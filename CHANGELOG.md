@@ -1,3 +1,8 @@
+## 0.0.2
+
+- Declare supported platforms on pub.dev.
+- Add documentation link to GitHub Pages.
+
 ## 0.0.1
 
 Initial release.
