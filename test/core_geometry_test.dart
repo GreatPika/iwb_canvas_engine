@@ -20,9 +20,11 @@ void main() {
   });
 
   test('aabbFromPoints builds bounds', () {
-    final rect = aabbFromPoints(
-      const [Offset(1, 2), Offset(4, -1), Offset(-2, 3)],
-    );
+    final rect = aabbFromPoints(const [
+      Offset(1, 2),
+      Offset(4, -1),
+      Offset(-2, 3),
+    ]);
     expect(rect.left, -2);
     expect(rect.top, -1);
     expect(rect.right, 4);
@@ -78,5 +80,27 @@ void main() {
     const rect = Rect.fromLTWH(0, 0, 10, 20);
     expect(hitTestRect(const Offset(5, 5), rect), isTrue);
     expect(hitTestRect(const Offset(-1, 5), rect), isFalse);
+  });
+
+  test('hitTestNode respects PathNode shape and transforms', () {
+    final node =
+        PathNode(
+            id: 'path-1',
+            svgPathData: 'M0 0 H40 V30 H0 Z M12 8 H28 V22 H12 Z',
+            fillRule: PathFillRule.evenOdd,
+          )
+          ..position = const Offset(100, 100)
+          ..rotationDeg = 90
+          ..scaleX = 2
+          ..scaleY = 0.5;
+
+    final holePoint = node.position;
+    expect(hitTestNode(holePoint, node), isFalse);
+
+    final localHit = const Offset(-15, 0);
+    final scaled = Offset(localHit.dx * node.scaleX, localHit.dy * node.scaleY);
+    final rotated = rotatePoint(scaled, Offset.zero, node.rotationDeg);
+    final worldHit = rotated + node.position;
+    expect(hitTestNode(worldHit, node), isTrue);
   });
 }
