@@ -246,6 +246,18 @@ v1.0
 
 ---
 
+### REQ-C6 — PathNode (векторная фигура)
+
+**Описание:** Узел хранит `svgPathData` и рендерит фигуру с заливкой/обводкой.
+Поддерживаются правила заливки `nonZero` и `evenOdd`.
+
+**Критерии приёмки:**
+
+* AC-C6-1: Фигура отрисовывается корректно с заданной заливкой и/или обводкой.
+* AC-C6-2: Проверка попадания работает по геометрии фигуры (включая «дырки» при `evenOdd`).
+
+---
+
 ## D. Камера (прокрутка)
 
 ### REQ-D1 — Камера со смещением
@@ -535,6 +547,7 @@ v1.0
 * отражение относительно оси;
 * преобразование координат с камерой;
 * проверка попадания для прямоугольника и линии/штриха;
+* проверка попадания для PathNode (включая `evenOdd`);
 * сериализация/десериализация.
 
 **Критерии приёмки:**
@@ -565,6 +578,7 @@ v1.0
 
 * Для большинства узлов допускается проверка попадания по ограничивающему прямоугольнику.
 * Для линий и штрихов обязателен допуск по толщине.
+* Для PathNode обязателен точный hit-test по `Path.contains` (bbox недостаточен).
 * Ластик на первом этапе удаляет весь узел аннотации при пересечении.
 
 Конец документа.
@@ -625,18 +639,33 @@ Future format changes must bump the version and use a migration **in the app** o
 
 ---
 
-## A5) Hit-test for rotated objects
+## A5) PathNode JSON representation
+
+**Minimum JSON fields for PathNode:**
+
+* `svgPathData: string` (SVG path data)
+* `fillRule: 'nonZero'|'evenOdd'` (default `nonZero`)
+* `fillColor: string` (optional)
+* `strokeColor: string` (optional)
+* `strokeWidth: number` (default `1`)
+
+**Validation:** invalid SVG path data must fail with a clear error.
+
+---
+
+## A6) Hit-test for rotated objects
 
 **Decision:** AABB after rotation is sufficient.
 
 Compute the 4 rectangle corners, transform them, build the AABB, and hit-test against it.
 Exact hit-test against the rotated rectangle is **not required**.
 
-For lines/strokes, use distance-to-segment with thickness tolerance (see A8).
+For lines/strokes, use distance-to-segment with thickness tolerance.
+For PathNode, use exact `Path.contains` with inverse transforms.
 
 ---
 
-## A6) Group transforms (rotate/flip)
+## A7) Group transforms (rotate/flip)
 
 **Decision:** group is **not** stored. Transform applies to each selected node.
 
@@ -656,7 +685,7 @@ For lines/strokes, use distance-to-segment with thickness tolerance (see A8).
 
 ---
 
-## A7) Line tool: two-tap flow
+## A8) Line tool: two-tap flow
 
 **Decision:** two-tap flow uses a timeout to avoid “hanging” state.
 
@@ -672,7 +701,7 @@ In `example/`, show a small start marker so users understand it is waiting for t
 
 ---
 
-## A8) Eraser trajectory and tolerance
+## A9) Eraser trajectory and tolerance
 
 **Decision:** eraser path is a polyline with its own thickness.
 
@@ -690,7 +719,7 @@ Default values:
 
 ---
 
-## A9) Default palettes
+## A10) Default palettes
 
 No brand colors provided, so defaults are neutral and configurable via API.
 
@@ -712,13 +741,13 @@ No brand colors provided, so defaults are neutral and configurable via API.
 
 ---
 
-## A10) Default grid sizes
+## A11) Default grid sizes
 
 Default cell sizes (logical pixels): `10`, `20`, `40`, `80`. Configurable via API.
 
 ---
 
-## A11) Action events (minimum)
+## A12) Action events (minimum)
 
 **Required:** `ActionCommitted`.
 
