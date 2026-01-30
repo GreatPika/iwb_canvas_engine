@@ -78,6 +78,18 @@ SceneView(
 );
 ```
 
+## API reference
+
+The package public surface is exported from `lib/iwb_canvas_engine.dart`
+(imported as `package:iwb_canvas_engine/iwb_canvas_engine.dart`).
+
+API docs are generated from Dartdoc comments in `lib/`:
+
+- Local: run `dart doc` and open `doc/api/index.html`.
+- On pub.dev: the “API reference” tab is generated automatically on publish.
+- On GitHub: enable GitHub Pages + run the `api_docs_pages` workflow to publish
+  Dartdoc HTML to Pages.
+
 ### Text layout
 
 `TextNode.size` is the layout box used for alignment, hit-testing, and
