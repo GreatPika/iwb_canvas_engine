@@ -14,12 +14,6 @@ A Flutter/Dart canvas engine package with scene model, rendering, input handling
 - `ARCHITECTURE.md` (system overview and data flow)
 - `DEVELOPMENT_PLAN.md` (phased plan with checkboxes; update after each completed item)
 
-## Current status
-
-- Phase: 3 (rendering done, vector paths added).
-- Working set: core model + math + hit-test + JSON v1 serialization + rendering + tests in place.
-- Next focus: input handling and tools.
-
 ## Rules for this repo
 
 - Single source of truth: no sync glue or duplicated state between modules.
