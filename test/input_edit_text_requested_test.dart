@@ -15,7 +15,11 @@ void main() {
 
   test('double tap on text emits EditTextRequested', () {
     final text = textNode('text-1', const Offset(0, 0));
-    final scene = Scene(layers: [Layer(nodes: [text])]);
+    final scene = Scene(
+      layers: [
+        Layer(nodes: [text]),
+      ],
+    );
     final controller = SceneController(scene: scene);
 
     final requests = <EditTextRequested>[];
@@ -38,7 +42,11 @@ void main() {
 
   test('double tap ignored in draw mode', () {
     final text = textNode('text-1', const Offset(0, 0));
-    final scene = Scene(layers: [Layer(nodes: [text])]);
+    final scene = Scene(
+      layers: [
+        Layer(nodes: [text]),
+      ],
+    );
     final controller = SceneController(scene: scene);
     controller.setMode(CanvasMode.draw);
 

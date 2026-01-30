@@ -633,9 +633,8 @@ class SceneController extends ChangeNotifier {
   }
 
   void _finishErase(int timestampMs, Offset scenePoint) {
-    if (_eraserPoints.isEmpty) {
-      _eraserPoints.add(scenePoint);
-    } else if ((_eraserPoints.last - scenePoint).distance > 0) {
+    if (_eraserPoints.isNotEmpty &&
+        (_eraserPoints.last - scenePoint).distance > 0) {
       _eraserPoints.add(scenePoint);
     }
 

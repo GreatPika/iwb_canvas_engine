@@ -203,7 +203,11 @@ void main() {
       fillColor: const Color(0xFF000000),
     )..position = const Offset(100, 100);
 
-    final scene = Scene(layers: [Layer(nodes: [stroke, line, rect])]);
+    final scene = Scene(
+      layers: [
+        Layer(nodes: [stroke, line, rect]),
+      ],
+    );
     final controller = drawController(scene);
     controller.setDrawTool(DrawTool.eraser);
     controller.eraserThickness = 10;

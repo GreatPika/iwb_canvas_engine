@@ -43,7 +43,11 @@ void main() {
   test('rotateSelection rotates around selection center', () {
     final left = rectNode('left', const Offset(0, 0));
     final right = rectNode('right', const Offset(10, 0));
-    final scene = Scene(layers: [Layer(nodes: [left, right])]);
+    final scene = Scene(
+      layers: [
+        Layer(nodes: [left, right]),
+      ],
+    );
     final controller = SceneController(scene: scene, dragStartSlop: 0);
     marqueeSelect(controller, const Rect.fromLTRB(-20, -20, 20, 20));
 
@@ -60,7 +64,11 @@ void main() {
   test('flipSelectionVertical mirrors around center x', () {
     final left = rectNode('left', const Offset(0, 0));
     final right = rectNode('right', const Offset(10, 0));
-    final scene = Scene(layers: [Layer(nodes: [left, right])]);
+    final scene = Scene(
+      layers: [
+        Layer(nodes: [left, right]),
+      ],
+    );
     final controller = SceneController(scene: scene, dragStartSlop: 0);
     marqueeSelect(controller, const Rect.fromLTRB(-20, -20, 20, 20));
 
@@ -80,7 +88,11 @@ void main() {
       thickness: 2,
       color: const Color(0xFF000000),
     );
-    final scene = Scene(layers: [Layer(nodes: [line])]);
+    final scene = Scene(
+      layers: [
+        Layer(nodes: [line]),
+      ],
+    );
     final controller = SceneController(scene: scene, dragStartSlop: 0);
     marqueeSelect(controller, const Rect.fromLTRB(-20, -20, 20, 20));
 
@@ -95,15 +107,15 @@ void main() {
   test('flipSelectionVertical mirrors stroke geometry', () {
     final stroke = StrokeNode(
       id: 'stroke',
-      points: [
-        const Offset(0, 0),
-        const Offset(10, 0),
-        const Offset(20, 0),
-      ],
+      points: [const Offset(0, 0), const Offset(10, 0), const Offset(20, 0)],
       thickness: 2,
       color: const Color(0xFF000000),
     );
-    final scene = Scene(layers: [Layer(nodes: [stroke])]);
+    final scene = Scene(
+      layers: [
+        Layer(nodes: [stroke]),
+      ],
+    );
     final controller = SceneController(scene: scene, dragStartSlop: 0);
     marqueeSelect(controller, const Rect.fromLTRB(-20, -20, 40, 20));
 
@@ -122,7 +134,11 @@ void main() {
       fillColor: const Color(0xFF000000),
       isDeletable: false,
     )..position = const Offset(20, 0);
-    final scene = Scene(layers: [Layer(nodes: [deletable, locked])]);
+    final scene = Scene(
+      layers: [
+        Layer(nodes: [deletable, locked]),
+      ],
+    );
     final controller = SceneController(scene: scene, dragStartSlop: 0);
     marqueeSelect(controller, const Rect.fromLTRB(-20, -20, 30, 20));
 
@@ -134,9 +150,7 @@ void main() {
   test('clearScene removes nodes from non-background layers', () {
     final background = Layer(
       isBackground: true,
-      nodes: [
-        rectNode('bg', const Offset(0, 0)),
-      ],
+      nodes: [rectNode('bg', const Offset(0, 0))],
     );
     final foreground = Layer(
       nodes: [

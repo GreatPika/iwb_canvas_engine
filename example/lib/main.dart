@@ -51,9 +51,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('IWB Canvas Engine Example'),
-      ),
+      appBar: AppBar(title: const Text('IWB Canvas Engine Example')),
       body: SafeArea(
         child: AnimatedBuilder(
           animation: _controller,
@@ -79,8 +77,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     final theme = Theme.of(context);
     final selectedTextNodes = _selectedTextNodes();
     final hasTextSelection = selectedTextNodes.isNotEmpty;
-    final primaryTextNode =
-        hasTextSelection ? selectedTextNodes.first : null;
+    final primaryTextNode = hasTextSelection ? selectedTextNodes.first : null;
     final textColor = primaryTextNode?.color ?? scene.palette.penColors.first;
     final textAlign = primaryTextNode?.align ?? TextAlign.left;
     final textFontSize = primaryTextNode?.fontSize ?? 24;
@@ -164,8 +161,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                   IconButton(
                     tooltip: 'Rotate left',
                     onPressed: hasSelection
-                        ? () =>
-                            _controller.rotateSelection(clockwise: false)
+                        ? () => _controller.rotateSelection(clockwise: false)
                         : null,
                     icon: const Icon(Icons.rotate_left),
                   ),
@@ -185,8 +181,9 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                   ),
                   IconButton(
                     tooltip: 'Delete',
-                    onPressed:
-                        hasSelection ? () => _controller.deleteSelection() : null,
+                    onPressed: hasSelection
+                        ? () => _controller.deleteSelection()
+                        : null,
                     icon: const Icon(Icons.delete_outline),
                   ),
                   IconButton(
@@ -338,10 +335,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Switch(
-                        value: grid.isEnabled,
-                        onChanged: _setGridEnabled,
-                      ),
+                      Switch(value: grid.isEnabled, onChanged: _setGridEnabled),
                       Text(grid.isEnabled ? 'On' : 'Off'),
                     ],
                   ),
@@ -408,10 +402,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   Widget _buildCanvas() {
     return Stack(
       children: [
-        SceneView(
-          controller: _controller,
-          imageResolver: (_) => null,
-        ),
+        SceneView(controller: _controller, imageResolver: (_) => null),
         Positioned.fill(
           child: IgnorePointer(
             child: CustomPaint(
@@ -588,10 +579,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
 }
 
 class _ToolbarGroup extends StatelessWidget {
-  const _ToolbarGroup({
-    required this.label,
-    required this.child,
-  });
+  const _ToolbarGroup({required this.label, required this.child});
 
   final String label;
   final Widget child;
@@ -654,10 +642,9 @@ class _ColorSwatch extends StatelessWidget {
   Widget build(BuildContext context) {
     final borderColor = isSelected
         ? Theme.of(context).colorScheme.onSurface
-        : Theme.of(context)
-            .colorScheme
-            .onSurface
-            .withAlpha((0.2 * 255).round());
+        : Theme.of(
+            context,
+          ).colorScheme.onSurface.withAlpha((0.2 * 255).round());
 
     return InkResponse(
       onTap: onTap,
@@ -668,10 +655,7 @@ class _ColorSwatch extends StatelessWidget {
         decoration: BoxDecoration(
           color: color,
           shape: BoxShape.circle,
-          border: Border.all(
-            color: borderColor,
-            width: isSelected ? 2 : 1,
-          ),
+          border: Border.all(color: borderColor, width: isSelected ? 2 : 1),
         ),
       ),
     );
@@ -680,7 +664,7 @@ class _ColorSwatch extends StatelessWidget {
 
 class _PendingLineMarkerPainter extends CustomPainter {
   _PendingLineMarkerPainter({required this.controller})
-      : super(repaint: controller);
+    : super(repaint: controller);
 
   final SceneController controller;
 

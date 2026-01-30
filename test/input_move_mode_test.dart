@@ -49,7 +49,11 @@ void main() {
 
   test('tap on empty clears selection', () {
     final node = rectNode('node-1', const Offset(0, 0));
-    final scene = Scene(layers: [Layer(nodes: [node])]);
+    final scene = Scene(
+      layers: [
+        Layer(nodes: [node]),
+      ],
+    );
     final controller = SceneController(scene: scene);
 
     controller.handlePointer(
@@ -95,7 +99,9 @@ void main() {
     final second = rectNode('node-2', const Offset(50, 0));
     final third = rectNode('node-3', const Offset(200, 0));
     final scene = Scene(
-      layers: [Layer(nodes: [first, second, third])],
+      layers: [
+        Layer(nodes: [first, second, third]),
+      ],
     );
     final controller = SceneController(scene: scene, dragStartSlop: 0);
     final actions = <ActionCommitted>[];
@@ -135,13 +141,11 @@ void main() {
 
   test('drag move updates selection and emits action with moved ids', () {
     final movable = rectNode('movable', const Offset(0, 0));
-    final locked = rectNode(
-      'locked',
-      const Offset(50, 0),
-      isLocked: true,
-    );
+    final locked = rectNode('locked', const Offset(50, 0), isLocked: true);
     final scene = Scene(
-      layers: [Layer(nodes: [movable, locked])],
+      layers: [
+        Layer(nodes: [movable, locked]),
+      ],
     );
     final controller = SceneController(scene: scene, dragStartSlop: 0);
     final actions = <ActionCommitted>[];

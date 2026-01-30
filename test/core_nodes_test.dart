@@ -47,4 +47,64 @@ void main() {
     expect(rect.right, 13);
     expect(rect.bottom, 13);
   });
+
+  test('StrokeNode.position translates points', () {
+    final node = StrokeNode(
+      id: 'stroke-1',
+      points: const [Offset(0, 0), Offset(10, 0)],
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+
+    expect(node.position, const Offset(5, 0));
+    node.position = const Offset(7, 3);
+
+    expect(node.points, const [Offset(2, 3), Offset(12, 3)]);
+    expect(node.position, const Offset(7, 3));
+  });
+
+  test('LineNode.position translates endpoints', () {
+    final node = LineNode(
+      id: 'line-1',
+      start: const Offset(0, 0),
+      end: const Offset(10, 0),
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+
+    expect(node.position, const Offset(5, 0));
+    node.position = const Offset(5, 5);
+
+    expect(node.start, const Offset(0, 5));
+    expect(node.end, const Offset(10, 5));
+  });
+
+  test('PathNode.buildLocalPath returns null for empty and invalid data', () {
+    expect(PathNode(id: 'p1', svgPathData: '   ').buildLocalPath(), isNull);
+    expect(
+      PathNode(id: 'p2', svgPathData: 'not-a-path').buildLocalPath(),
+      isNull,
+    );
+  });
+
+  test(
+    'PathNode.buildLocalPath applies fill rule and aabb uses transforms',
+    () {
+      final node =
+          PathNode(
+              id: 'path-1',
+              svgPathData: 'M0 0 H40 V30 H0 Z M12 8 H28 V22 H12 Z',
+              fillRule: PathFillRule.evenOdd,
+            )
+            ..position = const Offset(100, 100)
+            ..rotationDeg = 90
+            ..scaleX = 2
+            ..scaleY = 0.5;
+
+      final path = node.buildLocalPath();
+      expect(path, isNotNull);
+      expect(path!.fillType, PathFillType.evenOdd);
+      expect(node.aabb, isNot(Rect.zero));
+    },
+  );
 }

@@ -342,7 +342,7 @@ class PathNode extends SceneNode {
           ? PathFillType.evenOdd
           : PathFillType.nonZero;
       return centered;
-    } on Exception {
+    } catch (_) {
       return null;
     }
   }

@@ -517,7 +517,7 @@ void _validateSvgPathData(String value) {
   }
   try {
     parseSvgPathData(value);
-  } on Exception {
+  } catch (_) {
     throw SceneJsonFormatException('Invalid svgPathData.');
   }
 }

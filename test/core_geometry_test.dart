@@ -103,4 +103,36 @@ void main() {
     final worldHit = rotated + node.position;
     expect(hitTestNode(worldHit, node), isTrue);
   });
+
+  test('distancePointToSegment handles degenerate segments', () {
+    const point = Offset(3, 4);
+    const a = Offset(1, 1);
+    final distance = distancePointToSegment(point, a, a);
+    expect(distance, closeTo((point - a).distance, 0.0001));
+  });
+
+  test('segmentsIntersect handles colinear overlaps', () {
+    expect(
+      segmentsIntersect(
+        const Offset(0, 0),
+        const Offset(10, 0),
+        const Offset(5, 0),
+        const Offset(15, 0),
+      ),
+      isTrue,
+    );
+  });
+
+  test(
+    'distanceSegmentToSegment returns positive distance for parallel lines',
+    () {
+      final distance = distanceSegmentToSegment(
+        const Offset(0, 0),
+        const Offset(10, 0),
+        const Offset(0, 5),
+        const Offset(10, 5),
+      );
+      expect(distance, closeTo(5, 0.0001));
+    },
+  );
 }
