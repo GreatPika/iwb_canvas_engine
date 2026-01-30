@@ -3,6 +3,8 @@ export 'core/geometry.dart';
 export 'core/hit_test.dart';
 export 'core/nodes.dart';
 export 'core/scene.dart';
+export 'input/action_events.dart';
 export 'input/pointer_input.dart';
+export 'input/scene_controller.dart';
 export 'render/scene_painter.dart';
 export 'serialization/scene_codec.dart';

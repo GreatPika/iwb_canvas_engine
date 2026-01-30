@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'geometry.dart';
 import 'nodes.dart';
+import 'scene.dart';
 
 bool hitTestRect(Offset point, Rect rect) {
   return rect.contains(point);
@@ -43,6 +44,19 @@ bool hitTestNode(Offset point, SceneNode node) {
       final stroke = node as StrokeNode;
       return hitTestStroke(point, stroke.points, stroke.thickness);
   }
+}
+
+SceneNode? hitTestTopNode(Scene scene, Offset point) {
+  for (var layerIndex = scene.layers.length - 1; layerIndex >= 0; layerIndex--) {
+    final layer = scene.layers[layerIndex];
+    for (var nodeIndex = layer.nodes.length - 1; nodeIndex >= 0; nodeIndex--) {
+      final node = layer.nodes[nodeIndex];
+      if (hitTestNode(point, node)) {
+        return node;
+      }
+    }
+  }
+  return null;
 }
 
 Offset _toLocalPathPoint(Offset point, PathNode node) {
