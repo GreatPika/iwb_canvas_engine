@@ -72,6 +72,48 @@ void main() {
     expect(right.scaleX, -1);
   });
 
+  test('rotateSelection rotates line geometry', () {
+    final line = LineNode(
+      id: 'line',
+      start: const Offset(0, 0),
+      end: const Offset(10, 0),
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+    final scene = Scene(layers: [Layer(nodes: [line])]);
+    final controller = SceneController(scene: scene, dragStartSlop: 0);
+    marqueeSelect(controller, const Rect.fromLTRB(-20, -20, 20, 20));
+
+    controller.rotateSelection(clockwise: true, timestampMs: 40);
+
+    expect(line.start.dx, closeTo(5, 0.001));
+    expect(line.start.dy, closeTo(-5, 0.001));
+    expect(line.end.dx, closeTo(5, 0.001));
+    expect(line.end.dy, closeTo(5, 0.001));
+  });
+
+  test('flipSelectionVertical mirrors stroke geometry', () {
+    final stroke = StrokeNode(
+      id: 'stroke',
+      points: [
+        const Offset(0, 0),
+        const Offset(10, 0),
+        const Offset(20, 0),
+      ],
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+    final scene = Scene(layers: [Layer(nodes: [stroke])]);
+    final controller = SceneController(scene: scene, dragStartSlop: 0);
+    marqueeSelect(controller, const Rect.fromLTRB(-20, -20, 40, 20));
+
+    controller.flipSelectionVertical(timestampMs: 40);
+
+    expect(stroke.points[0].dx, closeTo(20, 0.001));
+    expect(stroke.points[1].dx, closeTo(10, 0.001));
+    expect(stroke.points[2].dx, closeTo(0, 0.001));
+  });
+
   test('deleteSelection removes deletable nodes only', () {
     final deletable = rectNode('del', const Offset(0, 0));
     final locked = RectNode(

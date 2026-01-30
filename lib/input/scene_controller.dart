@@ -78,6 +78,12 @@ class SceneController extends ChangeNotifier {
 
   Rect? get selectionRect => _selectionRect;
 
+  Offset? get pendingLineStart => _pendingLineStart;
+
+  int? get pendingLineTimestampMs => _pendingLineTimestampMs;
+
+  bool get hasPendingLineStart => _pendingLineStart != null;
+
   double get dragStartSlop => _dragStartSlop ?? pointerSettings.tapSlop;
 
   static NodeId _defaultNodeIdGenerator() {
@@ -111,6 +117,40 @@ class SceneController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setDrawColor(Color value) {
+    if (drawColor == value) return;
+    drawColor = value;
+    notifyListeners();
+  }
+
+  void setBackgroundColor(Color value) {
+    if (scene.background.color == value) return;
+    scene.background.color = value;
+    notifyListeners();
+  }
+
+  void setGridEnabled(bool value) {
+    if (scene.background.grid.isEnabled == value) return;
+    scene.background.grid.isEnabled = value;
+    notifyListeners();
+  }
+
+  void setGridCellSize(double value) {
+    if (scene.background.grid.cellSize == value) return;
+    scene.background.grid.cellSize = value;
+    notifyListeners();
+  }
+
+  void setCameraOffset(Offset value) {
+    if (scene.camera.offset == value) return;
+    scene.camera.offset = value;
+    notifyListeners();
+  }
+
+  void notifySceneChanged() {
+    notifyListeners();
+  }
+
   void clearSelection() {
     if (_selectedNodeIds.isEmpty) return;
     _selectedNodeIds.clear();
@@ -124,8 +164,7 @@ class SceneController extends ChangeNotifier {
     final center = _selectionCenter(nodes);
     final delta = clockwise ? 90.0 : -90.0;
     for (final node in nodes) {
-      node.position = rotatePoint(node.position, center, delta);
-      node.rotationDeg += delta;
+      _rotateNode(node, center, delta);
     }
 
     _emitAction(
@@ -143,8 +182,7 @@ class SceneController extends ChangeNotifier {
 
     final center = _selectionCenter(nodes);
     for (final node in nodes) {
-      node.position = reflectPointVertical(node.position, center.dx);
-      node.scaleX = -node.scaleX;
+      _flipNodeVertical(node, center.dx);
     }
 
     _emitAction(
@@ -560,8 +598,7 @@ class SceneController extends ChangeNotifier {
     if (!isTap) return;
 
     if (_pendingLineStart == null) {
-      _pendingLineStart = scenePoint;
-      _pendingLineTimestampMs = timestampMs;
+      _setPendingLineStart(scenePoint, timestampMs);
       return;
     }
 
@@ -573,8 +610,7 @@ class SceneController extends ChangeNotifier {
       thickness: lineThickness,
       color: drawColor,
     );
-    _pendingLineStart = null;
-    _pendingLineTimestampMs = null;
+    _setPendingLineStart(null, null);
     _activeDrawLayer = _ensureAnnotationLayer();
     _activeDrawLayer!.nodes.add(line);
     _activeDrawLayer = null;
@@ -840,9 +876,18 @@ class SceneController extends ChangeNotifier {
         : penThickness;
   }
 
+  void _setPendingLineStart(Offset? start, int? timestampMs) {
+    if (_pendingLineStart == start &&
+        _pendingLineTimestampMs == timestampMs) {
+      return;
+    }
+    _pendingLineStart = start;
+    _pendingLineTimestampMs = timestampMs;
+    notifyListeners();
+  }
+
   void _clearPendingLine() {
-    _pendingLineStart = null;
-    _pendingLineTimestampMs = null;
+    _setPendingLineStart(null, null);
   }
 
   void _expirePendingLine(int timestampMs) {
@@ -868,6 +913,38 @@ class SceneController extends ChangeNotifier {
         payload: payload,
       ),
     );
+  }
+
+  void _rotateNode(SceneNode node, Offset center, double delta) {
+    if (node is LineNode) {
+      node.start = rotatePoint(node.start, center, delta);
+      node.end = rotatePoint(node.end, center, delta);
+      return;
+    }
+    if (node is StrokeNode) {
+      for (var i = 0; i < node.points.length; i++) {
+        node.points[i] = rotatePoint(node.points[i], center, delta);
+      }
+      return;
+    }
+    node.position = rotatePoint(node.position, center, delta);
+    node.rotationDeg += delta;
+  }
+
+  void _flipNodeVertical(SceneNode node, double axisX) {
+    if (node is LineNode) {
+      node.start = reflectPointVertical(node.start, axisX);
+      node.end = reflectPointVertical(node.end, axisX);
+      return;
+    }
+    if (node is StrokeNode) {
+      for (var i = 0; i < node.points.length; i++) {
+        node.points[i] = reflectPointVertical(node.points[i], axisX);
+      }
+      return;
+    }
+    node.position = reflectPointVertical(node.position, axisX);
+    node.scaleX = -node.scaleX;
   }
 }
 
