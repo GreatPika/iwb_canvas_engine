@@ -1,14 +1,17 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
+/// Converts a point from view/screen coordinates to scene coordinates.
 Offset toScene(Offset viewPoint, Offset cameraOffset) {
   return viewPoint + cameraOffset;
 }
 
+/// Converts a point from scene coordinates to view/screen coordinates.
 Offset toView(Offset scenePoint, Offset cameraOffset) {
   return scenePoint - cameraOffset;
 }
 
+/// Rotates [point] around [center] by [degrees].
 Offset rotatePoint(Offset point, Offset center, double degrees) {
   final radians = degrees * math.pi / 180.0;
   final cosA = math.cos(radians);
@@ -21,11 +24,13 @@ Offset rotatePoint(Offset point, Offset center, double degrees) {
   return rotated + center;
 }
 
+/// Mirrors [point] across the vertical axis that passes through [axisX].
 Offset reflectPointVertical(Offset point, double axisX) {
   final dx = axisX + (axisX - point.dx);
   return Offset(dx, point.dy);
 }
 
+/// Returns the axis-aligned bounding box for [points].
 Rect aabbFromPoints(Iterable<Offset> points) {
   final iterator = points.iterator;
   if (!iterator.moveNext()) {
@@ -45,6 +50,10 @@ Rect aabbFromPoints(Iterable<Offset> points) {
   return Rect.fromLTRB(minX, minY, maxX, maxY);
 }
 
+/// Computes an axis-aligned bounding box for a transformed rectangle.
+///
+/// [localRect] is specified in the node's local space around the origin.
+/// Transform is applied in the order: scale -> rotate -> translate.
 Rect aabbForTransformedRect({
   required Rect localRect,
   required Offset position,
@@ -66,16 +75,15 @@ Rect aabbForTransformedRect({
   final rotated = rotationDeg == 0
       ? scaled
       : scaled
-          .map((c) => rotatePoint(c, Offset.zero, rotationDeg))
-          .toList(growable: false);
+            .map((c) => rotatePoint(c, Offset.zero, rotationDeg))
+            .toList(growable: false);
 
-  final translated = rotated
-      .map((c) => c + position)
-      .toList(growable: false);
+  final translated = rotated.map((c) => c + position).toList(growable: false);
 
   return aabbFromPoints(translated);
 }
 
+/// Returns the shortest distance from [point] to the segment [a]-[b].
 double distancePointToSegment(Offset point, Offset a, Offset b) {
   final ab = b - a;
   final ap = point - a;
@@ -90,10 +98,10 @@ double distancePointToSegment(Offset point, Offset a, Offset b) {
   return (point - projection).distance;
 }
 
+/// Returns true if segments [a1]-[a2] and [b1]-[b2] intersect.
 bool segmentsIntersect(Offset a1, Offset a2, Offset b1, Offset b2) {
   int orientation(Offset p, Offset q, Offset r) {
-    final val = (q.dy - p.dy) * (r.dx - q.dx) -
-        (q.dx - p.dx) * (r.dy - q.dy);
+    final val = (q.dy - p.dy) * (r.dx - q.dx) - (q.dx - p.dx) * (r.dy - q.dy);
     if (val == 0) return 0;
     return val > 0 ? 1 : 2;
   }
@@ -120,6 +128,7 @@ bool segmentsIntersect(Offset a1, Offset a2, Offset b1, Offset b2) {
   return false;
 }
 
+/// Returns the shortest distance between two line segments.
 double distanceSegmentToSegment(Offset a1, Offset a2, Offset b1, Offset b2) {
   if (segmentsIntersect(a1, a2, b1, b2)) {
     return 0;

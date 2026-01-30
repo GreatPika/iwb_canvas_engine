@@ -1,7 +1,9 @@
 name: iwb_canvas_engine
-description: "A new Flutter package project."
+description: "Scene-based canvas engine for Flutter: model, rendering, input, JSON serialization."
 version: 0.0.1
-homepage: https://github.com/yourusername/iwb_canvas_engine
+homepage: https://github.com/GreatPika/iwb_canvas_engine
+repository: https://github.com/GreatPika/iwb_canvas_engine
+issue_tracker: https://github.com/GreatPika/iwb_canvas_engine/issues
 
 environment:
   sdk: ^3.10.4

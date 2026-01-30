@@ -4,12 +4,20 @@ import 'package:path_drawing/path_drawing.dart';
 
 import 'geometry.dart';
 
+/// Supported node variants in a [Scene].
 enum NodeType { image, text, stroke, line, rect, path }
 
+/// Fill rule for [PathNode] geometry.
 enum PathFillRule { nonZero, evenOdd }
 
+/// Stable node identifier used for selection and action events.
 typedef NodeId = String;
 
+/// Base class for all nodes stored in a [Scene].
+///
+/// The model is mutable by design. Box-based nodes use [position] as the center.
+/// Line and stroke nodes store their geometry in scene coordinates, and expose
+/// [position] as a derived bounding-box center.
 abstract class SceneNode {
   SceneNode({
     required this.id,
@@ -40,9 +48,11 @@ abstract class SceneNode {
   Offset get position;
   set position(Offset value);
 
+  /// Axis-aligned bounding box in scene coordinates.
   Rect get aabb;
 }
 
+/// Raster image node referenced by [imageId] and drawn at [size].
 class ImageNode extends SceneNode {
   ImageNode({
     required super.id,
@@ -87,6 +97,7 @@ class ImageNode extends SceneNode {
   );
 }
 
+/// Text node with a fixed layout box ([size]) and basic styling.
 class TextNode extends SceneNode {
   TextNode({
     required super.id,
@@ -147,6 +158,7 @@ class TextNode extends SceneNode {
   );
 }
 
+/// Freehand polyline stroke node.
 class StrokeNode extends SceneNode {
   StrokeNode({
     required super.id,
@@ -194,6 +206,7 @@ class StrokeNode extends SceneNode {
   }
 }
 
+/// Straight segment node defined by [start] and [end] points.
 class LineNode extends SceneNode {
   LineNode({
     required super.id,
@@ -234,6 +247,7 @@ class LineNode extends SceneNode {
   }
 }
 
+/// Box node with optional fill and stroke.
 class RectNode extends SceneNode {
   RectNode({
     required super.id,
@@ -280,6 +294,7 @@ class RectNode extends SceneNode {
   );
 }
 
+/// SVG-path based vector node.
 class PathNode extends SceneNode {
   PathNode({
     required super.id,
@@ -312,6 +327,10 @@ class PathNode extends SceneNode {
   @override
   set position(Offset value) => _position = value;
 
+  /// Builds a local path centered around (0,0), or returns null if invalid.
+  ///
+  /// The returned path is in the node's local coordinate space. The caller is
+  /// responsible for applying [position], [rotationDeg], and scaling.
   Path? buildLocalPath() {
     if (svgPathData.trim().isEmpty) return null;
     try {

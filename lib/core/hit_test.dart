@@ -4,15 +4,18 @@ import 'geometry.dart';
 import 'nodes.dart';
 import 'scene.dart';
 
+/// Returns true if [point] lies inside [rect].
 bool hitTestRect(Offset point, Rect rect) {
   return rect.contains(point);
 }
 
+/// Returns true if [point] is within [thickness] of the segment [start]-[end].
 bool hitTestLine(Offset point, Offset start, Offset end, double thickness) {
   final distance = distancePointToSegment(point, start, end);
   return distance <= thickness / 2;
 }
 
+/// Returns true if [point] hits the polyline [points] with [thickness].
 bool hitTestStroke(Offset point, List<Offset> points, double thickness) {
   if (points.length < 2) return false;
   for (var i = 0; i < points.length - 1; i++) {
@@ -23,6 +26,7 @@ bool hitTestStroke(Offset point, List<Offset> points, double thickness) {
   return false;
 }
 
+/// Returns true if [point] hits [node] in scene coordinates.
 bool hitTestNode(Offset point, SceneNode node) {
   if (!node.isVisible || !node.isSelectable) return false;
 
@@ -46,8 +50,13 @@ bool hitTestNode(Offset point, SceneNode node) {
   }
 }
 
+/// Returns the top-most node hit by [point], or null.
 SceneNode? hitTestTopNode(Scene scene, Offset point) {
-  for (var layerIndex = scene.layers.length - 1; layerIndex >= 0; layerIndex--) {
+  for (
+    var layerIndex = scene.layers.length - 1;
+    layerIndex >= 0;
+    layerIndex--
+  ) {
     final layer = scene.layers[layerIndex];
     for (var nodeIndex = layer.nodes.length - 1; nodeIndex >= 0; nodeIndex--) {
       final node = layer.nodes[nodeIndex];

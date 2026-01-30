@@ -1,0 +1,16 @@
+# Internal project docs (not part of the public package API/docs).
+AGENTS.md
+DEVELOPMENT_PLAN.md
+TZ.md
+
+# Flutter/Dart/Pub build artifacts.
+.dart_tool/
+.flutter-plugins-dependencies
+.idea/
+.metadata
+build/
+coverage/
+pubspec.lock
+**/doc/api/
+*.iml
+.github/

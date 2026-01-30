@@ -6,6 +6,9 @@ import '../input/pointer_input.dart';
 import '../input/scene_controller.dart';
 import '../render/scene_painter.dart';
 
+/// A self-contained widget that renders a [SceneController] and feeds it input.
+///
+/// The view listens to [SceneController] changes and rebuilds its painter.
 class SceneView extends StatefulWidget {
   const SceneView({
     required this.controller,
@@ -61,34 +64,27 @@ class _SceneViewState extends State<SceneView> {
   Widget build(BuildContext context) {
     return Listener(
       behavior: HitTestBehavior.opaque,
-      onPointerDown: (event) => _handlePointerEvent(
-        event,
-        PointerPhase.down,
-      ),
-      onPointerMove: (event) => _handlePointerEvent(
-        event,
-        PointerPhase.move,
-      ),
-      onPointerUp: (event) => _handlePointerEvent(
-        event,
-        PointerPhase.up,
-      ),
-      onPointerCancel: (event) => _handlePointerEvent(
-        event,
-        PointerPhase.cancel,
-      ),
-      child: CustomPaint(
-        painter: ScenePainter(
-          scene: widget.controller.scene,
-          imageResolver: widget.imageResolver,
-          selectedNodeIds: widget.controller.selectedNodeIds,
-          selectionRect: widget.controller.selectionRect,
-          selectionColor: widget.selectionColor,
-          selectionStrokeWidth: widget.selectionStrokeWidth,
-          gridStrokeWidth: widget.gridStrokeWidth,
-          repaint: widget.controller,
-        ),
-        child: const SizedBox.expand(),
+      onPointerDown: (event) => _handlePointerEvent(event, PointerPhase.down),
+      onPointerMove: (event) => _handlePointerEvent(event, PointerPhase.move),
+      onPointerUp: (event) => _handlePointerEvent(event, PointerPhase.up),
+      onPointerCancel: (event) =>
+          _handlePointerEvent(event, PointerPhase.cancel),
+      child: AnimatedBuilder(
+        animation: widget.controller,
+        builder: (context, _) {
+          return CustomPaint(
+            painter: ScenePainter(
+              scene: widget.controller.scene,
+              imageResolver: widget.imageResolver,
+              selectedNodeIds: widget.controller.selectedNodeIds,
+              selectionRect: widget.controller.selectionRect,
+              selectionColor: widget.selectionColor,
+              selectionStrokeWidth: widget.selectionStrokeWidth,
+              gridStrokeWidth: widget.gridStrokeWidth,
+            ),
+            child: const SizedBox.expand(),
+          );
+        },
       ),
     );
   }
@@ -120,8 +116,7 @@ class _SceneViewState extends State<SceneView> {
   void _schedulePendingFlush(int timestampMs) {
     _lastTimestampMs = timestampMs;
     _pendingTapTimer?.cancel();
-    final delayMs =
-        widget.controller.pointerSettings.doubleTapMaxDelayMs + 1;
+    final delayMs = widget.controller.pointerSettings.doubleTapMaxDelayMs + 1;
     _pendingTapTimer = Timer(Duration(milliseconds: delayMs), () {
       final flushTimestamp = _lastTimestampMs + delayMs;
       final signals = _pointerTracker.flushPending(flushTimestamp);

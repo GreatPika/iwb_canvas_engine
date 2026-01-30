@@ -12,20 +12,29 @@ import '../core/scene.dart';
 import 'action_events.dart';
 import 'pointer_input.dart';
 
+/// Interaction mode for the canvas.
 enum CanvasMode { move, draw }
 
+/// Active drawing tool when [CanvasMode.draw] is enabled.
 enum DrawTool { pen, highlighter, line, eraser }
 
+/// Mutable controller that owns the scene editing state and tool logic.
+///
+/// The controller is the primary integration point for apps:
+/// - It mutates [scene] in response to pointer input and commands.
+/// - It exposes selection state and marquee selection rectangle.
+/// - It emits [actions] for app-level undo/redo integration.
+/// - It emits [editTextRequests] when a text node should be edited.
 class SceneController extends ChangeNotifier {
   SceneController({
     Scene? scene,
     PointerInputSettings? pointerSettings,
     double? dragStartSlop,
     NodeId Function()? nodeIdGenerator,
-  })  : scene = scene ?? Scene(),
-        pointerSettings = pointerSettings ?? const PointerInputSettings(),
-        _dragStartSlop = dragStartSlop,
-        _nodeIdGenerator = nodeIdGenerator ?? _defaultNodeIdGenerator;
+  }) : scene = scene ?? Scene(),
+       pointerSettings = pointerSettings ?? const PointerInputSettings(),
+       _dragStartSlop = dragStartSlop,
+       _nodeIdGenerator = nodeIdGenerator ?? _defaultNodeIdGenerator;
 
   final Scene scene;
   final PointerInputSettings pointerSettings;
@@ -43,6 +52,9 @@ class SceneController extends ChangeNotifier {
   double highlighterOpacity = SceneDefaults.highlighterOpacity;
 
   final LinkedHashSet<NodeId> _selectedNodeIds = LinkedHashSet<NodeId>();
+  late final Set<NodeId> _selectedNodeIdsView = UnmodifiableSetView(
+    _selectedNodeIds,
+  );
   Rect? _selectionRect;
 
   final StreamController<ActionCommitted> _actions =
@@ -71,10 +83,9 @@ class SceneController extends ChangeNotifier {
   int? _pendingLineTimestampMs;
 
   Stream<ActionCommitted> get actions => _actions.stream;
-  Stream<EditTextRequested> get editTextRequests =>
-      _editTextRequests.stream;
+  Stream<EditTextRequested> get editTextRequests => _editTextRequests.stream;
 
-  Set<NodeId> get selectedNodeIds => Set.unmodifiable(_selectedNodeIds);
+  Set<NodeId> get selectedNodeIds => _selectedNodeIdsView;
 
   Rect? get selectionRect => _selectionRect;
 
@@ -458,10 +469,7 @@ class SceneController extends ChangeNotifier {
         ActionType.move,
         movedNodeIds,
         timestampMs,
-        payload: <String, Object?>{
-          'deltaX': delta.dx,
-          'deltaY': delta.dy,
-        },
+        payload: <String, Object?>{'deltaX': delta.dx, 'deltaY': delta.dy},
       );
     }
   }
@@ -490,9 +498,7 @@ class SceneController extends ChangeNotifier {
       points: [scenePoint],
       thickness: _strokeThicknessForTool(),
       color: drawColor,
-      opacity: drawTool == DrawTool.highlighter
-          ? highlighterOpacity
-          : 1,
+      opacity: drawTool == DrawTool.highlighter ? highlighterOpacity : 1,
     );
     _activeStroke = stroke;
     _activeLine = null;
@@ -593,8 +599,7 @@ class SceneController extends ChangeNotifier {
 
     if (_drawDownScene == null) return;
 
-    final isTap =
-        (scenePoint - _drawDownScene!).distance <= dragStartSlop;
+    final isTap = (scenePoint - _drawDownScene!).distance <= dragStartSlop;
     if (!isTap) return;
 
     if (_pendingLineStart == null) {
@@ -645,9 +650,7 @@ class SceneController extends ChangeNotifier {
       ActionType.erase,
       deletedNodeIds,
       timestampMs,
-      payload: <String, Object?>{
-        'eraserThickness': eraserThickness,
-      },
+      payload: <String, Object?>{'eraserThickness': eraserThickness},
     );
   }
 
@@ -877,8 +880,7 @@ class SceneController extends ChangeNotifier {
   }
 
   void _setPendingLineStart(Offset? start, int? timestampMs) {
-    if (_pendingLineStart == start &&
-        _pendingLineTimestampMs == timestampMs) {
+    if (_pendingLineStart == start && _pendingLineTimestampMs == timestampMs) {
       return;
     }
     _pendingLineStart = start;

@@ -1,9 +1,12 @@
 import 'dart:ui';
 
+/// Low-level pointer lifecycle phases.
 enum PointerPhase { down, move, up, cancel }
 
+/// High-level signals derived from [PointerSample] input.
 enum PointerSignalType { down, move, up, cancel, tap, doubleTap }
 
+/// A single pointer sample in view/screen coordinates.
 class PointerSample {
   const PointerSample({
     required this.pointerId,
@@ -20,6 +23,7 @@ class PointerSample {
   final PointerDeviceKind kind;
 }
 
+/// A derived pointer signal (including tap and double tap).
 class PointerSignal {
   const PointerSignal({
     required this.type,
@@ -49,6 +53,7 @@ class PointerSignal {
   final PointerDeviceKind kind;
 }
 
+/// Thresholds and timings used by [PointerInputTracker].
 class PointerInputSettings {
   const PointerInputSettings({
     this.tapSlop = 8,
@@ -65,6 +70,10 @@ class PointerInputSettings {
   final bool deferSingleTap;
 }
 
+/// Converts [PointerSample] input into a stream of [PointerSignal]s.
+///
+/// The tracker is stateless with respect to the scene model and can be reused
+/// by hosts that want tap/double-tap detection.
 class PointerInputTracker {
   PointerInputTracker({PointerInputSettings? settings})
     : settings = settings ?? const PointerInputSettings();

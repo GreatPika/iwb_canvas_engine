@@ -1,3 +1,9 @@
+/// Public API exports for `iwb_canvas_engine`.
+///
+/// This package provides a scene model, rendering, input handling, and JSON
+/// serialization for whiteboard-style apps.
+library;
+
 export 'core/defaults.dart';
 export 'core/geometry.dart';
 export 'core/hit_test.dart';

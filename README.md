@@ -97,4 +97,4 @@ Guidelines:
 
 ## Additional information
 
-See `ARCHITECTURE.md` and `TZ.md` for detailed design and requirements.
+See `ARCHITECTURE.md` for design notes.

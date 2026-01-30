@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../core/nodes.dart';
 
+/// Discrete actions emitted by [SceneController] for app-level undo/redo.
 enum ActionType {
   move,
   selectMarquee,
@@ -15,6 +16,7 @@ enum ActionType {
   erase,
 }
 
+/// A committed action with stable [actionId] and affected [nodeIds].
 class ActionCommitted {
   const ActionCommitted({
     required this.actionId,
@@ -31,6 +33,7 @@ class ActionCommitted {
   final Map<String, Object?>? payload;
 }
 
+/// Request from the engine to edit a [TextNode] at [position].
 class EditTextRequested {
   const EditTextRequested({
     required this.nodeId,

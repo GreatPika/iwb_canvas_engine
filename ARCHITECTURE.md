@@ -1,6 +1,6 @@
 # Architecture Overview
 
-This document describes the intended architecture for `iwb_canvas_engine` v1.0. It complements the requirements in `TZ.md` and the quick-start rules in `AGENTS.md`.
+This document describes the intended architecture for `iwb_canvas_engine` v1.0.
 
 ## Goals
 
@@ -46,13 +46,14 @@ Common base properties:
 - `opacity`, `isVisible`, `isSelectable`, `isLocked`, `isDeletable`, `isTransformable`
 
 Position semantics:
+
 - For box-based nodes (image/text/rect), `position` is the **center** of the node.
 - For stroke/line, points are stored in **scene coordinates**; `position` is derived as the bounding box center, and setting it translates all points.
 
 Node types:
 
 - `ImageNode`: references `imageId` and size
-- `TextNode`: text + minimal style (see `TZ.md` Appendix A)
+- `TextNode`: text + minimal style (font size, color, alignment, bold/italic/underline, optional fontFamily/maxWidth/lineHeight)
 - `StrokeNode`: polyline + style
 - `LineNode`: start/end + style
 - `RectNode`: basic rectangle (selection + example)

@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+/// Default values used by the engine for palettes and tool settings.
 class SceneDefaults {
   static const List<Color> penColors = <Color>[
     Color(0xFF000000),

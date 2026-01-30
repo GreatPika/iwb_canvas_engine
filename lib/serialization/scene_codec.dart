@@ -6,6 +6,7 @@ import 'package:path_drawing/path_drawing.dart';
 import '../core/scene.dart';
 import '../core/nodes.dart';
 
+/// Thrown when scene JSON fails schema validation.
 class SceneJsonFormatException implements FormatException {
   SceneJsonFormatException(this.message, [this.source]);
 
@@ -22,12 +23,18 @@ class SceneJsonFormatException implements FormatException {
   String toString() => 'SceneJsonFormatException: $message';
 }
 
+/// Current JSON schema version supported by this package.
 const int schemaVersion = 1;
 
+/// Encodes [scene] to a JSON string.
 String encodeSceneToJson(Scene scene) {
   return jsonEncode(encodeScene(scene));
 }
 
+/// Decodes a [Scene] from a JSON string.
+///
+/// Throws [SceneJsonFormatException] when the JSON is invalid or fails schema
+/// validation.
 Scene decodeSceneFromJson(String json) {
   try {
     final raw = jsonDecode(json);
@@ -42,6 +49,7 @@ Scene decodeSceneFromJson(String json) {
   }
 }
 
+/// Encodes [scene] into a JSON-serializable map.
 Map<String, dynamic> encodeScene(Scene scene) {
   return <String, dynamic>{
     'schemaVersion': schemaVersion,
@@ -68,6 +76,9 @@ Map<String, dynamic> encodeScene(Scene scene) {
   };
 }
 
+/// Decodes a [Scene] from a JSON map (already parsed).
+///
+/// Throws [SceneJsonFormatException] when validation fails.
 Scene decodeScene(Map<String, dynamic> json) {
   final version = _requireInt(json, 'schemaVersion');
   if (version != schemaVersion) {

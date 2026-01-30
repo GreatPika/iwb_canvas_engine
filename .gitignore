@@ -29,3 +29,8 @@ migrate_working_dir/
 .flutter-plugins-dependencies
 /build/
 /coverage/
+
+# Internal project docs (kept out of git; see .pubignore for pub.dev packaging).
+AGENTS.md
+DEVELOPMENT_PLAN.md
+TZ.md

@@ -1,14 +1,20 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 
 import '../core/geometry.dart';
 import '../core/nodes.dart';
 import '../core/scene.dart';
 
+/// Resolves an [ImageNode.imageId] to a decoded [Image] instance.
 typedef ImageResolver = Image? Function(String imageId);
 
+/// A [CustomPainter] that renders a [Scene] to a Flutter [Canvas].
+///
+/// The painter expects all node geometry to be in scene coordinates and applies
+/// [Scene.camera] offset to render into view coordinates.
 class ScenePainter extends CustomPainter {
   ScenePainter({
     required this.scene,
@@ -19,7 +25,7 @@ class ScenePainter extends CustomPainter {
     this.selectionStrokeWidth = 1,
     this.gridStrokeWidth = 1,
     super.repaint,
-  });
+  }) : _repaint = repaint;
 
   final Scene scene;
   final ImageResolver imageResolver;
@@ -28,6 +34,7 @@ class ScenePainter extends CustomPainter {
   final Color selectionColor;
   final double selectionStrokeWidth;
   final double gridStrokeWidth;
+  final Listenable? _repaint;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -39,9 +46,14 @@ class ScenePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant ScenePainter oldDelegate) {
+    final usesRepaint = _repaint != null || oldDelegate._repaint != null;
+    if (!usesRepaint) {
+      return true;
+    }
+
     return oldDelegate.scene != scene ||
         oldDelegate.imageResolver != imageResolver ||
-        oldDelegate.selectedNodeIds != selectedNodeIds ||
+        !setEquals(oldDelegate.selectedNodeIds, selectedNodeIds) ||
         oldDelegate.selectionRect != selectionRect ||
         oldDelegate.selectionColor != selectionColor ||
         oldDelegate.selectionStrokeWidth != selectionStrokeWidth ||
