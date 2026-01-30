@@ -8,3 +8,4 @@ export 'input/pointer_input.dart';
 export 'input/scene_controller.dart';
 export 'render/scene_painter.dart';
 export 'serialization/scene_codec.dart';
+export 'view/scene_view.dart';

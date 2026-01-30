@@ -38,10 +38,10 @@
 
 ## Этап 5 — Публичный API и интеграция
 
-- [ ] `SceneController` как единый источник истины.
-- [ ] События: `ActionCommitted`, `EditTextRequested`, уведомление об изменениях.
-- [ ] `SceneView` (widget) + `CustomPaint` + `Listener`.
-- [ ] `ImageResolver` контракт: `imageId -> ui.Image`.
+- [x] `SceneController` как единый источник истины.
+- [x] События: `ActionCommitted`, `EditTextRequested`, уведомление об изменениях.
+- [x] `SceneView` (widget) + `CustomPaint` + `Listener`.
+- [x] `ImageResolver` контракт: `imageId -> ui.Image`.
 
 ## Этап 6 — Example приложение
 

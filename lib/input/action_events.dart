@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import '../core/nodes.dart';
 
 enum ActionType {
@@ -27,4 +29,16 @@ class ActionCommitted {
   final List<NodeId> nodeIds;
   final int timestampMs;
   final Map<String, Object?>? payload;
+}
+
+class EditTextRequested {
+  const EditTextRequested({
+    required this.nodeId,
+    required this.timestampMs,
+    required this.position,
+  });
+
+  final NodeId nodeId;
+  final int timestampMs;
+  final Offset position;
 }

@@ -56,6 +56,28 @@ CustomPaint(
 );
 ```
 
+### SceneView integration
+
+`SceneView` wires pointer input to `SceneController` and repaints via
+`ScenePainter`. The app provides an `ImageResolver` and listens to events.
+
+```dart
+final controller = SceneController(scene: scene);
+
+controller.actions.listen((event) {
+  // ActionCommitted for undo/redo integration.
+});
+
+controller.editTextRequests.listen((event) {
+  // Open a text editor for event.nodeId at event.position.
+});
+
+SceneView(
+  controller: controller,
+  imageResolver: (imageId) => null,
+);
+```
+
 ## Additional information
 
 See `ARCHITECTURE.md` and `TZ.md` for detailed design and requirements.

@@ -47,6 +47,8 @@ class SceneController extends ChangeNotifier {
 
   final StreamController<ActionCommitted> _actions =
       StreamController<ActionCommitted>.broadcast(sync: true);
+  final StreamController<EditTextRequested> _editTextRequests =
+      StreamController<EditTextRequested>.broadcast(sync: true);
   int _actionCounter = 0;
 
   int? _activePointerId;
@@ -69,6 +71,8 @@ class SceneController extends ChangeNotifier {
   int? _pendingLineTimestampMs;
 
   Stream<ActionCommitted> get actions => _actions.stream;
+  Stream<EditTextRequested> get editTextRequests =>
+      _editTextRequests.stream;
 
   Set<NodeId> get selectedNodeIds => Set.unmodifiable(_selectedNodeIds);
 
@@ -84,6 +88,7 @@ class SceneController extends ChangeNotifier {
   @override
   void dispose() {
     _actions.close();
+    _editTextRequests.close();
     super.dispose();
   }
 
@@ -198,6 +203,23 @@ class SceneController extends ChangeNotifier {
       _handleMoveModePointer(sample);
     } else {
       _handleDrawModePointer(sample);
+    }
+  }
+
+  void handlePointerSignal(PointerSignal signal) {
+    if (signal.type != PointerSignalType.doubleTap) return;
+    if (mode != CanvasMode.move) return;
+
+    final scenePoint = toScene(signal.position, scene.camera.offset);
+    final hit = hitTestTopNode(scene, scenePoint);
+    if (hit is TextNode) {
+      _editTextRequests.add(
+        EditTextRequested(
+          nodeId: hit.id,
+          timestampMs: signal.timestampMs,
+          position: signal.position,
+        ),
+      );
     }
   }
 
