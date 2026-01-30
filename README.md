@@ -1,19 +1,10 @@
-<!--
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# iwb_canvas_engine
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages).
+[![pub package](https://img.shields.io/pub/v/iwb_canvas_engine.svg)](https://pub.dev/packages/iwb_canvas_engine)
+[![CI](https://github.com/GreatPika/iwb_canvas_engine/actions/workflows/ci.yaml/badge.svg)](https://github.com/GreatPika/iwb_canvas_engine/actions/workflows/ci.yaml)
 
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages).
--->
-
-`iwb_canvas_engine` is a Flutter/Dart package for rendering and editing
-scene-based canvas content. It provides a scene model, rendering, hit-testing,
-and JSON serialization for drawing tools and whiteboard-style apps.
+Scene-based canvas engine for Flutter: model, rendering, input handling, and
+JSON serialization for drawing tools and whiteboard-style apps.
 
 ## Features
 
@@ -24,12 +15,18 @@ and JSON serialization for drawing tools and whiteboard-style apps.
 
 ## Getting started
 
-Requires Flutter stable and Dart compatible with the pinned SDK in
-`pubspec.yaml`.
+Add the dependency:
+
+```sh
+flutter pub add iwb_canvas_engine
+```
 
 ## Usage
 
 ```dart
+import 'package:flutter/material.dart';
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+
 final scene = Scene(
   layers: [
     Layer(nodes: [
@@ -78,6 +75,13 @@ SceneView(
 );
 ```
 
+## Serialization (JSON v1)
+
+```dart
+final json = encodeSceneToJson(controller.scene);
+final restored = decodeSceneFromJson(json);
+```
+
 ## API reference
 
 The package public surface is exported from `lib/iwb_canvas_engine.dart`
@@ -109,4 +113,4 @@ Guidelines:
 
 ## Additional information
 
-See `ARCHITECTURE.md` for design notes.
+See `ARCHITECTURE.md` for design notes and `example/` for a working app.
