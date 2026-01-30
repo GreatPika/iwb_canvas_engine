@@ -45,6 +45,10 @@ Common base properties:
 - `id`, `type`, `position`, `rotationDeg`, `scaleX`, `scaleY`
 - `opacity`, `isVisible`, `isSelectable`, `isLocked`, `isDeletable`, `isTransformable`
 
+Position semantics:
+- For box-based nodes (image/text/rect), `position` is the **center** of the node.
+- For stroke/line, points are stored in **scene coordinates**; `position` is derived as the bounding box center, and setting it translates all points.
+
 Node types:
 
 - `ImageNode`: references `imageId` and size

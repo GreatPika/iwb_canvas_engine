@@ -1,0 +1,132 @@
+import 'dart:math' as math;
+import 'dart:ui';
+
+Offset toScene(Offset viewPoint, Offset cameraOffset) {
+  return viewPoint + cameraOffset;
+}
+
+Offset toView(Offset scenePoint, Offset cameraOffset) {
+  return scenePoint - cameraOffset;
+}
+
+Offset rotatePoint(Offset point, Offset center, double degrees) {
+  final radians = degrees * math.pi / 180.0;
+  final cosA = math.cos(radians);
+  final sinA = math.sin(radians);
+  final translated = point - center;
+  final rotated = Offset(
+    translated.dx * cosA - translated.dy * sinA,
+    translated.dx * sinA + translated.dy * cosA,
+  );
+  return rotated + center;
+}
+
+Offset reflectPointVertical(Offset point, double axisX) {
+  final dx = axisX + (axisX - point.dx);
+  return Offset(dx, point.dy);
+}
+
+Rect aabbFromPoints(Iterable<Offset> points) {
+  final iterator = points.iterator;
+  if (!iterator.moveNext()) {
+    return Rect.zero;
+  }
+  var minX = iterator.current.dx;
+  var maxX = iterator.current.dx;
+  var minY = iterator.current.dy;
+  var maxY = iterator.current.dy;
+  while (iterator.moveNext()) {
+    final p = iterator.current;
+    if (p.dx < minX) minX = p.dx;
+    if (p.dx > maxX) maxX = p.dx;
+    if (p.dy < minY) minY = p.dy;
+    if (p.dy > maxY) maxY = p.dy;
+  }
+  return Rect.fromLTRB(minX, minY, maxX, maxY);
+}
+
+Rect aabbForTransformedRect({
+  required Rect localRect,
+  required Offset position,
+  required double rotationDeg,
+  required double scaleX,
+  required double scaleY,
+}) {
+  final corners = <Offset>[
+    Offset(localRect.left, localRect.top),
+    Offset(localRect.right, localRect.top),
+    Offset(localRect.right, localRect.bottom),
+    Offset(localRect.left, localRect.bottom),
+  ];
+
+  final scaled = corners
+      .map((c) => Offset(c.dx * scaleX, c.dy * scaleY))
+      .toList(growable: false);
+
+  final rotated = rotationDeg == 0
+      ? scaled
+      : scaled
+          .map((c) => rotatePoint(c, Offset.zero, rotationDeg))
+          .toList(growable: false);
+
+  final translated = rotated
+      .map((c) => c + position)
+      .toList(growable: false);
+
+  return aabbFromPoints(translated);
+}
+
+double distancePointToSegment(Offset point, Offset a, Offset b) {
+  final ab = b - a;
+  final ap = point - a;
+  final abLen2 = ab.dx * ab.dx + ab.dy * ab.dy;
+  if (abLen2 == 0) {
+    return (point - a).distance;
+  }
+  var t = (ap.dx * ab.dx + ap.dy * ab.dy) / abLen2;
+  if (t < 0) t = 0;
+  if (t > 1) t = 1;
+  final projection = Offset(a.dx + ab.dx * t, a.dy + ab.dy * t);
+  return (point - projection).distance;
+}
+
+bool segmentsIntersect(Offset a1, Offset a2, Offset b1, Offset b2) {
+  int orientation(Offset p, Offset q, Offset r) {
+    final val = (q.dy - p.dy) * (r.dx - q.dx) -
+        (q.dx - p.dx) * (r.dy - q.dy);
+    if (val == 0) return 0;
+    return val > 0 ? 1 : 2;
+  }
+
+  bool onSegment(Offset p, Offset q, Offset r) {
+    return q.dx <= math.max(p.dx, r.dx) &&
+        q.dx >= math.min(p.dx, r.dx) &&
+        q.dy <= math.max(p.dy, r.dy) &&
+        q.dy >= math.min(p.dy, r.dy);
+  }
+
+  final o1 = orientation(a1, a2, b1);
+  final o2 = orientation(a1, a2, b2);
+  final o3 = orientation(b1, b2, a1);
+  final o4 = orientation(b1, b2, a2);
+
+  if (o1 != o2 && o3 != o4) return true;
+
+  if (o1 == 0 && onSegment(a1, b1, a2)) return true;
+  if (o2 == 0 && onSegment(a1, b2, a2)) return true;
+  if (o3 == 0 && onSegment(b1, a1, b2)) return true;
+  if (o4 == 0 && onSegment(b1, a2, b2)) return true;
+
+  return false;
+}
+
+double distanceSegmentToSegment(Offset a1, Offset a2, Offset b1, Offset b2) {
+  if (segmentsIntersect(a1, a2, b1, b2)) {
+    return 0;
+  }
+  final d1 = distancePointToSegment(a1, b1, b2);
+  final d2 = distancePointToSegment(a2, b1, b2);
+  final d3 = distancePointToSegment(b1, a1, a2);
+  final d4 = distancePointToSegment(b2, a1, a2);
+  return math.min(math.min(d1, d2), math.min(d3, d4));
+}
