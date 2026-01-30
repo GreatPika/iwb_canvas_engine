@@ -78,6 +78,17 @@ SceneView(
 );
 ```
 
+### ImageResolver and constraints
+
+`ImageResolver` maps `imageId` from `ImageNode` to a `ui.Image` instance. It is
+called during painting, so keep it fast and side-effect free.
+
+Guidelines:
+
+- Return `null` if the image is not ready; the painter will render a placeholder.
+- Preload images in the app layer and cache the `ui.Image` objects.
+- Avoid async work in the resolver; resolve before repainting.
+
 ## Additional information
 
 See `ARCHITECTURE.md` and `TZ.md` for detailed design and requirements.
