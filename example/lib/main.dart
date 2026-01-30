@@ -77,6 +77,16 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     final hasSelection = _controller.selectedNodeIds.isNotEmpty;
     final isDrawMode = _controller.mode == CanvasMode.draw;
     final theme = Theme.of(context);
+    final selectedTextNodes = _selectedTextNodes();
+    final hasTextSelection = selectedTextNodes.isNotEmpty;
+    final primaryTextNode =
+        hasTextSelection ? selectedTextNodes.first : null;
+    final textColor = primaryTextNode?.color ?? scene.palette.penColors.first;
+    final textAlign = primaryTextNode?.align ?? TextAlign.left;
+    final textFontSize = primaryTextNode?.fontSize ?? 24;
+    final lineHeightMultiplier = primaryTextNode == null || textFontSize == 0
+        ? 1.0
+        : (primaryTextNode.lineHeight ?? textFontSize) / textFontSize;
 
     final cameraX = _controller.scene.camera.offset.dx;
 
@@ -187,6 +197,114 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                 ],
               ),
             ),
+            if (hasTextSelection)
+              _ToolbarGroup(
+                label: 'Text',
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 220,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Size: ${textFontSize.toStringAsFixed(0)}',
+                            style: theme.textTheme.labelMedium,
+                          ),
+                          Slider(
+                            value: textFontSize.clamp(10, 72).toDouble(),
+                            min: 10,
+                            max: 72,
+                            divisions: 62,
+                            label: textFontSize.toStringAsFixed(0),
+                            onChanged: _setSelectedTextFontSize,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          tooltip: 'Bold',
+                          onPressed: _toggleSelectedTextBold,
+                          isSelected: primaryTextNode?.isBold ?? false,
+                          icon: const Icon(Icons.format_bold),
+                        ),
+                        IconButton(
+                          tooltip: 'Italic',
+                          onPressed: _toggleSelectedTextItalic,
+                          isSelected: primaryTextNode?.isItalic ?? false,
+                          icon: const Icon(Icons.format_italic),
+                        ),
+                        IconButton(
+                          tooltip: 'Underline',
+                          onPressed: _toggleSelectedTextUnderline,
+                          isSelected: primaryTextNode?.isUnderline ?? false,
+                          icon: const Icon(Icons.format_underline),
+                        ),
+                        const SizedBox(width: 8),
+                        SegmentedButton<TextAlign>(
+                          segments: const [
+                            ButtonSegment(
+                              value: TextAlign.left,
+                              icon: Icon(Icons.format_align_left),
+                              label: Text('Left'),
+                            ),
+                            ButtonSegment(
+                              value: TextAlign.center,
+                              icon: Icon(Icons.format_align_center),
+                              label: Text('Center'),
+                            ),
+                            ButtonSegment(
+                              value: TextAlign.right,
+                              icon: Icon(Icons.format_align_right),
+                              label: Text('Right'),
+                            ),
+                          ],
+                          selected: {textAlign},
+                          onSelectionChanged: (value) {
+                            if (value.isEmpty) return;
+                            _setSelectedTextAlign(value.first);
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    _ColorPalette(
+                      colors: scene.palette.penColors,
+                      selected: textColor,
+                      onSelected: _setSelectedTextColor,
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: 220,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Line height: ${lineHeightMultiplier.toStringAsFixed(2)}',
+                            style: theme.textTheme.labelMedium,
+                          ),
+                          Slider(
+                            value: lineHeightMultiplier
+                                .clamp(0.8, 2.0)
+                                .toDouble(),
+                            min: 0.8,
+                            max: 2.0,
+                            divisions: 12,
+                            label: lineHeightMultiplier.toStringAsFixed(2),
+                            onChanged: _setSelectedTextLineHeight,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             _ToolbarGroup(
               label: 'Samples',
               child: FilledButton.icon(
@@ -309,6 +427,29 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     return Scene(layers: [Layer()]);
   }
 
+  List<TextNode> _selectedTextNodes() {
+    final selectedIds = _controller.selectedNodeIds;
+    if (selectedIds.isEmpty) return const <TextNode>[];
+    final nodes = <TextNode>[];
+    for (final layer in _controller.scene.layers) {
+      for (final node in layer.nodes) {
+        if (node is TextNode && selectedIds.contains(node.id)) {
+          nodes.add(node);
+        }
+      }
+    }
+    return nodes;
+  }
+
+  void _updateSelectedTextNodes(void Function(TextNode node) update) {
+    final nodes = _selectedTextNodes();
+    if (nodes.isEmpty) return;
+    for (final node in nodes) {
+      update(node);
+    }
+    _controller.notifySceneChanged();
+  }
+
   void _addSampleObjects() {
     final scene = _controller.scene;
     final layer = _ensureContentLayer(scene);
@@ -375,6 +516,57 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   void _setDrawColor(Color color) {
     if (_controller.drawColor == color) return;
     _controller.setDrawColor(color);
+  }
+
+  void _setSelectedTextColor(Color color) {
+    _updateSelectedTextNodes((node) {
+      node.color = color;
+    });
+  }
+
+  void _setSelectedTextAlign(TextAlign align) {
+    _updateSelectedTextNodes((node) {
+      node.align = align;
+    });
+  }
+
+  void _setSelectedTextFontSize(double value) {
+    _updateSelectedTextNodes((node) {
+      final lineHeightRatio = node.lineHeight == null
+          ? null
+          : node.lineHeight! / node.fontSize;
+      node.fontSize = value;
+      if (lineHeightRatio != null) {
+        node.lineHeight = value * lineHeightRatio;
+      }
+    });
+  }
+
+  void _setSelectedTextLineHeight(double multiplier) {
+    _updateSelectedTextNodes((node) {
+      node.lineHeight = node.fontSize * multiplier;
+    });
+  }
+
+  void _toggleSelectedTextBold() {
+    final nodes = _selectedTextNodes();
+    if (nodes.isEmpty) return;
+    final next = !nodes.first.isBold;
+    _updateSelectedTextNodes((node) => node.isBold = next);
+  }
+
+  void _toggleSelectedTextItalic() {
+    final nodes = _selectedTextNodes();
+    if (nodes.isEmpty) return;
+    final next = !nodes.first.isItalic;
+    _updateSelectedTextNodes((node) => node.isItalic = next);
+  }
+
+  void _toggleSelectedTextUnderline() {
+    final nodes = _selectedTextNodes();
+    if (nodes.isEmpty) return;
+    final next = !nodes.first.isUnderline;
+    _updateSelectedTextNodes((node) => node.isUnderline = next);
   }
 
   void _setBackgroundColor(Color color) {

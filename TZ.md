@@ -637,6 +637,11 @@ Future format changes must bump the version and use a migration **in the app** o
 * `maxWidth: number` (for wrapping)
 * `lineHeight: number`
 
+**Layout note:** `TextNode.size` defines the layout box used for alignment,
+hit-testing, and selection bounds. The engine does not auto-resize this box
+when text style changes. Apps may recompute and update `size` if they want
+auto-fit behavior.
+
 ---
 
 ## A5) PathNode JSON representation

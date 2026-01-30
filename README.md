@@ -78,6 +78,12 @@ SceneView(
 );
 ```
 
+### Text layout
+
+`TextNode.size` is the layout box used for alignment, hit-testing, and
+selection bounds. The engine does not auto-resize this box when text style
+changes. If you need auto-fit behavior, recompute and update `size` in the app.
+
 ### ImageResolver and constraints
 
 `ImageResolver` maps `imageId` from `ImageNode` to a `ui.Image` instance. It is
