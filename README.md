@@ -11,29 +11,51 @@ and the Flutter guide for
 [developing packages and plugins](https://flutter.dev/to/develop-packages).
 -->
 
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
+`iwb_canvas_engine` is a Flutter/Dart package for rendering and editing
+scene-based canvas content. It provides a scene model, rendering, hit-testing,
+and JSON serialization for drawing tools and whiteboard-style apps.
 
 ## Features
 
-TODO: List what your package can do. Maybe include images, gifs, or videos.
+- Scene model with layers and nodes (image, text, stroke, line, rect, path).
+- Rendering via `ScenePainter` with background and grid.
+- Hit-testing for selection and interaction.
+- JSON v1 import/export with validation.
 
 ## Getting started
 
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
+Requires Flutter stable and Dart compatible with the pinned SDK in
+`pubspec.yaml`.
 
 ## Usage
 
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder.
-
 ```dart
-const like = 'sample';
+final scene = Scene(
+  layers: [
+    Layer(nodes: [
+      RectNode(
+        id: 'rect-1',
+        size: const Size(120, 80),
+        fillColor: const Color(0xFF2196F3),
+      )..position = const Offset(120, 120),
+      PathNode(
+        id: 'path-1',
+        svgPathData: 'M0 0 H40 V30 H0 Z M12 8 H28 V22 H12 Z',
+        fillRule: PathFillRule.evenOdd,
+        fillColor: const Color(0xFF4CAF50),
+      )..position = const Offset(260, 120),
+    ]),
+  ],
+);
+
+CustomPaint(
+  painter: ScenePainter(
+    scene: scene,
+    imageResolver: (_) => null,
+  ),
+);
 ```
 
 ## Additional information
 
-TODO: Tell users more about the package: where to find more information, how to
-contribute to the package, how to file issues, what response they can expect
-from the package authors, and more.
+See `ARCHITECTURE.md` and `TZ.md` for detailed design and requirements.

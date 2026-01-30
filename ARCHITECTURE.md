@@ -56,6 +56,7 @@ Node types:
 - `StrokeNode`: polyline + style
 - `LineNode`: start/end + style
 - `RectNode`: basic rectangle (selection + example)
+- `PathNode`: SVG path data + fill/stroke + fill rule (nonZero/evenOdd)
 
 ### Selection
 
@@ -121,6 +122,7 @@ Emit `ActionCommitted` on:
 
 - Rotated rectangles use AABB of transformed corners.
 - Lines/strokes use distance-to-segment with thickness tolerance.
+- Path nodes use geometry hit-test via `Path.contains` with inverse transforms.
 - Group rotate/flip uses center of union AABB of selected nodes.
 
 ## Serialization (JSON v1)
@@ -128,6 +130,7 @@ Emit `ActionCommitted` on:
 - `schemaVersion = 1`.
 - `ImageNode` stores only `imageId` and sizes.
 - `TextNode` stores minimal style fields.
+- `PathNode` stores `svgPathData`, fill/stroke colors, stroke width, and fill rule.
 - Export/import must validate and produce clear errors on invalid input.
 
 ## Events
