@@ -73,4 +73,10 @@ void main() {
     expect(hit, isTrue);
     expect(miss, isFalse);
   });
+
+  test('hitTestRect uses rect bounds', () {
+    const rect = Rect.fromLTWH(0, 0, 10, 20);
+    expect(hitTestRect(const Offset(5, 5), rect), isTrue);
+    expect(hitTestRect(const Offset(-1, 5), rect), isFalse);
+  });
 }

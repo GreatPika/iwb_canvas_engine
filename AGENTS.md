@@ -16,9 +16,9 @@ A Flutter/Dart canvas engine package with scene model, rendering, input handling
 
 ## Current status
 
-- Phase: 2 (JSON serialization next).
-- Working set: core model + math + hit-test + tests in place; plan updated.
-- Next focus: implement JSON v1 export/import and validation.
+- Phase: 3 (rendering next).
+- Working set: core model + math + hit-test + JSON v1 serialization + tests in place.
+- Next focus: implement rendering (`ScenePainter`) and node drawing.
 
 ## Rules for this repo
 
