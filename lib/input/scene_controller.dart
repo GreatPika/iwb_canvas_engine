@@ -112,6 +112,87 @@ class SceneController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void rotateSelection({required bool clockwise, int? timestampMs}) {
+    final nodes = _selectedTransformableNodesInSceneOrder();
+    if (nodes.isEmpty) return;
+
+    final center = _selectionCenter(nodes);
+    final delta = clockwise ? 90.0 : -90.0;
+    for (final node in nodes) {
+      node.position = rotatePoint(node.position, center, delta);
+      node.rotationDeg += delta;
+    }
+
+    _emitAction(
+      ActionType.rotate,
+      nodes.map((node) => node.id).toList(growable: false),
+      timestampMs ?? DateTime.now().millisecondsSinceEpoch,
+      payload: <String, Object?>{'clockwise': clockwise},
+    );
+    notifyListeners();
+  }
+
+  void flipSelectionVertical({int? timestampMs}) {
+    final nodes = _selectedTransformableNodesInSceneOrder();
+    if (nodes.isEmpty) return;
+
+    final center = _selectionCenter(nodes);
+    for (final node in nodes) {
+      node.position = reflectPointVertical(node.position, center.dx);
+      node.scaleX = -node.scaleX;
+    }
+
+    _emitAction(
+      ActionType.flip,
+      nodes.map((node) => node.id).toList(growable: false),
+      timestampMs ?? DateTime.now().millisecondsSinceEpoch,
+    );
+    notifyListeners();
+  }
+
+  void deleteSelection({int? timestampMs}) {
+    if (_selectedNodeIds.isEmpty) return;
+    final deletableIds = <NodeId>[];
+
+    for (final layer in scene.layers) {
+      layer.nodes.removeWhere((node) {
+        if (!_selectedNodeIds.contains(node.id)) return false;
+        if (!node.isDeletable) return false;
+        deletableIds.add(node.id);
+        return true;
+      });
+    }
+
+    if (deletableIds.isEmpty) return;
+    _selectedNodeIds.removeAll(deletableIds);
+    _emitAction(
+      ActionType.delete,
+      deletableIds,
+      timestampMs ?? DateTime.now().millisecondsSinceEpoch,
+    );
+    notifyListeners();
+  }
+
+  void clearScene({int? timestampMs}) {
+    final clearedIds = <NodeId>[];
+    for (final layer in scene.layers) {
+      if (layer.isBackground) continue;
+      for (final node in layer.nodes) {
+        clearedIds.add(node.id);
+      }
+      layer.nodes.clear();
+    }
+
+    if (clearedIds.isEmpty) return;
+    _selectedNodeIds.clear();
+    _emitAction(
+      ActionType.clear,
+      clearedIds,
+      timestampMs ?? DateTime.now().millisecondsSinceEpoch,
+    );
+    notifyListeners();
+  }
+
   void handlePointer(PointerSample sample) {
     if (mode == CanvasMode.move) {
       _handleMoveModePointer(sample);
@@ -641,6 +722,29 @@ class SceneController extends ChangeNotifier {
       }
     }
     return ids;
+  }
+
+  List<SceneNode> _selectedTransformableNodesInSceneOrder() {
+    final nodes = <SceneNode>[];
+    if (_selectedNodeIds.isEmpty) return nodes;
+
+    for (final layer in scene.layers) {
+      for (final node in layer.nodes) {
+        if (!_selectedNodeIds.contains(node.id)) continue;
+        if (!node.isTransformable) continue;
+        nodes.add(node);
+      }
+    }
+    return nodes;
+  }
+
+  Offset _selectionCenter(List<SceneNode> nodes) {
+    Rect? bounds;
+    for (final node in nodes) {
+      final aabb = node.aabb;
+      bounds = bounds == null ? aabb : bounds.expandToInclude(aabb);
+    }
+    return bounds?.center ?? Offset.zero;
   }
 
   bool _setSelection(Iterable<NodeId> nodeIds, {bool notify = true}) {

@@ -34,7 +34,7 @@
 - [x] Обработка pointer down/move/up, double‑tap.
 - [x] Move режим: выбор, drag‑move, marquee‑selection.
 - [x] Draw режим: pen, highlighter, line (drag + two‑tap), eraser.
-- [ ] Соблюдение границ действий и `ActionCommitted`.
+- [x] Соблюдение границ действий и `ActionCommitted`.
 
 ## Этап 5 — Публичный API и интеграция
 
