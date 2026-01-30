@@ -31,7 +31,7 @@
 
 ## Этап 4 — Ввод и инструменты
 
-- [ ] Обработка pointer down/move/up, double‑tap.
+- [x] Обработка pointer down/move/up, double‑tap.
 - [ ] Move режим: выбор, drag‑move, marquee‑selection.
 - [ ] Draw режим: pen, highlighter, line (drag + two‑tap), eraser.
 - [ ] Соблюдение границ действий и `ActionCommitted`.
