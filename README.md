@@ -6,6 +6,11 @@
 Scene-based canvas engine for Flutter: model, rendering, input handling, and
 JSON serialization for drawing tools and whiteboard-style apps.
 
+Live demo and docs:
+
+- Web demo: https://greatpika.github.io/iwb_canvas_engine/demo/
+- API reference: https://greatpika.github.io/iwb_canvas_engine/api/
+
 ## Features
 
 - Scene model with layers and nodes (image, text, stroke, line, rect, path).

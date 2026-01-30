@@ -1,3 +1,8 @@
+## 0.0.3
+
+- Publish web demo (Flutter Web) to GitHub Pages.
+- Improve README links for pub.dev.
+
 ## 0.0.2
 
 - Declare supported platforms on pub.dev.
