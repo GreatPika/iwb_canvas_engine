@@ -25,3 +25,4 @@ A Flutter/Dart canvas engine package with scene model, rendering, input handling
 - Single source of truth: no sync glue or duplicated state between modules.
 - Group is ephemeral: no stored Group node.
 - Always mark the checkbox in `DEVELOPMENT_PLAN.md` after completing an item.
+- Always run the linter and tests after changes, and report the results.

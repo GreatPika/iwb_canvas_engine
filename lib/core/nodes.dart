@@ -1,8 +1,12 @@
 import 'dart:ui';
 
+import 'package:path_drawing/path_drawing.dart';
+
 import 'geometry.dart';
 
-enum NodeType { image, text, stroke, line, rect }
+enum NodeType { image, text, stroke, line, rect, path }
+
+enum PathFillRule { nonZero, evenOdd }
 
 typedef NodeId = String;
 
@@ -68,19 +72,19 @@ class ImageNode extends SceneNode {
   set position(Offset value) => _position = value;
 
   Rect get _localRect => Rect.fromCenter(
-        center: Offset.zero,
-        width: size.width,
-        height: size.height,
-      );
+    center: Offset.zero,
+    width: size.width,
+    height: size.height,
+  );
 
   @override
   Rect get aabb => aabbForTransformedRect(
-        localRect: _localRect,
-        position: position,
-        rotationDeg: rotationDeg,
-        scaleX: scaleX,
-        scaleY: scaleY,
-      );
+    localRect: _localRect,
+    position: position,
+    rotationDeg: rotationDeg,
+    scaleX: scaleX,
+    scaleY: scaleY,
+  );
 }
 
 class TextNode extends SceneNode {
@@ -128,19 +132,19 @@ class TextNode extends SceneNode {
   set position(Offset value) => _position = value;
 
   Rect get _localRect => Rect.fromCenter(
-        center: Offset.zero,
-        width: size.width,
-        height: size.height,
-      );
+    center: Offset.zero,
+    width: size.width,
+    height: size.height,
+  );
 
   @override
   Rect get aabb => aabbForTransformedRect(
-        localRect: _localRect,
-        position: position,
-        rotationDeg: rotationDeg,
-        scaleX: scaleX,
-        scaleY: scaleY,
-      );
+    localRect: _localRect,
+    position: position,
+    rotationDeg: rotationDeg,
+    scaleX: scaleX,
+    scaleY: scaleY,
+  );
 }
 
 class StrokeNode extends SceneNode {
@@ -158,8 +162,8 @@ class StrokeNode extends SceneNode {
     super.isLocked,
     super.isDeletable,
     super.isTransformable,
-  })  : points = List<Offset>.from(points),
-        super(type: NodeType.stroke);
+  }) : points = List<Offset>.from(points),
+       super(type: NodeType.stroke);
 
   final List<Offset> points;
   double thickness;
@@ -261,17 +265,91 @@ class RectNode extends SceneNode {
   set position(Offset value) => _position = value;
 
   Rect get _localRect => Rect.fromCenter(
-        center: Offset.zero,
-        width: size.width,
-        height: size.height,
-      );
+    center: Offset.zero,
+    width: size.width,
+    height: size.height,
+  );
 
   @override
   Rect get aabb => aabbForTransformedRect(
-        localRect: _localRect,
-        position: position,
-        rotationDeg: rotationDeg,
-        scaleX: scaleX,
-        scaleY: scaleY,
-      );
+    localRect: _localRect,
+    position: position,
+    rotationDeg: rotationDeg,
+    scaleX: scaleX,
+    scaleY: scaleY,
+  );
+}
+
+class PathNode extends SceneNode {
+  PathNode({
+    required super.id,
+    required this.svgPathData,
+    this.fillColor,
+    this.strokeColor,
+    this.strokeWidth = 1,
+    this.fillRule = PathFillRule.nonZero,
+    super.rotationDeg,
+    super.scaleX,
+    super.scaleY,
+    super.opacity,
+    super.isVisible,
+    super.isSelectable,
+    super.isLocked,
+    super.isDeletable,
+    super.isTransformable,
+  }) : super(type: NodeType.path);
+
+  String svgPathData;
+  Color? fillColor;
+  Color? strokeColor;
+  double strokeWidth;
+  PathFillRule fillRule;
+  Offset _position = Offset.zero;
+
+  @override
+  Offset get position => _position;
+
+  @override
+  set position(Offset value) => _position = value;
+
+  Path? buildLocalPath() {
+    if (svgPathData.trim().isEmpty) return null;
+    try {
+      final path = parseSvgPathData(svgPathData);
+      final bounds = path.getBounds();
+      if (bounds.isEmpty) return null;
+      final centered = path.shift(-bounds.center);
+      centered.fillType = fillRule == PathFillRule.evenOdd
+          ? PathFillType.evenOdd
+          : PathFillType.nonZero;
+      return centered;
+    } on Exception {
+      return null;
+    }
+  }
+
+  Rect? _pathBounds() {
+    final path = buildLocalPath();
+    if (path == null) return null;
+    final bounds = path.getBounds();
+    return bounds.isEmpty ? null : bounds;
+  }
+
+  @override
+  Rect get aabb {
+    final bounds = _pathBounds();
+    if (bounds == null) return Rect.zero;
+    final localRect = Rect.fromCenter(
+      center: Offset.zero,
+      width: bounds.width,
+      height: bounds.height,
+    );
+    return aabbForTransformedRect(
+      localRect: localRect,
+      position: position,
+      rotationDeg: rotationDeg,
+      scaleX: scaleX,
+      scaleY: scaleY,
+    );
+  }
 }

@@ -35,47 +35,49 @@ void main() {
 }
 
 Scene _buildScene() {
-  final image = ImageNode(
-    id: 'img-1',
-    imageId: 'asset:sample',
-    size: const Size(100, 80),
-    naturalSize: const Size(200, 160),
-  )
-    ..position = const Offset(10, 20)
-    ..rotationDeg = 90
-    ..scaleX = 1
-    ..scaleY = -1
-    ..opacity = 0.8
-    ..isVisible = true
-    ..isSelectable = true
-    ..isLocked = false
-    ..isDeletable = true
-    ..isTransformable = true;
+  final image =
+      ImageNode(
+          id: 'img-1',
+          imageId: 'asset:sample',
+          size: const Size(100, 80),
+          naturalSize: const Size(200, 160),
+        )
+        ..position = const Offset(10, 20)
+        ..rotationDeg = 90
+        ..scaleX = 1
+        ..scaleY = -1
+        ..opacity = 0.8
+        ..isVisible = true
+        ..isSelectable = true
+        ..isLocked = false
+        ..isDeletable = true
+        ..isTransformable = true;
 
-  final text = TextNode(
-    id: 'text-1',
-    text: 'Hello',
-    size: const Size(120, 30),
-    fontSize: 24,
-    color: const Color(0xFF112233),
-    align: TextAlign.center,
-    isBold: true,
-    isItalic: false,
-    isUnderline: true,
-    fontFamily: 'Roboto',
-    maxWidth: 200,
-    lineHeight: 1.2,
-  )
-    ..position = const Offset(50, 50)
-    ..rotationDeg = -90
-    ..scaleX = 1.5
-    ..scaleY = 0.5
-    ..opacity = 0.9
-    ..isVisible = true
-    ..isSelectable = true
-    ..isLocked = false
-    ..isDeletable = true
-    ..isTransformable = true;
+  final text =
+      TextNode(
+          id: 'text-1',
+          text: 'Hello',
+          size: const Size(120, 30),
+          fontSize: 24,
+          color: const Color(0xFF112233),
+          align: TextAlign.center,
+          isBold: true,
+          isItalic: false,
+          isUnderline: true,
+          fontFamily: 'Roboto',
+          maxWidth: 200,
+          lineHeight: 1.2,
+        )
+        ..position = const Offset(50, 50)
+        ..rotationDeg = -90
+        ..scaleX = 1.5
+        ..scaleY = 0.5
+        ..opacity = 0.9
+        ..isVisible = true
+        ..isSelectable = true
+        ..isLocked = false
+        ..isDeletable = true
+        ..isTransformable = true;
 
   final stroke = StrokeNode(
     id: 'stroke-1',
@@ -100,7 +102,16 @@ Scene _buildScene() {
     strokeWidth: 2,
   )..position = const Offset(-10, -20);
 
-  final layer = Layer(nodes: [image, text, stroke, line, rect]);
+  final path = PathNode(
+    id: 'path-1',
+    svgPathData: 'M0 0 H40 V30 H0 Z M12 8 H28 V22 H12 Z',
+    fillColor: const Color(0xFF4CAF50),
+    strokeColor: const Color(0xFF1B5E20),
+    strokeWidth: 2,
+    fillRule: PathFillRule.evenOdd,
+  )..position = const Offset(100, -40);
+
+  final layer = Layer(nodes: [image, text, stroke, line, rect, path]);
 
   return Scene(
     layers: [layer],

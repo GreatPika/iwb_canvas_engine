@@ -1,3 +1,5 @@
+<!-- markdownlint-disable MD025 -->
+
 # Техническое задание для Codex
 
 ## Flutter-движок холста (аналог роли konva.js)

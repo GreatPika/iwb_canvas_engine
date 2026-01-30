@@ -30,6 +30,12 @@ bool hitTestNode(Offset point, SceneNode node) {
     case NodeType.text:
     case NodeType.rect:
       return hitTestRect(point, node.aabb);
+    case NodeType.path:
+      final pathNode = node as PathNode;
+      final localPath = pathNode.buildLocalPath();
+      if (localPath == null) return false;
+      final localPoint = _toLocalPathPoint(point, pathNode);
+      return localPath.contains(localPoint);
     case NodeType.line:
       final line = node as LineNode;
       return hitTestLine(point, line.start, line.end, line.thickness);
@@ -37,4 +43,17 @@ bool hitTestNode(Offset point, SceneNode node) {
       final stroke = node as StrokeNode;
       return hitTestStroke(point, stroke.points, stroke.thickness);
   }
+}
+
+Offset _toLocalPathPoint(Offset point, PathNode node) {
+  var local = point - node.position;
+  if (node.rotationDeg != 0) {
+    local = rotatePoint(local, Offset.zero, -node.rotationDeg);
+  }
+  if (node.scaleX != 1 || node.scaleY != 1) {
+    final scaleX = node.scaleX == 0 ? 1 : node.scaleX;
+    final scaleY = node.scaleY == 0 ? 1 : node.scaleY;
+    local = Offset(local.dx / scaleX, local.dy / scaleY);
+  }
+  return local;
 }

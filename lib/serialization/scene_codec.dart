@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:ui';
 
+import 'package:path_drawing/path_drawing.dart';
+
 import '../core/scene.dart';
 import '../core/nodes.dart';
 
@@ -57,7 +59,9 @@ Map<String, dynamic> encodeScene(Scene scene) {
     },
     'palette': {
       'penColors': scene.palette.penColors.map(_colorToHex).toList(),
-      'backgroundColors': scene.palette.backgroundColors.map(_colorToHex).toList(),
+      'backgroundColors': scene.palette.backgroundColors
+          .map(_colorToHex)
+          .toList(),
       'gridSizes': scene.palette.gridSizes,
     },
     'layers': scene.layers.map(_encodeLayer).toList(),
@@ -97,12 +101,15 @@ Scene decodeScene(Map<String, dynamic> json) {
         .map((value) => _parseColor(_requireStringValue(value, 'penColors')))
         .toList(),
     backgroundColors: _requireList(paletteJson, 'backgroundColors')
-        .map((value) =>
-            _parseColor(_requireStringValue(value, 'backgroundColors')))
+        .map(
+          (value) =>
+              _parseColor(_requireStringValue(value, 'backgroundColors')),
+        )
         .toList(),
-    gridSizes: _requireList(paletteJson, 'gridSizes')
-        .map((value) => _requireDoubleValue(value, 'gridSizes'))
-        .toList(),
+    gridSizes: _requireList(
+      paletteJson,
+      'gridSizes',
+    ).map((value) => _requireDoubleValue(value, 'gridSizes')).toList(),
   );
 
   final layersJson = _requireList(json, 'layers');
@@ -136,20 +143,14 @@ Layer _decodeLayer(Map<String, dynamic> json) {
     }
     return _decodeNode(nodeJson);
   }).toList();
-  return Layer(
-    nodes: nodes,
-    isBackground: _requireBool(json, 'isBackground'),
-  );
+  return Layer(nodes: nodes, isBackground: _requireBool(json, 'isBackground'));
 }
 
 Map<String, dynamic> _encodeNode(SceneNode node) {
   final base = <String, dynamic>{
     'id': node.id,
     'type': _nodeTypeToString(node.type),
-    'position': {
-      'x': node.position.dx,
-      'y': node.position.dy,
-    },
+    'position': {'x': node.position.dx, 'y': node.position.dy},
     'rotationDeg': node.rotationDeg,
     'scaleX': node.scaleX,
     'scaleY': node.scaleY,
@@ -221,6 +222,17 @@ Map<String, dynamic> _encodeNode(SceneNode node) {
         if (rect.strokeColor != null)
           'strokeColor': _colorToHex(rect.strokeColor!),
       };
+    case NodeType.path:
+      final path = node as PathNode;
+      return {
+        ...base,
+        'svgPathData': path.svgPathData,
+        'fillRule': _pathFillRuleToString(path.fillRule),
+        'strokeWidth': path.strokeWidth,
+        if (path.fillColor != null) 'fillColor': _colorToHex(path.fillColor!),
+        if (path.strokeColor != null)
+          'strokeColor': _colorToHex(path.strokeColor!),
+      };
   }
 }
 
@@ -267,9 +279,10 @@ SceneNode _decodeNode(Map<String, dynamic> json) {
     case NodeType.stroke:
       node = StrokeNode(
         id: _requireString(json, 'id'),
-        points: _requireList(json, 'points')
-            .map((point) => _parsePoint(point, 'points'))
-            .toList(),
+        points: _requireList(
+          json,
+          'points',
+        ).map((point) => _parsePoint(point, 'points')).toList(),
         thickness: _requireDouble(json, 'thickness'),
         color: _parseColor(_requireString(json, 'color')),
       );
@@ -293,6 +306,19 @@ SceneNode _decodeNode(Map<String, dynamic> json) {
         fillColor: _optionalColor(json, 'fillColor'),
         strokeColor: _optionalColor(json, 'strokeColor'),
         strokeWidth: _requireDouble(json, 'strokeWidth'),
+      );
+      break;
+    case NodeType.path:
+      final svgPathData = _requireString(json, 'svgPathData');
+      _validateSvgPathData(svgPathData);
+      node = PathNode(
+        id: _requireString(json, 'id'),
+        svgPathData: svgPathData,
+        fillColor: _optionalColor(json, 'fillColor'),
+        strokeColor: _optionalColor(json, 'strokeColor'),
+        strokeWidth: _optionalDouble(json, 'strokeWidth') ?? 1,
+        fillRule:
+            _optionalPathFillRule(json, 'fillRule') ?? PathFillRule.nonZero,
       );
       break;
   }
@@ -323,6 +349,8 @@ String _nodeTypeToString(NodeType type) {
       return 'line';
     case NodeType.rect:
       return 'rect';
+    case NodeType.path:
+      return 'path';
   }
 }
 
@@ -338,8 +366,30 @@ NodeType _parseNodeType(String value) {
       return NodeType.line;
     case 'rect':
       return NodeType.rect;
+    case 'path':
+      return NodeType.path;
     default:
       throw SceneJsonFormatException('Unknown node type: $value.');
+  }
+}
+
+String _pathFillRuleToString(PathFillRule rule) {
+  switch (rule) {
+    case PathFillRule.nonZero:
+      return 'nonZero';
+    case PathFillRule.evenOdd:
+      return 'evenOdd';
+  }
+}
+
+PathFillRule _parsePathFillRule(String value) {
+  switch (value) {
+    case 'nonZero':
+      return PathFillRule.nonZero;
+    case 'evenOdd':
+      return PathFillRule.evenOdd;
+    default:
+      throw SceneJsonFormatException('Unknown fillRule: $value.');
   }
 }
 
@@ -406,13 +456,14 @@ Offset _parsePoint(Object value, String field) {
   if (value is! Map<String, dynamic>) {
     throw SceneJsonFormatException('$field must be an object with x/y.');
   }
-  return Offset(
-    _requireDouble(value, 'x'),
-    _requireDouble(value, 'y'),
-  );
+  return Offset(_requireDouble(value, 'x'), _requireDouble(value, 'y'));
 }
 
-Size? _optionalSize(Map<String, dynamic> json, String widthKey, String heightKey) {
+Size? _optionalSize(
+  Map<String, dynamic> json,
+  String widthKey,
+  String heightKey,
+) {
   final width = json[widthKey];
   final height = json[heightKey];
   if (width == null || height == null) return null;
@@ -438,6 +489,26 @@ double? _optionalDouble(Map<String, dynamic> json, String key) {
     throw SceneJsonFormatException('Field $key must be a number.');
   }
   return value.toDouble();
+}
+
+PathFillRule? _optionalPathFillRule(Map<String, dynamic> json, String key) {
+  final value = json[key];
+  if (value == null) return null;
+  if (value is! String) {
+    throw SceneJsonFormatException('Field $key must be a string.');
+  }
+  return _parsePathFillRule(value);
+}
+
+void _validateSvgPathData(String value) {
+  if (value.trim().isEmpty) {
+    throw SceneJsonFormatException('svgPathData must not be empty.');
+  }
+  try {
+    parseSvgPathData(value);
+  } on Exception {
+    throw SceneJsonFormatException('Invalid svgPathData.');
+  }
 }
 
 Map<String, dynamic> _requireMap(Map<String, dynamic> json, String key) {
