@@ -13,10 +13,12 @@ class CanvasExampleApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'IWB Canvas Engine Example',
+      debugShowCheckedModeBanner: false,
+      title: 'IWB Canvas Engine',
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: const Color(0xFF1565C0),
+        brightness: Brightness.light,
       ),
       home: const CanvasExampleScreen(),
     );
@@ -31,10 +33,6 @@ class CanvasExampleScreen extends StatefulWidget {
 }
 
 class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
-  static const double _cameraMinX = -400;
-  static const double _cameraMaxX = 400;
-  static const int _jsonPreviewMaxLines = 12;
-
   late final SceneController _controller;
   int _sampleSeed = 0;
   int _nodeSeed = 0;
@@ -47,7 +45,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   void initState() {
     super.initState();
     _controller = SceneController(
-      scene: _createScene(),
+      scene: Scene(layers: [Layer()]),
       pointerSettings: const PointerInputSettings(
         tapSlop: 16,
         doubleTapSlop: 32,
@@ -68,16 +66,39 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('IWB Canvas Engine Example')),
+      backgroundColor: const Color(0xFFF5F5F7),
       body: SafeArea(
         child: AnimatedBuilder(
           animation: _controller,
           builder: (context, _) {
-            return Column(
+            return Stack(
               children: [
-                _buildToolbar(context),
-                const Divider(height: 1),
-                Expanded(child: _buildCanvas()),
+                // 1. Основной холст
+                Positioned.fill(child: _buildCanvas()),
+
+                // 2. Индикатор камеры (сверху слева)
+                Positioned(top: 20, left: 20, child: _buildCameraIndicator()),
+
+                // 3. Контекстное меню для текста (появляется над нижней панелью)
+                if (_selectedTextNodes().isNotEmpty)
+                  Positioned(
+                    bottom: 120,
+                    left: 20,
+                    right: 20,
+                    child: _buildTextOptionsPanel(),
+                  ),
+
+                // 4. ГЛАВНАЯ НИЖНЯЯ ПАНЕЛЬ (DOCK)
+                Positioned(
+                  bottom: 20,
+                  left: 20,
+                  right: 20,
+                  child: _buildMainBottomBar(),
+                ),
+
+                // 5. Оверлей редактирования текста
+                if (_editingNodeId != null)
+                  _buildTextEditOverlay() ?? const SizedBox.shrink(),
               ],
             );
           },
@@ -86,364 +107,576 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     );
   }
 
-  Widget _buildToolbar(BuildContext context) {
-    final scene = _controller.scene;
-    final grid = scene.background.grid;
-    final hasSelection = _controller.selectedNodeIds.isNotEmpty;
-    final isDrawMode = _controller.mode == CanvasMode.draw;
-    final theme = Theme.of(context);
-    final selectedTextNodes = _selectedTextNodes();
-    final hasTextSelection = selectedTextNodes.isNotEmpty;
-    final primaryTextNode = hasTextSelection ? selectedTextNodes.first : null;
-    final textColor = primaryTextNode?.color ?? scene.palette.penColors.first;
-    final textAlign = primaryTextNode?.align ?? TextAlign.left;
-    final textFontSize = primaryTextNode?.fontSize ?? 24;
-    final lineHeightMultiplier = primaryTextNode == null || textFontSize == 0
-        ? 1.0
-        : (primaryTextNode.lineHeight ?? textFontSize) / textFontSize;
+  // --- UI СЕКЦИИ ---
 
+  Widget _buildCameraIndicator() {
     final cameraX = _controller.scene.camera.offset.dx;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.black12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.videocam_outlined, size: 18),
+          const SizedBox(width: 8),
+          Text(
+            "Camera X: ${cameraX.toStringAsFixed(0)}",
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+          ),
+        ],
+      ),
+    );
+  }
 
-    return Material(
-      elevation: 1,
-      color: theme.colorScheme.surface,
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Wrap(
-          spacing: 16,
-          runSpacing: 12,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            _ToolbarGroup(
-              label: 'Mode',
-              child: SegmentedButton<CanvasMode>(
-                segments: const [
-                  ButtonSegment(
-                    value: CanvasMode.move,
-                    label: Text('Move'),
-                    icon: Icon(Icons.open_with),
-                  ),
-                  ButtonSegment(
-                    value: CanvasMode.draw,
-                    label: Text('Draw'),
-                    icon: Icon(Icons.edit),
-                  ),
-                ],
-                selected: {_controller.mode},
-                onSelectionChanged: (value) {
-                  if (value.isEmpty) return;
-                  _controller.setMode(value.first);
-                },
-              ),
-            ),
-            _ToolbarGroup(
-              label: 'Tool',
-              child: SegmentedButton<DrawTool>(
-                segments: const [
-                  ButtonSegment(
-                    value: DrawTool.pen,
-                    label: Text('Pen'),
-                    icon: Icon(Icons.brush),
-                  ),
-                  ButtonSegment(
-                    value: DrawTool.highlighter,
-                    label: Text('Highlighter'),
-                    icon: Icon(Icons.border_color),
-                  ),
-                  ButtonSegment(
-                    value: DrawTool.line,
-                    label: Text('Line'),
-                    icon: Icon(Icons.show_chart),
-                  ),
-                  ButtonSegment(
-                    value: DrawTool.eraser,
-                    label: Text('Eraser'),
-                    icon: Icon(Icons.auto_fix_normal),
-                  ),
-                ],
-                selected: {_controller.drawTool},
-                onSelectionChanged: isDrawMode
-                    ? (value) {
-                        if (value.isEmpty) return;
-                        _controller.setDrawTool(value.first);
-                      }
-                    : null,
-              ),
-            ),
-            _ToolbarGroup(
-              label: 'Actions',
+  Widget _buildMainBottomBar() {
+    final isDrawMode = _controller.mode == CanvasMode.draw;
+    final hasSelection = _controller.selectedNodeIds.isNotEmpty;
+
+    return Container(
+      height: 84,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Режимы работы
+          _buildModeToggle(),
+          const VerticalDivider(indent: 20, endIndent: 20, width: 24),
+
+          // Инструменты (динамические)
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
               child: Row(
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  IconButton(
-                    tooltip: 'Rotate left',
-                    onPressed: hasSelection
-                        ? () => _controller.rotateSelection(clockwise: false)
-                        : null,
-                    icon: const Icon(Icons.rotate_left),
-                  ),
-                  IconButton(
-                    tooltip: 'Rotate right',
-                    onPressed: hasSelection
-                        ? () => _controller.rotateSelection(clockwise: true)
-                        : null,
-                    icon: const Icon(Icons.rotate_right),
-                  ),
-                  IconButton(
-                    tooltip: 'Flip vertical',
-                    onPressed: hasSelection
-                        ? () => _controller.flipSelectionVertical()
-                        : null,
-                    icon: const Icon(Icons.flip),
-                  ),
-                  IconButton(
-                    tooltip: 'Flip horizontal',
-                    onPressed: hasSelection
-                        ? () => _controller.flipSelectionHorizontal()
-                        : null,
-                    icon: const Icon(Icons.flip_camera_android),
-                  ),
-                  IconButton(
-                    tooltip: 'Delete',
-                    onPressed: hasSelection
-                        ? () => _controller.deleteSelection()
-                        : null,
-                    icon: const Icon(Icons.delete_outline),
-                  ),
-                  IconButton(
-                    tooltip: 'Clear',
-                    onPressed: () => _controller.clearScene(),
-                    icon: const Icon(Icons.clear_all),
-                  ),
-                ],
-              ),
-            ),
-            if (hasTextSelection)
-              _ToolbarGroup(
-                label: 'Text',
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: 220,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Size: ${textFontSize.toStringAsFixed(0)}',
-                            style: theme.textTheme.labelMedium,
-                          ),
-                          Slider(
-                            value: textFontSize.clamp(10, 72).toDouble(),
-                            min: 10,
-                            max: 72,
-                            divisions: 62,
-                            label: textFontSize.toStringAsFixed(0),
-                            onChanged: _setSelectedTextFontSize,
-                          ),
-                        ],
-                      ),
+                  if (isDrawMode) ...[
+                    _buildDrawToolButton(DrawTool.pen, Icons.brush, "Pen"),
+                    _buildDrawToolButton(
+                      DrawTool.highlighter,
+                      Icons.border_color,
+                      "Marker",
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          tooltip: 'Bold',
-                          onPressed: _toggleSelectedTextBold,
-                          isSelected: primaryTextNode?.isBold ?? false,
-                          icon: const Icon(Icons.format_bold),
-                        ),
-                        IconButton(
-                          tooltip: 'Italic',
-                          onPressed: _toggleSelectedTextItalic,
-                          isSelected: primaryTextNode?.isItalic ?? false,
-                          icon: const Icon(Icons.format_italic),
-                        ),
-                        IconButton(
-                          tooltip: 'Underline',
-                          onPressed: _toggleSelectedTextUnderline,
-                          isSelected: primaryTextNode?.isUnderline ?? false,
-                          icon: const Icon(Icons.format_underline),
-                        ),
-                        const SizedBox(width: 8),
-                        SegmentedButton<TextAlign>(
-                          segments: const [
-                            ButtonSegment(
-                              value: TextAlign.left,
-                              icon: Icon(Icons.format_align_left),
-                              label: Text('Left'),
-                            ),
-                            ButtonSegment(
-                              value: TextAlign.center,
-                              icon: Icon(Icons.format_align_center),
-                              label: Text('Center'),
-                            ),
-                            ButtonSegment(
-                              value: TextAlign.right,
-                              icon: Icon(Icons.format_align_right),
-                              label: Text('Right'),
-                            ),
-                          ],
-                          selected: {textAlign},
-                          onSelectionChanged: (value) {
-                            if (value.isEmpty) return;
-                            _setSelectedTextAlign(value.first);
-                          },
-                        ),
-                      ],
+                    _buildDrawToolButton(
+                      DrawTool.line,
+                      Icons.show_chart,
+                      "Line",
                     ),
-                    const SizedBox(height: 8),
+                    _buildDrawToolButton(
+                      DrawTool.eraser,
+                      Icons.auto_fix_normal,
+                      "Eraser",
+                    ),
+                    const VerticalDivider(indent: 25, endIndent: 25, width: 20),
                     _ColorPalette(
-                      colors: scene.palette.penColors,
-                      selected: textColor,
-                      onSelected: _setSelectedTextColor,
+                      colors: _controller.scene.palette.penColors,
+                      selected: _controller.drawColor,
+                      onSelected: _setDrawColor,
                     ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: 220,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Line height: ${lineHeightMultiplier.toStringAsFixed(2)}',
-                            style: theme.textTheme.labelMedium,
-                          ),
-                          Slider(
-                            value: lineHeightMultiplier
-                                .clamp(0.8, 2.0)
-                                .toDouble(),
-                            min: 0.8,
-                            max: 2.0,
-                            divisions: 12,
-                            label: lineHeightMultiplier.toStringAsFixed(2),
-                            onChanged: _setSelectedTextLineHeight,
-                          ),
-                        ],
-                      ),
+                  ] else ...[
+                    _buildActionButton(
+                      Icons.rotate_left,
+                      "Rotate L",
+                      hasSelection
+                          ? () => _controller.rotateSelection(clockwise: false)
+                          : null,
+                    ),
+                    _buildActionButton(
+                      Icons.rotate_right,
+                      "Rotate R",
+                      hasSelection
+                          ? () => _controller.rotateSelection(clockwise: true)
+                          : null,
+                    ),
+                    _buildActionButton(
+                      Icons.flip,
+                      "Flip V",
+                      hasSelection
+                          ? () => _controller.flipSelectionVertical()
+                          : null,
+                      quarterTurns: 1,
+                    ),
+                    _buildActionButton(
+                      Icons.flip,
+                      "Flip H",
+                      hasSelection
+                          ? () => _controller.flipSelectionHorizontal()
+                          : null,
+                    ),
+                    _buildActionButton(
+                      Icons.delete_outline,
+                      "Delete",
+                      hasSelection ? () => _controller.deleteSelection() : null,
+                      color: Colors.red,
+                    ),
+                    _buildActionButton(
+                      Icons.add_box_outlined,
+                      "Add Sample",
+                      _addSampleObjects,
                     ),
                   ],
-                ),
-              ),
-            _ToolbarGroup(
-              label: 'Samples',
-              child: FilledButton.icon(
-                onPressed: _addSampleObjects,
-                icon: const Icon(Icons.add_box_outlined),
-                label: const Text('Add objects'),
-              ),
-            ),
-            _ToolbarGroup(
-              label: 'JSON',
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: _exportSceneJson,
-                    icon: const Icon(Icons.download),
-                    label: const Text('Export'),
-                  ),
-                  const SizedBox(width: 8),
-                  OutlinedButton.icon(
-                    onPressed: _importSceneJson,
-                    icon: const Icon(Icons.upload),
-                    label: const Text('Import'),
-                  ),
                 ],
               ),
             ),
-            _ToolbarGroup(
-              label: 'Pen color',
-              child: _ColorPalette(
-                colors: scene.palette.penColors,
-                selected: _controller.drawColor,
-                onSelected: _setDrawColor,
-              ),
-            ),
-            _ToolbarGroup(
-              label: 'Background',
-              child: _ColorPalette(
-                colors: scene.palette.backgroundColors,
-                selected: scene.background.color,
-                onSelected: _setBackgroundColor,
-              ),
-            ),
-            _ToolbarGroup(
-              label: 'Grid',
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Switch(value: grid.isEnabled, onChanged: _setGridEnabled),
-                      Text(grid.isEnabled ? 'On' : 'Off'),
-                    ],
-                  ),
-                  SegmentedButton<double>(
-                    segments: scene.palette.gridSizes
-                        .map(
-                          (size) => ButtonSegment<double>(
-                            value: size,
-                            label: Text('${size.toInt()}'),
-                          ),
-                        )
-                        .toList(growable: false),
-                    selected: {grid.cellSize},
-                    onSelectionChanged: grid.isEnabled
-                        ? (value) {
-                            if (value.isEmpty) return;
-                            _setGridSize(value.first);
-                          }
-                        : null,
-                  ),
-                ],
-              ),
-            ),
-            _ToolbarGroup(
-              label: 'Camera X',
-              child: SizedBox(
-                width: 220,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Slider(
-                      value: cameraX.clamp(_cameraMinX, _cameraMaxX).toDouble(),
-                      min: _cameraMinX,
-                      max: _cameraMaxX,
-                      divisions: 80,
-                      label: cameraX.toStringAsFixed(0),
-                      onChanged: _setCameraX,
-                    ),
-                    Text(
-                      'Offset: ${cameraX.toStringAsFixed(0)}',
-                      style: theme.textTheme.labelMedium,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            if (_controller.hasPendingLineStart)
-              _ToolbarGroup(
-                label: 'Line start',
-                child: Chip(
-                  avatar: const Icon(Icons.adjust, size: 16),
-                  label: const Text('Tap to set end'),
-                  backgroundColor: theme.colorScheme.secondaryContainer
-                      .withAlpha((0.6 * 255).round()),
-                ),
-              ),
-          ],
+          ),
+
+          const VerticalDivider(indent: 20, endIndent: 20, width: 24),
+
+          // Системные действия
+          _buildGridMenu(),
+          _buildSystemMenu(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModeToggle() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: const EdgeInsets.all(4),
+      child: Row(
+        children: [
+          _buildSmallModeBtn(CanvasMode.move, Icons.pan_tool_alt),
+          _buildSmallModeBtn(CanvasMode.draw, Icons.edit),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSmallModeBtn(CanvasMode mode, IconData icon) {
+    final isSelected = _controller.mode == mode;
+    return GestureDetector(
+      onTap: () => _controller.setMode(mode),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: isSelected
+              ? [const BoxShadow(color: Colors.black12, blurRadius: 4)]
+              : null,
+        ),
+        child: Icon(
+          icon,
+          color: isSelected ? Colors.blue[800] : Colors.grey[600],
         ),
       ),
     );
   }
 
+  Widget _buildDrawToolButton(DrawTool tool, IconData icon, String label) {
+    final isSelected = _controller.drawTool == tool;
+    return IconButton(
+      icon: Icon(icon),
+      onPressed: () => _controller.setDrawTool(tool),
+      color: isSelected ? Colors.blue : Colors.grey[700],
+      iconSize: 28,
+      tooltip: label,
+    );
+  }
+
+  Widget _buildActionButton(
+    IconData icon,
+    String label,
+    VoidCallback? onTap, {
+    Color? color,
+    int quarterTurns = 0,
+  }) {
+    return IconButton(
+      icon: RotatedBox(
+        quarterTurns: quarterTurns,
+        child: Icon(
+          icon,
+          color: onTap == null ? Colors.grey[300] : (color ?? Colors.grey[800]),
+        ),
+      ),
+      onPressed: onTap,
+      tooltip: label,
+      iconSize: 28,
+    );
+  }
+
+  Widget _buildTextOptionsPanel() {
+    final nodes = _selectedTextNodes();
+    if (nodes.isEmpty) return const SizedBox.shrink();
+    final node = nodes.first;
+
+    return Card(
+      elevation: 6,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _buildTextStyleToggle(
+                Icons.format_bold,
+                node.isBold,
+                _toggleSelectedTextBold,
+              ),
+              _buildTextStyleToggle(
+                Icons.format_italic,
+                node.isItalic,
+                _toggleSelectedTextItalic,
+              ),
+              _buildTextStyleToggle(
+                Icons.format_underline,
+                node.isUnderline,
+                _toggleSelectedTextUnderline,
+              ),
+              const VerticalDivider(width: 20),
+              _buildAlignSelector(node.align),
+              const VerticalDivider(width: 20),
+              const Text(
+                "Size: ",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Slider(
+                value: node.fontSize.clamp(10, 72).toDouble(),
+                min: 10,
+                max: 72,
+                divisions: 10,
+                onChanged: _setSelectedTextFontSize,
+              ),
+              const VerticalDivider(width: 20),
+              _ColorPalette(
+                colors: _controller.scene.palette.penColors,
+                selected: node.color,
+                onSelected: _setSelectedTextColor,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextStyleToggle(IconData icon, bool active, VoidCallback onTap) {
+    return IconButton(
+      icon: Icon(icon),
+      color: active ? Colors.blue : Colors.grey,
+      onPressed: onTap,
+    );
+  }
+
+  Widget _buildAlignSelector(TextAlign current) {
+    return Row(
+      children: [TextAlign.left, TextAlign.center, TextAlign.right].map((a) {
+        return IconButton(
+          icon: Icon(
+            a == TextAlign.left
+                ? Icons.format_align_left
+                : a == TextAlign.center
+                ? Icons.format_align_center
+                : Icons.format_align_right,
+          ),
+          color: current == a ? Colors.blue : Colors.grey,
+          onPressed: () => _setSelectedTextAlign(a),
+        );
+      }).toList(),
+    );
+  }
+
+  // --- ЛОГИКА ДИАЛОГОВ ---
+
+  Widget _buildGridMenu() {
+    final grid = _controller.scene.background.grid;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return MenuAnchor(
+      alignmentOffset: const Offset(-240, 0),
+      style: MenuStyle(
+        padding: WidgetStateProperty.all(
+          const EdgeInsets.symmetric(vertical: 12),
+        ),
+        shape: WidgetStateProperty.all(
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        ),
+        elevation: WidgetStateProperty.all(12),
+      ),
+      builder: (context, controller, child) {
+        return IconButton(
+          icon: Icon(
+            grid.isEnabled ? Icons.grid_4x4 : Icons.grid_off,
+            color: grid.isEnabled
+                ? colorScheme.primary
+                : colorScheme.onSurfaceVariant,
+          ),
+          onPressed: () =>
+              controller.isOpen ? controller.close() : controller.open(),
+          tooltip: "Grid Settings",
+          iconSize: 28,
+        );
+      },
+      menuChildren: [
+        SizedBox(
+          width: 300,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primaryContainer.withValues(
+                          alpha: 0.4,
+                        ),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.grid_on,
+                        size: 18,
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      "Grid Appearance",
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: colorScheme.onSurface,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Display Grid",
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            "Enable alignment guides",
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: grid.isEnabled,
+                      onChanged: (v) {
+                        _setGridEnabled(v);
+                        setState(() {});
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  "Cell Size",
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: SegmentedButton<double>(
+                    showSelectedIcon: false,
+                    segments: _controller.scene.palette.gridSizes.map((s) {
+                      return ButtonSegment<double>(
+                        value: s,
+                        label: Text(
+                          s.toInt().toString(),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      );
+                    }).toList(),
+                    selected: {grid.cellSize},
+                    onSelectionChanged: (Set<double> newSelection) {
+                      _setGridSize(newSelection.first);
+                      setState(() {});
+                    },
+                    style: SegmentedButton.styleFrom(
+                      visualDensity: VisualDensity.comfortable,
+                      selectedBackgroundColor: colorScheme.primary,
+                      selectedForegroundColor: colorScheme.onPrimary,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSystemMenu() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return MenuAnchor(
+      alignmentOffset: const Offset(-240, 0),
+      style: MenuStyle(
+        padding: WidgetStateProperty.all(
+          const EdgeInsets.symmetric(vertical: 12),
+        ),
+        shape: WidgetStateProperty.all(
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        ),
+        elevation: WidgetStateProperty.all(12),
+      ),
+      builder: (context, controller, child) {
+        return IconButton(
+          icon: Icon(Icons.settings, color: colorScheme.onSurfaceVariant),
+          onPressed: () =>
+              controller.isOpen ? controller.close() : controller.open(),
+          tooltip: "System Menu",
+          iconSize: 28,
+        );
+      },
+      menuChildren: [
+        SizedBox(
+          width: 280,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.palette_outlined,
+                      size: 18,
+                      color: colorScheme.primary,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      "Background",
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 8,
+                ),
+                child: Row(
+                  children: _controller.scene.palette.backgroundColors.map((c) {
+                    final isSelected = _controller.scene.background.color == c;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: GestureDetector(
+                        onTap: () {
+                          _setBackgroundColor(c);
+                          setState(() {});
+                        },
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: c,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isSelected
+                                  ? colorScheme.primary
+                                  : Colors.black12,
+                              width: isSelected ? 2 : 1,
+                            ),
+                            boxShadow: isSelected
+                                ? [
+                                    BoxShadow(
+                                      color: colorScheme.primary.withValues(
+                                        alpha: 0.3,
+                                      ),
+                                      blurRadius: 4,
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          child: isSelected
+                              ? Icon(
+                                  Icons.check,
+                                  size: 16,
+                                  color: c.computeLuminance() > 0.5
+                                      ? Colors.black
+                                      : Colors.white,
+                                )
+                              : null,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+              const Divider(indent: 16, endIndent: 16),
+              MenuItemButton(
+                leadingIcon: const Icon(Icons.download_outlined, size: 20),
+                onPressed: _exportSceneJson,
+                child: const Text("Export (JSON)"),
+              ),
+              MenuItemButton(
+                leadingIcon: const Icon(Icons.upload_outlined, size: 20),
+                onPressed: _importSceneJson,
+                child: const Text("Import (JSON)"),
+              ),
+              const Divider(indent: 16, endIndent: 16),
+              MenuItemButton(
+                leadingIcon: Icon(
+                  Icons.delete_sweep_outlined,
+                  color: colorScheme.error,
+                  size: 20,
+                ),
+                onPressed: () => _controller.clearScene(),
+                child: Text(
+                  "Clear Canvas",
+                  style: TextStyle(
+                    color: colorScheme.error,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // --- БАЗОВЫЕ МЕТОДЫ (СОХРАНЕНЫ ИЗ ОРИГИНАЛА) ---
+
   Widget _buildCanvas() {
-    final textEditOverlay = _buildTextEditOverlay();
     return Stack(
       children: [
         SceneView(
@@ -459,13 +692,8 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
             ),
           ),
         ),
-        if (textEditOverlay != null) textEditOverlay,
       ],
     );
-  }
-
-  Scene _createScene() {
-    return Scene(layers: [Layer()]);
   }
 
   List<TextNode> _selectedTextNodes() {
@@ -474,9 +702,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     final nodes = <TextNode>[];
     for (final layer in _controller.scene.layers) {
       for (final node in layer.nodes) {
-        if (node is TextNode && selectedIds.contains(node.id)) {
-          nodes.add(node);
-        }
+        if (node is TextNode && selectedIds.contains(node.id)) nodes.add(node);
       }
     }
     return nodes;
@@ -494,9 +720,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   TextNode? _findTextNode(NodeId id) {
     for (final layer in _controller.scene.layers) {
       for (final node in layer.nodes) {
-        if (node is TextNode && node.id == id) {
-          return node;
-        }
+        if (node is TextNode && node.id == id) return node;
       }
     }
     return null;
@@ -513,124 +737,55 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final focusNode = _textEditFocusNode;
-      if (focusNode == null) return;
-      focusNode.requestFocus();
-      final controller = _textEditController;
-      if (controller != null) {
-        controller.selection = TextSelection.collapsed(
-          offset: controller.text.length,
-        );
-      }
+      _textEditFocusNode?.requestFocus();
     });
   }
 
   void _finishInlineTextEdit({required bool save}) {
     final nodeId = _editingNodeId;
-    final controller = _textEditController;
-    final focusNode = _textEditFocusNode;
-    if (nodeId == null || controller == null || focusNode == null) return;
+    if (nodeId == null) return;
 
     if (save) {
       final node = _findTextNode(nodeId);
       if (node != null) {
-        node.text = controller.text;
+        node.text = _textEditController?.text ?? "";
         _controller.notifySceneChanged();
       }
     }
-
-    if (!mounted) {
-      _editingNodeId = null;
-      _textEditController = null;
-      _textEditFocusNode = null;
-      controller.dispose();
-      focusNode.dispose();
-      return;
-    }
-
     setState(() {
       _editingNodeId = null;
-      _textEditController = null;
-      _textEditFocusNode = null;
-    });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      controller.dispose();
-      focusNode.dispose();
+      _textEditController?.dispose();
+      _textEditFocusNode?.dispose();
     });
   }
 
   Widget? _buildTextEditOverlay() {
     final nodeId = _editingNodeId;
-    final controller = _textEditController;
-    final focusNode = _textEditFocusNode;
-    if (nodeId == null || controller == null || focusNode == null) {
-      return null;
-    }
+    if (nodeId == null || _textEditController == null) return null;
     final node = _findTextNode(nodeId);
-    if (node == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _finishInlineTextEdit(save: false);
-      });
-      return null;
-    }
+    if (node == null) return null;
 
     final viewRect = _textEditRectFor(node);
-    final minWidth = viewRect.width < 140 ? 140 : viewRect.width;
-    final minHeight = viewRect.height < 44 ? 44 : viewRect.height;
-    final padding = 6.0;
-    final theme = Theme.of(context);
-    final lineHeight = node.lineHeight == null || node.fontSize == 0
-        ? null
-        : node.lineHeight! / node.fontSize;
-
     return Positioned(
-      left: viewRect.left - padding,
-      top: viewRect.top - padding,
-      width: minWidth + padding * 2,
-      height: minHeight + padding * 2 + 40,
+      left: viewRect.left - 10,
+      top: viewRect.top - 10,
+      width: viewRect.width + 120,
       child: Material(
-        elevation: 4,
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(8),
+        elevation: 8,
+        borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(12),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Expanded(
-                child: Focus(
-                  focusNode: focusNode,
-                  onFocusChange: (hasFocus) {
-                    if (!hasFocus) {
-                      _finishInlineTextEdit(save: true);
-                    }
-                  },
-                  child: TextField(
-                    controller: controller,
-                    maxLines: null,
-                    expands: true,
-                    textAlign: node.align,
-                    style: TextStyle(
-                      fontSize: node.fontSize,
-                      height: lineHeight,
-                      color: node.color,
-                      fontWeight:
-                          node.isBold ? FontWeight.bold : FontWeight.normal,
-                      fontStyle:
-                          node.isItalic ? FontStyle.italic : FontStyle.normal,
-                      decoration: node.isUnderline
-                          ? TextDecoration.underline
-                          : TextDecoration.none,
-                      fontFamily: node.fontFamily,
-                    ),
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      contentPadding: EdgeInsets.zero,
-                      border: OutlineInputBorder(),
-                    ),
-                    onSubmitted: (_) => _finishInlineTextEdit(save: true),
-                  ),
+              TextField(
+                controller: _textEditController,
+                focusNode: _textEditFocusNode,
+                maxLines: null,
+                style: TextStyle(fontSize: node.fontSize, color: node.color),
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  isDense: true,
                 ),
               ),
               const SizedBox(height: 8),
@@ -639,12 +794,11 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                 children: [
                   TextButton(
                     onPressed: () => _finishInlineTextEdit(save: false),
-                    child: const Text('Cancel'),
+                    child: const Text("Cancel"),
                   ),
-                  const SizedBox(width: 8),
-                  FilledButton(
+                  ElevatedButton(
                     onPressed: () => _finishInlineTextEdit(save: true),
-                    child: const Text('Save'),
+                    child: const Text("Save"),
                   ),
                 ],
               ),
@@ -658,41 +812,37 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   Rect _textEditRectFor(TextNode node) {
     final rect = node.aabb;
     final cameraOffset = _controller.scene.camera.offset;
-    final topLeft = toView(rect.topLeft, cameraOffset);
-    final bottomRight = toView(rect.bottomRight, cameraOffset);
-    return Rect.fromPoints(topLeft, bottomRight);
+    return Rect.fromPoints(
+      toView(rect.topLeft, cameraOffset),
+      toView(rect.bottomRight, cameraOffset),
+    );
   }
 
   Future<void> _exportSceneJson() async {
     final json = encodeSceneToJson(_controller.scene);
     _lastExportedJson = json;
-    final textController = TextEditingController(text: json);
-    await showDialog<void>(
+    await showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Scene JSON'),
         content: SizedBox(
-          width: 420,
+          width: 400,
           child: TextField(
-            controller: textController,
-            maxLines: _jsonPreviewMaxLines,
+            controller: TextEditingController(text: json),
+            maxLines: 8,
             readOnly: true,
           ),
         ),
         actions: [
           TextButton(
-            onPressed: () async {
-              await Clipboard.setData(ClipboardData(text: json));
-              if (!context.mounted) return;
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('JSON copied to clipboard')),
-              );
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: json));
+              Navigator.pop(context);
             },
             child: const Text('Copy'),
           ),
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.pop(context),
             child: const Text('Close'),
           ),
         ],
@@ -701,41 +851,35 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   }
 
   Future<void> _importSceneJson() async {
-    final textController = TextEditingController(text: _lastExportedJson ?? '');
+    final controller = TextEditingController(text: _lastExportedJson ?? '');
     final result = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Import scene JSON'),
-        content: SizedBox(
-          width: 420,
-          child: TextField(
-            controller: textController,
-            maxLines: _jsonPreviewMaxLines,
-            autofocus: true,
-          ),
-        ),
+        title: const Text('Import Scene'),
+        content: TextField(controller: controller, maxLines: 8),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.of(context).pop(textController.text),
+            onPressed: () => Navigator.pop(context, controller.text),
             child: const Text('Import'),
           ),
         ],
       ),
     );
-    if (result == null || result.trim().isEmpty) return;
-    try {
-      final decoded = decodeSceneFromJson(result);
-      _applyDecodedScene(decoded);
-      _controller.notifySceneChanged();
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Import failed: $error')));
+    if (result != null && result.isNotEmpty) {
+      try {
+        final decoded = decodeSceneFromJson(result);
+        _applyDecodedScene(decoded);
+        _controller.notifySceneChanged();
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     }
   }
 
@@ -748,177 +892,56 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     scene.background.color = decoded.background.color;
     scene.background.grid.isEnabled = decoded.background.grid.isEnabled;
     scene.background.grid.cellSize = decoded.background.grid.cellSize;
-    scene.background.grid.color = decoded.background.grid.color;
-    scene.palette.penColors
-      ..clear()
-      ..addAll(decoded.palette.penColors);
-    scene.palette.backgroundColors
-      ..clear()
-      ..addAll(decoded.palette.backgroundColors);
-    scene.palette.gridSizes
-      ..clear()
-      ..addAll(decoded.palette.gridSizes);
   }
 
   void _addSampleObjects() {
-    final scene = _controller.scene;
-    final layerIndex = _ensureContentLayerIndex(scene);
-    final baseX = 120 + (_sampleSeed * 30);
-    final baseY = 120 + (_sampleSeed * 20);
+    final layerIndex = 0;
+    final baseX = 100 + (_sampleSeed * 30);
+    final baseY = 100 + (_sampleSeed * 20);
 
     final nodes = <SceneNode>[
       RectNode(
-        id: _nextSampleId(),
+        id: 'sample-${_nodeSeed++}',
         size: const Size(140, 90),
-        fillColor: const Color(0xFFBBDEFB),
-        strokeColor: const Color(0xFF1E88E5),
+        fillColor: Colors.blue.withValues(alpha: 0.2),
+        strokeColor: Colors.blue,
         strokeWidth: 2,
       )..position = Offset(baseX.toDouble(), baseY.toDouble()),
       TextNode(
-        id: _nextSampleId(),
-        text: 'Hello canvas',
-        size: const Size(180, 60),
-        fontSize: 24,
-        color: const Color(0xFF263238),
-        isBold: true,
-      )..position = Offset(baseX + 220, baseY.toDouble()),
-      PathNode(
-        id: _nextSampleId(),
-        svgPathData: 'M0 0 H40 V30 H0 Z M12 8 H28 V22 H12 Z',
-        fillRule: PathFillRule.evenOdd,
-        fillColor: const Color(0xFF81C784),
-        strokeColor: const Color(0xFF2E7D32),
-        strokeWidth: 2,
-      )..position = Offset(baseX + 100, baseY + 160),
-      ImageNode(
-        id: _nextSampleId(),
-        imageId: 'sample-image',
-        size: const Size(120, 90),
-      )..position = Offset(baseX + 280, baseY + 160),
-      LineNode(
-        id: _nextSampleId(),
-        start: Offset(baseX.toDouble(), baseY + 220),
-        end: Offset(baseX + 180, baseY + 260),
-        thickness: 4,
-        color: const Color(0xFFE53935),
-      ),
+        id: 'sample-${_nodeSeed++}',
+        text: 'New Note',
+        size: const Size(150, 50),
+        fontSize: 20,
+        color: Colors.black87,
+      )..position = Offset(baseX + 160, baseY.toDouble()),
     ];
 
-    _sampleSeed += 1;
+    _sampleSeed++;
     for (final node in nodes) {
       _controller.addNode(node, layerIndex: layerIndex);
     }
   }
 
-  int _ensureContentLayerIndex(Scene scene) {
-    for (var i = scene.layers.length - 1; i >= 0; i--) {
-      final layer = scene.layers[i];
-      if (!layer.isBackground) return i;
-    }
-    final layer = Layer();
-    scene.layers.add(layer);
-    return scene.layers.length - 1;
-  }
-
-  NodeId _nextSampleId() {
-    final id = _nodeSeed++;
-    return 'sample-$id';
-  }
-
-  void _setDrawColor(Color color) {
-    if (_controller.drawColor == color) return;
-    _controller.setDrawColor(color);
-  }
-
-  void _setSelectedTextColor(Color color) {
-    _updateSelectedTextNodes((node) {
-      node.color = color;
-    });
-  }
-
-  void _setSelectedTextAlign(TextAlign align) {
-    _updateSelectedTextNodes((node) {
-      node.align = align;
-    });
-  }
-
-  void _setSelectedTextFontSize(double value) {
-    _updateSelectedTextNodes((node) {
-      final lineHeightRatio = node.lineHeight == null
-          ? null
-          : node.lineHeight! / node.fontSize;
-      node.fontSize = value;
-      if (lineHeightRatio != null) {
-        node.lineHeight = value * lineHeightRatio;
-      }
-    });
-  }
-
-  void _setSelectedTextLineHeight(double multiplier) {
-    _updateSelectedTextNodes((node) {
-      node.lineHeight = node.fontSize * multiplier;
-    });
-  }
-
-  void _toggleSelectedTextBold() {
-    final nodes = _selectedTextNodes();
-    if (nodes.isEmpty) return;
-    final next = !nodes.first.isBold;
-    _updateSelectedTextNodes((node) => node.isBold = next);
-  }
-
-  void _toggleSelectedTextItalic() {
-    final nodes = _selectedTextNodes();
-    if (nodes.isEmpty) return;
-    final next = !nodes.first.isItalic;
-    _updateSelectedTextNodes((node) => node.isItalic = next);
-  }
-
-  void _toggleSelectedTextUnderline() {
-    final nodes = _selectedTextNodes();
-    if (nodes.isEmpty) return;
-    final next = !nodes.first.isUnderline;
-    _updateSelectedTextNodes((node) => node.isUnderline = next);
-  }
-
-  void _setBackgroundColor(Color color) {
-    _controller.setBackgroundColor(color);
-  }
-
-  void _setGridEnabled(bool value) {
-    _controller.setGridEnabled(value);
-  }
-
-  void _setGridSize(double value) {
-    _controller.setGridCellSize(value);
-  }
-
-  void _setCameraX(double value) {
-    final camera = _controller.scene.camera;
-    _controller.setCameraOffset(Offset(value, camera.offset.dy));
-  }
+  // Сеттеры
+  void _setDrawColor(Color c) => _controller.setDrawColor(c);
+  void _setBackgroundColor(Color c) => _controller.setBackgroundColor(c);
+  void _setGridEnabled(bool v) => _controller.setGridEnabled(v);
+  void _setGridSize(double s) => _controller.setGridCellSize(s);
+  void _setSelectedTextColor(Color c) =>
+      _updateSelectedTextNodes((n) => n.color = c);
+  void _setSelectedTextAlign(TextAlign a) =>
+      _updateSelectedTextNodes((n) => n.align = a);
+  void _setSelectedTextFontSize(double v) =>
+      _updateSelectedTextNodes((n) => n.fontSize = v);
+  void _toggleSelectedTextBold() =>
+      _updateSelectedTextNodes((n) => n.isBold = !n.isBold);
+  void _toggleSelectedTextItalic() =>
+      _updateSelectedTextNodes((n) => n.isItalic = !n.isItalic);
+  void _toggleSelectedTextUnderline() =>
+      _updateSelectedTextNodes((n) => n.isUnderline = !n.isUnderline);
 }
 
-class _ToolbarGroup extends StatelessWidget {
-  const _ToolbarGroup({required this.label, required this.child});
-
-  final String label;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: theme.textTheme.labelSmall),
-        const SizedBox(height: 4),
-        child,
-      ],
-    );
-  }
-}
+// --- ВСПОМОГАТЕЛЬНЫЕ ВИДЖЕТЫ ---
 
 class _ColorPalette extends StatelessWidget {
   const _ColorPalette({
@@ -926,7 +949,6 @@ class _ColorPalette extends StatelessWidget {
     required this.selected,
     required this.onSelected,
   });
-
   final List<Color> colors;
   final Color selected;
   final ValueChanged<Color> onSelected;
@@ -934,51 +956,34 @@ class _ColorPalette extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Wrap(
-      spacing: 6,
+      spacing: 8,
       children: colors
           .map(
-            (color) => _ColorSwatch(
-              color: color,
-              isSelected: color == selected,
+            (color) => GestureDetector(
               onTap: () => onSelected(color),
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: color == selected ? Colors.black : Colors.black12,
+                    width: color == selected ? 3 : 1,
+                  ),
+                  boxShadow: color == selected
+                      ? [
+                          BoxShadow(
+                            color: color.withValues(alpha: 0.4),
+                            blurRadius: 4,
+                          ),
+                        ]
+                      : null,
+                ),
+              ),
             ),
           )
-          .toList(growable: false),
-    );
-  }
-}
-
-class _ColorSwatch extends StatelessWidget {
-  const _ColorSwatch({
-    required this.color,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  final Color color;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final borderColor = isSelected
-        ? Theme.of(context).colorScheme.onSurface
-        : Theme.of(
-            context,
-          ).colorScheme.onSurface.withAlpha((0.2 * 255).round());
-
-    return InkResponse(
-      onTap: onTap,
-      radius: 18,
-      child: Container(
-        width: 24,
-        height: 24,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-          border: Border.all(color: borderColor, width: isSelected ? 2 : 1),
-        ),
-      ),
+          .toList(),
     );
   }
 }
@@ -986,35 +991,31 @@ class _ColorSwatch extends StatelessWidget {
 class _PendingLineMarkerPainter extends CustomPainter {
   _PendingLineMarkerPainter({required this.controller})
     : super(repaint: controller);
-
   final SceneController controller;
 
   @override
   void paint(Canvas canvas, Size size) {
     final start = controller.pendingLineStart;
     if (start == null) return;
-
-    final viewPosition = toView(start, controller.scene.camera.offset);
+    final viewPos = toView(start, controller.scene.camera.offset);
     final paint = Paint()
-      ..color = controller.drawColor.withAlpha((0.8 * 255).round())
+      ..color = controller.drawColor.withAlpha(200)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
-
-    canvas.drawCircle(viewPosition, 8, paint);
+    canvas.drawCircle(viewPos, 12, paint);
     canvas.drawLine(
-      viewPosition + const Offset(-12, 0),
-      viewPosition + const Offset(12, 0),
+      viewPos + const Offset(-15, 0),
+      viewPos + const Offset(15, 0),
       paint,
     );
     canvas.drawLine(
-      viewPosition + const Offset(0, -12),
-      viewPosition + const Offset(0, 12),
+      viewPos + const Offset(0, -15),
+      viewPos + const Offset(0, 15),
       paint,
     );
   }
 
   @override
-  bool shouldRepaint(covariant _PendingLineMarkerPainter oldDelegate) {
-    return oldDelegate.controller != controller;
-  }
+  bool shouldRepaint(covariant _PendingLineMarkerPainter oldDelegate) =>
+      oldDelegate.controller != controller;
 }
