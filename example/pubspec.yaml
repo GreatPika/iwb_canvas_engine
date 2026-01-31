@@ -11,6 +11,7 @@ dependencies:
     sdk: flutter
   iwb_canvas_engine:
     path: ../
+  vector_math: ^2.1.4
 
 dev_dependencies:
   flutter_test:

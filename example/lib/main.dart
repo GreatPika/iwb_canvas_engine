@@ -1,5 +1,7 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:vector_math/vector_math_64.dart' show Vector3;
 import 'package:iwb_canvas_engine/basic.dart';
 import 'package:iwb_canvas_engine/input/pointer_input.dart';
 
@@ -732,9 +734,11 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     if (node == null) return;
     setState(() {
       _editingNodeId = node.id;
+      node.isVisible = false;
       _textEditController = TextEditingController(text: node.text);
       _textEditFocusNode = FocusNode();
     });
+    _controller.notifySceneChanged();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _textEditFocusNode?.requestFocus();
@@ -745,13 +749,35 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     final nodeId = _editingNodeId;
     if (nodeId == null) return;
 
-    if (save) {
-      final node = _findTextNode(nodeId);
-      if (node != null) {
-        node.text = _textEditController?.text ?? "";
-        _controller.notifySceneChanged();
+    final node = _findTextNode(nodeId);
+    if (node != null) {
+      if (save) {
+        final newText = _textEditController?.text ?? "";
+        node.text = newText;
+
+        // Update node size to fit the text precisely
+        final textStyle = TextStyle(
+          fontSize: node.fontSize,
+          fontWeight: node.isBold ? FontWeight.bold : FontWeight.normal,
+          fontStyle: node.isItalic ? FontStyle.italic : FontStyle.normal,
+          fontFamily: node.fontFamily,
+          height: node.lineHeight == null
+              ? null
+              : node.lineHeight! / node.fontSize,
+        );
+        final tp = TextPainter(
+          text: TextSpan(text: newText, style: textStyle),
+          textDirection: TextDirection.ltr,
+          textAlign: node.align,
+        )..layout();
+
+        // Exact size matches prevent jumping back
+        node.size = Size(tp.width, tp.height);
       }
+      node.isVisible = true;
+      _controller.notifySceneChanged();
     }
+
     setState(() {
       _editingNodeId = null;
       _textEditController?.dispose();
@@ -765,57 +791,80 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     final node = _findTextNode(nodeId);
     if (node == null) return null;
 
-    final viewRect = _textEditRectFor(node);
+    final viewPosition = toView(node.position, _controller.scene.camera.offset);
+    final alignment = _mapTextAlignToAlignment(node.align);
+
     return Positioned(
-      left: viewRect.left - 10,
-      top: viewRect.top - 10,
-      width: viewRect.width + 120,
-      child: Material(
-        elevation: 8,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: _textEditController,
-                focusNode: _textEditFocusNode,
-                maxLines: null,
-                style: TextStyle(fontSize: node.fontSize, color: node.color),
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  isDense: true,
+      left: viewPosition.dx,
+      top: viewPosition.dy,
+      child: Transform(
+        transform: Matrix4.rotationZ(
+          node.rotationDeg * math.pi / 180,
+        ).scaledByVector3(Vector3(node.scaleX, node.scaleY, 1.0)),
+        child: FractionalTranslation(
+          translation: const Offset(-0.5, -0.5),
+          child: Container(
+            width: math.max(node.size.width, 1.0),
+            height: math.max(node.size.height, 1.0),
+            alignment: alignment,
+            child: OverflowBox(
+              maxWidth: 3000,
+              maxHeight: 2000,
+              alignment: alignment,
+              child: IntrinsicWidth(
+                child: TextField(
+                  controller: _textEditController,
+                  focusNode: _textEditFocusNode,
+                  maxLines: null,
+                  textAlign: node.align,
+                  textAlignVertical: TextAlignVertical.center,
+                  onTapOutside: (_) => _finishInlineTextEdit(save: true),
+                  strutStyle: StrutStyle(
+                    fontSize: node.fontSize,
+                    height: node.lineHeight == null
+                        ? null
+                        : node.lineHeight! / node.fontSize,
+                    forceStrutHeight: true,
+                  ),
+                  style: TextStyle(
+                    fontSize: node.fontSize,
+                    color: node.color,
+                    fontWeight: node.isBold
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                    fontStyle: node.isItalic
+                        ? FontStyle.italic
+                        : FontStyle.normal,
+                    decoration: node.isUnderline
+                        ? TextDecoration.underline
+                        : null,
+                    fontFamily: node.fontFamily,
+                    height: node.lineHeight == null
+                        ? null
+                        : node.lineHeight! / node.fontSize,
+                  ),
+                  decoration: const InputDecoration.collapsed(
+                    hintText: "",
+                    fillColor: Colors.transparent,
+                  ),
                 ),
               ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => _finishInlineTextEdit(save: false),
-                    child: const Text("Cancel"),
-                  ),
-                  ElevatedButton(
-                    onPressed: () => _finishInlineTextEdit(save: true),
-                    child: const Text("Save"),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Rect _textEditRectFor(TextNode node) {
-    final rect = node.aabb;
-    final cameraOffset = _controller.scene.camera.offset;
-    return Rect.fromPoints(
-      toView(rect.topLeft, cameraOffset),
-      toView(rect.bottomRight, cameraOffset),
-    );
+  Alignment _mapTextAlignToAlignment(TextAlign align) {
+    switch (align) {
+      case TextAlign.center:
+        return Alignment.center;
+      case TextAlign.right:
+        return Alignment.centerRight;
+      default:
+        return Alignment.centerLeft;
+    }
   }
 
   Future<void> _exportSceneJson() async {
