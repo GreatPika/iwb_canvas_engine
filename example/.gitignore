@@ -43,3 +43,14 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/.gradle/
+/android/local.properties
+/android/key.properties
+**/*.jks
+**/*.keystore
+
+# Local release artifacts (keep out of VCS)
+*.apk
+*.aab
+*.dmg
+*.app

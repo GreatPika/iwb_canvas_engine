@@ -1,5 +1,11 @@
 ## Unreleased
 
+### Performance
+
+- Cache `PathNode` local paths to reduce selection rendering overhead.
+- Avoid extra scene traversal when rendering selections.
+- Simplify selection halo rendering to avoid expensive path unions/layers.
+
 ### Selection transforms
 
 - Add horizontal flip alongside vertical flip.
