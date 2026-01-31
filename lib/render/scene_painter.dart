@@ -113,14 +113,20 @@ class ScenePainter extends CustomPainter {
   }
 
   void _drawSelection(Canvas canvas, Scene scene, Offset cameraOffset) {
-    final selectionBounds = _selectionBounds(scene);
-    if (selectionBounds != null) {
-      final viewRect = selectionBounds.shift(-cameraOffset);
-      final paint = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = selectionStrokeWidth
-        ..color = selectionColor;
-      canvas.drawRect(viewRect, paint);
+    if (selectedNodeIds.isNotEmpty && selectionStrokeWidth > 0) {
+      for (final layer in scene.layers) {
+        for (final node in layer.nodes) {
+          if (!selectedNodeIds.contains(node.id)) continue;
+          if (!node.isVisible) continue;
+          _drawSelectionForNode(
+            canvas,
+            node,
+            cameraOffset,
+            selectionColor,
+            selectionStrokeWidth,
+          );
+        }
+      }
     }
 
     if (selectionRect != null) {
@@ -138,22 +144,329 @@ class ScenePainter extends CustomPainter {
     }
   }
 
-  Rect? _selectionBounds(Scene scene) {
-    if (selectedNodeIds.isEmpty) return null;
+  void _drawSelectionForNode(
+    Canvas canvas,
+    SceneNode node,
+    Offset cameraOffset,
+    Color color,
+    double haloWidth,
+  ) {
+    if (node is ImageNode) {
+      _drawBoxSelection(
+        canvas,
+        cameraOffset,
+        node.position,
+        node.size,
+        node.rotationDeg,
+        node.scaleX,
+        node.scaleY,
+        color,
+        haloWidth,
+        baseStrokeWidth: 0,
+        clearFill: true,
+      );
+    } else if (node is TextNode) {
+      _drawBoxSelection(
+        canvas,
+        cameraOffset,
+        node.position,
+        node.size,
+        node.rotationDeg,
+        node.scaleX,
+        node.scaleY,
+        color,
+        haloWidth,
+        baseStrokeWidth: 0,
+        clearFill: true,
+      );
+    } else if (node is RectNode) {
+      final hasStroke = node.strokeColor != null && node.strokeWidth > 0;
+      _drawBoxSelection(
+        canvas,
+        cameraOffset,
+        node.position,
+        node.size,
+        node.rotationDeg,
+        node.scaleX,
+        node.scaleY,
+        color,
+        haloWidth,
+        baseStrokeWidth: hasStroke ? node.strokeWidth : 0,
+        clearFill: true,
+      );
+    } else if (node is LineNode) {
+      final start = toView(node.start, cameraOffset);
+      final end = toView(node.end, cameraOffset);
+      _drawStrokeHalo(
+        canvas,
+        () => canvas.drawLine(
+          start,
+          end,
+          _haloPaint(
+            node.thickness + haloWidth * 2,
+            color,
+            cap: StrokeCap.round,
+          ),
+        ),
+        () => canvas.drawLine(
+          start,
+          end,
+          _clearStrokePaint(node.thickness, cap: StrokeCap.round),
+        ),
+      );
+    } else if (node is StrokeNode) {
+      if (node.points.isEmpty) return;
+      if (node.points.length == 1) {
+        final point = toView(node.points.first, cameraOffset);
+        _drawDotHalo(canvas, point, node.thickness / 2, color, haloWidth);
+        return;
+      }
+      final path = Path();
+      final first = toView(node.points.first, cameraOffset);
+      path.moveTo(first.dx, first.dy);
+      for (var i = 1; i < node.points.length; i++) {
+        final p = toView(node.points[i], cameraOffset);
+        path.lineTo(p.dx, p.dy);
+      }
+      _drawStrokeHalo(
+        canvas,
+        () => canvas.drawPath(
+          path,
+          _haloPaint(
+            node.thickness + haloWidth * 2,
+            color,
+            cap: StrokeCap.round,
+            join: StrokeJoin.round,
+          ),
+        ),
+        () => canvas.drawPath(
+          path,
+          _clearStrokePaint(
+            node.thickness,
+            cap: StrokeCap.round,
+            join: StrokeJoin.round,
+          ),
+        ),
+      );
+    } else if (node is PathNode) {
+      final localPath = node.buildLocalPath();
+      if (localPath == null) return;
+      final viewPosition = toView(node.position, cameraOffset);
+      canvas.save();
+      canvas.translate(viewPosition.dx, viewPosition.dy);
+      _applyTransform(canvas, node.rotationDeg, node.scaleX, node.scaleY);
+      final hasStroke = node.strokeColor != null && node.strokeWidth > 0;
+      final baseStrokeWidth = hasStroke ? node.strokeWidth : 0.0;
+      final metrics = localPath.computeMetrics().toList();
+      if (metrics.isEmpty) {
+        canvas.restore();
+        return;
+      }
 
-    Rect? bounds;
-    for (final layer in scene.layers) {
-      for (final node in layer.nodes) {
-        if (!selectedNodeIds.contains(node.id)) continue;
-        final aabb = node.aabb;
-        if (bounds == null) {
-          bounds = aabb;
+      Path? closedUnion;
+      final openContours = <Path>[];
+      for (final metric in metrics) {
+        final contour = metric.extractPath(
+          0,
+          metric.length,
+          startWithMoveTo: true,
+        );
+        contour.fillType = PathFillType.nonZero;
+        if (metric.isClosed) {
+          contour.close();
+          closedUnion = closedUnion == null
+              ? contour
+              : Path.combine(PathOperation.union, closedUnion, contour);
         } else {
-          bounds = bounds.expandToInclude(aabb);
+          openContours.add(contour);
         }
       }
+
+      if (closedUnion != null) {
+        _drawPathHalo(
+          canvas,
+          closedUnion,
+          color,
+          haloWidth,
+          baseStrokeWidth: baseStrokeWidth,
+          clearFill: true,
+        );
+      }
+
+      for (final contour in openContours) {
+        _drawStrokeHalo(
+          canvas,
+          () => canvas.drawPath(
+            contour,
+            _haloPaint(
+              baseStrokeWidth + haloWidth * 2,
+              color,
+              cap: StrokeCap.round,
+              join: StrokeJoin.round,
+            ),
+          ),
+          () => canvas.drawPath(
+            contour,
+            _clearStrokePaint(
+              baseStrokeWidth,
+              cap: StrokeCap.round,
+              join: StrokeJoin.round,
+            ),
+          ),
+        );
+      }
+      canvas.restore();
     }
-    return bounds;
+  }
+
+  void _drawBoxSelection(
+    Canvas canvas,
+    Offset cameraOffset,
+    Offset position,
+    Size size,
+    double rotationDeg,
+    double scaleX,
+    double scaleY,
+    Color color,
+    double haloWidth, {
+    required double baseStrokeWidth,
+    required bool clearFill,
+  }) {
+    final viewPosition = toView(position, cameraOffset);
+    canvas.save();
+    canvas.translate(viewPosition.dx, viewPosition.dy);
+    _applyTransform(canvas, rotationDeg, scaleX, scaleY);
+    final rect = Rect.fromCenter(
+      center: Offset.zero,
+      width: size.width,
+      height: size.height,
+    );
+    _drawRectHalo(
+      canvas,
+      rect,
+      color,
+      haloWidth,
+      baseStrokeWidth: baseStrokeWidth,
+      clearFill: clearFill,
+    );
+    canvas.restore();
+  }
+
+  Paint _haloPaint(
+    double strokeWidth,
+    Color color, {
+    StrokeCap cap = StrokeCap.round,
+    StrokeJoin join = StrokeJoin.round,
+  }) {
+    return Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = cap
+      ..strokeJoin = join
+      ..color = color;
+  }
+
+  Paint _clearStrokePaint(
+    double strokeWidth, {
+    StrokeCap cap = StrokeCap.round,
+    StrokeJoin join = StrokeJoin.round,
+  }) {
+    return Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = cap
+      ..strokeJoin = join
+      ..blendMode = BlendMode.clear;
+  }
+
+  void _drawStrokeHalo(
+    Canvas canvas,
+    VoidCallback drawHalo,
+    VoidCallback clearInner,
+  ) {
+    canvas.saveLayer(null, Paint());
+    drawHalo();
+    clearInner();
+    canvas.restore();
+  }
+
+  void _drawDotHalo(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    Color color,
+    double haloWidth,
+  ) {
+    canvas.saveLayer(null, Paint());
+    final haloPaint = Paint()
+      ..style = PaintingStyle.fill
+      ..color = color;
+    canvas.drawCircle(center, radius + haloWidth, haloPaint);
+    final clearPaint = Paint()
+      ..style = PaintingStyle.fill
+      ..blendMode = BlendMode.clear;
+    canvas.drawCircle(center, radius, clearPaint);
+    canvas.restore();
+  }
+
+  void _drawRectHalo(
+    Canvas canvas,
+    Rect rect,
+    Color color,
+    double haloWidth, {
+    required double baseStrokeWidth,
+    required bool clearFill,
+  }) {
+    canvas.saveLayer(null, Paint());
+    final haloPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = baseStrokeWidth + haloWidth * 2
+      ..color = color;
+    canvas.drawRect(rect, haloPaint);
+    final clearPaint = Paint()..blendMode = BlendMode.clear;
+    if (clearFill) {
+      clearPaint.style = PaintingStyle.fill;
+      canvas.drawRect(rect, clearPaint);
+    }
+    if (baseStrokeWidth > 0) {
+      clearPaint
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = baseStrokeWidth;
+      canvas.drawRect(rect, clearPaint);
+    }
+    canvas.restore();
+  }
+
+  void _drawPathHalo(
+    Canvas canvas,
+    Path path,
+    Color color,
+    double haloWidth, {
+    required double baseStrokeWidth,
+    required bool clearFill,
+  }) {
+    canvas.saveLayer(null, Paint());
+    final haloPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = baseStrokeWidth + haloWidth * 2
+      ..strokeJoin = StrokeJoin.round
+      ..strokeCap = StrokeCap.round
+      ..color = color;
+    canvas.drawPath(path, haloPaint);
+    final clearPaint = Paint()..blendMode = BlendMode.clear;
+    if (clearFill) {
+      clearPaint.style = PaintingStyle.fill;
+      canvas.drawPath(path, clearPaint);
+    }
+    if (baseStrokeWidth > 0) {
+      clearPaint
+        ..style = PaintingStyle.stroke
+        ..strokeJoin = StrokeJoin.round
+        ..strokeCap = StrokeCap.round
+        ..strokeWidth = baseStrokeWidth;
+      canvas.drawPath(path, clearPaint);
+    }
+    canvas.restore();
   }
 
   void _drawNode(Canvas canvas, SceneNode node, Offset cameraOffset) {

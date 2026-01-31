@@ -426,7 +426,12 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   Widget _buildCanvas() {
     return Stack(
       children: [
-        SceneView(controller: _controller, imageResolver: (_) => null),
+        SceneView(
+          controller: _controller,
+          imageResolver: (_) => null,
+          selectionColor: const Color(0xFFFFFF00),
+          selectionStrokeWidth: 4,
+        ),
         Positioned.fill(
           child: IgnorePointer(
             child: CustomPaint(

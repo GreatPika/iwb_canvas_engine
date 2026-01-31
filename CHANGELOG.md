@@ -34,6 +34,11 @@
 
 - Update example app to use `basic.dart` and demonstrate JSON export/import.
 
+### Selection rendering
+
+- Draw selection outlines using each node's geometry instead of the combined AABB.
+- Render selection as a halo around the node geometry.
+
 ### Backlog item delivered
 
 - Add viewport culling in `ScenePainter` to skip offscreen nodes.

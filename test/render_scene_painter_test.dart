@@ -51,6 +51,27 @@ Future<int> _countNonBackgroundPixels(Image image, Color background) async {
   return count;
 }
 
+Future<Color> _pixelAt(Image image, int x, int y) async {
+  final data = await image.toByteData(format: ImageByteFormat.rawRgba);
+  if (data == null) {
+    throw StateError('Failed to encode image to raw RGBA.');
+  }
+  if (x < 0 || x >= image.width) {
+    throw RangeError.range(x, 0, image.width - 1, 'x');
+  }
+  if (y < 0 || y >= image.height) {
+    throw RangeError.range(y, 0, image.height - 1, 'y');
+  }
+  final bytes = data.buffer.asUint8List();
+  final index = (y * image.width + x) * 4;
+  return Color.fromARGB(
+    bytes[index + 3],
+    bytes[index],
+    bytes[index + 1],
+    bytes[index + 2],
+  );
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -96,7 +117,7 @@ void main() {
     recorder.endRecording();
   });
 
-  test('ScenePainter draws grid, selection bounds, and marquee', () async {
+  test('ScenePainter draws grid, selection overlays, and marquee', () async {
     const background = Color(0xFFFFFFFF);
     final scene = Scene(
       camera: Camera(offset: const Offset(5, -3)),
@@ -137,6 +158,74 @@ void main() {
     final image = await _paintToImage(painter);
     final nonBg = await _countNonBackgroundPixels(image, background);
     expect(nonBg, greaterThan(0));
+  });
+
+  test('ScenePainter selection halo stays outside line geometry', () async {
+    const background = Color(0xFFFFFFFF);
+    final line = LineNode(
+      id: 'line',
+      start: const Offset(10, 20),
+      end: const Offset(90, 20),
+      thickness: 6,
+      color: background,
+    );
+    final scene = Scene(
+      background: Background(color: background),
+      layers: [
+        Layer(nodes: [line]),
+      ],
+    );
+
+    final painter = ScenePainter(
+      scene: scene,
+      imageResolver: (_) => null,
+      selectedNodeIds: const {'line'},
+      selectionColor: const Color(0xFFFF0000),
+      selectionStrokeWidth: 2,
+    );
+
+    final image = await _paintToImage(painter, width: 100, height: 80);
+    final onLine = await _pixelAt(image, 50, 20);
+    final onHalo = await _pixelAt(image, 50, 24);
+    final outside = await _pixelAt(image, 50, 27);
+
+    expect(onLine, equals(background));
+    expect(onHalo, isNot(background));
+    expect(outside, equals(background));
+  });
+
+  test('ScenePainter selection halo skips inner path contours', () async {
+    const background = Color(0xFFFFFFFF);
+    final pathNode = PathNode(
+      id: 'path',
+      svgPathData: 'M0 0 H40 V30 H0 Z M12 8 H28 V22 H12 Z',
+      fillRule: PathFillRule.evenOdd,
+      fillColor: const Color(0xFF81C784),
+      strokeColor: const Color(0xFF2E7D32),
+      strokeWidth: 2,
+    )..position = const Offset(50, 50);
+
+    final scene = Scene(
+      background: Background(color: background),
+      layers: [
+        Layer(nodes: [pathNode]),
+      ],
+    );
+
+    final painter = ScenePainter(
+      scene: scene,
+      imageResolver: (_) => null,
+      selectedNodeIds: const {'path'},
+      selectionColor: const Color(0xFFFF0000),
+      selectionStrokeWidth: 3,
+    );
+
+    final image = await _paintToImage(painter, width: 100, height: 100);
+    final insideHole = await _pixelAt(image, 50, 50);
+    final outsideHalo = await _pixelAt(image, 27, 50);
+
+    expect(insideHole, equals(background));
+    expect(outsideHalo, isNot(background));
   });
 
   test(
