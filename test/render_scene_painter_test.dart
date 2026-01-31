@@ -73,10 +73,7 @@ Future<Color> _pixelAt(Image image, int x, int y) async {
 }
 
 class _EmptyMetricsPathNode extends PathNode {
-  _EmptyMetricsPathNode({
-    required super.id,
-    required super.svgPathData,
-  });
+  _EmptyMetricsPathNode({required super.id, required super.svgPathData});
 
   @override
   Path? buildLocalPath() {
@@ -206,6 +203,69 @@ void main() {
     expect(outside, equals(background));
   });
 
+  test('ScenePainter selection renders for text nodes', () async {
+    const background = Color(0xFFFFFFFF);
+    final textNode = TextNode(
+      id: 'text-1',
+      text: 'Halo',
+      size: const Size(60, 24),
+      fontSize: 18,
+      color: const Color(0xFF000000),
+    )..position = const Offset(40, 40);
+
+    final scene = Scene(
+      background: Background(color: background),
+      layers: [
+        Layer(nodes: [textNode]),
+      ],
+    );
+
+    final painter = ScenePainter(
+      scene: scene,
+      imageResolver: (_) => null,
+      selectedNodeIds: const {'text-1'},
+      selectionColor: const Color(0xFFFF0000),
+      selectionStrokeWidth: 2,
+    );
+
+    final image = await _paintToImage(painter, width: 120, height: 90);
+    final nonBg = await _countNonBackgroundPixels(image, background);
+    expect(nonBg, greaterThan(0));
+  });
+
+  test('ScenePainter selection keeps line color intact', () async {
+    const background = Color(0xFFFFFFFF);
+    const lineColor = Color(0xFF000000);
+    final line = LineNode(
+      id: 'line',
+      start: const Offset(10, 20),
+      end: const Offset(90, 20),
+      thickness: 6,
+      color: lineColor,
+    );
+    final scene = Scene(
+      background: Background(color: background),
+      layers: [
+        Layer(nodes: [line]),
+      ],
+    );
+
+    final painter = ScenePainter(
+      scene: scene,
+      imageResolver: (_) => null,
+      selectedNodeIds: const {'line'},
+      selectionColor: const Color(0xFFFF0000),
+      selectionStrokeWidth: 2,
+    );
+
+    final image = await _paintToImage(painter, width: 100, height: 80);
+    final onLine = await _pixelAt(image, 50, 20);
+    final onHalo = await _pixelAt(image, 50, 24);
+
+    expect(onLine, equals(lineColor));
+    expect(onHalo, isNot(lineColor));
+  });
+
   test('ScenePainter selection halo skips inner path contours', () async {
     const background = Color(0xFFFFFFFF);
     final pathNode = PathNode(
@@ -238,6 +298,39 @@ void main() {
 
     expect(insideHole, equals(background));
     expect(outsideHalo, isNot(background));
+  });
+
+  test('ScenePainter selection renders multiple closed contours', () async {
+    const background = Color(0xFFFFFFFF);
+    final pathNode = PathNode(
+      id: 'path-multi',
+      svgPathData: 'M0 0 H20 V20 H0 Z M40 0 H60 V20 H40 Z',
+      strokeColor: const Color(0xFF000000),
+      strokeWidth: 2,
+      fillRule: PathFillRule.nonZero,
+    )..position = const Offset(50, 50);
+
+    final scene = Scene(
+      background: Background(color: background),
+      layers: [
+        Layer(nodes: [pathNode]),
+      ],
+    );
+
+    final painter = ScenePainter(
+      scene: scene,
+      imageResolver: (_) => null,
+      selectedNodeIds: const {'path-multi'},
+      selectionColor: const Color(0xFFFF0000),
+      selectionStrokeWidth: 3,
+    );
+
+    final image = await _paintToImage(painter, width: 120, height: 90);
+    final leftHalo = await _pixelAt(image, 18, 50);
+    final rightHalo = await _pixelAt(image, 58, 50);
+
+    expect(leftHalo, isNot(background));
+    expect(rightHalo, isNot(background));
   });
 
   test(
@@ -429,7 +522,15 @@ void main() {
       imageResolver: resolveNullImage,
     );
 
-    expect(painterB.shouldRepaint(painterA), isTrue);
+    expect(painterB.shouldRepaint(painterA), isFalse);
+
+    final painterC = ScenePainter(
+      scene: scene,
+      imageResolver: resolveNullImage,
+      selectedNodeIds: {'changed'},
+    );
+
+    expect(painterC.shouldRepaint(painterA), isTrue);
   });
 
   test(
@@ -467,75 +568,68 @@ void main() {
     },
   );
 
-  test('ScenePainter selection covers dot, open path, and empty metrics', () async {
-    const background = Color(0xFFFFFFFF);
-    final imageNode = ImageNode(
-      id: 'image-selected',
-      imageId: 'img:missing',
-      size: const Size(14, 10),
-    )..position = const Offset(12, 12);
+  test(
+    'ScenePainter selection covers dot, open path, and empty metrics',
+    () async {
+      const background = Color(0xFFFFFFFF);
+      final imageNode = ImageNode(
+        id: 'image-selected',
+        imageId: 'img:missing',
+        size: const Size(14, 10),
+      )..position = const Offset(12, 12);
 
-    final dotStroke = StrokeNode(
-      id: 'stroke-dot',
-      points: const [Offset(26, 20)],
-      thickness: 8,
-      color: const Color(0xFF000000),
-    );
+      final dotStroke = StrokeNode(
+        id: 'stroke-dot',
+        points: const [Offset(26, 20)],
+        thickness: 8,
+        color: const Color(0xFF000000),
+      );
 
-    final polyStroke = StrokeNode(
-      id: 'stroke-poly',
-      points: const [
-        Offset(30, 30),
-        Offset(45, 30),
-        Offset(45, 46),
-      ],
-      thickness: 5,
-      color: const Color(0xFF000000),
-    );
+      final polyStroke = StrokeNode(
+        id: 'stroke-poly',
+        points: const [Offset(30, 30), Offset(45, 30), Offset(45, 46)],
+        thickness: 5,
+        color: const Color(0xFF000000),
+      );
 
-    final openPath = PathNode(
-      id: 'path-open',
-      svgPathData: 'M0 0 L20 0 L20 12',
-      strokeColor: const Color(0xFF000000),
-      strokeWidth: 2,
-    )..position = const Offset(60, 24);
+      final openPath = PathNode(
+        id: 'path-open',
+        svgPathData: 'M0 0 L20 0 L20 12',
+        strokeColor: const Color(0xFF000000),
+        strokeWidth: 2,
+      )..position = const Offset(60, 24);
 
-    final emptyMetrics = _EmptyMetricsPathNode(
-      id: 'path-empty-metrics',
-      svgPathData: 'M0 0 L10 10',
-    )..position = const Offset(70, 50);
+      final emptyMetrics = _EmptyMetricsPathNode(
+        id: 'path-empty-metrics',
+        svgPathData: 'M0 0 L10 10',
+      )..position = const Offset(70, 50);
 
-    final scene = Scene(
-      background: Background(color: background),
-      layers: [
-        Layer(
-          nodes: [
-            imageNode,
-            dotStroke,
-            polyStroke,
-            openPath,
-            emptyMetrics,
-          ],
-        ),
-      ],
-    );
+      final scene = Scene(
+        background: Background(color: background),
+        layers: [
+          Layer(
+            nodes: [imageNode, dotStroke, polyStroke, openPath, emptyMetrics],
+          ),
+        ],
+      );
 
-    final painter = ScenePainter(
-      scene: scene,
-      imageResolver: (_) => null,
-      selectedNodeIds: const {
-        'image-selected',
-        'stroke-dot',
-        'stroke-poly',
-        'path-open',
-        'path-empty-metrics',
-      },
-      selectionColor: const Color(0xFFFF0000),
-      selectionStrokeWidth: 3,
-    );
+      final painter = ScenePainter(
+        scene: scene,
+        imageResolver: (_) => null,
+        selectedNodeIds: const {
+          'image-selected',
+          'stroke-dot',
+          'stroke-poly',
+          'path-open',
+          'path-empty-metrics',
+        },
+        selectionColor: const Color(0xFFFF0000),
+        selectionStrokeWidth: 3,
+      );
 
-    final image = await _paintToImage(painter, width: 120, height: 80);
-    final nonBg = await _countNonBackgroundPixels(image, background);
-    expect(nonBg, greaterThan(0));
-  });
+      final image = await _paintToImage(painter, width: 120, height: 80);
+      final nonBg = await _countNonBackgroundPixels(image, background);
+      expect(nonBg, greaterThan(0));
+    },
+  );
 }

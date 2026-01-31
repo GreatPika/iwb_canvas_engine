@@ -298,11 +298,11 @@ class RectNode extends SceneNode {
 class PathNode extends SceneNode {
   PathNode({
     required super.id,
-    required this.svgPathData,
+    required String svgPathData,
     this.fillColor,
     this.strokeColor,
     this.strokeWidth = 1,
-    this.fillRule = PathFillRule.nonZero,
+    PathFillRule fillRule = PathFillRule.nonZero,
     super.rotationDeg,
     super.scaleX,
     super.scaleY,
@@ -312,14 +312,38 @@ class PathNode extends SceneNode {
     super.isLocked,
     super.isDeletable,
     super.isTransformable,
-  }) : super(type: NodeType.path);
+  }) : _svgPathData = svgPathData,
+       _fillRule = fillRule,
+       super(type: NodeType.path);
 
-  String svgPathData;
   Color? fillColor;
   Color? strokeColor;
   double strokeWidth;
-  PathFillRule fillRule;
+  String _svgPathData;
+  PathFillRule _fillRule;
   Offset _position = Offset.zero;
+
+  /// Cached local path to avoid reparsing SVG data during culling and selection.
+  /// Invariant: cache is valid only while svgPathData and fillRule are unchanged.
+  /// Validate via core_nodes_test "PathNode invalidates cached path".
+  Path? _cachedLocalPath;
+  String? _cachedSvgPathData;
+  PathFillRule? _cachedFillRule;
+  bool _cacheResolved = false;
+
+  String get svgPathData => _svgPathData;
+  set svgPathData(String value) {
+    if (_svgPathData == value) return;
+    _svgPathData = value;
+    _invalidatePathCache();
+  }
+
+  PathFillRule get fillRule => _fillRule;
+  set fillRule(PathFillRule value) {
+    if (_fillRule == value) return;
+    _fillRule = value;
+    _invalidatePathCache();
+  }
 
   @override
   Offset get position => _position;
@@ -332,17 +356,42 @@ class PathNode extends SceneNode {
   /// The returned path is in the node's local coordinate space. The caller is
   /// responsible for applying [position], [rotationDeg], and scaling.
   Path? buildLocalPath() {
-    if (svgPathData.trim().isEmpty) return null;
+    if (_cacheResolved &&
+        _cachedSvgPathData == _svgPathData &&
+        _cachedFillRule == _fillRule) {
+      return _cachedLocalPath;
+    }
+    if (_svgPathData.trim().isEmpty) {
+      _cacheResolved = true;
+      _cachedSvgPathData = _svgPathData;
+      _cachedFillRule = _fillRule;
+      _cachedLocalPath = null;
+      return null;
+    }
     try {
-      final path = parseSvgPathData(svgPathData);
+      final path = parseSvgPathData(_svgPathData);
       final bounds = path.getBounds();
-      if (bounds.isEmpty) return null;
+      if (bounds.isEmpty) {
+        _cacheResolved = true;
+        _cachedSvgPathData = _svgPathData;
+        _cachedFillRule = _fillRule;
+        _cachedLocalPath = null;
+        return null;
+      }
       final centered = path.shift(-bounds.center);
-      centered.fillType = fillRule == PathFillRule.evenOdd
+      centered.fillType = _fillRule == PathFillRule.evenOdd
           ? PathFillType.evenOdd
           : PathFillType.nonZero;
+      _cacheResolved = true;
+      _cachedSvgPathData = _svgPathData;
+      _cachedFillRule = _fillRule;
+      _cachedLocalPath = centered;
       return centered;
     } catch (_) {
+      _cacheResolved = true;
+      _cachedSvgPathData = _svgPathData;
+      _cachedFillRule = _fillRule;
+      _cachedLocalPath = null;
       return null;
     }
   }
@@ -370,5 +419,12 @@ class PathNode extends SceneNode {
       scaleX: scaleX,
       scaleY: scaleY,
     );
+  }
+
+  void _invalidatePathCache() {
+    _cacheResolved = false;
+    _cachedLocalPath = null;
+    _cachedSvgPathData = null;
+    _cachedFillRule = null;
   }
 }

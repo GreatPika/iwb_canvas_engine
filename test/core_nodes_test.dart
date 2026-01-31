@@ -85,6 +85,7 @@ void main() {
       PathNode(id: 'p2', svgPathData: 'not-a-path').buildLocalPath(),
       isNull,
     );
+    expect(PathNode(id: 'p3', svgPathData: 'M0 0').buildLocalPath(), isNull);
   });
 
   test(
@@ -107,4 +108,24 @@ void main() {
       expect(node.aabb, isNot(Rect.zero));
     },
   );
+
+  test('PathNode invalidates cached path on data changes', () {
+    final node = PathNode(id: 'path-cache', svgPathData: 'M0 0 H10 V10 H0 Z');
+
+    final first = node.buildLocalPath();
+    expect(first, isNotNull);
+    final firstBounds = first!.getBounds();
+
+    node.svgPathData = 'M0 0 H20 V6 H0 Z';
+    final second = node.buildLocalPath();
+    expect(second, isNotNull);
+    final secondBounds = second!.getBounds();
+
+    expect(secondBounds.width, isNot(firstBounds.width));
+
+    node.fillRule = PathFillRule.evenOdd;
+    final third = node.buildLocalPath();
+    expect(third, isNotNull);
+    expect(third!.fillType, PathFillType.evenOdd);
+  });
 }

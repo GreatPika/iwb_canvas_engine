@@ -27,7 +27,7 @@ class ScenePainter extends CustomPainter {
     this.selectionStrokeWidth = 1,
     this.gridStrokeWidth = 1,
     super.repaint,
-  }) : _repaint = repaint;
+  });
 
   final Scene scene;
   final ImageResolver imageResolver;
@@ -36,7 +36,6 @@ class ScenePainter extends CustomPainter {
   final Color selectionColor;
   final double selectionStrokeWidth;
   final double gridStrokeWidth;
-  final Listenable? _repaint;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -48,17 +47,18 @@ class ScenePainter extends CustomPainter {
       size.width,
       size.height,
     ).inflate(_cullPadding);
-    _drawLayers(canvas, scene, scene.camera.offset, viewRect);
-    _drawSelection(canvas, scene, scene.camera.offset);
+    final selectedNodes = _drawLayers(
+      canvas,
+      scene,
+      scene.camera.offset,
+      viewRect,
+      selectedNodeIds,
+    );
+    _drawSelection(canvas, selectedNodes, scene.camera.offset);
   }
 
   @override
   bool shouldRepaint(covariant ScenePainter oldDelegate) {
-    final usesRepaint = _repaint != null || oldDelegate._repaint != null;
-    if (!usesRepaint) {
-      return true;
-    }
-
     return oldDelegate.scene != scene ||
         oldDelegate.imageResolver != imageResolver ||
         !setEquals(oldDelegate.selectedNodeIds, selectedNodeIds) ||
@@ -97,35 +97,41 @@ class ScenePainter extends CustomPainter {
     }
   }
 
-  void _drawLayers(
+  List<SceneNode> _drawLayers(
     Canvas canvas,
     Scene scene,
     Offset cameraOffset,
     Rect viewRect,
+    Set<NodeId> selectedNodeIds,
   ) {
+    final selectedNodes = <SceneNode>[];
     for (final layer in scene.layers) {
       for (final node in layer.nodes) {
         if (!node.isVisible) continue;
         if (!viewRect.overlaps(node.aabb)) continue;
         _drawNode(canvas, node, cameraOffset);
+        if (selectedNodeIds.contains(node.id)) {
+          selectedNodes.add(node);
+        }
       }
     }
+    return selectedNodes;
   }
 
-  void _drawSelection(Canvas canvas, Scene scene, Offset cameraOffset) {
-    if (selectedNodeIds.isNotEmpty && selectionStrokeWidth > 0) {
-      for (final layer in scene.layers) {
-        for (final node in layer.nodes) {
-          if (!selectedNodeIds.contains(node.id)) continue;
-          if (!node.isVisible) continue;
-          _drawSelectionForNode(
-            canvas,
-            node,
-            cameraOffset,
-            selectionColor,
-            selectionStrokeWidth,
-          );
-        }
+  void _drawSelection(
+    Canvas canvas,
+    List<SceneNode> selectedNodes,
+    Offset cameraOffset,
+  ) {
+    if (selectedNodes.isNotEmpty && selectionStrokeWidth > 0) {
+      for (final node in selectedNodes) {
+        _drawSelectionForNode(
+          canvas,
+          node,
+          cameraOffset,
+          selectionColor,
+          selectionStrokeWidth,
+        );
       }
     }
 
@@ -197,28 +203,32 @@ class ScenePainter extends CustomPainter {
     } else if (node is LineNode) {
       final start = toView(node.start, cameraOffset);
       final end = toView(node.end, cameraOffset);
-      _drawStrokeHalo(
-        canvas,
-        () => canvas.drawLine(
-          start,
-          end,
-          _haloPaint(
-            node.thickness + haloWidth * 2,
-            color,
-            cap: StrokeCap.round,
-          ),
-        ),
-        () => canvas.drawLine(
-          start,
-          end,
-          _clearStrokePaint(node.thickness, cap: StrokeCap.round),
-        ),
+      canvas.drawLine(
+        start,
+        end,
+        _haloPaint(node.thickness + haloWidth * 2, color, cap: StrokeCap.round),
+      );
+      canvas.drawLine(
+        start,
+        end,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = node.thickness
+          ..strokeCap = StrokeCap.round
+          ..color = _applyOpacity(node.color, node.opacity),
       );
     } else if (node is StrokeNode) {
       if (node.points.isEmpty) return;
       if (node.points.length == 1) {
         final point = toView(node.points.first, cameraOffset);
-        _drawDotHalo(canvas, point, node.thickness / 2, color, haloWidth);
+        _drawDotSelection(
+          canvas,
+          point,
+          node.thickness / 2,
+          color,
+          _applyOpacity(node.color, node.opacity),
+          haloWidth,
+        );
         return;
       }
       final path = Path();
@@ -228,25 +238,23 @@ class ScenePainter extends CustomPainter {
         final p = toView(node.points[i], cameraOffset);
         path.lineTo(p.dx, p.dy);
       }
-      _drawStrokeHalo(
-        canvas,
-        () => canvas.drawPath(
-          path,
-          _haloPaint(
-            node.thickness + haloWidth * 2,
-            color,
-            cap: StrokeCap.round,
-            join: StrokeJoin.round,
-          ),
+      canvas.drawPath(
+        path,
+        _haloPaint(
+          node.thickness + haloWidth * 2,
+          color,
+          cap: StrokeCap.round,
+          join: StrokeJoin.round,
         ),
-        () => canvas.drawPath(
-          path,
-          _clearStrokePaint(
-            node.thickness,
-            cap: StrokeCap.round,
-            join: StrokeJoin.round,
-          ),
-        ),
+      );
+      canvas.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = node.thickness
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..color = _applyOpacity(node.color, node.opacity),
       );
     } else if (node is PathNode) {
       final localPath = node.buildLocalPath();
@@ -263,7 +271,7 @@ class ScenePainter extends CustomPainter {
         return;
       }
 
-      Path? closedUnion;
+      Path? closedContours;
       final openContours = <Path>[];
       for (final metric in metrics) {
         final contour = metric.extractPath(
@@ -274,18 +282,17 @@ class ScenePainter extends CustomPainter {
         contour.fillType = PathFillType.nonZero;
         if (metric.isClosed) {
           contour.close();
-          closedUnion = closedUnion == null
-              ? contour
-              : Path.combine(PathOperation.union, closedUnion, contour);
+          closedContours ??= Path()..fillType = PathFillType.nonZero;
+          closedContours.addPath(contour, Offset.zero);
         } else {
           openContours.add(contour);
         }
       }
 
-      if (closedUnion != null) {
+      if (closedContours != null) {
         _drawPathHalo(
           canvas,
-          closedUnion,
+          closedContours,
           color,
           haloWidth,
           baseStrokeWidth: baseStrokeWidth,
@@ -294,26 +301,26 @@ class ScenePainter extends CustomPainter {
       }
 
       for (final contour in openContours) {
-        _drawStrokeHalo(
-          canvas,
-          () => canvas.drawPath(
-            contour,
-            _haloPaint(
-              baseStrokeWidth + haloWidth * 2,
-              color,
-              cap: StrokeCap.round,
-              join: StrokeJoin.round,
-            ),
-          ),
-          () => canvas.drawPath(
-            contour,
-            _clearStrokePaint(
-              baseStrokeWidth,
-              cap: StrokeCap.round,
-              join: StrokeJoin.round,
-            ),
+        canvas.drawPath(
+          contour,
+          _haloPaint(
+            baseStrokeWidth + haloWidth * 2,
+            color,
+            cap: StrokeCap.round,
+            join: StrokeJoin.round,
           ),
         );
+        if (baseStrokeWidth > 0) {
+          canvas.drawPath(
+            contour,
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = baseStrokeWidth
+              ..strokeJoin = StrokeJoin.round
+              ..strokeCap = StrokeCap.round
+              ..color = _applyOpacity(node.strokeColor ?? color, node.opacity),
+          );
+        }
       }
       canvas.restore();
     }
@@ -366,47 +373,22 @@ class ScenePainter extends CustomPainter {
       ..color = color;
   }
 
-  Paint _clearStrokePaint(
-    double strokeWidth, {
-    StrokeCap cap = StrokeCap.round,
-    StrokeJoin join = StrokeJoin.round,
-  }) {
-    return Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = cap
-      ..strokeJoin = join
-      ..blendMode = BlendMode.clear;
-  }
-
-  void _drawStrokeHalo(
-    Canvas canvas,
-    VoidCallback drawHalo,
-    VoidCallback clearInner,
-  ) {
-    canvas.saveLayer(null, Paint());
-    drawHalo();
-    clearInner();
-    canvas.restore();
-  }
-
-  void _drawDotHalo(
+  void _drawDotSelection(
     Canvas canvas,
     Offset center,
     double radius,
-    Color color,
+    Color haloColor,
+    Color baseColor,
     double haloWidth,
   ) {
-    canvas.saveLayer(null, Paint());
     final haloPaint = Paint()
       ..style = PaintingStyle.fill
-      ..color = color;
+      ..color = haloColor;
     canvas.drawCircle(center, radius + haloWidth, haloPaint);
-    final clearPaint = Paint()
+    final basePaint = Paint()
       ..style = PaintingStyle.fill
-      ..blendMode = BlendMode.clear;
-    canvas.drawCircle(center, radius, clearPaint);
-    canvas.restore();
+      ..color = baseColor;
+    canvas.drawCircle(center, radius, basePaint);
   }
 
   void _drawRectHalo(
