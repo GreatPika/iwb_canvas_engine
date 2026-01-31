@@ -30,7 +30,7 @@ flutter pub add iwb_canvas_engine
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/basic.dart';
 
 final scene = Scene(
   layers: [
@@ -50,22 +50,20 @@ final scene = Scene(
   ],
 );
 
-CustomPaint(
-  painter: ScenePainter(
-    scene: scene,
-    imageResolver: (_) => null,
-  ),
+final controller = SceneController(scene: scene);
+
+SceneView(
+  controller: controller,
+  imageResolver: (imageId) => null,
 );
 ```
 
-### SceneView integration
+### Events
 
-`SceneView` wires pointer input to `SceneController` and repaints via
-`ScenePainter`. The app provides an `ImageResolver` and listens to events.
+The app can listen to controller events to integrate with undo/redo and text
+editing UI.
 
 ```dart
-final controller = SceneController(scene: scene);
-
 controller.actions.listen((event) {
   // ActionCommitted for undo/redo integration.
 });
@@ -80,6 +78,18 @@ SceneView(
 );
 ```
 
+### Advanced rendering / input
+
+If you need low-level APIs (custom painting via `ScenePainter`, hit-testing, or
+raw pointer tracking), import the full export surface:
+
+```dart
+import 'package:iwb_canvas_engine/advanced.dart';
+```
+
+For backward compatibility, `package:iwb_canvas_engine/iwb_canvas_engine.dart`
+still exports the full surface in 0.x.
+
 ## Serialization (JSON v1)
 
 ```dart
@@ -89,8 +99,12 @@ final restored = decodeSceneFromJson(json);
 
 ## API reference
 
-The package public surface is exported from `lib/iwb_canvas_engine.dart`
-(imported as `package:iwb_canvas_engine/iwb_canvas_engine.dart`).
+Entrypoints:
+
+- `package:iwb_canvas_engine/basic.dart` — minimal "happy path" API.
+- `package:iwb_canvas_engine/advanced.dart` — full export surface.
+- `package:iwb_canvas_engine/iwb_canvas_engine.dart` — legacy full surface
+  (0.x compatibility; may change for 1.0).
 
 API docs are generated from Dartdoc comments in `lib/`:
 
