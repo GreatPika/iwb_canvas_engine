@@ -30,6 +30,12 @@ Offset reflectPointVertical(Offset point, double axisX) {
   return Offset(dx, point.dy);
 }
 
+/// Mirrors [point] across the horizontal axis that passes through [axisY].
+Offset reflectPointHorizontal(Offset point, double axisY) {
+  final dy = axisY + (axisY - point.dy);
+  return Offset(point.dx, dy);
+}
+
 /// Returns the axis-aligned bounding box for [points].
 Rect aabbFromPoints(Iterable<Offset> points) {
   final iterator = points.iterator;

@@ -185,6 +185,13 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                     icon: const Icon(Icons.flip),
                   ),
                   IconButton(
+                    tooltip: 'Flip horizontal',
+                    onPressed: hasSelection
+                        ? () => _controller.flipSelectionHorizontal()
+                        : null,
+                    icon: const Icon(Icons.flip_camera_android),
+                  ),
+                  IconButton(
                     tooltip: 'Delete',
                     onPressed: hasSelection
                         ? () => _controller.deleteSelection()

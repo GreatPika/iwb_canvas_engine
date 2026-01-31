@@ -114,6 +114,10 @@ SceneView(
 );
 ```
 
+For `ActionCommitted.payload`:
+- `rotate`: `{clockwise: bool}`
+- `flip`: `{axis: 'vertical' | 'horizontal'}`
+
 ### Scene mutations
 
 Prefer mutating the scene through `SceneController` instead of touching

@@ -340,6 +340,26 @@ class SceneController extends ChangeNotifier {
       ActionType.flip,
       nodes.map((node) => node.id).toList(growable: false),
       timestampMs ?? DateTime.now().millisecondsSinceEpoch,
+      payload: const <String, Object?>{'axis': 'vertical'},
+    );
+    notifyListeners();
+  }
+
+  /// Flips the transformable selection vertically around its center.
+  void flipSelectionHorizontal({int? timestampMs}) {
+    final nodes = _selectedTransformableNodesInSceneOrder();
+    if (nodes.isEmpty) return;
+
+    final center = _selectionCenter(nodes);
+    for (final node in nodes) {
+      _flipNodeHorizontal(node, center.dy);
+    }
+
+    _emitAction(
+      ActionType.flip,
+      nodes.map((node) => node.id).toList(growable: false),
+      timestampMs ?? DateTime.now().millisecondsSinceEpoch,
+      payload: const <String, Object?>{'axis': 'horizontal'},
     );
     notifyListeners();
   }
@@ -1090,6 +1110,22 @@ class SceneController extends ChangeNotifier {
     }
     node.position = reflectPointVertical(node.position, axisX);
     node.scaleX = -node.scaleX;
+  }
+
+  void _flipNodeHorizontal(SceneNode node, double axisY) {
+    if (node is LineNode) {
+      node.start = reflectPointHorizontal(node.start, axisY);
+      node.end = reflectPointHorizontal(node.end, axisY);
+      return;
+    }
+    if (node is StrokeNode) {
+      for (var i = 0; i < node.points.length; i++) {
+        node.points[i] = reflectPointHorizontal(node.points[i], axisY);
+      }
+      return;
+    }
+    node.position = reflectPointHorizontal(node.position, axisY);
+    node.scaleY = -node.scaleY;
   }
 }
 

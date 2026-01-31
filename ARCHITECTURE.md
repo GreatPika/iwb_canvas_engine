@@ -140,6 +140,10 @@ Emit `ActionCommitted` on:
 - `EditTextRequested` for `TextNode` double-tap
 - A change notification for repaint (stream/listener)
 
+`ActionCommitted.payload` uses minimal metadata for undo/redo:
+- rotate: `{clockwise: bool}`
+- flip: `{axis: 'vertical' | 'horizontal'}`
+
 ## Example app responsibilities
 
 - Provide UI for tools/modes, palettes, background.

@@ -91,14 +91,19 @@ void main() {
     final before = DateTime.now().millisecondsSinceEpoch;
     controller.rotateSelection(clockwise: false);
     controller.flipSelectionVertical();
+    controller.flipSelectionHorizontal();
     final after = DateTime.now().millisecondsSinceEpoch;
 
-    expect(actions, hasLength(2));
+    expect(actions, hasLength(3));
     expect(actions.first.type, ActionType.rotate);
     expect(actions.first.payload, containsPair('clockwise', false));
     expect(actions.first.timestampMs, inInclusiveRange(before, after));
-    expect(actions.last.type, ActionType.flip);
-    expect(actions.last.timestampMs, inInclusiveRange(before, after));
+    expect(actions[1].type, ActionType.flip);
+    expect(actions[1].payload, containsPair('axis', 'vertical'));
+    expect(actions[1].timestampMs, inInclusiveRange(before, after));
+    expect(actions[2].type, ActionType.flip);
+    expect(actions[2].payload, containsPair('axis', 'horizontal'));
+    expect(actions[2].timestampMs, inInclusiveRange(before, after));
   });
 
   test('deleteSelection/clearScene default timestamp uses DateTime.now', () {
@@ -853,5 +858,54 @@ void main() {
     controller.flipSelectionVertical(timestampMs: 30);
     expect(line.start.dx, closeTo(10, 0.001));
     expect(line.end.dx, closeTo(0, 0.001));
+  });
+
+  test('flipSelectionHorizontal mirrors line geometry', () {
+    final line = LineNode(
+      id: 'line',
+      start: const Offset(0, 0),
+      end: const Offset(0, 10),
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+
+    final controller = SceneController(
+      scene: Scene(
+        layers: [
+          Layer(nodes: [line]),
+        ],
+      ),
+      dragStartSlop: 0,
+    );
+    addTearDown(controller.dispose);
+
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 1,
+        position: Offset(-20, -20),
+        timestampMs: 0,
+        phase: PointerPhase.down,
+      ),
+    );
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 1,
+        position: Offset(20, 20),
+        timestampMs: 10,
+        phase: PointerPhase.move,
+      ),
+    );
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 1,
+        position: Offset(20, 20),
+        timestampMs: 20,
+        phase: PointerPhase.up,
+      ),
+    );
+
+    controller.flipSelectionHorizontal(timestampMs: 30);
+    expect(line.start.dy, closeTo(10, 0.001));
+    expect(line.end.dy, closeTo(0, 0.001));
   });
 }

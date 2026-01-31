@@ -1,5 +1,10 @@
 ## Unreleased
 
+### Selection transforms
+
+- Add horizontal flip alongside vertical flip.
+- Include flip axis in `ActionCommitted.payload`.
+
 ### Stage 1 — Public API split (basic vs advanced)
 
 - Add `basic.dart` entrypoint with a minimal public surface.
