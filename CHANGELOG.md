@@ -1,3 +1,43 @@
+## Unreleased
+
+### Stage 1 — Public API split (basic vs advanced)
+
+- Add `basic.dart` entrypoint with a minimal public surface.
+- Add `advanced.dart` entrypoint that exports the full API.
+- Document public API split and usage in README.
+
+### Stage 2 — SceneController mutations
+
+- Add `SceneController` mutation helpers (`addNode`, `removeNode`, `moveNode`).
+
+### Stage 3 — notifySceneChanged invariants
+
+- Enforce selection cleanup on `notifySceneChanged()` after external mutations.
+
+### Stage 4 — NodeId generation
+
+- Use per-controller NodeId seed; document `nodeIdGenerator`.
+
+### Stage 5 — SceneView without external controller
+
+- Allow `SceneView` without an external controller + `onControllerReady`.
+
+### Stage 6 — Locked/transformable rules
+
+- Define locked/transformable selection rules and document behavior.
+
+### Stage 7 — Public API docs
+
+- Add Dartdoc for `SceneController` public methods and streams.
+
+### Stage 8 — Example app updates
+
+- Update example app to use `basic.dart` and demonstrate JSON export/import.
+
+### Backlog item delivered
+
+- Add viewport culling in `ScenePainter` to skip offscreen nodes.
+
 ## 0.0.3
 
 - Publish web demo (Flutter Web) to GitHub Pages.

@@ -15,6 +15,7 @@ Live demo and docs:
 
 - Scene model with layers and nodes (image, text, stroke, line, rect, path).
 - Rendering via `ScenePainter` with background and grid.
+- Viewport culling for offscreen nodes.
 - Hit-testing for selection and interaction.
 - JSON v1 import/export with validation.
 

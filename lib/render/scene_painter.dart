@@ -16,6 +16,8 @@ typedef ImageResolver = Image? Function(String imageId);
 /// The painter expects all node geometry to be in scene coordinates and applies
 /// [Scene.camera] offset to render into view coordinates.
 class ScenePainter extends CustomPainter {
+  static const double _cullPadding = 1.0;
+
   ScenePainter({
     required this.scene,
     required this.imageResolver,
@@ -40,7 +42,13 @@ class ScenePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     _drawBackground(canvas, size, scene.background.color);
     _drawGrid(canvas, size, scene.background.grid, scene.camera.offset);
-    _drawLayers(canvas, scene, scene.camera.offset);
+    final viewRect = Rect.fromLTWH(
+      scene.camera.offset.dx,
+      scene.camera.offset.dy,
+      size.width,
+      size.height,
+    ).inflate(_cullPadding);
+    _drawLayers(canvas, scene, scene.camera.offset, viewRect);
     _drawSelection(canvas, scene, scene.camera.offset);
   }
 
@@ -89,10 +97,16 @@ class ScenePainter extends CustomPainter {
     }
   }
 
-  void _drawLayers(Canvas canvas, Scene scene, Offset cameraOffset) {
+  void _drawLayers(
+    Canvas canvas,
+    Scene scene,
+    Offset cameraOffset,
+    Rect viewRect,
+  ) {
     for (final layer in scene.layers) {
       for (final node in layer.nodes) {
         if (!node.isVisible) continue;
+        if (!viewRect.overlaps(node.aabb)) continue;
         _drawNode(canvas, node, cameraOffset);
       }
     }
