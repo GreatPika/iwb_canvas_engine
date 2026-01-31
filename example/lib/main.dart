@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iwb_canvas_engine/basic.dart';
+import 'package:iwb_canvas_engine/input/pointer_input.dart';
 
 void main() {
   runApp(const CanvasExampleApp());
@@ -38,17 +39,28 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   int _sampleSeed = 0;
   int _nodeSeed = 0;
   String? _lastExportedJson;
-  bool _isEditingText = false;
+  NodeId? _editingNodeId;
+  TextEditingController? _textEditController;
+  FocusNode? _textEditFocusNode;
 
   @override
   void initState() {
     super.initState();
-    _controller = SceneController(scene: _createScene());
-    _controller.editTextRequests.listen(_scheduleTextEdit);
+    _controller = SceneController(
+      scene: _createScene(),
+      pointerSettings: const PointerInputSettings(
+        tapSlop: 16,
+        doubleTapSlop: 32,
+        doubleTapMaxDelayMs: 450,
+      ),
+    );
+    _controller.editTextRequests.listen(_beginInlineTextEdit);
   }
 
   @override
   void dispose() {
+    _textEditController?.dispose();
+    _textEditFocusNode?.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -431,6 +443,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   }
 
   Widget _buildCanvas() {
+    final textEditOverlay = _buildTextEditOverlay();
     return Stack(
       children: [
         SceneView(
@@ -446,6 +459,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
             ),
           ),
         ),
+        if (textEditOverlay != null) textEditOverlay,
       ],
     );
   }
@@ -488,51 +502,165 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     return null;
   }
 
-  void _scheduleTextEdit(EditTextRequested request) {
-    if (_isEditingText) return;
-    _isEditingText = true;
+  void _beginInlineTextEdit(EditTextRequested request) {
+    if (_editingNodeId != null) return;
+    final node = _findTextNode(request.nodeId);
+    if (node == null) return;
+    setState(() {
+      _editingNodeId = node.id;
+      _textEditController = TextEditingController(text: node.text);
+      _textEditFocusNode = FocusNode();
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) {
-        _isEditingText = false;
-        return;
+      if (!mounted) return;
+      final focusNode = _textEditFocusNode;
+      if (focusNode == null) return;
+      focusNode.requestFocus();
+      final controller = _textEditController;
+      if (controller != null) {
+        controller.selection = TextSelection.collapsed(
+          offset: controller.text.length,
+        );
       }
-      _openTextEditDialog(request);
     });
   }
 
-  Future<void> _openTextEditDialog(EditTextRequested request) async {
-    final node = _findTextNode(request.nodeId);
-    if (node == null) {
-      _isEditingText = false;
+  void _finishInlineTextEdit({required bool save}) {
+    final nodeId = _editingNodeId;
+    final controller = _textEditController;
+    final focusNode = _textEditFocusNode;
+    if (nodeId == null || controller == null || focusNode == null) return;
+
+    if (save) {
+      final node = _findTextNode(nodeId);
+      if (node != null) {
+        node.text = controller.text;
+        _controller.notifySceneChanged();
+      }
+    }
+
+    if (!mounted) {
+      _editingNodeId = null;
+      _textEditController = null;
+      _textEditFocusNode = null;
+      controller.dispose();
+      focusNode.dispose();
       return;
     }
-    final controller = TextEditingController(text: node.text);
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit text'),
-        content: TextField(
-          controller: controller,
-          maxLines: 4,
-          autofocus: true,
+
+    setState(() {
+      _editingNodeId = null;
+      _textEditController = null;
+      _textEditFocusNode = null;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.dispose();
+      focusNode.dispose();
+    });
+  }
+
+  Widget? _buildTextEditOverlay() {
+    final nodeId = _editingNodeId;
+    final controller = _textEditController;
+    final focusNode = _textEditFocusNode;
+    if (nodeId == null || controller == null || focusNode == null) {
+      return null;
+    }
+    final node = _findTextNode(nodeId);
+    if (node == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _finishInlineTextEdit(save: false);
+      });
+      return null;
+    }
+
+    final viewRect = _textEditRectFor(node);
+    final minWidth = viewRect.width < 140 ? 140 : viewRect.width;
+    final minHeight = viewRect.height < 44 ? 44 : viewRect.height;
+    final padding = 6.0;
+    final theme = Theme.of(context);
+    final lineHeight = node.lineHeight == null || node.fontSize == 0
+        ? null
+        : node.lineHeight! / node.fontSize;
+
+    return Positioned(
+      left: viewRect.left - padding,
+      top: viewRect.top - padding,
+      width: minWidth + padding * 2,
+      height: minHeight + padding * 2 + 40,
+      child: Material(
+        elevation: 4,
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: Focus(
+                  focusNode: focusNode,
+                  onFocusChange: (hasFocus) {
+                    if (!hasFocus) {
+                      _finishInlineTextEdit(save: true);
+                    }
+                  },
+                  child: TextField(
+                    controller: controller,
+                    maxLines: null,
+                    expands: true,
+                    textAlign: node.align,
+                    style: TextStyle(
+                      fontSize: node.fontSize,
+                      height: lineHeight,
+                      color: node.color,
+                      fontWeight:
+                          node.isBold ? FontWeight.bold : FontWeight.normal,
+                      fontStyle:
+                          node.isItalic ? FontStyle.italic : FontStyle.normal,
+                      decoration: node.isUnderline
+                          ? TextDecoration.underline
+                          : TextDecoration.none,
+                      fontFamily: node.fontFamily,
+                    ),
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                      border: OutlineInputBorder(),
+                    ),
+                    onSubmitted: (_) => _finishInlineTextEdit(save: true),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => _finishInlineTextEdit(save: false),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: () => _finishInlineTextEdit(save: true),
+                    child: const Text('Save'),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text),
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
-    if (result != null) {
-      node.text = result;
-      _controller.notifySceneChanged();
-    }
-    _isEditingText = false;
+  }
+
+  Rect _textEditRectFor(TextNode node) {
+    final rect = node.aabb;
+    final cameraOffset = _controller.scene.camera.offset;
+    final topLeft = toView(rect.topLeft, cameraOffset);
+    final bottomRight = toView(rect.bottomRight, cameraOffset);
+    return Rect.fromPoints(topLeft, bottomRight);
   }
 
   Future<void> _exportSceneJson() async {
