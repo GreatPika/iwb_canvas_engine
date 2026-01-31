@@ -58,6 +58,34 @@ SceneView(
 );
 ```
 
+### Simple view (no controller boilerplate)
+
+```dart
+SceneView(
+  imageResolver: (imageId) => null,
+  onControllerReady: (controller) {
+    controller.addNode(
+      RectNode(
+        id: 'rect-1',
+        size: const Size(120, 80),
+        fillColor: const Color(0xFF2196F3),
+      )..position = const Offset(120, 120),
+    );
+  },
+);
+```
+
+### Advanced view (external controller)
+
+```dart
+final controller = SceneController(scene: scene);
+
+SceneView(
+  controller: controller,
+  imageResolver: (imageId) => null,
+);
+```
+
 Node IDs must be unique within a scene. By default, `SceneController` generates
 `node-{n}` IDs for nodes it creates; pass `nodeIdGenerator` if you need a custom
 scheme.

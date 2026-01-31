@@ -10,17 +10,24 @@ import '../render/scene_painter.dart';
 ///
 /// The view listens to [SceneController] changes and rebuilds its painter.
 class SceneView extends StatefulWidget {
+  /// Creates a view for the provided [controller].
+  ///
+  /// If [controller] is null, the view creates and owns a controller with an
+  /// empty scene. Use [onControllerReady] to access the internal controller once
+  /// it is created.
   const SceneView({
-    required this.controller,
+    this.controller,
     required this.imageResolver,
+    this.onControllerReady,
     this.selectionColor = const Color(0xFF1565C0),
     this.selectionStrokeWidth = 1,
     this.gridStrokeWidth = 1,
     super.key,
   });
 
-  final SceneController controller;
+  final SceneController? controller;
   final ImageResolver imageResolver;
+  final ValueChanged<SceneController>? onControllerReady;
   final Color selectionColor;
   final double selectionStrokeWidth;
   final double gridStrokeWidth;
@@ -33,21 +40,34 @@ class _SceneViewState extends State<SceneView> {
   late PointerInputTracker _pointerTracker;
   Timer? _pendingTapTimer;
   int _lastTimestampMs = 0;
+  SceneController? _ownedController;
+
+  SceneController get _controller => widget.controller ?? _ownedController!;
 
   @override
   void initState() {
     super.initState();
+    _ensureController();
     _pointerTracker = PointerInputTracker(
-      settings: widget.controller.pointerSettings,
+      settings: _controller.pointerSettings,
     );
   }
 
   @override
   void didUpdateWidget(SceneView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.controller != widget.controller) {
+    final controllerChanged = oldWidget.controller != widget.controller;
+    if (controllerChanged) {
+      if (oldWidget.controller == null && widget.controller != null) {
+        _disposeOwnedController();
+      } else if (oldWidget.controller != null && widget.controller == null) {
+        _ensureController();
+      }
+    }
+    if (controllerChanged ||
+        (widget.controller == null && _ownedController == null)) {
       _pointerTracker = PointerInputTracker(
-        settings: widget.controller.pointerSettings,
+        settings: _controller.pointerSettings,
       );
       _pendingTapTimer?.cancel();
       _lastTimestampMs = 0;
@@ -57,6 +77,7 @@ class _SceneViewState extends State<SceneView> {
   @override
   void dispose() {
     _pendingTapTimer?.cancel();
+    _disposeOwnedController();
     super.dispose();
   }
 
@@ -70,14 +91,14 @@ class _SceneViewState extends State<SceneView> {
       onPointerCancel: (event) =>
           _handlePointerEvent(event, PointerPhase.cancel),
       child: AnimatedBuilder(
-        animation: widget.controller,
+        animation: _controller,
         builder: (context, _) {
           return CustomPaint(
             painter: ScenePainter(
-              scene: widget.controller.scene,
+              scene: _controller.scene,
               imageResolver: widget.imageResolver,
-              selectedNodeIds: widget.controller.selectedNodeIds,
-              selectionRect: widget.controller.selectionRect,
+              selectedNodeIds: _controller.selectedNodeIds,
+              selectionRect: _controller.selectionRect,
               selectionColor: widget.selectionColor,
               selectionStrokeWidth: widget.selectionStrokeWidth,
               gridStrokeWidth: widget.gridStrokeWidth,
@@ -90,6 +111,7 @@ class _SceneViewState extends State<SceneView> {
   }
 
   void _handlePointerEvent(PointerEvent event, PointerPhase phase) {
+    final controller = _controller;
     final sample = PointerSample(
       pointerId: event.pointer,
       position: event.localPosition,
@@ -98,7 +120,7 @@ class _SceneViewState extends State<SceneView> {
       kind: event.kind,
     );
 
-    widget.controller.handlePointer(sample);
+    controller.handlePointer(sample);
 
     final signals = _pointerTracker.handle(sample);
     _dispatchSignals(signals);
@@ -106,9 +128,10 @@ class _SceneViewState extends State<SceneView> {
   }
 
   void _dispatchSignals(List<PointerSignal> signals) {
+    final controller = _controller;
     for (final signal in signals) {
       if (signal.type == PointerSignalType.doubleTap) {
-        widget.controller.handlePointerSignal(signal);
+        controller.handlePointerSignal(signal);
       }
     }
   }
@@ -116,11 +139,23 @@ class _SceneViewState extends State<SceneView> {
   void _schedulePendingFlush(int timestampMs) {
     _lastTimestampMs = timestampMs;
     _pendingTapTimer?.cancel();
-    final delayMs = widget.controller.pointerSettings.doubleTapMaxDelayMs + 1;
+    final delayMs = _controller.pointerSettings.doubleTapMaxDelayMs + 1;
     _pendingTapTimer = Timer(Duration(milliseconds: delayMs), () {
       final flushTimestamp = _lastTimestampMs + delayMs;
       final signals = _pointerTracker.flushPending(flushTimestamp);
       _dispatchSignals(signals);
     });
+  }
+
+  void _ensureController() {
+    if (widget.controller != null) return;
+    if (_ownedController != null) return;
+    _ownedController = SceneController();
+    widget.onControllerReady?.call(_ownedController!);
+  }
+
+  void _disposeOwnedController() {
+    _ownedController?.dispose();
+    _ownedController = null;
   }
 }

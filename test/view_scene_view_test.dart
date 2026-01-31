@@ -3,6 +3,44 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 void main() {
+  testWidgets('SceneView creates internal controller when missing', (
+    tester,
+  ) async {
+    SceneController? createdController;
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 300,
+          height: 300,
+          child: SceneView(
+            imageResolver: (_) => null,
+            onControllerReady: (controller) {
+              createdController = controller;
+              controller.addNode(
+                RectNode(
+                  id: 'rect-1',
+                  size: const Size(100, 80),
+                  fillColor: const Color(0xFF2196F3),
+                )..position = const Offset(150, 150),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    expect(createdController, isNotNull);
+    expect(createdController!.selectedNodeIds, isEmpty);
+
+    await tester.tapAt(const Offset(150, 150));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(createdController!.selectedNodeIds, contains('rect-1'));
+  });
+
   testWidgets('SceneView selects a node on tap', (tester) async {
     final scene = Scene(
       layers: [
@@ -42,6 +80,31 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
+  });
+
+  testWidgets('SceneView does not call onControllerReady for external', (
+    tester,
+  ) async {
+    var called = false;
+    final controller = SceneController(scene: Scene(layers: [Layer()]));
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 300,
+          height: 300,
+          child: SceneView(
+            controller: controller,
+            imageResolver: (_) => null,
+            onControllerReady: (_) => called = true,
+          ),
+        ),
+      ),
+    );
+
+    expect(called, isFalse);
   });
 
   testWidgets('SceneView dispatches double-tap signals', (tester) async {
