@@ -61,6 +61,30 @@ void main() {
     expect(right.rotationDeg, 90);
   });
 
+  test('rotateSelection skips non-transformable nodes and centers on them', () {
+    final transformable = rectNode('t', const Offset(0, 0));
+    final nonTransformable = rectNode(
+      'nt',
+      const Offset(100, 0),
+      transformable: false,
+    );
+    final scene = Scene(
+      layers: [
+        Layer(nodes: [transformable, nonTransformable]),
+      ],
+    );
+    final controller = SceneController(scene: scene, dragStartSlop: 0);
+    marqueeSelect(controller, const Rect.fromLTRB(-20, -20, 120, 20));
+
+    controller.rotateSelection(clockwise: true, timestampMs: 40);
+
+    expect(transformable.position.dx, closeTo(0, 0.001));
+    expect(transformable.position.dy, closeTo(0, 0.001));
+    expect(transformable.rotationDeg, 90);
+    expect(nonTransformable.position, const Offset(100, 0));
+    expect(nonTransformable.rotationDeg, 0);
+  });
+
   test('flipSelectionVertical mirrors around center x', () {
     final left = rectNode('left', const Offset(0, 0));
     final right = rectNode('right', const Offset(10, 0));
@@ -79,6 +103,33 @@ void main() {
     expect(left.scaleX, -1);
     expect(right.scaleX, -1);
   });
+
+  test(
+    'flipSelectionVertical skips non-transformable nodes and centers on them',
+    () {
+      final transformable = rectNode('t', const Offset(0, 0));
+      final nonTransformable = rectNode(
+        'nt',
+        const Offset(100, 0),
+        transformable: false,
+      );
+      final scene = Scene(
+        layers: [
+          Layer(nodes: [transformable, nonTransformable]),
+        ],
+      );
+      final controller = SceneController(scene: scene, dragStartSlop: 0);
+      marqueeSelect(controller, const Rect.fromLTRB(-20, -20, 120, 20));
+
+      controller.flipSelectionVertical(timestampMs: 40);
+
+      expect(transformable.position.dx, closeTo(0, 0.001));
+      expect(transformable.position.dy, closeTo(0, 0.001));
+      expect(transformable.scaleX, -1);
+      expect(nonTransformable.position, const Offset(100, 0));
+      expect(nonTransformable.scaleX, 1);
+    },
+  );
 
   test('rotateSelection rotates line geometry', () {
     final line = LineNode(

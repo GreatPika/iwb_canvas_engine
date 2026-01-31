@@ -107,6 +107,111 @@ void main() {
     expect(called, isFalse);
   });
 
+  testWidgets('SceneView switches from internal to external controller', (
+    tester,
+  ) async {
+    SceneController? internalController;
+    var readyCalls = 0;
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 300,
+          height: 300,
+          child: SceneView(
+            imageResolver: (_) => null,
+            onControllerReady: (controller) {
+              readyCalls += 1;
+              internalController = controller;
+            },
+          ),
+        ),
+      ),
+    );
+
+    expect(internalController, isNotNull);
+    expect(readyCalls, 1);
+
+    final externalController = SceneController(
+      scene: Scene(
+        layers: [
+          Layer(
+            nodes: [
+              RectNode(
+                id: 'rect-1',
+                size: const Size(100, 80),
+                fillColor: const Color(0xFF2196F3),
+              )..position = const Offset(150, 150),
+            ],
+          ),
+        ],
+      ),
+    );
+    addTearDown(externalController.dispose);
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 300,
+          height: 300,
+          child: SceneView(
+            controller: externalController,
+            imageResolver: (_) => null,
+            onControllerReady: (_) => readyCalls += 1,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tapAt(const Offset(150, 150));
+    await tester.pump();
+
+    expect(externalController.selectedNodeIds, contains('rect-1'));
+    expect(readyCalls, 1);
+  });
+
+  testWidgets('SceneView switches from external to internal controller', (
+    tester,
+  ) async {
+    final externalController = SceneController(scene: Scene(layers: [Layer()]));
+    addTearDown(externalController.dispose);
+    SceneController? internalController;
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 300,
+          height: 300,
+          child: SceneView(
+            controller: externalController,
+            imageResolver: (_) => null,
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 300,
+          height: 300,
+          child: SceneView(
+            imageResolver: (_) => null,
+            onControllerReady: (controller) {
+              internalController = controller;
+            },
+          ),
+        ),
+      ),
+    );
+
+    expect(internalController, isNotNull);
+  });
+
   testWidgets('SceneView dispatches double-tap signals', (tester) async {
     final scene = Scene(
       layers: [
@@ -234,5 +339,37 @@ void main() {
     );
 
     await tester.pump(const Duration(milliseconds: 50));
+  });
+
+  testWidgets('SceneView rebuilds with the same controller instance', (
+    tester,
+  ) async {
+    final controller = SceneController(
+      scene: Scene(layers: [Layer()]),
+      pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 20),
+    );
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 300,
+          height: 300,
+          child: SceneView(controller: controller, imageResolver: (_) => null),
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 300,
+          height: 300,
+          child: SceneView(controller: controller, imageResolver: (_) => null),
+        ),
+      ),
+    );
   });
 }

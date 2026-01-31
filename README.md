@@ -131,6 +131,12 @@ controller.removeNode('rect-2');
 If you mutate `controller.scene` directly, call `controller.notifySceneChanged()`
 afterwards to let the controller restore minimal invariants (e.g. selection).
 
+### Selection and transforms
+
+- Locked nodes (`isLocked == true`) can be selected, but drag-move skips them.
+- Rotate/flip operations apply only to nodes with `isTransformable == true`.
+- Transform centers and bounds are computed from the transformable subset.
+
 ### Advanced rendering / input
 
 If you need low-level APIs (custom painting via `ScenePainter`, hit-testing, or
