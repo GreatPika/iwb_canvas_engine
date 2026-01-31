@@ -167,6 +167,83 @@ void main() {
     expect(notifications, 0);
   });
 
+  test('notifySceneChanged drops selection for externally removed nodes', () {
+    final node = RectNode(
+      id: 'r1',
+      size: const Size(10, 10),
+      fillColor: const Color(0xFF000000),
+    )..position = const Offset(0, 0);
+    final controller = SceneController(
+      scene: Scene(
+        layers: [
+          Layer(nodes: [node]),
+        ],
+      ),
+    );
+    addTearDown(controller.dispose);
+
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 1,
+        position: Offset(0, 0),
+        timestampMs: 0,
+        phase: PointerPhase.down,
+      ),
+    );
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 1,
+        position: Offset(0, 0),
+        timestampMs: 10,
+        phase: PointerPhase.up,
+      ),
+    );
+
+    expect(controller.selectedNodeIds, contains('r1'));
+
+    controller.scene.layers[0].nodes.clear();
+    controller.notifySceneChanged();
+
+    expect(controller.selectedNodeIds, isEmpty);
+  });
+
+  test('notifySceneChanged keeps selection for existing nodes', () {
+    final node = RectNode(
+      id: 'r1',
+      size: const Size(10, 10),
+      fillColor: const Color(0xFF000000),
+    )..position = const Offset(0, 0);
+    final controller = SceneController(
+      scene: Scene(
+        layers: [
+          Layer(nodes: [node]),
+        ],
+      ),
+    );
+    addTearDown(controller.dispose);
+
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 1,
+        position: Offset(0, 0),
+        timestampMs: 0,
+        phase: PointerPhase.down,
+      ),
+    );
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 1,
+        position: Offset(0, 0),
+        timestampMs: 10,
+        phase: PointerPhase.up,
+      ),
+    );
+
+    controller.notifySceneChanged();
+
+    expect(controller.selectedNodeIds, contains('r1'));
+  });
+
   test(
     'moveNode moves node across layers, keeps selection, emits move action',
     () {

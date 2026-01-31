@@ -159,6 +159,15 @@ class SceneController extends ChangeNotifier {
   }
 
   void notifySceneChanged() {
+    if (_selectedNodeIds.isNotEmpty) {
+      final existingIds = <NodeId>{};
+      for (final layer in scene.layers) {
+        for (final node in layer.nodes) {
+          existingIds.add(node.id);
+        }
+      }
+      _selectedNodeIds.removeWhere((id) => !existingIds.contains(id));
+    }
     notifyListeners();
   }
 
