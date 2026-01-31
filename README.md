@@ -78,6 +78,24 @@ SceneView(
 );
 ```
 
+### Scene mutations
+
+Prefer mutating the scene through `SceneController` instead of touching
+`scene.layers.first.nodes` directly:
+
+```dart
+controller.addNode(
+  RectNode(
+    id: 'rect-2',
+    size: const Size(120, 80),
+    fillColor: const Color(0xFF2196F3),
+  )..position = const Offset(200, 200),
+);
+
+controller.moveNode('rect-2', targetLayerIndex: 0);
+controller.removeNode('rect-2');
+```
+
 ### Advanced rendering / input
 
 If you need low-level APIs (custom painting via `ScenePainter`, hit-testing, or

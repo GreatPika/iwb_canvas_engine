@@ -162,6 +162,82 @@ class SceneController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void addNode(SceneNode node, {int layerIndex = 0}) {
+    if (layerIndex < 0) {
+      throw RangeError.range(layerIndex, 0, null, 'layerIndex');
+    }
+
+    if (scene.layers.isEmpty) {
+      if (layerIndex != 0) {
+        throw RangeError.range(layerIndex, 0, 0, 'layerIndex');
+      }
+      scene.layers.add(Layer());
+    }
+
+    if (layerIndex >= scene.layers.length) {
+      throw RangeError.range(
+        layerIndex,
+        0,
+        scene.layers.length - 1,
+        'layerIndex',
+      );
+    }
+
+    scene.layers[layerIndex].nodes.add(node);
+    notifyListeners();
+  }
+
+  void removeNode(NodeId id, {int? timestampMs}) {
+    for (final layer in scene.layers) {
+      final index = layer.nodes.indexWhere((node) => node.id == id);
+      if (index == -1) continue;
+
+      layer.nodes.removeAt(index);
+      _selectedNodeIds.remove(id);
+      _emitAction(ActionType.delete, [
+        id,
+      ], timestampMs ?? DateTime.now().millisecondsSinceEpoch);
+      notifyListeners();
+      return;
+    }
+  }
+
+  void moveNode(NodeId id, {required int targetLayerIndex, int? timestampMs}) {
+    if (scene.layers.isEmpty) {
+      throw RangeError.range(targetLayerIndex, 0, 0, 'targetLayerIndex');
+    }
+    if (targetLayerIndex < 0 || targetLayerIndex >= scene.layers.length) {
+      throw RangeError.range(
+        targetLayerIndex,
+        0,
+        scene.layers.length - 1,
+        'targetLayerIndex',
+      );
+    }
+
+    for (var layerIndex = 0; layerIndex < scene.layers.length; layerIndex++) {
+      final layer = scene.layers[layerIndex];
+      final nodeIndex = layer.nodes.indexWhere((node) => node.id == id);
+      if (nodeIndex == -1) continue;
+
+      if (layerIndex == targetLayerIndex) return;
+
+      final node = layer.nodes.removeAt(nodeIndex);
+      scene.layers[targetLayerIndex].nodes.add(node);
+      _emitAction(
+        ActionType.move,
+        [id],
+        timestampMs ?? DateTime.now().millisecondsSinceEpoch,
+        payload: <String, Object?>{
+          'sourceLayerIndex': layerIndex,
+          'targetLayerIndex': targetLayerIndex,
+        },
+      );
+      notifyListeners();
+      return;
+    }
+  }
+
   void clearSelection() {
     if (_selectedNodeIds.isEmpty) return;
     _selectedNodeIds.clear();

@@ -443,11 +443,11 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
 
   void _addSampleObjects() {
     final scene = _controller.scene;
-    final layer = _ensureContentLayer(scene);
+    final layerIndex = _ensureContentLayerIndex(scene);
     final baseX = 120 + (_sampleSeed * 30);
     final baseY = 120 + (_sampleSeed * 20);
 
-    layer.nodes.addAll([
+    final nodes = <SceneNode>[
       RectNode(
         id: _nextSampleId(),
         size: const Size(140, 90),
@@ -483,20 +483,22 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
         thickness: 4,
         color: const Color(0xFFE53935),
       ),
-    ]);
+    ];
 
     _sampleSeed += 1;
-    _controller.notifySceneChanged();
+    for (final node in nodes) {
+      _controller.addNode(node, layerIndex: layerIndex);
+    }
   }
 
-  Layer _ensureContentLayer(Scene scene) {
+  int _ensureContentLayerIndex(Scene scene) {
     for (var i = scene.layers.length - 1; i >= 0; i--) {
       final layer = scene.layers[i];
-      if (!layer.isBackground) return layer;
+      if (!layer.isBackground) return i;
     }
     final layer = Layer();
     scene.layers.add(layer);
-    return layer;
+    return scene.layers.length - 1;
   }
 
   NodeId _nextSampleId() {
