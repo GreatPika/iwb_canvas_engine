@@ -357,6 +357,24 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                 onChanged: _setSelectedTextFontSize,
               ),
               const VerticalDivider(width: 20),
+              const Text(
+                "Line Height: ",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Slider(
+                value: (node.lineHeight ?? node.fontSize * 1.2).clamp(
+                  node.fontSize * 0.8,
+                  node.fontSize * 3.0,
+                ),
+                min: node.fontSize * 0.8,
+                max: node.fontSize * 3.0,
+                divisions: 20,
+                label: node.lineHeight == null
+                    ? 'Auto'
+                    : node.lineHeight!.toStringAsFixed(1),
+                onChanged: _setSelectedTextLineHeight,
+              ),
+              const VerticalDivider(width: 20),
               _ColorPalette(
                 colors: _controller.scene.palette.penColors,
                 selected: node.color,
@@ -803,50 +821,46 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
         ).scaledByVector3(Vector3(node.scaleX, node.scaleY, 1.0)),
         child: FractionalTranslation(
           translation: const Offset(-0.5, -0.5),
-          child: Container(
-            width: math.max(node.size.width, 1.0),
-            height: math.max(node.size.height, 1.0),
-            alignment: alignment,
+          child: SizedBox(
+            width: node.size.width,
+            height: node.size.height,
             child: OverflowBox(
               maxWidth: 3000,
               maxHeight: 2000,
               alignment: alignment,
-              child: IntrinsicWidth(
-                child: TextField(
-                  controller: _textEditController,
-                  focusNode: _textEditFocusNode,
-                  maxLines: null,
-                  textAlign: node.align,
-                  textAlignVertical: TextAlignVertical.center,
-                  onTapOutside: (_) => _finishInlineTextEdit(save: true),
-                  strutStyle: StrutStyle(
-                    fontSize: node.fontSize,
-                    height: node.lineHeight == null
-                        ? null
-                        : node.lineHeight! / node.fontSize,
-                    forceStrutHeight: true,
-                  ),
-                  style: TextStyle(
-                    fontSize: node.fontSize,
-                    color: node.color,
-                    fontWeight: node.isBold
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-                    fontStyle: node.isItalic
-                        ? FontStyle.italic
-                        : FontStyle.normal,
-                    decoration: node.isUnderline
-                        ? TextDecoration.underline
-                        : null,
-                    fontFamily: node.fontFamily,
-                    height: node.lineHeight == null
-                        ? null
-                        : node.lineHeight! / node.fontSize,
-                  ),
-                  decoration: const InputDecoration.collapsed(
-                    hintText: "",
-                    fillColor: Colors.transparent,
-                  ),
+              child: TextField(
+                controller: _textEditController,
+                focusNode: _textEditFocusNode,
+                maxLines: null,
+                textAlign: node.align,
+                scrollPadding: EdgeInsets.zero,
+                onTapOutside: (_) => _finishInlineTextEdit(save: true),
+                strutStyle: StrutStyle(
+                  fontSize: node.fontSize,
+                  height: node.lineHeight == null
+                      ? null
+                      : node.lineHeight! / node.fontSize,
+                  forceStrutHeight: true,
+                ),
+                style: TextStyle(
+                  fontSize: node.fontSize,
+                  color: node.color,
+                  fontWeight: node.isBold ? FontWeight.bold : FontWeight.normal,
+                  fontStyle: node.isItalic
+                      ? FontStyle.italic
+                      : FontStyle.normal,
+                  decoration: node.isUnderline
+                      ? TextDecoration.underline
+                      : null,
+                  fontFamily: node.fontFamily,
+                  height: node.lineHeight == null
+                      ? null
+                      : node.lineHeight! / node.fontSize,
+                ),
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
                 ),
               ),
             ),
@@ -956,14 +970,37 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
         strokeColor: Colors.blue,
         strokeWidth: 2,
       )..position = Offset(baseX.toDouble(), baseY.toDouble()),
-      TextNode(
-        id: 'sample-${_nodeSeed++}',
-        text: 'New Note',
-        size: const Size(150, 50),
-        fontSize: 20,
-        color: Colors.black87,
-      )..position = Offset(baseX + 160, baseY.toDouble()),
     ];
+
+    // Calculate proper size for text node
+    final textNode = TextNode(
+      id: 'sample-${_nodeSeed++}',
+      text: 'New Note',
+      size: const Size(100, 30), // temporary
+      fontSize: 20,
+      color: Colors.black87,
+    );
+
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: textNode.text,
+        style: TextStyle(
+          fontSize: textNode.fontSize,
+          fontWeight: textNode.isBold ? FontWeight.bold : FontWeight.normal,
+          fontStyle: textNode.isItalic ? FontStyle.italic : FontStyle.normal,
+          fontFamily: textNode.fontFamily,
+          height: textNode.lineHeight == null
+              ? null
+              : textNode.lineHeight! / textNode.fontSize,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: textNode.align,
+    )..layout();
+
+    textNode.size = Size(textPainter.width, textPainter.height);
+    textNode.position = Offset(baseX + 160, baseY.toDouble());
+    nodes.add(textNode);
 
     _sampleSeed++;
     for (final node in nodes) {
@@ -982,6 +1019,8 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
       _updateSelectedTextNodes((n) => n.align = a);
   void _setSelectedTextFontSize(double v) =>
       _updateSelectedTextNodes((n) => n.fontSize = v);
+  void _setSelectedTextLineHeight(double v) =>
+      _updateSelectedTextNodes((n) => n.lineHeight = v);
   void _toggleSelectedTextBold() =>
       _updateSelectedTextNodes((n) => n.isBold = !n.isBold);
   void _toggleSelectedTextItalic() =>
