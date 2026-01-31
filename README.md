@@ -58,6 +58,9 @@ SceneView(
 );
 ```
 
+`SceneController(scene: ...)` is optional. When omitted, the controller creates
+an empty `Scene()` by default.
+
 ### Simple view (no controller boilerplate)
 
 ```dart
@@ -148,6 +151,11 @@ import 'package:iwb_canvas_engine/advanced.dart';
 
 For backward compatibility, `package:iwb_canvas_engine/iwb_canvas_engine.dart`
 still exports the full surface in 0.x.
+
+### Input limitations
+
+The engine currently supports single-pointer input only. Multi-touch gestures
+(pinch-to-zoom, two-finger pan) are not supported yet.
 
 ## Serialization (JSON v1)
 

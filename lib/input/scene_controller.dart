@@ -90,19 +90,32 @@ class SceneController extends ChangeNotifier {
   Offset? _pendingLineStart;
   int? _pendingLineTimestampMs;
 
+  /// Synchronous broadcast stream of committed actions.
+  ///
+  /// Handlers must be fast and avoid blocking work.
   Stream<ActionCommitted> get actions => _actions.stream;
+
+  /// Synchronous broadcast stream of text edit requests.
+  ///
+  /// Handlers must be fast and avoid blocking work.
   Stream<EditTextRequested> get editTextRequests => _editTextRequests.stream;
 
+  /// Current selection snapshot.
   Set<NodeId> get selectedNodeIds => _selectedNodeIdsView;
 
+  /// Current marquee selection rectangle in scene coordinates.
   Rect? get selectionRect => _selectionRect;
 
+  /// Pending first point for a two-tap line gesture, if any.
   Offset? get pendingLineStart => _pendingLineStart;
 
+  /// Timestamp for the pending two-tap line start, if any.
   int? get pendingLineTimestampMs => _pendingLineTimestampMs;
 
+  /// Whether a two-tap line start is waiting for the second tap.
   bool get hasPendingLineStart => _pendingLineStart != null;
 
+  /// Pointer slop threshold used to treat a drag as a move.
   double get dragStartSlop => _dragStartSlop ?? pointerSettings.tapSlop;
 
   NodeId _defaultNodeIdGenerator() {
@@ -131,6 +144,7 @@ class SceneController extends ChangeNotifier {
     super.dispose();
   }
 
+  /// Switches between move and draw modes.
   void setMode(CanvasMode value) {
     if (mode == value) return;
     if (mode == CanvasMode.move) {
@@ -143,6 +157,7 @@ class SceneController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Changes the active drawing tool and resets draw state.
   void setDrawTool(DrawTool tool) {
     if (drawTool == tool) return;
     drawTool = tool;
@@ -150,36 +165,44 @@ class SceneController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Sets the current drawing color.
   void setDrawColor(Color value) {
     if (drawColor == value) return;
     drawColor = value;
     notifyListeners();
   }
 
+  /// Updates the scene background color.
   void setBackgroundColor(Color value) {
     if (scene.background.color == value) return;
     scene.background.color = value;
     notifyListeners();
   }
 
+  /// Enables or disables the background grid.
   void setGridEnabled(bool value) {
     if (scene.background.grid.isEnabled == value) return;
     scene.background.grid.isEnabled = value;
     notifyListeners();
   }
 
+  /// Sets the grid cell size in scene units.
   void setGridCellSize(double value) {
     if (scene.background.grid.cellSize == value) return;
     scene.background.grid.cellSize = value;
     notifyListeners();
   }
 
+  /// Updates the scene camera offset.
   void setCameraOffset(Offset value) {
     if (scene.camera.offset == value) return;
     scene.camera.offset = value;
     notifyListeners();
   }
 
+  /// Restores minimal invariants after external mutations to [scene].
+  ///
+  /// For example, it drops selection for nodes that were removed directly.
   void notifySceneChanged() {
     if (_selectedNodeIds.isNotEmpty) {
       final existingIds = <NodeId>{};
@@ -193,6 +216,9 @@ class SceneController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Adds [node] to the target layer and notifies listeners.
+  ///
+  /// Throws [RangeError] if [layerIndex] is out of bounds.
   void addNode(SceneNode node, {int layerIndex = 0}) {
     if (layerIndex < 0) {
       throw RangeError.range(layerIndex, 0, null, 'layerIndex');
@@ -218,6 +244,7 @@ class SceneController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Removes a node by [id], clears its selection, and emits an action.
   void removeNode(NodeId id, {int? timestampMs}) {
     for (final layer in scene.layers) {
       final index = layer.nodes.indexWhere((node) => node.id == id);
@@ -233,6 +260,9 @@ class SceneController extends ChangeNotifier {
     }
   }
 
+  /// Moves a node by [id] to another layer and emits an action.
+  ///
+  /// Throws [RangeError] if [targetLayerIndex] is out of bounds.
   void moveNode(NodeId id, {required int targetLayerIndex, int? timestampMs}) {
     if (scene.layers.isEmpty) {
       throw RangeError.range(targetLayerIndex, 0, 0, 'targetLayerIndex');
@@ -269,12 +299,14 @@ class SceneController extends ChangeNotifier {
     }
   }
 
+  /// Clears the current selection.
   void clearSelection() {
     if (_selectedNodeIds.isEmpty) return;
     _selectedNodeIds.clear();
     notifyListeners();
   }
 
+  /// Rotates the transformable selection by 90 degrees.
   void rotateSelection({required bool clockwise, int? timestampMs}) {
     final nodes = _selectedTransformableNodesInSceneOrder();
     if (nodes.isEmpty) return;
@@ -294,6 +326,7 @@ class SceneController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Flips the transformable selection horizontally around its center.
   void flipSelectionVertical({int? timestampMs}) {
     final nodes = _selectedTransformableNodesInSceneOrder();
     if (nodes.isEmpty) return;
@@ -311,6 +344,7 @@ class SceneController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Deletes deletable selected nodes and emits an action.
   void deleteSelection({int? timestampMs}) {
     if (_selectedNodeIds.isEmpty) return;
     final deletableIds = <NodeId>[];
@@ -334,6 +368,7 @@ class SceneController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Clears all non-background layers and emits an action.
   void clearScene({int? timestampMs}) {
     final clearedIds = <NodeId>[];
     for (final layer in scene.layers) {
@@ -354,6 +389,7 @@ class SceneController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Handles a pointer sample and updates the controller state.
   void handlePointer(PointerSample sample) {
     if (mode == CanvasMode.move) {
       _handleMoveModePointer(sample);
@@ -362,6 +398,7 @@ class SceneController extends ChangeNotifier {
     }
   }
 
+  /// Handles pointer signals such as double-tap text edit requests.
   void handlePointerSignal(PointerSignal signal) {
     if (signal.type != PointerSignalType.doubleTap) return;
     if (mode != CanvasMode.move) return;
