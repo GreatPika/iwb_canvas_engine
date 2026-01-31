@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:flutter/services.dart';
+import 'package:iwb_canvas_engine/basic.dart';
 
 void main() {
   runApp(const CanvasExampleApp());
@@ -31,15 +32,19 @@ class CanvasExampleScreen extends StatefulWidget {
 class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   static const double _cameraMinX = -400;
   static const double _cameraMaxX = 400;
+  static const int _jsonPreviewMaxLines = 12;
 
   late final SceneController _controller;
   int _sampleSeed = 0;
   int _nodeSeed = 0;
+  String? _lastExportedJson;
+  bool _isEditingText = false;
 
   @override
   void initState() {
     super.initState();
     _controller = SceneController(scene: _createScene());
+    _controller.editTextRequests.listen(_scheduleTextEdit);
   }
 
   @override
@@ -311,6 +316,25 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
               ),
             ),
             _ToolbarGroup(
+              label: 'JSON',
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: _exportSceneJson,
+                    icon: const Icon(Icons.download),
+                    label: const Text('Export'),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: _importSceneJson,
+                    icon: const Icon(Icons.upload),
+                    label: const Text('Import'),
+                  ),
+                ],
+              ),
+            ),
+            _ToolbarGroup(
               label: 'Pen color',
               child: _ColorPalette(
                 colors: scene.palette.penColors,
@@ -439,6 +463,161 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
       update(node);
     }
     _controller.notifySceneChanged();
+  }
+
+  TextNode? _findTextNode(NodeId id) {
+    for (final layer in _controller.scene.layers) {
+      for (final node in layer.nodes) {
+        if (node is TextNode && node.id == id) {
+          return node;
+        }
+      }
+    }
+    return null;
+  }
+
+  void _scheduleTextEdit(EditTextRequested request) {
+    if (_isEditingText) return;
+    _isEditingText = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        _isEditingText = false;
+        return;
+      }
+      _openTextEditDialog(request);
+    });
+  }
+
+  Future<void> _openTextEditDialog(EditTextRequested request) async {
+    final node = _findTextNode(request.nodeId);
+    if (node == null) {
+      _isEditingText = false;
+      return;
+    }
+    final controller = TextEditingController(text: node.text);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit text'),
+        content: TextField(
+          controller: controller,
+          maxLines: 4,
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(controller.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (result != null) {
+      node.text = result;
+      _controller.notifySceneChanged();
+    }
+    _isEditingText = false;
+  }
+
+  Future<void> _exportSceneJson() async {
+    final json = encodeSceneToJson(_controller.scene);
+    _lastExportedJson = json;
+    final textController = TextEditingController(text: json);
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Scene JSON'),
+        content: SizedBox(
+          width: 420,
+          child: TextField(
+            controller: textController,
+            maxLines: _jsonPreviewMaxLines,
+            readOnly: true,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: json));
+              if (!context.mounted) return;
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('JSON copied to clipboard')),
+              );
+            },
+            child: const Text('Copy'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _importSceneJson() async {
+    final textController = TextEditingController(text: _lastExportedJson ?? '');
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Import scene JSON'),
+        content: SizedBox(
+          width: 420,
+          child: TextField(
+            controller: textController,
+            maxLines: _jsonPreviewMaxLines,
+            autofocus: true,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(textController.text),
+            child: const Text('Import'),
+          ),
+        ],
+      ),
+    );
+    if (result == null || result.trim().isEmpty) return;
+    try {
+      final decoded = decodeSceneFromJson(result);
+      _applyDecodedScene(decoded);
+      _controller.notifySceneChanged();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Import failed: $error')));
+    }
+  }
+
+  void _applyDecodedScene(Scene decoded) {
+    final scene = _controller.scene;
+    scene.layers
+      ..clear()
+      ..addAll(decoded.layers);
+    scene.camera.offset = decoded.camera.offset;
+    scene.background.color = decoded.background.color;
+    scene.background.grid.isEnabled = decoded.background.grid.isEnabled;
+    scene.background.grid.cellSize = decoded.background.grid.cellSize;
+    scene.background.grid.color = decoded.background.grid.color;
+    scene.palette.penColors
+      ..clear()
+      ..addAll(decoded.palette.penColors);
+    scene.palette.backgroundColors
+      ..clear()
+      ..addAll(decoded.palette.backgroundColors);
+    scene.palette.gridSizes
+      ..clear()
+      ..addAll(decoded.palette.gridSizes);
   }
 
   void _addSampleObjects() {
