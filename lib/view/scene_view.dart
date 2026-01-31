@@ -38,6 +38,7 @@ class SceneView extends StatefulWidget {
 
 class _SceneViewState extends State<SceneView> {
   late PointerInputTracker _pointerTracker;
+  final SceneStaticLayerCache _staticLayerCache = SceneStaticLayerCache();
   Timer? _pendingTapTimer;
   int _lastTimestampMs = 0;
   SceneController? _ownedController;
@@ -97,6 +98,7 @@ class _SceneViewState extends State<SceneView> {
             painter: ScenePainter(
               scene: _controller.scene,
               imageResolver: widget.imageResolver,
+              staticLayerCache: _staticLayerCache,
               selectedNodeIds: _controller.selectedNodeIds,
               selectionRect: _controller.selectionRect,
               selectionColor: widget.selectionColor,

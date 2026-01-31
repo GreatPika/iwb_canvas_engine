@@ -21,6 +21,7 @@ class ScenePainter extends CustomPainter {
   ScenePainter({
     required this.scene,
     required this.imageResolver,
+    this.staticLayerCache,
     this.selectedNodeIds = const <NodeId>{},
     this.selectionRect,
     this.selectionColor = const Color(0xFF1565C0),
@@ -31,6 +32,7 @@ class ScenePainter extends CustomPainter {
 
   final Scene scene;
   final ImageResolver imageResolver;
+  final SceneStaticLayerCache? staticLayerCache;
   final Set<NodeId> selectedNodeIds;
   final Rect? selectionRect;
   final Color selectionColor;
@@ -39,8 +41,24 @@ class ScenePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    _drawBackground(canvas, size, scene.background.color);
-    _drawGrid(canvas, size, scene.background.grid, scene.camera.offset);
+    if (staticLayerCache != null) {
+      staticLayerCache!.draw(
+        canvas,
+        size,
+        background: scene.background,
+        cameraOffset: scene.camera.offset,
+        gridStrokeWidth: gridStrokeWidth,
+      );
+    } else {
+      _drawBackground(canvas, size, scene.background.color);
+      _drawGrid(
+        canvas,
+        size,
+        scene.background.grid,
+        scene.camera.offset,
+        gridStrokeWidth,
+      );
+    }
     final viewRect = Rect.fromLTWH(
       scene.camera.offset.dx,
       scene.camera.offset.dy,
@@ -61,40 +79,12 @@ class ScenePainter extends CustomPainter {
   bool shouldRepaint(covariant ScenePainter oldDelegate) {
     return oldDelegate.scene != scene ||
         oldDelegate.imageResolver != imageResolver ||
+        oldDelegate.staticLayerCache != staticLayerCache ||
         !setEquals(oldDelegate.selectedNodeIds, selectedNodeIds) ||
         oldDelegate.selectionRect != selectionRect ||
         oldDelegate.selectionColor != selectionColor ||
         oldDelegate.selectionStrokeWidth != selectionStrokeWidth ||
         oldDelegate.gridStrokeWidth != gridStrokeWidth;
-  }
-
-  void _drawBackground(Canvas canvas, Size size, Color color) {
-    final paint = Paint()..color = color;
-    canvas.drawRect(Offset.zero & size, paint);
-  }
-
-  void _drawGrid(
-    Canvas canvas,
-    Size size,
-    GridSettings grid,
-    Offset cameraOffset,
-  ) {
-    if (!grid.isEnabled || grid.cellSize <= 0) return;
-
-    final paint = Paint()
-      ..color = grid.color
-      ..strokeWidth = gridStrokeWidth;
-
-    final cell = grid.cellSize;
-    final startX = _gridStart(-cameraOffset.dx, cell);
-    final startY = _gridStart(-cameraOffset.dy, cell);
-
-    for (double x = startX; x <= size.width; x += cell) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
-    }
-    for (double y = startY; y <= size.height; y += cell) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
-    }
   }
 
   List<SceneNode> _drawLayers(
@@ -679,11 +669,6 @@ class ScenePainter extends CustomPainter {
     }
   }
 
-  double _gridStart(double offset, double cell) {
-    final remainder = offset % cell;
-    return remainder < 0 ? remainder + cell : remainder;
-  }
-
   Rect _normalizeRect(Rect rect) {
     return Rect.fromLTRB(
       math.min(rect.left, rect.right),
@@ -703,4 +688,142 @@ class ScenePainter extends CustomPainter {
     if (value > 1) return 1;
     return value;
   }
+}
+
+/// Cache for the static scene layer (background + grid).
+///
+/// Why: avoid re-drawing the grid every frame when inputs are unchanged.
+/// Invariant: the cache key must match size, background, grid, camera offset,
+/// and grid stroke width.
+/// Validate: `test/render_scene_static_layer_cache_test.dart`.
+class SceneStaticLayerCache {
+  _StaticLayerKey? _key;
+  Picture? _picture;
+
+  @visibleForTesting
+  int debugBuildCount = 0;
+  @visibleForTesting
+  int? get debugKeyHashCode => _key?.hashCode;
+
+  void draw(
+    Canvas canvas,
+    Size size, {
+    required Background background,
+    required Offset cameraOffset,
+    required double gridStrokeWidth,
+  }) {
+    final key = _StaticLayerKey(
+      size: size,
+      backgroundColor: background.color,
+      gridEnabled: background.grid.isEnabled,
+      gridCellSize: background.grid.cellSize,
+      gridColor: background.grid.color,
+      gridStrokeWidth: gridStrokeWidth,
+      cameraOffset: cameraOffset,
+    );
+
+    if (_picture == null || _key != key) {
+      _key = key;
+      _picture = _recordPicture(
+        size,
+        background,
+        cameraOffset,
+        gridStrokeWidth,
+      );
+      debugBuildCount += 1;
+    }
+
+    canvas.drawPicture(_picture!);
+  }
+
+  Picture _recordPicture(
+    Size size,
+    Background background,
+    Offset cameraOffset,
+    double gridStrokeWidth,
+  ) {
+    final recorder = PictureRecorder();
+    final canvas = Canvas(recorder);
+    _drawBackground(canvas, size, background.color);
+    _drawGrid(canvas, size, background.grid, cameraOffset, gridStrokeWidth);
+    return recorder.endRecording();
+  }
+}
+
+class _StaticLayerKey {
+  const _StaticLayerKey({
+    required this.size,
+    required this.backgroundColor,
+    required this.gridEnabled,
+    required this.gridCellSize,
+    required this.gridColor,
+    required this.gridStrokeWidth,
+    required this.cameraOffset,
+  });
+
+  final Size size;
+  final Color backgroundColor;
+  final bool gridEnabled;
+  final double gridCellSize;
+  final Color gridColor;
+  final double gridStrokeWidth;
+  final Offset cameraOffset;
+
+  @override
+  bool operator ==(Object other) {
+    return other is _StaticLayerKey &&
+        other.size == size &&
+        other.backgroundColor == backgroundColor &&
+        other.gridEnabled == gridEnabled &&
+        other.gridCellSize == gridCellSize &&
+        other.gridColor == gridColor &&
+        other.gridStrokeWidth == gridStrokeWidth &&
+        other.cameraOffset == cameraOffset;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    size,
+    backgroundColor,
+    gridEnabled,
+    gridCellSize,
+    gridColor,
+    gridStrokeWidth,
+    cameraOffset,
+  );
+}
+
+void _drawBackground(Canvas canvas, Size size, Color color) {
+  final paint = Paint()..color = color;
+  canvas.drawRect(Offset.zero & size, paint);
+}
+
+void _drawGrid(
+  Canvas canvas,
+  Size size,
+  GridSettings grid,
+  Offset cameraOffset,
+  double gridStrokeWidth,
+) {
+  if (!grid.isEnabled || grid.cellSize <= 0) return;
+
+  final paint = Paint()
+    ..color = grid.color
+    ..strokeWidth = gridStrokeWidth;
+
+  final cell = grid.cellSize;
+  final startX = _gridStart(-cameraOffset.dx, cell);
+  final startY = _gridStart(-cameraOffset.dy, cell);
+
+  for (double x = startX; x <= size.width; x += cell) {
+    canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+  }
+  for (double y = startY; y <= size.height; y += cell) {
+    canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+  }
+}
+
+double _gridStart(double offset, double cell) {
+  final remainder = offset % cell;
+  return remainder < 0 ? remainder + cell : remainder;
 }

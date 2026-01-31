@@ -82,10 +82,15 @@ Node types:
 
 ### `ScenePainter`
 
-1. Draw background color.
-2. Draw grid (if enabled), offset by camera.
-3. Draw layers in order; nodes in order.
-4. Draw selection overlay and selection marquee (if active).
+1. Draw static layer (background + grid) using a cached `Picture` when available.
+2. Draw layers in order; nodes in order.
+3. Draw selection overlay and selection marquee (if active).
+
+Static layer cache invariants:
+
+- The cache key includes view size, background color, grid settings, camera
+  offset, and grid stroke width.
+- The cached `Picture` is rebuilt only when the key changes.
 
 ### Images
 
