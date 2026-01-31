@@ -58,6 +58,10 @@ SceneView(
 );
 ```
 
+Node IDs must be unique within a scene. By default, `SceneController` generates
+`node-{n}` IDs for nodes it creates; pass `nodeIdGenerator` if you need a custom
+scheme.
+
 ### Events
 
 The app can listen to controller events to integrate with undo/redo and text

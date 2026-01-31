@@ -26,6 +26,13 @@ enum DrawTool { pen, highlighter, line, eraser }
 /// - It emits [actions] for app-level undo/redo integration.
 /// - It emits [editTextRequests] when a text node should be edited.
 class SceneController extends ChangeNotifier {
+  /// Creates a controller that edits [scene].
+  ///
+  /// [nodeIdGenerator] lets you override how node IDs are produced for nodes
+  /// created by this controller. By default, IDs are `node-{n}` with a
+  /// per-controller counter and are guaranteed to be unique within the scene at
+  /// generation time. If you override the generator, ensure IDs stay unique in
+  /// the scene.
   SceneController({
     Scene? scene,
     PointerInputSettings? pointerSettings,
@@ -33,14 +40,15 @@ class SceneController extends ChangeNotifier {
     NodeId Function()? nodeIdGenerator,
   }) : scene = scene ?? Scene(),
        pointerSettings = pointerSettings ?? const PointerInputSettings(),
-       _dragStartSlop = dragStartSlop,
-       _nodeIdGenerator = nodeIdGenerator ?? _defaultNodeIdGenerator;
+       _dragStartSlop = dragStartSlop {
+    _nodeIdGenerator = nodeIdGenerator ?? _defaultNodeIdGenerator;
+  }
 
   final Scene scene;
   final PointerInputSettings pointerSettings;
   final double? _dragStartSlop;
-  final NodeId Function() _nodeIdGenerator;
-  static int _nodeIdSeed = 0;
+  late final NodeId Function() _nodeIdGenerator;
+  int _nodeIdSeed = 0;
 
   CanvasMode mode = CanvasMode.move;
   DrawTool drawTool = DrawTool.pen;
@@ -97,9 +105,23 @@ class SceneController extends ChangeNotifier {
 
   double get dragStartSlop => _dragStartSlop ?? pointerSettings.tapSlop;
 
-  static NodeId _defaultNodeIdGenerator() {
-    final id = _nodeIdSeed++;
-    return 'node-$id';
+  NodeId _defaultNodeIdGenerator() {
+    while (true) {
+      final id = 'node-$_nodeIdSeed';
+      _nodeIdSeed += 1;
+      if (!_sceneContainsNodeId(id)) {
+        return id;
+      }
+    }
+  }
+
+  bool _sceneContainsNodeId(NodeId id) {
+    for (final layer in scene.layers) {
+      for (final node in layer.nodes) {
+        if (node.id == id) return true;
+      }
+    }
+    return false;
   }
 
   @override

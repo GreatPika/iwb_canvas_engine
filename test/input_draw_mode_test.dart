@@ -246,4 +246,49 @@ void main() {
     expect(actions.single.type, ActionType.erase);
     expect(actions.single.nodeIds.toSet(), {'stroke-1', 'line-1'});
   });
+
+  test('default nodeIdGenerator skips existing ids in the scene', () {
+    final existing = RectNode(
+      id: 'node-0',
+      size: const Size(10, 10),
+      fillColor: const Color(0xFF000000),
+    )..position = const Offset(50, 50);
+    final scene = Scene(
+      layers: [
+        Layer(nodes: [existing]),
+      ],
+    );
+    final controller = drawController(scene);
+    controller.setDrawTool(DrawTool.pen);
+
+    controller.handlePointer(
+      PointerSample(
+        pointerId: 6,
+        position: const Offset(0, 0),
+        timestampMs: 0,
+        phase: PointerPhase.down,
+      ),
+    );
+    controller.handlePointer(
+      PointerSample(
+        pointerId: 6,
+        position: const Offset(10, 0),
+        timestampMs: 10,
+        phase: PointerPhase.move,
+      ),
+    );
+    controller.handlePointer(
+      PointerSample(
+        pointerId: 6,
+        position: const Offset(20, 0),
+        timestampMs: 20,
+        phase: PointerPhase.up,
+      ),
+    );
+
+    final ids = scene.layers.single.nodes.map((node) => node.id).toList();
+    expect(ids, hasLength(2));
+    expect(ids, contains('node-0'));
+    expect(ids, contains('node-1'));
+  });
 }
