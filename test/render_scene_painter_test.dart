@@ -72,6 +72,18 @@ Future<Color> _pixelAt(Image image, int x, int y) async {
   );
 }
 
+class _EmptyMetricsPathNode extends PathNode {
+  _EmptyMetricsPathNode({
+    required super.id,
+    required super.svgPathData,
+  });
+
+  @override
+  Path? buildLocalPath() {
+    return Path();
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -454,4 +466,76 @@ void main() {
       expect(painterC.shouldRepaint(painterA), isTrue);
     },
   );
+
+  test('ScenePainter selection covers dot, open path, and empty metrics', () async {
+    const background = Color(0xFFFFFFFF);
+    final imageNode = ImageNode(
+      id: 'image-selected',
+      imageId: 'img:missing',
+      size: const Size(14, 10),
+    )..position = const Offset(12, 12);
+
+    final dotStroke = StrokeNode(
+      id: 'stroke-dot',
+      points: const [Offset(26, 20)],
+      thickness: 8,
+      color: const Color(0xFF000000),
+    );
+
+    final polyStroke = StrokeNode(
+      id: 'stroke-poly',
+      points: const [
+        Offset(30, 30),
+        Offset(45, 30),
+        Offset(45, 46),
+      ],
+      thickness: 5,
+      color: const Color(0xFF000000),
+    );
+
+    final openPath = PathNode(
+      id: 'path-open',
+      svgPathData: 'M0 0 L20 0 L20 12',
+      strokeColor: const Color(0xFF000000),
+      strokeWidth: 2,
+    )..position = const Offset(60, 24);
+
+    final emptyMetrics = _EmptyMetricsPathNode(
+      id: 'path-empty-metrics',
+      svgPathData: 'M0 0 L10 10',
+    )..position = const Offset(70, 50);
+
+    final scene = Scene(
+      background: Background(color: background),
+      layers: [
+        Layer(
+          nodes: [
+            imageNode,
+            dotStroke,
+            polyStroke,
+            openPath,
+            emptyMetrics,
+          ],
+        ),
+      ],
+    );
+
+    final painter = ScenePainter(
+      scene: scene,
+      imageResolver: (_) => null,
+      selectedNodeIds: const {
+        'image-selected',
+        'stroke-dot',
+        'stroke-poly',
+        'path-open',
+        'path-empty-metrics',
+      },
+      selectionColor: const Color(0xFFFF0000),
+      selectionStrokeWidth: 3,
+    );
+
+    final image = await _paintToImage(painter, width: 120, height: 80);
+    final nonBg = await _countNonBackgroundPixels(image, background);
+    expect(nonBg, greaterThan(0));
+  });
 }
