@@ -1,8 +1,10 @@
 import 'dart:ui';
+import 'dart:math' as math;
 
 import 'package:path_drawing/path_drawing.dart';
 
 import 'geometry.dart';
+import 'transform2d.dart';
 
 /// Supported node variants in a [Scene].
 enum NodeType { image, text, stroke, line, rect, path }
@@ -15,24 +17,23 @@ typedef NodeId = String;
 
 /// Base class for all nodes stored in a [Scene].
 ///
-/// The model is mutable by design. Box-based nodes use [position] as the center.
-/// Line and stroke nodes store their geometry in scene coordinates, and expose
-/// [position] as a derived bounding-box center.
+/// The model is mutable by design.
+///
+/// [transform] is the single source of truth for translation/rotation/scale.
+/// Geometry is stored in the node's local coordinate space around (0,0).
 abstract class SceneNode {
   SceneNode({
     required this.id,
     required this.type,
     this.hitPadding = 0,
-    this.rotationDeg = 0,
-    this.scaleX = 1,
-    this.scaleY = 1,
+    Transform2D? transform,
     this.opacity = 1,
     this.isVisible = true,
     this.isSelectable = true,
     this.isLocked = false,
     this.isDeletable = true,
     this.isTransformable = true,
-  });
+  }) : transform = transform ?? Transform2D.identity;
 
   final NodeId id;
   final NodeType type;
@@ -41,9 +42,6 @@ abstract class SceneNode {
   ///
   /// This is intentionally not serialized during stage A of the refactor plan.
   double hitPadding;
-  double rotationDeg;
-  double scaleX;
-  double scaleY;
   double opacity;
   bool isVisible;
   bool isSelectable;
@@ -51,11 +49,78 @@ abstract class SceneNode {
   bool isDeletable;
   bool isTransformable;
 
-  Offset get position;
-  set position(Offset value);
+  /// Local-to-world node transform.
+  Transform2D transform;
 
-  /// Axis-aligned bounding box in scene coordinates.
-  Rect get aabb;
+  /// Translation component of [transform].
+  Offset get position => transform.translation;
+  set position(Offset value) => transform = transform.withTranslation(value);
+
+  /// Derived rotation in degrees.
+  ///
+  /// Note: for general affine transforms (shear), a unique decomposition into
+  /// rotation+scale is not well-defined. This getter assumes a rotation+scale
+  /// form and is intended for legacy v1 JSON compatibility only.
+  double get rotationDeg {
+    final a = transform.a;
+    final b = transform.b;
+    if (a == 0 && b == 0) return 0;
+    return math.atan2(b, a) * 180.0 / math.pi;
+  }
+
+  set rotationDeg(double value) {
+    transform = Transform2D.trs(
+      translation: position,
+      rotationDeg: value,
+      scaleX: scaleX,
+      scaleY: scaleY,
+    );
+  }
+
+  /// Derived X scale (legacy v1 JSON compatibility).
+  double get scaleX {
+    final a = transform.a;
+    final b = transform.b;
+    return math.sqrt(a * a + b * b);
+  }
+
+  set scaleX(double value) {
+    transform = Transform2D.trs(
+      translation: position,
+      rotationDeg: rotationDeg,
+      scaleX: value,
+      scaleY: scaleY,
+    );
+  }
+
+  /// Derived Y scale (legacy v1 JSON compatibility).
+  ///
+  /// This derives the sign from the matrix determinant and [scaleX], so
+  /// reflections may be represented as a 180° rotation + negative Y scale.
+  double get scaleY {
+    final sx = scaleX;
+    if (sx == 0) return 0;
+    final det = transform.a * transform.d - transform.b * transform.c;
+    return det / sx;
+  }
+
+  set scaleY(double value) {
+    transform = Transform2D.trs(
+      translation: position,
+      rotationDeg: rotationDeg,
+      scaleX: scaleX,
+      scaleY: value,
+    );
+  }
+
+  /// Axis-aligned bounds in local coordinates.
+  Rect get localBounds;
+
+  /// Axis-aligned bounds in world coordinates.
+  Rect get boundsWorld => transform.applyToRect(localBounds);
+
+  /// Legacy alias for [boundsWorld].
+  Rect get aabb => boundsWorld;
 }
 
 /// Raster image node referenced by [imageId] and drawn at [size].
@@ -66,9 +131,7 @@ class ImageNode extends SceneNode {
     required this.size,
     this.naturalSize,
     super.hitPadding,
-    super.rotationDeg,
-    super.scaleX,
-    super.scaleY,
+    super.transform,
     super.opacity,
     super.isVisible,
     super.isSelectable,
@@ -80,13 +143,6 @@ class ImageNode extends SceneNode {
   String imageId;
   Size size;
   Size? naturalSize;
-  Offset _position = Offset.zero;
-
-  @override
-  Offset get position => _position;
-
-  @override
-  set position(Offset value) => _position = value;
 
   Rect get _localRect => Rect.fromCenter(
     center: Offset.zero,
@@ -95,13 +151,7 @@ class ImageNode extends SceneNode {
   );
 
   @override
-  Rect get aabb => aabbForTransformedRect(
-    localRect: _localRect,
-    position: position,
-    rotationDeg: rotationDeg,
-    scaleX: scaleX,
-    scaleY: scaleY,
-  );
+  Rect get localBounds => _localRect;
 }
 
 /// Text node with a fixed layout box ([size]) and basic styling.
@@ -120,9 +170,7 @@ class TextNode extends SceneNode {
     this.maxWidth,
     this.lineHeight,
     super.hitPadding,
-    super.rotationDeg,
-    super.scaleX,
-    super.scaleY,
+    super.transform,
     super.opacity,
     super.isVisible,
     super.isSelectable,
@@ -142,13 +190,6 @@ class TextNode extends SceneNode {
   String? fontFamily;
   double? maxWidth;
   double? lineHeight;
-  Offset _position = Offset.zero;
-
-  @override
-  Offset get position => _position;
-
-  @override
-  set position(Offset value) => _position = value;
 
   Rect get _localRect => Rect.fromCenter(
     center: Offset.zero,
@@ -157,13 +198,7 @@ class TextNode extends SceneNode {
   );
 
   @override
-  Rect get aabb => aabbForTransformedRect(
-    localRect: _localRect,
-    position: position,
-    rotationDeg: rotationDeg,
-    scaleX: scaleX,
-    scaleY: scaleY,
-  );
+  Rect get localBounds => _localRect;
 }
 
 /// Freehand polyline stroke node.
@@ -174,9 +209,7 @@ class StrokeNode extends SceneNode {
     required this.thickness,
     required this.color,
     super.hitPadding,
-    super.rotationDeg,
-    super.scaleX,
-    super.scaleY,
+    super.transform,
     super.opacity,
     super.isVisible,
     super.isSelectable,
@@ -186,32 +219,62 @@ class StrokeNode extends SceneNode {
   }) : points = List<Offset>.from(points),
        super(type: NodeType.stroke);
 
+  factory StrokeNode.fromWorldPoints({
+    required NodeId id,
+    required List<Offset> points,
+    required double thickness,
+    required Color color,
+    double hitPadding = 0,
+    double opacity = 1,
+    bool isVisible = true,
+    bool isSelectable = true,
+    bool isLocked = false,
+    bool isDeletable = true,
+    bool isTransformable = true,
+  }) {
+    final bounds = points.isEmpty ? Rect.zero : aabbFromPoints(points);
+    final centerWorld = bounds.center;
+    final local = points.map((p) => p - centerWorld).toList(growable: false);
+    return StrokeNode(
+      id: id,
+      points: local,
+      thickness: thickness,
+      color: color,
+      hitPadding: hitPadding,
+      transform: Transform2D.translation(centerWorld),
+      opacity: opacity,
+      isVisible: isVisible,
+      isSelectable: isSelectable,
+      isLocked: isLocked,
+      isDeletable: isDeletable,
+      isTransformable: isTransformable,
+    );
+  }
+
+  /// Stroke polyline points in local coordinates.
+  ///
+  /// During interactive drawing, the controller may temporarily keep points in
+  /// world coordinates with `transform == identity`. The stroke is normalized
+  /// when the gesture finishes.
   final List<Offset> points;
   double thickness;
   Color color;
 
   @override
-  Offset get position {
-    if (points.isEmpty) return Offset.zero;
-    final bounds = aabbFromPoints(points);
-    return bounds.center;
-  }
-
-  @override
-  set position(Offset value) {
-    if (points.isEmpty) return;
-    final delta = value - position;
-    for (var i = 0; i < points.length; i++) {
-      points[i] = points[i] + delta;
-    }
-  }
-
-  @override
-  Rect get aabb {
+  Rect get localBounds {
     if (points.isEmpty) return Rect.zero;
     final bounds = aabbFromPoints(points);
-    final inflateBy = thickness / 2;
-    return bounds.inflate(inflateBy);
+    return bounds.inflate(thickness / 2);
+  }
+
+  void normalizeToLocalCenter() {
+    if (points.isEmpty) return;
+    final bounds = aabbFromPoints(points);
+    final centerWorld = bounds.center;
+    for (var i = 0; i < points.length; i++) {
+      points[i] = points[i] - centerWorld;
+    }
+    transform = Transform2D.trs(translation: centerWorld);
   }
 }
 
@@ -224,9 +287,7 @@ class LineNode extends SceneNode {
     required this.thickness,
     required this.color,
     super.hitPadding,
-    super.rotationDeg,
-    super.scaleX,
-    super.scaleY,
+    super.transform,
     super.opacity,
     super.isVisible,
     super.isSelectable,
@@ -235,25 +296,56 @@ class LineNode extends SceneNode {
     super.isTransformable,
   }) : super(type: NodeType.line);
 
+  factory LineNode.fromWorldSegment({
+    required NodeId id,
+    required Offset start,
+    required Offset end,
+    required double thickness,
+    required Color color,
+    double hitPadding = 0,
+    double opacity = 1,
+    bool isVisible = true,
+    bool isSelectable = true,
+    bool isLocked = false,
+    bool isDeletable = true,
+    bool isTransformable = true,
+  }) {
+    final bounds = Rect.fromPoints(start, end);
+    final centerWorld = bounds.center;
+    return LineNode(
+      id: id,
+      start: start - centerWorld,
+      end: end - centerWorld,
+      thickness: thickness,
+      color: color,
+      hitPadding: hitPadding,
+      transform: Transform2D.translation(centerWorld),
+      opacity: opacity,
+      isVisible: isVisible,
+      isSelectable: isSelectable,
+      isLocked: isLocked,
+      isDeletable: isDeletable,
+      isTransformable: isTransformable,
+    );
+  }
+
+  /// Local-space start point.
   Offset start;
+
+  /// Local-space end point.
   Offset end;
   double thickness;
   Color color;
 
   @override
-  Offset get position => Rect.fromPoints(start, end).center;
+  Rect get localBounds => Rect.fromPoints(start, end).inflate(thickness / 2);
 
-  @override
-  set position(Offset value) {
-    final delta = value - position;
-    start = start + delta;
-    end = end + delta;
-  }
-
-  @override
-  Rect get aabb {
+  void normalizeToLocalCenter() {
     final bounds = Rect.fromPoints(start, end);
-    return bounds.inflate(thickness / 2);
+    final centerWorld = bounds.center;
+    start = start - centerWorld;
+    end = end - centerWorld;
+    transform = Transform2D.trs(translation: centerWorld);
   }
 }
 
@@ -266,9 +358,7 @@ class RectNode extends SceneNode {
     this.strokeColor,
     this.strokeWidth = 1,
     super.hitPadding,
-    super.rotationDeg,
-    super.scaleX,
-    super.scaleY,
+    super.transform,
     super.opacity,
     super.isVisible,
     super.isSelectable,
@@ -281,13 +371,6 @@ class RectNode extends SceneNode {
   Color? fillColor;
   Color? strokeColor;
   double strokeWidth;
-  Offset _position = Offset.zero;
-
-  @override
-  Offset get position => _position;
-
-  @override
-  set position(Offset value) => _position = value;
 
   Rect get _localRect => Rect.fromCenter(
     center: Offset.zero,
@@ -296,13 +379,7 @@ class RectNode extends SceneNode {
   );
 
   @override
-  Rect get aabb => aabbForTransformedRect(
-    localRect: _localRect,
-    position: position,
-    rotationDeg: rotationDeg,
-    scaleX: scaleX,
-    scaleY: scaleY,
-  );
+  Rect get localBounds => _localRect;
 }
 
 /// SVG-path based vector node.
@@ -315,9 +392,7 @@ class PathNode extends SceneNode {
     this.strokeWidth = 1,
     PathFillRule fillRule = PathFillRule.nonZero,
     super.hitPadding,
-    super.rotationDeg,
-    super.scaleX,
-    super.scaleY,
+    super.transform,
     super.opacity,
     super.isVisible,
     super.isSelectable,
@@ -333,7 +408,6 @@ class PathNode extends SceneNode {
   double strokeWidth;
   String _svgPathData;
   PathFillRule _fillRule;
-  Offset _position = Offset.zero;
 
   /// Cached local path to avoid reparsing SVG data during culling and selection.
   /// Invariant: cache is valid only while svgPathData and fillRule are unchanged.
@@ -357,16 +431,10 @@ class PathNode extends SceneNode {
     _invalidatePathCache();
   }
 
-  @override
-  Offset get position => _position;
-
-  @override
-  set position(Offset value) => _position = value;
-
   /// Builds a local path centered around (0,0), or returns null if invalid.
   ///
   /// The returned path is in the node's local coordinate space. The caller is
-  /// responsible for applying [position], [rotationDeg], and scaling.
+  /// responsible for applying [transform].
   Path? buildLocalPath() {
     if (_cacheResolved &&
         _cachedSvgPathData == _svgPathData &&
@@ -416,21 +484,14 @@ class PathNode extends SceneNode {
   }
 
   @override
-  Rect get aabb {
+  Rect get localBounds {
     final bounds = _pathBounds();
     if (bounds == null) return Rect.zero;
-    final localRect = Rect.fromCenter(
-      center: Offset.zero,
-      width: bounds.width,
-      height: bounds.height,
-    );
-    return aabbForTransformedRect(
-      localRect: localRect,
-      position: position,
-      rotationDeg: rotationDeg,
-      scaleX: scaleX,
-      scaleY: scaleY,
-    );
+    var rect = bounds;
+    if (strokeColor != null && strokeWidth > 0) {
+      rect = rect.inflate(strokeWidth / 2);
+    }
+    return rect;
   }
 
   void _invalidatePathCache() {

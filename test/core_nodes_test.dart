@@ -49,7 +49,7 @@ void main() {
   });
 
   test('StrokeNode.position translates points', () {
-    final node = StrokeNode(
+    final node = StrokeNode.fromWorldPoints(
       id: 'stroke-1',
       points: const [Offset(0, 0), Offset(10, 0)],
       thickness: 2,
@@ -59,12 +59,14 @@ void main() {
     expect(node.position, const Offset(5, 0));
     node.position = const Offset(7, 3);
 
-    expect(node.points, const [Offset(2, 3), Offset(12, 3)]);
+    expect(node.points, const [Offset(-5, 0), Offset(5, 0)]);
+    expect(node.transform.applyToPoint(node.points[0]), const Offset(2, 3));
+    expect(node.transform.applyToPoint(node.points[1]), const Offset(12, 3));
     expect(node.position, const Offset(7, 3));
   });
 
   test('LineNode.position translates endpoints', () {
-    final node = LineNode(
+    final node = LineNode.fromWorldSegment(
       id: 'line-1',
       start: const Offset(0, 0),
       end: const Offset(10, 0),
@@ -75,8 +77,10 @@ void main() {
     expect(node.position, const Offset(5, 0));
     node.position = const Offset(5, 5);
 
-    expect(node.start, const Offset(0, 5));
-    expect(node.end, const Offset(10, 5));
+    expect(node.start, const Offset(-5, 0));
+    expect(node.end, const Offset(5, 0));
+    expect(node.transform.applyToPoint(node.start), const Offset(0, 5));
+    expect(node.transform.applyToPoint(node.end), const Offset(10, 5));
   });
 
   test('PathNode.buildLocalPath returns null for empty and invalid data', () {

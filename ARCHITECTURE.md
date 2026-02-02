@@ -42,13 +42,14 @@ lib/
 
 Common base properties:
 
-- `id`, `type`, `position`, `rotationDeg`, `scaleX`, `scaleY`
+- `id`, `type`, `transform` (2x3 affine: a,b,c,d,tx,ty)
+- Legacy convenience accessors (for v1 JSON and current public API): `position`, `rotationDeg`, `scaleX`, `scaleY` are derived from `transform`
 - `opacity`, `isVisible`, `isSelectable`, `isLocked`, `isDeletable`, `isTransformable`
 
 Position semantics:
 
-- For box-based nodes (image/text/rect), `position` is the **center** of the node.
-- For stroke/line, points are stored in **scene coordinates**; `position` is derived as the bounding box center, and setting it translates all points.
+- `position` is the translation component of `transform` (center-based for box nodes).
+- For stroke/line, geometry is stored in **local coordinates** around (0,0). During interactive drawing, the controller may temporarily keep points in world coordinates with `transform == identity`, then normalizes on gesture end.
 
 Node types:
 
@@ -66,7 +67,8 @@ Node types:
 
 ## Coordinate systems
 
-- **Scene coordinates**: stored in model and JSON.
+- **Scene/world coordinates**: stored in node `transform` translation and used for hit-test and selection.
+- **Local coordinates**: per-node geometry around (0,0) (stroke points, line endpoints, path data).
 - **View/screen coordinates**: pointer and canvas space.
 - Conversion applies `cameraOffset`:
   - Render: `scenePoint - cameraOffset`.
@@ -84,6 +86,7 @@ Node types:
 
 1. Draw static layer (background + grid) using a cached `Picture` when available.
 2. Draw layers in order; nodes in order.
+   - Each node is rendered by applying `node.transform` (local -> scene/world) and then subtracting `cameraOffset` (scene/world -> view).
 3. Draw selection overlay and selection marquee (if active).
 
 Static layer cache invariants:

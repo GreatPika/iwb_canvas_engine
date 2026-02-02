@@ -460,7 +460,7 @@ void main() {
     );
 
     final line = scene.layers.first.nodes.single as LineNode;
-    expect(line.end, const Offset(20, 0));
+    expect(line.transform.applyToPoint(line.end), const Offset(20, 0));
     expect(actions.single.type, ActionType.drawLine);
   });
 
@@ -865,8 +865,9 @@ void main() {
     );
 
     controller.rotateSelection(clockwise: true, timestampMs: 30);
-    expect(stroke.points.first.dx, closeTo(5, 0.001));
-    expect(stroke.points.first.dy, closeTo(-5, 0.001));
+    final first = stroke.transform.applyToPoint(stroke.points.first);
+    expect(first.dx, closeTo(5, 0.001));
+    expect(first.dy, closeTo(-5, 0.001));
   });
 
   test('flipSelectionVertical mirrors line geometry', () {
@@ -914,8 +915,10 @@ void main() {
     );
 
     controller.flipSelectionVertical(timestampMs: 30);
-    expect(line.start.dx, closeTo(10, 0.001));
-    expect(line.end.dx, closeTo(0, 0.001));
+    final start = line.transform.applyToPoint(line.start);
+    final end = line.transform.applyToPoint(line.end);
+    expect(start.dx, closeTo(10, 0.001));
+    expect(end.dx, closeTo(0, 0.001));
   });
 
   test('flipSelectionHorizontal mirrors line geometry', () {
@@ -963,7 +966,9 @@ void main() {
     );
 
     controller.flipSelectionHorizontal(timestampMs: 30);
-    expect(line.start.dy, closeTo(10, 0.001));
-    expect(line.end.dy, closeTo(0, 0.001));
+    final start = line.transform.applyToPoint(line.start);
+    final end = line.transform.applyToPoint(line.end);
+    expect(start.dy, closeTo(10, 0.001));
+    expect(end.dy, closeTo(0, 0.001));
   });
 }

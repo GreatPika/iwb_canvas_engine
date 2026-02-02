@@ -4,9 +4,9 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 
-import '../core/geometry.dart';
 import '../core/nodes.dart';
 import '../core/scene.dart';
+import '../core/transform2d.dart';
 import '../input/scene_controller.dart';
 
 /// Resolves an [ImageNode.imageId] to a decoded [Image] instance.
@@ -14,10 +14,12 @@ typedef ImageResolver = Image? Function(String imageId);
 
 /// A [CustomPainter] that renders a [Scene] to a Flutter [Canvas].
 ///
-/// The painter expects all node geometry to be in scene coordinates and applies
-/// [Scene.camera] offset to render into view coordinates.
+/// The painter expects node geometry to be stored in local coordinates around
+/// (0,0) and uses [SceneNode.transform] to map into scene/world coordinates.
+/// It also applies [Scene.camera] offset to render into view coordinates.
 class ScenePainter extends CustomPainter {
   static const double _cullPadding = 1.0;
+  final Float64List _transformBuffer = Float64List(16);
 
   ScenePainter({
     required this.controller,
@@ -96,7 +98,7 @@ class ScenePainter extends CustomPainter {
     for (final layer in scene.layers) {
       for (final node in layer.nodes) {
         if (!node.isVisible) continue;
-        if (!viewRect.overlaps(node.aabb)) continue;
+        if (!viewRect.overlaps(node.boundsWorld)) continue;
         _drawNode(canvas, node, cameraOffset);
         if (selectedNodeIds.contains(node.id)) {
           selectedNodes.add(node);
@@ -149,12 +151,9 @@ class ScenePainter extends CustomPainter {
     if (node is ImageNode) {
       _drawBoxSelection(
         canvas,
+        node.transform,
         cameraOffset,
-        node.position,
         node.size,
-        node.rotationDeg,
-        node.scaleX,
-        node.scaleY,
         color,
         haloWidth,
         baseStrokeWidth: 0,
@@ -163,12 +162,9 @@ class ScenePainter extends CustomPainter {
     } else if (node is TextNode) {
       _drawBoxSelection(
         canvas,
+        node.transform,
         cameraOffset,
-        node.position,
         node.size,
-        node.rotationDeg,
-        node.scaleX,
-        node.scaleY,
         color,
         haloWidth,
         baseStrokeWidth: 0,
@@ -178,80 +174,78 @@ class ScenePainter extends CustomPainter {
       final hasStroke = node.strokeColor != null && node.strokeWidth > 0;
       _drawBoxSelection(
         canvas,
+        node.transform,
         cameraOffset,
-        node.position,
         node.size,
-        node.rotationDeg,
-        node.scaleX,
-        node.scaleY,
         color,
         haloWidth,
         baseStrokeWidth: hasStroke ? node.strokeWidth : 0,
         clearFill: true,
       );
     } else if (node is LineNode) {
-      final start = toView(node.start, cameraOffset);
-      final end = toView(node.end, cameraOffset);
+      canvas.save();
+      canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
       canvas.drawLine(
-        start,
-        end,
+        node.start,
+        node.end,
         _haloPaint(node.thickness + haloWidth * 2, color, cap: StrokeCap.round),
       );
       canvas.drawLine(
-        start,
-        end,
+        node.start,
+        node.end,
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = node.thickness
           ..strokeCap = StrokeCap.round
           ..color = _applyOpacity(node.color, node.opacity),
       );
+      canvas.restore();
     } else if (node is StrokeNode) {
       if (node.points.isEmpty) return;
+      canvas.save();
+      canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
       if (node.points.length == 1) {
-        final point = toView(node.points.first, cameraOffset);
         _drawDotSelection(
           canvas,
-          point,
+          node.points.first,
           node.thickness / 2,
           color,
           _applyOpacity(node.color, node.opacity),
           haloWidth,
         );
-        return;
+      } else {
+        final path = Path()..fillType = PathFillType.nonZero;
+        final first = node.points.first;
+        path.moveTo(first.dx, first.dy);
+        for (var i = 1; i < node.points.length; i++) {
+          final p = node.points[i];
+          path.lineTo(p.dx, p.dy);
+        }
+        canvas.drawPath(
+          path,
+          _haloPaint(
+            node.thickness + haloWidth * 2,
+            color,
+            cap: StrokeCap.round,
+            join: StrokeJoin.round,
+          ),
+        );
+        canvas.drawPath(
+          path,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = node.thickness
+            ..strokeCap = StrokeCap.round
+            ..strokeJoin = StrokeJoin.round
+            ..color = _applyOpacity(node.color, node.opacity),
+        );
       }
-      final path = Path();
-      final first = toView(node.points.first, cameraOffset);
-      path.moveTo(first.dx, first.dy);
-      for (var i = 1; i < node.points.length; i++) {
-        final p = toView(node.points[i], cameraOffset);
-        path.lineTo(p.dx, p.dy);
-      }
-      canvas.drawPath(
-        path,
-        _haloPaint(
-          node.thickness + haloWidth * 2,
-          color,
-          cap: StrokeCap.round,
-          join: StrokeJoin.round,
-        ),
-      );
-      canvas.drawPath(
-        path,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = node.thickness
-          ..strokeCap = StrokeCap.round
-          ..strokeJoin = StrokeJoin.round
-          ..color = _applyOpacity(node.color, node.opacity),
-      );
+      canvas.restore();
     } else if (node is PathNode) {
       final localPath = node.buildLocalPath();
       if (localPath == null) return;
-      final viewPosition = toView(node.position, cameraOffset);
       canvas.save();
-      canvas.translate(viewPosition.dx, viewPosition.dy);
-      _applyTransform(canvas, node.rotationDeg, node.scaleX, node.scaleY);
+      canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
       final hasStroke = node.strokeColor != null && node.strokeWidth > 0;
       final baseStrokeWidth = hasStroke ? node.strokeWidth : 0.0;
       final metrics = localPath.computeMetrics().toList();
@@ -317,21 +311,16 @@ class ScenePainter extends CustomPainter {
 
   void _drawBoxSelection(
     Canvas canvas,
+    Transform2D nodeTransform,
     Offset cameraOffset,
-    Offset position,
     Size size,
-    double rotationDeg,
-    double scaleX,
-    double scaleY,
     Color color,
     double haloWidth, {
     required double baseStrokeWidth,
     required bool clearFill,
   }) {
-    final viewPosition = toView(position, cameraOffset);
     canvas.save();
-    canvas.translate(viewPosition.dx, viewPosition.dy);
-    _applyTransform(canvas, rotationDeg, scaleX, scaleY);
+    canvas.transform(_toViewCanvasTransform(nodeTransform, cameraOffset));
     final rect = Rect.fromCenter(
       center: Offset.zero,
       width: size.width,
@@ -457,10 +446,8 @@ class ScenePainter extends CustomPainter {
   }
 
   void _drawImageNode(Canvas canvas, ImageNode node, Offset cameraOffset) {
-    final viewPosition = toView(node.position, cameraOffset);
     canvas.save();
-    canvas.translate(viewPosition.dx, viewPosition.dy);
-    _applyTransform(canvas, node.rotationDeg, node.scaleX, node.scaleY);
+    canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
 
     final rect = Rect.fromCenter(
       center: Offset.zero,
@@ -499,10 +486,8 @@ class ScenePainter extends CustomPainter {
   }
 
   void _drawTextNode(Canvas canvas, TextNode node, Offset cameraOffset) {
-    final viewPosition = toView(node.position, cameraOffset);
     canvas.save();
-    canvas.translate(viewPosition.dx, viewPosition.dy);
-    _applyTransform(canvas, node.rotationDeg, node.scaleX, node.scaleY);
+    canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
 
     final textStyle = TextStyle(
       fontSize: node.fontSize,
@@ -554,6 +539,8 @@ class ScenePainter extends CustomPainter {
 
   void _drawStrokeNode(Canvas canvas, StrokeNode node, Offset cameraOffset) {
     if (node.points.isEmpty) return;
+    canvas.save();
+    canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
 
     final paint = Paint()
       ..style = PaintingStyle.stroke
@@ -563,42 +550,42 @@ class ScenePainter extends CustomPainter {
       ..color = _applyOpacity(node.color, node.opacity);
 
     if (node.points.length == 1) {
-      final point = toView(node.points.first, cameraOffset);
       canvas.drawCircle(
-        point,
+        node.points.first,
         node.thickness / 2,
         paint..style = PaintingStyle.fill,
       );
+      canvas.restore();
       return;
     }
 
     final path = Path();
-    final first = toView(node.points.first, cameraOffset);
+    final first = node.points.first;
     path.moveTo(first.dx, first.dy);
     for (var i = 1; i < node.points.length; i++) {
-      final p = toView(node.points[i], cameraOffset);
+      final p = node.points[i];
       path.lineTo(p.dx, p.dy);
     }
     canvas.drawPath(path, paint);
+    canvas.restore();
   }
 
   void _drawLineNode(Canvas canvas, LineNode node, Offset cameraOffset) {
+    canvas.save();
+    canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
     final paint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = node.thickness
       ..strokeCap = StrokeCap.round
       ..color = _applyOpacity(node.color, node.opacity);
 
-    final start = toView(node.start, cameraOffset);
-    final end = toView(node.end, cameraOffset);
-    canvas.drawLine(start, end, paint);
+    canvas.drawLine(node.start, node.end, paint);
+    canvas.restore();
   }
 
   void _drawRectNode(Canvas canvas, RectNode node, Offset cameraOffset) {
-    final viewPosition = toView(node.position, cameraOffset);
     canvas.save();
-    canvas.translate(viewPosition.dx, viewPosition.dy);
-    _applyTransform(canvas, node.rotationDeg, node.scaleX, node.scaleY);
+    canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
 
     final rect = Rect.fromCenter(
       center: Offset.zero,
@@ -629,10 +616,8 @@ class ScenePainter extends CustomPainter {
     final centered = node.buildLocalPath();
     if (centered == null) return;
 
-    final viewPosition = toView(node.position, cameraOffset);
     canvas.save();
-    canvas.translate(viewPosition.dx, viewPosition.dy);
-    _applyTransform(canvas, node.rotationDeg, node.scaleX, node.scaleY);
+    canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
 
     if (node.fillColor != null) {
       final paint = Paint()
@@ -654,20 +639,6 @@ class ScenePainter extends CustomPainter {
     canvas.restore();
   }
 
-  void _applyTransform(
-    Canvas canvas,
-    double rotationDeg,
-    double scaleX,
-    double scaleY,
-  ) {
-    if (rotationDeg != 0) {
-      canvas.rotate(rotationDeg * math.pi / 180);
-    }
-    if (scaleX != 1 || scaleY != 1) {
-      canvas.scale(scaleX, scaleY);
-    }
-  }
-
   Rect _normalizeRect(Rect rect) {
     return Rect.fromLTRB(
       math.min(rect.left, rect.right),
@@ -675,6 +646,29 @@ class ScenePainter extends CustomPainter {
       math.max(rect.left, rect.right),
       math.max(rect.top, rect.bottom),
     );
+  }
+
+  Float64List _toViewCanvasTransform(
+    Transform2D nodeTransform,
+    Offset cameraOffset,
+  ) {
+    _transformBuffer[0] = nodeTransform.a;
+    _transformBuffer[1] = nodeTransform.b;
+    _transformBuffer[2] = 0;
+    _transformBuffer[3] = 0;
+    _transformBuffer[4] = nodeTransform.c;
+    _transformBuffer[5] = nodeTransform.d;
+    _transformBuffer[6] = 0;
+    _transformBuffer[7] = 0;
+    _transformBuffer[8] = 0;
+    _transformBuffer[9] = 0;
+    _transformBuffer[10] = 1;
+    _transformBuffer[11] = 0;
+    _transformBuffer[12] = nodeTransform.tx - cameraOffset.dx;
+    _transformBuffer[13] = nodeTransform.ty - cameraOffset.dy;
+    _transformBuffer[14] = 0;
+    _transformBuffer[15] = 1;
+    return _transformBuffer;
   }
 
   Color _applyOpacity(Color color, double opacity) {

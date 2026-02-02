@@ -129,8 +129,8 @@ void main() {
     );
 
     final node = scene.layers.first.nodes.single as LineNode;
-    expect(node.start, const Offset(0, 0));
-    expect(node.end, const Offset(10, 0));
+    expect(node.transform.applyToPoint(node.start), const Offset(0, 0));
+    expect(node.transform.applyToPoint(node.end), const Offset(10, 0));
     expect(node.thickness, 4);
     expect(actions, hasLength(1));
     expect(actions.single.type, ActionType.drawLine);
@@ -179,8 +179,8 @@ void main() {
     );
 
     final node = scene.layers.first.nodes.single as LineNode;
-    expect(node.start, const Offset(0, 0));
-    expect(node.end, const Offset(20, 0));
+    expect(node.transform.applyToPoint(node.start), const Offset(0, 0));
+    expect(node.transform.applyToPoint(node.end), const Offset(20, 0));
     expect(actions, hasLength(1));
     expect(actions.single.type, ActionType.drawLine);
   });

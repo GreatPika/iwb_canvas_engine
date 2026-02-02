@@ -79,14 +79,14 @@ Scene _buildScene() {
         ..isDeletable = true
         ..isTransformable = true;
 
-  final stroke = StrokeNode(
+  final stroke = StrokeNode.fromWorldPoints(
     id: 'stroke-1',
     points: const [Offset(0, 0), Offset(10, 10)],
     thickness: 3,
     color: const Color(0xFF000000),
   )..opacity = 0.4;
 
-  final line = LineNode(
+  final line = LineNode.fromWorldSegment(
     id: 'line-1',
     start: const Offset(5, 5),
     end: const Offset(15, 15),

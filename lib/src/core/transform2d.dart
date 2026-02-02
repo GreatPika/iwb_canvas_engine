@@ -22,6 +22,21 @@ class Transform2D {
 
   static const identity = Transform2D(a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0);
 
+  /// Builds a translate * rotate * scale transform.
+  ///
+  /// The resulting matrix applies scaling first, then rotation, then
+  /// translation when transforming a point.
+  factory Transform2D.trs({
+    Offset translation = Offset.zero,
+    double rotationDeg = 0,
+    double scaleX = 1,
+    double scaleY = 1,
+  }) {
+    return Transform2D.translation(translation)
+        .multiply(Transform2D.rotationDeg(rotationDeg))
+        .multiply(Transform2D.scale(scaleX, scaleY));
+  }
+
   factory Transform2D.translation(Offset delta) {
     return Transform2D(a: 1, b: 0, c: 0, d: 1, tx: delta.dx, ty: delta.dy);
   }
@@ -44,6 +59,19 @@ class Transform2D {
   final double tx;
   final double ty;
 
+  Offset get translation => Offset(tx, ty);
+
+  Transform2D withTranslation(Offset translation) {
+    return Transform2D(
+      a: a,
+      b: b,
+      c: c,
+      d: d,
+      tx: translation.dx,
+      ty: translation.dy,
+    );
+  }
+
   /// Returns a composition of this transform with [other] (`this * other`).
   ///
   /// When applied to a point, [other] is applied first and this transform
@@ -63,6 +91,30 @@ class Transform2D {
     final x = a * point.dx + c * point.dy + tx;
     final y = b * point.dx + d * point.dy + ty;
     return Offset(x, y);
+  }
+
+  /// Applies the transform to [rect] and returns its axis-aligned world bounds.
+  Rect applyToRect(Rect rect) {
+    if (rect.isEmpty) return Rect.zero;
+    final p1 = applyToPoint(rect.topLeft);
+    final p2 = applyToPoint(rect.topRight);
+    final p3 = applyToPoint(rect.bottomRight);
+    final p4 = applyToPoint(rect.bottomLeft);
+    var minX = p1.dx;
+    var maxX = p1.dx;
+    var minY = p1.dy;
+    var maxY = p1.dy;
+    void include(Offset p) {
+      if (p.dx < minX) minX = p.dx;
+      if (p.dx > maxX) maxX = p.dx;
+      if (p.dy < minY) minY = p.dy;
+      if (p.dy > maxY) maxY = p.dy;
+    }
+
+    include(p2);
+    include(p3);
+    include(p4);
+    return Rect.fromLTRB(minX, minY, maxX, maxY);
   }
 
   /// Returns the inverse transform, or `null` if the matrix is singular.
@@ -109,5 +161,30 @@ class Transform2D {
       0,
       1,
     ]);
+  }
+
+  /// Writes this transform into [out] as a 4×4 column-major matrix for Flutter.
+  ///
+  /// [out] must have length at least 16.
+  void writeToCanvasTransform(Float64List out) {
+    if (out.length < 16) {
+      throw ArgumentError.value(out.length, 'out.length', 'Must be >= 16.');
+    }
+    out[0] = a;
+    out[1] = b;
+    out[2] = 0;
+    out[3] = 0;
+    out[4] = c;
+    out[5] = d;
+    out[6] = 0;
+    out[7] = 0;
+    out[8] = 0;
+    out[9] = 0;
+    out[10] = 1;
+    out[11] = 0;
+    out[12] = tx;
+    out[13] = ty;
+    out[14] = 0;
+    out[15] = 1;
   }
 }

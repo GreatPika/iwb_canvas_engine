@@ -10,6 +10,7 @@ import '../core/geometry.dart';
 import '../core/hit_test.dart';
 import '../core/nodes.dart';
 import '../core/scene.dart';
+import '../core/transform2d.dart';
 import 'action_events.dart';
 import 'pointer_input.dart';
 
@@ -771,17 +772,14 @@ class SceneController extends ChangeNotifier {
   void _finishStroke(int timestampMs, Offset scenePoint) {
     final stroke = _activeStroke;
     if (stroke == null) return;
-    var didMutateGeometry = false;
     if (stroke.points.isEmpty ||
         (scenePoint - stroke.points.last).distance > 0) {
       stroke.points.add(scenePoint);
-      didMutateGeometry = true;
     }
+    stroke.normalizeToLocalCenter();
     _activeStroke = null;
     _activeDrawLayer = null;
-    if (didMutateGeometry) {
-      _needsNotify = true;
-    }
+    _needsNotify = true;
     _emitAction(
       drawTool == DrawTool.highlighter
           ? ActionType.drawHighlighter
@@ -837,8 +835,9 @@ class SceneController extends ChangeNotifier {
       final line = _activeLine!;
       if (line.end != scenePoint) {
         line.end = scenePoint;
-        _needsNotify = true;
       }
+      line.normalizeToLocalCenter();
+      _needsNotify = true;
       _activeLine = null;
       _activeDrawLayer = null;
       _emitAction(
@@ -865,7 +864,7 @@ class SceneController extends ChangeNotifier {
     }
 
     final start = _pendingLineStart!;
-    final line = LineNode(
+    final line = LineNode.fromWorldSegment(
       id: _nodeIdGenerator(),
       start: start,
       end: scenePoint,
@@ -939,18 +938,23 @@ class SceneController extends ChangeNotifier {
   }
 
   bool _eraserHitsLine(List<Offset> eraserPoints, LineNode line) {
+    final inverse = line.transform.invert();
+    if (inverse == null) return false;
+    final localEraserPoints = eraserPoints
+        .map(inverse.applyToPoint)
+        .toList(growable: false);
     final threshold = eraserThickness / 2 + line.thickness / 2;
-    if (eraserPoints.length == 1) {
+    if (localEraserPoints.length == 1) {
       final distance = distancePointToSegment(
-        eraserPoints.first,
+        localEraserPoints.first,
         line.start,
         line.end,
       );
       return distance <= threshold;
     }
-    for (var i = 0; i < eraserPoints.length - 1; i++) {
-      final a = eraserPoints[i];
-      final b = eraserPoints[i + 1];
+    for (var i = 0; i < localEraserPoints.length - 1; i++) {
+      final a = localEraserPoints[i];
+      final b = localEraserPoints[i + 1];
       final distance = distanceSegmentToSegment(a, b, line.start, line.end);
       if (distance <= threshold) {
         return true;
@@ -960,11 +964,16 @@ class SceneController extends ChangeNotifier {
   }
 
   bool _eraserHitsStroke(List<Offset> eraserPoints, StrokeNode stroke) {
+    final inverse = stroke.transform.invert();
+    if (inverse == null) return false;
+    final localEraserPoints = eraserPoints
+        .map(inverse.applyToPoint)
+        .toList(growable: false);
     final threshold = eraserThickness / 2 + stroke.thickness / 2;
     if (stroke.points.isEmpty) return false;
     if (stroke.points.length == 1) {
       final point = stroke.points.first;
-      for (final eraserPoint in eraserPoints) {
+      for (final eraserPoint in localEraserPoints) {
         if ((eraserPoint - point).distance <= threshold) {
           return true;
         }
@@ -972,8 +981,8 @@ class SceneController extends ChangeNotifier {
       return false;
     }
 
-    if (eraserPoints.length == 1) {
-      final eraserPoint = eraserPoints.first;
+    if (localEraserPoints.length == 1) {
+      final eraserPoint = localEraserPoints.first;
       for (var i = 0; i < stroke.points.length - 1; i++) {
         final a = stroke.points[i];
         final b = stroke.points[i + 1];
@@ -985,9 +994,9 @@ class SceneController extends ChangeNotifier {
       return false;
     }
 
-    for (var i = 0; i < eraserPoints.length - 1; i++) {
-      final eraserA = eraserPoints[i];
-      final eraserB = eraserPoints[i + 1];
+    for (var i = 0; i < localEraserPoints.length - 1; i++) {
+      final eraserA = localEraserPoints[i];
+      final eraserB = localEraserPoints[i + 1];
       for (var j = 0; j < stroke.points.length - 1; j++) {
         final strokeA = stroke.points[j];
         final strokeB = stroke.points[j + 1];
@@ -1033,7 +1042,7 @@ class SceneController extends ChangeNotifier {
     for (final layer in scene.layers) {
       for (final node in layer.nodes) {
         if (!node.isVisible || !node.isSelectable) continue;
-        if (node.aabb.overlaps(rect)) {
+        if (node.boundsWorld.overlaps(rect)) {
           ids.add(node.id);
         }
       }
@@ -1058,8 +1067,8 @@ class SceneController extends ChangeNotifier {
   Offset _selectionCenter(List<SceneNode> nodes) {
     Rect? bounds;
     for (final node in nodes) {
-      final aabb = node.aabb;
-      bounds = bounds == null ? aabb : bounds.expandToInclude(aabb);
+      final nodeBounds = node.boundsWorld;
+      bounds = bounds == null ? nodeBounds : bounds.expandToInclude(nodeBounds);
     }
     return bounds?.center ?? Offset.zero;
   }
@@ -1238,51 +1247,23 @@ class SceneController extends ChangeNotifier {
   }
 
   void _rotateNode(SceneNode node, Offset center, double delta) {
-    if (node is LineNode) {
-      node.start = rotatePoint(node.start, center, delta);
-      node.end = rotatePoint(node.end, center, delta);
-      return;
-    }
-    if (node is StrokeNode) {
-      for (var i = 0; i < node.points.length; i++) {
-        node.points[i] = rotatePoint(node.points[i], center, delta);
-      }
-      return;
-    }
-    node.position = rotatePoint(node.position, center, delta);
-    node.rotationDeg += delta;
+    final pivot = Transform2D.translation(center);
+    final unpivot = Transform2D.translation(Offset(-center.dx, -center.dy));
+    final rotation = Transform2D.rotationDeg(delta);
+    node.transform = pivot
+        .multiply(rotation)
+        .multiply(unpivot)
+        .multiply(node.transform);
   }
 
   void _flipNodeVertical(SceneNode node, double axisX) {
-    if (node is LineNode) {
-      node.start = reflectPointVertical(node.start, axisX);
-      node.end = reflectPointVertical(node.end, axisX);
-      return;
-    }
-    if (node is StrokeNode) {
-      for (var i = 0; i < node.points.length; i++) {
-        node.points[i] = reflectPointVertical(node.points[i], axisX);
-      }
-      return;
-    }
-    node.position = reflectPointVertical(node.position, axisX);
-    node.scaleX = -node.scaleX;
+    final reflect = Transform2D(a: -1, b: 0, c: 0, d: 1, tx: 2 * axisX, ty: 0);
+    node.transform = reflect.multiply(node.transform);
   }
 
   void _flipNodeHorizontal(SceneNode node, double axisY) {
-    if (node is LineNode) {
-      node.start = reflectPointHorizontal(node.start, axisY);
-      node.end = reflectPointHorizontal(node.end, axisY);
-      return;
-    }
-    if (node is StrokeNode) {
-      for (var i = 0; i < node.points.length; i++) {
-        node.points[i] = reflectPointHorizontal(node.points[i], axisY);
-      }
-      return;
-    }
-    node.position = reflectPointHorizontal(node.position, axisY);
-    node.scaleY = -node.scaleY;
+    final reflect = Transform2D(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: 2 * axisY);
+    node.transform = reflect.multiply(node.transform);
   }
 }
 

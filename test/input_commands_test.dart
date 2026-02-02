@@ -102,8 +102,10 @@ void main() {
 
     expect(left.position.dx, closeTo(10, 0.001));
     expect(right.position.dx, closeTo(0, 0.001));
-    expect(left.scaleX, -1);
-    expect(right.scaleX, -1);
+    expect(left.transform.a, closeTo(-1, 0.001));
+    expect(left.transform.d, closeTo(1, 0.001));
+    expect(right.transform.a, closeTo(-1, 0.001));
+    expect(right.transform.d, closeTo(1, 0.001));
   });
 
   test('flipSelectionHorizontal mirrors around center y', () {
@@ -121,8 +123,10 @@ void main() {
 
     expect(top.position.dy, closeTo(10, 0.001));
     expect(bottom.position.dy, closeTo(0, 0.001));
-    expect(top.scaleY, -1);
-    expect(bottom.scaleY, -1);
+    expect(top.transform.a, closeTo(1, 0.001));
+    expect(top.transform.d, closeTo(-1, 0.001));
+    expect(bottom.transform.a, closeTo(1, 0.001));
+    expect(bottom.transform.d, closeTo(-1, 0.001));
   });
 
   test(
@@ -146,9 +150,11 @@ void main() {
 
       expect(transformable.position.dx, closeTo(0, 0.001));
       expect(transformable.position.dy, closeTo(0, 0.001));
-      expect(transformable.scaleX, -1);
+      expect(transformable.transform.a, closeTo(-1, 0.001));
+      expect(transformable.transform.d, closeTo(1, 0.001));
       expect(nonTransformable.position, const Offset(100, 0));
-      expect(nonTransformable.scaleX, 1);
+      expect(nonTransformable.transform.a, closeTo(1, 0.001));
+      expect(nonTransformable.transform.d, closeTo(1, 0.001));
     },
   );
 
@@ -173,9 +179,11 @@ void main() {
 
       expect(transformable.position.dx, closeTo(0, 0.001));
       expect(transformable.position.dy, closeTo(0, 0.001));
-      expect(transformable.scaleY, -1);
+      expect(transformable.transform.a, closeTo(1, 0.001));
+      expect(transformable.transform.d, closeTo(-1, 0.001));
       expect(nonTransformable.position, const Offset(0, 100));
-      expect(nonTransformable.scaleY, 1);
+      expect(nonTransformable.transform.a, closeTo(1, 0.001));
+      expect(nonTransformable.transform.d, closeTo(1, 0.001));
     },
   );
 
@@ -197,10 +205,12 @@ void main() {
 
     controller.rotateSelection(clockwise: true, timestampMs: 40);
 
-    expect(line.start.dx, closeTo(5, 0.001));
-    expect(line.start.dy, closeTo(-5, 0.001));
-    expect(line.end.dx, closeTo(5, 0.001));
-    expect(line.end.dy, closeTo(5, 0.001));
+    final start = line.transform.applyToPoint(line.start);
+    final end = line.transform.applyToPoint(line.end);
+    expect(start.dx, closeTo(5, 0.001));
+    expect(start.dy, closeTo(-5, 0.001));
+    expect(end.dx, closeTo(5, 0.001));
+    expect(end.dy, closeTo(5, 0.001));
   });
 
   test('flipSelectionVertical mirrors stroke geometry', () {
@@ -220,9 +230,12 @@ void main() {
 
     controller.flipSelectionVertical(timestampMs: 40);
 
-    expect(stroke.points[0].dx, closeTo(20, 0.001));
-    expect(stroke.points[1].dx, closeTo(10, 0.001));
-    expect(stroke.points[2].dx, closeTo(0, 0.001));
+    final p0 = stroke.transform.applyToPoint(stroke.points[0]);
+    final p1 = stroke.transform.applyToPoint(stroke.points[1]);
+    final p2 = stroke.transform.applyToPoint(stroke.points[2]);
+    expect(p0.dx, closeTo(20, 0.001));
+    expect(p1.dx, closeTo(10, 0.001));
+    expect(p2.dx, closeTo(0, 0.001));
   });
 
   test('flipSelectionHorizontal mirrors stroke geometry', () {
@@ -242,9 +255,12 @@ void main() {
 
     controller.flipSelectionHorizontal(timestampMs: 40);
 
-    expect(stroke.points[0].dy, closeTo(20, 0.001));
-    expect(stroke.points[1].dy, closeTo(10, 0.001));
-    expect(stroke.points[2].dy, closeTo(0, 0.001));
+    final p0 = stroke.transform.applyToPoint(stroke.points[0]);
+    final p1 = stroke.transform.applyToPoint(stroke.points[1]);
+    final p2 = stroke.transform.applyToPoint(stroke.points[2]);
+    expect(p0.dy, closeTo(20, 0.001));
+    expect(p1.dy, closeTo(10, 0.001));
+    expect(p2.dy, closeTo(0, 0.001));
   });
 
   test('deleteSelection removes deletable nodes only', () {

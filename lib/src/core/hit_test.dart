@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'geometry.dart';
 import 'nodes.dart';
 import 'scene.dart';
+import 'transform2d.dart';
 
 const double kHitSlop = 4.0;
 
@@ -49,37 +50,42 @@ bool hitTestNode(Offset point, SceneNode node) {
     case NodeType.image:
     case NodeType.text:
     case NodeType.rect:
-      return hitTestRect(point, node.aabb);
+      return hitTestRect(point, node.boundsWorld);
     case NodeType.path:
       final pathNode = node as PathNode;
       if (pathNode.fillColor != null) {
         final padding = pathNode.hitPadding + kHitSlop;
-        if (!pathNode.aabb.inflate(padding).contains(point)) return false;
+        if (!pathNode.boundsWorld.inflate(padding).contains(point)) {
+          return false;
+        }
         final localPath = pathNode.buildLocalPath();
         if (localPath == null) return false;
-        final localPoint = _toLocalPathPoint(point, pathNode);
+        final inverse = pathNode.transform.invert();
+        if (inverse == null) return false;
+        final localPoint = inverse.applyToPoint(point);
         return localPath.contains(localPoint);
       }
       if (pathNode.strokeColor != null) {
-        final scaleX = pathNode.scaleX.abs();
-        final scaleY = pathNode.scaleY.abs();
-        final scaleFactor = math.max(
-          scaleX.isFinite ? scaleX : 1,
-          scaleY.isFinite ? scaleY : 1,
-        );
-        final effectiveStrokeWidth = pathNode.strokeWidth * scaleFactor;
+        final effectiveStrokeWidth =
+            pathNode.strokeWidth * _maxAxisScaleAbs(pathNode.transform);
         final padding =
             effectiveStrokeWidth / 2 + pathNode.hitPadding + kHitSlop;
-        return pathNode.aabb.inflate(padding).contains(point);
+        return pathNode.boundsWorld.inflate(padding).contains(point);
       }
       return false;
     case NodeType.line:
       final line = node as LineNode;
-      return hitTestLine(point, line.start, line.end, line.thickness);
+      final inverse = line.transform.invert();
+      if (inverse == null) return false;
+      final localPoint = inverse.applyToPoint(point);
+      return hitTestLine(localPoint, line.start, line.end, line.thickness);
     case NodeType.stroke:
       final stroke = node as StrokeNode;
+      final inverse = stroke.transform.invert();
+      if (inverse == null) return false;
+      final localPoint = inverse.applyToPoint(point);
       return hitTestStroke(
-        point,
+        localPoint,
         stroke.points,
         stroke.thickness,
         hitPadding: stroke.hitPadding,
@@ -105,15 +111,10 @@ SceneNode? hitTestTopNode(Scene scene, Offset point) {
   return null;
 }
 
-Offset _toLocalPathPoint(Offset point, PathNode node) {
-  var local = point - node.position;
-  if (node.rotationDeg != 0) {
-    local = rotatePoint(local, Offset.zero, -node.rotationDeg);
-  }
-  if (node.scaleX != 1 || node.scaleY != 1) {
-    final scaleX = node.scaleX == 0 ? 1 : node.scaleX;
-    final scaleY = node.scaleY == 0 ? 1 : node.scaleY;
-    local = Offset(local.dx / scaleX, local.dy / scaleY);
-  }
-  return local;
+double _maxAxisScaleAbs(Transform2D t) {
+  final sx = math.sqrt(t.a * t.a + t.b * t.b);
+  final sy = math.sqrt(t.c * t.c + t.d * t.d);
+  final safeSx = sx.isFinite && sx > 0 ? sx : 1.0;
+  final safeSy = sy.isFinite && sy > 0 ? sy : 1.0;
+  return math.max(safeSx, safeSy);
 }
