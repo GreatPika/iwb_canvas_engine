@@ -500,11 +500,11 @@ class SceneController extends ChangeNotifier {
         _handleMove(sample, scenePoint);
         break;
       case PointerPhase.up:
-      _handleUp(sample, scenePoint);
-      break;
-    case PointerPhase.cancel:
-      _handleCancel();
-      break;
+        _handleUp(sample, scenePoint);
+        break;
+      case PointerPhase.cancel:
+        _handleCancel();
+        break;
     }
   }
 
@@ -524,11 +524,11 @@ class SceneController extends ChangeNotifier {
         _handleDrawMove(sample, scenePoint);
         break;
       case PointerPhase.up:
-      _handleDrawUp(sample, scenePoint);
-      break;
-    case PointerPhase.cancel:
-      _handleDrawCancel();
-      break;
+        _handleDrawUp(sample, scenePoint);
+        break;
+      case PointerPhase.cancel:
+        _handleDrawCancel();
+        break;
     }
   }
 
@@ -890,6 +890,7 @@ class SceneController extends ChangeNotifier {
     if (eraserPoints.isEmpty) return deleted;
 
     for (final layer in scene.layers) {
+      if (layer.isBackground) continue;
       layer.nodes.removeWhere((node) {
         if (node is! StrokeNode && node is! LineNode) return false;
         if (!node.isDeletable) return false;

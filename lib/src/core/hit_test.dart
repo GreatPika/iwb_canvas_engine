@@ -1,8 +1,11 @@
 import 'dart:ui';
+import 'dart:math' as math;
 
 import 'geometry.dart';
 import 'nodes.dart';
 import 'scene.dart';
+
+const double kHitSlop = 4.0;
 
 /// Returns true if [point] lies inside [rect].
 bool hitTestRect(Offset point, Rect rect) {
@@ -16,10 +19,22 @@ bool hitTestLine(Offset point, Offset start, Offset end, double thickness) {
 }
 
 /// Returns true if [point] hits the polyline [points] with [thickness].
-bool hitTestStroke(Offset point, List<Offset> points, double thickness) {
-  if (points.length < 2) return false;
+bool hitTestStroke(
+  Offset point,
+  List<Offset> points,
+  double thickness, {
+  double hitPadding = 0,
+}) {
+  if (points.isEmpty) return false;
+  if (points.length == 1) {
+    final baseThickness = thickness < 0 ? 0 : thickness;
+    final radius = baseThickness / 2 + hitPadding + kHitSlop;
+    return (point - points.first).distance <= radius;
+  }
+  final baseThickness = thickness < 0 ? 0 : thickness;
+  final effectiveThickness = baseThickness + 2 * (hitPadding + kHitSlop);
   for (var i = 0; i < points.length - 1; i++) {
-    if (hitTestLine(point, points[i], points[i + 1], thickness)) {
+    if (hitTestLine(point, points[i], points[i + 1], effectiveThickness)) {
       return true;
     }
   }
@@ -37,16 +52,38 @@ bool hitTestNode(Offset point, SceneNode node) {
       return hitTestRect(point, node.aabb);
     case NodeType.path:
       final pathNode = node as PathNode;
-      final localPath = pathNode.buildLocalPath();
-      if (localPath == null) return false;
-      final localPoint = _toLocalPathPoint(point, pathNode);
-      return localPath.contains(localPoint);
+      if (pathNode.fillColor != null) {
+        final padding = pathNode.hitPadding + kHitSlop;
+        if (!pathNode.aabb.inflate(padding).contains(point)) return false;
+        final localPath = pathNode.buildLocalPath();
+        if (localPath == null) return false;
+        final localPoint = _toLocalPathPoint(point, pathNode);
+        return localPath.contains(localPoint);
+      }
+      if (pathNode.strokeColor != null) {
+        final scaleX = pathNode.scaleX.abs();
+        final scaleY = pathNode.scaleY.abs();
+        final scaleFactor = math.max(
+          scaleX.isFinite ? scaleX : 1,
+          scaleY.isFinite ? scaleY : 1,
+        );
+        final effectiveStrokeWidth = pathNode.strokeWidth * scaleFactor;
+        final padding =
+            effectiveStrokeWidth / 2 + pathNode.hitPadding + kHitSlop;
+        return pathNode.aabb.inflate(padding).contains(point);
+      }
+      return false;
     case NodeType.line:
       final line = node as LineNode;
       return hitTestLine(point, line.start, line.end, line.thickness);
     case NodeType.stroke:
       final stroke = node as StrokeNode;
-      return hitTestStroke(point, stroke.points, stroke.thickness);
+      return hitTestStroke(
+        point,
+        stroke.points,
+        stroke.thickness,
+        hitPadding: stroke.hitPadding,
+      );
   }
 }
 

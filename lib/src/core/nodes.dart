@@ -22,6 +22,7 @@ abstract class SceneNode {
   SceneNode({
     required this.id,
     required this.type,
+    this.hitPadding = 0,
     this.rotationDeg = 0,
     this.scaleX = 1,
     this.scaleY = 1,
@@ -35,6 +36,11 @@ abstract class SceneNode {
 
   final NodeId id;
   final NodeType type;
+
+  /// Additional hit-test tolerance in scene units.
+  ///
+  /// This is intentionally not serialized during stage A of the refactor plan.
+  double hitPadding;
   double rotationDeg;
   double scaleX;
   double scaleY;
@@ -59,6 +65,7 @@ class ImageNode extends SceneNode {
     required this.imageId,
     required this.size,
     this.naturalSize,
+    super.hitPadding,
     super.rotationDeg,
     super.scaleX,
     super.scaleY,
@@ -112,6 +119,7 @@ class TextNode extends SceneNode {
     this.fontFamily,
     this.maxWidth,
     this.lineHeight,
+    super.hitPadding,
     super.rotationDeg,
     super.scaleX,
     super.scaleY,
@@ -165,6 +173,7 @@ class StrokeNode extends SceneNode {
     required List<Offset> points,
     required this.thickness,
     required this.color,
+    super.hitPadding,
     super.rotationDeg,
     super.scaleX,
     super.scaleY,
@@ -214,6 +223,7 @@ class LineNode extends SceneNode {
     required this.end,
     required this.thickness,
     required this.color,
+    super.hitPadding,
     super.rotationDeg,
     super.scaleX,
     super.scaleY,
@@ -255,6 +265,7 @@ class RectNode extends SceneNode {
     this.fillColor,
     this.strokeColor,
     this.strokeWidth = 1,
+    super.hitPadding,
     super.rotationDeg,
     super.scaleX,
     super.scaleY,
@@ -303,6 +314,7 @@ class PathNode extends SceneNode {
     this.strokeColor,
     this.strokeWidth = 1,
     PathFillRule fillRule = PathFillRule.nonZero,
+    super.hitPadding,
     super.rotationDeg,
     super.scaleX,
     super.scaleY,

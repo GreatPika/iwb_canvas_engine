@@ -25,8 +25,7 @@ void main() {
     )..position = position;
   }
 
-  testWidgets('SceneController setters notify only on changes',
-      (tester) async {
+  testWidgets('SceneController setters notify only on changes', (tester) async {
     final controller = SceneController();
     addTearDown(controller.dispose);
 
@@ -673,6 +672,60 @@ void main() {
     );
 
     expect(scene.layers.first.nodes, isEmpty);
+  });
+
+  test('eraser skips background layers', () async {
+    final backgroundStroke = StrokeNode(
+      id: 'bg-stroke',
+      points: const [Offset(0, 0)],
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+    final foregroundStroke = StrokeNode(
+      id: 'fg-stroke',
+      points: const [Offset(0, 0)],
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+
+    final scene = Scene(
+      layers: [
+        Layer(nodes: [backgroundStroke], isBackground: true),
+        Layer(nodes: [foregroundStroke]),
+      ],
+    );
+    final controller = SceneController(scene: scene, dragStartSlop: 0);
+    addTearDown(controller.dispose);
+
+    controller.setMode(CanvasMode.draw);
+    controller.setDrawTool(DrawTool.eraser);
+    controller.eraserThickness = 10;
+
+    final actions = <ActionCommitted>[];
+    final sub = controller.actions.listen(actions.add);
+    addTearDown(sub.cancel);
+
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 1,
+        position: Offset(0, 0),
+        timestampMs: 0,
+        phase: PointerPhase.down,
+      ),
+    );
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 1,
+        position: Offset(0, 0),
+        timestampMs: 10,
+        phase: PointerPhase.up,
+      ),
+    );
+
+    expect(scene.layers.first.nodes.single.id, 'bg-stroke');
+    expect(scene.layers.last.nodes, isEmpty);
+    expect(actions.single.type, ActionType.erase);
+    expect(actions.single.nodeIds, ['fg-stroke']);
   });
 
   test('eraser deletes a stroke polyline with single-point input', () async {

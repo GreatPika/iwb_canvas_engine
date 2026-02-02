@@ -74,60 +74,62 @@ void main() {
     );
   });
 
-  testWidgets('removeNode removes node, clears selection, emits delete action',
-      (tester) async {
-    final node = RectNode(
-      id: 'r1',
-      size: const Size(10, 10),
-      fillColor: const Color(0xFF000000),
-    )..position = const Offset(0, 0);
-    final controller = SceneController(
-      scene: Scene(
-        layers: [
-          Layer(nodes: [node]),
-        ],
-      ),
-    );
-    addTearDown(controller.dispose);
+  testWidgets(
+    'removeNode removes node, clears selection, emits delete action',
+    (tester) async {
+      final node = RectNode(
+        id: 'r1',
+        size: const Size(10, 10),
+        fillColor: const Color(0xFF000000),
+      )..position = const Offset(0, 0);
+      final controller = SceneController(
+        scene: Scene(
+          layers: [
+            Layer(nodes: [node]),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
 
-    controller.handlePointer(
-      const PointerSample(
-        pointerId: 1,
-        position: Offset(0, 0),
-        timestampMs: 0,
-        phase: PointerPhase.down,
-      ),
-    );
-    controller.handlePointer(
-      const PointerSample(
-        pointerId: 1,
-        position: Offset(0, 0),
-        timestampMs: 10,
-        phase: PointerPhase.up,
-      ),
-    );
+      controller.handlePointer(
+        const PointerSample(
+          pointerId: 1,
+          position: Offset(0, 0),
+          timestampMs: 0,
+          phase: PointerPhase.down,
+        ),
+      );
+      controller.handlePointer(
+        const PointerSample(
+          pointerId: 1,
+          position: Offset(0, 0),
+          timestampMs: 10,
+          phase: PointerPhase.up,
+        ),
+      );
 
-    expect(controller.selectedNodeIds, contains('r1'));
+      expect(controller.selectedNodeIds, contains('r1'));
 
-    final actions = <ActionCommitted>[];
-    final sub = controller.actions.listen(actions.add);
-    addTearDown(sub.cancel);
+      final actions = <ActionCommitted>[];
+      final sub = controller.actions.listen(actions.add);
+      addTearDown(sub.cancel);
 
-    var notifications = 0;
-    controller.addListener(() => notifications++);
+      var notifications = 0;
+      controller.addListener(() => notifications++);
 
-    controller.removeNode('r1', timestampMs: 123);
+      controller.removeNode('r1', timestampMs: 123);
 
-    await tester.pump();
+      await tester.pump();
 
-    expect(controller.scene.layers.single.nodes, isEmpty);
-    expect(controller.selectedNodeIds, isNot(contains('r1')));
-    expect(actions, hasLength(1));
-    expect(actions.single.type, ActionType.delete);
-    expect(actions.single.nodeIds, ['r1']);
-    expect(actions.single.timestampMs, 123);
-    expect(notifications, 1);
-  });
+      expect(controller.scene.layers.single.nodes, isEmpty);
+      expect(controller.selectedNodeIds, isNot(contains('r1')));
+      expect(actions, hasLength(1));
+      expect(actions.single.type, ActionType.delete);
+      expect(actions.single.nodeIds, ['r1']);
+      expect(actions.single.timestampMs, 123);
+      expect(notifications, 1);
+    },
+  );
 
   test('removeNode default timestamp uses DateTime.now', () {
     final node = RectNode(

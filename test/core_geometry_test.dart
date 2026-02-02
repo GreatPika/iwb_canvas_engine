@@ -76,6 +76,18 @@ void main() {
     expect(miss, isFalse);
   });
 
+  test('hitTestStroke supports single-point strokes', () {
+    final points = [const Offset(0, 0)];
+    expect(hitTestStroke(const Offset(6, 0), points, 4), isTrue);
+    expect(hitTestStroke(const Offset(7, 0), points, 4), isFalse);
+  });
+
+  test('hitTestStroke applies hitPadding in addition to kHitSlop', () {
+    final points = [const Offset(0, 0)];
+    expect(hitTestStroke(const Offset(5, 0), points, 0), isFalse);
+    expect(hitTestStroke(const Offset(5, 0), points, 0, hitPadding: 2), isTrue);
+  });
+
   test('hitTestRect uses rect bounds', () {
     const rect = Rect.fromLTWH(0, 0, 10, 20);
     expect(hitTestRect(const Offset(5, 5), rect), isTrue);
@@ -87,6 +99,7 @@ void main() {
         PathNode(
             id: 'path-1',
             svgPathData: 'M0 0 H40 V30 H0 Z M12 8 H28 V22 H12 Z',
+            fillColor: const Color(0xFF000000),
             fillRule: PathFillRule.evenOdd,
           )
           ..position = const Offset(100, 100)
@@ -102,6 +115,31 @@ void main() {
     final rotated = rotatePoint(scaled, Offset.zero, node.rotationDeg);
     final worldHit = rotated + node.position;
     expect(hitTestNode(worldHit, node), isTrue);
+  });
+
+  test('hitTestNode allows coarse hits for stroke-only PathNode (stage A)', () {
+    final node = PathNode(
+      id: 'path-stroke-only',
+      svgPathData: 'M0 0 H40 V30 H0 Z',
+      strokeColor: const Color(0xFF000000),
+      strokeWidth: 2,
+    )..position = const Offset(100, 100);
+    expect(hitTestNode(node.position, node), isTrue);
+  });
+
+  test('stroke-only PathNode hit-test accounts for node scale (stage A)', () {
+    final node =
+        PathNode(
+            id: 'path-stroke-scale',
+            svgPathData: 'M0 0 H40 V30 H0 Z',
+            strokeColor: const Color(0xFF000000),
+            strokeWidth: 10,
+          )
+          ..position = Offset.zero
+          ..scaleX = 2
+          ..scaleY = 2;
+
+    expect(hitTestNode(const Offset(52, 0), node), isTrue);
   });
 
   test('distancePointToSegment handles degenerate segments', () {

@@ -24,8 +24,9 @@ PointerSample sample({
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('hot paths coalesce draw repaint requests to one per frame',
-      (tester) async {
+  testWidgets('hot paths coalesce draw repaint requests to one per frame', (
+    tester,
+  ) async {
     final controller = SceneController(scene: Scene(layers: [Layer()]));
     addTearDown(controller.dispose);
 
@@ -67,15 +68,20 @@ void main() {
     expect(notifications, 1);
   });
 
-  testWidgets('hot paths coalesce move repaint requests to one per frame',
-      (tester) async {
+  testWidgets('hot paths coalesce move repaint requests to one per frame', (
+    tester,
+  ) async {
     final node = RectNode(
       id: 'n1',
       size: const Size(10, 10),
       fillColor: const Color(0xFF000000),
     )..position = const Offset(0, 0);
     final controller = SceneController(
-      scene: Scene(layers: [Layer(nodes: [node])]),
+      scene: Scene(
+        layers: [
+          Layer(nodes: [node]),
+        ],
+      ),
     );
     addTearDown(controller.dispose);
 
@@ -131,8 +137,9 @@ void main() {
     expect(notifications, 1);
   });
 
-  testWidgets('hot paths coalesce marquee repaint requests to one per frame',
-      (tester) async {
+  testWidgets('hot paths coalesce marquee repaint requests to one per frame', (
+    tester,
+  ) async {
     final controller = SceneController(scene: Scene(layers: [Layer()]));
     addTearDown(controller.dispose);
 
@@ -171,8 +178,9 @@ void main() {
     expect(notifications, 1);
   });
 
-  testWidgets('hot paths coalesce erase repaint requests to one per frame',
-      (tester) async {
+  testWidgets('hot paths coalesce erase repaint requests to one per frame', (
+    tester,
+  ) async {
     final controller = SceneController(scene: Scene(layers: [Layer()]));
     addTearDown(controller.dispose);
 
@@ -214,15 +222,20 @@ void main() {
     expect(notifications, 1);
   });
 
-  testWidgets('commit + reset does not emit a tail notification',
-      (tester) async {
+  testWidgets('commit + reset does not emit a tail notification', (
+    tester,
+  ) async {
     final node = RectNode(
       id: 'n1',
       size: const Size(10, 10),
       fillColor: const Color(0xFF000000),
     )..position = const Offset(0, 0);
     final controller = SceneController(
-      scene: Scene(layers: [Layer(nodes: [node])]),
+      scene: Scene(
+        layers: [
+          Layer(nodes: [node]),
+        ],
+      ),
     );
     addTearDown(controller.dispose);
 
@@ -281,8 +294,9 @@ void main() {
     expect(notifications, 1);
   });
 
-  testWidgets('eraser up emits only one notification when deletions occur',
-      (tester) async {
+  testWidgets('eraser up emits only one notification when deletions occur', (
+    tester,
+  ) async {
     final stroke = StrokeNode(
       id: 's1',
       points: const [Offset(0, 0), Offset(20, 0)],
@@ -290,7 +304,11 @@ void main() {
       color: const Color(0xFF000000),
     );
     final controller = SceneController(
-      scene: Scene(layers: [Layer(nodes: [stroke])]),
+      scene: Scene(
+        layers: [
+          Layer(nodes: [stroke]),
+        ],
+      ),
     );
     addTearDown(controller.dispose);
 
@@ -330,8 +348,9 @@ void main() {
     expect(controller.scene.layers.single.nodes, isEmpty);
   });
 
-  testWidgets('setCameraOffset coalesces repaints to one per frame',
-      (tester) async {
+  testWidgets('setCameraOffset coalesces repaints to one per frame', (
+    tester,
+  ) async {
     final controller = SceneController();
     addTearDown(controller.dispose);
 
