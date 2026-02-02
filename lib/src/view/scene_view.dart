@@ -15,9 +15,14 @@ class SceneView extends StatefulWidget {
   /// If [controller] is null, the view creates and owns a controller with an
   /// empty scene. Use [onControllerReady] to access the internal controller once
   /// it is created.
+  ///
+  /// If [staticLayerCache] is null, the view creates and owns an internal cache
+  /// and disposes it when the view is disposed. If a cache is provided, the
+  /// caller owns it and must dispose it.
   const SceneView({
     this.controller,
     required this.imageResolver,
+    this.staticLayerCache,
     this.onControllerReady,
     this.selectionColor = const Color(0xFF1565C0),
     this.selectionStrokeWidth = 1,
@@ -27,6 +32,7 @@ class SceneView extends StatefulWidget {
 
   final SceneController? controller;
   final ImageResolver imageResolver;
+  final SceneStaticLayerCache? staticLayerCache;
   final ValueChanged<SceneController>? onControllerReady;
   final Color selectionColor;
   final double selectionStrokeWidth;
@@ -38,17 +44,22 @@ class SceneView extends StatefulWidget {
 
 class _SceneViewState extends State<SceneView> {
   late PointerInputTracker _pointerTracker;
-  final SceneStaticLayerCache _staticLayerCache = SceneStaticLayerCache();
+  late SceneStaticLayerCache _staticLayerCache;
+  late bool _ownsStaticLayerCache;
   Timer? _pendingTapTimer;
   int _lastTimestampMs = 0;
   SceneController? _ownedController;
 
   SceneController get _controller => widget.controller ?? _ownedController!;
 
+  @visibleForTesting
+  SceneStaticLayerCache get debugStaticLayerCache => _staticLayerCache;
+
   @override
   void initState() {
     super.initState();
     _ensureController();
+    _initStaticLayerCache();
     _pointerTracker = PointerInputTracker(
       settings: _controller.pointerSettings,
     );
@@ -57,6 +68,9 @@ class _SceneViewState extends State<SceneView> {
   @override
   void didUpdateWidget(SceneView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.staticLayerCache != widget.staticLayerCache) {
+      _syncStaticLayerCache();
+    }
     final controllerChanged = oldWidget.controller != widget.controller;
     if (controllerChanged) {
       if (oldWidget.controller == null && widget.controller != null) {
@@ -78,6 +92,9 @@ class _SceneViewState extends State<SceneView> {
   @override
   void dispose() {
     _pendingTapTimer?.cancel();
+    if (_ownsStaticLayerCache) {
+      _staticLayerCache.dispose();
+    }
     _disposeOwnedController();
     super.dispose();
   }
@@ -152,5 +169,33 @@ class _SceneViewState extends State<SceneView> {
   void _disposeOwnedController() {
     _ownedController?.dispose();
     _ownedController = null;
+  }
+
+  void _initStaticLayerCache() {
+    final providedCache = widget.staticLayerCache;
+    if (providedCache != null) {
+      _staticLayerCache = providedCache;
+      _ownsStaticLayerCache = false;
+      return;
+    }
+    _staticLayerCache = SceneStaticLayerCache();
+    _ownsStaticLayerCache = true;
+  }
+
+  void _syncStaticLayerCache() {
+    final providedCache = widget.staticLayerCache;
+    if (providedCache != null) {
+      if (_ownsStaticLayerCache) {
+        _staticLayerCache.dispose();
+      }
+      _staticLayerCache = providedCache;
+      _ownsStaticLayerCache = false;
+      return;
+    }
+
+    if (!_ownsStaticLayerCache) {
+      _staticLayerCache = SceneStaticLayerCache();
+      _ownsStaticLayerCache = true;
+    }
   }
 }

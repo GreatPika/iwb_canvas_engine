@@ -420,4 +420,33 @@ void main() {
       ),
     );
   });
+
+  testWidgets('A6-2: SceneView disposes owned static layer cache', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 64,
+          height: 64,
+          child: SceneView(imageResolver: (_) => null, staticLayerCache: null),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final renderObject = tester.renderObject<rendering.RenderCustomPaint>(
+      find.byType(CustomPaint),
+    );
+    final painter = renderObject.painter as ScenePainter;
+    final cache = painter.staticLayerCache!;
+    expect(cache.debugBuildCount, greaterThan(0));
+
+    final count0 = cache.debugDisposeCount;
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+
+    expect(cache.debugDisposeCount, greaterThan(count0));
+  });
 }

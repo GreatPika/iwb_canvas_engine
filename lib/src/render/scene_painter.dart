@@ -702,6 +702,8 @@ class SceneStaticLayerCache {
   @visibleForTesting
   int debugBuildCount = 0;
   @visibleForTesting
+  int debugDisposeCount = 0;
+  @visibleForTesting
   int? get debugKeyHashCode => _key?.hashCode;
 
   void draw(
@@ -722,6 +724,7 @@ class SceneStaticLayerCache {
     );
 
     if (_picture == null || _key != key) {
+      _disposePictureIfNeeded();
       _key = key;
       _picture = _recordPicture(
         size,
@@ -733,6 +736,19 @@ class SceneStaticLayerCache {
     }
 
     canvas.drawPicture(_picture!);
+  }
+
+  void dispose() {
+    _disposePictureIfNeeded();
+    _key = null;
+  }
+
+  void _disposePictureIfNeeded() {
+    final picture = _picture;
+    if (picture == null) return;
+    _picture = null;
+    picture.dispose();
+    debugDisposeCount += 1;
   }
 
   Picture _recordPicture(
