@@ -99,15 +99,28 @@ void main() {
     final after = DateTime.now().millisecondsSinceEpoch;
 
     expect(actions, hasLength(3));
-    expect(actions.first.type, ActionType.rotate);
-    expect(actions.first.payload, containsPair('clockwise', false));
+    expect(actions.first.type, ActionType.transform);
+    expect(actions.first.payload, contains('delta'));
     expect(actions.first.timestampMs, inInclusiveRange(before, after));
-    expect(actions[1].type, ActionType.flip);
-    expect(actions[1].payload, containsPair('axis', 'vertical'));
+    expect(actions[1].type, ActionType.transform);
+    expect(actions[1].payload, contains('delta'));
     expect(actions[1].timestampMs, inInclusiveRange(before, after));
-    expect(actions[2].type, ActionType.flip);
-    expect(actions[2].payload, containsPair('axis', 'horizontal'));
+    expect(actions[2].type, ActionType.transform);
+    expect(actions[2].payload, contains('delta'));
     expect(actions[2].timestampMs, inInclusiveRange(before, after));
+
+    bool isNonIdentityDelta(Map<String, Object?> payload) {
+      final delta = (payload['delta'] as Map).cast<String, num>();
+      final a = delta['a']?.toDouble() ?? 0;
+      final d = delta['d']?.toDouble() ?? 0;
+      final tx = delta['tx']?.toDouble() ?? 0;
+      final ty = delta['ty']?.toDouble() ?? 0;
+      return a != 1.0 || d != 1.0 || tx != 0.0 || ty != 0.0;
+    }
+
+    expect(isNonIdentityDelta(actions.first.payload!), isTrue);
+    expect(isNonIdentityDelta(actions[1].payload!), isTrue);
+    expect(isNonIdentityDelta(actions[2].payload!), isTrue);
   });
 
   test('deleteSelection/clearScene default timestamp uses DateTime.now', () {

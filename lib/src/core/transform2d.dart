@@ -22,6 +22,29 @@ class Transform2D {
 
   static const identity = Transform2D(a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0);
 
+  /// Decodes a transform from a JSON-friendly map.
+  ///
+  /// This format is shared between JSON serialization and action event payloads:
+  /// `{a,b,c,d,tx,ty}`.
+  ///
+  /// Throws [ArgumentError] when required fields are missing or not numeric.
+  factory Transform2D.fromJsonMap(Map<String, Object?> map) {
+    double requireNum(String key) {
+      final value = map[key];
+      if (value is num) return value.toDouble();
+      throw ArgumentError.value(value, key, 'Must be a number.');
+    }
+
+    return Transform2D(
+      a: requireNum('a'),
+      b: requireNum('b'),
+      c: requireNum('c'),
+      d: requireNum('d'),
+      tx: requireNum('tx'),
+      ty: requireNum('ty'),
+    );
+  }
+
   /// Builds a translate * rotate * scale transform.
   ///
   /// The resulting matrix applies scaling first, then rotation, then
@@ -60,6 +83,13 @@ class Transform2D {
   final double ty;
 
   Offset get translation => Offset(tx, ty);
+
+  /// Encodes this transform into a JSON-friendly map.
+  ///
+  /// This is shared between JSON serialization and action events payloads.
+  Map<String, double> toJsonMap() {
+    return <String, double>{'a': a, 'b': b, 'c': c, 'd': d, 'tx': tx, 'ty': ty};
+  }
 
   Transform2D withTranslation(Offset translation) {
     return Transform2D(

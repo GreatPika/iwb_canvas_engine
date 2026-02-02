@@ -360,20 +360,26 @@ class SceneController extends ChangeNotifier {
 
   /// Rotates the transformable selection by 90 degrees.
   void rotateSelection({required bool clockwise, int? timestampMs}) {
-    final nodes = _selectedTransformableNodesInSceneOrder();
+    final nodes = _selectedTransformableNodesInSceneOrder()
+        .where((node) => !node.isLocked)
+        .toList(growable: false);
     if (nodes.isEmpty) return;
 
     final center = _selectionCenter(nodes);
-    final delta = clockwise ? 90.0 : -90.0;
+    final pivot = Transform2D.translation(center);
+    final unpivot = Transform2D.translation(Offset(-center.dx, -center.dy));
+    final rotation = Transform2D.rotationDeg(clockwise ? 90.0 : -90.0);
+    final delta = pivot.multiply(rotation).multiply(unpivot);
+
     for (final node in nodes) {
-      _rotateNode(node, center, delta);
+      node.transform = delta.multiply(node.transform);
     }
 
     _emitAction(
-      ActionType.rotate,
+      ActionType.transform,
       nodes.map((node) => node.id).toList(growable: false),
       timestampMs ?? DateTime.now().millisecondsSinceEpoch,
-      payload: <String, Object?>{'clockwise': clockwise},
+      payload: <String, Object?>{'delta': delta.toJsonMap()},
     );
     _needsNotify = true;
     _notifyNow();
@@ -381,19 +387,30 @@ class SceneController extends ChangeNotifier {
 
   /// Flips the transformable selection horizontally around its center.
   void flipSelectionVertical({int? timestampMs}) {
-    final nodes = _selectedTransformableNodesInSceneOrder();
+    final nodes = _selectedTransformableNodesInSceneOrder()
+        .where((node) => !node.isLocked)
+        .toList(growable: false);
     if (nodes.isEmpty) return;
 
     final center = _selectionCenter(nodes);
+    final delta = Transform2D(
+      a: -1,
+      b: 0,
+      c: 0,
+      d: 1,
+      tx: 2 * center.dx,
+      ty: 0,
+    );
+
     for (final node in nodes) {
-      _flipNodeVertical(node, center.dx);
+      node.transform = delta.multiply(node.transform);
     }
 
     _emitAction(
-      ActionType.flip,
+      ActionType.transform,
       nodes.map((node) => node.id).toList(growable: false),
       timestampMs ?? DateTime.now().millisecondsSinceEpoch,
-      payload: const <String, Object?>{'axis': 'vertical'},
+      payload: <String, Object?>{'delta': delta.toJsonMap()},
     );
     _needsNotify = true;
     _notifyNow();
@@ -401,19 +418,30 @@ class SceneController extends ChangeNotifier {
 
   /// Flips the transformable selection vertically around its center.
   void flipSelectionHorizontal({int? timestampMs}) {
-    final nodes = _selectedTransformableNodesInSceneOrder();
+    final nodes = _selectedTransformableNodesInSceneOrder()
+        .where((node) => !node.isLocked)
+        .toList(growable: false);
     if (nodes.isEmpty) return;
 
     final center = _selectionCenter(nodes);
+    final delta = Transform2D(
+      a: 1,
+      b: 0,
+      c: 0,
+      d: -1,
+      tx: 0,
+      ty: 2 * center.dy,
+    );
+
     for (final node in nodes) {
-      _flipNodeHorizontal(node, center.dy);
+      node.transform = delta.multiply(node.transform);
     }
 
     _emitAction(
-      ActionType.flip,
+      ActionType.transform,
       nodes.map((node) => node.id).toList(growable: false),
       timestampMs ?? DateTime.now().millisecondsSinceEpoch,
-      payload: const <String, Object?>{'axis': 'horizontal'},
+      payload: <String, Object?>{'delta': delta.toJsonMap()},
     );
     _needsNotify = true;
     _notifyNow();
@@ -712,14 +740,15 @@ class SceneController extends ChangeNotifier {
   }
 
   void _commitMove(int timestampMs, Offset scenePoint) {
-    final movedNodeIds = _selectedMovableNodeIds();
-    if (movedNodeIds.isNotEmpty) {
-      final delta = scenePoint - (_pointerDownScene ?? scenePoint);
+    final movedNodeIds = _selectedTransformableNodeIds();
+    final totalDelta = scenePoint - (_pointerDownScene ?? scenePoint);
+    if (movedNodeIds.isNotEmpty && totalDelta != Offset.zero) {
+      final delta = Transform2D.translation(totalDelta);
       _emitAction(
-        ActionType.move,
+        ActionType.transform,
         movedNodeIds,
         timestampMs,
-        payload: <String, Object?>{'deltaX': delta.dx, 'deltaY': delta.dy},
+        payload: <String, Object?>{'delta': delta.toJsonMap()},
       );
     }
   }
@@ -738,6 +767,7 @@ class SceneController extends ChangeNotifier {
     final nodesToMove = nodes ?? _selectedNodesInSceneOrder();
     for (final node in nodesToMove) {
       if (node.isLocked) continue;
+      if (!node.isTransformable) continue;
       node.position = node.position + delta;
     }
   }
@@ -1028,9 +1058,9 @@ class SceneController extends ChangeNotifier {
     return nodes;
   }
 
-  List<NodeId> _selectedMovableNodeIds() {
+  List<NodeId> _selectedTransformableNodeIds() {
     final ids = <NodeId>[];
-    for (final node in _selectedNodesInSceneOrder()) {
+    for (final node in _selectedTransformableNodesInSceneOrder()) {
       if (node.isLocked) continue;
       ids.add(node.id);
     }
@@ -1244,26 +1274,6 @@ class SceneController extends ChangeNotifier {
         payload: payload,
       ),
     );
-  }
-
-  void _rotateNode(SceneNode node, Offset center, double delta) {
-    final pivot = Transform2D.translation(center);
-    final unpivot = Transform2D.translation(Offset(-center.dx, -center.dy));
-    final rotation = Transform2D.rotationDeg(delta);
-    node.transform = pivot
-        .multiply(rotation)
-        .multiply(unpivot)
-        .multiply(node.transform);
-  }
-
-  void _flipNodeVertical(SceneNode node, double axisX) {
-    final reflect = Transform2D(a: -1, b: 0, c: 0, d: 1, tx: 2 * axisX, ty: 0);
-    node.transform = reflect.multiply(node.transform);
-  }
-
-  void _flipNodeHorizontal(SceneNode node, double axisY) {
-    final reflect = Transform2D(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: 2 * axisY);
-    node.transform = reflect.multiply(node.transform);
   }
 }
 

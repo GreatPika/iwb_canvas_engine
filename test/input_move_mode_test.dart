@@ -207,7 +207,10 @@ void main() {
 
     expect(movable.position, const Offset(20, 0));
     expect(locked.position, const Offset(50, 0));
-    expect(actions.last.type, ActionType.move);
+    expect(actions.last.type, ActionType.transform);
     expect(actions.last.nodeIds, ['movable']);
+    final delta = (actions.last.payload!['delta'] as Map).cast<String, num>();
+    expect(delta['tx']?.toDouble(), 20.0);
+    expect(delta['ty']?.toDouble(), 0.0);
   });
 }

@@ -504,14 +504,7 @@ Offset _parsePoint(Object value, String field) {
 }
 
 Map<String, dynamic> _encodeTransform2D(Transform2D transform) {
-  return <String, dynamic>{
-    'a': transform.a,
-    'b': transform.b,
-    'c': transform.c,
-    'd': transform.d,
-    'tx': transform.tx,
-    'ty': transform.ty,
-  };
+  return <String, dynamic>{...transform.toJsonMap()};
 }
 
 Transform2D _decodeTransform2D(Map<String, dynamic> json) {

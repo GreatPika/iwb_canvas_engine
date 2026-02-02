@@ -124,10 +124,10 @@ Static layer cache invariants:
 Action boundaries are required for undo/redo integration.
 Emit `ActionCommitted` on:
 
-- drag end (move)
+- drag end (transform)
 - stroke end
 - line end
-- rotate/flip/delete/clear
+- transform/delete/clear
 - marquee end
 - erase end
 
@@ -136,7 +136,7 @@ Emit `ActionCommitted` on:
 - Rotated rectangles use AABB of transformed corners.
 - Lines/strokes use distance-to-segment with thickness tolerance.
 - Path nodes use geometry hit-test via `Path.contains` with inverse transforms.
-- Group rotate/flip uses center of union AABB of selected nodes.
+- Group transforms use center of union AABB of selected nodes.
 
 ## Serialization (JSON v2)
 
@@ -159,8 +159,7 @@ Emit `ActionCommitted` on:
 - A change notification for repaint (stream/listener)
 
 `ActionCommitted.payload` uses minimal metadata for undo/redo:
-- rotate: `{clockwise: bool}`
-- flip: `{axis: 'vertical' | 'horizontal'}`
+- transform: `{delta: {a,b,c,d,tx,ty}}`
 
 ## Example app responsibilities
 

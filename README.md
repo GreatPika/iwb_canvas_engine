@@ -115,8 +115,12 @@ SceneView(
 ```
 
 For `ActionCommitted.payload`:
-- `rotate`: `{clockwise: bool}`
-- `flip`: `{axis: 'vertical' | 'horizontal'}`
+- `transform`: `{delta: {a,b,c,d,tx,ty}}`
+- `move` (layer move): `{sourceLayerIndex: int, targetLayerIndex: int}`
+
+Decode helpers:
+- `Transform2D.fromJsonMap(event.payload!['delta'] as Map<String, Object?>)`
+- `event.tryTransformDelta()`
 
 ### Scene mutations
 
@@ -142,7 +146,8 @@ afterwards to let the controller restore minimal invariants (e.g. selection).
 ### Selection and transforms
 
 - Locked nodes (`isLocked == true`) can be selected, but drag-move skips them.
-- Rotate/flip operations apply only to nodes with `isTransformable == true`.
+- Geometric transforms (drag-move, rotate, flip) apply only to nodes with
+  `isTransformable == true` and `isLocked == false`.
 - Transform centers and bounds are computed from the transformable subset.
 
 ### Advanced rendering / input

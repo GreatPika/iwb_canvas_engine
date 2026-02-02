@@ -1,13 +1,13 @@
 import 'dart:ui';
 
 import '../core/nodes.dart';
+import '../core/transform2d.dart';
 
 /// Discrete actions emitted by [SceneController] for app-level undo/redo.
 enum ActionType {
   move,
   selectMarquee,
-  rotate,
-  flip,
+  transform,
   delete,
   clear,
   drawStroke,
@@ -44,4 +44,29 @@ class EditTextRequested {
   final NodeId nodeId;
   final int timestampMs;
   final Offset position;
+}
+
+extension ActionCommittedDelta on ActionCommitted {
+  /// Parses `payload.delta` into a [Transform2D] when present and valid.
+  ///
+  /// Returns `null` if payload does not contain a valid delta map.
+  Transform2D? tryTransformDelta() {
+    final payload = this.payload;
+    if (payload == null) return null;
+    final delta = payload['delta'];
+    if (delta is! Map) return null;
+
+    final map = <String, Object?>{};
+    for (final entry in delta.entries) {
+      final key = entry.key;
+      if (key is! String) return null;
+      map[key] = entry.value;
+    }
+
+    try {
+      return Transform2D.fromJsonMap(map);
+    } on ArgumentError {
+      return null;
+    }
+  }
 }

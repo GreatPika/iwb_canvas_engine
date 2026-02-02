@@ -13,7 +13,9 @@
 ### Selection transforms
 
 - Add horizontal flip alongside vertical flip.
-- Include flip axis in `ActionCommitted.payload`.
+- Replace rotate/flip/drag-move action events with `ActionType.transform` and
+  `payload.delta` (2×3 affine matrix).
+- Breaking: `ActionType.rotate` and `ActionType.flip` removed.
 
 ### Stage 1 — Public API split (basic vs advanced)
 
