@@ -77,6 +77,10 @@ class SceneController extends ChangeNotifier {
   bool _needsNotify = false;
   int _sceneRevision = 0;
   int _selectionRevision = 0;
+  List<SceneNode>? _moveGestureNodes;
+  int _dragSceneRevision = 0;
+  int _dragSelectionRevision = 0;
+  int _debugMoveGestureBuildCount = 0;
 
   int? _activePointerId;
   Offset? _pointerDownScene;
@@ -115,6 +119,12 @@ class SceneController extends ChangeNotifier {
 
   @visibleForTesting
   int get debugSelectionRevision => _selectionRevision;
+
+  @visibleForTesting
+  int get debugMoveGestureBuildCount => _debugMoveGestureBuildCount;
+
+  @visibleForTesting
+  List<SceneNode>? get debugMoveGestureNodes => _moveGestureNodes;
 
   /// Current marquee selection rectangle in scene coordinates.
   Rect? get selectionRect => _selectionRect;
@@ -538,6 +548,7 @@ class SceneController extends ChangeNotifier {
     _lastDragScene = scenePoint;
     _dragMoved = false;
     _pendingClearSelection = false;
+    _moveGestureNodes = null;
 
     final hit = hitTestTopNode(scene, scenePoint);
     if (hit != null) {
@@ -557,22 +568,34 @@ class SceneController extends ChangeNotifier {
     if (_pointerDownScene == null || _lastDragScene == null) return;
 
     final totalDelta = scenePoint - _pointerDownScene!;
-    if (!_dragMoved && totalDelta.distance > dragStartSlop) {
+    final didStartDrag = !_dragMoved && totalDelta.distance > dragStartSlop;
+    if (didStartDrag) {
       _dragMoved = true;
       if (_dragTarget == _DragTarget.marquee) {
         if (_pendingClearSelection) {
-          _selectedNodeIds.clear();
+          _setSelection(const <NodeId>[], notify: false);
           _pendingClearSelection = false;
         }
+      }
+      if (_dragTarget == _DragTarget.move) {
+        _dragSceneRevision = _sceneRevision;
+        _dragSelectionRevision = _selectionRevision;
+        _moveGestureNodes = _selectedNodesInSceneOrder();
+        _debugMoveGestureBuildCount += 1;
       }
     }
 
     if (!_dragMoved) return;
 
     if (_dragTarget == _DragTarget.move) {
+      if (_moveGestureNodes != null &&
+          (_sceneRevision != _dragSceneRevision ||
+              _selectionRevision != _dragSelectionRevision)) {
+        _moveGestureNodes = null;
+      }
       final delta = scenePoint - _lastDragScene!;
       if (delta == Offset.zero) return;
-      _applyMoveDelta(delta);
+      _applyMoveDelta(delta, nodes: _moveGestureNodes);
       _lastDragScene = scenePoint;
       requestRepaintOncePerFrame();
       return;
@@ -708,10 +731,11 @@ class SceneController extends ChangeNotifier {
     _emitAction(ActionType.selectMarquee, selected, timestampMs);
   }
 
-  void _applyMoveDelta(Offset delta) {
+  void _applyMoveDelta(Offset delta, {List<SceneNode>? nodes}) {
     if (delta == Offset.zero) return;
 
-    for (final node in _selectedNodesInSceneOrder()) {
+    final nodesToMove = nodes ?? _selectedNodesInSceneOrder();
+    for (final node in nodesToMove) {
       if (node.isLocked) continue;
       node.position = node.position + delta;
     }
@@ -1049,8 +1073,7 @@ class SceneController extends ChangeNotifier {
     _selectedNodeIds
       ..clear()
       ..addAll(next);
-    _selectionRevision++;
-    _needsNotify = true;
+    _markSelectionChanged();
     if (notify) {
       requestRepaintOncePerFrame();
     }
@@ -1073,6 +1096,7 @@ class SceneController extends ChangeNotifier {
     _dragTarget = _DragTarget.none;
     _dragMoved = false;
     _pendingClearSelection = false;
+    _moveGestureNodes = null;
     _setSelectionRect(null, notify: false);
     if (notify) {
       requestRepaintOncePerFrame();
@@ -1153,6 +1177,11 @@ class SceneController extends ChangeNotifier {
 
   void _markSceneStructuralChanged() {
     _sceneRevision++;
+    _needsNotify = true;
+  }
+
+  void _markSelectionChanged() {
+    _selectionRevision++;
     _needsNotify = true;
   }
 
