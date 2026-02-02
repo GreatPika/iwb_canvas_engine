@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:iwb_canvas_engine/input/pointer_input.dart';
+import 'package:iwb_canvas_engine/advanced.dart';
 
 void main() {
   test('emits down move up then deferred tap', () {

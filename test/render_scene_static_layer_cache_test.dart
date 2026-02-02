@@ -1,8 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/render/scene_painter.dart';
-import 'package:iwb_canvas_engine/core/scene.dart';
+import 'package:iwb_canvas_engine/advanced.dart';
 
 void main() {
   test('SceneStaticLayerCache reuses picture for same key', () {

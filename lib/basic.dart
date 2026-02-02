@@ -11,18 +11,18 @@
 library;
 
 // Model.
-export 'core/defaults.dart';
-export 'core/geometry.dart';
-export 'core/nodes.dart';
-export 'core/scene.dart';
+export 'src/core/defaults.dart';
+export 'src/core/geometry.dart';
+export 'src/core/nodes.dart';
+export 'src/core/scene.dart';
 
 // Integration.
-export 'input/action_events.dart';
-export 'input/scene_controller.dart';
-export 'view/scene_view.dart';
+export 'src/input/action_events.dart';
+export 'src/input/scene_controller.dart';
+export 'src/view/scene_view.dart';
 
 // JSON.
-export 'serialization/scene_codec.dart'
+export 'src/serialization/scene_codec.dart'
     show
         SceneJsonFormatException,
         decodeSceneFromJson,
@@ -30,4 +30,4 @@ export 'serialization/scene_codec.dart'
         schemaVersion;
 
 // Types needed to use the widget API.
-export 'render/scene_painter.dart' show ImageResolver;
+export 'src/render/scene_painter.dart' show ImageResolver;
