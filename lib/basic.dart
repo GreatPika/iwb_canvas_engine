@@ -15,6 +15,7 @@ export 'src/core/defaults.dart';
 export 'src/core/geometry.dart';
 export 'src/core/nodes.dart';
 export 'src/core/scene.dart';
+export 'src/core/transform2d.dart';
 
 // Integration.
 export 'src/input/action_events.dart';

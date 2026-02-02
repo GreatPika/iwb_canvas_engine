@@ -436,11 +436,8 @@ void main() {
     );
     await tester.pump();
 
-    final renderObject = tester.renderObject<rendering.RenderCustomPaint>(
-      find.byType(CustomPaint),
-    );
-    final painter = renderObject.painter as ScenePainter;
-    final cache = painter.staticLayerCache!;
+    final viewState = tester.state(find.byType(SceneView)) as dynamic;
+    final cache = viewState.debugStaticLayerCache as SceneStaticLayerCache;
     expect(cache.debugBuildCount, greaterThan(0));
 
     final count0 = cache.debugDisposeCount;

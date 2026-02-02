@@ -699,10 +699,13 @@ class SceneStaticLayerCache {
   _StaticLayerKey? _key;
   Picture? _picture;
 
+  int _debugBuildCount = 0;
+  int _debugDisposeCount = 0;
+
   @visibleForTesting
-  int debugBuildCount = 0;
+  int get debugBuildCount => _debugBuildCount;
   @visibleForTesting
-  int debugDisposeCount = 0;
+  int get debugDisposeCount => _debugDisposeCount;
   @visibleForTesting
   int? get debugKeyHashCode => _key?.hashCode;
 
@@ -732,7 +735,7 @@ class SceneStaticLayerCache {
         cameraOffset,
         gridStrokeWidth,
       );
-      debugBuildCount += 1;
+      _debugBuildCount += 1;
     }
 
     canvas.drawPicture(_picture!);
@@ -748,7 +751,7 @@ class SceneStaticLayerCache {
     if (picture == null) return;
     _picture = null;
     picture.dispose();
-    debugDisposeCount += 1;
+    _debugDisposeCount += 1;
   }
 
   Picture _recordPicture(
