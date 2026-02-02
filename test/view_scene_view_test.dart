@@ -1,8 +1,40 @@
+import 'package:flutter/rendering.dart' as rendering;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 void main() {
+  testWidgets(
+    'SceneView builds without AnimatedBuilder and repaints via controller',
+    (tester) async {
+      final scene = Scene(layers: [Layer()]);
+      final controller = SceneController(scene: scene);
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox(
+            width: 64,
+            height: 64,
+            child: SceneView(
+              controller: controller,
+              imageResolver: (_) => null,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(AnimatedBuilder), findsNothing);
+
+      final renderObject = tester.renderObject<rendering.RenderCustomPaint>(
+        find.byType(CustomPaint),
+      );
+      final painter = renderObject.painter as ScenePainter;
+      expect(painter.controller, same(controller));
+    },
+  );
+
   testWidgets('SceneView creates internal controller when missing', (
     tester,
   ) async {

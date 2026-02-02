@@ -7,6 +7,7 @@ import 'package:flutter/rendering.dart';
 import '../core/geometry.dart';
 import '../core/nodes.dart';
 import '../core/scene.dart';
+import '../input/scene_controller.dart';
 
 /// Resolves an [ImageNode.imageId] to a decoded [Image] instance.
 typedef ImageResolver = Image? Function(String imageId);
@@ -19,28 +20,27 @@ class ScenePainter extends CustomPainter {
   static const double _cullPadding = 1.0;
 
   ScenePainter({
-    required this.scene,
+    required this.controller,
     required this.imageResolver,
     this.staticLayerCache,
-    this.selectedNodeIds = const <NodeId>{},
-    this.selectionRect,
     this.selectionColor = const Color(0xFF1565C0),
     this.selectionStrokeWidth = 1,
     this.gridStrokeWidth = 1,
-    super.repaint,
-  });
+  }) : super(repaint: controller);
 
-  final Scene scene;
+  final SceneController controller;
   final ImageResolver imageResolver;
   final SceneStaticLayerCache? staticLayerCache;
-  final Set<NodeId> selectedNodeIds;
-  final Rect? selectionRect;
   final Color selectionColor;
   final double selectionStrokeWidth;
   final double gridStrokeWidth;
 
   @override
   void paint(Canvas canvas, Size size) {
+    final scene = controller.scene;
+    final selectedNodeIds = controller.selectedNodeIds;
+    final selectionRect = controller.selectionRect;
+
     if (staticLayerCache != null) {
       staticLayerCache!.draw(
         canvas,
@@ -72,16 +72,19 @@ class ScenePainter extends CustomPainter {
       viewRect,
       selectedNodeIds,
     );
-    _drawSelection(canvas, selectedNodes, scene.camera.offset);
+    _drawSelection(
+      canvas,
+      selectedNodes,
+      scene.camera.offset,
+      selectionRect,
+    );
   }
 
   @override
   bool shouldRepaint(covariant ScenePainter oldDelegate) {
-    return oldDelegate.scene != scene ||
+    return oldDelegate.controller != controller ||
         oldDelegate.imageResolver != imageResolver ||
         oldDelegate.staticLayerCache != staticLayerCache ||
-        !setEquals(oldDelegate.selectedNodeIds, selectedNodeIds) ||
-        oldDelegate.selectionRect != selectionRect ||
         oldDelegate.selectionColor != selectionColor ||
         oldDelegate.selectionStrokeWidth != selectionStrokeWidth ||
         oldDelegate.gridStrokeWidth != gridStrokeWidth;
@@ -112,6 +115,7 @@ class ScenePainter extends CustomPainter {
     Canvas canvas,
     List<SceneNode> selectedNodes,
     Offset cameraOffset,
+    Rect? selectionRect,
   ) {
     if (selectedNodes.isNotEmpty && selectionStrokeWidth > 0) {
       for (final node in selectedNodes) {
@@ -126,7 +130,7 @@ class ScenePainter extends CustomPainter {
     }
 
     if (selectionRect != null) {
-      final normalized = _normalizeRect(selectionRect!);
+      final normalized = _normalizeRect(selectionRect);
       final viewRect = normalized.shift(-cameraOffset);
       final fillPaint = Paint()
         ..style = PaintingStyle.fill

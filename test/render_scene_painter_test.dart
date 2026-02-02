@@ -1,6 +1,5 @@
 import 'dart:ui';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
@@ -13,6 +12,18 @@ Future<Image> _solidImage(Color color, {int width = 8, int height = 8}) async {
   );
   final picture = recorder.endRecording();
   return picture.toImage(width, height);
+}
+
+SceneController _controllerFor(
+  Scene scene, {
+  Set<NodeId> selectedNodeIds = const <NodeId>{},
+  Rect? selectionRect,
+}) {
+  final controller = SceneController(scene: scene);
+  controller.debugSetSelection(selectedNodeIds);
+  controller.debugSetSelectionRect(selectionRect);
+  addTearDown(controller.dispose);
+  return controller;
 }
 
 Future<Image> _paintToImage(
@@ -114,10 +125,12 @@ void main() {
     );
 
     final painter = ScenePainter(
-      scene: scene,
+      controller: _controllerFor(
+        scene,
+        selectedNodeIds: const {'rect-1'},
+        selectionRect: const Rect.fromLTWH(10, 10, 50, 40),
+      ),
       imageResolver: (_) => null,
-      selectedNodeIds: const {'rect-1'},
-      selectionRect: const Rect.fromLTWH(10, 10, 50, 40),
     );
 
     final recorder = PictureRecorder();
@@ -157,10 +170,12 @@ void main() {
     );
 
     final painter = ScenePainter(
-      scene: scene,
+      controller: _controllerFor(
+        scene,
+        selectedNodeIds: const {'a', 'b'},
+        selectionRect: const Rect.fromLTRB(70, 70, 30, 50),
+      ),
       imageResolver: (_) => null,
-      selectedNodeIds: const {'a', 'b'},
-      selectionRect: const Rect.fromLTRB(70, 70, 30, 50),
       selectionColor: const Color(0xFFFF0000),
     );
 
@@ -186,9 +201,8 @@ void main() {
     );
 
     final painter = ScenePainter(
-      scene: scene,
+      controller: _controllerFor(scene, selectedNodeIds: const {'line'}),
       imageResolver: (_) => null,
-      selectedNodeIds: const {'line'},
       selectionColor: const Color(0xFFFF0000),
       selectionStrokeWidth: 2,
     );
@@ -221,9 +235,8 @@ void main() {
     );
 
     final painter = ScenePainter(
-      scene: scene,
+      controller: _controllerFor(scene, selectedNodeIds: const {'text-1'}),
       imageResolver: (_) => null,
-      selectedNodeIds: const {'text-1'},
       selectionColor: const Color(0xFFFF0000),
       selectionStrokeWidth: 2,
     );
@@ -251,9 +264,8 @@ void main() {
     );
 
     final painter = ScenePainter(
-      scene: scene,
+      controller: _controllerFor(scene, selectedNodeIds: const {'line'}),
       imageResolver: (_) => null,
-      selectedNodeIds: const {'line'},
       selectionColor: const Color(0xFFFF0000),
       selectionStrokeWidth: 2,
     );
@@ -285,9 +297,8 @@ void main() {
     );
 
     final painter = ScenePainter(
-      scene: scene,
+      controller: _controllerFor(scene, selectedNodeIds: const {'path'}),
       imageResolver: (_) => null,
-      selectedNodeIds: const {'path'},
       selectionColor: const Color(0xFFFF0000),
       selectionStrokeWidth: 3,
     );
@@ -318,9 +329,8 @@ void main() {
     );
 
     final painter = ScenePainter(
-      scene: scene,
+      controller: _controllerFor(scene, selectedNodeIds: const {'path-multi'}),
       imageResolver: (_) => null,
-      selectedNodeIds: const {'path-multi'},
       selectionColor: const Color(0xFFFF0000),
       selectionStrokeWidth: 3,
     );
@@ -497,10 +507,12 @@ void main() {
       );
 
       final painter = ScenePainter(
-        scene: scene,
+        controller: _controllerFor(
+          scene,
+          selectedNodeIds: const {'rect'},
+          selectionRect: const Rect.fromLTRB(10, 90, 30, 80),
+        ),
         imageResolver: resolver,
-        selectedNodeIds: const {'rect'},
-        selectionRect: const Rect.fromLTRB(10, 90, 30, 80),
       );
 
       final image = await _paintToImage(painter);
@@ -510,63 +522,39 @@ void main() {
     },
   );
 
-  test('ScenePainter.shouldRepaint is safe without repaint notifier', () {
+  test('ScenePainter.shouldRepaint compares controller and styles', () {
     final scene = Scene();
     Image? resolveNullImage(String _) => null;
+    final controllerA = SceneController(scene: scene);
+    addTearDown(controllerA.dispose);
     final painterA = ScenePainter(
-      scene: scene,
+      controller: controllerA,
       imageResolver: resolveNullImage,
     );
     final painterB = ScenePainter(
-      scene: scene,
+      controller: controllerA,
       imageResolver: resolveNullImage,
     );
 
     expect(painterB.shouldRepaint(painterA), isFalse);
 
+    final controllerB = SceneController(scene: scene);
+    addTearDown(controllerB.dispose);
     final painterC = ScenePainter(
-      scene: scene,
+      controller: controllerB,
       imageResolver: resolveNullImage,
-      selectedNodeIds: {'changed'},
     );
 
     expect(painterC.shouldRepaint(painterA), isTrue);
+
+    final painterD = ScenePainter(
+      controller: controllerA,
+      imageResolver: resolveNullImage,
+      selectionColor: const Color(0xFFFF0000),
+    );
+
+    expect(painterD.shouldRepaint(painterA), isTrue);
   });
-
-  test(
-    'ScenePainter.shouldRepaint uses set equality when repaint is provided',
-    () {
-      final scene = Scene();
-      Image? resolveNullImage(String _) => null;
-      final notifier = ChangeNotifier();
-      addTearDown(notifier.dispose);
-
-      final painterA = ScenePainter(
-        scene: scene,
-        imageResolver: resolveNullImage,
-        selectedNodeIds: {'a'},
-        repaint: notifier,
-      );
-
-      final painterB = ScenePainter(
-        scene: scene,
-        imageResolver: resolveNullImage,
-        selectedNodeIds: {'a'},
-        repaint: notifier,
-      );
-
-      expect(painterB.shouldRepaint(painterA), isFalse);
-
-      final painterC = ScenePainter(
-        scene: scene,
-        imageResolver: resolveNullImage,
-        selectedNodeIds: {'b'},
-        repaint: notifier,
-      );
-
-      expect(painterC.shouldRepaint(painterA), isTrue);
-    },
-  );
 
   test(
     'ScenePainter selection covers dot, open path, and empty metrics',
@@ -614,15 +602,17 @@ void main() {
       );
 
       final painter = ScenePainter(
-        scene: scene,
+        controller: _controllerFor(
+          scene,
+          selectedNodeIds: const {
+            'image-selected',
+            'stroke-dot',
+            'stroke-poly',
+            'path-open',
+            'path-empty-metrics',
+          },
+        ),
         imageResolver: (_) => null,
-        selectedNodeIds: const {
-          'image-selected',
-          'stroke-dot',
-          'stroke-poly',
-          'path-open',
-          'path-empty-metrics',
-        },
         selectionColor: const Color(0xFFFF0000),
         selectionStrokeWidth: 3,
       );

@@ -118,6 +118,18 @@ class SceneController extends ChangeNotifier {
   /// Pointer slop threshold used to treat a drag as a move.
   double get dragStartSlop => _dragStartSlop ?? pointerSettings.tapSlop;
 
+  @visibleForTesting
+  void debugSetSelection(Iterable<NodeId> nodeIds) {
+    _selectedNodeIds
+      ..clear()
+      ..addAll(nodeIds);
+  }
+
+  @visibleForTesting
+  void debugSetSelectionRect(Rect? rect) {
+    _selectionRect = rect;
+  }
+
   NodeId _defaultNodeIdGenerator() {
     while (true) {
       final id = 'node-$_nodeIdSeed';

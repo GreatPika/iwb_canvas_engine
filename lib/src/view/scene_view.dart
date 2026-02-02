@@ -8,7 +8,7 @@ import '../render/scene_painter.dart';
 
 /// A self-contained widget that renders a [SceneController] and feeds it input.
 ///
-/// The view listens to [SceneController] changes and rebuilds its painter.
+/// The view repaints via [SceneController] as a [CustomPainter] notifier.
 class SceneView extends StatefulWidget {
   /// Creates a view for the provided [controller].
   ///
@@ -91,23 +91,16 @@ class _SceneViewState extends State<SceneView> {
       onPointerUp: (event) => _handlePointerEvent(event, PointerPhase.up),
       onPointerCancel: (event) =>
           _handlePointerEvent(event, PointerPhase.cancel),
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, _) {
-          return CustomPaint(
-            painter: ScenePainter(
-              scene: _controller.scene,
-              imageResolver: widget.imageResolver,
-              staticLayerCache: _staticLayerCache,
-              selectedNodeIds: _controller.selectedNodeIds,
-              selectionRect: _controller.selectionRect,
-              selectionColor: widget.selectionColor,
-              selectionStrokeWidth: widget.selectionStrokeWidth,
-              gridStrokeWidth: widget.gridStrokeWidth,
-            ),
-            child: const SizedBox.expand(),
-          );
-        },
+      child: CustomPaint(
+        painter: ScenePainter(
+          controller: _controller,
+          imageResolver: widget.imageResolver,
+          staticLayerCache: _staticLayerCache,
+          selectionColor: widget.selectionColor,
+          selectionStrokeWidth: widget.selectionStrokeWidth,
+          gridStrokeWidth: widget.gridStrokeWidth,
+        ),
+        child: const SizedBox.expand(),
       ),
     );
   }
