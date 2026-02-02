@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 2,
+  "camera": { "offsetX": 7, "offsetY": -3 },
+  "background": {
+    "color": "#FFFFFFFF",
+    "grid": { "enabled": true, "cellSize": 20, "color": "#1F000000" }
+  },
+  "palette": {
+    "penColors": ["#FF000000", "#FFE53935"],
+    "backgroundColors": ["#FFFFFFFF"],
+    "gridSizes": [10, 20]
+  },
+  "layers": [
+    {
+      "isBackground": false,
+      "nodes": [
+        {
+          "id": "stroke-1p",
+          "type": "stroke",
+          "transform": { "a": 1, "b": 0, "c": 0, "d": 1, "tx": 10, "ty": 20 },
+          "hitPadding": 0,
+          "opacity": 0.4,
+          "isVisible": true,
+          "isSelectable": true,
+          "isLocked": false,
+          "isDeletable": true,
+          "isTransformable": true,
+          "localPoints": [{ "x": 0, "y": 0 }],
+          "thickness": 3,
+          "color": "#FF000000"
+        },
+        {
+          "id": "stroke-2p",
+          "type": "stroke",
+          "transform": { "a": 1, "b": 0, "c": 0, "d": 1, "tx": 0, "ty": 0 },
+          "hitPadding": 1.5,
+          "opacity": 1,
+          "isVisible": true,
+          "isSelectable": true,
+          "isLocked": false,
+          "isDeletable": true,
+          "isTransformable": true,
+          "localPoints": [
+            { "x": -5, "y": -5 },
+            { "x": 0, "y": 0 },
+            { "x": 5, "y": 5 }
+          ],
+          "thickness": 3,
+          "color": "#FF000000"
+        },
+        {
+          "id": "line-1",
+          "type": "line",
+          "transform": { "a": 1, "b": 0, "c": 0, "d": 1, "tx": 12, "ty": 12 },
+          "hitPadding": 0,
+          "opacity": 1,
+          "isVisible": true,
+          "isSelectable": true,
+          "isLocked": false,
+          "isDeletable": true,
+          "isTransformable": true,
+          "localA": { "x": -5, "y": -5 },
+          "localB": { "x": 5, "y": 5 },
+          "thickness": 5,
+          "color": "#FF00FF00"
+        },
+        {
+          "id": "path-fill",
+          "type": "path",
+          "transform": { "a": 1, "b": 0, "c": 0, "d": 1, "tx": 100, "ty": -40 },
+          "hitPadding": 0,
+          "opacity": 1,
+          "isVisible": true,
+          "isSelectable": true,
+          "isLocked": false,
+          "isDeletable": true,
+          "isTransformable": true,
+          "svgPathData": "M0 0 H40 V30 H0 Z M12 8 H28 V22 H12 Z",
+          "fillRule": "evenOdd",
+          "strokeWidth": 2,
+          "fillColor": "#FF4CAF50",
+          "strokeColor": "#FF1B5E20"
+        },
+        {
+          "id": "path-stroke",
+          "type": "path",
+          "transform": { "a": 1, "b": 0, "c": 0, "d": 1, "tx": -30, "ty": 40 },
+          "hitPadding": 0,
+          "opacity": 1,
+          "isVisible": true,
+          "isSelectable": true,
+          "isLocked": false,
+          "isDeletable": true,
+          "isTransformable": true,
+          "svgPathData": "M0 0 H30 V20 H0 Z",
+          "fillRule": "nonZero",
+          "strokeWidth": 3,
+          "strokeColor": "#FF0000FF"
+        },
+        {
+          "id": "text-1",
+          "type": "text",
+          "transform": { "a": 0, "b": -1, "c": 1, "d": 0, "tx": 50, "ty": 50 },
+          "hitPadding": 0,
+          "opacity": 0.9,
+          "isVisible": true,
+          "isSelectable": true,
+          "isLocked": false,
+          "isDeletable": true,
+          "isTransformable": true,
+          "text": "Hello",
+          "size": { "w": 120, "h": 30 },
+          "fontSize": 24,
+          "color": "#FF112233",
+          "align": "center",
+          "isBold": true,
+          "isItalic": false,
+          "isUnderline": true,
+          "fontFamily": "Roboto",
+          "maxWidth": 200,
+          "lineHeight": 1.2
+        },
+        {
+          "id": "img-1",
+          "type": "image",
+          "transform": { "a": 0, "b": 1, "c": 1, "d": 0, "tx": 10, "ty": 20 },
+          "hitPadding": 0,
+          "opacity": 0.8,
+          "isVisible": true,
+          "isSelectable": true,
+          "isLocked": false,
+          "isDeletable": true,
+          "isTransformable": true,
+          "imageId": "asset:sample",
+          "size": { "w": 100, "h": 80 },
+          "naturalSize": { "w": 200, "h": 160 }
+        }
+      ]
+    }
+  ]
+}

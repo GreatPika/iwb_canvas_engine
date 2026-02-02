@@ -17,7 +17,7 @@ Live demo and docs:
 - Rendering via `ScenePainter` with background and grid.
 - Viewport culling for offscreen nodes.
 - Hit-testing for selection and interaction.
-- JSON v1 import/export with validation.
+- JSON v2 import/export with validation.
 
 ## Getting started
 
@@ -162,12 +162,14 @@ still exports the full surface in 0.x.
 The engine currently supports single-pointer input only. Multi-touch gestures
 (pinch-to-zoom, two-finger pan) are not supported yet.
 
-## Serialization (JSON v1)
+## Serialization (JSON v2)
 
 ```dart
 final json = encodeSceneToJson(controller.scene);
 final restored = decodeSceneFromJson(json);
 ```
+
+`decodeSceneFromJson` currently accepts only `schemaVersion = 2`.
 
 ## API reference
 

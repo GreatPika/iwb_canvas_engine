@@ -5,6 +5,7 @@ import 'package:path_drawing/path_drawing.dart';
 
 import '../core/scene.dart';
 import '../core/nodes.dart';
+import '../core/transform2d.dart';
 
 /// Thrown when scene JSON fails schema validation.
 class SceneJsonFormatException implements FormatException {
@@ -23,8 +24,14 @@ class SceneJsonFormatException implements FormatException {
   String toString() => 'SceneJsonFormatException: $message';
 }
 
-/// Current JSON schema version supported by this package.
-const int schemaVersion = 1;
+/// JSON schema version written by this package.
+const int schemaVersionWrite = 2;
+
+/// JSON schema versions accepted by this package.
+const Set<int> schemaVersionsRead = {2};
+
+/// Backwards-compatible alias for the current schema version.
+const int schemaVersion = schemaVersionWrite;
 
 /// Encodes [scene] to a JSON string.
 String encodeSceneToJson(Scene scene) {
@@ -52,7 +59,7 @@ Scene decodeSceneFromJson(String json) {
 /// Encodes [scene] into a JSON-serializable map.
 Map<String, dynamic> encodeScene(Scene scene) {
   return <String, dynamic>{
-    'schemaVersion': schemaVersion,
+    'schemaVersion': schemaVersionWrite,
     'camera': {
       'offsetX': scene.camera.offset.dx,
       'offsetY': scene.camera.offset.dy,
@@ -81,9 +88,10 @@ Map<String, dynamic> encodeScene(Scene scene) {
 /// Throws [SceneJsonFormatException] when validation fails.
 Scene decodeScene(Map<String, dynamic> json) {
   final version = _requireInt(json, 'schemaVersion');
-  if (version != schemaVersion) {
+  if (!schemaVersionsRead.contains(version)) {
     throw SceneJsonFormatException(
-      'Unsupported schemaVersion: $version. Expected $schemaVersion.',
+      'Unsupported schemaVersion: $version. Expected one of: '
+      '${schemaVersionsRead.toList()}.',
     );
   }
 
@@ -161,10 +169,8 @@ Map<String, dynamic> _encodeNode(SceneNode node) {
   final base = <String, dynamic>{
     'id': node.id,
     'type': _nodeTypeToString(node.type),
-    'position': {'x': node.position.dx, 'y': node.position.dy},
-    'rotationDeg': node.rotationDeg,
-    'scaleX': node.scaleX,
-    'scaleY': node.scaleY,
+    'transform': _encodeTransform2D(node.transform),
+    'hitPadding': node.hitPadding,
     'opacity': node.opacity,
     'isVisible': node.isVisible,
     'isSelectable': node.isSelectable,
@@ -179,11 +185,9 @@ Map<String, dynamic> _encodeNode(SceneNode node) {
       return {
         ...base,
         'imageId': image.imageId,
-        'width': image.size.width,
-        'height': image.size.height,
+        'size': _encodeSize(image.size),
         if (image.naturalSize != null) ...{
-          'naturalWidth': image.naturalSize!.width,
-          'naturalHeight': image.naturalSize!.height,
+          'naturalSize': _encodeSize(image.naturalSize!),
         },
       };
     case NodeType.text:
@@ -191,8 +195,7 @@ Map<String, dynamic> _encodeNode(SceneNode node) {
       return {
         ...base,
         'text': text.text,
-        'width': text.size.width,
-        'height': text.size.height,
+        'size': _encodeSize(text.size),
         'fontSize': text.fontSize,
         'color': _colorToHex(text.color),
         'align': _textAlignToString(text.align),
@@ -207,7 +210,7 @@ Map<String, dynamic> _encodeNode(SceneNode node) {
       final stroke = node as StrokeNode;
       return {
         ...base,
-        'points': stroke.points
+        'localPoints': stroke.points
             .map((point) => {'x': point.dx, 'y': point.dy})
             .toList(),
         'thickness': stroke.thickness,
@@ -217,8 +220,8 @@ Map<String, dynamic> _encodeNode(SceneNode node) {
       final line = node as LineNode;
       return {
         ...base,
-        'start': {'x': line.start.dx, 'y': line.start.dy},
-        'end': {'x': line.end.dx, 'y': line.end.dy},
+        'localA': {'x': line.start.dx, 'y': line.start.dy},
+        'localB': {'x': line.end.dx, 'y': line.end.dy},
         'thickness': line.thickness,
         'color': _colorToHex(line.color),
       };
@@ -226,8 +229,7 @@ Map<String, dynamic> _encodeNode(SceneNode node) {
       final rect = node as RectNode;
       return {
         ...base,
-        'width': rect.size.width,
-        'height': rect.size.height,
+        'size': _encodeSize(rect.size),
         'strokeWidth': rect.strokeWidth,
         if (rect.fillColor != null) 'fillColor': _colorToHex(rect.fillColor!),
         if (rect.strokeColor != null)
@@ -249,33 +251,39 @@ Map<String, dynamic> _encodeNode(SceneNode node) {
 
 SceneNode _decodeNode(Map<String, dynamic> json) {
   final type = _parseNodeType(_requireString(json, 'type'));
-  final positionJson = _requireMap(json, 'position');
-  final position = Offset(
-    _requireDouble(positionJson, 'x'),
-    _requireDouble(positionJson, 'y'),
-  );
+  final id = _requireString(json, 'id');
+  final transform = _decodeTransform2D(_requireMap(json, 'transform'));
+  final hitPadding = _requireDouble(json, 'hitPadding');
+  final opacity = _requireDouble(json, 'opacity');
+  final isVisible = _requireBool(json, 'isVisible');
+  final isSelectable = _requireBool(json, 'isSelectable');
+  final isLocked = _requireBool(json, 'isLocked');
+  final isDeletable = _requireBool(json, 'isDeletable');
+  final isTransformable = _requireBool(json, 'isTransformable');
 
   SceneNode node;
   switch (type) {
     case NodeType.image:
       node = ImageNode(
-        id: _requireString(json, 'id'),
+        id: id,
         imageId: _requireString(json, 'imageId'),
-        size: Size(
-          _requireDouble(json, 'width'),
-          _requireDouble(json, 'height'),
-        ),
-        naturalSize: _optionalSize(json, 'naturalWidth', 'naturalHeight'),
+        size: _requireSize(json, 'size'),
+        naturalSize: _optionalSizeMap(json, 'naturalSize'),
+        hitPadding: hitPadding,
+        transform: transform,
+        opacity: opacity,
+        isVisible: isVisible,
+        isSelectable: isSelectable,
+        isLocked: isLocked,
+        isDeletable: isDeletable,
+        isTransformable: isTransformable,
       );
       break;
     case NodeType.text:
       node = TextNode(
-        id: _requireString(json, 'id'),
+        id: id,
         text: _requireString(json, 'text'),
-        size: Size(
-          _requireDouble(json, 'width'),
-          _requireDouble(json, 'height'),
-        ),
+        size: _requireSize(json, 'size'),
         fontSize: _requireDouble(json, 'fontSize'),
         color: _parseColor(_requireString(json, 'color')),
         align: _parseTextAlign(_requireString(json, 'align')),
@@ -285,65 +293,90 @@ SceneNode _decodeNode(Map<String, dynamic> json) {
         fontFamily: _optionalString(json, 'fontFamily'),
         maxWidth: _optionalDouble(json, 'maxWidth'),
         lineHeight: _optionalDouble(json, 'lineHeight'),
+        hitPadding: hitPadding,
+        transform: transform,
+        opacity: opacity,
+        isVisible: isVisible,
+        isSelectable: isSelectable,
+        isLocked: isLocked,
+        isDeletable: isDeletable,
+        isTransformable: isTransformable,
       );
       break;
     case NodeType.stroke:
       node = StrokeNode(
-        id: _requireString(json, 'id'),
+        id: id,
         points: _requireList(
           json,
-          'points',
-        ).map((point) => _parsePoint(point, 'points')).toList(),
+          'localPoints',
+        ).map((point) => _parsePoint(point, 'localPoints')).toList(),
         thickness: _requireDouble(json, 'thickness'),
         color: _parseColor(_requireString(json, 'color')),
+        hitPadding: hitPadding,
+        transform: transform,
+        opacity: opacity,
+        isVisible: isVisible,
+        isSelectable: isSelectable,
+        isLocked: isLocked,
+        isDeletable: isDeletable,
+        isTransformable: isTransformable,
       );
       break;
     case NodeType.line:
       node = LineNode(
-        id: _requireString(json, 'id'),
-        start: _parsePoint(_requireMap(json, 'start'), 'start'),
-        end: _parsePoint(_requireMap(json, 'end'), 'end'),
+        id: id,
+        start: _parsePoint(_requireMap(json, 'localA'), 'localA'),
+        end: _parsePoint(_requireMap(json, 'localB'), 'localB'),
         thickness: _requireDouble(json, 'thickness'),
         color: _parseColor(_requireString(json, 'color')),
+        hitPadding: hitPadding,
+        transform: transform,
+        opacity: opacity,
+        isVisible: isVisible,
+        isSelectable: isSelectable,
+        isLocked: isLocked,
+        isDeletable: isDeletable,
+        isTransformable: isTransformable,
       );
       break;
     case NodeType.rect:
       node = RectNode(
-        id: _requireString(json, 'id'),
-        size: Size(
-          _requireDouble(json, 'width'),
-          _requireDouble(json, 'height'),
-        ),
+        id: id,
+        size: _requireSize(json, 'size'),
         fillColor: _optionalColor(json, 'fillColor'),
         strokeColor: _optionalColor(json, 'strokeColor'),
         strokeWidth: _requireDouble(json, 'strokeWidth'),
+        hitPadding: hitPadding,
+        transform: transform,
+        opacity: opacity,
+        isVisible: isVisible,
+        isSelectable: isSelectable,
+        isLocked: isLocked,
+        isDeletable: isDeletable,
+        isTransformable: isTransformable,
       );
       break;
     case NodeType.path:
       final svgPathData = _requireString(json, 'svgPathData');
       _validateSvgPathData(svgPathData);
       node = PathNode(
-        id: _requireString(json, 'id'),
+        id: id,
         svgPathData: svgPathData,
         fillColor: _optionalColor(json, 'fillColor'),
         strokeColor: _optionalColor(json, 'strokeColor'),
-        strokeWidth: _optionalDouble(json, 'strokeWidth') ?? 1,
-        fillRule:
-            _optionalPathFillRule(json, 'fillRule') ?? PathFillRule.nonZero,
+        strokeWidth: _requireDouble(json, 'strokeWidth'),
+        fillRule: _parsePathFillRule(_requireString(json, 'fillRule')),
+        hitPadding: hitPadding,
+        transform: transform,
+        opacity: opacity,
+        isVisible: isVisible,
+        isSelectable: isSelectable,
+        isLocked: isLocked,
+        isDeletable: isDeletable,
+        isTransformable: isTransformable,
       );
       break;
   }
-
-  node.position = position;
-  node.rotationDeg = _requireDouble(json, 'rotationDeg');
-  node.scaleX = _requireDouble(json, 'scaleX');
-  node.scaleY = _requireDouble(json, 'scaleY');
-  node.opacity = _requireDouble(json, 'opacity');
-  node.isVisible = _requireBool(json, 'isVisible');
-  node.isSelectable = _requireBool(json, 'isSelectable');
-  node.isLocked = _requireBool(json, 'isLocked');
-  node.isDeletable = _requireBool(json, 'isDeletable');
-  node.isTransformable = _requireBool(json, 'isTransformable');
 
   return node;
 }
@@ -470,14 +503,45 @@ Offset _parsePoint(Object value, String field) {
   return Offset(_requireDouble(value, 'x'), _requireDouble(value, 'y'));
 }
 
-Size? _optionalSize(
-  Map<String, dynamic> json,
-  String widthKey,
-  String heightKey,
-) {
-  final width = json[widthKey];
-  final height = json[heightKey];
-  if (width == null || height == null) return null;
+Map<String, dynamic> _encodeTransform2D(Transform2D transform) {
+  return <String, dynamic>{
+    'a': transform.a,
+    'b': transform.b,
+    'c': transform.c,
+    'd': transform.d,
+    'tx': transform.tx,
+    'ty': transform.ty,
+  };
+}
+
+Transform2D _decodeTransform2D(Map<String, dynamic> json) {
+  return Transform2D(
+    a: _requireDouble(json, 'a'),
+    b: _requireDouble(json, 'b'),
+    c: _requireDouble(json, 'c'),
+    d: _requireDouble(json, 'd'),
+    tx: _requireDouble(json, 'tx'),
+    ty: _requireDouble(json, 'ty'),
+  );
+}
+
+Map<String, dynamic> _encodeSize(Size size) {
+  return <String, dynamic>{'w': size.width, 'h': size.height};
+}
+
+Size _requireSize(Map<String, dynamic> json, String key) {
+  final map = _requireMap(json, key);
+  return Size(_requireDouble(map, 'w'), _requireDouble(map, 'h'));
+}
+
+Size? _optionalSizeMap(Map<String, dynamic> json, String key) {
+  final value = json[key];
+  if (value == null) return null;
+  if (value is! Map<String, dynamic>) {
+    throw SceneJsonFormatException('Field $key must be an object.');
+  }
+  final width = value['w'];
+  final height = value['h'];
   if (width is! num || height is! num) {
     throw SceneJsonFormatException('Optional size must be numeric.');
   }
@@ -500,15 +564,6 @@ double? _optionalDouble(Map<String, dynamic> json, String key) {
     throw SceneJsonFormatException('Field $key must be a number.');
   }
   return value.toDouble();
-}
-
-PathFillRule? _optionalPathFillRule(Map<String, dynamic> json, String key) {
-  final value = json[key];
-  if (value == null) return null;
-  if (value is! String) {
-    throw SceneJsonFormatException('Field $key must be a string.');
-  }
-  return _parsePathFillRule(value);
 }
 
 void _validateSvgPathData(String value) {

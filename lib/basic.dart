@@ -28,7 +28,9 @@ export 'src/serialization/scene_codec.dart'
         SceneJsonFormatException,
         decodeSceneFromJson,
         encodeSceneToJson,
-        schemaVersion;
+        schemaVersion,
+        schemaVersionWrite,
+        schemaVersionsRead;
 
 // Types needed to use the widget API.
 export 'src/render/scene_painter.dart' show ImageResolver;

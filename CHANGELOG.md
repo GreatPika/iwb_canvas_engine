@@ -6,6 +6,10 @@
 - Avoid extra scene traversal when rendering selections.
 - Simplify selection halo rendering to avoid expensive path unions/layers.
 
+### Serialization (breaking)
+
+- JSON import/export is now v2-only (`schemaVersion = 2`). v1 scenes are not supported.
+
 ### Selection transforms
 
 - Add horizontal flip alongside vertical flip.

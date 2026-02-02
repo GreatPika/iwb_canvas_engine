@@ -4,7 +4,7 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 Map<String, dynamic> _minimalSceneJson() {
   return <String, dynamic>{
-    'schemaVersion': schemaVersion,
+    'schemaVersion': schemaVersionWrite,
     'camera': <String, dynamic>{'offsetX': 0, 'offsetY': 0},
     'background': <String, dynamic>{
       'color': '#FFFFFFFF',
@@ -38,10 +38,15 @@ Map<String, dynamic> _baseNodeJson({required String id, required String type}) {
   return <String, dynamic>{
     'id': id,
     'type': type,
-    'position': <String, dynamic>{'x': 0, 'y': 0},
-    'rotationDeg': 0,
-    'scaleX': 1,
-    'scaleY': 1,
+    'transform': <String, dynamic>{
+      'a': 1,
+      'b': 0,
+      'c': 0,
+      'd': 1,
+      'tx': 0,
+      'ty': 0,
+    },
+    'hitPadding': 0,
     'opacity': 1,
     'isVisible': true,
     'isSelectable': true,
@@ -123,7 +128,7 @@ void main() {
   });
 
   test('decodeScene rejects unknown node types', () {
-    final json = _sceneWithSingleNode(<String, dynamic>{'type': 'mystery'});
+    final json = _sceneWithSingleNode(_baseNodeJson(id: 'n1', type: 'mystery'));
     expect(
       () => decodeScene(json),
       throwsA(
@@ -161,6 +166,7 @@ void main() {
     final nodeJson = _baseNodeJson(id: 'p1', type: 'path')
       ..addAll(<String, dynamic>{
         'svgPathData': 'M0 0 H10 V10 H0 Z',
+        'strokeWidth': 1,
         'fillRule': 'weird',
       });
 
@@ -178,7 +184,11 @@ void main() {
 
   test('decodeScene rejects empty svgPathData', () {
     final nodeJson = _baseNodeJson(id: 'p1', type: 'path')
-      ..addAll(<String, dynamic>{'svgPathData': '   '});
+      ..addAll(<String, dynamic>{
+        'svgPathData': '   ',
+        'strokeWidth': 1,
+        'fillRule': 'nonZero',
+      });
 
     expect(
       () => decodeScene(_sceneWithSingleNode(nodeJson)),
@@ -194,7 +204,11 @@ void main() {
 
   test('decodeScene rejects invalid svgPathData', () {
     final nodeJson = _baseNodeJson(id: 'p1', type: 'path')
-      ..addAll(<String, dynamic>{'svgPathData': 'not-a-path'});
+      ..addAll(<String, dynamic>{
+        'svgPathData': 'not-a-path',
+        'strokeWidth': 1,
+        'fillRule': 'nonZero',
+      });
 
     expect(
       () => decodeScene(_sceneWithSingleNode(nodeJson)),
@@ -230,8 +244,7 @@ void main() {
     final nodeJson = _baseNodeJson(id: 't1', type: 'text')
       ..addAll(<String, dynamic>{
         'text': 'Hello',
-        'width': 10,
-        'height': 10,
+        'size': <String, dynamic>{'w': 10, 'h': 10},
         'fontSize': 12,
         'color': '#FF000000',
         'align': 'right',
@@ -247,8 +260,7 @@ void main() {
     final invalidAlignJson = _baseNodeJson(id: 't2', type: 'text')
       ..addAll(<String, dynamic>{
         'text': 'Hello',
-        'width': 10,
-        'height': 10,
+        'size': <String, dynamic>{'w': 10, 'h': 10},
         'fontSize': 12,
         'color': '#FF000000',
         'align': 'start',
@@ -272,7 +284,7 @@ void main() {
   test('decodeScene validates point and optional field types', () {
     final strokeJson = _baseNodeJson(id: 's1', type: 'stroke')
       ..addAll(<String, dynamic>{
-        'points': <dynamic>[123],
+        'localPoints': <dynamic>[123],
         'thickness': 2,
         'color': '#FF000000',
       });
@@ -283,7 +295,7 @@ void main() {
         predicate(
           (e) =>
               e is SceneJsonFormatException &&
-              e.message == 'points must be an object with x/y.',
+              e.message == 'localPoints must be an object with x/y.',
         ),
       ),
     );
@@ -291,10 +303,8 @@ void main() {
     final imageJson = _baseNodeJson(id: 'img1', type: 'image')
       ..addAll(<String, dynamic>{
         'imageId': 'asset:sample',
-        'width': 10,
-        'height': 10,
-        'naturalWidth': 'x',
-        'naturalHeight': 10,
+        'size': <String, dynamic>{'w': 10, 'h': 10},
+        'naturalSize': <String, dynamic>{'w': 'x', 'h': 10},
       });
     expect(
       () => decodeScene(_sceneWithSingleNode(imageJson)),
@@ -310,8 +320,7 @@ void main() {
     final textJson = _baseNodeJson(id: 't1', type: 'text')
       ..addAll(<String, dynamic>{
         'text': 'Hello',
-        'width': 10,
-        'height': 10,
+        'size': <String, dynamic>{'w': 10, 'h': 10},
         'fontSize': 12,
         'color': '#FF000000',
         'align': 'left',
@@ -334,8 +343,7 @@ void main() {
     final textJsonWidth = _baseNodeJson(id: 't2', type: 'text')
       ..addAll(<String, dynamic>{
         'text': 'Hello',
-        'width': 10,
-        'height': 10,
+        'size': <String, dynamic>{'w': 10, 'h': 10},
         'fontSize': 12,
         'color': '#FF000000',
         'align': 'left',
@@ -358,6 +366,7 @@ void main() {
     final pathJson = _baseNodeJson(id: 'p1', type: 'path')
       ..addAll(<String, dynamic>{
         'svgPathData': 'M0 0 H10 V10 H0 Z',
+        'strokeWidth': 1,
         'fillRule': 123,
       });
     expect(
@@ -416,8 +425,7 @@ void main() {
   test('decodeScene validates optional and list item types', () {
     final rectJson = _baseNodeJson(id: 'r1', type: 'rect')
       ..addAll(<String, dynamic>{
-        'width': 10,
-        'height': 10,
+        'size': <String, dynamic>{'w': 10, 'h': 10},
         'strokeWidth': 1,
         'fillColor': 123,
       });

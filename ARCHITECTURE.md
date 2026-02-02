@@ -18,10 +18,14 @@ This document describes the intended architecture for `iwb_canvas_engine` v1.0.
 
 ```text
 lib/
-  core/            // Scene model, math, selection, hit-test
-  render/          // Canvas rendering for background, layers, nodes
-  input/           // Pointer handling, tool state, gesture logic
-  serialization/   // JSON v1 codecs
+  basic.dart        // Minimal public API
+  advanced.dart     // Full public API
+  iwb_canvas_engine.dart
+  src/
+    core/           // Scene model, math, selection, hit-test
+    render/         // Canvas rendering for background, layers, nodes
+    input/          // Pointer handling, tool state, gesture logic
+    serialization/  // JSON v2 codec
 ```
 
 ## Data model
@@ -43,7 +47,7 @@ lib/
 Common base properties:
 
 - `id`, `type`, `transform` (2x3 affine: a,b,c,d,tx,ty)
-- Legacy convenience accessors (for v1 JSON and current public API): `position`, `rotationDeg`, `scaleX`, `scaleY` are derived from `transform`
+- Convenience accessors (public API): `position`, `rotationDeg`, `scaleX`, `scaleY` are derived from `transform`
 - `opacity`, `isVisible`, `isSelectable`, `isLocked`, `isDeletable`, `isTransformable`
 
 Position semantics:
@@ -134,13 +138,19 @@ Emit `ActionCommitted` on:
 - Path nodes use geometry hit-test via `Path.contains` with inverse transforms.
 - Group rotate/flip uses center of union AABB of selected nodes.
 
-## Serialization (JSON v1)
+## Serialization (JSON v2)
 
-- `schemaVersion = 1`.
-- `ImageNode` stores only `imageId` and sizes.
-- `TextNode` stores minimal style fields.
-- `PathNode` stores `svgPathData`, fill/stroke colors, stroke width, and fill rule.
-- Export/import must validate and produce clear errors on invalid input.
+- `schemaVersionWrite = 2`, and the decoder accepts only `schemaVersionsRead = {2}`.
+- Every node stores:
+  - `transform` as an affine 2×3 matrix: `{a,b,c,d,tx,ty}`
+  - `hitPadding`
+  - local geometry by type
+- Local geometry:
+  - `StrokeNode`: `localPoints` (around (0,0))
+  - `LineNode`: `localA`, `localB` (around (0,0))
+  - `PathNode`: `svgPathData` (source of truth; rendered centered around (0,0))
+  - `RectNode` / `ImageNode` / `TextNode`: `size {w,h}` (always centered on (0,0))
+- Export/import validates input and throws a clear `SceneJsonFormatException` on invalid data.
 
 ## Events
 

@@ -39,8 +39,7 @@ abstract class SceneNode {
   final NodeType type;
 
   /// Additional hit-test tolerance in scene units.
-  ///
-  /// This is intentionally not serialized during stage A of the refactor plan.
+  /// (Serialized as part of JSON v2.)
   double hitPadding;
   double opacity;
   bool isVisible;
@@ -60,7 +59,7 @@ abstract class SceneNode {
   ///
   /// Note: for general affine transforms (shear), a unique decomposition into
   /// rotation+scale is not well-defined. This getter assumes a rotation+scale
-  /// form and is intended for legacy v1 JSON compatibility only.
+  /// form and is intended as a convenience accessor.
   double get rotationDeg {
     final a = transform.a;
     final b = transform.b;
@@ -77,7 +76,7 @@ abstract class SceneNode {
     );
   }
 
-  /// Derived X scale (legacy v1 JSON compatibility).
+  /// Derived X scale (convenience accessor).
   double get scaleX {
     final a = transform.a;
     final b = transform.b;
@@ -93,7 +92,7 @@ abstract class SceneNode {
     );
   }
 
-  /// Derived Y scale (legacy v1 JSON compatibility).
+  /// Derived Y scale (convenience accessor).
   ///
   /// This derives the sign from the matrix determinant and [scaleX], so
   /// reflections may be represented as a 180° rotation + negative Y scale.
@@ -119,7 +118,7 @@ abstract class SceneNode {
   /// Axis-aligned bounds in world coordinates.
   Rect get boundsWorld => transform.applyToRect(localBounds);
 
-  /// Legacy alias for [boundsWorld].
+  /// Backwards-compatible alias for [boundsWorld].
   Rect get aabb => boundsWorld;
 }
 

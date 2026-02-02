@@ -22,6 +22,14 @@ void main() {
     );
   });
 
+  test('decodeSceneFromJson rejects schemaVersion 1', () {
+    final json = '{"schemaVersion": 1}';
+    expect(
+      () => decodeSceneFromJson(json),
+      throwsA(isA<SceneJsonFormatException>()),
+    );
+  });
+
   test('decodeSceneFromJson rejects invalid color', () {
     final scene = _buildScene();
     final encoded = encodeScene(scene);
