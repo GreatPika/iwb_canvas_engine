@@ -72,12 +72,7 @@ class ScenePainter extends CustomPainter {
       viewRect,
       selectedNodeIds,
     );
-    _drawSelection(
-      canvas,
-      selectedNodes,
-      scene.camera.offset,
-      selectionRect,
-    );
+    _drawSelection(canvas, selectedNodes, scene.camera.offset, selectionRect);
   }
 
   @override
