@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/basic.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   testWidgets('basic.dart supports a minimal happy-path integration', (
     tester,
   ) async {

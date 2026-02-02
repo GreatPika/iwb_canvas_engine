@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   SceneController drawController(Scene scene) {
     final controller = SceneController(scene: scene, dragStartSlop: 0);
     controller.setMode(CanvasMode.draw);

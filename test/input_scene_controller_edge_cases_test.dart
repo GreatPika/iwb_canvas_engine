@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   RectNode rectNode(
     String id,
     Offset position, {
@@ -23,7 +25,8 @@ void main() {
     )..position = position;
   }
 
-  test('SceneController setters notify only on changes', () {
+  testWidgets('SceneController setters notify only on changes',
+      (tester) async {
     final controller = SceneController();
     addTearDown(controller.dispose);
 
@@ -47,6 +50,8 @@ void main() {
     controller.setCameraOffset(const Offset(10, -5));
 
     controller.notifySceneChanged();
+
+    await tester.pump();
 
     expect(notifications, greaterThan(0));
     expect(controller.drawColor, const Color(0xFF112233));

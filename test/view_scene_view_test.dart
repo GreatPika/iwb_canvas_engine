@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   testWidgets(
     'SceneView builds without AnimatedBuilder and repaints via controller',
     (tester) async {
@@ -32,6 +34,20 @@ void main() {
       );
       final painter = renderObject.painter as ScenePainter;
       expect(painter.controller, same(controller));
+
+      controller.addNode(
+        RectNode(
+          id: 'rect-1',
+          size: const Size(10, 10),
+          fillColor: const Color(0xFF000000),
+        )..position = const Offset(8, 8),
+      );
+
+      expect(tester.binding.hasScheduledFrame, isTrue);
+
+      await tester.pump();
+
+      expect(tester.binding.hasScheduledFrame, isFalse);
     },
   );
 

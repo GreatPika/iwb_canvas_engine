@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/advanced.dart';
 
 void main() {
-  test('addNode adds to layer 0 and notifies', () {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets('addNode adds to layer 0 and notifies', (tester) async {
     final controller = SceneController(scene: Scene());
     addTearDown(controller.dispose);
 
@@ -18,6 +20,8 @@ void main() {
         fillColor: const Color(0xFF000000),
       )..position = const Offset(0, 0),
     );
+
+    await tester.pump();
 
     expect(controller.scene.layers, hasLength(1));
     expect(controller.scene.layers.single.nodes.single.id, 'r1');
@@ -70,7 +74,8 @@ void main() {
     );
   });
 
-  test('removeNode removes node, clears selection, emits delete action', () {
+  testWidgets('removeNode removes node, clears selection, emits delete action',
+      (tester) async {
     final node = RectNode(
       id: 'r1',
       size: const Size(10, 10),
@@ -113,6 +118,8 @@ void main() {
 
     controller.removeNode('r1', timestampMs: 123);
 
+    await tester.pump();
+
     expect(controller.scene.layers.single.nodes, isEmpty);
     expect(controller.selectedNodeIds, isNot(contains('r1')));
     expect(actions, hasLength(1));
@@ -150,7 +157,7 @@ void main() {
     expect(actions.single.timestampMs, inInclusiveRange(before, after));
   });
 
-  test('removeNode is a no-op for unknown id', () {
+  testWidgets('removeNode is a no-op for unknown id', (tester) async {
     final controller = SceneController(scene: Scene(layers: [Layer()]));
     addTearDown(controller.dispose);
 
@@ -162,6 +169,8 @@ void main() {
     controller.addListener(() => notifications++);
 
     controller.removeNode('missing', timestampMs: 1);
+
+    await tester.pump();
 
     expect(actions, isEmpty);
     expect(notifications, 0);

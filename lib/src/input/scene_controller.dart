@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../core/defaults.dart';
 import '../core/geometry.dart';
@@ -70,6 +71,12 @@ class SceneController extends ChangeNotifier {
   final StreamController<EditTextRequested> _editTextRequests =
       StreamController<EditTextRequested>.broadcast(sync: true);
   int _actionCounter = 0;
+  bool _repaintScheduled = false;
+  int _repaintToken = 0;
+  bool _isDisposed = false;
+  bool _needsNotify = false;
+  int _sceneRevision = 0;
+  int _selectionRevision = 0;
 
   int? _activePointerId;
   Offset? _pointerDownScene;
@@ -102,6 +109,12 @@ class SceneController extends ChangeNotifier {
 
   /// Current selection snapshot.
   Set<NodeId> get selectedNodeIds => _selectedNodeIdsView;
+
+  @visibleForTesting
+  int get debugSceneRevision => _sceneRevision;
+
+  @visibleForTesting
+  int get debugSelectionRevision => _selectionRevision;
 
   /// Current marquee selection rectangle in scene coordinates.
   Rect? get selectionRect => _selectionRect;
@@ -151,6 +164,8 @@ class SceneController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _isDisposed = true;
+    _cancelScheduledRepaint();
     _actions.close();
     _editTextRequests.close();
     super.dispose();
@@ -160,13 +175,14 @@ class SceneController extends ChangeNotifier {
   void setMode(CanvasMode value) {
     if (mode == value) return;
     if (mode == CanvasMode.move) {
-      _resetDrag();
+      _resetDrag(notify: false);
     } else {
       _resetDraw();
     }
     mode = value;
-    _setSelectionRect(null);
-    notifyListeners();
+    _setSelectionRect(null, notify: false);
+    _needsNotify = true;
+    _notifyNow();
   }
 
   /// Changes the active drawing tool and resets draw state.
@@ -174,42 +190,45 @@ class SceneController extends ChangeNotifier {
     if (drawTool == tool) return;
     drawTool = tool;
     _resetDraw();
-    notifyListeners();
+    _needsNotify = true;
+    _notifyNow();
   }
 
   /// Sets the current drawing color.
   void setDrawColor(Color value) {
     if (drawColor == value) return;
     drawColor = value;
-    notifyListeners();
+    _needsNotify = true;
+    _notifyNow();
   }
 
   /// Updates the scene background color.
   void setBackgroundColor(Color value) {
     if (scene.background.color == value) return;
     scene.background.color = value;
-    notifyListeners();
+    _needsNotify = true;
+    _notifyNow();
   }
 
   /// Enables or disables the background grid.
   void setGridEnabled(bool value) {
     if (scene.background.grid.isEnabled == value) return;
     scene.background.grid.isEnabled = value;
-    notifyListeners();
+    _needsNotify = true;
+    _notifyNow();
   }
 
   /// Sets the grid cell size in scene units.
   void setGridCellSize(double value) {
     if (scene.background.grid.cellSize == value) return;
     scene.background.grid.cellSize = value;
-    notifyListeners();
+    _needsNotify = true;
+    _notifyNow();
   }
 
   /// Updates the scene camera offset.
   void setCameraOffset(Offset value) {
-    if (scene.camera.offset == value) return;
-    scene.camera.offset = value;
-    notifyListeners();
+    _setCameraOffset(value);
   }
 
   /// Restores minimal invariants after external mutations to [scene].
@@ -223,9 +242,13 @@ class SceneController extends ChangeNotifier {
           existingIds.add(node.id);
         }
       }
-      _selectedNodeIds.removeWhere((id) => !existingIds.contains(id));
+      _setSelection(
+        _selectedNodeIds.where(existingIds.contains),
+        notify: false,
+      );
     }
-    notifyListeners();
+    _markSceneStructuralChanged();
+    _notifyNow();
   }
 
   /// Adds [node] to the target layer and notifies listeners.
@@ -253,7 +276,8 @@ class SceneController extends ChangeNotifier {
     }
 
     scene.layers[layerIndex].nodes.add(node);
-    notifyListeners();
+    _markSceneStructuralChanged();
+    _notifyNow();
   }
 
   /// Removes a node by [id], clears its selection, and emits an action.
@@ -263,11 +287,15 @@ class SceneController extends ChangeNotifier {
       if (index == -1) continue;
 
       layer.nodes.removeAt(index);
-      _selectedNodeIds.remove(id);
+      _setSelection(
+        _selectedNodeIds.where((candidate) => candidate != id),
+        notify: false,
+      );
+      _markSceneStructuralChanged();
       _emitAction(ActionType.delete, [
         id,
       ], timestampMs ?? DateTime.now().millisecondsSinceEpoch);
-      notifyListeners();
+      _notifyNow();
       return;
     }
   }
@@ -297,6 +325,7 @@ class SceneController extends ChangeNotifier {
 
       final node = layer.nodes.removeAt(nodeIndex);
       scene.layers[targetLayerIndex].nodes.add(node);
+      _markSceneStructuralChanged();
       _emitAction(
         ActionType.move,
         [id],
@@ -306,7 +335,7 @@ class SceneController extends ChangeNotifier {
           'targetLayerIndex': targetLayerIndex,
         },
       );
-      notifyListeners();
+      _notifyNow();
       return;
     }
   }
@@ -314,8 +343,8 @@ class SceneController extends ChangeNotifier {
   /// Clears the current selection.
   void clearSelection() {
     if (_selectedNodeIds.isEmpty) return;
-    _selectedNodeIds.clear();
-    notifyListeners();
+    _setSelection(const <NodeId>[], notify: false);
+    _notifyNow();
   }
 
   /// Rotates the transformable selection by 90 degrees.
@@ -335,7 +364,8 @@ class SceneController extends ChangeNotifier {
       timestampMs ?? DateTime.now().millisecondsSinceEpoch,
       payload: <String, Object?>{'clockwise': clockwise},
     );
-    notifyListeners();
+    _needsNotify = true;
+    _notifyNow();
   }
 
   /// Flips the transformable selection horizontally around its center.
@@ -354,7 +384,8 @@ class SceneController extends ChangeNotifier {
       timestampMs ?? DateTime.now().millisecondsSinceEpoch,
       payload: const <String, Object?>{'axis': 'vertical'},
     );
-    notifyListeners();
+    _needsNotify = true;
+    _notifyNow();
   }
 
   /// Flips the transformable selection vertically around its center.
@@ -373,7 +404,8 @@ class SceneController extends ChangeNotifier {
       timestampMs ?? DateTime.now().millisecondsSinceEpoch,
       payload: const <String, Object?>{'axis': 'horizontal'},
     );
-    notifyListeners();
+    _needsNotify = true;
+    _notifyNow();
   }
 
   /// Deletes deletable selected nodes and emits an action.
@@ -391,13 +423,17 @@ class SceneController extends ChangeNotifier {
     }
 
     if (deletableIds.isEmpty) return;
-    _selectedNodeIds.removeAll(deletableIds);
+    _setSelection(
+      _selectedNodeIds.where((id) => !deletableIds.contains(id)),
+      notify: false,
+    );
+    _markSceneStructuralChanged();
     _emitAction(
       ActionType.delete,
       deletableIds,
       timestampMs ?? DateTime.now().millisecondsSinceEpoch,
     );
-    notifyListeners();
+    _notifyNow();
   }
 
   /// Clears all non-background layers and emits an action.
@@ -412,13 +448,14 @@ class SceneController extends ChangeNotifier {
     }
 
     if (clearedIds.isEmpty) return;
-    _selectedNodeIds.clear();
+    _setSelection(const <NodeId>[], notify: false);
+    _markSceneStructuralChanged();
     _emitAction(
       ActionType.clear,
       clearedIds,
       timestampMs ?? DateTime.now().millisecondsSinceEpoch,
     );
-    notifyListeners();
+    _notifyNow();
   }
 
   /// Handles a pointer sample and updates the controller state.
@@ -463,11 +500,11 @@ class SceneController extends ChangeNotifier {
         _handleMove(sample, scenePoint);
         break;
       case PointerPhase.up:
-        _handleUp(sample, scenePoint);
-        break;
-      case PointerPhase.cancel:
-        _handleCancel();
-        break;
+      _handleUp(sample, scenePoint);
+      break;
+    case PointerPhase.cancel:
+      _handleCancel();
+      break;
     }
   }
 
@@ -487,11 +524,11 @@ class SceneController extends ChangeNotifier {
         _handleDrawMove(sample, scenePoint);
         break;
       case PointerPhase.up:
-        _handleDrawUp(sample, scenePoint);
-        break;
-      case PointerPhase.cancel:
-        _handleDrawCancel();
-        break;
+      _handleDrawUp(sample, scenePoint);
+      break;
+    case PointerPhase.cancel:
+      _handleDrawCancel();
+      break;
     }
   }
 
@@ -537,7 +574,7 @@ class SceneController extends ChangeNotifier {
       if (delta == Offset.zero) return;
       _applyMoveDelta(delta);
       _lastDragScene = scenePoint;
-      notifyListeners();
+      requestRepaintOncePerFrame();
       return;
     }
 
@@ -557,15 +594,21 @@ class SceneController extends ChangeNotifier {
       if (_dragMoved && _selectionRect != null) {
         _commitMarquee(sample.timestampMs);
       } else if (_pendingClearSelection) {
-        clearSelection();
+        _setSelection(const <NodeId>[], notify: false);
       }
     }
 
-    _resetDrag();
+    _resetDrag(notify: false);
+    if (_needsNotify) {
+      _notifyNow();
+    }
   }
 
   void _handleCancel() {
-    _resetDrag();
+    _resetDrag(notify: false);
+    if (_needsNotify) {
+      _notifyNow();
+    }
   }
 
   void _handleDrawDown(PointerSample sample, Offset scenePoint) {
@@ -609,6 +652,7 @@ class SceneController extends ChangeNotifier {
         break;
       case DrawTool.eraser:
         _eraserPoints.add(scenePoint);
+        requestRepaintOncePerFrame();
         break;
     }
     _lastDrawScene = scenePoint;
@@ -631,10 +675,16 @@ class SceneController extends ChangeNotifier {
     }
 
     _resetDrawPointer();
+    if (_needsNotify) {
+      _notifyNow();
+    }
   }
 
   void _handleDrawCancel() {
     _resetDraw();
+    if (_needsNotify) {
+      _notifyNow();
+    }
   }
 
   void _commitMove(int timestampMs, Offset scenePoint) {
@@ -653,9 +703,8 @@ class SceneController extends ChangeNotifier {
   void _commitMarquee(int timestampMs) {
     final rect = _normalizeRect(_selectionRect!);
     final selected = _nodesIntersecting(rect);
-    _selectionRect = null;
+    _setSelectionRect(null, notify: false);
     _setSelection(selected, notify: false);
-    notifyListeners();
     _emitAction(ActionType.selectMarquee, selected, timestampMs);
   }
 
@@ -680,7 +729,8 @@ class SceneController extends ChangeNotifier {
     _activeLine = null;
     _activeDrawLayer = _ensureAnnotationLayer();
     _activeDrawLayer!.nodes.add(stroke);
-    notifyListeners();
+    _markSceneStructuralChanged();
+    requestRepaintOncePerFrame();
   }
 
   void _appendStrokePoint(Offset scenePoint) {
@@ -691,19 +741,23 @@ class SceneController extends ChangeNotifier {
       return;
     }
     stroke.points.add(scenePoint);
-    notifyListeners();
+    requestRepaintOncePerFrame();
   }
 
   void _finishStroke(int timestampMs, Offset scenePoint) {
     final stroke = _activeStroke;
     if (stroke == null) return;
+    var didMutateGeometry = false;
     if (stroke.points.isEmpty ||
         (scenePoint - stroke.points.last).distance > 0) {
       stroke.points.add(scenePoint);
+      didMutateGeometry = true;
     }
     _activeStroke = null;
     _activeDrawLayer = null;
-    notifyListeners();
+    if (didMutateGeometry) {
+      _needsNotify = true;
+    }
     _emitAction(
       drawTool == DrawTool.highlighter
           ? ActionType.drawHighlighter
@@ -747,19 +801,22 @@ class SceneController extends ChangeNotifier {
       _activeLine = line;
       _activeDrawLayer = _ensureAnnotationLayer();
       _activeDrawLayer!.nodes.add(line);
+      _markSceneStructuralChanged();
     } else {
       _activeLine!.end = scenePoint;
     }
-    notifyListeners();
+    requestRepaintOncePerFrame();
   }
 
   void _finishLineGesture(int timestampMs, Offset scenePoint) {
     if (_activeLine != null) {
-      _activeLine!.end = scenePoint;
       final line = _activeLine!;
+      if (line.end != scenePoint) {
+        line.end = scenePoint;
+        _needsNotify = true;
+      }
       _activeLine = null;
       _activeDrawLayer = null;
-      notifyListeners();
       _emitAction(
         ActionType.drawLine,
         [line.id],
@@ -795,7 +852,7 @@ class SceneController extends ChangeNotifier {
     _activeDrawLayer = _ensureAnnotationLayer();
     _activeDrawLayer!.nodes.add(line);
     _activeDrawLayer = null;
-    notifyListeners();
+    _markSceneStructuralChanged();
     _emitAction(
       ActionType.drawLine,
       [line.id],
@@ -817,10 +874,9 @@ class SceneController extends ChangeNotifier {
     final deletedNodeIds = _eraseAnnotations(_eraserPoints);
     _eraserPoints.clear();
     if (deletedNodeIds.isEmpty) {
-      notifyListeners();
       return;
     }
-    notifyListeners();
+    _markSceneStructuralChanged();
     _emitAction(
       ActionType.erase,
       deletedNodeIds,
@@ -992,26 +1048,34 @@ class SceneController extends ChangeNotifier {
     _selectedNodeIds
       ..clear()
       ..addAll(next);
+    _selectionRevision++;
+    _needsNotify = true;
     if (notify) {
-      notifyListeners();
+      requestRepaintOncePerFrame();
     }
     return true;
   }
 
-  void _setSelectionRect(Rect? rect) {
+  void _setSelectionRect(Rect? rect, {bool notify = true}) {
     if (_selectionRect == rect) return;
     _selectionRect = rect;
-    notifyListeners();
+    _needsNotify = true;
+    if (notify) {
+      requestRepaintOncePerFrame();
+    }
   }
 
-  void _resetDrag() {
+  void _resetDrag({bool notify = true}) {
     _activePointerId = null;
     _pointerDownScene = null;
     _lastDragScene = null;
     _dragTarget = _DragTarget.none;
     _dragMoved = false;
     _pendingClearSelection = false;
-    _setSelectionRect(null);
+    _setSelectionRect(null, notify: false);
+    if (notify) {
+      requestRepaintOncePerFrame();
+    }
   }
 
   void _resetDrawPointer() {
@@ -1024,9 +1088,11 @@ class SceneController extends ChangeNotifier {
   void _resetDraw() {
     if (_activeStroke != null && _activeDrawLayer != null) {
       _activeDrawLayer!.nodes.remove(_activeStroke);
+      _markSceneStructuralChanged();
     }
     if (_activeLine != null && _activeDrawLayer != null) {
       _activeDrawLayer!.nodes.remove(_activeLine);
+      _markSceneStructuralChanged();
     }
     _activeStroke = null;
     _activeLine = null;
@@ -1060,7 +1126,7 @@ class SceneController extends ChangeNotifier {
     }
     _pendingLineStart = start;
     _pendingLineTimestampMs = timestampMs;
-    notifyListeners();
+    requestRepaintOncePerFrame();
   }
 
   void _clearPendingLine() {
@@ -1073,6 +1139,55 @@ class SceneController extends ChangeNotifier {
     if (timestampMs - pendingTimestamp > 10000) {
       _clearPendingLine();
     }
+  }
+
+  void _setCameraOffset(Offset value, {bool notify = true}) {
+    if (scene.camera.offset == value) return;
+    scene.camera.offset = value;
+    _needsNotify = true;
+    if (notify) {
+      requestRepaintOncePerFrame();
+    }
+  }
+
+  void _markSceneStructuralChanged() {
+    _sceneRevision++;
+    _needsNotify = true;
+  }
+
+  void _cancelScheduledRepaint() {
+    _repaintScheduled = false;
+    _repaintToken++;
+  }
+
+  void requestRepaintOncePerFrame() {
+    if (_isDisposed) return;
+    if (_repaintScheduled) return;
+
+    _repaintScheduled = true;
+    final token = ++_repaintToken;
+
+    try {
+      SchedulerBinding.instance.scheduleFrameCallback((_) {
+        if (_isDisposed) return;
+        if (token != _repaintToken) return;
+        _repaintScheduled = false;
+        _needsNotify = false;
+        notifyListeners();
+      });
+
+      SchedulerBinding.instance.ensureVisualUpdate();
+    } on FlutterError {
+      // If no binding exists yet (e.g. in certain tests or during early init),
+      // fall back to an immediate notification.
+      _notifyNow();
+    }
+  }
+
+  void _notifyNow() {
+    _cancelScheduledRepaint();
+    notifyListeners();
+    _needsNotify = false;
   }
 
   void _emitAction(
