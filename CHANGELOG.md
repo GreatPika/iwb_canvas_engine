@@ -1,5 +1,9 @@
 ## Unreleased
 
+No changes yet.
+
+## 0.1.0 (2026-02-03)
+
 ### Performance
 
 - Cache `PathNode` local paths to reduce selection rendering overhead.

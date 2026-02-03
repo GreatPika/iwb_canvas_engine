@@ -8,6 +8,10 @@ import '../render/scene_painter.dart';
 
 /// A self-contained widget that renders a [SceneController] and feeds it input.
 ///
+/// Pointer events are forwarded to [SceneController] in view/screen coordinates
+/// (as received from `PointerEvent.localPosition`). The controller converts them
+/// to scene coordinates using `scene.camera.offset`.
+///
 /// The view repaints via [SceneController] as a [CustomPainter] notifier.
 class SceneView extends StatefulWidget {
   /// Creates a view for the provided [controller].

@@ -1,6 +1,7 @@
 # Architecture Overview
 
-This document describes the intended architecture for `iwb_canvas_engine` v1.0.
+This document describes the architecture as of `iwb_canvas_engine` v0.1.0 and
+the intended direction for v1.0.
 
 ## Goals
 
@@ -33,7 +34,7 @@ lib/
 ### Scene
 
 - Ordered `layers` list
-- `cameraOffset` (x, y)
+- Camera offset stored in `scene.camera.offset` (x, y)
 - Background: color + grid (optional)
 - Default palettes for drawing and background
 

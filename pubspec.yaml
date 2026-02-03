@@ -1,10 +1,16 @@
 name: iwb_canvas_engine
 description: "Scene-based canvas engine for Flutter: model, rendering, input, JSON serialization."
-version: 0.0.3
+version: 0.1.0
 homepage: https://github.com/GreatPika/iwb_canvas_engine
 repository: https://github.com/GreatPika/iwb_canvas_engine
 issue_tracker: https://github.com/GreatPika/iwb_canvas_engine/issues
 documentation: https://greatpika.github.io/iwb_canvas_engine/
+topics:
+  - flutter
+  - canvas
+  - whiteboard
+  - drawing
+  - graphics
 
 platforms:
   android:

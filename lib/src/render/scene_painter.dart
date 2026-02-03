@@ -10,6 +10,12 @@ import '../core/transform2d.dart';
 import '../input/scene_controller.dart';
 
 /// Resolves an [ImageNode.imageId] to a decoded [Image] instance.
+///
+/// This callback is invoked during painting, so it must be synchronous, fast,
+/// and side-effect free.
+///
+/// Return `null` when the image is not available yet; the painter renders a
+/// placeholder.
 typedef ImageResolver = Image? Function(String imageId);
 
 /// A [CustomPainter] that renders a [Scene] to a Flutter [Canvas].

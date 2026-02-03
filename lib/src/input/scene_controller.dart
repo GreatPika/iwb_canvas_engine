@@ -508,6 +508,13 @@ class SceneController extends ChangeNotifier {
   }
 
   /// Handles a pointer sample and updates the controller state.
+  ///
+  /// [PointerSample.position] must be provided in view/screen coordinates (the
+  /// same space as `PointerEvent.localPosition`). The controller converts it to
+  /// scene coordinates using `scene.camera.offset`.
+  ///
+  /// The controller processes at most one active pointer per mode; additional
+  /// pointers are ignored until the active one ends.
   void handlePointer(PointerSample sample) {
     if (mode == CanvasMode.move) {
       _handleMoveModePointer(sample);
@@ -517,6 +524,12 @@ class SceneController extends ChangeNotifier {
   }
 
   /// Handles pointer signals such as double-tap text edit requests.
+  ///
+  /// The controller currently reacts only to `doubleTap` signals in move mode:
+  /// if the top-most hit node is a [TextNode], an [EditTextRequested] event is
+  /// emitted.
+  ///
+  /// The emitted [EditTextRequested.position] is in view/screen coordinates.
   void handlePointerSignal(PointerSignal signal) {
     if (signal.type != PointerSignalType.doubleTap) return;
     if (mode != CanvasMode.move) return;

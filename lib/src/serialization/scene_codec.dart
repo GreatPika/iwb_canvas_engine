@@ -40,8 +40,10 @@ String encodeSceneToJson(Scene scene) {
 
 /// Decodes a [Scene] from a JSON string.
 ///
-/// Throws [SceneJsonFormatException] when the JSON is invalid or fails schema
-/// validation.
+/// Only `schemaVersion = 2` is accepted.
+///
+/// Throws [SceneJsonFormatException] when the JSON is invalid, the schema
+/// version is unsupported, or validation fails.
 Scene decodeSceneFromJson(String json) {
   try {
     final raw = jsonDecode(json);
@@ -84,6 +86,8 @@ Map<String, dynamic> encodeScene(Scene scene) {
 }
 
 /// Decodes a [Scene] from a JSON map (already parsed).
+///
+/// Only `schemaVersion = 2` is accepted.
 ///
 /// Throws [SceneJsonFormatException] when validation fails.
 Scene decodeScene(Map<String, dynamic> json) {

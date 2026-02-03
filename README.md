@@ -11,6 +11,21 @@ Live demo and docs:
 - Web demo: https://greatpika.github.io/iwb_canvas_engine/demo/
 - API reference: https://greatpika.github.io/iwb_canvas_engine/api/
 
+## What it is / What it isn't
+
+**What it is**
+
+- A Flutter canvas engine with a mutable scene model (layers + nodes).
+- Rendering via `CustomPaint` (`ScenePainter`) and a widget integration (`SceneView`).
+- Input handling + tool logic (move/select, pen/highlighter/line/eraser).
+- JSON v2 import/export for persistence and interoperability.
+
+**What it isn't**
+
+- A full whiteboard app (no menus/panels/toolbars/asset pickers).
+- A built-in undo/redo stack (the engine emits action events; the app owns history).
+- A storage backend (persistence is via JSON helpers).
+
 ## Features
 
 - Scene model with layers and nodes (image, text, stroke, line, rect, path).
@@ -26,6 +41,29 @@ Add the dependency:
 ```sh
 flutter pub add iwb_canvas_engine
 ```
+
+## Entrypoints
+
+Prefer importing the smallest API surface that fits your use case:
+
+- `package:iwb_canvas_engine/basic.dart` — minimal “happy path” API (recommended).
+- `package:iwb_canvas_engine/advanced.dart` — full export surface (low-level
+  painting, hit-testing, pointer tracking, etc.).
+- `package:iwb_canvas_engine/iwb_canvas_engine.dart` — legacy full export
+  surface kept for 0.x compatibility; may change before 1.0.
+
+## Core concepts
+
+- **Scene → Layer → Node**: layers are rendered in list order; nodes inside a
+  layer are rendered in list order. The last node is top-most for hit-testing.
+- **Local geometry + `Transform2D`**: node geometry is stored in local
+  coordinates around (0,0). `SceneNode.transform` (2×3 affine matrix) is the
+  single source of truth for translation/rotation/scale.
+- **View vs scene coordinates**: pointer samples come in view/screen
+  coordinates (e.g. `PointerEvent.localPosition`). The controller converts them
+  to scene coordinates using `scene.camera.offset`.
+- **Camera offset**: rendering subtracts `scene.camera.offset` so that panning
+  is implemented as camera movement, not by mutating node geometry.
 
 ## Usage
 
@@ -122,6 +160,13 @@ Decode helpers:
 - `Transform2D.fromJsonMap(event.payload!['delta'] as Map<String, Object?>)`
 - `event.tryTransformDelta()`
 
+Notes:
+
+- `actions` and `editTextRequests` are synchronous broadcast streams; handlers
+  must be fast and avoid blocking work.
+- The engine emits `ActionCommitted` boundaries, but the app is responsible for
+  storing history and applying undo/redo.
+
 ### Scene mutations
 
 Prefer mutating the scene through `SceneController` instead of touching
@@ -174,16 +219,10 @@ final json = encodeSceneToJson(controller.scene);
 final restored = decodeSceneFromJson(json);
 ```
 
-`decodeSceneFromJson` currently accepts only `schemaVersion = 2`.
+`decodeSceneFromJson` accepts only `schemaVersion = 2` and throws
+`SceneJsonFormatException` when the input is invalid or fails validation.
 
 ## API reference
-
-Entrypoints:
-
-- `package:iwb_canvas_engine/basic.dart` — minimal "happy path" API.
-- `package:iwb_canvas_engine/advanced.dart` — full export surface.
-- `package:iwb_canvas_engine/iwb_canvas_engine.dart` — legacy full surface
-  (0.x compatibility; may change for 1.0).
 
 API docs are generated from Dartdoc comments in `lib/`:
 
@@ -212,3 +251,8 @@ Guidelines:
 ## Additional information
 
 See `ARCHITECTURE.md` for design notes and `example/` for a working app.
+
+## AI-assisted development
+
+This library (including its tests) was fully written with OpenAI Codex
+(vibecoding).

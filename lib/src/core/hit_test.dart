@@ -6,6 +6,10 @@ import 'nodes.dart';
 import 'scene.dart';
 import 'transform2d.dart';
 
+/// Extra hit-test tolerance applied by this package, in scene units.
+///
+/// This constant is used in addition to node-specific thickness and
+/// [SceneNode.hitPadding] to make selection easier on touch devices.
 const double kHitSlop = 4.0;
 
 /// Returns true if [point] lies inside [rect].
