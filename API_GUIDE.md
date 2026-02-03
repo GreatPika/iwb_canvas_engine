@@ -553,7 +553,9 @@ Source of truth: `lib/src/serialization/scene_codec.dart`.
 
 - **View vs scene coordinates:** input positions are in view space; the controller converts via `camera.offset`.
   Using the wrong sign is the #1 bug source.
-- **Direct mutation:** if you mutate `scene.layers[..].nodes` directly, call `controller.notifySceneChanged()`.
+- **Direct mutation:**
+  - Structural changes (add/remove/reorder layers or nodes): call `controller.notifySceneChanged()`.
+  - Geometry-only changes (e.g. `node.transform`, points, colors, sizes): call `controller.requestRepaintOncePerFrame()`.
 - **ImageResolver:** keep it sync/fast; never do async work in the resolver.
 - **Text layout:** `TextNode.size` is not auto-updated; the app must manage it if needed.
 - **Multitouch:** not supported (single pointer only).

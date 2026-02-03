@@ -189,6 +189,13 @@ controller.removeNode('rect-2');
 If you mutate `controller.scene` directly, call `controller.notifySceneChanged()`
 afterwards to let the controller restore minimal invariants (e.g. selection).
 
+Notes about direct mutations:
+
+- **Structural changes** (add/remove/reorder layers or nodes): call
+  `controller.notifySceneChanged()`.
+- **Geometry-only changes** (e.g. `node.transform`, points, colors, sizes): call
+  `controller.requestRepaintOncePerFrame()` to schedule a repaint.
+
 ### Selection and transforms
 
 - Locked nodes (`isLocked == true`) can be selected, but drag-move skips them.

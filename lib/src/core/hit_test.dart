@@ -54,7 +54,25 @@ bool hitTestNode(Offset point, SceneNode node) {
     case NodeType.image:
     case NodeType.text:
     case NodeType.rect:
-      return hitTestRect(point, node.boundsWorld);
+      final inverse = node.transform.invert();
+      if (inverse == null) {
+        return hitTestRect(point, node.boundsWorld);
+      }
+      final localPoint = inverse.applyToPoint(point);
+      final paddingScene = node.hitPadding + kHitSlop;
+      final paddingX =
+          paddingScene *
+          math.sqrt(inverse.a * inverse.a + inverse.c * inverse.c);
+      final paddingY =
+          paddingScene *
+          math.sqrt(inverse.b * inverse.b + inverse.d * inverse.d);
+      final bounds = node.localBounds;
+      return Rect.fromLTRB(
+        bounds.left - paddingX,
+        bounds.top - paddingY,
+        bounds.right + paddingX,
+        bounds.bottom + paddingY,
+      ).contains(localPoint);
     case NodeType.path:
       final pathNode = node as PathNode;
       if (pathNode.fillColor != null) {

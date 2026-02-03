@@ -1,6 +1,9 @@
 ## Unreleased
 
-No changes yet.
+- More accurate hit-test for rotated rect/image/text nodes; `hitPadding` now
+  affects them.
+- Internal: tighten repaint notification invariants and add a debug-only guard
+  that disables drag-move buffering on external structural scene mutations.
 
 ## 0.1.0 (2026-02-03)
 

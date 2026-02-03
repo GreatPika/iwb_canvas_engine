@@ -121,6 +121,90 @@ void main() {
     expect(hitTestRect(const Offset(-1, 5), rect), isFalse);
   });
 
+  test('hitTestNode uses local bounds for rotated RectNode', () {
+    final node = RectNode(id: 'rect-rot', size: const Size(100, 20))
+      ..position = const Offset(100, 100)
+      ..rotationDeg = 45;
+
+    final aabbOnlyPoint = node.boundsWorld.topLeft + const Offset(1, 1);
+    expect(hitTestNode(aabbOnlyPoint, node), isFalse);
+    expect(hitTestNode(node.position, node), isTrue);
+
+    final localOutside = Offset(node.size.width / 2 + kHitSlop + 0.5, 0);
+    final worldOutside = node.transform.applyToPoint(localOutside);
+    expect(hitTestNode(worldOutside, node), isFalse);
+    node.hitPadding = 1;
+    expect(hitTestNode(worldOutside, node), isTrue);
+  });
+
+  test('hitTestNode uses local bounds for rotated ImageNode', () {
+    final node =
+        ImageNode(id: 'image-rot', imageId: 'img-1', size: const Size(120, 60))
+          ..position = const Offset(-20, 40)
+          ..rotationDeg = 30;
+
+    final aabbOnlyPoint = node.boundsWorld.topLeft + const Offset(1, 1);
+    expect(hitTestNode(aabbOnlyPoint, node), isFalse);
+    expect(hitTestNode(node.position, node), isTrue);
+
+    final localOutside = Offset(node.size.width / 2 + kHitSlop + 0.5, 0);
+    final worldOutside = node.transform.applyToPoint(localOutside);
+    expect(hitTestNode(worldOutside, node), isFalse);
+    node.hitPadding = 1;
+    expect(hitTestNode(worldOutside, node), isTrue);
+  });
+
+  test('hitTestNode uses local bounds for rotated TextNode', () {
+    final node =
+        TextNode(
+            id: 'text-rot',
+            text: 'Hello',
+            size: const Size(90, 40),
+            color: const Color(0xFF000000),
+          )
+          ..position = const Offset(10, -50)
+          ..rotationDeg = -60;
+
+    final aabbOnlyPoint = node.boundsWorld.topLeft + const Offset(1, 1);
+    expect(hitTestNode(aabbOnlyPoint, node), isFalse);
+    expect(hitTestNode(node.position, node), isTrue);
+
+    final localOutside = Offset(node.size.width / 2 + kHitSlop + 0.5, 0);
+    final worldOutside = node.transform.applyToPoint(localOutside);
+    expect(hitTestNode(worldOutside, node), isFalse);
+    node.hitPadding = 1;
+    expect(hitTestNode(worldOutside, node), isTrue);
+  });
+
+  test('hitTestNode uses kHitSlop in scene units for scaled RectNode', () {
+    final node = RectNode(id: 'rect-scale', size: const Size(10, 10))
+      ..position = Offset.zero
+      ..scaleX = 0.1
+      ..scaleY = 0.1;
+
+    final rightEdge = node.transform.applyToPoint(
+      Offset(node.size.width / 2, 0),
+    );
+    expect(hitTestNode(rightEdge + Offset(kHitSlop - 0.1, 0), node), isTrue);
+    expect(hitTestNode(rightEdge + Offset(kHitSlop + 0.1, 0), node), isFalse);
+
+    node
+      ..scaleX = 3
+      ..scaleY = 3;
+
+    final scaledRightEdge = node.transform.applyToPoint(
+      Offset(node.size.width / 2, 0),
+    );
+    expect(
+      hitTestNode(scaledRightEdge + Offset(kHitSlop - 0.1, 0), node),
+      isTrue,
+    );
+    expect(
+      hitTestNode(scaledRightEdge + Offset(kHitSlop + 0.1, 0), node),
+      isFalse,
+    );
+  });
+
   test('hitTestNode respects PathNode shape and transforms', () {
     final node =
         PathNode(

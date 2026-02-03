@@ -68,6 +68,55 @@ void main() {
     expect(notifications, 1);
   });
 
+  testWidgets('draw commit does not emit a tail notification', (tester) async {
+    final controller = SceneController(scene: Scene(layers: [Layer()]));
+    addTearDown(controller.dispose);
+
+    controller.setMode(CanvasMode.draw);
+    controller.setDrawTool(DrawTool.pen);
+
+    var notifications = 0;
+    controller.addListener(() => notifications++);
+
+    controller.handlePointer(
+      sample(
+        pointerId: 1,
+        position: const Offset(0, 0),
+        timestampMs: 0,
+        phase: PointerPhase.down,
+      ),
+    );
+    controller.handlePointer(
+      sample(
+        pointerId: 1,
+        position: const Offset(10, 0),
+        timestampMs: 10,
+        phase: PointerPhase.move,
+      ),
+    );
+
+    expect(notifications, 0);
+
+    await pumpFrame(tester);
+
+    expect(notifications, 1);
+
+    controller.handlePointer(
+      sample(
+        pointerId: 1,
+        position: const Offset(20, 0),
+        timestampMs: 20,
+        phase: PointerPhase.up,
+      ),
+    );
+
+    expect(notifications, 2);
+
+    await pumpFrame(tester);
+
+    expect(notifications, 2);
+  });
+
   testWidgets('hot paths coalesce move repaint requests to one per frame', (
     tester,
   ) async {

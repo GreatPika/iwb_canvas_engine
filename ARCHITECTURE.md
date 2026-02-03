@@ -134,7 +134,10 @@ Emit `ActionCommitted` on:
 
 ## Hit-testing and math
 
-- Rotated rectangles use AABB of transformed corners.
+- Rect/Image/Text nodes hit-test in local coordinates by transforming the
+  pointer via `inverse(transform)` and checking `localBounds` (inflated by
+  `hitPadding + kHitSlop`). When the inverse is unavailable (degenerate
+  transforms), the engine falls back to the world-space AABB.
 - Lines/strokes use distance-to-segment with thickness tolerance.
 - Path nodes use geometry hit-test via `Path.contains` with inverse transforms.
 - Group transforms use center of union AABB of selected nodes.

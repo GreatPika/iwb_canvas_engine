@@ -92,6 +92,7 @@ class SceneController extends ChangeNotifier {
   int _dragSceneRevision = 0;
   int _dragSelectionRevision = 0;
   int _debugMoveGestureBuildCount = 0;
+  int _debugDragSceneStructureFingerprint = 0;
 
   int? _activePointerId;
   Offset? _pointerDownScene;
@@ -202,7 +203,7 @@ class SceneController extends ChangeNotifier {
     }
     mode = value;
     _setSelectionRect(null, notify: false);
-    _needsNotify = true;
+    _markSceneGeometryChanged();
     _notifyNow();
   }
 
@@ -211,7 +212,7 @@ class SceneController extends ChangeNotifier {
     if (drawTool == tool) return;
     drawTool = tool;
     _resetDraw();
-    _needsNotify = true;
+    _markSceneGeometryChanged();
     _notifyNow();
   }
 
@@ -219,7 +220,7 @@ class SceneController extends ChangeNotifier {
   void setDrawColor(Color value) {
     if (drawColor == value) return;
     drawColor = value;
-    _needsNotify = true;
+    _markSceneGeometryChanged();
     _notifyNow();
   }
 
@@ -227,7 +228,7 @@ class SceneController extends ChangeNotifier {
   void setBackgroundColor(Color value) {
     if (scene.background.color == value) return;
     scene.background.color = value;
-    _needsNotify = true;
+    _markSceneGeometryChanged();
     _notifyNow();
   }
 
@@ -235,7 +236,7 @@ class SceneController extends ChangeNotifier {
   void setGridEnabled(bool value) {
     if (scene.background.grid.isEnabled == value) return;
     scene.background.grid.isEnabled = value;
-    _needsNotify = true;
+    _markSceneGeometryChanged();
     _notifyNow();
   }
 
@@ -243,7 +244,7 @@ class SceneController extends ChangeNotifier {
   void setGridCellSize(double value) {
     if (scene.background.grid.cellSize == value) return;
     scene.background.grid.cellSize = value;
-    _needsNotify = true;
+    _markSceneGeometryChanged();
     _notifyNow();
   }
 
@@ -391,7 +392,7 @@ class SceneController extends ChangeNotifier {
       timestampMs ?? DateTime.now().millisecondsSinceEpoch,
       payload: <String, Object?>{'delta': delta.toJsonMap()},
     );
-    _needsNotify = true;
+    _markSceneGeometryChanged();
     _notifyNow();
   }
 
@@ -422,7 +423,7 @@ class SceneController extends ChangeNotifier {
       timestampMs ?? DateTime.now().millisecondsSinceEpoch,
       payload: <String, Object?>{'delta': delta.toJsonMap()},
     );
-    _needsNotify = true;
+    _markSceneGeometryChanged();
     _notifyNow();
   }
 
@@ -453,7 +454,7 @@ class SceneController extends ChangeNotifier {
       timestampMs ?? DateTime.now().millisecondsSinceEpoch,
       payload: <String, Object?>{'delta': delta.toJsonMap()},
     );
-    _needsNotify = true;
+    _markSceneGeometryChanged();
     _notifyNow();
   }
 
@@ -634,6 +635,11 @@ class SceneController extends ChangeNotifier {
         _dragSelectionRevision = _selectionRevision;
         _moveGestureNodes = _selectedNodesInSceneOrder();
         _debugMoveGestureBuildCount += 1;
+        assert(() {
+          _debugDragSceneStructureFingerprint =
+              _debugComputeSceneStructureFingerprint();
+          return true;
+        }());
       }
     }
 
@@ -645,6 +651,14 @@ class SceneController extends ChangeNotifier {
               _selectionRevision != _dragSelectionRevision)) {
         _moveGestureNodes = null;
       }
+      assert(() {
+        if (_moveGestureNodes != null &&
+            _debugDragSceneStructureFingerprint !=
+                _debugComputeSceneStructureFingerprint()) {
+          _moveGestureNodes = null;
+        }
+        return true;
+      }());
       final delta = scenePoint - _lastDragScene!;
       if (delta == Offset.zero) return;
       _applyMoveDelta(delta, nodes: _moveGestureNodes);
@@ -832,7 +846,7 @@ class SceneController extends ChangeNotifier {
     stroke.normalizeToLocalCenter();
     _activeStroke = null;
     _activeDrawLayer = null;
-    _needsNotify = true;
+    _markSceneGeometryChanged();
     _emitAction(
       drawTool == DrawTool.highlighter
           ? ActionType.drawHighlighter
@@ -890,7 +904,7 @@ class SceneController extends ChangeNotifier {
         line.end = scenePoint;
       }
       line.normalizeToLocalCenter();
-      _needsNotify = true;
+      _markSceneGeometryChanged();
       _activeLine = null;
       _activeDrawLayer = null;
       _emitAction(
@@ -1157,7 +1171,7 @@ class SceneController extends ChangeNotifier {
   void _setSelectionRect(Rect? rect, {bool notify = true}) {
     if (_selectionRect == rect) return;
     _selectionRect = rect;
-    _needsNotify = true;
+    _markSceneGeometryChanged();
     if (notify) {
       requestRepaintOncePerFrame();
     }
@@ -1240,20 +1254,40 @@ class SceneController extends ChangeNotifier {
   void _setCameraOffset(Offset value, {bool notify = true}) {
     if (scene.camera.offset == value) return;
     scene.camera.offset = value;
-    _needsNotify = true;
+    _markSceneGeometryChanged();
     if (notify) {
       requestRepaintOncePerFrame();
     }
   }
 
+  void _markSceneGeometryChanged() {
+    _needsNotify = true;
+  }
+
   void _markSceneStructuralChanged() {
     _sceneRevision++;
-    _needsNotify = true;
+    _markSceneGeometryChanged();
   }
 
   void _markSelectionChanged() {
     _selectionRevision++;
-    _needsNotify = true;
+    _markSceneGeometryChanged();
+  }
+
+  int _debugComputeSceneStructureFingerprint() {
+    var hash = 17;
+    hash = 37 * hash + scene.layers.length;
+    for (final layer in scene.layers) {
+      hash = 37 * hash + identityHashCode(layer);
+      hash = 37 * hash + layer.nodes.length;
+      hash = 37 * hash + (layer.isBackground ? 1 : 0);
+      final nodes = layer.nodes;
+      if (nodes.isNotEmpty) {
+        hash = 37 * hash + identityHashCode(nodes.first);
+        hash = 37 * hash + identityHashCode(nodes.last);
+      }
+    }
+    return hash;
   }
 
   void _cancelScheduledRepaint() {

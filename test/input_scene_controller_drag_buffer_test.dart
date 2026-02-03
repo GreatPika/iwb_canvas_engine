@@ -188,4 +188,75 @@ void main() {
       await tester.pump();
     },
   );
+
+  testWidgets(
+    'external node replacement during drag disables buffer but keeps drag active',
+    (tester) async {
+      final node = RectNode(
+        id: 'n1',
+        size: const Size(10, 10),
+        fillColor: const Color(0xFF000000),
+      )..position = const Offset(0, 0);
+      final controller = SceneController(
+        scene: Scene(
+          layers: [
+            Layer(nodes: [node]),
+          ],
+        ),
+        dragStartSlop: 0,
+      );
+      addTearDown(controller.dispose);
+
+      controller.handlePointer(
+        sample(
+          pointerId: 1,
+          position: const Offset(0, 0),
+          timestampMs: 0,
+          phase: PointerPhase.down,
+        ),
+      );
+      controller.handlePointer(
+        sample(
+          pointerId: 1,
+          position: const Offset(10, 0),
+          timestampMs: 10,
+          phase: PointerPhase.move,
+        ),
+      );
+
+      final positionAfterStart = node.position;
+      expect(positionAfterStart.dx, greaterThan(0));
+      expect(controller.debugMoveGestureNodes, isNotNull);
+
+      final replacement = RectNode(
+        id: 'n1',
+        size: const Size(10, 10),
+        fillColor: const Color(0xFF000000),
+      )..position = positionAfterStart;
+      controller.scene.layers.first.nodes[0] = replacement;
+
+      controller.handlePointer(
+        sample(
+          pointerId: 1,
+          position: const Offset(20, 0),
+          timestampMs: 20,
+          phase: PointerPhase.move,
+        ),
+      );
+
+      expect(controller.debugMoveGestureNodes, isNull);
+      expect(replacement.position.dx, greaterThan(positionAfterStart.dx));
+
+      controller.handlePointer(
+        sample(
+          pointerId: 1,
+          position: const Offset(20, 0),
+          timestampMs: 30,
+          phase: PointerPhase.up,
+        ),
+      );
+
+      await tester.pump();
+    },
+  );
 }
