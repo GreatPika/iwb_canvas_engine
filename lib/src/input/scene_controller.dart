@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -19,6 +20,15 @@ enum CanvasMode { move, draw }
 
 /// Active drawing tool when [CanvasMode.draw] is enabled.
 enum DrawTool { pen, highlighter, line, eraser }
+
+double _maxSingularValue2x2(double a, double b, double c, double d) {
+  final t = a * a + b * b + c * c + d * d;
+  final det = a * d - b * c;
+  final discSquared = t * t - 4 * det * det;
+  final disc = math.sqrt(math.max(0, discSquared));
+  final lambdaMax = (t + disc) / 2;
+  return math.sqrt(math.max(0, lambdaMax));
+}
 
 /// Mutable controller that owns the scene editing state and tool logic.
 ///
@@ -973,7 +983,13 @@ class SceneController extends ChangeNotifier {
     final localEraserPoints = eraserPoints
         .map(inverse.applyToPoint)
         .toList(growable: false);
-    final threshold = eraserThickness / 2 + line.thickness / 2;
+    final sigmaMax = _maxSingularValue2x2(
+      inverse.a,
+      inverse.b,
+      inverse.c,
+      inverse.d,
+    );
+    final threshold = line.thickness / 2 + (eraserThickness / 2) * sigmaMax;
     if (localEraserPoints.length == 1) {
       final distance = distancePointToSegment(
         localEraserPoints.first,
@@ -999,7 +1015,13 @@ class SceneController extends ChangeNotifier {
     final localEraserPoints = eraserPoints
         .map(inverse.applyToPoint)
         .toList(growable: false);
-    final threshold = eraserThickness / 2 + stroke.thickness / 2;
+    final sigmaMax = _maxSingularValue2x2(
+      inverse.a,
+      inverse.b,
+      inverse.c,
+      inverse.d,
+    );
+    final threshold = stroke.thickness / 2 + (eraserThickness / 2) * sigmaMax;
     if (stroke.points.isEmpty) return false;
     if (stroke.points.length == 1) {
       final point = stroke.points.first;
