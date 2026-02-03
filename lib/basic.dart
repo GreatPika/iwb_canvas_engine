@@ -19,6 +19,7 @@ export 'src/core/transform2d.dart';
 
 // Integration.
 export 'src/input/action_events.dart';
+export 'src/input/pointer_input.dart' show PointerInputSettings;
 export 'src/input/scene_controller.dart';
 export 'src/view/scene_view.dart';
 
@@ -28,7 +29,6 @@ export 'src/serialization/scene_codec.dart'
         SceneJsonFormatException,
         decodeSceneFromJson,
         encodeSceneToJson,
-        schemaVersion,
         schemaVersionWrite,
         schemaVersionsRead;
 

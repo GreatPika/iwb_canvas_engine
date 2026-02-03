@@ -31,7 +31,7 @@ void main() {
         child: SizedBox(
           width: 200,
           height: 200,
-          child: SceneView(controller: controller, imageResolver: (_) => null),
+          child: SceneView(controller: controller),
         ),
       ),
     );

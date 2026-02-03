@@ -117,9 +117,6 @@ abstract class SceneNode {
 
   /// Axis-aligned bounds in world coordinates.
   Rect get boundsWorld => transform.applyToRect(localBounds);
-
-  /// Backwards-compatible alias for [boundsWorld].
-  Rect get aabb => boundsWorld;
 }
 
 /// Raster image node referenced by [imageId] and drawn at [size].
@@ -139,9 +136,54 @@ class ImageNode extends SceneNode {
     super.isTransformable,
   }) : super(type: NodeType.image);
 
+  /// Creates an image node positioned by its axis-aligned world top-left corner.
+  ///
+  /// This helper is AABB-based: rotation/shear affects [boundsWorld], so
+  /// [topLeftWorld] is intended for UI-like positioning (selection box).
+  factory ImageNode.fromTopLeftWorld({
+    required NodeId id,
+    required String imageId,
+    required Size size,
+    required Offset topLeftWorld,
+    Size? naturalSize,
+    double hitPadding = 0,
+    double opacity = 1,
+    bool isVisible = true,
+    bool isSelectable = true,
+    bool isLocked = false,
+    bool isDeletable = true,
+    bool isTransformable = true,
+  }) {
+    final centerWorld = topLeftWorld + Offset(size.width / 2, size.height / 2);
+    return ImageNode(
+      id: id,
+      imageId: imageId,
+      size: size,
+      naturalSize: naturalSize,
+      hitPadding: hitPadding,
+      transform: Transform2D.translation(centerWorld),
+      opacity: opacity,
+      isVisible: isVisible,
+      isSelectable: isSelectable,
+      isLocked: isLocked,
+      isDeletable: isDeletable,
+      isTransformable: isTransformable,
+    );
+  }
+
   String imageId;
   Size size;
   Size? naturalSize;
+
+  /// Axis-aligned world top-left corner of this node's bounds.
+  ///
+  /// This is based on [boundsWorld] and is intended for UI-like positioning.
+  Offset get topLeftWorld => boundsWorld.topLeft;
+  set topLeftWorld(Offset value) {
+    final delta = value - boundsWorld.topLeft;
+    if (delta == Offset.zero) return;
+    position = position + delta;
+  }
 
   Rect get _localRect => Rect.fromCenter(
     center: Offset.zero,
@@ -178,6 +220,57 @@ class TextNode extends SceneNode {
     super.isTransformable,
   }) : super(type: NodeType.text);
 
+  /// Creates a text node positioned by its axis-aligned world top-left corner.
+  ///
+  /// This helper is AABB-based: rotation/shear affects [boundsWorld], so
+  /// [topLeftWorld] is intended for UI-like positioning (selection box).
+  factory TextNode.fromTopLeftWorld({
+    required NodeId id,
+    required String text,
+    required Size size,
+    required Offset topLeftWorld,
+    double fontSize = 24,
+    required Color color,
+    TextAlign align = TextAlign.left,
+    bool isBold = false,
+    bool isItalic = false,
+    bool isUnderline = false,
+    String? fontFamily,
+    double? maxWidth,
+    double? lineHeight,
+    double hitPadding = 0,
+    double opacity = 1,
+    bool isVisible = true,
+    bool isSelectable = true,
+    bool isLocked = false,
+    bool isDeletable = true,
+    bool isTransformable = true,
+  }) {
+    final centerWorld = topLeftWorld + Offset(size.width / 2, size.height / 2);
+    return TextNode(
+      id: id,
+      text: text,
+      size: size,
+      fontSize: fontSize,
+      color: color,
+      align: align,
+      isBold: isBold,
+      isItalic: isItalic,
+      isUnderline: isUnderline,
+      fontFamily: fontFamily,
+      maxWidth: maxWidth,
+      lineHeight: lineHeight,
+      hitPadding: hitPadding,
+      transform: Transform2D.translation(centerWorld),
+      opacity: opacity,
+      isVisible: isVisible,
+      isSelectable: isSelectable,
+      isLocked: isLocked,
+      isDeletable: isDeletable,
+      isTransformable: isTransformable,
+    );
+  }
+
   String text;
   Size size;
   double fontSize;
@@ -189,6 +282,16 @@ class TextNode extends SceneNode {
   String? fontFamily;
   double? maxWidth;
   double? lineHeight;
+
+  /// Axis-aligned world top-left corner of this node's bounds.
+  ///
+  /// This is based on [boundsWorld] and is intended for UI-like positioning.
+  Offset get topLeftWorld => boundsWorld.topLeft;
+  set topLeftWorld(Offset value) {
+    final delta = value - boundsWorld.topLeft;
+    if (delta == Offset.zero) return;
+    position = position + delta;
+  }
 
   Rect get _localRect => Rect.fromCenter(
     center: Offset.zero,
@@ -366,10 +469,57 @@ class RectNode extends SceneNode {
     super.isTransformable,
   }) : super(type: NodeType.rect);
 
+  /// Creates a rect node positioned by its axis-aligned world top-left corner.
+  ///
+  /// This helper is AABB-based: rotation/shear affects [boundsWorld], so
+  /// [topLeftWorld] is intended for UI-like positioning (selection box).
+  factory RectNode.fromTopLeftWorld({
+    required NodeId id,
+    required Size size,
+    required Offset topLeftWorld,
+    Color? fillColor,
+    Color? strokeColor,
+    double strokeWidth = 1,
+    double hitPadding = 0,
+    double opacity = 1,
+    bool isVisible = true,
+    bool isSelectable = true,
+    bool isLocked = false,
+    bool isDeletable = true,
+    bool isTransformable = true,
+  }) {
+    final centerWorld = topLeftWorld + Offset(size.width / 2, size.height / 2);
+    return RectNode(
+      id: id,
+      size: size,
+      fillColor: fillColor,
+      strokeColor: strokeColor,
+      strokeWidth: strokeWidth,
+      hitPadding: hitPadding,
+      transform: Transform2D.translation(centerWorld),
+      opacity: opacity,
+      isVisible: isVisible,
+      isSelectable: isSelectable,
+      isLocked: isLocked,
+      isDeletable: isDeletable,
+      isTransformable: isTransformable,
+    );
+  }
+
   Size size;
   Color? fillColor;
   Color? strokeColor;
   double strokeWidth;
+
+  /// Axis-aligned world top-left corner of this node's bounds.
+  ///
+  /// This is based on [boundsWorld] and is intended for UI-like positioning.
+  Offset get topLeftWorld => boundsWorld.topLeft;
+  set topLeftWorld(Offset value) {
+    final delta = value - boundsWorld.topLeft;
+    if (delta == Offset.zero) return;
+    position = position + delta;
+  }
 
   Rect get _localRect => Rect.fromCenter(
     center: Offset.zero,

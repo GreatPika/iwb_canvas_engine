@@ -62,14 +62,60 @@ class SceneController extends ChangeNotifier {
   late final NodeId Function() _nodeIdGenerator;
   int _nodeIdSeed = 0;
 
-  CanvasMode mode = CanvasMode.move;
-  DrawTool drawTool = DrawTool.pen;
-  Color drawColor = SceneDefaults.penColors.first;
-  double penThickness = SceneDefaults.penThickness;
-  double highlighterThickness = SceneDefaults.highlighterThickness;
-  double lineThickness = SceneDefaults.penThickness;
-  double eraserThickness = SceneDefaults.eraserThickness;
-  double highlighterOpacity = SceneDefaults.highlighterOpacity;
+  CanvasMode _mode = CanvasMode.move;
+  DrawTool _drawTool = DrawTool.pen;
+  Color _drawColor = SceneDefaults.penColors.first;
+  double _penThickness = SceneDefaults.penThickness;
+  double _highlighterThickness = SceneDefaults.highlighterThickness;
+  double _lineThickness = SceneDefaults.penThickness;
+  double _eraserThickness = SceneDefaults.eraserThickness;
+  double _highlighterOpacity = SceneDefaults.highlighterOpacity;
+
+  CanvasMode get mode => _mode;
+
+  DrawTool get drawTool => _drawTool;
+
+  Color get drawColor => _drawColor;
+
+  double get penThickness => _penThickness;
+  set penThickness(double value) {
+    if (_penThickness == value) return;
+    _penThickness = value;
+    _markSceneGeometryChanged();
+    requestRepaintOncePerFrame();
+  }
+
+  double get highlighterThickness => _highlighterThickness;
+  set highlighterThickness(double value) {
+    if (_highlighterThickness == value) return;
+    _highlighterThickness = value;
+    _markSceneGeometryChanged();
+    requestRepaintOncePerFrame();
+  }
+
+  double get lineThickness => _lineThickness;
+  set lineThickness(double value) {
+    if (_lineThickness == value) return;
+    _lineThickness = value;
+    _markSceneGeometryChanged();
+    requestRepaintOncePerFrame();
+  }
+
+  double get eraserThickness => _eraserThickness;
+  set eraserThickness(double value) {
+    if (_eraserThickness == value) return;
+    _eraserThickness = value;
+    _markSceneGeometryChanged();
+    requestRepaintOncePerFrame();
+  }
+
+  double get highlighterOpacity => _highlighterOpacity;
+  set highlighterOpacity(double value) {
+    if (_highlighterOpacity == value) return;
+    _highlighterOpacity = value;
+    _markSceneGeometryChanged();
+    requestRepaintOncePerFrame();
+  }
 
   final LinkedHashSet<NodeId> _selectedNodeIds = LinkedHashSet<NodeId>();
   late final Set<NodeId> _selectedNodeIdsView = UnmodifiableSetView(
@@ -141,6 +187,25 @@ class SceneController extends ChangeNotifier {
   /// Current marquee selection rectangle in scene coordinates.
   Rect? get selectionRect => _selectionRect;
 
+  /// Axis-aligned world bounds of the current transformable selection.
+  ///
+  /// Returns `null` when no transformable, unlocked nodes are selected.
+  Rect? get selectionBoundsWorld {
+    final nodes = _selectedTransformableNodesInSceneOrder()
+        .where((node) => !node.isLocked)
+        .toList(growable: false);
+    if (nodes.isEmpty) return null;
+    Rect? bounds;
+    for (final node in nodes) {
+      final nodeBounds = node.boundsWorld;
+      bounds = bounds == null ? nodeBounds : bounds.expandToInclude(nodeBounds);
+    }
+    return bounds;
+  }
+
+  /// Center of [selectionBoundsWorld] when selection is non-empty.
+  Offset? get selectionCenterWorld => selectionBoundsWorld?.center;
+
   /// Pending first point for a two-tap line gesture, if any.
   Offset? get pendingLineStart => _pendingLineStart;
 
@@ -163,6 +228,25 @@ class SceneController extends ChangeNotifier {
   @visibleForTesting
   void debugSetSelectionRect(Rect? rect) {
     _selectionRect = rect;
+  }
+
+  /// Returns the first node with [id], or `null` if it does not exist.
+  SceneNode? getNode(NodeId id) => findNode(id)?.node;
+
+  /// Finds a node by [id] and returns its location in the scene.
+  ///
+  /// Returns `null` when the node is not present.
+  ({SceneNode node, int layerIndex, int nodeIndex})? findNode(NodeId id) {
+    for (var layerIndex = 0; layerIndex < scene.layers.length; layerIndex++) {
+      final layer = scene.layers[layerIndex];
+      for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
+        final node = layer.nodes[nodeIndex];
+        if (node.id == id) {
+          return (node: node, layerIndex: layerIndex, nodeIndex: nodeIndex);
+        }
+      }
+    }
+    return null;
   }
 
   NodeId _defaultNodeIdGenerator() {
@@ -195,13 +279,13 @@ class SceneController extends ChangeNotifier {
 
   /// Switches between move and draw modes.
   void setMode(CanvasMode value) {
-    if (mode == value) return;
-    if (mode == CanvasMode.move) {
+    if (_mode == value) return;
+    if (_mode == CanvasMode.move) {
       _resetDrag();
     } else {
       _resetDraw();
     }
-    mode = value;
+    _mode = value;
     _setSelectionRect(null, notify: false);
     _markSceneGeometryChanged();
     _notifyNow();
@@ -209,8 +293,8 @@ class SceneController extends ChangeNotifier {
 
   /// Changes the active drawing tool and resets draw state.
   void setDrawTool(DrawTool tool) {
-    if (drawTool == tool) return;
-    drawTool = tool;
+    if (_drawTool == tool) return;
+    _drawTool = tool;
     _resetDraw();
     _markSceneGeometryChanged();
     _notifyNow();
@@ -218,8 +302,8 @@ class SceneController extends ChangeNotifier {
 
   /// Sets the current drawing color.
   void setDrawColor(Color value) {
-    if (drawColor == value) return;
-    drawColor = value;
+    if (_drawColor == value) return;
+    _drawColor = value;
     _markSceneGeometryChanged();
     _notifyNow();
   }
@@ -271,6 +355,23 @@ class SceneController extends ChangeNotifier {
     }
     _markSceneStructuralChanged();
     _notifyNow();
+  }
+
+  /// Runs [fn] to mutate [scene] and schedules the appropriate updates.
+  ///
+  /// Prefer this helper over touching `scene.layers` directly:
+  /// - When [structural] is true (add/remove/reorder nodes/layers), this calls
+  ///   [notifySceneChanged] to restore minimal invariants (e.g. selection).
+  /// - When [structural] is false (geometry-only changes), this schedules a
+  ///   repaint once per frame.
+  void mutate(void Function(Scene scene) fn, {bool structural = false}) {
+    fn(scene);
+    if (structural) {
+      notifySceneChanged();
+      return;
+    }
+    _markSceneGeometryChanged();
+    requestRepaintOncePerFrame();
   }
 
   /// Adds [node] to the target layer and notifies listeners.
@@ -367,6 +468,37 @@ class SceneController extends ChangeNotifier {
     if (_selectedNodeIds.isEmpty) return;
     _setSelection(const <NodeId>[], notify: false);
     _notifyNow();
+  }
+
+  /// Replaces the selection with [nodeIds].
+  ///
+  /// This is intended for app-driven selection UIs (layers panel, object list).
+  void setSelection(Iterable<NodeId> nodeIds) {
+    _setSelection(nodeIds);
+  }
+
+  /// Toggles selection for a single node [id].
+  void toggleSelection(NodeId id) {
+    if (_selectedNodeIds.contains(id)) {
+      _setSelection(_selectedNodeIds.where((candidate) => candidate != id));
+    } else {
+      _setSelection(<NodeId>[..._selectedNodeIds, id]);
+    }
+  }
+
+  /// Selects all nodes in the scene.
+  ///
+  /// When [onlySelectable] is true, includes only nodes with `isSelectable`.
+  void selectAll({bool onlySelectable = true}) {
+    final ids = <NodeId>[];
+    for (final layer in scene.layers) {
+      for (final node in layer.nodes) {
+        if (!node.isVisible) continue;
+        if (onlySelectable && !node.isSelectable) continue;
+        ids.add(node.id);
+      }
+    }
+    _setSelection(ids);
   }
 
   /// Rotates the transformable selection by 90 degrees.

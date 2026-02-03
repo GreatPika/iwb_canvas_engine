@@ -359,4 +359,90 @@ void main() {
       throwsRangeError,
     );
   });
+
+  test('findNode and getNode locate nodes in layers', () {
+    final nodeA = RectNode(
+      id: 'a',
+      size: const Size(10, 10),
+      fillColor: const Color(0xFF000000),
+    );
+    final nodeB = RectNode(
+      id: 'b',
+      size: const Size(10, 10),
+      fillColor: const Color(0xFF000000),
+    );
+    final controller = SceneController(
+      scene: Scene(
+        layers: [
+          Layer(nodes: [nodeA]),
+          Layer(nodes: [nodeB]),
+        ],
+      ),
+    );
+    addTearDown(controller.dispose);
+
+    final foundA = controller.findNode('a');
+    expect(foundA, isNotNull);
+    expect(foundA!.layerIndex, 0);
+    expect(foundA.nodeIndex, 0);
+    expect(foundA.node.id, 'a');
+
+    final foundB = controller.findNode('b');
+    expect(foundB, isNotNull);
+    expect(foundB!.layerIndex, 1);
+    expect(foundB.nodeIndex, 0);
+    expect(controller.getNode('b'), same(nodeB));
+    expect(controller.getNode('missing'), isNull);
+  });
+
+  testWidgets('mutate structural uses notifySceneChanged', (tester) async {
+    final controller = SceneController(scene: Scene(layers: [Layer()]));
+    addTearDown(controller.dispose);
+
+    var notifications = 0;
+    controller.addListener(() => notifications += 1);
+
+    controller.mutate((scene) {
+      scene.layers.first.nodes.add(
+        RectNode(
+          id: 'r1',
+          size: const Size(10, 10),
+          fillColor: const Color(0xFF000000),
+        )..position = const Offset(0, 0),
+      );
+    }, structural: true);
+
+    await tester.pump();
+
+    expect(controller.scene.layers.first.nodes.single.id, 'r1');
+    expect(notifications, greaterThan(0));
+  });
+
+  testWidgets('mutate geometry-only schedules repaint', (tester) async {
+    final node = RectNode(
+      id: 'r1',
+      size: const Size(10, 10),
+      fillColor: const Color(0xFF000000),
+    )..position = const Offset(0, 0);
+    final controller = SceneController(
+      scene: Scene(
+        layers: [
+          Layer(nodes: [node]),
+        ],
+      ),
+    );
+    addTearDown(controller.dispose);
+
+    var notifications = 0;
+    controller.addListener(() => notifications += 1);
+
+    controller.mutate((scene) {
+      final rect = scene.layers.first.nodes.single as RectNode;
+      rect.position = const Offset(10, 0);
+    });
+    expect(tester.binding.hasScheduledFrame, isTrue);
+
+    await tester.pump();
+    expect(notifications, greaterThan(0));
+  });
 }

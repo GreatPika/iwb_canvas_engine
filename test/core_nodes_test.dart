@@ -1,23 +1,51 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/advanced.dart';
 
 void main() {
-  test('ImageNode aabb centers on position', () {
+  test('ImageNode boundsWorld centers on position', () {
     final node = ImageNode(
       id: 'img-1',
       imageId: 'asset:sample',
       size: const Size(10, 20),
     )..position = const Offset(5, 5);
 
-    final rect = node.aabb;
+    final rect = node.boundsWorld;
     expect(rect.center, const Offset(5, 5));
     expect(rect.width, 10);
     expect(rect.height, 20);
   });
 
-  test('LineNode aabb inflates by thickness', () {
+  test('RectNode.fromTopLeftWorld positions bounds by world top-left', () {
+    final node = RectNode.fromTopLeftWorld(
+      id: 'rect-1',
+      size: const Size(100, 50),
+      topLeftWorld: const Offset(10, 20),
+      fillColor: const Color(0xFF000000),
+    );
+
+    expect(node.topLeftWorld, const Offset(10, 20));
+    expect(node.boundsWorld.size, const Size(100, 50));
+  });
+
+  test('RectNode.topLeftWorld setter moves bounds top-left', () {
+    final node =
+        RectNode(
+            id: 'rect-1',
+            size: const Size(100, 50),
+            fillColor: const Color(0xFF000000),
+          )
+          ..position = const Offset(0, 0)
+          ..rotationDeg = 45;
+
+    node.topLeftWorld = const Offset(30, 40);
+
+    expect(node.boundsWorld.topLeft.dx, closeTo(30, 1e-9));
+    expect(node.boundsWorld.topLeft.dy, closeTo(40, 1e-9));
+  });
+
+  test('LineNode boundsWorld inflates by thickness', () {
     final node = LineNode(
       id: 'line-1',
       start: const Offset(0, 0),
@@ -26,14 +54,14 @@ void main() {
       color: const Color(0xFF000000),
     );
 
-    final rect = node.aabb;
+    final rect = node.boundsWorld;
     expect(rect.left, -2);
     expect(rect.right, 12);
     expect(rect.top, -2);
     expect(rect.bottom, 2);
   });
 
-  test('StrokeNode aabb inflates by thickness', () {
+  test('StrokeNode boundsWorld inflates by thickness', () {
     final node = StrokeNode(
       id: 'stroke-1',
       points: const [Offset(0, 0), Offset(10, 10)],
@@ -41,7 +69,7 @@ void main() {
       color: const Color(0xFF000000),
     );
 
-    final rect = node.aabb;
+    final rect = node.boundsWorld;
     expect(rect.left, -3);
     expect(rect.top, -3);
     expect(rect.right, 13);
@@ -93,7 +121,7 @@ void main() {
   });
 
   test(
-    'PathNode.buildLocalPath applies fill rule and aabb uses transforms',
+    'PathNode.buildLocalPath applies fill rule and boundsWorld uses transforms',
     () {
       final node =
           PathNode(
@@ -109,7 +137,7 @@ void main() {
       final path = node.buildLocalPath();
       expect(path, isNotNull);
       expect(path!.fillType, PathFillType.evenOdd);
-      expect(node.aabb, isNot(Rect.zero));
+      expect(node.boundsWorld, isNot(Rect.zero));
     },
   );
 

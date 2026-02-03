@@ -30,9 +30,6 @@ const int schemaVersionWrite = 2;
 /// JSON schema versions accepted by this package.
 const Set<int> schemaVersionsRead = {2};
 
-/// Backwards-compatible alias for the current schema version.
-const int schemaVersion = schemaVersionWrite;
-
 /// Encodes [scene] to a JSON string.
 String encodeSceneToJson(Scene scene) {
   return jsonEncode(encodeScene(scene));

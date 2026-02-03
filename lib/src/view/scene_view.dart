@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 
 import '../input/pointer_input.dart';
 import '../input/scene_controller.dart';
 import '../render/scene_painter.dart';
+
+ui.Image? _defaultImageResolver(String _) => null;
 
 /// A self-contained widget that renders a [SceneController] and feeds it input.
 ///
@@ -20,14 +23,21 @@ class SceneView extends StatefulWidget {
   /// empty scene. Use [onControllerReady] to access the internal controller once
   /// it is created.
   ///
+  /// When [controller] is null, [pointerSettings], [dragStartSlop], and
+  /// [nodeIdGenerator] are used to configure the internal controller.
+  /// These parameters are ignored when an external [controller] is provided.
+  ///
   /// If [staticLayerCache] is null, the view creates and owns an internal cache
   /// and disposes it when the view is disposed. If a cache is provided, the
   /// caller owns it and must dispose it.
   const SceneView({
     this.controller,
-    required this.imageResolver,
+    this.imageResolver,
     this.staticLayerCache,
     this.onControllerReady,
+    this.pointerSettings,
+    this.dragStartSlop,
+    this.nodeIdGenerator,
     this.selectionColor = const Color(0xFF1565C0),
     this.selectionStrokeWidth = 1,
     this.gridStrokeWidth = 1,
@@ -35,9 +45,12 @@ class SceneView extends StatefulWidget {
   });
 
   final SceneController? controller;
-  final ImageResolver imageResolver;
+  final ImageResolver? imageResolver;
   final SceneStaticLayerCache? staticLayerCache;
   final ValueChanged<SceneController>? onControllerReady;
+  final PointerInputSettings? pointerSettings;
+  final double? dragStartSlop;
+  final String Function()? nodeIdGenerator;
   final Color selectionColor;
   final double selectionStrokeWidth;
   final double gridStrokeWidth;
@@ -115,7 +128,7 @@ class _SceneViewState extends State<SceneView> {
       child: CustomPaint(
         painter: ScenePainter(
           controller: _controller,
-          imageResolver: widget.imageResolver,
+          imageResolver: widget.imageResolver ?? _defaultImageResolver,
           staticLayerCache: _staticLayerCache,
           selectionColor: widget.selectionColor,
           selectionStrokeWidth: widget.selectionStrokeWidth,
@@ -166,7 +179,11 @@ class _SceneViewState extends State<SceneView> {
   void _ensureController() {
     if (widget.controller != null) return;
     if (_ownedController != null) return;
-    _ownedController = SceneController();
+    _ownedController = SceneController(
+      pointerSettings: widget.pointerSettings,
+      dragStartSlop: widget.dragStartSlop,
+      nodeIdGenerator: widget.nodeIdGenerator,
+    );
     widget.onControllerReady?.call(_ownedController!);
   }
 

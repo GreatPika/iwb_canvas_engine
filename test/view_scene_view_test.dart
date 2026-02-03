@@ -1,7 +1,7 @@
 import 'package:flutter/rendering.dart' as rendering;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/advanced.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -19,10 +19,7 @@ void main() {
           child: SizedBox(
             width: 64,
             height: 64,
-            child: SceneView(
-              controller: controller,
-              imageResolver: (_) => null,
-            ),
+            child: SceneView(controller: controller),
           ),
         ),
       );
@@ -34,6 +31,7 @@ void main() {
       );
       final painter = renderObject.painter as ScenePainter;
       expect(painter.controller, same(controller));
+      expect(painter.imageResolver('missing'), isNull);
 
       controller.addNode(
         RectNode(
@@ -51,10 +49,33 @@ void main() {
     },
   );
 
+  testWidgets('SceneView can omit imageResolver', (tester) async {
+    final controller = SceneController(scene: Scene(layers: [Layer()]));
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 64,
+          height: 64,
+          child: SceneView(controller: controller),
+        ),
+      ),
+    );
+
+    expect(find.byType(SceneView), findsOneWidget);
+  });
+
   testWidgets('SceneView creates internal controller when missing', (
     tester,
   ) async {
     SceneController? createdController;
+    const settings = PointerInputSettings(
+      tapSlop: 12,
+      doubleTapSlop: 18,
+      doubleTapMaxDelayMs: 333,
+    );
 
     await tester.pumpWidget(
       Directionality(
@@ -63,7 +84,7 @@ void main() {
           width: 300,
           height: 300,
           child: SceneView(
-            imageResolver: (_) => null,
+            pointerSettings: settings,
             onControllerReady: (controller) {
               createdController = controller;
               controller.addNode(
@@ -80,6 +101,7 @@ void main() {
     );
 
     expect(createdController, isNotNull);
+    expect(createdController!.pointerSettings, same(settings));
     expect(createdController!.selectedNodeIds, isEmpty);
 
     await tester.tapAt(const Offset(150, 150));

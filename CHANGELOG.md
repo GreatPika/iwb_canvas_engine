@@ -1,5 +1,19 @@
 ## Unreleased
 
+- Breaking: remove legacy `package:iwb_canvas_engine/iwb_canvas_engine.dart`
+  entrypoint; use `basic.dart` or `advanced.dart`.
+- `SceneView`: `imageResolver` is now optional; add optional configuration
+  parameters (`pointerSettings`, `dragStartSlop`, `nodeIdGenerator`) for the
+  internally owned controller.
+- `SceneController`: breaking: remove direct setters for `mode/drawTool/drawColor`
+  (use `setMode/setDrawTool/setDrawColor`); add selection helpers
+  (`setSelection`, `toggleSelection`, `selectAll`) and selection geometry getters
+  (`selectionBoundsWorld`, `selectionCenterWorld`); add `mutate(...)` and
+  `getNode/findNode`.
+- Nodes: add AABB-based `topLeftWorld` / `fromTopLeftWorld` helpers for
+  `RectNode`, `ImageNode`, and `TextNode`.
+- Breaking: remove legacy aliases `SceneNode.aabb` and `schemaVersion`.
+- Action events: document payload schemas and add typed payload accessors.
 - More accurate hit-test for rotated rect/image/text nodes; `hitPadding` now
   affects them.
 - Internal: tighten repaint notification invariants and add a debug-only guard

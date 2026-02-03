@@ -20,7 +20,6 @@ Prefer importing the smallest surface area that fits your use case:
 
 - **Recommended:** `package:iwb_canvas_engine/basic.dart` — common “happy path”.
 - **Advanced:** `package:iwb_canvas_engine/advanced.dart` — low-level rendering/input/hit-test exports.
-- **Legacy (0.x):** `package:iwb_canvas_engine/iwb_canvas_engine.dart` — full export surface kept for compatibility.
 
 ---
 
@@ -39,7 +38,6 @@ class CanvasScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SceneView(
-        imageResolver: (_) => null,
         onControllerReady: (controller) {
           controller.addNode(
             RectNode(
@@ -85,7 +83,7 @@ class _CanvasScreenState extends State<CanvasScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return SceneView(controller: controller, imageResolver: (_) => null);
+    return SceneView(controller: controller);
   }
 }
 ```
@@ -93,6 +91,22 @@ class _CanvasScreenState extends State<CanvasScreen> {
 ---
 
 ## Core mental model (read this before coding)
+
+## Stability and compatibility
+
+This package follows a strict additive-only compatibility rule for public
+protocols:
+
+- Existing JSON fields and action payload keys must not change meaning or type.
+- New fields/keys may be added in a backwards-compatible way.
+
+Stable contracts (expected to remain compatible as the package evolves):
+
+- `Transform2D` JSON/event format: `{a,b,c,d,tx,ty}`.
+- JSON node type identifiers (strings written by the codec).
+- `ActionType` values and the documented `ActionCommitted.payload` schemas.
+- `SceneController` public command methods and selection helpers.
+- `SceneView` widget contract (controller ownership, coordinate conversion).
 
 ### Scene graph
 
@@ -172,11 +186,14 @@ Relevant APIs:
 What you want: directly edit `controller.scene` (e.g., bulk changes), then restore minimal invariants.
 
 ```dart
-// Escape hatch: mutate the scene model directly.
-controller.scene.layers.first.nodes.clear();
+// Preferred: use mutate(...) to schedule the right updates.
+controller.mutate((scene) {
+  scene.layers.first.nodes.clear();
+}, structural: true);
 
-// IMPORTANT: let the controller restore minimal invariants (selection cleanup, etc.).
-controller.notifySceneChanged();
+// Escape hatch:
+// If you mutate the model directly, call notifySceneChanged() for structural
+// changes, or requestRepaintOncePerFrame() for geometry-only changes.
 ```
 
 Gotchas:
@@ -185,11 +202,13 @@ Gotchas:
 
 Relevant APIs:
 - `SceneController.scene` + `SceneController.notifySceneChanged()` — `lib/src/input/scene_controller.dart`
+- `SceneController.mutate(...)` — `lib/src/input/scene_controller.dart`
 - `Scene/Layer` — `lib/src/core/scene.dart`
 
 ### 3) Selection basics
 
-What you want: react to selection changes and clear selection.
+What you want: react to selection changes, drive selection from your app UI,
+and read selection geometry.
 
 ```dart
 final selected = controller.selectedNodeIds; // snapshot view
@@ -198,6 +217,14 @@ if (selected.isEmpty) {
 }
 
 controller.clearSelection();
+
+// App-driven selection helpers (useful for layer/object panels).
+controller.setSelection(['node-1', 'node-2']);
+controller.toggleSelection('node-3');
+controller.selectAll();
+
+final bounds = controller.selectionBoundsWorld;
+final center = controller.selectionCenterWorld;
 ```
 
 Gotchas:
@@ -206,6 +233,8 @@ Gotchas:
 
 Relevant APIs:
 - `SceneController.selectedNodeIds`, `clearSelection()` — `lib/src/input/scene_controller.dart`
+- `SceneController.setSelection/toggleSelection/selectAll` — `lib/src/input/scene_controller.dart`
+- `SceneController.selectionBoundsWorld/selectionCenterWorld` — `lib/src/input/scene_controller.dart`
 - Flags: `isSelectable/isLocked/isTransformable` — `lib/src/core/nodes.dart`
 
 ### 4) Transform selection + undo/redo integration via `actions`
@@ -229,10 +258,12 @@ Gotchas:
 - `actions` is a **synchronous broadcast stream**; handlers must be fast (no heavy/async work).
 - `ActionType.transform` payload uses `{delta: {a,b,c,d,tx,ty}}`.
 - `ActionType.move` payload uses `{sourceLayerIndex: int, targetLayerIndex: int}`.
+- `ActionType.drawStroke/drawHighlighter/drawLine` payload uses `{tool: String, color: int, thickness: double}`.
+- `ActionType.erase` payload uses `{eraserThickness: double}`.
 
 Relevant APIs:
 - `SceneController.actions` — `lib/src/input/scene_controller.dart`
-- `ActionCommitted`, `ActionType`, `tryTransformDelta()` — `lib/src/input/action_events.dart`
+- `ActionCommitted`, `ActionType`, payload helpers — `lib/src/input/action_events.dart`
 - `Transform2D` — `lib/src/core/transform2d.dart`
 
 ### 5) Draw mode basics (pen/highlighter/line/eraser)
@@ -520,7 +551,7 @@ Source of truth: `lib/src/serialization/scene_codec.dart`.
 
 - `lib/basic.dart` — minimal public surface (recommended)
 - `lib/advanced.dart` — full export surface
-- `lib/iwb_canvas_engine.dart` — legacy full export surface (0.x)
+- `lib/advanced.dart` — full export surface
 
 ### Primary integration
 

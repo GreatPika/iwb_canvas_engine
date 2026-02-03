@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/advanced.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -16,7 +16,7 @@ void main() {
     final scene = Scene(layers: [Layer()]);
     final controller = drawController(scene);
     controller.setDrawTool(DrawTool.pen);
-    controller.drawColor = const Color(0xFF123456);
+    controller.setDrawColor(const Color(0xFF123456));
     controller.penThickness = 5;
 
     final actions = <ActionCommitted>[];
@@ -62,7 +62,7 @@ void main() {
     final scene = Scene(layers: [Layer()]);
     final controller = drawController(scene);
     controller.setDrawTool(DrawTool.highlighter);
-    controller.drawColor = const Color(0xFF00FF00);
+    controller.setDrawColor(const Color(0xFF00FF00));
     controller.highlighterThickness = 12;
     controller.highlighterOpacity = 0.4;
 

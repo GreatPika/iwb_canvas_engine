@@ -32,4 +32,3 @@ migrate_working_dir/
 
 # Internal project docs (kept out of git; see .pubignore for pub.dev packaging).
 DEVELOPMENT_PLAN.md
-TZ.md

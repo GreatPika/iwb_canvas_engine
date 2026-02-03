@@ -50,8 +50,6 @@ Prefer importing the smallest API surface that fits your use case:
 - `package:iwb_canvas_engine/basic.dart` — minimal “happy path” API (recommended).
 - `package:iwb_canvas_engine/advanced.dart` — full export surface (low-level
   painting, hit-testing, pointer tracking, etc.).
-- `package:iwb_canvas_engine/iwb_canvas_engine.dart` — legacy full export
-  surface kept for 0.x compatibility; may change before 1.0.
 
 ## Core concepts
 
@@ -94,6 +92,7 @@ final controller = SceneController(scene: scene);
 
 SceneView(
   controller: controller,
+  // Optional. Provide when you use ImageNode.
   imageResolver: (imageId) => null,
 );
 ```
@@ -105,7 +104,6 @@ an empty `Scene()` by default.
 
 ```dart
 SceneView(
-  imageResolver: (imageId) => null,
   onControllerReady: (controller) {
     controller.addNode(
       RectNode(
@@ -118,6 +116,16 @@ SceneView(
 );
 ```
 
+When `controller` is omitted, you can configure the internally owned controller:
+
+```dart
+SceneView(
+  pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 450),
+  dragStartSlop: 12,
+  nodeIdGenerator: () => 'node-${DateTime.now().microsecondsSinceEpoch}',
+);
+```
+
 ### Advanced view (external controller)
 
 ```dart
@@ -125,7 +133,6 @@ final controller = SceneController(scene: scene);
 
 SceneView(
   controller: controller,
-  imageResolver: (imageId) => null,
 );
 ```
 
@@ -149,17 +156,23 @@ controller.editTextRequests.listen((event) {
 
 SceneView(
   controller: controller,
-  imageResolver: (imageId) => null,
 );
 ```
 
 For `ActionCommitted.payload`:
 - `transform`: `{delta: {a,b,c,d,tx,ty}}`
 - `move` (layer move): `{sourceLayerIndex: int, targetLayerIndex: int}`
+- `drawStroke/drawHighlighter/drawLine`: `{tool: String, color: int, thickness: double}`
+- `erase`: `{eraserThickness: double}`
+
+Payload keys are additive-only: existing keys must keep their meaning and type.
 
 Decode helpers:
 - `Transform2D.fromJsonMap(event.payload!['delta'] as Map<String, Object?>)`
 - `event.tryTransformDelta()`
+- `event.tryMoveLayerIndices()`
+- `event.tryDrawStyle()`
+- `event.tryEraserThickness()`
 
 Notes:
 
@@ -186,8 +199,17 @@ controller.moveNode('rect-2', targetLayerIndex: 0);
 controller.removeNode('rect-2');
 ```
 
-If you mutate `controller.scene` directly, call `controller.notifySceneChanged()`
-afterwards to let the controller restore minimal invariants (e.g. selection).
+If you mutate `controller.scene` directly, prefer using `controller.mutate(...)`:
+
+```dart
+controller.mutate((scene) {
+  scene.layers.first.nodes.add(myNode);
+}, structural: true);
+```
+
+If you bypass controller helpers and mutate `controller.scene` directly, call
+the appropriate update method afterwards to restore minimal invariants and/or
+schedule repaint.
 
 Notes about direct mutations:
 
@@ -211,9 +233,6 @@ raw pointer tracking), import the full export surface:
 ```dart
 import 'package:iwb_canvas_engine/advanced.dart';
 ```
-
-For backward compatibility, `package:iwb_canvas_engine/iwb_canvas_engine.dart`
-still exports the full surface in 0.x.
 
 ### Input limitations
 

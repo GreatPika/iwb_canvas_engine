@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/advanced.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -61,6 +61,88 @@ void main() {
     controller.clearSelection();
 
     expect(controller.selectedNodeIds, isEmpty);
+    expect(notifications, greaterThan(0));
+  });
+
+  test('selectionBoundsWorld ignores locked nodes', () {
+    final left = RectNode(
+      id: 'left',
+      size: const Size(10, 10),
+      fillColor: const Color(0xFF000000),
+    )..position = const Offset(0, 0);
+    final right = RectNode(
+      id: 'right',
+      size: const Size(10, 10),
+      fillColor: const Color(0xFF000000),
+    )..position = const Offset(20, 0);
+    final locked = RectNode(
+      id: 'locked',
+      size: const Size(10, 10),
+      fillColor: const Color(0xFF000000),
+      isLocked: true,
+    )..position = const Offset(1000, 0);
+    final scene = Scene(
+      layers: [
+        Layer(nodes: [left, right, locked]),
+      ],
+    );
+    final controller = SceneController(scene: scene, dragStartSlop: 0);
+    addTearDown(controller.dispose);
+
+    controller.setSelection([left.id, right.id, locked.id]);
+
+    expect(controller.selectionBoundsWorld, const Rect.fromLTRB(-5, -5, 25, 5));
+    expect(controller.selectionCenterWorld, const Offset(10, 0));
+  });
+
+  test(
+    'selectionBoundsWorld is null for selection without transformable nodes',
+    () {
+      final locked = RectNode(
+        id: 'locked',
+        size: const Size(10, 10),
+        fillColor: const Color(0xFF000000),
+        isLocked: true,
+      )..position = const Offset(0, 0);
+      final scene = Scene(
+        layers: [
+          Layer(nodes: [locked]),
+        ],
+      );
+      final controller = SceneController(scene: scene, dragStartSlop: 0);
+      addTearDown(controller.dispose);
+
+      controller.setSelection([locked.id]);
+
+      expect(controller.selectionBoundsWorld, isNull);
+      expect(controller.selectionCenterWorld, isNull);
+    },
+  );
+
+  test('setMode clears selection rect and switches mode', () {
+    final controller = SceneController(scene: Scene(layers: [Layer()]));
+    addTearDown(controller.dispose);
+
+    controller.debugSetSelectionRect(const Rect.fromLTRB(0, 0, 10, 10));
+    expect(controller.selectionRect, isNotNull);
+
+    controller.setMode(CanvasMode.draw);
+
+    expect(controller.mode, CanvasMode.draw);
+    expect(controller.selectionRect, isNull);
+  });
+
+  testWidgets('tool parameter setter schedules repaint', (tester) async {
+    final controller = SceneController(scene: Scene(layers: [Layer()]));
+    addTearDown(controller.dispose);
+
+    var notifications = 0;
+    controller.addListener(() => notifications += 1);
+
+    controller.penThickness = controller.penThickness + 1;
+    expect(tester.binding.hasScheduledFrame, isTrue);
+
+    await tester.pump();
     expect(notifications, greaterThan(0));
   });
 

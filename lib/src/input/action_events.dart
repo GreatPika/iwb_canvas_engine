@@ -69,4 +69,66 @@ extension ActionCommittedDelta on ActionCommitted {
       return null;
     }
   }
+
+  /// Parses layer move metadata from the action payload.
+  ///
+  /// Expected schema: `{sourceLayerIndex: int, targetLayerIndex: int}`.
+  ({int sourceLayerIndex, int targetLayerIndex})? tryMoveLayerIndices() {
+    final payload = this.payload;
+    if (payload == null) return null;
+
+    int? tryInt(Object? value) {
+      if (value is int) return value;
+      if (value is num) {
+        final asInt = value.toInt();
+        if (value == asInt) return asInt;
+      }
+      return null;
+    }
+
+    final source = tryInt(payload['sourceLayerIndex']);
+    final target = tryInt(payload['targetLayerIndex']);
+    if (source == null || target == null) return null;
+    return (sourceLayerIndex: source, targetLayerIndex: target);
+  }
+
+  /// Parses common draw style metadata from the action payload.
+  ///
+  /// Expected schema: `{tool: String, color: int, thickness: double}`.
+  ({String tool, int colorArgb, double thickness})? tryDrawStyle() {
+    final payload = this.payload;
+    if (payload == null) return null;
+
+    int? tryInt(Object? value) {
+      if (value is int) return value;
+      if (value is num) {
+        final asInt = value.toInt();
+        if (value == asInt) return asInt;
+      }
+      return null;
+    }
+
+    double? tryDouble(Object? value) {
+      if (value is num) return value.toDouble();
+      return null;
+    }
+
+    final tool = payload['tool'];
+    if (tool is! String) return null;
+    final colorArgb = tryInt(payload['color']);
+    final thickness = tryDouble(payload['thickness']);
+    if (colorArgb == null || thickness == null) return null;
+    return (tool: tool, colorArgb: colorArgb, thickness: thickness);
+  }
+
+  /// Parses eraser metadata from the action payload.
+  ///
+  /// Expected schema: `{eraserThickness: double}`.
+  double? tryEraserThickness() {
+    final payload = this.payload;
+    if (payload == null) return null;
+    final thickness = payload['eraserThickness'];
+    if (thickness is num) return thickness.toDouble();
+    return null;
+  }
 }
