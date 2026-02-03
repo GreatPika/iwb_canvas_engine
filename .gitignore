@@ -31,6 +31,5 @@ migrate_working_dir/
 /coverage/
 
 # Internal project docs (kept out of git; see .pubignore for pub.dev packaging).
-AGENTS.md
 DEVELOPMENT_PLAN.md
 TZ.md
