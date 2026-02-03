@@ -10,6 +10,7 @@ Live demo and docs:
 
 - Web demo: https://greatpika.github.io/iwb_canvas_engine/demo/
 - API reference: https://greatpika.github.io/iwb_canvas_engine/api/
+- API usage guide: `API_GUIDE.md`
 
 ## What it is / What it isn't
 
