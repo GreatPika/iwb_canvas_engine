@@ -205,6 +205,26 @@ void main() {
     );
   });
 
+  test(
+    'hitTestNode falls back to world AABB for non-invertible transforms',
+    () {
+      final node = RectNode(id: 'rect-singular', size: const Size(100, 40))
+        ..transform = const Transform2D(
+          a: 1,
+          b: 2,
+          c: 1,
+          d: 2,
+          tx: 100,
+          ty: -50,
+        );
+
+      expect(node.transform.invert(), isNull);
+
+      final point = node.boundsWorld.center;
+      expect(hitTestNode(point, node), isTrue);
+    },
+  );
+
   test('hitTestNode respects PathNode shape and transforms', () {
     final node =
         PathNode(
