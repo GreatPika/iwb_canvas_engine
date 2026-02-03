@@ -24,6 +24,22 @@ PointerSample sample({
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  testWidgets('style setters schedule a repaint notification', (tester) async {
+    final controller = SceneController(scene: Scene(layers: [Layer()]));
+    addTearDown(controller.dispose);
+
+    var notifications = 0;
+    controller.addListener(() => notifications++);
+
+    controller.highlighterThickness = controller.highlighterThickness + 1;
+    await pumpFrame(tester);
+    expect(notifications, 1);
+
+    controller.highlighterOpacity = controller.highlighterOpacity + 0.1;
+    await pumpFrame(tester);
+    expect(notifications, 2);
+  });
+
   testWidgets('hot paths coalesce draw repaint requests to one per frame', (
     tester,
   ) async {

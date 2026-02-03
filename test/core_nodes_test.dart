@@ -4,6 +4,73 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/advanced.dart';
 
 void main() {
+  test('ImageNode.fromTopLeftWorld positions bounds by world top-left', () {
+    final node = ImageNode.fromTopLeftWorld(
+      id: 'img-1',
+      imageId: 'asset:sample',
+      size: const Size(100, 50),
+      topLeftWorld: const Offset(10, 20),
+    );
+
+    expect(node.topLeftWorld, const Offset(10, 20));
+    expect(node.boundsWorld.size, const Size(100, 50));
+  });
+
+  test('ImageNode.topLeftWorld setter is a no-op for same value', () {
+    final node = ImageNode.fromTopLeftWorld(
+      id: 'img-1',
+      imageId: 'asset:sample',
+      size: const Size(100, 50),
+      topLeftWorld: const Offset(10, 20),
+    );
+
+    final beforePosition = node.position;
+    node.topLeftWorld = node.topLeftWorld;
+    expect(node.position, beforePosition);
+  });
+
+  test('ImageNode.topLeftWorld setter moves bounds top-left', () {
+    final node = ImageNode.fromTopLeftWorld(
+      id: 'img-1',
+      imageId: 'asset:sample',
+      size: const Size(100, 50),
+      topLeftWorld: const Offset(10, 20),
+    );
+
+    node.topLeftWorld = const Offset(30, 40);
+
+    expect(node.boundsWorld.topLeft.dx, closeTo(30, 1e-9));
+    expect(node.boundsWorld.topLeft.dy, closeTo(40, 1e-9));
+  });
+
+  test('TextNode.fromTopLeftWorld positions bounds by world top-left', () {
+    final node = TextNode.fromTopLeftWorld(
+      id: 'txt-1',
+      text: 'Hello',
+      size: const Size(100, 50),
+      topLeftWorld: const Offset(10, 20),
+      color: const Color(0xFF000000),
+    );
+
+    expect(node.topLeftWorld, const Offset(10, 20));
+    expect(node.boundsWorld.size, const Size(100, 50));
+  });
+
+  test('TextNode.topLeftWorld setter moves bounds top-left', () {
+    final node = TextNode.fromTopLeftWorld(
+      id: 'txt-1',
+      text: 'Hello',
+      size: const Size(100, 50),
+      topLeftWorld: const Offset(10, 20),
+      color: const Color(0xFF000000),
+    );
+
+    node.topLeftWorld = const Offset(30, 40);
+
+    expect(node.boundsWorld.topLeft.dx, closeTo(30, 1e-9));
+    expect(node.boundsWorld.topLeft.dy, closeTo(40, 1e-9));
+  });
+
   test('ImageNode boundsWorld centers on position', () {
     final node = ImageNode(
       id: 'img-1',
@@ -43,6 +110,20 @@ void main() {
 
     expect(node.boundsWorld.topLeft.dx, closeTo(30, 1e-9));
     expect(node.boundsWorld.topLeft.dy, closeTo(40, 1e-9));
+  });
+
+  test('TextNode.topLeftWorld setter is a no-op for same value', () {
+    final node = TextNode.fromTopLeftWorld(
+      id: 'txt-1',
+      text: 'Hello',
+      size: const Size(100, 50),
+      topLeftWorld: const Offset(10, 20),
+      color: const Color(0xFF000000),
+    );
+
+    final beforePosition = node.position;
+    node.topLeftWorld = node.topLeftWorld;
+    expect(node.position, beforePosition);
   });
 
   test('LineNode boundsWorld inflates by thickness', () {

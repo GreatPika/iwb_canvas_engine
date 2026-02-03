@@ -65,4 +65,69 @@ void main() {
     expect(event.tryDrawStyle(), isNull);
     expect(event.tryEraserThickness(), isNull);
   });
+
+  test('tryMoveLayerIndices accepts num values that are integral', () {
+    final event = ActionCommitted(
+      actionId: 'a4',
+      type: ActionType.move,
+      nodeIds: const ['n1'],
+      timestampMs: 0,
+      payload: const <String, Object?>{
+        'sourceLayerIndex': 1.0,
+        'targetLayerIndex': 3.0,
+      },
+    );
+
+    expect(event.tryMoveLayerIndices(), (
+      sourceLayerIndex: 1,
+      targetLayerIndex: 3,
+    ));
+  });
+
+  test('tryMoveLayerIndices rejects non-integral num values', () {
+    final event = ActionCommitted(
+      actionId: 'a5',
+      type: ActionType.move,
+      nodeIds: const ['n1'],
+      timestampMs: 0,
+      payload: const <String, Object?>{
+        'sourceLayerIndex': 1.5,
+        'targetLayerIndex': 3.0,
+      },
+    );
+
+    expect(event.tryMoveLayerIndices(), isNull);
+  });
+
+  test('tryDrawStyle accepts num color values that are integral', () {
+    final event = ActionCommitted(
+      actionId: 'a6',
+      type: ActionType.drawStroke,
+      nodeIds: const ['n1'],
+      timestampMs: 0,
+      payload: const <String, Object?>{
+        'tool': 'pen',
+        'color': 1.0,
+        'thickness': 3,
+      },
+    );
+
+    expect(event.tryDrawStyle(), (tool: 'pen', colorArgb: 1, thickness: 3.0));
+  });
+
+  test('tryDrawStyle rejects non-integral num color values', () {
+    final event = ActionCommitted(
+      actionId: 'a7',
+      type: ActionType.drawStroke,
+      nodeIds: const ['n1'],
+      timestampMs: 0,
+      payload: const <String, Object?>{
+        'tool': 'pen',
+        'color': 1.5,
+        'thickness': 3,
+      },
+    );
+
+    expect(event.tryDrawStyle(), isNull);
+  });
 }

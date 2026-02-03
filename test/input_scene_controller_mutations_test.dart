@@ -255,6 +255,81 @@ void main() {
     expect(controller.selectedNodeIds, contains('r1'));
   });
 
+  testWidgets('toggleSelection toggles selection for a node', (tester) async {
+    final node = RectNode(
+      id: 'r1',
+      size: const Size(10, 10),
+      fillColor: const Color(0xFF000000),
+    )..position = const Offset(0, 0);
+    final controller = SceneController(
+      scene: Scene(
+        layers: [
+          Layer(nodes: [node]),
+        ],
+      ),
+    );
+    addTearDown(controller.dispose);
+
+    var notifications = 0;
+    controller.addListener(() => notifications++);
+
+    expect(controller.selectedNodeIds, isEmpty);
+
+    controller.toggleSelection('r1');
+    await tester.pump();
+    expect(controller.selectedNodeIds, contains('r1'));
+
+    controller.toggleSelection('r1');
+    await tester.pump();
+    expect(controller.selectedNodeIds, isEmpty);
+
+    expect(notifications, 2);
+  });
+
+  testWidgets('selectAll respects visibility and selectability', (
+    tester,
+  ) async {
+    final selectableVisible = RectNode(
+      id: 'n1',
+      size: const Size(10, 10),
+      fillColor: const Color(0xFF000000),
+      isSelectable: true,
+      isVisible: true,
+    )..position = const Offset(0, 0);
+    final notSelectableVisible = RectNode(
+      id: 'n2',
+      size: const Size(10, 10),
+      fillColor: const Color(0xFF000000),
+      isSelectable: false,
+      isVisible: true,
+    )..position = const Offset(20, 0);
+    final selectableHidden = RectNode(
+      id: 'n3',
+      size: const Size(10, 10),
+      fillColor: const Color(0xFF000000),
+      isSelectable: true,
+      isVisible: false,
+    )..position = const Offset(40, 0);
+
+    final controller = SceneController(
+      scene: Scene(
+        layers: [
+          Layer(nodes: [selectableVisible, notSelectableVisible]),
+          Layer(nodes: [selectableHidden]),
+        ],
+      ),
+    );
+    addTearDown(controller.dispose);
+
+    controller.selectAll();
+    await tester.pump();
+    expect(controller.selectedNodeIds, {'n1'});
+
+    controller.selectAll(onlySelectable: false);
+    await tester.pump();
+    expect(controller.selectedNodeIds, {'n1', 'n2'});
+  });
+
   test(
     'moveNode moves node across layers, keeps selection, emits move action',
     () {
