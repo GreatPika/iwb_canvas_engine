@@ -240,6 +240,26 @@ void main() {
     expect(scene.background.color, const Color(0xFF112233));
   });
 
+  test('decodeScene rejects non-object naturalSize for image nodes', () {
+    final nodeJson = _baseNodeJson(id: 'img-1', type: 'image')
+      ..addAll(<String, dynamic>{
+        'imageId': 'image-1',
+        'size': <String, dynamic>{'w': 10, 'h': 20},
+        'naturalSize': 'oops',
+      });
+
+    expect(
+      () => decodeScene(_sceneWithSingleNode(nodeJson)),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Field naturalSize must be an object.',
+        ),
+      ),
+    );
+  });
+
   test('decodeScene parses text align right and rejects unknown aligns', () {
     final nodeJson = _baseNodeJson(id: 't1', type: 'text')
       ..addAll(<String, dynamic>{

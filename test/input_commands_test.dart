@@ -42,6 +42,66 @@ void main() {
     )..position = position;
   }
 
+  test('clearSelection clears non-empty selection and notifies', () {
+    final node = rectNode('rect-1', const Offset(0, 0));
+    final scene = Scene(
+      layers: [
+        Layer(nodes: [node]),
+      ],
+    );
+    final controller = SceneController(scene: scene, dragStartSlop: 0);
+    addTearDown(controller.dispose);
+
+    marqueeSelect(controller, const Rect.fromLTRB(-20, -20, 20, 20));
+    expect(controller.selectedNodeIds, contains('rect-1'));
+
+    var notifications = 0;
+    controller.addListener(() => notifications += 1);
+
+    controller.clearSelection();
+
+    expect(controller.selectedNodeIds, isEmpty);
+    expect(notifications, greaterThan(0));
+  });
+
+  test('debug revisions behave consistently', () {
+    final scene = Scene(layers: [Layer()]);
+    final controller = SceneController(scene: scene, dragStartSlop: 0);
+    addTearDown(controller.dispose);
+
+    final sceneRev0 = controller.debugSceneRevision;
+    final selRev0 = controller.debugSelectionRevision;
+
+    controller.addNode(rectNode('rect-1', const Offset(0, 0)));
+    expect(controller.debugSceneRevision, greaterThan(sceneRev0));
+
+    void tapAt(Offset position, int timestampMs) {
+      controller.handlePointer(
+        PointerSample(
+          pointerId: 1,
+          position: position,
+          timestampMs: timestampMs,
+          phase: PointerPhase.down,
+        ),
+      );
+      controller.handlePointer(
+        PointerSample(
+          pointerId: 1,
+          position: position,
+          timestampMs: timestampMs + 10,
+          phase: PointerPhase.up,
+        ),
+      );
+    }
+
+    tapAt(const Offset(0, 0), 0);
+    final selRev1 = controller.debugSelectionRevision;
+    expect(selRev1, greaterThan(selRev0));
+
+    tapAt(const Offset(0, 0), 100);
+    expect(controller.debugSelectionRevision, selRev1);
+  });
+
   test('rotateSelection rotates around selection center', () {
     final left = rectNode('left', const Offset(0, 0));
     final right = rectNode('right', const Offset(10, 0));

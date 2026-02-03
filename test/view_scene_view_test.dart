@@ -446,4 +446,89 @@ void main() {
 
     expect(cache.debugDisposeCount, greaterThan(count0));
   });
+
+  testWidgets('SceneView does not dispose externally provided static cache', (
+    tester,
+  ) async {
+    final cache = SceneStaticLayerCache();
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 64,
+          height: 64,
+          child: SceneView(imageResolver: (_) => null, staticLayerCache: cache),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(cache.debugBuildCount, greaterThan(0));
+    final dispose0 = cache.debugDisposeCount;
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+
+    expect(cache.debugDisposeCount, dispose0);
+  });
+
+  testWidgets('SceneView disposes only the owned cache when switching', (
+    tester,
+  ) async {
+    final external = SceneStaticLayerCache();
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 64,
+          height: 64,
+          child: SceneView(imageResolver: (_) => null, staticLayerCache: null),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final viewState0 = tester.state(find.byType(SceneView)) as dynamic;
+    final owned0 = viewState0.debugStaticLayerCache as SceneStaticLayerCache;
+    expect(owned0.debugBuildCount, greaterThan(0));
+
+    final ownedDispose0 = owned0.debugDisposeCount;
+    final externalDispose0 = external.debugDisposeCount;
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 64,
+          height: 64,
+          child: SceneView(
+            imageResolver: (_) => null,
+            staticLayerCache: external,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(owned0.debugDisposeCount, greaterThan(ownedDispose0));
+    expect(external.debugDisposeCount, externalDispose0);
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 64,
+          height: 64,
+          child: SceneView(imageResolver: (_) => null, staticLayerCache: null),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final viewState1 = tester.state(find.byType(SceneView)) as dynamic;
+    final owned1 = viewState1.debugStaticLayerCache as SceneStaticLayerCache;
+    expect(owned1, isNot(same(owned0)));
+  });
 }

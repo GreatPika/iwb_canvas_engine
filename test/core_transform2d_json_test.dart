@@ -86,6 +86,24 @@ void main() {
         payload: const <String, Object?>{'delta': 'oops'},
       );
       expect(badPayload.tryTransformDelta(), isNull);
+
+      final invalidDeltaPayload = ActionCommitted(
+        actionId: 'a3',
+        type: ActionType.transform,
+        nodeIds: const <NodeId>[],
+        timestampMs: 0,
+        payload: const <String, Object?>{
+          'delta': <String, Object?>{
+            'a': 1,
+            'b': 0,
+            'c': 0,
+            'd': 1,
+            'tx': 5,
+            'ty': 'oops',
+          },
+        },
+      );
+      expect(invalidDeltaPayload.tryTransformDelta(), isNull);
     },
   );
 }

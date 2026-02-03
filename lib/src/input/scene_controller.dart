@@ -196,7 +196,7 @@ class SceneController extends ChangeNotifier {
   void setMode(CanvasMode value) {
     if (mode == value) return;
     if (mode == CanvasMode.move) {
-      _resetDrag(notify: false);
+      _resetDrag();
     } else {
       _resetDraw();
     }
@@ -660,14 +660,14 @@ class SceneController extends ChangeNotifier {
       }
     }
 
-    _resetDrag(notify: false);
+    _resetDrag();
     if (_needsNotify) {
       _notifyNow();
     }
   }
 
   void _handleCancel() {
-    _resetDrag(notify: false);
+    _resetDrag();
     if (_needsNotify) {
       _notifyNow();
     }
@@ -1150,7 +1150,7 @@ class SceneController extends ChangeNotifier {
     }
   }
 
-  void _resetDrag({bool notify = true}) {
+  void _resetDrag() {
     _activePointerId = null;
     _pointerDownScene = null;
     _lastDragScene = null;
@@ -1159,9 +1159,6 @@ class SceneController extends ChangeNotifier {
     _pendingClearSelection = false;
     _moveGestureNodes = null;
     _setSelectionRect(null, notify: false);
-    if (notify) {
-      requestRepaintOncePerFrame();
-    }
   }
 
   void _resetDrawPointer() {

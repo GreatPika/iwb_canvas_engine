@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -17,6 +18,32 @@ void main() {
     final mirrored = reflectPointVertical(point, 0);
     expect(mirrored.dx, -2);
     expect(mirrored.dy, 3);
+  });
+
+  test('reflectPointHorizontal mirrors around axis', () {
+    const point = Offset(2, 3);
+    final mirrored = reflectPointHorizontal(point, 10);
+    expect(mirrored.dx, 2);
+    expect(mirrored.dy, 17);
+  });
+
+  test('reflectPointHorizontal is an involution (property)', () {
+    final rnd = math.Random(1337);
+    for (var i = 0; i < 100; i++) {
+      final axisY = rnd.nextDouble() * 200 - 100;
+      final point = Offset(
+        rnd.nextDouble() * 200 - 100,
+        rnd.nextDouble() * 200 - 100,
+      );
+      final reflected = reflectPointHorizontal(point, axisY);
+      final back = reflectPointHorizontal(reflected, axisY);
+
+      expect(back.dx, closeTo(point.dx, 1e-9));
+      expect(back.dy, closeTo(point.dy, 1e-9));
+
+      expect(reflected.dx, closeTo(point.dx, 1e-9));
+      expect((point.dy + reflected.dy) / 2.0, closeTo(axisY, 1e-9));
+    }
   });
 
   test('aabbFromPoints builds bounds', () {

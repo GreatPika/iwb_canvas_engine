@@ -122,7 +122,7 @@ void main() {
     controller.handlePointer(
       PointerSample(
         pointerId: 3,
-        position: const Offset(10, 0),
+        position: const Offset(12, 0),
         timestampMs: 20,
         phase: PointerPhase.up,
       ),
@@ -130,7 +130,7 @@ void main() {
 
     final node = scene.layers.first.nodes.single as LineNode;
     expect(node.transform.applyToPoint(node.start), const Offset(0, 0));
-    expect(node.transform.applyToPoint(node.end), const Offset(10, 0));
+    expect(node.transform.applyToPoint(node.end), const Offset(12, 0));
     expect(node.thickness, 4);
     expect(actions, hasLength(1));
     expect(actions.single.type, ActionType.drawLine);

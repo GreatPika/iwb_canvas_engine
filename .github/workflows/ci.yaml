@@ -30,17 +30,19 @@ jobs:
         run: flutter pub get
 
       - name: Format (check)
-        run: dart format --output=none --set-exit-if-changed lib test example/lib
+        run: dart format --output=none --set-exit-if-changed lib test example/lib tool
 
       - name: Analyze
         run: flutter analyze
 
       - name: Test
-        run: flutter test
+        run: flutter test --coverage
+
+      - name: Coverage (100%)
+        run: dart run tool/check_coverage.dart
 
       - name: Dartdoc
         run: dart doc
 
       - name: Publish dry-run
         run: dart pub publish --dry-run
-
