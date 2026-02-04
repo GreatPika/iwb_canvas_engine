@@ -1,5 +1,12 @@
 ## Unreleased
 
+- Serialization: stricter numeric validation for JSON import/export (finite
+  numbers + valid ranges); invalid input throws `SceneJsonFormatException`.
+- Input: `SceneController` numeric setters now reject invalid values and throw
+  `ArgumentError`.
+- Core: document and debug-assert preconditions for
+  `StrokeNode.normalizeToLocalCenter` and `LineNode.normalizeToLocalCenter`.
+
 ## 0.2.0 (2026-02-04)
 
 - Breaking: remove legacy `package:iwb_canvas_engine/iwb_canvas_engine.dart`

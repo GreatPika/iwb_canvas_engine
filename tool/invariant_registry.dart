@@ -117,4 +117,19 @@ const List<Invariant> invariants = <Invariant>[
     title:
         'structural mutations call notifySceneChanged() and return immediately',
   ),
+
+  // Serialization.
+  Invariant(
+    id: 'INV-SER-JSON-NUMERIC-VALIDATION',
+    scope: 'serialization',
+    title: 'Scene JSON numeric fields are finite and within valid ranges',
+  ),
+
+  // Core.
+  Invariant(
+    id: 'INV-CORE-NORMALIZE-PRECONDITIONS',
+    scope: 'core',
+    title:
+        'normalizeToLocalCenter requires identity transform and finite geometry',
+  ),
 ];
