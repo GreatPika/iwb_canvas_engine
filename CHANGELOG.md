@@ -1,5 +1,7 @@
 ## Unreleased
 
+## 0.2.0 (2026-02-04)
+
 - Breaking: remove legacy `package:iwb_canvas_engine/iwb_canvas_engine.dart`
   entrypoint; use `basic.dart` or `advanced.dart`.
 - `SceneView`: `imageResolver` is now optional; add optional configuration
@@ -18,6 +20,12 @@
   affects them.
 - Internal: tighten repaint notification invariants and add a debug-only guard
   that disables drag-move buffering on external structural scene mutations.
+- Refactor input internals into vertical slices with explicit boundary
+  contracts, strict import boundary checks, and slice-level regression tests.
+- Tooling: add invariant registry + coverage checks to ensure every invariant is
+  enforced by a test and/or tool check.
+- Docs: add `CODE_REVIEW_CHECKLIST.md` for maintainers.
+- Docs/tooling: keep `dart doc` warning-free via `dartdoc_options.yaml`.
 
 ## 0.1.0 (2026-02-03)
 
