@@ -4,7 +4,6 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/scheduler.dart';
 
 import '../core/defaults.dart';
 import '../core/geometry.dart';
@@ -15,6 +14,7 @@ import '../core/transform2d.dart';
 import 'action_events.dart';
 import 'internal/contracts.dart';
 import 'pointer_input.dart';
+import 'slices/repaint/repaint_scheduler.dart';
 import 'types.dart';
 
 export 'types.dart';
@@ -52,6 +52,7 @@ class SceneController extends ChangeNotifier {
        pointerSettings = pointerSettings ?? const PointerInputSettings(),
        _dragStartSlop = dragStartSlop {
     _nodeIdGenerator = nodeIdGenerator ?? _defaultNodeIdGenerator;
+    _repaintScheduler = RepaintScheduler(notifyListeners: notifyListeners);
   }
 
   final Scene scene;
@@ -59,6 +60,7 @@ class SceneController extends ChangeNotifier {
   final double? _dragStartSlop;
   late final InputSliceContracts _contracts = _SceneControllerContracts(this);
   late final NodeId Function() _nodeIdGenerator;
+  late final RepaintScheduler _repaintScheduler;
   int _nodeIdSeed = 0;
 
   CanvasMode _mode = CanvasMode.move;
@@ -127,10 +129,6 @@ class SceneController extends ChangeNotifier {
   final StreamController<EditTextRequested> _editTextRequests =
       StreamController<EditTextRequested>.broadcast(sync: true);
   int _actionCounter = 0;
-  bool _repaintScheduled = false;
-  int _repaintToken = 0;
-  bool _isDisposed = false;
-  bool _needsNotify = false;
   int _sceneRevision = 0;
   int _selectionRevision = 0;
   List<SceneNode>? _moveGestureNodes;
@@ -269,8 +267,7 @@ class SceneController extends ChangeNotifier {
 
   @override
   void dispose() {
-    _isDisposed = true;
-    _cancelScheduledRepaint();
+    _repaintScheduler.dispose();
     _actions.close();
     _editTextRequests.close();
     super.dispose();
@@ -1406,7 +1403,7 @@ class SceneController extends ChangeNotifier {
   }
 
   void _markSceneGeometryChanged() {
-    _needsNotify = true;
+    _repaintScheduler.markNeedsNotify();
   }
 
   void _markSceneStructuralChanged() {
@@ -1435,40 +1432,8 @@ class SceneController extends ChangeNotifier {
     return hash;
   }
 
-  void _cancelScheduledRepaint() {
-    _repaintScheduled = false;
-    _repaintToken++;
-  }
-
-  void requestRepaintOncePerFrame() {
-    if (_isDisposed) return;
-    if (_repaintScheduled) return;
-
-    _repaintScheduled = true;
-    final token = ++_repaintToken;
-
-    try {
-      SchedulerBinding.instance.scheduleFrameCallback((_) {
-        if (_isDisposed) return;
-        if (token != _repaintToken) return;
-        _repaintScheduled = false;
-        _needsNotify = false;
-        notifyListeners();
-      });
-
-      SchedulerBinding.instance.ensureVisualUpdate();
-    } on FlutterError {
-      // If no binding exists yet (e.g. in certain tests or during early init),
-      // fall back to an immediate notification.
-      _notifyNow();
-    }
-  }
-
-  void _notifyNow() {
-    _cancelScheduledRepaint();
-    notifyListeners();
-    _needsNotify = false;
-  }
+  void requestRepaintOncePerFrame() =>
+      _repaintScheduler.requestRepaintOncePerFrame();
 
   void _emitAction(
     ActionType type,
@@ -1537,10 +1502,10 @@ class _SceneControllerContracts implements InputSliceContracts {
   void requestRepaintOncePerFrame() => _controller.requestRepaintOncePerFrame();
 
   @override
-  void notifyNow() => _controller._notifyNow();
+  void notifyNow() => _controller._repaintScheduler.notifyNow();
 
   @override
-  bool get needsNotify => _controller._needsNotify;
+  bool get needsNotify => _controller._repaintScheduler.needsNotify;
 
   @override
   void notifyNowIfNeeded() {
