@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:collection';
 import 'dart:math' as math;
 import 'dart:ui';
@@ -15,6 +14,7 @@ import 'action_events.dart';
 import 'internal/contracts.dart';
 import 'pointer_input.dart';
 import 'slices/repaint/repaint_scheduler.dart';
+import 'slices/signals/action_dispatcher.dart';
 import 'types.dart';
 
 export 'types.dart';
@@ -53,6 +53,7 @@ class SceneController extends ChangeNotifier {
        _dragStartSlop = dragStartSlop {
     _nodeIdGenerator = nodeIdGenerator ?? _defaultNodeIdGenerator;
     _repaintScheduler = RepaintScheduler(notifyListeners: notifyListeners);
+    _actionDispatcher = ActionDispatcher();
   }
 
   final Scene scene;
@@ -61,6 +62,7 @@ class SceneController extends ChangeNotifier {
   late final InputSliceContracts _contracts = _SceneControllerContracts(this);
   late final NodeId Function() _nodeIdGenerator;
   late final RepaintScheduler _repaintScheduler;
+  late final ActionDispatcher _actionDispatcher;
   int _nodeIdSeed = 0;
 
   CanvasMode _mode = CanvasMode.move;
@@ -123,12 +125,6 @@ class SceneController extends ChangeNotifier {
     _selectedNodeIds,
   );
   Rect? _selectionRect;
-
-  final StreamController<ActionCommitted> _actions =
-      StreamController<ActionCommitted>.broadcast(sync: true);
-  final StreamController<EditTextRequested> _editTextRequests =
-      StreamController<EditTextRequested>.broadcast(sync: true);
-  int _actionCounter = 0;
   int _sceneRevision = 0;
   int _selectionRevision = 0;
   List<SceneNode>? _moveGestureNodes;
@@ -159,12 +155,13 @@ class SceneController extends ChangeNotifier {
   /// Synchronous broadcast stream of committed actions.
   ///
   /// Handlers must be fast and avoid blocking work.
-  Stream<ActionCommitted> get actions => _actions.stream;
+  Stream<ActionCommitted> get actions => _actionDispatcher.actions;
 
   /// Synchronous broadcast stream of text edit requests.
   ///
   /// Handlers must be fast and avoid blocking work.
-  Stream<EditTextRequested> get editTextRequests => _editTextRequests.stream;
+  Stream<EditTextRequested> get editTextRequests =>
+      _actionDispatcher.editTextRequests;
 
   /// Current selection snapshot.
   Set<NodeId> get selectedNodeIds => _selectedNodeIdsView;
@@ -268,8 +265,7 @@ class SceneController extends ChangeNotifier {
   @override
   void dispose() {
     _repaintScheduler.dispose();
-    _actions.close();
-    _editTextRequests.close();
+    _actionDispatcher.dispose();
     super.dispose();
   }
 
@@ -1434,23 +1430,6 @@ class SceneController extends ChangeNotifier {
 
   void requestRepaintOncePerFrame() =>
       _repaintScheduler.requestRepaintOncePerFrame();
-
-  void _emitAction(
-    ActionType type,
-    List<NodeId> nodeIds,
-    int timestampMs, {
-    Map<String, Object?>? payload,
-  }) {
-    _actions.add(
-      ActionCommitted(
-        actionId: 'a${_actionCounter++}',
-        type: type,
-        nodeIds: List<NodeId>.from(nodeIds),
-        timestampMs: timestampMs,
-        payload: payload,
-      ),
-    );
-  }
 }
 
 class _SceneControllerContracts implements InputSliceContracts {
@@ -1520,11 +1499,16 @@ class _SceneControllerContracts implements InputSliceContracts {
     List<NodeId> nodeIds,
     int timestampMs, {
     Map<String, Object?>? payload,
-  }) => _controller._emitAction(type, nodeIds, timestampMs, payload: payload);
+  }) => _controller._actionDispatcher.emitAction(
+    type,
+    nodeIds,
+    timestampMs,
+    payload: payload,
+  );
 
   @override
   void emitEditTextRequested(EditTextRequested req) =>
-      _controller._editTextRequests.add(req);
+      _controller._actionDispatcher.emitEditTextRequested(req);
 
   @override
   NodeId newNodeId() => _controller._nodeIdGenerator();
