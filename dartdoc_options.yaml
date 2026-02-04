@@ -1,0 +1,13 @@
+# Dartdoc configuration for this package.
+#
+# Rationale:
+# This package intentionally provides two public entrypoints:
+# - `basic.dart` (recommended minimal API)
+# - `advanced.dart` (full API surface)
+#
+# Both entrypoints re-export a shared subset of symbols by design, which causes
+# dartdoc to emit "ambiguous reexport" warnings. We keep the two-entrypoint
+# structure and silence that specific warning category.
+dartdoc:
+  ambiguousReexportScorerMinConfidence: 0.0
+
