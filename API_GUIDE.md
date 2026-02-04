@@ -551,7 +551,6 @@ Source of truth: `lib/src/serialization/scene_codec.dart`.
 
 - `lib/basic.dart` — minimal public surface (recommended)
 - `lib/advanced.dart` — full export surface
-- `lib/advanced.dart` — full export surface
 
 ### Primary integration
 
