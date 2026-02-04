@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -12,6 +11,7 @@ import '../core/transform2d.dart';
 import 'action_events.dart';
 import 'internal/contracts.dart';
 import 'pointer_input.dart';
+import 'slices/draw/draw_mode_engine.dart';
 import 'slices/move/move_mode_engine.dart';
 import 'slices/repaint/repaint_scheduler.dart';
 import 'slices/selection/selection_model.dart';
@@ -19,15 +19,6 @@ import 'slices/signals/action_dispatcher.dart';
 import 'types.dart';
 
 export 'types.dart';
-
-double _maxSingularValue2x2(double a, double b, double c, double d) {
-  final t = a * a + b * b + c * c + d * d;
-  final det = a * d - b * c;
-  final discSquared = t * t - 4 * det * det;
-  final disc = math.sqrt(math.max(0, discSquared));
-  final lambdaMax = (t + disc) / 2;
-  return math.sqrt(math.max(0, lambdaMax));
-}
 
 /// Mutable controller that owns the scene editing state and tool logic.
 ///
@@ -57,6 +48,7 @@ class SceneController extends ChangeNotifier {
     _actionDispatcher = ActionDispatcher();
     _selectionModel = SelectionModel();
     _moveModeEngine = MoveModeEngine(_contracts);
+    _drawModeEngine = DrawModeEngine(_contracts);
   }
 
   final Scene scene;
@@ -68,6 +60,7 @@ class SceneController extends ChangeNotifier {
   late final ActionDispatcher _actionDispatcher;
   late final SelectionModel _selectionModel;
   late final MoveModeEngine _moveModeEngine;
+  late final DrawModeEngine _drawModeEngine;
   int _nodeIdSeed = 0;
 
   CanvasMode _mode = CanvasMode.move;
@@ -127,18 +120,6 @@ class SceneController extends ChangeNotifier {
 
   int _sceneRevision = 0;
 
-  int? _drawPointerId;
-  Offset? _drawDownScene;
-  Offset? _lastDrawScene;
-  bool _drawMoved = false;
-  StrokeNode? _activeStroke;
-  LineNode? _activeLine;
-  Layer? _activeDrawLayer;
-  final List<Offset> _eraserPoints = <Offset>[];
-
-  Offset? _pendingLineStart;
-  int? _pendingLineTimestampMs;
-
   /// Synchronous broadcast stream of committed actions.
   ///
   /// Handlers must be fast and avoid blocking work.
@@ -190,13 +171,13 @@ class SceneController extends ChangeNotifier {
   Offset? get selectionCenterWorld => selectionBoundsWorld?.center;
 
   /// Pending first point for a two-tap line gesture, if any.
-  Offset? get pendingLineStart => _pendingLineStart;
+  Offset? get pendingLineStart => _drawModeEngine.pendingLineStart;
 
   /// Timestamp for the pending two-tap line start, if any.
-  int? get pendingLineTimestampMs => _pendingLineTimestampMs;
+  int? get pendingLineTimestampMs => _drawModeEngine.pendingLineTimestampMs;
 
   /// Whether a two-tap line start is waiting for the second tap.
-  bool get hasPendingLineStart => _pendingLineStart != null;
+  bool get hasPendingLineStart => _drawModeEngine.hasPendingLineStart;
 
   /// Pointer slop threshold used to treat a drag as a move.
   double get dragStartSlop => _dragStartSlop ?? pointerSettings.tapSlop;
@@ -262,7 +243,7 @@ class SceneController extends ChangeNotifier {
     if (_mode == CanvasMode.move) {
       _resetDrag();
     } else {
-      _resetDraw();
+      _drawModeEngine.reset();
     }
     _mode = value;
     _contracts.setSelectionRect(null, notify: false);
@@ -274,7 +255,7 @@ class SceneController extends ChangeNotifier {
   void setDrawTool(DrawTool tool) {
     if (_drawTool == tool) return;
     _drawTool = tool;
-    _resetDraw();
+    _drawModeEngine.reset();
     _contracts.markSceneGeometryChanged();
     _contracts.notifyNow();
   }
@@ -636,7 +617,7 @@ class SceneController extends ChangeNotifier {
     if (mode == CanvasMode.move) {
       _moveModeEngine.handlePointer(sample);
     } else {
-      _handleDrawModePointer(sample);
+      _drawModeEngine.handlePointer(sample);
     }
   }
 
@@ -662,400 +643,6 @@ class SceneController extends ChangeNotifier {
         ),
       );
     }
-  }
-
-  void _handleDrawModePointer(PointerSample sample) {
-    if (_drawPointerId != null && _drawPointerId != sample.pointerId) {
-      return;
-    }
-
-    _expirePendingLine(sample.timestampMs);
-    final scenePoint = _contracts.toScenePoint(sample.position);
-
-    switch (sample.phase) {
-      case PointerPhase.down:
-        _handleDrawDown(sample, scenePoint);
-        break;
-      case PointerPhase.move:
-        _handleDrawMove(sample, scenePoint);
-        break;
-      case PointerPhase.up:
-        _handleDrawUp(sample, scenePoint);
-        break;
-      case PointerPhase.cancel:
-        _handleDrawCancel();
-        break;
-    }
-  }
-
-  void _handleDrawDown(PointerSample sample, Offset scenePoint) {
-    _drawPointerId = sample.pointerId;
-    _drawDownScene = scenePoint;
-    _lastDrawScene = scenePoint;
-    _drawMoved = false;
-
-    switch (_contracts.drawTool) {
-      case DrawTool.pen:
-      case DrawTool.highlighter:
-        _startStroke(scenePoint);
-        break;
-      case DrawTool.line:
-        _startLineGesture(scenePoint);
-        break;
-      case DrawTool.eraser:
-        _eraserPoints
-          ..clear()
-          ..add(scenePoint);
-        break;
-    }
-  }
-
-  void _handleDrawMove(PointerSample sample, Offset scenePoint) {
-    if (_drawPointerId != sample.pointerId) return;
-    if (_drawDownScene == null || _lastDrawScene == null) return;
-
-    final totalDelta = scenePoint - _drawDownScene!;
-    if (!_drawMoved && totalDelta.distance > _contracts.dragStartSlop) {
-      _drawMoved = true;
-    }
-
-    switch (_contracts.drawTool) {
-      case DrawTool.pen:
-      case DrawTool.highlighter:
-        _appendStrokePoint(scenePoint);
-        break;
-      case DrawTool.line:
-        _updateLineDrag(scenePoint);
-        break;
-      case DrawTool.eraser:
-        _eraserPoints.add(scenePoint);
-        _contracts.requestRepaintOncePerFrame();
-        break;
-    }
-    _lastDrawScene = scenePoint;
-  }
-
-  void _handleDrawUp(PointerSample sample, Offset scenePoint) {
-    if (_drawPointerId != sample.pointerId) return;
-
-    switch (_contracts.drawTool) {
-      case DrawTool.pen:
-      case DrawTool.highlighter:
-        _finishStroke(sample.timestampMs, scenePoint);
-        break;
-      case DrawTool.line:
-        _finishLineGesture(sample.timestampMs, scenePoint);
-        break;
-      case DrawTool.eraser:
-        _finishErase(sample.timestampMs, scenePoint);
-        break;
-    }
-
-    _resetDrawPointer();
-    _contracts.notifyNowIfNeeded();
-  }
-
-  void _handleDrawCancel() {
-    _resetDraw();
-    _contracts.notifyNowIfNeeded();
-  }
-
-  void _startStroke(Offset scenePoint) {
-    final drawTool = _contracts.drawTool;
-    final drawColor = _contracts.drawColor;
-    final stroke = StrokeNode(
-      id: _contracts.newNodeId(),
-      points: [scenePoint],
-      thickness: _strokeThicknessForTool(),
-      color: drawColor,
-      opacity: drawTool == DrawTool.highlighter
-          ? _contracts.highlighterOpacity
-          : 1,
-    );
-    _activeStroke = stroke;
-    _activeLine = null;
-    _activeDrawLayer = _ensureAnnotationLayer();
-    _activeDrawLayer!.nodes.add(stroke);
-    _contracts.markSceneStructuralChanged();
-    _contracts.requestRepaintOncePerFrame();
-  }
-
-  void _appendStrokePoint(Offset scenePoint) {
-    final stroke = _activeStroke;
-    if (stroke == null) return;
-    if (stroke.points.isNotEmpty &&
-        (scenePoint - stroke.points.last).distance == 0) {
-      return;
-    }
-    stroke.points.add(scenePoint);
-    _contracts.requestRepaintOncePerFrame();
-  }
-
-  void _finishStroke(int timestampMs, Offset scenePoint) {
-    final stroke = _activeStroke;
-    if (stroke == null) return;
-    if (stroke.points.isEmpty ||
-        (scenePoint - stroke.points.last).distance > 0) {
-      stroke.points.add(scenePoint);
-    }
-    stroke.normalizeToLocalCenter();
-    _activeStroke = null;
-    _activeDrawLayer = null;
-    _contracts.markSceneGeometryChanged();
-    final drawTool = _contracts.drawTool;
-    final drawColor = _contracts.drawColor;
-    _contracts.emitAction(
-      drawTool == DrawTool.highlighter
-          ? ActionType.drawHighlighter
-          : ActionType.drawStroke,
-      [stroke.id],
-      timestampMs,
-      payload: <String, Object?>{
-        'tool': drawTool.name,
-        'color': drawColor.toARGB32(),
-        'thickness': stroke.thickness,
-      },
-    );
-  }
-
-  void _startLineGesture(Offset scenePoint) {
-    _activeLine = null;
-    _activeStroke = null;
-    _drawMoved = false;
-    _drawDownScene = scenePoint;
-  }
-
-  void _updateLineDrag(Offset scenePoint) {
-    if (_drawDownScene == null) return;
-    final totalDelta = scenePoint - _drawDownScene!;
-    if (!_drawMoved && totalDelta.distance <= _contracts.dragStartSlop) {
-      return;
-    }
-
-    if (_pendingLineStart != null) {
-      _clearPendingLine();
-    }
-
-    if (_activeLine == null) {
-      final drawColor = _contracts.drawColor;
-      final line = LineNode(
-        id: _contracts.newNodeId(),
-        start: _drawDownScene!,
-        end: scenePoint,
-        thickness: _contracts.lineThickness,
-        color: drawColor,
-      );
-      _activeLine = line;
-      _activeDrawLayer = _ensureAnnotationLayer();
-      _activeDrawLayer!.nodes.add(line);
-      _contracts.markSceneStructuralChanged();
-    } else {
-      _activeLine!.end = scenePoint;
-    }
-    _contracts.requestRepaintOncePerFrame();
-  }
-
-  void _finishLineGesture(int timestampMs, Offset scenePoint) {
-    if (_activeLine != null) {
-      final line = _activeLine!;
-      if (line.end != scenePoint) {
-        line.end = scenePoint;
-      }
-      line.normalizeToLocalCenter();
-      _contracts.markSceneGeometryChanged();
-      _activeLine = null;
-      _activeDrawLayer = null;
-      final drawTool = _contracts.drawTool;
-      final drawColor = _contracts.drawColor;
-      _contracts.emitAction(
-        ActionType.drawLine,
-        [line.id],
-        timestampMs,
-        payload: <String, Object?>{
-          'tool': drawTool.name,
-          'color': drawColor.toARGB32(),
-          'thickness': line.thickness,
-        },
-      );
-      return;
-    }
-
-    if (_drawDownScene == null) return;
-
-    final isTap =
-        (scenePoint - _drawDownScene!).distance <= _contracts.dragStartSlop;
-    if (!isTap) return;
-
-    if (_pendingLineStart == null) {
-      _setPendingLineStart(scenePoint, timestampMs);
-      return;
-    }
-
-    final start = _pendingLineStart!;
-    final line = LineNode.fromWorldSegment(
-      id: _contracts.newNodeId(),
-      start: start,
-      end: scenePoint,
-      thickness: _contracts.lineThickness,
-      color: _contracts.drawColor,
-    );
-    _setPendingLineStart(null, null);
-    _activeDrawLayer = _ensureAnnotationLayer();
-    _activeDrawLayer!.nodes.add(line);
-    _activeDrawLayer = null;
-    _contracts.markSceneStructuralChanged();
-    final drawTool = _contracts.drawTool;
-    final drawColor = _contracts.drawColor;
-    _contracts.emitAction(
-      ActionType.drawLine,
-      [line.id],
-      timestampMs,
-      payload: <String, Object?>{
-        'tool': drawTool.name,
-        'color': drawColor.toARGB32(),
-        'thickness': line.thickness,
-      },
-    );
-  }
-
-  void _finishErase(int timestampMs, Offset scenePoint) {
-    if (_eraserPoints.isNotEmpty &&
-        (_eraserPoints.last - scenePoint).distance > 0) {
-      _eraserPoints.add(scenePoint);
-    }
-
-    final deletedNodeIds = _eraseAnnotations(_eraserPoints);
-    _eraserPoints.clear();
-    if (deletedNodeIds.isEmpty) {
-      return;
-    }
-    _contracts.markSceneStructuralChanged();
-    _contracts.emitAction(
-      ActionType.erase,
-      deletedNodeIds,
-      timestampMs,
-      payload: <String, Object?>{'eraserThickness': _contracts.eraserThickness},
-    );
-  }
-
-  List<NodeId> _eraseAnnotations(List<Offset> eraserPoints) {
-    final deleted = <NodeId>[];
-    if (eraserPoints.isEmpty) return deleted;
-
-    for (final layer in scene.layers) {
-      if (layer.isBackground) continue;
-      layer.nodes.removeWhere((node) {
-        if (node is! StrokeNode && node is! LineNode) return false;
-        if (!node.isDeletable) return false;
-        final hit = _eraserHitsNode(eraserPoints, node);
-        if (hit) {
-          deleted.add(node.id);
-        }
-        return hit;
-      });
-    }
-    return deleted;
-  }
-
-  bool _eraserHitsNode(List<Offset> eraserPoints, SceneNode node) {
-    if (node is LineNode) {
-      return _eraserHitsLine(eraserPoints, node);
-    }
-    if (node is StrokeNode) {
-      return _eraserHitsStroke(eraserPoints, node);
-    }
-    return false;
-  }
-
-  bool _eraserHitsLine(List<Offset> eraserPoints, LineNode line) {
-    final inverse = line.transform.invert();
-    if (inverse == null) return false;
-    final localEraserPoints = eraserPoints
-        .map(inverse.applyToPoint)
-        .toList(growable: false);
-    final sigmaMax = _maxSingularValue2x2(
-      inverse.a,
-      inverse.b,
-      inverse.c,
-      inverse.d,
-    );
-    final threshold =
-        line.thickness / 2 + (_contracts.eraserThickness / 2) * sigmaMax;
-    if (localEraserPoints.length == 1) {
-      final distance = distancePointToSegment(
-        localEraserPoints.first,
-        line.start,
-        line.end,
-      );
-      return distance <= threshold;
-    }
-    for (var i = 0; i < localEraserPoints.length - 1; i++) {
-      final a = localEraserPoints[i];
-      final b = localEraserPoints[i + 1];
-      final distance = distanceSegmentToSegment(a, b, line.start, line.end);
-      if (distance <= threshold) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  bool _eraserHitsStroke(List<Offset> eraserPoints, StrokeNode stroke) {
-    final inverse = stroke.transform.invert();
-    if (inverse == null) return false;
-    final localEraserPoints = eraserPoints
-        .map(inverse.applyToPoint)
-        .toList(growable: false);
-    final sigmaMax = _maxSingularValue2x2(
-      inverse.a,
-      inverse.b,
-      inverse.c,
-      inverse.d,
-    );
-    final threshold =
-        stroke.thickness / 2 + (_contracts.eraserThickness / 2) * sigmaMax;
-    if (stroke.points.isEmpty) return false;
-    if (stroke.points.length == 1) {
-      final point = stroke.points.first;
-      for (final eraserPoint in localEraserPoints) {
-        if ((eraserPoint - point).distance <= threshold) {
-          return true;
-        }
-      }
-      return false;
-    }
-
-    if (localEraserPoints.length == 1) {
-      final eraserPoint = localEraserPoints.first;
-      for (var i = 0; i < stroke.points.length - 1; i++) {
-        final a = stroke.points[i];
-        final b = stroke.points[i + 1];
-        final distance = distancePointToSegment(eraserPoint, a, b);
-        if (distance <= threshold) {
-          return true;
-        }
-      }
-      return false;
-    }
-
-    for (var i = 0; i < localEraserPoints.length - 1; i++) {
-      final eraserA = localEraserPoints[i];
-      final eraserB = localEraserPoints[i + 1];
-      for (var j = 0; j < stroke.points.length - 1; j++) {
-        final strokeA = stroke.points[j];
-        final strokeB = stroke.points[j + 1];
-        final distance = distanceSegmentToSegment(
-          eraserA,
-          eraserB,
-          strokeA,
-          strokeB,
-        );
-        if (distance <= threshold) {
-          return true;
-        }
-      }
-    }
-    return false;
   }
 
   List<SceneNode> _selectedTransformableNodesInSceneOrder() {
@@ -1102,70 +689,6 @@ class SceneController extends ChangeNotifier {
   }
 
   void _resetDrag() => _moveModeEngine.reset();
-
-  void _resetDrawPointer() {
-    _drawPointerId = null;
-    _drawDownScene = null;
-    _lastDrawScene = null;
-    _drawMoved = false;
-  }
-
-  void _resetDraw() {
-    if (_activeStroke != null && _activeDrawLayer != null) {
-      _activeDrawLayer!.nodes.remove(_activeStroke);
-      _contracts.markSceneStructuralChanged();
-    }
-    if (_activeLine != null && _activeDrawLayer != null) {
-      _activeDrawLayer!.nodes.remove(_activeLine);
-      _contracts.markSceneStructuralChanged();
-    }
-    _activeStroke = null;
-    _activeLine = null;
-    _activeDrawLayer = null;
-    _eraserPoints.clear();
-    _resetDrawPointer();
-    _clearPendingLine();
-  }
-
-  Layer _ensureAnnotationLayer() {
-    for (var i = scene.layers.length - 1; i >= 0; i--) {
-      final layer = scene.layers[i];
-      if (!layer.isBackground) {
-        return layer;
-      }
-    }
-    final layer = Layer();
-    scene.layers.add(layer);
-    return layer;
-  }
-
-  double _strokeThicknessForTool() {
-    final drawTool = _contracts.drawTool;
-    return drawTool == DrawTool.highlighter
-        ? _contracts.highlighterThickness
-        : _contracts.penThickness;
-  }
-
-  void _setPendingLineStart(Offset? start, int? timestampMs) {
-    if (_pendingLineStart == start && _pendingLineTimestampMs == timestampMs) {
-      return;
-    }
-    _pendingLineStart = start;
-    _pendingLineTimestampMs = timestampMs;
-    _contracts.requestRepaintOncePerFrame();
-  }
-
-  void _clearPendingLine() {
-    _setPendingLineStart(null, null);
-  }
-
-  void _expirePendingLine(int timestampMs) {
-    final pendingTimestamp = _pendingLineTimestampMs;
-    if (pendingTimestamp == null) return;
-    if (timestampMs - pendingTimestamp > 10000) {
-      _clearPendingLine();
-    }
-  }
 
   void _setCameraOffset(Offset value, {bool notify = true}) {
     if (scene.camera.offset == value) return;
