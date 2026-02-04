@@ -14,12 +14,9 @@ import '../core/scene.dart';
 import '../core/transform2d.dart';
 import 'action_events.dart';
 import 'pointer_input.dart';
+import 'types.dart';
 
-/// Interaction mode for the canvas.
-enum CanvasMode { move, draw }
-
-/// Active drawing tool when [CanvasMode.draw] is enabled.
-enum DrawTool { pen, highlighter, line, eraser }
+export 'types.dart';
 
 double _maxSingularValue2x2(double a, double b, double c, double d) {
   final t = a * a + b * b + c * c + d * d;
