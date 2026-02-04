@@ -54,4 +54,3 @@ class SelectionModel {
     _selectionRect = rect;
   }
 }
-

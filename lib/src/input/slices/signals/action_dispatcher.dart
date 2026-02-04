@@ -49,4 +49,3 @@ class ActionDispatcher {
     _editTextRequests.close();
   }
 }
-
