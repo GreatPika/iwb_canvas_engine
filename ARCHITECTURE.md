@@ -76,7 +76,6 @@ here as a checklist to prevent subtle behavioral regressions during refactors.
 lib/
   basic.dart        // Minimal public API
   advanced.dart     // Full public API
-  iwb_canvas_engine.dart
   src/
     core/           // Scene model, math, selection, hit-test
     render/         // Canvas rendering for background, layers, nodes
