@@ -83,6 +83,13 @@ class SceneController extends ChangeNotifier {
 
   double get penThickness => _penThickness;
   set penThickness(double value) {
+    if (!value.isFinite || value <= 0) {
+      throw ArgumentError.value(
+        value,
+        'penThickness',
+        'Must be a finite number > 0.',
+      );
+    }
     if (_penThickness == value) return;
     _penThickness = value;
     _contracts.markSceneGeometryChanged();
@@ -91,6 +98,13 @@ class SceneController extends ChangeNotifier {
 
   double get highlighterThickness => _highlighterThickness;
   set highlighterThickness(double value) {
+    if (!value.isFinite || value <= 0) {
+      throw ArgumentError.value(
+        value,
+        'highlighterThickness',
+        'Must be a finite number > 0.',
+      );
+    }
     if (_highlighterThickness == value) return;
     _highlighterThickness = value;
     _contracts.markSceneGeometryChanged();
@@ -99,6 +113,13 @@ class SceneController extends ChangeNotifier {
 
   double get lineThickness => _lineThickness;
   set lineThickness(double value) {
+    if (!value.isFinite || value <= 0) {
+      throw ArgumentError.value(
+        value,
+        'lineThickness',
+        'Must be a finite number > 0.',
+      );
+    }
     if (_lineThickness == value) return;
     _lineThickness = value;
     _contracts.markSceneGeometryChanged();
@@ -107,6 +128,13 @@ class SceneController extends ChangeNotifier {
 
   double get eraserThickness => _eraserThickness;
   set eraserThickness(double value) {
+    if (!value.isFinite || value <= 0) {
+      throw ArgumentError.value(
+        value,
+        'eraserThickness',
+        'Must be a finite number > 0.',
+      );
+    }
     if (_eraserThickness == value) return;
     _eraserThickness = value;
     _contracts.markSceneGeometryChanged();
@@ -115,6 +143,13 @@ class SceneController extends ChangeNotifier {
 
   double get highlighterOpacity => _highlighterOpacity;
   set highlighterOpacity(double value) {
+    if (!value.isFinite || value < 0 || value > 1) {
+      throw ArgumentError.value(
+        value,
+        'highlighterOpacity',
+        'Must be a finite number within [0,1].',
+      );
+    }
     if (_highlighterOpacity == value) return;
     _highlighterOpacity = value;
     _contracts.markSceneGeometryChanged();
@@ -285,6 +320,13 @@ class SceneController extends ChangeNotifier {
 
   /// Sets the grid cell size in scene units.
   void setGridCellSize(double value) {
+    if (!value.isFinite || value <= 0) {
+      throw ArgumentError.value(
+        value,
+        'value',
+        'Grid cell size must be a finite number > 0.',
+      );
+    }
     if (scene.background.grid.cellSize == value) return;
     scene.background.grid.cellSize = value;
     _contracts.markSceneGeometryChanged();
