@@ -1,4 +1,3 @@
-import 'dart:collection';
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -14,6 +13,7 @@ import 'action_events.dart';
 import 'internal/contracts.dart';
 import 'pointer_input.dart';
 import 'slices/repaint/repaint_scheduler.dart';
+import 'slices/selection/selection_model.dart';
 import 'slices/signals/action_dispatcher.dart';
 import 'types.dart';
 
@@ -54,6 +54,7 @@ class SceneController extends ChangeNotifier {
     _nodeIdGenerator = nodeIdGenerator ?? _defaultNodeIdGenerator;
     _repaintScheduler = RepaintScheduler(notifyListeners: notifyListeners);
     _actionDispatcher = ActionDispatcher();
+    _selectionModel = SelectionModel();
   }
 
   final Scene scene;
@@ -63,6 +64,7 @@ class SceneController extends ChangeNotifier {
   late final NodeId Function() _nodeIdGenerator;
   late final RepaintScheduler _repaintScheduler;
   late final ActionDispatcher _actionDispatcher;
+  late final SelectionModel _selectionModel;
   int _nodeIdSeed = 0;
 
   CanvasMode _mode = CanvasMode.move;
@@ -120,13 +122,7 @@ class SceneController extends ChangeNotifier {
     _contracts.requestRepaintOncePerFrame();
   }
 
-  final LinkedHashSet<NodeId> _selectedNodeIds = LinkedHashSet<NodeId>();
-  late final Set<NodeId> _selectedNodeIdsView = UnmodifiableSetView(
-    _selectedNodeIds,
-  );
-  Rect? _selectionRect;
   int _sceneRevision = 0;
-  int _selectionRevision = 0;
   List<SceneNode>? _moveGestureNodes;
   int _dragSceneRevision = 0;
   int _dragSelectionRevision = 0;
@@ -164,13 +160,13 @@ class SceneController extends ChangeNotifier {
       _actionDispatcher.editTextRequests;
 
   /// Current selection snapshot.
-  Set<NodeId> get selectedNodeIds => _selectedNodeIdsView;
+  Set<NodeId> get selectedNodeIds => _selectionModel.selectedNodeIds;
 
   @visibleForTesting
   int get debugSceneRevision => _sceneRevision;
 
   @visibleForTesting
-  int get debugSelectionRevision => _selectionRevision;
+  int get debugSelectionRevision => _selectionModel.selectionRevision;
 
   @visibleForTesting
   int get debugMoveGestureBuildCount => _debugMoveGestureBuildCount;
@@ -179,7 +175,7 @@ class SceneController extends ChangeNotifier {
   List<SceneNode>? get debugMoveGestureNodes => _moveGestureNodes;
 
   /// Current marquee selection rectangle in scene coordinates.
-  Rect? get selectionRect => _selectionRect;
+  Rect? get selectionRect => _selectionModel.selectionRect;
 
   /// Axis-aligned world bounds of the current transformable selection.
   ///
@@ -214,14 +210,12 @@ class SceneController extends ChangeNotifier {
 
   @visibleForTesting
   void debugSetSelection(Iterable<NodeId> nodeIds) {
-    _selectedNodeIds
-      ..clear()
-      ..addAll(nodeIds);
+    _selectionModel.debugSetSelection(nodeIds);
   }
 
   @visibleForTesting
   void debugSetSelectionRect(Rect? rect) {
-    _selectionRect = rect;
+    _selectionModel.debugSetSelectionRect(rect);
   }
 
   /// Returns the first node with [id], or `null` if it does not exist.
@@ -333,7 +327,8 @@ class SceneController extends ChangeNotifier {
   ///
   /// For example, it drops selection for nodes that were removed directly.
   void notifySceneChanged() {
-    if (_selectedNodeIds.isNotEmpty) {
+    final selectedNodeIds = _selectionModel.selectedNodeIds;
+    if (selectedNodeIds.isNotEmpty) {
       final existingIds = <NodeId>{};
       for (final layer in scene.layers) {
         for (final node in layer.nodes) {
@@ -341,7 +336,7 @@ class SceneController extends ChangeNotifier {
         }
       }
       _contracts.setSelection(
-        _selectedNodeIds.where(existingIds.contains),
+        selectedNodeIds.where(existingIds.contains),
         notify: false,
       );
     }
@@ -403,7 +398,7 @@ class SceneController extends ChangeNotifier {
 
       layer.nodes.removeAt(index);
       _contracts.setSelection(
-        _selectedNodeIds.where((candidate) => candidate != id),
+        _selectionModel.selectedNodeIds.where((candidate) => candidate != id),
         notify: false,
       );
       _contracts.markSceneStructuralChanged();
@@ -457,7 +452,7 @@ class SceneController extends ChangeNotifier {
 
   /// Clears the current selection.
   void clearSelection() {
-    if (_selectedNodeIds.isEmpty) return;
+    if (_selectionModel.selectedNodeIds.isEmpty) return;
     _contracts.setSelection(const <NodeId>[], notify: false);
     _contracts.notifyNow();
   }
@@ -471,12 +466,13 @@ class SceneController extends ChangeNotifier {
 
   /// Toggles selection for a single node [id].
   void toggleSelection(NodeId id) {
-    if (_selectedNodeIds.contains(id)) {
+    final selectedNodeIds = _selectionModel.selectedNodeIds;
+    if (selectedNodeIds.contains(id)) {
       _contracts.setSelection(
-        _selectedNodeIds.where((candidate) => candidate != id),
+        selectedNodeIds.where((candidate) => candidate != id),
       );
     } else {
-      _contracts.setSelection(<NodeId>[..._selectedNodeIds, id]);
+      _contracts.setSelection(<NodeId>[...selectedNodeIds, id]);
     }
   }
 
@@ -586,12 +582,13 @@ class SceneController extends ChangeNotifier {
 
   /// Deletes deletable selected nodes and emits an action.
   void deleteSelection({int? timestampMs}) {
-    if (_selectedNodeIds.isEmpty) return;
+    final selectedNodeIds = _selectionModel.selectedNodeIds;
+    if (selectedNodeIds.isEmpty) return;
     final deletableIds = <NodeId>[];
 
     for (final layer in scene.layers) {
       layer.nodes.removeWhere((node) {
-        if (!_selectedNodeIds.contains(node.id)) return false;
+        if (!selectedNodeIds.contains(node.id)) return false;
         if (!node.isDeletable) return false;
         deletableIds.add(node.id);
         return true;
@@ -600,7 +597,7 @@ class SceneController extends ChangeNotifier {
 
     if (deletableIds.isEmpty) return;
     _contracts.setSelection(
-      _selectedNodeIds.where((id) => !deletableIds.contains(id)),
+      selectedNodeIds.where((id) => !deletableIds.contains(id)),
       notify: false,
     );
     _contracts.markSceneStructuralChanged();
@@ -732,7 +729,7 @@ class SceneController extends ChangeNotifier {
     final hit = hitTestTopNode(_contracts.scene, scenePoint);
     if (hit != null) {
       _dragTarget = _DragTarget.move;
-      if (!_selectedNodeIds.contains(hit.id)) {
+      if (!_contracts.selectedNodeIds.contains(hit.id)) {
         _contracts.setSelection({hit.id});
       }
       return;
@@ -1290,14 +1287,8 @@ class SceneController extends ChangeNotifier {
   }
 
   bool _setSelection(Iterable<NodeId> nodeIds, {bool notify = true}) {
-    final next = LinkedHashSet<NodeId>.from(nodeIds);
-    if (_selectedNodeIds.length == next.length &&
-        _selectedNodeIds.containsAll(next)) {
-      return false;
-    }
-    _selectedNodeIds
-      ..clear()
-      ..addAll(next);
+    final didChange = _selectionModel.setSelection(nodeIds);
+    if (!didChange) return false;
     _contracts.markSelectionChanged();
     if (notify) {
       _contracts.requestRepaintOncePerFrame();
@@ -1306,8 +1297,8 @@ class SceneController extends ChangeNotifier {
   }
 
   void _setSelectionRect(Rect? rect, {bool notify = true}) {
-    if (_selectionRect == rect) return;
-    _selectionRect = rect;
+    final didChange = _selectionModel.setSelectionRect(rect);
+    if (!didChange) return;
     _contracts.markSceneGeometryChanged();
     if (notify) {
       _contracts.requestRepaintOncePerFrame();
@@ -1408,7 +1399,7 @@ class SceneController extends ChangeNotifier {
   }
 
   void _markSelectionChanged() {
-    _selectionRevision++;
+    _selectionModel.markSelectionChanged();
     _markSceneGeometryChanged();
   }
 
@@ -1465,7 +1456,7 @@ class _SceneControllerContracts implements InputSliceContracts {
   int get sceneRevision => _controller._sceneRevision;
 
   @override
-  int get selectionRevision => _controller._selectionRevision;
+  int get selectionRevision => _controller._selectionModel.selectionRevision;
 
   @override
   void markSceneGeometryChanged() => _controller._markSceneGeometryChanged();
