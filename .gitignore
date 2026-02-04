@@ -31,3 +31,4 @@ migrate_working_dir/
 /coverage/
 
 # Internal project docs (excluded from pub.dev packaging via .pubignore).
+DEVELOPMENT_PLAN.md
