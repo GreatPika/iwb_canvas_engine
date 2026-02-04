@@ -33,9 +33,11 @@ class SceneController extends ChangeNotifier {
   ///
   /// [nodeIdGenerator] lets you override how node IDs are produced for nodes
   /// created by this controller. By default, IDs are `node-{n}` with a
-  /// per-controller counter and are guaranteed to be unique within the scene at
-  /// generation time. If you override the generator, ensure IDs stay unique in
-  /// the scene.
+  /// per-controller counter. The default counter starts at `max(existing node-n)+1`
+  /// for the provided scene to avoid O(N) scans during bulk node creation.
+  ///
+  /// IDs are guaranteed to be unique within the scene at generation time. If
+  /// you override the generator, ensure IDs stay unique in the scene.
   SceneController({
     Scene? scene,
     PointerInputSettings? pointerSettings,
@@ -45,6 +47,7 @@ class SceneController extends ChangeNotifier {
        pointerSettings = pointerSettings ?? const PointerInputSettings(),
        _dragStartSlop = dragStartSlop {
     _nodeIdGenerator = nodeIdGenerator ?? _defaultNodeIdGenerator;
+    _nodeIdSeed = _initialDefaultNodeIdSeed(this.scene);
     _repaintScheduler = RepaintScheduler(notifyListeners: notifyListeners);
     _actionDispatcher = ActionDispatcher();
     _selectionModel = SelectionModel();
@@ -260,6 +263,20 @@ class SceneController extends ChangeNotifier {
         return id;
       }
     }
+  }
+
+  static int _initialDefaultNodeIdSeed(Scene scene) {
+    var maxId = -1;
+    for (final layer in scene.layers) {
+      for (final node in layer.nodes) {
+        final id = node.id;
+        if (!id.startsWith('node-')) continue;
+        final n = int.tryParse(id.substring('node-'.length));
+        if (n == null || n < 0) continue;
+        if (n > maxId) maxId = n;
+      }
+    }
+    return maxId + 1;
   }
 
   bool _sceneContainsNodeId(NodeId id) {

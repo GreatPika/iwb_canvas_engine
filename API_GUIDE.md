@@ -198,6 +198,7 @@ controller.removeNode('rect-2');
 Gotchas:
 - **Node IDs must be unique within a scene.** If you create IDs yourself, enforce uniqueness.
 - If you want the controller to generate IDs, use controller-created nodes/flows or provide `nodeIdGenerator`.
+- The default `node-{n}` generator starts at `max(existing node-{n}) + 1` for the provided scene (so bulk node creation stays fast).
 
 Relevant APIs:
 - `SceneController.addNode/removeNode/moveNode` — `lib/src/input/scene_controller.dart`

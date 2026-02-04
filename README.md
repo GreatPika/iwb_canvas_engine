@@ -137,8 +137,10 @@ SceneView(
 ```
 
 Node IDs must be unique within a scene. By default, `SceneController` generates
-`node-{n}` IDs for nodes it creates; pass `nodeIdGenerator` if you need a custom
-scheme.
+`node-{n}` IDs for nodes it creates. The default counter starts at
+`max(existing node-{n}) + 1` for the provided scene (so it doesn't scan the
+whole scene on every new node when nodes are created in bulk). Pass
+`nodeIdGenerator` if you need a custom scheme.
 
 ### Events
 

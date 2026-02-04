@@ -8,8 +8,8 @@
 
 ## Nice to have (P2 — as needed)
 
-- [ ] Speed up hit-testing for complex `PathNode` geometries (only if it becomes a bottleneck with large SVG paths).
-- [ ] Optimize `NodeId` generation (caching/acceleration). Likely unnecessary unless scenes are very large and nodes are created in bulk.
+- [x] Speed up hit-testing for complex `PathNode` geometries (only if it becomes a bottleneck with large SVG paths).
+- [x] Optimize `NodeId` generation (caching/acceleration). Likely unnecessary unless scenes are very large and nodes are created in bulk.
 
 ## Optional (P3 — only with requirements + metrics)
 

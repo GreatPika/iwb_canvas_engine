@@ -631,6 +631,7 @@ class PathNode extends SceneNode {
   /// Invariant: cache is valid only while svgPathData and fillRule are unchanged.
   /// Validate via core_nodes_test "PathNode invalidates cached path".
   Path? _cachedLocalPath;
+  Rect? _cachedLocalPathBounds;
   String? _cachedSvgPathData;
   PathFillRule? _cachedFillRule;
   bool _cacheResolved = false;
@@ -664,6 +665,7 @@ class PathNode extends SceneNode {
       _cachedSvgPathData = _svgPathData;
       _cachedFillRule = _fillRule;
       _cachedLocalPath = null;
+      _cachedLocalPathBounds = null;
       return null;
     }
     try {
@@ -674,36 +676,34 @@ class PathNode extends SceneNode {
         _cachedSvgPathData = _svgPathData;
         _cachedFillRule = _fillRule;
         _cachedLocalPath = null;
+        _cachedLocalPathBounds = null;
         return null;
       }
       final centered = path.shift(-bounds.center);
       centered.fillType = _fillRule == PathFillRule.evenOdd
           ? PathFillType.evenOdd
           : PathFillType.nonZero;
+      final centeredBounds = centered.getBounds();
       _cacheResolved = true;
       _cachedSvgPathData = _svgPathData;
       _cachedFillRule = _fillRule;
       _cachedLocalPath = centered;
+      _cachedLocalPathBounds = centeredBounds.isEmpty ? null : centeredBounds;
       return centered;
     } catch (_) {
       _cacheResolved = true;
       _cachedSvgPathData = _svgPathData;
       _cachedFillRule = _fillRule;
       _cachedLocalPath = null;
+      _cachedLocalPathBounds = null;
       return null;
     }
   }
 
-  Rect? _pathBounds() {
-    final path = buildLocalPath();
-    if (path == null) return null;
-    final bounds = path.getBounds();
-    return bounds.isEmpty ? null : bounds;
-  }
-
   @override
   Rect get localBounds {
-    final bounds = _pathBounds();
+    buildLocalPath();
+    final bounds = _cachedLocalPathBounds;
     if (bounds == null) return Rect.zero;
     var rect = bounds;
     if (strokeColor != null && strokeWidth > 0) {
@@ -715,6 +715,7 @@ class PathNode extends SceneNode {
   void _invalidatePathCache() {
     _cacheResolved = false;
     _cachedLocalPath = null;
+    _cachedLocalPathBounds = null;
     _cachedSvgPathData = null;
     _cachedFillRule = null;
   }

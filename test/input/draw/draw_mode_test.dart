@@ -293,4 +293,52 @@ void main() {
     expect(ids, contains('node-0'));
     expect(ids, contains('node-1'));
   });
+
+  test('default nodeIdGenerator starts after the max existing node-n', () {
+    final existingLow = RectNode(
+      id: 'node-1',
+      size: const Size(10, 10),
+      fillColor: const Color(0xFF000000),
+    )..position = const Offset(50, 50);
+    final existingHigh = RectNode(
+      id: 'node-41',
+      size: const Size(10, 10),
+      fillColor: const Color(0xFF000000),
+    )..position = const Offset(150, 50);
+    final scene = Scene(
+      layers: [
+        Layer(nodes: [existingLow, existingHigh]),
+      ],
+    );
+    final controller = drawController(scene);
+    controller.setDrawTool(DrawTool.pen);
+
+    controller.handlePointer(
+      PointerSample(
+        pointerId: 7,
+        position: const Offset(0, 0),
+        timestampMs: 0,
+        phase: PointerPhase.down,
+      ),
+    );
+    controller.handlePointer(
+      PointerSample(
+        pointerId: 7,
+        position: const Offset(10, 0),
+        timestampMs: 10,
+        phase: PointerPhase.move,
+      ),
+    );
+    controller.handlePointer(
+      PointerSample(
+        pointerId: 7,
+        position: const Offset(20, 0),
+        timestampMs: 20,
+        phase: PointerPhase.up,
+      ),
+    );
+
+    expect(scene.layers.single.nodes, hasLength(3));
+    expect(scene.layers.single.nodes.last.id, 'node-42');
+  });
 }
