@@ -15,6 +15,61 @@ the intended direction for v1.0.
 - Built-in undo/redo implementation.
 - Persistence beyond JSON export/import.
 
+## Invariants
+
+This section documents project invariants in a form that is intended to be
+checkable (by tests, tooling, or simple grep-able rules).
+
+### Global invariants
+
+- `lib/src/core/**` must not import `input/`, `render/`, `view/`, or
+  `serialization/`.
+- Public entrypoints must remain source-compatible:
+  - `package:iwb_canvas_engine/basic.dart`
+  - `package:iwb_canvas_engine/advanced.dart`
+  - `CanvasMode` and `DrawTool` stay available via those same entrypoints.
+- Input notifications preserve the current "bit-for-bit" semantics:
+  - **Immediate notification** (synchronous): mode/tool/color/background/grid
+    setters, `notifySceneChanged()`, and most scene mutation commands
+    (rotate/flip/delete/clear/moveNode/removeNode/addNode).
+  - **Coalesced notification (once per frame)**: stroke thickness/opacity
+    setters, camera offset, selection/selection-rect updates, and hot paths
+    during pointer gestures.
+
+### Boundary invariants (Input slices)
+
+The input layer is being refactored into vertical slices under
+`lib/src/input/slices/**`. These rules are enforced by `tool/` checks (see
+`DEVELOPMENT_PLAN.md`).
+
+- `lib/src/input/slices/**`:
+  - must not use `part` / `part of`
+  - must not import `scene_controller.dart`
+  - must not import other slices outside of its own slice subtree
+- `lib/src/input/internal/**`:
+  - must not import `scene_controller.dart`
+  - must not import `slices/**`
+- Shared reusable input code (used by multiple slices) lives in
+  `lib/src/input/internal/**` (or in `lib/src/core/**` if it is pure math).
+
+### Slice invariants
+
+These invariants are requirements for future extraction work. They are kept
+here as a checklist to prevent subtle behavioral regressions during refactors.
+
+- Repaint:
+  - repeated `requestRepaintOncePerFrame()` calls schedule at most one frame
+  - cancellation tokening prevents stale scheduled callbacks from firing
+  - `notifyNow()` clears the "needs notify" flag and cancels scheduled repaint
+- Signals:
+  - both streams stay `broadcast(sync: true)`
+  - `ActionCommitted.actionId` format stays `a${counter++}`
+- Selection:
+  - `setSelection(...)` defaults to coalesced repaint (not immediate notify)
+  - `clearSelection()` remains an immediate notify
+- Commands:
+  - structural mutations call `notifySceneChanged()` and return immediately
+
 ## High-level structure
 
 ```text
