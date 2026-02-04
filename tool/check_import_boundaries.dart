@@ -1,13 +1,22 @@
 import 'dart:io';
 
 class _Violation {
-  _Violation(this.filePath, this.message);
+  _Violation({
+    required this.filePath,
+    required this.line,
+    required this.directive,
+    required this.target,
+    required this.message,
+  });
 
   final String filePath;
+  final int line;
+  final String directive;
+  final String target;
   final String message;
 
   @override
-  String toString() => '$filePath: $message';
+  String toString() => '$filePath:$line: $message ($directive: $target)';
 }
 
 String _normalizePosixPath(String path) {
@@ -43,45 +52,102 @@ String _posixJoin(String a, String b) {
 
 String _toPosixPath(String path) => path.replaceAll('\\', '/');
 
-String? _extractImportTarget(String line) {
-  final trimmed = line.trimLeft();
-  if (!trimmed.startsWith('import ')) {
-    return null;
+String _posixDirname(String posixPath) {
+  final n = _normalizePosixPath(posixPath);
+  if (n == '/' || n.isEmpty) {
+    return n;
   }
-
-  final firstQuote = trimmed.indexOf("'");
-  final firstDQuote = trimmed.indexOf('"');
-  final quoteIndex = (firstQuote == -1)
-      ? firstDQuote
-      : (firstDQuote == -1
-            ? firstQuote
-            : (firstQuote < firstDQuote ? firstQuote : firstDQuote));
-  if (quoteIndex == -1) {
-    return null;
+  final idx = n.lastIndexOf('/');
+  if (idx <= 0) {
+    return n.startsWith('/') ? '/' : '';
   }
-
-  final quoteChar = trimmed[quoteIndex];
-  final endQuote = trimmed.indexOf(quoteChar, quoteIndex + 1);
-  if (endQuote == -1) {
-    return null;
-  }
-
-  return trimmed.substring(quoteIndex + 1, endQuote);
+  return n.substring(0, idx);
 }
 
-bool _containsPartDirective(String content) {
-  for (final line in content.split('\n')) {
-    final t = line.trimLeft();
-    if (t.startsWith('part ') ||
-        t.startsWith('part\t') ||
-        t.startsWith('part;')) {
-      return true;
-    }
-    if (t.startsWith('part of ')) {
-      return true;
+String _toRepoRelPosixPath({
+  required String absPosixPath,
+  required String rootAbsPosixPath,
+}) {
+  final abs = _normalizePosixPath(absPosixPath);
+  final root = _normalizePosixPath(rootAbsPosixPath);
+  if (abs == root) {
+    return '/';
+  }
+  final rootPrefix = root.endsWith('/') ? root : '$root/';
+  if (!abs.startsWith(rootPrefix)) {
+    return abs;
+  }
+  final rel = abs.substring(root.length);
+  return rel.startsWith('/') ? rel : '/$rel';
+}
+
+String _readPackageNameOrFallback(Directory root) {
+  final pubspec = File('${root.path}${Platform.pathSeparator}pubspec.yaml');
+  if (!pubspec.existsSync()) {
+    return 'iwb_canvas_engine';
+  }
+  for (final line in pubspec.readAsLinesSync()) {
+    final trimmed = line.trimLeft();
+    final match = RegExp(r'^name:\s*([A-Za-z0-9_]+)\s*$').firstMatch(trimmed);
+    if (match != null) {
+      return match.group(1)!;
     }
   }
-  return false;
+  return 'iwb_canvas_engine';
+}
+
+List<String> _extractAllQuotedStrings(String text) {
+  final out = <String>[];
+
+  for (var i = 0; i < text.length; i++) {
+    final ch = text[i];
+    if (ch != "'" && ch != '"') {
+      continue;
+    }
+
+    final quote = ch;
+    final buf = StringBuffer();
+    var escaped = false;
+    var j = i + 1;
+    for (; j < text.length; j++) {
+      final c = text[j];
+      if (escaped) {
+        buf.write(c);
+        escaped = false;
+        continue;
+      }
+      if (c == r'\') {
+        escaped = true;
+        continue;
+      }
+      if (c == quote) {
+        break;
+      }
+      buf.write(c);
+    }
+    if (j >= text.length) {
+      break;
+    }
+
+    out.add(buf.toString());
+    i = j;
+  }
+
+  return out;
+}
+
+List<String>? _extractDirectiveTargets(
+  String line, {
+  required String directive,
+}) {
+  final trimmed = line.trimLeft();
+  if (trimmed.startsWith('//')) {
+    return null;
+  }
+  if (!trimmed.startsWith('$directive ')) {
+    return null;
+  }
+  return _extractAllQuotedStrings(trimmed);
 }
 
 String? _sliceNameForFilePosix(String filePosixPath) {
@@ -98,15 +164,112 @@ String? _sliceNameForFilePosix(String filePosixPath) {
   return after.substring(0, slash);
 }
 
-bool _isUnderPosix(String filePosixPath, String folderPosixPath) {
-  final f = _normalizePosixPath(filePosixPath);
-  final folder = _normalizePosixPath(folderPosixPath);
-  return f == folder ||
-      f.startsWith(folder.endsWith('/') ? folder : '$folder/');
+String? _resolveToRepoRelTargetPosix({
+  required String targetPosix,
+  required String packageName,
+  required String fileDirRepoRelPosix,
+}) {
+  final isDart = targetPosix.startsWith('dart:');
+  if (isDart) {
+    return null;
+  }
+
+  final isPackage = targetPosix.startsWith('package:');
+  if (isPackage) {
+    final prefix = 'package:$packageName/';
+    if (!targetPosix.startsWith(prefix)) {
+      return null;
+    }
+    final rest = targetPosix.substring(prefix.length);
+    return _normalizePosixPath('/lib/$rest');
+  }
+
+  // Relative (including "file:"-like oddities is intentionally not supported).
+  return _posixJoin(fileDirRepoRelPosix, targetPosix);
+}
+
+bool _isAllowedForSlice({
+  required String targetPosix,
+  required String? resolvedRepoRelPosix,
+  required String currentSlice,
+}) {
+  if (targetPosix.startsWith('dart:')) {
+    return true;
+  }
+  if (targetPosix.startsWith('package:flutter/')) {
+    return true;
+  }
+  if (targetPosix.startsWith('package:meta/')) {
+    return true;
+  }
+
+  if (resolvedRepoRelPosix == null) {
+    return false;
+  }
+
+  if (resolvedRepoRelPosix.startsWith('/lib/src/core/')) {
+    return true;
+  }
+  if (resolvedRepoRelPosix == '/lib/src/input/types.dart') {
+    return true;
+  }
+  if (resolvedRepoRelPosix == '/lib/src/input/action_events.dart') {
+    return true;
+  }
+  if (resolvedRepoRelPosix == '/lib/src/input/pointer_input.dart') {
+    return true;
+  }
+  if (resolvedRepoRelPosix.startsWith('/lib/src/input/internal/')) {
+    return true;
+  }
+  if (resolvedRepoRelPosix.startsWith('/lib/src/input/slices/$currentSlice/')) {
+    return true;
+  }
+
+  return false;
+}
+
+bool _isAllowedForInternal({
+  required String targetPosix,
+  required String? resolvedRepoRelPosix,
+}) {
+  if (targetPosix.startsWith('dart:')) {
+    return true;
+  }
+  if (targetPosix.startsWith('package:flutter/')) {
+    return true;
+  }
+  if (targetPosix.startsWith('package:meta/')) {
+    return true;
+  }
+
+  if (resolvedRepoRelPosix == null) {
+    return false;
+  }
+
+  if (resolvedRepoRelPosix.startsWith('/lib/src/core/')) {
+    return true;
+  }
+  if (resolvedRepoRelPosix == '/lib/src/input/types.dart') {
+    return true;
+  }
+  if (resolvedRepoRelPosix == '/lib/src/input/action_events.dart') {
+    return true;
+  }
+  if (resolvedRepoRelPosix == '/lib/src/input/pointer_input.dart') {
+    return true;
+  }
+  if (resolvedRepoRelPosix.startsWith('/lib/src/input/internal/')) {
+    return true;
+  }
+
+  return false;
 }
 
 void main(List<String> args) {
   final root = Directory.current;
+  final rootAbsPosix = _toPosixPath(root.absolute.path);
+  final packageName = _readPackageNameOrFallback(root);
   final inputRoot = Directory(
     '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}src${Platform.pathSeparator}input',
   );
@@ -129,9 +292,13 @@ void main(List<String> args) {
       continue;
     }
 
-    final filePosixPath = _toPosixPath(entity.absolute.path);
-    final isSliceFile = filePosixPath.contains('/lib/src/input/slices/');
-    final isInternalFile = filePosixPath.contains('/lib/src/input/internal/');
+    final fileAbsPosixPath = _toPosixPath(entity.absolute.path);
+    final filePosixPath = _toRepoRelPosixPath(
+      absPosixPath: fileAbsPosixPath,
+      rootAbsPosixPath: rootAbsPosix,
+    );
+    final isSliceFile = filePosixPath.startsWith('/lib/src/input/slices/');
+    final isInternalFile = filePosixPath.startsWith('/lib/src/input/internal/');
 
     if (!isSliceFile && !isInternalFile) {
       continue;
@@ -139,100 +306,132 @@ void main(List<String> args) {
 
     final content = entity.readAsStringSync();
 
-    if (isSliceFile && _containsPartDirective(content)) {
-      violations.add(
-        _Violation(filePosixPath, 'must not use part/part of directives'),
-      );
-    }
-
-    final fileDirPosix = _toPosixPath(entity.parent.absolute.path);
     final currentSlice = isSliceFile
         ? _sliceNameForFilePosix(filePosixPath)
         : null;
+    final fileDirRepoRelPosix = _posixDirname(filePosixPath);
 
-    for (final line in content.split('\n')) {
-      final target = _extractImportTarget(line);
-      if (target == null) {
-        continue;
-      }
+    final lines = content.split('\n');
+    for (var i = 0; i < lines.length; i++) {
+      final lineNo = i + 1;
+      final line = lines[i];
 
-      final targetPosix = _toPosixPath(target);
-
-      final isDart = targetPosix.startsWith('dart:');
-      final isPackage = targetPosix.startsWith('package:');
-      final isRelative = !isDart && !isPackage;
-
-      if (targetPosix.contains('scene_controller.dart')) {
+      final partTargets = _extractDirectiveTargets(line, directive: 'part');
+      final partOfTargets = _extractDirectiveTargets(
+        line,
+        directive: 'part of',
+      );
+      if (isSliceFile && (partTargets != null || partOfTargets != null)) {
         violations.add(
           _Violation(
-            filePosixPath,
-            "must not import 'scene_controller.dart' ($target)",
+            filePath: filePosixPath,
+            line: lineNo,
+            directive: 'part',
+            target: line.trim(),
+            message: 'slices/** must not use part/part of directives',
           ),
         );
       }
 
-      if (isRelative) {
-        final resolved = _posixJoin(fileDirPosix, targetPosix);
-
-        if (isInternalFile && resolved.contains('/lib/src/input/slices/')) {
-          violations.add(
-            _Violation(
-              filePosixPath,
-              "internal/** must not import slices/** ($target)",
-            ),
-          );
-        }
-
-        if (isSliceFile && resolved.contains('/lib/src/input/slices/')) {
-          final importedSlice = _sliceNameForFilePosix(resolved);
-          if (currentSlice != null &&
-              importedSlice != null &&
-              importedSlice != currentSlice &&
-              !_isUnderPosix(
-                resolved,
-                '/lib/src/input/slices/$currentSlice/',
-              )) {
-            violations.add(
-              _Violation(
-                filePosixPath,
-                "slices/** must not import other slices (current=$currentSlice, import=$importedSlice, target=$target)",
-              ),
-            );
-          }
-        }
-
+      final importTargets = _extractDirectiveTargets(line, directive: 'import');
+      final exportTargets = _extractDirectiveTargets(line, directive: 'export');
+      final directive = importTargets != null
+          ? 'import'
+          : (exportTargets != null ? 'export' : null);
+      final targets = importTargets ?? exportTargets;
+      if (directive == null || targets == null) {
         continue;
       }
 
-      if (isPackage) {
-        final normalized = targetPosix.replaceFirst(
-          'package:iwb_canvas_engine/',
-          '/lib/',
+      for (final target in targets) {
+        final targetPosix = _toPosixPath(target);
+        final resolvedRepoRelPosix = _resolveToRepoRelTargetPosix(
+          targetPosix: targetPosix,
+          packageName: packageName,
+          fileDirRepoRelPosix: fileDirRepoRelPosix,
         );
-        if (isInternalFile && normalized.contains('/src/input/slices/')) {
+
+        var hasSpecificViolation = false;
+
+        if (resolvedRepoRelPosix == '/lib/src/input/scene_controller.dart') {
           violations.add(
             _Violation(
-              filePosixPath,
-              "internal/** must not import slices/** ($target)",
+              filePath: filePosixPath,
+              line: lineNo,
+              directive: directive,
+              target: target,
+              message: "must not $directive 'scene_controller.dart'",
             ),
           );
+          hasSpecificViolation = true;
         }
 
-        if (isSliceFile && normalized.contains('/src/input/slices/')) {
-          final idx = normalized.indexOf('/src/input/slices/');
-          final after = normalized.substring(idx + '/src/input/slices/'.length);
-          final slash = after.indexOf('/');
-          if (slash != -1) {
-            final importedSlice = after.substring(0, slash);
-            if (currentSlice != null && importedSlice != currentSlice) {
+        if (resolvedRepoRelPosix != null) {
+          if (isInternalFile &&
+              resolvedRepoRelPosix.startsWith('/lib/src/input/slices/')) {
+            violations.add(
+              _Violation(
+                filePath: filePosixPath,
+                line: lineNo,
+                directive: directive,
+                target: target,
+                message: 'internal/** must not $directive slices/**',
+              ),
+            );
+            hasSpecificViolation = true;
+          }
+
+          if (isSliceFile &&
+              resolvedRepoRelPosix.startsWith('/lib/src/input/slices/')) {
+            final importedSlice = _sliceNameForFilePosix(resolvedRepoRelPosix);
+            if (currentSlice != null &&
+                importedSlice != null &&
+                importedSlice != currentSlice) {
               violations.add(
                 _Violation(
-                  filePosixPath,
-                  "slices/** must not import other slices (current=$currentSlice, import=$importedSlice, target=$target)",
+                  filePath: filePosixPath,
+                  line: lineNo,
+                  directive: directive,
+                  target: target,
+                  message:
+                      'slices/** must not $directive other slices '
+                      '(current=$currentSlice, import=$importedSlice)',
                 ),
               );
+              hasSpecificViolation = true;
             }
           }
+        }
+
+        final allowed = isSliceFile
+            ? (currentSlice != null &&
+                  _isAllowedForSlice(
+                    targetPosix: targetPosix,
+                    resolvedRepoRelPosix: resolvedRepoRelPosix,
+                    currentSlice: currentSlice,
+                  ))
+            : _isAllowedForInternal(
+                targetPosix: targetPosix,
+                resolvedRepoRelPosix: resolvedRepoRelPosix,
+              );
+        if (!allowed && !hasSpecificViolation) {
+          final scope = isSliceFile ? 'slices/**' : 'internal/**';
+          final details = resolvedRepoRelPosix ?? targetPosix;
+          final isExternalPackage =
+              resolvedRepoRelPosix == null &&
+              targetPosix.startsWith('package:');
+          final message = isExternalPackage
+              ? '$scope has a disallowed external package $directive'
+              : '$scope has a disallowed $directive target';
+          violations.add(
+            _Violation(
+              filePath: filePosixPath,
+              line: lineNo,
+              directive: directive,
+              target: target,
+              message: '$message ($details)',
+            ),
+          );
         }
       }
     }
