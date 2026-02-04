@@ -13,6 +13,7 @@ import '../core/nodes.dart';
 import '../core/scene.dart';
 import '../core/transform2d.dart';
 import 'action_events.dart';
+import 'internal/contracts.dart';
 import 'pointer_input.dart';
 import 'types.dart';
 
@@ -56,6 +57,7 @@ class SceneController extends ChangeNotifier {
   final Scene scene;
   final PointerInputSettings pointerSettings;
   final double? _dragStartSlop;
+  late final InputSliceContracts _contracts = _SceneControllerContracts(this);
   late final NodeId Function() _nodeIdGenerator;
   int _nodeIdSeed = 0;
 
@@ -664,10 +666,10 @@ class SceneController extends ChangeNotifier {
     if (signal.type != PointerSignalType.doubleTap) return;
     if (mode != CanvasMode.move) return;
 
-    final scenePoint = toScene(signal.position, scene.camera.offset);
-    final hit = hitTestTopNode(scene, scenePoint);
+    final scenePoint = _contracts.toScenePoint(signal.position);
+    final hit = hitTestTopNode(_contracts.scene, scenePoint);
     if (hit is TextNode) {
-      _editTextRequests.add(
+      _contracts.emitEditTextRequested(
         EditTextRequested(
           nodeId: hit.id,
           timestampMs: signal.timestampMs,
@@ -682,7 +684,7 @@ class SceneController extends ChangeNotifier {
       return;
     }
 
-    final scenePoint = toScene(sample.position, scene.camera.offset);
+    final scenePoint = _contracts.toScenePoint(sample.position);
 
     switch (sample.phase) {
       case PointerPhase.down:
@@ -706,7 +708,7 @@ class SceneController extends ChangeNotifier {
     }
 
     _expirePendingLine(sample.timestampMs);
-    final scenePoint = toScene(sample.position, scene.camera.offset);
+    final scenePoint = _contracts.toScenePoint(sample.position);
 
     switch (sample.phase) {
       case PointerPhase.down:
@@ -817,16 +819,12 @@ class SceneController extends ChangeNotifier {
     }
 
     _resetDrag();
-    if (_needsNotify) {
-      _notifyNow();
-    }
+    _contracts.notifyNowIfNeeded();
   }
 
   void _handleCancel() {
     _resetDrag();
-    if (_needsNotify) {
-      _notifyNow();
-    }
+    _contracts.notifyNowIfNeeded();
   }
 
   void _handleDrawDown(PointerSample sample, Offset scenePoint) {
@@ -893,16 +891,12 @@ class SceneController extends ChangeNotifier {
     }
 
     _resetDrawPointer();
-    if (_needsNotify) {
-      _notifyNow();
-    }
+    _contracts.notifyNowIfNeeded();
   }
 
   void _handleDrawCancel() {
     _resetDraw();
-    if (_needsNotify) {
-      _notifyNow();
-    }
+    _contracts.notifyNowIfNeeded();
   }
 
   void _commitMove(int timestampMs, Offset scenePoint) {
@@ -1470,6 +1464,104 @@ class SceneController extends ChangeNotifier {
       ),
     );
   }
+}
+
+class _SceneControllerContracts implements InputSliceContracts {
+  _SceneControllerContracts(this._controller);
+
+  final SceneController _controller;
+
+  @override
+  Scene get scene => _controller.scene;
+
+  @override
+  Offset toScenePoint(Offset viewPoint) =>
+      toScene(viewPoint, _controller.scene.camera.offset);
+
+  @override
+  double get dragStartSlop => _controller.dragStartSlop;
+
+  @override
+  Set<NodeId> get selectedNodeIds => _controller.selectedNodeIds;
+
+  @override
+  bool setSelection(Iterable<NodeId> ids, {bool notify = true}) =>
+      _controller._setSelection(ids, notify: notify);
+
+  @override
+  Rect? get selectionRect => _controller.selectionRect;
+
+  @override
+  void setSelectionRect(Rect? rect, {bool notify = true}) =>
+      _controller._setSelectionRect(rect, notify: notify);
+
+  @override
+  int get sceneRevision => _controller._sceneRevision;
+
+  @override
+  int get selectionRevision => _controller._selectionRevision;
+
+  @override
+  void markSceneGeometryChanged() => _controller._markSceneGeometryChanged();
+
+  @override
+  void markSceneStructuralChanged() =>
+      _controller._markSceneStructuralChanged();
+
+  @override
+  void markSelectionChanged() => _controller._markSelectionChanged();
+
+  @override
+  void requestRepaintOncePerFrame() => _controller.requestRepaintOncePerFrame();
+
+  @override
+  void notifyNow() => _controller._notifyNow();
+
+  @override
+  bool get needsNotify => _controller._needsNotify;
+
+  @override
+  void notifyNowIfNeeded() {
+    if (_controller._needsNotify) {
+      _controller._notifyNow();
+    }
+  }
+
+  @override
+  void emitAction(
+    ActionType type,
+    List<NodeId> nodeIds,
+    int timestampMs, {
+    Map<String, Object?>? payload,
+  }) => _controller._emitAction(type, nodeIds, timestampMs, payload: payload);
+
+  @override
+  void emitEditTextRequested(EditTextRequested req) =>
+      _controller._editTextRequests.add(req);
+
+  @override
+  NodeId newNodeId() => _controller._nodeIdGenerator();
+
+  @override
+  DrawTool get drawTool => _controller.drawTool;
+
+  @override
+  Color get drawColor => _controller.drawColor;
+
+  @override
+  double get penThickness => _controller.penThickness;
+
+  @override
+  double get highlighterThickness => _controller.highlighterThickness;
+
+  @override
+  double get lineThickness => _controller.lineThickness;
+
+  @override
+  double get eraserThickness => _controller.eraserThickness;
+
+  @override
+  double get highlighterOpacity => _controller.highlighterOpacity;
 }
 
 enum _DragTarget { none, move, marquee }
