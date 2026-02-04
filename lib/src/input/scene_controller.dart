@@ -7,10 +7,11 @@ import '../core/geometry.dart';
 import '../core/hit_test.dart';
 import '../core/nodes.dart';
 import '../core/scene.dart';
-import '../core/transform2d.dart';
 import 'action_events.dart';
 import 'internal/contracts.dart';
+import 'internal/selection_geometry.dart';
 import 'pointer_input.dart';
+import 'slices/commands/scene_commands.dart';
 import 'slices/draw/draw_mode_engine.dart';
 import 'slices/move/move_mode_engine.dart';
 import 'slices/repaint/repaint_scheduler.dart';
@@ -49,6 +50,7 @@ class SceneController extends ChangeNotifier {
     _selectionModel = SelectionModel();
     _moveModeEngine = MoveModeEngine(_contracts);
     _drawModeEngine = DrawModeEngine(_contracts);
+    _sceneCommands = SceneCommands(_contracts);
   }
 
   final Scene scene;
@@ -61,6 +63,7 @@ class SceneController extends ChangeNotifier {
   late final SelectionModel _selectionModel;
   late final MoveModeEngine _moveModeEngine;
   late final DrawModeEngine _drawModeEngine;
+  late final SceneCommands _sceneCommands;
   int _nodeIdSeed = 0;
 
   CanvasMode _mode = CanvasMode.move;
@@ -155,16 +158,12 @@ class SceneController extends ChangeNotifier {
   ///
   /// Returns `null` when no transformable, unlocked nodes are selected.
   Rect? get selectionBoundsWorld {
-    final nodes = _selectedTransformableNodesInSceneOrder()
-        .where((node) => !node.isLocked)
-        .toList(growable: false);
+    final nodes = selectedTransformableNodesInSceneOrder(
+      scene,
+      _contracts.selectedNodeIds,
+    ).where((node) => !node.isLocked).toList(growable: false);
     if (nodes.isEmpty) return null;
-    Rect? bounds;
-    for (final node in nodes) {
-      final nodeBounds = node.boundsWorld;
-      bounds = bounds == null ? nodeBounds : bounds.expandToInclude(nodeBounds);
-    }
-    return bounds;
+    return boundsWorldForNodes(nodes);
   }
 
   /// Center of [selectionBoundsWorld] when selection is non-empty.
@@ -301,21 +300,7 @@ class SceneController extends ChangeNotifier {
   ///
   /// For example, it drops selection for nodes that were removed directly.
   void notifySceneChanged() {
-    final selectedNodeIds = _selectionModel.selectedNodeIds;
-    if (selectedNodeIds.isNotEmpty) {
-      final existingIds = <NodeId>{};
-      for (final layer in scene.layers) {
-        for (final node in layer.nodes) {
-          existingIds.add(node.id);
-        }
-      }
-      _contracts.setSelection(
-        selectedNodeIds.where(existingIds.contains),
-        notify: false,
-      );
-    }
-    _contracts.markSceneStructuralChanged();
-    _contracts.notifyNow();
+    _sceneCommands.notifySceneChanged();
   }
 
   /// Runs [fn] to mutate [scene] and schedules the appropriate updates.
@@ -326,283 +311,82 @@ class SceneController extends ChangeNotifier {
   /// - When [structural] is false (geometry-only changes), this schedules a
   ///   repaint once per frame.
   void mutate(void Function(Scene scene) fn, {bool structural = false}) {
-    fn(scene);
-    if (structural) {
-      notifySceneChanged();
-      return;
-    }
-    _contracts.markSceneGeometryChanged();
-    _contracts.requestRepaintOncePerFrame();
+    _sceneCommands.mutate(fn, structural: structural);
   }
 
   /// Adds [node] to the target layer and notifies listeners.
   ///
   /// Throws [RangeError] if [layerIndex] is out of bounds.
   void addNode(SceneNode node, {int layerIndex = 0}) {
-    if (layerIndex < 0) {
-      throw RangeError.range(layerIndex, 0, null, 'layerIndex');
-    }
-
-    if (scene.layers.isEmpty) {
-      if (layerIndex != 0) {
-        throw RangeError.range(layerIndex, 0, 0, 'layerIndex');
-      }
-      scene.layers.add(Layer());
-    }
-
-    if (layerIndex >= scene.layers.length) {
-      throw RangeError.range(
-        layerIndex,
-        0,
-        scene.layers.length - 1,
-        'layerIndex',
-      );
-    }
-
-    scene.layers[layerIndex].nodes.add(node);
-    _contracts.markSceneStructuralChanged();
-    _contracts.notifyNow();
+    _sceneCommands.addNode(node, layerIndex: layerIndex);
   }
 
   /// Removes a node by [id], clears its selection, and emits an action.
   void removeNode(NodeId id, {int? timestampMs}) {
-    for (final layer in scene.layers) {
-      final index = layer.nodes.indexWhere((node) => node.id == id);
-      if (index == -1) continue;
-
-      layer.nodes.removeAt(index);
-      _contracts.setSelection(
-        _selectionModel.selectedNodeIds.where((candidate) => candidate != id),
-        notify: false,
-      );
-      _contracts.markSceneStructuralChanged();
-      _contracts.emitAction(ActionType.delete, [
-        id,
-      ], timestampMs ?? DateTime.now().millisecondsSinceEpoch);
-      _contracts.notifyNow();
-      return;
-    }
+    _sceneCommands.removeNode(id, timestampMs: timestampMs);
   }
 
   /// Moves a node by [id] to another layer and emits an action.
   ///
   /// Throws [RangeError] if [targetLayerIndex] is out of bounds.
   void moveNode(NodeId id, {required int targetLayerIndex, int? timestampMs}) {
-    if (scene.layers.isEmpty) {
-      throw RangeError.range(targetLayerIndex, 0, 0, 'targetLayerIndex');
-    }
-    if (targetLayerIndex < 0 || targetLayerIndex >= scene.layers.length) {
-      throw RangeError.range(
-        targetLayerIndex,
-        0,
-        scene.layers.length - 1,
-        'targetLayerIndex',
-      );
-    }
-
-    for (var layerIndex = 0; layerIndex < scene.layers.length; layerIndex++) {
-      final layer = scene.layers[layerIndex];
-      final nodeIndex = layer.nodes.indexWhere((node) => node.id == id);
-      if (nodeIndex == -1) continue;
-
-      if (layerIndex == targetLayerIndex) return;
-
-      final node = layer.nodes.removeAt(nodeIndex);
-      scene.layers[targetLayerIndex].nodes.add(node);
-      _contracts.markSceneStructuralChanged();
-      _contracts.emitAction(
-        ActionType.move,
-        [id],
-        timestampMs ?? DateTime.now().millisecondsSinceEpoch,
-        payload: <String, Object?>{
-          'sourceLayerIndex': layerIndex,
-          'targetLayerIndex': targetLayerIndex,
-        },
-      );
-      _contracts.notifyNow();
-      return;
-    }
+    _sceneCommands.moveNode(
+      id,
+      targetLayerIndex: targetLayerIndex,
+      timestampMs: timestampMs,
+    );
   }
 
   /// Clears the current selection.
   void clearSelection() {
-    if (_selectionModel.selectedNodeIds.isEmpty) return;
-    _contracts.setSelection(const <NodeId>[], notify: false);
-    _contracts.notifyNow();
+    _sceneCommands.clearSelection();
   }
 
   /// Replaces the selection with [nodeIds].
   ///
   /// This is intended for app-driven selection UIs (layers panel, object list).
   void setSelection(Iterable<NodeId> nodeIds) {
-    _contracts.setSelection(nodeIds);
+    _sceneCommands.setSelection(nodeIds);
   }
 
   /// Toggles selection for a single node [id].
   void toggleSelection(NodeId id) {
-    final selectedNodeIds = _selectionModel.selectedNodeIds;
-    if (selectedNodeIds.contains(id)) {
-      _contracts.setSelection(
-        selectedNodeIds.where((candidate) => candidate != id),
-      );
-    } else {
-      _contracts.setSelection(<NodeId>[...selectedNodeIds, id]);
-    }
+    _sceneCommands.toggleSelection(id);
   }
 
   /// Selects all nodes in the scene.
   ///
   /// When [onlySelectable] is true, includes only nodes with `isSelectable`.
   void selectAll({bool onlySelectable = true}) {
-    final ids = <NodeId>[];
-    for (final layer in scene.layers) {
-      for (final node in layer.nodes) {
-        if (!node.isVisible) continue;
-        if (onlySelectable && !node.isSelectable) continue;
-        ids.add(node.id);
-      }
-    }
-    _contracts.setSelection(ids);
+    _sceneCommands.selectAll(onlySelectable: onlySelectable);
   }
 
   /// Rotates the transformable selection by 90 degrees.
   void rotateSelection({required bool clockwise, int? timestampMs}) {
-    final nodes = _selectedTransformableNodesInSceneOrder()
-        .where((node) => !node.isLocked)
-        .toList(growable: false);
-    if (nodes.isEmpty) return;
-
-    final center = _selectionCenter(nodes);
-    final pivot = Transform2D.translation(center);
-    final unpivot = Transform2D.translation(Offset(-center.dx, -center.dy));
-    final rotation = Transform2D.rotationDeg(clockwise ? 90.0 : -90.0);
-    final delta = pivot.multiply(rotation).multiply(unpivot);
-
-    for (final node in nodes) {
-      node.transform = delta.multiply(node.transform);
-    }
-
-    _contracts.emitAction(
-      ActionType.transform,
-      nodes.map((node) => node.id).toList(growable: false),
-      timestampMs ?? DateTime.now().millisecondsSinceEpoch,
-      payload: <String, Object?>{'delta': delta.toJsonMap()},
+    _sceneCommands.rotateSelection(
+      clockwise: clockwise,
+      timestampMs: timestampMs,
     );
-    _contracts.markSceneGeometryChanged();
-    _contracts.notifyNow();
   }
 
   /// Flips the transformable selection horizontally around its center.
   void flipSelectionVertical({int? timestampMs}) {
-    final nodes = _selectedTransformableNodesInSceneOrder()
-        .where((node) => !node.isLocked)
-        .toList(growable: false);
-    if (nodes.isEmpty) return;
-
-    final center = _selectionCenter(nodes);
-    final delta = Transform2D(
-      a: -1,
-      b: 0,
-      c: 0,
-      d: 1,
-      tx: 2 * center.dx,
-      ty: 0,
-    );
-
-    for (final node in nodes) {
-      node.transform = delta.multiply(node.transform);
-    }
-
-    _contracts.emitAction(
-      ActionType.transform,
-      nodes.map((node) => node.id).toList(growable: false),
-      timestampMs ?? DateTime.now().millisecondsSinceEpoch,
-      payload: <String, Object?>{'delta': delta.toJsonMap()},
-    );
-    _contracts.markSceneGeometryChanged();
-    _contracts.notifyNow();
+    _sceneCommands.flipSelectionVertical(timestampMs: timestampMs);
   }
 
   /// Flips the transformable selection vertically around its center.
   void flipSelectionHorizontal({int? timestampMs}) {
-    final nodes = _selectedTransformableNodesInSceneOrder()
-        .where((node) => !node.isLocked)
-        .toList(growable: false);
-    if (nodes.isEmpty) return;
-
-    final center = _selectionCenter(nodes);
-    final delta = Transform2D(
-      a: 1,
-      b: 0,
-      c: 0,
-      d: -1,
-      tx: 0,
-      ty: 2 * center.dy,
-    );
-
-    for (final node in nodes) {
-      node.transform = delta.multiply(node.transform);
-    }
-
-    _contracts.emitAction(
-      ActionType.transform,
-      nodes.map((node) => node.id).toList(growable: false),
-      timestampMs ?? DateTime.now().millisecondsSinceEpoch,
-      payload: <String, Object?>{'delta': delta.toJsonMap()},
-    );
-    _contracts.markSceneGeometryChanged();
-    _contracts.notifyNow();
+    _sceneCommands.flipSelectionHorizontal(timestampMs: timestampMs);
   }
 
   /// Deletes deletable selected nodes and emits an action.
   void deleteSelection({int? timestampMs}) {
-    final selectedNodeIds = _selectionModel.selectedNodeIds;
-    if (selectedNodeIds.isEmpty) return;
-    final deletableIds = <NodeId>[];
-
-    for (final layer in scene.layers) {
-      layer.nodes.removeWhere((node) {
-        if (!selectedNodeIds.contains(node.id)) return false;
-        if (!node.isDeletable) return false;
-        deletableIds.add(node.id);
-        return true;
-      });
-    }
-
-    if (deletableIds.isEmpty) return;
-    _contracts.setSelection(
-      selectedNodeIds.where((id) => !deletableIds.contains(id)),
-      notify: false,
-    );
-    _contracts.markSceneStructuralChanged();
-    _contracts.emitAction(
-      ActionType.delete,
-      deletableIds,
-      timestampMs ?? DateTime.now().millisecondsSinceEpoch,
-    );
-    _contracts.notifyNow();
+    _sceneCommands.deleteSelection(timestampMs: timestampMs);
   }
 
   /// Clears all non-background layers and emits an action.
   void clearScene({int? timestampMs}) {
-    final clearedIds = <NodeId>[];
-    for (final layer in scene.layers) {
-      if (layer.isBackground) continue;
-      for (final node in layer.nodes) {
-        clearedIds.add(node.id);
-      }
-      layer.nodes.clear();
-    }
-
-    if (clearedIds.isEmpty) return;
-    _contracts.setSelection(const <NodeId>[], notify: false);
-    _contracts.markSceneStructuralChanged();
-    _contracts.emitAction(
-      ActionType.clear,
-      clearedIds,
-      timestampMs ?? DateTime.now().millisecondsSinceEpoch,
-    );
-    _contracts.notifyNow();
+    _sceneCommands.clearScene(timestampMs: timestampMs);
   }
 
   /// Handles a pointer sample and updates the controller state.
@@ -643,30 +427,6 @@ class SceneController extends ChangeNotifier {
         ),
       );
     }
-  }
-
-  List<SceneNode> _selectedTransformableNodesInSceneOrder() {
-    final nodes = <SceneNode>[];
-    final selectedNodeIds = _contracts.selectedNodeIds;
-    if (selectedNodeIds.isEmpty) return nodes;
-
-    for (final layer in scene.layers) {
-      for (final node in layer.nodes) {
-        if (!selectedNodeIds.contains(node.id)) continue;
-        if (!node.isTransformable) continue;
-        nodes.add(node);
-      }
-    }
-    return nodes;
-  }
-
-  Offset _selectionCenter(List<SceneNode> nodes) {
-    Rect? bounds;
-    for (final node in nodes) {
-      final nodeBounds = node.boundsWorld;
-      bounds = bounds == null ? nodeBounds : bounds.expandToInclude(nodeBounds);
-    }
-    return bounds?.center ?? Offset.zero;
   }
 
   bool _setSelection(Iterable<NodeId> nodeIds, {bool notify = true}) {
