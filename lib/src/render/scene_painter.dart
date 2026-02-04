@@ -694,7 +694,7 @@ class ScenePainter extends CustomPainter {
 /// Why: avoid re-drawing the grid every frame when inputs are unchanged.
 /// Invariant: the cache key must match size, background, grid, camera offset,
 /// and grid stroke width.
-/// Validate: `test/render_scene_static_layer_cache_test.dart`.
+/// Validate: `test/render/scene_static_layer_cache_test.dart`.
 class SceneStaticLayerCache {
   _StaticLayerKey? _key;
   Picture? _picture;

@@ -1,5 +1,15 @@
 import 'dart:io';
 
+// Invariants enforced by this tool:
+// INV:INV-G-CORE-NO-LAYER-DEPS
+// INV:INV-G-LAYER-BOUNDARIES
+// INV:INV-SLICE-NO-PART
+// INV:INV-SLICE-NO-SCENE_CONTROLLER
+// INV:INV-SLICE-NO-CROSS_SLICE_IMPORTS
+// INV:INV-INTERNAL-NO-SCENE_CONTROLLER
+// INV:INV-INTERNAL-NO-SLICES_IMPORTS
+// INV:INV-SHARED-INPUT-IN-INTERNAL
+
 class _Violation {
   _Violation({
     required this.filePath,
@@ -51,6 +61,52 @@ String _posixJoin(String a, String b) {
 }
 
 String _toPosixPath(String path) => path.replaceAll('\\', '/');
+
+enum _Layer { core, input, render, serialization, view }
+
+_Layer? _layerForRepoRelPosixPath(String repoRelPosixPath) {
+  if (repoRelPosixPath.startsWith('/lib/src/core/')) return _Layer.core;
+  if (repoRelPosixPath.startsWith('/lib/src/input/')) return _Layer.input;
+  if (repoRelPosixPath.startsWith('/lib/src/render/')) return _Layer.render;
+  if (repoRelPosixPath.startsWith('/lib/src/serialization/')) {
+    return _Layer.serialization;
+  }
+  if (repoRelPosixPath.startsWith('/lib/src/view/')) return _Layer.view;
+  return null;
+}
+
+String _layerLabel(_Layer layer) {
+  switch (layer) {
+    case _Layer.core:
+      return 'core';
+    case _Layer.input:
+      return 'input';
+    case _Layer.render:
+      return 'render';
+    case _Layer.serialization:
+      return 'serialization';
+    case _Layer.view:
+      return 'view';
+  }
+}
+
+bool _isAllowedLayerDependency({required _Layer from, required _Layer to}) {
+  switch (from) {
+    case _Layer.core:
+      return to == _Layer.core;
+    case _Layer.serialization:
+      return to == _Layer.core || to == _Layer.serialization;
+    case _Layer.input:
+      return to == _Layer.core || to == _Layer.input;
+    case _Layer.render:
+      return to == _Layer.core || to == _Layer.input || to == _Layer.render;
+    case _Layer.view:
+      return to == _Layer.core ||
+          to == _Layer.input ||
+          to == _Layer.render ||
+          to == _Layer.view;
+  }
+}
 
 String _posixDirname(String posixPath) {
   final n = _normalizePosixPath(posixPath);
@@ -270,21 +326,18 @@ void main(List<String> args) {
   final root = Directory.current;
   final rootAbsPosix = _toPosixPath(root.absolute.path);
   final packageName = _readPackageNameOrFallback(root);
-  final inputRoot = Directory(
-    '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}src${Platform.pathSeparator}input',
+  final srcRoot = Directory(
+    '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}src',
   );
 
-  if (!inputRoot.existsSync()) {
-    stderr.writeln('No lib/src/input directory found. Nothing to check.');
+  if (!srcRoot.existsSync()) {
+    stderr.writeln('No lib/src directory found. Nothing to check.');
     exit(0);
   }
 
   final violations = <_Violation>[];
 
-  for (final entity in inputRoot.listSync(
-    recursive: true,
-    followLinks: false,
-  )) {
+  for (final entity in srcRoot.listSync(recursive: true, followLinks: false)) {
     if (entity is! File) {
       continue;
     }
@@ -297,12 +350,12 @@ void main(List<String> args) {
       absPosixPath: fileAbsPosixPath,
       rootAbsPosixPath: rootAbsPosix,
     );
-    final isSliceFile = filePosixPath.startsWith('/lib/src/input/slices/');
-    final isInternalFile = filePosixPath.startsWith('/lib/src/input/internal/');
-
-    if (!isSliceFile && !isInternalFile) {
+    final fileLayer = _layerForRepoRelPosixPath(filePosixPath);
+    if (fileLayer == null) {
       continue;
     }
+    final isSliceFile = filePosixPath.startsWith('/lib/src/input/slices/');
+    final isInternalFile = filePosixPath.startsWith('/lib/src/input/internal/');
 
     final content = entity.readAsStringSync();
 
@@ -350,6 +403,30 @@ void main(List<String> args) {
           packageName: packageName,
           fileDirRepoRelPosix: fileDirRepoRelPosix,
         );
+
+        if (!isSliceFile && !isInternalFile) {
+          if (resolvedRepoRelPosix != null &&
+              resolvedRepoRelPosix.startsWith('/lib/src/')) {
+            final targetLayer = _layerForRepoRelPosixPath(resolvedRepoRelPosix);
+            if (targetLayer != null &&
+                !_isAllowedLayerDependency(from: fileLayer, to: targetLayer)) {
+              violations.add(
+                _Violation(
+                  filePath: filePosixPath,
+                  line: lineNo,
+                  directive: directive,
+                  target: target,
+                  message:
+                      'layer boundary violation: '
+                      '${_layerLabel(fileLayer)}/** must not $directive '
+                      '${_layerLabel(targetLayer)}/** '
+                      '($resolvedRepoRelPosix)',
+                ),
+              );
+            }
+          }
+          continue;
+        }
 
         var hasSpecificViolation = false;
 
@@ -438,13 +515,11 @@ void main(List<String> args) {
   }
 
   if (violations.isEmpty) {
-    stdout.writeln('OK: input import boundaries');
+    stdout.writeln('OK: import boundaries');
     exit(0);
   }
 
-  stderr.writeln(
-    'FAIL: input import boundary violations (${violations.length})',
-  );
+  stderr.writeln('FAIL: import boundary violations (${violations.length})');
   for (final v in violations) {
     stderr.writeln('- $v');
   }

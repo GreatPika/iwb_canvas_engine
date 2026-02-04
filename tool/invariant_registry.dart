@@ -1,0 +1,120 @@
+/// Canonical list of project invariants.
+///
+/// This file is intentionally machine-readable and stable to parse.
+/// It is used by tooling to ensure every invariant has automated enforcement
+/// (a test and/or a tool check).
+///
+/// To reference an invariant from a test/tool, add a marker comment:
+///   // INV:INV-EXAMPLE
+library;
+
+class Invariant {
+  const Invariant({required this.id, required this.title, required this.scope});
+
+  final String id;
+  final String title;
+
+  /// A short scope label to make reports easier to read.
+  /// Example: "global", "layering", "input-slices", "repaint".
+  final String scope;
+}
+
+const List<Invariant> invariants = <Invariant>[
+  // Global / layering.
+  Invariant(
+    id: 'INV-G-CORE-NO-LAYER-DEPS',
+    scope: 'layering',
+    title: 'core/** must not import input/render/view/serialization',
+  ),
+  Invariant(
+    id: 'INV-G-LAYER-BOUNDARIES',
+    scope: 'layering',
+    title:
+        'layer boundaries (core/input/render/serialization/view) are enforced',
+  ),
+  Invariant(
+    id: 'INV-G-PUBLIC-ENTRYPOINTS',
+    scope: 'public-api',
+    title: 'public entrypoints remain source-compatible (basic/advanced)',
+  ),
+  Invariant(
+    id: 'INV-G-NOTIFY-SEMANTICS',
+    scope: 'behavior',
+    title: 'input notifications preserve immediate vs coalesced semantics',
+  ),
+
+  // Input slice boundaries.
+  Invariant(
+    id: 'INV-SLICE-NO-PART',
+    scope: 'input-slices',
+    title: 'input/slices/** must not use part/part of',
+  ),
+  Invariant(
+    id: 'INV-SLICE-NO-SCENE_CONTROLLER',
+    scope: 'input-slices',
+    title: 'input/slices/** must not import scene_controller.dart',
+  ),
+  Invariant(
+    id: 'INV-SLICE-NO-CROSS_SLICE_IMPORTS',
+    scope: 'input-slices',
+    title: 'input/slices/** must not import other slices outside current slice',
+  ),
+  Invariant(
+    id: 'INV-INTERNAL-NO-SCENE_CONTROLLER',
+    scope: 'input-slices',
+    title: 'input/internal/** must not import scene_controller.dart',
+  ),
+  Invariant(
+    id: 'INV-INTERNAL-NO-SLICES_IMPORTS',
+    scope: 'input-slices',
+    title: 'input/internal/** must not import input/slices/**',
+  ),
+  Invariant(
+    id: 'INV-SHARED-INPUT-IN-INTERNAL',
+    scope: 'input-slices',
+    title: 'shared reusable input code lives in input/internal/** (or core/**)',
+  ),
+
+  // Slice invariants.
+  Invariant(
+    id: 'INV-REPAINT-ONE-PER-FRAME',
+    scope: 'repaint',
+    title: 'requestRepaintOncePerFrame schedules at most one frame',
+  ),
+  Invariant(
+    id: 'INV-REPAINT-TOKEN-CANCELS',
+    scope: 'repaint',
+    title: 'repaint tokening prevents stale scheduled callbacks from firing',
+  ),
+  Invariant(
+    id: 'INV-REPAINT-NOTIFYNOW-CLEARS',
+    scope: 'repaint',
+    title: 'notifyNow clears needs-notify flag and cancels scheduled repaint',
+  ),
+  Invariant(
+    id: 'INV-SIGNALS-BROADCAST-SYNC',
+    scope: 'signals',
+    title: 'signal streams stay broadcast(sync: true)',
+  ),
+  Invariant(
+    id: 'INV-SIGNALS-ACTIONID-FORMAT',
+    scope: 'signals',
+    title: 'ActionCommitted.actionId format stays a{counter++}',
+  ),
+  Invariant(
+    id: 'INV-SELECTION-SETSELECTION-COALESCED',
+    scope: 'selection',
+    title: 'setSelection defaults to coalesced repaint (not immediate notify)',
+  ),
+  Invariant(
+    id: 'INV-SELECTION-CLEARSELECTION-IMMEDIATE',
+    scope: 'selection',
+    title: 'clearSelection remains an immediate notify',
+  ),
+  Invariant(
+    id: 'INV-COMMANDS-STRUCTURAL-NOTIFYSCENECHANGED',
+    scope: 'commands',
+    title:
+        'structural mutations call notifySceneChanged() and return immediately',
+  ),
+];

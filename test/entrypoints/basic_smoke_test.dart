@@ -2,6 +2,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/basic.dart';
 
+// INV:INV-G-PUBLIC-ENTRYPOINTS
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 

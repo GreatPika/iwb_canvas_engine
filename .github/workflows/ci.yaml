@@ -38,6 +38,9 @@ jobs:
       - name: Import boundaries
         run: dart run tool/check_import_boundaries.dart
 
+      - name: Invariant coverage
+        run: dart run tool/check_invariant_coverage.dart
+
       - name: Test
         run: flutter test --coverage
 

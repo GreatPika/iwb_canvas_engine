@@ -10,11 +10,17 @@ A Flutter/Dart canvas engine package with scene model, rendering, input handling
 
 - `ARCHITECTURE.md` (system overview and data flow)
 - `DEVELOPMENT_PLAN.md` (phased plan with checkboxes; update after each completed item)
+- `CODE_REVIEW_CHECKLIST.md` (maintainer checklist for code review and quality gates)
+- `tool/invariant_registry.dart` (canonical machine-readable invariant list)
 
 ## Rules for this repo
 
 - Single source of truth: no sync glue or duplicated state between modules.
 - Group is ephemeral: no stored Group node.
+- Invariants must be explicit and enforced:
+  - Add/modify invariants in `tool/invariant_registry.dart`.
+  - Reference enforcement sites with `// INV:<id>` in `test/**` or `tool/**`.
+  - Keep `dart run tool/check_invariant_coverage.dart` green (CI enforces this).
 - Always mark the checkbox in `DEVELOPMENT_PLAN.md` after completing an item.
 - When changing public behavior or public API, update the relevant documentation in the same PR/commit (as applicable):
   - `API_GUIDE.md` (API usage guide / cookbook for agents)

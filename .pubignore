@@ -1,6 +1,7 @@
 # Internal project docs (not part of the public package API/docs).
 AGENTS.md
 DEVELOPMENT_PLAN.md
+CODE_REVIEW_CHECKLIST.md
 TZ.md
 
 # Flutter/Dart/Pub build artifacts.

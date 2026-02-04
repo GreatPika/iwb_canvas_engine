@@ -20,10 +20,17 @@ the intended direction for v1.0.
 This section documents project invariants in a form that is intended to be
 checkable (by tests, tooling, or simple grep-able rules).
 
+Canonical invariant IDs live in `tool/invariant_registry.dart`.
+
 ### Global invariants
 
 - `lib/src/core/**` must not import `input/`, `render/`, `view/`, or
   `serialization/`.
+- Layer boundaries are enforced by `tool/check_import_boundaries.dart`:
+  - `lib/src/serialization/**` may import only `core/**` and `serialization/**`
+  - `lib/src/input/**` may import only `core/**` and `input/**`
+  - `lib/src/render/**` may import only `core/**`, `input/**`, and `render/**`
+  - `lib/src/view/**` may import only `core/**`, `input/**`, `render/**`, and `view/**`
 - Public entrypoints must remain source-compatible:
   - `package:iwb_canvas_engine/basic.dart`
   - `package:iwb_canvas_engine/advanced.dart`

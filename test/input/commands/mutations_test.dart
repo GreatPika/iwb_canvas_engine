@@ -3,8 +3,28 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/advanced.dart';
 
+// INV:INV-COMMANDS-STRUCTURAL-NOTIFYSCENECHANGED
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('addNode notifies immediately (structural mutation)', () {
+    final controller = SceneController(scene: Scene());
+    addTearDown(controller.dispose);
+
+    var notifications = 0;
+    controller.addListener(() => notifications++);
+
+    controller.addNode(
+      RectNode(
+        id: 'r1',
+        size: const Size(10, 10),
+        fillColor: const Color(0xFF000000),
+      ),
+    );
+
+    expect(notifications, 1);
+  });
 
   testWidgets('addNode adds to layer 0 and notifies', (tester) async {
     final controller = SceneController(scene: Scene());
