@@ -178,6 +178,44 @@ Each recipe includes:
 
 What you want: add/remove/move nodes without breaking controller invariants.
 
+### 2) Hook into `SceneView` pointer samples (snap, grouped drag)
+
+What you want: integrate app-level logic (e.g., snap on drop, or dragging a
+"board" together with attached pieces) without re-implementing `SceneView`.
+
+Key contract:
+- `PointerSample.position` is in view/screen coordinates.
+- Call order per sample: `onPointerSampleBefore` → `controller.handlePointer` →
+  `onPointerSampleAfter` → internal pointer signals (double-tap).
+
+Example: expand selection on `down` when the user taps the board so the default
+move tool drags the board and its attached pieces together.
+
+```dart
+import 'package:flutter/widgets.dart';
+import 'package:iwb_canvas_engine/advanced.dart';
+
+SceneView(
+  controller: controller,
+  onPointerSampleAfter: (controller, sample) {
+    if (sample.phase != PointerPhase.down) return;
+
+    final scenePoint = toScene(sample.position, controller.scene.camera.offset);
+    final hit = hitTestTopNode(controller.scene, scenePoint);
+    if (hit?.id != 'board') return;
+
+    // App-owned domain state.
+    final attachedPieceIds = <NodeId>{'piece-1', 'piece-2'};
+    controller.setSelection(<NodeId>{'board', ...attachedPieceIds});
+  },
+);
+```
+
+Where to implement snap:
+- Do snap computations on `PointerPhase.up` in `onPointerSampleAfter`, then
+  apply the final node transform(s) via controller commands or direct mutations
+  wrapped in `controller.mutate(...)`.
+
 ```dart
 import 'package:iwb_canvas_engine/basic.dart';
 

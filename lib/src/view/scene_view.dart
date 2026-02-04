@@ -9,6 +9,18 @@ import '../render/scene_painter.dart';
 
 ui.Image? _defaultImageResolver(String _) => null;
 
+/// Callback invoked by [SceneView] for each pointer sample it processes.
+///
+/// Notes:
+/// - [PointerSample.position] is in view/screen coordinates (as received from
+///   `PointerEvent.localPosition`).
+/// - Keep callbacks fast and side-effect free where possible; they run on the
+///   UI thread.
+/// - Callbacks cannot cancel the default controller handling. Use them to
+///   observe or to apply app-level logic (e.g., expand selection, snap on drop).
+typedef SceneViewPointerSampleCallback =
+    void Function(SceneController controller, PointerSample sample);
+
 /// A self-contained widget that renders a [SceneController] and feeds it input.
 ///
 /// Pointer events are forwarded to [SceneController] in view/screen coordinates
@@ -34,12 +46,25 @@ class SceneView extends StatefulWidget {
   /// If [textLayoutCache] / [strokePathCache] are null, the view creates and
   /// owns internal LRU caches to reduce per-frame work. If caches are provided,
   /// the caller owns them.
+  ///
+  /// [onPointerSampleBefore] / [onPointerSampleAfter] let apps hook into the
+  /// pointer pipeline without re-implementing input dispatch. The call order
+  /// for each pointer sample is:
+  /// 1) Create [PointerSample] from the Flutter event
+  /// 2) Invoke [onPointerSampleBefore]
+  /// 3) Call `controller.handlePointer(sample)`
+  /// 4) Invoke [onPointerSampleAfter]
+  /// 5) Process internal pointer signals (double-tap) and schedule pending flush
+  ///
+  /// Callbacks run synchronously and must not block for long.
   const SceneView({
     this.controller,
     this.imageResolver,
     this.staticLayerCache,
     this.textLayoutCache,
     this.strokePathCache,
+    this.onPointerSampleBefore,
+    this.onPointerSampleAfter,
     this.onControllerReady,
     this.pointerSettings,
     this.dragStartSlop,
@@ -55,6 +80,8 @@ class SceneView extends StatefulWidget {
   final SceneStaticLayerCache? staticLayerCache;
   final SceneTextLayoutCache? textLayoutCache;
   final SceneStrokePathCache? strokePathCache;
+  final SceneViewPointerSampleCallback? onPointerSampleBefore;
+  final SceneViewPointerSampleCallback? onPointerSampleAfter;
   final ValueChanged<SceneController>? onControllerReady;
   final PointerInputSettings? pointerSettings;
   final double? dragStartSlop;
@@ -217,7 +244,9 @@ class _SceneViewState extends State<SceneView> {
       kind: event.kind,
     );
 
+    widget.onPointerSampleBefore?.call(controller, sample);
     controller.handlePointer(sample);
+    widget.onPointerSampleAfter?.call(controller, sample);
 
     final signals = _pointerTracker.handle(sample);
     _dispatchSignals(signals);

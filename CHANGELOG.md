@@ -4,6 +4,8 @@
   numbers + valid ranges); invalid input throws `SceneJsonFormatException`.
 - Input: `SceneController` numeric setters now reject invalid values and throw
   `ArgumentError`.
+- View: add `SceneView` pointer sample callbacks (`onPointerSampleBefore`,
+  `onPointerSampleAfter`) for app-level integrations (snap, grouped drag).
 - Core: document and debug-assert preconditions for
   `StrokeNode.normalizeToLocalCenter` and `LineNode.normalizeToLocalCenter`.
 

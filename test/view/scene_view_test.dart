@@ -76,6 +76,113 @@ void main() {
     },
   );
 
+  testWidgets('SceneView invokes pointer sample callbacks in order', (
+    tester,
+  ) async {
+    final controller = SceneController(scene: Scene(layers: [Layer()]));
+    addTearDown(controller.dispose);
+
+    final calls = <String>[];
+    final beforePhases = <PointerPhase>[];
+    final afterPhases = <PointerPhase>[];
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 200,
+          height: 200,
+          child: SceneView(
+            controller: controller,
+            onPointerSampleBefore: (_, sample) {
+              calls.add('before:${sample.phase}');
+              beforePhases.add(sample.phase);
+            },
+            onPointerSampleAfter: (_, sample) {
+              calls.add('after:${sample.phase}');
+              afterPhases.add(sample.phase);
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pump();
+
+    expect(beforePhases, [PointerPhase.down, PointerPhase.up]);
+    expect(afterPhases, [PointerPhase.down, PointerPhase.up]);
+    expect(calls, [
+      'before:PointerPhase.down',
+      'after:PointerPhase.down',
+      'before:PointerPhase.up',
+      'after:PointerPhase.up',
+    ]);
+  });
+
+  testWidgets('SceneView can drag board and attached piece via selection', (
+    tester,
+  ) async {
+    final board = RectNode(
+      id: 'board',
+      size: const Size(120, 80),
+      fillColor: const Color(0xFF2196F3),
+    )..position = const Offset(150, 150);
+    final piece = RectNode(
+      id: 'piece',
+      size: const Size(40, 40),
+      fillColor: const Color(0xFFE91E63),
+    )..position = const Offset(210, 150);
+
+    final controller = SceneController(
+      scene: Scene(
+        layers: [
+          Layer(nodes: [board, piece]),
+        ],
+      ),
+      dragStartSlop: 0,
+    );
+    addTearDown(controller.dispose);
+
+    final actions = <ActionCommitted>[];
+    controller.actions.listen(actions.add);
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 300,
+          height: 300,
+          child: SceneView(
+            controller: controller,
+            imageResolver: (_) => null,
+            onPointerSampleAfter: (controller, sample) {
+              if (sample.phase != PointerPhase.down) return;
+              final scenePoint = toScene(
+                sample.position,
+                controller.scene.camera.offset,
+              );
+              final hit = hitTestTopNode(controller.scene, scenePoint);
+              if (hit?.id != 'board') return;
+              controller.setSelection(const <NodeId>['board', 'piece']);
+            },
+          ),
+        ),
+      ),
+    );
+
+    final gesture = await tester.startGesture(const Offset(150, 150));
+    await gesture.moveTo(const Offset(180, 150));
+    await gesture.up();
+    await tester.pump();
+
+    expect(board.position, const Offset(180, 150));
+    expect(piece.position, const Offset(240, 150));
+
+    final last = actions.lastWhere((a) => a.type == ActionType.transform);
+    expect(last.nodeIds, ['board', 'piece']);
+  });
+
   testWidgets('SceneView can omit imageResolver', (tester) async {
     final controller = SceneController(scene: Scene(layers: [Layer()]));
     addTearDown(controller.dispose);
