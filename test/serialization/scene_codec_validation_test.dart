@@ -57,6 +57,7 @@ Map<String, dynamic> _baseNodeJson({required String id, required String type}) {
 }
 
 void main() {
+  // INV:INV-SER-JSON-NUMERIC-VALIDATION
   test('encodeSceneToJson -> decodeSceneFromJson is stable', () {
     final scene = Scene(layers: [Layer()]);
     final json = encodeSceneToJson(scene);
@@ -517,6 +518,325 @@ void main() {
           (e) =>
               e is SceneJsonFormatException &&
               e.message == 'Field enabled must be a bool.',
+        ),
+      ),
+    );
+  });
+
+  test('decodeScene rejects NaN/Infinity numeric fields', () {
+    final json = _minimalSceneJson();
+    (json['camera'] as Map<String, dynamic>)['offsetX'] = double.nan;
+    expect(
+      () => decodeScene(json),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Field offsetX must be finite.',
+        ),
+      ),
+    );
+
+    final json2 = _minimalSceneJson();
+    (json2['camera'] as Map<String, dynamic>)['offsetY'] = double.infinity;
+    expect(
+      () => decodeScene(json2),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Field offsetY must be finite.',
+        ),
+      ),
+    );
+  });
+
+  test('decodeScene rejects opacity outside [0,1]', () {
+    final nodeJson = _baseNodeJson(id: 'n1', type: 'rect')
+      ..addAll(<String, dynamic>{
+        'size': <String, dynamic>{'w': 10, 'h': 10},
+        'strokeWidth': 1,
+      });
+    nodeJson['opacity'] = 2;
+    expect(
+      () => decodeScene(_sceneWithSingleNode(nodeJson)),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Field opacity must be within [0,1].',
+        ),
+      ),
+    );
+  });
+
+  test('decodeScene rejects non-positive thickness', () {
+    final nodeJson = _baseNodeJson(id: 's1', type: 'stroke')
+      ..addAll(<String, dynamic>{
+        'localPoints': <dynamic>[
+          <String, dynamic>{'x': 0, 'y': 0},
+        ],
+        'thickness': 0,
+        'color': '#FF000000',
+      });
+    expect(
+      () => decodeScene(_sceneWithSingleNode(nodeJson)),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Field thickness must be > 0.',
+        ),
+      ),
+    );
+  });
+
+  test('decodeScene rejects non-positive grid cellSize', () {
+    final json = _minimalSceneJson();
+    ((json['background'] as Map<String, dynamic>)['grid']
+            as Map<String, dynamic>)['cellSize'] =
+        0;
+    expect(
+      () => decodeScene(json),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Field cellSize must be > 0.',
+        ),
+      ),
+    );
+  });
+
+  test('decodeScene rejects negative sizes', () {
+    final nodeJson = _baseNodeJson(id: 'img-1', type: 'image')
+      ..addAll(<String, dynamic>{
+        'imageId': 'image-1',
+        'size': <String, dynamic>{'w': -10, 'h': 20},
+      });
+
+    expect(
+      () => decodeScene(_sceneWithSingleNode(nodeJson)),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Field w must be >= 0.',
+        ),
+      ),
+    );
+  });
+
+  test('decodeScene rejects invalid optional naturalSize values', () {
+    final nonFinite = _baseNodeJson(id: 'img-1', type: 'image')
+      ..addAll(<String, dynamic>{
+        'imageId': 'image-1',
+        'size': <String, dynamic>{'w': 10, 'h': 20},
+        'naturalSize': <String, dynamic>{'w': double.infinity, 'h': 20},
+      });
+
+    expect(
+      () => decodeScene(_sceneWithSingleNode(nonFinite)),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Optional size must be finite.',
+        ),
+      ),
+    );
+
+    final negative = _baseNodeJson(id: 'img-1', type: 'image')
+      ..addAll(<String, dynamic>{
+        'imageId': 'image-1',
+        'size': <String, dynamic>{'w': 10, 'h': 20},
+        'naturalSize': <String, dynamic>{'w': -1, 'h': 20},
+      });
+
+    expect(
+      () => decodeScene(_sceneWithSingleNode(negative)),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Optional size must be non-negative.',
+        ),
+      ),
+    );
+  });
+
+  test('decodeScene rejects invalid optional doubles for TextNode', () {
+    final nonFiniteMaxWidth = _baseNodeJson(id: 't1', type: 'text')
+      ..addAll(<String, dynamic>{
+        'text': 'Hello',
+        'size': <String, dynamic>{'w': 10, 'h': 10},
+        'fontSize': 12,
+        'color': '#FF000000',
+        'align': 'left',
+        'isBold': false,
+        'isItalic': false,
+        'isUnderline': false,
+        'maxWidth': double.nan,
+      });
+
+    expect(
+      () => decodeScene(_sceneWithSingleNode(nonFiniteMaxWidth)),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Field maxWidth must be finite.',
+        ),
+      ),
+    );
+
+    final nonPositiveMaxWidth = _baseNodeJson(id: 't1', type: 'text')
+      ..addAll(<String, dynamic>{
+        'text': 'Hello',
+        'size': <String, dynamic>{'w': 10, 'h': 10},
+        'fontSize': 12,
+        'color': '#FF000000',
+        'align': 'left',
+        'isBold': false,
+        'isItalic': false,
+        'isUnderline': false,
+        'maxWidth': 0,
+      });
+
+    expect(
+      () => decodeScene(_sceneWithSingleNode(nonPositiveMaxWidth)),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Field maxWidth must be > 0.',
+        ),
+      ),
+    );
+  });
+
+  test('decodeScene rejects non-positive palette gridSizes', () {
+    final json = _minimalSceneJson();
+    (json['palette'] as Map<String, dynamic>)['gridSizes'] = <dynamic>[0];
+
+    expect(
+      () => decodeScene(json),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Items of gridSizes must be > 0.',
+        ),
+      ),
+    );
+  });
+
+  test('decodeScene rejects non-finite palette gridSizes', () {
+    final json = _minimalSceneJson();
+    (json['palette'] as Map<String, dynamic>)['gridSizes'] = <dynamic>[
+      double.infinity,
+    ];
+
+    expect(
+      () => decodeScene(json),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Items of gridSizes must be finite.',
+        ),
+      ),
+    );
+  });
+
+  test('encodeScene rejects non-finite and out-of-range numeric fields', () {
+    final cameraNaN = Scene(
+      layers: [Layer()],
+      camera: Camera(offset: Offset(double.nan, 0)),
+    );
+    expect(
+      () => encodeScene(cameraNaN),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Field camera.offsetX must be finite.',
+        ),
+      ),
+    );
+
+    final negativeHitPaddingScene = Scene(
+      layers: [
+        Layer(
+          nodes: [
+            RectNode(
+              id: 'r1',
+              size: const Size(10, 10),
+              fillColor: const Color(0xFF000000),
+              hitPadding: -1,
+            ),
+          ],
+        ),
+      ],
+    );
+    expect(
+      () => encodeScene(negativeHitPaddingScene),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Field node.hitPadding must be >= 0.',
+        ),
+      ),
+    );
+
+    final nonPositiveFontSizeScene = Scene(
+      layers: [
+        Layer(
+          nodes: [
+            TextNode(
+              id: 't1',
+              text: 'Hello',
+              size: const Size(10, 10),
+              fontSize: 0,
+              color: const Color(0xFF000000),
+            ),
+          ],
+        ),
+      ],
+    );
+    expect(
+      () => encodeScene(nonPositiveFontSizeScene),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Field text.fontSize must be > 0.',
+        ),
+      ),
+    );
+
+    final opacityOutOfRangeScene = Scene(
+      layers: [
+        Layer(
+          nodes: [
+            RectNode(
+              id: 'r1',
+              size: const Size(10, 10),
+              fillColor: const Color(0xFF000000),
+              opacity: 2,
+            ),
+          ],
+        ),
+      ],
+    );
+    expect(
+      () => encodeScene(opacityOutOfRangeScene),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Field node.opacity must be within [0,1].',
         ),
       ),
     );

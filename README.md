@@ -249,6 +249,10 @@ final restored = decodeSceneFromJson(json);
 `decodeSceneFromJson` accepts only `schemaVersion = 2` and throws
 `SceneJsonFormatException` when the input is invalid or fails validation.
 
+Numeric fields must be finite and within valid ranges (for example, opacity
+must be within `[0,1]` and thickness values must be `> 0`). Invalid input
+throws `SceneJsonFormatException`.
+
 ## API reference
 
 API docs are generated from Dartdoc comments in `lib/`:

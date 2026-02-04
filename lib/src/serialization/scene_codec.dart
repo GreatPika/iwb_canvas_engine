@@ -57,6 +57,11 @@ Scene decodeSceneFromJson(String json) {
 
 /// Encodes [scene] into a JSON-serializable map.
 Map<String, dynamic> encodeScene(Scene scene) {
+  _ensureFiniteDouble(scene.camera.offset.dx, 'camera.offsetX');
+  _ensureFiniteDouble(scene.camera.offset.dy, 'camera.offsetY');
+  _ensureFiniteColor(scene.background.color, 'background.color');
+  _ensureFiniteGrid(scene.background.grid, 'background.grid');
+  _ensureFinitePalette(scene.palette, 'palette');
   return <String, dynamic>{
     'schemaVersion': schemaVersionWrite,
     'camera': {
@@ -110,7 +115,7 @@ Scene decodeScene(Map<String, dynamic> json) {
     color: _parseColor(_requireString(backgroundJson, 'color')),
     grid: GridSettings(
       isEnabled: _requireBool(gridJson, 'enabled'),
-      cellSize: _requireDouble(gridJson, 'cellSize'),
+      cellSize: _requirePositiveDouble(gridJson, 'cellSize'),
       color: _parseColor(_requireString(gridJson, 'color')),
     ),
   );
@@ -129,7 +134,7 @@ Scene decodeScene(Map<String, dynamic> json) {
     gridSizes: _requireList(
       paletteJson,
       'gridSizes',
-    ).map((value) => _requireDoubleValue(value, 'gridSizes')).toList(),
+    ).map((value) => _requirePositiveDoubleValue(value, 'gridSizes')).toList(),
   );
 
   final layersJson = _requireList(json, 'layers');
@@ -167,6 +172,9 @@ Layer _decodeLayer(Map<String, dynamic> json) {
 }
 
 Map<String, dynamic> _encodeNode(SceneNode node) {
+  _ensureFiniteTransform2D(node.transform, 'node.transform');
+  _ensureNonNegativeDouble(node.hitPadding, 'node.hitPadding');
+  _ensureClamped01Double(node.opacity, 'node.opacity');
   final base = <String, dynamic>{
     'id': node.id,
     'type': _nodeTypeToString(node.type),
@@ -183,6 +191,10 @@ Map<String, dynamic> _encodeNode(SceneNode node) {
   switch (node.type) {
     case NodeType.image:
       final image = node as ImageNode;
+      _ensureNonNegativeSize(image.size, 'image.size');
+      if (image.naturalSize != null) {
+        _ensureNonNegativeSize(image.naturalSize!, 'image.naturalSize');
+      }
       return {
         ...base,
         'imageId': image.imageId,
@@ -193,6 +205,14 @@ Map<String, dynamic> _encodeNode(SceneNode node) {
       };
     case NodeType.text:
       final text = node as TextNode;
+      _ensureNonNegativeSize(text.size, 'text.size');
+      _ensurePositiveDouble(text.fontSize, 'text.fontSize');
+      if (text.maxWidth != null) {
+        _ensurePositiveDouble(text.maxWidth!, 'text.maxWidth');
+      }
+      if (text.lineHeight != null) {
+        _ensurePositiveDouble(text.lineHeight!, 'text.lineHeight');
+      }
       return {
         ...base,
         'text': text.text,
@@ -209,6 +229,7 @@ Map<String, dynamic> _encodeNode(SceneNode node) {
       };
     case NodeType.stroke:
       final stroke = node as StrokeNode;
+      _ensurePositiveDouble(stroke.thickness, 'stroke.thickness');
       return {
         ...base,
         'localPoints': stroke.points
@@ -219,6 +240,7 @@ Map<String, dynamic> _encodeNode(SceneNode node) {
       };
     case NodeType.line:
       final line = node as LineNode;
+      _ensurePositiveDouble(line.thickness, 'line.thickness');
       return {
         ...base,
         'localA': {'x': line.start.dx, 'y': line.start.dy},
@@ -228,6 +250,8 @@ Map<String, dynamic> _encodeNode(SceneNode node) {
       };
     case NodeType.rect:
       final rect = node as RectNode;
+      _ensureNonNegativeSize(rect.size, 'rect.size');
+      _ensureNonNegativeDouble(rect.strokeWidth, 'rect.strokeWidth');
       return {
         ...base,
         'size': _encodeSize(rect.size),
@@ -238,6 +262,7 @@ Map<String, dynamic> _encodeNode(SceneNode node) {
       };
     case NodeType.path:
       final path = node as PathNode;
+      _ensureNonNegativeDouble(path.strokeWidth, 'path.strokeWidth');
       return {
         ...base,
         'svgPathData': path.svgPathData,
@@ -254,8 +279,8 @@ SceneNode _decodeNode(Map<String, dynamic> json) {
   final type = _parseNodeType(_requireString(json, 'type'));
   final id = _requireString(json, 'id');
   final transform = _decodeTransform2D(_requireMap(json, 'transform'));
-  final hitPadding = _requireDouble(json, 'hitPadding');
-  final opacity = _requireDouble(json, 'opacity');
+  final hitPadding = _requireNonNegativeDouble(json, 'hitPadding');
+  final opacity = _requireClamped01Double(json, 'opacity');
   final isVisible = _requireBool(json, 'isVisible');
   final isSelectable = _requireBool(json, 'isSelectable');
   final isLocked = _requireBool(json, 'isLocked');
@@ -268,7 +293,7 @@ SceneNode _decodeNode(Map<String, dynamic> json) {
       node = ImageNode(
         id: id,
         imageId: _requireString(json, 'imageId'),
-        size: _requireSize(json, 'size'),
+        size: _requireNonNegativeSize(json, 'size'),
         naturalSize: _optionalSizeMap(json, 'naturalSize'),
         hitPadding: hitPadding,
         transform: transform,
@@ -284,16 +309,16 @@ SceneNode _decodeNode(Map<String, dynamic> json) {
       node = TextNode(
         id: id,
         text: _requireString(json, 'text'),
-        size: _requireSize(json, 'size'),
-        fontSize: _requireDouble(json, 'fontSize'),
+        size: _requireNonNegativeSize(json, 'size'),
+        fontSize: _requirePositiveDouble(json, 'fontSize'),
         color: _parseColor(_requireString(json, 'color')),
         align: _parseTextAlign(_requireString(json, 'align')),
         isBold: _requireBool(json, 'isBold'),
         isItalic: _requireBool(json, 'isItalic'),
         isUnderline: _requireBool(json, 'isUnderline'),
         fontFamily: _optionalString(json, 'fontFamily'),
-        maxWidth: _optionalDouble(json, 'maxWidth'),
-        lineHeight: _optionalDouble(json, 'lineHeight'),
+        maxWidth: _optionalPositiveDouble(json, 'maxWidth'),
+        lineHeight: _optionalPositiveDouble(json, 'lineHeight'),
         hitPadding: hitPadding,
         transform: transform,
         opacity: opacity,
@@ -311,7 +336,7 @@ SceneNode _decodeNode(Map<String, dynamic> json) {
           json,
           'localPoints',
         ).map((point) => _parsePoint(point, 'localPoints')).toList(),
-        thickness: _requireDouble(json, 'thickness'),
+        thickness: _requirePositiveDouble(json, 'thickness'),
         color: _parseColor(_requireString(json, 'color')),
         hitPadding: hitPadding,
         transform: transform,
@@ -328,7 +353,7 @@ SceneNode _decodeNode(Map<String, dynamic> json) {
         id: id,
         start: _parsePoint(_requireMap(json, 'localA'), 'localA'),
         end: _parsePoint(_requireMap(json, 'localB'), 'localB'),
-        thickness: _requireDouble(json, 'thickness'),
+        thickness: _requirePositiveDouble(json, 'thickness'),
         color: _parseColor(_requireString(json, 'color')),
         hitPadding: hitPadding,
         transform: transform,
@@ -343,10 +368,10 @@ SceneNode _decodeNode(Map<String, dynamic> json) {
     case NodeType.rect:
       node = RectNode(
         id: id,
-        size: _requireSize(json, 'size'),
+        size: _requireNonNegativeSize(json, 'size'),
         fillColor: _optionalColor(json, 'fillColor'),
         strokeColor: _optionalColor(json, 'strokeColor'),
-        strokeWidth: _requireDouble(json, 'strokeWidth'),
+        strokeWidth: _requireNonNegativeDouble(json, 'strokeWidth'),
         hitPadding: hitPadding,
         transform: transform,
         opacity: opacity,
@@ -365,7 +390,7 @@ SceneNode _decodeNode(Map<String, dynamic> json) {
         svgPathData: svgPathData,
         fillColor: _optionalColor(json, 'fillColor'),
         strokeColor: _optionalColor(json, 'strokeColor'),
-        strokeWidth: _requireDouble(json, 'strokeWidth'),
+        strokeWidth: _requireNonNegativeDouble(json, 'strokeWidth'),
         fillRule: _parsePathFillRule(_requireString(json, 'fillRule')),
         hitPadding: hitPadding,
         transform: transform,
@@ -523,9 +548,11 @@ Map<String, dynamic> _encodeSize(Size size) {
   return <String, dynamic>{'w': size.width, 'h': size.height};
 }
 
-Size _requireSize(Map<String, dynamic> json, String key) {
+Size _requireNonNegativeSize(Map<String, dynamic> json, String key) {
   final map = _requireMap(json, key);
-  return Size(_requireDouble(map, 'w'), _requireDouble(map, 'h'));
+  final w = _requireNonNegativeDouble(map, 'w');
+  final h = _requireNonNegativeDouble(map, 'h');
+  return Size(w, h);
 }
 
 Size? _optionalSizeMap(Map<String, dynamic> json, String key) {
@@ -539,7 +566,15 @@ Size? _optionalSizeMap(Map<String, dynamic> json, String key) {
   if (width is! num || height is! num) {
     throw SceneJsonFormatException('Optional size must be numeric.');
   }
-  return Size(width.toDouble(), height.toDouble());
+  final w = width.toDouble();
+  final h = height.toDouble();
+  if (!w.isFinite || !h.isFinite) {
+    throw SceneJsonFormatException('Optional size must be finite.');
+  }
+  if (w < 0 || h < 0) {
+    throw SceneJsonFormatException('Optional size must be non-negative.');
+  }
+  return Size(w, h);
 }
 
 String? _optionalString(Map<String, dynamic> json, String key) {
@@ -557,7 +592,20 @@ double? _optionalDouble(Map<String, dynamic> json, String key) {
   if (value is! num) {
     throw SceneJsonFormatException('Field $key must be a number.');
   }
-  return value.toDouble();
+  final out = value.toDouble();
+  if (!out.isFinite) {
+    throw SceneJsonFormatException('Field $key must be finite.');
+  }
+  return out;
+}
+
+double? _optionalPositiveDouble(Map<String, dynamic> json, String key) {
+  final value = _optionalDouble(json, key);
+  if (value == null) return null;
+  if (value <= 0) {
+    throw SceneJsonFormatException('Field $key must be > 0.');
+  }
+  return value;
 }
 
 void _validateSvgPathData(String value) {
@@ -623,12 +671,111 @@ double _requireDouble(Map<String, dynamic> json, String key) {
   if (value is! num) {
     throw SceneJsonFormatException('Field $key must be a number.');
   }
-  return value.toDouble();
+  final out = value.toDouble();
+  if (!out.isFinite) {
+    throw SceneJsonFormatException('Field $key must be finite.');
+  }
+  return out;
 }
 
 double _requireDoubleValue(Object value, String key) {
   if (value is! num) {
     throw SceneJsonFormatException('Items of $key must be numbers.');
   }
-  return value.toDouble();
+  final out = value.toDouble();
+  if (!out.isFinite) {
+    throw SceneJsonFormatException('Items of $key must be finite.');
+  }
+  return out;
+}
+
+double _requirePositiveDouble(Map<String, dynamic> json, String key) {
+  final value = _requireDouble(json, key);
+  if (value <= 0) {
+    throw SceneJsonFormatException('Field $key must be > 0.');
+  }
+  return value;
+}
+
+double _requireNonNegativeDouble(Map<String, dynamic> json, String key) {
+  final value = _requireDouble(json, key);
+  if (value < 0) {
+    throw SceneJsonFormatException('Field $key must be >= 0.');
+  }
+  return value;
+}
+
+double _requireClamped01Double(Map<String, dynamic> json, String key) {
+  final value = _requireDouble(json, key);
+  if (value < 0 || value > 1) {
+    throw SceneJsonFormatException('Field $key must be within [0,1].');
+  }
+  return value;
+}
+
+double _requirePositiveDoubleValue(Object value, String key) {
+  final out = _requireDoubleValue(value, key);
+  if (out <= 0) {
+    throw SceneJsonFormatException('Items of $key must be > 0.');
+  }
+  return out;
+}
+
+void _ensureFiniteDouble(double value, String field) {
+  if (!value.isFinite) {
+    throw SceneJsonFormatException('Field $field must be finite.');
+  }
+}
+
+void _ensureNonNegativeDouble(double value, String field) {
+  _ensureFiniteDouble(value, field);
+  if (value < 0) {
+    throw SceneJsonFormatException('Field $field must be >= 0.');
+  }
+}
+
+void _ensurePositiveDouble(double value, String field) {
+  _ensureFiniteDouble(value, field);
+  if (value <= 0) {
+    throw SceneJsonFormatException('Field $field must be > 0.');
+  }
+}
+
+void _ensureClamped01Double(double value, String field) {
+  _ensureFiniteDouble(value, field);
+  if (value < 0 || value > 1) {
+    throw SceneJsonFormatException('Field $field must be within [0,1].');
+  }
+}
+
+void _ensureNonNegativeSize(Size size, String field) {
+  _ensureNonNegativeDouble(size.width, '$field.w');
+  _ensureNonNegativeDouble(size.height, '$field.h');
+}
+
+void _ensureFiniteTransform2D(Transform2D transform, String field) {
+  _ensureFiniteDouble(transform.a, '$field.a');
+  _ensureFiniteDouble(transform.b, '$field.b');
+  _ensureFiniteDouble(transform.c, '$field.c');
+  _ensureFiniteDouble(transform.d, '$field.d');
+  _ensureFiniteDouble(transform.tx, '$field.tx');
+  _ensureFiniteDouble(transform.ty, '$field.ty');
+}
+
+void _ensureFiniteColor(Color color, String field) {
+  // Colors are integers, but keep as a hook for future validation.
+  // No-op for now.
+  if (field.isEmpty) return;
+}
+
+void _ensureFiniteGrid(GridSettings grid, String field) {
+  _ensurePositiveDouble(grid.cellSize, '$field.cellSize');
+  _ensureFiniteColor(grid.color, '$field.color');
+}
+
+void _ensureFinitePalette(ScenePalette palette, String field) {
+  for (var i = 0; i < palette.gridSizes.length; i++) {
+    final value = palette.gridSizes[i];
+    _ensurePositiveDouble(value, '$field.gridSizes[$i]');
+  }
 }
