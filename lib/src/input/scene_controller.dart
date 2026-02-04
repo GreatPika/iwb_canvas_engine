@@ -80,40 +80,40 @@ class SceneController extends ChangeNotifier {
   set penThickness(double value) {
     if (_penThickness == value) return;
     _penThickness = value;
-    _markSceneGeometryChanged();
-    requestRepaintOncePerFrame();
+    _contracts.markSceneGeometryChanged();
+    _contracts.requestRepaintOncePerFrame();
   }
 
   double get highlighterThickness => _highlighterThickness;
   set highlighterThickness(double value) {
     if (_highlighterThickness == value) return;
     _highlighterThickness = value;
-    _markSceneGeometryChanged();
-    requestRepaintOncePerFrame();
+    _contracts.markSceneGeometryChanged();
+    _contracts.requestRepaintOncePerFrame();
   }
 
   double get lineThickness => _lineThickness;
   set lineThickness(double value) {
     if (_lineThickness == value) return;
     _lineThickness = value;
-    _markSceneGeometryChanged();
-    requestRepaintOncePerFrame();
+    _contracts.markSceneGeometryChanged();
+    _contracts.requestRepaintOncePerFrame();
   }
 
   double get eraserThickness => _eraserThickness;
   set eraserThickness(double value) {
     if (_eraserThickness == value) return;
     _eraserThickness = value;
-    _markSceneGeometryChanged();
-    requestRepaintOncePerFrame();
+    _contracts.markSceneGeometryChanged();
+    _contracts.requestRepaintOncePerFrame();
   }
 
   double get highlighterOpacity => _highlighterOpacity;
   set highlighterOpacity(double value) {
     if (_highlighterOpacity == value) return;
     _highlighterOpacity = value;
-    _markSceneGeometryChanged();
-    requestRepaintOncePerFrame();
+    _contracts.markSceneGeometryChanged();
+    _contracts.requestRepaintOncePerFrame();
   }
 
   final LinkedHashSet<NodeId> _selectedNodeIds = LinkedHashSet<NodeId>();
@@ -285,9 +285,9 @@ class SceneController extends ChangeNotifier {
       _resetDraw();
     }
     _mode = value;
-    _setSelectionRect(null, notify: false);
-    _markSceneGeometryChanged();
-    _notifyNow();
+    _contracts.setSelectionRect(null, notify: false);
+    _contracts.markSceneGeometryChanged();
+    _contracts.notifyNow();
   }
 
   /// Changes the active drawing tool and resets draw state.
@@ -295,40 +295,40 @@ class SceneController extends ChangeNotifier {
     if (_drawTool == tool) return;
     _drawTool = tool;
     _resetDraw();
-    _markSceneGeometryChanged();
-    _notifyNow();
+    _contracts.markSceneGeometryChanged();
+    _contracts.notifyNow();
   }
 
   /// Sets the current drawing color.
   void setDrawColor(Color value) {
     if (_drawColor == value) return;
     _drawColor = value;
-    _markSceneGeometryChanged();
-    _notifyNow();
+    _contracts.markSceneGeometryChanged();
+    _contracts.notifyNow();
   }
 
   /// Updates the scene background color.
   void setBackgroundColor(Color value) {
     if (scene.background.color == value) return;
     scene.background.color = value;
-    _markSceneGeometryChanged();
-    _notifyNow();
+    _contracts.markSceneGeometryChanged();
+    _contracts.notifyNow();
   }
 
   /// Enables or disables the background grid.
   void setGridEnabled(bool value) {
     if (scene.background.grid.isEnabled == value) return;
     scene.background.grid.isEnabled = value;
-    _markSceneGeometryChanged();
-    _notifyNow();
+    _contracts.markSceneGeometryChanged();
+    _contracts.notifyNow();
   }
 
   /// Sets the grid cell size in scene units.
   void setGridCellSize(double value) {
     if (scene.background.grid.cellSize == value) return;
     scene.background.grid.cellSize = value;
-    _markSceneGeometryChanged();
-    _notifyNow();
+    _contracts.markSceneGeometryChanged();
+    _contracts.notifyNow();
   }
 
   /// Updates the scene camera offset.
@@ -347,13 +347,13 @@ class SceneController extends ChangeNotifier {
           existingIds.add(node.id);
         }
       }
-      _setSelection(
+      _contracts.setSelection(
         _selectedNodeIds.where(existingIds.contains),
         notify: false,
       );
     }
-    _markSceneStructuralChanged();
-    _notifyNow();
+    _contracts.markSceneStructuralChanged();
+    _contracts.notifyNow();
   }
 
   /// Runs [fn] to mutate [scene] and schedules the appropriate updates.
@@ -369,8 +369,8 @@ class SceneController extends ChangeNotifier {
       notifySceneChanged();
       return;
     }
-    _markSceneGeometryChanged();
-    requestRepaintOncePerFrame();
+    _contracts.markSceneGeometryChanged();
+    _contracts.requestRepaintOncePerFrame();
   }
 
   /// Adds [node] to the target layer and notifies listeners.
@@ -398,8 +398,8 @@ class SceneController extends ChangeNotifier {
     }
 
     scene.layers[layerIndex].nodes.add(node);
-    _markSceneStructuralChanged();
-    _notifyNow();
+    _contracts.markSceneStructuralChanged();
+    _contracts.notifyNow();
   }
 
   /// Removes a node by [id], clears its selection, and emits an action.
@@ -409,15 +409,15 @@ class SceneController extends ChangeNotifier {
       if (index == -1) continue;
 
       layer.nodes.removeAt(index);
-      _setSelection(
+      _contracts.setSelection(
         _selectedNodeIds.where((candidate) => candidate != id),
         notify: false,
       );
-      _markSceneStructuralChanged();
-      _emitAction(ActionType.delete, [
+      _contracts.markSceneStructuralChanged();
+      _contracts.emitAction(ActionType.delete, [
         id,
       ], timestampMs ?? DateTime.now().millisecondsSinceEpoch);
-      _notifyNow();
+      _contracts.notifyNow();
       return;
     }
   }
@@ -447,8 +447,8 @@ class SceneController extends ChangeNotifier {
 
       final node = layer.nodes.removeAt(nodeIndex);
       scene.layers[targetLayerIndex].nodes.add(node);
-      _markSceneStructuralChanged();
-      _emitAction(
+      _contracts.markSceneStructuralChanged();
+      _contracts.emitAction(
         ActionType.move,
         [id],
         timestampMs ?? DateTime.now().millisecondsSinceEpoch,
@@ -457,7 +457,7 @@ class SceneController extends ChangeNotifier {
           'targetLayerIndex': targetLayerIndex,
         },
       );
-      _notifyNow();
+      _contracts.notifyNow();
       return;
     }
   }
@@ -465,23 +465,25 @@ class SceneController extends ChangeNotifier {
   /// Clears the current selection.
   void clearSelection() {
     if (_selectedNodeIds.isEmpty) return;
-    _setSelection(const <NodeId>[], notify: false);
-    _notifyNow();
+    _contracts.setSelection(const <NodeId>[], notify: false);
+    _contracts.notifyNow();
   }
 
   /// Replaces the selection with [nodeIds].
   ///
   /// This is intended for app-driven selection UIs (layers panel, object list).
   void setSelection(Iterable<NodeId> nodeIds) {
-    _setSelection(nodeIds);
+    _contracts.setSelection(nodeIds);
   }
 
   /// Toggles selection for a single node [id].
   void toggleSelection(NodeId id) {
     if (_selectedNodeIds.contains(id)) {
-      _setSelection(_selectedNodeIds.where((candidate) => candidate != id));
+      _contracts.setSelection(
+        _selectedNodeIds.where((candidate) => candidate != id),
+      );
     } else {
-      _setSelection(<NodeId>[..._selectedNodeIds, id]);
+      _contracts.setSelection(<NodeId>[..._selectedNodeIds, id]);
     }
   }
 
@@ -497,7 +499,7 @@ class SceneController extends ChangeNotifier {
         ids.add(node.id);
       }
     }
-    _setSelection(ids);
+    _contracts.setSelection(ids);
   }
 
   /// Rotates the transformable selection by 90 degrees.
@@ -517,14 +519,14 @@ class SceneController extends ChangeNotifier {
       node.transform = delta.multiply(node.transform);
     }
 
-    _emitAction(
+    _contracts.emitAction(
       ActionType.transform,
       nodes.map((node) => node.id).toList(growable: false),
       timestampMs ?? DateTime.now().millisecondsSinceEpoch,
       payload: <String, Object?>{'delta': delta.toJsonMap()},
     );
-    _markSceneGeometryChanged();
-    _notifyNow();
+    _contracts.markSceneGeometryChanged();
+    _contracts.notifyNow();
   }
 
   /// Flips the transformable selection horizontally around its center.
@@ -548,14 +550,14 @@ class SceneController extends ChangeNotifier {
       node.transform = delta.multiply(node.transform);
     }
 
-    _emitAction(
+    _contracts.emitAction(
       ActionType.transform,
       nodes.map((node) => node.id).toList(growable: false),
       timestampMs ?? DateTime.now().millisecondsSinceEpoch,
       payload: <String, Object?>{'delta': delta.toJsonMap()},
     );
-    _markSceneGeometryChanged();
-    _notifyNow();
+    _contracts.markSceneGeometryChanged();
+    _contracts.notifyNow();
   }
 
   /// Flips the transformable selection vertically around its center.
@@ -579,14 +581,14 @@ class SceneController extends ChangeNotifier {
       node.transform = delta.multiply(node.transform);
     }
 
-    _emitAction(
+    _contracts.emitAction(
       ActionType.transform,
       nodes.map((node) => node.id).toList(growable: false),
       timestampMs ?? DateTime.now().millisecondsSinceEpoch,
       payload: <String, Object?>{'delta': delta.toJsonMap()},
     );
-    _markSceneGeometryChanged();
-    _notifyNow();
+    _contracts.markSceneGeometryChanged();
+    _contracts.notifyNow();
   }
 
   /// Deletes deletable selected nodes and emits an action.
@@ -604,17 +606,17 @@ class SceneController extends ChangeNotifier {
     }
 
     if (deletableIds.isEmpty) return;
-    _setSelection(
+    _contracts.setSelection(
       _selectedNodeIds.where((id) => !deletableIds.contains(id)),
       notify: false,
     );
-    _markSceneStructuralChanged();
-    _emitAction(
+    _contracts.markSceneStructuralChanged();
+    _contracts.emitAction(
       ActionType.delete,
       deletableIds,
       timestampMs ?? DateTime.now().millisecondsSinceEpoch,
     );
-    _notifyNow();
+    _contracts.notifyNow();
   }
 
   /// Clears all non-background layers and emits an action.
@@ -629,14 +631,14 @@ class SceneController extends ChangeNotifier {
     }
 
     if (clearedIds.isEmpty) return;
-    _setSelection(const <NodeId>[], notify: false);
-    _markSceneStructuralChanged();
-    _emitAction(
+    _contracts.setSelection(const <NodeId>[], notify: false);
+    _contracts.markSceneStructuralChanged();
+    _contracts.emitAction(
       ActionType.clear,
       clearedIds,
       timestampMs ?? DateTime.now().millisecondsSinceEpoch,
     );
-    _notifyNow();
+    _contracts.notifyNow();
   }
 
   /// Handles a pointer sample and updates the controller state.
@@ -734,11 +736,11 @@ class SceneController extends ChangeNotifier {
     _pendingClearSelection = false;
     _moveGestureNodes = null;
 
-    final hit = hitTestTopNode(scene, scenePoint);
+    final hit = hitTestTopNode(_contracts.scene, scenePoint);
     if (hit != null) {
       _dragTarget = _DragTarget.move;
       if (!_selectedNodeIds.contains(hit.id)) {
-        _setSelection({hit.id});
+        _contracts.setSelection({hit.id});
       }
       return;
     }
@@ -752,18 +754,19 @@ class SceneController extends ChangeNotifier {
     if (_pointerDownScene == null || _lastDragScene == null) return;
 
     final totalDelta = scenePoint - _pointerDownScene!;
-    final didStartDrag = !_dragMoved && totalDelta.distance > dragStartSlop;
+    final didStartDrag =
+        !_dragMoved && totalDelta.distance > _contracts.dragStartSlop;
     if (didStartDrag) {
       _dragMoved = true;
       if (_dragTarget == _DragTarget.marquee) {
         if (_pendingClearSelection) {
-          _setSelection(const <NodeId>[], notify: false);
+          _contracts.setSelection(const <NodeId>[], notify: false);
           _pendingClearSelection = false;
         }
       }
       if (_dragTarget == _DragTarget.move) {
-        _dragSceneRevision = _sceneRevision;
-        _dragSelectionRevision = _selectionRevision;
+        _dragSceneRevision = _contracts.sceneRevision;
+        _dragSelectionRevision = _contracts.selectionRevision;
         _moveGestureNodes = _selectedNodesInSceneOrder();
         _debugMoveGestureBuildCount += 1;
         assert(() {
@@ -778,8 +781,8 @@ class SceneController extends ChangeNotifier {
 
     if (_dragTarget == _DragTarget.move) {
       if (_moveGestureNodes != null &&
-          (_sceneRevision != _dragSceneRevision ||
-              _selectionRevision != _dragSelectionRevision)) {
+          (_contracts.sceneRevision != _dragSceneRevision ||
+              _contracts.selectionRevision != _dragSelectionRevision)) {
         _moveGestureNodes = null;
       }
       assert(() {
@@ -794,12 +797,14 @@ class SceneController extends ChangeNotifier {
       if (delta == Offset.zero) return;
       _applyMoveDelta(delta, nodes: _moveGestureNodes);
       _lastDragScene = scenePoint;
-      requestRepaintOncePerFrame();
+      _contracts.requestRepaintOncePerFrame();
       return;
     }
 
     if (_dragTarget == _DragTarget.marquee) {
-      _setSelectionRect(Rect.fromPoints(_pointerDownScene!, scenePoint));
+      _contracts.setSelectionRect(
+        Rect.fromPoints(_pointerDownScene!, scenePoint),
+      );
     }
   }
 
@@ -811,10 +816,10 @@ class SceneController extends ChangeNotifier {
         _commitMove(sample.timestampMs, scenePoint);
       }
     } else if (_dragTarget == _DragTarget.marquee) {
-      if (_dragMoved && _selectionRect != null) {
+      if (_dragMoved && _contracts.selectionRect != null) {
         _commitMarquee(sample.timestampMs);
       } else if (_pendingClearSelection) {
-        _setSelection(const <NodeId>[], notify: false);
+        _contracts.setSelection(const <NodeId>[], notify: false);
       }
     }
 
@@ -833,7 +838,7 @@ class SceneController extends ChangeNotifier {
     _lastDrawScene = scenePoint;
     _drawMoved = false;
 
-    switch (drawTool) {
+    switch (_contracts.drawTool) {
       case DrawTool.pen:
       case DrawTool.highlighter:
         _startStroke(scenePoint);
@@ -854,11 +859,11 @@ class SceneController extends ChangeNotifier {
     if (_drawDownScene == null || _lastDrawScene == null) return;
 
     final totalDelta = scenePoint - _drawDownScene!;
-    if (!_drawMoved && totalDelta.distance > dragStartSlop) {
+    if (!_drawMoved && totalDelta.distance > _contracts.dragStartSlop) {
       _drawMoved = true;
     }
 
-    switch (drawTool) {
+    switch (_contracts.drawTool) {
       case DrawTool.pen:
       case DrawTool.highlighter:
         _appendStrokePoint(scenePoint);
@@ -868,7 +873,7 @@ class SceneController extends ChangeNotifier {
         break;
       case DrawTool.eraser:
         _eraserPoints.add(scenePoint);
-        requestRepaintOncePerFrame();
+        _contracts.requestRepaintOncePerFrame();
         break;
     }
     _lastDrawScene = scenePoint;
@@ -877,7 +882,7 @@ class SceneController extends ChangeNotifier {
   void _handleDrawUp(PointerSample sample, Offset scenePoint) {
     if (_drawPointerId != sample.pointerId) return;
 
-    switch (drawTool) {
+    switch (_contracts.drawTool) {
       case DrawTool.pen:
       case DrawTool.highlighter:
         _finishStroke(sample.timestampMs, scenePoint);
@@ -904,7 +909,7 @@ class SceneController extends ChangeNotifier {
     final totalDelta = scenePoint - (_pointerDownScene ?? scenePoint);
     if (movedNodeIds.isNotEmpty && totalDelta != Offset.zero) {
       final delta = Transform2D.translation(totalDelta);
-      _emitAction(
+      _contracts.emitAction(
         ActionType.transform,
         movedNodeIds,
         timestampMs,
@@ -914,11 +919,11 @@ class SceneController extends ChangeNotifier {
   }
 
   void _commitMarquee(int timestampMs) {
-    final rect = _normalizeRect(_selectionRect!);
+    final rect = _normalizeRect(_contracts.selectionRect!);
     final selected = _nodesIntersecting(rect);
-    _setSelectionRect(null, notify: false);
-    _setSelection(selected, notify: false);
-    _emitAction(ActionType.selectMarquee, selected, timestampMs);
+    _contracts.setSelectionRect(null, notify: false);
+    _contracts.setSelection(selected, notify: false);
+    _contracts.emitAction(ActionType.selectMarquee, selected, timestampMs);
   }
 
   void _applyMoveDelta(Offset delta, {List<SceneNode>? nodes}) {
@@ -933,19 +938,23 @@ class SceneController extends ChangeNotifier {
   }
 
   void _startStroke(Offset scenePoint) {
+    final drawTool = _contracts.drawTool;
+    final drawColor = _contracts.drawColor;
     final stroke = StrokeNode(
-      id: _nodeIdGenerator(),
+      id: _contracts.newNodeId(),
       points: [scenePoint],
       thickness: _strokeThicknessForTool(),
       color: drawColor,
-      opacity: drawTool == DrawTool.highlighter ? highlighterOpacity : 1,
+      opacity: drawTool == DrawTool.highlighter
+          ? _contracts.highlighterOpacity
+          : 1,
     );
     _activeStroke = stroke;
     _activeLine = null;
     _activeDrawLayer = _ensureAnnotationLayer();
     _activeDrawLayer!.nodes.add(stroke);
-    _markSceneStructuralChanged();
-    requestRepaintOncePerFrame();
+    _contracts.markSceneStructuralChanged();
+    _contracts.requestRepaintOncePerFrame();
   }
 
   void _appendStrokePoint(Offset scenePoint) {
@@ -956,7 +965,7 @@ class SceneController extends ChangeNotifier {
       return;
     }
     stroke.points.add(scenePoint);
-    requestRepaintOncePerFrame();
+    _contracts.requestRepaintOncePerFrame();
   }
 
   void _finishStroke(int timestampMs, Offset scenePoint) {
@@ -969,8 +978,10 @@ class SceneController extends ChangeNotifier {
     stroke.normalizeToLocalCenter();
     _activeStroke = null;
     _activeDrawLayer = null;
-    _markSceneGeometryChanged();
-    _emitAction(
+    _contracts.markSceneGeometryChanged();
+    final drawTool = _contracts.drawTool;
+    final drawColor = _contracts.drawColor;
+    _contracts.emitAction(
       drawTool == DrawTool.highlighter
           ? ActionType.drawHighlighter
           : ActionType.drawStroke,
@@ -994,7 +1005,7 @@ class SceneController extends ChangeNotifier {
   void _updateLineDrag(Offset scenePoint) {
     if (_drawDownScene == null) return;
     final totalDelta = scenePoint - _drawDownScene!;
-    if (!_drawMoved && totalDelta.distance <= dragStartSlop) {
+    if (!_drawMoved && totalDelta.distance <= _contracts.dragStartSlop) {
       return;
     }
 
@@ -1003,21 +1014,22 @@ class SceneController extends ChangeNotifier {
     }
 
     if (_activeLine == null) {
+      final drawColor = _contracts.drawColor;
       final line = LineNode(
-        id: _nodeIdGenerator(),
+        id: _contracts.newNodeId(),
         start: _drawDownScene!,
         end: scenePoint,
-        thickness: lineThickness,
+        thickness: _contracts.lineThickness,
         color: drawColor,
       );
       _activeLine = line;
       _activeDrawLayer = _ensureAnnotationLayer();
       _activeDrawLayer!.nodes.add(line);
-      _markSceneStructuralChanged();
+      _contracts.markSceneStructuralChanged();
     } else {
       _activeLine!.end = scenePoint;
     }
-    requestRepaintOncePerFrame();
+    _contracts.requestRepaintOncePerFrame();
   }
 
   void _finishLineGesture(int timestampMs, Offset scenePoint) {
@@ -1027,10 +1039,12 @@ class SceneController extends ChangeNotifier {
         line.end = scenePoint;
       }
       line.normalizeToLocalCenter();
-      _markSceneGeometryChanged();
+      _contracts.markSceneGeometryChanged();
       _activeLine = null;
       _activeDrawLayer = null;
-      _emitAction(
+      final drawTool = _contracts.drawTool;
+      final drawColor = _contracts.drawColor;
+      _contracts.emitAction(
         ActionType.drawLine,
         [line.id],
         timestampMs,
@@ -1045,7 +1059,8 @@ class SceneController extends ChangeNotifier {
 
     if (_drawDownScene == null) return;
 
-    final isTap = (scenePoint - _drawDownScene!).distance <= dragStartSlop;
+    final isTap =
+        (scenePoint - _drawDownScene!).distance <= _contracts.dragStartSlop;
     if (!isTap) return;
 
     if (_pendingLineStart == null) {
@@ -1055,18 +1070,20 @@ class SceneController extends ChangeNotifier {
 
     final start = _pendingLineStart!;
     final line = LineNode.fromWorldSegment(
-      id: _nodeIdGenerator(),
+      id: _contracts.newNodeId(),
       start: start,
       end: scenePoint,
-      thickness: lineThickness,
-      color: drawColor,
+      thickness: _contracts.lineThickness,
+      color: _contracts.drawColor,
     );
     _setPendingLineStart(null, null);
     _activeDrawLayer = _ensureAnnotationLayer();
     _activeDrawLayer!.nodes.add(line);
     _activeDrawLayer = null;
-    _markSceneStructuralChanged();
-    _emitAction(
+    _contracts.markSceneStructuralChanged();
+    final drawTool = _contracts.drawTool;
+    final drawColor = _contracts.drawColor;
+    _contracts.emitAction(
       ActionType.drawLine,
       [line.id],
       timestampMs,
@@ -1089,12 +1106,12 @@ class SceneController extends ChangeNotifier {
     if (deletedNodeIds.isEmpty) {
       return;
     }
-    _markSceneStructuralChanged();
-    _emitAction(
+    _contracts.markSceneStructuralChanged();
+    _contracts.emitAction(
       ActionType.erase,
       deletedNodeIds,
       timestampMs,
-      payload: <String, Object?>{'eraserThickness': eraserThickness},
+      payload: <String, Object?>{'eraserThickness': _contracts.eraserThickness},
     );
   }
 
@@ -1139,7 +1156,8 @@ class SceneController extends ChangeNotifier {
       inverse.c,
       inverse.d,
     );
-    final threshold = line.thickness / 2 + (eraserThickness / 2) * sigmaMax;
+    final threshold =
+        line.thickness / 2 + (_contracts.eraserThickness / 2) * sigmaMax;
     if (localEraserPoints.length == 1) {
       final distance = distancePointToSegment(
         localEraserPoints.first,
@@ -1171,7 +1189,8 @@ class SceneController extends ChangeNotifier {
       inverse.c,
       inverse.d,
     );
-    final threshold = stroke.thickness / 2 + (eraserThickness / 2) * sigmaMax;
+    final threshold =
+        stroke.thickness / 2 + (_contracts.eraserThickness / 2) * sigmaMax;
     if (stroke.points.isEmpty) return false;
     if (stroke.points.length == 1) {
       final point = stroke.points.first;
@@ -1218,11 +1237,12 @@ class SceneController extends ChangeNotifier {
 
   List<SceneNode> _selectedNodesInSceneOrder() {
     final nodes = <SceneNode>[];
-    if (_selectedNodeIds.isEmpty) return nodes;
+    final selectedNodeIds = _contracts.selectedNodeIds;
+    if (selectedNodeIds.isEmpty) return nodes;
 
     for (final layer in scene.layers) {
       for (final node in layer.nodes) {
-        if (_selectedNodeIds.contains(node.id)) {
+        if (selectedNodeIds.contains(node.id)) {
           nodes.add(node);
         }
       }
@@ -1254,11 +1274,12 @@ class SceneController extends ChangeNotifier {
 
   List<SceneNode> _selectedTransformableNodesInSceneOrder() {
     final nodes = <SceneNode>[];
-    if (_selectedNodeIds.isEmpty) return nodes;
+    final selectedNodeIds = _contracts.selectedNodeIds;
+    if (selectedNodeIds.isEmpty) return nodes;
 
     for (final layer in scene.layers) {
       for (final node in layer.nodes) {
-        if (!_selectedNodeIds.contains(node.id)) continue;
+        if (!selectedNodeIds.contains(node.id)) continue;
         if (!node.isTransformable) continue;
         nodes.add(node);
       }
@@ -1284,9 +1305,9 @@ class SceneController extends ChangeNotifier {
     _selectedNodeIds
       ..clear()
       ..addAll(next);
-    _markSelectionChanged();
+    _contracts.markSelectionChanged();
     if (notify) {
-      requestRepaintOncePerFrame();
+      _contracts.requestRepaintOncePerFrame();
     }
     return true;
   }
@@ -1294,9 +1315,9 @@ class SceneController extends ChangeNotifier {
   void _setSelectionRect(Rect? rect, {bool notify = true}) {
     if (_selectionRect == rect) return;
     _selectionRect = rect;
-    _markSceneGeometryChanged();
+    _contracts.markSceneGeometryChanged();
     if (notify) {
-      requestRepaintOncePerFrame();
+      _contracts.requestRepaintOncePerFrame();
     }
   }
 
@@ -1308,7 +1329,7 @@ class SceneController extends ChangeNotifier {
     _dragMoved = false;
     _pendingClearSelection = false;
     _moveGestureNodes = null;
-    _setSelectionRect(null, notify: false);
+    _contracts.setSelectionRect(null, notify: false);
   }
 
   void _resetDrawPointer() {
@@ -1321,11 +1342,11 @@ class SceneController extends ChangeNotifier {
   void _resetDraw() {
     if (_activeStroke != null && _activeDrawLayer != null) {
       _activeDrawLayer!.nodes.remove(_activeStroke);
-      _markSceneStructuralChanged();
+      _contracts.markSceneStructuralChanged();
     }
     if (_activeLine != null && _activeDrawLayer != null) {
       _activeDrawLayer!.nodes.remove(_activeLine);
-      _markSceneStructuralChanged();
+      _contracts.markSceneStructuralChanged();
     }
     _activeStroke = null;
     _activeLine = null;
@@ -1348,9 +1369,10 @@ class SceneController extends ChangeNotifier {
   }
 
   double _strokeThicknessForTool() {
+    final drawTool = _contracts.drawTool;
     return drawTool == DrawTool.highlighter
-        ? highlighterThickness
-        : penThickness;
+        ? _contracts.highlighterThickness
+        : _contracts.penThickness;
   }
 
   void _setPendingLineStart(Offset? start, int? timestampMs) {
@@ -1359,7 +1381,7 @@ class SceneController extends ChangeNotifier {
     }
     _pendingLineStart = start;
     _pendingLineTimestampMs = timestampMs;
-    requestRepaintOncePerFrame();
+    _contracts.requestRepaintOncePerFrame();
   }
 
   void _clearPendingLine() {
@@ -1377,9 +1399,9 @@ class SceneController extends ChangeNotifier {
   void _setCameraOffset(Offset value, {bool notify = true}) {
     if (scene.camera.offset == value) return;
     scene.camera.offset = value;
-    _markSceneGeometryChanged();
+    _contracts.markSceneGeometryChanged();
     if (notify) {
-      requestRepaintOncePerFrame();
+      _contracts.requestRepaintOncePerFrame();
     }
   }
 
@@ -1522,8 +1544,8 @@ class _SceneControllerContracts implements InputSliceContracts {
 
   @override
   void notifyNowIfNeeded() {
-    if (_controller._needsNotify) {
-      _controller._notifyNow();
+    if (needsNotify) {
+      notifyNow();
     }
   }
 
