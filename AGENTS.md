@@ -28,4 +28,37 @@ A Flutter/Dart canvas engine package with scene model, rendering, input handling
   - `ARCHITECTURE.md` (design/flow/invariants when architecture changes)
   - Dartdoc comments (public symbols) + regenerate `doc/api` if you rely on published HTML docs
 - Always run the linter and tests after changes, and report the results.
-- Run `dart format --output=none --set-exit-if-changed lib test example/lib` (or `dart format lib test example/lib`) before pushing.
+
+## Required checks (run locally before pushing)
+
+Run these from the repo root:
+
+1) Formatting (fail on diffs)
+
+   - `dart format --output=none --set-exit-if-changed lib test example/lib tool`
+
+2) Static analysis
+
+   - `flutter analyze`
+
+3) Unit tests
+
+   - `flutter test`
+
+4) Coverage gates (line coverage for `lib/src/**` must be 100%)
+
+   - `flutter test --coverage`
+   - `dart run tool/check_coverage.dart`
+
+5) Invariant coverage (every invariant must have enforcement)
+
+   - `dart run tool/check_invariant_coverage.dart`
+
+6) Import boundary rules
+
+   - `dart run tool/check_import_boundaries.dart`
+
+7) Documentation + publish sanity (recommended before release)
+
+   - `dart doc`
+   - `dart pub publish --dry-run`
