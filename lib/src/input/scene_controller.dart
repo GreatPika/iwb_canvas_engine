@@ -179,6 +179,13 @@ class SceneController extends ChangeNotifier {
   int get debugSelectionRevision => _selectionModel.selectionRevision;
 
   @visibleForTesting
+  int get debugSelectionRectRevision => _selectionModel.selectionRectRevision;
+
+  @visibleForTesting
+  int get debugContractsSelectionRectRevision =>
+      _contracts.selectionRectRevision;
+
+  @visibleForTesting
   int get debugMoveGestureBuildCount =>
       _moveModeEngine.debugMoveGestureBuildCount;
 
@@ -553,6 +560,10 @@ class _SceneControllerContracts implements InputSliceContracts {
 
   @override
   int get selectionRevision => _controller._selectionModel.selectionRevision;
+
+  @override
+  int get selectionRectRevision =>
+      _controller._selectionModel.selectionRectRevision;
 
   @override
   void markSceneGeometryChanged() => _controller._markSceneGeometryChanged();

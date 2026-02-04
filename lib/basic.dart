@@ -33,4 +33,9 @@ export 'src/serialization/scene_codec.dart'
         schemaVersionsRead;
 
 // Types needed to use the widget API.
-export 'src/render/scene_painter.dart' show ImageResolver;
+export 'src/render/scene_painter.dart'
+    show
+        ImageResolver,
+        SceneStaticLayerCache,
+        SceneTextLayoutCache,
+        SceneStrokePathCache;

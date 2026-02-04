@@ -155,6 +155,9 @@ void main() {
 
     final sceneRev0 = controller.debugSceneRevision;
     final selRev0 = controller.debugSelectionRevision;
+    final rectRev0 = controller.debugSelectionRectRevision;
+    final rectContractsRev0 = controller.debugContractsSelectionRectRevision;
+    expect(rectContractsRev0, rectRev0);
 
     controller.addNode(rectNode('rect-1', const Offset(0, 0)));
     expect(controller.debugSceneRevision, greaterThan(sceneRev0));
@@ -184,6 +187,13 @@ void main() {
 
     tapAt(const Offset(0, 0), 100);
     expect(controller.debugSelectionRevision, selRev1);
+
+    marqueeSelect(controller, const Rect.fromLTRB(-20, -20, 20, 20));
+    expect(controller.debugSelectionRectRevision, greaterThan(rectRev0));
+    expect(
+      controller.debugContractsSelectionRectRevision,
+      controller.debugSelectionRectRevision,
+    );
   });
 
   test('rotateSelection rotates around selection center', () {

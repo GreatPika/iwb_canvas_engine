@@ -6,6 +6,33 @@ import 'package:iwb_canvas_engine/advanced.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  SceneController controllerWithTextAndStroke() {
+    final scene = Scene(
+      layers: [
+        Layer(
+          nodes: [
+            TextNode(
+              id: 'text-1',
+              text: 'Hello',
+              size: const Size(80, 20),
+              fontSize: 14,
+              color: const Color(0xFF000000),
+            )..position = const Offset(10, 10),
+            StrokeNode(
+              id: 'stroke-1',
+              points: const [Offset(10, 40), Offset(50, 40)],
+              thickness: 4,
+              color: const Color(0xFF000000),
+            ),
+          ],
+        ),
+      ],
+    );
+    final controller = SceneController(scene: scene);
+    addTearDown(controller.dispose);
+    return controller;
+  }
+
   testWidgets(
     'SceneView builds without AnimatedBuilder and repaints via controller',
     (tester) async {
@@ -552,5 +579,178 @@ void main() {
     final viewState1 = tester.state(find.byType(SceneView)) as dynamic;
     final owned1 = viewState1.debugStaticLayerCache as SceneStaticLayerCache;
     expect(owned1, isNot(same(owned0)));
+  });
+
+  testWidgets('P1: SceneView creates owned text/stroke caches by default', (
+    tester,
+  ) async {
+    final controller = controllerWithTextAndStroke();
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 96,
+          height: 96,
+          child: SceneView(controller: controller, imageResolver: (_) => null),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final viewState = tester.state(find.byType(SceneView)) as dynamic;
+    final textCache = viewState.debugTextLayoutCache as SceneTextLayoutCache;
+    final strokeCache = viewState.debugStrokePathCache as SceneStrokePathCache;
+    expect(textCache.debugSize, greaterThan(0));
+    expect(strokeCache.debugSize, greaterThan(0));
+
+    final renderObject = tester.renderObject<rendering.RenderCustomPaint>(
+      find.byType(CustomPaint),
+    );
+    final painter = renderObject.painter as ScenePainter;
+    expect(painter.textLayoutCache, same(textCache));
+    expect(painter.strokePathCache, same(strokeCache));
+  });
+
+  testWidgets('P1: SceneView clears owned text/stroke caches on dispose', (
+    tester,
+  ) async {
+    final controller = controllerWithTextAndStroke();
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 96,
+          height: 96,
+          child: SceneView(controller: controller, imageResolver: (_) => null),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final viewState = tester.state(find.byType(SceneView)) as dynamic;
+    final textCache = viewState.debugTextLayoutCache as SceneTextLayoutCache;
+    final strokeCache = viewState.debugStrokePathCache as SceneStrokePathCache;
+    expect(textCache.debugSize, greaterThan(0));
+    expect(strokeCache.debugSize, greaterThan(0));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+
+    expect(textCache.debugSize, 0);
+    expect(strokeCache.debugSize, 0);
+  });
+
+  testWidgets('P1: SceneView does not clear external text/stroke caches', (
+    tester,
+  ) async {
+    final controller = controllerWithTextAndStroke();
+    final textCache = SceneTextLayoutCache(maxEntries: 8);
+    final strokeCache = SceneStrokePathCache(maxEntries: 8);
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 96,
+          height: 96,
+          child: SceneView(
+            controller: controller,
+            imageResolver: (_) => null,
+            textLayoutCache: textCache,
+            strokePathCache: strokeCache,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(textCache.debugSize, greaterThan(0));
+    expect(strokeCache.debugSize, greaterThan(0));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+
+    expect(textCache.debugSize, greaterThan(0));
+    expect(strokeCache.debugSize, greaterThan(0));
+  });
+
+  testWidgets('P1: SceneView clears only owned caches when switching', (
+    tester,
+  ) async {
+    final controller = controllerWithTextAndStroke();
+    final externalText = SceneTextLayoutCache(maxEntries: 8);
+    final externalStroke = SceneStrokePathCache(maxEntries: 8);
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 96,
+          height: 96,
+          child: SceneView(controller: controller, imageResolver: (_) => null),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final viewState0 = tester.state(find.byType(SceneView)) as dynamic;
+    final ownedText0 = viewState0.debugTextLayoutCache as SceneTextLayoutCache;
+    final ownedStroke0 =
+        viewState0.debugStrokePathCache as SceneStrokePathCache;
+    expect(ownedText0.debugSize, greaterThan(0));
+    expect(ownedStroke0.debugSize, greaterThan(0));
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 96,
+          height: 96,
+          child: SceneView(
+            controller: controller,
+            imageResolver: (_) => null,
+            textLayoutCache: externalText,
+            strokePathCache: externalStroke,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    // The previously owned caches must be cleared when switching away.
+    expect(ownedText0.debugSize, 0);
+    expect(ownedStroke0.debugSize, 0);
+
+    final viewState1 = tester.state(find.byType(SceneView)) as dynamic;
+    expect(viewState1.debugTextLayoutCache, same(externalText));
+    expect(viewState1.debugStrokePathCache, same(externalStroke));
+
+    final externalTextSize = externalText.debugSize;
+    final externalStrokeSize = externalStroke.debugSize;
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 96,
+          height: 96,
+          child: SceneView(controller: controller, imageResolver: (_) => null),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    // Externally owned caches must stay intact.
+    expect(externalText.debugSize, externalTextSize);
+    expect(externalStroke.debugSize, externalStrokeSize);
+
+    final viewState2 = tester.state(find.byType(SceneView)) as dynamic;
+    final ownedText1 = viewState2.debugTextLayoutCache as SceneTextLayoutCache;
+    final ownedStroke1 =
+        viewState2.debugStrokePathCache as SceneStrokePathCache;
+    expect(ownedText1, isNot(same(ownedText0)));
+    expect(ownedStroke1, isNot(same(ownedStroke0)));
   });
 }

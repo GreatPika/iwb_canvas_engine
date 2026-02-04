@@ -30,10 +30,16 @@ class SceneView extends StatefulWidget {
   /// If [staticLayerCache] is null, the view creates and owns an internal cache
   /// and disposes it when the view is disposed. If a cache is provided, the
   /// caller owns it and must dispose it.
+  ///
+  /// If [textLayoutCache] / [strokePathCache] are null, the view creates and
+  /// owns internal LRU caches to reduce per-frame work. If caches are provided,
+  /// the caller owns them.
   const SceneView({
     this.controller,
     this.imageResolver,
     this.staticLayerCache,
+    this.textLayoutCache,
+    this.strokePathCache,
     this.onControllerReady,
     this.pointerSettings,
     this.dragStartSlop,
@@ -47,6 +53,8 @@ class SceneView extends StatefulWidget {
   final SceneController? controller;
   final ImageResolver? imageResolver;
   final SceneStaticLayerCache? staticLayerCache;
+  final SceneTextLayoutCache? textLayoutCache;
+  final SceneStrokePathCache? strokePathCache;
   final ValueChanged<SceneController>? onControllerReady;
   final PointerInputSettings? pointerSettings;
   final double? dragStartSlop;
@@ -63,6 +71,10 @@ class _SceneViewState extends State<SceneView> {
   late PointerInputTracker _pointerTracker;
   late SceneStaticLayerCache _staticLayerCache;
   late bool _ownsStaticLayerCache;
+  late SceneTextLayoutCache _textLayoutCache;
+  late bool _ownsTextLayoutCache;
+  late SceneStrokePathCache _strokePathCache;
+  late bool _ownsStrokePathCache;
   Timer? _pendingTapTimer;
   int _lastTimestampMs = 0;
   SceneController? _ownedController;
@@ -71,12 +83,18 @@ class _SceneViewState extends State<SceneView> {
 
   @visibleForTesting
   SceneStaticLayerCache get debugStaticLayerCache => _staticLayerCache;
+  @visibleForTesting
+  SceneTextLayoutCache get debugTextLayoutCache => _textLayoutCache;
+  @visibleForTesting
+  SceneStrokePathCache get debugStrokePathCache => _strokePathCache;
 
   @override
   void initState() {
     super.initState();
     _ensureController();
     _initStaticLayerCache();
+    _initTextLayoutCache();
+    _initStrokePathCache();
     _pointerTracker = PointerInputTracker(
       settings: _controller.pointerSettings,
     );
@@ -87,6 +105,12 @@ class _SceneViewState extends State<SceneView> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.staticLayerCache != widget.staticLayerCache) {
       _syncStaticLayerCache();
+    }
+    if (oldWidget.textLayoutCache != widget.textLayoutCache) {
+      _syncTextLayoutCache();
+    }
+    if (oldWidget.strokePathCache != widget.strokePathCache) {
+      _syncStrokePathCache();
     }
     final controllerChanged = oldWidget.controller != widget.controller;
     if (controllerChanged) {
@@ -112,6 +136,12 @@ class _SceneViewState extends State<SceneView> {
     if (_ownsStaticLayerCache) {
       _staticLayerCache.dispose();
     }
+    if (_ownsTextLayoutCache) {
+      _textLayoutCache.clear();
+    }
+    if (_ownsStrokePathCache) {
+      _strokePathCache.clear();
+    }
     _disposeOwnedController();
     super.dispose();
   }
@@ -130,6 +160,8 @@ class _SceneViewState extends State<SceneView> {
           controller: _controller,
           imageResolver: widget.imageResolver ?? _defaultImageResolver,
           staticLayerCache: _staticLayerCache,
+          textLayoutCache: _textLayoutCache,
+          strokePathCache: _strokePathCache,
           selectionColor: widget.selectionColor,
           selectionStrokeWidth: widget.selectionStrokeWidth,
           gridStrokeWidth: widget.gridStrokeWidth,
@@ -137,6 +169,42 @@ class _SceneViewState extends State<SceneView> {
         child: const SizedBox.expand(),
       ),
     );
+  }
+
+  void _initTextLayoutCache() {
+    final external = widget.textLayoutCache;
+    if (external != null) {
+      _textLayoutCache = external;
+      _ownsTextLayoutCache = false;
+      return;
+    }
+    _textLayoutCache = SceneTextLayoutCache();
+    _ownsTextLayoutCache = true;
+  }
+
+  void _syncTextLayoutCache() {
+    if (_ownsTextLayoutCache) {
+      _textLayoutCache.clear();
+    }
+    _initTextLayoutCache();
+  }
+
+  void _initStrokePathCache() {
+    final external = widget.strokePathCache;
+    if (external != null) {
+      _strokePathCache = external;
+      _ownsStrokePathCache = false;
+      return;
+    }
+    _strokePathCache = SceneStrokePathCache();
+    _ownsStrokePathCache = true;
+  }
+
+  void _syncStrokePathCache() {
+    if (_ownsStrokePathCache) {
+      _strokePathCache.clear();
+    }
+    _initStrokePathCache();
   }
 
   void _handlePointerEvent(PointerEvent event, PointerPhase phase) {

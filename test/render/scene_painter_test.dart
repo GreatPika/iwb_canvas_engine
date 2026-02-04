@@ -246,6 +246,40 @@ void main() {
     expect(nonBg, greaterThan(0));
   });
 
+  test(
+    'P1: ScenePainter uses stroke path cache for stroke paint + selection',
+    () async {
+      const background = Color(0xFFFFFFFF);
+      final stroke = StrokeNode(
+        id: 'stroke-1',
+        points: const [Offset(10, 10), Offset(80, 10)],
+        thickness: 6,
+        color: const Color(0xFF000000),
+      );
+      final scene = Scene(
+        background: Background(color: background),
+        layers: [
+          Layer(nodes: [stroke]),
+        ],
+      );
+      final cache = SceneStrokePathCache(maxEntries: 8);
+
+      final painter = ScenePainter(
+        controller: _controllerFor(scene, selectedNodeIds: const {'stroke-1'}),
+        imageResolver: (_) => null,
+        strokePathCache: cache,
+        selectionColor: const Color(0xFFFF0000),
+        selectionStrokeWidth: 2,
+      );
+
+      await _paintToImage(painter, width: 100, height: 60);
+
+      expect(cache.debugBuildCount, 1);
+      expect(cache.debugHitCount, 1);
+      expect(cache.debugSize, 1);
+    },
+  );
+
   test('ScenePainter selection keeps line color intact', () async {
     const background = Color(0xFFFFFFFF);
     const lineColor = Color(0xFF000000);

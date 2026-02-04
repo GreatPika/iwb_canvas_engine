@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -8,6 +9,238 @@ import '../core/nodes.dart';
 import '../core/scene.dart';
 import '../core/transform2d.dart';
 import '../input/scene_controller.dart';
+
+/// LRU cache for built [Path] instances for [StrokeNode] geometry.
+///
+/// Why: avoid rebuilding long stroke polylines every frame.
+/// Invariant: cached path is valid only while the stroke geometry is unchanged.
+/// The cache detects unexpected mutation heuristically via (points length, first
+/// point, last point). This matches the engine's normal flow where strokes are
+/// immutable after gesture commit.
+/// Validate: `test/render/scene_stroke_path_cache_test.dart`.
+class SceneStrokePathCache {
+  SceneStrokePathCache({this.maxEntries = 512})
+    : assert(maxEntries > 0, 'maxEntries must be > 0.');
+
+  final int maxEntries;
+
+  final LinkedHashMap<NodeId, _StrokePathEntry> _entries =
+      LinkedHashMap<NodeId, _StrokePathEntry>();
+
+  int _debugBuildCount = 0;
+  int _debugHitCount = 0;
+  int _debugEvictCount = 0;
+
+  @visibleForTesting
+  int get debugBuildCount => _debugBuildCount;
+  @visibleForTesting
+  int get debugHitCount => _debugHitCount;
+  @visibleForTesting
+  int get debugEvictCount => _debugEvictCount;
+  @visibleForTesting
+  int get debugSize => _entries.length;
+
+  void clear() {
+    _entries.clear();
+  }
+
+  Path getOrBuild(StrokeNode node) {
+    final points = node.points;
+    if (points.length < 2) {
+      throw StateError(
+        'SceneStrokePathCache.getOrBuild requires points.length >= 2. '
+        'Dots must be handled separately.',
+      );
+    }
+
+    final firstPoint = points.first;
+    final lastPoint = points.last;
+    final cached = _entries.remove(node.id);
+    if (cached != null &&
+        cached.pointsLength == points.length &&
+        cached.firstPoint == firstPoint &&
+        cached.lastPoint == lastPoint) {
+      _entries[node.id] = cached;
+      _debugHitCount += 1;
+      return cached.path;
+    }
+
+    final path = _buildStrokePath(points);
+    _entries[node.id] = _StrokePathEntry(
+      path: path,
+      pointsLength: points.length,
+      firstPoint: firstPoint,
+      lastPoint: lastPoint,
+    );
+    _debugBuildCount += 1;
+    _evictIfNeeded();
+    return path;
+  }
+
+  void _evictIfNeeded() {
+    while (_entries.length > maxEntries) {
+      _entries.remove(_entries.keys.first);
+      _debugEvictCount += 1;
+    }
+  }
+}
+
+class _StrokePathEntry {
+  const _StrokePathEntry({
+    required this.path,
+    required this.pointsLength,
+    required this.firstPoint,
+    required this.lastPoint,
+  });
+
+  final Path path;
+  final int pointsLength;
+  final Offset firstPoint;
+  final Offset lastPoint;
+}
+
+/// LRU cache for [TextPainter] layout results for [TextNode].
+///
+/// Why: avoid recomputing text layout on every paint when inputs are unchanged.
+/// Invariant: cached layout is valid only while the key (text + style + layout
+/// constraints) is unchanged.
+/// Validate: `test/render/scene_text_layout_cache_test.dart`.
+class SceneTextLayoutCache {
+  SceneTextLayoutCache({this.maxEntries = 256})
+    : assert(maxEntries > 0, 'maxEntries must be > 0.');
+
+  final int maxEntries;
+
+  final LinkedHashMap<_TextLayoutKey, TextPainter> _entries =
+      LinkedHashMap<_TextLayoutKey, TextPainter>();
+
+  int _debugBuildCount = 0;
+  int _debugHitCount = 0;
+  int _debugEvictCount = 0;
+
+  @visibleForTesting
+  int get debugBuildCount => _debugBuildCount;
+  @visibleForTesting
+  int get debugHitCount => _debugHitCount;
+  @visibleForTesting
+  int get debugEvictCount => _debugEvictCount;
+  @visibleForTesting
+  int get debugSize => _entries.length;
+
+  void clear() {
+    _entries.clear();
+  }
+
+  TextPainter getOrBuild({
+    required TextNode node,
+    required TextStyle textStyle,
+    required double maxWidth,
+  }) {
+    final key = _TextLayoutKey(
+      nodeId: node.id,
+      text: node.text,
+      fontSize: node.fontSize,
+      fontFamily: node.fontFamily,
+      isBold: node.isBold,
+      isItalic: node.isItalic,
+      isUnderline: node.isUnderline,
+      align: node.align,
+      lineHeight: node.lineHeight,
+      maxWidth: maxWidth,
+      boxSize: node.size,
+      color: textStyle.color ?? const Color(0xFF000000),
+    );
+
+    final cached = _entries.remove(key);
+    if (cached != null) {
+      _entries[key] = cached;
+      _debugHitCount += 1;
+      return cached;
+    }
+
+    final textPainter = TextPainter(
+      text: TextSpan(text: node.text, style: textStyle),
+      textAlign: node.align,
+      textDirection: TextDirection.ltr,
+      maxLines: null,
+    );
+    textPainter.layout(maxWidth: maxWidth);
+    _entries[key] = textPainter;
+    _debugBuildCount += 1;
+    _evictIfNeeded();
+    return textPainter;
+  }
+
+  void _evictIfNeeded() {
+    while (_entries.length > maxEntries) {
+      _entries.remove(_entries.keys.first);
+      _debugEvictCount += 1;
+    }
+  }
+}
+
+class _TextLayoutKey {
+  const _TextLayoutKey({
+    required this.nodeId,
+    required this.text,
+    required this.fontSize,
+    required this.fontFamily,
+    required this.isBold,
+    required this.isItalic,
+    required this.isUnderline,
+    required this.align,
+    required this.lineHeight,
+    required this.maxWidth,
+    required this.boxSize,
+    required this.color,
+  });
+
+  final NodeId nodeId;
+  final String text;
+  final double fontSize;
+  final String? fontFamily;
+  final bool isBold;
+  final bool isItalic;
+  final bool isUnderline;
+  final TextAlign align;
+  final double? lineHeight;
+  final double maxWidth;
+  final Size boxSize;
+  final Color color;
+
+  @override
+  bool operator ==(Object other) {
+    return other is _TextLayoutKey &&
+        other.nodeId == nodeId &&
+        other.text == text &&
+        other.fontSize == fontSize &&
+        other.fontFamily == fontFamily &&
+        other.isBold == isBold &&
+        other.isItalic == isItalic &&
+        other.isUnderline == isUnderline &&
+        other.align == align &&
+        other.lineHeight == lineHeight &&
+        other.maxWidth == maxWidth &&
+        other.boxSize == boxSize &&
+        other.color == color;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    nodeId,
+    text,
+    fontSize,
+    fontFamily,
+    isBold,
+    isItalic,
+    isUnderline,
+    align,
+    lineHeight,
+    maxWidth,
+    boxSize,
+    color,
+  );
+}
 
 /// Resolves an [ImageNode.imageId] to a decoded [Image] instance.
 ///
@@ -31,6 +264,8 @@ class ScenePainter extends CustomPainter {
     required this.controller,
     required this.imageResolver,
     this.staticLayerCache,
+    this.textLayoutCache,
+    this.strokePathCache,
     this.selectionColor = const Color(0xFF1565C0),
     this.selectionStrokeWidth = 1,
     this.gridStrokeWidth = 1,
@@ -39,6 +274,8 @@ class ScenePainter extends CustomPainter {
   final SceneController controller;
   final ImageResolver imageResolver;
   final SceneStaticLayerCache? staticLayerCache;
+  final SceneTextLayoutCache? textLayoutCache;
+  final SceneStrokePathCache? strokePathCache;
   final Color selectionColor;
   final double selectionStrokeWidth;
   final double gridStrokeWidth;
@@ -88,6 +325,8 @@ class ScenePainter extends CustomPainter {
     return oldDelegate.controller != controller ||
         oldDelegate.imageResolver != imageResolver ||
         oldDelegate.staticLayerCache != staticLayerCache ||
+        oldDelegate.textLayoutCache != textLayoutCache ||
+        oldDelegate.strokePathCache != strokePathCache ||
         oldDelegate.selectionColor != selectionColor ||
         oldDelegate.selectionStrokeWidth != selectionStrokeWidth ||
         oldDelegate.gridStrokeWidth != gridStrokeWidth;
@@ -220,13 +459,9 @@ class ScenePainter extends CustomPainter {
           haloWidth,
         );
       } else {
-        final path = Path()..fillType = PathFillType.nonZero;
-        final first = node.points.first;
-        path.moveTo(first.dx, first.dy);
-        for (var i = 1; i < node.points.length; i++) {
-          final p = node.points[i];
-          path.lineTo(p.dx, p.dy);
-        }
+        final path = strokePathCache != null
+            ? strokePathCache!.getOrBuild(node)
+            : _buildStrokePath(node.points);
         canvas.drawPath(
           path,
           _haloPaint(
@@ -505,15 +740,19 @@ class ScenePainter extends CustomPainter {
       height: node.lineHeight == null ? null : node.lineHeight! / node.fontSize,
     );
 
-    final textPainter = TextPainter(
-      text: TextSpan(text: node.text, style: textStyle),
-      textAlign: node.align,
-      textDirection: TextDirection.ltr,
-      maxLines: null,
-    );
-
     final maxWidth = node.maxWidth ?? node.size.width;
-    textPainter.layout(maxWidth: maxWidth);
+    final textPainter = textLayoutCache != null
+        ? textLayoutCache!.getOrBuild(
+            node: node,
+            textStyle: textStyle,
+            maxWidth: maxWidth,
+          )
+        : (TextPainter(
+            text: TextSpan(text: node.text, style: textStyle),
+            textAlign: node.align,
+            textDirection: TextDirection.ltr,
+            maxLines: null,
+          )..layout(maxWidth: maxWidth));
 
     final box = Rect.fromCenter(
       center: Offset.zero,
@@ -565,13 +804,9 @@ class ScenePainter extends CustomPainter {
       return;
     }
 
-    final path = Path();
-    final first = node.points.first;
-    path.moveTo(first.dx, first.dy);
-    for (var i = 1; i < node.points.length; i++) {
-      final p = node.points[i];
-      path.lineTo(p.dx, p.dy);
-    }
+    final path = strokePathCache != null
+        ? strokePathCache!.getOrBuild(node)
+        : _buildStrokePath(node.points);
     canvas.drawPath(path, paint);
     canvas.restore();
   }
@@ -687,6 +922,17 @@ class ScenePainter extends CustomPainter {
     if (value > 1) return 1;
     return value;
   }
+}
+
+Path _buildStrokePath(List<Offset> points) {
+  final path = Path()..fillType = PathFillType.nonZero;
+  final first = points.first;
+  path.moveTo(first.dx, first.dy);
+  for (var i = 1; i < points.length; i++) {
+    final p = points[i];
+    path.lineTo(p.dx, p.dy);
+  }
+  return path;
 }
 
 /// Cache for the static scene layer (background + grid).

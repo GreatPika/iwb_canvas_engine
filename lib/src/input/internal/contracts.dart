@@ -24,6 +24,7 @@ abstract class InputSliceContracts {
   // (3) Revisions / change markers
   int get sceneRevision;
   int get selectionRevision;
+  int get selectionRectRevision;
   void markSceneGeometryChanged();
   void markSceneStructuralChanged();
   void markSelectionChanged();

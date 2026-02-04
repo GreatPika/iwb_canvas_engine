@@ -90,6 +90,28 @@ class _CanvasScreenState extends State<CanvasScreen> {
 
 ---
 
+## Rendering caches (performance)
+
+`SceneView` enables bounded in-memory caches by default to reduce per-frame work:
+
+- `SceneTextLayoutCache`: caches `TextPainter.layout()` results for `TextNode`
+- `SceneStrokePathCache`: caches built `Path` geometry for `StrokeNode`
+
+You can optionally provide your own cache instances to share across multiple
+views or tune memory limits.
+
+```dart
+import 'package:iwb_canvas_engine/basic.dart';
+
+final textCache = SceneTextLayoutCache(maxEntries: 512);
+final strokeCache = SceneStrokePathCache(maxEntries: 1024);
+
+SceneView(
+  textLayoutCache: textCache,
+  strokePathCache: strokeCache,
+);
+```
+
 ## Core mental model (read this before coding)
 
 ## Stability and compatibility
