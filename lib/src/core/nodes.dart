@@ -369,7 +369,41 @@ class StrokeNode extends SceneNode {
     return bounds.inflate(thickness / 2);
   }
 
+  /// Normalizes interactive stroke geometry into local coordinates.
+  ///
+  /// Preconditions (debug-asserted):
+  /// - [transform] must be the identity transform.
+  /// - All point coordinates must be finite.
+  ///
+  /// This method is intended for interactive drawing: while the user draws,
+  /// the engine may temporarily store [points] in world/scene coordinates with
+  /// `transform == identity`. Call this when the gesture finishes to convert
+  /// geometry to local space and store the world center in [transform].
   void normalizeToLocalCenter() {
+    assert(() {
+      final t = transform;
+      final isIdentity =
+          t.a == 1 &&
+          t.b == 0 &&
+          t.c == 0 &&
+          t.d == 1 &&
+          t.tx == 0 &&
+          t.ty == 0;
+      if (!isIdentity) {
+        throw AssertionError(
+          'StrokeNode.normalizeToLocalCenter requires transform == identity. '
+          'Use StrokeNode.fromWorldPoints for non-interactive creation.',
+        );
+      }
+      for (final p in points) {
+        if (!p.dx.isFinite || !p.dy.isFinite) {
+          throw AssertionError(
+            'StrokeNode.normalizeToLocalCenter requires finite point coordinates.',
+          );
+        }
+      }
+      return true;
+    }());
     if (points.isEmpty) return;
     final bounds = aabbFromPoints(points);
     final centerWorld = bounds.center;
@@ -442,7 +476,42 @@ class LineNode extends SceneNode {
   @override
   Rect get localBounds => Rect.fromPoints(start, end).inflate(thickness / 2);
 
+  /// Normalizes interactive line geometry into local coordinates.
+  ///
+  /// Preconditions (debug-asserted):
+  /// - [transform] must be the identity transform.
+  /// - [start] and [end] must have finite coordinates.
+  ///
+  /// This method is intended for interactive drawing: while the user draws,
+  /// the engine may temporarily store [start]/[end] in world/scene coordinates
+  /// with `transform == identity`. Call this when the gesture finishes to
+  /// convert geometry to local space and store the world center in [transform].
   void normalizeToLocalCenter() {
+    assert(() {
+      final t = transform;
+      final isIdentity =
+          t.a == 1 &&
+          t.b == 0 &&
+          t.c == 0 &&
+          t.d == 1 &&
+          t.tx == 0 &&
+          t.ty == 0;
+      if (!isIdentity) {
+        throw AssertionError(
+          'LineNode.normalizeToLocalCenter requires transform == identity. '
+          'Use LineNode.fromWorldSegment for non-interactive creation.',
+        );
+      }
+      if (!start.dx.isFinite ||
+          !start.dy.isFinite ||
+          !end.dx.isFinite ||
+          !end.dy.isFinite) {
+        throw AssertionError(
+          'LineNode.normalizeToLocalCenter requires finite start/end coordinates.',
+        );
+      }
+      return true;
+    }());
     final bounds = Rect.fromPoints(start, end);
     final centerWorld = bounds.center;
     start = start - centerWorld;

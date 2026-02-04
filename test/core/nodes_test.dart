@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/advanced.dart';
 
 void main() {
+  // INV:INV-CORE-NORMALIZE-PRECONDITIONS
   test('ImageNode.fromTopLeftWorld positions bounds by world top-left', () {
     final node = ImageNode.fromTopLeftWorld(
       id: 'img-1',
@@ -240,5 +241,75 @@ void main() {
     final third = node.buildLocalPath();
     expect(third, isNotNull);
     expect(third!.fillType, PathFillType.evenOdd);
+  });
+
+  test('normalizeToLocalCenter asserts on non-identity transforms', () {
+    final stroke = StrokeNode.fromWorldPoints(
+      id: 's1',
+      points: const [Offset(0, 0), Offset(10, 0)],
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+    expect(
+      () => stroke.normalizeToLocalCenter(),
+      throwsA(isA<AssertionError>()),
+    );
+
+    final line = LineNode.fromWorldSegment(
+      id: 'l1',
+      start: const Offset(0, 0),
+      end: const Offset(10, 0),
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+    expect(() => line.normalizeToLocalCenter(), throwsA(isA<AssertionError>()));
+  });
+
+  test('normalizeToLocalCenter asserts on non-finite geometry', () {
+    final stroke = StrokeNode(
+      id: 's2',
+      points: [const Offset(0, 0), Offset(double.nan, 0)],
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+    expect(
+      () => stroke.normalizeToLocalCenter(),
+      throwsA(isA<AssertionError>()),
+    );
+
+    final line = LineNode(
+      id: 'l2',
+      start: const Offset(0, 0),
+      end: Offset(double.infinity, 0),
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+    expect(() => line.normalizeToLocalCenter(), throwsA(isA<AssertionError>()));
+  });
+
+  test('normalizeToLocalCenter converts world geometry to local space', () {
+    final stroke = StrokeNode(
+      id: 's3',
+      points: const [Offset(0, 0), Offset(10, 0)],
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+
+    stroke.normalizeToLocalCenter();
+    expect(stroke.position, const Offset(5, 0));
+    expect(stroke.points, const [Offset(-5, 0), Offset(5, 0)]);
+
+    final line = LineNode(
+      id: 'l3',
+      start: const Offset(0, 0),
+      end: const Offset(10, 0),
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+
+    line.normalizeToLocalCenter();
+    expect(line.position, const Offset(5, 0));
+    expect(line.start, const Offset(-5, 0));
+    expect(line.end, const Offset(5, 0));
   });
 }
