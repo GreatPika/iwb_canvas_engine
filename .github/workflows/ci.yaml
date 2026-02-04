@@ -35,6 +35,9 @@ jobs:
       - name: Analyze
         run: flutter analyze
 
+      - name: Import boundaries
+        run: dart run tool/check_import_boundaries.dart
+
       - name: Test
         run: flutter test --coverage
 
