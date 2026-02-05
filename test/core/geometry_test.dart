@@ -396,8 +396,14 @@ void main() {
       nodeNeg.boundsWorld.right + kHitSlop + 0.1,
       nodeNeg.boundsWorld.center.dy,
     );
-    expect(hitTestNode(pointInside, nodeNeg), hitTestNode(pointInside, nodeZero));
-    expect(hitTestNode(pointOutside, nodeNeg), hitTestNode(pointOutside, nodeZero));
+    expect(
+      hitTestNode(pointInside, nodeNeg),
+      hitTestNode(pointInside, nodeZero),
+    );
+    expect(
+      hitTestNode(pointOutside, nodeNeg),
+      hitTestNode(pointOutside, nodeZero),
+    );
   });
 
   test(

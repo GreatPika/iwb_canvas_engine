@@ -437,11 +437,7 @@ class ScenePainter extends CustomPainter {
       canvas.drawLine(
         node.start,
         node.end,
-        _haloPaint(
-          baseThickness + haloWidth * 2,
-          color,
-          cap: StrokeCap.round,
-        ),
+        _haloPaint(baseThickness + haloWidth * 2, color, cap: StrokeCap.round),
       );
       canvas.drawLine(
         node.start,

@@ -146,7 +146,8 @@ const List<Invariant> invariants = <Invariant>[
   Invariant(
     id: 'INV-CORE-NONNEGATIVE-WIDTHS-CLAMP',
     scope: 'core',
-    title: 'Negative thickness/strokeWidth are treated as 0 in bounds/hit-test/render.',
+    title:
+        'Negative thickness/strokeWidth are treated as 0 in bounds/hit-test/render.',
   ),
   Invariant(
     id: 'INV-CORE-LINE-HITPADDING-SLOP-SCENE',

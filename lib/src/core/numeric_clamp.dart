@@ -6,4 +6,3 @@
 library;
 
 double clampNonNegative(double value) => value < 0 ? 0.0 : value;
-
