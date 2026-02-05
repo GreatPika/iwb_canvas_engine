@@ -29,21 +29,29 @@ bool hitTestStroke(
   List<Offset> points,
   double thickness, {
   double hitPadding = 0,
+  double hitSlop = kHitSlop,
 }) {
   if (points.isEmpty) return false;
   if (points.length == 1) {
     final baseThickness = thickness < 0 ? 0 : thickness;
-    final radius = baseThickness / 2 + hitPadding + kHitSlop;
+    final radius = baseThickness / 2 + hitPadding + hitSlop;
     return (point - points.first).distance <= radius;
   }
   final baseThickness = thickness < 0 ? 0 : thickness;
-  final effectiveThickness = baseThickness + 2 * (hitPadding + kHitSlop);
+  final effectiveThickness = baseThickness + 2 * (hitPadding + hitSlop);
   for (var i = 0; i < points.length - 1; i++) {
     if (hitTestLine(point, points[i], points[i + 1], effectiveThickness)) {
       return true;
     }
   }
   return false;
+}
+
+double _sceneScalarToLocalMax(Transform2D inverse, double valueScene) {
+  final scaleX = math.sqrt(inverse.a * inverse.a + inverse.c * inverse.c);
+  final scaleY = math.sqrt(inverse.b * inverse.b + inverse.d * inverse.d);
+  final scale = math.max(scaleX, scaleY);
+  return valueScene * scale;
 }
 
 /// Returns true if [point] hits [node] in scene coordinates.
@@ -56,7 +64,8 @@ bool hitTestNode(Offset point, SceneNode node) {
     case NodeType.rect:
       final inverse = node.transform.invert();
       if (inverse == null) {
-        return hitTestRect(point, node.boundsWorld);
+        final paddingScene = node.hitPadding + kHitSlop;
+        return node.boundsWorld.inflate(paddingScene).contains(point);
       }
       final localPoint = inverse.applyToPoint(point);
       final paddingScene = node.hitPadding + kHitSlop;
@@ -83,7 +92,7 @@ bool hitTestNode(Offset point, SceneNode node) {
         final localPath = pathNode.buildLocalPath();
         if (localPath == null) return false;
         final inverse = pathNode.transform.invert();
-        if (inverse == null) return false;
+        if (inverse == null) return true;
         final localPoint = inverse.applyToPoint(point);
         return localPath.contains(localPoint);
       }
@@ -98,29 +107,35 @@ bool hitTestNode(Offset point, SceneNode node) {
     case NodeType.line:
       final line = node as LineNode;
       final inverse = line.transform.invert();
-      if (inverse == null) return false;
+      if (inverse == null) {
+        final paddingScene = line.hitPadding + kHitSlop;
+        return line.boundsWorld.inflate(paddingScene).contains(point);
+      }
       final localPoint = inverse.applyToPoint(point);
       final baseThickness = line.thickness < 0 ? 0 : line.thickness;
       final paddingScene = line.hitPadding + kHitSlop;
-      final paddingX =
-          paddingScene *
-          math.sqrt(inverse.a * inverse.a + inverse.c * inverse.c);
-      final paddingY =
-          paddingScene *
-          math.sqrt(inverse.b * inverse.b + inverse.d * inverse.d);
-      final paddingLocal = math.max(paddingX, paddingY);
+      final paddingLocal = _sceneScalarToLocalMax(inverse, paddingScene);
       final effectiveThickness = baseThickness + 2 * paddingLocal;
       return hitTestLine(localPoint, line.start, line.end, effectiveThickness);
     case NodeType.stroke:
       final stroke = node as StrokeNode;
       final inverse = stroke.transform.invert();
-      if (inverse == null) return false;
+      if (inverse == null) {
+        final paddingScene = stroke.hitPadding + kHitSlop;
+        return stroke.boundsWorld.inflate(paddingScene).contains(point);
+      }
       final localPoint = inverse.applyToPoint(point);
+      final hitPaddingLocal = _sceneScalarToLocalMax(
+        inverse,
+        stroke.hitPadding,
+      );
+      final hitSlopLocal = _sceneScalarToLocalMax(inverse, kHitSlop);
       return hitTestStroke(
         localPoint,
         stroke.points,
         stroke.thickness,
-        hitPadding: stroke.hitPadding,
+        hitPadding: hitPaddingLocal,
+        hitSlop: hitSlopLocal,
       );
   }
 }

@@ -136,6 +136,10 @@ Stable contracts (expected to remain compatible as the package evolves):
 - Layers are rendered in list order; nodes are rendered in list order.
 - **Z-order / hit-test:** the **last** node in a layer is the top-most; the **last** layer is on top.
   - Source of truth: `hitTestTopNode` in `lib/src/core/hit_test.dart`.
+  - Hit-test tolerance uses `kHitSlop` + `SceneNode.hitPadding` in **scene/world units**
+    (scale-aware). When `transform.invert()` is unavailable (degenerate
+    transforms), hit-testing falls back to `boundsWorld.inflate(hitPadding + kHitSlop)`
+    for coarse-but-selectable behavior.
 
 ### Coordinate systems
 

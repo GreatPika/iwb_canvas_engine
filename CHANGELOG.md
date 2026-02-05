@@ -12,6 +12,10 @@
   (degenerate bounds); path nodes no longer disappear/cull incorrectly.
 - Fix: `LineNode` hit-testing now accounts for `hitPadding` and `kHitSlop` in
   scene units (touch-friendly, scale-aware).
+- Fix: `StrokeNode` hit-testing now accounts for `hitPadding` and `kHitSlop` in
+  scene units (touch-friendly, scale-aware).
+- Fix: hit-testing fallback for non-invertible transforms now preserves
+  `hitPadding` + `kHitSlop` and keeps nodes selectable via inflated `boundsWorld`.
 - Core: document and debug-assert preconditions for
   `StrokeNode.normalizeToLocalCenter` and `LineNode.normalizeToLocalCenter`.
 

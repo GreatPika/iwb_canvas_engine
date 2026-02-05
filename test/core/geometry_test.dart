@@ -208,6 +208,7 @@ void main() {
   test(
     'hitTestNode falls back to world AABB for non-invertible transforms',
     () {
+      // INV:INV-CORE-HITTEST-FALLBACK-INFLATED-AABB
       final node = RectNode(id: 'rect-singular', size: const Size(100, 40))
         ..transform = const Transform2D(
           a: 1,
@@ -222,6 +223,71 @@ void main() {
 
       final point = node.boundsWorld.center;
       expect(hitTestNode(point, node), isTrue);
+
+      final paddingInside = Offset(
+        node.boundsWorld.right + kHitSlop - 0.1,
+        node.boundsWorld.center.dy,
+      );
+      expect(hitTestNode(paddingInside, node), isTrue);
+      final paddingOutside = Offset(
+        node.boundsWorld.right + kHitSlop + 0.1,
+        node.boundsWorld.center.dy,
+      );
+      expect(hitTestNode(paddingOutside, node), isFalse);
+
+      final line = LineNode(
+        id: 'line-singular',
+        start: const Offset(0, 0),
+        end: const Offset(10, 0),
+        thickness: 0,
+        color: const Color(0xFF000000),
+      )..transform = node.transform;
+      expect(line.transform.invert(), isNull);
+      final lineInside = Offset(
+        line.boundsWorld.right + kHitSlop - 0.1,
+        line.boundsWorld.center.dy,
+      );
+      expect(hitTestNode(lineInside, line), isTrue);
+      final lineOutside = Offset(
+        line.boundsWorld.right + kHitSlop + 0.1,
+        line.boundsWorld.center.dy,
+      );
+      expect(hitTestNode(lineOutside, line), isFalse);
+
+      final stroke = StrokeNode(
+        id: 'stroke-singular',
+        points: const <Offset>[Offset(0, 0), Offset(10, 0)],
+        thickness: 0,
+        color: const Color(0xFF000000),
+      )..transform = node.transform;
+      expect(stroke.transform.invert(), isNull);
+      final strokeInside = Offset(
+        stroke.boundsWorld.right + kHitSlop - 0.1,
+        stroke.boundsWorld.center.dy,
+      );
+      expect(hitTestNode(strokeInside, stroke), isTrue);
+      final strokeOutside = Offset(
+        stroke.boundsWorld.right + kHitSlop + 0.1,
+        stroke.boundsWorld.center.dy,
+      );
+      expect(hitTestNode(strokeOutside, stroke), isFalse);
+
+      final path = PathNode(
+        id: 'path-singular',
+        svgPathData: 'M0 0 H40 V30 H0 Z',
+        fillColor: const Color(0xFF000000),
+      )..transform = node.transform;
+      expect(path.transform.invert(), isNull);
+      final pathInside = Offset(
+        path.boundsWorld.right + kHitSlop - 0.1,
+        path.boundsWorld.center.dy,
+      );
+      expect(hitTestNode(pathInside, path), isTrue);
+      final pathOutside = Offset(
+        path.boundsWorld.right + kHitSlop + 0.1,
+        path.boundsWorld.center.dy,
+      );
+      expect(hitTestNode(pathOutside, path), isFalse);
     },
   );
 
@@ -293,6 +359,63 @@ void main() {
     expect(hitTestNode(mid2 + Offset(0, kHitSlop - 0.1), line), isTrue);
     expect(hitTestNode(mid2 + Offset(0, kHitSlop + 0.1), line), isFalse);
   });
+
+  test('hitTestNode StrokeNode slop is stable under scale', () {
+    // INV:INV-CORE-STROKE-HITPADDING-SLOP-SCENE
+    final stroke = StrokeNode(
+      id: 'stroke-scale',
+      points: const <Offset>[Offset(0, 0), Offset(10, 0)],
+      thickness: 0,
+      color: const Color(0xFF000000),
+    );
+
+    stroke
+      ..scaleX = 0.5
+      ..scaleY = 0.5;
+    final mid05 = stroke.transform.applyToPoint(const Offset(5, 0));
+    expect(hitTestNode(mid05 + Offset(0, kHitSlop - 0.1), stroke), isTrue);
+    expect(hitTestNode(mid05 + Offset(0, kHitSlop + 0.1), stroke), isFalse);
+
+    stroke
+      ..scaleX = 2.0
+      ..scaleY = 2.0;
+    final mid2 = stroke.transform.applyToPoint(const Offset(5, 0));
+    expect(hitTestNode(mid2 + Offset(0, kHitSlop - 0.1), stroke), isTrue);
+    expect(hitTestNode(mid2 + Offset(0, kHitSlop + 0.1), stroke), isFalse);
+
+    stroke
+      ..scaleX = 2.0
+      ..scaleY = 0.5;
+    final midNonUniform = stroke.transform.applyToPoint(const Offset(5, 0));
+    expect(
+      hitTestNode(midNonUniform + Offset(0, kHitSlop - 0.1), stroke),
+      isTrue,
+    );
+    expect(
+      hitTestNode(midNonUniform + Offset(0, kHitSlop + 0.1), stroke),
+      isFalse,
+    );
+  });
+
+  test(
+    'hitTestNode applies hitPadding + kHitSlop for StrokeNode (scene units)',
+    () {
+      final stroke = StrokeNode(
+        id: 'stroke-padding',
+        points: const <Offset>[Offset(0, 0), Offset(10, 0)],
+        thickness: 0,
+        color: const Color(0xFF000000),
+      )..hitPadding = 3;
+
+      stroke
+        ..scaleX = 2
+        ..scaleY = 0.5;
+      final mid = stroke.transform.applyToPoint(const Offset(5, 0));
+      final total = 3 + kHitSlop;
+      expect(hitTestNode(mid + Offset(0, total - 0.1), stroke), isTrue);
+      expect(hitTestNode(mid + Offset(0, total + 0.1), stroke), isFalse);
+    },
+  );
 
   test('hitTestNode allows coarse hits for stroke-only PathNode (stage A)', () {
     final node = PathNode(

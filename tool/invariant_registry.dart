@@ -149,4 +149,16 @@ const List<Invariant> invariants = <Invariant>[
     title:
         'LineNode hit-test applies hitPadding + kHitSlop in scene units (scale-aware)',
   ),
+  Invariant(
+    id: 'INV-CORE-STROKE-HITPADDING-SLOP-SCENE',
+    scope: 'hit-test',
+    title:
+        'StrokeNode hit-test applies hitPadding + kHitSlop in scene units (scale-aware)',
+  ),
+  Invariant(
+    id: 'INV-CORE-HITTEST-FALLBACK-INFLATED-AABB',
+    scope: 'hit-test',
+    title:
+        'When inverse transform is unavailable, hit-test falls back to boundsWorld inflated by hitPadding + kHitSlop',
+  ),
 ];
