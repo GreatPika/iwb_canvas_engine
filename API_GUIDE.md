@@ -166,6 +166,7 @@ Stable contracts (expected to remain compatible as the package evolves):
 - Every node has `SceneNode.transform` (`Transform2D`) which stores a 2×3 affine matrix `{a,b,c,d,tx,ty}`.
 - Convenience accessors (`position`, `rotationDeg`, `scaleX`, `scaleY`) are derived from `transform`.
 - Convenience setters `rotationDeg` / `scaleX` / `scaleY` require a TRS transform (no shear). For general affine edits, set `SceneNode.transform` directly.
+- `scaleX` is a magnitude (non-negative). Flips/reflections (`det < 0`) are represented via the sign of `scaleY` and may shift `rotationDeg` by 180° as part of a canonical TRS(+flip) decomposition.
 - Source of truth: `lib/src/core/transform2d.dart` and `lib/src/core/nodes.dart`.
 
 ### Numeric robustness (near-zero handling)
@@ -174,6 +175,7 @@ Stable contracts (expected to remain compatible as the package evolves):
 - `Transform2D.invert()` may return `null` not only for exactly singular matrices, but also for **near-singular** or **non-finite** transforms.
   - Always handle `null` and fall back to coarse behavior when needed (example: hit-testing uses an inflated `boundsWorld` fallback).
 - Derived convenience accessors (`rotationDeg`, `scaleY`) are designed to stay finite and stable even when the underlying transform is almost-degenerate.
+- UI-like positioning helpers (e.g. `topLeftWorld` setters) use epsilon comparisons to avoid floating-point micro-drift.
 
 ### Geometry is local (around (0,0))
 

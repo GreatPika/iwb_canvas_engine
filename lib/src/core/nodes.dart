@@ -99,11 +99,25 @@ abstract class SceneNode {
     );
   }
 
-  /// Derived X scale (convenience accessor).
+  /// Derived X scale magnitude (convenience accessor).
+  ///
+  /// This value is always non-negative and represents the length of the first
+  /// basis column of the 2×2 linear part. For flipped transforms (`det < 0`),
+  /// the reflection sign is represented via [scaleY] (canonical TRS(+flip)
+  /// decomposition).
   double get scaleX {
-    final a = transform.a;
-    final b = transform.b;
-    return math.sqrt(a * a + b * b);
+    final t = transform;
+    assert(
+      t.a.isFinite && t.b.isFinite && t.c.isFinite && t.d.isFinite,
+      'SceneNode.scaleX requires finite transform.',
+    );
+
+    final a = t.a;
+    final b = t.b;
+    final sx = math.sqrt(a * a + b * b);
+    if (!sx.isFinite) return 0;
+    if (nearZero(sx)) return 0;
+    return sx;
   }
 
   set scaleX(double value) {
@@ -121,6 +135,10 @@ abstract class SceneNode {
   /// This derives the sign from the matrix determinant and the local axis
   /// direction. For general affine transforms (shear), this is a convenience
   /// accessor and may not match a unique decomposition.
+  ///
+  /// For flips (`det < 0`), this accessor encodes the reflection sign while
+  /// [scaleX] remains a non-negative magnitude (canonical TRS(+flip)
+  /// decomposition together with [rotationDeg]).
   double get scaleY {
     final t = transform;
     assert(
@@ -223,7 +241,7 @@ class ImageNode extends SceneNode {
   Offset get topLeftWorld => boundsWorld.topLeft;
   set topLeftWorld(Offset value) {
     final delta = value - boundsWorld.topLeft;
-    if (delta == Offset.zero) return;
+    if (delta.distanceSquared < kUiEpsilonSquared) return;
     position = position + delta;
   }
 
@@ -331,7 +349,7 @@ class TextNode extends SceneNode {
   Offset get topLeftWorld => boundsWorld.topLeft;
   set topLeftWorld(Offset value) {
     final delta = value - boundsWorld.topLeft;
-    if (delta == Offset.zero) return;
+    if (delta.distanceSquared < kUiEpsilonSquared) return;
     position = position + delta;
   }
 
@@ -414,39 +432,31 @@ class StrokeNode extends SceneNode {
 
   /// Normalizes interactive stroke geometry into local coordinates.
   ///
-  /// Preconditions (debug-asserted):
+  /// Preconditions (validated at runtime):
   /// - [transform] must be the identity transform.
   /// - All point coordinates must be finite.
+  ///
+  /// Throws [StateError] when preconditions are violated.
   ///
   /// This method is intended for interactive drawing: while the user draws,
   /// the engine may temporarily store [points] in world/scene coordinates with
   /// `transform == identity`. Call this when the gesture finishes to convert
   /// geometry to local space and store the world center in [transform].
   void normalizeToLocalCenter() {
-    assert(() {
-      final t = transform;
-      final isIdentity =
-          t.a == 1 &&
-          t.b == 0 &&
-          t.c == 0 &&
-          t.d == 1 &&
-          t.tx == 0 &&
-          t.ty == 0;
-      if (!isIdentity) {
-        throw AssertionError(
-          'StrokeNode.normalizeToLocalCenter requires transform == identity. '
-          'Use StrokeNode.fromWorldPoints for non-interactive creation.',
+    final t = transform;
+    if (!_isExactIdentityTransform(t)) {
+      throw StateError(
+        'StrokeNode.normalizeToLocalCenter requires transform == identity. '
+        'Use StrokeNode.fromWorldPoints for non-interactive creation.',
+      );
+    }
+    for (final p in points) {
+      if (!p.dx.isFinite || !p.dy.isFinite) {
+        throw StateError(
+          'StrokeNode.normalizeToLocalCenter requires finite point coordinates.',
         );
       }
-      for (final p in points) {
-        if (!p.dx.isFinite || !p.dy.isFinite) {
-          throw AssertionError(
-            'StrokeNode.normalizeToLocalCenter requires finite point coordinates.',
-          );
-        }
-      }
-      return true;
-    }());
+    }
     if (points.isEmpty) return;
     final bounds = aabbFromPoints(points);
     final centerWorld = bounds.center;
@@ -524,40 +534,32 @@ class LineNode extends SceneNode {
 
   /// Normalizes interactive line geometry into local coordinates.
   ///
-  /// Preconditions (debug-asserted):
+  /// Preconditions (validated at runtime):
   /// - [transform] must be the identity transform.
   /// - [start] and [end] must have finite coordinates.
+  ///
+  /// Throws [StateError] when preconditions are violated.
   ///
   /// This method is intended for interactive drawing: while the user draws,
   /// the engine may temporarily store [start]/[end] in world/scene coordinates
   /// with `transform == identity`. Call this when the gesture finishes to
   /// convert geometry to local space and store the world center in [transform].
   void normalizeToLocalCenter() {
-    assert(() {
-      final t = transform;
-      final isIdentity =
-          t.a == 1 &&
-          t.b == 0 &&
-          t.c == 0 &&
-          t.d == 1 &&
-          t.tx == 0 &&
-          t.ty == 0;
-      if (!isIdentity) {
-        throw AssertionError(
-          'LineNode.normalizeToLocalCenter requires transform == identity. '
-          'Use LineNode.fromWorldSegment for non-interactive creation.',
-        );
-      }
-      if (!start.dx.isFinite ||
-          !start.dy.isFinite ||
-          !end.dx.isFinite ||
-          !end.dy.isFinite) {
-        throw AssertionError(
-          'LineNode.normalizeToLocalCenter requires finite start/end coordinates.',
-        );
-      }
-      return true;
-    }());
+    final t = transform;
+    if (!_isExactIdentityTransform(t)) {
+      throw StateError(
+        'LineNode.normalizeToLocalCenter requires transform == identity. '
+        'Use LineNode.fromWorldSegment for non-interactive creation.',
+      );
+    }
+    if (!start.dx.isFinite ||
+        !start.dy.isFinite ||
+        !end.dx.isFinite ||
+        !end.dy.isFinite) {
+      throw StateError(
+        'LineNode.normalizeToLocalCenter requires finite start/end coordinates.',
+      );
+    }
     final bounds = Rect.fromPoints(start, end);
     final centerWorld = bounds.center;
     start = start - centerWorld;
@@ -632,7 +634,7 @@ class RectNode extends SceneNode {
   Offset get topLeftWorld => boundsWorld.topLeft;
   set topLeftWorld(Offset value) {
     final delta = value - boundsWorld.topLeft;
-    if (delta == Offset.zero) return;
+    if (delta.distanceSquared < kUiEpsilonSquared) return;
     position = position + delta;
   }
 
@@ -813,4 +815,8 @@ void _requireTrsTransformForConvenienceSetter(
       'Set SceneNode.transform directly for general affine transforms.',
     );
   }
+}
+
+bool _isExactIdentityTransform(Transform2D t) {
+  return t.a == 1 && t.b == 0 && t.c == 0 && t.d == 1 && t.tx == 0 && t.ty == 0;
 }

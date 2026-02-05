@@ -27,8 +27,11 @@
 - Core: improve numeric robustness for near-zero values (near-singular
   `Transform2D.invert()` returns `null`; derived `rotationDeg/scaleY` are stable;
   geometry helpers avoid division by almost-zero).
-- Core: document and debug-assert preconditions for
-  `StrokeNode.normalizeToLocalCenter` and `LineNode.normalizeToLocalCenter`.
+- Fix: `StrokeNode.normalizeToLocalCenter` and `LineNode.normalizeToLocalCenter`
+  now validate preconditions at runtime and throw `StateError` in release builds
+  (previously debug-only via `assert`).
+- Fix: `topLeftWorld` setters now use epsilon comparisons to avoid floating-point
+  micro-drift under repeated updates.
 
 ## 0.2.0 (2026-02-04)
 

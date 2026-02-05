@@ -110,6 +110,7 @@ Common base properties:
 
 - `id`, `type`, `transform` (2x3 affine: a,b,c,d,tx,ty)
 - Convenience accessors (public API): `position`, `rotationDeg`, `scaleX`, `scaleY` are derived from `transform`
+- For flips (`det < 0`), convenience accessors use a canonical TRS(+flip) decomposition: `scaleX` is a non-negative magnitude and reflection is encoded via the sign of `scaleY` together with `rotationDeg`. If you need to preserve the original reflection axis, use `transform` directly.
 - `opacity`, `isVisible`, `isSelectable`, `isLocked`, `isDeletable`, `isTransformable`
 
 Position semantics:

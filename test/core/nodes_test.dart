@@ -349,10 +349,7 @@ void main() {
       thickness: 2,
       color: const Color(0xFF000000),
     );
-    expect(
-      () => stroke.normalizeToLocalCenter(),
-      throwsA(isA<AssertionError>()),
-    );
+    expect(() => stroke.normalizeToLocalCenter(), throwsA(isA<StateError>()));
 
     final line = LineNode.fromWorldSegment(
       id: 'l1',
@@ -361,7 +358,7 @@ void main() {
       thickness: 2,
       color: const Color(0xFF000000),
     );
-    expect(() => line.normalizeToLocalCenter(), throwsA(isA<AssertionError>()));
+    expect(() => line.normalizeToLocalCenter(), throwsA(isA<StateError>()));
   });
 
   test('normalizeToLocalCenter asserts on non-finite geometry', () {
@@ -371,10 +368,7 @@ void main() {
       thickness: 2,
       color: const Color(0xFF000000),
     );
-    expect(
-      () => stroke.normalizeToLocalCenter(),
-      throwsA(isA<AssertionError>()),
-    );
+    expect(() => stroke.normalizeToLocalCenter(), throwsA(isA<StateError>()));
 
     final line = LineNode(
       id: 'l2',
@@ -383,7 +377,39 @@ void main() {
       thickness: 2,
       color: const Color(0xFF000000),
     );
-    expect(() => line.normalizeToLocalCenter(), throwsA(isA<AssertionError>()));
+    expect(() => line.normalizeToLocalCenter(), throwsA(isA<StateError>()));
+  });
+
+  test('normalizeToLocalCenter does not mutate on precondition failure', () {
+    // INV:INV-CORE-NORMALIZE-PRECONDITIONS
+    final stroke = StrokeNode(
+      id: 's2-no-mutate',
+      points: const [Offset(0, 0), Offset(10, 0)],
+      thickness: 2,
+      color: const Color(0xFF000000),
+      transform: Transform2D.translation(const Offset(1, 2)),
+    );
+    final strokeBeforeTransform = stroke.transform;
+    final strokeBeforePoints = List<Offset>.from(stroke.points);
+    expect(() => stroke.normalizeToLocalCenter(), throwsA(isA<StateError>()));
+    expect(stroke.transform, strokeBeforeTransform);
+    expect(stroke.points, strokeBeforePoints);
+
+    final line = LineNode(
+      id: 'l2-no-mutate',
+      start: const Offset(0, 0),
+      end: const Offset(10, 0),
+      thickness: 2,
+      color: const Color(0xFF000000),
+      transform: Transform2D.translation(const Offset(1, 2)),
+    );
+    final lineBeforeTransform = line.transform;
+    final lineBeforeStart = line.start;
+    final lineBeforeEnd = line.end;
+    expect(() => line.normalizeToLocalCenter(), throwsA(isA<StateError>()));
+    expect(line.transform, lineBeforeTransform);
+    expect(line.start, lineBeforeStart);
+    expect(line.end, lineBeforeEnd);
   });
 
   test('normalizeToLocalCenter converts world geometry to local space', () {
@@ -424,6 +450,45 @@ void main() {
     expect(node.scaleY, closeTo(-2.0, 1e-9));
   });
 
+  test('SceneNode TRS decomposition is canonical for flips', () {
+    // INV:INV-CORE-TRS-DECOMPOSITION-CANONICAL-FLIP
+    final flipX = RectNode(id: 'rect-flipX', size: const Size(10, 10))
+      ..transform = const Transform2D(a: -1, b: 0, c: 0, d: 1, tx: 10, ty: 20);
+    expect(flipX.scaleX, closeTo(1.0, 1e-9));
+    expect(flipX.scaleY, closeTo(-1.0, 1e-9));
+    expect(flipX.rotationDeg, closeTo(180.0, 1e-9));
+    final flipXRoundTrip = Transform2D.trs(
+      translation: flipX.position,
+      rotationDeg: flipX.rotationDeg,
+      scaleX: flipX.scaleX,
+      scaleY: flipX.scaleY,
+    );
+    expect(flipXRoundTrip.a, closeTo(-1.0, 1e-9));
+    expect(flipXRoundTrip.b, closeTo(0.0, 1e-9));
+    expect(flipXRoundTrip.c, closeTo(0.0, 1e-9));
+    expect(flipXRoundTrip.d, closeTo(1.0, 1e-9));
+    expect(flipXRoundTrip.tx, closeTo(10.0, 1e-9));
+    expect(flipXRoundTrip.ty, closeTo(20.0, 1e-9));
+
+    final flipY = RectNode(id: 'rect-flipY', size: const Size(10, 10))
+      ..transform = const Transform2D(a: 1, b: 0, c: 0, d: -1, tx: -3, ty: 7);
+    expect(flipY.scaleX, closeTo(1.0, 1e-9));
+    expect(flipY.scaleY, closeTo(-1.0, 1e-9));
+    expect(flipY.rotationDeg, closeTo(0.0, 1e-9));
+    final flipYRoundTrip = Transform2D.trs(
+      translation: flipY.position,
+      rotationDeg: flipY.rotationDeg,
+      scaleX: flipY.scaleX,
+      scaleY: flipY.scaleY,
+    );
+    expect(flipYRoundTrip.a, closeTo(1.0, 1e-9));
+    expect(flipYRoundTrip.b, closeTo(0.0, 1e-9));
+    expect(flipYRoundTrip.c, closeTo(0.0, 1e-9));
+    expect(flipYRoundTrip.d, closeTo(-1.0, 1e-9));
+    expect(flipYRoundTrip.tx, closeTo(-3.0, 1e-9));
+    expect(flipYRoundTrip.ty, closeTo(7.0, 1e-9));
+  });
+
   test(
     'SceneNode rotationDeg/scaleX/scaleY setters reject sheared transforms',
     () {
@@ -458,6 +523,25 @@ void main() {
         expect(node.rotationDeg.isFinite, isTrue);
         expect(node.scaleY.isFinite, isTrue);
       }
+    },
+  );
+
+  test(
+    'RectNode.topLeftWorld setter does not drift under repeated near-identical values',
+    () {
+      final node = RectNode(
+        id: 'rect-topLeft-drift',
+        size: const Size(100, 50),
+        fillColor: const Color(0xFF000000),
+      )..rotationDeg = 45;
+
+      final target = node.topLeftWorld;
+      final beforePosition = node.position;
+      const jitter = Offset(1e-10, -1e-10);
+      for (var i = 0; i < 1000; i++) {
+        node.topLeftWorld = target + jitter;
+      }
+      expect(node.position, beforePosition);
     },
   );
 }

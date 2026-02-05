@@ -130,7 +130,13 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-CORE-NORMALIZE-PRECONDITIONS',
     scope: 'core',
     title:
-        'normalizeToLocalCenter requires identity transform and finite geometry',
+        'normalizeToLocalCenter requires identity transform and finite geometry (validated at runtime)',
+  ),
+  Invariant(
+    id: 'INV-CORE-TRS-DECOMPOSITION-CANONICAL-FLIP',
+    scope: 'core',
+    title:
+        'TRS convenience accessors provide a canonical decomposition for flips (scaleX ≥ 0, reflection encoded via scaleY sign + rotationDeg).',
   ),
   Invariant(
     id: 'INV-CORE-TRANSFORM-APPLYTORECT-DEGENERATE',
