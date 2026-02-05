@@ -206,8 +206,10 @@ Emit `ActionCommitted` on:
   world-space AABB (coarse selection).
 - Path nodes hit-test as the union of:
   - **Fill**: geometry hit-test via `Path.contains` with inverse transforms.
-  - **Stroke**: coarse AABB hit-test (stage A) using `strokeWidth/2 + hitPadding + kHitSlop`
-    in scene units. This keeps selection usable without expensive geometry distance checks.
+  - **Stroke**: coarse AABB hit-test (stage A) using
+    `boundsWorld.inflate(hitPadding + kHitSlop)` in scene units. Note that
+    `boundsWorld` already includes stroke thickness via `PathNode.localBounds`.
+    This keeps selection usable without expensive geometry distance checks.
 - `PathNode` geometry may be open and/or degenerate in bounds (e.g. linear
   paths); validity is not determined by `Rect.isEmpty`.
 - Group transforms use center of union AABB of selected nodes.

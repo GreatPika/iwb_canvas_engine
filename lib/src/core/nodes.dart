@@ -719,8 +719,9 @@ class PathNode extends SceneNode {
     final bounds = _cachedLocalPathBounds;
     if (bounds == null) return Rect.zero;
     var rect = bounds;
-    if (strokeColor != null && strokeWidth > 0) {
-      rect = rect.inflate(strokeWidth / 2);
+    final baseStrokeWidth = clampNonNegative(strokeWidth);
+    if (strokeColor != null && baseStrokeWidth > 0) {
+      rect = rect.inflate(baseStrokeWidth / 2);
     }
     return rect;
   }

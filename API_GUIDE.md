@@ -143,7 +143,8 @@ Stable contracts (expected to remain compatible as the package evolves):
   - **PathNode semantics:** hit-testing selects the union of fill and stroke.
     - Fill uses `Path.contains` (exact interior hit-test).
     - Stroke uses a coarse AABB check (stage A) with tolerance
-      `strokeWidth/2 + hitPadding + kHitSlop` in scene units.
+      `boundsWorld.inflate(hitPadding + kHitSlop)` in scene units (stroke thickness is already
+      included in `boundsWorld` via `PathNode.localBounds`).
 
 ### Coordinate systems
 

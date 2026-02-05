@@ -16,6 +16,8 @@
   scene units (touch-friendly, scale-aware).
 - Fix: `PathNode` hit-testing includes stroke even when the node is filled
   (selection = fill ∪ stroke; coarse stage A for stroke).
+- Fix: `PathNode` stroke hit-testing no longer double-counts `strokeWidth` when
+  inflating `boundsWorld`; selection tolerance uses only `hitPadding + kHitSlop`.
 - Fix: hit-testing fallback for non-invertible transforms now preserves
   `hitPadding` + `kHitSlop` and keeps nodes selectable via inflated `boundsWorld`.
 - Fix: negative `thickness/strokeWidth` values are treated as zero in bounds,

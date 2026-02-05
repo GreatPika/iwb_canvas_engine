@@ -113,10 +113,9 @@ bool hitTestNode(Offset point, SceneNode node) {
           );
           final baseStrokeWidth = clampNonNegative(pathNode.strokeWidth);
           if (baseStrokeWidth > 0) {
-            final effectiveStrokeWidth =
-                baseStrokeWidth * _maxAxisScaleAbs(pathNode.transform);
-            final strokePadding =
-                effectiveStrokeWidth / 2 + pathNode.hitPadding + kHitSlop;
+            // Note: boundsWorld already includes stroke thickness via
+            // PathNode.localBounds; only apply selection tolerances here.
+            final strokePadding = pathNode.hitPadding + kHitSlop;
             return pathNode.boundsWorld.inflate(strokePadding).contains(point);
           }
         }
@@ -128,10 +127,10 @@ bool hitTestNode(Offset point, SceneNode node) {
           'PathNode.strokeWidth must be finite.',
         );
         final baseStrokeWidth = clampNonNegative(pathNode.strokeWidth);
-        final effectiveStrokeWidth =
-            baseStrokeWidth * _maxAxisScaleAbs(pathNode.transform);
-        final padding =
-            effectiveStrokeWidth / 2 + pathNode.hitPadding + kHitSlop;
+        if (baseStrokeWidth <= 0) return false;
+        // Note: boundsWorld already includes stroke thickness via
+        // PathNode.localBounds; only apply selection tolerances here.
+        final padding = pathNode.hitPadding + kHitSlop;
         return pathNode.boundsWorld.inflate(padding).contains(point);
       }
       return false;
@@ -188,12 +187,4 @@ SceneNode? hitTestTopNode(Scene scene, Offset point) {
     }
   }
   return null;
-}
-
-double _maxAxisScaleAbs(Transform2D t) {
-  final sx = math.sqrt(t.a * t.a + t.b * t.b);
-  final sy = math.sqrt(t.c * t.c + t.d * t.d);
-  final safeSx = sx.isFinite && sx > 0 ? sx : 1.0;
-  final safeSy = sy.isFinite && sy > 0 ? sy : 1.0;
-  return math.max(safeSx, safeSy);
 }

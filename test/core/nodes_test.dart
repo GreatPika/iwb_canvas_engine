@@ -190,6 +190,24 @@ void main() {
     expect(rect.bottom, 10);
   });
 
+  test('PathNode negative strokeWidth behaves like zero for boundsWorld', () {
+    // INV:INV-CORE-NONNEGATIVE-WIDTHS-CLAMP
+    final neg = PathNode(
+      id: 'path-stroke-neg-bounds',
+      svgPathData: 'M0 0 H40 V30 H0 Z',
+      strokeColor: const Color(0xFF000000),
+      strokeWidth: -10,
+    );
+    final zero = PathNode(
+      id: 'path-stroke-zero-bounds',
+      svgPathData: 'M0 0 H40 V30 H0 Z',
+      strokeColor: const Color(0xFF000000),
+      strokeWidth: 0,
+    );
+
+    expect(neg.boundsWorld, zero.boundsWorld);
+  });
+
   test('StrokeNode.position translates points', () {
     final node = StrokeNode.fromWorldPoints(
       id: 'stroke-1',

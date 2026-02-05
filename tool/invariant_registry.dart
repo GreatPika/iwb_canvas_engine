@@ -168,6 +168,12 @@ const List<Invariant> invariants = <Invariant>[
         'PathNode hit-test selects the union of fill and stroke (stroke uses coarse AABB stage A).',
   ),
   Invariant(
+    id: 'INV-CORE-PATH-HITTEST-STROKE-NO-DOUBLECOUNT',
+    scope: 'hit-test',
+    title:
+        'PathNode stroke hit-test inflates boundsWorld only by hitPadding + kHitSlop (strokeWidth is already included in bounds).',
+  ),
+  Invariant(
     id: 'INV-CORE-HITTEST-FALLBACK-INFLATED-AABB',
     scope: 'hit-test',
     title:

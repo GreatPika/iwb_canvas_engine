@@ -393,6 +393,51 @@ void main() {
     expect(hitTestNode(outside, node), isFalse);
   });
 
+  test(
+    'PathNode stroke-only hit-test does not double-count strokeWidth in AABB padding',
+    () {
+      // INV:INV-CORE-PATH-HITTEST-STROKE-NO-DOUBLECOUNT
+      final node = PathNode(
+        id: 'path-stroke-only',
+        svgPathData: 'M0 0 H40 V30 H0 Z',
+        strokeColor: const Color(0xFF000000),
+        strokeWidth: 10,
+      );
+
+      final inside = Offset(
+        node.boundsWorld.right + kHitSlop - 0.1,
+        node.boundsWorld.center.dy,
+      );
+      expect(hitTestNode(inside, node), isTrue);
+
+      final outside = Offset(
+        node.boundsWorld.right + kHitSlop + 0.1,
+        node.boundsWorld.center.dy,
+      );
+      expect(hitTestNode(outside, node), isFalse);
+
+      final padded = PathNode(
+        id: 'path-stroke-only-padded',
+        svgPathData: 'M0 0 H40 V30 H0 Z',
+        strokeColor: const Color(0xFF000000),
+        strokeWidth: 10,
+        hitPadding: 7,
+      );
+
+      final insidePadded = Offset(
+        padded.boundsWorld.right + padded.hitPadding + kHitSlop - 0.1,
+        padded.boundsWorld.center.dy,
+      );
+      expect(hitTestNode(insidePadded, padded), isTrue);
+
+      final outsidePadded = Offset(
+        padded.boundsWorld.right + padded.hitPadding + kHitSlop + 0.1,
+        padded.boundsWorld.center.dy,
+      );
+      expect(hitTestNode(outsidePadded, padded), isFalse);
+    },
+  );
+
   test('PathNode hit-test clamps negative strokeWidth to zero', () {
     // INV:INV-CORE-NONNEGATIVE-WIDTHS-CLAMP
     final nodeNeg = PathNode(
