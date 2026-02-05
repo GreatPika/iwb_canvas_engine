@@ -32,6 +32,14 @@
   (previously debug-only via `assert`).
 - Fix: `topLeftWorld` setters now use epsilon comparisons to avoid floating-point
   micro-drift under repeated updates.
+- Core: `Scene`/`Layer` constructors defensively copy `layers:`/`nodes:` lists to
+  prevent external aliasing.
+- Breaking: `PathNode.buildLocalPath` now has an optional named parameter
+  `{copy}`; custom overrides must match the updated signature.
+- Fix: `PathNode.buildLocalPath` returns a defensive copy by default; internal
+  hot paths use `copy:false` to avoid per-frame allocations.
+- Debug: optional `PathNode.enableBuildLocalPathDiagnostics` + debug getters to
+  capture/log `buildLocalPath` failure reasons (keeps `null` return contract).
 
 ## 0.2.0 (2026-02-04)
 

@@ -87,7 +87,7 @@ class _EmptyMetricsPathNode extends PathNode {
   _EmptyMetricsPathNode({required super.id, required super.svgPathData});
 
   @override
-  Path? buildLocalPath() {
+  Path? buildLocalPath({bool copy = true}) {
     return Path();
   }
 }

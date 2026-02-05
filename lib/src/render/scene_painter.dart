@@ -490,7 +490,7 @@ class ScenePainter extends CustomPainter {
       canvas.restore();
     } else if (node is PathNode) {
       assert(node.strokeWidth.isFinite, 'PathNode.strokeWidth must be finite.');
-      final localPath = node.buildLocalPath();
+      final localPath = node.buildLocalPath(copy: false);
       if (localPath == null) return;
       canvas.save();
       canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
@@ -865,7 +865,7 @@ class ScenePainter extends CustomPainter {
     if (node.svgPathData.trim().isEmpty) return;
     assert(node.strokeWidth.isFinite, 'PathNode.strokeWidth must be finite.');
 
-    final centered = node.buildLocalPath();
+    final centered = node.buildLocalPath(copy: false);
     if (centered == null) return;
 
     canvas.save();

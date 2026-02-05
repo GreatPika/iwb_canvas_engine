@@ -278,12 +278,29 @@ void main() {
   });
 
   test('PathNode.buildLocalPath returns null for empty and invalid data', () {
-    expect(PathNode(id: 'p1', svgPathData: '   ').buildLocalPath(), isNull);
+    // INV:INV-CORE-PATHNODE-BUILDLOCALPATH-DIAGNOSTICS
+    final empty = PathNode(id: 'p1', svgPathData: '   ');
+    expect(empty.buildLocalPath(), isNull);
+    expect(empty.debugLastBuildLocalPathFailureReason, 'empty-svg-path-data');
+    expect(empty.debugLastBuildLocalPathException, isNull);
+
+    final invalid = PathNode(id: 'p2', svgPathData: 'not-a-path');
+    expect(invalid.buildLocalPath(), isNull);
     expect(
-      PathNode(id: 'p2', svgPathData: 'not-a-path').buildLocalPath(),
-      isNull,
+      invalid.debugLastBuildLocalPathFailureReason,
+      'exception-while-building-local-path',
     );
-    expect(PathNode(id: 'p3', svgPathData: 'M0 0').buildLocalPath(), isNull);
+    expect(invalid.debugLastBuildLocalPathException, isNotNull);
+    expect(invalid.debugLastBuildLocalPathStackTrace, isNotNull);
+
+    final zeroLength = PathNode(id: 'p3', svgPathData: 'M0 0');
+    expect(zeroLength.buildLocalPath(), isNull);
+    expect(
+      zeroLength.debugLastBuildLocalPathFailureReason,
+      'svg-path-has-no-nonzero-length',
+    );
+    expect(zeroLength.debugLastBuildLocalPathException, isNull);
+    expect(zeroLength.debugLastBuildLocalPathStackTrace, isNull);
   });
 
   test('PathNode.buildLocalPath accepts linear (degenerate bounds) paths', () {
@@ -341,6 +358,44 @@ void main() {
     expect(third, isNotNull);
     expect(third!.fillType, PathFillType.evenOdd);
   });
+
+  test('PathNode.buildLocalPath returns a defensive copy by default', () {
+    // INV:INV-CORE-PATHNODE-LOCALPATH-DEFENSIVE-COPY
+    final node = PathNode(id: 'path-copy', svgPathData: 'M0 0 H10 V10 H0 Z');
+
+    final boundsBefore = node.localBounds;
+
+    final localPathCopy = node.buildLocalPath();
+    expect(localPathCopy, isNotNull);
+    localPathCopy!.addRect(const Rect.fromLTWH(-100, -100, 10, 10));
+
+    expect(node.localBounds, boundsBefore);
+
+    // Internal/hot callers can opt into the cached instance.
+    final localPathCached = node.buildLocalPath(copy: false);
+    expect(localPathCached, isNotNull);
+  });
+
+  test(
+    'PathNode.buildLocalPath diagnostics can be enabled in release builds',
+    () {
+      final previous = PathNode.enableBuildLocalPathDiagnostics;
+      PathNode.enableBuildLocalPathDiagnostics = true;
+      addTearDown(() => PathNode.enableBuildLocalPathDiagnostics = previous);
+
+      final node = PathNode(id: 'path-diag-1', svgPathData: 'not-a-path');
+      expect(node.buildLocalPath(), isNull);
+      expect(node.debugLastBuildLocalPathFailureReason, isNotNull);
+      expect(node.debugLastBuildLocalPathException, isNotNull);
+      expect(node.debugLastBuildLocalPathStackTrace, isNotNull);
+
+      node.svgPathData = 'M0 0 H10 V10 H0 Z';
+      expect(node.buildLocalPath(), isNotNull);
+      expect(node.debugLastBuildLocalPathFailureReason, isNull);
+      expect(node.debugLastBuildLocalPathException, isNull);
+      expect(node.debugLastBuildLocalPathStackTrace, isNull);
+    },
+  );
 
   test('normalizeToLocalCenter asserts on non-identity transforms', () {
     final stroke = StrokeNode.fromWorldPoints(

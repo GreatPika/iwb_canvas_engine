@@ -145,6 +145,14 @@ Stable contracts (expected to remain compatible as the package evolves):
     - Stroke uses a coarse AABB check (stage A) with tolerance
       `boundsWorld.inflate(hitPadding + kHitSlop)` in scene units (stroke thickness is already
       included in `boundsWorld` via `PathNode.localBounds`).
+- **List ownership:** `Scene(layers: ...)` and `Layer(nodes: ...)` defensively copy
+  the provided lists. Mutating the original list after construction does not affect
+  the scene/layer.
+- **PathNode local path cache:** `PathNode.buildLocalPath()` returns a defensive
+  copy by default. Pass `copy:false` only for performance-sensitive, read-only
+  internal usage. To debug invalid SVG path data, enable
+  `PathNode.enableBuildLocalPathDiagnostics` and inspect
+  `debugLastBuildLocalPathFailureReason` (plus exception/stack trace getters).
 
 ### Coordinate systems
 

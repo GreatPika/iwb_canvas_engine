@@ -156,6 +156,24 @@ const List<Invariant> invariants = <Invariant>[
         'PathNode accepts non-zero-length SVG paths even if bounds are degenerate (line)',
   ),
   Invariant(
+    id: 'INV-CORE-SCENE-LAYER-DEFENSIVE-LISTS',
+    scope: 'core',
+    title:
+        'Scene/Layer constructors defensively copy list arguments (no external aliasing)',
+  ),
+  Invariant(
+    id: 'INV-CORE-PATHNODE-BUILDLOCALPATH-DIAGNOSTICS',
+    scope: 'core',
+    title:
+        'PathNode.buildLocalPath records a failure reason when diagnostics are enabled',
+  ),
+  Invariant(
+    id: 'INV-CORE-PATHNODE-LOCALPATH-DEFENSIVE-COPY',
+    scope: 'core',
+    title:
+        'PathNode.buildLocalPath returns a defensive copy by default (external mutation does not corrupt cache)',
+  ),
+  Invariant(
     id: 'INV-CORE-RECTNODE-BOUNDS-INCLUDE-STROKE',
     scope: 'core',
     title: 'RectNode.localBounds includes strokeWidth/2 when stroked',

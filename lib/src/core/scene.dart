@@ -13,11 +13,15 @@ class Scene {
     Camera? camera,
     Background? background,
     ScenePalette? palette,
-  }) : layers = layers ?? <Layer>[],
+  }) : layers = layers == null ? <Layer>[] : List<Layer>.from(layers),
        camera = camera ?? Camera(),
        background = background ?? Background(),
        palette = palette ?? ScenePalette();
 
+  /// Layer list owned by the scene.
+  ///
+  /// The constructor defensively copies the `layers:` argument; mutating the
+  /// original list after construction does not affect this scene.
   final List<Layer> layers;
   Camera camera;
   Background background;
@@ -30,8 +34,12 @@ class Scene {
 /// list order; the last node is considered the top-most for hit-testing.
 class Layer {
   Layer({List<SceneNode>? nodes, this.isBackground = false})
-    : nodes = nodes ?? <SceneNode>[];
+    : nodes = nodes == null ? <SceneNode>[] : List<SceneNode>.from(nodes);
 
+  /// Node list owned by the layer.
+  ///
+  /// The constructor defensively copies the `nodes:` argument; mutating the
+  /// original list after construction does not affect this layer.
   final List<SceneNode> nodes;
   bool isBackground;
 }

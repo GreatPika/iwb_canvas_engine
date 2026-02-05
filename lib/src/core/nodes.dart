@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'dart:math' as math;
+import 'dart:developer' as developer;
 
 import 'package:path_drawing/path_drawing.dart';
 
@@ -657,6 +658,13 @@ class RectNode extends SceneNode {
 
 /// SVG-path based vector node.
 class PathNode extends SceneNode {
+  /// When enabled, `buildLocalPath()` records failure reasons and emits
+  /// diagnostics logs even in release builds.
+  ///
+  /// By default, failures are silent in release builds and are only recorded
+  /// when assertions are enabled (debug/profile).
+  static bool enableBuildLocalPathDiagnostics = false;
+
   PathNode({
     required super.id,
     required String svgPathData,
@@ -691,6 +699,31 @@ class PathNode extends SceneNode {
   PathFillRule? _cachedFillRule;
   bool _cacheResolved = false;
 
+  String? _debugLastBuildLocalPathFailureReason;
+  Object? _debugLastBuildLocalPathException;
+  StackTrace? _debugLastBuildLocalPathStackTrace;
+
+  /// Debug-only failure reason for the last `buildLocalPath()` attempt.
+  ///
+  /// This value is populated when assertions are enabled, or when
+  /// [enableBuildLocalPathDiagnostics] is true.
+  String? get debugLastBuildLocalPathFailureReason =>
+      _debugLastBuildLocalPathFailureReason;
+
+  /// Debug-only exception captured from the last `buildLocalPath()` attempt.
+  ///
+  /// This value is populated when assertions are enabled, or when
+  /// [enableBuildLocalPathDiagnostics] is true.
+  Object? get debugLastBuildLocalPathException =>
+      _debugLastBuildLocalPathException;
+
+  /// Debug-only stack trace captured from the last `buildLocalPath()` attempt.
+  ///
+  /// This value is populated when assertions are enabled, or when
+  /// [enableBuildLocalPathDiagnostics] is true.
+  StackTrace? get debugLastBuildLocalPathStackTrace =>
+      _debugLastBuildLocalPathStackTrace;
+
   String get svgPathData => _svgPathData;
   set svgPathData(String value) {
     if (_svgPathData == value) return;
@@ -709,11 +742,19 @@ class PathNode extends SceneNode {
   ///
   /// The returned path is in the node's local coordinate space. The caller is
   /// responsible for applying [transform].
-  Path? buildLocalPath() {
+  ///
+  /// By default, this method returns a defensive copy of the cached geometry so
+  /// external callers cannot accidentally mutate internal cache state.
+  ///
+  /// For performance-sensitive internal call sites, pass `copy: false` and
+  /// treat the returned path as immutable (read-only).
+  Path? buildLocalPath({bool copy = true}) {
     if (_cacheResolved &&
         _cachedSvgPathData == _svgPathData &&
         _cachedFillRule == _fillRule) {
-      return _cachedLocalPath;
+      final cached = _cachedLocalPath;
+      if (cached == null) return null;
+      return copy ? _copyPath(cached) : cached;
     }
     if (_svgPathData.trim().isEmpty) {
       _cacheResolved = true;
@@ -721,6 +762,7 @@ class PathNode extends SceneNode {
       _cachedFillRule = _fillRule;
       _cachedLocalPath = null;
       _cachedLocalPathBounds = null;
+      _recordBuildLocalPathFailure(reason: 'empty-svg-path-data');
       return null;
     }
     try {
@@ -739,6 +781,7 @@ class PathNode extends SceneNode {
         _cachedFillRule = _fillRule;
         _cachedLocalPath = null;
         _cachedLocalPathBounds = null;
+        _recordBuildLocalPathFailure(reason: 'svg-path-has-no-nonzero-length');
         return null;
       }
       final bounds = path.getBounds();
@@ -752,20 +795,26 @@ class PathNode extends SceneNode {
       _cachedFillRule = _fillRule;
       _cachedLocalPath = centered;
       _cachedLocalPathBounds = centeredBounds;
-      return centered;
-    } catch (_) {
+      _clearBuildLocalPathFailure();
+      return copy ? _copyPath(centered) : centered;
+    } catch (e, st) {
       _cacheResolved = true;
       _cachedSvgPathData = _svgPathData;
       _cachedFillRule = _fillRule;
       _cachedLocalPath = null;
       _cachedLocalPathBounds = null;
+      _recordBuildLocalPathFailure(
+        reason: 'exception-while-building-local-path',
+        exception: e,
+        stackTrace: st,
+      );
       return null;
     }
   }
 
   @override
   Rect get localBounds {
-    buildLocalPath();
+    buildLocalPath(copy: false);
     final bounds = _cachedLocalPathBounds;
     if (bounds == null) return Rect.zero;
     var rect = bounds;
@@ -782,6 +831,55 @@ class PathNode extends SceneNode {
     _cachedLocalPathBounds = null;
     _cachedSvgPathData = null;
     _cachedFillRule = null;
+  }
+
+  static final bool _assertionsEnabled = (() {
+    var enabled = false;
+    assert(() {
+      enabled = true;
+      return true;
+    }());
+    return enabled;
+  })();
+
+  void _recordBuildLocalPathFailure({
+    required String reason,
+    Object? exception,
+    StackTrace? stackTrace,
+  }) {
+    if (enableBuildLocalPathDiagnostics) {
+      _debugLastBuildLocalPathFailureReason = reason;
+      _debugLastBuildLocalPathException = exception;
+      _debugLastBuildLocalPathStackTrace = stackTrace;
+      developer.log(
+        reason,
+        name: 'iwb_canvas_engine.PathNode.buildLocalPath',
+        error: exception,
+        stackTrace: stackTrace,
+      );
+      return;
+    }
+    if (!_assertionsEnabled) return;
+    _debugLastBuildLocalPathFailureReason = reason;
+    _debugLastBuildLocalPathException = exception;
+    _debugLastBuildLocalPathStackTrace = stackTrace;
+  }
+
+  void _clearBuildLocalPathFailure() {
+    if (enableBuildLocalPathDiagnostics) {
+      _debugLastBuildLocalPathFailureReason = null;
+      _debugLastBuildLocalPathException = null;
+      _debugLastBuildLocalPathStackTrace = null;
+      return;
+    }
+    if (!_assertionsEnabled) return;
+    _debugLastBuildLocalPathFailureReason = null;
+    _debugLastBuildLocalPathException = null;
+    _debugLastBuildLocalPathStackTrace = null;
+  }
+
+  Path _copyPath(Path source) {
+    return Path.from(source);
   }
 }
 

@@ -95,7 +95,7 @@ bool hitTestNode(Offset point, SceneNode node) {
         if (!pathNode.boundsWorld.inflate(padding).contains(point)) {
           return false;
         }
-        final localPath = pathNode.buildLocalPath();
+        final localPath = pathNode.buildLocalPath(copy: false);
         if (localPath == null) return false;
         final inverse = pathNode.transform.invert();
         if (inverse == null) return true;
