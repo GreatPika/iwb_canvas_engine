@@ -19,7 +19,7 @@
 - Fix: hit-testing fallback for non-invertible transforms now preserves
   `hitPadding` + `kHitSlop` and keeps nodes selectable via inflated `boundsWorld`.
 - Fix: negative `thickness/strokeWidth` values are treated as zero in bounds,
-  hit-testing, and rendering.
+  hit-testing (including `hitTestLine`), and rendering.
 - Core: document and debug-assert preconditions for
   `StrokeNode.normalizeToLocalCenter` and `LineNode.normalizeToLocalCenter`.
 

@@ -575,7 +575,8 @@ Source of truth: `lib/src/serialization/scene_codec.dart`.
 ### Numeric semantics
 
 - **Runtime:** negative `thickness`/`strokeWidth` values are clamped to `0` for
-  bounds, hit-testing, and rendering.
+  bounds, hit-testing (including low-level helpers like `hitTestLine`), and
+  rendering.
 - **JSON import/export:** validation remains strict: `stroke`/`line` nodes
   require `thickness > 0`, and `rect`/`path` nodes require `strokeWidth >= 0`.
 

@@ -21,8 +21,9 @@ bool hitTestRect(Offset point, Rect rect) {
 /// Returns true if [point] is within [thickness] of the segment [start]-[end].
 bool hitTestLine(Offset point, Offset start, Offset end, double thickness) {
   assert(thickness.isFinite, 'hitTestLine: thickness must be finite.');
+  final baseThickness = clampNonNegative(thickness);
   final distance = distancePointToSegment(point, start, end);
-  return distance <= thickness / 2;
+  return distance <= baseThickness / 2;
 }
 
 /// Returns true if [point] hits the polyline [points] with [thickness].

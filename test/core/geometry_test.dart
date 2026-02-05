@@ -91,6 +91,26 @@ void main() {
     expect(miss, isFalse);
   });
 
+  test('hitTestLine clamps negative thickness to zero', () {
+    // INV:INV-CORE-NONNEGATIVE-WIDTHS-CLAMP
+    const start = Offset(0, 0);
+    const end = Offset(10, 0);
+
+    const onLine = Offset(5, 0);
+    expect(
+      hitTestLine(onLine, start, end, -5),
+      hitTestLine(onLine, start, end, 0),
+    );
+    expect(hitTestLine(onLine, start, end, -5), isTrue);
+
+    const offLine = Offset(5, 1);
+    expect(
+      hitTestLine(offLine, start, end, -5),
+      hitTestLine(offLine, start, end, 0),
+    );
+    expect(hitTestLine(offLine, start, end, -5), isFalse);
+  });
+
   test('hitTestStroke finds points near polyline', () {
     final points = [
       const Offset(0, 0),
