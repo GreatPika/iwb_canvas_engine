@@ -132,4 +132,9 @@ const List<Invariant> invariants = <Invariant>[
     title:
         'normalizeToLocalCenter requires identity transform and finite geometry',
   ),
+  Invariant(
+    id: 'INV-CORE-TRANSFORM-APPLYTORECT-DEGENERATE',
+    scope: 'core',
+    title: 'Transform2D.applyToRect preserves translation for degenerate rects',
+  ),
 ];

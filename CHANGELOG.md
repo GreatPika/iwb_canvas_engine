@@ -6,6 +6,8 @@
   `ArgumentError`.
 - View: add `SceneView` pointer sample callbacks (`onPointerSampleBefore`,
   `onPointerSampleAfter`) for app-level integrations (snap, grouped drag).
+- Core: fix `Transform2D.applyToRect` to preserve translation for degenerate
+  rects (zero width/height).
 - Core: document and debug-assert preconditions for
   `StrokeNode.normalizeToLocalCenter` and `LineNode.normalizeToLocalCenter`.
 

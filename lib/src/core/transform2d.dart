@@ -124,8 +124,10 @@ class Transform2D {
   }
 
   /// Applies the transform to [rect] and returns its axis-aligned world bounds.
+  ///
+  /// Degenerate rectangles (zero width and/or height) are still transformed and
+  /// may remain degenerate in world space.
   Rect applyToRect(Rect rect) {
-    if (rect.isEmpty) return Rect.zero;
     final p1 = applyToPoint(rect.topLeft);
     final p2 = applyToPoint(rect.topRight);
     final p3 = applyToPoint(rect.bottomRight);
