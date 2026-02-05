@@ -127,6 +127,40 @@ void main() {
     expect(node.position, beforePosition);
   });
 
+  test('RectNode localBounds includes strokeWidth/2 when stroked', () {
+    // INV:INV-CORE-RECTNODE-BOUNDS-INCLUDE-STROKE
+    final node = RectNode(
+      id: 'rect-stroke-bounds',
+      size: const Size(10, 20),
+      strokeColor: const Color(0xFF000000),
+      strokeWidth: 10,
+    );
+
+    final bounds = node.localBounds;
+    expect(bounds.left, -10);
+    expect(bounds.right, 10);
+    expect(bounds.top, -15);
+    expect(bounds.bottom, 15);
+  });
+
+  test('RectNode negative strokeWidth behaves like zero for localBounds', () {
+    // INV:INV-CORE-NONNEGATIVE-WIDTHS-CLAMP
+    final neg = RectNode(
+      id: 'rect-stroke-neg',
+      size: const Size(10, 20),
+      strokeColor: const Color(0xFF000000),
+      strokeWidth: -10,
+    );
+    final zero = RectNode(
+      id: 'rect-stroke-zero',
+      size: const Size(10, 20),
+      strokeColor: const Color(0xFF000000),
+      strokeWidth: 0,
+    );
+
+    expect(neg.localBounds, zero.localBounds);
+  });
+
   test('LineNode boundsWorld inflates by thickness', () {
     final node = LineNode(
       id: 'line-1',
@@ -388,6 +422,26 @@ void main() {
     final node = RectNode(id: 'rect-scaleY', size: const Size(10, 10))
       ..transform = const Transform2D(a: 1, b: 0, c: 0, d: -2, tx: 0, ty: 0);
     expect(node.scaleY, closeTo(-2.0, 1e-9));
+  });
+
+  test(
+    'SceneNode rotationDeg/scaleX/scaleY setters reject sheared transforms',
+    () {
+      // INV:INV-CORE-CONVENIENCE-SETTERS-REJECT-SHEAR
+      final node = RectNode(id: 'rect-shear', size: const Size(10, 10))
+        ..transform = const Transform2D(a: 1, b: 0, c: 1, d: 1, tx: 0, ty: 0);
+
+      expect(() => node.rotationDeg = 10, throwsA(isA<StateError>()));
+      expect(() => node.scaleX = 2, throwsA(isA<StateError>()));
+      expect(() => node.scaleY = 2, throwsA(isA<StateError>()));
+    },
+  );
+
+  test('SceneNode rotationDeg setter rejects non-finite transforms', () {
+    final node = RectNode(id: 'rect-nan', size: const Size(10, 10))
+      ..transform = Transform2D(a: double.nan, b: 0, c: 0, d: 1, tx: 0, ty: 0);
+
+    expect(() => node.rotationDeg = 10, throwsA(isA<StateError>()));
   });
 
   test(

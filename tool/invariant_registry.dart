@@ -150,10 +150,21 @@ const List<Invariant> invariants = <Invariant>[
         'PathNode accepts non-zero-length SVG paths even if bounds are degenerate (line)',
   ),
   Invariant(
+    id: 'INV-CORE-RECTNODE-BOUNDS-INCLUDE-STROKE',
+    scope: 'core',
+    title: 'RectNode.localBounds includes strokeWidth/2 when stroked',
+  ),
+  Invariant(
     id: 'INV-CORE-NONNEGATIVE-WIDTHS-CLAMP',
     scope: 'core',
     title:
         'Negative thickness/strokeWidth are treated as 0 in bounds/hit-test/render.',
+  ),
+  Invariant(
+    id: 'INV-CORE-CONVENIENCE-SETTERS-REJECT-SHEAR',
+    scope: 'core',
+    title:
+        'rotationDeg/scaleX/scaleY setters reject non-TRS (sheared) transforms',
   ),
   Invariant(
     id: 'INV-CORE-LINE-HITPADDING-SLOP-SCENE',

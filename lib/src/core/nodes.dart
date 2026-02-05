@@ -90,6 +90,7 @@ abstract class SceneNode {
   }
 
   set rotationDeg(double value) {
+    _requireTrsTransformForConvenienceSetter(transform, 'rotationDeg');
     transform = Transform2D.trs(
       translation: position,
       rotationDeg: value,
@@ -106,6 +107,7 @@ abstract class SceneNode {
   }
 
   set scaleX(double value) {
+    _requireTrsTransformForConvenienceSetter(transform, 'scaleX');
     transform = Transform2D.trs(
       translation: position,
       rotationDeg: rotationDeg,
@@ -143,6 +145,7 @@ abstract class SceneNode {
   }
 
   set scaleY(double value) {
+    _requireTrsTransformForConvenienceSetter(transform, 'scaleY');
     transform = Transform2D.trs(
       translation: position,
       rotationDeg: rotationDeg,
@@ -640,7 +643,14 @@ class RectNode extends SceneNode {
   );
 
   @override
-  Rect get localBounds => _localRect;
+  Rect get localBounds {
+    var rect = _localRect;
+    final baseStrokeWidth = clampNonNegative(strokeWidth);
+    if (strokeColor != null && baseStrokeWidth > 0) {
+      rect = rect.inflate(baseStrokeWidth / 2);
+    }
+    return rect;
+  }
 }
 
 /// SVG-path based vector node.
@@ -770,5 +780,37 @@ class PathNode extends SceneNode {
     _cachedLocalPathBounds = null;
     _cachedSvgPathData = null;
     _cachedFillRule = null;
+  }
+}
+
+void _requireTrsTransformForConvenienceSetter(
+  Transform2D transform,
+  String setterName,
+) {
+  final a = transform.a;
+  final b = transform.b;
+  final c = transform.c;
+  final d = transform.d;
+  if (!a.isFinite || !b.isFinite || !c.isFinite || !d.isFinite) {
+    throw StateError(
+      'SceneNode.$setterName setter requires a finite transform. '
+      'Set SceneNode.transform directly for general affine transforms.',
+    );
+  }
+
+  // Convenience setters are TRS-only: reject sheared transforms.
+  //
+  // We detect shear by checking orthogonality of the basis columns:
+  // first column = (a,b), second column = (c,d).
+  //
+  // For TRS (including flips), columns are orthogonal up to numeric tolerance.
+  final dot = a * c + b * d;
+  final s = norm1_2x2(a, b, c, d);
+  final isOrtho = dot.abs() <= kEpsilon * s * s;
+  if (!isOrtho) {
+    throw StateError(
+      'SceneNode.$setterName setter requires a TRS transform (no shear). '
+      'Set SceneNode.transform directly for general affine transforms.',
+    );
   }
 }

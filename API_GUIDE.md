@@ -165,6 +165,7 @@ Stable contracts (expected to remain compatible as the package evolves):
 
 - Every node has `SceneNode.transform` (`Transform2D`) which stores a 2×3 affine matrix `{a,b,c,d,tx,ty}`.
 - Convenience accessors (`position`, `rotationDeg`, `scaleX`, `scaleY`) are derived from `transform`.
+- Convenience setters `rotationDeg` / `scaleX` / `scaleY` require a TRS transform (no shear). For general affine edits, set `SceneNode.transform` directly.
 - Source of truth: `lib/src/core/transform2d.dart` and `lib/src/core/nodes.dart`.
 
 ### Numeric robustness (near-zero handling)

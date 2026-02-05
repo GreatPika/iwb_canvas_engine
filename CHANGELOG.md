@@ -22,6 +22,8 @@
   `hitPadding` + `kHitSlop` and keeps nodes selectable via inflated `boundsWorld`.
 - Fix: negative `thickness/strokeWidth` values are treated as zero in bounds,
   hit-testing (including `hitTestLine`), and rendering.
+- Fix: `RectNode` bounds now include stroke thickness (`strokeWidth/2`) when stroked.
+- Fix: `rotationDeg/scaleX/scaleY` setters now reject sheared transforms instead of silently normalizing to TRS.
 - Core: improve numeric robustness for near-zero values (near-singular
   `Transform2D.invert()` returns `null`; derived `rotationDeg/scaleY` are stable;
   geometry helpers avoid division by almost-zero).
