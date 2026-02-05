@@ -377,4 +377,33 @@ void main() {
     expect(line.start, const Offset(-5, 0));
     expect(line.end, const Offset(5, 0));
   });
+
+  test('SceneNode.rotationDeg uses second column when first is near zero', () {
+    final node = RectNode(id: 'rect-rot', size: const Size(10, 10))
+      ..transform = const Transform2D(a: 0, b: 0, c: -1, d: 0, tx: 0, ty: 0);
+    expect(node.rotationDeg, closeTo(90.0, 1e-9));
+  });
+
+  test('SceneNode.scaleY uses column magnitude and determinant sign', () {
+    final node = RectNode(id: 'rect-scaleY', size: const Size(10, 10))
+      ..transform = const Transform2D(a: 1, b: 0, c: 0, d: -2, tx: 0, ty: 0);
+    expect(node.scaleY, closeTo(-2.0, 1e-9));
+  });
+
+  test(
+    'SceneNode.rotationDeg/scaleY stay finite for tiny finite transforms',
+    () {
+      final node = RectNode(id: 'rect-tiny', size: const Size(10, 10));
+      final transforms = <Transform2D>[
+        const Transform2D(a: 1e-300, b: 0, c: 0, d: 1e-300, tx: 0, ty: 0),
+        const Transform2D(a: 0, b: 0, c: 1e-300, d: 0, tx: 0, ty: 0),
+        const Transform2D(a: 1e-12, b: 1e-12, c: 0, d: 1e-12, tx: 0, ty: 0),
+      ];
+      for (final t in transforms) {
+        node.transform = t;
+        expect(node.rotationDeg.isFinite, isTrue);
+        expect(node.scaleY.isFinite, isTrue);
+      }
+    },
+  );
 }

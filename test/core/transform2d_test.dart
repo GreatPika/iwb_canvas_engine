@@ -62,4 +62,37 @@ void main() {
     t.writeToCanvasTransform(out);
     expect(out, t.toCanvasTransform());
   });
+
+  // INV:INV-CORE-NUMERIC-ROBUSTNESS
+  test('Transform2D.invert returns null for near-singular finite matrices', () {
+    const t = Transform2D(a: 1, b: 1, c: 1, d: 1 + 1e-15, tx: 0, ty: 0);
+    expect(t.invert(), isNull);
+  });
+
+  test('Transform2D.invert works for small well-conditioned scales', () {
+    const t = Transform2D(a: 1e-6, b: 0, c: 0, d: 1e-6, tx: 10, ty: -20);
+    final inv = t.invert();
+    expect(inv, isNotNull);
+    expect(inv!.a.isFinite, isTrue);
+    expect(inv.b.isFinite, isTrue);
+    expect(inv.c.isFinite, isTrue);
+    expect(inv.d.isFinite, isTrue);
+    expect(inv.tx.isFinite, isTrue);
+    expect(inv.ty.isFinite, isTrue);
+  });
+
+  test('Transform2D.invert returns null for non-finite components', () {
+    const nanT = Transform2D(a: double.nan, b: 0, c: 0, d: 1, tx: 0, ty: 0);
+    expect(nanT.invert(), isNull);
+
+    const infT = Transform2D(
+      a: 1,
+      b: 0,
+      c: 0,
+      d: 1,
+      tx: double.infinity,
+      ty: 0,
+    );
+    expect(infT.invert(), isNull);
+  });
 }

@@ -22,6 +22,9 @@
   `hitPadding` + `kHitSlop` and keeps nodes selectable via inflated `boundsWorld`.
 - Fix: negative `thickness/strokeWidth` values are treated as zero in bounds,
   hit-testing (including `hitTestLine`), and rendering.
+- Core: improve numeric robustness for near-zero values (near-singular
+  `Transform2D.invert()` returns `null`; derived `rotationDeg/scaleY` are stable;
+  geometry helpers avoid division by almost-zero).
 - Core: document and debug-assert preconditions for
   `StrokeNode.normalizeToLocalCenter` and `LineNode.normalizeToLocalCenter`.
 

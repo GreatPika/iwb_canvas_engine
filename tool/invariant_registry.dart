@@ -138,6 +138,12 @@ const List<Invariant> invariants = <Invariant>[
     title: 'Transform2D.applyToRect preserves translation for degenerate rects',
   ),
   Invariant(
+    id: 'INV-CORE-NUMERIC-ROBUSTNESS',
+    scope: 'core',
+    title:
+        'Core transform/geometry helpers are robust to near-zero and never emit NaN/Infinity from finite inputs',
+  ),
+  Invariant(
     id: 'INV-CORE-PATHNODE-LINEAR-PATHS',
     scope: 'core',
     title:

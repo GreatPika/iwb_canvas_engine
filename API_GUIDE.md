@@ -167,6 +167,13 @@ Stable contracts (expected to remain compatible as the package evolves):
 - Convenience accessors (`position`, `rotationDeg`, `scaleX`, `scaleY`) are derived from `transform`.
 - Source of truth: `lib/src/core/transform2d.dart` and `lib/src/core/nodes.dart`.
 
+### Numeric robustness (near-zero handling)
+
+- Floating-point math is not exact. This package avoids strict `== 0` checks in core math where it can cause unstable behavior.
+- `Transform2D.invert()` may return `null` not only for exactly singular matrices, but also for **near-singular** or **non-finite** transforms.
+  - Always handle `null` and fall back to coarse behavior when needed (example: hit-testing uses an inflated `boundsWorld` fallback).
+- Derived convenience accessors (`rotationDeg`, `scaleY`) are designed to stay finite and stable even when the underlying transform is almost-degenerate.
+
 ### Geometry is local (around (0,0))
 
 - Node geometry is stored in **local coordinates around the origin**.

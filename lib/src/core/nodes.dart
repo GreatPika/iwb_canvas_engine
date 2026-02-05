@@ -5,6 +5,7 @@ import 'package:path_drawing/path_drawing.dart';
 
 import 'geometry.dart';
 import 'numeric_clamp.dart';
+import 'numeric_tolerance.dart';
 import 'transform2d.dart';
 
 /// Supported node variants in a [Scene].
@@ -61,11 +62,31 @@ abstract class SceneNode {
   /// Note: for general affine transforms (shear), a unique decomposition into
   /// rotation+scale is not well-defined. This getter assumes a rotation+scale
   /// form and is intended as a convenience accessor.
+  ///
+  /// This accessor is numerically robust for near-degenerate transforms and is
+  /// designed to return a finite value for finite matrix components.
   double get rotationDeg {
-    final a = transform.a;
-    final b = transform.b;
-    if (a == 0 && b == 0) return 0;
-    return math.atan2(b, a) * 180.0 / math.pi;
+    final t = transform;
+    assert(
+      t.a.isFinite && t.b.isFinite && t.c.isFinite && t.d.isFinite,
+      'SceneNode.rotationDeg requires finite transform.',
+    );
+
+    final a = t.a;
+    final b = t.b;
+    final c = t.c;
+    final d = t.d;
+
+    final sx = math.sqrt(a * a + b * b);
+    final syAbs = math.sqrt(c * c + d * d);
+    if (!sx.isFinite || !syAbs.isFinite) return 0;
+    if (nearZero(sx) && nearZero(syAbs)) return 0;
+
+    final radians = (sx >= syAbs && !nearZero(sx))
+        ? math.atan2(b, a)
+        : math.atan2(-c, d);
+    final degrees = radians * 180.0 / math.pi;
+    return degrees.isFinite ? degrees : 0;
   }
 
   set rotationDeg(double value) {
@@ -95,13 +116,30 @@ abstract class SceneNode {
 
   /// Derived Y scale (convenience accessor).
   ///
-  /// This derives the sign from the matrix determinant and [scaleX], so
-  /// reflections may be represented as a 180° rotation + negative Y scale.
+  /// This derives the sign from the matrix determinant and the local axis
+  /// direction. For general affine transforms (shear), this is a convenience
+  /// accessor and may not match a unique decomposition.
   double get scaleY {
-    final sx = scaleX;
-    if (sx == 0) return 0;
-    final det = transform.a * transform.d - transform.b * transform.c;
-    return det / sx;
+    final t = transform;
+    assert(
+      t.a.isFinite && t.b.isFinite && t.c.isFinite && t.d.isFinite,
+      'SceneNode.scaleY requires finite transform.',
+    );
+
+    final c = t.c;
+    final d = t.d;
+    final syAbs = math.sqrt(c * c + d * d);
+    if (!syAbs.isFinite) return 0;
+    if (nearZero(syAbs)) return 0;
+
+    final a = t.a;
+    final b = t.b;
+    final det = a * d - b * c;
+    if (isNearSingular2x2(a, b, c, d) || !det.isFinite) return syAbs;
+
+    final sign = det < 0 ? -1.0 : 1.0;
+    final out = sign * syAbs;
+    return out.isFinite ? out : 0;
   }
 
   set scaleY(double value) {

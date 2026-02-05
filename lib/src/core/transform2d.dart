@@ -2,6 +2,8 @@ import 'dart:typed_data';
 import 'dart:ui';
 import 'dart:math' as math;
 
+import 'numeric_tolerance.dart';
+
 /// A 2D affine transform represented as a 2×3 matrix.
 ///
 /// The matrix maps points in the following form:
@@ -150,9 +152,21 @@ class Transform2D {
   }
 
   /// Returns the inverse transform, or `null` if the matrix is singular.
+  ///
+  /// This method is numerically robust: it returns `null` for near-singular
+  /// matrices and for non-finite components to avoid unstable results
+  /// (e.g. huge coefficients or NaN/Infinity).
   Transform2D? invert() {
+    if (!a.isFinite ||
+        !b.isFinite ||
+        !c.isFinite ||
+        !d.isFinite ||
+        !tx.isFinite ||
+        !ty.isFinite) {
+      return null;
+    }
+    if (isNearSingular2x2(a, b, c, d)) return null;
     final det = a * d - b * c;
-    if (det == 0) return null;
     final invDet = 1.0 / det;
     final invA = d * invDet;
     final invB = -b * invDet;
@@ -160,6 +174,14 @@ class Transform2D {
     final invD = a * invDet;
     final invTx = -(invA * tx + invC * ty);
     final invTy = -(invB * tx + invD * ty);
+    if (!invA.isFinite ||
+        !invB.isFinite ||
+        !invC.isFinite ||
+        !invD.isFinite ||
+        !invTx.isFinite ||
+        !invTy.isFinite) {
+      return null;
+    }
     return Transform2D(
       a: invA,
       b: invB,

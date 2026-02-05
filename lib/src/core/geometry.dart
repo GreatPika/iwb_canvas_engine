@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
+import 'numeric_tolerance.dart';
+
 /// Converts a point from view/screen coordinates to scene coordinates.
 Offset toScene(Offset viewPoint, Offset cameraOffset) {
   return viewPoint + cameraOffset;
@@ -78,7 +80,7 @@ Rect aabbForTransformedRect({
       .map((c) => Offset(c.dx * scaleX, c.dy * scaleY))
       .toList(growable: false);
 
-  final rotated = rotationDeg == 0
+  final rotated = nearZero(rotationDeg)
       ? scaled
       : scaled
             .map((c) => rotatePoint(c, Offset.zero, rotationDeg))
@@ -94,7 +96,7 @@ double distancePointToSegment(Offset point, Offset a, Offset b) {
   final ab = b - a;
   final ap = point - a;
   final abLen2 = ab.dx * ab.dx + ab.dy * ab.dy;
-  if (abLen2 == 0) {
+  if (abLen2 <= kEpsilonSquared) {
     return (point - a).distance;
   }
   var t = (ap.dx * ab.dx + ap.dy * ab.dy) / abLen2;

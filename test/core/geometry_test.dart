@@ -606,6 +606,42 @@ void main() {
     expect(distance, closeTo((point - a).distance, 0.0001));
   });
 
+  test('distancePointToSegment handles almost-degenerate segments', () {
+    const point = Offset(0, 1);
+    const a = Offset(0, 0);
+    const b = Offset(1e-12, 0);
+    final distance = distancePointToSegment(point, a, b);
+    expect(distance.isFinite, isTrue);
+    expect(distance, closeTo(1.0, 1e-6));
+
+    const nearA = Offset(1e-13, 0);
+    final distanceNearA = distancePointToSegment(nearA, a, b);
+    expect(distanceNearA.isFinite, isTrue);
+    expect(distanceNearA, closeTo(0.0, 1e-9));
+  });
+
+  test('aabbForTransformedRect treats tiny rotation as zero', () {
+    const rect = Rect.fromLTWH(-5, -5, 10, 10);
+    final base = aabbForTransformedRect(
+      localRect: rect,
+      position: const Offset(10, 20),
+      rotationDeg: 0,
+      scaleX: 2,
+      scaleY: 3,
+    );
+    final tiny = aabbForTransformedRect(
+      localRect: rect,
+      position: const Offset(10, 20),
+      rotationDeg: 1e-13,
+      scaleX: 2,
+      scaleY: 3,
+    );
+    expect(tiny.left, closeTo(base.left, 1e-9));
+    expect(tiny.top, closeTo(base.top, 1e-9));
+    expect(tiny.right, closeTo(base.right, 1e-9));
+    expect(tiny.bottom, closeTo(base.bottom, 1e-9));
+  });
+
   test('segmentsIntersect handles colinear overlaps', () {
     expect(
       segmentsIntersect(
