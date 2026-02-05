@@ -137,4 +137,16 @@ const List<Invariant> invariants = <Invariant>[
     scope: 'core',
     title: 'Transform2D.applyToRect preserves translation for degenerate rects',
   ),
+  Invariant(
+    id: 'INV-CORE-PATHNODE-LINEAR-PATHS',
+    scope: 'core',
+    title:
+        'PathNode accepts non-zero-length SVG paths even if bounds are degenerate (line)',
+  ),
+  Invariant(
+    id: 'INV-CORE-LINE-HITPADDING-SLOP-SCENE',
+    scope: 'hit-test',
+    title:
+        'LineNode hit-test applies hitPadding + kHitSlop in scene units (scale-aware)',
+  ),
 ];

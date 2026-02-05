@@ -248,6 +248,52 @@ void main() {
     expect(hitTestNode(worldHit, node), isTrue);
   });
 
+  test(
+    'hitTestNode applies kHitSlop/hitPadding for LineNode (scene units)',
+    () {
+      // INV:INV-CORE-LINE-HITPADDING-SLOP-SCENE
+      final line = LineNode(
+        id: 'line-hit',
+        start: const Offset(0, 0),
+        end: const Offset(10, 0),
+        thickness: 0,
+        color: const Color(0xFF000000),
+      );
+
+      final mid = line.transform.applyToPoint(const Offset(5, 0));
+      expect(hitTestNode(mid + Offset(0, kHitSlop - 0.1), line), isTrue);
+      expect(hitTestNode(mid + Offset(0, kHitSlop + 0.1), line), isFalse);
+
+      line.hitPadding = 3;
+      expect(hitTestNode(mid + Offset(0, 3 + kHitSlop - 0.1), line), isTrue);
+      expect(hitTestNode(mid + Offset(0, 3 + kHitSlop + 0.1), line), isFalse);
+    },
+  );
+
+  test('hitTestNode LineNode slop is stable under scale', () {
+    final line = LineNode(
+      id: 'line-scale',
+      start: const Offset(0, 0),
+      end: const Offset(10, 0),
+      thickness: 0,
+      color: const Color(0xFF000000),
+    );
+
+    line
+      ..scaleX = 0.5
+      ..scaleY = 0.5;
+    final mid05 = line.transform.applyToPoint(const Offset(5, 0));
+    expect(hitTestNode(mid05 + Offset(0, kHitSlop - 0.1), line), isTrue);
+    expect(hitTestNode(mid05 + Offset(0, kHitSlop + 0.1), line), isFalse);
+
+    line
+      ..scaleX = 2.0
+      ..scaleY = 2.0;
+    final mid2 = line.transform.applyToPoint(const Offset(5, 0));
+    expect(hitTestNode(mid2 + Offset(0, kHitSlop - 0.1), line), isTrue);
+    expect(hitTestNode(mid2 + Offset(0, kHitSlop + 0.1), line), isFalse);
+  });
+
   test('hitTestNode allows coarse hits for stroke-only PathNode (stage A)', () {
     final node = PathNode(
       id: 'path-stroke-only',

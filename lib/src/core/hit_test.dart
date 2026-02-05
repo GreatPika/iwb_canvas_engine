@@ -100,7 +100,17 @@ bool hitTestNode(Offset point, SceneNode node) {
       final inverse = line.transform.invert();
       if (inverse == null) return false;
       final localPoint = inverse.applyToPoint(point);
-      return hitTestLine(localPoint, line.start, line.end, line.thickness);
+      final baseThickness = line.thickness < 0 ? 0 : line.thickness;
+      final paddingScene = line.hitPadding + kHitSlop;
+      final paddingX =
+          paddingScene *
+          math.sqrt(inverse.a * inverse.a + inverse.c * inverse.c);
+      final paddingY =
+          paddingScene *
+          math.sqrt(inverse.b * inverse.b + inverse.d * inverse.d);
+      final paddingLocal = math.max(paddingX, paddingY);
+      final effectiveThickness = baseThickness + 2 * paddingLocal;
+      return hitTestLine(localPoint, line.start, line.end, effectiveThickness);
     case NodeType.stroke:
       final stroke = node as StrokeNode;
       final inverse = stroke.transform.invert();

@@ -670,8 +670,15 @@ class PathNode extends SceneNode {
     }
     try {
       final path = parseSvgPathData(_svgPathData);
-      final bounds = path.getBounds();
-      if (bounds.isEmpty) {
+      final metrics = path.computeMetrics();
+      var hasNonZeroLength = false;
+      for (final metric in metrics) {
+        if (metric.length > 0) {
+          hasNonZeroLength = true;
+          break;
+        }
+      }
+      if (!hasNonZeroLength) {
         _cacheResolved = true;
         _cachedSvgPathData = _svgPathData;
         _cachedFillRule = _fillRule;
@@ -679,6 +686,7 @@ class PathNode extends SceneNode {
         _cachedLocalPathBounds = null;
         return null;
       }
+      final bounds = path.getBounds();
       final centered = path.shift(-bounds.center);
       centered.fillType = _fillRule == PathFillRule.evenOdd
           ? PathFillType.evenOdd
@@ -688,7 +696,7 @@ class PathNode extends SceneNode {
       _cachedSvgPathData = _svgPathData;
       _cachedFillRule = _fillRule;
       _cachedLocalPath = centered;
-      _cachedLocalPathBounds = centeredBounds.isEmpty ? null : centeredBounds;
+      _cachedLocalPathBounds = centeredBounds;
       return centered;
     } catch (_) {
       _cacheResolved = true;

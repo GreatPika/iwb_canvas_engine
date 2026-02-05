@@ -8,6 +8,10 @@
   `onPointerSampleAfter`) for app-level integrations (snap, grouped drag).
 - Core: fix `Transform2D.applyToRect` to preserve translation for degenerate
   rects (zero width/height).
+- Fix: `PathNode.buildLocalPath` no longer rejects valid linear SVG paths
+  (degenerate bounds); path nodes no longer disappear/cull incorrectly.
+- Fix: `LineNode` hit-testing now accounts for `hitPadding` and `kHitSlop` in
+  scene units (touch-friendly, scale-aware).
 - Core: document and debug-assert preconditions for
   `StrokeNode.normalizeToLocalCenter` and `LineNode.normalizeToLocalCenter`.
 

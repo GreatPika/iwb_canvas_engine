@@ -202,6 +202,21 @@ void main() {
     expect(PathNode(id: 'p3', svgPathData: 'M0 0').buildLocalPath(), isNull);
   });
 
+  test('PathNode.buildLocalPath accepts linear (degenerate bounds) paths', () {
+    // INV:INV-CORE-PATHNODE-LINEAR-PATHS
+    final node = PathNode(
+      id: 'p-linear',
+      svgPathData: 'M0 0 L0 10',
+      strokeColor: const Color(0xFF000000),
+      strokeWidth: 1,
+    );
+
+    final path = node.buildLocalPath();
+    expect(path, isNotNull);
+    expect(node.localBounds, isNot(Rect.zero));
+    expect(node.localBounds.isEmpty, isFalse);
+  });
+
   test(
     'PathNode.buildLocalPath applies fill rule and boundsWorld uses transforms',
     () {

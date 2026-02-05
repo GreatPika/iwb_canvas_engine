@@ -29,6 +29,13 @@ A Flutter/Dart canvas engine package with scene model, rendering, input handling
   - Dartdoc comments (public symbols) + regenerate `doc/api` if you rely on published HTML docs
 - Always run the linter and tests after changes, and report the results.
 
+## Changelog
+
+- Keep `CHANGELOG.md` updated for user-visible changes.
+- Add entries under `## Unreleased` as you work.
+- When releasing `X.Y.Z (YYYY-MM-DD)`, move Unreleased entries into that section and leave `## Unreleased` empty.
+- Prefix breaking changes with `Breaking:`; avoid listing pure refactors unless they affect users.
+
 ## Required checks (run locally before pushing)
 
 Run these from the repo root:

@@ -199,8 +199,11 @@ Emit `ActionCommitted` on:
   pointer via `inverse(transform)` and checking `localBounds` (inflated by
   `hitPadding + kHitSlop`). When the inverse is unavailable (degenerate
   transforms), the engine falls back to the world-space AABB.
-- Lines/strokes use distance-to-segment with thickness tolerance.
+- Lines/strokes use distance-to-segment with thickness tolerance. `LineNode`
+  hit-testing also applies `hitPadding + kHitSlop` in scene units (scale-aware).
 - Path nodes use geometry hit-test via `Path.contains` with inverse transforms.
+- `PathNode` geometry may be open and/or degenerate in bounds (e.g. linear
+  paths); validity is not determined by `Rect.isEmpty`.
 - Group transforms use center of union AABB of selected nodes.
 
 ## Serialization (JSON v2)
