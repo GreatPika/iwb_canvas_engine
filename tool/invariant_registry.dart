@@ -150,6 +150,12 @@ const List<Invariant> invariants = <Invariant>[
         'Core transform/geometry helpers are robust to near-zero and never emit NaN/Infinity from finite inputs',
   ),
   Invariant(
+    id: 'INV-CORE-RUNTIME-NUMERIC-SANITIZATION',
+    scope: 'core',
+    title:
+        'Runtime bounds/hit-test/render sanitize non-finite numeric parameters (no NaN/Infinity propagation)',
+  ),
+  Invariant(
     id: 'INV-CORE-PATHNODE-LINEAR-PATHS',
     scope: 'core',
     title:

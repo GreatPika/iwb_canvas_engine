@@ -111,6 +111,37 @@ void main() {
     expect(hitTestLine(offLine, start, end, -5), isFalse);
   });
 
+  test('hitTestLine/hitTestStroke sanitize non-finite numeric inputs', () {
+    // INV:INV-CORE-RUNTIME-NUMERIC-SANITIZATION
+    const start = Offset(0, 0);
+    const end = Offset(10, 0);
+    const onLine = Offset(5, 0);
+    const offLine = Offset(5, 1);
+
+    expect(
+      hitTestLine(onLine, start, end, double.nan),
+      hitTestLine(onLine, start, end, 0),
+    );
+    expect(
+      hitTestLine(offLine, start, end, double.infinity),
+      hitTestLine(offLine, start, end, 0),
+    );
+
+    final points = [const Offset(0, 0)];
+    expect(
+      hitTestStroke(onLine, points, double.nan),
+      hitTestStroke(onLine, points, 0),
+    );
+    expect(
+      hitTestStroke(onLine, points, 0, hitPadding: double.infinity),
+      hitTestStroke(onLine, points, 0, hitPadding: 0),
+    );
+    expect(
+      hitTestStroke(onLine, points, 0, hitSlop: double.nan),
+      hitTestStroke(onLine, points, 0, hitSlop: kHitSlop),
+    );
+  });
+
   test('hitTestStroke finds points near polyline', () {
     final points = [
       const Offset(0, 0),
@@ -139,6 +170,14 @@ void main() {
     const rect = Rect.fromLTWH(0, 0, 10, 20);
     expect(hitTestRect(const Offset(5, 5), rect), isTrue);
     expect(hitTestRect(const Offset(-1, 5), rect), isFalse);
+  });
+
+  test('hitTestNode rejects nodes with non-finite transform', () {
+    final node = RectNode(id: 'rect-non-finite', size: const Size(10, 10));
+    node.transform = Transform2D(a: double.nan, b: 0, c: 0, d: 1, tx: 0, ty: 0);
+    expect(node.boundsWorld, Rect.zero);
+    expect(hitTestNode(Offset.zero, node), isFalse);
+    expect(hitTestNode(const Offset(1, 1), node), isFalse);
   });
 
   test('hitTestNode uses local bounds for rotated RectNode', () {

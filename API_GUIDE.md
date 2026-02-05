@@ -185,6 +185,21 @@ Stable contracts (expected to remain compatible as the package evolves):
 - Derived convenience accessors (`rotationDeg`, `scaleY`) are designed to stay finite and stable even when the underlying transform is almost-degenerate.
 - UI-like positioning helpers (e.g. `topLeftWorld` setters) use epsilon comparisons to avoid floating-point micro-drift.
 
+### Numeric validity (NaN/Infinity/ranges)
+
+- **Serialization boundary (`decodeScene` / `encodeScene`) is strict:** non-finite
+  numbers and out-of-range values throw `SceneJsonFormatException`.
+- **Runtime behavior is defensive:** bounds, hit-testing, and rendering sanitize
+  invalid numeric inputs to avoid propagating NaN/Infinity or crashing.
+  - Length-like values (`thickness`, `strokeWidth`, `hitPadding`, `Size.*`) treat
+    non-finite and negative values as `0`.
+  - `opacity` treats non-finite values as `1` and clamps to `[0,1]`.
+  - Grid rendering treats non-finite / non-positive `cellSize` as "grid disabled"
+    even if `grid.enabled == true`.
+  - Camera offset sanitizes non-finite components to `0`.
+  - Non-finite transforms are treated as invalid at runtime: `boundsWorld` becomes
+    `Rect.zero` and rendering skips the node (safe no-op).
+
 ### Geometry is local (around (0,0))
 
 - Node geometry is stored in **local coordinates around the origin**.

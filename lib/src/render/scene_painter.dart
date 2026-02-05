@@ -137,18 +137,27 @@ class SceneTextLayoutCache {
     required TextStyle textStyle,
     required double maxWidth,
   }) {
+    final safeFontSize = clampPositiveFinite(node.fontSize, fallback: 24.0);
+    final safeBoxSize = clampNonNegativeSizeFinite(node.size);
+    final safeLineHeight =
+        (node.lineHeight != null &&
+            node.lineHeight!.isFinite &&
+            node.lineHeight! > 0)
+        ? node.lineHeight
+        : null;
+    final safeMaxWidth = clampNonNegativeFinite(maxWidth);
     final key = _TextLayoutKey(
       nodeId: node.id,
       text: node.text,
-      fontSize: node.fontSize,
+      fontSize: safeFontSize,
       fontFamily: node.fontFamily,
       isBold: node.isBold,
       isItalic: node.isItalic,
       isUnderline: node.isUnderline,
       align: node.align,
-      lineHeight: node.lineHeight,
-      maxWidth: maxWidth,
-      boxSize: node.size,
+      lineHeight: safeLineHeight,
+      maxWidth: safeMaxWidth,
+      boxSize: safeBoxSize,
       color: textStyle.color ?? const Color(0xFF000000),
     );
 
@@ -165,7 +174,7 @@ class SceneTextLayoutCache {
       textDirection: TextDirection.ltr,
       maxLines: null,
     );
-    textPainter.layout(maxWidth: maxWidth);
+    textPainter.layout(maxWidth: safeMaxWidth);
     _entries[key] = textPainter;
     _debugBuildCount += 1;
     _evictIfNeeded();
@@ -286,14 +295,19 @@ class ScenePainter extends CustomPainter {
     final scene = controller.scene;
     final selectedNodeIds = controller.selectedNodeIds;
     final selectionRect = controller.selectionRect;
+    final cameraOffset = sanitizeFiniteOffset(scene.camera.offset);
+    final safeSelectionStrokeWidth = clampNonNegativeFinite(
+      selectionStrokeWidth,
+    );
+    final safeGridStrokeWidth = clampNonNegativeFinite(gridStrokeWidth);
 
     if (staticLayerCache != null) {
       staticLayerCache!.draw(
         canvas,
         size,
         background: scene.background,
-        cameraOffset: scene.camera.offset,
-        gridStrokeWidth: gridStrokeWidth,
+        cameraOffset: cameraOffset,
+        gridStrokeWidth: safeGridStrokeWidth,
       );
     } else {
       _drawBackground(canvas, size, scene.background.color);
@@ -301,36 +315,52 @@ class ScenePainter extends CustomPainter {
         canvas,
         size,
         scene.background.grid,
-        scene.camera.offset,
-        gridStrokeWidth,
+        cameraOffset,
+        safeGridStrokeWidth,
       );
     }
     final viewRect = Rect.fromLTWH(
-      scene.camera.offset.dx,
-      scene.camera.offset.dy,
+      cameraOffset.dx,
+      cameraOffset.dy,
       size.width,
       size.height,
     ).inflate(_cullPadding);
     final selectedNodes = _drawLayers(
       canvas,
       scene,
-      scene.camera.offset,
+      cameraOffset,
       viewRect,
       selectedNodeIds,
     );
-    _drawSelection(canvas, selectedNodes, scene.camera.offset, selectionRect);
+    _drawSelection(
+      canvas,
+      selectedNodes,
+      cameraOffset,
+      selectionRect,
+      safeSelectionStrokeWidth,
+    );
   }
 
   @override
   bool shouldRepaint(covariant ScenePainter oldDelegate) {
+    final oldSelectionStrokeWidth = clampNonNegativeFinite(
+      oldDelegate.selectionStrokeWidth,
+    );
+    final newSelectionStrokeWidth = clampNonNegativeFinite(
+      selectionStrokeWidth,
+    );
+    final oldGridStrokeWidth = clampNonNegativeFinite(
+      oldDelegate.gridStrokeWidth,
+    );
+    final newGridStrokeWidth = clampNonNegativeFinite(gridStrokeWidth);
     return oldDelegate.controller != controller ||
         oldDelegate.imageResolver != imageResolver ||
         oldDelegate.staticLayerCache != staticLayerCache ||
         oldDelegate.textLayoutCache != textLayoutCache ||
         oldDelegate.strokePathCache != strokePathCache ||
         oldDelegate.selectionColor != selectionColor ||
-        oldDelegate.selectionStrokeWidth != selectionStrokeWidth ||
-        oldDelegate.gridStrokeWidth != gridStrokeWidth;
+        oldSelectionStrokeWidth != newSelectionStrokeWidth ||
+        oldGridStrokeWidth != newGridStrokeWidth;
   }
 
   List<SceneNode> _drawLayers(
@@ -359,6 +389,7 @@ class ScenePainter extends CustomPainter {
     List<SceneNode> selectedNodes,
     Offset cameraOffset,
     Rect? selectionRect,
+    double selectionStrokeWidth,
   ) {
     if (selectedNodes.isNotEmpty && selectionStrokeWidth > 0) {
       for (final node in selectedNodes) {
@@ -373,6 +404,7 @@ class ScenePainter extends CustomPainter {
     }
 
     if (selectionRect != null) {
+      if (!_isFiniteRect(selectionRect)) return;
       final normalized = _normalizeRect(selectionRect);
       final viewRect = normalized.shift(-cameraOffset);
       final fillPaint = Paint()
@@ -399,7 +431,7 @@ class ScenePainter extends CustomPainter {
         canvas,
         node.transform,
         cameraOffset,
-        node.size,
+        clampNonNegativeSizeFinite(node.size),
         color,
         haloWidth,
         baseStrokeWidth: 0,
@@ -410,28 +442,29 @@ class ScenePainter extends CustomPainter {
         canvas,
         node.transform,
         cameraOffset,
-        node.size,
+        clampNonNegativeSizeFinite(node.size),
         color,
         haloWidth,
         baseStrokeWidth: 0,
         clearFill: true,
       );
     } else if (node is RectNode) {
-      assert(node.strokeWidth.isFinite, 'RectNode.strokeWidth must be finite.');
-      final hasStroke = node.strokeColor != null && node.strokeWidth > 0;
+      final safeStrokeWidth = clampNonNegativeFinite(node.strokeWidth);
+      final hasStroke = node.strokeColor != null && safeStrokeWidth > 0;
       _drawBoxSelection(
         canvas,
         node.transform,
         cameraOffset,
-        node.size,
+        clampNonNegativeSizeFinite(node.size),
         color,
         haloWidth,
-        baseStrokeWidth: hasStroke ? node.strokeWidth : 0,
+        baseStrokeWidth: hasStroke ? safeStrokeWidth : 0,
         clearFill: true,
       );
     } else if (node is LineNode) {
-      assert(node.thickness.isFinite, 'LineNode.thickness must be finite.');
-      final baseThickness = clampNonNegative(node.thickness);
+      if (!_isFiniteTransform2D(node.transform)) return;
+      if (!_isFiniteOffset(node.start) || !_isFiniteOffset(node.end)) return;
+      final baseThickness = clampNonNegativeFinite(node.thickness);
       canvas.save();
       canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
       canvas.drawLine(
@@ -451,8 +484,9 @@ class ScenePainter extends CustomPainter {
       canvas.restore();
     } else if (node is StrokeNode) {
       if (node.points.isEmpty) return;
-      assert(node.thickness.isFinite, 'StrokeNode.thickness must be finite.');
-      final baseThickness = clampNonNegative(node.thickness);
+      if (!_isFiniteTransform2D(node.transform)) return;
+      if (!_areFiniteOffsets(node.points)) return;
+      final baseThickness = clampNonNegativeFinite(node.thickness);
       canvas.save();
       canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
       if (node.points.length == 1) {
@@ -489,13 +523,14 @@ class ScenePainter extends CustomPainter {
       }
       canvas.restore();
     } else if (node is PathNode) {
-      assert(node.strokeWidth.isFinite, 'PathNode.strokeWidth must be finite.');
       final localPath = node.buildLocalPath(copy: false);
       if (localPath == null) return;
+      if (!_isFiniteTransform2D(node.transform)) return;
       canvas.save();
       canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
-      final hasStroke = node.strokeColor != null && node.strokeWidth > 0;
-      final baseStrokeWidth = hasStroke ? node.strokeWidth : 0.0;
+      final safeStrokeWidth = clampNonNegativeFinite(node.strokeWidth);
+      final hasStroke = node.strokeColor != null && safeStrokeWidth > 0;
+      final baseStrokeWidth = hasStroke ? safeStrokeWidth : 0.0;
       final metrics = localPath.computeMetrics().toList();
       if (metrics.isEmpty) {
         canvas.restore();
@@ -567,19 +602,20 @@ class ScenePainter extends CustomPainter {
     required double baseStrokeWidth,
     required bool clearFill,
   }) {
+    if (!_isFiniteTransform2D(nodeTransform)) return;
     canvas.save();
     canvas.transform(_toViewCanvasTransform(nodeTransform, cameraOffset));
     final rect = Rect.fromCenter(
       center: Offset.zero,
-      width: size.width,
-      height: size.height,
+      width: clampNonNegativeFinite(size.width),
+      height: clampNonNegativeFinite(size.height),
     );
     _drawRectHalo(
       canvas,
       rect,
       color,
-      haloWidth,
-      baseStrokeWidth: baseStrokeWidth,
+      clampNonNegativeFinite(haloWidth),
+      baseStrokeWidth: clampNonNegativeFinite(baseStrokeWidth),
       clearFill: clearFill,
     );
     canvas.restore();
@@ -591,9 +627,10 @@ class ScenePainter extends CustomPainter {
     StrokeCap cap = StrokeCap.round,
     StrokeJoin join = StrokeJoin.round,
   }) {
+    final safeStrokeWidth = clampNonNegativeFinite(strokeWidth);
     return Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
+      ..strokeWidth = safeStrokeWidth
       ..strokeCap = cap
       ..strokeJoin = join
       ..color = color;
@@ -626,9 +663,13 @@ class ScenePainter extends CustomPainter {
     required bool clearFill,
   }) {
     canvas.saveLayer(null, Paint());
+    final safeHaloWidth = clampNonNegativeFinite(haloWidth);
+    final safeBaseStrokeWidth = clampNonNegativeFinite(baseStrokeWidth);
     final haloPaint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = baseStrokeWidth + haloWidth * 2
+      ..strokeWidth = clampNonNegativeFinite(
+        safeBaseStrokeWidth + safeHaloWidth * 2,
+      )
       ..color = color;
     canvas.drawRect(rect, haloPaint);
     final clearPaint = Paint()..blendMode = BlendMode.clear;
@@ -636,10 +677,10 @@ class ScenePainter extends CustomPainter {
       clearPaint.style = PaintingStyle.fill;
       canvas.drawRect(rect, clearPaint);
     }
-    if (baseStrokeWidth > 0) {
+    if (safeBaseStrokeWidth > 0) {
       clearPaint
         ..style = PaintingStyle.stroke
-        ..strokeWidth = baseStrokeWidth;
+        ..strokeWidth = safeBaseStrokeWidth;
       canvas.drawRect(rect, clearPaint);
     }
     canvas.restore();
@@ -654,9 +695,13 @@ class ScenePainter extends CustomPainter {
     required bool clearFill,
   }) {
     canvas.saveLayer(null, Paint());
+    final safeHaloWidth = clampNonNegativeFinite(haloWidth);
+    final safeBaseStrokeWidth = clampNonNegativeFinite(baseStrokeWidth);
     final haloPaint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = baseStrokeWidth + haloWidth * 2
+      ..strokeWidth = clampNonNegativeFinite(
+        safeBaseStrokeWidth + safeHaloWidth * 2,
+      )
       ..strokeJoin = StrokeJoin.round
       ..strokeCap = StrokeCap.round
       ..color = color;
@@ -666,12 +711,12 @@ class ScenePainter extends CustomPainter {
       clearPaint.style = PaintingStyle.fill;
       canvas.drawPath(path, clearPaint);
     }
-    if (baseStrokeWidth > 0) {
+    if (safeBaseStrokeWidth > 0) {
       clearPaint
         ..style = PaintingStyle.stroke
         ..strokeJoin = StrokeJoin.round
         ..strokeCap = StrokeCap.round
-        ..strokeWidth = baseStrokeWidth;
+        ..strokeWidth = safeBaseStrokeWidth;
       canvas.drawPath(path, clearPaint);
     }
     canvas.restore();
@@ -694,13 +739,14 @@ class ScenePainter extends CustomPainter {
   }
 
   void _drawImageNode(Canvas canvas, ImageNode node, Offset cameraOffset) {
+    if (!_isFiniteTransform2D(node.transform)) return;
     canvas.save();
     canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
 
     final rect = Rect.fromCenter(
       center: Offset.zero,
-      width: node.size.width,
-      height: node.size.height,
+      width: clampNonNegativeFinite(node.size.width),
+      height: clampNonNegativeFinite(node.size.height),
     );
 
     final image = imageResolver(node.imageId);
@@ -734,37 +780,49 @@ class ScenePainter extends CustomPainter {
   }
 
   void _drawTextNode(Canvas canvas, TextNode node, Offset cameraOffset) {
+    if (!_isFiniteTransform2D(node.transform)) return;
     canvas.save();
     canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
 
+    final fontSize = clampPositiveFinite(node.fontSize, fallback: 24.0);
+    final safeLineHeight =
+        (node.lineHeight != null &&
+            node.lineHeight!.isFinite &&
+            node.lineHeight! > 0)
+        ? node.lineHeight
+        : null;
     final textStyle = TextStyle(
-      fontSize: node.fontSize,
+      fontSize: fontSize,
       color: _applyOpacity(node.color, node.opacity),
       fontWeight: node.isBold ? FontWeight.bold : FontWeight.normal,
       fontStyle: node.isItalic ? FontStyle.italic : FontStyle.normal,
       decoration: node.isUnderline ? TextDecoration.underline : null,
       fontFamily: node.fontFamily,
-      height: node.lineHeight == null ? null : node.lineHeight! / node.fontSize,
+      height: safeLineHeight == null ? null : safeLineHeight / fontSize,
     );
 
-    final maxWidth = node.maxWidth ?? node.size.width;
+    final safeMaxWidth =
+        (node.maxWidth != null && node.maxWidth!.isFinite && node.maxWidth! > 0)
+        ? node.maxWidth!
+        : clampNonNegativeFinite(node.size.width);
     final textPainter = textLayoutCache != null
         ? textLayoutCache!.getOrBuild(
             node: node,
             textStyle: textStyle,
-            maxWidth: maxWidth,
+            maxWidth: safeMaxWidth,
           )
         : (TextPainter(
             text: TextSpan(text: node.text, style: textStyle),
             textAlign: node.align,
             textDirection: TextDirection.ltr,
             maxLines: null,
-          )..layout(maxWidth: maxWidth));
+          )..layout(maxWidth: safeMaxWidth));
 
+    final safeBoxSize = clampNonNegativeSizeFinite(node.size);
     final box = Rect.fromCenter(
       center: Offset.zero,
-      width: node.size.width,
-      height: node.size.height,
+      width: safeBoxSize.width,
+      height: safeBoxSize.height,
     );
 
     final dx = _textAlignOffset(node.align, box.width, textPainter.width);
@@ -791,7 +849,9 @@ class ScenePainter extends CustomPainter {
 
   void _drawStrokeNode(Canvas canvas, StrokeNode node, Offset cameraOffset) {
     if (node.points.isEmpty) return;
-    final baseThickness = clampNonNegative(node.thickness);
+    if (!_isFiniteTransform2D(node.transform)) return;
+    if (!_areFiniteOffsets(node.points)) return;
+    final baseThickness = clampNonNegativeFinite(node.thickness);
     canvas.save();
     canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
 
@@ -820,7 +880,9 @@ class ScenePainter extends CustomPainter {
   }
 
   void _drawLineNode(Canvas canvas, LineNode node, Offset cameraOffset) {
-    final baseThickness = clampNonNegative(node.thickness);
+    if (!_isFiniteTransform2D(node.transform)) return;
+    if (!_isFiniteOffset(node.start) || !_isFiniteOffset(node.end)) return;
+    final baseThickness = clampNonNegativeFinite(node.thickness);
     canvas.save();
     canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
     final paint = Paint()
@@ -834,14 +896,15 @@ class ScenePainter extends CustomPainter {
   }
 
   void _drawRectNode(Canvas canvas, RectNode node, Offset cameraOffset) {
-    assert(node.strokeWidth.isFinite, 'RectNode.strokeWidth must be finite.');
+    if (!_isFiniteTransform2D(node.transform)) return;
+    final safeStrokeWidth = clampNonNegativeFinite(node.strokeWidth);
     canvas.save();
     canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
 
     final rect = Rect.fromCenter(
       center: Offset.zero,
-      width: node.size.width,
-      height: node.size.height,
+      width: clampNonNegativeFinite(node.size.width),
+      height: clampNonNegativeFinite(node.size.height),
     );
 
     if (node.fillColor != null) {
@@ -850,10 +913,10 @@ class ScenePainter extends CustomPainter {
         ..color = _applyOpacity(node.fillColor!, node.opacity);
       canvas.drawRect(rect, paint);
     }
-    if (node.strokeColor != null && node.strokeWidth > 0) {
+    if (node.strokeColor != null && safeStrokeWidth > 0) {
       final paint = Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = node.strokeWidth
+        ..strokeWidth = safeStrokeWidth
         ..color = _applyOpacity(node.strokeColor!, node.opacity);
       canvas.drawRect(rect, paint);
     }
@@ -863,7 +926,8 @@ class ScenePainter extends CustomPainter {
 
   void _drawPathNode(Canvas canvas, PathNode node, Offset cameraOffset) {
     if (node.svgPathData.trim().isEmpty) return;
-    assert(node.strokeWidth.isFinite, 'PathNode.strokeWidth must be finite.');
+    if (!_isFiniteTransform2D(node.transform)) return;
+    final safeStrokeWidth = clampNonNegativeFinite(node.strokeWidth);
 
     final centered = node.buildLocalPath(copy: false);
     if (centered == null) return;
@@ -878,10 +942,10 @@ class ScenePainter extends CustomPainter {
       canvas.drawPath(centered, paint);
     }
 
-    if (node.strokeColor != null && node.strokeWidth > 0) {
+    if (node.strokeColor != null && safeStrokeWidth > 0) {
       final paint = Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = node.strokeWidth
+        ..strokeWidth = safeStrokeWidth
         ..strokeJoin = StrokeJoin.round
         ..strokeCap = StrokeCap.round
         ..color = _applyOpacity(node.strokeColor!, node.opacity);
@@ -929,9 +993,7 @@ class ScenePainter extends CustomPainter {
   }
 
   double _clamp01(double value) {
-    if (value < 0) return 0;
-    if (value > 1) return 1;
-    return value;
+    return clamp01Finite(value);
   }
 }
 
@@ -973,14 +1035,20 @@ class SceneStaticLayerCache {
     required Offset cameraOffset,
     required double gridStrokeWidth,
   }) {
+    final safeCameraOffset = sanitizeFiniteOffset(cameraOffset);
+    final safeGridStrokeWidth = clampNonNegativeFinite(gridStrokeWidth);
+    final grid = background.grid;
+    final cell = grid.cellSize;
+    final effectiveGridEnabled = grid.isEnabled && cell.isFinite && cell > 0;
+    final effectiveCellSize = effectiveGridEnabled ? cell : 0.0;
     final key = _StaticLayerKey(
       size: size,
       backgroundColor: background.color,
-      gridEnabled: background.grid.isEnabled,
-      gridCellSize: background.grid.cellSize,
-      gridColor: background.grid.color,
-      gridStrokeWidth: gridStrokeWidth,
-      cameraOffset: cameraOffset,
+      gridEnabled: effectiveGridEnabled,
+      gridCellSize: effectiveCellSize,
+      gridColor: grid.color,
+      gridStrokeWidth: safeGridStrokeWidth,
+      cameraOffset: safeCameraOffset,
     );
 
     if (_picture == null || _key != key) {
@@ -989,8 +1057,8 @@ class SceneStaticLayerCache {
       _picture = _recordPicture(
         size,
         background,
-        cameraOffset,
-        gridStrokeWidth,
+        safeCameraOffset,
+        safeGridStrokeWidth,
       );
       _debugBuildCount += 1;
     }
@@ -1080,13 +1148,13 @@ void _drawGrid(
   Offset cameraOffset,
   double gridStrokeWidth,
 ) {
-  if (!grid.isEnabled || grid.cellSize <= 0) return;
+  if (!grid.isEnabled) return;
+  final cell = grid.cellSize;
+  if (!cell.isFinite || cell <= 0) return;
 
   final paint = Paint()
     ..color = grid.color
-    ..strokeWidth = gridStrokeWidth;
-
-  final cell = grid.cellSize;
+    ..strokeWidth = clampNonNegativeFinite(gridStrokeWidth);
   final startX = _gridStart(-cameraOffset.dx, cell);
   final startY = _gridStart(-cameraOffset.dy, cell);
 
@@ -1101,4 +1169,31 @@ void _drawGrid(
 double _gridStart(double offset, double cell) {
   final remainder = offset % cell;
   return remainder < 0 ? remainder + cell : remainder;
+}
+
+bool _isFiniteTransform2D(Transform2D transform) {
+  return transform.a.isFinite &&
+      transform.b.isFinite &&
+      transform.c.isFinite &&
+      transform.d.isFinite &&
+      transform.tx.isFinite &&
+      transform.ty.isFinite;
+}
+
+bool _isFiniteRect(Rect rect) {
+  return rect.left.isFinite &&
+      rect.top.isFinite &&
+      rect.right.isFinite &&
+      rect.bottom.isFinite;
+}
+
+bool _isFiniteOffset(Offset value) {
+  return value.dx.isFinite && value.dy.isFinite;
+}
+
+bool _areFiniteOffsets(List<Offset> values) {
+  for (final value in values) {
+    if (!_isFiniteOffset(value)) return false;
+  }
+  return true;
 }

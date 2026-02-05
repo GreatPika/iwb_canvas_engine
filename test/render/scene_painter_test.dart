@@ -139,6 +139,81 @@ void main() {
     recorder.endRecording();
   });
 
+  test(
+    'ScenePainter paints with invalid numeric fields without throwing',
+    () async {
+      // INV:INV-CORE-RUNTIME-NUMERIC-SANITIZATION
+      const background = Color(0xFFFFFFFF);
+      final nonFiniteTransformNode = RectNode(
+        id: 'rect-nonfinite-transform',
+        size: const Size(10, 10),
+        fillColor: const Color(0xFF2196F3),
+      )..transform = Transform2D(a: 1, b: 0, c: 0, d: 1, tx: double.nan, ty: 0);
+
+      final scene = Scene(
+        camera: Camera(offset: const Offset(double.infinity, double.nan)),
+        background: Background(
+          color: background,
+          grid: GridSettings(
+            isEnabled: true,
+            cellSize: double.nan,
+            color: const Color(0x1F000000),
+          ),
+        ),
+        layers: [
+          Layer(
+            nodes: [
+              RectNode(
+                id: 'rect-1',
+                size: const Size(double.infinity, double.nan),
+                fillColor: const Color(0xFF4CAF50),
+                strokeColor: const Color(0xFF000000),
+                strokeWidth: double.infinity,
+                opacity: double.nan,
+                hitPadding: double.nan,
+              )..position = const Offset(20, 20),
+              LineNode(
+                id: 'line-1',
+                start: const Offset(0, 0),
+                end: const Offset(40, 0),
+                thickness: double.nan,
+                color: const Color(0xFF000000),
+                opacity: double.infinity,
+              )..position = const Offset(10, 40),
+              StrokeNode(
+                id: 'stroke-1',
+                points: const [Offset(0, 0), Offset(10, 10)],
+                thickness: double.infinity,
+                color: const Color(0xFF000000),
+                opacity: double.nan,
+              )..position = const Offset(40, 40),
+              nonFiniteTransformNode,
+            ],
+          ),
+        ],
+      );
+
+      final painter = ScenePainter(
+        controller: _controllerFor(
+          scene,
+          selectedNodeIds: const {
+            'rect-1',
+            'line-1',
+            'stroke-1',
+            'rect-nonfinite-transform',
+          },
+          selectionRect: const Rect.fromLTWH(10, 10, 50, 40),
+        ),
+        imageResolver: (_) => null,
+        selectionStrokeWidth: double.nan,
+        gridStrokeWidth: double.nan,
+      );
+
+      final image = await _paintToImage(painter);
+      expect(image.width, greaterThan(0));
+    },
+  );
+
   test('ScenePainter draws grid, selection overlays, and marquee', () async {
     const background = Color(0xFFFFFFFF);
     final scene = Scene(
@@ -183,6 +258,42 @@ void main() {
     final nonBg = await _countNonBackgroundPixels(image, background);
     expect(nonBg, greaterThan(0));
   });
+
+  test(
+    'ScenePainter uses TextNode maxWidth and lineHeight when valid',
+    () async {
+      // INV:INV-CORE-RUNTIME-NUMERIC-SANITIZATION
+      const background = Color(0xFFFFFFFF);
+      final scene = Scene(
+        background: Background(color: background),
+        layers: [
+          Layer(
+            nodes: [
+              TextNode(
+                id: 't1',
+                text: 'Hello world',
+                size: const Size(80, 30),
+                fontSize: 12,
+                maxWidth: 40,
+                lineHeight: 18,
+                color: const Color(0xFF000000),
+              )..position = const Offset(20, 20),
+            ],
+          ),
+        ],
+      );
+
+      final painter = ScenePainter(
+        controller: _controllerFor(scene, selectedNodeIds: const {'t1'}),
+        imageResolver: (_) => null,
+        textLayoutCache: SceneTextLayoutCache(maxEntries: 8),
+      );
+
+      final image = await _paintToImage(painter, width: 120, height: 80);
+      final nonBg = await _countNonBackgroundPixels(image, background);
+      expect(nonBg, greaterThan(0));
+    },
+  );
 
   test('ScenePainter selection halo stays outside line geometry', () async {
     const background = Color(0xFFFFFFFF);
@@ -588,6 +699,35 @@ void main() {
     );
 
     expect(painterD.shouldRepaint(painterA), isTrue);
+  });
+
+  test('ScenePainter.shouldRepaint ignores non-finite stroke widths', () {
+    final scene = Scene();
+    Image? resolveNullImage(String _) => null;
+    final controller = SceneController(scene: scene);
+    addTearDown(controller.dispose);
+
+    final painterNanA = ScenePainter(
+      controller: controller,
+      imageResolver: resolveNullImage,
+      selectionStrokeWidth: double.nan,
+      gridStrokeWidth: double.nan,
+    );
+    final painterNanB = ScenePainter(
+      controller: controller,
+      imageResolver: resolveNullImage,
+      selectionStrokeWidth: double.nan,
+      gridStrokeWidth: double.nan,
+    );
+    expect(painterNanB.shouldRepaint(painterNanA), isFalse);
+
+    final painterZero = ScenePainter(
+      controller: controller,
+      imageResolver: resolveNullImage,
+      selectionStrokeWidth: 0,
+      gridStrokeWidth: 0,
+    );
+    expect(painterZero.shouldRepaint(painterNanA), isFalse);
   });
 
   test(

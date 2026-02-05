@@ -48,6 +48,12 @@ class Layer {
 class Camera {
   Camera({Offset? offset}) : offset = offset ?? Offset.zero;
 
+  /// Camera pan in scene/world coordinates.
+  ///
+  /// Expected to have finite components.
+  ///
+  /// Runtime behavior: rendering and hit-testing sanitize non-finite components
+  /// to `0` to avoid crashes; JSON serialization rejects invalid values.
   Offset offset;
 }
 
@@ -68,6 +74,13 @@ class GridSettings {
       color = color ?? SceneDefaults.gridColor;
 
   bool isEnabled;
+
+  /// Grid cell size in scene/world units.
+  ///
+  /// Expected to be finite and `> 0` when [isEnabled] is true.
+  ///
+  /// Runtime behavior: rendering treats non-finite or non-positive values as
+  /// "grid disabled"; JSON serialization rejects invalid values.
   double cellSize;
   Color color;
 }

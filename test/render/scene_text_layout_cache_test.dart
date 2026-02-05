@@ -47,6 +47,23 @@ void main() {
     expect(cache.debugBuildCount, 2);
   });
 
+  test('SceneTextLayoutCache key includes valid lineHeight', () {
+    // INV:INV-CORE-RUNTIME-NUMERIC-SANITIZATION
+    final cache = SceneTextLayoutCache(maxEntries: 8);
+    final node = TextNode(
+      id: 't-lineHeight',
+      text: 'Hello',
+      size: const ui.Size(100, 20),
+      fontSize: 14,
+      lineHeight: 28,
+      color: const ui.Color(0xFF000000),
+    );
+    final style = const TextStyle(fontSize: 14, color: ui.Color(0xFF000000));
+
+    cache.getOrBuild(node: node, textStyle: style, maxWidth: 100);
+    expect(cache.debugBuildCount, 1);
+  });
+
   test('P1-6: SceneTextLayoutCache evicts oldest entries (LRU)', () {
     final cache = SceneTextLayoutCache(maxEntries: 2);
     final style = const TextStyle(fontSize: 14, color: ui.Color(0xFF000000));

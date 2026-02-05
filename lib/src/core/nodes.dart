@@ -43,7 +43,21 @@ abstract class SceneNode {
 
   /// Additional hit-test tolerance in scene units.
   /// (Serialized as part of JSON v2.)
+  ///
+  /// Expected to be finite and non-negative.
+  ///
+  /// Runtime behavior: non-finite values are sanitized by hit-testing/bounds
+  /// computations and rendering to avoid crashes; JSON serialization rejects
+  /// invalid values.
   double hitPadding;
+
+  /// Node opacity in the range `[0,1]`.
+  ///
+  /// Expected to be finite.
+  ///
+  /// Runtime behavior: non-finite values are treated as `1` and values outside
+  /// `[0,1]` are clamped during rendering; JSON serialization rejects invalid
+  /// values.
   double opacity;
   bool isVisible;
   bool isSelectable;
@@ -177,7 +191,15 @@ abstract class SceneNode {
   Rect get localBounds;
 
   /// Axis-aligned bounds in world coordinates.
-  Rect get boundsWorld => transform.applyToRect(localBounds);
+  Rect get boundsWorld {
+    final local = localBounds;
+    if (!_isFiniteRect(local)) return Rect.zero;
+    final t = transform;
+    if (!_isFiniteTransform2D(t)) return Rect.zero;
+    final out = t.applyToRect(local);
+    if (!_isFiniteRect(out)) return Rect.zero;
+    return out;
+  }
 }
 
 /// Raster image node referenced by [imageId] and drawn at [size].
@@ -248,8 +270,8 @@ class ImageNode extends SceneNode {
 
   Rect get _localRect => Rect.fromCenter(
     center: Offset.zero,
-    width: size.width,
-    height: size.height,
+    width: clampNonNegativeFinite(size.width),
+    height: clampNonNegativeFinite(size.height),
   );
 
   @override
@@ -356,8 +378,8 @@ class TextNode extends SceneNode {
 
   Rect get _localRect => Rect.fromCenter(
     center: Offset.zero,
-    width: size.width,
-    height: size.height,
+    width: clampNonNegativeFinite(size.width),
+    height: clampNonNegativeFinite(size.height),
   );
 
   @override
@@ -427,7 +449,8 @@ class StrokeNode extends SceneNode {
   Rect get localBounds {
     if (points.isEmpty) return Rect.zero;
     final bounds = aabbFromPoints(points);
-    final baseThickness = clampNonNegative(thickness);
+    if (!_isFiniteRect(bounds)) return Rect.zero;
+    final baseThickness = clampNonNegativeFinite(thickness);
     return bounds.inflate(baseThickness / 2);
   }
 
@@ -529,7 +552,13 @@ class LineNode extends SceneNode {
 
   @override
   Rect get localBounds {
-    final baseThickness = clampNonNegative(thickness);
+    if (!start.dx.isFinite ||
+        !start.dy.isFinite ||
+        !end.dx.isFinite ||
+        !end.dy.isFinite) {
+      return Rect.zero;
+    }
+    final baseThickness = clampNonNegativeFinite(thickness);
     return Rect.fromPoints(start, end).inflate(baseThickness / 2);
   }
 
@@ -641,14 +670,14 @@ class RectNode extends SceneNode {
 
   Rect get _localRect => Rect.fromCenter(
     center: Offset.zero,
-    width: size.width,
-    height: size.height,
+    width: clampNonNegativeFinite(size.width),
+    height: clampNonNegativeFinite(size.height),
   );
 
   @override
   Rect get localBounds {
     var rect = _localRect;
-    final baseStrokeWidth = clampNonNegative(strokeWidth);
+    final baseStrokeWidth = clampNonNegativeFinite(strokeWidth);
     if (strokeColor != null && baseStrokeWidth > 0) {
       rect = rect.inflate(baseStrokeWidth / 2);
     }
@@ -817,8 +846,9 @@ class PathNode extends SceneNode {
     buildLocalPath(copy: false);
     final bounds = _cachedLocalPathBounds;
     if (bounds == null) return Rect.zero;
+    if (!_isFiniteRect(bounds)) return Rect.zero;
     var rect = bounds;
-    final baseStrokeWidth = clampNonNegative(strokeWidth);
+    final baseStrokeWidth = clampNonNegativeFinite(strokeWidth);
     if (strokeColor != null && baseStrokeWidth > 0) {
       rect = rect.inflate(baseStrokeWidth / 2);
     }
@@ -917,4 +947,15 @@ void _requireTrsTransformForConvenienceSetter(
 
 bool _isExactIdentityTransform(Transform2D t) {
   return t.a == 1 && t.b == 0 && t.c == 0 && t.d == 1 && t.tx == 0 && t.ty == 0;
+}
+
+bool _isFiniteRect(Rect rect) {
+  return rect.left.isFinite &&
+      rect.top.isFinite &&
+      rect.right.isFinite &&
+      rect.bottom.isFinite;
+}
+
+bool _isFiniteTransform2D(Transform2D transform) {
+  return transform.isFinite;
 }

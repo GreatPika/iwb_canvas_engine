@@ -599,4 +599,78 @@ void main() {
       expect(node.position, beforePosition);
     },
   );
+
+  test('SceneNode bounds stay finite for non-finite numeric inputs', () {
+    // INV:INV-CORE-RUNTIME-NUMERIC-SANITIZATION
+    bool isFiniteRect(Rect rect) {
+      return rect.left.isFinite &&
+          rect.top.isFinite &&
+          rect.right.isFinite &&
+          rect.bottom.isFinite;
+    }
+
+    final nodes = <SceneNode>[
+      ImageNode(
+        id: 'img-nonfinite',
+        imageId: 'asset:sample',
+        size: const Size(double.infinity, double.nan),
+        hitPadding: double.nan,
+        opacity: double.nan,
+      ),
+      TextNode(
+        id: 'txt-nonfinite',
+        text: 'Hello',
+        size: const Size(double.nan, double.infinity),
+        fontSize: double.nan,
+        maxWidth: double.nan,
+        lineHeight: double.infinity,
+        color: const Color(0xFF000000),
+        hitPadding: double.infinity,
+        opacity: double.infinity,
+      ),
+      StrokeNode(
+        id: 'stroke-nonfinite',
+        points: const [Offset(double.nan, 0), Offset(10, 10)],
+        thickness: double.nan,
+        color: const Color(0xFF000000),
+      ),
+      LineNode(
+        id: 'line-nonfinite',
+        start: const Offset(double.nan, 0),
+        end: const Offset(10, 0),
+        thickness: double.infinity,
+        color: const Color(0xFF000000),
+      ),
+      RectNode(
+        id: 'rect-nonfinite',
+        size: const Size(double.infinity, double.nan),
+        fillColor: const Color(0xFF000000),
+        strokeColor: const Color(0xFF000000),
+        strokeWidth: double.nan,
+        hitPadding: double.nan,
+        opacity: double.nan,
+      ),
+      PathNode(
+        id: 'path-nonfinite',
+        svgPathData: 'M0 0 H40',
+        strokeColor: const Color(0xFF000000),
+        strokeWidth: double.infinity,
+        hitPadding: double.nan,
+        opacity: double.nan,
+      ),
+    ];
+
+    for (final node in nodes) {
+      expect(isFiniteRect(node.localBounds), isTrue, reason: node.id);
+      expect(isFiniteRect(node.boundsWorld), isTrue, reason: node.id);
+    }
+  });
+
+  test('boundsWorld is Rect.zero for non-finite transforms', () {
+    final node = RectNode(
+      id: 'rect-nonfinite-transform',
+      size: const Size(10, 10),
+    )..transform = Transform2D(a: 1, b: 0, c: 0, d: 1, tx: double.nan, ty: 0);
+    expect(node.boundsWorld, Rect.zero);
+  });
 }

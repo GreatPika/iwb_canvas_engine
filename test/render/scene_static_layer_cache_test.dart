@@ -53,4 +53,43 @@ void main() {
     expect(cache.debugBuildCount, 2);
     expect(cache.debugDisposeCount, 1);
   });
+
+  test(
+    'SceneStaticLayerCache key is stable for non-finite grid/camera inputs',
+    () {
+      // INV:INV-CORE-RUNTIME-NUMERIC-SANITIZATION
+      final cache = SceneStaticLayerCache();
+      final background = Background(
+        color: const Color(0xFFFFFFFF),
+        grid: GridSettings(
+          isEnabled: true,
+          cellSize: double.nan,
+          color: const Color(0xFFCCCCCC),
+        ),
+      );
+      const size = Size(120, 80);
+
+      final recorder1 = PictureRecorder();
+      cache.draw(
+        Canvas(recorder1),
+        size,
+        background: background,
+        cameraOffset: const Offset(double.nan, double.infinity),
+        gridStrokeWidth: double.nan,
+      );
+      recorder1.endRecording();
+      expect(cache.debugBuildCount, 1);
+
+      final recorder2 = PictureRecorder();
+      cache.draw(
+        Canvas(recorder2),
+        size,
+        background: background,
+        cameraOffset: const Offset(double.nan, double.infinity),
+        gridStrokeWidth: double.nan,
+      );
+      recorder2.endRecording();
+      expect(cache.debugBuildCount, 1);
+    },
+  );
 }

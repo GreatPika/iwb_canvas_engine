@@ -86,6 +86,15 @@ class Transform2D {
 
   Offset get translation => Offset(tx, ty);
 
+  /// Returns true when all matrix components are finite.
+  bool get isFinite =>
+      a.isFinite &&
+      b.isFinite &&
+      c.isFinite &&
+      d.isFinite &&
+      tx.isFinite &&
+      ty.isFinite;
+
   /// Encodes this transform into a JSON-friendly map.
   ///
   /// This is shared between JSON serialization and action events payloads.
