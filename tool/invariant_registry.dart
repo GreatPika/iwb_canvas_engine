@@ -144,6 +144,11 @@ const List<Invariant> invariants = <Invariant>[
         'PathNode accepts non-zero-length SVG paths even if bounds are degenerate (line)',
   ),
   Invariant(
+    id: 'INV-CORE-NONNEGATIVE-WIDTHS-CLAMP',
+    scope: 'core',
+    title: 'Negative thickness/strokeWidth are treated as 0 in bounds/hit-test/render.',
+  ),
+  Invariant(
     id: 'INV-CORE-LINE-HITPADDING-SLOP-SCENE',
     scope: 'hit-test',
     title:
@@ -154,6 +159,12 @@ const List<Invariant> invariants = <Invariant>[
     scope: 'hit-test',
     title:
         'StrokeNode hit-test applies hitPadding + kHitSlop in scene units (scale-aware)',
+  ),
+  Invariant(
+    id: 'INV-CORE-PATH-HITTEST-FILL-OR-STROKE',
+    scope: 'hit-test',
+    title:
+        'PathNode hit-test selects the union of fill and stroke (stroke uses coarse AABB stage A).',
   ),
   Invariant(
     id: 'INV-CORE-HITTEST-FALLBACK-INFLATED-AABB',

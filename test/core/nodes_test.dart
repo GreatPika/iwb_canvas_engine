@@ -143,6 +143,23 @@ void main() {
     expect(rect.bottom, 2);
   });
 
+  test('LineNode negative thickness behaves like zero for boundsWorld', () {
+    // INV:INV-CORE-NONNEGATIVE-WIDTHS-CLAMP
+    final node = LineNode(
+      id: 'line-neg',
+      start: const Offset(0, 0),
+      end: const Offset(10, 0),
+      thickness: -4,
+      color: const Color(0xFF000000),
+    );
+
+    final rect = node.boundsWorld;
+    expect(rect.left, 0);
+    expect(rect.right, 10);
+    expect(rect.top, 0);
+    expect(rect.bottom, 0);
+  });
+
   test('StrokeNode boundsWorld inflates by thickness', () {
     final node = StrokeNode(
       id: 'stroke-1',
@@ -156,6 +173,21 @@ void main() {
     expect(rect.top, -3);
     expect(rect.right, 13);
     expect(rect.bottom, 13);
+  });
+
+  test('StrokeNode negative thickness behaves like zero for boundsWorld', () {
+    final node = StrokeNode(
+      id: 'stroke-neg',
+      points: const [Offset(0, 0), Offset(10, 10)],
+      thickness: -2,
+      color: const Color(0xFF000000),
+    );
+
+    final rect = node.boundsWorld;
+    expect(rect.left, 0);
+    expect(rect.top, 0);
+    expect(rect.right, 10);
+    expect(rect.bottom, 10);
   });
 
   test('StrokeNode.position translates points', () {

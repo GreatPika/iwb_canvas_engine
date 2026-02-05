@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'geometry.dart';
 import 'nodes.dart';
 import 'scene.dart';
+import 'numeric_clamp.dart';
 import 'transform2d.dart';
 
 /// Extra hit-test tolerance applied by this package, in scene units.
@@ -19,6 +20,7 @@ bool hitTestRect(Offset point, Rect rect) {
 
 /// Returns true if [point] is within [thickness] of the segment [start]-[end].
 bool hitTestLine(Offset point, Offset start, Offset end, double thickness) {
+  assert(thickness.isFinite, 'hitTestLine: thickness must be finite.');
   final distance = distancePointToSegment(point, start, end);
   return distance <= thickness / 2;
 }
@@ -31,13 +33,16 @@ bool hitTestStroke(
   double hitPadding = 0,
   double hitSlop = kHitSlop,
 }) {
+  assert(thickness.isFinite, 'hitTestStroke: thickness must be finite.');
+  assert(hitPadding.isFinite, 'hitTestStroke: hitPadding must be finite.');
+  assert(hitSlop.isFinite, 'hitTestStroke: hitSlop must be finite.');
   if (points.isEmpty) return false;
   if (points.length == 1) {
-    final baseThickness = thickness < 0 ? 0 : thickness;
+    final baseThickness = clampNonNegative(thickness);
     final radius = baseThickness / 2 + hitPadding + hitSlop;
     return (point - points.first).distance <= radius;
   }
-  final baseThickness = thickness < 0 ? 0 : thickness;
+  final baseThickness = clampNonNegative(thickness);
   final effectiveThickness = baseThickness + 2 * (hitPadding + hitSlop);
   for (var i = 0; i < points.length - 1; i++) {
     if (hitTestLine(point, points[i], points[i + 1], effectiveThickness)) {
@@ -94,11 +99,36 @@ bool hitTestNode(Offset point, SceneNode node) {
         final inverse = pathNode.transform.invert();
         if (inverse == null) return true;
         final localPoint = inverse.applyToPoint(point);
-        return localPath.contains(localPoint);
+        if (localPath.contains(localPoint)) return true;
+
+        // Union semantics: when a path has both fill and stroke, allow hits on
+        // the stroke even if the point lies outside the filled interior.
+        //
+        // Stage A (coarse): use an inflated AABB check for the stroke area.
+        if (pathNode.strokeColor != null) {
+          assert(
+            pathNode.strokeWidth.isFinite,
+            'PathNode.strokeWidth must be finite.',
+          );
+          final baseStrokeWidth = clampNonNegative(pathNode.strokeWidth);
+          if (baseStrokeWidth > 0) {
+            final effectiveStrokeWidth =
+                baseStrokeWidth * _maxAxisScaleAbs(pathNode.transform);
+            final strokePadding =
+                effectiveStrokeWidth / 2 + pathNode.hitPadding + kHitSlop;
+            return pathNode.boundsWorld.inflate(strokePadding).contains(point);
+          }
+        }
+        return false;
       }
       if (pathNode.strokeColor != null) {
+        assert(
+          pathNode.strokeWidth.isFinite,
+          'PathNode.strokeWidth must be finite.',
+        );
+        final baseStrokeWidth = clampNonNegative(pathNode.strokeWidth);
         final effectiveStrokeWidth =
-            pathNode.strokeWidth * _maxAxisScaleAbs(pathNode.transform);
+            baseStrokeWidth * _maxAxisScaleAbs(pathNode.transform);
         final padding =
             effectiveStrokeWidth / 2 + pathNode.hitPadding + kHitSlop;
         return pathNode.boundsWorld.inflate(padding).contains(point);
@@ -112,7 +142,8 @@ bool hitTestNode(Offset point, SceneNode node) {
         return line.boundsWorld.inflate(paddingScene).contains(point);
       }
       final localPoint = inverse.applyToPoint(point);
-      final baseThickness = line.thickness < 0 ? 0 : line.thickness;
+      assert(line.thickness.isFinite, 'LineNode.thickness must be finite.');
+      final baseThickness = clampNonNegative(line.thickness);
       final paddingScene = line.hitPadding + kHitSlop;
       final paddingLocal = _sceneScalarToLocalMax(inverse, paddingScene);
       final effectiveThickness = baseThickness + 2 * paddingLocal;

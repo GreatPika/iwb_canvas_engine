@@ -55,6 +55,8 @@ Prefer importing the smallest API surface that fits your use case:
 
 - **Scene → Layer → Node**: layers are rendered in list order; nodes inside a
   layer are rendered in list order. The last node is top-most for hit-testing.
+- **Path hit-testing**: `PathNode` selection uses fill ∪ stroke; fill is checked
+  via `Path.contains`, and stroke uses a coarse AABB tolerance (stage A).
 - **Local geometry + `Transform2D`**: node geometry is stored in local
   coordinates around (0,0). `SceneNode.transform` (2×3 affine matrix) is the
   single source of truth for translation/rotation/scale.

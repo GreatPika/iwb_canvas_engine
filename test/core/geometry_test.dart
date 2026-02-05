@@ -254,6 +254,25 @@ void main() {
       );
       expect(hitTestNode(lineOutside, line), isFalse);
 
+      final lineNeg = LineNode(
+        id: 'line-singular-neg',
+        start: const Offset(0, 0),
+        end: const Offset(10, 0),
+        thickness: -1,
+        color: const Color(0xFF000000),
+      )..transform = node.transform;
+      expect(lineNeg.transform.invert(), isNull);
+      final lineNegInside = Offset(
+        lineNeg.boundsWorld.right + kHitSlop - 0.1,
+        lineNeg.boundsWorld.center.dy,
+      );
+      expect(hitTestNode(lineNegInside, lineNeg), isTrue);
+      final lineNegOutside = Offset(
+        lineNeg.boundsWorld.right + kHitSlop + 0.1,
+        lineNeg.boundsWorld.center.dy,
+      );
+      expect(hitTestNode(lineNegOutside, lineNeg), isFalse);
+
       final stroke = StrokeNode(
         id: 'stroke-singular',
         points: const <Offset>[Offset(0, 0), Offset(10, 0)],
@@ -271,6 +290,24 @@ void main() {
         stroke.boundsWorld.center.dy,
       );
       expect(hitTestNode(strokeOutside, stroke), isFalse);
+
+      final strokeNeg = StrokeNode(
+        id: 'stroke-singular-neg',
+        points: const <Offset>[Offset(0, 0), Offset(10, 0)],
+        thickness: -1,
+        color: const Color(0xFF000000),
+      )..transform = node.transform;
+      expect(strokeNeg.transform.invert(), isNull);
+      final strokeNegInside = Offset(
+        strokeNeg.boundsWorld.right + kHitSlop - 0.1,
+        strokeNeg.boundsWorld.center.dy,
+      );
+      expect(hitTestNode(strokeNegInside, strokeNeg), isTrue);
+      final strokeNegOutside = Offset(
+        strokeNeg.boundsWorld.right + kHitSlop + 0.1,
+        strokeNeg.boundsWorld.center.dy,
+      );
+      expect(hitTestNode(strokeNegOutside, strokeNeg), isFalse);
 
       final path = PathNode(
         id: 'path-singular',
@@ -312,6 +349,55 @@ void main() {
     final rotated = rotatePoint(scaled, Offset.zero, node.rotationDeg);
     final worldHit = rotated + node.position;
     expect(hitTestNode(worldHit, node), isTrue);
+  });
+
+  test('PathNode hit-test selects union of fill and stroke (stage A)', () {
+    // INV:INV-CORE-PATH-HITTEST-FILL-OR-STROKE
+    final node = PathNode(
+      id: 'path-fill-stroke',
+      svgPathData: 'M0 0 H40 V30 H0 Z',
+      fillColor: const Color(0xFF000000),
+      strokeColor: const Color(0xFF000000),
+      strokeWidth: 10,
+    );
+
+    expect(hitTestNode(Offset.zero, node), isTrue);
+
+    // Outside fill (x > 20), but within the stroke band.
+    expect(hitTestNode(const Offset(21, 0), node), isTrue);
+
+    final outside = Offset(
+      node.boundsWorld.right + kHitSlop + 0.1,
+      node.boundsWorld.center.dy,
+    );
+    expect(hitTestNode(outside, node), isFalse);
+  });
+
+  test('PathNode hit-test clamps negative strokeWidth to zero', () {
+    // INV:INV-CORE-NONNEGATIVE-WIDTHS-CLAMP
+    final nodeNeg = PathNode(
+      id: 'path-stroke-neg',
+      svgPathData: 'M0 0 H40 V30 H0 Z',
+      strokeColor: const Color(0xFF000000),
+      strokeWidth: -10,
+    );
+    final nodeZero = PathNode(
+      id: 'path-stroke-zero',
+      svgPathData: 'M0 0 H40 V30 H0 Z',
+      strokeColor: const Color(0xFF000000),
+      strokeWidth: 0,
+    );
+
+    final pointInside = Offset(
+      nodeNeg.boundsWorld.right + kHitSlop - 0.1,
+      nodeNeg.boundsWorld.center.dy,
+    );
+    final pointOutside = Offset(
+      nodeNeg.boundsWorld.right + kHitSlop + 0.1,
+      nodeNeg.boundsWorld.center.dy,
+    );
+    expect(hitTestNode(pointInside, nodeNeg), hitTestNode(pointInside, nodeZero));
+    expect(hitTestNode(pointOutside, nodeNeg), hitTestNode(pointOutside, nodeZero));
   });
 
   test(

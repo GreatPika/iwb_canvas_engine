@@ -8,6 +8,7 @@ import 'package:flutter/rendering.dart';
 import '../core/nodes.dart';
 import '../core/scene.dart';
 import '../core/transform2d.dart';
+import '../core/numeric_clamp.dart';
 import '../input/scene_controller.dart';
 
 /// LRU cache for built [Path] instances for [StrokeNode] geometry.
@@ -416,6 +417,7 @@ class ScenePainter extends CustomPainter {
         clearFill: true,
       );
     } else if (node is RectNode) {
+      assert(node.strokeWidth.isFinite, 'RectNode.strokeWidth must be finite.');
       final hasStroke = node.strokeColor != null && node.strokeWidth > 0;
       _drawBoxSelection(
         canvas,
@@ -428,32 +430,40 @@ class ScenePainter extends CustomPainter {
         clearFill: true,
       );
     } else if (node is LineNode) {
+      assert(node.thickness.isFinite, 'LineNode.thickness must be finite.');
+      final baseThickness = clampNonNegative(node.thickness);
       canvas.save();
       canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
       canvas.drawLine(
         node.start,
         node.end,
-        _haloPaint(node.thickness + haloWidth * 2, color, cap: StrokeCap.round),
+        _haloPaint(
+          baseThickness + haloWidth * 2,
+          color,
+          cap: StrokeCap.round,
+        ),
       );
       canvas.drawLine(
         node.start,
         node.end,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = node.thickness
+          ..strokeWidth = baseThickness
           ..strokeCap = StrokeCap.round
           ..color = _applyOpacity(node.color, node.opacity),
       );
       canvas.restore();
     } else if (node is StrokeNode) {
       if (node.points.isEmpty) return;
+      assert(node.thickness.isFinite, 'StrokeNode.thickness must be finite.');
+      final baseThickness = clampNonNegative(node.thickness);
       canvas.save();
       canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
       if (node.points.length == 1) {
         _drawDotSelection(
           canvas,
           node.points.first,
-          node.thickness / 2,
+          baseThickness / 2,
           color,
           _applyOpacity(node.color, node.opacity),
           haloWidth,
@@ -465,7 +475,7 @@ class ScenePainter extends CustomPainter {
         canvas.drawPath(
           path,
           _haloPaint(
-            node.thickness + haloWidth * 2,
+            baseThickness + haloWidth * 2,
             color,
             cap: StrokeCap.round,
             join: StrokeJoin.round,
@@ -475,7 +485,7 @@ class ScenePainter extends CustomPainter {
           path,
           Paint()
             ..style = PaintingStyle.stroke
-            ..strokeWidth = node.thickness
+            ..strokeWidth = baseThickness
             ..strokeCap = StrokeCap.round
             ..strokeJoin = StrokeJoin.round
             ..color = _applyOpacity(node.color, node.opacity),
@@ -483,6 +493,7 @@ class ScenePainter extends CustomPainter {
       }
       canvas.restore();
     } else if (node is PathNode) {
+      assert(node.strokeWidth.isFinite, 'PathNode.strokeWidth must be finite.');
       final localPath = node.buildLocalPath();
       if (localPath == null) return;
       canvas.save();
@@ -784,12 +795,13 @@ class ScenePainter extends CustomPainter {
 
   void _drawStrokeNode(Canvas canvas, StrokeNode node, Offset cameraOffset) {
     if (node.points.isEmpty) return;
+    final baseThickness = clampNonNegative(node.thickness);
     canvas.save();
     canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
 
     final paint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = node.thickness
+      ..strokeWidth = baseThickness
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round
       ..color = _applyOpacity(node.color, node.opacity);
@@ -797,7 +809,7 @@ class ScenePainter extends CustomPainter {
     if (node.points.length == 1) {
       canvas.drawCircle(
         node.points.first,
-        node.thickness / 2,
+        baseThickness / 2,
         paint..style = PaintingStyle.fill,
       );
       canvas.restore();
@@ -812,11 +824,12 @@ class ScenePainter extends CustomPainter {
   }
 
   void _drawLineNode(Canvas canvas, LineNode node, Offset cameraOffset) {
+    final baseThickness = clampNonNegative(node.thickness);
     canvas.save();
     canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
     final paint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = node.thickness
+      ..strokeWidth = baseThickness
       ..strokeCap = StrokeCap.round
       ..color = _applyOpacity(node.color, node.opacity);
 
@@ -825,6 +838,7 @@ class ScenePainter extends CustomPainter {
   }
 
   void _drawRectNode(Canvas canvas, RectNode node, Offset cameraOffset) {
+    assert(node.strokeWidth.isFinite, 'RectNode.strokeWidth must be finite.');
     canvas.save();
     canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
 
@@ -853,6 +867,7 @@ class ScenePainter extends CustomPainter {
 
   void _drawPathNode(Canvas canvas, PathNode node, Offset cameraOffset) {
     if (node.svgPathData.trim().isEmpty) return;
+    assert(node.strokeWidth.isFinite, 'PathNode.strokeWidth must be finite.');
 
     final centered = node.buildLocalPath();
     if (centered == null) return;

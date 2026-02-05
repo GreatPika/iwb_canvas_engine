@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:path_drawing/path_drawing.dart';
 
 import 'geometry.dart';
+import 'numeric_clamp.dart';
 import 'transform2d.dart';
 
 /// Supported node variants in a [Scene].
@@ -366,7 +367,8 @@ class StrokeNode extends SceneNode {
   Rect get localBounds {
     if (points.isEmpty) return Rect.zero;
     final bounds = aabbFromPoints(points);
-    return bounds.inflate(thickness / 2);
+    final baseThickness = clampNonNegative(thickness);
+    return bounds.inflate(baseThickness / 2);
   }
 
   /// Normalizes interactive stroke geometry into local coordinates.
@@ -474,7 +476,10 @@ class LineNode extends SceneNode {
   Color color;
 
   @override
-  Rect get localBounds => Rect.fromPoints(start, end).inflate(thickness / 2);
+  Rect get localBounds {
+    final baseThickness = clampNonNegative(thickness);
+    return Rect.fromPoints(start, end).inflate(baseThickness / 2);
+  }
 
   /// Normalizes interactive line geometry into local coordinates.
   ///

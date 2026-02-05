@@ -140,6 +140,10 @@ Stable contracts (expected to remain compatible as the package evolves):
     (scale-aware). When `transform.invert()` is unavailable (degenerate
     transforms), hit-testing falls back to `boundsWorld.inflate(hitPadding + kHitSlop)`
     for coarse-but-selectable behavior.
+  - **PathNode semantics:** hit-testing selects the union of fill and stroke.
+    - Fill uses `Path.contains` (exact interior hit-test).
+    - Stroke uses a coarse AABB check (stage A) with tolerance
+      `strokeWidth/2 + hitPadding + kHitSlop` in scene units.
 
 ### Coordinate systems
 
@@ -567,6 +571,13 @@ Source of truth: `lib/src/serialization/scene_codec.dart`.
   - `fillRule` (`nonZero|evenOdd`)
   - `strokeWidth` (double)
   - `fillColor|strokeColor` (optional)
+
+### Numeric semantics
+
+- **Runtime:** negative `thickness`/`strokeWidth` values are clamped to `0` for
+  bounds, hit-testing, and rendering.
+- **JSON import/export:** validation remains strict: `stroke`/`line` nodes
+  require `thickness > 0`, and `rect`/`path` nodes require `strokeWidth >= 0`.
 
 ### Minimal JSON example
 
