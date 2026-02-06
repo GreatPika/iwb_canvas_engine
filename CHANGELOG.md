@@ -1,5 +1,7 @@
 ## Unreleased
 
+- Input: unify `ActionCommitted.timestampMs` scale for command defaults with
+  pointer time (monotonic timeline, strict `+1` fallback progression).
 - Behavior: `hitTestTopNode` now skips `Layer.isBackground` layers, so
   background content is no longer returned by top-level selection hit-testing.
 - Core: normalize `SceneNode.opacity` at assignment time (`!finite -> 1`,

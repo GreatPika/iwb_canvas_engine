@@ -68,6 +68,7 @@ class SceneController extends ChangeNotifier {
   late final DrawModeEngine _drawModeEngine;
   late final SceneCommands _sceneCommands;
   int _nodeIdSeed = 0;
+  int _timestampCursorMs = -1;
 
   CanvasMode _mode = CanvasMode.move;
   DrawTool _drawTool = DrawTool.pen;
@@ -464,6 +465,7 @@ class SceneController extends ChangeNotifier {
   /// The controller processes at most one active pointer per mode; additional
   /// pointers are ignored until the active one ends.
   void handlePointer(PointerSample sample) {
+    _observeTimestamp(sample.timestampMs);
     if (mode == CanvasMode.move) {
       _moveModeEngine.handlePointer(sample);
     } else {
@@ -537,6 +539,17 @@ class SceneController extends ChangeNotifier {
   void _markSelectionChanged() {
     _selectionModel.markSelectionChanged();
     _markSceneGeometryChanged();
+  }
+
+  void _observeTimestamp(int timestampMs) {
+    if (timestampMs > _timestampCursorMs) {
+      _timestampCursorMs = timestampMs;
+    }
+  }
+
+  int _nextMonotonicTimestampMs() {
+    _timestampCursorMs += 1;
+    return _timestampCursorMs;
   }
 
   void requestRepaintOncePerFrame() =>
@@ -614,16 +627,22 @@ class _SceneControllerContracts implements InputSliceContracts {
     List<NodeId> nodeIds,
     int timestampMs, {
     Map<String, Object?>? payload,
-  }) => _controller._actionDispatcher.emitAction(
-    type,
-    nodeIds,
-    timestampMs,
-    payload: payload,
-  );
+  }) {
+    _controller._observeTimestamp(timestampMs);
+    _controller._actionDispatcher.emitAction(
+      type,
+      nodeIds,
+      timestampMs,
+      payload: payload,
+    );
+  }
 
   @override
   void emitEditTextRequested(EditTextRequested req) =>
       _controller._actionDispatcher.emitEditTextRequested(req);
+
+  @override
+  int nextMonotonicTimestampMs() => _controller._nextMonotonicTimestampMs();
 
   @override
   NodeId newNodeId() => _controller._nodeIdGenerator();

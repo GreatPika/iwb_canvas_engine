@@ -43,6 +43,7 @@ abstract class InputSliceContracts {
     Map<String, Object?>? payload,
   });
   void emitEditTextRequested(EditTextRequested req);
+  int nextMonotonicTimestampMs();
 
   // (6) ID generation
   NodeId newNodeId();

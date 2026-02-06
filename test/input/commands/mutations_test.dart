@@ -151,33 +151,34 @@ void main() {
     },
   );
 
-  test('removeNode default timestamp uses DateTime.now', () {
-    final node = RectNode(
-      id: 'r1',
-      size: const Size(10, 10),
-      fillColor: const Color(0xFF000000),
-    )..position = const Offset(0, 0);
-    final controller = SceneController(
-      scene: Scene(
-        layers: [
-          Layer(nodes: [node]),
-        ],
-      ),
-    );
-    addTearDown(controller.dispose);
+  test(
+    'removeNode default timestamp starts from 0 without pointer history',
+    () {
+      final node = RectNode(
+        id: 'r1',
+        size: const Size(10, 10),
+        fillColor: const Color(0xFF000000),
+      )..position = const Offset(0, 0);
+      final controller = SceneController(
+        scene: Scene(
+          layers: [
+            Layer(nodes: [node]),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
 
-    final actions = <ActionCommitted>[];
-    final sub = controller.actions.listen(actions.add);
-    addTearDown(sub.cancel);
+      final actions = <ActionCommitted>[];
+      final sub = controller.actions.listen(actions.add);
+      addTearDown(sub.cancel);
 
-    final before = DateTime.now().millisecondsSinceEpoch;
-    controller.removeNode('r1');
-    final after = DateTime.now().millisecondsSinceEpoch;
+      controller.removeNode('r1');
 
-    expect(actions, hasLength(1));
-    expect(actions.single.type, ActionType.delete);
-    expect(actions.single.timestampMs, inInclusiveRange(before, after));
-  });
+      expect(actions, hasLength(1));
+      expect(actions.single.type, ActionType.delete);
+      expect(actions.single.timestampMs, 0);
+    },
+  );
 
   testWidgets('removeNode is a no-op for unknown id', (tester) async {
     final controller = SceneController(scene: Scene(layers: [Layer()]));
@@ -416,7 +417,7 @@ void main() {
     );
   });
 
-  test('moveNode default timestamp uses DateTime.now', () {
+  test('moveNode default timestamp follows pointer monotonic timeline', () {
     final node = RectNode(
       id: 'r1',
       size: const Size(10, 10),
@@ -436,13 +437,28 @@ void main() {
     final sub = controller.actions.listen(actions.add);
     addTearDown(sub.cancel);
 
-    final before = DateTime.now().millisecondsSinceEpoch;
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 1,
+        position: Offset(0, 0),
+        timestampMs: 0,
+        phase: PointerPhase.down,
+      ),
+    );
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 1,
+        position: Offset(0, 0),
+        timestampMs: 10,
+        phase: PointerPhase.up,
+      ),
+    );
+
     controller.moveNode('r1', targetLayerIndex: 1);
-    final after = DateTime.now().millisecondsSinceEpoch;
 
     expect(actions, hasLength(1));
     expect(actions.single.type, ActionType.move);
-    expect(actions.single.timestampMs, inInclusiveRange(before, after));
+    expect(actions.single.timestampMs, 11);
   });
 
   test('moveNode throws for invalid target layer index', () {

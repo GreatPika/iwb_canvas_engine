@@ -11,6 +11,8 @@ class SceneCommands {
   SceneCommands(this._contracts);
 
   final InputSliceContracts _contracts;
+  int _resolveTimestampMs(int? timestampMs) =>
+      timestampMs ?? _contracts.nextMonotonicTimestampMs();
 
   void notifySceneChanged() {
     final selectedNodeIds = _contracts.selectedNodeIds;
@@ -75,7 +77,7 @@ class SceneCommands {
       _contracts.markSceneStructuralChanged();
       _contracts.emitAction(ActionType.delete, [
         id,
-      ], timestampMs ?? DateTime.now().millisecondsSinceEpoch);
+      ], _resolveTimestampMs(timestampMs));
       _contracts.notifyNow();
       return;
     }
@@ -108,7 +110,7 @@ class SceneCommands {
       _contracts.emitAction(
         ActionType.move,
         [id],
-        timestampMs ?? DateTime.now().millisecondsSinceEpoch,
+        _resolveTimestampMs(timestampMs),
         payload: <String, Object?>{
           'sourceLayerIndex': layerIndex,
           'targetLayerIndex': targetLayerIndex,
@@ -172,7 +174,7 @@ class SceneCommands {
     _contracts.emitAction(
       ActionType.transform,
       nodes.map((node) => node.id).toList(growable: false),
-      timestampMs ?? DateTime.now().millisecondsSinceEpoch,
+      _resolveTimestampMs(timestampMs),
       payload: <String, Object?>{'delta': delta.toJsonMap()},
     );
     _contracts.markSceneGeometryChanged();
@@ -203,7 +205,7 @@ class SceneCommands {
     _contracts.emitAction(
       ActionType.transform,
       nodes.map((node) => node.id).toList(growable: false),
-      timestampMs ?? DateTime.now().millisecondsSinceEpoch,
+      _resolveTimestampMs(timestampMs),
       payload: <String, Object?>{'delta': delta.toJsonMap()},
     );
     _contracts.markSceneGeometryChanged();
@@ -234,7 +236,7 @@ class SceneCommands {
     _contracts.emitAction(
       ActionType.transform,
       nodes.map((node) => node.id).toList(growable: false),
-      timestampMs ?? DateTime.now().millisecondsSinceEpoch,
+      _resolveTimestampMs(timestampMs),
       payload: <String, Object?>{'delta': delta.toJsonMap()},
     );
     _contracts.markSceneGeometryChanged();
@@ -264,7 +266,7 @@ class SceneCommands {
     _contracts.emitAction(
       ActionType.delete,
       deletableIds,
-      timestampMs ?? DateTime.now().millisecondsSinceEpoch,
+      _resolveTimestampMs(timestampMs),
     );
     _contracts.notifyNow();
   }
@@ -285,7 +287,7 @@ class SceneCommands {
     _contracts.emitAction(
       ActionType.clear,
       clearedIds,
-      timestampMs ?? DateTime.now().millisecondsSinceEpoch,
+      _resolveTimestampMs(timestampMs),
     );
     _contracts.notifyNow();
   }

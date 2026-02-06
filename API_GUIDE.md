@@ -364,6 +364,7 @@ controller.flipSelectionVertical();
 
 Gotchas:
 - `actions` is a **synchronous broadcast stream**; handlers must be fast (no heavy/async work).
+- `ActionCommitted.timestampMs` is an engine monotonic timeline (ordered event time), not guaranteed UNIX epoch wall-clock time.
 - `ActionType.transform` payload uses `{delta: {a,b,c,d,tx,ty}}`.
 - `ActionType.move` payload uses `{sourceLayerIndex: int, targetLayerIndex: int}`.
 - `ActionType.drawStroke/drawHighlighter/drawLine` payload uses `{tool: String, color: int, thickness: double}`.

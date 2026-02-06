@@ -60,7 +60,116 @@ void main() {
     expect(controller.scene.camera.offset, const Offset(10, -5));
   });
 
-  test('rotate/flip default timestamp uses DateTime.now', () async {
+  test(
+    'rotate/flip default timestamps are monotonic after pointer events',
+    () async {
+      final node = rectNode('r1', const Offset(0, 0));
+      final controller = SceneController(
+        scene: Scene(
+          layers: [
+            Layer(nodes: [node]),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      controller.handlePointer(
+        const PointerSample(
+          pointerId: 1,
+          position: Offset(0, 0),
+          timestampMs: 0,
+          phase: PointerPhase.down,
+        ),
+      );
+      controller.handlePointer(
+        const PointerSample(
+          pointerId: 1,
+          position: Offset(0, 0),
+          timestampMs: 10,
+          phase: PointerPhase.up,
+        ),
+      );
+
+      final actions = <ActionCommitted>[];
+      final sub = controller.actions.listen(actions.add);
+      addTearDown(sub.cancel);
+
+      controller.rotateSelection(clockwise: false);
+      controller.flipSelectionVertical();
+      controller.flipSelectionHorizontal();
+
+      expect(actions, hasLength(3));
+      expect(actions.first.type, ActionType.transform);
+      expect(actions.first.payload, contains('delta'));
+      expect(actions.first.timestampMs, 11);
+      expect(actions[1].type, ActionType.transform);
+      expect(actions[1].payload, contains('delta'));
+      expect(actions[1].timestampMs, 12);
+      expect(actions[2].type, ActionType.transform);
+      expect(actions[2].payload, contains('delta'));
+      expect(actions[2].timestampMs, 13);
+
+      bool isNonIdentityDelta(Map<String, Object?> payload) {
+        final delta = (payload['delta'] as Map).cast<String, num>();
+        final a = delta['a']?.toDouble() ?? 0;
+        final d = delta['d']?.toDouble() ?? 0;
+        final tx = delta['tx']?.toDouble() ?? 0;
+        final ty = delta['ty']?.toDouble() ?? 0;
+        return a != 1.0 || d != 1.0 || tx != 0.0 || ty != 0.0;
+      }
+
+      expect(isNonIdentityDelta(actions.first.payload!), isTrue);
+      expect(isNonIdentityDelta(actions[1].payload!), isTrue);
+      expect(isNonIdentityDelta(actions[2].payload!), isTrue);
+    },
+  );
+
+  test('deleteSelection/clearScene default timestamps are monotonic', () {
+    final deletable = rectNode('del', const Offset(0, 0));
+    final scene = Scene(
+      layers: [
+        Layer(nodes: [deletable]),
+      ],
+    );
+    final controller = SceneController(scene: scene);
+    addTearDown(controller.dispose);
+
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 1,
+        position: Offset(0, 0),
+        timestampMs: 0,
+        phase: PointerPhase.down,
+      ),
+    );
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 1,
+        position: Offset(0, 0),
+        timestampMs: 10,
+        phase: PointerPhase.up,
+      ),
+    );
+
+    final actions = <ActionCommitted>[];
+    final sub = controller.actions.listen(actions.add);
+    addTearDown(sub.cancel);
+
+    controller.deleteSelection();
+
+    expect(actions.single.type, ActionType.delete);
+    expect(actions.single.timestampMs, 11);
+    expect(scene.layers.single.nodes, isEmpty);
+
+    scene.layers.single.nodes.add(rectNode('a', const Offset(0, 0)));
+    controller.clearScene();
+
+    expect(actions.last.type, ActionType.clear);
+    expect(actions.last.timestampMs, 12);
+    expect(scene.layers.single.nodes, isEmpty);
+  });
+
+  test('default timestamp follows explicit command timestamp watermark', () {
     final node = rectNode('r1', const Offset(0, 0));
     final controller = SceneController(
       scene: Scene(
@@ -92,84 +201,12 @@ void main() {
     final sub = controller.actions.listen(actions.add);
     addTearDown(sub.cancel);
 
-    final before = DateTime.now().millisecondsSinceEpoch;
-    controller.rotateSelection(clockwise: false);
+    controller.rotateSelection(clockwise: true, timestampMs: 100);
     controller.flipSelectionVertical();
-    controller.flipSelectionHorizontal();
-    final after = DateTime.now().millisecondsSinceEpoch;
 
-    expect(actions, hasLength(3));
-    expect(actions.first.type, ActionType.transform);
-    expect(actions.first.payload, contains('delta'));
-    expect(actions.first.timestampMs, inInclusiveRange(before, after));
-    expect(actions[1].type, ActionType.transform);
-    expect(actions[1].payload, contains('delta'));
-    expect(actions[1].timestampMs, inInclusiveRange(before, after));
-    expect(actions[2].type, ActionType.transform);
-    expect(actions[2].payload, contains('delta'));
-    expect(actions[2].timestampMs, inInclusiveRange(before, after));
-
-    bool isNonIdentityDelta(Map<String, Object?> payload) {
-      final delta = (payload['delta'] as Map).cast<String, num>();
-      final a = delta['a']?.toDouble() ?? 0;
-      final d = delta['d']?.toDouble() ?? 0;
-      final tx = delta['tx']?.toDouble() ?? 0;
-      final ty = delta['ty']?.toDouble() ?? 0;
-      return a != 1.0 || d != 1.0 || tx != 0.0 || ty != 0.0;
-    }
-
-    expect(isNonIdentityDelta(actions.first.payload!), isTrue);
-    expect(isNonIdentityDelta(actions[1].payload!), isTrue);
-    expect(isNonIdentityDelta(actions[2].payload!), isTrue);
-  });
-
-  test('deleteSelection/clearScene default timestamp uses DateTime.now', () {
-    final deletable = rectNode('del', const Offset(0, 0));
-    final scene = Scene(
-      layers: [
-        Layer(nodes: [deletable]),
-      ],
-    );
-    final controller = SceneController(scene: scene);
-    addTearDown(controller.dispose);
-
-    controller.handlePointer(
-      const PointerSample(
-        pointerId: 1,
-        position: Offset(0, 0),
-        timestampMs: 0,
-        phase: PointerPhase.down,
-      ),
-    );
-    controller.handlePointer(
-      const PointerSample(
-        pointerId: 1,
-        position: Offset(0, 0),
-        timestampMs: 10,
-        phase: PointerPhase.up,
-      ),
-    );
-
-    final actions = <ActionCommitted>[];
-    final sub = controller.actions.listen(actions.add);
-    addTearDown(sub.cancel);
-
-    final before = DateTime.now().millisecondsSinceEpoch;
-    controller.deleteSelection();
-    final after = DateTime.now().millisecondsSinceEpoch;
-
-    expect(actions.single.type, ActionType.delete);
-    expect(actions.single.timestampMs, inInclusiveRange(before, after));
-    expect(scene.layers.single.nodes, isEmpty);
-
-    scene.layers.single.nodes.add(rectNode('a', const Offset(0, 0)));
-    final clearBefore = DateTime.now().millisecondsSinceEpoch;
-    controller.clearScene();
-    final clearAfter = DateTime.now().millisecondsSinceEpoch;
-
-    expect(actions.last.type, ActionType.clear);
-    expect(actions.last.timestampMs, inInclusiveRange(clearBefore, clearAfter));
-    expect(scene.layers.single.nodes, isEmpty);
+    expect(actions, hasLength(2));
+    expect(actions.first.timestampMs, 100);
+    expect(actions.last.timestampMs, 101);
   });
 
   test('marquee on empty area keeps selection empty', () {
