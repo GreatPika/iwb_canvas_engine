@@ -644,7 +644,7 @@ void main() {
   });
 
   test(
-    'invalid PathNode is non-interactive for stroke-only and fill+stroke',
+    'invalid PathNode is non-interactive for stroke-only, fill-only, and fill+stroke',
     () {
       // INV:INV-CORE-PATH-HITTEST-INVALID-NONINTERACTIVE
       final strokeOnly = PathNode(
@@ -652,6 +652,11 @@ void main() {
         svgPathData: 'not-a-path',
         strokeColor: const Color(0xFF000000),
         strokeWidth: 8,
+      );
+      final fillOnly = PathNode(
+        id: 'path-invalid-fill',
+        svgPathData: 'not-a-path',
+        fillColor: const Color(0xFF000000),
       );
       final fillAndStroke = PathNode(
         id: 'path-invalid-fill-stroke',
@@ -663,9 +668,11 @@ void main() {
 
       final probeStrokeOnly =
           strokeOnly.boundsWorld.topLeft + const Offset(1, 1);
+      final probeFillOnly = fillOnly.boundsWorld.topLeft + const Offset(1, 1);
       final probeFillAndStroke =
           fillAndStroke.boundsWorld.topLeft + const Offset(1, 1);
       expect(hitTestNode(probeStrokeOnly, strokeOnly), isFalse);
+      expect(hitTestNode(probeFillOnly, fillOnly), isFalse);
       expect(hitTestNode(probeFillAndStroke, fillAndStroke), isFalse);
     },
   );
@@ -739,6 +746,22 @@ void main() {
   });
 
   test(
+    'segmentsIntersect handles large-scale near-collinear overlap robustly',
+    () {
+      // INV:INV-CORE-NUMERIC-ROBUSTNESS
+      expect(
+        segmentsIntersect(
+          const Offset(1e9, 1e9),
+          const Offset(1e9 + 1000, 1e9 + 1000),
+          const Offset(1e9 + 500, 1e9 + 500 + 5e-4),
+          const Offset(1e9 + 1500, 1e9 + 1500 + 5e-4),
+        ),
+        isTrue,
+      );
+    },
+  );
+
+  test(
     'segmentsIntersect rejects near-collinear non-overlap with tiny gap',
     () {
       expect(
@@ -747,6 +770,22 @@ void main() {
           const Offset(10, 10),
           const Offset(10 + 1e-6, 10 + 1e-6),
           const Offset(20, 20),
+        ),
+        isFalse,
+      );
+    },
+  );
+
+  test(
+    'segmentsIntersect rejects large-scale near-collinear non-overlap beyond epsilon',
+    () {
+      // INV:INV-CORE-NUMERIC-ROBUSTNESS
+      expect(
+        segmentsIntersect(
+          const Offset(1e9, 1e9),
+          const Offset(1e9 + 1000, 1e9 + 1000),
+          const Offset(1e9 + 1000.02, 1e9 + 1000.0205),
+          const Offset(1e9 + 2000, 1e9 + 2000.0005),
         ),
         isFalse,
       );

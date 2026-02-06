@@ -1,5 +1,13 @@
 ## Unreleased
 
+- Perf: remove hot-path list allocation in `segmentsIntersect` by switching to
+  allocation-free max-scale aggregation.
+- Tests: extend invalid `PathNode` hit-test regression to cover fill-only nodes
+  (`buildLocalPath() == null` stays non-interactive).
+- Tests: add large-scale near-collinear regression cases for segment
+  intersection predicates.
+- Docs: add a plan-editing guardrail to keep `DEVELOPMENT_PLAN.md` checkbox
+  updates scoped and avoid unrelated structural rewrites.
 - Serialization: stricter numeric validation for JSON import/export (finite
   numbers + valid ranges); invalid input throws `SceneJsonFormatException`.
 - Input: `SceneController` numeric setters now reject invalid values and throw

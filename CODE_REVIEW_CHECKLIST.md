@@ -99,6 +99,8 @@ For every problem found during review, create a short entry (in the PR descripti
 - [ ] Architecture notes match implementation (`ARCHITECTURE.md`)
 - [ ] Internal docs referenced by ignore files actually exist (e.g. `.pubignore`)
 - [ ] Generated artifacts are not committed unless explicitly intended
+- [ ] `DEVELOPMENT_PLAN.md` checkbox updates are scoped to target items only
+      (no unrelated section rewrites unless explicitly requested)
 
 ---
 

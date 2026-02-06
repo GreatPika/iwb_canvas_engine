@@ -112,21 +112,26 @@ bool segmentsIntersect(Offset a1, Offset a2, Offset b1, Offset b2) {
   // checks stable across tiny and large coordinate ranges.
   final deltaA = a2 - a1;
   final deltaB = b2 - b1;
-  final maxScale = <double>[
-    1.0,
-    a1.dx.abs(),
-    a1.dy.abs(),
-    a2.dx.abs(),
-    a2.dy.abs(),
-    b1.dx.abs(),
-    b1.dy.abs(),
-    b2.dx.abs(),
-    b2.dy.abs(),
-    deltaA.dx.abs(),
-    deltaA.dy.abs(),
-    deltaB.dx.abs(),
-    deltaB.dy.abs(),
-  ].reduce(math.max);
+  var maxScale = 1.0;
+
+  void consider(double value) {
+    final absValue = value.abs();
+    if (absValue > maxScale) maxScale = absValue;
+  }
+
+  consider(a1.dx);
+  consider(a1.dy);
+  consider(a2.dx);
+  consider(a2.dy);
+  consider(b1.dx);
+  consider(b1.dy);
+  consider(b2.dx);
+  consider(b2.dy);
+  consider(deltaA.dx);
+  consider(deltaA.dy);
+  consider(deltaB.dx);
+  consider(deltaB.dy);
+
   final orientationEpsilon = kEpsilon * maxScale * maxScale;
   final coordinateEpsilon = kEpsilon * maxScale;
 

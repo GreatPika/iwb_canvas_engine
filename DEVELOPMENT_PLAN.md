@@ -10,10 +10,12 @@
 
 ### Follow-up (post-P1 implementation review)
 
-- [ ] Remove hot-path list allocation in `segmentsIntersect` (`lib/src/core/geometry.dart`): replace temporary `List<double>` + `reduce(math.max)` with allocation-free max aggregation over local doubles.
-- [ ] Add missing regression for invalid fill-only `PathNode` hit-test (`test/core/geometry_test.dart`): `buildLocalPath() == null` must be non-interactive for fill-only as well.
-- [ ] Add large-scale near-collinear regression coverage for segment predicates (`test/core/geometry_test.dart`): validate stability for very large coordinate magnitudes.
-- [ ] Stabilize plan structure edits: when closing item checkboxes, avoid unrelated rewrites of `DEVELOPMENT_PLAN.md` sections unless the task explicitly includes plan restructuring.
+- [x] Remove hot-path list allocation in `segmentsIntersect` (`lib/src/core/geometry.dart`): replace temporary `List<double>` + `reduce(math.max)` with allocation-free max aggregation over local doubles.
+- [x] Add missing regression for invalid fill-only `PathNode` hit-test (`test/core/geometry_test.dart`): `buildLocalPath() == null` must be non-interactive for fill-only as well.
+- [x] Add large-scale near-collinear regression coverage for segment predicates (`test/core/geometry_test.dart`): validate stability for very large coordinate magnitudes.
+- [x] Stabilize plan structure edits: when closing item checkboxes, avoid unrelated rewrites of `DEVELOPMENT_PLAN.md` sections unless the task explicitly includes plan restructuring.
+
+Plan editing rule: checkbox-only updates in this file must be minimal and scoped to the target items; section reorder/reflow is out of scope unless explicitly requested.
 
 ### Nice to have (P2 — behavior/UX alignment)
 
