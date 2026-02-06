@@ -83,6 +83,37 @@ Future<Color> _pixelAt(Image image, int x, int y) async {
   );
 }
 
+Future<double> _inkCentroidY(Image image, Color background) async {
+  final data = await image.toByteData(format: ImageByteFormat.rawRgba);
+  if (data == null) {
+    throw StateError('Failed to encode image to raw RGBA.');
+  }
+  final bytes = data.buffer.asUint8List();
+  final argb = background.toARGB32();
+  final bgR = (argb >> 16) & 0xFF;
+  final bgG = (argb >> 8) & 0xFF;
+  final bgB = argb & 0xFF;
+
+  double weightedY = 0;
+  double totalInk = 0;
+  for (var y = 0; y < image.height; y++) {
+    for (var x = 0; x < image.width; x++) {
+      final index = (y * image.width + x) * 4;
+      final dr = (bytes[index] - bgR).abs();
+      final dg = (bytes[index + 1] - bgG).abs();
+      final db = (bytes[index + 2] - bgB).abs();
+      final ink = (dr + dg + db).toDouble();
+      if (ink <= 0) continue;
+      weightedY += y * ink;
+      totalInk += ink;
+    }
+  }
+  if (totalInk == 0) {
+    throw StateError('Expected non-background pixels.');
+  }
+  return weightedY / totalInk;
+}
+
 class _EmptyMetricsPathNode extends PathNode {
   _EmptyMetricsPathNode({required super.id, required super.svgPathData});
 
@@ -794,6 +825,149 @@ void main() {
       final image = await _paintToImage(painter, width: 120, height: 80);
       final nonBg = await _countNonBackgroundPixels(image, background);
       expect(nonBg, greaterThan(0));
+    },
+  );
+
+  test('ScenePainter snaps thin horizontal line in auto mode', () async {
+    const background = Color(0xFFFFFFFF);
+    final line = LineNode(
+      id: 'line',
+      start: const Offset(10, 20.3),
+      end: const Offset(90, 20.3),
+      thickness: 1,
+      color: const Color(0xFF000000),
+    );
+    final scene = Scene(
+      background: Background(color: background),
+      layers: [
+        Layer(nodes: [line]),
+      ],
+    );
+
+    final painterNone = ScenePainter(
+      controller: _controllerFor(scene),
+      imageResolver: (_) => null,
+      devicePixelRatio: 2,
+      thinLineSnapStrategy: ThinLineSnapStrategy.none,
+    );
+    final painterAuto = ScenePainter(
+      controller: _controllerFor(scene),
+      imageResolver: (_) => null,
+      devicePixelRatio: 2,
+      thinLineSnapStrategy: ThinLineSnapStrategy.autoAxisAlignedThin,
+    );
+
+    final imageNone = await _paintToImage(painterNone, width: 100, height: 60);
+    final imageAuto = await _paintToImage(painterAuto, width: 100, height: 60);
+    final centroidNone = await _inkCentroidY(imageNone, background);
+    final centroidAuto = await _inkCentroidY(imageAuto, background);
+
+    expect((centroidAuto - 20.5).abs(), lessThan((centroidNone - 20.5).abs()));
+  });
+
+  test('ScenePainter snaps thin horizontal stroke in auto mode', () async {
+    const background = Color(0xFFFFFFFF);
+    final stroke = StrokeNode(
+      id: 'stroke',
+      points: const [Offset(10, 30.3), Offset(50, 30.3), Offset(90, 30.3)],
+      thickness: 1,
+      color: const Color(0xFF000000),
+    );
+    final scene = Scene(
+      background: Background(color: background),
+      layers: [
+        Layer(nodes: [stroke]),
+      ],
+    );
+
+    final painterNone = ScenePainter(
+      controller: _controllerFor(scene),
+      imageResolver: (_) => null,
+      devicePixelRatio: 2,
+      thinLineSnapStrategy: ThinLineSnapStrategy.none,
+    );
+    final painterAuto = ScenePainter(
+      controller: _controllerFor(scene),
+      imageResolver: (_) => null,
+      devicePixelRatio: 2,
+      thinLineSnapStrategy: ThinLineSnapStrategy.autoAxisAlignedThin,
+    );
+
+    final imageNone = await _paintToImage(painterNone, width: 100, height: 70);
+    final imageAuto = await _paintToImage(painterAuto, width: 100, height: 70);
+    final centroidNone = await _inkCentroidY(imageNone, background);
+    final centroidAuto = await _inkCentroidY(imageAuto, background);
+
+    expect((centroidAuto - 30.5).abs(), lessThan((centroidNone - 30.5).abs()));
+  });
+
+  test('ScenePainter snaps selected thin line and stroke overlays', () async {
+    const background = Color(0xFFFFFFFF);
+    final line = LineNode(
+      id: 'line',
+      start: const Offset(20, 10.3),
+      end: const Offset(20, 50.3),
+      thickness: 1,
+      color: const Color(0xFF000000),
+    );
+    final stroke = StrokeNode(
+      id: 'stroke',
+      points: const [Offset(70, 10.3), Offset(70, 30.3), Offset(70, 50.3)],
+      thickness: 1,
+      color: const Color(0xFF000000),
+    );
+    final scene = Scene(
+      background: Background(color: background),
+      layers: [
+        Layer(nodes: [line, stroke]),
+      ],
+    );
+
+    final painter = ScenePainter(
+      controller: _controllerFor(
+        scene,
+        selectedNodeIds: const {'line', 'stroke'},
+      ),
+      imageResolver: (_) => null,
+      selectionColor: const Color(0xFFFF0000),
+      selectionStrokeWidth: 2,
+      devicePixelRatio: 2,
+      thinLineSnapStrategy: ThinLineSnapStrategy.autoAxisAlignedThin,
+    );
+
+    final image = await _paintToImage(painter, width: 100, height: 70);
+    final nonBg = await _countNonBackgroundPixels(image, background);
+    expect(nonBg, greaterThan(0));
+  });
+
+  test(
+    'ScenePainter skips snapping when transformed points overflow',
+    () async {
+      const background = Color(0xFFFFFFFF);
+      final stroke = StrokeNode(
+        id: 'overflow-stroke',
+        points: const [Offset(1e308, 0), Offset(1e308, 10)],
+        thickness: 1,
+        color: const Color(0xFF000000),
+        transform: const Transform2D(a: 1e308, b: 0, c: 0, d: 1, tx: 0, ty: 0),
+      );
+      final scene = Scene(
+        background: Background(color: background),
+        layers: [
+          Layer(nodes: [stroke]),
+        ],
+      );
+
+      final painter = ScenePainter(
+        controller: _controllerFor(scene),
+        imageResolver: (_) => null,
+        devicePixelRatio: 2,
+        thinLineSnapStrategy: ThinLineSnapStrategy.autoAxisAlignedThin,
+      );
+
+      final image = await _paintToImage(painter, width: 100, height: 70);
+      final nonBg = await _countNonBackgroundPixels(image, background);
+      expect(nonBg, equals(0));
     },
   );
 }

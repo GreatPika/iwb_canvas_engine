@@ -57,6 +57,10 @@ class SceneView extends StatefulWidget {
   /// 5) Process internal pointer signals (double-tap) and schedule pending flush
   ///
   /// Callbacks run synchronously and must not block for long.
+  ///
+  /// [thinLineSnapStrategy] controls optional pixel-grid snapping for thin
+  /// axis-aligned lines/strokes in [ScenePainter]. This can improve crispness
+  /// for 1 logical px lines on HiDPI displays.
   const SceneView({
     this.controller,
     this.imageResolver,
@@ -72,6 +76,7 @@ class SceneView extends StatefulWidget {
     this.selectionColor = const Color(0xFF1565C0),
     this.selectionStrokeWidth = 1,
     this.gridStrokeWidth = 1,
+    this.thinLineSnapStrategy = ThinLineSnapStrategy.autoAxisAlignedThin,
     super.key,
   });
 
@@ -89,6 +94,7 @@ class SceneView extends StatefulWidget {
   final Color selectionColor;
   final double selectionStrokeWidth;
   final double gridStrokeWidth;
+  final ThinLineSnapStrategy thinLineSnapStrategy;
 
   @override
   State<SceneView> createState() => _SceneViewState();
@@ -175,6 +181,8 @@ class _SceneViewState extends State<SceneView> {
 
   @override
   Widget build(BuildContext context) {
+    final view = View.maybeOf(context);
+    final devicePixelRatio = view?.devicePixelRatio ?? 1.0;
     return Listener(
       behavior: HitTestBehavior.opaque,
       onPointerDown: (event) => _handlePointerEvent(event, PointerPhase.down),
@@ -192,6 +200,8 @@ class _SceneViewState extends State<SceneView> {
           selectionColor: widget.selectionColor,
           selectionStrokeWidth: widget.selectionStrokeWidth,
           gridStrokeWidth: widget.gridStrokeWidth,
+          devicePixelRatio: devicePixelRatio,
+          thinLineSnapStrategy: widget.thinLineSnapStrategy,
         ),
         child: const SizedBox.expand(),
       ),

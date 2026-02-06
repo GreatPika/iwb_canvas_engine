@@ -109,8 +109,13 @@ final strokeCache = SceneStrokePathCache(maxEntries: 1024);
 SceneView(
   textLayoutCache: textCache,
   strokePathCache: strokeCache,
+  thinLineSnapStrategy: ThinLineSnapStrategy.autoAxisAlignedThin,
 );
 ```
+
+`thinLineSnapStrategy` controls optional physical pixel-grid snapping in
+`ScenePainter` for thin axis-aligned lines/strokes. Use
+`ThinLineSnapStrategy.none` if you need exact raw coordinates without snapping.
 
 ## Core mental model (read this before coding)
 

@@ -1,5 +1,8 @@
 ## Unreleased
 
+- Render/View: add configurable thin-line pixel snap strategy
+  (`ThinLineSnapStrategy`) and enable HiDPI-friendly snapping for
+  axis-aligned 1 logical px lines/strokes in `ScenePainter`/`SceneView`.
 - Input: unify `ActionCommitted.timestampMs` scale for command defaults with
   pointer time (monotonic timeline, strict `+1` fallback progression).
 - Behavior: `hitTestTopNode` now skips `Layer.isBackground` layers, so

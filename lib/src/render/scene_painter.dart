@@ -246,6 +246,17 @@ class _TextLayoutKey {
 /// placeholder.
 typedef ImageResolver = Image? Function(String imageId);
 
+/// Strategy for snapping thin axis-aligned strokes to the physical pixel grid.
+enum ThinLineSnapStrategy {
+  /// Render geometry as-is without pixel-grid snapping.
+  none,
+
+  /// Snap thin horizontal/vertical line centers in view space.
+  ///
+  /// This targets crisper rendering on HiDPI displays for 1 logical px lines.
+  autoAxisAlignedThin,
+}
+
 /// A [CustomPainter] that renders a [Scene] to a Flutter [Canvas].
 ///
 /// The painter expects node geometry to be stored in local coordinates around
@@ -264,6 +275,8 @@ class ScenePainter extends CustomPainter {
     this.selectionColor = const Color(0xFF1565C0),
     this.selectionStrokeWidth = 1,
     this.gridStrokeWidth = 1,
+    this.devicePixelRatio = 1,
+    this.thinLineSnapStrategy = ThinLineSnapStrategy.autoAxisAlignedThin,
   }) : super(repaint: controller);
 
   final SceneController controller;
@@ -274,6 +287,8 @@ class ScenePainter extends CustomPainter {
   final Color selectionColor;
   final double selectionStrokeWidth;
   final double gridStrokeWidth;
+  final double devicePixelRatio;
+  final ThinLineSnapStrategy thinLineSnapStrategy;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -338,6 +353,14 @@ class ScenePainter extends CustomPainter {
       oldDelegate.gridStrokeWidth,
     );
     final newGridStrokeWidth = clampNonNegativeFinite(gridStrokeWidth);
+    final oldDevicePixelRatio = clampPositiveFinite(
+      oldDelegate.devicePixelRatio,
+      fallback: 1,
+    );
+    final newDevicePixelRatio = clampPositiveFinite(
+      devicePixelRatio,
+      fallback: 1,
+    );
     return oldDelegate.controller != controller ||
         oldDelegate.imageResolver != imageResolver ||
         oldDelegate.staticLayerCache != staticLayerCache ||
@@ -345,7 +368,9 @@ class ScenePainter extends CustomPainter {
         oldDelegate.strokePathCache != strokePathCache ||
         oldDelegate.selectionColor != selectionColor ||
         oldSelectionStrokeWidth != newSelectionStrokeWidth ||
-        oldGridStrokeWidth != newGridStrokeWidth;
+        oldGridStrokeWidth != newGridStrokeWidth ||
+        oldDevicePixelRatio != newDevicePixelRatio ||
+        oldDelegate.thinLineSnapStrategy != thinLineSnapStrategy;
   }
 
   List<SceneNode> _drawLayers(
@@ -450,23 +475,55 @@ class ScenePainter extends CustomPainter {
       if (!_isFiniteTransform2D(node.transform)) return;
       if (!_isFiniteOffset(node.start) || !_isFiniteOffset(node.end)) return;
       final baseThickness = clampNonNegativeFinite(node.thickness);
-      canvas.save();
-      canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
-      canvas.drawLine(
+      final line = _resolveSnappedLine(
+        node.transform,
+        cameraOffset,
+        baseThickness,
         node.start,
         node.end,
-        _haloPaint(baseThickness + haloWidth * 2, color, cap: StrokeCap.round),
       );
-      canvas.drawLine(
-        node.start,
-        node.end,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = baseThickness
-          ..strokeCap = StrokeCap.round
-          ..color = _applyOpacity(node.color, node.opacity),
-      );
-      canvas.restore();
+      if (line != null) {
+        canvas.drawLine(
+          line.a,
+          line.b,
+          _haloPaint(
+            baseThickness + haloWidth * 2,
+            color,
+            cap: StrokeCap.round,
+          ),
+        );
+        canvas.drawLine(
+          line.a,
+          line.b,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = baseThickness
+            ..strokeCap = StrokeCap.round
+            ..color = _applyOpacity(node.color, node.opacity),
+        );
+      } else {
+        canvas.save();
+        canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
+        canvas.drawLine(
+          node.start,
+          node.end,
+          _haloPaint(
+            baseThickness + haloWidth * 2,
+            color,
+            cap: StrokeCap.round,
+          ),
+        );
+        canvas.drawLine(
+          node.start,
+          node.end,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = baseThickness
+            ..strokeCap = StrokeCap.round
+            ..color = _applyOpacity(node.color, node.opacity),
+        );
+        canvas.restore();
+      }
     } else if (node is StrokeNode) {
       if (node.points.isEmpty) return;
       if (!_isFiniteTransform2D(node.transform)) return;
@@ -484,6 +541,35 @@ class ScenePainter extends CustomPainter {
           haloWidth,
         );
       } else {
+        final points = _resolveSnappedPolyline(
+          node.transform,
+          cameraOffset,
+          baseThickness,
+          node.points,
+        );
+        if (points != null) {
+          final path = _buildStrokePath(points);
+          canvas.restore();
+          canvas.drawPath(
+            path,
+            _haloPaint(
+              baseThickness + haloWidth * 2,
+              color,
+              cap: StrokeCap.round,
+              join: StrokeJoin.round,
+            ),
+          );
+          canvas.drawPath(
+            path,
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = baseThickness
+              ..strokeCap = StrokeCap.round
+              ..strokeJoin = StrokeJoin.round
+              ..color = _applyOpacity(node.color, node.opacity),
+          );
+          return;
+        }
         final path = strokePathCache != null
             ? strokePathCache!.getOrBuild(node)
             : _buildStrokePath(node.points);
@@ -857,6 +943,18 @@ class ScenePainter extends CustomPainter {
       return;
     }
 
+    final snappedPoints = _resolveSnappedPolyline(
+      node.transform,
+      cameraOffset,
+      baseThickness,
+      node.points,
+    );
+    if (snappedPoints != null) {
+      canvas.restore();
+      canvas.drawPath(_buildStrokePath(snappedPoints), paint);
+      return;
+    }
+
     final path = strokePathCache != null
         ? strokePathCache!.getOrBuild(node)
         : _buildStrokePath(node.points);
@@ -868,14 +966,24 @@ class ScenePainter extends CustomPainter {
     if (!_isFiniteTransform2D(node.transform)) return;
     if (!_isFiniteOffset(node.start) || !_isFiniteOffset(node.end)) return;
     final baseThickness = clampNonNegativeFinite(node.thickness);
-    canvas.save();
-    canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
     final paint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = baseThickness
       ..strokeCap = StrokeCap.round
       ..color = _applyOpacity(node.color, node.opacity);
-
+    final line = _resolveSnappedLine(
+      node.transform,
+      cameraOffset,
+      baseThickness,
+      node.start,
+      node.end,
+    );
+    if (line != null) {
+      canvas.drawLine(line.a, line.b, paint);
+      return;
+    }
+    canvas.save();
+    canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
     canvas.drawLine(node.start, node.end, paint);
     canvas.restore();
   }
@@ -980,6 +1088,110 @@ class ScenePainter extends CustomPainter {
   double _clamp01(double value) {
     return clamp01Finite(value);
   }
+
+  _LineEndpoints? _resolveSnappedLine(
+    Transform2D nodeTransform,
+    Offset cameraOffset,
+    double strokeWidth,
+    Offset localA,
+    Offset localB,
+  ) {
+    if (thinLineSnapStrategy != ThinLineSnapStrategy.autoAxisAlignedThin) {
+      return null;
+    }
+    if (!_isThinStrokeForSnap(strokeWidth)) return null;
+    final viewA = nodeTransform.applyToPoint(localA) - cameraOffset;
+    final viewB = nodeTransform.applyToPoint(localB) - cameraOffset;
+    if (!_isFiniteOffset(viewA) || !_isFiniteOffset(viewB)) return null;
+
+    const axisTolerance = 1e-3;
+    final isHorizontal = (viewA.dy - viewB.dy).abs() <= axisTolerance;
+    final isVertical = (viewA.dx - viewB.dx).abs() <= axisTolerance;
+    if (!isHorizontal && !isVertical) return null;
+
+    if (isHorizontal) {
+      final snappedY = _snapCenterCoordinate(
+        (viewA.dy + viewB.dy) / 2,
+        strokeWidth,
+      );
+      return _LineEndpoints(
+        a: Offset(viewA.dx, snappedY),
+        b: Offset(viewB.dx, snappedY),
+      );
+    }
+    final snappedX = _snapCenterCoordinate(
+      (viewA.dx + viewB.dx) / 2,
+      strokeWidth,
+    );
+    return _LineEndpoints(
+      a: Offset(snappedX, viewA.dy),
+      b: Offset(snappedX, viewB.dy),
+    );
+  }
+
+  List<Offset>? _resolveSnappedPolyline(
+    Transform2D nodeTransform,
+    Offset cameraOffset,
+    double strokeWidth,
+    List<Offset> localPoints,
+  ) {
+    if (thinLineSnapStrategy != ThinLineSnapStrategy.autoAxisAlignedThin) {
+      return null;
+    }
+    if (!_isThinStrokeForSnap(strokeWidth)) return null;
+    if (localPoints.length < 2) return null;
+
+    final viewPoints = <Offset>[];
+    for (final point in localPoints) {
+      final viewPoint = nodeTransform.applyToPoint(point) - cameraOffset;
+      if (!_isFiniteOffset(viewPoint)) return null;
+      viewPoints.add(viewPoint);
+    }
+
+    const axisTolerance = 1e-3;
+    final first = viewPoints.first;
+    final isHorizontal = viewPoints.every(
+      (point) => (point.dy - first.dy).abs() <= axisTolerance,
+    );
+    final isVertical = viewPoints.every(
+      (point) => (point.dx - first.dx).abs() <= axisTolerance,
+    );
+    if (!isHorizontal && !isVertical) return null;
+
+    if (isHorizontal) {
+      final meanY =
+          viewPoints.map((p) => p.dy).reduce((a, b) => a + b) /
+          viewPoints.length;
+      final snappedY = _snapCenterCoordinate(meanY, strokeWidth);
+      return viewPoints.map((point) => Offset(point.dx, snappedY)).toList();
+    }
+    final meanX =
+        viewPoints.map((p) => p.dx).reduce((a, b) => a + b) / viewPoints.length;
+    final snappedX = _snapCenterCoordinate(meanX, strokeWidth);
+    return viewPoints.map((point) => Offset(snappedX, point.dy)).toList();
+  }
+
+  bool _isThinStrokeForSnap(double strokeWidth) {
+    return strokeWidth > 0 && strokeWidth <= 1;
+  }
+
+  double _snapCenterCoordinate(double logical, double strokeWidth) {
+    final safeDpr = clampPositiveFinite(devicePixelRatio, fallback: 1);
+    final physical = logical * safeDpr;
+    final physicalWidth = strokeWidth * safeDpr;
+    final roundedWidth = physicalWidth.round();
+    final targetFraction = roundedWidth.isOdd ? 0.5 : 0.0;
+    final snappedPhysical =
+        (physical - targetFraction).roundToDouble() + targetFraction;
+    return snappedPhysical / safeDpr;
+  }
+}
+
+class _LineEndpoints {
+  const _LineEndpoints({required this.a, required this.b});
+
+  final Offset a;
+  final Offset b;
 }
 
 Path _buildStrokePath(List<Offset> points) {

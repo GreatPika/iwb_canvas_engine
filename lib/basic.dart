@@ -36,6 +36,7 @@ export 'src/serialization/scene_codec.dart'
 export 'src/render/scene_painter.dart'
     show
         ImageResolver,
+        ThinLineSnapStrategy,
         SceneStaticLayerCache,
         SceneTextLayoutCache,
         SceneStrokePathCache;

@@ -59,6 +59,10 @@ void main() {
       final painter = renderObject.painter as ScenePainter;
       expect(painter.controller, same(controller));
       expect(painter.imageResolver('missing'), isNull);
+      expect(
+        painter.thinLineSnapStrategy,
+        ThinLineSnapStrategy.autoAxisAlignedThin,
+      );
 
       controller.addNode(
         RectNode(
@@ -199,6 +203,33 @@ void main() {
     );
 
     expect(find.byType(SceneView), findsOneWidget);
+  });
+
+  testWidgets('SceneView forwards thin line snap strategy to ScenePainter', (
+    tester,
+  ) async {
+    final controller = SceneController(scene: Scene(layers: [Layer()]));
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 64,
+          height: 64,
+          child: SceneView(
+            controller: controller,
+            thinLineSnapStrategy: ThinLineSnapStrategy.none,
+          ),
+        ),
+      ),
+    );
+
+    final renderObject = tester.renderObject<rendering.RenderCustomPaint>(
+      find.byType(CustomPaint),
+    );
+    final painter = renderObject.painter as ScenePainter;
+    expect(painter.thinLineSnapStrategy, ThinLineSnapStrategy.none);
   });
 
   testWidgets('SceneView creates internal controller when missing', (
