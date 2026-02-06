@@ -15,9 +15,7 @@ import '../input/scene_controller.dart';
 ///
 /// Why: avoid rebuilding long stroke polylines every frame.
 /// Invariant: cached path is valid only while the stroke geometry is unchanged.
-/// The cache detects unexpected mutation heuristically via (points length, first
-/// point, last point). This matches the engine's normal flow where strokes are
-/// immutable after gesture commit.
+/// The cache validates freshness by [StrokeNode.pointsRevision].
 /// Validate: `test/render/scene_stroke_path_cache_test.dart`.
 class SceneStrokePathCache {
   SceneStrokePathCache({this.maxEntries = 512})
@@ -54,13 +52,9 @@ class SceneStrokePathCache {
       );
     }
 
-    final firstPoint = points.first;
-    final lastPoint = points.last;
+    final pointsRevision = node.pointsRevision;
     final cached = _entries.remove(node.id);
-    if (cached != null &&
-        cached.pointsLength == points.length &&
-        cached.firstPoint == firstPoint &&
-        cached.lastPoint == lastPoint) {
+    if (cached != null && cached.pointsRevision == pointsRevision) {
       _entries[node.id] = cached;
       _debugHitCount += 1;
       return cached.path;
@@ -69,9 +63,7 @@ class SceneStrokePathCache {
     final path = _buildStrokePath(points);
     _entries[node.id] = _StrokePathEntry(
       path: path,
-      pointsLength: points.length,
-      firstPoint: firstPoint,
-      lastPoint: lastPoint,
+      pointsRevision: pointsRevision,
     );
     _debugBuildCount += 1;
     _evictIfNeeded();
@@ -87,17 +79,10 @@ class SceneStrokePathCache {
 }
 
 class _StrokePathEntry {
-  const _StrokePathEntry({
-    required this.path,
-    required this.pointsLength,
-    required this.firstPoint,
-    required this.lastPoint,
-  });
+  const _StrokePathEntry({required this.path, required this.pointsRevision});
 
   final Path path;
-  final int pointsLength;
-  final Offset firstPoint;
-  final Offset lastPoint;
+  final int pointsRevision;
 }
 
 /// LRU cache for [TextPainter] layout results for [TextNode].

@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'dart:math' as math;
 import 'dart:developer' as developer;
+import 'dart:collection';
 
 import 'package:path_drawing/path_drawing.dart';
 
@@ -404,8 +405,9 @@ class StrokeNode extends SceneNode {
     super.isLocked,
     super.isDeletable,
     super.isTransformable,
-  }) : points = List<Offset>.from(points),
-       super(type: NodeType.stroke);
+  }) : super(type: NodeType.stroke) {
+    _points = _RevisionedOffsetList.from(points);
+  }
 
   factory StrokeNode.fromWorldPoints({
     required NodeId id,
@@ -444,7 +446,13 @@ class StrokeNode extends SceneNode {
   /// During interactive drawing, the controller may temporarily keep points in
   /// world coordinates with `transform == identity`. The stroke is normalized
   /// when the gesture finishes.
-  final List<Offset> points;
+  late final _RevisionedOffsetList _points;
+  List<Offset> get points => _points;
+
+  /// Monotonic geometry revision incremented on any [points] mutation.
+  ///
+  /// This is used by renderer caches to validate path freshness in O(1).
+  int get pointsRevision => _points.revision;
   double thickness;
   Color color;
 
@@ -491,6 +499,160 @@ class StrokeNode extends SceneNode {
       points[i] = points[i] - centerWorld;
     }
     transform = Transform2D.trs(translation: centerWorld);
+  }
+}
+
+class _RevisionedOffsetList extends ListBase<Offset> {
+  _RevisionedOffsetList.from(Iterable<Offset> source)
+    : _inner = List<Offset>.from(source);
+
+  final List<Offset> _inner;
+  int _revision = 0;
+  int get revision => _revision;
+
+  void _markMutated() {
+    _revision += 1;
+  }
+
+  @override
+  int get length => _inner.length;
+
+  @override
+  set length(int value) {
+    if (value == _inner.length) return;
+    _inner.length = value;
+    _markMutated();
+  }
+
+  @override
+  Offset operator [](int index) => _inner[index];
+
+  @override
+  void operator []=(int index, Offset value) {
+    if (_inner[index] == value) return;
+    _inner[index] = value;
+    _markMutated();
+  }
+
+  @override
+  void add(Offset value) {
+    _inner.add(value);
+    _markMutated();
+  }
+
+  @override
+  void addAll(Iterable<Offset> iterable) {
+    if (iterable.isEmpty) return;
+    _inner.addAll(iterable);
+    _markMutated();
+  }
+
+  @override
+  void clear() {
+    if (_inner.isEmpty) return;
+    _inner.clear();
+    _markMutated();
+  }
+
+  @override
+  void insert(int index, Offset element) {
+    _inner.insert(index, element);
+    _markMutated();
+  }
+
+  @override
+  void insertAll(int index, Iterable<Offset> iterable) {
+    if (iterable.isEmpty) return;
+    _inner.insertAll(index, iterable);
+    _markMutated();
+  }
+
+  @override
+  bool remove(Object? value) {
+    final removed = _inner.remove(value);
+    if (removed) _markMutated();
+    return removed;
+  }
+
+  @override
+  Offset removeAt(int index) {
+    final removed = _inner.removeAt(index);
+    _markMutated();
+    return removed;
+  }
+
+  @override
+  Offset removeLast() {
+    final removed = _inner.removeLast();
+    _markMutated();
+    return removed;
+  }
+
+  @override
+  void removeRange(int start, int end) {
+    if (start == end) return;
+    _inner.removeRange(start, end);
+    _markMutated();
+  }
+
+  @override
+  void replaceRange(int start, int end, Iterable<Offset> replacements) {
+    _inner.replaceRange(start, end, replacements);
+    _markMutated();
+  }
+
+  @override
+  void setAll(int index, Iterable<Offset> iterable) {
+    if (iterable.isEmpty) return;
+    _inner.setAll(index, iterable);
+    _markMutated();
+  }
+
+  @override
+  void setRange(
+    int start,
+    int end,
+    Iterable<Offset> iterable, [
+    int skipCount = 0,
+  ]) {
+    if (start == end) return;
+    _inner.setRange(start, end, iterable, skipCount);
+    _markMutated();
+  }
+
+  @override
+  void fillRange(int start, int end, [Offset? fillValue]) {
+    if (start == end) return;
+    _inner.fillRange(start, end, fillValue);
+    _markMutated();
+  }
+
+  @override
+  void removeWhere(bool Function(Offset element) test) {
+    final before = _inner.length;
+    _inner.removeWhere(test);
+    if (_inner.length != before) _markMutated();
+  }
+
+  @override
+  void retainWhere(bool Function(Offset element) test) {
+    final before = _inner.length;
+    _inner.retainWhere(test);
+    if (_inner.length != before) _markMutated();
+  }
+
+  @override
+  void sort([int Function(Offset a, Offset b)? compare]) {
+    if (_inner.length < 2) return;
+    _inner.sort(compare);
+    _markMutated();
+  }
+
+  @override
+  void shuffle([math.Random? random]) {
+    if (_inner.length < 2) return;
+    _inner.shuffle(random);
+    _markMutated();
   }
 }
 

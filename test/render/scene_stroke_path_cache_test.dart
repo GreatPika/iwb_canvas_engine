@@ -55,6 +55,26 @@ void main() {
     expect(cache.debugBuildCount, 2);
   });
 
+  test('P1-2a: SceneStrokePathCache rebuilds on middle-point mutation', () {
+    final cache = SceneStrokePathCache(maxEntries: 8);
+    final stroke = StrokeNode(
+      id: 's-mid',
+      points: const [Offset(0, 0), Offset(5, 5), Offset(10, 10)],
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+
+    final path1 = cache.getOrBuild(stroke);
+    expect(cache.debugBuildCount, 1);
+
+    stroke.points[1] = const Offset(5, 9);
+    final path2 = cache.getOrBuild(stroke);
+
+    expect(identical(path1, path2), isFalse);
+    expect(cache.debugBuildCount, 2);
+    expect(cache.debugHitCount, 0);
+  });
+
   test('P1-3: SceneStrokePathCache evicts oldest entries (LRU)', () {
     final cache = SceneStrokePathCache(maxEntries: 2);
     final a = StrokeNode(

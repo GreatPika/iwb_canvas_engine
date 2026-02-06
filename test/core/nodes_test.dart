@@ -493,6 +493,93 @@ void main() {
     expect(line.end, const Offset(5, 0));
   });
 
+  test('StrokeNode.pointsRevision increments on point list mutation', () {
+    final stroke = StrokeNode(
+      id: 'stroke-revision',
+      points: const [Offset(0, 0), Offset(1, 1), Offset(2, 2)],
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+
+    int revision = stroke.pointsRevision;
+    void expectChanged(void Function() mutate) {
+      mutate();
+      expect(stroke.pointsRevision, greaterThan(revision));
+      revision = stroke.pointsRevision;
+    }
+
+    void expectUnchanged(void Function() mutate) {
+      mutate();
+      expect(stroke.pointsRevision, revision);
+    }
+
+    expectUnchanged(() => stroke.points.length = stroke.points.length);
+    expectChanged(() => stroke.points.length = 2);
+
+    expectChanged(() => stroke.points.add(const Offset(3, 3)));
+    expectChanged(() => stroke.points.addAll(const [Offset(4, 4)]));
+    expectUnchanged(() => stroke.points.addAll(const []));
+
+    expectChanged(() => stroke.points[0] = const Offset(9, 9));
+    expectUnchanged(() => stroke.points[0] = const Offset(9, 9));
+
+    expectChanged(() => stroke.points.insert(1, const Offset(8, 8)));
+    expectChanged(() => stroke.points.insertAll(2, const [Offset(7, 7)]));
+    expectUnchanged(() => stroke.points.insertAll(2, const []));
+
+    expectUnchanged(() => stroke.points.remove(const Offset(123, 123)));
+    expectChanged(() => stroke.points.remove(const Offset(8, 8)));
+
+    expectChanged(() => stroke.points.removeAt(0));
+    expectChanged(() => stroke.points.removeLast());
+
+    expectUnchanged(() => stroke.points.removeRange(0, 0));
+    expectChanged(() => stroke.points.removeRange(0, 1));
+
+    stroke.points.addAll(const [Offset(1, 1), Offset(2, 2), Offset(3, 3)]);
+    revision = stroke.pointsRevision;
+    expectChanged(
+      () => stroke.points.replaceRange(0, 1, const [Offset(11, 11)]),
+    );
+
+    expectUnchanged(() => stroke.points.setAll(0, const []));
+    expectChanged(() => stroke.points.setAll(0, const [Offset(12, 12)]));
+
+    expectUnchanged(() => stroke.points.setRange(0, 0, const [Offset(13, 13)]));
+    expectChanged(() => stroke.points.setRange(0, 1, const [Offset(14, 14)]));
+
+    expectUnchanged(() => stroke.points.fillRange(0, 0, const Offset(15, 15)));
+    expectChanged(() => stroke.points.fillRange(0, 1, const Offset(16, 16)));
+
+    expectUnchanged(() => stroke.points.removeWhere((_) => false));
+    expectChanged(() => stroke.points.removeWhere((p) => p.dx == 16));
+
+    stroke.points.add(const Offset(20, 20));
+    revision = stroke.pointsRevision;
+    expectUnchanged(() => stroke.points.retainWhere((_) => true));
+    expectChanged(() => stroke.points.retainWhere((p) => p.dx == 20));
+
+    stroke.points
+      ..clear()
+      ..add(const Offset(2, 2));
+    revision = stroke.pointsRevision;
+    expectUnchanged(() => stroke.points.sort());
+    expectUnchanged(() => stroke.points.shuffle());
+
+    stroke.points.add(const Offset(1, 1));
+    revision = stroke.pointsRevision;
+    expectChanged(() => stroke.points.sort((a, b) => a.dx.compareTo(b.dx)));
+    expectChanged(() => stroke.points.shuffle());
+
+    stroke.points.clear();
+    revision = stroke.pointsRevision;
+    expectUnchanged(() => stroke.points.clear());
+
+    stroke.points.add(const Offset(1, 1));
+    revision = stroke.pointsRevision;
+    expectChanged(() => stroke.points.clear());
+  });
+
   test('SceneNode.rotationDeg uses second column when first is near zero', () {
     final node = RectNode(id: 'rect-rot', size: const Size(10, 10))
       ..transform = const Transform2D(a: 0, b: 0, c: -1, d: 0, tx: 0, ty: 0);
