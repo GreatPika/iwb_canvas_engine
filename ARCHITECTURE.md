@@ -211,6 +211,7 @@ Emit `ActionCommitted` on:
     `boundsWorld.inflate(hitPadding + kHitSlop)` in scene units. Note that
     `boundsWorld` already includes stroke thickness via `PathNode.localBounds`.
     This keeps selection usable without expensive geometry distance checks.
+  - Invalid/unbuildable SVG path data is non-interactive in hit-testing.
 - `PathNode` geometry may be open and/or degenerate in bounds (e.g. linear
   paths); validity is not determined by `Rect.isEmpty`.
 - Group transforms use center of union AABB of selected nodes.
@@ -228,6 +229,9 @@ Emit `ActionCommitted` on:
   - `PathNode`: `svgPathData` (source of truth; rendered centered around (0,0))
   - `RectNode` / `ImageNode` / `TextNode`: `size {w,h}` (always centered on (0,0))
 - Export/import validates input and throws a clear `SceneJsonFormatException` on invalid data.
+- Runtime bounds/hit-testing/rendering use soft numeric normalization for
+  width-like values (`thickness`, `strokeWidth`, `hitPadding`) to avoid
+  NaN/Infinity propagation; strict validation is enforced at the JSON boundary.
 
 ## Events
 

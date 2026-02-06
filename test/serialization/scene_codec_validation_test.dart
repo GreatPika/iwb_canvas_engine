@@ -591,6 +591,61 @@ void main() {
     );
   });
 
+  test('decodeScene rejects invalid width-like numeric fields', () {
+    final strokeWithNonFiniteThickness = _baseNodeJson(id: 's2', type: 'stroke')
+      ..addAll(<String, dynamic>{
+        'localPoints': <dynamic>[
+          <String, dynamic>{'x': 0, 'y': 0},
+        ],
+        'thickness': double.nan,
+        'color': '#FF000000',
+      });
+    expect(
+      () => decodeScene(_sceneWithSingleNode(strokeWithNonFiniteThickness)),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Field thickness must be finite.',
+        ),
+      ),
+    );
+
+    final pathWithNegativeStrokeWidth = _baseNodeJson(id: 'p2', type: 'path')
+      ..addAll(<String, dynamic>{
+        'svgPathData': 'M0 0 H10 V10 H0 Z',
+        'strokeWidth': -1,
+        'fillRule': 'nonZero',
+      });
+    expect(
+      () => decodeScene(_sceneWithSingleNode(pathWithNegativeStrokeWidth)),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Field strokeWidth must be >= 0.',
+        ),
+      ),
+    );
+
+    final rectWithNonFiniteHitPadding = _baseNodeJson(id: 'r1', type: 'rect')
+      ..addAll(<String, dynamic>{
+        'size': <String, dynamic>{'w': 10, 'h': 10},
+        'strokeWidth': 1,
+        'hitPadding': double.infinity,
+      });
+    expect(
+      () => decodeScene(_sceneWithSingleNode(rectWithNonFiniteHitPadding)),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Field hitPadding must be finite.',
+        ),
+      ),
+    );
+  });
+
   test('decodeScene rejects non-positive grid cellSize', () {
     final json = _minimalSceneJson();
     ((json['background'] as Map<String, dynamic>)['grid']

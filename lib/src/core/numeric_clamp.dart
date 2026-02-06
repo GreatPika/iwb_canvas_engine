@@ -3,7 +3,8 @@
 /// Note: JSON import/export applies stricter validation and throws on invalid
 /// values. These helpers exist to make rendering, bounds, and hit-testing
 /// robust against invalid runtime values (e.g. NaN/Infinity, negative
-/// thickness) without throwing.
+/// width-like values such as thickness/strokeWidth/hitPadding) without
+/// throwing.
 library;
 
 import 'dart:ui';

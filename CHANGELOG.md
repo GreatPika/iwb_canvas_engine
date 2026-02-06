@@ -18,10 +18,14 @@
   (selection = fill ∪ stroke; coarse stage A for stroke).
 - Fix: `PathNode` stroke hit-testing no longer double-counts `strokeWidth` when
   inflating `boundsWorld`; selection tolerance uses only `hitPadding + kHitSlop`.
+- Fix: invalid/unbuildable `PathNode` SVG data is now non-interactive in
+  hit-testing (no coarse AABB phantom hits).
 - Fix: hit-testing fallback for non-invertible transforms now preserves
   `hitPadding` + `kHitSlop` and keeps nodes selectable via inflated `boundsWorld`.
 - Fix: negative `thickness/strokeWidth` values are treated as zero in bounds,
   hit-testing (including `hitTestLine`), and rendering.
+- Core: `segmentsIntersect` now uses scale-aware epsilon logic for near-collinear
+  doubles, improving robustness in eraser-adjacent segment cases.
 - Fix: runtime bounds/hit-testing/rendering sanitize non-finite numeric values
   (NaN/Infinity) to prevent crashes and non-finite geometry; JSON validation
   remains strict.

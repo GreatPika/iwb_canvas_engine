@@ -145,6 +145,8 @@ Stable contracts (expected to remain compatible as the package evolves):
     - Stroke uses a coarse AABB check (stage A) with tolerance
       `boundsWorld.inflate(hitPadding + kHitSlop)` in scene units (stroke thickness is already
       included in `boundsWorld` via `PathNode.localBounds`).
+    - Invalid/unbuildable SVG path data is non-interactive at runtime
+      (`buildLocalPath() == null` => no hit).
 - **List ownership:** `Scene(layers: ...)` and `Layer(nodes: ...)` defensively copy
   the provided lists. Mutating the original list after construction does not affect
   the scene/layer.
@@ -193,6 +195,7 @@ Stable contracts (expected to remain compatible as the package evolves):
   invalid numeric inputs to avoid propagating NaN/Infinity or crashing.
   - Length-like values (`thickness`, `strokeWidth`, `hitPadding`, `Size.*`) treat
     non-finite and negative values as `0`.
+  - This soft normalization is runtime-only; JSON import/export remains strict.
   - `opacity` treats non-finite values as `1` and clamps to `[0,1]`.
   - Grid rendering treats non-finite / non-positive `cellSize` as "grid disabled"
     even if `grid.enabled == true`.

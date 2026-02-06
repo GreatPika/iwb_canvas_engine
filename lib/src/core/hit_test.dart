@@ -91,13 +91,14 @@ bool hitTestNode(Offset point, SceneNode node) {
     case NodeType.path:
       final pathNode = node as PathNode;
       final baseHitPadding = clampNonNegativeFinite(pathNode.hitPadding);
+      final localPath = pathNode.buildLocalPath(copy: false);
+      // Invalid/unbuildable path data is non-interactive at runtime.
+      if (localPath == null) return false;
       if (pathNode.fillColor != null) {
         final padding = baseHitPadding + kHitSlop;
         if (!pathNode.boundsWorld.inflate(padding).contains(point)) {
           return false;
         }
-        final localPath = pathNode.buildLocalPath(copy: false);
-        if (localPath == null) return false;
         final inverse = pathNode.transform.invert();
         if (inverse == null) return true;
         final localPoint = inverse.applyToPoint(point);

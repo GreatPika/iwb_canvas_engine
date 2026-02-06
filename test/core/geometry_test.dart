@@ -113,6 +113,7 @@ void main() {
 
   test('hitTestLine/hitTestStroke sanitize non-finite numeric inputs', () {
     // INV:INV-CORE-RUNTIME-NUMERIC-SANITIZATION
+    // INV:INV-CORE-NONNEGATIVE-WIDTHS-CLAMP
     const start = Offset(0, 0);
     const end = Offset(10, 0);
     const onLine = Offset(5, 0);
@@ -134,6 +135,10 @@ void main() {
     );
     expect(
       hitTestStroke(onLine, points, 0, hitPadding: double.infinity),
+      hitTestStroke(onLine, points, 0, hitPadding: 0),
+    );
+    expect(
+      hitTestStroke(onLine, points, 0, hitPadding: double.nan),
       hitTestStroke(onLine, points, 0, hitPadding: 0),
     );
     expect(
@@ -638,6 +643,33 @@ void main() {
     expect(hitTestNode(const Offset(52, 0), node), isTrue);
   });
 
+  test(
+    'invalid PathNode is non-interactive for stroke-only and fill+stroke',
+    () {
+      // INV:INV-CORE-PATH-HITTEST-INVALID-NONINTERACTIVE
+      final strokeOnly = PathNode(
+        id: 'path-invalid-stroke',
+        svgPathData: 'not-a-path',
+        strokeColor: const Color(0xFF000000),
+        strokeWidth: 8,
+      );
+      final fillAndStroke = PathNode(
+        id: 'path-invalid-fill-stroke',
+        svgPathData: 'not-a-path',
+        fillColor: const Color(0xFF000000),
+        strokeColor: const Color(0xFF000000),
+        strokeWidth: 8,
+      );
+
+      final probeStrokeOnly =
+          strokeOnly.boundsWorld.topLeft + const Offset(1, 1);
+      final probeFillAndStroke =
+          fillAndStroke.boundsWorld.topLeft + const Offset(1, 1);
+      expect(hitTestNode(probeStrokeOnly, strokeOnly), isFalse);
+      expect(hitTestNode(probeFillAndStroke, fillAndStroke), isFalse);
+    },
+  );
+
   test('distancePointToSegment handles degenerate segments', () {
     const point = Offset(3, 4);
     const a = Offset(1, 1);
@@ -682,6 +714,7 @@ void main() {
   });
 
   test('segmentsIntersect handles colinear overlaps', () {
+    // INV:INV-CORE-NUMERIC-ROBUSTNESS
     expect(
       segmentsIntersect(
         const Offset(0, 0),
@@ -693,6 +726,33 @@ void main() {
     );
   });
 
+  test('segmentsIntersect handles near-collinear overlap robustly', () {
+    expect(
+      segmentsIntersect(
+        const Offset(0, 0),
+        const Offset(10, 10),
+        const Offset(5, 5 + 1e-13),
+        const Offset(15, 15 + 1e-13),
+      ),
+      isTrue,
+    );
+  });
+
+  test(
+    'segmentsIntersect rejects near-collinear non-overlap with tiny gap',
+    () {
+      expect(
+        segmentsIntersect(
+          const Offset(0, 0),
+          const Offset(10, 10),
+          const Offset(10 + 1e-6, 10 + 1e-6),
+          const Offset(20, 20),
+        ),
+        isFalse,
+      );
+    },
+  );
+
   test(
     'distanceSegmentToSegment returns positive distance for parallel lines',
     () {
@@ -703,6 +763,22 @@ void main() {
         const Offset(10, 5),
       );
       expect(distance, closeTo(5, 0.0001));
+    },
+  );
+
+  test(
+    'distanceSegmentToSegment stays finite for eraser-adjacent segments',
+    () {
+      final distance = distanceSegmentToSegment(
+        const Offset(0, 0),
+        const Offset(100, 0),
+        const Offset(100 + 1e-9, 1e-9),
+        const Offset(200, 1e-9),
+      );
+
+      expect(distance.isFinite, isTrue);
+      expect(distance, greaterThan(0));
+      expect(distance, lessThan(1e-6));
     },
   );
 }

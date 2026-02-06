@@ -108,30 +108,52 @@ double distancePointToSegment(Offset point, Offset a, Offset b) {
 
 /// Returns true if segments [a1]-[a2] and [b1]-[b2] intersect.
 bool segmentsIntersect(Offset a1, Offset a2, Offset b1, Offset b2) {
-  int orientation(Offset p, Offset q, Offset r) {
+  // Scale epsilon with coordinate magnitude to keep orientation/on-segment
+  // checks stable across tiny and large coordinate ranges.
+  final deltaA = a2 - a1;
+  final deltaB = b2 - b1;
+  final maxScale = <double>[
+    1.0,
+    a1.dx.abs(),
+    a1.dy.abs(),
+    a2.dx.abs(),
+    a2.dy.abs(),
+    b1.dx.abs(),
+    b1.dy.abs(),
+    b2.dx.abs(),
+    b2.dy.abs(),
+    deltaA.dx.abs(),
+    deltaA.dy.abs(),
+    deltaB.dx.abs(),
+    deltaB.dy.abs(),
+  ].reduce(math.max);
+  final orientationEpsilon = kEpsilon * maxScale * maxScale;
+  final coordinateEpsilon = kEpsilon * maxScale;
+
+  int orientationEps(Offset p, Offset q, Offset r) {
     final val = (q.dy - p.dy) * (r.dx - q.dx) - (q.dx - p.dx) * (r.dy - q.dy);
-    if (val == 0) return 0;
+    if (val.abs() <= orientationEpsilon) return 0;
     return val > 0 ? 1 : 2;
   }
 
-  bool onSegment(Offset p, Offset q, Offset r) {
-    return q.dx <= math.max(p.dx, r.dx) &&
-        q.dx >= math.min(p.dx, r.dx) &&
-        q.dy <= math.max(p.dy, r.dy) &&
-        q.dy >= math.min(p.dy, r.dy);
+  bool onSegmentEps(Offset p, Offset q, Offset r) {
+    return q.dx <= math.max(p.dx, r.dx) + coordinateEpsilon &&
+        q.dx >= math.min(p.dx, r.dx) - coordinateEpsilon &&
+        q.dy <= math.max(p.dy, r.dy) + coordinateEpsilon &&
+        q.dy >= math.min(p.dy, r.dy) - coordinateEpsilon;
   }
 
-  final o1 = orientation(a1, a2, b1);
-  final o2 = orientation(a1, a2, b2);
-  final o3 = orientation(b1, b2, a1);
-  final o4 = orientation(b1, b2, a2);
+  final o1 = orientationEps(a1, a2, b1);
+  final o2 = orientationEps(a1, a2, b2);
+  final o3 = orientationEps(b1, b2, a1);
+  final o4 = orientationEps(b1, b2, a2);
 
   if (o1 != o2 && o3 != o4) return true;
 
-  if (o1 == 0 && onSegment(a1, b1, a2)) return true;
-  if (o2 == 0 && onSegment(a1, b2, a2)) return true;
-  if (o3 == 0 && onSegment(b1, a1, b2)) return true;
-  if (o4 == 0 && onSegment(b1, a2, b2)) return true;
+  if (o1 == 0 && onSegmentEps(a1, b1, a2)) return true;
+  if (o2 == 0 && onSegmentEps(a1, b2, a2)) return true;
+  if (o3 == 0 && onSegmentEps(b1, a1, b2)) return true;
+  if (o4 == 0 && onSegmentEps(b1, a2, b2)) return true;
 
   return false;
 }

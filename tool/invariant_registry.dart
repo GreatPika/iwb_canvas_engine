@@ -188,7 +188,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-CORE-NONNEGATIVE-WIDTHS-CLAMP',
     scope: 'core',
     title:
-        'Negative thickness/strokeWidth are treated as 0 in bounds/hit-test/render.',
+        'Runtime width-like fields (thickness/strokeWidth/hitPadding) soft-normalize negative/non-finite values to non-negative finite values in bounds/hit-test/render.',
   ),
   Invariant(
     id: 'INV-CORE-CONVENIENCE-SETTERS-REJECT-SHEAR',
@@ -219,6 +219,12 @@ const List<Invariant> invariants = <Invariant>[
     scope: 'hit-test',
     title:
         'PathNode stroke hit-test inflates boundsWorld only by hitPadding + kHitSlop (strokeWidth is already included in bounds).',
+  ),
+  Invariant(
+    id: 'INV-CORE-PATH-HITTEST-INVALID-NONINTERACTIVE',
+    scope: 'hit-test',
+    title:
+        'PathNode with invalid/unbuildable local path is non-interactive in hit-testing.',
   ),
   Invariant(
     id: 'INV-CORE-HITTEST-FALLBACK-INFLATED-AABB',

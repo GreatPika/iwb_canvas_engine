@@ -57,6 +57,7 @@ Prefer importing the smallest API surface that fits your use case:
   layer are rendered in list order. The last node is top-most for hit-testing.
 - **Path hit-testing**: `PathNode` selection uses fill ∪ stroke; fill is checked
   via `Path.contains`, and stroke uses a coarse AABB tolerance (stage A).
+  Invalid/unbuildable SVG path data is non-interactive in hit-testing.
 - **Local geometry + `Transform2D`**: node geometry is stored in local
   coordinates around (0,0). `SceneNode.transform` (2×3 affine matrix) is the
   single source of truth for translation/rotation/scale.
@@ -256,6 +257,10 @@ final restored = decodeSceneFromJson(json);
 Numeric fields must be finite and within valid ranges (for example, opacity
 must be within `[0,1]` and thickness values must be `> 0`). Invalid input
 throws `SceneJsonFormatException`.
+
+At runtime, bounds/hit-testing/rendering are defensive: non-finite or negative
+length-like values (`thickness`, `strokeWidth`, `hitPadding`) are soft-normalized
+to safe finite non-negative values instead of throwing.
 
 ## API reference
 
