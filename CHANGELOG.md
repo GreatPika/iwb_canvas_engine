@@ -1,5 +1,9 @@
 ## Unreleased
 
+- Behavior: `hitTestTopNode` now skips `Layer.isBackground` layers, so
+  background content is no longer returned by top-level selection hit-testing.
+- Core: normalize `SceneNode.opacity` at assignment time (`!finite -> 1`,
+  clamp `[0,1]`), aligning model/runtime behavior with rendering.
 - Perf: remove hot-path list allocation in `segmentsIntersect` by switching to
   allocation-free max-scale aggregation.
 - Tests: extend invalid `PathNode` hit-test regression to cover fill-only nodes

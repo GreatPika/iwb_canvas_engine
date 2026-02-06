@@ -30,13 +30,15 @@ abstract class SceneNode {
     required this.type,
     this.hitPadding = 0,
     Transform2D? transform,
-    this.opacity = 1,
+    double opacity = 1,
     this.isVisible = true,
     this.isSelectable = true,
     this.isLocked = false,
     this.isDeletable = true,
     this.isTransformable = true,
-  }) : transform = transform ?? Transform2D.identity;
+  }) : transform = transform ?? Transform2D.identity {
+    this.opacity = opacity;
+  }
 
   final NodeId id;
   final NodeType type;
@@ -55,10 +57,11 @@ abstract class SceneNode {
   ///
   /// Expected to be finite.
   ///
-  /// Runtime behavior: non-finite values are treated as `1` and values outside
-  /// `[0,1]` are clamped during rendering; JSON serialization rejects invalid
-  /// values.
-  double opacity;
+  /// Runtime behavior: values are normalized at assignment (`!finite -> 1`,
+  /// clamped to `[0,1]`); JSON serialization rejects invalid values.
+  double get opacity => _opacity;
+  late double _opacity;
+  set opacity(double value) => _opacity = clamp01Finite(value);
   bool isVisible;
   bool isSelectable;
   bool isLocked;

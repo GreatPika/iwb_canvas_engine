@@ -156,6 +156,12 @@ const List<Invariant> invariants = <Invariant>[
         'Runtime bounds/hit-test/render sanitize non-finite numeric parameters (no NaN/Infinity propagation)',
   ),
   Invariant(
+    id: 'INV-CORE-OPACITY-RUNTIME-CLAMP01',
+    scope: 'core',
+    title:
+        'SceneNode.opacity normalizes runtime writes (`!finite -> 1`, clamp to `[0,1]`)',
+  ),
+  Invariant(
     id: 'INV-CORE-PATHNODE-LINEAR-PATHS',
     scope: 'core',
     title:
@@ -231,5 +237,10 @@ const List<Invariant> invariants = <Invariant>[
     scope: 'hit-test',
     title:
         'When inverse transform is unavailable, hit-test falls back to boundsWorld inflated by hitPadding + kHitSlop',
+  ),
+  Invariant(
+    id: 'INV-CORE-HITTEST-TOP-SKIPS-BACKGROUND',
+    scope: 'hit-test',
+    title: 'hitTestTopNode skips layers marked as isBackground',
   ),
 ];

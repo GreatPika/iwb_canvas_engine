@@ -666,6 +666,48 @@ void main() {
     }
   });
 
+  test('SceneNode.opacity normalizes constructor and setter writes', () {
+    // INV:INV-CORE-OPACITY-RUNTIME-CLAMP01
+    final fromNan = RectNode(
+      id: 'rect-opacity-nan',
+      size: const Size(10, 10),
+      opacity: double.nan,
+    );
+    expect(fromNan.opacity, 1);
+
+    final fromInfinity = RectNode(
+      id: 'rect-opacity-inf',
+      size: const Size(10, 10),
+      opacity: double.infinity,
+    );
+    expect(fromInfinity.opacity, 1);
+
+    final fromNegative = RectNode(
+      id: 'rect-opacity-neg',
+      size: const Size(10, 10),
+      opacity: -0.2,
+    );
+    expect(fromNegative.opacity, 0);
+
+    final fromAboveOne = RectNode(
+      id: 'rect-opacity-hi',
+      size: const Size(10, 10),
+      opacity: 1.7,
+    );
+    expect(fromAboveOne.opacity, 1);
+
+    final setter = RectNode(
+      id: 'rect-opacity-setter',
+      size: const Size(10, 10),
+    );
+    setter.opacity = double.nan;
+    expect(setter.opacity, 1);
+    setter.opacity = -0.2;
+    expect(setter.opacity, 0);
+    setter.opacity = 1.7;
+    expect(setter.opacity, 1);
+  });
+
   test('boundsWorld is Rect.zero for non-finite transforms', () {
     final node = RectNode(
       id: 'rect-nonfinite-transform',

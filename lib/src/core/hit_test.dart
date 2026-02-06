@@ -171,6 +171,7 @@ SceneNode? hitTestTopNode(Scene scene, Offset point) {
     layerIndex--
   ) {
     final layer = scene.layers[layerIndex];
+    if (layer.isBackground) continue;
     for (var nodeIndex = layer.nodes.length - 1; nodeIndex >= 0; nodeIndex--) {
       final node = layer.nodes[nodeIndex];
       if (hitTestNode(point, node)) {

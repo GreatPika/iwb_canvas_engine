@@ -201,6 +201,47 @@ void main() {
     expect(hitTestNode(worldOutside, node), isTrue);
   });
 
+  test('hitTestTopNode skips background layers', () {
+    // INV:INV-CORE-HITTEST-TOP-SKIPS-BACKGROUND
+    final foreground = RectNode(
+      id: 'fg',
+      size: const Size(20, 20),
+      fillColor: const Color(0xFF000000),
+    );
+    final background = RectNode(
+      id: 'bg',
+      size: const Size(20, 20),
+      fillColor: const Color(0xFF000000),
+    );
+
+    final scene = Scene(
+      layers: [
+        Layer(nodes: [foreground]),
+        Layer(nodes: [background], isBackground: true),
+      ],
+    );
+
+    final hit = hitTestTopNode(scene, Offset.zero);
+    expect(hit?.id, 'fg');
+    expect(hitTestNode(Offset.zero, background), isTrue);
+  });
+
+  test('hitTestTopNode returns null when only background layers are hit', () {
+    // INV:INV-CORE-HITTEST-TOP-SKIPS-BACKGROUND
+    final background = RectNode(
+      id: 'bg-only',
+      size: const Size(20, 20),
+      fillColor: const Color(0xFF000000),
+    );
+    final scene = Scene(
+      layers: [
+        Layer(nodes: [background], isBackground: true),
+      ],
+    );
+
+    expect(hitTestTopNode(scene, Offset.zero), isNull);
+  });
+
   test('hitTestNode uses local bounds for rotated ImageNode', () {
     final node =
         ImageNode(id: 'image-rot', imageId: 'img-1', size: const Size(120, 60))

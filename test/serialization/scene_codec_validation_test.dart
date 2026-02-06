@@ -56,6 +56,20 @@ Map<String, dynamic> _baseNodeJson({required String id, required String type}) {
   };
 }
 
+class _RectNodeWithInvalidOpacityGetter extends RectNode {
+  _RectNodeWithInvalidOpacityGetter({
+    required super.id,
+    required super.size,
+    super.fillColor,
+  });
+
+  @override
+  double get opacity => 2;
+
+  @override
+  set opacity(double value) {}
+}
+
 void main() {
   // INV:INV-SER-JSON-NUMERIC-VALIDATION
   test('encodeSceneToJson -> decodeSceneFromJson is stable', () {
@@ -804,96 +818,120 @@ void main() {
     );
   });
 
-  test('encodeScene rejects non-finite and out-of-range numeric fields', () {
-    final cameraNaN = Scene(
-      layers: [Layer()],
-      camera: Camera(offset: Offset(double.nan, 0)),
-    );
-    expect(
-      () => encodeScene(cameraNaN),
-      throwsA(
-        predicate(
-          (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Field camera.offsetX must be finite.',
+  test(
+    'encodeScene rejects invalid numeric fields but accepts runtime-normalized opacity',
+    () {
+      final cameraNaN = Scene(
+        layers: [Layer()],
+        camera: Camera(offset: Offset(double.nan, 0)),
+      );
+      expect(
+        () => encodeScene(cameraNaN),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneJsonFormatException &&
+                e.message == 'Field camera.offsetX must be finite.',
+          ),
         ),
-      ),
-    );
+      );
 
-    final negativeHitPaddingScene = Scene(
-      layers: [
-        Layer(
-          nodes: [
-            RectNode(
-              id: 'r1',
-              size: const Size(10, 10),
-              fillColor: const Color(0xFF000000),
-              hitPadding: -1,
-            ),
-          ],
+      final negativeHitPaddingScene = Scene(
+        layers: [
+          Layer(
+            nodes: [
+              RectNode(
+                id: 'r1',
+                size: const Size(10, 10),
+                fillColor: const Color(0xFF000000),
+                hitPadding: -1,
+              ),
+            ],
+          ),
+        ],
+      );
+      expect(
+        () => encodeScene(negativeHitPaddingScene),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneJsonFormatException &&
+                e.message == 'Field node.hitPadding must be >= 0.',
+          ),
         ),
-      ],
-    );
-    expect(
-      () => encodeScene(negativeHitPaddingScene),
-      throwsA(
-        predicate(
-          (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Field node.hitPadding must be >= 0.',
-        ),
-      ),
-    );
+      );
 
-    final nonPositiveFontSizeScene = Scene(
-      layers: [
-        Layer(
-          nodes: [
-            TextNode(
-              id: 't1',
-              text: 'Hello',
-              size: const Size(10, 10),
-              fontSize: 0,
-              color: const Color(0xFF000000),
-            ),
-          ],
+      final nonPositiveFontSizeScene = Scene(
+        layers: [
+          Layer(
+            nodes: [
+              TextNode(
+                id: 't1',
+                text: 'Hello',
+                size: const Size(10, 10),
+                fontSize: 0,
+                color: const Color(0xFF000000),
+              ),
+            ],
+          ),
+        ],
+      );
+      expect(
+        () => encodeScene(nonPositiveFontSizeScene),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneJsonFormatException &&
+                e.message == 'Field text.fontSize must be > 0.',
+          ),
         ),
-      ],
-    );
-    expect(
-      () => encodeScene(nonPositiveFontSizeScene),
-      throwsA(
-        predicate(
-          (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Field text.fontSize must be > 0.',
-        ),
-      ),
-    );
+      );
 
-    final opacityOutOfRangeScene = Scene(
-      layers: [
-        Layer(
-          nodes: [
-            RectNode(
-              id: 'r1',
-              size: const Size(10, 10),
-              fillColor: const Color(0xFF000000),
-              opacity: 2,
-            ),
-          ],
+      final opacityOutOfRangeScene = Scene(
+        layers: [
+          Layer(
+            nodes: [
+              RectNode(
+                id: 'r1',
+                size: const Size(10, 10),
+                fillColor: const Color(0xFF000000),
+                opacity: 2,
+              ),
+            ],
+          ),
+        ],
+      );
+      final encoded = encodeScene(opacityOutOfRangeScene);
+      final nodes =
+          ((encoded['layers'] as List<dynamic>).single
+                  as Map<String, dynamic>)['nodes']
+              as List<dynamic>;
+      final encodedOpacity = (nodes.single as Map<String, dynamic>)['opacity'];
+      expect(encodedOpacity, 1);
+
+      final bypassedOpacityScene = Scene(
+        layers: [
+          Layer(
+            nodes: [
+              _RectNodeWithInvalidOpacityGetter(
+                id: 'r2',
+                size: const Size(10, 10),
+                fillColor: const Color(0xFF000000),
+              ),
+            ],
+          ),
+        ],
+      );
+      expect(
+        () => encodeScene(bypassedOpacityScene),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneJsonFormatException &&
+                e.message == 'Field node.opacity must be within [0,1].',
+          ),
         ),
-      ],
-    );
-    expect(
-      () => encodeScene(opacityOutOfRangeScene),
-      throwsA(
-        predicate(
-          (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Field node.opacity must be within [0,1].',
-        ),
-      ),
-    );
-  });
+      );
+    },
+  );
 }

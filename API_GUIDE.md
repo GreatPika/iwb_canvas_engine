@@ -136,6 +136,7 @@ Stable contracts (expected to remain compatible as the package evolves):
 - Layers are rendered in list order; nodes are rendered in list order.
 - **Z-order / hit-test:** the **last** node in a layer is the top-most; the **last** layer is on top.
   - Source of truth: `hitTestTopNode` in `lib/src/core/hit_test.dart`.
+  - `hitTestTopNode` skips layers with `isBackground == true`.
   - Hit-test tolerance uses `kHitSlop` + `SceneNode.hitPadding` in **scene/world units**
     (scale-aware). When `transform.invert()` is unavailable (degenerate
     transforms), hit-testing falls back to `boundsWorld.inflate(hitPadding + kHitSlop)`
@@ -196,7 +197,8 @@ Stable contracts (expected to remain compatible as the package evolves):
   - Length-like values (`thickness`, `strokeWidth`, `hitPadding`, `Size.*`) treat
     non-finite and negative values as `0`.
   - This soft normalization is runtime-only; JSON import/export remains strict.
-  - `opacity` treats non-finite values as `1` and clamps to `[0,1]`.
+  - `opacity` is normalized at core-model assignment: non-finite values become
+    `1` and finite values are clamped to `[0,1]`.
   - Grid rendering treats non-finite / non-positive `cellSize` as "grid disabled"
     even if `grid.enabled == true`.
   - Camera offset sanitizes non-finite components to `0`.

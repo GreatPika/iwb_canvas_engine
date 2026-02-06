@@ -19,5 +19,5 @@ Plan editing rule: checkbox-only updates in this file must be minimal and scoped
 
 ### Nice to have (P2 — behavior/UX alignment)
 
-- [ ] Decide whether `Layer.isBackground` must affect interactivity in `hitTestTopNode` (skip background layers) or remain a rendering-only flag with explicit `isSelectable=false` enforcement outside hit-testing.
-- [ ] Unify runtime numeric sanitization semantics for `opacity` across core/render paths (currently effectively clamped in rendering but not normalized at the core model layer).
+- [x] Decide whether `Layer.isBackground` must affect interactivity in `hitTestTopNode` (skip background layers) or remain a rendering-only flag with explicit `isSelectable=false` enforcement outside hit-testing.
+- [x] Unify runtime numeric sanitization semantics for `opacity` across core/render paths (currently effectively clamped in rendering but not normalized at the core model layer).

@@ -196,6 +196,8 @@ Emit `ActionCommitted` on:
 
 ## Hit-testing and math
 
+- `hitTestTopNode` ignores layers with `isBackground == true`; background layers
+  are render-only at top-level selection/hit-test.
 - Rect/Image/Text nodes hit-test in local coordinates by transforming the
   pointer via `inverse(transform)` and checking `localBounds` (inflated by
   `hitPadding + kHitSlop`). When the inverse is unavailable (degenerate
@@ -229,9 +231,11 @@ Emit `ActionCommitted` on:
   - `PathNode`: `svgPathData` (source of truth; rendered centered around (0,0))
   - `RectNode` / `ImageNode` / `TextNode`: `size {w,h}` (always centered on (0,0))
 - Export/import validates input and throws a clear `SceneJsonFormatException` on invalid data.
-- Runtime bounds/hit-testing/rendering use soft numeric normalization for
-  width-like values (`thickness`, `strokeWidth`, `hitPadding`) to avoid
+- Runtime bounds/hit-testing/rendering use soft numeric normalization to avoid
   NaN/Infinity propagation; strict validation is enforced at the JSON boundary.
+  - Width-like values (`thickness`, `strokeWidth`, `hitPadding`) normalize to
+    finite non-negative values.
+  - `opacity` normalizes in the core model (`!finite -> 1`, clamp to `[0,1]`).
 
 ## Events
 

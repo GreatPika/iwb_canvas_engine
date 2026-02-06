@@ -258,9 +258,10 @@ Numeric fields must be finite and within valid ranges (for example, opacity
 must be within `[0,1]` and thickness values must be `> 0`). Invalid input
 throws `SceneJsonFormatException`.
 
-At runtime, bounds/hit-testing/rendering are defensive: non-finite or negative
-length-like values (`thickness`, `strokeWidth`, `hitPadding`) are soft-normalized
-to safe finite non-negative values instead of throwing.
+At runtime, bounds/hit-testing/rendering are defensive:
+- non-finite or negative length-like values (`thickness`, `strokeWidth`,
+  `hitPadding`) are soft-normalized to safe finite non-negative values;
+- `opacity` is normalized in the core model (`!finite -> 1`, clamp `[0,1]`).
 
 ## API reference
 
