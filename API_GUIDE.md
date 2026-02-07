@@ -53,6 +53,10 @@ class CanvasScreen extends StatelessWidget {
 }
 ```
 
+When `SceneView` owns the controller, updating its `pointerSettings`,
+`dragStartSlop`, or `nodeIdGenerator` parameters reconfigures the same
+controller instance (no recreation).
+
 ### 2) External `SceneController` + explicit `Scene(layers:[Layer()])`
 
 ```dart
@@ -87,6 +91,22 @@ class _CanvasScreenState extends State<CanvasScreen> {
   }
 }
 ```
+
+### 3) Reconfigure input settings at runtime (without recreating controller)
+
+```dart
+controller.reconfigureInput(
+  pointerSettings: const PointerInputSettings(
+    tapSlop: 10,
+    doubleTapMaxDelayMs: 450,
+  ),
+  dragStartSlop: 12,
+  nodeIdGenerator: () => 'node-${DateTime.now().microsecondsSinceEpoch}',
+);
+```
+
+If called during an active pointer gesture, the new config is applied after
+that gesture ends.
 
 ---
 
@@ -300,6 +320,8 @@ Gotchas:
   layer and adds the node there.
 - If you want the controller to generate IDs, use controller-created nodes/flows or provide `nodeIdGenerator`.
 - The default `node-{n}` generator starts at `max(existing node-{n}) + 1` for the provided scene (so bulk node creation stays fast).
+- Use `reconfigureInput(...)` when you need to update pointer thresholds or
+  ID-generation strategy at runtime without replacing the controller.
 
 Relevant APIs:
 - `SceneController.addNode/removeNode/moveNode` — `lib/src/input/scene_controller.dart`

@@ -138,6 +138,10 @@ SceneView(
 );
 ```
 
+When `SceneView` owns the controller, updating these widget parameters at
+runtime reconfigures the same controller instance (no recreation). If a pointer
+gesture is active, the new configuration is applied after that gesture ends.
+
 ### Advanced view (external controller)
 
 ```dart
@@ -154,6 +158,20 @@ Node IDs must be unique within a scene. By default, `SceneController` generates
 `max(existing node-{n}) + 1` for the provided scene (so it doesn't scan the
 whole scene on every new node when nodes are created in bulk). Pass
 `nodeIdGenerator` if you need a custom scheme.
+
+You can update input/runtime generation config without recreating the
+controller:
+
+```dart
+controller.reconfigureInput(
+  pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 500),
+  dragStartSlop: 10,
+  nodeIdGenerator: () => 'custom-${DateTime.now().microsecondsSinceEpoch}',
+);
+```
+
+If called during an active pointer gesture, the new config is deferred and
+applies from the next gesture.
 
 ### Events
 

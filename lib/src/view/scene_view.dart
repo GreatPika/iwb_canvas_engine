@@ -39,6 +39,11 @@ class SceneView extends StatefulWidget {
   /// [nodeIdGenerator] are used to configure the internal controller.
   /// These parameters are ignored when an external [controller] is provided.
   ///
+  /// When this widget owns the controller, updating these parameters at
+  /// runtime reconfigures the existing controller via
+  /// [SceneController.reconfigureInput]. If a pointer gesture is active, the
+  /// new settings are applied after that gesture ends.
+  ///
   /// If [staticLayerCache] is null, the view creates and owns an internal cache
   /// and disposes it when the view is disposed. If a cache is provided, the
   /// caller owns it and must dispose it.
@@ -88,8 +93,14 @@ class SceneView extends StatefulWidget {
   final SceneViewPointerSampleCallback? onPointerSampleBefore;
   final SceneViewPointerSampleCallback? onPointerSampleAfter;
   final ValueChanged<SceneController>? onControllerReady;
+
+  /// Pointer signal/tap thresholds for the owned controller.
   final PointerInputSettings? pointerSettings;
+
+  /// Drag threshold override for the owned controller.
   final double? dragStartSlop;
+
+  /// Custom node ID generator for nodes created by the owned controller.
   final String Function()? nodeIdGenerator;
   final Color selectionColor;
   final double selectionStrokeWidth;
@@ -111,6 +122,8 @@ class _SceneViewState extends State<SceneView> {
   Timer? _pendingTapTimer;
   int _lastTimestampMs = 0;
   SceneController? _ownedController;
+  int? _activePointerId;
+  bool _pendingPointerTrackerRefresh = false;
 
   SceneController get _controller => widget.controller ?? _ownedController!;
 
@@ -153,13 +166,25 @@ class _SceneViewState extends State<SceneView> {
         _ensureController();
       }
     }
+    final ownsController =
+        widget.controller == null && _ownedController != null;
+    if (ownsController && _ownedInputConfigChanged(oldWidget)) {
+      _ownedController!.reconfigureInput(
+        pointerSettings: _resolvedPointerSettings(widget.pointerSettings),
+        dragStartSlop: widget.dragStartSlop,
+        nodeIdGenerator: widget.nodeIdGenerator,
+      );
+      if (_activePointerId != null) {
+        _pendingPointerTrackerRefresh = true;
+      } else {
+        _resetPointerTracker();
+      }
+    }
     if (controllerChanged ||
         (widget.controller == null && _ownedController == null)) {
-      _pointerTracker = PointerInputTracker(
-        settings: _controller.pointerSettings,
-      );
-      _pendingTapTimer?.cancel();
-      _lastTimestampMs = 0;
+      _activePointerId = null;
+      _pendingPointerTrackerRefresh = false;
+      _resetPointerTracker();
     }
   }
 
@@ -255,6 +280,7 @@ class _SceneViewState extends State<SceneView> {
       phase: phase,
       kind: event.kind,
     );
+    _captureActivePointer(sample);
 
     widget.onPointerSampleBefore?.call(controller, sample);
     controller.handlePointer(sample);
@@ -263,6 +289,7 @@ class _SceneViewState extends State<SceneView> {
     final signals = _pointerTracker.handle(sample);
     _dispatchSignals(signals);
     _schedulePendingFlush(sample.timestampMs);
+    _releaseActivePointerIfEnded(sample);
   }
 
   void _dispatchSignals(List<PointerSignal> signals) {
@@ -294,6 +321,62 @@ class _SceneViewState extends State<SceneView> {
       nodeIdGenerator: widget.nodeIdGenerator,
     );
     widget.onControllerReady?.call(_ownedController!);
+  }
+
+  void _resetPointerTracker() {
+    _pointerTracker = PointerInputTracker(
+      settings: _controller.pointerSettings,
+    );
+    _pendingTapTimer?.cancel();
+    _lastTimestampMs = 0;
+    _pendingPointerTrackerRefresh = false;
+  }
+
+  void _captureActivePointer(PointerSample sample) {
+    if (sample.phase == PointerPhase.down && _activePointerId == null) {
+      _activePointerId = sample.pointerId;
+    }
+  }
+
+  void _releaseActivePointerIfEnded(PointerSample sample) {
+    if (sample.phase != PointerPhase.up &&
+        sample.phase != PointerPhase.cancel) {
+      return;
+    }
+    if (_activePointerId != sample.pointerId) {
+      return;
+    }
+    _activePointerId = null;
+    if (_pendingPointerTrackerRefresh) {
+      _resetPointerTracker();
+    }
+  }
+
+  bool _ownedInputConfigChanged(SceneView oldWidget) {
+    return !_pointerSettingsEquivalent(
+          oldWidget.pointerSettings,
+          widget.pointerSettings,
+        ) ||
+        oldWidget.dragStartSlop != widget.dragStartSlop ||
+        !identical(oldWidget.nodeIdGenerator, widget.nodeIdGenerator);
+  }
+
+  PointerInputSettings _resolvedPointerSettings(
+    PointerInputSettings? settings,
+  ) {
+    return settings ?? const PointerInputSettings();
+  }
+
+  bool _pointerSettingsEquivalent(
+    PointerInputSettings? left,
+    PointerInputSettings? right,
+  ) {
+    final a = _resolvedPointerSettings(left);
+    final b = _resolvedPointerSettings(right);
+    return a.tapSlop == b.tapSlop &&
+        a.doubleTapSlop == b.doubleTapSlop &&
+        a.doubleTapMaxDelayMs == b.doubleTapMaxDelayMs &&
+        a.deferSingleTap == b.deferSingleTap;
   }
 
   void _disposeOwnedController() {

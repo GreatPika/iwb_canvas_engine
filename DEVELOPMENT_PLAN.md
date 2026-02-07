@@ -162,7 +162,7 @@ behavior across modules.
    * If inverse matrix is null/unavailable → return `false` for fill hit-test (skip coarse-rect fallback).
      **Done when:** test: degenerate transform never “steals” clicks by AABB.
 
-9. [ ] **(#26) `SceneView` owned controller does not react to updated settings**
+9. [x] **(#26) `SceneView` owned controller does not react to updated settings**
    **Where:** `SceneView.didUpdateWidget`
    **Do:**
 

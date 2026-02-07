@@ -1,5 +1,9 @@
 ## Unreleased
 
+- Input/View: add `SceneController.reconfigureInput(...)` for runtime updates
+  of `pointerSettings`/`dragStartSlop`/`nodeIdGenerator` without recreating
+  the controller. `SceneView` now applies these updates to its owned controller
+  and defers activation until the current gesture ends.
 - Input: make stroke/line commit fail-safe in draw mode. If
   `normalizeToLocalCenter()` throws during commit, the pending preview node is
   discarded, the tool state is reset, and no action is emitted.

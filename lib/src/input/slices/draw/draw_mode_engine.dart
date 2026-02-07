@@ -32,6 +32,7 @@ class DrawModeEngine {
   Offset? get pendingLineStart => _lineTool.pendingLineStart;
   int? get pendingLineTimestampMs => _lineTool.pendingLineTimestampMs;
   bool get hasPendingLineStart => _lineTool.hasPendingLineStart;
+  bool get hasActivePointer => _activePointerId != null;
 
   void handlePointer(PointerSample sample) {
     if (_activePointerId != null && _activePointerId != sample.pointerId) {

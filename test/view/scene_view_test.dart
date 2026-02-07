@@ -6,6 +6,9 @@ import 'package:iwb_canvas_engine/advanced.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  Layer sceneContentLayer(Scene scene) =>
+      scene.layers.firstWhere((layer) => !layer.isBackground);
+
   SceneController controllerWithTextAndStroke() {
     final scene = Scene(
       layers: [
@@ -276,6 +279,281 @@ void main() {
     expect(createdController!.selectedNodeIds, contains('rect-1'));
   });
 
+  testWidgets(
+    'SceneView updates owned controller dragStartSlop without recreation',
+    (tester) async {
+      SceneController? ownedController;
+      var readyCalls = 0;
+
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox(
+            width: 300,
+            height: 300,
+            child: SceneView(
+              dragStartSlop: 100,
+              onControllerReady: (controller) {
+                readyCalls += 1;
+                ownedController = controller;
+                controller.addNode(
+                  RectNode(
+                    id: 'rect-1',
+                    size: const Size(100, 80),
+                    fillColor: const Color(0xFF2196F3),
+                  )..position = const Offset(150, 150),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      expect(ownedController, isNotNull);
+      expect(readyCalls, 1);
+
+      final firstDrag = await tester.startGesture(const Offset(150, 150));
+      await firstDrag.moveTo(const Offset(170, 150));
+      await firstDrag.up();
+      await tester.pump();
+
+      final nodeAfterFirstDrag = ownedController!.getNode('rect-1') as RectNode;
+      expect(nodeAfterFirstDrag.position, const Offset(150, 150));
+
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox(
+            width: 300,
+            height: 300,
+            child: SceneView(
+              dragStartSlop: 0,
+              onControllerReady: (controller) {
+                readyCalls += 1;
+                ownedController = controller;
+              },
+            ),
+          ),
+        ),
+      );
+
+      expect(readyCalls, 1);
+
+      final secondDrag = await tester.startGesture(const Offset(150, 150));
+      await secondDrag.moveTo(const Offset(170, 150));
+      await secondDrag.up();
+      await tester.pump();
+
+      final nodeAfterSecondDrag =
+          ownedController!.getNode('rect-1') as RectNode;
+      expect(nodeAfterSecondDrag.position, const Offset(170, 150));
+    },
+  );
+
+  testWidgets('SceneView updates owned controller pointerSettings', (
+    tester,
+  ) async {
+    SceneController? ownedController;
+    var readyCalls = 0;
+    final requests = <EditTextRequested>[];
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 300,
+          height: 300,
+          child: SceneView(
+            pointerSettings: const PointerInputSettings(
+              doubleTapMaxDelayMs: 20,
+            ),
+            onControllerReady: (controller) {
+              readyCalls += 1;
+              ownedController = controller;
+              controller.addNode(
+                TextNode(
+                  id: 'text-1',
+                  text: 'Hello',
+                  size: const Size(200, 60),
+                  color: const Color(0xFF000000),
+                )..position = const Offset(150, 150),
+              );
+              controller.editTextRequests.listen(requests.add);
+            },
+          ),
+        ),
+      ),
+    );
+
+    expect(ownedController, isNotNull);
+    expect(readyCalls, 1);
+
+    await tester.tapAt(const Offset(150, 150));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 80));
+    await tester.tapAt(const Offset(150, 150));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 80));
+
+    expect(requests, isEmpty);
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 300,
+          height: 300,
+          child: SceneView(
+            pointerSettings: const PointerInputSettings(
+              doubleTapMaxDelayMs: 300,
+            ),
+            onControllerReady: (controller) {
+              readyCalls += 1;
+              ownedController = controller;
+            },
+          ),
+        ),
+      ),
+    );
+
+    expect(readyCalls, 1);
+
+    await tester.tapAt(const Offset(150, 150));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 80));
+    await tester.tapAt(const Offset(150, 150));
+    await tester.pump();
+
+    expect(requests, hasLength(1));
+    expect(requests.single.nodeId, 'text-1');
+  });
+
+  testWidgets(
+    'SceneView defers pointer tracker refresh until active pointer ends',
+    (tester) async {
+      final requests = <EditTextRequested>[];
+
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox(
+            width: 300,
+            height: 300,
+            child: SceneView(
+              pointerSettings: const PointerInputSettings(
+                doubleTapMaxDelayMs: 20,
+              ),
+              onControllerReady: (controller) {
+                controller.addNode(
+                  TextNode(
+                    id: 'text-1',
+                    text: 'Hello',
+                    size: const Size(200, 60),
+                    color: const Color(0xFF000000),
+                  )..position = const Offset(150, 150),
+                );
+                controller.editTextRequests.listen(requests.add);
+              },
+            ),
+          ),
+        ),
+      );
+
+      final gesture = await tester.startGesture(const Offset(150, 150));
+
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox(
+            width: 300,
+            height: 300,
+            child: SceneView(
+              pointerSettings: const PointerInputSettings(
+                doubleTapMaxDelayMs: 300,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await gesture.up();
+      await tester.pump();
+      expect(requests, isEmpty);
+
+      await tester.tapAt(const Offset(150, 150));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 80));
+      await tester.tapAt(const Offset(150, 150));
+      await tester.pump();
+
+      expect(requests, hasLength(1));
+      expect(requests.single.nodeId, 'text-1');
+    },
+  );
+
+  testWidgets('SceneView updates owned controller nodeIdGenerator', (
+    tester,
+  ) async {
+    SceneController? ownedController;
+    var readyCalls = 0;
+    var seedA = 0;
+    var seedB = 0;
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 300,
+          height: 300,
+          child: SceneView(
+            nodeIdGenerator: () => 'a-${seedA++}',
+            onControllerReady: (controller) {
+              readyCalls += 1;
+              ownedController = controller;
+              controller.setMode(CanvasMode.draw);
+              controller.setDrawTool(DrawTool.pen);
+            },
+          ),
+        ),
+      ),
+    );
+
+    final firstStroke = await tester.startGesture(const Offset(40, 40));
+    await firstStroke.moveTo(const Offset(60, 40));
+    await firstStroke.up();
+    await tester.pump();
+
+    final firstId = sceneContentLayer(ownedController!.scene).nodes.last.id;
+    expect(firstId, 'a-0');
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 300,
+          height: 300,
+          child: SceneView(
+            nodeIdGenerator: () => 'b-${seedB++}',
+            onControllerReady: (controller) {
+              readyCalls += 1;
+              ownedController = controller;
+            },
+          ),
+        ),
+      ),
+    );
+
+    expect(readyCalls, 1);
+
+    final secondStroke = await tester.startGesture(const Offset(80, 40));
+    await secondStroke.moveTo(const Offset(100, 40));
+    await secondStroke.up();
+    await tester.pump();
+
+    final secondId = sceneContentLayer(ownedController!.scene).nodes.last.id;
+    expect(secondId, 'b-0');
+  });
+
   testWidgets('SceneView selects a node on tap', (tester) async {
     final scene = Scene(
       layers: [
@@ -341,6 +619,58 @@ void main() {
 
     expect(called, isFalse);
   });
+
+  testWidgets(
+    'SceneView ignores input config updates for external controller',
+    (tester) async {
+      String externalGenerator() => 'ext';
+      final externalController = SceneController(
+        scene: Scene(layers: [Layer()]),
+        pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 20),
+        dragStartSlop: 7,
+      );
+      addTearDown(externalController.dispose);
+
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox(
+            width: 300,
+            height: 300,
+            child: SceneView(
+              controller: externalController,
+              pointerSettings: const PointerInputSettings(
+                doubleTapMaxDelayMs: 200,
+              ),
+              dragStartSlop: 1,
+              nodeIdGenerator: externalGenerator,
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox(
+            width: 300,
+            height: 300,
+            child: SceneView(
+              controller: externalController,
+              pointerSettings: const PointerInputSettings(
+                doubleTapMaxDelayMs: 450,
+              ),
+              dragStartSlop: 0,
+              nodeIdGenerator: () => 'changed',
+            ),
+          ),
+        ),
+      );
+
+      expect(externalController.pointerSettings.doubleTapMaxDelayMs, 20);
+      expect(externalController.dragStartSlop, 7);
+    },
+  );
 
   testWidgets('SceneView switches from internal to external controller', (
     tester,

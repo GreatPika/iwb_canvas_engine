@@ -413,20 +413,12 @@ void main() {
         strokeNeg.boundsWorld.center.dy,
       );
       expect(hitTestNode(strokeNegOutside, strokeNeg), isFalse);
-
     },
   );
 
   test('PathNode fill hit-test requires invertible transform', () {
     // INV:INV-CORE-PATH-HITTEST-FILL-REQUIRES-INVERSE
-    const singular = Transform2D(
-      a: 1,
-      b: 2,
-      c: 1,
-      d: 2,
-      tx: 100,
-      ty: -50,
-    );
+    const singular = Transform2D(a: 1, b: 2, c: 1, d: 2, tx: 100, ty: -50);
 
     final fillOnly = PathNode(
       id: 'path-singular-fill-only',
@@ -479,7 +471,10 @@ void main() {
       fillAndZeroStroke.boundsWorld.right + kHitSlop - 0.1,
       fillAndZeroStroke.boundsWorld.center.dy,
     );
-    expect(hitTestNode(fillAndZeroStrokeInsideAabb, fillAndZeroStroke), isFalse);
+    expect(
+      hitTestNode(fillAndZeroStrokeInsideAabb, fillAndZeroStroke),
+      isFalse,
+    );
   });
 
   test('hitTestNode respects PathNode shape and transforms', () {

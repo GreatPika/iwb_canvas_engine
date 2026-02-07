@@ -29,6 +29,8 @@ class MoveModeEngine {
 
   List<SceneNode>? get debugMoveGestureNodes => _moveGestureNodes;
 
+  bool get hasActivePointer => _activePointerId != null;
+
   void handlePointer(PointerSample sample) {
     if (_activePointerId != null && _activePointerId != sample.pointerId) {
       return;

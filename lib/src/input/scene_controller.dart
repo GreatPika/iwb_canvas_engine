@@ -40,6 +40,9 @@ class SceneController extends ChangeNotifier {
   /// IDs are guaranteed to be unique within the scene at generation time. If
   /// you override the generator, ensure IDs stay unique in the scene.
   ///
+  /// You can reconfigure [pointerSettings], [dragStartSlop], and
+  /// [nodeIdGenerator] at runtime via [reconfigureInput].
+  ///
   /// Constructor policy:
   /// - validates scene invariants and throws [ArgumentError] for unrecoverable
   ///   violations,
@@ -52,10 +55,12 @@ class SceneController extends ChangeNotifier {
     double? dragStartSlop,
     NodeId Function()? nodeIdGenerator,
   }) : scene = scene ?? Scene(),
-       pointerSettings = pointerSettings ?? const PointerInputSettings(),
-       _dragStartSlop = dragStartSlop {
+       _inputConfig = _InputConfig(
+         pointerSettings: pointerSettings ?? const PointerInputSettings(),
+         dragStartSlop: dragStartSlop,
+         nodeIdGenerator: nodeIdGenerator,
+       ) {
     _validateSceneOrThrow(this.scene);
-    _nodeIdGenerator = nodeIdGenerator ?? _defaultNodeIdGenerator;
     _nodeIdSeed = _initialDefaultNodeIdSeed(this.scene);
     _repaintScheduler = RepaintScheduler(notifyListeners: notifyListeners);
     _actionDispatcher = ActionDispatcher();
@@ -66,10 +71,9 @@ class SceneController extends ChangeNotifier {
   }
 
   final Scene scene;
-  final PointerInputSettings pointerSettings;
-  final double? _dragStartSlop;
+  _InputConfig _inputConfig;
+  _InputConfig? _pendingInputConfig;
   late final InputSliceContracts _contracts = _SceneControllerContracts(this);
-  late final NodeId Function() _nodeIdGenerator;
   late final RepaintScheduler _repaintScheduler;
   late final ActionDispatcher _actionDispatcher;
   late final SelectionModel _selectionModel;
@@ -179,6 +183,9 @@ class SceneController extends ChangeNotifier {
   Stream<EditTextRequested> get editTextRequests =>
       _actionDispatcher.editTextRequests;
 
+  /// Pointer gesture thresholds and timing settings used by this controller.
+  PointerInputSettings get pointerSettings => _inputConfig.pointerSettings;
+
   /// Current selection snapshot.
   Set<NodeId> get selectedNodeIds => _selectionModel.selectedNodeIds;
 
@@ -231,7 +238,38 @@ class SceneController extends ChangeNotifier {
   bool get hasPendingLineStart => _drawModeEngine.hasPendingLineStart;
 
   /// Pointer slop threshold used to treat a drag as a move.
-  double get dragStartSlop => _dragStartSlop ?? pointerSettings.tapSlop;
+  double get dragStartSlop =>
+      _inputConfig.dragStartSlop ?? pointerSettings.tapSlop;
+
+  /// Atomically updates pointer input configuration at runtime.
+  ///
+  /// The update applies immediately when no pointer gesture is active.
+  /// If a gesture is in progress, the new configuration is stored and applied
+  /// after the active pointer ends (`up`/`cancel`).
+  ///
+  /// This method never emits actions, does not mutate scene/selection, and
+  /// does not trigger repaint by itself.
+  void reconfigureInput({
+    required PointerInputSettings pointerSettings,
+    required double? dragStartSlop,
+    required NodeId Function()? nodeIdGenerator,
+  }) {
+    final nextConfig = _InputConfig(
+      pointerSettings: pointerSettings,
+      dragStartSlop: dragStartSlop,
+      nodeIdGenerator: nodeIdGenerator,
+    );
+    if (nextConfig.equivalentTo(_inputConfig)) {
+      _pendingInputConfig = null;
+      return;
+    }
+    if (_hasActivePointer) {
+      _pendingInputConfig = nextConfig;
+      return;
+    }
+    _pendingInputConfig = null;
+    _applyInputConfig(nextConfig);
+  }
 
   @visibleForTesting
   void debugSetSelection(Iterable<NodeId> nodeIds) {
@@ -270,6 +308,14 @@ class SceneController extends ChangeNotifier {
         return id;
       }
     }
+  }
+
+  NodeId _newNodeId() {
+    final custom = _inputConfig.nodeIdGenerator;
+    if (custom != null) {
+      return custom();
+    }
+    return _defaultNodeIdGenerator();
   }
 
   static int _initialDefaultNodeIdSeed(Scene scene) {
@@ -390,6 +436,7 @@ class SceneController extends ChangeNotifier {
     } else {
       _drawModeEngine.reset();
     }
+    _applyPendingInputConfigIfIdle();
     _mode = value;
     _contracts.setSelectionRect(null, notify: false);
     _contracts.markSceneGeometryChanged();
@@ -578,6 +625,7 @@ class SceneController extends ChangeNotifier {
     } else {
       _drawModeEngine.handlePointer(resolvedSample);
     }
+    _applyPendingInputConfigIfIdle();
   }
 
   /// Handles pointer signals such as double-tap text edit requests.
@@ -624,6 +672,21 @@ class SceneController extends ChangeNotifier {
     if (notify) {
       _contracts.requestRepaintOncePerFrame();
     }
+  }
+
+  bool get _hasActivePointer =>
+      _moveModeEngine.hasActivePointer || _drawModeEngine.hasActivePointer;
+
+  void _applyInputConfig(_InputConfig config) {
+    _inputConfig = config;
+  }
+
+  void _applyPendingInputConfigIfIdle() {
+    if (_hasActivePointer) return;
+    final pending = _pendingInputConfig;
+    if (pending == null) return;
+    _pendingInputConfig = null;
+    _applyInputConfig(pending);
   }
 
   void _resetDrag() => _moveModeEngine.reset();
@@ -711,6 +774,32 @@ class SceneController extends ChangeNotifier {
   }) {
     if (values.isNotEmpty) return;
     throw ArgumentError.value(values, argumentName, message);
+  }
+}
+
+class _InputConfig {
+  const _InputConfig({
+    required this.pointerSettings,
+    required this.dragStartSlop,
+    required this.nodeIdGenerator,
+  });
+
+  final PointerInputSettings pointerSettings;
+  final double? dragStartSlop;
+  final NodeId Function()? nodeIdGenerator;
+
+  bool equivalentTo(_InputConfig other) {
+    return _equivalentPointerSettings(other.pointerSettings) &&
+        dragStartSlop == other.dragStartSlop &&
+        identical(nodeIdGenerator, other.nodeIdGenerator);
+  }
+
+  bool _equivalentPointerSettings(PointerInputSettings other) {
+    final current = pointerSettings;
+    return current.tapSlop == other.tapSlop &&
+        current.doubleTapSlop == other.doubleTapSlop &&
+        current.doubleTapMaxDelayMs == other.doubleTapMaxDelayMs &&
+        current.deferSingleTap == other.deferSingleTap;
   }
 }
 
@@ -803,7 +892,7 @@ class _SceneControllerContracts implements InputSliceContracts {
       _controller._resolveTimestampMs(hintTimestampMs);
 
   @override
-  NodeId newNodeId() => _controller._nodeIdGenerator();
+  NodeId newNodeId() => _controller._newNodeId();
 
   @override
   DrawTool get drawTool => _controller.drawTool;
