@@ -173,6 +173,8 @@ Static layer cache invariants:
 ### Pointer handling
 
 - Raw pointer events are converted to scene coordinates.
+- Inbound timestamps are treated as hints and normalized into an internal
+  monotonic timeline (`max(hint, cursor + 1)`).
 - Double-tap is detected with time and distance thresholds.
 - Pointer capture: if a drag starts on a node, it continues until pointer up.
 
@@ -242,6 +244,8 @@ Emit `ActionCommitted` on:
 - `ActionCommitted` (required)
 - `EditTextRequested` for `TextNode` double-tap
 - A change notification for repaint (stream/listener)
+- `ActionCommitted.timestampMs` and `EditTextRequested.timestampMs` are emitted
+  on the same internal monotonic timeline (not UNIX wall-clock time).
 
 `ActionCommitted.payload` uses minimal metadata for undo/redo:
 - transform: `{delta: {a,b,c,d,tx,ty}}`

@@ -113,6 +113,12 @@ const List<Invariant> invariants = <Invariant>[
     title: 'ActionCommitted.actionId format stays a{counter++}',
   ),
   Invariant(
+    id: 'INV-INPUT-TIMESTAMP-MONOTONIC',
+    scope: 'input',
+    title:
+        'ActionCommitted/EditTextRequested timestamps are normalized from hints into a strictly monotonic internal timeline',
+  ),
+  Invariant(
     id: 'INV-SELECTION-SETSELECTION-COALESCED',
     scope: 'selection',
     title: 'setSelection defaults to coalesced repaint (not immediate notify)',

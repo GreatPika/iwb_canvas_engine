@@ -52,14 +52,20 @@ behavior across modules.
 
 - The task checklist order and numbering are intentionally preserved.
 - Do **not** renumber or reorder existing items unless scope changes materially.
-- Close tasks in strict ID order: only the smallest unchecked task ID may be marked as completed.
+- Work in small batches when it reduces risk and avoids temporary half-states.
+  - Batch size limit: at most **3** tasks may be completed together.
+  - Before starting a batch, explicitly decide which task IDs belong to the batch and document a short rationale (why these tasks are coupled, and what shared contract/infrastructure they touch).
+  - Prefer batches that are adjacent in phase/scope and share the same primary strategy layer (see "Whole-Plan Strategy").
 - Changes that help future tasks are allowed only as **prep-only** work:
   - they must not be marked as completed for those future task IDs,
   - they must be minimal and directly required to unblock the current task.
 - A checkbox may be marked complete only after:
   - the task acceptance criteria are satisfied,
   - related tests are added/updated and pass,
-  - invariant coverage is updated when applicable,
+  - invariants are added/updated when applicable, and have enforcement:
+    - update `tool/invariant_registry.dart` when a new invariant is introduced or an existing one changes,
+    - reference enforcement sites via `// INV:<id>` in `test/**` and/or `tool/**`,
+    - keep `dart run tool/check_invariant_coverage.dart` green,
   - required docs/changelog updates are included when public behavior changes.
 
 ## API Clarity Guardrails
@@ -100,14 +106,14 @@ behavior across modules.
    * In `decodeScene`: after decoding, ensure all `id`s are unique → otherwise throw `SceneJsonFormatException`.
      **Done when:** tests: addNode with dup fails; JSON with dup fails.
 
-3. [ ] **(#6) `timestampMs` allows “time going backwards”**
+3. [x] **(#6) `timestampMs` allows “time going backwards”**
    **Where:** central timestamp resolution (`_resolveTimestampMs` or right before `emitAction`)
    **Do:**
 
    * Enforce monotonic output: `resolvedTimestamp = max(inputTimestamp, cursor + 1)` and update cursor.
      **Done when:** test: action with timestamp 10 after 100 is emitted with >=101.
 
-4. [ ] **(#7) Mixed time scales (`event.timeStamp` vs epoch milliseconds)**
+4. [x] **(#7) Mixed time scales (`event.timeStamp` vs epoch milliseconds)**
    **Where:** anywhere external `timestampMs` is accepted; pointer event pipeline uses `event.timeStamp.inMilliseconds`
    **Policy (fixed):** the engine uses **internal monotonic time**, not wall-clock.
    **Do:**

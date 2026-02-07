@@ -11,8 +11,6 @@ class SceneCommands {
   SceneCommands(this._contracts);
 
   final InputSliceContracts _contracts;
-  int _resolveTimestampMs(int? timestampMs) =>
-      timestampMs ?? _contracts.nextMonotonicTimestampMs();
 
   void notifySceneChanged() {
     final selectedNodeIds = _contracts.selectedNodeIds;
@@ -93,7 +91,7 @@ class SceneCommands {
       _contracts.markSceneStructuralChanged();
       _contracts.emitAction(ActionType.delete, [
         id,
-      ], _resolveTimestampMs(timestampMs));
+      ], _contracts.resolveTimestampMs(timestampMs));
       _contracts.notifyNow();
       return;
     }
@@ -126,7 +124,7 @@ class SceneCommands {
       _contracts.emitAction(
         ActionType.move,
         [id],
-        _resolveTimestampMs(timestampMs),
+        _contracts.resolveTimestampMs(timestampMs),
         payload: <String, Object?>{
           'sourceLayerIndex': layerIndex,
           'targetLayerIndex': targetLayerIndex,
@@ -190,7 +188,7 @@ class SceneCommands {
     _contracts.emitAction(
       ActionType.transform,
       nodes.map((node) => node.id).toList(growable: false),
-      _resolveTimestampMs(timestampMs),
+      _contracts.resolveTimestampMs(timestampMs),
       payload: <String, Object?>{'delta': delta.toJsonMap()},
     );
     _contracts.markSceneGeometryChanged();
@@ -221,7 +219,7 @@ class SceneCommands {
     _contracts.emitAction(
       ActionType.transform,
       nodes.map((node) => node.id).toList(growable: false),
-      _resolveTimestampMs(timestampMs),
+      _contracts.resolveTimestampMs(timestampMs),
       payload: <String, Object?>{'delta': delta.toJsonMap()},
     );
     _contracts.markSceneGeometryChanged();
@@ -252,7 +250,7 @@ class SceneCommands {
     _contracts.emitAction(
       ActionType.transform,
       nodes.map((node) => node.id).toList(growable: false),
-      _resolveTimestampMs(timestampMs),
+      _contracts.resolveTimestampMs(timestampMs),
       payload: <String, Object?>{'delta': delta.toJsonMap()},
     );
     _contracts.markSceneGeometryChanged();
@@ -282,7 +280,7 @@ class SceneCommands {
     _contracts.emitAction(
       ActionType.delete,
       deletableIds,
-      _resolveTimestampMs(timestampMs),
+      _contracts.resolveTimestampMs(timestampMs),
     );
     _contracts.notifyNow();
   }
@@ -303,7 +301,7 @@ class SceneCommands {
     _contracts.emitAction(
       ActionType.clear,
       clearedIds,
-      _resolveTimestampMs(timestampMs),
+      _contracts.resolveTimestampMs(timestampMs),
     );
     _contracts.notifyNow();
   }

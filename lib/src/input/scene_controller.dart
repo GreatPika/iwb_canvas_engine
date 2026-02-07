@@ -165,10 +165,17 @@ class SceneController extends ChangeNotifier {
 
   /// Synchronous broadcast stream of committed actions.
   ///
+  /// Emitted [ActionCommitted.timestampMs] values use the engine's internal
+  /// monotonic timeline. External timestamps are treated as hints and are
+  /// normalized to avoid time going backwards.
+  ///
   /// Handlers must be fast and avoid blocking work.
   Stream<ActionCommitted> get actions => _actionDispatcher.actions;
 
   /// Synchronous broadcast stream of text edit requests.
+  ///
+  /// Emitted [EditTextRequested.timestampMs] values use the same internal
+  /// monotonic timeline as [actions].
   ///
   /// Handlers must be fast and avoid blocking work.
   Stream<EditTextRequested> get editTextRequests =>
@@ -471,14 +478,24 @@ class SceneController extends ChangeNotifier {
   /// same space as `PointerEvent.localPosition`). The controller converts it to
   /// scene coordinates using `scene.camera.offset`.
   ///
+  /// [PointerSample.timestampMs] is treated as a timestamp hint. The controller
+  /// normalizes it into an internal monotonic timeline before dispatching to
+  /// move/draw engines.
+  ///
   /// The controller processes at most one active pointer per mode; additional
   /// pointers are ignored until the active one ends.
   void handlePointer(PointerSample sample) {
-    _observeTimestamp(sample.timestampMs);
+    final resolvedSample = PointerSample(
+      pointerId: sample.pointerId,
+      position: sample.position,
+      timestampMs: _resolveTimestampMs(sample.timestampMs),
+      phase: sample.phase,
+      kind: sample.kind,
+    );
     if (mode == CanvasMode.move) {
-      _moveModeEngine.handlePointer(sample);
+      _moveModeEngine.handlePointer(resolvedSample);
     } else {
-      _drawModeEngine.handlePointer(sample);
+      _drawModeEngine.handlePointer(resolvedSample);
     }
   }
 
@@ -487,6 +504,9 @@ class SceneController extends ChangeNotifier {
   /// The controller currently reacts only to `doubleTap` signals in move mode:
   /// if the top-most hit node is a [TextNode], an [EditTextRequested] event is
   /// emitted.
+  ///
+  /// [PointerSignal.timestampMs] is treated as a timestamp hint and normalized
+  /// before emitting [EditTextRequested].
   ///
   /// The emitted [EditTextRequested.position] is in view/screen coordinates.
   void handlePointerSignal(PointerSignal signal) {
@@ -499,7 +519,7 @@ class SceneController extends ChangeNotifier {
       _contracts.emitEditTextRequested(
         EditTextRequested(
           nodeId: hit.id,
-          timestampMs: signal.timestampMs,
+          timestampMs: _contracts.resolveTimestampMs(signal.timestampMs),
           position: signal.position,
         ),
       );
@@ -550,15 +570,13 @@ class SceneController extends ChangeNotifier {
     _markSceneGeometryChanged();
   }
 
-  void _observeTimestamp(int timestampMs) {
-    if (timestampMs > _timestampCursorMs) {
-      _timestampCursorMs = timestampMs;
-    }
-  }
-
-  int _nextMonotonicTimestampMs() {
-    _timestampCursorMs += 1;
-    return _timestampCursorMs;
+  int _resolveTimestampMs(int? hintTimestampMs) {
+    final next = _timestampCursorMs + 1;
+    final resolved = hintTimestampMs == null || hintTimestampMs < next
+        ? next
+        : hintTimestampMs;
+    _timestampCursorMs = resolved;
+    return resolved;
   }
 
   void requestRepaintOncePerFrame() =>
@@ -637,7 +655,6 @@ class _SceneControllerContracts implements InputSliceContracts {
     int timestampMs, {
     Map<String, Object?>? payload,
   }) {
-    _controller._observeTimestamp(timestampMs);
     _controller._actionDispatcher.emitAction(
       type,
       nodeIds,
@@ -651,7 +668,8 @@ class _SceneControllerContracts implements InputSliceContracts {
       _controller._actionDispatcher.emitEditTextRequested(req);
 
   @override
-  int nextMonotonicTimestampMs() => _controller._nextMonotonicTimestampMs();
+  int resolveTimestampMs(int? hintTimestampMs) =>
+      _controller._resolveTimestampMs(hintTimestampMs);
 
   @override
   NodeId newNodeId() => _controller._nodeIdGenerator();

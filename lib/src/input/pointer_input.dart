@@ -18,6 +18,11 @@ class PointerSample {
 
   final int pointerId;
   final Offset position;
+
+  /// Host-provided timestamp hint for event ordering.
+  ///
+  /// `SceneController` normalizes this hint into an internal monotonic
+  /// timeline before using it for emitted actions/signals.
   final int timestampMs;
   final PointerPhase phase;
   final PointerDeviceKind kind;

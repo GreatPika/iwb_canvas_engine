@@ -13,6 +13,9 @@
   axis-aligned 1 logical px lines/strokes in `ScenePainter`/`SceneView`.
 - Input: unify `ActionCommitted.timestampMs` scale for command defaults with
   pointer time (monotonic timeline, strict `+1` fallback progression).
+- Input: normalize all inbound timestamp hints (pointer/commands/signals) via a
+  single controller contract; `ActionCommitted.timestampMs` and
+  `EditTextRequested.timestampMs` are now strictly monotonic.
 - Behavior: `hitTestTopNode` now skips `Layer.isBackground` layers, so
   background content is no longer returned by top-level selection hit-testing.
 - Core: normalize `SceneNode.opacity` at assignment time (`!finite -> 1`,

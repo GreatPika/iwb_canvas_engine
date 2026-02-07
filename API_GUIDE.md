@@ -371,7 +371,9 @@ controller.flipSelectionVertical();
 
 Gotchas:
 - `actions` is a **synchronous broadcast stream**; handlers must be fast (no heavy/async work).
-- `ActionCommitted.timestampMs` is an engine monotonic timeline (ordered event time), not guaranteed UNIX epoch wall-clock time.
+- `ActionCommitted.timestampMs` is an internal monotonic timeline (ordered event time), not guaranteed UNIX epoch wall-clock time.
+- Any inbound `timestampMs` (pointer samples, command args, pointer signals) is treated as a **hint** and normalized so emitted timestamps never go backwards.
+- `EditTextRequested.timestampMs` uses the same internal monotonic timeline.
 - `ActionType.transform` payload uses `{delta: {a,b,c,d,tx,ty}}`.
 - `ActionType.move` payload uses `{sourceLayerIndex: int, targetLayerIndex: int}`.
 - `ActionType.drawStroke/drawHighlighter/drawLine` payload uses `{tool: String, color: int, thickness: double}`.
@@ -525,7 +527,7 @@ void onPointerEvent(PointerEvent event, PointerPhase phase) {
   final sample = PointerSample(
     pointerId: event.pointer,
     position: event.localPosition, // view/screen coordinates
-    timestampMs: event.timeStamp.inMilliseconds,
+    timestampMs: event.timeStamp.inMilliseconds, // timestamp hint
     phase: phase,
     kind: event.kind,
   );

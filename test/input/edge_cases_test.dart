@@ -5,6 +5,7 @@ import 'package:iwb_canvas_engine/advanced.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  // INV:INV-INPUT-TIMESTAMP-MONOTONIC
 
   RectNode rectNode(
     String id,
@@ -207,6 +208,94 @@ void main() {
     expect(actions, hasLength(2));
     expect(actions.first.timestampMs, 100);
     expect(actions.last.timestampMs, 101);
+  });
+
+  test('explicit timestamp hint that goes backwards is normalized forward', () {
+    final node = rectNode('r1', const Offset(0, 0));
+    final controller = SceneController(
+      scene: Scene(
+        layers: [
+          Layer(nodes: [node]),
+        ],
+      ),
+    );
+    addTearDown(controller.dispose);
+
+    final actions = <ActionCommitted>[];
+    final sub = controller.actions.listen(actions.add);
+    addTearDown(sub.cancel);
+
+    controller.setSelection(const ['r1']);
+    controller.rotateSelection(clockwise: true, timestampMs: 100);
+    controller.flipSelectionVertical(timestampMs: 10);
+
+    expect(actions, hasLength(2));
+    expect(actions.first.timestampMs, 100);
+    expect(actions.last.timestampMs, 101);
+  });
+
+  test('explicit timestamp hint is preserved when already ahead of cursor', () {
+    final node = rectNode('r1', const Offset(0, 0));
+    final controller = SceneController(
+      scene: Scene(
+        layers: [
+          Layer(nodes: [node]),
+        ],
+      ),
+    );
+    addTearDown(controller.dispose);
+
+    final actions = <ActionCommitted>[];
+    final sub = controller.actions.listen(actions.add);
+    addTearDown(sub.cancel);
+
+    controller.setSelection(const ['r1']);
+    controller.rotateSelection(clockwise: true, timestampMs: 77);
+
+    expect(actions, hasLength(1));
+    expect(actions.single.timestampMs, 77);
+  });
+
+  test('epoch-like hint keeps subsequent pointer-driven actions monotonic', () {
+    final node = rectNode('r1', const Offset(0, 0));
+    final controller = SceneController(
+      scene: Scene(
+        layers: [
+          Layer(nodes: [node]),
+        ],
+      ),
+    );
+    addTearDown(controller.dispose);
+
+    final actions = <ActionCommitted>[];
+    final sub = controller.actions.listen(actions.add);
+    addTearDown(sub.cancel);
+
+    controller.setSelection(const ['r1']);
+    controller.rotateSelection(clockwise: true, timestampMs: 1700000000000);
+
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 1,
+        position: Offset(0, 0),
+        timestampMs: 0,
+        phase: PointerPhase.down,
+      ),
+    );
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 1,
+        position: Offset(0, 0),
+        timestampMs: 10,
+        phase: PointerPhase.up,
+      ),
+    );
+
+    controller.flipSelectionHorizontal();
+
+    expect(actions, hasLength(2));
+    expect(actions.first.timestampMs, 1700000000000);
+    expect(actions.last.timestampMs, 1700000000003);
   });
 
   test('marquee on empty area keeps selection empty', () {

@@ -249,6 +249,8 @@ class _SceneViewState extends State<SceneView> {
     final sample = PointerSample(
       pointerId: event.pointer,
       position: event.localPosition,
+      // Raw host timestamp is only a hint; SceneController normalizes it into
+      // an internal monotonic timeline for emitted actions/signals.
       timestampMs: event.timeStamp.inMilliseconds,
       phase: phase,
       kind: event.kind,

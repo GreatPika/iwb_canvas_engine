@@ -5,6 +5,7 @@ import 'package:iwb_canvas_engine/advanced.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  // INV:INV-INPUT-TIMESTAMP-MONOTONIC
 
   TextNode textNode(String id, Offset position) {
     return TextNode(
@@ -39,6 +40,7 @@ void main() {
 
     expect(requests, hasLength(1));
     expect(requests.single.nodeId, 'text-1');
+    expect(requests.single.timestampMs, 100);
     expect(requests.single.position, const Offset(0, 0));
   });
 
@@ -66,5 +68,50 @@ void main() {
     );
 
     expect(requests, isEmpty);
+  });
+
+  test('double tap timestamp hint is normalized after higher watermark', () {
+    final text = textNode('text-1', const Offset(0, 0));
+    final scene = Scene(
+      layers: [
+        Layer(nodes: [text]),
+      ],
+    );
+    final controller = SceneController(scene: scene);
+    addTearDown(controller.dispose);
+
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 1,
+        position: Offset(0, 0),
+        timestampMs: 1000,
+        phase: PointerPhase.down,
+      ),
+    );
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 1,
+        position: Offset(0, 0),
+        timestampMs: 1010,
+        phase: PointerPhase.up,
+      ),
+    );
+
+    final requests = <EditTextRequested>[];
+    final sub = controller.editTextRequests.listen(requests.add);
+    addTearDown(sub.cancel);
+
+    controller.handlePointerSignal(
+      const PointerSignal(
+        type: PointerSignalType.doubleTap,
+        pointerId: 2,
+        position: Offset(0, 0),
+        timestampMs: 1,
+        kind: PointerDeviceKind.touch,
+      ),
+    );
+
+    expect(requests, hasLength(1));
+    expect(requests.single.timestampMs, 1011);
   });
 }
