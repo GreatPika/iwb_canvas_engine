@@ -290,6 +290,57 @@ void main() {
     expect(nonBg, greaterThan(0));
   });
 
+  test('ScenePainter skips grid when cellSize is below minimum', () async {
+    const background = Color(0xFFFFFFFF);
+    final scene = Scene(
+      background: Background(
+        color: background,
+        grid: GridSettings(
+          isEnabled: true,
+          cellSize: 0.5,
+          color: const Color(0xFF000000),
+        ),
+      ),
+      layers: [Layer()],
+    );
+
+    final painter = ScenePainter(
+      controller: _controllerFor(scene),
+      imageResolver: (_) => null,
+    );
+
+    final image = await _paintToImage(painter, width: 120, height: 80);
+    final nonBg = await _countNonBackgroundPixels(image, background);
+    expect(nonBg, 0);
+  });
+
+  test(
+    'ScenePainter skips grid when expected line count exceeds safety cap',
+    () async {
+      const background = Color(0xFFFFFFFF);
+      final scene = Scene(
+        background: Background(
+          color: background,
+          grid: GridSettings(
+            isEnabled: true,
+            cellSize: 1,
+            color: const Color(0xFF000000),
+          ),
+        ),
+        layers: [Layer()],
+      );
+
+      final painter = ScenePainter(
+        controller: _controllerFor(scene),
+        imageResolver: (_) => null,
+      );
+
+      final image = await _paintToImage(painter, width: 320, height: 80);
+      final nonBg = await _countNonBackgroundPixels(image, background);
+      expect(nonBg, 0);
+    },
+  );
+
   test(
     'ScenePainter uses TextNode maxWidth and lineHeight when valid',
     () async {

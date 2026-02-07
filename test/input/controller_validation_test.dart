@@ -44,4 +44,14 @@ void main() {
     expect(controller.highlighterOpacity, 0.4);
     expect(controller.scene.background.grid.cellSize, 12);
   });
+
+  test('setGridCellSize clamps to minimum when grid is enabled', () {
+    final controller = SceneController(scene: Scene(layers: [Layer()]));
+    addTearDown(controller.dispose);
+
+    controller.setGridEnabled(true);
+    controller.setGridCellSize(0.5);
+
+    expect(controller.scene.background.grid.cellSize, 1.0);
+  });
 }

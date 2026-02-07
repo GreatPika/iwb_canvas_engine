@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../core/defaults.dart';
 import '../core/geometry.dart';
+import '../core/grid_safety_limits.dart';
 import '../core/hit_test.dart';
 import '../core/nodes.dart';
 import '../core/scene.dart';
@@ -352,8 +353,11 @@ class SceneController extends ChangeNotifier {
         'Grid cell size must be a finite number > 0.',
       );
     }
-    if (scene.background.grid.cellSize == value) return;
-    scene.background.grid.cellSize = value;
+    final resolvedValue = scene.background.grid.isEnabled
+        ? value.clamp(kMinGridCellSize, double.infinity).toDouble()
+        : value;
+    if (scene.background.grid.cellSize == resolvedValue) return;
+    scene.background.grid.cellSize = resolvedValue;
     _contracts.markSceneGeometryChanged();
     _contracts.notifyNow();
   }

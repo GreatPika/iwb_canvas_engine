@@ -7,6 +7,7 @@ import 'package:flutter/rendering.dart';
 
 import '../core/nodes.dart';
 import '../core/scene.dart';
+import '../core/grid_safety_limits.dart';
 import '../core/transform2d.dart';
 import '../core/numeric_clamp.dart';
 import '../input/scene_controller.dart';
@@ -1235,8 +1236,12 @@ class SceneStaticLayerCache {
     final safeCameraOffset = sanitizeFiniteOffset(cameraOffset);
     final safeGridStrokeWidth = clampNonNegativeFinite(gridStrokeWidth);
     final grid = background.grid;
+    final effectiveGridEnabled = _isGridDrawable(
+      grid,
+      size: size,
+      cameraOffset: safeCameraOffset,
+    );
     final cell = grid.cellSize;
-    final effectiveGridEnabled = grid.isEnabled && cell.isFinite && cell > 0;
     final effectiveCellSize = effectiveGridEnabled ? cell : 0.0;
     final key = _StaticLayerKey(
       size: size,
@@ -1345,9 +1350,8 @@ void _drawGrid(
   Offset cameraOffset,
   double gridStrokeWidth,
 ) {
-  if (!grid.isEnabled) return;
+  if (!_isGridDrawable(grid, size: size, cameraOffset: cameraOffset)) return;
   final cell = grid.cellSize;
-  if (!cell.isFinite || cell <= 0) return;
 
   final paint = Paint()
     ..color = grid.color
@@ -1361,6 +1365,32 @@ void _drawGrid(
   for (double y = startY; y <= size.height; y += cell) {
     canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
   }
+}
+
+bool _isGridDrawable(
+  GridSettings grid, {
+  required Size size,
+  required Offset cameraOffset,
+}) {
+  if (!grid.isEnabled) return false;
+  final cell = grid.cellSize;
+  if (!cell.isFinite || cell < kMinGridCellSize) return false;
+
+  final startX = _gridStart(-cameraOffset.dx, cell);
+  final startY = _gridStart(-cameraOffset.dy, cell);
+  final verticalLines = _gridLineCount(startX, size.width, cell);
+  final horizontalLines = _gridLineCount(startY, size.height, cell);
+  return verticalLines <= kMaxGridLinesPerAxis &&
+      horizontalLines <= kMaxGridLinesPerAxis;
+}
+
+int _gridLineCount(double start, double extent, double cell) {
+  if (!start.isFinite || !extent.isFinite || !cell.isFinite || cell <= 0) {
+    return kMaxGridLinesPerAxis + 1;
+  }
+  if (start > extent) return 0;
+  final count = ((extent - start) / cell).floor() + 1;
+  return count < 0 ? 0 : count;
 }
 
 double _gridStart(double offset, double cell) {

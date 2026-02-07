@@ -1,5 +1,9 @@
 ## Unreleased
 
+- Fix: harden grid safety limits to prevent pathological rendering load:
+  clamp `setGridCellSize` to minimum `1.0` when grid is enabled, skip grid
+  paint for `cellSize < 1.0`/non-finite values, and skip when expected grid
+  lines exceed `200` per axis.
 - Render/View: add configurable thin-line pixel snap strategy
   (`ThinLineSnapStrategy`) and enable HiDPI-friendly snapping for
   axis-aligned 1 logical px lines/strokes in `ScenePainter`/`SceneView`.
