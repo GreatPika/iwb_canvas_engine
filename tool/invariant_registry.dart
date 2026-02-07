@@ -125,6 +125,18 @@ const List<Invariant> invariants = <Invariant>[
         'SceneController.setCameraOffset rejects non-finite offsets and preserves scene state on rejection',
   ),
   Invariant(
+    id: 'INV-INPUT-DRAW-COMMIT-FAILSAFE',
+    scope: 'input',
+    title:
+        'StrokeTool/LineTool commit paths are fail-safe: normalize failures abort without crashes and without action emission',
+  ),
+  Invariant(
+    id: 'INV-INPUT-CONSTRUCTOR-SCENE-VALIDATION',
+    scope: 'input',
+    title:
+        'SceneController constructor validates scene invariants, canonicalizes recoverable background cases, and rejects unrecoverable cases',
+  ),
+  Invariant(
     id: 'INV-SELECTION-SETSELECTION-COALESCED',
     scope: 'selection',
     title: 'setSelection defaults to coalesced repaint (not immediate notify)',
@@ -139,6 +151,12 @@ const List<Invariant> invariants = <Invariant>[
     scope: 'commands',
     title:
         'structural mutations call notifySceneChanged() and return immediately',
+  ),
+  Invariant(
+    id: 'INV-COMMANDS-ADDNODE-DEFAULT-NONBACKGROUND',
+    scope: 'commands',
+    title:
+        'addNode default target layer is the first non-background layer (created when absent)',
   ),
 
   // Serialization.

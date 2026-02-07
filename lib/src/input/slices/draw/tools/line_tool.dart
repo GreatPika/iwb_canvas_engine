@@ -69,7 +69,12 @@ class LineTool {
       if (line.end != scenePoint) {
         line.end = scenePoint;
       }
-      line.normalizeToLocalCenter();
+      try {
+        line.normalizeToLocalCenter();
+      } catch (_) {
+        _abortActiveLineCommit();
+        return;
+      }
       _contracts.markSceneGeometryChanged();
       _activeLine = null;
       _activeDrawLayer = null;
@@ -161,5 +166,16 @@ class LineTool {
 
   void _clearPendingLine() {
     _setPendingLineStart(null, null);
+  }
+
+  void _abortActiveLineCommit() {
+    if (_activeLine != null && _activeDrawLayer != null) {
+      _activeDrawLayer!.nodes.remove(_activeLine);
+      _contracts.markSceneStructuralChanged();
+    }
+    _activeLine = null;
+    _activeDrawLayer = null;
+    _drawDownScene = null;
+    _drawMoved = false;
   }
 }

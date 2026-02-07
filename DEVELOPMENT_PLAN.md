@@ -130,7 +130,7 @@ behavior across modules.
    * If `offset.dx` or `offset.dy` is not finite → throw `ArgumentError` (and do not mutate scene).
      **Done when:** test: setting NaN throws; subsequent gestures never produce NaN in node transforms.
 
-6. [ ] **(#19) `normalizeToLocalCenter()` can throw and crash input processing**
+6. [x] **(#19) `normalizeToLocalCenter()` can throw and crash input processing**
    **Where:** `StrokeTool` commit path, `LineTool` commit path
    **Policy (fixed):** never crash; abort the tool safely.
    **Do:**
@@ -138,9 +138,9 @@ behavior across modules.
    * Wrap `normalizeToLocalCenter()` in try/catch; on exception: discard the pending node, reset tool state, emit no action.
      **Done when:** test: crafted invalid geometry does not crash; tool resets predictably.
 
-7. [ ] **(#22) `SceneController` does not validate scene invariants on construction**
+7. [x] **(#22) `SceneController` does not validate scene invariants on construction**
    **Where:** `SceneController(scene: ...)` constructor
-   **Policy (fixed):** validate and fail fast.
+   **Policy (fixed):** validate + canonicalize recoverable invariants; fail fast on unrecoverable invariants.
    **Do:**
 
    * Add `validateSceneOrThrow(scene)` called in constructor:
@@ -148,8 +148,11 @@ behavior across modules.
      * camera offset finite (#8)
      * grid config finite and safe (#1, #28)
      * palettes non-empty (#27)
-     * background layer invariants (#35)
-       **Done when:** test: controller creation with invalid scene throws consistent error.
+     * background layer invariants (#35), with explicit constructor behavior:
+       * if no background layer exists -> create one at index 0
+       * if background exists but not at index 0 -> move it to index 0 (preserve relative order of non-background layers)
+       * if multiple background layers exist -> throw
+       **Done when:** tests cover constructor canonicalization (missing/misordered background) and constructor rejection (multiple background layers), with consistent error on rejection.
 
 8. [ ] **(#24) Fill hit-test returns true for degenerate transforms after coarse check**
    **Where:** fill hit-test logic (`selection_geometry` / geometry hit-testing for fill)
@@ -223,7 +226,7 @@ Goal: no bypasses. Background must never be selectable/deletable; selection must
 * On decode/validation:
 
   * If none → create one at index 0.
-  * If multiple → throw `SceneJsonFormatException`.
+  * If multiple → throw a validation error (`SceneJsonFormatException` on decode; constructor validation error in `SceneController`).
   * If background not at index 0 → normalize by moving it to index 0 (preserving other order).
     **Done when:** tests cover all 3 cases above.
 

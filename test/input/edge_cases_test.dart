@@ -26,6 +26,9 @@ void main() {
     )..position = position;
   }
 
+  Layer firstNonBackgroundLayer(Scene scene) =>
+      scene.layers.firstWhere((layer) => !layer.isBackground);
+
   testWidgets('SceneController setters notify only on changes', (tester) async {
     final controller = SceneController();
     addTearDown(controller.dispose);
@@ -160,14 +163,14 @@ void main() {
 
     expect(actions.single.type, ActionType.delete);
     expect(actions.single.timestampMs, 11);
-    expect(scene.layers.single.nodes, isEmpty);
+    expect(firstNonBackgroundLayer(scene).nodes, isEmpty);
 
-    scene.layers.single.nodes.add(rectNode('a', const Offset(0, 0)));
+    firstNonBackgroundLayer(scene).nodes.add(rectNode('a', const Offset(0, 0)));
     controller.clearScene();
 
     expect(actions.last.type, ActionType.clear);
     expect(actions.last.timestampMs, 12);
-    expect(scene.layers.single.nodes, isEmpty);
+    expect(firstNonBackgroundLayer(scene).nodes, isEmpty);
   });
 
   test('default timestamp follows explicit command timestamp watermark', () {
@@ -437,7 +440,7 @@ void main() {
         phase: PointerPhase.down,
       ),
     );
-    expect(scene.layers.first.nodes, isNotEmpty);
+    expect(firstNonBackgroundLayer(scene).nodes, isNotEmpty);
 
     controller.handlePointer(
       const PointerSample(
@@ -448,7 +451,7 @@ void main() {
       ),
     );
 
-    expect(scene.layers.first.nodes, isEmpty);
+    expect(firstNonBackgroundLayer(scene).nodes, isEmpty);
   });
 
   test('switching draw->move resets draw state', () {
@@ -467,10 +470,10 @@ void main() {
         phase: PointerPhase.down,
       ),
     );
-    expect(scene.layers.first.nodes, isNotEmpty);
+    expect(firstNonBackgroundLayer(scene).nodes, isNotEmpty);
 
     controller.setMode(CanvasMode.move);
-    expect(scene.layers.first.nodes, isEmpty);
+    expect(firstNonBackgroundLayer(scene).nodes, isEmpty);
   });
 
   test('switching draw->move removes active line preview', () {
@@ -497,10 +500,10 @@ void main() {
         phase: PointerPhase.move,
       ),
     );
-    expect(scene.layers.first.nodes, isNotEmpty);
+    expect(firstNonBackgroundLayer(scene).nodes, isNotEmpty);
 
     controller.setMode(CanvasMode.move);
-    expect(scene.layers.first.nodes, isEmpty);
+    expect(firstNonBackgroundLayer(scene).nodes, isEmpty);
   });
 
   test('line drag clears pending two-tap start', () {
@@ -550,7 +553,7 @@ void main() {
     );
 
     expect(controller.hasPendingLineStart, isFalse);
-    expect(scene.layers.first.nodes.single, isA<LineNode>());
+    expect(firstNonBackgroundLayer(scene).nodes.single, isA<LineNode>());
   });
 
   test('line drag updates existing line end', () {
@@ -598,7 +601,7 @@ void main() {
       ),
     );
 
-    final line = scene.layers.first.nodes.single as LineNode;
+    final line = firstNonBackgroundLayer(scene).nodes.single as LineNode;
     expect(line.transform.applyToPoint(line.end), const Offset(20, 0));
     expect(actions.single.type, ActionType.drawLine);
   });
@@ -715,7 +718,7 @@ void main() {
       ),
     );
 
-    expect(scene.layers.first.nodes, hasLength(1));
+    expect(firstNonBackgroundLayer(scene).nodes, hasLength(1));
     expect(actions, isEmpty);
   });
 
@@ -761,7 +764,7 @@ void main() {
       ),
     );
 
-    expect(scene.layers.first.nodes, isEmpty);
+    expect(firstNonBackgroundLayer(scene).nodes, isEmpty);
     expect(actions.single.type, ActionType.erase);
   });
 
@@ -810,7 +813,7 @@ void main() {
       ),
     );
 
-    expect(scene.layers.first.nodes, isEmpty);
+    expect(firstNonBackgroundLayer(scene).nodes, isEmpty);
   });
 
   test('eraser skips background layers', () async {
@@ -862,7 +865,7 @@ void main() {
     );
 
     expect(scene.layers.first.nodes.single.id, 'bg-stroke');
-    expect(scene.layers.last.nodes, isEmpty);
+    expect(firstNonBackgroundLayer(scene).nodes, isEmpty);
     expect(actions.single.type, ActionType.erase);
     expect(actions.single.nodeIds, ['fg-stroke']);
   });
@@ -904,7 +907,7 @@ void main() {
       ),
     );
 
-    expect(scene.layers.first.nodes, isEmpty);
+    expect(firstNonBackgroundLayer(scene).nodes, isEmpty);
   });
 
   test('marquee selection skips invisible and non-selectable nodes', () {

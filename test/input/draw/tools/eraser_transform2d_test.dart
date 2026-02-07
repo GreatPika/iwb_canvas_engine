@@ -52,6 +52,9 @@ void main() {
     return controller;
   }
 
+  Layer firstNonBackgroundLayer(Scene scene) =>
+      scene.layers.firstWhere((layer) => !layer.isBackground);
+
   void expectEraseResult({
     required String name,
     required SceneNode Function() buildNode,
@@ -64,7 +67,7 @@ void main() {
 
       eraseWithThreePoints(controller, eraserY);
 
-      final nodes = controller.scene.layers.single.nodes;
+      final nodes = firstNonBackgroundLayer(controller.scene).nodes;
       if (shouldErase) {
         expect(nodes, isEmpty);
       } else {

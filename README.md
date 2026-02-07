@@ -105,6 +105,10 @@ SceneView(
 
 `SceneController(scene: ...)` is optional. When omitted, the controller creates
 an empty `Scene()` by default.
+When provided, the constructor validates scene invariants and canonicalizes
+recoverable background-layer cases (ensures a background layer exists at index
+0). Unrecoverable violations (for example multiple background layers) throw
+`ArgumentError`.
 
 ### Simple view (no controller boilerplate)
 
@@ -208,11 +212,16 @@ controller.moveNode('rect-2', targetLayerIndex: 0);
 controller.removeNode('rect-2');
 ```
 
+`addNode(...)` default target is the first non-background layer. If the scene
+has only a background layer, the controller creates a new non-background layer
+and adds the node there.
+
 If you mutate `controller.scene` directly, prefer using `controller.mutate(...)`:
 
 ```dart
 controller.mutate((scene) {
-  scene.layers.first.nodes.add(myNode);
+  final contentLayer = scene.layers.firstWhere((layer) => !layer.isBackground);
+  contentLayer.nodes.add(myNode);
 }, structural: true);
 ```
 

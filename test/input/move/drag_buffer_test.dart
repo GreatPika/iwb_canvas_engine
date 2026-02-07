@@ -20,6 +20,9 @@ PointerSample sample({
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  Layer firstNonBackgroundLayer(Scene scene) =>
+      scene.layers.firstWhere((layer) => !layer.isBackground);
+
   testWidgets('click without drag does not build move gesture buffer', (
     tester,
   ) async {
@@ -233,7 +236,7 @@ void main() {
         size: const Size(10, 10),
         fillColor: const Color(0xFF000000),
       )..position = positionAfterStart;
-      controller.scene.layers.first.nodes[0] = replacement;
+      firstNonBackgroundLayer(controller.scene).nodes[0] = replacement;
 
       controller.handlePointer(
         sample(

@@ -40,8 +40,8 @@ class SceneCommands {
     _contracts.requestRepaintOncePerFrame();
   }
 
-  void addNode(SceneNode node, {int layerIndex = 0}) {
-    if (layerIndex < 0) {
+  void addNode(SceneNode node, {int? layerIndex}) {
+    if (layerIndex != null && layerIndex < 0) {
       throw RangeError.range(layerIndex, 0, null, 'layerIndex');
     }
     if (_sceneContainsNodeId(node.id)) {
@@ -54,19 +54,36 @@ class SceneCommands {
 
     final layers = _contracts.scene.layers;
     if (layers.isEmpty) {
-      if (layerIndex != 0) {
+      if (layerIndex != null && layerIndex != 0) {
         throw RangeError.range(layerIndex, 0, 0, 'layerIndex');
       }
       layers.add(Layer());
     }
 
-    if (layerIndex >= layers.length) {
-      throw RangeError.range(layerIndex, 0, layers.length - 1, 'layerIndex');
+    final resolvedLayerIndex =
+        layerIndex ?? _resolveDefaultAddLayerIndex(layers);
+    if (resolvedLayerIndex >= layers.length) {
+      throw RangeError.range(
+        resolvedLayerIndex,
+        0,
+        layers.length - 1,
+        'layerIndex',
+      );
     }
 
-    layers[layerIndex].nodes.add(node);
+    layers[resolvedLayerIndex].nodes.add(node);
     _contracts.markSceneStructuralChanged();
     _contracts.notifyNow();
+  }
+
+  int _resolveDefaultAddLayerIndex(List<Layer> layers) {
+    for (var i = 0; i < layers.length; i++) {
+      if (!layers[i].isBackground) {
+        return i;
+      }
+    }
+    layers.add(Layer());
+    return layers.length - 1;
   }
 
   bool _sceneContainsNodeId(NodeId id) {

@@ -44,6 +44,9 @@ void main() {
     )..position = position;
   }
 
+  Layer firstNonBackgroundLayer(Scene scene) =>
+      scene.layers.firstWhere((layer) => !layer.isBackground);
+
   test('clearSelection clears non-empty selection and notifies', () {
     final node = rectNode('rect-1', const Offset(0, 0));
     final scene = Scene(
@@ -435,7 +438,7 @@ void main() {
 
     controller.deleteSelection(timestampMs: 40);
 
-    expect(scene.layers.first.nodes, [locked]);
+    expect(firstNonBackgroundLayer(scene).nodes, [locked]);
   });
 
   test('clearScene removes nodes from non-background layers', () {

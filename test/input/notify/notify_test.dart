@@ -26,6 +26,9 @@ PointerSample sample({
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  Layer firstNonBackgroundLayer(Scene scene) =>
+      scene.layers.firstWhere((layer) => !layer.isBackground);
+
   testWidgets('style setters schedule a repaint notification', (tester) async {
     final controller = SceneController(scene: Scene(layers: [Layer()]));
     addTearDown(controller.dispose);
@@ -412,7 +415,7 @@ void main() {
     );
 
     expect(notifications, 1);
-    expect(controller.scene.layers.single.nodes, isEmpty);
+    expect(firstNonBackgroundLayer(controller.scene).nodes, isEmpty);
   });
 
   testWidgets('setCameraOffset coalesces repaints to one per frame', (

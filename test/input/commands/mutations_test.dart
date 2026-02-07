@@ -8,6 +8,9 @@ import 'package:iwb_canvas_engine/advanced.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  Layer firstNonBackgroundLayer(Scene scene) =>
+      scene.layers.firstWhere((layer) => !layer.isBackground);
+
   test('addNode notifies immediately (structural mutation)', () {
     final controller = SceneController(scene: Scene());
     addTearDown(controller.dispose);
@@ -26,7 +29,10 @@ void main() {
     expect(notifications, 1);
   });
 
-  testWidgets('addNode adds to layer 0 and notifies', (tester) async {
+  testWidgets('addNode defaults to first non-background layer and notifies', (
+    tester,
+  ) async {
+    // INV:INV-COMMANDS-ADDNODE-DEFAULT-NONBACKGROUND
     final controller = SceneController(scene: Scene());
     addTearDown(controller.dispose);
 
@@ -43,10 +49,71 @@ void main() {
 
     await tester.pump();
 
-    expect(controller.scene.layers, hasLength(1));
-    expect(controller.scene.layers.single.nodes.single.id, 'r1');
+    expect(controller.scene.layers, hasLength(2));
+    expect(controller.scene.layers.first.isBackground, isTrue);
+    expect(firstNonBackgroundLayer(controller.scene).nodes.single.id, 'r1');
     expect(notifications, 1);
   });
+
+  test(
+    'addNode default creates non-background layer when scene is background-only',
+    () {
+      final controller = SceneController(
+        scene: Scene(layers: [Layer(isBackground: true)]),
+      );
+      addTearDown(controller.dispose);
+
+      controller.addNode(
+        RectNode(
+          id: 'r1',
+          size: const Size(10, 10),
+          fillColor: const Color(0xFF000000),
+        )..position = const Offset(0, 0),
+      );
+
+      expect(controller.scene.layers, hasLength(2));
+      expect(controller.scene.layers.first.isBackground, isTrue);
+      expect(firstNonBackgroundLayer(controller.scene).nodes.single.id, 'r1');
+    },
+  );
+
+  test('addNode recreates layer when scene layers are externally cleared', () {
+    final controller = SceneController(scene: Scene());
+    addTearDown(controller.dispose);
+    controller.scene.layers.clear();
+
+    controller.addNode(
+      RectNode(
+        id: 'r1',
+        size: const Size(10, 10),
+        fillColor: const Color(0xFF000000),
+      )..position = const Offset(0, 0),
+    );
+
+    expect(controller.scene.layers, hasLength(1));
+    expect(controller.scene.layers.single.nodes.single.id, 'r1');
+  });
+
+  test(
+    'addNode throws for non-zero layerIndex when scene layers are externally cleared',
+    () {
+      final controller = SceneController(scene: Scene());
+      addTearDown(controller.dispose);
+      controller.scene.layers.clear();
+
+      expect(
+        () => controller.addNode(
+          RectNode(
+            id: 'r1',
+            size: const Size(10, 10),
+            fillColor: const Color(0xFF000000),
+          )..position = const Offset(0, 0),
+          layerIndex: 1,
+        ),
+        throwsRangeError,
+      );
+    },
+  );
 
   test('addNode throws for invalid layerIndex', () {
     final controller = SceneController(scene: Scene());
@@ -88,7 +155,7 @@ void main() {
           size: const Size(10, 10),
           fillColor: const Color(0xFF000000),
         )..position = const Offset(0, 0),
-        layerIndex: 1,
+        layerIndex: 2,
       ),
       throwsRangeError,
     );
@@ -178,7 +245,7 @@ void main() {
 
       await tester.pump();
 
-      expect(controller.scene.layers.single.nodes, isEmpty);
+      expect(firstNonBackgroundLayer(controller.scene).nodes, isEmpty);
       expect(controller.selectedNodeIds, isNot(contains('r1')));
       expect(actions, hasLength(1));
       expect(actions.single.type, ActionType.delete);
@@ -270,7 +337,7 @@ void main() {
 
     expect(controller.selectedNodeIds, contains('r1'));
 
-    controller.scene.layers[0].nodes.clear();
+    firstNonBackgroundLayer(controller.scene).nodes.clear();
     controller.notifySceneChanged();
 
     expect(controller.selectedNodeIds, isEmpty);
@@ -427,10 +494,10 @@ void main() {
       final sub = controller.actions.listen(actions.add);
       addTearDown(sub.cancel);
 
-      controller.moveNode('r1', targetLayerIndex: 1, timestampMs: 77);
+      controller.moveNode('r1', targetLayerIndex: 2, timestampMs: 77);
 
-      expect(controller.scene.layers[0].nodes, isEmpty);
-      expect(controller.scene.layers[1].nodes.single.id, 'r1');
+      expect(controller.scene.layers[1].nodes, isEmpty);
+      expect(controller.scene.layers[2].nodes.single.id, 'r1');
       expect(controller.selectedNodeIds, contains('r1'));
 
       expect(actions, hasLength(1));
@@ -438,15 +505,26 @@ void main() {
       expect(actions.single.nodeIds, ['r1']);
       expect(actions.single.timestampMs, 77);
       expect(actions.single.payload, <String, Object?>{
-        'sourceLayerIndex': 0,
-        'targetLayerIndex': 1,
+        'sourceLayerIndex': 1,
+        'targetLayerIndex': 2,
       });
     },
   );
 
-  test('moveNode throws when scene has no layers', () {
+  test('moveNode throws when target layer index is invalid', () {
     final controller = SceneController(scene: Scene());
     addTearDown(controller.dispose);
+
+    expect(
+      () => controller.moveNode('r1', targetLayerIndex: 1),
+      throwsRangeError,
+    );
+  });
+
+  test('moveNode throws when scene layers are externally cleared', () {
+    final controller = SceneController(scene: Scene());
+    addTearDown(controller.dispose);
+    controller.scene.layers.clear();
 
     expect(
       () => controller.moveNode('r1', targetLayerIndex: 0),
@@ -491,7 +569,7 @@ void main() {
       ),
     );
 
-    controller.moveNode('r1', targetLayerIndex: 1);
+    controller.moveNode('r1', targetLayerIndex: 2);
 
     expect(actions, hasLength(1));
     expect(actions.single.type, ActionType.move);
@@ -503,7 +581,7 @@ void main() {
     addTearDown(controller.dispose);
 
     expect(
-      () => controller.moveNode('r1', targetLayerIndex: 1, timestampMs: 0),
+      () => controller.moveNode('r1', targetLayerIndex: 2, timestampMs: 0),
       throwsRangeError,
     );
   });
@@ -531,13 +609,13 @@ void main() {
 
     final foundA = controller.findNode('a');
     expect(foundA, isNotNull);
-    expect(foundA!.layerIndex, 0);
+    expect(foundA!.layerIndex, 1);
     expect(foundA.nodeIndex, 0);
     expect(foundA.node.id, 'a');
 
     final foundB = controller.findNode('b');
     expect(foundB, isNotNull);
-    expect(foundB!.layerIndex, 1);
+    expect(foundB!.layerIndex, 2);
     expect(foundB.nodeIndex, 0);
     expect(controller.getNode('b'), same(nodeB));
     expect(controller.getNode('missing'), isNull);
@@ -551,7 +629,7 @@ void main() {
     controller.addListener(() => notifications += 1);
 
     controller.mutate((scene) {
-      scene.layers.first.nodes.add(
+      firstNonBackgroundLayer(scene).nodes.add(
         RectNode(
           id: 'r1',
           size: const Size(10, 10),
@@ -562,7 +640,7 @@ void main() {
 
     await tester.pump();
 
-    expect(controller.scene.layers.first.nodes.single.id, 'r1');
+    expect(firstNonBackgroundLayer(controller.scene).nodes.single.id, 'r1');
     expect(notifications, greaterThan(0));
   });
 
@@ -585,7 +663,7 @@ void main() {
     controller.addListener(() => notifications += 1);
 
     controller.mutate((scene) {
-      final rect = scene.layers.first.nodes.single as RectNode;
+      final rect = firstNonBackgroundLayer(scene).nodes.single as RectNode;
       rect.position = const Offset(10, 0);
     });
     expect(tester.binding.hasScheduledFrame, isTrue);

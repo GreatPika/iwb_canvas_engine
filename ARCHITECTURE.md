@@ -103,6 +103,9 @@ lib/
 
 - Ordered `nodes` list
 - The order defines z-order (last is top)
+- For scenes managed by `SceneController`, constructor canonicalization keeps a
+  single background layer at index `0` (missing/misordered background is fixed;
+  multiple background layers are rejected).
 
 ### Nodes
 
@@ -182,6 +185,9 @@ Static layer cache invariants:
 
 - **Move mode**: selection, drag move, marquee selection.
 - **Draw mode**: pen, highlighter, line, eraser.
+- Stroke/line commit is fail-safe: if local-normalization preconditions are
+  violated at commit time, the pending preview node is discarded and no action
+  is emitted (the input loop must not crash).
 - Line tool supports two flows: drag or two-tap with 10s timeout.
 
 ### Action boundaries
@@ -190,8 +196,8 @@ Action boundaries are required for undo/redo integration.
 Emit `ActionCommitted` on:
 
 - drag end (transform)
-- stroke end
-- line end
+- stroke end (successful commit only)
+- line end (successful commit only)
 - transform/delete/clear
 - marquee end
 - erase end

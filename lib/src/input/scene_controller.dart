@@ -39,6 +39,13 @@ class SceneController extends ChangeNotifier {
   ///
   /// IDs are guaranteed to be unique within the scene at generation time. If
   /// you override the generator, ensure IDs stay unique in the scene.
+  ///
+  /// Constructor policy:
+  /// - validates scene invariants and throws [ArgumentError] for unrecoverable
+  ///   violations,
+  /// - canonicalizes recoverable background-layer invariants:
+  ///   - creates a background layer at index 0 when missing,
+  ///   - moves background layer to index 0 when misordered.
   SceneController({
     Scene? scene,
     PointerInputSettings? pointerSettings,
@@ -47,6 +54,7 @@ class SceneController extends ChangeNotifier {
   }) : scene = scene ?? Scene(),
        pointerSettings = pointerSettings ?? const PointerInputSettings(),
        _dragStartSlop = dragStartSlop {
+    _validateSceneOrThrow(this.scene);
     _nodeIdGenerator = nodeIdGenerator ?? _defaultNodeIdGenerator;
     _nodeIdSeed = _initialDefaultNodeIdSeed(this.scene);
     _repaintScheduler = RepaintScheduler(notifyListeners: notifyListeners);
@@ -88,13 +96,11 @@ class SceneController extends ChangeNotifier {
 
   double get penThickness => _penThickness;
   set penThickness(double value) {
-    if (!value.isFinite || value <= 0) {
-      throw ArgumentError.value(
-        value,
-        'penThickness',
-        'Must be a finite number > 0.',
-      );
-    }
+    _requireFinitePositive(
+      value,
+      argumentName: 'penThickness',
+      message: 'Must be a finite number > 0.',
+    );
     if (_penThickness == value) return;
     _penThickness = value;
     _contracts.markSceneGeometryChanged();
@@ -103,13 +109,11 @@ class SceneController extends ChangeNotifier {
 
   double get highlighterThickness => _highlighterThickness;
   set highlighterThickness(double value) {
-    if (!value.isFinite || value <= 0) {
-      throw ArgumentError.value(
-        value,
-        'highlighterThickness',
-        'Must be a finite number > 0.',
-      );
-    }
+    _requireFinitePositive(
+      value,
+      argumentName: 'highlighterThickness',
+      message: 'Must be a finite number > 0.',
+    );
     if (_highlighterThickness == value) return;
     _highlighterThickness = value;
     _contracts.markSceneGeometryChanged();
@@ -118,13 +122,11 @@ class SceneController extends ChangeNotifier {
 
   double get lineThickness => _lineThickness;
   set lineThickness(double value) {
-    if (!value.isFinite || value <= 0) {
-      throw ArgumentError.value(
-        value,
-        'lineThickness',
-        'Must be a finite number > 0.',
-      );
-    }
+    _requireFinitePositive(
+      value,
+      argumentName: 'lineThickness',
+      message: 'Must be a finite number > 0.',
+    );
     if (_lineThickness == value) return;
     _lineThickness = value;
     _contracts.markSceneGeometryChanged();
@@ -133,13 +135,11 @@ class SceneController extends ChangeNotifier {
 
   double get eraserThickness => _eraserThickness;
   set eraserThickness(double value) {
-    if (!value.isFinite || value <= 0) {
-      throw ArgumentError.value(
-        value,
-        'eraserThickness',
-        'Must be a finite number > 0.',
-      );
-    }
+    _requireFinitePositive(
+      value,
+      argumentName: 'eraserThickness',
+      message: 'Must be a finite number > 0.',
+    );
     if (_eraserThickness == value) return;
     _eraserThickness = value;
     _contracts.markSceneGeometryChanged();
@@ -148,13 +148,11 @@ class SceneController extends ChangeNotifier {
 
   double get highlighterOpacity => _highlighterOpacity;
   set highlighterOpacity(double value) {
-    if (!value.isFinite || value < 0 || value > 1) {
-      throw ArgumentError.value(
-        value,
-        'highlighterOpacity',
-        'Must be a finite number within [0,1].',
-      );
-    }
+    _requireFiniteInUnitInterval(
+      value,
+      argumentName: 'highlighterOpacity',
+      message: 'Must be a finite number within [0,1].',
+    );
     if (_highlighterOpacity == value) return;
     _highlighterOpacity = value;
     _contracts.markSceneGeometryChanged();
@@ -288,6 +286,86 @@ class SceneController extends ChangeNotifier {
     return maxId + 1;
   }
 
+  static void _validateSceneOrThrow(Scene scene) {
+    _validateUnrecoverableSceneInvariants(scene);
+    _canonicalizeRecoverableSceneInvariants(scene);
+  }
+
+  static void _validateUnrecoverableSceneInvariants(Scene scene) {
+    _requireFiniteOffset(
+      scene.camera.offset,
+      argumentName: 'scene.camera.offset',
+      message: 'Camera offset must be finite.',
+    );
+    _requireNotEmpty(
+      scene.palette.penColors,
+      argumentName: 'scene.palette.penColors',
+      message: 'Palette penColors must not be empty.',
+    );
+    _requireNotEmpty(
+      scene.palette.backgroundColors,
+      argumentName: 'scene.palette.backgroundColors',
+      message: 'Palette backgroundColors must not be empty.',
+    );
+    _requireNotEmpty(
+      scene.palette.gridSizes,
+      argumentName: 'scene.palette.gridSizes',
+      message: 'Palette gridSizes must not be empty.',
+    );
+
+    final grid = scene.background.grid;
+    _requireFinite(
+      grid.cellSize,
+      argumentName: 'scene.background.grid.cellSize',
+      message: 'Grid cell size must be finite.',
+    );
+    if (grid.isEnabled) {
+      _requireFinitePositive(
+        grid.cellSize,
+        argumentName: 'scene.background.grid.cellSize',
+        message: 'Grid cell size must be > 0 when grid is enabled.',
+      );
+    }
+
+    var backgroundCount = 0;
+    for (final layer in scene.layers) {
+      if (layer.isBackground) {
+        backgroundCount += 1;
+      }
+      if (backgroundCount > 1) {
+        throw ArgumentError.value(
+          scene.layers,
+          'scene.layers',
+          'Scene must contain at most one background layer.',
+        );
+      }
+    }
+  }
+
+  static void _canonicalizeRecoverableSceneInvariants(Scene scene) {
+    final grid = scene.background.grid;
+    if (grid.isEnabled && grid.cellSize < kMinGridCellSize) {
+      grid.cellSize = kMinGridCellSize;
+    }
+
+    var backgroundIndex = -1;
+    for (var i = 0; i < scene.layers.length; i++) {
+      if (scene.layers[i].isBackground) {
+        backgroundIndex = i;
+        break;
+      }
+    }
+
+    if (backgroundIndex == -1) {
+      scene.layers.insert(0, Layer(isBackground: true));
+      return;
+    }
+    if (backgroundIndex == 0) return;
+
+    final backgroundLayer = scene.layers.removeAt(backgroundIndex);
+    scene.layers.insert(0, backgroundLayer);
+  }
+
   bool _sceneContainsNodeId(NodeId id) {
     for (final layer in scene.layers) {
       for (final node in layer.nodes) {
@@ -353,13 +431,11 @@ class SceneController extends ChangeNotifier {
 
   /// Sets the grid cell size in scene units.
   void setGridCellSize(double value) {
-    if (!value.isFinite || value <= 0) {
-      throw ArgumentError.value(
-        value,
-        'value',
-        'Grid cell size must be a finite number > 0.',
-      );
-    }
+    _requireFinitePositive(
+      value,
+      argumentName: 'value',
+      message: 'Grid cell size must be a finite number > 0.',
+    );
     final resolvedValue = scene.background.grid.isEnabled
         ? value.clamp(kMinGridCellSize, double.infinity).toDouble()
         : value;
@@ -396,13 +472,16 @@ class SceneController extends ChangeNotifier {
 
   /// Adds [node] to the target layer and notifies listeners.
   ///
-  /// Throws [RangeError] if [layerIndex] is out of bounds.
-  /// Adds [node] to [layerIndex].
+  /// When [layerIndex] is omitted, the node is added to the first
+  /// non-background layer. If none exists, a new non-background layer is
+  /// created and used.
+  ///
+  /// Adds [node] to [layerIndex] when provided.
   ///
   /// Throws [RangeError] when [layerIndex] is invalid.
   /// Throws [ArgumentError] when a node with the same [SceneNode.id] already
   /// exists in the scene.
-  void addNode(SceneNode node, {int layerIndex = 0}) {
+  void addNode(SceneNode node, {int? layerIndex}) {
     _sceneCommands.addNode(node, layerIndex: layerIndex);
   }
 
@@ -550,13 +629,11 @@ class SceneController extends ChangeNotifier {
   void _resetDrag() => _moveModeEngine.reset();
 
   void _setCameraOffset(Offset value, {bool notify = true}) {
-    if (!value.dx.isFinite || !value.dy.isFinite) {
-      throw ArgumentError.value(
-        value,
-        'value',
-        'Camera offset must be finite.',
-      );
-    }
+    _requireFiniteOffset(
+      value,
+      argumentName: 'value',
+      message: 'Camera offset must be finite.',
+    );
     if (scene.camera.offset == value) return;
     scene.camera.offset = value;
     _contracts.markSceneGeometryChanged();
@@ -590,6 +667,51 @@ class SceneController extends ChangeNotifier {
 
   void requestRepaintOncePerFrame() =>
       _repaintScheduler.requestRepaintOncePerFrame();
+
+  static void _requireFinite(
+    double value, {
+    required String argumentName,
+    required String message,
+  }) {
+    if (value.isFinite) return;
+    throw ArgumentError.value(value, argumentName, message);
+  }
+
+  static void _requireFinitePositive(
+    double value, {
+    required String argumentName,
+    required String message,
+  }) {
+    if (value.isFinite && value > 0) return;
+    throw ArgumentError.value(value, argumentName, message);
+  }
+
+  static void _requireFiniteInUnitInterval(
+    double value, {
+    required String argumentName,
+    required String message,
+  }) {
+    if (value.isFinite && value >= 0 && value <= 1) return;
+    throw ArgumentError.value(value, argumentName, message);
+  }
+
+  static void _requireFiniteOffset(
+    Offset value, {
+    required String argumentName,
+    required String message,
+  }) {
+    if (value.dx.isFinite && value.dy.isFinite) return;
+    throw ArgumentError.value(value, argumentName, message);
+  }
+
+  static void _requireNotEmpty(
+    List<Object?> values, {
+    required String argumentName,
+    required String message,
+  }) {
+    if (values.isNotEmpty) return;
+    throw ArgumentError.value(values, argumentName, message);
+  }
 }
 
 class _SceneControllerContracts implements InputSliceContracts {

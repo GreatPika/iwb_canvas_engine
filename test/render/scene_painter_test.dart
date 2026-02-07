@@ -184,12 +184,12 @@ void main() {
       )..transform = Transform2D(a: 1, b: 0, c: 0, d: 1, tx: double.nan, ty: 0);
 
       final scene = Scene(
-        camera: Camera(offset: const Offset(double.infinity, double.nan)),
+        camera: Camera(offset: const Offset(0, 0)),
         background: Background(
           color: background,
           grid: GridSettings(
             isEnabled: true,
-            cellSize: double.nan,
+            cellSize: 10,
             color: const Color(0x1F000000),
           ),
         ),
@@ -225,22 +225,24 @@ void main() {
           ),
         ],
       );
+      final controller = _controllerFor(scene);
+      // Deliberately break runtime values after constructor validation.
+      scene.camera.offset = const Offset(double.infinity, double.nan);
+      scene.background.grid.cellSize = double.nan;
 
       final painter = ScenePainter(
-        controller: _controllerFor(
-          scene,
-          selectedNodeIds: const {
-            'rect-1',
-            'line-1',
-            'stroke-1',
-            'rect-nonfinite-transform',
-          },
-          selectionRect: const Rect.fromLTWH(10, 10, 50, 40),
-        ),
+        controller: controller,
         imageResolver: (_) => null,
         selectionStrokeWidth: double.nan,
         gridStrokeWidth: double.nan,
       );
+      controller.debugSetSelection(const {
+        'rect-1',
+        'line-1',
+        'stroke-1',
+        'rect-nonfinite-transform',
+      });
+      controller.debugSetSelectionRect(const Rect.fromLTWH(10, 10, 50, 40));
 
       final image = await _paintToImage(painter);
       expect(image.width, greaterThan(0));
@@ -300,15 +302,17 @@ void main() {
         color: background,
         grid: GridSettings(
           isEnabled: true,
-          cellSize: 0.5,
+          cellSize: 10,
           color: const Color(0xFF000000),
         ),
       ),
       layers: [Layer()],
     );
+    final controller = _controllerFor(scene);
+    scene.background.grid.cellSize = 0.5;
 
     final painter = ScenePainter(
-      controller: _controllerFor(scene),
+      controller: controller,
       imageResolver: (_) => null,
     );
 
@@ -326,7 +330,7 @@ void main() {
 
   test('ScenePainter skips grid when camera offset is non-finite', () async {
     final scene = Scene(
-      camera: Camera(offset: const Offset(double.nan, 0)),
+      camera: Camera(offset: const Offset(0, 0)),
       background: Background(
         color: const Color(0xFFFFFFFF),
         grid: GridSettings(
@@ -337,9 +341,11 @@ void main() {
       ),
       layers: [Layer()],
     );
+    final controller = _controllerFor(scene);
+    scene.camera.offset = const Offset(double.nan, 0);
 
     final painter = ScenePainter(
-      controller: _controllerFor(scene),
+      controller: controller,
       imageResolver: (_) => null,
     );
 

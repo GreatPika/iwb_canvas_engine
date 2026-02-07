@@ -53,7 +53,12 @@ class StrokeTool {
         (scenePoint - stroke.points.last).distance > 0) {
       stroke.points.add(scenePoint);
     }
-    stroke.normalizeToLocalCenter();
+    try {
+      stroke.normalizeToLocalCenter();
+    } catch (_) {
+      _abortActiveStroke();
+      return;
+    }
     _activeStroke = null;
     _activeDrawLayer = null;
     _contracts.markSceneGeometryChanged();
@@ -74,6 +79,15 @@ class StrokeTool {
   }
 
   void reset() {
+    if (_activeStroke != null && _activeDrawLayer != null) {
+      _activeDrawLayer!.nodes.remove(_activeStroke);
+      _contracts.markSceneStructuralChanged();
+    }
+    _activeStroke = null;
+    _activeDrawLayer = null;
+  }
+
+  void _abortActiveStroke() {
     if (_activeStroke != null && _activeDrawLayer != null) {
       _activeDrawLayer!.nodes.remove(_activeStroke);
       _contracts.markSceneStructuralChanged();

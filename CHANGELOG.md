@@ -1,5 +1,16 @@
 ## Unreleased
 
+- Input: make stroke/line commit fail-safe in draw mode. If
+  `normalizeToLocalCenter()` throws during commit, the pending preview node is
+  discarded, the tool state is reset, and no action is emitted.
+- Input: `SceneController(scene: ...)` now validates constructor scene
+  invariants and canonicalizes recoverable background-layer cases (ensures
+  background exists at index 0, moves misordered background to index 0).
+  Unrecoverable constructor violations (for example multiple background layers,
+  empty palettes, non-finite camera/grid values) throw `ArgumentError`.
+- Behavior: `SceneController.addNode(...)` without `layerIndex` now targets the
+  first non-background layer; when no non-background layer exists, the
+  controller creates one automatically.
 - Fix: enforce unique `NodeId` at both mutation and JSON boundaries:
   `SceneController.addNode(...)` now throws `ArgumentError` for duplicate IDs,
   and `decodeScene(...)` throws `SceneJsonFormatException` when duplicate node

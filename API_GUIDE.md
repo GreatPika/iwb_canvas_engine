@@ -156,6 +156,10 @@ Stable contracts (expected to remain compatible as the package evolves):
 - **List ownership:** `Scene(layers: ...)` and `Layer(nodes: ...)` defensively copy
   the provided lists. Mutating the original list after construction does not affect
   the scene/layer.
+- **Controller canonicalization:** `SceneController(scene: ...)` validates
+  constructor input, ensures a background layer exists at index `0`, and moves
+  a misordered background layer to index `0`. Multiple background layers are
+  rejected with `ArgumentError`.
 - **PathNode local path cache:** `PathNode.buildLocalPath()` returns a defensive
   copy by default. Pass `copy:false` only for performance-sensitive, read-only
   internal usage. To debug invalid SVG path data, enable
@@ -272,7 +276,7 @@ Where to implement snap:
 ```dart
 import 'package:iwb_canvas_engine/basic.dart';
 
-final controller = SceneController(scene: Scene(layers: [Layer()]));
+final controller = SceneController(scene: Scene(layers: [Layer(), Layer()]));
 
 controller.addNode(
   RectNode(
@@ -282,7 +286,7 @@ controller.addNode(
   )..position = const Offset(200, 200),
 );
 
-controller.moveNode('rect-2', targetLayerIndex: 0);
+controller.moveNode('rect-2', targetLayerIndex: 2);
 controller.removeNode('rect-2');
 ```
 
@@ -290,6 +294,9 @@ Gotchas:
 - **Node IDs must be unique within a scene.** `SceneController.addNode(...)`
   throws `ArgumentError` for duplicates; `decodeScene(...)` throws
   `SceneJsonFormatException` if JSON contains duplicate IDs.
+- `addNode(...)` without `layerIndex` targets the first non-background layer.
+  When a scene has only background, the controller creates a non-background
+  layer and adds the node there.
 - If you want the controller to generate IDs, use controller-created nodes/flows or provide `nodeIdGenerator`.
 - The default `node-{n}` generator starts at `max(existing node-{n}) + 1` for the provided scene (so bulk node creation stays fast).
 
@@ -304,7 +311,8 @@ What you want: directly edit `controller.scene` (e.g., bulk changes), then resto
 ```dart
 // Preferred: use mutate(...) to schedule the right updates.
 controller.mutate((scene) {
-  scene.layers.first.nodes.clear();
+  final contentLayer = scene.layers.firstWhere((layer) => !layer.isBackground);
+  contentLayer.nodes.clear();
 }, structural: true);
 
 // Escape hatch:
