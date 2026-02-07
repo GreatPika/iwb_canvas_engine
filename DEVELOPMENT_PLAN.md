@@ -170,14 +170,14 @@ behavior across modules.
    * Recreate the owned controller (or update fields if supported) on change.
      **Done when:** test/demo: updating `dragStartSlop` changes behavior without rebuilding the entire widget.
 
-10. [ ] **(#27) JSON allows empty palettes (`penColors/backgroundColors/gridSizes`)**
+10. [x] **(#27) JSON allows empty palettes (`penColors/backgroundColors/gridSizes`)**
     **Where:** `SceneCodec` decode/validation
     **Do:**
 
 * Reject empty lists with `SceneJsonFormatException`.
   **Done when:** test: empty palette JSON fails to load.
 
-11. [ ] **(#28) JSON too strict about `grid.cellSize` even when `enabled=false`**
+11. [x] **(#28) JSON too strict about `grid.cellSize` even when `enabled=false`**
     **Where:** `SceneCodec`
     **Policy (fixed):** when grid disabled, accept any finite value.
     **Do:**

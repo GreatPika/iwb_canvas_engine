@@ -241,6 +241,9 @@ Emit `ActionCommitted` on:
   - `PathNode`: `svgPathData` (source of truth; rendered centered around (0,0))
   - `RectNode` / `ImageNode` / `TextNode`: `size {w,h}` (always centered on (0,0))
 - Export/import validates input and throws a clear `SceneJsonFormatException` on invalid data.
+- JSON contracts also enforce non-empty palettes and conditional grid rules:
+  `background.grid.cellSize` must be finite and `> 0` when grid is enabled,
+  and only finite when grid is disabled.
 - Runtime bounds/hit-testing/rendering use soft numeric normalization to avoid
   NaN/Infinity propagation; strict validation is enforced at the JSON boundary.
   - Width-like values (`thickness`, `strokeWidth`, `hitPadding`) normalize to

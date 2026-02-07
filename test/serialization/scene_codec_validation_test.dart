@@ -530,6 +530,50 @@ void main() {
     );
   });
 
+  test('decodeScene rejects empty palette lists', () {
+    // INV:INV-SER-JSON-GRID-PALETTE-CONTRACTS
+    final emptyPen = _minimalSceneJson();
+    (emptyPen['palette'] as Map<String, dynamic>)['penColors'] = <dynamic>[];
+    expect(
+      () => decodeScene(emptyPen),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Field penColors must not be empty.',
+        ),
+      ),
+    );
+
+    final emptyBackground = _minimalSceneJson();
+    (emptyBackground['palette'] as Map<String, dynamic>)['backgroundColors'] =
+        <dynamic>[];
+    expect(
+      () => decodeScene(emptyBackground),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Field backgroundColors must not be empty.',
+        ),
+      ),
+    );
+
+    final emptyGridSizes = _minimalSceneJson();
+    (emptyGridSizes['palette'] as Map<String, dynamic>)['gridSizes'] =
+        <dynamic>[];
+    expect(
+      () => decodeScene(emptyGridSizes),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Field gridSizes must not be empty.',
+        ),
+      ),
+    );
+  });
+
   test('decodeScene validates required field types', () {
     final schemaWrong = _minimalSceneJson();
     schemaWrong['schemaVersion'] = '1';
@@ -696,22 +740,66 @@ void main() {
     );
   });
 
-  test('decodeScene rejects non-positive grid cellSize', () {
-    final json = _minimalSceneJson();
-    ((json['background'] as Map<String, dynamic>)['grid']
-            as Map<String, dynamic>)['cellSize'] =
-        0;
-    expect(
-      () => decodeScene(json),
-      throwsA(
-        predicate(
-          (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Field cellSize must be > 0.',
+  test(
+    'decodeScene rejects non-positive grid cellSize when grid is enabled',
+    () {
+      final json = _minimalSceneJson();
+      final grid =
+          (json['background'] as Map<String, dynamic>)['grid']
+              as Map<String, dynamic>;
+      grid['enabled'] = true;
+      grid['cellSize'] = 0;
+      expect(
+        () => decodeScene(json),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneJsonFormatException &&
+                e.message == 'Field cellSize must be > 0.',
+          ),
         ),
-      ),
-    );
+      );
+    },
+  );
+
+  test('decodeScene accepts disabled-grid finite odd cellSize values', () {
+    for (final value in <double>[0, -12.5, 0.125]) {
+      final json = _minimalSceneJson();
+      final grid =
+          (json['background'] as Map<String, dynamic>)['grid']
+              as Map<String, dynamic>;
+      grid['enabled'] = false;
+      grid['cellSize'] = value;
+
+      final scene = decodeScene(json);
+      expect(scene.background.grid.isEnabled, isFalse);
+      expect(scene.background.grid.cellSize, value);
+    }
   });
+
+  test(
+    'decodeScene rejects non-finite grid cellSize regardless of enabled',
+    () {
+      for (final enabled in <bool>[false, true]) {
+        final json = _minimalSceneJson();
+        final grid =
+            (json['background'] as Map<String, dynamic>)['grid']
+                as Map<String, dynamic>;
+        grid['enabled'] = enabled;
+        grid['cellSize'] = double.infinity;
+        expect(
+          () => decodeScene(json),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is SceneJsonFormatException &&
+                  e.message == 'Field cellSize must be finite.',
+            ),
+          ),
+        );
+      }
+    },
+  );
 
   test('decodeScene rejects negative sizes', () {
     final nodeJson = _baseNodeJson(id: 'img-1', type: 'image')
@@ -849,6 +937,82 @@ void main() {
           (e) =>
               e is SceneJsonFormatException &&
               e.message == 'Items of gridSizes must be finite.',
+        ),
+      ),
+    );
+  });
+
+  test('encodeScene enforces grid and palette contracts', () {
+    // INV:INV-SER-JSON-GRID-PALETTE-CONTRACTS
+    final disabledGridScene = Scene(
+      layers: [Layer()],
+      background: Background(
+        grid: GridSettings(isEnabled: false, cellSize: -12.5),
+      ),
+    );
+    final disabledGridEncoded = encodeScene(disabledGridScene);
+    final disabledGridJson =
+        (disabledGridEncoded['background'] as Map<String, dynamic>)['grid']
+            as Map<String, dynamic>;
+    expect(disabledGridJson['cellSize'], -12.5);
+
+    final enabledGridScene = Scene(
+      layers: [Layer()],
+      background: Background(grid: GridSettings(isEnabled: true, cellSize: 0)),
+    );
+    expect(
+      () => encodeScene(enabledGridScene),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Field background.grid.cellSize must be > 0.',
+        ),
+      ),
+    );
+
+    expect(
+      () => encodeScene(
+        Scene(
+          layers: [Layer()],
+          palette: ScenePalette(penColors: const []),
+        ),
+      ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Field palette.penColors must not be empty.',
+        ),
+      ),
+    );
+    expect(
+      () => encodeScene(
+        Scene(
+          layers: [Layer()],
+          palette: ScenePalette(backgroundColors: const []),
+        ),
+      ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Field palette.backgroundColors must not be empty.',
+        ),
+      ),
+    );
+    expect(
+      () => encodeScene(
+        Scene(
+          layers: [Layer()],
+          palette: ScenePalette(gridSizes: const []),
+        ),
+      ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Field palette.gridSizes must not be empty.',
         ),
       ),
     );

@@ -111,30 +111,36 @@ Scene decodeScene(Map<String, dynamic> json) {
 
   final backgroundJson = _requireMap(json, 'background');
   final gridJson = _requireMap(backgroundJson, 'grid');
+  final gridEnabled = _requireBool(gridJson, 'enabled');
   final background = Background(
     color: _parseColor(_requireString(backgroundJson, 'color')),
     grid: GridSettings(
-      isEnabled: _requireBool(gridJson, 'enabled'),
-      cellSize: _requirePositiveDouble(gridJson, 'cellSize'),
+      isEnabled: gridEnabled,
+      cellSize: _requireGridCellSize(gridJson, isEnabled: gridEnabled),
       color: _parseColor(_requireString(gridJson, 'color')),
     ),
   );
 
   final paletteJson = _requireMap(json, 'palette');
+  final penColorsJson = _requireList(paletteJson, 'penColors');
+  _ensureListNotEmpty(penColorsJson, 'penColors');
+  final backgroundColorsJson = _requireList(paletteJson, 'backgroundColors');
+  _ensureListNotEmpty(backgroundColorsJson, 'backgroundColors');
+  final gridSizesJson = _requireList(paletteJson, 'gridSizes');
+  _ensureListNotEmpty(gridSizesJson, 'gridSizes');
   final palette = ScenePalette(
-    penColors: _requireList(paletteJson, 'penColors')
+    penColors: penColorsJson
         .map((value) => _parseColor(_requireStringValue(value, 'penColors')))
         .toList(),
-    backgroundColors: _requireList(paletteJson, 'backgroundColors')
+    backgroundColors: backgroundColorsJson
         .map(
           (value) =>
               _parseColor(_requireStringValue(value, 'backgroundColors')),
         )
         .toList(),
-    gridSizes: _requireList(
-      paletteJson,
-      'gridSizes',
-    ).map((value) => _requirePositiveDoubleValue(value, 'gridSizes')).toList(),
+    gridSizes: gridSizesJson
+        .map((value) => _requirePositiveDoubleValue(value, 'gridSizes'))
+        .toList(),
   );
 
   final layersJson = _requireList(json, 'layers');
@@ -711,6 +717,17 @@ double _requirePositiveDouble(Map<String, dynamic> json, String key) {
   return value;
 }
 
+double _requireGridCellSize(
+  Map<String, dynamic> json, {
+  required bool isEnabled,
+}) {
+  final value = _requireDouble(json, 'cellSize');
+  if (isEnabled && value <= 0) {
+    throw SceneJsonFormatException('Field cellSize must be > 0.');
+  }
+  return value;
+}
+
 double _requireNonNegativeDouble(Map<String, dynamic> json, String key) {
   final value = _requireDouble(json, key);
   if (value < 0) {
@@ -783,13 +800,25 @@ void _ensureFiniteColor(Color color, String field) {
 }
 
 void _ensureFiniteGrid(GridSettings grid, String field) {
-  _ensurePositiveDouble(grid.cellSize, '$field.cellSize');
+  _ensureFiniteDouble(grid.cellSize, '$field.cellSize');
+  if (grid.isEnabled && grid.cellSize <= 0) {
+    throw SceneJsonFormatException('Field $field.cellSize must be > 0.');
+  }
   _ensureFiniteColor(grid.color, '$field.color');
 }
 
 void _ensureFinitePalette(ScenePalette palette, String field) {
+  _ensureListNotEmpty(palette.penColors, '$field.penColors');
+  _ensureListNotEmpty(palette.backgroundColors, '$field.backgroundColors');
+  _ensureListNotEmpty(palette.gridSizes, '$field.gridSizes');
   for (var i = 0; i < palette.gridSizes.length; i++) {
     final value = palette.gridSizes[i];
     _ensurePositiveDouble(value, '$field.gridSizes[$i]');
+  }
+}
+
+void _ensureListNotEmpty(List<Object?> values, String field) {
+  if (values.isEmpty) {
+    throw SceneJsonFormatException('Field $field must not be empty.');
   }
 }

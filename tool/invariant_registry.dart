@@ -165,6 +165,12 @@ const List<Invariant> invariants = <Invariant>[
     scope: 'serialization',
     title: 'Scene JSON numeric fields are finite and within valid ranges',
   ),
+  Invariant(
+    id: 'INV-SER-JSON-GRID-PALETTE-CONTRACTS',
+    scope: 'serialization',
+    title:
+        'Scene JSON enforces non-empty palettes and conditional grid.cellSize validation (enabled: > 0, disabled: finite)',
+  ),
 
   // Core.
   Invariant(

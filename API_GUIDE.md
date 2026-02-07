@@ -222,6 +222,11 @@ Stable contracts (expected to remain compatible as the package evolves):
 
 - **Serialization boundary (`decodeScene` / `encodeScene`) is strict:** non-finite
   numbers and out-of-range values throw `SceneJsonFormatException`.
+- JSON palette lists (`penColors`, `backgroundColors`, `gridSizes`) must be
+  non-empty.
+- `background.grid.cellSize` validation is conditional:
+  - when `grid.enabled == true`, `cellSize` must be finite and `> 0`;
+  - when `grid.enabled == false`, any finite `cellSize` is accepted.
 - **Runtime behavior is defensive:** bounds, hit-testing, and rendering sanitize
   invalid numeric inputs to avoid propagating NaN/Infinity or crashing.
   - Length-like values (`thickness`, `strokeWidth`, `hitPadding`, `Size.*`) treat
@@ -599,8 +604,10 @@ Source of truth: `lib/src/serialization/scene_codec.dart`.
   - `color` (string: `#AARRGGBB` or `#RRGGBB`)
   - `grid`:
     - `enabled` (bool), `cellSize` (double), `color` (string)
+    - `cellSize` rule: if `enabled` then finite `> 0`, otherwise any finite
 - `palette`:
   - `penColors` (string[]), `backgroundColors` (string[]), `gridSizes` (double[])
+  - each list must be non-empty
 - `layers` (array)
 
 ### Layer

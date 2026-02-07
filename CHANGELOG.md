@@ -51,6 +51,9 @@
   updates scoped and avoid unrelated structural rewrites.
 - Serialization: stricter numeric validation for JSON import/export (finite
   numbers + valid ranges); invalid input throws `SceneJsonFormatException`.
+- Serialization: enforce non-empty palette lists on JSON import/export and
+  validate `background.grid.cellSize` conditionally (`enabled=true` requires
+  `> 0`; `enabled=false` accepts any finite value).
 - Input: `SceneController` numeric setters now reject invalid values and throw
   `ArgumentError`.
 - View: add `SceneView` pointer sample callbacks (`onPointerSampleBefore`,

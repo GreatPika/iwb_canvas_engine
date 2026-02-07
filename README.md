@@ -290,6 +290,10 @@ final restored = decodeSceneFromJson(json);
 Numeric fields must be finite and within valid ranges (for example, opacity
 must be within `[0,1]` and thickness values must be `> 0`). Invalid input
 throws `SceneJsonFormatException`.
+Palette arrays must be non-empty (`penColors`, `backgroundColors`, `gridSizes`).
+For `background.grid.cellSize`, validation depends on `grid.enabled`:
+- `enabled == true`: `cellSize` must be finite and `> 0`.
+- `enabled == false`: any finite `cellSize` is accepted.
 
 At runtime, bounds/hit-testing/rendering are defensive:
 - non-finite or negative length-like values (`thickness`, `strokeWidth`,
