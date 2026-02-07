@@ -1,5 +1,9 @@
 ## Unreleased
 
+- Fix: enforce unique `NodeId` at both mutation and JSON boundaries:
+  `SceneController.addNode(...)` now throws `ArgumentError` for duplicate IDs,
+  and `decodeScene(...)` throws `SceneJsonFormatException` when duplicate node
+  IDs are present in input JSON.
 - Fix: harden grid safety limits to prevent pathological rendering load:
   clamp `setGridCellSize` to minimum `1.0` when grid is enabled, skip grid
   paint for `cellSize < 1.0`/non-finite values, and skip when expected grid

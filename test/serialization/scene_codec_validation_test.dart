@@ -142,6 +142,42 @@ void main() {
     );
   });
 
+  test('decodeScene rejects duplicate node ids across layers', () {
+    // INV:INV-G-NODEID-UNIQUE
+    final json = _minimalSceneJson();
+    json['layers'] = <dynamic>[
+      <String, dynamic>{
+        'isBackground': false,
+        'nodes': <dynamic>[
+          _baseNodeJson(id: 'dup-node', type: 'rect')..addAll(<String, dynamic>{
+            'size': <String, dynamic>{'w': 10, 'h': 10},
+            'strokeWidth': 0,
+          }),
+        ],
+      },
+      <String, dynamic>{
+        'isBackground': false,
+        'nodes': <dynamic>[
+          _baseNodeJson(id: 'dup-node', type: 'rect')..addAll(<String, dynamic>{
+            'size': <String, dynamic>{'w': 20, 'h': 20},
+            'strokeWidth': 0,
+          }),
+        ],
+      },
+    ];
+    expect(
+      () => decodeScene(json),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message ==
+                  'Duplicate node id: dup-node. Node ids must be unique.',
+        ),
+      ),
+    );
+  });
+
   test('decodeScene rejects unknown node types', () {
     final json = _sceneWithSingleNode(_baseNodeJson(id: 'n1', type: 'mystery'));
     expect(

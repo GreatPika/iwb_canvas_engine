@@ -388,6 +388,11 @@ class SceneController extends ChangeNotifier {
   /// Adds [node] to the target layer and notifies listeners.
   ///
   /// Throws [RangeError] if [layerIndex] is out of bounds.
+  /// Adds [node] to [layerIndex].
+  ///
+  /// Throws [RangeError] when [layerIndex] is invalid.
+  /// Throws [ArgumentError] when a node with the same [SceneNode.id] already
+  /// exists in the scene.
   void addNode(SceneNode node, {int layerIndex = 0}) {
     _sceneCommands.addNode(node, layerIndex: layerIndex);
   }

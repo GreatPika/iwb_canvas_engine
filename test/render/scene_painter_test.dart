@@ -2,6 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/advanced.dart';
+import 'package:iwb_canvas_engine/src/render/scene_painter.dart'
+    as render_internal;
 
 Future<Image> _solidImage(Color color, {int width = 8, int height = 8}) async {
   final recorder = PictureRecorder();
@@ -291,6 +293,7 @@ void main() {
   });
 
   test('ScenePainter skips grid when cellSize is below minimum', () async {
+    // INV:INV-RENDER-GRID-SAFETY-LIMITS
     const background = Color(0xFFFFFFFF);
     final scene = Scene(
       background: Background(
@@ -314,9 +317,42 @@ void main() {
     expect(nonBg, 0);
   });
 
+  test('grid line count fallback handles non-finite inputs', () {
+    expect(
+      render_internal.debugGridLineCount(0, double.nan, 10),
+      greaterThan(200),
+    );
+  });
+
+  test('ScenePainter skips grid when camera offset is non-finite', () async {
+    final scene = Scene(
+      camera: Camera(offset: const Offset(double.nan, 0)),
+      background: Background(
+        color: const Color(0xFFFFFFFF),
+        grid: GridSettings(
+          isEnabled: true,
+          cellSize: 10,
+          color: const Color(0xFF000000),
+        ),
+      ),
+      layers: [Layer()],
+    );
+
+    final painter = ScenePainter(
+      controller: _controllerFor(scene),
+      imageResolver: (_) => null,
+    );
+
+    final recorder = PictureRecorder();
+    final canvas = Canvas(recorder);
+    painter.paint(canvas, const Size(120, 80));
+    recorder.endRecording();
+  });
+
   test(
     'ScenePainter skips grid when expected line count exceeds safety cap',
     () async {
+      // INV:INV-RENDER-GRID-SAFETY-LIMITS
       const background = Color(0xFFFFFFFF);
       final scene = Scene(
         background: Background(

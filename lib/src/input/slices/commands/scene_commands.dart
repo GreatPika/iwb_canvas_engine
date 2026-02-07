@@ -46,6 +46,13 @@ class SceneCommands {
     if (layerIndex < 0) {
       throw RangeError.range(layerIndex, 0, null, 'layerIndex');
     }
+    if (_sceneContainsNodeId(node.id)) {
+      throw ArgumentError.value(
+        node.id,
+        'node.id',
+        'Node id must be unique within the scene.',
+      );
+    }
 
     final layers = _contracts.scene.layers;
     if (layers.isEmpty) {
@@ -62,6 +69,15 @@ class SceneCommands {
     layers[layerIndex].nodes.add(node);
     _contracts.markSceneStructuralChanged();
     _contracts.notifyNow();
+  }
+
+  bool _sceneContainsNodeId(NodeId id) {
+    for (final layer in _contracts.scene.layers) {
+      for (final node in layer.nodes) {
+        if (node.id == id) return true;
+      }
+    }
+    return false;
   }
 
   void removeNode(NodeId id, {int? timestampMs}) {

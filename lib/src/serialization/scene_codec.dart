@@ -144,6 +144,7 @@ Scene decodeScene(Map<String, dynamic> json) {
     }
     return _decodeLayer(layerJson);
   }).toList();
+  _ensureUniqueNodeIds(layers);
 
   return Scene(
     layers: layers,
@@ -169,6 +170,19 @@ Layer _decodeLayer(Map<String, dynamic> json) {
     return _decodeNode(nodeJson);
   }).toList();
   return Layer(nodes: nodes, isBackground: _requireBool(json, 'isBackground'));
+}
+
+void _ensureUniqueNodeIds(List<Layer> layers) {
+  final seen = <NodeId>{};
+  for (final layer in layers) {
+    for (final node in layer.nodes) {
+      if (!seen.add(node.id)) {
+        throw SceneJsonFormatException(
+          'Duplicate node id: ${node.id}. Node ids must be unique.',
+        );
+      }
+    }
+  }
 }
 
 Map<String, dynamic> _encodeNode(SceneNode node) {

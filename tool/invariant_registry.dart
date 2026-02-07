@@ -42,6 +42,11 @@ const List<Invariant> invariants = <Invariant>[
     scope: 'behavior',
     title: 'input notifications preserve immediate vs coalesced semantics',
   ),
+  Invariant(
+    id: 'INV-G-NODEID-UNIQUE',
+    scope: 'behavior',
+    title: 'NodeId is unique across all scene layers (commands + decode)',
+  ),
 
   // Input slice boundaries.
   Invariant(
@@ -90,6 +95,12 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-REPAINT-NOTIFYNOW-CLEARS',
     scope: 'repaint',
     title: 'notifyNow clears needs-notify flag and cancels scheduled repaint',
+  ),
+  Invariant(
+    id: 'INV-RENDER-GRID-SAFETY-LIMITS',
+    scope: 'render',
+    title:
+        'Grid rendering/input enforce safety limits (min cell size clamp, max line cap skip)',
   ),
   Invariant(
     id: 'INV-SIGNALS-BROADCAST-SYNC',

@@ -14,6 +14,40 @@ Goal: prevent invalid state (NaN/Infinity, duplicate IDs, time going backwards, 
   - invariant marker updates where applicable (`INV:*` references),
   - checkbox update in this document.
 
+## Whole-Plan Strategy
+
+Implement the full roadmap through four cross-cutting layers, then map each task
+to one primary layer. This keeps local fixes consistent and avoids fragmented
+behavior across modules.
+
+1. Reliability Kernel
+   - Build shared primitives first: scene validation, selection normalization,
+     monotonic timestamp resolution, and O(1) node identity/index helpers.
+   - Rule: all input/command/serialization paths must use these primitives
+     instead of re-implementing checks locally.
+
+2. Transactional Gestures
+   - Use a consistent gesture lifecycle: `begin -> preview -> commit | rollback`.
+   - Apply the same rollback semantics to `cancel` and `setMode(...)` during an
+     active gesture (no partial edits left behind).
+
+3. Interaction Policy Layer
+   - Centralize interaction contracts: active pointer ownership, pointer-signal
+     filtering, and non-interactive/non-deletable background behavior.
+   - Rule: selection contains valid interactive IDs only.
+
+4. Performance Backbone
+   - After behavior is stable, optimize with shared infrastructure: spatial
+     indexing, cache-key correctness, O(1) membership paths, and hot-path math
+     simplifications.
+   - Rule: performance changes must preserve previously locked contracts.
+
+### Task Mapping Rule
+
+- Each task must declare one primary strategy layer (1-4) before implementation.
+- If a task touches multiple layers, complete the primary layer behavior first,
+  and treat the rest as minimal supporting changes only.
+
 ## Execution Ordering Policy
 
 - The task checklist order and numbering are intentionally preserved.
@@ -58,7 +92,7 @@ Goal: prevent invalid state (NaN/Infinity, duplicate IDs, time going backwards, 
    * Add `maxGridLines` guard (e.g. <= 200 lines per axis); if exceeded, skip grid.
      **Done when:** test proves no freeze for very small values; non-finite values don’t draw.
 
-2. [ ] **(#2) Duplicate `NodeId` causes nondeterministic find/remove/selection**
+2. [x] **(#2) Duplicate `NodeId` causes nondeterministic find/remove/selection**
    **Where:** `SceneCommands.addNode(...)`, `SceneCodec.decodeScene(...)`
    **Do:**
 

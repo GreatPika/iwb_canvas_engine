@@ -46,6 +46,7 @@ void main() {
   });
 
   test('setGridCellSize clamps to minimum when grid is enabled', () {
+    // INV:INV-RENDER-GRID-SAFETY-LIMITS
     final controller = SceneController(scene: Scene(layers: [Layer()]));
     addTearDown(controller.dispose);
 

@@ -286,7 +286,9 @@ controller.removeNode('rect-2');
 ```
 
 Gotchas:
-- **Node IDs must be unique within a scene.** If you create IDs yourself, enforce uniqueness.
+- **Node IDs must be unique within a scene.** `SceneController.addNode(...)`
+  throws `ArgumentError` for duplicates; `decodeScene(...)` throws
+  `SceneJsonFormatException` if JSON contains duplicate IDs.
 - If you want the controller to generate IDs, use controller-created nodes/flows or provide `nodeIdGenerator`.
 - The default `node-{n}` generator starts at `max(existing node-{n}) + 1` for the provided scene (so bulk node creation stays fast).
 

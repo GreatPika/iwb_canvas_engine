@@ -1393,6 +1393,10 @@ int _gridLineCount(double start, double extent, double cell) {
   return count < 0 ? 0 : count;
 }
 
+@visibleForTesting
+int debugGridLineCount(double start, double extent, double cell) =>
+    _gridLineCount(start, extent, cell);
+
 double _gridStart(double offset, double cell) {
   final remainder = offset % cell;
   return remainder < 0 ? remainder + cell : remainder;

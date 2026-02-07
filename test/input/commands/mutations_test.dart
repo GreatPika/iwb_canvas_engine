@@ -94,6 +94,43 @@ void main() {
     );
   });
 
+  test('addNode throws when node id already exists in scene', () {
+    // INV:INV-G-NODEID-UNIQUE
+    final controller = SceneController(
+      scene: Scene(
+        layers: [
+          Layer(
+            nodes: [
+              RectNode(
+                id: 'r1',
+                size: const Size(10, 10),
+                fillColor: const Color(0xFF000000),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+    addTearDown(controller.dispose);
+
+    expect(
+      () => controller.addNode(
+        RectNode(
+          id: 'r1',
+          size: const Size(20, 20),
+          fillColor: const Color(0xFF00FF00),
+        ),
+      ),
+      throwsA(
+        isA<ArgumentError>().having(
+          (error) => error.message,
+          'message',
+          contains('Node id must be unique'),
+        ),
+      ),
+    );
+  });
+
   testWidgets(
     'removeNode removes node, clears selection, emits delete action',
     (tester) async {
