@@ -16,6 +16,9 @@
 - Input: normalize all inbound timestamp hints (pointer/commands/signals) via a
   single controller contract; `ActionCommitted.timestampMs` and
   `EditTextRequested.timestampMs` are now strictly monotonic.
+- Input: `SceneController.setCameraOffset(...)` now rejects non-finite
+  offsets (`NaN`/`Infinity`) with `ArgumentError` and preserves camera state
+  on rejection.
 - Behavior: `hitTestTopNode` now skips `Layer.isBackground` layers, so
   background content is no longer returned by top-level selection hit-testing.
 - Core: normalize `SceneNode.opacity` at assignment time (`!finite -> 1`,

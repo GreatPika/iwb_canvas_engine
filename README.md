@@ -67,6 +67,8 @@ Prefer importing the smallest API surface that fits your use case:
   to scene coordinates using `scene.camera.offset`.
 - **Camera offset**: rendering subtracts `scene.camera.offset` so that panning
   is implemented as camera movement, not by mutating node geometry.
+  `SceneController.setCameraOffset(...)` accepts only finite offsets and throws
+  `ArgumentError` for NaN/Infinity components.
 
 ## Usage
 

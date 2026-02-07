@@ -122,7 +122,7 @@ behavior across modules.
    * Document in code comment: do not pass epoch timestamps; if passed, they’ll be normalized.
      **Done when:** test: epoch-like timestamp followed by pointer timestamps still yields monotonic actions.
 
-5. [ ] **(#8) `camera.offset` accepts NaN/Infinity and poisons coordinates**
+5. [x] **(#8) `camera.offset` accepts NaN/Infinity and poisons coordinates**
    **Where:** `SceneController.setCameraOffset/_setCameraOffset`
    **Policy (fixed):** reject invalid input.
    **Do:**

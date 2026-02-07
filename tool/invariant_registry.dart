@@ -119,6 +119,12 @@ const List<Invariant> invariants = <Invariant>[
         'ActionCommitted/EditTextRequested timestamps are normalized from hints into a strictly monotonic internal timeline',
   ),
   Invariant(
+    id: 'INV-INPUT-CAMERA-OFFSET-FINITE',
+    scope: 'input',
+    title:
+        'SceneController.setCameraOffset rejects non-finite offsets and preserves scene state on rejection',
+  ),
+  Invariant(
     id: 'INV-SELECTION-SETSELECTION-COALESCED',
     scope: 'selection',
     title: 'setSelection defaults to coalesced repaint (not immediate notify)',

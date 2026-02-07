@@ -370,6 +370,8 @@ class SceneController extends ChangeNotifier {
   }
 
   /// Updates the scene camera offset.
+  ///
+  /// Throws [ArgumentError] when [value] contains non-finite components.
   void setCameraOffset(Offset value) {
     _setCameraOffset(value);
   }
@@ -548,6 +550,13 @@ class SceneController extends ChangeNotifier {
   void _resetDrag() => _moveModeEngine.reset();
 
   void _setCameraOffset(Offset value, {bool notify = true}) {
+    if (!value.dx.isFinite || !value.dy.isFinite) {
+      throw ArgumentError.value(
+        value,
+        'value',
+        'Camera offset must be finite.',
+      );
+    }
     if (scene.camera.offset == value) return;
     scene.camera.offset = value;
     _contracts.markSceneGeometryChanged();
