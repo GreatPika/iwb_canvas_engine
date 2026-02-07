@@ -145,9 +145,10 @@ Stable contracts (expected to remain compatible as the package evolves):
   - Hit-test tolerance uses `kHitSlop` + `SceneNode.hitPadding` in **scene/world units**
     (scale-aware). When `transform.invert()` is unavailable (degenerate
     transforms), hit-testing falls back to `boundsWorld.inflate(hitPadding + kHitSlop)`
-    for coarse-but-selectable behavior.
+    for coarse-but-selectable behavior. Exception: `PathNode` fill does not use
+    coarse fallback and is non-interactive when inverse transform is unavailable.
   - **PathNode semantics:** hit-testing selects the union of fill and stroke.
-    - Fill uses `Path.contains` (exact interior hit-test).
+    - Fill uses `Path.contains` (exact interior hit-test, requires invertible transform).
     - Stroke uses a coarse AABB check (stage A) with tolerance
       `boundsWorld.inflate(hitPadding + kHitSlop)` in scene units (stroke thickness is already
       included in `boundsWorld` via `PathNode.localBounds`).
@@ -193,7 +194,7 @@ Stable contracts (expected to remain compatible as the package evolves):
 
 - Floating-point math is not exact. This package avoids strict `== 0` checks in core math where it can cause unstable behavior.
 - `Transform2D.invert()` may return `null` not only for exactly singular matrices, but also for **near-singular** or **non-finite** transforms.
-  - Always handle `null` and fall back to coarse behavior when needed (example: hit-testing uses an inflated `boundsWorld` fallback).
+  - Always handle `null` and fall back to coarse behavior when needed (example: most hit-testing paths use an inflated `boundsWorld` fallback; `PathNode` fill stays non-interactive).
 - Derived convenience accessors (`rotationDeg`, `scaleY`) are designed to stay finite and stable even when the underlying transform is almost-degenerate.
 - UI-like positioning helpers (e.g. `topLeftWorld` setters) use epsilon comparisons to avoid floating-point micro-drift.
 

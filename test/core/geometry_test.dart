@@ -414,24 +414,73 @@ void main() {
       );
       expect(hitTestNode(strokeNegOutside, strokeNeg), isFalse);
 
-      final path = PathNode(
-        id: 'path-singular',
-        svgPathData: 'M0 0 H40 V30 H0 Z',
-        fillColor: const Color(0xFF000000),
-      )..transform = node.transform;
-      expect(path.transform.invert(), isNull);
-      final pathInside = Offset(
-        path.boundsWorld.right + kHitSlop - 0.1,
-        path.boundsWorld.center.dy,
-      );
-      expect(hitTestNode(pathInside, path), isTrue);
-      final pathOutside = Offset(
-        path.boundsWorld.right + kHitSlop + 0.1,
-        path.boundsWorld.center.dy,
-      );
-      expect(hitTestNode(pathOutside, path), isFalse);
     },
   );
+
+  test('PathNode fill hit-test requires invertible transform', () {
+    // INV:INV-CORE-PATH-HITTEST-FILL-REQUIRES-INVERSE
+    const singular = Transform2D(
+      a: 1,
+      b: 2,
+      c: 1,
+      d: 2,
+      tx: 100,
+      ty: -50,
+    );
+
+    final fillOnly = PathNode(
+      id: 'path-singular-fill-only',
+      svgPathData: 'M0 0 H40 V30 H0 Z',
+      fillColor: const Color(0xFF000000),
+    )..transform = singular;
+    expect(fillOnly.transform.invert(), isNull);
+    final fillOnlyInsideAabb = Offset(
+      fillOnly.boundsWorld.right + kHitSlop - 0.1,
+      fillOnly.boundsWorld.center.dy,
+    );
+    expect(hitTestNode(fillOnlyInsideAabb, fillOnly), isFalse);
+
+    final strokeOnly = PathNode(
+      id: 'path-singular-stroke-only',
+      svgPathData: 'M0 0 H40 V30 H0 Z',
+      strokeColor: const Color(0xFF000000),
+      strokeWidth: 4,
+    )..transform = singular;
+    expect(strokeOnly.transform.invert(), isNull);
+    final strokeOnlyInsideAabb = Offset(
+      strokeOnly.boundsWorld.right + kHitSlop - 0.1,
+      strokeOnly.boundsWorld.center.dy,
+    );
+    expect(hitTestNode(strokeOnlyInsideAabb, strokeOnly), isTrue);
+
+    final fillAndStroke = PathNode(
+      id: 'path-singular-fill-and-stroke',
+      svgPathData: 'M0 0 H40 V30 H0 Z',
+      fillColor: const Color(0xFF000000),
+      strokeColor: const Color(0xFF000000),
+      strokeWidth: 4,
+    )..transform = singular;
+    expect(fillAndStroke.transform.invert(), isNull);
+    final fillAndStrokeInsideAabb = Offset(
+      fillAndStroke.boundsWorld.right + kHitSlop - 0.1,
+      fillAndStroke.boundsWorld.center.dy,
+    );
+    expect(hitTestNode(fillAndStrokeInsideAabb, fillAndStroke), isTrue);
+
+    final fillAndZeroStroke = PathNode(
+      id: 'path-singular-fill-and-zero-stroke',
+      svgPathData: 'M0 0 H40 V30 H0 Z',
+      fillColor: const Color(0xFF000000),
+      strokeColor: const Color(0xFF000000),
+      strokeWidth: 0,
+    )..transform = singular;
+    expect(fillAndZeroStroke.transform.invert(), isNull);
+    final fillAndZeroStrokeInsideAabb = Offset(
+      fillAndZeroStroke.boundsWorld.right + kHitSlop - 0.1,
+      fillAndZeroStroke.boundsWorld.center.dy,
+    );
+    expect(hitTestNode(fillAndZeroStrokeInsideAabb, fillAndZeroStroke), isFalse);
+  });
 
   test('hitTestNode respects PathNode shape and transforms', () {
     final node =

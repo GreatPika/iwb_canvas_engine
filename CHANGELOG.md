@@ -32,6 +32,9 @@
   on rejection.
 - Behavior: `hitTestTopNode` now skips `Layer.isBackground` layers, so
   background content is no longer returned by top-level selection hit-testing.
+- Fix: `PathNode` fill hit-testing no longer uses coarse AABB fallback for
+  degenerate/non-invertible transforms (`inverse == null` now returns `false`
+  for fill; stroke stage-A behavior is unchanged).
 - Core: normalize `SceneNode.opacity` at assignment time (`!finite -> 1`,
   clamp `[0,1]`), aligning model/runtime behavior with rendering.
 - Perf: remove hot-path list allocation in `segmentsIntersect` by switching to

@@ -274,6 +274,12 @@ const List<Invariant> invariants = <Invariant>[
         'PathNode with invalid/unbuildable local path is non-interactive in hit-testing.',
   ),
   Invariant(
+    id: 'INV-CORE-PATH-HITTEST-FILL-REQUIRES-INVERSE',
+    scope: 'hit-test',
+    title:
+        'PathNode fill hit-testing requires an invertible transform; degenerate transforms are not clickable for fill.',
+  ),
+  Invariant(
     id: 'INV-CORE-HITTEST-FALLBACK-INFLATED-AABB',
     scope: 'hit-test',
     title:

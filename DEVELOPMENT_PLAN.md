@@ -154,7 +154,7 @@ behavior across modules.
        * if multiple background layers exist -> throw
        **Done when:** tests cover constructor canonicalization (missing/misordered background) and constructor rejection (multiple background layers), with consistent error on rejection.
 
-8. [ ] **(#24) Fill hit-test returns true for degenerate transforms after coarse check**
+8. [x] **(#24) Fill hit-test returns true for degenerate transforms after coarse check**
    **Where:** fill hit-test logic (`selection_geometry` / geometry hit-testing for fill)
    **Policy (fixed):** degenerate transform → not clickable for fill.
    **Do:**

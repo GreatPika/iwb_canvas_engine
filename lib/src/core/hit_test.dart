@@ -100,9 +100,13 @@ bool hitTestNode(Offset point, SceneNode node) {
           return false;
         }
         final inverse = pathNode.transform.invert();
-        if (inverse == null) return true;
-        final localPoint = inverse.applyToPoint(point);
-        if (localPath.contains(localPoint)) return true;
+        if (inverse != null) {
+          final localPoint = inverse.applyToPoint(point);
+          if (localPath.contains(localPoint)) return true;
+        } else {
+          // Fill hit-testing requires local-space geometry checks.
+          // Degenerate transforms are not clickable for fill.
+        }
 
         // Union semantics: when a path has both fill and stroke, allow hits on
         // the stroke even if the point lies outside the filled interior.

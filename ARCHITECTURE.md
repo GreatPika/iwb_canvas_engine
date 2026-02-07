@@ -217,6 +217,8 @@ Emit `ActionCommitted` on:
   world-space AABB (coarse selection).
 - Path nodes hit-test as the union of:
   - **Fill**: geometry hit-test via `Path.contains` with inverse transforms.
+    If inverse transform is unavailable (degenerate), fill is non-interactive
+    (no coarse AABB fallback).
   - **Stroke**: coarse AABB hit-test (stage A) using
     `boundsWorld.inflate(hitPadding + kHitSlop)` in scene units. Note that
     `boundsWorld` already includes stroke thickness via `PathNode.localBounds`.
