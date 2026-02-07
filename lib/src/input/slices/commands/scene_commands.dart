@@ -30,14 +30,33 @@ class SceneCommands {
     _contracts.notifyNow();
   }
 
-  void mutate(void Function(Scene scene) fn, {bool structural = false}) {
+  void mutate(void Function(Scene scene) fn) {
+    String? beforeFingerprint;
+    assert(() {
+      beforeFingerprint = _structuralFingerprint(_contracts.scene);
+      return true;
+    }());
+
     fn(_contracts.scene);
-    if (structural) {
-      notifySceneChanged();
-      return;
-    }
+
+    assert(() {
+      final afterFingerprint = _structuralFingerprint(_contracts.scene);
+      if (beforeFingerprint != afterFingerprint) {
+        throw StateError(
+          'Structural scene mutation detected in mutate(...). '
+          'Use mutateStructural(...) for add/remove/reorder layers or nodes.',
+        );
+      }
+      return true;
+    }());
+
     _contracts.markSceneGeometryChanged();
     _contracts.requestRepaintOncePerFrame();
+  }
+
+  void mutateStructural(void Function(Scene scene) fn) {
+    fn(_contracts.scene);
+    notifySceneChanged();
   }
 
   void addNode(SceneNode node, {int? layerIndex}) {
@@ -93,6 +112,29 @@ class SceneCommands {
       }
     }
     return false;
+  }
+
+  String _structuralFingerprint(Scene scene) {
+    final buffer = StringBuffer();
+    buffer.write('layers=${scene.layers.length};');
+    for (var layerIndex = 0; layerIndex < scene.layers.length; layerIndex++) {
+      final layer = scene.layers[layerIndex];
+      buffer
+        ..write('L')
+        ..write(layerIndex)
+        ..write(':bg=')
+        ..write(layer.isBackground ? '1' : '0')
+        ..write(':nodes=')
+        ..write(layer.nodes.length)
+        ..write(':');
+      for (final node in layer.nodes) {
+        buffer
+          ..write(node.id)
+          ..write('|');
+      }
+      buffer.write(';');
+    }
+    return buffer.toString();
   }
 
   void removeNode(NodeId id, {int? timestampMs}) {

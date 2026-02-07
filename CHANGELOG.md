@@ -1,5 +1,9 @@
 ## Unreleased
 
+- Breaking: `SceneController.mutate(...)` is now geometry-only and no longer
+  accepts `structural:`. Use `SceneController.mutateStructural(...)` for
+  add/remove/reorder layer/node edits. In debug, structural edits inside
+  `mutate(...)` assert with guidance to use `mutateStructural(...)`.
 - Input/View: add `SceneController.reconfigureInput(...)` for runtime updates
   of `pointerSettings`/`dragStartSlop`/`nodeIdGenerator` without recreating
   the controller. `SceneView` now applies these updates to its owned controller

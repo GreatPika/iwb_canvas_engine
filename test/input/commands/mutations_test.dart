@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/advanced.dart';
 
 // INV:INV-COMMANDS-STRUCTURAL-NOTIFYSCENECHANGED
+// INV:INV-COMMANDS-MUTATE-STRUCTURAL-EXPLICIT
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -621,14 +622,15 @@ void main() {
     expect(controller.getNode('missing'), isNull);
   });
 
-  testWidgets('mutate structural uses notifySceneChanged', (tester) async {
+  testWidgets('mutateStructural uses notifySceneChanged', (tester) async {
     final controller = SceneController(scene: Scene(layers: [Layer()]));
     addTearDown(controller.dispose);
 
     var notifications = 0;
     controller.addListener(() => notifications += 1);
+    final sceneRevisionBefore = controller.debugSceneRevision;
 
-    controller.mutate((scene) {
+    controller.mutateStructural((scene) {
       firstNonBackgroundLayer(scene).nodes.add(
         RectNode(
           id: 'r1',
@@ -636,12 +638,13 @@ void main() {
           fillColor: const Color(0xFF000000),
         )..position = const Offset(0, 0),
       );
-    }, structural: true);
+    });
 
     await tester.pump();
 
     expect(firstNonBackgroundLayer(controller.scene).nodes.single.id, 'r1');
     expect(notifications, greaterThan(0));
+    expect(controller.debugSceneRevision, greaterThan(sceneRevisionBefore));
   });
 
   testWidgets('mutate geometry-only schedules repaint', (tester) async {
@@ -661,6 +664,7 @@ void main() {
 
     var notifications = 0;
     controller.addListener(() => notifications += 1);
+    final sceneRevisionBefore = controller.debugSceneRevision;
 
     controller.mutate((scene) {
       final rect = firstNonBackgroundLayer(scene).nodes.single as RectNode;
@@ -670,5 +674,30 @@ void main() {
 
     await tester.pump();
     expect(notifications, greaterThan(0));
+    expect(controller.debugSceneRevision, sceneRevisionBefore);
+  });
+
+  test('mutate asserts on structural changes', () {
+    final controller = SceneController(scene: Scene(layers: [Layer()]));
+    addTearDown(controller.dispose);
+
+    expect(
+      () => controller.mutate((scene) {
+        firstNonBackgroundLayer(scene).nodes.add(
+          RectNode(
+            id: 'r1',
+            size: const Size(10, 10),
+            fillColor: const Color(0xFF000000),
+          ),
+        );
+      }),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          contains('Use mutateStructural(...)'),
+        ),
+      ),
+    );
   });
 }

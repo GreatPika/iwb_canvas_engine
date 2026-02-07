@@ -236,13 +236,14 @@ controller.removeNode('rect-2');
 has only a background layer, the controller creates a new non-background layer
 and adds the node there.
 
-If you mutate `controller.scene` directly, prefer using `controller.mutate(...)`:
+If you mutate `controller.scene` directly, prefer using
+`controller.mutateStructural(...)` for structural edits:
 
 ```dart
-controller.mutate((scene) {
+controller.mutateStructural((scene) {
   final contentLayer = scene.layers.firstWhere((layer) => !layer.isBackground);
   contentLayer.nodes.add(myNode);
-}, structural: true);
+});
 ```
 
 If you bypass controller helpers and mutate `controller.scene` directly, call
@@ -252,9 +253,11 @@ schedule repaint.
 Notes about direct mutations:
 
 - **Structural changes** (add/remove/reorder layers or nodes): call
-  `controller.notifySceneChanged()`.
+  `controller.mutateStructural(...)` (or `controller.notifySceneChanged()` if
+  you intentionally bypass mutation helpers).
 - **Geometry-only changes** (e.g. `node.transform`, points, colors, sizes): call
-  `controller.requestRepaintOncePerFrame()` to schedule a repaint.
+  `controller.mutate(...)` (or `controller.requestRepaintOncePerFrame()` when
+  mutating directly).
 
 ### Selection and transforms
 

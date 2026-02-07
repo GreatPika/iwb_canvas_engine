@@ -153,6 +153,12 @@ const List<Invariant> invariants = <Invariant>[
         'structural mutations call notifySceneChanged() and return immediately',
   ),
   Invariant(
+    id: 'INV-COMMANDS-MUTATE-STRUCTURAL-EXPLICIT',
+    scope: 'commands',
+    title:
+        'structural scene edits must use mutateStructural(); mutate() is geometry-only and asserts on structural changes in debug',
+  ),
+  Invariant(
     id: 'INV-COMMANDS-ADDNODE-DEFAULT-NONBACKGROUND',
     scope: 'commands',
     title:

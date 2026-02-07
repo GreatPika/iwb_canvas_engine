@@ -506,15 +506,20 @@ class SceneController extends ChangeNotifier {
     _sceneCommands.notifySceneChanged();
   }
 
-  /// Runs [fn] to mutate [scene] and schedules the appropriate updates.
+  /// Runs [fn] to mutate [scene] as a geometry-only edit and schedules repaint.
   ///
-  /// Prefer this helper over touching `scene.layers` directly:
-  /// - When [structural] is true (add/remove/reorder nodes/layers), this calls
-  ///   [notifySceneChanged] to restore minimal invariants (e.g. selection).
-  /// - When [structural] is false (geometry-only changes), this schedules a
-  ///   repaint once per frame.
-  void mutate(void Function(Scene scene) fn, {bool structural = false}) {
-    _sceneCommands.mutate(fn, structural: structural);
+  /// Use [mutateStructural] for structural edits (add/remove/reorder layers or
+  /// nodes). In debug mode, structural edits inside [mutate] trigger an assert.
+  void mutate(void Function(Scene scene) fn) {
+    _sceneCommands.mutate(fn);
+  }
+
+  /// Runs [fn] to mutate [scene] structurally and restores minimal invariants.
+  ///
+  /// Structural edits include add/remove/reorder of layers or nodes.
+  /// This path calls [notifySceneChanged] semantics immediately.
+  void mutateStructural(void Function(Scene scene) fn) {
+    _sceneCommands.mutateStructural(fn);
   }
 
   /// Adds [node] to the target layer and notifies listeners.

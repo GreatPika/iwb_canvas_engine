@@ -186,7 +186,7 @@ behavior across modules.
 * If later enabled: clamp via #1.
   **Done when:** test: disabled grid + “weird but finite” cellSize loads successfully.
 
-12. [ ] **(#33) `mutate(structural:false)` is easy to misuse and break caches/revisions**
+12. [x] **(#33) `mutate(structural:false)` is easy to misuse and break caches/revisions**
     **Where:** scene mutation API
     **Policy (fixed):** make structural mutations explicit.
     **Do:**

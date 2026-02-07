@@ -75,7 +75,8 @@ here as a checklist to prevent subtle behavioral regressions during refactors.
   - `setSelection(...)` defaults to coalesced repaint (not immediate notify)
   - `clearSelection()` remains an immediate notify
 - Commands:
-  - structural mutations call `notifySceneChanged()` and return immediately
+  - structural mutations go through `mutateStructural(...)`/commands that call
+    `notifySceneChanged()` and return immediately
 
 ## High-level structure
 

@@ -337,11 +337,11 @@ Relevant APIs:
 What you want: directly edit `controller.scene` (e.g., bulk changes), then restore minimal invariants.
 
 ```dart
-// Preferred: use mutate(...) to schedule the right updates.
-controller.mutate((scene) {
+// Preferred: use mutateStructural(...) for structural edits.
+controller.mutateStructural((scene) {
   final contentLayer = scene.layers.firstWhere((layer) => !layer.isBackground);
   contentLayer.nodes.clear();
-}, structural: true);
+});
 
 // Escape hatch:
 // If you mutate the model directly, call notifySceneChanged() for structural
@@ -354,7 +354,7 @@ Gotchas:
 
 Relevant APIs:
 - `SceneController.scene` + `SceneController.notifySceneChanged()` — `lib/src/input/scene_controller.dart`
-- `SceneController.mutate(...)` — `lib/src/input/scene_controller.dart`
+- `SceneController.mutate(...)` / `SceneController.mutateStructural(...)` — `lib/src/input/scene_controller.dart`
 - `Scene/Layer` — `lib/src/core/scene.dart`
 
 ### 3) Selection basics
@@ -749,8 +749,8 @@ Source of truth: `lib/src/serialization/scene_codec.dart`.
 - **View vs scene coordinates:** input positions are in view space; the controller converts via `camera.offset`.
   Using the wrong sign is the #1 bug source.
 - **Direct mutation:**
-  - Structural changes (add/remove/reorder layers or nodes): call `controller.notifySceneChanged()`.
-  - Geometry-only changes (e.g. `node.transform`, points, colors, sizes): call `controller.requestRepaintOncePerFrame()`.
+  - Structural changes (add/remove/reorder layers or nodes): use `controller.mutateStructural(...)` (or call `controller.notifySceneChanged()` if you mutate directly).
+  - Geometry-only changes (e.g. `node.transform`, points, colors, sizes): use `controller.mutate(...)` (or call `controller.requestRepaintOncePerFrame()` if you mutate directly).
 - **ImageResolver:** keep it sync/fast; never do async work in the resolver.
 - **Text layout:** `TextNode.size` is not auto-updated; the app must manage it if needed.
 - **Multitouch:** not supported (single pointer only).
