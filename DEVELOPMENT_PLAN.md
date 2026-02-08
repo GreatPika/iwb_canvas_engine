@@ -429,7 +429,12 @@ and are safest to lock as one performance-focused batch in layer 4.
 * Separate grid/background caching from camera offset.
   **Done when:** pan does not trigger frequent picture rebuilds (measurable reduction).
 
-36. [ ] **(#31) `newNodeId()` checks uniqueness via O(N) scan**
+Batch rationale (2026-02-08): tasks **#31 + #32** were completed together
+because both depend on one shared controller-level `allNodeIds` membership
+index; implementing them as one batch avoids temporary dual paths and locks a
+single O(1) contract for id generation and selection normalization.
+
+36. [x] **(#31) `newNodeId()` checks uniqueness via O(N) scan**
     **Where:** node ID generator / controller
     **Do:**
 
@@ -437,7 +442,7 @@ and are safest to lock as one performance-focused batch in layer 4.
 * Generate/check in O(1).
   **Done when:** perf test: mass creation is significantly faster.
 
-37. [ ] **(#32) `notifySceneChanged()` scans all nodes to clean selection**
+37. [x] **(#32) `notifySceneChanged()` scans all nodes to clean selection**
     **Where:** `notifySceneChanged()`
     **Do:**
 

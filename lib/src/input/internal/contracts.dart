@@ -49,6 +49,10 @@ abstract class InputSliceContracts {
 
   // (6) ID generation
   NodeId newNodeId();
+  bool containsNodeId(NodeId id);
+  void rebuildNodeIdIndex();
+  void registerNodeId(NodeId id);
+  void unregisterNodeId(NodeId id);
 
   // (7) Drawing settings (read-only)
   DrawTool get drawTool;

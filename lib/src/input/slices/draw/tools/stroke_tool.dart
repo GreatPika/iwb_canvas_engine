@@ -37,6 +37,7 @@ class StrokeTool {
     _activeStroke = stroke;
     _activeDrawLayer = _ensureAnnotationLayer();
     _activeDrawLayer!.nodes.add(stroke);
+    _contracts.registerNodeId(stroke.id);
     _contracts.markSceneStructuralChanged();
     _contracts.requestRepaintOncePerFrame();
   }
@@ -87,6 +88,7 @@ class StrokeTool {
   void reset() {
     if (_activeStroke != null && _activeDrawLayer != null) {
       _activeDrawLayer!.nodes.remove(_activeStroke);
+      _contracts.unregisterNodeId(_activeStroke!.id);
       _contracts.markSceneStructuralChanged();
     }
     _activeStroke = null;
@@ -96,6 +98,7 @@ class StrokeTool {
   void _abortActiveStroke() {
     if (_activeStroke != null && _activeDrawLayer != null) {
       _activeDrawLayer!.nodes.remove(_activeStroke);
+      _contracts.unregisterNodeId(_activeStroke!.id);
       _contracts.markSceneStructuralChanged();
     }
     _activeStroke = null;

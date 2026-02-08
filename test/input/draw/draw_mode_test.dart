@@ -252,6 +252,54 @@ void main() {
     expect(actions.single.nodeIds.toSet(), {'stroke-1', 'line-1'});
   });
 
+  test('eraser unregisters deleted node ids from controller index', () {
+    // INV:INV-INPUT-NODEID-INDEX-CONSISTENT
+    final stroke = StrokeNode(
+      id: 'stroke-1',
+      points: const [Offset(-10, 0), Offset(10, 0)],
+      thickness: 4,
+      color: const Color(0xFF000000),
+    );
+    final scene = Scene(
+      layers: [
+        Layer(nodes: [stroke]),
+      ],
+    );
+    final controller = drawController(scene);
+    addTearDown(controller.dispose);
+    controller.setDrawTool(DrawTool.eraser);
+    controller.eraserThickness = 10;
+
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 6,
+        position: Offset(0, 0),
+        timestampMs: 0,
+        phase: PointerPhase.down,
+      ),
+    );
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 6,
+        position: Offset(0, 0),
+        timestampMs: 10,
+        phase: PointerPhase.up,
+      ),
+    );
+
+    expect(annotationLayer(scene).nodes, isEmpty);
+    expect(
+      () => controller.addNode(
+        RectNode(
+          id: 'stroke-1',
+          size: const Size(10, 10),
+          fillColor: const Color(0xFF000000),
+        ),
+      ),
+      returnsNormally,
+    );
+  });
+
   test('eraser removes deleted ids from selection before emit', () {
     // INV:INV-INPUT-ERASER-SELECTION-NORMALIZED
     final stroke = StrokeNode(
@@ -426,6 +474,100 @@ void main() {
 
     expect(annotationLayer(scene).nodes, hasLength(3));
     expect(annotationLayer(scene).nodes.last.id, 'node-42');
+  });
+
+  test('custom nodeIdGenerator fails fast on duplicate id', () {
+    // INV:INV-INPUT-NODEID-INDEX-CONSISTENT
+    final scene = Scene(
+      layers: [
+        Layer(
+          nodes: [
+            RectNode(
+              id: 'dup',
+              size: const Size(10, 10),
+              fillColor: const Color(0xFF000000),
+            ),
+          ],
+        ),
+      ],
+    );
+    final controller = SceneController(
+      scene: scene,
+      dragStartSlop: 0,
+      nodeIdGenerator: () => 'dup',
+    );
+    addTearDown(controller.dispose);
+    controller.setMode(CanvasMode.draw);
+    controller.setDrawTool(DrawTool.pen);
+
+    expect(
+      () => controller.handlePointer(
+        const PointerSample(
+          pointerId: 99,
+          position: Offset(0, 0),
+          timestampMs: 0,
+          phase: PointerPhase.down,
+        ),
+      ),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          contains('duplicate id: dup'),
+        ),
+      ),
+    );
+  });
+
+  test('node id index tracks ids added by draw tools', () {
+    // INV:INV-INPUT-NODEID-INDEX-CONSISTENT
+    final scene = Scene(layers: [Layer()]);
+    final controller = SceneController(
+      scene: scene,
+      dragStartSlop: 0,
+      nodeIdGenerator: () => 'dup',
+    );
+    addTearDown(controller.dispose);
+    controller.setMode(CanvasMode.draw);
+    controller.setDrawTool(DrawTool.pen);
+
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 10,
+        position: Offset(0, 0),
+        timestampMs: 0,
+        phase: PointerPhase.down,
+      ),
+    );
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 10,
+        position: Offset(10, 0),
+        timestampMs: 10,
+        phase: PointerPhase.move,
+      ),
+    );
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 10,
+        position: Offset(10, 0),
+        timestampMs: 20,
+        phase: PointerPhase.up,
+      ),
+    );
+
+    expect(annotationLayer(scene).nodes.single.id, 'dup');
+    expect(
+      () => controller.handlePointer(
+        const PointerSample(
+          pointerId: 11,
+          position: Offset(20, 0),
+          timestampMs: 30,
+          phase: PointerPhase.down,
+        ),
+      ),
+      throwsA(isA<StateError>()),
+    );
   });
 
   test(

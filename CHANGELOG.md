@@ -1,5 +1,11 @@
 ## Unreleased
 
+- Performance/Input: `SceneController` now maintains an internal
+  `Set<NodeId>` membership index (`allNodeIds`) used by `newNodeId()` and
+  `notifySceneChanged()` paths for O(1) id checks instead of full scene scans.
+- Input: custom `nodeIdGenerator` is now fail-fast for duplicates; when the
+  callback returns an id that already exists in the scene, `newNodeId()`
+  throws `StateError`.
 - Render: thin-line pixel snapping now applies only to eligible geometry
   (axis-aligned unit-scale transforms with thin screen-space stroke width);
   rotated/non-unit-scale nodes skip snapping to avoid artifacts.

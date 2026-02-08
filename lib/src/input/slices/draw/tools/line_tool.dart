@@ -60,6 +60,7 @@ class LineTool {
       _activeLine = line;
       _activeDrawLayer = _ensureAnnotationLayer();
       _activeDrawLayer!.nodes.add(line);
+      _contracts.registerNodeId(line.id);
       _contracts.markSceneStructuralChanged();
     } else {
       _activeLine!.end = scenePoint;
@@ -123,6 +124,7 @@ class LineTool {
     _setPendingLineStart(null, null);
     _activeDrawLayer = _ensureAnnotationLayer();
     _activeDrawLayer!.nodes.add(line);
+    _contracts.registerNodeId(line.id);
     _activeDrawLayer = null;
     _contracts.markSceneStructuralChanged();
     final drawTool = _contracts.drawTool;
@@ -142,6 +144,7 @@ class LineTool {
   void reset() {
     if (_activeLine != null && _activeDrawLayer != null) {
       _activeDrawLayer!.nodes.remove(_activeLine);
+      _contracts.unregisterNodeId(_activeLine!.id);
       _contracts.markSceneStructuralChanged();
     }
     _activeLine = null;
@@ -172,6 +175,7 @@ class LineTool {
   void _abortActiveLineCommit() {
     if (_activeLine != null && _activeDrawLayer != null) {
       _activeDrawLayer!.nodes.remove(_activeLine);
+      _contracts.unregisterNodeId(_activeLine!.id);
       _contracts.markSceneStructuralChanged();
     }
     _activeLine = null;

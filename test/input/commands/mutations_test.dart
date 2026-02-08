@@ -7,6 +7,7 @@ import 'package:iwb_canvas_engine/advanced.dart';
 // INV:INV-COMMANDS-MUTATE-STRUCTURAL-EXPLICIT
 // INV:INV-INPUT-BACKGROUND-NONINTERACTIVE-NONDELETABLE
 // INV:INV-SELECTION-STRICT-INTERACTIVE-IDS
+// INV:INV-INPUT-NODEID-INDEX-CONSISTENT
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -381,6 +382,37 @@ void main() {
     controller.notifySceneChanged();
 
     expect(controller.selectedNodeIds, contains('r1'));
+  });
+
+  test('notifySceneChanged rebuilds node id index after external mutation', () {
+    final controller = SceneController(scene: Scene(layers: [Layer()]));
+    addTearDown(controller.dispose);
+
+    final externalNode = RectNode(
+      id: 'external',
+      size: const Size(10, 10),
+      fillColor: const Color(0xFF000000),
+    )..position = const Offset(0, 0);
+    firstNonBackgroundLayer(controller.scene).nodes.add(externalNode);
+
+    controller.notifySceneChanged();
+
+    expect(
+      () => controller.addNode(
+        RectNode(
+          id: 'external',
+          size: const Size(20, 20),
+          fillColor: const Color(0xFF00FF00),
+        ),
+      ),
+      throwsA(
+        isA<ArgumentError>().having(
+          (error) => error.message,
+          'message',
+          contains('Node id must be unique'),
+        ),
+      ),
+    );
   });
 
   testWidgets('setSelection keeps only interactive node ids', (tester) async {

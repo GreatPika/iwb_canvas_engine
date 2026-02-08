@@ -219,6 +219,12 @@ const List<Invariant> invariants = <Invariant>[
         'SceneController constructor validates scene invariants, canonicalizes recoverable background cases, and rejects unrecoverable cases',
   ),
   Invariant(
+    id: 'INV-INPUT-NODEID-INDEX-CONSISTENT',
+    scope: 'input',
+    title:
+        'SceneController node-id index is kept consistent with scene structure and is used for O(1) membership checks in newNodeId/notifySceneChanged paths',
+  ),
+  Invariant(
     id: 'INV-INPUT-BACKGROUND-NONINTERACTIVE-NONDELETABLE',
     scope: 'input',
     title:

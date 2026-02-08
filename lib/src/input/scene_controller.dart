@@ -68,6 +68,7 @@ class SceneController extends ChangeNotifier {
          nodeIdGenerator: nodeIdGenerator,
        ) {
     _validateSceneOrThrow(this.scene);
+    _rebuildAllNodeIdsFromScene();
     _nodeIdSeed = _initialDefaultNodeIdSeed(this.scene);
     _repaintScheduler = RepaintScheduler(notifyListeners: notifyListeners);
     _actionDispatcher = ActionDispatcher();
@@ -87,6 +88,7 @@ class SceneController extends ChangeNotifier {
   late final MoveModeEngine _moveModeEngine;
   late final DrawModeEngine _drawModeEngine;
   late final SceneCommands _sceneCommands;
+  final Set<NodeId> _allNodeIds = <NodeId>{};
   int _nodeIdSeed = 0;
   int _timestampCursorMs = -1;
   int _sceneGeometryRevision = 0;
@@ -317,7 +319,7 @@ class SceneController extends ChangeNotifier {
     while (true) {
       final id = 'node-$_nodeIdSeed';
       _nodeIdSeed += 1;
-      if (!_sceneContainsNodeId(id)) {
+      if (!_containsNodeId(id)) {
         return id;
       }
     }
@@ -326,7 +328,14 @@ class SceneController extends ChangeNotifier {
   NodeId _newNodeId() {
     final custom = _inputConfig.nodeIdGenerator;
     if (custom != null) {
-      return custom();
+      final id = custom();
+      if (_containsNodeId(id)) {
+        throw StateError(
+          'Custom nodeIdGenerator returned a duplicate id: $id. '
+          'Node ids must be unique within the scene.',
+        );
+      }
+      return id;
     }
     return _defaultNodeIdGenerator();
   }
@@ -404,13 +413,25 @@ class SceneController extends ChangeNotifier {
     );
   }
 
-  bool _sceneContainsNodeId(NodeId id) {
+  bool _containsNodeId(NodeId id) {
+    return _allNodeIds.contains(id);
+  }
+
+  void _registerNodeId(NodeId id) {
+    _allNodeIds.add(id);
+  }
+
+  void _unregisterNodeId(NodeId id) {
+    _allNodeIds.remove(id);
+  }
+
+  void _rebuildAllNodeIdsFromScene() {
+    _allNodeIds.clear();
     for (final layer in scene.layers) {
       for (final node in layer.nodes) {
-        if (node.id == id) return true;
+        _allNodeIds.add(node.id);
       }
     }
-    return false;
   }
 
   @override
@@ -985,6 +1006,18 @@ class _SceneControllerContracts implements InputSliceContracts {
 
   @override
   NodeId newNodeId() => _controller._newNodeId();
+
+  @override
+  bool containsNodeId(NodeId id) => _controller._containsNodeId(id);
+
+  @override
+  void rebuildNodeIdIndex() => _controller._rebuildAllNodeIdsFromScene();
+
+  @override
+  void registerNodeId(NodeId id) => _controller._registerNodeId(id);
+
+  @override
+  void unregisterNodeId(NodeId id) => _controller._unregisterNodeId(id);
 
   @override
   DrawTool get drawTool => _controller.drawTool;

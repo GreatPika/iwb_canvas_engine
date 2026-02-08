@@ -111,7 +111,8 @@ class EraserTool {
       final layer = _contracts.scene.layers[layerIndex];
       for (final nodeIndex in indices) {
         if (nodeIndex < 0 || nodeIndex >= layer.nodes.length) continue;
-        layer.nodes.removeAt(nodeIndex);
+        final removedNode = layer.nodes.removeAt(nodeIndex);
+        _contracts.unregisterNodeId(removedNode.id);
       }
     }
     return deleted;

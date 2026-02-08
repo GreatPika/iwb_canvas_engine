@@ -83,6 +83,9 @@ here as a checklist to prevent subtle behavioral regressions during refactors.
 - Commands:
   - structural mutations go through `mutateStructural(...)`/commands that call
     `notifySceneChanged()` and return immediately
+  - `SceneController` maintains an internal `allNodeIds` membership index
+    (derived from scene structure) used by `newNodeId()` and
+    `notifySceneChanged()` normalization paths for O(1) id checks
 
 ## High-level structure
 

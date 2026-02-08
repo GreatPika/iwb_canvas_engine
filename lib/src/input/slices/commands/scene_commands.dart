@@ -15,16 +15,11 @@ class SceneCommands {
   final InputSliceContracts _contracts;
 
   void notifySceneChanged() {
+    _contracts.rebuildNodeIdIndex();
     final selectedNodeIds = _contracts.selectedNodeIds;
     if (selectedNodeIds.isNotEmpty) {
-      final existingIds = <NodeId>{};
-      for (final layer in _contracts.scene.layers) {
-        for (final node in layer.nodes) {
-          existingIds.add(node.id);
-        }
-      }
       _contracts.setSelection(
-        selectedNodeIds.where(existingIds.contains),
+        selectedNodeIds.where(_contracts.containsNodeId),
         notify: false,
       );
     }
@@ -65,7 +60,7 @@ class SceneCommands {
     if (layerIndex != null && layerIndex < 0) {
       throw RangeError.range(layerIndex, 0, null, 'layerIndex');
     }
-    if (_sceneContainsNodeId(node.id)) {
+    if (_contracts.containsNodeId(node.id)) {
       throw ArgumentError.value(
         node.id,
         'node.id',
@@ -93,6 +88,7 @@ class SceneCommands {
     }
 
     layers[resolvedLayerIndex].nodes.add(node);
+    _contracts.registerNodeId(node.id);
     _contracts.markSceneStructuralChanged();
     _contracts.notifyNow();
   }
@@ -105,15 +101,6 @@ class SceneCommands {
     }
     layers.add(Layer());
     return layers.length - 1;
-  }
-
-  bool _sceneContainsNodeId(NodeId id) {
-    for (final layer in _contracts.scene.layers) {
-      for (final node in layer.nodes) {
-        if (node.id == id) return true;
-      }
-    }
-    return false;
   }
 
   String _structuralFingerprint(Scene scene) {
@@ -145,6 +132,7 @@ class SceneCommands {
       if (index == -1) continue;
 
       layer.nodes.removeAt(index);
+      _contracts.unregisterNodeId(id);
       _contracts.setSelection(
         _contracts.selectedNodeIds.where((candidate) => candidate != id),
         notify: false,
@@ -334,6 +322,7 @@ class SceneCommands {
         if (!selectedIdSet.contains(node.id)) return false;
         if (!isNodeDeletableInLayer(node, layer)) return false;
         deletableIds.add(node.id);
+        _contracts.unregisterNodeId(node.id);
         return true;
       });
     }
@@ -367,6 +356,7 @@ class SceneCommands {
     for (var layerIndex = 1; layerIndex < layers.length; layerIndex++) {
       for (final node in layers[layerIndex].nodes) {
         clearedIds.add(node.id);
+        _contracts.unregisterNodeId(node.id);
       }
     }
     layers.removeRange(1, layers.length);
