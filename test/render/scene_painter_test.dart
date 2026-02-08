@@ -1215,6 +1215,106 @@ void main() {
     expect((centroidAuto - 30.5).abs(), lessThan((centroidNone - 30.5).abs()));
   });
 
+  test(
+    'ScenePainter skips thin-line snapping when node scale is non-unit',
+    () async {
+      // INV:INV-RENDER-THIN-LINE-SNAP-ELIGIBILITY
+      const background = Color(0xFFFFFFFF);
+      final line = LineNode(
+        id: 'line-scaled',
+        start: const Offset(10, 20.3),
+        end: const Offset(90, 20.3),
+        thickness: 1,
+        color: const Color(0xFF000000),
+        transform: const Transform2D(a: 2, b: 0, c: 0, d: 1, tx: -10, ty: 0),
+      );
+      final scene = Scene(
+        background: Background(color: background),
+        layers: [
+          Layer(nodes: [line]),
+        ],
+      );
+
+      final painterNone = ScenePainter(
+        controller: _controllerFor(scene),
+        imageResolver: (_) => null,
+        devicePixelRatio: 2,
+        thinLineSnapStrategy: ThinLineSnapStrategy.none,
+      );
+      final painterAuto = ScenePainter(
+        controller: _controllerFor(scene),
+        imageResolver: (_) => null,
+        devicePixelRatio: 2,
+        thinLineSnapStrategy: ThinLineSnapStrategy.autoAxisAlignedThin,
+      );
+
+      final imageNone = await _paintToImage(
+        painterNone,
+        width: 100,
+        height: 60,
+      );
+      final imageAuto = await _paintToImage(
+        painterAuto,
+        width: 100,
+        height: 60,
+      );
+      final bytesNone = await _rawRgbaBytes(imageNone);
+      final bytesAuto = await _rawRgbaBytes(imageAuto);
+      expect(bytesAuto, orderedEquals(bytesNone));
+    },
+  );
+
+  test(
+    'ScenePainter skips thin-line snapping when node has rotation',
+    () async {
+      const background = Color(0xFFFFFFFF);
+      final line = LineNode(
+        id: 'line-rotated',
+        start: const Offset(-20, 0.3),
+        end: const Offset(20, 0.3),
+        thickness: 1,
+        color: const Color(0xFF000000),
+        transform: Transform2D.trs(
+          translation: const Offset(50, 30),
+          rotationDeg: 90,
+        ),
+      );
+      final scene = Scene(
+        background: Background(color: background),
+        layers: [
+          Layer(nodes: [line]),
+        ],
+      );
+
+      final painterNone = ScenePainter(
+        controller: _controllerFor(scene),
+        imageResolver: (_) => null,
+        devicePixelRatio: 2,
+        thinLineSnapStrategy: ThinLineSnapStrategy.none,
+      );
+      final painterAuto = ScenePainter(
+        controller: _controllerFor(scene),
+        imageResolver: (_) => null,
+        devicePixelRatio: 2,
+        thinLineSnapStrategy: ThinLineSnapStrategy.autoAxisAlignedThin,
+      );
+
+      final imageNone = await _paintToImage(
+        painterNone,
+        width: 100,
+        height: 70,
+      );
+      final imageAuto = await _paintToImage(
+        painterAuto,
+        width: 100,
+        height: 70,
+      );
+      final bytesNone = await _rawRgbaBytes(imageNone);
+      final bytesAuto = await _rawRgbaBytes(imageAuto);
+      expect(bytesAuto, orderedEquals(bytesNone));
+    },
+  );
+
   test('ScenePainter snaps selected thin line and stroke overlays', () async {
     const background = Color(0xFFFFFFFF);
     final line = LineNode(

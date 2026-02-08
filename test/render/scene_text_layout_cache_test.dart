@@ -93,6 +93,60 @@ void main() {
     expect(cache.debugBuildCount, 1);
   });
 
+  test('SceneTextLayoutCache key excludes node identity and box height', () {
+    // INV:INV-RENDER-TEXT-LAYOUT-CACHE-KEY
+    final cache = SceneTextLayoutCache(maxEntries: 8);
+    final nodeA = TextNode(
+      id: 'node-a',
+      text: 'Shared',
+      size: const ui.Size(100, 20),
+      fontSize: 14,
+      color: const ui.Color(0xFF000000),
+    );
+    final nodeB = TextNode(
+      id: 'node-b',
+      text: 'Shared',
+      size: const ui.Size(100, 200),
+      fontSize: 14,
+      color: const ui.Color(0xFF000000),
+    );
+    const style = TextStyle(fontSize: 14, color: ui.Color(0xFF000000));
+
+    final tp1 = cache.getOrBuild(node: nodeA, textStyle: style, maxWidth: 100);
+    final tp2 = cache.getOrBuild(node: nodeB, textStyle: style, maxWidth: 100);
+
+    expect(identical(tp1, tp2), isTrue);
+    expect(cache.debugBuildCount, 1);
+    expect(cache.debugHitCount, 1);
+  });
+
+  test('SceneTextLayoutCache key includes paint color', () {
+    final cache = SceneTextLayoutCache(maxEntries: 8);
+    final node = TextNode(
+      id: 'node-color',
+      text: 'Shared',
+      size: const ui.Size(100, 20),
+      fontSize: 14,
+      color: const ui.Color(0xFF000000),
+    );
+    const styleBlack = TextStyle(fontSize: 14, color: ui.Color(0xFF000000));
+    const styleRed = TextStyle(fontSize: 14, color: ui.Color(0xFFFF0000));
+
+    final tp1 = cache.getOrBuild(
+      node: node,
+      textStyle: styleBlack,
+      maxWidth: 100,
+    );
+    final tp2 = cache.getOrBuild(
+      node: node,
+      textStyle: styleRed,
+      maxWidth: 100,
+    );
+
+    expect(identical(tp1, tp2), isFalse);
+    expect(cache.debugBuildCount, 2);
+  });
+
   test('P1-6: SceneTextLayoutCache evicts oldest entries (LRU)', () {
     final cache = SceneTextLayoutCache(maxEntries: 2);
     final style = const TextStyle(fontSize: 14, color: ui.Color(0xFF000000));

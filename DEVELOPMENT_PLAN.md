@@ -400,7 +400,12 @@ candidate lookup + precise path stroke checks + input-point decimation).
 * Use spatial index candidates (#30) first, then precise test.
   **Done when:** test: click inside AABB but far from stroke returns false.
 
-33. [ ] **(#25) Thin-line pixel snapping ignores scale/rotation**
+Batch rationale (2026-02-08): tasks **#25 + #29 + #30** were completed together
+because they share the same rendering infrastructure contract in `ScenePainter`
+(snap eligibility in transformed space + layout/static cache key correctness)
+and are safest to lock as one performance-focused batch in layer 4.
+
+33. [x] **(#25) Thin-line pixel snapping ignores scale/rotation**
     **Where:** snapping/alignment logic
     **Do:**
 
@@ -408,7 +413,7 @@ candidate lookup + precise path stroke checks + input-point decimation).
 * Disable snapping when rotation ≠ 0 or scale ≠ 1 (unless you implement rotated snapping).
   **Done when:** scaled/rotated examples do not show snapping artifacts.
 
-34. [ ] **(#29) Text layout cache key includes non-layout fields (color/height/nodeId) → low hit rate**
+34. [x] **(#29) Text layout cache key includes non-layout fields (color/height/nodeId) → low hit rate**
     **Where:** `SceneTextLayoutCache` key computation
     **Do:**
 
@@ -416,7 +421,7 @@ candidate lookup + precise path stroke checks + input-point decimation).
 * Exclude color and box height if they do not affect layout.
   **Done when:** metric/counter shows fewer layout recomputations when only color changes.
 
-35. [ ] **(#30) Static layer cache depends on `cameraOffset` → rebuilt on panning**
+35. [x] **(#30) Static layer cache depends on `cameraOffset` → rebuilt on panning**
     **Where:** static layer picture caching
     **Do:**
 

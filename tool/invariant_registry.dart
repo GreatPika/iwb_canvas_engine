@@ -120,6 +120,24 @@ const List<Invariant> invariants = <Invariant>[
         'PathNode selection highlight uses node.fillRule (evenOdd/nonZero) consistently for closed contours.',
   ),
   Invariant(
+    id: 'INV-RENDER-THIN-LINE-SNAP-ELIGIBILITY',
+    scope: 'render',
+    title:
+        'Thin-line pixel snapping is applied only for axis-aligned, unit-scale transforms and thin screen-space strokes.',
+  ),
+  Invariant(
+    id: 'INV-RENDER-TEXT-LAYOUT-CACHE-KEY',
+    scope: 'render',
+    title:
+        'Text layout cache key excludes non-semantic identity/geometry fields while preserving cached TextPainter paint-style correctness.',
+  ),
+  Invariant(
+    id: 'INV-RENDER-STATIC-CACHE-CAMERA-INDEPENDENT',
+    scope: 'render',
+    title:
+        'Static layer grid cache key is camera-independent; camera pan applies translation at draw time without cache rebuild and remains clipped to the scene bounds.',
+  ),
+  Invariant(
     id: 'INV-SIGNALS-BROADCAST-SYNC',
     scope: 'signals',
     title: 'signal streams stay broadcast(sync: true)',

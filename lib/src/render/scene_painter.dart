@@ -125,7 +125,6 @@ class SceneTextLayoutCache {
     TextDirection textDirection = TextDirection.ltr,
   }) {
     final safeFontSize = clampPositiveFinite(node.fontSize, fallback: 24.0);
-    final safeBoxSize = clampNonNegativeSizeFinite(node.size);
     final safeLineHeight =
         (node.lineHeight != null &&
             node.lineHeight!.isFinite &&
@@ -133,8 +132,15 @@ class SceneTextLayoutCache {
         ? node.lineHeight
         : null;
     final safeMaxWidth = clampNonNegativeFinite(maxWidth);
+    final safeLetterSpacing = sanitizeFinite(
+      textStyle.letterSpacing ?? 0.0,
+      fallback: 0.0,
+    );
+    final safeWordSpacing = sanitizeFinite(
+      textStyle.wordSpacing ?? 0.0,
+      fallback: 0.0,
+    );
     final key = _TextLayoutKey(
-      nodeId: node.id,
       text: node.text,
       fontSize: safeFontSize,
       fontFamily: node.fontFamily,
@@ -143,8 +149,10 @@ class SceneTextLayoutCache {
       isUnderline: node.isUnderline,
       align: node.align,
       lineHeight: safeLineHeight,
+      letterSpacing: safeLetterSpacing,
+      wordSpacing: safeWordSpacing,
+      locale: textStyle.locale,
       maxWidth: safeMaxWidth,
-      boxSize: safeBoxSize,
       color: textStyle.color ?? const Color(0xFF000000),
       textDirection: textDirection,
     );
@@ -160,6 +168,7 @@ class SceneTextLayoutCache {
       text: TextSpan(text: node.text, style: textStyle),
       textAlign: node.align,
       textDirection: textDirection,
+      locale: textStyle.locale,
       maxLines: null,
     );
     textPainter.layout(maxWidth: safeMaxWidth);
@@ -179,7 +188,6 @@ class SceneTextLayoutCache {
 
 class _TextLayoutKey {
   const _TextLayoutKey({
-    required this.nodeId,
     required this.text,
     required this.fontSize,
     required this.fontFamily,
@@ -188,13 +196,14 @@ class _TextLayoutKey {
     required this.isUnderline,
     required this.align,
     required this.lineHeight,
+    required this.letterSpacing,
+    required this.wordSpacing,
+    required this.locale,
     required this.maxWidth,
-    required this.boxSize,
     required this.color,
     required this.textDirection,
   });
 
-  final NodeId nodeId;
   final String text;
   final double fontSize;
   final String? fontFamily;
@@ -203,15 +212,16 @@ class _TextLayoutKey {
   final bool isUnderline;
   final TextAlign align;
   final double? lineHeight;
+  final double letterSpacing;
+  final double wordSpacing;
+  final Locale? locale;
   final double maxWidth;
-  final Size boxSize;
   final Color color;
   final TextDirection textDirection;
 
   @override
   bool operator ==(Object other) {
     return other is _TextLayoutKey &&
-        other.nodeId == nodeId &&
         other.text == text &&
         other.fontSize == fontSize &&
         other.fontFamily == fontFamily &&
@@ -220,15 +230,16 @@ class _TextLayoutKey {
         other.isUnderline == isUnderline &&
         other.align == align &&
         other.lineHeight == lineHeight &&
+        other.letterSpacing == letterSpacing &&
+        other.wordSpacing == wordSpacing &&
+        other.locale == locale &&
         other.maxWidth == maxWidth &&
-        other.boxSize == boxSize &&
         other.color == color &&
         other.textDirection == textDirection;
   }
 
   @override
   int get hashCode => Object.hash(
-    nodeId,
     text,
     fontSize,
     fontFamily,
@@ -237,8 +248,10 @@ class _TextLayoutKey {
     isUnderline,
     align,
     lineHeight,
+    letterSpacing,
+    wordSpacing,
+    locale,
     maxWidth,
-    boxSize,
     color,
     textDirection,
   );
@@ -1120,10 +1133,7 @@ class ScenePainter extends CustomPainter {
     Offset localA,
     Offset localB,
   ) {
-    if (thinLineSnapStrategy != ThinLineSnapStrategy.autoAxisAlignedThin) {
-      return null;
-    }
-    if (!_isThinStrokeForSnap(strokeWidth)) return null;
+    if (!_canSnapThinStroke(nodeTransform, strokeWidth)) return null;
     final viewA = nodeTransform.applyToPoint(localA) - cameraOffset;
     final viewB = nodeTransform.applyToPoint(localB) - cameraOffset;
     if (!_isFiniteOffset(viewA) || !_isFiniteOffset(viewB)) return null;
@@ -1134,18 +1144,22 @@ class ScenePainter extends CustomPainter {
     if (!isHorizontal && !isVertical) return null;
 
     if (isHorizontal) {
+      final strokeWidthInView =
+          strokeWidth * _effectiveViewScaleMagnitude(nodeTransform);
       final snappedY = _snapCenterCoordinate(
         (viewA.dy + viewB.dy) / 2,
-        strokeWidth,
+        strokeWidthInView,
       );
       return _LineEndpoints(
         a: Offset(viewA.dx, snappedY),
         b: Offset(viewB.dx, snappedY),
       );
     }
+    final strokeWidthInView =
+        strokeWidth * _effectiveViewScaleMagnitude(nodeTransform);
     final snappedX = _snapCenterCoordinate(
       (viewA.dx + viewB.dx) / 2,
-      strokeWidth,
+      strokeWidthInView,
     );
     return _LineEndpoints(
       a: Offset(snappedX, viewA.dy),
@@ -1159,10 +1173,7 @@ class ScenePainter extends CustomPainter {
     double strokeWidth,
     List<Offset> localPoints,
   ) {
-    if (thinLineSnapStrategy != ThinLineSnapStrategy.autoAxisAlignedThin) {
-      return null;
-    }
-    if (!_isThinStrokeForSnap(strokeWidth)) return null;
+    if (!_canSnapThinStroke(nodeTransform, strokeWidth)) return null;
     if (localPoints.length < 2) return null;
 
     final viewPoints = <Offset>[];
@@ -1182,21 +1193,48 @@ class ScenePainter extends CustomPainter {
     );
     if (!isHorizontal && !isVertical) return null;
 
+    final strokeWidthInView =
+        strokeWidth * _effectiveViewScaleMagnitude(nodeTransform);
     if (isHorizontal) {
       final meanY =
           viewPoints.map((p) => p.dy).reduce((a, b) => a + b) /
           viewPoints.length;
-      final snappedY = _snapCenterCoordinate(meanY, strokeWidth);
+      final snappedY = _snapCenterCoordinate(meanY, strokeWidthInView);
       return viewPoints.map((point) => Offset(point.dx, snappedY)).toList();
     }
     final meanX =
         viewPoints.map((p) => p.dx).reduce((a, b) => a + b) / viewPoints.length;
-    final snappedX = _snapCenterCoordinate(meanX, strokeWidth);
+    final snappedX = _snapCenterCoordinate(meanX, strokeWidthInView);
     return viewPoints.map((point) => Offset(snappedX, point.dy)).toList();
   }
 
-  bool _isThinStrokeForSnap(double strokeWidth) {
-    return strokeWidth > 0 && strokeWidth <= 1;
+  bool _canSnapThinStroke(Transform2D nodeTransform, double strokeWidth) {
+    if (thinLineSnapStrategy != ThinLineSnapStrategy.autoAxisAlignedThin) {
+      return false;
+    }
+    if (!_isFiniteTransform2D(nodeTransform)) return false;
+    if (!_hasAxisAlignedUnitScale(nodeTransform)) return false;
+
+    final viewScale = _effectiveViewScaleMagnitude(nodeTransform);
+    if (!viewScale.isFinite || viewScale <= 0) return false;
+    final strokeWidthInView = strokeWidth * viewScale;
+    return strokeWidthInView > 0 && strokeWidthInView <= 1;
+  }
+
+  bool _hasAxisAlignedUnitScale(Transform2D transform) {
+    const epsilon = 1e-6;
+    if (transform.b.abs() > epsilon || transform.c.abs() > epsilon) {
+      return false;
+    }
+    final scaleX = transform.a.abs();
+    final scaleY = transform.d.abs();
+    return (scaleX - 1).abs() <= epsilon && (scaleY - 1).abs() <= epsilon;
+  }
+
+  double _effectiveViewScaleMagnitude(Transform2D transform) {
+    final safeScaleX = sanitizeFinite(transform.a.abs(), fallback: 1.0);
+    final safeScaleY = sanitizeFinite(transform.d.abs(), fallback: 1.0);
+    return math.max(safeScaleX, safeScaleY);
   }
 
   double _snapCenterCoordinate(double logical, double strokeWidth) {
@@ -1235,15 +1273,15 @@ PathFillType _pathFillType(PathFillRule rule) {
       : PathFillType.nonZero;
 }
 
-/// Cache for the static scene layer (background + grid).
+/// Cache for static grid rendering.
 ///
-/// Why: avoid re-drawing the grid every frame when inputs are unchanged.
-/// Invariant: the cache key must match size, background, grid, camera offset,
-/// and grid stroke width.
+/// Why: avoid re-recording grid geometry when inputs are unchanged.
+/// Invariant: static cache key must stay camera-independent; camera translation
+/// is applied at draw time.
 /// Validate: `test/render/scene_static_layer_cache_test.dart`.
 class SceneStaticLayerCache {
   _StaticLayerKey? _key;
-  Picture? _picture;
+  Picture? _gridPicture;
 
   int _debugBuildCount = 0;
   int _debugDisposeCount = 0;
@@ -1262,64 +1300,66 @@ class SceneStaticLayerCache {
     required Offset cameraOffset,
     required double gridStrokeWidth,
   }) {
+    _drawBackground(canvas, size, background.color);
+
     final safeCameraOffset = sanitizeFiniteOffset(cameraOffset);
     final safeGridStrokeWidth = clampNonNegativeFinite(gridStrokeWidth);
     final grid = background.grid;
     final effectiveGridEnabled = _isGridDrawable(
       grid,
       size: size,
-      cameraOffset: safeCameraOffset,
+      cameraOffset: Offset.zero,
     );
     final cell = grid.cellSize;
     final effectiveCellSize = effectiveGridEnabled ? cell : 0.0;
     final key = _StaticLayerKey(
       size: size,
-      backgroundColor: background.color,
       gridEnabled: effectiveGridEnabled,
       gridCellSize: effectiveCellSize,
       gridColor: grid.color,
       gridStrokeWidth: safeGridStrokeWidth,
-      cameraOffset: safeCameraOffset,
     );
 
-    if (_picture == null || _key != key) {
-      _disposePictureIfNeeded();
+    if (_gridPicture == null || _key != key) {
+      _disposeGridPictureIfNeeded();
       _key = key;
-      _picture = _recordPicture(
-        size,
-        background,
-        safeCameraOffset,
-        safeGridStrokeWidth,
-      );
+      _gridPicture = _recordGridPicture(size, grid, safeGridStrokeWidth);
       _debugBuildCount += 1;
     }
 
-    canvas.drawPicture(_picture!);
+    if (!_key!.gridEnabled) return;
+    final shift = _gridShiftForCameraOffset(
+      safeCameraOffset,
+      _key!.gridCellSize,
+    );
+    canvas.save();
+    canvas.clipRect(Offset.zero & size);
+    canvas.translate(shift.dx, shift.dy);
+    canvas.drawPicture(_gridPicture!);
+    canvas.restore();
   }
 
   void dispose() {
-    _disposePictureIfNeeded();
+    _disposeGridPictureIfNeeded();
     _key = null;
   }
 
-  void _disposePictureIfNeeded() {
-    final picture = _picture;
+  void _disposeGridPictureIfNeeded() {
+    final picture = _gridPicture;
     if (picture == null) return;
-    _picture = null;
+    _gridPicture = null;
     picture.dispose();
     _debugDisposeCount += 1;
   }
 
-  Picture _recordPicture(
+  Picture _recordGridPicture(
     Size size,
-    Background background,
-    Offset cameraOffset,
+    GridSettings grid,
     double gridStrokeWidth,
   ) {
     final recorder = PictureRecorder();
     final canvas = Canvas(recorder);
-    _drawBackground(canvas, size, background.color);
-    _drawGrid(canvas, size, background.grid, cameraOffset, gridStrokeWidth);
+    _drawGrid(canvas, size, grid, Offset.zero, gridStrokeWidth);
     return recorder.endRecording();
   }
 }
@@ -1327,44 +1367,31 @@ class SceneStaticLayerCache {
 class _StaticLayerKey {
   const _StaticLayerKey({
     required this.size,
-    required this.backgroundColor,
     required this.gridEnabled,
     required this.gridCellSize,
     required this.gridColor,
     required this.gridStrokeWidth,
-    required this.cameraOffset,
   });
 
   final Size size;
-  final Color backgroundColor;
   final bool gridEnabled;
   final double gridCellSize;
   final Color gridColor;
   final double gridStrokeWidth;
-  final Offset cameraOffset;
 
   @override
   bool operator ==(Object other) {
     return other is _StaticLayerKey &&
         other.size == size &&
-        other.backgroundColor == backgroundColor &&
         other.gridEnabled == gridEnabled &&
         other.gridCellSize == gridCellSize &&
         other.gridColor == gridColor &&
-        other.gridStrokeWidth == gridStrokeWidth &&
-        other.cameraOffset == cameraOffset;
+        other.gridStrokeWidth == gridStrokeWidth;
   }
 
   @override
-  int get hashCode => Object.hash(
-    size,
-    backgroundColor,
-    gridEnabled,
-    gridCellSize,
-    gridColor,
-    gridStrokeWidth,
-    cameraOffset,
-  );
+  int get hashCode =>
+      Object.hash(size, gridEnabled, gridCellSize, gridColor, gridStrokeWidth);
 }
 
 void _drawBackground(Canvas canvas, Size size, Color color) {
@@ -1429,6 +1456,19 @@ int debugGridLineCount(double start, double extent, double cell) =>
 double _gridStart(double offset, double cell) {
   final remainder = offset % cell;
   return remainder < 0 ? remainder + cell : remainder;
+}
+
+Offset _gridShiftForCameraOffset(Offset cameraOffset, double cellSize) {
+  if (!cameraOffset.dx.isFinite || !cameraOffset.dy.isFinite) {
+    return Offset.zero;
+  }
+  if (!cellSize.isFinite || cellSize <= 0) {
+    return Offset.zero;
+  }
+  return Offset(
+    _gridStart(-cameraOffset.dx, cellSize),
+    _gridStart(-cameraOffset.dy, cellSize),
+  );
 }
 
 bool _isFiniteTransform2D(Transform2D transform) {

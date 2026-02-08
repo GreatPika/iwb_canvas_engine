@@ -1,5 +1,13 @@
 ## Unreleased
 
+- Render: thin-line pixel snapping now applies only to eligible geometry
+  (axis-aligned unit-scale transforms with thin screen-space stroke width);
+  rotated/non-unit-scale nodes skip snapping to avoid artifacts.
+- Render: `SceneTextLayoutCache` key now excludes non-semantic identity/geometry
+  fields (`nodeId`, box height) while preserving paint-style correctness for
+  cached `TextPainter` instances (color remains part of the key).
+- Render: `SceneStaticLayerCache` no longer keys by `cameraOffset`; camera pan
+  now translates cached grid draw at paint time instead of rebuilding the cache.
 - Render/View: `SceneView` now forwards ambient `Directionality` to
   `ScenePainter`; text layout and painting resolve `TextAlign.start/end`
   according to `TextDirection` (LTR/RTL).
