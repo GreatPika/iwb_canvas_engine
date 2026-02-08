@@ -131,6 +131,24 @@ const List<Invariant> invariants = <Invariant>[
         'StrokeTool/LineTool commit paths are fail-safe: normalize failures abort without crashes and without action emission',
   ),
   Invariant(
+    id: 'INV-INPUT-MOVE-DRAG-ROLLBACK',
+    scope: 'input',
+    title:
+        'Move drag is transactional: cancel and mode switch rollback moved node transforms and emit no transform action',
+  ),
+  Invariant(
+    id: 'INV-INPUT-ERASER-COMMIT-ON-UP',
+    scope: 'input',
+    title:
+        'Eraser mutates scene only on pointer up; cancel and mode switch produce no deletions/actions',
+  ),
+  Invariant(
+    id: 'INV-INPUT-LINE-PENDING-TIMER',
+    scope: 'input',
+    title:
+        'Line two-tap pending start expires by an internal 10s timer even without new pointer events',
+  ),
+  Invariant(
     id: 'INV-INPUT-CONSTRUCTOR-SCENE-VALIDATION',
     scope: 'input',
     title:

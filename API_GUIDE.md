@@ -454,6 +454,12 @@ controller.eraserThickness = 20;
 Gotchas:
 - The engine currently supports **single-pointer input only** (no pinch-to-zoom, no multitouch).
 - Draw strokes and line gestures emit action events (`drawStroke/drawHighlighter/drawLine/erase`).
+- Move drag is transactional: cancel and mode switch during an active drag
+  rollback transforms and emit no transform action.
+- Eraser is commit-on-up: move only records trajectory for feedback; scene
+  mutation + `ActionType.erase` happen on pointer up only.
+- Two-tap line start expires after 10 seconds via an internal timer even if
+  no new pointer events arrive.
 
 Relevant APIs:
 - `CanvasMode`, `DrawTool`, `SceneController.setMode/setDrawTool/setDrawColor` — `lib/src/input/scene_controller.dart`

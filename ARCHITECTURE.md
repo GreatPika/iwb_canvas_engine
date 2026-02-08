@@ -194,12 +194,17 @@ Static layer cache invariants:
 
 - **Move mode**: selection, drag move, marquee selection.
 - **Draw mode**: pen, highlighter, line, eraser.
+- Move drag is transactional: cancel and mode switch during active drag
+  rollback all drag-applied transforms and emit no transform action.
 - Eraser normalizes selection before publishing changes: deleted node ids are
   removed from `selectedNodeIds` before action emission.
+- Eraser commits only on pointer up (move is preview-only); cancel and mode
+  switch do not mutate scene and emit no erase action.
 - Stroke/line commit is fail-safe: if local-normalization preconditions are
   violated at commit time, the pending preview node is discarded and no action
   is emitted (the input loop must not crash).
-- Line tool supports two flows: drag or two-tap with 10s timeout.
+- Line tool supports two flows: drag or two-tap with 10s timeout driven by an
+  internal timer (not by arrival of new pointer events).
 
 ### Action boundaries
 

@@ -1,5 +1,13 @@
 ## Unreleased
 
+- Input: move-drag is now transactional. `PointerPhase.cancel` and
+  `setMode(...)` during an active move drag rollback node transforms and emit
+  no `ActionType.transform`.
+- Input: line two-tap pending start now expires via an internal `Timer(10s)`,
+  so timeout works even without new pointer events.
+- Input: eraser behavior is explicitly transactional commit-on-up:
+  trajectory during move does not mutate scene; cancel/mode switch leaves scene
+  unchanged and emits no `ActionType.erase`.
 - Input: `setSelection(...)` / `toggleSelection(...)` now strictly normalize to
   interactive ids only (existing + non-background + visible + selectable).
 - Input: selection contract is now explicitly unordered-set semantics; code and

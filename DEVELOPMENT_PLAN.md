@@ -266,7 +266,7 @@ Goal: no bypasses. Background must never be selectable/deletable; selection must
 
 Goal: any in-progress gesture ends deterministically. No silent partial edits.
 
-19. [ ] **(#3) Drag cancel/mode change leaves nodes moved without rollback and/or without Action**
+19. [x] **(#3) Drag cancel/mode change leaves nodes moved without rollback and/or without Action**
     **Where:** `MoveModeEngine`, `SceneController.setMode(...)`
     **Policy (fixed):** `cancel` and `setMode(...)` during drag both **rollback**.
     **Do:**
@@ -276,7 +276,7 @@ Goal: any in-progress gesture ends deterministically. No silent partial edits.
 * On `SceneController.setMode(...)` while drag active: treat as cancel → restore snapshot; emit **no** action.
   **Done when:** tests: drag→move→cancel restores; drag→setMode restores identically.
 
-20. [ ] **(#4) Eraser mutates scene during move; cancel/mode change loses Action and/or lacks rollback**
+20. [x] **(#4) Eraser mutates scene during move; cancel/mode change loses Action and/or lacks rollback**
     **Where:** `EraserTool`, `SceneController.setMode(...)`
     **Policy (fixed):** eraser is transactional:
 
@@ -289,7 +289,7 @@ Goal: any in-progress gesture ends deterministically. No silent partial edits.
 * On rollback: reinsert nodes at original positions; restore selection normalization (#15/#36).
   **Done when:** tests: erasing then cancel restores nodes; erasing then setMode restores; erasing then up emits action.
 
-21. [ ] **(#12) Line tool pending-start expires only on new events**
+21. [x] **(#12) Line tool pending-start expires only on new events**
     **Where:** `LineTool`
     **Policy (fixed):** pending line start auto-clears after 10 seconds.
     **Do:**

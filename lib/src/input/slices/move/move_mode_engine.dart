@@ -25,6 +25,8 @@ class MoveModeEngine {
   _DragTarget _dragTarget = _DragTarget.none;
   bool _dragMoved = false;
   bool _pendingClearSelection = false;
+  final List<_NodeTransformSnapshot> _dragTransformSnapshots =
+      <_NodeTransformSnapshot>[];
 
   int get debugMoveGestureBuildCount => _debugMoveGestureBuildCount;
 
@@ -63,7 +65,16 @@ class MoveModeEngine {
     _dragMoved = false;
     _pendingClearSelection = false;
     _moveGestureNodes = null;
+    _dragTransformSnapshots.clear();
     _contracts.setSelectionRect(null, notify: false);
+  }
+
+  void cancelGesture({bool notify = true}) {
+    _rollbackMoveIfNeeded();
+    reset();
+    if (notify) {
+      _contracts.notifyNowIfNeeded();
+    }
   }
 
   void _handleDown(PointerSample sample, Offset scenePoint) {
@@ -166,8 +177,7 @@ class MoveModeEngine {
   }
 
   void _handleCancel() {
-    reset();
-    _contracts.notifyNowIfNeeded();
+    cancelGesture();
   }
 
   void _commitMove(int timestampMs, Offset scenePoint) {
@@ -199,8 +209,34 @@ class MoveModeEngine {
     for (final node in nodesToMove) {
       if (node.isLocked) continue;
       if (!node.isTransformable) continue;
+      _rememberNodeTransform(node);
       node.position = node.position + delta;
     }
+  }
+
+  void _rememberNodeTransform(SceneNode node) {
+    for (final snapshot in _dragTransformSnapshots) {
+      if (identical(snapshot.node, node)) {
+        return;
+      }
+    }
+    _dragTransformSnapshots.add(
+      _NodeTransformSnapshot(node: node, transform: node.transform),
+    );
+  }
+
+  void _rollbackMoveIfNeeded() {
+    if (!_dragMoved || _dragTarget != _DragTarget.move) {
+      return;
+    }
+    if (_dragTransformSnapshots.isEmpty) {
+      return;
+    }
+    for (final snapshot in _dragTransformSnapshots) {
+      snapshot.node.transform = snapshot.transform;
+    }
+    _contracts.markSceneGeometryChanged();
+    _contracts.requestRepaintOncePerFrame();
   }
 
   List<SceneNode> _selectedNodesInSceneOrder() {
@@ -268,6 +304,13 @@ class MoveModeEngine {
 }
 
 enum _DragTarget { none, move, marquee }
+
+class _NodeTransformSnapshot {
+  const _NodeTransformSnapshot({required this.node, required this.transform});
+
+  final SceneNode node;
+  final Transform2D transform;
+}
 
 Rect _normalizeRect(Rect rect) {
   final left = rect.left < rect.right ? rect.left : rect.right;

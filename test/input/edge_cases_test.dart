@@ -6,6 +6,8 @@ import 'package:iwb_canvas_engine/advanced.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   // INV:INV-INPUT-TIMESTAMP-MONOTONIC
+  // INV:INV-INPUT-ERASER-COMMIT-ON-UP
+  // INV:INV-INPUT-LINE-PENDING-TIMER
 
   RectNode rectNode(
     String id,
@@ -607,7 +609,9 @@ void main() {
     expect(actions.single.type, ActionType.drawLine);
   });
 
-  test('pending two-tap line expires after timeout', () {
+  testWidgets('pending two-tap line expires after timeout without new events', (
+    tester,
+  ) async {
     final scene = Scene(layers: [Layer()]);
     final controller = SceneController(scene: scene, dragStartSlop: 0);
     addTearDown(controller.dispose);
@@ -633,14 +637,7 @@ void main() {
     );
     expect(controller.hasPendingLineStart, isTrue);
 
-    controller.handlePointer(
-      const PointerSample(
-        pointerId: 2,
-        position: Offset(0, 0),
-        timestampMs: 10002,
-        phase: PointerPhase.down,
-      ),
-    );
+    await tester.pump(const Duration(seconds: 11));
 
     expect(controller.hasPendingLineStart, isFalse);
   });
@@ -721,6 +718,105 @@ void main() {
 
     expect(firstNonBackgroundLayer(scene).nodes, hasLength(1));
     expect(actions, isEmpty);
+  });
+
+  test('eraser move + cancel does not delete nodes and emits no action', () {
+    final line = LineNode(
+      id: 'line-1',
+      start: const Offset(-10, 0),
+      end: const Offset(10, 0),
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+    final scene = Scene(
+      layers: [
+        Layer(nodes: [line]),
+      ],
+    );
+    final controller = SceneController(scene: scene, dragStartSlop: 0);
+    addTearDown(controller.dispose);
+
+    controller.setMode(CanvasMode.draw);
+    controller.setDrawTool(DrawTool.eraser);
+    controller.eraserThickness = 10;
+
+    final actions = <ActionCommitted>[];
+    final sub = controller.actions.listen(actions.add);
+    addTearDown(sub.cancel);
+
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 1,
+        position: Offset(-5, 0),
+        timestampMs: 0,
+        phase: PointerPhase.down,
+      ),
+    );
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 1,
+        position: Offset(5, 0),
+        timestampMs: 10,
+        phase: PointerPhase.move,
+      ),
+    );
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 1,
+        position: Offset(5, 0),
+        timestampMs: 20,
+        phase: PointerPhase.cancel,
+      ),
+    );
+
+    expect(firstNonBackgroundLayer(scene).nodes.single.id, 'line-1');
+    expect(actions.where((event) => event.type == ActionType.erase), isEmpty);
+  });
+
+  test('eraser move + setMode does not delete nodes and emits no action', () {
+    final line = LineNode(
+      id: 'line-1',
+      start: const Offset(-10, 0),
+      end: const Offset(10, 0),
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+    final scene = Scene(
+      layers: [
+        Layer(nodes: [line]),
+      ],
+    );
+    final controller = SceneController(scene: scene, dragStartSlop: 0);
+    addTearDown(controller.dispose);
+
+    controller.setMode(CanvasMode.draw);
+    controller.setDrawTool(DrawTool.eraser);
+    controller.eraserThickness = 10;
+
+    final actions = <ActionCommitted>[];
+    final sub = controller.actions.listen(actions.add);
+    addTearDown(sub.cancel);
+
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 1,
+        position: Offset(-5, 0),
+        timestampMs: 0,
+        phase: PointerPhase.down,
+      ),
+    );
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 1,
+        position: Offset(5, 0),
+        timestampMs: 10,
+        phase: PointerPhase.move,
+      ),
+    );
+    controller.setMode(CanvasMode.move);
+
+    expect(firstNonBackgroundLayer(scene).nodes.single.id, 'line-1');
+    expect(actions.where((event) => event.type == ActionType.erase), isEmpty);
   });
 
   test('eraser deletes a line with single-point input', () async {

@@ -5,6 +5,7 @@ import 'package:iwb_canvas_engine/advanced.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  // INV:INV-INPUT-MOVE-DRAG-ROLLBACK
 
   RectNode rectNode(String id, Offset position, {bool isLocked = false}) {
     return RectNode(
@@ -213,4 +214,99 @@ void main() {
     expect(delta['tx']?.toDouble(), 20.0);
     expect(delta['ty']?.toDouble(), 0.0);
   });
+
+  test('drag cancel restores moved nodes and emits no transform action', () {
+    final movable = rectNode('movable', const Offset(0, 0));
+    final scene = Scene(
+      layers: [
+        Layer(nodes: [movable]),
+      ],
+    );
+    final controller = SceneController(scene: scene, dragStartSlop: 0);
+    addTearDown(controller.dispose);
+    controller.setSelection(const <NodeId>{'movable'});
+
+    final actions = <ActionCommitted>[];
+    final sub = controller.actions.listen(actions.add);
+    addTearDown(sub.cancel);
+
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 10,
+        position: Offset(0, 0),
+        timestampMs: 0,
+        phase: PointerPhase.down,
+      ),
+    );
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 10,
+        position: Offset(20, 0),
+        timestampMs: 10,
+        phase: PointerPhase.move,
+      ),
+    );
+    expect(movable.position, const Offset(20, 0));
+
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 10,
+        position: Offset(20, 0),
+        timestampMs: 20,
+        phase: PointerPhase.cancel,
+      ),
+    );
+
+    expect(movable.position, const Offset(0, 0));
+    expect(
+      actions.where((event) => event.type == ActionType.transform),
+      isEmpty,
+    );
+  });
+
+  test(
+    'setMode during drag restores moved nodes and emits no transform action',
+    () {
+      final movable = rectNode('movable', const Offset(0, 0));
+      final scene = Scene(
+        layers: [
+          Layer(nodes: [movable]),
+        ],
+      );
+      final controller = SceneController(scene: scene, dragStartSlop: 0);
+      addTearDown(controller.dispose);
+      controller.setSelection(const <NodeId>{'movable'});
+
+      final actions = <ActionCommitted>[];
+      final sub = controller.actions.listen(actions.add);
+      addTearDown(sub.cancel);
+
+      controller.handlePointer(
+        const PointerSample(
+          pointerId: 11,
+          position: Offset(0, 0),
+          timestampMs: 0,
+          phase: PointerPhase.down,
+        ),
+      );
+      controller.handlePointer(
+        const PointerSample(
+          pointerId: 11,
+          position: Offset(20, 0),
+          timestampMs: 10,
+          phase: PointerPhase.move,
+        ),
+      );
+      expect(movable.position, const Offset(20, 0));
+
+      controller.setMode(CanvasMode.draw);
+
+      expect(movable.position, const Offset(0, 0));
+      expect(controller.mode, CanvasMode.draw);
+      expect(
+        actions.where((event) => event.type == ActionType.transform),
+        isEmpty,
+      );
+    },
+  );
 }

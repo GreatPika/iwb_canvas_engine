@@ -39,7 +39,6 @@ class DrawModeEngine {
       return;
     }
 
-    _lineTool.expirePendingLine(sample.timestampMs);
     final scenePoint = _contracts.toScenePoint(sample.position);
 
     switch (sample.phase) {

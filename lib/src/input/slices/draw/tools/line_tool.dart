@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' show Offset;
 
 import '../../../../core/nodes.dart';
@@ -8,6 +9,8 @@ import '../../../internal/contracts.dart';
 class LineTool {
   LineTool(this._contracts, {required Layer Function() ensureAnnotationLayer})
     : _ensureAnnotationLayer = ensureAnnotationLayer;
+
+  static const Duration _pendingLineTimeout = Duration(seconds: 10);
 
   final InputSliceContracts _contracts;
   final Layer Function() _ensureAnnotationLayer;
@@ -20,6 +23,7 @@ class LineTool {
 
   Offset? _pendingLineStart;
   int? _pendingLineTimestampMs;
+  Timer? _pendingLineTimer;
 
   Offset? get pendingLineStart => _pendingLineStart;
   int? get pendingLineTimestampMs => _pendingLineTimestampMs;
@@ -147,20 +151,17 @@ class LineTool {
     _clearPendingLine();
   }
 
-  void expirePendingLine(int timestampMs) {
-    final pendingTimestamp = _pendingLineTimestampMs;
-    if (pendingTimestamp == null) return;
-    if (timestampMs - pendingTimestamp > 10000) {
-      _clearPendingLine();
-    }
-  }
-
   void _setPendingLineStart(Offset? start, int? timestampMs) {
     if (_pendingLineStart == start && _pendingLineTimestampMs == timestampMs) {
       return;
     }
+    _pendingLineTimer?.cancel();
+    _pendingLineTimer = null;
     _pendingLineStart = start;
     _pendingLineTimestampMs = timestampMs;
+    if (_pendingLineStart != null) {
+      _pendingLineTimer = Timer(_pendingLineTimeout, _clearPendingLine);
+    }
     _contracts.requestRepaintOncePerFrame();
   }
 

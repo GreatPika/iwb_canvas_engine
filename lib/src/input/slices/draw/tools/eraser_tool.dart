@@ -23,6 +23,11 @@ class EraserTool {
     _contracts.requestRepaintOncePerFrame();
   }
 
+  /// Commits erasing only on pointer up.
+  ///
+  /// During move, eraser keeps trajectory for visual feedback but does not
+  /// mutate scene structure yet. This keeps cancel/mode-switch paths
+  /// transactional (no partial deletions left behind).
   void handleUp(int timestampMs, Offset scenePoint) {
     if (_eraserPoints.isNotEmpty &&
         (_eraserPoints.last - scenePoint).distance > 0) {

@@ -704,7 +704,7 @@ class SceneController extends ChangeNotifier {
     _applyInputConfig(pending);
   }
 
-  void _resetDrag() => _moveModeEngine.reset();
+  void _resetDrag() => _moveModeEngine.cancelGesture(notify: false);
 
   void _setCameraOffset(Offset value, {bool notify = true}) {
     _requireFiniteOffset(
