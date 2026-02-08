@@ -693,6 +693,31 @@ void main() {
   );
 
   test(
+    'hitTestNode does not over-inflate LineNode hit radius under anisotropic scale',
+    () {
+      // INV:INV-CORE-LINE-HITPADDING-SLOP-SCENE
+      final line =
+          LineNode(
+              id: 'line-anisotropic-strict',
+              start: const Offset(0, 0),
+              end: const Offset(10, 0),
+              thickness: 0,
+              color: const Color(0xFF000000),
+            )
+            ..scaleX = 0.01
+            ..scaleY = 1.0;
+
+      final near = const Offset(0.05, kHitSlop - 0.1);
+      final far = const Offset(0.05, kHitSlop + 0.1);
+      final veryFar = const Offset(0.05, 50);
+
+      expect(hitTestNode(near, line), isTrue);
+      expect(hitTestNode(far, line), isFalse);
+      expect(hitTestNode(veryFar, line), isFalse);
+    },
+  );
+
+  test(
     'hitTestNode rejects stroke-only PathNode center when far from stroke',
     () {
       final node = PathNode(

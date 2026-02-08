@@ -1,5 +1,9 @@
 ## Unreleased
 
+- Fix: `LineNode`/`StrokeNode` hit-testing now applies `hitPadding + kHitSlop`
+  in strict scene/world units under anisotropic transforms (no max-axis
+  tolerance inflation); add regression coverage for anisotropic scale probes.
+
 - View: `SceneView` now invalidates text/stroke/path render caches when the
   bound `SceneController` instance is replaced, preventing stale cache reuse
   across scenes with reused `NodeId` values.

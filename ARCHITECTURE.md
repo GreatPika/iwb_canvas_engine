@@ -242,9 +242,10 @@ Emit `ActionCommitted` on:
   transforms), the engine falls back to the world-space AABB inflated by
   `hitPadding + kHitSlop` (coarse selection).
 - Lines/strokes use distance-to-segment with thickness tolerance. `LineNode` and
-  `StrokeNode` hit-testing also applies `hitPadding + kHitSlop` in scene units
-  (scale-aware). When the inverse is unavailable, they fall back to the inflated
-  world-space AABB (coarse selection).
+  `StrokeNode` hit-testing also applies `hitPadding + kHitSlop` in strict
+  scene/world units (no anisotropic max-axis inflation). When the inverse is
+  unavailable, they fall back to the inflated world-space AABB (coarse
+  selection).
 - Path nodes hit-test as the union of:
   - **Fill**: geometry hit-test via `Path.contains` with inverse transforms.
     If inverse transform is unavailable (degenerate), fill is non-interactive

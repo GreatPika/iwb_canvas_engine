@@ -167,7 +167,8 @@ Stable contracts (expected to remain compatible as the package evolves):
   - Source of truth: `hitTestTopNode` in `lib/src/core/hit_test.dart`.
   - `hitTestTopNode` skips layers with `isBackground == true`.
   - Hit-test tolerance uses `kHitSlop` + `SceneNode.hitPadding` in **scene/world units**
-    (scale-aware). When `transform.invert()` is unavailable (degenerate
+    (strict scene units for `LineNode`/`StrokeNode`, no anisotropic max-axis inflation).
+    When `transform.invert()` is unavailable (degenerate
     transforms), hit-testing falls back to `boundsWorld.inflate(hitPadding + kHitSlop)`
     for coarse-but-selectable behavior. Exception: `PathNode` fill/stroke do not
     use coarse fallback and are non-interactive when inverse transform is unavailable.

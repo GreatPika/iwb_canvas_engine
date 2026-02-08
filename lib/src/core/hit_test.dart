@@ -77,6 +77,19 @@ double _sceneScalarToLocalMax(Transform2D inverse, double valueScene) {
   return clampNonNegativeFinite(valueScene * scale);
 }
 
+double _localScalarToSceneMax(Transform2D transform, double valueLocal) {
+  final clampedLocal = clampNonNegativeFinite(valueLocal);
+  if (clampedLocal <= 0) return 0;
+  if (!transform.isFinite) return clampedLocal;
+  final localToScene = _maxSingularValue2x2(
+    transform.a,
+    transform.b,
+    transform.c,
+    transform.d,
+  );
+  return clampNonNegativeFinite(clampedLocal * localToScene);
+}
+
 double _maxSingularValue2x2(double a, double b, double c, double d) {
   final t = a * a + b * b + c * c + d * d;
   final det = a * d - b * c;
@@ -226,12 +239,15 @@ bool hitTestNode(Offset point, SceneNode node) {
         final paddingScene = baseHitPadding + kHitSlop;
         return line.boundsWorld.inflate(paddingScene).contains(point);
       }
-      final localPoint = inverse.applyToPoint(point);
       final baseThickness = clampNonNegativeFinite(line.thickness);
       final paddingScene = baseHitPadding + kHitSlop;
-      final paddingLocal = _sceneScalarToLocalMax(inverse, paddingScene);
-      final effectiveThickness = baseThickness + 2 * paddingLocal;
-      return hitTestLine(localPoint, line.start, line.end, effectiveThickness);
+      final worldStart = line.transform.applyToPoint(line.start);
+      final worldEnd = line.transform.applyToPoint(line.end);
+      final worldRadius =
+          _localScalarToSceneMax(line.transform, baseThickness / 2) +
+          paddingScene;
+      return distanceSquaredPointToSegment(point, worldStart, worldEnd) <=
+          worldRadius * worldRadius;
     case NodeType.stroke:
       final stroke = node as StrokeNode;
       final inverse = stroke.transform.invert();
@@ -240,16 +256,27 @@ bool hitTestNode(Offset point, SceneNode node) {
         final paddingScene = baseHitPadding + kHitSlop;
         return stroke.boundsWorld.inflate(paddingScene).contains(point);
       }
-      final localPoint = inverse.applyToPoint(point);
-      final hitPaddingLocal = _sceneScalarToLocalMax(inverse, baseHitPadding);
-      final hitSlopLocal = _sceneScalarToLocalMax(inverse, kHitSlop);
-      return hitTestStroke(
-        localPoint,
-        stroke.points,
-        stroke.thickness,
-        hitPadding: hitPaddingLocal,
-        hitSlop: hitSlopLocal,
-      );
+      final baseThickness = clampNonNegativeFinite(stroke.thickness);
+      final paddingScene = baseHitPadding + kHitSlop;
+      final worldRadius =
+          _localScalarToSceneMax(stroke.transform, baseThickness / 2) +
+          paddingScene;
+      if (stroke.points.isEmpty) return false;
+      if (stroke.points.length == 1) {
+        final worldPoint = stroke.transform.applyToPoint(stroke.points.first);
+        final delta = point - worldPoint;
+        final distanceSquared = delta.dx * delta.dx + delta.dy * delta.dy;
+        return distanceSquared <= worldRadius * worldRadius;
+      }
+      for (var i = 0; i < stroke.points.length - 1; i++) {
+        final start = stroke.transform.applyToPoint(stroke.points[i]);
+        final end = stroke.transform.applyToPoint(stroke.points[i + 1]);
+        if (distanceSquaredPointToSegment(point, start, end) <=
+            worldRadius * worldRadius) {
+          return true;
+        }
+      }
+      return false;
   }
 }
 

@@ -97,7 +97,7 @@ void main() {
             )
             ..scaleX = 0.01
             ..scaleY = 1.0;
-      final probe = const Offset(0.05, 50);
+      final probe = const Offset(0.05, 3.9);
       expect(hitTestNode(probe, line), isTrue);
 
       final scene = Scene(
