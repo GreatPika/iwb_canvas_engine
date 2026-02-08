@@ -281,6 +281,12 @@ const List<Invariant> invariants = <Invariant>[
     title:
         'clearScene keeps exactly one background layer at index 0 and removes all non-background layers',
   ),
+  Invariant(
+    id: 'INV-COMMANDS-FLIP-SELECTION-AXES',
+    scope: 'commands',
+    title:
+        'flipSelectionHorizontal reflects across the vertical center axis; flipSelectionVertical reflects across the horizontal center axis',
+  ),
 
   // Serialization.
   Invariant(

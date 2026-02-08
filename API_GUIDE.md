@@ -431,6 +431,9 @@ Gotchas:
 - `ActionCommitted.timestampMs` is an internal monotonic timeline (ordered event time), not guaranteed UNIX epoch wall-clock time.
 - Any inbound `timestampMs` (pointer samples, command args, pointer signals) is treated as a **hint** and normalized so emitted timestamps never go backwards.
 - `EditTextRequested.timestampMs` uses the same internal monotonic timeline.
+- Flip axis semantics are explicit:
+  - `flipSelectionHorizontal()` reflects across the **vertical** axis through the current selection center.
+  - `flipSelectionVertical()` reflects across the **horizontal** axis through the current selection center.
 - `ActionType.transform` payload uses `{delta: {a,b,c,d,tx,ty}}`.
 - `ActionType.move` payload uses `{sourceLayerIndex: int, targetLayerIndex: int}`.
 - `ActionType.drawStroke/drawHighlighter/drawLine` payload uses `{tool: String, color: int, thickness: double}`.

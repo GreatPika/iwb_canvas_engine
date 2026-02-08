@@ -274,7 +274,7 @@ void main() {
     expect(nonTransformable.rotationDeg, 0);
   });
 
-  test('flipSelectionVertical mirrors around center x', () {
+  test('flipSelectionVertical mirrors around center y', () {
     final left = rectNode('left', const Offset(0, 0));
     final right = rectNode('right', const Offset(10, 0));
     final scene = Scene(
@@ -287,15 +287,15 @@ void main() {
 
     controller.flipSelectionVertical(timestampMs: 40);
 
-    expect(left.position.dx, closeTo(10, 0.001));
-    expect(right.position.dx, closeTo(0, 0.001));
-    expect(left.transform.a, closeTo(-1, 0.001));
-    expect(left.transform.d, closeTo(1, 0.001));
-    expect(right.transform.a, closeTo(-1, 0.001));
-    expect(right.transform.d, closeTo(1, 0.001));
+    expect(left.position.dx, closeTo(0, 0.001));
+    expect(right.position.dx, closeTo(10, 0.001));
+    expect(left.transform.a, closeTo(1, 0.001));
+    expect(left.transform.d, closeTo(-1, 0.001));
+    expect(right.transform.a, closeTo(1, 0.001));
+    expect(right.transform.d, closeTo(-1, 0.001));
   });
 
-  test('flipSelectionHorizontal mirrors around center y', () {
+  test('flipSelectionHorizontal mirrors around center x', () {
     final top = rectNode('top', const Offset(0, 0));
     final bottom = rectNode('bottom', const Offset(0, 10));
     final scene = Scene(
@@ -308,12 +308,12 @@ void main() {
 
     controller.flipSelectionHorizontal(timestampMs: 40);
 
-    expect(top.position.dy, closeTo(10, 0.001));
-    expect(bottom.position.dy, closeTo(0, 0.001));
-    expect(top.transform.a, closeTo(1, 0.001));
-    expect(top.transform.d, closeTo(-1, 0.001));
-    expect(bottom.transform.a, closeTo(1, 0.001));
-    expect(bottom.transform.d, closeTo(-1, 0.001));
+    expect(top.position.dy, closeTo(0, 0.001));
+    expect(bottom.position.dy, closeTo(10, 0.001));
+    expect(top.transform.a, closeTo(-1, 0.001));
+    expect(top.transform.d, closeTo(1, 0.001));
+    expect(bottom.transform.a, closeTo(-1, 0.001));
+    expect(bottom.transform.d, closeTo(1, 0.001));
   });
 
   test(
@@ -337,8 +337,8 @@ void main() {
 
       expect(transformable.position.dx, closeTo(0, 0.001));
       expect(transformable.position.dy, closeTo(0, 0.001));
-      expect(transformable.transform.a, closeTo(-1, 0.001));
-      expect(transformable.transform.d, closeTo(1, 0.001));
+      expect(transformable.transform.a, closeTo(1, 0.001));
+      expect(transformable.transform.d, closeTo(-1, 0.001));
       expect(nonTransformable.position, const Offset(100, 0));
       expect(nonTransformable.transform.a, closeTo(1, 0.001));
       expect(nonTransformable.transform.d, closeTo(1, 0.001));
@@ -366,8 +366,8 @@ void main() {
 
       expect(transformable.position.dx, closeTo(0, 0.001));
       expect(transformable.position.dy, closeTo(0, 0.001));
-      expect(transformable.transform.a, closeTo(1, 0.001));
-      expect(transformable.transform.d, closeTo(-1, 0.001));
+      expect(transformable.transform.a, closeTo(-1, 0.001));
+      expect(transformable.transform.d, closeTo(1, 0.001));
       expect(nonTransformable.position, const Offset(0, 100));
       expect(nonTransformable.transform.a, closeTo(1, 0.001));
       expect(nonTransformable.transform.d, closeTo(1, 0.001));
@@ -400,54 +400,99 @@ void main() {
     expect(end.dy, closeTo(5, 0.001));
   });
 
-  test('flipSelectionVertical mirrors stroke geometry', () {
-    final stroke = StrokeNode(
-      id: 'stroke',
-      points: [const Offset(0, 0), const Offset(10, 0), const Offset(20, 0)],
-      thickness: 2,
-      color: const Color(0xFF000000),
-    );
+  test(
+    'flipSelectionVertical mirrors stroke geometry around horizontal axis',
+    () {
+      final stroke = StrokeNode(
+        id: 'stroke',
+        points: [const Offset(0, 0), const Offset(10, 0), const Offset(20, 0)],
+        thickness: 2,
+        color: const Color(0xFF000000),
+      );
+      final scene = Scene(
+        layers: [
+          Layer(nodes: [stroke]),
+        ],
+      );
+      final controller = SceneController(scene: scene, dragStartSlop: 0);
+      marqueeSelect(controller, const Rect.fromLTRB(-20, -20, 40, 20));
+
+      controller.flipSelectionVertical(timestampMs: 40);
+
+      final p0 = stroke.transform.applyToPoint(stroke.points[0]);
+      final p1 = stroke.transform.applyToPoint(stroke.points[1]);
+      final p2 = stroke.transform.applyToPoint(stroke.points[2]);
+      expect(p0.dx, closeTo(0, 0.001));
+      expect(p1.dx, closeTo(10, 0.001));
+      expect(p2.dx, closeTo(20, 0.001));
+    },
+  );
+
+  test(
+    'flipSelectionHorizontal mirrors stroke geometry around vertical axis',
+    () {
+      final stroke = StrokeNode(
+        id: 'stroke',
+        points: [const Offset(0, 0), const Offset(0, 10), const Offset(0, 20)],
+        thickness: 2,
+        color: const Color(0xFF000000),
+      );
+      final scene = Scene(
+        layers: [
+          Layer(nodes: [stroke]),
+        ],
+      );
+      final controller = SceneController(scene: scene, dragStartSlop: 0);
+      marqueeSelect(controller, const Rect.fromLTRB(-20, -20, 20, 40));
+
+      controller.flipSelectionHorizontal(timestampMs: 40);
+
+      final p0 = stroke.transform.applyToPoint(stroke.points[0]);
+      final p1 = stroke.transform.applyToPoint(stroke.points[1]);
+      final p2 = stroke.transform.applyToPoint(stroke.points[2]);
+      expect(p0.dy, closeTo(0, 0.001));
+      expect(p1.dy, closeTo(10, 0.001));
+      expect(p2.dy, closeTo(20, 0.001));
+    },
+  );
+
+  test('flipSelection commands emit exact reflection deltas', () {
+    // INV:INV-COMMANDS-FLIP-SELECTION-AXES
+    final node = rectNode('node', const Offset(0, 0));
     final scene = Scene(
       layers: [
-        Layer(nodes: [stroke]),
+        Layer(nodes: [node]),
       ],
     );
     final controller = SceneController(scene: scene, dragStartSlop: 0);
-    marqueeSelect(controller, const Rect.fromLTRB(-20, -20, 40, 20));
+    addTearDown(controller.dispose);
+    marqueeSelect(controller, const Rect.fromLTRB(-20, -20, 20, 20));
 
-    controller.flipSelectionVertical(timestampMs: 40);
-
-    final p0 = stroke.transform.applyToPoint(stroke.points[0]);
-    final p1 = stroke.transform.applyToPoint(stroke.points[1]);
-    final p2 = stroke.transform.applyToPoint(stroke.points[2]);
-    expect(p0.dx, closeTo(20, 0.001));
-    expect(p1.dx, closeTo(10, 0.001));
-    expect(p2.dx, closeTo(0, 0.001));
-  });
-
-  test('flipSelectionHorizontal mirrors stroke geometry', () {
-    final stroke = StrokeNode(
-      id: 'stroke',
-      points: [const Offset(0, 0), const Offset(0, 10), const Offset(0, 20)],
-      thickness: 2,
-      color: const Color(0xFF000000),
-    );
-    final scene = Scene(
-      layers: [
-        Layer(nodes: [stroke]),
-      ],
-    );
-    final controller = SceneController(scene: scene, dragStartSlop: 0);
-    marqueeSelect(controller, const Rect.fromLTRB(-20, -20, 20, 40));
+    final events = <ActionCommitted>[];
+    final subscription = controller.actions.listen(events.add);
+    addTearDown(subscription.cancel);
 
     controller.flipSelectionHorizontal(timestampMs: 40);
+    controller.flipSelectionVertical(timestampMs: 50);
 
-    final p0 = stroke.transform.applyToPoint(stroke.points[0]);
-    final p1 = stroke.transform.applyToPoint(stroke.points[1]);
-    final p2 = stroke.transform.applyToPoint(stroke.points[2]);
-    expect(p0.dy, closeTo(20, 0.001));
-    expect(p1.dy, closeTo(10, 0.001));
-    expect(p2.dy, closeTo(0, 0.001));
+    final horizontalDelta = events.first.tryTransformDelta();
+    final verticalDelta = events.last.tryTransformDelta();
+    expect(events.first.type, ActionType.transform);
+    expect(events.last.type, ActionType.transform);
+    expect(horizontalDelta, isNotNull);
+    expect(verticalDelta, isNotNull);
+    expect(horizontalDelta!.a, -1);
+    expect(horizontalDelta.b, 0);
+    expect(horizontalDelta.c, 0);
+    expect(horizontalDelta.d, 1);
+    expect(horizontalDelta.tx, 0);
+    expect(horizontalDelta.ty, 0);
+    expect(verticalDelta!.a, 1);
+    expect(verticalDelta.b, 0);
+    expect(verticalDelta.c, 0);
+    expect(verticalDelta.d, -1);
+    expect(verticalDelta.tx, 0);
+    expect(verticalDelta.ty, 0);
   });
 
   test('deleteSelection removes deletable nodes only', () {

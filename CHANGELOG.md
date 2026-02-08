@@ -58,6 +58,10 @@
   tests no longer rely on iteration order.
 - Input: `clearScene()` now canonicalizes layer structure to exactly one
   background layer at index `0` (removes all non-background layers).
+- Input: clarify and enforce flip command axis semantics:
+  `flipSelectionHorizontal()` now reflects across the vertical axis through the
+  selection center, and `flipSelectionVertical()` reflects across the horizontal
+  axis through the selection center.
 - Input: enforce a single background interaction policy in move/selection/delete
   paths (background nodes are non-interactive and non-deletable even when ids
   are injected).

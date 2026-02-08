@@ -449,7 +449,11 @@ single O(1) contract for id generation and selection normalization.
 * Use `allNodeIds` set (#36) to filter selection without scanning the entire scene graph.
   **Done when:** repeated structural changes don’t produce O(N) overhead.
 
-38. [ ] **(#34) `flipSelectionVertical/Horizontal` semantics ambiguous**
+Batch rationale (2026-02-08): task **#34** was completed as a standalone batch
+because it changes a user-visible transform contract and needs semantic lock via
+tests/docs before subsequent performance-only changes.
+
+38. [x] **(#34) `flipSelectionVertical/Horizontal` semantics ambiguous**
     **Policy (fixed):**
 
 * `flipSelectionHorizontal`: reflect across **vertical** axis through the selection bounding box center (world space).

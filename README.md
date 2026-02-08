@@ -277,6 +277,9 @@ Notes about direct mutations:
 - Geometric transforms (drag-move, rotate, flip) apply only to nodes with
   `isTransformable == true` and `isLocked == false`.
 - Transform centers and bounds are computed from the transformable subset.
+- Flip axis semantics: `flipSelectionHorizontal()` reflects across the vertical
+  axis through selection center; `flipSelectionVertical()` reflects across the
+  horizontal axis through selection center.
 
 ### Advanced rendering / input
 

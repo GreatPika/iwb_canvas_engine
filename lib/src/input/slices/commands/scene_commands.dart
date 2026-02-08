@@ -258,12 +258,12 @@ class SceneCommands {
 
     final center = centerWorldForNodes(nodes);
     final delta = Transform2D(
-      a: -1,
+      a: 1,
       b: 0,
       c: 0,
-      d: 1,
-      tx: 2 * center.dx,
-      ty: 0,
+      d: -1,
+      tx: 0,
+      ty: 2 * center.dy,
     );
 
     for (final node in nodes) {
@@ -289,12 +289,12 @@ class SceneCommands {
 
     final center = centerWorldForNodes(nodes);
     final delta = Transform2D(
-      a: 1,
+      a: -1,
       b: 0,
       c: 0,
-      d: -1,
-      tx: 0,
-      ty: 2 * center.dy,
+      d: 1,
+      tx: 2 * center.dx,
+      ty: 0,
     );
 
     for (final node in nodes) {
