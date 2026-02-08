@@ -265,6 +265,9 @@ Emit `ActionCommitted` on:
 ## Serialization (JSON v2)
 
 - `schemaVersionWrite = 2`, and the decoder accepts only `schemaVersionsRead = {2}`.
+- Integer JSON fields use integer-valued finite numeric validation:
+  values like `2` and `2.0` are accepted; `2.5`, non-finite numbers, and
+  non-numeric values are rejected.
 - Every node stores:
   - `transform` as an affine 2×3 matrix: `{a,b,c,d,tx,ty}`
   - `hitPadding`

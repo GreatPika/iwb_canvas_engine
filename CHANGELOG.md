@@ -1,5 +1,10 @@
 ## Unreleased
 
+- Serialization: `decodeScene(...)` now accepts integer-valued numeric forms
+  for integer fields (for example, `schemaVersion: 2.0`); fractional numeric
+  values (for example, `2.5`) remain invalid and throw
+  `SceneJsonFormatException`.
+
 - Render: grid over-density now degrades uniformly by drawing every `N`th line
   per axis (capped by `kMaxGridLinesPerAxis`) instead of silently skipping the
   grid; no major/accent lines are used.

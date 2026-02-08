@@ -1555,9 +1555,12 @@ void _drawGrid(
     ..strokeWidth = clampNonNegativeFinite(gridStrokeWidth);
   final startX = _gridStart(-cameraOffset.dx, cell);
   final startY = _gridStart(-cameraOffset.dy, cell);
-  final strideX = _gridStrideForLineCount(_gridLineCount(startX, size.width, cell));
-  final strideY =
-      _gridStrideForLineCount(_gridLineCount(startY, size.height, cell));
+  final strideX = _gridStrideForLineCount(
+    _gridLineCount(startX, size.width, cell),
+  );
+  final strideY = _gridStrideForLineCount(
+    _gridLineCount(startY, size.height, cell),
+  );
   final stepX = cell * strideX;
   final stepY = cell * strideY;
 

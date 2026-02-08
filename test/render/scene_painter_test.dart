@@ -425,12 +425,10 @@ void main() {
       final rawLinesY = render_internal.debugGridLineCount(0, 320, 1);
       final strideX = render_internal.debugGridStrideForLineCount(rawLinesX);
       final strideY = render_internal.debugGridStrideForLineCount(rawLinesY);
-      final renderedLinesX = render_internal.debugGridRenderedLineCountForLineCount(
-        rawLinesX,
-      );
-      final renderedLinesY = render_internal.debugGridRenderedLineCountForLineCount(
-        rawLinesY,
-      );
+      final renderedLinesX = render_internal
+          .debugGridRenderedLineCountForLineCount(rawLinesX);
+      final renderedLinesY = render_internal
+          .debugGridRenderedLineCountForLineCount(rawLinesY);
 
       expect(strideX, greaterThan(1));
       expect(strideY, greaterThan(1));
@@ -438,10 +436,7 @@ void main() {
       expect(renderedLinesY, lessThan(rawLinesY));
       expect(renderedLinesX, lessThanOrEqualTo(kMaxGridLinesPerAxis));
       expect(renderedLinesY, lessThanOrEqualTo(kMaxGridLinesPerAxis));
-      expect(
-        renderedLinesX + renderedLinesY,
-        lessThan(rawLinesX + rawLinesY),
-      );
+      expect(renderedLinesX + renderedLinesY, lessThan(rawLinesX + rawLinesY));
     },
   );
 

@@ -539,7 +539,10 @@ final restored = decodeSceneFromJson(json);
 ```
 
 Gotchas:
-- Only `schemaVersion = 2` is accepted. Invalid input throws `SceneJsonFormatException`.
+- Only `schemaVersion = 2` is accepted. Integer-valued numeric forms (for
+  example, `2.0`) are accepted for integer fields; fractional values (for
+  example, `2.5`) are rejected. Invalid input throws
+  `SceneJsonFormatException`.
 
 Relevant APIs:
 - `encodeSceneToJson`, `decodeSceneFromJson`, `SceneJsonFormatException` — `lib/src/serialization/scene_codec.dart`
@@ -683,7 +686,7 @@ Source of truth: `lib/src/serialization/scene_codec.dart`.
 
 ### Root
 
-- `schemaVersion` (int) — must be `2`
+- `schemaVersion` (integer-valued number) — must be `2` (`2` or `2.0`)
 - `camera`:
   - `offsetX` (double), `offsetY` (double)
 - `background`:

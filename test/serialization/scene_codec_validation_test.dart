@@ -706,6 +706,48 @@ void main() {
     );
   });
 
+  test('decodeScene accepts integer-valued numeric schemaVersion', () {
+    final json = _minimalSceneJson();
+    json['schemaVersion'] = 2.0;
+
+    final scene = decodeScene(json);
+    expect(scene.layers.first.isBackground, isTrue);
+  });
+
+  test('decodeScene rejects non-integer numeric schemaVersion', () {
+    final json = _minimalSceneJson();
+    json['schemaVersion'] = 2.5;
+    expect(
+      () => decodeScene(json),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Field schemaVersion must be an int.',
+        ),
+      ),
+    );
+  });
+
+  test(
+    'decodeScene reports unsupported version for integer-valued schemaVersion',
+    () {
+      final json = _minimalSceneJson();
+      json['schemaVersion'] = 1.0;
+      expect(
+        () => decodeScene(json),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneJsonFormatException &&
+                e.message ==
+                    'Unsupported schemaVersion: 1. Expected one of: [2].',
+          ),
+        ),
+      );
+    },
+  );
+
   test('decodeScene rejects NaN/Infinity numeric fields', () {
     final json = _minimalSceneJson();
     (json['camera'] as Map<String, dynamic>)['offsetX'] = double.nan;

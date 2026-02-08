@@ -309,6 +309,9 @@ final restored = decodeSceneFromJson(json);
 
 `decodeSceneFromJson` accepts only `schemaVersion = 2` and throws
 `SceneJsonFormatException` when the input is invalid or fails validation.
+Integer-valued numeric forms are accepted for integer fields (for example
+`schemaVersion: 2.0`), while fractional values (for example `2.5`) are
+rejected.
 
 Numeric fields must be finite and within valid ranges (for example, opacity
 must be within `[0,1]` and thickness values must be `> 0`). Invalid input

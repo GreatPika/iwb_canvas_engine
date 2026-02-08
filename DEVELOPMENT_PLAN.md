@@ -72,7 +72,7 @@ Deliver fixes that improve correctness and maintain a small, predictable codebas
 
 ## Phase 2 — Interoperability and API Clarity
 
-* [ ] **(P2) JSON integer decoding robustness**
+* [x] **(P2) JSON integer decoding robustness**
 
   * **Where:** `lib/src/serialization/scene_codec.dart` (`_requireInt`)
   * **Problem:** integer-like values parsed as `double` (for example `1.0`) are rejected.
@@ -121,5 +121,5 @@ Deliver fixes that improve correctness and maintain a small, predictable codebas
 
 * [ ] Controller swap with repeated `NodeId` (ghost-render prevention)
 * [x] Hit-testing under anisotropic scale (locks Gate-1 behavior)
-* [ ] JSON numeric robustness (`1.0` for integer fields)
+* [x] JSON numeric robustness (`1.0` for integer fields)
 * [x] Grid density behavior (locks Gate-2 behavior)

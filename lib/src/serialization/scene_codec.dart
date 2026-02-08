@@ -689,10 +689,16 @@ bool _requireBool(Map<String, dynamic> json, String key) {
 
 int _requireInt(Map<String, dynamic> json, String key) {
   final value = json[key];
-  if (value is! int) {
+  // Accept integer-valued finite numbers (e.g. 2 and 2.0) for JSON parsers
+  // that materialize integral literals as double.
+  if (value is! num) {
     throw SceneJsonFormatException('Field $key must be an int.');
   }
-  return value;
+  final asDouble = value.toDouble();
+  if (!asDouble.isFinite || asDouble.truncateToDouble() != asDouble) {
+    throw SceneJsonFormatException('Field $key must be an int.');
+  }
+  return value.toInt();
 }
 
 double _requireDouble(Map<String, dynamic> json, String key) {
