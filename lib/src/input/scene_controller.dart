@@ -631,6 +631,10 @@ class SceneController extends ChangeNotifier {
   /// [PointerSignal.timestampMs] is treated as a timestamp hint and normalized
   /// before emitting [EditTextRequested].
   ///
+  /// Signal routing policy for active pointers is host-owned: [SceneView]
+  /// forwards signals only from the currently active pointer while a gesture is
+  /// in progress.
+  ///
   /// The emitted [EditTextRequested.position] is in view/screen coordinates.
   void handlePointerSignal(PointerSignal signal) {
     if (signal.type != PointerSignalType.doubleTap) return;

@@ -453,6 +453,9 @@ controller.eraserThickness = 20;
 
 Gotchas:
 - The engine currently supports **single-pointer input only** (no pinch-to-zoom, no multitouch).
+- Tap/double-tap correlation is per `pointerId` (not per `PointerDeviceKind`).
+- While a gesture is active, only the active pointer should be allowed to feed
+  tap/double-tap candidates to signal routing.
 - Draw strokes and line gestures emit action events (`drawStroke/drawHighlighter/drawLine/erase`).
 - Move drag is transactional: cancel and mode switch during an active drag
   rollback transforms and emit no transform action.
@@ -581,6 +584,8 @@ import 'package:iwb_canvas_engine/advanced.dart';
 
 final controller = SceneController();
 final tracker = PointerInputTracker(settings: controller.pointerSettings);
+int? activePointerId;
+Timer? pendingTapTimer;
 
 void onPointerEvent(PointerEvent event, PointerPhase phase) {
   final sample = PointerSample(
@@ -591,20 +596,59 @@ void onPointerEvent(PointerEvent event, PointerPhase phase) {
     kind: event.kind,
   );
 
+  if (phase == PointerPhase.down && activePointerId == null) {
+    activePointerId = sample.pointerId;
+  }
+
   controller.handlePointer(sample);
 
-  for (final signal in tracker.handle(sample)) {
-    if (signal.type == PointerSignalType.doubleTap) {
-      controller.handlePointerSignal(signal);
+  final allowSignals =
+      activePointerId == null || activePointerId == sample.pointerId;
+  if (allowSignals) {
+    for (final signal in tracker.handle(sample)) {
+      if (signal.type == PointerSignalType.doubleTap) {
+        controller.handlePointerSignal(signal);
+      }
     }
   }
+
+  if (phase == PointerPhase.up || phase == PointerPhase.cancel) {
+    if (activePointerId == sample.pointerId) {
+      activePointerId = null;
+    }
+  }
+
+  final nextFlushTs = tracker.nextPendingFlushTimestampMs;
+  if (nextFlushTs == null) {
+    pendingTapTimer?.cancel();
+    pendingTapTimer = null;
+    return;
+  }
+
+  pendingTapTimer ??= Timer(
+    Duration(
+      milliseconds: (nextFlushTs - sample.timestampMs)
+          .clamp(0, 1 << 30)
+          .toInt(),
+    ),
+    () {
+      final flushedSignals = tracker.flushPending(nextFlushTs);
+      for (final signal in flushedSignals) {
+        if (signal.type == PointerSignalType.doubleTap) {
+          controller.handlePointerSignal(signal);
+        }
+      }
+      pendingTapTimer = null;
+    },
+  );
 }
 ```
 
 Gotchas:
 - You must pass **view/screen coordinates**; the controller converts using `scene.camera.offset`.
-- If you defer single taps, call `tracker.flushPending(...)` on a timer/tick when needed
-  (see `SceneView` implementation for reference).
+- If you defer single taps, keep **at most one timer** and schedule it only
+  while `tracker.hasPendingTap` is true.
+- When a gesture is active, ignore tap/double-tap candidates from non-active pointers.
 
 Relevant APIs:
 - `PointerSample`, `PointerPhase`, `PointerInputTracker`, `PointerSignal` — `lib/src/input/pointer_input.dart`

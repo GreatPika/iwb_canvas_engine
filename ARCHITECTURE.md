@@ -73,6 +73,10 @@ here as a checklist to prevent subtle behavioral regressions during refactors.
   - both streams stay `broadcast(sync: true)`
   - `ActionCommitted.actionId` format stays `a${counter++}`
   - events emitted after dispatcher `dispose()` are dropped safely
+  - double-tap correlation is keyed by `pointerId` (not device kind)
+  - while a gesture is active, signal candidates are accepted only from the
+    active pointer id
+  - pending-tap flush uses a single timer window (no timer recreation per move)
 - Selection:
   - `setSelection(...)` defaults to coalesced repaint (not immediate notify)
   - `clearSelection()` remains an immediate notify
@@ -189,8 +193,13 @@ Static layer cache invariants:
 - Raw pointer events are converted to scene coordinates.
 - Inbound timestamps are treated as hints and normalized into an internal
   monotonic timeline (`max(hint, cursor + 1)`).
-- Double-tap is detected with time and distance thresholds.
+- Double-tap is detected with time and distance thresholds and is correlated by
+  `pointerId` (not by `PointerDeviceKind`).
 - Pointer capture: if a drag starts on a node, it continues until pointer up.
+- While a gesture is active, `SceneView` forwards tap/double-tap candidates
+  only from the active pointer id.
+- `SceneView` keeps at most one pending-tap flush timer and only while pending
+  taps exist.
 
 ### Tool state machine
 

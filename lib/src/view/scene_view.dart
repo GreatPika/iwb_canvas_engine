@@ -120,7 +120,7 @@ class _SceneViewState extends State<SceneView> {
   late SceneStrokePathCache _strokePathCache;
   late bool _ownsStrokePathCache;
   Timer? _pendingTapTimer;
-  int _lastTimestampMs = 0;
+  int? _pendingTapFlushTimestampMs;
   SceneController? _ownedController;
   int? _activePointerId;
   bool _pendingPointerTrackerRefresh = false;
@@ -133,6 +133,10 @@ class _SceneViewState extends State<SceneView> {
   SceneTextLayoutCache get debugTextLayoutCache => _textLayoutCache;
   @visibleForTesting
   SceneStrokePathCache get debugStrokePathCache => _strokePathCache;
+  @visibleForTesting
+  bool get debugHasPendingTapTimer => _pendingTapTimer != null;
+  @visibleForTesting
+  int? get debugPendingTapFlushTimestampMs => _pendingTapFlushTimestampMs;
 
   @override
   void initState() {
@@ -286,9 +290,11 @@ class _SceneViewState extends State<SceneView> {
     controller.handlePointer(sample);
     widget.onPointerSampleAfter?.call(controller, sample);
 
-    final signals = _pointerTracker.handle(sample);
-    _dispatchSignals(signals);
-    _schedulePendingFlush(sample.timestampMs);
+    if (_shouldTrackSignals(sample)) {
+      final signals = _pointerTracker.handle(sample);
+      _dispatchSignals(signals);
+    }
+    _syncPendingFlushTimer(referenceTimestampMs: sample.timestampMs);
     _releaseActivePointerIfEnded(sample);
   }
 
@@ -301,15 +307,47 @@ class _SceneViewState extends State<SceneView> {
     }
   }
 
-  void _schedulePendingFlush(int timestampMs) {
-    _lastTimestampMs = timestampMs;
+  bool _shouldTrackSignals(PointerSample sample) {
+    final activePointerId = _activePointerId;
+    return activePointerId == null || activePointerId == sample.pointerId;
+  }
+
+  void _syncPendingFlushTimer({required int referenceTimestampMs}) {
+    final nextFlushTimestampMs = _pointerTracker.nextPendingFlushTimestampMs;
+    if (nextFlushTimestampMs == null) {
+      _pendingTapTimer?.cancel();
+      _pendingTapTimer = null;
+      _pendingTapFlushTimestampMs = null;
+      return;
+    }
+
+    if (_pendingTapTimer != null &&
+        _pendingTapFlushTimestampMs == nextFlushTimestampMs) {
+      return;
+    }
+
     _pendingTapTimer?.cancel();
-    final delayMs = _controller.pointerSettings.doubleTapMaxDelayMs + 1;
-    _pendingTapTimer = Timer(Duration(milliseconds: delayMs), () {
-      final flushTimestamp = _lastTimestampMs + delayMs;
-      final signals = _pointerTracker.flushPending(flushTimestamp);
-      _dispatchSignals(signals);
-    });
+    _pendingTapFlushTimestampMs = nextFlushTimestampMs;
+    final delayMs = (nextFlushTimestampMs - referenceTimestampMs).clamp(
+      0,
+      1 << 30,
+    );
+    _pendingTapTimer = Timer(
+      Duration(milliseconds: delayMs),
+      _handlePendingTapTimer,
+    );
+  }
+
+  void _handlePendingTapTimer() {
+    final flushTimestampMs = _pendingTapFlushTimestampMs;
+    _pendingTapTimer = null;
+    _pendingTapFlushTimestampMs = null;
+    if (flushTimestampMs == null) {
+      return;
+    }
+    final signals = _pointerTracker.flushPending(flushTimestampMs);
+    _dispatchSignals(signals);
+    _syncPendingFlushTimer(referenceTimestampMs: flushTimestampMs);
   }
 
   void _ensureController() {
@@ -328,7 +366,8 @@ class _SceneViewState extends State<SceneView> {
       settings: _controller.pointerSettings,
     );
     _pendingTapTimer?.cancel();
-    _lastTimestampMs = 0;
+    _pendingTapTimer = null;
+    _pendingTapFlushTimestampMs = null;
     _pendingPointerTrackerRefresh = false;
   }
 

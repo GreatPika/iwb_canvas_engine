@@ -159,6 +159,24 @@ const List<Invariant> invariants = <Invariant>[
         'Line two-tap pending start expires by an internal 10s timer even without new pointer events',
   ),
   Invariant(
+    id: 'INV-INPUT-SIGNALS-ACTIVE-POINTER-ONLY',
+    scope: 'input',
+    title:
+        'while a gesture is active, SceneView routes tap/double-tap candidates only from the active pointer id',
+  ),
+  Invariant(
+    id: 'INV-INPUT-DOUBLETAP-BY-POINTERID',
+    scope: 'input',
+    title:
+        'pending/double-tap correlation is keyed by pointerId (not PointerDeviceKind)',
+  ),
+  Invariant(
+    id: 'INV-INPUT-PENDING-TAP-SINGLE-TIMER',
+    scope: 'input',
+    title:
+        'SceneView maintains at most one pending-tap flush timer and only while pending taps exist',
+  ),
+  Invariant(
     id: 'INV-INPUT-MARQUEE-EMIT-ON-CHANGE',
     scope: 'input',
     title:

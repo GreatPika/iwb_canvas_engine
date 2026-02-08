@@ -1,5 +1,10 @@
 ## Unreleased
 
+- Input/View: harden multitouch signal policy and pending-tap scheduling.
+  `PointerInputTracker` now correlates double-tap by `pointerId` (not device
+  kind), `SceneView` ignores tap/double-tap candidates from non-active
+  pointers during an active gesture, and pending-tap flushing now uses a
+  single timer window instead of timer recreation on every pointer sample.
 - Input: marquee commit now emits `ActionType.selectMarquee` only when the
   normalized selection actually changes (no-op marquee commits emit no action).
 - Input: harden dispose-safety in input slices:

@@ -286,6 +286,9 @@ import 'package:iwb_canvas_engine/advanced.dart';
 
 The engine currently supports single-pointer input only. Multi-touch gestures
 (pinch-to-zoom, two-finger pan) are not supported yet.
+Tap/double-tap signal correlation is `pointerId`-based, and `SceneView`
+accepts tap/double-tap candidates only from the active pointer while a gesture
+is in progress.
 
 ## Serialization (JSON v2)
 

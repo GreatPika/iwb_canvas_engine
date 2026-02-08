@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/advanced.dart';
 
 void main() {
+  // INV:INV-INPUT-DOUBLETAP-BY-POINTERID
+  // INV:INV-INPUT-PENDING-TAP-SINGLE-TIMER
   test('emits down move up then deferred tap', () {
     final tracker = PointerInputTracker();
 
@@ -108,7 +110,7 @@ void main() {
       ),
       ...tracker.handle(
         PointerSample(
-          pointerId: 8,
+          pointerId: 7,
           position: const Offset(25, 22),
           timestampMs: 240,
           phase: PointerPhase.down,
@@ -116,7 +118,7 @@ void main() {
       ),
       ...tracker.handle(
         PointerSample(
-          pointerId: 8,
+          pointerId: 7,
           position: const Offset(25, 22),
           timestampMs: 280,
           phase: PointerPhase.up,
@@ -132,6 +134,60 @@ void main() {
       PointerSignalType.up,
       PointerSignalType.doubleTap,
     ]);
+  });
+
+  test('different pointer ids do not produce double tap', () {
+    final tracker = PointerInputTracker(
+      settings: const PointerInputSettings(
+        doubleTapSlop: 24,
+        doubleTapMaxDelayMs: 300,
+      ),
+    );
+
+    final signals = <PointerSignal>[
+      ...tracker.handle(
+        PointerSample(
+          pointerId: 1,
+          position: const Offset(20, 20),
+          timestampMs: 100,
+          phase: PointerPhase.down,
+        ),
+      ),
+      ...tracker.handle(
+        PointerSample(
+          pointerId: 1,
+          position: const Offset(20, 20),
+          timestampMs: 140,
+          phase: PointerPhase.up,
+        ),
+      ),
+      ...tracker.handle(
+        PointerSample(
+          pointerId: 2,
+          position: const Offset(22, 21),
+          timestampMs: 200,
+          phase: PointerPhase.down,
+        ),
+      ),
+      ...tracker.handle(
+        PointerSample(
+          pointerId: 2,
+          position: const Offset(22, 21),
+          timestampMs: 240,
+          phase: PointerPhase.up,
+        ),
+      ),
+      ...tracker.flushPending(1000),
+    ];
+
+    expect(
+      signals.map((signal) => signal.type),
+      isNot(contains(PointerSignalType.doubleTap)),
+    );
+    expect(
+      signals.where((signal) => signal.type == PointerSignalType.tap),
+      hasLength(2),
+    );
   });
 
   test('deferSingleTap=false emits tap immediately on up', () {
@@ -246,6 +302,83 @@ void main() {
       contains(PointerSignalType.tap),
     );
   });
+
+  test('exposes pending tap lifecycle and next flush timestamp', () {
+    final tracker = PointerInputTracker(
+      settings: const PointerInputSettings(doubleTapMaxDelayMs: 100),
+    );
+    expect(tracker.hasPendingTap, isFalse);
+    expect(tracker.nextPendingFlushTimestampMs, isNull);
+
+    tracker.handle(
+      const PointerSample(
+        pointerId: 9,
+        position: Offset(1, 1),
+        timestampMs: 10,
+        phase: PointerPhase.down,
+      ),
+    );
+    tracker.handle(
+      const PointerSample(
+        pointerId: 9,
+        position: Offset(1, 1),
+        timestampMs: 20,
+        phase: PointerPhase.up,
+      ),
+    );
+
+    expect(tracker.hasPendingTap, isTrue);
+    expect(tracker.nextPendingFlushTimestampMs, 121);
+
+    tracker.flushPending(121);
+    expect(tracker.hasPendingTap, isFalse);
+    expect(tracker.nextPendingFlushTimestampMs, isNull);
+  });
+
+  test(
+    'nextPendingFlushTimestampMs uses earliest pending tap across pointers',
+    () {
+      final tracker = PointerInputTracker(
+        settings: const PointerInputSettings(doubleTapMaxDelayMs: 100),
+      );
+
+      tracker.handle(
+        const PointerSample(
+          pointerId: 1,
+          position: Offset(0, 0),
+          timestampMs: 200,
+          phase: PointerPhase.down,
+        ),
+      );
+      tracker.handle(
+        const PointerSample(
+          pointerId: 1,
+          position: Offset(0, 0),
+          timestampMs: 200,
+          phase: PointerPhase.up,
+        ),
+      );
+      tracker.handle(
+        const PointerSample(
+          pointerId: 2,
+          position: Offset(1, 1),
+          timestampMs: 120,
+          phase: PointerPhase.down,
+        ),
+      );
+      tracker.handle(
+        const PointerSample(
+          pointerId: 2,
+          position: Offset(1, 1),
+          timestampMs: 120,
+          phase: PointerPhase.up,
+        ),
+      );
+
+      expect(tracker.hasPendingTap, isTrue);
+      expect(tracker.nextPendingFlushTimestampMs, 221);
+    },
+  );
 
   test('drag beyond tap slop does not emit tap', () {
     final tracker = PointerInputTracker(

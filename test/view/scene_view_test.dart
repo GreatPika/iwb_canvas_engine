@@ -5,6 +5,8 @@ import 'package:iwb_canvas_engine/advanced.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  // INV:INV-INPUT-SIGNALS-ACTIVE-POINTER-ONLY
+  // INV:INV-INPUT-PENDING-TAP-SINGLE-TIMER
 
   Layer sceneContentLayer(Scene scene) =>
       scene.layers.firstWhere((layer) => !layer.isBackground);
@@ -34,6 +36,21 @@ void main() {
     final controller = SceneController(scene: scene);
     addTearDown(controller.dispose);
     return controller;
+  }
+
+  Future<void> doubleTapWithPointer(
+    WidgetTester tester,
+    Offset position, {
+    required int pointer,
+    Duration delay = const Duration(milliseconds: 10),
+  }) async {
+    final firstTap = await tester.startGesture(position, pointer: pointer);
+    await firstTap.up();
+    await tester.pump();
+    await tester.pump(delay);
+    final secondTap = await tester.startGesture(position, pointer: pointer);
+    await secondTap.up();
+    await tester.pump();
   }
 
   testWidgets(
@@ -388,11 +405,12 @@ void main() {
     expect(ownedController, isNotNull);
     expect(readyCalls, 1);
 
-    await tester.tapAt(const Offset(150, 150));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 80));
-    await tester.tapAt(const Offset(150, 150));
-    await tester.pump();
+    await doubleTapWithPointer(
+      tester,
+      const Offset(150, 150),
+      pointer: 41,
+      delay: const Duration(milliseconds: 80),
+    );
     await tester.pump(const Duration(milliseconds: 80));
 
     expect(requests, isEmpty);
@@ -418,11 +436,12 @@ void main() {
 
     expect(readyCalls, 1);
 
-    await tester.tapAt(const Offset(150, 150));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 80));
-    await tester.tapAt(const Offset(150, 150));
-    await tester.pump();
+    await doubleTapWithPointer(
+      tester,
+      const Offset(150, 150),
+      pointer: 42,
+      delay: const Duration(milliseconds: 80),
+    );
 
     expect(requests, hasLength(1));
     expect(requests.single.nodeId, 'text-1');
@@ -480,11 +499,12 @@ void main() {
       await tester.pump();
       expect(requests, isEmpty);
 
-      await tester.tapAt(const Offset(150, 150));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 80));
-      await tester.tapAt(const Offset(150, 150));
-      await tester.pump();
+      await doubleTapWithPointer(
+        tester,
+        const Offset(150, 150),
+        pointer: 43,
+        delay: const Duration(milliseconds: 80),
+      );
 
       expect(requests, hasLength(1));
       expect(requests.single.nodeId, 'text-1');
@@ -813,15 +833,129 @@ void main() {
       ),
     );
 
-    await tester.tapAt(const Offset(150, 150));
-    await tester.pump(const Duration(milliseconds: 10));
-    await tester.tapAt(const Offset(150, 150));
-    await tester.pump();
+    await doubleTapWithPointer(tester, const Offset(150, 150), pointer: 44);
 
     expect(requests, hasLength(1));
     expect(requests.single.nodeId, 'text-1');
     expect(requests.single.position, const Offset(150, 150));
   });
+
+  testWidgets(
+    'SceneView ignores non-active pointer double-tap while gesture is active',
+    (tester) async {
+      final scene = Scene(
+        layers: [
+          Layer(
+            nodes: [
+              RectNode(
+                id: 'rect-1',
+                size: const Size(80, 80),
+                fillColor: const Color(0xFF90CAF9),
+              )..position = const Offset(60, 150),
+              TextNode(
+                id: 'text-1',
+                text: 'Hello',
+                size: const Size(200, 60),
+                color: const Color(0xFF000000),
+              )..position = const Offset(220, 150),
+            ],
+          ),
+        ],
+      );
+      final controller = SceneController(
+        scene: scene,
+        dragStartSlop: 0,
+        pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 300),
+      );
+      addTearDown(controller.dispose);
+      final requests = <EditTextRequested>[];
+      controller.editTextRequests.listen(requests.add);
+
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox(
+            width: 320,
+            height: 260,
+            child: SceneView(
+              controller: controller,
+              imageResolver: (_) => null,
+            ),
+          ),
+        ),
+      );
+
+      final drag = await tester.startGesture(const Offset(60, 150), pointer: 1);
+      await drag.moveTo(const Offset(90, 150));
+
+      final tapA = await tester.startGesture(
+        const Offset(220, 150),
+        pointer: 2,
+      );
+      await tapA.up();
+      await tester.pump(const Duration(milliseconds: 10));
+      final tapB = await tester.startGesture(
+        const Offset(220, 150),
+        pointer: 2,
+      );
+      await tapB.up();
+      await tester.pump();
+
+      await drag.up();
+      await tester.pump();
+
+      expect(requests, isEmpty);
+    },
+  );
+
+  testWidgets(
+    'SceneView keeps a single pending-tap timer during move samples',
+    (tester) async {
+      final controller = SceneController(
+        scene: Scene(layers: [Layer()]),
+        pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 300),
+      );
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox(
+            width: 300,
+            height: 300,
+            child: SceneView(controller: controller),
+          ),
+        ),
+      );
+
+      final firstTap = await tester.startGesture(
+        const Offset(30, 30),
+        pointer: 1,
+      );
+      await firstTap.up();
+      await tester.pump();
+
+      final viewState = tester.state(find.byType(SceneView)) as dynamic;
+      final baselineFlushTs = viewState.debugPendingTapFlushTimestampMs as int?;
+      expect(viewState.debugHasPendingTapTimer as bool, isTrue);
+      expect(baselineFlushTs, isNotNull);
+
+      final drag = await tester.startGesture(const Offset(60, 60), pointer: 2);
+      await tester.pump(const Duration(milliseconds: 5));
+      await drag.moveTo(const Offset(120, 60));
+      await tester.pump(const Duration(milliseconds: 5));
+      await drag.moveTo(const Offset(180, 60));
+      await tester.pump(const Duration(milliseconds: 5));
+      await drag.cancel();
+      await tester.pump();
+
+      expect(viewState.debugHasPendingTapTimer as bool, isTrue);
+      expect(
+        viewState.debugPendingTapFlushTimestampMs as int?,
+        baselineFlushTs,
+      );
+    },
+  );
 
   testWidgets('SceneView handles pointer cancel', (tester) async {
     final scene = Scene(
