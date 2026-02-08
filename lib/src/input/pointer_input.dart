@@ -120,8 +120,10 @@ class PointerInputTracker {
       case PointerPhase.move:
         final down = _downStates[sample.pointerId];
         if (down != null && !down.movedBeyondSlop) {
-          down.movedBeyondSlop =
-              (sample.position - down.position).distance > settings.tapSlop;
+          final delta = sample.position - down.position;
+          final deltaSquared = delta.dx * delta.dx + delta.dy * delta.dy;
+          final tapSlop = settings.tapSlop;
+          down.movedBeyondSlop = deltaSquared > tapSlop * tapSlop;
         }
         break;
       case PointerPhase.up:
@@ -231,8 +233,10 @@ class PointerInputTracker {
       return false;
     }
 
-    final distance = (sample.position - pendingTap.position).distance;
-    return distance <= settings.doubleTapSlop;
+    final delta = sample.position - pendingTap.position;
+    final distanceSquared = delta.dx * delta.dx + delta.dy * delta.dy;
+    final doubleTapSlop = settings.doubleTapSlop;
+    return distanceSquared <= doubleTapSlop * doubleTapSlop;
   }
 }
 

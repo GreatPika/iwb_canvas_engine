@@ -188,6 +188,62 @@ void main() {
     expect(actions.single.type, ActionType.drawLine);
   });
 
+  test('line movement at dragStartSlop boundary is treated as tap', () {
+    final scene = Scene(layers: [Layer()]);
+    final controller = SceneController(scene: scene, dragStartSlop: 5);
+    addTearDown(controller.dispose);
+    controller.setMode(CanvasMode.draw);
+    controller.setDrawTool(DrawTool.line);
+
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 10,
+        position: Offset(0, 0),
+        timestampMs: 0,
+        phase: PointerPhase.down,
+      ),
+    );
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 10,
+        position: Offset(3, 4),
+        timestampMs: 10,
+        phase: PointerPhase.move,
+      ),
+    );
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 10,
+        position: Offset(3, 4),
+        timestampMs: 20,
+        phase: PointerPhase.up,
+      ),
+    );
+
+    expect(annotationLayer(scene).nodes, isEmpty);
+
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 10,
+        position: Offset(10, 0),
+        timestampMs: 30,
+        phase: PointerPhase.down,
+      ),
+    );
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 10,
+        position: Offset(10, 0),
+        timestampMs: 40,
+        phase: PointerPhase.up,
+      ),
+    );
+
+    final node = annotationLayer(scene).nodes.single as LineNode;
+    expect(node.transform.applyToPoint(node.start), const Offset(3, 4));
+    expect(node.transform.applyToPoint(node.end), const Offset(10, 0));
+  });
+
   test('eraser removes only stroke and line and emits action', () {
     final stroke = StrokeNode(
       id: 'stroke-1',

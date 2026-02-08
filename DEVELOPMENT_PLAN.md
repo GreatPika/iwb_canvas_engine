@@ -464,21 +464,21 @@ tests/docs before subsequent performance-only changes.
 * Add tests that verify exact transform results.
   **Done when:** tests encode the definition and pass.
 
-39. [ ] **(#37) Hot paths use `distance()` (sqrt) instead of squared comparisons**
+39. [x] **(#37) Hot paths use `distance()` (sqrt) instead of squared comparisons**
     **Where:** geometry/helpers used on move
     **Do:**
 
 * Replace with squared distance comparisons (`dx*dx + dy*dy`).
   **Done when:** microbenchmark/profiling shows reduced time for move processing.
 
-40. [ ] **(#38) `resolveSnappedPolyline` allocates before early exit**
+40. [x] **(#38) `resolveSnappedPolyline` allocates before early exit**
     **Where:** `resolveSnappedPolyline`
     **Do:**
 
 * Check “eligible for snapping” first; only allocate lists after passing checks.
   **Done when:** allocation count decreases; behavior unchanged.
 
-41. [ ] **(#40) `deleteSelection` uses `List.contains` inside filters**
+41. [x] **(#40) `deleteSelection` uses `List.contains` inside filters**
     **Where:** `SceneCommands.deleteSelection`
     **Do:**
 

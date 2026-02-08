@@ -483,4 +483,93 @@ void main() {
       PointerSignalType.up,
     ]);
   });
+
+  test('move at tap slop boundary still emits tap', () {
+    final tracker = PointerInputTracker(
+      settings: const PointerInputSettings(tapSlop: 5),
+    );
+
+    final signals = <PointerSignal>[
+      ...tracker.handle(
+        const PointerSample(
+          pointerId: 10,
+          position: Offset(0, 0),
+          timestampMs: 0,
+          phase: PointerPhase.down,
+        ),
+      ),
+      ...tracker.handle(
+        const PointerSample(
+          pointerId: 10,
+          position: Offset(3, 4),
+          timestampMs: 10,
+          phase: PointerPhase.move,
+        ),
+      ),
+      ...tracker.handle(
+        const PointerSample(
+          pointerId: 10,
+          position: Offset(3, 4),
+          timestampMs: 20,
+          phase: PointerPhase.up,
+        ),
+      ),
+      ...tracker.flushPending(500),
+    ];
+
+    expect(
+      signals.map((signal) => signal.type),
+      contains(PointerSignalType.tap),
+    );
+  });
+
+  test('double tap at distance boundary still emits doubleTap', () {
+    final tracker = PointerInputTracker(
+      settings: const PointerInputSettings(
+        doubleTapSlop: 5,
+        doubleTapMaxDelayMs: 300,
+      ),
+    );
+
+    final signals = <PointerSignal>[
+      ...tracker.handle(
+        const PointerSample(
+          pointerId: 1,
+          position: Offset(0, 0),
+          timestampMs: 0,
+          phase: PointerPhase.down,
+        ),
+      ),
+      ...tracker.handle(
+        const PointerSample(
+          pointerId: 1,
+          position: Offset(0, 0),
+          timestampMs: 10,
+          phase: PointerPhase.up,
+        ),
+      ),
+      ...tracker.handle(
+        const PointerSample(
+          pointerId: 2,
+          position: Offset(3, 4),
+          timestampMs: 100,
+          phase: PointerPhase.down,
+        ),
+      ),
+      ...tracker.handle(
+        const PointerSample(
+          pointerId: 2,
+          position: Offset(3, 4),
+          timestampMs: 110,
+          phase: PointerPhase.up,
+        ),
+      ),
+      ...tracker.flushPending(500),
+    ];
+
+    expect(
+      signals.map((signal) => signal.type),
+      contains(PointerSignalType.doubleTap),
+    );
+  });
 }

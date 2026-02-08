@@ -106,8 +106,12 @@ class MoveModeEngine {
     if (_pointerDownScene == null || _lastDragScene == null) return;
 
     final totalDelta = scenePoint - _pointerDownScene!;
+    final dragStartSlop = _contracts.dragStartSlop;
+    final dragStartSlopSquared = dragStartSlop * dragStartSlop;
+    final totalDeltaSquared =
+        totalDelta.dx * totalDelta.dx + totalDelta.dy * totalDelta.dy;
     final didStartDrag =
-        !_dragMoved && totalDelta.distance > _contracts.dragStartSlop;
+        !_dragMoved && totalDeltaSquared > dragStartSlopSquared;
     if (didStartDrag) {
       _dragMoved = true;
       if (_dragTarget == _DragTarget.marquee) {

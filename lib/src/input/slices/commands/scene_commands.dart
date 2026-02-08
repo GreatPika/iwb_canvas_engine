@@ -328,8 +328,9 @@ class SceneCommands {
     }
 
     if (deletableIds.isEmpty) return;
+    final deletableIdSet = deletableIds.toSet();
     _contracts.setSelection(
-      selectedNodeIds.where((id) => !deletableIds.contains(id)),
+      selectedNodeIds.where((id) => !deletableIdSet.contains(id)),
       notify: false,
     );
     _contracts.markSceneStructuralChanged();

@@ -1215,6 +1215,41 @@ void main() {
     expect((centroidAuto - 30.5).abs(), lessThan((centroidNone - 30.5).abs()));
   });
 
+  test('ScenePainter keeps non-axis polyline unchanged in auto mode', () async {
+    const background = Color(0xFFFFFFFF);
+    final stroke = StrokeNode(
+      id: 'stroke-diagonal',
+      points: const [Offset(10, 10), Offset(50, 30), Offset(90, 40)],
+      thickness: 1,
+      color: const Color(0xFF000000),
+    );
+    final scene = Scene(
+      background: Background(color: background),
+      layers: [
+        Layer(nodes: [stroke]),
+      ],
+    );
+
+    final painterNone = ScenePainter(
+      controller: _controllerFor(scene),
+      imageResolver: (_) => null,
+      devicePixelRatio: 2,
+      thinLineSnapStrategy: ThinLineSnapStrategy.none,
+    );
+    final painterAuto = ScenePainter(
+      controller: _controllerFor(scene),
+      imageResolver: (_) => null,
+      devicePixelRatio: 2,
+      thinLineSnapStrategy: ThinLineSnapStrategy.autoAxisAlignedThin,
+    );
+
+    final imageNone = await _paintToImage(painterNone, width: 100, height: 60);
+    final imageAuto = await _paintToImage(painterAuto, width: 100, height: 60);
+    final bytesNone = await _rawRgbaBytes(imageNone);
+    final bytesAuto = await _rawRgbaBytes(imageAuto);
+    expect(bytesAuto, orderedEquals(bytesNone));
+  });
+
   test(
     'ScenePainter skips thin-line snapping when node scale is non-unit',
     () async {

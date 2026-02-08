@@ -1176,36 +1176,52 @@ class ScenePainter extends CustomPainter {
     if (!_canSnapThinStroke(nodeTransform, strokeWidth)) return null;
     if (localPoints.length < 2) return null;
 
-    final viewPoints = <Offset>[];
-    for (final point in localPoints) {
-      final viewPoint = nodeTransform.applyToPoint(point) - cameraOffset;
-      if (!_isFiniteOffset(viewPoint)) return null;
-      viewPoints.add(viewPoint);
-    }
-
     const axisTolerance = 1e-3;
-    final first = viewPoints.first;
-    final isHorizontal = viewPoints.every(
-      (point) => (point.dy - first.dy).abs() <= axisTolerance,
-    );
-    final isVertical = viewPoints.every(
-      (point) => (point.dx - first.dx).abs() <= axisTolerance,
-    );
+    final firstLocal = localPoints.first;
+    var isHorizontal = true;
+    var isVertical = true;
+    for (var i = 1; i < localPoints.length; i++) {
+      final point = localPoints[i];
+      if ((point.dy - firstLocal.dy).abs() > axisTolerance) {
+        isHorizontal = false;
+      }
+      if ((point.dx - firstLocal.dx).abs() > axisTolerance) {
+        isVertical = false;
+      }
+      if (!isHorizontal && !isVertical) return null;
+    }
     if (!isHorizontal && !isVertical) return null;
+
+    final viewPoints = List<Offset>.filled(localPoints.length, Offset.zero);
+    var sumX = 0.0;
+    var sumY = 0.0;
+    for (var i = 0; i < localPoints.length; i++) {
+      final viewPoint =
+          nodeTransform.applyToPoint(localPoints[i]) - cameraOffset;
+      if (!_isFiniteOffset(viewPoint)) return null;
+      viewPoints[i] = viewPoint;
+      sumX += viewPoint.dx;
+      sumY += viewPoint.dy;
+    }
 
     final strokeWidthInView =
         strokeWidth * _effectiveViewScaleMagnitude(nodeTransform);
     if (isHorizontal) {
-      final meanY =
-          viewPoints.map((p) => p.dy).reduce((a, b) => a + b) /
-          viewPoints.length;
+      final meanY = sumY / viewPoints.length;
       final snappedY = _snapCenterCoordinate(meanY, strokeWidthInView);
-      return viewPoints.map((point) => Offset(point.dx, snappedY)).toList();
+      return List<Offset>.generate(
+        viewPoints.length,
+        (index) => Offset(viewPoints[index].dx, snappedY),
+        growable: false,
+      );
     }
-    final meanX =
-        viewPoints.map((p) => p.dx).reduce((a, b) => a + b) / viewPoints.length;
+    final meanX = sumX / viewPoints.length;
     final snappedX = _snapCenterCoordinate(meanX, strokeWidthInView);
-    return viewPoints.map((point) => Offset(snappedX, point.dy)).toList();
+    return List<Offset>.generate(
+      viewPoints.length,
+      (index) => Offset(snappedX, viewPoints[index].dy),
+      growable: false,
+    );
   }
 
   bool _canSnapThinStroke(Transform2D nodeTransform, double strokeWidth) {

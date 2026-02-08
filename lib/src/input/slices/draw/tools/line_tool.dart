@@ -38,7 +38,11 @@ class LineTool {
   void handleMove(Offset scenePoint) {
     if (_drawDownScene == null) return;
     final totalDelta = scenePoint - _drawDownScene!;
-    if (!_drawMoved && totalDelta.distance <= _contracts.dragStartSlop) {
+    final dragStartSlop = _contracts.dragStartSlop;
+    final dragStartSlopSquared = dragStartSlop * dragStartSlop;
+    final totalDeltaSquared =
+        totalDelta.dx * totalDelta.dx + totalDelta.dy * totalDelta.dy;
+    if (!_drawMoved && totalDeltaSquared <= dragStartSlopSquared) {
       return;
     }
 
@@ -102,8 +106,10 @@ class LineTool {
 
     if (_drawDownScene == null) return;
 
-    final isTap =
-        (scenePoint - _drawDownScene!).distance <= _contracts.dragStartSlop;
+    final delta = scenePoint - _drawDownScene!;
+    final deltaSquared = delta.dx * delta.dx + delta.dy * delta.dy;
+    final dragStartSlop = _contracts.dragStartSlop;
+    final isTap = deltaSquared <= dragStartSlop * dragStartSlop;
     _drawDownScene = null;
     _drawMoved = false;
     if (!isTap) return;
