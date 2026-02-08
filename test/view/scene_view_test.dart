@@ -59,6 +59,45 @@ void main() {
     return controller;
   }
 
+  SceneController controllerWithCacheableContent({
+    required String strokeId,
+    required List<Offset> strokePoints,
+    String textNodeId = 'text-shared',
+    String pathNodeId = 'path-shared',
+  }) {
+    final scene = Scene(
+      layers: [
+        Layer(
+          nodes: [
+            TextNode(
+              id: textNodeId,
+              text: 'Hello',
+              size: const Size(80, 20),
+              fontSize: 14,
+              color: const Color(0xFF000000),
+            )..position = const Offset(10, 10),
+            StrokeNode(
+              id: strokeId,
+              points: strokePoints,
+              thickness: 4,
+              color: const Color(0xFF000000),
+            ),
+            PathNode(
+              id: pathNodeId,
+              svgPathData: 'M0 0 H40 V20 H0 Z',
+              strokeColor: const Color(0xFF000000),
+              strokeWidth: 2,
+            )..position = const Offset(20, 20),
+          ],
+        ),
+      ],
+    );
+    final controller = SceneController(scene: scene);
+    controller.setSelection(<NodeId>{pathNodeId});
+    addTearDown(controller.dispose);
+    return controller;
+  }
+
   Future<void> doubleTapWithPointer(
     WidgetTester tester,
     Offset position, {
@@ -163,6 +202,45 @@ void main() {
       'before:PointerPhase.up',
       'after:PointerPhase.up',
     ]);
+  });
+
+  testWidgets('SceneView reuses the smallest free pointer slot id', (
+    tester,
+  ) async {
+    final controller = SceneController(scene: Scene(layers: [Layer()]));
+    addTearDown(controller.dispose);
+    final downPointerIds = <int>[];
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 200,
+          height: 200,
+          child: SceneView(
+            controller: controller,
+            onPointerSampleBefore: (_, sample) {
+              if (sample.phase == PointerPhase.down) {
+                downPointerIds.add(sample.pointerId);
+              }
+            },
+          ),
+        ),
+      ),
+    );
+
+    final first = await tester.startGesture(const Offset(10, 10), pointer: 11);
+    final second = await tester.startGesture(const Offset(20, 20), pointer: 22);
+    await first.up();
+    await tester.pump();
+    await second.up();
+    await tester.pump();
+
+    final third = await tester.startGesture(const Offset(30, 30), pointer: 33);
+    await third.up();
+    await tester.pump();
+
+    expect(downPointerIds, [1, 2, 1]);
   });
 
   testWidgets('SceneView can drag board and attached piece via selection', (
@@ -1457,6 +1535,76 @@ void main() {
     expect(painter.strokePathCache, same(strokeCache));
     expect(painter.pathMetricsCache, same(pathCache));
   });
+
+  testWidgets(
+    'P1: SceneView clears active caches when controller is replaced',
+    (tester) async {
+      final controllerA = controllerWithCacheableContent(
+        strokeId: 'shared-stroke',
+        strokePoints: const <Offset>[Offset(10, 40), Offset(50, 40)],
+      );
+      final controllerB = controllerWithCacheableContent(
+        strokeId: 'shared-stroke',
+        strokePoints: const <Offset>[Offset(10, 70), Offset(80, 70)],
+      );
+
+      final textCache = SceneTextLayoutCache(maxEntries: 8);
+      final strokeCache = SceneStrokePathCache(maxEntries: 8);
+      final pathCache = ScenePathMetricsCache(maxEntries: 8);
+
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox(
+            width: 96,
+            height: 96,
+            child: SceneView(
+              controller: controllerA,
+              imageResolver: (_) => null,
+              textLayoutCache: textCache,
+              strokePathCache: strokeCache,
+              pathMetricsCache: pathCache,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(textCache.debugBuildCount, 1);
+      expect(textCache.debugHitCount, 0);
+      expect(strokeCache.debugBuildCount, 1);
+      expect(strokeCache.debugHitCount, 0);
+      expect(pathCache.debugBuildCount, 1);
+      expect(pathCache.debugHitCount, 0);
+
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox(
+            width: 96,
+            height: 96,
+            child: SceneView(
+              controller: controllerB,
+              imageResolver: (_) => null,
+              textLayoutCache: textCache,
+              strokePathCache: strokeCache,
+              pathMetricsCache: pathCache,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // NodeId values can be reused across scenes. Replacing controller must
+      // clear caches so the second frame rebuilds entries instead of hitting.
+      expect(textCache.debugBuildCount, 2);
+      expect(textCache.debugHitCount, 0);
+      expect(strokeCache.debugBuildCount, 2);
+      expect(strokeCache.debugHitCount, 0);
+      expect(pathCache.debugBuildCount, 2);
+      expect(pathCache.debugHitCount, 0);
+    },
+  );
 
   testWidgets('P1: SceneView clears owned text/stroke caches on dispose', (
     tester,

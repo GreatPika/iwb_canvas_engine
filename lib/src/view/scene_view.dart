@@ -177,6 +177,9 @@ class _SceneViewState extends State<SceneView> {
     }
     final controllerChanged = oldWidget.controller != widget.controller;
     if (controllerChanged) {
+      // Cache entries must never cross SceneController boundaries because
+      // NodeId values can be reused by different scenes.
+      _invalidateRenderCachesOnControllerSwap();
       if (oldWidget.controller == null && widget.controller != null) {
         _disposeOwnedController();
       } else if (oldWidget.controller != null && widget.controller == null) {
@@ -310,6 +313,12 @@ class _SceneViewState extends State<SceneView> {
       _pathMetricsCache.clear();
     }
     _initPathMetricsCache();
+  }
+
+  void _invalidateRenderCachesOnControllerSwap() {
+    _textLayoutCache.clear();
+    _strokePathCache.clear();
+    _pathMetricsCache.clear();
   }
 
   void _handlePointerEvent(PointerEvent event, PointerPhase phase) {

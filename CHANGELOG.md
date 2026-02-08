@@ -1,5 +1,9 @@
 ## Unreleased
 
+- View: `SceneView` now invalidates text/stroke/path render caches when the
+  bound `SceneController` instance is replaced, preventing stale cache reuse
+  across scenes with reused `NodeId` values.
+
 - Render: add `ScenePathMetricsCache` and wire it through
   `ScenePainter`/`SceneView` to avoid per-frame `Path.computeMetrics()` +
   contour decomposition for unchanged selected `PathNode`s
