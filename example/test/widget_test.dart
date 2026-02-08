@@ -14,7 +14,7 @@ void main() {
   testWidgets('Renders canvas example app', (WidgetTester tester) async {
     await tester.pumpWidget(const CanvasExampleApp());
 
-    expect(find.text('IWB Canvas Engine Example'), findsWidgets);
     expect(find.byType(Scaffold), findsOneWidget);
+    expect(find.byIcon(Icons.add_box_outlined), findsOneWidget);
   });
 }

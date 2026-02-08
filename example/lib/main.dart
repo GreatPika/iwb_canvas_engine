@@ -957,7 +957,6 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   }
 
   void _addSampleObjects() {
-    final layerIndex = 0;
     final baseX = 100 + (_sampleSeed * 30);
     final baseY = 100 + (_sampleSeed * 20);
 
@@ -1003,7 +1002,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
 
     _sampleSeed++;
     for (final node in nodes) {
-      _controller.addNode(node, layerIndex: layerIndex);
+      _controller.addNode(node);
     }
   }
 
