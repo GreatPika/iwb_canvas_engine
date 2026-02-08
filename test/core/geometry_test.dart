@@ -898,6 +898,45 @@ void main() {
     },
   );
 
+  test('segmentsIntersect handles large-scale endpoint touch', () {
+    // INV:INV-CORE-NUMERIC-ROBUSTNESS
+    expect(
+      segmentsIntersect(
+        const Offset(1e12, -1e12),
+        const Offset(1e12 + 5000, -1e12 + 5000),
+        const Offset(1e12 + 5000, -1e12 + 5000),
+        const Offset(1e12 + 7000, -1e12 + 9000),
+      ),
+      isTrue,
+    );
+  });
+
+  test(
+    'segmentsIntersect stays stable under extreme offset with tiny deltas',
+    () {
+      // INV:INV-CORE-NUMERIC-ROBUSTNESS
+      final base = 1e12;
+      expect(
+        segmentsIntersect(
+          Offset(base, base),
+          Offset(base + 1e-2, base + 1e-2),
+          Offset(base + 5e-3, base + 5e-3),
+          Offset(base + 2e-2, base + 2e-2),
+        ),
+        isTrue,
+      );
+      expect(
+        segmentsIntersect(
+          Offset(base, base),
+          Offset(base + 1e-2, base + 1e-2),
+          Offset(base + 2e-2, base + 2e-2),
+          Offset(base + 3e-2, base + 3e-2),
+        ),
+        isFalse,
+      );
+    },
+  );
+
   test(
     'distanceSegmentToSegment returns positive distance for parallel lines',
     () {

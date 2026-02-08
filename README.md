@@ -31,6 +31,8 @@ Live demo and docs:
 
 - Scene model with layers and nodes (image, text, stroke, line, rect, path).
 - Rendering via `ScenePainter` with background and grid.
+- Built-in bounded render caches for text layout, stroke paths, and selected
+  path metrics (`SceneView` owns them by default).
 - Optional HiDPI-friendly pixel snapping for thin axis-aligned lines/strokes.
 - Viewport culling for offscreen nodes.
 - Hit-testing for selection and interaction.

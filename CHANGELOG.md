@@ -1,5 +1,16 @@
 ## Unreleased
 
+- Render: add `ScenePathMetricsCache` and wire it through
+  `ScenePainter`/`SceneView` to avoid per-frame `Path.computeMetrics()` +
+  contour decomposition for unchanged selected `PathNode`s
+  (`id + svgPathData + fillRule` cache key).
+- Core: harden `segmentsIntersect` for very large coordinates via local-frame
+  normalization and clamped epsilon scaling; non-finite intermediate
+  normalization now returns `false` deterministically.
+- Tests: add dedicated `ScenePathMetricsCache` coverage and extend large-scale
+  `segmentsIntersect` regression cases (endpoint touch + extreme-offset tiny
+  deltas).
+
 - Performance/Input: `SceneController` now maintains an internal
   `Set<NodeId>` membership index (`allNodeIds`) used by `newNodeId()` and
   `notifySceneChanged()` paths for O(1) id checks instead of full scene scans.

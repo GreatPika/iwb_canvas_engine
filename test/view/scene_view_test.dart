@@ -38,6 +38,27 @@ void main() {
     return controller;
   }
 
+  SceneController controllerWithSelectedPath() {
+    final scene = Scene(
+      layers: [
+        Layer(
+          nodes: [
+            PathNode(
+              id: 'path-1',
+              svgPathData: 'M0 0 H40 V20 H0 Z',
+              strokeColor: const Color(0xFF000000),
+              strokeWidth: 2,
+            )..position = const Offset(20, 20),
+          ],
+        ),
+      ],
+    );
+    final controller = SceneController(scene: scene);
+    controller.setSelection(const <NodeId>['path-1']);
+    addTearDown(controller.dispose);
+    return controller;
+  }
+
   Future<void> doubleTapWithPointer(
     WidgetTester tester,
     Offset position, {
@@ -1292,6 +1313,7 @@ void main() {
     final viewState = tester.state(find.byType(SceneView)) as dynamic;
     final textCache = viewState.debugTextLayoutCache as SceneTextLayoutCache;
     final strokeCache = viewState.debugStrokePathCache as SceneStrokePathCache;
+    final pathCache = viewState.debugPathMetricsCache as ScenePathMetricsCache;
     expect(textCache.debugSize, greaterThan(0));
     expect(strokeCache.debugSize, greaterThan(0));
 
@@ -1301,6 +1323,7 @@ void main() {
     final painter = renderObject.painter as ScenePainter;
     expect(painter.textLayoutCache, same(textCache));
     expect(painter.strokePathCache, same(strokeCache));
+    expect(painter.pathMetricsCache, same(pathCache));
   });
 
   testWidgets('P1: SceneView clears owned text/stroke caches on dispose', (
@@ -1443,5 +1466,126 @@ void main() {
         viewState2.debugStrokePathCache as SceneStrokePathCache;
     expect(ownedText1, isNot(same(ownedText0)));
     expect(ownedStroke1, isNot(same(ownedStroke0)));
+  });
+
+  testWidgets('P1: SceneView clears owned path metrics cache on dispose', (
+    tester,
+  ) async {
+    final controller = controllerWithSelectedPath();
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 96,
+          height: 96,
+          child: SceneView(controller: controller, imageResolver: (_) => null),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final viewState = tester.state(find.byType(SceneView)) as dynamic;
+    final pathCache = viewState.debugPathMetricsCache as ScenePathMetricsCache;
+    expect(pathCache.debugSize, greaterThan(0));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+
+    expect(pathCache.debugSize, 0);
+  });
+
+  testWidgets('P1: SceneView does not clear external path metrics cache', (
+    tester,
+  ) async {
+    final controller = controllerWithSelectedPath();
+    final pathCache = ScenePathMetricsCache(maxEntries: 8);
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 96,
+          height: 96,
+          child: SceneView(
+            controller: controller,
+            imageResolver: (_) => null,
+            pathMetricsCache: pathCache,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(pathCache.debugSize, greaterThan(0));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+
+    expect(pathCache.debugSize, greaterThan(0));
+  });
+
+  testWidgets('P1: SceneView clears only owned path metrics cache on switch', (
+    tester,
+  ) async {
+    final controller = controllerWithSelectedPath();
+    final externalPath = ScenePathMetricsCache(maxEntries: 8);
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 96,
+          height: 96,
+          child: SceneView(controller: controller, imageResolver: (_) => null),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final viewState0 = tester.state(find.byType(SceneView)) as dynamic;
+    final ownedPath0 =
+        viewState0.debugPathMetricsCache as ScenePathMetricsCache;
+    expect(ownedPath0.debugSize, greaterThan(0));
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 96,
+          height: 96,
+          child: SceneView(
+            controller: controller,
+            imageResolver: (_) => null,
+            pathMetricsCache: externalPath,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(ownedPath0.debugSize, 0);
+    final viewState1 = tester.state(find.byType(SceneView)) as dynamic;
+    expect(viewState1.debugPathMetricsCache, same(externalPath));
+
+    final externalPathSize = externalPath.debugSize;
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 96,
+          height: 96,
+          child: SceneView(controller: controller, imageResolver: (_) => null),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(externalPath.debugSize, externalPathSize);
+    final viewState2 = tester.state(find.byType(SceneView)) as dynamic;
+    final ownedPath1 =
+        viewState2.debugPathMetricsCache as ScenePathMetricsCache;
+    expect(ownedPath1, isNot(same(ownedPath0)));
   });
 }

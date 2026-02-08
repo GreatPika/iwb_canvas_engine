@@ -108,35 +108,59 @@ double distancePointToSegment(Offset point, Offset a, Offset b) {
 
 /// Returns true if segments [a1]-[a2] and [b1]-[b2] intersect.
 bool segmentsIntersect(Offset a1, Offset a2, Offset b1, Offset b2) {
-  // Scale epsilon with coordinate magnitude to keep orientation/on-segment
-  // checks stable across tiny and large coordinate ranges.
-  final deltaA = a2 - a1;
-  final deltaB = b2 - b1;
-  var maxScale = 1.0;
-
-  void consider(double value) {
-    final absValue = value.abs();
-    if (absValue > maxScale) maxScale = absValue;
+  // Shift to a local frame around a1 to reduce cancellation for very large
+  // absolute coordinates. Epsilon uses local geometry scale and a clamped
+  // precision factor derived from absolute magnitude.
+  final p1 = Offset.zero;
+  final p2 = a2 - a1;
+  final p3 = b1 - a1;
+  final p4 = b2 - a1;
+  if (!p2.dx.isFinite ||
+      !p2.dy.isFinite ||
+      !p3.dx.isFinite ||
+      !p3.dy.isFinite ||
+      !p4.dx.isFinite ||
+      !p4.dy.isFinite) {
+    return false;
   }
 
-  consider(a1.dx);
-  consider(a1.dy);
-  consider(a2.dx);
-  consider(a2.dy);
-  consider(b1.dx);
-  consider(b1.dy);
-  consider(b2.dx);
-  consider(b2.dy);
-  consider(deltaA.dx);
-  consider(deltaA.dy);
-  consider(deltaB.dx);
-  consider(deltaB.dy);
+  var localScale = 1.0;
+  var absoluteScale = 1.0;
 
-  final orientationEpsilon = kEpsilon * maxScale * maxScale;
-  final coordinateEpsilon = kEpsilon * maxScale;
+  void considerLocal(Offset p) {
+    final dx = p.dx.abs();
+    final dy = p.dy.abs();
+    if (dx > localScale) localScale = dx;
+    if (dy > localScale) localScale = dy;
+  }
+
+  void considerAbsolute(Offset p) {
+    final dx = p.dx.abs();
+    final dy = p.dy.abs();
+    if (dx > absoluteScale) absoluteScale = dx;
+    if (dy > absoluteScale) absoluteScale = dy;
+  }
+
+  considerLocal(p2);
+  considerLocal(p3);
+  considerLocal(p4);
+  considerAbsolute(a1);
+  considerAbsolute(a2);
+  considerAbsolute(b1);
+  considerAbsolute(b2);
+
+  final localScaleSafe = localScale < 1.0 ? 1.0 : localScale;
+  final precisionFactorRaw = absoluteScale / localScaleSafe;
+  final precisionFactor = precisionFactorRaw.isFinite
+      ? precisionFactorRaw.clamp(1.0, 1e6).toDouble()
+      : 1e6;
+  final orientationEpsilon =
+      kEpsilon * localScaleSafe * localScaleSafe * precisionFactor;
+  final coordinateEpsilon = kEpsilon * localScaleSafe * precisionFactor;
 
   int orientationEps(Offset p, Offset q, Offset r) {
     final val = (q.dy - p.dy) * (r.dx - q.dx) - (q.dx - p.dx) * (r.dy - q.dy);
+    if (!val.isFinite) return 0;
     if (val.abs() <= orientationEpsilon) return 0;
     return val > 0 ? 1 : 2;
   }
@@ -148,17 +172,17 @@ bool segmentsIntersect(Offset a1, Offset a2, Offset b1, Offset b2) {
         q.dy >= math.min(p.dy, r.dy) - coordinateEpsilon;
   }
 
-  final o1 = orientationEps(a1, a2, b1);
-  final o2 = orientationEps(a1, a2, b2);
-  final o3 = orientationEps(b1, b2, a1);
-  final o4 = orientationEps(b1, b2, a2);
+  final o1 = orientationEps(p1, p2, p3);
+  final o2 = orientationEps(p1, p2, p4);
+  final o3 = orientationEps(p3, p4, p1);
+  final o4 = orientationEps(p3, p4, p2);
 
   if (o1 != o2 && o3 != o4) return true;
 
-  if (o1 == 0 && onSegmentEps(a1, b1, a2)) return true;
-  if (o2 == 0 && onSegmentEps(a1, b2, a2)) return true;
-  if (o3 == 0 && onSegmentEps(b1, a1, b2)) return true;
-  if (o4 == 0 && onSegmentEps(b1, a2, b2)) return true;
+  if (o1 == 0 && onSegmentEps(p1, p3, p2)) return true;
+  if (o2 == 0 && onSegmentEps(p1, p4, p2)) return true;
+  if (o3 == 0 && onSegmentEps(p3, p1, p4)) return true;
+  if (o4 == 0 && onSegmentEps(p3, p2, p4)) return true;
 
   return false;
 }

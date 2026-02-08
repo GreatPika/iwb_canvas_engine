@@ -485,14 +485,14 @@ tests/docs before subsequent performance-only changes.
 * Convert selection IDs to a `Set` locally for the operation and use O(1) membership checks.
   **Done when:** faster on large selections; tests unchanged.
 
-42. [ ] **(#42) PathNode rendering recomputes path metrics per frame**
+42. [x] **(#42) PathNode rendering recomputes path metrics per frame**
     **Where:** PathNode rendering code
     **Do:**
 
 * Cache path metrics keyed by path + relevant style; invalidate cache only when path/style changes.
   **Done when:** profiling shows fewer per-frame metric computations.
 
-43. [ ] **(#43) Segment intersection math unstable for very large coordinates**
+43. [x] **(#43) Segment intersection math unstable for very large coordinates**
     **Where:** `geometry.segmentsIntersect`
     **Do:**
 

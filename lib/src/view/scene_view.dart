@@ -49,8 +49,8 @@ class SceneView extends StatefulWidget {
   /// caller owns it and must dispose it.
   ///
   /// If [textLayoutCache] / [strokePathCache] are null, the view creates and
-  /// owns internal LRU caches to reduce per-frame work. If caches are provided,
-  /// the caller owns them.
+  /// [pathMetricsCache] are null, the view creates and owns internal LRU caches
+  /// to reduce per-frame work. If caches are provided, the caller owns them.
   ///
   /// [onPointerSampleBefore] / [onPointerSampleAfter] let apps hook into the
   /// pointer pipeline without re-implementing input dispatch. The call order
@@ -72,6 +72,7 @@ class SceneView extends StatefulWidget {
     this.staticLayerCache,
     this.textLayoutCache,
     this.strokePathCache,
+    this.pathMetricsCache,
     this.onPointerSampleBefore,
     this.onPointerSampleAfter,
     this.onControllerReady,
@@ -90,6 +91,7 @@ class SceneView extends StatefulWidget {
   final SceneStaticLayerCache? staticLayerCache;
   final SceneTextLayoutCache? textLayoutCache;
   final SceneStrokePathCache? strokePathCache;
+  final ScenePathMetricsCache? pathMetricsCache;
   final SceneViewPointerSampleCallback? onPointerSampleBefore;
   final SceneViewPointerSampleCallback? onPointerSampleAfter;
   final ValueChanged<SceneController>? onControllerReady;
@@ -119,6 +121,8 @@ class _SceneViewState extends State<SceneView> {
   late bool _ownsTextLayoutCache;
   late SceneStrokePathCache _strokePathCache;
   late bool _ownsStrokePathCache;
+  late ScenePathMetricsCache _pathMetricsCache;
+  late bool _ownsPathMetricsCache;
   Timer? _pendingTapTimer;
   int? _pendingTapFlushTimestampMs;
   SceneController? _ownedController;
@@ -134,6 +138,8 @@ class _SceneViewState extends State<SceneView> {
   @visibleForTesting
   SceneStrokePathCache get debugStrokePathCache => _strokePathCache;
   @visibleForTesting
+  ScenePathMetricsCache get debugPathMetricsCache => _pathMetricsCache;
+  @visibleForTesting
   bool get debugHasPendingTapTimer => _pendingTapTimer != null;
   @visibleForTesting
   int? get debugPendingTapFlushTimestampMs => _pendingTapFlushTimestampMs;
@@ -145,6 +151,7 @@ class _SceneViewState extends State<SceneView> {
     _initStaticLayerCache();
     _initTextLayoutCache();
     _initStrokePathCache();
+    _initPathMetricsCache();
     _pointerTracker = PointerInputTracker(
       settings: _controller.pointerSettings,
     );
@@ -161,6 +168,9 @@ class _SceneViewState extends State<SceneView> {
     }
     if (oldWidget.strokePathCache != widget.strokePathCache) {
       _syncStrokePathCache();
+    }
+    if (oldWidget.pathMetricsCache != widget.pathMetricsCache) {
+      _syncPathMetricsCache();
     }
     final controllerChanged = oldWidget.controller != widget.controller;
     if (controllerChanged) {
@@ -204,6 +214,9 @@ class _SceneViewState extends State<SceneView> {
     if (_ownsStrokePathCache) {
       _strokePathCache.clear();
     }
+    if (_ownsPathMetricsCache) {
+      _pathMetricsCache.clear();
+    }
     _disposeOwnedController();
     super.dispose();
   }
@@ -227,6 +240,7 @@ class _SceneViewState extends State<SceneView> {
           staticLayerCache: _staticLayerCache,
           textLayoutCache: _textLayoutCache,
           strokePathCache: _strokePathCache,
+          pathMetricsCache: _pathMetricsCache,
           selectionColor: widget.selectionColor,
           selectionStrokeWidth: widget.selectionStrokeWidth,
           gridStrokeWidth: widget.gridStrokeWidth,
@@ -273,6 +287,24 @@ class _SceneViewState extends State<SceneView> {
       _strokePathCache.clear();
     }
     _initStrokePathCache();
+  }
+
+  void _initPathMetricsCache() {
+    final external = widget.pathMetricsCache;
+    if (external != null) {
+      _pathMetricsCache = external;
+      _ownsPathMetricsCache = false;
+      return;
+    }
+    _pathMetricsCache = ScenePathMetricsCache();
+    _ownsPathMetricsCache = true;
+  }
+
+  void _syncPathMetricsCache() {
+    if (_ownsPathMetricsCache) {
+      _pathMetricsCache.clear();
+    }
+    _initPathMetricsCache();
   }
 
   void _handlePointerEvent(PointerEvent event, PointerPhase phase) {

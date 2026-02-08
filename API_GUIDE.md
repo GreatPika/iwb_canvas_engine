@@ -116,6 +116,8 @@ that gesture ends.
 
 - `SceneTextLayoutCache`: caches `TextPainter.layout()` results for `TextNode`
 - `SceneStrokePathCache`: caches built `Path` geometry for `StrokeNode`
+- `ScenePathMetricsCache`: caches decomposed path contours for selected
+  `PathNode` rendering (`id + svgPathData + fillRule` key)
 
 You can optionally provide your own cache instances to share across multiple
 views or tune memory limits.
@@ -125,10 +127,12 @@ import 'package:iwb_canvas_engine/basic.dart';
 
 final textCache = SceneTextLayoutCache(maxEntries: 512);
 final strokeCache = SceneStrokePathCache(maxEntries: 1024);
+final pathMetricsCache = ScenePathMetricsCache(maxEntries: 512);
 
 SceneView(
   textLayoutCache: textCache,
   strokePathCache: strokeCache,
+  pathMetricsCache: pathMetricsCache,
   thinLineSnapStrategy: ThinLineSnapStrategy.autoAxisAlignedThin,
 );
 ```

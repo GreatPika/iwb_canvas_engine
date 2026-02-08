@@ -554,6 +554,40 @@ void main() {
     },
   );
 
+  test(
+    'P1: ScenePainter uses path metrics cache for PathNode selection',
+    () async {
+      const background = Color(0xFFFFFFFF);
+      final pathNode = PathNode(
+        id: 'path-1',
+        svgPathData: 'M0 0 H60 V40 H0 Z',
+        strokeColor: const Color(0xFF000000),
+        strokeWidth: 4,
+      )..position = const Offset(20, 20);
+      final scene = Scene(
+        background: Background(color: background),
+        layers: [
+          Layer(nodes: [pathNode]),
+        ],
+      );
+      final cache = ScenePathMetricsCache(maxEntries: 8);
+      final painter = ScenePainter(
+        controller: _controllerFor(scene, selectedNodeIds: const {'path-1'}),
+        imageResolver: (_) => null,
+        pathMetricsCache: cache,
+        selectionColor: const Color(0xFFFF0000),
+        selectionStrokeWidth: 2,
+      );
+
+      await _paintToImage(painter, width: 120, height: 80);
+      await _paintToImage(painter, width: 120, height: 80);
+
+      expect(cache.debugBuildCount, 1);
+      expect(cache.debugHitCount, 1);
+      expect(cache.debugSize, 1);
+    },
+  );
+
   test('ScenePainter selection keeps line color intact', () async {
     const background = Color(0xFFFFFFFF);
     const lineColor = Color(0xFF000000);

@@ -257,6 +257,118 @@ class _TextLayoutKey {
   );
 }
 
+/// LRU cache for decomposed [PathNode] contours used by selection rendering.
+///
+/// Why: avoid recomputing `Path.computeMetrics()` and contour extraction on
+/// every frame when path data and relevant style are unchanged.
+/// Invariant: cached entry is valid only while `id + svgPathData + fillRule`
+/// are unchanged.
+/// Validate: `test/render/scene_path_metrics_cache_test.dart`.
+class ScenePathMetricsCache {
+  ScenePathMetricsCache({this.maxEntries = 512})
+    : assert(maxEntries > 0, 'maxEntries must be > 0.');
+
+  final int maxEntries;
+
+  final LinkedHashMap<NodeId, _PathMetricsCacheEntry> _entries =
+      LinkedHashMap<NodeId, _PathMetricsCacheEntry>();
+
+  int _debugBuildCount = 0;
+  int _debugHitCount = 0;
+  int _debugEvictCount = 0;
+
+  @visibleForTesting
+  int get debugBuildCount => _debugBuildCount;
+  @visibleForTesting
+  int get debugHitCount => _debugHitCount;
+  @visibleForTesting
+  int get debugEvictCount => _debugEvictCount;
+  @visibleForTesting
+  int get debugSize => _entries.length;
+
+  void clear() {
+    _entries.clear();
+  }
+
+  PathSelectionContours getOrBuild({
+    required PathNode node,
+    required Path localPath,
+  }) {
+    final svgPathData = node.svgPathData;
+    final fillRule = node.fillRule;
+    final cached = _entries.remove(node.id);
+    if (cached != null &&
+        cached.svgPathData == svgPathData &&
+        cached.fillRule == fillRule) {
+      _entries[node.id] = cached;
+      _debugHitCount += 1;
+      return cached.contours;
+    }
+
+    final selectionFillType = _pathFillType(fillRule);
+    Path? closedContours;
+    final openContours = <Path>[];
+    for (final metric in localPath.computeMetrics()) {
+      final contour = metric.extractPath(
+        0,
+        metric.length,
+        startWithMoveTo: true,
+      );
+      contour.fillType = selectionFillType;
+      if (metric.isClosed) {
+        contour.close();
+        closedContours ??= Path()..fillType = selectionFillType;
+        closedContours.addPath(contour, Offset.zero);
+      } else {
+        openContours.add(contour);
+      }
+    }
+    final contours = PathSelectionContours(
+      closedContours: closedContours,
+      openContours: openContours,
+    );
+    _entries[node.id] = _PathMetricsCacheEntry(
+      svgPathData: svgPathData,
+      fillRule: fillRule,
+      contours: contours,
+    );
+    _debugBuildCount += 1;
+    _evictIfNeeded();
+    return contours;
+  }
+
+  void _evictIfNeeded() {
+    while (_entries.length > maxEntries) {
+      _entries.remove(_entries.keys.first);
+      _debugEvictCount += 1;
+    }
+  }
+}
+
+class _PathMetricsCacheEntry {
+  const _PathMetricsCacheEntry({
+    required this.svgPathData,
+    required this.fillRule,
+    required this.contours,
+  });
+
+  final String svgPathData;
+  final PathFillRule fillRule;
+  final PathSelectionContours contours;
+}
+
+class PathSelectionContours {
+  const PathSelectionContours({
+    required this.closedContours,
+    required this.openContours,
+  });
+
+  final Path? closedContours;
+  final List<Path> openContours;
+
+  bool get isEmpty => closedContours == null && openContours.isEmpty;
+}
+
 /// Resolves an [ImageNode.imageId] to a decoded [Image] instance.
 ///
 /// This callback is invoked during painting, so it must be synchronous, fast,
@@ -292,6 +404,7 @@ class ScenePainter extends CustomPainter {
     this.staticLayerCache,
     this.textLayoutCache,
     this.strokePathCache,
+    this.pathMetricsCache,
     this.selectionColor = const Color(0xFF1565C0),
     this.selectionStrokeWidth = 1,
     this.gridStrokeWidth = 1,
@@ -305,6 +418,7 @@ class ScenePainter extends CustomPainter {
   final SceneStaticLayerCache? staticLayerCache;
   final SceneTextLayoutCache? textLayoutCache;
   final SceneStrokePathCache? strokePathCache;
+  final ScenePathMetricsCache? pathMetricsCache;
   final Color selectionColor;
   final double selectionStrokeWidth;
   final double gridStrokeWidth;
@@ -388,6 +502,7 @@ class ScenePainter extends CustomPainter {
         oldDelegate.staticLayerCache != staticLayerCache ||
         oldDelegate.textLayoutCache != textLayoutCache ||
         oldDelegate.strokePathCache != strokePathCache ||
+        oldDelegate.pathMetricsCache != pathMetricsCache ||
         oldDelegate.selectionColor != selectionColor ||
         oldSelectionStrokeWidth != newSelectionStrokeWidth ||
         oldGridStrokeWidth != newGridStrokeWidth ||
@@ -625,35 +740,17 @@ class ScenePainter extends CustomPainter {
       final safeStrokeWidth = clampNonNegativeFinite(node.strokeWidth);
       final hasStroke = node.strokeColor != null && safeStrokeWidth > 0;
       final baseStrokeWidth = hasStroke ? safeStrokeWidth : 0.0;
-      final metrics = localPath.computeMetrics().toList();
-      if (metrics.isEmpty) {
+      final contours = pathMetricsCache != null
+          ? pathMetricsCache!.getOrBuild(node: node, localPath: localPath)
+          : _buildPathSelectionContours(node: node, localPath: localPath);
+      if (contours.isEmpty) {
         canvas.restore();
         return;
       }
-
-      Path? closedContours;
-      final openContours = <Path>[];
-      final selectionFillType = _pathFillType(node.fillRule);
-      for (final metric in metrics) {
-        final contour = metric.extractPath(
-          0,
-          metric.length,
-          startWithMoveTo: true,
-        );
-        contour.fillType = selectionFillType;
-        if (metric.isClosed) {
-          contour.close();
-          closedContours ??= Path()..fillType = selectionFillType;
-          closedContours.addPath(contour, Offset.zero);
-        } else {
-          openContours.add(contour);
-        }
-      }
-
-      if (closedContours != null) {
+      if (contours.closedContours != null) {
         _drawPathHalo(
           canvas,
-          closedContours,
+          contours.closedContours!,
           color,
           haloWidth,
           baseStrokeWidth: baseStrokeWidth,
@@ -661,7 +758,7 @@ class ScenePainter extends CustomPainter {
         );
       }
 
-      for (final contour in openContours) {
+      for (final contour in contours.openContours) {
         canvas.drawPath(
           contour,
           _haloPaint(
@@ -685,6 +782,34 @@ class ScenePainter extends CustomPainter {
       }
       canvas.restore();
     }
+  }
+
+  PathSelectionContours _buildPathSelectionContours({
+    required PathNode node,
+    required Path localPath,
+  }) {
+    final selectionFillType = _pathFillType(node.fillRule);
+    Path? closedContours;
+    final openContours = <Path>[];
+    for (final metric in localPath.computeMetrics()) {
+      final contour = metric.extractPath(
+        0,
+        metric.length,
+        startWithMoveTo: true,
+      );
+      contour.fillType = selectionFillType;
+      if (metric.isClosed) {
+        contour.close();
+        closedContours ??= Path()..fillType = selectionFillType;
+        closedContours.addPath(contour, Offset.zero);
+      } else {
+        openContours.add(contour);
+      }
+    }
+    return PathSelectionContours(
+      closedContours: closedContours,
+      openContours: openContours,
+    );
   }
 
   void _drawBoxSelection(
