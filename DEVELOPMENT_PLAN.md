@@ -201,7 +201,7 @@ behavior across modules.
 
 Goal: no bypasses. Background must never be selectable/deletable; selection must never contain garbage.
 
-13. [ ] **(#5) Background layer not consistently protected; can be selected/deleted via bypasses**
+13. [x] **(#5) Background layer not consistently protected; can be selected/deleted via bypasses**
     **Where:** `MoveModeEngine._nodesIntersecting(...)`, `SceneCommands.selectAll/deleteSelection`, `selection_geometry.selectedTransformableNodesInSceneOrder(...)`
     **Policy (fixed):** background is **non-interactive** and **non-deletable**.
     **Do:**
@@ -210,7 +210,7 @@ Goal: no bypasses. Background must never be selectable/deletable; selection must
 * Apply consistently in marquee selection, selectAll, deleteSelection, and any “scene-order selection” helpers.
   **Done when:** tests: marquee/selectAll never include background; deleteSelection never deletes it even if ID is injected.
 
-14. [ ] **(#15) Eraser deletes nodes but selection still contains deleted IDs**
+14. [x] **(#15) Eraser deletes nodes but selection still contains deleted IDs**
     **Where:** eraser deletion path + selection update path
     **Policy (fixed):** selection is always normalized against current scene.
     **Do:**
@@ -218,7 +218,7 @@ Goal: no bypasses. Background must never be selectable/deletable; selection must
 * After erasing, remove `deletedIds` from selection before publishing scene change / emitting action.
   **Done when:** test: erase a selected stroke => selection becomes empty.
 
-15. [ ] **(#35) Background layer invariants not defined (count/position/operations)**
+15. [x] **(#35) Background layer invariants not defined (count/position/operations)**
     **Where:** scene model + `SceneCodec` + controller validation
     **Policy (fixed):** exactly **one** background layer at **index 0**.
     **Do:**

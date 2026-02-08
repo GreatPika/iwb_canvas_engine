@@ -34,6 +34,11 @@ class EraserTool {
     if (deletedNodeIds.isEmpty) {
       return;
     }
+    final deletedIdSet = deletedNodeIds.toSet();
+    _contracts.setSelection(
+      _contracts.selectedNodeIds.where((id) => !deletedIdSet.contains(id)),
+      notify: false,
+    );
     _contracts.markSceneStructuralChanged();
     _contracts.emitAction(
       ActionType.erase,

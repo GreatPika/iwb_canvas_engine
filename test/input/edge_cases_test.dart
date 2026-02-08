@@ -911,6 +911,7 @@ void main() {
   });
 
   test('marquee selection skips invisible and non-selectable nodes', () {
+    // INV:INV-INPUT-BACKGROUND-NONINTERACTIVE-NONDELETABLE
     final visible = rectNode('a', const Offset(0, 0));
     final hidden = rectNode('b', const Offset(0, 0), isVisible: false);
     final nonSelectable = rectNode(
@@ -918,10 +919,12 @@ void main() {
       const Offset(0, 0),
       isSelectable: false,
     );
+    final backgroundNode = rectNode('bg', const Offset(0, 0));
 
     final controller = SceneController(
       scene: Scene(
         layers: [
+          Layer(isBackground: true, nodes: [backgroundNode]),
           Layer(nodes: [visible, hidden, nonSelectable]),
         ],
       ),

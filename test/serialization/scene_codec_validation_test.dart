@@ -73,7 +73,7 @@ class _RectNodeWithInvalidOpacityGetter extends RectNode {
 void main() {
   // INV:INV-SER-JSON-NUMERIC-VALIDATION
   test('encodeSceneToJson -> decodeSceneFromJson is stable', () {
-    final scene = Scene(layers: [Layer()]);
+    final scene = Scene(layers: [Layer(isBackground: true), Layer()]);
     final json = encodeSceneToJson(scene);
     final decoded = decodeSceneFromJson(json);
     expect(encodeScene(decoded), encodeScene(scene));
@@ -104,6 +104,93 @@ void main() {
     expect(
       () => decodeSceneFromJson('{'),
       throwsA(isA<SceneJsonFormatException>()),
+    );
+  });
+
+  test('decodeScene canonicalizes missing background layer at index 0', () {
+    // INV:INV-SER-BACKGROUND-SINGLE-AT-ZERO
+    final scene = decodeScene(_minimalSceneJson());
+    expect(scene.layers, hasLength(1));
+    expect(scene.layers.first.isBackground, isTrue);
+  });
+
+  test(
+    'decodeScene moves misordered background layer to index 0 preserving order',
+    () {
+      // INV:INV-SER-BACKGROUND-SINGLE-AT-ZERO
+      final bgNode = _baseNodeJson(id: 'bg', type: 'rect')
+        ..addAll(<String, dynamic>{
+          'size': <String, dynamic>{'w': 1, 'h': 1},
+          'strokeWidth': 0,
+        });
+      final n1 = _baseNodeJson(id: 'n1', type: 'rect')
+        ..addAll(<String, dynamic>{
+          'size': <String, dynamic>{'w': 1, 'h': 1},
+          'strokeWidth': 0,
+        });
+      final n2 = _baseNodeJson(id: 'n2', type: 'rect')
+        ..addAll(<String, dynamic>{
+          'size': <String, dynamic>{'w': 1, 'h': 1},
+          'strokeWidth': 0,
+        });
+      final json = _minimalSceneJson();
+      json['layers'] = <dynamic>[
+        <String, dynamic>{
+          'isBackground': false,
+          'nodes': <dynamic>[n1],
+        },
+        <String, dynamic>{
+          'isBackground': true,
+          'nodes': <dynamic>[bgNode],
+        },
+        <String, dynamic>{
+          'isBackground': false,
+          'nodes': <dynamic>[n2],
+        },
+      ];
+
+      final scene = decodeScene(json);
+
+      expect(scene.layers, hasLength(3));
+      expect(scene.layers.first.isBackground, isTrue);
+      expect(scene.layers[1].nodes.single.id, 'n1');
+      expect(scene.layers[2].nodes.single.id, 'n2');
+    },
+  );
+
+  test('decodeScene rejects multiple background layers', () {
+    // INV:INV-SER-BACKGROUND-SINGLE-AT-ZERO
+    final firstBg = _baseNodeJson(id: 'bg-1', type: 'rect')
+      ..addAll(<String, dynamic>{
+        'size': <String, dynamic>{'w': 1, 'h': 1},
+        'strokeWidth': 0,
+      });
+    final secondBg = _baseNodeJson(id: 'bg-2', type: 'rect')
+      ..addAll(<String, dynamic>{
+        'size': <String, dynamic>{'w': 1, 'h': 1},
+        'strokeWidth': 0,
+      });
+    final json = _minimalSceneJson();
+    json['layers'] = <dynamic>[
+      <String, dynamic>{
+        'isBackground': true,
+        'nodes': <dynamic>[firstBg],
+      },
+      <String, dynamic>{
+        'isBackground': true,
+        'nodes': <dynamic>[secondBg],
+      },
+    ];
+
+    expect(
+      () => decodeScene(json),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Scene must contain at most one background layer.',
+        ),
+      ),
     );
   });
 
@@ -325,7 +412,9 @@ void main() {
       });
 
     final scene = decodeScene(_sceneWithSingleNode(nodeJson));
-    final node = scene.layers.single.nodes.single as TextNode;
+    final node =
+        scene.layers.firstWhere((layer) => !layer.isBackground).nodes.single
+            as TextNode;
     expect(node.align, TextAlign.right);
 
     final invalidAlignJson = _baseNodeJson(id: 't2', type: 'text')

@@ -252,6 +252,89 @@ void main() {
     expect(actions.single.nodeIds.toSet(), {'stroke-1', 'line-1'});
   });
 
+  test('eraser removes deleted ids from selection before emit', () {
+    // INV:INV-INPUT-ERASER-SELECTION-NORMALIZED
+    final stroke = StrokeNode(
+      id: 'stroke-1',
+      points: const [Offset(-10, 0), Offset(10, 0)],
+      thickness: 4,
+      color: const Color(0xFF000000),
+    );
+    final scene = Scene(
+      layers: [
+        Layer(nodes: [stroke]),
+      ],
+    );
+    final controller = drawController(scene);
+    controller.setDrawTool(DrawTool.eraser);
+    controller.eraserThickness = 10;
+    controller.setSelection(const <NodeId>{'stroke-1'});
+
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 7,
+        position: Offset(0, 0),
+        timestampMs: 0,
+        phase: PointerPhase.down,
+      ),
+    );
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 7,
+        position: Offset(0, 0),
+        timestampMs: 10,
+        phase: PointerPhase.up,
+      ),
+    );
+
+    expect(annotationLayer(scene).nodes, isEmpty);
+    expect(controller.selectedNodeIds, isEmpty);
+  });
+
+  test('eraser preserves selection for nodes that were not deleted', () {
+    final erased = StrokeNode(
+      id: 'erased',
+      points: const [Offset(-10, 0), Offset(10, 0)],
+      thickness: 4,
+      color: const Color(0xFF000000),
+    );
+    final kept = RectNode(
+      id: 'kept',
+      size: const Size(10, 10),
+      fillColor: const Color(0xFF000000),
+    )..position = const Offset(100, 100);
+    final scene = Scene(
+      layers: [
+        Layer(nodes: [erased, kept]),
+      ],
+    );
+    final controller = drawController(scene);
+    controller.setDrawTool(DrawTool.eraser);
+    controller.eraserThickness = 10;
+    controller.setSelection(const <NodeId>{'erased', 'kept'});
+
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 8,
+        position: Offset(0, 0),
+        timestampMs: 0,
+        phase: PointerPhase.down,
+      ),
+    );
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 8,
+        position: Offset(0, 0),
+        timestampMs: 10,
+        phase: PointerPhase.up,
+      ),
+    );
+
+    expect(annotationLayer(scene).nodes, hasLength(1));
+    expect(annotationLayer(scene).nodes.single.id, 'kept');
+    expect(controller.selectedNodeIds, const <NodeId>{'kept'});
+  });
+
   test('default nodeIdGenerator skips existing ids in the scene', () {
     final existing = RectNode(
       id: 'node-0',

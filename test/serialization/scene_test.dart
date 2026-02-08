@@ -119,10 +119,11 @@ Scene _buildScene() {
     fillRule: PathFillRule.evenOdd,
   )..position = const Offset(100, -40);
 
+  final backgroundLayer = Layer(isBackground: true);
   final layer = Layer(nodes: [image, text, stroke, line, rect, path]);
 
   return Scene(
-    layers: [layer],
+    layers: [backgroundLayer, layer],
     camera: Camera(offset: const Offset(7, -3)),
     background: Background(
       color: const Color(0xFFFFFFFF),

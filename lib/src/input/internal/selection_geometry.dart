@@ -5,6 +5,9 @@ import '../../core/scene.dart';
 
 /// Returns selected transformable nodes in scene order (layer order, then node
 /// order) for stable commands and queries.
+///
+/// Background layers are ignored even if their ids are present in
+/// [selectedNodeIds].
 List<SceneNode> selectedTransformableNodesInSceneOrder(
   Scene scene,
   Set<NodeId> selectedNodeIds,
@@ -13,6 +16,7 @@ List<SceneNode> selectedTransformableNodesInSceneOrder(
 
   final nodes = <SceneNode>[];
   for (final layer in scene.layers) {
+    if (layer.isBackground) continue;
     for (final node in layer.nodes) {
       if (!selectedNodeIds.contains(node.id)) continue;
       if (!node.isTransformable) continue;

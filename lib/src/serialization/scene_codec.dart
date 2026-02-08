@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:path_drawing/path_drawing.dart';
 
+import '../core/background_layer_invariants.dart';
 import '../core/scene.dart';
 import '../core/nodes.dart';
 import '../core/transform2d.dart';
@@ -151,6 +152,14 @@ Scene decodeScene(Map<String, dynamic> json) {
     return _decodeLayer(layerJson);
   }).toList();
   _ensureUniqueNodeIds(layers);
+  canonicalizeBackgroundLayerInvariants(
+    layers,
+    onMultipleBackgroundError: (_) {
+      throw SceneJsonFormatException(
+        'Scene must contain at most one background layer.',
+      );
+    },
+  );
 
   return Scene(
     layers: layers,

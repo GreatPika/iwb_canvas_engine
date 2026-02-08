@@ -137,6 +137,18 @@ const List<Invariant> invariants = <Invariant>[
         'SceneController constructor validates scene invariants, canonicalizes recoverable background cases, and rejects unrecoverable cases',
   ),
   Invariant(
+    id: 'INV-INPUT-BACKGROUND-NONINTERACTIVE-NONDELETABLE',
+    scope: 'input',
+    title:
+        'Background layer nodes are non-interactive and non-deletable across selection, marquee, and delete paths',
+  ),
+  Invariant(
+    id: 'INV-INPUT-ERASER-SELECTION-NORMALIZED',
+    scope: 'input',
+    title:
+        'Eraser removes deleted node ids from selection before publishing scene changes and actions',
+  ),
+  Invariant(
     id: 'INV-SELECTION-SETSELECTION-COALESCED',
     scope: 'selection',
     title: 'setSelection defaults to coalesced repaint (not immediate notify)',
@@ -176,6 +188,12 @@ const List<Invariant> invariants = <Invariant>[
     scope: 'serialization',
     title:
         'Scene JSON enforces non-empty palettes and conditional grid.cellSize validation (enabled: > 0, disabled: finite)',
+  ),
+  Invariant(
+    id: 'INV-SER-BACKGROUND-SINGLE-AT-ZERO',
+    scope: 'serialization',
+    title:
+        'Decode canonicalizes to exactly one background layer at index 0; multiple background layers are rejected',
   ),
 
   // Core.

@@ -181,6 +181,9 @@ Stable contracts (expected to remain compatible as the package evolves):
   constructor input, ensures a background layer exists at index `0`, and moves
   a misordered background layer to index `0`. Multiple background layers are
   rejected with `ArgumentError`.
+- **Decoder canonicalization:** `decodeScene(...)` enforces the same background
+  invariant: missing/misordered background is canonicalized to index `0`;
+  multiple background layers are rejected with `SceneJsonFormatException`.
 - **PathNode local path cache:** `PathNode.buildLocalPath()` returns a defensive
   copy by default. Pass `copy:false` only for performance-sensitive, read-only
   internal usage. To debug invalid SVG path data, enable
@@ -382,6 +385,8 @@ final center = controller.selectionCenterWorld;
 Gotchas:
 - A node can be **selectable** but **locked**. Locked nodes can be selected, but drag-move skips them.
 - Transform commands apply only to nodes with `isTransformable == true` and `isLocked == false`.
+- Background-layer nodes are excluded from marquee/selectAll/transform helpers
+  and are not deletable via `deleteSelection`, even if their ids are injected.
 
 Relevant APIs:
 - `SceneController.selectedNodeIds`, `clearSelection()` — `lib/src/input/scene_controller.dart`
@@ -415,6 +420,8 @@ Gotchas:
 - `ActionType.move` payload uses `{sourceLayerIndex: int, targetLayerIndex: int}`.
 - `ActionType.drawStroke/drawHighlighter/drawLine` payload uses `{tool: String, color: int, thickness: double}`.
 - `ActionType.erase` payload uses `{eraserThickness: double}`.
+- Eraser normalizes selection before emission: deleted ids are removed from
+  `selectedNodeIds` before `ActionType.erase`.
 
 Relevant APIs:
 - `SceneController.actions` — `lib/src/input/scene_controller.dart`
@@ -614,6 +621,11 @@ Source of truth: `lib/src/serialization/scene_codec.dart`.
 
 - `isBackground` (bool)
 - `nodes` (array)
+
+Decode canonicalization:
+- exactly one background layer must exist at index `0`;
+- missing/misordered background is fixed automatically;
+- multiple background layers fail decode.
 
 ### Base node fields (all node types)
 

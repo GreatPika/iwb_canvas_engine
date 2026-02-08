@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/advanced.dart';
 
 // INV:INV-SELECTION-CLEARSELECTION-IMMEDIATE
+// INV:INV-INPUT-BACKGROUND-NONINTERACTIVE-NONDELETABLE
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -440,6 +441,29 @@ void main() {
 
     expect(firstNonBackgroundLayer(scene).nodes, [locked]);
   });
+
+  test(
+    'deleteSelection never deletes background nodes even if id injected',
+    () {
+      final backgroundNode = rectNode('bg', const Offset(0, 0));
+      final foregroundNode = rectNode('fg', const Offset(10, 0));
+      final scene = Scene(
+        layers: [
+          Layer(isBackground: true, nodes: [backgroundNode]),
+          Layer(nodes: [foregroundNode]),
+        ],
+      );
+      final controller = SceneController(scene: scene, dragStartSlop: 0);
+      addTearDown(controller.dispose);
+
+      controller.setSelection(const <NodeId>{'bg', 'fg'});
+      controller.deleteSelection(timestampMs: 42);
+
+      expect(scene.layers.first.nodes.map((node) => node.id), <String>['bg']);
+      expect(firstNonBackgroundLayer(scene).nodes, isEmpty);
+      expect(controller.selectedNodeIds, const <NodeId>{'bg'});
+    },
+  );
 
   test('clearScene removes nodes from non-background layers', () {
     final background = Layer(

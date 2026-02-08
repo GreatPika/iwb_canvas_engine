@@ -7,6 +7,7 @@ import '../core/geometry.dart';
 import '../core/grid_safety_limits.dart';
 import '../core/hit_test.dart';
 import '../core/nodes.dart';
+import '../core/background_layer_invariants.dart';
 import '../core/scene.dart';
 import 'action_events.dart';
 import 'internal/contracts.dart';
@@ -372,20 +373,6 @@ class SceneController extends ChangeNotifier {
         message: 'Grid cell size must be > 0 when grid is enabled.',
       );
     }
-
-    var backgroundCount = 0;
-    for (final layer in scene.layers) {
-      if (layer.isBackground) {
-        backgroundCount += 1;
-      }
-      if (backgroundCount > 1) {
-        throw ArgumentError.value(
-          scene.layers,
-          'scene.layers',
-          'Scene must contain at most one background layer.',
-        );
-      }
-    }
   }
 
   static void _canonicalizeRecoverableSceneInvariants(Scene scene) {
@@ -393,23 +380,16 @@ class SceneController extends ChangeNotifier {
     if (grid.isEnabled && grid.cellSize < kMinGridCellSize) {
       grid.cellSize = kMinGridCellSize;
     }
-
-    var backgroundIndex = -1;
-    for (var i = 0; i < scene.layers.length; i++) {
-      if (scene.layers[i].isBackground) {
-        backgroundIndex = i;
-        break;
-      }
-    }
-
-    if (backgroundIndex == -1) {
-      scene.layers.insert(0, Layer(isBackground: true));
-      return;
-    }
-    if (backgroundIndex == 0) return;
-
-    final backgroundLayer = scene.layers.removeAt(backgroundIndex);
-    scene.layers.insert(0, backgroundLayer);
+    canonicalizeBackgroundLayerInvariants(
+      scene.layers,
+      onMultipleBackgroundError: (_) {
+        throw ArgumentError.value(
+          scene.layers,
+          'scene.layers',
+          'Scene must contain at most one background layer.',
+        );
+      },
+    );
   }
 
   bool _sceneContainsNodeId(NodeId id) {

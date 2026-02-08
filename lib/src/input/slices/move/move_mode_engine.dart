@@ -5,6 +5,7 @@ import '../../../core/nodes.dart';
 import '../../../core/transform2d.dart';
 import '../../action_events.dart';
 import '../../internal/contracts.dart';
+import '../../internal/node_interaction_policy.dart';
 import '../../pointer_input.dart';
 
 class MoveModeEngine {
@@ -237,7 +238,9 @@ class MoveModeEngine {
     final ids = <NodeId>[];
     for (final layer in _contracts.scene.layers) {
       for (final node in layer.nodes) {
-        if (!node.isVisible || !node.isSelectable) continue;
+        if (!isNodeInteractiveForSelection(node, layer, onlySelectable: true)) {
+          continue;
+        }
         if (node.boundsWorld.overlaps(rect)) {
           ids.add(node.id);
         }

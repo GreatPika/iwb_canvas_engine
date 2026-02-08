@@ -1,5 +1,13 @@
 ## Unreleased
 
+- Input: enforce a single background interaction policy in move/selection/delete
+  paths (background nodes are non-interactive and non-deletable even when ids
+  are injected).
+- Input: eraser now normalizes selection by removing deleted node ids before
+  publishing scene changes and emitting `ActionType.erase`.
+- Serialization: `decodeScene(...)` now canonicalizes background layers to
+  exactly one layer at index `0` (missing/misordered are fixed; multiple
+  background layers throw `SceneJsonFormatException`).
 - Breaking: `SceneController.mutate(...)` is now geometry-only and no longer
   accepts `structural:`. Use `SceneController.mutateStructural(...)` for
   add/remove/reorder layer/node edits. In debug, structural edits inside

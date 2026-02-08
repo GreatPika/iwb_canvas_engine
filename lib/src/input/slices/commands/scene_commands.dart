@@ -5,6 +5,7 @@ import '../../../core/scene.dart';
 import '../../../core/transform2d.dart';
 import '../../action_events.dart';
 import '../../internal/contracts.dart';
+import '../../internal/node_interaction_policy.dart';
 import '../../internal/selection_geometry.dart';
 
 class SceneCommands {
@@ -219,8 +220,13 @@ class SceneCommands {
     final ids = <NodeId>[];
     for (final layer in _contracts.scene.layers) {
       for (final node in layer.nodes) {
-        if (!node.isVisible) continue;
-        if (onlySelectable && !node.isSelectable) continue;
+        if (!isNodeInteractiveForSelection(
+          node,
+          layer,
+          onlySelectable: onlySelectable,
+        )) {
+          continue;
+        }
         ids.add(node.id);
       }
     }
@@ -320,11 +326,12 @@ class SceneCommands {
     final selectedNodeIds = _contracts.selectedNodeIds;
     if (selectedNodeIds.isEmpty) return;
     final deletableIds = <NodeId>[];
+    final selectedIdSet = selectedNodeIds.toSet();
 
     for (final layer in _contracts.scene.layers) {
       layer.nodes.removeWhere((node) {
-        if (!selectedNodeIds.contains(node.id)) return false;
-        if (!node.isDeletable) return false;
+        if (!selectedIdSet.contains(node.id)) return false;
+        if (!isNodeDeletableInLayer(node, layer)) return false;
         deletableIds.add(node.id);
         return true;
       });

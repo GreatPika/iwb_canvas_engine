@@ -134,6 +134,8 @@ Node types:
 ### Selection
 
 - Selection is a set of `nodeIds`.
+- Selection operations treat background-layer nodes as non-interactive and
+  non-deletable (even if ids are injected manually).
 - Group is not stored; group operations compute a union AABB and apply transforms per node.
 
 ## Coordinate systems
@@ -186,6 +188,8 @@ Static layer cache invariants:
 
 - **Move mode**: selection, drag move, marquee selection.
 - **Draw mode**: pen, highlighter, line, eraser.
+- Eraser normalizes selection before publishing changes: deleted node ids are
+  removed from `selectedNodeIds` before action emission.
 - Stroke/line commit is fail-safe: if local-normalization preconditions are
   violated at commit time, the pending preview node is discarded and no action
   is emitted (the input loop must not crash).
@@ -245,6 +249,9 @@ Emit `ActionCommitted` on:
 - JSON contracts also enforce non-empty palettes and conditional grid rules:
   `background.grid.cellSize` must be finite and `> 0` when grid is enabled,
   and only finite when grid is disabled.
+- Decoder canonicalizes background-layer invariants: exactly one background
+  layer at index `0` (missing/misordered is fixed, multiple backgrounds throw
+  `SceneJsonFormatException`).
 - Runtime bounds/hit-testing/rendering use soft numeric normalization to avoid
   NaN/Infinity propagation; strict validation is enforced at the JSON boundary.
   - Width-like values (`thickness`, `strokeWidth`, `hitPadding`) normalize to

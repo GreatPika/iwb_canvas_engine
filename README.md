@@ -61,6 +61,9 @@ Prefer importing the smallest API surface that fits your use case:
   are not clickable for fill), and stroke uses a coarse AABB tolerance
   (stage A).
   Invalid/unbuildable SVG path data is non-interactive in hit-testing.
+- **Background interaction policy**: background-layer nodes are render-only for
+  selection/delete paths (`selectAll`, marquee, transform helpers, and
+  `deleteSelection`).
 - **Local geometry + `Transform2D`**: node geometry is stored in local
   coordinates around (0,0). `SceneNode.transform` (2×3 affine matrix) is the
   single source of truth for translation/rotation/scale.
@@ -111,6 +114,8 @@ When provided, the constructor validates scene invariants and canonicalizes
 recoverable background-layer cases (ensures a background layer exists at index
 0). Unrecoverable violations (for example multiple background layers) throw
 `ArgumentError`.
+`decodeScene(...)` applies the same background-layer canonicalization and throws
+`SceneJsonFormatException` for multiple background layers.
 
 ### Simple view (no controller boilerplate)
 
@@ -213,6 +218,8 @@ Notes:
   must be fast and avoid blocking work.
 - The engine emits `ActionCommitted` boundaries, but the app is responsible for
   storing history and applying undo/redo.
+- After an erase commit, deleted node ids are removed from selection before
+  the `ActionType.erase` event is emitted.
 
 ### Scene mutations
 

@@ -5,6 +5,7 @@ import 'package:iwb_canvas_engine/advanced.dart';
 
 // INV:INV-COMMANDS-STRUCTURAL-NOTIFYSCENECHANGED
 // INV:INV-COMMANDS-MUTATE-STRUCTURAL-EXPLICIT
+// INV:INV-INPUT-BACKGROUND-NONINTERACTIVE-NONDELETABLE
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -454,6 +455,43 @@ void main() {
     controller.selectAll(onlySelectable: false);
     await tester.pump();
     expect(controller.selectedNodeIds, {'n1', 'n2'});
+  });
+
+  testWidgets('selectAll never includes background layer nodes', (
+    tester,
+  ) async {
+    final backgroundNode = RectNode(
+      id: 'bg',
+      size: const Size(10, 10),
+      fillColor: const Color(0xFF000000),
+      isSelectable: true,
+      isVisible: true,
+    )..position = const Offset(0, 0);
+    final foregroundNode = RectNode(
+      id: 'fg',
+      size: const Size(10, 10),
+      fillColor: const Color(0xFF000000),
+      isSelectable: true,
+      isVisible: true,
+    )..position = const Offset(10, 0);
+
+    final controller = SceneController(
+      scene: Scene(
+        layers: [
+          Layer(nodes: [backgroundNode], isBackground: true),
+          Layer(nodes: [foregroundNode]),
+        ],
+      ),
+    );
+    addTearDown(controller.dispose);
+
+    controller.selectAll();
+    await tester.pump();
+    expect(controller.selectedNodeIds, {'fg'});
+
+    controller.selectAll(onlySelectable: false);
+    await tester.pump();
+    expect(controller.selectedNodeIds, {'fg'});
   });
 
   test(

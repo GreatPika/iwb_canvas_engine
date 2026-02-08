@@ -12,6 +12,10 @@
   },
   "layers": [
     {
+      "isBackground": true,
+      "nodes": []
+    },
+    {
       "isBackground": false,
       "nodes": [
         {
