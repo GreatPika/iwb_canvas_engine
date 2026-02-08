@@ -611,6 +611,20 @@ void main() {
     },
   );
 
+  test('hitTestNode includes positive LineNode thickness in world radius', () {
+    final line = LineNode(
+      id: 'line-thickness-radius',
+      start: const Offset(0, 0),
+      end: const Offset(10, 0),
+      thickness: 6,
+      color: const Color(0xFF000000),
+    );
+
+    final mid = line.transform.applyToPoint(const Offset(5, 0));
+    expect(hitTestNode(mid + const Offset(0, 6.9), line), isTrue);
+    expect(hitTestNode(mid + const Offset(0, 7.1), line), isFalse);
+  });
+
   test('hitTestNode LineNode slop is stable under scale', () {
     final line = LineNode(
       id: 'line-scale',
@@ -691,6 +705,18 @@ void main() {
       expect(hitTestNode(mid + Offset(0, total + 0.1), stroke), isFalse);
     },
   );
+
+  test('hitTestNode single-point StrokeNode uses circle distance check', () {
+    final stroke = StrokeNode(
+      id: 'stroke-single-point',
+      points: const <Offset>[Offset(0, 0)],
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+
+    expect(hitTestNode(const Offset(4.9, 0), stroke), isTrue);
+    expect(hitTestNode(const Offset(5.1, 0), stroke), isFalse);
+  });
 
   test(
     'hitTestNode does not over-inflate LineNode hit radius under anisotropic scale',

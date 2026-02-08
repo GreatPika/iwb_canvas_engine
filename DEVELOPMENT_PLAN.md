@@ -42,11 +42,11 @@ Deliver fixes that improve correctness and maintain a small, predictable codebas
   * **Note:** degenerate-transform fallback may stay coarse, but must be documented as a fallback path, not primary semantics.
   * **Exit criteria:** this contract is written in `ARCHITECTURE.md` + covered by tests.
 
-* [ ] **(Gate-2) Grid over-density behavior contract**
+* [x] **(Gate-2) Grid over-density behavior contract**
 
   * **Where:** `lib/src/render/scene_painter.dart`, `lib/src/core/grid_safety_limits.dart`
   * **Chosen contract (fixed): graceful degradation.**
-  * **Implementation rule:** when density exceeds safety limits, draw every Nth line and preserve major lines (no silent full disappearance).
+  * **Implementation rule:** when density exceeds safety limits, draw every Nth line (uniform degradation, no major lines) and avoid silent full disappearance.
   * **Out of scope:** no extra public signal/state and no adaptive-limit logic in this phase.
   * **Exit criteria:** this behavior is documented and testable.
 
@@ -90,7 +90,7 @@ Deliver fixes that improve correctness and maintain a small, predictable codebas
 
 ## Phase 3 — UX/Performance Guardrails
 
-* [ ] **(P3) Grid over-density implementation aligned with Gate-2**
+* [x] **(P3) Grid over-density implementation aligned with Gate-2**
 
   * **Where:** `lib/src/render/scene_painter.dart`, `lib/src/core/grid_safety_limits.dart`
   * **Problem:** grid can disappear silently when line count exceeds cap.
@@ -122,4 +122,4 @@ Deliver fixes that improve correctness and maintain a small, predictable codebas
 * [ ] Controller swap with repeated `NodeId` (ghost-render prevention)
 * [x] Hit-testing under anisotropic scale (locks Gate-1 behavior)
 * [ ] JSON numeric robustness (`1.0` for integer fields)
-* [ ] Grid density behavior (locks Gate-2 behavior)
+* [x] Grid density behavior (locks Gate-2 behavior)

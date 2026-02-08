@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/advanced.dart';
+import 'package:iwb_canvas_engine/src/core/grid_safety_limits.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart'
     as render_internal;
 
@@ -395,7 +396,7 @@ void main() {
   });
 
   test(
-    'ScenePainter skips grid when expected line count exceeds safety cap',
+    'ScenePainter degrades grid when expected line count exceeds safety cap',
     () async {
       // INV:INV-RENDER-GRID-SAFETY-LIMITS
       const background = Color(0xFFFFFFFF);
@@ -416,9 +417,31 @@ void main() {
         imageResolver: (_) => null,
       );
 
-      final image = await _paintToImage(painter, width: 320, height: 80);
+      final image = await _paintToImage(painter, width: 320, height: 320);
       final nonBg = await _countNonBackgroundPixels(image, background);
-      expect(nonBg, 0);
+      expect(nonBg, greaterThan(0));
+
+      final rawLinesX = render_internal.debugGridLineCount(0, 320, 1);
+      final rawLinesY = render_internal.debugGridLineCount(0, 320, 1);
+      final strideX = render_internal.debugGridStrideForLineCount(rawLinesX);
+      final strideY = render_internal.debugGridStrideForLineCount(rawLinesY);
+      final renderedLinesX = render_internal.debugGridRenderedLineCountForLineCount(
+        rawLinesX,
+      );
+      final renderedLinesY = render_internal.debugGridRenderedLineCountForLineCount(
+        rawLinesY,
+      );
+
+      expect(strideX, greaterThan(1));
+      expect(strideY, greaterThan(1));
+      expect(renderedLinesX, lessThan(rawLinesX));
+      expect(renderedLinesY, lessThan(rawLinesY));
+      expect(renderedLinesX, lessThanOrEqualTo(kMaxGridLinesPerAxis));
+      expect(renderedLinesY, lessThanOrEqualTo(kMaxGridLinesPerAxis));
+      expect(
+        renderedLinesX + renderedLinesY,
+        lessThan(rawLinesX + rawLinesY),
+      );
     },
   );
 

@@ -250,6 +250,9 @@ Stable contracts (expected to remain compatible as the package evolves):
     `1` and finite values are clamped to `[0,1]`.
   - Grid rendering treats non-finite / non-positive `cellSize` as "grid disabled"
     even if `grid.enabled == true`.
+  - For over-dense grids, rendering degrades uniformly by drawing every `N`th
+    line per axis so painted line count stays within the safety cap
+    (`kMaxGridLinesPerAxis`); no major/accent lines are used.
   - `SceneController.setCameraOffset(...)` rejects non-finite components with
     `ArgumentError` (camera state is not mutated on rejection).
   - Non-finite transforms are treated as invalid at runtime: `boundsWorld` becomes

@@ -173,14 +173,17 @@ Node types:
 ### `ScenePainter`
 
 1. Draw static layer (background + grid) using a cached `Picture` when available.
+   - Grid over-density is degraded by drawing every `N`th line per axis so
+     painted line count stays within safety cap; the grid is not silently
+     disabled for this case.
 2. Draw layers in order; nodes in order.
    - Each node is rendered by applying `node.transform` (local -> scene/world) and then subtracting `cameraOffset` (scene/world -> view).
 3. Draw selection overlay and selection marquee (if active).
 
 Static layer cache invariants:
 
-- The cache key includes view size, background color, grid settings, camera
-  offset, and grid stroke width.
+- The cache key includes view size, background color, grid settings, and grid
+  stroke width.
 - The cached `Picture` is rebuilt only when the key changes.
 
 ### Images

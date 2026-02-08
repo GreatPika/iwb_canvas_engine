@@ -8,4 +8,7 @@ library;
 const double kMinGridCellSize = 1.0;
 
 /// Maximum number of grid lines per axis that may be painted in one frame.
+///
+/// When raw grid density exceeds this limit, rendering must degrade by
+/// increasing line stride (draw every Nth line) instead of fully skipping grid.
 const int kMaxGridLinesPerAxis = 200;

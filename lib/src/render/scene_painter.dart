@@ -1555,11 +1555,16 @@ void _drawGrid(
     ..strokeWidth = clampNonNegativeFinite(gridStrokeWidth);
   final startX = _gridStart(-cameraOffset.dx, cell);
   final startY = _gridStart(-cameraOffset.dy, cell);
+  final strideX = _gridStrideForLineCount(_gridLineCount(startX, size.width, cell));
+  final strideY =
+      _gridStrideForLineCount(_gridLineCount(startY, size.height, cell));
+  final stepX = cell * strideX;
+  final stepY = cell * strideY;
 
-  for (double x = startX; x <= size.width; x += cell) {
+  for (double x = startX; x <= size.width; x += stepX) {
     canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
   }
-  for (double y = startY; y <= size.height; y += cell) {
+  for (double y = startY; y <= size.height; y += stepY) {
     canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
   }
 }
@@ -1570,15 +1575,11 @@ bool _isGridDrawable(
   required Offset cameraOffset,
 }) {
   if (!grid.isEnabled) return false;
+  if (!size.width.isFinite || !size.height.isFinite) return false;
+  if (!cameraOffset.dx.isFinite || !cameraOffset.dy.isFinite) return false;
   final cell = grid.cellSize;
   if (!cell.isFinite || cell < kMinGridCellSize) return false;
-
-  final startX = _gridStart(-cameraOffset.dx, cell);
-  final startY = _gridStart(-cameraOffset.dy, cell);
-  final verticalLines = _gridLineCount(startX, size.width, cell);
-  final horizontalLines = _gridLineCount(startY, size.height, cell);
-  return verticalLines <= kMaxGridLinesPerAxis &&
-      horizontalLines <= kMaxGridLinesPerAxis;
+  return true;
 }
 
 int _gridLineCount(double start, double extent, double cell) {
@@ -1590,9 +1591,29 @@ int _gridLineCount(double start, double extent, double cell) {
   return count < 0 ? 0 : count;
 }
 
+int _gridStrideForLineCount(int lineCount) {
+  if (lineCount <= 0) return 1;
+  final stride = (lineCount / kMaxGridLinesPerAxis).ceil();
+  return stride < 1 ? 1 : stride;
+}
+
+int _gridRenderedLineCountForLineCount(int lineCount) {
+  if (lineCount <= 0) return 0;
+  final stride = _gridStrideForLineCount(lineCount);
+  return ((lineCount - 1) ~/ stride) + 1;
+}
+
 @visibleForTesting
 int debugGridLineCount(double start, double extent, double cell) =>
     _gridLineCount(start, extent, cell);
+
+@visibleForTesting
+int debugGridStrideForLineCount(int lineCount) =>
+    _gridStrideForLineCount(lineCount);
+
+@visibleForTesting
+int debugGridRenderedLineCountForLineCount(int lineCount) =>
+    _gridRenderedLineCountForLineCount(lineCount);
 
 double _gridStart(double offset, double cell) {
   final remainder = offset % cell;

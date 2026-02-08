@@ -105,7 +105,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-RENDER-GRID-SAFETY-LIMITS',
     scope: 'render',
     title:
-        'Grid rendering/input enforce safety limits (min cell size clamp, max line cap skip)',
+        'Grid rendering/input enforce safety limits (min cell size clamp, max line cap via density degradation)',
   ),
   Invariant(
     id: 'INV-RENDER-TEXT-DIRECTION-ALIGNMENT',
