@@ -47,6 +47,35 @@ void main() {
     expect(cache.debugBuildCount, 2);
   });
 
+  test('SceneTextLayoutCache key includes textDirection', () {
+    // INV:INV-RENDER-TEXT-DIRECTION-ALIGNMENT
+    final cache = SceneTextLayoutCache(maxEntries: 8);
+    final node = TextNode(
+      id: 't-dir',
+      text: 'Hello',
+      size: const ui.Size(100, 20),
+      fontSize: 14,
+      color: const ui.Color(0xFF000000),
+    );
+    final style = const TextStyle(fontSize: 14, color: ui.Color(0xFF000000));
+
+    final ltr = cache.getOrBuild(
+      node: node,
+      textStyle: style,
+      maxWidth: 100,
+      textDirection: TextDirection.ltr,
+    );
+    final rtl = cache.getOrBuild(
+      node: node,
+      textStyle: style,
+      maxWidth: 100,
+      textDirection: TextDirection.rtl,
+    );
+
+    expect(identical(ltr, rtl), isFalse);
+    expect(cache.debugBuildCount, 2);
+  });
+
   test('SceneTextLayoutCache key includes valid lineHeight', () {
     // INV:INV-CORE-RUNTIME-NUMERIC-SANITIZATION
     final cache = SceneTextLayoutCache(maxEntries: 8);

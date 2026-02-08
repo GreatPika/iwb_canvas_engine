@@ -122,6 +122,7 @@ class SceneTextLayoutCache {
     required TextNode node,
     required TextStyle textStyle,
     required double maxWidth,
+    TextDirection textDirection = TextDirection.ltr,
   }) {
     final safeFontSize = clampPositiveFinite(node.fontSize, fallback: 24.0);
     final safeBoxSize = clampNonNegativeSizeFinite(node.size);
@@ -145,6 +146,7 @@ class SceneTextLayoutCache {
       maxWidth: safeMaxWidth,
       boxSize: safeBoxSize,
       color: textStyle.color ?? const Color(0xFF000000),
+      textDirection: textDirection,
     );
 
     final cached = _entries.remove(key);
@@ -157,7 +159,7 @@ class SceneTextLayoutCache {
     final textPainter = TextPainter(
       text: TextSpan(text: node.text, style: textStyle),
       textAlign: node.align,
-      textDirection: TextDirection.ltr,
+      textDirection: textDirection,
       maxLines: null,
     );
     textPainter.layout(maxWidth: safeMaxWidth);
@@ -189,6 +191,7 @@ class _TextLayoutKey {
     required this.maxWidth,
     required this.boxSize,
     required this.color,
+    required this.textDirection,
   });
 
   final NodeId nodeId;
@@ -203,6 +206,7 @@ class _TextLayoutKey {
   final double maxWidth;
   final Size boxSize;
   final Color color;
+  final TextDirection textDirection;
 
   @override
   bool operator ==(Object other) {
@@ -218,7 +222,8 @@ class _TextLayoutKey {
         other.lineHeight == lineHeight &&
         other.maxWidth == maxWidth &&
         other.boxSize == boxSize &&
-        other.color == color;
+        other.color == color &&
+        other.textDirection == textDirection;
   }
 
   @override
@@ -235,6 +240,7 @@ class _TextLayoutKey {
     maxWidth,
     boxSize,
     color,
+    textDirection,
   );
 }
 
@@ -278,6 +284,7 @@ class ScenePainter extends CustomPainter {
     this.gridStrokeWidth = 1,
     this.devicePixelRatio = 1,
     this.thinLineSnapStrategy = ThinLineSnapStrategy.autoAxisAlignedThin,
+    this.textDirection = TextDirection.ltr,
   }) : super(repaint: controller);
 
   final SceneController controller;
@@ -290,6 +297,7 @@ class ScenePainter extends CustomPainter {
   final double gridStrokeWidth;
   final double devicePixelRatio;
   final ThinLineSnapStrategy thinLineSnapStrategy;
+  final TextDirection textDirection;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -371,7 +379,8 @@ class ScenePainter extends CustomPainter {
         oldSelectionStrokeWidth != newSelectionStrokeWidth ||
         oldGridStrokeWidth != newGridStrokeWidth ||
         oldDevicePixelRatio != newDevicePixelRatio ||
-        oldDelegate.thinLineSnapStrategy != thinLineSnapStrategy;
+        oldDelegate.thinLineSnapStrategy != thinLineSnapStrategy ||
+        oldDelegate.textDirection != textDirection;
   }
 
   List<SceneNode> _drawLayers(
@@ -611,16 +620,17 @@ class ScenePainter extends CustomPainter {
 
       Path? closedContours;
       final openContours = <Path>[];
+      final selectionFillType = _pathFillType(node.fillRule);
       for (final metric in metrics) {
         final contour = metric.extractPath(
           0,
           metric.length,
           startWithMoveTo: true,
         );
-        contour.fillType = PathFillType.nonZero;
+        contour.fillType = selectionFillType;
         if (metric.isClosed) {
           contour.close();
-          closedContours ??= Path()..fillType = PathFillType.nonZero;
+          closedContours ??= Path()..fillType = selectionFillType;
           closedContours.addPath(contour, Offset.zero);
         } else {
           openContours.add(contour);
@@ -882,11 +892,12 @@ class ScenePainter extends CustomPainter {
             node: node,
             textStyle: textStyle,
             maxWidth: safeMaxWidth,
+            textDirection: textDirection,
           )
         : (TextPainter(
             text: TextSpan(text: node.text, style: textStyle),
             textAlign: node.align,
-            textDirection: TextDirection.ltr,
+            textDirection: textDirection,
             maxLines: null,
           )..layout(maxWidth: safeMaxWidth));
 
@@ -897,7 +908,12 @@ class ScenePainter extends CustomPainter {
       height: safeBoxSize.height,
     );
 
-    final dx = _textAlignOffset(node.align, box.width, textPainter.width);
+    final dx = _textAlignOffset(
+      node.align,
+      box.width,
+      textPainter.width,
+      textDirection,
+    );
     final dy = (box.height - textPainter.height) / 2;
     final offset = Offset(box.left + dx, box.top + dy);
     textPainter.paint(canvas, offset);
@@ -905,17 +921,24 @@ class ScenePainter extends CustomPainter {
     canvas.restore();
   }
 
-  double _textAlignOffset(TextAlign align, double boxWidth, double textWidth) {
+  double _textAlignOffset(
+    TextAlign align,
+    double boxWidth,
+    double textWidth,
+    TextDirection textDirection,
+  ) {
     switch (align) {
       case TextAlign.right:
-      case TextAlign.end:
         return boxWidth - textWidth;
+      case TextAlign.end:
+        return textDirection == TextDirection.rtl ? 0 : boxWidth - textWidth;
       case TextAlign.center:
         return (boxWidth - textWidth) / 2;
       case TextAlign.left:
+        return 0;
       case TextAlign.start:
       case TextAlign.justify:
-        return 0;
+        return textDirection == TextDirection.rtl ? boxWidth - textWidth : 0;
     }
   }
 
@@ -1204,6 +1227,12 @@ Path _buildStrokePath(List<Offset> points) {
     path.lineTo(p.dx, p.dy);
   }
   return path;
+}
+
+PathFillType _pathFillType(PathFillRule rule) {
+  return rule == PathFillRule.evenOdd
+      ? PathFillType.evenOdd
+      : PathFillType.nonZero;
 }
 
 /// Cache for the static scene layer (background + grid).

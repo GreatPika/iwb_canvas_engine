@@ -116,6 +116,45 @@ Future<double> _inkCentroidY(Image image, Color background) async {
   return weightedY / totalInk;
 }
 
+Future<double> _inkCentroidX(Image image, Color background) async {
+  final data = await image.toByteData(format: ImageByteFormat.rawRgba);
+  if (data == null) {
+    throw StateError('Failed to encode image to raw RGBA.');
+  }
+  final bytes = data.buffer.asUint8List();
+  final argb = background.toARGB32();
+  final bgR = (argb >> 16) & 0xFF;
+  final bgG = (argb >> 8) & 0xFF;
+  final bgB = argb & 0xFF;
+
+  double weightedX = 0;
+  double totalInk = 0;
+  for (var y = 0; y < image.height; y++) {
+    for (var x = 0; x < image.width; x++) {
+      final index = (y * image.width + x) * 4;
+      final dr = (bytes[index] - bgR).abs();
+      final dg = (bytes[index + 1] - bgG).abs();
+      final db = (bytes[index + 2] - bgB).abs();
+      final ink = (dr + dg + db).toDouble();
+      if (ink <= 0) continue;
+      weightedX += x * ink;
+      totalInk += ink;
+    }
+  }
+  if (totalInk == 0) {
+    throw StateError('Expected non-background pixels.');
+  }
+  return weightedX / totalInk;
+}
+
+Future<List<int>> _rawRgbaBytes(Image image) async {
+  final data = await image.toByteData(format: ImageByteFormat.rawRgba);
+  if (data == null) {
+    throw StateError('Failed to encode image to raw RGBA.');
+  }
+  return data.buffer.asUint8List();
+}
+
 class _EmptyMetricsPathNode extends PathNode {
   _EmptyMetricsPathNode({required super.id, required super.svgPathData});
 
@@ -611,6 +650,143 @@ void main() {
     expect(leftHalo, isNot(background));
     expect(rightHalo, isNot(background));
   });
+
+  test('ScenePainter resolves TextAlign.start by textDirection', () async {
+    // INV:INV-RENDER-TEXT-DIRECTION-ALIGNMENT
+    const background = Color(0xFFFFFFFF);
+    Scene sceneFor(TextDirection direction) => Scene(
+      background: Background(color: background),
+      layers: [
+        Layer(
+          nodes: [
+            TextNode(
+              id: 'text-start-$direction',
+              text: 'Start',
+              size: const Size(120, 28),
+              fontSize: 20,
+              color: const Color(0xFF000000),
+              align: TextAlign.start,
+            )..position = const Offset(80, 40),
+          ],
+        ),
+      ],
+    );
+
+    final ltrImage = await _paintToImage(
+      ScenePainter(
+        controller: _controllerFor(sceneFor(TextDirection.ltr)),
+        imageResolver: (_) => null,
+        textDirection: TextDirection.ltr,
+      ),
+      width: 160,
+      height: 80,
+    );
+    final rtlImage = await _paintToImage(
+      ScenePainter(
+        controller: _controllerFor(sceneFor(TextDirection.rtl)),
+        imageResolver: (_) => null,
+        textDirection: TextDirection.rtl,
+      ),
+      width: 160,
+      height: 80,
+    );
+
+    final ltrCenterX = await _inkCentroidX(ltrImage, background);
+    final rtlCenterX = await _inkCentroidX(rtlImage, background);
+    expect(rtlCenterX, greaterThan(ltrCenterX));
+  });
+
+  test('ScenePainter resolves TextAlign.end by textDirection', () async {
+    // INV:INV-RENDER-TEXT-DIRECTION-ALIGNMENT
+    const background = Color(0xFFFFFFFF);
+    Scene sceneFor(TextDirection direction) => Scene(
+      background: Background(color: background),
+      layers: [
+        Layer(
+          nodes: [
+            TextNode(
+              id: 'text-end-$direction',
+              text: 'End',
+              size: const Size(120, 28),
+              fontSize: 20,
+              color: const Color(0xFF000000),
+              align: TextAlign.end,
+            )..position = const Offset(80, 40),
+          ],
+        ),
+      ],
+    );
+
+    final ltrImage = await _paintToImage(
+      ScenePainter(
+        controller: _controllerFor(sceneFor(TextDirection.ltr)),
+        imageResolver: (_) => null,
+        textDirection: TextDirection.ltr,
+      ),
+      width: 160,
+      height: 80,
+    );
+    final rtlImage = await _paintToImage(
+      ScenePainter(
+        controller: _controllerFor(sceneFor(TextDirection.rtl)),
+        imageResolver: (_) => null,
+        textDirection: TextDirection.rtl,
+      ),
+      width: 160,
+      height: 80,
+    );
+
+    final ltrCenterX = await _inkCentroidX(ltrImage, background);
+    final rtlCenterX = await _inkCentroidX(rtlImage, background);
+    expect(rtlCenterX, lessThan(ltrCenterX));
+  });
+
+  test(
+    'ScenePainter selection halo honors PathNode.fillRule for inner contour',
+    () async {
+      // INV:INV-RENDER-PATH-SELECTION-FILLRULE
+      final evenOddPath = PathNode(
+        id: 'path-even-odd',
+        svgPathData: 'M0 0 H40 V30 H0 Z M12 8 H28 V22 H12 Z',
+        fillRule: PathFillRule.evenOdd,
+      )..position = const Offset(50, 50);
+      final nonZeroPath = PathNode(
+        id: 'path-non-zero',
+        svgPathData: 'M0 0 H40 V30 H0 Z M12 8 H28 V22 H12 Z',
+        fillRule: PathFillRule.nonZero,
+      )..position = const Offset(50, 50);
+
+      Future<Image> renderSelectedPath(PathNode node) async {
+        final scene = Scene(
+          background: Background(color: const Color(0xFFFFFFFF)),
+          layers: [
+            Layer(nodes: [node]),
+          ],
+        );
+        return _paintToImage(
+          ScenePainter(
+            controller: _controllerFor(scene, selectedNodeIds: {node.id}),
+            imageResolver: (_) => null,
+            selectionColor: const Color(0xFFFF0000),
+            selectionStrokeWidth: 3,
+          ),
+          width: 100,
+          height: 100,
+        );
+      }
+
+      final evenOddImage = await renderSelectedPath(evenOddPath);
+      final nonZeroImage = await renderSelectedPath(nonZeroPath);
+      final evenOddBytes = await _rawRgbaBytes(evenOddImage);
+      final nonZeroBytes = await _rawRgbaBytes(nonZeroImage);
+
+      expect(evenOddBytes.length, equals(nonZeroBytes.length));
+      final differs = evenOddBytes.asMap().entries.any(
+        (entry) => entry.value != nonZeroBytes[entry.key],
+      );
+      expect(differs, isTrue);
+    },
+  );
 
   test(
     'ScenePainter draws all node variants and respects visibility',

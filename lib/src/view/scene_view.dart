@@ -212,6 +212,7 @@ class _SceneViewState extends State<SceneView> {
   Widget build(BuildContext context) {
     final view = View.maybeOf(context);
     final devicePixelRatio = view?.devicePixelRatio ?? 1.0;
+    final textDirection = Directionality.maybeOf(context) ?? TextDirection.ltr;
     return Listener(
       behavior: HitTestBehavior.opaque,
       onPointerDown: (event) => _handlePointerEvent(event, PointerPhase.down),
@@ -231,6 +232,7 @@ class _SceneViewState extends State<SceneView> {
           gridStrokeWidth: widget.gridStrokeWidth,
           devicePixelRatio: devicePixelRatio,
           thinLineSnapStrategy: widget.thinLineSnapStrategy,
+          textDirection: textDirection,
         ),
         child: const SizedBox.expand(),
       ),

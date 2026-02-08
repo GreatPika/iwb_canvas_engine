@@ -108,6 +108,18 @@ const List<Invariant> invariants = <Invariant>[
         'Grid rendering/input enforce safety limits (min cell size clamp, max line cap skip)',
   ),
   Invariant(
+    id: 'INV-RENDER-TEXT-DIRECTION-ALIGNMENT',
+    scope: 'render',
+    title:
+        'SceneView/ScenePainter/SceneTextLayoutCache honor TextDirection for TextAlign.start/end layout and painting.',
+  ),
+  Invariant(
+    id: 'INV-RENDER-PATH-SELECTION-FILLRULE',
+    scope: 'render',
+    title:
+        'PathNode selection highlight uses node.fillRule (evenOdd/nonZero) consistently for closed contours.',
+  ),
+  Invariant(
     id: 'INV-SIGNALS-BROADCAST-SYNC',
     scope: 'signals',
     title: 'signal streams stay broadcast(sync: true)',

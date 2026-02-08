@@ -61,6 +61,9 @@ Prefer importing the smallest API surface that fits your use case:
   are not clickable for fill), and stroke uses a coarse AABB tolerance
   (stage A).
   Invalid/unbuildable SVG path data is non-interactive in hit-testing.
+- **Text direction and alignment**: `SceneView` forwards ambient
+  `Directionality` to `ScenePainter`. `TextAlign.start`/`TextAlign.end`
+  resolve according to that direction (`ltr`/`rtl`).
 - **Background interaction policy**: background-layer nodes are render-only for
   selection/delete paths (`selectAll`, marquee, transform helpers, and
   `deleteSelection`).

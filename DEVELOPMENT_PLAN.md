@@ -357,7 +357,7 @@ Goal: one active pointer policy; no spurious double taps; no timer storms.
 
 Goal: scalability on large scenes and long gestures; reduce unnecessary work; fix visual/text correctness.
 
-28. [ ] **(#13) RTL languages broken: text always LTR; start/end alignment wrong**
+28. [x] **(#13) RTL languages broken: text always LTR; start/end alignment wrong**
     **Where:** `ScenePainter`, `SceneTextLayoutCache`, data passed from `SceneView`
     **Do:**
 
@@ -365,7 +365,7 @@ Goal: scalability on large scenes and long gestures; reduce unnecessary work; fi
 * Make start/end alignment depend on direction.
   **Done when:** RTL sample/test renders and aligns correctly.
 
-29. [ ] **(#14) PathNode selection highlight ignores `fillRule` (always nonZero)**
+29. [x] **(#14) PathNode selection highlight ignores `fillRule` (always nonZero)**
     **Where:** `_drawSelectionForNode(PathNode)`
     **Do:**
 

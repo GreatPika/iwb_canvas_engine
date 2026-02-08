@@ -172,6 +172,8 @@ Stable contracts (expected to remain compatible as the package evolves):
     - Stroke uses a coarse AABB check (stage A) with tolerance
       `boundsWorld.inflate(hitPadding + kHitSlop)` in scene units (stroke thickness is already
       included in `boundsWorld` via `PathNode.localBounds`).
+    - Selection highlight for closed contours follows `PathNode.fillRule`
+      (`nonZero` / `evenOdd`) for consistent hole behavior.
     - Invalid/unbuildable SVG path data is non-interactive at runtime
       (`buildLocalPath() == null` => no hit).
 - **List ownership:** `Scene(layers: ...)` and `Layer(nodes: ...)` defensively copy
@@ -501,6 +503,9 @@ if (node != null) {
 Gotchas:
 - `TextNode.size` is the layout box used for alignment/hit-test/selection. The engine does **not**
   auto-resize it when text/style changes. If you need auto-fit, recompute in the app.
+- `TextAlign.start` / `TextAlign.end` follow ambient `Directionality`
+  (`TextDirection.ltr` / `TextDirection.rtl`) provided by the widget tree
+  around `SceneView`.
 
 Relevant APIs:
 - `SceneController.editTextRequests` — `lib/src/input/scene_controller.dart`

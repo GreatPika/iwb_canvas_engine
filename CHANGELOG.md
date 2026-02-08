@@ -1,5 +1,10 @@
 ## Unreleased
 
+- Render/View: `SceneView` now forwards ambient `Directionality` to
+  `ScenePainter`; text layout and painting resolve `TextAlign.start/end`
+  according to `TextDirection` (LTR/RTL).
+- Render: `PathNode` selection highlight now respects `fillRule`
+  (`evenOdd`/`nonZero`) for closed contours.
 - Input/View: harden multitouch signal policy and pending-tap scheduling.
   `PointerInputTracker` now correlates double-tap by `pointerId` (not device
   kind), `SceneView` ignores tap/double-tap candidates from non-active

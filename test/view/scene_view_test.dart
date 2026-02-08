@@ -252,6 +252,44 @@ void main() {
     expect(painter.thinLineSnapStrategy, ThinLineSnapStrategy.none);
   });
 
+  testWidgets('SceneView forwards Directionality to ScenePainter', (
+    tester,
+  ) async {
+    // INV:INV-RENDER-TEXT-DIRECTION-ALIGNMENT
+    final controller = SceneController(scene: Scene(layers: [Layer()]));
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 200,
+          height: 100,
+          child: SceneView(controller: controller),
+        ),
+      ),
+    );
+    final ltrPaint = tester.renderObject<rendering.RenderCustomPaint>(
+      find.byType(CustomPaint),
+    );
+    expect((ltrPaint.painter as ScenePainter).textDirection, TextDirection.ltr);
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.rtl,
+        child: SizedBox(
+          width: 200,
+          height: 100,
+          child: SceneView(controller: controller),
+        ),
+      ),
+    );
+    final rtlPaint = tester.renderObject<rendering.RenderCustomPaint>(
+      find.byType(CustomPaint),
+    );
+    expect((rtlPaint.painter as ScenePainter).textDirection, TextDirection.rtl);
+  });
+
   testWidgets('SceneView creates internal controller when missing', (
     tester,
   ) async {
