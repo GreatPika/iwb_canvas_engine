@@ -154,6 +154,17 @@ const List<Invariant> invariants = <Invariant>[
     title: 'setSelection defaults to coalesced repaint (not immediate notify)',
   ),
   Invariant(
+    id: 'INV-SELECTION-STRICT-INTERACTIVE-IDS',
+    scope: 'selection',
+    title:
+        'selection normalization keeps only interactive ids (existing, non-background, visible, selectable)',
+  ),
+  Invariant(
+    id: 'INV-SELECTION-UNORDERED-SET',
+    scope: 'selection',
+    title: 'selection storage is order-insensitive (unordered set semantics)',
+  ),
+  Invariant(
     id: 'INV-SELECTION-CLEARSELECTION-IMMEDIATE',
     scope: 'selection',
     title: 'clearSelection remains an immediate notify',
@@ -175,6 +186,12 @@ const List<Invariant> invariants = <Invariant>[
     scope: 'commands',
     title:
         'addNode default target layer is the first non-background layer (created when absent)',
+  ),
+  Invariant(
+    id: 'INV-COMMANDS-CLEARSCENE-KEEP-ONLY-BACKGROUND',
+    scope: 'commands',
+    title:
+        'clearScene keeps exactly one background layer at index 0 and removes all non-background layers',
   ),
 
   // Serialization.

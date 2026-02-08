@@ -445,6 +445,7 @@ void main() {
   test(
     'deleteSelection never deletes background nodes even if id injected',
     () {
+      // INV:INV-SELECTION-STRICT-INTERACTIVE-IDS
       final backgroundNode = rectNode('bg', const Offset(0, 0));
       final foregroundNode = rectNode('fg', const Offset(10, 0));
       final scene = Scene(
@@ -461,11 +462,12 @@ void main() {
 
       expect(scene.layers.first.nodes.map((node) => node.id), <String>['bg']);
       expect(firstNonBackgroundLayer(scene).nodes, isEmpty);
-      expect(controller.selectedNodeIds, const <NodeId>{'bg'});
+      expect(controller.selectedNodeIds, isEmpty);
     },
   );
 
   test('clearScene removes nodes from non-background layers', () {
+    // INV:INV-COMMANDS-CLEARSCENE-KEEP-ONLY-BACKGROUND
     final background = Layer(
       isBackground: true,
       nodes: [rectNode('bg', const Offset(0, 0))],
@@ -481,7 +483,46 @@ void main() {
 
     controller.clearScene(timestampMs: 10);
 
+    expect(scene.layers, hasLength(1));
+    expect(scene.layers.first.isBackground, isTrue);
     expect(scene.layers.first.nodes, hasLength(1));
-    expect(scene.layers.last.nodes, isEmpty);
   });
+
+  test('clearScene keeps only background layer without no-op action', () {
+    final scene = Scene(layers: [Layer(isBackground: true), Layer(), Layer()]);
+    final controller = SceneController(scene: scene);
+    addTearDown(controller.dispose);
+
+    final actions = <ActionCommitted>[];
+    final sub = controller.actions.listen(actions.add);
+    addTearDown(sub.cancel);
+
+    controller.clearScene();
+
+    expect(scene.layers, hasLength(1));
+    expect(scene.layers.first.isBackground, isTrue);
+    expect(actions, isEmpty);
+  });
+
+  test(
+    'clearScene throws when scene is externally corrupted by backgrounds',
+    () {
+      final scene = Scene(layers: [Layer(isBackground: true), Layer()]);
+      final controller = SceneController(scene: scene);
+      addTearDown(controller.dispose);
+
+      scene.layers.insert(1, Layer(isBackground: true));
+
+      expect(
+        () => controller.clearScene(),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            contains('at most one background layer'),
+          ),
+        ),
+      );
+    },
+  );
 }

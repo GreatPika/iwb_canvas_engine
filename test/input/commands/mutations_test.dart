@@ -6,6 +6,7 @@ import 'package:iwb_canvas_engine/advanced.dart';
 // INV:INV-COMMANDS-STRUCTURAL-NOTIFYSCENECHANGED
 // INV:INV-COMMANDS-MUTATE-STRUCTURAL-EXPLICIT
 // INV:INV-INPUT-BACKGROUND-NONINTERACTIVE-NONDELETABLE
+// INV:INV-SELECTION-STRICT-INTERACTIVE-IDS
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -382,6 +383,119 @@ void main() {
     expect(controller.selectedNodeIds, contains('r1'));
   });
 
+  testWidgets('setSelection keeps only interactive node ids', (tester) async {
+    final visibleSelectable = RectNode(
+      id: 'interactive',
+      size: const Size(10, 10),
+      fillColor: const Color(0xFF000000),
+      isSelectable: true,
+      isVisible: true,
+    )..position = const Offset(10, 0);
+    final backgroundNode = RectNode(
+      id: 'background',
+      size: const Size(10, 10),
+      fillColor: const Color(0xFF000000),
+      isSelectable: true,
+      isVisible: true,
+    )..position = const Offset(0, 0);
+    final hidden = RectNode(
+      id: 'hidden',
+      size: const Size(10, 10),
+      fillColor: const Color(0xFF000000),
+      isSelectable: true,
+      isVisible: false,
+    )..position = const Offset(20, 0);
+    final nonSelectable = RectNode(
+      id: 'not-selectable',
+      size: const Size(10, 10),
+      fillColor: const Color(0xFF000000),
+      isSelectable: false,
+      isVisible: true,
+    )..position = const Offset(30, 0);
+
+    final controller = SceneController(
+      scene: Scene(
+        layers: [
+          Layer(isBackground: true, nodes: [backgroundNode]),
+          Layer(nodes: [visibleSelectable, hidden, nonSelectable]),
+        ],
+      ),
+    );
+    addTearDown(controller.dispose);
+
+    controller.setSelection(const <NodeId>[
+      'background',
+      'hidden',
+      'not-selectable',
+      'unknown',
+      'interactive',
+      'interactive',
+    ]);
+    await tester.pump();
+
+    expect(controller.selectedNodeIds, const <NodeId>{'interactive'});
+  });
+
+  testWidgets('toggleSelection ignores non-interactive ids', (tester) async {
+    final backgroundNode = RectNode(
+      id: 'background',
+      size: const Size(10, 10),
+      fillColor: const Color(0xFF000000),
+      isSelectable: true,
+      isVisible: true,
+    )..position = const Offset(0, 0);
+    final hidden = RectNode(
+      id: 'hidden',
+      size: const Size(10, 10),
+      fillColor: const Color(0xFF000000),
+      isSelectable: true,
+      isVisible: false,
+    )..position = const Offset(20, 0);
+
+    final controller = SceneController(
+      scene: Scene(
+        layers: [
+          Layer(isBackground: true, nodes: [backgroundNode]),
+          Layer(nodes: [hidden]),
+        ],
+      ),
+    );
+    addTearDown(controller.dispose);
+
+    controller.toggleSelection('background');
+    controller.toggleSelection('hidden');
+    controller.toggleSelection('unknown');
+    await tester.pump();
+
+    expect(controller.selectedNodeIds, isEmpty);
+  });
+
+  test('notifySceneChanged drops ids that become non-interactive', () {
+    final node = RectNode(
+      id: 'r1',
+      size: const Size(10, 10),
+      fillColor: const Color(0xFF000000),
+      isSelectable: true,
+      isVisible: true,
+    )..position = const Offset(0, 0);
+    final controller = SceneController(
+      scene: Scene(
+        layers: [
+          Layer(nodes: [node]),
+        ],
+      ),
+    );
+    addTearDown(controller.dispose);
+
+    controller.setSelection(const <NodeId>{'r1'});
+    expect(controller.selectedNodeIds, const <NodeId>{'r1'});
+
+    node.isSelectable = false;
+    controller.notifySceneChanged();
+
+    expect(controller.selectedNodeIds, isEmpty);
+  });
+
   testWidgets('toggleSelection toggles selection for a node', (tester) async {
     final node = RectNode(
       id: 'r1',
@@ -413,7 +527,7 @@ void main() {
     expect(notifications, 2);
   });
 
-  testWidgets('selectAll respects visibility and selectability', (
+  testWidgets('selectAll keeps only interactive nodes under strict policy', (
     tester,
   ) async {
     final selectableVisible = RectNode(
@@ -454,7 +568,7 @@ void main() {
 
     controller.selectAll(onlySelectable: false);
     await tester.pump();
-    expect(controller.selectedNodeIds, {'n1', 'n2'});
+    expect(controller.selectedNodeIds, {'n1'});
   });
 
   testWidgets('selectAll never includes background layer nodes', (

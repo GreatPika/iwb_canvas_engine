@@ -1,5 +1,11 @@
 ## Unreleased
 
+- Input: `setSelection(...)` / `toggleSelection(...)` now strictly normalize to
+  interactive ids only (existing + non-background + visible + selectable).
+- Input: selection contract is now explicitly unordered-set semantics; code and
+  tests no longer rely on iteration order.
+- Input: `clearScene()` now canonicalizes layer structure to exactly one
+  background layer at index `0` (removes all non-background layers).
 - Input: enforce a single background interaction policy in move/selection/delete
   paths (background nodes are non-interactive and non-deletable even when ids
   are injected).

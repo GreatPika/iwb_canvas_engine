@@ -6,12 +6,12 @@ import '../../../core/nodes.dart';
 /// Selection state for the input pipeline.
 ///
 /// This slice owns:
-/// - selected node IDs (stable iteration order)
+/// - selected node IDs (unordered set semantics)
 /// - marquee selection rectangle (scene coordinates)
 /// - a monotonically increasing selection-set revision
 /// - a monotonically increasing marquee-rect revision
 class SelectionModel {
-  final LinkedHashSet<NodeId> _selectedNodeIds = LinkedHashSet<NodeId>();
+  final HashSet<NodeId> _selectedNodeIds = HashSet<NodeId>();
   late final Set<NodeId> _selectedNodeIdsView = UnmodifiableSetView(
     _selectedNodeIds,
   );
@@ -26,7 +26,7 @@ class SelectionModel {
   int get selectionRectRevision => _selectionRectRevision;
 
   bool setSelection(Iterable<NodeId> nodeIds) {
-    final next = LinkedHashSet<NodeId>.from(nodeIds);
+    final next = HashSet<NodeId>.from(nodeIds);
     if (_selectedNodeIds.length == next.length &&
         _selectedNodeIds.containsAll(next)) {
       return false;

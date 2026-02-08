@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import '../../../core/background_layer_invariants.dart';
 import '../../../core/nodes.dart';
 import '../../../core/scene.dart';
 import '../../../core/transform2d.dart';
@@ -352,14 +353,23 @@ class SceneCommands {
   }
 
   void clearScene({int? timestampMs}) {
+    canonicalizeBackgroundLayerInvariants(
+      _contracts.scene.layers,
+      onMultipleBackgroundError: (count) {
+        throw StateError(
+          'clearScene requires at most one background layer; found $count.',
+        );
+      },
+    );
+
     final clearedIds = <NodeId>[];
-    for (final layer in _contracts.scene.layers) {
-      if (layer.isBackground) continue;
-      for (final node in layer.nodes) {
+    final layers = _contracts.scene.layers;
+    for (var layerIndex = 1; layerIndex < layers.length; layerIndex++) {
+      for (final node in layers[layerIndex].nodes) {
         clearedIds.add(node.id);
       }
-      layer.nodes.clear();
     }
+    layers.removeRange(1, layers.length);
 
     if (clearedIds.isEmpty) return;
     _contracts.setSelection(const <NodeId>[], notify: false);

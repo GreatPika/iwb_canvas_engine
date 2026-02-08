@@ -11,6 +11,7 @@ import '../core/background_layer_invariants.dart';
 import '../core/scene.dart';
 import 'action_events.dart';
 import 'internal/contracts.dart';
+import 'internal/node_interaction_policy.dart';
 import 'internal/selection_geometry.dart';
 import 'pointer_input.dart';
 import 'slices/commands/scene_commands.dart';
@@ -188,6 +189,8 @@ class SceneController extends ChangeNotifier {
   PointerInputSettings get pointerSettings => _inputConfig.pointerSettings;
 
   /// Current selection snapshot.
+  ///
+  /// The returned set is unordered; iteration order is not guaranteed.
   Set<NodeId> get selectedNodeIds => _selectionModel.selectedNodeIds;
 
   @visibleForTesting
@@ -541,11 +544,15 @@ class SceneController extends ChangeNotifier {
   /// Replaces the selection with [nodeIds].
   ///
   /// This is intended for app-driven selection UIs (layers panel, object list).
+  /// Input is normalized to interactive ids only (existing, non-background,
+  /// visible, selectable).
   void setSelection(Iterable<NodeId> nodeIds) {
     _sceneCommands.setSelection(nodeIds);
   }
 
   /// Toggles selection for a single node [id].
+  ///
+  /// Non-interactive ids are ignored.
   void toggleSelection(NodeId id) {
     _sceneCommands.toggleSelection(id);
   }
@@ -580,7 +587,9 @@ class SceneController extends ChangeNotifier {
     _sceneCommands.deleteSelection(timestampMs: timestampMs);
   }
 
-  /// Clears all non-background layers and emits an action.
+  /// Clears all non-background content.
+  ///
+  /// After completion, the scene keeps exactly one background layer at index 0.
   void clearScene({int? timestampMs}) {
     _sceneCommands.clearScene(timestampMs: timestampMs);
   }
@@ -641,13 +650,34 @@ class SceneController extends ChangeNotifier {
   }
 
   bool _setSelection(Iterable<NodeId> nodeIds, {bool notify = true}) {
-    final didChange = _selectionModel.setSelection(nodeIds);
+    final normalizedNodeIds = _normalizeSelectionNodeIds(nodeIds);
+    final didChange = _selectionModel.setSelection(normalizedNodeIds);
     if (!didChange) return false;
     _contracts.markSelectionChanged();
     if (notify) {
       _contracts.requestRepaintOncePerFrame();
     }
     return true;
+  }
+
+  Set<NodeId> _normalizeSelectionNodeIds(Iterable<NodeId> nodeIds) {
+    final interactiveIds = <NodeId>{};
+    for (final layer in scene.layers) {
+      for (final node in layer.nodes) {
+        if (!isNodeInteractiveForSelection(node, layer, onlySelectable: true)) {
+          continue;
+        }
+        interactiveIds.add(node.id);
+      }
+    }
+
+    final normalized = <NodeId>{};
+    for (final id in nodeIds) {
+      if (interactiveIds.contains(id)) {
+        normalized.add(id);
+      }
+    }
+    return normalized;
   }
 
   void _setSelectionRect(Rect? rect, {bool notify = true}) {

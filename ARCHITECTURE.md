@@ -107,6 +107,8 @@ lib/
 - For scenes managed by `SceneController`, constructor canonicalization keeps a
   single background layer at index `0` (missing/misordered background is fixed;
   multiple background layers are rejected).
+- `clearScene()` canonicalizes runtime layer structure to that same invariant:
+  exactly one background layer at index `0` and no non-background layers.
 
 ### Nodes
 
@@ -134,6 +136,10 @@ Node types:
 ### Selection
 
 - Selection is a set of `nodeIds`.
+- Selection storage is unordered; iteration order is not part of the contract.
+- `setSelection(...)` / `toggleSelection(...)` normalize input to interactive
+  node ids only: existing ids in non-background layers where
+  `isVisible == true` and `isSelectable == true`.
 - Selection operations treat background-layer nodes as non-interactive and
   non-deletable (even if ids are injected manually).
 - Group is not stored; group operations compute a union AABB and apply transforms per node.

@@ -383,10 +383,19 @@ final center = controller.selectionCenterWorld;
 ```
 
 Gotchas:
+- `selectedNodeIds` is an unordered set; iteration order is not guaranteed.
+- `setSelection(...)` and `toggleSelection(...)` normalize inputs to
+  interactive ids only: existing ids in non-background layers where
+  `isVisible == true` and `isSelectable == true`.
 - A node can be **selectable** but **locked**. Locked nodes can be selected, but drag-move skips them.
 - Transform commands apply only to nodes with `isTransformable == true` and `isLocked == false`.
 - Background-layer nodes are excluded from marquee/selectAll/transform helpers
   and are not deletable via `deleteSelection`, even if their ids are injected.
+
+`clearScene()` behavior:
+- removes all nodes from non-background layers,
+- removes non-background layers themselves,
+- keeps exactly one background layer at index `0`.
 
 Relevant APIs:
 - `SceneController.selectedNodeIds`, `clearSelection()` — `lib/src/input/scene_controller.dart`

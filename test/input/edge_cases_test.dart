@@ -170,7 +170,8 @@ void main() {
 
     expect(actions.last.type, ActionType.clear);
     expect(actions.last.timestampMs, 12);
-    expect(firstNonBackgroundLayer(scene).nodes, isEmpty);
+    expect(scene.layers, hasLength(1));
+    expect(scene.layers.first.isBackground, isTrue);
   });
 
   test('default timestamp follows explicit command timestamp watermark', () {

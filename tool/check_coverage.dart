@@ -55,7 +55,9 @@ Map<String, _FileCoverage> _parseLcov(String content, {required String cwd}) {
       current.instrumentedLines.add(lineNo);
       if (hits > 0) {
         current.hitLines.add(lineNo);
+        current.missedLines.remove(lineNo);
       } else {
+        if (current.hitLines.contains(lineNo)) continue;
         current.missedLines.add(lineNo);
       }
       continue;

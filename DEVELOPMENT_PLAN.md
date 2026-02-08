@@ -230,7 +230,7 @@ Goal: no bypasses. Background must never be selectable/deletable; selection must
   * If background not at index 0 → normalize by moving it to index 0 (preserving other order).
     **Done when:** tests cover all 3 cases above.
 
-16. [ ] **(#36) Selection accepts garbage: unknown IDs / background IDs**
+16. [x] **(#36) Selection accepts garbage: unknown IDs / background IDs**
     **Where:** `setSelection`, `toggleSelection`, and central selection setter
     **Policy (fixed):** selection is a **set of valid, interactive node IDs only**.
     **Do:**
@@ -242,7 +242,7 @@ Goal: no bypasses. Background must never be selectable/deletable; selection must
   * remove duplicates
     **Done when:** test: `setSelection([backgroundId, unknownId])` results in empty selection.
 
-17. [ ] **(#39) `SelectionModel.setSelection` ignores ordering**
+17. [x] **(#39) `SelectionModel.setSelection` ignores ordering**
     **Policy (fixed):** selection is **unordered** (a mathematical set).
     **Where:** `SelectionModel.setSelection`
     **Do:**
@@ -252,7 +252,7 @@ Goal: no bypasses. Background must never be selectable/deletable; selection must
 * Where stable order is needed (painting/transform), derive order from scene order explicitly.
   **Done when:** tests confirm order is not relied upon; deterministic scene-order iteration works.
 
-18. [ ] **(#41) `clearScene` leaves empty layers**
+18. [x] **(#41) `clearScene` leaves empty layers**
     **Policy (fixed):** after `clearScene`, keep **only** the background layer (index 0) + no other empty layers.
     **Where:** `clearScene`
     **Do:**
