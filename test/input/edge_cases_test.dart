@@ -345,8 +345,10 @@ void main() {
     );
 
     expect(controller.selectedNodeIds, isEmpty);
-    expect(actions.single.type, ActionType.selectMarquee);
-    expect(actions.single.nodeIds, isEmpty);
+    expect(
+      actions.where((event) => event.type == ActionType.selectMarquee),
+      isEmpty,
+    );
   });
 
   test('move mode cancel clears marquee rect and releases pointer capture', () {

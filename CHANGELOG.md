@@ -1,5 +1,11 @@
 ## Unreleased
 
+- Input: marquee commit now emits `ActionType.selectMarquee` only when the
+  normalized selection actually changes (no-op marquee commits emit no action).
+- Input: harden dispose-safety in input slices:
+  `RepaintScheduler.notifyNow()` is now a safe no-op after `dispose()`, and
+  `ActionDispatcher` drops `emitAction` / `emitEditTextRequested` calls after
+  `dispose()` instead of writing to closed streams.
 - Input: move-drag is now transactional. `PointerPhase.cancel` and
   `setMode(...)` during an active move drag rollback node transforms and emit
   no `ActionType.transform`.

@@ -6,6 +6,7 @@ import 'package:iwb_canvas_engine/advanced.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   // INV:INV-INPUT-MOVE-DRAG-ROLLBACK
+  // INV:INV-INPUT-MARQUEE-EMIT-ON-CHANGE
 
   RectNode rectNode(String id, Offset position, {bool isLocked = false}) {
     return RectNode(
@@ -141,6 +142,57 @@ void main() {
     expect(actions.single.type, ActionType.selectMarquee);
     expect(actions.single.nodeIds, ['node-1', 'node-2']);
   });
+
+  test(
+    'marquee commit does not emit action when selection set is unchanged',
+    () {
+      final first = rectNode('node-1', const Offset(0, 0));
+      final second = rectNode('node-2', const Offset(50, 0));
+      final scene = Scene(
+        layers: [
+          Layer(nodes: [first, second]),
+        ],
+      );
+      final controller = SceneController(scene: scene, dragStartSlop: 0);
+      addTearDown(controller.dispose);
+      controller.setSelection(const <NodeId>{'node-1', 'node-2'});
+
+      final actions = <ActionCommitted>[];
+      final sub = controller.actions.listen(actions.add);
+      addTearDown(sub.cancel);
+
+      controller.handlePointer(
+        const PointerSample(
+          pointerId: 12,
+          position: Offset(-20, -20),
+          timestampMs: 0,
+          phase: PointerPhase.down,
+        ),
+      );
+      controller.handlePointer(
+        const PointerSample(
+          pointerId: 12,
+          position: Offset(80, 20),
+          timestampMs: 10,
+          phase: PointerPhase.move,
+        ),
+      );
+      controller.handlePointer(
+        const PointerSample(
+          pointerId: 12,
+          position: Offset(80, 20),
+          timestampMs: 20,
+          phase: PointerPhase.up,
+        ),
+      );
+
+      expect(controller.selectedNodeIds, {'node-1', 'node-2'});
+      expect(
+        actions.where((event) => event.type == ActionType.selectMarquee),
+        isEmpty,
+      );
+    },
+  );
 
   test('drag move updates selection and emits action with moved ids', () {
     final movable = rectNode('movable', const Offset(0, 0));

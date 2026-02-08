@@ -19,6 +19,7 @@ class ActionDispatcher {
       StreamController<EditTextRequested>.broadcast(sync: true);
 
   int _actionCounter = 0;
+  bool _isDisposed = false;
 
   Stream<ActionCommitted> get actions => _actions.stream;
   Stream<EditTextRequested> get editTextRequests => _editTextRequests.stream;
@@ -29,6 +30,7 @@ class ActionDispatcher {
     int timestampMs, {
     Map<String, Object?>? payload,
   }) {
+    if (_isDisposed) return;
     _actions.add(
       ActionCommitted(
         actionId: 'a${_actionCounter++}',
@@ -41,10 +43,13 @@ class ActionDispatcher {
   }
 
   void emitEditTextRequested(EditTextRequested req) {
+    if (_isDisposed) return;
     _editTextRequests.add(req);
   }
 
   void dispose() {
+    if (_isDisposed) return;
+    _isDisposed = true;
     _actions.close();
     _editTextRequests.close();
   }

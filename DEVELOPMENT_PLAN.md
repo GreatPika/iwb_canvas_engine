@@ -298,7 +298,7 @@ Goal: any in-progress gesture ends deterministically. No silent partial edits.
 * Cancel timer on line completion or tool reset.
   **Done when:** test: first tap → wait >10s with no events → second tap does not use old start.
 
-22. [ ] **(#20) Marquee commit always emits Action even when selection didn’t change**
+22. [x] **(#20) Marquee commit always emits Action even when selection didn’t change**
     **Where:** `MoveModeEngine._commitMarquee(...)`
     **Policy (fixed):** do not emit no-op actions.
     **Do:**
@@ -306,14 +306,14 @@ Goal: any in-progress gesture ends deterministically. No silent partial edits.
 * Compare previous and new normalized selection sets; only emit `ActionType.selectMarquee` when changed.
   **Done when:** test: empty marquee on empty selection emits nothing; real change emits action.
 
-23. [ ] **(#16) `RepaintScheduler.notifyNow()` can notify after dispose**
+23. [x] **(#16) `RepaintScheduler.notifyNow()` can notify after dispose**
     **Where:** `RepaintScheduler.notifyNow()`
     **Do:**
 
 * Add `_isDisposed` guard; return early if disposed.
   **Done when:** test: calling after dispose is safe.
 
-24. [ ] **(#17) `ActionDispatcher` may write into a closed stream after dispose**
+24. [x] **(#17) `ActionDispatcher` may write into a closed stream after dispose**
     **Where:** `ActionDispatcher.emitAction/emitEditTextRequested`
     **Do:**
 

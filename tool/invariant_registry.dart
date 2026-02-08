@@ -97,6 +97,11 @@ const List<Invariant> invariants = <Invariant>[
     title: 'notifyNow clears needs-notify flag and cancels scheduled repaint',
   ),
   Invariant(
+    id: 'INV-REPAINT-NOTIFYNOW-AFTER-DISPOSE-SAFE',
+    scope: 'repaint',
+    title: 'notifyNow is a safe no-op after dispose',
+  ),
+  Invariant(
     id: 'INV-RENDER-GRID-SAFETY-LIMITS',
     scope: 'render',
     title:
@@ -111,6 +116,11 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-SIGNALS-ACTIONID-FORMAT',
     scope: 'signals',
     title: 'ActionCommitted.actionId format stays a{counter++}',
+  ),
+  Invariant(
+    id: 'INV-SIGNALS-DROP-AFTER-DISPOSE',
+    scope: 'signals',
+    title: 'signals emitted after dispatcher dispose are dropped safely',
   ),
   Invariant(
     id: 'INV-INPUT-TIMESTAMP-MONOTONIC',
@@ -147,6 +157,12 @@ const List<Invariant> invariants = <Invariant>[
     scope: 'input',
     title:
         'Line two-tap pending start expires by an internal 10s timer even without new pointer events',
+  ),
+  Invariant(
+    id: 'INV-INPUT-MARQUEE-EMIT-ON-CHANGE',
+    scope: 'input',
+    title:
+        'marquee commit emits ActionType.selectMarquee only when selection changes',
   ),
   Invariant(
     id: 'INV-INPUT-CONSTRUCTOR-SCENE-VALIDATION',

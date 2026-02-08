@@ -25,6 +25,7 @@ class MoveModeEngine {
   _DragTarget _dragTarget = _DragTarget.none;
   bool _dragMoved = false;
   bool _pendingClearSelection = false;
+  Set<NodeId> _marqueeSelectionBaseline = <NodeId>{};
   final List<_NodeTransformSnapshot> _dragTransformSnapshots =
       <_NodeTransformSnapshot>[];
 
@@ -64,6 +65,7 @@ class MoveModeEngine {
     _dragTarget = _DragTarget.none;
     _dragMoved = false;
     _pendingClearSelection = false;
+    _marqueeSelectionBaseline = <NodeId>{};
     _moveGestureNodes = null;
     _dragTransformSnapshots.clear();
     _contracts.setSelectionRect(null, notify: false);
@@ -95,6 +97,7 @@ class MoveModeEngine {
     }
 
     _dragTarget = _DragTarget.marquee;
+    _marqueeSelectionBaseline = Set<NodeId>.from(_contracts.selectedNodeIds);
     _pendingClearSelection = true;
   }
 
@@ -197,9 +200,16 @@ class MoveModeEngine {
   void _commitMarquee(int timestampMs) {
     final rect = _normalizeRect(_contracts.selectionRect!);
     final selected = _nodesIntersecting(rect);
+    final baseline = _marqueeSelectionBaseline;
     _contracts.setSelectionRect(null, notify: false);
     _contracts.setSelection(selected, notify: false);
-    _contracts.emitAction(ActionType.selectMarquee, selected, timestampMs);
+    final currentSelection = _contracts.selectedNodeIds;
+    final didChange =
+        baseline.length != currentSelection.length ||
+        !baseline.containsAll(currentSelection);
+    if (didChange) {
+      _contracts.emitAction(ActionType.selectMarquee, selected, timestampMs);
+    }
   }
 
   void _applyMoveDelta(Offset delta, {List<SceneNode>? nodes}) {

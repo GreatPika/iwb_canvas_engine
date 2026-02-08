@@ -68,9 +68,11 @@ here as a checklist to prevent subtle behavioral regressions during refactors.
   - repeated `requestRepaintOncePerFrame()` calls schedule at most one frame
   - cancellation tokening prevents stale scheduled callbacks from firing
   - `notifyNow()` clears the "needs notify" flag and cancels scheduled repaint
+  - `notifyNow()` is a safe no-op after `dispose()`
 - Signals:
   - both streams stay `broadcast(sync: true)`
   - `ActionCommitted.actionId` format stays `a${counter++}`
+  - events emitted after dispatcher `dispose()` are dropped safely
 - Selection:
   - `setSelection(...)` defaults to coalesced repaint (not immediate notify)
   - `clearSelection()` remains an immediate notify
@@ -215,7 +217,7 @@ Emit `ActionCommitted` on:
 - stroke end (successful commit only)
 - line end (successful commit only)
 - transform/delete/clear
-- marquee end
+- marquee end (only when normalized selection changes)
 - erase end
 
 ## Hit-testing and math

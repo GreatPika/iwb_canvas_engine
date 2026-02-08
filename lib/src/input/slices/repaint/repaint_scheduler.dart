@@ -24,6 +24,7 @@ class RepaintScheduler {
 
   void dispose() {
     _isDisposed = true;
+    _needsNotify = false;
     _cancelScheduledRepaint();
   }
 
@@ -57,6 +58,7 @@ class RepaintScheduler {
   }
 
   void notifyNow() {
+    if (_isDisposed) return;
     _cancelScheduledRepaint();
     _notifyListeners();
     _needsNotify = false;

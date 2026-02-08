@@ -4,6 +4,7 @@ import 'package:iwb_canvas_engine/src/input/slices/repaint/repaint_scheduler.dar
 // INV:INV-REPAINT-ONE-PER-FRAME
 // INV:INV-REPAINT-TOKEN-CANCELS
 // INV:INV-REPAINT-NOTIFYNOW-CLEARS
+// INV:INV-REPAINT-NOTIFYNOW-AFTER-DISPOSE-SAFE
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -46,5 +47,18 @@ void main() {
 
     await tester.pump();
     expect(calls, 1);
+  });
+
+  testWidgets('notifyNow after dispose is a safe no-op', (tester) async {
+    var calls = 0;
+    final scheduler = RepaintScheduler(notifyListeners: () => calls++);
+
+    scheduler.markNeedsNotify();
+    scheduler.dispose();
+
+    expect(() => scheduler.notifyNow(), returnsNormally);
+    await tester.pump();
+    expect(calls, 0);
+    expect(scheduler.needsNotify, isFalse);
   });
 }
