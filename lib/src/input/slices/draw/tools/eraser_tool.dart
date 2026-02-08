@@ -189,19 +189,20 @@ class EraserTool {
     );
     final threshold =
         line.thickness / 2 + (_contracts.eraserThickness / 2) * sigmaMax;
+    final thresholdSquared = threshold * threshold;
     if (localEraserPoints.length == 1) {
-      final distance = distancePointToSegment(
-        localEraserPoints.first,
-        line.start,
-        line.end,
-      );
-      return distance <= threshold;
+      return distanceSquaredPointToSegment(
+            localEraserPoints.first,
+            line.start,
+            line.end,
+          ) <=
+          thresholdSquared;
     }
     for (var i = 0; i < localEraserPoints.length - 1; i++) {
       final a = localEraserPoints[i];
       final b = localEraserPoints[i + 1];
-      final distance = distanceSegmentToSegment(a, b, line.start, line.end);
-      if (distance <= threshold) {
+      if (distanceSquaredSegmentToSegment(a, b, line.start, line.end) <=
+          thresholdSquared) {
         return true;
       }
     }
@@ -222,11 +223,14 @@ class EraserTool {
     );
     final threshold =
         stroke.thickness / 2 + (_contracts.eraserThickness / 2) * sigmaMax;
+    final thresholdSquared = threshold * threshold;
     if (stroke.points.isEmpty) return false;
     if (stroke.points.length == 1) {
       final point = stroke.points.first;
       for (final eraserPoint in localEraserPoints) {
-        if ((eraserPoint - point).distance <= threshold) {
+        final delta = eraserPoint - point;
+        final distanceSquared = delta.dx * delta.dx + delta.dy * delta.dy;
+        if (distanceSquared <= thresholdSquared) {
           return true;
         }
       }
@@ -238,8 +242,8 @@ class EraserTool {
       for (var i = 0; i < stroke.points.length - 1; i++) {
         final a = stroke.points[i];
         final b = stroke.points[i + 1];
-        final distance = distancePointToSegment(eraserPoint, a, b);
-        if (distance <= threshold) {
+        if (distanceSquaredPointToSegment(eraserPoint, a, b) <=
+            thresholdSquared) {
           return true;
         }
       }
@@ -252,13 +256,13 @@ class EraserTool {
       for (var j = 0; j < stroke.points.length - 1; j++) {
         final strokeA = stroke.points[j];
         final strokeB = stroke.points[j + 1];
-        final distance = distanceSegmentToSegment(
-          eraserA,
-          eraserB,
-          strokeA,
-          strokeB,
-        );
-        if (distance <= threshold) {
+        if (distanceSquaredSegmentToSegment(
+              eraserA,
+              eraserB,
+              strokeA,
+              strokeB,
+            ) <=
+            thresholdSquared) {
           return true;
         }
       }

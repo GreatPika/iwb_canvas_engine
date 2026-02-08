@@ -14,6 +14,8 @@
 - Performance/Input: `SceneController` now maintains an internal
   `Set<NodeId>` membership index (`allNodeIds`) used by `newNodeId()` and
   `notifySceneChanged()` paths for O(1) id checks instead of full scene scans.
+- Performance: hot-path hit-testing/eraser threshold checks now use squared
+  distances (`dx*dx + dy*dy`) instead of `sqrt`-based distance comparisons.
 - Input: custom `nodeIdGenerator` is now fail-fast for duplicates; when the
   callback returns an id that already exists in the scene, `newNodeId()`
   throws `StateError`.
@@ -42,8 +44,8 @@
   AABB-final selection; non-invertible path transforms are non-clickable for
   both fill and stroke.
 - Input/View: harden multitouch signal policy and pending-tap scheduling.
-  `PointerInputTracker` now correlates double-tap by device kind
-  (`PointerDeviceKind`), `SceneView` ignores tap/double-tap candidates from non-active
+  `PointerInputTracker` now correlates double-tap by `pointerId`
+  (not `PointerDeviceKind`), `SceneView` ignores tap/double-tap candidates from non-active
   pointers during an active gesture, and pending-tap flushing now uses a
   single timer window instead of timer recreation on every pointer sample.
 - Input: add optional `SceneController(clearSelectionOnDrawModeEnter: true)`

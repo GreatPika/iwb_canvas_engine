@@ -85,19 +85,18 @@ class PointerInputTracker {
 
   final PointerInputSettings settings;
   final Map<int, _PointerDownState> _downStates = <int, _PointerDownState>{};
-  final Map<PointerDeviceKind, _PendingTap> _pendingTapByKind =
-      <PointerDeviceKind, _PendingTap>{};
+  final Map<int, _PendingTap> _pendingTapByPointerId = <int, _PendingTap>{};
 
   /// Whether at least one pointer currently has a pending tap window.
-  bool get hasPendingTap => _pendingTapByKind.isNotEmpty;
+  bool get hasPendingTap => _pendingTapByPointerId.isNotEmpty;
 
   /// Earliest timestamp when [flushPending] may emit one or more taps.
   ///
   /// Returns `null` when there are no pending taps.
   int? get nextPendingFlushTimestampMs {
-    if (_pendingTapByKind.isEmpty) return null;
-    var earliestTimestampMs = _pendingTapByKind.values.first.timestampMs;
-    for (final pendingTap in _pendingTapByKind.values) {
+    if (_pendingTapByPointerId.isEmpty) return null;
+    var earliestTimestampMs = _pendingTapByPointerId.values.first.timestampMs;
+    for (final pendingTap in _pendingTapByPointerId.values) {
       if (pendingTap.timestampMs < earliestTimestampMs) {
         earliestTimestampMs = pendingTap.timestampMs;
       }
@@ -161,12 +160,12 @@ class PointerInputTracker {
   }
 
   void _handleTap(PointerSample sample, List<PointerSignal> signals) {
-    final pendingTap = _pendingTapByKind[sample.kind];
+    final pendingTap = _pendingTapByPointerId[sample.pointerId];
     if (pendingTap != null && _isDoubleTap(sample, pendingTap)) {
       signals.add(
         PointerSignal.fromSample(sample, PointerSignalType.doubleTap),
       );
-      _pendingTapByKind.remove(sample.kind);
+      _pendingTapByPointerId.remove(sample.pointerId);
       return;
     }
 
@@ -180,14 +179,14 @@ class PointerInputTracker {
           kind: pendingTap.kind,
         ),
       );
-      _pendingTapByKind.remove(sample.kind);
+      _pendingTapByPointerId.remove(sample.pointerId);
     }
 
     if (!settings.deferSingleTap) {
       signals.add(PointerSignal.fromSample(sample, PointerSignalType.tap));
     }
 
-    _pendingTapByKind[sample.kind] = _PendingTap(
+    _pendingTapByPointerId[sample.pointerId] = _PendingTap(
       pointerId: sample.pointerId,
       position: sample.position,
       timestampMs: sample.timestampMs,
@@ -196,17 +195,17 @@ class PointerInputTracker {
   }
 
   List<PointerSignal> _flushExpired(int timestampMs) {
-    if (_pendingTapByKind.isEmpty) return const <PointerSignal>[];
+    if (_pendingTapByPointerId.isEmpty) return const <PointerSignal>[];
 
-    final expiredKinds = <PointerDeviceKind>[];
+    final expiredPointerIds = <int>[];
     final signals = <PointerSignal>[];
 
-    _pendingTapByKind.forEach((kind, pendingTap) {
+    _pendingTapByPointerId.forEach((pointerId, pendingTap) {
       final timeDelta = timestampMs - pendingTap.timestampMs;
       if (timeDelta < 0) return;
       if (timeDelta <= settings.doubleTapMaxDelayMs) return;
 
-      expiredKinds.add(kind);
+      expiredPointerIds.add(pointerId);
       if (settings.deferSingleTap) {
         signals.add(
           PointerSignal(
@@ -220,8 +219,8 @@ class PointerInputTracker {
       }
     });
 
-    for (final kind in expiredKinds) {
-      _pendingTapByKind.remove(kind);
+    for (final pointerId in expiredPointerIds) {
+      _pendingTapByPointerId.remove(pointerId);
     }
 
     return signals;

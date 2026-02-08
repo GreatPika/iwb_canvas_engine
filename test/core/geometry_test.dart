@@ -790,6 +790,15 @@ void main() {
     expect(distance, closeTo((point - a).distance, 0.0001));
   });
 
+  test('distanceSquaredPointToSegment matches squared distance', () {
+    const point = Offset(7, -2);
+    const a = Offset(1, 1);
+    const b = Offset(5, 1);
+    final squared = distanceSquaredPointToSegment(point, a, b);
+    final distance = distancePointToSegment(point, a, b);
+    expect(squared, closeTo(distance * distance, 1e-9));
+  });
+
   test('distancePointToSegment handles almost-degenerate segments', () {
     const point = Offset(0, 1);
     const a = Offset(0, 0);
@@ -802,6 +811,16 @@ void main() {
     final distanceNearA = distancePointToSegment(nearA, a, b);
     expect(distanceNearA.isFinite, isTrue);
     expect(distanceNearA, closeTo(0.0, 1e-9));
+  });
+
+  test('distanceSquaredSegmentToSegment matches squared distance', () {
+    const a1 = Offset(0, 0);
+    const a2 = Offset(5, 0);
+    const b1 = Offset(3, 2);
+    const b2 = Offset(7, 2);
+    final squared = distanceSquaredSegmentToSegment(a1, a2, b1, b2);
+    final distance = distanceSegmentToSegment(a1, a2, b1, b2);
+    expect(squared, closeTo(distance * distance, 1e-9));
   });
 
   test('aabbForTransformedRect treats tiny rotation as zero', () {

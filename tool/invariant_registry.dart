@@ -195,10 +195,10 @@ const List<Invariant> invariants = <Invariant>[
         'while a gesture is active, SceneView routes tap/double-tap candidates only from the active pointer id',
   ),
   Invariant(
-    id: 'INV-INPUT-DOUBLETAP-BY-KIND',
+    id: 'INV-INPUT-DOUBLETAP-BY-POINTERID',
     scope: 'input',
     title:
-        'pending/double-tap correlation is keyed by PointerDeviceKind (not pointerId)',
+        'pending/double-tap correlation is keyed by pointerId (not PointerDeviceKind)',
   ),
   Invariant(
     id: 'INV-INPUT-PENDING-TAP-SINGLE-TIMER',

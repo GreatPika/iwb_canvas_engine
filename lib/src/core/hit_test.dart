@@ -39,8 +39,8 @@ bool hitTestRect(Offset point, Rect rect) {
 /// Returns true if [point] is within [thickness] of the segment [start]-[end].
 bool hitTestLine(Offset point, Offset start, Offset end, double thickness) {
   final baseThickness = clampNonNegativeFinite(thickness);
-  final distance = distancePointToSegment(point, start, end);
-  return distance <= baseThickness / 2;
+  final radius = baseThickness / 2;
+  return distanceSquaredPointToSegment(point, start, end) <= radius * radius;
 }
 
 /// Returns true if [point] hits the polyline [points] with [thickness].
@@ -57,7 +57,9 @@ bool hitTestStroke(
   if (points.isEmpty) return false;
   if (points.length == 1) {
     final radius = baseThickness / 2 + baseHitPadding + baseHitSlop;
-    return (point - points.first).distance <= radius;
+    final delta = point - points.first;
+    final distanceSquared = delta.dx * delta.dx + delta.dy * delta.dy;
+    return distanceSquared <= radius * radius;
   }
   final effectiveThickness = baseThickness + 2 * (baseHitPadding + baseHitSlop);
   for (var i = 0; i < points.length - 1; i++) {
@@ -119,13 +121,17 @@ bool _hitTestPathStrokePrecise(
 ) {
   final radius = clampNonNegativeFinite(strokeRadiusLocal);
   if (radius <= 0) return false;
+  final radiusSquared = radius * radius;
 
   for (final metric in localPath.computeMetrics()) {
     if (metric.length <= 0) continue;
     final start = metric.getTangentForOffset(0);
     if (start == null) continue;
     var previous = start.position;
-    if ((localPoint - previous).distance <= radius) {
+    final startDelta = localPoint - previous;
+    final startDistanceSquared =
+        startDelta.dx * startDelta.dx + startDelta.dy * startDelta.dy;
+    if (startDistanceSquared <= radiusSquared) {
       return true;
     }
     final step = _pathMetricStep(radius);
@@ -133,20 +139,16 @@ bool _hitTestPathStrokePrecise(
       final currentTangent = metric.getTangentForOffset(offset);
       if (currentTangent == null) continue;
       final current = currentTangent.position;
-      final distance = distancePointToSegment(localPoint, previous, current);
-      if (distance <= radius) {
+      if (distanceSquaredPointToSegment(localPoint, previous, current) <=
+          radiusSquared) {
         return true;
       }
       previous = current;
     }
     final end = metric.getTangentForOffset(metric.length);
     if (end == null) continue;
-    final endDistance = distancePointToSegment(
-      localPoint,
-      previous,
-      end.position,
-    );
-    if (endDistance <= radius) {
+    if (distanceSquaredPointToSegment(localPoint, previous, end.position) <=
+        radiusSquared) {
       return true;
     }
   }

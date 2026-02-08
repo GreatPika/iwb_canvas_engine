@@ -93,17 +93,24 @@ Rect aabbForTransformedRect({
 
 /// Returns the shortest distance from [point] to the segment [a]-[b].
 double distancePointToSegment(Offset point, Offset a, Offset b) {
+  return math.sqrt(distanceSquaredPointToSegment(point, a, b));
+}
+
+/// Returns squared shortest distance from [point] to segment [a]-[b].
+double distanceSquaredPointToSegment(Offset point, Offset a, Offset b) {
   final ab = b - a;
   final ap = point - a;
   final abLen2 = ab.dx * ab.dx + ab.dy * ab.dy;
   if (abLen2 <= kEpsilonSquared) {
-    return (point - a).distance;
+    final delta = point - a;
+    return delta.dx * delta.dx + delta.dy * delta.dy;
   }
   var t = (ap.dx * ab.dx + ap.dy * ab.dy) / abLen2;
   if (t < 0) t = 0;
   if (t > 1) t = 1;
   final projection = Offset(a.dx + ab.dx * t, a.dy + ab.dy * t);
-  return (point - projection).distance;
+  final delta = point - projection;
+  return delta.dx * delta.dx + delta.dy * delta.dy;
 }
 
 /// Returns true if segments [a1]-[a2] and [b1]-[b2] intersect.
@@ -189,12 +196,22 @@ bool segmentsIntersect(Offset a1, Offset a2, Offset b1, Offset b2) {
 
 /// Returns the shortest distance between two line segments.
 double distanceSegmentToSegment(Offset a1, Offset a2, Offset b1, Offset b2) {
+  return math.sqrt(distanceSquaredSegmentToSegment(a1, a2, b1, b2));
+}
+
+/// Returns squared shortest distance between line segments [a1]-[a2] and [b1]-[b2].
+double distanceSquaredSegmentToSegment(
+  Offset a1,
+  Offset a2,
+  Offset b1,
+  Offset b2,
+) {
   if (segmentsIntersect(a1, a2, b1, b2)) {
     return 0;
   }
-  final d1 = distancePointToSegment(a1, b1, b2);
-  final d2 = distancePointToSegment(a2, b1, b2);
-  final d3 = distancePointToSegment(b1, a1, a2);
-  final d4 = distancePointToSegment(b2, a1, a2);
+  final d1 = distanceSquaredPointToSegment(a1, b1, b2);
+  final d2 = distanceSquaredPointToSegment(a2, b1, b2);
+  final d3 = distanceSquaredPointToSegment(b1, a1, a2);
+  final d4 = distanceSquaredPointToSegment(b2, a1, a2);
   return math.min(math.min(d1, d2), math.min(d3, d4));
 }

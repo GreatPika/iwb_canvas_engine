@@ -128,6 +128,9 @@ class _SceneViewState extends State<SceneView> {
   SceneController? _ownedController;
   int? _activePointerId;
   bool _pendingPointerTrackerRefresh = false;
+  final Map<int, int> _pointerSlotByRawPointer = <int, int>{};
+  final List<int> _freePointerSlots = <int>[];
+  int _nextPointerSlotId = 1;
 
   SceneController get _controller => widget.controller ?? _ownedController!;
 
@@ -218,6 +221,8 @@ class _SceneViewState extends State<SceneView> {
       _pathMetricsCache.clear();
     }
     _disposeOwnedController();
+    _pointerSlotByRawPointer.clear();
+    _freePointerSlots.clear();
     super.dispose();
   }
 
@@ -309,8 +314,9 @@ class _SceneViewState extends State<SceneView> {
 
   void _handlePointerEvent(PointerEvent event, PointerPhase phase) {
     final controller = _controller;
+    final pointerId = _resolvePointerId(event, phase);
     final sample = PointerSample(
-      pointerId: event.pointer,
+      pointerId: pointerId,
       position: event.localPosition,
       // Raw host timestamp is only a hint; SceneController normalizes it into
       // an internal monotonic timeline for emitted actions/signals.
@@ -330,6 +336,7 @@ class _SceneViewState extends State<SceneView> {
     }
     _syncPendingFlushTimer(referenceTimestampMs: sample.timestampMs);
     _releaseActivePointerIfEnded(sample);
+    _releasePointerSlotIfEnded(event, phase);
   }
 
   void _dispatchSignals(List<PointerSignal> signals) {
@@ -403,6 +410,54 @@ class _SceneViewState extends State<SceneView> {
     _pendingTapTimer = null;
     _pendingTapFlushTimestampMs = null;
     _pendingPointerTrackerRefresh = false;
+    _pointerSlotByRawPointer.clear();
+    _freePointerSlots.clear();
+    _nextPointerSlotId = 1;
+  }
+
+  int _resolvePointerId(PointerEvent event, PointerPhase phase) {
+    final rawPointer = event.pointer;
+    final existing = _pointerSlotByRawPointer[rawPointer];
+    if (existing != null) {
+      return existing;
+    }
+    if (phase != PointerPhase.down) {
+      // Keep graceful behavior for stray non-down events.
+      return rawPointer;
+    }
+
+    final slotId = _acquirePointerSlot();
+    _pointerSlotByRawPointer[rawPointer] = slotId;
+    return slotId;
+  }
+
+  int _acquirePointerSlot() {
+    if (_freePointerSlots.isEmpty) {
+      return _nextPointerSlotId++;
+    }
+
+    var minIndex = 0;
+    var minValue = _freePointerSlots.first;
+    for (var i = 1; i < _freePointerSlots.length; i++) {
+      final value = _freePointerSlots[i];
+      if (value < minValue) {
+        minValue = value;
+        minIndex = i;
+      }
+    }
+    _freePointerSlots.removeAt(minIndex);
+    return minValue;
+  }
+
+  void _releasePointerSlotIfEnded(PointerEvent event, PointerPhase phase) {
+    if (phase != PointerPhase.up && phase != PointerPhase.cancel) {
+      return;
+    }
+    final slotId = _pointerSlotByRawPointer.remove(event.pointer);
+    if (slotId == null) {
+      return;
+    }
+    _freePointerSlots.add(slotId);
   }
 
   void _captureActivePointer(PointerSample sample) {
