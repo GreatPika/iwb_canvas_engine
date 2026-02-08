@@ -177,10 +177,10 @@ const List<Invariant> invariants = <Invariant>[
         'while a gesture is active, SceneView routes tap/double-tap candidates only from the active pointer id',
   ),
   Invariant(
-    id: 'INV-INPUT-DOUBLETAP-BY-POINTERID',
+    id: 'INV-INPUT-DOUBLETAP-BY-KIND',
     scope: 'input',
     title:
-        'pending/double-tap correlation is keyed by pointerId (not PointerDeviceKind)',
+        'pending/double-tap correlation is keyed by PointerDeviceKind (not pointerId)',
   ),
   Invariant(
     id: 'INV-INPUT-PENDING-TAP-SINGLE-TIMER',
@@ -370,13 +370,13 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-CORE-PATH-HITTEST-FILL-OR-STROKE',
     scope: 'hit-test',
     title:
-        'PathNode hit-test selects the union of fill and stroke (stroke uses coarse AABB stage A).',
+        'PathNode hit-test selects the union of fill and stroke (stroke uses precise distance-to-path checks).',
   ),
   Invariant(
     id: 'INV-CORE-PATH-HITTEST-STROKE-NO-DOUBLECOUNT',
     scope: 'hit-test',
     title:
-        'PathNode stroke hit-test inflates boundsWorld only by hitPadding + kHitSlop (strokeWidth is already included in bounds).',
+        'PathNode stroke hit-test tolerance is strokeWidth/2 + hitPadding + kHitSlop in scene units (scale-aware).',
   ),
   Invariant(
     id: 'INV-CORE-PATH-HITTEST-INVALID-NONINTERACTIVE',
@@ -388,13 +388,13 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-CORE-PATH-HITTEST-FILL-REQUIRES-INVERSE',
     scope: 'hit-test',
     title:
-        'PathNode fill hit-testing requires an invertible transform; degenerate transforms are not clickable for fill.',
+        'PathNode fill/stroke hit-testing requires an invertible transform; degenerate transforms are non-clickable.',
   ),
   Invariant(
     id: 'INV-CORE-HITTEST-FALLBACK-INFLATED-AABB',
     scope: 'hit-test',
     title:
-        'When inverse transform is unavailable, hit-test falls back to boundsWorld inflated by hitPadding + kHitSlop',
+        'When inverse transform is unavailable, non-PathNode hit-test falls back to boundsWorld inflated by hitPadding + kHitSlop',
   ),
   Invariant(
     id: 'INV-CORE-HITTEST-TOP-SKIPS-BACKGROUND',

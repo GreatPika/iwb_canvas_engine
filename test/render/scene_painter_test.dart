@@ -741,6 +741,51 @@ void main() {
     expect(rtlCenterX, lessThan(ltrCenterX));
   });
 
+  test('ScenePainter applies TextAlign.right offset', () async {
+    const background = Color(0xFFFFFFFF);
+
+    Scene sceneFor(TextAlign align) => Scene(
+      background: Background(color: background),
+      layers: [
+        Layer(
+          nodes: [
+            TextNode(
+              id: 'text-right-$align',
+              text: 'Right',
+              size: const Size(120, 28),
+              fontSize: 20,
+              color: const Color(0xFF000000),
+              align: align,
+            )..position = const Offset(80, 40),
+          ],
+        ),
+      ],
+    );
+
+    final rightAligned = await _paintToImage(
+      ScenePainter(
+        controller: _controllerFor(sceneFor(TextAlign.right)),
+        imageResolver: (_) => null,
+        textDirection: TextDirection.ltr,
+      ),
+      width: 160,
+      height: 80,
+    );
+    final leftAligned = await _paintToImage(
+      ScenePainter(
+        controller: _controllerFor(sceneFor(TextAlign.left)),
+        imageResolver: (_) => null,
+        textDirection: TextDirection.ltr,
+      ),
+      width: 160,
+      height: 80,
+    );
+
+    final rightCenterX = await _inkCentroidX(rightAligned, background);
+    final leftCenterX = await _inkCentroidX(leftAligned, background);
+    expect(rightCenterX, greaterThan(leftCenterX));
+  });
+
   test(
     'ScenePainter selection halo honors PathNode.fillRule for inner contour',
     () async {

@@ -47,6 +47,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     super.initState();
     _controller = SceneController(
       scene: Scene(layers: [Layer()]),
+      clearSelectionOnDrawModeEnter: true,
       pointerSettings: const PointerInputSettings(
         tapSlop: 16,
         doubleTapSlop: 32,
@@ -262,7 +263,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   Widget _buildSmallModeBtn(CanvasMode mode, IconData icon) {
     final isSelected = _controller.mode == mode;
     return GestureDetector(
-      onTap: () => _controller.setMode(mode),
+      onTap: () => _setMode(mode),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
@@ -1007,6 +1008,14 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   }
 
   // Сеттеры
+  void _setMode(CanvasMode mode) {
+    if (_controller.mode == mode) return;
+    if (mode != CanvasMode.move && _editingNodeId != null) {
+      _finishInlineTextEdit(save: true);
+    }
+    _controller.setMode(mode);
+  }
+
   void _setDrawColor(Color c) => _controller.setDrawColor(c);
   void _setBackgroundColor(Color c) => _controller.setBackgroundColor(c);
   void _setGridEnabled(bool v) => _controller.setGridEnabled(v);

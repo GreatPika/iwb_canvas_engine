@@ -878,6 +878,57 @@ void main() {
     expect(requests.single.position, const Offset(150, 150));
   });
 
+  testWidgets('SceneView dispatches double-tap signals across pointer ids', (
+    tester,
+  ) async {
+    final scene = Scene(
+      layers: [
+        Layer(
+          nodes: [
+            TextNode(
+              id: 'text-1',
+              text: 'Hello',
+              size: const Size(200, 60),
+              color: const Color(0xFF000000),
+            )..position = const Offset(150, 150),
+          ],
+        ),
+      ],
+    );
+
+    final controller = SceneController(
+      scene: scene,
+      pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 300),
+    );
+    addTearDown(controller.dispose);
+
+    final requests = <EditTextRequested>[];
+    controller.editTextRequests.listen(requests.add);
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 300,
+          height: 300,
+          child: SceneView(controller: controller, imageResolver: (_) => null),
+        ),
+      ),
+    );
+
+    final tapA = await tester.startGesture(const Offset(150, 150), pointer: 45);
+    await tapA.up();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 10));
+    final tapB = await tester.startGesture(const Offset(150, 150), pointer: 46);
+    await tapB.up();
+    await tester.pump();
+
+    expect(requests, hasLength(1));
+    expect(requests.single.nodeId, 'text-1');
+    expect(requests.single.position, const Offset(150, 150));
+  });
+
   testWidgets(
     'SceneView ignores non-active pointer double-tap while gesture is active',
     (tester) async {

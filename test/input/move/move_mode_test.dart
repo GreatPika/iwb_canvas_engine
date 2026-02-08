@@ -51,6 +51,83 @@ void main() {
     expect(controller.selectedNodeIds, {'top'});
   });
 
+  test('tap selects topmost node within the same layer', () {
+    final bottom = rectNode('bottom-same-layer', const Offset(0, 0));
+    final top = rectNode('top-same-layer', const Offset(0, 0));
+    final scene = Scene(
+      layers: [
+        Layer(nodes: [bottom, top]),
+      ],
+    );
+    final controller = SceneController(
+      scene: scene,
+      pointerSettings: const PointerInputSettings(tapSlop: 4),
+    );
+
+    controller.handlePointer(
+      PointerSample(
+        pointerId: 11,
+        position: const Offset(0, 0),
+        timestampMs: 0,
+        phase: PointerPhase.down,
+      ),
+    );
+    controller.handlePointer(
+      PointerSample(
+        pointerId: 11,
+        position: const Offset(0, 0),
+        timestampMs: 10,
+        phase: PointerPhase.up,
+      ),
+    );
+
+    expect(controller.selectedNodeIds, {'top-same-layer'});
+  });
+
+  test(
+    'tap selection keeps working for anisotropic LineNode hit radius with spatial prefilter',
+    () {
+      final line =
+          LineNode(
+              id: 'line-anisotropic',
+              start: const Offset(0, 0),
+              end: const Offset(10, 0),
+              thickness: 0,
+              color: const Color(0xFF000000),
+            )
+            ..scaleX = 0.01
+            ..scaleY = 1.0;
+      final probe = const Offset(0.05, 50);
+      expect(hitTestNode(probe, line), isTrue);
+
+      final scene = Scene(
+        layers: [
+          Layer(nodes: [line]),
+        ],
+      );
+      final controller = SceneController(scene: scene);
+
+      controller.handlePointer(
+        PointerSample(
+          pointerId: 101,
+          position: probe,
+          timestampMs: 0,
+          phase: PointerPhase.down,
+        ),
+      );
+      controller.handlePointer(
+        PointerSample(
+          pointerId: 101,
+          position: probe,
+          timestampMs: 10,
+          phase: PointerPhase.up,
+        ),
+      );
+
+      expect(controller.selectedNodeIds, {'line-anisotropic'});
+    },
+  );
+
   test('tap on empty clears selection', () {
     final node = rectNode('node-1', const Offset(0, 0));
     final scene = Scene(

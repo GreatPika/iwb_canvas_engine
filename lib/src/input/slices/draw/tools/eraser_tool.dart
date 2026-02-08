@@ -1,13 +1,21 @@
 import 'dart:math' as math;
-import 'dart:ui' show Offset;
+import 'dart:ui' show Offset, Rect;
 
 import '../../../../core/geometry.dart';
+import '../../../../core/hit_test.dart';
 import '../../../../core/nodes.dart';
+import '../../../../core/scene_spatial_index.dart';
 import '../../../action_events.dart';
 import '../../../internal/contracts.dart';
 
 class EraserTool {
   EraserTool(this._contracts);
+
+  // The engine currently uses camera translation only (no zoom), so scene
+  // units map 1:1 to screen-space pixels for input decimation.
+  static const double _minInputStepScene = 0.75;
+  static const double _minInputStepSceneSquared =
+      _minInputStepScene * _minInputStepScene;
 
   final InputSliceContracts _contracts;
   final List<Offset> _eraserPoints = <Offset>[];
@@ -19,7 +27,7 @@ class EraserTool {
   }
 
   void handleMove(Offset scenePoint) {
-    _eraserPoints.add(scenePoint);
+    _appendPoint(scenePoint);
     _contracts.requestRepaintOncePerFrame();
   }
 
@@ -29,10 +37,7 @@ class EraserTool {
   /// mutate scene structure yet. This keeps cancel/mode-switch paths
   /// transactional (no partial deletions left behind).
   void handleUp(int timestampMs, Offset scenePoint) {
-    if (_eraserPoints.isNotEmpty &&
-        (_eraserPoints.last - scenePoint).distance > 0) {
-      _eraserPoints.add(scenePoint);
-    }
+    _appendPoint(scenePoint, forceIfDifferent: true);
 
     final deletedNodeIds = _eraseAnnotations(_eraserPoints);
     _eraserPoints.clear();
@@ -70,19 +75,93 @@ class EraserTool {
     final deleted = <NodeId>[];
     if (eraserPoints.isEmpty) return deleted;
 
-    for (final layer in _contracts.scene.layers) {
-      if (layer.isBackground) continue;
-      layer.nodes.removeWhere((node) {
-        if (node is! StrokeNode && node is! LineNode) return false;
-        if (!node.isDeletable) return false;
-        final hit = _eraserHitsNode(eraserPoints, node);
-        if (hit) {
-          deleted.add(node.id);
-        }
-        return hit;
+    final candidates = _queryEraserCandidates(eraserPoints)
+      ..sort((left, right) {
+        final byLayer = left.layerIndex.compareTo(right.layerIndex);
+        if (byLayer != 0) return byLayer;
+        return left.nodeIndex.compareTo(right.nodeIndex);
       });
+    final deletionsByLayer = <int, List<int>>{};
+    for (final candidate in candidates) {
+      final layerIndex = candidate.layerIndex;
+      if (layerIndex < 0 || layerIndex >= _contracts.scene.layers.length) {
+        continue;
+      }
+      final layer = _contracts.scene.layers[layerIndex];
+      if (layer.isBackground) continue;
+      final nodeIndex = candidate.nodeIndex;
+      if (nodeIndex < 0 || nodeIndex >= layer.nodes.length) {
+        continue;
+      }
+      final node = layer.nodes[nodeIndex];
+      if (!identical(node, candidate.node)) continue;
+      if (node is! StrokeNode && node is! LineNode) continue;
+      if (!node.isDeletable) continue;
+      if (!_eraserHitsNode(eraserPoints, node)) continue;
+      deleted.add(node.id);
+      final indices = deletionsByLayer.putIfAbsent(layerIndex, () => <int>[]);
+      indices.add(nodeIndex);
+    }
+
+    final layerIndices = deletionsByLayer.keys.toList(growable: false)
+      ..sort((left, right) => right.compareTo(left));
+    for (final layerIndex in layerIndices) {
+      final indices = deletionsByLayer[layerIndex]!
+        ..sort((left, right) => right.compareTo(left));
+      final layer = _contracts.scene.layers[layerIndex];
+      for (final nodeIndex in indices) {
+        if (nodeIndex < 0 || nodeIndex >= layer.nodes.length) continue;
+        layer.nodes.removeAt(nodeIndex);
+      }
     }
     return deleted;
+  }
+
+  List<SceneSpatialCandidate> _queryEraserCandidates(
+    List<Offset> eraserPoints,
+  ) {
+    final byId = <NodeId, SceneSpatialCandidate>{};
+    final queryPadding = _contracts.eraserThickness / 2 + kHitSlop;
+    if (eraserPoints.length == 1) {
+      final point = eraserPoints.first;
+      final probe = Rect.fromLTWH(
+        point.dx,
+        point.dy,
+        0,
+        0,
+      ).inflate(queryPadding);
+      for (final candidate in _contracts.querySpatialCandidates(probe)) {
+        byId[candidate.node.id] = candidate;
+      }
+      return byId.values.toList(growable: false);
+    }
+
+    for (var i = 0; i < eraserPoints.length - 1; i++) {
+      final a = eraserPoints[i];
+      final b = eraserPoints[i + 1];
+      final segmentBounds = Rect.fromPoints(a, b).inflate(queryPadding);
+      for (final candidate in _contracts.querySpatialCandidates(
+        segmentBounds,
+      )) {
+        byId[candidate.node.id] = candidate;
+      }
+    }
+    return byId.values.toList(growable: false);
+  }
+
+  void _appendPoint(Offset scenePoint, {bool forceIfDifferent = false}) {
+    final last = _eraserPoints.last;
+    final delta = scenePoint - last;
+    final distanceSquared = delta.dx * delta.dx + delta.dy * delta.dy;
+    if (forceIfDifferent) {
+      if (distanceSquared > 0) {
+        _eraserPoints.add(scenePoint);
+      }
+      return;
+    }
+    if (distanceSquared >= _minInputStepSceneSquared) {
+      _eraserPoints.add(scenePoint);
+    }
   }
 
   bool _eraserHitsNode(List<Offset> eraserPoints, SceneNode node) {

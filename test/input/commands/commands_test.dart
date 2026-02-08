@@ -126,16 +126,45 @@ void main() {
   );
 
   test('setMode clears selection rect and switches mode', () {
-    final controller = SceneController(scene: Scene(layers: [Layer()]));
+    final node = rectNode('rect-1', const Offset(0, 0));
+    final controller = SceneController(
+      scene: Scene(
+        layers: [
+          Layer(nodes: [node]),
+        ],
+      ),
+    );
     addTearDown(controller.dispose);
 
+    controller.setSelection([node.id]);
     controller.debugSetSelectionRect(const Rect.fromLTRB(0, 0, 10, 10));
+    expect(controller.selectedNodeIds, contains(node.id));
     expect(controller.selectionRect, isNotNull);
 
     controller.setMode(CanvasMode.draw);
 
     expect(controller.mode, CanvasMode.draw);
     expect(controller.selectionRect, isNull);
+    expect(controller.selectedNodeIds, contains(node.id));
+  });
+
+  test('setMode can clear selection on entering draw mode', () {
+    final node = rectNode('rect-1', const Offset(0, 0));
+    final controller = SceneController(
+      scene: Scene(
+        layers: [
+          Layer(nodes: [node]),
+        ],
+      ),
+      clearSelectionOnDrawModeEnter: true,
+    );
+    addTearDown(controller.dispose);
+
+    controller.setSelection([node.id]);
+    controller.setMode(CanvasMode.draw);
+
+    expect(controller.mode, CanvasMode.draw);
+    expect(controller.selectedNodeIds, isEmpty);
   });
 
   testWidgets('tool parameter setter schedules repaint', (tester) async {

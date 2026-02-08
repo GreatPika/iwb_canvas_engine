@@ -165,13 +165,12 @@ Stable contracts (expected to remain compatible as the package evolves):
   - Hit-test tolerance uses `kHitSlop` + `SceneNode.hitPadding` in **scene/world units**
     (scale-aware). When `transform.invert()` is unavailable (degenerate
     transforms), hit-testing falls back to `boundsWorld.inflate(hitPadding + kHitSlop)`
-    for coarse-but-selectable behavior. Exception: `PathNode` fill does not use
-    coarse fallback and is non-interactive when inverse transform is unavailable.
+    for coarse-but-selectable behavior. Exception: `PathNode` fill/stroke do not
+    use coarse fallback and are non-interactive when inverse transform is unavailable.
   - **PathNode semantics:** hit-testing selects the union of fill and stroke.
     - Fill uses `Path.contains` (exact interior hit-test, requires invertible transform).
-    - Stroke uses a coarse AABB check (stage A) with tolerance
-      `boundsWorld.inflate(hitPadding + kHitSlop)` in scene units (stroke thickness is already
-      included in `boundsWorld` via `PathNode.localBounds`).
+    - Stroke uses precise distance-to-path checks with tolerance
+      `strokeWidth/2 + hitPadding + kHitSlop` in scene units (scale-aware).
     - Selection highlight for closed contours follows `PathNode.fillRule`
       (`nonZero` / `evenOdd`) for consistent hole behavior.
     - Invalid/unbuildable SVG path data is non-interactive at runtime
@@ -183,6 +182,9 @@ Stable contracts (expected to remain compatible as the package evolves):
   constructor input, ensures a background layer exists at index `0`, and moves
   a misordered background layer to index `0`. Multiple background layers are
   rejected with `ArgumentError`.
+- **Mode policy:** `SceneController(clearSelectionOnDrawModeEnter: true)`
+  clears current selection when switching mode to `CanvasMode.draw`
+  (default is `false`).
 - **Decoder canonicalization:** `decodeScene(...)` enforces the same background
   invariant: missing/misordered background is canonicalized to index `0`;
   multiple background layers are rejected with `SceneJsonFormatException`.
@@ -219,7 +221,9 @@ Stable contracts (expected to remain compatible as the package evolves):
 
 - Floating-point math is not exact. This package avoids strict `== 0` checks in core math where it can cause unstable behavior.
 - `Transform2D.invert()` may return `null` not only for exactly singular matrices, but also for **near-singular** or **non-finite** transforms.
-  - Always handle `null` and fall back to coarse behavior when needed (example: most hit-testing paths use an inflated `boundsWorld` fallback; `PathNode` fill stays non-interactive).
+  - Always handle `null` and fall back to coarse behavior when needed
+    (example: most hit-testing paths use an inflated `boundsWorld` fallback;
+    `PathNode` fill/stroke stay non-interactive).
 - Derived convenience accessors (`rotationDeg`, `scaleY`) are designed to stay finite and stable even when the underlying transform is almost-degenerate.
 - UI-like positioning helpers (e.g. `topLeftWorld` setters) use epsilon comparisons to avoid floating-point micro-drift.
 

@@ -13,7 +13,7 @@ library;
 export 'basic.dart';
 
 // Additional low-level building blocks.
-export 'src/core/hit_test.dart';
+export 'src/core/hit_test.dart' hide nodeHitTestCandidateBoundsWorld;
 
 export 'src/input/pointer_input.dart' hide PointerInputSettings;
 

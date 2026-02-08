@@ -372,7 +372,11 @@ Goal: scalability on large scenes and long gestures; reduce unnecessary work; fi
 * Set highlight fill type based on `node.fillRule` (evenOdd vs nonZero).
   **Done when:** visual/test verifies highlight matches fill behavior.
 
-30. [ ] **(#18) Eraser/hit-test is O(N) per move → slow on large scenes**
+Batch rationale (2026-02-08): tasks **#18 + #21 + #23** were completed together
+because they share the same hit-test/input hot path infrastructure (spatial
+candidate lookup + precise path stroke checks + input-point decimation).
+
+30. [x] **(#18) Eraser/hit-test is O(N) per move → slow on large scenes**
     **Where:** eraser hit-testing / scene hit-test pipeline
     **Do:**
 
@@ -380,7 +384,7 @@ Goal: scalability on large scenes and long gestures; reduce unnecessary work; fi
 * Keep it updated on structural mutations.
   **Done when:** perf test: erasing stays responsive on large scenes.
 
-31. [ ] **(#21) Unlimited point growth in stroke/eraser paths (memory/JSON/CPU)**
+31. [x] **(#21) Unlimited point growth in stroke/eraser paths (memory/JSON/CPU)**
     **Where:** `StrokeTool`, `EraserTool`
     **Do:**
 
@@ -388,7 +392,7 @@ Goal: scalability on large scenes and long gestures; reduce unnecessary work; fi
 * Optionally simplify polyline on commit (only if needed).
   **Done when:** long draw/erase does not create huge point arrays; perf and serialization stable.
 
-32. [ ] **(#23) PathNode stroke hit-test too coarse (AABB) → false hits**
+32. [x] **(#23) PathNode stroke hit-test too coarse (AABB) → false hits**
     **Where:** stroke hit-test for `PathNode`
     **Do:**
 

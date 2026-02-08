@@ -87,7 +87,7 @@ class MoveModeEngine {
     _pendingClearSelection = false;
     _moveGestureNodes = null;
 
-    final hit = hitTestTopNode(_contracts.scene, scenePoint);
+    final hit = _hitTestTopNode(scenePoint);
     if (hit != null) {
       _dragTarget = _DragTarget.move;
       if (!_contracts.selectedNodeIds.contains(hit.id)) {
@@ -216,11 +216,16 @@ class MoveModeEngine {
     if (delta == Offset.zero) return;
 
     final nodesToMove = nodes ?? _selectedNodesInSceneOrder();
+    var movedAny = false;
     for (final node in nodesToMove) {
       if (node.isLocked) continue;
       if (!node.isTransformable) continue;
       _rememberNodeTransform(node);
       node.position = node.position + delta;
+      movedAny = true;
+    }
+    if (movedAny) {
+      _contracts.markSceneGeometryChanged();
     }
   }
 
@@ -282,17 +287,68 @@ class MoveModeEngine {
 
   List<NodeId> _nodesIntersecting(Rect rect) {
     final ids = <NodeId>[];
-    for (final layer in _contracts.scene.layers) {
-      for (final node in layer.nodes) {
-        if (!isNodeInteractiveForSelection(node, layer, onlySelectable: true)) {
-          continue;
-        }
-        if (node.boundsWorld.overlaps(rect)) {
-          ids.add(node.id);
-        }
+    final seen = <NodeId>{};
+    final candidates =
+        _contracts.querySpatialCandidates(rect).toList(growable: true)
+          ..sort((left, right) {
+            final byLayer = left.layerIndex.compareTo(right.layerIndex);
+            if (byLayer != 0) return byLayer;
+            return left.nodeIndex.compareTo(right.nodeIndex);
+          });
+
+    for (final candidate in candidates) {
+      final layerIndex = candidate.layerIndex;
+      if (layerIndex < 0 || layerIndex >= _contracts.scene.layers.length) {
+        continue;
+      }
+      final layer = _contracts.scene.layers[layerIndex];
+      final nodeIndex = candidate.nodeIndex;
+      if (nodeIndex < 0 || nodeIndex >= layer.nodes.length) {
+        continue;
+      }
+      final node = layer.nodes[nodeIndex];
+      if (!identical(node, candidate.node)) continue;
+      if (!isNodeInteractiveForSelection(node, layer, onlySelectable: true)) {
+        continue;
+      }
+      if (!node.boundsWorld.overlaps(rect)) continue;
+      if (seen.add(node.id)) {
+        ids.add(node.id);
       }
     }
     return ids;
+  }
+
+  SceneNode? _hitTestTopNode(Offset point) {
+    final probe = Rect.fromLTWH(point.dx, point.dy, 0, 0);
+    final candidates =
+        _contracts.querySpatialCandidates(probe).toList(growable: true)
+          ..sort((left, right) {
+            final byLayer = right.layerIndex.compareTo(left.layerIndex);
+            if (byLayer != 0) return byLayer;
+            return right.nodeIndex.compareTo(left.nodeIndex);
+          });
+
+    for (final candidate in candidates) {
+      final layerIndex = candidate.layerIndex;
+      if (layerIndex < 0 || layerIndex >= _contracts.scene.layers.length) {
+        continue;
+      }
+      final layer = _contracts.scene.layers[layerIndex];
+      final nodeIndex = candidate.nodeIndex;
+      if (nodeIndex < 0 || nodeIndex >= layer.nodes.length) {
+        continue;
+      }
+      final node = layer.nodes[nodeIndex];
+      if (!identical(node, candidate.node)) continue;
+      if (!isNodeInteractiveForSelection(node, layer, onlySelectable: true)) {
+        continue;
+      }
+      if (hitTestNode(point, node)) {
+        return node;
+      }
+    }
+    return null;
   }
 
   int _debugComputeSceneStructureFingerprint() {

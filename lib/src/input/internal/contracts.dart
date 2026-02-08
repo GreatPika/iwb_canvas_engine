@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../../core/nodes.dart';
 import '../../core/scene.dart';
+import '../../core/scene_spatial_index.dart';
 import '../action_events.dart';
 import '../types.dart';
 
@@ -14,6 +15,7 @@ abstract class InputSliceContracts {
   Scene get scene;
   Offset toScenePoint(Offset viewPoint);
   double get dragStartSlop;
+  List<SceneSpatialCandidate> querySpatialCandidates(Rect worldBounds);
 
   // (2) Selection
   Set<NodeId> get selectedNodeIds;

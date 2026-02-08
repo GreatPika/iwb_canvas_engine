@@ -5,11 +5,25 @@
   according to `TextDirection` (LTR/RTL).
 - Render: `PathNode` selection highlight now respects `fillRule`
   (`evenOdd`/`nonZero`) for closed contours.
+- Performance: add a uniform-grid spatial index for scene hit-test candidates.
+  Move-mode hit discovery, marquee candidate lookup, and eraser deletion
+  candidate lookup now use lazy-rebuilt spatial queries instead of full scene
+  scans.
+- Input: stroke/eraser trajectories now apply input-point decimation
+  (`0.75` scene units) and always keep the final `up` sample when it differs
+  from the last accepted point.
+- Fix: `PathNode` stroke hit-testing now uses precise distance-to-path checks
+  (with tolerance `strokeWidth/2 + hitPadding + kHitSlop`) instead of coarse
+  AABB-final selection; non-invertible path transforms are non-clickable for
+  both fill and stroke.
 - Input/View: harden multitouch signal policy and pending-tap scheduling.
-  `PointerInputTracker` now correlates double-tap by `pointerId` (not device
-  kind), `SceneView` ignores tap/double-tap candidates from non-active
+  `PointerInputTracker` now correlates double-tap by device kind
+  (`PointerDeviceKind`), `SceneView` ignores tap/double-tap candidates from non-active
   pointers during an active gesture, and pending-tap flushing now uses a
   single timer window instead of timer recreation on every pointer sample.
+- Input: add optional `SceneController(clearSelectionOnDrawModeEnter: true)`
+  policy to clear selection when entering `CanvasMode.draw` (`false` by
+  default).
 - Input: marquee commit now emits `ActionType.selectMarquee` only when the
   normalized selection actually changes (no-op marquee commits emit no action).
 - Input: harden dispose-safety in input slices:
@@ -111,13 +125,13 @@
 - Fix: `StrokeNode` hit-testing now accounts for `hitPadding` and `kHitSlop` in
   scene units (touch-friendly, scale-aware).
 - Fix: `PathNode` hit-testing includes stroke even when the node is filled
-  (selection = fill ∪ stroke; coarse stage A for stroke).
+  (selection = fill ∪ stroke).
 - Fix: `PathNode` stroke hit-testing no longer double-counts `strokeWidth` when
   inflating `boundsWorld`; selection tolerance uses only `hitPadding + kHitSlop`.
 - Fix: invalid/unbuildable `PathNode` SVG data is now non-interactive in
   hit-testing (no coarse AABB phantom hits).
 - Fix: hit-testing fallback for non-invertible transforms now preserves
-  `hitPadding` + `kHitSlop` and keeps nodes selectable via inflated `boundsWorld`.
+  `hitPadding` + `kHitSlop` for non-`PathNode` shapes.
 - Fix: negative `thickness/strokeWidth` values are treated as zero in bounds,
   hit-testing (including `hitTestLine`), and rendering.
 - Core: `segmentsIntersect` now uses scale-aware epsilon logic for near-collinear

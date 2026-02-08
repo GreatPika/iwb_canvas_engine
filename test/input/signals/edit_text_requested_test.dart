@@ -114,4 +114,33 @@ void main() {
     expect(requests, hasLength(1));
     expect(requests.single.timestampMs, 1011);
   });
+
+  test('double tap on overlapping texts picks top-most in same layer', () {
+    final bottom = textNode('text-bottom', const Offset(0, 0));
+    final top = textNode('text-top', const Offset(0, 0));
+    final scene = Scene(
+      layers: [
+        Layer(nodes: [bottom, top]),
+      ],
+    );
+    final controller = SceneController(scene: scene);
+    addTearDown(controller.dispose);
+
+    final requests = <EditTextRequested>[];
+    final sub = controller.editTextRequests.listen(requests.add);
+    addTearDown(sub.cancel);
+
+    controller.handlePointerSignal(
+      const PointerSignal(
+        type: PointerSignalType.doubleTap,
+        pointerId: 3,
+        position: Offset(0, 0),
+        timestampMs: 200,
+        kind: PointerDeviceKind.touch,
+      ),
+    );
+
+    expect(requests, hasLength(1));
+    expect(requests.single.nodeId, 'text-top');
+  });
 }

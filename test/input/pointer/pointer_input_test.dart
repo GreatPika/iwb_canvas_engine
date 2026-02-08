@@ -1,9 +1,11 @@
+import 'dart:ui';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:iwb_canvas_engine/advanced.dart';
 
 void main() {
-  // INV:INV-INPUT-DOUBLETAP-BY-POINTERID
+  // INV:INV-INPUT-DOUBLETAP-BY-KIND
   // INV:INV-INPUT-PENDING-TAP-SINGLE-TIMER
   test('emits down move up then deferred tap', () {
     final tracker = PointerInputTracker();
@@ -136,7 +138,7 @@ void main() {
     ]);
   });
 
-  test('different pointer ids do not produce double tap', () {
+  test('different pointer ids can produce double tap', () {
     final tracker = PointerInputTracker(
       settings: const PointerInputSettings(
         doubleTapSlop: 24,
@@ -175,6 +177,64 @@ void main() {
           position: const Offset(22, 21),
           timestampMs: 240,
           phase: PointerPhase.up,
+        ),
+      ),
+      ...tracker.flushPending(1000),
+    ];
+
+    expect(
+      signals.map((signal) => signal.type),
+      contains(PointerSignalType.doubleTap),
+    );
+    expect(
+      signals.where((signal) => signal.type == PointerSignalType.tap),
+      isEmpty,
+    );
+  });
+
+  test('different pointer kinds do not produce double tap', () {
+    final tracker = PointerInputTracker(
+      settings: const PointerInputSettings(
+        doubleTapSlop: 24,
+        doubleTapMaxDelayMs: 300,
+      ),
+    );
+
+    final signals = <PointerSignal>[
+      ...tracker.handle(
+        const PointerSample(
+          pointerId: 1,
+          position: Offset(20, 20),
+          timestampMs: 100,
+          phase: PointerPhase.down,
+          kind: PointerDeviceKind.touch,
+        ),
+      ),
+      ...tracker.handle(
+        const PointerSample(
+          pointerId: 1,
+          position: Offset(20, 20),
+          timestampMs: 140,
+          phase: PointerPhase.up,
+          kind: PointerDeviceKind.touch,
+        ),
+      ),
+      ...tracker.handle(
+        const PointerSample(
+          pointerId: 2,
+          position: Offset(22, 21),
+          timestampMs: 200,
+          phase: PointerPhase.down,
+          kind: PointerDeviceKind.stylus,
+        ),
+      ),
+      ...tracker.handle(
+        const PointerSample(
+          pointerId: 2,
+          position: Offset(22, 21),
+          timestampMs: 240,
+          phase: PointerPhase.up,
+          kind: PointerDeviceKind.stylus,
         ),
       ),
       ...tracker.flushPending(1000),
@@ -336,7 +396,7 @@ void main() {
   });
 
   test(
-    'nextPendingFlushTimestampMs uses earliest pending tap across pointers',
+    'nextPendingFlushTimestampMs uses earliest pending tap across kinds',
     () {
       final tracker = PointerInputTracker(
         settings: const PointerInputSettings(doubleTapMaxDelayMs: 100),
@@ -348,6 +408,7 @@ void main() {
           position: Offset(0, 0),
           timestampMs: 200,
           phase: PointerPhase.down,
+          kind: PointerDeviceKind.touch,
         ),
       );
       tracker.handle(
@@ -356,6 +417,7 @@ void main() {
           position: Offset(0, 0),
           timestampMs: 200,
           phase: PointerPhase.up,
+          kind: PointerDeviceKind.touch,
         ),
       );
       tracker.handle(
@@ -364,6 +426,7 @@ void main() {
           position: Offset(1, 1),
           timestampMs: 120,
           phase: PointerPhase.down,
+          kind: PointerDeviceKind.stylus,
         ),
       );
       tracker.handle(
@@ -372,6 +435,7 @@ void main() {
           position: Offset(1, 1),
           timestampMs: 120,
           phase: PointerPhase.up,
+          kind: PointerDeviceKind.stylus,
         ),
       );
 

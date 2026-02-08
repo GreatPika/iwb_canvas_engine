@@ -9,6 +9,7 @@ import '../core/hit_test.dart';
 import '../core/nodes.dart';
 import '../core/background_layer_invariants.dart';
 import '../core/scene.dart';
+import '../core/scene_spatial_index.dart';
 import 'action_events.dart';
 import 'internal/contracts.dart';
 import 'internal/node_interaction_policy.dart';
@@ -45,6 +46,9 @@ class SceneController extends ChangeNotifier {
   /// You can reconfigure [pointerSettings], [dragStartSlop], and
   /// [nodeIdGenerator] at runtime via [reconfigureInput].
   ///
+  /// When [clearSelectionOnDrawModeEnter] is `true`, [setMode] clears current
+  /// selection whenever mode changes from move to draw.
+  ///
   /// Constructor policy:
   /// - validates scene invariants and throws [ArgumentError] for unrecoverable
   ///   violations,
@@ -56,6 +60,7 @@ class SceneController extends ChangeNotifier {
     PointerInputSettings? pointerSettings,
     double? dragStartSlop,
     NodeId Function()? nodeIdGenerator,
+    this.clearSelectionOnDrawModeEnter = false,
   }) : scene = scene ?? Scene(),
        _inputConfig = _InputConfig(
          pointerSettings: pointerSettings ?? const PointerInputSettings(),
@@ -84,6 +89,9 @@ class SceneController extends ChangeNotifier {
   late final SceneCommands _sceneCommands;
   int _nodeIdSeed = 0;
   int _timestampCursorMs = -1;
+  int _sceneGeometryRevision = 0;
+  int _spatialIndexRevision = -1;
+  SceneSpatialIndex? _spatialIndexCache;
 
   CanvasMode _mode = CanvasMode.move;
   DrawTool _drawTool = DrawTool.pen;
@@ -93,6 +101,7 @@ class SceneController extends ChangeNotifier {
   double _lineThickness = SceneDefaults.penThickness;
   double _eraserThickness = SceneDefaults.eraserThickness;
   double _highlighterOpacity = SceneDefaults.highlighterOpacity;
+  final bool clearSelectionOnDrawModeEnter;
 
   CanvasMode get mode => _mode;
 
@@ -109,7 +118,7 @@ class SceneController extends ChangeNotifier {
     );
     if (_penThickness == value) return;
     _penThickness = value;
-    _contracts.markSceneGeometryChanged();
+    _markVisualStateChanged();
     _contracts.requestRepaintOncePerFrame();
   }
 
@@ -122,7 +131,7 @@ class SceneController extends ChangeNotifier {
     );
     if (_highlighterThickness == value) return;
     _highlighterThickness = value;
-    _contracts.markSceneGeometryChanged();
+    _markVisualStateChanged();
     _contracts.requestRepaintOncePerFrame();
   }
 
@@ -135,7 +144,7 @@ class SceneController extends ChangeNotifier {
     );
     if (_lineThickness == value) return;
     _lineThickness = value;
-    _contracts.markSceneGeometryChanged();
+    _markVisualStateChanged();
     _contracts.requestRepaintOncePerFrame();
   }
 
@@ -148,7 +157,7 @@ class SceneController extends ChangeNotifier {
     );
     if (_eraserThickness == value) return;
     _eraserThickness = value;
-    _contracts.markSceneGeometryChanged();
+    _markVisualStateChanged();
     _contracts.requestRepaintOncePerFrame();
   }
 
@@ -161,7 +170,7 @@ class SceneController extends ChangeNotifier {
     );
     if (_highlighterOpacity == value) return;
     _highlighterOpacity = value;
-    _contracts.markSceneGeometryChanged();
+    _markVisualStateChanged();
     _contracts.requestRepaintOncePerFrame();
   }
 
@@ -414,6 +423,10 @@ class SceneController extends ChangeNotifier {
   /// Switches between move and draw modes.
   void setMode(CanvasMode value) {
     if (_mode == value) return;
+    final shouldClearSelection =
+        value == CanvasMode.draw &&
+        clearSelectionOnDrawModeEnter &&
+        _contracts.selectedNodeIds.isNotEmpty;
     if (_mode == CanvasMode.move) {
       _resetDrag();
     } else {
@@ -422,7 +435,10 @@ class SceneController extends ChangeNotifier {
     _applyPendingInputConfigIfIdle();
     _mode = value;
     _contracts.setSelectionRect(null, notify: false);
-    _contracts.markSceneGeometryChanged();
+    if (shouldClearSelection) {
+      _contracts.setSelection(const <NodeId>[], notify: false);
+    }
+    _markVisualStateChanged();
     _contracts.notifyNow();
   }
 
@@ -431,7 +447,7 @@ class SceneController extends ChangeNotifier {
     if (_drawTool == tool) return;
     _drawTool = tool;
     _drawModeEngine.reset();
-    _contracts.markSceneGeometryChanged();
+    _markVisualStateChanged();
     _contracts.notifyNow();
   }
 
@@ -439,7 +455,7 @@ class SceneController extends ChangeNotifier {
   void setDrawColor(Color value) {
     if (_drawColor == value) return;
     _drawColor = value;
-    _contracts.markSceneGeometryChanged();
+    _markVisualStateChanged();
     _contracts.notifyNow();
   }
 
@@ -447,7 +463,7 @@ class SceneController extends ChangeNotifier {
   void setBackgroundColor(Color value) {
     if (scene.background.color == value) return;
     scene.background.color = value;
-    _contracts.markSceneGeometryChanged();
+    _markVisualStateChanged();
     _contracts.notifyNow();
   }
 
@@ -455,7 +471,7 @@ class SceneController extends ChangeNotifier {
   void setGridEnabled(bool value) {
     if (scene.background.grid.isEnabled == value) return;
     scene.background.grid.isEnabled = value;
-    _contracts.markSceneGeometryChanged();
+    _markVisualStateChanged();
     _contracts.notifyNow();
   }
 
@@ -471,7 +487,7 @@ class SceneController extends ChangeNotifier {
         : value;
     if (scene.background.grid.cellSize == resolvedValue) return;
     scene.background.grid.cellSize = resolvedValue;
-    _contracts.markSceneGeometryChanged();
+    _markVisualStateChanged();
     _contracts.notifyNow();
   }
 
@@ -641,7 +657,7 @@ class SceneController extends ChangeNotifier {
     if (mode != CanvasMode.move) return;
 
     final scenePoint = _contracts.toScenePoint(signal.position);
-    final hit = hitTestTopNode(_contracts.scene, scenePoint);
+    final hit = _hitTestTopNodeWithSpatialIndex(scenePoint);
     if (hit is TextNode) {
       _contracts.emitEditTextRequested(
         EditTextRequested(
@@ -651,6 +667,25 @@ class SceneController extends ChangeNotifier {
         ),
       );
     }
+  }
+
+  SceneNode? _hitTestTopNodeWithSpatialIndex(Offset scenePoint) {
+    final probe = Rect.fromLTWH(scenePoint.dx, scenePoint.dy, 0, 0);
+    final candidates = _querySpatialCandidates(probe).toList(growable: true);
+    if (candidates.isEmpty) return null;
+
+    candidates.sort((left, right) {
+      final byLayer = right.layerIndex.compareTo(left.layerIndex);
+      if (byLayer != 0) return byLayer;
+      return right.nodeIndex.compareTo(left.nodeIndex);
+    });
+    for (final candidate in candidates) {
+      if (!_isCandidateCurrent(candidate)) continue;
+      if (hitTestNode(scenePoint, candidate.node)) {
+        return candidate.node;
+      }
+    }
+    return null;
   }
 
   bool _setSelection(Iterable<NodeId> nodeIds, {bool notify = true}) {
@@ -687,7 +722,7 @@ class SceneController extends ChangeNotifier {
   void _setSelectionRect(Rect? rect, {bool notify = true}) {
     final didChange = _selectionModel.setSelectionRect(rect);
     if (!didChange) return;
-    _contracts.markSceneGeometryChanged();
+    _markVisualStateChanged();
     if (notify) {
       _contracts.requestRepaintOncePerFrame();
     }
@@ -718,14 +753,41 @@ class SceneController extends ChangeNotifier {
     );
     if (scene.camera.offset == value) return;
     scene.camera.offset = value;
-    _contracts.markSceneGeometryChanged();
+    _markVisualStateChanged();
     if (notify) {
       _contracts.requestRepaintOncePerFrame();
     }
   }
 
-  void _markSceneGeometryChanged() {
+  List<SceneSpatialCandidate> _querySpatialCandidates(Rect worldBounds) {
+    if (!_isFiniteRect(worldBounds)) return const <SceneSpatialCandidate>[];
+    if (_spatialIndexCache == null ||
+        _spatialIndexRevision != _sceneGeometryRevision) {
+      _spatialIndexCache = SceneSpatialIndex.build(scene);
+      _spatialIndexRevision = _sceneGeometryRevision;
+    }
+    return _spatialIndexCache!.query(worldBounds);
+  }
+
+  bool _isCandidateCurrent(SceneSpatialCandidate candidate) {
+    if (candidate.layerIndex < 0 ||
+        candidate.layerIndex >= scene.layers.length) {
+      return false;
+    }
+    final layer = scene.layers[candidate.layerIndex];
+    if (candidate.nodeIndex < 0 || candidate.nodeIndex >= layer.nodes.length) {
+      return false;
+    }
+    return identical(layer.nodes[candidate.nodeIndex], candidate.node);
+  }
+
+  void _markVisualStateChanged() {
     _repaintScheduler.markNeedsNotify();
+  }
+
+  void _markSceneGeometryChanged() {
+    _sceneGeometryRevision += 1;
+    _markVisualStateChanged();
   }
 
   void _markSceneStructuralChanged() {
@@ -735,7 +797,7 @@ class SceneController extends ChangeNotifier {
 
   void _markSelectionChanged() {
     _selectionModel.markSelectionChanged();
-    _markSceneGeometryChanged();
+    _markVisualStateChanged();
   }
 
   int _resolveTimestampMs(int? hintTimestampMs) {
@@ -794,6 +856,13 @@ class SceneController extends ChangeNotifier {
     if (values.isNotEmpty) return;
     throw ArgumentError.value(values, argumentName, message);
   }
+
+  static bool _isFiniteRect(Rect rect) {
+    return rect.left.isFinite &&
+        rect.top.isFinite &&
+        rect.right.isFinite &&
+        rect.bottom.isFinite;
+  }
 }
 
 class _InputConfig {
@@ -836,6 +905,10 @@ class _SceneControllerContracts implements InputSliceContracts {
 
   @override
   double get dragStartSlop => _controller.dragStartSlop;
+
+  @override
+  List<SceneSpatialCandidate> querySpatialCandidates(Rect worldBounds) =>
+      _controller._querySpatialCandidates(worldBounds);
 
   @override
   Set<NodeId> get selectedNodeIds => _controller.selectedNodeIds;

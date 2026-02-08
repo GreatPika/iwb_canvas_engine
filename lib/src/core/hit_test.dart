@@ -13,6 +13,24 @@ import 'transform2d.dart';
 /// [SceneNode.hitPadding] to make selection easier on touch devices.
 const double kHitSlop = 4.0;
 
+/// Returns coarse world bounds used to prefilter node hit-test candidates.
+///
+/// The returned rectangle includes node geometry bounds plus
+/// `hitPadding + kHitSlop`, and optionally [additionalScenePadding].
+Rect nodeHitTestCandidateBoundsWorld(
+  SceneNode node, {
+  double additionalScenePadding = 0,
+}) {
+  final bounds = node.boundsWorld;
+  if (!_isFiniteRect(bounds)) return Rect.zero;
+  final baseHitPadding = clampNonNegativeFinite(node.hitPadding);
+  final extraPadding = clampNonNegativeFinite(additionalScenePadding);
+  final scenePadding = baseHitPadding + kHitSlop + extraPadding;
+  final padding = _scenePaddingToWorldMax(node.transform, scenePadding);
+  if (padding <= 0) return bounds;
+  return bounds.inflate(padding);
+}
+
 /// Returns true if [point] lies inside [rect].
 bool hitTestRect(Offset point, Rect rect) {
   return rect.contains(point);
@@ -57,6 +75,84 @@ double _sceneScalarToLocalMax(Transform2D inverse, double valueScene) {
   return clampNonNegativeFinite(valueScene * scale);
 }
 
+double _maxSingularValue2x2(double a, double b, double c, double d) {
+  final t = a * a + b * b + c * c + d * d;
+  final det = a * d - b * c;
+  final discSquared = t * t - 4 * det * det;
+  final disc = math.sqrt(math.max(0, discSquared));
+  final lambdaMax = (t + disc) / 2;
+  return math.sqrt(math.max(0, lambdaMax));
+}
+
+double _scenePaddingToWorldMax(Transform2D transform, double valueScene) {
+  final clampedScene = clampNonNegativeFinite(valueScene);
+  if (clampedScene <= 0) return 0;
+  if (!transform.isFinite) return clampedScene;
+  final inverse = transform.invert();
+  if (inverse == null) return clampedScene;
+  final sceneToLocal = _maxSingularValue2x2(
+    inverse.a,
+    inverse.b,
+    inverse.c,
+    inverse.d,
+  );
+  final localToScene = _maxSingularValue2x2(
+    transform.a,
+    transform.b,
+    transform.c,
+    transform.d,
+  );
+  final localPaddingMax = clampedScene * sceneToLocal;
+  final worldPaddingMax = localPaddingMax * localToScene;
+  return clampNonNegativeFinite(worldPaddingMax, fallback: clampedScene);
+}
+
+double _pathMetricStep(double strokeRadiusLocal) {
+  final radius = clampNonNegativeFinite(strokeRadiusLocal);
+  return math.max(0.5, radius * 0.5);
+}
+
+bool _hitTestPathStrokePrecise(
+  Path localPath,
+  Offset localPoint,
+  double strokeRadiusLocal,
+) {
+  final radius = clampNonNegativeFinite(strokeRadiusLocal);
+  if (radius <= 0) return false;
+
+  for (final metric in localPath.computeMetrics()) {
+    if (metric.length <= 0) continue;
+    final start = metric.getTangentForOffset(0);
+    if (start == null) continue;
+    var previous = start.position;
+    if ((localPoint - previous).distance <= radius) {
+      return true;
+    }
+    final step = _pathMetricStep(radius);
+    for (var offset = step; offset < metric.length; offset += step) {
+      final currentTangent = metric.getTangentForOffset(offset);
+      if (currentTangent == null) continue;
+      final current = currentTangent.position;
+      final distance = distancePointToSegment(localPoint, previous, current);
+      if (distance <= radius) {
+        return true;
+      }
+      previous = current;
+    }
+    final end = metric.getTangentForOffset(metric.length);
+    if (end == null) continue;
+    final endDistance = distancePointToSegment(
+      localPoint,
+      previous,
+      end.position,
+    );
+    if (endDistance <= radius) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /// Returns true if [point] hits [node] in scene coordinates.
 bool hitTestNode(Offset point, SceneNode node) {
   if (!point.dx.isFinite || !point.dy.isFinite) return false;
@@ -94,44 +190,32 @@ bool hitTestNode(Offset point, SceneNode node) {
       final localPath = pathNode.buildLocalPath(copy: false);
       // Invalid/unbuildable path data is non-interactive at runtime.
       if (localPath == null) return false;
-      if (pathNode.fillColor != null) {
-        final padding = baseHitPadding + kHitSlop;
-        if (!pathNode.boundsWorld.inflate(padding).contains(point)) {
-          return false;
-        }
-        final inverse = pathNode.transform.invert();
-        if (inverse != null) {
-          final localPoint = inverse.applyToPoint(point);
-          if (localPath.contains(localPoint)) return true;
-        } else {
-          // Fill hit-testing requires local-space geometry checks.
-          // Degenerate transforms are not clickable for fill.
-        }
+      final candidateBounds = nodeHitTestCandidateBoundsWorld(pathNode);
+      if (!candidateBounds.contains(point)) return false;
 
-        // Union semantics: when a path has both fill and stroke, allow hits on
-        // the stroke even if the point lies outside the filled interior.
-        //
-        // Stage A (coarse): use an inflated AABB check for the stroke area.
-        if (pathNode.strokeColor != null) {
-          final baseStrokeWidth = clampNonNegativeFinite(pathNode.strokeWidth);
-          if (baseStrokeWidth > 0) {
-            // Note: boundsWorld already includes stroke thickness via
-            // PathNode.localBounds; only apply selection tolerances here.
-            final strokePadding = baseHitPadding + kHitSlop;
-            return pathNode.boundsWorld.inflate(strokePadding).contains(point);
-          }
-        }
+      final inverse = pathNode.transform.invert();
+      if (pathNode.fillColor != null && inverse != null) {
+        final localPoint = inverse.applyToPoint(point);
+        if (localPath.contains(localPoint)) return true;
+      }
+
+      if (pathNode.strokeColor == null) return false;
+      final baseStrokeWidth = clampNonNegativeFinite(pathNode.strokeWidth);
+      if (baseStrokeWidth <= 0) return false;
+      if (inverse == null) {
+        // Stroke precision requires local-space distance checks.
         return false;
       }
-      if (pathNode.strokeColor != null) {
-        final baseStrokeWidth = clampNonNegativeFinite(pathNode.strokeWidth);
-        if (baseStrokeWidth <= 0) return false;
-        // Note: boundsWorld already includes stroke thickness via
-        // PathNode.localBounds; only apply selection tolerances here.
-        final padding = baseHitPadding + kHitSlop;
-        return pathNode.boundsWorld.inflate(padding).contains(point);
-      }
-      return false;
+
+      final localPoint = inverse.applyToPoint(point);
+      final paddingScene = baseHitPadding + kHitSlop;
+      final paddingLocal = _sceneScalarToLocalMax(inverse, paddingScene);
+      final strokeRadiusLocal = baseStrokeWidth / 2 + paddingLocal;
+      return _hitTestPathStrokePrecise(
+        localPath,
+        localPoint,
+        strokeRadiusLocal,
+      );
     case NodeType.line:
       final line = node as LineNode;
       final inverse = line.transform.invert();
@@ -165,6 +249,13 @@ bool hitTestNode(Offset point, SceneNode node) {
         hitSlop: hitSlopLocal,
       );
   }
+}
+
+bool _isFiniteRect(Rect rect) {
+  return rect.left.isFinite &&
+      rect.top.isFinite &&
+      rect.right.isFinite &&
+      rect.bottom.isFinite;
 }
 
 /// Returns the top-most node hit by [point], or null.

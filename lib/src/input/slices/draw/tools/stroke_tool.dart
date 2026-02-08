@@ -10,6 +10,12 @@ class StrokeTool {
   StrokeTool(this._contracts, {required Layer Function() ensureAnnotationLayer})
     : _ensureAnnotationLayer = ensureAnnotationLayer;
 
+  // The engine currently uses camera translation only (no zoom), so scene
+  // units map 1:1 to screen-space pixels for input decimation.
+  static const double _minInputStepScene = 0.75;
+  static const double _minInputStepSceneSquared =
+      _minInputStepScene * _minInputStepScene;
+
   final InputSliceContracts _contracts;
   final Layer Function() _ensureAnnotationLayer;
 
@@ -39,7 +45,7 @@ class StrokeTool {
     final stroke = _activeStroke;
     if (stroke == null) return;
     if (stroke.points.isNotEmpty &&
-        (scenePoint - stroke.points.last).distance == 0) {
+        !_shouldAppendPoint(stroke.points.last, scenePoint)) {
       return;
     }
     stroke.points.add(scenePoint);
@@ -50,7 +56,7 @@ class StrokeTool {
     final stroke = _activeStroke;
     if (stroke == null) return;
     if (stroke.points.isEmpty ||
-        (scenePoint - stroke.points.last).distance > 0) {
+        _isDifferentPoint(stroke.points.last, scenePoint)) {
       stroke.points.add(scenePoint);
     }
     try {
@@ -101,5 +107,16 @@ class StrokeTool {
     return drawTool == DrawTool.highlighter
         ? _contracts.highlighterThickness
         : _contracts.penThickness;
+  }
+
+  bool _shouldAppendPoint(Offset last, Offset current) {
+    final delta = current - last;
+    final distanceSquared = delta.dx * delta.dx + delta.dy * delta.dy;
+    return distanceSquared >= _minInputStepSceneSquared;
+  }
+
+  bool _isDifferentPoint(Offset left, Offset right) {
+    final delta = right - left;
+    return delta.dx * delta.dx + delta.dy * delta.dy > 0;
   }
 }

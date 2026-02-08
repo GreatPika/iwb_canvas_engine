@@ -416,7 +416,7 @@ void main() {
     },
   );
 
-  test('PathNode fill hit-test requires invertible transform', () {
+  test('PathNode fill/stroke hit-test requires invertible transform', () {
     // INV:INV-CORE-PATH-HITTEST-FILL-REQUIRES-INVERSE
     const singular = Transform2D(a: 1, b: 2, c: 1, d: 2, tx: 100, ty: -50);
 
@@ -443,7 +443,7 @@ void main() {
       strokeOnly.boundsWorld.right + kHitSlop - 0.1,
       strokeOnly.boundsWorld.center.dy,
     );
-    expect(hitTestNode(strokeOnlyInsideAabb, strokeOnly), isTrue);
+    expect(hitTestNode(strokeOnlyInsideAabb, strokeOnly), isFalse);
 
     final fillAndStroke = PathNode(
       id: 'path-singular-fill-and-stroke',
@@ -457,7 +457,7 @@ void main() {
       fillAndStroke.boundsWorld.right + kHitSlop - 0.1,
       fillAndStroke.boundsWorld.center.dy,
     );
-    expect(hitTestNode(fillAndStrokeInsideAabb, fillAndStroke), isTrue);
+    expect(hitTestNode(fillAndStrokeInsideAabb, fillAndStroke), isFalse);
 
     final fillAndZeroStroke = PathNode(
       id: 'path-singular-fill-and-zero-stroke',
@@ -500,7 +500,7 @@ void main() {
     expect(hitTestNode(worldHit, node), isTrue);
   });
 
-  test('PathNode hit-test selects union of fill and stroke (stage A)', () {
+  test('PathNode hit-test selects union of fill and precise stroke', () {
     // INV:INV-CORE-PATH-HITTEST-FILL-OR-STROKE
     final node = PathNode(
       id: 'path-fill-stroke',
@@ -522,50 +522,39 @@ void main() {
     expect(hitTestNode(outside, node), isFalse);
   });
 
-  test(
-    'PathNode stroke-only hit-test does not double-count strokeWidth in AABB padding',
-    () {
-      // INV:INV-CORE-PATH-HITTEST-STROKE-NO-DOUBLECOUNT
-      final node = PathNode(
-        id: 'path-stroke-only',
-        svgPathData: 'M0 0 H40 V30 H0 Z',
-        strokeColor: const Color(0xFF000000),
-        strokeWidth: 10,
-      );
+  test('PathNode stroke-only hit-test uses precise stroke distance', () {
+    // INV:INV-CORE-PATH-HITTEST-STROKE-NO-DOUBLECOUNT
+    final node = PathNode(
+      id: 'path-stroke-only',
+      svgPathData: 'M0 0 H40 V30 H0 Z',
+      strokeColor: const Color(0xFF000000),
+      strokeWidth: 10,
+    );
 
-      final inside = Offset(
-        node.boundsWorld.right + kHitSlop - 0.1,
-        node.boundsWorld.center.dy,
-      );
-      expect(hitTestNode(inside, node), isTrue);
+    // Inside AABB, but far from stroke geometry.
+    expect(hitTestNode(node.position, node), isFalse);
 
-      final outside = Offset(
-        node.boundsWorld.right + kHitSlop + 0.1,
-        node.boundsWorld.center.dy,
-      );
-      expect(hitTestNode(outside, node), isFalse);
+    // Near right edge stroke.
+    expect(hitTestNode(const Offset(24, 0), node), isTrue);
 
-      final padded = PathNode(
-        id: 'path-stroke-only-padded',
-        svgPathData: 'M0 0 H40 V30 H0 Z',
-        strokeColor: const Color(0xFF000000),
-        strokeWidth: 10,
-        hitPadding: 7,
-      );
+    final padded = PathNode(
+      id: 'path-stroke-only-padded',
+      svgPathData: 'M0 0 H40 V30 H0 Z',
+      strokeColor: const Color(0xFF000000),
+      strokeWidth: 10,
+      hitPadding: 7,
+    );
 
-      final insidePadded = Offset(
-        padded.boundsWorld.right + padded.hitPadding + kHitSlop - 0.1,
-        padded.boundsWorld.center.dy,
-      );
-      expect(hitTestNode(insidePadded, padded), isTrue);
+    expect(hitTestNode(node.position, padded), isTrue);
+    final insidePadded = const Offset(30, 0);
+    expect(hitTestNode(insidePadded, padded), isTrue);
 
-      final outsidePadded = Offset(
-        padded.boundsWorld.right + padded.hitPadding + kHitSlop + 0.1,
-        padded.boundsWorld.center.dy,
-      );
-      expect(hitTestNode(outsidePadded, padded), isFalse);
-    },
-  );
+    final outsidePadded = Offset(
+      padded.boundsWorld.right + padded.hitPadding + kHitSlop + 0.1,
+      padded.boundsWorld.center.dy,
+    );
+    expect(hitTestNode(outsidePadded, padded), isFalse);
+  });
 
   test('PathNode hit-test clamps negative strokeWidth to zero', () {
     // INV:INV-CORE-NONNEGATIVE-WIDTHS-CLAMP
@@ -703,17 +692,20 @@ void main() {
     },
   );
 
-  test('hitTestNode allows coarse hits for stroke-only PathNode (stage A)', () {
-    final node = PathNode(
-      id: 'path-stroke-only',
-      svgPathData: 'M0 0 H40 V30 H0 Z',
-      strokeColor: const Color(0xFF000000),
-      strokeWidth: 2,
-    )..position = const Offset(100, 100);
-    expect(hitTestNode(node.position, node), isTrue);
-  });
+  test(
+    'hitTestNode rejects stroke-only PathNode center when far from stroke',
+    () {
+      final node = PathNode(
+        id: 'path-stroke-only',
+        svgPathData: 'M0 0 H40 V30 H0 Z',
+        strokeColor: const Color(0xFF000000),
+        strokeWidth: 2,
+      )..position = const Offset(100, 100);
+      expect(hitTestNode(node.position, node), isFalse);
+    },
+  );
 
-  test('stroke-only PathNode hit-test accounts for node scale (stage A)', () {
+  test('stroke-only PathNode hit-test accounts for node scale', () {
     final node =
         PathNode(
             id: 'path-stroke-scale',
@@ -727,6 +719,35 @@ void main() {
 
     expect(hitTestNode(const Offset(52, 0), node), isTrue);
   });
+
+  test(
+    'stroke-only PathNode precise hit-test stays correct under rotation and non-uniform scale',
+    () {
+      final node =
+          PathNode(
+              id: 'path-stroke-rot-scale',
+              svgPathData: 'M0 0 H40 V30 H0 Z',
+              strokeColor: const Color(0xFF000000),
+              strokeWidth: 6,
+            )
+            ..position = const Offset(100, 80)
+            ..rotationDeg = 30
+            ..scaleX = 2
+            ..scaleY = 0.5;
+
+      final nearLocal = const Offset(22, 0);
+      final farLocal = const Offset(0, 0);
+
+      Offset toWorld(Offset local) {
+        final scaled = Offset(local.dx * node.scaleX, local.dy * node.scaleY);
+        final rotated = rotatePoint(scaled, Offset.zero, node.rotationDeg);
+        return rotated + node.position;
+      }
+
+      expect(hitTestNode(toWorld(nearLocal), node), isTrue);
+      expect(hitTestNode(toWorld(farLocal), node), isFalse);
+    },
+  );
 
   test(
     'invalid PathNode is non-interactive for stroke-only, fill-only, and fill+stroke',

@@ -58,8 +58,8 @@ Prefer importing the smallest API surface that fits your use case:
   layer are rendered in list order. The last node is top-most for hit-testing.
 - **Path hit-testing**: `PathNode` selection uses fill ∪ stroke; fill is checked
   via `Path.contains` (requires an invertible transform; degenerate transforms
-  are not clickable for fill), and stroke uses a coarse AABB tolerance
-  (stage A).
+  are not clickable for fill), and stroke uses precise distance-to-path checks
+  with tolerance `strokeWidth/2 + hitPadding + kHitSlop`.
   Invalid/unbuildable SVG path data is non-interactive in hit-testing.
 - **Text direction and alignment**: `SceneView` forwards ambient
   `Directionality` to `ScenePainter`. `TextAlign.start`/`TextAlign.end`
@@ -117,6 +117,8 @@ When provided, the constructor validates scene invariants and canonicalizes
 recoverable background-layer cases (ensures a background layer exists at index
 0). Unrecoverable violations (for example multiple background layers) throw
 `ArgumentError`.
+Set `clearSelectionOnDrawModeEnter: true` if your UX requires dropping current
+selection whenever mode switches to `CanvasMode.draw` (default is `false`).
 `decodeScene(...)` applies the same background-layer canonicalization and throws
 `SceneJsonFormatException` for multiple background layers.
 
