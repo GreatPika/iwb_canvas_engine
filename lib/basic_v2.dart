@@ -8,3 +8,12 @@ export 'src/v2/public/node_patch.dart';
 export 'src/v2/public/node_spec.dart';
 export 'src/v2/public/patch_field.dart';
 export 'src/v2/public/snapshot.dart';
+export 'src/v2/serialization/scene_codec.dart'
+    show
+        SceneJsonFormatException,
+        decodeScene,
+        decodeSceneFromJson,
+        encodeScene,
+        encodeSceneToJson,
+        schemaVersionWrite,
+        schemaVersionsRead;

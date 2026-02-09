@@ -118,17 +118,19 @@ lib/
     core/           // Scene model, math, selection, hit-test
     render/         // Canvas rendering for background, layers, nodes
     input/          // Pointer handling, tool state, gesture logic
-    serialization/  // JSON v2 codec
+    serialization/  // Legacy JSON v2 codec (mutable Scene API)
     v2/public/      // Immutable snapshot/spec/patch contracts (transaction-first migration)
+    v2/serialization/ // JSON v2 codec (SceneSnapshot API)
 ```
 
 ## v2 public preview surface
 
-`basic_v2.dart` / `advanced_v2.dart` currently expose a snapshot-only contract:
+`basic_v2.dart` / `advanced_v2.dart` currently expose immutable v2 contracts:
 
 - immutable read models (`SceneSnapshot`, `LayerSnapshot`, `NodeSnapshot`)
 - immutable write intents (`NodeSpec`, `NodePatch`)
 - tri-state patch field semantics (`PatchField.absent/value/nullValue`)
+- JSON helpers with v2 snapshot types (`encodeScene*` / `decodeScene*`)
 
 At this stage, no v2 controller/runtime is exported from these entrypoints.
 Mutation orchestration (`write(...)`, commit pipeline, epoch lifecycle) is

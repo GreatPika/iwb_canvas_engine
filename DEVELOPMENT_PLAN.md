@@ -123,11 +123,11 @@ language: russian
 
 ### F. Сериализация v2
 
-- [ ] F1. Портировать codec в `lib/src/v2/serialization/`.
-- [ ] F2. `decode` возвращает snapshot/document v2 (не mutable Scene).
-- [ ] F3. `encode` принимает snapshot/document v2.
-- [ ] F4. Портировать и адаптировать `test/serialization/*`.
-- [ ] F5. Сохранить совместимость `_requireInt`: принимать `num`, проверять целочисленность, затем приводить к `int`.
+- [x] F1. Портировать codec в `lib/src/v2/serialization/`.
+- [x] F2. `decode` возвращает snapshot/document v2 (не mutable Scene).
+- [x] F3. `encode` принимает snapshot/document v2.
+- [x] F4. Портировать и адаптировать `test/serialization/*`.
+- [x] F5. Сохранить совместимость `_requireInt`: принимать `num`, проверять целочисленность, затем приводить к `int`.
 
 Критерий приёмки F:
 - JSON v2 round-trip проходит на новой модели без утечек mutable-состояния наружу.
@@ -195,3 +195,4 @@ dart pub publish --dry-run
 | 2026-02-09 | C1-C5, D1-D9 | Done | Добавлены `SceneControllerV2`/`SceneWriter`/`TxnContext`/`ChangeSet`/`V2Store`, внутренний mutable-документ с конвертерами `SceneSnapshot <-> Scene`, транзакционные v2-slices (`commands/move/draw/selection/spatial_index/signals/repaint/grid`), commit-order `selection->grid->spatial_index->signals->repaint`, `writeReplaceScene(...)` с `controllerEpoch++`, и тесты на atomic commit/rollback/epoch/signal buffering. |
 | 2026-02-09 | G2 | Decision fixed | Legacy API в major удаляем, отдельный legacy entrypoint не поддерживаем. |
 | 2026-02-09 | E1-E5 | Done | Candidate bounds переведены на strict scene units, добавлены `ScenePainterV2`/`SceneViewV2` и v2 caches с epoch-based invalidation, `SceneStrokePathCache` сделан fail-safe для 0/1 точки, добавлены v2 render/view и core hit-test regression тесты. |
+| 2026-02-09 | F1-F5 | Done | Добавлен `lib/src/v2/serialization/scene_codec.dart` с публичным snapshot API (`encode/decode*`), внутренними document adapters через `txnSceneFromSnapshot`/`txnSceneToSnapshot`, сохранена совместимость `_requireInt` для integer-valued `num`, портированы `test/serialization/*` на `basic_v2.dart`, добавлен тест на immutable decode-контракт. |

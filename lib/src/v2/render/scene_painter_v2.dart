@@ -55,14 +55,19 @@ class SceneStrokePathCacheV2 {
     }
 
     final path = _buildStrokePath(node.points);
-    _entries[node.id] = _StrokePathEntryV2(path: path, geometryHash: geometryHash);
+    _entries[node.id] = _StrokePathEntryV2(
+      path: path,
+      geometryHash: geometryHash,
+    );
     _debugBuildCount += 1;
     _evictIfNeeded();
     return path;
   }
 
   int _pointsHash(List<Offset> points) {
-    return Object.hashAll(points.map((point) => Object.hash(point.dx, point.dy)));
+    return Object.hashAll(
+      points.map((point) => Object.hash(point.dx, point.dy)),
+    );
   }
 
   void _evictIfNeeded() {
@@ -252,7 +257,11 @@ class ScenePathMetricsCacheV2 {
     Path? closedContours;
     final openContours = <Path>[];
     for (final metric in localPath.computeMetrics()) {
-      final contour = metric.extractPath(0, metric.length, startWithMoveTo: true);
+      final contour = metric.extractPath(
+        0,
+        metric.length,
+        startWithMoveTo: true,
+      );
       contour.fillType = fillType;
       if (metric.isClosed) {
         contour.close();
@@ -338,7 +347,11 @@ class SceneStaticLayerCacheV2 {
     final safeOffset = sanitizeFiniteOffset(cameraOffset);
     final safeGridStrokeWidth = clampNonNegativeFinite(gridStrokeWidth);
     final grid = background.grid;
-    final enabled = _isGridDrawable(grid, size: size, cameraOffset: Offset.zero);
+    final enabled = _isGridDrawable(
+      grid,
+      size: size,
+      cameraOffset: Offset.zero,
+    );
     final cellSize = enabled ? grid.cellSize : 0.0;
     final key = _StaticLayerKeyV2(
       size: size,
@@ -366,7 +379,11 @@ class SceneStaticLayerCacheV2 {
     canvas.restore();
   }
 
-  Picture _recordGridPicture(Size size, GridSnapshot grid, double gridStrokeWidth) {
+  Picture _recordGridPicture(
+    Size size,
+    GridSnapshot grid,
+    double gridStrokeWidth,
+  ) {
     final recorder = PictureRecorder();
     final canvas = Canvas(recorder);
     _drawGrid(canvas, size, grid, Offset.zero, gridStrokeWidth);
@@ -526,7 +543,11 @@ class ScenePainterV2 extends CustomPainter {
     }
   }
 
-  void _drawRectNode(Canvas canvas, RectNodeSnapshot node, Offset cameraOffset) {
+  void _drawRectNode(
+    Canvas canvas,
+    RectNodeSnapshot node,
+    Offset cameraOffset,
+  ) {
     if (!node.transform.isFinite) {
       return;
     }
@@ -554,8 +575,14 @@ class ScenePainterV2 extends CustomPainter {
     canvas.restore();
   }
 
-  void _drawLineNode(Canvas canvas, LineNodeSnapshot node, Offset cameraOffset) {
-    if (!node.transform.isFinite || !_isFiniteOffset(node.start) || !_isFiniteOffset(node.end)) {
+  void _drawLineNode(
+    Canvas canvas,
+    LineNodeSnapshot node,
+    Offset cameraOffset,
+  ) {
+    if (!node.transform.isFinite ||
+        !_isFiniteOffset(node.start) ||
+        !_isFiniteOffset(node.end)) {
       return;
     }
     canvas.save();
@@ -577,7 +604,9 @@ class ScenePainterV2 extends CustomPainter {
     StrokeNodeSnapshot node,
     Offset cameraOffset,
   ) {
-    if (node.points.isEmpty || !node.transform.isFinite || !_areFiniteOffsets(node.points)) {
+    if (node.points.isEmpty ||
+        !node.transform.isFinite ||
+        !_areFiniteOffsets(node.points)) {
       return;
     }
 
@@ -613,7 +642,11 @@ class ScenePainterV2 extends CustomPainter {
     canvas.restore();
   }
 
-  void _drawTextNode(Canvas canvas, TextNodeSnapshot node, Offset cameraOffset) {
+  void _drawTextNode(
+    Canvas canvas,
+    TextNodeSnapshot node,
+    Offset cameraOffset,
+  ) {
     if (!node.transform.isFinite) {
       return;
     }
@@ -673,7 +706,11 @@ class ScenePainterV2 extends CustomPainter {
     return painter;
   }
 
-  void _drawImageNode(Canvas canvas, ImageNodeSnapshot node, Offset cameraOffset) {
+  void _drawImageNode(
+    Canvas canvas,
+    ImageNodeSnapshot node,
+    Offset cameraOffset,
+  ) {
     if (!node.transform.isFinite) {
       return;
     }
@@ -703,7 +740,11 @@ class ScenePainterV2 extends CustomPainter {
     canvas.restore();
   }
 
-  void _drawPathNode(Canvas canvas, PathNodeSnapshot node, Offset cameraOffset) {
+  void _drawPathNode(
+    Canvas canvas,
+    PathNodeSnapshot node,
+    Offset cameraOffset,
+  ) {
     if (!node.transform.isFinite) {
       return;
     }
@@ -756,17 +797,18 @@ class ScenePainterV2 extends CustomPainter {
       case TextNodeSnapshot textNode:
         return node.transform.applyToRect(_centerRect(textNode.size));
       case LineNodeSnapshot lineNode:
-        final local = Rect.fromPoints(lineNode.start, lineNode.end).inflate(
-          clampNonNegativeFinite(lineNode.thickness) / 2,
-        );
+        final local = Rect.fromPoints(
+          lineNode.start,
+          lineNode.end,
+        ).inflate(clampNonNegativeFinite(lineNode.thickness) / 2);
         return node.transform.applyToRect(local);
       case StrokeNodeSnapshot strokeNode:
         if (strokeNode.points.isEmpty) {
           return Rect.zero;
         }
-        final local = _aabbFromPoints(strokeNode.points).inflate(
-          clampNonNegativeFinite(strokeNode.thickness) / 2,
-        );
+        final local = _aabbFromPoints(
+          strokeNode.points,
+        ).inflate(clampNonNegativeFinite(strokeNode.thickness) / 2);
         return node.transform.applyToRect(local);
       case PathNodeSnapshot pathNode:
         final localPath = _buildPathNode(pathNode).buildLocalPath(copy: false);
@@ -856,8 +898,12 @@ void _drawGrid(
   final startX = _gridStart(-cameraOffset.dx, cell);
   final startY = _gridStart(-cameraOffset.dy, cell);
 
-  final strideX = _gridStrideForLineCount(_gridLineCount(startX, size.width, cell));
-  final strideY = _gridStrideForLineCount(_gridLineCount(startY, size.height, cell));
+  final strideX = _gridStrideForLineCount(
+    _gridLineCount(startX, size.width, cell),
+  );
+  final strideY = _gridStrideForLineCount(
+    _gridLineCount(startY, size.height, cell),
+  );
 
   for (var x = startX, index = 0; x <= size.width; x += cell, index++) {
     if (index % strideX != 0) {

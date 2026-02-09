@@ -1,7 +1,8 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/advanced.dart';
+import 'package:iwb_canvas_engine/basic_v2.dart';
+import 'package:iwb_canvas_engine/src/core/transform2d.dart';
 
 void main() {
   test('encode -> decode -> encode is stable', () {
@@ -15,7 +16,7 @@ void main() {
   });
 
   test('decodeSceneFromJson rejects invalid schema', () {
-    final json = '{"schemaVersion": 999}';
+    const json = '{"schemaVersion": 999}';
     expect(
       () => decodeSceneFromJson(json),
       throwsA(isA<SceneJsonFormatException>()),
@@ -23,7 +24,7 @@ void main() {
   });
 
   test('decodeSceneFromJson rejects schemaVersion 1', () {
-    final json = '{"schemaVersion": 1}';
+    const json = '{"schemaVersion": 1}';
     expect(
       () => decodeSceneFromJson(json),
       throwsA(isA<SceneJsonFormatException>()),
@@ -40,103 +41,120 @@ void main() {
       throwsA(isA<SceneJsonFormatException>()),
     );
   });
+
+  test('decodeScene returns immutable snapshots', () {
+    final scene = decodeScene(encodeScene(_buildScene()));
+    expect(() => scene.layers.add(LayerSnapshot()), throwsUnsupportedError);
+    expect(
+      () => scene.layers.first.nodes.add(
+        const RectNodeSnapshot(id: 'extra', size: Size(1, 1)),
+      ),
+      throwsUnsupportedError,
+    );
+    expect(
+      () => scene.palette.penColors.add(const Color(0xFF00FF00)),
+      throwsUnsupportedError,
+    );
+  });
 }
 
-Scene _buildScene() {
-  final image =
-      ImageNode(
-          id: 'img-1',
-          imageId: 'asset:sample',
-          size: const Size(100, 80),
-          naturalSize: const Size(200, 160),
-        )
-        ..position = const Offset(10, 20)
-        ..rotationDeg = 90
-        ..scaleX = 1
-        ..scaleY = -1
-        ..opacity = 0.8
-        ..isVisible = true
-        ..isSelectable = true
-        ..isLocked = false
-        ..isDeletable = true
-        ..isTransformable = true;
-
-  final text =
-      TextNode(
-          id: 'text-1',
-          text: 'Hello',
-          size: const Size(120, 30),
-          fontSize: 24,
-          color: const Color(0xFF112233),
-          align: TextAlign.center,
-          isBold: true,
-          isItalic: false,
-          isUnderline: true,
-          fontFamily: 'Roboto',
-          maxWidth: 200,
-          lineHeight: 1.2,
-        )
-        ..position = const Offset(50, 50)
-        ..rotationDeg = -90
-        ..scaleX = 1.5
-        ..scaleY = 0.5
-        ..opacity = 0.9
-        ..isVisible = true
-        ..isSelectable = true
-        ..isLocked = false
-        ..isDeletable = true
-        ..isTransformable = true;
-
-  final stroke = StrokeNode.fromWorldPoints(
-    id: 'stroke-1',
-    points: const [Offset(0, 0), Offset(10, 10)],
-    thickness: 3,
-    color: const Color(0xFF000000),
-  )..opacity = 0.4;
-
-  final line = LineNode.fromWorldSegment(
-    id: 'line-1',
-    start: const Offset(5, 5),
-    end: const Offset(15, 15),
-    thickness: 5,
-    color: const Color(0xFF00FF00),
-  );
-
-  final rect = RectNode(
-    id: 'rect-1',
-    size: const Size(50, 60),
-    fillColor: const Color(0xFFFF0000),
-    strokeColor: const Color(0xFF0000FF),
-    strokeWidth: 2,
-  )..position = const Offset(-10, -20);
-
-  final path = PathNode(
-    id: 'path-1',
-    svgPathData: 'M0 0 H40 V30 H0 Z M12 8 H28 V22 H12 Z',
-    fillColor: const Color(0xFF4CAF50),
-    strokeColor: const Color(0xFF1B5E20),
-    strokeWidth: 2,
-    fillRule: PathFillRule.evenOdd,
-  )..position = const Offset(100, -40);
-
-  final backgroundLayer = Layer(isBackground: true);
-  final layer = Layer(nodes: [image, text, stroke, line, rect, path]);
-
-  return Scene(
-    layers: [backgroundLayer, layer],
-    camera: Camera(offset: const Offset(7, -3)),
-    background: Background(
-      color: const Color(0xFFFFFFFF),
-      grid: GridSettings(
+SceneSnapshot _buildScene() {
+  return SceneSnapshot(
+    layers: <LayerSnapshot>[
+      LayerSnapshot(isBackground: true),
+      LayerSnapshot(
+        nodes: <NodeSnapshot>[
+          ImageNodeSnapshot(
+            id: 'img-1',
+            imageId: 'asset:sample',
+            size: const Size(100, 80),
+            naturalSize: const Size(200, 160),
+            transform: Transform2D.trs(
+              translation: const Offset(10, 20),
+              rotationDeg: 90,
+              scaleX: 1,
+              scaleY: -1,
+            ),
+            opacity: 0.8,
+            isVisible: true,
+            isSelectable: true,
+            isLocked: false,
+            isDeletable: true,
+            isTransformable: true,
+          ),
+          TextNodeSnapshot(
+            id: 'text-1',
+            text: 'Hello',
+            size: const Size(120, 30),
+            fontSize: 24,
+            color: const Color(0xFF112233),
+            align: TextAlign.center,
+            isBold: true,
+            isItalic: false,
+            isUnderline: true,
+            fontFamily: 'Roboto',
+            maxWidth: 200,
+            lineHeight: 1.2,
+            transform: Transform2D.trs(
+              translation: const Offset(50, 50),
+              rotationDeg: -90,
+              scaleX: 1.5,
+              scaleY: 0.5,
+            ),
+            opacity: 0.9,
+            isVisible: true,
+            isSelectable: true,
+            isLocked: false,
+            isDeletable: true,
+            isTransformable: true,
+          ),
+          StrokeNodeSnapshot(
+            id: 'stroke-1',
+            points: const <Offset>[Offset(0, 0), Offset(10, 10)],
+            thickness: 3,
+            color: Color(0xFF000000),
+            opacity: 0.4,
+          ),
+          const LineNodeSnapshot(
+            id: 'line-1',
+            start: Offset(5, 5),
+            end: Offset(15, 15),
+            thickness: 5,
+            color: Color(0xFF00FF00),
+          ),
+          RectNodeSnapshot(
+            id: 'rect-1',
+            size: const Size(50, 60),
+            fillColor: const Color(0xFFFF0000),
+            strokeColor: const Color(0xFF0000FF),
+            strokeWidth: 2,
+            transform: Transform2D.translation(const Offset(-10, -20)),
+          ),
+          PathNodeSnapshot(
+            id: 'path-1',
+            svgPathData: 'M0 0 H40 V30 H0 Z M12 8 H28 V22 H12 Z',
+            fillColor: Color(0xFF4CAF50),
+            strokeColor: Color(0xFF1B5E20),
+            strokeWidth: 2,
+            fillRule: V2PathFillRule.evenOdd,
+            transform: Transform2D.translation(Offset(100, -40)),
+          ),
+        ],
+      ),
+    ],
+    camera: const CameraSnapshot(offset: Offset(7, -3)),
+    background: const BackgroundSnapshot(
+      color: Color(0xFFFFFFFF),
+      grid: GridSnapshot(
         isEnabled: true,
         cellSize: 20,
-        color: const Color(0x1F000000),
+        color: Color(0x1F000000),
       ),
     ),
-    palette: ScenePalette(
-      penColors: const [Color(0xFF000000), Color(0xFFE53935)],
-      backgroundColors: const [Color(0xFFFFFFFF)],
-      gridSizes: const [10, 20],
+    palette: ScenePaletteSnapshot(
+      penColors: const <Color>[Color(0xFF000000), Color(0xFFE53935)],
+      backgroundColors: const <Color>[Color(0xFFFFFFFF)],
+      gridSizes: const <double>[10, 20],
     ),
   );
 }

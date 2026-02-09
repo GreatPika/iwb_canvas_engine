@@ -1,5 +1,9 @@
 ## Unreleased
 
+- Add v2 snapshot JSON codec at `lib/src/v2/serialization/scene_codec.dart`
+  and export it from `basic_v2.dart` / `advanced_v2.dart` with parity function
+  names (`encodeScene*` / `decodeScene*`) and strict JSON validation behavior.
+
 - Add preview v2 immutable public API entrypoints:
   `basic_v2.dart` and `advanced_v2.dart` (snapshot/spec/patch model with
   tri-state `PatchField`, no v2 controller/runtime yet).

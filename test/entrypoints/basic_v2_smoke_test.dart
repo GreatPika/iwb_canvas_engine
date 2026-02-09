@@ -101,4 +101,32 @@ void main() {
     );
     expect(patch.size.value, const Size(50, 30));
   });
+
+  test('basic_v2.dart exports snapshot json codec helpers', () {
+    final scene = SceneSnapshot(
+      layers: <LayerSnapshot>[
+        LayerSnapshot(
+          nodes: <NodeSnapshot>[
+            const RectNodeSnapshot(id: 'rect-json-1', size: Size(2, 3)),
+          ],
+        ),
+      ],
+    );
+    final encoded = encodeScene(scene);
+    final decoded = decodeScene(encoded);
+    final encodedJson = encodeSceneToJson(scene);
+    final decodedJson = decodeSceneFromJson(encodedJson);
+    final decodedNode = decoded.layers
+        .firstWhere((layer) => !layer.isBackground)
+        .nodes
+        .single;
+    final decodedJsonNode = decodedJson.layers
+        .firstWhere((layer) => !layer.isBackground)
+        .nodes
+        .single;
+
+    expect(encoded['schemaVersion'], schemaVersionWrite);
+    expect(decodedNode.id, 'rect-json-1');
+    expect(decodedJsonNode.id, 'rect-json-1');
+  });
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/advanced.dart';
+import 'package:iwb_canvas_engine/basic_v2.dart';
 
 Map<String, dynamic> _minimalSceneJson() {
   return <String, dynamic>{
@@ -56,24 +56,12 @@ Map<String, dynamic> _baseNodeJson({required String id, required String type}) {
   };
 }
 
-class _RectNodeWithInvalidOpacityGetter extends RectNode {
-  _RectNodeWithInvalidOpacityGetter({
-    required super.id,
-    required super.size,
-    super.fillColor,
-  });
-
-  @override
-  double get opacity => 2;
-
-  @override
-  set opacity(double value) {}
-}
-
 void main() {
   // INV:INV-SER-JSON-NUMERIC-VALIDATION
   test('encodeSceneToJson -> decodeSceneFromJson is stable', () {
-    final scene = Scene(layers: [Layer(isBackground: true), Layer()]);
+    final scene = SceneSnapshot(
+      layers: [LayerSnapshot(isBackground: true), LayerSnapshot()],
+    );
     final json = encodeSceneToJson(scene);
     final decoded = decodeSceneFromJson(json);
     expect(encodeScene(decoded), encodeScene(scene));
@@ -280,11 +268,11 @@ void main() {
   });
 
   test('encodeScene rejects unsupported TextAlign values', () {
-    final scene = Scene(
+    final scene = SceneSnapshot(
       layers: [
-        Layer(
+        LayerSnapshot(
           nodes: [
-            TextNode(
+            TextNodeSnapshot(
               id: 'text-1',
               text: 'Hello',
               size: const Size(10, 10),
@@ -414,7 +402,7 @@ void main() {
     final scene = decodeScene(_sceneWithSingleNode(nodeJson));
     final node =
         scene.layers.firstWhere((layer) => !layer.isBackground).nodes.single
-            as TextNode;
+            as TextNodeSnapshot;
     expect(node.align, TextAlign.right);
 
     final invalidAlignJson = _baseNodeJson(id: 't2', type: 'text')
@@ -1075,10 +1063,10 @@ void main() {
 
   test('encodeScene enforces grid and palette contracts', () {
     // INV:INV-SER-JSON-GRID-PALETTE-CONTRACTS
-    final disabledGridScene = Scene(
-      layers: [Layer()],
-      background: Background(
-        grid: GridSettings(isEnabled: false, cellSize: -12.5),
+    final disabledGridScene = SceneSnapshot(
+      layers: [LayerSnapshot()],
+      background: BackgroundSnapshot(
+        grid: GridSnapshot(isEnabled: false, cellSize: -12.5),
       ),
     );
     final disabledGridEncoded = encodeScene(disabledGridScene);
@@ -1087,9 +1075,11 @@ void main() {
             as Map<String, dynamic>;
     expect(disabledGridJson['cellSize'], -12.5);
 
-    final enabledGridScene = Scene(
-      layers: [Layer()],
-      background: Background(grid: GridSettings(isEnabled: true, cellSize: 0)),
+    final enabledGridScene = SceneSnapshot(
+      layers: [LayerSnapshot()],
+      background: BackgroundSnapshot(
+        grid: GridSnapshot(isEnabled: true, cellSize: 0),
+      ),
     );
     expect(
       () => encodeScene(enabledGridScene),
@@ -1104,9 +1094,9 @@ void main() {
 
     expect(
       () => encodeScene(
-        Scene(
-          layers: [Layer()],
-          palette: ScenePalette(penColors: const []),
+        SceneSnapshot(
+          layers: [LayerSnapshot()],
+          palette: ScenePaletteSnapshot(penColors: const []),
         ),
       ),
       throwsA(
@@ -1119,9 +1109,9 @@ void main() {
     );
     expect(
       () => encodeScene(
-        Scene(
-          layers: [Layer()],
-          palette: ScenePalette(backgroundColors: const []),
+        SceneSnapshot(
+          layers: [LayerSnapshot()],
+          palette: ScenePaletteSnapshot(backgroundColors: const []),
         ),
       ),
       throwsA(
@@ -1134,9 +1124,9 @@ void main() {
     );
     expect(
       () => encodeScene(
-        Scene(
-          layers: [Layer()],
-          palette: ScenePalette(gridSizes: const []),
+        SceneSnapshot(
+          layers: [LayerSnapshot()],
+          palette: ScenePaletteSnapshot(gridSizes: const []),
         ),
       ),
       throwsA(
@@ -1152,9 +1142,9 @@ void main() {
   test(
     'encodeScene rejects invalid numeric fields but accepts runtime-normalized opacity',
     () {
-      final cameraNaN = Scene(
-        layers: [Layer()],
-        camera: Camera(offset: Offset(double.nan, 0)),
+      final cameraNaN = SceneSnapshot(
+        layers: [LayerSnapshot()],
+        camera: CameraSnapshot(offset: Offset(double.nan, 0)),
       );
       expect(
         () => encodeScene(cameraNaN),
@@ -1167,11 +1157,11 @@ void main() {
         ),
       );
 
-      final negativeHitPaddingScene = Scene(
+      final negativeHitPaddingScene = SceneSnapshot(
         layers: [
-          Layer(
+          LayerSnapshot(
             nodes: [
-              RectNode(
+              RectNodeSnapshot(
                 id: 'r1',
                 size: const Size(10, 10),
                 fillColor: const Color(0xFF000000),
@@ -1192,11 +1182,11 @@ void main() {
         ),
       );
 
-      final nonPositiveFontSizeScene = Scene(
+      final nonPositiveFontSizeScene = SceneSnapshot(
         layers: [
-          Layer(
+          LayerSnapshot(
             nodes: [
-              TextNode(
+              TextNodeSnapshot(
                 id: 't1',
                 text: 'Hello',
                 size: const Size(10, 10),
@@ -1218,11 +1208,11 @@ void main() {
         ),
       );
 
-      final opacityOutOfRangeScene = Scene(
+      final opacityOutOfRangeScene = SceneSnapshot(
         layers: [
-          Layer(
+          LayerSnapshot(
             nodes: [
-              RectNode(
+              RectNodeSnapshot(
                 id: 'r1',
                 size: const Size(10, 10),
                 fillColor: const Color(0xFF000000),
@@ -1239,30 +1229,6 @@ void main() {
               as List<dynamic>;
       final encodedOpacity = (nodes.single as Map<String, dynamic>)['opacity'];
       expect(encodedOpacity, 1);
-
-      final bypassedOpacityScene = Scene(
-        layers: [
-          Layer(
-            nodes: [
-              _RectNodeWithInvalidOpacityGetter(
-                id: 'r2',
-                size: const Size(10, 10),
-                fillColor: const Color(0xFF000000),
-              ),
-            ],
-          ),
-        ],
-      );
-      expect(
-        () => encodeScene(bypassedOpacityScene),
-        throwsA(
-          predicate(
-            (e) =>
-                e is SceneJsonFormatException &&
-                e.message == 'Field node.opacity must be within [0,1].',
-          ),
-        ),
-      );
     },
   );
 }

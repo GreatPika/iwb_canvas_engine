@@ -54,11 +54,11 @@ Prefer importing the smallest API surface that fits your use case:
 - `package:iwb_canvas_engine/advanced.dart` — full export surface (low-level
   painting, hit-testing, pointer tracking, etc.).
 - `package:iwb_canvas_engine/basic_v2.dart` — preview v2 immutable model
-  (snapshot/spec/patch only; no v2 controller yet).
+  with JSON v2 snapshot codec (snapshot/spec/patch + serialization helpers).
 - `package:iwb_canvas_engine/advanced_v2.dart` — preview v2 alias of
   `basic_v2.dart` during migration stage B.
 
-## v2 preview API (snapshot-only)
+## v2 preview API (snapshot + serialization)
 
 The preview v2 entrypoints expose immutable public contracts for transaction-
 first migration:
@@ -69,6 +69,11 @@ first migration:
   - `PatchField.absent()` => do not change field.
   - `PatchField.value(x)` => set field to `x`.
   - `PatchField.nullValue()` => explicitly set field to `null`.
+- JSON helpers with the same names as v1 but v2 types:
+  - `encodeSceneToJson(SceneSnapshot)`
+  - `decodeSceneFromJson(String)`
+  - `encodeScene(SceneSnapshot)`
+  - `decodeScene(Map<String, dynamic>)`
 
 No bridge to mutable v1 `Scene` is provided in this stage by design.
 
@@ -323,6 +328,18 @@ is in progress.
 ```dart
 final json = encodeSceneToJson(controller.scene);
 final restored = decodeSceneFromJson(json);
+```
+
+For v2 snapshot API:
+
+```dart
+import 'package:iwb_canvas_engine/basic_v2.dart';
+
+final snapshot = SceneSnapshot(
+  layers: [LayerSnapshot(nodes: [const RectNodeSnapshot(id: 'r1', size: Size(80, 40))])],
+);
+final json = encodeSceneToJson(snapshot);
+final restored = decodeSceneFromJson(json); // SceneSnapshot
 ```
 
 `decodeSceneFromJson` accepts only `schemaVersion = 2` and throws

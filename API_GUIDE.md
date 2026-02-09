@@ -21,7 +21,8 @@ Prefer importing the smallest surface area that fits your use case:
 - **Recommended:** `package:iwb_canvas_engine/basic.dart` — common “happy path”.
 - **Advanced:** `package:iwb_canvas_engine/advanced.dart` — low-level rendering/input/hit-test exports.
 - **v2 preview:** `package:iwb_canvas_engine/basic_v2.dart` — immutable
-  snapshot/spec/patch model (no `SceneControllerV2` yet).
+  snapshot/spec/patch model + JSON v2 snapshot codec (no `SceneControllerV2`
+  export yet).
 - **v2 preview advanced:** `package:iwb_canvas_engine/advanced_v2.dart` —
   currently a strict alias of `basic_v2.dart` during migration stage B.
 
@@ -577,6 +578,18 @@ final json = encodeSceneToJson(controller.scene);
 final restored = decodeSceneFromJson(json);
 ```
 
+For v2 snapshot API:
+
+```dart
+import 'package:iwb_canvas_engine/basic_v2.dart';
+
+final snapshot = SceneSnapshot(
+  layers: [LayerSnapshot(nodes: [const RectNodeSnapshot(id: 'rect-1', size: Size(120, 80))])],
+);
+final json = encodeSceneToJson(snapshot);
+final restored = decodeSceneFromJson(json); // SceneSnapshot
+```
+
 Gotchas:
 - Only `schemaVersion = 2` is accepted. Integer-valued numeric forms (for
   example, `2.0`) are accepted for integer fields; fractional values (for
@@ -585,6 +598,7 @@ Gotchas:
 
 Relevant APIs:
 - `encodeSceneToJson`, `decodeSceneFromJson`, `SceneJsonFormatException` — `lib/src/serialization/scene_codec.dart`
+- v2 snapshot codec with same function names — `lib/src/v2/serialization/scene_codec.dart`
 
 ### 8) Background / grid / camera
 
@@ -721,7 +735,8 @@ Relevant APIs:
 
 ## JSON v2 schema cheat sheet (agent-friendly)
 
-Source of truth: `lib/src/serialization/scene_codec.dart`.
+Source of truth: `lib/src/serialization/scene_codec.dart` (v1) and
+`lib/src/v2/serialization/scene_codec.dart` (v2 snapshot codec).
 
 ### Root
 
