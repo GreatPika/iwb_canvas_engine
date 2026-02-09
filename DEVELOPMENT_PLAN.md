@@ -132,18 +132,60 @@ language: russian
 Критерий приёмки F:
 - JSON v2 round-trip проходит на новой модели без утечек mutable-состояния наружу.
 
-### G. Cutover и release
+### G. Полный interactive parity c v1 (example-first)
 
-- [ ] G1. После прохождения всех тестов переключить `basic.dart` и `advanced.dart` на v2.
-- [ ] G2. Удалить legacy API в рамках major (без отдельного legacy entrypoint).
-- [ ] G3. Обновить docs в том же PR:
+- [x] G1. Зафиксировать baseline для сравнения parity:
+  - использовать `baseline-vertical-slices-2026-02-04` как целевой ref;
+  - если нужен другой baseline, явно записать commit/tag в этом пункте до начала cutover.
+- [ ] G2. Закрепить checklist интерактивных сценариев из `example/lib/main.dart`.
+- [ ] G2.1. Сценарий: переключение `move/draw` + семантика `selection`.
+- [ ] G2.2. Сценарий: механика выделения (`tap-select`, `marquee-select`, `clear selection` в ожидаемых режимах).
+- [ ] G2.3. Сценарий: draw-tools `pen/highlighter/line/eraser` + очистка `pending-state`.
+- [ ] G2.4. Сценарий: `line tool` (двухтаповый flow: `pending start -> commit line -> reset/cancel`).
+- [ ] G2.5. Сценарий: `eraser` (удаление пересечённых узлов в draw-режиме).
+- [ ] G2.6. Сценарий: text nodes (`double-tap -> inline edit overlay -> save/cancel`).
+- [ ] G2.7. Сценарий: text styling в selection-panel (`color/align/font size/line height/bold/italic/underline`).
+- [ ] G2.8. Сценарий: трансформации (`rotate/flip/delete`) и `marquee-selection`.
+- [ ] G2.9. Сценарий: `camera pan/zoom` + `hit-test`.
+- [ ] G2.10. Сценарий: `grid/system actions` (включая `import/export/replace scene`).
+- [ ] G2.11. Сценарий: `Add Sample` (создаются `RectNode + TextNode`, корректные size/position/id, сценарий повторяемый).
+- [ ] G2.12. Сценарий: system menu background flow (смена background color + `Clear Canvas`).
+- [ ] G2.13. Сценарий: visual parity индикаторов (`Camera X` и pending-line marker в draw-line режиме).
+- [ ] G2.14. Сценарий: text edit commit-триггеры (`onTapOutside` и auto-save при `setMode`).
+- [ ] G3. Добавить автоматические parity-регрессии для example-flow (`example/test/**`), детерминированные и с проверкой UI state + public controller state.
+- [ ] G3.1. Автотест для `G2.1`.
+- [ ] G3.2. Автотест для `G2.2`.
+- [ ] G3.3. Автотест для `G2.3`.
+- [ ] G3.4. Автотест для `G2.4`.
+- [ ] G3.5. Автотест для `G2.5`.
+- [ ] G3.6. Автотест для `G2.6`.
+- [ ] G3.7. Автотест для `G2.7`.
+- [ ] G3.8. Автотест для `G2.8`.
+- [ ] G3.9. Автотест для `G2.9`.
+- [ ] G3.10. Автотест для `G2.10`.
+- [ ] G3.11. Автотест для `G2.11`.
+- [ ] G3.12. Автотест для `G2.12`.
+- [ ] G3.13. Автотест для `G2.13`.
+- [ ] G3.14. Автотест для `G2.14`.
+- [ ] G4. Добавить engine-level parity harness v1 vs v2 (пока legacy ещё существует):
+  - одинаковые входные event-script дают эквивалентный публичный результат (scene JSON, selected ids, contract-level signals/actions).
+- [ ] G5. Закрыть все найденные parity-gap без изменения UX-контракта baseline.
+
+Критерий приёмки G:
+- при открытии `example/lib/main.dart` и прохождении сценариев из G2 поведение и интерактивность не отличаются от baseline v1 в рамках зафиксированного checklist (включая выделение, ластик, line tool и редактирование текстовых узлов).
+
+### H. Cutover и release
+
+- [ ] H1. После прохождения parity и всех тестов переключить `basic.dart` и `advanced.dart` на v2.
+- [ ] H2. Удалить legacy API в рамках major (без отдельного legacy entrypoint).
+- [ ] H3. Обновить docs в том же PR:
   - `README.md`;
   - `API_GUIDE.md`;
   - `ARCHITECTURE.md`;
   - public dartdoc (если менялся публичный контракт).
-- [ ] G4. Обновить `CHANGELOG.md` (`## Unreleased`, пометить breaking как `Breaking:`).
+- [ ] H4. Обновить `CHANGELOG.md` (`## Unreleased`, пометить breaking как `Breaking:`).
 
-Критерий приёмки G:
+Критерий приёмки H:
 - публичный API major-версии согласован, документация и changelog синхронны.
 
 ## 5) Обязательный набор тестов "без новых дыр"
@@ -164,6 +206,12 @@ language: russian
 - [ ] T5. Инструменты/таймеры:
   - pending state line tool корректно очищается на reset/mode switch/dispose flow;
   - reset у draw-tools не оставляет отложенных побочных эффектов после dispose.
+- [ ] T6. Example interactive parity:
+  - каждый сценарий из G2 покрыт тестом в `example/test/**`;
+  - зафиксированы ожидаемые состояния UI и публичного API на каждом ключевом шаге сценария.
+  - отдельные regression-тесты обязательны для: selection-механики, line tool, eraser flow, text edit flow и text styling flow.
+- [ ] T7. v1/v2 parity harness:
+  - для набора детерминированных event-script итоговый scene JSON/selection/signals совпадают по контракту между baseline и v2.
 
 ## 6) Команды проверки (обязательно перед mark done крупных этапов)
 
@@ -171,6 +219,7 @@ language: russian
 dart format --output=none --set-exit-if-changed lib test example/lib tool
 flutter analyze
 flutter test
+(cd example && flutter test)
 flutter test --coverage
 dart run tool/check_coverage.dart
 dart run tool/check_invariant_coverage.dart
@@ -193,6 +242,11 @@ dart pub publish --dry-run
 | 2026-02-09 | A1-A4 | Done | Добавлены INV-V2-*, расширены import boundaries для `lib/src/v2/**`, добавлен `tool/check_v2_guardrails.dart`, добавлены tool-тесты и enforcement-маркеры. |
 | 2026-02-09 | B1-B3 | Done | Добавлены immutable v2 public-модели (`snapshot/spec/patch`), tri-state `PatchField`, временные entrypoints `basic_v2.dart`/`advanced_v2.dart` и тесты на immutable-контракт. |
 | 2026-02-09 | C1-C5, D1-D9 | Done | Добавлены `SceneControllerV2`/`SceneWriter`/`TxnContext`/`ChangeSet`/`V2Store`, внутренний mutable-документ с конвертерами `SceneSnapshot <-> Scene`, транзакционные v2-slices (`commands/move/draw/selection/spatial_index/signals/repaint/grid`), commit-order `selection->grid->spatial_index->signals->repaint`, `writeReplaceScene(...)` с `controllerEpoch++`, и тесты на atomic commit/rollback/epoch/signal buffering. |
-| 2026-02-09 | G2 | Decision fixed | Legacy API в major удаляем, отдельный legacy entrypoint не поддерживаем. |
+| 2026-02-09 | H2 | Decision fixed | Legacy API в major удаляем, отдельный legacy entrypoint не поддерживаем. |
 | 2026-02-09 | E1-E5 | Done | Candidate bounds переведены на strict scene units, добавлены `ScenePainterV2`/`SceneViewV2` и v2 caches с epoch-based invalidation, `SceneStrokePathCache` сделан fail-safe для 0/1 точки, добавлены v2 render/view и core hit-test regression тесты. |
 | 2026-02-09 | F1-F5 | Done | Добавлен `lib/src/v2/serialization/scene_codec.dart` с публичным snapshot API (`encode/decode*`), внутренними document adapters через `txnSceneFromSnapshot`/`txnSceneToSnapshot`, сохранена совместимость `_requireInt` для integer-valued `num`, портированы `test/serialization/*` на `basic_v2.dart`, добавлен тест на immutable decode-контракт. |
+| 2026-02-09 | G/H rescope | Done | Этап `G` разделён: сначала полный interactive parity c baseline v1 (`example-first`), затем отдельный cutover/release этап `H`; добавлены обязательные тесты `T6-T7` и проверка `(cd example && flutter test)`. |
+| 2026-02-09 | G1 | Done | Baseline parity зафиксирован на `baseline-vertical-slices-2026-02-04` по решению PM. |
+| 2026-02-09 | G2/T6 scope | Done | По решению PM явно закреплены обязательные parity-сценарии: выделение, ластик, line tool, текстовые узлы (редактирование + styling). |
+| 2026-02-09 | G2/G3 split | Done | Пункты `G2` и `G3` декомпозированы на подшаги `G2.1..G2.10` и `G3.1..G3.10` для прозрачного трекинга прогресса по каждому сценарию и тесту. |
+| 2026-02-09 | G2/G3 scope extend | Done | Добавлены сценарии из `example/lib/main.dart`, которые не были явными: `Add Sample`, background+clear, визуальные индикаторы камеры/line-pending, text edit commit-триггеры; добавлены `G3.11..G3.14`. |
