@@ -77,30 +77,30 @@ language: russian
 
 ### C. Внутренний store, epoch и транзакции
 
-- [ ] C1. Создать `lib/src/v2/model/` с внутренней mutable-моделью (не экспортируется наружу).
-- [ ] C2. Создать store (`lib/src/v2/controller/store.dart`) с:
+- [x] C1. Создать `lib/src/v2/model/` с внутренней mutable-моделью (не экспортируется наружу).
+- [x] C2. Создать store (`lib/src/v2/controller/store.dart`) с:
   - `controllerEpoch`;
   - `structuralRevision`, `boundsRevision`, `visualRevision`.
-- [ ] C3. Реализовать `SceneControllerV2.write(fn)` + `TxnContext` + `SceneWriter`.
-- [ ] C4. Сделать `ChangeSet` источником правды для commit:
+- [x] C3. Реализовать `SceneControllerV2.write(fn)` + `TxnContext` + `SceneWriter`.
+- [x] C4. Сделать `ChangeSet` источником правды для commit:
   - `documentReplaced`, `structuralChanged`, `boundsChanged`, `visualChanged`, `selectionChanged`, `gridChanged`;
   - `added/removed/updated` ids.
-- [ ] C5. `boundsChanged` вычислять автоматически сравнением `oldBounds/newBounds` до/после мутации узла.
+- [x] C5. `boundsChanged` вычислять автоматически сравнением `oldBounds/newBounds` до/после мутации узла.
 
 Критерий приёмки C:
 - несколько операций внутри одного `write(...)` приводят к одному commit и консистентному `ChangeSet`.
 
 ### D. Input slices поверх транзакций
 
-- [ ] D1. Новый v2-контракт для slices: read-only чтение + write-доступ только внутри txn.
-- [ ] D2. Порт `commands` на txn; запрет `addNode` в background layer.
-- [ ] D3. Порт `move` и `draw` на txn; не должно быть прямых мутаций "мимо write".
-- [ ] D4. `selection` нормализует удалённые id на commit.
-- [ ] D5. Вынести spatial index в отдельный `spatial_index` slice (epoch + boundsRevision invalidation).
-- [ ] D6. `signals` буферизует события внутри txn и эмитит только после commit.
-- [ ] D7. `repaint` делает один flush на commit (batch mode).
-- [ ] D8. Нормализация grid в commit-пайплайне (`grid` slice или эквивалентный слой).
-- [ ] D9. Зафиксировать порядок `onCommit`:
+- [x] D1. Новый v2-контракт для slices: read-only чтение + write-доступ только внутри txn.
+- [x] D2. Порт `commands` на txn; запрет `addNode` в background layer.
+- [x] D3. Порт `move` и `draw` на txn; не должно быть прямых мутаций "мимо write".
+- [x] D4. `selection` нормализует удалённые id на commit.
+- [x] D5. Вынести spatial index в отдельный `spatial_index` slice (epoch + boundsRevision invalidation).
+- [x] D6. `signals` буферизует события внутри txn и эмитит только после commit.
+- [x] D7. `repaint` делает один flush на commit (batch mode).
+- [x] D8. Нормализация grid в commit-пайплайне (`grid` slice или эквивалентный слой).
+- [x] D9. Зафиксировать порядок `onCommit`:
   1) `selection`
   2) `grid`
   3) `spatial_index`
@@ -192,4 +192,5 @@ dart pub publish --dry-run
 | 2026-02-09 | A0 | Done | План сокращён, исправлен и приведён к чеклист-формату. |
 | 2026-02-09 | A1-A4 | Done | Добавлены INV-V2-*, расширены import boundaries для `lib/src/v2/**`, добавлен `tool/check_v2_guardrails.dart`, добавлены tool-тесты и enforcement-маркеры. |
 | 2026-02-09 | B1-B3 | Done | Добавлены immutable v2 public-модели (`snapshot/spec/patch`), tri-state `PatchField`, временные entrypoints `basic_v2.dart`/`advanced_v2.dart` и тесты на immutable-контракт. |
+| 2026-02-09 | C1-C5, D1-D9 | Done | Добавлены `SceneControllerV2`/`SceneWriter`/`TxnContext`/`ChangeSet`/`V2Store`, внутренний mutable-документ с конвертерами `SceneSnapshot <-> Scene`, транзакционные v2-slices (`commands/move/draw/selection/spatial_index/signals/repaint/grid`), commit-order `selection->grid->spatial_index->signals->repaint`, `writeReplaceScene(...)` с `controllerEpoch++`, и тесты на atomic commit/rollback/epoch/signal buffering. |
 | 2026-02-09 | G2 | Decision fixed | Legacy API в major удаляем, отдельный legacy entrypoint не поддерживаем. |

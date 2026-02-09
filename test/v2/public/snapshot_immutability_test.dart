@@ -175,4 +175,32 @@ void main() {
     expect(scene.background.grid.isEnabled, isTrue);
     expect(scene.background.color, const Color(0xFFFAFAFA));
   });
+
+  test('Node snapshot constructors execute in runtime (non-const path)', () {
+    final image = ImageNodeSnapshot(
+      id: 'i-runtime',
+      imageId: 'image://runtime',
+      size: const Size(10, 10),
+      naturalSize: const Size(20, 20),
+    );
+    final text = TextNodeSnapshot(
+      id: 't-runtime',
+      text: 'runtime',
+      size: const Size(10, 10),
+      color: const Color(0xFF010203),
+    );
+    final line = LineNodeSnapshot(
+      id: 'l-runtime',
+      start: const Offset(0, 0),
+      end: const Offset(2, 2),
+      thickness: 1,
+      color: const Color(0xFF040506),
+    );
+    final path = PathNodeSnapshot(id: 'p-runtime', svgPathData: 'M0 0 L2 2');
+
+    expect(image.naturalSize, const Size(20, 20));
+    expect(text.text, 'runtime');
+    expect(line.end, const Offset(2, 2));
+    expect(path.svgPathData, 'M0 0 L2 2');
+  });
 }

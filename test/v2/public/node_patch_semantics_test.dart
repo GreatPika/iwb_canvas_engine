@@ -137,4 +137,41 @@ void main() {
     expect(path.fillRule.value, V2PathFillRule.evenOdd);
     expect(path.strokeColor.isNullValue, isTrue);
   });
+
+  test('Patch constructors are callable at runtime (non-const path)', () {
+    final dynamicValue = PatchField<String>.value('runtime');
+    final dynamicNull = PatchField<String?>.nullValue();
+
+    final imagePatch = ImageNodePatch(
+      id: 'image-runtime',
+      imageId: dynamicValue,
+    );
+    final textPatch = TextNodePatch(
+      id: 'text-runtime',
+      fontFamily: dynamicNull,
+    );
+    final strokePatch = StrokeNodePatch(
+      id: 'stroke-runtime',
+      thickness: PatchField<double>.value(2),
+    );
+    final linePatch = LineNodePatch(
+      id: 'line-runtime',
+      start: PatchField<Offset>.value(const Offset(1, 1)),
+    );
+    final rectPatch = RectNodePatch(
+      id: 'rect-runtime',
+      strokeWidth: PatchField<double>.value(3),
+    );
+    final pathPatch = PathNodePatch(
+      id: 'path-runtime',
+      fillRule: PatchField<V2PathFillRule>.value(V2PathFillRule.nonZero),
+    );
+
+    expect(imagePatch.imageId.value, 'runtime');
+    expect(textPatch.fontFamily.isNullValue, isTrue);
+    expect(strokePatch.thickness.value, 2);
+    expect(linePatch.start.value, const Offset(1, 1));
+    expect(rectPatch.strokeWidth.value, 3);
+    expect(pathPatch.fillRule.value, V2PathFillRule.nonZero);
+  });
 }

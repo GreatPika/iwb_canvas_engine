@@ -1,0 +1,138 @@
+import 'dart:ui';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/basic_v2.dart';
+import 'package:iwb_canvas_engine/src/v2/controller/scene_controller_v2.dart';
+
+void main() {
+  // INV:INV-V2-TXN-ATOMIC-COMMIT
+
+  SceneControllerV2 buildController() {
+    return SceneControllerV2(
+      initialSnapshot: SceneSnapshot(
+        layers: <LayerSnapshot>[
+          LayerSnapshot(
+            nodes: const <NodeSnapshot>[
+              RectNodeSnapshot(id: 'base', size: Size(20, 10)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  test('commands slice routes structural updates through write', () {
+    final controller = buildController();
+    addTearDown(controller.dispose);
+
+    var notifications = 0;
+    controller.addListener(() {
+      notifications = notifications + 1;
+    });
+
+    final created = controller.commands.writeAddNode(
+      RectNodeSpec(id: 'cmd-added', size: const Size(6, 6)),
+    );
+
+    expect(created, 'cmd-added');
+    expect(controller.snapshot.layers.first.nodes.length, 2);
+    expect(controller.structuralRevision, 1);
+    expect(notifications, 1);
+  });
+
+  test('move slice translates selected nodes in one commit', () {
+    final controller = buildController();
+    addTearDown(controller.dispose);
+
+    controller.commands.writeSelectionReplace(const <NodeId>{'base'});
+    final moved = controller.move.writeTranslateSelection(const Offset(7, 3));
+
+    final node =
+        controller.snapshot.layers.first.nodes.first as RectNodeSnapshot;
+    expect(moved, 1);
+    expect(node.transform.tx, 7);
+    expect(node.transform.ty, 3);
+    expect(controller.boundsRevision, greaterThan(0));
+  });
+
+  test('draw slice creates line/stroke and erase removes node ids', () {
+    final controller = buildController();
+    addTearDown(controller.dispose);
+
+    final signalTypes = <String>[];
+    final sub = controller.signals.listen((signal) {
+      signalTypes.add(signal.type);
+    });
+    addTearDown(sub.cancel);
+
+    final strokeId = controller.draw.writeDrawStroke(
+      points: const <Offset>[Offset(0, 0), Offset(10, 0)],
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+    final lineId = controller.draw.writeDrawLine(
+      start: const Offset(0, 0),
+      end: const Offset(0, 10),
+      thickness: 3,
+      color: const Color(0xFF111111),
+    );
+
+    final removed = controller.draw.writeEraseNodes(<NodeId>[
+      strokeId,
+      'missing',
+    ]);
+
+    expect(lineId, isNotEmpty);
+    expect(removed, 1);
+    expect(
+      signalTypes,
+      containsAll(<String>['draw.stroke', 'draw.line', 'draw.erase']),
+    );
+  });
+
+  test(
+    'commands slice handles missing patch/delete and selection commands',
+    () {
+      final controller = buildController();
+      addTearDown(controller.dispose);
+
+      final signalTypes = <String>[];
+      final sub = controller.signals.listen((signal) {
+        signalTypes.add(signal.type);
+      });
+      addTearDown(sub.cancel);
+
+      final patchMissing = controller.commands.writePatchNode(
+        const RectNodePatch(
+          id: 'missing',
+          strokeWidth: PatchField<double>.value(2),
+        ),
+      );
+      final patchExisting = controller.commands.writePatchNode(
+        const RectNodePatch(
+          id: 'base',
+          strokeWidth: PatchField<double>.value(3),
+        ),
+      );
+      final deleteMissing = controller.commands.writeDeleteNode('missing');
+      final deleteExisting = controller.commands.writeDeleteNode('base');
+
+      controller.commands.writeSelectionReplace(const <NodeId>{'base'});
+      controller.commands.writeSelectionToggle('base');
+
+      expect(patchMissing, isFalse);
+      expect(patchExisting, isTrue);
+      expect(deleteMissing, isFalse);
+      expect(deleteExisting, isTrue);
+      expect(
+        signalTypes,
+        containsAll(<String>[
+          'node.updated',
+          'node.removed',
+          'selection.replaced',
+          'selection.toggled',
+        ]),
+      );
+    },
+  );
+}
