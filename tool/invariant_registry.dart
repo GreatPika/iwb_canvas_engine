@@ -47,6 +47,30 @@ const List<Invariant> invariants = <Invariant>[
     scope: 'behavior',
     title: 'NodeId is unique across all scene layers (commands + decode)',
   ),
+  Invariant(
+    id: 'INV-V2-NO-EXTERNAL-MUTATION',
+    scope: 'v2-api',
+    title:
+        'v2 public API is read-only for scene state and does not expose mutable engine internals',
+  ),
+  Invariant(
+    id: 'INV-V2-WRITE-ONLY-MUTATION',
+    scope: 'v2-controller',
+    title:
+        'v2 scene mutations are routed only through write/txn-prefixed transaction entrypoints',
+  ),
+  Invariant(
+    id: 'INV-V2-TXN-ATOMIC-COMMIT',
+    scope: 'v2-controller',
+    title:
+        'v2 transaction commit is atomic: one write boundary, one commit flush boundary',
+  ),
+  Invariant(
+    id: 'INV-V2-EPOCH-INVALIDATION',
+    scope: 'v2-runtime',
+    title:
+        'v2 replace-scene/controller lifecycle preserves epoch-based invalidation contracts',
+  ),
 
   // Input slice boundaries.
   Invariant(

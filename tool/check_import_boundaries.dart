@@ -3,6 +3,7 @@ import 'dart:io';
 // Invariants enforced by this tool:
 // INV:INV-G-CORE-NO-LAYER-DEPS
 // INV:INV-G-LAYER-BOUNDARIES
+// INV:INV-V2-NO-EXTERNAL-MUTATION
 // INV:INV-SLICE-NO-PART
 // INV:INV-SLICE-NO-SCENE_CONTROLLER
 // INV:INV-SLICE-NO-CROSS_SLICE_IMPORTS
@@ -62,7 +63,7 @@ String _posixJoin(String a, String b) {
 
 String _toPosixPath(String path) => path.replaceAll('\\', '/');
 
-enum _Layer { core, input, render, serialization, view }
+enum _Layer { core, input, render, serialization, view, v2 }
 
 _Layer? _layerForRepoRelPosixPath(String repoRelPosixPath) {
   if (repoRelPosixPath.startsWith('/lib/src/core/')) return _Layer.core;
@@ -72,6 +73,7 @@ _Layer? _layerForRepoRelPosixPath(String repoRelPosixPath) {
     return _Layer.serialization;
   }
   if (repoRelPosixPath.startsWith('/lib/src/view/')) return _Layer.view;
+  if (repoRelPosixPath.startsWith('/lib/src/v2/')) return _Layer.v2;
   return null;
 }
 
@@ -87,6 +89,8 @@ String _layerLabel(_Layer layer) {
       return 'serialization';
     case _Layer.view:
       return 'view';
+    case _Layer.v2:
+      return 'v2';
   }
 }
 
@@ -105,6 +109,8 @@ bool _isAllowedLayerDependency({required _Layer from, required _Layer to}) {
           to == _Layer.input ||
           to == _Layer.render ||
           to == _Layer.view;
+    case _Layer.v2:
+      return to == _Layer.core || to == _Layer.v2;
   }
 }
 

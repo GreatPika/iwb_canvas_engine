@@ -43,6 +43,25 @@ Canonical invariant IDs live in `tool/invariant_registry.dart`.
     setters, camera offset, selection/selection-rect updates, and hot paths
     during pointer gestures.
 
+### v2 transaction-first guardrails
+
+The v2 migration adds explicit guardrails enforced by `tool/` checks. They are
+designed to keep v2 architecture constraints machine-checkable while the v1 and
+v2 code paths temporarily coexist.
+
+- `INV-V2-NO-EXTERNAL-MUTATION`:
+  v2 public API modules must not depend on mutable internals from
+  `input/**`, `render/**`, `view/**`, or `serialization/**`.
+- `INV-V2-WRITE-ONLY-MUTATION`:
+  v2 controller mutation entrypoints are restricted to transaction-style
+  `write*`/`txn*` symbols.
+- `INV-V2-TXN-ATOMIC-COMMIT`:
+  v2 mutation flow must preserve a single transaction boundary per write
+  (guarded by transaction entrypoint rules and transaction-focused tests).
+- `INV-V2-EPOCH-INVALIDATION`:
+  v2 controller lifecycle must preserve epoch-based invalidation contracts
+  (`controllerEpoch`) for replace-scene/cache/index safety.
+
 ### Boundary invariants (Input slices)
 
 The input layer is being refactored into vertical slices under

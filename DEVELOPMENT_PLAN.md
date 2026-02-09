@@ -51,14 +51,14 @@ language: russian
 ### A. Guardrails и инварианты
 
 - [x] A0. Аудит текущего плана и сверка с кодом выполнены.
-- [ ] A1. Добавить/обновить v2-инварианты в `tool/invariant_registry.dart`:
+- [x] A1. Добавить/обновить v2-инварианты в `tool/invariant_registry.dart`:
   - запрет внешней мутации документа;
   - транзакция как единственный путь записи;
   - атомарность commit;
   - epoch-инвалидация кэшей/индекса.
-- [ ] A2. Расширить `tool/check_import_boundaries.dart` (или аналогичный tool-check), чтобы `lib/src/v2/**` тоже проверялся на архитектурные границы.
-- [ ] A3. Добавить enforcement (`// INV:<id>`) в `test/**` и/или `tool/**` для всех новых v2-инвариантов.
-- [ ] A4. Держать зелёным `dart run tool/check_invariant_coverage.dart` на каждом шаге.
+- [x] A2. Расширить `tool/check_import_boundaries.dart` (или аналогичный tool-check), чтобы `lib/src/v2/**` тоже проверялся на архитектурные границы.
+- [x] A3. Добавить enforcement (`// INV:<id>`) в `test/**` и/или `tool/**` для всех новых v2-инвариантов.
+- [x] A4. Держать зелёным `dart run tool/check_invariant_coverage.dart` на каждом шаге.
 
 Критерий приёмки A:
 - новые v2-инварианты зарегистрированы, покрыты enforcement, tooling их проверяет.
@@ -175,6 +175,7 @@ flutter test --coverage
 dart run tool/check_coverage.dart
 dart run tool/check_invariant_coverage.dart
 dart run tool/check_import_boundaries.dart
+dart run tool/check_v2_guardrails.dart
 ```
 
 Рекомендовано перед релизом:
@@ -189,4 +190,5 @@ dart pub publish --dry-run
 | Дата | Пункт | Статус | Комментарий |
 |---|---|---|---|
 | 2026-02-09 | A0 | Done | План сокращён, исправлен и приведён к чеклист-формату. |
+| 2026-02-09 | A1-A4 | Done | Добавлены INV-V2-*, расширены import boundaries для `lib/src/v2/**`, добавлен `tool/check_v2_guardrails.dart`, добавлены tool-тесты и enforcement-маркеры. |
 | 2026-02-09 | G2 | Decision fixed | Legacy API в major удаляем, отдельный legacy entrypoint не поддерживаем. |
