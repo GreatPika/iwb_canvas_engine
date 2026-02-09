@@ -1,6 +1,10 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/basic_v2.dart';
+import 'package:iwb_canvas_engine/src/core/nodes.dart';
+import 'package:iwb_canvas_engine/src/core/scene.dart';
+import 'package:iwb_canvas_engine/src/v2/serialization/scene_codec.dart'
+    show encodeSceneDocument;
 
 Map<String, dynamic> _minimalSceneJson() {
   return <String, dynamic>{
@@ -783,6 +787,29 @@ void main() {
     );
   });
 
+  test('encodeSceneDocument rejects mutable node opacity outside [0,1]', () {
+    final scene = Scene(
+      layers: <Layer>[
+        Layer(
+          nodes: <SceneNode>[
+            _BadOpacityNode(id: 'bad-opacity'),
+          ],
+        ),
+      ],
+    );
+
+    expect(
+      () => encodeSceneDocument(scene),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Field node.opacity must be within [0,1].',
+        ),
+      ),
+    );
+  });
+
   test('decodeScene rejects non-positive thickness', () {
     final nodeJson = _baseNodeJson(id: 's1', type: 'stroke')
       ..addAll(<String, dynamic>{
@@ -1231,4 +1258,14 @@ void main() {
       expect(encodedOpacity, 1);
     },
   );
+}
+
+class _BadOpacityNode extends SceneNode {
+  _BadOpacityNode({required super.id}) : super(type: NodeType.rect);
+
+  @override
+  Rect get localBounds => Rect.zero;
+
+  @override
+  double get opacity => 2;
 }

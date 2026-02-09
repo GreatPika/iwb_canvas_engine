@@ -808,8 +808,12 @@ void _ensurePositiveDouble(double value, String field) {
 void _ensureClamped01Double(double value, String field) {
   _ensureFiniteDouble(value, field);
   if (value < 0 || value > 1) {
-    throw SceneJsonFormatException('Field $field must be within [0,1].');
+    _throwOutsideClamped01(field);
   }
+}
+
+Never _throwOutsideClamped01(String field) {
+  throw SceneJsonFormatException('Field $field must be within [0,1].');
 }
 
 void _ensureNonNegativeSize(Size size, String field) {

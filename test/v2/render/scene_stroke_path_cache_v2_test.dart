@@ -55,4 +55,52 @@ void main() {
     expect(cache.debugBuildCount, 2);
     expect(cache.debugHitCount, 1);
   });
+
+  test('v2 stroke cache evicts least-recent entry (LRU)', () {
+    final cache = SceneStrokePathCacheV2(maxEntries: 2);
+    final a = StrokeNodeSnapshot(
+      id: 'a',
+      points: const <Offset>[Offset(0, 0), Offset(1, 0)],
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+    final b = StrokeNodeSnapshot(
+      id: 'b',
+      points: const <Offset>[Offset(0, 0), Offset(0, 1)],
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+    final c = StrokeNodeSnapshot(
+      id: 'c',
+      points: const <Offset>[Offset(1, 1), Offset(2, 2)],
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+
+    cache.getOrBuild(a);
+    cache.getOrBuild(b);
+    expect(cache.debugSize, 2);
+    expect(cache.debugEvictCount, 0);
+
+    cache.getOrBuild(a);
+    expect(cache.debugHitCount, 1);
+
+    cache.getOrBuild(c);
+    expect(cache.debugSize, 2);
+    expect(cache.debugEvictCount, 1);
+  });
+
+  test('v2 stroke cache clear drops entries', () {
+    final cache = SceneStrokePathCacheV2(maxEntries: 8);
+    final stroke = StrokeNodeSnapshot(
+      id: 'clear',
+      points: const <Offset>[Offset(0, 0), Offset(10, 10)],
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+    cache.getOrBuild(stroke);
+    expect(cache.debugSize, 1);
+    cache.clear();
+    expect(cache.debugSize, 0);
+  });
 }

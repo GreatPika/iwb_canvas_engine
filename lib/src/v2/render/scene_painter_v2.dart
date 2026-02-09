@@ -327,6 +327,8 @@ class SceneStaticLayerCacheV2 {
   int get debugBuildCount => _debugBuildCount;
   @visibleForTesting
   int get debugDisposeCount => _debugDisposeCount;
+  @visibleForTesting
+  int? get debugKeyHashCode => _key?.hashCode;
 
   void clear() {
     _disposeGridPictureIfNeeded();
