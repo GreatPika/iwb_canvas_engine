@@ -13,6 +13,9 @@
   per axis (capped by `kMaxGridLinesPerAxis`) instead of silently skipping the
   grid; no major/accent lines are used.
 
+- Render: `SceneStrokePathCache.getOrBuild(...)` is now fail-safe for `0/1`
+  point strokes and no longer throws `StateError` for dot/empty geometry.
+
 - Fix: `LineNode`/`StrokeNode` hit-testing now applies `hitPadding + kHitSlop`
   in strict scene/world units under anisotropic transforms (no max-axis
   tolerance inflation); add regression coverage for anisotropic scale probes.

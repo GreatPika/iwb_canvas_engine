@@ -112,11 +112,11 @@ language: russian
 
 ### E. Hit-test, render и view
 
-- [ ] E1. Исправить candidate bounds в hit-test v2 на строгую семантику scene units (без `_scenePaddingToWorldMax`-раздувания).
-- [ ] E2. Портировать `ScenePainter` + кэши с epoch-инвалидацией.
-- [ ] E3. Сделать `SceneStrokePathCache` fail-safe на `0/1` точке (без исключения).
-- [ ] E4. В `SceneView` добавить invalidation по epoch и очищать все кэши, включая static layer cache.
-- [ ] E5. Сохранить текущий контракт сетки: при over-density использовать stride-деградацию, а не "молчаливое исчезновение" сетки.
+- [x] E1. Исправить candidate bounds в hit-test v2 на строгую семантику scene units (без `_scenePaddingToWorldMax`-раздувания).
+- [x] E2. Портировать `ScenePainter` + кэши с epoch-инвалидацией.
+- [x] E3. Сделать `SceneStrokePathCache` fail-safe на `0/1` точке (без исключения).
+- [x] E4. В `SceneView` добавить invalidation по epoch и очищать все кэши, включая static layer cache.
+- [x] E5. Сохранить текущий контракт сетки: при over-density использовать stride-деградацию, а не "молчаливое исчезновение" сетки.
 
 Критерий приёмки E:
 - нет "призрачных" кэшей после `replaceScene`, hit-test предсказуем при анизотропии.
@@ -194,3 +194,4 @@ dart pub publish --dry-run
 | 2026-02-09 | B1-B3 | Done | Добавлены immutable v2 public-модели (`snapshot/spec/patch`), tri-state `PatchField`, временные entrypoints `basic_v2.dart`/`advanced_v2.dart` и тесты на immutable-контракт. |
 | 2026-02-09 | C1-C5, D1-D9 | Done | Добавлены `SceneControllerV2`/`SceneWriter`/`TxnContext`/`ChangeSet`/`V2Store`, внутренний mutable-документ с конвертерами `SceneSnapshot <-> Scene`, транзакционные v2-slices (`commands/move/draw/selection/spatial_index/signals/repaint/grid`), commit-order `selection->grid->spatial_index->signals->repaint`, `writeReplaceScene(...)` с `controllerEpoch++`, и тесты на atomic commit/rollback/epoch/signal buffering. |
 | 2026-02-09 | G2 | Decision fixed | Legacy API в major удаляем, отдельный legacy entrypoint не поддерживаем. |
+| 2026-02-09 | E1-E5 | Done | Candidate bounds переведены на strict scene units, добавлены `ScenePainterV2`/`SceneViewV2` и v2 caches с epoch-based invalidation, `SceneStrokePathCache` сделан fail-safe для 0/1 точки, добавлены v2 render/view и core hit-test regression тесты. |

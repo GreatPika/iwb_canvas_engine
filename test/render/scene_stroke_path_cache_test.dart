@@ -25,16 +25,24 @@ void main() {
     expect(cache.debugSize, 1);
   });
 
-  test('P1-0: SceneStrokePathCache rejects dot strokes', () {
+  test('P1-0: SceneStrokePathCache handles dot/empty strokes safely', () {
     final cache = SceneStrokePathCache(maxEntries: 8);
-    final stroke = StrokeNode(
+    final dot = StrokeNode(
       id: 'dot',
       points: const [Offset(0, 0)],
       thickness: 2,
       color: const Color(0xFF000000),
     );
+    final empty = StrokeNode(
+      id: 'empty',
+      points: const <Offset>[],
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
 
-    expect(() => cache.getOrBuild(stroke), throwsStateError);
+    expect(() => cache.getOrBuild(dot), returnsNormally);
+    expect(() => cache.getOrBuild(empty), returnsNormally);
+    expect(cache.debugBuildCount, 0);
   });
 
   test('P1-2: SceneStrokePathCache rebuilds on geometry change', () {

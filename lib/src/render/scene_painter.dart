@@ -46,11 +46,11 @@ class SceneStrokePathCache {
 
   Path getOrBuild(StrokeNode node) {
     final points = node.points;
-    if (points.length < 2) {
-      throw StateError(
-        'SceneStrokePathCache.getOrBuild requires points.length >= 2. '
-        'Dots must be handled separately.',
-      );
+    if (points.isEmpty) {
+      return Path();
+    }
+    if (points.length == 1) {
+      return Path()..addOval(Rect.fromCircle(center: points.first, radius: 0));
     }
 
     final pointsRevision = node.pointsRevision;

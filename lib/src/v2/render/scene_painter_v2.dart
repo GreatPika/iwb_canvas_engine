@@ -1,0 +1,1024 @@
+import 'dart:collection';
+import 'dart:math' as math;
+import 'dart:ui';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
+
+import '../../core/grid_safety_limits.dart';
+import '../../core/nodes.dart' show PathFillRule, PathNode;
+import '../../core/numeric_clamp.dart';
+import '../../core/transform2d.dart';
+import '../controller/scene_controller_v2.dart';
+import '../public/snapshot.dart';
+
+typedef ImageResolverV2 = Image? Function(String imageId);
+
+class SceneStrokePathCacheV2 {
+  SceneStrokePathCacheV2({this.maxEntries = 512})
+    : assert(maxEntries > 0, 'maxEntries must be > 0.');
+
+  final int maxEntries;
+  final LinkedHashMap<NodeId, _StrokePathEntryV2> _entries =
+      LinkedHashMap<NodeId, _StrokePathEntryV2>();
+
+  int _debugBuildCount = 0;
+  int _debugHitCount = 0;
+  int _debugEvictCount = 0;
+
+  @visibleForTesting
+  int get debugBuildCount => _debugBuildCount;
+  @visibleForTesting
+  int get debugHitCount => _debugHitCount;
+  @visibleForTesting
+  int get debugEvictCount => _debugEvictCount;
+  @visibleForTesting
+  int get debugSize => _entries.length;
+
+  void clear() => _entries.clear();
+
+  Path getOrBuild(StrokeNodeSnapshot node) {
+    if (node.points.isEmpty) {
+      return Path();
+    }
+    if (node.points.length == 1) {
+      return Path()
+        ..addOval(Rect.fromCircle(center: node.points.first, radius: 0));
+    }
+
+    final geometryHash = _pointsHash(node.points);
+    final cached = _entries.remove(node.id);
+    if (cached != null && cached.geometryHash == geometryHash) {
+      _entries[node.id] = cached;
+      _debugHitCount += 1;
+      return cached.path;
+    }
+
+    final path = _buildStrokePath(node.points);
+    _entries[node.id] = _StrokePathEntryV2(path: path, geometryHash: geometryHash);
+    _debugBuildCount += 1;
+    _evictIfNeeded();
+    return path;
+  }
+
+  int _pointsHash(List<Offset> points) {
+    return Object.hashAll(points.map((point) => Object.hash(point.dx, point.dy)));
+  }
+
+  void _evictIfNeeded() {
+    while (_entries.length > maxEntries) {
+      _entries.remove(_entries.keys.first);
+      _debugEvictCount += 1;
+    }
+  }
+}
+
+class _StrokePathEntryV2 {
+  const _StrokePathEntryV2({required this.path, required this.geometryHash});
+
+  final Path path;
+  final int geometryHash;
+}
+
+class SceneTextLayoutCacheV2 {
+  SceneTextLayoutCacheV2({this.maxEntries = 256})
+    : assert(maxEntries > 0, 'maxEntries must be > 0.');
+
+  final int maxEntries;
+  final LinkedHashMap<_TextLayoutKeyV2, TextPainter> _entries =
+      LinkedHashMap<_TextLayoutKeyV2, TextPainter>();
+
+  int _debugBuildCount = 0;
+  int _debugHitCount = 0;
+  int _debugEvictCount = 0;
+
+  @visibleForTesting
+  int get debugBuildCount => _debugBuildCount;
+  @visibleForTesting
+  int get debugHitCount => _debugHitCount;
+  @visibleForTesting
+  int get debugEvictCount => _debugEvictCount;
+  @visibleForTesting
+  int get debugSize => _entries.length;
+
+  void clear() => _entries.clear();
+
+  TextPainter getOrBuild({
+    required TextNodeSnapshot node,
+    required TextStyle textStyle,
+    required double maxWidth,
+    TextDirection textDirection = TextDirection.ltr,
+  }) {
+    final key = _TextLayoutKeyV2(
+      text: node.text,
+      fontSize: clampPositiveFinite(node.fontSize, fallback: 24),
+      fontFamily: node.fontFamily,
+      isBold: node.isBold,
+      isItalic: node.isItalic,
+      isUnderline: node.isUnderline,
+      align: node.align,
+      lineHeight: (node.lineHeight != null && node.lineHeight! > 0)
+          ? node.lineHeight
+          : null,
+      maxWidth: clampNonNegativeFinite(maxWidth),
+      color: textStyle.color ?? const Color(0xFF000000),
+      textDirection: textDirection,
+    );
+
+    final cached = _entries.remove(key);
+    if (cached != null) {
+      _entries[key] = cached;
+      _debugHitCount += 1;
+      return cached;
+    }
+
+    final textPainter = TextPainter(
+      text: TextSpan(text: node.text, style: textStyle),
+      textAlign: node.align,
+      textDirection: textDirection,
+      maxLines: null,
+    );
+    textPainter.layout(maxWidth: key.maxWidth);
+    _entries[key] = textPainter;
+    _debugBuildCount += 1;
+    _evictIfNeeded();
+    return textPainter;
+  }
+
+  void _evictIfNeeded() {
+    while (_entries.length > maxEntries) {
+      _entries.remove(_entries.keys.first);
+      _debugEvictCount += 1;
+    }
+  }
+}
+
+class _TextLayoutKeyV2 {
+  const _TextLayoutKeyV2({
+    required this.text,
+    required this.fontSize,
+    required this.fontFamily,
+    required this.isBold,
+    required this.isItalic,
+    required this.isUnderline,
+    required this.align,
+    required this.lineHeight,
+    required this.maxWidth,
+    required this.color,
+    required this.textDirection,
+  });
+
+  final String text;
+  final double fontSize;
+  final String? fontFamily;
+  final bool isBold;
+  final bool isItalic;
+  final bool isUnderline;
+  final TextAlign align;
+  final double? lineHeight;
+  final double maxWidth;
+  final Color color;
+  final TextDirection textDirection;
+
+  @override
+  bool operator ==(Object other) {
+    return other is _TextLayoutKeyV2 &&
+        other.text == text &&
+        other.fontSize == fontSize &&
+        other.fontFamily == fontFamily &&
+        other.isBold == isBold &&
+        other.isItalic == isItalic &&
+        other.isUnderline == isUnderline &&
+        other.align == align &&
+        other.lineHeight == lineHeight &&
+        other.maxWidth == maxWidth &&
+        other.color == color &&
+        other.textDirection == textDirection;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    text,
+    fontSize,
+    fontFamily,
+    isBold,
+    isItalic,
+    isUnderline,
+    align,
+    lineHeight,
+    maxWidth,
+    color,
+    textDirection,
+  );
+}
+
+class ScenePathMetricsCacheV2 {
+  ScenePathMetricsCacheV2({this.maxEntries = 512})
+    : assert(maxEntries > 0, 'maxEntries must be > 0.');
+
+  final int maxEntries;
+  final LinkedHashMap<NodeId, _PathMetricsEntryV2> _entries =
+      LinkedHashMap<NodeId, _PathMetricsEntryV2>();
+
+  int _debugBuildCount = 0;
+  int _debugHitCount = 0;
+  int _debugEvictCount = 0;
+
+  @visibleForTesting
+  int get debugBuildCount => _debugBuildCount;
+  @visibleForTesting
+  int get debugHitCount => _debugHitCount;
+  @visibleForTesting
+  int get debugEvictCount => _debugEvictCount;
+  @visibleForTesting
+  int get debugSize => _entries.length;
+
+  void clear() => _entries.clear();
+
+  PathSelectionContoursV2 getOrBuild({
+    required PathNodeSnapshot node,
+    required Path localPath,
+  }) {
+    final cached = _entries.remove(node.id);
+    if (cached != null &&
+        cached.svgPathData == node.svgPathData &&
+        cached.fillRule == node.fillRule) {
+      _entries[node.id] = cached;
+      _debugHitCount += 1;
+      return cached.contours;
+    }
+
+    final fillType = _fillTypeFromSnapshot(node.fillRule);
+    Path? closedContours;
+    final openContours = <Path>[];
+    for (final metric in localPath.computeMetrics()) {
+      final contour = metric.extractPath(0, metric.length, startWithMoveTo: true);
+      contour.fillType = fillType;
+      if (metric.isClosed) {
+        contour.close();
+        closedContours ??= Path()..fillType = fillType;
+        closedContours.addPath(contour, Offset.zero);
+      } else {
+        openContours.add(contour);
+      }
+    }
+
+    final contours = PathSelectionContoursV2(
+      closedContours: closedContours,
+      openContours: openContours,
+    );
+    _entries[node.id] = _PathMetricsEntryV2(
+      svgPathData: node.svgPathData,
+      fillRule: node.fillRule,
+      contours: contours,
+    );
+    _debugBuildCount += 1;
+    _evictIfNeeded();
+    return contours;
+  }
+
+  void _evictIfNeeded() {
+    while (_entries.length > maxEntries) {
+      _entries.remove(_entries.keys.first);
+      _debugEvictCount += 1;
+    }
+  }
+}
+
+class _PathMetricsEntryV2 {
+  const _PathMetricsEntryV2({
+    required this.svgPathData,
+    required this.fillRule,
+    required this.contours,
+  });
+
+  final String svgPathData;
+  final V2PathFillRule fillRule;
+  final PathSelectionContoursV2 contours;
+}
+
+class PathSelectionContoursV2 {
+  const PathSelectionContoursV2({
+    required this.closedContours,
+    required this.openContours,
+  });
+
+  final Path? closedContours;
+  final List<Path> openContours;
+}
+
+class SceneStaticLayerCacheV2 {
+  _StaticLayerKeyV2? _key;
+  Picture? _gridPicture;
+
+  int _debugBuildCount = 0;
+  int _debugDisposeCount = 0;
+
+  @visibleForTesting
+  int get debugBuildCount => _debugBuildCount;
+  @visibleForTesting
+  int get debugDisposeCount => _debugDisposeCount;
+
+  void clear() {
+    _disposeGridPictureIfNeeded();
+    _key = null;
+  }
+
+  void dispose() => clear();
+
+  void draw(
+    Canvas canvas,
+    Size size, {
+    required BackgroundSnapshot background,
+    required Offset cameraOffset,
+    required double gridStrokeWidth,
+  }) {
+    _drawBackground(canvas, size, background.color);
+
+    final safeOffset = sanitizeFiniteOffset(cameraOffset);
+    final safeGridStrokeWidth = clampNonNegativeFinite(gridStrokeWidth);
+    final grid = background.grid;
+    final enabled = _isGridDrawable(grid, size: size, cameraOffset: Offset.zero);
+    final cellSize = enabled ? grid.cellSize : 0.0;
+    final key = _StaticLayerKeyV2(
+      size: size,
+      gridEnabled: enabled,
+      gridCellSize: cellSize,
+      gridColor: grid.color,
+      gridStrokeWidth: safeGridStrokeWidth,
+    );
+
+    if (_gridPicture == null || _key != key) {
+      _disposeGridPictureIfNeeded();
+      _key = key;
+      _gridPicture = _recordGridPicture(size, grid, safeGridStrokeWidth);
+      _debugBuildCount += 1;
+    }
+
+    if (!_key!.gridEnabled) {
+      return;
+    }
+    final shift = _gridShiftForCameraOffset(safeOffset, _key!.gridCellSize);
+    canvas.save();
+    canvas.clipRect(Offset.zero & size);
+    canvas.translate(shift.dx, shift.dy);
+    canvas.drawPicture(_gridPicture!);
+    canvas.restore();
+  }
+
+  Picture _recordGridPicture(Size size, GridSnapshot grid, double gridStrokeWidth) {
+    final recorder = PictureRecorder();
+    final canvas = Canvas(recorder);
+    _drawGrid(canvas, size, grid, Offset.zero, gridStrokeWidth);
+    return recorder.endRecording();
+  }
+
+  void _disposeGridPictureIfNeeded() {
+    final picture = _gridPicture;
+    if (picture == null) {
+      return;
+    }
+    _gridPicture = null;
+    picture.dispose();
+    _debugDisposeCount += 1;
+  }
+}
+
+class _StaticLayerKeyV2 {
+  const _StaticLayerKeyV2({
+    required this.size,
+    required this.gridEnabled,
+    required this.gridCellSize,
+    required this.gridColor,
+    required this.gridStrokeWidth,
+  });
+
+  final Size size;
+  final bool gridEnabled;
+  final double gridCellSize;
+  final Color gridColor;
+  final double gridStrokeWidth;
+
+  @override
+  bool operator ==(Object other) {
+    return other is _StaticLayerKeyV2 &&
+        other.size == size &&
+        other.gridEnabled == gridEnabled &&
+        other.gridCellSize == gridCellSize &&
+        other.gridColor == gridColor &&
+        other.gridStrokeWidth == gridStrokeWidth;
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(size, gridEnabled, gridCellSize, gridColor, gridStrokeWidth);
+}
+
+class ScenePainterV2 extends CustomPainter {
+  static const double _cullPadding = 1.0;
+
+  ScenePainterV2({
+    required this.controller,
+    required this.imageResolver,
+    this.staticLayerCache,
+    this.textLayoutCache,
+    this.strokePathCache,
+    this.pathMetricsCache,
+    this.selectionColor = const Color(0xFF1565C0),
+    this.selectionStrokeWidth = 1,
+    this.gridStrokeWidth = 1,
+    this.textDirection = TextDirection.ltr,
+  }) : super(repaint: controller);
+
+  final SceneControllerV2 controller;
+  final ImageResolverV2 imageResolver;
+  final SceneStaticLayerCacheV2? staticLayerCache;
+  final SceneTextLayoutCacheV2? textLayoutCache;
+  final SceneStrokePathCacheV2? strokePathCache;
+  final ScenePathMetricsCacheV2? pathMetricsCache;
+  final Color selectionColor;
+  final double selectionStrokeWidth;
+  final double gridStrokeWidth;
+  final TextDirection textDirection;
+
+  final Float64List _transformBuffer = Float64List(16);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final snapshot = controller.snapshot;
+    final selectedIds = controller.selectedNodeIds;
+    final cameraOffset = sanitizeFiniteOffset(snapshot.camera.offset);
+
+    if (staticLayerCache != null) {
+      staticLayerCache!.draw(
+        canvas,
+        size,
+        background: snapshot.background,
+        cameraOffset: cameraOffset,
+        gridStrokeWidth: gridStrokeWidth,
+      );
+    } else {
+      _drawBackground(canvas, size, snapshot.background.color);
+      _drawGrid(
+        canvas,
+        size,
+        snapshot.background.grid,
+        cameraOffset,
+        gridStrokeWidth,
+      );
+    }
+
+    final viewRect = Rect.fromLTWH(
+      cameraOffset.dx,
+      cameraOffset.dy,
+      size.width,
+      size.height,
+    ).inflate(_cullPadding);
+
+    final selectedBounds = <Rect>[];
+    for (final layer in snapshot.layers) {
+      for (final node in layer.nodes) {
+        if (!node.isVisible) {
+          continue;
+        }
+        final bounds = _nodeBoundsWorld(node);
+        if (!_isFiniteRect(bounds) || !viewRect.overlaps(bounds)) {
+          continue;
+        }
+        _drawNode(canvas, node, cameraOffset);
+        if (selectedIds.contains(node.id)) {
+          selectedBounds.add(bounds);
+        }
+      }
+    }
+
+    _drawSelection(canvas, selectedBounds, cameraOffset);
+  }
+
+  void _drawSelection(Canvas canvas, List<Rect> bounds, Offset cameraOffset) {
+    final width = clampNonNegativeFinite(selectionStrokeWidth);
+    if (width <= 0) {
+      return;
+    }
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = width
+      ..color = selectionColor;
+    for (final rect in bounds) {
+      canvas.drawRect(rect.shift(-cameraOffset), paint);
+    }
+  }
+
+  void _drawNode(Canvas canvas, NodeSnapshot node, Offset cameraOffset) {
+    switch (node) {
+      case RectNodeSnapshot rectNode:
+        _drawRectNode(canvas, rectNode, cameraOffset);
+      case LineNodeSnapshot lineNode:
+        _drawLineNode(canvas, lineNode, cameraOffset);
+      case StrokeNodeSnapshot strokeNode:
+        _drawStrokeNode(canvas, strokeNode, cameraOffset);
+      case TextNodeSnapshot textNode:
+        _drawTextNode(canvas, textNode, cameraOffset);
+      case ImageNodeSnapshot imageNode:
+        _drawImageNode(canvas, imageNode, cameraOffset);
+      case PathNodeSnapshot pathNode:
+        _drawPathNode(canvas, pathNode, cameraOffset);
+    }
+  }
+
+  void _drawRectNode(Canvas canvas, RectNodeSnapshot node, Offset cameraOffset) {
+    if (!node.transform.isFinite) {
+      return;
+    }
+    final rect = _centerRect(node.size);
+    canvas.save();
+    canvas.transform(_toViewTransform(node.transform, cameraOffset));
+    if (node.fillColor != null) {
+      canvas.drawRect(
+        rect,
+        Paint()
+          ..style = PaintingStyle.fill
+          ..color = _applyOpacity(node.fillColor!, node.opacity),
+      );
+    }
+    final strokeWidth = clampNonNegativeFinite(node.strokeWidth);
+    if (node.strokeColor != null && strokeWidth > 0) {
+      canvas.drawRect(
+        rect,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeWidth
+          ..color = _applyOpacity(node.strokeColor!, node.opacity),
+      );
+    }
+    canvas.restore();
+  }
+
+  void _drawLineNode(Canvas canvas, LineNodeSnapshot node, Offset cameraOffset) {
+    if (!node.transform.isFinite || !_isFiniteOffset(node.start) || !_isFiniteOffset(node.end)) {
+      return;
+    }
+    canvas.save();
+    canvas.transform(_toViewTransform(node.transform, cameraOffset));
+    canvas.drawLine(
+      node.start,
+      node.end,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = clampNonNegativeFinite(node.thickness)
+        ..strokeCap = StrokeCap.round
+        ..color = _applyOpacity(node.color, node.opacity),
+    );
+    canvas.restore();
+  }
+
+  void _drawStrokeNode(
+    Canvas canvas,
+    StrokeNodeSnapshot node,
+    Offset cameraOffset,
+  ) {
+    if (node.points.isEmpty || !node.transform.isFinite || !_areFiniteOffsets(node.points)) {
+      return;
+    }
+
+    final thickness = clampNonNegativeFinite(node.thickness);
+    canvas.save();
+    canvas.transform(_toViewTransform(node.transform, cameraOffset));
+
+    if (node.points.length == 1) {
+      canvas.drawCircle(
+        node.points.first,
+        thickness / 2,
+        Paint()
+          ..style = PaintingStyle.fill
+          ..color = _applyOpacity(node.color, node.opacity),
+      );
+      canvas.restore();
+      return;
+    }
+
+    final path = strokePathCache != null
+        ? strokePathCache!.getOrBuild(node)
+        : _buildStrokePath(node.points);
+
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = thickness
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..color = _applyOpacity(node.color, node.opacity),
+    );
+    canvas.restore();
+  }
+
+  void _drawTextNode(Canvas canvas, TextNodeSnapshot node, Offset cameraOffset) {
+    if (!node.transform.isFinite) {
+      return;
+    }
+    final safeSize = clampNonNegativeSizeFinite(node.size);
+    final maxWidth = node.maxWidth ?? safeSize.width;
+    final style = TextStyle(
+      color: _applyOpacity(node.color, node.opacity),
+      fontSize: clampPositiveFinite(node.fontSize, fallback: 24),
+      fontFamily: node.fontFamily,
+      fontWeight: node.isBold ? FontWeight.bold : FontWeight.normal,
+      fontStyle: node.isItalic ? FontStyle.italic : FontStyle.normal,
+      decoration: node.isUnderline
+          ? TextDecoration.underline
+          : TextDecoration.none,
+      height: (node.lineHeight != null && node.lineHeight! > 0)
+          ? node.lineHeight
+          : null,
+    );
+
+    final textPainter = textLayoutCache != null
+        ? textLayoutCache!.getOrBuild(
+            node: node,
+            textStyle: style,
+            maxWidth: maxWidth,
+            textDirection: textDirection,
+          )
+        : _buildTextPainter(node, style, maxWidth);
+
+    final alignOffset = _textAlignOffset(
+      node.align,
+      safeSize.width,
+      textPainter.width,
+      textDirection,
+    );
+
+    canvas.save();
+    canvas.transform(_toViewTransform(node.transform, cameraOffset));
+    textPainter.paint(
+      canvas,
+      Offset(-safeSize.width / 2 + alignOffset, -safeSize.height / 2),
+    );
+    canvas.restore();
+  }
+
+  TextPainter _buildTextPainter(
+    TextNodeSnapshot node,
+    TextStyle style,
+    double maxWidth,
+  ) {
+    final painter = TextPainter(
+      text: TextSpan(text: node.text, style: style),
+      textAlign: node.align,
+      textDirection: textDirection,
+      maxLines: null,
+    );
+    painter.layout(maxWidth: clampNonNegativeFinite(maxWidth));
+    return painter;
+  }
+
+  void _drawImageNode(Canvas canvas, ImageNodeSnapshot node, Offset cameraOffset) {
+    if (!node.transform.isFinite) {
+      return;
+    }
+    final image = imageResolver(node.imageId);
+    final rect = _centerRect(node.size);
+    canvas.save();
+    canvas.transform(_toViewTransform(node.transform, cameraOffset));
+    if (image == null) {
+      canvas.drawRect(
+        rect,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..color = const Color(0xFF9E9E9E),
+      );
+      canvas.restore();
+      return;
+    }
+
+    paintImage(
+      canvas: canvas,
+      rect: rect,
+      image: image,
+      fit: BoxFit.fill,
+      filterQuality: FilterQuality.medium,
+      opacity: _alpha01(node.opacity),
+    );
+    canvas.restore();
+  }
+
+  void _drawPathNode(Canvas canvas, PathNodeSnapshot node, Offset cameraOffset) {
+    if (!node.transform.isFinite) {
+      return;
+    }
+
+    final localPath = _buildPathNode(node).buildLocalPath(copy: false);
+    if (localPath == null) {
+      return;
+    }
+    localPath.fillType = _fillTypeFromSnapshot(node.fillRule);
+
+    if (pathMetricsCache != null) {
+      pathMetricsCache!.getOrBuild(node: node, localPath: localPath);
+    }
+
+    canvas.save();
+    canvas.transform(_toViewTransform(node.transform, cameraOffset));
+
+    if (node.fillColor != null) {
+      canvas.drawPath(
+        localPath,
+        Paint()
+          ..style = PaintingStyle.fill
+          ..color = _applyOpacity(node.fillColor!, node.opacity),
+      );
+    }
+
+    final strokeWidth = clampNonNegativeFinite(node.strokeWidth);
+    if (node.strokeColor != null && strokeWidth > 0) {
+      canvas.drawPath(
+        localPath,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeWidth
+          ..color = _applyOpacity(node.strokeColor!, node.opacity),
+      );
+    }
+    canvas.restore();
+  }
+
+  Rect _nodeBoundsWorld(NodeSnapshot node) {
+    if (!node.transform.isFinite) {
+      return Rect.zero;
+    }
+
+    switch (node) {
+      case RectNodeSnapshot rectNode:
+        return node.transform.applyToRect(_centerRect(rectNode.size));
+      case ImageNodeSnapshot imageNode:
+        return node.transform.applyToRect(_centerRect(imageNode.size));
+      case TextNodeSnapshot textNode:
+        return node.transform.applyToRect(_centerRect(textNode.size));
+      case LineNodeSnapshot lineNode:
+        final local = Rect.fromPoints(lineNode.start, lineNode.end).inflate(
+          clampNonNegativeFinite(lineNode.thickness) / 2,
+        );
+        return node.transform.applyToRect(local);
+      case StrokeNodeSnapshot strokeNode:
+        if (strokeNode.points.isEmpty) {
+          return Rect.zero;
+        }
+        final local = _aabbFromPoints(strokeNode.points).inflate(
+          clampNonNegativeFinite(strokeNode.thickness) / 2,
+        );
+        return node.transform.applyToRect(local);
+      case PathNodeSnapshot pathNode:
+        final localPath = _buildPathNode(pathNode).buildLocalPath(copy: false);
+        if (localPath == null) {
+          return Rect.zero;
+        }
+        return node.transform.applyToRect(localPath.getBounds());
+    }
+  }
+
+  PathNode _buildPathNode(PathNodeSnapshot snapshot) {
+    return PathNode(
+      id: snapshot.id,
+      svgPathData: snapshot.svgPathData,
+      fillColor: snapshot.fillColor,
+      strokeColor: snapshot.strokeColor,
+      strokeWidth: snapshot.strokeWidth,
+      fillRule: snapshot.fillRule == V2PathFillRule.evenOdd
+          ? PathFillRule.evenOdd
+          : PathFillRule.nonZero,
+      transform: snapshot.transform,
+      opacity: snapshot.opacity,
+      hitPadding: snapshot.hitPadding,
+      isVisible: snapshot.isVisible,
+      isSelectable: snapshot.isSelectable,
+      isLocked: snapshot.isLocked,
+      isDeletable: snapshot.isDeletable,
+      isTransformable: snapshot.isTransformable,
+    );
+  }
+
+  Float64List _toViewTransform(Transform2D transform, Offset cameraOffset) {
+    _transformBuffer[0] = transform.a;
+    _transformBuffer[1] = transform.b;
+    _transformBuffer[2] = 0;
+    _transformBuffer[3] = 0;
+    _transformBuffer[4] = transform.c;
+    _transformBuffer[5] = transform.d;
+    _transformBuffer[6] = 0;
+    _transformBuffer[7] = 0;
+    _transformBuffer[8] = 0;
+    _transformBuffer[9] = 0;
+    _transformBuffer[10] = 1;
+    _transformBuffer[11] = 0;
+    _transformBuffer[12] = transform.tx - cameraOffset.dx;
+    _transformBuffer[13] = transform.ty - cameraOffset.dy;
+    _transformBuffer[14] = 0;
+    _transformBuffer[15] = 1;
+    return _transformBuffer;
+  }
+
+  @override
+  bool shouldRepaint(covariant ScenePainterV2 oldDelegate) {
+    return oldDelegate.controller != controller ||
+        oldDelegate.imageResolver != imageResolver ||
+        oldDelegate.staticLayerCache != staticLayerCache ||
+        oldDelegate.textLayoutCache != textLayoutCache ||
+        oldDelegate.strokePathCache != strokePathCache ||
+        oldDelegate.pathMetricsCache != pathMetricsCache ||
+        oldDelegate.selectionColor != selectionColor ||
+        oldDelegate.selectionStrokeWidth != selectionStrokeWidth ||
+        oldDelegate.gridStrokeWidth != gridStrokeWidth ||
+        oldDelegate.textDirection != textDirection;
+  }
+}
+
+void _drawBackground(Canvas canvas, Size size, Color color) {
+  canvas.drawRect(Offset.zero & size, Paint()..color = color);
+}
+
+void _drawGrid(
+  Canvas canvas,
+  Size size,
+  GridSnapshot grid,
+  Offset cameraOffset,
+  double gridStrokeWidth,
+) {
+  if (!_isGridDrawable(grid, size: size, cameraOffset: cameraOffset)) {
+    return;
+  }
+
+  final cell = grid.cellSize;
+  final paint = Paint()
+    ..color = grid.color
+    ..strokeWidth = clampNonNegativeFinite(gridStrokeWidth);
+
+  final startX = _gridStart(-cameraOffset.dx, cell);
+  final startY = _gridStart(-cameraOffset.dy, cell);
+
+  final strideX = _gridStrideForLineCount(_gridLineCount(startX, size.width, cell));
+  final strideY = _gridStrideForLineCount(_gridLineCount(startY, size.height, cell));
+
+  for (var x = startX, index = 0; x <= size.width; x += cell, index++) {
+    if (index % strideX != 0) {
+      continue;
+    }
+    canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+  }
+
+  for (var y = startY, index = 0; y <= size.height; y += cell, index++) {
+    if (index % strideY != 0) {
+      continue;
+    }
+    canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+  }
+}
+
+bool _isGridDrawable(
+  GridSnapshot grid, {
+  required Size size,
+  required Offset cameraOffset,
+}) {
+  if (!grid.isEnabled) {
+    return false;
+  }
+  if (!size.width.isFinite || !size.height.isFinite) {
+    return false;
+  }
+  if (size.width <= 0 || size.height <= 0) {
+    return false;
+  }
+  if (!_isFiniteOffset(cameraOffset)) {
+    return false;
+  }
+  if (!grid.cellSize.isFinite || grid.cellSize < kMinGridCellSize) {
+    return false;
+  }
+  return true;
+}
+
+int _gridLineCount(double start, double extent, double cell) {
+  if (!start.isFinite || !extent.isFinite || !cell.isFinite || cell <= 0) {
+    return 0;
+  }
+  return ((extent - start) / cell).ceil().clamp(0, 1 << 30) + 1;
+}
+
+int _gridStrideForLineCount(int lineCount) {
+  if (lineCount <= kMaxGridLinesPerAxis) {
+    return 1;
+  }
+  return (lineCount / kMaxGridLinesPerAxis).ceil().clamp(1, 1 << 30);
+}
+
+double _gridStart(double offset, double cell) {
+  if (!offset.isFinite || !cell.isFinite || cell <= 0) {
+    return 0;
+  }
+  final rem = offset % cell;
+  return rem > 0 ? rem - cell : rem;
+}
+
+Offset _gridShiftForCameraOffset(Offset cameraOffset, double cellSize) {
+  if (!_isFiniteOffset(cameraOffset)) {
+    return Offset.zero;
+  }
+  if (!cellSize.isFinite || cellSize <= 0) {
+    return Offset.zero;
+  }
+  return Offset(
+    _gridStart(-cameraOffset.dx, cellSize),
+    _gridStart(-cameraOffset.dy, cellSize),
+  );
+}
+
+Rect _centerRect(Size size) {
+  final safe = clampNonNegativeSizeFinite(size);
+  return Rect.fromCenter(
+    center: Offset.zero,
+    width: safe.width,
+    height: safe.height,
+  );
+}
+
+Rect _aabbFromPoints(List<Offset> points) {
+  var minX = points.first.dx;
+  var minY = points.first.dy;
+  var maxX = minX;
+  var maxY = minY;
+  for (var i = 1; i < points.length; i++) {
+    final point = points[i];
+    minX = math.min(minX, point.dx);
+    minY = math.min(minY, point.dy);
+    maxX = math.max(maxX, point.dx);
+    maxY = math.max(maxY, point.dy);
+  }
+  return Rect.fromLTRB(minX, minY, maxX, maxY);
+}
+
+Path _buildStrokePath(List<Offset> points) {
+  final path = Path()..fillType = PathFillType.nonZero;
+  final first = points.first;
+  path.moveTo(first.dx, first.dy);
+  for (var i = 1; i < points.length; i++) {
+    final p = points[i];
+    path.lineTo(p.dx, p.dy);
+  }
+  return path;
+}
+
+PathFillType _fillTypeFromSnapshot(V2PathFillRule rule) {
+  return rule == V2PathFillRule.evenOdd
+      ? PathFillType.evenOdd
+      : PathFillType.nonZero;
+}
+
+Color _applyOpacity(Color color, double opacity) {
+  final alpha = (_alpha01(opacity) * 255.0).round().clamp(0, 255);
+  return color.withAlpha(alpha);
+}
+
+double _alpha01(double opacity) {
+  return clampNonNegativeFinite(opacity).clamp(0.0, 1.0);
+}
+
+double _textAlignOffset(
+  TextAlign align,
+  double boxWidth,
+  double textWidth,
+  TextDirection textDirection,
+) {
+  switch (align) {
+    case TextAlign.right:
+      return boxWidth - textWidth;
+    case TextAlign.end:
+      return textDirection == TextDirection.rtl ? 0 : boxWidth - textWidth;
+    case TextAlign.center:
+      return (boxWidth - textWidth) / 2;
+    case TextAlign.left:
+      return 0;
+    case TextAlign.start:
+    case TextAlign.justify:
+      return textDirection == TextDirection.rtl ? boxWidth - textWidth : 0;
+  }
+}
+
+bool _isFiniteRect(Rect rect) {
+  return rect.left.isFinite &&
+      rect.top.isFinite &&
+      rect.right.isFinite &&
+      rect.bottom.isFinite;
+}
+
+bool _isFiniteOffset(Offset offset) {
+  return offset.dx.isFinite && offset.dy.isFinite;
+}
+
+bool _areFiniteOffsets(List<Offset> offsets) {
+  for (final offset in offsets) {
+    if (!_isFiniteOffset(offset)) {
+      return false;
+    }
+  }
+  return true;
+}

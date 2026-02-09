@@ -25,8 +25,7 @@ Rect nodeHitTestCandidateBoundsWorld(
   if (!_isFiniteRect(bounds)) return Rect.zero;
   final baseHitPadding = clampNonNegativeFinite(node.hitPadding);
   final extraPadding = clampNonNegativeFinite(additionalScenePadding);
-  final scenePadding = baseHitPadding + kHitSlop + extraPadding;
-  final padding = _scenePaddingToWorldMax(node.transform, scenePadding);
+  final padding = baseHitPadding + kHitSlop + extraPadding;
   if (padding <= 0) return bounds;
   return bounds.inflate(padding);
 }
@@ -97,29 +96,6 @@ double _maxSingularValue2x2(double a, double b, double c, double d) {
   final disc = math.sqrt(math.max(0, discSquared));
   final lambdaMax = (t + disc) / 2;
   return math.sqrt(math.max(0, lambdaMax));
-}
-
-double _scenePaddingToWorldMax(Transform2D transform, double valueScene) {
-  final clampedScene = clampNonNegativeFinite(valueScene);
-  if (clampedScene <= 0) return 0;
-  if (!transform.isFinite) return clampedScene;
-  final inverse = transform.invert();
-  if (inverse == null) return clampedScene;
-  final sceneToLocal = _maxSingularValue2x2(
-    inverse.a,
-    inverse.b,
-    inverse.c,
-    inverse.d,
-  );
-  final localToScene = _maxSingularValue2x2(
-    transform.a,
-    transform.b,
-    transform.c,
-    transform.d,
-  );
-  final localPaddingMax = clampedScene * sceneToLocal;
-  final worldPaddingMax = localPaddingMax * localToScene;
-  return clampNonNegativeFinite(worldPaddingMax, fallback: clampedScene);
 }
 
 double _pathMetricStep(double strokeRadiusLocal) {
