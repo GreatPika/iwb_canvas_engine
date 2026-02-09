@@ -3,6 +3,7 @@ import 'dart:ui' show Offset, Rect;
 
 import '../../../../core/geometry.dart';
 import '../../../../core/hit_test.dart';
+import '../../../../core/input_sampling.dart';
 import '../../../../core/nodes.dart';
 import '../../../../core/scene_spatial_index.dart';
 import '../../../action_events.dart';
@@ -10,12 +11,6 @@ import '../../../internal/contracts.dart';
 
 class EraserTool {
   EraserTool(this._contracts);
-
-  // The engine currently uses camera translation only (no zoom), so scene
-  // units map 1:1 to screen-space pixels for input decimation.
-  static const double _minInputStepScene = 0.75;
-  static const double _minInputStepSceneSquared =
-      _minInputStepScene * _minInputStepScene;
 
   final InputSliceContracts _contracts;
   final List<Offset> _eraserPoints = <Offset>[];
@@ -152,15 +147,13 @@ class EraserTool {
 
   void _appendPoint(Offset scenePoint, {bool forceIfDifferent = false}) {
     final last = _eraserPoints.last;
-    final delta = scenePoint - last;
-    final distanceSquared = delta.dx * delta.dx + delta.dy * delta.dy;
     if (forceIfDifferent) {
-      if (distanceSquared > 0) {
+      if (isDistanceGreaterThan(last, scenePoint, 0)) {
         _eraserPoints.add(scenePoint);
       }
       return;
     }
-    if (distanceSquared >= _minInputStepSceneSquared) {
+    if (isDistanceAtLeast(last, scenePoint, kInputDecimationMinStepScene)) {
       _eraserPoints.add(scenePoint);
     }
   }

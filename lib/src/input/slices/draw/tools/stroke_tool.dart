@@ -1,5 +1,6 @@
 import 'dart:ui' show Offset;
 
+import '../../../../core/input_sampling.dart';
 import '../../../../core/nodes.dart';
 import '../../../../core/scene.dart';
 import '../../../action_events.dart';
@@ -9,12 +10,6 @@ import '../../../types.dart';
 class StrokeTool {
   StrokeTool(this._contracts, {required Layer Function() ensureAnnotationLayer})
     : _ensureAnnotationLayer = ensureAnnotationLayer;
-
-  // The engine currently uses camera translation only (no zoom), so scene
-  // units map 1:1 to screen-space pixels for input decimation.
-  static const double _minInputStepScene = 0.75;
-  static const double _minInputStepSceneSquared =
-      _minInputStepScene * _minInputStepScene;
 
   final InputSliceContracts _contracts;
   final Layer Function() _ensureAnnotationLayer;
@@ -113,13 +108,10 @@ class StrokeTool {
   }
 
   bool _shouldAppendPoint(Offset last, Offset current) {
-    final delta = current - last;
-    final distanceSquared = delta.dx * delta.dx + delta.dy * delta.dy;
-    return distanceSquared >= _minInputStepSceneSquared;
+    return isDistanceAtLeast(last, current, kInputDecimationMinStepScene);
   }
 
   bool _isDifferentPoint(Offset left, Offset right) {
-    final delta = right - left;
-    return delta.dx * delta.dx + delta.dy * delta.dy > 0;
+    return isDistanceGreaterThan(left, right, 0);
   }
 }

@@ -1,15 +1,39 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
 import 'package:iwb_canvas_engine/advanced.dart';
 
+const ValueKey<String> canvasHostKey = ValueKey<String>('canvas-host');
+const ValueKey<String> modeMoveKey = ValueKey<String>('mode-move');
+const ValueKey<String> modeDrawKey = ValueKey<String>('mode-draw');
+const ValueKey<String> drawToolPenKey = ValueKey<String>('draw-tool-pen');
+const ValueKey<String> drawToolHighlighterKey = ValueKey<String>(
+  'draw-tool-highlighter',
+);
+const ValueKey<String> drawToolLineKey = ValueKey<String>('draw-tool-line');
+const ValueKey<String> drawToolEraserKey = ValueKey<String>('draw-tool-eraser');
+const ValueKey<String> actionDeleteKey = ValueKey<String>('action-delete');
+const ValueKey<String> actionAddSampleKey = ValueKey<String>(
+  'action-add-sample',
+);
+const ValueKey<String> gridMenuButtonKey = ValueKey<String>('grid-menu-button');
+const ValueKey<String> systemMenuButtonKey = ValueKey<String>(
+  'system-menu-button',
+);
+const ValueKey<String> systemClearCanvasKey = ValueKey<String>(
+  'system-clear-canvas',
+);
+
 void main() {
   runApp(const CanvasExampleApp());
 }
 
 class CanvasExampleApp extends StatelessWidget {
-  const CanvasExampleApp({super.key});
+  const CanvasExampleApp({super.key, this.controller});
+
+  final SceneController? controller;
 
   @override
   Widget build(BuildContext context) {
@@ -21,13 +45,15 @@ class CanvasExampleApp extends StatelessWidget {
         colorSchemeSeed: const Color(0xFF1565C0),
         brightness: Brightness.light,
       ),
-      home: const CanvasExampleScreen(),
+      home: CanvasExampleScreen(controller: controller),
     );
   }
 }
 
 class CanvasExampleScreen extends StatefulWidget {
-  const CanvasExampleScreen({super.key});
+  const CanvasExampleScreen({super.key, this.controller});
+
+  final SceneController? controller;
 
   @override
   State<CanvasExampleScreen> createState() => _CanvasExampleScreenState();
@@ -35,6 +61,8 @@ class CanvasExampleScreen extends StatefulWidget {
 
 class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   late final SceneController _controller;
+  late final bool _ownsController;
+  StreamSubscription<EditTextRequested>? _editTextSubscription;
   int _sampleSeed = 0;
   int _nodeSeed = 0;
   String? _lastExportedJson;
@@ -45,23 +73,34 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   @override
   void initState() {
     super.initState();
-    _controller = SceneController(
-      scene: Scene(layers: [Layer()]),
-      clearSelectionOnDrawModeEnter: true,
-      pointerSettings: const PointerInputSettings(
-        tapSlop: 16,
-        doubleTapSlop: 32,
-        doubleTapMaxDelayMs: 450,
-      ),
+    if (widget.controller != null) {
+      _controller = widget.controller!;
+      _ownsController = false;
+    } else {
+      _controller = SceneController(
+        scene: Scene(layers: [Layer()]),
+        clearSelectionOnDrawModeEnter: true,
+        pointerSettings: const PointerInputSettings(
+          tapSlop: 16,
+          doubleTapSlop: 32,
+          doubleTapMaxDelayMs: 450,
+        ),
+      );
+      _ownsController = true;
+    }
+    _editTextSubscription = _controller.editTextRequests.listen(
+      _beginInlineTextEdit,
     );
-    _controller.editTextRequests.listen(_beginInlineTextEdit);
   }
 
   @override
   void dispose() {
+    _editTextSubscription?.cancel();
     _textEditController?.dispose();
     _textEditFocusNode?.dispose();
-    _controller.dispose();
+    if (_ownsController) {
+      _controller.dispose();
+    }
     super.dispose();
   }
 
@@ -221,12 +260,14 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                       Icons.delete_outline,
                       "Delete",
                       hasSelection ? () => _controller.deleteSelection() : null,
+                      key: actionDeleteKey,
                       color: Colors.red,
                     ),
                     _buildActionButton(
                       Icons.add_box_outlined,
                       "Add Sample",
                       _addSampleObjects,
+                      key: actionAddSampleKey,
                     ),
                   ],
                 ],
@@ -263,6 +304,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   Widget _buildSmallModeBtn(CanvasMode mode, IconData icon) {
     final isSelected = _controller.mode == mode;
     return GestureDetector(
+      key: mode == CanvasMode.move ? modeMoveKey : modeDrawKey,
       onTap: () => _setMode(mode),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -284,6 +326,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   Widget _buildDrawToolButton(DrawTool tool, IconData icon, String label) {
     final isSelected = _controller.drawTool == tool;
     return IconButton(
+      key: _drawToolKey(tool),
       icon: Icon(icon),
       onPressed: () => _controller.setDrawTool(tool),
       color: isSelected ? Colors.blue : Colors.grey[700],
@@ -296,10 +339,12 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     IconData icon,
     String label,
     VoidCallback? onTap, {
+    Key? key,
     Color? color,
     int quarterTurns = 0,
   }) {
     return IconButton(
+      key: key,
       icon: RotatedBox(
         quarterTurns: quarterTurns,
         child: Icon(
@@ -433,6 +478,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
       ),
       builder: (context, controller, child) {
         return IconButton(
+          key: gridMenuButtonKey,
           icon: Icon(
             grid.isEnabled ? Icons.grid_4x4 : Icons.grid_off,
             color: grid.isEnabled
@@ -573,6 +619,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
       ),
       builder: (context, controller, child) {
         return IconButton(
+          key: systemMenuButtonKey,
           icon: Icon(Icons.settings, color: colorScheme.onSurfaceVariant),
           onPressed: () =>
               controller.isOpen ? controller.close() : controller.open(),
@@ -672,6 +719,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
               ),
               const Divider(indent: 16, endIndent: 16),
               MenuItemButton(
+                key: systemClearCanvasKey,
                 leadingIcon: Icon(
                   Icons.delete_sweep_outlined,
                   color: colorScheme.error,
@@ -700,6 +748,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     return Stack(
       children: [
         SceneView(
+          key: canvasHostKey,
           controller: _controller,
           imageResolver: (_) => null,
           selectionColor: const Color(0xFFFFFF00),
@@ -714,6 +763,19 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
         ),
       ],
     );
+  }
+
+  Key _drawToolKey(DrawTool tool) {
+    switch (tool) {
+      case DrawTool.pen:
+        return drawToolPenKey;
+      case DrawTool.highlighter:
+        return drawToolHighlighterKey;
+      case DrawTool.line:
+        return drawToolLineKey;
+      case DrawTool.eraser:
+        return drawToolEraserKey;
+    }
   }
 
   List<TextNode> _selectedTextNodes() {

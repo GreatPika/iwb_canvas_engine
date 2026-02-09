@@ -46,6 +46,17 @@ language: russian
 - можно портировать модули поэтапно и тестировать изолированно;
 - проще локализовать проблемы по фазам.
 
+### 3.1) Reuse policy for legacy slices (batch guardrail)
+
+- Разрешён только перенос **pure** логики из legacy:
+  - без зависимостей на `InputSliceContracts` / `SceneController`;
+  - без `notify/emit/commit` orchestration;
+  - детерминированной и side-effect free.
+- Запрещён перенос legacy orchestration "как есть":
+  - `lib/src/input/slices/**`;
+  - `lib/src/input/internal/contracts.dart`.
+- Для batch `G2.1-G2.5` целевой перенос ограничен общей логикой порогов/декимации input-семплов (move/line/stroke/eraser), вынесенной в `core`-утилиту и переиспользуемой без изменения transaction-first контракта.
+
 ## 4) Основной чеклист реализации v2
 
 ### A. Guardrails и инварианты
@@ -138,11 +149,11 @@ language: russian
   - использовать `baseline-vertical-slices-2026-02-04` как целевой ref;
   - если нужен другой baseline, явно записать commit/tag в этом пункте до начала cutover.
 - [ ] G2. Закрепить checklist интерактивных сценариев из `example/lib/main.dart`.
-- [ ] G2.1. Сценарий: переключение `move/draw` + семантика `selection`.
-- [ ] G2.2. Сценарий: механика выделения (`tap-select`, `marquee-select`, `clear selection` в ожидаемых режимах).
-- [ ] G2.3. Сценарий: draw-tools `pen/highlighter/line/eraser` + очистка `pending-state`.
-- [ ] G2.4. Сценарий: `line tool` (двухтаповый flow: `pending start -> commit line -> reset/cancel`).
-- [ ] G2.5. Сценарий: `eraser` (удаление пересечённых узлов в draw-режиме).
+- [x] G2.1. Сценарий: переключение `move/draw` + семантика `selection`.
+- [x] G2.2. Сценарий: механика выделения (`tap-select`, `marquee-select`, `clear selection` в ожидаемых режимах).
+- [x] G2.3. Сценарий: draw-tools `pen/highlighter/line/eraser` + очистка `pending-state`.
+- [x] G2.4. Сценарий: `line tool` (двухтаповый flow: `pending start -> commit line -> reset/cancel`).
+- [x] G2.5. Сценарий: `eraser` (удаление пересечённых узлов в draw-режиме).
 - [ ] G2.6. Сценарий: text nodes (`double-tap -> inline edit overlay -> save/cancel`).
 - [ ] G2.7. Сценарий: text styling в selection-panel (`color/align/font size/line height/bold/italic/underline`).
 - [ ] G2.8. Сценарий: трансформации (`rotate/flip/delete`) и `marquee-selection`.
@@ -153,11 +164,11 @@ language: russian
 - [ ] G2.13. Сценарий: visual parity индикаторов (`Camera X` и pending-line marker в draw-line режиме).
 - [ ] G2.14. Сценарий: text edit commit-триггеры (`onTapOutside` и auto-save при `setMode`).
 - [ ] G3. Добавить автоматические parity-регрессии для example-flow (`example/test/**`), детерминированные и с проверкой UI state + public controller state.
-- [ ] G3.1. Автотест для `G2.1`.
-- [ ] G3.2. Автотест для `G2.2`.
-- [ ] G3.3. Автотест для `G2.3`.
-- [ ] G3.4. Автотест для `G2.4`.
-- [ ] G3.5. Автотест для `G2.5`.
+- [x] G3.1. Автотест для `G2.1`.
+- [x] G3.2. Автотест для `G2.2`.
+- [x] G3.3. Автотест для `G2.3`.
+- [x] G3.4. Автотест для `G2.4`.
+- [x] G3.5. Автотест для `G2.5`.
 - [ ] G3.6. Автотест для `G2.6`.
 - [ ] G3.7. Автотест для `G2.7`.
 - [ ] G3.8. Автотест для `G2.8`.
@@ -250,3 +261,4 @@ dart pub publish --dry-run
 | 2026-02-09 | G2/T6 scope | Done | По решению PM явно закреплены обязательные parity-сценарии: выделение, ластик, line tool, текстовые узлы (редактирование + styling). |
 | 2026-02-09 | G2/G3 split | Done | Пункты `G2` и `G3` декомпозированы на подшаги `G2.1..G2.10` и `G3.1..G3.10` для прозрачного трекинга прогресса по каждому сценарию и тесту. |
 | 2026-02-09 | G2/G3 scope extend | Done | Добавлены сценарии из `example/lib/main.dart`, которые не были явными: `Add Sample`, background+clear, визуальные индикаторы камеры/line-pending, text edit commit-триггеры; добавлены `G3.11..G3.14`. |
+| 2026-02-09 | G2.1-G2.5, G3.1-G3.5 | Done | Добавлены scenario-parity tests в `example/test/interactive_parity_batch1_test.dart`, в `example/lib/main.dart` добавлены non-breaking test hooks (опциональная инъекция `SceneController` + стабильные keys), а также вынесена общая pure-логика порогов/декимации в `lib/src/core/input_sampling.dart` с переиспользованием в `move/line/stroke/eraser` slices. |

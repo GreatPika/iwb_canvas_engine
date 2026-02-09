@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../../../core/hit_test.dart';
+import '../../../core/input_sampling.dart';
 import '../../../core/nodes.dart';
 import '../../../core/transform2d.dart';
 import '../../action_events.dart';
@@ -105,13 +106,13 @@ class MoveModeEngine {
     if (_activePointerId != sample.pointerId) return;
     if (_pointerDownScene == null || _lastDragScene == null) return;
 
-    final totalDelta = scenePoint - _pointerDownScene!;
-    final dragStartSlop = _contracts.dragStartSlop;
-    final dragStartSlopSquared = dragStartSlop * dragStartSlop;
-    final totalDeltaSquared =
-        totalDelta.dx * totalDelta.dx + totalDelta.dy * totalDelta.dy;
     final didStartDrag =
-        !_dragMoved && totalDeltaSquared > dragStartSlopSquared;
+        !_dragMoved &&
+        isDistanceGreaterThan(
+          _pointerDownScene!,
+          scenePoint,
+          _contracts.dragStartSlop,
+        );
     if (didStartDrag) {
       _dragMoved = true;
       if (_dragTarget == _DragTarget.marquee) {

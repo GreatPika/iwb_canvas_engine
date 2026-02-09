@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui' show Offset;
 
+import '../../../../core/input_sampling.dart';
 import '../../../../core/nodes.dart';
 import '../../../../core/scene.dart';
 import '../../../action_events.dart';
@@ -37,12 +38,12 @@ class LineTool {
 
   void handleMove(Offset scenePoint) {
     if (_drawDownScene == null) return;
-    final totalDelta = scenePoint - _drawDownScene!;
-    final dragStartSlop = _contracts.dragStartSlop;
-    final dragStartSlopSquared = dragStartSlop * dragStartSlop;
-    final totalDeltaSquared =
-        totalDelta.dx * totalDelta.dx + totalDelta.dy * totalDelta.dy;
-    if (!_drawMoved && totalDeltaSquared <= dragStartSlopSquared) {
+    if (!_drawMoved &&
+        isDistanceAtMost(
+          _drawDownScene!,
+          scenePoint,
+          _contracts.dragStartSlop,
+        )) {
       return;
     }
 
@@ -106,10 +107,11 @@ class LineTool {
 
     if (_drawDownScene == null) return;
 
-    final delta = scenePoint - _drawDownScene!;
-    final deltaSquared = delta.dx * delta.dx + delta.dy * delta.dy;
-    final dragStartSlop = _contracts.dragStartSlop;
-    final isTap = deltaSquared <= dragStartSlop * dragStartSlop;
+    final isTap = isDistanceAtMost(
+      _drawDownScene!,
+      scenePoint,
+      _contracts.dragStartSlop,
+    );
     _drawDownScene = null;
     _drawMoved = false;
     if (!isTap) return;
