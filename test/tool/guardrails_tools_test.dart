@@ -28,11 +28,7 @@ void main() {
     test('rejects v2 -> input import', () async {
       final sandbox = await _createSandbox();
       try {
-        _writeFile(
-          sandbox,
-          'lib/src/input/types.dart',
-          'class InputType {}\n',
-        );
+        _writeFile(sandbox, 'lib/src/input/types.dart', 'class InputType {}\n');
         _writeFile(
           sandbox,
           'lib/src/v2/public/snapshot.dart',
@@ -81,10 +77,7 @@ void main() {
     test('passes for write/txn APIs and controllerEpoch usage', () async {
       final sandbox = await _createSandbox();
       try {
-        _writeFile(
-          sandbox,
-          'lib/src/v2/controller/store.dart',
-          '''
+        _writeFile(sandbox, 'lib/src/v2/controller/store.dart', '''
 class Store {
   int controllerEpoch = 0;
 
@@ -94,8 +87,7 @@ class Store {
     writeMutations();
   }
 }
-''',
-        );
+''');
 
         final result = await _runTool(sandbox, 'check_v2_guardrails.dart');
         expect(result.exitCode, 0, reason: result.stderr.toString());
@@ -107,17 +99,13 @@ class Store {
     test('rejects mutating symbol outside write/txn prefixes', () async {
       final sandbox = await _createSandbox();
       try {
-        _writeFile(
-          sandbox,
-          'lib/src/v2/controller/store.dart',
-          '''
+        _writeFile(sandbox, 'lib/src/v2/controller/store.dart', '''
 class Store {
   int controllerEpoch = 0;
 
   void replaceScene() {}
 }
-''',
-        );
+''');
 
         final result = await _runTool(sandbox, 'check_v2_guardrails.dart');
         expect(result.exitCode, isNonZero);
@@ -133,11 +121,7 @@ class Store {
     test('rejects v2/public import from input layer', () async {
       final sandbox = await _createSandbox();
       try {
-        _writeFile(
-          sandbox,
-          'lib/src/input/types.dart',
-          'class InputType {}\n',
-        );
+        _writeFile(sandbox, 'lib/src/input/types.dart', 'class InputType {}\n');
         _writeFile(
           sandbox,
           'lib/src/v2/public/snapshot.dart',
@@ -148,7 +132,9 @@ class Store {
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          contains('v2/public must not import/export input/render/view/serialization internals'),
+          contains(
+            'v2/public must not import/export input/render/view/serialization internals',
+          ),
         );
       } finally {
         sandbox.deleteSync(recursive: true);
@@ -162,15 +148,11 @@ Future<Directory> _createSandbox() async {
     'iwb_canvas_engine_tool_test_',
   );
 
-  _writeFile(
-    sandbox,
-    'pubspec.yaml',
-    '''
+  _writeFile(sandbox, 'pubspec.yaml', '''
 name: iwb_canvas_engine
 environment:
   sdk: ">=3.0.0 <4.0.0"
-''',
-  );
+''');
 
   final sourceRoot = Directory.current.path;
   _copyFile(
@@ -199,9 +181,8 @@ void _writeFile(Directory root, String relativePath, String content) {
 }
 
 Future<ProcessResult> _runTool(Directory sandbox, String toolFileName) {
-  return Process.run(
-    'dart',
-    <String>['run', 'tool/$toolFileName'],
-    workingDirectory: sandbox.path,
-  );
+  return Process.run('dart', <String>[
+    'run',
+    'tool/$toolFileName',
+  ], workingDirectory: sandbox.path);
 }

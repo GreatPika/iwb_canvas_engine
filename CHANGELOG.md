@@ -1,5 +1,9 @@
 ## Unreleased
 
+- Add preview v2 immutable public API entrypoints:
+  `basic_v2.dart` and `advanced_v2.dart` (snapshot/spec/patch model with
+  tri-state `PatchField`, no v2 controller/runtime yet).
+
 - Serialization: `decodeScene(...)` now accepts integer-valued numeric forms
   for integer fields (for example, `schemaVersion: 2.0`); fractional numeric
   values (for example, `2.5`) remain invalid and throw

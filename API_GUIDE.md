@@ -20,6 +20,45 @@ Prefer importing the smallest surface area that fits your use case:
 
 - **Recommended:** `package:iwb_canvas_engine/basic.dart` — common “happy path”.
 - **Advanced:** `package:iwb_canvas_engine/advanced.dart` — low-level rendering/input/hit-test exports.
+- **v2 preview:** `package:iwb_canvas_engine/basic_v2.dart` — immutable
+  snapshot/spec/patch model (no `SceneControllerV2` yet).
+- **v2 preview advanced:** `package:iwb_canvas_engine/advanced_v2.dart` —
+  currently a strict alias of `basic_v2.dart` during migration stage B.
+
+### v2 preview: minimal model creation examples
+
+```dart
+import 'package:iwb_canvas_engine/basic_v2.dart';
+
+final scene = SceneSnapshot(
+  layers: [
+    LayerSnapshot(
+      nodes: [
+        const RectNodeSnapshot(
+          id: 'rect-1',
+          size: Size(120, 80),
+        ),
+      ],
+    ),
+  ],
+);
+
+const spec = RectNodeSpec(
+  id: 'rect-2',
+  size: Size(100, 60),
+);
+
+const patch = RectNodePatch(
+  id: 'rect-1',
+  fillColor: PatchField<Color?>.nullValue(),
+  strokeWidth: PatchField<double>.value(2),
+);
+```
+
+`PatchField<T>` is tri-state by design:
+- `absent()` => keep current field value.
+- `value(x)` => set concrete value.
+- `nullValue()` => explicitly clear nullable field.
 
 ---
 

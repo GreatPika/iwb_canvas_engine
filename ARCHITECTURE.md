@@ -112,12 +112,27 @@ here as a checklist to prevent subtle behavioral regressions during refactors.
 lib/
   basic.dart        // Minimal public API
   advanced.dart     // Full public API
+  basic_v2.dart     // Preview v2 immutable public API
+  advanced_v2.dart  // Preview v2 immutable public API (superset alias)
   src/
     core/           // Scene model, math, selection, hit-test
     render/         // Canvas rendering for background, layers, nodes
     input/          // Pointer handling, tool state, gesture logic
     serialization/  // JSON v2 codec
+    v2/public/      // Immutable snapshot/spec/patch contracts (transaction-first migration)
 ```
+
+## v2 public preview surface
+
+`basic_v2.dart` / `advanced_v2.dart` currently expose a snapshot-only contract:
+
+- immutable read models (`SceneSnapshot`, `LayerSnapshot`, `NodeSnapshot`)
+- immutable write intents (`NodeSpec`, `NodePatch`)
+- tri-state patch field semantics (`PatchField.absent/value/nullValue`)
+
+At this stage, no v2 controller/runtime is exported from these entrypoints.
+Mutation orchestration (`write(...)`, commit pipeline, epoch lifecycle) is
+added in the next migration phases under `lib/src/v2/controller/**`.
 
 ## Data model
 

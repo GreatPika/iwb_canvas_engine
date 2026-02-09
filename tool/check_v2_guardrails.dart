@@ -110,7 +110,10 @@ List<String> _extractAllQuotedStrings(String text) {
   return out;
 }
 
-List<String>? _extractDirectiveTargets(String line, {required String directive}) {
+List<String>? _extractDirectiveTargets(
+  String line, {
+  required String directive,
+}) {
   final trimmed = line.trimLeft();
   if (trimmed.startsWith('//')) return null;
   if (!trimmed.startsWith('$directive ')) return null;
@@ -173,7 +176,10 @@ void _checkV2PublicImports({
     '/lib/src/serialization/',
   ];
 
-  for (final entity in publicDir.listSync(recursive: true, followLinks: false)) {
+  for (final entity in publicDir.listSync(
+    recursive: true,
+    followLinks: false,
+  )) {
     if (entity is! File || !entity.path.endsWith('.dart')) continue;
 
     final fileAbsPosixPath = _toPosixPath(entity.absolute.path);
@@ -266,7 +272,8 @@ void _checkV2ControllerGuardrails({
       final trimmed = line.trimLeft();
       if (trimmed.startsWith('//')) continue;
 
-      if (line.contains('replaceScene(') && !fullText.contains('controllerEpoch')) {
+      if (line.contains('replaceScene(') &&
+          !fullText.contains('controllerEpoch')) {
         _fail(
           _Violation(
             filePath: filePosixPath,

@@ -65,12 +65,12 @@ language: russian
 
 ### B. Публичная read-only модель v2
 
-- [ ] B1. Создать `lib/src/v2/public/`:
+- [x] B1. Создать `lib/src/v2/public/`:
   - `SceneSnapshot`, `LayerSnapshot`, `NodeSnapshot` (immutable);
   - `NodeSpec` (создание);
   - `NodePatch` (частичное изменение).
-- [ ] B2. Убедиться, что наружу не возвращаются mutable-объекты сцены/узлов.
-- [ ] B3. Добавить `basic_v2.dart` и `advanced_v2.dart` (временные entrypoints для миграции).
+- [x] B2. Убедиться, что наружу не возвращаются mutable-объекты сцены/узлов.
+- [x] B3. Добавить `basic_v2.dart` и `advanced_v2.dart` (временные entrypoints для миграции).
 
 Критерий приёмки B:
 - публичный API v2 предоставляет только read-only модель + команды через контроллер.
@@ -191,4 +191,5 @@ dart pub publish --dry-run
 |---|---|---|---|
 | 2026-02-09 | A0 | Done | План сокращён, исправлен и приведён к чеклист-формату. |
 | 2026-02-09 | A1-A4 | Done | Добавлены INV-V2-*, расширены import boundaries для `lib/src/v2/**`, добавлен `tool/check_v2_guardrails.dart`, добавлены tool-тесты и enforcement-маркеры. |
+| 2026-02-09 | B1-B3 | Done | Добавлены immutable v2 public-модели (`snapshot/spec/patch`), tri-state `PatchField`, временные entrypoints `basic_v2.dart`/`advanced_v2.dart` и тесты на immutable-контракт. |
 | 2026-02-09 | G2 | Decision fixed | Legacy API в major удаляем, отдельный legacy entrypoint не поддерживаем. |

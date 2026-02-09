@@ -53,6 +53,24 @@ Prefer importing the smallest API surface that fits your use case:
 - `package:iwb_canvas_engine/basic.dart` — minimal “happy path” API (recommended).
 - `package:iwb_canvas_engine/advanced.dart` — full export surface (low-level
   painting, hit-testing, pointer tracking, etc.).
+- `package:iwb_canvas_engine/basic_v2.dart` — preview v2 immutable model
+  (snapshot/spec/patch only; no v2 controller yet).
+- `package:iwb_canvas_engine/advanced_v2.dart` — preview v2 alias of
+  `basic_v2.dart` during migration stage B.
+
+## v2 preview API (snapshot-only)
+
+The preview v2 entrypoints expose immutable public contracts for transaction-
+first migration:
+
+- `SceneSnapshot`, `LayerSnapshot`, `NodeSnapshot` variants (read model).
+- `NodeSpec` variants (node creation intent).
+- `NodePatch` variants + `PatchField<T>` tri-state semantics:
+  - `PatchField.absent()` => do not change field.
+  - `PatchField.value(x)` => set field to `x`.
+  - `PatchField.nullValue()` => explicitly set field to `null`.
+
+No bridge to mutable v1 `Scene` is provided in this stage by design.
 
 ## Core concepts
 
