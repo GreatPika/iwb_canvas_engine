@@ -1,5 +1,10 @@
 ## Unreleased
 
+- Tests: add engine-level v1/v2 parity harness in `test/parity/**` with
+  deterministic event scripts (`script_01..script_05`), normalized contract
+  comparison (`scene JSON + selection + payload-subset events`), and adapter
+  baseline alignment fixes for v1/v2 default scene state parity.
+
 - Example: add camera pan controls (`left/right/up/down`, 50 scene units per
   step) and parity regression coverage for camera-pan hit-testing flow
   (`G3.9`) in `example/test/interactive_parity_batch1_test.dart`.

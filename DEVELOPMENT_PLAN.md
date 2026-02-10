@@ -178,9 +178,9 @@ language: russian
 - [x] G3.12. Автотест для `G2.12`.
 - [x] G3.13. Автотест для `G2.13`.
 - [x] G3.14. Автотест для `G2.14`.
-- [ ] G4. Добавить engine-level parity harness v1 vs v2 (пока legacy ещё существует):
+- [x] G4. Добавить engine-level parity harness v1 vs v2 (пока legacy ещё существует):
   - одинаковые входные event-script дают эквивалентный публичный результат (scene JSON, selected ids, contract-level signals/actions).
-- [ ] G5. Закрыть все найденные parity-gap без изменения UX-контракта baseline.
+- [x] G5. Закрыть все найденные parity-gap без изменения UX-контракта baseline.
 
 Критерий приёмки G:
 - при открытии `example/lib/main.dart` и прохождении сценариев из G2 поведение и интерактивность не отличаются от baseline v1 в рамках зафиксированного checklist (включая выделение, ластик, line tool и редактирование текстовых узлов).
@@ -221,7 +221,7 @@ language: russian
   - каждый сценарий из G2 покрыт тестом в `example/test/**`;
   - зафиксированы ожидаемые состояния UI и публичного API на каждом ключевом шаге сценария.
   - отдельные regression-тесты обязательны для: selection-механики, line tool, eraser flow, text edit flow и text styling flow.
-- [ ] T7. v1/v2 parity harness:
+- [x] T7. v1/v2 parity harness:
   - для набора детерминированных event-script итоговый scene JSON/selection/signals совпадают по контракту между baseline и v2.
 
 ## 6) Команды проверки (обязательно перед mark done крупных этапов)
@@ -268,3 +268,4 @@ dart pub publish --dry-run
 | 2026-02-10 | G2.9, G3.9 | Done | Добавлены camera pan controls (`left/right/up/down`, шаг `50`) в `example/lib/main.dart` и parity regression-тест `G3.9` в `example/test/interactive_parity_batch1_test.dart`; `zoom` сознательно оставлен вне scope по текущему single-pointer/no-zoom контракту движка. |
 | 2026-02-10 | G2.10, G3.10 | Done | Для `grid/system actions` добавлены стабильные test hooks в `example/lib/main.dart` (grid toggle/size, background swatches, system export/import, import dialog), зафиксирована import-политика `replace scene => clear selection`, и добавлен parity regression-тест `G3.10` в `example/test/interactive_parity_batch1_test.dart` с проверкой grid/background/export/import/clear flow. |
 | 2026-02-10 | G2.11, G3.11 | Done | Добавлен widget parity-тест `G3.11` для `Add Sample`: проверены типы/порядок/id/позиции/размеры `RectNode+TextNode`, повторяемость второго добавления и отсутствие побочного изменения selection. |
+| 2026-02-10 | G4, G5, T7 | Done | Добавлен engine-level parity harness `test/parity/**` (adapters + event scripts + normalization + 5 deterministic scripts); закрыты parity-gap по baseline defaults (`background/palette/grid`) в v2 harness adapter; `flutter test test/parity/v1_v2_engine_parity_harness_test.dart` и tool-checks (`check_invariant_coverage`, `check_import_boundaries`, `check_v2_guardrails`) зелёные. |
