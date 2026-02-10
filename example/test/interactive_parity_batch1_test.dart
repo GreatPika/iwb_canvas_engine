@@ -46,6 +46,23 @@ void main() {
     await tester.pump();
   }
 
+  Future<void> doubleTapScene(
+    WidgetTester tester,
+    SceneController controller,
+    Offset scenePoint, {
+    required int pointer,
+    Duration delay = const Duration(milliseconds: 80),
+  }) async {
+    final globalPoint = sceneToGlobal(tester, controller, scenePoint);
+    final firstTap = await tester.startGesture(globalPoint, pointer: pointer);
+    await firstTap.up();
+    await tester.pump();
+    await tester.pump(delay);
+    final secondTap = await tester.startGesture(globalPoint, pointer: pointer);
+    await secondTap.up();
+    await tester.pump();
+  }
+
   Future<void> dragScene(
     WidgetTester tester,
     SceneController controller, {
@@ -312,6 +329,71 @@ void main() {
       ).nodes.map((node) => node.id).toSet();
       expect(remainingIds, const <NodeId>{'rect-keep'});
       expect(controller.selectedNodeIds, const <NodeId>{'rect-keep'});
+    },
+  );
+
+  testWidgets(
+    'G3.6: text inline edit saves on tap outside and closes unchanged session',
+    (tester) async {
+      final textNode = TextNode(
+        id: 'text-1',
+        text: 'Start Note',
+        size: const Size(180, 40),
+        fontSize: 20,
+        color: const Color(0xFF212121),
+      )..position = const Offset(220, 220);
+      final controller = await pumpExampleApp(
+        tester,
+        scene: Scene(
+          layers: [
+            Layer(nodes: [textNode]),
+          ],
+        ),
+      );
+
+      expect(find.byKey(inlineTextEditOverlayKey), findsNothing);
+
+      await tapScene(tester, controller, const Offset(220, 220));
+      expect(find.byKey(inlineTextEditOverlayKey), findsNothing);
+      expect(textNode.isVisible, isTrue);
+
+      await doubleTapScene(
+        tester,
+        controller,
+        const Offset(220, 220),
+        pointer: 61,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(inlineTextEditOverlayKey), findsOneWidget);
+      expect(find.byKey(inlineTextEditFieldKey), findsOneWidget);
+      expect(textNode.isVisible, isFalse);
+
+      await tester.enterText(find.byKey(inlineTextEditFieldKey), 'Edited Note');
+      await tester.pump();
+      await tapScene(tester, controller, const Offset(30, 30));
+      await tester.pumpAndSettle();
+
+      expect(textNode.text, 'Edited Note');
+      expect(textNode.isVisible, isTrue);
+      expect(find.byKey(inlineTextEditOverlayKey), findsNothing);
+
+      await doubleTapScene(
+        tester,
+        controller,
+        const Offset(220, 220),
+        pointer: 62,
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(inlineTextEditOverlayKey), findsOneWidget);
+      expect(textNode.isVisible, isFalse);
+
+      await tapScene(tester, controller, const Offset(40, 40));
+      await tester.pumpAndSettle();
+
+      expect(textNode.text, 'Edited Note');
+      expect(textNode.isVisible, isTrue);
+      expect(find.byKey(inlineTextEditOverlayKey), findsNothing);
     },
   );
 }

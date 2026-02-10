@@ -154,7 +154,7 @@ language: russian
 - [x] G2.3. Сценарий: draw-tools `pen/highlighter/line/eraser` + очистка `pending-state`.
 - [x] G2.4. Сценарий: `line tool` (двухтаповый flow: `pending start -> commit line -> reset/cancel`).
 - [x] G2.5. Сценарий: `eraser` (удаление пересечённых узлов в draw-режиме).
-- [ ] G2.6. Сценарий: text nodes (`double-tap -> inline edit overlay -> save/cancel`).
+- [x] G2.6. Сценарий: text nodes (`double-tap -> inline edit overlay -> save/cancel`, где cancel = no-op закрытие через `tap outside` без изменения текста).
 - [ ] G2.7. Сценарий: text styling в selection-panel (`color/align/font size/line height/bold/italic/underline`).
 - [ ] G2.8. Сценарий: трансформации (`rotate/flip/delete`) и `marquee-selection`.
 - [ ] G2.9. Сценарий: `camera pan/zoom` + `hit-test`.
@@ -169,7 +169,7 @@ language: russian
 - [x] G3.3. Автотест для `G2.3`.
 - [x] G3.4. Автотест для `G2.4`.
 - [x] G3.5. Автотест для `G2.5`.
-- [ ] G3.6. Автотест для `G2.6`.
+- [x] G3.6. Автотест для `G2.6`.
 - [ ] G3.7. Автотест для `G2.7`.
 - [ ] G3.8. Автотест для `G2.8`.
 - [ ] G3.9. Автотест для `G2.9`.
@@ -262,3 +262,4 @@ dart pub publish --dry-run
 | 2026-02-09 | G2/G3 split | Done | Пункты `G2` и `G3` декомпозированы на подшаги `G2.1..G2.10` и `G3.1..G3.10` для прозрачного трекинга прогресса по каждому сценарию и тесту. |
 | 2026-02-09 | G2/G3 scope extend | Done | Добавлены сценарии из `example/lib/main.dart`, которые не были явными: `Add Sample`, background+clear, визуальные индикаторы камеры/line-pending, text edit commit-триггеры; добавлены `G3.11..G3.14`. |
 | 2026-02-09 | G2.1-G2.5, G3.1-G3.5 | Done | Добавлены scenario-parity tests в `example/test/interactive_parity_batch1_test.dart`, в `example/lib/main.dart` добавлены non-breaking test hooks (опциональная инъекция `SceneController` + стабильные keys), а также вынесена общая pure-логика порогов/декимации в `lib/src/core/input_sampling.dart` с переиспользованием в `move/line/stroke/eraser` slices. |
+| 2026-02-10 | G2.6, G3.6 | Done | Зафиксирован parity-сценарий text inline edit в текущем UX-контракте example: открытие только по double-tap, save через `onTapOutside`, no-op cancel как закрытие сессии без изменения текста; добавлен regression-тест в `example/test/interactive_parity_batch1_test.dart`. |

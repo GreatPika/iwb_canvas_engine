@@ -25,6 +25,12 @@ const ValueKey<String> systemMenuButtonKey = ValueKey<String>(
 const ValueKey<String> systemClearCanvasKey = ValueKey<String>(
   'system-clear-canvas',
 );
+const ValueKey<String> inlineTextEditOverlayKey = ValueKey<String>(
+  'inline-text-edit-overlay',
+);
+const ValueKey<String> inlineTextEditFieldKey = ValueKey<String>(
+  'inline-text-edit-field',
+);
 
 void main() {
   runApp(const CanvasExampleApp());
@@ -858,11 +864,15 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
       _controller.notifySceneChanged();
     }
 
+    final textEditController = _textEditController;
+    final textEditFocusNode = _textEditFocusNode;
     setState(() {
       _editingNodeId = null;
-      _textEditController?.dispose();
-      _textEditFocusNode?.dispose();
+      _textEditController = null;
+      _textEditFocusNode = null;
     });
+    textEditController?.dispose();
+    textEditFocusNode?.dispose();
   }
 
   Widget? _buildTextEditOverlay() {
@@ -875,6 +885,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     final alignment = _mapTextAlignToAlignment(node.align);
 
     return Positioned(
+      key: inlineTextEditOverlayKey,
       left: viewPosition.dx,
       top: viewPosition.dy,
       child: Transform(
@@ -891,6 +902,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
               maxHeight: 2000,
               alignment: alignment,
               child: TextField(
+                key: inlineTextEditFieldKey,
                 controller: _textEditController,
                 focusNode: _textEditFocusNode,
                 maxLines: null,
