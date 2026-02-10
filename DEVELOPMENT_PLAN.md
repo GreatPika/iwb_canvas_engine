@@ -159,7 +159,7 @@ language: russian
 - [x] G2.8. Сценарий: трансформации (`rotate/flip/delete`) и `marquee-selection`.
 - [x] G2.9. Сценарий: `camera pan/zoom` + `hit-test`.
 - [x] G2.10. Сценарий: `grid/system actions` (включая `import/export/replace scene`).
-- [ ] G2.11. Сценарий: `Add Sample` (создаются `RectNode + TextNode`, корректные size/position/id, сценарий повторяемый).
+- [x] G2.11. Сценарий: `Add Sample` (создаются `RectNode + TextNode`, корректные size/position/id, сценарий повторяемый).
 - [ ] G2.12. Сценарий: system menu background flow (смена background color + `Clear Canvas`).
 - [ ] G2.13. Сценарий: visual parity индикаторов (`Camera X` и pending-line marker в draw-line режиме).
 - [ ] G2.14. Сценарий: text edit commit-триггеры (`onTapOutside` и auto-save при `setMode`).
@@ -174,7 +174,7 @@ language: russian
 - [x] G3.8. Автотест для `G2.8`.
 - [x] G3.9. Автотест для `G2.9`.
 - [x] G3.10. Автотест для `G2.10`.
-- [ ] G3.11. Автотест для `G2.11`.
+- [x] G3.11. Автотест для `G2.11`.
 - [ ] G3.12. Автотест для `G2.12`.
 - [ ] G3.13. Автотест для `G2.13`.
 - [ ] G3.14. Автотест для `G2.14`.
@@ -267,3 +267,4 @@ dart pub publish --dry-run
 | 2026-02-10 | G2.8, G3.8 | Done | Добавлены стабильные test hooks для action-кнопок transform (`rotate/flip`) в `example/lib/main.dart`; добавлен parity regression-тест `G3.8` на связку `marquee-select -> rotate/flip -> delete` с проверкой, что невыделенные ноды не изменяются. |
 | 2026-02-10 | G2.9, G3.9 | Done | Добавлены camera pan controls (`left/right/up/down`, шаг `50`) в `example/lib/main.dart` и parity regression-тест `G3.9` в `example/test/interactive_parity_batch1_test.dart`; `zoom` сознательно оставлен вне scope по текущему single-pointer/no-zoom контракту движка. |
 | 2026-02-10 | G2.10, G3.10 | Done | Для `grid/system actions` добавлены стабильные test hooks в `example/lib/main.dart` (grid toggle/size, background swatches, system export/import, import dialog), зафиксирована import-политика `replace scene => clear selection`, и добавлен parity regression-тест `G3.10` в `example/test/interactive_parity_batch1_test.dart` с проверкой grid/background/export/import/clear flow. |
+| 2026-02-10 | G2.11, G3.11 | Done | Добавлен widget parity-тест `G3.11` для `Add Sample`: проверены типы/порядок/id/позиции/размеры `RectNode+TextNode`, повторяемость второго добавления и отсутствие побочного изменения selection. |

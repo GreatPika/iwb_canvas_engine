@@ -811,4 +811,114 @@ void main() {
     expect(nonBackgroundNodeCount, 0);
     expect(controller.selectedNodeIds, isEmpty);
   });
+
+  testWidgets(
+    'G3.11: Add Sample creates deterministic Rect+Text and is repeatable',
+    (tester) async {
+      final controller = await pumpExampleApp(tester);
+
+      expect(controller.mode, CanvasMode.move);
+      expect(find.byKey(actionAddSampleKey), findsOneWidget);
+      expect(iconButtonByKey(tester, actionAddSampleKey).onPressed, isNotNull);
+      expect(controller.selectedNodeIds, isEmpty);
+
+      await tapByKey(tester, actionAddSampleKey);
+
+      final firstNodes = annotationLayer(controller.scene).nodes;
+      expect(firstNodes, hasLength(2));
+      expect(firstNodes[0].id, 'sample-0');
+      expect(firstNodes[1].id, 'sample-1');
+
+      final firstRect = firstNodes[0] as RectNode;
+      final firstText = firstNodes[1] as TextNode;
+
+      expect(firstRect.size, const Size(140, 90));
+      expect(firstRect.position, const Offset(100, 100));
+      expect(firstRect.strokeWidth, 2);
+      expect(firstText.text, 'New Note');
+      expect(firstText.fontSize, 20);
+      expect(firstText.position, const Offset(260, 100));
+
+      final firstExpectedTextPainter = TextPainter(
+        text: TextSpan(
+          text: firstText.text,
+          style: TextStyle(
+            fontSize: firstText.fontSize,
+            fontWeight: firstText.isBold ? FontWeight.bold : FontWeight.normal,
+            fontStyle: firstText.isItalic
+                ? FontStyle.italic
+                : FontStyle.normal,
+            fontFamily: firstText.fontFamily,
+            height: firstText.lineHeight == null
+                ? null
+                : firstText.lineHeight! / firstText.fontSize,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+        textAlign: firstText.align,
+      )..layout();
+      expect(firstText.size.width, closeTo(firstExpectedTextPainter.width, 1e-6));
+      expect(
+        firstText.size.height,
+        closeTo(firstExpectedTextPainter.height, 1e-6),
+      );
+      expect(controller.selectedNodeIds, isEmpty);
+
+      final firstRectSize = firstRect.size;
+      final firstRectPosition = firstRect.position;
+      final firstTextSize = firstText.size;
+      final firstTextPosition = firstText.position;
+
+      await tapByKey(tester, actionAddSampleKey);
+
+      final allNodes = annotationLayer(controller.scene).nodes;
+      expect(allNodes, hasLength(4));
+      expect(
+        allNodes.map((node) => node.id).toList(),
+        <NodeId>['sample-0', 'sample-1', 'sample-2', 'sample-3'],
+      );
+      expect(allNodes.map((node) => node.id).toSet(), hasLength(4));
+
+      final secondRect = allNodes[2] as RectNode;
+      final secondText = allNodes[3] as TextNode;
+      expect(secondRect.id, 'sample-2');
+      expect(secondRect.position, const Offset(130, 120));
+      expect(secondText.id, 'sample-3');
+      expect(secondText.position, const Offset(290, 120));
+
+      final secondExpectedTextPainter = TextPainter(
+        text: TextSpan(
+          text: secondText.text,
+          style: TextStyle(
+            fontSize: secondText.fontSize,
+            fontWeight:
+                secondText.isBold ? FontWeight.bold : FontWeight.normal,
+            fontStyle: secondText.isItalic
+                ? FontStyle.italic
+                : FontStyle.normal,
+            fontFamily: secondText.fontFamily,
+            height: secondText.lineHeight == null
+                ? null
+                : secondText.lineHeight! / secondText.fontSize,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+        textAlign: secondText.align,
+      )..layout();
+      expect(
+        secondText.size.width,
+        closeTo(secondExpectedTextPainter.width, 1e-6),
+      );
+      expect(
+        secondText.size.height,
+        closeTo(secondExpectedTextPainter.height, 1e-6),
+      );
+
+      expect(firstRect.size, firstRectSize);
+      expect(firstRect.position, firstRectPosition);
+      expect(firstText.size, firstTextSize);
+      expect(firstText.position, firstTextPosition);
+      expect(controller.selectedNodeIds, isEmpty);
+    },
+  );
 }
