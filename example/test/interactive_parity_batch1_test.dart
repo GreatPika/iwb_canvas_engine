@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/advanced.dart';
@@ -116,6 +118,27 @@ void main() {
     final finder = find.byKey(key);
     await tester.ensureVisible(finder);
     await tester.drag(finder, const Offset(1200, 0));
+    await tester.pump();
+  }
+
+  Future<void> openMenuAndTapItem(
+    WidgetTester tester, {
+    required Key menuKey,
+    required Key itemKey,
+  }) async {
+    Future<void> ensureMenuOpen() async {
+      var visibleItem = find.byKey(itemKey).hitTestable();
+      if (visibleItem.evaluate().isNotEmpty) return;
+      await tapByKey(tester, menuKey);
+      await tester.pumpAndSettle();
+      visibleItem = find.byKey(itemKey).hitTestable();
+      if (visibleItem.evaluate().isNotEmpty) return;
+      await tapByKey(tester, menuKey);
+      await tester.pumpAndSettle();
+    }
+
+    await ensureMenuOpen();
+    await tester.tap(find.byKey(itemKey).hitTestable().first);
     await tester.pump();
   }
 
@@ -478,10 +501,7 @@ void main() {
       expect(textB.isUnderline, isTrue);
       expect(iconButtonByKey(tester, textStyleBoldKey).color, Colors.blue);
       expect(iconButtonByKey(tester, textStyleItalicKey).color, Colors.blue);
-      expect(
-        iconButtonByKey(tester, textStyleUnderlineKey).color,
-        Colors.blue,
-      );
+      expect(iconButtonByKey(tester, textStyleUnderlineKey).color, Colors.blue);
 
       await tapByKey(tester, textAlignCenterKey);
       expect(textA.align, TextAlign.center);
@@ -513,102 +533,98 @@ void main() {
     },
   );
 
-  testWidgets(
-    'G3.8: transformations + marquee-selection parity',
-    (tester) async {
-      final targetA = RectNode(
-        id: 'target-a',
-        size: const Size(80, 60),
-        fillColor: const Color(0xFF42A5F5),
-      )..position = const Offset(180, 200);
-      final targetB = RectNode(
-        id: 'target-b',
-        size: const Size(80, 60),
-        fillColor: const Color(0xFF66BB6A),
-      )..position = const Offset(280, 200);
-      final keep = RectNode(
-        id: 'keep',
-        size: const Size(80, 60),
-        fillColor: const Color(0xFFEF5350),
-      )..position = const Offset(500, 200);
+  testWidgets('G3.8: transformations + marquee-selection parity', (
+    tester,
+  ) async {
+    final targetA = RectNode(
+      id: 'target-a',
+      size: const Size(80, 60),
+      fillColor: const Color(0xFF42A5F5),
+    )..position = const Offset(180, 200);
+    final targetB = RectNode(
+      id: 'target-b',
+      size: const Size(80, 60),
+      fillColor: const Color(0xFF66BB6A),
+    )..position = const Offset(280, 200);
+    final keep = RectNode(
+      id: 'keep',
+      size: const Size(80, 60),
+      fillColor: const Color(0xFFEF5350),
+    )..position = const Offset(500, 200);
 
-      final controller = await pumpExampleApp(
-        tester,
-        scene: Scene(
-          layers: [
-            Layer(nodes: [targetA, targetB, keep]),
-          ],
-        ),
-      );
+    final controller = await pumpExampleApp(
+      tester,
+      scene: Scene(
+        layers: [
+          Layer(nodes: [targetA, targetB, keep]),
+        ],
+      ),
+    );
 
-      expect(controller.mode, CanvasMode.move);
-      expect(controller.selectedNodeIds, isEmpty);
-      expect(iconButtonByKey(tester, actionRotateLeftKey).onPressed, isNull);
-      expect(iconButtonByKey(tester, actionRotateRightKey).onPressed, isNull);
-      expect(iconButtonByKey(tester, actionFlipVerticalKey).onPressed, isNull);
-      expect(
-        iconButtonByKey(tester, actionFlipHorizontalKey).onPressed,
-        isNull,
-      );
+    expect(controller.mode, CanvasMode.move);
+    expect(controller.selectedNodeIds, isEmpty);
+    expect(iconButtonByKey(tester, actionRotateLeftKey).onPressed, isNull);
+    expect(iconButtonByKey(tester, actionRotateRightKey).onPressed, isNull);
+    expect(iconButtonByKey(tester, actionFlipVerticalKey).onPressed, isNull);
+    expect(iconButtonByKey(tester, actionFlipHorizontalKey).onPressed, isNull);
 
-      final beforeTargetATransform = targetA.transform;
-      final beforeTargetBTransform = targetB.transform;
-      final beforeKeepTransform = keep.transform;
-      final beforeKeepPosition = keep.position;
+    final beforeTargetATransform = targetA.transform;
+    final beforeTargetBTransform = targetB.transform;
+    final beforeKeepTransform = keep.transform;
+    final beforeKeepPosition = keep.position;
 
-      await dragScene(
-        tester,
-        controller,
-        from: const Offset(130, 150),
-        to: const Offset(340, 250),
-      );
+    await dragScene(
+      tester,
+      controller,
+      from: const Offset(130, 150),
+      to: const Offset(340, 250),
+    );
 
-      expect(controller.selectedNodeIds, const <NodeId>{'target-a', 'target-b'});
-      expect(iconButtonByKey(tester, actionRotateLeftKey).onPressed, isNotNull);
-      expect(iconButtonByKey(tester, actionRotateRightKey).onPressed, isNotNull);
-      expect(iconButtonByKey(tester, actionFlipVerticalKey).onPressed, isNotNull);
-      expect(
-        iconButtonByKey(tester, actionFlipHorizontalKey).onPressed,
-        isNotNull,
-      );
+    expect(controller.selectedNodeIds, const <NodeId>{'target-a', 'target-b'});
+    expect(iconButtonByKey(tester, actionRotateLeftKey).onPressed, isNotNull);
+    expect(iconButtonByKey(tester, actionRotateRightKey).onPressed, isNotNull);
+    expect(iconButtonByKey(tester, actionFlipVerticalKey).onPressed, isNotNull);
+    expect(
+      iconButtonByKey(tester, actionFlipHorizontalKey).onPressed,
+      isNotNull,
+    );
 
-      await tapByKey(tester, actionRotateLeftKey);
-      await tapByKey(tester, actionRotateRightKey);
-      await tapByKey(tester, actionFlipVerticalKey);
-      await tapByKey(tester, actionFlipHorizontalKey);
+    await tapByKey(tester, actionRotateLeftKey);
+    await tapByKey(tester, actionRotateRightKey);
+    await tapByKey(tester, actionFlipVerticalKey);
+    await tapByKey(tester, actionFlipHorizontalKey);
 
-      final afterTargetA = nodeById(controller.scene, 'target-a');
-      final afterTargetB = nodeById(controller.scene, 'target-b');
-      final afterKeep = nodeById(controller.scene, 'keep');
+    final afterTargetA = nodeById(controller.scene, 'target-a');
+    final afterTargetB = nodeById(controller.scene, 'target-b');
+    final afterKeep = nodeById(controller.scene, 'keep');
 
-      expect(
-        transformEqualsWithinEpsilon(
-          afterTargetA.transform,
-          beforeTargetATransform,
-        ),
-        isFalse,
-      );
-      expect(
-        transformEqualsWithinEpsilon(
-          afterTargetB.transform,
-          beforeTargetBTransform,
-        ),
-        isFalse,
-      );
-      expect(
-        transformEqualsWithinEpsilon(afterKeep.transform, beforeKeepTransform),
-        isTrue,
-      );
-      expect(afterKeep.position.dx, closeTo(beforeKeepPosition.dx, 1e-6));
-      expect(afterKeep.position.dy, closeTo(beforeKeepPosition.dy, 1e-6));
+    expect(
+      transformEqualsWithinEpsilon(
+        afterTargetA.transform,
+        beforeTargetATransform,
+      ),
+      isFalse,
+    );
+    expect(
+      transformEqualsWithinEpsilon(
+        afterTargetB.transform,
+        beforeTargetBTransform,
+      ),
+      isFalse,
+    );
+    expect(
+      transformEqualsWithinEpsilon(afterKeep.transform, beforeKeepTransform),
+      isTrue,
+    );
+    expect(afterKeep.position.dx, closeTo(beforeKeepPosition.dx, 1e-6));
+    expect(afterKeep.position.dy, closeTo(beforeKeepPosition.dy, 1e-6));
 
-      await tapByKey(tester, actionDeleteKey);
+    await tapByKey(tester, actionDeleteKey);
 
-      final remainingNodes = annotationLayer(controller.scene).nodes;
-      expect(remainingNodes.map((node) => node.id).toList(), <NodeId>['keep']);
-      expect(controller.selectedNodeIds, isEmpty);
-    },
-  );
+    final remainingNodes = annotationLayer(controller.scene).nodes;
+    expect(remainingNodes.map((node) => node.id).toList(), <NodeId>['keep']);
+    expect(controller.selectedNodeIds, isEmpty);
+  });
 
   testWidgets('G3.9: camera pan controls preserve hit-test parity', (
     tester,
@@ -656,5 +672,143 @@ void main() {
     await tester.tapAt(sceneToGlobal(tester, controller, target.position));
     await tester.pump();
     expect(controller.selectedNodeIds, const <NodeId>{'camera-target'});
+  });
+
+  testWidgets('G3.10: grid/system actions parity with import replace scene', (
+    tester,
+  ) async {
+    final initialNode = RectNode(
+      id: 'initial-node',
+      size: const Size(70, 50),
+      fillColor: const Color(0xFF42A5F5),
+    )..position = const Offset(140, 140);
+    final controller = await pumpExampleApp(
+      tester,
+      scene: Scene(
+        layers: [
+          Layer(nodes: [initialNode]),
+        ],
+      ),
+    );
+
+    controller.setSelection(const <NodeId>{'initial-node'});
+    await tester.pump();
+    expect(controller.selectedNodeIds, const <NodeId>{'initial-node'});
+
+    await tapByKey(tester, gridMenuButtonKey);
+    expect(controller.scene.background.grid.isEnabled, isFalse);
+    await tapByKey(tester, gridEnabledSwitchKey);
+    expect(controller.scene.background.grid.isEnabled, isTrue);
+    await tapByKey(
+      tester,
+      const ValueKey<String>('${gridCellSizeOptionKeyPrefix}40'),
+    );
+    expect(controller.scene.background.grid.cellSize, 40);
+
+    final targetBackgroundColor = controller.scene.palette.backgroundColors[1];
+    await openMenuAndTapItem(
+      tester,
+      menuKey: systemMenuButtonKey,
+      itemKey: const ValueKey<String>('${backgroundColorSwatchKeyPrefix}1'),
+    );
+    expect(controller.scene.background.color, targetBackgroundColor);
+
+    await openMenuAndTapItem(
+      tester,
+      menuKey: systemMenuButtonKey,
+      itemKey: systemExportJsonKey,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Scene JSON'), findsOneWidget);
+    final exportField = find.byType(TextField).first;
+    final exportController = tester.widget<TextField>(exportField).controller;
+    expect(exportController, isNotNull);
+    final exported = exportController!.text;
+    final exportedMap = jsonDecode(exported) as Map<String, dynamic>;
+    expect(exportedMap['schemaVersion'], 2);
+    expect(find.text('Copy'), findsOneWidget);
+    await tester.tap(find.text('Close'));
+    await tester.pumpAndSettle();
+    expect(find.text('Scene JSON'), findsNothing);
+
+    final importedMap = <String, dynamic>{
+      ...exportedMap,
+      'camera': <String, dynamic>{'offsetX': 120, 'offsetY': -40},
+      'background': <String, dynamic>{
+        'color': '#fffff59d',
+        'grid': <String, dynamic>{
+          'enabled': true,
+          'cellSize': 40,
+          'color': '#ffe0e0e0',
+        },
+      },
+      'layers': <Map<String, dynamic>>[
+        <String, dynamic>{
+          'isBackground': false,
+          'nodes': <Map<String, dynamic>>[
+            <String, dynamic>{
+              'id': 'imported-rect',
+              'type': 'rect',
+              'transform': <String, dynamic>{
+                'a': 1,
+                'b': 0,
+                'c': 0,
+                'd': 1,
+                'tx': 420,
+                'ty': 300,
+              },
+              'hitPadding': 0,
+              'opacity': 1,
+              'isVisible': true,
+              'isSelectable': true,
+              'isLocked': false,
+              'isDeletable': true,
+              'isTransformable': true,
+              'size': <String, dynamic>{'w': 100, 'h': 70},
+              'fillColor': '#ff66bb6a',
+              'strokeColor': '#ff2e7d32',
+              'strokeWidth': 2,
+            },
+          ],
+        },
+      ],
+    };
+    final importedJson = jsonEncode(importedMap);
+
+    await openMenuAndTapItem(
+      tester,
+      menuKey: systemMenuButtonKey,
+      itemKey: systemImportJsonKey,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Import Scene'), findsOneWidget);
+    await tester.enterText(find.byKey(importSceneFieldKey), importedJson);
+    await tapByKey(tester, importSceneConfirmKey);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Error:'), findsNothing);
+
+    expect(controller.selectedNodeIds, isEmpty);
+    expect(controller.scene.camera.offset, const Offset(120, -40));
+    expect(controller.scene.background.grid.isEnabled, isTrue);
+    expect(controller.scene.background.grid.cellSize, 40);
+    expect(controller.scene.background.color, const Color(0xFFFFF59D));
+    final importedNodes = annotationLayer(controller.scene).nodes;
+    expect(importedNodes.map((node) => node.id).toList(), <NodeId>[
+      'imported-rect',
+    ]);
+    expect(find.text('Camera X: 120'), findsOneWidget);
+
+    await openMenuAndTapItem(
+      tester,
+      menuKey: systemMenuButtonKey,
+      itemKey: systemClearCanvasKey,
+    );
+    await tester.pumpAndSettle();
+    final nonBackgroundNodeCount = controller.scene.layers
+        .where((layer) => !layer.isBackground)
+        .fold<int>(0, (sum, layer) => sum + layer.nodes.length);
+    expect(nonBackgroundNodeCount, 0);
+    expect(controller.selectedNodeIds, isEmpty);
   });
 }

@@ -31,11 +31,31 @@ const ValueKey<String> actionFlipHorizontalKey = ValueKey<String>(
   'action-flip-horizontal',
 );
 const ValueKey<String> gridMenuButtonKey = ValueKey<String>('grid-menu-button');
+const ValueKey<String> gridEnabledSwitchKey = ValueKey<String>(
+  'grid-enabled-switch',
+);
+const String gridCellSizeOptionKeyPrefix = 'grid-cell-size-option-';
 const ValueKey<String> systemMenuButtonKey = ValueKey<String>(
   'system-menu-button',
 );
+const ValueKey<String> systemExportJsonKey = ValueKey<String>(
+  'system-export-json',
+);
+const ValueKey<String> systemImportJsonKey = ValueKey<String>(
+  'system-import-json',
+);
 const ValueKey<String> systemClearCanvasKey = ValueKey<String>(
   'system-clear-canvas',
+);
+const String backgroundColorSwatchKeyPrefix = 'background-color-';
+const ValueKey<String> importSceneFieldKey = ValueKey<String>(
+  'import-scene-field',
+);
+const ValueKey<String> importSceneConfirmKey = ValueKey<String>(
+  'import-scene-confirm',
+);
+const ValueKey<String> importSceneCancelKey = ValueKey<String>(
+  'import-scene-cancel',
 );
 const ValueKey<String> inlineTextEditOverlayKey = ValueKey<String>(
   'inline-text-edit-overlay',
@@ -619,7 +639,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
       },
       menuChildren: [
         SizedBox(
-          width: 300,
+          width: 340,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             child: Column(
@@ -676,6 +696,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                       ),
                     ),
                     Switch(
+                      key: gridEnabledSwitchKey,
                       value: grid.isEnabled,
                       onChanged: (v) {
                         _setGridEnabled(v);
@@ -702,6 +723,9 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                       return ButtonSegment<double>(
                         value: s,
                         label: Text(
+                          key: ValueKey<String>(
+                            '$gridCellSizeOptionKeyPrefix${s.toInt()}',
+                          ),
                           s.toInt().toString(),
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
@@ -785,60 +809,72 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                   vertical: 8,
                 ),
                 child: Row(
-                  children: _controller.scene.palette.backgroundColors.map((c) {
-                    final isSelected = _controller.scene.background.color == c;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: GestureDetector(
-                        onTap: () {
-                          _setBackgroundColor(c);
-                          setState(() {});
-                        },
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: c,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: isSelected
-                                  ? colorScheme.primary
-                                  : Colors.black12,
-                              width: isSelected ? 2 : 1,
+                  children: _controller.scene.palette.backgroundColors
+                      .asMap()
+                      .entries
+                      .map((entry) {
+                        final index = entry.key;
+                        final c = entry.value;
+                        final isSelected =
+                            _controller.scene.background.color == c;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: GestureDetector(
+                            key: ValueKey<String>(
+                              '$backgroundColorSwatchKeyPrefix$index',
                             ),
-                            boxShadow: isSelected
-                                ? [
-                                    BoxShadow(
-                                      color: colorScheme.primary.withValues(
-                                        alpha: 0.3,
-                                      ),
-                                      blurRadius: 4,
-                                    ),
-                                  ]
-                                : null,
+                            onTap: () {
+                              _setBackgroundColor(c);
+                              setState(() {});
+                            },
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: c,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: isSelected
+                                      ? colorScheme.primary
+                                      : Colors.black12,
+                                  width: isSelected ? 2 : 1,
+                                ),
+                                boxShadow: isSelected
+                                    ? [
+                                        BoxShadow(
+                                          color: colorScheme.primary.withValues(
+                                            alpha: 0.3,
+                                          ),
+                                          blurRadius: 4,
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              child: isSelected
+                                  ? Icon(
+                                      Icons.check,
+                                      size: 16,
+                                      color: c.computeLuminance() > 0.5
+                                          ? Colors.black
+                                          : Colors.white,
+                                    )
+                                  : null,
+                            ),
                           ),
-                          child: isSelected
-                              ? Icon(
-                                  Icons.check,
-                                  size: 16,
-                                  color: c.computeLuminance() > 0.5
-                                      ? Colors.black
-                                      : Colors.white,
-                                )
-                              : null,
-                        ),
-                      ),
-                    );
-                  }).toList(),
+                        );
+                      })
+                      .toList(),
                 ),
               ),
               const Divider(indent: 16, endIndent: 16),
               MenuItemButton(
+                key: systemExportJsonKey,
                 leadingIcon: const Icon(Icons.download_outlined, size: 20),
                 onPressed: _exportSceneJson,
                 child: const Text("Export (JSON)"),
               ),
               MenuItemButton(
+                key: systemImportJsonKey,
                 leadingIcon: const Icon(Icons.upload_outlined, size: 20),
                 onPressed: _importSceneJson,
                 child: const Text("Import (JSON)"),
@@ -1113,13 +1149,19 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Import Scene'),
-        content: TextField(controller: controller, maxLines: 8),
+        content: TextField(
+          key: importSceneFieldKey,
+          controller: controller,
+          maxLines: 8,
+        ),
         actions: [
           TextButton(
+            key: importSceneCancelKey,
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
           FilledButton(
+            key: importSceneConfirmKey,
             onPressed: () => Navigator.pop(context, controller.text),
             child: const Text('Import'),
           ),
@@ -1130,6 +1172,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
       try {
         final decoded = decodeSceneFromJson(result);
         _applyDecodedScene(decoded);
+        _controller.setSelection(const <NodeId>[]);
         _controller.notifySceneChanged();
       } catch (e) {
         if (!mounted) return;
