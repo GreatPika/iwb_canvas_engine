@@ -7,7 +7,11 @@ void main() {
     test('allows view -> render import', () async {
       final sandbox = await _createSandbox();
       try {
-        _writeFile(sandbox, 'lib/src/render/painter.dart', 'class Painter {}\n');
+        _writeFile(
+          sandbox,
+          'lib/src/render/painter.dart',
+          'class Painter {}\n',
+        );
         _writeFile(
           sandbox,
           'lib/src/view/widget.dart',
@@ -35,7 +39,9 @@ void main() {
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          contains('layer boundary violation: core/** must not import input/**'),
+          contains(
+            'layer boundary violation: core/** must not import input/**',
+          ),
         );
       } finally {
         sandbox.deleteSync(recursive: true);

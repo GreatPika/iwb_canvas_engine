@@ -413,7 +413,8 @@ void main(List<String> args) {
 
         var hasSpecificViolation = false;
 
-        if (resolvedRepoRelPosix == '/lib/src/controller/scene_controller.dart') {
+        if (resolvedRepoRelPosix ==
+            '/lib/src/controller/scene_controller.dart') {
           violations.add(
             _Violation(
               filePath: filePosixPath,
