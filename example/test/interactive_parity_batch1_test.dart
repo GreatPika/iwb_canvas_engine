@@ -28,6 +28,29 @@ void main() {
   Layer annotationLayer(Scene scene) =>
       scene.layers.firstWhere((layer) => !layer.isBackground);
 
+  SceneNode nodeById(Scene scene, NodeId id) {
+    for (final layer in scene.layers) {
+      for (final node in layer.nodes) {
+        if (node.id == id) return node;
+      }
+    }
+    throw StateError('Node not found: $id');
+  }
+
+  bool transformEqualsWithinEpsilon(
+    Transform2D left,
+    Transform2D right, {
+    double epsilon = 1e-6,
+  }) {
+    bool close(double a, double b) => (a - b).abs() <= epsilon;
+    return close(left.a, right.a) &&
+        close(left.b, right.b) &&
+        close(left.c, right.c) &&
+        close(left.d, right.d) &&
+        close(left.tx, right.tx) &&
+        close(left.ty, right.ty);
+  }
+
   Offset sceneToGlobal(
     WidgetTester tester,
     SceneController controller,
@@ -487,6 +510,103 @@ void main() {
       );
       expect(textA.color, expectedColor);
       expect(textB.color, expectedColor);
+    },
+  );
+
+  testWidgets(
+    'G3.8: transformations + marquee-selection parity',
+    (tester) async {
+      final targetA = RectNode(
+        id: 'target-a',
+        size: const Size(80, 60),
+        fillColor: const Color(0xFF42A5F5),
+      )..position = const Offset(180, 200);
+      final targetB = RectNode(
+        id: 'target-b',
+        size: const Size(80, 60),
+        fillColor: const Color(0xFF66BB6A),
+      )..position = const Offset(280, 200);
+      final keep = RectNode(
+        id: 'keep',
+        size: const Size(80, 60),
+        fillColor: const Color(0xFFEF5350),
+      )..position = const Offset(500, 200);
+
+      final controller = await pumpExampleApp(
+        tester,
+        scene: Scene(
+          layers: [
+            Layer(nodes: [targetA, targetB, keep]),
+          ],
+        ),
+      );
+
+      expect(controller.mode, CanvasMode.move);
+      expect(controller.selectedNodeIds, isEmpty);
+      expect(iconButtonByKey(tester, actionRotateLeftKey).onPressed, isNull);
+      expect(iconButtonByKey(tester, actionRotateRightKey).onPressed, isNull);
+      expect(iconButtonByKey(tester, actionFlipVerticalKey).onPressed, isNull);
+      expect(
+        iconButtonByKey(tester, actionFlipHorizontalKey).onPressed,
+        isNull,
+      );
+
+      final beforeTargetATransform = targetA.transform;
+      final beforeTargetBTransform = targetB.transform;
+      final beforeKeepTransform = keep.transform;
+      final beforeKeepPosition = keep.position;
+
+      await dragScene(
+        tester,
+        controller,
+        from: const Offset(130, 150),
+        to: const Offset(340, 250),
+      );
+
+      expect(controller.selectedNodeIds, const <NodeId>{'target-a', 'target-b'});
+      expect(iconButtonByKey(tester, actionRotateLeftKey).onPressed, isNotNull);
+      expect(iconButtonByKey(tester, actionRotateRightKey).onPressed, isNotNull);
+      expect(iconButtonByKey(tester, actionFlipVerticalKey).onPressed, isNotNull);
+      expect(
+        iconButtonByKey(tester, actionFlipHorizontalKey).onPressed,
+        isNotNull,
+      );
+
+      await tapByKey(tester, actionRotateLeftKey);
+      await tapByKey(tester, actionRotateRightKey);
+      await tapByKey(tester, actionFlipVerticalKey);
+      await tapByKey(tester, actionFlipHorizontalKey);
+
+      final afterTargetA = nodeById(controller.scene, 'target-a');
+      final afterTargetB = nodeById(controller.scene, 'target-b');
+      final afterKeep = nodeById(controller.scene, 'keep');
+
+      expect(
+        transformEqualsWithinEpsilon(
+          afterTargetA.transform,
+          beforeTargetATransform,
+        ),
+        isFalse,
+      );
+      expect(
+        transformEqualsWithinEpsilon(
+          afterTargetB.transform,
+          beforeTargetBTransform,
+        ),
+        isFalse,
+      );
+      expect(
+        transformEqualsWithinEpsilon(afterKeep.transform, beforeKeepTransform),
+        isTrue,
+      );
+      expect(afterKeep.position.dx, closeTo(beforeKeepPosition.dx, 1e-6));
+      expect(afterKeep.position.dy, closeTo(beforeKeepPosition.dy, 1e-6));
+
+      await tapByKey(tester, actionDeleteKey);
+
+      final remainingNodes = annotationLayer(controller.scene).nodes;
+      expect(remainingNodes.map((node) => node.id).toList(), <NodeId>['keep']);
+      expect(controller.selectedNodeIds, isEmpty);
     },
   );
 }

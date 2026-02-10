@@ -18,6 +18,18 @@ const ValueKey<String> actionDeleteKey = ValueKey<String>('action-delete');
 const ValueKey<String> actionAddSampleKey = ValueKey<String>(
   'action-add-sample',
 );
+const ValueKey<String> actionRotateLeftKey = ValueKey<String>(
+  'action-rotate-left',
+);
+const ValueKey<String> actionRotateRightKey = ValueKey<String>(
+  'action-rotate-right',
+);
+const ValueKey<String> actionFlipVerticalKey = ValueKey<String>(
+  'action-flip-vertical',
+);
+const ValueKey<String> actionFlipHorizontalKey = ValueKey<String>(
+  'action-flip-horizontal',
+);
 const ValueKey<String> gridMenuButtonKey = ValueKey<String>('grid-menu-button');
 const ValueKey<String> systemMenuButtonKey = ValueKey<String>(
   'system-menu-button',
@@ -261,6 +273,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                       hasSelection
                           ? () => _controller.rotateSelection(clockwise: false)
                           : null,
+                      key: actionRotateLeftKey,
                     ),
                     _buildActionButton(
                       Icons.rotate_right,
@@ -268,6 +281,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                       hasSelection
                           ? () => _controller.rotateSelection(clockwise: true)
                           : null,
+                      key: actionRotateRightKey,
                     ),
                     _buildActionButton(
                       Icons.flip,
@@ -275,6 +289,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                       hasSelection
                           ? () => _controller.flipSelectionVertical()
                           : null,
+                      key: actionFlipVerticalKey,
                       quarterTurns: 1,
                     ),
                     _buildActionButton(
@@ -283,6 +298,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                       hasSelection
                           ? () => _controller.flipSelectionHorizontal()
                           : null,
+                      key: actionFlipHorizontalKey,
                     ),
                     _buildActionButton(
                       Icons.delete_outline,
