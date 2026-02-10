@@ -606,6 +606,59 @@ void main() {
       },
     );
 
+    test('stroke preview is available during drag and clears on up', () {
+      final controller = SceneControllerInteractiveV2(
+        initialSnapshot: SceneSnapshot(
+          layers: <LayerSnapshot>[
+            LayerSnapshot(isBackground: true),
+            LayerSnapshot(),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      controller.setMode(CanvasMode.draw);
+      controller.setDrawTool(DrawTool.highlighter);
+      controller.highlighterThickness = 8;
+      controller.highlighterOpacity = 0.3;
+
+      controller.handlePointer(
+        _sample(
+          pointerId: 1,
+          position: const Offset(10, 10),
+          timestampMs: 1,
+          phase: PointerPhase.down,
+        ),
+      );
+      expect(controller.hasActiveStrokePreview, isTrue);
+      expect(controller.activeStrokePreviewPoints, const <Offset>[
+        Offset(10, 10),
+      ]);
+      expect(controller.activeStrokePreviewThickness, 8);
+      expect(controller.activeStrokePreviewOpacity, 0.3);
+
+      controller.handlePointer(
+        _sample(
+          pointerId: 1,
+          position: const Offset(14, 10),
+          timestampMs: 2,
+          phase: PointerPhase.move,
+        ),
+      );
+      expect(controller.activeStrokePreviewPoints.length, 2);
+
+      controller.handlePointer(
+        _sample(
+          pointerId: 1,
+          position: const Offset(14, 10),
+          timestampMs: 3,
+          phase: PointerPhase.up,
+        ),
+      );
+      expect(controller.hasActiveStrokePreview, isFalse);
+      expect(controller.activeStrokePreviewPoints, isEmpty);
+    });
+
     test('eraser removes line and stroke nodes on pointer up', () {
       final line = LineNode(
         id: 'line',

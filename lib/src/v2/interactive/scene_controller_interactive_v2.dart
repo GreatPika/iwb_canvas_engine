@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -69,8 +70,10 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
   int? _drawActivePointerId;
   Offset? _drawDownScene;
   bool _drawMoved = false;
-  List<Offset> _activeStrokePoints = <Offset>[];
-  List<Offset> _activeEraserPoints = <Offset>[];
+  final List<Offset> _activeStrokePoints = <Offset>[];
+  late final UnmodifiableListView<Offset> _activeStrokePointsView =
+      UnmodifiableListView<Offset>(_activeStrokePoints);
+  final List<Offset> _activeEraserPoints = <Offset>[];
 
   Offset? _pendingLineStart;
   int? _pendingLineTimestampMs;
@@ -99,6 +102,16 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
   Offset? get pendingLineStart => _pendingLineStart;
   int? get pendingLineTimestampMs => _pendingLineTimestampMs;
   bool get hasPendingLineStart => _pendingLineStart != null;
+  bool get hasActiveStrokePreview =>
+      _drawActivePointerId != null &&
+      (_drawTool == DrawTool.pen || _drawTool == DrawTool.highlighter) &&
+      _activeStrokePoints.isNotEmpty;
+  List<Offset> get activeStrokePreviewPoints => _activeStrokePointsView;
+  double get activeStrokePreviewThickness =>
+      _drawTool == DrawTool.highlighter ? _highlighterThickness : _penThickness;
+  Color get activeStrokePreviewColor => _drawColor;
+  double get activeStrokePreviewOpacity =>
+      _drawTool == DrawTool.highlighter ? _highlighterOpacity : 1;
 
   PointerInputSettings get pointerSettings => _pointerSettings;
 
@@ -590,12 +603,16 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
     switch (_drawTool) {
       case DrawTool.pen:
       case DrawTool.highlighter:
-        _activeStrokePoints = <Offset>[scenePoint];
+        _activeStrokePoints
+          ..clear()
+          ..add(scenePoint);
         break;
       case DrawTool.line:
         break;
       case DrawTool.eraser:
-        _activeEraserPoints = <Offset>[scenePoint];
+        _activeEraserPoints
+          ..clear()
+          ..add(scenePoint);
         break;
     }
   }
@@ -703,7 +720,7 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
       },
     );
 
-    _activeStrokePoints = <Offset>[];
+    _activeStrokePoints.clear();
   }
 
   void _commitLine(int timestampMs, Offset scenePoint) {
@@ -768,7 +785,7 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
     }
 
     final deletedIds = _eraseAnnotations(_activeEraserPoints);
-    _activeEraserPoints = <Offset>[];
+    _activeEraserPoints.clear();
     if (deletedIds.isEmpty) return;
 
     _events.emitAction(
@@ -1038,8 +1055,8 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
     _drawActivePointerId = null;
     _drawDownScene = null;
     _drawMoved = false;
-    _activeStrokePoints = <Offset>[];
-    _activeEraserPoints = <Offset>[];
+    _activeStrokePoints.clear();
+    _activeEraserPoints.clear();
   }
 
   void _setSelectionRect(Rect? value) {

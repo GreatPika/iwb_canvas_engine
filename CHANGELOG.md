@@ -1,5 +1,9 @@
 ## Unreleased
 
+- V2 interactive view: restore in-progress freehand stroke rendering (pen/highlighter)
+  during pointer move via lightweight foreground preview overlay in
+  `SceneViewInteractiveV2`; stroke remains committed to snapshot on pointer up.
+
 - Tests: add engine-level v1/v2 parity harness in `test/parity/**` with
   deterministic event scripts (`script_01..script_05`), normalized contract
   comparison (`scene JSON + selection + payload-subset events`), and adapter

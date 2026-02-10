@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 
+import '../../core/geometry.dart';
 import '../../core/pointer_input.dart';
 import '../interactive/scene_controller_interactive_v2.dart';
 import '../render/scene_painter_v2.dart';
@@ -136,6 +137,9 @@ class _SceneViewInteractiveV2State extends State<SceneViewInteractiveV2> {
           selectionStrokeWidth: widget.selectionStrokeWidth,
           gridStrokeWidth: widget.gridStrokeWidth,
           textDirection: textDirection,
+        ),
+        foregroundPainter: _SceneInteractiveOverlayPainterV2(
+          controller: widget.controller,
         ),
         child: const SizedBox.expand(),
       ),
@@ -345,6 +349,76 @@ class _SceneViewInteractiveV2State extends State<SceneViewInteractiveV2> {
       _pathMetricsCache.clear();
     }
     _initPathMetricsCache();
+  }
+}
+
+class _SceneInteractiveOverlayPainterV2 extends CustomPainter {
+  const _SceneInteractiveOverlayPainterV2({required this.controller})
+    : super(repaint: controller);
+
+  final SceneControllerInteractiveV2 controller;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (!controller.hasActiveStrokePreview) {
+      return;
+    }
+
+    final points = controller.activeStrokePreviewPoints;
+    if (points.isEmpty) {
+      return;
+    }
+
+    final thickness = controller.activeStrokePreviewThickness;
+    if (!thickness.isFinite || thickness <= 0) {
+      return;
+    }
+
+    final cameraOffset = controller.snapshot.camera.offset;
+    final color = _applyOpacity(
+      controller.activeStrokePreviewColor,
+      controller.activeStrokePreviewOpacity,
+    );
+
+    if (points.length == 1) {
+      canvas.drawCircle(
+        toView(points.first, cameraOffset),
+        thickness / 2,
+        Paint()
+          ..style = PaintingStyle.fill
+          ..color = color,
+      );
+      return;
+    }
+
+    final path = Path()
+      ..moveTo(
+        points.first.dx - cameraOffset.dx,
+        points.first.dy - cameraOffset.dy,
+      );
+    for (var i = 1; i < points.length; i++) {
+      final point = points[i];
+      path.lineTo(point.dx - cameraOffset.dx, point.dy - cameraOffset.dy);
+    }
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = thickness
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..color = color,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _SceneInteractiveOverlayPainterV2 oldDelegate) {
+    return oldDelegate.controller != controller;
+  }
+
+  Color _applyOpacity(Color color, double opacity) {
+    final clamped = opacity.clamp(0.0, 1.0).toDouble();
+    return color.withValues(alpha: clamped * color.a);
   }
 }
 
