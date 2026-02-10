@@ -643,15 +643,18 @@ Set<NodeId> txnNormalizeSelection({
   required Set<NodeId> rawSelection,
   required Scene scene,
 }) {
-  final interactive = <NodeId>{
+  // Commit-time normalization keeps selection ids that still point to visible
+  // non-background nodes. It intentionally does not enforce isSelectable to
+  // preserve explicit selection flows like selectAll(onlySelectable: false).
+  final normalizedCandidates = <NodeId>{
     for (final layer in scene.layers)
       for (final node in layer.nodes)
-        if (!layer.isBackground && node.isVisible && node.isSelectable) node.id,
+        if (!layer.isBackground && node.isVisible) node.id,
   };
 
   return <NodeId>{
     for (final id in rawSelection)
-      if (interactive.contains(id)) id,
+      if (normalizedCandidates.contains(id)) id,
   };
 }
 

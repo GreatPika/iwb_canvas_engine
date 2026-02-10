@@ -182,7 +182,7 @@ void main() {
       rawSelection: <NodeId>{'ok', 'hidden', 'nonsel', 'bg', 'missing'},
       scene: scene,
     );
-    expect(normalized, <NodeId>{'ok'});
+    expect(normalized, <NodeId>{'ok', 'nonsel'});
 
     expect(
       txnTranslateSelection(

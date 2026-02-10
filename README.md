@@ -86,6 +86,7 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Partial updates: `NodePatch` + tri-state `PatchField<T>`.
 - Serialization: `encodeScene*`, `decodeScene*`, `SceneJsonFormatException`.
 - Event payload contract: `ActionCommitted.nodeIds/payload` are immutable snapshots.
+- Selection contract: commit normalization keeps explicit non-selectable ids valid while filtering missing/background/invisible ids.
 
 ## Invariants and quality gates
 

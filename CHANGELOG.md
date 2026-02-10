@@ -11,6 +11,7 @@
 - Controller commit now derives `allNodeIds` and `nodeIdSeed` from the committed scene as the single source of truth.
 - `SceneWriter.writeNodeErase` now respects deletable-layer policy consistently with selection delete flow.
 - `SceneWriter.writeGridCellSize` and `SceneWriter.writeCameraOffset` now reject non-finite/invalid inputs at write boundary.
+- Selection normalization now preserves explicit non-selectable ids, so `selectAll(onlySelectable: false)` remains stable after commit.
 - Added runtime commit invariant assertions for store consistency in debug/test execution.
 
 ## 2.0.0 (2026-02-10)

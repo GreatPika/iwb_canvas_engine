@@ -250,6 +250,9 @@ Behavior notes:
 
 - Transform operations affect transformable, unlocked selected nodes.
 - Background/non-deletable policy is respected by delete flows.
+- `selectAll(onlySelectable: true)` selects visible selectable foreground nodes.
+- `selectAll(onlySelectable: false)` also includes visible non-selectable foreground nodes.
+- Commit-time selection normalization removes only missing/background/invisible ids and preserves explicitly selected non-selectable nodes.
 - `clearScene` keeps canonical background layer and clears non-background content.
 
 ### 6.7 Low-level input hooks

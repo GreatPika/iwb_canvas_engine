@@ -197,7 +197,7 @@ void main() {
     expect(controller.boundsRevision, 1);
   });
 
-  test('node patch that changes selection policy normalizes selected ids', () {
+  test('node patch changing isSelectable keeps explicitly selected ids', () {
     final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
@@ -215,9 +215,39 @@ void main() {
       );
     });
 
-    expect(controller.selectedNodeIds, isEmpty);
+    expect(controller.selectedNodeIds, const <NodeId>{'r1'});
     expect(controller.debugLastChangeSet.selectionChanged, isTrue);
   });
+
+  test(
+    'selectAll with onlySelectable false preserves non-selectable ids after commit',
+    () {
+      final controller = SceneControllerV2(
+        initialSnapshot: SceneSnapshot(
+          layers: <LayerSnapshot>[
+            LayerSnapshot(
+              nodes: const <NodeSnapshot>[
+                RectNodeSnapshot(id: 'selectable', size: Size(10, 10)),
+                RectNodeSnapshot(
+                  id: 'nonsel',
+                  size: Size(10, 10),
+                  isSelectable: false,
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      controller.commands.writeSelectionSelectAll(onlySelectable: false);
+
+      expect(controller.selectedNodeIds, const <NodeId>{
+        'selectable',
+        'nonsel',
+      });
+    },
+  );
 
   test(
     'writeReplaceScene increments epoch clears selection and has no action signal',
