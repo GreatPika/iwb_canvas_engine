@@ -26,7 +26,7 @@ void main() {
     );
   }
 
-  test('write is atomic and notifies once per commit', () {
+  test('write is atomic and notifies once per commit', () async {
     final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
@@ -43,6 +43,7 @@ void main() {
         nodeIds: const <NodeId>['r1'],
       );
     });
+    await pumpEventQueue();
 
     final moved =
         controller.snapshot.layers.first.nodes.first as RectNodeSnapshot;
@@ -55,6 +56,31 @@ void main() {
       'repaint',
     ]);
   });
+
+  test(
+    'repaint notifications are coalesced within the same event-loop tick',
+    () async {
+      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      addTearDown(controller.dispose);
+
+      var notifications = 0;
+      controller.addListener(() {
+        notifications = notifications + 1;
+      });
+
+      controller.write<void>((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'r1'});
+      });
+      controller.write<void>((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'r2'});
+      });
+
+      expect(notifications, 0);
+      await pumpEventQueue();
+
+      expect(notifications, 1);
+    },
+  );
 
   test('no-op write keeps commit/revisions unchanged and does not notify', () {
     final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
@@ -494,6 +520,37 @@ void main() {
         everyElement(isTrue),
       );
       expect(controller.debugCommitRevision, 2);
+    },
+  );
+
+  test(
+    'change listener can trigger follow-up write without nested write error',
+    () async {
+      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      addTearDown(controller.dispose);
+
+      Object? nestedWriteError;
+      var listenerCalls = 0;
+      controller.addListener(() {
+        listenerCalls = listenerCalls + 1;
+        if (listenerCalls != 1) return;
+        try {
+          controller.write<void>((writer) {
+            writer.writeSelectionReplace(const <NodeId>{'r2'});
+          });
+        } catch (error) {
+          nestedWriteError = error;
+        }
+      });
+
+      controller.write<void>((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'r1'});
+      });
+      await pumpEventQueue(times: 2);
+
+      expect(nestedWriteError, isNull);
+      expect(listenerCalls, 2);
+      expect(controller.selectedNodeIds, const <NodeId>{'r2'});
     },
   );
 

@@ -228,6 +228,11 @@ Validation notes:
 - `setGridCellSize` requires finite positive value; with enabled grid it clamps to internal minimum safety limit.
 - `setCameraOffset` rejects non-finite offsets.
 
+Notification semantics:
+
+- Scene repaint notifications are deferred to a microtask after commit/repaint request.
+- Multiple writes/repaint requests in the same event-loop tick are coalesced into one listener notification.
+
 ### 6.5 Node and selection methods
 
 - `String addNode(NodeSpec node, {int? layerIndex})`
@@ -275,6 +280,11 @@ Direct usage is useful when embedding the controller in custom input pipelines.
 - Does not expose node-id bookkeeping internals; ids are allocated via structural writes (`writeNodeInsert`).
 
 Prefer high-level command methods unless custom transactional logic is required.
+
+Write-notify semantics:
+
+- `write(...)` finalizes transaction state first, then schedules listener notification in a microtask when repaint is needed.
+- Calling `write(...)` from `addListener(...)` is allowed; it runs after the original transaction is finished.
 
 ## 7. Interaction model details
 

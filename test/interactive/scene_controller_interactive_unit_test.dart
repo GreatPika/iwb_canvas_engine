@@ -982,56 +982,60 @@ void main() {
       expect(ids.contains('fg'), isTrue);
     });
 
-    test('transform/delete/clear/notify scene APIs emit expected effects', () {
-      final rect = RectNode(id: 'r', size: const Size(20, 10))
-        ..position = const Offset(50, 50);
-      final locked = RectNode(
-        id: 'locked',
-        size: const Size(20, 10),
-        isLocked: true,
-        isDeletable: false,
-      )..position = const Offset(90, 50);
-      final controller = _controllerFromScene(
-        Scene(
-          layers: <Layer>[
-            Layer(isBackground: true),
-            Layer(nodes: <SceneNode>[rect, locked]),
-          ],
-        ),
-      );
-      addTearDown(controller.dispose);
+    test(
+      'transform/delete/clear/notify scene APIs emit expected effects',
+      () async {
+        final rect = RectNode(id: 'r', size: const Size(20, 10))
+          ..position = const Offset(50, 50);
+        final locked = RectNode(
+          id: 'locked',
+          size: const Size(20, 10),
+          isLocked: true,
+          isDeletable: false,
+        )..position = const Offset(90, 50);
+        final controller = _controllerFromScene(
+          Scene(
+            layers: <Layer>[
+              Layer(isBackground: true),
+              Layer(nodes: <SceneNode>[rect, locked]),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
 
-      final actions = <ActionCommitted>[];
-      final sub = controller.actions.listen(actions.add);
-      addTearDown(sub.cancel);
+        final actions = <ActionCommitted>[];
+        final sub = controller.actions.listen(actions.add);
+        addTearDown(sub.cancel);
 
-      final visualBefore = controller.visualRevision;
-      var notifications = 0;
-      controller.addListener(() {
-        notifications = notifications + 1;
-      });
-      controller.notifySceneChanged();
-      expect(controller.visualRevision, visualBefore);
-      expect(notifications, 1);
+        final visualBefore = controller.visualRevision;
+        var notifications = 0;
+        controller.addListener(() {
+          notifications = notifications + 1;
+        });
+        controller.notifySceneChanged();
+        await pumpEventQueue();
+        expect(controller.visualRevision, visualBefore);
+        expect(notifications, 1);
 
-      controller.setSelection(const <NodeId>{'r', 'locked'});
-      controller.rotateSelection(clockwise: true, timestampMs: 100);
-      controller.flipSelectionHorizontal(timestampMs: 101);
-      controller.flipSelectionVertical(timestampMs: 102);
-      controller.deleteSelection(timestampMs: 103);
-      expect(_nodeById(controller.snapshot, 'locked').id, 'locked');
+        controller.setSelection(const <NodeId>{'r', 'locked'});
+        controller.rotateSelection(clockwise: true, timestampMs: 100);
+        controller.flipSelectionHorizontal(timestampMs: 101);
+        controller.flipSelectionVertical(timestampMs: 102);
+        controller.deleteSelection(timestampMs: 103);
+        expect(_nodeById(controller.snapshot, 'locked').id, 'locked');
 
-      controller.clearScene(timestampMs: 104);
-      final remaining = <NodeId>{
-        for (final layer in controller.snapshot.layers)
-          for (final node in layer.nodes) node.id,
-      };
-      expect(remaining.contains('locked'), isFalse);
+        controller.clearScene(timestampMs: 104);
+        final remaining = <NodeId>{
+          for (final layer in controller.snapshot.layers)
+            for (final node in layer.nodes) node.id,
+        };
+        expect(remaining.contains('locked'), isFalse);
 
-      expect(actions.any((a) => a.type == ActionType.transform), isTrue);
-      expect(actions.any((a) => a.type == ActionType.delete), isTrue);
-      expect(actions.any((a) => a.type == ActionType.clear), isTrue);
-    });
+        expect(actions.any((a) => a.type == ActionType.transform), isTrue);
+        expect(actions.any((a) => a.type == ActionType.delete), isTrue);
+        expect(actions.any((a) => a.type == ActionType.clear), isTrue);
+      },
+    );
 
     test('move drag up emits transform action with delta payload', () async {
       final rect = RectNode(id: 'node', size: const Size(30, 20))

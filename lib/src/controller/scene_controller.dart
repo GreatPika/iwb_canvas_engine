@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -39,6 +40,9 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
   final V2RepaintSlice _repaintSlice = V2RepaintSlice();
 
   bool _writeInProgress = false;
+  bool _notifyScheduled = false;
+  bool _notifyPending = false;
+  bool _isDisposed = false;
   List<String> _debugLastCommitPhases = const <String>[];
   ChangeSet _debugLastChangeSet = ChangeSet();
 
@@ -125,7 +129,10 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
     );
 
     late final T result;
-    var committedSignals = const <V2CommittedSignal>[];
+    var commitResult = const _TxnWriteCommitResult(
+      committedSignals: <V2CommittedSignal>[],
+      needsNotify: false,
+    );
 
     try {
       final writer = SceneWriter(
@@ -133,7 +140,7 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
         txnSignalSink: _signalsSlice.writeBufferSignal,
       );
       result = fn(writer);
-      committedSignals = _txnWriteCommit(ctx);
+      commitResult = _txnWriteCommit(ctx);
     } catch (_) {
       _signalsSlice.writeDiscardBuffered();
       _repaintSlice.writeDiscardPending();
@@ -142,7 +149,10 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
       _writeInProgress = false;
     }
 
-    _signalsSlice.emitCommitted(committedSignals);
+    if (commitResult.needsNotify) {
+      _scheduleNotify();
+    }
+    _signalsSlice.emitCommitted(commitResult.committedSignals);
     return result;
   }
 
@@ -154,10 +164,12 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
 
   void requestRepaint() {
     _repaintSlice.writeMarkNeedsRepaint();
-    _repaintSlice.writeFlushNotify(notifyListeners);
+    if (_repaintSlice.writeTakeNeedsNotify()) {
+      _scheduleNotify();
+    }
   }
 
-  List<V2CommittedSignal> _txnWriteCommit(TxnContext ctx) {
+  _TxnWriteCommitResult _txnWriteCommit(TxnContext ctx) {
     var commitPhases = const <String>[];
 
     final shouldNormalizeSelection =
@@ -193,7 +205,10 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
     if (!hasStateChanges && !hasSignals) {
       _debugLastCommitPhases = commitPhases;
       _debugLastChangeSet = ctx.changeSet.txnClone();
-      return const <V2CommittedSignal>[];
+      return const _TxnWriteCommitResult(
+        committedSignals: <V2CommittedSignal>[],
+        needsNotify: false,
+      );
     }
 
     if (!hasStateChanges && hasSignals) {
@@ -206,7 +221,10 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
       _debugAssertStoreInvariants();
       _debugLastCommitPhases = commitPhases;
       _debugLastChangeSet = ctx.changeSet.txnClone();
-      return committedSignals;
+      return _TxnWriteCommitResult(
+        committedSignals: committedSignals,
+        needsNotify: false,
+      );
     }
 
     final nextEpoch =
@@ -248,12 +266,35 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
     _debugAssertStoreInvariants();
 
     _repaintSlice.writeMarkNeedsRepaint();
-    _repaintSlice.writeFlushNotify(notifyListeners);
+    final needsNotify = _repaintSlice.writeTakeNeedsNotify();
     commitPhases = <String>[...commitPhases, 'repaint'];
 
     _debugLastCommitPhases = commitPhases;
     _debugLastChangeSet = ctx.changeSet.txnClone();
-    return committedSignals;
+    return _TxnWriteCommitResult(
+      committedSignals: committedSignals,
+      needsNotify: needsNotify,
+    );
+  }
+
+  void _scheduleNotify() {
+    if (_isDisposed) {
+      return;
+    }
+    _notifyPending = true;
+    if (_notifyScheduled) {
+      return;
+    }
+    _notifyScheduled = true;
+
+    scheduleMicrotask(() {
+      _notifyScheduled = false;
+      if (_isDisposed || !_notifyPending) {
+        return;
+      }
+      _notifyPending = false;
+      notifyListeners();
+    });
   }
 
   void _debugAssertStoreInvariants() {
@@ -268,7 +309,20 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
 
   @override
   void dispose() {
+    _isDisposed = true;
+    _notifyPending = false;
+    _notifyScheduled = false;
     _signalsSlice.dispose();
     super.dispose();
   }
+}
+
+class _TxnWriteCommitResult {
+  const _TxnWriteCommitResult({
+    required this.committedSignals,
+    required this.needsNotify,
+  });
+
+  final List<V2CommittedSignal> committedSignals;
+  final bool needsNotify;
 }

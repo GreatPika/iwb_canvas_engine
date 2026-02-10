@@ -61,6 +61,7 @@ Key invariants:
 - Public API does not expose mutable core scene structures.
 - All state mutations flow through `write` transactions and safe txn operations.
 - Committed signals are delivered only after store commit finalization.
+- Repaint/listener notifications are scheduled after commit via microtask and coalesced per event-loop tick.
 - Node-id index state (`allNodeIds`, `nodeIdSeed`) is derived from committed scene data.
 - Selection normalization preserves explicit non-selectable ids and drops only missing/background/invisible ids.
 - Background layer rule: at most one background layer; canonical index is `0`.

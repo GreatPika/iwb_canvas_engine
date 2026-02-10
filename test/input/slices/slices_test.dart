@@ -22,7 +22,7 @@ void main() {
     );
   }
 
-  test('commands slice routes structural updates through write', () {
+  test('commands slice routes structural updates through write', () async {
     final controller = buildController();
     addTearDown(controller.dispose);
 
@@ -34,6 +34,7 @@ void main() {
     final created = controller.commands.writeAddNode(
       RectNodeSpec(id: 'cmd-added', size: const Size(6, 6)),
     );
+    await pumpEventQueue();
 
     expect(created, 'cmd-added');
     expect(controller.snapshot.layers.first.nodes.length, 2);

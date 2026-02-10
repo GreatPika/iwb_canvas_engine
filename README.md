@@ -87,6 +87,7 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Serialization: `encodeScene*`, `decodeScene*`, `SceneJsonFormatException`.
 - Event payload contract: `ActionCommitted.nodeIds/payload` are immutable snapshots.
 - Selection contract: commit normalization keeps explicit non-selectable ids valid while filtering missing/background/invisible ids.
+- Runtime notify contract: controller repaint notifications are deferred to a microtask after commit and coalesced to at most one notification per event-loop tick.
 
 ## Invariants and quality gates
 

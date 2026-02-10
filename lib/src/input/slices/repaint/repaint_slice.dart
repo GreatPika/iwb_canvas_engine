@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 class V2RepaintSlice {
   bool _needsNotify = false;
 
@@ -13,12 +11,11 @@ class V2RepaintSlice {
     _needsNotify = false;
   }
 
-  bool writeFlushNotify(VoidCallback notifyListeners) {
+  bool writeTakeNeedsNotify() {
     if (!_needsNotify) {
       return false;
     }
     _needsNotify = false;
-    notifyListeners();
     return true;
   }
 }

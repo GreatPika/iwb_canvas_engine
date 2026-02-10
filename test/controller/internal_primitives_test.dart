@@ -442,22 +442,15 @@ void main() {
     },
   );
 
-  test('V2RepaintSlice marks/flushes once and can discard pending', () {
+  test('V2RepaintSlice marks/takes once and can discard pending', () {
     final slice = V2RepaintSlice();
 
     expect(slice.needsNotify, isFalse);
-    expect(slice.writeFlushNotify(() {}), isFalse);
+    expect(slice.writeTakeNeedsNotify(), isFalse);
 
-    var notified = 0;
     slice.writeMarkNeedsRepaint();
     expect(slice.needsNotify, isTrue);
-    expect(
-      slice.writeFlushNotify(() {
-        notified = notified + 1;
-      }),
-      isTrue,
-    );
-    expect(notified, 1);
+    expect(slice.writeTakeNeedsNotify(), isTrue);
     expect(slice.needsNotify, isFalse);
 
     slice.writeMarkNeedsRepaint();

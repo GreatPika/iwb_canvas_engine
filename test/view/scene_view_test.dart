@@ -69,6 +69,7 @@ void main() {
 
     controller.writeReplaceScene(_snapshot(strokeY: 60, text: 'B'));
     await tester.pump();
+    await tester.pump();
 
     expect(textCache.debugBuildCount, 2);
     expect(textCache.debugHitCount, 0);

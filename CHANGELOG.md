@@ -1,3 +1,9 @@
+## Unreleased
+
+### Changed
+
+- Controller repaint/listener notifications are now deferred to a microtask after commit and coalesced to one notification per event-loop tick, so `write(...)` calls inside listeners no longer trip nested-write guards from the originating transaction.
+
 ## 2.0.1 (2026-02-10)
 
 ### Breaking
