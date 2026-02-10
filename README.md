@@ -85,6 +85,7 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Write intents: `NodeSpec` variants.
 - Partial updates: `NodePatch` + tri-state `PatchField<T>`.
 - Serialization: `encodeScene*`, `decodeScene*`, `SceneJsonFormatException`.
+- Event payload contract: `ActionCommitted.nodeIds/payload` are immutable snapshots.
 
 ## Invariants and quality gates
 

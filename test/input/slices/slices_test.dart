@@ -6,6 +6,7 @@ import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
 
 void main() {
   // INV:INV-V2-TXN-ATOMIC-COMMIT
+  // INV:INV-V2-SIGNALS-AFTER-COMMIT
 
   SceneControllerV2 buildController() {
     return SceneControllerV2(
@@ -55,7 +56,7 @@ void main() {
     expect(controller.boundsRevision, greaterThan(0));
   });
 
-  test('draw slice creates line/stroke and erase removes node ids', () {
+  test('draw slice creates line/stroke and erase removes node ids', () async {
     final controller = buildController();
     addTearDown(controller.dispose);
 
@@ -81,6 +82,7 @@ void main() {
       strokeId,
       'missing',
     ]);
+    await pumpEventQueue();
 
     expect(lineId, isNotEmpty);
     expect(removed, 1);
@@ -92,7 +94,7 @@ void main() {
 
   test(
     'commands slice handles missing patch/delete and selection commands',
-    () {
+    () async {
       final controller = buildController();
       addTearDown(controller.dispose);
 
@@ -119,6 +121,7 @@ void main() {
 
       controller.commands.writeSelectionReplace(const <NodeId>{'base'});
       controller.commands.writeSelectionToggle('base');
+      await pumpEventQueue();
 
       expect(patchMissing, isFalse);
       expect(patchExisting, isTrue);
@@ -136,55 +139,64 @@ void main() {
     },
   );
 
-  test('commands slice covers selection transform/delete/clear helpers', () {
-    final controller = buildController();
-    addTearDown(controller.dispose);
+  test(
+    'commands slice covers selection transform/delete/clear helpers',
+    () async {
+      final controller = buildController();
+      addTearDown(controller.dispose);
 
-    final signalTypes = <String>[];
-    final sub = controller.signals.listen((signal) {
-      signalTypes.add(signal.type);
-    });
-    addTearDown(sub.cancel);
+      final signalTypes = <String>[];
+      final sub = controller.signals.listen((signal) {
+        signalTypes.add(signal.type);
+      });
+      addTearDown(sub.cancel);
 
-    controller.commands.writeSelectionClear();
-    expect(signalTypes, contains('selection.cleared'));
+      controller.commands.writeSelectionClear();
+      await pumpEventQueue();
+      expect(signalTypes, contains('selection.cleared'));
 
-    final selectNone = controller.commands.writeSelectionSelectAll(
-      onlySelectable: false,
-    );
-    expect(selectNone, 1);
-    expect(signalTypes, contains('selection.all'));
-    expect(controller.selectedNodeIds, const <NodeId>{'base'});
+      final selectNone = controller.commands.writeSelectionSelectAll(
+        onlySelectable: false,
+      );
+      await pumpEventQueue();
+      expect(selectNone, 1);
+      expect(signalTypes, contains('selection.all'));
+      expect(controller.selectedNodeIds, const <NodeId>{'base'});
 
-    final transformed = controller.commands.writeSelectionTransform(
-      Transform2D.translation(const Offset(4, 6)),
-    );
-    expect(transformed, 1);
-    expect(signalTypes, contains('selection.transformed'));
+      final transformed = controller.commands.writeSelectionTransform(
+        Transform2D.translation(const Offset(4, 6)),
+      );
+      await pumpEventQueue();
+      expect(transformed, 1);
+      expect(signalTypes, contains('selection.transformed'));
 
-    final deleted = controller.commands.writeDeleteSelection();
-    expect(deleted, 1);
-    expect(signalTypes, contains('selection.deleted'));
+      final deleted = controller.commands.writeDeleteSelection();
+      await pumpEventQueue();
+      expect(deleted, 1);
+      expect(signalTypes, contains('selection.deleted'));
 
-    controller.commands.writeAddNode(
-      RectNodeSpec(id: 'temp', size: const Size(4, 4)),
-    );
-    final cleared = controller.commands.writeClearScene();
-    expect(cleared, 1);
-    expect(signalTypes, contains('scene.cleared'));
+      controller.commands.writeAddNode(
+        RectNodeSpec(id: 'temp', size: const Size(4, 4)),
+      );
+      final cleared = controller.commands.writeClearScene();
+      await pumpEventQueue();
+      expect(cleared, 1);
+      expect(signalTypes, contains('scene.cleared'));
 
-    controller.commands.writeBackgroundColorSet(const Color(0xFFAA5500));
-    controller.commands.writeGridEnabledSet(true);
-    controller.commands.writeGridCellSizeSet(42);
-    controller.commands.writeCameraOffsetSet(const Offset(10, -4));
-    expect(
-      signalTypes,
-      containsAll(<String>[
-        'background.updated',
-        'grid.enabled.updated',
-        'grid.cell.updated',
-        'camera.updated',
-      ]),
-    );
-  });
+      controller.commands.writeBackgroundColorSet(const Color(0xFFAA5500));
+      controller.commands.writeGridEnabledSet(true);
+      controller.commands.writeGridCellSizeSet(42);
+      controller.commands.writeCameraOffsetSet(const Offset(10, -4));
+      await pumpEventQueue();
+      expect(
+        signalTypes,
+        containsAll(<String>[
+          'background.updated',
+          'grid.enabled.updated',
+          'grid.cell.updated',
+          'camera.updated',
+        ]),
+      );
+    },
+  );
 }

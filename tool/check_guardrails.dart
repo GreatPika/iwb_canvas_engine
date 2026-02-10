@@ -361,6 +361,20 @@ void _checkSceneWriteTxnContract({
         ),
       );
     }
+    if (RegExp(r'\bwriteNewNodeId\s*\(').hasMatch(line) ||
+        RegExp(r'\bwriteContainsNodeId\s*\(').hasMatch(line) ||
+        RegExp(r'\bwriteRegisterNodeId\s*\(').hasMatch(line) ||
+        RegExp(r'\bwriteUnregisterNodeId\s*\(').hasMatch(line) ||
+        RegExp(r'\bwriteRebuildNodeIdIndex\s*\(').hasMatch(line)) {
+      _fail(
+        _Violation(
+          filePath: filePosixPath,
+          line: lineNo,
+          message:
+              'public SceneWriteTxn must not expose node-id bookkeeping methods.',
+        ),
+      );
+    }
   }
 }
 

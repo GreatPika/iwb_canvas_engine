@@ -19,6 +19,7 @@ import '../public/scene_render_state.dart';
 import '../public/scene_write_txn.dart';
 import '../public/snapshot.dart';
 import 'change_set.dart';
+import 'scene_invariants.dart';
 import 'scene_writer.dart';
 import 'store.dart';
 import 'txn_context.dart';
@@ -123,14 +124,16 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
       nodeIdSeed: _store.nodeIdSeed,
     );
 
+    late final T result;
+    var committedSignals = const <V2CommittedSignal>[];
+
     try {
       final writer = SceneWriter(
         ctx,
         txnSignalSink: _signalsSlice.writeBufferSignal,
       );
-      final result = fn(writer);
-      _txnWriteCommit(ctx);
-      return result;
+      result = fn(writer);
+      committedSignals = _txnWriteCommit(ctx);
     } catch (_) {
       _signalsSlice.writeDiscardBuffered();
       _repaintSlice.writeDiscardPending();
@@ -138,6 +141,9 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
     } finally {
       _writeInProgress = false;
     }
+
+    _signalsSlice.emitCommitted(committedSignals);
+    return result;
   }
 
   void writeReplaceScene(SceneSnapshot snapshot) {
@@ -151,7 +157,7 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
     _repaintSlice.writeFlushNotify(notifyListeners);
   }
 
-  void _txnWriteCommit(TxnContext ctx) {
+  List<V2CommittedSignal> _txnWriteCommit(TxnContext ctx) {
     var commitPhases = const <String>[];
 
     final shouldNormalizeSelection =
@@ -187,17 +193,20 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
     if (!hasStateChanges && !hasSignals) {
       _debugLastCommitPhases = commitPhases;
       _debugLastChangeSet = ctx.changeSet.txnClone();
-      return;
+      return const <V2CommittedSignal>[];
     }
 
     if (!hasStateChanges && hasSignals) {
       final nextCommitRevision = _store.commitRevision + 1;
-      _signalsSlice.writeFlushBuffered(commitRevision: nextCommitRevision);
+      final committedSignals = _signalsSlice.writeTakeCommitted(
+        commitRevision: nextCommitRevision,
+      );
       commitPhases = <String>[...commitPhases, 'signals'];
       _store.commitRevision = nextCommitRevision;
+      _debugAssertStoreInvariants();
       _debugLastCommitPhases = commitPhases;
       _debugLastChangeSet = ctx.changeSet.txnClone();
-      return;
+      return committedSignals;
     }
 
     final nextEpoch =
@@ -217,24 +226,28 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
     commitPhases = <String>[...commitPhases, 'spatial_index'];
 
     final nextCommitRevision = _store.commitRevision + 1;
-    _signalsSlice.writeFlushBuffered(commitRevision: nextCommitRevision);
+    final committedSignals = _signalsSlice.writeTakeCommitted(
+      commitRevision: nextCommitRevision,
+    );
     commitPhases = <String>[...commitPhases, 'signals'];
 
     final committedScene = ctx.txnHasMutableScene
         ? txnCloneScene(ctx.workingScene)
         : _store.sceneDoc;
     final committedSelection = Set<NodeId>.from(ctx.workingSelection);
-    final committedNodeIds = Set<NodeId>.from(ctx.workingNodeIds);
+    final committedNodeIds = txnCollectNodeIds(committedScene);
+    final committedNodeIdSeed = txnInitialNodeIdSeed(committedScene);
 
     _store.sceneDoc = committedScene;
     _store.selectedNodeIds = committedSelection;
     _store.allNodeIds = committedNodeIds;
-    _store.nodeIdSeed = ctx.nodeIdSeed;
+    _store.nodeIdSeed = committedNodeIdSeed;
     _store.controllerEpoch = nextEpoch;
     _store.structuralRevision = nextStructuralRevision;
     _store.boundsRevision = nextBoundsRevision;
     _store.visualRevision = nextVisualRevision;
     _store.commitRevision = nextCommitRevision;
+    _debugAssertStoreInvariants();
 
     _repaintSlice.writeMarkNeedsRepaint();
     _repaintSlice.writeFlushNotify(notifyListeners);
@@ -242,6 +255,17 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
 
     _debugLastCommitPhases = commitPhases;
     _debugLastChangeSet = ctx.changeSet.txnClone();
+    return committedSignals;
+  }
+
+  void _debugAssertStoreInvariants() {
+    debugAssertTxnStoreInvariants(
+      scene: _store.sceneDoc,
+      selectedNodeIds: _store.selectedNodeIds,
+      allNodeIds: _store.allNodeIds,
+      nodeIdSeed: _store.nodeIdSeed,
+      commitRevision: _store.commitRevision,
+    );
   }
 
   @override

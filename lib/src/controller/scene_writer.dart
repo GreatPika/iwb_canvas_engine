@@ -4,7 +4,6 @@ import '../core/background_layer_invariants.dart';
 import '../core/selection_policy.dart';
 import '../core/transform2d.dart';
 import '../input/slices/signals/signal_event.dart';
-import '../model/document_clone.dart';
 import '../model/document.dart';
 import '../public/node_patch.dart';
 import '../public/node_spec.dart';
@@ -26,27 +25,6 @@ class SceneWriter implements SceneWriteTxn {
       Set<NodeId>.unmodifiable(_ctx.workingSelection);
 
   @override
-  NodeId writeNewNodeId() => _ctx.txnNextNodeId();
-
-  @override
-  bool writeContainsNodeId(NodeId nodeId) => _ctx.txnHasNodeId(nodeId);
-
-  @override
-  void writeRegisterNodeId(NodeId nodeId) {
-    _ctx.txnRememberNodeId(nodeId);
-  }
-
-  @override
-  void writeUnregisterNodeId(NodeId nodeId) {
-    _ctx.txnForgetNodeId(nodeId);
-  }
-
-  @override
-  void writeRebuildNodeIdIndex() {
-    _ctx.workingNodeIds = txnCollectNodeIds(_ctx.workingScene);
-  }
-
-  @override
   String writeNodeInsert(NodeSpec spec, {int? layerIndex}) {
     final resolvedId = spec.id ?? _ctx.txnNextNodeId();
     if (spec.id != null && _ctx.txnHasNodeId(resolvedId)) {
@@ -66,6 +44,10 @@ class SceneWriter implements SceneWriteTxn {
   bool writeNodeErase(NodeId nodeId) {
     final existing = txnFindNodeById(_ctx.workingScene, nodeId);
     if (existing == null) {
+      return false;
+    }
+    final layer = _ctx.workingScene.layers[existing.layerIndex];
+    if (!isNodeDeletableInLayer(existing.node, layer)) {
       return false;
     }
     final scene = _ctx.txnEnsureMutableScene();
@@ -317,6 +299,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   void writeCameraOffset(Offset offset) {
+    _txnRequireFiniteOffset(offset, name: 'offset');
     if (_ctx.workingScene.camera.offset == offset) return;
     final scene = _ctx.txnEnsureMutableScene();
     scene.camera.offset = offset;
@@ -335,6 +318,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   void writeGridCellSize(double cellSize) {
+    _txnRequireFinitePositive(cellSize, name: 'cellSize');
     if (_ctx.workingScene.background.grid.cellSize == cellSize) {
       return;
     }
@@ -387,5 +371,15 @@ class SceneWriter implements SceneWriteTxn {
   bool _txnPatchTouchesSelectionPolicy(NodePatch patch) {
     final common = patch.common;
     return !common.isVisible.isAbsent || !common.isSelectable.isAbsent;
+  }
+
+  void _txnRequireFiniteOffset(Offset value, {required String name}) {
+    if (value.dx.isFinite && value.dy.isFinite) return;
+    throw ArgumentError.value(value, name, 'Offset must be finite.');
+  }
+
+  void _txnRequireFinitePositive(double value, {required String name}) {
+    if (value.isFinite && value > 0) return;
+    throw ArgumentError.value(value, name, 'Must be a finite number > 0.');
   }
 }

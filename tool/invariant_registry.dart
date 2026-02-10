@@ -62,6 +62,27 @@ const List<Invariant> invariants = <Invariant>[
     title: 'transaction commit remains atomic',
   ),
   Invariant(
+    id: 'INV-V2-SIGNALS-AFTER-COMMIT',
+    scope: 'engine-controller',
+    title:
+        'committed signals are delivered only after store commit is finalized',
+  ),
+  Invariant(
+    id: 'INV-V2-ID-INDEX-FROM-SCENE',
+    scope: 'engine-controller',
+    title: 'allNodeIds/nodeIdSeed are derived from committed scene',
+  ),
+  Invariant(
+    id: 'INV-V2-WRITE-NUMERIC-GUARDS',
+    scope: 'engine-controller',
+    title: 'writer rejects non-finite or invalid numeric write inputs',
+  ),
+  Invariant(
+    id: 'INV-V2-EVENTS-IMMUTABLE',
+    scope: 'engine-runtime',
+    title: 'published events expose immutable nodeIds/payload snapshots',
+  ),
+  Invariant(
     id: 'INV-V2-EPOCH-INVALIDATION',
     scope: 'engine-runtime',
     title: 'replace-scene lifecycle preserves epoch invalidation',

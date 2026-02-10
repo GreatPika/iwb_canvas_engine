@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'transform2d.dart';
 import '../public/snapshot.dart';
+import 'immutable_collections.dart';
 
 /// Discrete actions emitted by interactive controllers for app-level undo/redo.
 enum ActionType {
@@ -18,12 +19,28 @@ enum ActionType {
 
 /// A committed action with stable [actionId] and affected [nodeIds].
 class ActionCommitted {
-  const ActionCommitted({
+  factory ActionCommitted({
+    required String actionId,
+    required ActionType type,
+    required List<NodeId> nodeIds,
+    required int timestampMs,
+    Map<String, Object?>? payload,
+  }) {
+    return ActionCommitted._(
+      actionId: actionId,
+      type: type,
+      nodeIds: freezeList<NodeId>(nodeIds),
+      timestampMs: timestampMs,
+      payload: freezePayloadMap(payload),
+    );
+  }
+
+  const ActionCommitted._({
     required this.actionId,
     required this.type,
     required this.nodeIds,
     required this.timestampMs,
-    this.payload,
+    required this.payload,
   });
 
   final String actionId;

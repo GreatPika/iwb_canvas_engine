@@ -60,6 +60,8 @@ Key invariants:
 - Single source of truth: runtime state is owned by controller snapshot.
 - Public API does not expose mutable core scene structures.
 - All state mutations flow through `write` transactions and safe txn operations.
+- Committed signals are delivered only after store commit finalization.
+- Node-id index state (`allNodeIds`, `nodeIdSeed`) is derived from committed scene data.
 - Background layer rule: at most one background layer; canonical index is `0`.
 - Unique node ids across all layers.
 - Input and render subsystems must not bypass controller transaction boundaries.

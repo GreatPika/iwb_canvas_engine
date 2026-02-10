@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/core/action_events.dart';
 
+// INV:INV-V2-EVENTS-IMMUTABLE
+
 void main() {
   group('ActionCommitted parsers', () {
     test('tryTransformDelta parses valid matrix payload', () {
@@ -182,5 +184,37 @@ void main() {
     expect(request.nodeId, 't');
     expect(request.timestampMs, 42);
     expect(request.position, const Offset(3, 4));
+  });
+
+  test('ActionCommitted freezes nodeIds and payload', () {
+    final nodeIds = <String>['n1'];
+    final payload = <String, Object?>{
+      'nested': <String, Object?>{'value': 1},
+      'tags': <String>{'a'},
+    };
+    final action = ActionCommitted(
+      actionId: 'a10',
+      type: ActionType.transform,
+      nodeIds: nodeIds,
+      timestampMs: 10,
+      payload: payload,
+    );
+
+    nodeIds.add('n2');
+    (payload['nested'] as Map<String, Object?>)['value'] = 2;
+    (payload['tags'] as Set<String>).add('b');
+
+    expect(action.nodeIds, const <String>['n1']);
+    expect((action.payload!['nested'] as Map<String, Object?>)['value'], 1);
+    expect(action.payload!['tags'], const <String>{'a'});
+    expect(() => action.nodeIds.add('x'), throwsUnsupportedError);
+    expect(
+      () => (action.payload!['nested'] as Map<Object?, Object?>)['value'] = 3,
+      throwsUnsupportedError,
+    );
+    expect(
+      () => (action.payload!['tags'] as Set<Object?>).add('c'),
+      throwsUnsupportedError,
+    );
   });
 }

@@ -1,10 +1,23 @@
 import '../../../public/snapshot.dart';
+import '../../../core/immutable_collections.dart';
 
 class V2BufferedSignal {
-  const V2BufferedSignal({
+  factory V2BufferedSignal({
+    required String type,
+    required List<NodeId> nodeIds,
+    Map<String, Object?>? payload,
+  }) {
+    return V2BufferedSignal._(
+      type: type,
+      nodeIds: freezeList<NodeId>(nodeIds),
+      payload: freezePayloadMap(payload),
+    );
+  }
+
+  const V2BufferedSignal._({
     required this.type,
     required this.nodeIds,
-    this.payload,
+    required this.payload,
   });
 
   final String type;
@@ -13,12 +26,28 @@ class V2BufferedSignal {
 }
 
 class V2CommittedSignal {
-  const V2CommittedSignal({
+  factory V2CommittedSignal({
+    required String signalId,
+    required String type,
+    required List<NodeId> nodeIds,
+    required int commitRevision,
+    Map<String, Object?>? payload,
+  }) {
+    return V2CommittedSignal._(
+      signalId: signalId,
+      type: type,
+      nodeIds: freezeList<NodeId>(nodeIds),
+      commitRevision: commitRevision,
+      payload: freezePayloadMap(payload),
+    );
+  }
+
+  const V2CommittedSignal._({
     required this.signalId,
     required this.type,
     required this.nodeIds,
     required this.commitRevision,
-    this.payload,
+    required this.payload,
   });
 
   final String signalId;

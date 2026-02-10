@@ -269,6 +269,7 @@ Direct usage is useful when embedding the controller in custom input pipelines.
 - Includes state snapshots (`snapshot`, `selectedNodeIds`) and explicit write operations.
 - Does not expose mutable `Scene`/`SceneNode`.
 - Does not include `writeFindNode` or `writeMark*` escape methods.
+- Does not expose node-id bookkeeping internals; ids are allocated via structural writes (`writeNodeInsert`).
 
 Prefer high-level command methods unless custom transactional logic is required.
 
@@ -300,6 +301,10 @@ On double tap in move mode, if top hit node is a text node, controller emits `Ed
 - `nodeIds`
 - `timestampMs`
 - optional `payload`
+
+Delivery and mutability contract:
+
+- `nodeIds` and `payload` are immutable snapshots; subscribers cannot mutate shared event data.
 
 `ActionType` values:
 

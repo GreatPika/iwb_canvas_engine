@@ -4,7 +4,7 @@ import 'signal_event.dart';
 
 class V2SignalsSlice {
   final StreamController<V2CommittedSignal> _signals =
-      StreamController<V2CommittedSignal>.broadcast(sync: true);
+      StreamController<V2CommittedSignal>.broadcast();
 
   List<V2BufferedSignal> _buffered = const <V2BufferedSignal>[];
   int _signalCounter = 0;
@@ -22,26 +22,33 @@ class V2SignalsSlice {
     _buffered = const <V2BufferedSignal>[];
   }
 
-  int writeFlushBuffered({required int commitRevision}) {
-    if (_isDisposed) return 0;
+  List<V2CommittedSignal> writeTakeCommitted({required int commitRevision}) {
+    if (_isDisposed) return const <V2CommittedSignal>[];
     final pending = _buffered;
     _buffered = const <V2BufferedSignal>[];
-    var emitted = 0;
+    if (pending.isEmpty) return const <V2CommittedSignal>[];
+    final committed = <V2CommittedSignal>[];
 
     for (final signal in pending) {
-      if (_isDisposed) return emitted;
-      _signals.add(
+      committed.add(
         V2CommittedSignal(
           signalId: 's${_signalCounter++}',
           type: signal.type,
-          nodeIds: List.of(signal.nodeIds),
+          nodeIds: signal.nodeIds,
           payload: signal.payload,
           commitRevision: commitRevision,
         ),
       );
-      emitted = emitted + 1;
     }
-    return emitted;
+    return committed;
+  }
+
+  void emitCommitted(Iterable<V2CommittedSignal> committed) {
+    if (_isDisposed) return;
+    for (final signal in committed) {
+      if (_isDisposed) return;
+      _signals.add(signal);
+    }
   }
 
   void dispose() {

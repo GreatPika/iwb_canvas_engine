@@ -15,12 +15,6 @@ abstract interface class SceneWriteTxn {
   /// Current selection snapshot for the transaction.
   Set<NodeId> get selectedNodeIds;
 
-  NodeId writeNewNodeId();
-  bool writeContainsNodeId(NodeId nodeId);
-  void writeRegisterNodeId(NodeId nodeId);
-  void writeUnregisterNodeId(NodeId nodeId);
-  void writeRebuildNodeIdIndex();
-
   String writeNodeInsert(NodeSpec spec, {int? layerIndex});
   bool writeNodeErase(NodeId nodeId);
   bool writeNodePatch(NodePatch patch);

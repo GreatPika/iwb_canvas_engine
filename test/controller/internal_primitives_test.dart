@@ -171,7 +171,7 @@ void main() {
     expect(ctx.changeSet.documentReplaced, isTrue);
   });
 
-  test('SceneWriter covers node-id helpers and selection branches', () {
+  test('SceneWriter covers id generation and selection branches', () {
     final ctx = TxnContext(
       baseScene: Scene(
         layers: <Layer>[
@@ -195,14 +195,10 @@ void main() {
     final bufferedSignals = <V2BufferedSignal>[];
     final writer = SceneWriter(ctx, txnSignalSink: bufferedSignals.add);
 
-    expect(writer.writeNewNodeId(), 'node-2');
-    expect(writer.writeContainsNodeId('rect-1'), isTrue);
-    writer.writeRegisterNodeId('node-extra');
-    expect(writer.writeContainsNodeId('node-extra'), isTrue);
-    writer.writeUnregisterNodeId('node-extra');
-    expect(writer.writeContainsNodeId('node-extra'), isFalse);
-
-    writer.writeRebuildNodeIdIndex();
+    final generatedId = writer.writeNodeInsert(
+      RectNodeSpec(size: const Size(2, 2)),
+    );
+    expect(generatedId, 'node-2');
     expect(ctx.workingNodeIds, containsAll(<NodeId>{'rect-1', 'locked'}));
 
     expect(
@@ -222,9 +218,58 @@ void main() {
     expect(writer.writeSelectionClear(), isFalse);
 
     final selectAll = writer.writeSelectionSelectAll();
-    expect(selectAll, 1);
-    expect(writer.selectedNodeIds, const <NodeId>{'rect-1'});
+    expect(selectAll, 2);
+    expect(writer.selectedNodeIds, const <NodeId>{'rect-1', 'node-2'});
     expect(writer.writeSelectionSelectAll(), 0);
+  });
+
+  test('SceneWriter writeNodeErase respects deletable layer policy', () {
+    // INV:INV-V2-WRITE-NUMERIC-GUARDS
+    final ctx = TxnContext(
+      baseScene: Scene(
+        layers: <Layer>[
+          Layer(
+            nodes: <SceneNode>[
+              RectNode(
+                id: 'locked',
+                size: const Size(10, 10),
+                isDeletable: false,
+              ),
+              RectNode(id: 'free', size: const Size(10, 10)),
+            ],
+          ),
+        ],
+      ),
+      workingSelection: <NodeId>{'locked', 'free'},
+      workingNodeIds: <NodeId>{'locked', 'free'},
+      nodeIdSeed: 0,
+    );
+    final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+
+    expect(writer.writeNodeErase('locked'), isFalse);
+    expect(writer.writeNodeErase('free'), isTrue);
+  });
+
+  test('SceneWriter rejects non-finite grid/camera values', () {
+    // INV:INV-V2-WRITE-NUMERIC-GUARDS
+    final ctx = TxnContext(
+      baseScene: Scene(),
+      workingSelection: <NodeId>{},
+      workingNodeIds: <NodeId>{},
+      nodeIdSeed: 0,
+    );
+    final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+
+    expect(() => writer.writeGridCellSize(double.nan), throwsArgumentError);
+    expect(() => writer.writeGridCellSize(0), throwsArgumentError);
+    expect(
+      () => writer.writeCameraOffset(const Offset(double.infinity, 0)),
+      throwsArgumentError,
+    );
+    expect(
+      () => writer.writeCameraOffset(const Offset(0, double.nan)),
+      throwsArgumentError,
+    );
   });
 
   test('writeNodeTransformSet marks visual change when bounds stay same', () {

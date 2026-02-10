@@ -1,3 +1,18 @@
+## Unreleased
+
+### Breaking
+
+- `SceneWriteTxn` no longer exposes node-id bookkeeping methods (`writeNewNodeId`, `writeContainsNodeId`, `writeRegisterNodeId`, `writeUnregisterNodeId`, `writeRebuildNodeIdIndex`).
+- `ActionCommitted` and internal committed signal payloads are now immutable snapshots (mutating `nodeIds`/`payload` throws).
+
+### Changed
+
+- Commit pipeline now finalizes store state first and only then emits committed signals.
+- Controller commit now derives `allNodeIds` and `nodeIdSeed` from the committed scene as the single source of truth.
+- `SceneWriter.writeNodeErase` now respects deletable-layer policy consistently with selection delete flow.
+- `SceneWriter.writeGridCellSize` and `SceneWriter.writeCameraOffset` now reject non-finite/invalid inputs at write boundary.
+- Added runtime commit invariant assertions for store consistency in debug/test execution.
+
 ## 2.0.0 (2026-02-10)
 
 ### Breaking

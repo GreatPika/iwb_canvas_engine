@@ -9,6 +9,8 @@ import 'package:iwb_canvas_engine/src/input/slices/signals/signal_event.dart';
 
 // INV:INV-V2-TXN-ATOMIC-COMMIT
 // INV:INV-V2-EPOCH-INVALIDATION
+// INV:INV-V2-SIGNALS-AFTER-COMMIT
+// INV:INV-V2-ID-INDEX-FROM-SCENE
 
 void main() {
   SceneSnapshot twoRectSnapshot() {
@@ -99,6 +101,7 @@ void main() {
     controller.write<void>((writer) {
       writer.writeSignalEnqueue(type: 'signals-only');
     });
+    await pumpEventQueue();
 
     expect(emitted, hasLength(1));
     expect(emitted.single.type, 'signals-only');
@@ -112,7 +115,7 @@ void main() {
 
   test(
     'write rollback keeps scene/revisions unchanged and emits no signals',
-    () {
+    () async {
       final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
       addTearDown(controller.dispose);
 
@@ -139,6 +142,7 @@ void main() {
         }),
         throwsStateError,
       );
+      await pumpEventQueue();
 
       expect(
         controller.snapshot.layers.first.nodes.length,
@@ -217,7 +221,7 @@ void main() {
 
   test(
     'writeReplaceScene increments epoch clears selection and has no action signal',
-    () {
+    () async {
       final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
       addTearDown(controller.dispose);
 
@@ -245,6 +249,7 @@ void main() {
           ],
         ),
       );
+      await pumpEventQueue();
 
       expect(controller.controllerEpoch, 1);
       expect(controller.selectedNodeIds, isEmpty);
@@ -387,7 +392,7 @@ void main() {
     },
   );
 
-  test('signals are emitted only after successful commit', () {
+  test('signals are emitted only after successful commit', () async {
     final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
@@ -410,8 +415,94 @@ void main() {
     controller.write<void>((writer) {
       writer.writeSignalEnqueue(type: 'committed');
     });
+    await pumpEventQueue();
 
     expect(emitted, <String>['committed']);
+  });
+
+  test(
+    'signal listener observes committed state and can trigger follow-up write',
+    () async {
+      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      addTearDown(controller.dispose);
+
+      final observed =
+          <({String type, int signalRevision, int storeRevision})>[];
+      Object? nestedWriteError;
+      final sub = controller.signals.listen((signal) {
+        observed.add((
+          type: signal.type,
+          signalRevision: signal.commitRevision,
+          storeRevision: controller.debugCommitRevision,
+        ));
+        if (signal.type == 'first') {
+          try {
+            controller.write<void>((writer) {
+              writer.writeSignalEnqueue(type: 'second');
+            });
+          } catch (error) {
+            nestedWriteError = error;
+          }
+        }
+      });
+      addTearDown(sub.cancel);
+
+      controller.write<void>((writer) {
+        writer.writeSignalEnqueue(type: 'first');
+      });
+      await pumpEventQueue(times: 2);
+
+      expect(nestedWriteError, isNull);
+      expect(
+        observed.map((entry) => entry.type).toList(growable: false),
+        const <String>['first', 'second'],
+      );
+      expect(
+        observed
+            .map((entry) => entry.signalRevision == entry.storeRevision)
+            .toList(growable: false),
+        everyElement(isTrue),
+      );
+      expect(controller.debugCommitRevision, 2);
+    },
+  );
+
+  test('committed signals expose immutable payload and nodeIds', () async {
+    // INV:INV-V2-EVENTS-IMMUTABLE
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    final emitted = <V2CommittedSignal>[];
+    final sub = controller.signals.listen(emitted.add);
+    addTearDown(sub.cancel);
+
+    final nodeIds = <NodeId>['r1'];
+    final payload = <String, Object?>{
+      'nested': <String, Object?>{'value': 1},
+      'items': <Object?>[1, 2],
+    };
+    controller.write<void>((writer) {
+      writer.writeSignalEnqueue(
+        type: 'immutable',
+        nodeIds: nodeIds,
+        payload: payload,
+      );
+    });
+
+    nodeIds.add('r2');
+    (payload['nested'] as Map<String, Object?>)['value'] = 99;
+    (payload['items'] as List<Object?>).add(3);
+    await pumpEventQueue();
+
+    final signal = emitted.single;
+    expect(signal.nodeIds, const <NodeId>['r1']);
+    expect((signal.payload!['nested']! as Map<String, Object?>)['value'], 1);
+    expect(signal.payload!['items'], const <Object?>[1, 2]);
+    expect(() => signal.nodeIds.add('x'), throwsUnsupportedError);
+    expect(
+      () => (signal.payload!['nested'] as Map<Object?, Object?>)['value'] = 7,
+      throwsUnsupportedError,
+    );
   });
 
   test('nested write throws and does not commit', () {

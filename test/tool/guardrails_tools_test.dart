@@ -136,36 +136,41 @@ class Store {
       }
     });
 
-    test('rejects scene/writeFindNode/writeMark* in public txn API', () async {
-      final sandbox = await _createSandbox();
-      try {
-        _writeFile(
-          sandbox,
-          'lib/iwb_canvas_engine.dart',
-          "export 'src/public/scene_write_txn.dart';\n",
-        );
-        _writeFile(sandbox, 'lib/src/public/scene_write_txn.dart', '''
+    test(
+      'rejects scene/writeFindNode/writeMark*/id-bookkeeping in public txn API',
+      () async {
+        final sandbox = await _createSandbox();
+        try {
+          _writeFile(
+            sandbox,
+            'lib/iwb_canvas_engine.dart',
+            "export 'src/public/scene_write_txn.dart';\n",
+          );
+          _writeFile(sandbox, 'lib/src/public/scene_write_txn.dart', '''
 abstract interface class SceneWriteTxn {
   Object get scene;
   Object? writeFindNode(String id);
   void writeMarkVisualChanged();
+  String writeNewNodeId();
 }
 ''');
 
-        final result = await _runTool(sandbox, 'check_guardrails.dart');
-        expect(result.exitCode, isNonZero);
-        expect(
-          result.stderr.toString(),
-          anyOf(
-            contains('must not expose raw scene access'),
-            contains('must not expose writeFindNode'),
-            contains('must not expose writeMark* escape hatches'),
-          ),
-        );
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
+          final result = await _runTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            anyOf(
+              contains('must not expose raw scene access'),
+              contains('must not expose writeFindNode'),
+              contains('must not expose writeMark* escape hatches'),
+              contains('must not expose node-id bookkeeping methods'),
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
 
     test(
       'rejects mutable core type in exported public API signature',
