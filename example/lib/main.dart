@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
-import 'package:iwb_canvas_engine/advanced.dart';
+import 'package:iwb_canvas_engine/basic_v2.dart';
 
 const ValueKey<String> canvasHostKey = ValueKey<String>('canvas-host');
 const ValueKey<String> modeMoveKey = ValueKey<String>('mode-move');
@@ -151,7 +151,12 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
       _ownsController = false;
     } else {
       _controller = SceneController(
-        scene: Scene(layers: [Layer()]),
+        initialSnapshot: SceneSnapshot(
+          layers: <LayerSnapshot>[
+            LayerSnapshot(isBackground: true),
+            LayerSnapshot(),
+          ],
+        ),
         clearSelectionOnDrawModeEnter: true,
         pointerSettings: const PointerInputSettings(
           tapSlop: 16,
@@ -957,31 +962,34 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     }
   }
 
-  List<TextNode> _selectedTextNodes() {
+  List<TextNodeSnapshot> _selectedTextNodes() {
     final selectedIds = _controller.selectedNodeIds;
-    if (selectedIds.isEmpty) return const <TextNode>[];
-    final nodes = <TextNode>[];
-    for (final layer in _controller.scene.layers) {
+    if (selectedIds.isEmpty) return const <TextNodeSnapshot>[];
+    final nodes = <TextNodeSnapshot>[];
+    for (final layer in _controller.snapshot.layers) {
       for (final node in layer.nodes) {
-        if (node is TextNode && selectedIds.contains(node.id)) nodes.add(node);
+        if (node is TextNodeSnapshot && selectedIds.contains(node.id)) {
+          nodes.add(node);
+        }
       }
     }
     return nodes;
   }
 
-  void _updateSelectedTextNodes(void Function(TextNode node) update) {
+  void _updateSelectedTextNodes(
+    TextNodePatch Function(TextNodeSnapshot node) patchBuilder,
+  ) {
     final nodes = _selectedTextNodes();
     if (nodes.isEmpty) return;
     for (final node in nodes) {
-      update(node);
+      _controller.patchNode(patchBuilder(node));
     }
-    _controller.notifySceneChanged();
   }
 
-  TextNode? _findTextNode(NodeId id) {
-    for (final layer in _controller.scene.layers) {
+  TextNodeSnapshot? _findTextNode(NodeId id) {
+    for (final layer in _controller.snapshot.layers) {
       for (final node in layer.nodes) {
-        if (node is TextNode && node.id == id) return node;
+        if (node is TextNodeSnapshot && node.id == id) return node;
       }
     }
     return null;
@@ -993,11 +1001,15 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     if (node == null) return;
     setState(() {
       _editingNodeId = node.id;
-      node.isVisible = false;
       _textEditController = TextEditingController(text: node.text);
       _textEditFocusNode = FocusNode();
     });
-    _controller.notifySceneChanged();
+    _controller.patchNode(
+      TextNodePatch(
+        id: node.id,
+        common: const CommonNodePatch(isVisible: PatchField<bool>.value(false)),
+      ),
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _textEditFocusNode?.requestFocus();
@@ -1012,7 +1024,6 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     if (node != null) {
       if (save) {
         final newText = _textEditController?.text ?? "";
-        node.text = newText;
 
         // Update node size to fit the text precisely
         final textStyle = TextStyle(
@@ -1030,11 +1041,26 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
           textAlign: node.align,
         )..layout();
 
-        // Exact size matches prevent jumping back
-        node.size = Size(tp.width, tp.height);
+        _controller.patchNode(
+          TextNodePatch(
+            id: node.id,
+            text: PatchField<String>.value(newText),
+            size: PatchField<Size>.value(Size(tp.width, tp.height)),
+            common: const CommonNodePatch(
+              isVisible: PatchField<bool>.value(true),
+            ),
+          ),
+        );
+      } else {
+        _controller.patchNode(
+          TextNodePatch(
+            id: node.id,
+            common: const CommonNodePatch(
+              isVisible: PatchField<bool>.value(true),
+            ),
+          ),
+        );
       }
-      node.isVisible = true;
-      _controller.notifySceneChanged();
     }
 
     final textEditController = _textEditController;
@@ -1054,7 +1080,13 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     final node = _findTextNode(nodeId);
     if (node == null) return null;
 
-    final viewPosition = toView(node.position, _controller.scene.camera.offset);
+    final viewPosition = toView(
+      node.transform.translation,
+      _controller.scene.camera.offset,
+    );
+    final rotationDeg = _rotationDegreesFromTransform(node.transform);
+    final scaleX = _scaleXFromTransform(node.transform);
+    final scaleY = _scaleYFromTransform(node.transform);
     final alignment = _mapTextAlignToAlignment(node.align);
 
     return Positioned(
@@ -1063,8 +1095,8 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
       top: viewPosition.dy,
       child: Transform(
         transform: Matrix4.rotationZ(
-          node.rotationDeg * math.pi / 180,
-        ).scaledByVector3(Vector3(node.scaleX, node.scaleY, 1.0)),
+          rotationDeg * math.pi / 180,
+        ).scaledByVector3(Vector3(scaleX, scaleY, 1.0)),
         child: FractionalTranslation(
           translation: const Offset(-0.5, -0.5),
           child: SizedBox(
@@ -1129,7 +1161,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   }
 
   Future<void> _exportSceneJson() async {
-    final json = encodeSceneToJson(_controller.scene);
+    final json = encodeSceneToJson(_controller.snapshot);
     _lastExportedJson = json;
     await showDialog(
       context: context,
@@ -1189,8 +1221,6 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
       try {
         final decoded = decodeSceneFromJson(result);
         _applyDecodedScene(decoded);
-        _controller.setSelection(const <NodeId>[]);
-        _controller.notifySceneChanged();
       } catch (e) {
         if (!mounted) return;
         ScaffoldMessenger.of(
@@ -1200,65 +1230,74 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     }
   }
 
-  void _applyDecodedScene(Scene decoded) {
-    final scene = _controller.scene;
-    scene.layers
-      ..clear()
-      ..addAll(decoded.layers);
-    scene.camera.offset = decoded.camera.offset;
-    scene.background.color = decoded.background.color;
-    scene.background.grid.isEnabled = decoded.background.grid.isEnabled;
-    scene.background.grid.cellSize = decoded.background.grid.cellSize;
+  void _applyDecodedScene(SceneSnapshot decoded) {
+    _controller.replaceScene(decoded);
   }
 
   void _addSampleObjects() {
     final baseX = 100 + (_sampleSeed * 30);
     final baseY = 100 + (_sampleSeed * 20);
 
-    final nodes = <SceneNode>[
-      RectNode(
+    final nodes = <NodeSpec>[
+      RectNodeSpec(
         id: 'sample-${_nodeSeed++}',
         size: const Size(140, 90),
         fillColor: Colors.blue.withValues(alpha: 0.2),
         strokeColor: Colors.blue,
         strokeWidth: 2,
-      )..position = Offset(baseX.toDouble(), baseY.toDouble()),
+        transform: Transform2D.translation(
+          Offset(baseX.toDouble(), baseY.toDouble()),
+        ),
+      ),
     ];
 
     // Calculate proper size for text node
-    final textNode = TextNode(
-      id: 'sample-${_nodeSeed++}',
-      text: 'New Note',
-      size: const Size(100, 30), // temporary
-      fontSize: 20,
-      color: Colors.black87,
+    const sampleText = 'New Note';
+    const sampleFontSize = 20.0;
+    final textStyle = const TextStyle(
+      fontSize: sampleFontSize,
+      fontWeight: FontWeight.normal,
+      fontStyle: FontStyle.normal,
     );
-
     final textPainter = TextPainter(
-      text: TextSpan(
-        text: textNode.text,
-        style: TextStyle(
-          fontSize: textNode.fontSize,
-          fontWeight: textNode.isBold ? FontWeight.bold : FontWeight.normal,
-          fontStyle: textNode.isItalic ? FontStyle.italic : FontStyle.normal,
-          fontFamily: textNode.fontFamily,
-          height: textNode.lineHeight == null
-              ? null
-              : textNode.lineHeight! / textNode.fontSize,
-        ),
-      ),
+      text: TextSpan(text: sampleText, style: textStyle),
       textDirection: TextDirection.ltr,
-      textAlign: textNode.align,
+      textAlign: TextAlign.left,
     )..layout();
 
-    textNode.size = Size(textPainter.width, textPainter.height);
-    textNode.position = Offset(baseX + 160, baseY.toDouble());
-    nodes.add(textNode);
+    nodes.add(
+      TextNodeSpec(
+        id: 'sample-${_nodeSeed++}',
+        text: sampleText,
+        size: Size(textPainter.width, textPainter.height),
+        fontSize: sampleFontSize,
+        color: Colors.black87,
+        transform: Transform2D.translation(
+          Offset(baseX + 160, baseY.toDouble()),
+        ),
+      ),
+    );
 
     _sampleSeed++;
     for (final node in nodes) {
       _controller.addNode(node);
     }
+  }
+
+  double _rotationDegreesFromTransform(Transform2D transform) {
+    return math.atan2(transform.b, transform.a) * 180 / math.pi;
+  }
+
+  double _scaleXFromTransform(Transform2D transform) {
+    return math.sqrt(transform.a * transform.a + transform.b * transform.b);
+  }
+
+  double _scaleYFromTransform(Transform2D transform) {
+    final magnitude = math.sqrt(
+      transform.c * transform.c + transform.d * transform.d,
+    );
+    final det = transform.a * transform.d - transform.b * transform.c;
+    return det < 0 ? -magnitude : magnitude;
   }
 
   // Сеттеры
@@ -1279,20 +1318,31 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   void _setBackgroundColor(Color c) => _controller.setBackgroundColor(c);
   void _setGridEnabled(bool v) => _controller.setGridEnabled(v);
   void _setGridSize(double s) => _controller.setGridCellSize(s);
-  void _setSelectedTextColor(Color c) =>
-      _updateSelectedTextNodes((n) => n.color = c);
-  void _setSelectedTextAlign(TextAlign a) =>
-      _updateSelectedTextNodes((n) => n.align = a);
-  void _setSelectedTextFontSize(double v) =>
-      _updateSelectedTextNodes((n) => n.fontSize = v);
-  void _setSelectedTextLineHeight(double v) =>
-      _updateSelectedTextNodes((n) => n.lineHeight = v);
-  void _toggleSelectedTextBold() =>
-      _updateSelectedTextNodes((n) => n.isBold = !n.isBold);
-  void _toggleSelectedTextItalic() =>
-      _updateSelectedTextNodes((n) => n.isItalic = !n.isItalic);
-  void _toggleSelectedTextUnderline() =>
-      _updateSelectedTextNodes((n) => n.isUnderline = !n.isUnderline);
+  void _setSelectedTextColor(Color c) => _updateSelectedTextNodes(
+    (n) => TextNodePatch(id: n.id, color: PatchField<Color>.value(c)),
+  );
+  void _setSelectedTextAlign(TextAlign a) => _updateSelectedTextNodes(
+    (n) => TextNodePatch(id: n.id, align: PatchField<TextAlign>.value(a)),
+  );
+  void _setSelectedTextFontSize(double v) => _updateSelectedTextNodes(
+    (n) => TextNodePatch(id: n.id, fontSize: PatchField<double>.value(v)),
+  );
+  void _setSelectedTextLineHeight(double v) => _updateSelectedTextNodes(
+    (n) => TextNodePatch(id: n.id, lineHeight: PatchField<double?>.value(v)),
+  );
+  void _toggleSelectedTextBold() => _updateSelectedTextNodes(
+    (n) => TextNodePatch(id: n.id, isBold: PatchField<bool>.value(!n.isBold)),
+  );
+  void _toggleSelectedTextItalic() => _updateSelectedTextNodes(
+    (n) =>
+        TextNodePatch(id: n.id, isItalic: PatchField<bool>.value(!n.isItalic)),
+  );
+  void _toggleSelectedTextUnderline() => _updateSelectedTextNodes(
+    (n) => TextNodePatch(
+      id: n.id,
+      isUnderline: PatchField<bool>.value(!n.isUnderline),
+    ),
+  );
 }
 
 // --- ВСПОМОГАТЕЛЬНЫЕ ВИДЖЕТЫ ---

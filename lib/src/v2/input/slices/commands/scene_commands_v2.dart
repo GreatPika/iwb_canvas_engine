@@ -1,4 +1,7 @@
+import 'dart:ui' show Color, Offset;
+
 import '../../../../core/nodes.dart';
+import '../../../../core/transform2d.dart';
 import '../../../controller/scene_writer.dart';
 import '../../../public/node_patch.dart';
 import '../../../public/node_spec.dart';
@@ -57,6 +60,91 @@ class V2SceneCommandsSlice {
         type: 'selection.toggled',
         nodeIds: <NodeId>[nodeId],
       );
+      return null;
+    });
+  }
+
+  void writeSelectionClear() {
+    _writeRunner((writer) {
+      writer.writeSelectionClear();
+      writer.writeSignalEnqueue(type: 'selection.cleared');
+      return null;
+    });
+  }
+
+  int writeSelectionSelectAll({bool onlySelectable = true}) {
+    return _writeRunner((writer) {
+      final count = writer.writeSelectionSelectAll(
+        onlySelectable: onlySelectable,
+      );
+      if (count > 0) {
+        writer.writeSignalEnqueue(type: 'selection.all');
+      }
+      return count;
+    });
+  }
+
+  int writeSelectionTransform(Transform2D delta) {
+    return _writeRunner((writer) {
+      final affected = writer.writeSelectionTransform(delta);
+      if (affected > 0) {
+        writer.writeSignalEnqueue(
+          type: 'selection.transformed',
+          payload: <String, Object?>{'delta': delta.toJsonMap()},
+        );
+      }
+      return affected;
+    });
+  }
+
+  int writeDeleteSelection() {
+    return _writeRunner((writer) {
+      final removed = writer.writeDeleteSelection();
+      if (removed > 0) {
+        writer.writeSignalEnqueue(type: 'selection.deleted');
+      }
+      return removed;
+    });
+  }
+
+  int writeClearScene() {
+    return _writeRunner((writer) {
+      final removedIds = writer.writeClearSceneKeepBackground();
+      if (removedIds.isNotEmpty) {
+        writer.writeSignalEnqueue(type: 'scene.cleared', nodeIds: removedIds);
+      }
+      return removedIds.length;
+    });
+  }
+
+  void writeBackgroundColorSet(Color color) {
+    _writeRunner((writer) {
+      writer.writeBackgroundColor(color);
+      writer.writeSignalEnqueue(type: 'background.updated');
+      return null;
+    });
+  }
+
+  void writeGridEnabledSet(bool enabled) {
+    _writeRunner((writer) {
+      writer.writeGridEnable(enabled);
+      writer.writeSignalEnqueue(type: 'grid.enabled.updated');
+      return null;
+    });
+  }
+
+  void writeGridCellSizeSet(double size) {
+    _writeRunner((writer) {
+      writer.writeGridCellSize(size);
+      writer.writeSignalEnqueue(type: 'grid.cell.updated');
+      return null;
+    });
+  }
+
+  void writeCameraOffsetSet(Offset offset) {
+    _writeRunner((writer) {
+      writer.writeCameraOffset(offset);
+      writer.writeSignalEnqueue(type: 'camera.updated');
       return null;
     });
   }

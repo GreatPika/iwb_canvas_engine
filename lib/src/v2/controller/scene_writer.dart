@@ -1,8 +1,12 @@
 import 'dart:ui';
 
+import '../../core/background_layer_invariants.dart';
 import '../../core/nodes.dart';
 import '../../core/scene.dart';
+import '../../core/selection_policy.dart';
+import '../../core/transform2d.dart';
 import '../input/slices/signals/signal_event.dart';
+import '../model/document_clone.dart';
 import '../model/document.dart';
 import '../public/node_patch.dart';
 import '../public/node_spec.dart';
@@ -17,6 +21,22 @@ class SceneWriter {
 
   Scene get scene => _ctx.workingScene;
   Set<NodeId> get selectedNodeIds => _ctx.workingSelection;
+
+  NodeId writeNewNodeId() => _ctx.txnNextNodeId();
+
+  bool writeContainsNodeId(NodeId nodeId) => _ctx.txnHasNodeId(nodeId);
+
+  void writeRegisterNodeId(NodeId nodeId) {
+    _ctx.txnRememberNodeId(nodeId);
+  }
+
+  void writeUnregisterNodeId(NodeId nodeId) {
+    _ctx.txnForgetNodeId(nodeId);
+  }
+
+  void writeRebuildNodeIdIndex() {
+    _ctx.workingNodeIds = txnCollectNodeIds(_ctx.workingScene);
+  }
 
   String writeNodeInsert(NodeSpec spec, {int? layerIndex}) {
     final resolvedId = spec.id ?? _ctx.txnNextNodeId();
@@ -79,6 +99,10 @@ class SceneWriter {
     return true;
   }
 
+  ({SceneNode node, int layerIndex, int nodeIndex})? writeFindNode(NodeId id) {
+    return txnFindNodeById(_ctx.workingScene, id);
+  }
+
   void writeSelectionReplace(Iterable<NodeId> ids) {
     final next = <NodeId>{for (final id in ids) id};
     if (_txnSetsEqual(_ctx.workingSelection, next)) {
@@ -103,6 +127,34 @@ class SceneWriter {
     _ctx.changeSet.txnMarkSelectionChanged();
   }
 
+  bool writeSelectionClear() {
+    if (_ctx.workingSelection.isEmpty) {
+      return false;
+    }
+    _ctx.workingSelection = <NodeId>{};
+    _ctx.changeSet.txnMarkSelectionChanged();
+    return true;
+  }
+
+  int writeSelectionSelectAll({bool onlySelectable = true}) {
+    final ids = <NodeId>{
+      for (final layer in _ctx.workingScene.layers)
+        for (final node in layer.nodes)
+          if (isNodeInteractiveForSelection(
+            node,
+            layer,
+            onlySelectable: onlySelectable,
+          ))
+            node.id,
+    };
+    if (_txnSetsEqual(_ctx.workingSelection, ids)) {
+      return 0;
+    }
+    _ctx.workingSelection = ids;
+    _ctx.changeSet.txnMarkSelectionChanged();
+    return ids.length;
+  }
+
   int writeSelectionTranslate(Offset delta) {
     final moved = txnTranslateSelection(
       scene: _ctx.workingScene,
@@ -117,6 +169,104 @@ class SceneWriter {
     }
     _ctx.changeSet.txnMarkBoundsChanged();
     return moved.length;
+  }
+
+  int writeSelectionTransform(Transform2D delta) {
+    final selected = _ctx.workingSelection;
+    if (selected.isEmpty) return 0;
+
+    var affected = 0;
+    for (final layer in _ctx.workingScene.layers) {
+      if (layer.isBackground) continue;
+      for (final node in layer.nodes) {
+        if (!selected.contains(node.id)) continue;
+        if (!node.isTransformable || node.isLocked) continue;
+        final before = node.boundsWorld;
+        node.transform = delta.multiply(node.transform);
+        final after = node.boundsWorld;
+        _ctx.changeSet.txnTrackUpdated(node.id);
+        if (before != after) {
+          _ctx.changeSet.txnMarkBoundsChanged();
+        } else {
+          _ctx.changeSet.txnMarkVisualChanged();
+        }
+        affected = affected + 1;
+      }
+    }
+    return affected;
+  }
+
+  int writeDeleteSelection() {
+    final selected = _ctx.workingSelection;
+    if (selected.isEmpty) return 0;
+
+    final deleted = <NodeId>{
+      for (final layer in _ctx.workingScene.layers)
+        for (final node in layer.nodes)
+          if (selected.contains(node.id) && isNodeDeletableInLayer(node, layer))
+            node.id,
+    };
+    if (deleted.isEmpty) return 0;
+
+    for (final id in deleted) {
+      _ctx.txnForgetNodeId(id);
+    }
+
+    for (final layer in _ctx.workingScene.layers) {
+      layer.nodes.retainWhere((node) => !deleted.contains(node.id));
+    }
+    _ctx.changeSet.txnMarkStructuralChanged();
+    for (final id in deleted) {
+      _ctx.changeSet.txnTrackRemoved(id);
+    }
+    _ctx.workingSelection = <NodeId>{
+      for (final id in _ctx.workingSelection)
+        if (!deleted.contains(id)) id,
+    };
+    _ctx.changeSet.txnMarkSelectionChanged();
+    return deleted.length;
+  }
+
+  List<NodeId> writeClearSceneKeepBackground() {
+    canonicalizeBackgroundLayerInvariants(
+      _ctx.workingScene.layers,
+      onMultipleBackgroundError: (count) {
+        throw StateError(
+          'clearScene requires at most one background layer; found $count.',
+        );
+      },
+    );
+
+    final layers = _ctx.workingScene.layers;
+    final clearedIds = <NodeId>[
+      for (var layerIndex = 1; layerIndex < layers.length; layerIndex++)
+        for (final node in layers[layerIndex].nodes) node.id,
+    ];
+    for (final id in clearedIds) {
+      _ctx.txnForgetNodeId(id);
+    }
+    if (layers.length > 1) {
+      layers.length = 1;
+    }
+    if (clearedIds.isEmpty) {
+      return const <NodeId>[];
+    }
+
+    _ctx.changeSet.txnMarkStructuralChanged();
+    for (final id in clearedIds) {
+      _ctx.changeSet.txnTrackRemoved(id);
+    }
+    if (_ctx.workingSelection.isNotEmpty) {
+      _ctx.workingSelection = <NodeId>{};
+      _ctx.changeSet.txnMarkSelectionChanged();
+    }
+    return clearedIds;
+  }
+
+  void writeCameraOffset(Offset offset) {
+    if (_ctx.workingScene.camera.offset == offset) return;
+    _ctx.workingScene.camera.offset = offset;
+    _ctx.changeSet.txnMarkVisualChanged();
   }
 
   void writeGridEnable(bool enabled) {
@@ -141,6 +291,22 @@ class SceneWriter {
     }
     _ctx.workingScene.background.color = color;
     _ctx.changeSet.txnMarkVisualChanged();
+  }
+
+  void writeMarkSceneStructuralChanged() {
+    _ctx.changeSet.txnMarkStructuralChanged();
+  }
+
+  void writeMarkSceneGeometryChanged() {
+    _ctx.changeSet.txnMarkBoundsChanged();
+  }
+
+  void writeMarkVisualChanged() {
+    _ctx.changeSet.txnMarkVisualChanged();
+  }
+
+  void writeMarkSelectionChanged() {
+    _ctx.changeSet.txnMarkSelectionChanged();
   }
 
   void writeDocumentReplace(SceneSnapshot snapshot) {

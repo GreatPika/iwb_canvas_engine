@@ -3,7 +3,6 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/basic_v2.dart' hide NodeId;
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
-import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/v2/controller/change_set.dart';
 import 'package:iwb_canvas_engine/src/v2/controller/scene_writer.dart';
 import 'package:iwb_canvas_engine/src/v2/controller/store.dart';
@@ -169,6 +168,116 @@ void main() {
     expect(ctx.workingScene.layers.single.nodes.single.id, 'fresh');
     expect(ctx.workingSelection, isEmpty);
     expect(ctx.changeSet.documentReplaced, isTrue);
+  });
+
+  test('SceneWriter covers node-id helpers and selection branches', () {
+    final ctx = TxnContext(
+      workingScene: Scene(
+        layers: <Layer>[
+          Layer(
+            nodes: <SceneNode>[
+              RectNode(id: 'rect-1', size: const Size(10, 10)),
+              RectNode(
+                id: 'locked',
+                size: const Size(10, 10),
+                isSelectable: false,
+                isDeletable: false,
+              ),
+            ],
+          ),
+        ],
+      ),
+      workingSelection: <NodeId>{'rect-1'},
+      workingNodeIds: <NodeId>{'rect-1', 'locked'},
+      nodeIdSeed: 2,
+    );
+    final bufferedSignals = <V2BufferedSignal>[];
+    final writer = SceneWriter(ctx, txnSignalSink: bufferedSignals.add);
+
+    expect(writer.writeNewNodeId(), 'node-2');
+    expect(writer.writeContainsNodeId('rect-1'), isTrue);
+    writer.writeRegisterNodeId('node-extra');
+    expect(writer.writeContainsNodeId('node-extra'), isTrue);
+    writer.writeUnregisterNodeId('node-extra');
+    expect(writer.writeContainsNodeId('node-extra'), isFalse);
+
+    writer.writeRebuildNodeIdIndex();
+    expect(ctx.workingNodeIds, containsAll(<NodeId>{'rect-1', 'locked'}));
+
+    final found = writer.writeFindNode('rect-1');
+    expect(found, isNotNull);
+    expect(found!.layerIndex, 0);
+    expect(found.nodeIndex, 0);
+    expect(writer.writeFindNode('missing'), isNull);
+
+    expect(writer.writeSelectionClear(), isTrue);
+    expect(writer.writeSelectionClear(), isFalse);
+
+    final selectAll = writer.writeSelectionSelectAll();
+    expect(selectAll, 1);
+    expect(writer.selectedNodeIds, const <NodeId>{'rect-1'});
+    expect(writer.writeSelectionSelectAll(), 0);
+  });
+
+  test('SceneWriter covers clear/delete/mark helpers', () {
+    final ctx = TxnContext(
+      workingScene: Scene(
+        layers: <Layer>[
+          Layer(isBackground: true),
+          Layer(
+            nodes: <SceneNode>[
+              RectNode(
+                id: 'keep',
+                size: const Size(10, 10),
+                isDeletable: false,
+              ),
+              RectNode(id: 'del', size: const Size(10, 10)),
+            ],
+          ),
+        ],
+      ),
+      workingSelection: <NodeId>{'keep', 'del'},
+      workingNodeIds: <NodeId>{'keep', 'del'},
+      nodeIdSeed: 0,
+    );
+    final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+
+    expect(writer.writeDeleteSelection(), 1);
+    expect(
+      ctx.workingScene.layers[1].nodes.map((n) => n.id),
+      orderedEquals(<NodeId>['keep']),
+    );
+    expect(ctx.workingSelection, const <NodeId>{'keep'});
+    expect(writer.writeDeleteSelection(), 0);
+
+    final cleared = writer.writeClearSceneKeepBackground();
+    expect(cleared, const <NodeId>['keep']);
+    expect(ctx.workingScene.layers.length, 1);
+    expect(ctx.workingSelection, isEmpty);
+    expect(writer.writeClearSceneKeepBackground(), isEmpty);
+
+    writer.writeMarkSceneStructuralChanged();
+    writer.writeMarkSceneGeometryChanged();
+    writer.writeMarkVisualChanged();
+    writer.writeMarkSelectionChanged();
+    expect(ctx.changeSet.structuralChanged, isTrue);
+    expect(ctx.changeSet.boundsChanged, isTrue);
+    expect(ctx.changeSet.visualChanged, isTrue);
+    expect(ctx.changeSet.selectionChanged, isTrue);
+  });
+
+  test('SceneWriter clearScene throws on multiple background layers', () {
+    final ctx = TxnContext(
+      workingScene: Scene(
+        layers: <Layer>[Layer(isBackground: true), Layer(isBackground: true)],
+      ),
+      workingSelection: <NodeId>{},
+      workingNodeIds: <NodeId>{},
+      nodeIdSeed: 0,
+    );
+    final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+
+    expect(writer.writeClearSceneKeepBackground, throwsStateError);
   });
 
   test(

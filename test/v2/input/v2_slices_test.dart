@@ -135,4 +135,56 @@ void main() {
       );
     },
   );
+
+  test('commands slice covers selection transform/delete/clear helpers', () {
+    final controller = buildController();
+    addTearDown(controller.dispose);
+
+    final signalTypes = <String>[];
+    final sub = controller.signals.listen((signal) {
+      signalTypes.add(signal.type);
+    });
+    addTearDown(sub.cancel);
+
+    controller.commands.writeSelectionClear();
+    expect(signalTypes, contains('selection.cleared'));
+
+    final selectNone = controller.commands.writeSelectionSelectAll(
+      onlySelectable: false,
+    );
+    expect(selectNone, 1);
+    expect(signalTypes, contains('selection.all'));
+    expect(controller.selectedNodeIds, const <NodeId>{'base'});
+
+    final transformed = controller.commands.writeSelectionTransform(
+      Transform2D.translation(const Offset(4, 6)),
+    );
+    expect(transformed, 1);
+    expect(signalTypes, contains('selection.transformed'));
+
+    final deleted = controller.commands.writeDeleteSelection();
+    expect(deleted, 1);
+    expect(signalTypes, contains('selection.deleted'));
+
+    controller.commands.writeAddNode(
+      RectNodeSpec(id: 'temp', size: const Size(4, 4)),
+    );
+    final cleared = controller.commands.writeClearScene();
+    expect(cleared, 1);
+    expect(signalTypes, contains('scene.cleared'));
+
+    controller.commands.writeBackgroundColorSet(const Color(0xFFAA5500));
+    controller.commands.writeGridEnabledSet(true);
+    controller.commands.writeGridCellSizeSet(42);
+    controller.commands.writeCameraOffsetSet(const Offset(10, -4));
+    expect(
+      signalTypes,
+      containsAll(<String>[
+        'background.updated',
+        'grid.enabled.updated',
+        'grid.cell.updated',
+        'camera.updated',
+      ]),
+    );
+  });
 }
