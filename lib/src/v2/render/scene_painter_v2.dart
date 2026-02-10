@@ -443,6 +443,7 @@ class ScenePainterV2 extends CustomPainter {
     this.textLayoutCache,
     this.strokePathCache,
     this.pathMetricsCache,
+    this.selectionRect,
     this.selectionColor = const Color(0xFF1565C0),
     this.selectionStrokeWidth = 1,
     this.gridStrokeWidth = 1,
@@ -455,6 +456,7 @@ class ScenePainterV2 extends CustomPainter {
   final SceneTextLayoutCacheV2? textLayoutCache;
   final SceneStrokePathCacheV2? strokePathCache;
   final ScenePathMetricsCacheV2? pathMetricsCache;
+  final Rect? selectionRect;
   final Color selectionColor;
   final double selectionStrokeWidth;
   final double gridStrokeWidth;
@@ -494,7 +496,7 @@ class ScenePainterV2 extends CustomPainter {
       size.height,
     ).inflate(_cullPadding);
 
-    final selectedBounds = <Rect>[];
+    final selectedNodes = <NodeSnapshot>[];
     for (final layer in snapshot.layers) {
       for (final node in layer.nodes) {
         if (!node.isVisible) {
@@ -506,26 +508,389 @@ class ScenePainterV2 extends CustomPainter {
         }
         _drawNode(canvas, node, cameraOffset);
         if (selectedIds.contains(node.id)) {
-          selectedBounds.add(bounds);
+          selectedNodes.add(node);
         }
       }
     }
 
-    _drawSelection(canvas, selectedBounds, cameraOffset);
+    _drawSelection(
+      canvas,
+      selectedNodes,
+      cameraOffset,
+      selectionRect,
+      clampNonNegativeFinite(selectionStrokeWidth),
+    );
   }
 
-  void _drawSelection(Canvas canvas, List<Rect> bounds, Offset cameraOffset) {
-    final width = clampNonNegativeFinite(selectionStrokeWidth);
-    if (width <= 0) {
+  void _drawSelection(
+    Canvas canvas,
+    List<NodeSnapshot> selectedNodes,
+    Offset cameraOffset,
+    Rect? selectionRect,
+    double selectionStrokeWidth,
+  ) {
+    if (selectedNodes.isNotEmpty && selectionStrokeWidth > 0) {
+      for (final node in selectedNodes) {
+        _drawSelectionForNode(
+          canvas,
+          node,
+          cameraOffset,
+          selectionColor,
+          selectionStrokeWidth,
+        );
+      }
+    }
+
+    if (selectionRect == null) {
       return;
     }
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = width
-      ..color = selectionColor;
-    for (final rect in bounds) {
-      canvas.drawRect(rect.shift(-cameraOffset), paint);
+    if (!_isFiniteRect(selectionRect)) {
+      return;
     }
+    final normalized = _normalizeRect(selectionRect);
+    final viewRect = normalized.shift(-cameraOffset);
+    final fillPaint = Paint()
+      ..style = PaintingStyle.fill
+      ..color = _applyOpacity(selectionColor, 0.15);
+    final strokePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = selectionStrokeWidth
+      ..color = selectionColor;
+    canvas.drawRect(viewRect, fillPaint);
+    canvas.drawRect(viewRect, strokePaint);
+  }
+
+  void _drawSelectionForNode(
+    Canvas canvas,
+    NodeSnapshot node,
+    Offset cameraOffset,
+    Color color,
+    double haloWidth,
+  ) {
+    switch (node) {
+      case ImageNodeSnapshot image:
+        _drawBoxSelection(
+          canvas,
+          image.transform,
+          cameraOffset,
+          image.size,
+          color,
+          haloWidth,
+          baseStrokeWidth: 0,
+          clearFill: true,
+        );
+      case TextNodeSnapshot text:
+        _drawBoxSelection(
+          canvas,
+          text.transform,
+          cameraOffset,
+          text.size,
+          color,
+          haloWidth,
+          baseStrokeWidth: 0,
+          clearFill: true,
+        );
+      case RectNodeSnapshot rect:
+        final safeStrokeWidth = clampNonNegativeFinite(rect.strokeWidth);
+        final hasStroke = rect.strokeColor != null && safeStrokeWidth > 0;
+        _drawBoxSelection(
+          canvas,
+          rect.transform,
+          cameraOffset,
+          rect.size,
+          color,
+          haloWidth,
+          baseStrokeWidth: hasStroke ? safeStrokeWidth : 0,
+          clearFill: true,
+        );
+      case LineNodeSnapshot line:
+        if (!line.transform.isFinite ||
+            !_isFiniteOffset(line.start) ||
+            !_isFiniteOffset(line.end)) {
+          return;
+        }
+        final baseThickness = clampNonNegativeFinite(line.thickness);
+        canvas.save();
+        canvas.transform(_toViewTransform(line.transform, cameraOffset));
+        canvas.drawLine(
+          line.start,
+          line.end,
+          _haloPaint(
+            baseThickness + haloWidth * 2,
+            color,
+            cap: StrokeCap.round,
+          ),
+        );
+        canvas.drawLine(
+          line.start,
+          line.end,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = baseThickness
+            ..strokeCap = StrokeCap.round
+            ..color = _applyOpacity(line.color, line.opacity),
+        );
+        canvas.restore();
+      case StrokeNodeSnapshot stroke:
+        if (stroke.points.isEmpty ||
+            !stroke.transform.isFinite ||
+            !_areFiniteOffsets(stroke.points)) {
+          return;
+        }
+        final baseThickness = clampNonNegativeFinite(stroke.thickness);
+        canvas.save();
+        canvas.transform(_toViewTransform(stroke.transform, cameraOffset));
+        if (stroke.points.length == 1) {
+          _drawDotSelection(
+            canvas,
+            stroke.points.first,
+            baseThickness / 2,
+            color,
+            _applyOpacity(stroke.color, stroke.opacity),
+            haloWidth,
+          );
+        } else {
+          final path = strokePathCache != null
+              ? strokePathCache!.getOrBuild(stroke)
+              : _buildStrokePath(stroke.points);
+          canvas.drawPath(
+            path,
+            _haloPaint(
+              baseThickness + haloWidth * 2,
+              color,
+              cap: StrokeCap.round,
+              join: StrokeJoin.round,
+            ),
+          );
+          canvas.drawPath(
+            path,
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = baseThickness
+              ..strokeCap = StrokeCap.round
+              ..strokeJoin = StrokeJoin.round
+              ..color = _applyOpacity(stroke.color, stroke.opacity),
+          );
+        }
+        canvas.restore();
+      case PathNodeSnapshot pathNode:
+        if (!pathNode.transform.isFinite) {
+          return;
+        }
+        final pathNodeModel = _buildPathNode(pathNode);
+        final localPath = pathNodeModel.buildLocalPath(copy: false);
+        if (localPath == null) {
+          return;
+        }
+        canvas.save();
+        canvas.transform(_toViewTransform(pathNode.transform, cameraOffset));
+        final safeStrokeWidth = clampNonNegativeFinite(pathNode.strokeWidth);
+        final hasStroke = pathNode.strokeColor != null && safeStrokeWidth > 0;
+        final baseStrokeWidth = hasStroke ? safeStrokeWidth : 0.0;
+        final contours = pathMetricsCache != null
+            ? pathMetricsCache!.getOrBuild(node: pathNode, localPath: localPath)
+            : _buildPathSelectionContours(pathNode: pathNode, localPath: localPath);
+        if (contours.closedContours != null) {
+          _drawPathHalo(
+            canvas,
+            contours.closedContours!,
+            color,
+            haloWidth,
+            baseStrokeWidth: baseStrokeWidth,
+            clearFill: true,
+          );
+        }
+        for (final contour in contours.openContours) {
+          canvas.drawPath(
+            contour,
+            _haloPaint(
+              baseStrokeWidth + haloWidth * 2,
+              color,
+              cap: StrokeCap.round,
+              join: StrokeJoin.round,
+            ),
+          );
+          if (baseStrokeWidth > 0) {
+            canvas.drawPath(
+              contour,
+              Paint()
+                ..style = PaintingStyle.stroke
+                ..strokeWidth = baseStrokeWidth
+                ..strokeJoin = StrokeJoin.round
+                ..strokeCap = StrokeCap.round
+                ..color = _applyOpacity(
+                  pathNode.strokeColor ?? color,
+                  pathNode.opacity,
+                ),
+            );
+          }
+        }
+        canvas.restore();
+    }
+  }
+
+  PathSelectionContoursV2 _buildPathSelectionContours({
+    required PathNodeSnapshot pathNode,
+    required Path localPath,
+  }) {
+    final selectionFillType = _fillTypeFromSnapshot(pathNode.fillRule);
+    Path? closedContours;
+    final openContours = <Path>[];
+    for (final metric in localPath.computeMetrics()) {
+      final contour = metric.extractPath(
+        0,
+        metric.length,
+        startWithMoveTo: true,
+      );
+      contour.fillType = selectionFillType;
+      if (metric.isClosed) {
+        contour.close();
+        closedContours ??= Path()..fillType = selectionFillType;
+        closedContours.addPath(contour, Offset.zero);
+      } else {
+        openContours.add(contour);
+      }
+    }
+    return PathSelectionContoursV2(
+      closedContours: closedContours,
+      openContours: openContours,
+    );
+  }
+
+  void _drawBoxSelection(
+    Canvas canvas,
+    Transform2D nodeTransform,
+    Offset cameraOffset,
+    Size size,
+    Color color,
+    double haloWidth, {
+    required double baseStrokeWidth,
+    required bool clearFill,
+  }) {
+    if (!nodeTransform.isFinite) {
+      return;
+    }
+    canvas.save();
+    canvas.transform(_toViewTransform(nodeTransform, cameraOffset));
+    _drawRectHalo(
+      canvas,
+      _centerRect(size),
+      color,
+      clampNonNegativeFinite(haloWidth),
+      baseStrokeWidth: clampNonNegativeFinite(baseStrokeWidth),
+      clearFill: clearFill,
+    );
+    canvas.restore();
+  }
+
+  Paint _haloPaint(
+    double strokeWidth,
+    Color color, {
+    StrokeCap cap = StrokeCap.round,
+    StrokeJoin join = StrokeJoin.round,
+  }) {
+    return Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = clampNonNegativeFinite(strokeWidth)
+      ..strokeCap = cap
+      ..strokeJoin = join
+      ..color = color;
+  }
+
+  void _drawDotSelection(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    Color haloColor,
+    Color baseColor,
+    double haloWidth,
+  ) {
+    canvas.drawCircle(
+      center,
+      radius + haloWidth,
+      Paint()
+        ..style = PaintingStyle.fill
+        ..color = haloColor,
+    );
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..style = PaintingStyle.fill
+        ..color = baseColor,
+    );
+  }
+
+  void _drawRectHalo(
+    Canvas canvas,
+    Rect rect,
+    Color color,
+    double haloWidth, {
+    required double baseStrokeWidth,
+    required bool clearFill,
+  }) {
+    canvas.saveLayer(null, Paint());
+    final safeHaloWidth = clampNonNegativeFinite(haloWidth);
+    final safeBaseStrokeWidth = clampNonNegativeFinite(baseStrokeWidth);
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = clampNonNegativeFinite(
+          safeBaseStrokeWidth + safeHaloWidth * 2,
+        )
+        ..color = color,
+    );
+    final clearPaint = Paint()..blendMode = BlendMode.clear;
+    if (clearFill) {
+      clearPaint.style = PaintingStyle.fill;
+      canvas.drawRect(rect, clearPaint);
+    }
+    if (safeBaseStrokeWidth > 0) {
+      clearPaint
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = safeBaseStrokeWidth;
+      canvas.drawRect(rect, clearPaint);
+    }
+    canvas.restore();
+  }
+
+  void _drawPathHalo(
+    Canvas canvas,
+    Path path,
+    Color color,
+    double haloWidth, {
+    required double baseStrokeWidth,
+    required bool clearFill,
+  }) {
+    canvas.saveLayer(null, Paint());
+    final safeHaloWidth = clampNonNegativeFinite(haloWidth);
+    final safeBaseStrokeWidth = clampNonNegativeFinite(baseStrokeWidth);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = clampNonNegativeFinite(
+          safeBaseStrokeWidth + safeHaloWidth * 2,
+        )
+        ..strokeJoin = StrokeJoin.round
+        ..strokeCap = StrokeCap.round
+        ..color = color,
+    );
+    final clearPaint = Paint()..blendMode = BlendMode.clear;
+    if (clearFill) {
+      clearPaint.style = PaintingStyle.fill;
+      canvas.drawPath(path, clearPaint);
+    }
+    if (safeBaseStrokeWidth > 0) {
+      clearPaint
+        ..style = PaintingStyle.stroke
+        ..strokeJoin = StrokeJoin.round
+        ..strokeCap = StrokeCap.round
+        ..strokeWidth = safeBaseStrokeWidth;
+      canvas.drawPath(path, clearPaint);
+    }
+    canvas.restore();
   }
 
   void _drawNode(Canvas canvas, NodeSnapshot node, Offset cameraOffset) {
@@ -870,6 +1235,7 @@ class ScenePainterV2 extends CustomPainter {
         oldDelegate.textLayoutCache != textLayoutCache ||
         oldDelegate.strokePathCache != strokePathCache ||
         oldDelegate.pathMetricsCache != pathMetricsCache ||
+        oldDelegate.selectionRect != selectionRect ||
         oldDelegate.selectionColor != selectionColor ||
         oldDelegate.selectionStrokeWidth != selectionStrokeWidth ||
         oldDelegate.gridStrokeWidth != gridStrokeWidth ||
@@ -987,6 +1353,14 @@ Rect _centerRect(Size size) {
     width: safe.width,
     height: safe.height,
   );
+}
+
+Rect _normalizeRect(Rect rect) {
+  final left = rect.left < rect.right ? rect.left : rect.right;
+  final right = rect.left < rect.right ? rect.right : rect.left;
+  final top = rect.top < rect.bottom ? rect.top : rect.bottom;
+  final bottom = rect.top < rect.bottom ? rect.bottom : rect.top;
+  return Rect.fromLTRB(left, top, right, bottom);
 }
 
 Rect _aabbFromPoints(List<Offset> points) {

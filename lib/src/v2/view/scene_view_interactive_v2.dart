@@ -133,6 +133,7 @@ class _SceneViewInteractiveV2State extends State<SceneViewInteractiveV2> {
           textLayoutCache: _textLayoutCache,
           strokePathCache: _strokePathCache,
           pathMetricsCache: _pathMetricsCache,
+          selectionRect: widget.controller.selectionRect,
           selectionColor: widget.selectionColor,
           selectionStrokeWidth: widget.selectionStrokeWidth,
           gridStrokeWidth: widget.gridStrokeWidth,

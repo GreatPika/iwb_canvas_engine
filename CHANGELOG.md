@@ -1,5 +1,9 @@
 ## Unreleased
 
+- V2 render: selection visuals now match legacy behavior in interactive flows:
+  per-node halo rendering (Rect/Line/Stroke/Text/Image/Path) and marquee
+  rectangle (`selectionRect`) drawing are restored in `ScenePainterV2`.
+
 - V2 interactive view: restore in-progress freehand stroke rendering (pen/highlighter)
   during pointer move via lightweight foreground preview overlay in
   `SceneViewInteractiveV2`; stroke remains committed to snapshot on pointer up.

@@ -174,6 +174,43 @@ void main() {
     expect(nonBackground, greaterThan(0));
   });
 
+  test('ScenePainterV2 paints marquee selection rectangle', () async {
+    const background = Color(0xFFFFFFFF);
+    final controller = SceneControllerV2(
+      initialSnapshot: SceneSnapshot(
+        background: const BackgroundSnapshot(color: background),
+        layers: <LayerSnapshot>[LayerSnapshot()],
+      ),
+    );
+    addTearDown(controller.dispose);
+
+    final withoutMarquee = ScenePainterV2(
+      controller: controller,
+      imageResolver: (_) => null,
+      selectionColor: const Color(0xFFFF0000),
+      selectionStrokeWidth: 2,
+    );
+    final withMarquee = ScenePainterV2(
+      controller: controller,
+      imageResolver: (_) => null,
+      selectionRect: const Rect.fromLTRB(20, 20, 70, 60),
+      selectionColor: const Color(0xFFFF0000),
+      selectionStrokeWidth: 2,
+    );
+
+    final imageWithout = await _paintToImage(withoutMarquee);
+    final imageWith = await _paintToImage(withMarquee);
+    final nonBackgroundWithout = await _countNonBackgroundPixels(
+      imageWithout,
+      background,
+    );
+    final nonBackgroundWith = await _countNonBackgroundPixels(
+      imageWith,
+      background,
+    );
+    expect(nonBackgroundWith, greaterThan(nonBackgroundWithout));
+  });
+
   test(
     'ScenePainterV2 handles invalid numeric fields without throwing',
     () async {
