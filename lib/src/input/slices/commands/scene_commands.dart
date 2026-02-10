@@ -1,375 +1,151 @@
-import 'dart:ui';
+import 'dart:ui' show Color, Offset;
 
-import '../../../core/background_layer_invariants.dart';
 import '../../../core/nodes.dart';
-import '../../../core/scene.dart';
 import '../../../core/transform2d.dart';
-import '../../action_events.dart';
-import '../../internal/contracts.dart';
-import '../../internal/node_interaction_policy.dart';
-import '../../internal/selection_geometry.dart';
+import '../../../controller/scene_writer.dart';
+import '../../../public/node_patch.dart';
+import '../../../public/node_spec.dart';
 
-class SceneCommands {
-  SceneCommands(this._contracts);
+class V2SceneCommandsSlice {
+  V2SceneCommandsSlice(this._writeRunner);
 
-  final InputSliceContracts _contracts;
+  final T Function<T>(T Function(SceneWriter writer) fn) _writeRunner;
 
-  void notifySceneChanged() {
-    _contracts.rebuildNodeIdIndex();
-    final selectedNodeIds = _contracts.selectedNodeIds;
-    if (selectedNodeIds.isNotEmpty) {
-      _contracts.setSelection(
-        selectedNodeIds.where(_contracts.containsNodeId),
-        notify: false,
-      );
-    }
-    _contracts.markSceneStructuralChanged();
-    _contracts.notifyNow();
+  String writeAddNode(NodeSpec spec, {int? layerIndex}) {
+    return _writeRunner((writer) {
+      final nodeId = writer.writeNodeInsert(spec, layerIndex: layerIndex);
+      writer.writeSignalEnqueue(type: 'node.added', nodeIds: <NodeId>[nodeId]);
+      return nodeId;
+    });
   }
 
-  void mutate(void Function(Scene scene) fn) {
-    String? beforeFingerprint;
-    assert(() {
-      beforeFingerprint = _structuralFingerprint(_contracts.scene);
-      return true;
-    }());
-
-    fn(_contracts.scene);
-
-    assert(() {
-      final afterFingerprint = _structuralFingerprint(_contracts.scene);
-      if (beforeFingerprint != afterFingerprint) {
-        throw StateError(
-          'Structural scene mutation detected in mutate(...). '
-          'Use mutateStructural(...) for add/remove/reorder layers or nodes.',
+  bool writePatchNode(NodePatch patch) {
+    return _writeRunner((writer) {
+      final changed = writer.writeNodePatch(patch);
+      if (changed) {
+        writer.writeSignalEnqueue(
+          type: 'node.updated',
+          nodeIds: <NodeId>[patch.id],
         );
       }
-      return true;
-    }());
-
-    _contracts.markSceneGeometryChanged();
-    _contracts.requestRepaintOncePerFrame();
+      return changed;
+    });
   }
 
-  void mutateStructural(void Function(Scene scene) fn) {
-    fn(_contracts.scene);
-    notifySceneChanged();
-  }
-
-  void addNode(SceneNode node, {int? layerIndex}) {
-    if (layerIndex != null && layerIndex < 0) {
-      throw RangeError.range(layerIndex, 0, null, 'layerIndex');
-    }
-    if (_contracts.containsNodeId(node.id)) {
-      throw ArgumentError.value(
-        node.id,
-        'node.id',
-        'Node id must be unique within the scene.',
-      );
-    }
-
-    final layers = _contracts.scene.layers;
-    if (layers.isEmpty) {
-      if (layerIndex != null && layerIndex != 0) {
-        throw RangeError.range(layerIndex, 0, 0, 'layerIndex');
-      }
-      layers.add(Layer());
-    }
-
-    final resolvedLayerIndex =
-        layerIndex ?? _resolveDefaultAddLayerIndex(layers);
-    if (resolvedLayerIndex >= layers.length) {
-      throw RangeError.range(
-        resolvedLayerIndex,
-        0,
-        layers.length - 1,
-        'layerIndex',
-      );
-    }
-
-    layers[resolvedLayerIndex].nodes.add(node);
-    _contracts.registerNodeId(node.id);
-    _contracts.markSceneStructuralChanged();
-    _contracts.notifyNow();
-  }
-
-  int _resolveDefaultAddLayerIndex(List<Layer> layers) {
-    for (var i = 0; i < layers.length; i++) {
-      if (!layers[i].isBackground) {
-        return i;
-      }
-    }
-    layers.add(Layer());
-    return layers.length - 1;
-  }
-
-  String _structuralFingerprint(Scene scene) {
-    final buffer = StringBuffer();
-    buffer.write('layers=${scene.layers.length};');
-    for (var layerIndex = 0; layerIndex < scene.layers.length; layerIndex++) {
-      final layer = scene.layers[layerIndex];
-      buffer
-        ..write('L')
-        ..write(layerIndex)
-        ..write(':bg=')
-        ..write(layer.isBackground ? '1' : '0')
-        ..write(':nodes=')
-        ..write(layer.nodes.length)
-        ..write(':');
-      for (final node in layer.nodes) {
-        buffer
-          ..write(node.id)
-          ..write('|');
-      }
-      buffer.write(';');
-    }
-    return buffer.toString();
-  }
-
-  void removeNode(NodeId id, {int? timestampMs}) {
-    for (final layer in _contracts.scene.layers) {
-      final index = layer.nodes.indexWhere((node) => node.id == id);
-      if (index == -1) continue;
-
-      layer.nodes.removeAt(index);
-      _contracts.unregisterNodeId(id);
-      _contracts.setSelection(
-        _contracts.selectedNodeIds.where((candidate) => candidate != id),
-        notify: false,
-      );
-      _contracts.markSceneStructuralChanged();
-      _contracts.emitAction(ActionType.delete, [
-        id,
-      ], _contracts.resolveTimestampMs(timestampMs));
-      _contracts.notifyNow();
-      return;
-    }
-  }
-
-  void moveNode(NodeId id, {required int targetLayerIndex, int? timestampMs}) {
-    final layers = _contracts.scene.layers;
-    if (layers.isEmpty) {
-      throw RangeError.range(targetLayerIndex, 0, 0, 'targetLayerIndex');
-    }
-    if (targetLayerIndex < 0 || targetLayerIndex >= layers.length) {
-      throw RangeError.range(
-        targetLayerIndex,
-        0,
-        layers.length - 1,
-        'targetLayerIndex',
-      );
-    }
-
-    for (var layerIndex = 0; layerIndex < layers.length; layerIndex++) {
-      final layer = layers[layerIndex];
-      final nodeIndex = layer.nodes.indexWhere((node) => node.id == id);
-      if (nodeIndex == -1) continue;
-
-      if (layerIndex == targetLayerIndex) return;
-
-      final node = layer.nodes.removeAt(nodeIndex);
-      layers[targetLayerIndex].nodes.add(node);
-      _contracts.markSceneStructuralChanged();
-      _contracts.emitAction(
-        ActionType.move,
-        [id],
-        _contracts.resolveTimestampMs(timestampMs),
-        payload: <String, Object?>{
-          'sourceLayerIndex': layerIndex,
-          'targetLayerIndex': targetLayerIndex,
-        },
-      );
-      _contracts.notifyNow();
-      return;
-    }
-  }
-
-  void clearSelection() {
-    if (_contracts.selectedNodeIds.isEmpty) return;
-    _contracts.setSelection(const <NodeId>[], notify: false);
-    _contracts.notifyNow();
-  }
-
-  void setSelection(Iterable<NodeId> nodeIds) {
-    _contracts.setSelection(nodeIds);
-  }
-
-  void toggleSelection(NodeId id) {
-    final selectedNodeIds = _contracts.selectedNodeIds;
-    if (selectedNodeIds.contains(id)) {
-      _contracts.setSelection(
-        selectedNodeIds.where((candidate) => candidate != id),
-      );
-    } else {
-      _contracts.setSelection(<NodeId>[...selectedNodeIds, id]);
-    }
-  }
-
-  void selectAll({bool onlySelectable = true}) {
-    final ids = <NodeId>[];
-    for (final layer in _contracts.scene.layers) {
-      for (final node in layer.nodes) {
-        if (!isNodeInteractiveForSelection(
-          node,
-          layer,
-          onlySelectable: onlySelectable,
-        )) {
-          continue;
-        }
-        ids.add(node.id);
-      }
-    }
-    _contracts.setSelection(ids);
-  }
-
-  void rotateSelection({required bool clockwise, int? timestampMs}) {
-    final nodes = selectedTransformableNodesInSceneOrder(
-      _contracts.scene,
-      _contracts.selectedNodeIds,
-    ).where((node) => !node.isLocked).toList(growable: false);
-    if (nodes.isEmpty) return;
-
-    final center = centerWorldForNodes(nodes);
-    final pivot = Transform2D.translation(center);
-    final unpivot = Transform2D.translation(Offset(-center.dx, -center.dy));
-    final rotation = Transform2D.rotationDeg(clockwise ? 90.0 : -90.0);
-    final delta = pivot.multiply(rotation).multiply(unpivot);
-
-    for (final node in nodes) {
-      node.transform = delta.multiply(node.transform);
-    }
-
-    _contracts.emitAction(
-      ActionType.transform,
-      nodes.map((node) => node.id).toList(growable: false),
-      _contracts.resolveTimestampMs(timestampMs),
-      payload: <String, Object?>{'delta': delta.toJsonMap()},
-    );
-    _contracts.markSceneGeometryChanged();
-    _contracts.notifyNow();
-  }
-
-  void flipSelectionVertical({int? timestampMs}) {
-    final nodes = selectedTransformableNodesInSceneOrder(
-      _contracts.scene,
-      _contracts.selectedNodeIds,
-    ).where((node) => !node.isLocked).toList(growable: false);
-    if (nodes.isEmpty) return;
-
-    final center = centerWorldForNodes(nodes);
-    final delta = Transform2D(
-      a: 1,
-      b: 0,
-      c: 0,
-      d: -1,
-      tx: 0,
-      ty: 2 * center.dy,
-    );
-
-    for (final node in nodes) {
-      node.transform = delta.multiply(node.transform);
-    }
-
-    _contracts.emitAction(
-      ActionType.transform,
-      nodes.map((node) => node.id).toList(growable: false),
-      _contracts.resolveTimestampMs(timestampMs),
-      payload: <String, Object?>{'delta': delta.toJsonMap()},
-    );
-    _contracts.markSceneGeometryChanged();
-    _contracts.notifyNow();
-  }
-
-  void flipSelectionHorizontal({int? timestampMs}) {
-    final nodes = selectedTransformableNodesInSceneOrder(
-      _contracts.scene,
-      _contracts.selectedNodeIds,
-    ).where((node) => !node.isLocked).toList(growable: false);
-    if (nodes.isEmpty) return;
-
-    final center = centerWorldForNodes(nodes);
-    final delta = Transform2D(
-      a: -1,
-      b: 0,
-      c: 0,
-      d: 1,
-      tx: 2 * center.dx,
-      ty: 0,
-    );
-
-    for (final node in nodes) {
-      node.transform = delta.multiply(node.transform);
-    }
-
-    _contracts.emitAction(
-      ActionType.transform,
-      nodes.map((node) => node.id).toList(growable: false),
-      _contracts.resolveTimestampMs(timestampMs),
-      payload: <String, Object?>{'delta': delta.toJsonMap()},
-    );
-    _contracts.markSceneGeometryChanged();
-    _contracts.notifyNow();
-  }
-
-  void deleteSelection({int? timestampMs}) {
-    final selectedNodeIds = _contracts.selectedNodeIds;
-    if (selectedNodeIds.isEmpty) return;
-    final deletableIds = <NodeId>[];
-    final selectedIdSet = selectedNodeIds.toSet();
-
-    for (final layer in _contracts.scene.layers) {
-      layer.nodes.removeWhere((node) {
-        if (!selectedIdSet.contains(node.id)) return false;
-        if (!isNodeDeletableInLayer(node, layer)) return false;
-        deletableIds.add(node.id);
-        _contracts.unregisterNodeId(node.id);
-        return true;
-      });
-    }
-
-    if (deletableIds.isEmpty) return;
-    final deletableIdSet = deletableIds.toSet();
-    _contracts.setSelection(
-      selectedNodeIds.where((id) => !deletableIdSet.contains(id)),
-      notify: false,
-    );
-    _contracts.markSceneStructuralChanged();
-    _contracts.emitAction(
-      ActionType.delete,
-      deletableIds,
-      _contracts.resolveTimestampMs(timestampMs),
-    );
-    _contracts.notifyNow();
-  }
-
-  void clearScene({int? timestampMs}) {
-    canonicalizeBackgroundLayerInvariants(
-      _contracts.scene.layers,
-      onMultipleBackgroundError: (count) {
-        throw StateError(
-          'clearScene requires at most one background layer; found $count.',
+  bool writeDeleteNode(NodeId nodeId) {
+    return _writeRunner((writer) {
+      final deleted = writer.writeNodeErase(nodeId);
+      if (deleted) {
+        writer.writeSignalEnqueue(
+          type: 'node.removed',
+          nodeIds: <NodeId>[nodeId],
         );
-      },
-    );
-
-    final clearedIds = <NodeId>[];
-    final layers = _contracts.scene.layers;
-    for (var layerIndex = 1; layerIndex < layers.length; layerIndex++) {
-      for (final node in layers[layerIndex].nodes) {
-        clearedIds.add(node.id);
-        _contracts.unregisterNodeId(node.id);
       }
-    }
-    layers.removeRange(1, layers.length);
+      return deleted;
+    });
+  }
 
-    if (clearedIds.isEmpty) return;
-    _contracts.setSelection(const <NodeId>[], notify: false);
-    _contracts.markSceneStructuralChanged();
-    _contracts.emitAction(
-      ActionType.clear,
-      clearedIds,
-      _contracts.resolveTimestampMs(timestampMs),
-    );
-    _contracts.notifyNow();
+  void writeSelectionReplace(Iterable<NodeId> nodeIds) {
+    _writeRunner((writer) {
+      writer.writeSelectionReplace(nodeIds);
+      writer.writeSignalEnqueue(type: 'selection.replaced', nodeIds: nodeIds);
+      return null;
+    });
+  }
+
+  void writeSelectionToggle(NodeId nodeId) {
+    _writeRunner((writer) {
+      writer.writeSelectionToggle(nodeId);
+      writer.writeSignalEnqueue(
+        type: 'selection.toggled',
+        nodeIds: <NodeId>[nodeId],
+      );
+      return null;
+    });
+  }
+
+  void writeSelectionClear() {
+    _writeRunner((writer) {
+      writer.writeSelectionClear();
+      writer.writeSignalEnqueue(type: 'selection.cleared');
+      return null;
+    });
+  }
+
+  int writeSelectionSelectAll({bool onlySelectable = true}) {
+    return _writeRunner((writer) {
+      final count = writer.writeSelectionSelectAll(
+        onlySelectable: onlySelectable,
+      );
+      if (count > 0) {
+        writer.writeSignalEnqueue(type: 'selection.all');
+      }
+      return count;
+    });
+  }
+
+  int writeSelectionTransform(Transform2D delta) {
+    return _writeRunner((writer) {
+      final affected = writer.writeSelectionTransform(delta);
+      if (affected > 0) {
+        writer.writeSignalEnqueue(
+          type: 'selection.transformed',
+          payload: <String, Object?>{'delta': delta.toJsonMap()},
+        );
+      }
+      return affected;
+    });
+  }
+
+  int writeDeleteSelection() {
+    return _writeRunner((writer) {
+      final removed = writer.writeDeleteSelection();
+      if (removed > 0) {
+        writer.writeSignalEnqueue(type: 'selection.deleted');
+      }
+      return removed;
+    });
+  }
+
+  int writeClearScene() {
+    return _writeRunner((writer) {
+      final removedIds = writer.writeClearSceneKeepBackground();
+      if (removedIds.isNotEmpty) {
+        writer.writeSignalEnqueue(type: 'scene.cleared', nodeIds: removedIds);
+      }
+      return removedIds.length;
+    });
+  }
+
+  void writeBackgroundColorSet(Color color) {
+    _writeRunner((writer) {
+      writer.writeBackgroundColor(color);
+      writer.writeSignalEnqueue(type: 'background.updated');
+      return null;
+    });
+  }
+
+  void writeGridEnabledSet(bool enabled) {
+    _writeRunner((writer) {
+      writer.writeGridEnable(enabled);
+      writer.writeSignalEnqueue(type: 'grid.enabled.updated');
+      return null;
+    });
+  }
+
+  void writeGridCellSizeSet(double size) {
+    _writeRunner((writer) {
+      writer.writeGridCellSize(size);
+      writer.writeSignalEnqueue(type: 'grid.cell.updated');
+      return null;
+    });
+  }
+
+  void writeCameraOffsetSet(Offset offset) {
+    _writeRunner((writer) {
+      writer.writeCameraOffset(offset);
+      writer.writeSignalEnqueue(type: 'camera.updated');
+      return null;
+    });
   }
 }

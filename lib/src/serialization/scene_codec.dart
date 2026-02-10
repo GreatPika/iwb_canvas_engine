@@ -4,9 +4,11 @@ import 'dart:ui';
 import 'package:path_drawing/path_drawing.dart';
 
 import '../core/background_layer_invariants.dart';
-import '../core/scene.dart';
 import '../core/nodes.dart';
+import '../core/scene.dart';
 import '../core/transform2d.dart';
+import '../model/document.dart';
+import '../public/snapshot.dart' hide NodeId;
 
 /// Thrown when scene JSON fails schema validation.
 class SceneJsonFormatException implements FormatException {
@@ -31,18 +33,18 @@ const int schemaVersionWrite = 2;
 /// JSON schema versions accepted by this package.
 const Set<int> schemaVersionsRead = {2};
 
-/// Encodes [scene] to a JSON string.
-String encodeSceneToJson(Scene scene) {
-  return jsonEncode(encodeScene(scene));
+/// Encodes [snapshot] to a JSON string.
+String encodeSceneToJson(SceneSnapshot snapshot) {
+  return jsonEncode(encodeScene(snapshot));
 }
 
-/// Decodes a [Scene] from a JSON string.
+/// Decodes a [SceneSnapshot] from a JSON string.
 ///
 /// Only `schemaVersion = 2` is accepted.
 ///
 /// Throws [SceneJsonFormatException] when the JSON is invalid, the schema
 /// version is unsupported, or validation fails.
-Scene decodeSceneFromJson(String json) {
+SceneSnapshot decodeSceneFromJson(String json) {
   try {
     final raw = jsonDecode(json);
     if (raw is! Map<String, dynamic>) {
@@ -56,8 +58,24 @@ Scene decodeSceneFromJson(String json) {
   }
 }
 
-/// Encodes [scene] into a JSON-serializable map.
-Map<String, dynamic> encodeScene(Scene scene) {
+/// Encodes [snapshot] into a JSON-serializable map.
+Map<String, dynamic> encodeScene(SceneSnapshot snapshot) {
+  final sceneDoc = txnSceneFromSnapshot(snapshot);
+  return encodeSceneDocument(sceneDoc);
+}
+
+/// Decodes a [SceneSnapshot] from a JSON map (already parsed).
+///
+/// Only `schemaVersion = 2` is accepted.
+///
+/// Throws [SceneJsonFormatException] when validation fails.
+SceneSnapshot decodeScene(Map<String, dynamic> json) {
+  final sceneDoc = decodeSceneDocument(json);
+  return txnSceneToSnapshot(sceneDoc);
+}
+
+/// Encodes internal mutable [Scene] document into a JSON-serializable map.
+Map<String, dynamic> encodeSceneDocument(Scene scene) {
   _ensureFiniteDouble(scene.camera.offset.dx, 'camera.offsetX');
   _ensureFiniteDouble(scene.camera.offset.dy, 'camera.offsetY');
   _ensureFiniteColor(scene.background.color, 'background.color');
@@ -88,12 +106,12 @@ Map<String, dynamic> encodeScene(Scene scene) {
   };
 }
 
-/// Decodes a [Scene] from a JSON map (already parsed).
+/// Decodes internal mutable [Scene] document from a JSON map (already parsed).
 ///
 /// Only `schemaVersion = 2` is accepted.
 ///
 /// Throws [SceneJsonFormatException] when validation fails.
-Scene decodeScene(Map<String, dynamic> json) {
+Scene decodeSceneDocument(Map<String, dynamic> json) {
   final version = _requireInt(json, 'schemaVersion');
   if (!schemaVersionsRead.contains(version)) {
     throw SceneJsonFormatException(
@@ -790,8 +808,12 @@ void _ensurePositiveDouble(double value, String field) {
 void _ensureClamped01Double(double value, String field) {
   _ensureFiniteDouble(value, field);
   if (value < 0 || value > 1) {
-    throw SceneJsonFormatException('Field $field must be within [0,1].');
+    _throwOutsideClamped01(field);
   }
+}
+
+Never _throwOutsideClamped01(String field) {
+  throw SceneJsonFormatException('Field $field must be within [0,1].');
 }
 
 void _ensureNonNegativeSize(Size size, String field) {

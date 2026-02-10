@@ -2,14 +2,15 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/advanced.dart';
+import 'package:iwb_canvas_engine/src/public/snapshot.dart';
+import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('P1-4: SceneTextLayoutCache caches TextPainter layouts', () {
-    final cache = SceneTextLayoutCache(maxEntries: 8);
-    final node = TextNode(
+  test('SceneTextLayoutCacheV2 caches TextPainter layouts', () {
+    final cache = SceneTextLayoutCacheV2(maxEntries: 8);
+    final node = TextNodeSnapshot(
       id: 't-1',
       text: 'Hello',
       size: const ui.Size(100, 20),
@@ -30,9 +31,9 @@ void main() {
     expect(cache.debugSize, 1);
   });
 
-  test('P1-5: SceneTextLayoutCache rebuilds on maxWidth change', () {
-    final cache = SceneTextLayoutCache(maxEntries: 8);
-    final node = TextNode(
+  test('SceneTextLayoutCacheV2 rebuilds on maxWidth change', () {
+    final cache = SceneTextLayoutCacheV2(maxEntries: 8);
+    final node = TextNodeSnapshot(
       id: 't-1',
       text: 'Hello',
       size: const ui.Size(100, 20),
@@ -47,10 +48,9 @@ void main() {
     expect(cache.debugBuildCount, 2);
   });
 
-  test('SceneTextLayoutCache key includes textDirection', () {
-    // INV:INV-RENDER-TEXT-DIRECTION-ALIGNMENT
-    final cache = SceneTextLayoutCache(maxEntries: 8);
-    final node = TextNode(
+  test('SceneTextLayoutCacheV2 key includes textDirection', () {
+    final cache = SceneTextLayoutCacheV2(maxEntries: 8);
+    final node = TextNodeSnapshot(
       id: 't-dir',
       text: 'Hello',
       size: const ui.Size(100, 20),
@@ -76,34 +76,16 @@ void main() {
     expect(cache.debugBuildCount, 2);
   });
 
-  test('SceneTextLayoutCache key includes valid lineHeight', () {
-    // INV:INV-CORE-RUNTIME-NUMERIC-SANITIZATION
-    final cache = SceneTextLayoutCache(maxEntries: 8);
-    final node = TextNode(
-      id: 't-lineHeight',
-      text: 'Hello',
-      size: const ui.Size(100, 20),
-      fontSize: 14,
-      lineHeight: 28,
-      color: const ui.Color(0xFF000000),
-    );
-    final style = const TextStyle(fontSize: 14, color: ui.Color(0xFF000000));
-
-    cache.getOrBuild(node: node, textStyle: style, maxWidth: 100);
-    expect(cache.debugBuildCount, 1);
-  });
-
-  test('SceneTextLayoutCache key excludes node identity and box height', () {
-    // INV:INV-RENDER-TEXT-LAYOUT-CACHE-KEY
-    final cache = SceneTextLayoutCache(maxEntries: 8);
-    final nodeA = TextNode(
+  test('SceneTextLayoutCacheV2 key excludes node identity and box height', () {
+    final cache = SceneTextLayoutCacheV2(maxEntries: 8);
+    final nodeA = TextNodeSnapshot(
       id: 'node-a',
       text: 'Shared',
       size: const ui.Size(100, 20),
       fontSize: 14,
       color: const ui.Color(0xFF000000),
     );
-    final nodeB = TextNode(
+    final nodeB = TextNodeSnapshot(
       id: 'node-b',
       text: 'Shared',
       size: const ui.Size(100, 200),
@@ -120,9 +102,9 @@ void main() {
     expect(cache.debugHitCount, 1);
   });
 
-  test('SceneTextLayoutCache key includes paint color', () {
-    final cache = SceneTextLayoutCache(maxEntries: 8);
-    final node = TextNode(
+  test('SceneTextLayoutCacheV2 key includes paint color', () {
+    final cache = SceneTextLayoutCacheV2(maxEntries: 8);
+    final node = TextNodeSnapshot(
       id: 'node-color',
       text: 'Shared',
       size: const ui.Size(100, 20),
@@ -147,24 +129,75 @@ void main() {
     expect(cache.debugBuildCount, 2);
   });
 
-  test('P1-6: SceneTextLayoutCache evicts oldest entries (LRU)', () {
-    final cache = SceneTextLayoutCache(maxEntries: 2);
+  test('SceneTextLayoutCacheV2 key includes positive lineHeight', () {
+    final cache = SceneTextLayoutCacheV2(maxEntries: 8);
+    final node = TextNodeSnapshot(
+      id: 'node-line-height',
+      text: 'Shared',
+      size: const ui.Size(100, 20),
+      fontSize: 14,
+      lineHeight: 1.5,
+      color: const ui.Color(0xFF000000),
+    );
+    const style = TextStyle(fontSize: 14, color: ui.Color(0xFF000000));
+
+    final first = cache.getOrBuild(node: node, textStyle: style, maxWidth: 100);
+    final second = cache.getOrBuild(
+      node: node,
+      textStyle: style,
+      maxWidth: 100,
+    );
+    expect(identical(first, second), isTrue);
+    expect(cache.debugBuildCount, 1);
+    expect(cache.debugHitCount, 1);
+  });
+
+  test('SceneTextLayoutCacheV2 normalizes invalid lineHeight and maxWidth', () {
+    final cache = SceneTextLayoutCacheV2(maxEntries: 8);
+    final node = TextNodeSnapshot(
+      id: 'node-invalid',
+      text: 'Shared',
+      size: const ui.Size(100, 20),
+      fontSize: 14,
+      lineHeight: -5,
+      color: const ui.Color(0xFF000000),
+    );
+    const style = TextStyle(fontSize: 14, color: ui.Color(0xFF000000));
+
+    final first = cache.getOrBuild(
+      node: node,
+      textStyle: style,
+      maxWidth: double.nan,
+    );
+    final second = cache.getOrBuild(
+      node: node,
+      textStyle: style,
+      maxWidth: -100,
+    );
+
+    expect(identical(first, second), isTrue);
+    expect(cache.debugBuildCount, 1);
+    expect(cache.debugHitCount, 1);
+  });
+
+  test('SceneTextLayoutCacheV2 evicts least-recent entries (LRU)', () {
+    final cache = SceneTextLayoutCacheV2(maxEntries: 2);
     final style = const TextStyle(fontSize: 14, color: ui.Color(0xFF000000));
-    final a = TextNode(
+    final a = TextNodeSnapshot(
       id: 'a',
       text: 'A',
       size: const ui.Size(20, 20),
       fontSize: 14,
       color: const ui.Color(0xFF000000),
     );
-    final b = TextNode(
+    final b = TextNodeSnapshot(
       id: 'b',
       text: 'B',
       size: const ui.Size(20, 20),
       fontSize: 14,
       color: const ui.Color(0xFF000000),
     );
-    final c = TextNode(
+    final c = TextNodeSnapshot(
       id: 'c',
       text: 'C',
       size: const ui.Size(20, 20),
@@ -177,14 +210,31 @@ void main() {
     expect(cache.debugSize, 2);
     expect(cache.debugEvictCount, 0);
 
-    cache.getOrBuild(node: a, textStyle: style, maxWidth: 20); // hit
+    cache.getOrBuild(node: a, textStyle: style, maxWidth: 20);
     expect(cache.debugHitCount, 1);
 
-    cache.getOrBuild(node: c, textStyle: style, maxWidth: 20); // evict B
+    cache.getOrBuild(node: c, textStyle: style, maxWidth: 20);
     expect(cache.debugEvictCount, 1);
     expect(cache.debugSize, 2);
 
-    cache.getOrBuild(node: b, textStyle: style, maxWidth: 20); // rebuild
+    cache.getOrBuild(node: b, textStyle: style, maxWidth: 20);
     expect(cache.debugBuildCount, 4);
+  });
+
+  test('SceneTextLayoutCacheV2 clear drops entries', () {
+    final cache = SceneTextLayoutCacheV2(maxEntries: 8);
+    final node = TextNodeSnapshot(
+      id: 't-clear',
+      text: 'Hello',
+      size: const ui.Size(100, 20),
+      fontSize: 14,
+      color: const ui.Color(0xFF000000),
+    );
+    final style = const TextStyle(fontSize: 14, color: ui.Color(0xFF000000));
+
+    cache.getOrBuild(node: node, textStyle: style, maxWidth: 100);
+    expect(cache.debugSize, 1);
+    cache.clear();
+    expect(cache.debugSize, 0);
   });
 }

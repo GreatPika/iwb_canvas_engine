@@ -1,21 +1,17 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/advanced.dart';
 
+// INV:INV-V2-NO-EXTERNAL-MUTATION
 // INV:INV-G-PUBLIC-ENTRYPOINTS
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('advanced.dart exports SceneController and input types', () {
-    final controller = SceneController();
-    addTearDown(controller.dispose);
-
-    expect(controller.mode, CanvasMode.move);
-    controller.setMode(CanvasMode.draw);
-    expect(controller.mode, CanvasMode.draw);
-
-    expect(controller.drawTool, DrawTool.pen);
-    controller.setDrawTool(DrawTool.line);
-    expect(controller.drawTool, DrawTool.line);
+  test('advanced.dart re-exports v2 symbols from basic.dart', () {
+    const patch = PathNodePatch(
+      id: 'path-1',
+      fillRule: PatchField<V2PathFillRule>.value(V2PathFillRule.nonZero),
+    );
+    expect(patch.fillRule.value, V2PathFillRule.nonZero);
   });
 }

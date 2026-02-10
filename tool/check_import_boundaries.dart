@@ -3,6 +3,7 @@ import 'dart:io';
 // Invariants enforced by this tool:
 // INV:INV-G-CORE-NO-LAYER-DEPS
 // INV:INV-G-LAYER-BOUNDARIES
+// INV:INV-V2-NO-EXTERNAL-MUTATION
 // INV:INV-SLICE-NO-PART
 // INV:INV-SLICE-NO-SCENE_CONTROLLER
 // INV:INV-SLICE-NO-CROSS_SLICE_IMPORTS
@@ -266,18 +267,9 @@ bool _isAllowedForSlice({
   if (resolvedRepoRelPosix.startsWith('/lib/src/core/')) {
     return true;
   }
-  if (resolvedRepoRelPosix == '/lib/src/input/types.dart') {
-    return true;
-  }
-  if (resolvedRepoRelPosix == '/lib/src/input/action_events.dart') {
-    return true;
-  }
-  if (resolvedRepoRelPosix == '/lib/src/input/pointer_input.dart') {
-    return true;
-  }
-  if (resolvedRepoRelPosix.startsWith('/lib/src/input/internal/')) {
-    return true;
-  }
+  if (resolvedRepoRelPosix.startsWith('/lib/src/controller/')) return true;
+  if (resolvedRepoRelPosix.startsWith('/lib/src/model/')) return true;
+  if (resolvedRepoRelPosix.startsWith('/lib/src/public/')) return true;
   if (resolvedRepoRelPosix.startsWith('/lib/src/input/slices/$currentSlice/')) {
     return true;
   }
@@ -304,15 +296,6 @@ bool _isAllowedForInternal({
   }
 
   if (resolvedRepoRelPosix.startsWith('/lib/src/core/')) {
-    return true;
-  }
-  if (resolvedRepoRelPosix == '/lib/src/input/types.dart') {
-    return true;
-  }
-  if (resolvedRepoRelPosix == '/lib/src/input/action_events.dart') {
-    return true;
-  }
-  if (resolvedRepoRelPosix == '/lib/src/input/pointer_input.dart') {
     return true;
   }
   if (resolvedRepoRelPosix.startsWith('/lib/src/input/internal/')) {
@@ -430,14 +413,15 @@ void main(List<String> args) {
 
         var hasSpecificViolation = false;
 
-        if (resolvedRepoRelPosix == '/lib/src/input/scene_controller.dart') {
+        if (resolvedRepoRelPosix ==
+            '/lib/src/controller/scene_controller.dart') {
           violations.add(
             _Violation(
               filePath: filePosixPath,
               line: lineNo,
               directive: directive,
               target: target,
-              message: "must not $directive 'scene_controller.dart'",
+              message: "must not $directive controller/scene_controller.dart",
             ),
           );
           hasSpecificViolation = true;
