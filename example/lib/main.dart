@@ -5,100 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
 import 'package:iwb_canvas_engine/basic.dart';
 
-const ValueKey<String> canvasHostKey = ValueKey<String>('canvas-host');
-const ValueKey<String> modeMoveKey = ValueKey<String>('mode-move');
-const ValueKey<String> modeDrawKey = ValueKey<String>('mode-draw');
-const ValueKey<String> drawToolPenKey = ValueKey<String>('draw-tool-pen');
-const ValueKey<String> drawToolHighlighterKey = ValueKey<String>(
-  'draw-tool-highlighter',
-);
-const ValueKey<String> drawToolLineKey = ValueKey<String>('draw-tool-line');
-const ValueKey<String> drawToolEraserKey = ValueKey<String>('draw-tool-eraser');
-const ValueKey<String> actionDeleteKey = ValueKey<String>('action-delete');
-const ValueKey<String> actionAddSampleKey = ValueKey<String>(
-  'action-add-sample',
-);
-const ValueKey<String> actionRotateLeftKey = ValueKey<String>(
-  'action-rotate-left',
-);
-const ValueKey<String> actionRotateRightKey = ValueKey<String>(
-  'action-rotate-right',
-);
-const ValueKey<String> actionFlipVerticalKey = ValueKey<String>(
-  'action-flip-vertical',
-);
-const ValueKey<String> actionFlipHorizontalKey = ValueKey<String>(
-  'action-flip-horizontal',
-);
-const ValueKey<String> gridMenuButtonKey = ValueKey<String>('grid-menu-button');
-const ValueKey<String> gridEnabledSwitchKey = ValueKey<String>(
-  'grid-enabled-switch',
-);
-const String gridCellSizeOptionKeyPrefix = 'grid-cell-size-option-';
-const ValueKey<String> systemMenuButtonKey = ValueKey<String>(
-  'system-menu-button',
-);
-const ValueKey<String> systemExportJsonKey = ValueKey<String>(
-  'system-export-json',
-);
-const ValueKey<String> systemImportJsonKey = ValueKey<String>(
-  'system-import-json',
-);
-const ValueKey<String> systemClearCanvasKey = ValueKey<String>(
-  'system-clear-canvas',
-);
-const String backgroundColorSwatchKeyPrefix = 'background-color-';
-const ValueKey<String> importSceneFieldKey = ValueKey<String>(
-  'import-scene-field',
-);
-const ValueKey<String> importSceneConfirmKey = ValueKey<String>(
-  'import-scene-confirm',
-);
-const ValueKey<String> importSceneCancelKey = ValueKey<String>(
-  'import-scene-cancel',
-);
-const ValueKey<String> inlineTextEditOverlayKey = ValueKey<String>(
-  'inline-text-edit-overlay',
-);
-const ValueKey<String> inlineTextEditFieldKey = ValueKey<String>(
-  'inline-text-edit-field',
-);
-const ValueKey<String> textOptionsPanelKey = ValueKey<String>(
-  'text-options-panel',
-);
-const ValueKey<String> textStyleBoldKey = ValueKey<String>('text-style-bold');
-const ValueKey<String> textStyleItalicKey = ValueKey<String>(
-  'text-style-italic',
-);
-const ValueKey<String> textStyleUnderlineKey = ValueKey<String>(
-  'text-style-underline',
-);
-const ValueKey<String> textAlignLeftKey = ValueKey<String>('text-align-left');
-const ValueKey<String> textAlignCenterKey = ValueKey<String>(
-  'text-align-center',
-);
-const ValueKey<String> textAlignRightKey = ValueKey<String>('text-align-right');
-const ValueKey<String> textFontSizeSliderKey = ValueKey<String>(
-  'text-font-size-slider',
-);
-const ValueKey<String> textLineHeightSliderKey = ValueKey<String>(
-  'text-line-height-slider',
-);
-const ValueKey<String> cameraPanLeftKey = ValueKey<String>('camera-pan-left');
-const ValueKey<String> cameraPanRightKey = ValueKey<String>('camera-pan-right');
-const ValueKey<String> cameraPanUpKey = ValueKey<String>('camera-pan-up');
-const ValueKey<String> cameraPanDownKey = ValueKey<String>('camera-pan-down');
-const ValueKey<String> cameraIndicatorKey = ValueKey<String>(
-  'camera-indicator',
-);
-const ValueKey<String> pendingLineMarkerPaintKey = ValueKey<String>(
-  'pending-line-marker-paint',
-);
-const ValueKey<String> pendingLineMarkerActiveKey = ValueKey<String>(
-  'pending-line-marker-active',
-);
-const String textColorSwatchKeyPrefix = 'text-color-';
-
 void main() {
   runApp(const CanvasExampleApp());
 }
@@ -237,7 +143,6 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   Widget _buildCameraIndicator() {
     final cameraX = _controller.scene.camera.offset.dx;
     return Container(
-      key: cameraIndicatorKey,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.8),
@@ -270,28 +175,24 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           IconButton(
-            key: cameraPanLeftKey,
             icon: const Icon(Icons.arrow_back),
             onPressed: () => _panCameraBy(const Offset(-50, 0)),
             iconSize: 18,
             tooltip: 'Pan left',
           ),
           IconButton(
-            key: cameraPanRightKey,
             icon: const Icon(Icons.arrow_forward),
             onPressed: () => _panCameraBy(const Offset(50, 0)),
             iconSize: 18,
             tooltip: 'Pan right',
           ),
           IconButton(
-            key: cameraPanUpKey,
             icon: const Icon(Icons.arrow_upward),
             onPressed: () => _panCameraBy(const Offset(0, -50)),
             iconSize: 18,
             tooltip: 'Pan up',
           ),
           IconButton(
-            key: cameraPanDownKey,
             icon: const Icon(Icons.arrow_downward),
             onPressed: () => _panCameraBy(const Offset(0, 50)),
             iconSize: 18,
@@ -362,7 +263,6 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                       hasSelection
                           ? () => _controller.rotateSelection(clockwise: false)
                           : null,
-                      key: actionRotateLeftKey,
                     ),
                     _buildActionButton(
                       Icons.rotate_right,
@@ -370,7 +270,6 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                       hasSelection
                           ? () => _controller.rotateSelection(clockwise: true)
                           : null,
-                      key: actionRotateRightKey,
                     ),
                     _buildActionButton(
                       Icons.flip,
@@ -378,7 +277,6 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                       hasSelection
                           ? () => _controller.flipSelectionVertical()
                           : null,
-                      key: actionFlipVerticalKey,
                       quarterTurns: 1,
                     ),
                     _buildActionButton(
@@ -387,20 +285,17 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                       hasSelection
                           ? () => _controller.flipSelectionHorizontal()
                           : null,
-                      key: actionFlipHorizontalKey,
                     ),
                     _buildActionButton(
                       Icons.delete_outline,
                       "Delete",
                       hasSelection ? () => _controller.deleteSelection() : null,
-                      key: actionDeleteKey,
                       color: Colors.red,
                     ),
                     _buildActionButton(
                       Icons.add_box_outlined,
                       "Add Sample",
                       _addSampleObjects,
-                      key: actionAddSampleKey,
                     ),
                   ],
                 ],
@@ -437,7 +332,6 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   Widget _buildSmallModeBtn(CanvasMode mode, IconData icon) {
     final isSelected = _controller.mode == mode;
     return GestureDetector(
-      key: mode == CanvasMode.move ? modeMoveKey : modeDrawKey,
       onTap: () => _setMode(mode),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -459,7 +353,6 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   Widget _buildDrawToolButton(DrawTool tool, IconData icon, String label) {
     final isSelected = _controller.drawTool == tool;
     return IconButton(
-      key: _drawToolKey(tool),
       icon: Icon(icon),
       onPressed: () => _controller.setDrawTool(tool),
       color: isSelected ? Colors.blue : Colors.grey[700],
@@ -472,12 +365,10 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     IconData icon,
     String label,
     VoidCallback? onTap, {
-    Key? key,
     Color? color,
     int quarterTurns = 0,
   }) {
     return IconButton(
-      key: key,
       icon: RotatedBox(
         quarterTurns: quarterTurns,
         child: Icon(
@@ -497,7 +388,6 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     final node = nodes.first;
 
     return Card(
-      key: textOptionsPanelKey,
       elevation: 6,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
@@ -510,19 +400,16 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                 Icons.format_bold,
                 node.isBold,
                 _toggleSelectedTextBold,
-                key: textStyleBoldKey,
               ),
               _buildTextStyleToggle(
                 Icons.format_italic,
                 node.isItalic,
                 _toggleSelectedTextItalic,
-                key: textStyleItalicKey,
               ),
               _buildTextStyleToggle(
                 Icons.format_underline,
                 node.isUnderline,
                 _toggleSelectedTextUnderline,
-                key: textStyleUnderlineKey,
               ),
               const VerticalDivider(width: 20),
               _buildAlignSelector(node.align),
@@ -532,7 +419,6 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               Slider(
-                key: textFontSizeSliderKey,
                 value: node.fontSize.clamp(10, 72).toDouble(),
                 min: 10,
                 max: 72,
@@ -545,7 +431,6 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               Slider(
-                key: textLineHeightSliderKey,
                 value: (node.lineHeight ?? node.fontSize * 1.2).clamp(
                   node.fontSize * 0.8,
                   node.fontSize * 3.0,
@@ -563,8 +448,6 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                 colors: _controller.scene.palette.penColors,
                 selected: node.color,
                 onSelected: _setSelectedTextColor,
-                keyBuilder: (index, _) =>
-                    ValueKey<String>('$textColorSwatchKeyPrefix$index'),
               ),
             ],
           ),
@@ -573,14 +456,8 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     );
   }
 
-  Widget _buildTextStyleToggle(
-    IconData icon,
-    bool active,
-    VoidCallback onTap, {
-    Key? key,
-  }) {
+  Widget _buildTextStyleToggle(IconData icon, bool active, VoidCallback onTap) {
     return IconButton(
-      key: key,
       icon: Icon(icon),
       color: active ? Colors.blue : Colors.grey,
       onPressed: onTap,
@@ -591,7 +468,6 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     return Row(
       children: [TextAlign.left, TextAlign.center, TextAlign.right].map((a) {
         return IconButton(
-          key: _textAlignButtonKey(a),
           icon: Icon(
             a == TextAlign.left
                 ? Icons.format_align_left
@@ -604,19 +480,6 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
         );
       }).toList(),
     );
-  }
-
-  ValueKey<String> _textAlignButtonKey(TextAlign align) {
-    switch (align) {
-      case TextAlign.left:
-        return textAlignLeftKey;
-      case TextAlign.center:
-        return textAlignCenterKey;
-      case TextAlign.right:
-        return textAlignRightKey;
-      default:
-        return textAlignLeftKey;
-    }
   }
 
   // --- ЛОГИКА ДИАЛОГОВ ---
@@ -639,7 +502,6 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
       ),
       builder: (context, controller, child) {
         return IconButton(
-          key: gridMenuButtonKey,
           icon: Icon(
             grid.isEnabled ? Icons.grid_4x4 : Icons.grid_off,
             color: grid.isEnabled
@@ -711,7 +573,6 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                       ),
                     ),
                     Switch(
-                      key: gridEnabledSwitchKey,
                       value: grid.isEnabled,
                       onChanged: (v) {
                         _setGridEnabled(v);
@@ -738,9 +599,6 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                       return ButtonSegment<double>(
                         value: s,
                         label: Text(
-                          key: ValueKey<String>(
-                            '$gridCellSizeOptionKeyPrefix${s.toInt()}',
-                          ),
                           s.toInt().toString(),
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
@@ -784,7 +642,6 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
       ),
       builder: (context, controller, child) {
         return IconButton(
-          key: systemMenuButtonKey,
           icon: Icon(Icons.settings, color: colorScheme.onSurfaceVariant),
           onPressed: () =>
               controller.isOpen ? controller.close() : controller.open(),
@@ -828,16 +685,12 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                       .asMap()
                       .entries
                       .map((entry) {
-                        final index = entry.key;
                         final c = entry.value;
                         final isSelected =
                             _controller.scene.background.color == c;
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: GestureDetector(
-                            key: ValueKey<String>(
-                              '$backgroundColorSwatchKeyPrefix$index',
-                            ),
                             onTap: () {
                               _setBackgroundColor(c);
                               setState(() {});
@@ -883,20 +736,17 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
               ),
               const Divider(indent: 16, endIndent: 16),
               MenuItemButton(
-                key: systemExportJsonKey,
                 leadingIcon: const Icon(Icons.download_outlined, size: 20),
                 onPressed: _exportSceneJson,
                 child: const Text("Export (JSON)"),
               ),
               MenuItemButton(
-                key: systemImportJsonKey,
                 leadingIcon: const Icon(Icons.upload_outlined, size: 20),
                 onPressed: _importSceneJson,
                 child: const Text("Import (JSON)"),
               ),
               const Divider(indent: 16, endIndent: 16),
               MenuItemButton(
-                key: systemClearCanvasKey,
                 leadingIcon: Icon(
                   Icons.delete_sweep_outlined,
                   color: colorScheme.error,
@@ -925,7 +775,6 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     return Stack(
       children: [
         SceneView(
-          key: canvasHostKey,
           controller: _controller,
           imageResolver: (_) => null,
           selectionColor: const Color(0xFFFFFF00),
@@ -934,32 +783,14 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
         Positioned.fill(
           child: IgnorePointer(
             child: CustomPaint(
-              key: pendingLineMarkerPaintKey,
               painter: _PendingLineMarkerPainter(controller: _controller),
             ),
           ),
         ),
         if (_controller.pendingLineStart != null)
-          const Positioned.fill(
-            child: IgnorePointer(
-              child: SizedBox(key: pendingLineMarkerActiveKey),
-            ),
-          ),
+          Positioned.fill(child: IgnorePointer(child: const SizedBox())),
       ],
     );
-  }
-
-  Key _drawToolKey(DrawTool tool) {
-    switch (tool) {
-      case DrawTool.pen:
-        return drawToolPenKey;
-      case DrawTool.highlighter:
-        return drawToolHighlighterKey;
-      case DrawTool.line:
-        return drawToolLineKey;
-      case DrawTool.eraser:
-        return drawToolEraserKey;
-    }
   }
 
   List<TextNodeSnapshot> _selectedTextNodes() {
@@ -1090,7 +921,6 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     final alignment = _mapTextAlignToAlignment(node.align);
 
     return Positioned(
-      key: inlineTextEditOverlayKey,
       left: viewPosition.dx,
       top: viewPosition.dy,
       child: Transform(
@@ -1107,7 +937,6 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
               maxHeight: 2000,
               alignment: alignment,
               child: TextField(
-                key: inlineTextEditFieldKey,
                 controller: _textEditController,
                 focusNode: _textEditFocusNode,
                 maxLines: null,
@@ -1198,19 +1027,13 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Import Scene'),
-        content: TextField(
-          key: importSceneFieldKey,
-          controller: controller,
-          maxLines: 8,
-        ),
+        content: TextField(controller: controller, maxLines: 8),
         actions: [
           TextButton(
-            key: importSceneCancelKey,
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            key: importSceneConfirmKey,
             onPressed: () => Navigator.pop(context, controller.text),
             child: const Text('Import'),
           ),
@@ -1345,19 +1168,15 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   );
 }
 
-// --- ВСПОМОГАТЕЛЬНЫЕ ВИДЖЕТЫ ---
-
 class _ColorPalette extends StatelessWidget {
   const _ColorPalette({
     required this.colors,
     required this.selected,
     required this.onSelected,
-    this.keyBuilder,
   });
   final List<Color> colors;
   final Color selected;
   final ValueChanged<Color> onSelected;
-  final Key? Function(int index, Color color)? keyBuilder;
 
   @override
   Widget build(BuildContext context) {
@@ -1366,7 +1185,6 @@ class _ColorPalette extends StatelessWidget {
       children: List<Widget>.generate(colors.length, (index) {
         final color = colors[index];
         return GestureDetector(
-          key: keyBuilder?.call(index, color),
           onTap: () => onSelected(color),
           child: Container(
             width: 32,
