@@ -185,9 +185,67 @@ language: russian
 Критерий приёмки G:
 - при открытии `example/lib/main.dart` и прохождении сценариев из G2 поведение и интерактивность не отличаются от baseline v1 в рамках зафиксированного checklist (включая выделение, ластик, line tool и редактирование текстовых узлов).
 
+### G2. Parity lockstep перед cutover (инструменты + UI 1:1)
+
+Цель этапа: **до переключения публичных entrypoints** довести v2 до полного
+совпадения с legacy в `example`:
+- те же пользовательские функции;
+- тот же observable UX-контракт;
+- тот же UI-контракт (layout/контролы/сценарии/индикаторы).
+
+Правило этапа:
+- `H1`/`H2` заблокированы до полного закрытия `G2L.*`.
+- Нельзя удалять legacy-код, пока `example` не работает на v2 с 1:1 parity.
+
+- [ ] G2L.1. Ввести `SceneControllerInteractiveV2` (или эквивалентный слой) с high-level API, совместимым с legacy-контрактом:
+  - `setMode(...)`;
+  - `setDrawTool(...)`;
+  - `setDrawColor(...)`;
+  - `setBackgroundColor(...)`, `setGridEnabled(...)`, `setGridCellSize(...)`, `setCameraOffset(...)`;
+  - `setSelection(...)`, `toggleSelection(...)`, `clearSelection(...)`;
+  - `rotateSelection(...)`, `flipSelectionVertical(...)`, `flipSelectionHorizontal(...)`, `deleteSelection(...)`, `clearScene(...)`;
+  - readonly-свойства для UI (`mode`, `drawTool`, `pendingLineStart`, `selectionRect`, и т.п. по необходимости для exact parity).
+- [ ] G2L.2. Перенести pointer-level orchestration в v2 без изменения UX:
+  - `handlePointer(...)`;
+  - `handlePointerSignal(...)`;
+  - pending two-tap line таймер/timeout/reset semantics;
+  - drag/marquee lifecycle, включая cancel/mode-switch rollback.
+- [ ] G2L.3. Портировать tool-state lifecycle 1:1:
+  - pen/highlighter/line/eraser parity;
+  - reset/dispose semantics без отложенных side-effects;
+  - commit/cancel behavior идентичен legacy.
+- [ ] G2L.4. Подключить `example/lib/main.dart` к v2 interactive controller с сохранением текущего UI без визуальных/поведенческих изменений.
+- [ ] G2L.5. Зафиксировать UI parity контракт:
+  - список обязательных виджет-ключей/контролов/иконок/панелей не меняется;
+  - порядок и доступность контролов по режимам совпадают с baseline;
+  - индикаторы (`Camera X`, pending-line marker и др.) совпадают по условиям показа.
+- [ ] G2L.6. Добавить adapter-level parity tests для interactive API (legacy vs v2) на одинаковых input scripts:
+  - selection/marquee;
+  - draw tools;
+  - line two-tap;
+  - eraser;
+  - text edit/styling;
+  - transform/delete;
+  - system/grid/background/import-export.
+- [ ] G2L.7. Прогнать и зафиксировать "example on v2" regression пакет:
+  - `example/test/**` зелёный без специальных fallback на legacy;
+  - сравнение ключевых UI state и public controller state на каждом шаге сценариев G2.
+- [ ] G2L.8. Документировать матрицу parity в `DEVELOPMENT_PLAN.md` (таблица):
+  - Feature;
+  - Legacy API;
+  - V2 API;
+  - Test coverage id;
+  - Status (`Done/Gap`).
+
+Критерий приёмки G2:
+- `example` работает на v2 interactive controller.
+- Все legacy-функции из текущего UX-контракта доступны в v2.
+- Поведение и UI совпадают 1:1 по сценариям G2 и regression-тестам.
+- После этого можно переходить к `H1`.
+
 ### H. Cutover и release
 
-- [ ] H1. После прохождения parity и всех тестов переключить `basic.dart` и `advanced.dart` на v2.
+- [ ] H1. После прохождения parity, закрытия `G2L.*` и всех тестов переключить `basic.dart` и `advanced.dart` на v2.
 - [ ] H2. Удалить legacy API в рамках major (без отдельного legacy entrypoint).
 - [ ] H3. Обновить docs в том же PR:
   - `README.md`;
@@ -221,6 +279,10 @@ language: russian
   - каждый сценарий из G2 покрыт тестом в `example/test/**`;
   - зафиксированы ожидаемые состояния UI и публичного API на каждом ключевом шаге сценария.
   - отдельные regression-тесты обязательны для: selection-механики, line tool, eraser flow, text edit flow и text styling flow.
+- [ ] T8. Interactive parity lockstep (legacy vs v2):
+  - одинаковые pointer/input scripts дают одинаковый observable UI state и controller state в `example`;
+  - проверены mode/tool transitions, pending-line lifecycle, transform/delete/system flows;
+  - тесты выполняются без fallback на legacy runtime.
 - [x] T7. v1/v2 parity harness:
   - для набора детерминированных event-script итоговый scene JSON/selection/signals совпадают по контракту между baseline и v2.
 
@@ -244,28 +306,3 @@ dart run tool/check_v2_guardrails.dart
 dart doc
 dart pub publish --dry-run
 ```
-
-## 7) Журнал прогресса
-
-| Дата | Пункт | Статус | Комментарий |
-|---|---|---|---|
-| 2026-02-09 | A0 | Done | План сокращён, исправлен и приведён к чеклист-формату. |
-| 2026-02-09 | A1-A4 | Done | Добавлены INV-V2-*, расширены import boundaries для `lib/src/v2/**`, добавлен `tool/check_v2_guardrails.dart`, добавлены tool-тесты и enforcement-маркеры. |
-| 2026-02-09 | B1-B3 | Done | Добавлены immutable v2 public-модели (`snapshot/spec/patch`), tri-state `PatchField`, временные entrypoints `basic_v2.dart`/`advanced_v2.dart` и тесты на immutable-контракт. |
-| 2026-02-09 | C1-C5, D1-D9 | Done | Добавлены `SceneControllerV2`/`SceneWriter`/`TxnContext`/`ChangeSet`/`V2Store`, внутренний mutable-документ с конвертерами `SceneSnapshot <-> Scene`, транзакционные v2-slices (`commands/move/draw/selection/spatial_index/signals/repaint/grid`), commit-order `selection->grid->spatial_index->signals->repaint`, `writeReplaceScene(...)` с `controllerEpoch++`, и тесты на atomic commit/rollback/epoch/signal buffering. |
-| 2026-02-09 | H2 | Decision fixed | Legacy API в major удаляем, отдельный legacy entrypoint не поддерживаем. |
-| 2026-02-09 | E1-E5 | Done | Candidate bounds переведены на strict scene units, добавлены `ScenePainterV2`/`SceneViewV2` и v2 caches с epoch-based invalidation, `SceneStrokePathCache` сделан fail-safe для 0/1 точки, добавлены v2 render/view и core hit-test regression тесты. |
-| 2026-02-09 | F1-F5 | Done | Добавлен `lib/src/v2/serialization/scene_codec.dart` с публичным snapshot API (`encode/decode*`), внутренними document adapters через `txnSceneFromSnapshot`/`txnSceneToSnapshot`, сохранена совместимость `_requireInt` для integer-valued `num`, портированы `test/serialization/*` на `basic_v2.dart`, добавлен тест на immutable decode-контракт. |
-| 2026-02-09 | G/H rescope | Done | Этап `G` разделён: сначала полный interactive parity c baseline v1 (`example-first`), затем отдельный cutover/release этап `H`; добавлены обязательные тесты `T6-T7` и проверка `(cd example && flutter test)`. |
-| 2026-02-09 | G1 | Done | Baseline parity зафиксирован на `baseline-vertical-slices-2026-02-04` по решению PM. |
-| 2026-02-09 | G2/T6 scope | Done | По решению PM явно закреплены обязательные parity-сценарии: выделение, ластик, line tool, текстовые узлы (редактирование + styling). |
-| 2026-02-09 | G2/G3 split | Done | Пункты `G2` и `G3` декомпозированы на подшаги `G2.1..G2.10` и `G3.1..G3.10` для прозрачного трекинга прогресса по каждому сценарию и тесту. |
-| 2026-02-09 | G2/G3 scope extend | Done | Добавлены сценарии из `example/lib/main.dart`, которые не были явными: `Add Sample`, background+clear, визуальные индикаторы камеры/line-pending, text edit commit-триггеры; добавлены `G3.11..G3.14`. |
-| 2026-02-09 | G2.1-G2.5, G3.1-G3.5 | Done | Добавлены scenario-parity tests в `example/test/interactive_parity_batch1_test.dart`, в `example/lib/main.dart` добавлены non-breaking test hooks (опциональная инъекция `SceneController` + стабильные keys), а также вынесена общая pure-логика порогов/декимации в `lib/src/core/input_sampling.dart` с переиспользованием в `move/line/stroke/eraser` slices. |
-| 2026-02-10 | G2.6, G3.6 | Done | Зафиксирован parity-сценарий text inline edit в текущем UX-контракте example: открытие только по double-tap, save через `onTapOutside`, no-op cancel как закрытие сессии без изменения текста; добавлен regression-тест в `example/test/interactive_parity_batch1_test.dart`. |
-| 2026-02-10 | G2.7, G3.7 | Done | Добавлены deterministic test hooks для text styling controls (`bold/italic/underline`, `align`, `font size`, `line height`, color swatches) в `example/lib/main.dart`; добавлен parity regression-тест `G3.7` с multi-select проверкой controller/UI state в `example/test/interactive_parity_batch1_test.dart`. |
-| 2026-02-10 | G2.8, G3.8 | Done | Добавлены стабильные test hooks для action-кнопок transform (`rotate/flip`) в `example/lib/main.dart`; добавлен parity regression-тест `G3.8` на связку `marquee-select -> rotate/flip -> delete` с проверкой, что невыделенные ноды не изменяются. |
-| 2026-02-10 | G2.9, G3.9 | Done | Добавлены camera pan controls (`left/right/up/down`, шаг `50`) в `example/lib/main.dart` и parity regression-тест `G3.9` в `example/test/interactive_parity_batch1_test.dart`; `zoom` сознательно оставлен вне scope по текущему single-pointer/no-zoom контракту движка. |
-| 2026-02-10 | G2.10, G3.10 | Done | Для `grid/system actions` добавлены стабильные test hooks в `example/lib/main.dart` (grid toggle/size, background swatches, system export/import, import dialog), зафиксирована import-политика `replace scene => clear selection`, и добавлен parity regression-тест `G3.10` в `example/test/interactive_parity_batch1_test.dart` с проверкой grid/background/export/import/clear flow. |
-| 2026-02-10 | G2.11, G3.11 | Done | Добавлен widget parity-тест `G3.11` для `Add Sample`: проверены типы/порядок/id/позиции/размеры `RectNode+TextNode`, повторяемость второго добавления и отсутствие побочного изменения selection. |
-| 2026-02-10 | G4, G5, T7 | Done | Добавлен engine-level parity harness `test/parity/**` (adapters + event scripts + normalization + 5 deterministic scripts); закрыты parity-gap по baseline defaults (`background/palette/grid`) в v2 harness adapter; `flutter test test/parity/v1_v2_engine_parity_harness_test.dart` и tool-checks (`check_invariant_coverage`, `check_import_boundaries`, `check_v2_guardrails`) зелёные. |
