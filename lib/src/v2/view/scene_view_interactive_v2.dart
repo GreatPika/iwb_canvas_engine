@@ -361,6 +361,17 @@ class _SceneInteractiveOverlayPainterV2 extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    final cameraOffset = controller.snapshot.camera.offset;
+    _paintStrokePreview(canvas, cameraOffset);
+    _paintLinePreview(canvas, cameraOffset);
+  }
+
+  @override
+  bool shouldRepaint(covariant _SceneInteractiveOverlayPainterV2 oldDelegate) {
+    return oldDelegate.controller != controller;
+  }
+
+  void _paintStrokePreview(Canvas canvas, Offset cameraOffset) {
     if (!controller.hasActiveStrokePreview) {
       return;
     }
@@ -375,7 +386,6 @@ class _SceneInteractiveOverlayPainterV2 extends CustomPainter {
       return;
     }
 
-    final cameraOffset = controller.snapshot.camera.offset;
     final color = _applyOpacity(
       controller.activeStrokePreviewColor,
       controller.activeStrokePreviewOpacity,
@@ -412,9 +422,31 @@ class _SceneInteractiveOverlayPainterV2 extends CustomPainter {
     );
   }
 
-  @override
-  bool shouldRepaint(covariant _SceneInteractiveOverlayPainterV2 oldDelegate) {
-    return oldDelegate.controller != controller;
+  void _paintLinePreview(Canvas canvas, Offset cameraOffset) {
+    if (!controller.hasActiveLinePreview) {
+      return;
+    }
+
+    final start = controller.activeLinePreviewStart;
+    final end = controller.activeLinePreviewEnd;
+    if (start == null || end == null) {
+      return;
+    }
+
+    final thickness = controller.activeLinePreviewThickness;
+    if (!thickness.isFinite || thickness <= 0) {
+      return;
+    }
+
+    canvas.drawLine(
+      toView(start, cameraOffset),
+      toView(end, cameraOffset),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = thickness
+        ..strokeCap = StrokeCap.round
+        ..color = controller.activeLinePreviewColor,
+    );
   }
 
   Color _applyOpacity(Color color, double opacity) {

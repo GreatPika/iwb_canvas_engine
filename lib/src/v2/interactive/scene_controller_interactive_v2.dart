@@ -29,8 +29,10 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
     Scene? scene,
     SceneSnapshot? initialSnapshot,
     PointerInputSettings? pointerSettings,
+    double? dragStartSlop,
     this.clearSelectionOnDrawModeEnter = false,
   }) : _pointerSettings = pointerSettings ?? const PointerInputSettings(),
+       _dragStartSlop = dragStartSlop,
        _core = SceneControllerV2(
          initialSnapshot:
              initialSnapshot ??
@@ -43,6 +45,7 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
   final _InteractiveEventDispatcher _events = _InteractiveEventDispatcher();
 
   PointerInputSettings _pointerSettings;
+  double? _dragStartSlop;
   int _timestampCursorMs = -1;
 
   CanvasMode _mode = CanvasMode.move;
@@ -74,6 +77,8 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
   late final UnmodifiableListView<Offset> _activeStrokePointsView =
       UnmodifiableListView<Offset>(_activeStrokePoints);
   final List<Offset> _activeEraserPoints = <Offset>[];
+  Offset? _activeLinePreviewStart;
+  Offset? _activeLinePreviewEnd;
 
   Offset? _pendingLineStart;
   int? _pendingLineTimestampMs;
@@ -96,6 +101,7 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
   double get lineThickness => _lineThickness;
   double get eraserThickness => _eraserThickness;
   double get highlighterOpacity => _highlighterOpacity;
+  double get dragStartSlop => _dragStartSlop ?? _pointerSettings.tapSlop;
 
   Rect? get selectionRect => _selectionRect;
 
@@ -112,6 +118,15 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
   Color get activeStrokePreviewColor => _drawColor;
   double get activeStrokePreviewOpacity =>
       _drawTool == DrawTool.highlighter ? _highlighterOpacity : 1;
+  bool get hasActiveLinePreview =>
+      _drawActivePointerId != null &&
+      _drawTool == DrawTool.line &&
+      _activeLinePreviewStart != null &&
+      _activeLinePreviewEnd != null;
+  Offset? get activeLinePreviewStart => _activeLinePreviewStart;
+  Offset? get activeLinePreviewEnd => _activeLinePreviewEnd;
+  double get activeLinePreviewThickness => _lineThickness;
+  Color get activeLinePreviewColor => _drawColor;
 
   PointerInputSettings get pointerSettings => _pointerSettings;
 
@@ -195,6 +210,16 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
 
   void setPointerSettings(PointerInputSettings value) {
     _pointerSettings = value;
+    notifyListeners();
+  }
+
+  void setDragStartSlop(double? value) {
+    final resolved = value == null
+        ? null
+        : _requireFinitePositive(value, name: 'dragStartSlop');
+    if (_dragStartSlop == resolved) return;
+    _dragStartSlop = resolved;
+    notifyListeners();
   }
 
   void setBackgroundColor(Color value) {
@@ -608,6 +633,7 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
           ..add(scenePoint);
         break;
       case DrawTool.line:
+        _setActiveLinePreview(null, null);
         break;
       case DrawTool.eraser:
         _activeEraserPoints
@@ -638,17 +664,14 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
       case DrawTool.line:
         if (_drawDownScene == null) return;
         if (!_drawMoved &&
-            isDistanceAtMost(
-              _drawDownScene!,
-              scenePoint,
-              _pointerSettings.tapSlop,
-            )) {
+            isDistanceAtMost(_drawDownScene!, scenePoint, dragStartSlop)) {
           return;
         }
         _drawMoved = true;
         if (_pendingLineStart != null) {
           _clearPendingLine();
         }
+        _setActiveLinePreview(_drawDownScene, scenePoint);
         _core.write<void>((writer) {
           writer.writeMarkVisualChanged();
         });
@@ -688,6 +711,7 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
     _drawActivePointerId = null;
     _drawDownScene = null;
     _drawMoved = false;
+    _setActiveLinePreview(null, null);
   }
 
   void _commitStroke(int timestampMs, Offset scenePoint) {
@@ -727,17 +751,11 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
     final drawDown = _drawDownScene;
     if (drawDown == null) return;
 
-    final isTap = isDistanceAtMost(
-      drawDown,
-      scenePoint,
-      _pointerSettings.tapSlop,
-    );
+    final isTap = isDistanceAtMost(drawDown, scenePoint, dragStartSlop);
     if (!isTap || _drawMoved) {
-      final lineId = _core.draw.writeDrawLine(
+      final lineId = _writeDrawLineFromWorldSegment(
         start: drawDown,
         end: scenePoint,
-        thickness: _lineThickness,
-        color: _drawColor,
       );
       _events.emitAction(
         ActionType.drawLine,
@@ -760,11 +778,9 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
 
     final start = _pendingLineStart!;
     _clearPendingLine();
-    final lineId = _core.draw.writeDrawLine(
+    final lineId = _writeDrawLineFromWorldSegment(
       start: start,
       end: scenePoint,
-      thickness: _lineThickness,
-      color: _drawColor,
     );
     _events.emitAction(
       ActionType.drawLine,
@@ -1057,6 +1073,16 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
     _drawMoved = false;
     _activeStrokePoints.clear();
     _activeEraserPoints.clear();
+    _setActiveLinePreview(null, null);
+  }
+
+  void _setActiveLinePreview(Offset? start, Offset? end) {
+    if (_activeLinePreviewStart == start && _activeLinePreviewEnd == end) {
+      return;
+    }
+    _activeLinePreviewStart = start;
+    _activeLinePreviewEnd = end;
+    notifyListeners();
   }
 
   void _setSelectionRect(Rect? value) {
@@ -1094,6 +1120,27 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
         : hintTimestampMs;
     _timestampCursorMs = resolved;
     return resolved;
+  }
+
+  NodeId _writeDrawLineFromWorldSegment({
+    required Offset start,
+    required Offset end,
+  }) {
+    return _core.write<NodeId>((writer) {
+      final bounds = Rect.fromPoints(start, end);
+      final center = bounds.center;
+      final nodeId = writer.writeNodeInsert(
+        LineNodeSpec(
+          start: start - center,
+          end: end - center,
+          thickness: _lineThickness,
+          color: _drawColor,
+          transform: Transform2D.translation(center),
+        ),
+      );
+      writer.writeSignalEnqueue(type: 'draw.line', nodeIds: <NodeId>[nodeId]);
+      return nodeId;
+    });
   }
 
   double _maxSingularValue2x2(double a, double b, double c, double d) {

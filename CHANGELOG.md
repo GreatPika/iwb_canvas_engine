@@ -1,5 +1,10 @@
 ## Unreleased
 
+- V2 interactive draw-line parity: line commit now stores geometry in
+  legacy-compatible normalized form (local `start/end` + centered `transform`);
+  drag line preview and `dragStartSlop` configuration are restored for
+  legacy-equivalent tap/drag behavior.
+
 - V2 render: selection visuals now match legacy behavior in interactive flows:
   per-node halo rendering (Rect/Line/Stroke/Text/Image/Path) and marquee
   rectangle (`selectionRect`) drawing are restored in `ScenePainterV2`.

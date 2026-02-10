@@ -689,7 +689,10 @@ class ScenePainterV2 extends CustomPainter {
         final baseStrokeWidth = hasStroke ? safeStrokeWidth : 0.0;
         final contours = pathMetricsCache != null
             ? pathMetricsCache!.getOrBuild(node: pathNode, localPath: localPath)
-            : _buildPathSelectionContours(pathNode: pathNode, localPath: localPath);
+            : _buildPathSelectionContours(
+                pathNode: pathNode,
+                localPath: localPath,
+              );
         if (contours.closedContours != null) {
           _drawPathHalo(
             canvas,

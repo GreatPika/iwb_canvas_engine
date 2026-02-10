@@ -66,7 +66,9 @@ void main() {
       expect(controller.pendingLineStart, isNull);
       expect(controller.pendingLineTimestampMs, isNull);
       expect(controller.hasPendingLineStart, isFalse);
+      expect(controller.hasActiveLinePreview, isFalse);
       expect(controller.pointerSettings.tapSlop, greaterThan(0));
+      expect(controller.dragStartSlop, controller.pointerSettings.tapSlop);
       expect(controller.controllerEpoch, 0);
       expect(controller.structuralRevision, 0);
       expect(controller.boundsRevision, 0);
@@ -95,6 +97,12 @@ void main() {
       expect(controller.highlighterOpacity, 0.4);
       expect(controller.drawColor, const Color(0xFF336699));
       expect(controller.pointerSettings.tapSlop, 12);
+      expect(controller.dragStartSlop, 12);
+
+      controller.setDragStartSlop(9);
+      expect(controller.dragStartSlop, 9);
+      controller.setDragStartSlop(null);
+      expect(controller.dragStartSlop, 12);
 
       expect(() => controller.penThickness = 0, throwsArgumentError);
       expect(
@@ -106,6 +114,7 @@ void main() {
         throwsArgumentError,
       );
       expect(() => controller.eraserThickness = -1, throwsArgumentError);
+      expect(() => controller.setDragStartSlop(-1), throwsArgumentError);
       expect(() => controller.highlighterOpacity = -0.1, throwsArgumentError);
       expect(() => controller.highlighterOpacity = 1.1, throwsArgumentError);
       expect(
@@ -429,6 +438,7 @@ void main() {
 
       controller.setMode(CanvasMode.draw);
       controller.setDrawTool(DrawTool.line);
+      controller.setDragStartSlop(0.001);
 
       controller.handlePointer(
         _sample(
@@ -438,6 +448,7 @@ void main() {
           phase: PointerPhase.down,
         ),
       );
+      expect(controller.hasActiveLinePreview, isFalse);
       controller.handlePointer(
         _sample(
           pointerId: 1,
@@ -446,6 +457,9 @@ void main() {
           phase: PointerPhase.move,
         ),
       );
+      expect(controller.hasActiveLinePreview, isTrue);
+      expect(controller.activeLinePreviewStart, const Offset(20, 20));
+      expect(controller.activeLinePreviewEnd, const Offset(50, 20));
       controller.handlePointer(
         _sample(
           pointerId: 1,
@@ -454,7 +468,23 @@ void main() {
           phase: PointerPhase.up,
         ),
       );
+      expect(controller.hasActiveLinePreview, isFalse);
       expect(controller.hasPendingLineStart, isFalse);
+
+      final dragLine =
+          controller.snapshot.layers[1].nodes.first as LineNodeSnapshot;
+      expect(dragLine.transform.tx, 40);
+      expect(dragLine.transform.ty, 20);
+      expect(dragLine.start, const Offset(-20, 0));
+      expect(dragLine.end, const Offset(20, 0));
+      expect(
+        dragLine.transform.applyToPoint(dragLine.start),
+        const Offset(20, 20),
+      );
+      expect(
+        dragLine.transform.applyToPoint(dragLine.end),
+        const Offset(60, 20),
+      );
 
       controller.handlePointer(
         _sample(
@@ -491,6 +521,9 @@ void main() {
           phase: PointerPhase.move,
         ),
       );
+      expect(controller.hasActiveLinePreview, isTrue);
+      expect(controller.activeLinePreviewStart, const Offset(220, 220));
+      expect(controller.activeLinePreviewEnd, const Offset(280, 220));
       controller.handlePointer(
         _sample(
           pointerId: 20,
@@ -537,6 +570,17 @@ void main() {
       expect(
         actions.where((a) => a.type == ActionType.drawLine).length,
         greaterThanOrEqualTo(2),
+      );
+      final lines = controller.snapshot.layers[1].nodes
+          .whereType<LineNodeSnapshot>();
+      expect(
+        lines.any((line) {
+          final worldStart = line.transform.applyToPoint(line.start);
+          final worldEnd = line.transform.applyToPoint(line.end);
+          return worldStart == const Offset(130, 130) &&
+              worldEnd == const Offset(150, 150);
+        }),
+        isTrue,
       );
 
       controller.setMode(CanvasMode.move);
@@ -658,6 +702,104 @@ void main() {
       expect(controller.hasActiveStrokePreview, isFalse);
       expect(controller.activeStrokePreviewPoints, isEmpty);
     });
+
+    test(
+      'line preview starts after dragStartSlop and clears on cancel/tool/mode switch',
+      () {
+        final controller = SceneControllerInteractiveV2(
+          initialSnapshot: SceneSnapshot(
+            layers: <LayerSnapshot>[
+              LayerSnapshot(isBackground: true),
+              LayerSnapshot(),
+            ],
+          ),
+          dragStartSlop: 10,
+        );
+        addTearDown(controller.dispose);
+
+        controller.setMode(CanvasMode.draw);
+        controller.setDrawTool(DrawTool.line);
+
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: const Offset(10, 10),
+            timestampMs: 1,
+            phase: PointerPhase.down,
+          ),
+        );
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: const Offset(18, 10),
+            timestampMs: 2,
+            phase: PointerPhase.move,
+          ),
+        );
+        expect(controller.hasActiveLinePreview, isFalse);
+
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: const Offset(21, 10),
+            timestampMs: 3,
+            phase: PointerPhase.move,
+          ),
+        );
+        expect(controller.hasActiveLinePreview, isTrue);
+
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: const Offset(21, 10),
+            timestampMs: 4,
+            phase: PointerPhase.cancel,
+          ),
+        );
+        expect(controller.hasActiveLinePreview, isFalse);
+
+        controller.handlePointer(
+          _sample(
+            pointerId: 2,
+            position: const Offset(30, 30),
+            timestampMs: 5,
+            phase: PointerPhase.down,
+          ),
+        );
+        controller.handlePointer(
+          _sample(
+            pointerId: 2,
+            position: const Offset(50, 30),
+            timestampMs: 6,
+            phase: PointerPhase.move,
+          ),
+        );
+        expect(controller.hasActiveLinePreview, isTrue);
+        controller.setDrawTool(DrawTool.pen);
+        expect(controller.hasActiveLinePreview, isFalse);
+
+        controller.setDrawTool(DrawTool.line);
+        controller.handlePointer(
+          _sample(
+            pointerId: 3,
+            position: const Offset(30, 30),
+            timestampMs: 7,
+            phase: PointerPhase.down,
+          ),
+        );
+        controller.handlePointer(
+          _sample(
+            pointerId: 3,
+            position: const Offset(50, 30),
+            timestampMs: 8,
+            phase: PointerPhase.move,
+          ),
+        );
+        expect(controller.hasActiveLinePreview, isTrue);
+        controller.setMode(CanvasMode.move);
+        expect(controller.hasActiveLinePreview, isFalse);
+      },
+    );
 
     test('eraser removes line and stroke nodes on pointer up', () {
       final line = LineNode(
@@ -892,5 +1034,40 @@ void main() {
         controller.dispose();
       },
     );
+
+    testWidgets('pending two-tap line expires after timeout', (tester) async {
+      final controller = SceneControllerInteractiveV2(
+        initialSnapshot: SceneSnapshot(
+          layers: <LayerSnapshot>[
+            LayerSnapshot(isBackground: true),
+            LayerSnapshot(),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      controller.setMode(CanvasMode.draw);
+      controller.setDrawTool(DrawTool.line);
+      controller.handlePointer(
+        _sample(
+          pointerId: 1,
+          position: const Offset(10, 10),
+          timestampMs: 1,
+          phase: PointerPhase.down,
+        ),
+      );
+      controller.handlePointer(
+        _sample(
+          pointerId: 1,
+          position: const Offset(10, 10),
+          timestampMs: 2,
+          phase: PointerPhase.up,
+        ),
+      );
+
+      expect(controller.hasPendingLineStart, isTrue);
+      await tester.pump(const Duration(seconds: 11));
+      expect(controller.hasPendingLineStart, isFalse);
+    });
   });
 }
