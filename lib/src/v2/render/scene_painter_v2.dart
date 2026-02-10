@@ -114,17 +114,22 @@ class SceneTextLayoutCacheV2 {
     required double maxWidth,
     TextDirection textDirection = TextDirection.ltr,
   }) {
+    final safeFontSize = clampPositiveFinite(node.fontSize, fallback: 24);
+    final safeLineHeight =
+        (node.lineHeight != null &&
+            node.lineHeight!.isFinite &&
+            node.lineHeight! > 0)
+        ? node.lineHeight
+        : null;
     final key = _TextLayoutKeyV2(
       text: node.text,
-      fontSize: clampPositiveFinite(node.fontSize, fallback: 24),
+      fontSize: safeFontSize,
       fontFamily: node.fontFamily,
       isBold: node.isBold,
       isItalic: node.isItalic,
       isUnderline: node.isUnderline,
       align: node.align,
-      lineHeight: (node.lineHeight != null && node.lineHeight! > 0)
-          ? node.lineHeight
-          : null,
+      lineHeight: safeLineHeight,
       maxWidth: clampNonNegativeFinite(maxWidth),
       color: textStyle.color ?? const Color(0xFF000000),
       textDirection: textDirection,
@@ -1022,18 +1027,23 @@ class ScenePainterV2 extends CustomPainter {
     }
     final safeSize = clampNonNegativeSizeFinite(node.size);
     final maxWidth = node.maxWidth ?? safeSize.width;
+    final safeFontSize = clampPositiveFinite(node.fontSize, fallback: 24);
+    final safeLineHeight =
+        (node.lineHeight != null &&
+            node.lineHeight!.isFinite &&
+            node.lineHeight! > 0)
+        ? node.lineHeight
+        : null;
     final style = TextStyle(
       color: _applyOpacity(node.color, node.opacity),
-      fontSize: clampPositiveFinite(node.fontSize, fallback: 24),
+      fontSize: safeFontSize,
       fontFamily: node.fontFamily,
       fontWeight: node.isBold ? FontWeight.bold : FontWeight.normal,
       fontStyle: node.isItalic ? FontStyle.italic : FontStyle.normal,
       decoration: node.isUnderline
           ? TextDecoration.underline
           : TextDecoration.none,
-      height: (node.lineHeight != null && node.lineHeight! > 0)
-          ? node.lineHeight
-          : null,
+      height: safeLineHeight == null ? null : safeLineHeight / safeFontSize,
     );
 
     final textPainter = textLayoutCache != null

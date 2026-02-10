@@ -85,6 +85,50 @@ Future<double> _inkCentroidX(Image image, Color background) async {
   return weightedX / totalInk;
 }
 
+Future<Rect> _inkBounds(Image image, Color background) async {
+  final data = await image.toByteData(format: ImageByteFormat.rawRgba);
+  if (data == null) {
+    throw StateError('Failed to encode image to raw RGBA.');
+  }
+  final bytes = data.buffer.asUint8List();
+  final argb = background.toARGB32();
+  final bgA = (argb >> 24) & 0xFF;
+  final bgR = (argb >> 16) & 0xFF;
+  final bgG = (argb >> 8) & 0xFF;
+  final bgB = argb & 0xFF;
+
+  var minX = image.width;
+  var minY = image.height;
+  var maxX = -1;
+  var maxY = -1;
+
+  for (var y = 0; y < image.height; y++) {
+    for (var x = 0; x < image.width; x++) {
+      final index = (y * image.width + x) * 4;
+      if (bytes[index] == bgR &&
+          bytes[index + 1] == bgG &&
+          bytes[index + 2] == bgB &&
+          bytes[index + 3] == bgA) {
+        continue;
+      }
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+  }
+
+  if (maxX < minX || maxY < minY) {
+    throw StateError('Expected non-background pixels.');
+  }
+  return Rect.fromLTRB(
+    minX.toDouble(),
+    minY.toDouble(),
+    (maxX + 1).toDouble(),
+    (maxY + 1).toDouble(),
+  );
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -437,6 +481,65 @@ void main() {
       final ltrEndCenterX = await _inkCentroidX(ltrEndImage, background);
       final rtlEndCenterX = await _inkCentroidX(rtlEndImage, background);
       expect(rtlEndCenterX, lessThan(ltrEndCenterX));
+    },
+  );
+
+  test(
+    'ScenePainterV2 treats lineHeight as absolute logical units (legacy parity)',
+    () async {
+      const background = Color(0xFFFFFFFF);
+
+      SceneSnapshot snapshotFor(double? lineHeight) {
+        return SceneSnapshot(
+          background: const BackgroundSnapshot(color: background),
+          layers: <LayerSnapshot>[
+            LayerSnapshot(
+              nodes: <NodeSnapshot>[
+                TextNodeSnapshot(
+                  id: 'text-line-height',
+                  text: 'One\nTwo',
+                  size: const Size(180, 180),
+                  fontSize: 12,
+                  color: const Color(0xFF000000),
+                  lineHeight: lineHeight,
+                  transform: Transform2D.translation(const Offset(90, 90)),
+                ),
+              ],
+            ),
+          ],
+        );
+      }
+
+      final defaultController = SceneControllerV2(
+        initialSnapshot: snapshotFor(null),
+      );
+      final customController = SceneControllerV2(
+        initialSnapshot: snapshotFor(24),
+      );
+      addTearDown(defaultController.dispose);
+      addTearDown(customController.dispose);
+
+      final defaultImage = await _paintToImage(
+        ScenePainterV2(
+          controller: defaultController,
+          imageResolver: (_) => null,
+        ),
+        width: 180,
+        height: 180,
+      );
+      final customImage = await _paintToImage(
+        ScenePainterV2(
+          controller: customController,
+          imageResolver: (_) => null,
+        ),
+        width: 180,
+        height: 180,
+      );
+      final defaultBounds = await _inkBounds(defaultImage, background);
+      final customBounds = await _inkBounds(customImage, background);
+
+      expect(customBounds.height, greaterThan(defaultBounds.height + 8));
+      expect(customBounds.height, lessThan(80));
     },
   );
 

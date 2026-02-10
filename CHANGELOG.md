@@ -1,5 +1,9 @@
 ## Unreleased
 
+- Fix: `ScenePainterV2` now applies text `lineHeight` with legacy-compatible
+  semantics (absolute logical units normalized by `fontSize`), matching v1
+  rendering behavior in text node line spacing.
+
 - V2 interactive draw-line parity: line commit now stores geometry in
   legacy-compatible normalized form (local `start/end` + centered `transform`);
   drag line preview and `dragStartSlop` configuration are restored for
