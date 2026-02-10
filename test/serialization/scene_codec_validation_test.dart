@@ -790,11 +790,7 @@ void main() {
   test('encodeSceneDocument rejects mutable node opacity outside [0,1]', () {
     final scene = Scene(
       layers: <Layer>[
-        Layer(
-          nodes: <SceneNode>[
-            _BadOpacityNode(id: 'bad-opacity'),
-          ],
-        ),
+        Layer(nodes: <SceneNode>[_BadOpacityNode(id: 'bad-opacity')]),
       ],
     );
 

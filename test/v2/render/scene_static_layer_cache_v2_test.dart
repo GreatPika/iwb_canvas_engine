@@ -70,65 +70,71 @@ void main() {
     expect(cache.debugDisposeCount, 1);
   });
 
-  test('SceneStaticLayerCacheV2 does not rebuild grid picture on camera pan', () {
-    final cache = SceneStaticLayerCacheV2();
-    const background = BackgroundSnapshot(
-      color: Color(0xFFFFFFFF),
-      grid: GridSnapshot(
-        isEnabled: true,
-        cellSize: 20,
-        color: Color(0xFFCCCCCC),
-      ),
-    );
-    const size = Size(120, 80);
+  test(
+    'SceneStaticLayerCacheV2 does not rebuild grid picture on camera pan',
+    () {
+      final cache = SceneStaticLayerCacheV2();
+      const background = BackgroundSnapshot(
+        color: Color(0xFFFFFFFF),
+        grid: GridSnapshot(
+          isEnabled: true,
+          cellSize: 20,
+          color: Color(0xFFCCCCCC),
+        ),
+      );
+      const size = Size(120, 80);
 
-    final recorder1 = PictureRecorder();
-    cache.draw(
-      Canvas(recorder1),
-      size,
-      background: background,
-      cameraOffset: Offset.zero,
-      gridStrokeWidth: 1,
-    );
-    recorder1.endRecording();
-    expect(cache.debugBuildCount, 1);
+      final recorder1 = PictureRecorder();
+      cache.draw(
+        Canvas(recorder1),
+        size,
+        background: background,
+        cameraOffset: Offset.zero,
+        gridStrokeWidth: 1,
+      );
+      recorder1.endRecording();
+      expect(cache.debugBuildCount, 1);
 
-    final recorder2 = PictureRecorder();
-    cache.draw(
-      Canvas(recorder2),
-      size,
-      background: background,
-      cameraOffset: const Offset(13, 7),
-      gridStrokeWidth: 1,
-    );
-    recorder2.endRecording();
-    expect(cache.debugBuildCount, 1);
-    expect(cache.debugDisposeCount, 0);
-  });
+      final recorder2 = PictureRecorder();
+      cache.draw(
+        Canvas(recorder2),
+        size,
+        background: background,
+        cameraOffset: const Offset(13, 7),
+        gridStrokeWidth: 1,
+      );
+      recorder2.endRecording();
+      expect(cache.debugBuildCount, 1);
+      expect(cache.debugDisposeCount, 0);
+    },
+  );
 
-  test('SceneStaticLayerCacheV2 clips translated grid to scene bounds', () async {
-    final cache = SceneStaticLayerCacheV2();
-    const background = BackgroundSnapshot(
-      color: Color(0x00000000),
-      grid: GridSnapshot(
-        isEnabled: true,
-        cellSize: 10,
-        color: Color(0xFF000000),
-      ),
-    );
+  test(
+    'SceneStaticLayerCacheV2 clips translated grid to scene bounds',
+    () async {
+      final cache = SceneStaticLayerCacheV2();
+      const background = BackgroundSnapshot(
+        color: Color(0x00000000),
+        grid: GridSnapshot(
+          isEnabled: true,
+          cellSize: 10,
+          color: Color(0xFF000000),
+        ),
+      );
 
-    final recorder = PictureRecorder();
-    cache.draw(
-      Canvas(recorder),
-      const Size(20, 20),
-      background: background,
-      cameraOffset: const Offset(-5, 0),
-      gridStrokeWidth: 1,
-    );
-    final image = await recorder.endRecording().toImage(40, 40);
-    final outsidePixel = await _pixelAt(image, 25, 10);
-    expect(outsidePixel.a, equals(0));
-  });
+      final recorder = PictureRecorder();
+      cache.draw(
+        Canvas(recorder),
+        const Size(20, 20),
+        background: background,
+        cameraOffset: const Offset(-5, 0),
+        gridStrokeWidth: 1,
+      );
+      final image = await recorder.endRecording().toImage(40, 40);
+      final outsidePixel = await _pixelAt(image, 25, 10);
+      expect(outsidePixel.a, equals(0));
+    },
+  );
 
   test('SceneStaticLayerCacheV2 handles invalid numeric inputs', () {
     final cache = SceneStaticLayerCacheV2();

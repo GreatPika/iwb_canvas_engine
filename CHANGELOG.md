@@ -1,5 +1,9 @@
 ## Unreleased
 
+- Example: add camera pan controls (`left/right/up/down`, 50 scene units per
+  step) and parity regression coverage for camera-pan hit-testing flow
+  (`G3.9`) in `example/test/interactive_parity_batch1_test.dart`.
+
 - Add v2 snapshot JSON codec at `lib/src/v2/serialization/scene_codec.dart`
   and export it from `basic_v2.dart` / `advanced_v2.dart` with parity function
   names (`encodeScene*` / `decodeScene*`) and strict JSON validation behavior.

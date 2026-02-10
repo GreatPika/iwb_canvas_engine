@@ -8,8 +8,7 @@ void main() {
   test('ScenePathMetricsCacheV2 caches contours per id+path+fillRule', () {
     final cache = ScenePathMetricsCacheV2(maxEntries: 8);
     const node = PathNodeSnapshot(id: 'p-1', svgPathData: 'M0 0 H10 V10 H0 Z');
-    final localPath = Path()
-      ..addRect(const Rect.fromLTWH(0, 0, 10, 10));
+    final localPath = Path()..addRect(const Rect.fromLTWH(0, 0, 10, 10));
 
     final entry1 = cache.getOrBuild(node: node, localPath: localPath);
     expect(cache.debugBuildCount, 1);
@@ -102,7 +101,10 @@ void main() {
     );
     expect(cache.debugHitCount, 1);
 
-    cache.getOrBuild(node: c, localPath: Path()..addRect(const Rect.fromLTWH(0, 0, 5, 5)));
+    cache.getOrBuild(
+      node: c,
+      localPath: Path()..addRect(const Rect.fromLTWH(0, 0, 5, 5)),
+    );
     expect(cache.debugSize, 2);
     expect(cache.debugEvictCount, 1);
 
@@ -117,7 +119,10 @@ void main() {
 
   test('ScenePathMetricsCacheV2 clear drops entries', () {
     final cache = ScenePathMetricsCacheV2(maxEntries: 8);
-    const node = PathNodeSnapshot(id: 'clear', svgPathData: 'M0 0 H10 V10 H0 Z');
+    const node = PathNodeSnapshot(
+      id: 'clear',
+      svgPathData: 'M0 0 H10 V10 H0 Z',
+    );
 
     cache.getOrBuild(
       node: node,

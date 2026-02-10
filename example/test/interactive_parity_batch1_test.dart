@@ -609,4 +609,52 @@ void main() {
       expect(controller.selectedNodeIds, isEmpty);
     },
   );
+
+  testWidgets('G3.9: camera pan controls preserve hit-test parity', (
+    tester,
+  ) async {
+    final target = RectNode(
+      id: 'camera-target',
+      size: const Size(80, 60),
+      fillColor: const Color(0xFF42A5F5),
+    )..position = const Offset(220, 220);
+    final controller = await pumpExampleApp(
+      tester,
+      scene: Scene(
+        layers: [
+          Layer(nodes: [target]),
+        ],
+      ),
+    );
+
+    expect(controller.scene.camera.offset, Offset.zero);
+    await tapScene(tester, controller, target.position);
+    expect(controller.selectedNodeIds, const <NodeId>{'camera-target'});
+
+    await tapByKey(tester, cameraPanRightKey);
+    expect(controller.scene.camera.offset, const Offset(50, 0));
+    await tapByKey(tester, cameraPanLeftKey);
+    expect(controller.scene.camera.offset, Offset.zero);
+
+    await tapByKey(tester, cameraPanDownKey);
+    expect(controller.scene.camera.offset, const Offset(0, 50));
+    await tapByKey(tester, cameraPanUpKey);
+    expect(controller.scene.camera.offset, Offset.zero);
+
+    final oldVisualGlobal = sceneToGlobal(tester, controller, target.position);
+    await tapByKey(tester, cameraPanRightKey);
+    await tapByKey(tester, cameraPanDownKey);
+    expect(controller.scene.camera.offset, const Offset(50, 50));
+
+    controller.setSelection(const <NodeId>{});
+    await tester.pump();
+
+    await tester.tapAt(oldVisualGlobal);
+    await tester.pump();
+    expect(controller.selectedNodeIds, isEmpty);
+
+    await tester.tapAt(sceneToGlobal(tester, controller, target.position));
+    await tester.pump();
+    expect(controller.selectedNodeIds, const <NodeId>{'camera-target'});
+  });
 }

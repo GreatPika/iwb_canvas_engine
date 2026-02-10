@@ -64,6 +64,10 @@ const ValueKey<String> textFontSizeSliderKey = ValueKey<String>(
 const ValueKey<String> textLineHeightSliderKey = ValueKey<String>(
   'text-line-height-slider',
 );
+const ValueKey<String> cameraPanLeftKey = ValueKey<String>('camera-pan-left');
+const ValueKey<String> cameraPanRightKey = ValueKey<String>('camera-pan-right');
+const ValueKey<String> cameraPanUpKey = ValueKey<String>('camera-pan-up');
+const ValueKey<String> cameraPanDownKey = ValueKey<String>('camera-pan-down');
 const String textColorSwatchKeyPrefix = 'text-color-';
 
 void main() {
@@ -159,6 +163,12 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
 
                 // 2. Индикатор камеры (сверху слева)
                 Positioned(top: 20, left: 20, child: _buildCameraIndicator()),
+                // 2.1 Управление камерой (сверху справа)
+                Positioned(
+                  top: 20,
+                  right: 20,
+                  child: _buildCameraPanControls(),
+                ),
 
                 // 3. Контекстное меню для текста (появляется над нижней панелью)
                 if (_selectedTextNodes().isNotEmpty)
@@ -207,6 +217,50 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
           Text(
             "Camera X: ${cameraX.toStringAsFixed(0)}",
             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCameraPanControls() {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.black12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            key: cameraPanLeftKey,
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => _panCameraBy(const Offset(-50, 0)),
+            iconSize: 18,
+            tooltip: 'Pan left',
+          ),
+          IconButton(
+            key: cameraPanRightKey,
+            icon: const Icon(Icons.arrow_forward),
+            onPressed: () => _panCameraBy(const Offset(50, 0)),
+            iconSize: 18,
+            tooltip: 'Pan right',
+          ),
+          IconButton(
+            key: cameraPanUpKey,
+            icon: const Icon(Icons.arrow_upward),
+            onPressed: () => _panCameraBy(const Offset(0, -50)),
+            iconSize: 18,
+            tooltip: 'Pan up',
+          ),
+          IconButton(
+            key: cameraPanDownKey,
+            icon: const Icon(Icons.arrow_downward),
+            onPressed: () => _panCameraBy(const Offset(0, 50)),
+            iconSize: 18,
+            tooltip: 'Pan down',
           ),
         ],
       ),
@@ -474,9 +528,8 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                 colors: _controller.scene.palette.penColors,
                 selected: node.color,
                 onSelected: _setSelectedTextColor,
-                keyBuilder: (index, _) => ValueKey<String>(
-                  '$textColorSwatchKeyPrefix$index',
-                ),
+                keyBuilder: (index, _) =>
+                    ValueKey<String>('$textColorSwatchKeyPrefix$index'),
               ),
             ],
           ),
@@ -1158,6 +1211,11 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   }
 
   void _setDrawColor(Color c) => _controller.setDrawColor(c);
+  void _panCameraBy(Offset delta) {
+    final nextOffset = _controller.scene.camera.offset + delta;
+    _controller.setCameraOffset(nextOffset);
+  }
+
   void _setBackgroundColor(Color c) => _controller.setBackgroundColor(c);
   void _setGridEnabled(bool v) => _controller.setGridEnabled(v);
   void _setGridSize(double s) => _controller.setGridCellSize(s);

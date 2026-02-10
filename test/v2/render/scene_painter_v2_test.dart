@@ -174,110 +174,119 @@ void main() {
     expect(nonBackground, greaterThan(0));
   });
 
-  test('ScenePainterV2 handles invalid numeric fields without throwing', () async {
-    const background = Color(0xFFFFFFFF);
-    final controller = SceneControllerV2(
-      initialSnapshot: SceneSnapshot(
-        camera: const CameraSnapshot(offset: Offset(double.nan, 0)),
-        background: const BackgroundSnapshot(
-          color: background,
-          grid: GridSnapshot(
-            isEnabled: true,
-            cellSize: double.nan,
-            color: Color(0xFF000000),
+  test(
+    'ScenePainterV2 handles invalid numeric fields without throwing',
+    () async {
+      const background = Color(0xFFFFFFFF);
+      final controller = SceneControllerV2(
+        initialSnapshot: SceneSnapshot(
+          camera: const CameraSnapshot(offset: Offset(double.nan, 0)),
+          background: const BackgroundSnapshot(
+            color: background,
+            grid: GridSnapshot(
+              isEnabled: true,
+              cellSize: double.nan,
+              color: Color(0xFF000000),
+            ),
           ),
-        ),
-        layers: <LayerSnapshot>[
-          LayerSnapshot(
-            nodes: <NodeSnapshot>[
-              RectNodeSnapshot(
-                id: 'rect',
-                size: const Size(double.infinity, double.nan),
-                fillColor: const Color(0xFF2196F3),
-                strokeColor: const Color(0xFF000000),
-                strokeWidth: double.infinity,
-                opacity: double.nan,
-              ),
-              const LineNodeSnapshot(
-                id: 'line',
-                start: Offset(double.nan, 0),
-                end: Offset(10, 0),
-                thickness: double.nan,
-                color: Color(0xFF000000),
-              ),
-              StrokeNodeSnapshot(
-                id: 'stroke',
-                points: const <Offset>[Offset(0, 0), Offset(double.nan, 1)],
-                thickness: double.infinity,
-                color: const Color(0xFF000000),
-              ),
-              TextNodeSnapshot(
-                id: 'text',
-                text: 'x',
-                size: const Size(double.infinity, double.nan),
-                fontSize: double.nan,
-                color: const Color(0xFF000000),
-                maxWidth: double.nan,
-                lineHeight: -1,
-              ),
-              const ImageNodeSnapshot(
-                id: 'image',
-                imageId: 'none',
-                size: Size(10, 10),
-                transform: Transform2D(
-                  a: 1,
-                  b: 0,
-                  c: 0,
-                  d: 1,
-                  tx: double.nan,
-                  ty: 0,
+          layers: <LayerSnapshot>[
+            LayerSnapshot(
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(
+                  id: 'rect',
+                  size: const Size(double.infinity, double.nan),
+                  fillColor: const Color(0xFF2196F3),
+                  strokeColor: const Color(0xFF000000),
+                  strokeWidth: double.infinity,
+                  opacity: double.nan,
                 ),
-              ),
-              const PathNodeSnapshot(
-                id: 'path',
-                svgPathData: 'INVALID',
-                fillColor: Color(0xFF000000),
-                strokeWidth: double.nan,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-    addTearDown(controller.dispose);
+                const LineNodeSnapshot(
+                  id: 'line',
+                  start: Offset(double.nan, 0),
+                  end: Offset(10, 0),
+                  thickness: double.nan,
+                  color: Color(0xFF000000),
+                ),
+                StrokeNodeSnapshot(
+                  id: 'stroke',
+                  points: const <Offset>[Offset(0, 0), Offset(double.nan, 1)],
+                  thickness: double.infinity,
+                  color: const Color(0xFF000000),
+                ),
+                TextNodeSnapshot(
+                  id: 'text',
+                  text: 'x',
+                  size: const Size(double.infinity, double.nan),
+                  fontSize: double.nan,
+                  color: const Color(0xFF000000),
+                  maxWidth: double.nan,
+                  lineHeight: -1,
+                ),
+                const ImageNodeSnapshot(
+                  id: 'image',
+                  imageId: 'none',
+                  size: Size(10, 10),
+                  transform: Transform2D(
+                    a: 1,
+                    b: 0,
+                    c: 0,
+                    d: 1,
+                    tx: double.nan,
+                    ty: 0,
+                  ),
+                ),
+                const PathNodeSnapshot(
+                  id: 'path',
+                  svgPathData: 'INVALID',
+                  fillColor: Color(0xFF000000),
+                  strokeWidth: double.nan,
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
 
-    final painter = ScenePainterV2(
-      controller: controller,
-      imageResolver: (_) => null,
-      selectionStrokeWidth: double.nan,
-      gridStrokeWidth: double.nan,
-    );
+      final painter = ScenePainterV2(
+        controller: controller,
+        imageResolver: (_) => null,
+        selectionStrokeWidth: double.nan,
+        gridStrokeWidth: double.nan,
+      );
 
-    final rendered = await _paintToImage(painter, width: 80, height: 80);
-    expect(rendered.width, greaterThan(0));
-  });
+      final rendered = await _paintToImage(painter, width: 80, height: 80);
+      expect(rendered.width, greaterThan(0));
+    },
+  );
 
-  test('ScenePainterV2 keeps grid visible with over-density via stride', () async {
-    const background = Color(0xFFFFFFFF);
-    final controller = SceneControllerV2(
-      initialSnapshot: SceneSnapshot(
-        background: BackgroundSnapshot(
-          color: background,
-          grid: GridSnapshot(
-            isEnabled: true,
-            cellSize: 1,
-            color: Color(0xFF000000),
+  test(
+    'ScenePainterV2 keeps grid visible with over-density via stride',
+    () async {
+      const background = Color(0xFFFFFFFF);
+      final controller = SceneControllerV2(
+        initialSnapshot: SceneSnapshot(
+          background: BackgroundSnapshot(
+            color: background,
+            grid: GridSnapshot(
+              isEnabled: true,
+              cellSize: 1,
+              color: Color(0xFF000000),
+            ),
           ),
         ),
-      ),
-    );
-    addTearDown(controller.dispose);
+      );
+      addTearDown(controller.dispose);
 
-    final painter = ScenePainterV2(controller: controller, imageResolver: (_) => null);
-    final image = await _paintToImage(painter, width: 500, height: 500);
-    final nonBackground = await _countNonBackgroundPixels(image, background);
-    expect(nonBackground, greaterThan(0));
-  });
+      final painter = ScenePainterV2(
+        controller: controller,
+        imageResolver: (_) => null,
+      );
+      final image = await _paintToImage(painter, width: 500, height: 500);
+      final nonBackground = await _countNonBackgroundPixels(image, background);
+      expect(nonBackground, greaterThan(0));
+    },
+  );
 
   test('ScenePainterV2 skips grid for invalid drawable state', () async {
     const background = Color(0xFFFFFFFF);
@@ -295,90 +304,104 @@ void main() {
     );
     addTearDown(controller.dispose);
 
-    final painter = ScenePainterV2(controller: controller, imageResolver: (_) => null);
+    final painter = ScenePainterV2(
+      controller: controller,
+      imageResolver: (_) => null,
+    );
     final image = await _paintToImage(painter, width: 120, height: 80);
     final nonBackground = await _countNonBackgroundPixels(image, background);
     expect(nonBackground, 0);
   });
 
-  test('ScenePainterV2 uses textDirection for TextAlign.start and end', () async {
-    const background = Color(0xFFFFFFFF);
+  test(
+    'ScenePainterV2 uses textDirection for TextAlign.start and end',
+    () async {
+      const background = Color(0xFFFFFFFF);
 
-    SceneSnapshot snapshotFor(TextAlign align) {
-      return SceneSnapshot(
-        background: const BackgroundSnapshot(color: background),
-        layers: <LayerSnapshot>[
-          LayerSnapshot(
-            nodes: <NodeSnapshot>[
-              TextNodeSnapshot(
-                id: 'text-$align',
-                text: 'StartEnd',
-                size: const Size(120, 28),
-                fontSize: 20,
-                color: const Color(0xFF000000),
-                align: align,
-                transform: Transform2D.translation(const Offset(80, 40)),
-              ),
-            ],
-          ),
-        ],
+      SceneSnapshot snapshotFor(TextAlign align) {
+        return SceneSnapshot(
+          background: const BackgroundSnapshot(color: background),
+          layers: <LayerSnapshot>[
+            LayerSnapshot(
+              nodes: <NodeSnapshot>[
+                TextNodeSnapshot(
+                  id: 'text-$align',
+                  text: 'StartEnd',
+                  size: const Size(120, 28),
+                  fontSize: 20,
+                  color: const Color(0xFF000000),
+                  align: align,
+                  transform: Transform2D.translation(const Offset(80, 40)),
+                ),
+              ],
+            ),
+          ],
+        );
+      }
+
+      final ltrController = SceneControllerV2(
+        initialSnapshot: snapshotFor(TextAlign.start),
       );
-    }
+      final rtlController = SceneControllerV2(
+        initialSnapshot: snapshotFor(TextAlign.start),
+      );
+      addTearDown(ltrController.dispose);
+      addTearDown(rtlController.dispose);
 
-    final ltrController = SceneControllerV2(initialSnapshot: snapshotFor(TextAlign.start));
-    final rtlController = SceneControllerV2(initialSnapshot: snapshotFor(TextAlign.start));
-    addTearDown(ltrController.dispose);
-    addTearDown(rtlController.dispose);
+      final ltrImage = await _paintToImage(
+        ScenePainterV2(
+          controller: ltrController,
+          imageResolver: (_) => null,
+          textDirection: TextDirection.ltr,
+        ),
+        width: 160,
+        height: 80,
+      );
+      final rtlImage = await _paintToImage(
+        ScenePainterV2(
+          controller: rtlController,
+          imageResolver: (_) => null,
+          textDirection: TextDirection.rtl,
+        ),
+        width: 160,
+        height: 80,
+      );
+      final ltrCenterX = await _inkCentroidX(ltrImage, background);
+      final rtlCenterX = await _inkCentroidX(rtlImage, background);
+      expect(rtlCenterX, greaterThan(ltrCenterX));
 
-    final ltrImage = await _paintToImage(
-      ScenePainterV2(
-        controller: ltrController,
-        imageResolver: (_) => null,
-        textDirection: TextDirection.ltr,
-      ),
-      width: 160,
-      height: 80,
-    );
-    final rtlImage = await _paintToImage(
-      ScenePainterV2(
-        controller: rtlController,
-        imageResolver: (_) => null,
-        textDirection: TextDirection.rtl,
-      ),
-      width: 160,
-      height: 80,
-    );
-    final ltrCenterX = await _inkCentroidX(ltrImage, background);
-    final rtlCenterX = await _inkCentroidX(rtlImage, background);
-    expect(rtlCenterX, greaterThan(ltrCenterX));
+      final ltrEndController = SceneControllerV2(
+        initialSnapshot: snapshotFor(TextAlign.end),
+      );
+      final rtlEndController = SceneControllerV2(
+        initialSnapshot: snapshotFor(TextAlign.end),
+      );
+      addTearDown(ltrEndController.dispose);
+      addTearDown(rtlEndController.dispose);
 
-    final ltrEndController = SceneControllerV2(initialSnapshot: snapshotFor(TextAlign.end));
-    final rtlEndController = SceneControllerV2(initialSnapshot: snapshotFor(TextAlign.end));
-    addTearDown(ltrEndController.dispose);
-    addTearDown(rtlEndController.dispose);
-
-    final ltrEndImage = await _paintToImage(
-      ScenePainterV2(
-        controller: ltrEndController,
-        imageResolver: (_) => null,
-        textDirection: TextDirection.ltr,
-      ),
-      width: 160,
-      height: 80,
-    );
-    final rtlEndImage = await _paintToImage(
-      ScenePainterV2(
-        controller: rtlEndController,
-        imageResolver: (_) => null,
-        textDirection: TextDirection.rtl,
-      ),
-      width: 160,
-      height: 80,
-    );
-    final ltrEndCenterX = await _inkCentroidX(ltrEndImage, background);
-    final rtlEndCenterX = await _inkCentroidX(rtlEndImage, background);
-    expect(rtlEndCenterX, lessThan(ltrEndCenterX));
-  });
+      final ltrEndImage = await _paintToImage(
+        ScenePainterV2(
+          controller: ltrEndController,
+          imageResolver: (_) => null,
+          textDirection: TextDirection.ltr,
+        ),
+        width: 160,
+        height: 80,
+      );
+      final rtlEndImage = await _paintToImage(
+        ScenePainterV2(
+          controller: rtlEndController,
+          imageResolver: (_) => null,
+          textDirection: TextDirection.rtl,
+        ),
+        width: 160,
+        height: 80,
+      );
+      final ltrEndCenterX = await _inkCentroidX(ltrEndImage, background);
+      final rtlEndCenterX = await _inkCentroidX(rtlEndImage, background);
+      expect(rtlEndCenterX, lessThan(ltrEndCenterX));
+    },
+  );
 
   test('ScenePainterV2 uses caches when provided', () async {
     const background = Color(0xFFFFFFFF);
@@ -438,47 +461,50 @@ void main() {
     expect(pathCache.debugHitCount, greaterThanOrEqualTo(1));
   });
 
-  test('ScenePainterV2 can use static layer cache across camera updates', () async {
-    final staticCache = SceneStaticLayerCacheV2();
-    final controller = SceneControllerV2(
-      initialSnapshot: SceneSnapshot(
-        background: BackgroundSnapshot(
-          color: Color(0xFFFFFFFF),
-          grid: GridSnapshot(
-            isEnabled: true,
-            cellSize: 20,
-            color: Color(0xFF000000),
+  test(
+    'ScenePainterV2 can use static layer cache across camera updates',
+    () async {
+      final staticCache = SceneStaticLayerCacheV2();
+      final controller = SceneControllerV2(
+        initialSnapshot: SceneSnapshot(
+          background: BackgroundSnapshot(
+            color: Color(0xFFFFFFFF),
+            grid: GridSnapshot(
+              isEnabled: true,
+              cellSize: 20,
+              color: Color(0xFF000000),
+            ),
           ),
         ),
-      ),
-    );
-    addTearDown(controller.dispose);
+      );
+      addTearDown(controller.dispose);
 
-    final painter = ScenePainterV2(
-      controller: controller,
-      imageResolver: (_) => null,
-      staticLayerCache: staticCache,
-    );
+      final painter = ScenePainterV2(
+        controller: controller,
+        imageResolver: (_) => null,
+        staticLayerCache: staticCache,
+      );
 
-    await _paintToImage(painter, width: 120, height: 80);
-    expect(staticCache.debugBuildCount, 1);
+      await _paintToImage(painter, width: 120, height: 80);
+      expect(staticCache.debugBuildCount, 1);
 
-    controller.writeReplaceScene(
-      SceneSnapshot(
-        camera: CameraSnapshot(offset: Offset(7, 5)),
-        background: BackgroundSnapshot(
-          color: Color(0xFFFFFFFF),
-          grid: GridSnapshot(
-            isEnabled: true,
-            cellSize: 20,
-            color: Color(0xFF000000),
+      controller.writeReplaceScene(
+        SceneSnapshot(
+          camera: CameraSnapshot(offset: Offset(7, 5)),
+          background: BackgroundSnapshot(
+            color: Color(0xFFFFFFFF),
+            grid: GridSnapshot(
+              isEnabled: true,
+              cellSize: 20,
+              color: Color(0xFF000000),
+            ),
           ),
         ),
-      ),
-    );
-    await _paintToImage(painter, width: 120, height: 80);
-    expect(staticCache.debugBuildCount, 1);
-  });
+      );
+      await _paintToImage(painter, width: 120, height: 80);
+      expect(staticCache.debugBuildCount, 1);
+    },
+  );
 
   test(
     'ScenePainterV2 covers single-point stroke, image placeholder and text align branches',
@@ -558,8 +584,20 @@ void main() {
     final same = ScenePainterV2(controller: c1, imageResolver: resolverA);
     expect(base.shouldRepaint(same), isFalse);
 
-    expect(ScenePainterV2(controller: c2, imageResolver: resolverA).shouldRepaint(base), isTrue);
-    expect(ScenePainterV2(controller: c1, imageResolver: resolverB).shouldRepaint(base), isTrue);
+    expect(
+      ScenePainterV2(
+        controller: c2,
+        imageResolver: resolverA,
+      ).shouldRepaint(base),
+      isTrue,
+    );
+    expect(
+      ScenePainterV2(
+        controller: c1,
+        imageResolver: resolverB,
+      ).shouldRepaint(base),
+      isTrue,
+    );
 
     final staticCache = SceneStaticLayerCacheV2();
     expect(
