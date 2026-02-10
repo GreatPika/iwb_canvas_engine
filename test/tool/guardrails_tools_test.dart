@@ -4,18 +4,14 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('tool/check_import_boundaries.dart', () {
-    test('allows v2 -> core import', () async {
+    test('allows view -> render import', () async {
       final sandbox = await _createSandbox();
       try {
+        _writeFile(sandbox, 'lib/src/render/painter.dart', 'class Painter {}\n');
         _writeFile(
           sandbox,
-          'lib/src/core/value.dart',
-          'const int coreValue = 1;\n',
-        );
-        _writeFile(
-          sandbox,
-          'lib/src/v2/public/snapshot.dart',
-          "import 'package:iwb_canvas_engine/src/core/value.dart';\n",
+          'lib/src/view/widget.dart',
+          "import 'package:iwb_canvas_engine/src/render/painter.dart';\n",
         );
 
         final result = await _runTool(sandbox, 'check_import_boundaries.dart');
@@ -25,13 +21,13 @@ void main() {
       }
     });
 
-    test('rejects v2 -> input import', () async {
+    test('rejects core -> input import', () async {
       final sandbox = await _createSandbox();
       try {
         _writeFile(sandbox, 'lib/src/input/types.dart', 'class InputType {}\n');
         _writeFile(
           sandbox,
-          'lib/src/v2/public/snapshot.dart',
+          'lib/src/core/value.dart',
           "import 'package:iwb_canvas_engine/src/input/types.dart';\n",
         );
 
@@ -39,32 +35,32 @@ void main() {
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          contains('layer boundary violation: v2/** must not import input/**'),
+          contains('layer boundary violation: core/** must not import input/**'),
         );
       } finally {
         sandbox.deleteSync(recursive: true);
       }
     });
 
-    test('rejects input -> v2 import before cutover', () async {
+    test('rejects cross-slice import', () async {
       final sandbox = await _createSandbox();
       try {
         _writeFile(
           sandbox,
-          'lib/src/v2/public/snapshot.dart',
-          'class SceneSnapshot {}\n',
+          'lib/src/input/slices/a/a.dart',
+          'class SliceA {}\n',
         );
         _writeFile(
           sandbox,
-          'lib/src/input/bridge.dart',
-          "import 'package:iwb_canvas_engine/src/v2/public/snapshot.dart';\n",
+          'lib/src/input/slices/b/b.dart',
+          "import 'package:iwb_canvas_engine/src/input/slices/a/a.dart';\n",
         );
 
         final result = await _runTool(sandbox, 'check_import_boundaries.dart');
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          contains('layer boundary violation: input/** must not import v2/**'),
+          contains('slices/** must not import other slices'),
         );
       } finally {
         sandbox.deleteSync(recursive: true);
@@ -72,12 +68,12 @@ void main() {
     });
   });
 
-  group('tool/check_v2_guardrails.dart', () {
+  group('tool/check_guardrails.dart', () {
     // INV:INV-V2-TXN-ATOMIC-COMMIT
     test('passes for write/txn APIs and controllerEpoch usage', () async {
       final sandbox = await _createSandbox();
       try {
-        _writeFile(sandbox, 'lib/src/v2/controller/store.dart', '''
+        _writeFile(sandbox, 'lib/src/controller/store.dart', '''
 class Store {
   int controllerEpoch = 0;
 
@@ -89,7 +85,7 @@ class Store {
 }
 ''');
 
-        final result = await _runTool(sandbox, 'check_v2_guardrails.dart');
+        final result = await _runTool(sandbox, 'check_guardrails.dart');
         expect(result.exitCode, 0, reason: result.stderr.toString());
       } finally {
         sandbox.deleteSync(recursive: true);
@@ -99,7 +95,7 @@ class Store {
     test('rejects mutating symbol outside write/txn prefixes', () async {
       final sandbox = await _createSandbox();
       try {
-        _writeFile(sandbox, 'lib/src/v2/controller/store.dart', '''
+        _writeFile(sandbox, 'lib/src/controller/store.dart', '''
 class Store {
   int controllerEpoch = 0;
 
@@ -107,7 +103,7 @@ class Store {
 }
 ''');
 
-        final result = await _runTool(sandbox, 'check_v2_guardrails.dart');
+        final result = await _runTool(sandbox, 'check_guardrails.dart');
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
@@ -118,22 +114,22 @@ class Store {
       }
     });
 
-    test('rejects v2/public import from input layer', () async {
+    test('rejects public import from input layer', () async {
       final sandbox = await _createSandbox();
       try {
         _writeFile(sandbox, 'lib/src/input/types.dart', 'class InputType {}\n');
         _writeFile(
           sandbox,
-          'lib/src/v2/public/snapshot.dart',
+          'lib/src/public/snapshot.dart',
           "import 'package:iwb_canvas_engine/src/input/types.dart';\n",
         );
 
-        final result = await _runTool(sandbox, 'check_v2_guardrails.dart');
+        final result = await _runTool(sandbox, 'check_guardrails.dart');
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
           contains(
-            'v2/public must not import/export input/render/view/serialization internals',
+            'public must not import/export input/render/view/serialization internals',
           ),
         );
       } finally {
@@ -160,8 +156,8 @@ environment:
     '${sandbox.path}/tool/check_import_boundaries.dart',
   );
   _copyFile(
-    '$sourceRoot/tool/check_v2_guardrails.dart',
-    '${sandbox.path}/tool/check_v2_guardrails.dart',
+    '$sourceRoot/tool/check_guardrails.dart',
+    '${sandbox.path}/tool/check_guardrails.dart',
   );
 
   return sandbox;

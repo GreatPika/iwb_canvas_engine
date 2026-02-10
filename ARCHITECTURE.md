@@ -112,8 +112,8 @@ here as a checklist to prevent subtle behavioral regressions during refactors.
 lib/
   basic.dart        // Primary v2 public API
   advanced.dart     // Advanced alias of basic.dart
-  basic_v2.dart     // Deprecated compatibility alias to basic.dart
-  advanced_v2.dart  // Deprecated compatibility alias to advanced.dart
+  basic.dart     // Deprecated compatibility alias to basic.dart
+  advanced.dart  // Deprecated compatibility alias to advanced.dart
   src/
     core/           // Scene model, math, selection, hit-test
     render/         // Canvas rendering for background, layers, nodes
@@ -132,7 +132,7 @@ lib/
 - tri-state patch field semantics (`PatchField.absent/value/nullValue`)
 - JSON helpers with v2 snapshot types (`encodeScene*` / `decodeScene*`)
 
-The compatibility aliases `basic_v2.dart` / `advanced_v2.dart` re-export the
+The compatibility aliases `basic.dart` / `advanced.dart` re-export the
 same symbols for migration convenience.
 
 ## Data model

@@ -29,15 +29,15 @@ language: russian
 - удалён большой статический листинг файлов `lib/src/**` (быстро устаревает, не помогает выполнению);
 - удалена избыточная "карта переиспользования" по каждому файлу в деталях;
 - убраны устаревшие формулировки про уже решённые части (таймер line tool как реализация);
-- уточнено, что для `lib/src/v2/**` нужно расширить tooling/инварианты, иначе новые слои не будут автоматически защищены текущими проверками границ импортов;
+- уточнено, что для `lib/src/**` нужно расширить tooling/инварианты, иначе новые слои не будут автоматически защищены текущими проверками границ импортов;
 - этапы сведены к чеклисту с критериями приёмки, чтобы было удобно отмечать прогресс.
 
 ## 3) Выбранная стратегия (рекомендованная)
 
 Рекомендация: **инкрементальный параллельный ввод v2**.
 
-- сначала добавить `basic_v2.dart` и `advanced_v2.dart`;
-- код v2 разрабатывать в `lib/src/v2/**`;
+- сначала добавить `basic.dart` и `advanced.dart`;
+- код v2 разрабатывать в `lib/src/**`;
 - v1 не ломать, пока v2 не закроет тесты и инварианты;
 - после готовности переключить `basic.dart`/`advanced.dart` на v2, удалить legacy API и зафиксировать breaking changes в `CHANGELOG.md`.
 
@@ -67,7 +67,7 @@ language: russian
   - транзакция как единственный путь записи;
   - атомарность commit;
   - epoch-инвалидация кэшей/индекса.
-- [x] A2. Расширить `tool/check_import_boundaries.dart` (или аналогичный tool-check), чтобы `lib/src/v2/**` тоже проверялся на архитектурные границы.
+- [x] A2. Расширить `tool/check_import_boundaries.dart` (или аналогичный tool-check), чтобы `lib/src/**` тоже проверялся на архитектурные границы.
 - [x] A3. Добавить enforcement (`// INV:<id>`) в `test/**` и/или `tool/**` для всех новых v2-инвариантов.
 - [x] A4. Держать зелёным `dart run tool/check_invariant_coverage.dart` на каждом шаге.
 
@@ -76,20 +76,20 @@ language: russian
 
 ### B. Публичная read-only модель v2
 
-- [x] B1. Создать `lib/src/v2/public/`:
+- [x] B1. Создать `lib/src/public/`:
   - `SceneSnapshot`, `LayerSnapshot`, `NodeSnapshot` (immutable);
   - `NodeSpec` (создание);
   - `NodePatch` (частичное изменение).
 - [x] B2. Убедиться, что наружу не возвращаются mutable-объекты сцены/узлов.
-- [x] B3. Добавить `basic_v2.dart` и `advanced_v2.dart` (временные entrypoints для миграции).
+- [x] B3. Добавить `basic.dart` и `advanced.dart` (временные entrypoints для миграции).
 
 Критерий приёмки B:
 - публичный API v2 предоставляет только read-only модель + команды через контроллер.
 
 ### C. Внутренний store, epoch и транзакции
 
-- [x] C1. Создать `lib/src/v2/model/` с внутренней mutable-моделью (не экспортируется наружу).
-- [x] C2. Создать store (`lib/src/v2/controller/store.dart`) с:
+- [x] C1. Создать `lib/src/model/` с внутренней mutable-моделью (не экспортируется наружу).
+- [x] C2. Создать store (`lib/src/controller/store.dart`) с:
   - `controllerEpoch`;
   - `structuralRevision`, `boundsRevision`, `visualRevision`.
 - [x] C3. Реализовать `SceneControllerV2.write(fn)` + `TxnContext` + `SceneWriter`.
@@ -134,7 +134,7 @@ language: russian
 
 ### F. Сериализация v2
 
-- [x] F1. Портировать codec в `lib/src/v2/serialization/`.
+- [x] F1. Портировать codec в `lib/src/serialization/`.
 - [x] F2. `decode` возвращает snapshot/document v2 (не mutable Scene).
 - [x] F3. `encode` принимает snapshot/document v2.
 - [x] F4. Портировать и адаптировать `test/serialization/*`.
@@ -311,7 +311,7 @@ flutter test --coverage
 dart run tool/check_coverage.dart
 dart run tool/check_invariant_coverage.dart
 dart run tool/check_import_boundaries.dart
-dart run tool/check_v2_guardrails.dart
+dart run tool/check_guardrails.dart
 ```
 
 Рекомендовано перед релизом:

@@ -28,7 +28,7 @@ If you discover a new class of defect, the end state should be: **a test, a tool
 - [ ] Pointer + gesture sequencing: `test/input/pointer/pointer_input_test.dart`, `test/input/edge_cases_test.dart`
 - [ ] Repaint scheduling invariants: `test/input/repaint/repaint_scheduler_test.dart`
 - [ ] Selection notify invariants: `test/input/selection/selection_notify_test.dart`, `test/input/commands/commands_test.dart`
-- [ ] JSON schema validation + fixtures: `test/serialization/scene_codec_validation_test.dart`, `test/serialization/scene_v2_fixture_test.dart`, `test/fixtures/scene_v2.json`
+- [ ] JSON schema validation + fixtures: `test/serialization/scene_codec_validation_test.dart`, `test/serialization/scene_v2_fixture_test.dart`, `test/fixtures/scene.json`
 - [ ] Static layer cache invariants: `test/render/scene_static_layer_cache_test.dart`
 - [ ] `SceneView` integration + disposal: `test/view/scene_view_test.dart`
 

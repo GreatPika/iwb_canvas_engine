@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/basic.dart';
-import 'package:iwb_canvas_engine/src/v2/serialization/scene_codec.dart'
+import 'package:iwb_canvas_engine/src/serialization/scene_codec.dart'
     show encodeSceneDocument;
 
 Map<String, dynamic> _minimalSceneJson() {

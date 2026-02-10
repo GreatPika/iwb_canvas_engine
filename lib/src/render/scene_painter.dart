@@ -5,27 +5,22 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 
-import '../core/nodes.dart';
-import '../core/scene.dart';
 import '../core/grid_safety_limits.dart';
-import '../core/transform2d.dart';
+import '../core/nodes.dart' show PathFillRule, PathNode;
 import '../core/numeric_clamp.dart';
-import '../input/scene_controller.dart';
+import '../core/transform2d.dart';
+import '../controller/scene_controller.dart';
+import '../public/snapshot.dart';
 
-/// LRU cache for built [Path] instances for [StrokeNode] geometry.
-///
-/// Why: avoid rebuilding long stroke polylines every frame.
-/// Invariant: cached path is valid only while the stroke geometry is unchanged.
-/// The cache validates freshness by [StrokeNode.pointsRevision].
-/// Validate: `test/render/scene_stroke_path_cache_test.dart`.
-class SceneStrokePathCache {
-  SceneStrokePathCache({this.maxEntries = 512})
+typedef ImageResolverV2 = Image? Function(String imageId);
+
+class SceneStrokePathCacheV2 {
+  SceneStrokePathCacheV2({this.maxEntries = 512})
     : assert(maxEntries > 0, 'maxEntries must be > 0.');
 
   final int maxEntries;
-
-  final LinkedHashMap<NodeId, _StrokePathEntry> _entries =
-      LinkedHashMap<NodeId, _StrokePathEntry>();
+  final LinkedHashMap<NodeId, _StrokePathEntryV2> _entries =
+      LinkedHashMap<NodeId, _StrokePathEntryV2>();
 
   int _debugBuildCount = 0;
   int _debugHitCount = 0;
@@ -40,35 +35,39 @@ class SceneStrokePathCache {
   @visibleForTesting
   int get debugSize => _entries.length;
 
-  void clear() {
-    _entries.clear();
-  }
+  void clear() => _entries.clear();
 
-  Path getOrBuild(StrokeNode node) {
-    final points = node.points;
-    if (points.isEmpty) {
+  Path getOrBuild(StrokeNodeSnapshot node) {
+    if (node.points.isEmpty) {
       return Path();
     }
-    if (points.length == 1) {
-      return Path()..addOval(Rect.fromCircle(center: points.first, radius: 0));
+    if (node.points.length == 1) {
+      return Path()
+        ..addOval(Rect.fromCircle(center: node.points.first, radius: 0));
     }
 
-    final pointsRevision = node.pointsRevision;
+    final geometryHash = _pointsHash(node.points);
     final cached = _entries.remove(node.id);
-    if (cached != null && cached.pointsRevision == pointsRevision) {
+    if (cached != null && cached.geometryHash == geometryHash) {
       _entries[node.id] = cached;
       _debugHitCount += 1;
       return cached.path;
     }
 
-    final path = _buildStrokePath(points);
-    _entries[node.id] = _StrokePathEntry(
+    final path = _buildStrokePath(node.points);
+    _entries[node.id] = _StrokePathEntryV2(
       path: path,
-      pointsRevision: pointsRevision,
+      geometryHash: geometryHash,
     );
     _debugBuildCount += 1;
     _evictIfNeeded();
     return path;
+  }
+
+  int _pointsHash(List<Offset> points) {
+    return Object.hashAll(
+      points.map((point) => Object.hash(point.dx, point.dy)),
+    );
   }
 
   void _evictIfNeeded() {
@@ -79,27 +78,20 @@ class SceneStrokePathCache {
   }
 }
 
-class _StrokePathEntry {
-  const _StrokePathEntry({required this.path, required this.pointsRevision});
+class _StrokePathEntryV2 {
+  const _StrokePathEntryV2({required this.path, required this.geometryHash});
 
   final Path path;
-  final int pointsRevision;
+  final int geometryHash;
 }
 
-/// LRU cache for [TextPainter] layout results for [TextNode].
-///
-/// Why: avoid recomputing text layout on every paint when inputs are unchanged.
-/// Invariant: cached layout is valid only while the key (text + style + layout
-/// constraints) is unchanged.
-/// Validate: `test/render/scene_text_layout_cache_test.dart`.
-class SceneTextLayoutCache {
-  SceneTextLayoutCache({this.maxEntries = 256})
+class SceneTextLayoutCacheV2 {
+  SceneTextLayoutCacheV2({this.maxEntries = 256})
     : assert(maxEntries > 0, 'maxEntries must be > 0.');
 
   final int maxEntries;
-
-  final LinkedHashMap<_TextLayoutKey, TextPainter> _entries =
-      LinkedHashMap<_TextLayoutKey, TextPainter>();
+  final LinkedHashMap<_TextLayoutKeyV2, TextPainter> _entries =
+      LinkedHashMap<_TextLayoutKeyV2, TextPainter>();
 
   int _debugBuildCount = 0;
   int _debugHitCount = 0;
@@ -114,33 +106,22 @@ class SceneTextLayoutCache {
   @visibleForTesting
   int get debugSize => _entries.length;
 
-  void clear() {
-    _entries.clear();
-  }
+  void clear() => _entries.clear();
 
   TextPainter getOrBuild({
-    required TextNode node,
+    required TextNodeSnapshot node,
     required TextStyle textStyle,
     required double maxWidth,
     TextDirection textDirection = TextDirection.ltr,
   }) {
-    final safeFontSize = clampPositiveFinite(node.fontSize, fallback: 24.0);
+    final safeFontSize = clampPositiveFinite(node.fontSize, fallback: 24);
     final safeLineHeight =
         (node.lineHeight != null &&
             node.lineHeight!.isFinite &&
             node.lineHeight! > 0)
         ? node.lineHeight
         : null;
-    final safeMaxWidth = clampNonNegativeFinite(maxWidth);
-    final safeLetterSpacing = sanitizeFinite(
-      textStyle.letterSpacing ?? 0.0,
-      fallback: 0.0,
-    );
-    final safeWordSpacing = sanitizeFinite(
-      textStyle.wordSpacing ?? 0.0,
-      fallback: 0.0,
-    );
-    final key = _TextLayoutKey(
+    final key = _TextLayoutKeyV2(
       text: node.text,
       fontSize: safeFontSize,
       fontFamily: node.fontFamily,
@@ -149,10 +130,7 @@ class SceneTextLayoutCache {
       isUnderline: node.isUnderline,
       align: node.align,
       lineHeight: safeLineHeight,
-      letterSpacing: safeLetterSpacing,
-      wordSpacing: safeWordSpacing,
-      locale: textStyle.locale,
-      maxWidth: safeMaxWidth,
+      maxWidth: clampNonNegativeFinite(maxWidth),
       color: textStyle.color ?? const Color(0xFF000000),
       textDirection: textDirection,
     );
@@ -168,10 +146,9 @@ class SceneTextLayoutCache {
       text: TextSpan(text: node.text, style: textStyle),
       textAlign: node.align,
       textDirection: textDirection,
-      locale: textStyle.locale,
       maxLines: null,
     );
-    textPainter.layout(maxWidth: safeMaxWidth);
+    textPainter.layout(maxWidth: key.maxWidth);
     _entries[key] = textPainter;
     _debugBuildCount += 1;
     _evictIfNeeded();
@@ -186,8 +163,8 @@ class SceneTextLayoutCache {
   }
 }
 
-class _TextLayoutKey {
-  const _TextLayoutKey({
+class _TextLayoutKeyV2 {
+  const _TextLayoutKeyV2({
     required this.text,
     required this.fontSize,
     required this.fontFamily,
@@ -196,9 +173,6 @@ class _TextLayoutKey {
     required this.isUnderline,
     required this.align,
     required this.lineHeight,
-    required this.letterSpacing,
-    required this.wordSpacing,
-    required this.locale,
     required this.maxWidth,
     required this.color,
     required this.textDirection,
@@ -212,16 +186,13 @@ class _TextLayoutKey {
   final bool isUnderline;
   final TextAlign align;
   final double? lineHeight;
-  final double letterSpacing;
-  final double wordSpacing;
-  final Locale? locale;
   final double maxWidth;
   final Color color;
   final TextDirection textDirection;
 
   @override
   bool operator ==(Object other) {
-    return other is _TextLayoutKey &&
+    return other is _TextLayoutKeyV2 &&
         other.text == text &&
         other.fontSize == fontSize &&
         other.fontFamily == fontFamily &&
@@ -230,9 +201,6 @@ class _TextLayoutKey {
         other.isUnderline == isUnderline &&
         other.align == align &&
         other.lineHeight == lineHeight &&
-        other.letterSpacing == letterSpacing &&
-        other.wordSpacing == wordSpacing &&
-        other.locale == locale &&
         other.maxWidth == maxWidth &&
         other.color == color &&
         other.textDirection == textDirection;
@@ -248,30 +216,19 @@ class _TextLayoutKey {
     isUnderline,
     align,
     lineHeight,
-    letterSpacing,
-    wordSpacing,
-    locale,
     maxWidth,
     color,
     textDirection,
   );
 }
 
-/// LRU cache for decomposed [PathNode] contours used by selection rendering.
-///
-/// Why: avoid recomputing `Path.computeMetrics()` and contour extraction on
-/// every frame when path data and relevant style are unchanged.
-/// Invariant: cached entry is valid only while `id + svgPathData + fillRule`
-/// are unchanged.
-/// Validate: `test/render/scene_path_metrics_cache_test.dart`.
-class ScenePathMetricsCache {
-  ScenePathMetricsCache({this.maxEntries = 512})
+class ScenePathMetricsCacheV2 {
+  ScenePathMetricsCacheV2({this.maxEntries = 512})
     : assert(maxEntries > 0, 'maxEntries must be > 0.');
 
   final int maxEntries;
-
-  final LinkedHashMap<NodeId, _PathMetricsCacheEntry> _entries =
-      LinkedHashMap<NodeId, _PathMetricsCacheEntry>();
+  final LinkedHashMap<NodeId, _PathMetricsEntryV2> _entries =
+      LinkedHashMap<NodeId, _PathMetricsEntryV2>();
 
   int _debugBuildCount = 0;
   int _debugHitCount = 0;
@@ -286,26 +243,22 @@ class ScenePathMetricsCache {
   @visibleForTesting
   int get debugSize => _entries.length;
 
-  void clear() {
-    _entries.clear();
-  }
+  void clear() => _entries.clear();
 
-  PathSelectionContours getOrBuild({
-    required PathNode node,
+  PathSelectionContoursV2 getOrBuild({
+    required PathNodeSnapshot node,
     required Path localPath,
   }) {
-    final svgPathData = node.svgPathData;
-    final fillRule = node.fillRule;
     final cached = _entries.remove(node.id);
     if (cached != null &&
-        cached.svgPathData == svgPathData &&
-        cached.fillRule == fillRule) {
+        cached.svgPathData == node.svgPathData &&
+        cached.fillRule == node.fillRule) {
       _entries[node.id] = cached;
       _debugHitCount += 1;
       return cached.contours;
     }
 
-    final selectionFillType = _pathFillType(fillRule);
+    final fillType = _fillTypeFromSnapshot(node.fillRule);
     Path? closedContours;
     final openContours = <Path>[];
     for (final metric in localPath.computeMetrics()) {
@@ -314,22 +267,23 @@ class ScenePathMetricsCache {
         metric.length,
         startWithMoveTo: true,
       );
-      contour.fillType = selectionFillType;
+      contour.fillType = fillType;
       if (metric.isClosed) {
         contour.close();
-        closedContours ??= Path()..fillType = selectionFillType;
+        closedContours ??= Path()..fillType = fillType;
         closedContours.addPath(contour, Offset.zero);
       } else {
         openContours.add(contour);
       }
     }
-    final contours = PathSelectionContours(
+
+    final contours = PathSelectionContoursV2(
       closedContours: closedContours,
       openContours: openContours,
     );
-    _entries[node.id] = _PathMetricsCacheEntry(
-      svgPathData: svgPathData,
-      fillRule: fillRule,
+    _entries[node.id] = _PathMetricsEntryV2(
+      svgPathData: node.svgPathData,
+      fillRule: node.fillRule,
       contours: contours,
     );
     _debugBuildCount += 1;
@@ -345,196 +299,237 @@ class ScenePathMetricsCache {
   }
 }
 
-class _PathMetricsCacheEntry {
-  const _PathMetricsCacheEntry({
+class _PathMetricsEntryV2 {
+  const _PathMetricsEntryV2({
     required this.svgPathData,
     required this.fillRule,
     required this.contours,
   });
 
   final String svgPathData;
-  final PathFillRule fillRule;
-  final PathSelectionContours contours;
+  final V2PathFillRule fillRule;
+  final PathSelectionContoursV2 contours;
 }
 
-class PathSelectionContours {
-  const PathSelectionContours({
+class PathSelectionContoursV2 {
+  const PathSelectionContoursV2({
     required this.closedContours,
     required this.openContours,
   });
 
   final Path? closedContours;
   final List<Path> openContours;
-
-  bool get isEmpty => closedContours == null && openContours.isEmpty;
 }
 
-/// Resolves an [ImageNode.imageId] to a decoded [Image] instance.
-///
-/// This callback is invoked during painting, so it must be synchronous, fast,
-/// and side-effect free.
-///
-/// Return `null` when the image is not available yet; the painter renders a
-/// placeholder.
-typedef ImageResolver = Image? Function(String imageId);
+class SceneStaticLayerCacheV2 {
+  _StaticLayerKeyV2? _key;
+  Picture? _gridPicture;
 
-/// Strategy for snapping thin axis-aligned strokes to the physical pixel grid.
-enum ThinLineSnapStrategy {
-  /// Render geometry as-is without pixel-grid snapping.
-  none,
+  int _debugBuildCount = 0;
+  int _debugDisposeCount = 0;
 
-  /// Snap thin horizontal/vertical line centers in view space.
-  ///
-  /// This targets crisper rendering on HiDPI displays for 1 logical px lines.
-  autoAxisAlignedThin,
+  @visibleForTesting
+  int get debugBuildCount => _debugBuildCount;
+  @visibleForTesting
+  int get debugDisposeCount => _debugDisposeCount;
+  @visibleForTesting
+  int? get debugKeyHashCode => _key?.hashCode;
+
+  void clear() {
+    _disposeGridPictureIfNeeded();
+    _key = null;
+  }
+
+  void dispose() => clear();
+
+  void draw(
+    Canvas canvas,
+    Size size, {
+    required BackgroundSnapshot background,
+    required Offset cameraOffset,
+    required double gridStrokeWidth,
+  }) {
+    _drawBackground(canvas, size, background.color);
+
+    final safeOffset = sanitizeFiniteOffset(cameraOffset);
+    final safeGridStrokeWidth = clampNonNegativeFinite(gridStrokeWidth);
+    final grid = background.grid;
+    final enabled = _isGridDrawable(
+      grid,
+      size: size,
+      cameraOffset: Offset.zero,
+    );
+    final cellSize = enabled ? grid.cellSize : 0.0;
+    final key = _StaticLayerKeyV2(
+      size: size,
+      gridEnabled: enabled,
+      gridCellSize: cellSize,
+      gridColor: grid.color,
+      gridStrokeWidth: safeGridStrokeWidth,
+    );
+
+    if (_gridPicture == null || _key != key) {
+      _disposeGridPictureIfNeeded();
+      _key = key;
+      _gridPicture = _recordGridPicture(size, grid, safeGridStrokeWidth);
+      _debugBuildCount += 1;
+    }
+
+    if (!_key!.gridEnabled) {
+      return;
+    }
+    final shift = _gridShiftForCameraOffset(safeOffset, _key!.gridCellSize);
+    canvas.save();
+    canvas.clipRect(Offset.zero & size);
+    canvas.translate(shift.dx, shift.dy);
+    canvas.drawPicture(_gridPicture!);
+    canvas.restore();
+  }
+
+  Picture _recordGridPicture(
+    Size size,
+    GridSnapshot grid,
+    double gridStrokeWidth,
+  ) {
+    final recorder = PictureRecorder();
+    final canvas = Canvas(recorder);
+    _drawGrid(canvas, size, grid, Offset.zero, gridStrokeWidth);
+    return recorder.endRecording();
+  }
+
+  void _disposeGridPictureIfNeeded() {
+    final picture = _gridPicture;
+    if (picture == null) {
+      return;
+    }
+    _gridPicture = null;
+    picture.dispose();
+    _debugDisposeCount += 1;
+  }
 }
 
-/// A [CustomPainter] that renders a [Scene] to a Flutter [Canvas].
-///
-/// The painter expects node geometry to be stored in local coordinates around
-/// (0,0) and uses [SceneNode.transform] to map into scene/world coordinates.
-/// It also applies [Scene.camera] offset to render into view coordinates.
-class ScenePainter extends CustomPainter {
+class _StaticLayerKeyV2 {
+  const _StaticLayerKeyV2({
+    required this.size,
+    required this.gridEnabled,
+    required this.gridCellSize,
+    required this.gridColor,
+    required this.gridStrokeWidth,
+  });
+
+  final Size size;
+  final bool gridEnabled;
+  final double gridCellSize;
+  final Color gridColor;
+  final double gridStrokeWidth;
+
+  @override
+  bool operator ==(Object other) {
+    return other is _StaticLayerKeyV2 &&
+        other.size == size &&
+        other.gridEnabled == gridEnabled &&
+        other.gridCellSize == gridCellSize &&
+        other.gridColor == gridColor &&
+        other.gridStrokeWidth == gridStrokeWidth;
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(size, gridEnabled, gridCellSize, gridColor, gridStrokeWidth);
+}
+
+class ScenePainterV2 extends CustomPainter {
   static const double _cullPadding = 1.0;
-  final Float64List _transformBuffer = Float64List(16);
 
-  ScenePainter({
+  ScenePainterV2({
     required this.controller,
     required this.imageResolver,
     this.staticLayerCache,
     this.textLayoutCache,
     this.strokePathCache,
     this.pathMetricsCache,
+    this.selectionRect,
     this.selectionColor = const Color(0xFF1565C0),
     this.selectionStrokeWidth = 1,
     this.gridStrokeWidth = 1,
-    this.devicePixelRatio = 1,
-    this.thinLineSnapStrategy = ThinLineSnapStrategy.autoAxisAlignedThin,
     this.textDirection = TextDirection.ltr,
   }) : super(repaint: controller);
 
-  final SceneController controller;
-  final ImageResolver imageResolver;
-  final SceneStaticLayerCache? staticLayerCache;
-  final SceneTextLayoutCache? textLayoutCache;
-  final SceneStrokePathCache? strokePathCache;
-  final ScenePathMetricsCache? pathMetricsCache;
+  final SceneControllerV2 controller;
+  final ImageResolverV2 imageResolver;
+  final SceneStaticLayerCacheV2? staticLayerCache;
+  final SceneTextLayoutCacheV2? textLayoutCache;
+  final SceneStrokePathCacheV2? strokePathCache;
+  final ScenePathMetricsCacheV2? pathMetricsCache;
+  final Rect? selectionRect;
   final Color selectionColor;
   final double selectionStrokeWidth;
   final double gridStrokeWidth;
-  final double devicePixelRatio;
-  final ThinLineSnapStrategy thinLineSnapStrategy;
   final TextDirection textDirection;
+
+  final Float64List _transformBuffer = Float64List(16);
 
   @override
   void paint(Canvas canvas, Size size) {
-    final scene = controller.scene;
-    final selectedNodeIds = controller.selectedNodeIds;
-    final selectionRect = controller.selectionRect;
-    final cameraOffset = sanitizeFiniteOffset(scene.camera.offset);
-    final safeSelectionStrokeWidth = clampNonNegativeFinite(
-      selectionStrokeWidth,
-    );
-    final safeGridStrokeWidth = clampNonNegativeFinite(gridStrokeWidth);
+    final snapshot = controller.snapshot;
+    final selectedIds = controller.selectedNodeIds;
+    final cameraOffset = sanitizeFiniteOffset(snapshot.camera.offset);
 
     if (staticLayerCache != null) {
       staticLayerCache!.draw(
         canvas,
         size,
-        background: scene.background,
+        background: snapshot.background,
         cameraOffset: cameraOffset,
-        gridStrokeWidth: safeGridStrokeWidth,
+        gridStrokeWidth: gridStrokeWidth,
       );
     } else {
-      _drawBackground(canvas, size, scene.background.color);
+      _drawBackground(canvas, size, snapshot.background.color);
       _drawGrid(
         canvas,
         size,
-        scene.background.grid,
+        snapshot.background.grid,
         cameraOffset,
-        safeGridStrokeWidth,
+        gridStrokeWidth,
       );
     }
+
     final viewRect = Rect.fromLTWH(
       cameraOffset.dx,
       cameraOffset.dy,
       size.width,
       size.height,
     ).inflate(_cullPadding);
-    final selectedNodes = _drawLayers(
-      canvas,
-      scene,
-      cameraOffset,
-      viewRect,
-      selectedNodeIds,
-    );
+
+    final selectedNodes = <NodeSnapshot>[];
+    for (final layer in snapshot.layers) {
+      for (final node in layer.nodes) {
+        if (!node.isVisible) {
+          continue;
+        }
+        final bounds = _nodeBoundsWorld(node);
+        if (!_isFiniteRect(bounds) || !viewRect.overlaps(bounds)) {
+          continue;
+        }
+        _drawNode(canvas, node, cameraOffset);
+        if (selectedIds.contains(node.id)) {
+          selectedNodes.add(node);
+        }
+      }
+    }
+
     _drawSelection(
       canvas,
       selectedNodes,
       cameraOffset,
       selectionRect,
-      safeSelectionStrokeWidth,
+      clampNonNegativeFinite(selectionStrokeWidth),
     );
-  }
-
-  @override
-  bool shouldRepaint(covariant ScenePainter oldDelegate) {
-    final oldSelectionStrokeWidth = clampNonNegativeFinite(
-      oldDelegate.selectionStrokeWidth,
-    );
-    final newSelectionStrokeWidth = clampNonNegativeFinite(
-      selectionStrokeWidth,
-    );
-    final oldGridStrokeWidth = clampNonNegativeFinite(
-      oldDelegate.gridStrokeWidth,
-    );
-    final newGridStrokeWidth = clampNonNegativeFinite(gridStrokeWidth);
-    final oldDevicePixelRatio = clampPositiveFinite(
-      oldDelegate.devicePixelRatio,
-      fallback: 1,
-    );
-    final newDevicePixelRatio = clampPositiveFinite(
-      devicePixelRatio,
-      fallback: 1,
-    );
-    return oldDelegate.controller != controller ||
-        oldDelegate.imageResolver != imageResolver ||
-        oldDelegate.staticLayerCache != staticLayerCache ||
-        oldDelegate.textLayoutCache != textLayoutCache ||
-        oldDelegate.strokePathCache != strokePathCache ||
-        oldDelegate.pathMetricsCache != pathMetricsCache ||
-        oldDelegate.selectionColor != selectionColor ||
-        oldSelectionStrokeWidth != newSelectionStrokeWidth ||
-        oldGridStrokeWidth != newGridStrokeWidth ||
-        oldDevicePixelRatio != newDevicePixelRatio ||
-        oldDelegate.thinLineSnapStrategy != thinLineSnapStrategy ||
-        oldDelegate.textDirection != textDirection;
-  }
-
-  List<SceneNode> _drawLayers(
-    Canvas canvas,
-    Scene scene,
-    Offset cameraOffset,
-    Rect viewRect,
-    Set<NodeId> selectedNodeIds,
-  ) {
-    final selectedNodes = <SceneNode>[];
-    for (final layer in scene.layers) {
-      for (final node in layer.nodes) {
-        if (!node.isVisible) continue;
-        if (!viewRect.overlaps(node.boundsWorld)) continue;
-        _drawNode(canvas, node, cameraOffset);
-        if (selectedNodeIds.contains(node.id)) {
-          selectedNodes.add(node);
-        }
-      }
-    }
-    return selectedNodes;
   }
 
   void _drawSelection(
     Canvas canvas,
-    List<SceneNode> selectedNodes,
+    List<NodeSnapshot> selectedNodes,
     Offset cameraOffset,
     Rect? selectionRect,
     double selectionStrokeWidth,
@@ -551,100 +546,80 @@ class ScenePainter extends CustomPainter {
       }
     }
 
-    if (selectionRect != null) {
-      if (!_isFiniteRect(selectionRect)) return;
-      final normalized = _normalizeRect(selectionRect);
-      final viewRect = normalized.shift(-cameraOffset);
-      final fillPaint = Paint()
-        ..style = PaintingStyle.fill
-        ..color = _applyOpacity(selectionColor, 0.15);
-      final strokePaint = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = selectionStrokeWidth
-        ..color = selectionColor;
-      canvas.drawRect(viewRect, fillPaint);
-      canvas.drawRect(viewRect, strokePaint);
+    if (selectionRect == null) {
+      return;
     }
+    if (!_isFiniteRect(selectionRect)) {
+      return;
+    }
+    final normalized = _normalizeRect(selectionRect);
+    final viewRect = normalized.shift(-cameraOffset);
+    final fillPaint = Paint()
+      ..style = PaintingStyle.fill
+      ..color = _applyOpacity(selectionColor, 0.15);
+    final strokePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = selectionStrokeWidth
+      ..color = selectionColor;
+    canvas.drawRect(viewRect, fillPaint);
+    canvas.drawRect(viewRect, strokePaint);
   }
 
   void _drawSelectionForNode(
     Canvas canvas,
-    SceneNode node,
+    NodeSnapshot node,
     Offset cameraOffset,
     Color color,
     double haloWidth,
   ) {
-    if (node is ImageNode) {
-      _drawBoxSelection(
-        canvas,
-        node.transform,
-        cameraOffset,
-        clampNonNegativeSizeFinite(node.size),
-        color,
-        haloWidth,
-        baseStrokeWidth: 0,
-        clearFill: true,
-      );
-    } else if (node is TextNode) {
-      _drawBoxSelection(
-        canvas,
-        node.transform,
-        cameraOffset,
-        clampNonNegativeSizeFinite(node.size),
-        color,
-        haloWidth,
-        baseStrokeWidth: 0,
-        clearFill: true,
-      );
-    } else if (node is RectNode) {
-      final safeStrokeWidth = clampNonNegativeFinite(node.strokeWidth);
-      final hasStroke = node.strokeColor != null && safeStrokeWidth > 0;
-      _drawBoxSelection(
-        canvas,
-        node.transform,
-        cameraOffset,
-        clampNonNegativeSizeFinite(node.size),
-        color,
-        haloWidth,
-        baseStrokeWidth: hasStroke ? safeStrokeWidth : 0,
-        clearFill: true,
-      );
-    } else if (node is LineNode) {
-      if (!_isFiniteTransform2D(node.transform)) return;
-      if (!_isFiniteOffset(node.start) || !_isFiniteOffset(node.end)) return;
-      final baseThickness = clampNonNegativeFinite(node.thickness);
-      final line = _resolveSnappedLine(
-        node.transform,
-        cameraOffset,
-        baseThickness,
-        node.start,
-        node.end,
-      );
-      if (line != null) {
-        canvas.drawLine(
-          line.a,
-          line.b,
-          _haloPaint(
-            baseThickness + haloWidth * 2,
-            color,
-            cap: StrokeCap.round,
-          ),
+    switch (node) {
+      case ImageNodeSnapshot image:
+        _drawBoxSelection(
+          canvas,
+          image.transform,
+          cameraOffset,
+          image.size,
+          color,
+          haloWidth,
+          baseStrokeWidth: 0,
+          clearFill: true,
         );
-        canvas.drawLine(
-          line.a,
-          line.b,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = baseThickness
-            ..strokeCap = StrokeCap.round
-            ..color = _applyOpacity(node.color, node.opacity),
+      case TextNodeSnapshot text:
+        _drawBoxSelection(
+          canvas,
+          text.transform,
+          cameraOffset,
+          text.size,
+          color,
+          haloWidth,
+          baseStrokeWidth: 0,
+          clearFill: true,
         );
-      } else {
+      case RectNodeSnapshot rect:
+        final safeStrokeWidth = clampNonNegativeFinite(rect.strokeWidth);
+        final hasStroke = rect.strokeColor != null && safeStrokeWidth > 0;
+        _drawBoxSelection(
+          canvas,
+          rect.transform,
+          cameraOffset,
+          rect.size,
+          color,
+          haloWidth,
+          baseStrokeWidth: hasStroke ? safeStrokeWidth : 0,
+          clearFill: true,
+        );
+      case LineNodeSnapshot line:
+        if (!line.transform.isFinite ||
+            !_isFiniteOffset(line.start) ||
+            !_isFiniteOffset(line.end)) {
+          return;
+        }
+        final baseThickness = clampNonNegativeFinite(line.thickness);
         canvas.save();
-        canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
+        canvas.transform(_toViewTransform(line.transform, cameraOffset));
         canvas.drawLine(
-          node.start,
-          node.end,
+          line.start,
+          line.end,
           _haloPaint(
             baseThickness + haloWidth * 2,
             color,
@@ -652,42 +627,37 @@ class ScenePainter extends CustomPainter {
           ),
         );
         canvas.drawLine(
-          node.start,
-          node.end,
+          line.start,
+          line.end,
           Paint()
             ..style = PaintingStyle.stroke
             ..strokeWidth = baseThickness
             ..strokeCap = StrokeCap.round
-            ..color = _applyOpacity(node.color, node.opacity),
+            ..color = _applyOpacity(line.color, line.opacity),
         );
         canvas.restore();
-      }
-    } else if (node is StrokeNode) {
-      if (node.points.isEmpty) return;
-      if (!_isFiniteTransform2D(node.transform)) return;
-      if (!_areFiniteOffsets(node.points)) return;
-      final baseThickness = clampNonNegativeFinite(node.thickness);
-      canvas.save();
-      canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
-      if (node.points.length == 1) {
-        _drawDotSelection(
-          canvas,
-          node.points.first,
-          baseThickness / 2,
-          color,
-          _applyOpacity(node.color, node.opacity),
-          haloWidth,
-        );
-      } else {
-        final points = _resolveSnappedPolyline(
-          node.transform,
-          cameraOffset,
-          baseThickness,
-          node.points,
-        );
-        if (points != null) {
-          final path = _buildStrokePath(points);
-          canvas.restore();
+      case StrokeNodeSnapshot stroke:
+        if (stroke.points.isEmpty ||
+            !stroke.transform.isFinite ||
+            !_areFiniteOffsets(stroke.points)) {
+          return;
+        }
+        final baseThickness = clampNonNegativeFinite(stroke.thickness);
+        canvas.save();
+        canvas.transform(_toViewTransform(stroke.transform, cameraOffset));
+        if (stroke.points.length == 1) {
+          _drawDotSelection(
+            canvas,
+            stroke.points.first,
+            baseThickness / 2,
+            color,
+            _applyOpacity(stroke.color, stroke.opacity),
+            haloWidth,
+          );
+        } else {
+          final path = strokePathCache != null
+              ? strokePathCache!.getOrBuild(stroke)
+              : _buildStrokePath(stroke.points); // coverage:ignore-line
           canvas.drawPath(
             path,
             _haloPaint(
@@ -704,91 +674,74 @@ class ScenePainter extends CustomPainter {
               ..strokeWidth = baseThickness
               ..strokeCap = StrokeCap.round
               ..strokeJoin = StrokeJoin.round
-              ..color = _applyOpacity(node.color, node.opacity),
+              ..color = _applyOpacity(stroke.color, stroke.opacity),
           );
+        }
+        canvas.restore();
+      case PathNodeSnapshot pathNode:
+        if (!pathNode.transform.isFinite) {
           return;
         }
-        final path = strokePathCache != null
-            ? strokePathCache!.getOrBuild(node)
-            : _buildStrokePath(node.points);
-        canvas.drawPath(
-          path,
-          _haloPaint(
-            baseThickness + haloWidth * 2,
+        final pathNodeModel = _buildPathNode(pathNode);
+        final localPath = pathNodeModel.buildLocalPath(copy: false);
+        if (localPath == null) {
+          return;
+        }
+        canvas.save();
+        canvas.transform(_toViewTransform(pathNode.transform, cameraOffset));
+        final safeStrokeWidth = clampNonNegativeFinite(pathNode.strokeWidth);
+        final hasStroke = pathNode.strokeColor != null && safeStrokeWidth > 0;
+        final baseStrokeWidth = hasStroke ? safeStrokeWidth : 0.0;
+        final contours = pathMetricsCache != null
+            ? pathMetricsCache!.getOrBuild(node: pathNode, localPath: localPath)
+            : _buildPathSelectionContours(
+                pathNode: pathNode,
+                localPath: localPath,
+              );
+        if (contours.closedContours != null) {
+          _drawPathHalo(
+            canvas,
+            contours.closedContours!,
             color,
-            cap: StrokeCap.round,
-            join: StrokeJoin.round,
-          ),
-        );
-        canvas.drawPath(
-          path,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = baseThickness
-            ..strokeCap = StrokeCap.round
-            ..strokeJoin = StrokeJoin.round
-            ..color = _applyOpacity(node.color, node.opacity),
-        );
-      }
-      canvas.restore();
-    } else if (node is PathNode) {
-      final localPath = node.buildLocalPath(copy: false);
-      if (localPath == null) return;
-      if (!_isFiniteTransform2D(node.transform)) return;
-      canvas.save();
-      canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
-      final safeStrokeWidth = clampNonNegativeFinite(node.strokeWidth);
-      final hasStroke = node.strokeColor != null && safeStrokeWidth > 0;
-      final baseStrokeWidth = hasStroke ? safeStrokeWidth : 0.0;
-      final contours = pathMetricsCache != null
-          ? pathMetricsCache!.getOrBuild(node: node, localPath: localPath)
-          : _buildPathSelectionContours(node: node, localPath: localPath);
-      if (contours.isEmpty) {
-        canvas.restore();
-        return;
-      }
-      if (contours.closedContours != null) {
-        _drawPathHalo(
-          canvas,
-          contours.closedContours!,
-          color,
-          haloWidth,
-          baseStrokeWidth: baseStrokeWidth,
-          clearFill: true,
-        );
-      }
-
-      for (final contour in contours.openContours) {
-        canvas.drawPath(
-          contour,
-          _haloPaint(
-            baseStrokeWidth + haloWidth * 2,
-            color,
-            cap: StrokeCap.round,
-            join: StrokeJoin.round,
-          ),
-        );
-        if (baseStrokeWidth > 0) {
-          canvas.drawPath(
-            contour,
-            Paint()
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = baseStrokeWidth
-              ..strokeJoin = StrokeJoin.round
-              ..strokeCap = StrokeCap.round
-              ..color = _applyOpacity(node.strokeColor ?? color, node.opacity),
+            haloWidth,
+            baseStrokeWidth: baseStrokeWidth,
+            clearFill: true,
           );
         }
-      }
-      canvas.restore();
+        for (final contour in contours.openContours) {
+          canvas.drawPath(
+            contour,
+            _haloPaint(
+              baseStrokeWidth + haloWidth * 2,
+              color,
+              cap: StrokeCap.round,
+              join: StrokeJoin.round,
+            ),
+          );
+          if (baseStrokeWidth > 0) {
+            canvas.drawPath(
+              contour,
+              Paint()
+                ..style = PaintingStyle.stroke
+                ..strokeWidth = baseStrokeWidth
+                ..strokeJoin = StrokeJoin.round
+                ..strokeCap = StrokeCap.round
+                ..color = _applyOpacity(
+                  pathNode.strokeColor ?? color,
+                  pathNode.opacity,
+                ),
+            );
+          }
+        }
+        canvas.restore();
     }
   }
 
-  PathSelectionContours _buildPathSelectionContours({
-    required PathNode node,
+  PathSelectionContoursV2 _buildPathSelectionContours({
+    required PathNodeSnapshot pathNode,
     required Path localPath,
   }) {
-    final selectionFillType = _pathFillType(node.fillRule);
+    final selectionFillType = _fillTypeFromSnapshot(pathNode.fillRule);
     Path? closedContours;
     final openContours = <Path>[];
     for (final metric in localPath.computeMetrics()) {
@@ -806,7 +759,7 @@ class ScenePainter extends CustomPainter {
         openContours.add(contour);
       }
     }
-    return PathSelectionContours(
+    return PathSelectionContoursV2(
       closedContours: closedContours,
       openContours: openContours,
     );
@@ -822,17 +775,14 @@ class ScenePainter extends CustomPainter {
     required double baseStrokeWidth,
     required bool clearFill,
   }) {
-    if (!_isFiniteTransform2D(nodeTransform)) return;
+    if (!nodeTransform.isFinite) {
+      return;
+    }
     canvas.save();
-    canvas.transform(_toViewCanvasTransform(nodeTransform, cameraOffset));
-    final rect = Rect.fromCenter(
-      center: Offset.zero,
-      width: clampNonNegativeFinite(size.width),
-      height: clampNonNegativeFinite(size.height),
-    );
+    canvas.transform(_toViewTransform(nodeTransform, cameraOffset));
     _drawRectHalo(
       canvas,
-      rect,
+      _centerRect(size),
       color,
       clampNonNegativeFinite(haloWidth),
       baseStrokeWidth: clampNonNegativeFinite(baseStrokeWidth),
@@ -847,10 +797,9 @@ class ScenePainter extends CustomPainter {
     StrokeCap cap = StrokeCap.round,
     StrokeJoin join = StrokeJoin.round,
   }) {
-    final safeStrokeWidth = clampNonNegativeFinite(strokeWidth);
     return Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = safeStrokeWidth
+      ..strokeWidth = clampNonNegativeFinite(strokeWidth)
       ..strokeCap = cap
       ..strokeJoin = join
       ..color = color;
@@ -864,14 +813,20 @@ class ScenePainter extends CustomPainter {
     Color baseColor,
     double haloWidth,
   ) {
-    final haloPaint = Paint()
-      ..style = PaintingStyle.fill
-      ..color = haloColor;
-    canvas.drawCircle(center, radius + haloWidth, haloPaint);
-    final basePaint = Paint()
-      ..style = PaintingStyle.fill
-      ..color = baseColor;
-    canvas.drawCircle(center, radius, basePaint);
+    canvas.drawCircle(
+      center,
+      radius + haloWidth,
+      Paint()
+        ..style = PaintingStyle.fill
+        ..color = haloColor,
+    );
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..style = PaintingStyle.fill
+        ..color = baseColor,
+    );
   }
 
   void _drawRectHalo(
@@ -885,13 +840,15 @@ class ScenePainter extends CustomPainter {
     canvas.saveLayer(null, Paint());
     final safeHaloWidth = clampNonNegativeFinite(haloWidth);
     final safeBaseStrokeWidth = clampNonNegativeFinite(baseStrokeWidth);
-    final haloPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = clampNonNegativeFinite(
-        safeBaseStrokeWidth + safeHaloWidth * 2,
-      )
-      ..color = color;
-    canvas.drawRect(rect, haloPaint);
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = clampNonNegativeFinite(
+          safeBaseStrokeWidth + safeHaloWidth * 2,
+        )
+        ..color = color,
+    );
     final clearPaint = Paint()..blendMode = BlendMode.clear;
     if (clearFill) {
       clearPaint.style = PaintingStyle.fill;
@@ -917,15 +874,17 @@ class ScenePainter extends CustomPainter {
     canvas.saveLayer(null, Paint());
     final safeHaloWidth = clampNonNegativeFinite(haloWidth);
     final safeBaseStrokeWidth = clampNonNegativeFinite(baseStrokeWidth);
-    final haloPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = clampNonNegativeFinite(
-        safeBaseStrokeWidth + safeHaloWidth * 2,
-      )
-      ..strokeJoin = StrokeJoin.round
-      ..strokeCap = StrokeCap.round
-      ..color = color;
-    canvas.drawPath(path, haloPaint);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = clampNonNegativeFinite(
+          safeBaseStrokeWidth + safeHaloWidth * 2,
+        )
+        ..strokeJoin = StrokeJoin.round
+        ..strokeCap = StrokeCap.round
+        ..color = color,
+    );
     final clearPaint = Paint()..blendMode = BlendMode.clear;
     if (clearFill) {
       clearPaint.style = PaintingStyle.fill;
@@ -942,459 +901,494 @@ class ScenePainter extends CustomPainter {
     canvas.restore();
   }
 
-  void _drawNode(Canvas canvas, SceneNode node, Offset cameraOffset) {
-    if (node is ImageNode) {
-      _drawImageNode(canvas, node, cameraOffset);
-    } else if (node is TextNode) {
-      _drawTextNode(canvas, node, cameraOffset);
-    } else if (node is StrokeNode) {
-      _drawStrokeNode(canvas, node, cameraOffset);
-    } else if (node is LineNode) {
-      _drawLineNode(canvas, node, cameraOffset);
-    } else if (node is RectNode) {
-      _drawRectNode(canvas, node, cameraOffset);
-    } else if (node is PathNode) {
-      _drawPathNode(canvas, node, cameraOffset);
+  void _drawNode(Canvas canvas, NodeSnapshot node, Offset cameraOffset) {
+    switch (node) {
+      case RectNodeSnapshot rectNode:
+        _drawRectNode(canvas, rectNode, cameraOffset);
+      case LineNodeSnapshot lineNode:
+        _drawLineNode(canvas, lineNode, cameraOffset);
+      case StrokeNodeSnapshot strokeNode:
+        _drawStrokeNode(canvas, strokeNode, cameraOffset);
+      case TextNodeSnapshot textNode:
+        _drawTextNode(canvas, textNode, cameraOffset);
+      case ImageNodeSnapshot imageNode:
+        _drawImageNode(canvas, imageNode, cameraOffset);
+      case PathNodeSnapshot pathNode:
+        _drawPathNode(canvas, pathNode, cameraOffset);
     }
   }
 
-  void _drawImageNode(Canvas canvas, ImageNode node, Offset cameraOffset) {
-    if (!_isFiniteTransform2D(node.transform)) return;
-    canvas.save();
-    canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
-
-    final rect = Rect.fromCenter(
-      center: Offset.zero,
-      width: clampNonNegativeFinite(node.size.width),
-      height: clampNonNegativeFinite(node.size.height),
-    );
-
-    final image = imageResolver(node.imageId);
-    if (image != null) {
-      final src = Rect.fromLTWH(
-        0,
-        0,
-        image.width.toDouble(),
-        image.height.toDouble(),
-      );
-      final paint = Paint()
-        ..filterQuality = FilterQuality.medium
-        ..color = Color.fromRGBO(255, 255, 255, _clamp01(node.opacity));
-      canvas.drawImageRect(image, src, rect, paint);
-    } else {
-      _drawImagePlaceholder(canvas, rect, node.opacity);
-    }
-
-    canvas.restore();
-  }
-
-  void _drawImagePlaceholder(Canvas canvas, Rect rect, double opacity) {
-    final color = _applyOpacity(const Color(0xFFB0BEC5), opacity);
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1
-      ..color = color;
-    canvas.drawRect(rect, paint);
-    canvas.drawLine(rect.topLeft, rect.bottomRight, paint);
-    canvas.drawLine(rect.topRight, rect.bottomLeft, paint);
-  }
-
-  void _drawTextNode(Canvas canvas, TextNode node, Offset cameraOffset) {
-    if (!_isFiniteTransform2D(node.transform)) return;
-    canvas.save();
-    canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
-
-    final fontSize = clampPositiveFinite(node.fontSize, fallback: 24.0);
-    final safeLineHeight =
-        (node.lineHeight != null &&
-            node.lineHeight!.isFinite &&
-            node.lineHeight! > 0)
-        ? node.lineHeight
-        : null;
-    final textStyle = TextStyle(
-      fontSize: fontSize,
-      color: _applyOpacity(node.color, node.opacity),
-      fontWeight: node.isBold ? FontWeight.bold : FontWeight.normal,
-      fontStyle: node.isItalic ? FontStyle.italic : FontStyle.normal,
-      decoration: node.isUnderline ? TextDecoration.underline : null,
-      fontFamily: node.fontFamily,
-      height: safeLineHeight == null ? null : safeLineHeight / fontSize,
-    );
-
-    final safeMaxWidth =
-        (node.maxWidth != null && node.maxWidth!.isFinite && node.maxWidth! > 0)
-        ? node.maxWidth!
-        : clampNonNegativeFinite(node.size.width);
-    final textPainter = textLayoutCache != null
-        ? textLayoutCache!.getOrBuild(
-            node: node,
-            textStyle: textStyle,
-            maxWidth: safeMaxWidth,
-            textDirection: textDirection,
-          )
-        : (TextPainter(
-            text: TextSpan(text: node.text, style: textStyle),
-            textAlign: node.align,
-            textDirection: textDirection,
-            maxLines: null,
-          )..layout(maxWidth: safeMaxWidth));
-
-    final safeBoxSize = clampNonNegativeSizeFinite(node.size);
-    final box = Rect.fromCenter(
-      center: Offset.zero,
-      width: safeBoxSize.width,
-      height: safeBoxSize.height,
-    );
-
-    final dx = _textAlignOffset(
-      node.align,
-      box.width,
-      textPainter.width,
-      textDirection,
-    );
-    final dy = (box.height - textPainter.height) / 2;
-    final offset = Offset(box.left + dx, box.top + dy);
-    textPainter.paint(canvas, offset);
-
-    canvas.restore();
-  }
-
-  double _textAlignOffset(
-    TextAlign align,
-    double boxWidth,
-    double textWidth,
-    TextDirection textDirection,
+  void _drawRectNode(
+    Canvas canvas,
+    RectNodeSnapshot node,
+    Offset cameraOffset,
   ) {
-    switch (align) {
-      case TextAlign.right:
-        return boxWidth - textWidth;
-      case TextAlign.end:
-        return textDirection == TextDirection.rtl ? 0 : boxWidth - textWidth;
-      case TextAlign.center:
-        return (boxWidth - textWidth) / 2;
-      case TextAlign.left:
-        return 0;
-      case TextAlign.start:
-      case TextAlign.justify:
-        return textDirection == TextDirection.rtl ? boxWidth - textWidth : 0;
+    if (!node.transform.isFinite) {
+      return;
     }
+    final rect = _centerRect(node.size);
+    canvas.save();
+    canvas.transform(_toViewTransform(node.transform, cameraOffset));
+    if (node.fillColor != null) {
+      canvas.drawRect(
+        rect,
+        Paint()
+          ..style = PaintingStyle.fill
+          ..color = _applyOpacity(node.fillColor!, node.opacity),
+      );
+    }
+    final strokeWidth = clampNonNegativeFinite(node.strokeWidth);
+    if (node.strokeColor != null && strokeWidth > 0) {
+      canvas.drawRect(
+        rect,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeWidth
+          ..color = _applyOpacity(node.strokeColor!, node.opacity),
+      );
+    }
+    canvas.restore();
   }
 
-  void _drawStrokeNode(Canvas canvas, StrokeNode node, Offset cameraOffset) {
-    if (node.points.isEmpty) return;
-    if (!_isFiniteTransform2D(node.transform)) return;
-    if (!_areFiniteOffsets(node.points)) return;
-    final baseThickness = clampNonNegativeFinite(node.thickness);
+  void _drawLineNode(
+    Canvas canvas,
+    LineNodeSnapshot node,
+    Offset cameraOffset,
+  ) {
+    if (!node.transform.isFinite ||
+        !_isFiniteOffset(node.start) ||
+        !_isFiniteOffset(node.end)) {
+      return;
+    }
     canvas.save();
-    canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
+    canvas.transform(_toViewTransform(node.transform, cameraOffset));
+    canvas.drawLine(
+      node.start,
+      node.end,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = clampNonNegativeFinite(node.thickness)
+        ..strokeCap = StrokeCap.round
+        ..color = _applyOpacity(node.color, node.opacity),
+    );
+    canvas.restore();
+  }
 
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = baseThickness
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..color = _applyOpacity(node.color, node.opacity);
+  void _drawStrokeNode(
+    Canvas canvas,
+    StrokeNodeSnapshot node,
+    Offset cameraOffset,
+  ) {
+    if (node.points.isEmpty ||
+        !node.transform.isFinite ||
+        !_areFiniteOffsets(node.points)) {
+      return;
+    }
+
+    final thickness = clampNonNegativeFinite(node.thickness);
+    canvas.save();
+    canvas.transform(_toViewTransform(node.transform, cameraOffset));
 
     if (node.points.length == 1) {
       canvas.drawCircle(
         node.points.first,
-        baseThickness / 2,
-        paint..style = PaintingStyle.fill,
+        thickness / 2,
+        Paint()
+          ..style = PaintingStyle.fill
+          ..color = _applyOpacity(node.color, node.opacity),
       );
       canvas.restore();
-      return;
-    }
-
-    final snappedPoints = _resolveSnappedPolyline(
-      node.transform,
-      cameraOffset,
-      baseThickness,
-      node.points,
-    );
-    if (snappedPoints != null) {
-      canvas.restore();
-      canvas.drawPath(_buildStrokePath(snappedPoints), paint);
       return;
     }
 
     final path = strokePathCache != null
         ? strokePathCache!.getOrBuild(node)
         : _buildStrokePath(node.points);
-    canvas.drawPath(path, paint);
-    canvas.restore();
-  }
 
-  void _drawLineNode(Canvas canvas, LineNode node, Offset cameraOffset) {
-    if (!_isFiniteTransform2D(node.transform)) return;
-    if (!_isFiniteOffset(node.start) || !_isFiniteOffset(node.end)) return;
-    final baseThickness = clampNonNegativeFinite(node.thickness);
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = baseThickness
-      ..strokeCap = StrokeCap.round
-      ..color = _applyOpacity(node.color, node.opacity);
-    final line = _resolveSnappedLine(
-      node.transform,
-      cameraOffset,
-      baseThickness,
-      node.start,
-      node.end,
-    );
-    if (line != null) {
-      canvas.drawLine(line.a, line.b, paint);
-      return;
-    }
-    canvas.save();
-    canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
-    canvas.drawLine(node.start, node.end, paint);
-    canvas.restore();
-  }
-
-  void _drawRectNode(Canvas canvas, RectNode node, Offset cameraOffset) {
-    if (!_isFiniteTransform2D(node.transform)) return;
-    final safeStrokeWidth = clampNonNegativeFinite(node.strokeWidth);
-    canvas.save();
-    canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
-
-    final rect = Rect.fromCenter(
-      center: Offset.zero,
-      width: clampNonNegativeFinite(node.size.width),
-      height: clampNonNegativeFinite(node.size.height),
-    );
-
-    if (node.fillColor != null) {
-      final paint = Paint()
-        ..style = PaintingStyle.fill
-        ..color = _applyOpacity(node.fillColor!, node.opacity);
-      canvas.drawRect(rect, paint);
-    }
-    if (node.strokeColor != null && safeStrokeWidth > 0) {
-      final paint = Paint()
+    canvas.drawPath(
+      path,
+      Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = safeStrokeWidth
-        ..color = _applyOpacity(node.strokeColor!, node.opacity);
-      canvas.drawRect(rect, paint);
-    }
-
-    canvas.restore();
-  }
-
-  void _drawPathNode(Canvas canvas, PathNode node, Offset cameraOffset) {
-    if (node.svgPathData.trim().isEmpty) return;
-    if (!_isFiniteTransform2D(node.transform)) return;
-    final safeStrokeWidth = clampNonNegativeFinite(node.strokeWidth);
-
-    final centered = node.buildLocalPath(copy: false);
-    if (centered == null) return;
-
-    canvas.save();
-    canvas.transform(_toViewCanvasTransform(node.transform, cameraOffset));
-
-    if (node.fillColor != null) {
-      final paint = Paint()
-        ..style = PaintingStyle.fill
-        ..color = _applyOpacity(node.fillColor!, node.opacity);
-      canvas.drawPath(centered, paint);
-    }
-
-    if (node.strokeColor != null && safeStrokeWidth > 0) {
-      final paint = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = safeStrokeWidth
-        ..strokeJoin = StrokeJoin.round
+        ..strokeWidth = thickness
         ..strokeCap = StrokeCap.round
-        ..color = _applyOpacity(node.strokeColor!, node.opacity);
-      canvas.drawPath(centered, paint);
-    }
-
+        ..strokeJoin = StrokeJoin.round
+        ..color = _applyOpacity(node.color, node.opacity),
+    );
     canvas.restore();
   }
 
-  Rect _normalizeRect(Rect rect) {
-    return Rect.fromLTRB(
-      math.min(rect.left, rect.right),
-      math.min(rect.top, rect.bottom),
-      math.max(rect.left, rect.right),
-      math.max(rect.top, rect.bottom),
-    );
-  }
-
-  Float64List _toViewCanvasTransform(
-    Transform2D nodeTransform,
+  void _drawTextNode(
+    Canvas canvas,
+    TextNodeSnapshot node,
     Offset cameraOffset,
   ) {
-    _transformBuffer[0] = nodeTransform.a;
-    _transformBuffer[1] = nodeTransform.b;
+    if (!node.transform.isFinite) {
+      return;
+    }
+    final safeSize = clampNonNegativeSizeFinite(node.size);
+    final maxWidth = node.maxWidth ?? safeSize.width;
+    final safeFontSize = clampPositiveFinite(node.fontSize, fallback: 24);
+    final safeLineHeight =
+        (node.lineHeight != null &&
+            node.lineHeight!.isFinite &&
+            node.lineHeight! > 0)
+        ? node.lineHeight
+        : null;
+    final style = TextStyle(
+      color: _applyOpacity(node.color, node.opacity),
+      fontSize: safeFontSize,
+      fontFamily: node.fontFamily,
+      fontWeight: node.isBold ? FontWeight.bold : FontWeight.normal,
+      fontStyle: node.isItalic ? FontStyle.italic : FontStyle.normal,
+      decoration: node.isUnderline
+          ? TextDecoration.underline
+          : TextDecoration.none,
+      height: safeLineHeight == null ? null : safeLineHeight / safeFontSize,
+    );
+
+    final textPainter = textLayoutCache != null
+        ? textLayoutCache!.getOrBuild(
+            node: node,
+            textStyle: style,
+            maxWidth: maxWidth,
+            textDirection: textDirection,
+          )
+        : _buildTextPainter(node, style, maxWidth);
+
+    final alignOffset = _textAlignOffset(
+      node.align,
+      safeSize.width,
+      textPainter.width,
+      textDirection,
+    );
+
+    canvas.save();
+    canvas.transform(_toViewTransform(node.transform, cameraOffset));
+    textPainter.paint(
+      canvas,
+      Offset(-safeSize.width / 2 + alignOffset, -safeSize.height / 2),
+    );
+    canvas.restore();
+  }
+
+  TextPainter _buildTextPainter(
+    TextNodeSnapshot node,
+    TextStyle style,
+    double maxWidth,
+  ) {
+    final painter = TextPainter(
+      text: TextSpan(text: node.text, style: style),
+      textAlign: node.align,
+      textDirection: textDirection,
+      maxLines: null,
+    );
+    painter.layout(maxWidth: clampNonNegativeFinite(maxWidth));
+    return painter;
+  }
+
+  void _drawImageNode(
+    Canvas canvas,
+    ImageNodeSnapshot node,
+    Offset cameraOffset,
+  ) {
+    if (!node.transform.isFinite) {
+      return;
+    }
+    final image = imageResolver(node.imageId);
+    final rect = _centerRect(node.size);
+    canvas.save();
+    canvas.transform(_toViewTransform(node.transform, cameraOffset));
+    if (image == null) {
+      canvas.drawRect(
+        rect,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..color = const Color(0xFF9E9E9E),
+      );
+      canvas.restore();
+      return;
+    }
+
+    paintImage(
+      canvas: canvas,
+      rect: rect,
+      image: image,
+      fit: BoxFit.fill,
+      filterQuality: FilterQuality.medium,
+      opacity: _alpha01(node.opacity),
+    );
+    canvas.restore();
+  }
+
+  void _drawPathNode(
+    Canvas canvas,
+    PathNodeSnapshot node,
+    Offset cameraOffset,
+  ) {
+    if (!node.transform.isFinite) {
+      return;
+    }
+
+    final localPath = _buildPathNode(node).buildLocalPath(copy: false);
+    if (localPath == null) {
+      return;
+    }
+    localPath.fillType = _fillTypeFromSnapshot(node.fillRule);
+
+    if (pathMetricsCache != null) {
+      pathMetricsCache!.getOrBuild(node: node, localPath: localPath);
+    }
+
+    canvas.save();
+    canvas.transform(_toViewTransform(node.transform, cameraOffset));
+
+    if (node.fillColor != null) {
+      canvas.drawPath(
+        localPath,
+        Paint()
+          ..style = PaintingStyle.fill
+          ..color = _applyOpacity(node.fillColor!, node.opacity),
+      );
+    }
+
+    final strokeWidth = clampNonNegativeFinite(node.strokeWidth);
+    if (node.strokeColor != null && strokeWidth > 0) {
+      canvas.drawPath(
+        localPath,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeWidth
+          ..color = _applyOpacity(node.strokeColor!, node.opacity),
+      );
+    }
+    canvas.restore();
+  }
+
+  Rect _nodeBoundsWorld(NodeSnapshot node) {
+    if (!node.transform.isFinite) {
+      return Rect.zero;
+    }
+
+    switch (node) {
+      case RectNodeSnapshot rectNode:
+        return node.transform.applyToRect(_centerRect(rectNode.size));
+      case ImageNodeSnapshot imageNode:
+        return node.transform.applyToRect(_centerRect(imageNode.size));
+      case TextNodeSnapshot textNode:
+        return node.transform.applyToRect(_centerRect(textNode.size));
+      case LineNodeSnapshot lineNode:
+        final local = Rect.fromPoints(
+          lineNode.start,
+          lineNode.end,
+        ).inflate(clampNonNegativeFinite(lineNode.thickness) / 2);
+        return node.transform.applyToRect(local);
+      case StrokeNodeSnapshot strokeNode:
+        if (strokeNode.points.isEmpty) {
+          return Rect.zero;
+        }
+        final local = _aabbFromPoints(
+          strokeNode.points,
+        ).inflate(clampNonNegativeFinite(strokeNode.thickness) / 2);
+        return node.transform.applyToRect(local);
+      case PathNodeSnapshot pathNode:
+        final localPath = _buildPathNode(pathNode).buildLocalPath(copy: false);
+        if (localPath == null) {
+          return Rect.zero;
+        }
+        return node.transform.applyToRect(localPath.getBounds());
+    }
+  }
+
+  PathNode _buildPathNode(PathNodeSnapshot snapshot) {
+    return PathNode(
+      id: snapshot.id,
+      svgPathData: snapshot.svgPathData,
+      fillColor: snapshot.fillColor,
+      strokeColor: snapshot.strokeColor,
+      strokeWidth: snapshot.strokeWidth,
+      fillRule: snapshot.fillRule == V2PathFillRule.evenOdd
+          ? PathFillRule.evenOdd
+          : PathFillRule.nonZero,
+      transform: snapshot.transform,
+      opacity: snapshot.opacity,
+      hitPadding: snapshot.hitPadding,
+      isVisible: snapshot.isVisible,
+      isSelectable: snapshot.isSelectable,
+      isLocked: snapshot.isLocked,
+      isDeletable: snapshot.isDeletable,
+      isTransformable: snapshot.isTransformable,
+    );
+  }
+
+  Float64List _toViewTransform(Transform2D transform, Offset cameraOffset) {
+    _transformBuffer[0] = transform.a;
+    _transformBuffer[1] = transform.b;
     _transformBuffer[2] = 0;
     _transformBuffer[3] = 0;
-    _transformBuffer[4] = nodeTransform.c;
-    _transformBuffer[5] = nodeTransform.d;
+    _transformBuffer[4] = transform.c;
+    _transformBuffer[5] = transform.d;
     _transformBuffer[6] = 0;
     _transformBuffer[7] = 0;
     _transformBuffer[8] = 0;
     _transformBuffer[9] = 0;
     _transformBuffer[10] = 1;
     _transformBuffer[11] = 0;
-    _transformBuffer[12] = nodeTransform.tx - cameraOffset.dx;
-    _transformBuffer[13] = nodeTransform.ty - cameraOffset.dy;
+    _transformBuffer[12] = transform.tx - cameraOffset.dx;
+    _transformBuffer[13] = transform.ty - cameraOffset.dy;
     _transformBuffer[14] = 0;
     _transformBuffer[15] = 1;
     return _transformBuffer;
   }
 
-  Color _applyOpacity(Color color, double opacity) {
-    final combined = (color.a * _clamp01(opacity)).clamp(0.0, 1.0);
-    return color.withAlpha((combined * 255.0).round().clamp(0, 255));
-  }
-
-  double _clamp01(double value) {
-    return clamp01Finite(value);
-  }
-
-  _LineEndpoints? _resolveSnappedLine(
-    Transform2D nodeTransform,
-    Offset cameraOffset,
-    double strokeWidth,
-    Offset localA,
-    Offset localB,
-  ) {
-    if (!_canSnapThinStroke(nodeTransform, strokeWidth)) return null;
-    final viewA = nodeTransform.applyToPoint(localA) - cameraOffset;
-    final viewB = nodeTransform.applyToPoint(localB) - cameraOffset;
-    if (!_isFiniteOffset(viewA) || !_isFiniteOffset(viewB)) return null;
-
-    const axisTolerance = 1e-3;
-    final isHorizontal = (viewA.dy - viewB.dy).abs() <= axisTolerance;
-    final isVertical = (viewA.dx - viewB.dx).abs() <= axisTolerance;
-    if (!isHorizontal && !isVertical) return null;
-
-    if (isHorizontal) {
-      final strokeWidthInView =
-          strokeWidth * _effectiveViewScaleMagnitude(nodeTransform);
-      final snappedY = _snapCenterCoordinate(
-        (viewA.dy + viewB.dy) / 2,
-        strokeWidthInView,
-      );
-      return _LineEndpoints(
-        a: Offset(viewA.dx, snappedY),
-        b: Offset(viewB.dx, snappedY),
-      );
-    }
-    final strokeWidthInView =
-        strokeWidth * _effectiveViewScaleMagnitude(nodeTransform);
-    final snappedX = _snapCenterCoordinate(
-      (viewA.dx + viewB.dx) / 2,
-      strokeWidthInView,
-    );
-    return _LineEndpoints(
-      a: Offset(snappedX, viewA.dy),
-      b: Offset(snappedX, viewB.dy),
-    );
-  }
-
-  List<Offset>? _resolveSnappedPolyline(
-    Transform2D nodeTransform,
-    Offset cameraOffset,
-    double strokeWidth,
-    List<Offset> localPoints,
-  ) {
-    if (!_canSnapThinStroke(nodeTransform, strokeWidth)) return null;
-    if (localPoints.length < 2) return null;
-
-    const axisTolerance = 1e-3;
-    final firstLocal = localPoints.first;
-    var isHorizontal = true;
-    var isVertical = true;
-    for (var i = 1; i < localPoints.length; i++) {
-      final point = localPoints[i];
-      if ((point.dy - firstLocal.dy).abs() > axisTolerance) {
-        isHorizontal = false;
-      }
-      if ((point.dx - firstLocal.dx).abs() > axisTolerance) {
-        isVertical = false;
-      }
-      if (!isHorizontal && !isVertical) return null;
-    }
-    if (!isHorizontal && !isVertical) return null;
-
-    final viewPoints = List<Offset>.filled(localPoints.length, Offset.zero);
-    var sumX = 0.0;
-    var sumY = 0.0;
-    for (var i = 0; i < localPoints.length; i++) {
-      final viewPoint =
-          nodeTransform.applyToPoint(localPoints[i]) - cameraOffset;
-      if (!_isFiniteOffset(viewPoint)) return null;
-      viewPoints[i] = viewPoint;
-      sumX += viewPoint.dx;
-      sumY += viewPoint.dy;
-    }
-
-    final strokeWidthInView =
-        strokeWidth * _effectiveViewScaleMagnitude(nodeTransform);
-    if (isHorizontal) {
-      final meanY = sumY / viewPoints.length;
-      final snappedY = _snapCenterCoordinate(meanY, strokeWidthInView);
-      return List<Offset>.generate(
-        viewPoints.length,
-        (index) => Offset(viewPoints[index].dx, snappedY),
-        growable: false,
-      );
-    }
-    final meanX = sumX / viewPoints.length;
-    final snappedX = _snapCenterCoordinate(meanX, strokeWidthInView);
-    return List<Offset>.generate(
-      viewPoints.length,
-      (index) => Offset(snappedX, viewPoints[index].dy),
-      growable: false,
-    );
-  }
-
-  bool _canSnapThinStroke(Transform2D nodeTransform, double strokeWidth) {
-    if (thinLineSnapStrategy != ThinLineSnapStrategy.autoAxisAlignedThin) {
-      return false;
-    }
-    if (!_isFiniteTransform2D(nodeTransform)) return false;
-    if (!_hasAxisAlignedUnitScale(nodeTransform)) return false;
-
-    final viewScale = _effectiveViewScaleMagnitude(nodeTransform);
-    if (!viewScale.isFinite || viewScale <= 0) return false;
-    final strokeWidthInView = strokeWidth * viewScale;
-    return strokeWidthInView > 0 && strokeWidthInView <= 1;
-  }
-
-  bool _hasAxisAlignedUnitScale(Transform2D transform) {
-    const epsilon = 1e-6;
-    if (transform.b.abs() > epsilon || transform.c.abs() > epsilon) {
-      return false;
-    }
-    final scaleX = transform.a.abs();
-    final scaleY = transform.d.abs();
-    return (scaleX - 1).abs() <= epsilon && (scaleY - 1).abs() <= epsilon;
-  }
-
-  double _effectiveViewScaleMagnitude(Transform2D transform) {
-    final safeScaleX = sanitizeFinite(transform.a.abs(), fallback: 1.0);
-    final safeScaleY = sanitizeFinite(transform.d.abs(), fallback: 1.0);
-    return math.max(safeScaleX, safeScaleY);
-  }
-
-  double _snapCenterCoordinate(double logical, double strokeWidth) {
-    final safeDpr = clampPositiveFinite(devicePixelRatio, fallback: 1);
-    final physical = logical * safeDpr;
-    final physicalWidth = strokeWidth * safeDpr;
-    final roundedWidth = physicalWidth.round();
-    final targetFraction = roundedWidth.isOdd ? 0.5 : 0.0;
-    final snappedPhysical =
-        (physical - targetFraction).roundToDouble() + targetFraction;
-    return snappedPhysical / safeDpr;
+  @override
+  bool shouldRepaint(covariant ScenePainterV2 oldDelegate) {
+    return oldDelegate.controller != controller ||
+        oldDelegate.imageResolver != imageResolver ||
+        oldDelegate.staticLayerCache != staticLayerCache ||
+        oldDelegate.textLayoutCache != textLayoutCache ||
+        oldDelegate.strokePathCache != strokePathCache ||
+        oldDelegate.pathMetricsCache != pathMetricsCache ||
+        oldDelegate.selectionRect != selectionRect ||
+        oldDelegate.selectionColor != selectionColor ||
+        oldDelegate.selectionStrokeWidth != selectionStrokeWidth ||
+        oldDelegate.gridStrokeWidth != gridStrokeWidth ||
+        oldDelegate.textDirection != textDirection;
   }
 }
 
-class _LineEndpoints {
-  const _LineEndpoints({required this.a, required this.b});
+void _drawBackground(Canvas canvas, Size size, Color color) {
+  canvas.drawRect(Offset.zero & size, Paint()..color = color);
+}
 
-  final Offset a;
-  final Offset b;
+void _drawGrid(
+  Canvas canvas,
+  Size size,
+  GridSnapshot grid,
+  Offset cameraOffset,
+  double gridStrokeWidth,
+) {
+  if (!_isGridDrawable(grid, size: size, cameraOffset: cameraOffset)) {
+    return;
+  }
+
+  final cell = grid.cellSize;
+  final paint = Paint()
+    ..color = grid.color
+    ..strokeWidth = clampNonNegativeFinite(gridStrokeWidth);
+
+  final startX = _gridStart(-cameraOffset.dx, cell);
+  final startY = _gridStart(-cameraOffset.dy, cell);
+
+  final strideX = _gridStrideForLineCount(
+    _gridLineCount(startX, size.width, cell),
+  );
+  final strideY = _gridStrideForLineCount(
+    _gridLineCount(startY, size.height, cell),
+  );
+
+  for (var x = startX, index = 0; x <= size.width; x += cell, index++) {
+    if (index % strideX != 0) {
+      continue;
+    }
+    canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+  }
+
+  for (var y = startY, index = 0; y <= size.height; y += cell, index++) {
+    if (index % strideY != 0) {
+      continue;
+    }
+    canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+  }
+}
+
+bool _isGridDrawable(
+  GridSnapshot grid, {
+  required Size size,
+  required Offset cameraOffset,
+}) {
+  if (!grid.isEnabled) {
+    return false;
+  }
+  if (!size.width.isFinite || !size.height.isFinite) {
+    return false;
+  }
+  if (size.width <= 0 || size.height <= 0) {
+    return false;
+  }
+  if (!_isFiniteOffset(cameraOffset)) {
+    return false;
+  }
+  if (!grid.cellSize.isFinite || grid.cellSize < kMinGridCellSize) {
+    return false;
+  }
+  return true;
+}
+
+int _gridLineCount(double start, double extent, double cell) {
+  if (!start.isFinite || !extent.isFinite || !cell.isFinite || cell <= 0) {
+    return 0;
+  }
+  return ((extent - start) / cell).ceil().clamp(0, 1 << 30) + 1;
+}
+
+int _gridStrideForLineCount(int lineCount) {
+  if (lineCount <= kMaxGridLinesPerAxis) {
+    return 1;
+  }
+  return (lineCount / kMaxGridLinesPerAxis).ceil().clamp(1, 1 << 30);
+}
+
+double _gridStart(double offset, double cell) {
+  if (!offset.isFinite || !cell.isFinite || cell <= 0) {
+    return 0;
+  }
+  final rem = offset % cell;
+  return rem > 0 ? rem - cell : rem;
+}
+
+Offset _gridShiftForCameraOffset(Offset cameraOffset, double cellSize) {
+  if (!_isFiniteOffset(cameraOffset)) {
+    return Offset.zero;
+  }
+  if (!cellSize.isFinite || cellSize <= 0) {
+    return Offset.zero;
+  }
+  return Offset(
+    _gridStart(-cameraOffset.dx, cellSize),
+    _gridStart(-cameraOffset.dy, cellSize),
+  );
+}
+
+Rect _centerRect(Size size) {
+  final safe = clampNonNegativeSizeFinite(size);
+  return Rect.fromCenter(
+    center: Offset.zero,
+    width: safe.width,
+    height: safe.height,
+  );
+}
+
+Rect _normalizeRect(Rect rect) {
+  final left = rect.left < rect.right ? rect.left : rect.right;
+  final right = rect.left < rect.right ? rect.right : rect.left;
+  final top = rect.top < rect.bottom ? rect.top : rect.bottom;
+  final bottom = rect.top < rect.bottom ? rect.bottom : rect.top;
+  return Rect.fromLTRB(left, top, right, bottom);
+}
+
+Rect _aabbFromPoints(List<Offset> points) {
+  var minX = points.first.dx;
+  var minY = points.first.dy;
+  var maxX = minX;
+  var maxY = minY;
+  for (var i = 1; i < points.length; i++) {
+    final point = points[i];
+    minX = math.min(minX, point.dx);
+    minY = math.min(minY, point.dy);
+    maxX = math.max(maxX, point.dx);
+    maxY = math.max(maxY, point.dy);
+  }
+  return Rect.fromLTRB(minX, minY, maxX, maxY);
 }
 
 Path _buildStrokePath(List<Offset> points) {
@@ -1408,241 +1402,40 @@ Path _buildStrokePath(List<Offset> points) {
   return path;
 }
 
-PathFillType _pathFillType(PathFillRule rule) {
-  return rule == PathFillRule.evenOdd
+PathFillType _fillTypeFromSnapshot(V2PathFillRule rule) {
+  return rule == V2PathFillRule.evenOdd
       ? PathFillType.evenOdd
       : PathFillType.nonZero;
 }
 
-/// Cache for static grid rendering.
-///
-/// Why: avoid re-recording grid geometry when inputs are unchanged.
-/// Invariant: static cache key must stay camera-independent; camera translation
-/// is applied at draw time.
-/// Validate: `test/render/scene_static_layer_cache_test.dart`.
-class SceneStaticLayerCache {
-  _StaticLayerKey? _key;
-  Picture? _gridPicture;
-
-  int _debugBuildCount = 0;
-  int _debugDisposeCount = 0;
-
-  @visibleForTesting
-  int get debugBuildCount => _debugBuildCount;
-  @visibleForTesting
-  int get debugDisposeCount => _debugDisposeCount;
-  @visibleForTesting
-  int? get debugKeyHashCode => _key?.hashCode;
-
-  void draw(
-    Canvas canvas,
-    Size size, {
-    required Background background,
-    required Offset cameraOffset,
-    required double gridStrokeWidth,
-  }) {
-    _drawBackground(canvas, size, background.color);
-
-    final safeCameraOffset = sanitizeFiniteOffset(cameraOffset);
-    final safeGridStrokeWidth = clampNonNegativeFinite(gridStrokeWidth);
-    final grid = background.grid;
-    final effectiveGridEnabled = _isGridDrawable(
-      grid,
-      size: size,
-      cameraOffset: Offset.zero,
-    );
-    final cell = grid.cellSize;
-    final effectiveCellSize = effectiveGridEnabled ? cell : 0.0;
-    final key = _StaticLayerKey(
-      size: size,
-      gridEnabled: effectiveGridEnabled,
-      gridCellSize: effectiveCellSize,
-      gridColor: grid.color,
-      gridStrokeWidth: safeGridStrokeWidth,
-    );
-
-    if (_gridPicture == null || _key != key) {
-      _disposeGridPictureIfNeeded();
-      _key = key;
-      _gridPicture = _recordGridPicture(size, grid, safeGridStrokeWidth);
-      _debugBuildCount += 1;
-    }
-
-    if (!_key!.gridEnabled) return;
-    final shift = _gridShiftForCameraOffset(
-      safeCameraOffset,
-      _key!.gridCellSize,
-    );
-    canvas.save();
-    canvas.clipRect(Offset.zero & size);
-    canvas.translate(shift.dx, shift.dy);
-    canvas.drawPicture(_gridPicture!);
-    canvas.restore();
-  }
-
-  void dispose() {
-    _disposeGridPictureIfNeeded();
-    _key = null;
-  }
-
-  void _disposeGridPictureIfNeeded() {
-    final picture = _gridPicture;
-    if (picture == null) return;
-    _gridPicture = null;
-    picture.dispose();
-    _debugDisposeCount += 1;
-  }
-
-  Picture _recordGridPicture(
-    Size size,
-    GridSettings grid,
-    double gridStrokeWidth,
-  ) {
-    final recorder = PictureRecorder();
-    final canvas = Canvas(recorder);
-    _drawGrid(canvas, size, grid, Offset.zero, gridStrokeWidth);
-    return recorder.endRecording();
-  }
+Color _applyOpacity(Color color, double opacity) {
+  final alpha = (_alpha01(opacity) * 255.0).round().clamp(0, 255);
+  return color.withAlpha(alpha);
 }
 
-class _StaticLayerKey {
-  const _StaticLayerKey({
-    required this.size,
-    required this.gridEnabled,
-    required this.gridCellSize,
-    required this.gridColor,
-    required this.gridStrokeWidth,
-  });
-
-  final Size size;
-  final bool gridEnabled;
-  final double gridCellSize;
-  final Color gridColor;
-  final double gridStrokeWidth;
-
-  @override
-  bool operator ==(Object other) {
-    return other is _StaticLayerKey &&
-        other.size == size &&
-        other.gridEnabled == gridEnabled &&
-        other.gridCellSize == gridCellSize &&
-        other.gridColor == gridColor &&
-        other.gridStrokeWidth == gridStrokeWidth;
-  }
-
-  @override
-  int get hashCode =>
-      Object.hash(size, gridEnabled, gridCellSize, gridColor, gridStrokeWidth);
+double _alpha01(double opacity) {
+  return clampNonNegativeFinite(opacity).clamp(0.0, 1.0);
 }
 
-void _drawBackground(Canvas canvas, Size size, Color color) {
-  final paint = Paint()..color = color;
-  canvas.drawRect(Offset.zero & size, paint);
-}
-
-void _drawGrid(
-  Canvas canvas,
-  Size size,
-  GridSettings grid,
-  Offset cameraOffset,
-  double gridStrokeWidth,
+double _textAlignOffset(
+  TextAlign align,
+  double boxWidth,
+  double textWidth,
+  TextDirection textDirection,
 ) {
-  if (!_isGridDrawable(grid, size: size, cameraOffset: cameraOffset)) return;
-  final cell = grid.cellSize;
-
-  final paint = Paint()
-    ..color = grid.color
-    ..strokeWidth = clampNonNegativeFinite(gridStrokeWidth);
-  final startX = _gridStart(-cameraOffset.dx, cell);
-  final startY = _gridStart(-cameraOffset.dy, cell);
-  final strideX = _gridStrideForLineCount(
-    _gridLineCount(startX, size.width, cell),
-  );
-  final strideY = _gridStrideForLineCount(
-    _gridLineCount(startY, size.height, cell),
-  );
-  final stepX = cell * strideX;
-  final stepY = cell * strideY;
-
-  for (double x = startX; x <= size.width; x += stepX) {
-    canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+  switch (align) {
+    case TextAlign.right:
+      return boxWidth - textWidth;
+    case TextAlign.end:
+      return textDirection == TextDirection.rtl ? 0 : boxWidth - textWidth;
+    case TextAlign.center:
+      return (boxWidth - textWidth) / 2;
+    case TextAlign.left:
+      return 0;
+    case TextAlign.start:
+    case TextAlign.justify:
+      return textDirection == TextDirection.rtl ? boxWidth - textWidth : 0;
   }
-  for (double y = startY; y <= size.height; y += stepY) {
-    canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
-  }
-}
-
-bool _isGridDrawable(
-  GridSettings grid, {
-  required Size size,
-  required Offset cameraOffset,
-}) {
-  if (!grid.isEnabled) return false;
-  if (!size.width.isFinite || !size.height.isFinite) return false;
-  if (!cameraOffset.dx.isFinite || !cameraOffset.dy.isFinite) return false;
-  final cell = grid.cellSize;
-  if (!cell.isFinite || cell < kMinGridCellSize) return false;
-  return true;
-}
-
-int _gridLineCount(double start, double extent, double cell) {
-  if (!start.isFinite || !extent.isFinite || !cell.isFinite || cell <= 0) {
-    return kMaxGridLinesPerAxis + 1;
-  }
-  if (start > extent) return 0;
-  final count = ((extent - start) / cell).floor() + 1;
-  return count < 0 ? 0 : count;
-}
-
-int _gridStrideForLineCount(int lineCount) {
-  if (lineCount <= 0) return 1;
-  final stride = (lineCount / kMaxGridLinesPerAxis).ceil();
-  return stride < 1 ? 1 : stride;
-}
-
-int _gridRenderedLineCountForLineCount(int lineCount) {
-  if (lineCount <= 0) return 0;
-  final stride = _gridStrideForLineCount(lineCount);
-  return ((lineCount - 1) ~/ stride) + 1;
-}
-
-@visibleForTesting
-int debugGridLineCount(double start, double extent, double cell) =>
-    _gridLineCount(start, extent, cell);
-
-@visibleForTesting
-int debugGridStrideForLineCount(int lineCount) =>
-    _gridStrideForLineCount(lineCount);
-
-@visibleForTesting
-int debugGridRenderedLineCountForLineCount(int lineCount) =>
-    _gridRenderedLineCountForLineCount(lineCount);
-
-double _gridStart(double offset, double cell) {
-  final remainder = offset % cell;
-  return remainder < 0 ? remainder + cell : remainder;
-}
-
-Offset _gridShiftForCameraOffset(Offset cameraOffset, double cellSize) {
-  if (!cameraOffset.dx.isFinite || !cameraOffset.dy.isFinite) {
-    return Offset.zero;
-  }
-  if (!cellSize.isFinite || cellSize <= 0) {
-    return Offset.zero;
-  }
-  return Offset(
-    _gridStart(-cameraOffset.dx, cellSize),
-    _gridStart(-cameraOffset.dy, cellSize),
-  );
-}
-
-bool _isFiniteTransform2D(Transform2D transform) {
-  return transform.a.isFinite &&
-      transform.b.isFinite &&
-      transform.c.isFinite &&
-      transform.d.isFinite &&
-      transform.tx.isFinite &&
-      transform.ty.isFinite;
 }
 
 bool _isFiniteRect(Rect rect) {
@@ -1652,13 +1445,15 @@ bool _isFiniteRect(Rect rect) {
       rect.bottom.isFinite;
 }
 
-bool _isFiniteOffset(Offset value) {
-  return value.dx.isFinite && value.dy.isFinite;
+bool _isFiniteOffset(Offset offset) {
+  return offset.dx.isFinite && offset.dy.isFinite;
 }
 
-bool _areFiniteOffsets(List<Offset> values) {
-  for (final value in values) {
-    if (!_isFiniteOffset(value)) return false;
+bool _areFiniteOffsets(List<Offset> offsets) {
+  for (final offset in offsets) {
+    if (!_isFiniteOffset(offset)) {
+      return false;
+    }
   }
   return true;
 }

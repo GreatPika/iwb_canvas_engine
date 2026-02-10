@@ -6,8 +6,8 @@
   `SceneViewInteractiveV2`, v2 JSON codec). Legacy mutable controller/view
   symbols are removed from public entrypoints.
 
-- Breaking: legacy public API cutover is complete. `basic_v2.dart` and
-  `advanced_v2.dart` remain only as deprecated compatibility aliases to
+- Breaking: legacy public API cutover is complete. `basic.dart` and
+  `advanced.dart` remain only as deprecated compatibility aliases to
   `basic.dart` and `advanced.dart`.
 
 - V2 grid parity hardening: `SceneControllerInteractiveV2.setGridCellSize(...)`
@@ -44,12 +44,12 @@
   step) and parity regression coverage for camera-pan hit-testing flow
   (`G3.9`) in `example/test/interactive_parity_batch1_test.dart`.
 
-- Add v2 snapshot JSON codec at `lib/src/v2/serialization/scene_codec.dart`
+- Add v2 snapshot JSON codec at `lib/src/serialization/scene_codec.dart`
   and export it from public entrypoints with parity function names
   (`encodeScene*` / `decodeScene*`) and strict JSON validation behavior.
 
 - Add preview v2 immutable public API entrypoints:
-  `basic_v2.dart` and `advanced_v2.dart` (snapshot/spec/patch model with
+  `basic.dart` and `advanced.dart` (snapshot/spec/patch model with
   tri-state `PatchField`, no v2 controller/runtime yet).
 
 - Serialization: `decodeScene(...)` now accepts integer-valued numeric forms

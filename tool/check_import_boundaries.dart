@@ -63,7 +63,7 @@ String _posixJoin(String a, String b) {
 
 String _toPosixPath(String path) => path.replaceAll('\\', '/');
 
-enum _Layer { core, input, render, serialization, view, v2 }
+enum _Layer { core, input, render, serialization, view }
 
 _Layer? _layerForRepoRelPosixPath(String repoRelPosixPath) {
   if (repoRelPosixPath.startsWith('/lib/src/core/')) return _Layer.core;
@@ -73,7 +73,6 @@ _Layer? _layerForRepoRelPosixPath(String repoRelPosixPath) {
     return _Layer.serialization;
   }
   if (repoRelPosixPath.startsWith('/lib/src/view/')) return _Layer.view;
-  if (repoRelPosixPath.startsWith('/lib/src/v2/')) return _Layer.v2;
   return null;
 }
 
@@ -89,8 +88,6 @@ String _layerLabel(_Layer layer) {
       return 'serialization';
     case _Layer.view:
       return 'view';
-    case _Layer.v2:
-      return 'v2';
   }
 }
 
@@ -109,8 +106,6 @@ bool _isAllowedLayerDependency({required _Layer from, required _Layer to}) {
           to == _Layer.input ||
           to == _Layer.render ||
           to == _Layer.view;
-    case _Layer.v2:
-      return to == _Layer.core || to == _Layer.v2;
   }
 }
 
@@ -272,18 +267,9 @@ bool _isAllowedForSlice({
   if (resolvedRepoRelPosix.startsWith('/lib/src/core/')) {
     return true;
   }
-  if (resolvedRepoRelPosix == '/lib/src/input/types.dart') {
-    return true;
-  }
-  if (resolvedRepoRelPosix == '/lib/src/input/action_events.dart') {
-    return true;
-  }
-  if (resolvedRepoRelPosix == '/lib/src/input/pointer_input.dart') {
-    return true;
-  }
-  if (resolvedRepoRelPosix.startsWith('/lib/src/input/internal/')) {
-    return true;
-  }
+  if (resolvedRepoRelPosix.startsWith('/lib/src/controller/')) return true;
+  if (resolvedRepoRelPosix.startsWith('/lib/src/model/')) return true;
+  if (resolvedRepoRelPosix.startsWith('/lib/src/public/')) return true;
   if (resolvedRepoRelPosix.startsWith('/lib/src/input/slices/$currentSlice/')) {
     return true;
   }
@@ -310,15 +296,6 @@ bool _isAllowedForInternal({
   }
 
   if (resolvedRepoRelPosix.startsWith('/lib/src/core/')) {
-    return true;
-  }
-  if (resolvedRepoRelPosix == '/lib/src/input/types.dart') {
-    return true;
-  }
-  if (resolvedRepoRelPosix == '/lib/src/input/action_events.dart') {
-    return true;
-  }
-  if (resolvedRepoRelPosix == '/lib/src/input/pointer_input.dart') {
     return true;
   }
   if (resolvedRepoRelPosix.startsWith('/lib/src/input/internal/')) {
@@ -436,14 +413,14 @@ void main(List<String> args) {
 
         var hasSpecificViolation = false;
 
-        if (resolvedRepoRelPosix == '/lib/src/input/scene_controller.dart') {
+        if (resolvedRepoRelPosix == '/lib/src/controller/scene_controller.dart') {
           violations.add(
             _Violation(
               filePath: filePosixPath,
               line: lineNo,
               directive: directive,
               target: target,
-              message: "must not $directive 'scene_controller.dart'",
+              message: "must not $directive controller/scene_controller.dart",
             ),
           );
           hasSpecificViolation = true;

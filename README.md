@@ -52,9 +52,9 @@ Prefer importing the smallest API surface that fits your use case:
 
 - `package:iwb_canvas_engine/basic.dart` — primary v2 API (recommended).
 - `package:iwb_canvas_engine/advanced.dart` — advanced alias of `basic.dart`.
-- `package:iwb_canvas_engine/basic_v2.dart` — deprecated compatibility alias
+- `package:iwb_canvas_engine/basic.dart` — deprecated compatibility alias
   to `basic.dart`.
-- `package:iwb_canvas_engine/advanced_v2.dart` — deprecated compatibility
+- `package:iwb_canvas_engine/advanced.dart` — deprecated compatibility
   alias to `advanced.dart`.
 
 ## V2 API (snapshot + serialization)

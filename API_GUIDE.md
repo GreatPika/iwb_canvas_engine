@@ -21,9 +21,9 @@ Prefer importing the smallest surface area that fits your use case:
 - **Recommended:** `package:iwb_canvas_engine/basic.dart` — primary v2 API.
 - **Advanced:** `package:iwb_canvas_engine/advanced.dart` — advanced alias of
   `basic.dart`.
-- **Compatibility alias:** `package:iwb_canvas_engine/basic_v2.dart` —
+- **Compatibility alias:** `package:iwb_canvas_engine/basic.dart` —
   deprecated alias of `basic.dart`.
-- **Compatibility alias:** `package:iwb_canvas_engine/advanced_v2.dart` —
+- **Compatibility alias:** `package:iwb_canvas_engine/advanced.dart` —
   deprecated alias of `advanced.dart`.
 
 ### v2: minimal model creation examples
@@ -601,7 +601,7 @@ Gotchas:
 
 Relevant APIs:
 - `encodeSceneToJson`, `decodeSceneFromJson`, `SceneJsonFormatException` —
-  `lib/src/v2/serialization/scene_codec.dart`
+  `lib/src/serialization/scene_codec.dart`
 
 ### 8) Background / grid / camera
 
@@ -624,7 +624,7 @@ Gotchas:
 Relevant APIs:
 - `Scene.background/grid` — `lib/src/core/scene.dart`
 - `SceneController.setBackgroundColor/setGridEnabled/setGridCellSize/setCameraOffset` — `lib/src/input/scene_controller.dart`
-- `SceneControllerInteractiveV2.setBackgroundColor/setGridEnabled/setGridCellSize/setCameraOffset` — `lib/src/v2/interactive/scene_controller_interactive_v2.dart`
+- `SceneControllerInteractiveV2.setBackgroundColor/setGridEnabled/setGridCellSize/setCameraOffset` — `lib/src/interactive/scene_controller_interactive.dart`
 
 ### 9) Image rendering (`ImageNode` + `ImageResolver`)
 
@@ -743,7 +743,7 @@ Relevant APIs:
 ## JSON v2 schema cheat sheet (agent-friendly)
 
 Source of truth: `lib/src/serialization/scene_codec.dart` (v1) and
-`lib/src/v2/serialization/scene_codec.dart` (v2 snapshot codec).
+`lib/src/serialization/scene_codec.dart` (v2 snapshot codec).
 
 ### Root
 
@@ -874,9 +874,9 @@ Decode canonicalization:
 
 ### Primary integration
 
-- `SceneViewInteractiveV2` — `lib/src/v2/view/scene_view_interactive_v2.dart`
+- `SceneViewInteractiveV2` — `lib/src/view/scene_view_interactive.dart`
 - `SceneControllerInteractiveV2` —
-  `lib/src/v2/interactive/scene_controller_interactive_v2.dart`
+  `lib/src/interactive/scene_controller_interactive.dart`
 - Events: `ActionCommitted`, `ActionType`, `EditTextRequested` —
   `lib/src/core/action_events.dart`
 
