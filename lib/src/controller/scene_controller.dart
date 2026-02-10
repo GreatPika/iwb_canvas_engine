@@ -231,9 +231,7 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
     );
     commitPhases = <String>[...commitPhases, 'signals'];
 
-    final committedScene = ctx.txnHasMutableScene
-        ? txnCloneScene(ctx.workingScene)
-        : _store.sceneDoc;
+    final committedScene = ctx.txnSceneForCommit();
     final committedSelection = Set<NodeId>.from(ctx.workingSelection);
     final committedNodeIds = txnCollectNodeIds(committedScene);
     final committedNodeIdSeed = txnInitialNodeIdSeed(committedScene);

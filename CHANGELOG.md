@@ -1,4 +1,4 @@
-## Unreleased
+## 2.0.1 (2026-02-10)
 
 ### Breaking
 
@@ -12,6 +12,7 @@
 - `SceneWriter.writeNodeErase` now respects deletable-layer policy consistently with selection delete flow.
 - `SceneWriter.writeGridCellSize` and `SceneWriter.writeCameraOffset` now reject non-finite/invalid inputs at write boundary.
 - Selection normalization now preserves explicit non-selectable ids, so `selectAll(onlySelectable: false)` remains stable after commit.
+- Commit state-change path no longer performs a redundant second deep clone of scene data; mutating transactions now clone once (clone-on-first-mutation).
 - Added runtime commit invariant assertions for store consistency in debug/test execution.
 
 ## 2.0.0 (2026-02-10)

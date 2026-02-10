@@ -17,7 +17,7 @@ class TxnContext {
   Scene? _mutableScene;
 
   Scene get workingScene => _mutableScene ?? _baseScene;
-  bool get txnHasMutableScene => _mutableScene != null;
+  Scene txnSceneForCommit() => _mutableScene ?? _baseScene;
 
   Set<NodeId> workingSelection;
   Set<NodeId> workingNodeIds;

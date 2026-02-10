@@ -1,6 +1,6 @@
 # Architecture Overview
 
-This document describes the architecture of `iwb_canvas_engine` for release `2.0.0`.
+This document describes the architecture of `iwb_canvas_engine` for release `2.0.1`.
 
 ## Goals
 
@@ -76,6 +76,7 @@ Key invariants:
 
 ## Performance model
 
+- Mutating transactions use single clone-on-first-mutation; commit does not deep-clone scene again.
 - Viewport culling for offscreen nodes.
 - Bounded caches for text layout, stroke paths, and selected path metrics.
 - Spatial index support for input hit-testing hot paths.

@@ -85,6 +85,29 @@ void main() {
     expect(storeWithoutSelection.nodeIdSeed, 0);
   });
 
+  test('TxnContext scene-for-commit uses base scene until first mutation', () {
+    final baseScene = Scene(
+      layers: <Layer>[
+        Layer(
+          nodes: <SceneNode>[RectNode(id: 'r1', size: const Size(10, 10))],
+        ),
+      ],
+    );
+    final ctx = TxnContext(
+      baseScene: baseScene,
+      workingSelection: <NodeId>{},
+      workingNodeIds: <NodeId>{'r1'},
+      nodeIdSeed: 0,
+    );
+
+    expect(identical(ctx.txnSceneForCommit(), baseScene), isTrue);
+
+    final mutableScene = ctx.txnEnsureMutableScene();
+    expect(identical(mutableScene, baseScene), isFalse);
+    expect(identical(ctx.txnSceneForCommit(), mutableScene), isTrue);
+    expect(identical(ctx.workingScene, mutableScene), isTrue);
+  });
+
   test('SceneWriter handles write operations and updates changeset', () {
     final bufferedSignals = <V2BufferedSignal>[];
     final ctx = TxnContext(
