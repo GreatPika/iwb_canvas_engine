@@ -26,14 +26,6 @@ Recommended import:
 import 'package:iwb_canvas_engine/basic.dart';
 ```
 
-Alternative import:
-
-```dart
-import 'package:iwb_canvas_engine/advanced.dart';
-```
-
-`advanced.dart` is currently an alias of `basic.dart`.
-
 Runtime aliases exposed publicly:
 
 - `SceneController` is a typedef alias of `SceneControllerInteractiveV2`
@@ -50,6 +42,7 @@ Runtime aliases exposed publicly:
   - `PatchField<T>` and `PatchFieldState`
 - Runtime:
   - `SceneController`, `SceneView`
+  - `SceneWriteTxn`, `SceneRenderState`
 - Input/event contracts:
   - `CanvasMode`, `DrawTool`
   - `PointerSample`, `PointerSignal`, `PointerInputSettings`
@@ -157,9 +150,6 @@ Use `nullValue()` only for nullable fields.
 
 ```dart
 final controller = SceneController(
-  // Optional legacy mutable scene source.
-  scene: null,
-
   // Optional immutable startup scene.
   initialSnapshot: SceneSnapshot(
     layers: [
@@ -186,7 +176,6 @@ final controller = SceneController(
 ### 6.2 Read-only state
 
 - `snapshot: SceneSnapshot`
-- `scene: Scene` (legacy mutable projection)
 - `selectedNodeIds: Set<NodeId>`
 - `mode: CanvasMode`
 - `drawTool: DrawTool`
@@ -241,8 +230,7 @@ Validation notes:
 
 ### 6.5 Node and selection methods
 
-- `String addNode(Object node, {int? layerIndex})`
-  - Accepts `NodeSpec` and legacy `SceneNode`.
+- `String addNode(NodeSpec node, {int? layerIndex})`
 - `bool patchNode(NodePatch patch)`
 - `bool removeNode(NodeId id, {int? timestampMs})`
 - `setSelection(Iterable<NodeId> nodeIds)`
@@ -274,10 +262,15 @@ Direct usage is useful when embedding the controller in custom input pipelines.
 
 ### 6.8 Direct transactional writes
 
-- `write<T>(T Function(SceneWriter writer) fn)`
+- `write<T>(T Function(SceneWriteTxn txn) fn)`
 
-This is advanced API for controlled low-level writes.
-Prefer high-level command methods unless you need custom transactional logic.
+`SceneWriteTxn` is a safe contract:
+
+- Includes state snapshots (`snapshot`, `selectedNodeIds`) and explicit write operations.
+- Does not expose mutable `Scene`/`SceneNode`.
+- Does not include `writeFindNode` or `writeMark*` escape methods.
+
+Prefer high-level command methods unless custom transactional logic is required.
 
 ## 7. Interaction model details
 
@@ -503,7 +496,21 @@ When an agent modifies integration code:
 5. Respect background layer semantics and non-deletable/non-selectable flags.
 6. Prefer `SceneController`/`SceneView` aliases in app-facing docs/examples.
 
-## 14. Quick recipes
+## 14. Migration from 1.x to 2.0.0
+
+Required updates:
+
+1. Remove `advanced.dart` imports and use `basic.dart` only.
+2. Replace legacy constructor usage:
+   - Remove `scene: ...` from `SceneController(...)`.
+   - Use `initialSnapshot: SceneSnapshot(...)` instead.
+3. Replace `addNode(Object ...)` calls with explicit `NodeSpec` variants.
+4. Replace low-level write callbacks:
+   - from `write((SceneWriter w) { ... })`
+   - to `write((SceneWriteTxn txn) { ... })`
+5. Remove any dependency on legacy mutable getters (`controller.scene`, `controller.core`).
+
+## 15. Quick recipes
 
 ### 14.1 Export/import JSON
 

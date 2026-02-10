@@ -1,13 +1,13 @@
 import 'dart:ui';
 
 import '../../../core/nodes.dart';
-import '../../../controller/scene_writer.dart';
 import '../../../public/node_spec.dart';
+import '../../../public/scene_write_txn.dart';
 
 class V2DrawSlice {
   V2DrawSlice(this._writeRunner);
 
-  final T Function<T>(T Function(SceneWriter writer) fn) _writeRunner;
+  final T Function<T>(T Function(SceneWriteTxn writer) fn) _writeRunner;
 
   String writeDrawStroke({
     required List<Offset> points,

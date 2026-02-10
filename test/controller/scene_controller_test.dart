@@ -2,8 +2,10 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/basic.dart';
+import 'package:iwb_canvas_engine/src/core/nodes.dart' show RectNode;
 import 'package:iwb_canvas_engine/src/core/scene_spatial_index.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/input/slices/signals/signal_event.dart';
 
 // INV:INV-V2-TXN-ATOMIC-COMMIT
 // INV:INV-V2-EPOCH-INVALIDATION
@@ -46,11 +48,66 @@ void main() {
     expect(notifications, 1);
     expect(controller.debugLastCommitPhases, const <String>[
       'selection',
-      'grid',
       'spatial_index',
       'signals',
       'repaint',
     ]);
+  });
+
+  test('no-op write keeps commit/revisions unchanged and does not notify', () {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    final beforeCommit = controller.debugCommitRevision;
+    final beforeStructural = controller.structuralRevision;
+    final beforeBounds = controller.boundsRevision;
+    final beforeVisual = controller.visualRevision;
+
+    var notifications = 0;
+    controller.addListener(() {
+      notifications = notifications + 1;
+    });
+
+    controller.write<void>((_) {});
+
+    expect(controller.debugCommitRevision, beforeCommit);
+    expect(controller.structuralRevision, beforeStructural);
+    expect(controller.boundsRevision, beforeBounds);
+    expect(controller.visualRevision, beforeVisual);
+    expect(notifications, 0);
+    expect(controller.debugLastCommitPhases, isEmpty);
+  });
+
+  test('signals-only write bumps commit only and skips repaint', () async {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    final beforeCommit = controller.debugCommitRevision;
+    final beforeStructural = controller.structuralRevision;
+    final beforeBounds = controller.boundsRevision;
+    final beforeVisual = controller.visualRevision;
+
+    var notifications = 0;
+    controller.addListener(() {
+      notifications = notifications + 1;
+    });
+
+    final emitted = <V2CommittedSignal>[];
+    final sub = controller.signals.listen(emitted.add);
+    addTearDown(sub.cancel);
+
+    controller.write<void>((writer) {
+      writer.writeSignalEnqueue(type: 'signals-only');
+    });
+
+    expect(emitted, hasLength(1));
+    expect(emitted.single.type, 'signals-only');
+    expect(controller.debugCommitRevision, beforeCommit + 1);
+    expect(controller.structuralRevision, beforeStructural);
+    expect(controller.boundsRevision, beforeBounds);
+    expect(controller.visualRevision, beforeVisual);
+    expect(notifications, 0);
+    expect(controller.debugLastCommitPhases, const <String>['signals']);
   });
 
   test(
@@ -134,6 +191,28 @@ void main() {
 
     expect(controller.debugLastChangeSet.boundsChanged, isTrue);
     expect(controller.boundsRevision, 1);
+  });
+
+  test('node patch that changes selection policy normalizes selected ids', () {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    controller.write<void>((writer) {
+      writer.writeSelectionReplace(const <NodeId>{'r1'});
+    });
+    expect(controller.selectedNodeIds, const <NodeId>{'r1'});
+
+    controller.write<void>((writer) {
+      writer.writeNodePatch(
+        const RectNodePatch(
+          id: 'r1',
+          common: CommonNodePatch(isSelectable: PatchField<bool>.value(false)),
+        ),
+      );
+    });
+
+    expect(controller.selectedNodeIds, isEmpty);
+    expect(controller.debugLastChangeSet.selectionChanged, isTrue);
   });
 
   test(

@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/basic.dart';
@@ -48,5 +49,9 @@ void main() {
 
     expect(encoded['schemaVersion'], schemaVersionWrite);
     expect(decodedNode.id, 'rect-json-1');
+  });
+
+  test('advanced.dart entrypoint is removed', () {
+    expect(File('lib/advanced.dart').existsSync(), isFalse);
   });
 }

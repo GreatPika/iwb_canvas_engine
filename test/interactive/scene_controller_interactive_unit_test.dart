@@ -2,16 +2,11 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/basic.dart';
+import 'package:iwb_canvas_engine/src/core/nodes.dart' hide NodeId;
+import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/core/grid_safety_limits.dart';
 import 'package:iwb_canvas_engine/src/core/pointer_input.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
-
-class _UnknownSceneNode extends SceneNode {
-  _UnknownSceneNode({required super.id}) : super(type: NodeType.rect);
-
-  @override
-  Rect get localBounds => const Rect.fromLTWH(0, 0, 1, 1);
-}
+import 'package:iwb_canvas_engine/src/model/document.dart';
 
 NodeSnapshot _nodeById(SceneSnapshot snapshot, NodeId id) {
   for (final layer in snapshot.layers) {
@@ -36,11 +31,25 @@ PointerSample _sample({
   );
 }
 
+SceneControllerInteractiveV2 _controllerFromScene(
+  Scene scene, {
+  PointerInputSettings? pointerSettings,
+  double? dragStartSlop,
+  bool clearSelectionOnDrawModeEnter = false,
+}) {
+  return SceneControllerInteractiveV2(
+    initialSnapshot: txnSceneToSnapshot(scene),
+    pointerSettings: pointerSettings,
+    dragStartSlop: dragStartSlop,
+    clearSelectionOnDrawModeEnter: clearSelectionOnDrawModeEnter,
+  );
+}
+
 void main() {
   group('SceneControllerInteractiveV2 unit', () {
     test('read API + setters + validation', () {
-      final controller = SceneControllerInteractiveV2(
-        scene: Scene(
+      final controller = _controllerFromScene(
+        Scene(
           layers: <Layer>[
             Layer(isBackground: true),
             Layer(
@@ -51,9 +60,8 @@ void main() {
       );
       addTearDown(controller.dispose);
 
-      expect(controller.core, isA<SceneControllerV2>());
       expect(controller.snapshot.layers.length, 2);
-      expect(controller.scene.layers.length, 2);
+      expect(controller.snapshot.layers.length, 2);
       expect(controller.selectedNodeIds, isEmpty);
       expect(controller.mode, CanvasMode.move);
       expect(controller.drawTool, DrawTool.pen);
@@ -142,8 +150,8 @@ void main() {
           ..position = const Offset(20, 20);
         final nodeB = RectNode(id: 'b', size: const Size(40, 40))
           ..position = const Offset(120, 20);
-        final controller = SceneControllerInteractiveV2(
-          scene: Scene(
+        final controller = _controllerFromScene(
+          Scene(
             layers: <Layer>[
               Layer(isBackground: true),
               Layer(nodes: <SceneNode>[nodeA, nodeB]),
@@ -187,7 +195,7 @@ void main() {
       },
     );
 
-    test('addNode accepts NodeSpec and legacy SceneNode variants', () {
+    test('addNode accepts NodeSpec variants', () {
       final controller = SceneControllerInteractiveV2(
         initialSnapshot: SceneSnapshot(
           layers: <LayerSnapshot>[
@@ -206,70 +214,58 @@ void main() {
       );
       expect(
         controller.addNode(
-          RectNode(id: 'legacy-rect', size: const Size(10, 10)),
-        ),
-        'legacy-rect',
-      );
-      expect(
-        controller.addNode(
-          TextNode(
-            id: 'legacy-text',
+          TextNodeSpec(
+            id: 'spec-text',
             text: 'hello',
             size: const Size(80, 20),
             color: const Color(0xFF222222),
             align: TextAlign.center,
           ),
         ),
-        'legacy-text',
+        'spec-text',
       );
       expect(
         controller.addNode(
-          StrokeNode(
-            id: 'legacy-stroke',
+          StrokeNodeSpec(
+            id: 'spec-stroke',
             points: const <Offset>[Offset(0, 0), Offset(8, 0)],
             thickness: 2,
-            color: const Color(0xFF111111),
+            color: const Color(0xFF222222),
           ),
         ),
-        'legacy-stroke',
+        'spec-stroke',
       );
       expect(
         controller.addNode(
-          LineNode(
-            id: 'legacy-line',
+          LineNodeSpec(
+            id: 'spec-line',
             start: const Offset(0, 0),
             end: const Offset(0, 10),
             thickness: 2,
             color: const Color(0xFF111111),
           ),
         ),
-        'legacy-line',
+        'spec-line',
       );
       expect(
         controller.addNode(
-          ImageNode(
-            id: 'legacy-image',
+          ImageNodeSpec(
+            id: 'spec-image',
             imageId: 'img',
             size: const Size(20, 20),
           ),
         ),
-        'legacy-image',
+        'spec-image',
       );
       expect(
         controller.addNode(
-          PathNode(
-            id: 'legacy-path',
+          PathNodeSpec(
+            id: 'spec-path',
             svgPathData: 'M0 0 L10 0 L10 10 Z',
             fillColor: const Color(0xFF00AA00),
           ),
         ),
-        'legacy-path',
-      );
-
-      expect(() => controller.addNode('bad-node'), throwsArgumentError);
-      expect(
-        () => controller.addNode(_UnknownSceneNode(id: 'unknown')),
-        throwsArgumentError,
+        'spec-path',
       );
     });
 
@@ -312,8 +308,8 @@ void main() {
         )..position = const Offset(100, 100);
         final rect = RectNode(id: 'rect', size: const Size(80, 30))
           ..position = const Offset(200, 100);
-        final controller = SceneControllerInteractiveV2(
-          scene: Scene(
+        final controller = _controllerFromScene(
+          Scene(
             layers: <Layer>[
               Layer(isBackground: true),
               Layer(nodes: <SceneNode>[rect, text]),
@@ -375,8 +371,8 @@ void main() {
     test('move cancel rolls back drag transform', () {
       final rect = RectNode(id: 'node', size: const Size(40, 20))
         ..position = const Offset(80, 80);
-      final controller = SceneControllerInteractiveV2(
-        scene: Scene(
+      final controller = _controllerFromScene(
+        Scene(
           layers: <Layer>[
             Layer(isBackground: true),
             Layer(nodes: <SceneNode>[rect]),
@@ -815,8 +811,8 @@ void main() {
         thickness: 2,
         color: const Color(0xFF000000),
       )..position = const Offset(170, 120);
-      final controller = SceneControllerInteractiveV2(
-        scene: Scene(
+      final controller = _controllerFromScene(
+        Scene(
           layers: <Layer>[
             Layer(isBackground: true),
             Layer(nodes: <SceneNode>[line, stroke]),
@@ -903,8 +899,8 @@ void main() {
         thickness: 2,
         color: const Color(0xFF000000),
       )..position = const Offset(160, 100);
-      final controller = SceneControllerInteractiveV2(
-        scene: Scene(
+      final controller = _controllerFromScene(
+        Scene(
           layers: <Layer>[
             Layer(isBackground: true, nodes: <SceneNode>[backgroundRect]),
             Layer(nodes: <SceneNode>[foregroundRect, foregroundLine]),
@@ -995,8 +991,8 @@ void main() {
         isLocked: true,
         isDeletable: false,
       )..position = const Offset(90, 50);
-      final controller = SceneControllerInteractiveV2(
-        scene: Scene(
+      final controller = _controllerFromScene(
+        Scene(
           layers: <Layer>[
             Layer(isBackground: true),
             Layer(nodes: <SceneNode>[rect, locked]),
@@ -1010,8 +1006,13 @@ void main() {
       addTearDown(sub.cancel);
 
       final visualBefore = controller.visualRevision;
+      var notifications = 0;
+      controller.addListener(() {
+        notifications = notifications + 1;
+      });
       controller.notifySceneChanged();
-      expect(controller.visualRevision, greaterThan(visualBefore));
+      expect(controller.visualRevision, visualBefore);
+      expect(notifications, 1);
 
       controller.setSelection(const <NodeId>{'r', 'locked'});
       controller.rotateSelection(clockwise: true, timestampMs: 100);
@@ -1035,8 +1036,8 @@ void main() {
     test('move drag up emits transform action with delta payload', () async {
       final rect = RectNode(id: 'node', size: const Size(30, 20))
         ..position = const Offset(60, 60);
-      final controller = SceneControllerInteractiveV2(
-        scene: Scene(
+      final controller = _controllerFromScene(
+        Scene(
           layers: <Layer>[
             Layer(isBackground: true),
             Layer(nodes: <SceneNode>[rect]),
@@ -1080,6 +1081,35 @@ void main() {
       );
       expect(transformActions, isNotEmpty);
       expect(transformActions.last.payload?['delta'], isNotNull);
+    });
+
+    test('rotateSelection emits transform for multi-node selection', () {
+      final first = RectNode(id: 'a', size: const Size(30, 20))
+        ..position = const Offset(40, 40);
+      final second = RectNode(id: 'b', size: const Size(30, 20))
+        ..position = const Offset(140, 40);
+      final controller = _controllerFromScene(
+        Scene(
+          layers: <Layer>[
+            Layer(isBackground: true),
+            Layer(nodes: <SceneNode>[first, second]),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      final actions = <ActionCommitted>[];
+      final sub = controller.actions.listen(actions.add);
+      addTearDown(sub.cancel);
+
+      controller.setSelection(const <NodeId>{'a', 'b'});
+      controller.rotateSelection(clockwise: true, timestampMs: 200);
+
+      final transformActions = actions
+          .where((event) => event.type == ActionType.transform)
+          .toList(growable: false);
+      expect(transformActions, isNotEmpty);
+      expect(transformActions.last.nodeIds.toSet(), const <NodeId>{'a', 'b'});
     });
 
     test(
@@ -1171,8 +1201,8 @@ void main() {
     test(
       'configured draw-mode entry clears selection and delegates commands',
       () {
-        final controller = SceneControllerInteractiveV2(
-          scene: Scene(
+        final controller = _controllerFromScene(
+          Scene(
             layers: <Layer>[
               Layer(isBackground: true),
               Layer(
@@ -1216,15 +1246,15 @@ void main() {
           isTrue,
         );
         expect(
-          (controller.scene.layers[1].nodes.first as RectNode).size,
+          (controller.snapshot.layers[1].nodes.first as RectNodeSnapshot).size,
           const Size(20, 10),
         );
       },
     );
 
     test('eraser path and move hit-tests cover multi-candidate sorting', () {
-      final controller = SceneControllerInteractiveV2(
-        scene: Scene(
+      final controller = _controllerFromScene(
+        Scene(
           layers: <Layer>[
             Layer(isBackground: true),
             Layer(

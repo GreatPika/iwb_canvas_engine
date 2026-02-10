@@ -1,7 +1,7 @@
 import 'dart:ui';
 
-import 'nodes.dart';
 import 'transform2d.dart';
+import '../public/snapshot.dart';
 
 /// Discrete actions emitted by interactive controllers for app-level undo/redo.
 enum ActionType {
@@ -33,7 +33,7 @@ class ActionCommitted {
   final Map<String, Object?>? payload;
 }
 
-/// Request from the engine to edit a [TextNode] at [position].
+/// Request from the engine to edit a text node at [position].
 class EditTextRequested {
   const EditTextRequested({
     required this.nodeId,

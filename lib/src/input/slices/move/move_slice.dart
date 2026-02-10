@@ -1,11 +1,11 @@
 import 'dart:ui';
 
-import '../../../controller/scene_writer.dart';
+import '../../../public/scene_write_txn.dart';
 
 class V2MoveSlice {
   V2MoveSlice(this._writeRunner);
 
-  final T Function<T>(T Function(SceneWriter writer) fn) _writeRunner;
+  final T Function<T>(T Function(SceneWriteTxn writer) fn) _writeRunner;
 
   int writeTranslateSelection(Offset delta) {
     return _writeRunner((writer) {

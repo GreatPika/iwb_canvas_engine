@@ -5,6 +5,8 @@ import 'dart:io';
 // INV:INV-V2-WRITE-ONLY-MUTATION
 // INV:INV-V2-TXN-ATOMIC-COMMIT
 // INV:INV-V2-EPOCH-INVALIDATION
+// INV:INV-G-PUBLIC-ENTRYPOINTS
+// INV:INV-V2-SAFE-TXN-API
 
 class _Violation {
   _Violation({
@@ -223,6 +225,220 @@ void _checkPublicImports({
   }
 }
 
+Set<String> _collectBasicExportTargets({
+  required Directory root,
+  required String rootAbsPosix,
+  required String packageName,
+}) {
+  final basicFile = File(
+    '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}basic.dart',
+  );
+  if (!basicFile.existsSync()) {
+    return const <String>{};
+  }
+
+  final basicAbsPosixPath = _toPosixPath(basicFile.absolute.path);
+  final basicPosixPath = _toRepoRelPosixPath(
+    absPosixPath: basicAbsPosixPath,
+    rootAbsPosixPath: rootAbsPosix,
+  );
+  final basicDirRepoRelPosix = _posixDirname(basicPosixPath);
+  final targets = <String>{};
+  final lines = basicFile.readAsLinesSync();
+
+  for (final line in lines) {
+    final exportTargets = _extractDirectiveTargets(line, directive: 'export');
+    if (exportTargets == null) continue;
+
+    for (final target in exportTargets) {
+      final resolvedRepoRelPosix = _resolveToRepoRelTargetPosix(
+        targetPosix: _toPosixPath(target),
+        packageName: packageName,
+        fileDirRepoRelPosix: basicDirRepoRelPosix,
+      );
+      if (resolvedRepoRelPosix != null) {
+        targets.add(resolvedRepoRelPosix);
+      }
+    }
+  }
+  return targets;
+}
+
+Set<String> _checkEntrypointGuardrails({
+  required Directory root,
+  required String rootAbsPosix,
+  required String packageName,
+}) {
+  final advancedFile = File(
+    '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}advanced.dart',
+  );
+  if (advancedFile.existsSync()) {
+    _fail(
+      _Violation(
+        filePath: '/lib/advanced.dart',
+        line: 1,
+        message: 'advanced.dart entrypoint is forbidden in v2.',
+      ),
+    );
+  }
+
+  final exports = _collectBasicExportTargets(
+    root: root,
+    rootAbsPosix: rootAbsPosix,
+    packageName: packageName,
+  );
+  if (exports.isEmpty) {
+    return exports;
+  }
+
+  const forbiddenExports = <String>{
+    '/lib/src/core/scene.dart',
+    '/lib/src/core/nodes.dart',
+  };
+  for (final path in forbiddenExports) {
+    if (exports.contains(path)) {
+      _fail(
+        _Violation(
+          filePath: '/lib/basic.dart',
+          line: 1,
+          message: 'basic.dart must not export mutable core model ($path).',
+        ),
+      );
+    }
+  }
+  return exports;
+}
+
+void _checkSceneWriteTxnContract({
+  required Directory root,
+  required String rootAbsPosix,
+}) {
+  final txnApiFile = File(
+    '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}src${Platform.pathSeparator}public${Platform.pathSeparator}scene_write_txn.dart',
+  );
+  if (!txnApiFile.existsSync()) return;
+
+  final fileAbsPosixPath = _toPosixPath(txnApiFile.absolute.path);
+  final filePosixPath = _toRepoRelPosixPath(
+    absPosixPath: fileAbsPosixPath,
+    rootAbsPosixPath: rootAbsPosix,
+  );
+  final lines = txnApiFile.readAsLinesSync();
+
+  for (var i = 0; i < lines.length; i++) {
+    final lineNo = i + 1;
+    final line = lines[i];
+    final trimmed = line.trimLeft();
+    if (trimmed.startsWith('//')) continue;
+
+    if (RegExp(r'\bget\s+scene\b').hasMatch(line) ||
+        RegExp(r'\bscene\s*=>').hasMatch(line)) {
+      _fail(
+        _Violation(
+          filePath: filePosixPath,
+          line: lineNo,
+          message: 'public SceneWriteTxn must not expose raw scene access.',
+        ),
+      );
+    }
+    if (RegExp(r'\bwriteFindNode\s*\(').hasMatch(line)) {
+      _fail(
+        _Violation(
+          filePath: filePosixPath,
+          line: lineNo,
+          message: 'public SceneWriteTxn must not expose writeFindNode.',
+        ),
+      );
+    }
+    if (RegExp(r'\bwriteMark[A-Za-z0-9_]*\s*\(').hasMatch(line)) {
+      _fail(
+        _Violation(
+          filePath: filePosixPath,
+          line: lineNo,
+          message:
+              'public SceneWriteTxn must not expose writeMark* escape hatches.',
+        ),
+      );
+    }
+  }
+}
+
+void _checkExportedApiMutableTypeLeak({
+  required Directory root,
+  required String rootAbsPosix,
+  required Set<String> exportedFiles,
+}) {
+  if (exportedFiles.isEmpty) return;
+  final filesToCheck = exportedFiles
+      .where((path) {
+        return path.startsWith('/lib/src/public/') ||
+            path == '/lib/src/interactive/scene_controller_interactive.dart';
+      })
+      .toList(growable: false);
+  if (filesToCheck.isEmpty) return;
+
+  const mutableTypePattern = r'\b(?:Scene|Layer|SceneNode|NodeType)\b';
+  final mutableTypeRegex = RegExp(mutableTypePattern);
+  const skipPrefixes = <String>[
+    '//',
+    'import ',
+    'export ',
+    'part ',
+    '@',
+    'if ',
+    'for ',
+    'while ',
+    'switch ',
+    'return ',
+  ];
+
+  for (final repoRel in filesToCheck) {
+    final absPath = _toPosixPath(_posixJoin(root.path, repoRel.substring(1)));
+    final file = File(absPath);
+    if (!file.existsSync()) continue;
+
+    final lines = file.readAsLinesSync();
+    for (var i = 0; i < lines.length; i++) {
+      final lineNo = i + 1;
+      final line = lines[i];
+      final trimmed = line.trimLeft();
+      if (!mutableTypeRegex.hasMatch(line)) continue;
+      if (skipPrefixes.any(trimmed.startsWith)) continue;
+
+      final isPublicDeclarationLine =
+          RegExp(
+            r'^\s*(?:class|typedef|enum|mixin|extension)\s+[A-Za-z]',
+          ).hasMatch(line) ||
+          RegExp(r'\bget\s+[A-Za-z][A-Za-z0-9_]*\b').hasMatch(line) ||
+          RegExp(r'\bset\s+[A-Za-z][A-Za-z0-9_]*\s*\(').hasMatch(line) ||
+          RegExp(
+            r'\b[A-Za-z][A-Za-z0-9_]*\s*\([^)]*\)\s*(?:=>|{|;)',
+          ).hasMatch(line) ||
+          RegExp(
+            r'^\s*(?:final|const|late|static|var)\s+[A-Za-z0-9_<>,? ]+\s+[A-Za-z][A-Za-z0-9_]*\s*(?:=|;)',
+          ).hasMatch(line);
+      if (!isPublicDeclarationLine) continue;
+
+      final publicNameMatch =
+          RegExp(
+            r'\b(?:get|set|class|typedef|enum|mixin|extension)\s+([A-Za-z][A-Za-z0-9_]*)\b',
+          ).firstMatch(line) ??
+          RegExp(r'\b([A-Za-z][A-Za-z0-9_]*)\s*\(').firstMatch(line);
+      final publicName = publicNameMatch?.group(1);
+      if (publicName != null && publicName.startsWith('_')) continue;
+
+      _fail(
+        _Violation(
+          filePath: repoRel,
+          line: lineNo,
+          message:
+              'public API must not expose mutable core types (Scene/Layer/SceneNode/NodeType).',
+        ),
+      );
+    }
+  }
+}
+
 void _checkControllerGuardrails({
   required Directory root,
   required String rootAbsPosix,
@@ -318,11 +534,22 @@ void main(List<String> args) {
   final root = Directory.current;
   final rootAbsPosix = _toPosixPath(root.absolute.path);
   final packageName = _readPackageNameOrFallback(root);
+  final exportedFiles = _checkEntrypointGuardrails(
+    root: root,
+    rootAbsPosix: rootAbsPosix,
+    packageName: packageName,
+  );
 
   _checkPublicImports(
     root: root,
     rootAbsPosix: rootAbsPosix,
     packageName: packageName,
+  );
+  _checkSceneWriteTxnContract(root: root, rootAbsPosix: rootAbsPosix);
+  _checkExportedApiMutableTypeLeak(
+    root: root,
+    rootAbsPosix: rootAbsPosix,
+    exportedFiles: exportedFiles,
   );
   _checkControllerGuardrails(root: root, rootAbsPosix: rootAbsPosix);
 

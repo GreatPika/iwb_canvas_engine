@@ -1,6 +1,6 @@
 # Architecture Overview
 
-This document describes the architecture of `iwb_canvas_engine` for release `1.0.0`.
+This document describes the architecture of `iwb_canvas_engine` for release `2.0.0`.
 
 ## Goals
 
@@ -13,12 +13,12 @@ This document describes the architecture of `iwb_canvas_engine` for release `1.0
 Entrypoints:
 
 - `package:iwb_canvas_engine/basic.dart`
-- `package:iwb_canvas_engine/advanced.dart` (alias)
 
 Primary public abstractions:
 
 - Runtime: `SceneController`, `SceneView`
 - Immutable read model: `SceneSnapshot`, `LayerSnapshot`, `NodeSnapshot`
+- Safe transactional write model: `SceneWriteTxn`
 - Write intents: `NodeSpec`
 - Partial mutation: `NodePatch` + `PatchField<T>`
 - Serialization: `encodeScene*`, `decodeScene*`, `SceneJsonFormatException`
@@ -28,7 +28,6 @@ Primary public abstractions:
 ```text
 lib/
   basic.dart
-  advanced.dart
   src/
     core/           // model primitives, math, hit testing, defaults
     controller/     // transactional writer/store internals
@@ -57,7 +56,10 @@ Canonical invariant registry:
 
 Key invariants:
 
+- Single entrypoint: `basic.dart` only.
 - Single source of truth: runtime state is owned by controller snapshot.
+- Public API does not expose mutable core scene structures.
+- All state mutations flow through `write` transactions and safe txn operations.
 - Background layer rule: at most one background layer; canonical index is `0`.
 - Unique node ids across all layers.
 - Input and render subsystems must not bypass controller transaction boundaries.

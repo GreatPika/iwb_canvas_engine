@@ -141,7 +141,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   // --- UI СЕКЦИИ ---
 
   Widget _buildCameraIndicator() {
-    final cameraX = _controller.scene.camera.offset.dx;
+    final cameraX = _controller.snapshot.camera.offset.dx;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
@@ -252,7 +252,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                     ),
                     const VerticalDivider(indent: 25, endIndent: 25, width: 20),
                     _ColorPalette(
-                      colors: _controller.scene.palette.penColors,
+                      colors: _controller.snapshot.palette.penColors,
                       selected: _controller.drawColor,
                       onSelected: _setDrawColor,
                     ),
@@ -445,7 +445,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
               ),
               const VerticalDivider(width: 20),
               _ColorPalette(
-                colors: _controller.scene.palette.penColors,
+                colors: _controller.snapshot.palette.penColors,
                 selected: node.color,
                 onSelected: _setSelectedTextColor,
               ),
@@ -485,7 +485,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   // --- ЛОГИКА ДИАЛОГОВ ---
 
   Widget _buildGridMenu() {
-    final grid = _controller.scene.background.grid;
+    final grid = _controller.snapshot.background.grid;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -595,7 +595,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                   width: double.infinity,
                   child: SegmentedButton<double>(
                     showSelectedIcon: false,
-                    segments: _controller.scene.palette.gridSizes.map((s) {
+                    segments: _controller.snapshot.palette.gridSizes.map((s) {
                       return ButtonSegment<double>(
                         value: s,
                         label: Text(
@@ -681,13 +681,13 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                   vertical: 8,
                 ),
                 child: Row(
-                  children: _controller.scene.palette.backgroundColors
+                  children: _controller.snapshot.palette.backgroundColors
                       .asMap()
                       .entries
                       .map((entry) {
                         final c = entry.value;
                         final isSelected =
-                            _controller.scene.background.color == c;
+                            _controller.snapshot.background.color == c;
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: GestureDetector(
@@ -913,7 +913,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
 
     final viewPosition = toView(
       node.transform.translation,
-      _controller.scene.camera.offset,
+      _controller.snapshot.camera.offset,
     );
     final rotationDeg = _rotationDegreesFromTransform(node.transform);
     final scaleX = _scaleXFromTransform(node.transform);
@@ -1134,7 +1134,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
 
   void _setDrawColor(Color c) => _controller.setDrawColor(c);
   void _panCameraBy(Offset delta) {
-    final nextOffset = _controller.scene.camera.offset + delta;
+    final nextOffset = _controller.snapshot.camera.offset + delta;
     _controller.setCameraOffset(nextOffset);
   }
 
@@ -1221,7 +1221,7 @@ class _PendingLineMarkerPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final start = controller.pendingLineStart;
     if (start == null) return;
-    final viewPos = toView(start, controller.scene.camera.offset);
+    final viewPos = toView(start, controller.snapshot.camera.offset);
     final paint = Paint()
       ..color = controller.drawColor.withAlpha(200)
       ..style = PaintingStyle.stroke

@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 
-import '../core/nodes.dart';
+import '../core/nodes.dart' show SceneNode;
 import '../core/scene_spatial_index.dart';
 import '../input/slices/commands/scene_commands.dart';
 import '../input/slices/draw/draw_slice.dart';
@@ -15,13 +15,15 @@ import '../input/slices/signals/signals_slice.dart';
 import '../input/slices/spatial_index/spatial_index_slice.dart';
 import '../model/document.dart';
 import '../model/document_clone.dart';
-import '../public/snapshot.dart' hide NodeId;
+import '../public/scene_render_state.dart';
+import '../public/scene_write_txn.dart';
+import '../public/snapshot.dart';
 import 'change_set.dart';
 import 'scene_writer.dart';
 import 'store.dart';
 import 'txn_context.dart';
 
-class SceneControllerV2 extends ChangeNotifier {
+class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
   SceneControllerV2({SceneSnapshot? initialSnapshot})
     : _store = V2Store(
         sceneDoc: txnSceneFromSnapshot(initialSnapshot ?? SceneSnapshot()),
@@ -43,7 +45,10 @@ class SceneControllerV2 extends ChangeNotifier {
   late final V2MoveSlice move = V2MoveSlice(write);
   late final V2DrawSlice draw = V2DrawSlice(write);
 
+  @override
   SceneSnapshot get snapshot => txnSceneToSnapshot(_store.sceneDoc);
+
+  @override
   Set<NodeId> get selectedNodeIds =>
       Set<NodeId>.unmodifiable(_store.selectedNodeIds);
 
@@ -62,6 +67,9 @@ class SceneControllerV2 extends ChangeNotifier {
 
   @visibleForTesting
   int get debugSpatialIndexBuildCount => _spatialIndexSlice.debugBuildCount;
+
+  @visibleForTesting
+  int get debugCommitRevision => _store.commitRevision;
 
   List<SceneSpatialCandidate> querySpatialCandidates(Rect worldBounds) {
     return _spatialIndexSlice.writeQueryCandidates(
@@ -93,23 +101,23 @@ class SceneControllerV2 extends ChangeNotifier {
       return node;
     }
 
-    // v2 write() commits always swap sceneDoc with a cloned document, so node
-    // identity may differ after non-geometry writes while index coordinates
-    // remain valid.
+    // v2 commits may replace sceneDoc identity on structural/geometry writes.
+    // For stale candidates after such commits, id/type still allows safe
+    // fallback resolution when coordinates remain valid.
     if (node.id != candidate.node.id || node.type != candidate.node.type) {
       return null;
     }
     return node;
   }
 
-  T write<T>(T Function(SceneWriter writer) fn) {
+  T write<T>(T Function(SceneWriteTxn txn) fn) {
     if (_writeInProgress) {
       throw StateError('Nested write(...) calls are not allowed.');
     }
 
     _writeInProgress = true;
     final ctx = TxnContext(
-      workingScene: txnCloneScene(_store.sceneDoc),
+      baseScene: _store.sceneDoc,
       workingSelection: Set<NodeId>.from(_store.selectedNodeIds),
       workingNodeIds: Set<NodeId>.from(_store.allNodeIds),
       nodeIdSeed: _store.nodeIdSeed,
@@ -138,23 +146,58 @@ class SceneControllerV2 extends ChangeNotifier {
     });
   }
 
+  void requestRepaint() {
+    _repaintSlice.writeMarkNeedsRepaint();
+    _repaintSlice.writeFlushNotify(notifyListeners);
+  }
+
   void _txnWriteCommit(TxnContext ctx) {
     var commitPhases = const <String>[];
 
-    final selectionResult = _selectionSlice.writeNormalizeSelection(
-      rawSelection: ctx.workingSelection,
-      scene: ctx.workingScene,
-    );
-    commitPhases = <String>[...commitPhases, 'selection'];
-    if (selectionResult.normalizedChanged) {
-      ctx.changeSet.txnMarkSelectionChanged();
+    final shouldNormalizeSelection =
+        ctx.changeSet.selectionChanged ||
+        ctx.changeSet.structuralChanged ||
+        ctx.changeSet.documentReplaced;
+    if (shouldNormalizeSelection) {
+      final selectionResult = _selectionSlice.writeNormalizeSelection(
+        rawSelection: ctx.workingSelection,
+        scene: ctx.workingScene,
+      );
+      commitPhases = <String>[...commitPhases, 'selection'];
+      if (selectionResult.normalizedChanged) {
+        ctx.changeSet.txnMarkSelectionChanged();
+      }
+      ctx.workingSelection = selectionResult.normalized;
     }
-    ctx.workingSelection = selectionResult.normalized;
 
-    final gridChanged = _gridSlice.writeNormalizeGrid(scene: ctx.workingScene);
-    commitPhases = <String>[...commitPhases, 'grid'];
-    if (gridChanged) {
-      ctx.changeSet.txnMarkGridChanged();
+    final shouldNormalizeGrid =
+        ctx.changeSet.gridChanged || ctx.changeSet.documentReplaced;
+    if (shouldNormalizeGrid) {
+      final gridChanged = _gridSlice.writeNormalizeGrid(
+        scene: ctx.workingScene,
+      );
+      commitPhases = <String>[...commitPhases, 'grid'];
+      if (gridChanged) {
+        ctx.changeSet.txnMarkGridChanged();
+      }
+    }
+
+    final hasStateChanges = ctx.changeSet.txnHasAnyChange;
+    final hasSignals = _signalsSlice.writeHasBufferedSignals;
+    if (!hasStateChanges && !hasSignals) {
+      _debugLastCommitPhases = commitPhases;
+      _debugLastChangeSet = ctx.changeSet.txnClone();
+      return;
+    }
+
+    if (!hasStateChanges && hasSignals) {
+      final nextCommitRevision = _store.commitRevision + 1;
+      _signalsSlice.writeFlushBuffered(commitRevision: nextCommitRevision);
+      commitPhases = <String>[...commitPhases, 'signals'];
+      _store.commitRevision = nextCommitRevision;
+      _debugLastCommitPhases = commitPhases;
+      _debugLastChangeSet = ctx.changeSet.txnClone();
+      return;
     }
 
     final nextEpoch =
@@ -163,16 +206,8 @@ class SceneControllerV2 extends ChangeNotifier {
         _store.structuralRevision + (ctx.changeSet.structuralChanged ? 1 : 0);
     final nextBoundsRevision =
         _store.boundsRevision + (ctx.changeSet.boundsChanged ? 1 : 0);
-
-    final shouldBumpVisual =
-        ctx.changeSet.visualChanged ||
-        ctx.changeSet.selectionChanged ||
-        ctx.changeSet.gridChanged ||
-        ctx.changeSet.structuralChanged ||
-        ctx.changeSet.boundsChanged ||
-        ctx.changeSet.documentReplaced;
-    final nextVisualRevision =
-        _store.visualRevision + (shouldBumpVisual ? 1 : 0);
+    // In state-change branch any committed mutation must bump visual revision.
+    final nextVisualRevision = _store.visualRevision + 1;
 
     _spatialIndexSlice.writeHandleCommit(
       changeSet: ctx.changeSet,
@@ -185,21 +220,23 @@ class SceneControllerV2 extends ChangeNotifier {
     _signalsSlice.writeFlushBuffered(commitRevision: nextCommitRevision);
     commitPhases = <String>[...commitPhases, 'signals'];
 
-    if (ctx.changeSet.txnHasAnyChange) {
-      _repaintSlice.writeMarkNeedsRepaint();
-    }
+    final committedScene = ctx.txnHasMutableScene
+        ? txnCloneScene(ctx.workingScene)
+        : _store.sceneDoc;
+    final committedSelection = Set<NodeId>.from(ctx.workingSelection);
+    final committedNodeIds = Set<NodeId>.from(ctx.workingNodeIds);
 
-    _store.sceneDoc = ctx.workingScene;
-    _store.selectedNodeIds = ctx.workingSelection;
-    _store.allNodeIds = txnCollectNodeIds(ctx.workingScene);
+    _store.sceneDoc = committedScene;
+    _store.selectedNodeIds = committedSelection;
+    _store.allNodeIds = committedNodeIds;
     _store.nodeIdSeed = ctx.nodeIdSeed;
-
     _store.controllerEpoch = nextEpoch;
     _store.structuralRevision = nextStructuralRevision;
     _store.boundsRevision = nextBoundsRevision;
     _store.visualRevision = nextVisualRevision;
     _store.commitRevision = nextCommitRevision;
 
+    _repaintSlice.writeMarkNeedsRepaint();
     _repaintSlice.writeFlushNotify(notifyListeners);
     commitPhases = <String>[...commitPhases, 'repaint'];
 

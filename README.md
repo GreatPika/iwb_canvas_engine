@@ -33,8 +33,7 @@ flutter pub add iwb_canvas_engine
 
 ## Entrypoints
 
-- `package:iwb_canvas_engine/basic.dart` - recommended default import.
-- `package:iwb_canvas_engine/advanced.dart` - alias of `basic.dart`.
+- `package:iwb_canvas_engine/basic.dart` - single public entrypoint.
 
 ## Quick start
 
@@ -82,6 +81,7 @@ class _CanvasScreenState extends State<CanvasScreen> {
 ## Core API
 
 - Runtime: `SceneController`, `SceneView`, `SceneSnapshot`.
+- Safe transactional writes: `SceneWriteTxn` via `controller.write((txn) { ... })`.
 - Write intents: `NodeSpec` variants.
 - Partial updates: `NodePatch` + tri-state `PatchField<T>`.
 - Serialization: `encodeScene*`, `decodeScene*`, `SceneJsonFormatException`.

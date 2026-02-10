@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/basic.dart' hide NodeId;
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
+import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/controller/change_set.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_writer.dart';
 import 'package:iwb_canvas_engine/src/controller/store.dart';
@@ -87,7 +88,7 @@ void main() {
   test('SceneWriter handles write operations and updates changeset', () {
     final bufferedSignals = <V2BufferedSignal>[];
     final ctx = TxnContext(
-      workingScene: Scene(
+      baseScene: Scene(
         layers: <Layer>[
           Layer(
             nodes: <SceneNode>[RectNode(id: 'r1', size: const Size(10, 10))],
@@ -100,7 +101,7 @@ void main() {
     );
     final writer = SceneWriter(ctx, txnSignalSink: bufferedSignals.add);
 
-    expect(writer.scene.layers.single.nodes.single.id, 'r1');
+    expect(writer.snapshot.layers.single.nodes.single.id, 'r1');
     expect(writer.selectedNodeIds, <NodeId>{'r1'});
 
     expect(
@@ -145,7 +146,7 @@ void main() {
     writer.writeGridEnable(true);
     writer.writeGridCellSize(20);
     writer.writeGridCellSize(24);
-    writer.writeBackgroundColor(writer.scene.background.color);
+    writer.writeBackgroundColor(writer.snapshot.background.color);
     writer.writeBackgroundColor(const Color(0xFFEEEEEE));
 
     writer.writeSignalEnqueue(
@@ -172,7 +173,7 @@ void main() {
 
   test('SceneWriter covers node-id helpers and selection branches', () {
     final ctx = TxnContext(
-      workingScene: Scene(
+      baseScene: Scene(
         layers: <Layer>[
           Layer(
             nodes: <SceneNode>[
@@ -204,11 +205,18 @@ void main() {
     writer.writeRebuildNodeIdIndex();
     expect(ctx.workingNodeIds, containsAll(<NodeId>{'rect-1', 'locked'}));
 
-    final found = writer.writeFindNode('rect-1');
-    expect(found, isNotNull);
-    expect(found!.layerIndex, 0);
-    expect(found.nodeIndex, 0);
-    expect(writer.writeFindNode('missing'), isNull);
+    expect(
+      writer.writeNodeTransformSet('missing', Transform2D.identity),
+      isFalse,
+    );
+    expect(
+      writer.writeNodeTransformSet(
+        'rect-1',
+        Transform2D.translation(const Offset(3, 4)),
+      ),
+      isTrue,
+    );
+    expect(ctx.changeSet.updatedNodeIds, contains('rect-1'));
 
     expect(writer.writeSelectionClear(), isTrue);
     expect(writer.writeSelectionClear(), isFalse);
@@ -219,9 +227,42 @@ void main() {
     expect(writer.writeSelectionSelectAll(), 0);
   });
 
+  test('writeNodeTransformSet marks visual change when bounds stay same', () {
+    final ctx = TxnContext(
+      baseScene: Scene(
+        layers: <Layer>[
+          Layer(
+            nodes: <SceneNode>[
+              LineNode(
+                id: 'line-static',
+                start: Offset.zero,
+                end: Offset.zero,
+                thickness: 2,
+                color: const Color(0xFF000000),
+              ),
+            ],
+          ),
+        ],
+      ),
+      workingSelection: <NodeId>{},
+      workingNodeIds: <NodeId>{'line-static'},
+      nodeIdSeed: 0,
+    );
+    final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+
+    final changed = writer.writeNodeTransformSet(
+      'line-static',
+      Transform2D.rotationDeg(90),
+    );
+
+    expect(changed, isTrue);
+    expect(ctx.changeSet.boundsChanged, isFalse);
+    expect(ctx.changeSet.visualChanged, isTrue);
+  });
+
   test('SceneWriter covers clear/delete/mark helpers', () {
     final ctx = TxnContext(
-      workingScene: Scene(
+      baseScene: Scene(
         layers: <Layer>[
           Layer(isBackground: true),
           Layer(
@@ -255,11 +296,6 @@ void main() {
     expect(ctx.workingScene.layers.length, 1);
     expect(ctx.workingSelection, isEmpty);
     expect(writer.writeClearSceneKeepBackground(), isEmpty);
-
-    writer.writeMarkSceneStructuralChanged();
-    writer.writeMarkSceneGeometryChanged();
-    writer.writeMarkVisualChanged();
-    writer.writeMarkSelectionChanged();
     expect(ctx.changeSet.structuralChanged, isTrue);
     expect(ctx.changeSet.boundsChanged, isTrue);
     expect(ctx.changeSet.visualChanged, isTrue);
@@ -268,7 +304,7 @@ void main() {
 
   test('SceneWriter clearScene throws on multiple background layers', () {
     final ctx = TxnContext(
-      workingScene: Scene(
+      baseScene: Scene(
         layers: <Layer>[Layer(isBackground: true), Layer(isBackground: true)],
       ),
       workingSelection: <NodeId>{},

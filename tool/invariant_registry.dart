@@ -32,7 +32,7 @@ const List<Invariant> invariants = <Invariant>[
   Invariant(
     id: 'INV-G-PUBLIC-ENTRYPOINTS',
     scope: 'public-api',
-    title: 'public entrypoints remain stable (basic/advanced)',
+    title: 'public entrypoint is single basic.dart (advanced.dart forbidden)',
   ),
   Invariant(
     id: 'INV-G-NODEID-UNIQUE',
@@ -48,6 +48,12 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-V2-WRITE-ONLY-MUTATION',
     scope: 'engine-controller',
     title: 'mutations are routed via write*/txn* APIs',
+  ),
+  Invariant(
+    id: 'INV-V2-SAFE-TXN-API',
+    scope: 'engine-controller',
+    title:
+        'public transaction API does not expose mutable scene escape hatches',
   ),
   Invariant(
     id: 'INV-V2-TXN-ATOMIC-COMMIT',

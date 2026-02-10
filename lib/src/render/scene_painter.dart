@@ -9,7 +9,7 @@ import '../core/grid_safety_limits.dart';
 import '../core/nodes.dart' show PathFillRule, PathNode;
 import '../core/numeric_clamp.dart';
 import '../core/transform2d.dart';
-import '../controller/scene_controller.dart';
+import '../public/scene_render_state.dart';
 import '../public/snapshot.dart';
 
 typedef ImageResolverV2 = Image? Function(String imageId);
@@ -455,7 +455,7 @@ class ScenePainterV2 extends CustomPainter {
     this.textDirection = TextDirection.ltr,
   }) : super(repaint: controller);
 
-  final SceneControllerV2 controller;
+  final SceneRenderState controller;
   final ImageResolverV2 imageResolver;
   final SceneStaticLayerCacheV2? staticLayerCache;
   final SceneTextLayoutCacheV2? textLayoutCache;

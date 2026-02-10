@@ -127,7 +127,7 @@ class _SceneViewInteractiveV2State extends State<SceneViewInteractiveV2> {
           _handlePointerEvent(event, PointerPhase.cancel),
       child: CustomPaint(
         painter: ScenePainterV2(
-          controller: widget.controller.core,
+          controller: widget.controller,
           imageResolver: widget.imageResolver ?? _defaultImageResolver,
           staticLayerCache: _staticLayerCache,
           textLayoutCache: _textLayoutCache,

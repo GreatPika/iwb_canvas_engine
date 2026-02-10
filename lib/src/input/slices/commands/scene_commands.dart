@@ -2,14 +2,14 @@ import 'dart:ui' show Color, Offset;
 
 import '../../../core/nodes.dart';
 import '../../../core/transform2d.dart';
-import '../../../controller/scene_writer.dart';
 import '../../../public/node_patch.dart';
 import '../../../public/node_spec.dart';
+import '../../../public/scene_write_txn.dart';
 
 class V2SceneCommandsSlice {
   V2SceneCommandsSlice(this._writeRunner);
 
-  final T Function<T>(T Function(SceneWriter writer) fn) _writeRunner;
+  final T Function<T>(T Function(SceneWriteTxn writer) fn) _writeRunner;
 
   String writeAddNode(NodeSpec spec, {int? layerIndex}) {
     return _writeRunner((writer) {

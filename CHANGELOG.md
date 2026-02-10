@@ -1,3 +1,33 @@
+## 2.0.0 (2026-02-10)
+
+### Breaking
+
+- Removed `lib/advanced.dart`; `basic.dart` is now the single public entrypoint.
+- `basic.dart` no longer exports mutable core model files (`src/core/scene.dart`, `src/core/nodes.dart`).
+- `SceneControllerInteractiveV2` removed legacy mutable API:
+  - removed constructor parameter `scene`,
+  - removed getters `core` and `scene`,
+  - `addNode` now accepts only `NodeSpec`.
+- Public transactional write callback now uses `SceneWriteTxn` (safe contract without raw `scene`, `writeFindNode`, or `writeMark*` APIs).
+
+### Added
+
+- New public `SceneWriteTxn` contract (`lib/src/public/scene_write_txn.dart`).
+- New public `SceneRenderState` contract (`lib/src/public/scene_render_state.dart`) for painter/view integration.
+- `SceneControllerV2.requestRepaint()` for explicit repaint without transactional mutation.
+- Commit-path tests for no-op, signals-only, and selection-policy patch normalization.
+- Guardrails for single entrypoint and safe transaction API surface.
+
+### Changed
+
+- `TxnContext` now uses lazy scene clone-on-first-mutation.
+- Commit pipeline supports explicit branches:
+  - no-op: no commit/revision/repaint,
+  - signals-only: commit revision + signal flush without repaint,
+  - state-change/document-replace: full commit path.
+- Selection normalization now handles node patches that affect selection policy for selected nodes.
+- Interactive controller refactored to avoid read-only transaction misuse and raw writer mutations in move rollback.
+
 ## 1.0.0 (2026-02-10)
 
 ### Breaking

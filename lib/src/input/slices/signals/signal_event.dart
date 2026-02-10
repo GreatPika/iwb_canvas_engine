@@ -1,4 +1,4 @@
-import '../../../core/nodes.dart';
+import '../../../public/snapshot.dart';
 
 class V2BufferedSignal {
   const V2BufferedSignal({

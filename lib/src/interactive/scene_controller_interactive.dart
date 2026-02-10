@@ -12,33 +12,28 @@ import '../core/grid_safety_limits.dart';
 import '../core/hit_test.dart';
 import '../core/input_sampling.dart';
 import '../core/interaction_types.dart';
-import '../core/nodes.dart';
+import '../core/nodes.dart' show LineNode, SceneNode, StrokeNode, TextNode;
 import '../core/pointer_input.dart';
-import '../core/scene.dart';
 import '../core/scene_spatial_index.dart';
-import '../core/selection_policy.dart';
 import '../core/transform2d.dart';
 import '../controller/scene_controller.dart';
-import '../controller/scene_writer.dart';
 import '../model/document.dart';
 import '../public/node_patch.dart';
 import '../public/node_spec.dart';
-import '../public/snapshot.dart' hide NodeId;
+import '../public/scene_render_state.dart';
+import '../public/scene_write_txn.dart';
+import '../public/snapshot.dart';
 
-class SceneControllerInteractiveV2 extends ChangeNotifier {
+class SceneControllerInteractiveV2 extends ChangeNotifier
+    implements SceneRenderState {
   SceneControllerInteractiveV2({
-    Scene? scene,
     SceneSnapshot? initialSnapshot,
     PointerInputSettings? pointerSettings,
     double? dragStartSlop,
     this.clearSelectionOnDrawModeEnter = false,
   }) : _pointerSettings = pointerSettings ?? const PointerInputSettings(),
        _dragStartSlop = dragStartSlop,
-       _core = SceneControllerV2(
-         initialSnapshot:
-             initialSnapshot ??
-             (scene == null ? null : txnSceneToSnapshot(scene)),
-       ) {
+       _core = SceneControllerV2(initialSnapshot: initialSnapshot) {
     _core.addListener(_handleCoreChanged);
   }
 
@@ -87,10 +82,9 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
 
   static const Duration _pendingLineTimeout = Duration(seconds: 10);
 
-  SceneControllerV2 get core => _core;
-
+  @override
   SceneSnapshot get snapshot => _core.snapshot;
-  Scene get scene => txnSceneFromSnapshot(snapshot);
+  @override
   Set<NodeId> get selectedNodeIds => _core.selectedNodeIds;
 
   CanvasMode get mode => _mode;
@@ -139,7 +133,7 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
   int get boundsRevision => _core.boundsRevision;
   int get visualRevision => _core.visualRevision;
 
-  T write<T>(T Function(SceneWriter writer) fn) => _core.write(fn);
+  T write<T>(T Function(SceneWriteTxn writer) fn) => _core.write(fn);
 
   void setMode(CanvasMode value) {
     if (_mode == value) return;
@@ -245,17 +239,8 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
     _core.commands.writeCameraOffsetSet(value);
   }
 
-  String addNode(Object node, {int? layerIndex}) {
-    if (node is NodeSpec) {
-      return _core.commands.writeAddNode(node, layerIndex: layerIndex);
-    }
-    if (node is SceneNode) {
-      return _core.commands.writeAddNode(
-        _nodeSpecFromLegacyNode(node),
-        layerIndex: layerIndex,
-      );
-    }
-    throw ArgumentError.value(node, 'node', 'Expected NodeSpec or SceneNode.');
+  String addNode(NodeSpec node, {int? layerIndex}) {
+    return _core.commands.writeAddNode(node, layerIndex: layerIndex);
   }
 
   bool patchNode(NodePatch patch) {
@@ -288,118 +273,109 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
   }
 
   void rotateSelection({required bool clockwise, int? timestampMs}) {
-    var affected = 0;
-    Transform2D? delta;
-    final movedIds = <NodeId>[];
-    _core.write<void>((writer) {
-      final nodes = selectedTransformableNodesInSceneOrder(
-        writer.scene,
-        writer.selectedNodeIds,
-      ).where((node) => !node.isLocked).toList(growable: false);
-      if (nodes.isEmpty) return;
+    final nodes = _selectedTransformableNodesInSnapshotOrder(
+      snapshot: snapshot,
+      selected: selectedNodeIds,
+    );
+    if (nodes.isEmpty) return;
 
-      final center = centerWorldForNodes(nodes);
-      final pivot = Transform2D.translation(center);
-      final unpivot = Transform2D.translation(Offset(-center.dx, -center.dy));
-      final rotation = Transform2D.rotationDeg(clockwise ? 90 : -90);
-      delta = pivot.multiply(rotation).multiply(unpivot);
-      affected = writer.writeSelectionTransform(delta!);
-      if (affected > 0) {
-        movedIds.addAll(nodes.map((n) => n.id));
-      }
+    final center = _centerWorldForNodeSnapshots(nodes);
+    final pivot = Transform2D.translation(center);
+    final unpivot = Transform2D.translation(Offset(-center.dx, -center.dy));
+    final rotation = Transform2D.rotationDeg(clockwise ? 90 : -90);
+    final delta = pivot.multiply(rotation).multiply(unpivot);
+    final movedIds = nodes.map((node) => node.id).toList(growable: false);
+    final affected = _core.write<int>((writer) {
+      return writer.writeSelectionTransform(delta);
     });
 
-    if (affected > 0 && delta != null) {
+    if (affected > 0) {
       _events.emitAction(
         ActionType.transform,
         movedIds,
         _resolveTimestampMs(timestampMs),
-        payload: <String, Object?>{'delta': delta!.toJsonMap()},
+        payload: <String, Object?>{'delta': delta.toJsonMap()},
       );
     }
   }
 
   void flipSelectionVertical({int? timestampMs}) {
-    var affected = 0;
-    Transform2D? delta;
-    final movedIds = <NodeId>[];
-    _core.write<void>((writer) {
-      final nodes = selectedTransformableNodesInSceneOrder(
-        writer.scene,
-        writer.selectedNodeIds,
-      ).where((node) => !node.isLocked).toList(growable: false);
-      if (nodes.isEmpty) return;
+    final nodes = _selectedTransformableNodesInSnapshotOrder(
+      snapshot: snapshot,
+      selected: selectedNodeIds,
+    );
+    if (nodes.isEmpty) return;
 
-      final center = centerWorldForNodes(nodes);
-      delta = Transform2D(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: 2 * center.dy);
-      affected = writer.writeSelectionTransform(delta!);
-      if (affected > 0) {
-        movedIds.addAll(nodes.map((n) => n.id));
-      }
+    final center = _centerWorldForNodeSnapshots(nodes);
+    final delta = Transform2D(
+      a: 1,
+      b: 0,
+      c: 0,
+      d: -1,
+      tx: 0,
+      ty: 2 * center.dy,
+    );
+    final movedIds = nodes.map((node) => node.id).toList(growable: false);
+    final affected = _core.write<int>((writer) {
+      return writer.writeSelectionTransform(delta);
     });
 
-    if (affected > 0 && delta != null) {
+    if (affected > 0) {
       _events.emitAction(
         ActionType.transform,
         movedIds,
         _resolveTimestampMs(timestampMs),
-        payload: <String, Object?>{'delta': delta!.toJsonMap()},
+        payload: <String, Object?>{'delta': delta.toJsonMap()},
       );
     }
   }
 
   void flipSelectionHorizontal({int? timestampMs}) {
-    var affected = 0;
-    Transform2D? delta;
-    final movedIds = <NodeId>[];
-    _core.write<void>((writer) {
-      final nodes = selectedTransformableNodesInSceneOrder(
-        writer.scene,
-        writer.selectedNodeIds,
-      ).where((node) => !node.isLocked).toList(growable: false);
-      if (nodes.isEmpty) return;
+    final nodes = _selectedTransformableNodesInSnapshotOrder(
+      snapshot: snapshot,
+      selected: selectedNodeIds,
+    );
+    if (nodes.isEmpty) return;
 
-      final center = centerWorldForNodes(nodes);
-      delta = Transform2D(a: -1, b: 0, c: 0, d: 1, tx: 2 * center.dx, ty: 0);
-      affected = writer.writeSelectionTransform(delta!);
-      if (affected > 0) {
-        movedIds.addAll(nodes.map((n) => n.id));
-      }
+    final center = _centerWorldForNodeSnapshots(nodes);
+    final delta = Transform2D(
+      a: -1,
+      b: 0,
+      c: 0,
+      d: 1,
+      tx: 2 * center.dx,
+      ty: 0,
+    );
+    final movedIds = nodes.map((node) => node.id).toList(growable: false);
+    final affected = _core.write<int>((writer) {
+      return writer.writeSelectionTransform(delta);
     });
 
-    if (affected > 0 && delta != null) {
+    if (affected > 0) {
       _events.emitAction(
         ActionType.transform,
         movedIds,
         _resolveTimestampMs(timestampMs),
-        payload: <String, Object?>{'delta': delta!.toJsonMap()},
+        payload: <String, Object?>{'delta': delta.toJsonMap()},
       );
     }
   }
 
   void deleteSelection({int? timestampMs}) {
-    final deletedIds = <NodeId>[];
-    _core.write<void>((writer) {
-      final selected = writer.selectedNodeIds.toSet();
-      if (selected.isEmpty) return;
-      for (final layer in writer.scene.layers) {
-        for (final node in layer.nodes) {
-          if (!selected.contains(node.id)) continue;
-          if (!isNodeDeletableInLayer(node, layer)) continue;
-          deletedIds.add(node.id);
-        }
-      }
-      if (deletedIds.isEmpty) return;
-      writer.writeDeleteSelection();
-    });
+    final deletedIds = _deletableSelectedNodeIdsInSnapshot(
+      snapshot: snapshot,
+      selected: selectedNodeIds,
+    );
+    if (deletedIds.isEmpty) return;
 
-    if (deletedIds.isNotEmpty) {
-      _events.emitAction(
-        ActionType.delete,
-        deletedIds,
-        _resolveTimestampMs(timestampMs),
-      );
-    }
+    final removedCount = _core.commands.writeDeleteSelection();
+    if (removedCount <= 0) return;
+
+    _events.emitAction(
+      ActionType.delete,
+      deletedIds,
+      _resolveTimestampMs(timestampMs),
+    );
   }
 
   void clearScene({int? timestampMs}) {
@@ -422,9 +398,7 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
   }
 
   void notifySceneChanged() {
-    _core.write<void>((writer) {
-      writer.writeMarkVisualChanged();
-    });
+    _core.requestRepaint();
   }
 
   void handlePointer(PointerSample sample) {
@@ -658,9 +632,7 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
               kInputDecimationMinStepScene,
             )) {
           _activeStrokePoints.add(scenePoint);
-          _core.write<void>((writer) {
-            writer.writeMarkVisualChanged();
-          });
+          notifyListeners();
         }
         break;
       case DrawTool.line:
@@ -674,9 +646,7 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
           _clearPendingLine();
         }
         _setActiveLinePreview(_drawDownScene, scenePoint);
-        _core.write<void>((writer) {
-          writer.writeMarkVisualChanged();
-        });
+        notifyListeners();
         break;
       case DrawTool.eraser:
         if (_activeEraserPoints.isEmpty) return;
@@ -686,9 +656,7 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
           kInputDecimationMinStepScene,
         )) {
           _activeEraserPoints.add(scenePoint);
-          _core.write<void>((writer) {
-            writer.writeMarkVisualChanged();
-          });
+          notifyListeners();
         }
         break;
     }
@@ -1023,17 +991,65 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
     return null;
   }
 
+  List<NodeSnapshot> _selectedTransformableNodesInSnapshotOrder({
+    required SceneSnapshot snapshot,
+    required Set<NodeId> selected,
+  }) {
+    if (selected.isEmpty) return const <NodeSnapshot>[];
+
+    final nodes = <NodeSnapshot>[];
+    for (final layer in snapshot.layers) {
+      if (layer.isBackground) continue;
+      for (final node in layer.nodes) {
+        if (!selected.contains(node.id)) continue;
+        if (!node.isTransformable || node.isLocked) continue;
+        nodes.add(node);
+      }
+    }
+    return nodes;
+  }
+
+  List<NodeId> _deletableSelectedNodeIdsInSnapshot({
+    required SceneSnapshot snapshot,
+    required Set<NodeId> selected,
+  }) {
+    if (selected.isEmpty) return const <NodeId>[];
+
+    final ids = <NodeId>[];
+    for (final layer in snapshot.layers) {
+      if (layer.isBackground) continue;
+      for (final node in layer.nodes) {
+        if (!selected.contains(node.id)) continue;
+        if (!node.isDeletable) continue;
+        ids.add(node.id);
+      }
+    }
+    return ids;
+  }
+
+  Offset _centerWorldForNodeSnapshots(List<NodeSnapshot> nodes) {
+    Rect? bounds;
+    for (final nodeSnapshot in nodes) {
+      final boundsWorld = txnNodeFromSnapshot(nodeSnapshot).boundsWorld;
+      bounds = bounds == null
+          ? boundsWorld
+          : bounds.expandToInclude(boundsWorld);
+    }
+    return bounds?.center ?? Offset.zero;
+  }
+
   Map<NodeId, Transform2D> _captureSelectedTransforms() {
     final captured = <NodeId, Transform2D>{};
-    _core.write<void>((writer) {
-      for (final layer in writer.scene.layers) {
-        for (final node in layer.nodes) {
-          if (!writer.selectedNodeIds.contains(node.id)) continue;
-          if (!node.isTransformable || node.isLocked) continue;
-          captured[node.id] = node.transform;
-        }
+    final currentSnapshot = snapshot;
+    final selected = selectedNodeIds;
+    for (final layer in currentSnapshot.layers) {
+      if (layer.isBackground) continue;
+      for (final node in layer.nodes) {
+        if (!selected.contains(node.id)) continue;
+        if (!node.isTransformable || node.isLocked) continue;
+        captured[node.id] = node.transform;
       }
-    });
+    }
     return captured;
   }
 
@@ -1044,10 +1060,7 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
 
     _core.write<void>((writer) {
       for (final entry in _moveInitialTransforms.entries) {
-        final found = writer.writeFindNode(entry.key);
-        if (found == null) continue;
-        found.node.transform = entry.value;
-        writer.writeMarkSceneGeometryChanged();
+        writer.writeNodeTransformSet(entry.key, entry.value);
       }
     });
   }
@@ -1182,118 +1195,6 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
   static void _requireFiniteOffset(Offset value, {required String name}) {
     if (value.dx.isFinite && value.dy.isFinite) return;
     throw ArgumentError.value(value, name, 'Offset must be finite.');
-  }
-
-  static NodeSpec _nodeSpecFromLegacyNode(SceneNode node) {
-    switch (node) {
-      case RectNode rect:
-        return RectNodeSpec(
-          id: rect.id,
-          size: rect.size,
-          fillColor: rect.fillColor,
-          strokeColor: rect.strokeColor,
-          strokeWidth: rect.strokeWidth,
-          transform: rect.transform,
-          opacity: rect.opacity,
-          hitPadding: rect.hitPadding,
-          isVisible: rect.isVisible,
-          isSelectable: rect.isSelectable,
-          isLocked: rect.isLocked,
-          isDeletable: rect.isDeletable,
-          isTransformable: rect.isTransformable,
-        );
-      case TextNode text:
-        return TextNodeSpec(
-          id: text.id,
-          text: text.text,
-          size: text.size,
-          fontSize: text.fontSize,
-          color: text.color,
-          align: text.align,
-          isBold: text.isBold,
-          isItalic: text.isItalic,
-          isUnderline: text.isUnderline,
-          fontFamily: text.fontFamily,
-          maxWidth: text.maxWidth,
-          lineHeight: text.lineHeight,
-          transform: text.transform,
-          opacity: text.opacity,
-          hitPadding: text.hitPadding,
-          isVisible: text.isVisible,
-          isSelectable: text.isSelectable,
-          isLocked: text.isLocked,
-          isDeletable: text.isDeletable,
-          isTransformable: text.isTransformable,
-        );
-      case StrokeNode stroke:
-        return StrokeNodeSpec(
-          id: stroke.id,
-          points: stroke.points,
-          thickness: stroke.thickness,
-          color: stroke.color,
-          transform: stroke.transform,
-          opacity: stroke.opacity,
-          hitPadding: stroke.hitPadding,
-          isVisible: stroke.isVisible,
-          isSelectable: stroke.isSelectable,
-          isLocked: stroke.isLocked,
-          isDeletable: stroke.isDeletable,
-          isTransformable: stroke.isTransformable,
-        );
-      case LineNode line:
-        return LineNodeSpec(
-          id: line.id,
-          start: line.start,
-          end: line.end,
-          thickness: line.thickness,
-          color: line.color,
-          transform: line.transform,
-          opacity: line.opacity,
-          hitPadding: line.hitPadding,
-          isVisible: line.isVisible,
-          isSelectable: line.isSelectable,
-          isLocked: line.isLocked,
-          isDeletable: line.isDeletable,
-          isTransformable: line.isTransformable,
-        );
-      case ImageNode image:
-        return ImageNodeSpec(
-          id: image.id,
-          imageId: image.imageId,
-          size: image.size,
-          naturalSize: image.naturalSize,
-          transform: image.transform,
-          opacity: image.opacity,
-          hitPadding: image.hitPadding,
-          isVisible: image.isVisible,
-          isSelectable: image.isSelectable,
-          isLocked: image.isLocked,
-          isDeletable: image.isDeletable,
-          isTransformable: image.isTransformable,
-        );
-      case PathNode path:
-        return PathNodeSpec(
-          id: path.id,
-          svgPathData: path.svgPathData,
-          fillColor: path.fillColor,
-          strokeColor: path.strokeColor,
-          strokeWidth: path.strokeWidth,
-          fillRule: path.fillRule == PathFillRule.evenOdd
-              ? V2PathFillRule.evenOdd
-              : V2PathFillRule.nonZero,
-          transform: path.transform,
-          opacity: path.opacity,
-          hitPadding: path.hitPadding,
-          isVisible: path.isVisible,
-          isSelectable: path.isSelectable,
-          isLocked: path.isLocked,
-          isDeletable: path.isDeletable,
-          isTransformable: path.isTransformable,
-        );
-    }
-    throw ArgumentError(
-      'Unsupported SceneNode runtime type: ${node.runtimeType}',
-    );
   }
 }
 

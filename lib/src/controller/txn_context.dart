@@ -5,18 +5,32 @@ import 'change_set.dart';
 
 class TxnContext {
   TxnContext({
-    required this.workingScene,
+    required Scene baseScene,
     required this.workingSelection,
     required this.workingNodeIds,
     required this.nodeIdSeed,
     ChangeSet? changeSet,
-  }) : changeSet = changeSet ?? ChangeSet();
+  }) : _baseScene = baseScene,
+       changeSet = changeSet ?? ChangeSet();
 
-  Scene workingScene;
+  final Scene _baseScene;
+  Scene? _mutableScene;
+
+  Scene get workingScene => _mutableScene ?? _baseScene;
+  bool get txnHasMutableScene => _mutableScene != null;
+
   Set<NodeId> workingSelection;
   Set<NodeId> workingNodeIds;
   int nodeIdSeed;
   final ChangeSet changeSet;
+
+  Scene txnEnsureMutableScene() {
+    final existing = _mutableScene;
+    if (existing != null) return existing;
+    final cloned = txnCloneScene(_baseScene);
+    _mutableScene = cloned;
+    return cloned;
+  }
 
   bool txnHasNodeId(NodeId nodeId) => workingNodeIds.contains(nodeId);
 
@@ -43,7 +57,7 @@ class TxnContext {
   }
 
   void txnAdoptScene(Scene scene) {
-    workingScene = scene;
+    _mutableScene = scene;
     workingNodeIds = txnCollectNodeIds(scene);
     nodeIdSeed = txnInitialNodeIdSeed(scene);
   }

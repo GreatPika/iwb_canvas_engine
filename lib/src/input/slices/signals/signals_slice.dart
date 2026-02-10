@@ -11,6 +11,7 @@ class V2SignalsSlice {
   bool _isDisposed = false;
 
   Stream<V2CommittedSignal> get signals => _signals.stream;
+  bool get writeHasBufferedSignals => _buffered.isNotEmpty;
 
   void writeBufferSignal(V2BufferedSignal signal) {
     if (_isDisposed) return;
@@ -21,13 +22,14 @@ class V2SignalsSlice {
     _buffered = const <V2BufferedSignal>[];
   }
 
-  void writeFlushBuffered({required int commitRevision}) {
-    if (_isDisposed) return;
+  int writeFlushBuffered({required int commitRevision}) {
+    if (_isDisposed) return 0;
     final pending = _buffered;
     _buffered = const <V2BufferedSignal>[];
+    var emitted = 0;
 
     for (final signal in pending) {
-      if (_isDisposed) return;
+      if (_isDisposed) return emitted;
       _signals.add(
         V2CommittedSignal(
           signalId: 's${_signalCounter++}',
@@ -37,7 +39,9 @@ class V2SignalsSlice {
           commitRevision: commitRevision,
         ),
       );
+      emitted = emitted + 1;
     }
+    return emitted;
   }
 
   void dispose() {

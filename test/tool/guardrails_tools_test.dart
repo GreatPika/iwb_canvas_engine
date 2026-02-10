@@ -76,6 +76,8 @@ void main() {
 
   group('tool/check_guardrails.dart', () {
     // INV:INV-V2-TXN-ATOMIC-COMMIT
+    // INV:INV-G-PUBLIC-ENTRYPOINTS
+    // INV:INV-V2-SAFE-TXN-API
     test('passes for write/txn APIs and controllerEpoch usage', () async {
       final sandbox = await _createSandbox();
       try {
@@ -97,6 +99,101 @@ class Store {
         sandbox.deleteSync(recursive: true);
       }
     });
+
+    test('rejects advanced.dart entrypoint', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(sandbox, 'lib/advanced.dart', '// forbidden entrypoint\n');
+
+        final result = await _runTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains('advanced.dart entrypoint is forbidden in v2'),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects mutable core exports from basic.dart', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(
+          sandbox,
+          'lib/basic.dart',
+          "export 'src/core/scene.dart';\n",
+        );
+
+        final result = await _runTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains('basic.dart must not export mutable core model'),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects scene/writeFindNode/writeMark* in public txn API', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(
+          sandbox,
+          'lib/basic.dart',
+          "export 'src/public/scene_write_txn.dart';\n",
+        );
+        _writeFile(sandbox, 'lib/src/public/scene_write_txn.dart', '''
+abstract interface class SceneWriteTxn {
+  Object get scene;
+  Object? writeFindNode(String id);
+  void writeMarkVisualChanged();
+}
+''');
+
+        final result = await _runTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          anyOf(
+            contains('must not expose raw scene access'),
+            contains('must not expose writeFindNode'),
+            contains('must not expose writeMark* escape hatches'),
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test(
+      'rejects mutable core type in exported public API signature',
+      () async {
+        final sandbox = await _createSandbox();
+        try {
+          _writeFile(
+            sandbox,
+            'lib/basic.dart',
+            "export 'src/public/foo.dart';\n",
+          );
+          _writeFile(sandbox, 'lib/src/public/foo.dart', '''
+abstract class Foo {
+  Scene get scene;
+}
+''');
+
+          final result = await _runTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            contains('must not expose mutable core types'),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
 
     test('rejects mutating symbol outside write/txn prefixes', () async {
       final sandbox = await _createSandbox();
