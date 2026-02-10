@@ -9,7 +9,7 @@ A Flutter/Dart canvas engine package with scene model, rendering, input handling
 ## Canonical sources
 
 - `ARCHITECTURE.md` (system overview and data flow)
-- `DEVELOPMENT_PLAN.md` (current phased roadmap)
+- `DEVELOPMENT_PLAN.md` (optional roadmap; may be empty between planning cycles)
 - `tool/invariant_registry.dart` (canonical machine-readable invariant list)
 
 ## Rules for this repo
