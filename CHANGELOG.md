@@ -2,8 +2,8 @@
 
 ### Breaking
 
-- Removed `lib/advanced.dart`; `basic.dart` is now the single public entrypoint.
-- `basic.dart` no longer exports mutable core model files (`src/core/scene.dart`, `src/core/nodes.dart`).
+- Removed `lib/advanced.dart`; `iwb_canvas_engine.dart` is now the single public entrypoint.
+- `iwb_canvas_engine.dart` no longer exports mutable core model files (`src/core/scene.dart`, `src/core/nodes.dart`).
 - `SceneControllerInteractiveV2` removed legacy mutable API:
   - removed constructor parameter `scene`,
   - removed getters `core` and `scene`,
@@ -32,7 +32,7 @@
 
 ### Breaking
 
-- Finalized the v2 public API in `basic.dart`/`advanced.dart` around immutable snapshots, specs, and patch semantics.
+- Finalized the v2 public API in `iwb_canvas_engine.dart`/`advanced.dart` around immutable snapshots, specs, and patch semantics.
 - Removed the legacy mutable public surface from package entrypoints.
 
 ### Added

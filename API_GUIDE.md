@@ -23,7 +23,7 @@ It is designed for both human developers and coding agents.
 Recommended import:
 
 ```dart
-import 'package:iwb_canvas_engine/basic.dart';
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 ```
 
 Runtime aliases exposed publicly:
@@ -33,7 +33,7 @@ Runtime aliases exposed publicly:
 
 ## 3. Public API map
 
-`basic.dart` exports:
+`iwb_canvas_engine.dart` exports:
 
 - Public immutable model contracts:
   - `SceneSnapshot`, `LayerSnapshot`, `NodeSnapshot` variants
@@ -414,7 +414,7 @@ Invalid input throws `SceneJsonFormatException` with validation details.
 ```dart
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:iwb_canvas_engine/basic.dart';
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 class CanvasScreen extends StatefulWidget {
   const CanvasScreen({super.key});
@@ -500,7 +500,7 @@ When an agent modifies integration code:
 
 Required updates:
 
-1. Remove `advanced.dart` imports and use `basic.dart` only.
+1. Remove `advanced.dart` imports and use `iwb_canvas_engine.dart` only.
 2. Replace legacy constructor usage:
    - Remove `scene: ...` from `SceneController(...)`.
    - Use `initialSnapshot: SceneSnapshot(...)` instead.

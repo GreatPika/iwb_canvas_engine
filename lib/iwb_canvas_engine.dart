@@ -1,4 +1,4 @@
-/// Basic public API exports for `iwb_canvas_engine`.
+/// Public API exports for `iwb_canvas_engine`.
 ///
 /// This is the primary v2 entrypoint and recommended default import.
 library;

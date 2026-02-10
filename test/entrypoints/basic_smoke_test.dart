@@ -2,7 +2,7 @@ import 'dart:ui';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/basic.dart';
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 // INV:INV-V2-NO-EXTERNAL-MUTATION
 // INV:INV-G-PUBLIC-ENTRYPOINTS
@@ -10,7 +10,7 @@ import 'package:iwb_canvas_engine/basic.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('basic.dart exports immutable snapshots/specs/patches', () {
+  test('iwb_canvas_engine.dart exports immutable snapshots/specs/patches', () {
     final scene = SceneSnapshot(
       layers: <LayerSnapshot>[
         LayerSnapshot(
@@ -30,7 +30,7 @@ void main() {
     expect(patch.size.value, const Size(50, 30));
   });
 
-  test('basic.dart exports snapshot json codec helpers', () {
+  test('iwb_canvas_engine.dart exports snapshot json codec helpers', () {
     final scene = SceneSnapshot(
       layers: <LayerSnapshot>[
         LayerSnapshot(

@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/basic.dart';
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 void main() {
   test('scene.json round-trip is stable', () {

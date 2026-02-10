@@ -225,26 +225,26 @@ void _checkPublicImports({
   }
 }
 
-Set<String> _collectBasicExportTargets({
+Set<String> _collectEntrypointExportTargets({
   required Directory root,
   required String rootAbsPosix,
   required String packageName,
 }) {
-  final basicFile = File(
-    '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}basic.dart',
+  final entrypointFile = File(
+    '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}iwb_canvas_engine.dart',
   );
-  if (!basicFile.existsSync()) {
+  if (!entrypointFile.existsSync()) {
     return const <String>{};
   }
 
-  final basicAbsPosixPath = _toPosixPath(basicFile.absolute.path);
-  final basicPosixPath = _toRepoRelPosixPath(
-    absPosixPath: basicAbsPosixPath,
+  final entrypointAbsPosixPath = _toPosixPath(entrypointFile.absolute.path);
+  final entrypointPosixPath = _toRepoRelPosixPath(
+    absPosixPath: entrypointAbsPosixPath,
     rootAbsPosixPath: rootAbsPosix,
   );
-  final basicDirRepoRelPosix = _posixDirname(basicPosixPath);
+  final entrypointDirRepoRelPosix = _posixDirname(entrypointPosixPath);
   final targets = <String>{};
-  final lines = basicFile.readAsLinesSync();
+  final lines = entrypointFile.readAsLinesSync();
 
   for (final line in lines) {
     final exportTargets = _extractDirectiveTargets(line, directive: 'export');
@@ -254,7 +254,7 @@ Set<String> _collectBasicExportTargets({
       final resolvedRepoRelPosix = _resolveToRepoRelTargetPosix(
         targetPosix: _toPosixPath(target),
         packageName: packageName,
-        fileDirRepoRelPosix: basicDirRepoRelPosix,
+        fileDirRepoRelPosix: entrypointDirRepoRelPosix,
       );
       if (resolvedRepoRelPosix != null) {
         targets.add(resolvedRepoRelPosix);
@@ -282,7 +282,7 @@ Set<String> _checkEntrypointGuardrails({
     );
   }
 
-  final exports = _collectBasicExportTargets(
+  final exports = _collectEntrypointExportTargets(
     root: root,
     rootAbsPosix: rootAbsPosix,
     packageName: packageName,
@@ -299,9 +299,10 @@ Set<String> _checkEntrypointGuardrails({
     if (exports.contains(path)) {
       _fail(
         _Violation(
-          filePath: '/lib/basic.dart',
+          filePath: '/lib/iwb_canvas_engine.dart',
           line: 1,
-          message: 'basic.dart must not export mutable core model ($path).',
+          message:
+              'iwb_canvas_engine.dart must not export mutable core model ($path).',
         ),
       );
     }

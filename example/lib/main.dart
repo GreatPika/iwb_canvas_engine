@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
-import 'package:iwb_canvas_engine/basic.dart';
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 void main() {
   runApp(const CanvasExampleApp());

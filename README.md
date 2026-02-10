@@ -33,13 +33,13 @@ flutter pub add iwb_canvas_engine
 
 ## Entrypoints
 
-- `package:iwb_canvas_engine/basic.dart` - single public entrypoint.
+- `package:iwb_canvas_engine/iwb_canvas_engine.dart` - single public entrypoint.
 
 ## Quick start
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:iwb_canvas_engine/basic.dart';
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 class CanvasScreen extends StatefulWidget {
   const CanvasScreen({super.key});

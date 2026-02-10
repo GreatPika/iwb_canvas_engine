@@ -12,7 +12,7 @@ This document describes the architecture of `iwb_canvas_engine` for release `2.0
 
 Entrypoints:
 
-- `package:iwb_canvas_engine/basic.dart`
+- `package:iwb_canvas_engine/iwb_canvas_engine.dart`
 
 Primary public abstractions:
 
@@ -27,7 +27,7 @@ Primary public abstractions:
 
 ```text
 lib/
-  basic.dart
+  iwb_canvas_engine.dart
   src/
     core/           // model primitives, math, hit testing, defaults
     controller/     // transactional writer/store internals
@@ -56,7 +56,7 @@ Canonical invariant registry:
 
 Key invariants:
 
-- Single entrypoint: `basic.dart` only.
+- Single entrypoint: `iwb_canvas_engine.dart` only.
 - Single source of truth: runtime state is owned by controller snapshot.
 - Public API does not expose mutable core scene structures.
 - All state mutations flow through `write` transactions and safe txn operations.

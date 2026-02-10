@@ -32,7 +32,8 @@ const List<Invariant> invariants = <Invariant>[
   Invariant(
     id: 'INV-G-PUBLIC-ENTRYPOINTS',
     scope: 'public-api',
-    title: 'public entrypoint is single basic.dart (advanced.dart forbidden)',
+    title:
+        'public entrypoint is single iwb_canvas_engine.dart (advanced.dart forbidden)',
   ),
   Invariant(
     id: 'INV-G-NODEID-UNIQUE',

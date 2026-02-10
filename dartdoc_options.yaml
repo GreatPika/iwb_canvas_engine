@@ -1,7 +1,8 @@
 # Dartdoc configuration for this package.
 #
 # Rationale:
-# Public API is exposed through a curated `basic.dart` entrypoint with selective
+# Public API is exposed through a curated `iwb_canvas_engine.dart` entrypoint
+# with selective
 # re-exports (`show` lists). Keeping low-confidence ambiguous reexport scoring
 # suppresses noisy warnings for intentionally-curated export graphs.
 dartdoc:

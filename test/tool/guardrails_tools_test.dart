@@ -116,12 +116,12 @@ class Store {
       }
     });
 
-    test('rejects mutable core exports from basic.dart', () async {
+    test('rejects mutable core exports from iwb_canvas_engine.dart', () async {
       final sandbox = await _createSandbox();
       try {
         _writeFile(
           sandbox,
-          'lib/basic.dart',
+          'lib/iwb_canvas_engine.dart',
           "export 'src/core/scene.dart';\n",
         );
 
@@ -129,7 +129,7 @@ class Store {
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          contains('basic.dart must not export mutable core model'),
+          contains('iwb_canvas_engine.dart must not export mutable core model'),
         );
       } finally {
         sandbox.deleteSync(recursive: true);
@@ -141,7 +141,7 @@ class Store {
       try {
         _writeFile(
           sandbox,
-          'lib/basic.dart',
+          'lib/iwb_canvas_engine.dart',
           "export 'src/public/scene_write_txn.dart';\n",
         );
         _writeFile(sandbox, 'lib/src/public/scene_write_txn.dart', '''
@@ -174,7 +174,7 @@ abstract interface class SceneWriteTxn {
         try {
           _writeFile(
             sandbox,
-            'lib/basic.dart',
+            'lib/iwb_canvas_engine.dart',
             "export 'src/public/foo.dart';\n",
           );
           _writeFile(sandbox, 'lib/src/public/foo.dart', '''
