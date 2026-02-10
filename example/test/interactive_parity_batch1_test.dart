@@ -82,6 +82,20 @@ void main() {
   IconButton iconButtonByKey(WidgetTester tester, Key key) =>
       tester.widget<IconButton>(find.byKey(key));
 
+  Future<void> tapByKey(WidgetTester tester, Key key) async {
+    final finder = find.byKey(key);
+    await tester.ensureVisible(finder);
+    await tester.tap(finder);
+    await tester.pump();
+  }
+
+  Future<void> dragSliderToMax(WidgetTester tester, Key key) async {
+    final finder = find.byKey(key);
+    await tester.ensureVisible(finder);
+    await tester.drag(finder, const Offset(1200, 0));
+    await tester.pump();
+  }
+
   testWidgets('G3.1: mode switch keeps selection semantics parity', (
     tester,
   ) async {
@@ -394,6 +408,85 @@ void main() {
       expect(textNode.text, 'Edited Note');
       expect(textNode.isVisible, isTrue);
       expect(find.byKey(inlineTextEditOverlayKey), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'G3.7: text styling panel applies color/align/size/line-height/style parity',
+    (tester) async {
+      final textA = TextNode(
+        id: 'text-a',
+        text: 'Alpha',
+        size: const Size(140, 40),
+        fontSize: 20,
+        color: const Color(0xFF212121),
+      )..position = const Offset(220, 220);
+      final textB = TextNode(
+        id: 'text-b',
+        text: 'Beta',
+        size: const Size(140, 40),
+        fontSize: 20,
+        color: const Color(0xFF212121),
+      )..position = const Offset(380, 220);
+      final controller = await pumpExampleApp(
+        tester,
+        scene: Scene(
+          layers: [
+            Layer(nodes: [textA, textB]),
+          ],
+        ),
+      );
+
+      expect(find.byKey(textOptionsPanelKey), findsNothing);
+
+      controller.setSelection(const <NodeId>{'text-a', 'text-b'});
+      await tester.pump();
+      expect(find.byKey(textOptionsPanelKey), findsOneWidget);
+
+      await tapByKey(tester, textStyleBoldKey);
+      await tapByKey(tester, textStyleItalicKey);
+      await tapByKey(tester, textStyleUnderlineKey);
+
+      expect(textA.isBold, isTrue);
+      expect(textA.isItalic, isTrue);
+      expect(textA.isUnderline, isTrue);
+      expect(textB.isBold, isTrue);
+      expect(textB.isItalic, isTrue);
+      expect(textB.isUnderline, isTrue);
+      expect(iconButtonByKey(tester, textStyleBoldKey).color, Colors.blue);
+      expect(iconButtonByKey(tester, textStyleItalicKey).color, Colors.blue);
+      expect(
+        iconButtonByKey(tester, textStyleUnderlineKey).color,
+        Colors.blue,
+      );
+
+      await tapByKey(tester, textAlignCenterKey);
+      expect(textA.align, TextAlign.center);
+      expect(textB.align, TextAlign.center);
+      expect(iconButtonByKey(tester, textAlignCenterKey).color, Colors.blue);
+
+      await tapByKey(tester, textAlignRightKey);
+      expect(textA.align, TextAlign.right);
+      expect(textB.align, TextAlign.right);
+      expect(iconButtonByKey(tester, textAlignRightKey).color, Colors.blue);
+
+      await dragSliderToMax(tester, textFontSizeSliderKey);
+      expect(textA.fontSize, closeTo(72, 0.001));
+      expect(textB.fontSize, closeTo(72, 0.001));
+
+      await dragSliderToMax(tester, textLineHeightSliderKey);
+      expect(textA.lineHeight, isNotNull);
+      expect(textB.lineHeight, isNotNull);
+      expect(textA.lineHeight!, closeTo(216, 0.001));
+      expect(textB.lineHeight!, closeTo(216, 0.001));
+
+      final expectedColor = controller.scene.palette.penColors[2];
+      await tapByKey(
+        tester,
+        const ValueKey<String>('${textColorSwatchKeyPrefix}2'),
+      );
+      expect(textA.color, expectedColor);
+      expect(textB.color, expectedColor);
     },
   );
 }

@@ -31,6 +31,28 @@ const ValueKey<String> inlineTextEditOverlayKey = ValueKey<String>(
 const ValueKey<String> inlineTextEditFieldKey = ValueKey<String>(
   'inline-text-edit-field',
 );
+const ValueKey<String> textOptionsPanelKey = ValueKey<String>(
+  'text-options-panel',
+);
+const ValueKey<String> textStyleBoldKey = ValueKey<String>('text-style-bold');
+const ValueKey<String> textStyleItalicKey = ValueKey<String>(
+  'text-style-italic',
+);
+const ValueKey<String> textStyleUnderlineKey = ValueKey<String>(
+  'text-style-underline',
+);
+const ValueKey<String> textAlignLeftKey = ValueKey<String>('text-align-left');
+const ValueKey<String> textAlignCenterKey = ValueKey<String>(
+  'text-align-center',
+);
+const ValueKey<String> textAlignRightKey = ValueKey<String>('text-align-right');
+const ValueKey<String> textFontSizeSliderKey = ValueKey<String>(
+  'text-font-size-slider',
+);
+const ValueKey<String> textLineHeightSliderKey = ValueKey<String>(
+  'text-line-height-slider',
+);
+const String textColorSwatchKeyPrefix = 'text-color-';
 
 void main() {
   runApp(const CanvasExampleApp());
@@ -370,6 +392,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     final node = nodes.first;
 
     return Card(
+      key: textOptionsPanelKey,
       elevation: 6,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
@@ -382,16 +405,19 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                 Icons.format_bold,
                 node.isBold,
                 _toggleSelectedTextBold,
+                key: textStyleBoldKey,
               ),
               _buildTextStyleToggle(
                 Icons.format_italic,
                 node.isItalic,
                 _toggleSelectedTextItalic,
+                key: textStyleItalicKey,
               ),
               _buildTextStyleToggle(
                 Icons.format_underline,
                 node.isUnderline,
                 _toggleSelectedTextUnderline,
+                key: textStyleUnderlineKey,
               ),
               const VerticalDivider(width: 20),
               _buildAlignSelector(node.align),
@@ -401,6 +427,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               Slider(
+                key: textFontSizeSliderKey,
                 value: node.fontSize.clamp(10, 72).toDouble(),
                 min: 10,
                 max: 72,
@@ -413,6 +440,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               Slider(
+                key: textLineHeightSliderKey,
                 value: (node.lineHeight ?? node.fontSize * 1.2).clamp(
                   node.fontSize * 0.8,
                   node.fontSize * 3.0,
@@ -430,6 +458,9 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                 colors: _controller.scene.palette.penColors,
                 selected: node.color,
                 onSelected: _setSelectedTextColor,
+                keyBuilder: (index, _) => ValueKey<String>(
+                  '$textColorSwatchKeyPrefix$index',
+                ),
               ),
             ],
           ),
@@ -438,8 +469,14 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     );
   }
 
-  Widget _buildTextStyleToggle(IconData icon, bool active, VoidCallback onTap) {
+  Widget _buildTextStyleToggle(
+    IconData icon,
+    bool active,
+    VoidCallback onTap, {
+    Key? key,
+  }) {
     return IconButton(
+      key: key,
       icon: Icon(icon),
       color: active ? Colors.blue : Colors.grey,
       onPressed: onTap,
@@ -450,6 +487,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     return Row(
       children: [TextAlign.left, TextAlign.center, TextAlign.right].map((a) {
         return IconButton(
+          key: _textAlignButtonKey(a),
           icon: Icon(
             a == TextAlign.left
                 ? Icons.format_align_left
@@ -462,6 +500,19 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
         );
       }).toList(),
     );
+  }
+
+  ValueKey<String> _textAlignButtonKey(TextAlign align) {
+    switch (align) {
+      case TextAlign.left:
+        return textAlignLeftKey;
+      case TextAlign.center:
+        return textAlignCenterKey;
+      case TextAlign.right:
+        return textAlignRightKey;
+      default:
+        return textAlignLeftKey;
+    }
   }
 
   // --- ЛОГИКА ДИАЛОГОВ ---
@@ -1117,42 +1168,44 @@ class _ColorPalette extends StatelessWidget {
     required this.colors,
     required this.selected,
     required this.onSelected,
+    this.keyBuilder,
   });
   final List<Color> colors;
   final Color selected;
   final ValueChanged<Color> onSelected;
+  final Key? Function(int index, Color color)? keyBuilder;
 
   @override
   Widget build(BuildContext context) {
     return Wrap(
       spacing: 8,
-      children: colors
-          .map(
-            (color) => GestureDetector(
-              onTap: () => onSelected(color),
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: color,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: color == selected ? Colors.black : Colors.black12,
-                    width: color == selected ? 3 : 1,
-                  ),
-                  boxShadow: color == selected
-                      ? [
-                          BoxShadow(
-                            color: color.withValues(alpha: 0.4),
-                            blurRadius: 4,
-                          ),
-                        ]
-                      : null,
-                ),
+      children: List<Widget>.generate(colors.length, (index) {
+        final color = colors[index];
+        return GestureDetector(
+          key: keyBuilder?.call(index, color),
+          onTap: () => onSelected(color),
+          child: Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: color == selected ? Colors.black : Colors.black12,
+                width: color == selected ? 3 : 1,
               ),
+              boxShadow: color == selected
+                  ? [
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.4),
+                        blurRadius: 4,
+                      ),
+                    ]
+                  : null,
             ),
-          )
-          .toList(),
+          ),
+        );
+      }),
     );
   }
 }
