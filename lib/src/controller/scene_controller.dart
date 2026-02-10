@@ -73,7 +73,6 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
   @visibleForTesting
   int get debugSpatialIndexBuildCount => _spatialIndexSlice.debugBuildCount;
 
-  @visibleForTesting
   int get debugCommitRevision => _store.commitRevision;
 
   List<SceneSpatialCandidate> querySpatialCandidates(Rect worldBounds) {

@@ -129,6 +129,7 @@ class _SceneViewInteractiveV2State extends State<SceneViewInteractiveV2> {
         painter: ScenePainterV2(
           controller: widget.controller,
           imageResolver: widget.imageResolver ?? _defaultImageResolver,
+          nodePreviewOffsetResolver: widget.controller.movePreviewDeltaForNode,
           staticLayerCache: _staticLayerCache,
           textLayoutCache: _textLayoutCache,
           strokePathCache: _strokePathCache,

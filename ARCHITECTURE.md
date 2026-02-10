@@ -81,6 +81,7 @@ Key invariants:
 - Viewport culling for offscreen nodes.
 - Bounded caches for text layout, stroke paths, and selected path metrics.
 - Spatial index support for input hit-testing hot paths.
+- Interactive move drag uses preview translation (single source in interactive controller) and commits translation once on pointer up; preview hit-testing merges spatial candidates for `point` and `point - delta`.
 
 ## Non-goals
 

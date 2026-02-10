@@ -299,7 +299,13 @@ Write-notify semantics:
 - Line: drag line or two-tap line (first tap sets pending start, second tap commits)
 - Eraser: erases supported annotations (`StrokeNode`, `LineNode`) based on eraser trajectory
 
-### 7.3 Double tap behavior
+### 7.3 Move drag behavior
+
+- During move drag, selected nodes are translated in preview only (render/hit-test use effective preview bounds).
+- The scene snapshot is committed once on pointer up with the accumulated drag delta.
+- Pointer cancel clears preview and does not mutate scene geometry.
+
+### 7.4 Double tap behavior
 
 On double tap in move mode, if top hit node is a text node, controller emits `EditTextRequested`.
 

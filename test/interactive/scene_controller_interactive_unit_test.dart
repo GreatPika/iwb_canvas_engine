@@ -368,7 +368,70 @@ void main() {
       },
     );
 
-    test('move cancel rolls back drag transform', () {
+    test('hit-test uses preview-shifted geometry during move drag', () async {
+      final text = TextNode(
+        id: 'text',
+        text: 'note',
+        size: const Size(40, 20),
+        color: const Color(0xFF000000),
+      )..position = const Offset(100, 100);
+      final controller = _controllerFromScene(
+        Scene(
+          layers: <Layer>[
+            Layer(isBackground: true),
+            Layer(nodes: <SceneNode>[text]),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+      controller.setSelection(const <NodeId>{'text'});
+
+      final requests = <EditTextRequested>[];
+      final sub = controller.editTextRequests.listen(requests.add);
+      addTearDown(sub.cancel);
+
+      controller.handlePointer(
+        _sample(
+          pointerId: 1,
+          position: const Offset(100, 100),
+          timestampMs: 1,
+          phase: PointerPhase.down,
+        ),
+      );
+      controller.handlePointer(
+        _sample(
+          pointerId: 1,
+          position: const Offset(140, 100),
+          timestampMs: 2,
+          phase: PointerPhase.move,
+        ),
+      );
+
+      controller.handlePointerSignal(
+        const PointerSignal(
+          type: PointerSignalType.doubleTap,
+          pointerId: 9,
+          position: Offset(140, 100),
+          timestampMs: 3,
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      controller.handlePointerSignal(
+        const PointerSignal(
+          type: PointerSignalType.doubleTap,
+          pointerId: 9,
+          position: Offset(100, 100),
+          timestampMs: 4,
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+
+      expect(requests.length, 1);
+      expect(requests.single.nodeId, 'text');
+      expect(requests.single.position, const Offset(140, 100));
+    });
+
+    test('move cancel keeps document unchanged and clears preview', () {
       final rect = RectNode(id: 'node', size: const Size(40, 20))
         ..position = const Offset(80, 80);
       final controller = _controllerFromScene(
@@ -382,6 +445,9 @@ void main() {
       addTearDown(controller.dispose);
 
       controller.setSelection(const <NodeId>{'node'});
+      final beforeCommitRevision = controller.debugCommitRevision;
+      final beforeNode =
+          _nodeById(controller.snapshot, 'node') as RectNodeSnapshot;
 
       controller.handlePointer(
         _sample(
@@ -399,8 +465,10 @@ void main() {
           phase: PointerPhase.move,
         ),
       );
-      final moved = _nodeById(controller.snapshot, 'node') as RectNodeSnapshot;
-      expect(moved.transform.tx, greaterThan(80));
+      final duringMove =
+          _nodeById(controller.snapshot, 'node') as RectNodeSnapshot;
+      expect(duringMove.transform.tx, closeTo(beforeNode.transform.tx, 1e-6));
+      expect(controller.debugCommitRevision, beforeCommitRevision);
 
       controller.handlePointer(
         _sample(
@@ -411,10 +479,72 @@ void main() {
         ),
       );
 
-      final rolledBack =
+      final afterCancel =
           _nodeById(controller.snapshot, 'node') as RectNodeSnapshot;
-      expect(rolledBack.transform.tx, closeTo(80, 1e-6));
+      expect(afterCancel.transform.tx, closeTo(beforeNode.transform.tx, 1e-6));
+      expect(afterCancel.transform.ty, closeTo(beforeNode.transform.ty, 1e-6));
+      expect(controller.debugCommitRevision, beforeCommitRevision);
       expect(controller.selectionRect, isNull);
+    });
+
+    test('move drag commits once on up and applies total delta exactly', () {
+      final rect = RectNode(id: 'node', size: const Size(30, 20))
+        ..position = const Offset(60, 60);
+      final controller = _controllerFromScene(
+        Scene(
+          layers: <Layer>[
+            Layer(isBackground: true),
+            Layer(nodes: <SceneNode>[rect]),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      controller.setSelection(const <NodeId>{'node'});
+      final beforeCommitRevision = controller.debugCommitRevision;
+
+      controller.handlePointer(
+        _sample(
+          pointerId: 1,
+          position: const Offset(60, 60),
+          timestampMs: 1,
+          phase: PointerPhase.down,
+        ),
+      );
+
+      var position = const Offset(60, 60);
+      for (var i = 0; i < 50; i++) {
+        position = Offset(position.dx + 1, position.dy + 2);
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: position,
+            timestampMs: 2 + i,
+            phase: PointerPhase.move,
+          ),
+        );
+      }
+
+      expect(controller.debugCommitRevision, beforeCommitRevision);
+      final beforeUp =
+          _nodeById(controller.snapshot, 'node') as RectNodeSnapshot;
+      expect(beforeUp.transform.tx, closeTo(60, 1e-6));
+      expect(beforeUp.transform.ty, closeTo(60, 1e-6));
+
+      controller.handlePointer(
+        _sample(
+          pointerId: 1,
+          position: position,
+          timestampMs: 100,
+          phase: PointerPhase.up,
+        ),
+      );
+
+      expect(controller.debugCommitRevision, beforeCommitRevision + 1);
+      final afterUp =
+          _nodeById(controller.snapshot, 'node') as RectNodeSnapshot;
+      expect(afterUp.transform.tx, closeTo(110, 1e-6));
+      expect(afterUp.transform.ty, closeTo(160, 1e-6));
     });
 
     test('line tool supports drag flow and two-tap pending flow', () async {

@@ -64,7 +64,9 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
   bool _moveDragStarted = false;
   bool _movePendingClearSelection = false;
   Set<NodeId> _moveMarqueeBaseline = <NodeId>{};
-  Map<NodeId, Transform2D> _moveInitialTransforms = <NodeId, Transform2D>{};
+  bool _movePreviewActive = false;
+  Offset _movePreviewDelta = Offset.zero;
+  Set<NodeId> _movePreviewNodeIds = <NodeId>{};
 
   int? _drawActivePointerId;
   Offset? _drawDownScene;
@@ -132,6 +134,8 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
   int get structuralRevision => _core.structuralRevision;
   int get boundsRevision => _core.boundsRevision;
   int get visualRevision => _core.visualRevision;
+  @visibleForTesting
+  int get debugCommitRevision => _core.debugCommitRevision;
 
   T write<T>(T Function(SceneWriteTxn writer) fn) => _core.write(fn);
 
@@ -139,7 +143,6 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
     if (_mode == value) return;
 
     if (_mode == CanvasMode.move) {
-      _rollbackMoveGestureIfNeeded();
       _resetMoveGestureState();
     } else {
       _resetDrawGestureState();
@@ -452,7 +455,6 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
         _moveHandleUp(sample, scenePoint);
         break;
       case PointerPhase.cancel:
-        _rollbackMoveGestureIfNeeded();
         _resetMoveGestureState();
         _setSelectionRect(null);
         notifyListeners();
@@ -467,19 +469,24 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
     _moveDragStarted = false;
     _movePendingClearSelection = false;
     _moveMarqueeBaseline = Set<NodeId>.from(selectedNodeIds);
-    _moveInitialTransforms = <NodeId, Transform2D>{};
 
     final hit = _hitTestTopNode(scenePoint);
     if (hit != null) {
       _moveTarget = _MoveDragTarget.move;
+      Set<NodeId> previewNodeIds = selectedNodeIds;
       if (!selectedNodeIds.contains(hit.id)) {
         _core.commands.writeSelectionReplace(<NodeId>{hit.id});
+        previewNodeIds = <NodeId>{hit.id};
       }
+      _startMovePreview(previewNodeIds);
+      notifyListeners();
       return;
     }
 
     _moveTarget = _MoveDragTarget.marquee;
     _movePendingClearSelection = true;
+    _clearMovePreview();
+    notifyListeners();
   }
 
   void _moveHandleMove(PointerSample sample, Offset scenePoint) {
@@ -501,20 +508,16 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
         _core.commands.writeSelectionReplace(const <NodeId>{});
         _movePendingClearSelection = false;
       }
-      if (_moveTarget == _MoveDragTarget.move) {
-        _moveInitialTransforms = _captureSelectedTransforms();
-      }
     }
 
     if (!_moveDragStarted) return;
 
     if (_moveTarget == _MoveDragTarget.move) {
-      final delta = scenePoint - _moveLastScene!;
-      if (delta == Offset.zero) return;
-      _core.write<void>((writer) {
-        writer.writeSelectionTranslate(delta);
-      });
+      final deltaStep = scenePoint - _moveLastScene!;
+      if (deltaStep == Offset.zero) return;
+      _movePreviewDelta = _movePreviewDelta + deltaStep;
       _moveLastScene = scenePoint;
+      notifyListeners();
       return;
     }
 
@@ -527,11 +530,21 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
     if (_moveActivePointerId != sample.pointerId) return;
 
     if (_moveTarget == _MoveDragTarget.move) {
+      final finalDelta = _movePreviewDelta;
+      final movedIds = _selectedTransformableNodesInSnapshotOrder(
+        snapshot: snapshot,
+        selected: _movePreviewNodeIds,
+      ).map((node) => node.id).toList(growable: false);
+      _clearMovePreview();
       if (_moveDragStarted) {
-        final movedIds = _moveInitialTransforms.keys.toList(growable: false);
-        final totalDelta = scenePoint - (_movePointerDownScene ?? scenePoint);
-        if (movedIds.isNotEmpty && totalDelta != Offset.zero) {
-          final delta = Transform2D.translation(totalDelta);
+        var affected = 0;
+        if (finalDelta != Offset.zero) {
+          affected = _core.write<int>((writer) {
+            return writer.writeSelectionTranslate(finalDelta);
+          });
+        }
+        if (affected > 0 && movedIds.isNotEmpty) {
+          final delta = Transform2D.translation(finalDelta);
           _events.emitAction(
             ActionType.transform,
             movedIds,
@@ -550,6 +563,7 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
 
     _resetMoveGestureState();
     _setSelectionRect(null);
+    notifyListeners();
   }
 
   void _commitMarquee(int timestampMs) {
@@ -962,7 +976,7 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
       final node = _core.resolveSpatialCandidateNode(candidate);
       if (node == null) continue;
       if (!node.isVisible || !node.isSelectable) continue;
-      if (!node.boundsWorld.overlaps(rect)) continue;
+      if (!_effectiveNodeBoundsWorld(node).overlaps(rect)) continue;
       ids.add(node.id);
     }
 
@@ -970,25 +984,44 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
   }
 
   SceneNode? _hitTestTopNode(Offset scenePoint) {
-    final probe = Rect.fromLTWH(scenePoint.dx, scenePoint.dy, 0, 0);
-    final candidates =
-        _core.querySpatialCandidates(probe).toList(growable: true)
-          ..sort((left, right) {
-            final byLayer = right.layerIndex.compareTo(left.layerIndex);
-            if (byLayer != 0) return byLayer;
-            return right.nodeIndex.compareTo(left.nodeIndex);
-          });
+    final candidates = _queryHitTestCandidates(scenePoint);
 
     for (final candidate in candidates) {
       final node = _core.resolveSpatialCandidateNode(candidate);
       if (node == null) continue;
       if (!node.isVisible || !node.isSelectable) continue;
-      if (hitTestNode(scenePoint, node)) {
+      if (_hitTestNodeWithMovePreview(scenePoint, node)) {
         return node;
       }
     }
 
     return null;
+  }
+
+  List<SceneSpatialCandidate> _queryHitTestCandidates(Offset scenePoint) {
+    final probe = Rect.fromLTWH(scenePoint.dx, scenePoint.dy, 0, 0);
+    final byNodeId = <NodeId, SceneSpatialCandidate>{};
+    for (final candidate in _core.querySpatialCandidates(probe)) {
+      byNodeId[candidate.node.id] = candidate;
+    }
+    if (_hasMovePreviewTranslation) {
+      final shiftedProbe = Rect.fromLTWH(
+        scenePoint.dx - _movePreviewDelta.dx,
+        scenePoint.dy - _movePreviewDelta.dy,
+        0,
+        0,
+      );
+      for (final candidate in _core.querySpatialCandidates(shiftedProbe)) {
+        byNodeId[candidate.node.id] = candidate;
+      }
+    }
+    final candidates = byNodeId.values.toList(growable: true)
+      ..sort((left, right) {
+        final byLayer = right.layerIndex.compareTo(left.layerIndex);
+        if (byLayer != 0) return byLayer;
+        return right.nodeIndex.compareTo(left.nodeIndex);
+      });
+    return candidates;
   }
 
   List<NodeSnapshot> _selectedTransformableNodesInSnapshotOrder({
@@ -1038,33 +1071,6 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
     return bounds?.center ?? Offset.zero;
   }
 
-  Map<NodeId, Transform2D> _captureSelectedTransforms() {
-    final captured = <NodeId, Transform2D>{};
-    final currentSnapshot = snapshot;
-    final selected = selectedNodeIds;
-    for (final layer in currentSnapshot.layers) {
-      if (layer.isBackground) continue;
-      for (final node in layer.nodes) {
-        if (!selected.contains(node.id)) continue;
-        if (!node.isTransformable || node.isLocked) continue;
-        captured[node.id] = node.transform;
-      }
-    }
-    return captured;
-  }
-
-  void _rollbackMoveGestureIfNeeded() {
-    if (!_moveDragStarted) return;
-    if (_moveTarget != _MoveDragTarget.move) return;
-    if (_moveInitialTransforms.isEmpty) return;
-
-    _core.write<void>((writer) {
-      for (final entry in _moveInitialTransforms.entries) {
-        writer.writeNodeTransformSet(entry.key, entry.value);
-      }
-    });
-  }
-
   void _resetMoveGestureState() {
     _moveActivePointerId = null;
     _movePointerDownScene = null;
@@ -1073,7 +1079,48 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
     _moveDragStarted = false;
     _movePendingClearSelection = false;
     _moveMarqueeBaseline = <NodeId>{};
-    _moveInitialTransforms = <NodeId, Transform2D>{};
+    _clearMovePreview();
+  }
+
+  void _startMovePreview(Set<NodeId> nodeIds) {
+    _movePreviewActive = true;
+    _movePreviewDelta = Offset.zero;
+    _movePreviewNodeIds = Set<NodeId>.from(nodeIds);
+  }
+
+  void _clearMovePreview() {
+    _movePreviewActive = false;
+    _movePreviewDelta = Offset.zero;
+    _movePreviewNodeIds = <NodeId>{};
+  }
+
+  bool get _hasMovePreviewTranslation =>
+      _movePreviewActive &&
+      _movePreviewNodeIds.isNotEmpty &&
+      _movePreviewDelta != Offset.zero;
+
+  Offset movePreviewDeltaForNode(NodeId nodeId) {
+    if (!_hasMovePreviewTranslation) return Offset.zero;
+    if (!_movePreviewNodeIds.contains(nodeId)) return Offset.zero;
+    return _movePreviewDelta;
+  }
+
+  Rect effectiveNodeBoundsWorld(SceneNode node) {
+    return _effectiveNodeBoundsWorld(node);
+  }
+
+  Rect _effectiveNodeBoundsWorld(SceneNode node) {
+    final delta = movePreviewDeltaForNode(node.id);
+    if (delta == Offset.zero) return node.boundsWorld;
+    return node.boundsWorld.shift(delta);
+  }
+
+  bool _hitTestNodeWithMovePreview(Offset scenePoint, SceneNode node) {
+    final delta = movePreviewDeltaForNode(node.id);
+    if (delta == Offset.zero) {
+      return hitTestNode(scenePoint, node);
+    }
+    return hitTestNode(scenePoint - delta, node);
   }
 
   void _resetDrawGestureState() {

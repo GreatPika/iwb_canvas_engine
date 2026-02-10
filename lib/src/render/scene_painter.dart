@@ -13,6 +13,7 @@ import '../public/scene_render_state.dart';
 import '../public/snapshot.dart';
 
 typedef ImageResolverV2 = Image? Function(String imageId);
+typedef NodePreviewOffsetResolverV2 = Offset Function(NodeId nodeId);
 
 class SceneStrokePathCacheV2 {
   SceneStrokePathCacheV2({this.maxEntries = 512})
@@ -444,6 +445,7 @@ class ScenePainterV2 extends CustomPainter {
   ScenePainterV2({
     required this.controller,
     required this.imageResolver,
+    this.nodePreviewOffsetResolver,
     this.staticLayerCache,
     this.textLayoutCache,
     this.strokePathCache,
@@ -457,6 +459,7 @@ class ScenePainterV2 extends CustomPainter {
 
   final SceneRenderState controller;
   final ImageResolverV2 imageResolver;
+  final NodePreviewOffsetResolverV2? nodePreviewOffsetResolver;
   final SceneStaticLayerCacheV2? staticLayerCache;
   final SceneTextLayoutCacheV2? textLayoutCache;
   final SceneStrokePathCacheV2? strokePathCache;
@@ -507,11 +510,12 @@ class ScenePainterV2 extends CustomPainter {
         if (!node.isVisible) {
           continue;
         }
-        final bounds = _nodeBoundsWorld(node);
+        final previewDelta = _nodePreviewOffset(node.id);
+        final bounds = _nodeBoundsWorld(node, previewDelta: previewDelta);
         if (!_isFiniteRect(bounds) || !viewRect.overlaps(bounds)) {
           continue;
         }
-        _drawNode(canvas, node, cameraOffset);
+        _drawNode(canvas, node, cameraOffset, previewDelta: previewDelta);
         if (selectedIds.contains(node.id)) {
           selectedNodes.add(node);
         }
@@ -536,12 +540,14 @@ class ScenePainterV2 extends CustomPainter {
   ) {
     if (selectedNodes.isNotEmpty && selectionStrokeWidth > 0) {
       for (final node in selectedNodes) {
+        final previewDelta = _nodePreviewOffset(node.id);
         _drawSelectionForNode(
           canvas,
           node,
           cameraOffset,
           selectionColor,
           selectionStrokeWidth,
+          previewDelta: previewDelta,
         );
       }
     }
@@ -570,8 +576,13 @@ class ScenePainterV2 extends CustomPainter {
     NodeSnapshot node,
     Offset cameraOffset,
     Color color,
-    double haloWidth,
-  ) {
+    double haloWidth, {
+    required Offset previewDelta,
+  }) {
+    if (previewDelta != Offset.zero) {
+      canvas.save();
+      canvas.translate(previewDelta.dx, previewDelta.dy);
+    }
     switch (node) {
       case ImageNodeSnapshot image:
         _drawBoxSelection(
@@ -734,6 +745,9 @@ class ScenePainterV2 extends CustomPainter {
           }
         }
         canvas.restore();
+    }
+    if (previewDelta != Offset.zero) {
+      canvas.restore();
     }
   }
 
@@ -901,7 +915,16 @@ class ScenePainterV2 extends CustomPainter {
     canvas.restore();
   }
 
-  void _drawNode(Canvas canvas, NodeSnapshot node, Offset cameraOffset) {
+  void _drawNode(
+    Canvas canvas,
+    NodeSnapshot node,
+    Offset cameraOffset, {
+    required Offset previewDelta,
+  }) {
+    if (previewDelta != Offset.zero) {
+      canvas.save();
+      canvas.translate(previewDelta.dx, previewDelta.dy);
+    }
     switch (node) {
       case RectNodeSnapshot rectNode:
         _drawRectNode(canvas, rectNode, cameraOffset);
@@ -915,6 +938,9 @@ class ScenePainterV2 extends CustomPainter {
         _drawImageNode(canvas, imageNode, cameraOffset);
       case PathNodeSnapshot pathNode:
         _drawPathNode(canvas, pathNode, cameraOffset);
+    }
+    if (previewDelta != Offset.zero) {
+      canvas.restore();
     }
   }
 
@@ -1164,39 +1190,49 @@ class ScenePainterV2 extends CustomPainter {
     canvas.restore();
   }
 
-  Rect _nodeBoundsWorld(NodeSnapshot node) {
+  Rect _nodeBoundsWorld(NodeSnapshot node, {required Offset previewDelta}) {
     if (!node.transform.isFinite) {
       return Rect.zero;
     }
 
+    late final Rect bounds;
     switch (node) {
       case RectNodeSnapshot rectNode:
-        return node.transform.applyToRect(_centerRect(rectNode.size));
+        bounds = node.transform.applyToRect(_centerRect(rectNode.size));
       case ImageNodeSnapshot imageNode:
-        return node.transform.applyToRect(_centerRect(imageNode.size));
+        bounds = node.transform.applyToRect(_centerRect(imageNode.size));
       case TextNodeSnapshot textNode:
-        return node.transform.applyToRect(_centerRect(textNode.size));
+        bounds = node.transform.applyToRect(_centerRect(textNode.size));
       case LineNodeSnapshot lineNode:
         final local = Rect.fromPoints(
           lineNode.start,
           lineNode.end,
         ).inflate(clampNonNegativeFinite(lineNode.thickness) / 2);
-        return node.transform.applyToRect(local);
+        bounds = node.transform.applyToRect(local);
       case StrokeNodeSnapshot strokeNode:
         if (strokeNode.points.isEmpty) {
-          return Rect.zero;
+          bounds = Rect.zero;
+          break;
         }
         final local = _aabbFromPoints(
           strokeNode.points,
         ).inflate(clampNonNegativeFinite(strokeNode.thickness) / 2);
-        return node.transform.applyToRect(local);
+        bounds = node.transform.applyToRect(local);
       case PathNodeSnapshot pathNode:
         final localPath = _buildPathNode(pathNode).buildLocalPath(copy: false);
         if (localPath == null) {
-          return Rect.zero;
+          bounds = Rect.zero;
+          break;
         }
-        return node.transform.applyToRect(localPath.getBounds());
+        bounds = node.transform.applyToRect(localPath.getBounds());
     }
+
+    if (previewDelta == Offset.zero) return bounds;
+    return bounds.shift(previewDelta);
+  }
+
+  Offset _nodePreviewOffset(NodeId nodeId) {
+    return nodePreviewOffsetResolver?.call(nodeId) ?? Offset.zero;
   }
 
   PathNode _buildPathNode(PathNodeSnapshot snapshot) {
@@ -1244,6 +1280,7 @@ class ScenePainterV2 extends CustomPainter {
   bool shouldRepaint(covariant ScenePainterV2 oldDelegate) {
     return oldDelegate.controller != controller ||
         oldDelegate.imageResolver != imageResolver ||
+        oldDelegate.nodePreviewOffsetResolver != nodePreviewOffsetResolver ||
         oldDelegate.staticLayerCache != staticLayerCache ||
         oldDelegate.textLayoutCache != textLayoutCache ||
         oldDelegate.strokePathCache != strokePathCache ||
