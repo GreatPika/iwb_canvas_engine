@@ -197,7 +197,7 @@ language: russian
 - `H1`/`H2` заблокированы до полного закрытия `G2L.*`.
 - Нельзя удалять legacy-код, пока `example` не работает на v2 с 1:1 parity.
 
-- [ ] G2L.1. Ввести `SceneControllerInteractiveV2` (или эквивалентный слой) с high-level API, совместимым с legacy-контрактом:
+- [x] G2L.1. Ввести `SceneControllerInteractiveV2` (или эквивалентный слой) с high-level API, совместимым с legacy-контрактом:
   - `setMode(...)`;
   - `setDrawTool(...)`;
   - `setDrawColor(...)`;
@@ -205,21 +205,21 @@ language: russian
   - `setSelection(...)`, `toggleSelection(...)`, `clearSelection(...)`;
   - `rotateSelection(...)`, `flipSelectionVertical(...)`, `flipSelectionHorizontal(...)`, `deleteSelection(...)`, `clearScene(...)`;
   - readonly-свойства для UI (`mode`, `drawTool`, `pendingLineStart`, `selectionRect`, и т.п. по необходимости для exact parity).
-- [ ] G2L.2. Перенести pointer-level orchestration в v2 без изменения UX:
+- [x] G2L.2. Перенести pointer-level orchestration в v2 без изменения UX:
   - `handlePointer(...)`;
   - `handlePointerSignal(...)`;
   - pending two-tap line таймер/timeout/reset semantics;
   - drag/marquee lifecycle, включая cancel/mode-switch rollback.
-- [ ] G2L.3. Портировать tool-state lifecycle 1:1:
+- [x] G2L.3. Портировать tool-state lifecycle 1:1:
   - pen/highlighter/line/eraser parity;
   - reset/dispose semantics без отложенных side-effects;
   - commit/cancel behavior идентичен legacy.
-- [ ] G2L.4. Подключить `example/lib/main.dart` к v2 interactive controller с сохранением текущего UI без визуальных/поведенческих изменений.
-- [ ] G2L.5. Зафиксировать UI parity контракт:
+- [x] G2L.4. Подключить `example/lib/main.dart` к v2 interactive controller с сохранением текущего UI без визуальных/поведенческих изменений.
+- [x] G2L.5. Зафиксировать UI parity контракт:
   - список обязательных виджет-ключей/контролов/иконок/панелей не меняется;
   - порядок и доступность контролов по режимам совпадают с baseline;
   - индикаторы (`Camera X`, pending-line marker и др.) совпадают по условиям показа.
-- [ ] G2L.6. Добавить adapter-level parity tests для interactive API (legacy vs v2) на одинаковых input scripts:
+- [x] G2L.6. Добавить adapter-level parity tests для interactive API (legacy vs v2) на одинаковых input scripts:
   - selection/marquee;
   - draw tools;
   - line two-tap;
@@ -227,15 +227,28 @@ language: russian
   - text edit/styling;
   - transform/delete;
   - system/grid/background/import-export.
-- [ ] G2L.7. Прогнать и зафиксировать "example on v2" regression пакет:
+- [x] G2L.7. Прогнать и зафиксировать "example on v2" regression пакет:
   - `example/test/**` зелёный без специальных fallback на legacy;
   - сравнение ключевых UI state и public controller state на каждом шаге сценариев G2.
-- [ ] G2L.8. Документировать матрицу parity в `DEVELOPMENT_PLAN.md` (таблица):
+- [x] G2L.8. Документировать матрицу parity в `DEVELOPMENT_PLAN.md` (таблица):
   - Feature;
   - Legacy API;
   - V2 API;
   - Test coverage id;
   - Status (`Done/Gap`).
+
+| Feature | Legacy API | V2 API | Test coverage id | Status |
+|---|---|---|---|---|
+| Mode/tool switch + selection semantics | `SceneController.setMode/setDrawTool/setSelection` | `SceneControllerInteractiveV2.setMode/setDrawTool/setSelection` | `G3.1`, `G3.2` | Done |
+| Pointer orchestration + marquee lifecycle | `handlePointer`, move/marquee internals | `SceneControllerInteractiveV2.handlePointer` | `G3.2`, `scene_controller_interactive_v2_unit_test` | Done |
+| Draw tools (`pen/highlighter/line/eraser`) | draw slices + tool engines | draw path in `SceneControllerInteractiveV2` + v2 commands | `G3.3`, `G3.4`, `G3.5` | Done |
+| Line two-tap pending lifecycle | line tool pending/timer | pending line state in `SceneControllerInteractiveV2` | `G3.4`, `T5` unit checks | Done |
+| Text edit request + inline edit flow | `handlePointerSignal` + example inline editor | same contract in v2 interactive runtime | `G3.6`, `G3.14` | Done |
+| Text styling panel actions | legacy node patch/update flows | v2 `write(...)` patch flow from example UI | `G3.7` | Done |
+| Transform/delete/clear/system actions | legacy command surface | v2 commands via interactive controller | `G3.8`, `G3.10`, `G3.12` | Done |
+| Camera/grid/background parity | legacy camera/grid/background setters | v2 `setCameraOffset/setGrid*/setBackgroundColor` | `G3.9`, `G3.10`, `G3.12`, `G3.13` | Done |
+| Add Sample deterministic behavior | legacy example flow | v2 example flow | `G3.11` | Done |
+| Lockstep legacy-v2 parity scripts | legacy runtime reference | v2 runtime under same scripts | `interactive_parity_batch1/2` (+ root v2 parity copies) | Done |
 
 Критерий приёмки G2:
 - `example` работает на v2 interactive controller.
@@ -259,27 +272,27 @@ language: russian
 
 ## 5) Обязательный набор тестов "без новых дыр"
 
-- [ ] T1. Внешняя мутация невозможна:
+- [x] T1. Внешняя мутация невозможна:
   - нельзя получить mutable сцену/узлы из публичного API;
   - запись вне `write(...)` блокируется и в debug, и в release.
-- [ ] T2. Атомарность транзакции:
+- [x] T2. Атомарность транзакции:
   - внутри `write(...)` нет ранних flush/events/index rebuild;
   - после commit всё согласовано и происходит ровно один flush.
-- [ ] T3. Epoch-сценарии:
+- [x] T3. Epoch-сценарии:
   - `replaceScene(...)` очищает selection;
   - spatial index rebuild;
   - render caches invalidated.
-- [ ] T4. Bounds/index связка:
+- [x] T4. Bounds/index связка:
   - изменение bounds гарантированно даёт `boundsRevision++` и rebuild индекса.
   - анизотропный transform не даёт "неожиданно дальних" кандидатов hit-test.
-- [ ] T5. Инструменты/таймеры:
+- [x] T5. Инструменты/таймеры:
   - pending state line tool корректно очищается на reset/mode switch/dispose flow;
   - reset у draw-tools не оставляет отложенных побочных эффектов после dispose.
-- [ ] T6. Example interactive parity:
+- [x] T6. Example interactive parity:
   - каждый сценарий из G2 покрыт тестом в `example/test/**`;
   - зафиксированы ожидаемые состояния UI и публичного API на каждом ключевом шаге сценария.
   - отдельные regression-тесты обязательны для: selection-механики, line tool, eraser flow, text edit flow и text styling flow.
-- [ ] T8. Interactive parity lockstep (legacy vs v2):
+- [x] T8. Interactive parity lockstep (legacy vs v2):
   - одинаковые pointer/input scripts дают одинаковый observable UI state и controller state в `example`;
   - проверены mode/tool transitions, pending-line lifecycle, transform/delete/system flows;
   - тесты выполняются без fallback на legacy runtime.
