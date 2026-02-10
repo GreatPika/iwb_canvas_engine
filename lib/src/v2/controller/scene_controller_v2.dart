@@ -72,6 +72,36 @@ class SceneControllerV2 extends ChangeNotifier {
     );
   }
 
+  SceneNode? resolveSpatialCandidateNode(SceneSpatialCandidate candidate) {
+    final layerIndex = candidate.layerIndex;
+    if (layerIndex < 0 || layerIndex >= _store.sceneDoc.layers.length) {
+      return null;
+    }
+
+    final layer = _store.sceneDoc.layers[layerIndex];
+    if (layer.isBackground) {
+      return null;
+    }
+
+    final nodeIndex = candidate.nodeIndex;
+    if (nodeIndex < 0 || nodeIndex >= layer.nodes.length) {
+      return null;
+    }
+
+    final node = layer.nodes[nodeIndex];
+    if (identical(node, candidate.node)) {
+      return node;
+    }
+
+    // v2 write() commits always swap sceneDoc with a cloned document, so node
+    // identity may differ after non-geometry writes while index coordinates
+    // remain valid.
+    if (node.id != candidate.node.id || node.type != candidate.node.type) {
+      return null;
+    }
+    return node;
+  }
+
   T write<T>(T Function(SceneWriter writer) fn) {
     if (_writeInProgress) {
       throw StateError('Nested write(...) calls are not allowed.');

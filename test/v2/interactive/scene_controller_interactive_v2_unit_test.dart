@@ -888,6 +888,104 @@ void main() {
       );
     });
 
+    test('hit-test marquee and eraser keep foreground behavior', () {
+      final backgroundRect = RectNode(
+        id: 'bg',
+        size: const Size(200, 200),
+        isSelectable: true,
+      )..position = const Offset(100, 100);
+      final foregroundRect = RectNode(id: 'fg', size: const Size(40, 40))
+        ..position = const Offset(100, 100);
+      final foregroundLine = LineNode(
+        id: 'line',
+        start: const Offset(-15, 0),
+        end: const Offset(15, 0),
+        thickness: 2,
+        color: const Color(0xFF000000),
+      )..position = const Offset(160, 100);
+      final controller = SceneControllerInteractiveV2(
+        scene: Scene(
+          layers: <Layer>[
+            Layer(isBackground: true, nodes: <SceneNode>[backgroundRect]),
+            Layer(nodes: <SceneNode>[foregroundRect, foregroundLine]),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      controller.handlePointer(
+        _sample(
+          pointerId: 1,
+          position: const Offset(100, 100),
+          timestampMs: 1,
+          phase: PointerPhase.down,
+        ),
+      );
+      controller.handlePointer(
+        _sample(
+          pointerId: 1,
+          position: const Offset(100, 100),
+          timestampMs: 2,
+          phase: PointerPhase.up,
+        ),
+      );
+      expect(controller.selectedNodeIds, const <NodeId>{'fg'});
+
+      controller.handlePointer(
+        _sample(
+          pointerId: 2,
+          position: const Offset(80, 80),
+          timestampMs: 3,
+          phase: PointerPhase.down,
+        ),
+      );
+      controller.handlePointer(
+        _sample(
+          pointerId: 2,
+          position: const Offset(120, 120),
+          timestampMs: 4,
+          phase: PointerPhase.move,
+        ),
+      );
+      controller.handlePointer(
+        _sample(
+          pointerId: 2,
+          position: const Offset(120, 120),
+          timestampMs: 5,
+          phase: PointerPhase.up,
+        ),
+      );
+      expect(controller.selectedNodeIds, const <NodeId>{'fg'});
+
+      controller.setMode(CanvasMode.draw);
+      controller.setDrawTool(DrawTool.eraser);
+      controller.eraserThickness = 20;
+      controller.handlePointer(
+        _sample(
+          pointerId: 3,
+          position: const Offset(160, 100),
+          timestampMs: 6,
+          phase: PointerPhase.down,
+        ),
+      );
+      controller.handlePointer(
+        _sample(
+          pointerId: 3,
+          position: const Offset(160, 100),
+          timestampMs: 7,
+          phase: PointerPhase.up,
+        ),
+      );
+
+      final ids = <NodeId>{
+        for (final layer in controller.snapshot.layers)
+          for (final node in layer.nodes) node.id,
+      };
+      expect(ids.contains('line'), isFalse);
+      expect(ids.contains('bg'), isTrue);
+      expect(ids.contains('fg'), isTrue);
+    });
+
     test('transform/delete/clear/notify scene APIs emit expected effects', () {
       final rect = RectNode(id: 'r', size: const Size(20, 10))
         ..position = const Offset(50, 50);

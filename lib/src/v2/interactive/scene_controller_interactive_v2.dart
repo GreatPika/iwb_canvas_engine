@@ -822,8 +822,8 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
 
     final ids = <NodeId>[];
     for (final candidate in candidates) {
-      if (!_isCandidateFromForeground(candidate.layerIndex)) continue;
-      final node = candidate.node;
+      final node = _core.resolveSpatialCandidateNode(candidate);
+      if (node == null) continue;
       if (node is! StrokeNode && node is! LineNode) continue;
       if (!node.isDeletable) continue;
       if (!_eraserHitsNode(eraserPoints, node)) continue;
@@ -989,8 +989,8 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
       });
 
     for (final candidate in candidates) {
-      if (!_isCandidateFromForeground(candidate.layerIndex)) continue;
-      final node = candidate.node;
+      final node = _core.resolveSpatialCandidateNode(candidate);
+      if (node == null) continue;
       if (!node.isVisible || !node.isSelectable) continue;
       if (!node.boundsWorld.overlaps(rect)) continue;
       ids.add(node.id);
@@ -1010,8 +1010,8 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
           });
 
     for (final candidate in candidates) {
-      if (!_isCandidateFromForeground(candidate.layerIndex)) continue;
-      final node = candidate.node;
+      final node = _core.resolveSpatialCandidateNode(candidate);
+      if (node == null) continue;
       if (!node.isVisible || !node.isSelectable) continue;
       if (hitTestNode(scenePoint, node)) {
         return node;
@@ -1019,12 +1019,6 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
     }
 
     return null;
-  }
-
-  bool _isCandidateFromForeground(int layerIndex) {
-    final layers = snapshot.layers;
-    if (layerIndex < 0 || layerIndex >= layers.length) return false;
-    return !layers[layerIndex].isBackground;
   }
 
   Map<NodeId, Transform2D> _captureSelectedTransforms() {
