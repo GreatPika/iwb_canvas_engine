@@ -148,7 +148,7 @@ language: russian
 - [x] G1. Зафиксировать baseline для сравнения parity:
   - использовать `baseline-vertical-slices-2026-02-04` как целевой ref;
   - если нужен другой baseline, явно записать commit/tag в этом пункте до начала cutover.
-- [ ] G2. Закрепить checklist интерактивных сценариев из `example/lib/main.dart`.
+- [x] G2. Закрепить checklist интерактивных сценариев из `example/lib/main.dart`.
 - [x] G2.1. Сценарий: переключение `move/draw` + семантика `selection`.
 - [x] G2.2. Сценарий: механика выделения (`tap-select`, `marquee-select`, `clear selection` в ожидаемых режимах).
 - [x] G2.3. Сценарий: draw-tools `pen/highlighter/line/eraser` + очистка `pending-state`.
@@ -160,10 +160,10 @@ language: russian
 - [x] G2.9. Сценарий: `camera pan/zoom` + `hit-test`.
 - [x] G2.10. Сценарий: `grid/system actions` (включая `import/export/replace scene`).
 - [x] G2.11. Сценарий: `Add Sample` (создаются `RectNode + TextNode`, корректные size/position/id, сценарий повторяемый).
-- [ ] G2.12. Сценарий: system menu background flow (смена background color + `Clear Canvas`).
-- [ ] G2.13. Сценарий: visual parity индикаторов (`Camera X` и pending-line marker в draw-line режиме).
-- [ ] G2.14. Сценарий: text edit commit-триггеры (`onTapOutside` и auto-save при `setMode`).
-- [ ] G3. Добавить автоматические parity-регрессии для example-flow (`example/test/**`), детерминированные и с проверкой UI state + public controller state.
+- [x] G2.12. Сценарий: system menu background flow (смена background color + `Clear Canvas`).
+- [x] G2.13. Сценарий: visual parity индикаторов (`Camera X` и pending-line marker в draw-line режиме).
+- [x] G2.14. Сценарий: text edit commit-триггеры (`onTapOutside` и auto-save при `setMode`).
+- [x] G3. Добавить автоматические parity-регрессии для example-flow (`example/test/**`), детерминированные и с проверкой UI state + public controller state.
 - [x] G3.1. Автотест для `G2.1`.
 - [x] G3.2. Автотест для `G2.2`.
 - [x] G3.3. Автотест для `G2.3`.
@@ -175,9 +175,9 @@ language: russian
 - [x] G3.9. Автотест для `G2.9`.
 - [x] G3.10. Автотест для `G2.10`.
 - [x] G3.11. Автотест для `G2.11`.
-- [ ] G3.12. Автотест для `G2.12`.
-- [ ] G3.13. Автотест для `G2.13`.
-- [ ] G3.14. Автотест для `G2.14`.
+- [x] G3.12. Автотест для `G2.12`.
+- [x] G3.13. Автотест для `G2.13`.
+- [x] G3.14. Автотест для `G2.14`.
 - [ ] G4. Добавить engine-level parity harness v1 vs v2 (пока legacy ещё существует):
   - одинаковые входные event-script дают эквивалентный публичный результат (scene JSON, selected ids, contract-level signals/actions).
 - [ ] G5. Закрыть все найденные parity-gap без изменения UX-контракта baseline.

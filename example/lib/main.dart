@@ -88,6 +88,15 @@ const ValueKey<String> cameraPanLeftKey = ValueKey<String>('camera-pan-left');
 const ValueKey<String> cameraPanRightKey = ValueKey<String>('camera-pan-right');
 const ValueKey<String> cameraPanUpKey = ValueKey<String>('camera-pan-up');
 const ValueKey<String> cameraPanDownKey = ValueKey<String>('camera-pan-down');
+const ValueKey<String> cameraIndicatorKey = ValueKey<String>(
+  'camera-indicator',
+);
+const ValueKey<String> pendingLineMarkerPaintKey = ValueKey<String>(
+  'pending-line-marker-paint',
+);
+const ValueKey<String> pendingLineMarkerActiveKey = ValueKey<String>(
+  'pending-line-marker-active',
+);
 const String textColorSwatchKeyPrefix = 'text-color-';
 
 void main() {
@@ -223,6 +232,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   Widget _buildCameraIndicator() {
     final cameraX = _controller.scene.camera.offset.dx;
     return Container(
+      key: cameraIndicatorKey,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.8),
@@ -919,10 +929,17 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
         Positioned.fill(
           child: IgnorePointer(
             child: CustomPaint(
+              key: pendingLineMarkerPaintKey,
               painter: _PendingLineMarkerPainter(controller: _controller),
             ),
           ),
         ),
+        if (_controller.pendingLineStart != null)
+          const Positioned.fill(
+            child: IgnorePointer(
+              child: SizedBox(key: pendingLineMarkerActiveKey),
+            ),
+          ),
       ],
     );
   }
