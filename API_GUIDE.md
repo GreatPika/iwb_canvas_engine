@@ -281,6 +281,9 @@ Stable contracts (expected to remain compatible as the package evolves):
 - `background.grid.cellSize` validation is conditional:
   - when `grid.enabled == true`, `cellSize` must be finite and `> 0`;
   - when `grid.enabled == false`, any finite `cellSize` is accepted.
+- `SceneControllerInteractiveV2.setGridCellSize(...)` is fail-fast: it rejects
+  non-finite and non-positive values regardless of `grid.enabled`. When grid is
+  enabled, values below the safety minimum are clamped to `kMinGridCellSize`.
 - **Runtime behavior is defensive:** bounds, hit-testing, and rendering sanitize
   invalid numeric inputs to avoid propagating NaN/Infinity or crashing.
   - Length-like values (`thickness`, `strokeWidth`, `hitPadding`, `Size.*`) treat
@@ -614,10 +617,14 @@ controller.setCameraOffset(const Offset(120, 0)); // pan right by 120 scene unit
 
 Gotchas:
 - Camera offset affects both rendering and input conversion; keep it as the only pan source of truth.
+- `setGridCellSize(...)` rejects non-finite and non-positive values with
+  `ArgumentError` in both legacy `SceneController` and
+  `SceneControllerInteractiveV2`.
 
 Relevant APIs:
 - `Scene.background/grid` — `lib/src/core/scene.dart`
 - `SceneController.setBackgroundColor/setGridEnabled/setGridCellSize/setCameraOffset` — `lib/src/input/scene_controller.dart`
+- `SceneControllerInteractiveV2.setBackgroundColor/setGridEnabled/setGridCellSize/setCameraOffset` — `lib/src/v2/interactive/scene_controller_interactive_v2.dart`
 
 ### 9) Image rendering (`ImageNode` + `ImageResolver`)
 
@@ -827,9 +834,9 @@ Decode canonicalization:
     "grid": { "enabled": false, "cellSize": 20.0, "color": "#1F000000" }
   },
   "palette": {
-    "penColors": ["#FF000000"],
-    "backgroundColors": ["#FFFFFFFF"],
-    "gridSizes": [20.0]
+    "penColors": ["#FF000000", "#FFE53935", "#FF1E88E5", "#FF43A047", "#FFFB8C00", "#FF8E24AA"],
+    "backgroundColors": ["#FFFFFFFF", "#FFFFF9C4", "#FFBBDEFB", "#FFC8E6C9"],
+    "gridSizes": [10.0, 20.0, 40.0, 80.0]
   },
   "layers": [
     {

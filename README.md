@@ -356,6 +356,17 @@ For `background.grid.cellSize`, validation depends on `grid.enabled`:
 - `enabled == true`: `cellSize` must be finite and `> 0`.
 - `enabled == false`: any finite `cellSize` is accepted.
 
+`SceneControllerInteractiveV2.setGridCellSize(...)` is fail-fast regardless of
+`grid.enabled`: non-finite and non-positive values throw `ArgumentError`.
+When grid is enabled, values below the safety minimum are clamped to
+`kMinGridCellSize` on commit.
+
+By default, `ScenePaletteSnapshot().gridSizes` uses legacy-equivalent presets:
+`[10, 20, 40, 80]`.
+`ScenePaletteSnapshot().penColors` and
+`ScenePaletteSnapshot().backgroundColors` also follow legacy `SceneDefaults`
+presets.
+
 At runtime, bounds/hit-testing/rendering are defensive:
 - non-finite or negative length-like values (`thickness`, `strokeWidth`,
   `hitPadding`) are soft-normalized to safe finite non-negative values;

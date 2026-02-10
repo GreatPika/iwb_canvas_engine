@@ -181,6 +181,7 @@ language: russian
 - [x] G4. Добавить engine-level parity harness v1 vs v2 (пока legacy ещё существует):
   - одинаковые входные event-script дают эквивалентный публичный результат (scene JSON, selected ids, contract-level signals/actions).
 - [x] G5. Закрыть все найденные parity-gap без изменения UX-контракта baseline.
+- [x] G6. Grid/palette parity hardening: v2 использует общую константу min-limit, fail-fast контракт `setGridCellSize`, и legacy-эквивалентные default presets для `gridSizes`, `penColors`, `backgroundColors`.
 
 Критерий приёмки G:
 - при открытии `example/lib/main.dart` и прохождении сценариев из G2 поведение и интерактивность не отличаются от baseline v1 в рамках зафиксированного checklist (включая выделение, ластик, line tool и редактирование текстовых узлов).

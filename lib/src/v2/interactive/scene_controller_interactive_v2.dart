@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import '../../core/action_events.dart';
 import '../../core/defaults.dart';
 import '../../core/geometry.dart';
+import '../../core/grid_safety_limits.dart';
 import '../../core/hit_test.dart';
 import '../../core/input_sampling.dart';
 import '../../core/interaction_types.dart';
@@ -231,9 +232,10 @@ class SceneControllerInteractiveV2 extends ChangeNotifier {
   }
 
   void setGridCellSize(double value) {
+    _requireFinitePositive(value, name: 'value');
     final gridEnabled = snapshot.background.grid.isEnabled;
     final resolved = gridEnabled
-        ? value.clamp(1.0, double.infinity).toDouble()
+        ? value.clamp(kMinGridCellSize, double.infinity).toDouble()
         : value;
     _core.commands.writeGridCellSizeSet(resolved);
   }

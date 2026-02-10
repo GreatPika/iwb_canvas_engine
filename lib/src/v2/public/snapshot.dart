@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import '../../core/defaults.dart';
 import '../../core/transform2d.dart';
 
 /// Stable node identifier for the v2 public model.
@@ -60,7 +61,7 @@ class BackgroundSnapshot {
 class GridSnapshot {
   const GridSnapshot({
     this.isEnabled = false,
-    this.cellSize = 20,
+    this.cellSize = SceneDefaults.gridCellSize,
     this.color = const Color(0x1F000000),
   });
 
@@ -77,16 +78,18 @@ class ScenePaletteSnapshot {
     List<double>? gridSizes,
   }) : penColors = List<Color>.unmodifiable(
          penColors == null
-             ? const <Color>[Color(0xFF000000)]
+             ? SceneDefaults.penColors
              : List<Color>.from(penColors),
        ),
        backgroundColors = List<Color>.unmodifiable(
          backgroundColors == null
-             ? const <Color>[Color(0xFFFFFFFF)]
+             ? SceneDefaults.backgroundColors
              : List<Color>.from(backgroundColors),
        ),
        gridSizes = List<double>.unmodifiable(
-         gridSizes == null ? const <double>[20] : List<double>.from(gridSizes),
+         gridSizes == null
+             ? SceneDefaults.gridSizes
+             : List<double>.from(gridSizes),
        );
 
   final List<Color> penColors;

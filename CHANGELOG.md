@@ -1,5 +1,13 @@
 ## Unreleased
 
+- V2 grid parity hardening: `SceneControllerInteractiveV2.setGridCellSize(...)`
+  is now fail-fast for non-finite/non-positive inputs regardless of grid
+  enabled state; enabled-grid values still clamp to the shared
+  `kMinGridCellSize` safety limit. `ScenePaletteSnapshot` default `gridSizes`
+  now matches legacy presets (`[10, 20, 40, 80]`). Default
+  `ScenePaletteSnapshot.penColors`/`backgroundColors` now also match legacy
+  `SceneDefaults` presets.
+
 - Fix: `ScenePainterV2` now applies text `lineHeight` with legacy-compatible
   semantics (absolute logical units normalized by `fontSize`), matching v1
   rendering behavior in text node line spacing.

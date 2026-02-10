@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/basic_v2.dart';
+import 'package:iwb_canvas_engine/src/core/grid_safety_limits.dart';
 import 'package:iwb_canvas_engine/src/core/pointer_input.dart';
 import 'package:iwb_canvas_engine/src/v2/controller/scene_controller_v2.dart';
 
@@ -123,11 +124,10 @@ void main() {
       );
 
       controller.setGridEnabled(false);
-      controller.setGridCellSize(-12);
-      expect(controller.snapshot.background.grid.cellSize, -12);
+      expect(() => controller.setGridCellSize(-12), throwsArgumentError);
       controller.setGridEnabled(true);
-      controller.setGridCellSize(-12);
-      expect(controller.snapshot.background.grid.cellSize, 1);
+      controller.setGridCellSize(0.5);
+      expect(controller.snapshot.background.grid.cellSize, kMinGridCellSize);
 
       final actionSub = controller.actions.listen((_) {});
       final editSub = controller.editTextRequests.listen((_) {});

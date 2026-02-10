@@ -18,7 +18,8 @@ class SceneDefaults {
     Color(0xFFC8E6C9),
   ];
 
-  static const List<double> gridSizes = <double>[10, 20, 40, 80];
+  static const double gridCellSize = 10;
+  static const List<double> gridSizes = <double>[gridCellSize, 20, 40, 80];
 
   static const double penThickness = 3;
   static const double highlighterThickness = 12;

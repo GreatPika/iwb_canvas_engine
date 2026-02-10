@@ -61,9 +61,9 @@ void main() {
     expect(() => palette.gridSizes.add(8), throwsUnsupportedError);
 
     final defaultPalette = ScenePaletteSnapshot();
-    expect(defaultPalette.penColors, isNotEmpty);
-    expect(defaultPalette.backgroundColors, isNotEmpty);
-    expect(defaultPalette.gridSizes, isNotEmpty);
+    expect(defaultPalette.penColors, SceneDefaults.penColors);
+    expect(defaultPalette.backgroundColors, SceneDefaults.backgroundColors);
+    expect(defaultPalette.gridSizes, SceneDefaults.gridSizes);
   });
 
   test('StrokeNodeSnapshot defensively copies and freezes points', () {
