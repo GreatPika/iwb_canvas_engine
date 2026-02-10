@@ -138,4 +138,97 @@ void main() {
     expect(strokeCache.debugHitCount, 0);
     expect(staticCache.debugBuildCount, 2);
   });
+
+  testWidgets(
+    'SceneViewV2 syncs owned/external caches and exposes debug getters',
+    (tester) async {
+      final controller = SceneControllerV2(
+        initialSnapshot: _snapshot(strokeY: 12, text: 'sync'),
+      );
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox(
+            width: 80,
+            height: 80,
+            child: SceneViewV2(controller: controller),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final state = tester.state(find.byType(SceneViewV2)) as dynamic;
+      expect(state.debugStaticLayerCache, isA<SceneStaticLayerCacheV2>());
+      expect(state.debugTextLayoutCache, isA<SceneTextLayoutCacheV2>());
+      expect(state.debugStrokePathCache, isA<SceneStrokePathCacheV2>());
+      expect(state.debugPathMetricsCache, isA<ScenePathMetricsCacheV2>());
+
+      final customPaint = tester.widget<CustomPaint>(find.byType(CustomPaint));
+      final painter = customPaint.painter! as ScenePainterV2;
+      expect(painter.imageResolver('missing'), isNull);
+
+      final extStaticA = SceneStaticLayerCacheV2();
+      final extTextA = SceneTextLayoutCacheV2(maxEntries: 4);
+      final extStrokeA = SceneStrokePathCacheV2(maxEntries: 4);
+      final extPathA = ScenePathMetricsCacheV2(maxEntries: 4);
+
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox(
+            width: 80,
+            height: 80,
+            child: SceneViewV2(
+              controller: controller,
+              staticLayerCache: extStaticA,
+              textLayoutCache: extTextA,
+              strokePathCache: extStrokeA,
+              pathMetricsCache: extPathA,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final extStaticB = SceneStaticLayerCacheV2();
+      final extTextB = SceneTextLayoutCacheV2(maxEntries: 4);
+      final extStrokeB = SceneStrokePathCacheV2(maxEntries: 4);
+      final extPathB = ScenePathMetricsCacheV2(maxEntries: 4);
+
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox(
+            width: 80,
+            height: 80,
+            child: SceneViewV2(
+              controller: controller,
+              staticLayerCache: extStaticB,
+              textLayoutCache: extTextB,
+              strokePathCache: extStrokeB,
+              pathMetricsCache: extPathB,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox(
+            width: 80,
+            height: 80,
+            child: SceneViewV2(controller: controller),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    },
+  );
 }

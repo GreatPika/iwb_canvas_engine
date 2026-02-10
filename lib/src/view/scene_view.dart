@@ -1,5 +1,3 @@
-// coverage:ignore-file
-
 import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';

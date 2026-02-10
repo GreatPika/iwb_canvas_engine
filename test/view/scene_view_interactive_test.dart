@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/core/interaction_types.dart';
@@ -225,4 +227,101 @@ void main() {
     await gesture.up();
     await tester.pump();
   });
+
+  testWidgets(
+    'SceneViewInteractiveV2 overlay painter covers preview branches',
+    (tester) async {
+      final controller = _OverlayTestController(
+        initialSnapshot: _snapshot(text: 'overlay'),
+      );
+      addTearDown(controller.dispose);
+
+      Future<void> paintOverlay() async {
+        await tester.pumpWidget(_host(controller));
+        await tester.pump();
+        final customPaint = tester.widget<CustomPaint>(
+          find.byType(CustomPaint),
+        );
+        final overlay = customPaint.foregroundPainter!;
+        final recorder = PictureRecorder();
+        final canvas = Canvas(recorder);
+        overlay.paint(canvas, const Size(120, 120));
+        recorder.endRecording();
+      }
+
+      controller.strokeActive = true;
+      controller.strokePoints = const <Offset>[];
+      await paintOverlay();
+
+      controller.strokePoints = const <Offset>[Offset(10, 10)];
+      controller.strokeThickness = 0;
+      await paintOverlay();
+
+      controller.strokeThickness = 4;
+      controller.strokeOpacity = 2;
+      await paintOverlay();
+
+      controller.strokePoints = const <Offset>[Offset(10, 10), Offset(20, 20)];
+      await paintOverlay();
+
+      controller.lineActive = true;
+      controller.lineStart = null;
+      controller.lineEnd = null;
+      await paintOverlay();
+
+      controller.lineStart = const Offset(5, 5);
+      controller.lineEnd = const Offset(25, 25);
+      controller.linePreviewThickness = 0;
+      await paintOverlay();
+
+      controller.linePreviewThickness = 2;
+      await paintOverlay();
+    },
+  );
+}
+
+class _OverlayTestController extends SceneControllerInteractiveV2 {
+  _OverlayTestController({required super.initialSnapshot});
+
+  bool strokeActive = false;
+  List<Offset> strokePoints = const <Offset>[];
+  double strokeThickness = 2;
+  Color strokeColor = const Color(0xFF123456);
+  double strokeOpacity = 1;
+
+  bool lineActive = false;
+  Offset? lineStart;
+  Offset? lineEnd;
+  double linePreviewThickness = 1;
+  Color lineColor = const Color(0xFF654321);
+
+  @override
+  bool get hasActiveStrokePreview => strokeActive;
+
+  @override
+  List<Offset> get activeStrokePreviewPoints => strokePoints;
+
+  @override
+  double get activeStrokePreviewThickness => strokeThickness;
+
+  @override
+  Color get activeStrokePreviewColor => strokeColor;
+
+  @override
+  double get activeStrokePreviewOpacity => strokeOpacity;
+
+  @override
+  bool get hasActiveLinePreview => lineActive;
+
+  @override
+  Offset? get activeLinePreviewStart => lineStart;
+
+  @override
+  Offset? get activeLinePreviewEnd => lineEnd;
+
+  @override
+  double get activeLinePreviewThickness => linePreviewThickness;
+
+  @override
+  Color get activeLinePreviewColor => lineColor;
 }

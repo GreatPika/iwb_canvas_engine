@@ -342,6 +342,100 @@ void main() {
   );
 
   test(
+    'ScenePainterV2 paints selected line/stroke and skips invalid line',
+    () async {
+      const background = Color(0xFFFFFFFF);
+      final controller = SceneControllerV2(
+        initialSnapshot: SceneSnapshot(
+          background: const BackgroundSnapshot(color: background),
+          layers: <LayerSnapshot>[
+            LayerSnapshot(
+              nodes: <NodeSnapshot>[
+                const LineNodeSnapshot(
+                  id: 'line-valid',
+                  start: Offset(0, 0),
+                  end: Offset(20, 0),
+                  thickness: 3,
+                  color: Color(0xFF000000),
+                  transform: Transform2D(
+                    a: 1,
+                    b: 0,
+                    c: 0,
+                    d: 1,
+                    tx: 20,
+                    ty: 20,
+                  ),
+                ),
+                const LineNodeSnapshot(
+                  id: 'line-invalid',
+                  start: Offset(double.nan, 0),
+                  end: Offset(20, 0),
+                  thickness: 3,
+                  color: Color(0xFF000000),
+                ),
+                StrokeNodeSnapshot(
+                  id: 'stroke-valid',
+                  points: <Offset>[Offset(0, 0), Offset(10, 10)],
+                  thickness: 3,
+                  color: Color(0xFF000000),
+                  transform: Transform2D(
+                    a: 1,
+                    b: 0,
+                    c: 0,
+                    d: 1,
+                    tx: 60,
+                    ty: 20,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+      controller.write<void>((writer) {
+        writer.writeSelectionReplace(const <String>{
+          'line-valid',
+          'line-invalid',
+          'stroke-valid',
+        });
+      });
+
+      final painter = ScenePainterV2(
+        controller: controller,
+        imageResolver: (_) => null,
+        selectionColor: const Color(0xFFFF0000),
+        selectionStrokeWidth: 2,
+        strokePathCache: null,
+      );
+      final rendered = await _paintToImage(painter, width: 100, height: 60);
+      final nonBackground = await _countNonBackgroundPixels(
+        rendered,
+        background,
+      );
+      expect(nonBackground, greaterThan(0));
+
+      final cachedPainter = ScenePainterV2(
+        controller: controller,
+        imageResolver: (_) => null,
+        selectionColor: const Color(0xFFFF0000),
+        selectionStrokeWidth: 2,
+        strokePathCache: SceneStrokePathCacheV2(maxEntries: 8),
+      );
+      final cachedRendered = await _paintToImage(
+        cachedPainter,
+        width: 100,
+        height: 60,
+      );
+      final cachedNonBackground = await _countNonBackgroundPixels(
+        cachedRendered,
+        background,
+      );
+      expect(cachedNonBackground, greaterThan(0));
+    },
+  );
+
+  test(
     'ScenePainterV2 keeps grid visible with over-density via stride',
     () async {
       const background = Color(0xFFFFFFFF);

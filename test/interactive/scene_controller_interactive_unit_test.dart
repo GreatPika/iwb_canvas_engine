@@ -1167,5 +1167,186 @@ void main() {
       await tester.pump(const Duration(seconds: 11));
       expect(controller.hasPendingLineStart, isFalse);
     });
+
+    test(
+      'configured draw-mode entry clears selection and delegates commands',
+      () {
+        final controller = SceneControllerInteractiveV2(
+          scene: Scene(
+            layers: <Layer>[
+              Layer(isBackground: true),
+              Layer(
+                nodes: <SceneNode>[RectNode(id: 'n', size: const Size(10, 10))],
+              ),
+            ],
+          ),
+          clearSelectionOnDrawModeEnter: true,
+        );
+        addTearDown(controller.dispose);
+
+        controller.setSelection(const <String>{'n'});
+        expect(controller.selectedNodeIds, isNotEmpty);
+        controller.setMode(CanvasMode.draw);
+        expect(controller.selectedNodeIds, isEmpty);
+
+        controller.setDrawTool(DrawTool.pen);
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: const Offset(10, 10),
+            timestampMs: 1,
+            phase: PointerPhase.down,
+          ),
+        );
+        expect(controller.activeStrokePreviewColor, controller.drawColor);
+
+        controller.setBackgroundColor(const Color(0xFF010203));
+        expect(controller.snapshot.background.color, const Color(0xFF010203));
+
+        controller.setCameraOffset(const Offset(3, 4));
+        expect(controller.snapshot.camera.offset, const Offset(3, 4));
+
+        expect(
+          controller.patchNode(
+            const RectNodePatch(
+              id: 'n',
+              size: PatchField<Size>.value(Size(20, 10)),
+            ),
+          ),
+          isTrue,
+        );
+        expect(
+          (controller.scene.layers[1].nodes.first as RectNode).size,
+          const Size(20, 10),
+        );
+      },
+    );
+
+    test('eraser path and move hit-tests cover multi-candidate sorting', () {
+      final controller = SceneControllerInteractiveV2(
+        scene: Scene(
+          layers: <Layer>[
+            Layer(isBackground: true),
+            Layer(
+              nodes: <SceneNode>[
+                LineNode(
+                  id: 'line-a',
+                  start: const Offset(-10, 0),
+                  end: const Offset(10, 0),
+                  thickness: 2,
+                  color: const Color(0xFF000000),
+                )..position = const Offset(20, 20),
+                StrokeNode(
+                  id: 'stroke-a',
+                  points: const <Offset>[Offset(-5, 0), Offset(5, 0)],
+                  thickness: 2,
+                  color: const Color(0xFF000000),
+                )..position = const Offset(20, 20),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      final actions = <ActionCommitted>[];
+      final sub = controller.actions.listen(actions.add);
+      addTearDown(sub.cancel);
+
+      controller.setMode(CanvasMode.draw);
+      controller.setDrawTool(DrawTool.eraser);
+
+      controller.handlePointer(
+        _sample(
+          pointerId: 10,
+          position: const Offset(10, 20),
+          timestampMs: 1,
+          phase: PointerPhase.down,
+        ),
+      );
+      controller.handlePointer(
+        _sample(
+          pointerId: 10,
+          position: const Offset(30, 20),
+          timestampMs: 2,
+          phase: PointerPhase.move,
+        ),
+      );
+      controller.handlePointer(
+        _sample(
+          pointerId: 10,
+          position: const Offset(30, 20),
+          timestampMs: 3,
+          phase: PointerPhase.up,
+        ),
+      );
+
+      expect(actions.any((a) => a.type == ActionType.erase), isTrue);
+
+      controller.replaceScene(
+        SceneSnapshot(
+          layers: <LayerSnapshot>[
+            LayerSnapshot(isBackground: true),
+            LayerSnapshot(
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(
+                  id: 'bottom',
+                  size: const Size(30, 30),
+                  transform: Transform2D.translation(const Offset(50, 50)),
+                ),
+                RectNodeSnapshot(
+                  id: 'top',
+                  size: const Size(20, 20),
+                  transform: Transform2D.translation(const Offset(50, 50)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      controller.setMode(CanvasMode.move);
+
+      controller.handlePointer(
+        _sample(
+          pointerId: 20,
+          position: const Offset(0, 0),
+          timestampMs: 10,
+          phase: PointerPhase.down,
+        ),
+      );
+      controller.handlePointer(
+        _sample(
+          pointerId: 20,
+          position: const Offset(80, 80),
+          timestampMs: 11,
+          phase: PointerPhase.move,
+        ),
+      );
+      controller.handlePointer(
+        _sample(
+          pointerId: 20,
+          position: const Offset(80, 80),
+          timestampMs: 12,
+          phase: PointerPhase.up,
+        ),
+      );
+
+      controller.handlePointer(
+        _sample(
+          pointerId: 21,
+          position: const Offset(50, 50),
+          timestampMs: 13,
+          phase: PointerPhase.down,
+        ),
+      );
+      controller.handlePointer(
+        _sample(
+          pointerId: 21,
+          position: const Offset(50, 50),
+          timestampMs: 14,
+          phase: PointerPhase.up,
+        ),
+      );
+    });
   });
 }

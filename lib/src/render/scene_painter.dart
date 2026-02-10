@@ -657,7 +657,7 @@ class ScenePainterV2 extends CustomPainter {
         } else {
           final path = strokePathCache != null
               ? strokePathCache!.getOrBuild(stroke)
-              : _buildStrokePath(stroke.points); // coverage:ignore-line
+              : _buildStrokePath(stroke.points);
           canvas.drawPath(
             path,
             _haloPaint(

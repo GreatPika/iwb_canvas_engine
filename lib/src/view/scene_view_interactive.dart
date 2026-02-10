@@ -392,7 +392,6 @@ class _SceneInteractiveOverlayPainterV2 extends CustomPainter {
     );
 
     if (points.length == 1) {
-      // coverage:ignore-start
       canvas.drawCircle(
         toView(points.first, cameraOffset),
         thickness / 2,
@@ -400,7 +399,6 @@ class _SceneInteractiveOverlayPainterV2 extends CustomPainter {
           ..style = PaintingStyle.fill
           ..color = color,
       );
-      // coverage:ignore-end
       return;
     }
 
