@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/src/core/interaction_types.dart';
+import 'package:iwb_canvas_engine/src/core/pointer_input.dart';
 import 'package:iwb_canvas_engine/src/v2/interactive/scene_controller_interactive_v2.dart';
 import 'package:iwb_canvas_engine/src/v2/public/snapshot.dart';
 import 'package:iwb_canvas_engine/src/v2/render/scene_painter_v2.dart';
@@ -155,5 +157,72 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.byType(SceneViewInteractiveV2), findsOneWidget);
+  });
+
+  testWidgets('SceneViewInteractiveV2 paints single-point stroke preview', (
+    tester,
+  ) async {
+    final controller = SceneControllerInteractiveV2(
+      initialSnapshot: _snapshot(text: 'preview-dot'),
+    );
+    addTearDown(controller.dispose);
+
+    controller.setMode(CanvasMode.draw);
+    controller.setDrawTool(DrawTool.pen);
+
+    await tester.pumpWidget(_host(controller));
+    await tester.pump();
+
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 301,
+        position: Offset(40, 40),
+        timestampMs: 1,
+        phase: PointerPhase.down,
+      ),
+    );
+    await tester.pump();
+
+    expect(controller.hasActiveStrokePreview, isTrue);
+    expect(controller.activeStrokePreviewPoints.length, 1);
+
+    controller.handlePointer(
+      const PointerSample(
+        pointerId: 301,
+        position: Offset(40, 40),
+        timestampMs: 2,
+        phase: PointerPhase.up,
+      ),
+    );
+    await tester.pump();
+  });
+
+  testWidgets('SceneViewInteractiveV2 paints active line preview', (
+    tester,
+  ) async {
+    final controller = SceneControllerInteractiveV2(
+      initialSnapshot: _snapshot(text: 'preview-line'),
+    );
+    addTearDown(controller.dispose);
+
+    controller.setMode(CanvasMode.draw);
+    controller.setDrawTool(DrawTool.line);
+
+    await tester.pumpWidget(_host(controller));
+    await tester.pump();
+
+    final gesture = await tester.startGesture(
+      const Offset(20, 20),
+      pointer: 302,
+    );
+    await gesture.moveBy(const Offset(24, 0));
+    await tester.pump();
+
+    expect(controller.hasActiveLinePreview, isTrue);
+    expect(controller.activeLinePreviewStart, isNotNull);
+    expect(controller.activeLinePreviewEnd, isNotNull);
+
+    await gesture.up();
+    await tester.pump();
   });
 }

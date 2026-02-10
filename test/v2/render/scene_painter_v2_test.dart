@@ -711,6 +711,105 @@ void main() {
     },
   );
 
+  test(
+    'ScenePainterV2 covers selection halo branches for image/text/stroke/path',
+    () async {
+      const background = Color(0xFFFFFFFF);
+      final controller = SceneControllerV2(
+        initialSnapshot: SceneSnapshot(
+          background: const BackgroundSnapshot(color: background),
+          layers: <LayerSnapshot>[
+            LayerSnapshot(
+              nodes: <NodeSnapshot>[
+                const ImageNodeSnapshot(
+                  id: 'img-sel',
+                  imageId: 'missing',
+                  size: Size(20, 16),
+                  transform: Transform2D(
+                    a: 1,
+                    b: 0,
+                    c: 0,
+                    d: 1,
+                    tx: 20,
+                    ty: 20,
+                  ),
+                ),
+                TextNodeSnapshot(
+                  id: 'txt-sel',
+                  text: 'T',
+                  size: const Size(30, 16),
+                  color: const Color(0xFF000000),
+                  transform: Transform2D.translation(const Offset(60, 20)),
+                ),
+                StrokeNodeSnapshot(
+                  id: 'dot-sel',
+                  points: <Offset>[Offset(40, 45)],
+                  thickness: 6,
+                  color: Color(0xFF000000),
+                ),
+                StrokeNodeSnapshot(
+                  id: 'stroke-sel',
+                  points: <Offset>[Offset(65, 40), Offset(78, 48)],
+                  thickness: 4,
+                  color: Color(0xFF000000),
+                ),
+                const PathNodeSnapshot(
+                  id: 'path-open-sel',
+                  svgPathData: 'M0 0 L30 0',
+                  strokeColor: Color(0xFF000000),
+                  strokeWidth: 3,
+                  transform: Transform2D(
+                    a: 1,
+                    b: 0,
+                    c: 0,
+                    d: 1,
+                    tx: 20,
+                    ty: 80,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      controller.write((writer) {
+        writer.writeSelectionReplace(const <NodeId>{
+          'img-sel',
+          'txt-sel',
+          'dot-sel',
+          'stroke-sel',
+          'path-open-sel',
+        });
+      });
+
+      final withoutCache = await _paintToImage(
+        ScenePainterV2(controller: controller, imageResolver: (_) => null),
+        width: 120,
+        height: 120,
+      );
+      expect(
+        await _countNonBackgroundPixels(withoutCache, background),
+        greaterThan(0),
+      );
+
+      final withPathCache = await _paintToImage(
+        ScenePainterV2(
+          controller: controller,
+          imageResolver: (_) => null,
+          pathMetricsCache: ScenePathMetricsCacheV2(),
+        ),
+        width: 120,
+        height: 120,
+      );
+      expect(
+        await _countNonBackgroundPixels(withPathCache, background),
+        greaterThan(0),
+      );
+    },
+  );
+
   test('ScenePainterV2 shouldRepaint reflects individual fields', () {
     final c1 = SceneControllerV2();
     final c2 = SceneControllerV2();

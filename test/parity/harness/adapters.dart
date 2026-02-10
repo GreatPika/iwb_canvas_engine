@@ -1,7 +1,7 @@
 import 'dart:ui';
 
-import 'package:iwb_canvas_engine/advanced.dart' as v1;
-import 'package:iwb_canvas_engine/basic_v2.dart' as v2;
+import 'package:iwb_canvas_engine/src/legacy_api.dart' as v1;
+import 'package:iwb_canvas_engine/basic.dart' as v2;
 import 'package:iwb_canvas_engine/src/core/transform2d.dart';
 import 'package:iwb_canvas_engine/src/v2/controller/scene_controller_v2.dart';
 

@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/advanced.dart';
+import 'package:iwb_canvas_engine/src/legacy_api.dart';
 
 // INV:INV-SELECTION-SETSELECTION-COALESCED
 // INV:INV-SELECTION-UNORDERED-SET

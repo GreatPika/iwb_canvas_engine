@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/advanced.dart';
+import 'package:iwb_canvas_engine/src/legacy_api.dart';
 
 Future<Color> _pixelAt(Image image, int x, int y) async {
   final data = await image.toByteData(format: ImageByteFormat.rawRgba);

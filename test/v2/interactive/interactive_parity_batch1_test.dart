@@ -4,7 +4,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/basic_v2.dart';
+import 'package:iwb_canvas_engine/basic.dart';
 import '../../../example/lib/main.dart';
 
 void main() {

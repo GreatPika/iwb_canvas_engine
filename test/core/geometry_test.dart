@@ -2,7 +2,7 @@ import 'dart:ui';
 import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/advanced.dart';
+import 'package:iwb_canvas_engine/src/legacy_api.dart';
 
 void main() {
   test('rotatePoint rotates around center', () {

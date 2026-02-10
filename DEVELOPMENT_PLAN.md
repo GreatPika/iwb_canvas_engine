@@ -259,14 +259,14 @@ language: russian
 
 ### H. Cutover и release
 
-- [ ] H1. После прохождения parity, закрытия `G2L.*` и всех тестов переключить `basic.dart` и `advanced.dart` на v2.
-- [ ] H2. Удалить legacy API в рамках major (без отдельного legacy entrypoint).
-- [ ] H3. Обновить docs в том же PR:
+- [x] H1. После прохождения parity, закрытия `G2L.*` и всех тестов переключить `basic.dart` и `advanced.dart` на v2.
+- [x] H2. Удалить legacy API в рамках major (без отдельного legacy entrypoint).
+- [x] H3. Обновить docs в том же PR:
   - `README.md`;
   - `API_GUIDE.md`;
   - `ARCHITECTURE.md`;
   - public dartdoc (если менялся публичный контракт).
-- [ ] H4. Обновить `CHANGELOG.md` (`## Unreleased`, пометить breaking как `Breaking:`).
+- [x] H4. Обновить `CHANGELOG.md` (`## Unreleased`, пометить breaking как `Breaking:`).
 
 Критерий приёмки H:
 - публичный API major-версии согласован, документация и changelog синхронны.

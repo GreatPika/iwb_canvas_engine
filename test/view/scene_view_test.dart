@@ -1,7 +1,7 @@
 import 'package:flutter/rendering.dart' as rendering;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/advanced.dart';
+import 'package:iwb_canvas_engine/src/legacy_api.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

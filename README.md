@@ -16,8 +16,8 @@ Live demo and docs:
 
 **What it is**
 
-- A Flutter canvas engine with a mutable scene model (layers + nodes).
-- Rendering via `CustomPaint` (`ScenePainter`) and a widget integration (`SceneView`).
+- A Flutter canvas engine with immutable v2 snapshots and transactional writes.
+- Rendering via `CustomPaint` with interactive v2 widget/controller integration.
 - Input handling + tool logic (move/select, pen/highlighter/line/eraser).
 - JSON v2 import/export for persistence and interoperability.
 
@@ -50,18 +50,16 @@ flutter pub add iwb_canvas_engine
 
 Prefer importing the smallest API surface that fits your use case:
 
-- `package:iwb_canvas_engine/basic.dart` — minimal “happy path” API (recommended).
-- `package:iwb_canvas_engine/advanced.dart` — full export surface (low-level
-  painting, hit-testing, pointer tracking, etc.).
-- `package:iwb_canvas_engine/basic_v2.dart` — preview v2 immutable model
-  with JSON v2 snapshot codec (snapshot/spec/patch + serialization helpers).
-- `package:iwb_canvas_engine/advanced_v2.dart` — preview v2 alias of
-  `basic_v2.dart` during migration stage B.
+- `package:iwb_canvas_engine/basic.dart` — primary v2 API (recommended).
+- `package:iwb_canvas_engine/advanced.dart` — advanced alias of `basic.dart`.
+- `package:iwb_canvas_engine/basic_v2.dart` — deprecated compatibility alias
+  to `basic.dart`.
+- `package:iwb_canvas_engine/advanced_v2.dart` — deprecated compatibility
+  alias to `advanced.dart`.
 
-## v2 preview API (snapshot + serialization)
+## V2 API (snapshot + serialization)
 
-The preview v2 entrypoints expose immutable public contracts for transaction-
-first migration:
+The public entrypoints expose immutable v2 contracts:
 
 - `SceneSnapshot`, `LayerSnapshot`, `NodeSnapshot` variants (read model).
 - `NodeSpec` variants (node creation intent).
@@ -69,13 +67,13 @@ first migration:
   - `PatchField.absent()` => do not change field.
   - `PatchField.value(x)` => set field to `x`.
   - `PatchField.nullValue()` => explicitly set field to `null`.
-- JSON helpers with the same names as v1 but v2 types:
+- JSON helpers with v2 snapshot types:
   - `encodeSceneToJson(SceneSnapshot)`
   - `decodeSceneFromJson(String)`
   - `encodeScene(SceneSnapshot)`
   - `decodeScene(Map<String, dynamic>)`
 
-No bridge to mutable v1 `Scene` is provided in this stage by design.
+Legacy v1 public API is removed from `basic.dart`/`advanced.dart`.
 
 ## Core concepts
 
@@ -333,7 +331,7 @@ final restored = decodeSceneFromJson(json);
 For v2 snapshot API:
 
 ```dart
-import 'package:iwb_canvas_engine/basic_v2.dart';
+import 'package:iwb_canvas_engine/basic.dart';
 
 final snapshot = SceneSnapshot(
   layers: [LayerSnapshot(nodes: [const RectNodeSnapshot(id: 'r1', size: Size(80, 40))])],

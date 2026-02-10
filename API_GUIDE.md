@@ -18,18 +18,18 @@ It is written to be **LLM/agent-friendly**: copy/paste snippets, explicit invari
 
 Prefer importing the smallest surface area that fits your use case:
 
-- **Recommended:** `package:iwb_canvas_engine/basic.dart` — common “happy path”.
-- **Advanced:** `package:iwb_canvas_engine/advanced.dart` — low-level rendering/input/hit-test exports.
-- **v2 preview:** `package:iwb_canvas_engine/basic_v2.dart` — immutable
-  snapshot/spec/patch model + JSON v2 snapshot codec (no `SceneControllerV2`
-  export yet).
-- **v2 preview advanced:** `package:iwb_canvas_engine/advanced_v2.dart` —
-  currently a strict alias of `basic_v2.dart` during migration stage B.
+- **Recommended:** `package:iwb_canvas_engine/basic.dart` — primary v2 API.
+- **Advanced:** `package:iwb_canvas_engine/advanced.dart` — advanced alias of
+  `basic.dart`.
+- **Compatibility alias:** `package:iwb_canvas_engine/basic_v2.dart` —
+  deprecated alias of `basic.dart`.
+- **Compatibility alias:** `package:iwb_canvas_engine/advanced_v2.dart` —
+  deprecated alias of `advanced.dart`.
 
-### v2 preview: minimal model creation examples
+### v2: minimal model creation examples
 
 ```dart
-import 'package:iwb_canvas_engine/basic_v2.dart';
+import 'package:iwb_canvas_engine/basic.dart';
 
 final scene = SceneSnapshot(
   layers: [
@@ -581,10 +581,10 @@ final json = encodeSceneToJson(controller.scene);
 final restored = decodeSceneFromJson(json);
 ```
 
-For v2 snapshot API:
+For snapshot API:
 
 ```dart
-import 'package:iwb_canvas_engine/basic_v2.dart';
+import 'package:iwb_canvas_engine/basic.dart';
 
 final snapshot = SceneSnapshot(
   layers: [LayerSnapshot(nodes: [const RectNodeSnapshot(id: 'rect-1', size: Size(120, 80))])],
@@ -600,8 +600,8 @@ Gotchas:
   `SceneJsonFormatException`.
 
 Relevant APIs:
-- `encodeSceneToJson`, `decodeSceneFromJson`, `SceneJsonFormatException` — `lib/src/serialization/scene_codec.dart`
-- v2 snapshot codec with same function names — `lib/src/v2/serialization/scene_codec.dart`
+- `encodeSceneToJson`, `decodeSceneFromJson`, `SceneJsonFormatException` —
+  `lib/src/v2/serialization/scene_codec.dart`
 
 ### 8) Background / grid / camera
 
@@ -869,14 +869,16 @@ Decode canonicalization:
 
 ### Entrypoints
 
-- `lib/basic.dart` — minimal public surface (recommended)
-- `lib/advanced.dart` — full export surface
+- `lib/basic.dart` — primary v2 public surface (recommended)
+- `lib/advanced.dart` — advanced alias of `basic.dart`
 
 ### Primary integration
 
-- `SceneView` — `lib/src/view/scene_view.dart`
-- `SceneController` — `lib/src/input/scene_controller.dart`
-- Events: `ActionCommitted`, `ActionType`, `EditTextRequested` — `lib/src/input/action_events.dart`
+- `SceneViewInteractiveV2` — `lib/src/v2/view/scene_view_interactive_v2.dart`
+- `SceneControllerInteractiveV2` —
+  `lib/src/v2/interactive/scene_controller_interactive_v2.dart`
+- Events: `ActionCommitted`, `ActionType`, `EditTextRequested` —
+  `lib/src/core/action_events.dart`
 
 ### Model
 

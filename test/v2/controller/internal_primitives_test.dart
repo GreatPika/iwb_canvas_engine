@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/basic_v2.dart' hide NodeId;
+import 'package:iwb_canvas_engine/basic.dart' hide NodeId;
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/v2/controller/change_set.dart';
 import 'package:iwb_canvas_engine/src/v2/controller/scene_writer.dart';

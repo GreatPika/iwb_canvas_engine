@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/advanced.dart';
+import 'package:iwb_canvas_engine/src/legacy_api.dart';
 import 'package:iwb_canvas_engine/src/input/internal/selection_geometry.dart';
 
 void main() {

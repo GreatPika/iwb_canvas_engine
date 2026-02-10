@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/basic_v2.dart';
+import 'package:iwb_canvas_engine/basic.dart';
 import 'package:iwb_canvas_engine/src/v2/serialization/scene_codec.dart'
     show encodeSceneDocument;
 

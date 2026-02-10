@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/basic_v2.dart';
+import 'package:iwb_canvas_engine/basic.dart';
 
 void main() {
   test('encode -> decode -> encode is stable', () {

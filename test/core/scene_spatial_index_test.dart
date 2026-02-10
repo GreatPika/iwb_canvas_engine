@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/basic.dart';
+import 'package:iwb_canvas_engine/src/legacy_api.dart';
 import 'package:iwb_canvas_engine/src/core/scene_spatial_index.dart';
 
 void main() {

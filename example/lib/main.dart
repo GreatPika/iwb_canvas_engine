@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
-import 'package:iwb_canvas_engine/basic_v2.dart';
+import 'package:iwb_canvas_engine/basic.dart';
 
 const ValueKey<String> canvasHostKey = ValueKey<String>('canvas-host');
 const ValueKey<String> modeMoveKey = ValueKey<String>('mode-move');

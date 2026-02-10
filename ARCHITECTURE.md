@@ -110,10 +110,10 @@ here as a checklist to prevent subtle behavioral regressions during refactors.
 
 ```text
 lib/
-  basic.dart        // Minimal public API
-  advanced.dart     // Full public API
-  basic_v2.dart     // Preview v2 immutable public API
-  advanced_v2.dart  // Preview v2 immutable public API (superset alias)
+  basic.dart        // Primary v2 public API
+  advanced.dart     // Advanced alias of basic.dart
+  basic_v2.dart     // Deprecated compatibility alias to basic.dart
+  advanced_v2.dart  // Deprecated compatibility alias to advanced.dart
   src/
     core/           // Scene model, math, selection, hit-test
     render/         // Canvas rendering for background, layers, nodes
@@ -123,18 +123,17 @@ lib/
     v2/serialization/ // JSON v2 codec (SceneSnapshot API)
 ```
 
-## v2 public preview surface
+## v2 public surface
 
-`basic_v2.dart` / `advanced_v2.dart` currently expose immutable v2 contracts:
+`basic.dart` / `advanced.dart` expose immutable v2 contracts:
 
 - immutable read models (`SceneSnapshot`, `LayerSnapshot`, `NodeSnapshot`)
 - immutable write intents (`NodeSpec`, `NodePatch`)
 - tri-state patch field semantics (`PatchField.absent/value/nullValue`)
 - JSON helpers with v2 snapshot types (`encodeScene*` / `decodeScene*`)
 
-At this stage, no v2 controller/runtime is exported from these entrypoints.
-Mutation orchestration (`write(...)`, commit pipeline, epoch lifecycle) is
-added in the next migration phases under `lib/src/v2/controller/**`.
+The compatibility aliases `basic_v2.dart` / `advanced_v2.dart` re-export the
+same symbols for migration convenience.
 
 ## Data model
 

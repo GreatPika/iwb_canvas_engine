@@ -1,5 +1,15 @@
 ## Unreleased
 
+- Breaking: `package:iwb_canvas_engine/basic.dart` and
+  `package:iwb_canvas_engine/advanced.dart` now expose the v2 immutable
+  snapshot/spec/patch API (`SceneControllerInteractiveV2`,
+  `SceneViewInteractiveV2`, v2 JSON codec). Legacy mutable controller/view
+  symbols are removed from public entrypoints.
+
+- Breaking: legacy public API cutover is complete. `basic_v2.dart` and
+  `advanced_v2.dart` remain only as deprecated compatibility aliases to
+  `basic.dart` and `advanced.dart`.
+
 - V2 grid parity hardening: `SceneControllerInteractiveV2.setGridCellSize(...)`
   is now fail-fast for non-finite/non-positive inputs regardless of grid
   enabled state; enabled-grid values still clamp to the shared
@@ -35,8 +45,8 @@
   (`G3.9`) in `example/test/interactive_parity_batch1_test.dart`.
 
 - Add v2 snapshot JSON codec at `lib/src/v2/serialization/scene_codec.dart`
-  and export it from `basic_v2.dart` / `advanced_v2.dart` with parity function
-  names (`encodeScene*` / `decodeScene*`) and strict JSON validation behavior.
+  and export it from public entrypoints with parity function names
+  (`encodeScene*` / `decodeScene*`) and strict JSON validation behavior.
 
 - Add preview v2 immutable public API entrypoints:
   `basic_v2.dart` and `advanced_v2.dart` (snapshot/spec/patch model with

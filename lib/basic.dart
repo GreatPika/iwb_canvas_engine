@@ -1,42 +1,35 @@
 /// Basic public API exports for `iwb_canvas_engine`.
 ///
-/// This entrypoint is intended for the common "happy path" integration:
-/// - Build and mutate a [Scene] via [SceneController]
-/// - Render and handle input via [SceneView]
-/// - Persist via JSON codec helpers
-///
-/// Low-level building blocks (custom painting, hit testing, pointer tracking,
-/// etc.) are intentionally omitted. For the full API, import
-/// `package:iwb_canvas_engine/advanced.dart`.
+/// This is the primary v2 entrypoint and recommended default import.
 library;
 
-// Model.
+export 'src/v2/public/node_patch.dart';
+export 'src/v2/public/node_spec.dart';
+export 'src/v2/public/patch_field.dart';
+export 'src/v2/public/snapshot.dart' hide NodeId;
+export 'src/core/action_events.dart';
 export 'src/core/defaults.dart';
 export 'src/core/geometry.dart';
+export 'src/core/interaction_types.dart';
 export 'src/core/nodes.dart';
+export 'src/core/pointer_input.dart' show PointerInputSettings;
 export 'src/core/scene.dart';
 export 'src/core/transform2d.dart';
-
-// Integration.
-export 'src/input/action_events.dart';
-export 'src/input/pointer_input.dart' show PointerInputSettings;
-export 'src/input/scene_controller.dart';
-export 'src/view/scene_view.dart';
-
-// JSON.
-export 'src/serialization/scene_codec.dart'
+export 'src/v2/interactive/scene_controller_interactive_v2.dart';
+export 'src/v2/view/scene_view_interactive_v2.dart';
+export 'src/v2/render/scene_painter_v2.dart'
+    show
+        ImageResolverV2,
+        SceneStaticLayerCacheV2,
+        SceneStrokePathCacheV2,
+        SceneTextLayoutCacheV2,
+        ScenePathMetricsCacheV2;
+export 'src/v2/serialization/scene_codec.dart'
     show
         SceneJsonFormatException,
+        decodeScene,
         decodeSceneFromJson,
+        encodeScene,
         encodeSceneToJson,
         schemaVersionWrite,
         schemaVersionsRead;
-
-// Types needed to use the widget API.
-export 'src/render/scene_painter.dart'
-    show
-        ImageResolver,
-        ThinLineSnapStrategy,
-        SceneStaticLayerCache,
-        SceneTextLayoutCache,
-        SceneStrokePathCache;
