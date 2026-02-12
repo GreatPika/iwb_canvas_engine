@@ -121,6 +121,10 @@ Node spec variants:
 
 `NodeSpec.id` is optional; controller can generate ids.
 
+Validation notes:
+
+- `addNode(...)` validates incoming `NodeSpec` values strictly and throws `ArgumentError` for malformed numeric/geometry input (including non-finite `transform`, negative `hitPadding`, invalid geometry fields, invalid `svgPathData`, and `opacity` outside `[0,1]`).
+
 ### 5.2 Patch nodes (`NodePatch`)
 
 `SceneController.patchNode(...)` accepts `NodePatch` and returns `bool` (true when node was updated).
@@ -135,6 +139,12 @@ Patch variants:
 - `PathNodePatch`
 
 Common patch fields are grouped in `CommonNodePatch`.
+
+Validation notes:
+
+- `patchNode(...)` validates only fields present in `NodePatch`/`CommonNodePatch` and throws `ArgumentError` for malformed values.
+- `PatchField.nullValue()` is rejected for non-nullable fields with `ArgumentError`.
+- `CommonNodePatch.opacity` is strict at write boundary (`[0,1]`).
 
 ### 5.3 Tri-state patch semantics (`PatchField<T>`)
 
@@ -264,6 +274,7 @@ Notification semantics:
 Behavior notes:
 
 - Transform operations affect transformable, unlocked selected nodes.
+- Transform/translate write operations reject non-finite deltas (`Transform2D`/`Offset`) with `ArgumentError`.
 - Background/non-deletable policy is respected by delete flows.
 - `selectAll(onlySelectable: true)` selects visible selectable foreground nodes.
 - `selectAll(onlySelectable: false)` also includes visible non-selectable foreground nodes.

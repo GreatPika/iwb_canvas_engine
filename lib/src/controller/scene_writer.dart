@@ -103,6 +103,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   bool writeNodeTransformSet(NodeId id, Transform2D transform) {
+    _txnRequireFiniteTransform(transform, name: 'transform');
     final existing = txnFindNodeById(_ctx.workingScene, id);
     if (existing == null) return false;
     if (existing.node.transform == transform) return false;
@@ -180,6 +181,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   int writeSelectionTranslate(Offset delta) {
+    _txnRequireFiniteOffset(delta, name: 'delta');
     if (delta == Offset.zero || _ctx.workingSelection.isEmpty) {
       return 0;
     }
@@ -201,6 +203,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   int writeSelectionTransform(Transform2D delta) {
+    _txnRequireFiniteTransform(delta, name: 'delta');
     final selected = _ctx.workingSelection;
     if (selected.isEmpty) return 0;
 
@@ -376,6 +379,15 @@ class SceneWriter implements SceneWriteTxn {
   void _txnRequireFiniteOffset(Offset value, {required String name}) {
     if (value.dx.isFinite && value.dy.isFinite) return;
     throw ArgumentError.value(value, name, 'Offset must be finite.');
+  }
+
+  void _txnRequireFiniteTransform(Transform2D value, {required String name}) {
+    if (value.isFinite) return;
+    throw ArgumentError.value(
+      value,
+      name,
+      'Transform2D fields must be finite.',
+    );
   }
 
   void _txnRequireFinitePositive(double value, {required String name}) {

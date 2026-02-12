@@ -326,6 +326,11 @@ NodeSnapshot txnNodeToSnapshot(SceneNode node) {
 }
 
 SceneNode txnNodeFromSpec(NodeSpec spec, {required NodeId fallbackId}) {
+  sceneValidateNodeSpecValues(
+    spec,
+    field: 'spec',
+    onError: _txnSnapshotValidationError,
+  );
   final id = spec.id ?? fallbackId;
   switch (spec) {
     case ImageNodeSpec image:
@@ -443,6 +448,12 @@ bool txnApplyNodePatch(SceneNode node, NodePatch patch) {
       'NodePatch id does not match target node id ${node.id}.',
     );
   }
+
+  sceneValidateNodePatchValues(
+    patch,
+    field: 'patch',
+    onError: _txnSnapshotValidationError,
+  );
 
   changed = _txnApplyCommonPatch(node, patch.common) || changed;
 

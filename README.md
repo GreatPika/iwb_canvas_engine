@@ -84,6 +84,7 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Safe transactional writes: `SceneWriteTxn` via `controller.write((txn) { ... })`.
 - Write intents: `NodeSpec` variants.
 - Partial updates: `NodePatch` + tri-state `PatchField<T>`.
+- Write-boundary validation: `addNode(...)`/`patchNode(...)` fail fast with `ArgumentError` for invalid `NodeSpec`/`NodePatch` values (including `transform`, `hitPadding`, and `opacity` outside `[0,1]`), and transform/translate write operations reject non-finite `Transform2D`/`Offset`.
 - Serialization: `encodeScene*`, `decodeScene*`, `SceneJsonFormatException`.
 - Event payload contract: `ActionCommitted.nodeIds/payload` are immutable snapshots.
 - Selection contract: commit normalization keeps explicit non-selectable ids valid while filtering missing/background/invisible ids.

@@ -295,6 +295,41 @@ void main() {
     );
   });
 
+  test('SceneWriter rejects non-finite transform and translate values', () {
+    // INV:INV-V2-WRITE-NUMERIC-GUARDS
+    final ctx = TxnContext(
+      baseScene: Scene(
+        layers: <Layer>[
+          Layer(
+            nodes: <SceneNode>[RectNode(id: 'r1', size: const Size(10, 10))],
+          ),
+        ],
+      ),
+      workingSelection: <NodeId>{'r1'},
+      workingNodeIds: <NodeId>{'r1'},
+      nodeIdSeed: 0,
+    );
+    final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+
+    expect(
+      () => writer.writeNodeTransformSet(
+        'r1',
+        const Transform2D(a: double.nan, b: 0, c: 0, d: 1, tx: 0, ty: 0),
+      ),
+      throwsArgumentError,
+    );
+    expect(
+      () => writer.writeSelectionTransform(
+        const Transform2D(a: 1, b: 0, c: 0, d: double.infinity, tx: 0, ty: 0),
+      ),
+      throwsArgumentError,
+    );
+    expect(
+      () => writer.writeSelectionTranslate(const Offset(double.nan, 0)),
+      throwsArgumentError,
+    );
+  });
+
   test('writeNodeTransformSet marks visual change when bounds stay same', () {
     final ctx = TxnContext(
       baseScene: Scene(

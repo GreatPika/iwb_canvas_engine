@@ -7,6 +7,11 @@
   - `replaceScene(...)` throws `ArgumentError` for malformed snapshots.
 - Runtime snapshot import no longer auto-inserts a missing background layer.
 - JSON codec now rejects non-positive `background.grid.cellSize` regardless of grid enabled state.
+- Write-boundary validation is now strict:
+  - `addNode(...)` rejects malformed `NodeSpec` values with `ArgumentError`.
+  - `patchNode(...)` rejects malformed present `NodePatch` fields with `ArgumentError`.
+  - `writeNodeTransformSet(...)`, `writeSelectionTransform(...)`, and `writeSelectionTranslate(...)` reject non-finite `Transform2D`/`Offset`.
+  - `opacity` is now strict at write boundary (`[0,1]`) instead of relying on soft normalization.
 
 ### Changed
 

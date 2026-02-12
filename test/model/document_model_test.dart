@@ -378,6 +378,74 @@ void main() {
     expect(explicit.id, 'explicit');
   });
 
+  test('node-from-spec rejects invalid numeric fields with field path', () {
+    final invalidCases = <({NodeSpec spec, String field, String message})>[
+      (
+        spec: RectNodeSpec(size: const Size(1, 1), opacity: 1.1),
+        field: 'spec.opacity',
+        message: 'Must be within [0,1].',
+      ),
+      (
+        spec: RectNodeSpec(
+          size: const Size(1, 1),
+          transform: const Transform2D(
+            a: double.nan,
+            b: 0,
+            c: 0,
+            d: 1,
+            tx: 0,
+            ty: 0,
+          ),
+        ),
+        field: 'spec.transform.a',
+        message: 'Must be finite.',
+      ),
+      (
+        spec: TextNodeSpec(
+          text: 't',
+          size: const Size(1, 1),
+          fontSize: 0,
+          color: const Color(0xFF000000),
+        ),
+        field: 'spec.fontSize',
+        message: 'Must be > 0.',
+      ),
+      (
+        spec: StrokeNodeSpec(
+          points: <Offset>[const Offset(double.infinity, 0)],
+          thickness: 1,
+          color: const Color(0xFF000000),
+        ),
+        field: 'spec.points[0].dx',
+        message: 'Must be finite.',
+      ),
+      (
+        spec: RectNodeSpec(size: const Size(1, 1), strokeWidth: -1),
+        field: 'spec.strokeWidth',
+        message: 'Must be >= 0.',
+      ),
+      (
+        spec: PathNodeSpec(svgPathData: 'not-a-path'),
+        field: 'spec.svgPathData',
+        message: 'Must be valid SVG path data.',
+      ),
+    ];
+
+    for (final invalid in invalidCases) {
+      expect(
+        () => txnNodeFromSpec(invalid.spec, fallbackId: 'auto-id'),
+        throwsA(
+          predicate(
+            (e) =>
+                e is ArgumentError &&
+                e.name == invalid.field &&
+                e.message == invalid.message,
+          ),
+        ),
+      );
+    }
+  });
+
   test('node patch applies type-specific fields and common fields', () {
     final image = ImageNode(id: 'img', imageId: 'a', size: const Size(1, 1));
     expect(
@@ -571,4 +639,58 @@ void main() {
       throwsArgumentError,
     );
   });
+
+  test(
+    'node patch validates only present fields and rejects invalid write values',
+    () {
+      final rect = RectNode(id: 'r1', size: const Size(1, 1));
+
+      expect(txnApplyNodePatch(rect, const RectNodePatch(id: 'r1')), isFalse);
+
+      final invalidCases = <({NodePatch patch, String field, String message})>[
+        (
+          patch: const RectNodePatch(
+            id: 'r1',
+            common: CommonNodePatch(opacity: PatchField<double>.value(1.1)),
+          ),
+          field: 'patch.common.opacity',
+          message: 'Must be within [0,1].',
+        ),
+        (
+          patch: const RectNodePatch(
+            id: 'r1',
+            common: CommonNodePatch(
+              transform: PatchField<Transform2D>.value(
+                Transform2D(a: 1, b: 0, c: 0, d: 1, tx: double.nan, ty: 0),
+              ),
+            ),
+          ),
+          field: 'patch.common.transform.tx',
+          message: 'Must be finite.',
+        ),
+        (
+          patch: const RectNodePatch(
+            id: 'r1',
+            size: PatchField<Size>.nullValue(),
+          ),
+          field: 'patch.size',
+          message: 'PatchField.nullValue() is invalid for non-nullable field.',
+        ),
+      ];
+
+      for (final invalid in invalidCases) {
+        expect(
+          () => txnApplyNodePatch(rect, invalid.patch),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is ArgumentError &&
+                  e.name == invalid.field &&
+                  e.message == invalid.message,
+            ),
+          ),
+        );
+      }
+    },
+  );
 }
