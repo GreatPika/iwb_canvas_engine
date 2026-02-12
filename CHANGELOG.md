@@ -12,6 +12,7 @@
   - `patchNode(...)` rejects malformed present `NodePatch` fields with `ArgumentError`.
   - `writeNodeTransformSet(...)`, `writeSelectionTransform(...)`, and `writeSelectionTranslate(...)` reject non-finite `Transform2D`/`Offset`.
   - `opacity` is now strict at write boundary (`[0,1]`) instead of relying on soft normalization.
+- Interactive controller event streams (`actions`, `editTextRequests`) are now asynchronous; listeners are no longer invoked in the emitter call stack.
 
 ### Changed
 

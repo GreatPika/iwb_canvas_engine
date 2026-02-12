@@ -87,6 +87,7 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Write-boundary validation: `addNode(...)`/`patchNode(...)` fail fast with `ArgumentError` for invalid `NodeSpec`/`NodePatch` values (including `transform`, `hitPadding`, and `opacity` outside `[0,1]`), and transform/translate write operations reject non-finite `Transform2D`/`Offset`.
 - Serialization: `encodeScene*`, `decodeScene*`, `SceneJsonFormatException`.
 - Event payload contract: `ActionCommitted.nodeIds/payload` are immutable snapshots.
+- Interactive event delivery contract: `actions` and `editTextRequests` are asynchronous; relative ordering against repaint/listener notifications is not a public contract.
 - Selection contract: commit normalization keeps explicit non-selectable ids valid while filtering missing/background/invisible ids.
 - Runtime notify contract: controller repaint notifications are deferred to a microtask after commit and coalesced to at most one notification per event-loop tick.
 - Move drag contract: pointer move updates only visual preview; scene translation is committed once on pointer up, and pointer cancel keeps the document unchanged.

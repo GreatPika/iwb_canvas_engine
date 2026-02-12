@@ -46,7 +46,7 @@ lib/
 2. `SceneController` processes events and performs transactional writes.
 3. Controller updates the immutable `SceneSnapshot`.
 4. `ScenePainterV2` renders snapshot state via `CustomPaint`.
-5. `actions` / `editTextRequests` streams expose boundaries to the host app.
+5. `actions` / `editTextRequests` streams expose asynchronous boundaries to the host app.
 
 ## Invariants
 
@@ -63,6 +63,8 @@ Key invariants:
 - Committed signals are delivered only after store commit finalization.
 - For each successful commit, signal delivery happens before repaint listener notification.
 - Repaint/listener notifications are scheduled after commit via microtask and coalesced per event-loop tick.
+- Interactive `actions` / `editTextRequests` streams are delivered asynchronously (never in the same call stack as mutation methods).
+- Relative ordering between interactive stream delivery and repaint listener notification is intentionally not a public contract.
 - Buffered signal/repaint effects are discarded when `write(...)` rolls back.
 - Node-id index state (`allNodeIds`, `nodeIdSeed`) is derived from committed scene data.
 - Selection normalization preserves explicit non-selectable ids and drops only missing/background/invisible ids.

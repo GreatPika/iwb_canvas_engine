@@ -345,6 +345,8 @@ On double tap in move mode, if top hit node is a text node, controller emits `Ed
 
 Delivery and mutability contract:
 
+- Delivery is asynchronous; subscribers are called after the emitting controller method returns.
+- Relative ordering against `ChangeNotifier` listener notifications/repaint is not a public contract.
 - `nodeIds` and `payload` are immutable snapshots; subscribers cannot mutate shared event data.
 
 `ActionType` values:
@@ -381,6 +383,11 @@ Helper parsers on `ActionCommitted`:
 - `position` (view coordinates)
 
 Use this to open app-level text editor overlays.
+
+Delivery contract:
+
+- Delivery is asynchronous; subscribers are called after the emitting controller method returns.
+- Relative ordering against `ChangeNotifier` listener notifications/repaint is not a public contract.
 
 ## 9. View widget (`SceneView`)
 

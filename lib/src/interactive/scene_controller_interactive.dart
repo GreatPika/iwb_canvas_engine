@@ -1249,9 +1249,9 @@ enum _MoveDragTarget { none, move, marquee }
 
 class _InteractiveEventDispatcher {
   final StreamController<ActionCommitted> _actions =
-      StreamController<ActionCommitted>.broadcast(sync: true);
+      StreamController<ActionCommitted>.broadcast();
   final StreamController<EditTextRequested> _editTextRequests =
-      StreamController<EditTextRequested>.broadcast(sync: true);
+      StreamController<EditTextRequested>.broadcast();
 
   int _actionCounter = 0;
   bool _isDisposed = false;
