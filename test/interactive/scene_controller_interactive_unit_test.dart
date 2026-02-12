@@ -615,6 +615,60 @@ void main() {
       expect(afterUp.transform.ty, closeTo(160, 1e-6));
     });
 
+    test(
+      'effectiveNodeBoundsWorld applies move preview delta for selected node',
+      () {
+        final rect = RectNode(id: 'node', size: const Size(30, 20))
+          ..position = const Offset(60, 60);
+        final controller = _controllerFromScene(
+          Scene(
+            layers: <Layer>[
+              Layer(isBackground: true),
+              Layer(nodes: <SceneNode>[rect]),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+        controller.setSelection(const <NodeId>{'node'});
+
+        final nodeSnapshotBefore = _nodeById(controller.snapshot, 'node');
+        final nodeBefore = txnNodeFromSnapshot(nodeSnapshotBefore);
+        expect(
+          controller.effectiveNodeBoundsWorld(nodeBefore),
+          nodeBefore.boundsWorld,
+        );
+
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: const Offset(60, 60),
+            timestampMs: 1,
+            phase: PointerPhase.down,
+          ),
+        );
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: const Offset(90, 50),
+            timestampMs: 2,
+            phase: PointerPhase.move,
+          ),
+        );
+
+        final nodeSnapshotDuringPreview = _nodeById(
+          controller.snapshot,
+          'node',
+        );
+        final nodeDuringPreview = txnNodeFromSnapshot(
+          nodeSnapshotDuringPreview,
+        );
+        expect(
+          controller.effectiveNodeBoundsWorld(nodeDuringPreview),
+          nodeDuringPreview.boundsWorld.shift(const Offset(30, -10)),
+        );
+      },
+    );
+
     test('line tool supports drag flow and two-tap pending flow', () async {
       final controller = SceneControllerInteractiveV2(
         initialSnapshot: SceneSnapshot(

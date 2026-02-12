@@ -902,4 +902,50 @@ void main() {
       isTrue,
     );
   });
+
+  test(
+    'ScenePainterV2 applies preview delta resolver for nodes and selection',
+    () async {
+      const background = Color(0xFFFFFFFF);
+      final controller = SceneControllerV2(
+        initialSnapshot: SceneSnapshot(
+          background: const BackgroundSnapshot(color: background),
+          layers: <LayerSnapshot>[
+            LayerSnapshot(
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(
+                  id: 'previewed',
+                  size: const Size(20, 20),
+                  fillColor: const Color(0xFF000000),
+                  transform: Transform2D.translation(const Offset(20, 20)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+      controller.write((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'previewed'});
+      });
+
+      final image = await _paintToImage(
+        ScenePainterV2(
+          controller: controller,
+          imageResolver: (_) => null,
+          nodePreviewOffsetResolver: (nodeId) {
+            if (nodeId == 'previewed') return const Offset(30, 10);
+            return Offset.zero;
+          },
+        ),
+        width: 80,
+        height: 80,
+      );
+
+      expect(
+        await _countNonBackgroundPixels(image, background),
+        greaterThan(0),
+      );
+    },
+  );
 }

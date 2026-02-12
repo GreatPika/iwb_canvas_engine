@@ -792,11 +792,6 @@ bool _txnApplyCommonPatch(SceneNode node, CommonNodePatch patch) {
 
 bool _txnSet<T>(PatchField<T> patch, T current, void Function(T value) assign) {
   if (patch.isAbsent) return false;
-  if (patch.isNullValue) {
-    throw ArgumentError(
-      'PatchField.nullValue() is invalid for non-nullable field.',
-    );
-  }
   final next = patch.value;
   if (next == current) return false;
   assign(next);
@@ -822,9 +817,6 @@ bool _txnSetOffsets(
   void Function(List<Offset> value) assign,
 ) {
   if (patch.isAbsent) return false;
-  if (patch.isNullValue) {
-    throw ArgumentError('PatchField.nullValue() is invalid for List<Offset>.');
-  }
   final next = List<Offset>.from(patch.value);
   if (_txnOffsetListsEqual(current, next)) return false;
   assign(next);

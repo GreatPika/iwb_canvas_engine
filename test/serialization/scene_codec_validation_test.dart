@@ -807,6 +807,100 @@ void main() {
     );
   });
 
+  test('encodeSceneDocument encodes full scene structure', () {
+    final scene = Scene(
+      camera: Camera(offset: const Offset(12, -7)),
+      background: Background(
+        color: const Color(0xFF010203),
+        grid: GridSettings(
+          isEnabled: true,
+          cellSize: 16,
+          color: const Color(0xFF040506),
+        ),
+      ),
+      palette: ScenePalette(
+        penColors: <Color>[const Color(0xFF111111)],
+        backgroundColors: <Color>[const Color(0xFF222222)],
+        gridSizes: <double>[8, 16],
+      ),
+      layers: <Layer>[
+        Layer(
+          isBackground: true,
+          nodes: <SceneNode>[RectNode(id: 'bg-rect', size: const Size(10, 5))],
+        ),
+        Layer(
+          nodes: <SceneNode>[RectNode(id: 'fg-rect', size: const Size(3, 2))],
+        ),
+      ],
+    );
+
+    final encoded = encodeSceneDocument(scene);
+    expect(encoded['schemaVersion'], schemaVersionWrite);
+
+    final camera = encoded['camera'] as Map<String, dynamic>;
+    expect(camera['offsetX'], 12);
+    expect(camera['offsetY'], -7);
+
+    final background = encoded['background'] as Map<String, dynamic>;
+    expect(background['color'], '#FF010203');
+    final grid = background['grid'] as Map<String, dynamic>;
+    expect(grid['enabled'], isTrue);
+    expect(grid['cellSize'], 16);
+    expect(grid['color'], '#FF040506');
+
+    final palette = encoded['palette'] as Map<String, dynamic>;
+    expect(palette['penColors'], <String>['#FF111111']);
+    expect(palette['backgroundColors'], <String>['#FF222222']);
+    expect(palette['gridSizes'], <double>[8, 16]);
+
+    final layers = encoded['layers'] as List<dynamic>;
+    expect(layers, hasLength(2));
+    expect((layers[0] as Map<String, dynamic>)['isBackground'], isTrue);
+    expect((layers[1] as Map<String, dynamic>)['isBackground'], isFalse);
+  });
+
+  test(
+    'encodeSceneDocument rejects duplicate node ids and multiple background layers',
+    () {
+      final duplicateIds = Scene(
+        layers: <Layer>[
+          Layer(
+            nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(1, 1))],
+          ),
+          Layer(
+            nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(2, 2))],
+          ),
+        ],
+      );
+      expect(
+        () => encodeSceneDocument(duplicateIds),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneJsonFormatException &&
+                e.message ==
+                    'Field layers[1].nodes[0].id must be unique across scene layers.',
+          ),
+        ),
+      );
+
+      final multipleBackground = Scene(
+        layers: <Layer>[Layer(isBackground: true), Layer(isBackground: true)],
+      );
+      expect(
+        () => encodeSceneDocument(multipleBackground),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneJsonFormatException &&
+                e.message ==
+                    'Field layers must contain at most one background layer.',
+          ),
+        ),
+      );
+    },
+  );
+
   test('decodeScene rejects non-positive thickness', () {
     final nodeJson = _baseNodeJson(id: 's1', type: 'stroke')
       ..addAll(<String, dynamic>{

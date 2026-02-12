@@ -327,13 +327,19 @@ void main() {
 
   test('node-from-spec maps all variants and fallback id behavior', () {
     final image = txnNodeFromSpec(
-      ImageNodeSpec(imageId: 'i', size: const Size(1, 2)),
+      ImageNodeSpec(
+        imageId: 'i',
+        size: const Size(1, 2),
+        naturalSize: const Size(2, 4),
+      ),
       fallbackId: 'auto-1',
     );
     final text = txnNodeFromSpec(
       TextNodeSpec(
         text: 't',
         size: const Size(3, 4),
+        maxWidth: 20,
+        lineHeight: 1.5,
         color: const Color(0xFF000000),
       ),
       fallbackId: 'auto-2',
@@ -369,7 +375,11 @@ void main() {
     );
 
     expect(image.id, 'auto-1');
+    expect((image as ImageNode).naturalSize, const Size(2, 4));
+    final textNode = text as TextNode;
     expect(text.id, 'auto-2');
+    expect(textNode.maxWidth, 20);
+    expect(textNode.lineHeight, 1.5);
     expect(stroke.id, 'auto-3');
     expect(line.id, 'auto-4');
     expect(rect.id, 'auto-5');
