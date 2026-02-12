@@ -232,6 +232,8 @@ Notification semantics:
 
 - Scene repaint notifications are deferred to a microtask after commit/repaint request.
 - Multiple writes/repaint requests in the same event-loop tick are coalesced into one listener notification.
+- `requestRepaint()` called inside `write(...)` is buffered and published only after a successful transaction commit.
+- If `write(...)` rolls back with an exception, buffered repaint/signal effects are discarded.
 
 ### 6.5 Node and selection methods
 
@@ -284,6 +286,7 @@ Prefer high-level command methods unless custom transactional logic is required.
 Write-notify semantics:
 
 - `write(...)` finalizes transaction state first, then schedules listener notification in a microtask when repaint is needed.
+- Committed `signals` are emitted before repaint listener notification for the same successful commit.
 - Calling `write(...)` from `addListener(...)` is allowed; it runs after the original transaction is finished.
 
 ## 7. Interaction model details

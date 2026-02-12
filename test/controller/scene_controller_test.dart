@@ -184,6 +184,75 @@ void main() {
     },
   );
 
+  test(
+    'write rollback discards repaint request and emits no external effects',
+    () async {
+      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      addTearDown(controller.dispose);
+
+      final beforeCommit = controller.debugCommitRevision;
+      final beforeSnapshot = controller.snapshot;
+
+      final signals = <Object>[];
+      final sub = controller.signals.listen(signals.add);
+      addTearDown(sub.cancel);
+
+      var notifications = 0;
+      controller.addListener(() {
+        notifications = notifications + 1;
+      });
+
+      expect(
+        () => controller.write<void>((writer) {
+          writer.writeSelectionReplace(const <NodeId>{'r1'});
+          writer.writeSignalEnqueue(type: 'will.rollback');
+          controller.requestRepaint();
+          throw StateError('rollback');
+        }),
+        throwsStateError,
+      );
+      await pumpEventQueue(times: 2);
+
+      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.selectedNodeIds, isEmpty);
+      expect(controller.snapshot.layers.length, beforeSnapshot.layers.length);
+      expect(signals, isEmpty);
+      expect(notifications, 0);
+    },
+  );
+
+  test(
+    'requestRepaint inside successful no-op write schedules one notification',
+    () async {
+      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      addTearDown(controller.dispose);
+
+      final beforeCommit = controller.debugCommitRevision;
+      final beforeStructural = controller.structuralRevision;
+      final beforeBounds = controller.boundsRevision;
+      final beforeVisual = controller.visualRevision;
+
+      var notifications = 0;
+      controller.addListener(() {
+        notifications = notifications + 1;
+      });
+
+      controller.write<void>((_) {
+        controller.requestRepaint();
+      });
+
+      expect(notifications, 0);
+      await pumpEventQueue();
+
+      expect(notifications, 1);
+      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.structuralRevision, beforeStructural);
+      expect(controller.boundsRevision, beforeBounds);
+      expect(controller.visualRevision, beforeVisual);
+      expect(controller.debugLastCommitPhases, const <String>['repaint']);
+    },
+  );
+
   test('changeset tracks added removed and updated node ids', () {
     final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
@@ -475,6 +544,31 @@ void main() {
 
     expect(emitted, <String>['committed']);
   });
+
+  test(
+    'signals are delivered before repaint listeners for same commit',
+    () async {
+      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      addTearDown(controller.dispose);
+
+      final observed = <String>[];
+      final sub = controller.signals.listen((_) {
+        observed.add('signal');
+      });
+      addTearDown(sub.cancel);
+      controller.addListener(() {
+        observed.add('notify');
+      });
+
+      controller.write<void>((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'r1'});
+        writer.writeSignalEnqueue(type: 'ordered');
+      });
+      await pumpEventQueue(times: 2);
+
+      expect(observed, const <String>['signal', 'notify']);
+    },
+  );
 
   test(
     'signal listener observes committed state and can trigger follow-up write',

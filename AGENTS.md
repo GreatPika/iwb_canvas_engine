@@ -24,7 +24,9 @@ A Flutter/Dart canvas engine package with scene model, rendering, input handling
   - `API_GUIDE.md`
   - `README.md`
   - `ARCHITECTURE.md` (when architecture/invariants change)
-- Always run linter and tests after changes, and report results.
+- Run linter/tests for code changes and report results.
+- For documentation-only changes, checks are not required.
+- Exception: if `tool/invariant_registry.dart` is changed, run and report `dart run tool/check_invariant_coverage.dart`.
 
 ## Changelog
 
@@ -33,7 +35,7 @@ A Flutter/Dart canvas engine package with scene model, rendering, input handling
 - For release `X.Y.Z (YYYY-MM-DD)`, move entries from `Unreleased` into the release section and leave `Unreleased` empty.
 - Prefix breaking changes with `Breaking:`.
 
-## Required checks (run locally before pushing)
+## Required checks (run locally before pushing code changes)
 
 1) Formatting (fail on diffs)
 

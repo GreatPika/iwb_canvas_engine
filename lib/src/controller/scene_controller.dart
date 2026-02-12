@@ -148,10 +148,10 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
       _writeInProgress = false;
     }
 
+    _signalsSlice.emitCommitted(commitResult.committedSignals);
     if (commitResult.needsNotify) {
       _scheduleNotify();
     }
-    _signalsSlice.emitCommitted(commitResult.committedSignals);
     return result;
   }
 
@@ -163,6 +163,9 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
 
   void requestRepaint() {
     _repaintSlice.writeMarkNeedsRepaint();
+    if (_writeInProgress) {
+      return;
+    }
     if (_repaintSlice.writeTakeNeedsNotify()) {
       _scheduleNotify();
     }
@@ -201,7 +204,8 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
 
     final hasStateChanges = ctx.changeSet.txnHasAnyChange;
     final hasSignals = _signalsSlice.writeHasBufferedSignals;
-    if (!hasStateChanges && !hasSignals) {
+    final hasRepaint = _repaintSlice.needsNotify;
+    if (!hasStateChanges && !hasSignals && !hasRepaint) {
       _debugLastCommitPhases = commitPhases;
       _debugLastChangeSet = ctx.changeSet.txnClone();
       return const _TxnWriteCommitResult(
@@ -210,19 +214,27 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
       );
     }
 
-    if (!hasStateChanges && hasSignals) {
-      final nextCommitRevision = _store.commitRevision + 1;
-      final committedSignals = _signalsSlice.writeTakeCommitted(
-        commitRevision: nextCommitRevision,
-      );
-      commitPhases = <String>[...commitPhases, 'signals'];
-      _store.commitRevision = nextCommitRevision;
-      _debugAssertStoreInvariants();
+    if (!hasStateChanges) {
+      var committedSignals = const <V2CommittedSignal>[];
+      if (hasSignals) {
+        final nextCommitRevision = _store.commitRevision + 1;
+        committedSignals = _signalsSlice.writeTakeCommitted(
+          commitRevision: nextCommitRevision,
+        );
+        commitPhases = <String>[...commitPhases, 'signals'];
+        _store.commitRevision = nextCommitRevision;
+        _debugAssertStoreInvariants();
+      }
+
+      final needsNotify = _repaintSlice.writeTakeNeedsNotify();
+      if (needsNotify) {
+        commitPhases = <String>[...commitPhases, 'repaint'];
+      }
       _debugLastCommitPhases = commitPhases;
       _debugLastChangeSet = ctx.changeSet.txnClone();
       return _TxnWriteCommitResult(
         committedSignals: committedSignals,
-        needsNotify: false,
+        needsNotify: needsNotify,
       );
     }
 
