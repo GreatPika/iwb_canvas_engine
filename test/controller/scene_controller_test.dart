@@ -133,6 +133,72 @@ void main() {
     expect(controller.debugLastCommitPhases, isEmpty);
   });
 
+  test('snapshot getter reuses immutable instance between reads', () {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    final first = controller.snapshot;
+    final second = controller.snapshot;
+
+    expect(identical(first, second), isTrue);
+  });
+
+  test('snapshot cache survives selection-only and signals-only commits', () {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    final before = controller.snapshot;
+    controller.write<void>((writer) {
+      writer.writeSelectionReplace(const <NodeId>{'r1'});
+    });
+    final afterSelection = controller.snapshot;
+    expect(identical(before, afterSelection), isTrue);
+
+    controller.write<void>((writer) {
+      writer.writeSignalEnqueue(type: 'signals-only.cache');
+    });
+    final afterSignals = controller.snapshot;
+    expect(identical(afterSelection, afterSignals), isTrue);
+  });
+
+  test('snapshot cache invalidates on scene identity change', () {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    final before = controller.snapshot;
+    controller.write<void>((writer) {
+      writer.writeSelectionReplace(const <NodeId>{'r1'});
+      writer.writeSelectionTranslate(const Offset(10, 0));
+    });
+    final after = controller.snapshot;
+
+    expect(identical(before, after), isFalse);
+    final moved = after.layers.first.nodes.first as RectNodeSnapshot;
+    expect(moved.transform.tx, 10);
+  });
+
+  test('snapshot cache invalidates after writeReplaceScene', () {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    final before = controller.snapshot;
+    controller.writeReplaceScene(
+      SceneSnapshot(
+        layers: <LayerSnapshot>[
+          LayerSnapshot(
+            nodes: const <NodeSnapshot>[
+              RectNodeSnapshot(id: 'fresh', size: Size(4, 4)),
+            ],
+          ),
+        ],
+      ),
+    );
+    final after = controller.snapshot;
+
+    expect(identical(before, after), isFalse);
+    expect(after.layers.first.nodes.single.id, 'fresh');
+  });
+
   test('signals-only write bumps commit only and skips repaint', () async {
     final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);

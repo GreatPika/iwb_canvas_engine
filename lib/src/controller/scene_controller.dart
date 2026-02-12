@@ -44,6 +44,8 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
   bool _notifyScheduled = false;
   bool _notifyPending = false;
   bool _isDisposed = false;
+  Scene? _cachedSnapshotScene;
+  SceneSnapshot? _cachedSnapshot;
   List<String> _debugLastCommitPhases = const <String>[];
   ChangeSet _debugLastChangeSet = ChangeSet();
   @visibleForTesting
@@ -54,7 +56,20 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
   late final V2DrawSlice draw = V2DrawSlice(write);
 
   @override
-  SceneSnapshot get snapshot => txnSceneToSnapshot(_store.sceneDoc);
+  SceneSnapshot get snapshot {
+    final sceneDoc = _store.sceneDoc;
+    final cachedSnapshot = _cachedSnapshot;
+    if (cachedSnapshot != null && identical(sceneDoc, _cachedSnapshotScene)) {
+      return cachedSnapshot;
+    }
+
+    // Safe because committed scene identity changes on first mutating write.
+    // Non-mutating commits keep identity and can reuse immutable snapshot.
+    final rebuiltSnapshot = txnSceneToSnapshot(sceneDoc);
+    _cachedSnapshotScene = sceneDoc;
+    _cachedSnapshot = rebuiltSnapshot;
+    return rebuiltSnapshot;
+  }
 
   @override
   Set<NodeId> get selectedNodeIds =>
