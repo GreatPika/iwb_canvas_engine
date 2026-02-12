@@ -1,9 +1,10 @@
 import 'dart:async';
-import 'dart:ui';
+import 'dart:ui' hide Scene;
 
 import 'package:flutter/foundation.dart';
 
 import '../core/nodes.dart' show SceneNode;
+import '../core/scene.dart' show Scene;
 import '../core/scene_spatial_index.dart';
 import '../input/slices/commands/scene_commands.dart';
 import '../input/slices/draw/draw_slice.dart';
@@ -45,6 +46,8 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
   bool _isDisposed = false;
   List<String> _debugLastCommitPhases = const <String>[];
   ChangeSet _debugLastChangeSet = ChangeSet();
+  @visibleForTesting
+  void Function()? debugBeforeInvariantPrecheckHook;
 
   late final V2SceneCommandsSlice commands = V2SceneCommandsSlice(write);
   late final V2MoveSlice move = V2MoveSlice(write);
@@ -218,12 +221,18 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
       var committedSignals = const <V2CommittedSignal>[];
       if (hasSignals) {
         final nextCommitRevision = _store.commitRevision + 1;
+        _debugAssertStoreInvariantsCandidate(
+          scene: _store.sceneDoc,
+          selectedNodeIds: _store.selectedNodeIds,
+          allNodeIds: _store.allNodeIds,
+          nodeIdSeed: _store.nodeIdSeed,
+          commitRevision: nextCommitRevision,
+        );
         committedSignals = _signalsSlice.writeTakeCommitted(
           commitRevision: nextCommitRevision,
         );
         commitPhases = <String>[...commitPhases, 'signals'];
         _store.commitRevision = nextCommitRevision;
-        _debugAssertStoreInvariants();
       }
 
       final needsNotify = _repaintSlice.writeTakeNeedsNotify();
@@ -247,6 +256,19 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
     // In state-change branch any committed mutation must bump visual revision.
     final nextVisualRevision = _store.visualRevision + 1;
 
+    final nextCommitRevision = _store.commitRevision + 1;
+    final committedScene = ctx.txnSceneForCommit();
+    final committedSelection = Set<NodeId>.from(ctx.workingSelection);
+    final committedNodeIds = txnCollectNodeIds(committedScene);
+    final committedNodeIdSeed = txnInitialNodeIdSeed(committedScene);
+    _debugAssertStoreInvariantsCandidate(
+      scene: committedScene,
+      selectedNodeIds: committedSelection,
+      allNodeIds: committedNodeIds,
+      nodeIdSeed: committedNodeIdSeed,
+      commitRevision: nextCommitRevision,
+    );
+
     _spatialIndexSlice.writeHandleCommit(
       changeSet: ctx.changeSet,
       controllerEpoch: nextEpoch,
@@ -254,16 +276,10 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
     );
     commitPhases = <String>[...commitPhases, 'spatial_index'];
 
-    final nextCommitRevision = _store.commitRevision + 1;
     final committedSignals = _signalsSlice.writeTakeCommitted(
       commitRevision: nextCommitRevision,
     );
     commitPhases = <String>[...commitPhases, 'signals'];
-
-    final committedScene = ctx.txnSceneForCommit();
-    final committedSelection = Set<NodeId>.from(ctx.workingSelection);
-    final committedNodeIds = txnCollectNodeIds(committedScene);
-    final committedNodeIdSeed = txnInitialNodeIdSeed(committedScene);
 
     _store.sceneDoc = committedScene;
     _store.selectedNodeIds = committedSelection;
@@ -274,7 +290,6 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
     _store.boundsRevision = nextBoundsRevision;
     _store.visualRevision = nextVisualRevision;
     _store.commitRevision = nextCommitRevision;
-    _debugAssertStoreInvariants();
 
     _repaintSlice.writeMarkNeedsRepaint();
     final needsNotify = _repaintSlice.writeTakeNeedsNotify();
@@ -308,13 +323,23 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
     });
   }
 
-  void _debugAssertStoreInvariants() {
+  void _debugAssertStoreInvariantsCandidate({
+    required Scene scene,
+    required Set<NodeId> selectedNodeIds,
+    required Set<NodeId> allNodeIds,
+    required int nodeIdSeed,
+    required int commitRevision,
+  }) {
+    assert(() {
+      debugBeforeInvariantPrecheckHook?.call();
+      return true;
+    }());
     debugAssertTxnStoreInvariants(
-      scene: _store.sceneDoc,
-      selectedNodeIds: _store.selectedNodeIds,
-      allNodeIds: _store.allNodeIds,
-      nodeIdSeed: _store.nodeIdSeed,
-      commitRevision: _store.commitRevision,
+      scene: scene,
+      selectedNodeIds: selectedNodeIds,
+      allNodeIds: allNodeIds,
+      nodeIdSeed: nodeIdSeed,
+      commitRevision: commitRevision,
     );
   }
 

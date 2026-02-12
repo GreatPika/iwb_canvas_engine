@@ -249,6 +249,107 @@ void main() {
   );
 
   test(
+    'invariant pre-check failure in state-change branch keeps store and effects unchanged',
+    () async {
+      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      addTearDown(controller.dispose);
+
+      final beforeSnapshot = controller.snapshot;
+      final beforeEpoch = controller.controllerEpoch;
+      final beforeStructural = controller.structuralRevision;
+      final beforeBounds = controller.boundsRevision;
+      final beforeVisual = controller.visualRevision;
+      final beforeCommit = controller.debugCommitRevision;
+      final beforeSelection = controller.selectedNodeIds;
+
+      final signals = <Object>[];
+      final sub = controller.signals.listen(signals.add);
+      addTearDown(sub.cancel);
+
+      var notifications = 0;
+      controller.addListener(() {
+        notifications = notifications + 1;
+      });
+
+      controller.debugBeforeInvariantPrecheckHook = () {
+        throw StateError('forced invariant pre-check failure');
+      };
+
+      expect(
+        () => controller.write<void>((writer) {
+          writer.writeSelectionReplace(const <NodeId>{'r1'});
+          writer.writeSelectionTranslate(const Offset(10, 0));
+          writer.writeSignalEnqueue(type: 'will.not.emit');
+        }),
+        throwsStateError,
+      );
+      await pumpEventQueue(times: 2);
+
+      final afterSnapshot = controller.snapshot;
+      expect(afterSnapshot.layers.length, beforeSnapshot.layers.length);
+      expect(
+        afterSnapshot.layers.first.nodes
+            .map((node) => node.id)
+            .toList(growable: false),
+        beforeSnapshot.layers.first.nodes
+            .map((node) => node.id)
+            .toList(growable: false),
+      );
+      expect(controller.controllerEpoch, beforeEpoch);
+      expect(controller.structuralRevision, beforeStructural);
+      expect(controller.boundsRevision, beforeBounds);
+      expect(controller.visualRevision, beforeVisual);
+      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.selectedNodeIds, beforeSelection);
+      expect(signals, isEmpty);
+      expect(notifications, 0);
+    },
+  );
+
+  test(
+    'invariant pre-check failure in signals-only branch keeps commit and effects unchanged',
+    () async {
+      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      addTearDown(controller.dispose);
+
+      final beforeCommit = controller.debugCommitRevision;
+      final beforeEpoch = controller.controllerEpoch;
+      final beforeStructural = controller.structuralRevision;
+      final beforeBounds = controller.boundsRevision;
+      final beforeVisual = controller.visualRevision;
+
+      final signals = <Object>[];
+      final sub = controller.signals.listen(signals.add);
+      addTearDown(sub.cancel);
+
+      var notifications = 0;
+      controller.addListener(() {
+        notifications = notifications + 1;
+      });
+
+      controller.debugBeforeInvariantPrecheckHook = () {
+        throw StateError('forced invariant pre-check failure');
+      };
+
+      expect(
+        () => controller.write<void>((writer) {
+          writer.writeSignalEnqueue(type: 'signals-only.fail');
+        }),
+        throwsStateError,
+      );
+      await pumpEventQueue(times: 2);
+
+      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.controllerEpoch, beforeEpoch);
+      expect(controller.structuralRevision, beforeStructural);
+      expect(controller.boundsRevision, beforeBounds);
+      expect(controller.visualRevision, beforeVisual);
+      expect(signals, isEmpty);
+      expect(notifications, 0);
+    },
+  );
+
+  test(
     'requestRepaint inside successful no-op write schedules one notification',
     () async {
       final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());

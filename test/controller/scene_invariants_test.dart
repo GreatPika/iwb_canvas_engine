@@ -7,6 +7,7 @@ import 'package:iwb_canvas_engine/src/core/scene.dart';
 
 // INV:INV-V2-ID-INDEX-FROM-SCENE
 // INV:INV-V2-WRITE-NUMERIC-GUARDS
+// INV:INV-G-NODEID-UNIQUE
 
 void main() {
   Scene sceneFixture({
@@ -88,6 +89,72 @@ void main() {
     );
 
     expect(violations.join('\n'), contains('enabled grid.cellSize must be >='));
+  });
+
+  test('detects duplicate node ids in committed scene', () {
+    final scene = Scene(
+      layers: <Layer>[
+        Layer(
+          nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(10, 10))],
+        ),
+        Layer(
+          nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(12, 12))],
+        ),
+      ],
+    );
+    final violations = txnCollectStoreInvariantViolations(
+      scene: scene,
+      selectedNodeIds: const <NodeId>{},
+      allNodeIds: const <NodeId>{'dup'},
+      nodeIdSeed: 1,
+      commitRevision: 0,
+    );
+
+    expect(
+      violations.join('\n'),
+      contains('scene must not contain duplicate node ids'),
+    );
+  });
+
+  test('detects background layer that is not at index 0', () {
+    final scene = Scene(
+      layers: <Layer>[
+        Layer(
+          nodes: <SceneNode>[RectNode(id: 'n1', size: const Size(10, 10))],
+        ),
+        Layer(isBackground: true),
+      ],
+    );
+    final violations = txnCollectStoreInvariantViolations(
+      scene: scene,
+      selectedNodeIds: const <NodeId>{},
+      allNodeIds: const <NodeId>{'n1'},
+      nodeIdSeed: 1,
+      commitRevision: 0,
+    );
+
+    expect(
+      violations.join('\n'),
+      contains('background layer must be at index 0 when present'),
+    );
+  });
+
+  test('detects multiple background layers', () {
+    final scene = Scene(
+      layers: <Layer>[Layer(isBackground: true), Layer(isBackground: true)],
+    );
+    final violations = txnCollectStoreInvariantViolations(
+      scene: scene,
+      selectedNodeIds: const <NodeId>{},
+      allNodeIds: const <NodeId>{},
+      nodeIdSeed: 0,
+      commitRevision: 0,
+    );
+
+    expect(
+      violations.join('\n'),
+      contains('scene must contain at most one background layer'),
+    );
   });
 
   test('debug assert throws for invalid committed store', () {
