@@ -82,6 +82,36 @@ void main() {
     },
   );
 
+  test(
+    'requestRepaint outside write is deferred and coalesced',
+    () async {
+      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      addTearDown(controller.dispose);
+
+      final beforeCommit = controller.debugCommitRevision;
+      final beforeStructural = controller.structuralRevision;
+      final beforeBounds = controller.boundsRevision;
+      final beforeVisual = controller.visualRevision;
+
+      var notifications = 0;
+      controller.addListener(() {
+        notifications = notifications + 1;
+      });
+
+      controller.requestRepaint();
+      controller.requestRepaint();
+
+      expect(notifications, 0);
+      await pumpEventQueue();
+
+      expect(notifications, 1);
+      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.structuralRevision, beforeStructural);
+      expect(controller.boundsRevision, beforeBounds);
+      expect(controller.visualRevision, beforeVisual);
+    },
+  );
+
   test('no-op write keeps commit/revisions unchanged and does not notify', () {
     final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
