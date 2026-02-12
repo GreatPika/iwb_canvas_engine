@@ -7,6 +7,7 @@ import '../public/node_patch.dart';
 import '../public/node_spec.dart';
 import '../public/patch_field.dart';
 import '../public/snapshot.dart' hide NodeId;
+import 'scene_value_validation.dart';
 
 ({SceneNode node, int layerIndex, int nodeIndex})? txnFindNodeById(
   Scene scene,
@@ -52,8 +53,14 @@ SceneSnapshot txnSceneToSnapshot(Scene scene) {
 }
 
 Scene txnSceneFromSnapshot(SceneSnapshot snapshot) {
+  sceneValidateSnapshotValues(
+    snapshot,
+    onError: _txnSnapshotValidationError,
+    requirePositiveGridCellSize: true,
+  );
+  final canonicalLayers = _txnCanonicalizeSnapshotLayers(snapshot.layers);
   return Scene(
-    layers: snapshot.layers
+    layers: canonicalLayers
         .map(
           (layer) => Layer(
             isBackground: layer.isBackground,
@@ -76,6 +83,26 @@ Scene txnSceneFromSnapshot(SceneSnapshot snapshot) {
       gridSizes: snapshot.palette.gridSizes,
     ),
   );
+}
+
+List<LayerSnapshot> _txnCanonicalizeSnapshotLayers(List<LayerSnapshot> layers) {
+  var backgroundIndex = -1;
+  for (var i = 0; i < layers.length; i++) {
+    if (!layers[i].isBackground) continue;
+    backgroundIndex = i;
+    break;
+  }
+
+  if (backgroundIndex <= 0) {
+    return layers;
+  }
+
+  final out = <LayerSnapshot>[layers[backgroundIndex]];
+  for (var i = 0; i < layers.length; i++) {
+    if (i == backgroundIndex) continue;
+    out.add(layers[i]);
+  }
+  return out;
 }
 
 SceneNode txnNodeFromSnapshot(NodeSnapshot node) {
@@ -799,4 +826,21 @@ bool _txnOffsetListsEqual(List<Offset> left, List<Offset> right) {
     if (left[i] != right[i]) return false;
   }
   return true;
+}
+
+Never _txnSnapshotValidationError({
+  required Object? value,
+  required String field,
+  required String message,
+}) {
+  throw ArgumentError.value(
+    value,
+    field,
+    _txnCapitalizeValidationMessage(message),
+  );
+}
+
+String _txnCapitalizeValidationMessage(String message) {
+  if (message.isEmpty) return message;
+  return '${message[0].toUpperCase()}${message.substring(1)}';
 }

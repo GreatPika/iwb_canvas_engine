@@ -66,7 +66,9 @@ Key invariants:
 - Buffered signal/repaint effects are discarded when `write(...)` rolls back.
 - Node-id index state (`allNodeIds`, `nodeIdSeed`) is derived from committed scene data.
 - Selection normalization preserves explicit non-selectable ids and drops only missing/background/invisible ids.
-- Background layer rule: at most one background layer; canonical index is `0`.
+- Runtime snapshot boundary (`initialSnapshot` / `replaceScene`) validates input strictly and fails fast with `ArgumentError` for malformed snapshots.
+- Runtime background-layer rule: at most one background layer; if present it is canonicalized to index `0`; missing background is allowed (no auto-insert on runtime boundary).
+- JSON decoder background-layer rule: canonicalizes to a single background layer at index `0`.
 - Unique node ids across all layers.
 - Input and render subsystems must not bypass controller transaction boundaries.
 - Import boundaries are enforced by `tool/check_import_boundaries.dart`.
@@ -75,7 +77,7 @@ Key invariants:
 
 - Current write schema: `schemaVersion = 2`.
 - Accepted read schemas: `{2}`.
-- Decoder validates numeric and structural constraints and fails fast with `SceneJsonFormatException`.
+- Encoder/decoder validate numeric and structural constraints and fail fast with `SceneJsonFormatException`.
 
 ## Performance model
 

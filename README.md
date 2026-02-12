@@ -89,12 +89,15 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Selection contract: commit normalization keeps explicit non-selectable ids valid while filtering missing/background/invisible ids.
 - Runtime notify contract: controller repaint notifications are deferred to a microtask after commit and coalesced to at most one notification per event-loop tick.
 - Move drag contract: pointer move updates only visual preview; scene translation is committed once on pointer up, and pointer cancel keeps the document unchanged.
+- Runtime snapshot validation: `initialSnapshot` and `replaceScene` fail fast with `ArgumentError` for malformed snapshots (duplicate node ids, invalid numbers, invalid SVG path data, invalid palette, multiple background layers).
 
 ## Invariants and quality gates
 
 - Canonical invariants are defined in `tool/invariant_registry.dart`.
 - Validation checks are available in `tool/` and run in CI.
-- Background layer contract: at most one background layer, canonicalized to index `0`.
+- Background layer contract:
+  - runtime/store snapshot boundary: at most one background layer; if present, it is canonicalized to index `0`; missing background is allowed and not auto-inserted.
+  - JSON decoder boundary: at most one background layer; decoder canonicalizes to a single background layer at index `0`.
 
 ## Development checks
 

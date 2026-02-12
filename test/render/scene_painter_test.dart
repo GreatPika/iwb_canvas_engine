@@ -255,185 +255,82 @@ void main() {
     expect(nonBackgroundWith, greaterThan(nonBackgroundWithout));
   });
 
-  test(
-    'ScenePainterV2 handles invalid numeric fields without throwing',
-    () async {
-      const background = Color(0xFFFFFFFF);
-      final controller = SceneControllerV2(
+  test('SceneControllerV2 rejects invalid numeric snapshot fields', () {
+    expect(
+      () => SceneControllerV2(
         initialSnapshot: SceneSnapshot(
           camera: const CameraSnapshot(offset: Offset(double.nan, 0)),
-          background: const BackgroundSnapshot(
-            color: background,
-            grid: GridSnapshot(
-              isEnabled: true,
-              cellSize: double.nan,
-              color: Color(0xFF000000),
-            ),
+        ),
+      ),
+      throwsArgumentError,
+    );
+  });
+
+  test('ScenePainterV2 paints selected line and stroke', () async {
+    const background = Color(0xFFFFFFFF);
+    final controller = SceneControllerV2(
+      initialSnapshot: SceneSnapshot(
+        background: const BackgroundSnapshot(color: background),
+        layers: <LayerSnapshot>[
+          LayerSnapshot(
+            nodes: <NodeSnapshot>[
+              const LineNodeSnapshot(
+                id: 'line-valid',
+                start: Offset(0, 0),
+                end: Offset(20, 0),
+                thickness: 3,
+                color: Color(0xFF000000),
+                transform: Transform2D(a: 1, b: 0, c: 0, d: 1, tx: 20, ty: 20),
+              ),
+              StrokeNodeSnapshot(
+                id: 'stroke-valid',
+                points: <Offset>[Offset(0, 0), Offset(10, 10)],
+                thickness: 3,
+                color: Color(0xFF000000),
+                transform: Transform2D(a: 1, b: 0, c: 0, d: 1, tx: 60, ty: 20),
+              ),
+            ],
           ),
-          layers: <LayerSnapshot>[
-            LayerSnapshot(
-              nodes: <NodeSnapshot>[
-                RectNodeSnapshot(
-                  id: 'rect',
-                  size: const Size(double.infinity, double.nan),
-                  fillColor: const Color(0xFF2196F3),
-                  strokeColor: const Color(0xFF000000),
-                  strokeWidth: double.infinity,
-                  opacity: double.nan,
-                ),
-                const LineNodeSnapshot(
-                  id: 'line',
-                  start: Offset(double.nan, 0),
-                  end: Offset(10, 0),
-                  thickness: double.nan,
-                  color: Color(0xFF000000),
-                ),
-                StrokeNodeSnapshot(
-                  id: 'stroke',
-                  points: const <Offset>[Offset(0, 0), Offset(double.nan, 1)],
-                  thickness: double.infinity,
-                  color: const Color(0xFF000000),
-                ),
-                TextNodeSnapshot(
-                  id: 'text',
-                  text: 'x',
-                  size: const Size(double.infinity, double.nan),
-                  fontSize: double.nan,
-                  color: const Color(0xFF000000),
-                  maxWidth: double.nan,
-                  lineHeight: -1,
-                ),
-                const ImageNodeSnapshot(
-                  id: 'image',
-                  imageId: 'none',
-                  size: Size(10, 10),
-                  transform: Transform2D(
-                    a: 1,
-                    b: 0,
-                    c: 0,
-                    d: 1,
-                    tx: double.nan,
-                    ty: 0,
-                  ),
-                ),
-                const PathNodeSnapshot(
-                  id: 'path',
-                  svgPathData: 'INVALID',
-                  fillColor: Color(0xFF000000),
-                  strokeWidth: double.nan,
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
-      addTearDown(controller.dispose);
-
-      final painter = ScenePainterV2(
-        controller: controller,
-        imageResolver: (_) => null,
-        selectionStrokeWidth: double.nan,
-        gridStrokeWidth: double.nan,
-      );
-
-      final rendered = await _paintToImage(painter, width: 80, height: 80);
-      expect(rendered.width, greaterThan(0));
-    },
-  );
-
-  test(
-    'ScenePainterV2 paints selected line/stroke and skips invalid line',
-    () async {
-      const background = Color(0xFFFFFFFF);
-      final controller = SceneControllerV2(
-        initialSnapshot: SceneSnapshot(
-          background: const BackgroundSnapshot(color: background),
-          layers: <LayerSnapshot>[
-            LayerSnapshot(
-              nodes: <NodeSnapshot>[
-                const LineNodeSnapshot(
-                  id: 'line-valid',
-                  start: Offset(0, 0),
-                  end: Offset(20, 0),
-                  thickness: 3,
-                  color: Color(0xFF000000),
-                  transform: Transform2D(
-                    a: 1,
-                    b: 0,
-                    c: 0,
-                    d: 1,
-                    tx: 20,
-                    ty: 20,
-                  ),
-                ),
-                const LineNodeSnapshot(
-                  id: 'line-invalid',
-                  start: Offset(double.nan, 0),
-                  end: Offset(20, 0),
-                  thickness: 3,
-                  color: Color(0xFF000000),
-                ),
-                StrokeNodeSnapshot(
-                  id: 'stroke-valid',
-                  points: <Offset>[Offset(0, 0), Offset(10, 10)],
-                  thickness: 3,
-                  color: Color(0xFF000000),
-                  transform: Transform2D(
-                    a: 1,
-                    b: 0,
-                    c: 0,
-                    d: 1,
-                    tx: 60,
-                    ty: 20,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
-      addTearDown(controller.dispose);
-      controller.write<void>((writer) {
-        writer.writeSelectionReplace(const <String>{
-          'line-valid',
-          'line-invalid',
-          'stroke-valid',
-        });
+        ],
+      ),
+    );
+    addTearDown(controller.dispose);
+    controller.write<void>((writer) {
+      writer.writeSelectionReplace(const <String>{
+        'line-valid',
+        'stroke-valid',
       });
+    });
 
-      final painter = ScenePainterV2(
-        controller: controller,
-        imageResolver: (_) => null,
-        selectionColor: const Color(0xFFFF0000),
-        selectionStrokeWidth: 2,
-        strokePathCache: null,
-      );
-      final rendered = await _paintToImage(painter, width: 100, height: 60);
-      final nonBackground = await _countNonBackgroundPixels(
-        rendered,
-        background,
-      );
-      expect(nonBackground, greaterThan(0));
+    final painter = ScenePainterV2(
+      controller: controller,
+      imageResolver: (_) => null,
+      selectionColor: const Color(0xFFFF0000),
+      selectionStrokeWidth: 2,
+      strokePathCache: null,
+    );
+    final rendered = await _paintToImage(painter, width: 100, height: 60);
+    final nonBackground = await _countNonBackgroundPixels(rendered, background);
+    expect(nonBackground, greaterThan(0));
 
-      final cachedPainter = ScenePainterV2(
-        controller: controller,
-        imageResolver: (_) => null,
-        selectionColor: const Color(0xFFFF0000),
-        selectionStrokeWidth: 2,
-        strokePathCache: SceneStrokePathCacheV2(maxEntries: 8),
-      );
-      final cachedRendered = await _paintToImage(
-        cachedPainter,
-        width: 100,
-        height: 60,
-      );
-      final cachedNonBackground = await _countNonBackgroundPixels(
-        cachedRendered,
-        background,
-      );
-      expect(cachedNonBackground, greaterThan(0));
-    },
-  );
+    final cachedPainter = ScenePainterV2(
+      controller: controller,
+      imageResolver: (_) => null,
+      selectionColor: const Color(0xFFFF0000),
+      selectionStrokeWidth: 2,
+      strokePathCache: SceneStrokePathCacheV2(maxEntries: 8),
+    );
+    final cachedRendered = await _paintToImage(
+      cachedPainter,
+      width: 100,
+      height: 60,
+    );
+    final cachedNonBackground = await _countNonBackgroundPixels(
+      cachedRendered,
+      background,
+    );
+    expect(cachedNonBackground, greaterThan(0));
+  });
 
   test(
     'ScenePainterV2 keeps grid visible with over-density via stride',

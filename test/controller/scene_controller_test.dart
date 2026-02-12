@@ -82,35 +82,32 @@ void main() {
     },
   );
 
-  test(
-    'requestRepaint outside write is deferred and coalesced',
-    () async {
-      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
-      addTearDown(controller.dispose);
+  test('requestRepaint outside write is deferred and coalesced', () async {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
 
-      final beforeCommit = controller.debugCommitRevision;
-      final beforeStructural = controller.structuralRevision;
-      final beforeBounds = controller.boundsRevision;
-      final beforeVisual = controller.visualRevision;
+    final beforeCommit = controller.debugCommitRevision;
+    final beforeStructural = controller.structuralRevision;
+    final beforeBounds = controller.boundsRevision;
+    final beforeVisual = controller.visualRevision;
 
-      var notifications = 0;
-      controller.addListener(() {
-        notifications = notifications + 1;
-      });
+    var notifications = 0;
+    controller.addListener(() {
+      notifications = notifications + 1;
+    });
 
-      controller.requestRepaint();
-      controller.requestRepaint();
+    controller.requestRepaint();
+    controller.requestRepaint();
 
-      expect(notifications, 0);
-      await pumpEventQueue();
+    expect(notifications, 0);
+    await pumpEventQueue();
 
-      expect(notifications, 1);
-      expect(controller.debugCommitRevision, beforeCommit);
-      expect(controller.structuralRevision, beforeStructural);
-      expect(controller.boundsRevision, beforeBounds);
-      expect(controller.visualRevision, beforeVisual);
-    },
-  );
+    expect(notifications, 1);
+    expect(controller.debugCommitRevision, beforeCommit);
+    expect(controller.structuralRevision, beforeStructural);
+    expect(controller.boundsRevision, beforeBounds);
+    expect(controller.visualRevision, beforeVisual);
+  });
 
   test('no-op write keeps commit/revisions unchanged and does not notify', () {
     final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
@@ -412,6 +409,155 @@ void main() {
       expect(controller.debugLastChangeSet.documentReplaced, isTrue);
       expect(notifications, 1);
       expect(signals, isEmpty);
+    },
+  );
+
+  test('initialSnapshot rejects malformed snapshots with ArgumentError', () {
+    final malformedCases =
+        <({SceneSnapshot snapshot, String field, String message})>[
+          (
+            snapshot: SceneSnapshot(
+              layers: <LayerSnapshot>[
+                LayerSnapshot(
+                  nodes: const <NodeSnapshot>[
+                    RectNodeSnapshot(id: 'dup', size: Size(1, 1)),
+                  ],
+                ),
+                LayerSnapshot(
+                  nodes: const <NodeSnapshot>[
+                    RectNodeSnapshot(id: 'dup', size: Size(2, 2)),
+                  ],
+                ),
+              ],
+            ),
+            field: 'layers[1].nodes[0].id',
+            message: 'Must be unique across scene layers.',
+          ),
+          (
+            snapshot: SceneSnapshot(
+              layers: <LayerSnapshot>[
+                LayerSnapshot(isBackground: true),
+                LayerSnapshot(isBackground: true),
+              ],
+            ),
+            field: 'layers',
+            message: 'Must contain at most one background layer.',
+          ),
+          (
+            snapshot: SceneSnapshot(
+              layers: <LayerSnapshot>[
+                LayerSnapshot(
+                  nodes: const <NodeSnapshot>[
+                    PathNodeSnapshot(id: 'p1', svgPathData: 'not-a-path'),
+                  ],
+                ),
+              ],
+            ),
+            field: 'layers[0].nodes[0].svgPathData',
+            message: 'Must be valid SVG path data.',
+          ),
+          (
+            snapshot: SceneSnapshot(
+              palette: ScenePaletteSnapshot(penColors: const <Color>[]),
+            ),
+            field: 'palette.penColors',
+            message: 'Must not be empty.',
+          ),
+        ];
+
+    for (final malformed in malformedCases) {
+      expect(
+        () => SceneControllerV2(initialSnapshot: malformed.snapshot),
+        throwsA(
+          predicate(
+            (e) =>
+                e is ArgumentError &&
+                e.name == malformed.field &&
+                e.message == malformed.message,
+          ),
+        ),
+      );
+    }
+  });
+
+  test(
+    'writeReplaceScene rejects malformed snapshot without state changes or effects',
+    () async {
+      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      addTearDown(controller.dispose);
+
+      controller.write<void>((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'r1'});
+      });
+      await pumpEventQueue();
+      final beforeSnapshot = controller.snapshot;
+      final beforeEpoch = controller.controllerEpoch;
+      final beforeStructural = controller.structuralRevision;
+      final beforeBounds = controller.boundsRevision;
+      final beforeVisual = controller.visualRevision;
+      final beforeCommit = controller.debugCommitRevision;
+      final beforeSelection = controller.selectedNodeIds;
+
+      final signals = <Object>[];
+      final sub = controller.signals.listen(signals.add);
+      addTearDown(sub.cancel);
+
+      var notifications = 0;
+      controller.addListener(() {
+        notifications = notifications + 1;
+      });
+
+      final malformed = SceneSnapshot(
+        layers: <LayerSnapshot>[
+          LayerSnapshot(
+            nodes: const <NodeSnapshot>[
+              RectNodeSnapshot(
+                id: 'bad',
+                size: Size(10, 10),
+                transform: Transform2D(
+                  a: double.infinity,
+                  b: 0,
+                  c: 0,
+                  d: 1,
+                  tx: 0,
+                  ty: 0,
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+
+      expect(
+        () => controller.writeReplaceScene(malformed),
+        throwsA(
+          predicate(
+            (e) =>
+                e is ArgumentError &&
+                e.name == 'layers[0].nodes[0].transform.a' &&
+                e.message == 'Must be finite.',
+          ),
+        ),
+      );
+      await pumpEventQueue(times: 2);
+
+      expect(controller.snapshot.layers.length, beforeSnapshot.layers.length);
+      expect(
+        controller.snapshot.layers.first.nodes
+            .map((node) => node.id)
+            .toList(growable: false),
+        beforeSnapshot.layers.first.nodes
+            .map((node) => node.id)
+            .toList(growable: false),
+      );
+      expect(controller.controllerEpoch, beforeEpoch);
+      expect(controller.structuralRevision, beforeStructural);
+      expect(controller.boundsRevision, beforeBounds);
+      expect(controller.visualRevision, beforeVisual);
+      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.selectedNodeIds, beforeSelection);
+      expect(signals, isEmpty);
+      expect(notifications, 0);
     },
   );
 

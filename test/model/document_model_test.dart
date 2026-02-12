@@ -113,6 +113,123 @@ void main() {
     expect((nodes[5] as PathNode).fillRule, PathFillRule.evenOdd);
   });
 
+  test(
+    'txnSceneFromSnapshot canonicalizes a single background layer to index 0',
+    () {
+      final scene = txnSceneFromSnapshot(
+        SceneSnapshot(
+          layers: <LayerSnapshot>[
+            LayerSnapshot(
+              nodes: const <NodeSnapshot>[
+                RectNodeSnapshot(id: 'n1', size: Size(1, 1)),
+              ],
+            ),
+            LayerSnapshot(
+              isBackground: true,
+              nodes: const <NodeSnapshot>[
+                RectNodeSnapshot(id: 'bg', size: Size(1, 1)),
+              ],
+            ),
+            LayerSnapshot(
+              nodes: const <NodeSnapshot>[
+                RectNodeSnapshot(id: 'n2', size: Size(1, 1)),
+              ],
+            ),
+          ],
+        ),
+      );
+
+      expect(scene.layers.length, 3);
+      expect(scene.layers.first.isBackground, isTrue);
+      expect(scene.layers[1].nodes.single.id, 'n1');
+      expect(scene.layers[2].nodes.single.id, 'n2');
+    },
+  );
+
+  test(
+    'txnSceneFromSnapshot does not auto-insert missing background layer',
+    () {
+      final scene = txnSceneFromSnapshot(
+        SceneSnapshot(
+          layers: <LayerSnapshot>[
+            LayerSnapshot(
+              nodes: const <NodeSnapshot>[
+                RectNodeSnapshot(id: 'n1', size: Size(1, 1)),
+              ],
+            ),
+          ],
+        ),
+      );
+
+      expect(scene.layers.length, 1);
+      expect(scene.layers.first.isBackground, isFalse);
+    },
+  );
+
+  test('txnSceneFromSnapshot rejects duplicate node ids with field path', () {
+    expect(
+      () => txnSceneFromSnapshot(
+        SceneSnapshot(
+          layers: <LayerSnapshot>[
+            LayerSnapshot(
+              nodes: const <NodeSnapshot>[
+                RectNodeSnapshot(id: 'dup', size: Size(1, 1)),
+              ],
+            ),
+            LayerSnapshot(
+              nodes: const <NodeSnapshot>[
+                RectNodeSnapshot(id: 'dup', size: Size(2, 2)),
+              ],
+            ),
+          ],
+        ),
+      ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is ArgumentError &&
+              e.name == 'layers[1].nodes[0].id' &&
+              e.message == 'Must be unique across scene layers.',
+        ),
+      ),
+    );
+  });
+
+  test('txnSceneFromSnapshot rejects non-finite transform values', () {
+    expect(
+      () => txnSceneFromSnapshot(
+        SceneSnapshot(
+          layers: <LayerSnapshot>[
+            LayerSnapshot(
+              nodes: const <NodeSnapshot>[
+                RectNodeSnapshot(
+                  id: 'r1',
+                  size: Size(1, 1),
+                  transform: Transform2D(
+                    a: double.nan,
+                    b: 0,
+                    c: 0,
+                    d: 1,
+                    tx: 0,
+                    ty: 0,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is ArgumentError &&
+              e.name == 'layers[0].nodes[0].transform.a' &&
+              e.message == 'Must be finite.',
+        ),
+      ),
+    );
+  });
+
   test('find/insert/erase node utilities work across layers', () {
     final scene = sceneWithAllNodeTypes();
 

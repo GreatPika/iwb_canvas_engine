@@ -800,7 +800,8 @@ void main() {
         predicate(
           (e) =>
               e is SceneJsonFormatException &&
-              e.message == 'Field node.opacity must be within [0,1].',
+              e.message ==
+                  'Field layers[0].nodes[0].opacity must be within [0,1].',
         ),
       ),
     );
@@ -882,30 +883,32 @@ void main() {
     );
   });
 
-  test(
-    'decodeScene rejects non-positive grid cellSize when grid is enabled',
-    () {
-      final json = _minimalSceneJson();
-      final grid =
-          (json['background'] as Map<String, dynamic>)['grid']
-              as Map<String, dynamic>;
-      grid['enabled'] = true;
-      grid['cellSize'] = 0;
-      expect(
-        () => decodeScene(json),
-        throwsA(
-          predicate(
-            (e) =>
-                e is SceneJsonFormatException &&
-                e.message == 'Field cellSize must be > 0.',
-          ),
-        ),
-      );
-    },
-  );
+  test('decodeScene rejects non-positive grid cellSize', () {
+    for (final enabled in <bool>[false, true]) {
+      for (final value in <double>[0, -12.5]) {
+        final json = _minimalSceneJson();
+        final grid =
+            (json['background'] as Map<String, dynamic>)['grid']
+                as Map<String, dynamic>;
+        grid['enabled'] = enabled;
+        grid['cellSize'] = value;
 
-  test('decodeScene accepts disabled-grid finite odd cellSize values', () {
-    for (final value in <double>[0, -12.5, 0.125]) {
+        expect(
+          () => decodeScene(json),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is SceneJsonFormatException &&
+                  e.message == 'Field cellSize must be > 0.',
+            ),
+          ),
+        );
+      }
+    }
+  });
+
+  test('decodeScene accepts positive grid cellSize for disabled grid', () {
+    for (final value in <double>[0.125, 1, 12.5]) {
       final json = _minimalSceneJson();
       final grid =
           (json['background'] as Map<String, dynamic>)['grid']
@@ -1086,17 +1089,22 @@ void main() {
 
   test('encodeScene enforces grid and palette contracts', () {
     // INV:INV-SER-JSON-GRID-PALETTE-CONTRACTS
-    final disabledGridScene = SceneSnapshot(
+    final invalidGridScene = SceneSnapshot(
       layers: [LayerSnapshot()],
       background: BackgroundSnapshot(
         grid: GridSnapshot(isEnabled: false, cellSize: -12.5),
       ),
     );
-    final disabledGridEncoded = encodeScene(disabledGridScene);
-    final disabledGridJson =
-        (disabledGridEncoded['background'] as Map<String, dynamic>)['grid']
-            as Map<String, dynamic>;
-    expect(disabledGridJson['cellSize'], -12.5);
+    expect(
+      () => encodeScene(invalidGridScene),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Field background.grid.cellSize must be > 0.',
+        ),
+      ),
+    );
 
     final enabledGridScene = SceneSnapshot(
       layers: [LayerSnapshot()],
@@ -1162,98 +1170,99 @@ void main() {
     );
   });
 
-  test(
-    'encodeScene rejects invalid numeric fields but accepts runtime-normalized opacity',
-    () {
-      final cameraNaN = SceneSnapshot(
-        layers: [LayerSnapshot()],
-        camera: CameraSnapshot(offset: Offset(double.nan, 0)),
-      );
-      expect(
-        () => encodeScene(cameraNaN),
-        throwsA(
-          predicate(
-            (e) =>
-                e is SceneJsonFormatException &&
-                e.message == 'Field camera.offsetX must be finite.',
-          ),
+  test('encodeScene rejects invalid numeric fields', () {
+    final cameraNaN = SceneSnapshot(
+      layers: [LayerSnapshot()],
+      camera: CameraSnapshot(offset: Offset(double.nan, 0)),
+    );
+    expect(
+      () => encodeScene(cameraNaN),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Field camera.offset.dx must be finite.',
         ),
-      );
+      ),
+    );
 
-      final negativeHitPaddingScene = SceneSnapshot(
-        layers: [
-          LayerSnapshot(
-            nodes: [
-              RectNodeSnapshot(
-                id: 'r1',
-                size: const Size(10, 10),
-                fillColor: const Color(0xFF000000),
-                hitPadding: -1,
-              ),
-            ],
-          ),
-        ],
-      );
-      expect(
-        () => encodeScene(negativeHitPaddingScene),
-        throwsA(
-          predicate(
-            (e) =>
-                e is SceneJsonFormatException &&
-                e.message == 'Field node.hitPadding must be >= 0.',
-          ),
+    final negativeHitPaddingScene = SceneSnapshot(
+      layers: [
+        LayerSnapshot(
+          nodes: [
+            RectNodeSnapshot(
+              id: 'r1',
+              size: const Size(10, 10),
+              fillColor: const Color(0xFF000000),
+              hitPadding: -1,
+            ),
+          ],
         ),
-      );
-
-      final nonPositiveFontSizeScene = SceneSnapshot(
-        layers: [
-          LayerSnapshot(
-            nodes: [
-              TextNodeSnapshot(
-                id: 't1',
-                text: 'Hello',
-                size: const Size(10, 10),
-                fontSize: 0,
-                color: const Color(0xFF000000),
-              ),
-            ],
-          ),
-        ],
-      );
-      expect(
-        () => encodeScene(nonPositiveFontSizeScene),
-        throwsA(
-          predicate(
-            (e) =>
-                e is SceneJsonFormatException &&
-                e.message == 'Field text.fontSize must be > 0.',
-          ),
+      ],
+    );
+    expect(
+      () => encodeScene(negativeHitPaddingScene),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Field layers[0].nodes[0].hitPadding must be >= 0.',
         ),
-      );
+      ),
+    );
 
-      final opacityOutOfRangeScene = SceneSnapshot(
-        layers: [
-          LayerSnapshot(
-            nodes: [
-              RectNodeSnapshot(
-                id: 'r1',
-                size: const Size(10, 10),
-                fillColor: const Color(0xFF000000),
-                opacity: 2,
-              ),
-            ],
-          ),
-        ],
-      );
-      final encoded = encodeScene(opacityOutOfRangeScene);
-      final nodes =
-          ((encoded['layers'] as List<dynamic>).single
-                  as Map<String, dynamic>)['nodes']
-              as List<dynamic>;
-      final encodedOpacity = (nodes.single as Map<String, dynamic>)['opacity'];
-      expect(encodedOpacity, 1);
-    },
-  );
+    final nonPositiveFontSizeScene = SceneSnapshot(
+      layers: [
+        LayerSnapshot(
+          nodes: [
+            TextNodeSnapshot(
+              id: 't1',
+              text: 'Hello',
+              size: const Size(10, 10),
+              fontSize: 0,
+              color: const Color(0xFF000000),
+            ),
+          ],
+        ),
+      ],
+    );
+    expect(
+      () => encodeScene(nonPositiveFontSizeScene),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message == 'Field layers[0].nodes[0].fontSize must be > 0.',
+        ),
+      ),
+    );
+
+    final opacityOutOfRangeScene = SceneSnapshot(
+      layers: [
+        LayerSnapshot(
+          nodes: [
+            RectNodeSnapshot(
+              id: 'r1',
+              size: const Size(10, 10),
+              fillColor: const Color(0xFF000000),
+              opacity: 2,
+            ),
+          ],
+        ),
+      ],
+    );
+    expect(
+      () => encodeScene(opacityOutOfRangeScene),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneJsonFormatException &&
+              e.message ==
+                  'Field layers[0].nodes[0].opacity must be within [0,1].',
+        ),
+      ),
+    );
+  });
 }
 
 class _BadOpacityNode extends SceneNode {

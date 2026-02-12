@@ -173,6 +173,13 @@ final controller = SceneController(
 );
 ```
 
+Construction validation notes:
+
+- `initialSnapshot` is validated strictly.
+- Malformed snapshot input throws `ArgumentError` (duplicate ids, invalid numeric fields, invalid `svgPathData`, invalid palette, multiple background layers).
+- Runtime snapshot boundary does not auto-insert a background layer when missing.
+- If one background layer is present but misordered, it is canonicalized to index `0`.
+
 ### 6.2 Read-only state
 
 - `snapshot: SceneSnapshot`
@@ -227,6 +234,7 @@ Validation notes:
 
 - `setGridCellSize` requires finite positive value; with enabled grid it clamps to internal minimum safety limit.
 - `setCameraOffset` rejects non-finite offsets.
+- `replaceScene` validates snapshot input strictly and throws `ArgumentError` on malformed snapshots.
 
 Notification semantics:
 
@@ -435,6 +443,10 @@ Controller normalizes timestamps into a monotonic internal timeline.
 ### 11.3 Errors
 
 Invalid input throws `SceneJsonFormatException` with validation details.
+
+Encoding notes:
+
+- `encodeScene(...)` validates `SceneSnapshot` input before encoding and throws `SceneJsonFormatException` on malformed snapshots.
 
 ## 12. Full integration example
 
