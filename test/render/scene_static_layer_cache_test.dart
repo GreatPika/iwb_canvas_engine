@@ -156,7 +156,8 @@ void main() {
       gridStrokeWidth: double.nan,
     );
     recorder1.endRecording();
-    expect(cache.debugBuildCount, 1);
+    expect(cache.debugBuildCount, 0);
+    expect(cache.debugKeyHashCode, isNull);
 
     final recorder2 = PictureRecorder();
     cache.draw(
@@ -167,8 +168,104 @@ void main() {
       gridStrokeWidth: double.nan,
     );
     recorder2.endRecording();
-    expect(cache.debugBuildCount, 1);
+    expect(cache.debugBuildCount, 0);
+    expect(cache.debugDisposeCount, 0);
+    expect(cache.debugKeyHashCode, isNull);
   });
+
+  test(
+    'SceneStaticLayerCacheV2 skips picture recording when grid is disabled',
+    () {
+      final cache = SceneStaticLayerCacheV2();
+      const background = BackgroundSnapshot(
+        color: Color(0xFFFFFFFF),
+        grid: GridSnapshot(
+          isEnabled: false,
+          cellSize: 20,
+          color: Color(0xFFCCCCCC),
+        ),
+      );
+
+      final recorder = PictureRecorder();
+      cache.draw(
+        Canvas(recorder),
+        const Size(120, 80),
+        background: background,
+        cameraOffset: Offset.zero,
+        gridStrokeWidth: 1,
+      );
+      recorder.endRecording();
+
+      expect(cache.debugBuildCount, 0);
+      expect(cache.debugDisposeCount, 0);
+      expect(cache.debugKeyHashCode, isNull);
+    },
+  );
+
+  test(
+    'SceneStaticLayerCacheV2 releases picture when grid becomes disabled',
+    () {
+      final cache = SceneStaticLayerCacheV2();
+      const enabledBackground = BackgroundSnapshot(
+        color: Color(0xFFFFFFFF),
+        grid: GridSnapshot(
+          isEnabled: true,
+          cellSize: 20,
+          color: Color(0xFFCCCCCC),
+        ),
+      );
+      const disabledBackground = BackgroundSnapshot(
+        color: Color(0xFFFFFFFF),
+        grid: GridSnapshot(
+          isEnabled: false,
+          cellSize: 20,
+          color: Color(0xFFCCCCCC),
+        ),
+      );
+
+      final enabledRecorder = PictureRecorder();
+      cache.draw(
+        Canvas(enabledRecorder),
+        const Size(120, 80),
+        background: enabledBackground,
+        cameraOffset: Offset.zero,
+        gridStrokeWidth: 1,
+      );
+      enabledRecorder.endRecording();
+
+      expect(cache.debugBuildCount, 1);
+      expect(cache.debugDisposeCount, 0);
+      expect(cache.debugKeyHashCode, isNotNull);
+
+      final disabledRecorder = PictureRecorder();
+      cache.draw(
+        Canvas(disabledRecorder),
+        const Size(120, 80),
+        background: disabledBackground,
+        cameraOffset: Offset.zero,
+        gridStrokeWidth: 1,
+      );
+      disabledRecorder.endRecording();
+
+      expect(cache.debugBuildCount, 1);
+      expect(cache.debugDisposeCount, 1);
+      expect(cache.debugKeyHashCode, isNull);
+
+      final disabledRecorderAgain = PictureRecorder();
+      cache.draw(
+        Canvas(disabledRecorderAgain),
+        const Size(120, 80),
+        background: disabledBackground,
+        cameraOffset: Offset.zero,
+        gridStrokeWidth: 1,
+      );
+      disabledRecorderAgain.endRecording();
+
+      expect(cache.debugBuildCount, 1);
+      expect(cache.debugDisposeCount, 1);
+      expect(cache.debugKeyHashCode, isNull);
+    },
+  );
 
   test('SceneStaticLayerCacheV2 clear and dispose release cached picture', () {
     final cache = SceneStaticLayerCacheV2();

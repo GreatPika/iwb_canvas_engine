@@ -359,11 +359,16 @@ class SceneStaticLayerCacheV2 {
       size: size,
       cameraOffset: Offset.zero,
     );
-    final cellSize = enabled ? grid.cellSize : 0.0;
+    if (!enabled) {
+      _disposeGridPictureIfNeeded();
+      _key = null;
+      return;
+    }
+
     final key = _StaticLayerKeyV2(
       size: size,
-      gridEnabled: enabled,
-      gridCellSize: cellSize,
+      gridEnabled: true,
+      gridCellSize: grid.cellSize,
       gridColor: grid.color,
       gridStrokeWidth: safeGridStrokeWidth,
     );
@@ -375,14 +380,15 @@ class SceneStaticLayerCacheV2 {
       _debugBuildCount += 1;
     }
 
-    if (!_key!.gridEnabled) {
+    final picture = _gridPicture;
+    if (picture == null) {
       return;
     }
-    final shift = _gridShiftForCameraOffset(safeOffset, _key!.gridCellSize);
+    final shift = _gridShiftForCameraOffset(safeOffset, key.gridCellSize);
     canvas.save();
     canvas.clipRect(Offset.zero & size);
     canvas.translate(shift.dx, shift.dy);
-    canvas.drawPicture(_gridPicture!);
+    canvas.drawPicture(picture);
     canvas.restore();
   }
 
@@ -593,21 +599,9 @@ class ScenePainterV2 extends CustomPainter {
           haloWidth,
         );
       case TextNodeSnapshot text:
-        _drawWorldBoundsSelection(
-          canvas,
-          text,
-          cameraOffset,
-          color,
-          haloWidth,
-        );
+        _drawWorldBoundsSelection(canvas, text, cameraOffset, color, haloWidth);
       case RectNodeSnapshot rect:
-        _drawWorldBoundsSelection(
-          canvas,
-          rect,
-          cameraOffset,
-          color,
-          haloWidth,
-        );
+        _drawWorldBoundsSelection(canvas, rect, cameraOffset, color, haloWidth);
       case LineNodeSnapshot line:
         if (!line.transform.isFinite ||
             !_isFiniteOffset(line.start) ||
@@ -779,13 +773,7 @@ class ScenePainterV2 extends CustomPainter {
       return;
     }
     final viewRect = worldBounds.shift(-cameraOffset);
-    _drawRectHalo(
-      canvas,
-      viewRect,
-      color,
-      haloWidth,
-      clearFill: true,
-    );
+    _drawRectHalo(canvas, viewRect, color, haloWidth, clearFill: true);
   }
 
   Paint _haloPaint(

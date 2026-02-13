@@ -154,10 +154,7 @@ void _expectRectNear(Rect actual, Rect expected, {double tolerance = 2.0}) {
   expect((actual.left - expected.left).abs(), lessThanOrEqualTo(tolerance));
   expect((actual.top - expected.top).abs(), lessThanOrEqualTo(tolerance));
   expect((actual.right - expected.right).abs(), lessThanOrEqualTo(tolerance));
-  expect(
-    (actual.bottom - expected.bottom).abs(),
-    lessThanOrEqualTo(tolerance),
-  );
+  expect((actual.bottom - expected.bottom).abs(), lessThanOrEqualTo(tolerance));
 }
 
 void main() {
