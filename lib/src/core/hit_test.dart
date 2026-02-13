@@ -189,7 +189,11 @@ bool hitTestNode(Offset point, SceneNode node) {
       if (!candidateBounds.contains(point)) return false;
 
       final inverse = pathNode.transform.invert();
-      if (pathNode.fillColor != null && inverse != null) {
+      if (inverse == null) {
+        // Fallback for singular transforms: keep PathNode selectable by bounds.
+        return true;
+      }
+      if (pathNode.fillColor != null) {
         final localPoint = inverse.applyToPoint(point);
         if (localPath.contains(localPoint)) return true;
       }
@@ -197,10 +201,6 @@ bool hitTestNode(Offset point, SceneNode node) {
       if (pathNode.strokeColor == null) return false;
       final baseStrokeWidth = clampNonNegativeFinite(pathNode.strokeWidth);
       if (baseStrokeWidth <= 0) return false;
-      if (inverse == null) {
-        // Stroke precision requires local-space distance checks.
-        return false;
-      }
 
       final localPoint = inverse.applyToPoint(point);
       final paddingScene = baseHitPadding + kHitSlop;

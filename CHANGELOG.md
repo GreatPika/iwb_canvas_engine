@@ -21,6 +21,8 @@
 - `V2SpatialIndexSlice` now keeps invalid index instances in fallback mode instead of forcing rebuild loops after failed incremental updates.
 - `SceneControllerV2.selectedNodeIds` now reuses a cached `UnmodifiableSetView` and refreshes it only when selection actually changes, removing per-read allocation on hot getter paths.
 - `clearScene`/`writeClearSceneKeepBackground` now keep (or create) dedicated `backgroundLayer` and clear all content layers.
+- `V2SignalsSlice` now buffers pending signals in-place and clears on take/discard, removing per-append list copying in large signal batches.
+- `PathNode` hit-testing now falls back to candidate bounds when node transform is non-invertible, keeping singular transformed paths selectable.
 
 ## 3.0.0 (2026-02-13)
 

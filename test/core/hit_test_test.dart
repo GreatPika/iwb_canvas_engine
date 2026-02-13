@@ -183,7 +183,8 @@ void main() {
       strokeWidth: 2,
       transform: const Transform2D(a: 0, b: 0, c: 0, d: 0, tx: 0, ty: 0),
     );
-    expect(hitTestNode(Offset.zero, singular), isFalse);
+    expect(hitTestNode(Offset.zero, singular), isTrue);
+    expect(hitTestNode(const Offset(10, 0), singular), isFalse);
 
     final shortPath = PathNode(
       id: 'p5',

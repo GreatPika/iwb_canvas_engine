@@ -6,7 +6,7 @@ class V2SignalsSlice {
   final StreamController<V2CommittedSignal> _signals =
       StreamController<V2CommittedSignal>.broadcast();
 
-  List<V2BufferedSignal> _buffered = const <V2BufferedSignal>[];
+  final List<V2BufferedSignal> _buffered = <V2BufferedSignal>[];
   int _signalCounter = 0;
   bool _isDisposed = false;
 
@@ -15,31 +15,29 @@ class V2SignalsSlice {
 
   void writeBufferSignal(V2BufferedSignal signal) {
     if (_isDisposed) return;
-    _buffered = <V2BufferedSignal>[..._buffered, signal];
+    _buffered.add(signal);
   }
 
   void writeDiscardBuffered() {
-    _buffered = const <V2BufferedSignal>[];
+    _buffered.clear();
   }
 
   List<V2CommittedSignal> writeTakeCommitted({required int commitRevision}) {
     if (_isDisposed) return const <V2CommittedSignal>[];
-    final pending = _buffered;
-    _buffered = const <V2BufferedSignal>[];
-    if (pending.isEmpty) return const <V2CommittedSignal>[];
-    final committed = <V2CommittedSignal>[];
-
-    for (final signal in pending) {
-      committed.add(
-        V2CommittedSignal(
-          signalId: 's${_signalCounter++}',
-          type: signal.type,
-          nodeIds: signal.nodeIds,
-          payload: signal.payload,
-          commitRevision: commitRevision,
-        ),
+    if (_buffered.isEmpty) return const <V2CommittedSignal>[];
+    final committed = List<V2CommittedSignal>.generate(_buffered.length, (
+      index,
+    ) {
+      final signal = _buffered[index];
+      return V2CommittedSignal(
+        signalId: 's${_signalCounter++}',
+        type: signal.type,
+        nodeIds: signal.nodeIds,
+        payload: signal.payload,
+        commitRevision: commitRevision,
       );
-    }
+    }, growable: false);
+    _buffered.clear();
     return committed;
   }
 
@@ -54,7 +52,7 @@ class V2SignalsSlice {
   void dispose() {
     if (_isDisposed) return;
     _isDisposed = true;
-    _buffered = const <V2BufferedSignal>[];
+    _buffered.clear();
     _signals.close();
   }
 }
