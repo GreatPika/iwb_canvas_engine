@@ -62,6 +62,12 @@ const List<Invariant> invariants = <Invariant>[
     title: 'transaction commit remains atomic',
   ),
   Invariant(
+    id: 'INV-V2-TXN-COPY-ON-WRITE',
+    scope: 'engine-controller',
+    title:
+        'transactions use scene/layer/node copy-on-write and avoid full scene deep clone',
+  ),
+  Invariant(
     id: 'INV-V2-SIGNALS-AFTER-COMMIT',
     scope: 'engine-controller',
     title:

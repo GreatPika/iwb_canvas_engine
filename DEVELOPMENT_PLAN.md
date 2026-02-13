@@ -246,7 +246,7 @@ workingNodeIds.remove(nodeId);
 
 ---
 
-# [ ] 4) Этап 4 — Убрать глубокое клонирование сцены и внедрить копирование при записи
+# [x] 4) Этап 4 — Убрать глубокое клонирование сцены и внедрить копирование при записи
 
 Это самый важный этап для “больших сцен”.
 
@@ -270,38 +270,38 @@ workingNodeIds.remove(nodeId);
 
 ## Изменения в коде
 
-### [ ] 4.1. `lib/src/model/document_clone.dart`
+### [x] 4.1. `lib/src/model/document_clone.dart`
 
 Добавить две функции:
 
-#### [ ] A) `txnCloneSceneShallow(Scene scene)`
+#### [x] A) `txnCloneSceneShallow(Scene scene)`
 
 Возвращает новый `Scene`, где:
 
 * `layers: scene.layers` (важно: `Scene` сам делает `List.from`, то есть список слоёв будет новым)
 * `camera/background/palette` — **новые объекты** (как сейчас в `txnCloneScene`, но без клонирования слоёв и узлов)
 
-#### [ ] B) `txnCloneLayerShallow(Layer layer)`
+#### [x] B) `txnCloneLayerShallow(Layer layer)`
 
 Возвращает новый `Layer`, где:
 
 * `nodes: layer.nodes` (через конструктор `Layer` это станет новым списком ссылок)
 * `isBackground` копируется
 
-### [ ] 4.2. `lib/src/controller/txn_context.dart`
+### [x] 4.2. `lib/src/controller/txn_context.dart`
 
-#### [ ] A) Заменить `txnEnsureMutableScene()`
+#### [x] A) Заменить `txnEnsureMutableScene()`
 
 Сделать:
 
 * если `_mutableScene == null` → `_mutableScene = txnCloneSceneShallow(_baseScene)`
 
-#### [ ] B) Добавить внутренние поля
+#### [x] B) Добавить внутренние поля
 
 * `final Set<int> _clonedLayerIndexes = <int>{};`
 * `final Set<NodeId> _clonedNodeIds = <NodeId>{};`
 
-#### [ ] C) Добавить методы
+#### [x] C) Добавить методы
 
 1. `Layer txnEnsureMutableLayer(int layerIndex)`
 
@@ -327,7 +327,7 @@ workingNodeIds.remove(nodeId);
 
 * перед изменением `layer.nodes` обязательно вызвать `txnEnsureMutableLayer(layerIndex)`
 
-### [ ] 4.3. `lib/src/controller/scene_writer.dart`
+### [x] 4.3. `lib/src/controller/scene_writer.dart`
 
 Переписать методы так, чтобы **никогда не мутировать узлы из базовой сцены**.
 
@@ -361,7 +361,7 @@ workingNodeIds.remove(nodeId);
 
 ## Тесты и контроль корректности
 
-### [ ] 4.4. Добавить отладочную статистику клонирования (для тестов и регрессий)
+### [x] 4.4. Добавить отладочную статистику клонирования (для тестов и регрессий)
 
 Добавить в `TxnContext` счётчики:
 
@@ -371,29 +371,29 @@ workingNodeIds.remove(nodeId);
 
 Пробросить их в `SceneControllerV2` аналогично `debugLastChangeSet`.
 
-### [ ] 4.5. Тест: “camera move does not clone layers/nodes”
+### [x] 4.5. Тест: “camera move does not clone layers/nodes”
 
 * сделать `writeCameraOffset(...)`
 * ожидать: `debugLayerShallowClones == 0`, `debugNodeClones == 0`
 
-### [ ] 4.6. Тест: “node patch clones exactly one layer and one node”
+### [x] 4.6. Тест: “node patch clones exactly one layer and one node”
 
 * патчить один узел (например opacity)
 * ожидать: `debugLayerShallowClones == 1`, `debugNodeClones == 1`
 
-- [ ] **Критерий готовности этапа 4:** при изменении одного узла не происходит глубокого клонирования всей сцены; при изменениях вида не клонируются слои/узлы.
+- [x] **Критерий готовности этапа 4:** при изменении одного узла не происходит глубокого клонирования всей сцены; при изменениях вида не клонируются слои/узлы.
 
 ---
 
-# [ ] 5) Итоговая карта изменений “что и где”
+# [x] 5) Итоговая карта изменений “что и где”
 
-- [ ] `lib/src/controller/scene_writer.dart`
+- [x] `lib/src/controller/scene_writer.dart`
 
 * [x] Перевести `boundsChanged` на сравнение `nodeHitTestCandidateBoundsWorld`
-* [ ] Перейти на `_ctx.txnResolveMutableNode(...)` перед любыми мутациями узлов
-* [ ] Перед вставкой/удалением узлов — `_ctx.txnEnsureMutableLayer(...)`
+* [x] Перейти на `_ctx.txnResolveMutableNode(...)` перед любыми мутациями узлов
+* [x] Перед вставкой/удалением узлов — `_ctx.txnEnsureMutableLayer(...)`
 
-- [ ] `lib/src/controller/txn_context.dart`
+- [x] `lib/src/controller/txn_context.dart`
 
 * `workingNodeIds.add/remove` вместо пересоздания
 * `txnEnsureMutableScene()` → поверхностное клонирование сцены
@@ -413,17 +413,17 @@ workingNodeIds.remove(nodeId);
 
 * строить индекс без зависимости от `scene.background.grid.cellSize`
 
-- [ ] `lib/src/model/document_clone.dart`
+- [x] `lib/src/model/document_clone.dart`
 
 * `txnCloneSceneShallow`
 * `txnCloneLayerShallow`
 
-- [ ] Тесты:
+- [x] Тесты:
 
 * [x] hitPadding → инвалидация индекса
 * [x] huge bounds → крупные кандидаты
-* [ ] view change → не клонируются узлы/слои
-* [ ] patch одного узла → клонируется 1 слой + 1 узел
+* [x] view change → не клонируются узлы/слои
+* [x] patch одного узла → клонируется 1 слой + 1 узел
 
 ---
 
@@ -432,7 +432,7 @@ workingNodeIds.remove(nodeId);
 - [x] Этап 1 (hitPadding и candidate bounds → boundsChanged)
 - [x] Этап 2 (устойчивость индекса + отвязка от grid cellSize)
 - [x] Этап 3 (мутабельные множества в транзакции и ChangeSet)
-- [ ] Этап 4 (копирование при записи: scene/layer/node)
+- [x] Этап 4 (копирование при записи: scene/layer/node)
 
 
 ### [ ] Этап 6. Убрать O(N) сканирования на коммите (обязательно)

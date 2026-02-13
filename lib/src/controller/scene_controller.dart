@@ -48,6 +48,9 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
   SceneSnapshot? _cachedSnapshot;
   List<String> _debugLastCommitPhases = const <String>[];
   ChangeSet _debugLastChangeSet = ChangeSet();
+  int _debugLastSceneShallowClones = 0;
+  int _debugLastLayerShallowClones = 0;
+  int _debugLastNodeClones = 0;
   @visibleForTesting
   void Function()? debugBeforeInvariantPrecheckHook;
 
@@ -90,6 +93,15 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
 
   @visibleForTesting
   int get debugSpatialIndexBuildCount => _spatialIndexSlice.debugBuildCount;
+
+  @visibleForTesting
+  int get debugSceneShallowClones => _debugLastSceneShallowClones;
+
+  @visibleForTesting
+  int get debugLayerShallowClones => _debugLastLayerShallowClones;
+
+  @visibleForTesting
+  int get debugNodeClones => _debugLastNodeClones;
 
   int get debugCommitRevision => _store.commitRevision;
 
@@ -226,6 +238,7 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
     if (!hasStateChanges && !hasSignals && !hasRepaint) {
       _debugLastCommitPhases = commitPhases;
       _debugLastChangeSet = ctx.changeSet.txnClone();
+      _debugCaptureTxnCloneStats(ctx);
       return const _TxnWriteCommitResult(
         committedSignals: <V2CommittedSignal>[],
         needsNotify: false,
@@ -256,6 +269,7 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
       }
       _debugLastCommitPhases = commitPhases;
       _debugLastChangeSet = ctx.changeSet.txnClone();
+      _debugCaptureTxnCloneStats(ctx);
       return _TxnWriteCommitResult(
         committedSignals: committedSignals,
         needsNotify: needsNotify,
@@ -312,10 +326,17 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
 
     _debugLastCommitPhases = commitPhases;
     _debugLastChangeSet = ctx.changeSet.txnClone();
+    _debugCaptureTxnCloneStats(ctx);
     return _TxnWriteCommitResult(
       committedSignals: committedSignals,
       needsNotify: needsNotify,
     );
+  }
+
+  void _debugCaptureTxnCloneStats(TxnContext ctx) {
+    _debugLastSceneShallowClones = ctx.debugSceneShallowClones;
+    _debugLastLayerShallowClones = ctx.debugLayerShallowClones;
+    _debugLastNodeClones = ctx.debugNodeClones;
   }
 
   void _scheduleNotify() {

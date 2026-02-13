@@ -21,6 +21,7 @@
 - Spatial-index invalidation now tracks hit candidate bounds (`nodeHitTestCandidateBoundsWorld`) so `hitPadding` updates rebuild candidate lookup correctly.
 - Spatial index now uses a dual-path layout (`grid cells` + `large candidates`) with `kMaxCellsPerNode = 1024`, so a single huge node can no longer explode per-cell indexing cost.
 - Spatial index construction is fixed to the internal index cell size and no longer depends on background visual grid settings.
+- Transaction write path now uses scene/layer/node copy-on-write: first mutation shallow-clones scene metadata and clones only touched layers/nodes, while no-op node patches skip COW cloning.
 - Move-mode drag now uses preview translation during pointer move and commits scene translation once on pointer up; pointer cancel no longer mutates document state.
 - Added shared internal scene-value validation (`scene_value_validation.dart`) and wired it into runtime snapshot import and JSON encode/decode validation paths.
 

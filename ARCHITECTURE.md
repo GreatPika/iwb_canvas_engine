@@ -83,7 +83,7 @@ Key invariants:
 
 ## Performance model
 
-- Mutating transactions use single clone-on-first-mutation; commit does not deep-clone scene again.
+- Mutating transactions use copy-on-write: first mutation creates a shallow scene clone, then only touched layers/nodes are cloned on demand; no-op patches do not trigger layer/node cloning.
 - Viewport culling for offscreen nodes.
 - Bounded caches for text layout, stroke paths, and selected path metrics.
 - Spatial index support for input hit-testing hot paths.

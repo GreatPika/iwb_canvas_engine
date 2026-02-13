@@ -438,7 +438,7 @@ SceneNode txnNodeFromSpec(NodeSpec spec, {required NodeId fallbackId}) {
   }
 }
 
-bool txnApplyNodePatch(SceneNode node, NodePatch patch) {
+bool txnApplyNodePatch(SceneNode node, NodePatch patch, {bool dryRun = false}) {
   var changed = false;
 
   if (node.id != patch.id) {
@@ -455,80 +455,80 @@ bool txnApplyNodePatch(SceneNode node, NodePatch patch) {
     onError: _txnSnapshotValidationError,
   );
 
-  changed = _txnApplyCommonPatch(node, patch.common) || changed;
+  changed = _txnApplyCommonPatch(node, patch.common, dryRun: dryRun) || changed;
 
   switch ((node, patch)) {
     case (ImageNode image, ImageNodePatch imagePatch):
       changed =
           _txnSet(imagePatch.imageId, image.imageId, (value) {
             image.imageId = value;
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
       changed =
           _txnSet(imagePatch.size, image.size, (value) {
             image.size = value;
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
       changed =
           _txnSetNullable(imagePatch.naturalSize, image.naturalSize, (value) {
             image.naturalSize = value;
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
     case (TextNode text, TextNodePatch textPatch):
       changed =
           _txnSet(textPatch.text, text.text, (value) {
             text.text = value;
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
       changed =
           _txnSet(textPatch.size, text.size, (value) {
             text.size = value;
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
       changed =
           _txnSet(textPatch.fontSize, text.fontSize, (value) {
             text.fontSize = value;
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
       changed =
           _txnSet(textPatch.color, text.color, (value) {
             text.color = value;
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
       changed =
           _txnSet(textPatch.align, text.align, (value) {
             text.align = value;
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
       changed =
           _txnSet(textPatch.isBold, text.isBold, (value) {
             text.isBold = value;
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
       changed =
           _txnSet(textPatch.isItalic, text.isItalic, (value) {
             text.isItalic = value;
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
       changed =
           _txnSet(textPatch.isUnderline, text.isUnderline, (value) {
             text.isUnderline = value;
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
       changed =
           _txnSetNullable(textPatch.fontFamily, text.fontFamily, (value) {
             text.fontFamily = value;
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
       changed =
           _txnSetNullable(textPatch.maxWidth, text.maxWidth, (value) {
             text.maxWidth = value;
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
       changed =
           _txnSetNullable(textPatch.lineHeight, text.lineHeight, (value) {
             text.lineHeight = value;
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
     case (StrokeNode stroke, StrokeNodePatch strokePatch):
       changed =
@@ -536,87 +536,87 @@ bool txnApplyNodePatch(SceneNode node, NodePatch patch) {
             stroke.points
               ..clear()
               ..addAll(value);
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
       changed =
           _txnSet(strokePatch.thickness, stroke.thickness, (value) {
             stroke.thickness = value;
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
       changed =
           _txnSet(strokePatch.color, stroke.color, (value) {
             stroke.color = value;
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
     case (LineNode line, LineNodePatch linePatch):
       changed =
           _txnSet(linePatch.start, line.start, (value) {
             line.start = value;
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
       changed =
           _txnSet(linePatch.end, line.end, (value) {
             line.end = value;
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
       changed =
           _txnSet(linePatch.thickness, line.thickness, (value) {
             line.thickness = value;
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
       changed =
           _txnSet(linePatch.color, line.color, (value) {
             line.color = value;
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
     case (RectNode rect, RectNodePatch rectPatch):
       changed =
           _txnSet(rectPatch.size, rect.size, (value) {
             rect.size = value;
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
       changed =
           _txnSetNullable(rectPatch.fillColor, rect.fillColor, (value) {
             rect.fillColor = value;
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
       changed =
           _txnSetNullable(rectPatch.strokeColor, rect.strokeColor, (value) {
             rect.strokeColor = value;
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
       changed =
           _txnSet(rectPatch.strokeWidth, rect.strokeWidth, (value) {
             rect.strokeWidth = value;
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
     case (PathNode path, PathNodePatch pathPatch):
       changed =
           _txnSet(pathPatch.svgPathData, path.svgPathData, (value) {
             path.svgPathData = value;
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
       changed =
           _txnSetNullable(pathPatch.fillColor, path.fillColor, (value) {
             path.fillColor = value;
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
       changed =
           _txnSetNullable(pathPatch.strokeColor, path.strokeColor, (value) {
             path.strokeColor = value;
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
       changed =
           _txnSet(pathPatch.strokeWidth, path.strokeWidth, (value) {
             path.strokeWidth = value;
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
       changed =
           _txnSet(pathPatch.fillRule, _txnPathFillRuleToV2(path.fillRule), (
             value,
           ) {
             path.fillRule = _txnPathFillRuleFromV2(value);
-          }) ||
+          }, dryRun: dryRun) ||
           changed;
     default:
       throw ArgumentError(
@@ -745,81 +745,98 @@ V2PathFillRule _txnPathFillRuleToV2(PathFillRule fillRule) {
   }
 }
 
-bool _txnApplyCommonPatch(SceneNode node, CommonNodePatch patch) {
+bool _txnApplyCommonPatch(
+  SceneNode node,
+  CommonNodePatch patch, {
+  required bool dryRun,
+}) {
   var changed = false;
   changed =
       _txnSet(patch.transform, node.transform, (value) {
         node.transform = value;
-      }) ||
+      }, dryRun: dryRun) ||
       changed;
   changed =
       _txnSet(patch.opacity, node.opacity, (value) {
         node.opacity = value;
-      }) ||
+      }, dryRun: dryRun) ||
       changed;
   changed =
       _txnSet(patch.hitPadding, node.hitPadding, (value) {
         node.hitPadding = value;
-      }) ||
+      }, dryRun: dryRun) ||
       changed;
   changed =
       _txnSet(patch.isVisible, node.isVisible, (value) {
         node.isVisible = value;
-      }) ||
+      }, dryRun: dryRun) ||
       changed;
   changed =
       _txnSet(patch.isSelectable, node.isSelectable, (value) {
         node.isSelectable = value;
-      }) ||
+      }, dryRun: dryRun) ||
       changed;
   changed =
       _txnSet(patch.isLocked, node.isLocked, (value) {
         node.isLocked = value;
-      }) ||
+      }, dryRun: dryRun) ||
       changed;
   changed =
       _txnSet(patch.isDeletable, node.isDeletable, (value) {
         node.isDeletable = value;
-      }) ||
+      }, dryRun: dryRun) ||
       changed;
   changed =
       _txnSet(patch.isTransformable, node.isTransformable, (value) {
         node.isTransformable = value;
-      }) ||
+      }, dryRun: dryRun) ||
       changed;
   return changed;
 }
 
-bool _txnSet<T>(PatchField<T> patch, T current, void Function(T value) assign) {
+bool _txnSet<T>(
+  PatchField<T> patch,
+  T current,
+  void Function(T value) assign, {
+  required bool dryRun,
+}) {
   if (patch.isAbsent) return false;
   final next = patch.value;
   if (next == current) return false;
-  assign(next);
+  if (!dryRun) {
+    assign(next);
+  }
   return true;
 }
 
 bool _txnSetNullable<T>(
   PatchField<T?> patch,
   T? current,
-  void Function(T? value) assign,
-) {
+  void Function(T? value) assign, {
+  required bool dryRun,
+}) {
   if (patch.isAbsent) return false;
 
   final next = patch.isNullValue ? null : patch.value;
   if (next == current) return false;
-  assign(next);
+  if (!dryRun) {
+    assign(next);
+  }
   return true;
 }
 
 bool _txnSetOffsets(
   PatchField<List<Offset>> patch,
   List<Offset> current,
-  void Function(List<Offset> value) assign,
-) {
+  void Function(List<Offset> value) assign, {
+  required bool dryRun,
+}) {
   if (patch.isAbsent) return false;
   final next = List<Offset>.from(patch.value);
   if (_txnOffsetListsEqual(current, next)) return false;
-  assign(next);
+  if (!dryRun) {
+    assign(next);
+  }
   return true;
 }
 

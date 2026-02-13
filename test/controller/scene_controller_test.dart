@@ -11,6 +11,7 @@ import 'package:iwb_canvas_engine/src/input/slices/signals/signal_event.dart';
 // INV:INV-V2-EPOCH-INVALIDATION
 // INV:INV-V2-SIGNALS-AFTER-COMMIT
 // INV:INV-V2-ID-INDEX-FROM-SCENE
+// INV:INV-V2-TXN-COPY-ON-WRITE
 
 void main() {
   SceneSnapshot twoRectSnapshot() {
@@ -834,6 +835,37 @@ void main() {
 
     expect(controller.boundsRevision, beforeBounds);
     expect(controller.debugLastChangeSet.boundsChanged, isFalse);
+    expect(controller.debugSceneShallowClones, 0);
+    expect(controller.debugLayerShallowClones, 0);
+    expect(controller.debugNodeClones, 0);
+  });
+
+  test('camera offset write does not clone layers or nodes', () {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    controller.write<void>((writer) {
+      writer.writeCameraOffset(const Offset(20, 10));
+    });
+
+    expect(controller.debugSceneShallowClones, 1);
+    expect(controller.debugLayerShallowClones, 0);
+    expect(controller.debugNodeClones, 0);
+  });
+
+  test('single node patch clones exactly one layer and one node', () {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    controller.write<void>((writer) {
+      writer.writeNodePatch(
+        const RectNodePatch(id: 'r1', strokeWidth: PatchField<double>.value(2)),
+      );
+    });
+
+    expect(controller.debugSceneShallowClones, 1);
+    expect(controller.debugLayerShallowClones, 1);
+    expect(controller.debugNodeClones, 1);
   });
 
   test('resolveSpatialCandidateNode accepts valid foreground candidate', () {

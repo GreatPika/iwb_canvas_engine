@@ -34,7 +34,12 @@ class SceneWriter implements SceneWriteTxn {
 
     final node = txnNodeFromSpec(spec, fallbackId: resolvedId);
     final scene = _ctx.txnEnsureMutableScene();
-    txnInsertNodeInScene(scene: scene, node: node, layerIndex: layerIndex);
+    final targetLayerIndex = txnResolveInsertLayerIndex(
+      scene: scene,
+      layerIndex: layerIndex,
+    );
+    final layer = _ctx.txnEnsureMutableLayer(targetLayerIndex);
+    layer.nodes.add(node);
     _ctx.txnRememberNodeId(node.id);
     _ctx.changeSet.txnMarkStructuralChanged();
     _ctx.changeSet.txnTrackAdded(node.id);
@@ -51,6 +56,7 @@ class SceneWriter implements SceneWriteTxn {
     if (!isNodeDeletableInLayer(existing.node, layer)) {
       return false;
     }
+    _ctx.txnEnsureMutableLayer(existing.layerIndex);
     final scene = _ctx.txnEnsureMutableScene();
     final removed = txnEraseNodeFromScene(scene: scene, nodeId: nodeId);
     if (removed == null) {
@@ -77,18 +83,13 @@ class SceneWriter implements SceneWriteTxn {
     if (existing == null) {
       return false;
     }
-
-    final scene = _ctx.txnEnsureMutableScene();
-    final found = txnFindNodeById(scene, patch.id);
-    if (found == null) {
+    if (!txnApplyNodePatch(existing.node, patch, dryRun: true)) {
       return false;
     }
 
+    final found = _ctx.txnResolveMutableNode(patch.id);
     final oldCandidate = nodeHitTestCandidateBoundsWorld(found.node);
-    final changed = txnApplyNodePatch(found.node, patch);
-    if (!changed) {
-      return false;
-    }
+    txnApplyNodePatch(found.node, patch);
 
     _ctx.changeSet.txnTrackUpdated(patch.id);
     final newCandidate = nodeHitTestCandidateBoundsWorld(found.node);
@@ -111,10 +112,7 @@ class SceneWriter implements SceneWriteTxn {
     if (existing == null) return false;
     if (existing.node.transform == transform) return false;
 
-    final scene = _ctx.txnEnsureMutableScene();
-    final found = txnFindNodeById(scene, id);
-    if (found == null) return false;
-
+    final found = _ctx.txnResolveMutableNode(id);
     final oldCandidate = nodeHitTestCandidateBoundsWorld(found.node);
     found.node.transform = transform;
     _ctx.changeSet.txnTrackUpdated(id);
@@ -189,15 +187,22 @@ class SceneWriter implements SceneWriteTxn {
     if (delta == Offset.zero || _ctx.workingSelection.isEmpty) {
       return 0;
     }
-    final scene = _ctx.txnEnsureMutableScene();
-    final moved = txnTranslateSelection(
-      scene: scene,
-      selectedNodeIds: _ctx.workingSelection,
-      delta: delta,
-    );
-    if (moved.isEmpty) {
-      return 0;
+
+    final moved = <NodeId>{};
+    final selectedIds = _ctx.workingSelection.toList(growable: false);
+    for (final nodeId in selectedIds) {
+      final existing = txnFindNodeById(_ctx.workingScene, nodeId);
+      if (existing == null) continue;
+      final layer = _ctx.workingScene.layers[existing.layerIndex];
+      if (layer.isBackground) continue;
+      if (existing.node.isLocked || !existing.node.isTransformable) continue;
+
+      final mutable = _ctx.txnResolveMutableNode(nodeId);
+      mutable.node.position = mutable.node.position + delta;
+      moved.add(nodeId);
     }
+    if (moved.isEmpty) return 0;
+
     for (final nodeId in moved) {
       _ctx.changeSet.txnTrackUpdated(nodeId);
     }
@@ -211,24 +216,29 @@ class SceneWriter implements SceneWriteTxn {
     final selected = _ctx.workingSelection;
     if (selected.isEmpty) return 0;
 
-    final scene = _ctx.txnEnsureMutableScene();
     var affected = 0;
-    for (final layer in scene.layers) {
+    final selectedIds = selected.toList(growable: false);
+    for (final nodeId in selectedIds) {
+      final existing = txnFindNodeById(_ctx.workingScene, nodeId);
+      if (existing == null) continue;
+      final layer = _ctx.workingScene.layers[existing.layerIndex];
       if (layer.isBackground) continue;
-      for (final node in layer.nodes) {
-        if (!selected.contains(node.id)) continue;
-        if (!node.isTransformable || node.isLocked) continue;
-        final beforeCandidate = nodeHitTestCandidateBoundsWorld(node);
-        node.transform = delta.multiply(node.transform);
-        final afterCandidate = nodeHitTestCandidateBoundsWorld(node);
-        _ctx.changeSet.txnTrackUpdated(node.id);
-        if (beforeCandidate != afterCandidate) {
-          _ctx.changeSet.txnMarkBoundsChanged();
-        } else {
-          _ctx.changeSet.txnMarkVisualChanged();
-        }
-        affected = affected + 1;
+      if (!existing.node.isTransformable || existing.node.isLocked) continue;
+
+      final nextTransform = delta.multiply(existing.node.transform);
+      if (nextTransform == existing.node.transform) continue;
+
+      final mutable = _ctx.txnResolveMutableNode(nodeId);
+      final beforeCandidate = nodeHitTestCandidateBoundsWorld(mutable.node);
+      mutable.node.transform = nextTransform;
+      final afterCandidate = nodeHitTestCandidateBoundsWorld(mutable.node);
+      _ctx.changeSet.txnTrackUpdated(nodeId);
+      if (beforeCandidate != afterCandidate) {
+        _ctx.changeSet.txnMarkBoundsChanged();
+      } else {
+        _ctx.changeSet.txnMarkVisualChanged();
       }
+      affected = affected + 1;
     }
     return affected;
   }
@@ -238,21 +248,30 @@ class SceneWriter implements SceneWriteTxn {
     final selected = _ctx.workingSelection;
     if (selected.isEmpty) return 0;
 
-    final deleted = <NodeId>{
-      for (final layer in _ctx.workingScene.layers)
-        for (final node in layer.nodes)
-          if (selected.contains(node.id) && isNodeDeletableInLayer(node, layer))
-            node.id,
-    };
+    final deleted = <NodeId>{};
+    final deletedByLayer = <int, Set<NodeId>>{};
+    final layers = _ctx.workingScene.layers;
+    for (var layerIndex = 0; layerIndex < layers.length; layerIndex++) {
+      final layer = layers[layerIndex];
+      for (final node in layer.nodes) {
+        if (!selected.contains(node.id)) continue;
+        if (!isNodeDeletableInLayer(node, layer)) continue;
+        deleted.add(node.id);
+        deletedByLayer.putIfAbsent(layerIndex, () => <NodeId>{}).add(node.id);
+      }
+    }
     if (deleted.isEmpty) return 0;
 
-    final scene = _ctx.txnEnsureMutableScene();
     for (final id in deleted) {
       _ctx.txnForgetNodeId(id);
     }
 
-    for (final layer in scene.layers) {
-      layer.nodes.retainWhere((node) => !deleted.contains(node.id));
+    for (final entry in deletedByLayer.entries) {
+      final mutableLayer = _ctx.txnEnsureMutableLayer(entry.key);
+      final layerDeletedIds = entry.value;
+      mutableLayer.nodes.retainWhere(
+        (node) => !layerDeletedIds.contains(node.id),
+      );
     }
     _ctx.changeSet.txnMarkStructuralChanged();
     for (final id in deleted) {

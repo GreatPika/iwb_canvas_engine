@@ -12,6 +12,29 @@ import 'package:iwb_canvas_engine/src/input/slices/repaint/repaint_slice.dart';
 import 'package:iwb_canvas_engine/src/input/slices/signals/signal_event.dart';
 import 'package:iwb_canvas_engine/src/input/slices/spatial_index/spatial_index_slice.dart';
 
+// INV:INV-V2-TXN-COPY-ON-WRITE
+
+class _LayerDropTxnContext extends TxnContext {
+  _LayerDropTxnContext({
+    required super.baseScene,
+    required super.workingSelection,
+    required super.workingNodeIds,
+    required super.nodeIdSeed,
+  });
+
+  bool _dropped = false;
+
+  @override
+  Layer txnEnsureMutableLayer(int layerIndex) {
+    final layer = super.txnEnsureMutableLayer(layerIndex);
+    if (!_dropped) {
+      _dropped = true;
+      layer.nodes.clear();
+    }
+    return layer;
+  }
+}
+
 void main() {
   test('ChangeSet tracks and clones change state consistently', () {
     final changeSet = ChangeSet();
@@ -217,6 +240,171 @@ void main() {
     expect(identical(ctx.txnSceneForCommit(), mutableScene), isTrue);
     expect(identical(ctx.workingScene, mutableScene), isTrue);
   });
+
+  test('TxnContext shallow scene clone defers layer and node cloning', () {
+    final baseScene = Scene(
+      layers: <Layer>[
+        Layer(
+          nodes: <SceneNode>[RectNode(id: 'r1', size: const Size(10, 10))],
+        ),
+      ],
+    );
+    final ctx = TxnContext(
+      baseScene: baseScene,
+      workingSelection: <NodeId>{},
+      workingNodeIds: <NodeId>{'r1'},
+      nodeIdSeed: 0,
+    );
+
+    final mutable = ctx.txnEnsureMutableScene();
+    expect(ctx.debugSceneShallowClones, 1);
+    expect(ctx.debugLayerShallowClones, 0);
+    expect(ctx.debugNodeClones, 0);
+    expect(identical(mutable.layers, baseScene.layers), isFalse);
+    expect(identical(mutable.layers.single, baseScene.layers.single), isTrue);
+    expect(
+      identical(
+        mutable.layers.single.nodes.single,
+        baseScene.layers.single.nodes.single,
+      ),
+      isTrue,
+    );
+  });
+
+  test(
+    'TxnContext resolves mutable nodes with one layer clone and per-node COW',
+    () {
+      final baseScene = Scene(
+        layers: <Layer>[
+          Layer(
+            nodes: <SceneNode>[
+              RectNode(id: 'r1', size: const Size(10, 10)),
+              RectNode(id: 'r2', size: const Size(12, 12)),
+            ],
+          ),
+        ],
+      );
+      final baseR1 = baseScene.layers.single.nodes.first;
+      final baseR2 = baseScene.layers.single.nodes.last;
+      final ctx = TxnContext(
+        baseScene: baseScene,
+        workingSelection: <NodeId>{},
+        workingNodeIds: <NodeId>{'r1', 'r2'},
+        nodeIdSeed: 0,
+      );
+
+      final first = ctx.txnResolveMutableNode('r1');
+      expect(ctx.debugSceneShallowClones, 1);
+      expect(ctx.debugLayerShallowClones, 1);
+      expect(ctx.debugNodeClones, 1);
+      expect(identical(first.node, baseR1), isFalse);
+
+      final again = ctx.txnResolveMutableNode('r1');
+      expect(ctx.debugLayerShallowClones, 1);
+      expect(ctx.debugNodeClones, 1);
+      expect(identical(again.node, first.node), isTrue);
+
+      final second = ctx.txnResolveMutableNode('r2');
+      expect(ctx.debugLayerShallowClones, 1);
+      expect(ctx.debugNodeClones, 2);
+      expect(identical(second.node, baseR2), isFalse);
+    },
+  );
+
+  test('TxnContext adopted scene bypasses layer/node COW cloning', () {
+    final adopted = Scene(
+      layers: <Layer>[
+        Layer(
+          nodes: <SceneNode>[RectNode(id: 'adopted', size: const Size(10, 10))],
+        ),
+      ],
+    );
+    final adoptedNode = adopted.layers.single.nodes.single;
+    final ctx = TxnContext(
+      baseScene: Scene(),
+      workingSelection: <NodeId>{},
+      workingNodeIds: <NodeId>{},
+      nodeIdSeed: 0,
+    );
+
+    ctx.txnAdoptScene(adopted);
+    final mutable = ctx.txnResolveMutableNode('adopted');
+    mutable.node.opacity = 0.5;
+
+    expect(ctx.debugSceneShallowClones, 0);
+    expect(ctx.debugLayerShallowClones, 0);
+    expect(ctx.debugNodeClones, 0);
+    expect(identical(mutable.node, adoptedNode), isTrue);
+  });
+
+  test(
+    'TxnContext ensureMutableLayer throws range error for invalid index',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(layers: <Layer>[Layer()]),
+        workingSelection: <NodeId>{},
+        workingNodeIds: <NodeId>{},
+        nodeIdSeed: 0,
+      );
+
+      expect(() => ctx.txnEnsureMutableLayer(5), throwsRangeError);
+    },
+  );
+
+  test(
+    'TxnContext ensureMutableLayer fast path returns owned adopted layer',
+    () {
+      final adopted = Scene(
+        layers: <Layer>[
+          Layer(
+            nodes: <SceneNode>[RectNode(id: 'n1', size: const Size(1, 1))],
+          ),
+        ],
+      );
+      final ctx = TxnContext(
+        baseScene: Scene(),
+        workingSelection: <NodeId>{},
+        workingNodeIds: <NodeId>{},
+        nodeIdSeed: 0,
+      );
+
+      ctx.txnAdoptScene(adopted);
+      final layer = ctx.txnEnsureMutableLayer(0);
+      expect(identical(layer, adopted.layers[0]), isTrue);
+      expect(ctx.debugLayerShallowClones, 0);
+    },
+  );
+
+  test('TxnContext resolveMutableNode throws for missing node id', () {
+    final ctx = TxnContext(
+      baseScene: Scene(),
+      workingSelection: <NodeId>{},
+      workingNodeIds: <NodeId>{},
+      nodeIdSeed: 0,
+    );
+
+    expect(() => ctx.txnResolveMutableNode('missing'), throwsStateError);
+  });
+
+  test(
+    'TxnContext resolveMutableNode throws when node disappears mid-resolve',
+    () {
+      final ctx = _LayerDropTxnContext(
+        baseScene: Scene(
+          layers: <Layer>[
+            Layer(
+              nodes: <SceneNode>[RectNode(id: 'n1', size: const Size(1, 1))],
+            ),
+          ],
+        ),
+        workingSelection: <NodeId>{},
+        workingNodeIds: <NodeId>{'n1'},
+        nodeIdSeed: 0,
+      );
+
+      expect(() => ctx.txnResolveMutableNode('n1'), throwsStateError);
+    },
+  );
 
   test('SceneWriter handles write operations and updates changeset', () {
     final bufferedSignals = <V2BufferedSignal>[];
