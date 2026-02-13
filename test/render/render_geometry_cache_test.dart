@@ -1,0 +1,126 @@
+import 'dart:ui';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/src/core/transform2d.dart';
+import 'package:iwb_canvas_engine/src/public/snapshot.dart';
+import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
+
+void main() {
+  test('RenderGeometryCache reuses entry for unchanged node geometry', () {
+    final cache = RenderGeometryCache();
+    const node = RectNodeSnapshot(
+      id: 'rect-1',
+      size: Size(20, 10),
+      strokeColor: Color(0xFF000000),
+      strokeWidth: 2,
+    );
+
+    final entry1 = cache.get(node);
+    final entry2 = cache.get(node);
+
+    expect(identical(entry1, entry2), isTrue);
+    expect(cache.debugBuildCount, 1);
+    expect(cache.debugHitCount, 1);
+    expect(cache.debugSize, 1);
+  });
+
+  test('RenderGeometryCache rebuilds when path geometry key changes', () {
+    final cache = RenderGeometryCache();
+    const nodeA = PathNodeSnapshot(id: 'path-1', svgPathData: 'M0 0 H10');
+    const nodeB = PathNodeSnapshot(id: 'path-1', svgPathData: 'M0 0 H20');
+
+    final entryA = cache.get(nodeA);
+    final entryB = cache.get(nodeB);
+
+    expect(identical(entryA, entryB), isFalse);
+    expect(cache.debugBuildCount, 2);
+    expect(cache.debugHitCount, 0);
+  });
+
+  test('RenderGeometryCache rect bounds include stroke only when enabled', () {
+    final cache = RenderGeometryCache();
+    const withStroke = RectNodeSnapshot(
+      id: 'rect-with-stroke',
+      size: Size(10, 6),
+      strokeColor: Color(0xFF000000),
+      strokeWidth: 4,
+    );
+    const noStroke = RectNodeSnapshot(
+      id: 'rect-no-stroke',
+      size: Size(10, 6),
+      strokeWidth: 4,
+    );
+
+    final withStrokeEntry = cache.get(withStroke);
+    final noStrokeEntry = cache.get(noStroke);
+
+    expect(withStrokeEntry.localBounds, const Rect.fromLTRB(-7, -5, 7, 5));
+    expect(noStrokeEntry.localBounds, const Rect.fromLTRB(-5, -3, 5, 3));
+  });
+
+  test('RenderGeometryCache builds centered path and world bounds', () {
+    final cache = RenderGeometryCache();
+    const node = PathNodeSnapshot(
+      id: 'path-centered',
+      svgPathData: 'M0 0 H10 V10 H0 Z',
+      strokeColor: Color(0xFF000000),
+      strokeWidth: 2,
+      transform: Transform2D(a: 1, b: 0, c: 0, d: 1, tx: 10, ty: 20),
+    );
+
+    final entry = cache.get(node);
+
+    expect(entry.localPath, isNotNull);
+    expect(entry.localBounds, const Rect.fromLTRB(-6, -6, 6, 6));
+    expect(entry.worldBounds, const Rect.fromLTRB(4, 14, 16, 26));
+  });
+
+  test(
+    'RenderGeometryCache returns safe zero bounds for invalid path data',
+    () {
+      final cache = RenderGeometryCache();
+      const node = PathNodeSnapshot(id: 'path-invalid', svgPathData: 'invalid');
+
+      final entry = cache.get(node);
+
+      expect(entry.localPath, isNull);
+      expect(entry.localBounds, Rect.zero);
+      expect(entry.worldBounds, Rect.zero);
+    },
+  );
+
+  test(
+    'RenderGeometryCache returns zero world bounds for non-finite transform',
+    () {
+      final cache = RenderGeometryCache();
+      final node = RectNodeSnapshot(
+        id: 'rect-non-finite-transform',
+        size: const Size(10, 10),
+        transform: Transform2D(a: 1, b: 0, c: 0, d: 1, tx: double.nan, ty: 0),
+      );
+
+      final entry = cache.get(node);
+
+      expect(entry.localBounds, const Rect.fromLTRB(-5, -5, 5, 5));
+      expect(entry.worldBounds, Rect.zero);
+    },
+  );
+
+  test('RenderGeometryCache invalidateAll clears cached entries', () {
+    final cache = RenderGeometryCache();
+    const node = ImageNodeSnapshot(
+      id: 'image-1',
+      imageId: 'img',
+      size: Size(20, 20),
+    );
+
+    cache.get(node);
+    expect(cache.debugSize, 1);
+
+    cache.invalidateAll();
+    expect(cache.debugSize, 0);
+
+    cache.get(node);
+    expect(cache.debugBuildCount, 2);
+  });
+}

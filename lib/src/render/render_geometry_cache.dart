@@ -1,0 +1,324 @@
+import 'dart:ui';
+
+import 'package:flutter/foundation.dart';
+import 'package:path_drawing/path_drawing.dart';
+
+import '../core/geometry.dart';
+import '../core/numeric_clamp.dart';
+import '../core/transform2d.dart';
+import '../public/snapshot.dart';
+
+class GeometryEntry {
+  const GeometryEntry({
+    required this.localBounds,
+    required this.worldBounds,
+    this.localPath,
+  });
+
+  final Rect localBounds;
+  final Rect worldBounds;
+  final Path? localPath;
+}
+
+class RenderGeometryCache {
+  final Map<NodeId, _GeometryCacheRecord> _entries =
+      <NodeId, _GeometryCacheRecord>{};
+
+  int _debugBuildCount = 0;
+  int _debugHitCount = 0;
+
+  @visibleForTesting
+  int get debugBuildCount => _debugBuildCount;
+  @visibleForTesting
+  int get debugHitCount => _debugHitCount;
+  @visibleForTesting
+  int get debugSize => _entries.length;
+
+  GeometryEntry get(NodeSnapshot node) {
+    final key = _buildValidityKey(node);
+    final cached = _entries[node.id];
+    if (cached != null && cached.key == key) {
+      _debugHitCount += 1;
+      return cached.entry;
+    }
+
+    final entry = _buildEntry(node);
+    _entries[node.id] = _GeometryCacheRecord(key: key, entry: entry);
+    _debugBuildCount += 1;
+    return entry;
+  }
+
+  void invalidateAll() => _entries.clear();
+
+  GeometryEntry _buildEntry(NodeSnapshot node) {
+    return switch (node) {
+      RectNodeSnapshot rectNode => _rectEntry(rectNode),
+      ImageNodeSnapshot imageNode => _imageEntry(imageNode),
+      TextNodeSnapshot textNode => _textEntry(textNode),
+      LineNodeSnapshot lineNode => _lineEntry(lineNode),
+      StrokeNodeSnapshot strokeNode => _strokeEntry(strokeNode),
+      PathNodeSnapshot pathNode => _pathEntry(pathNode),
+    };
+  }
+
+  GeometryEntry _rectEntry(RectNodeSnapshot node) {
+    var localBounds = _centerRect(node.size);
+    final safeStrokeWidth = clampNonNegativeFinite(node.strokeWidth);
+    if (_isStrokeEnabled(node.strokeColor, safeStrokeWidth)) {
+      localBounds = localBounds.inflate(safeStrokeWidth / 2);
+    }
+    return GeometryEntry(
+      localBounds: _sanitizeRect(localBounds),
+      worldBounds: _toWorldBounds(node.transform, localBounds),
+    );
+  }
+
+  GeometryEntry _imageEntry(ImageNodeSnapshot node) {
+    final localBounds = _centerRect(node.size);
+    return GeometryEntry(
+      localBounds: _sanitizeRect(localBounds),
+      worldBounds: _toWorldBounds(node.transform, localBounds),
+    );
+  }
+
+  GeometryEntry _textEntry(TextNodeSnapshot node) {
+    final localBounds = _centerRect(node.size);
+    return GeometryEntry(
+      localBounds: _sanitizeRect(localBounds),
+      worldBounds: _toWorldBounds(node.transform, localBounds),
+    );
+  }
+
+  GeometryEntry _lineEntry(LineNodeSnapshot node) {
+    if (!_isFiniteOffset(node.start) || !_isFiniteOffset(node.end)) {
+      return const GeometryEntry(
+        localBounds: Rect.zero,
+        worldBounds: Rect.zero,
+      );
+    }
+    final safeThickness = clampNonNegativeFinite(node.thickness);
+    final localBounds = Rect.fromPoints(
+      node.start,
+      node.end,
+    ).inflate(safeThickness / 2);
+    return GeometryEntry(
+      localBounds: _sanitizeRect(localBounds),
+      worldBounds: _toWorldBounds(node.transform, localBounds),
+    );
+  }
+
+  GeometryEntry _strokeEntry(StrokeNodeSnapshot node) {
+    if (node.points.isEmpty || !_areFiniteOffsets(node.points)) {
+      return const GeometryEntry(
+        localBounds: Rect.zero,
+        worldBounds: Rect.zero,
+      );
+    }
+    final safeThickness = clampNonNegativeFinite(node.thickness);
+    final localBounds = aabbFromPoints(node.points).inflate(safeThickness / 2);
+    return GeometryEntry(
+      localBounds: _sanitizeRect(localBounds),
+      worldBounds: _toWorldBounds(node.transform, localBounds),
+    );
+  }
+
+  GeometryEntry _pathEntry(PathNodeSnapshot node) {
+    final localPath = _buildLocalPath(node);
+    if (localPath == null) {
+      return const GeometryEntry(
+        localBounds: Rect.zero,
+        worldBounds: Rect.zero,
+      );
+    }
+
+    var localBounds = localPath.getBounds();
+    final safeStrokeWidth = clampNonNegativeFinite(node.strokeWidth);
+    if (_isStrokeEnabled(node.strokeColor, safeStrokeWidth)) {
+      localBounds = localBounds.inflate(safeStrokeWidth / 2);
+    }
+    localBounds = _sanitizeRect(localBounds);
+    return GeometryEntry(
+      localBounds: localBounds,
+      worldBounds: _toWorldBounds(node.transform, localBounds),
+      localPath: localPath,
+    );
+  }
+
+  Path? _buildLocalPath(PathNodeSnapshot node) {
+    if (node.svgPathData.trim().isEmpty) {
+      return null;
+    }
+    try {
+      final path = parseSvgPathData(node.svgPathData);
+      var hasNonZeroLength = false;
+      for (final metric in path.computeMetrics()) {
+        if (metric.length > 0) {
+          hasNonZeroLength = true;
+          break;
+        }
+      }
+      if (!hasNonZeroLength) {
+        return null;
+      }
+      final bounds = path.getBounds();
+      final centered = path.shift(-bounds.center);
+      centered.fillType = _fillTypeFromSnapshot(node.fillRule);
+      if (!_isFiniteRect(centered.getBounds())) {
+        return null;
+      }
+      return centered;
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
+class _GeometryCacheRecord {
+  const _GeometryCacheRecord({required this.key, required this.entry});
+
+  final Object key;
+  final GeometryEntry entry;
+}
+
+Object _buildValidityKey(NodeSnapshot node) {
+  final t = node.transform;
+  final ta = t.a;
+  final tb = t.b;
+  final tc = t.c;
+  final td = t.d;
+  final ttx = t.tx;
+  final tty = t.ty;
+  return switch (node) {
+    RectNodeSnapshot rectNode => (
+      'rect',
+      ta,
+      tb,
+      tc,
+      td,
+      ttx,
+      tty,
+      rectNode.size.width,
+      rectNode.size.height,
+      clampNonNegativeFinite(rectNode.strokeWidth),
+      _isStrokeEnabled(rectNode.strokeColor, rectNode.strokeWidth),
+    ),
+    ImageNodeSnapshot imageNode => (
+      'image',
+      ta,
+      tb,
+      tc,
+      td,
+      ttx,
+      tty,
+      imageNode.size.width,
+      imageNode.size.height,
+    ),
+    TextNodeSnapshot textNode => (
+      'text',
+      ta,
+      tb,
+      tc,
+      td,
+      ttx,
+      tty,
+      textNode.size.width,
+      textNode.size.height,
+    ),
+    LineNodeSnapshot lineNode => (
+      'line',
+      ta,
+      tb,
+      tc,
+      td,
+      ttx,
+      tty,
+      lineNode.start.dx,
+      lineNode.start.dy,
+      lineNode.end.dx,
+      lineNode.end.dy,
+      clampNonNegativeFinite(lineNode.thickness),
+    ),
+    StrokeNodeSnapshot strokeNode => (
+      'stroke',
+      ta,
+      tb,
+      tc,
+      td,
+      ttx,
+      tty,
+      strokeNode.pointsRevision,
+      strokeNode.points,
+      clampNonNegativeFinite(strokeNode.thickness),
+    ),
+    PathNodeSnapshot pathNode => (
+      'path',
+      ta,
+      tb,
+      tc,
+      td,
+      ttx,
+      tty,
+      pathNode.svgPathData,
+      pathNode.fillRule,
+      clampNonNegativeFinite(pathNode.strokeWidth),
+      _isStrokeEnabled(pathNode.strokeColor, pathNode.strokeWidth),
+    ),
+  };
+}
+
+Rect _centerRect(Size size) {
+  final safe = clampNonNegativeSizeFinite(size);
+  return Rect.fromCenter(
+    center: Offset.zero,
+    width: safe.width,
+    height: safe.height,
+  );
+}
+
+Rect _sanitizeRect(Rect rect) {
+  if (!_isFiniteRect(rect)) {
+    return Rect.zero;
+  }
+  return rect;
+}
+
+Rect _toWorldBounds(Transform2D transform, Rect localBounds) {
+  if (!transform.isFinite || !_isFiniteRect(localBounds)) {
+    return Rect.zero;
+  }
+  final worldBounds = transform.applyToRect(localBounds);
+  if (!_isFiniteRect(worldBounds)) {
+    return Rect.zero;
+  }
+  return worldBounds;
+}
+
+bool _isStrokeEnabled(Color? strokeColor, double strokeWidth) {
+  return strokeColor != null && clampNonNegativeFinite(strokeWidth) > 0;
+}
+
+PathFillType _fillTypeFromSnapshot(V2PathFillRule rule) {
+  return rule == V2PathFillRule.evenOdd
+      ? PathFillType.evenOdd
+      : PathFillType.nonZero;
+}
+
+bool _isFiniteRect(Rect rect) {
+  return rect.left.isFinite &&
+      rect.top.isFinite &&
+      rect.right.isFinite &&
+      rect.bottom.isFinite;
+}
+
+bool _isFiniteOffset(Offset offset) {
+  return offset.dx.isFinite && offset.dy.isFinite;
+}
+
+bool _areFiniteOffsets(List<Offset> offsets) {
+  for (final offset in offsets) {
+    if (!_isFiniteOffset(offset)) {
+      return false;
+    }
+  }
+  return true;
+}

@@ -88,6 +88,7 @@ Key invariants:
 - Hot-path node lookup (`NodeId -> layer/node index`) uses committed `nodeLocator` instead of linear scene scans.
 - Viewport culling for offscreen nodes.
 - Bounded caches for text layout, stroke paths, and selected path metrics.
+- `ScenePainterV2` keeps an internal per-node `RenderGeometryCache` that reuses path parsing and local/world bounds calculations across culling, selection, and drawing.
 - Stroke-path cache freshness is validated in O(1) by `(node.id, pointsRevision)`
   instead of hashing/iterating point lists on every lookup.
 - Spatial index supports incremental commit updates (`added/removed/hitGeometryChangedIds`) for hit-testing hot paths; full rebuild is a fallback path only.

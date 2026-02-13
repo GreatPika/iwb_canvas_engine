@@ -1,17 +1,16 @@
 import 'dart:collection';
-import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 
 import '../core/grid_safety_limits.dart';
-import '../core/nodes.dart' show PathFillRule, PathNode;
 import '../core/numeric_clamp.dart';
 import '../core/text_layout.dart';
 import '../core/transform2d.dart';
 import '../public/scene_render_state.dart';
 import '../public/snapshot.dart';
+import 'render_geometry_cache.dart';
 
 typedef ImageResolverV2 = Image? Function(String imageId);
 typedef NodePreviewOffsetResolverV2 = Offset Function(NodeId nodeId);
@@ -469,6 +468,7 @@ class ScenePainterV2 extends CustomPainter {
   final double selectionStrokeWidth;
   final double gridStrokeWidth;
   final TextDirection textDirection;
+  final RenderGeometryCache _geometryCache = RenderGeometryCache();
 
   final Float64List _transformBuffer = Float64List(16);
 
@@ -693,8 +693,7 @@ class ScenePainterV2 extends CustomPainter {
         if (!pathNode.transform.isFinite) {
           return;
         }
-        final pathNodeModel = _buildPathNode(pathNode);
-        final localPath = pathNodeModel.buildLocalPath(copy: false);
+        final localPath = _geometryCache.get(pathNode).localPath;
         if (localPath == null) {
           return;
         }
@@ -1151,11 +1150,10 @@ class ScenePainterV2 extends CustomPainter {
       return;
     }
 
-    final localPath = _buildPathNode(node).buildLocalPath(copy: false);
+    final localPath = _geometryCache.get(node).localPath;
     if (localPath == null) {
       return;
     }
-    localPath.fillType = _fillTypeFromSnapshot(node.fillRule);
 
     if (pathMetricsCache != null) {
       pathMetricsCache!.getOrBuild(node: node, localPath: localPath);
@@ -1187,69 +1185,13 @@ class ScenePainterV2 extends CustomPainter {
   }
 
   Rect _nodeBoundsWorld(NodeSnapshot node, {required Offset previewDelta}) {
-    if (!node.transform.isFinite) {
-      return Rect.zero;
-    }
-
-    late final Rect bounds;
-    switch (node) {
-      case RectNodeSnapshot rectNode:
-        bounds = node.transform.applyToRect(_centerRect(rectNode.size));
-      case ImageNodeSnapshot imageNode:
-        bounds = node.transform.applyToRect(_centerRect(imageNode.size));
-      case TextNodeSnapshot textNode:
-        bounds = node.transform.applyToRect(_centerRect(textNode.size));
-      case LineNodeSnapshot lineNode:
-        final local = Rect.fromPoints(
-          lineNode.start,
-          lineNode.end,
-        ).inflate(clampNonNegativeFinite(lineNode.thickness) / 2);
-        bounds = node.transform.applyToRect(local);
-      case StrokeNodeSnapshot strokeNode:
-        if (strokeNode.points.isEmpty) {
-          bounds = Rect.zero;
-          break;
-        }
-        final local = _aabbFromPoints(
-          strokeNode.points,
-        ).inflate(clampNonNegativeFinite(strokeNode.thickness) / 2);
-        bounds = node.transform.applyToRect(local);
-      case PathNodeSnapshot pathNode:
-        final localPath = _buildPathNode(pathNode).buildLocalPath(copy: false);
-        if (localPath == null) {
-          bounds = Rect.zero;
-          break;
-        }
-        bounds = node.transform.applyToRect(localPath.getBounds());
-    }
-
+    final bounds = _geometryCache.get(node).worldBounds;
     if (previewDelta == Offset.zero) return bounds;
     return bounds.shift(previewDelta);
   }
 
   Offset _nodePreviewOffset(NodeId nodeId) {
     return nodePreviewOffsetResolver?.call(nodeId) ?? Offset.zero;
-  }
-
-  PathNode _buildPathNode(PathNodeSnapshot snapshot) {
-    return PathNode(
-      id: snapshot.id,
-      svgPathData: snapshot.svgPathData,
-      fillColor: snapshot.fillColor,
-      strokeColor: snapshot.strokeColor,
-      strokeWidth: snapshot.strokeWidth,
-      fillRule: snapshot.fillRule == V2PathFillRule.evenOdd
-          ? PathFillRule.evenOdd
-          : PathFillRule.nonZero,
-      transform: snapshot.transform,
-      opacity: snapshot.opacity,
-      hitPadding: snapshot.hitPadding,
-      isVisible: snapshot.isVisible,
-      isSelectable: snapshot.isSelectable,
-      isLocked: snapshot.isLocked,
-      isDeletable: snapshot.isDeletable,
-      isTransformable: snapshot.isTransformable,
-    );
   }
 
   Float64List _toViewTransform(Transform2D transform, Offset cameraOffset) {
@@ -1407,21 +1349,6 @@ Rect _normalizeRect(Rect rect) {
   final top = rect.top < rect.bottom ? rect.top : rect.bottom;
   final bottom = rect.top < rect.bottom ? rect.bottom : rect.top;
   return Rect.fromLTRB(left, top, right, bottom);
-}
-
-Rect _aabbFromPoints(List<Offset> points) {
-  var minX = points.first.dx;
-  var minY = points.first.dy;
-  var maxX = minX;
-  var maxY = minY;
-  for (var i = 1; i < points.length; i++) {
-    final point = points[i];
-    minX = math.min(minX, point.dx);
-    minY = math.min(minY, point.dy);
-    maxX = math.max(maxX, point.dx);
-    maxY = math.max(maxY, point.dy);
-  }
-  return Rect.fromLTRB(minX, minY, maxX, maxY);
 }
 
 Path _buildStrokePath(List<Offset> points) {

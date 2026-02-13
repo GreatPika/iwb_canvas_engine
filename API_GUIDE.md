@@ -442,6 +442,11 @@ If you pass external caches, ownership stays external.
 
 When controller instance changes, view resets pointer tracking state and clears caches to prevent stale reuse across scenes.
 
+`ScenePainterV2` also owns an internal geometry cache (`RenderGeometryCache`) that
+stores per-node local/world bounds and cached local path for `PathNodeSnapshot`.
+This cache is keyed by `NodeId` plus geometry-affecting fields and keeps culling,
+selection halo, and path rendering on the same geometry source.
+
 Runtime constructor validation:
 
 - `SceneStrokePathCacheV2(maxEntries: ...)`
