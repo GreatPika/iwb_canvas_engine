@@ -25,23 +25,33 @@ void main() {
     expect(cache.debugBuildCount, 0);
   });
 
-  test('v2 stroke cache rebuilds only when geometry changes', () {
+  test('v2 stroke cache rebuilds only when pointsRevision changes', () {
     final cache = SceneStrokePathCacheV2(maxEntries: 8);
     final strokeA = StrokeNodeSnapshot(
       id: 's1',
       points: const <Offset>[Offset(0, 0), Offset(10, 10)],
+      pointsRevision: 1,
       thickness: 2,
       color: const Color(0xFF000000),
     );
     final strokeA2 = StrokeNodeSnapshot(
       id: 's1',
       points: const <Offset>[Offset(0, 0), Offset(10, 10)],
+      pointsRevision: 1,
       thickness: 2,
       color: const Color(0xFF000000),
     );
     final strokeChanged = StrokeNodeSnapshot(
       id: 's1',
+      points: const <Offset>[Offset(0, 0), Offset(10, 10)],
+      pointsRevision: 2,
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+    final staleRevision = StrokeNodeSnapshot(
+      id: 's1',
       points: const <Offset>[Offset(0, 0), Offset(12, 10)],
+      pointsRevision: 2,
       thickness: 2,
       color: const Color(0xFF000000),
     );
@@ -49,11 +59,13 @@ void main() {
     final first = cache.getOrBuild(strokeA);
     final second = cache.getOrBuild(strokeA2);
     final third = cache.getOrBuild(strokeChanged);
+    final fourth = cache.getOrBuild(staleRevision);
 
     expect(identical(first, second), isTrue);
     expect(identical(second, third), isFalse);
+    expect(identical(third, fourth), isTrue);
     expect(cache.debugBuildCount, 2);
-    expect(cache.debugHitCount, 1);
+    expect(cache.debugHitCount, 2);
   });
 
   test('v2 stroke cache evicts least-recent entry (LRU)', () {

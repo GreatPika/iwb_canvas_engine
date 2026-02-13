@@ -69,7 +69,6 @@ void main() {
     const text = TextNodePatch(
       id: 'text-1',
       text: PatchField<String>.value('hello'),
-      size: PatchField<Size>.value(Size(100, 50)),
       fontSize: PatchField<double>.value(16),
       color: PatchField<Color>.value(Color(0xFF00FF00)),
       align: PatchField<TextAlign>.value(TextAlign.right),

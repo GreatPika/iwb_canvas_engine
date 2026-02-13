@@ -260,6 +260,19 @@ void main() {
     expect(one.pointsRevision, oneRev);
   });
 
+  test('stroke constructor rejects negative initial pointsRevision', () {
+    expect(
+      () => StrokeNode(
+        id: 'bad-rev',
+        points: const <Offset>[Offset(0, 0)],
+        pointsRevision: -1,
+        thickness: 1,
+        color: const Color(0xFF000000),
+      ),
+      throwsArgumentError,
+    );
+  });
+
   test('path node builds, caches and invalidates local path data', () {
     final pathNode = PathNode(
       id: 'p',

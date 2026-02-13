@@ -113,7 +113,7 @@
           "isDeletable": true,
           "isTransformable": true,
           "text": "Hello",
-          "size": { "w": 120, "h": 30 },
+          "size": { "w": 120, "h": 1 },
           "fontSize": 24,
           "color": "#FF112233",
           "align": "center",

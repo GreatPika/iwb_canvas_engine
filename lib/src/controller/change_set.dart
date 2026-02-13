@@ -1,16 +1,20 @@
+import 'dart:collection';
+
 import '../core/nodes.dart';
 
 class ChangeSet {
   bool documentReplaced = false;
   bool structuralChanged = false;
+  // True when hit candidate bounds changed (or scene structure changed).
   bool boundsChanged = false;
   bool visualChanged = false;
   bool selectionChanged = false;
   bool gridChanged = false;
 
-  Set<NodeId> addedNodeIds = <NodeId>{};
-  Set<NodeId> removedNodeIds = <NodeId>{};
-  Set<NodeId> updatedNodeIds = <NodeId>{};
+  final Set<NodeId> addedNodeIds = HashSet<NodeId>();
+  final Set<NodeId> removedNodeIds = HashSet<NodeId>();
+  final Set<NodeId> updatedNodeIds = HashSet<NodeId>();
+  final Set<NodeId> hitGeometryChangedIds = HashSet<NodeId>();
 
   bool get txnHasAnyChange =>
       documentReplaced ||
@@ -55,33 +59,29 @@ class ChangeSet {
   }
 
   void txnTrackAdded(NodeId nodeId) {
-    addedNodeIds = <NodeId>{...addedNodeIds, nodeId};
-    removedNodeIds = <NodeId>{
-      for (final candidate in removedNodeIds)
-        if (candidate != nodeId) candidate,
-    };
-    updatedNodeIds = <NodeId>{
-      for (final candidate in updatedNodeIds)
-        if (candidate != nodeId) candidate,
-    };
+    addedNodeIds.add(nodeId);
+    removedNodeIds.remove(nodeId);
+    updatedNodeIds.remove(nodeId);
+    hitGeometryChangedIds.remove(nodeId);
   }
 
   void txnTrackRemoved(NodeId nodeId) {
-    removedNodeIds = <NodeId>{...removedNodeIds, nodeId};
-    addedNodeIds = <NodeId>{
-      for (final candidate in addedNodeIds)
-        if (candidate != nodeId) candidate,
-    };
-    updatedNodeIds = <NodeId>{
-      for (final candidate in updatedNodeIds)
-        if (candidate != nodeId) candidate,
-    };
+    removedNodeIds.add(nodeId);
+    addedNodeIds.remove(nodeId);
+    updatedNodeIds.remove(nodeId);
+    hitGeometryChangedIds.remove(nodeId);
   }
 
   void txnTrackUpdated(NodeId nodeId) {
     if (addedNodeIds.contains(nodeId)) return;
     if (removedNodeIds.contains(nodeId)) return;
-    updatedNodeIds = <NodeId>{...updatedNodeIds, nodeId};
+    updatedNodeIds.add(nodeId);
+  }
+
+  void txnTrackHitGeometryChanged(NodeId nodeId) {
+    if (addedNodeIds.contains(nodeId)) return;
+    if (removedNodeIds.contains(nodeId)) return;
+    hitGeometryChangedIds.add(nodeId);
   }
 
   ChangeSet txnClone() {
@@ -92,9 +92,10 @@ class ChangeSet {
     out.visualChanged = visualChanged;
     out.selectionChanged = selectionChanged;
     out.gridChanged = gridChanged;
-    out.addedNodeIds = Set<NodeId>.from(addedNodeIds);
-    out.removedNodeIds = Set<NodeId>.from(removedNodeIds);
-    out.updatedNodeIds = Set<NodeId>.from(updatedNodeIds);
+    out.addedNodeIds.addAll(addedNodeIds);
+    out.removedNodeIds.addAll(removedNodeIds);
+    out.updatedNodeIds.addAll(updatedNodeIds);
+    out.hitGeometryChangedIds.addAll(hitGeometryChangedIds);
     return out;
   }
 }

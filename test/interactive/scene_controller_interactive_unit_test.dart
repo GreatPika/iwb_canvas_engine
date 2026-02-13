@@ -145,7 +145,7 @@ void main() {
 
     test(
       'marquee emits select action when selection set changes with same length',
-      () {
+      () async {
         final nodeA = RectNode(id: 'a', size: const Size(40, 40))
           ..position = const Offset(20, 20);
         final nodeB = RectNode(id: 'b', size: const Size(40, 40))
@@ -191,6 +191,7 @@ void main() {
         );
 
         expect(controller.selectedNodeIds, const <NodeId>{'b'});
+        await pumpEventQueue();
         expect(actions.any((a) => a.type == ActionType.selectMarquee), isTrue);
       },
     );
@@ -217,7 +218,6 @@ void main() {
           TextNodeSpec(
             id: 'spec-text',
             text: 'hello',
-            size: const Size(80, 20),
             color: const Color(0xFF222222),
             align: TextAlign.center,
           ),
@@ -291,10 +291,37 @@ void main() {
       controller.addNode(RectNodeSpec(id: 'n2', size: const Size(10, 10)));
       expect(controller.removeNode('n2', timestampMs: 3), isTrue);
 
+      await pumpEventQueue();
       expect(actions.length, 2);
       expect(actions[0].type, ActionType.delete);
       expect(actions[0].timestampMs, 5);
       expect(actions[1].timestampMs, greaterThan(actions[0].timestampMs));
+    });
+
+    test('actions stream delivery is asynchronous', () async {
+      final controller = SceneControllerInteractiveV2(
+        initialSnapshot: SceneSnapshot(
+          layers: <LayerSnapshot>[
+            LayerSnapshot(isBackground: true),
+            LayerSnapshot(),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      controller.addNode(RectNodeSpec(id: 'n1', size: const Size(10, 10)));
+
+      final actions = <ActionCommitted>[];
+      final sub = controller.actions.listen(actions.add);
+      addTearDown(sub.cancel);
+
+      expect(controller.removeNode('n1', timestampMs: 5), isTrue);
+      expect(actions, isEmpty);
+
+      await pumpEventQueue();
+
+      expect(actions, hasLength(1));
+      expect(actions.single.type, ActionType.delete);
     });
 
     test(
@@ -362,11 +389,50 @@ void main() {
           ),
         );
 
+        await pumpEventQueue();
         expect(requests.length, 1);
         expect(requests.single.nodeId, 'text');
         expect(requests.single.position, const Offset(100, 100));
       },
     );
+
+    test('editTextRequests stream delivery is asynchronous', () async {
+      final text = TextNode(
+        id: 'text',
+        text: 'note',
+        size: const Size(80, 30),
+        color: const Color(0xFF000000),
+      )..position = const Offset(100, 100);
+      final controller = _controllerFromScene(
+        Scene(
+          layers: <Layer>[
+            Layer(isBackground: true),
+            Layer(nodes: <SceneNode>[text]),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      final requests = <EditTextRequested>[];
+      final sub = controller.editTextRequests.listen(requests.add);
+      addTearDown(sub.cancel);
+
+      controller.handlePointerSignal(
+        const PointerSignal(
+          type: PointerSignalType.doubleTap,
+          pointerId: 1,
+          position: Offset(100, 100),
+          timestampMs: 10,
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      expect(requests, isEmpty);
+
+      await pumpEventQueue();
+
+      expect(requests, hasLength(1));
+      expect(requests.single.nodeId, 'text');
+    });
 
     test('hit-test uses preview-shifted geometry during move drag', () async {
       final text = TextNode(
@@ -385,6 +451,17 @@ void main() {
       );
       addTearDown(controller.dispose);
       controller.setSelection(const <NodeId>{'text'});
+      final textSnapshotBeforeMove =
+          _nodeById(controller.snapshot, 'text') as TextNodeSnapshot;
+      final originalCenter = Offset(
+        textSnapshotBeforeMove.transform.tx,
+        textSnapshotBeforeMove.transform.ty,
+      );
+      final originalOnlyPoint = Offset(
+        originalCenter.dx - textSnapshotBeforeMove.size.width / 2 + 2,
+        originalCenter.dy,
+      );
+      final movedPoint = originalCenter.translate(40, 0);
 
       final requests = <EditTextRequested>[];
       final sub = controller.editTextRequests.listen(requests.add);
@@ -393,7 +470,7 @@ void main() {
       controller.handlePointer(
         _sample(
           pointerId: 1,
-          position: const Offset(100, 100),
+          position: originalCenter,
           timestampMs: 1,
           phase: PointerPhase.down,
         ),
@@ -401,34 +478,35 @@ void main() {
       controller.handlePointer(
         _sample(
           pointerId: 1,
-          position: const Offset(140, 100),
+          position: movedPoint,
           timestampMs: 2,
           phase: PointerPhase.move,
         ),
       );
 
       controller.handlePointerSignal(
-        const PointerSignal(
+        PointerSignal(
           type: PointerSignalType.doubleTap,
           pointerId: 9,
-          position: Offset(140, 100),
+          position: movedPoint,
           timestampMs: 3,
           kind: PointerDeviceKind.touch,
         ),
       );
       controller.handlePointerSignal(
-        const PointerSignal(
+        PointerSignal(
           type: PointerSignalType.doubleTap,
           pointerId: 9,
-          position: Offset(100, 100),
+          position: originalOnlyPoint,
           timestampMs: 4,
           kind: PointerDeviceKind.touch,
         ),
       );
 
+      await pumpEventQueue();
       expect(requests.length, 1);
       expect(requests.single.nodeId, 'text');
-      expect(requests.single.position, const Offset(140, 100));
+      expect(requests.single.position, movedPoint);
     });
 
     test('move cancel keeps document unchanged and clears preview', () {
@@ -546,6 +624,60 @@ void main() {
       expect(afterUp.transform.tx, closeTo(110, 1e-6));
       expect(afterUp.transform.ty, closeTo(160, 1e-6));
     });
+
+    test(
+      'effectiveNodeBoundsWorld applies move preview delta for selected node',
+      () {
+        final rect = RectNode(id: 'node', size: const Size(30, 20))
+          ..position = const Offset(60, 60);
+        final controller = _controllerFromScene(
+          Scene(
+            layers: <Layer>[
+              Layer(isBackground: true),
+              Layer(nodes: <SceneNode>[rect]),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+        controller.setSelection(const <NodeId>{'node'});
+
+        final nodeSnapshotBefore = _nodeById(controller.snapshot, 'node');
+        final nodeBefore = txnNodeFromSnapshot(nodeSnapshotBefore);
+        expect(
+          controller.effectiveNodeBoundsWorld(nodeBefore),
+          nodeBefore.boundsWorld,
+        );
+
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: const Offset(60, 60),
+            timestampMs: 1,
+            phase: PointerPhase.down,
+          ),
+        );
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: const Offset(90, 50),
+            timestampMs: 2,
+            phase: PointerPhase.move,
+          ),
+        );
+
+        final nodeSnapshotDuringPreview = _nodeById(
+          controller.snapshot,
+          'node',
+        );
+        final nodeDuringPreview = txnNodeFromSnapshot(
+          nodeSnapshotDuringPreview,
+        );
+        expect(
+          controller.effectiveNodeBoundsWorld(nodeDuringPreview),
+          nodeDuringPreview.boundsWorld.shift(const Offset(30, -10)),
+        );
+      },
+    );
 
     test('line tool supports drag flow and two-tap pending flow', () async {
       final controller = SceneControllerInteractiveV2(
@@ -693,6 +825,7 @@ void main() {
       controller.setDrawTool(DrawTool.pen);
       expect(controller.hasPendingLineStart, isFalse);
 
+      await pumpEventQueue();
       expect(
         actions.where((a) => a.type == ActionType.drawLine).length,
         greaterThanOrEqualTo(2),
@@ -775,6 +908,59 @@ void main() {
         expect(controller.snapshot.layers[1].nodes, isEmpty);
       },
     );
+
+    test('pen commit caps very long stroke and preserves endpoints', () {
+      final controller = SceneControllerInteractiveV2(
+        initialSnapshot: SceneSnapshot(
+          layers: <LayerSnapshot>[
+            LayerSnapshot(isBackground: true),
+            LayerSnapshot(),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      controller.setMode(CanvasMode.draw);
+      controller.setDrawTool(DrawTool.pen);
+      controller.penThickness = 2;
+
+      const totalRawPoints = 20050;
+      controller.handlePointer(
+        _sample(
+          pointerId: 1,
+          position: const Offset(0, 0),
+          timestampMs: 1,
+          phase: PointerPhase.down,
+        ),
+      );
+      for (var i = 1; i < totalRawPoints - 1; i++) {
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: Offset(i.toDouble(), 0),
+            timestampMs: i + 1,
+            phase: PointerPhase.move,
+          ),
+        );
+      }
+      controller.handlePointer(
+        _sample(
+          pointerId: 1,
+          position: Offset((totalRawPoints - 1).toDouble(), 0),
+          timestampMs: totalRawPoints + 1,
+          phase: PointerPhase.up,
+        ),
+      );
+
+      final strokeSnap =
+          controller.snapshot.layers[1].nodes.single as StrokeNodeSnapshot;
+      expect(strokeSnap.points.length, 20000);
+      expect(strokeSnap.points.first, const Offset(0, 0));
+      expect(
+        strokeSnap.points.last,
+        Offset((totalRawPoints - 1).toDouble(), 0),
+      );
+    });
 
     test('stroke preview is available during drag and clears on up', () {
       final controller = SceneControllerInteractiveV2(
@@ -1161,6 +1347,7 @@ void main() {
         };
         expect(remaining.contains('locked'), isFalse);
 
+        await pumpEventQueue();
         expect(actions.any((a) => a.type == ActionType.transform), isTrue);
         expect(actions.any((a) => a.type == ActionType.delete), isTrue);
         expect(actions.any((a) => a.type == ActionType.clear), isTrue);
@@ -1210,6 +1397,7 @@ void main() {
         ),
       );
 
+      await pumpEventQueue();
       final transformActions = actions.where(
         (a) => a.type == ActionType.transform,
       );
@@ -1217,7 +1405,7 @@ void main() {
       expect(transformActions.last.payload?['delta'], isNotNull);
     });
 
-    test('rotateSelection emits transform for multi-node selection', () {
+    test('rotateSelection emits transform for multi-node selection', () async {
       final first = RectNode(id: 'a', size: const Size(30, 20))
         ..position = const Offset(40, 40);
       final second = RectNode(id: 'b', size: const Size(30, 20))
@@ -1239,6 +1427,7 @@ void main() {
       controller.setSelection(const <NodeId>{'a', 'b'});
       controller.rotateSelection(clockwise: true, timestampMs: 200);
 
+      await pumpEventQueue();
       final transformActions = actions
           .where((event) => event.type == ActionType.transform)
           .toList(growable: false);
@@ -1386,131 +1575,135 @@ void main() {
       },
     );
 
-    test('eraser path and move hit-tests cover multi-candidate sorting', () {
-      final controller = _controllerFromScene(
-        Scene(
-          layers: <Layer>[
-            Layer(isBackground: true),
-            Layer(
-              nodes: <SceneNode>[
-                LineNode(
-                  id: 'line-a',
-                  start: const Offset(-10, 0),
-                  end: const Offset(10, 0),
-                  thickness: 2,
-                  color: const Color(0xFF000000),
-                )..position = const Offset(20, 20),
-                StrokeNode(
-                  id: 'stroke-a',
-                  points: const <Offset>[Offset(-5, 0), Offset(5, 0)],
-                  thickness: 2,
-                  color: const Color(0xFF000000),
-                )..position = const Offset(20, 20),
-              ],
-            ),
-          ],
-        ),
-      );
-      addTearDown(controller.dispose);
+    test(
+      'eraser path and move hit-tests cover multi-candidate sorting',
+      () async {
+        final controller = _controllerFromScene(
+          Scene(
+            layers: <Layer>[
+              Layer(isBackground: true),
+              Layer(
+                nodes: <SceneNode>[
+                  LineNode(
+                    id: 'line-a',
+                    start: const Offset(-10, 0),
+                    end: const Offset(10, 0),
+                    thickness: 2,
+                    color: const Color(0xFF000000),
+                  )..position = const Offset(20, 20),
+                  StrokeNode(
+                    id: 'stroke-a',
+                    points: const <Offset>[Offset(-5, 0), Offset(5, 0)],
+                    thickness: 2,
+                    color: const Color(0xFF000000),
+                  )..position = const Offset(20, 20),
+                ],
+              ),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
 
-      final actions = <ActionCommitted>[];
-      final sub = controller.actions.listen(actions.add);
-      addTearDown(sub.cancel);
+        final actions = <ActionCommitted>[];
+        final sub = controller.actions.listen(actions.add);
+        addTearDown(sub.cancel);
 
-      controller.setMode(CanvasMode.draw);
-      controller.setDrawTool(DrawTool.eraser);
+        controller.setMode(CanvasMode.draw);
+        controller.setDrawTool(DrawTool.eraser);
 
-      controller.handlePointer(
-        _sample(
-          pointerId: 10,
-          position: const Offset(10, 20),
-          timestampMs: 1,
-          phase: PointerPhase.down,
-        ),
-      );
-      controller.handlePointer(
-        _sample(
-          pointerId: 10,
-          position: const Offset(30, 20),
-          timestampMs: 2,
-          phase: PointerPhase.move,
-        ),
-      );
-      controller.handlePointer(
-        _sample(
-          pointerId: 10,
-          position: const Offset(30, 20),
-          timestampMs: 3,
-          phase: PointerPhase.up,
-        ),
-      );
+        controller.handlePointer(
+          _sample(
+            pointerId: 10,
+            position: const Offset(10, 20),
+            timestampMs: 1,
+            phase: PointerPhase.down,
+          ),
+        );
+        controller.handlePointer(
+          _sample(
+            pointerId: 10,
+            position: const Offset(30, 20),
+            timestampMs: 2,
+            phase: PointerPhase.move,
+          ),
+        );
+        controller.handlePointer(
+          _sample(
+            pointerId: 10,
+            position: const Offset(30, 20),
+            timestampMs: 3,
+            phase: PointerPhase.up,
+          ),
+        );
 
-      expect(actions.any((a) => a.type == ActionType.erase), isTrue);
+        await pumpEventQueue();
+        expect(actions.any((a) => a.type == ActionType.erase), isTrue);
 
-      controller.replaceScene(
-        SceneSnapshot(
-          layers: <LayerSnapshot>[
-            LayerSnapshot(isBackground: true),
-            LayerSnapshot(
-              nodes: <NodeSnapshot>[
-                RectNodeSnapshot(
-                  id: 'bottom',
-                  size: const Size(30, 30),
-                  transform: Transform2D.translation(const Offset(50, 50)),
-                ),
-                RectNodeSnapshot(
-                  id: 'top',
-                  size: const Size(20, 20),
-                  transform: Transform2D.translation(const Offset(50, 50)),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
-      controller.setMode(CanvasMode.move);
+        controller.replaceScene(
+          SceneSnapshot(
+            layers: <LayerSnapshot>[
+              LayerSnapshot(isBackground: true),
+              LayerSnapshot(
+                nodes: <NodeSnapshot>[
+                  RectNodeSnapshot(
+                    id: 'bottom',
+                    size: const Size(30, 30),
+                    transform: Transform2D.translation(const Offset(50, 50)),
+                  ),
+                  RectNodeSnapshot(
+                    id: 'top',
+                    size: const Size(20, 20),
+                    transform: Transform2D.translation(const Offset(50, 50)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+        controller.setMode(CanvasMode.move);
 
-      controller.handlePointer(
-        _sample(
-          pointerId: 20,
-          position: const Offset(0, 0),
-          timestampMs: 10,
-          phase: PointerPhase.down,
-        ),
-      );
-      controller.handlePointer(
-        _sample(
-          pointerId: 20,
-          position: const Offset(80, 80),
-          timestampMs: 11,
-          phase: PointerPhase.move,
-        ),
-      );
-      controller.handlePointer(
-        _sample(
-          pointerId: 20,
-          position: const Offset(80, 80),
-          timestampMs: 12,
-          phase: PointerPhase.up,
-        ),
-      );
+        controller.handlePointer(
+          _sample(
+            pointerId: 20,
+            position: const Offset(0, 0),
+            timestampMs: 10,
+            phase: PointerPhase.down,
+          ),
+        );
+        controller.handlePointer(
+          _sample(
+            pointerId: 20,
+            position: const Offset(80, 80),
+            timestampMs: 11,
+            phase: PointerPhase.move,
+          ),
+        );
+        controller.handlePointer(
+          _sample(
+            pointerId: 20,
+            position: const Offset(80, 80),
+            timestampMs: 12,
+            phase: PointerPhase.up,
+          ),
+        );
 
-      controller.handlePointer(
-        _sample(
-          pointerId: 21,
-          position: const Offset(50, 50),
-          timestampMs: 13,
-          phase: PointerPhase.down,
-        ),
-      );
-      controller.handlePointer(
-        _sample(
-          pointerId: 21,
-          position: const Offset(50, 50),
-          timestampMs: 14,
-          phase: PointerPhase.up,
-        ),
-      );
-    });
+        controller.handlePointer(
+          _sample(
+            pointerId: 21,
+            position: const Offset(50, 50),
+            timestampMs: 13,
+            phase: PointerPhase.down,
+          ),
+        );
+        controller.handlePointer(
+          _sample(
+            pointerId: 21,
+            position: const Offset(50, 50),
+            timestampMs: 14,
+            phase: PointerPhase.up,
+          ),
+        );
+      },
+    );
   });
 }

@@ -1,9 +1,11 @@
 import 'dart:async';
-import 'dart:ui';
+import 'dart:collection';
+import 'dart:ui' hide Scene;
 
 import 'package:flutter/foundation.dart';
 
 import '../core/nodes.dart' show SceneNode;
+import '../core/scene.dart' show Scene;
 import '../core/scene_spatial_index.dart';
 import '../input/slices/commands/scene_commands.dart';
 import '../input/slices/draw/draw_slice.dart';
@@ -15,7 +17,6 @@ import '../input/slices/signals/signal_event.dart';
 import '../input/slices/signals/signals_slice.dart';
 import '../input/slices/spatial_index/spatial_index_slice.dart';
 import '../model/document.dart';
-import '../model/document_clone.dart';
 import '../public/scene_render_state.dart';
 import '../public/scene_write_txn.dart';
 import '../public/snapshot.dart';
@@ -43,15 +44,37 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
   bool _notifyScheduled = false;
   bool _notifyPending = false;
   bool _isDisposed = false;
+  Scene? _cachedSnapshotScene;
+  SceneSnapshot? _cachedSnapshot;
   List<String> _debugLastCommitPhases = const <String>[];
   ChangeSet _debugLastChangeSet = ChangeSet();
+  int _debugLastSceneShallowClones = 0;
+  int _debugLastLayerShallowClones = 0;
+  int _debugLastNodeClones = 0;
+  int _debugLastNodeIdSetMaterializations = 0;
+  int _debugLastNodeLocatorMaterializations = 0;
+  @visibleForTesting
+  void Function()? debugBeforeInvariantPrecheckHook;
 
   late final V2SceneCommandsSlice commands = V2SceneCommandsSlice(write);
   late final V2MoveSlice move = V2MoveSlice(write);
   late final V2DrawSlice draw = V2DrawSlice(write);
 
   @override
-  SceneSnapshot get snapshot => txnSceneToSnapshot(_store.sceneDoc);
+  SceneSnapshot get snapshot {
+    final sceneDoc = _store.sceneDoc;
+    final cachedSnapshot = _cachedSnapshot;
+    if (cachedSnapshot != null && identical(sceneDoc, _cachedSnapshotScene)) {
+      return cachedSnapshot;
+    }
+
+    // Safe because committed scene identity changes on first mutating write.
+    // Non-mutating commits keep identity and can reuse immutable snapshot.
+    final rebuiltSnapshot = txnSceneToSnapshot(sceneDoc);
+    _cachedSnapshotScene = sceneDoc;
+    _cachedSnapshot = rebuiltSnapshot;
+    return rebuiltSnapshot;
+  }
 
   @override
   Set<NodeId> get selectedNodeIds =>
@@ -73,14 +96,34 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
   @visibleForTesting
   int get debugSpatialIndexBuildCount => _spatialIndexSlice.debugBuildCount;
 
+  @visibleForTesting
+  int get debugSpatialIndexIncrementalApplyCount =>
+      _spatialIndexSlice.debugIncrementalApplyCount;
+
+  @visibleForTesting
+  int get debugSceneShallowClones => _debugLastSceneShallowClones;
+
+  @visibleForTesting
+  int get debugLayerShallowClones => _debugLastLayerShallowClones;
+
+  @visibleForTesting
+  int get debugNodeClones => _debugLastNodeClones;
+
+  @visibleForTesting
+  int get debugNodeIdSetMaterializations => _debugLastNodeIdSetMaterializations;
+
+  @visibleForTesting
+  int get debugNodeLocatorMaterializations =>
+      _debugLastNodeLocatorMaterializations;
+
   int get debugCommitRevision => _store.commitRevision;
 
   List<SceneSpatialCandidate> querySpatialCandidates(Rect worldBounds) {
     return _spatialIndexSlice.writeQueryCandidates(
       scene: _store.sceneDoc,
+      nodeLocator: _store.nodeLocator,
       worldBounds: worldBounds,
       controllerEpoch: _store.controllerEpoch,
-      boundsRevision: _store.boundsRevision,
     );
   }
 
@@ -122,8 +165,9 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
     _writeInProgress = true;
     final ctx = TxnContext(
       baseScene: _store.sceneDoc,
-      workingSelection: Set<NodeId>.from(_store.selectedNodeIds),
-      workingNodeIds: Set<NodeId>.from(_store.allNodeIds),
+      workingSelection: HashSet<NodeId>.of(_store.selectedNodeIds),
+      baseAllNodeIds: _store.allNodeIds,
+      baseNodeLocator: _store.nodeLocator,
       nodeIdSeed: _store.nodeIdSeed,
     );
 
@@ -148,10 +192,10 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
       _writeInProgress = false;
     }
 
+    _signalsSlice.emitCommitted(commitResult.committedSignals);
     if (commitResult.needsNotify) {
       _scheduleNotify();
     }
-    _signalsSlice.emitCommitted(commitResult.committedSignals);
     return result;
   }
 
@@ -163,6 +207,9 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
 
   void requestRepaint() {
     _repaintSlice.writeMarkNeedsRepaint();
+    if (_writeInProgress) {
+      return;
+    }
     if (_repaintSlice.writeTakeNeedsNotify()) {
       _scheduleNotify();
     }
@@ -184,7 +231,11 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
       if (selectionResult.normalizedChanged) {
         ctx.changeSet.txnMarkSelectionChanged();
       }
-      ctx.workingSelection = selectionResult.normalized;
+      if (!identical(selectionResult.normalized, ctx.workingSelection)) {
+        ctx.workingSelection
+          ..clear()
+          ..addAll(selectionResult.normalized);
+      }
     }
 
     final shouldNormalizeGrid =
@@ -201,28 +252,46 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
 
     final hasStateChanges = ctx.changeSet.txnHasAnyChange;
     final hasSignals = _signalsSlice.writeHasBufferedSignals;
-    if (!hasStateChanges && !hasSignals) {
+    final hasRepaint = _repaintSlice.needsNotify;
+    if (!hasStateChanges && !hasSignals && !hasRepaint) {
       _debugLastCommitPhases = commitPhases;
       _debugLastChangeSet = ctx.changeSet.txnClone();
+      _debugCaptureTxnCloneStats(ctx);
       return const _TxnWriteCommitResult(
         committedSignals: <V2CommittedSignal>[],
         needsNotify: false,
       );
     }
 
-    if (!hasStateChanges && hasSignals) {
-      final nextCommitRevision = _store.commitRevision + 1;
-      final committedSignals = _signalsSlice.writeTakeCommitted(
-        commitRevision: nextCommitRevision,
-      );
-      commitPhases = <String>[...commitPhases, 'signals'];
-      _store.commitRevision = nextCommitRevision;
-      _debugAssertStoreInvariants();
+    if (!hasStateChanges) {
+      var committedSignals = const <V2CommittedSignal>[];
+      if (hasSignals) {
+        final nextCommitRevision = _store.commitRevision + 1;
+        _debugAssertStoreInvariantsCandidate(
+          scene: _store.sceneDoc,
+          selectedNodeIds: _store.selectedNodeIds,
+          allNodeIds: _store.allNodeIds,
+          nodeLocator: _store.nodeLocator,
+          nodeIdSeed: _store.nodeIdSeed,
+          commitRevision: nextCommitRevision,
+        );
+        committedSignals = _signalsSlice.writeTakeCommitted(
+          commitRevision: nextCommitRevision,
+        );
+        commitPhases = <String>[...commitPhases, 'signals'];
+        _store.commitRevision = nextCommitRevision;
+      }
+
+      final needsNotify = _repaintSlice.writeTakeNeedsNotify();
+      if (needsNotify) {
+        commitPhases = <String>[...commitPhases, 'repaint'];
+      }
       _debugLastCommitPhases = commitPhases;
       _debugLastChangeSet = ctx.changeSet.txnClone();
+      _debugCaptureTxnCloneStats(ctx);
       return _TxnWriteCommitResult(
         committedSignals: committedSignals,
-        needsNotify: false,
+        needsNotify: needsNotify,
       );
     }
 
@@ -235,34 +304,48 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
     // In state-change branch any committed mutation must bump visual revision.
     final nextVisualRevision = _store.visualRevision + 1;
 
+    final nextCommitRevision = _store.commitRevision + 1;
+    final committedScene = ctx.txnSceneForCommit();
+    final committedSelection = HashSet<NodeId>.of(ctx.workingSelection);
+    final committedNodeIds = ctx.txnAllNodeIdsForCommit(
+      structuralChanged: ctx.changeSet.structuralChanged,
+    );
+    final committedNodeLocator = ctx.txnNodeLocatorForCommit(
+      structuralChanged: ctx.changeSet.structuralChanged,
+    );
+    final committedNodeIdSeed = ctx.nodeIdSeed;
+    _debugAssertStoreInvariantsCandidate(
+      scene: committedScene,
+      selectedNodeIds: committedSelection,
+      allNodeIds: committedNodeIds,
+      nodeLocator: committedNodeLocator,
+      nodeIdSeed: committedNodeIdSeed,
+      commitRevision: nextCommitRevision,
+    );
+
     _spatialIndexSlice.writeHandleCommit(
+      scene: committedScene,
+      nodeLocator: committedNodeLocator,
       changeSet: ctx.changeSet,
       controllerEpoch: nextEpoch,
-      boundsRevision: nextBoundsRevision,
     );
     commitPhases = <String>[...commitPhases, 'spatial_index'];
 
-    final nextCommitRevision = _store.commitRevision + 1;
     final committedSignals = _signalsSlice.writeTakeCommitted(
       commitRevision: nextCommitRevision,
     );
     commitPhases = <String>[...commitPhases, 'signals'];
 
-    final committedScene = ctx.txnSceneForCommit();
-    final committedSelection = Set<NodeId>.from(ctx.workingSelection);
-    final committedNodeIds = txnCollectNodeIds(committedScene);
-    final committedNodeIdSeed = txnInitialNodeIdSeed(committedScene);
-
     _store.sceneDoc = committedScene;
     _store.selectedNodeIds = committedSelection;
     _store.allNodeIds = committedNodeIds;
+    _store.nodeLocator = committedNodeLocator;
     _store.nodeIdSeed = committedNodeIdSeed;
     _store.controllerEpoch = nextEpoch;
     _store.structuralRevision = nextStructuralRevision;
     _store.boundsRevision = nextBoundsRevision;
     _store.visualRevision = nextVisualRevision;
     _store.commitRevision = nextCommitRevision;
-    _debugAssertStoreInvariants();
 
     _repaintSlice.writeMarkNeedsRepaint();
     final needsNotify = _repaintSlice.writeTakeNeedsNotify();
@@ -270,10 +353,20 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
 
     _debugLastCommitPhases = commitPhases;
     _debugLastChangeSet = ctx.changeSet.txnClone();
+    _debugCaptureTxnCloneStats(ctx);
     return _TxnWriteCommitResult(
       committedSignals: committedSignals,
       needsNotify: needsNotify,
     );
+  }
+
+  void _debugCaptureTxnCloneStats(TxnContext ctx) {
+    _debugLastSceneShallowClones = ctx.debugSceneShallowClones;
+    _debugLastLayerShallowClones = ctx.debugLayerShallowClones;
+    _debugLastNodeClones = ctx.debugNodeClones;
+    _debugLastNodeIdSetMaterializations = ctx.debugNodeIdSetMaterializations;
+    _debugLastNodeLocatorMaterializations =
+        ctx.debugNodeLocatorMaterializations;
   }
 
   void _scheduleNotify() {
@@ -296,13 +389,25 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
     });
   }
 
-  void _debugAssertStoreInvariants() {
+  void _debugAssertStoreInvariantsCandidate({
+    required Scene scene,
+    required Set<NodeId> selectedNodeIds,
+    required Set<NodeId> allNodeIds,
+    required Map<NodeId, NodeLocatorEntry> nodeLocator,
+    required int nodeIdSeed,
+    required int commitRevision,
+  }) {
+    assert(() {
+      debugBeforeInvariantPrecheckHook?.call();
+      return true;
+    }());
     debugAssertTxnStoreInvariants(
-      scene: _store.sceneDoc,
-      selectedNodeIds: _store.selectedNodeIds,
-      allNodeIds: _store.allNodeIds,
-      nodeIdSeed: _store.nodeIdSeed,
-      commitRevision: _store.commitRevision,
+      scene: scene,
+      selectedNodeIds: selectedNodeIds,
+      allNodeIds: allNodeIds,
+      nodeLocator: nodeLocator,
+      nodeIdSeed: nodeIdSeed,
+      commitRevision: commitRevision,
     );
   }
 

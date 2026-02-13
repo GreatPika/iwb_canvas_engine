@@ -11,6 +11,8 @@ import 'package:iwb_canvas_engine/src/input/slices/signals/signal_event.dart';
 // INV:INV-V2-EPOCH-INVALIDATION
 // INV:INV-V2-SIGNALS-AFTER-COMMIT
 // INV:INV-V2-ID-INDEX-FROM-SCENE
+// INV:INV-V2-TXN-COPY-ON-WRITE
+// INV:INV-V2-TEXT-SIZE-DERIVED
 
 void main() {
   SceneSnapshot twoRectSnapshot() {
@@ -20,6 +22,23 @@ void main() {
           nodes: <NodeSnapshot>[
             const RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
             const RectNodeSnapshot(id: 'r2', size: Size(12, 12)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  SceneSnapshot singleStrokeSnapshot() {
+    return SceneSnapshot(
+      layers: <LayerSnapshot>[
+        LayerSnapshot(
+          nodes: <NodeSnapshot>[
+            StrokeNodeSnapshot(
+              id: 's1',
+              points: const <Offset>[Offset(0, 0), Offset(1, 1)],
+              thickness: 2,
+              color: const Color(0xFF000000),
+            ),
           ],
         ),
       ],
@@ -82,6 +101,33 @@ void main() {
     },
   );
 
+  test('requestRepaint outside write is deferred and coalesced', () async {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    final beforeCommit = controller.debugCommitRevision;
+    final beforeStructural = controller.structuralRevision;
+    final beforeBounds = controller.boundsRevision;
+    final beforeVisual = controller.visualRevision;
+
+    var notifications = 0;
+    controller.addListener(() {
+      notifications = notifications + 1;
+    });
+
+    controller.requestRepaint();
+    controller.requestRepaint();
+
+    expect(notifications, 0);
+    await pumpEventQueue();
+
+    expect(notifications, 1);
+    expect(controller.debugCommitRevision, beforeCommit);
+    expect(controller.structuralRevision, beforeStructural);
+    expect(controller.boundsRevision, beforeBounds);
+    expect(controller.visualRevision, beforeVisual);
+  });
+
   test('no-op write keeps commit/revisions unchanged and does not notify', () {
     final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
@@ -104,6 +150,120 @@ void main() {
     expect(controller.visualRevision, beforeVisual);
     expect(notifications, 0);
     expect(controller.debugLastCommitPhases, isEmpty);
+  });
+
+  test('snapshot getter reuses immutable instance between reads', () {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    final first = controller.snapshot;
+    final second = controller.snapshot;
+
+    expect(identical(first, second), isTrue);
+  });
+
+  test('snapshot cache survives selection-only and signals-only commits', () {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    final before = controller.snapshot;
+    controller.write<void>((writer) {
+      writer.writeSelectionReplace(const <NodeId>{'r1'});
+    });
+    final afterSelection = controller.snapshot;
+    expect(identical(before, afterSelection), isTrue);
+
+    controller.write<void>((writer) {
+      writer.writeSignalEnqueue(type: 'signals-only.cache');
+    });
+    final afterSignals = controller.snapshot;
+    expect(identical(afterSelection, afterSignals), isTrue);
+  });
+
+  test('snapshot cache invalidates on scene identity change', () {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    final before = controller.snapshot;
+    controller.write<void>((writer) {
+      writer.writeSelectionReplace(const <NodeId>{'r1'});
+      writer.writeSelectionTranslate(const Offset(10, 0));
+    });
+    final after = controller.snapshot;
+
+    expect(identical(before, after), isFalse);
+    final moved = after.layers.first.nodes.first as RectNodeSnapshot;
+    expect(moved.transform.tx, 10);
+  });
+
+  test(
+    'stroke pointsRevision stays monotonic across sequential geometry commits',
+    () {
+      final controller = SceneControllerV2(
+        initialSnapshot: singleStrokeSnapshot(),
+      );
+      addTearDown(controller.dispose);
+
+      final rev0 =
+          (controller.snapshot.layers.first.nodes.first as StrokeNodeSnapshot)
+              .pointsRevision;
+      expect(rev0, 0);
+
+      controller.write<void>((writer) {
+        writer.writeNodePatch(
+          const StrokeNodePatch(
+            id: 's1',
+            points: PatchField<List<Offset>>.value(<Offset>[
+              Offset(0, 0),
+              Offset(2, 2),
+            ]),
+          ),
+        );
+      });
+      final rev1 =
+          (controller.snapshot.layers.first.nodes.first as StrokeNodeSnapshot)
+              .pointsRevision;
+
+      controller.write<void>((writer) {
+        writer.writeNodePatch(
+          const StrokeNodePatch(
+            id: 's1',
+            points: PatchField<List<Offset>>.value(<Offset>[
+              Offset(0, 0),
+              Offset(3, 3),
+            ]),
+          ),
+        );
+      });
+      final rev2 =
+          (controller.snapshot.layers.first.nodes.first as StrokeNodeSnapshot)
+              .pointsRevision;
+
+      expect(rev1, greaterThan(rev0));
+      expect(rev2, greaterThan(rev1));
+    },
+  );
+
+  test('snapshot cache invalidates after writeReplaceScene', () {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    final before = controller.snapshot;
+    controller.writeReplaceScene(
+      SceneSnapshot(
+        layers: <LayerSnapshot>[
+          LayerSnapshot(
+            nodes: const <NodeSnapshot>[
+              RectNodeSnapshot(id: 'fresh', size: Size(4, 4)),
+            ],
+          ),
+        ],
+      ),
+    );
+    final after = controller.snapshot;
+
+    expect(identical(before, after), isFalse);
+    expect(after.layers.first.nodes.single.id, 'fresh');
   });
 
   test('signals-only write bumps commit only and skips repaint', () async {
@@ -181,6 +341,176 @@ void main() {
       expect(controller.selectedNodeIds, isEmpty);
       expect(signals, isEmpty);
       expect(notifications, 0);
+    },
+  );
+
+  test(
+    'write rollback discards repaint request and emits no external effects',
+    () async {
+      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      addTearDown(controller.dispose);
+
+      final beforeCommit = controller.debugCommitRevision;
+      final beforeSnapshot = controller.snapshot;
+
+      final signals = <Object>[];
+      final sub = controller.signals.listen(signals.add);
+      addTearDown(sub.cancel);
+
+      var notifications = 0;
+      controller.addListener(() {
+        notifications = notifications + 1;
+      });
+
+      expect(
+        () => controller.write<void>((writer) {
+          writer.writeSelectionReplace(const <NodeId>{'r1'});
+          writer.writeSignalEnqueue(type: 'will.rollback');
+          controller.requestRepaint();
+          throw StateError('rollback');
+        }),
+        throwsStateError,
+      );
+      await pumpEventQueue(times: 2);
+
+      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.selectedNodeIds, isEmpty);
+      expect(controller.snapshot.layers.length, beforeSnapshot.layers.length);
+      expect(signals, isEmpty);
+      expect(notifications, 0);
+    },
+  );
+
+  test(
+    'invariant pre-check failure in state-change branch keeps store and effects unchanged',
+    () async {
+      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      addTearDown(controller.dispose);
+
+      final beforeSnapshot = controller.snapshot;
+      final beforeEpoch = controller.controllerEpoch;
+      final beforeStructural = controller.structuralRevision;
+      final beforeBounds = controller.boundsRevision;
+      final beforeVisual = controller.visualRevision;
+      final beforeCommit = controller.debugCommitRevision;
+      final beforeSelection = controller.selectedNodeIds;
+
+      final signals = <Object>[];
+      final sub = controller.signals.listen(signals.add);
+      addTearDown(sub.cancel);
+
+      var notifications = 0;
+      controller.addListener(() {
+        notifications = notifications + 1;
+      });
+
+      controller.debugBeforeInvariantPrecheckHook = () {
+        throw StateError('forced invariant pre-check failure');
+      };
+
+      expect(
+        () => controller.write<void>((writer) {
+          writer.writeSelectionReplace(const <NodeId>{'r1'});
+          writer.writeSelectionTranslate(const Offset(10, 0));
+          writer.writeSignalEnqueue(type: 'will.not.emit');
+        }),
+        throwsStateError,
+      );
+      await pumpEventQueue(times: 2);
+
+      final afterSnapshot = controller.snapshot;
+      expect(afterSnapshot.layers.length, beforeSnapshot.layers.length);
+      expect(
+        afterSnapshot.layers.first.nodes
+            .map((node) => node.id)
+            .toList(growable: false),
+        beforeSnapshot.layers.first.nodes
+            .map((node) => node.id)
+            .toList(growable: false),
+      );
+      expect(controller.controllerEpoch, beforeEpoch);
+      expect(controller.structuralRevision, beforeStructural);
+      expect(controller.boundsRevision, beforeBounds);
+      expect(controller.visualRevision, beforeVisual);
+      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.selectedNodeIds, beforeSelection);
+      expect(signals, isEmpty);
+      expect(notifications, 0);
+    },
+  );
+
+  test(
+    'invariant pre-check failure in signals-only branch keeps commit and effects unchanged',
+    () async {
+      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      addTearDown(controller.dispose);
+
+      final beforeCommit = controller.debugCommitRevision;
+      final beforeEpoch = controller.controllerEpoch;
+      final beforeStructural = controller.structuralRevision;
+      final beforeBounds = controller.boundsRevision;
+      final beforeVisual = controller.visualRevision;
+
+      final signals = <Object>[];
+      final sub = controller.signals.listen(signals.add);
+      addTearDown(sub.cancel);
+
+      var notifications = 0;
+      controller.addListener(() {
+        notifications = notifications + 1;
+      });
+
+      controller.debugBeforeInvariantPrecheckHook = () {
+        throw StateError('forced invariant pre-check failure');
+      };
+
+      expect(
+        () => controller.write<void>((writer) {
+          writer.writeSignalEnqueue(type: 'signals-only.fail');
+        }),
+        throwsStateError,
+      );
+      await pumpEventQueue(times: 2);
+
+      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.controllerEpoch, beforeEpoch);
+      expect(controller.structuralRevision, beforeStructural);
+      expect(controller.boundsRevision, beforeBounds);
+      expect(controller.visualRevision, beforeVisual);
+      expect(signals, isEmpty);
+      expect(notifications, 0);
+    },
+  );
+
+  test(
+    'requestRepaint inside successful no-op write schedules one notification',
+    () async {
+      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      addTearDown(controller.dispose);
+
+      final beforeCommit = controller.debugCommitRevision;
+      final beforeStructural = controller.structuralRevision;
+      final beforeBounds = controller.boundsRevision;
+      final beforeVisual = controller.visualRevision;
+
+      var notifications = 0;
+      controller.addListener(() {
+        notifications = notifications + 1;
+      });
+
+      controller.write<void>((_) {
+        controller.requestRepaint();
+      });
+
+      expect(notifications, 0);
+      await pumpEventQueue();
+
+      expect(notifications, 1);
+      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.structuralRevision, beforeStructural);
+      expect(controller.boundsRevision, beforeBounds);
+      expect(controller.visualRevision, beforeVisual);
+      expect(controller.debugLastCommitPhases, const <String>['repaint']);
     },
   );
 
@@ -316,7 +646,156 @@ void main() {
     },
   );
 
-  test('spatial index invalidates on bounds revision change', () {
+  test('initialSnapshot rejects malformed snapshots with ArgumentError', () {
+    final malformedCases =
+        <({SceneSnapshot snapshot, String field, String message})>[
+          (
+            snapshot: SceneSnapshot(
+              layers: <LayerSnapshot>[
+                LayerSnapshot(
+                  nodes: const <NodeSnapshot>[
+                    RectNodeSnapshot(id: 'dup', size: Size(1, 1)),
+                  ],
+                ),
+                LayerSnapshot(
+                  nodes: const <NodeSnapshot>[
+                    RectNodeSnapshot(id: 'dup', size: Size(2, 2)),
+                  ],
+                ),
+              ],
+            ),
+            field: 'layers[1].nodes[0].id',
+            message: 'Must be unique across scene layers.',
+          ),
+          (
+            snapshot: SceneSnapshot(
+              layers: <LayerSnapshot>[
+                LayerSnapshot(isBackground: true),
+                LayerSnapshot(isBackground: true),
+              ],
+            ),
+            field: 'layers',
+            message: 'Must contain at most one background layer.',
+          ),
+          (
+            snapshot: SceneSnapshot(
+              layers: <LayerSnapshot>[
+                LayerSnapshot(
+                  nodes: const <NodeSnapshot>[
+                    PathNodeSnapshot(id: 'p1', svgPathData: 'not-a-path'),
+                  ],
+                ),
+              ],
+            ),
+            field: 'layers[0].nodes[0].svgPathData',
+            message: 'Must be valid SVG path data.',
+          ),
+          (
+            snapshot: SceneSnapshot(
+              palette: ScenePaletteSnapshot(penColors: const <Color>[]),
+            ),
+            field: 'palette.penColors',
+            message: 'Must not be empty.',
+          ),
+        ];
+
+    for (final malformed in malformedCases) {
+      expect(
+        () => SceneControllerV2(initialSnapshot: malformed.snapshot),
+        throwsA(
+          predicate(
+            (e) =>
+                e is ArgumentError &&
+                e.name == malformed.field &&
+                e.message == malformed.message,
+          ),
+        ),
+      );
+    }
+  });
+
+  test(
+    'writeReplaceScene rejects malformed snapshot without state changes or effects',
+    () async {
+      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      addTearDown(controller.dispose);
+
+      controller.write<void>((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'r1'});
+      });
+      await pumpEventQueue();
+      final beforeSnapshot = controller.snapshot;
+      final beforeEpoch = controller.controllerEpoch;
+      final beforeStructural = controller.structuralRevision;
+      final beforeBounds = controller.boundsRevision;
+      final beforeVisual = controller.visualRevision;
+      final beforeCommit = controller.debugCommitRevision;
+      final beforeSelection = controller.selectedNodeIds;
+
+      final signals = <Object>[];
+      final sub = controller.signals.listen(signals.add);
+      addTearDown(sub.cancel);
+
+      var notifications = 0;
+      controller.addListener(() {
+        notifications = notifications + 1;
+      });
+
+      final malformed = SceneSnapshot(
+        layers: <LayerSnapshot>[
+          LayerSnapshot(
+            nodes: const <NodeSnapshot>[
+              RectNodeSnapshot(
+                id: 'bad',
+                size: Size(10, 10),
+                transform: Transform2D(
+                  a: double.infinity,
+                  b: 0,
+                  c: 0,
+                  d: 1,
+                  tx: 0,
+                  ty: 0,
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+
+      expect(
+        () => controller.writeReplaceScene(malformed),
+        throwsA(
+          predicate(
+            (e) =>
+                e is ArgumentError &&
+                e.name == 'layers[0].nodes[0].transform.a' &&
+                e.message == 'Must be finite.',
+          ),
+        ),
+      );
+      await pumpEventQueue(times: 2);
+
+      expect(controller.snapshot.layers.length, beforeSnapshot.layers.length);
+      expect(
+        controller.snapshot.layers.first.nodes
+            .map((node) => node.id)
+            .toList(growable: false),
+        beforeSnapshot.layers.first.nodes
+            .map((node) => node.id)
+            .toList(growable: false),
+      );
+      expect(controller.controllerEpoch, beforeEpoch);
+      expect(controller.structuralRevision, beforeStructural);
+      expect(controller.boundsRevision, beforeBounds);
+      expect(controller.visualRevision, beforeVisual);
+      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.selectedNodeIds, beforeSelection);
+      expect(signals, isEmpty);
+      expect(notifications, 0);
+    },
+  );
+
+  test('spatial index updates incrementally on bounds revision change', () {
     final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
@@ -335,7 +814,370 @@ void main() {
       const Rect.fromLTWH(80, 0, 0, 0),
     );
     expect(afterQuery, isNotEmpty);
+    expect(controller.debugSpatialIndexBuildCount, 1);
+    expect(controller.debugSpatialIndexIncrementalApplyCount, 1);
+  });
+
+  test(
+    'single-node transform stays incremental without full materialization',
+    () {
+      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      addTearDown(controller.dispose);
+
+      controller.querySpatialCandidates(const Rect.fromLTWH(0, 0, 0, 0));
+      expect(controller.debugSpatialIndexBuildCount, 1);
+
+      controller.write<void>((writer) {
+        final changed = writer.writeNodeTransformSet(
+          'r1',
+          Transform2D.translation(const Offset(100, 0)),
+        );
+        expect(changed, isTrue);
+      });
+
+      final moved = controller.querySpatialCandidates(
+        const Rect.fromLTWH(100, 0, 0, 0),
+      );
+      expect(moved.map((candidate) => candidate.node.id), contains('r1'));
+      expect(controller.debugSpatialIndexBuildCount, 1);
+      expect(controller.debugSpatialIndexIncrementalApplyCount, 1);
+      expect(controller.debugNodeIdSetMaterializations, 0);
+      expect(controller.debugNodeLocatorMaterializations, 0);
+    },
+  );
+
+  test('spatial index updates incrementally on hitPadding change', () {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    final beforeQuery = controller.querySpatialCandidates(
+      const Rect.fromLTWH(30, 0, 0, 0),
+    );
+    expect(beforeQuery, isEmpty);
+    expect(controller.debugSpatialIndexBuildCount, 1);
+
+    controller.write<void>((writer) {
+      writer.writeNodePatch(
+        const RectNodePatch(
+          id: 'r1',
+          common: CommonNodePatch(hitPadding: PatchField<double>.value(22)),
+        ),
+      );
+    });
+
+    final afterQuery = controller.querySpatialCandidates(
+      const Rect.fromLTWH(30, 0, 0, 0),
+    );
+    expect(afterQuery.map((candidate) => candidate.node.id), contains('r1'));
+    expect(
+      afterQuery.map((candidate) => candidate.node.id),
+      isNot(contains('r2')),
+    );
+    expect(controller.debugSpatialIndexBuildCount, 1);
+    expect(controller.debugSpatialIndexIncrementalApplyCount, 1);
+  });
+
+  test('spatial index handles huge node and updates incrementally', () {
+    final controller = SceneControllerV2(
+      initialSnapshot: SceneSnapshot(
+        layers: <LayerSnapshot>[
+          LayerSnapshot(
+            nodes: const <NodeSnapshot>[
+              RectNodeSnapshot(id: 'huge', size: Size(1e9, 1e9)),
+            ],
+          ),
+        ],
+      ),
+    );
+    addTearDown(controller.dispose);
+
+    final initial = controller.querySpatialCandidates(
+      const Rect.fromLTWH(0, 0, 10, 10),
+    );
+    expect(initial.map((candidate) => candidate.node.id), <NodeId>['huge']);
+    expect(controller.debugSpatialIndexBuildCount, 1);
+
+    controller.write<void>((writer) {
+      writer.writeSelectionReplace(const <NodeId>{'huge'});
+      writer.writeSelectionTranslate(const Offset(2e9, 0));
+    });
+
+    final oldProbe = controller.querySpatialCandidates(
+      const Rect.fromLTWH(0, 0, 10, 10),
+    );
+    expect(oldProbe, isEmpty);
+
+    final movedProbe = controller.querySpatialCandidates(
+      const Rect.fromLTWH(2e9, 0, 10, 10),
+    );
+    expect(movedProbe.map((candidate) => candidate.node.id), <NodeId>['huge']);
+    expect(controller.debugSpatialIndexBuildCount, 1);
+    expect(controller.debugSpatialIndexIncrementalApplyCount, 1);
+  });
+
+  test('spatial index invalidates and rebuilds after replaceScene', () {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    final beforeQuery = controller.querySpatialCandidates(
+      const Rect.fromLTWH(0, 0, 0, 0),
+    );
+    expect(beforeQuery, isNotEmpty);
+    expect(controller.debugSpatialIndexBuildCount, 1);
+
+    controller.writeReplaceScene(
+      SceneSnapshot(
+        layers: <LayerSnapshot>[
+          LayerSnapshot(
+            nodes: const <NodeSnapshot>[
+              RectNodeSnapshot(id: 'fresh', size: Size(10, 10)),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    final afterQuery = controller.querySpatialCandidates(
+      const Rect.fromLTWH(0, 0, 0, 0),
+    );
+    expect(afterQuery.map((candidate) => candidate.node.id), <NodeId>['fresh']);
     expect(controller.debugSpatialIndexBuildCount, 2);
+    expect(controller.debugSpatialIndexIncrementalApplyCount, 0);
+  });
+
+  test(
+    'spatial index keeps candidate indices after erase in middle of layer',
+    () {
+      final controller = SceneControllerV2(
+        initialSnapshot: SceneSnapshot(
+          layers: <LayerSnapshot>[
+            LayerSnapshot(
+              nodes: const <NodeSnapshot>[
+                RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
+                RectNodeSnapshot(id: 'r2', size: Size(10, 10)),
+                RectNodeSnapshot(id: 'r3', size: Size(10, 10)),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      controller.querySpatialCandidates(const Rect.fromLTWH(0, 0, 0, 0));
+      expect(controller.debugSpatialIndexBuildCount, 1);
+
+      controller.write<void>((writer) {
+        writer.writeNodeErase('r2');
+      });
+
+      final candidates = controller.querySpatialCandidates(
+        const Rect.fromLTWH(0, 0, 0, 0),
+      );
+      final byId = <NodeId, SceneSpatialCandidate>{
+        for (final candidate in candidates) candidate.node.id: candidate,
+      };
+      expect(byId.containsKey('r1'), isTrue);
+      expect(byId.containsKey('r2'), isFalse);
+      expect(byId.containsKey('r3'), isTrue);
+      expect(byId['r1']!.layerIndex, 0);
+      expect(byId['r1']!.nodeIndex, 0);
+      expect(byId['r3']!.layerIndex, 0);
+      expect(byId['r3']!.nodeIndex, 1);
+      expect(controller.resolveSpatialCandidateNode(byId['r1']!), isNotNull);
+      expect(controller.resolveSpatialCandidateNode(byId['r3']!), isNotNull);
+      expect(controller.debugSpatialIndexBuildCount, 1);
+      expect(controller.debugSpatialIndexIncrementalApplyCount, 1);
+    },
+  );
+
+  test('no-op hitPadding patch does not bump bounds revision', () {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    final beforeBounds = controller.boundsRevision;
+
+    controller.write<void>((writer) {
+      writer.writeNodePatch(
+        const RectNodePatch(
+          id: 'r1',
+          common: CommonNodePatch(hitPadding: PatchField<double>.value(0)),
+        ),
+      );
+    });
+
+    expect(controller.boundsRevision, beforeBounds);
+    expect(controller.debugLastChangeSet.boundsChanged, isFalse);
+    expect(controller.debugLastChangeSet.hitGeometryChangedIds, isEmpty);
+    expect(controller.debugSceneShallowClones, 0);
+    expect(controller.debugLayerShallowClones, 0);
+    expect(controller.debugNodeClones, 0);
+  });
+
+  test(
+    'text layout patch recomputes derived size and bumps bounds revision',
+    () {
+      final controller = SceneControllerV2(
+        initialSnapshot: SceneSnapshot(
+          layers: <LayerSnapshot>[
+            LayerSnapshot(
+              nodes: const <NodeSnapshot>[
+                TextNodeSnapshot(
+                  id: 't1',
+                  text: 'hello',
+                  size: Size(1, 1),
+                  fontSize: 12,
+                  color: Color(0xFF000000),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      final beforeNode =
+          controller.snapshot.layers.first.nodes.single as TextNodeSnapshot;
+      final beforeSize = beforeNode.size;
+      final beforeBoundsRevision = controller.boundsRevision;
+
+      controller.write<void>((writer) {
+        writer.writeNodePatch(
+          const TextNodePatch(id: 't1', fontSize: PatchField<double>.value(36)),
+        );
+      });
+
+      final afterNode =
+          controller.snapshot.layers.first.nodes.single as TextNodeSnapshot;
+      expect(afterNode.size.height, greaterThan(beforeSize.height));
+      expect(controller.boundsRevision, beforeBoundsRevision + 1);
+      expect(controller.debugLastChangeSet.boundsChanged, isTrue);
+      expect(
+        controller.debugLastChangeSet.hitGeometryChangedIds,
+        contains('t1'),
+      );
+    },
+  );
+
+  test('text visual-only patch keeps bounds revision unchanged', () {
+    final controller = SceneControllerV2(
+      initialSnapshot: SceneSnapshot(
+        layers: <LayerSnapshot>[
+          LayerSnapshot(
+            nodes: const <NodeSnapshot>[
+              TextNodeSnapshot(
+                id: 't1',
+                text: 'hello',
+                size: Size(80, 24),
+                fontSize: 24,
+                color: Color(0xFF000000),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+    addTearDown(controller.dispose);
+
+    final beforeBoundsRevision = controller.boundsRevision;
+
+    controller.write<void>((writer) {
+      writer.writeNodePatch(
+        const TextNodePatch(
+          id: 't1',
+          color: PatchField<Color>.value(Color(0xFF00AA00)),
+        ),
+      );
+    });
+
+    expect(controller.boundsRevision, beforeBoundsRevision);
+    expect(controller.debugLastChangeSet.boundsChanged, isFalse);
+    expect(controller.debugLastChangeSet.hitGeometryChangedIds, isEmpty);
+  });
+
+  test('camera offset write does not clone layers or nodes', () {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    controller.write<void>((writer) {
+      writer.writeCameraOffset(const Offset(20, 10));
+    });
+
+    expect(controller.debugSceneShallowClones, 1);
+    expect(controller.debugLayerShallowClones, 0);
+    expect(controller.debugNodeClones, 0);
+  });
+
+  test('single node patch clones exactly one layer and one node', () {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    controller.write<void>((writer) {
+      writer.writeNodePatch(
+        const RectNodePatch(id: 'r1', strokeWidth: PatchField<double>.value(2)),
+      );
+    });
+
+    expect(controller.debugSceneShallowClones, 1);
+    expect(controller.debugLayerShallowClones, 1);
+    expect(controller.debugNodeClones, 1);
+  });
+
+  test('opacity patch commit does not materialize allNodeIds', () {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    controller.write<void>((writer) {
+      writer.writeNodePatch(
+        const RectNodePatch(
+          id: 'r1',
+          common: CommonNodePatch(opacity: PatchField<double>.value(0.5)),
+        ),
+      );
+    });
+
+    expect(controller.debugNodeIdSetMaterializations, 0);
+    expect(controller.debugNodeLocatorMaterializations, 0);
+  });
+
+  test('structural commit materializes allNodeIds once', () {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    controller.write<void>((writer) {
+      writer.writeNodeInsert(RectNodeSpec(size: const Size(8, 8)));
+    });
+
+    expect(controller.debugNodeIdSetMaterializations, 1);
+    expect(controller.debugNodeLocatorMaterializations, 1);
+  });
+
+  test('node id seed stays monotonic after deleting max node-* id', () {
+    final controller = SceneControllerV2(
+      initialSnapshot: SceneSnapshot(
+        layers: <LayerSnapshot>[
+          LayerSnapshot(
+            nodes: const <NodeSnapshot>[
+              RectNodeSnapshot(id: 'node-1', size: Size(10, 10)),
+              RectNodeSnapshot(id: 'node-9', size: Size(12, 12)),
+            ],
+          ),
+        ],
+      ),
+    );
+    addTearDown(controller.dispose);
+
+    controller.write<void>((writer) {
+      writer.writeNodeErase('node-9');
+    });
+
+    late final NodeId generatedId;
+    controller.write<void>((writer) {
+      generatedId = writer.writeNodeInsert(
+        RectNodeSpec(size: const Size(6, 6)),
+      );
+    });
+
+    expect(generatedId, 'node-10');
   });
 
   test('resolveSpatialCandidateNode accepts valid foreground candidate', () {
@@ -477,6 +1319,31 @@ void main() {
   });
 
   test(
+    'signals are delivered before repaint listeners for same commit',
+    () async {
+      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      addTearDown(controller.dispose);
+
+      final observed = <String>[];
+      final sub = controller.signals.listen((_) {
+        observed.add('signal');
+      });
+      addTearDown(sub.cancel);
+      controller.addListener(() {
+        observed.add('notify');
+      });
+
+      controller.write<void>((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'r1'});
+        writer.writeSignalEnqueue(type: 'ordered');
+      });
+      await pumpEventQueue(times: 2);
+
+      expect(observed, const <String>['signal', 'notify']);
+    },
+  );
+
+  test(
     'signal listener observes committed state and can trigger follow-up write',
     () async {
       final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
@@ -603,6 +1470,60 @@ void main() {
       throwsStateError,
     );
   });
+
+  test(
+    'controller commit handles 1000 mixed selection operations and stays correct',
+    () {
+      final controller = SceneControllerV2(
+        initialSnapshot: SceneSnapshot(
+          layers: <LayerSnapshot>[
+            LayerSnapshot(
+              nodes: <NodeSnapshot>[
+                for (var i = 0; i < 1000; i++)
+                  RectNodeSnapshot(id: 'n$i', size: const Size(10, 10)),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      final expectedSelection = <NodeId>{};
+      controller.write<void>((writer) {
+        for (var i = 0; i < 1000; i++) {
+          final id = 'n$i';
+          switch (i % 3) {
+            case 0:
+              writer.writeSelectionToggle(id);
+              if (!expectedSelection.remove(id)) {
+                expectedSelection.add(id);
+              }
+              break;
+            case 1:
+              writer.writeSelectionReplace(<NodeId>{id});
+              expectedSelection
+                ..clear()
+                ..add(id);
+              break;
+            case 2:
+              expect(writer.writeNodeErase(id), isTrue);
+              expectedSelection.remove(id);
+              break;
+          }
+        }
+      });
+
+      final remainingNodeIds = <NodeId>{
+        for (final layer in controller.snapshot.layers)
+          for (final node in layer.nodes) node.id,
+      };
+      expect(controller.selectedNodeIds, expectedSelection);
+      expect(remainingNodeIds.containsAll(controller.selectedNodeIds), isTrue);
+      expect(controller.debugLastChangeSet.selectionChanged, isTrue);
+      expect(controller.debugLastChangeSet.structuralChanged, isTrue);
+      expect(controller.debugCommitRevision, 1);
+    },
+  );
 
   test('commit normalization marks selection/grid changes when normalized', () {
     final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());

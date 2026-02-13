@@ -24,6 +24,8 @@ import '../public/scene_render_state.dart';
 import '../public/scene_write_txn.dart';
 import '../public/snapshot.dart';
 
+const int kMaxStrokePointsPerNode = 20000;
+
 class SceneControllerInteractiveV2 extends ChangeNotifier
     implements SceneRenderState {
   SceneControllerInteractiveV2({
@@ -703,9 +705,13 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
     if (isDistanceGreaterThan(_activeStrokePoints.last, scenePoint, 0)) {
       _activeStrokePoints.add(scenePoint);
     }
+    final committedPoints = _resampleStrokePointsToLimit(
+      _activeStrokePoints,
+      limit: kMaxStrokePointsPerNode,
+    );
 
     final strokeId = _core.draw.writeDrawStroke(
-      points: _activeStrokePoints,
+      points: committedPoints,
       thickness: _drawTool == DrawTool.highlighter
           ? _highlighterThickness
           : _penThickness,
@@ -729,6 +735,20 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
     );
 
     _activeStrokePoints.clear();
+  }
+
+  List<Offset> _resampleStrokePointsToLimit(
+    List<Offset> points, {
+    required int limit,
+  }) {
+    if (points.length <= limit) {
+      return points;
+    }
+    final sourceCount = points.length;
+    return List<Offset>.generate(limit, (i) {
+      final sourceIndex = (i * (sourceCount - 1)) ~/ (limit - 1);
+      return points[sourceIndex];
+    }, growable: false);
   }
 
   void _commitLine(int timestampMs, Offset scenePoint) {
@@ -1249,9 +1269,9 @@ enum _MoveDragTarget { none, move, marquee }
 
 class _InteractiveEventDispatcher {
   final StreamController<ActionCommitted> _actions =
-      StreamController<ActionCommitted>.broadcast(sync: true);
+      StreamController<ActionCommitted>.broadcast();
   final StreamController<EditTextRequested> _editTextRequests =
-      StreamController<EditTextRequested>.broadcast(sync: true);
+      StreamController<EditTextRequested>.broadcast();
 
   int _actionCounter = 0;
   bool _isDisposed = false;

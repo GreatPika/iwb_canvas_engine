@@ -1,9 +1,44 @@
-## Unreleased
+## 3.0.0 (2026-02-13)
+
+### Breaking
+
+- Runtime snapshot boundaries are now strict:
+  - `SceneController(initialSnapshot: ...)` throws `ArgumentError` for malformed snapshots.
+  - `replaceScene(...)` throws `ArgumentError` for malformed snapshots.
+- Runtime snapshot import no longer auto-inserts a missing background layer.
+- JSON codec now rejects non-positive `background.grid.cellSize` regardless of grid enabled state.
+- Write-boundary validation is now strict:
+  - `addNode(...)` rejects malformed `NodeSpec` values with `ArgumentError`.
+  - `patchNode(...)` rejects malformed present `NodePatch` fields with `ArgumentError`.
+  - `writeNodeTransformSet(...)`, `writeSelectionTransform(...)`, and `writeSelectionTranslate(...)` reject non-finite `Transform2D`/`Offset`.
+  - `opacity` is now strict at write boundary (`[0,1]`) instead of relying on soft normalization.
+- Text node write API is now size-derived:
+  - `TextNodeSpec` no longer accepts `size`.
+  - `TextNodePatch` no longer accepts `size`.
+- Interactive controller event streams (`actions`, `editTextRequests`) are now asynchronous; listeners are no longer invoked in the emitter call stack.
 
 ### Changed
 
 - Controller repaint/listener notifications are now deferred to a microtask after commit and coalesced to one notification per event-loop tick, so `write(...)` calls inside listeners no longer trip nested-write guards from the originating transaction.
+- Transactional repaint requests are now buffered until successful commit; rollback discards buffered repaint/signals, and successful commit delivers signals before repaint listener notification.
+- Spatial-index invalidation now tracks hit candidate bounds (`nodeHitTestCandidateBoundsWorld`) so `hitPadding` updates rebuild candidate lookup correctly.
+- Spatial index now uses a dual-path layout (`grid cells` + `large candidates`) with `kMaxCellsPerNode = 1024`, so a single huge node can no longer explode per-cell indexing cost.
+- Spatial index construction is fixed to the internal index cell size and no longer depends on background visual grid settings.
+- Spatial index commits are now incremental: local hit-geometry changes update per-node cell coverage (`added/removed/hitGeometryChangedIds`) without full-index rebuild; rebuild is kept as a fallback path when incremental apply is not possible.
+- Interactive pen/highlighter commits now enforce `kMaxStrokePointsPerNode = 20_000` with deterministic index-uniform downsampling that preserves stroke endpoints.
+- Path-stroke precise hit-testing now enforces `kMaxStrokeHitSamplesPerMetric = 2_048` by increasing sampling step on very long path metrics.
+- Spatial index query now enforces `kMaxQueryCells = 50_000`; oversized queries switch to bounded all-candidate scan with exact intersection filtering instead of unbounded cell iteration.
+- Transaction write path now uses scene/layer/node copy-on-write: first mutation shallow-clones scene metadata and clones only touched layers/nodes, while no-op node patches skip COW cloning.
+- Commit state-change path now keeps node-id index incrementally: local non-structural commits reuse existing `allNodeIds`, structural commits materialize ids lazily once, and `nodeIdSeed` is treated as a monotonic generator (lower-bounded by committed scene ids).
+- Commit/store now maintain `nodeLocator` (`NodeId -> layer/node position`) and writer hot paths use locator-based O(1) lookup instead of linear node-id scans.
+- Stroke render-path cache now validates freshness by `(node.id, pointsRevision)` in O(1), avoiding per-frame point-list hashing/traversal in cache checks.
 - Move-mode drag now uses preview translation during pointer move and commits scene translation once on pointer up; pointer cancel no longer mutates document state.
+- Added shared internal scene-value validation (`scene_value_validation.dart`) and wired it into runtime snapshot import and JSON encode/decode validation paths.
+- Selection transaction hot paths now keep a hash-based mutable working set in place (`toggle/clear/erase/delete/replace`) instead of rebuilding `Set` instances on each step.
+- Text node bounds are now derived in-engine from text layout inputs; snapshot/JSON import recomputes text size on load so stale serialized values do not stay authoritative at runtime.
+- Added load-profile benchmark tooling (`dart run tool/bench/run_load_profiles.dart --profile=<smoke|full>`) with structured JSON output and dedicated benchmark cases for large node/stroke scenes and worst-case spatial/path scenarios.
+- CI now runs smoke load profiles and uploads benchmark artifacts; a new nightly workflow runs full load profiles and extended randomized transaction fuzzing.
+- Randomized transaction fuzz tests now support environment-based scaling (`IWB_FUZZ_SEEDS`, `IWB_FUZZ_STEPS`, `IWB_FUZZ_BASE_SEED`) and explicitly assert finite numeric state after each step.
 
 ## 2.0.1 (2026-02-10)
 

@@ -93,8 +93,48 @@ void main() {
     );
   }
 
+  test('txnCloneSceneShallow copies scene shell and shares layers/nodes', () {
+    final source = sourceScene();
+
+    final clone = txnCloneSceneShallow(source);
+
+    expect(clone, isNot(same(source)));
+    expect(clone.layers, isNot(same(source.layers)));
+    expect(clone.layers.length, source.layers.length);
+    expect(identical(clone.layers[0], source.layers[0]), isTrue);
+    expect(identical(clone.layers[1], source.layers[1]), isTrue);
+    expect(
+      identical(clone.layers[1].nodes[0], source.layers[1].nodes[0]),
+      isTrue,
+    );
+
+    expect(clone.camera, isNot(same(source.camera)));
+    expect(clone.background, isNot(same(source.background)));
+    expect(clone.background.grid, isNot(same(source.background.grid)));
+    expect(clone.palette, isNot(same(source.palette)));
+    expect(clone.palette.penColors, isNot(same(source.palette.penColors)));
+
+    clone.layers.add(Layer());
+    clone.camera.offset = const Offset(42, 24);
+    expect(source.layers.length, 2);
+    expect(source.camera.offset, const Offset(10, 20));
+  });
+
+  test('txnCloneLayerShallow copies node list and shares node objects', () {
+    final source = sourceScene();
+
+    final clone = txnCloneLayerShallow(source.layers[1]);
+
+    expect(clone, isNot(same(source.layers[1])));
+    expect(clone.nodes, isNot(same(source.layers[1].nodes)));
+    expect(clone.nodes.length, source.layers[1].nodes.length);
+    expect(identical(clone.nodes[2], source.layers[1].nodes[2]), isTrue);
+  });
+
   test('txnCloneScene deep clones scene, layers, nodes and mutable lists', () {
     final source = sourceScene();
+    final sourceStrokeBeforeClone = source.layers[1].nodes[2] as StrokeNode;
+    sourceStrokeBeforeClone.points[0] = const Offset(-1, -1);
     final clone = txnCloneScene(source);
 
     expect(clone, isNot(same(source)));
@@ -109,6 +149,8 @@ void main() {
     expect(cloneNode, isNot(same(sourceNode)));
     expect(cloneNode.points, isNot(same(sourceNode.points)));
     expect(cloneNode.points, sourceNode.points);
+    expect(cloneNode.pointsRevision, sourceNode.pointsRevision);
+    expect(cloneNode.pointsRevision, greaterThan(0));
 
     cloneNode.points.add(const Offset(99, 99));
     expect(sourceNode.points.length, 2);

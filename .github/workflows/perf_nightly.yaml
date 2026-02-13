@@ -1,0 +1,46 @@
+name: Perf Nightly
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: perf-nightly-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  perf:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.38.9"
+          cache: true
+
+      - name: Pub get
+        run: flutter pub get
+
+      - name: Randomized txn fuzz (nightly profile)
+        env:
+          IWB_FUZZ_SEEDS: 11,29,47,71,89,107,131,149
+          IWB_FUZZ_STEPS: 800
+          IWB_FUZZ_BASE_SEED: 11
+        run: flutter test test/controller/scene_controller_randomized_txn_test.dart
+
+      - name: Load profiles (full)
+        run: dart run tool/bench/run_load_profiles.dart --profile=full --output=build/bench/load_profiles_full.json
+
+      - name: Upload full benchmark artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-profiles-full
+          path: build/bench/load_profiles_full.json

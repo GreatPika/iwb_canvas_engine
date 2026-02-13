@@ -1,6 +1,6 @@
 # Architecture Overview
 
-This document describes the architecture of `iwb_canvas_engine` for release `2.0.1`.
+This document describes the architecture of `iwb_canvas_engine` for release `3.0.0`.
 
 ## Goals
 
@@ -46,7 +46,7 @@ lib/
 2. `SceneController` processes events and performs transactional writes.
 3. Controller updates the immutable `SceneSnapshot`.
 4. `ScenePainterV2` renders snapshot state via `CustomPaint`.
-5. `actions` / `editTextRequests` streams expose boundaries to the host app.
+5. `actions` / `editTextRequests` streams expose asynchronous boundaries to the host app.
 
 ## Invariants
 
@@ -61,10 +61,17 @@ Key invariants:
 - Public API does not expose mutable core scene structures.
 - All state mutations flow through `write` transactions and safe txn operations.
 - Committed signals are delivered only after store commit finalization.
+- For each successful commit, signal delivery happens before repaint listener notification.
 - Repaint/listener notifications are scheduled after commit via microtask and coalesced per event-loop tick.
-- Node-id index state (`allNodeIds`, `nodeIdSeed`) is derived from committed scene data.
+- Interactive `actions` / `editTextRequests` streams are delivered asynchronously (never in the same call stack as mutation methods).
+- Relative ordering between interactive stream delivery and repaint listener notification is intentionally not a public contract.
+- Buffered signal/repaint effects are discarded when `write(...)` rolls back.
+- Node-id index state keeps `allNodeIds` and `nodeLocator` equal to committed scene ids/locations, while `nodeIdSeed` is a monotonic generator lower-bounded by committed scene ids.
 - Selection normalization preserves explicit non-selectable ids and drops only missing/background/invisible ids.
-- Background layer rule: at most one background layer; canonical index is `0`.
+- Runtime snapshot boundary (`initialSnapshot` / `replaceScene`) validates input strictly and fails fast with `ArgumentError` for malformed snapshots.
+- Text node box size is derived from text layout inputs and is not writable via public spec/patch APIs.
+- Runtime background-layer rule: at most one background layer; if present it is canonicalized to index `0`; missing background is allowed (no auto-insert on runtime boundary).
+- JSON decoder background-layer rule: canonicalizes to a single background layer at index `0`.
 - Unique node ids across all layers.
 - Input and render subsystems must not bypass controller transaction boundaries.
 - Import boundaries are enforced by `tool/check_import_boundaries.dart`.
@@ -73,14 +80,20 @@ Key invariants:
 
 - Current write schema: `schemaVersion = 2`.
 - Accepted read schemas: `{2}`.
-- Decoder validates numeric and structural constraints and fails fast with `SceneJsonFormatException`.
+- Encoder/decoder validate numeric and structural constraints and fail fast with `SceneJsonFormatException`.
 
 ## Performance model
 
-- Mutating transactions use single clone-on-first-mutation; commit does not deep-clone scene again.
+- Mutating transactions use copy-on-write: first mutation creates a shallow scene clone, then only touched layers/nodes are cloned on demand; no-op patches do not trigger layer/node cloning.
+- Hot-path node lookup (`NodeId -> layer/node index`) uses committed `nodeLocator` instead of linear scene scans.
 - Viewport culling for offscreen nodes.
 - Bounded caches for text layout, stroke paths, and selected path metrics.
-- Spatial index support for input hit-testing hot paths.
+- Stroke-path cache freshness is validated in O(1) by `(node.id, pointsRevision)`
+  instead of hashing/iterating point lists on every lookup.
+- Spatial index supports incremental commit updates (`added/removed/hitGeometryChangedIds`) for hit-testing hot paths; full rebuild is a fallback path only.
+- Spatial query guardrail: oversized query rectangles (`> 50_000` index cells) bypass cell loops and use bounded all-candidate scan with exact intersection filtering.
+- Hit-test guardrail: path-stroke precise hit-testing caps per-metric sampling to `2_048` points by increasing sampling step for long metrics.
+- Interactive draw guardrail: stroke commit caps points to `20_000` using deterministic index-uniform downsampling (endpoints preserved).
 - Interactive move drag uses preview translation (single source in interactive controller) and commits translation once on pointer up; preview hit-testing merges spatial candidates for `point` and `point - delta`.
 
 ## Non-goals

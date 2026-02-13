@@ -10,6 +10,7 @@ List<String> txnCollectStoreInvariantViolations({
   required Scene scene,
   required Set<NodeId> selectedNodeIds,
   required Set<NodeId> allNodeIds,
+  required Map<NodeId, NodeLocatorEntry> nodeLocator,
   required int nodeIdSeed,
   required int commitRevision,
 }) {
@@ -21,6 +22,46 @@ List<String> txnCollectStoreInvariantViolations({
       ...violations,
       'allNodeIds must equal collectNodeIds(scene). '
           'actual=$allNodeIds expected=$expectedAllNodeIds',
+    ];
+  }
+  if (!_txnSetsEqual(allNodeIds, nodeLocator.keys.toSet())) {
+    violations = <String>[
+      ...violations,
+      'allNodeIds must equal nodeLocator keys. '
+          'allNodeIds=$allNodeIds locatorKeys=${nodeLocator.keys.toSet()}',
+    ];
+  }
+  final expectedNodeLocator = txnBuildNodeLocator(scene);
+  if (!_txnNodeLocatorEquals(nodeLocator, expectedNodeLocator)) {
+    violations = <String>[
+      ...violations,
+      'nodeLocator must match buildNodeLocator(scene). '
+          'actual=$nodeLocator expected=$expectedNodeLocator',
+    ];
+  }
+
+  final duplicateNodeIds = _txnCollectDuplicateNodeIds(scene);
+  if (duplicateNodeIds.isNotEmpty) {
+    violations = <String>[
+      ...violations,
+      'scene must not contain duplicate node ids. '
+          'duplicates=$duplicateNodeIds',
+    ];
+  }
+
+  final backgroundLayerIndexes = _txnCollectBackgroundLayerIndexes(scene);
+  if (backgroundLayerIndexes.length > 1) {
+    violations = <String>[
+      ...violations,
+      'scene must contain at most one background layer. '
+          'indexes=$backgroundLayerIndexes',
+    ];
+  } else if (backgroundLayerIndexes.isNotEmpty &&
+      backgroundLayerIndexes.single != 0) {
+    violations = <String>[
+      ...violations,
+      'background layer must be at index 0 when present. '
+          'actualIndex=${backgroundLayerIndexes.single}',
     ];
   }
 
@@ -37,11 +78,11 @@ List<String> txnCollectStoreInvariantViolations({
   }
 
   final expectedSeed = txnInitialNodeIdSeed(scene);
-  if (nodeIdSeed != expectedSeed) {
+  if (nodeIdSeed < expectedSeed) {
     violations = <String>[
       ...violations,
-      'nodeIdSeed must be derived from scene. '
-          'actual=$nodeIdSeed expected=$expectedSeed',
+      'nodeIdSeed must be >= initialNodeIdSeed(scene). '
+          'actual=$nodeIdSeed min=$expectedSeed',
     ];
   }
 
@@ -77,6 +118,7 @@ void debugAssertTxnStoreInvariants({
   required Scene scene,
   required Set<NodeId> selectedNodeIds,
   required Set<NodeId> allNodeIds,
+  required Map<NodeId, NodeLocatorEntry> nodeLocator,
   required int nodeIdSeed,
   required int commitRevision,
 }) {
@@ -85,6 +127,7 @@ void debugAssertTxnStoreInvariants({
       scene: scene,
       selectedNodeIds: selectedNodeIds,
       allNodeIds: allNodeIds,
+      nodeLocator: nodeLocator,
       nodeIdSeed: nodeIdSeed,
       commitRevision: commitRevision,
     );
@@ -101,6 +144,45 @@ bool _txnSetsEqual(Set<NodeId> left, Set<NodeId> right) {
   return left.length == right.length && left.containsAll(right);
 }
 
+bool _txnNodeLocatorEquals(
+  Map<NodeId, NodeLocatorEntry> left,
+  Map<NodeId, NodeLocatorEntry> right,
+) {
+  if (left.length != right.length) {
+    return false;
+  }
+  for (final entry in left.entries) {
+    final rightValue = right[entry.key];
+    if (rightValue == null || rightValue != entry.value) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool _txnIsFiniteOffset(Offset value) {
   return value.dx.isFinite && value.dy.isFinite;
+}
+
+Set<NodeId> _txnCollectDuplicateNodeIds(Scene scene) {
+  final seen = <NodeId>{};
+  final duplicates = <NodeId>{};
+  for (final layer in scene.layers) {
+    for (final node in layer.nodes) {
+      if (!seen.add(node.id)) {
+        duplicates.add(node.id);
+      }
+    }
+  }
+  return duplicates;
+}
+
+List<int> _txnCollectBackgroundLayerIndexes(Scene scene) {
+  final out = <int>[];
+  for (var i = 0; i < scene.layers.length; i++) {
+    if (scene.layers[i].isBackground) {
+      out.add(i);
+    }
+  }
+  return out;
 }

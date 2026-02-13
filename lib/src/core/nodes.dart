@@ -282,7 +282,7 @@ class ImageNode extends SceneNode {
   Rect get localBounds => _localRect;
 }
 
-/// Text node with a fixed layout box ([size]) and basic styling.
+/// Text node with derived layout box ([size]) and basic styling.
 class TextNode extends SceneNode {
   TextNode({
     required super.id,
@@ -395,6 +395,7 @@ class StrokeNode extends SceneNode {
   StrokeNode({
     required super.id,
     required List<Offset> points,
+    int pointsRevision = 0,
     required this.thickness,
     required this.color,
     super.hitPadding,
@@ -406,7 +407,10 @@ class StrokeNode extends SceneNode {
     super.isDeletable,
     super.isTransformable,
   }) : super(type: NodeType.stroke) {
-    _points = _RevisionedOffsetList.from(points);
+    _points = _RevisionedOffsetList.from(
+      points,
+      initialRevision: pointsRevision,
+    );
   }
 
   factory StrokeNode.fromWorldPoints({
@@ -503,11 +507,20 @@ class StrokeNode extends SceneNode {
 }
 
 class _RevisionedOffsetList extends ListBase<Offset> {
-  _RevisionedOffsetList.from(Iterable<Offset> source)
-    : _inner = List<Offset>.from(source);
+  _RevisionedOffsetList.from(Iterable<Offset> source, {int initialRevision = 0})
+    : _inner = List<Offset>.from(source),
+      _revision = initialRevision {
+    if (initialRevision < 0) {
+      throw ArgumentError.value(
+        initialRevision,
+        'initialRevision',
+        'must be >= 0',
+      );
+    }
+  }
 
   final List<Offset> _inner;
-  int _revision = 0;
+  int _revision;
   int get revision => _revision;
 
   void _markMutated() {

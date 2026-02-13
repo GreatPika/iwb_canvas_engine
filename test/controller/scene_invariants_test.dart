@@ -4,9 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_invariants.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
+import 'package:iwb_canvas_engine/src/model/document.dart';
 
 // INV:INV-V2-ID-INDEX-FROM-SCENE
 // INV:INV-V2-WRITE-NUMERIC-GUARDS
+// INV:INV-G-NODEID-UNIQUE
 
 void main() {
   Scene sceneFixture({
@@ -33,6 +35,9 @@ void main() {
       scene: scene,
       selectedNodeIds: const <NodeId>{'node-1'},
       allNodeIds: const <NodeId>{'node-1'},
+      nodeLocator: const <NodeId, NodeLocatorEntry>{
+        'node-1': (layerIndex: 0, nodeIndex: 0),
+      },
       nodeIdSeed: 2,
       commitRevision: 1,
     );
@@ -50,7 +55,8 @@ void main() {
       scene: scene,
       selectedNodeIds: const <NodeId>{'missing'},
       allNodeIds: const <NodeId>{},
-      nodeIdSeed: 7,
+      nodeLocator: const <NodeId, NodeLocatorEntry>{},
+      nodeIdSeed: 1,
       commitRevision: -1,
     );
 
@@ -64,7 +70,7 @@ void main() {
     );
     expect(
       violations.join('\n'),
-      contains('nodeIdSeed must be derived from scene'),
+      contains('nodeIdSeed must be >= initialNodeIdSeed(scene)'),
     );
     expect(
       violations.join('\n'),
@@ -83,11 +89,87 @@ void main() {
       scene: scene,
       selectedNodeIds: const <NodeId>{'node-1'},
       allNodeIds: const <NodeId>{'node-1'},
+      nodeLocator: const <NodeId, NodeLocatorEntry>{
+        'node-1': (layerIndex: 0, nodeIndex: 0),
+      },
       nodeIdSeed: 2,
       commitRevision: 0,
     );
 
     expect(violations.join('\n'), contains('enabled grid.cellSize must be >='));
+  });
+
+  test('detects duplicate node ids in committed scene', () {
+    final scene = Scene(
+      layers: <Layer>[
+        Layer(
+          nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(10, 10))],
+        ),
+        Layer(
+          nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(12, 12))],
+        ),
+      ],
+    );
+    final violations = txnCollectStoreInvariantViolations(
+      scene: scene,
+      selectedNodeIds: const <NodeId>{},
+      allNodeIds: const <NodeId>{'dup'},
+      nodeLocator: const <NodeId, NodeLocatorEntry>{
+        'dup': (layerIndex: 0, nodeIndex: 0),
+      },
+      nodeIdSeed: 1,
+      commitRevision: 0,
+    );
+
+    expect(
+      violations.join('\n'),
+      contains('scene must not contain duplicate node ids'),
+    );
+  });
+
+  test('detects background layer that is not at index 0', () {
+    final scene = Scene(
+      layers: <Layer>[
+        Layer(
+          nodes: <SceneNode>[RectNode(id: 'n1', size: const Size(10, 10))],
+        ),
+        Layer(isBackground: true),
+      ],
+    );
+    final violations = txnCollectStoreInvariantViolations(
+      scene: scene,
+      selectedNodeIds: const <NodeId>{},
+      allNodeIds: const <NodeId>{'n1'},
+      nodeLocator: const <NodeId, NodeLocatorEntry>{
+        'n1': (layerIndex: 0, nodeIndex: 0),
+      },
+      nodeIdSeed: 1,
+      commitRevision: 0,
+    );
+
+    expect(
+      violations.join('\n'),
+      contains('background layer must be at index 0 when present'),
+    );
+  });
+
+  test('detects multiple background layers', () {
+    final scene = Scene(
+      layers: <Layer>[Layer(isBackground: true), Layer(isBackground: true)],
+    );
+    final violations = txnCollectStoreInvariantViolations(
+      scene: scene,
+      selectedNodeIds: const <NodeId>{},
+      allNodeIds: const <NodeId>{},
+      nodeLocator: const <NodeId, NodeLocatorEntry>{},
+      nodeIdSeed: 0,
+      commitRevision: 0,
+    );
+
+    expect(
+      violations.join('\n'),
+      contains('scene must contain at most one background layer'),
+    );
   });
 
   test('debug assert throws for invalid committed store', () {
@@ -97,10 +179,45 @@ void main() {
         scene: scene,
         selectedNodeIds: const <NodeId>{},
         allNodeIds: const <NodeId>{},
+        nodeLocator: const <NodeId, NodeLocatorEntry>{},
         nodeIdSeed: 0,
         commitRevision: 0,
       ),
       throwsStateError,
+    );
+  });
+
+  test('detects mismatched nodeLocator entries', () {
+    final scene = sceneFixture();
+    final violations = txnCollectStoreInvariantViolations(
+      scene: scene,
+      selectedNodeIds: const <NodeId>{'node-1'},
+      allNodeIds: const <NodeId>{'node-1'},
+      nodeLocator: const <NodeId, NodeLocatorEntry>{
+        'node-1': (layerIndex: 0, nodeIndex: 7),
+      },
+      nodeIdSeed: 2,
+      commitRevision: 0,
+    );
+    expect(
+      violations.join('\n'),
+      contains('nodeLocator must match buildNodeLocator(scene)'),
+    );
+  });
+
+  test('detects mismatch between allNodeIds and nodeLocator keys', () {
+    final scene = sceneFixture();
+    final violations = txnCollectStoreInvariantViolations(
+      scene: scene,
+      selectedNodeIds: const <NodeId>{'node-1'},
+      allNodeIds: const <NodeId>{'node-1'},
+      nodeLocator: const <NodeId, NodeLocatorEntry>{},
+      nodeIdSeed: 2,
+      commitRevision: 0,
+    );
+    expect(
+      violations.join('\n'),
+      contains('allNodeIds must equal nodeLocator keys'),
     );
   });
 }

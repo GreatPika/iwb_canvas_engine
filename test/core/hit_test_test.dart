@@ -217,6 +217,15 @@ void main() {
       transform: const Transform2D(a: 1000, b: 0, c: 0, d: 1000, tx: 0, ty: 0),
     );
     expect(hitTestNode(const Offset(1000, 0), scaledPath), isTrue);
+
+    final longMetricPath = PathNode(
+      id: 'p9',
+      svgPathData: 'M0 0 H10000',
+      strokeColor: const Color(0xFF000000),
+      strokeWidth: 0.2,
+    );
+    expect(hitTestNode(const Offset(4990, 0), longMetricPath), isTrue);
+    expect(hitTestNode(const Offset(4990, 30), longMetricPath), isFalse);
   });
 
   test(

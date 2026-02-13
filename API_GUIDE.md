@@ -1,6 +1,6 @@
 # iwb_canvas_engine API Guide
 
-This guide is a complete, implementation-aligned reference for integrating `iwb_canvas_engine` in Flutter apps.
+This guide is a complete, implementation-aligned reference for integrating `iwb_canvas_engine` (`3.0.0`) in Flutter apps.
 It is designed for both human developers and coding agents.
 
 ## 1. Package purpose and boundaries
@@ -99,6 +99,12 @@ Variants:
 - `RectNodeSnapshot`
 - `PathNodeSnapshot`
 
+`StrokeNodeSnapshot` runtime fields:
+
+- `pointsRevision` is a non-negative monotonic geometry revision used by
+  render caches for O(1) stroke-path freshness checks.
+- `pointsRevision` is runtime metadata and is not serialized into JSON.
+
 Path fill rule enum:
 
 - `V2PathFillRule.nonZero`
@@ -121,6 +127,11 @@ Node spec variants:
 
 `NodeSpec.id` is optional; controller can generate ids.
 
+Validation notes:
+
+- `addNode(...)` validates incoming `NodeSpec` values strictly and throws `ArgumentError` for malformed numeric/geometry input (including non-finite `transform`, negative `hitPadding`, invalid geometry fields, invalid `svgPathData`, and `opacity` outside `[0,1]`).
+- `TextNodeSpec` no longer accepts `size`; text node size is derived from text layout (`text/fontSize/fontFamily/style/lineHeight/maxWidth`) inside the engine.
+
 ### 5.2 Patch nodes (`NodePatch`)
 
 `SceneController.patchNode(...)` accepts `NodePatch` and returns `bool` (true when node was updated).
@@ -135,6 +146,13 @@ Patch variants:
 - `PathNodePatch`
 
 Common patch fields are grouped in `CommonNodePatch`.
+
+Validation notes:
+
+- `patchNode(...)` validates only fields present in `NodePatch`/`CommonNodePatch` and throws `ArgumentError` for malformed values.
+- `PatchField.nullValue()` is rejected for non-nullable fields with `ArgumentError`.
+- `CommonNodePatch.opacity` is strict at write boundary (`[0,1]`).
+- `TextNodePatch` no longer accepts `size`; text size is re-derived automatically when layout-affecting fields change (`text`, `fontSize`, `isBold`, `isItalic`, `isUnderline`, `fontFamily`, `lineHeight`, `maxWidth`).
 
 ### 5.3 Tri-state patch semantics (`PatchField<T>`)
 
@@ -172,6 +190,13 @@ final controller = SceneController(
   clearSelectionOnDrawModeEnter: true,
 );
 ```
+
+Construction validation notes:
+
+- `initialSnapshot` is validated strictly.
+- Malformed snapshot input throws `ArgumentError` (duplicate ids, invalid numeric fields, invalid `svgPathData`, invalid palette, multiple background layers).
+- Runtime snapshot boundary does not auto-insert a background layer when missing.
+- If one background layer is present but misordered, it is canonicalized to index `0`.
 
 ### 6.2 Read-only state
 
@@ -227,11 +252,14 @@ Validation notes:
 
 - `setGridCellSize` requires finite positive value; with enabled grid it clamps to internal minimum safety limit.
 - `setCameraOffset` rejects non-finite offsets.
+- `replaceScene` validates snapshot input strictly and throws `ArgumentError` on malformed snapshots.
 
 Notification semantics:
 
 - Scene repaint notifications are deferred to a microtask after commit/repaint request.
 - Multiple writes/repaint requests in the same event-loop tick are coalesced into one listener notification.
+- `requestRepaint()` called inside `write(...)` is buffered and published only after a successful transaction commit.
+- If `write(...)` rolls back with an exception, buffered repaint/signal effects are discarded.
 
 ### 6.5 Node and selection methods
 
@@ -254,6 +282,7 @@ Notification semantics:
 Behavior notes:
 
 - Transform operations affect transformable, unlocked selected nodes.
+- Transform/translate write operations reject non-finite deltas (`Transform2D`/`Offset`) with `ArgumentError`.
 - Background/non-deletable policy is respected by delete flows.
 - `selectAll(onlySelectable: true)` selects visible selectable foreground nodes.
 - `selectAll(onlySelectable: false)` also includes visible non-selectable foreground nodes.
@@ -284,6 +313,7 @@ Prefer high-level command methods unless custom transactional logic is required.
 Write-notify semantics:
 
 - `write(...)` finalizes transaction state first, then schedules listener notification in a microtask when repaint is needed.
+- Committed `signals` are emitted before repaint listener notification for the same successful commit.
 - Calling `write(...)` from `addListener(...)` is allowed; it runs after the original transaction is finished.
 
 ## 7. Interaction model details
@@ -296,6 +326,7 @@ Write-notify semantics:
 ### 7.2 Draw tool behavior
 
 - Pen/highlighter: freehand stroke commit on pointer up
+- Pen/highlighter guardrail: if captured stroke points exceed `20_000`, commit applies deterministic index-uniform downsampling while preserving first/last points.
 - Line: drag line or two-tap line (first tap sets pending start, second tap commits)
 - Eraser: erases supported annotations (`StrokeNode`, `LineNode`) based on eraser trajectory
 
@@ -323,6 +354,8 @@ On double tap in move mode, if top hit node is a text node, controller emits `Ed
 
 Delivery and mutability contract:
 
+- Delivery is asynchronous; subscribers are called after the emitting controller method returns.
+- Relative ordering against `ChangeNotifier` listener notifications/repaint is not a public contract.
 - `nodeIds` and `payload` are immutable snapshots; subscribers cannot mutate shared event data.
 
 `ActionType` values:
@@ -359,6 +392,11 @@ Helper parsers on `ActionCommitted`:
 - `position` (view coordinates)
 
 Use this to open app-level text editor overlays.
+
+Delivery contract:
+
+- Delivery is asynchronous; subscribers are called after the emitting controller method returns.
+- Relative ordering against `ChangeNotifier` listener notifications/repaint is not a public contract.
 
 ## 9. View widget (`SceneView`)
 
@@ -432,6 +470,10 @@ Controller normalizes timestamps into a monotonic internal timeline.
 ### 11.3 Errors
 
 Invalid input throws `SceneJsonFormatException` with validation details.
+
+Encoding notes:
+
+- `encodeScene(...)` validates `SceneSnapshot` input before encoding and throws `SceneJsonFormatException` on malformed snapshots.
 
 ## 12. Full integration example
 
@@ -520,7 +562,9 @@ When an agent modifies integration code:
 5. Respect background layer semantics and non-deletable/non-selectable flags.
 6. Prefer `SceneController`/`SceneView` aliases in app-facing docs/examples.
 
-## 14. Migration from 1.x to 2.0.0
+## 14. Migration notes
+
+### 14.1 From 1.x to 2.x
 
 Required updates:
 
@@ -534,9 +578,18 @@ Required updates:
    - to `write((SceneWriteTxn txn) { ... })`
 5. Remove any dependency on legacy mutable getters (`controller.scene`, `controller.core`).
 
+### 14.2 From 2.x to 3.0.0
+
+Required updates:
+
+1. Remove `TextNodeSpec.size` and `TextNodePatch.size` usage; text bounds are runtime-derived from layout fields.
+2. Ensure `initialSnapshot`/`replaceScene(...)` inputs are strictly valid; malformed snapshots now throw `ArgumentError`.
+3. Ensure `addNode(...)` and `patchNode(...)` inputs are valid at write boundary; malformed values now throw `ArgumentError`.
+4. If app logic depended on synchronous `actions`/`editTextRequests` delivery, update it for asynchronous stream delivery.
+
 ## 15. Quick recipes
 
-### 14.1 Export/import JSON
+### 15.1 Export/import JSON
 
 ```dart
 final json = encodeSceneToJson(controller.snapshot);
@@ -544,13 +597,13 @@ final restored = decodeSceneFromJson(json);
 controller.replaceScene(restored);
 ```
 
-### 14.2 Rotate selected nodes clockwise
+### 15.2 Rotate selected nodes clockwise
 
 ```dart
 controller.rotateSelection(clockwise: true);
 ```
 
-### 14.3 Toggle draw mode and set pen style
+### 15.3 Toggle draw mode and set pen style
 
 ```dart
 controller.setMode(CanvasMode.draw);
@@ -559,7 +612,7 @@ controller.setDrawColor(const Color(0xFF0D47A1));
 controller.penThickness = 4;
 ```
 
-### 14.4 Clear scene while keeping background
+### 15.4 Clear scene while keeping background
 
 ```dart
 controller.clearScene();

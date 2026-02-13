@@ -1,13 +1,13 @@
 import 'dart:convert';
 import 'dart:ui';
 
-import 'package:path_drawing/path_drawing.dart';
-
 import '../core/background_layer_invariants.dart';
 import '../core/nodes.dart';
 import '../core/scene.dart';
+import '../core/text_layout.dart';
 import '../core/transform2d.dart';
 import '../model/document.dart';
+import '../model/scene_value_validation.dart';
 import '../public/snapshot.dart' hide NodeId;
 
 /// Thrown when scene JSON fails schema validation.
@@ -60,8 +60,12 @@ SceneSnapshot decodeSceneFromJson(String json) {
 
 /// Encodes [snapshot] into a JSON-serializable map.
 Map<String, dynamic> encodeScene(SceneSnapshot snapshot) {
-  final sceneDoc = txnSceneFromSnapshot(snapshot);
-  return encodeSceneDocument(sceneDoc);
+  sceneValidateSnapshotValues(
+    snapshot,
+    onError: _sceneJsonValidationError,
+    requirePositiveGridCellSize: true,
+  );
+  return _encodeSnapshot(snapshot);
 }
 
 /// Decodes a [SceneSnapshot] from a JSON map (already parsed).
@@ -76,11 +80,11 @@ SceneSnapshot decodeScene(Map<String, dynamic> json) {
 
 /// Encodes internal mutable [Scene] document into a JSON-serializable map.
 Map<String, dynamic> encodeSceneDocument(Scene scene) {
-  _ensureFiniteDouble(scene.camera.offset.dx, 'camera.offsetX');
-  _ensureFiniteDouble(scene.camera.offset.dy, 'camera.offsetY');
-  _ensureFiniteColor(scene.background.color, 'background.color');
-  _ensureFiniteGrid(scene.background.grid, 'background.grid');
-  _ensureFinitePalette(scene.palette, 'palette');
+  sceneValidateSceneValues(
+    scene,
+    onError: _sceneJsonValidationError,
+    requirePositiveGridCellSize: true,
+  );
   return <String, dynamic>{
     'schemaVersion': schemaVersionWrite,
     'camera': {
@@ -135,7 +139,7 @@ Scene decodeSceneDocument(Map<String, dynamic> json) {
     color: _parseColor(_requireString(backgroundJson, 'color')),
     grid: GridSettings(
       isEnabled: gridEnabled,
-      cellSize: _requireGridCellSize(gridJson, isEnabled: gridEnabled),
+      cellSize: _requireGridCellSize(gridJson),
       color: _parseColor(_requireString(gridJson, 'color')),
     ),
   );
@@ -178,13 +182,53 @@ Scene decodeSceneDocument(Map<String, dynamic> json) {
       );
     },
   );
-
-  return Scene(
+  final scene = Scene(
     layers: layers,
     camera: camera,
     background: background,
     palette: palette,
   );
+  sceneValidateSceneValues(
+    scene,
+    onError: _sceneJsonValidationError,
+    requirePositiveGridCellSize: true,
+  );
+  return scene;
+}
+
+Map<String, dynamic> _encodeSnapshot(SceneSnapshot snapshot) {
+  return <String, dynamic>{
+    'schemaVersion': schemaVersionWrite,
+    'camera': {
+      'offsetX': snapshot.camera.offset.dx,
+      'offsetY': snapshot.camera.offset.dy,
+    },
+    'background': {
+      'color': _colorToHex(snapshot.background.color),
+      'grid': {
+        'enabled': snapshot.background.grid.isEnabled,
+        'cellSize': snapshot.background.grid.cellSize,
+        'color': _colorToHex(snapshot.background.grid.color),
+      },
+    },
+    'palette': {
+      'penColors': snapshot.palette.penColors.map(_colorToHex).toList(),
+      'backgroundColors': snapshot.palette.backgroundColors
+          .map(_colorToHex)
+          .toList(),
+      'gridSizes': snapshot.palette.gridSizes,
+    },
+    'layers': snapshot.layers
+        .map(
+          (layer) => <String, dynamic>{
+            'isBackground': layer.isBackground,
+            'nodes': layer.nodes
+                .map((node) => _encodeNode(txnNodeFromSnapshot(node)))
+                .toList(),
+          },
+        )
+        .toList(),
+  };
 }
 
 Map<String, dynamic> _encodeLayer(Layer layer) {
@@ -375,6 +419,7 @@ SceneNode _decodeNode(Map<String, dynamic> json) {
         isDeletable: isDeletable,
         isTransformable: isTransformable,
       );
+      recomputeDerivedTextSize(node as TextNode);
       break;
     case NodeType.stroke:
       node = StrokeNode(
@@ -649,21 +694,30 @@ double? _optionalDouble(Map<String, dynamic> json, String key) {
 double? _optionalPositiveDouble(Map<String, dynamic> json, String key) {
   final value = _optionalDouble(json, key);
   if (value == null) return null;
-  if (value <= 0) {
-    throw SceneJsonFormatException('Field $key must be > 0.');
-  }
+  sceneValidatePositiveDouble(
+    value,
+    field: key,
+    onError: _sceneJsonValidationError,
+  );
   return value;
 }
 
 void _validateSvgPathData(String value) {
-  if (value.trim().isEmpty) {
-    throw SceneJsonFormatException('svgPathData must not be empty.');
-  }
-  try {
-    parseSvgPathData(value);
-  } catch (_) {
-    throw SceneJsonFormatException('Invalid svgPathData.');
-  }
+  sceneValidateSvgPathData(
+    value,
+    field: 'svgPathData',
+    onError:
+        ({
+          required Object? value,
+          required String field,
+          required String message,
+        }) {
+          if (message == 'must not be empty.') {
+            throw SceneJsonFormatException('svgPathData must not be empty.');
+          }
+          throw SceneJsonFormatException('Invalid svgPathData.');
+        },
+  );
 }
 
 Map<String, dynamic> _requireMap(Map<String, dynamic> json, String key) {
@@ -725,9 +779,11 @@ double _requireDouble(Map<String, dynamic> json, String key) {
     throw SceneJsonFormatException('Field $key must be a number.');
   }
   final out = value.toDouble();
-  if (!out.isFinite) {
-    throw SceneJsonFormatException('Field $key must be finite.');
-  }
+  sceneValidateFiniteDouble(
+    out,
+    field: key,
+    onError: _sceneJsonValidationError,
+  );
   return out;
 }
 
@@ -736,84 +792,86 @@ double _requireDoubleValue(Object value, String key) {
     throw SceneJsonFormatException('Items of $key must be numbers.');
   }
   final out = value.toDouble();
-  if (!out.isFinite) {
-    throw SceneJsonFormatException('Items of $key must be finite.');
-  }
+  sceneValidateFiniteDouble(
+    out,
+    field: 'Items of $key',
+    onError: _sceneJsonItemsValidationError,
+  );
   return out;
 }
 
 double _requirePositiveDouble(Map<String, dynamic> json, String key) {
   final value = _requireDouble(json, key);
-  if (value <= 0) {
-    throw SceneJsonFormatException('Field $key must be > 0.');
-  }
+  sceneValidatePositiveDouble(
+    value,
+    field: key,
+    onError: _sceneJsonValidationError,
+  );
   return value;
 }
 
-double _requireGridCellSize(
-  Map<String, dynamic> json, {
-  required bool isEnabled,
-}) {
+double _requireGridCellSize(Map<String, dynamic> json) {
   final value = _requireDouble(json, 'cellSize');
-  if (isEnabled && value <= 0) {
-    throw SceneJsonFormatException('Field cellSize must be > 0.');
-  }
+  sceneValidatePositiveDouble(
+    value,
+    field: 'cellSize',
+    onError: _sceneJsonValidationError,
+  );
   return value;
 }
 
 double _requireNonNegativeDouble(Map<String, dynamic> json, String key) {
   final value = _requireDouble(json, key);
-  if (value < 0) {
-    throw SceneJsonFormatException('Field $key must be >= 0.');
-  }
+  sceneValidateNonNegativeDouble(
+    value,
+    field: key,
+    onError: _sceneJsonValidationError,
+  );
   return value;
 }
 
 double _requireClamped01Double(Map<String, dynamic> json, String key) {
   final value = _requireDouble(json, key);
-  if (value < 0 || value > 1) {
-    throw SceneJsonFormatException('Field $key must be within [0,1].');
-  }
+  sceneValidateClamped01Double(
+    value,
+    field: key,
+    onError: _sceneJsonValidationError,
+  );
   return value;
 }
 
 double _requirePositiveDoubleValue(Object value, String key) {
   final out = _requireDoubleValue(value, key);
-  if (out <= 0) {
-    throw SceneJsonFormatException('Items of $key must be > 0.');
-  }
+  sceneValidatePositiveDouble(
+    out,
+    field: 'Items of $key',
+    onError: _sceneJsonItemsValidationError,
+  );
   return out;
 }
 
-void _ensureFiniteDouble(double value, String field) {
-  if (!value.isFinite) {
-    throw SceneJsonFormatException('Field $field must be finite.');
-  }
-}
-
 void _ensureNonNegativeDouble(double value, String field) {
-  _ensureFiniteDouble(value, field);
-  if (value < 0) {
-    throw SceneJsonFormatException('Field $field must be >= 0.');
-  }
+  sceneValidateNonNegativeDouble(
+    value,
+    field: field,
+    onError: _sceneJsonValidationError,
+  );
 }
 
 void _ensurePositiveDouble(double value, String field) {
-  _ensureFiniteDouble(value, field);
-  if (value <= 0) {
-    throw SceneJsonFormatException('Field $field must be > 0.');
-  }
+  sceneValidatePositiveDouble(
+    value,
+    field: field,
+    onError: _sceneJsonValidationError,
+  );
 }
 
 void _ensureClamped01Double(double value, String field) {
-  _ensureFiniteDouble(value, field);
-  if (value < 0 || value > 1) {
-    _throwOutsideClamped01(field);
-  }
-}
-
-Never _throwOutsideClamped01(String field) {
-  throw SceneJsonFormatException('Field $field must be within [0,1].');
+  sceneValidateClamped01Double(
+    value,
+    field: field,
+    onError: _sceneJsonValidationError,
+  );
 }
 
 void _ensureNonNegativeSize(Size size, String field) {
@@ -822,40 +880,31 @@ void _ensureNonNegativeSize(Size size, String field) {
 }
 
 void _ensureFiniteTransform2D(Transform2D transform, String field) {
-  _ensureFiniteDouble(transform.a, '$field.a');
-  _ensureFiniteDouble(transform.b, '$field.b');
-  _ensureFiniteDouble(transform.c, '$field.c');
-  _ensureFiniteDouble(transform.d, '$field.d');
-  _ensureFiniteDouble(transform.tx, '$field.tx');
-  _ensureFiniteDouble(transform.ty, '$field.ty');
-}
-
-void _ensureFiniteColor(Color color, String field) {
-  // Colors are integers, but keep as a hook for future validation.
-  // No-op for now.
-  if (field.isEmpty) return;
-}
-
-void _ensureFiniteGrid(GridSettings grid, String field) {
-  _ensureFiniteDouble(grid.cellSize, '$field.cellSize');
-  if (grid.isEnabled && grid.cellSize <= 0) {
-    throw SceneJsonFormatException('Field $field.cellSize must be > 0.');
-  }
-  _ensureFiniteColor(grid.color, '$field.color');
-}
-
-void _ensureFinitePalette(ScenePalette palette, String field) {
-  _ensureListNotEmpty(palette.penColors, '$field.penColors');
-  _ensureListNotEmpty(palette.backgroundColors, '$field.backgroundColors');
-  _ensureListNotEmpty(palette.gridSizes, '$field.gridSizes');
-  for (var i = 0; i < palette.gridSizes.length; i++) {
-    final value = palette.gridSizes[i];
-    _ensurePositiveDouble(value, '$field.gridSizes[$i]');
-  }
+  sceneValidateFiniteTransform2D(
+    transform,
+    field: field,
+    onError: _sceneJsonValidationError,
+  );
 }
 
 void _ensureListNotEmpty(List<Object?> values, String field) {
   if (values.isEmpty) {
     throw SceneJsonFormatException('Field $field must not be empty.');
   }
+}
+
+Never _sceneJsonValidationError({
+  required Object? value,
+  required String field,
+  required String message,
+}) {
+  throw SceneJsonFormatException('Field $field $message');
+}
+
+Never _sceneJsonItemsValidationError({
+  required Object? value,
+  required String field,
+  required String message,
+}) {
+  throw SceneJsonFormatException('$field $message');
 }

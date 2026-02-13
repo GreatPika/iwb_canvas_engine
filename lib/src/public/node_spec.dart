@@ -53,7 +53,6 @@ class TextNodeSpec extends NodeSpec {
   TextNodeSpec({
     super.id,
     required this.text,
-    required this.size,
     this.fontSize = 24,
     required this.color,
     this.align = TextAlign.left,
@@ -74,7 +73,6 @@ class TextNodeSpec extends NodeSpec {
   });
 
   final String text;
-  final Size size;
   final double fontSize;
   final Color color;
   final TextAlign align;

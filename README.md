@@ -9,6 +9,14 @@ and JSON serialization for whiteboard-style applications.
 - Demo: https://greatpika.github.io/iwb_canvas_engine/demo/
 - API docs: https://greatpika.github.io/iwb_canvas_engine/api/
 - Detailed usage guide: `API_GUIDE.md`
+- Current stable release: `3.0.0`
+
+## Release 3.0.0 highlights
+
+- Strict runtime and write-boundary validation for snapshots/specs/patches.
+- Copy-on-write transaction path and incremental spatial-index updates for large scenes.
+- Text node size is engine-derived from text layout inputs (not writable in public API).
+- Coalesced microtask-based repaint notifications and asynchronous interactive streams.
 
 ## Scope
 
@@ -84,17 +92,24 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Safe transactional writes: `SceneWriteTxn` via `controller.write((txn) { ... })`.
 - Write intents: `NodeSpec` variants.
 - Partial updates: `NodePatch` + tri-state `PatchField<T>`.
+- Text layout sizing is engine-derived: `TextNodeSpec`/`TextNodePatch` do not expose writable `size`; update text/style fields and the runtime recomputes text box bounds.
+- Write-boundary validation: `addNode(...)`/`patchNode(...)` fail fast with `ArgumentError` for invalid `NodeSpec`/`NodePatch` values (including `transform`, `hitPadding`, and `opacity` outside `[0,1]`), and transform/translate write operations reject non-finite `Transform2D`/`Offset`.
 - Serialization: `encodeScene*`, `decodeScene*`, `SceneJsonFormatException`.
 - Event payload contract: `ActionCommitted.nodeIds/payload` are immutable snapshots.
+- Interactive event delivery contract: `actions` and `editTextRequests` are asynchronous; relative ordering against repaint/listener notifications is not a public contract.
 - Selection contract: commit normalization keeps explicit non-selectable ids valid while filtering missing/background/invisible ids.
 - Runtime notify contract: controller repaint notifications are deferred to a microtask after commit and coalesced to at most one notification per event-loop tick.
 - Move drag contract: pointer move updates only visual preview; scene translation is committed once on pointer up, and pointer cancel keeps the document unchanged.
+- Runtime guardrails bound worst-case input/query cost: interactive stroke commits are capped to `20_000` points (deterministic downsampling), path-stroke precise hit-testing is capped to `2_048` samples per path metric, and oversized spatial queries switch to bounded candidate-scan fallback.
+- Runtime snapshot validation: `initialSnapshot` and `replaceScene` fail fast with `ArgumentError` for malformed snapshots (duplicate node ids, invalid numbers, invalid SVG path data, invalid palette, multiple background layers).
 
 ## Invariants and quality gates
 
 - Canonical invariants are defined in `tool/invariant_registry.dart`.
 - Validation checks are available in `tool/` and run in CI.
-- Background layer contract: at most one background layer, canonicalized to index `0`.
+- Background layer contract:
+  - runtime/store snapshot boundary: at most one background layer; if present, it is canonicalized to index `0`; missing background is allowed and not auto-inserted.
+  - JSON decoder boundary: at most one background layer; decoder canonicalizes to a single background layer at index `0`.
 
 ## Development checks
 

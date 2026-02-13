@@ -4,6 +4,26 @@ import '../core/nodes.dart';
 import '../core/scene.dart';
 import '../core/transform2d.dart';
 
+Scene txnCloneSceneShallow(Scene scene) {
+  return Scene(
+    layers: scene.layers,
+    camera: Camera(offset: scene.camera.offset),
+    background: Background(
+      color: scene.background.color,
+      grid: GridSettings(
+        isEnabled: scene.background.grid.isEnabled,
+        cellSize: scene.background.grid.cellSize,
+        color: scene.background.grid.color,
+      ),
+    ),
+    palette: ScenePalette(
+      penColors: List<Color>.from(scene.palette.penColors),
+      backgroundColors: List<Color>.from(scene.palette.backgroundColors),
+      gridSizes: List<double>.from(scene.palette.gridSizes),
+    ),
+  );
+}
+
 Scene txnCloneScene(Scene scene) {
   return Scene(
     layers: scene.layers.map(txnCloneLayer).toList(growable: false),
@@ -22,6 +42,10 @@ Scene txnCloneScene(Scene scene) {
       gridSizes: List<double>.from(scene.palette.gridSizes),
     ),
   );
+}
+
+Layer txnCloneLayerShallow(Layer layer) {
+  return Layer(nodes: layer.nodes, isBackground: layer.isBackground);
 }
 
 Layer txnCloneLayer(Layer layer) {
@@ -80,6 +104,7 @@ SceneNode txnCloneNode(SceneNode node) {
       return StrokeNode(
         id: stroke.id,
         points: List<Offset>.from(stroke.points),
+        pointsRevision: stroke.pointsRevision,
         thickness: stroke.thickness,
         color: stroke.color,
         transform: transform,

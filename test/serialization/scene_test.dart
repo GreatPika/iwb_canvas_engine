@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/core/text_layout.dart';
 
 void main() {
   test('encode -> decode -> encode is stable', () {
@@ -55,9 +56,56 @@ void main() {
       throwsUnsupportedError,
     );
   });
+
+  test('decodeScene recomputes derived text size from content', () {
+    final encoded = encodeScene(_buildScene());
+    final textNode =
+        (encoded['layers'] as List<dynamic>)[1]['nodes'][1]
+            as Map<String, dynamic>;
+    textNode['text'] = 'Auto-derived size from decode';
+    textNode['fontSize'] = 28.0;
+    textNode['size'] = <String, dynamic>{'w': 1.0, 'h': 1.0};
+    textNode['maxWidth'] = null;
+
+    final decoded = decodeScene(encoded);
+    final decodedText = decoded.layers[1].nodes[1] as TextNodeSnapshot;
+    final expectedSize = measureTextLayoutSize(
+      text: decodedText.text,
+      textStyle: buildTextStyleForTextLayout(
+        color: decodedText.color,
+        fontSize: decodedText.fontSize,
+        isBold: decodedText.isBold,
+        isItalic: decodedText.isItalic,
+        isUnderline: decodedText.isUnderline,
+        fontFamily: decodedText.fontFamily,
+        lineHeight: decodedText.lineHeight,
+      ),
+      textAlign: decodedText.align,
+      maxWidth: decodedText.maxWidth,
+    );
+
+    expect(decodedText.size, expectedSize);
+    expect(decodedText.size, isNot(const Size(1, 1)));
+  });
 }
 
 SceneSnapshot _buildScene() {
+  final textStyle = buildTextStyleForTextLayout(
+    color: const Color(0xFF112233),
+    fontSize: 24,
+    isBold: true,
+    isItalic: false,
+    isUnderline: true,
+    fontFamily: 'Roboto',
+    lineHeight: 1.2,
+  );
+  final derivedTextSize = measureTextLayoutSize(
+    text: 'Hello',
+    textStyle: textStyle,
+    textAlign: TextAlign.center,
+    maxWidth: 200,
+  );
+
   return SceneSnapshot(
     layers: <LayerSnapshot>[
       LayerSnapshot(isBackground: true),
@@ -84,7 +132,7 @@ SceneSnapshot _buildScene() {
           TextNodeSnapshot(
             id: 'text-1',
             text: 'Hello',
-            size: const Size(120, 30),
+            size: derivedTextSize,
             fontSize: 24,
             color: const Color(0xFF112233),
             align: TextAlign.center,
