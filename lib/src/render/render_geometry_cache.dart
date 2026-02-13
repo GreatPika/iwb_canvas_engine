@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path_drawing/path_drawing.dart';
 
 import '../core/geometry.dart';
+import '../core/local_bounds_policy.dart';
 import '../core/numeric_clamp.dart';
 import '../core/transform2d.dart';
 import '../public/snapshot.dart';
@@ -62,29 +63,29 @@ class RenderGeometryCache {
   }
 
   GeometryEntry _rectEntry(RectNodeSnapshot node) {
-    var localBounds = _centerRect(node.size);
-    final safeStrokeWidth = clampNonNegativeFinite(node.strokeWidth);
-    if (_isStrokeEnabled(node.strokeColor, safeStrokeWidth)) {
-      localBounds = localBounds.inflate(safeStrokeWidth / 2);
-    }
+    final localBounds = strokeAwareCenteredRectLocalBounds(
+      size: node.size,
+      strokeColor: node.strokeColor,
+      strokeWidth: node.strokeWidth,
+    );
     return GeometryEntry(
-      localBounds: _sanitizeRect(localBounds),
+      localBounds: localBounds,
       worldBounds: _toWorldBounds(node.transform, localBounds),
     );
   }
 
   GeometryEntry _imageEntry(ImageNodeSnapshot node) {
-    final localBounds = _centerRect(node.size);
+    final localBounds = centeredRectLocalBounds(node.size);
     return GeometryEntry(
-      localBounds: _sanitizeRect(localBounds),
+      localBounds: localBounds,
       worldBounds: _toWorldBounds(node.transform, localBounds),
     );
   }
 
   GeometryEntry _textEntry(TextNodeSnapshot node) {
-    final localBounds = _centerRect(node.size);
+    final localBounds = centeredRectLocalBounds(node.size);
     return GeometryEntry(
-      localBounds: _sanitizeRect(localBounds),
+      localBounds: localBounds,
       worldBounds: _toWorldBounds(node.transform, localBounds),
     );
   }
@@ -102,7 +103,7 @@ class RenderGeometryCache {
       node.end,
     ).inflate(safeThickness / 2);
     return GeometryEntry(
-      localBounds: _sanitizeRect(localBounds),
+      localBounds: sanitizeFiniteRect(localBounds),
       worldBounds: _toWorldBounds(node.transform, localBounds),
     );
   }
@@ -117,7 +118,7 @@ class RenderGeometryCache {
     final safeThickness = clampNonNegativeFinite(node.thickness);
     final localBounds = aabbFromPoints(node.points).inflate(safeThickness / 2);
     return GeometryEntry(
-      localBounds: _sanitizeRect(localBounds),
+      localBounds: sanitizeFiniteRect(localBounds),
       worldBounds: _toWorldBounds(node.transform, localBounds),
     );
   }
@@ -131,12 +132,11 @@ class RenderGeometryCache {
       );
     }
 
-    var localBounds = localPath.getBounds();
-    final safeStrokeWidth = clampNonNegativeFinite(node.strokeWidth);
-    if (_isStrokeEnabled(node.strokeColor, safeStrokeWidth)) {
-      localBounds = localBounds.inflate(safeStrokeWidth / 2);
-    }
-    localBounds = _sanitizeRect(localBounds);
+    final localBounds = strokeAwareLocalBounds(
+      baseBounds: localPath.getBounds(),
+      strokeColor: node.strokeColor,
+      strokeWidth: node.strokeWidth,
+    );
     return GeometryEntry(
       localBounds: localBounds,
       worldBounds: _toWorldBounds(node.transform, localBounds),
@@ -199,8 +199,10 @@ Object _buildValidityKey(NodeSnapshot node) {
       tty,
       rectNode.size.width,
       rectNode.size.height,
-      clampNonNegativeFinite(rectNode.strokeWidth),
-      _isStrokeEnabled(rectNode.strokeColor, rectNode.strokeWidth),
+      effectiveStrokeWidth(
+        strokeColor: rectNode.strokeColor,
+        strokeWidth: rectNode.strokeWidth,
+      ),
     ),
     ImageNodeSnapshot imageNode => (
       'image',
@@ -260,26 +262,12 @@ Object _buildValidityKey(NodeSnapshot node) {
       tty,
       pathNode.svgPathData,
       pathNode.fillRule,
-      clampNonNegativeFinite(pathNode.strokeWidth),
-      _isStrokeEnabled(pathNode.strokeColor, pathNode.strokeWidth),
+      effectiveStrokeWidth(
+        strokeColor: pathNode.strokeColor,
+        strokeWidth: pathNode.strokeWidth,
+      ),
     ),
   };
-}
-
-Rect _centerRect(Size size) {
-  final safe = clampNonNegativeSizeFinite(size);
-  return Rect.fromCenter(
-    center: Offset.zero,
-    width: safe.width,
-    height: safe.height,
-  );
-}
-
-Rect _sanitizeRect(Rect rect) {
-  if (!_isFiniteRect(rect)) {
-    return Rect.zero;
-  }
-  return rect;
 }
 
 Rect _toWorldBounds(Transform2D transform, Rect localBounds) {
@@ -291,10 +279,6 @@ Rect _toWorldBounds(Transform2D transform, Rect localBounds) {
     return Rect.zero;
   }
   return worldBounds;
-}
-
-bool _isStrokeEnabled(Color? strokeColor, double strokeWidth) {
-  return strokeColor != null && clampNonNegativeFinite(strokeWidth) > 0;
 }
 
 PathFillType _fillTypeFromSnapshot(V2PathFillRule rule) {

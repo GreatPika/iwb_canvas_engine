@@ -58,6 +58,76 @@ void main() {
     expect(noStrokeEntry.localBounds, const Rect.fromLTRB(-5, -3, 5, 3));
   });
 
+  test('RenderGeometryCache path bounds include stroke only when enabled', () {
+    final cache = RenderGeometryCache();
+    const withStroke = PathNodeSnapshot(
+      id: 'path-with-stroke',
+      svgPathData: 'M0 0 H10 V10 H0 Z',
+      strokeColor: Color(0xFF000000),
+      strokeWidth: 4,
+    );
+    const noStroke = PathNodeSnapshot(
+      id: 'path-no-stroke',
+      svgPathData: 'M0 0 H10 V10 H0 Z',
+      strokeWidth: 4,
+    );
+
+    final withStrokeEntry = cache.get(withStroke);
+    final noStrokeEntry = cache.get(noStroke);
+
+    expect(withStrokeEntry.localBounds, const Rect.fromLTRB(-7, -7, 7, 7));
+    expect(noStrokeEntry.localBounds, const Rect.fromLTRB(-5, -5, 5, 5));
+  });
+
+  test(
+    'RenderGeometryCache ignores strokeWidth key changes when stroke is disabled',
+    () {
+      final cache = RenderGeometryCache();
+      const nodeA = PathNodeSnapshot(
+        id: 'path-disabled-stroke',
+        svgPathData: 'M0 0 H10 V10 H0 Z',
+        strokeWidth: 1,
+      );
+      const nodeB = PathNodeSnapshot(
+        id: 'path-disabled-stroke',
+        svgPathData: 'M0 0 H10 V10 H0 Z',
+        strokeWidth: 64,
+      );
+
+      final entryA = cache.get(nodeA);
+      final entryB = cache.get(nodeB);
+
+      expect(identical(entryA, entryB), isTrue);
+      expect(entryB.localBounds, const Rect.fromLTRB(-5, -5, 5, 5));
+      expect(cache.debugBuildCount, 1);
+      expect(cache.debugHitCount, 1);
+    },
+  );
+
+  test('RenderGeometryCache rebuilds when path stroke enablement changes', () {
+    final cache = RenderGeometryCache();
+    const nodeWithoutStroke = PathNodeSnapshot(
+      id: 'path-enable-stroke',
+      svgPathData: 'M0 0 H10 V10 H0 Z',
+      strokeWidth: 4,
+    );
+    const nodeWithStroke = PathNodeSnapshot(
+      id: 'path-enable-stroke',
+      svgPathData: 'M0 0 H10 V10 H0 Z',
+      strokeColor: Color(0xFF000000),
+      strokeWidth: 4,
+    );
+
+    final withoutStrokeEntry = cache.get(nodeWithoutStroke);
+    final withStrokeEntry = cache.get(nodeWithStroke);
+
+    expect(identical(withoutStrokeEntry, withStrokeEntry), isFalse);
+    expect(withoutStrokeEntry.localBounds, const Rect.fromLTRB(-5, -5, 5, 5));
+    expect(withStrokeEntry.localBounds, const Rect.fromLTRB(-7, -7, 7, 7));
+    expect(cache.debugBuildCount, 2);
+    expect(cache.debugHitCount, 0);
+  });
+
   test('RenderGeometryCache builds centered path and world bounds', () {
     final cache = RenderGeometryCache();
     const node = PathNodeSnapshot(

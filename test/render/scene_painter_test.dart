@@ -467,6 +467,59 @@ void main() {
   );
 
   test(
+    'ScenePainterV2 culls rect nodes using stroke-inflated bounds',
+    () async {
+      const background = Color(0xFFFFFFFF);
+      final controller = SceneControllerV2(
+        initialSnapshot: SceneSnapshot(
+          background: const BackgroundSnapshot(
+            color: background,
+            grid: GridSnapshot(
+              isEnabled: false,
+              cellSize: 10,
+              color: Color(0xFF000000),
+            ),
+          ),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              nodes: const <NodeSnapshot>[
+                RectNodeSnapshot(
+                  id: 'edge-rect',
+                  size: Size(10, 10),
+                  strokeColor: Color(0xFF000000),
+                  strokeWidth: 8,
+                  transform: Transform2D(
+                    a: 1,
+                    b: 0,
+                    c: 0,
+                    d: 1,
+                    tx: -8,
+                    ty: 15,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      final painter = ScenePainterV2(
+        controller: controller,
+        imageResolver: (_) => null,
+      );
+      final image = await _paintToImage(painter, width: 30, height: 30);
+
+      expect(
+        await _countNonBackgroundPixels(image, background),
+        greaterThan(0),
+      );
+      final bounds = await _inkBounds(image, background);
+      expect(bounds.left, lessThanOrEqualTo(1.5));
+    },
+  );
+
+  test(
     'ScenePainterV2 uses textDirection for TextAlign.start and end',
     () async {
       const background = Color(0xFFFFFFFF);

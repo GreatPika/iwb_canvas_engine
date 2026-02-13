@@ -6,6 +6,7 @@ import 'dart:collection';
 import 'package:path_drawing/path_drawing.dart';
 
 import 'geometry.dart';
+import 'local_bounds_policy.dart';
 import 'numeric_clamp.dart';
 import 'numeric_tolerance.dart';
 import 'transform2d.dart';
@@ -846,21 +847,14 @@ class RectNode extends SceneNode {
     position = position + delta;
   }
 
-  Rect get _localRect => Rect.fromCenter(
-    center: Offset.zero,
-    width: clampNonNegativeFinite(size.width),
-    height: clampNonNegativeFinite(size.height),
-  );
+  Rect get _localRect => centeredRectLocalBounds(size);
 
   @override
-  Rect get localBounds {
-    var rect = _localRect;
-    final baseStrokeWidth = clampNonNegativeFinite(strokeWidth);
-    if (strokeColor != null && baseStrokeWidth > 0) {
-      rect = rect.inflate(baseStrokeWidth / 2);
-    }
-    return rect;
-  }
+  Rect get localBounds => strokeAwareLocalBounds(
+    baseBounds: _localRect,
+    strokeColor: strokeColor,
+    strokeWidth: strokeWidth,
+  );
 }
 
 /// SVG-path based vector node.
@@ -1024,13 +1018,11 @@ class PathNode extends SceneNode {
     buildLocalPath(copy: false);
     final bounds = _cachedLocalPathBounds;
     if (bounds == null) return Rect.zero;
-    if (!_isFiniteRect(bounds)) return Rect.zero;
-    var rect = bounds;
-    final baseStrokeWidth = clampNonNegativeFinite(strokeWidth);
-    if (strokeColor != null && baseStrokeWidth > 0) {
-      rect = rect.inflate(baseStrokeWidth / 2);
-    }
-    return rect;
+    return strokeAwareLocalBounds(
+      baseBounds: bounds,
+      strokeColor: strokeColor,
+      strokeWidth: strokeWidth,
+    );
   }
 
   void _invalidatePathCache() {
