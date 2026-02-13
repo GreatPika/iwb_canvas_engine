@@ -110,7 +110,7 @@
 
 ---
 
-# [ ] 2) Этап 2 — Сделать `SceneSpatialIndex` устойчивым к гигантским объектам
+# [x] 2) Этап 2 — Сделать `SceneSpatialIndex` устойчивым к гигантским объектам
 
 ## Решение (фиксируем окончательно)
 
@@ -126,21 +126,21 @@
 
 ## Изменения в коде
 
-### [ ] 2.1. `lib/src/core/scene_spatial_index.dart`
+### [x] 2.1. `lib/src/core/scene_spatial_index.dart`
 
-#### [ ] A) Добавить поле
+#### [x] A) Добавить поле
 
 ```dart
 final List<SceneSpatialCandidate> _largeCandidates = <SceneSpatialCandidate>[];
 ```
 
-#### [ ] B) Добавить константу
+#### [x] B) Добавить константу
 
 ```dart
 const int kMaxCellsPerNode = 1024;
 ```
 
-#### [ ] C) Правка `_build(Scene scene)`
+#### [x] C) Правка `_build(Scene scene)`
 
 После вычисления `startX/endX/startY/endY` для `candidateBounds`:
 
@@ -155,14 +155,14 @@ const int kMaxCellsPerNode = 1024;
   * **не** добавлять его в `_cells`
 * иначе — текущая логика раскладки по сетке
 
-#### [ ] D) Правка `query(Rect worldRect)`
+#### [x] D) Правка `query(Rect worldRect)`
 
 После обхода `_cells`:
 
 * пройти по `_largeCandidates`
 * добавить в `unique`, если пересекается с `worldRect` (тем же `_rectsIntersectInclusive`)
 
-### [ ] 2.2. `lib/src/input/slices/spatial_index/spatial_index_slice.dart`
+### [x] 2.2. `lib/src/input/slices/spatial_index/spatial_index_slice.dart`
 
 Убрать зависимость индекса от `scene.background.grid.cellSize`.
 
@@ -182,7 +182,7 @@ SceneSpatialIndex.build(scene) // фиксированный cellSize по ум�
 
 ## Тесты
 
-### [ ] 2.3. Добавить тест: “huge bounds goes to largeCandidates and does not explode”
+### [x] 2.3. Добавить тест: “huge bounds goes to largeCandidates and does not explode”
 
 Добавить в `test/core/...` или `test/controller/...` (удобнее в controller).
 
@@ -194,9 +194,9 @@ SceneSpatialIndex.build(scene) // фиксированный cellSize по ум�
 * Для детерминированной проверки добавить в `SceneSpatialIndex` **только для тестов**:
 
   * `@visibleForTesting int get debugLargeCandidateCount => _largeCandidates.length;`
-    и пробросить это через `SpatialIndexSlice`/`SceneControllerV2` как `debugSpatialIndexLargeCandidateCount`.
+    (без проброса через `SpatialIndexSlice`/`SceneControllerV2`; проверяется unit-тестом индекса).
 
-- [ ] **Критерий готовности этапа 2:** один гигантский объект не способен вызвать “взрыв” времени/памяти при построении индекса.
+- [x] **Критерий готовности этапа 2:** один гигантский объект не способен вызвать “взрыв” времени/памяти при построении индекса.
 
 ---
 
@@ -403,13 +403,13 @@ workingNodeIds.remove(nodeId);
 
 * Убрать пересоздание Set, перейти на `add/remove`
 
-- [ ] `lib/src/core/scene_spatial_index.dart`
+- [x] `lib/src/core/scene_spatial_index.dart`
 
 * `_largeCandidates`
 * порог `kMaxCellsPerNode = 1024`
 * логика build/query с “крупными объектами”
 
-- [ ] `lib/src/input/slices/spatial_index/spatial_index_slice.dart`
+- [x] `lib/src/input/slices/spatial_index/spatial_index_slice.dart`
 
 * строить индекс без зависимости от `scene.background.grid.cellSize`
 
@@ -421,7 +421,7 @@ workingNodeIds.remove(nodeId);
 - [ ] Тесты:
 
 * [x] hitPadding → инвалидация индекса
-* [ ] huge bounds → крупные кандидаты
+* [x] huge bounds → крупные кандидаты
 * [ ] view change → не клонируются узлы/слои
 * [ ] patch одного узла → клонируется 1 слой + 1 узел
 
@@ -430,7 +430,7 @@ workingNodeIds.remove(nodeId);
 # [ ] 6) Порядок внедрения (строго)
 
 - [x] Этап 1 (hitPadding и candidate bounds → boundsChanged)
-- [ ] Этап 2 (устойчивость индекса + отвязка от grid cellSize)
+- [x] Этап 2 (устойчивость индекса + отвязка от grid cellSize)
 - [ ] Этап 3 (мутабельные множества в транзакции и ChangeSet)
 - [ ] Этап 4 (копирование при записи: scene/layer/node)
 

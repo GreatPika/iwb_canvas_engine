@@ -780,6 +780,43 @@ void main() {
     expect(controller.debugSpatialIndexBuildCount, 2);
   });
 
+  test('spatial index handles huge node and rebuilds after bounds change', () {
+    final controller = SceneControllerV2(
+      initialSnapshot: SceneSnapshot(
+        layers: <LayerSnapshot>[
+          LayerSnapshot(
+            nodes: const <NodeSnapshot>[
+              RectNodeSnapshot(id: 'huge', size: Size(1e9, 1e9)),
+            ],
+          ),
+        ],
+      ),
+    );
+    addTearDown(controller.dispose);
+
+    final initial = controller.querySpatialCandidates(
+      const Rect.fromLTWH(0, 0, 10, 10),
+    );
+    expect(initial.map((candidate) => candidate.node.id), <NodeId>['huge']);
+    expect(controller.debugSpatialIndexBuildCount, 1);
+
+    controller.write<void>((writer) {
+      writer.writeSelectionReplace(const <NodeId>{'huge'});
+      writer.writeSelectionTranslate(const Offset(2e9, 0));
+    });
+
+    final oldProbe = controller.querySpatialCandidates(
+      const Rect.fromLTWH(0, 0, 10, 10),
+    );
+    expect(oldProbe, isEmpty);
+
+    final movedProbe = controller.querySpatialCandidates(
+      const Rect.fromLTWH(2e9, 0, 10, 10),
+    );
+    expect(movedProbe.map((candidate) => candidate.node.id), <NodeId>['huge']);
+    expect(controller.debugSpatialIndexBuildCount, 2);
+  });
+
   test('no-op hitPadding patch does not bump bounds revision', () {
     final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);

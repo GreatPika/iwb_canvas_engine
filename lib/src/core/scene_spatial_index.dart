@@ -5,6 +5,9 @@ import 'hit_test.dart';
 import 'nodes.dart';
 import 'scene.dart';
 
+const int kMaxCellsPerNode = 1024;
+const double _defaultSpatialCellSize = 256;
+
 /// Scene node candidate returned by [SceneSpatialIndex.query].
 class SceneSpatialCandidate {
   const SceneSpatialCandidate({
@@ -24,11 +27,8 @@ class SceneSpatialCandidate {
 class SceneSpatialIndex {
   SceneSpatialIndex._(this._cellSize);
 
-  factory SceneSpatialIndex.build(Scene scene, {double cellSize = 256}) {
-    final resolvedCellSize = cellSize.isFinite && cellSize > 0
-        ? cellSize
-        : 256.0;
-    final index = SceneSpatialIndex._(resolvedCellSize);
+  factory SceneSpatialIndex.build(Scene scene) {
+    final index = SceneSpatialIndex._(_defaultSpatialCellSize);
     index._build(scene);
     return index;
   }
@@ -36,11 +36,19 @@ class SceneSpatialIndex {
   final double _cellSize;
   final Map<_CellKey, List<SceneSpatialCandidate>> _cells =
       <_CellKey, List<SceneSpatialCandidate>>{};
+  final List<SceneSpatialCandidate> _largeCandidates =
+      <SceneSpatialCandidate>[];
+
+  // Test-only counters for validating index routing decisions.
+  int get debugLargeCandidateCount => _largeCandidates.length;
+  int get debugCellCount => _cells.length;
 
   /// Returns de-duplicated candidates whose coarse bounds intersect [worldRect].
   List<SceneSpatialCandidate> query(Rect worldRect) {
     if (!_isFiniteRect(worldRect)) return const <SceneSpatialCandidate>[];
-    if (_cells.isEmpty) return const <SceneSpatialCandidate>[];
+    if (_cells.isEmpty && _largeCandidates.isEmpty) {
+      return const <SceneSpatialCandidate>[];
+    }
 
     final minX = math.min(worldRect.left, worldRect.right);
     final maxX = math.max(worldRect.left, worldRect.right);
@@ -67,6 +75,15 @@ class SceneSpatialIndex {
         }
       }
     }
+    for (final candidate in _largeCandidates) {
+      if (!_rectsIntersectInclusive(
+        candidate.candidateBoundsWorld,
+        worldRect,
+      )) {
+        continue;
+      }
+      unique.add(candidate);
+    }
     return unique.toList(growable: false);
   }
 
@@ -89,6 +106,15 @@ class SceneSpatialIndex {
         final endX = _cellIndexFor(candidateBounds.right);
         final startY = _cellIndexFor(candidateBounds.top);
         final endY = _cellIndexFor(candidateBounds.bottom);
+        if (_isLargeSpan(
+          startX: startX,
+          endX: endX,
+          startY: startY,
+          endY: endY,
+        )) {
+          _largeCandidates.add(candidate);
+          continue;
+        }
         for (var x = startX; x <= endX; x++) {
           for (var y = startY; y <= endY; y++) {
             final key = _CellKey(x, y);
@@ -105,6 +131,19 @@ class SceneSpatialIndex {
 
   int _cellIndexFor(double coordinate) {
     return (coordinate / _cellSize).floor();
+  }
+
+  bool _isLargeSpan({
+    required int startX,
+    required int endX,
+    required int startY,
+    required int endY,
+  }) {
+    final dx = endX - startX + 1;
+    final dy = endY - startY + 1;
+    if (dx <= 0 || dy <= 0) return true;
+    if (dx > kMaxCellsPerNode || dy > kMaxCellsPerNode) return true;
+    return dx * dy > kMaxCellsPerNode;
   }
 }
 

@@ -474,6 +474,20 @@ void main() {
         boundsRevision: 0,
       );
       expect(slice.debugBuildCount, 2);
+
+      final gridOnly = ChangeSet()..txnMarkGridChanged();
+      slice.writeHandleCommit(
+        changeSet: gridOnly,
+        controllerEpoch: 1,
+        boundsRevision: 0,
+      );
+      slice.writeQueryCandidates(
+        scene: scene,
+        worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
+        controllerEpoch: 1,
+        boundsRevision: 0,
+      );
+      expect(slice.debugBuildCount, 2);
     },
   );
 
