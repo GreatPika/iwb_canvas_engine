@@ -555,6 +555,80 @@ void main() {
     expect(explicit.id, 'explicit');
   });
 
+  test('node-from-spec allocates instanceRevision from allocator', () {
+    var nextInstanceRevision = 5;
+    int allocate() => nextInstanceRevision++;
+
+    final a = txnNodeFromSpec(
+      RectNodeSpec(size: const Size(1, 1)),
+      fallbackId: 'a',
+      nextInstanceRevision: allocate,
+    );
+    final b = txnNodeFromSpec(
+      RectNodeSpec(size: const Size(1, 1)),
+      fallbackId: 'b',
+      nextInstanceRevision: allocate,
+    );
+
+    expect(a.instanceRevision, 5);
+    expect(b.instanceRevision, 6);
+  });
+
+  test(
+    'node-from-snapshot preserves positive instanceRevision and allocates non-positive',
+    () {
+      var nextInstanceRevision = 10;
+      int allocate() => nextInstanceRevision++;
+
+      final preserved = txnNodeFromSnapshot(
+        const RectNodeSnapshot(
+          id: 'preserved',
+          instanceRevision: 7,
+          size: Size(1, 1),
+        ),
+        nextInstanceRevision: allocate,
+      );
+      final allocated = txnNodeFromSnapshot(
+        const RectNodeSnapshot(id: 'allocated', size: Size(1, 1)),
+        nextInstanceRevision: allocate,
+      );
+
+      expect(preserved.instanceRevision, 7);
+      expect(allocated.instanceRevision, 10);
+    },
+  );
+
+  test(
+    'txnSceneFromSnapshot allocates instanceRevision for non-positive values',
+    () {
+      var nextInstanceRevision = 20;
+      int allocate() => nextInstanceRevision++;
+
+      final scene = txnSceneFromSnapshot(
+        SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              nodes: const <NodeSnapshot>[
+                RectNodeSnapshot(id: 'a', size: Size(1, 1)),
+                RectNodeSnapshot(
+                  id: 'b',
+                  instanceRevision: 9,
+                  size: Size(1, 1),
+                ),
+              ],
+            ),
+          ],
+        ),
+        nextInstanceRevision: allocate,
+      );
+
+      final nodeA = txnFindNodeById(scene, 'a')!.node;
+      final nodeB = txnFindNodeById(scene, 'b')!.node;
+      expect(nodeA.instanceRevision, 20);
+      expect(nodeB.instanceRevision, 9);
+    },
+  );
+
   test('text node from spec derives size from text layout', () {
     final node =
         txnNodeFromSpec(

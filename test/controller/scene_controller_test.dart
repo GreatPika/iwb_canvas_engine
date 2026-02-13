@@ -1218,6 +1218,51 @@ void main() {
     expect(generatedId, 'node-10');
   });
 
+  test('nextInstanceRevision stays monotonic across replaceScene', () {
+    final controller = SceneControllerV2(
+      initialSnapshot: SceneSnapshot(
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
+            nodes: const <NodeSnapshot>[
+              RectNodeSnapshot(
+                id: 'high',
+                instanceRevision: 100,
+                size: Size(10, 10),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+    addTearDown(controller.dispose);
+
+    controller.writeReplaceScene(
+      SceneSnapshot(
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
+            nodes: const <NodeSnapshot>[
+              RectNodeSnapshot(
+                id: 'low',
+                instanceRevision: 3,
+                size: Size(10, 10),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    late final NodeId insertedId;
+    controller.write<void>((writer) {
+      insertedId = writer.writeNodeInsert(RectNodeSpec(size: const Size(4, 4)));
+    });
+
+    final inserted = controller.snapshot.layers
+        .expand((layer) => layer.nodes)
+        .firstWhere((node) => node.id == insertedId);
+    expect(inserted.instanceRevision, greaterThanOrEqualTo(101));
+  });
+
   test('resolveSpatialCandidateNode accepts valid foreground candidate', () {
     final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);

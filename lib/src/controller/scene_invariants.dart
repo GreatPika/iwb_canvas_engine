@@ -12,6 +12,7 @@ List<String> txnCollectStoreInvariantViolations({
   required Set<NodeId> allNodeIds,
   required Map<NodeId, NodeLocatorEntry> nodeLocator,
   required int nodeIdSeed,
+  required int nextInstanceRevision,
   required int commitRevision,
 }) {
   var violations = const <String>[];
@@ -70,6 +71,29 @@ List<String> txnCollectStoreInvariantViolations({
     ];
   }
 
+  final expectedInstanceSeed = txnInitialNodeInstanceRevisionSeed(scene);
+  if (nextInstanceRevision < expectedInstanceSeed) {
+    violations = <String>[
+      ...violations,
+      'nextInstanceRevision must be >= '
+          'initialNodeInstanceRevisionSeed(scene). '
+          'actual=$nextInstanceRevision min=$expectedInstanceSeed',
+    ];
+  }
+
+  final invalidInstanceRevisionIds = <NodeId>[];
+  for (final node in _txnAllNodes(scene)) {
+    if (node.instanceRevision >= 1) continue;
+    invalidInstanceRevisionIds.add(node.id);
+  }
+  if (invalidInstanceRevisionIds.isNotEmpty) {
+    violations = <String>[
+      ...violations,
+      'scene nodes must have instanceRevision >= 1. '
+          'nodeIds=$invalidInstanceRevisionIds',
+    ];
+  }
+
   if (commitRevision < 0) {
     violations = <String>[
       ...violations,
@@ -104,6 +128,7 @@ void debugAssertTxnStoreInvariants({
   required Set<NodeId> allNodeIds,
   required Map<NodeId, NodeLocatorEntry> nodeLocator,
   required int nodeIdSeed,
+  required int nextInstanceRevision,
   required int commitRevision,
 }) {
   assert(() {
@@ -113,6 +138,7 @@ void debugAssertTxnStoreInvariants({
       allNodeIds: allNodeIds,
       nodeLocator: nodeLocator,
       nodeIdSeed: nodeIdSeed,
+      nextInstanceRevision: nextInstanceRevision,
       commitRevision: commitRevision,
     );
     if (violations.isNotEmpty) {
@@ -122,6 +148,16 @@ void debugAssertTxnStoreInvariants({
     }
     return true;
   }());
+}
+
+Iterable<SceneNode> _txnAllNodes(Scene scene) sync* {
+  final backgroundLayer = scene.backgroundLayer;
+  if (backgroundLayer != null) {
+    yield* backgroundLayer.nodes;
+  }
+  for (final layer in scene.layers) {
+    yield* layer.nodes;
+  }
 }
 
 bool _txnSetsEqual(Set<NodeId> left, Set<NodeId> right) {

@@ -10,9 +10,15 @@ import '../public/scene_data_exception.dart';
 import '../public/snapshot.dart' hide NodeId;
 import 'scene_value_validation.dart';
 
-Scene sceneBuildFromSnapshot(SceneSnapshot rawSnapshot) {
+Scene sceneBuildFromSnapshot(
+  SceneSnapshot rawSnapshot, {
+  int Function()? nextInstanceRevision,
+}) {
   final canonicalSnapshot = sceneCanonicalizeAndValidateSnapshot(rawSnapshot);
-  return _sceneFromSnapshot(canonicalSnapshot);
+  return _sceneFromSnapshot(
+    canonicalSnapshot,
+    nextInstanceRevision: nextInstanceRevision,
+  );
 }
 
 Scene sceneBuildFromJsonMap(Map<String, Object?> rawJson) {
@@ -177,6 +183,7 @@ ContentLayerSnapshot _decodeContentLayer(Map<String, Object?> json) {
 NodeSnapshot _decodeNode(Map<String, Object?> json) {
   final type = _parseNodeType(_requireString(json, 'type'));
   final id = _requireString(json, 'id');
+  final instanceRevision = _optionalInt(json, 'instanceRevision') ?? 0;
   final transform = _decodeTransform2D(_requireMap(json, 'transform'));
   final hitPadding = _requireDouble(json, 'hitPadding');
   final opacity = _requireDouble(json, 'opacity');
@@ -190,6 +197,7 @@ NodeSnapshot _decodeNode(Map<String, Object?> json) {
     case NodeType.image:
       return ImageNodeSnapshot(
         id: id,
+        instanceRevision: instanceRevision,
         imageId: _requireString(json, 'imageId'),
         size: _requireSize(json, 'size'),
         naturalSize: _optionalSizeMap(json, 'naturalSize'),
@@ -205,6 +213,7 @@ NodeSnapshot _decodeNode(Map<String, Object?> json) {
     case NodeType.text:
       return TextNodeSnapshot(
         id: id,
+        instanceRevision: instanceRevision,
         text: _requireString(json, 'text'),
         size: _requireSize(json, 'size'),
         fontSize: _requireDouble(json, 'fontSize'),
@@ -228,6 +237,7 @@ NodeSnapshot _decodeNode(Map<String, Object?> json) {
     case NodeType.stroke:
       return StrokeNodeSnapshot(
         id: id,
+        instanceRevision: instanceRevision,
         points: _requireList(json, 'localPoints')
             .map((point) => _parsePoint(point, 'localPoints'))
             .toList(growable: false),
@@ -245,6 +255,7 @@ NodeSnapshot _decodeNode(Map<String, Object?> json) {
     case NodeType.line:
       return LineNodeSnapshot(
         id: id,
+        instanceRevision: instanceRevision,
         start: _parsePoint(_requireMap(json, 'localA'), 'localA'),
         end: _parsePoint(_requireMap(json, 'localB'), 'localB'),
         thickness: _requireDouble(json, 'thickness'),
@@ -261,6 +272,7 @@ NodeSnapshot _decodeNode(Map<String, Object?> json) {
     case NodeType.rect:
       return RectNodeSnapshot(
         id: id,
+        instanceRevision: instanceRevision,
         size: _requireSize(json, 'size'),
         fillColor: _optionalColor(json, 'fillColor'),
         strokeColor: _optionalColor(json, 'strokeColor'),
@@ -277,6 +289,7 @@ NodeSnapshot _decodeNode(Map<String, Object?> json) {
     case NodeType.path:
       return PathNodeSnapshot(
         id: id,
+        instanceRevision: instanceRevision,
         svgPathData: _requireString(json, 'svgPathData'),
         fillColor: _optionalColor(json, 'fillColor'),
         strokeColor: _optionalColor(json, 'strokeColor'),
@@ -294,20 +307,35 @@ NodeSnapshot _decodeNode(Map<String, Object?> json) {
   }
 }
 
-Scene _sceneFromSnapshot(SceneSnapshot snapshot) {
+Scene _sceneFromSnapshot(
+  SceneSnapshot snapshot, {
+  int Function()? nextInstanceRevision,
+}) {
+  final instanceRevisionAllocator =
+      nextInstanceRevision ?? _snapshotInstanceRevisionAllocator(snapshot);
   return Scene(
     backgroundLayer: snapshot.backgroundLayer == null
         ? null
         : BackgroundLayer(
             nodes: snapshot.backgroundLayer!.nodes
-                .map(_sceneNodeFromSnapshot)
+                .map(
+                  (node) => _sceneNodeFromSnapshot(
+                    node,
+                    nextInstanceRevision: instanceRevisionAllocator,
+                  ),
+                )
                 .toList(growable: false),
           ),
     layers: snapshot.layers
         .map(
           (layer) => ContentLayer(
             nodes: layer.nodes
-                .map(_sceneNodeFromSnapshot)
+                .map(
+                  (node) => _sceneNodeFromSnapshot(
+                    node,
+                    nextInstanceRevision: instanceRevisionAllocator,
+                  ),
+                )
                 .toList(growable: false),
           ),
         )
@@ -329,11 +357,19 @@ Scene _sceneFromSnapshot(SceneSnapshot snapshot) {
   );
 }
 
-SceneNode _sceneNodeFromSnapshot(NodeSnapshot node) {
+SceneNode _sceneNodeFromSnapshot(
+  NodeSnapshot node, {
+  required int Function() nextInstanceRevision,
+}) {
+  final instanceRevision = _resolveSnapshotInstanceRevision(
+    node,
+    nextInstanceRevision: nextInstanceRevision,
+  );
   switch (node) {
     case ImageNodeSnapshot image:
       return ImageNode(
         id: image.id,
+        instanceRevision: instanceRevision,
         imageId: image.imageId,
         size: image.size,
         naturalSize: image.naturalSize,
@@ -349,6 +385,7 @@ SceneNode _sceneNodeFromSnapshot(NodeSnapshot node) {
     case TextNodeSnapshot text:
       final built = TextNode(
         id: text.id,
+        instanceRevision: instanceRevision,
         text: text.text,
         size: text.size,
         fontSize: text.fontSize,
@@ -374,6 +411,7 @@ SceneNode _sceneNodeFromSnapshot(NodeSnapshot node) {
     case StrokeNodeSnapshot stroke:
       return StrokeNode(
         id: stroke.id,
+        instanceRevision: instanceRevision,
         points: stroke.points,
         pointsRevision: stroke.pointsRevision,
         thickness: stroke.thickness,
@@ -390,6 +428,7 @@ SceneNode _sceneNodeFromSnapshot(NodeSnapshot node) {
     case LineNodeSnapshot line:
       return LineNode(
         id: line.id,
+        instanceRevision: instanceRevision,
         start: line.start,
         end: line.end,
         thickness: line.thickness,
@@ -406,6 +445,7 @@ SceneNode _sceneNodeFromSnapshot(NodeSnapshot node) {
     case RectNodeSnapshot rect:
       return RectNode(
         id: rect.id,
+        instanceRevision: instanceRevision,
         size: rect.size,
         fillColor: rect.fillColor,
         strokeColor: rect.strokeColor,
@@ -422,6 +462,7 @@ SceneNode _sceneNodeFromSnapshot(NodeSnapshot node) {
     case PathNodeSnapshot path:
       return PathNode(
         id: path.id,
+        instanceRevision: instanceRevision,
         svgPathData: path.svgPathData,
         fillColor: path.fillColor,
         strokeColor: path.strokeColor,
@@ -480,6 +521,7 @@ NodeSnapshot _snapshotNodeFromScene(SceneNode node) {
       final image = node as ImageNode;
       return ImageNodeSnapshot(
         id: image.id,
+        instanceRevision: image.instanceRevision,
         imageId: image.imageId,
         size: image.size,
         naturalSize: image.naturalSize,
@@ -496,6 +538,7 @@ NodeSnapshot _snapshotNodeFromScene(SceneNode node) {
       final text = node as TextNode;
       return TextNodeSnapshot(
         id: text.id,
+        instanceRevision: text.instanceRevision,
         text: text.text,
         size: text.size,
         fontSize: text.fontSize,
@@ -520,6 +563,7 @@ NodeSnapshot _snapshotNodeFromScene(SceneNode node) {
       final stroke = node as StrokeNode;
       return StrokeNodeSnapshot(
         id: stroke.id,
+        instanceRevision: stroke.instanceRevision,
         points: stroke.points,
         pointsRevision: stroke.pointsRevision,
         thickness: stroke.thickness,
@@ -537,6 +581,7 @@ NodeSnapshot _snapshotNodeFromScene(SceneNode node) {
       final line = node as LineNode;
       return LineNodeSnapshot(
         id: line.id,
+        instanceRevision: line.instanceRevision,
         start: line.start,
         end: line.end,
         thickness: line.thickness,
@@ -554,6 +599,7 @@ NodeSnapshot _snapshotNodeFromScene(SceneNode node) {
       final rect = node as RectNode;
       return RectNodeSnapshot(
         id: rect.id,
+        instanceRevision: rect.instanceRevision,
         size: rect.size,
         fillColor: rect.fillColor,
         strokeColor: rect.strokeColor,
@@ -571,6 +617,7 @@ NodeSnapshot _snapshotNodeFromScene(SceneNode node) {
       final path = node as PathNode;
       return PathNodeSnapshot(
         id: path.id,
+        instanceRevision: path.instanceRevision,
         svgPathData: path.svgPathData,
         fillColor: path.fillColor,
         strokeColor: path.strokeColor,
@@ -586,6 +633,46 @@ NodeSnapshot _snapshotNodeFromScene(SceneNode node) {
         isTransformable: path.isTransformable,
       );
   }
+}
+
+int Function() _snapshotInstanceRevisionAllocator(SceneSnapshot snapshot) {
+  var next = _snapshotInitialNodeInstanceRevisionSeed(snapshot);
+  return () {
+    final out = next;
+    next = next + 1;
+    return out;
+  };
+}
+
+int _snapshotInitialNodeInstanceRevisionSeed(SceneSnapshot snapshot) {
+  var maxRevision = 0;
+  final backgroundLayer = snapshot.backgroundLayer;
+  if (backgroundLayer != null) {
+    for (final node in backgroundLayer.nodes) {
+      if (node.instanceRevision > maxRevision) {
+        maxRevision = node.instanceRevision;
+      }
+    }
+  }
+  for (final layer in snapshot.layers) {
+    for (final node in layer.nodes) {
+      if (node.instanceRevision > maxRevision) {
+        maxRevision = node.instanceRevision;
+      }
+    }
+  }
+  return maxRevision + 1;
+}
+
+int _resolveSnapshotInstanceRevision(
+  NodeSnapshot node, {
+  required int Function() nextInstanceRevision,
+}) {
+  final existing = node.instanceRevision;
+  if (existing > 0) {
+    return existing;
+  }
+  return nextInstanceRevision();
 }
 
 void _validateStructuralInvariants(SceneSnapshot snapshot) {
@@ -1092,6 +1179,39 @@ double? _optionalDouble(Map<String, Object?> json, String key) {
     );
   }
   return out;
+}
+
+int? _optionalInt(Map<String, Object?> json, String key) {
+  if (!json.containsKey(key)) return null;
+  final value = json[key];
+  if (value == null) return null;
+  if (value is int) {
+    return value;
+  }
+  if (value is! num) {
+    throw SceneDataException(
+      code: SceneDataErrorCode.invalidFieldType,
+      path: key,
+      message: 'Field $key must be an int.',
+    );
+  }
+  final asDouble = value.toDouble();
+  if (!asDouble.isFinite || asDouble.truncateToDouble() != asDouble) {
+    throw SceneDataException(
+      code: SceneDataErrorCode.invalidFieldType,
+      path: key,
+      message: 'Field $key must be an int.',
+    );
+  }
+  if (asDouble.abs() > 9007199254740991) {
+    throw SceneDataException(
+      code: SceneDataErrorCode.invalidValue,
+      path: key,
+      message: 'Field $key must be an int.',
+      source: value,
+    );
+  }
+  return asDouble.toInt();
 }
 
 Offset _parsePoint(Object? value, String field) {

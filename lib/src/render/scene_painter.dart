@@ -27,8 +27,8 @@ class SceneStrokePathCacheV2 {
     : maxEntries = _requirePositiveCacheEntries(maxEntries);
 
   final int maxEntries;
-  final LinkedHashMap<NodeId, _StrokePathEntryV2> _entries =
-      LinkedHashMap<NodeId, _StrokePathEntryV2>();
+  final LinkedHashMap<_NodeInstanceKeyV2, _StrokePathEntryV2> _entries =
+      LinkedHashMap<_NodeInstanceKeyV2, _StrokePathEntryV2>();
 
   int _debugBuildCount = 0;
   int _debugHitCount = 0;
@@ -54,15 +54,19 @@ class SceneStrokePathCacheV2 {
         ..addOval(Rect.fromCircle(center: node.points.first, radius: 0));
     }
 
-    final cached = _entries.remove(node.id);
+    final key = _NodeInstanceKeyV2(
+      nodeId: node.id,
+      instanceRevision: node.instanceRevision,
+    );
+    final cached = _entries.remove(key);
     if (cached != null && cached.pointsRevision == node.pointsRevision) {
-      _entries[node.id] = cached;
+      _entries[key] = cached;
       _debugHitCount += 1;
       return cached.path;
     }
 
     final path = _buildStrokePath(node.points);
-    _entries[node.id] = _StrokePathEntryV2(
+    _entries[key] = _StrokePathEntryV2(
       path: path,
       pointsRevision: node.pointsRevision,
     );
@@ -227,8 +231,8 @@ class ScenePathMetricsCacheV2 {
     : maxEntries = _requirePositiveCacheEntries(maxEntries);
 
   final int maxEntries;
-  final LinkedHashMap<NodeId, _PathMetricsEntryV2> _entries =
-      LinkedHashMap<NodeId, _PathMetricsEntryV2>();
+  final LinkedHashMap<_NodeInstanceKeyV2, _PathMetricsEntryV2> _entries =
+      LinkedHashMap<_NodeInstanceKeyV2, _PathMetricsEntryV2>();
 
   int _debugBuildCount = 0;
   int _debugHitCount = 0;
@@ -249,11 +253,15 @@ class ScenePathMetricsCacheV2 {
     required PathNodeSnapshot node,
     required Path localPath,
   }) {
-    final cached = _entries.remove(node.id);
+    final key = _NodeInstanceKeyV2(
+      nodeId: node.id,
+      instanceRevision: node.instanceRevision,
+    );
+    final cached = _entries.remove(key);
     if (cached != null &&
         cached.svgPathData == node.svgPathData &&
         cached.fillRule == node.fillRule) {
-      _entries[node.id] = cached;
+      _entries[key] = cached;
       _debugHitCount += 1;
       return cached.contours;
     }
@@ -281,7 +289,7 @@ class ScenePathMetricsCacheV2 {
       closedContours: closedContours,
       openContours: openContours,
     );
-    _entries[node.id] = _PathMetricsEntryV2(
+    _entries[key] = _PathMetricsEntryV2(
       svgPathData: node.svgPathData,
       fillRule: node.fillRule,
       contours: contours,
@@ -297,6 +305,26 @@ class ScenePathMetricsCacheV2 {
       _debugEvictCount += 1;
     }
   }
+}
+
+class _NodeInstanceKeyV2 {
+  const _NodeInstanceKeyV2({
+    required this.nodeId,
+    required this.instanceRevision,
+  });
+
+  final NodeId nodeId;
+  final int instanceRevision;
+
+  @override
+  bool operator ==(Object other) {
+    return other is _NodeInstanceKeyV2 &&
+        other.nodeId == nodeId &&
+        other.instanceRevision == instanceRevision;
+  }
+
+  @override
+  int get hashCode => Object.hash(nodeId, instanceRevision);
 }
 
 class _PathMetricsEntryV2 {

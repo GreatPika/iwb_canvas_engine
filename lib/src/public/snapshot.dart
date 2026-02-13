@@ -115,6 +115,7 @@ enum V2PathFillRule { nonZero, evenOdd }
 sealed class NodeSnapshot {
   const NodeSnapshot({
     required this.id,
+    this.instanceRevision = 0,
     this.transform = Transform2D.identity,
     this.opacity = 1,
     this.hitPadding = 0,
@@ -126,6 +127,7 @@ sealed class NodeSnapshot {
   });
 
   final NodeId id;
+  final int instanceRevision;
   final Transform2D transform;
   final double opacity;
   final double hitPadding;
@@ -139,6 +141,7 @@ sealed class NodeSnapshot {
 class ImageNodeSnapshot extends NodeSnapshot {
   const ImageNodeSnapshot({
     required super.id,
+    super.instanceRevision,
     required this.imageId,
     required this.size,
     this.naturalSize,
@@ -160,6 +163,7 @@ class ImageNodeSnapshot extends NodeSnapshot {
 class TextNodeSnapshot extends NodeSnapshot {
   const TextNodeSnapshot({
     required super.id,
+    super.instanceRevision,
     required this.text,
     required this.size,
     this.fontSize = 24,
@@ -197,6 +201,7 @@ class TextNodeSnapshot extends NodeSnapshot {
 class StrokeNodeSnapshot extends NodeSnapshot {
   StrokeNodeSnapshot({
     required super.id,
+    super.instanceRevision,
     required List<Offset> points,
     this.pointsRevision = 0,
     required this.thickness,
@@ -220,6 +225,7 @@ class StrokeNodeSnapshot extends NodeSnapshot {
 class LineNodeSnapshot extends NodeSnapshot {
   const LineNodeSnapshot({
     required super.id,
+    super.instanceRevision,
     required this.start,
     required this.end,
     required this.thickness,
@@ -243,6 +249,7 @@ class LineNodeSnapshot extends NodeSnapshot {
 class RectNodeSnapshot extends NodeSnapshot {
   const RectNodeSnapshot({
     required super.id,
+    super.instanceRevision,
     required this.size,
     this.fillColor,
     this.strokeColor,
@@ -266,6 +273,7 @@ class RectNodeSnapshot extends NodeSnapshot {
 class PathNodeSnapshot extends NodeSnapshot {
   const PathNodeSnapshot({
     required super.id,
+    super.instanceRevision,
     required this.svgPathData,
     this.fillColor,
     this.strokeColor,

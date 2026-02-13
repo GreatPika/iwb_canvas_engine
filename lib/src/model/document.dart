@@ -136,15 +136,29 @@ SceneSnapshot txnSceneToSnapshot(Scene scene) {
   );
 }
 
-Scene txnSceneFromSnapshot(SceneSnapshot snapshot) {
-  return model_builder.sceneBuildFromSnapshot(snapshot);
+Scene txnSceneFromSnapshot(
+  SceneSnapshot snapshot, {
+  int Function()? nextInstanceRevision,
+}) {
+  return model_builder.sceneBuildFromSnapshot(
+    snapshot,
+    nextInstanceRevision: nextInstanceRevision,
+  );
 }
 
-SceneNode txnNodeFromSnapshot(NodeSnapshot node) {
+SceneNode txnNodeFromSnapshot(
+  NodeSnapshot node, {
+  int Function()? nextInstanceRevision,
+}) {
+  final instanceRevision = _txnResolveSnapshotInstanceRevision(
+    node,
+    nextInstanceRevision: nextInstanceRevision,
+  );
   switch (node) {
     case ImageNodeSnapshot image:
       return ImageNode(
         id: image.id,
+        instanceRevision: instanceRevision,
         imageId: image.imageId,
         size: image.size,
         naturalSize: image.naturalSize,
@@ -160,6 +174,7 @@ SceneNode txnNodeFromSnapshot(NodeSnapshot node) {
     case TextNodeSnapshot text:
       final node = TextNode(
         id: text.id,
+        instanceRevision: instanceRevision,
         text: text.text,
         size: text.size,
         fontSize: text.fontSize,
@@ -185,6 +200,7 @@ SceneNode txnNodeFromSnapshot(NodeSnapshot node) {
     case StrokeNodeSnapshot stroke:
       return StrokeNode(
         id: stroke.id,
+        instanceRevision: instanceRevision,
         points: stroke.points,
         pointsRevision: stroke.pointsRevision,
         thickness: stroke.thickness,
@@ -201,6 +217,7 @@ SceneNode txnNodeFromSnapshot(NodeSnapshot node) {
     case LineNodeSnapshot line:
       return LineNode(
         id: line.id,
+        instanceRevision: instanceRevision,
         start: line.start,
         end: line.end,
         thickness: line.thickness,
@@ -217,6 +234,7 @@ SceneNode txnNodeFromSnapshot(NodeSnapshot node) {
     case RectNodeSnapshot rect:
       return RectNode(
         id: rect.id,
+        instanceRevision: instanceRevision,
         size: rect.size,
         fillColor: rect.fillColor,
         strokeColor: rect.strokeColor,
@@ -233,6 +251,7 @@ SceneNode txnNodeFromSnapshot(NodeSnapshot node) {
     case PathNodeSnapshot path:
       return PathNode(
         id: path.id,
+        instanceRevision: instanceRevision,
         svgPathData: path.svgPathData,
         fillColor: path.fillColor,
         strokeColor: path.strokeColor,
@@ -256,6 +275,7 @@ NodeSnapshot txnNodeToSnapshot(SceneNode node) {
       final image = node as ImageNode;
       return ImageNodeSnapshot(
         id: image.id,
+        instanceRevision: image.instanceRevision,
         imageId: image.imageId,
         size: image.size,
         naturalSize: image.naturalSize,
@@ -272,6 +292,7 @@ NodeSnapshot txnNodeToSnapshot(SceneNode node) {
       final text = node as TextNode;
       return TextNodeSnapshot(
         id: text.id,
+        instanceRevision: text.instanceRevision,
         text: text.text,
         size: text.size,
         fontSize: text.fontSize,
@@ -296,6 +317,7 @@ NodeSnapshot txnNodeToSnapshot(SceneNode node) {
       final stroke = node as StrokeNode;
       return StrokeNodeSnapshot(
         id: stroke.id,
+        instanceRevision: stroke.instanceRevision,
         points: stroke.points,
         pointsRevision: stroke.pointsRevision,
         thickness: stroke.thickness,
@@ -313,6 +335,7 @@ NodeSnapshot txnNodeToSnapshot(SceneNode node) {
       final line = node as LineNode;
       return LineNodeSnapshot(
         id: line.id,
+        instanceRevision: line.instanceRevision,
         start: line.start,
         end: line.end,
         thickness: line.thickness,
@@ -330,6 +353,7 @@ NodeSnapshot txnNodeToSnapshot(SceneNode node) {
       final rect = node as RectNode;
       return RectNodeSnapshot(
         id: rect.id,
+        instanceRevision: rect.instanceRevision,
         size: rect.size,
         fillColor: rect.fillColor,
         strokeColor: rect.strokeColor,
@@ -347,6 +371,7 @@ NodeSnapshot txnNodeToSnapshot(SceneNode node) {
       final path = node as PathNode;
       return PathNodeSnapshot(
         id: path.id,
+        instanceRevision: path.instanceRevision,
         svgPathData: path.svgPathData,
         fillColor: path.fillColor,
         strokeColor: path.strokeColor,
@@ -364,17 +389,25 @@ NodeSnapshot txnNodeToSnapshot(SceneNode node) {
   }
 }
 
-SceneNode txnNodeFromSpec(NodeSpec spec, {required NodeId fallbackId}) {
+SceneNode txnNodeFromSpec(
+  NodeSpec spec, {
+  required NodeId fallbackId,
+  int Function()? nextInstanceRevision,
+}) {
   sceneValidateNodeSpecValues(
     spec,
     field: 'spec',
     onError: _txnSnapshotValidationError,
   );
   final id = spec.id ?? fallbackId;
+  final instanceRevision = _txnResolveSpecInstanceRevision(
+    nextInstanceRevision: nextInstanceRevision,
+  );
   switch (spec) {
     case ImageNodeSpec image:
       return ImageNode(
         id: id,
+        instanceRevision: instanceRevision,
         imageId: image.imageId,
         size: image.size,
         naturalSize: image.naturalSize,
@@ -390,6 +423,7 @@ SceneNode txnNodeFromSpec(NodeSpec spec, {required NodeId fallbackId}) {
     case TextNodeSpec text:
       final node = TextNode(
         id: id,
+        instanceRevision: instanceRevision,
         text: text.text,
         size: Size.zero,
         fontSize: text.fontSize,
@@ -415,6 +449,7 @@ SceneNode txnNodeFromSpec(NodeSpec spec, {required NodeId fallbackId}) {
     case StrokeNodeSpec stroke:
       return StrokeNode(
         id: id,
+        instanceRevision: instanceRevision,
         points: stroke.points,
         thickness: stroke.thickness,
         color: stroke.color,
@@ -430,6 +465,7 @@ SceneNode txnNodeFromSpec(NodeSpec spec, {required NodeId fallbackId}) {
     case LineNodeSpec line:
       return LineNode(
         id: id,
+        instanceRevision: instanceRevision,
         start: line.start,
         end: line.end,
         thickness: line.thickness,
@@ -446,6 +482,7 @@ SceneNode txnNodeFromSpec(NodeSpec spec, {required NodeId fallbackId}) {
     case RectNodeSpec rect:
       return RectNode(
         id: id,
+        instanceRevision: instanceRevision,
         size: rect.size,
         fillColor: rect.fillColor,
         strokeColor: rect.strokeColor,
@@ -462,6 +499,7 @@ SceneNode txnNodeFromSpec(NodeSpec spec, {required NodeId fallbackId}) {
     case PathNodeSpec path:
       return PathNode(
         id: id,
+        instanceRevision: instanceRevision,
         svgPathData: path.svgPathData,
         fillColor: path.fillColor,
         strokeColor: path.strokeColor,
@@ -477,6 +515,29 @@ SceneNode txnNodeFromSpec(NodeSpec spec, {required NodeId fallbackId}) {
         isTransformable: path.isTransformable,
       );
   }
+}
+
+int _txnResolveSnapshotInstanceRevision(
+  NodeSnapshot node, {
+  int Function()? nextInstanceRevision,
+}) {
+  final existing = node.instanceRevision;
+  if (existing > 0) {
+    return existing;
+  }
+  final allocator = nextInstanceRevision;
+  if (allocator != null) {
+    return allocator();
+  }
+  return 1;
+}
+
+int _txnResolveSpecInstanceRevision({int Function()? nextInstanceRevision}) {
+  final allocator = nextInstanceRevision;
+  if (allocator != null) {
+    return allocator();
+  }
+  return 1;
 }
 
 bool txnApplyNodePatch(SceneNode node, NodePatch patch, {bool dryRun = false}) {

@@ -273,6 +273,17 @@ void main() {
     );
   });
 
+  test('scene node constructor rejects non-positive instanceRevision', () {
+    expect(
+      () => RectNode(
+        id: 'bad-instance-revision',
+        instanceRevision: 0,
+        size: const Size(1, 1),
+      ),
+      throwsArgumentError,
+    );
+  });
+
   test('path node builds, caches and invalidates local path data', () {
     final pathNode = PathNode(
       id: 'p',

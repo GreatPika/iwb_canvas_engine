@@ -67,6 +67,7 @@ Key invariants:
 - Relative ordering between interactive stream delivery and repaint listener notification is intentionally not a public contract.
 - Buffered signal/repaint effects are discarded when `write(...)` rolls back.
 - Node-id index state keeps `allNodeIds` and `nodeLocator` equal to committed scene ids/locations, while `nodeIdSeed` is a monotonic generator lower-bounded by committed scene ids.
+- Node instance identity keeps `instanceRevision >= 1` for all committed nodes, and `nextInstanceRevision` is a monotonic generator lower-bounded by committed scene instance revisions.
 - Selection normalization preserves explicit non-selectable ids and drops only missing/background/invisible ids.
 - Runtime snapshot boundary (`initialSnapshot` / `replaceScene`) validates input strictly and fails fast with `SceneDataException` for malformed snapshots.
 - Text node box size is derived from text layout inputs and is not writable via public spec/patch APIs.
@@ -89,8 +90,9 @@ Key invariants:
 - Viewport culling for offscreen nodes.
 - Bounded caches for text layout, stroke paths, and selected path metrics.
 - `ScenePainterV2` keeps an internal per-node `RenderGeometryCache` that reuses path parsing and local/world bounds calculations across culling, selection, and drawing.
-- Stroke-path cache freshness is validated in O(1) by `(node.id, pointsRevision)`
-  instead of hashing/iterating point lists on every lookup.
+- Stroke-path cache freshness is validated in O(1) by
+  `(node.id, node.instanceRevision, pointsRevision)` instead of
+  hashing/iterating point lists on every lookup.
 - Spatial index supports incremental commit updates (`added/removed/hitGeometryChangedIds`) for hit-testing hot paths; full rebuild is a fallback path only.
 - Spatial query guardrail: oversized query rectangles (`> 50_000` index cells) bypass cell loops and use bounded all-candidate scan with exact intersection filtering.
 - Hit-test guardrail: path-stroke precise hit-testing caps per-metric sampling to `2_048` points by increasing sampling step for long metrics.

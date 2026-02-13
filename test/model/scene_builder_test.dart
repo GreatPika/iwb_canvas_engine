@@ -525,4 +525,46 @@ void main() {
       ),
     );
   });
+
+  test('sceneValidatePositiveInt reports non-positive values', () {
+    SceneDataException asSceneDataException({
+      required Object? value,
+      required String field,
+      required String message,
+    }) {
+      return SceneDataException(
+        code: SceneDataErrorCode.invalidValue,
+        path: field,
+        message: 'Field $field $message',
+        source: value,
+      );
+    }
+
+    expect(
+      () => value_validation.sceneValidatePositiveInt(
+        0,
+        field: 'instanceRevision',
+        onError:
+            ({
+              required Object? value,
+              required String field,
+              required String message,
+            }) {
+              throw asSceneDataException(
+                value: value,
+                field: field,
+                message: message,
+              );
+            },
+      ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.path == 'instanceRevision' &&
+              e.message == 'Field instanceRevision must be > 0.',
+        ),
+      ),
+    );
+  });
 }

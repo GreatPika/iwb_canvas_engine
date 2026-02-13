@@ -1326,6 +1326,123 @@ void main() {
       ),
     );
   });
+
+  test('decodeScene rejects non-integer instanceRevision', () {
+    final nodeJson = _baseNodeJson(id: 'r-inst-type', type: 'rect')
+      ..addAll(<String, dynamic>{
+        'instanceRevision': 1.5,
+        'size': <String, dynamic>{'w': 10, 'h': 10},
+        'strokeWidth': 0,
+      });
+
+    expect(
+      () => decodeScene(_sceneWithSingleNode(nodeJson)),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.message == 'Field instanceRevision must be an int.',
+        ),
+      ),
+    );
+  });
+
+  test('decodeScene rejects non-numeric instanceRevision', () {
+    final nodeJson = _baseNodeJson(id: 'r-inst-string', type: 'rect')
+      ..addAll(<String, dynamic>{
+        'instanceRevision': 'abc',
+        'size': <String, dynamic>{'w': 10, 'h': 10},
+        'strokeWidth': 0,
+      });
+
+    expect(
+      () => decodeScene(_sceneWithSingleNode(nodeJson)),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidFieldType &&
+              e.message == 'Field instanceRevision must be an int.',
+        ),
+      ),
+    );
+  });
+
+  test('decodeScene rejects out-of-range numeric instanceRevision', () {
+    final nodeJson = _baseNodeJson(id: 'r-inst-huge', type: 'rect')
+      ..addAll(<String, dynamic>{
+        'instanceRevision': 9007199254740992.0,
+        'size': <String, dynamic>{'w': 10, 'h': 10},
+        'strokeWidth': 0,
+      });
+
+    expect(
+      () => decodeScene(_sceneWithSingleNode(nodeJson)),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.message == 'Field instanceRevision must be an int.',
+        ),
+      ),
+    );
+  });
+
+  test('decodeScene accepts integer-valued double instanceRevision', () {
+    final nodeJson = _baseNodeJson(id: 'r-inst-double-int', type: 'rect')
+      ..addAll(<String, dynamic>{
+        'instanceRevision': 3.0,
+        'size': <String, dynamic>{'w': 10, 'h': 10},
+        'strokeWidth': 0,
+      });
+
+    final decoded = decodeScene(_sceneWithSingleNode(nodeJson));
+    final node = decoded.layers.single.nodes.single as RectNodeSnapshot;
+    expect(node.instanceRevision, 3);
+  });
+
+  test('decodeScene rejects negative instanceRevision', () {
+    final nodeJson = _baseNodeJson(id: 'r-inst-negative', type: 'rect')
+      ..addAll(<String, dynamic>{
+        'instanceRevision': -1,
+        'size': <String, dynamic>{'w': 10, 'h': 10},
+        'strokeWidth': 0,
+      });
+
+    expect(
+      () => decodeScene(_sceneWithSingleNode(nodeJson)),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.message ==
+                  'Field layers[0].nodes[0].instanceRevision must be >= 0.',
+        ),
+      ),
+    );
+  });
+
+  test('encodeScene always writes instanceRevision for nodes', () {
+    final encoded = encodeScene(
+      SceneSnapshot(
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
+            nodes: const <NodeSnapshot>[
+              RectNodeSnapshot(id: 'rect-inst', size: Size(10, 10)),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    final layers = encoded['layers'] as List<dynamic>;
+    final layer0 = layers[0] as Map<String, dynamic>;
+    final nodes = layer0['nodes'] as List<dynamic>;
+    final node = nodes[0] as Map<String, dynamic>;
+    expect(node['instanceRevision'], isA<int>());
+    expect(node['instanceRevision'], greaterThanOrEqualTo(1));
+  });
 }
 
 class _BadOpacityNode extends SceneNode {

@@ -24,6 +24,33 @@ void main() {
     expect(cache.debugSize, 1);
   });
 
+  test(
+    'RenderGeometryCache treats same id with different instanceRevision as different entries',
+    () {
+      final cache = RenderGeometryCache();
+      const oldNode = RectNodeSnapshot(
+        id: 'reuse-id',
+        instanceRevision: 1,
+        size: Size(20, 10),
+      );
+      const newNode = RectNodeSnapshot(
+        id: 'reuse-id',
+        instanceRevision: 2,
+        size: Size(20, 10),
+      );
+
+      final oldEntry = cache.get(oldNode);
+      final newEntry = cache.get(newNode);
+      final newEntryHit = cache.get(newNode);
+
+      expect(identical(oldEntry, newEntry), isFalse);
+      expect(identical(newEntry, newEntryHit), isTrue);
+      expect(cache.debugBuildCount, 2);
+      expect(cache.debugHitCount, 1);
+      expect(cache.debugSize, 2);
+    },
+  );
+
   test('RenderGeometryCache rebuilds when path geometry key changes', () {
     final cache = RenderGeometryCache();
     const nodeA = PathNodeSnapshot(id: 'path-1', svgPathData: 'M0 0 H10');

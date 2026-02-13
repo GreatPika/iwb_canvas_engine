@@ -15,6 +15,7 @@ class TxnContext {
     required Set<NodeId> baseAllNodeIds,
     Map<NodeId, NodeLocatorEntry>? baseNodeLocator,
     required this.nodeIdSeed,
+    required this.nextInstanceRevision,
     ChangeSet? changeSet,
   }) : _baseScene = baseScene,
        workingSelection = HashSet<NodeId>.of(workingSelection),
@@ -40,6 +41,7 @@ class TxnContext {
 
   final Set<NodeId> workingSelection;
   int nodeIdSeed;
+  int nextInstanceRevision;
   final ChangeSet changeSet;
   int debugSceneShallowClones = 0;
   int debugLayerShallowClones = 0;
@@ -246,7 +248,14 @@ class TxnContext {
     }
   }
 
+  int txnNextInstanceRevision() {
+    final out = nextInstanceRevision;
+    nextInstanceRevision = nextInstanceRevision + 1;
+    return out;
+  }
+
   void txnAdoptScene(Scene scene) {
+    final prevNextInstanceRevision = nextInstanceRevision;
     _mutableScene = scene;
     _mutableSceneOwnedByTxn = true;
     _clonedLayerIndexes.clear();
@@ -259,6 +268,10 @@ class TxnContext {
     _materializedAllNodeIds = _baseAllNodeIds;
     _materializedNodeLocator = _baseNodeLocator;
     nodeIdSeed = txnInitialNodeIdSeed(scene);
+    final adoptedSeed = txnInitialNodeInstanceRevisionSeed(scene);
+    nextInstanceRevision = prevNextInstanceRevision >= adoptedSeed
+        ? prevNextInstanceRevision
+        : adoptedSeed;
   }
 
   Set<NodeId> txnAllNodeIdsForCommit({required bool structuralChanged}) {

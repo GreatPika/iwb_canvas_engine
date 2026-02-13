@@ -243,6 +243,7 @@ void _assertPostConditions({
     allNodeIds: txnCollectNodeIds(scene),
     nodeLocator: txnBuildNodeLocator(scene),
     nodeIdSeed: txnInitialNodeIdSeed(scene),
+    nextInstanceRevision: txnInitialNodeInstanceRevisionSeed(scene),
     commitRevision: controller.debugCommitRevision,
   );
   expect(
@@ -587,6 +588,11 @@ void _assertFiniteSnapshotNumbers({
   for (final layer in snapshot.layers) {
     for (final node in layer.nodes) {
       final nodeCtx = '$context node=${node.id}';
+      expect(
+        node.instanceRevision >= 0,
+        isTrue,
+        reason: '$nodeCtx instanceRevision',
+      );
       expect(
         _isFiniteTransform(node.transform),
         isTrue,

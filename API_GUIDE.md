@@ -88,6 +88,7 @@ Typed layer boundary:
 `NodeSnapshot` base fields:
 
 - `id`
+- `instanceRevision`
 - `transform`
 - `opacity`
 - `hitPadding`
@@ -111,6 +112,10 @@ Variants:
 - `pointsRevision` is a non-negative monotonic geometry revision used by
   render caches for O(1) stroke-path freshness checks.
 - `pointsRevision` is runtime metadata and is not serialized into JSON.
+- `instanceRevision` is an immutable per-node-instance identity revision.
+  Runtime import allocates it when input value is `<= 0`, JSON encoder writes
+  it for every node, and render caches use `(id, instanceRevision)` isolation
+  to avoid stale hits after id reuse.
 
 Path fill rule enum:
 

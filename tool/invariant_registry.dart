@@ -80,6 +80,12 @@ const List<Invariant> invariants = <Invariant>[
         'allNodeIds/nodeLocator match committed scene and nodeIdSeed is monotonic (lower-bounded by scene)',
   ),
   Invariant(
+    id: 'INV-V2-INSTANCE-REVISION-MONOTONIC',
+    scope: 'engine-controller',
+    title:
+        'scene nodes keep instanceRevision >= 1 and nextInstanceRevision stays monotonic (lower-bounded by scene)',
+  ),
+  Invariant(
     id: 'INV-V2-WRITE-NUMERIC-GUARDS',
     scope: 'engine-controller',
     title: 'writer rejects non-finite or invalid numeric write inputs',

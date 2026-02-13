@@ -30,6 +30,7 @@ abstract class SceneNode {
   SceneNode({
     required this.id,
     required this.type,
+    this.instanceRevision = 1,
     this.hitPadding = 0,
     Transform2D? transform,
     double opacity = 1,
@@ -39,11 +40,19 @@ abstract class SceneNode {
     this.isDeletable = true,
     this.isTransformable = true,
   }) : transform = transform ?? Transform2D.identity {
+    if (instanceRevision < 1) {
+      throw ArgumentError.value(
+        instanceRevision,
+        'instanceRevision',
+        'must be >= 1',
+      );
+    }
     this.opacity = opacity;
   }
 
   final NodeId id;
   final NodeType type;
+  final int instanceRevision;
 
   /// Additional hit-test tolerance in scene units.
   /// (Serialized as part of JSON v2.)
@@ -214,6 +223,7 @@ class ImageNode extends SceneNode {
     required this.imageId,
     required this.size,
     this.naturalSize,
+    super.instanceRevision,
     super.hitPadding,
     super.transform,
     super.opacity,
@@ -298,6 +308,7 @@ class TextNode extends SceneNode {
     this.fontFamily,
     this.maxWidth,
     this.lineHeight,
+    super.instanceRevision,
     super.hitPadding,
     super.transform,
     super.opacity,
@@ -399,6 +410,7 @@ class StrokeNode extends SceneNode {
     int pointsRevision = 0,
     required this.thickness,
     required this.color,
+    super.instanceRevision,
     super.hitPadding,
     super.transform,
     super.opacity,
@@ -678,6 +690,7 @@ class LineNode extends SceneNode {
     required this.end,
     required this.thickness,
     required this.color,
+    super.instanceRevision,
     super.hitPadding,
     super.transform,
     super.opacity,
@@ -785,6 +798,7 @@ class RectNode extends SceneNode {
     this.fillColor,
     this.strokeColor,
     this.strokeWidth = 1,
+    super.instanceRevision,
     super.hitPadding,
     super.transform,
     super.opacity,
@@ -873,6 +887,7 @@ class PathNode extends SceneNode {
     this.strokeColor,
     this.strokeWidth = 1,
     PathFillRule fillRule = PathFillRule.nonZero,
+    super.instanceRevision,
     super.hitPadding,
     super.transform,
     super.opacity,

@@ -76,6 +76,7 @@ SceneNode txnCloneNode(SceneNode node) {
       final image = node as ImageNode;
       return ImageNode(
         id: image.id,
+        instanceRevision: image.instanceRevision,
         imageId: image.imageId,
         size: image.size,
         naturalSize: image.naturalSize,
@@ -92,6 +93,7 @@ SceneNode txnCloneNode(SceneNode node) {
       final text = node as TextNode;
       return TextNode(
         id: text.id,
+        instanceRevision: text.instanceRevision,
         text: text.text,
         size: text.size,
         fontSize: text.fontSize,
@@ -116,6 +118,7 @@ SceneNode txnCloneNode(SceneNode node) {
       final stroke = node as StrokeNode;
       return StrokeNode(
         id: stroke.id,
+        instanceRevision: stroke.instanceRevision,
         points: List<Offset>.from(stroke.points),
         pointsRevision: stroke.pointsRevision,
         thickness: stroke.thickness,
@@ -133,6 +136,7 @@ SceneNode txnCloneNode(SceneNode node) {
       final line = node as LineNode;
       return LineNode(
         id: line.id,
+        instanceRevision: line.instanceRevision,
         start: line.start,
         end: line.end,
         thickness: line.thickness,
@@ -150,6 +154,7 @@ SceneNode txnCloneNode(SceneNode node) {
       final rect = node as RectNode;
       return RectNode(
         id: rect.id,
+        instanceRevision: rect.instanceRevision,
         size: rect.size,
         fillColor: rect.fillColor,
         strokeColor: rect.strokeColor,
@@ -167,6 +172,7 @@ SceneNode txnCloneNode(SceneNode node) {
       final path = node as PathNode;
       return PathNode(
         id: path.id,
+        instanceRevision: path.instanceRevision,
         svgPathData: path.svgPathData,
         fillColor: path.fillColor,
         strokeColor: path.strokeColor,
@@ -220,4 +226,19 @@ int txnInitialNodeIdSeed(Scene scene) {
     }
   }
   return maxId + 1;
+}
+
+int txnInitialNodeInstanceRevisionSeed(Scene scene) {
+  var maxRevision = 0;
+  final nodes = <SceneNode>[
+    if (scene.backgroundLayer != null) ...scene.backgroundLayer!.nodes,
+    for (final layer in scene.layers) ...layer.nodes,
+  ];
+  for (final node in nodes) {
+    final revision = node.instanceRevision;
+    if (revision > maxRevision) {
+      maxRevision = revision;
+    }
+  }
+  return maxRevision + 1;
 }

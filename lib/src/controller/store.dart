@@ -10,7 +10,8 @@ class V2Store {
           : Set<NodeId>.from(selectedNodeIds),
       allNodeIds = txnCollectNodeIds(sceneDoc),
       nodeLocator = txnBuildNodeLocator(sceneDoc),
-      nodeIdSeed = txnInitialNodeIdSeed(sceneDoc);
+      nodeIdSeed = txnInitialNodeIdSeed(sceneDoc),
+      nextInstanceRevision = txnInitialNodeInstanceRevisionSeed(sceneDoc);
 
   Scene sceneDoc;
   Set<NodeId> selectedNodeIds;
@@ -24,4 +25,5 @@ class V2Store {
   int commitRevision = 0;
 
   int nodeIdSeed;
+  int nextInstanceRevision;
 }

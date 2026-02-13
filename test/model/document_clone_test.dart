@@ -151,6 +151,7 @@ void main() {
     expect(cloneNode, isNot(same(sourceNode)));
     expect(cloneNode.points, isNot(same(sourceNode.points)));
     expect(cloneNode.points, sourceNode.points);
+    expect(cloneNode.instanceRevision, sourceNode.instanceRevision);
     expect(cloneNode.pointsRevision, sourceNode.pointsRevision);
     expect(cloneNode.pointsRevision, greaterThan(0));
 
@@ -254,6 +255,25 @@ void main() {
 
       expect(txnInitialNodeIdSeed(scene), 11);
       expect(txnInitialNodeIdSeed(Scene()), 0);
+    },
+  );
+
+  test(
+    'txnInitialNodeInstanceRevisionSeed finds max instanceRevision and keeps min 1',
+    () {
+      final scene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            nodes: <SceneNode>[
+              RectNode(id: 'a', size: const Size(1, 1), instanceRevision: 3),
+              RectNode(id: 'b', size: const Size(1, 1), instanceRevision: 10),
+            ],
+          ),
+        ],
+      );
+
+      expect(txnInitialNodeInstanceRevisionSeed(scene), 11);
+      expect(txnInitialNodeInstanceRevisionSeed(Scene()), 1);
     },
   );
 }

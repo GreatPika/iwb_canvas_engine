@@ -60,6 +60,45 @@ void main() {
     expect(cache.debugBuildCount, 2);
   });
 
+  test(
+    'ScenePathMetricsCacheV2 treats same id with different instanceRevision as different entries',
+    () {
+      final cache = ScenePathMetricsCacheV2(maxEntries: 8);
+      const oldNode = PathNodeSnapshot(
+        id: 'reuse-id',
+        instanceRevision: 1,
+        svgPathData: 'M0 0 H10 V10 H0 Z',
+      );
+      const newNode = PathNodeSnapshot(
+        id: 'reuse-id',
+        instanceRevision: 2,
+        svgPathData: 'M0 0 H10',
+      );
+
+      final oldEntry = cache.getOrBuild(
+        node: oldNode,
+        localPath: Path()..addRect(const Rect.fromLTWH(0, 0, 10, 10)),
+      );
+      final newEntry = cache.getOrBuild(
+        node: newNode,
+        localPath: Path()
+          ..moveTo(0, 0)
+          ..lineTo(10, 0),
+      );
+      final newEntryHit = cache.getOrBuild(
+        node: newNode,
+        localPath: Path()
+          ..moveTo(0, 0)
+          ..lineTo(10, 0),
+      );
+
+      expect(identical(oldEntry, newEntry), isFalse);
+      expect(identical(newEntry, newEntryHit), isTrue);
+      expect(cache.debugBuildCount, 2);
+      expect(cache.debugHitCount, 1);
+    },
+  );
+
   test('ScenePathMetricsCacheV2 supports open-only and empty paths', () {
     final cache = ScenePathMetricsCacheV2(maxEntries: 8);
     const openNode = PathNodeSnapshot(id: 'open', svgPathData: 'M0 0 H10');

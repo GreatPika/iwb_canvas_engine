@@ -167,6 +167,7 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
       baseAllNodeIds: _store.allNodeIds,
       baseNodeLocator: _store.nodeLocator,
       nodeIdSeed: _store.nodeIdSeed,
+      nextInstanceRevision: _store.nextInstanceRevision,
     );
 
     late final T result;
@@ -271,6 +272,7 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
           allNodeIds: _store.allNodeIds,
           nodeLocator: _store.nodeLocator,
           nodeIdSeed: _store.nodeIdSeed,
+          nextInstanceRevision: _store.nextInstanceRevision,
           commitRevision: nextCommitRevision,
         );
         committedSignals = _signalsSlice.writeTakeCommitted(
@@ -314,12 +316,14 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
       structuralChanged: ctx.changeSet.structuralChanged,
     );
     final committedNodeIdSeed = ctx.nodeIdSeed;
+    final committedNextInstanceRevision = ctx.nextInstanceRevision;
     _debugAssertStoreInvariantsCandidate(
       scene: committedScene,
       selectedNodeIds: committedSelection,
       allNodeIds: committedNodeIds,
       nodeLocator: committedNodeLocator,
       nodeIdSeed: committedNodeIdSeed,
+      nextInstanceRevision: committedNextInstanceRevision,
       commitRevision: nextCommitRevision,
     );
 
@@ -344,6 +348,7 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
     _store.allNodeIds = committedNodeIds;
     _store.nodeLocator = committedNodeLocator;
     _store.nodeIdSeed = committedNodeIdSeed;
+    _store.nextInstanceRevision = committedNextInstanceRevision;
     _store.controllerEpoch = nextEpoch;
     _store.structuralRevision = nextStructuralRevision;
     _store.boundsRevision = nextBoundsRevision;
@@ -398,6 +403,7 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
     required Set<NodeId> allNodeIds,
     required Map<NodeId, NodeLocatorEntry> nodeLocator,
     required int nodeIdSeed,
+    required int nextInstanceRevision,
     required int commitRevision,
   }) {
     assert(() {
@@ -410,6 +416,7 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
       allNodeIds: allNodeIds,
       nodeLocator: nodeLocator,
       nodeIdSeed: nodeIdSeed,
+      nextInstanceRevision: nextInstanceRevision,
       commitRevision: commitRevision,
     );
   }

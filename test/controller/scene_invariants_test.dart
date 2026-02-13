@@ -7,6 +7,7 @@ import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/model/document.dart';
 
 // INV:INV-V2-ID-INDEX-FROM-SCENE
+// INV:INV-V2-INSTANCE-REVISION-MONOTONIC
 // INV:INV-V2-WRITE-NUMERIC-GUARDS
 // INV:INV-G-NODEID-UNIQUE
 
@@ -39,6 +40,7 @@ void main() {
         'node-1': (layerIndex: 0, nodeIndex: 0),
       },
       nodeIdSeed: 2,
+      nextInstanceRevision: 2,
       commitRevision: 1,
     );
 
@@ -57,6 +59,7 @@ void main() {
       allNodeIds: const <NodeId>{},
       nodeLocator: const <NodeId, NodeLocatorEntry>{},
       nodeIdSeed: 1,
+      nextInstanceRevision: 2,
       commitRevision: -1,
     );
 
@@ -93,6 +96,7 @@ void main() {
         'node-1': (layerIndex: 0, nodeIndex: 0),
       },
       nodeIdSeed: 2,
+      nextInstanceRevision: 2,
       commitRevision: 0,
     );
 
@@ -118,6 +122,7 @@ void main() {
         'dup': (layerIndex: 0, nodeIndex: 0),
       },
       nodeIdSeed: 1,
+      nextInstanceRevision: 2,
       commitRevision: 0,
     );
 
@@ -145,6 +150,7 @@ void main() {
         'dup-bg': (layerIndex: -1, nodeIndex: 0),
       },
       nodeIdSeed: 1,
+      nextInstanceRevision: 2,
       commitRevision: 0,
     );
 
@@ -174,6 +180,7 @@ void main() {
         'n1': (layerIndex: 0, nodeIndex: 0),
       },
       nodeIdSeed: 2,
+      nextInstanceRevision: 2,
       commitRevision: 0,
     );
 
@@ -199,12 +206,56 @@ void main() {
         'dup': (layerIndex: -1, nodeIndex: 0),
       },
       nodeIdSeed: 0,
+      nextInstanceRevision: 2,
       commitRevision: 0,
     );
 
     expect(
       violations.join('\n'),
       contains('scene must not contain duplicate node ids'),
+    );
+  });
+
+  test('detects nextInstanceRevision lower bound violation', () {
+    final scene = sceneFixture();
+    final violations = txnCollectStoreInvariantViolations(
+      scene: scene,
+      selectedNodeIds: const <NodeId>{'node-1'},
+      allNodeIds: const <NodeId>{'node-1'},
+      nodeLocator: const <NodeId, NodeLocatorEntry>{
+        'node-1': (layerIndex: 0, nodeIndex: 0),
+      },
+      nodeIdSeed: 2,
+      nextInstanceRevision: 1,
+      commitRevision: 0,
+    );
+
+    expect(violations.join('\n'), contains('nextInstanceRevision must be >='));
+  });
+
+  test('detects invalid node instanceRevision in committed scene', () {
+    final badNode = _BadInstanceRevisionNode(id: 'bad-rev')
+      ..forceInvalidInstanceRevision();
+    final scene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(nodes: <SceneNode>[badNode]),
+      ],
+    );
+    final violations = txnCollectStoreInvariantViolations(
+      scene: scene,
+      selectedNodeIds: const <NodeId>{},
+      allNodeIds: const <NodeId>{'bad-rev'},
+      nodeLocator: const <NodeId, NodeLocatorEntry>{
+        'bad-rev': (layerIndex: 0, nodeIndex: 0),
+      },
+      nodeIdSeed: 0,
+      nextInstanceRevision: 1,
+      commitRevision: 0,
+    );
+
+    expect(
+      violations.join('\n'),
+      contains('scene nodes must have instanceRevision >= 1'),
     );
   });
 
@@ -217,6 +268,7 @@ void main() {
         allNodeIds: const <NodeId>{},
         nodeLocator: const <NodeId, NodeLocatorEntry>{},
         nodeIdSeed: 0,
+        nextInstanceRevision: 2,
         commitRevision: 0,
       ),
       throwsStateError,
@@ -233,6 +285,7 @@ void main() {
         'node-1': (layerIndex: 0, nodeIndex: 7),
       },
       nodeIdSeed: 2,
+      nextInstanceRevision: 2,
       commitRevision: 0,
     );
     expect(
@@ -249,6 +302,7 @@ void main() {
       allNodeIds: const <NodeId>{'node-1'},
       nodeLocator: const <NodeId, NodeLocatorEntry>{},
       nodeIdSeed: 2,
+      nextInstanceRevision: 2,
       commitRevision: 0,
     );
     expect(
@@ -256,4 +310,20 @@ void main() {
       contains('allNodeIds must equal nodeLocator keys'),
     );
   });
+}
+
+class _BadInstanceRevisionNode extends SceneNode {
+  _BadInstanceRevisionNode({required super.id}) : super(type: NodeType.rect);
+
+  int _fakeInstanceRevision = 1;
+
+  @override
+  int get instanceRevision => _fakeInstanceRevision;
+
+  void forceInvalidInstanceRevision() {
+    _fakeInstanceRevision = 0;
+  }
+
+  @override
+  Rect get localBounds => Rect.zero;
 }

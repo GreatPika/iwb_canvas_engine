@@ -90,6 +90,20 @@ void sceneValidateNonNegativeInt(
   );
 }
 
+void sceneValidatePositiveInt(
+  int value, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+}) {
+  if (value > 0) return;
+  _sceneValidationFail(
+    onError: onError,
+    value: value,
+    field: field,
+    message: 'must be > 0.',
+  );
+}
+
 void sceneValidateFiniteOffset(
   Offset value, {
   required String field,
@@ -273,6 +287,11 @@ void sceneValidateNodeSnapshot(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
+  sceneValidateNonNegativeInt(
+    node.instanceRevision,
+    field: '$field.instanceRevision',
+    onError: onError,
+  );
   sceneValidateFiniteTransform2D(
     node.transform,
     field: '$field.transform',
@@ -395,6 +414,11 @@ void sceneValidateNode(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
+  sceneValidatePositiveInt(
+    node.instanceRevision,
+    field: '$field.instanceRevision',
+    onError: onError,
+  );
   sceneValidateFiniteTransform2D(
     node.transform,
     field: '$field.transform',

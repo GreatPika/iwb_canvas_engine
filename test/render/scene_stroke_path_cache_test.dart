@@ -73,6 +73,38 @@ void main() {
     expect(cache.debugHitCount, 2);
   });
 
+  test(
+    'v2 stroke cache treats same id with different instanceRevision as different entries',
+    () {
+      final cache = SceneStrokePathCacheV2(maxEntries: 8);
+      final oldNode = StrokeNodeSnapshot(
+        id: 'reuse-id',
+        instanceRevision: 1,
+        points: const <Offset>[Offset(0, 0), Offset(10, 0)],
+        pointsRevision: 1,
+        thickness: 2,
+        color: const Color(0xFF000000),
+      );
+      final newNode = StrokeNodeSnapshot(
+        id: 'reuse-id',
+        instanceRevision: 2,
+        points: const <Offset>[Offset(0, 0), Offset(0, 10)],
+        pointsRevision: 1,
+        thickness: 2,
+        color: const Color(0xFF000000),
+      );
+
+      final oldPath = cache.getOrBuild(oldNode);
+      final newPath = cache.getOrBuild(newNode);
+      final newPathHit = cache.getOrBuild(newNode);
+
+      expect(identical(oldPath, newPath), isFalse);
+      expect(identical(newPath, newPathHit), isTrue);
+      expect(cache.debugBuildCount, 2);
+      expect(cache.debugHitCount, 1);
+    },
+  );
+
   test('v2 stroke cache evicts least-recent entry (LRU)', () {
     final cache = SceneStrokePathCacheV2(maxEntries: 2);
     final a = StrokeNodeSnapshot(

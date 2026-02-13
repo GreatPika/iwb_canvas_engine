@@ -157,6 +157,7 @@ Map<String, dynamic> _encodeContentLayer(ContentLayer layer) {
 Map<String, dynamic> _encodeNode(SceneNode node) {
   final base = <String, dynamic>{
     'id': node.id,
+    'instanceRevision': node.instanceRevision,
     'type': _nodeTypeToString(node.type),
     'transform': _encodeTransform2D(node.transform),
     'hitPadding': node.hitPadding,

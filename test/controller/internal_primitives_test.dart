@@ -23,6 +23,7 @@ class _LayerDropTxnContext extends TxnContext {
     required super.workingSelection,
     required super.baseAllNodeIds,
     required super.nodeIdSeed,
+    required super.nextInstanceRevision,
   });
 
   bool _dropped = false;
@@ -44,6 +45,7 @@ class _BackgroundDropTxnContext extends TxnContext {
     required super.workingSelection,
     required super.baseAllNodeIds,
     required super.nodeIdSeed,
+    required super.nextInstanceRevision,
   });
 
   ({SceneNode node, int layerIndex, int nodeIndex})? _cachedFound;
@@ -126,6 +128,7 @@ void main() {
       workingSelection: <NodeId>{},
       baseAllNodeIds: <NodeId>{'keep'},
       nodeIdSeed: 0,
+      nextInstanceRevision: 1,
     );
 
     ctx.txnRememberNodeId('added');
@@ -169,6 +172,29 @@ void main() {
       },
     );
     expect(ctx.nodeIdSeed, 8);
+    expect(ctx.nextInstanceRevision, 2);
+  });
+
+  test('TxnContext keeps nextInstanceRevision monotonic on adopt', () {
+    final ctx = TxnContext(
+      baseScene: Scene(),
+      workingSelection: <NodeId>{},
+      baseAllNodeIds: <NodeId>{},
+      nodeIdSeed: 0,
+      nextInstanceRevision: 50,
+    );
+
+    ctx.txnAdoptScene(
+      Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            nodes: <SceneNode>[RectNode(id: 'a', size: const Size(1, 1))],
+          ),
+        ],
+      ),
+    );
+
+    expect(ctx.nextInstanceRevision, 50);
   });
 
   test(
@@ -179,6 +205,7 @@ void main() {
         workingSelection: <NodeId>{},
         baseAllNodeIds: <NodeId>{'keep'},
         nodeIdSeed: 0,
+        nextInstanceRevision: 1,
       );
 
       ctx.txnForgetNodeId('keep');
@@ -211,6 +238,7 @@ void main() {
         workingSelection: <NodeId>{},
         baseAllNodeIds: <NodeId>{'r1'},
         nodeIdSeed: 0,
+        nextInstanceRevision: 1,
       );
 
       expect(ctx.debugNodeLocatorMaterializations, 0);
@@ -227,6 +255,7 @@ void main() {
       workingSelection: inputSelection,
       baseAllNodeIds: <NodeId>{},
       nodeIdSeed: 0,
+      nextInstanceRevision: 1,
     );
 
     expect(ctx.workingSelection, isA<HashSet<NodeId>>());
@@ -282,6 +311,7 @@ void main() {
         workingSelection: <NodeId>{},
         baseAllNodeIds: <NodeId>{},
         nodeIdSeed: 0,
+        nextInstanceRevision: 1,
       );
       final changeSet = ChangeSet();
       final addedRef = changeSet.addedNodeIds;
@@ -355,10 +385,12 @@ void main() {
       'custom': (layerIndex: 0, nodeIndex: 2),
     });
     expect(storeWithSelection.nodeIdSeed, 10);
+    expect(storeWithSelection.nextInstanceRevision, 2);
 
     final storeWithoutSelection = V2Store(sceneDoc: Scene());
     expect(storeWithoutSelection.selectedNodeIds, isEmpty);
     expect(storeWithoutSelection.nodeIdSeed, 0);
+    expect(storeWithoutSelection.nextInstanceRevision, 1);
   });
 
   test('TxnContext scene-for-commit uses base scene until first mutation', () {
@@ -374,6 +406,7 @@ void main() {
       workingSelection: <NodeId>{},
       baseAllNodeIds: <NodeId>{'r1'},
       nodeIdSeed: 0,
+      nextInstanceRevision: 1,
     );
 
     expect(identical(ctx.txnSceneForCommit(), baseScene), isTrue);
@@ -397,6 +430,7 @@ void main() {
       workingSelection: <NodeId>{},
       baseAllNodeIds: <NodeId>{'r1'},
       nodeIdSeed: 0,
+      nextInstanceRevision: 1,
     );
 
     final mutable = ctx.txnEnsureMutableScene();
@@ -434,6 +468,7 @@ void main() {
         workingSelection: <NodeId>{},
         baseAllNodeIds: <NodeId>{'r1', 'r2'},
         nodeIdSeed: 0,
+        nextInstanceRevision: 1,
       );
 
       final first = ctx.txnResolveMutableNode('r1');
@@ -468,6 +503,7 @@ void main() {
       workingSelection: <NodeId>{},
       baseAllNodeIds: <NodeId>{},
       nodeIdSeed: 0,
+      nextInstanceRevision: 1,
     );
 
     ctx.txnAdoptScene(adopted);
@@ -488,6 +524,7 @@ void main() {
         workingSelection: <NodeId>{},
         baseAllNodeIds: <NodeId>{},
         nodeIdSeed: 0,
+        nextInstanceRevision: 1,
       );
 
       expect(() => ctx.txnEnsureMutableLayer(5), throwsRangeError);
@@ -509,6 +546,7 @@ void main() {
         workingSelection: <NodeId>{},
         baseAllNodeIds: <NodeId>{},
         nodeIdSeed: 0,
+        nextInstanceRevision: 1,
       );
 
       ctx.txnAdoptScene(adopted);
@@ -524,6 +562,7 @@ void main() {
       workingSelection: <NodeId>{},
       baseAllNodeIds: <NodeId>{},
       nodeIdSeed: 0,
+      nextInstanceRevision: 1,
     );
 
     expect(() => ctx.txnResolveMutableNode('missing'), throwsStateError);
@@ -543,6 +582,7 @@ void main() {
         workingSelection: <NodeId>{},
         baseAllNodeIds: <NodeId>{'n1'},
         nodeIdSeed: 0,
+        nextInstanceRevision: 1,
       );
 
       expect(() => ctx.txnResolveMutableNode('n1'), throwsStateError);
@@ -562,6 +602,7 @@ void main() {
       workingSelection: <NodeId>{},
       baseAllNodeIds: <NodeId>{'bg'},
       nodeIdSeed: 0,
+      nextInstanceRevision: 1,
     );
 
     final firstMutable = ctx.txnEnsureMutableBackgroundLayer();
@@ -592,6 +633,7 @@ void main() {
         workingSelection: <NodeId>{},
         baseAllNodeIds: <NodeId>{'bg'},
         nodeIdSeed: 0,
+        nextInstanceRevision: 1,
       );
 
       final scene = ctx.txnEnsureMutableScene();
@@ -619,6 +661,7 @@ void main() {
         workingSelection: <NodeId>{},
         baseAllNodeIds: <NodeId>{'bg'},
         nodeIdSeed: 0,
+        nextInstanceRevision: 1,
       );
 
       expect(
@@ -648,6 +691,7 @@ void main() {
       workingSelection: <NodeId>{'r1'},
       baseAllNodeIds: <NodeId>{'r1'},
       nodeIdSeed: 0,
+      nextInstanceRevision: 1,
     );
     final writer = SceneWriter(ctx, txnSignalSink: bufferedSignals.add);
 
@@ -739,6 +783,7 @@ void main() {
         workingSelection: <NodeId>{'r1', 'r2'},
         baseAllNodeIds: <NodeId>{'r1', 'r2', 'r3'},
         nodeIdSeed: 0,
+        nextInstanceRevision: 1,
       );
       final writer = SceneWriter(ctx, txnSignalSink: (_) {});
       final selectionRef = ctx.workingSelection;
@@ -772,6 +817,7 @@ void main() {
         workingSelection: <NodeId>{},
         baseAllNodeIds: <NodeId>{for (var i = 0; i < 1000; i++) 'n$i'},
         nodeIdSeed: 1000,
+        nextInstanceRevision: 1,
       );
       final writer = SceneWriter(ctx, txnSignalSink: (_) {});
       final selectionRef = ctx.workingSelection;
@@ -824,6 +870,7 @@ void main() {
       workingSelection: <NodeId>{'rect-1'},
       baseAllNodeIds: <NodeId>{'rect-1', 'locked'},
       nodeIdSeed: 2,
+      nextInstanceRevision: 1,
     );
     final bufferedSignals = <V2BufferedSignal>[];
     final writer = SceneWriter(ctx, txnSignalSink: bufferedSignals.add);
@@ -877,6 +924,7 @@ void main() {
       workingSelection: <NodeId>{'locked', 'free'},
       baseAllNodeIds: <NodeId>{'locked', 'free'},
       nodeIdSeed: 0,
+      nextInstanceRevision: 1,
     );
     final writer = SceneWriter(ctx, txnSignalSink: (_) {});
 
@@ -891,6 +939,7 @@ void main() {
       workingSelection: <NodeId>{},
       baseAllNodeIds: <NodeId>{},
       nodeIdSeed: 0,
+      nextInstanceRevision: 1,
     );
     final writer = SceneWriter(ctx, txnSignalSink: (_) {});
 
@@ -919,6 +968,7 @@ void main() {
       workingSelection: <NodeId>{'r1'},
       baseAllNodeIds: <NodeId>{'r1'},
       nodeIdSeed: 0,
+      nextInstanceRevision: 1,
     );
     final writer = SceneWriter(ctx, txnSignalSink: (_) {});
 
@@ -961,6 +1011,7 @@ void main() {
       workingSelection: <NodeId>{},
       baseAllNodeIds: <NodeId>{'line-static'},
       nodeIdSeed: 0,
+      nextInstanceRevision: 1,
     );
     final writer = SceneWriter(ctx, txnSignalSink: (_) {});
 
@@ -994,6 +1045,7 @@ void main() {
       workingSelection: <NodeId>{'keep', 'del'},
       baseAllNodeIds: <NodeId>{'keep', 'del'},
       nodeIdSeed: 0,
+      nextInstanceRevision: 1,
     );
     final writer = SceneWriter(ctx, txnSignalSink: (_) {});
 
@@ -1027,6 +1079,7 @@ void main() {
         workingSelection: <NodeId>{},
         baseAllNodeIds: <NodeId>{},
         nodeIdSeed: 0,
+        nextInstanceRevision: 1,
       );
       final writer = SceneWriter(ctx, txnSignalSink: (_) {});
 

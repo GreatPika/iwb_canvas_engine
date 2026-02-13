@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/core/transform2d.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/public/node_spec.dart';
 import 'package:iwb_canvas_engine/src/public/scene_data_exception.dart';
 import 'package:iwb_canvas_engine/src/public/scene_render_state.dart';
 import 'package:iwb_canvas_engine/src/public/snapshot.dart';
@@ -791,6 +792,106 @@ void main() {
     expect(pathCache.debugBuildCount, 1);
     expect(pathCache.debugHitCount, greaterThanOrEqualTo(1));
   });
+
+  test(
+    'ScenePainterV2 stroke cache rebuilds when node id is reused across commits',
+    () async {
+      final strokeCache = SceneStrokePathCacheV2(maxEntries: 8);
+      final controller = SceneControllerV2(
+        initialSnapshot: SceneSnapshot(
+          background: const BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              nodes: <NodeSnapshot>[
+                StrokeNodeSnapshot(
+                  id: 'A',
+                  points: const <Offset>[Offset(0, 0), Offset(20, 0)],
+                  thickness: 4,
+                  color: const Color(0xFF000000),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      final painter = ScenePainterV2(
+        controller: controller,
+        imageResolver: (_) => null,
+        strokePathCache: strokeCache,
+      );
+
+      await _paintToImage(painter, width: 80, height: 80);
+      expect(strokeCache.debugBuildCount, 1);
+
+      controller.write<void>((writer) {
+        writer.writeNodeErase('A');
+      });
+      controller.write<void>((writer) {
+        writer.writeNodeInsert(
+          StrokeNodeSpec(
+            id: 'A',
+            points: const <Offset>[Offset(0, 0), Offset(0, 20)],
+            thickness: 4,
+            color: const Color(0xFF000000),
+          ),
+        );
+      });
+
+      await _paintToImage(painter, width: 80, height: 80);
+      expect(strokeCache.debugBuildCount, 2);
+    },
+  );
+
+  test(
+    'ScenePainterV2 stroke cache rebuilds when erase+insert same id happens in one write',
+    () async {
+      final strokeCache = SceneStrokePathCacheV2(maxEntries: 8);
+      final controller = SceneControllerV2(
+        initialSnapshot: SceneSnapshot(
+          background: const BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              nodes: <NodeSnapshot>[
+                StrokeNodeSnapshot(
+                  id: 'A',
+                  points: const <Offset>[Offset(0, 0), Offset(20, 0)],
+                  thickness: 4,
+                  color: const Color(0xFF000000),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      final painter = ScenePainterV2(
+        controller: controller,
+        imageResolver: (_) => null,
+        strokePathCache: strokeCache,
+      );
+
+      await _paintToImage(painter, width: 80, height: 80);
+      expect(strokeCache.debugBuildCount, 1);
+
+      controller.write<void>((writer) {
+        expect(writer.writeNodeErase('A'), isTrue);
+        writer.writeNodeInsert(
+          StrokeNodeSpec(
+            id: 'A',
+            points: const <Offset>[Offset(0, 0), Offset(0, 20)],
+            thickness: 4,
+            color: const Color(0xFF000000),
+          ),
+        );
+      });
+
+      await _paintToImage(painter, width: 80, height: 80);
+      expect(strokeCache.debugBuildCount, 2);
+    },
+  );
 
   test(
     'ScenePainterV2 reuses path geometry across cull, draw and selection in one frame',

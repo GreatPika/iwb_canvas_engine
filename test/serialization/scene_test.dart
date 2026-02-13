@@ -51,6 +51,28 @@ void main() {
     );
   });
 
+  test(
+    'decodeScene accepts JSON without instanceRevision and re-encodes with it',
+    () {
+      final encoded = encodeScene(_buildScene());
+      final layers = encoded['layers'] as List<dynamic>;
+      final layer = layers[1] as Map<String, dynamic>;
+      final nodes = layer['nodes'] as List<dynamic>;
+      final firstNode = nodes.first as Map<String, dynamic>;
+      firstNode.remove('instanceRevision');
+
+      final decoded = decodeScene(encoded);
+      final reEncoded = encodeScene(decoded);
+      final reEncodedLayers = reEncoded['layers'] as List<dynamic>;
+      final reEncodedLayer = reEncodedLayers[1] as Map<String, dynamic>;
+      final reEncodedNodes = reEncodedLayer['nodes'] as List<dynamic>;
+      final reEncodedFirstNode = reEncodedNodes.first as Map<String, dynamic>;
+
+      expect(reEncodedFirstNode['instanceRevision'], isA<int>());
+      expect(reEncodedFirstNode['instanceRevision'], greaterThanOrEqualTo(1));
+    },
+  );
+
   test('decodeScene recomputes derived text size from content', () {
     final encoded = encodeScene(_buildScene());
     final textNode =

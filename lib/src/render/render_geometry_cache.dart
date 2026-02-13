@@ -22,8 +22,8 @@ class GeometryEntry {
 }
 
 class RenderGeometryCache {
-  final Map<NodeId, _GeometryCacheRecord> _entries =
-      <NodeId, _GeometryCacheRecord>{};
+  final Map<_NodeInstanceKey, _GeometryCacheRecord> _entries =
+      <_NodeInstanceKey, _GeometryCacheRecord>{};
 
   int _debugBuildCount = 0;
   int _debugHitCount = 0;
@@ -37,14 +37,18 @@ class RenderGeometryCache {
 
   GeometryEntry get(NodeSnapshot node) {
     final key = _buildValidityKey(node);
-    final cached = _entries[node.id];
+    final entryKey = _NodeInstanceKey(
+      nodeId: node.id,
+      instanceRevision: node.instanceRevision,
+    );
+    final cached = _entries[entryKey];
     if (cached != null && cached.key == key) {
       _debugHitCount += 1;
       return cached.entry;
     }
 
     final entry = _buildEntry(node);
-    _entries[node.id] = _GeometryCacheRecord(key: key, entry: entry);
+    _entries[entryKey] = _GeometryCacheRecord(key: key, entry: entry);
     _debugBuildCount += 1;
     return entry;
   }
@@ -178,6 +182,26 @@ class _GeometryCacheRecord {
 
   final Object key;
   final GeometryEntry entry;
+}
+
+class _NodeInstanceKey {
+  const _NodeInstanceKey({
+    required this.nodeId,
+    required this.instanceRevision,
+  });
+
+  final NodeId nodeId;
+  final int instanceRevision;
+
+  @override
+  bool operator ==(Object other) {
+    return other is _NodeInstanceKey &&
+        other.nodeId == nodeId &&
+        other.instanceRevision == instanceRevision;
+  }
+
+  @override
+  int get hashCode => Object.hash(nodeId, instanceRevision);
 }
 
 Object _buildValidityKey(NodeSnapshot node) {

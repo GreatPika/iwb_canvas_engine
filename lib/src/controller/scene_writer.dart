@@ -34,7 +34,11 @@ class SceneWriter implements SceneWriteTxn {
       throw StateError('Node id must be unique: $resolvedId');
     }
 
-    final node = txnNodeFromSpec(spec, fallbackId: resolvedId);
+    final node = txnNodeFromSpec(
+      spec,
+      fallbackId: resolvedId,
+      nextInstanceRevision: _ctx.txnNextInstanceRevision,
+    );
     final scene = _ctx.txnEnsureMutableScene();
     final targetLayerIndex = txnResolveInsertLayerIndex(
       scene: scene,
@@ -365,7 +369,10 @@ class SceneWriter implements SceneWriteTxn {
   @override
   void writeDocumentReplace(SceneSnapshot snapshot) {
     final hadSelection = _ctx.workingSelection.isNotEmpty;
-    final nextScene = txnSceneFromSnapshot(snapshot);
+    final nextScene = txnSceneFromSnapshot(
+      snapshot,
+      nextInstanceRevision: _ctx.txnNextInstanceRevision,
+    );
     _ctx.txnAdoptScene(nextScene);
     _ctx.workingSelection.clear();
     _ctx.changeSet.txnMarkDocumentReplaced();
