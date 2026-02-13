@@ -585,39 +585,28 @@ class ScenePainterV2 extends CustomPainter {
     }
     switch (node) {
       case ImageNodeSnapshot image:
-        _drawBoxSelection(
+        _drawWorldBoundsSelection(
           canvas,
-          image.transform,
+          image,
           cameraOffset,
-          image.size,
           color,
           haloWidth,
-          baseStrokeWidth: 0,
-          clearFill: true,
         );
       case TextNodeSnapshot text:
-        _drawBoxSelection(
+        _drawWorldBoundsSelection(
           canvas,
-          text.transform,
+          text,
           cameraOffset,
-          text.size,
           color,
           haloWidth,
-          baseStrokeWidth: 0,
-          clearFill: true,
         );
       case RectNodeSnapshot rect:
-        final safeStrokeWidth = clampNonNegativeFinite(rect.strokeWidth);
-        final hasStroke = rect.strokeColor != null && safeStrokeWidth > 0;
-        _drawBoxSelection(
+        _drawWorldBoundsSelection(
           canvas,
-          rect.transform,
+          rect,
           cameraOffset,
-          rect.size,
           color,
           haloWidth,
-          baseStrokeWidth: hasStroke ? safeStrokeWidth : 0,
-          clearFill: true,
         );
       case LineNodeSnapshot line:
         if (!line.transform.isFinite ||
@@ -778,30 +767,25 @@ class ScenePainterV2 extends CustomPainter {
     );
   }
 
-  void _drawBoxSelection(
+  void _drawWorldBoundsSelection(
     Canvas canvas,
-    Transform2D nodeTransform,
+    NodeSnapshot node,
     Offset cameraOffset,
-    Size size,
     Color color,
-    double haloWidth, {
-    required double baseStrokeWidth,
-    required bool clearFill,
-  }) {
-    if (!nodeTransform.isFinite) {
+    double haloWidth,
+  ) {
+    final worldBounds = _nodeBoundsWorld(node, previewDelta: Offset.zero);
+    if (!_isFiniteRect(worldBounds)) {
       return;
     }
-    canvas.save();
-    canvas.transform(_toViewTransform(nodeTransform, cameraOffset));
+    final viewRect = worldBounds.shift(-cameraOffset);
     _drawRectHalo(
       canvas,
-      _centerRect(size),
+      viewRect,
       color,
-      clampNonNegativeFinite(haloWidth),
-      baseStrokeWidth: clampNonNegativeFinite(baseStrokeWidth),
-      clearFill: clearFill,
+      haloWidth,
+      clearFill: true,
     );
-    canvas.restore();
   }
 
   Paint _haloPaint(
@@ -847,30 +831,20 @@ class ScenePainterV2 extends CustomPainter {
     Rect rect,
     Color color,
     double haloWidth, {
-    required double baseStrokeWidth,
     required bool clearFill,
   }) {
     canvas.saveLayer(null, Paint());
     final safeHaloWidth = clampNonNegativeFinite(haloWidth);
-    final safeBaseStrokeWidth = clampNonNegativeFinite(baseStrokeWidth);
     canvas.drawRect(
       rect,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = clampNonNegativeFinite(
-          safeBaseStrokeWidth + safeHaloWidth * 2,
-        )
+        ..strokeWidth = clampNonNegativeFinite(safeHaloWidth * 2)
         ..color = color,
     );
     final clearPaint = Paint()..blendMode = BlendMode.clear;
     if (clearFill) {
       clearPaint.style = PaintingStyle.fill;
-      canvas.drawRect(rect, clearPaint);
-    }
-    if (safeBaseStrokeWidth > 0) {
-      clearPaint
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = safeBaseStrokeWidth;
       canvas.drawRect(rect, clearPaint);
     }
     canvas.restore();

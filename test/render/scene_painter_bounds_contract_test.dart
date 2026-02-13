@@ -82,4 +82,23 @@ void main() {
     expect(body, isNot(contains('buildLocalPath')));
     expect(body, isNot(contains('_buildPathNode')));
   });
+
+  test(
+    '_drawSelectionForNode uses worldBounds-based selection for box nodes',
+    () {
+      final source = File(
+        'lib/src/render/scene_painter.dart',
+      ).readAsStringSync();
+      final body = _extractMethodBody(
+        source: source,
+        methodStart: 'void _drawSelectionForNode(',
+      );
+
+      expect(body, contains('case ImageNodeSnapshot image:'));
+      expect(body, contains('case TextNodeSnapshot text:'));
+      expect(body, contains('case RectNodeSnapshot rect:'));
+      expect(body, contains('_drawWorldBoundsSelection('));
+      expect(body, isNot(contains('_drawBoxSelection(')));
+    },
+  );
 }

@@ -7,6 +7,7 @@ import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
 import 'package:iwb_canvas_engine/src/public/scene_data_exception.dart';
 import 'package:iwb_canvas_engine/src/public/scene_render_state.dart';
 import 'package:iwb_canvas_engine/src/public/snapshot.dart';
+import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 
 class _FakeRenderState extends ChangeNotifier implements SceneRenderState {
@@ -146,6 +147,16 @@ Future<Rect> _inkBounds(Image image, Color background) async {
     minY.toDouble(),
     (maxX + 1).toDouble(),
     (maxY + 1).toDouble(),
+  );
+}
+
+void _expectRectNear(Rect actual, Rect expected, {double tolerance = 2.0}) {
+  expect((actual.left - expected.left).abs(), lessThanOrEqualTo(tolerance));
+  expect((actual.top - expected.top).abs(), lessThanOrEqualTo(tolerance));
+  expect((actual.right - expected.right).abs(), lessThanOrEqualTo(tolerance));
+  expect(
+    (actual.bottom - expected.bottom).abs(),
+    lessThanOrEqualTo(tolerance),
   );
 }
 
@@ -516,6 +527,71 @@ void main() {
       );
       final bounds = await _inkBounds(image, background);
       expect(bounds.left, lessThanOrEqualTo(1.5));
+    },
+  );
+
+  test(
+    'ScenePainterV2 draws rect selection frame from worldBounds and keeps preview parity',
+    () async {
+      const background = Color(0xFFFFFFFF);
+      const node = RectNodeSnapshot(
+        id: 'rect-world-selection',
+        size: Size(20, 12),
+        transform: Transform2D(
+          a: 0.7071067811865476,
+          b: 0.7071067811865476,
+          c: -0.7071067811865476,
+          d: 0.7071067811865476,
+          tx: 40,
+          ty: 30,
+        ),
+      );
+      const selectionStrokeWidth = 3.0;
+      final expectedFrame = RenderGeometryCache()
+          .get(node)
+          .worldBounds
+          .inflate(selectionStrokeWidth);
+
+      final controller = SceneControllerV2(
+        initialSnapshot: SceneSnapshot(
+          background: const BackgroundSnapshot(color: background),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(nodes: const <NodeSnapshot>[node]),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+      controller.write((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'rect-world-selection'});
+      });
+
+      final baselineImage = await _paintToImage(
+        ScenePainterV2(
+          controller: controller,
+          imageResolver: (_) => null,
+          selectionStrokeWidth: selectionStrokeWidth,
+          selectionColor: const Color(0xFFFF0000),
+        ),
+        width: 80,
+        height: 80,
+      );
+      final baselineBounds = await _inkBounds(baselineImage, background);
+      _expectRectNear(baselineBounds, expectedFrame);
+
+      const previewDelta = Offset(7, -5);
+      final previewImage = await _paintToImage(
+        ScenePainterV2(
+          controller: controller,
+          imageResolver: (_) => null,
+          selectionStrokeWidth: selectionStrokeWidth,
+          selectionColor: const Color(0xFFFF0000),
+          nodePreviewOffsetResolver: (_) => previewDelta,
+        ),
+        width: 80,
+        height: 80,
+      );
+      final previewBounds = await _inkBounds(previewImage, background);
+      _expectRectNear(previewBounds, expectedFrame.shift(previewDelta));
     },
   );
 
