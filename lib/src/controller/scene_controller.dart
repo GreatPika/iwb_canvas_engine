@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:ui' hide Scene;
 
 import 'package:flutter/foundation.dart';
@@ -164,7 +165,7 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
     _writeInProgress = true;
     final ctx = TxnContext(
       baseScene: _store.sceneDoc,
-      workingSelection: Set<NodeId>.from(_store.selectedNodeIds),
+      workingSelection: HashSet<NodeId>.of(_store.selectedNodeIds),
       baseAllNodeIds: _store.allNodeIds,
       baseNodeLocator: _store.nodeLocator,
       nodeIdSeed: _store.nodeIdSeed,
@@ -230,7 +231,11 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
       if (selectionResult.normalizedChanged) {
         ctx.changeSet.txnMarkSelectionChanged();
       }
-      ctx.workingSelection = selectionResult.normalized;
+      if (!identical(selectionResult.normalized, ctx.workingSelection)) {
+        ctx.workingSelection
+          ..clear()
+          ..addAll(selectionResult.normalized);
+      }
     }
 
     final shouldNormalizeGrid =
@@ -301,7 +306,7 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
 
     final nextCommitRevision = _store.commitRevision + 1;
     final committedScene = ctx.txnSceneForCommit();
-    final committedSelection = Set<NodeId>.from(ctx.workingSelection);
+    final committedSelection = HashSet<NodeId>.of(ctx.workingSelection);
     final committedNodeIds = ctx.txnAllNodeIdsForCommit(
       structuralChanged: ctx.changeSet.structuralChanged,
     );

@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:ui';
 
 import '../core/background_layer_invariants.dart';
@@ -72,11 +73,7 @@ class SceneWriter implements SceneWriteTxn {
       return false;
     }
 
-    final hadSelection = _ctx.workingSelection.contains(nodeId);
-    _ctx.workingSelection = <NodeId>{
-      for (final id in _ctx.workingSelection)
-        if (id != nodeId) id,
-    };
+    final hadSelection = _ctx.workingSelection.remove(nodeId);
     _ctx.txnForgetNodeId(nodeId);
     _ctx.changeSet.txnMarkStructuralChanged();
     _ctx.changeSet.txnTrackRemoved(nodeId);
@@ -138,27 +135,23 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   void writeSelectionReplace(Iterable<NodeId> ids) {
-    final next = <NodeId>{for (final id in ids) id};
+    final next = HashSet<NodeId>.of(ids);
     if (_txnSetsEqual(_ctx.workingSelection, next)) {
       return;
     }
-    _ctx.workingSelection = next;
+    _ctx.workingSelection
+      ..clear()
+      ..addAll(next);
     _ctx.changeSet.txnMarkSelectionChanged();
   }
 
   @override
   void writeSelectionToggle(NodeId id) {
-    final contains = _ctx.workingSelection.contains(id);
-    final next = contains
-        ? <NodeId>{
-            for (final candidate in _ctx.workingSelection)
-              if (candidate != id) candidate,
-          }
-        : <NodeId>{..._ctx.workingSelection, id};
-    if (_txnSetsEqual(_ctx.workingSelection, next)) {
-      return;
+    if (_ctx.workingSelection.contains(id)) {
+      _ctx.workingSelection.remove(id);
+    } else {
+      _ctx.workingSelection.add(id);
     }
-    _ctx.workingSelection = next;
     _ctx.changeSet.txnMarkSelectionChanged();
   }
 
@@ -167,27 +160,31 @@ class SceneWriter implements SceneWriteTxn {
     if (_ctx.workingSelection.isEmpty) {
       return false;
     }
-    _ctx.workingSelection = <NodeId>{};
+    _ctx.workingSelection.clear();
     _ctx.changeSet.txnMarkSelectionChanged();
     return true;
   }
 
   @override
   int writeSelectionSelectAll({bool onlySelectable = true}) {
-    final ids = <NodeId>{
-      for (final layer in _ctx.workingScene.layers)
-        for (final node in layer.nodes)
-          if (isNodeInteractiveForSelection(
-            node,
-            layer,
-            onlySelectable: onlySelectable,
-          ))
-            node.id,
-    };
+    final ids = HashSet<NodeId>();
+    for (final layer in _ctx.workingScene.layers) {
+      for (final node in layer.nodes) {
+        if (isNodeInteractiveForSelection(
+          node,
+          layer,
+          onlySelectable: onlySelectable,
+        )) {
+          ids.add(node.id);
+        }
+      }
+    }
     if (_txnSetsEqual(_ctx.workingSelection, ids)) {
       return 0;
     }
-    _ctx.workingSelection = ids;
+    _ctx.workingSelection
+      ..clear()
+      ..addAll(ids);
     _ctx.changeSet.txnMarkSelectionChanged();
     return ids.length;
   }
@@ -291,10 +288,7 @@ class SceneWriter implements SceneWriteTxn {
     for (final id in deleted) {
       _ctx.changeSet.txnTrackRemoved(id);
     }
-    _ctx.workingSelection = <NodeId>{
-      for (final id in _ctx.workingSelection)
-        if (!deleted.contains(id)) id,
-    };
+    _ctx.workingSelection.removeAll(deleted);
     _ctx.changeSet.txnMarkSelectionChanged();
     return deleted.length;
   }
@@ -332,7 +326,7 @@ class SceneWriter implements SceneWriteTxn {
       _ctx.changeSet.txnTrackRemoved(id);
     }
     if (_ctx.workingSelection.isNotEmpty) {
-      _ctx.workingSelection = <NodeId>{};
+      _ctx.workingSelection.clear();
       _ctx.changeSet.txnMarkSelectionChanged();
     }
     return clearedIds;
@@ -380,12 +374,12 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   void writeDocumentReplace(SceneSnapshot snapshot) {
-    final previousSelection = _ctx.workingSelection;
+    final hadSelection = _ctx.workingSelection.isNotEmpty;
     final nextScene = txnSceneFromSnapshot(snapshot);
     _ctx.txnAdoptScene(nextScene);
-    _ctx.workingSelection = <NodeId>{};
+    _ctx.workingSelection.clear();
     _ctx.changeSet.txnMarkDocumentReplaced();
-    if (previousSelection.isNotEmpty) {
+    if (hadSelection) {
       _ctx.changeSet.txnMarkSelectionChanged();
     }
   }

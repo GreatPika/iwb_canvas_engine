@@ -1296,6 +1296,60 @@ void main() {
     );
   });
 
+  test(
+    'controller commit handles 1000 mixed selection operations and stays correct',
+    () {
+      final controller = SceneControllerV2(
+        initialSnapshot: SceneSnapshot(
+          layers: <LayerSnapshot>[
+            LayerSnapshot(
+              nodes: <NodeSnapshot>[
+                for (var i = 0; i < 1000; i++)
+                  RectNodeSnapshot(id: 'n$i', size: const Size(10, 10)),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      final expectedSelection = <NodeId>{};
+      controller.write<void>((writer) {
+        for (var i = 0; i < 1000; i++) {
+          final id = 'n$i';
+          switch (i % 3) {
+            case 0:
+              writer.writeSelectionToggle(id);
+              if (!expectedSelection.remove(id)) {
+                expectedSelection.add(id);
+              }
+              break;
+            case 1:
+              writer.writeSelectionReplace(<NodeId>{id});
+              expectedSelection
+                ..clear()
+                ..add(id);
+              break;
+            case 2:
+              expect(writer.writeNodeErase(id), isTrue);
+              expectedSelection.remove(id);
+              break;
+          }
+        }
+      });
+
+      final remainingNodeIds = <NodeId>{
+        for (final layer in controller.snapshot.layers)
+          for (final node in layer.nodes) node.id,
+      };
+      expect(controller.selectedNodeIds, expectedSelection);
+      expect(remainingNodeIds.containsAll(controller.selectedNodeIds), isTrue);
+      expect(controller.debugLastChangeSet.selectionChanged, isTrue);
+      expect(controller.debugLastChangeSet.structuralChanged, isTrue);
+      expect(controller.debugCommitRevision, 1);
+    },
+  );
+
   test('commit normalization marks selection/grid changes when normalized', () {
     final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);

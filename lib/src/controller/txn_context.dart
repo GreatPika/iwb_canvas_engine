@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:flutter/foundation.dart';
 
 import '../core/nodes.dart';
@@ -9,12 +11,13 @@ import 'change_set.dart';
 class TxnContext {
   TxnContext({
     required Scene baseScene,
-    required this.workingSelection,
+    required Set<NodeId> workingSelection,
     required Set<NodeId> baseAllNodeIds,
     Map<NodeId, NodeLocatorEntry>? baseNodeLocator,
     required this.nodeIdSeed,
     ChangeSet? changeSet,
   }) : _baseScene = baseScene,
+       workingSelection = HashSet<NodeId>.of(workingSelection),
        _baseAllNodeIds = baseAllNodeIds,
        _baseNodeLocator = baseNodeLocator ?? txnBuildNodeLocator(baseScene),
        changeSet = changeSet ?? ChangeSet();
@@ -34,7 +37,7 @@ class TxnContext {
   Scene get workingScene => _mutableScene ?? _baseScene;
   Scene txnSceneForCommit() => _mutableScene ?? _baseScene;
 
-  Set<NodeId> workingSelection;
+  final Set<NodeId> workingSelection;
   int nodeIdSeed;
   final ChangeSet changeSet;
   int debugSceneShallowClones = 0;

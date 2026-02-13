@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -186,6 +187,29 @@ void main() {
     },
   );
 
+  test('TxnContext keeps workingSelection hash-based and mutable in place', () {
+    final inputSelection = <NodeId>{'a', 'b'};
+    final ctx = TxnContext(
+      baseScene: Scene(),
+      workingSelection: inputSelection,
+      baseAllNodeIds: <NodeId>{},
+      nodeIdSeed: 0,
+    );
+
+    expect(ctx.workingSelection, isA<HashSet<NodeId>>());
+    expect(ctx.workingSelection, <NodeId>{'a', 'b'});
+
+    inputSelection.add('late');
+    expect(ctx.workingSelection, isNot(contains('late')));
+
+    final workingSelectionRef = ctx.workingSelection;
+    ctx.workingSelection.remove('a');
+    ctx.workingSelection.add('c');
+
+    expect(identical(workingSelectionRef, ctx.workingSelection), isTrue);
+    expect(ctx.workingSelection, <NodeId>{'b', 'c'});
+  });
+
   test('ChangeSet mutates tracked sets in place across transitions', () {
     final changeSet = ChangeSet();
     final addedRef = changeSet.addedNodeIds;
@@ -207,6 +231,10 @@ void main() {
     expect(identical(addedRef, changeSet.addedNodeIds), isTrue);
     expect(identical(removedRef, changeSet.removedNodeIds), isTrue);
     expect(identical(updatedRef, changeSet.updatedNodeIds), isTrue);
+    expect(changeSet.addedNodeIds, isA<HashSet<NodeId>>());
+    expect(changeSet.removedNodeIds, isA<HashSet<NodeId>>());
+    expect(changeSet.updatedNodeIds, isA<HashSet<NodeId>>());
+    expect(changeSet.hitGeometryChangedIds, isA<HashSet<NodeId>>());
 
     expect(changeSet.addedNodeIds, <NodeId>{'n1', 'n2', 'n3'});
     expect(changeSet.removedNodeIds, isEmpty);
@@ -573,6 +601,89 @@ void main() {
     expect(ctx.workingSelection, isEmpty);
     expect(ctx.changeSet.documentReplaced, isTrue);
   });
+
+  test(
+    'SceneWriter keeps selection set identity across hot-path mutations',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(
+          layers: <Layer>[
+            Layer(
+              nodes: <SceneNode>[
+                RectNode(id: 'r1', size: const Size(10, 10)),
+                RectNode(id: 'r2', size: const Size(10, 10)),
+                RectNode(id: 'r3', size: const Size(10, 10)),
+              ],
+            ),
+          ],
+        ),
+        workingSelection: <NodeId>{'r1', 'r2'},
+        baseAllNodeIds: <NodeId>{'r1', 'r2', 'r3'},
+        nodeIdSeed: 0,
+      );
+      final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+      final selectionRef = ctx.workingSelection;
+
+      writer.writeSelectionToggle('r3');
+      expect(identical(selectionRef, ctx.workingSelection), isTrue);
+
+      writer.writeSelectionReplace(const <NodeId>{'r1', 'r3'});
+      expect(identical(selectionRef, ctx.workingSelection), isTrue);
+
+      writer.writeNodeErase('r1');
+      expect(identical(selectionRef, ctx.workingSelection), isTrue);
+
+      writer.writeDeleteSelection();
+      expect(identical(selectionRef, ctx.workingSelection), isTrue);
+
+      writer.writeSelectionClear();
+      expect(identical(selectionRef, ctx.workingSelection), isTrue);
+    },
+  );
+
+  test(
+    'SceneWriter selection hot-path keeps in-place set on 1000 toggle/replace/erase ops',
+    () {
+      final nodes = <SceneNode>[
+        for (var i = 0; i < 1000; i++)
+          RectNode(id: 'n$i', size: const Size(10, 10)),
+      ];
+      final ctx = TxnContext(
+        baseScene: Scene(layers: <Layer>[Layer(nodes: nodes)]),
+        workingSelection: <NodeId>{},
+        baseAllNodeIds: <NodeId>{for (var i = 0; i < 1000; i++) 'n$i'},
+        nodeIdSeed: 1000,
+      );
+      final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+      final selectionRef = ctx.workingSelection;
+      final expected = <NodeId>{};
+
+      for (var i = 0; i < 1000; i++) {
+        final id = 'n$i';
+        switch (i % 3) {
+          case 0:
+            writer.writeSelectionToggle(id);
+            if (!expected.remove(id)) {
+              expected.add(id);
+            }
+            break;
+          case 1:
+            writer.writeSelectionReplace(<NodeId>{id});
+            expected
+              ..clear()
+              ..add(id);
+            break;
+          case 2:
+            expect(writer.writeNodeErase(id), isTrue);
+            expected.remove(id);
+            break;
+        }
+        expect(identical(selectionRef, ctx.workingSelection), isTrue);
+      }
+
+      expect(ctx.workingSelection, expected);
+    },
+  );
 
   test('SceneWriter covers id generation and selection branches', () {
     final ctx = TxnContext(

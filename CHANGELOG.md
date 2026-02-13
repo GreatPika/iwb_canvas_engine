@@ -27,6 +27,7 @@
 - Commit/store now maintain `nodeLocator` (`NodeId -> layer/node position`) and writer hot paths use locator-based O(1) lookup instead of linear node-id scans.
 - Move-mode drag now uses preview translation during pointer move and commits scene translation once on pointer up; pointer cancel no longer mutates document state.
 - Added shared internal scene-value validation (`scene_value_validation.dart`) and wired it into runtime snapshot import and JSON encode/decode validation paths.
+- Selection transaction hot paths now keep a hash-based mutable working set in place (`toggle/clear/erase/delete/replace`) instead of rebuilding `Set` instances on each step.
 
 ## 2.0.1 (2026-02-10)
 

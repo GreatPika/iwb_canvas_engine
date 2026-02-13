@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import '../core/nodes.dart';
 
 class ChangeSet {
@@ -9,10 +11,10 @@ class ChangeSet {
   bool selectionChanged = false;
   bool gridChanged = false;
 
-  final Set<NodeId> addedNodeIds = <NodeId>{};
-  final Set<NodeId> removedNodeIds = <NodeId>{};
-  final Set<NodeId> updatedNodeIds = <NodeId>{};
-  final Set<NodeId> hitGeometryChangedIds = <NodeId>{};
+  final Set<NodeId> addedNodeIds = HashSet<NodeId>();
+  final Set<NodeId> removedNodeIds = HashSet<NodeId>();
+  final Set<NodeId> updatedNodeIds = HashSet<NodeId>();
+  final Set<NodeId> hitGeometryChangedIds = HashSet<NodeId>();
 
   bool get txnHasAnyChange =>
       documentReplaced ||
