@@ -65,14 +65,14 @@ class _ThrowingLayersScene extends Scene {
   _ThrowingLayersScene();
 
   @override
-  List<Layer> get layers => throw StateError('layers failed');
+  List<ContentLayer> get layers => throw StateError('layers failed');
 }
 
 void main() {
   Scene sceneWithRect(RectNode node) {
     return Scene(
-      layers: <Layer>[
-        Layer(nodes: <SceneNode>[node]),
+      layers: <ContentLayer>[
+        ContentLayer(nodes: <SceneNode>[node]),
       ],
     );
   }
@@ -106,8 +106,8 @@ void main() {
     'out-of-range node marks index invalid and serves repeated linear fallback queries',
     () {
       final scene = Scene(
-        layers: <Layer>[
-          Layer(
+        layers: <ContentLayer>[
+          ContentLayer(
             nodes: <SceneNode>[
               RectNode(
                 id: 'oor',
@@ -197,8 +197,8 @@ void main() {
     final outside = RectNode(id: 'outside', size: const Size(10, 10))
       ..position = const Offset(9999990, 9999990);
     final scene = Scene(
-      layers: <Layer>[
-        Layer(nodes: <SceneNode>[inside, outside]),
+      layers: <ContentLayer>[
+        ContentLayer(nodes: <SceneNode>[inside, outside]),
       ],
     );
 

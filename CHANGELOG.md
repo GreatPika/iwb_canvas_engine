@@ -3,6 +3,11 @@
 ### Breaking
 
 - `SceneJsonFormatException` is removed from public API; scene import/serialization boundaries now throw `SceneDataException` with `SceneDataErrorCode`.
+- Typed layer model replaces `LayerSnapshot(isBackground: ...)`:
+  - `SceneSnapshot.backgroundLayer: BackgroundLayerSnapshot?`
+  - `SceneSnapshot.layers: List<ContentLayerSnapshot>` (content-only)
+  - `layerIndex` in write APIs addresses content layers only.
+- JSON codec now supports only `schemaVersion = 3`; legacy schema `2` is rejected.
 
 ### Changed
 
@@ -12,6 +17,7 @@
 - `SceneSpatialIndex` now exposes explicit validity state (`isValid`) and degrades to safe linear candidate scan when indexing cannot be maintained (including out-of-range/extreme geometry), preventing hard failures in query paths.
 - `V2SpatialIndexSlice` now keeps invalid index instances in fallback mode instead of forcing rebuild loops after failed incremental updates.
 - `SceneControllerV2.selectedNodeIds` now reuses a cached `UnmodifiableSetView` and refreshes it only when selection actually changes, removing per-read allocation on hot getter paths.
+- `clearScene`/`writeClearSceneKeepBackground` now keep (or create) dedicated `backgroundLayer` and clear all content layers.
 
 ## 3.0.0 (2026-02-13)
 

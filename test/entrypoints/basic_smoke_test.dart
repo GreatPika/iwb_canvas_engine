@@ -12,8 +12,8 @@ void main() {
 
   test('iwb_canvas_engine.dart exports immutable snapshots/specs/patches', () {
     final scene = SceneSnapshot(
-      layers: <LayerSnapshot>[
-        LayerSnapshot(
+      layers: <ContentLayerSnapshot>[
+        ContentLayerSnapshot(
           nodes: <NodeSnapshot>[
             const RectNodeSnapshot(id: 'rect-1', size: Size(40, 20)),
           ],
@@ -32,8 +32,8 @@ void main() {
 
   test('iwb_canvas_engine.dart exports snapshot json codec helpers', () {
     final scene = SceneSnapshot(
-      layers: <LayerSnapshot>[
-        LayerSnapshot(
+      layers: <ContentLayerSnapshot>[
+        ContentLayerSnapshot(
           nodes: <NodeSnapshot>[
             const RectNodeSnapshot(id: 'rect-json-1', size: Size(2, 3)),
           ],
@@ -42,10 +42,7 @@ void main() {
     );
     final encoded = encodeScene(scene);
     final decoded = decodeScene(encoded);
-    final decodedNode = decoded.layers
-        .firstWhere((layer) => !layer.isBackground)
-        .nodes
-        .single;
+    final decodedNode = decoded.layers.first.nodes.single;
 
     expect(encoded['schemaVersion'], schemaVersionWrite);
     expect(decodedNode.id, 'rect-json-1');

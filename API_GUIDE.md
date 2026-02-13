@@ -10,7 +10,7 @@ It is designed for both human developers and coding agents.
 - Scene model (`SceneSnapshot`, layers, nodes)
 - Interactive runtime (`SceneController`, `SceneView`)
 - Input handling (move/select/draw tools)
-- JSON import/export (`schemaVersion = 2`)
+- JSON import/export (`schemaVersion = 3`)
 
 `iwb_canvas_engine` does not provide:
 
@@ -36,7 +36,7 @@ Runtime aliases exposed publicly:
 `iwb_canvas_engine.dart` exports:
 
 - Public immutable model contracts:
-  - `SceneSnapshot`, `LayerSnapshot`, `NodeSnapshot` variants
+  - `SceneSnapshot`, `BackgroundLayerSnapshot`, `ContentLayerSnapshot`, `NodeSnapshot` variants
   - `NodeSpec` variants
   - `NodePatch` variants
   - `PatchField<T>` and `PatchFieldState`
@@ -62,19 +62,26 @@ Runtime aliases exposed publicly:
 
 `SceneSnapshot` contains:
 
-- `layers: List<LayerSnapshot>`
+- `backgroundLayer: BackgroundLayerSnapshot?`
+- `layers: List<ContentLayerSnapshot>`
 - `camera: CameraSnapshot` (`offset`)
 - `background: BackgroundSnapshot` (`color`, `grid`)
 - `palette: ScenePaletteSnapshot` (`penColors`, `backgroundColors`, `gridSizes`)
 
 ### 4.2 Layer
 
-`LayerSnapshot` contains:
+`BackgroundLayerSnapshot` contains:
 
 - `nodes: List<NodeSnapshot>`
-- `isBackground: bool`
 
-Background layer constraints are canonicalized/validated by runtime and decoder.
+`ContentLayerSnapshot` contains:
+
+- `nodes: List<NodeSnapshot>`
+
+Typed layer boundary:
+
+- `backgroundLayer` is a dedicated optional layer (rendered below content).
+- `layers` is an ordered list of content layers only.
 
 ### 4.3 Node snapshots
 
@@ -170,9 +177,9 @@ Use `nullValue()` only for nullable fields.
 final controller = SceneController(
   // Optional immutable startup scene.
   initialSnapshot: SceneSnapshot(
+    backgroundLayer: BackgroundLayerSnapshot(),
     layers: [
-      LayerSnapshot(isBackground: true),
-      LayerSnapshot(),
+      ContentLayerSnapshot(),
     ],
   ),
 
@@ -194,9 +201,8 @@ final controller = SceneController(
 Construction validation notes:
 
 - `initialSnapshot` is validated strictly.
-- Malformed snapshot input throws `SceneDataException` (duplicate ids, invalid numeric fields, invalid `svgPathData`, invalid palette, multiple background layers).
+- Malformed snapshot input throws `SceneDataException` (duplicate ids, invalid numeric fields, invalid `svgPathData`, invalid palette, invalid typed layer fields).
 - Runtime snapshot boundary does not auto-insert a background layer when missing.
-- If one background layer is present but misordered, it is canonicalized to index `0`.
 
 ### 6.2 Read-only state
 
@@ -271,6 +277,10 @@ Notification semantics:
 - `clearSelection()`
 - `selectAll({bool onlySelectable = true})`
 
+`layerIndex` contract:
+
+- `addNode(..., layerIndex)` addresses `SceneSnapshot.layers` only (content layers).
+
 ### 6.6 Transform/delete/clear commands
 
 - `rotateSelection({required bool clockwise, int? timestampMs})`
@@ -287,7 +297,7 @@ Behavior notes:
 - `selectAll(onlySelectable: true)` selects visible selectable foreground nodes.
 - `selectAll(onlySelectable: false)` also includes visible non-selectable foreground nodes.
 - Commit-time selection normalization removes only missing/background/invisible ids and preserves explicitly selected non-selectable nodes.
-- `clearScene` keeps canonical background layer and clears non-background content.
+- `clearScene` keeps/creates dedicated `backgroundLayer` and clears all content layers.
 
 ### 6.7 Low-level input hooks
 
@@ -485,8 +495,8 @@ Controller normalizes timestamps into a monotonic internal timeline.
 
 ### 11.2 Versioning
 
-- `schemaVersionWrite == 2`
-- `schemaVersionsRead == {2}`
+- `schemaVersionWrite == 3`
+- `schemaVersionsRead == {3}`
 
 ### 11.3 Errors
 
@@ -521,9 +531,9 @@ class _CanvasScreenState extends State<CanvasScreen> {
 
     controller = SceneController(
       initialSnapshot: SceneSnapshot(
+        backgroundLayer: BackgroundLayerSnapshot(),
         layers: [
-          LayerSnapshot(isBackground: true),
-          LayerSnapshot(),
+          ContentLayerSnapshot(),
         ],
       ),
       pointerSettings: const PointerInputSettings(
@@ -607,6 +617,10 @@ Required updates:
 2. Ensure `initialSnapshot`/`replaceScene(...)` inputs are strictly valid; malformed snapshots now throw `SceneDataException`.
 3. Ensure `addNode(...)` and `patchNode(...)` inputs are valid at write boundary; malformed values now throw `ArgumentError`.
 4. If app logic depended on synchronous `actions`/`editTextRequests` delivery, update it for asynchronous stream delivery.
+5. Replace layer model usage:
+   - remove `LayerSnapshot(isBackground: ...)`,
+   - use `backgroundLayer: BackgroundLayerSnapshot?` + `layers: List<ContentLayerSnapshot>`.
+6. JSON codec now writes/reads only schema `3`; legacy schema `2` is unsupported.
 
 ## 15. Quick recipes
 

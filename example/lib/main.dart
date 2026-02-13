@@ -62,9 +62,9 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     } else {
       _controller = SceneController(
         initialSnapshot: SceneSnapshot(
-          layers: <LayerSnapshot>[
-            LayerSnapshot(isBackground: true),
-            LayerSnapshot(),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(),
+            ContentLayerSnapshot(),
           ],
         ),
         clearSelectionOnDrawModeEnter: true,

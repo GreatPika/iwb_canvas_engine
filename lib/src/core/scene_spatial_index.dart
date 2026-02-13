@@ -188,7 +188,6 @@ class SceneSpatialIndex {
     try {
       for (var layerIndex = 0; layerIndex < scene.layers.length; layerIndex++) {
         final layer = scene.layers[layerIndex];
-        if (layer.isBackground) continue;
         for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
           final node = layer.nodes[nodeIndex];
           if (!_upsertResolvedNode(
@@ -237,7 +236,6 @@ class SceneSpatialIndex {
     final scene = _scene;
     if (scene == null) return true;
     if (layerIndex < 0 || layerIndex >= scene.layers.length) return true;
-    if (scene.layers[layerIndex].isBackground) return true;
     if (nodeIndex < 0 || nodeIndex >= scene.layers[layerIndex].nodes.length) {
       return true;
     }
@@ -313,6 +311,7 @@ class SceneSpatialIndex {
     final location = _nodeLocator[nodeId];
     if (location == null) return null;
     final layerIndex = location.layerIndex;
+    if (layerIndex == -1) return null;
     if (layerIndex < 0 || layerIndex >= scene.layers.length) return null;
     final layer = scene.layers[layerIndex];
     final nodeIndex = location.nodeIndex;
@@ -351,7 +350,6 @@ class SceneSpatialIndex {
     final out = <SceneSpatialCandidate>[];
     for (var layerIndex = 0; layerIndex < scene.layers.length; layerIndex++) {
       final layer = scene.layers[layerIndex];
-      if (layer.isBackground) continue;
       for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
         final node = layer.nodes[nodeIndex];
         final candidateBounds = nodeHitTestCandidateBoundsWorld(node);

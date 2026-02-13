@@ -35,7 +35,10 @@ void main() {
 
   test('decodeScene returns immutable snapshots', () {
     final scene = decodeScene(encodeScene(_buildScene()));
-    expect(() => scene.layers.add(LayerSnapshot()), throwsUnsupportedError);
+    expect(
+      () => scene.layers.add(ContentLayerSnapshot()),
+      throwsUnsupportedError,
+    );
     expect(
       () => scene.layers.first.nodes.add(
         const RectNodeSnapshot(id: 'extra', size: Size(1, 1)),
@@ -98,9 +101,9 @@ SceneSnapshot _buildScene() {
   );
 
   return SceneSnapshot(
-    layers: <LayerSnapshot>[
-      LayerSnapshot(isBackground: true),
-      LayerSnapshot(
+    layers: <ContentLayerSnapshot>[
+      ContentLayerSnapshot(),
+      ContentLayerSnapshot(
         nodes: <NodeSnapshot>[
           ImageNodeSnapshot(
             id: 'img-1',

@@ -11,9 +11,9 @@ import 'package:iwb_canvas_engine/src/model/document.dart';
 void main() {
   Scene sceneWithAllNodeTypes() {
     return Scene(
-      layers: <Layer>[
-        Layer(isBackground: true, nodes: <SceneNode>[]),
-        Layer(
+      layers: <ContentLayer>[
+        ContentLayer(nodes: <SceneNode>[]),
+        ContentLayer(
           nodes: <SceneNode>[
             ImageNode(
               id: 'img',
@@ -126,8 +126,8 @@ void main() {
     expect(
       () => txnSceneFromSnapshot(
         SceneSnapshot(
-          layers: <LayerSnapshot>[
-            LayerSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
               nodes: <NodeSnapshot>[
                 StrokeNodeSnapshot(
                   id: 's',
@@ -154,46 +154,43 @@ void main() {
     );
   });
 
-  test(
-    'txnSceneFromSnapshot canonicalizes a single background layer to index 0',
-    () {
-      final scene = txnSceneFromSnapshot(
-        SceneSnapshot(
-          layers: <LayerSnapshot>[
-            LayerSnapshot(
-              nodes: const <NodeSnapshot>[
-                RectNodeSnapshot(id: 'n1', size: Size(1, 1)),
-              ],
-            ),
-            LayerSnapshot(
-              isBackground: true,
-              nodes: const <NodeSnapshot>[
-                RectNodeSnapshot(id: 'bg', size: Size(1, 1)),
-              ],
-            ),
-            LayerSnapshot(
-              nodes: const <NodeSnapshot>[
-                RectNodeSnapshot(id: 'n2', size: Size(1, 1)),
-              ],
-            ),
+  test('txnSceneFromSnapshot preserves dedicated background layer', () {
+    final scene = txnSceneFromSnapshot(
+      SceneSnapshot(
+        backgroundLayer: BackgroundLayerSnapshot(
+          nodes: const <NodeSnapshot>[
+            RectNodeSnapshot(id: 'bg', size: Size(1, 1)),
           ],
         ),
-      );
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
+            nodes: const <NodeSnapshot>[
+              RectNodeSnapshot(id: 'n1', size: Size(1, 1)),
+            ],
+          ),
+          ContentLayerSnapshot(
+            nodes: const <NodeSnapshot>[
+              RectNodeSnapshot(id: 'n2', size: Size(1, 1)),
+            ],
+          ),
+        ],
+      ),
+    );
 
-      expect(scene.layers.length, 3);
-      expect(scene.layers.first.isBackground, isTrue);
-      expect(scene.layers[1].nodes.single.id, 'n1');
-      expect(scene.layers[2].nodes.single.id, 'n2');
-    },
-  );
+    expect(scene.backgroundLayer, isNotNull);
+    expect(scene.backgroundLayer!.nodes.single.id, 'bg');
+    expect(scene.layers.length, 2);
+    expect(scene.layers[0].nodes.single.id, 'n1');
+    expect(scene.layers[1].nodes.single.id, 'n2');
+  });
 
   test(
     'txnSceneFromSnapshot does not auto-insert missing background layer',
     () {
       final scene = txnSceneFromSnapshot(
         SceneSnapshot(
-          layers: <LayerSnapshot>[
-            LayerSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
               nodes: const <NodeSnapshot>[
                 RectNodeSnapshot(id: 'n1', size: Size(1, 1)),
               ],
@@ -203,7 +200,7 @@ void main() {
       );
 
       expect(scene.layers.length, 1);
-      expect(scene.layers.first.isBackground, isFalse);
+      expect(scene.backgroundLayer, isNull);
     },
   );
 
@@ -211,13 +208,13 @@ void main() {
     expect(
       () => txnSceneFromSnapshot(
         SceneSnapshot(
-          layers: <LayerSnapshot>[
-            LayerSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
               nodes: const <NodeSnapshot>[
                 RectNodeSnapshot(id: 'dup', size: Size(1, 1)),
               ],
             ),
-            LayerSnapshot(
+            ContentLayerSnapshot(
               nodes: const <NodeSnapshot>[
                 RectNodeSnapshot(id: 'dup', size: Size(2, 2)),
               ],
@@ -241,8 +238,8 @@ void main() {
     expect(
       () => txnSceneFromSnapshot(
         SceneSnapshot(
-          layers: <LayerSnapshot>[
-            LayerSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
               nodes: const <NodeSnapshot>[
                 RectNodeSnapshot(
                   id: 'r1',
@@ -308,8 +305,8 @@ void main() {
       nodeId: 'new',
     );
     expect(insertedFound, isNotNull);
-    expect(insertedFound!.layerIndex, 1);
-    expect(insertedFound.nodeIndex, scene.layers[1].nodes.length - 1);
+    expect(insertedFound!.layerIndex, 2);
+    expect(insertedFound.nodeIndex, scene.layers[2].nodes.length - 1);
 
     final erased = txnEraseNodeFromScene(
       scene: scene,
@@ -323,10 +320,82 @@ void main() {
     );
   });
 
+  test('find/locator/erase utilities handle dedicated background layer', () {
+    final scene = Scene(
+      backgroundLayer: BackgroundLayer(
+        nodes: <SceneNode>[
+          RectNode(id: 'bg-a', size: const Size(1, 1)),
+          RectNode(id: 'bg-b', size: const Size(1, 1)),
+        ],
+      ),
+      layers: <ContentLayer>[
+        ContentLayer(
+          nodes: <SceneNode>[RectNode(id: 'fg-a', size: const Size(1, 1))],
+        ),
+      ],
+    );
+    final locator = txnBuildNodeLocator(scene);
+
+    final bgFound = txnFindNodeById(scene, 'bg-a');
+    expect(bgFound, isNotNull);
+    expect(bgFound!.layerIndex, -1);
+    expect(bgFound.nodeIndex, 0);
+
+    final bgByLocator = txnFindNodeByLocator(
+      scene: scene,
+      nodeLocator: locator,
+      nodeId: 'bg-b',
+    );
+    expect(bgByLocator, isNotNull);
+    expect(bgByLocator!.layerIndex, -1);
+    expect(bgByLocator.nodeIndex, 1);
+
+    final wrongIndexLocator = <NodeId, NodeLocatorEntry>{
+      ...locator,
+      'bg-b': (layerIndex: -1, nodeIndex: 99),
+    };
+    expect(
+      txnFindNodeByLocator(
+        scene: scene,
+        nodeLocator: wrongIndexLocator,
+        nodeId: 'bg-b',
+      ),
+      isNull,
+    );
+
+    final wrongIdLocator = <NodeId, NodeLocatorEntry>{
+      ...locator,
+      'bg-a': (layerIndex: -1, nodeIndex: 1),
+    };
+    expect(
+      txnFindNodeByLocator(
+        scene: scene,
+        nodeLocator: wrongIdLocator,
+        nodeId: 'bg-a',
+      ),
+      isNull,
+    );
+
+    final removed = txnEraseNodeFromScene(
+      scene: scene,
+      nodeLocator: locator,
+      nodeId: 'bg-a',
+    );
+    expect(removed, isNotNull);
+    expect(locator.containsKey('bg-a'), isFalse);
+    expect(locator['bg-b'], (layerIndex: -1, nodeIndex: 0));
+
+    scene.backgroundLayer = null;
+    expect(
+      txnFindNodeByLocator(scene: scene, nodeLocator: locator, nodeId: 'bg-b'),
+      isNull,
+    );
+  });
+
   test('erase updates locator indexes for layer tail', () {
     final scene = Scene(
-      layers: <Layer>[
-        Layer(
+      layers: <ContentLayer>[
+        ContentLayer(
           nodes: <SceneNode>[
             RectNode(id: 'a', size: const Size(1, 1)),
             RectNode(id: 'b', size: const Size(1, 1)),
@@ -351,7 +420,7 @@ void main() {
   test(
     'resolve layer index validates range and creates non-background layer',
     () {
-      final scene = Scene(layers: <Layer>[Layer(isBackground: true)]);
+      final scene = Scene(layers: <ContentLayer>[ContentLayer()]);
 
       expect(
         () => txnResolveInsertLayerIndex(scene: scene, layerIndex: -1),
@@ -365,18 +434,17 @@ void main() {
       final index = txnResolveInsertLayerIndex(scene: scene, layerIndex: null);
       expect(index, 1);
       expect(scene.layers.length, 2);
-      expect(scene.layers.last.isBackground, isFalse);
+      expect(scene.layers.last, isA<ContentLayer>());
     },
   );
 
   test('selection/grid helpers enforce transaction invariants', () {
     final scene = Scene(
-      layers: <Layer>[
-        Layer(
-          isBackground: true,
-          nodes: <SceneNode>[RectNode(id: 'bg', size: const Size(1, 1))],
-        ),
-        Layer(
+      backgroundLayer: BackgroundLayer(
+        nodes: <SceneNode>[RectNode(id: 'bg', size: const Size(1, 1))],
+      ),
+      layers: <ContentLayer>[
+        ContentLayer(
           nodes: <SceneNode>[
             RectNode(id: 'ok', size: const Size(1, 1)),
             RectNode(id: 'hidden', size: const Size(1, 1), isVisible: false),

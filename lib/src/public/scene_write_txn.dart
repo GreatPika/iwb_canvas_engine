@@ -15,6 +15,10 @@ abstract interface class SceneWriteTxn {
   /// Current selection snapshot for the transaction.
   Set<NodeId> get selectedNodeIds;
 
+  /// Inserts a node into content layers.
+  ///
+  /// `layerIndex` addresses only `snapshot.layers` (content layers) and never
+  /// the optional background layer.
   String writeNodeInsert(NodeSpec spec, {int? layerIndex});
   bool writeNodeErase(NodeId nodeId);
   bool writeNodePatch(NodePatch patch);

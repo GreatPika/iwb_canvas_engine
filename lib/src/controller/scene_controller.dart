@@ -136,10 +136,6 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
     }
 
     final layer = _store.sceneDoc.layers[layerIndex];
-    if (layer.isBackground) {
-      return null;
-    }
-
     final nodeIndex = candidate.nodeIndex;
     if (nodeIndex < 0 || nodeIndex >= layer.nodes.length) {
       return null;

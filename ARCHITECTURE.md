@@ -17,7 +17,7 @@ Entrypoints:
 Primary public abstractions:
 
 - Runtime: `SceneController`, `SceneView`
-- Immutable read model: `SceneSnapshot`, `LayerSnapshot`, `NodeSnapshot`
+- Immutable read model: `SceneSnapshot`, `BackgroundLayerSnapshot`, `ContentLayerSnapshot`, `NodeSnapshot`
 - Safe transactional write model: `SceneWriteTxn`
 - Write intents: `NodeSpec`
 - Partial mutation: `NodePatch` + `PatchField<T>`
@@ -36,7 +36,7 @@ lib/
     model/          // scene <-> snapshot conversion helpers
     public/         // snapshot/spec/patch contracts
     render/         // painter and render caches
-    serialization/  // JSON codec (schema v2)
+    serialization/  // JSON codec (schema v3)
     view/           // interactive Flutter widget
 ```
 
@@ -70,16 +70,16 @@ Key invariants:
 - Selection normalization preserves explicit non-selectable ids and drops only missing/background/invisible ids.
 - Runtime snapshot boundary (`initialSnapshot` / `replaceScene`) validates input strictly and fails fast with `SceneDataException` for malformed snapshots.
 - Text node box size is derived from text layout inputs and is not writable via public spec/patch APIs.
-- Runtime background-layer rule: at most one background layer; if present it is canonicalized to index `0`; missing background is allowed (no auto-insert on runtime boundary).
-- JSON decoder background-layer rule: canonicalizes to a single background layer at index `0`.
+- Runtime typed-layer rule: snapshot/model uses optional `backgroundLayer` plus content-only `layers`; missing background layer is allowed (no auto-insert on runtime boundary).
+- JSON decoder rule: accepts `backgroundLayer` (optional) and `layers` (content-only); legacy `isBackground` layer flag is unsupported.
 - Unique node ids across all layers.
 - Input and render subsystems must not bypass controller transaction boundaries.
 - Import boundaries are enforced by `tool/check_import_boundaries.dart`.
 
 ## Serialization contract
 
-- Current write schema: `schemaVersion = 2`.
-- Accepted read schemas: `{2}`.
+- Current write schema: `schemaVersion = 3`.
+- Accepted read schemas: `{3}`.
 - Encoder/decoder validate numeric and structural constraints and fail fast with `SceneDataException`.
 
 ## Performance model

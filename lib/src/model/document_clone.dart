@@ -7,6 +7,7 @@ import '../core/transform2d.dart';
 Scene txnCloneSceneShallow(Scene scene) {
   return Scene(
     layers: scene.layers,
+    backgroundLayer: scene.backgroundLayer,
     camera: Camera(offset: scene.camera.offset),
     background: Background(
       color: scene.background.color,
@@ -26,7 +27,10 @@ Scene txnCloneSceneShallow(Scene scene) {
 
 Scene txnCloneScene(Scene scene) {
   return Scene(
-    layers: scene.layers.map(txnCloneLayer).toList(growable: false),
+    layers: scene.layers.map(txnCloneContentLayer).toList(growable: false),
+    backgroundLayer: scene.backgroundLayer == null
+        ? null
+        : txnCloneBackgroundLayer(scene.backgroundLayer!),
     camera: Camera(offset: scene.camera.offset),
     background: Background(
       color: scene.background.color,
@@ -44,14 +48,23 @@ Scene txnCloneScene(Scene scene) {
   );
 }
 
-Layer txnCloneLayerShallow(Layer layer) {
-  return Layer(nodes: layer.nodes, isBackground: layer.isBackground);
+BackgroundLayer txnCloneBackgroundLayerShallow(BackgroundLayer layer) {
+  return BackgroundLayer(nodes: layer.nodes);
 }
 
-Layer txnCloneLayer(Layer layer) {
-  return Layer(
+BackgroundLayer txnCloneBackgroundLayer(BackgroundLayer layer) {
+  return BackgroundLayer(
     nodes: layer.nodes.map(txnCloneNode).toList(growable: false),
-    isBackground: layer.isBackground,
+  );
+}
+
+ContentLayer txnCloneContentLayerShallow(ContentLayer layer) {
+  return ContentLayer(nodes: layer.nodes);
+}
+
+ContentLayer txnCloneContentLayer(ContentLayer layer) {
+  return ContentLayer(
+    nodes: layer.nodes.map(txnCloneNode).toList(growable: false),
   );
 }
 
@@ -184,6 +197,8 @@ Transform2D _txnCloneTransform(Transform2D transform) {
 
 Set<NodeId> txnCollectNodeIds(Scene scene) {
   return <NodeId>{
+    if (scene.backgroundLayer != null)
+      for (final node in scene.backgroundLayer!.nodes) node.id,
     for (final layer in scene.layers)
       for (final node in layer.nodes) node.id,
   };
@@ -191,15 +206,17 @@ Set<NodeId> txnCollectNodeIds(Scene scene) {
 
 int txnInitialNodeIdSeed(Scene scene) {
   var maxId = -1;
-  for (final layer in scene.layers) {
-    for (final node in layer.nodes) {
-      final id = node.id;
-      if (!id.startsWith('node-')) continue;
-      final parsed = int.tryParse(id.substring('node-'.length));
-      if (parsed == null || parsed < 0) continue;
-      if (parsed > maxId) {
-        maxId = parsed;
-      }
+  final nodes = <SceneNode>[
+    if (scene.backgroundLayer != null) ...scene.backgroundLayer!.nodes,
+    for (final layer in scene.layers) ...layer.nodes,
+  ];
+  for (final node in nodes) {
+    final id = node.id;
+    if (!id.startsWith('node-')) continue;
+    final parsed = int.tryParse(id.substring('node-'.length));
+    if (parsed == null || parsed < 0) continue;
+    if (parsed > maxId) {
+      maxId = parsed;
     }
   }
   return maxId + 1;

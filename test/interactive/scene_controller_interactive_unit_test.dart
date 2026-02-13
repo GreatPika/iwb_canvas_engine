@@ -50,9 +50,9 @@ void main() {
     test('read API + setters + validation', () {
       final controller = _controllerFromScene(
         Scene(
-          layers: <Layer>[
-            Layer(isBackground: true),
-            Layer(
+          layers: <ContentLayer>[
+            ContentLayer(),
+            ContentLayer(
               nodes: <SceneNode>[RectNode(id: 'n', size: const Size(10, 8))],
             ),
           ],
@@ -152,9 +152,9 @@ void main() {
           ..position = const Offset(120, 20);
         final controller = _controllerFromScene(
           Scene(
-            layers: <Layer>[
-              Layer(isBackground: true),
-              Layer(nodes: <SceneNode>[nodeA, nodeB]),
+            layers: <ContentLayer>[
+              ContentLayer(),
+              ContentLayer(nodes: <SceneNode>[nodeA, nodeB]),
             ],
           ),
         );
@@ -199,9 +199,9 @@ void main() {
     test('addNode accepts NodeSpec variants', () {
       final controller = SceneControllerInteractiveV2(
         initialSnapshot: SceneSnapshot(
-          layers: <LayerSnapshot>[
-            LayerSnapshot(isBackground: true),
-            LayerSnapshot(),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(),
+            ContentLayerSnapshot(),
           ],
         ),
       );
@@ -272,9 +272,9 @@ void main() {
     test('removeNode emits delete actions with monotonic timestamps', () async {
       final controller = SceneControllerInteractiveV2(
         initialSnapshot: SceneSnapshot(
-          layers: <LayerSnapshot>[
-            LayerSnapshot(isBackground: true),
-            LayerSnapshot(),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(),
+            ContentLayerSnapshot(),
           ],
         ),
       );
@@ -301,9 +301,9 @@ void main() {
     test('actions stream delivery is asynchronous', () async {
       final controller = SceneControllerInteractiveV2(
         initialSnapshot: SceneSnapshot(
-          layers: <LayerSnapshot>[
-            LayerSnapshot(isBackground: true),
-            LayerSnapshot(),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(),
+            ContentLayerSnapshot(),
           ],
         ),
       );
@@ -337,9 +337,9 @@ void main() {
           ..position = const Offset(200, 100);
         final controller = _controllerFromScene(
           Scene(
-            layers: <Layer>[
-              Layer(isBackground: true),
-              Layer(nodes: <SceneNode>[rect, text]),
+            layers: <ContentLayer>[
+              ContentLayer(),
+              ContentLayer(nodes: <SceneNode>[rect, text]),
             ],
           ),
         );
@@ -405,9 +405,9 @@ void main() {
       )..position = const Offset(100, 100);
       final controller = _controllerFromScene(
         Scene(
-          layers: <Layer>[
-            Layer(isBackground: true),
-            Layer(nodes: <SceneNode>[text]),
+          layers: <ContentLayer>[
+            ContentLayer(),
+            ContentLayer(nodes: <SceneNode>[text]),
           ],
         ),
       );
@@ -443,9 +443,9 @@ void main() {
       )..position = const Offset(100, 100);
       final controller = _controllerFromScene(
         Scene(
-          layers: <Layer>[
-            Layer(isBackground: true),
-            Layer(nodes: <SceneNode>[text]),
+          layers: <ContentLayer>[
+            ContentLayer(),
+            ContentLayer(nodes: <SceneNode>[text]),
           ],
         ),
       );
@@ -514,9 +514,9 @@ void main() {
         ..position = const Offset(80, 80);
       final controller = _controllerFromScene(
         Scene(
-          layers: <Layer>[
-            Layer(isBackground: true),
-            Layer(nodes: <SceneNode>[rect]),
+          layers: <ContentLayer>[
+            ContentLayer(),
+            ContentLayer(nodes: <SceneNode>[rect]),
           ],
         ),
       );
@@ -570,9 +570,9 @@ void main() {
         ..position = const Offset(60, 60);
       final controller = _controllerFromScene(
         Scene(
-          layers: <Layer>[
-            Layer(isBackground: true),
-            Layer(nodes: <SceneNode>[rect]),
+          layers: <ContentLayer>[
+            ContentLayer(),
+            ContentLayer(nodes: <SceneNode>[rect]),
           ],
         ),
       );
@@ -632,9 +632,9 @@ void main() {
           ..position = const Offset(60, 60);
         final controller = _controllerFromScene(
           Scene(
-            layers: <Layer>[
-              Layer(isBackground: true),
-              Layer(nodes: <SceneNode>[rect]),
+            layers: <ContentLayer>[
+              ContentLayer(),
+              ContentLayer(nodes: <SceneNode>[rect]),
             ],
           ),
         );
@@ -682,9 +682,9 @@ void main() {
     test('line tool supports drag flow and two-tap pending flow', () async {
       final controller = SceneControllerInteractiveV2(
         initialSnapshot: SceneSnapshot(
-          layers: <LayerSnapshot>[
-            LayerSnapshot(isBackground: true),
-            LayerSnapshot(),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(),
+            ContentLayerSnapshot(),
           ],
         ),
       );
@@ -729,8 +729,10 @@ void main() {
       expect(controller.hasActiveLinePreview, isFalse);
       expect(controller.hasPendingLineStart, isFalse);
 
-      final dragLine =
-          controller.snapshot.layers[1].nodes.first as LineNodeSnapshot;
+      final dragLine = controller.snapshot.layers
+          .expand((layer) => layer.nodes)
+          .whereType<LineNodeSnapshot>()
+          .first;
       expect(dragLine.transform.tx, 40);
       expect(dragLine.transform.ty, 20);
       expect(dragLine.start, const Offset(-20, 0));
@@ -830,7 +832,8 @@ void main() {
         actions.where((a) => a.type == ActionType.drawLine).length,
         greaterThanOrEqualTo(2),
       );
-      final lines = controller.snapshot.layers[1].nodes
+      final lines = controller.snapshot.layers
+          .expand((layer) => layer.nodes)
           .whereType<LineNodeSnapshot>();
       expect(
         lines.any((line) {
@@ -854,9 +857,9 @@ void main() {
       () {
         final controller = SceneControllerInteractiveV2(
           initialSnapshot: SceneSnapshot(
-            layers: <LayerSnapshot>[
-              LayerSnapshot(isBackground: true),
-              LayerSnapshot(),
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(),
+              ContentLayerSnapshot(),
             ],
           ),
         );
@@ -882,8 +885,10 @@ void main() {
           ),
         );
 
-        final strokeSnap =
-            controller.snapshot.layers[1].nodes.single as StrokeNodeSnapshot;
+        final strokeSnap = controller.snapshot.layers
+            .expand((layer) => layer.nodes)
+            .whereType<StrokeNodeSnapshot>()
+            .single;
         expect(strokeSnap.points.length, 2);
 
         controller.setDrawTool(DrawTool.eraser);
@@ -905,16 +910,21 @@ void main() {
           ),
         );
 
-        expect(controller.snapshot.layers[1].nodes, isEmpty);
+        expect(
+          controller.snapshot.layers
+              .expand((layer) => layer.nodes)
+              .whereType<StrokeNodeSnapshot>(),
+          isEmpty,
+        );
       },
     );
 
     test('pen commit caps very long stroke and preserves endpoints', () {
       final controller = SceneControllerInteractiveV2(
         initialSnapshot: SceneSnapshot(
-          layers: <LayerSnapshot>[
-            LayerSnapshot(isBackground: true),
-            LayerSnapshot(),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(),
+            ContentLayerSnapshot(),
           ],
         ),
       );
@@ -952,8 +962,10 @@ void main() {
         ),
       );
 
-      final strokeSnap =
-          controller.snapshot.layers[1].nodes.single as StrokeNodeSnapshot;
+      final strokeSnap = controller.snapshot.layers
+          .expand((layer) => layer.nodes)
+          .whereType<StrokeNodeSnapshot>()
+          .single;
       expect(strokeSnap.points.length, 20000);
       expect(strokeSnap.points.first, const Offset(0, 0));
       expect(
@@ -965,9 +977,9 @@ void main() {
     test('stroke preview is available during drag and clears on up', () {
       final controller = SceneControllerInteractiveV2(
         initialSnapshot: SceneSnapshot(
-          layers: <LayerSnapshot>[
-            LayerSnapshot(isBackground: true),
-            LayerSnapshot(),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(),
+            ContentLayerSnapshot(),
           ],
         ),
       );
@@ -1020,9 +1032,9 @@ void main() {
       () {
         final controller = SceneControllerInteractiveV2(
           initialSnapshot: SceneSnapshot(
-            layers: <LayerSnapshot>[
-              LayerSnapshot(isBackground: true),
-              LayerSnapshot(),
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(),
+              ContentLayerSnapshot(),
             ],
           ),
           dragStartSlop: 10,
@@ -1129,9 +1141,9 @@ void main() {
       )..position = const Offset(170, 120);
       final controller = _controllerFromScene(
         Scene(
-          layers: <Layer>[
-            Layer(isBackground: true),
-            Layer(nodes: <SceneNode>[line, stroke]),
+          layers: <ContentLayer>[
+            ContentLayer(),
+            ContentLayer(nodes: <SceneNode>[line, stroke]),
           ],
         ),
       );
@@ -1217,9 +1229,9 @@ void main() {
       )..position = const Offset(160, 100);
       final controller = _controllerFromScene(
         Scene(
-          layers: <Layer>[
-            Layer(isBackground: true, nodes: <SceneNode>[backgroundRect]),
-            Layer(nodes: <SceneNode>[foregroundRect, foregroundLine]),
+          layers: <ContentLayer>[
+            ContentLayer(nodes: <SceneNode>[backgroundRect]),
+            ContentLayer(nodes: <SceneNode>[foregroundRect, foregroundLine]),
           ],
         ),
       );
@@ -1311,9 +1323,9 @@ void main() {
         )..position = const Offset(90, 50);
         final controller = _controllerFromScene(
           Scene(
-            layers: <Layer>[
-              Layer(isBackground: true),
-              Layer(nodes: <SceneNode>[rect, locked]),
+            layers: <ContentLayer>[
+              ContentLayer(),
+              ContentLayer(nodes: <SceneNode>[rect, locked]),
             ],
           ),
         );
@@ -1359,9 +1371,9 @@ void main() {
         ..position = const Offset(60, 60);
       final controller = _controllerFromScene(
         Scene(
-          layers: <Layer>[
-            Layer(isBackground: true),
-            Layer(nodes: <SceneNode>[rect]),
+          layers: <ContentLayer>[
+            ContentLayer(),
+            ContentLayer(nodes: <SceneNode>[rect]),
           ],
         ),
       );
@@ -1412,9 +1424,9 @@ void main() {
         ..position = const Offset(140, 40);
       final controller = _controllerFromScene(
         Scene(
-          layers: <Layer>[
-            Layer(isBackground: true),
-            Layer(nodes: <SceneNode>[first, second]),
+          layers: <ContentLayer>[
+            ContentLayer(),
+            ContentLayer(nodes: <SceneNode>[first, second]),
           ],
         ),
       );
@@ -1440,9 +1452,9 @@ void main() {
       () async {
         final controller = SceneControllerInteractiveV2(
           initialSnapshot: SceneSnapshot(
-            layers: <LayerSnapshot>[
-              LayerSnapshot(isBackground: true),
-              LayerSnapshot(),
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(),
+              ContentLayerSnapshot(),
             ],
           ),
         );
@@ -1469,9 +1481,9 @@ void main() {
 
         controller.replaceScene(
           SceneSnapshot(
-            layers: <LayerSnapshot>[
-              LayerSnapshot(isBackground: true),
-              LayerSnapshot(
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(),
+              ContentLayerSnapshot(
                 nodes: <NodeSnapshot>[
                   RectNodeSnapshot(id: 'new', size: Size(5, 5)),
                 ],
@@ -1489,9 +1501,9 @@ void main() {
     testWidgets('pending two-tap line expires after timeout', (tester) async {
       final controller = SceneControllerInteractiveV2(
         initialSnapshot: SceneSnapshot(
-          layers: <LayerSnapshot>[
-            LayerSnapshot(isBackground: true),
-            LayerSnapshot(),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(),
+            ContentLayerSnapshot(),
           ],
         ),
       );
@@ -1526,9 +1538,9 @@ void main() {
       () {
         final controller = _controllerFromScene(
           Scene(
-            layers: <Layer>[
-              Layer(isBackground: true),
-              Layer(
+            layers: <ContentLayer>[
+              ContentLayer(),
+              ContentLayer(
                 nodes: <SceneNode>[RectNode(id: 'n', size: const Size(10, 10))],
               ),
             ],
@@ -1580,9 +1592,9 @@ void main() {
       () async {
         final controller = _controllerFromScene(
           Scene(
-            layers: <Layer>[
-              Layer(isBackground: true),
-              Layer(
+            layers: <ContentLayer>[
+              ContentLayer(),
+              ContentLayer(
                 nodes: <SceneNode>[
                   LineNode(
                     id: 'line-a',
@@ -1641,9 +1653,9 @@ void main() {
 
         controller.replaceScene(
           SceneSnapshot(
-            layers: <LayerSnapshot>[
-              LayerSnapshot(isBackground: true),
-              LayerSnapshot(
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(),
+              ContentLayerSnapshot(
                 nodes: <NodeSnapshot>[
                   RectNodeSnapshot(
                     id: 'bottom',

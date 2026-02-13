@@ -49,22 +49,6 @@ List<String> txnCollectStoreInvariantViolations({
     ];
   }
 
-  final backgroundLayerIndexes = _txnCollectBackgroundLayerIndexes(scene);
-  if (backgroundLayerIndexes.length > 1) {
-    violations = <String>[
-      ...violations,
-      'scene must contain at most one background layer. '
-          'indexes=$backgroundLayerIndexes',
-    ];
-  } else if (backgroundLayerIndexes.isNotEmpty &&
-      backgroundLayerIndexes.single != 0) {
-    violations = <String>[
-      ...violations,
-      'background layer must be at index 0 when present. '
-          'actualIndex=${backgroundLayerIndexes.single}',
-    ];
-  }
-
   final normalizedSelection = txnNormalizeSelection(
     rawSelection: selectedNodeIds,
     scene: scene,
@@ -167,6 +151,14 @@ bool _txnIsFiniteOffset(Offset value) {
 Set<NodeId> _txnCollectDuplicateNodeIds(Scene scene) {
   final seen = <NodeId>{};
   final duplicates = <NodeId>{};
+  final backgroundLayer = scene.backgroundLayer;
+  if (backgroundLayer != null) {
+    for (final node in backgroundLayer.nodes) {
+      if (!seen.add(node.id)) {
+        duplicates.add(node.id);
+      }
+    }
+  }
   for (final layer in scene.layers) {
     for (final node in layer.nodes) {
       if (!seen.add(node.id)) {
@@ -175,14 +167,4 @@ Set<NodeId> _txnCollectDuplicateNodeIds(Scene scene) {
     }
   }
   return duplicates;
-}
-
-List<int> _txnCollectBackgroundLayerIndexes(Scene scene) {
-  final out = <int>[];
-  for (var i = 0; i < scene.layers.length; i++) {
-    if (scene.layers[i].isBackground) {
-      out.add(i);
-    }
-  }
-  return out;
 }

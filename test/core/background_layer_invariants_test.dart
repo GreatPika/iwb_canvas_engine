@@ -3,47 +3,25 @@ import 'package:iwb_canvas_engine/src/core/background_layer_invariants.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 
 void main() {
-  test(
-    'canonicalizeBackgroundLayerInvariants moves single background to index 0',
-    () {
-      final layers = <Layer>[
-        Layer(isBackground: false),
-        Layer(isBackground: true),
-        Layer(isBackground: false),
-      ];
+  test('ensureBackgroundLayer creates background layer when missing', () {
+    final scene = Scene(layers: <ContentLayer>[ContentLayer()]);
 
-      canonicalizeBackgroundLayerInvariants(
-        layers,
-        onMultipleBackgroundError: (_) => throw StateError('unexpected'),
-      );
+    final layer = ensureBackgroundLayer(scene);
 
-      expect(layers.first.isBackground, isTrue);
-      expect(layers[1].isBackground, isFalse);
-      expect(layers[2].isBackground, isFalse);
-    },
-  );
+    expect(scene.backgroundLayer, isNotNull);
+    expect(identical(scene.backgroundLayer, layer), isTrue);
+  });
 
-  test(
-    'canonicalizeBackgroundLayerInvariants throws when callback does not throw',
-    () {
-      final layers = <Layer>[
-        Layer(isBackground: true),
-        Layer(isBackground: true),
-      ];
+  test('ensureBackgroundLayer returns existing layer without replacement', () {
+    final existing = BackgroundLayer();
+    final scene = Scene(
+      backgroundLayer: existing,
+      layers: <ContentLayer>[ContentLayer()],
+    );
 
-      expect(
-        () => canonicalizeBackgroundLayerInvariants(
-          layers,
-          onMultipleBackgroundError: (_) {},
-        ),
-        throwsA(
-          isA<StateError>().having(
-            (error) => error.message,
-            'message',
-            contains('onMultipleBackgroundError must throw'),
-          ),
-        ),
-      );
-    },
-  );
+    final resolved = ensureBackgroundLayer(scene);
+
+    expect(identical(resolved, existing), isTrue);
+    expect(identical(scene.backgroundLayer, existing), isTrue);
+  });
 }

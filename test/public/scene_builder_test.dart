@@ -29,7 +29,7 @@ Map<String, Object?> _minimalRectNodeJson({required String id}) {
 
 Map<String, Object?> _minimalSceneJson() {
   return <String, Object?>{
-    'schemaVersion': 2,
+    'schemaVersion': 3,
     'camera': <String, Object?>{'offsetX': 0, 'offsetY': 0},
     'background': <String, Object?>{
       'color': '#FFFFFFFF',
@@ -44,50 +44,46 @@ Map<String, Object?> _minimalSceneJson() {
       'backgroundColors': <Object?>['#FFFFFFFF'],
       'gridSizes': <Object?>[10],
     },
+    'backgroundLayer': <String, Object?>{
+      'nodes': <Object?>[_minimalRectNodeJson(id: 'bg')],
+    },
     'layers': <Object?>[
       <String, Object?>{
-        'isBackground': false,
         'nodes': <Object?>[_minimalRectNodeJson(id: 'n1')],
-      },
-      <String, Object?>{
-        'isBackground': true,
-        'nodes': <Object?>[_minimalRectNodeJson(id: 'bg')],
       },
     ],
   };
 }
 
 void main() {
-  test(
-    'SceneBuilder.buildFromSnapshot canonicalizes background to index 0',
-    () {
-      final result = SceneBuilder.buildFromSnapshot(
-        SceneSnapshot(
-          layers: <LayerSnapshot>[
-            LayerSnapshot(
-              nodes: const <NodeSnapshot>[
-                RectNodeSnapshot(id: 'n1', size: Size(1, 1)),
-              ],
-            ),
-            LayerSnapshot(
-              isBackground: true,
-              nodes: const <NodeSnapshot>[
-                RectNodeSnapshot(id: 'bg', size: Size(1, 1)),
-              ],
-            ),
+  test('SceneBuilder.buildFromSnapshot keeps typed background layer', () {
+    final result = SceneBuilder.buildFromSnapshot(
+      SceneSnapshot(
+        backgroundLayer: BackgroundLayerSnapshot(
+          nodes: const <NodeSnapshot>[
+            RectNodeSnapshot(id: 'bg', size: Size(1, 1)),
           ],
         ),
-      );
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
+            nodes: const <NodeSnapshot>[
+              RectNodeSnapshot(id: 'n1', size: Size(1, 1)),
+            ],
+          ),
+        ],
+      ),
+    );
 
-      expect(result.layers.first.isBackground, isTrue);
-      expect(result.layers[1].nodes.single.id, 'n1');
-    },
-  );
+    expect(result.backgroundLayer, isNotNull);
+    expect(result.backgroundLayer!.nodes.single.id, 'bg');
+    expect(result.layers.single.nodes.single.id, 'n1');
+  });
 
-  test('SceneBuilder.buildFromJson builds canonical snapshot', () {
+  test('SceneBuilder.buildFromJson builds typed snapshot', () {
     final result = SceneBuilder.buildFromJson(_minimalSceneJson());
 
-    expect(result.layers.first.isBackground, isTrue);
-    expect(result.layers[1].nodes.single.id, 'n1');
+    expect(result.backgroundLayer, isNotNull);
+    expect(result.backgroundLayer!.nodes.single.id, 'bg');
+    expect(result.layers.single.nodes.single.id, 'n1');
   });
 }

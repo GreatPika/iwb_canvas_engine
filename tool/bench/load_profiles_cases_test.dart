@@ -112,8 +112,8 @@ Map<String, Object?> _runNodeScaleCase({
   required int iterations,
 }) {
   final snapshot = SceneSnapshot(
-    layers: <LayerSnapshot>[
-      LayerSnapshot(
+    layers: <ContentLayerSnapshot>[
+      ContentLayerSnapshot(
         nodes: <NodeSnapshot>[
           for (var i = 0; i < nodeCount; i++)
             RectNodeSnapshot(
@@ -215,7 +215,7 @@ Map<String, Object?> _runStrokeScaleCase({
       ),
   ];
   final snapshot = SceneSnapshot(
-    layers: <LayerSnapshot>[LayerSnapshot(nodes: nodes)],
+    layers: <ContentLayerSnapshot>[ContentLayerSnapshot(nodes: nodes)],
   );
   final controller = SceneControllerV2(initialSnapshot: snapshot);
   final targetId = 's${strokeCount ~/ 2}';
@@ -307,8 +307,8 @@ Map<String, Object?> _runWorstCaseProfile({
 
 Map<String, Object?> _runHugeBoundsMetric({required int iterations}) {
   final snapshot = SceneSnapshot(
-    layers: <LayerSnapshot>[
-      LayerSnapshot(
+    layers: <ContentLayerSnapshot>[
+      ContentLayerSnapshot(
         nodes: const <NodeSnapshot>[
           RectNodeSnapshot(id: 'huge', size: Size(1e9, 1e9)),
         ],
@@ -353,8 +353,8 @@ Map<String, Object?> _runHugeRectSelectMetric({
   required int iterations,
 }) {
   final snapshot = SceneSnapshot(
-    layers: <LayerSnapshot>[
-      LayerSnapshot(
+    layers: <ContentLayerSnapshot>[
+      ContentLayerSnapshot(
         nodes: <NodeSnapshot>[
           for (var i = 0; i < nodeCount; i++)
             RectNodeSnapshot(
@@ -390,8 +390,8 @@ Map<String, Object?> _runVeryLongPathMetric({
   final pathA = _horizontalPath(segments: segments);
   final pathB = _horizontalPath(segments: segments + 100);
   final snapshot = SceneSnapshot(
-    layers: <LayerSnapshot>[
-      LayerSnapshot(
+    layers: <ContentLayerSnapshot>[
+      ContentLayerSnapshot(
         nodes: <NodeSnapshot>[
           PathNodeSnapshot(
             id: 'path',

@@ -140,8 +140,9 @@ const List<Invariant> invariants = <Invariant>[
     title: 'JSON grid/palette contracts are enforced',
   ),
   Invariant(
-    id: 'INV-SER-BACKGROUND-SINGLE-AT-ZERO',
+    id: 'INV-SER-TYPED-LAYER-SPLIT',
     scope: 'serialization',
-    title: 'decode canonicalizes single background layer at index 0',
+    title:
+        'serialization keeps optional backgroundLayer separate from content layers',
   ),
 ];

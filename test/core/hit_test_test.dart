@@ -237,12 +237,11 @@ void main() {
         ..position = const Offset(10, 10);
 
       final scene = Scene(
-        layers: <Layer>[
-          Layer(
-            isBackground: true,
+        layers: <ContentLayer>[
+          ContentLayer(
             nodes: <SceneNode>[RectNode(id: 'bg', size: const Size(200, 200))],
           ),
-          Layer(nodes: <SceneNode>[bottom, top]),
+          ContentLayer(nodes: <SceneNode>[bottom, top]),
         ],
       );
 

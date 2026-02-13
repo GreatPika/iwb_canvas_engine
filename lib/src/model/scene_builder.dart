@@ -32,14 +32,13 @@ Scene sceneBuildFromJsonMap(Map<String, Object?> rawJson) {
 
 SceneSnapshot sceneCanonicalizeAndValidateSnapshot(SceneSnapshot rawSnapshot) {
   _validateStructuralInvariants(rawSnapshot);
-  final canonicalSnapshot = _canonicalizeBackgroundLayer(rawSnapshot);
   sceneValidateSnapshotValues(
-    canonicalSnapshot,
+    rawSnapshot,
     onError: _snapshotValidationError,
     requirePositiveGridCellSize: true,
   );
-  _validateSnapshotRanges(canonicalSnapshot);
-  return canonicalSnapshot;
+  _validateSnapshotRanges(rawSnapshot);
+  return rawSnapshot;
 }
 
 Scene sceneCanonicalizeAndValidateScene(Scene rawScene) {
@@ -63,7 +62,7 @@ SceneSnapshot _decodeSnapshotFromJson(Map<String, Object?> json) {
     throw SceneDataException(
       code: SceneDataErrorCode.unsupportedSchemaVersion,
       path: 'schemaVersion',
-      message: 'Unsupported schemaVersion: $version. Expected one of: [2].',
+      message: 'Unsupported schemaVersion: $version. Expected one of: [3].',
     );
   }
 
@@ -105,6 +104,19 @@ SceneSnapshot _decodeSnapshotFromJson(Map<String, Object?> json) {
         .toList(growable: false),
   );
 
+  BackgroundLayerSnapshot? backgroundLayer;
+  final backgroundLayerJson = json['backgroundLayer'];
+  if (backgroundLayerJson != null) {
+    if (backgroundLayerJson is! Map) {
+      throw SceneDataException(
+        code: SceneDataErrorCode.invalidFieldType,
+        path: 'backgroundLayer',
+        message: 'Layer must be an object.',
+      );
+    }
+    backgroundLayer = _decodeBackgroundLayer(_castMap(backgroundLayerJson));
+  }
+
   final layersJson = _requireList(json, 'layers');
   final layers = layersJson
       .map((layerJson) {
@@ -115,11 +127,12 @@ SceneSnapshot _decodeSnapshotFromJson(Map<String, Object?> json) {
             message: 'Layer must be an object.',
           );
         }
-        return _decodeLayer(_castMap(layerJson));
+        return _decodeContentLayer(_castMap(layerJson));
       })
       .toList(growable: false);
 
   return SceneSnapshot(
+    backgroundLayer: backgroundLayer,
     layers: layers,
     camera: camera,
     background: background,
@@ -127,7 +140,24 @@ SceneSnapshot _decodeSnapshotFromJson(Map<String, Object?> json) {
   );
 }
 
-LayerSnapshot _decodeLayer(Map<String, Object?> json) {
+BackgroundLayerSnapshot _decodeBackgroundLayer(Map<String, Object?> json) {
+  final nodesJson = _requireList(json, 'nodes');
+  final nodes = nodesJson
+      .map((nodeJson) {
+        if (nodeJson is! Map) {
+          throw SceneDataException(
+            code: SceneDataErrorCode.invalidFieldType,
+            path: 'backgroundLayer.nodes',
+            message: 'Node must be an object.',
+          );
+        }
+        return _decodeNode(_castMap(nodeJson));
+      })
+      .toList(growable: false);
+  return BackgroundLayerSnapshot(nodes: nodes);
+}
+
+ContentLayerSnapshot _decodeContentLayer(Map<String, Object?> json) {
   final nodesJson = _requireList(json, 'nodes');
   final nodes = nodesJson
       .map((nodeJson) {
@@ -141,10 +171,7 @@ LayerSnapshot _decodeLayer(Map<String, Object?> json) {
         return _decodeNode(_castMap(nodeJson));
       })
       .toList(growable: false);
-  return LayerSnapshot(
-    nodes: nodes,
-    isBackground: _requireBool(json, 'isBackground'),
-  );
+  return ContentLayerSnapshot(nodes: nodes);
 }
 
 NodeSnapshot _decodeNode(Map<String, Object?> json) {
@@ -269,10 +296,16 @@ NodeSnapshot _decodeNode(Map<String, Object?> json) {
 
 Scene _sceneFromSnapshot(SceneSnapshot snapshot) {
   return Scene(
+    backgroundLayer: snapshot.backgroundLayer == null
+        ? null
+        : BackgroundLayer(
+            nodes: snapshot.backgroundLayer!.nodes
+                .map(_sceneNodeFromSnapshot)
+                .toList(growable: false),
+          ),
     layers: snapshot.layers
         .map(
-          (layer) => Layer(
-            isBackground: layer.isBackground,
+          (layer) => ContentLayer(
             nodes: layer.nodes
                 .map(_sceneNodeFromSnapshot)
                 .toList(growable: false),
@@ -408,10 +441,16 @@ SceneNode _sceneNodeFromSnapshot(NodeSnapshot node) {
 
 SceneSnapshot _snapshotFromScene(Scene scene) {
   return SceneSnapshot(
+    backgroundLayer: scene.backgroundLayer == null
+        ? null
+        : BackgroundLayerSnapshot(
+            nodes: scene.backgroundLayer!.nodes
+                .map(_snapshotNodeFromScene)
+                .toList(growable: false),
+          ),
     layers: scene.layers
         .map(
-          (layer) => LayerSnapshot(
-            isBackground: layer.isBackground,
+          (layer) => ContentLayerSnapshot(
             nodes: layer.nodes
                 .map(_snapshotNodeFromScene)
                 .toList(growable: false),
@@ -549,45 +588,29 @@ NodeSnapshot _snapshotNodeFromScene(SceneNode node) {
   }
 }
 
-SceneSnapshot _canonicalizeBackgroundLayer(SceneSnapshot snapshot) {
-  var backgroundCount = 0;
-  var backgroundIndex = -1;
-  for (var i = 0; i < snapshot.layers.length; i++) {
-    if (!snapshot.layers[i].isBackground) continue;
-    backgroundCount = backgroundCount + 1;
-    if (backgroundIndex == -1) {
-      backgroundIndex = i;
-    }
-  }
-
-  if (backgroundIndex <= 0) {
-    return snapshot;
-  }
-
-  final reordered = <LayerSnapshot>[snapshot.layers[backgroundIndex]];
-  for (var i = 0; i < snapshot.layers.length; i++) {
-    if (i == backgroundIndex) continue;
-    reordered.add(snapshot.layers[i]);
-  }
-
-  return SceneSnapshot(
-    layers: reordered,
-    camera: snapshot.camera,
-    background: snapshot.background,
-    palette: snapshot.palette,
-  );
-}
-
 void _validateStructuralInvariants(SceneSnapshot snapshot) {
   final seen = <String>{};
-  var backgroundCount = 0;
+
+  final backgroundLayer = snapshot.backgroundLayer;
+  if (backgroundLayer != null) {
+    for (
+      var nodeIndex = 0;
+      nodeIndex < backgroundLayer.nodes.length;
+      nodeIndex++
+    ) {
+      final node = backgroundLayer.nodes[nodeIndex];
+      if (seen.add(node.id)) continue;
+      throw SceneDataException(
+        code: SceneDataErrorCode.duplicateNodeId,
+        path: 'backgroundLayer.nodes[$nodeIndex].id',
+        message: 'Must be unique across scene layers.',
+        source: node.id,
+      );
+    }
+  }
 
   for (var layerIndex = 0; layerIndex < snapshot.layers.length; layerIndex++) {
     final layer = snapshot.layers[layerIndex];
-    if (layer.isBackground) {
-      backgroundCount = backgroundCount + 1;
-    }
-
     for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
       final node = layer.nodes[nodeIndex];
       if (seen.add(node.id)) continue;
@@ -598,15 +621,6 @@ void _validateStructuralInvariants(SceneSnapshot snapshot) {
         source: node.id,
       );
     }
-  }
-
-  if (backgroundCount > 1) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.multipleBackgroundLayers,
-      path: 'layers',
-      message: 'Must contain at most one background layer.',
-      source: backgroundCount,
-    );
   }
 }
 
@@ -620,6 +634,18 @@ void _validateSnapshotRanges(SceneSnapshot snapshot) {
   );
   for (var i = 0; i < snapshot.palette.gridSizes.length; i++) {
     _validateSizeUpper(snapshot.palette.gridSizes[i], 'palette.gridSizes[$i]');
+  }
+
+  final backgroundLayer = snapshot.backgroundLayer;
+  if (backgroundLayer != null) {
+    for (
+      var nodeIndex = 0;
+      nodeIndex < backgroundLayer.nodes.length;
+      nodeIndex++
+    ) {
+      final field = 'backgroundLayer.nodes[$nodeIndex]';
+      _validateNodeRanges(backgroundLayer.nodes[nodeIndex], field);
+    }
   }
 
   for (var layerIndex = 0; layerIndex < snapshot.layers.length; layerIndex++) {

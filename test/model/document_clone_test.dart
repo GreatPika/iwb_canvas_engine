@@ -9,12 +9,11 @@ import 'package:iwb_canvas_engine/src/model/document_clone.dart';
 void main() {
   Scene sourceScene() {
     return Scene(
-      layers: <Layer>[
-        Layer(
-          isBackground: true,
+      layers: <ContentLayer>[
+        ContentLayer(
           nodes: <SceneNode>[RectNode(id: 'bg-0', size: const Size(100, 100))],
         ),
-        Layer(
+        ContentLayer(
           nodes: <SceneNode>[
             ImageNode(
               id: 'node-1',
@@ -114,22 +113,25 @@ void main() {
     expect(clone.palette, isNot(same(source.palette)));
     expect(clone.palette.penColors, isNot(same(source.palette.penColors)));
 
-    clone.layers.add(Layer());
+    clone.layers.add(ContentLayer());
     clone.camera.offset = const Offset(42, 24);
     expect(source.layers.length, 2);
     expect(source.camera.offset, const Offset(10, 20));
   });
 
-  test('txnCloneLayerShallow copies node list and shares node objects', () {
-    final source = sourceScene();
+  test(
+    'txnCloneContentLayerShallow copies node list and shares node objects',
+    () {
+      final source = sourceScene();
 
-    final clone = txnCloneLayerShallow(source.layers[1]);
+      final clone = txnCloneContentLayerShallow(source.layers[1]);
 
-    expect(clone, isNot(same(source.layers[1])));
-    expect(clone.nodes, isNot(same(source.layers[1].nodes)));
-    expect(clone.nodes.length, source.layers[1].nodes.length);
-    expect(identical(clone.nodes[2], source.layers[1].nodes[2]), isTrue);
-  });
+      expect(clone, isNot(same(source.layers[1])));
+      expect(clone.nodes, isNot(same(source.layers[1].nodes)));
+      expect(clone.nodes.length, source.layers[1].nodes.length);
+      expect(identical(clone.nodes[2], source.layers[1].nodes[2]), isTrue);
+    },
+  );
 
   test('txnCloneScene deep clones scene, layers, nodes and mutable lists', () {
     final source = sourceScene();
@@ -161,11 +163,10 @@ void main() {
     expect(sourceRect.size, const Size(4, 6));
   });
 
-  test('txnCloneLayer and txnCloneNode keep node type fidelity', () {
+  test('txnCloneContentLayer and txnCloneNode keep node type fidelity', () {
     final source = sourceScene();
-    final layerClone = txnCloneLayer(source.layers[1]);
+    final layerClone = txnCloneContentLayer(source.layers[1]);
 
-    expect(layerClone.isBackground, isFalse);
     expect(layerClone.nodes.length, source.layers[1].nodes.length);
     expect(layerClone.nodes[0], isA<ImageNode>());
     expect(layerClone.nodes[1], isA<TextNode>());
@@ -176,6 +177,44 @@ void main() {
 
     final clonedPath = txnCloneNode(source.layers[1].nodes[5]) as PathNode;
     expect(clonedPath.fillRule, PathFillRule.evenOdd);
+  });
+
+  test('background layer clone helpers preserve shallow/deep semantics', () {
+    final source = sourceScene();
+    source.backgroundLayer = BackgroundLayer(
+      nodes: <SceneNode>[
+        RectNode(id: 'bg-node', size: const Size(50, 50)),
+        RectNode(id: 'bg-node-2', size: const Size(10, 10)),
+      ],
+    );
+
+    final shallow = txnCloneBackgroundLayerShallow(source.backgroundLayer!);
+    final deep = txnCloneBackgroundLayer(source.backgroundLayer!);
+    final sceneClone = txnCloneScene(source);
+
+    expect(shallow, isNot(same(source.backgroundLayer)));
+    expect(shallow.nodes, isNot(same(source.backgroundLayer!.nodes)));
+    expect(
+      identical(shallow.nodes.first, source.backgroundLayer!.nodes.first),
+      isTrue,
+    );
+
+    expect(deep, isNot(same(source.backgroundLayer)));
+    expect(deep.nodes, isNot(same(source.backgroundLayer!.nodes)));
+    expect(
+      identical(deep.nodes.first, source.backgroundLayer!.nodes.first),
+      isFalse,
+    );
+
+    expect(sceneClone.backgroundLayer, isNotNull);
+    expect(sceneClone.backgroundLayer, isNot(same(source.backgroundLayer)));
+    expect(
+      identical(
+        sceneClone.backgroundLayer!.nodes.first,
+        source.backgroundLayer!.nodes.first,
+      ),
+      isFalse,
+    );
   });
 
   test('txnCollectNodeIds gathers all ids across layers', () {

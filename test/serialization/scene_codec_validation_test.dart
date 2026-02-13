@@ -31,7 +31,6 @@ Map<String, dynamic> _sceneWithSingleNode(Map<String, dynamic> nodeJson) {
   final json = _minimalSceneJson();
   json['layers'] = <dynamic>[
     <String, dynamic>{
-      'isBackground': false,
       'nodes': <dynamic>[nodeJson],
     },
   ];
@@ -64,7 +63,7 @@ void main() {
   // INV:INV-SER-JSON-NUMERIC-VALIDATION
   test('encodeSceneToJson -> decodeSceneFromJson is stable', () {
     final scene = SceneSnapshot(
-      layers: [LayerSnapshot(isBackground: true), LayerSnapshot()],
+      layers: [ContentLayerSnapshot(), ContentLayerSnapshot()],
     );
     final json = encodeSceneToJson(scene);
     final decoded = decodeSceneFromJson(json);
@@ -101,15 +100,15 @@ void main() {
   });
 
   test('decodeScene does not auto-insert missing background layer', () {
-    // INV:INV-SER-BACKGROUND-SINGLE-AT-ZERO
+    // INV:INV-SER-TYPED-LAYER-SPLIT
     final scene = decodeScene(_minimalSceneJson());
     expect(scene.layers, isEmpty);
   });
 
   test(
-    'decodeScene moves misordered background layer to index 0 preserving order',
+    'decodeScene reads typed backgroundLayer and preserves content order',
     () {
-      // INV:INV-SER-BACKGROUND-SINGLE-AT-ZERO
+      // INV:INV-SER-TYPED-LAYER-SPLIT
       final bgNode = _baseNodeJson(id: 'bg', type: 'rect')
         ..addAll(<String, dynamic>{
           'size': <String, dynamic>{'w': 1, 'h': 1},
@@ -126,53 +125,31 @@ void main() {
           'strokeWidth': 0,
         });
       final json = _minimalSceneJson();
+      json['backgroundLayer'] = <String, dynamic>{
+        'nodes': <dynamic>[bgNode],
+      };
       json['layers'] = <dynamic>[
         <String, dynamic>{
-          'isBackground': false,
           'nodes': <dynamic>[n1],
         },
         <String, dynamic>{
-          'isBackground': true,
-          'nodes': <dynamic>[bgNode],
-        },
-        <String, dynamic>{
-          'isBackground': false,
           'nodes': <dynamic>[n2],
         },
       ];
 
       final scene = decodeScene(json);
 
-      expect(scene.layers, hasLength(3));
-      expect(scene.layers.first.isBackground, isTrue);
-      expect(scene.layers[1].nodes.single.id, 'n1');
-      expect(scene.layers[2].nodes.single.id, 'n2');
+      expect(scene.backgroundLayer, isNotNull);
+      expect(scene.backgroundLayer!.nodes.single.id, 'bg');
+      expect(scene.layers, hasLength(2));
+      expect(scene.layers[0].nodes.single.id, 'n1');
+      expect(scene.layers[1].nodes.single.id, 'n2');
     },
   );
 
-  test('decodeScene rejects multiple background layers', () {
-    // INV:INV-SER-BACKGROUND-SINGLE-AT-ZERO
-    final firstBg = _baseNodeJson(id: 'bg-1', type: 'rect')
-      ..addAll(<String, dynamic>{
-        'size': <String, dynamic>{'w': 1, 'h': 1},
-        'strokeWidth': 0,
-      });
-    final secondBg = _baseNodeJson(id: 'bg-2', type: 'rect')
-      ..addAll(<String, dynamic>{
-        'size': <String, dynamic>{'w': 1, 'h': 1},
-        'strokeWidth': 0,
-      });
+  test('decodeScene rejects non-object backgroundLayer', () {
     final json = _minimalSceneJson();
-    json['layers'] = <dynamic>[
-      <String, dynamic>{
-        'isBackground': true,
-        'nodes': <dynamic>[firstBg],
-      },
-      <String, dynamic>{
-        'isBackground': true,
-        'nodes': <dynamic>[secondBg],
-      },
-    ];
+    json['backgroundLayer'] = 'invalid';
 
     expect(
       () => decodeScene(json),
@@ -180,7 +157,8 @@ void main() {
         predicate(
           (e) =>
               e is SceneDataException &&
-              e.message == 'Must contain at most one background layer.',
+              e.code == SceneDataErrorCode.invalidFieldType &&
+              e.path == 'backgroundLayer',
         ),
       ),
     );
@@ -205,7 +183,6 @@ void main() {
     final json = _minimalSceneJson();
     json['layers'] = <dynamic>[
       <String, dynamic>{
-        'isBackground': false,
         'nodes': <dynamic>[123],
       },
     ];
@@ -225,7 +202,6 @@ void main() {
     final json = _minimalSceneJson();
     json['layers'] = <dynamic>[
       <String, dynamic>{
-        'isBackground': false,
         'nodes': <dynamic>[
           _baseNodeJson(id: 'dup-node', type: 'rect')..addAll(<String, dynamic>{
             'size': <String, dynamic>{'w': 10, 'h': 10},
@@ -234,7 +210,6 @@ void main() {
         ],
       },
       <String, dynamic>{
-        'isBackground': false,
         'nodes': <dynamic>[
           _baseNodeJson(id: 'dup-node', type: 'rect')..addAll(<String, dynamic>{
             'size': <String, dynamic>{'w': 20, 'h': 20},
@@ -272,7 +247,7 @@ void main() {
   test('encodeScene rejects unsupported TextAlign values', () {
     final scene = SceneSnapshot(
       layers: [
-        LayerSnapshot(
+        ContentLayerSnapshot(
           nodes: [
             TextNodeSnapshot(
               id: 'text-1',
@@ -404,9 +379,7 @@ void main() {
       });
 
     final scene = decodeScene(_sceneWithSingleNode(nodeJson));
-    final node =
-        scene.layers.firstWhere((layer) => !layer.isBackground).nodes.single
-            as TextNodeSnapshot;
+    final node = scene.layers.first.nodes.single as TextNodeSnapshot;
     expect(node.align, TextAlign.right);
 
     final invalidAlignJson = _baseNodeJson(id: 't2', type: 'text')
@@ -697,7 +670,7 @@ void main() {
 
   test('decodeScene accepts integer-valued numeric schemaVersion', () {
     final json = _minimalSceneJson();
-    json['schemaVersion'] = 2.0;
+    json['schemaVersion'] = 3.0;
 
     final scene = decodeScene(json);
     expect(scene.layers, isEmpty);
@@ -730,7 +703,7 @@ void main() {
             (e) =>
                 e is SceneDataException &&
                 e.message ==
-                    'Unsupported schemaVersion: 1. Expected one of: [2].',
+                    'Unsupported schemaVersion: 1. Expected one of: [3].',
           ),
         ),
       );
@@ -787,8 +760,8 @@ void main() {
 
   test('encodeSceneDocument rejects mutable node opacity outside [0,1]', () {
     final scene = Scene(
-      layers: <Layer>[
-        Layer(nodes: <SceneNode>[_BadOpacityNode(id: 'bad-opacity')]),
+      layers: <ContentLayer>[
+        ContentLayer(nodes: <SceneNode>[_BadOpacityNode(id: 'bad-opacity')]),
       ],
     );
 
@@ -821,13 +794,15 @@ void main() {
         backgroundColors: <Color>[const Color(0xFF222222)],
         gridSizes: <double>[8, 16],
       ),
-      layers: <Layer>[
-        Layer(
-          isBackground: true,
-          nodes: <SceneNode>[RectNode(id: 'bg-rect', size: const Size(10, 5))],
-        ),
-        Layer(
+      backgroundLayer: BackgroundLayer(
+        nodes: <SceneNode>[RectNode(id: 'bg-rect', size: const Size(10, 5))],
+      ),
+      layers: <ContentLayer>[
+        ContentLayer(
           nodes: <SceneNode>[RectNode(id: 'fg-rect', size: const Size(3, 2))],
+        ),
+        ContentLayer(
+          nodes: <SceneNode>[RectNode(id: 'fg-rect-2', size: const Size(6, 4))],
         ),
       ],
     );
@@ -851,21 +826,32 @@ void main() {
     expect(palette['backgroundColors'], <String>['#FF222222']);
     expect(palette['gridSizes'], <double>[8, 16]);
 
+    final backgroundLayer = encoded['backgroundLayer'] as Map<String, dynamic>;
+    final backgroundNodes = backgroundLayer['nodes'] as List<dynamic>;
+    expect(backgroundNodes, hasLength(1));
+    expect((backgroundNodes.single as Map<String, dynamic>)['id'], 'bg-rect');
+
     final layers = encoded['layers'] as List<dynamic>;
     expect(layers, hasLength(2));
-    expect((layers[0] as Map<String, dynamic>)['isBackground'], isTrue);
-    expect((layers[1] as Map<String, dynamic>)['isBackground'], isFalse);
+    expect(
+      (layers[0] as Map<String, dynamic>).containsKey('isBackground'),
+      isFalse,
+    );
+    expect(
+      (layers[1] as Map<String, dynamic>).containsKey('isBackground'),
+      isFalse,
+    );
   });
 
   test(
-    'encodeSceneDocument rejects duplicate node ids and multiple background layers',
+    'encodeSceneDocument rejects duplicate node ids across background/content',
     () {
       final duplicateIds = Scene(
-        layers: <Layer>[
-          Layer(
-            nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(1, 1))],
-          ),
-          Layer(
+        backgroundLayer: BackgroundLayer(
+          nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(1, 1))],
+        ),
+        layers: <ContentLayer>[
+          ContentLayer(
             nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(2, 2))],
           ),
         ],
@@ -876,23 +862,7 @@ void main() {
           predicate(
             (e) =>
                 e is SceneDataException &&
-                e.message ==
-                    'Field layers[1].nodes[0].id must be unique across scene layers.',
-          ),
-        ),
-      );
-
-      final multipleBackground = Scene(
-        layers: <Layer>[Layer(isBackground: true), Layer(isBackground: true)],
-      );
-      expect(
-        () => encodeSceneDocument(multipleBackground),
-        throwsA(
-          predicate(
-            (e) =>
-                e is SceneDataException &&
-                e.message ==
-                    'Field layers must contain at most one background layer.',
+                e.message.contains('must be unique across scene layers.'),
           ),
         ),
       );
@@ -1183,7 +1153,7 @@ void main() {
   test('encodeScene enforces grid and palette contracts', () {
     // INV:INV-SER-JSON-GRID-PALETTE-CONTRACTS
     final invalidGridScene = SceneSnapshot(
-      layers: [LayerSnapshot()],
+      layers: [ContentLayerSnapshot()],
       background: BackgroundSnapshot(
         grid: GridSnapshot(isEnabled: false, cellSize: -12.5),
       ),
@@ -1200,7 +1170,7 @@ void main() {
     );
 
     final enabledGridScene = SceneSnapshot(
-      layers: [LayerSnapshot()],
+      layers: [ContentLayerSnapshot()],
       background: BackgroundSnapshot(
         grid: GridSnapshot(isEnabled: true, cellSize: 0),
       ),
@@ -1219,7 +1189,7 @@ void main() {
     expect(
       () => encodeScene(
         SceneSnapshot(
-          layers: [LayerSnapshot()],
+          layers: [ContentLayerSnapshot()],
           palette: ScenePaletteSnapshot(penColors: const []),
         ),
       ),
@@ -1234,7 +1204,7 @@ void main() {
     expect(
       () => encodeScene(
         SceneSnapshot(
-          layers: [LayerSnapshot()],
+          layers: [ContentLayerSnapshot()],
           palette: ScenePaletteSnapshot(backgroundColors: const []),
         ),
       ),
@@ -1249,7 +1219,7 @@ void main() {
     expect(
       () => encodeScene(
         SceneSnapshot(
-          layers: [LayerSnapshot()],
+          layers: [ContentLayerSnapshot()],
           palette: ScenePaletteSnapshot(gridSizes: const []),
         ),
       ),
@@ -1265,7 +1235,7 @@ void main() {
 
   test('encodeScene rejects invalid numeric fields', () {
     final cameraNaN = SceneSnapshot(
-      layers: [LayerSnapshot()],
+      layers: [ContentLayerSnapshot()],
       camera: CameraSnapshot(offset: Offset(double.nan, 0)),
     );
     expect(
@@ -1281,7 +1251,7 @@ void main() {
 
     final negativeHitPaddingScene = SceneSnapshot(
       layers: [
-        LayerSnapshot(
+        ContentLayerSnapshot(
           nodes: [
             RectNodeSnapshot(
               id: 'r1',
@@ -1306,7 +1276,7 @@ void main() {
 
     final nonPositiveFontSizeScene = SceneSnapshot(
       layers: [
-        LayerSnapshot(
+        ContentLayerSnapshot(
           nodes: [
             TextNodeSnapshot(
               id: 't1',
@@ -1332,7 +1302,7 @@ void main() {
 
     final opacityOutOfRangeScene = SceneSnapshot(
       layers: [
-        LayerSnapshot(
+        ContentLayerSnapshot(
           nodes: [
             RectNodeSnapshot(
               id: 'r1',

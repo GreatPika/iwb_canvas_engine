@@ -167,14 +167,15 @@ void main() {
             color: Color(0xFF000000),
           ),
         ),
-        layers: <LayerSnapshot>[
-          LayerSnapshot(
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
             nodes: <NodeSnapshot>[
               RectNodeSnapshot(
                 id: 'rect-1',
                 size: const Size(30, 20),
                 fillColor: const Color(0xFF2196F3),
                 strokeColor: const Color(0xFF000000),
+                strokeWidth: 2,
                 transform: Transform2D.translation(const Offset(20, 20)),
               ),
               const LineNodeSnapshot(
@@ -243,7 +244,7 @@ void main() {
     final controller = SceneControllerV2(
       initialSnapshot: SceneSnapshot(
         background: const BackgroundSnapshot(color: background),
-        layers: <LayerSnapshot>[LayerSnapshot()],
+        layers: <ContentLayerSnapshot>[ContentLayerSnapshot()],
       ),
     );
     addTearDown(controller.dispose);
@@ -298,8 +299,8 @@ void main() {
     final controller = SceneControllerV2(
       initialSnapshot: SceneSnapshot(
         background: const BackgroundSnapshot(color: background),
-        layers: <LayerSnapshot>[
-          LayerSnapshot(
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
             nodes: <NodeSnapshot>[
               const LineNodeSnapshot(
                 id: 'line-valid',
@@ -420,8 +421,8 @@ void main() {
       SceneSnapshot snapshotFor(TextAlign align) {
         return SceneSnapshot(
           background: const BackgroundSnapshot(color: background),
-          layers: <LayerSnapshot>[
-            LayerSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
               nodes: <NodeSnapshot>[
                 TextNodeSnapshot(
                   id: 'text-$align',
@@ -503,8 +504,8 @@ void main() {
       SceneSnapshot snapshotFor(double? lineHeight) {
         return SceneSnapshot(
           background: const BackgroundSnapshot(color: background),
-          layers: <LayerSnapshot>[
-            LayerSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
               nodes: <NodeSnapshot>[
                 TextNodeSnapshot(
                   id: 'text-line-height',
@@ -562,8 +563,8 @@ void main() {
     final controller = SceneControllerV2(
       initialSnapshot: SceneSnapshot(
         background: const BackgroundSnapshot(color: background),
-        layers: <LayerSnapshot>[
-          LayerSnapshot(
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
             nodes: <NodeSnapshot>[
               StrokeNodeSnapshot(
                 id: 'stroke',
@@ -664,8 +665,8 @@ void main() {
       final controller = SceneControllerV2(
         initialSnapshot: SceneSnapshot(
           background: const BackgroundSnapshot(color: background),
-          layers: <LayerSnapshot>[
-            LayerSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
               nodes: <NodeSnapshot>[
                 StrokeNodeSnapshot(
                   id: 'dot',
@@ -729,8 +730,8 @@ void main() {
       final controller = SceneControllerV2(
         initialSnapshot: SceneSnapshot(
           background: const BackgroundSnapshot(color: background),
-          layers: <LayerSnapshot>[
-            LayerSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
               nodes: <NodeSnapshot>[
                 const ImageNodeSnapshot(
                   id: 'img-sel',
@@ -930,8 +931,8 @@ void main() {
       final controller = SceneControllerV2(
         initialSnapshot: SceneSnapshot(
           background: const BackgroundSnapshot(color: background),
-          layers: <LayerSnapshot>[
-            LayerSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
               nodes: <NodeSnapshot>[
                 RectNodeSnapshot(
                   id: 'previewed',

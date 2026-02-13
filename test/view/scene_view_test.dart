@@ -7,8 +7,8 @@ import 'package:iwb_canvas_engine/src/view/scene_view.dart';
 
 SceneSnapshot _snapshot({required double strokeY, required String text}) {
   return SceneSnapshot(
-    layers: <LayerSnapshot>[
-      LayerSnapshot(
+    layers: <ContentLayerSnapshot>[
+      ContentLayerSnapshot(
         nodes: <NodeSnapshot>[
           TextNodeSnapshot(
             id: 'txt',

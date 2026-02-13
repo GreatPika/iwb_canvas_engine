@@ -9,34 +9,45 @@ typedef NodeId = String;
 /// Immutable scene snapshot exposed by the v2 public API.
 class SceneSnapshot {
   SceneSnapshot({
-    List<LayerSnapshot>? layers,
+    List<ContentLayerSnapshot>? layers,
+    this.backgroundLayer,
     CameraSnapshot? camera,
     BackgroundSnapshot? background,
     ScenePaletteSnapshot? palette,
-  }) : layers = List<LayerSnapshot>.unmodifiable(
+  }) : layers = List<ContentLayerSnapshot>.unmodifiable(
          layers == null
-             ? const <LayerSnapshot>[]
-             : List<LayerSnapshot>.from(layers),
+             ? const <ContentLayerSnapshot>[]
+             : List<ContentLayerSnapshot>.from(layers),
        ),
        camera = camera ?? const CameraSnapshot(),
        background = background ?? const BackgroundSnapshot(),
        palette = palette ?? ScenePaletteSnapshot();
 
-  final List<LayerSnapshot> layers;
+  final List<ContentLayerSnapshot> layers;
+  final BackgroundLayerSnapshot? backgroundLayer;
   final CameraSnapshot camera;
   final BackgroundSnapshot background;
   final ScenePaletteSnapshot palette;
 }
 
-/// Immutable layer snapshot.
-class LayerSnapshot {
-  LayerSnapshot({List<NodeSnapshot>? nodes, this.isBackground = false})
+/// Immutable dedicated background layer snapshot.
+class BackgroundLayerSnapshot {
+  BackgroundLayerSnapshot({List<NodeSnapshot>? nodes})
     : nodes = List<NodeSnapshot>.unmodifiable(
         nodes == null ? const <NodeSnapshot>[] : List<NodeSnapshot>.from(nodes),
       );
 
   final List<NodeSnapshot> nodes;
-  final bool isBackground;
+}
+
+/// Immutable content layer snapshot.
+class ContentLayerSnapshot {
+  ContentLayerSnapshot({List<NodeSnapshot>? nodes})
+    : nodes = List<NodeSnapshot>.unmodifiable(
+        nodes == null ? const <NodeSnapshot>[] : List<NodeSnapshot>.from(nodes),
+      );
+
+  final List<NodeSnapshot> nodes;
 }
 
 /// Immutable camera state snapshot.
@@ -235,7 +246,7 @@ class RectNodeSnapshot extends NodeSnapshot {
     required this.size,
     this.fillColor,
     this.strokeColor,
-    this.strokeWidth = 1,
+    this.strokeWidth = 0,
     super.transform,
     super.opacity,
     super.hitPadding,
@@ -258,7 +269,7 @@ class PathNodeSnapshot extends NodeSnapshot {
     required this.svgPathData,
     this.fillColor,
     this.strokeColor,
-    this.strokeWidth = 1,
+    this.strokeWidth = 0,
     this.fillRule = V2PathFillRule.nonZero,
     super.transform,
     super.opacity,

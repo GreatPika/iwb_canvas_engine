@@ -31,6 +31,7 @@ class TxnContext {
   Map<NodeId, NodeLocatorEntry>? _materializedNodeLocator;
   Scene? _mutableScene;
   final Set<int> _clonedLayerIndexes = <int>{};
+  bool _backgroundLayerCloned = false;
   final Set<NodeId> _clonedNodeIds = <NodeId>{};
   bool _mutableSceneOwnedByTxn = false;
 
@@ -53,12 +54,13 @@ class TxnContext {
     _mutableScene = cloned;
     _mutableSceneOwnedByTxn = false;
     _clonedLayerIndexes.clear();
+    _backgroundLayerCloned = false;
     _clonedNodeIds.clear();
     debugSceneShallowClones = debugSceneShallowClones + 1;
     return cloned;
   }
 
-  Layer txnEnsureMutableLayer(int layerIndex) {
+  ContentLayer txnEnsureMutableLayer(int layerIndex) {
     final scene = txnEnsureMutableScene();
     if (layerIndex < 0 || layerIndex >= scene.layers.length) {
       throw RangeError.range(
@@ -82,9 +84,36 @@ class TxnContext {
       return current;
     }
 
-    final cloned = txnCloneLayerShallow(current);
+    final cloned = txnCloneContentLayerShallow(current);
     scene.layers[layerIndex] = cloned;
     _clonedLayerIndexes.add(layerIndex);
+    debugLayerShallowClones = debugLayerShallowClones + 1;
+    return cloned;
+  }
+
+  BackgroundLayer txnEnsureMutableBackgroundLayer() {
+    final scene = txnEnsureMutableScene();
+    final current = scene.backgroundLayer;
+    if (current == null) {
+      final created = BackgroundLayer();
+      scene.backgroundLayer = created;
+      _backgroundLayerCloned = true;
+      debugLayerShallowClones = debugLayerShallowClones + 1;
+      return created;
+    }
+    if (_mutableSceneOwnedByTxn || _backgroundLayerCloned) {
+      return current;
+    }
+
+    final baseLayer = _baseScene.backgroundLayer;
+    if (!identical(current, baseLayer)) {
+      _backgroundLayerCloned = true;
+      return current;
+    }
+
+    final cloned = txnCloneBackgroundLayerShallow(current);
+    scene.backgroundLayer = cloned;
+    _backgroundLayerCloned = true;
     debugLayerShallowClones = debugLayerShallowClones + 1;
     return cloned;
   }
@@ -111,7 +140,11 @@ class TxnContext {
       return foundInWorking;
     }
 
-    txnEnsureMutableLayer(foundInWorking.layerIndex);
+    if (foundInWorking.layerIndex == -1) {
+      txnEnsureMutableBackgroundLayer();
+    } else {
+      txnEnsureMutableLayer(foundInWorking.layerIndex);
+    }
     final foundAfterLayerClone = txnFindNodeById(id);
     if (foundAfterLayerClone == null) {
       throw StateError('Node not found after layer clone: $id');
@@ -129,10 +162,18 @@ class TxnContext {
     }
 
     final clonedNode = txnCloneNode(foundAfterLayerClone.node);
-    workingScene
-            .layers[foundAfterLayerClone.layerIndex]
-            .nodes[foundAfterLayerClone.nodeIndex] =
-        clonedNode;
+    if (foundAfterLayerClone.layerIndex == -1) {
+      final backgroundLayer = workingScene.backgroundLayer;
+      if (backgroundLayer == null) {
+        throw StateError('Background layer missing after mutable clone: $id');
+      }
+      backgroundLayer.nodes[foundAfterLayerClone.nodeIndex] = clonedNode;
+    } else {
+      workingScene
+              .layers[foundAfterLayerClone.layerIndex]
+              .nodes[foundAfterLayerClone.nodeIndex] =
+          clonedNode;
+    }
     _clonedNodeIds.add(id);
     debugNodeClones = debugNodeClones + 1;
     return (
@@ -209,6 +250,7 @@ class TxnContext {
     _mutableScene = scene;
     _mutableSceneOwnedByTxn = true;
     _clonedLayerIndexes.clear();
+    _backgroundLayerCloned = false;
     _clonedNodeIds.clear();
     _baseAllNodeIds = txnCollectNodeIds(scene);
     _baseNodeLocator = txnBuildNodeLocator(scene);
@@ -288,7 +330,7 @@ class TxnContext {
     return materialized;
   }
 
-  Layer? _txnBaseLayerAt(int layerIndex) {
+  ContentLayer? _txnBaseLayerAt(int layerIndex) {
     if (layerIndex < 0 || layerIndex >= _baseScene.layers.length) {
       return null;
     }
@@ -296,6 +338,16 @@ class TxnContext {
   }
 
   SceneNode? _txnBaseNodeAt({required int layerIndex, required int nodeIndex}) {
+    if (layerIndex == -1) {
+      final backgroundLayer = _baseScene.backgroundLayer;
+      if (backgroundLayer == null) {
+        return null;
+      }
+      if (nodeIndex < 0 || nodeIndex >= backgroundLayer.nodes.length) {
+        return null;
+      }
+      return backgroundLayer.nodes[nodeIndex];
+    }
     final layer = _txnBaseLayerAt(layerIndex);
     if (layer == null) {
       return null;

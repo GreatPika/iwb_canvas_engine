@@ -17,40 +17,30 @@ void main() {
     expect(centerWorldForNodes(<SceneNode>[a, b]), const Offset(10, 0));
   });
 
-  test('interactive/deletable selection helpers honor layer and flags', () {
+  test('interactive/deletable selection helpers honor node flags', () {
     final node = RectNode(id: 'n', size: const Size(10, 10));
-    final fg = Layer(nodes: <SceneNode>[node]);
-    final bg = Layer(isBackground: true, nodes: <SceneNode>[node]);
 
-    expect(
-      isNodeInteractiveForSelection(node, fg, onlySelectable: false),
-      isTrue,
-    );
+    expect(isNodeInteractiveForSelection(node, onlySelectable: false), isTrue);
     node.isSelectable = false;
-    expect(
-      isNodeInteractiveForSelection(node, fg, onlySelectable: true),
-      isFalse,
-    );
-    expect(
-      isNodeInteractiveForSelection(node, bg, onlySelectable: false),
-      isFalse,
-    );
+    expect(isNodeInteractiveForSelection(node, onlySelectable: true), isFalse);
+
+    node.isVisible = false;
+    expect(isNodeInteractiveForSelection(node, onlySelectable: false), isFalse);
 
     node.isDeletable = false;
-    expect(isNodeDeletableInLayer(node, fg), isFalse);
-    expect(isNodeDeletableInLayer(node, bg), isFalse);
+    expect(isNodeDeletableInLayer(node), isFalse);
   });
 
-  test('selectedTransformableNodesInSceneOrder filters by ids/layer/flag', () {
+  test('selectedTransformableNodesInSceneOrder filters by ids and flags', () {
     final a = RectNode(id: 'a', size: const Size(1, 1));
     final b = RectNode(id: 'b', size: const Size(1, 1))
       ..isTransformable = false;
     final c = RectNode(id: 'c', size: const Size(1, 1));
 
     final scene = Scene(
-      layers: <Layer>[
-        Layer(isBackground: true, nodes: <SceneNode>[a]),
-        Layer(nodes: <SceneNode>[b, c]),
+      layers: <ContentLayer>[
+        ContentLayer(nodes: <SceneNode>[a]),
+        ContentLayer(nodes: <SceneNode>[b, c]),
       ],
     );
 
@@ -64,7 +54,7 @@ void main() {
         'b',
         'c',
       }).map((n) => n.id).toList(),
-      const <String>['c'],
+      const <String>['a', 'c'],
     );
   });
 }

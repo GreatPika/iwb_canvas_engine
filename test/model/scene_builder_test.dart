@@ -36,7 +36,7 @@ Map<String, Object?> _minimalRectNodeJson({required String id}) {
 
 Map<String, Object?> _minimalSceneJson() {
   return <String, Object?>{
-    'schemaVersion': 2,
+    'schemaVersion': 3,
     'camera': <String, Object?>{'offsetX': 0, 'offsetY': 0},
     'background': <String, Object?>{
       'color': '#FFFFFFFF',
@@ -53,7 +53,6 @@ Map<String, Object?> _minimalSceneJson() {
     },
     'layers': <Object?>[
       <String, Object?>{
-        'isBackground': false,
         'nodes': <Object?>[_minimalRectNodeJson(id: 'n1')],
       },
     ],
@@ -100,8 +99,9 @@ void main() {
     'sceneValidateCore canonicalizes background and preserves all node types',
     () {
       final scene = Scene(
-        layers: <Layer>[
-          Layer(
+        backgroundLayer: BackgroundLayer(),
+        layers: <ContentLayer>[
+          ContentLayer(
             nodes: <SceneNode>[
               ImageNode(
                 id: 'img',
@@ -146,14 +146,13 @@ void main() {
               ),
             ],
           ),
-          Layer(isBackground: true),
         ],
       );
 
       final canonical = model_builder.sceneValidateCore(scene);
 
-      expect(canonical.layers.first.isBackground, isTrue);
-      final nodes = canonical.layers[1].nodes;
+      expect(canonical.backgroundLayer, isNotNull);
+      final nodes = canonical.layers.first.nodes;
       expect(nodes[0], isA<ImageNode>());
       expect(nodes[1], isA<TextNode>());
       expect(nodes[2], isA<StrokeNode>());
@@ -168,8 +167,8 @@ void main() {
 
   test('sceneBuildFromSnapshot rejects out-of-range transform values', () {
     final snapshot = SceneSnapshot(
-      layers: <LayerSnapshot>[
-        LayerSnapshot(
+      layers: <ContentLayerSnapshot>[
+        ContentLayerSnapshot(
           nodes: const <NodeSnapshot>[
             RectNodeSnapshot(
               id: 'r1',
@@ -247,18 +246,6 @@ void main() {
             })(),
           ),
           (
-            label: 'layer.isBackground',
-            expectedPath: 'isBackground',
-            json: (() {
-              final json = _minimalSceneJson();
-              final layer =
-                  (json['layers'] as List<Object?>).first
-                      as Map<String, Object?>;
-              layer.remove('isBackground');
-              return json;
-            })(),
-          ),
-          (
             label: 'node.hitPadding',
             expectedPath: 'hitPadding',
             json: (() {
@@ -291,6 +278,48 @@ void main() {
     }
   });
 
+  test('sceneBuildFromJsonMap rejects non-object background layer nodes', () {
+    final json = _minimalSceneJson();
+    json['backgroundLayer'] = <String, Object?>{
+      'nodes': <Object?>[123],
+    };
+
+    expect(
+      () => model_builder.sceneBuildFromJsonMap(json),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidFieldType &&
+              e.path == 'backgroundLayer.nodes' &&
+              e.message == 'Node must be an object.',
+        ),
+      ),
+    );
+  });
+
+  test('sceneBuildFromJsonMap reports missing required bool fields', () {
+    final json = _minimalSceneJson();
+    final layer =
+        (json['layers'] as List<Object?>).first as Map<String, Object?>;
+    final node =
+        (layer['nodes'] as List<Object?>).first as Map<String, Object?>;
+    node.remove('isVisible');
+
+    expect(
+      () => model_builder.sceneBuildFromJsonMap(json),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.missingField &&
+              e.path == 'isVisible' &&
+              e.message == 'Field isVisible must be a bool.',
+        ),
+      ),
+    );
+  });
+
   test('sceneBuildFromJsonMap rejects unsafe integer values', () {
     final json = _minimalSceneJson();
     json['schemaVersion'] = 9007199254740992.0;
@@ -303,6 +332,25 @@ void main() {
               e is SceneDataException &&
               e.code == SceneDataErrorCode.invalidValue &&
               e.path == 'schemaVersion',
+        ),
+      ),
+    );
+  });
+
+  test('sceneBuildFromJsonMap rejects non-string palette color entries', () {
+    final json = _minimalSceneJson();
+    final palette = json['palette'] as Map<String, Object?>;
+    palette['penColors'] = <Object?>[123];
+
+    expect(
+      () => model_builder.sceneBuildFromJsonMap(json),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidFieldType &&
+              e.path == 'penColors' &&
+              e.message == 'Items of penColors must be strings.',
         ),
       ),
     );
@@ -325,91 +373,156 @@ void main() {
     );
   });
 
-  test(
-    'sceneValidateSnapshotValues reports duplicate node ids and backgrounds',
-    () {
-      SceneDataException asSceneDataException({
-        required Object? value,
-        required String field,
-        required String message,
-      }) {
-        return SceneDataException(
-          code: SceneDataErrorCode.invalidValue,
-          path: field,
-          message: 'Field $field $message',
-          source: value,
-        );
-      }
+  test('sceneValidateSnapshotValues reports duplicate node ids', () {
+    SceneDataException asSceneDataException({
+      required Object? value,
+      required String field,
+      required String message,
+    }) {
+      return SceneDataException(
+        code: SceneDataErrorCode.invalidValue,
+        path: field,
+        message: 'Field $field $message',
+        source: value,
+      );
+    }
 
-      expect(
-        () => value_validation.sceneValidateSnapshotValues(
-          SceneSnapshot(
-            layers: <LayerSnapshot>[
-              LayerSnapshot(
-                nodes: const <NodeSnapshot>[
-                  RectNodeSnapshot(id: 'dup', size: Size(1, 1)),
-                  RectNodeSnapshot(id: 'dup', size: Size(1, 1)),
-                ],
-              ),
+    expect(
+      () => value_validation.sceneValidateSnapshotValues(
+        SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              nodes: const <NodeSnapshot>[
+                RectNodeSnapshot(id: 'dup', size: Size(1, 1)),
+                RectNodeSnapshot(id: 'dup', size: Size(1, 1)),
+              ],
+            ),
+          ],
+        ),
+        onError:
+            ({
+              required Object? value,
+              required String field,
+              required String message,
+            }) {
+              throw asSceneDataException(
+                value: value,
+                field: field,
+                message: message,
+              );
+            },
+        requirePositiveGridCellSize: true,
+      ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.path == 'layers[0].nodes[1].id' &&
+              e.message ==
+                  'Field layers[0].nodes[1].id must be unique across scene layers.',
+        ),
+      ),
+    );
+  });
+
+  test('sceneBuildFromSnapshot rejects duplicate ids in background layer', () {
+    final snapshot = SceneSnapshot(
+      backgroundLayer: BackgroundLayerSnapshot(
+        nodes: const <NodeSnapshot>[
+          RectNodeSnapshot(id: 'dup-bg', size: Size(1, 1)),
+          RectNodeSnapshot(id: 'dup-bg', size: Size(2, 2)),
+        ],
+      ),
+      layers: <ContentLayerSnapshot>[ContentLayerSnapshot()],
+    );
+
+    expect(
+      () => model_builder.sceneBuildFromSnapshot(snapshot),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.duplicateNodeId &&
+              e.path == 'backgroundLayer.nodes[1].id' &&
+              e.message == 'Must be unique across scene layers.',
+        ),
+      ),
+    );
+  });
+
+  test('sceneValidateSnapshotValues reports background duplicate node ids', () {
+    SceneDataException asSceneDataException({
+      required Object? value,
+      required String field,
+      required String message,
+    }) {
+      return SceneDataException(
+        code: SceneDataErrorCode.invalidValue,
+        path: field,
+        message: 'Field $field $message',
+        source: value,
+      );
+    }
+
+    expect(
+      () => value_validation.sceneValidateSnapshotValues(
+        SceneSnapshot(
+          backgroundLayer: BackgroundLayerSnapshot(
+            nodes: const <NodeSnapshot>[
+              RectNodeSnapshot(id: 'dup-bg', size: Size(1, 1)),
+              RectNodeSnapshot(id: 'dup-bg', size: Size(1, 1)),
             ],
           ),
-          onError:
-              ({
-                required Object? value,
-                required String field,
-                required String message,
-              }) {
-                throw asSceneDataException(
-                  value: value,
-                  field: field,
-                  message: message,
-                );
-              },
-          requirePositiveGridCellSize: true,
+          layers: <ContentLayerSnapshot>[ContentLayerSnapshot()],
         ),
-        throwsA(
-          predicate(
-            (e) =>
-                e is SceneDataException &&
-                e.path == 'layers[0].nodes[1].id' &&
-                e.message ==
-                    'Field layers[0].nodes[1].id must be unique across scene layers.',
-          ),
+        onError:
+            ({
+              required Object? value,
+              required String field,
+              required String message,
+            }) {
+              throw asSceneDataException(
+                value: value,
+                field: field,
+                message: message,
+              );
+            },
+        requirePositiveGridCellSize: true,
+      ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.path == 'backgroundLayer.nodes[1].id' &&
+              e.message ==
+                  'Field backgroundLayer.nodes[1].id must be unique across scene layers.',
         ),
-      );
+      ),
+    );
+  });
 
-      expect(
-        () => value_validation.sceneValidateSnapshotValues(
-          SceneSnapshot(
-            layers: <LayerSnapshot>[
-              LayerSnapshot(isBackground: true),
-              LayerSnapshot(isBackground: true),
+  test('sceneValidateCore reports background duplicate node ids', () {
+    expect(
+      () => model_builder.sceneValidateCore(
+        Scene(
+          backgroundLayer: BackgroundLayer(
+            nodes: <SceneNode>[
+              RectNode(id: 'dup-bg', size: const Size(1, 1)),
+              RectNode(id: 'dup-bg', size: const Size(1, 1)),
             ],
           ),
-          onError:
-              ({
-                required Object? value,
-                required String field,
-                required String message,
-              }) {
-                throw asSceneDataException(
-                  value: value,
-                  field: field,
-                  message: message,
-                );
-              },
-          requirePositiveGridCellSize: true,
+          layers: <ContentLayer>[ContentLayer()],
         ),
-        throwsA(
-          predicate(
-            (e) =>
-                e is SceneDataException &&
-                e.path == 'layers' &&
-                e.message ==
-                    'Field layers must contain at most one background layer.',
-          ),
+      ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.path == 'backgroundLayer.nodes[1].id' &&
+              e.message ==
+                  'Field backgroundLayer.nodes[1].id must be unique across scene layers.',
         ),
-      );
-    },
-  );
+      ),
+    );
+  });
 }

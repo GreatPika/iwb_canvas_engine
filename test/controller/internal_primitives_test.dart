@@ -28,12 +28,44 @@ class _LayerDropTxnContext extends TxnContext {
   bool _dropped = false;
 
   @override
-  Layer txnEnsureMutableLayer(int layerIndex) {
+  ContentLayer txnEnsureMutableLayer(int layerIndex) {
     final layer = super.txnEnsureMutableLayer(layerIndex);
     if (!_dropped) {
       _dropped = true;
       layer.nodes.clear();
     }
+    return layer;
+  }
+}
+
+class _BackgroundDropTxnContext extends TxnContext {
+  _BackgroundDropTxnContext({
+    required super.baseScene,
+    required super.workingSelection,
+    required super.baseAllNodeIds,
+    required super.nodeIdSeed,
+  });
+
+  ({SceneNode node, int layerIndex, int nodeIndex})? _cachedFound;
+  var _findCalls = 0;
+
+  @override
+  ({SceneNode node, int layerIndex, int nodeIndex})? txnFindNodeById(
+    NodeId id,
+  ) {
+    final found = super.txnFindNodeById(id);
+    _findCalls = _findCalls + 1;
+    if (_findCalls == 1) {
+      _cachedFound = found;
+      return found;
+    }
+    return found ?? _cachedFound;
+  }
+
+  @override
+  BackgroundLayer txnEnsureMutableBackgroundLayer() {
+    final layer = super.txnEnsureMutableBackgroundLayer();
+    workingScene.backgroundLayer = null;
     return layer;
   }
 }
@@ -115,8 +147,8 @@ void main() {
 
     ctx.txnAdoptScene(
       Scene(
-        layers: <Layer>[
-          Layer(
+        layers: <ContentLayer>[
+          ContentLayer(
             nodes: <SceneNode>[
               RectNode(id: 'node-7', size: const Size(1, 1)),
               RectNode(id: 'manual', size: const Size(1, 1)),
@@ -168,8 +200,8 @@ void main() {
     'TxnContext materializes nodeLocator lazily on structural commit view',
     () {
       final baseScene = Scene(
-        layers: <Layer>[
-          Layer(
+        layers: <ContentLayer>[
+          ContentLayer(
             nodes: <SceneNode>[RectNode(id: 'r1', size: const Size(1, 1))],
           ),
         ],
@@ -294,8 +326,8 @@ void main() {
 
   test('V2Store initializes selections, id set and id seed from scene', () {
     final scene = Scene(
-      layers: <Layer>[
-        Layer(
+      layers: <ContentLayer>[
+        ContentLayer(
           nodes: <SceneNode>[
             RectNode(id: 'node-2', size: const Size(1, 1)),
             RectNode(id: 'node-9', size: const Size(1, 1)),
@@ -331,8 +363,8 @@ void main() {
 
   test('TxnContext scene-for-commit uses base scene until first mutation', () {
     final baseScene = Scene(
-      layers: <Layer>[
-        Layer(
+      layers: <ContentLayer>[
+        ContentLayer(
           nodes: <SceneNode>[RectNode(id: 'r1', size: const Size(10, 10))],
         ),
       ],
@@ -354,8 +386,8 @@ void main() {
 
   test('TxnContext shallow scene clone defers layer and node cloning', () {
     final baseScene = Scene(
-      layers: <Layer>[
-        Layer(
+      layers: <ContentLayer>[
+        ContentLayer(
           nodes: <SceneNode>[RectNode(id: 'r1', size: const Size(10, 10))],
         ),
       ],
@@ -386,8 +418,8 @@ void main() {
     'TxnContext resolves mutable nodes with one layer clone and per-node COW',
     () {
       final baseScene = Scene(
-        layers: <Layer>[
-          Layer(
+        layers: <ContentLayer>[
+          ContentLayer(
             nodes: <SceneNode>[
               RectNode(id: 'r1', size: const Size(10, 10)),
               RectNode(id: 'r2', size: const Size(12, 12)),
@@ -424,8 +456,8 @@ void main() {
 
   test('TxnContext adopted scene bypasses layer/node COW cloning', () {
     final adopted = Scene(
-      layers: <Layer>[
-        Layer(
+      layers: <ContentLayer>[
+        ContentLayer(
           nodes: <SceneNode>[RectNode(id: 'adopted', size: const Size(10, 10))],
         ),
       ],
@@ -452,7 +484,7 @@ void main() {
     'TxnContext ensureMutableLayer throws range error for invalid index',
     () {
       final ctx = TxnContext(
-        baseScene: Scene(layers: <Layer>[Layer()]),
+        baseScene: Scene(layers: <ContentLayer>[ContentLayer()]),
         workingSelection: <NodeId>{},
         baseAllNodeIds: <NodeId>{},
         nodeIdSeed: 0,
@@ -466,8 +498,8 @@ void main() {
     'TxnContext ensureMutableLayer fast path returns owned adopted layer',
     () {
       final adopted = Scene(
-        layers: <Layer>[
-          Layer(
+        layers: <ContentLayer>[
+          ContentLayer(
             nodes: <SceneNode>[RectNode(id: 'n1', size: const Size(1, 1))],
           ),
         ],
@@ -502,8 +534,8 @@ void main() {
     () {
       final ctx = _LayerDropTxnContext(
         baseScene: Scene(
-          layers: <Layer>[
-            Layer(
+          layers: <ContentLayer>[
+            ContentLayer(
               nodes: <SceneNode>[RectNode(id: 'n1', size: const Size(1, 1))],
             ),
           ],
@@ -517,12 +549,98 @@ void main() {
     },
   );
 
+  test('TxnContext background layer COW resolves mutable background node', () {
+    final baseScene = Scene(
+      backgroundLayer: BackgroundLayer(
+        nodes: <SceneNode>[RectNode(id: 'bg', size: const Size(1, 1))],
+      ),
+      layers: <ContentLayer>[ContentLayer()],
+    );
+    final baseBackground = baseScene.backgroundLayer!;
+    final ctx = TxnContext(
+      baseScene: baseScene,
+      workingSelection: <NodeId>{},
+      baseAllNodeIds: <NodeId>{'bg'},
+      nodeIdSeed: 0,
+    );
+
+    final firstMutable = ctx.txnEnsureMutableBackgroundLayer();
+    expect(firstMutable, isNot(same(baseBackground)));
+    expect(ctx.debugLayerShallowClones, 1);
+
+    final secondMutable = ctx.txnEnsureMutableBackgroundLayer();
+    expect(identical(secondMutable, firstMutable), isTrue);
+
+    final resolved = ctx.txnResolveMutableNode('bg');
+    expect(resolved.layerIndex, -1);
+    expect(resolved.nodeIndex, 0);
+    expect(resolved.node, isA<RectNode>());
+    expect(identical(resolved.node, baseBackground.nodes.first), isFalse);
+  });
+
+  test(
+    'TxnContext background ensureMutable respects externally replaced layer identity',
+    () {
+      final baseScene = Scene(
+        backgroundLayer: BackgroundLayer(
+          nodes: <SceneNode>[RectNode(id: 'bg', size: const Size(1, 1))],
+        ),
+        layers: <ContentLayer>[ContentLayer()],
+      );
+      final ctx = TxnContext(
+        baseScene: baseScene,
+        workingSelection: <NodeId>{},
+        baseAllNodeIds: <NodeId>{'bg'},
+        nodeIdSeed: 0,
+      );
+
+      final scene = ctx.txnEnsureMutableScene();
+      final replaced = BackgroundLayer(
+        nodes: <SceneNode>[RectNode(id: 'bg', size: const Size(1, 1))],
+      );
+      scene.backgroundLayer = replaced;
+
+      final mutable = ctx.txnEnsureMutableBackgroundLayer();
+      expect(identical(mutable, replaced), isTrue);
+      expect(ctx.debugLayerShallowClones, 0);
+    },
+  );
+
+  test(
+    'TxnContext resolveMutableNode throws when background disappears mid-resolve',
+    () {
+      final ctx = _BackgroundDropTxnContext(
+        baseScene: Scene(
+          backgroundLayer: BackgroundLayer(
+            nodes: <SceneNode>[RectNode(id: 'bg', size: const Size(1, 1))],
+          ),
+          layers: <ContentLayer>[ContentLayer()],
+        ),
+        workingSelection: <NodeId>{},
+        baseAllNodeIds: <NodeId>{'bg'},
+        nodeIdSeed: 0,
+      );
+
+      expect(
+        () => ctx.txnResolveMutableNode('bg'),
+        throwsA(
+          predicate(
+            (error) =>
+                error is StateError &&
+                error.message ==
+                    'Background layer missing after mutable clone: bg',
+          ),
+        ),
+      );
+    },
+  );
+
   test('SceneWriter handles write operations and updates changeset', () {
     final bufferedSignals = <V2BufferedSignal>[];
     final ctx = TxnContext(
       baseScene: Scene(
-        layers: <Layer>[
-          Layer(
+        layers: <ContentLayer>[
+          ContentLayer(
             nodes: <SceneNode>[RectNode(id: 'r1', size: const Size(10, 10))],
           ),
         ],
@@ -589,8 +707,8 @@ void main() {
 
     writer.writeDocumentReplace(
       SceneSnapshot(
-        layers: <LayerSnapshot>[
-          LayerSnapshot(
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
             nodes: const <NodeSnapshot>[
               RectNodeSnapshot(id: 'fresh', size: Size(1, 1)),
             ],
@@ -608,8 +726,8 @@ void main() {
     () {
       final ctx = TxnContext(
         baseScene: Scene(
-          layers: <Layer>[
-            Layer(
+          layers: <ContentLayer>[
+            ContentLayer(
               nodes: <SceneNode>[
                 RectNode(id: 'r1', size: const Size(10, 10)),
                 RectNode(id: 'r2', size: const Size(10, 10)),
@@ -650,7 +768,7 @@ void main() {
           RectNode(id: 'n$i', size: const Size(10, 10)),
       ];
       final ctx = TxnContext(
-        baseScene: Scene(layers: <Layer>[Layer(nodes: nodes)]),
+        baseScene: Scene(layers: <ContentLayer>[ContentLayer(nodes: nodes)]),
         workingSelection: <NodeId>{},
         baseAllNodeIds: <NodeId>{for (var i = 0; i < 1000; i++) 'n$i'},
         nodeIdSeed: 1000,
@@ -689,8 +807,8 @@ void main() {
   test('SceneWriter covers id generation and selection branches', () {
     final ctx = TxnContext(
       baseScene: Scene(
-        layers: <Layer>[
-          Layer(
+        layers: <ContentLayer>[
+          ContentLayer(
             nodes: <SceneNode>[
               RectNode(id: 'rect-1', size: const Size(10, 10)),
               RectNode(
@@ -743,8 +861,8 @@ void main() {
     // INV:INV-V2-WRITE-NUMERIC-GUARDS
     final ctx = TxnContext(
       baseScene: Scene(
-        layers: <Layer>[
-          Layer(
+        layers: <ContentLayer>[
+          ContentLayer(
             nodes: <SceneNode>[
               RectNode(
                 id: 'locked',
@@ -792,8 +910,8 @@ void main() {
     // INV:INV-V2-WRITE-NUMERIC-GUARDS
     final ctx = TxnContext(
       baseScene: Scene(
-        layers: <Layer>[
-          Layer(
+        layers: <ContentLayer>[
+          ContentLayer(
             nodes: <SceneNode>[RectNode(id: 'r1', size: const Size(10, 10))],
           ),
         ],
@@ -826,8 +944,8 @@ void main() {
   test('writeNodeTransformSet marks visual change when bounds stay same', () {
     final ctx = TxnContext(
       baseScene: Scene(
-        layers: <Layer>[
-          Layer(
+        layers: <ContentLayer>[
+          ContentLayer(
             nodes: <SceneNode>[
               LineNode(
                 id: 'line-static',
@@ -859,9 +977,9 @@ void main() {
   test('SceneWriter covers clear/delete/mark helpers', () {
     final ctx = TxnContext(
       baseScene: Scene(
-        layers: <Layer>[
-          Layer(isBackground: true),
-          Layer(
+        layers: <ContentLayer>[
+          ContentLayer(),
+          ContentLayer(
             nodes: <SceneNode>[
               RectNode(
                 id: 'keep',
@@ -889,7 +1007,8 @@ void main() {
 
     final cleared = writer.writeClearSceneKeepBackground();
     expect(cleared, const <NodeId>['keep']);
-    expect(ctx.workingScene.layers.length, 1);
+    expect(ctx.workingScene.layers, isEmpty);
+    expect(ctx.workingScene.backgroundLayer, isNotNull);
     expect(ctx.workingSelection, isEmpty);
     expect(writer.writeClearSceneKeepBackground(), isEmpty);
     expect(ctx.changeSet.structuralChanged, isTrue);
@@ -898,27 +1017,32 @@ void main() {
     expect(ctx.changeSet.selectionChanged, isTrue);
   });
 
-  test('SceneWriter clearScene throws on multiple background layers', () {
-    final ctx = TxnContext(
-      baseScene: Scene(
-        layers: <Layer>[Layer(isBackground: true), Layer(isBackground: true)],
-      ),
-      workingSelection: <NodeId>{},
-      baseAllNodeIds: <NodeId>{},
-      nodeIdSeed: 0,
-    );
-    final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+  test(
+    'SceneWriter clearScene creates missing background layer and clears',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[ContentLayer(), ContentLayer()],
+        ),
+        workingSelection: <NodeId>{},
+        baseAllNodeIds: <NodeId>{},
+        nodeIdSeed: 0,
+      );
+      final writer = SceneWriter(ctx, txnSignalSink: (_) {});
 
-    expect(writer.writeClearSceneKeepBackground, throwsStateError);
-  });
+      expect(writer.writeClearSceneKeepBackground(), isEmpty);
+      expect(ctx.workingScene.layers, isEmpty);
+      expect(ctx.workingScene.backgroundLayer, isNotNull);
+    },
+  );
 
   test(
     'V2SpatialIndexSlice caches, applies incremental changes and falls back safely',
     () {
       final slice = V2SpatialIndexSlice();
       final scene = Scene(
-        layers: <Layer>[
-          Layer(
+        layers: <ContentLayer>[
+          ContentLayer(
             nodes: <SceneNode>[RectNode(id: 'r1', size: const Size(10, 10))],
           ),
         ],
@@ -962,8 +1086,8 @@ void main() {
       expect(slice.debugIncrementalApplyCount, 0);
 
       final movedScene = Scene(
-        layers: <Layer>[
-          Layer(
+        layers: <ContentLayer>[
+          ContentLayer(
             nodes: <SceneNode>[
               RectNode(
                 id: 'r1',
@@ -1059,8 +1183,8 @@ void main() {
       expect(slice.debugBuildCount, 4);
 
       final outOfRangeScene = Scene(
-        layers: <Layer>[
-          Layer(
+        layers: <ContentLayer>[
+          ContentLayer(
             nodes: <SceneNode>[
               RectNode(
                 id: 'r1',

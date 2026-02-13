@@ -17,8 +17,8 @@ import 'package:iwb_canvas_engine/src/input/slices/signals/signal_event.dart';
 void main() {
   SceneSnapshot twoRectSnapshot() {
     return SceneSnapshot(
-      layers: <LayerSnapshot>[
-        LayerSnapshot(
+      layers: <ContentLayerSnapshot>[
+        ContentLayerSnapshot(
           nodes: <NodeSnapshot>[
             const RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
             const RectNodeSnapshot(id: 'r2', size: Size(12, 12)),
@@ -30,8 +30,8 @@ void main() {
 
   SceneSnapshot singleStrokeSnapshot() {
     return SceneSnapshot(
-      layers: <LayerSnapshot>[
-        LayerSnapshot(
+      layers: <ContentLayerSnapshot>[
+        ContentLayerSnapshot(
           nodes: <NodeSnapshot>[
             StrokeNodeSnapshot(
               id: 's1',
@@ -297,8 +297,8 @@ void main() {
     final before = controller.snapshot;
     controller.writeReplaceScene(
       SceneSnapshot(
-        layers: <LayerSnapshot>[
-          LayerSnapshot(
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
             nodes: const <NodeSnapshot>[
               RectNodeSnapshot(id: 'fresh', size: Size(4, 4)),
             ],
@@ -626,8 +626,8 @@ void main() {
     () {
       final controller = SceneControllerV2(
         initialSnapshot: SceneSnapshot(
-          layers: <LayerSnapshot>[
-            LayerSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
               nodes: const <NodeSnapshot>[
                 RectNodeSnapshot(id: 'selectable', size: Size(10, 10)),
                 RectNodeSnapshot(
@@ -672,8 +672,8 @@ void main() {
 
       controller.writeReplaceScene(
         SceneSnapshot(
-          layers: <LayerSnapshot>[
-            LayerSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
               nodes: const <NodeSnapshot>[
                 RectNodeSnapshot(id: 'fresh', size: Size(4, 4)),
               ],
@@ -697,36 +697,26 @@ void main() {
         <({SceneSnapshot snapshot, String field, String expectedMessage})>[
           (
             snapshot: SceneSnapshot(
-              layers: <LayerSnapshot>[
-                LayerSnapshot(
-                  nodes: const <NodeSnapshot>[
-                    RectNodeSnapshot(id: 'dup', size: Size(1, 1)),
-                  ],
-                ),
-                LayerSnapshot(
+              backgroundLayer: BackgroundLayerSnapshot(
+                nodes: const <NodeSnapshot>[
+                  RectNodeSnapshot(id: 'dup', size: Size(1, 1)),
+                ],
+              ),
+              layers: <ContentLayerSnapshot>[
+                ContentLayerSnapshot(
                   nodes: const <NodeSnapshot>[
                     RectNodeSnapshot(id: 'dup', size: Size(2, 2)),
                   ],
                 ),
               ],
             ),
-            field: 'layers[1].nodes[0].id',
+            field: 'layers[0].nodes[0].id',
             expectedMessage: 'Must be unique across scene layers.',
           ),
           (
             snapshot: SceneSnapshot(
-              layers: <LayerSnapshot>[
-                LayerSnapshot(isBackground: true),
-                LayerSnapshot(isBackground: true),
-              ],
-            ),
-            field: 'layers',
-            expectedMessage: 'Must contain at most one background layer.',
-          ),
-          (
-            snapshot: SceneSnapshot(
-              layers: <LayerSnapshot>[
-                LayerSnapshot(
+              layers: <ContentLayerSnapshot>[
+                ContentLayerSnapshot(
                   nodes: const <NodeSnapshot>[
                     PathNodeSnapshot(id: 'p1', svgPathData: 'not-a-path'),
                   ],
@@ -789,8 +779,8 @@ void main() {
       });
 
       final malformed = SceneSnapshot(
-        layers: <LayerSnapshot>[
-          LayerSnapshot(
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
             nodes: const <NodeSnapshot>[
               RectNodeSnapshot(
                 id: 'bad',
@@ -928,8 +918,8 @@ void main() {
   test('spatial index handles huge node and updates incrementally', () {
     final controller = SceneControllerV2(
       initialSnapshot: SceneSnapshot(
-        layers: <LayerSnapshot>[
-          LayerSnapshot(
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
             nodes: const <NodeSnapshot>[
               RectNodeSnapshot(id: 'huge', size: Size(10000, 10000)),
             ],
@@ -975,8 +965,8 @@ void main() {
 
     controller.writeReplaceScene(
       SceneSnapshot(
-        layers: <LayerSnapshot>[
-          LayerSnapshot(
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
             nodes: const <NodeSnapshot>[
               RectNodeSnapshot(id: 'fresh', size: Size(10, 10)),
             ],
@@ -998,8 +988,8 @@ void main() {
     () {
       final controller = SceneControllerV2(
         initialSnapshot: SceneSnapshot(
-          layers: <LayerSnapshot>[
-            LayerSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
               nodes: const <NodeSnapshot>[
                 RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
                 RectNodeSnapshot(id: 'r2', size: Size(10, 10)),
@@ -1066,8 +1056,8 @@ void main() {
     () {
       final controller = SceneControllerV2(
         initialSnapshot: SceneSnapshot(
-          layers: <LayerSnapshot>[
-            LayerSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
               nodes: const <NodeSnapshot>[
                 TextNodeSnapshot(
                   id: 't1',
@@ -1109,8 +1099,8 @@ void main() {
   test('text visual-only patch keeps bounds revision unchanged', () {
     final controller = SceneControllerV2(
       initialSnapshot: SceneSnapshot(
-        layers: <LayerSnapshot>[
-          LayerSnapshot(
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
             nodes: const <NodeSnapshot>[
               TextNodeSnapshot(
                 id: 't1',
@@ -1202,8 +1192,8 @@ void main() {
   test('node id seed stays monotonic after deleting max node-* id', () {
     final controller = SceneControllerV2(
       initialSnapshot: SceneSnapshot(
-        layers: <LayerSnapshot>[
-          LayerSnapshot(
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
             nodes: const <NodeSnapshot>[
               RectNodeSnapshot(id: 'node-1', size: Size(10, 10)),
               RectNodeSnapshot(id: 'node-9', size: Size(12, 12)),
@@ -1242,31 +1232,34 @@ void main() {
     expect(identical(resolved, candidates.first.node), isTrue);
   });
 
-  test('resolveSpatialCandidateNode rejects background candidate', () {
-    final controller = SceneControllerV2(
-      initialSnapshot: SceneSnapshot(
-        layers: <LayerSnapshot>[
-          LayerSnapshot(
-            isBackground: true,
+  test(
+    'resolveSpatialCandidateNode rejects candidate from background locator',
+    () {
+      final controller = SceneControllerV2(
+        initialSnapshot: SceneSnapshot(
+          backgroundLayer: BackgroundLayerSnapshot(
             nodes: const <NodeSnapshot>[
               RectNodeSnapshot(id: 'bg-node', size: Size(10, 10)),
             ],
           ),
-          LayerSnapshot(),
-        ],
-      ),
-    );
-    addTearDown(controller.dispose);
+          layers: <ContentLayerSnapshot>[ContentLayerSnapshot()],
+        ),
+      );
+      addTearDown(controller.dispose);
 
-    final backgroundNode = RectNode(id: 'bg-node', size: const Size(10, 10));
-    final backgroundCandidate = SceneSpatialCandidate(
-      layerIndex: 0,
-      nodeIndex: 0,
-      node: backgroundNode,
-      candidateBoundsWorld: backgroundNode.boundsWorld,
-    );
-    expect(controller.resolveSpatialCandidateNode(backgroundCandidate), isNull);
-  });
+      final backgroundNode = RectNode(id: 'bg-node', size: const Size(10, 10));
+      final backgroundCandidate = SceneSpatialCandidate(
+        layerIndex: -1,
+        nodeIndex: 0,
+        node: backgroundNode,
+        candidateBoundsWorld: backgroundNode.boundsWorld,
+      );
+      expect(
+        controller.resolveSpatialCandidateNode(backgroundCandidate),
+        isNull,
+      );
+    },
+  );
 
   test('resolveSpatialCandidateNode rejects out-of-range indices', () {
     final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
@@ -1302,8 +1295,8 @@ void main() {
 
       controller.writeReplaceScene(
         SceneSnapshot(
-          layers: <LayerSnapshot>[
-            LayerSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
               nodes: const <NodeSnapshot>[
                 RectNodeSnapshot(id: 'fresh-1', size: Size(10, 10)),
                 RectNodeSnapshot(id: 'fresh-2', size: Size(12, 12)),
@@ -1524,8 +1517,8 @@ void main() {
     () {
       final controller = SceneControllerV2(
         initialSnapshot: SceneSnapshot(
-          layers: <LayerSnapshot>[
-            LayerSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
               nodes: <NodeSnapshot>[
                 for (var i = 0; i < 1000; i++)
                   RectNodeSnapshot(id: 'n$i', size: const Size(10, 10)),

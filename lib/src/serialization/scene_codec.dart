@@ -10,10 +10,10 @@ import '../public/scene_data_exception.dart';
 import '../public/snapshot.dart' hide NodeId;
 
 /// JSON schema version written by this package.
-const int schemaVersionWrite = 2;
+const int schemaVersionWrite = 3;
 
 /// JSON schema versions accepted by this package.
-const Set<int> schemaVersionsRead = {2};
+const Set<int> schemaVersionsRead = {3};
 
 /// Encodes [snapshot] to a JSON string.
 String encodeSceneToJson(SceneSnapshot snapshot) {
@@ -22,7 +22,7 @@ String encodeSceneToJson(SceneSnapshot snapshot) {
 
 /// Decodes a [SceneSnapshot] from a JSON string.
 ///
-/// Only `schemaVersion = 2` is accepted.
+/// Only `schemaVersion = 3` is accepted.
 ///
 /// Throws [SceneDataException] when the JSON is invalid, the schema version is
 /// unsupported, or validation fails.
@@ -57,7 +57,7 @@ Map<String, dynamic> encodeScene(SceneSnapshot snapshot) {
 
 /// Decodes a [SceneSnapshot] from a JSON map (already parsed).
 ///
-/// Only `schemaVersion = 2` is accepted.
+/// Only `schemaVersion = 3` is accepted.
 ///
 /// Throws [SceneDataException] when validation fails.
 SceneSnapshot decodeScene(Map<String, Object?> json) {
@@ -89,13 +89,17 @@ Map<String, dynamic> encodeSceneDocument(Scene scene) {
           .toList(),
       'gridSizes': canonicalScene.palette.gridSizes,
     },
-    'layers': canonicalScene.layers.map(_encodeLayer).toList(),
+    if (canonicalScene.backgroundLayer != null)
+      'backgroundLayer': _encodeBackgroundLayer(
+        canonicalScene.backgroundLayer!,
+      ),
+    'layers': canonicalScene.layers.map(_encodeContentLayer).toList(),
   };
 }
 
 /// Decodes internal mutable [Scene] document from a JSON map (already parsed).
 ///
-/// Only `schemaVersion = 2` is accepted.
+/// Only `schemaVersion = 3` is accepted.
 ///
 /// Throws [SceneDataException] when validation fails.
 Scene decodeSceneDocument(Map<String, Object?> json) {
@@ -124,10 +128,15 @@ Map<String, dynamic> _encodeSnapshot(SceneSnapshot snapshot) {
           .toList(),
       'gridSizes': snapshot.palette.gridSizes,
     },
+    if (snapshot.backgroundLayer != null)
+      'backgroundLayer': <String, dynamic>{
+        'nodes': snapshot.backgroundLayer!.nodes
+            .map((node) => _encodeNode(txnNodeFromSnapshot(node)))
+            .toList(),
+      },
     'layers': snapshot.layers
         .map(
           (layer) => <String, dynamic>{
-            'isBackground': layer.isBackground,
             'nodes': layer.nodes
                 .map((node) => _encodeNode(txnNodeFromSnapshot(node)))
                 .toList(),
@@ -137,11 +146,12 @@ Map<String, dynamic> _encodeSnapshot(SceneSnapshot snapshot) {
   };
 }
 
-Map<String, dynamic> _encodeLayer(Layer layer) {
-  return <String, dynamic>{
-    'isBackground': layer.isBackground,
-    'nodes': layer.nodes.map(_encodeNode).toList(),
-  };
+Map<String, dynamic> _encodeBackgroundLayer(BackgroundLayer layer) {
+  return <String, dynamic>{'nodes': layer.nodes.map(_encodeNode).toList()};
+}
+
+Map<String, dynamic> _encodeContentLayer(ContentLayer layer) {
+  return <String, dynamic>{'nodes': layer.nodes.map(_encodeNode).toList()};
 }
 
 Map<String, dynamic> _encodeNode(SceneNode node) {

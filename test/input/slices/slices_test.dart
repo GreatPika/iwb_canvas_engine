@@ -11,8 +11,8 @@ void main() {
   SceneControllerV2 buildController() {
     return SceneControllerV2(
       initialSnapshot: SceneSnapshot(
-        layers: <LayerSnapshot>[
-          LayerSnapshot(
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
             nodes: const <NodeSnapshot>[
               RectNodeSnapshot(id: 'base', size: Size(20, 10)),
             ],
@@ -37,7 +37,9 @@ void main() {
     await pumpEventQueue();
 
     expect(created, 'cmd-added');
-    expect(controller.snapshot.layers.first.nodes.length, 2);
+    expect(controller.snapshot.layers, hasLength(2));
+    expect(controller.snapshot.layers.first.nodes.length, 1);
+    expect(controller.snapshot.layers.last.nodes.single.id, 'cmd-added');
     expect(controller.structuralRevision, 1);
     expect(notifications, 1);
   });

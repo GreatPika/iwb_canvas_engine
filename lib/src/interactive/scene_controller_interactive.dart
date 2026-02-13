@@ -1052,7 +1052,6 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
 
     final nodes = <NodeSnapshot>[];
     for (final layer in snapshot.layers) {
-      if (layer.isBackground) continue;
       for (final node in layer.nodes) {
         if (!selected.contains(node.id)) continue;
         if (!node.isTransformable || node.isLocked) continue;
@@ -1070,7 +1069,6 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
 
     final ids = <NodeId>[];
     for (final layer in snapshot.layers) {
-      if (layer.isBackground) continue;
       for (final node in layer.nodes) {
         if (!selected.contains(node.id)) continue;
         if (!node.isDeletable) continue;

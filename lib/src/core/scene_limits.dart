@@ -11,5 +11,5 @@ const double sceneSizeMax = 1e7;
 const double sceneThicknessMax = 1e5;
 const double sceneHitPaddingMax = 1e5;
 
-const int sceneSchemaVersionMin = 2;
-const int sceneSchemaVersionMax = 2;
+const int sceneSchemaVersionMin = 3;
+const int sceneSchemaVersionMax = 3;

@@ -17,8 +17,8 @@ void main() {
     Offset cameraOffset = Offset.zero,
   }) {
     return Scene(
-      layers: <Layer>[
-        Layer(
+      layers: <ContentLayer>[
+        ContentLayer(
           nodes: <SceneNode>[RectNode(id: 'node-1', size: const Size(10, 10))],
         ),
       ],
@@ -101,11 +101,11 @@ void main() {
 
   test('detects duplicate node ids in committed scene', () {
     final scene = Scene(
-      layers: <Layer>[
-        Layer(
+      layers: <ContentLayer>[
+        ContentLayer(
           nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(10, 10))],
         ),
-        Layer(
+        ContentLayer(
           nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(12, 12))],
         ),
       ],
@@ -127,21 +127,22 @@ void main() {
     );
   });
 
-  test('detects background layer that is not at index 0', () {
+  test('detects duplicate node ids inside background layer', () {
     final scene = Scene(
-      layers: <Layer>[
-        Layer(
-          nodes: <SceneNode>[RectNode(id: 'n1', size: const Size(10, 10))],
-        ),
-        Layer(isBackground: true),
-      ],
+      backgroundLayer: BackgroundLayer(
+        nodes: <SceneNode>[
+          RectNode(id: 'dup-bg', size: const Size(10, 10)),
+          RectNode(id: 'dup-bg', size: const Size(12, 12)),
+        ],
+      ),
+      layers: <ContentLayer>[ContentLayer()],
     );
     final violations = txnCollectStoreInvariantViolations(
       scene: scene,
       selectedNodeIds: const <NodeId>{},
-      allNodeIds: const <NodeId>{'n1'},
+      allNodeIds: const <NodeId>{'dup-bg'},
       nodeLocator: const <NodeId, NodeLocatorEntry>{
-        'n1': (layerIndex: 0, nodeIndex: 0),
+        'dup-bg': (layerIndex: -1, nodeIndex: 0),
       },
       nodeIdSeed: 1,
       commitRevision: 0,
@@ -149,26 +150,61 @@ void main() {
 
     expect(
       violations.join('\n'),
-      contains('background layer must be at index 0 when present'),
+      contains('scene must not contain duplicate node ids'),
     );
   });
 
-  test('detects multiple background layers', () {
+  test('accepts typed background layer outside content layer index space', () {
     final scene = Scene(
-      layers: <Layer>[Layer(isBackground: true), Layer(isBackground: true)],
+      backgroundLayer: BackgroundLayer(
+        nodes: <SceneNode>[RectNode(id: 'bg', size: const Size(8, 8))],
+      ),
+      layers: <ContentLayer>[
+        ContentLayer(
+          nodes: <SceneNode>[RectNode(id: 'n1', size: const Size(10, 10))],
+        ),
+      ],
     );
     final violations = txnCollectStoreInvariantViolations(
       scene: scene,
       selectedNodeIds: const <NodeId>{},
-      allNodeIds: const <NodeId>{},
-      nodeLocator: const <NodeId, NodeLocatorEntry>{},
+      allNodeIds: const <NodeId>{'bg', 'n1'},
+      nodeLocator: const <NodeId, NodeLocatorEntry>{
+        'bg': (layerIndex: -1, nodeIndex: 0),
+        'n1': (layerIndex: 0, nodeIndex: 0),
+      },
+      nodeIdSeed: 2,
+      commitRevision: 0,
+    );
+
+    expect(violations, isEmpty);
+  });
+
+  test('detects duplicate node ids across background and content layers', () {
+    final scene = Scene(
+      backgroundLayer: BackgroundLayer(
+        nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(8, 8))],
+      ),
+      layers: <ContentLayer>[
+        ContentLayer(
+          nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(10, 10))],
+        ),
+      ],
+    );
+    final violations = txnCollectStoreInvariantViolations(
+      scene: scene,
+      selectedNodeIds: const <NodeId>{},
+      allNodeIds: const <NodeId>{'dup'},
+      nodeLocator: const <NodeId, NodeLocatorEntry>{
+        'dup': (layerIndex: -1, nodeIndex: 0),
+      },
       nodeIdSeed: 0,
       commitRevision: 0,
     );
 
     expect(
       violations.join('\n'),
-      contains('scene must contain at most one background layer'),
+      contains('scene must not contain duplicate node ids'),
     );
   });
 

@@ -392,7 +392,7 @@ void _checkExportedApiMutableTypeLeak({
       .toList(growable: false);
   if (filesToCheck.isEmpty) return;
 
-  const mutableTypePattern = r'\b(?:Scene|Layer|SceneNode|NodeType)\b';
+  const mutableTypePattern = r'\b(?:Scene|ContentLayer|SceneNode|NodeType)\b';
   final mutableTypeRegex = RegExp(mutableTypePattern);
   const skipPrefixes = <String>[
     '//',
@@ -447,7 +447,7 @@ void _checkExportedApiMutableTypeLeak({
           filePath: repoRel,
           line: lineNo,
           message:
-              'public API must not expose mutable core types (Scene/Layer/SceneNode/NodeType).',
+              'public API must not expose mutable core types (Scene/ContentLayer/SceneNode/NodeType).',
         ),
       );
     }

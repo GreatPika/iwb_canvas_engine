@@ -17,6 +17,19 @@ typedef NodeLocatorEntry = ({int layerIndex, int nodeIndex});
   Scene scene,
   NodeId id,
 ) {
+  final backgroundLayer = scene.backgroundLayer;
+  if (backgroundLayer != null) {
+    for (
+      var nodeIndex = 0;
+      nodeIndex < backgroundLayer.nodes.length;
+      nodeIndex++
+    ) {
+      final node = backgroundLayer.nodes[nodeIndex];
+      if (node.id == id) {
+        return (node: node, layerIndex: -1, nodeIndex: nodeIndex);
+      }
+    }
+  }
   for (var layerIndex = 0; layerIndex < scene.layers.length; layerIndex++) {
     final layer = scene.layers[layerIndex];
     for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
@@ -31,6 +44,17 @@ typedef NodeLocatorEntry = ({int layerIndex, int nodeIndex});
 
 Map<NodeId, NodeLocatorEntry> txnBuildNodeLocator(Scene scene) {
   final locator = <NodeId, NodeLocatorEntry>{};
+  final backgroundLayer = scene.backgroundLayer;
+  if (backgroundLayer != null) {
+    for (
+      var nodeIndex = 0;
+      nodeIndex < backgroundLayer.nodes.length;
+      nodeIndex++
+    ) {
+      final node = backgroundLayer.nodes[nodeIndex];
+      locator[node.id] = (layerIndex: -1, nodeIndex: nodeIndex);
+    }
+  }
   for (var layerIndex = 0; layerIndex < scene.layers.length; layerIndex++) {
     final layer = scene.layers[layerIndex];
     for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
@@ -50,6 +74,19 @@ Map<NodeId, NodeLocatorEntry> txnBuildNodeLocator(Scene scene) {
   if (entry == null) {
     return null;
   }
+  if (entry.layerIndex == -1) {
+    final backgroundLayer = scene.backgroundLayer;
+    if (backgroundLayer == null) return null;
+    final nodeIndex = entry.nodeIndex;
+    if (nodeIndex < 0 || nodeIndex >= backgroundLayer.nodes.length) {
+      return null;
+    }
+    final node = backgroundLayer.nodes[nodeIndex];
+    if (node.id != nodeId) {
+      return null;
+    }
+    return (node: node, layerIndex: -1, nodeIndex: nodeIndex);
+  }
   final layerIndex = entry.layerIndex;
   if (layerIndex < 0 || layerIndex >= scene.layers.length) {
     return null;
@@ -68,10 +105,16 @@ Map<NodeId, NodeLocatorEntry> txnBuildNodeLocator(Scene scene) {
 
 SceneSnapshot txnSceneToSnapshot(Scene scene) {
   return SceneSnapshot(
+    backgroundLayer: scene.backgroundLayer == null
+        ? null
+        : BackgroundLayerSnapshot(
+            nodes: scene.backgroundLayer!.nodes
+                .map(txnNodeToSnapshot)
+                .toList(growable: false),
+          ),
     layers: scene.layers
         .map(
-          (layer) => LayerSnapshot(
-            isBackground: layer.isBackground,
+          (layer) => ContentLayerSnapshot(
             nodes: layer.nodes.map(txnNodeToSnapshot).toList(growable: false),
           ),
         )
@@ -653,6 +696,23 @@ SceneNode? txnEraseNodeFromScene({
   if (found == null) {
     return null;
   }
+  if (found.layerIndex == -1) {
+    final backgroundLayer = scene.backgroundLayer;
+    if (backgroundLayer == null) {
+      return null;
+    }
+    final removed = backgroundLayer.nodes.removeAt(found.nodeIndex);
+    nodeLocator.remove(nodeId);
+    for (
+      var nodeIndex = found.nodeIndex;
+      nodeIndex < backgroundLayer.nodes.length;
+      nodeIndex++
+    ) {
+      final node = backgroundLayer.nodes[nodeIndex];
+      nodeLocator[node.id] = (layerIndex: -1, nodeIndex: nodeIndex);
+    }
+    return removed;
+  }
   final layer = scene.layers[found.layerIndex];
   final removed = layer.nodes.removeAt(found.nodeIndex);
   nodeLocator.remove(nodeId);
@@ -679,14 +739,7 @@ int txnResolveInsertLayerIndex({required Scene scene, int? layerIndex}) {
     }
     return layerIndex;
   }
-
-  for (var i = 0; i < scene.layers.length; i++) {
-    if (!scene.layers[i].isBackground) {
-      return i;
-    }
-  }
-
-  scene.layers.add(Layer());
+  scene.layers.add(ContentLayer());
   return scene.layers.length - 1;
 }
 
@@ -695,12 +748,12 @@ Set<NodeId> txnNormalizeSelection({
   required Scene scene,
 }) {
   // Commit-time normalization keeps selection ids that still point to visible
-  // non-background nodes. It intentionally does not enforce isSelectable to
+  // content nodes. It intentionally does not enforce isSelectable to
   // preserve explicit selection flows like selectAll(onlySelectable: false).
   final normalizedCandidates = <NodeId>{
     for (final layer in scene.layers)
       for (final node in layer.nodes)
-        if (!layer.isBackground && node.isVisible) node.id,
+        if (node.isVisible) node.id,
   };
 
   return <NodeId>{
@@ -722,7 +775,6 @@ Set<NodeId> txnTranslateSelection({
   for (final layer in scene.layers) {
     for (final node in layer.nodes) {
       if (!selectedNodeIds.contains(node.id)) continue;
-      if (layer.isBackground) continue;
       if (node.isLocked || !node.isTransformable) continue;
       node.position = node.position + delta;
       moved.add(node.id);

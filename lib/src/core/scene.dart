@@ -5,35 +5,40 @@ import 'nodes.dart';
 
 /// A mutable scene graph used by the canvas engine.
 ///
-/// The scene is organized into ordered [layers], with a [camera] offset and
-/// background settings. Nodes are stored in scene coordinates.
+/// The scene is organized into optional [backgroundLayer] and ordered content
+/// [layers], with a [camera] offset and background visual settings. Nodes are
+/// stored in scene coordinates.
 class Scene {
   Scene({
-    List<Layer>? layers,
+    List<ContentLayer>? layers,
+    this.backgroundLayer,
     Camera? camera,
     Background? background,
     ScenePalette? palette,
-  }) : layers = layers == null ? <Layer>[] : List<Layer>.from(layers),
+  }) : layers = layers == null
+           ? <ContentLayer>[]
+           : List<ContentLayer>.from(layers),
        camera = camera ?? Camera(),
        background = background ?? Background(),
        palette = palette ?? ScenePalette();
 
-  /// Layer list owned by the scene.
+  /// Content layer list owned by the scene.
   ///
   /// The constructor defensively copies the `layers:` argument; mutating the
   /// original list after construction does not affect this scene.
-  final List<Layer> layers;
+  final List<ContentLayer> layers;
+
+  /// Optional background layer rendered below all content layers.
+  BackgroundLayer? backgroundLayer;
+
   Camera camera;
   Background background;
   ScenePalette palette;
 }
 
-/// A z-ordered collection of nodes.
-///
-/// Layers are rendered in list order. Nodes inside a layer are rendered in
-/// list order; the last node is considered the top-most for hit-testing.
-class Layer {
-  Layer({List<SceneNode>? nodes, this.isBackground = false})
+/// A dedicated background node layer.
+class BackgroundLayer {
+  BackgroundLayer({List<SceneNode>? nodes})
     : nodes = nodes == null ? <SceneNode>[] : List<SceneNode>.from(nodes);
 
   /// Node list owned by the layer.
@@ -41,7 +46,21 @@ class Layer {
   /// The constructor defensively copies the `nodes:` argument; mutating the
   /// original list after construction does not affect this layer.
   final List<SceneNode> nodes;
-  bool isBackground;
+}
+
+/// A z-ordered collection of content nodes.
+///
+/// Layers are rendered in list order. Nodes inside a layer are rendered in
+/// list order; the last node is considered the top-most for hit-testing.
+class ContentLayer {
+  ContentLayer({List<SceneNode>? nodes})
+    : nodes = nodes == null ? <SceneNode>[] : List<SceneNode>.from(nodes);
+
+  /// Node list owned by the layer.
+  ///
+  /// The constructor defensively copies the `nodes:` argument; mutating the
+  /// original list after construction does not affect this layer.
+  final List<SceneNode> nodes;
 }
 
 /// Viewport state for converting between view and scene coordinates.

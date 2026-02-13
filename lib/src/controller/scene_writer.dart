@@ -1,10 +1,8 @@
 import 'dart:collection';
 import 'dart:ui';
 
-import '../core/background_layer_invariants.dart';
 import '../core/hit_test.dart';
 import '../core/nodes.dart' show TextNode;
-import '../core/scene.dart' show Layer;
 import '../core/selection_policy.dart';
 import '../core/text_layout.dart';
 import '../core/transform2d.dart';
@@ -61,8 +59,7 @@ class SceneWriter implements SceneWriteTxn {
     if (existing == null) {
       return false;
     }
-    final layer = _ctx.workingScene.layers[existing.layerIndex];
-    if (!isNodeDeletableInLayer(existing.node, layer)) {
+    if (existing.layerIndex == -1 || !isNodeDeletableInLayer(existing.node)) {
       return false;
     }
     _ctx.txnEnsureMutableLayer(existing.layerIndex);
@@ -176,7 +173,6 @@ class SceneWriter implements SceneWriteTxn {
       for (final node in layer.nodes) {
         if (isNodeInteractiveForSelection(
           node,
-          layer,
           onlySelectable: onlySelectable,
         )) {
           ids.add(node.id);
@@ -205,8 +201,7 @@ class SceneWriter implements SceneWriteTxn {
     for (final nodeId in selectedIds) {
       final existing = _ctx.txnFindNodeById(nodeId);
       if (existing == null) continue;
-      final layer = _ctx.workingScene.layers[existing.layerIndex];
-      if (layer.isBackground) continue;
+      if (existing.layerIndex == -1) continue;
       if (existing.node.isLocked || !existing.node.isTransformable) continue;
 
       final mutable = _ctx.txnResolveMutableNode(nodeId);
@@ -234,8 +229,7 @@ class SceneWriter implements SceneWriteTxn {
     for (final nodeId in selectedIds) {
       final existing = _ctx.txnFindNodeById(nodeId);
       if (existing == null) continue;
-      final layer = _ctx.workingScene.layers[existing.layerIndex];
-      if (layer.isBackground) continue;
+      if (existing.layerIndex == -1) continue;
       if (!existing.node.isTransformable || existing.node.isLocked) continue;
 
       final nextTransform = delta.multiply(existing.node.transform);
@@ -269,7 +263,7 @@ class SceneWriter implements SceneWriteTxn {
       final layer = layers[layerIndex];
       for (final node in layer.nodes) {
         if (!selected.contains(node.id)) continue;
-        if (!isNodeDeletableInLayer(node, layer)) continue;
+        if (!isNodeDeletableInLayer(node)) continue;
         deleted.add(node.id);
         deletedByLayer.putIfAbsent(layerIndex, () => <NodeId>{}).add(node.id);
       }
@@ -300,30 +294,18 @@ class SceneWriter implements SceneWriteTxn {
   @override
   List<NodeId> writeClearSceneKeepBackground() {
     final scene = _ctx.txnEnsureMutableScene();
-    canonicalizeBackgroundLayerInvariants(
-      scene.layers,
-      onMultipleBackgroundError: (count) {
-        throw StateError(
-          'clearScene requires at most one background layer; found $count.',
-        );
-      },
-    );
-    if (scene.layers.isEmpty || !scene.layers.first.isBackground) {
-      scene.layers.insert(0, Layer(isBackground: true));
+    if (scene.backgroundLayer == null) {
+      _ctx.txnEnsureMutableBackgroundLayer();
       _ctx.changeSet.txnMarkStructuralChanged();
     }
 
-    final layers = scene.layers;
     final clearedIds = <NodeId>[
-      for (var layerIndex = 1; layerIndex < layers.length; layerIndex++)
-        for (final node in layers[layerIndex].nodes) node.id,
+      for (final layer in scene.layers) ...layer.nodes.map((node) => node.id),
     ];
     for (final id in clearedIds) {
       _ctx.txnForgetNodeId(id);
     }
-    if (layers.length > 1) {
-      layers.length = 1;
-    }
+    scene.layers.clear();
     if (clearedIds.isEmpty) {
       return const <NodeId>[];
     }

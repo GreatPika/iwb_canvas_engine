@@ -22,10 +22,10 @@ and JSON serialization for whiteboard-style applications.
 
 ### What this package provides
 
-- Scene graph (`Scene -> Layer -> Node`) with deterministic draw order.
+- Scene graph (`Scene -> backgroundLayer? + content layers -> Node`) with deterministic draw order.
 - Interactive controller and widget for move/select/draw workflows.
 - Built-in tools: pen, highlighter, line, eraser, marquee selection.
-- JSON v2 codec for import/export (`schemaVersion = 2`).
+- JSON v3 codec for import/export (`schemaVersion = 3`).
 
 ### What this package does not provide
 
@@ -101,7 +101,7 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Runtime notify contract: controller repaint notifications are deferred to a microtask after commit and coalesced to at most one notification per event-loop tick.
 - Move drag contract: pointer move updates only visual preview; scene translation is committed once on pointer up, and pointer cancel keeps the document unchanged.
 - Runtime guardrails bound worst-case input/query cost: interactive stroke commits are capped to `20_000` points (deterministic downsampling), path-stroke precise hit-testing is capped to `2_048` samples per path metric, and oversized spatial queries switch to bounded candidate-scan fallback.
-- Runtime snapshot validation: `initialSnapshot` and `replaceScene` fail fast with `SceneDataException` for malformed snapshots (duplicate node ids, invalid numbers, invalid SVG path data, invalid palette, multiple background layers).
+- Runtime snapshot validation: `initialSnapshot` and `replaceScene` fail fast with `SceneDataException` for malformed snapshots (duplicate node ids, invalid numbers, invalid SVG path data, invalid palette, invalid typed layer fields).
 
 ## Render cache and image lifecycle
 
@@ -114,9 +114,10 @@ class _CanvasScreenState extends State<CanvasScreen> {
 
 - Canonical invariants are defined in `tool/invariant_registry.dart`.
 - Validation checks are available in `tool/` and run in CI.
-- Background layer contract:
-  - runtime/store snapshot boundary: at most one background layer; if present, it is canonicalized to index `0`; missing background is allowed and not auto-inserted.
-  - JSON decoder boundary: at most one background layer; decoder canonicalizes to a single background layer at index `0`.
+- Typed layer contract:
+  - snapshot/runtime model uses `backgroundLayer` as a dedicated optional field and `layers` as content-only ordered layers.
+  - `writeNodeInsert(..., layerIndex)` addresses content layers only.
+  - missing `backgroundLayer` is allowed; it is not auto-inserted at snapshot import boundary.
 
 ## Development checks
 

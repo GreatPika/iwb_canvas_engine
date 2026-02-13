@@ -221,24 +221,12 @@ void _assertPostConditions({
     reason: '$context duplicateNodeIds=$duplicateIds',
   );
 
-  final backgroundLayerIndexes = <int>[];
-  for (var i = 0; i < snapshot.layers.length; i++) {
-    if (snapshot.layers[i].isBackground) {
-      backgroundLayerIndexes.add(i);
-    }
-  }
   expect(
-    backgroundLayerIndexes.length <= 1,
+    snapshot.backgroundLayer == null ||
+        snapshot.backgroundLayer is BackgroundLayerSnapshot,
     isTrue,
-    reason: '$context backgroundLayerIndexes=$backgroundLayerIndexes',
+    reason: '$context backgroundLayer must be nullable single layer',
   );
-  if (backgroundLayerIndexes.isNotEmpty) {
-    expect(
-      backgroundLayerIndexes.single,
-      0,
-      reason: '$context backgroundLayerIndexes=$backgroundLayerIndexes',
-    );
-  }
 
   late final Scene scene;
   expect(
@@ -266,8 +254,8 @@ void _assertPostConditions({
 
 SceneSnapshot _initialSnapshot() {
   return SceneSnapshot(
-    layers: <LayerSnapshot>[
-      LayerSnapshot(
+    layers: <ContentLayerSnapshot>[
+      ContentLayerSnapshot(
         nodes: const <NodeSnapshot>[
           RectNodeSnapshot(id: 'seed-r1', size: Size(10, 10)),
           RectNodeSnapshot(id: 'seed-r2', size: Size(12, 12)),
@@ -292,9 +280,9 @@ SceneSnapshot _randomReplacementSnapshot({
       ),
   ];
 
-  final layers = <LayerSnapshot>[
-    if (includeBackground) LayerSnapshot(isBackground: true),
-    LayerSnapshot(nodes: nodes),
+  final layers = <ContentLayerSnapshot>[
+    if (includeBackground) ContentLayerSnapshot(),
+    ContentLayerSnapshot(nodes: nodes),
   ];
 
   return SceneSnapshot(

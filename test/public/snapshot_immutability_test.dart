@@ -6,31 +6,37 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 // INV:INV-V2-NO-EXTERNAL-MUTATION
 
 void main() {
-  test('SceneSnapshot and LayerSnapshot defensively copy and freeze lists', () {
-    final sourceNodes = <NodeSnapshot>[
-      const RectNodeSnapshot(id: 'rect-1', size: Size(10, 20)),
-    ];
-    final layer = LayerSnapshot(nodes: sourceNodes);
-    sourceNodes.add(const RectNodeSnapshot(id: 'rect-2', size: Size(1, 1)));
+  test(
+    'SceneSnapshot and ContentLayerSnapshot defensively copy and freeze lists',
+    () {
+      final sourceNodes = <NodeSnapshot>[
+        const RectNodeSnapshot(id: 'rect-1', size: Size(10, 20)),
+      ];
+      final layer = ContentLayerSnapshot(nodes: sourceNodes);
+      sourceNodes.add(const RectNodeSnapshot(id: 'rect-2', size: Size(1, 1)));
 
-    expect(layer.nodes.length, 1);
-    expect(
-      () => layer.nodes.add(
-        const RectNodeSnapshot(id: 'rect-3', size: Size(1, 1)),
-      ),
-      throwsUnsupportedError,
-    );
+      expect(layer.nodes.length, 1);
+      expect(
+        () => layer.nodes.add(
+          const RectNodeSnapshot(id: 'rect-3', size: Size(1, 1)),
+        ),
+        throwsUnsupportedError,
+      );
 
-    final sourceLayers = <LayerSnapshot>[layer];
-    final scene = SceneSnapshot(layers: sourceLayers);
-    sourceLayers.add(LayerSnapshot());
+      final sourceLayers = <ContentLayerSnapshot>[layer];
+      final scene = SceneSnapshot(layers: sourceLayers);
+      sourceLayers.add(ContentLayerSnapshot());
 
-    expect(scene.layers.length, 1);
-    expect(() => scene.layers.add(LayerSnapshot()), throwsUnsupportedError);
+      expect(scene.layers.length, 1);
+      expect(
+        () => scene.layers.add(ContentLayerSnapshot()),
+        throwsUnsupportedError,
+      );
 
-    final defaultScene = SceneSnapshot();
-    expect(defaultScene.layers, isEmpty);
-  });
+      final defaultScene = SceneSnapshot();
+      expect(defaultScene.layers, isEmpty);
+    },
+  );
 
   test('ScenePaletteSnapshot defensively copies and freezes lists', () {
     final sourcePen = <Color>[const Color(0xFF111111)];
@@ -162,7 +168,7 @@ void main() {
     final scene = SceneSnapshot(
       camera: camera,
       background: background,
-      layers: <LayerSnapshot>[LayerSnapshot()],
+      layers: <ContentLayerSnapshot>[ContentLayerSnapshot()],
       palette: ScenePaletteSnapshot(
         penColors: <Color>[Color(0xFF111111)],
         backgroundColors: <Color>[Color(0xFFEEEEEE)],
