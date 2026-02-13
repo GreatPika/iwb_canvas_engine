@@ -793,6 +793,55 @@ void main() {
   });
 
   test(
+    'ScenePainterV2 reuses path geometry across cull, draw and selection in one frame',
+    () async {
+      final geometryCache = RenderGeometryCache();
+      final controller = SceneControllerV2(
+        initialSnapshot: SceneSnapshot(
+          background: const BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              nodes: const <NodeSnapshot>[
+                PathNodeSnapshot(
+                  id: 'path-geometry-reuse',
+                  svgPathData: 'M0 0 H30 V20 H0 Z',
+                  fillColor: Color(0xFF81C784),
+                  strokeColor: Color(0xFF000000),
+                  strokeWidth: 4,
+                  transform: Transform2D(
+                    a: 1,
+                    b: 0,
+                    c: 0,
+                    d: 1,
+                    tx: 50,
+                    ty: 50,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+      controller.write<void>((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'path-geometry-reuse'});
+      });
+
+      final painter = ScenePainterV2(
+        controller: controller,
+        imageResolver: (_) => null,
+        geometryCache: geometryCache,
+      );
+
+      await _paintToImage(painter, width: 120, height: 100);
+
+      expect(geometryCache.debugBuildCount, 1);
+      expect(geometryCache.debugHitCount, greaterThanOrEqualTo(2));
+      expect(geometryCache.debugSize, 1);
+    },
+  );
+
+  test(
     'ScenePainterV2 skips path metrics cache when local path is unavailable',
     () async {
       final pathCache = ScenePathMetricsCacheV2(maxEntries: 8);

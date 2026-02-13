@@ -455,12 +455,14 @@ class ScenePainterV2 extends CustomPainter {
     this.textLayoutCache,
     this.strokePathCache,
     this.pathMetricsCache,
+    RenderGeometryCache? geometryCache,
     this.selectionRect,
     this.selectionColor = const Color(0xFF1565C0),
     this.selectionStrokeWidth = 1,
     this.gridStrokeWidth = 1,
     this.textDirection = TextDirection.ltr,
-  }) : super(repaint: controller);
+  }) : _geometryCache = geometryCache ?? RenderGeometryCache(),
+       super(repaint: controller);
 
   final SceneRenderState controller;
   final ImageResolverV2 imageResolver;
@@ -474,7 +476,7 @@ class ScenePainterV2 extends CustomPainter {
   final double selectionStrokeWidth;
   final double gridStrokeWidth;
   final TextDirection textDirection;
-  final RenderGeometryCache _geometryCache = RenderGeometryCache();
+  final RenderGeometryCache _geometryCache;
 
   final Float64List _transformBuffer = Float64List(16);
 
