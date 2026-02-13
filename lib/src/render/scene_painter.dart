@@ -16,9 +16,16 @@ import '../public/snapshot.dart';
 typedef ImageResolverV2 = Image? Function(String imageId);
 typedef NodePreviewOffsetResolverV2 = Offset Function(NodeId nodeId);
 
+int _requirePositiveCacheEntries(int maxEntries) {
+  if (maxEntries <= 0) {
+    throw ArgumentError.value(maxEntries, 'maxEntries', 'Must be > 0.');
+  }
+  return maxEntries;
+}
+
 class SceneStrokePathCacheV2 {
-  SceneStrokePathCacheV2({this.maxEntries = 512})
-    : assert(maxEntries > 0, 'maxEntries must be > 0.');
+  SceneStrokePathCacheV2({int maxEntries = 512})
+    : maxEntries = _requirePositiveCacheEntries(maxEntries);
 
   final int maxEntries;
   final LinkedHashMap<NodeId, _StrokePathEntryV2> _entries =
@@ -81,8 +88,8 @@ class _StrokePathEntryV2 {
 }
 
 class SceneTextLayoutCacheV2 {
-  SceneTextLayoutCacheV2({this.maxEntries = 256})
-    : assert(maxEntries > 0, 'maxEntries must be > 0.');
+  SceneTextLayoutCacheV2({int maxEntries = 256})
+    : maxEntries = _requirePositiveCacheEntries(maxEntries);
 
   final int maxEntries;
   final LinkedHashMap<_TextLayoutKeyV2, TextPainter> _entries =
@@ -217,8 +224,8 @@ class _TextLayoutKeyV2 {
 }
 
 class ScenePathMetricsCacheV2 {
-  ScenePathMetricsCacheV2({this.maxEntries = 512})
-    : assert(maxEntries > 0, 'maxEntries must be > 0.');
+  ScenePathMetricsCacheV2({int maxEntries = 512})
+    : maxEntries = _requirePositiveCacheEntries(maxEntries);
 
   final int maxEntries;
   final LinkedHashMap<NodeId, _PathMetricsEntryV2> _entries =

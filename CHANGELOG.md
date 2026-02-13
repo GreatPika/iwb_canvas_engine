@@ -1,3 +1,10 @@
+## Unreleased
+
+### Changed
+
+- `SceneStrokePathCacheV2`, `SceneTextLayoutCacheV2`, and `ScenePathMetricsCacheV2` now throw `ArgumentError` for `maxEntries <= 0` in all build modes (not only debug).
+- Documentation now explicitly defines ownership/disposal responsibilities for external `SceneStaticLayerCacheV2` and app-managed `ImageResolverV2` images.
+
 ## 3.0.0 (2026-02-13)
 
 ### Breaking

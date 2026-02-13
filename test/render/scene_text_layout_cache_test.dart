@@ -8,6 +8,11 @@ import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test('SceneTextLayoutCacheV2 rejects non-positive maxEntries', () {
+    expect(() => SceneTextLayoutCacheV2(maxEntries: 0), throwsArgumentError);
+    expect(() => SceneTextLayoutCacheV2(maxEntries: -1), throwsArgumentError);
+  });
+
   test('SceneTextLayoutCacheV2 caches TextPainter layouts', () {
     final cache = SceneTextLayoutCacheV2(maxEntries: 8);
     final node = TextNodeSnapshot(

@@ -5,6 +5,11 @@ import 'package:iwb_canvas_engine/src/public/snapshot.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 
 void main() {
+  test('ScenePathMetricsCacheV2 rejects non-positive maxEntries', () {
+    expect(() => ScenePathMetricsCacheV2(maxEntries: 0), throwsArgumentError);
+    expect(() => ScenePathMetricsCacheV2(maxEntries: -1), throwsArgumentError);
+  });
+
   test('ScenePathMetricsCacheV2 caches contours per id+path+fillRule', () {
     final cache = ScenePathMetricsCacheV2(maxEntries: 8);
     const node = PathNodeSnapshot(id: 'p-1', svgPathData: 'M0 0 H10 V10 H0 Z');

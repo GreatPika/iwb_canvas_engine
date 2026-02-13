@@ -5,6 +5,11 @@ import 'package:iwb_canvas_engine/src/public/snapshot.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 
 void main() {
+  test('v2 stroke cache rejects non-positive maxEntries', () {
+    expect(() => SceneStrokePathCacheV2(maxEntries: 0), throwsArgumentError);
+    expect(() => SceneStrokePathCacheV2(maxEntries: -1), throwsArgumentError);
+  });
+
   test('v2 stroke cache handles empty/dot geometries safely', () {
     final cache = SceneStrokePathCacheV2(maxEntries: 8);
     final empty = StrokeNodeSnapshot(

@@ -103,6 +103,13 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Runtime guardrails bound worst-case input/query cost: interactive stroke commits are capped to `20_000` points (deterministic downsampling), path-stroke precise hit-testing is capped to `2_048` samples per path metric, and oversized spatial queries switch to bounded candidate-scan fallback.
 - Runtime snapshot validation: `initialSnapshot` and `replaceScene` fail fast with `ArgumentError` for malformed snapshots (duplicate node ids, invalid numbers, invalid SVG path data, invalid palette, multiple background layers).
 
+## Render cache and image lifecycle
+
+- `SceneStrokePathCacheV2`, `SceneTextLayoutCacheV2`, and `ScenePathMetricsCacheV2` validate constructor input at runtime and throw `ArgumentError` when `maxEntries <= 0`.
+- If `SceneView` creates caches internally, it owns their lifecycle.
+- If you pass an external `SceneStaticLayerCacheV2` through `staticLayerCache:`, your app owns it and must call `dispose()` when the owner is disposed.
+- `ImageResolverV2` returns `dart:ui Image` objects. The app that creates/caches those images owns their lifecycle and should dispose them when they are no longer needed.
+
 ## Invariants and quality gates
 
 - Canonical invariants are defined in `tool/invariant_registry.dart`.

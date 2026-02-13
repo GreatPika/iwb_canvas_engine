@@ -432,6 +432,27 @@ If you pass external caches, ownership stays external.
 
 When controller instance changes, view resets pointer tracking state and clears caches to prevent stale reuse across scenes.
 
+Runtime constructor validation:
+
+- `SceneStrokePathCacheV2(maxEntries: ...)`
+- `SceneTextLayoutCacheV2(maxEntries: ...)`
+- `ScenePathMetricsCacheV2(maxEntries: ...)`
+
+All three throw `ArgumentError` when `maxEntries <= 0`.
+
+Resource ownership note:
+
+- External `SceneStaticLayerCacheV2` must be disposed by the external owner.
+- `SceneView` disposes `SceneStaticLayerCacheV2` only when it created that cache internally.
+
+### 9.4 Image resolver lifecycle
+
+`ImageResolverV2` returns `dart:ui Image` instances:
+
+- `SceneView` and `ScenePainterV2` treat these images as borrowed render inputs.
+- The app-side image store/cache owns the image lifecycle.
+- Dispose app-owned images when evicting them from cache or when their owning object is disposed.
+
 ## 10. Pointer contracts
 
 ### 10.1 `PointerSample`
