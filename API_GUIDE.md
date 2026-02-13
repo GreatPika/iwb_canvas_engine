@@ -1,6 +1,6 @@
 # iwb_canvas_engine API Guide
 
-This guide is a complete, implementation-aligned reference for integrating `iwb_canvas_engine` in Flutter apps.
+This guide is a complete, implementation-aligned reference for integrating `iwb_canvas_engine` (`3.0.0`) in Flutter apps.
 It is designed for both human developers and coding agents.
 
 ## 1. Package purpose and boundaries
@@ -562,7 +562,9 @@ When an agent modifies integration code:
 5. Respect background layer semantics and non-deletable/non-selectable flags.
 6. Prefer `SceneController`/`SceneView` aliases in app-facing docs/examples.
 
-## 14. Migration from 1.x to 2.0.0
+## 14. Migration notes
+
+### 14.1 From 1.x to 2.x
 
 Required updates:
 
@@ -571,16 +573,23 @@ Required updates:
    - Remove `scene: ...` from `SceneController(...)`.
    - Use `initialSnapshot: SceneSnapshot(...)` instead.
 3. Replace `addNode(Object ...)` calls with explicit `NodeSpec` variants.
-   - Remove `TextNodeSpec.size` from app code; use optional `maxWidth` when constrained wrapping is needed.
 4. Replace low-level write callbacks:
    - from `write((SceneWriter w) { ... })`
    - to `write((SceneWriteTxn txn) { ... })`
 5. Remove any dependency on legacy mutable getters (`controller.scene`, `controller.core`).
-6. Remove `TextNodePatch.size` writes; patch text/style fields only and let runtime derive box size.
+
+### 14.2 From 2.x to 3.0.0
+
+Required updates:
+
+1. Remove `TextNodeSpec.size` and `TextNodePatch.size` usage; text bounds are runtime-derived from layout fields.
+2. Ensure `initialSnapshot`/`replaceScene(...)` inputs are strictly valid; malformed snapshots now throw `ArgumentError`.
+3. Ensure `addNode(...)` and `patchNode(...)` inputs are valid at write boundary; malformed values now throw `ArgumentError`.
+4. If app logic depended on synchronous `actions`/`editTextRequests` delivery, update it for asynchronous stream delivery.
 
 ## 15. Quick recipes
 
-### 14.1 Export/import JSON
+### 15.1 Export/import JSON
 
 ```dart
 final json = encodeSceneToJson(controller.snapshot);
@@ -588,13 +597,13 @@ final restored = decodeSceneFromJson(json);
 controller.replaceScene(restored);
 ```
 
-### 14.2 Rotate selected nodes clockwise
+### 15.2 Rotate selected nodes clockwise
 
 ```dart
 controller.rotateSelection(clockwise: true);
 ```
 
-### 14.3 Toggle draw mode and set pen style
+### 15.3 Toggle draw mode and set pen style
 
 ```dart
 controller.setMode(CanvasMode.draw);
@@ -603,7 +612,7 @@ controller.setDrawColor(const Color(0xFF0D47A1));
 controller.penThickness = 4;
 ```
 
-### 14.4 Clear scene while keeping background
+### 15.4 Clear scene while keeping background
 
 ```dart
 controller.clearScene();

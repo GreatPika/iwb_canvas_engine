@@ -1,6 +1,6 @@
 # Architecture Overview
 
-This document describes the architecture of `iwb_canvas_engine` for release `2.0.1`.
+This document describes the architecture of `iwb_canvas_engine` for release `3.0.0`.
 
 ## Goals
 

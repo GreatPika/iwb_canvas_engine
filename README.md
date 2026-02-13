@@ -9,6 +9,14 @@ and JSON serialization for whiteboard-style applications.
 - Demo: https://greatpika.github.io/iwb_canvas_engine/demo/
 - API docs: https://greatpika.github.io/iwb_canvas_engine/api/
 - Detailed usage guide: `API_GUIDE.md`
+- Current stable release: `3.0.0`
+
+## Release 3.0.0 highlights
+
+- Strict runtime and write-boundary validation for snapshots/specs/patches.
+- Copy-on-write transaction path and incremental spatial-index updates for large scenes.
+- Text node size is engine-derived from text layout inputs (not writable in public API).
+- Coalesced microtask-based repaint notifications and asynchronous interactive streams.
 
 ## Scope
 
