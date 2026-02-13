@@ -30,7 +30,9 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
   SceneControllerV2({SceneSnapshot? initialSnapshot})
     : _store = V2Store(
         sceneDoc: txnSceneFromSnapshot(initialSnapshot ?? SceneSnapshot()),
-      );
+      ) {
+    _selectedNodeIdsView = UnmodifiableSetView<NodeId>(_store.selectedNodeIds);
+  }
 
   final V2Store _store;
 
@@ -46,6 +48,7 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
   bool _isDisposed = false;
   Scene? _cachedSnapshotScene;
   SceneSnapshot? _cachedSnapshot;
+  late UnmodifiableSetView<NodeId> _selectedNodeIdsView;
   List<String> _debugLastCommitPhases = const <String>[];
   ChangeSet _debugLastChangeSet = ChangeSet();
   int _debugLastSceneShallowClones = 0;
@@ -77,8 +80,7 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
   }
 
   @override
-  Set<NodeId> get selectedNodeIds =>
-      Set<NodeId>.unmodifiable(_store.selectedNodeIds);
+  Set<NodeId> get selectedNodeIds => _selectedNodeIdsView;
 
   int get controllerEpoch => _store.controllerEpoch;
   int get structuralRevision => _store.structuralRevision;
@@ -306,7 +308,9 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
 
     final nextCommitRevision = _store.commitRevision + 1;
     final committedScene = ctx.txnSceneForCommit();
-    final committedSelection = HashSet<NodeId>.of(ctx.workingSelection);
+    final committedSelection = ctx.changeSet.selectionChanged
+        ? HashSet<NodeId>.of(ctx.workingSelection)
+        : _store.selectedNodeIds;
     final committedNodeIds = ctx.txnAllNodeIdsForCommit(
       structuralChanged: ctx.changeSet.structuralChanged,
     );
@@ -337,7 +341,10 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
     commitPhases = <String>[...commitPhases, 'signals'];
 
     _store.sceneDoc = committedScene;
-    _store.selectedNodeIds = committedSelection;
+    if (!identical(_store.selectedNodeIds, committedSelection)) {
+      _store.selectedNodeIds = committedSelection;
+      _selectedNodeIdsView = UnmodifiableSetView<NodeId>(committedSelection);
+    }
     _store.allNodeIds = committedNodeIds;
     _store.nodeLocator = committedNodeLocator;
     _store.nodeIdSeed = committedNodeIdSeed;

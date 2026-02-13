@@ -1,10 +1,72 @@
+import 'dart:collection';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
+import 'package:iwb_canvas_engine/src/core/scene_limits.dart';
 import 'package:iwb_canvas_engine/src/core/scene_spatial_index.dart';
 import 'package:iwb_canvas_engine/src/core/transform2d.dart';
+
+class _ThrowingLookupMap<K, V> extends MapBase<K, V> {
+  _ThrowingLookupMap(this._delegate);
+
+  final Map<K, V> _delegate;
+
+  @override
+  V? operator [](Object? key) => throw StateError('lookup failed');
+
+  @override
+  void operator []=(K key, V value) {
+    _delegate[key] = value;
+  }
+
+  @override
+  void clear() {
+    _delegate.clear();
+  }
+
+  @override
+  Iterable<K> get keys => _delegate.keys;
+
+  @override
+  V? remove(Object? key) => _delegate.remove(key);
+}
+
+class _ThrowingContainsKeyMap<K, V> extends MapBase<K, V> {
+  _ThrowingContainsKeyMap(this._delegate);
+
+  final Map<K, V> _delegate;
+
+  @override
+  V? operator [](Object? key) => _delegate[key];
+
+  @override
+  void operator []=(K key, V value) {
+    _delegate[key] = value;
+  }
+
+  @override
+  void clear() {
+    _delegate.clear();
+  }
+
+  @override
+  bool containsKey(Object? key) => throw StateError('containsKey failed');
+
+  @override
+  Iterable<K> get keys => _delegate.keys;
+
+  @override
+  V? remove(Object? key) => _delegate.remove(key);
+}
+
+class _ThrowingLayersScene extends Scene {
+  _ThrowingLayersScene();
+
+  @override
+  List<Layer> get layers => throw StateError('layers failed');
+}
 
 void main() {
   Scene sceneWithRect(RectNode node) {
@@ -29,7 +91,7 @@ void main() {
 
   test('huge bounds route node to large candidates and query returns it', () {
     final scene = sceneWithRect(
-      RectNode(id: 'huge', size: const Size(1e9, 1e9)),
+      RectNode(id: 'huge', size: const Size(1e6, 1e6)),
     );
 
     final index = SceneSpatialIndex.build(scene);
@@ -38,6 +100,55 @@ void main() {
     expect(index.debugLargeCandidateCount, 1);
     expect(index.debugCellCount, 0);
     expect(candidates.map((candidate) => candidate.node.id), <NodeId>['huge']);
+  });
+
+  test(
+    'out-of-range node marks index invalid and serves repeated linear fallback queries',
+    () {
+      final scene = Scene(
+        layers: <Layer>[
+          Layer(
+            nodes: <SceneNode>[
+              RectNode(
+                id: 'oor',
+                size: const Size(10, 10),
+                transform: Transform2D.translation(
+                  Offset(sceneCoordMax + 500, 0),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+      final queryRect = Rect.fromLTWH(sceneCoordMax + 450, -20, 100, 40);
+
+      final index = SceneSpatialIndex.build(scene);
+      expect(index.isValid, isFalse);
+
+      final first = index.query(queryRect);
+      final second = index.query(queryRect);
+
+      expect(first.map((candidate) => candidate.node.id), <NodeId>['oor']);
+      expect(second.map((candidate) => candidate.node.id), <NodeId>['oor']);
+      expect(index.debugFallbackQueryCount, 2);
+      expect(index.debugCellCount, 0);
+      expect(index.debugLargeCandidateCount, 0);
+    },
+  );
+
+  test('out-of-range query falls back linearly without invalidating index', () {
+    final scene = sceneWithRect(
+      RectNode(id: 'regular', size: const Size(100, 100)),
+    );
+    final index = SceneSpatialIndex.build(scene);
+
+    final candidates = index.query(
+      Rect.fromLTWH(sceneCoordMax + 10, sceneCoordMax + 10, 20, 20),
+    );
+
+    expect(candidates, isEmpty);
+    expect(index.isValid, isTrue);
+    expect(index.debugFallbackQueryCount, 1);
   });
 
   test('regular bounds still use grid cells', () {
@@ -84,7 +195,7 @@ void main() {
   test('huge query switches to fallback candidate scan', () {
     final inside = RectNode(id: 'inside', size: const Size(10, 10));
     final outside = RectNode(id: 'outside', size: const Size(10, 10))
-      ..position = const Offset(10000000, 10000000);
+      ..position = const Offset(9999990, 9999990);
     final scene = Scene(
       layers: <Layer>[
         Layer(nodes: <SceneNode>[inside, outside]),
@@ -100,5 +211,64 @@ void main() {
     expect(index.debugFallbackQueryCount, 1);
     expect(ids, contains('inside'));
     expect(ids, isNot(contains('outside')));
+  });
+
+  test(
+    'query catches locator lookup errors and switches to invalid fallback',
+    () {
+      final scene = sceneWithRect(
+        RectNode(id: 'r1', size: const Size(100, 100)),
+      );
+      final index = SceneSpatialIndex.build(scene);
+      final throwingLookup = _ThrowingLookupMap<NodeId, SpatialNodeLocation>({
+        'r1': (layerIndex: 0, nodeIndex: 0),
+      });
+
+      final applied = index.applyIncremental(
+        scene: scene,
+        nodeLocator: throwingLookup,
+        addedNodeIds: const <NodeId>{},
+        removedNodeIds: const <NodeId>{},
+        hitGeometryChangedIds: const <NodeId>{},
+      );
+      expect(applied, isTrue);
+
+      final candidates = index.query(const Rect.fromLTWH(0, 0, 20, 20));
+      expect(candidates, isNotEmpty);
+      expect(index.isValid, isFalse);
+    },
+  );
+
+  test(
+    'applyIncremental catches containsKey errors and marks index invalid',
+    () {
+      final scene = sceneWithRect(
+        RectNode(id: 'r1', size: const Size(100, 100)),
+      );
+      final index = SceneSpatialIndex.build(scene);
+      final throwingContainsKey =
+          _ThrowingContainsKeyMap<NodeId, SpatialNodeLocation>({
+            'r1': (layerIndex: 0, nodeIndex: 0),
+          });
+
+      final applied = index.applyIncremental(
+        scene: scene,
+        nodeLocator: throwingContainsKey,
+        addedNodeIds: const <NodeId>{},
+        removedNodeIds: const <NodeId>{},
+        hitGeometryChangedIds: const <NodeId>{'r1'},
+      );
+
+      expect(applied, isFalse);
+      expect(index.isValid, isFalse);
+    },
+  );
+
+  test('build catches scene iteration errors and marks index invalid', () {
+    final index = SceneSpatialIndex.build(
+      _ThrowingLayersScene(),
+      nodeLocator: const <NodeId, SpatialNodeLocation>{},
+    );
+    expect(index.isValid, isFalse);
   });
 }

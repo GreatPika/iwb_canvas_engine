@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'hit_test.dart';
 import 'nodes.dart';
 import 'scene.dart';
+import 'scene_limits.dart';
 
 const int kMaxCellsPerNode = 1024;
 const int kMaxQueryCells = 50000;
@@ -47,6 +48,7 @@ class SceneSpatialIndex {
   final Map<NodeId, _SpatialEntry> _entriesById = <NodeId, _SpatialEntry>{};
   final Set<NodeId> _largeNodeIds = <NodeId>{};
   int _debugFallbackQueryCount = 0;
+  bool _isValid = true;
 
   Scene? _scene;
   Map<NodeId, SpatialNodeLocation> _nodeLocator =
@@ -56,62 +58,73 @@ class SceneSpatialIndex {
   int get debugLargeCandidateCount => _largeNodeIds.length;
   int get debugCellCount => _cells.length;
   int get debugFallbackQueryCount => _debugFallbackQueryCount;
+  bool get isValid => _isValid;
 
   /// Returns de-duplicated candidates whose coarse bounds intersect [worldRect].
   List<SceneSpatialCandidate> query(Rect worldRect) {
     if (!_isFiniteRect(worldRect)) return const <SceneSpatialCandidate>[];
-    if (_entriesById.isEmpty) return const <SceneSpatialCandidate>[];
-
-    final minX = math.min(worldRect.left, worldRect.right);
-    final maxX = math.max(worldRect.left, worldRect.right);
-    final minY = math.min(worldRect.top, worldRect.bottom);
-    final maxY = math.max(worldRect.top, worldRect.bottom);
-    final startX = _cellIndexFor(minX);
-    final endX = _cellIndexFor(maxX);
-    final startY = _cellIndexFor(minY);
-    final endY = _cellIndexFor(maxY);
-
-    final uniqueIds = <NodeId>{};
-    if (_isLargeSpan(
-      startX: startX,
-      endX: endX,
-      startY: startY,
-      endY: endY,
-      maxCells: kMaxQueryCells,
-    )) {
+    final scene = _scene;
+    if (scene == null) return const <SceneSpatialCandidate>[];
+    if (!_isValid) {
       _debugFallbackQueryCount = _debugFallbackQueryCount + 1;
-      uniqueIds.addAll(_entriesById.keys);
-    } else {
-      for (var x = startX; x <= endX; x++) {
-        for (var y = startY; y <= endY; y++) {
-          final cell = _cells[_CellKey(x, y)];
-          if (cell == null) continue;
-          uniqueIds.addAll(cell);
-        }
-      }
-      uniqueIds.addAll(_largeNodeIds);
+      return _queryLinear(scene, worldRect);
     }
-    if (uniqueIds.isEmpty) return const <SceneSpatialCandidate>[];
 
-    final out = <SceneSpatialCandidate>[];
-    for (final nodeId in uniqueIds) {
-      final entry = _entriesById[nodeId];
-      if (entry == null) continue;
-      if (!_rectsIntersectInclusive(entry.candidateBoundsWorld, worldRect)) {
-        continue;
+    try {
+      if (_entriesById.isEmpty) return const <SceneSpatialCandidate>[];
+
+      final span = _tryCellSpanForRect(worldRect);
+      if (span == null) {
+        _debugFallbackQueryCount = _debugFallbackQueryCount + 1;
+        return _queryLinear(scene, worldRect);
       }
-      final resolved = _resolveNodeById(nodeId);
-      if (resolved == null) continue;
-      out.add(
-        SceneSpatialCandidate(
-          layerIndex: resolved.layerIndex,
-          nodeIndex: resolved.nodeIndex,
-          node: resolved.node,
-          candidateBoundsWorld: entry.candidateBoundsWorld,
-        ),
-      );
+
+      final uniqueIds = <NodeId>{};
+      if (_isLargeSpan(
+        startX: span.startX,
+        endX: span.endX,
+        startY: span.startY,
+        endY: span.endY,
+        maxCells: kMaxQueryCells,
+      )) {
+        _debugFallbackQueryCount = _debugFallbackQueryCount + 1;
+        uniqueIds.addAll(_entriesById.keys);
+      } else {
+        for (var x = span.startX; x <= span.endX; x++) {
+          for (var y = span.startY; y <= span.endY; y++) {
+            final cell = _cells[_CellKey(x, y)];
+            if (cell == null) continue;
+            uniqueIds.addAll(cell);
+          }
+        }
+        uniqueIds.addAll(_largeNodeIds);
+      }
+      if (uniqueIds.isEmpty) return const <SceneSpatialCandidate>[];
+
+      final out = <SceneSpatialCandidate>[];
+      for (final nodeId in uniqueIds) {
+        final entry = _entriesById[nodeId];
+        if (entry == null) continue;
+        if (!_rectsIntersectInclusive(entry.candidateBoundsWorld, worldRect)) {
+          continue;
+        }
+        final resolved = _resolveNodeById(nodeId);
+        if (resolved == null) continue;
+        out.add(
+          SceneSpatialCandidate(
+            layerIndex: resolved.layerIndex,
+            nodeIndex: resolved.nodeIndex,
+            node: resolved.node,
+            candidateBoundsWorld: entry.candidateBoundsWorld,
+          ),
+        );
+      }
+      return out.toList(growable: false);
+    } catch (_) {
+      _markInvalid();
+      _debugFallbackQueryCount = _debugFallbackQueryCount + 1;
+      return _queryLinear(scene, worldRect);
     }
-    return out.toList(growable: false);
   }
 
   /// Applies commit deltas without full scene rebuild.
@@ -126,35 +139,43 @@ class SceneSpatialIndex {
     required Set<NodeId> hitGeometryChangedIds,
   }) {
     _bindState(scene: scene, nodeLocator: nodeLocator);
+    if (!_isValid) {
+      return false;
+    }
     if (addedNodeIds.isEmpty &&
         removedNodeIds.isEmpty &&
         hitGeometryChangedIds.isEmpty) {
       return true;
     }
 
-    for (final nodeId in removedNodeIds) {
-      _removeEntry(nodeId);
-    }
-
-    for (final nodeId in addedNodeIds) {
-      if (!_upsertNodeById(nodeId)) {
-        return false;
+    try {
+      for (final nodeId in removedNodeIds) {
+        _removeEntry(nodeId);
       }
-    }
 
-    for (final nodeId in hitGeometryChangedIds) {
-      if (removedNodeIds.contains(nodeId)) continue;
-      if (addedNodeIds.contains(nodeId)) continue;
-      if (!_nodeLocator.containsKey(nodeId)) {
-        return false;
+      for (final nodeId in addedNodeIds) {
+        if (!_upsertNodeById(nodeId)) {
+          return false;
+        }
       }
-      _removeEntry(nodeId);
-      if (!_upsertNodeById(nodeId)) {
-        return false;
-      }
-    }
 
-    return true;
+      for (final nodeId in hitGeometryChangedIds) {
+        if (removedNodeIds.contains(nodeId)) continue;
+        if (addedNodeIds.contains(nodeId)) continue;
+        if (!_nodeLocator.containsKey(nodeId)) {
+          return false;
+        }
+        _removeEntry(nodeId);
+        if (!_upsertNodeById(nodeId)) {
+          return false;
+        }
+      }
+
+      return true;
+    } catch (_) {
+      _markInvalid();
+      return false;
+    }
   }
 
   void _rebuild({
@@ -162,22 +183,26 @@ class SceneSpatialIndex {
     required Map<NodeId, SpatialNodeLocation> nodeLocator,
   }) {
     _bindState(scene: scene, nodeLocator: nodeLocator);
-    _cells.clear();
-    _entriesById.clear();
-    _largeNodeIds.clear();
-
-    for (var layerIndex = 0; layerIndex < scene.layers.length; layerIndex++) {
-      final layer = scene.layers[layerIndex];
-      if (layer.isBackground) continue;
-      for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
-        final node = layer.nodes[nodeIndex];
-        _upsertResolvedNode(
-          nodeId: node.id,
-          node: node,
-          layerIndex: layerIndex,
-          nodeIndex: nodeIndex,
-        );
+    _isValid = true;
+    _clearIndexData();
+    try {
+      for (var layerIndex = 0; layerIndex < scene.layers.length; layerIndex++) {
+        final layer = scene.layers[layerIndex];
+        if (layer.isBackground) continue;
+        for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
+          final node = layer.nodes[nodeIndex];
+          if (!_upsertResolvedNode(
+            nodeId: node.id,
+            node: node,
+            layerIndex: layerIndex,
+            nodeIndex: nodeIndex,
+          )) {
+            return;
+          }
+        }
       }
+    } catch (_) {
+      _markInvalid();
     }
   }
 
@@ -194,16 +219,15 @@ class SceneSpatialIndex {
     if (resolved == null) {
       return false;
     }
-    _upsertResolvedNode(
+    return _upsertResolvedNode(
       nodeId: nodeId,
       node: resolved.node,
       layerIndex: resolved.layerIndex,
       nodeIndex: resolved.nodeIndex,
     );
-    return true;
   }
 
-  void _upsertResolvedNode({
+  bool _upsertResolvedNode({
     required NodeId nodeId,
     required SceneNode node,
     required int layerIndex,
@@ -211,49 +235,55 @@ class SceneSpatialIndex {
   }) {
     _removeEntry(nodeId);
     final scene = _scene;
-    if (scene == null) return;
-    if (layerIndex < 0 || layerIndex >= scene.layers.length) return;
-    if (scene.layers[layerIndex].isBackground) return;
+    if (scene == null) return true;
+    if (layerIndex < 0 || layerIndex >= scene.layers.length) return true;
+    if (scene.layers[layerIndex].isBackground) return true;
     if (nodeIndex < 0 || nodeIndex >= scene.layers[layerIndex].nodes.length) {
-      return;
+      return true;
     }
 
     final candidateBounds = nodeHitTestCandidateBoundsWorld(node);
-    if (!_isFiniteRect(candidateBounds)) return;
+    if (!_isFiniteRect(candidateBounds)) return true;
 
     final entry = _SpatialEntry(
       nodeId: nodeId,
       candidateBoundsWorld: candidateBounds,
     );
     _entriesById[nodeId] = entry;
-    _placeEntry(entry);
+    if (_placeEntry(entry)) {
+      return true;
+    }
+    _entriesById.remove(nodeId);
+    return false;
   }
 
-  void _placeEntry(_SpatialEntry entry) {
-    final startX = _cellIndexFor(entry.candidateBoundsWorld.left);
-    final endX = _cellIndexFor(entry.candidateBoundsWorld.right);
-    final startY = _cellIndexFor(entry.candidateBoundsWorld.top);
-    final endY = _cellIndexFor(entry.candidateBoundsWorld.bottom);
+  bool _placeEntry(_SpatialEntry entry) {
+    final span = _tryCellSpanForRect(entry.candidateBoundsWorld);
+    if (span == null) {
+      _markInvalid();
+      return false;
+    }
     if (_isLargeSpan(
-      startX: startX,
-      endX: endX,
-      startY: startY,
-      endY: endY,
+      startX: span.startX,
+      endX: span.endX,
+      startY: span.startY,
+      endY: span.endY,
       maxCells: kMaxCellsPerNode,
     )) {
       entry.isLarge = true;
       _largeNodeIds.add(entry.nodeId);
-      return;
+      return true;
     }
 
-    for (var x = startX; x <= endX; x++) {
-      for (var y = startY; y <= endY; y++) {
+    for (var x = span.startX; x <= span.endX; x++) {
+      for (var y = span.startY; y <= span.endY; y++) {
         final key = _CellKey(x, y);
         final cell = _cells.putIfAbsent(key, () => <NodeId>{});
         cell.add(entry.nodeId);
         entry.coveredCells.add(key);
       }
     }
+    return true;
   }
 
   void _removeEntry(NodeId nodeId) {
@@ -294,6 +324,66 @@ class SceneSpatialIndex {
 
   int _cellIndexFor(double coordinate) {
     return (coordinate / _cellSize).floor();
+  }
+
+  ({int startX, int endX, int startY, int endY})? _tryCellSpanForRect(
+    Rect rect,
+  ) {
+    final minX = math.min(rect.left, rect.right);
+    final maxX = math.max(rect.left, rect.right);
+    final minY = math.min(rect.top, rect.bottom);
+    final maxY = math.max(rect.top, rect.bottom);
+    if (!_isCoordinateInIndexBounds(minX) ||
+        !_isCoordinateInIndexBounds(maxX) ||
+        !_isCoordinateInIndexBounds(minY) ||
+        !_isCoordinateInIndexBounds(maxY)) {
+      return null;
+    }
+    return (
+      startX: _cellIndexFor(minX),
+      endX: _cellIndexFor(maxX),
+      startY: _cellIndexFor(minY),
+      endY: _cellIndexFor(maxY),
+    );
+  }
+
+  List<SceneSpatialCandidate> _queryLinear(Scene scene, Rect worldRect) {
+    final out = <SceneSpatialCandidate>[];
+    for (var layerIndex = 0; layerIndex < scene.layers.length; layerIndex++) {
+      final layer = scene.layers[layerIndex];
+      if (layer.isBackground) continue;
+      for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
+        final node = layer.nodes[nodeIndex];
+        final candidateBounds = nodeHitTestCandidateBoundsWorld(node);
+        if (!_isFiniteRect(candidateBounds)) continue;
+        if (!_rectsIntersectInclusive(candidateBounds, worldRect)) continue;
+        out.add(
+          SceneSpatialCandidate(
+            layerIndex: layerIndex,
+            nodeIndex: nodeIndex,
+            node: node,
+            candidateBoundsWorld: candidateBounds,
+          ),
+        );
+      }
+    }
+    return out.toList(growable: false);
+  }
+
+  bool _isCoordinateInIndexBounds(double value) {
+    return value >= sceneCoordMin && value <= sceneCoordMax;
+  }
+
+  void _markInvalid() {
+    if (!_isValid) return;
+    _isValid = false;
+    _clearIndexData();
+  }
+
+  void _clearIndexData() {
+    _cells.clear();
+    _entriesById.clear();
+    _largeNodeIds.clear();
   }
 
   bool _isLargeSpan({

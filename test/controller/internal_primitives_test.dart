@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart' hide NodeId;
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
+import 'package:iwb_canvas_engine/src/core/scene_limits.dart';
 import 'package:iwb_canvas_engine/src/controller/change_set.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_writer.dart';
 import 'package:iwb_canvas_engine/src/controller/store.dart';
@@ -1056,6 +1057,53 @@ void main() {
         controllerEpoch: 1,
       );
       expect(slice.debugBuildCount, 4);
+
+      final outOfRangeScene = Scene(
+        layers: <Layer>[
+          Layer(
+            nodes: <SceneNode>[
+              RectNode(
+                id: 'r1',
+                size: const Size(10, 10),
+                transform: Transform2D.translation(
+                  Offset(sceneCoordMax + 500, 0),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+      final outOfRangeLocator = <NodeId, ({int layerIndex, int nodeIndex})>{
+        'r1': (layerIndex: 0, nodeIndex: 0),
+      };
+      final outOfRangeBounds = Rect.fromLTWH(sceneCoordMax + 450, -20, 100, 40);
+      final invalidFirst = slice.writeQueryCandidates(
+        scene: outOfRangeScene,
+        nodeLocator: outOfRangeLocator,
+        worldBounds: outOfRangeBounds,
+        controllerEpoch: 2,
+      );
+      expect(invalidFirst, isNotEmpty);
+      expect(slice.debugBuildCount, 5);
+
+      final outOfRangeChange = ChangeSet()
+        ..txnMarkBoundsChanged()
+        ..txnTrackUpdated('r1')
+        ..txnTrackHitGeometryChanged('r1');
+      slice.writeHandleCommit(
+        scene: outOfRangeScene,
+        nodeLocator: outOfRangeLocator,
+        changeSet: outOfRangeChange,
+        controllerEpoch: 2,
+      );
+      final invalidSecond = slice.writeQueryCandidates(
+        scene: outOfRangeScene,
+        nodeLocator: outOfRangeLocator,
+        worldBounds: outOfRangeBounds,
+        controllerEpoch: 2,
+      );
+      expect(invalidSecond, isNotEmpty);
+      expect(slice.debugBuildCount, 5);
     },
   );
 

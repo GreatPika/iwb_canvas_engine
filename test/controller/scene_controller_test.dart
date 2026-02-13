@@ -162,6 +162,52 @@ void main() {
     expect(identical(first, second), isTrue);
   });
 
+  test('selectedNodeIds getter reuses view between reads', () {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    final first = controller.selectedNodeIds;
+    final second = controller.selectedNodeIds;
+
+    expect(identical(first, second), isTrue);
+  });
+
+  test('selectedNodeIds view survives commits without selection changes', () {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    controller.write<void>((writer) {
+      writer.writeSelectionReplace(const <NodeId>{'r1'});
+    });
+    final before = controller.selectedNodeIds;
+
+    controller.write<void>((writer) {
+      writer.writeSelectionTranslate(const Offset(5, 0));
+    });
+    final afterBounds = controller.selectedNodeIds;
+    expect(identical(before, afterBounds), isTrue);
+
+    controller.write<void>((writer) {
+      writer.writeSignalEnqueue(type: 'signals-only.selection-view');
+    });
+    final afterSignals = controller.selectedNodeIds;
+    expect(identical(afterBounds, afterSignals), isTrue);
+  });
+
+  test('selectedNodeIds view identity changes after selection mutation', () {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    final before = controller.selectedNodeIds;
+    controller.write<void>((writer) {
+      writer.writeSelectionReplace(const <NodeId>{'r1'});
+    });
+    final after = controller.selectedNodeIds;
+
+    expect(identical(before, after), isFalse);
+    expect(after, const <NodeId>{'r1'});
+  });
+
   test('snapshot cache survives selection-only and signals-only commits', () {
     final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
