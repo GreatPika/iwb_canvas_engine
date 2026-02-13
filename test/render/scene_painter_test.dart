@@ -667,6 +667,45 @@ void main() {
   });
 
   test(
+    'ScenePainterV2 skips path metrics cache when local path is unavailable',
+    () async {
+      final pathCache = ScenePathMetricsCacheV2(maxEntries: 8);
+      final controller = SceneControllerV2(
+        initialSnapshot: SceneSnapshot(
+          background: const BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              nodes: <NodeSnapshot>[
+                PathNodeSnapshot(
+                  id: 'path-degenerate',
+                  svgPathData: 'M0 0',
+                  strokeColor: const Color(0xFF000000),
+                  strokeWidth: 2,
+                  transform: Transform2D.translation(const Offset(50, 50)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      final painter = ScenePainterV2(
+        controller: controller,
+        imageResolver: (_) => null,
+        pathMetricsCache: pathCache,
+      );
+
+      await _paintToImage(painter, width: 120, height: 100);
+      await _paintToImage(painter, width: 120, height: 100);
+
+      expect(pathCache.debugBuildCount, 0);
+      expect(pathCache.debugHitCount, 0);
+      expect(pathCache.debugSize, 0);
+    },
+  );
+
+  test(
     'ScenePainterV2 can use static layer cache across camera updates',
     () async {
       final staticCache = SceneStaticLayerCacheV2();

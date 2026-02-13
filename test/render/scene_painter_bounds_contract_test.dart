@@ -66,4 +66,20 @@ void main() {
       expect(body, isNot(contains('getBounds(')));
     },
   );
+
+  test('_drawPathNode reads localPath from RenderGeometryCache only', () {
+    final source = File('lib/src/render/scene_painter.dart').readAsStringSync();
+    final body = _extractMethodBody(
+      source: source,
+      methodStart: 'void _drawPathNode(',
+    );
+
+    expect(
+      body,
+      contains('final localPath = _geometryCache.get(node).localPath;'),
+    );
+    expect(body, isNot(contains('parseSvgPathData')));
+    expect(body, isNot(contains('buildLocalPath')));
+    expect(body, isNot(contains('_buildPathNode')));
+  });
 }

@@ -55,7 +55,7 @@ language: russian
 
 ---
 
-### ☐ 3) Перевести отрисовку `PathNodeSnapshot` на кэшированный `Path`
+### ☑ 3) Перевести отрисовку `PathNodeSnapshot` на кэшированный `Path`
 
 **Что делаем:** `_drawPathNode(...)` использует `localPath` из кэша вместо пересборки через временный `PathNode`.
 **Почему:** текущий подход обнуляет пользу кэша `PathNode` и парсит SVG-путь повторно.
@@ -70,6 +70,7 @@ language: russian
 * Удалить `_buildPathNode(...)` из painter (или сделать приватным только для миграции и удалить после перевода всех мест).
   **Критерии приёмки:**
 * Отрисовка путей не вызывает `parseSvgPathData` напрямую или косвенно через временный `PathNode`.
+* Подтверждено контрактами и регресс-тестами: `test/render/scene_painter_bounds_contract_test.dart`, `test/render/scene_painter_test.dart`.
 
 ---
 
