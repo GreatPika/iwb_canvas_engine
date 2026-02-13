@@ -62,11 +62,11 @@ List<String> txnCollectStoreInvariantViolations({
   }
 
   final expectedSeed = txnInitialNodeIdSeed(scene);
-  if (nodeIdSeed != expectedSeed) {
+  if (nodeIdSeed < expectedSeed) {
     violations = <String>[
       ...violations,
-      'nodeIdSeed must be derived from scene. '
-          'actual=$nodeIdSeed expected=$expectedSeed',
+      'nodeIdSeed must be >= initialNodeIdSeed(scene). '
+          'actual=$nodeIdSeed min=$expectedSeed',
     ];
   }
 

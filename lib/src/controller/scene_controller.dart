@@ -16,7 +16,6 @@ import '../input/slices/signals/signal_event.dart';
 import '../input/slices/signals/signals_slice.dart';
 import '../input/slices/spatial_index/spatial_index_slice.dart';
 import '../model/document.dart';
-import '../model/document_clone.dart';
 import '../public/scene_render_state.dart';
 import '../public/scene_write_txn.dart';
 import '../public/snapshot.dart';
@@ -51,6 +50,7 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
   int _debugLastSceneShallowClones = 0;
   int _debugLastLayerShallowClones = 0;
   int _debugLastNodeClones = 0;
+  int _debugLastNodeIdSetMaterializations = 0;
   @visibleForTesting
   void Function()? debugBeforeInvariantPrecheckHook;
 
@@ -103,6 +103,9 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
   @visibleForTesting
   int get debugNodeClones => _debugLastNodeClones;
 
+  @visibleForTesting
+  int get debugNodeIdSetMaterializations => _debugLastNodeIdSetMaterializations;
+
   int get debugCommitRevision => _store.commitRevision;
 
   List<SceneSpatialCandidate> querySpatialCandidates(Rect worldBounds) {
@@ -153,7 +156,7 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
     final ctx = TxnContext(
       baseScene: _store.sceneDoc,
       workingSelection: Set<NodeId>.from(_store.selectedNodeIds),
-      workingNodeIds: Set<NodeId>.from(_store.allNodeIds),
+      baseAllNodeIds: _store.allNodeIds,
       nodeIdSeed: _store.nodeIdSeed,
     );
 
@@ -288,8 +291,10 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
     final nextCommitRevision = _store.commitRevision + 1;
     final committedScene = ctx.txnSceneForCommit();
     final committedSelection = Set<NodeId>.from(ctx.workingSelection);
-    final committedNodeIds = txnCollectNodeIds(committedScene);
-    final committedNodeIdSeed = txnInitialNodeIdSeed(committedScene);
+    final committedNodeIds = ctx.txnAllNodeIdsForCommit(
+      structuralChanged: ctx.changeSet.structuralChanged,
+    );
+    final committedNodeIdSeed = ctx.nodeIdSeed;
     _debugAssertStoreInvariantsCandidate(
       scene: committedScene,
       selectedNodeIds: committedSelection,
@@ -337,6 +342,7 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
     _debugLastSceneShallowClones = ctx.debugSceneShallowClones;
     _debugLastLayerShallowClones = ctx.debugLayerShallowClones;
     _debugLastNodeClones = ctx.debugNodeClones;
+    _debugLastNodeIdSetMaterializations = ctx.debugNodeIdSetMaterializations;
   }
 
   void _scheduleNotify() {

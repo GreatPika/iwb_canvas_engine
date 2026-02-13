@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../core/nodes.dart';
 import '../core/scene.dart';
 import '../model/document.dart';
@@ -8,13 +10,18 @@ class TxnContext {
   TxnContext({
     required Scene baseScene,
     required this.workingSelection,
-    required this.workingNodeIds,
+    required Set<NodeId> baseAllNodeIds,
     required this.nodeIdSeed,
     ChangeSet? changeSet,
   }) : _baseScene = baseScene,
+       _baseAllNodeIds = baseAllNodeIds,
        changeSet = changeSet ?? ChangeSet();
 
   final Scene _baseScene;
+  Set<NodeId> _baseAllNodeIds;
+  final Set<NodeId> _addedNodeIds = <NodeId>{};
+  final Set<NodeId> _removedNodeIds = <NodeId>{};
+  Set<NodeId>? _materializedAllNodeIds;
   Scene? _mutableScene;
   final Set<int> _clonedLayerIndexes = <int>{};
   final Set<NodeId> _clonedNodeIds = <NodeId>{};
@@ -24,12 +31,12 @@ class TxnContext {
   Scene txnSceneForCommit() => _mutableScene ?? _baseScene;
 
   Set<NodeId> workingSelection;
-  final Set<NodeId> workingNodeIds;
   int nodeIdSeed;
   final ChangeSet changeSet;
   int debugSceneShallowClones = 0;
   int debugLayerShallowClones = 0;
   int debugNodeClones = 0;
+  int debugNodeIdSetMaterializations = 0;
 
   Scene txnEnsureMutableScene() {
     final existing = _mutableScene;
@@ -111,14 +118,44 @@ class TxnContext {
     );
   }
 
-  bool txnHasNodeId(NodeId nodeId) => workingNodeIds.contains(nodeId);
+  bool txnHasNodeId(NodeId nodeId) {
+    final materialized = _materializedAllNodeIds;
+    if (materialized != null) {
+      return materialized.contains(nodeId);
+    }
+    if (_addedNodeIds.contains(nodeId)) {
+      return true;
+    }
+    if (_removedNodeIds.contains(nodeId)) {
+      return false;
+    }
+    return _baseAllNodeIds.contains(nodeId);
+  }
 
   void txnRememberNodeId(NodeId nodeId) {
-    workingNodeIds.add(nodeId);
+    final materialized = _materializedAllNodeIds;
+    if (materialized != null) {
+      materialized.add(nodeId);
+      return;
+    }
+    if (_baseAllNodeIds.contains(nodeId)) {
+      _removedNodeIds.remove(nodeId);
+      return;
+    }
+    _addedNodeIds.add(nodeId);
   }
 
   void txnForgetNodeId(NodeId nodeId) {
-    workingNodeIds.remove(nodeId);
+    final materialized = _materializedAllNodeIds;
+    if (materialized != null) {
+      materialized.remove(nodeId);
+      return;
+    }
+    if (_baseAllNodeIds.contains(nodeId)) {
+      _removedNodeIds.add(nodeId);
+      return;
+    }
+    _addedNodeIds.remove(nodeId);
   }
 
   String txnNextNodeId() {
@@ -137,10 +174,46 @@ class TxnContext {
     _mutableSceneOwnedByTxn = true;
     _clonedLayerIndexes.clear();
     _clonedNodeIds.clear();
-    workingNodeIds
-      ..clear()
-      ..addAll(txnCollectNodeIds(scene));
+    _baseAllNodeIds = txnCollectNodeIds(scene);
+    _addedNodeIds.clear();
+    _removedNodeIds.clear();
+    _materializedAllNodeIds = _baseAllNodeIds;
     nodeIdSeed = txnInitialNodeIdSeed(scene);
+  }
+
+  Set<NodeId> txnAllNodeIdsForCommit({required bool structuralChanged}) {
+    final materialized = _materializedAllNodeIds;
+    if (materialized != null) {
+      return materialized;
+    }
+    if (!structuralChanged &&
+        _addedNodeIds.isEmpty &&
+        _removedNodeIds.isEmpty) {
+      return _baseAllNodeIds;
+    }
+    return _txnMaterializeAllNodeIds();
+  }
+
+  Set<NodeId> _txnMaterializeAllNodeIds() {
+    final cached = _materializedAllNodeIds;
+    if (cached != null) {
+      return cached;
+    }
+    final materialized = Set<NodeId>.from(_baseAllNodeIds);
+    if (_removedNodeIds.isNotEmpty) {
+      materialized.removeAll(_removedNodeIds);
+    }
+    if (_addedNodeIds.isNotEmpty) {
+      materialized.addAll(_addedNodeIds);
+    }
+    _materializedAllNodeIds = materialized;
+    debugNodeIdSetMaterializations = debugNodeIdSetMaterializations + 1;
+    return materialized;
+  }
+
+  @visibleForTesting
+  Set<NodeId> debugNodeIdsView({required bool structuralChanged}) {
+    return txnAllNodeIdsForCommit(structuralChanged: structuralChanged);
   }
 
   bool _txnIsSharedLayerWithBase(Layer layer) {

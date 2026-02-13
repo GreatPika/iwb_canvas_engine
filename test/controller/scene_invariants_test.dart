@@ -51,7 +51,7 @@ void main() {
       scene: scene,
       selectedNodeIds: const <NodeId>{'missing'},
       allNodeIds: const <NodeId>{},
-      nodeIdSeed: 7,
+      nodeIdSeed: 1,
       commitRevision: -1,
     );
 
@@ -65,7 +65,7 @@ void main() {
     );
     expect(
       violations.join('\n'),
-      contains('nodeIdSeed must be derived from scene'),
+      contains('nodeIdSeed must be >= initialNodeIdSeed(scene)'),
     );
     expect(
       violations.join('\n'),

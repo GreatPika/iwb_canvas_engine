@@ -66,7 +66,7 @@ Key invariants:
 - Interactive `actions` / `editTextRequests` streams are delivered asynchronously (never in the same call stack as mutation methods).
 - Relative ordering between interactive stream delivery and repaint listener notification is intentionally not a public contract.
 - Buffered signal/repaint effects are discarded when `write(...)` rolls back.
-- Node-id index state (`allNodeIds`, `nodeIdSeed`) is derived from committed scene data.
+- Node-id index state keeps `allNodeIds` equal to committed scene ids, while `nodeIdSeed` is a monotonic generator lower-bounded by committed scene ids.
 - Selection normalization preserves explicit non-selectable ids and drops only missing/background/invisible ids.
 - Runtime snapshot boundary (`initialSnapshot` / `replaceScene`) validates input strictly and fails fast with `ArgumentError` for malformed snapshots.
 - Runtime background-layer rule: at most one background layer; if present it is canonicalized to index `0`; missing background is allowed (no auto-insert on runtime boundary).

@@ -18,7 +18,7 @@ class _LayerDropTxnContext extends TxnContext {
   _LayerDropTxnContext({
     required super.baseScene,
     required super.workingSelection,
-    required super.workingNodeIds,
+    required super.baseAllNodeIds,
     required super.nodeIdSeed,
   });
 
@@ -76,22 +76,25 @@ void main() {
     expect(clone, isNot(same(changeSet)));
   });
 
-  test('TxnContext mutates workingNodeIds in place across operations', () {
+  test('TxnContext tracks node ids incrementally and materializes lazily', () {
     final ctx = TxnContext(
       baseScene: Scene(),
       workingSelection: <NodeId>{},
-      workingNodeIds: <NodeId>{'keep'},
+      baseAllNodeIds: <NodeId>{'keep'},
       nodeIdSeed: 0,
     );
-    final workingNodeIdsRef = ctx.workingNodeIds;
 
     ctx.txnRememberNodeId('added');
-    expect(identical(workingNodeIdsRef, ctx.workingNodeIds), isTrue);
-    expect(ctx.workingNodeIds, containsAll(<NodeId>{'keep', 'added'}));
+    expect(ctx.txnHasNodeId('added'), isTrue);
+    expect(ctx.debugNodeIdSetMaterializations, 0);
 
     ctx.txnForgetNodeId('keep');
-    expect(identical(workingNodeIdsRef, ctx.workingNodeIds), isTrue);
-    expect(ctx.workingNodeIds, <NodeId>{'added'});
+    expect(ctx.txnHasNodeId('keep'), isFalse);
+    expect(ctx.debugNodeIdSetMaterializations, 0);
+
+    final materialized = ctx.debugNodeIdsView(structuralChanged: true);
+    expect(materialized, <NodeId>{'added'});
+    expect(ctx.debugNodeIdSetMaterializations, 1);
 
     ctx.txnAdoptScene(
       Scene(
@@ -105,10 +108,37 @@ void main() {
         ],
       ),
     );
-    expect(identical(workingNodeIdsRef, ctx.workingNodeIds), isTrue);
-    expect(ctx.workingNodeIds, <NodeId>{'node-7', 'manual'});
+    expect(ctx.debugNodeIdsView(structuralChanged: true), <NodeId>{
+      'node-7',
+      'manual',
+    });
     expect(ctx.nodeIdSeed, 8);
   });
+
+  test(
+    'TxnContext updates materialized node ids in place after commit view',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(),
+        workingSelection: <NodeId>{},
+        baseAllNodeIds: <NodeId>{'keep'},
+        nodeIdSeed: 0,
+      );
+
+      ctx.txnForgetNodeId('keep');
+      ctx.txnRememberNodeId('keep');
+      expect(ctx.txnHasNodeId('keep'), isTrue);
+
+      final materialized = ctx.debugNodeIdsView(structuralChanged: true);
+      expect(materialized, <NodeId>{'keep'});
+
+      ctx.txnRememberNodeId('late');
+      expect(ctx.txnHasNodeId('late'), isTrue);
+      ctx.txnForgetNodeId('late');
+      expect(ctx.txnHasNodeId('late'), isFalse);
+      expect(materialized, <NodeId>{'keep'});
+    },
+  );
 
   test('ChangeSet mutates tracked sets in place across transitions', () {
     final changeSet = ChangeSet();
@@ -138,15 +168,14 @@ void main() {
   });
 
   test(
-    'TxnContext and ChangeSet keep set identity on 1000 add/remove operations',
+    'TxnContext and ChangeSet keep O(1) id delta updates on 1000 operations',
     () {
       final ctx = TxnContext(
         baseScene: Scene(),
         workingSelection: <NodeId>{},
-        workingNodeIds: <NodeId>{},
+        baseAllNodeIds: <NodeId>{},
         nodeIdSeed: 0,
       );
-      final workingNodeIdsRef = ctx.workingNodeIds;
       final changeSet = ChangeSet();
       final addedRef = changeSet.addedNodeIds;
       final removedRef = changeSet.removedNodeIds;
@@ -165,13 +194,15 @@ void main() {
         }
       }
 
-      expect(identical(workingNodeIdsRef, ctx.workingNodeIds), isTrue);
+      expect(ctx.debugNodeIdSetMaterializations, 0);
       expect(identical(addedRef, changeSet.addedNodeIds), isTrue);
       expect(identical(removedRef, changeSet.removedNodeIds), isTrue);
       expect(identical(updatedRef, changeSet.updatedNodeIds), isTrue);
 
-      expect(ctx.workingNodeIds.length, 500);
-      expect(ctx.workingNodeIds, <NodeId>{
+      final committedNodeIds = ctx.debugNodeIdsView(structuralChanged: true);
+      expect(ctx.debugNodeIdSetMaterializations, 1);
+      expect(committedNodeIds.length, 500);
+      expect(committedNodeIds, <NodeId>{
         for (var i = 1; i < 1000; i += 2) 'n$i',
       });
       expect(changeSet.addedNodeIds.length, 500);
@@ -229,7 +260,7 @@ void main() {
     final ctx = TxnContext(
       baseScene: baseScene,
       workingSelection: <NodeId>{},
-      workingNodeIds: <NodeId>{'r1'},
+      baseAllNodeIds: <NodeId>{'r1'},
       nodeIdSeed: 0,
     );
 
@@ -252,7 +283,7 @@ void main() {
     final ctx = TxnContext(
       baseScene: baseScene,
       workingSelection: <NodeId>{},
-      workingNodeIds: <NodeId>{'r1'},
+      baseAllNodeIds: <NodeId>{'r1'},
       nodeIdSeed: 0,
     );
 
@@ -289,7 +320,7 @@ void main() {
       final ctx = TxnContext(
         baseScene: baseScene,
         workingSelection: <NodeId>{},
-        workingNodeIds: <NodeId>{'r1', 'r2'},
+        baseAllNodeIds: <NodeId>{'r1', 'r2'},
         nodeIdSeed: 0,
       );
 
@@ -323,7 +354,7 @@ void main() {
     final ctx = TxnContext(
       baseScene: Scene(),
       workingSelection: <NodeId>{},
-      workingNodeIds: <NodeId>{},
+      baseAllNodeIds: <NodeId>{},
       nodeIdSeed: 0,
     );
 
@@ -343,7 +374,7 @@ void main() {
       final ctx = TxnContext(
         baseScene: Scene(layers: <Layer>[Layer()]),
         workingSelection: <NodeId>{},
-        workingNodeIds: <NodeId>{},
+        baseAllNodeIds: <NodeId>{},
         nodeIdSeed: 0,
       );
 
@@ -364,7 +395,7 @@ void main() {
       final ctx = TxnContext(
         baseScene: Scene(),
         workingSelection: <NodeId>{},
-        workingNodeIds: <NodeId>{},
+        baseAllNodeIds: <NodeId>{},
         nodeIdSeed: 0,
       );
 
@@ -379,7 +410,7 @@ void main() {
     final ctx = TxnContext(
       baseScene: Scene(),
       workingSelection: <NodeId>{},
-      workingNodeIds: <NodeId>{},
+      baseAllNodeIds: <NodeId>{},
       nodeIdSeed: 0,
     );
 
@@ -398,7 +429,7 @@ void main() {
           ],
         ),
         workingSelection: <NodeId>{},
-        workingNodeIds: <NodeId>{'n1'},
+        baseAllNodeIds: <NodeId>{'n1'},
         nodeIdSeed: 0,
       );
 
@@ -417,7 +448,7 @@ void main() {
         ],
       ),
       workingSelection: <NodeId>{'r1'},
-      workingNodeIds: <NodeId>{'r1'},
+      baseAllNodeIds: <NodeId>{'r1'},
       nodeIdSeed: 0,
     );
     final writer = SceneWriter(ctx, txnSignalSink: bufferedSignals.add);
@@ -510,7 +541,7 @@ void main() {
         ],
       ),
       workingSelection: <NodeId>{'rect-1'},
-      workingNodeIds: <NodeId>{'rect-1', 'locked'},
+      baseAllNodeIds: <NodeId>{'rect-1', 'locked'},
       nodeIdSeed: 2,
     );
     final bufferedSignals = <V2BufferedSignal>[];
@@ -520,7 +551,8 @@ void main() {
       RectNodeSpec(size: const Size(2, 2)),
     );
     expect(generatedId, 'node-2');
-    expect(ctx.workingNodeIds, containsAll(<NodeId>{'rect-1', 'locked'}));
+    expect(ctx.txnHasNodeId('rect-1'), isTrue);
+    expect(ctx.txnHasNodeId('locked'), isTrue);
 
     expect(
       writer.writeNodeTransformSet('missing', Transform2D.identity),
@@ -562,7 +594,7 @@ void main() {
         ],
       ),
       workingSelection: <NodeId>{'locked', 'free'},
-      workingNodeIds: <NodeId>{'locked', 'free'},
+      baseAllNodeIds: <NodeId>{'locked', 'free'},
       nodeIdSeed: 0,
     );
     final writer = SceneWriter(ctx, txnSignalSink: (_) {});
@@ -576,7 +608,7 @@ void main() {
     final ctx = TxnContext(
       baseScene: Scene(),
       workingSelection: <NodeId>{},
-      workingNodeIds: <NodeId>{},
+      baseAllNodeIds: <NodeId>{},
       nodeIdSeed: 0,
     );
     final writer = SceneWriter(ctx, txnSignalSink: (_) {});
@@ -604,7 +636,7 @@ void main() {
         ],
       ),
       workingSelection: <NodeId>{'r1'},
-      workingNodeIds: <NodeId>{'r1'},
+      baseAllNodeIds: <NodeId>{'r1'},
       nodeIdSeed: 0,
     );
     final writer = SceneWriter(ctx, txnSignalSink: (_) {});
@@ -646,7 +678,7 @@ void main() {
         ],
       ),
       workingSelection: <NodeId>{},
-      workingNodeIds: <NodeId>{'line-static'},
+      baseAllNodeIds: <NodeId>{'line-static'},
       nodeIdSeed: 0,
     );
     final writer = SceneWriter(ctx, txnSignalSink: (_) {});
@@ -679,7 +711,7 @@ void main() {
         ],
       ),
       workingSelection: <NodeId>{'keep', 'del'},
-      workingNodeIds: <NodeId>{'keep', 'del'},
+      baseAllNodeIds: <NodeId>{'keep', 'del'},
       nodeIdSeed: 0,
     );
     final writer = SceneWriter(ctx, txnSignalSink: (_) {});
@@ -709,7 +741,7 @@ void main() {
         layers: <Layer>[Layer(isBackground: true), Layer(isBackground: true)],
       ),
       workingSelection: <NodeId>{},
-      workingNodeIds: <NodeId>{},
+      baseAllNodeIds: <NodeId>{},
       nodeIdSeed: 0,
     );
     final writer = SceneWriter(ctx, txnSignalSink: (_) {});

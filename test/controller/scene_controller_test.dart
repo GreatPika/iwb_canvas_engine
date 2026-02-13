@@ -868,6 +868,62 @@ void main() {
     expect(controller.debugNodeClones, 1);
   });
 
+  test('opacity patch commit does not materialize allNodeIds', () {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    controller.write<void>((writer) {
+      writer.writeNodePatch(
+        const RectNodePatch(
+          id: 'r1',
+          common: CommonNodePatch(opacity: PatchField<double>.value(0.5)),
+        ),
+      );
+    });
+
+    expect(controller.debugNodeIdSetMaterializations, 0);
+  });
+
+  test('structural commit materializes allNodeIds once', () {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    controller.write<void>((writer) {
+      writer.writeNodeInsert(RectNodeSpec(size: const Size(8, 8)));
+    });
+
+    expect(controller.debugNodeIdSetMaterializations, 1);
+  });
+
+  test('node id seed stays monotonic after deleting max node-* id', () {
+    final controller = SceneControllerV2(
+      initialSnapshot: SceneSnapshot(
+        layers: <LayerSnapshot>[
+          LayerSnapshot(
+            nodes: const <NodeSnapshot>[
+              RectNodeSnapshot(id: 'node-1', size: Size(10, 10)),
+              RectNodeSnapshot(id: 'node-9', size: Size(12, 12)),
+            ],
+          ),
+        ],
+      ),
+    );
+    addTearDown(controller.dispose);
+
+    controller.write<void>((writer) {
+      writer.writeNodeErase('node-9');
+    });
+
+    late final NodeId generatedId;
+    controller.write<void>((writer) {
+      generatedId = writer.writeNodeInsert(
+        RectNodeSpec(size: const Size(6, 6)),
+      );
+    });
+
+    expect(generatedId, 'node-10');
+  });
+
   test('resolveSpatialCandidateNode accepts valid foreground candidate', () {
     final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
