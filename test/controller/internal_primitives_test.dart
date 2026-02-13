@@ -53,6 +53,116 @@ void main() {
     expect(clone, isNot(same(changeSet)));
   });
 
+  test('TxnContext mutates workingNodeIds in place across operations', () {
+    final ctx = TxnContext(
+      baseScene: Scene(),
+      workingSelection: <NodeId>{},
+      workingNodeIds: <NodeId>{'keep'},
+      nodeIdSeed: 0,
+    );
+    final workingNodeIdsRef = ctx.workingNodeIds;
+
+    ctx.txnRememberNodeId('added');
+    expect(identical(workingNodeIdsRef, ctx.workingNodeIds), isTrue);
+    expect(ctx.workingNodeIds, containsAll(<NodeId>{'keep', 'added'}));
+
+    ctx.txnForgetNodeId('keep');
+    expect(identical(workingNodeIdsRef, ctx.workingNodeIds), isTrue);
+    expect(ctx.workingNodeIds, <NodeId>{'added'});
+
+    ctx.txnAdoptScene(
+      Scene(
+        layers: <Layer>[
+          Layer(
+            nodes: <SceneNode>[
+              RectNode(id: 'node-7', size: const Size(1, 1)),
+              RectNode(id: 'manual', size: const Size(1, 1)),
+            ],
+          ),
+        ],
+      ),
+    );
+    expect(identical(workingNodeIdsRef, ctx.workingNodeIds), isTrue);
+    expect(ctx.workingNodeIds, <NodeId>{'node-7', 'manual'});
+    expect(ctx.nodeIdSeed, 8);
+  });
+
+  test('ChangeSet mutates tracked sets in place across transitions', () {
+    final changeSet = ChangeSet();
+    final addedRef = changeSet.addedNodeIds;
+    final removedRef = changeSet.removedNodeIds;
+    final updatedRef = changeSet.updatedNodeIds;
+
+    changeSet.txnTrackAdded('n1');
+    changeSet.txnTrackUpdated('n1');
+    changeSet.txnTrackRemoved('n1');
+    changeSet.txnTrackAdded('n1');
+
+    changeSet.txnTrackRemoved('n2');
+    changeSet.txnTrackAdded('n2');
+
+    changeSet.txnTrackAdded('n3');
+    changeSet.txnTrackRemoved('n3');
+    changeSet.txnTrackAdded('n3');
+
+    expect(identical(addedRef, changeSet.addedNodeIds), isTrue);
+    expect(identical(removedRef, changeSet.removedNodeIds), isTrue);
+    expect(identical(updatedRef, changeSet.updatedNodeIds), isTrue);
+
+    expect(changeSet.addedNodeIds, <NodeId>{'n1', 'n2', 'n3'});
+    expect(changeSet.removedNodeIds, isEmpty);
+    expect(changeSet.updatedNodeIds, isEmpty);
+  });
+
+  test(
+    'TxnContext and ChangeSet keep set identity on 1000 add/remove operations',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(),
+        workingSelection: <NodeId>{},
+        workingNodeIds: <NodeId>{},
+        nodeIdSeed: 0,
+      );
+      final workingNodeIdsRef = ctx.workingNodeIds;
+      final changeSet = ChangeSet();
+      final addedRef = changeSet.addedNodeIds;
+      final removedRef = changeSet.removedNodeIds;
+      final updatedRef = changeSet.updatedNodeIds;
+
+      for (var i = 0; i < 1000; i++) {
+        final id = 'n$i';
+        ctx.txnRememberNodeId(id);
+        changeSet.txnTrackAdded(id);
+
+        if (i.isEven) {
+          ctx.txnForgetNodeId(id);
+          changeSet.txnTrackRemoved(id);
+        } else {
+          changeSet.txnTrackUpdated(id);
+        }
+      }
+
+      expect(identical(workingNodeIdsRef, ctx.workingNodeIds), isTrue);
+      expect(identical(addedRef, changeSet.addedNodeIds), isTrue);
+      expect(identical(removedRef, changeSet.removedNodeIds), isTrue);
+      expect(identical(updatedRef, changeSet.updatedNodeIds), isTrue);
+
+      expect(ctx.workingNodeIds.length, 500);
+      expect(ctx.workingNodeIds, <NodeId>{
+        for (var i = 1; i < 1000; i += 2) 'n$i',
+      });
+      expect(changeSet.addedNodeIds.length, 500);
+      expect(changeSet.addedNodeIds, <NodeId>{
+        for (var i = 1; i < 1000; i += 2) 'n$i',
+      });
+      expect(changeSet.removedNodeIds.length, 500);
+      expect(changeSet.removedNodeIds, <NodeId>{
+        for (var i = 0; i < 1000; i += 2) 'n$i',
+      });
+      expect(changeSet.updatedNodeIds, isEmpty);
+    },
+  );
+
   test('V2Store initializes selections, id set and id seed from scene', () {
     final scene = Scene(
       layers: <Layer>[

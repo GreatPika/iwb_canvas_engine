@@ -20,7 +20,7 @@ class TxnContext {
   Scene txnSceneForCommit() => _mutableScene ?? _baseScene;
 
   Set<NodeId> workingSelection;
-  Set<NodeId> workingNodeIds;
+  final Set<NodeId> workingNodeIds;
   int nodeIdSeed;
   final ChangeSet changeSet;
 
@@ -35,14 +35,11 @@ class TxnContext {
   bool txnHasNodeId(NodeId nodeId) => workingNodeIds.contains(nodeId);
 
   void txnRememberNodeId(NodeId nodeId) {
-    workingNodeIds = <NodeId>{...workingNodeIds, nodeId};
+    workingNodeIds.add(nodeId);
   }
 
   void txnForgetNodeId(NodeId nodeId) {
-    workingNodeIds = <NodeId>{
-      for (final candidate in workingNodeIds)
-        if (candidate != nodeId) candidate,
-    };
+    workingNodeIds.remove(nodeId);
   }
 
   String txnNextNodeId() {
@@ -58,7 +55,9 @@ class TxnContext {
 
   void txnAdoptScene(Scene scene) {
     _mutableScene = scene;
-    workingNodeIds = txnCollectNodeIds(scene);
+    workingNodeIds
+      ..clear()
+      ..addAll(txnCollectNodeIds(scene));
     nodeIdSeed = txnInitialNodeIdSeed(scene);
   }
 }
