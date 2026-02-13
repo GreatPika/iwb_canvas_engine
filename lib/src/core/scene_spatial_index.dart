@@ -6,6 +6,7 @@ import 'nodes.dart';
 import 'scene.dart';
 
 const int kMaxCellsPerNode = 1024;
+const int kMaxQueryCells = 50000;
 const double _defaultSpatialCellSize = 256;
 
 typedef SpatialNodeLocation = ({int layerIndex, int nodeIndex});
@@ -45,6 +46,7 @@ class SceneSpatialIndex {
   final Map<_CellKey, Set<NodeId>> _cells = <_CellKey, Set<NodeId>>{};
   final Map<NodeId, _SpatialEntry> _entriesById = <NodeId, _SpatialEntry>{};
   final Set<NodeId> _largeNodeIds = <NodeId>{};
+  int _debugFallbackQueryCount = 0;
 
   Scene? _scene;
   Map<NodeId, SpatialNodeLocation> _nodeLocator =
@@ -53,6 +55,7 @@ class SceneSpatialIndex {
   // Test-only counters for validating index routing decisions.
   int get debugLargeCandidateCount => _largeNodeIds.length;
   int get debugCellCount => _cells.length;
+  int get debugFallbackQueryCount => _debugFallbackQueryCount;
 
   /// Returns de-duplicated candidates whose coarse bounds intersect [worldRect].
   List<SceneSpatialCandidate> query(Rect worldRect) {
@@ -69,14 +72,25 @@ class SceneSpatialIndex {
     final endY = _cellIndexFor(maxY);
 
     final uniqueIds = <NodeId>{};
-    for (var x = startX; x <= endX; x++) {
-      for (var y = startY; y <= endY; y++) {
-        final cell = _cells[_CellKey(x, y)];
-        if (cell == null) continue;
-        uniqueIds.addAll(cell);
+    if (_isLargeSpan(
+      startX: startX,
+      endX: endX,
+      startY: startY,
+      endY: endY,
+      maxCells: kMaxQueryCells,
+    )) {
+      _debugFallbackQueryCount = _debugFallbackQueryCount + 1;
+      uniqueIds.addAll(_entriesById.keys);
+    } else {
+      for (var x = startX; x <= endX; x++) {
+        for (var y = startY; y <= endY; y++) {
+          final cell = _cells[_CellKey(x, y)];
+          if (cell == null) continue;
+          uniqueIds.addAll(cell);
+        }
       }
+      uniqueIds.addAll(_largeNodeIds);
     }
-    uniqueIds.addAll(_largeNodeIds);
     if (uniqueIds.isEmpty) return const <SceneSpatialCandidate>[];
 
     final out = <SceneSpatialCandidate>[];
@@ -220,7 +234,13 @@ class SceneSpatialIndex {
     final endX = _cellIndexFor(entry.candidateBoundsWorld.right);
     final startY = _cellIndexFor(entry.candidateBoundsWorld.top);
     final endY = _cellIndexFor(entry.candidateBoundsWorld.bottom);
-    if (_isLargeSpan(startX: startX, endX: endX, startY: startY, endY: endY)) {
+    if (_isLargeSpan(
+      startX: startX,
+      endX: endX,
+      startY: startY,
+      endY: endY,
+      maxCells: kMaxCellsPerNode,
+    )) {
       entry.isLarge = true;
       _largeNodeIds.add(entry.nodeId);
       return;
@@ -281,12 +301,13 @@ class SceneSpatialIndex {
     required int endX,
     required int startY,
     required int endY,
+    required int maxCells,
   }) {
     final dx = endX - startX + 1;
     final dy = endY - startY + 1;
     if (dx <= 0 || dy <= 0) return true;
-    if (dx > kMaxCellsPerNode || dy > kMaxCellsPerNode) return true;
-    return dx * dy > kMaxCellsPerNode;
+    if (dx > maxCells || dy > maxCells) return true;
+    return dx * dy > maxCells;
   }
 }
 

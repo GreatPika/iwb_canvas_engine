@@ -22,6 +22,9 @@
 - Spatial index now uses a dual-path layout (`grid cells` + `large candidates`) with `kMaxCellsPerNode = 1024`, so a single huge node can no longer explode per-cell indexing cost.
 - Spatial index construction is fixed to the internal index cell size and no longer depends on background visual grid settings.
 - Spatial index commits are now incremental: local hit-geometry changes update per-node cell coverage (`added/removed/hitGeometryChangedIds`) without full-index rebuild; rebuild is kept as a fallback path when incremental apply is not possible.
+- Interactive pen/highlighter commits now enforce `kMaxStrokePointsPerNode = 20_000` with deterministic index-uniform downsampling that preserves stroke endpoints.
+- Path-stroke precise hit-testing now enforces `kMaxStrokeHitSamplesPerMetric = 2_048` by increasing sampling step on very long path metrics.
+- Spatial index query now enforces `kMaxQueryCells = 50_000`; oversized queries switch to bounded all-candidate scan with exact intersection filtering instead of unbounded cell iteration.
 - Transaction write path now uses scene/layer/node copy-on-write: first mutation shallow-clones scene metadata and clones only touched layers/nodes, while no-op node patches skip COW cloning.
 - Commit state-change path now keeps node-id index incrementally: local non-structural commits reuse existing `allNodeIds`, structural commits materialize ids lazily once, and `nodeIdSeed` is treated as a monotonic generator (lower-bounded by committed scene ids).
 - Commit/store now maintain `nodeLocator` (`NodeId -> layer/node position`) and writer hot paths use locator-based O(1) lookup instead of linear node-id scans.

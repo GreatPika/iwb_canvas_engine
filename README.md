@@ -91,6 +91,7 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Selection contract: commit normalization keeps explicit non-selectable ids valid while filtering missing/background/invisible ids.
 - Runtime notify contract: controller repaint notifications are deferred to a microtask after commit and coalesced to at most one notification per event-loop tick.
 - Move drag contract: pointer move updates only visual preview; scene translation is committed once on pointer up, and pointer cancel keeps the document unchanged.
+- Runtime guardrails bound worst-case input/query cost: interactive stroke commits are capped to `20_000` points (deterministic downsampling), path-stroke precise hit-testing is capped to `2_048` samples per path metric, and oversized spatial queries switch to bounded candidate-scan fallback.
 - Runtime snapshot validation: `initialSnapshot` and `replaceScene` fail fast with `ArgumentError` for malformed snapshots (duplicate node ids, invalid numbers, invalid SVG path data, invalid palette, multiple background layers).
 
 ## Invariants and quality gates

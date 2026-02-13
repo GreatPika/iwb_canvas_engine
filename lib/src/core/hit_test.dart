@@ -12,6 +12,7 @@ import 'transform2d.dart';
 /// This constant is used in addition to node-specific thickness and
 /// [SceneNode.hitPadding] to make selection easier on touch devices.
 const double kHitSlop = 4.0;
+const int kMaxStrokeHitSamplesPerMetric = 2048;
 
 /// Returns coarse world bounds used to prefilter node hit-test candidates.
 ///
@@ -123,7 +124,10 @@ bool _hitTestPathStrokePrecise(
     if (startDistanceSquared <= radiusSquared) {
       return true;
     }
-    final step = _pathMetricStep(radius);
+    var step = _pathMetricStep(radius);
+    if (metric.length / step > kMaxStrokeHitSamplesPerMetric) {
+      step = metric.length / kMaxStrokeHitSamplesPerMetric;
+    }
     for (var offset = step; offset < metric.length; offset += step) {
       final currentTangent = metric.getTangentForOffset(offset);
       if (currentTangent == null) continue;
@@ -135,9 +139,9 @@ bool _hitTestPathStrokePrecise(
       previous = current;
     }
     final end = metric.getTangentForOffset(metric.length);
-    if (end == null) continue;
-    if (distanceSquaredPointToSegment(localPoint, previous, end.position) <=
-        radiusSquared) {
+    if (end != null &&
+        distanceSquaredPointToSegment(localPoint, previous, end.position) <=
+            radiusSquared) {
       return true;
     }
   }

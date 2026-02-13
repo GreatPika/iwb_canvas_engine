@@ -80,4 +80,25 @@ void main() {
       'over-1024',
     );
   });
+
+  test('huge query switches to fallback candidate scan', () {
+    final inside = RectNode(id: 'inside', size: const Size(10, 10));
+    final outside = RectNode(id: 'outside', size: const Size(10, 10))
+      ..position = const Offset(10000000, 10000000);
+    final scene = Scene(
+      layers: <Layer>[
+        Layer(nodes: <SceneNode>[inside, outside]),
+      ],
+    );
+
+    final index = SceneSpatialIndex.build(scene);
+    final candidates = index.query(
+      const Rect.fromLTWH(-128000, -12800, 256000, 25600),
+    );
+
+    final ids = candidates.map((candidate) => candidate.node.id).toSet();
+    expect(index.debugFallbackQueryCount, 1);
+    expect(ids, contains('inside'));
+    expect(ids, isNot(contains('outside')));
+  });
 }

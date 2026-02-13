@@ -324,6 +324,7 @@ Write-notify semantics:
 ### 7.2 Draw tool behavior
 
 - Pen/highlighter: freehand stroke commit on pointer up
+- Pen/highlighter guardrail: if captured stroke points exceed `20_000`, commit applies deterministic index-uniform downsampling while preserving first/last points.
 - Line: drag line or two-tap line (first tap sets pending start, second tap commits)
 - Eraser: erases supported annotations (`StrokeNode`, `LineNode`) based on eraser trajectory
 

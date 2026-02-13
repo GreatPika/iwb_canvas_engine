@@ -90,6 +90,9 @@ Key invariants:
 - Stroke-path cache freshness is validated in O(1) by `(node.id, pointsRevision)`
   instead of hashing/iterating point lists on every lookup.
 - Spatial index supports incremental commit updates (`added/removed/hitGeometryChangedIds`) for hit-testing hot paths; full rebuild is a fallback path only.
+- Spatial query guardrail: oversized query rectangles (`> 50_000` index cells) bypass cell loops and use bounded all-candidate scan with exact intersection filtering.
+- Hit-test guardrail: path-stroke precise hit-testing caps per-metric sampling to `2_048` points by increasing sampling step for long metrics.
+- Interactive draw guardrail: stroke commit caps points to `20_000` using deterministic index-uniform downsampling (endpoints preserved).
 - Interactive move drag uses preview translation (single source in interactive controller) and commits translation once on pointer up; preview hit-testing merges spatial candidates for `point` and `point - delta`.
 
 ## Non-goals

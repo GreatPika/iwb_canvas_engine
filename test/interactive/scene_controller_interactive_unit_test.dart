@@ -899,6 +899,59 @@ void main() {
       },
     );
 
+    test('pen commit caps very long stroke and preserves endpoints', () {
+      final controller = SceneControllerInteractiveV2(
+        initialSnapshot: SceneSnapshot(
+          layers: <LayerSnapshot>[
+            LayerSnapshot(isBackground: true),
+            LayerSnapshot(),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      controller.setMode(CanvasMode.draw);
+      controller.setDrawTool(DrawTool.pen);
+      controller.penThickness = 2;
+
+      const totalRawPoints = 20050;
+      controller.handlePointer(
+        _sample(
+          pointerId: 1,
+          position: const Offset(0, 0),
+          timestampMs: 1,
+          phase: PointerPhase.down,
+        ),
+      );
+      for (var i = 1; i < totalRawPoints - 1; i++) {
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: Offset(i.toDouble(), 0),
+            timestampMs: i + 1,
+            phase: PointerPhase.move,
+          ),
+        );
+      }
+      controller.handlePointer(
+        _sample(
+          pointerId: 1,
+          position: Offset((totalRawPoints - 1).toDouble(), 0),
+          timestampMs: totalRawPoints + 1,
+          phase: PointerPhase.up,
+        ),
+      );
+
+      final strokeSnap =
+          controller.snapshot.layers[1].nodes.single as StrokeNodeSnapshot;
+      expect(strokeSnap.points.length, 20000);
+      expect(strokeSnap.points.first, const Offset(0, 0));
+      expect(
+        strokeSnap.points.last,
+        Offset((totalRawPoints - 1).toDouble(), 0),
+      );
+    });
+
     test('stroke preview is available during drag and clears on up', () {
       final controller = SceneControllerInteractiveV2(
         initialSnapshot: SceneSnapshot(
