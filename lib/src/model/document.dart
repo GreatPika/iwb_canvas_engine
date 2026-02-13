@@ -9,6 +9,8 @@ import '../public/patch_field.dart';
 import '../public/snapshot.dart' hide NodeId;
 import 'scene_value_validation.dart';
 
+typedef NodeLocatorEntry = ({int layerIndex, int nodeIndex});
+
 ({SceneNode node, int layerIndex, int nodeIndex})? txnFindNodeById(
   Scene scene,
   NodeId id,
@@ -23,6 +25,43 @@ import 'scene_value_validation.dart';
     }
   }
   return null;
+}
+
+Map<NodeId, NodeLocatorEntry> txnBuildNodeLocator(Scene scene) {
+  final locator = <NodeId, NodeLocatorEntry>{};
+  for (var layerIndex = 0; layerIndex < scene.layers.length; layerIndex++) {
+    final layer = scene.layers[layerIndex];
+    for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
+      final node = layer.nodes[nodeIndex];
+      locator[node.id] = (layerIndex: layerIndex, nodeIndex: nodeIndex);
+    }
+  }
+  return locator;
+}
+
+({SceneNode node, int layerIndex, int nodeIndex})? txnFindNodeByLocator({
+  required Scene scene,
+  required Map<NodeId, NodeLocatorEntry> nodeLocator,
+  required NodeId nodeId,
+}) {
+  final entry = nodeLocator[nodeId];
+  if (entry == null) {
+    return null;
+  }
+  final layerIndex = entry.layerIndex;
+  if (layerIndex < 0 || layerIndex >= scene.layers.length) {
+    return null;
+  }
+  final layer = scene.layers[layerIndex];
+  final nodeIndex = entry.nodeIndex;
+  if (nodeIndex < 0 || nodeIndex >= layer.nodes.length) {
+    return null;
+  }
+  final node = layer.nodes[nodeIndex];
+  if (node.id != nodeId) {
+    return null;
+  }
+  return (node: node, layerIndex: layerIndex, nodeIndex: nodeIndex);
 }
 
 SceneSnapshot txnSceneToSnapshot(Scene scene) {
@@ -629,6 +668,7 @@ bool txnApplyNodePatch(SceneNode node, NodePatch patch, {bool dryRun = false}) {
 
 bool txnInsertNodeInScene({
   required Scene scene,
+  required Map<NodeId, NodeLocatorEntry> nodeLocator,
   required SceneNode node,
   int? layerIndex,
 }) {
@@ -636,21 +676,40 @@ bool txnInsertNodeInScene({
     scene: scene,
     layerIndex: layerIndex,
   );
-  scene.layers[targetLayerIndex].nodes.add(node);
+  final targetLayer = scene.layers[targetLayerIndex];
+  final insertedNodeIndex = targetLayer.nodes.length;
+  targetLayer.nodes.add(node);
+  nodeLocator[node.id] = (
+    layerIndex: targetLayerIndex,
+    nodeIndex: insertedNodeIndex,
+  );
   return true;
 }
 
 SceneNode? txnEraseNodeFromScene({
   required Scene scene,
+  required Map<NodeId, NodeLocatorEntry> nodeLocator,
   required NodeId nodeId,
 }) {
-  final found = txnFindNodeById(scene, nodeId);
+  final found = txnFindNodeByLocator(
+    scene: scene,
+    nodeLocator: nodeLocator,
+    nodeId: nodeId,
+  );
   if (found == null) {
     return null;
   }
-  final removed = scene.layers[found.layerIndex].nodes.removeAt(
-    found.nodeIndex,
-  );
+  final layer = scene.layers[found.layerIndex];
+  final removed = layer.nodes.removeAt(found.nodeIndex);
+  nodeLocator.remove(nodeId);
+  for (
+    var nodeIndex = found.nodeIndex;
+    nodeIndex < layer.nodes.length;
+    nodeIndex++
+  ) {
+    final node = layer.nodes[nodeIndex];
+    nodeLocator[node.id] = (layerIndex: found.layerIndex, nodeIndex: nodeIndex);
+  }
   return removed;
 }
 

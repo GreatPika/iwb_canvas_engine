@@ -10,6 +10,7 @@ List<String> txnCollectStoreInvariantViolations({
   required Scene scene,
   required Set<NodeId> selectedNodeIds,
   required Set<NodeId> allNodeIds,
+  required Map<NodeId, NodeLocatorEntry> nodeLocator,
   required int nodeIdSeed,
   required int commitRevision,
 }) {
@@ -21,6 +22,21 @@ List<String> txnCollectStoreInvariantViolations({
       ...violations,
       'allNodeIds must equal collectNodeIds(scene). '
           'actual=$allNodeIds expected=$expectedAllNodeIds',
+    ];
+  }
+  if (!_txnSetsEqual(allNodeIds, nodeLocator.keys.toSet())) {
+    violations = <String>[
+      ...violations,
+      'allNodeIds must equal nodeLocator keys. '
+          'allNodeIds=$allNodeIds locatorKeys=${nodeLocator.keys.toSet()}',
+    ];
+  }
+  final expectedNodeLocator = txnBuildNodeLocator(scene);
+  if (!_txnNodeLocatorEquals(nodeLocator, expectedNodeLocator)) {
+    violations = <String>[
+      ...violations,
+      'nodeLocator must match buildNodeLocator(scene). '
+          'actual=$nodeLocator expected=$expectedNodeLocator',
     ];
   }
 
@@ -102,6 +118,7 @@ void debugAssertTxnStoreInvariants({
   required Scene scene,
   required Set<NodeId> selectedNodeIds,
   required Set<NodeId> allNodeIds,
+  required Map<NodeId, NodeLocatorEntry> nodeLocator,
   required int nodeIdSeed,
   required int commitRevision,
 }) {
@@ -110,6 +127,7 @@ void debugAssertTxnStoreInvariants({
       scene: scene,
       selectedNodeIds: selectedNodeIds,
       allNodeIds: allNodeIds,
+      nodeLocator: nodeLocator,
       nodeIdSeed: nodeIdSeed,
       commitRevision: commitRevision,
     );
@@ -124,6 +142,22 @@ void debugAssertTxnStoreInvariants({
 
 bool _txnSetsEqual(Set<NodeId> left, Set<NodeId> right) {
   return left.length == right.length && left.containsAll(right);
+}
+
+bool _txnNodeLocatorEquals(
+  Map<NodeId, NodeLocatorEntry> left,
+  Map<NodeId, NodeLocatorEntry> right,
+) {
+  if (left.length != right.length) {
+    return false;
+  }
+  for (final entry in left.entries) {
+    final rightValue = right[entry.key];
+    if (rightValue == null || rightValue != entry.value) {
+      return false;
+    }
+  }
+  return true;
 }
 
 bool _txnIsFiniteOffset(Offset value) {

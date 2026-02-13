@@ -77,7 +77,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-V2-ID-INDEX-FROM-SCENE',
     scope: 'engine-controller',
     title:
-        'allNodeIds matches committed scene and nodeIdSeed is monotonic (lower-bounded by scene)',
+        'allNodeIds/nodeLocator match committed scene and nodeIdSeed is monotonic (lower-bounded by scene)',
   ),
   Invariant(
     id: 'INV-V2-WRITE-NUMERIC-GUARDS',

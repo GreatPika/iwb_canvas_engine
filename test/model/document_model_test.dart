@@ -230,22 +230,78 @@ void main() {
     );
   });
 
-  test('find/insert/erase node utilities work across layers', () {
+  test('find/locator/insert/erase node utilities work across layers', () {
     final scene = sceneWithAllNodeTypes();
+    final locator = txnBuildNodeLocator(scene);
 
     final found = txnFindNodeById(scene, 'txt');
     expect(found, isNotNull);
     expect(found!.layerIndex, 1);
     expect(found.nodeIndex, 1);
     expect(txnFindNodeById(scene, 'missing'), isNull);
+    final foundByLocator = txnFindNodeByLocator(
+      scene: scene,
+      nodeLocator: locator,
+      nodeId: 'txt',
+    );
+    expect(foundByLocator, isNotNull);
+    expect(foundByLocator!.layerIndex, 1);
+    expect(foundByLocator.nodeIndex, 1);
+    expect(
+      txnFindNodeByLocator(
+        scene: scene,
+        nodeLocator: locator,
+        nodeId: 'missing',
+      ),
+      isNull,
+    );
 
     final inserted = RectNode(id: 'new', size: const Size(1, 1));
-    txnInsertNodeInScene(scene: scene, node: inserted);
-    expect(txnFindNodeById(scene, 'new'), isNotNull);
+    txnInsertNodeInScene(scene: scene, nodeLocator: locator, node: inserted);
+    final insertedFound = txnFindNodeByLocator(
+      scene: scene,
+      nodeLocator: locator,
+      nodeId: 'new',
+    );
+    expect(insertedFound, isNotNull);
+    expect(insertedFound!.layerIndex, 1);
+    expect(insertedFound.nodeIndex, scene.layers[1].nodes.length - 1);
 
-    final erased = txnEraseNodeFromScene(scene: scene, nodeId: 'new');
+    final erased = txnEraseNodeFromScene(
+      scene: scene,
+      nodeLocator: locator,
+      nodeId: 'new',
+    );
     expect(erased, isNotNull);
-    expect(txnEraseNodeFromScene(scene: scene, nodeId: 'new'), isNull);
+    expect(
+      txnEraseNodeFromScene(scene: scene, nodeLocator: locator, nodeId: 'new'),
+      isNull,
+    );
+  });
+
+  test('erase updates locator indexes for layer tail', () {
+    final scene = Scene(
+      layers: <Layer>[
+        Layer(
+          nodes: <SceneNode>[
+            RectNode(id: 'a', size: const Size(1, 1)),
+            RectNode(id: 'b', size: const Size(1, 1)),
+            RectNode(id: 'c', size: const Size(1, 1)),
+          ],
+        ),
+      ],
+    );
+    final locator = txnBuildNodeLocator(scene);
+
+    final removed = txnEraseNodeFromScene(
+      scene: scene,
+      nodeLocator: locator,
+      nodeId: 'b',
+    );
+    expect(removed, isNotNull);
+    expect(locator.containsKey('b'), isFalse);
+    expect(locator['a'], (layerIndex: 0, nodeIndex: 0));
+    expect(locator['c'], (layerIndex: 0, nodeIndex: 1));
   });
 
   test(

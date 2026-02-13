@@ -462,26 +462,26 @@ workingNodeIds.remove(nodeId);
 
 ---
 
-### [ ] Этап 7. Ввести индекс NodeId → расположение (обязательно)
+### [x] Этап 7. Ввести индекс NodeId → расположение (обязательно)
 
 **Цель:** убрать `txnFindNodeById` как линейный поиск из горячих путей.
 
 **Действия:**
 
-- [ ] 7.1. В `DocumentState` держать `nodeLocator: Map<NodeId, NodeLocatorEntry>` где `NodeLocatorEntry = (layerIndex, nodeIndex)`.
+- [x] 7.1. В `DocumentState` держать `nodeLocator: Map<NodeId, NodeLocatorEntry>` где `NodeLocatorEntry = (layerIndex, nodeIndex)`.
 
-- [ ] 7.2. В `txnInsertNodeInScene` / `txnEraseNodeFromScene`:
+- [x] 7.2. В `txnInsertNodeInScene` / `txnEraseNodeFromScene`:
 
 * обновлять `nodeLocator` инкрементально,
 * при вставках/удалениях в середину слоя корректировать `nodeIndex` для “хвоста” слоя (или перейти на структуру слоя “map id→node” и отдельный порядок — это вы всё равно делаете ради copy-on-write).
 
-- [ ] 7.3. Переписать в `SceneWriter` все операции, где сейчас:
+- [x] 7.3. Переписать в `SceneWriter` все операции, где сейчас:
 
 * сначала ищем в `_ctx.workingScene` (линейно),
 * потом снова ищем в mutable сцене,
   на одну операцию “получили locator → получили узел”.
 
-- [ ] **Критерий готовности:** `writeNodePatch`, `writeNodeErase`, `writeNodeTransformSet` не содержат линейного поиска по всем узлам.
+- [x] **Критерий готовности:** `writeNodePatch`, `writeNodeErase`, `writeNodeTransformSet` не содержат линейного поиска по всем узлам.
 
 ---
 

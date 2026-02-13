@@ -23,6 +23,7 @@
 - Spatial index construction is fixed to the internal index cell size and no longer depends on background visual grid settings.
 - Transaction write path now uses scene/layer/node copy-on-write: first mutation shallow-clones scene metadata and clones only touched layers/nodes, while no-op node patches skip COW cloning.
 - Commit state-change path now keeps node-id index incrementally: local non-structural commits reuse existing `allNodeIds`, structural commits materialize ids lazily once, and `nodeIdSeed` is treated as a monotonic generator (lower-bounded by committed scene ids).
+- Commit/store now maintain `nodeLocator` (`NodeId -> layer/node position`) and writer hot paths use locator-based O(1) lookup instead of linear node-id scans.
 - Move-mode drag now uses preview translation during pointer move and commits scene translation once on pointer up; pointer cancel no longer mutates document state.
 - Added shared internal scene-value validation (`scene_value_validation.dart`) and wired it into runtime snapshot import and JSON encode/decode validation paths.
 

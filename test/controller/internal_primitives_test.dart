@@ -11,6 +11,7 @@ import 'package:iwb_canvas_engine/src/controller/txn_context.dart';
 import 'package:iwb_canvas_engine/src/input/slices/repaint/repaint_slice.dart';
 import 'package:iwb_canvas_engine/src/input/slices/signals/signal_event.dart';
 import 'package:iwb_canvas_engine/src/input/slices/spatial_index/spatial_index_slice.dart';
+import 'package:iwb_canvas_engine/src/model/document.dart';
 
 // INV:INV-V2-TXN-COPY-ON-WRITE
 
@@ -87,14 +88,19 @@ void main() {
     ctx.txnRememberNodeId('added');
     expect(ctx.txnHasNodeId('added'), isTrue);
     expect(ctx.debugNodeIdSetMaterializations, 0);
+    expect(ctx.debugNodeLocatorMaterializations, 0);
 
     ctx.txnForgetNodeId('keep');
     expect(ctx.txnHasNodeId('keep'), isFalse);
     expect(ctx.debugNodeIdSetMaterializations, 0);
+    expect(ctx.debugNodeLocatorMaterializations, 0);
 
     final materialized = ctx.debugNodeIdsView(structuralChanged: true);
     expect(materialized, <NodeId>{'added'});
     expect(ctx.debugNodeIdSetMaterializations, 1);
+    final locatorView = ctx.debugNodeLocatorView(structuralChanged: false);
+    expect(locatorView, isEmpty);
+    expect(ctx.debugNodeLocatorMaterializations, 0);
 
     ctx.txnAdoptScene(
       Scene(
@@ -112,6 +118,13 @@ void main() {
       'node-7',
       'manual',
     });
+    expect(
+      ctx.debugNodeLocatorView(structuralChanged: true),
+      <NodeId, NodeLocatorEntry>{
+        'node-7': (layerIndex: 0, nodeIndex: 0),
+        'manual': (layerIndex: 0, nodeIndex: 1),
+      },
+    );
     expect(ctx.nodeIdSeed, 8);
   });
 
@@ -137,6 +150,30 @@ void main() {
       ctx.txnForgetNodeId('late');
       expect(ctx.txnHasNodeId('late'), isFalse);
       expect(materialized, <NodeId>{'keep'});
+    },
+  );
+
+  test(
+    'TxnContext materializes nodeLocator lazily on structural commit view',
+    () {
+      final baseScene = Scene(
+        layers: <Layer>[
+          Layer(
+            nodes: <SceneNode>[RectNode(id: 'r1', size: const Size(1, 1))],
+          ),
+        ],
+      );
+      final ctx = TxnContext(
+        baseScene: baseScene,
+        workingSelection: <NodeId>{},
+        baseAllNodeIds: <NodeId>{'r1'},
+        nodeIdSeed: 0,
+      );
+
+      expect(ctx.debugNodeLocatorMaterializations, 0);
+      final locator = ctx.debugNodeLocatorView(structuralChanged: true);
+      expect(locator['r1'], (layerIndex: 0, nodeIndex: 0));
+      expect(ctx.debugNodeLocatorMaterializations, 1);
     },
   );
 
@@ -242,6 +279,11 @@ void main() {
       storeWithSelection.allNodeIds,
       containsAll(<NodeId>{'node-2', 'node-9', 'custom'}),
     );
+    expect(storeWithSelection.nodeLocator, <NodeId, NodeLocatorEntry>{
+      'node-2': (layerIndex: 0, nodeIndex: 0),
+      'node-9': (layerIndex: 0, nodeIndex: 1),
+      'custom': (layerIndex: 0, nodeIndex: 2),
+    });
     expect(storeWithSelection.nodeIdSeed, 10);
 
     final storeWithoutSelection = V2Store(sceneDoc: Scene());

@@ -1,5 +1,6 @@
 import '../core/nodes.dart';
 import '../core/scene.dart';
+import '../model/document.dart';
 import '../model/document_clone.dart';
 
 class V2Store {
@@ -8,11 +9,13 @@ class V2Store {
           ? <NodeId>{}
           : Set<NodeId>.from(selectedNodeIds),
       allNodeIds = txnCollectNodeIds(sceneDoc),
+      nodeLocator = txnBuildNodeLocator(sceneDoc),
       nodeIdSeed = txnInitialNodeIdSeed(sceneDoc);
 
   Scene sceneDoc;
   Set<NodeId> selectedNodeIds;
   Set<NodeId> allNodeIds;
+  Map<NodeId, NodeLocatorEntry> nodeLocator;
 
   int controllerEpoch = 0;
   int structuralRevision = 0;

@@ -882,6 +882,7 @@ void main() {
     });
 
     expect(controller.debugNodeIdSetMaterializations, 0);
+    expect(controller.debugNodeLocatorMaterializations, 0);
   });
 
   test('structural commit materializes allNodeIds once', () {
@@ -893,6 +894,7 @@ void main() {
     });
 
     expect(controller.debugNodeIdSetMaterializations, 1);
+    expect(controller.debugNodeLocatorMaterializations, 1);
   });
 
   test('node id seed stays monotonic after deleting max node-* id', () {

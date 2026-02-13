@@ -38,8 +38,13 @@ class SceneWriter implements SceneWriteTxn {
       scene: scene,
       layerIndex: layerIndex,
     );
-    final layer = _ctx.txnEnsureMutableLayer(targetLayerIndex);
-    layer.nodes.add(node);
+    _ctx.txnEnsureMutableLayer(targetLayerIndex);
+    txnInsertNodeInScene(
+      scene: scene,
+      nodeLocator: _ctx.txnEnsureMutableNodeLocator(),
+      node: node,
+      layerIndex: targetLayerIndex,
+    );
     _ctx.txnRememberNodeId(node.id);
     _ctx.changeSet.txnMarkStructuralChanged();
     _ctx.changeSet.txnTrackAdded(node.id);
@@ -48,7 +53,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   bool writeNodeErase(NodeId nodeId) {
-    final existing = txnFindNodeById(_ctx.workingScene, nodeId);
+    final existing = _ctx.txnFindNodeById(nodeId);
     if (existing == null) {
       return false;
     }
@@ -58,7 +63,11 @@ class SceneWriter implements SceneWriteTxn {
     }
     _ctx.txnEnsureMutableLayer(existing.layerIndex);
     final scene = _ctx.txnEnsureMutableScene();
-    final removed = txnEraseNodeFromScene(scene: scene, nodeId: nodeId);
+    final removed = txnEraseNodeFromScene(
+      scene: scene,
+      nodeLocator: _ctx.txnEnsureMutableNodeLocator(),
+      nodeId: nodeId,
+    );
     if (removed == null) {
       return false;
     }
@@ -79,7 +88,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   bool writeNodePatch(NodePatch patch) {
-    final existing = txnFindNodeById(_ctx.workingScene, patch.id);
+    final existing = _ctx.txnFindNodeById(patch.id);
     if (existing == null) {
       return false;
     }
@@ -108,7 +117,7 @@ class SceneWriter implements SceneWriteTxn {
   @override
   bool writeNodeTransformSet(NodeId id, Transform2D transform) {
     _txnRequireFiniteTransform(transform, name: 'transform');
-    final existing = txnFindNodeById(_ctx.workingScene, id);
+    final existing = _ctx.txnFindNodeById(id);
     if (existing == null) return false;
     if (existing.node.transform == transform) return false;
 
@@ -191,7 +200,7 @@ class SceneWriter implements SceneWriteTxn {
     final moved = <NodeId>{};
     final selectedIds = _ctx.workingSelection.toList(growable: false);
     for (final nodeId in selectedIds) {
-      final existing = txnFindNodeById(_ctx.workingScene, nodeId);
+      final existing = _ctx.txnFindNodeById(nodeId);
       if (existing == null) continue;
       final layer = _ctx.workingScene.layers[existing.layerIndex];
       if (layer.isBackground) continue;
@@ -219,7 +228,7 @@ class SceneWriter implements SceneWriteTxn {
     var affected = 0;
     final selectedIds = selected.toList(growable: false);
     for (final nodeId in selectedIds) {
-      final existing = txnFindNodeById(_ctx.workingScene, nodeId);
+      final existing = _ctx.txnFindNodeById(nodeId);
       if (existing == null) continue;
       final layer = _ctx.workingScene.layers[existing.layerIndex];
       if (layer.isBackground) continue;
@@ -273,6 +282,7 @@ class SceneWriter implements SceneWriteTxn {
         (node) => !layerDeletedIds.contains(node.id),
       );
     }
+    _ctx.txnRebuildNodeLocatorFromWorkingScene();
     _ctx.changeSet.txnMarkStructuralChanged();
     for (final id in deleted) {
       _ctx.changeSet.txnTrackRemoved(id);
@@ -311,6 +321,7 @@ class SceneWriter implements SceneWriteTxn {
     if (clearedIds.isEmpty) {
       return const <NodeId>[];
     }
+    _ctx.txnRebuildNodeLocatorFromWorkingScene();
 
     _ctx.changeSet.txnMarkStructuralChanged();
     for (final id in clearedIds) {

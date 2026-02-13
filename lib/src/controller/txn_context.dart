@@ -11,10 +11,12 @@ class TxnContext {
     required Scene baseScene,
     required this.workingSelection,
     required Set<NodeId> baseAllNodeIds,
+    Map<NodeId, NodeLocatorEntry>? baseNodeLocator,
     required this.nodeIdSeed,
     ChangeSet? changeSet,
   }) : _baseScene = baseScene,
        _baseAllNodeIds = baseAllNodeIds,
+       _baseNodeLocator = baseNodeLocator ?? txnBuildNodeLocator(baseScene),
        changeSet = changeSet ?? ChangeSet();
 
   final Scene _baseScene;
@@ -22,6 +24,8 @@ class TxnContext {
   final Set<NodeId> _addedNodeIds = <NodeId>{};
   final Set<NodeId> _removedNodeIds = <NodeId>{};
   Set<NodeId>? _materializedAllNodeIds;
+  Map<NodeId, NodeLocatorEntry> _baseNodeLocator;
+  Map<NodeId, NodeLocatorEntry>? _materializedNodeLocator;
   Scene? _mutableScene;
   final Set<int> _clonedLayerIndexes = <int>{};
   final Set<NodeId> _clonedNodeIds = <NodeId>{};
@@ -37,6 +41,7 @@ class TxnContext {
   int debugLayerShallowClones = 0;
   int debugNodeClones = 0;
   int debugNodeIdSetMaterializations = 0;
+  int debugNodeLocatorMaterializations = 0;
 
   Scene txnEnsureMutableScene() {
     final existing = _mutableScene;
@@ -68,7 +73,9 @@ class TxnContext {
     }
 
     final current = scene.layers[layerIndex];
-    if (!_txnIsSharedLayerWithBase(current)) {
+    final baseLayer = _txnBaseLayerAt(layerIndex);
+    if (!identical(current, baseLayer)) {
+      _clonedLayerIndexes.add(layerIndex);
       return current;
     }
 
@@ -79,10 +86,20 @@ class TxnContext {
     return cloned;
   }
 
+  ({SceneNode node, int layerIndex, int nodeIndex})? txnFindNodeById(
+    NodeId id,
+  ) {
+    return txnFindNodeByLocator(
+      scene: workingScene,
+      nodeLocator: _workingNodeLocator,
+      nodeId: id,
+    );
+  }
+
   ({SceneNode node, int layerIndex, int nodeIndex}) txnResolveMutableNode(
     NodeId id,
   ) {
-    final foundInWorking = txnFindNodeById(workingScene, id);
+    final foundInWorking = txnFindNodeById(id);
     if (foundInWorking == null) {
       throw StateError('Node not found: $id');
     }
@@ -92,7 +109,7 @@ class TxnContext {
     }
 
     txnEnsureMutableLayer(foundInWorking.layerIndex);
-    final foundAfterLayerClone = txnFindNodeById(workingScene, id);
+    final foundAfterLayerClone = txnFindNodeById(id);
     if (foundAfterLayerClone == null) {
       throw StateError('Node not found after layer clone: $id');
     }
@@ -100,7 +117,11 @@ class TxnContext {
     if (_clonedNodeIds.contains(id)) {
       return foundAfterLayerClone;
     }
-    if (!_txnIsSharedNodeWithBase(foundAfterLayerClone.node)) {
+    final baseNode = _txnBaseNodeAt(
+      layerIndex: foundAfterLayerClone.layerIndex,
+      nodeIndex: foundAfterLayerClone.nodeIndex,
+    );
+    if (!identical(foundAfterLayerClone.node, baseNode)) {
       return foundAfterLayerClone;
     }
 
@@ -116,6 +137,18 @@ class TxnContext {
       layerIndex: foundAfterLayerClone.layerIndex,
       nodeIndex: foundAfterLayerClone.nodeIndex,
     );
+  }
+
+  Map<NodeId, NodeLocatorEntry> txnEnsureMutableNodeLocator() {
+    return _txnMaterializeNodeLocator();
+  }
+
+  void txnRebuildNodeLocatorFromWorkingScene() {
+    final rebuilt = txnBuildNodeLocator(workingScene);
+    if (_materializedNodeLocator == null) {
+      debugNodeLocatorMaterializations = debugNodeLocatorMaterializations + 1;
+    }
+    _materializedNodeLocator = rebuilt;
   }
 
   bool txnHasNodeId(NodeId nodeId) {
@@ -175,9 +208,11 @@ class TxnContext {
     _clonedLayerIndexes.clear();
     _clonedNodeIds.clear();
     _baseAllNodeIds = txnCollectNodeIds(scene);
+    _baseNodeLocator = txnBuildNodeLocator(scene);
     _addedNodeIds.clear();
     _removedNodeIds.clear();
     _materializedAllNodeIds = _baseAllNodeIds;
+    _materializedNodeLocator = _baseNodeLocator;
     nodeIdSeed = txnInitialNodeIdSeed(scene);
   }
 
@@ -192,6 +227,19 @@ class TxnContext {
       return _baseAllNodeIds;
     }
     return _txnMaterializeAllNodeIds();
+  }
+
+  Map<NodeId, NodeLocatorEntry> txnNodeLocatorForCommit({
+    required bool structuralChanged,
+  }) {
+    final materialized = _materializedNodeLocator;
+    if (materialized != null) {
+      return materialized;
+    }
+    if (!structuralChanged) {
+      return _baseNodeLocator;
+    }
+    return _txnMaterializeNodeLocator();
   }
 
   Set<NodeId> _txnMaterializeAllNodeIds() {
@@ -216,23 +264,42 @@ class TxnContext {
     return txnAllNodeIdsForCommit(structuralChanged: structuralChanged);
   }
 
-  bool _txnIsSharedLayerWithBase(Layer layer) {
-    for (final baseLayer in _baseScene.layers) {
-      if (identical(baseLayer, layer)) {
-        return true;
-      }
-    }
-    return false;
+  @visibleForTesting
+  Map<NodeId, NodeLocatorEntry> debugNodeLocatorView({
+    required bool structuralChanged,
+  }) {
+    return txnNodeLocatorForCommit(structuralChanged: structuralChanged);
   }
 
-  bool _txnIsSharedNodeWithBase(SceneNode node) {
-    for (final baseLayer in _baseScene.layers) {
-      for (final baseNode in baseLayer.nodes) {
-        if (identical(baseNode, node)) {
-          return true;
-        }
-      }
+  Map<NodeId, NodeLocatorEntry> get _workingNodeLocator =>
+      _materializedNodeLocator ?? _baseNodeLocator;
+
+  Map<NodeId, NodeLocatorEntry> _txnMaterializeNodeLocator() {
+    final cached = _materializedNodeLocator;
+    if (cached != null) {
+      return cached;
     }
-    return false;
+    final materialized = Map<NodeId, NodeLocatorEntry>.from(_baseNodeLocator);
+    _materializedNodeLocator = materialized;
+    debugNodeLocatorMaterializations = debugNodeLocatorMaterializations + 1;
+    return materialized;
+  }
+
+  Layer? _txnBaseLayerAt(int layerIndex) {
+    if (layerIndex < 0 || layerIndex >= _baseScene.layers.length) {
+      return null;
+    }
+    return _baseScene.layers[layerIndex];
+  }
+
+  SceneNode? _txnBaseNodeAt({required int layerIndex, required int nodeIndex}) {
+    final layer = _txnBaseLayerAt(layerIndex);
+    if (layer == null) {
+      return null;
+    }
+    if (nodeIndex < 0 || nodeIndex >= layer.nodes.length) {
+      return null;
+    }
+    return layer.nodes[nodeIndex];
   }
 }

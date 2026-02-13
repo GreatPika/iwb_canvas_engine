@@ -66,7 +66,7 @@ Key invariants:
 - Interactive `actions` / `editTextRequests` streams are delivered asynchronously (never in the same call stack as mutation methods).
 - Relative ordering between interactive stream delivery and repaint listener notification is intentionally not a public contract.
 - Buffered signal/repaint effects are discarded when `write(...)` rolls back.
-- Node-id index state keeps `allNodeIds` equal to committed scene ids, while `nodeIdSeed` is a monotonic generator lower-bounded by committed scene ids.
+- Node-id index state keeps `allNodeIds` and `nodeLocator` equal to committed scene ids/locations, while `nodeIdSeed` is a monotonic generator lower-bounded by committed scene ids.
 - Selection normalization preserves explicit non-selectable ids and drops only missing/background/invisible ids.
 - Runtime snapshot boundary (`initialSnapshot` / `replaceScene`) validates input strictly and fails fast with `ArgumentError` for malformed snapshots.
 - Runtime background-layer rule: at most one background layer; if present it is canonicalized to index `0`; missing background is allowed (no auto-insert on runtime boundary).
@@ -84,6 +84,7 @@ Key invariants:
 ## Performance model
 
 - Mutating transactions use copy-on-write: first mutation creates a shallow scene clone, then only touched layers/nodes are cloned on demand; no-op patches do not trigger layer/node cloning.
+- Hot-path node lookup (`NodeId -> layer/node index`) uses committed `nodeLocator` instead of linear scene scans.
 - Viewport culling for offscreen nodes.
 - Bounded caches for text layout, stroke paths, and selected path metrics.
 - Spatial index support for input hit-testing hot paths.

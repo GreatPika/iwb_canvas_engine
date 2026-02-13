@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_invariants.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
+import 'package:iwb_canvas_engine/src/model/document.dart';
 
 // INV:INV-V2-ID-INDEX-FROM-SCENE
 // INV:INV-V2-WRITE-NUMERIC-GUARDS
@@ -34,6 +35,9 @@ void main() {
       scene: scene,
       selectedNodeIds: const <NodeId>{'node-1'},
       allNodeIds: const <NodeId>{'node-1'},
+      nodeLocator: const <NodeId, NodeLocatorEntry>{
+        'node-1': (layerIndex: 0, nodeIndex: 0),
+      },
       nodeIdSeed: 2,
       commitRevision: 1,
     );
@@ -51,6 +55,7 @@ void main() {
       scene: scene,
       selectedNodeIds: const <NodeId>{'missing'},
       allNodeIds: const <NodeId>{},
+      nodeLocator: const <NodeId, NodeLocatorEntry>{},
       nodeIdSeed: 1,
       commitRevision: -1,
     );
@@ -84,6 +89,9 @@ void main() {
       scene: scene,
       selectedNodeIds: const <NodeId>{'node-1'},
       allNodeIds: const <NodeId>{'node-1'},
+      nodeLocator: const <NodeId, NodeLocatorEntry>{
+        'node-1': (layerIndex: 0, nodeIndex: 0),
+      },
       nodeIdSeed: 2,
       commitRevision: 0,
     );
@@ -106,6 +114,9 @@ void main() {
       scene: scene,
       selectedNodeIds: const <NodeId>{},
       allNodeIds: const <NodeId>{'dup'},
+      nodeLocator: const <NodeId, NodeLocatorEntry>{
+        'dup': (layerIndex: 0, nodeIndex: 0),
+      },
       nodeIdSeed: 1,
       commitRevision: 0,
     );
@@ -129,6 +140,9 @@ void main() {
       scene: scene,
       selectedNodeIds: const <NodeId>{},
       allNodeIds: const <NodeId>{'n1'},
+      nodeLocator: const <NodeId, NodeLocatorEntry>{
+        'n1': (layerIndex: 0, nodeIndex: 0),
+      },
       nodeIdSeed: 1,
       commitRevision: 0,
     );
@@ -147,6 +161,7 @@ void main() {
       scene: scene,
       selectedNodeIds: const <NodeId>{},
       allNodeIds: const <NodeId>{},
+      nodeLocator: const <NodeId, NodeLocatorEntry>{},
       nodeIdSeed: 0,
       commitRevision: 0,
     );
@@ -164,10 +179,45 @@ void main() {
         scene: scene,
         selectedNodeIds: const <NodeId>{},
         allNodeIds: const <NodeId>{},
+        nodeLocator: const <NodeId, NodeLocatorEntry>{},
         nodeIdSeed: 0,
         commitRevision: 0,
       ),
       throwsStateError,
+    );
+  });
+
+  test('detects mismatched nodeLocator entries', () {
+    final scene = sceneFixture();
+    final violations = txnCollectStoreInvariantViolations(
+      scene: scene,
+      selectedNodeIds: const <NodeId>{'node-1'},
+      allNodeIds: const <NodeId>{'node-1'},
+      nodeLocator: const <NodeId, NodeLocatorEntry>{
+        'node-1': (layerIndex: 0, nodeIndex: 7),
+      },
+      nodeIdSeed: 2,
+      commitRevision: 0,
+    );
+    expect(
+      violations.join('\n'),
+      contains('nodeLocator must match buildNodeLocator(scene)'),
+    );
+  });
+
+  test('detects mismatch between allNodeIds and nodeLocator keys', () {
+    final scene = sceneFixture();
+    final violations = txnCollectStoreInvariantViolations(
+      scene: scene,
+      selectedNodeIds: const <NodeId>{'node-1'},
+      allNodeIds: const <NodeId>{'node-1'},
+      nodeLocator: const <NodeId, NodeLocatorEntry>{},
+      nodeIdSeed: 2,
+      commitRevision: 0,
+    );
+    expect(
+      violations.join('\n'),
+      contains('allNodeIds must equal nodeLocator keys'),
     );
   });
 }
