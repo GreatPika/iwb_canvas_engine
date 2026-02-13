@@ -750,6 +750,55 @@ void main() {
     expect(controller.debugSpatialIndexBuildCount, 2);
   });
 
+  test('spatial index invalidates on hitPadding change', () {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    final beforeQuery = controller.querySpatialCandidates(
+      const Rect.fromLTWH(30, 0, 0, 0),
+    );
+    expect(beforeQuery, isEmpty);
+    expect(controller.debugSpatialIndexBuildCount, 1);
+
+    controller.write<void>((writer) {
+      writer.writeNodePatch(
+        const RectNodePatch(
+          id: 'r1',
+          common: CommonNodePatch(hitPadding: PatchField<double>.value(22)),
+        ),
+      );
+    });
+
+    final afterQuery = controller.querySpatialCandidates(
+      const Rect.fromLTWH(30, 0, 0, 0),
+    );
+    expect(afterQuery.map((candidate) => candidate.node.id), contains('r1'));
+    expect(
+      afterQuery.map((candidate) => candidate.node.id),
+      isNot(contains('r2')),
+    );
+    expect(controller.debugSpatialIndexBuildCount, 2);
+  });
+
+  test('no-op hitPadding patch does not bump bounds revision', () {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    final beforeBounds = controller.boundsRevision;
+
+    controller.write<void>((writer) {
+      writer.writeNodePatch(
+        const RectNodePatch(
+          id: 'r1',
+          common: CommonNodePatch(hitPadding: PatchField<double>.value(0)),
+        ),
+      );
+    });
+
+    expect(controller.boundsRevision, beforeBounds);
+    expect(controller.debugLastChangeSet.boundsChanged, isFalse);
+  });
+
   test('resolveSpatialCandidateNode accepts valid foreground candidate', () {
     final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);

@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../core/background_layer_invariants.dart';
+import '../core/hit_test.dart';
 import '../core/selection_policy.dart';
 import '../core/transform2d.dart';
 import '../input/slices/signals/signal_event.dart';
@@ -83,16 +84,18 @@ class SceneWriter implements SceneWriteTxn {
       return false;
     }
 
-    final oldBounds = found.node.boundsWorld;
+    final oldCandidate = nodeHitTestCandidateBoundsWorld(found.node);
     final changed = txnApplyNodePatch(found.node, patch);
     if (!changed) {
       return false;
     }
 
     _ctx.changeSet.txnTrackUpdated(patch.id);
-    _ctx.changeSet.txnMarkVisualChanged();
-    if (oldBounds != found.node.boundsWorld) {
+    final newCandidate = nodeHitTestCandidateBoundsWorld(found.node);
+    if (oldCandidate != newCandidate) {
       _ctx.changeSet.txnMarkBoundsChanged();
+    } else {
+      _ctx.changeSet.txnMarkVisualChanged();
     }
     if (_ctx.workingSelection.contains(patch.id) &&
         _txnPatchTouchesSelectionPolicy(patch)) {
@@ -112,10 +115,11 @@ class SceneWriter implements SceneWriteTxn {
     final found = txnFindNodeById(scene, id);
     if (found == null) return false;
 
-    final oldBounds = found.node.boundsWorld;
+    final oldCandidate = nodeHitTestCandidateBoundsWorld(found.node);
     found.node.transform = transform;
     _ctx.changeSet.txnTrackUpdated(id);
-    if (oldBounds != found.node.boundsWorld) {
+    final newCandidate = nodeHitTestCandidateBoundsWorld(found.node);
+    if (oldCandidate != newCandidate) {
       _ctx.changeSet.txnMarkBoundsChanged();
     } else {
       _ctx.changeSet.txnMarkVisualChanged();
@@ -214,11 +218,11 @@ class SceneWriter implements SceneWriteTxn {
       for (final node in layer.nodes) {
         if (!selected.contains(node.id)) continue;
         if (!node.isTransformable || node.isLocked) continue;
-        final before = node.boundsWorld;
+        final beforeCandidate = nodeHitTestCandidateBoundsWorld(node);
         node.transform = delta.multiply(node.transform);
-        final after = node.boundsWorld;
+        final afterCandidate = nodeHitTestCandidateBoundsWorld(node);
         _ctx.changeSet.txnTrackUpdated(node.id);
-        if (before != after) {
+        if (beforeCandidate != afterCandidate) {
           _ctx.changeSet.txnMarkBoundsChanged();
         } else {
           _ctx.changeSet.txnMarkVisualChanged();
