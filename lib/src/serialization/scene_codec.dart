@@ -10,10 +10,10 @@ import '../public/scene_data_exception.dart';
 import '../public/snapshot.dart' hide NodeId;
 
 /// JSON schema version written by this package.
-const int schemaVersionWrite = 3;
+const int schemaVersionWrite = 4;
 
 /// JSON schema versions accepted by this package.
-const Set<int> schemaVersionsRead = {3};
+const Set<int> schemaVersionsRead = {4};
 
 /// Encodes [snapshot] to a JSON string.
 String encodeSceneToJson(SceneSnapshot snapshot) {
@@ -22,7 +22,7 @@ String encodeSceneToJson(SceneSnapshot snapshot) {
 
 /// Decodes a [SceneSnapshot] from a JSON string.
 ///
-/// Only `schemaVersion = 3` is accepted.
+/// Only `schemaVersion = 4` is accepted.
 ///
 /// Throws [SceneDataException] when the JSON is invalid, the schema version is
 /// unsupported, or validation fails.
@@ -57,7 +57,7 @@ Map<String, dynamic> encodeScene(SceneSnapshot snapshot) {
 
 /// Decodes a [SceneSnapshot] from a JSON map (already parsed).
 ///
-/// Only `schemaVersion = 3` is accepted.
+/// Only `schemaVersion = 4` is accepted.
 ///
 /// Throws [SceneDataException] when validation fails.
 SceneSnapshot decodeScene(Map<String, Object?> json) {
@@ -68,6 +68,7 @@ SceneSnapshot decodeScene(Map<String, Object?> json) {
 /// Encodes internal mutable [Scene] document into a JSON-serializable map.
 Map<String, dynamic> encodeSceneDocument(Scene scene) {
   final canonicalScene = model_builder.sceneValidateCore(scene);
+  final backgroundLayer = canonicalScene.backgroundLayer!;
   return <String, dynamic>{
     'schemaVersion': schemaVersionWrite,
     'camera': {
@@ -89,17 +90,14 @@ Map<String, dynamic> encodeSceneDocument(Scene scene) {
           .toList(),
       'gridSizes': canonicalScene.palette.gridSizes,
     },
-    if (canonicalScene.backgroundLayer != null)
-      'backgroundLayer': _encodeBackgroundLayer(
-        canonicalScene.backgroundLayer!,
-      ),
+    'backgroundLayer': _encodeBackgroundLayer(backgroundLayer),
     'layers': canonicalScene.layers.map(_encodeContentLayer).toList(),
   };
 }
 
 /// Decodes internal mutable [Scene] document from a JSON map (already parsed).
 ///
-/// Only `schemaVersion = 3` is accepted.
+/// Only `schemaVersion = 4` is accepted.
 ///
 /// Throws [SceneDataException] when validation fails.
 Scene decodeSceneDocument(Map<String, Object?> json) {
@@ -107,6 +105,7 @@ Scene decodeSceneDocument(Map<String, Object?> json) {
 }
 
 Map<String, dynamic> _encodeSnapshot(SceneSnapshot snapshot) {
+  final backgroundLayer = snapshot.backgroundLayer!;
   return <String, dynamic>{
     'schemaVersion': schemaVersionWrite,
     'camera': {
@@ -128,12 +127,11 @@ Map<String, dynamic> _encodeSnapshot(SceneSnapshot snapshot) {
           .toList(),
       'gridSizes': snapshot.palette.gridSizes,
     },
-    if (snapshot.backgroundLayer != null)
-      'backgroundLayer': <String, dynamic>{
-        'nodes': snapshot.backgroundLayer!.nodes
-            .map((node) => _encodeNode(txnNodeFromSnapshot(node)))
-            .toList(),
-      },
+    'backgroundLayer': <String, dynamic>{
+      'nodes': backgroundLayer.nodes
+          .map((node) => _encodeNode(txnNodeFromSnapshot(node)))
+          .toList(),
+    },
     'layers': snapshot.layers
         .map(
           (layer) => <String, dynamic>{

@@ -22,10 +22,10 @@ and JSON serialization for whiteboard-style applications.
 
 ### What this package provides
 
-- Scene graph (`Scene -> backgroundLayer? + content layers -> Node`) with deterministic draw order.
+- Scene graph (`Scene -> backgroundLayer + content layers -> Node`) with deterministic draw order.
 - Interactive controller and widget for move/select/draw workflows.
 - Built-in tools: pen, highlighter, line, eraser, marquee selection.
-- JSON v3 codec for import/export (`schemaVersion = 3`).
+- JSON v4 codec for import/export (`schemaVersion = 4`).
 
 ### What this package does not provide
 
@@ -117,9 +117,9 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Canonical invariants are defined in `tool/invariant_registry.dart`.
 - Validation checks are available in `tool/` and run in CI.
 - Typed layer contract:
-  - snapshot/runtime model uses `backgroundLayer` as a dedicated optional field and `layers` as content-only ordered layers.
+  - snapshot/runtime model uses `backgroundLayer` as a dedicated typed field and `layers` as content-only ordered layers.
   - `writeNodeInsert(..., layerIndex)` addresses content layers only.
-  - missing `backgroundLayer` is allowed; it is not auto-inserted at snapshot import boundary.
+  - input may omit `backgroundLayer`, but snapshot/JSON import and JSON encode canonicalize it to a dedicated empty layer.
 
 ## Development checks
 

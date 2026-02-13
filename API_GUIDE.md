@@ -1,6 +1,6 @@
 # iwb_canvas_engine API Guide
 
-This guide is a complete, implementation-aligned reference for integrating `iwb_canvas_engine` (`3.0.0`) in Flutter apps.
+This guide is a complete, implementation-aligned reference for integrating `iwb_canvas_engine` on the current mainline in Flutter apps.
 It is designed for both human developers and coding agents.
 
 ## 1. Package purpose and boundaries
@@ -10,7 +10,7 @@ It is designed for both human developers and coding agents.
 - Scene model (`SceneSnapshot`, layers, nodes)
 - Interactive runtime (`SceneController`, `SceneView`)
 - Input handling (move/select/draw tools)
-- JSON import/export (`schemaVersion = 3`)
+- JSON import/export (`schemaVersion = 4`)
 
 `iwb_canvas_engine` does not provide:
 
@@ -80,8 +80,10 @@ Runtime aliases exposed publicly:
 
 Typed layer boundary:
 
-- `backgroundLayer` is a dedicated optional layer (rendered below content).
+- `backgroundLayer` is a dedicated typed layer (rendered below content).
 - `layers` is an ordered list of content layers only.
+- import/encode boundaries canonicalize missing `backgroundLayer` to an empty
+  dedicated background layer.
 
 ### 4.3 Node snapshots
 
@@ -207,7 +209,7 @@ Construction validation notes:
 
 - `initialSnapshot` is validated strictly.
 - Malformed snapshot input throws `SceneDataException` (duplicate ids, invalid numeric fields, invalid `svgPathData`, invalid palette, invalid typed layer fields).
-- Runtime snapshot boundary does not auto-insert a background layer when missing.
+- Runtime snapshot boundary canonicalizes missing `backgroundLayer` to an empty dedicated layer.
 
 ### 6.2 Read-only state
 
@@ -505,8 +507,8 @@ Controller normalizes timestamps into a monotonic internal timeline.
 
 ### 11.2 Versioning
 
-- `schemaVersionWrite == 3`
-- `schemaVersionsRead == {3}`
+- `schemaVersionWrite == 4`
+- `schemaVersionsRead == {4}`
 
 ### 11.3 Errors
 
@@ -630,7 +632,7 @@ Required updates:
 5. Replace layer model usage:
    - remove `LayerSnapshot(isBackground: ...)`,
    - use `backgroundLayer: BackgroundLayerSnapshot?` + `layers: List<ContentLayerSnapshot>`.
-6. JSON codec now writes/reads only schema `3`; legacy schema `2` is unsupported.
+6. JSON codec now writes/reads only schema `4`; schema `3` and legacy schema `2` are unsupported.
 
 ## 15. Quick recipes
 

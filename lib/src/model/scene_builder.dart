@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
+import '../core/background_layer_invariants.dart';
 import '../core/nodes.dart';
 import '../core/scene.dart';
 import '../core/scene_limits.dart';
@@ -37,14 +38,15 @@ Scene sceneBuildFromJsonMap(Map<String, Object?> rawJson) {
 }
 
 SceneSnapshot sceneCanonicalizeAndValidateSnapshot(SceneSnapshot rawSnapshot) {
-  _validateStructuralInvariants(rawSnapshot);
+  final canonicalSnapshot = canonicalizeBackgroundLayerSnapshot(rawSnapshot);
+  _validateStructuralInvariants(canonicalSnapshot);
   sceneValidateSnapshotValues(
-    rawSnapshot,
+    canonicalSnapshot,
     onError: _snapshotValidationError,
     requirePositiveGridCellSize: true,
   );
-  _validateSnapshotRanges(rawSnapshot);
-  return rawSnapshot;
+  _validateSnapshotRanges(canonicalSnapshot);
+  return canonicalSnapshot;
 }
 
 Scene sceneCanonicalizeAndValidateScene(Scene rawScene) {
@@ -68,7 +70,7 @@ SceneSnapshot _decodeSnapshotFromJson(Map<String, Object?> json) {
     throw SceneDataException(
       code: SceneDataErrorCode.unsupportedSchemaVersion,
       path: 'schemaVersion',
-      message: 'Unsupported schemaVersion: $version. Expected one of: [3].',
+      message: 'Unsupported schemaVersion: $version. Expected one of: [4].',
     );
   }
 

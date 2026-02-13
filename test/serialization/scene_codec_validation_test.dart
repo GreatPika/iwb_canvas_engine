@@ -99,10 +99,13 @@ void main() {
     expect(() => decodeSceneFromJson('{'), throwsA(isA<SceneDataException>()));
   });
 
-  test('decodeScene does not auto-insert missing background layer', () {
+  test('decodeScene canonicalizes missing background layer', () {
     // INV:INV-SER-TYPED-LAYER-SPLIT
+    // INV:INV-SER-CANONICAL-BACKGROUND-LAYER
     final scene = decodeScene(_minimalSceneJson());
     expect(scene.layers, isEmpty);
+    expect(scene.backgroundLayer, isNotNull);
+    expect(scene.backgroundLayer!.nodes, isEmpty);
   });
 
   test(
@@ -670,10 +673,11 @@ void main() {
 
   test('decodeScene accepts integer-valued numeric schemaVersion', () {
     final json = _minimalSceneJson();
-    json['schemaVersion'] = 3.0;
+    json['schemaVersion'] = 4.0;
 
     final scene = decodeScene(json);
     expect(scene.layers, isEmpty);
+    expect(scene.backgroundLayer, isNotNull);
   });
 
   test('decodeScene rejects non-integer numeric schemaVersion', () {
@@ -703,10 +707,28 @@ void main() {
             (e) =>
                 e is SceneDataException &&
                 e.message ==
-                    'Unsupported schemaVersion: 1. Expected one of: [3].',
+                    'Unsupported schemaVersion: 1. Expected one of: [4].',
           ),
         ),
       );
+    },
+  );
+
+  test(
+    'decode -> encode -> decode keeps canonical background layer for JSON missing backgroundLayer',
+    () {
+      // INV:INV-SER-CANONICAL-BACKGROUND-LAYER
+      final input = _minimalSceneJson();
+      input.remove('backgroundLayer');
+
+      final decoded = decodeScene(input);
+      final encoded = encodeScene(decoded);
+      final redecoded = decodeScene(encoded);
+
+      expect((encoded['backgroundLayer'] as Map<String, dynamic>)['nodes'], []);
+      expect(redecoded.backgroundLayer, isNotNull);
+      expect(redecoded.backgroundLayer!.nodes, isEmpty);
+      expect(redecoded.layers, isEmpty);
     },
   );
 

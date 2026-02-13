@@ -36,7 +36,7 @@ Map<String, Object?> _minimalRectNodeJson({required String id}) {
 
 Map<String, Object?> _minimalSceneJson() {
   return <String, Object?>{
-    'schemaVersion': 3,
+    'schemaVersion': 4,
     'camera': <String, Object?>{'offsetX': 0, 'offsetY': 0},
     'background': <String, Object?>{
       'color': '#FFFFFFFF',

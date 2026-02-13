@@ -7,7 +7,7 @@
   - `SceneSnapshot.backgroundLayer: BackgroundLayerSnapshot?`
   - `SceneSnapshot.layers: List<ContentLayerSnapshot>` (content-only)
   - `layerIndex` in write APIs addresses content layers only.
-- JSON codec now supports only `schemaVersion = 3`; legacy schema `2` is rejected.
+- JSON codec now supports only `schemaVersion = 4`; schema `3` and legacy schema `2` are rejected.
 
 ### Changed
 
@@ -22,6 +22,7 @@
 - `V2SpatialIndexSlice` now keeps invalid index instances in fallback mode instead of forcing rebuild loops after failed incremental updates.
 - `SceneControllerV2.selectedNodeIds` now reuses a cached `UnmodifiableSetView` and refreshes it only when selection actually changes, removing per-read allocation on hot getter paths.
 - `clearScene`/`writeClearSceneKeepBackground` now keep (or create) dedicated `backgroundLayer` and clear all content layers.
+- Snapshot/JSON import boundaries now canonicalize missing `backgroundLayer` to a dedicated empty background layer; JSON encode always writes canonical `backgroundLayer`.
 - `V2SignalsSlice` now buffers pending signals in-place and clears on take/discard, removing per-append list copying in large signal batches.
 - `PathNode` hit-testing now falls back to candidate bounds when node transform is non-invertible, keeping singular transformed paths selectable.
 

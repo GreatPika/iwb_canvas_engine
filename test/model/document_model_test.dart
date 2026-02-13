@@ -184,10 +184,30 @@ void main() {
     expect(scene.layers[1].nodes.single.id, 'n2');
   });
 
+  test('txnSceneFromSnapshot canonicalizes missing background layer', () {
+    // INV:INV-SER-CANONICAL-BACKGROUND-LAYER
+    final scene = txnSceneFromSnapshot(
+      SceneSnapshot(
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
+            nodes: const <NodeSnapshot>[
+              RectNodeSnapshot(id: 'n1', size: Size(1, 1)),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    expect(scene.layers.length, 1);
+    expect(scene.backgroundLayer, isNotNull);
+    expect(scene.backgroundLayer!.nodes, isEmpty);
+  });
+
   test(
-    'txnSceneFromSnapshot does not auto-insert missing background layer',
+    'snapshot import/export round-trip keeps canonical single background layer',
     () {
-      final scene = txnSceneFromSnapshot(
+      // INV:INV-SER-CANONICAL-BACKGROUND-LAYER
+      final imported = txnSceneFromSnapshot(
         SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
@@ -199,8 +219,15 @@ void main() {
         ),
       );
 
-      expect(scene.layers.length, 1);
-      expect(scene.backgroundLayer, isNull);
+      final exported = txnSceneToSnapshot(imported);
+      final reimported = txnSceneFromSnapshot(exported);
+
+      expect(exported.backgroundLayer, isNotNull);
+      expect(exported.backgroundLayer!.nodes, isEmpty);
+      expect(reimported.backgroundLayer, isNotNull);
+      expect(reimported.backgroundLayer!.nodes, isEmpty);
+      expect(reimported.layers.length, 1);
+      expect(reimported.layers[0].nodes.single.id, 'n1');
     },
   );
 

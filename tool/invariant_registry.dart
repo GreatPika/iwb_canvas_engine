@@ -151,4 +151,10 @@ const List<Invariant> invariants = <Invariant>[
     title:
         'serialization keeps optional backgroundLayer separate from content layers',
   ),
+  Invariant(
+    id: 'INV-SER-CANONICAL-BACKGROUND-LAYER',
+    scope: 'serialization',
+    title:
+        'snapshot/JSON boundaries canonicalize missing backgroundLayer to a single dedicated background layer',
+  ),
 ];

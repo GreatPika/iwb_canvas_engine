@@ -1,6 +1,6 @@
 # Architecture Overview
 
-This document describes the architecture of `iwb_canvas_engine` for release `3.0.0`.
+This document describes the architecture of `iwb_canvas_engine` on the current mainline.
 
 ## Goals
 
@@ -36,7 +36,7 @@ lib/
     model/          // scene <-> snapshot conversion helpers
     public/         // snapshot/spec/patch contracts
     render/         // painter and render caches
-    serialization/  // JSON codec (schema v3)
+    serialization/  // JSON codec (schema v4)
     view/           // interactive Flutter widget
 ```
 
@@ -71,16 +71,16 @@ Key invariants:
 - Selection normalization preserves explicit non-selectable ids and drops only missing/background/invisible ids.
 - Runtime snapshot boundary (`initialSnapshot` / `replaceScene`) validates input strictly and fails fast with `SceneDataException` for malformed snapshots.
 - Text node box size is derived from text layout inputs and is not writable via public spec/patch APIs.
-- Runtime typed-layer rule: snapshot/model uses optional `backgroundLayer` plus content-only `layers`; missing background layer is allowed (no auto-insert on runtime boundary).
-- JSON decoder rule: accepts `backgroundLayer` (optional) and `layers` (content-only); legacy `isBackground` layer flag is unsupported.
+- Runtime typed-layer rule: snapshot/model uses dedicated `backgroundLayer` plus content-only `layers`; input may omit background layer, but import boundaries canonicalize it to an empty dedicated layer.
+- JSON decoder rule: accepts `backgroundLayer` (optional) and `layers` (content-only); missing `backgroundLayer` is canonicalized on decode/encode boundaries; legacy `isBackground` layer flag is unsupported.
 - Unique node ids across all layers.
 - Input and render subsystems must not bypass controller transaction boundaries.
 - Import boundaries are enforced by `tool/check_import_boundaries.dart`.
 
 ## Serialization contract
 
-- Current write schema: `schemaVersion = 3`.
-- Accepted read schemas: `{3}`.
+- Current write schema: `schemaVersion = 4`.
+- Accepted read schemas: `{4}`.
 - Encoder/decoder validate numeric and structural constraints and fail fast with `SceneDataException`.
 
 ## Performance model
