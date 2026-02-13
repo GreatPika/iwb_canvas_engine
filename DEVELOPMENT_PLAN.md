@@ -544,15 +544,15 @@ workingNodeIds.remove(nodeId);
 
 ---
 
-### [ ] Этап 10. Ускорить рендер-кеши через ревизии геометрии (обязательно)
+### [x] Этап 10. Ускорить рендер-кеши через ревизии геометрии (обязательно)
 
 **Цель:** убрать O(points) вычисления в отрисовке.
 
 **Действия:**
 
-- [ ] 10.1. Добавить в `StrokeNodeSnapshot` поле `pointsRevision` (или более общее `renderGeometryRevision`), которое берётся из `StrokeNode.pointsRevision`.
+- [x] 10.1. Добавить в `StrokeNodeSnapshot` поле `pointsRevision` (или более общее `renderGeometryRevision`), которое берётся из `StrokeNode.pointsRevision`.
 
-- [ ] 10.2. В `SceneStrokePathCacheV2`:
+- [x] 10.2. В `SceneStrokePathCacheV2`:
 
 * вместо `_pointsHash(points)` использовать `(node.id, node.pointsRevision)` как ключ свежести;
 * хранить в entry именно revision.
@@ -562,7 +562,7 @@ workingNodeIds.remove(nodeId);
 * `PathNodeSnapshot`: `pathRevision` (монотонно увеличивать при изменении `svgPathData`/fillRule/strokeWidth и т.д.)
 * (опционально, но для “проду” лучше сделать) `TextNodeSnapshot`: `textLayoutRevision` при изменении текста/стиля/maxWidth.
 
-- [ ] **Критерий готовности:** при отрисовке stroke не происходит полного прохода по списку точек ради “проверить кеш”.
+- [x] **Критерий готовности:** при отрисовке stroke не происходит полного прохода по списку точек ради “проверить кеш”.
 
 ---
 

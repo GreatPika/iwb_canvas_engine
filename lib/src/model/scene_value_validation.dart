@@ -76,6 +76,20 @@ void sceneValidateClamped01Double(
   );
 }
 
+void sceneValidateNonNegativeInt(
+  int value, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+}) {
+  if (value >= 0) return;
+  _sceneValidationFail(
+    onError: onError,
+    value: value,
+    field: field,
+    message: 'must be >= 0.',
+  );
+}
+
 void sceneValidateFiniteOffset(
   Offset value, {
   required String field,
@@ -318,6 +332,11 @@ void sceneValidateNodeSnapshot(
         );
       }
     case StrokeNodeSnapshot stroke:
+      sceneValidateNonNegativeInt(
+        stroke.pointsRevision,
+        field: '$field.pointsRevision',
+        onError: onError,
+      );
       for (var i = 0; i < stroke.points.length; i++) {
         sceneValidateFiniteOffset(
           stroke.points[i],

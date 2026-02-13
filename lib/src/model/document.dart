@@ -188,6 +188,7 @@ SceneNode txnNodeFromSnapshot(NodeSnapshot node) {
       return StrokeNode(
         id: stroke.id,
         points: stroke.points,
+        pointsRevision: stroke.pointsRevision,
         thickness: stroke.thickness,
         color: stroke.color,
         transform: stroke.transform,
@@ -298,6 +299,7 @@ NodeSnapshot txnNodeToSnapshot(SceneNode node) {
       return StrokeNodeSnapshot(
         id: stroke.id,
         points: stroke.points,
+        pointsRevision: stroke.pointsRevision,
         thickness: stroke.thickness,
         color: stroke.color,
         transform: stroke.transform,

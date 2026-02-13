@@ -99,6 +99,12 @@ Variants:
 - `RectNodeSnapshot`
 - `PathNodeSnapshot`
 
+`StrokeNodeSnapshot` runtime fields:
+
+- `pointsRevision` is a non-negative monotonic geometry revision used by
+  render caches for O(1) stroke-path freshness checks.
+- `pointsRevision` is runtime metadata and is not serialized into JSON.
+
 Path fill rule enum:
 
 - `V2PathFillRule.nonZero`

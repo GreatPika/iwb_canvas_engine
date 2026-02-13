@@ -47,9 +47,8 @@ class SceneStrokePathCacheV2 {
         ..addOval(Rect.fromCircle(center: node.points.first, radius: 0));
     }
 
-    final geometryHash = _pointsHash(node.points);
     final cached = _entries.remove(node.id);
-    if (cached != null && cached.geometryHash == geometryHash) {
+    if (cached != null && cached.pointsRevision == node.pointsRevision) {
       _entries[node.id] = cached;
       _debugHitCount += 1;
       return cached.path;
@@ -58,17 +57,11 @@ class SceneStrokePathCacheV2 {
     final path = _buildStrokePath(node.points);
     _entries[node.id] = _StrokePathEntryV2(
       path: path,
-      geometryHash: geometryHash,
+      pointsRevision: node.pointsRevision,
     );
     _debugBuildCount += 1;
     _evictIfNeeded();
     return path;
-  }
-
-  int _pointsHash(List<Offset> points) {
-    return Object.hashAll(
-      points.map((point) => Object.hash(point.dx, point.dy)),
-    );
   }
 
   void _evictIfNeeded() {
@@ -80,10 +73,10 @@ class SceneStrokePathCacheV2 {
 }
 
 class _StrokePathEntryV2 {
-  const _StrokePathEntryV2({required this.path, required this.geometryHash});
+  const _StrokePathEntryV2({required this.path, required this.pointsRevision});
 
   final Path path;
-  final int geometryHash;
+  final int pointsRevision;
 }
 
 class SceneTextLayoutCacheV2 {

@@ -187,6 +187,7 @@ class StrokeNodeSnapshot extends NodeSnapshot {
   StrokeNodeSnapshot({
     required super.id,
     required List<Offset> points,
+    this.pointsRevision = 0,
     required this.thickness,
     required this.color,
     super.transform,
@@ -200,6 +201,7 @@ class StrokeNodeSnapshot extends NodeSnapshot {
   }) : points = List<Offset>.unmodifiable(List<Offset>.from(points));
 
   final List<Offset> points;
+  final int pointsRevision;
   final double thickness;
   final Color color;
 }

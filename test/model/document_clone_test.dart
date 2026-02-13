@@ -133,6 +133,8 @@ void main() {
 
   test('txnCloneScene deep clones scene, layers, nodes and mutable lists', () {
     final source = sourceScene();
+    final sourceStrokeBeforeClone = source.layers[1].nodes[2] as StrokeNode;
+    sourceStrokeBeforeClone.points[0] = const Offset(-1, -1);
     final clone = txnCloneScene(source);
 
     expect(clone, isNot(same(source)));
@@ -147,6 +149,8 @@ void main() {
     expect(cloneNode, isNot(same(sourceNode)));
     expect(cloneNode.points, isNot(same(sourceNode.points)));
     expect(cloneNode.points, sourceNode.points);
+    expect(cloneNode.pointsRevision, sourceNode.pointsRevision);
+    expect(cloneNode.pointsRevision, greaterThan(0));
 
     cloneNode.points.add(const Offset(99, 99));
     expect(sourceNode.points.length, 2);

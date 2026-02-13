@@ -19,6 +19,7 @@ SceneSnapshot _snapshot({required double strokeY, required String text}) {
           StrokeNodeSnapshot(
             id: 'stroke',
             points: <Offset>[Offset(8, strokeY), Offset(72, strokeY)],
+            pointsRevision: strokeY.abs().round(),
             thickness: 3,
             color: const Color(0xFF000000),
           ),

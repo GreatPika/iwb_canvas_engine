@@ -27,6 +27,23 @@ void main() {
     );
   }
 
+  SceneSnapshot singleStrokeSnapshot() {
+    return SceneSnapshot(
+      layers: <LayerSnapshot>[
+        LayerSnapshot(
+          nodes: <NodeSnapshot>[
+            StrokeNodeSnapshot(
+              id: 's1',
+              points: const <Offset>[Offset(0, 0), Offset(1, 1)],
+              thickness: 2,
+              color: const Color(0xFF000000),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   test('write is atomic and notifies once per commit', () async {
     final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
@@ -177,6 +194,54 @@ void main() {
     final moved = after.layers.first.nodes.first as RectNodeSnapshot;
     expect(moved.transform.tx, 10);
   });
+
+  test(
+    'stroke pointsRevision stays monotonic across sequential geometry commits',
+    () {
+      final controller = SceneControllerV2(
+        initialSnapshot: singleStrokeSnapshot(),
+      );
+      addTearDown(controller.dispose);
+
+      final rev0 =
+          (controller.snapshot.layers.first.nodes.first as StrokeNodeSnapshot)
+              .pointsRevision;
+      expect(rev0, 0);
+
+      controller.write<void>((writer) {
+        writer.writeNodePatch(
+          const StrokeNodePatch(
+            id: 's1',
+            points: PatchField<List<Offset>>.value(<Offset>[
+              Offset(0, 0),
+              Offset(2, 2),
+            ]),
+          ),
+        );
+      });
+      final rev1 =
+          (controller.snapshot.layers.first.nodes.first as StrokeNodeSnapshot)
+              .pointsRevision;
+
+      controller.write<void>((writer) {
+        writer.writeNodePatch(
+          const StrokeNodePatch(
+            id: 's1',
+            points: PatchField<List<Offset>>.value(<Offset>[
+              Offset(0, 0),
+              Offset(3, 3),
+            ]),
+          ),
+        );
+      });
+      final rev2 =
+          (controller.snapshot.layers.first.nodes.first as StrokeNodeSnapshot)
+              .pointsRevision;
+
+      expect(rev1, greaterThan(rev0));
+      expect(rev2, greaterThan(rev1));
+    },
+  );
 
   test('snapshot cache invalidates after writeReplaceScene', () {
     final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());

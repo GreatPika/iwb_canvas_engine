@@ -104,6 +104,7 @@ SceneNode txnCloneNode(SceneNode node) {
       return StrokeNode(
         id: stroke.id,
         points: List<Offset>.from(stroke.points),
+        pointsRevision: stroke.pointsRevision,
         thickness: stroke.thickness,
         color: stroke.color,
         transform: transform,

@@ -95,6 +95,8 @@ void main() {
 
   test('scene <-> snapshot conversion preserves node variants', () {
     final scene = sceneWithAllNodeTypes();
+    final stroke = scene.layers[1].nodes[2] as StrokeNode;
+    stroke.points[0] = const Offset(-1, -1);
     final snapshot = txnSceneToSnapshot(scene);
     final restored = txnSceneFromSnapshot(snapshot);
 
@@ -111,6 +113,41 @@ void main() {
     expect(nodes[4], isA<RectNode>());
     expect(nodes[5], isA<PathNode>());
     expect((nodes[5] as PathNode).fillRule, PathFillRule.evenOdd);
+    expect(
+      (snapshot.layers[1].nodes[2] as StrokeNodeSnapshot).pointsRevision,
+      1,
+    );
+    expect((nodes[2] as StrokeNode).pointsRevision, 1);
+  });
+
+  test('txnSceneFromSnapshot rejects negative stroke pointsRevision', () {
+    expect(
+      () => txnSceneFromSnapshot(
+        SceneSnapshot(
+          layers: <LayerSnapshot>[
+            LayerSnapshot(
+              nodes: <NodeSnapshot>[
+                StrokeNodeSnapshot(
+                  id: 's',
+                  points: const <Offset>[Offset(0, 0), Offset(1, 1)],
+                  pointsRevision: -1,
+                  thickness: 1,
+                  color: const Color(0xFF000000),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is ArgumentError &&
+              e.name == 'layers[0].nodes[0].pointsRevision' &&
+              e.message == 'Must be >= 0.',
+        ),
+      ),
+    );
   });
 
   test(
@@ -580,6 +617,7 @@ void main() {
       thickness: 1,
       color: const Color(0xFF000000),
     );
+    final strokeRevisionBeforePatch = stroke.pointsRevision;
     expect(
       txnApplyNodePatch(
         stroke,
@@ -596,6 +634,20 @@ void main() {
       isTrue,
     );
     expect(stroke.points, <Offset>[const Offset(2, 2), const Offset(3, 3)]);
+    expect(stroke.pointsRevision, greaterThan(strokeRevisionBeforePatch));
+
+    final strokeRevisionAfterGeometryPatch = stroke.pointsRevision;
+    expect(
+      txnApplyNodePatch(
+        stroke,
+        const StrokeNodePatch(
+          id: 'str',
+          color: PatchField<Color>.value(Color(0xFF222222)),
+        ),
+      ),
+      isTrue,
+    );
+    expect(stroke.pointsRevision, strokeRevisionAfterGeometryPatch);
 
     final line = LineNode(
       id: 'lin',
