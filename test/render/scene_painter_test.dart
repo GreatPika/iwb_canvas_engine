@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/core/transform2d.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/public/scene_data_exception.dart';
 import 'package:iwb_canvas_engine/src/public/scene_render_state.dart';
 import 'package:iwb_canvas_engine/src/public/snapshot.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
@@ -281,7 +282,14 @@ void main() {
           camera: const CameraSnapshot(offset: Offset(double.nan, 0)),
         ),
       ),
-      throwsArgumentError,
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.path == 'camera.offset.dx' &&
+              e.message == 'Field camera.offset.dx must be finite.',
+        ),
+      ),
     );
   });
 

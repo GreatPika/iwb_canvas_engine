@@ -8,6 +8,7 @@ import '../public/node_patch.dart';
 import '../public/node_spec.dart';
 import '../public/patch_field.dart';
 import '../public/snapshot.dart' hide NodeId;
+import 'scene_builder.dart' as model_builder;
 import 'scene_value_validation.dart';
 
 typedef NodeLocatorEntry = ({int layerIndex, int nodeIndex});
@@ -93,56 +94,7 @@ SceneSnapshot txnSceneToSnapshot(Scene scene) {
 }
 
 Scene txnSceneFromSnapshot(SceneSnapshot snapshot) {
-  sceneValidateSnapshotValues(
-    snapshot,
-    onError: _txnSnapshotValidationError,
-    requirePositiveGridCellSize: true,
-  );
-  final canonicalLayers = _txnCanonicalizeSnapshotLayers(snapshot.layers);
-  return Scene(
-    layers: canonicalLayers
-        .map(
-          (layer) => Layer(
-            isBackground: layer.isBackground,
-            nodes: layer.nodes.map(txnNodeFromSnapshot).toList(growable: false),
-          ),
-        )
-        .toList(growable: false),
-    camera: Camera(offset: snapshot.camera.offset),
-    background: Background(
-      color: snapshot.background.color,
-      grid: GridSettings(
-        isEnabled: snapshot.background.grid.isEnabled,
-        cellSize: snapshot.background.grid.cellSize,
-        color: snapshot.background.grid.color,
-      ),
-    ),
-    palette: ScenePalette(
-      penColors: snapshot.palette.penColors,
-      backgroundColors: snapshot.palette.backgroundColors,
-      gridSizes: snapshot.palette.gridSizes,
-    ),
-  );
-}
-
-List<LayerSnapshot> _txnCanonicalizeSnapshotLayers(List<LayerSnapshot> layers) {
-  var backgroundIndex = -1;
-  for (var i = 0; i < layers.length; i++) {
-    if (!layers[i].isBackground) continue;
-    backgroundIndex = i;
-    break;
-  }
-
-  if (backgroundIndex <= 0) {
-    return layers;
-  }
-
-  final out = <LayerSnapshot>[layers[backgroundIndex]];
-  for (var i = 0; i < layers.length; i++) {
-    if (i == backgroundIndex) continue;
-    out.add(layers[i]);
-  }
-  return out;
+  return model_builder.sceneBuildFromSnapshot(snapshot);
 }
 
 SceneNode txnNodeFromSnapshot(NodeSnapshot node) {

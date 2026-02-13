@@ -144,9 +144,11 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is ArgumentError &&
-              e.name == 'layers[0].nodes[0].pointsRevision' &&
-              e.message == 'Must be >= 0.',
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers[0].nodes[0].pointsRevision' &&
+              e.message ==
+                  'Field layers[0].nodes[0].pointsRevision must be >= 0.',
         ),
       ),
     );
@@ -226,8 +228,9 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is ArgumentError &&
-              e.name == 'layers[1].nodes[0].id' &&
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.duplicateNodeId &&
+              e.path == 'layers[1].nodes[0].id' &&
               e.message == 'Must be unique across scene layers.',
         ),
       ),
@@ -261,9 +264,11 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is ArgumentError &&
-              e.name == 'layers[0].nodes[0].transform.a' &&
-              e.message == 'Must be finite.',
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers[0].nodes[0].transform.a' &&
+              e.message ==
+                  'Field layers[0].nodes[0].transform.a must be finite.',
         ),
       ),
     );

@@ -6,6 +6,8 @@ library;
 export 'src/public/node_patch.dart';
 export 'src/public/node_spec.dart';
 export 'src/public/patch_field.dart';
+export 'src/public/scene_builder.dart';
+export 'src/public/scene_data_exception.dart';
 export 'src/public/scene_render_state.dart';
 export 'src/public/scene_write_txn.dart';
 export 'src/public/snapshot.dart';
@@ -26,7 +28,6 @@ export 'src/render/scene_painter.dart'
         ScenePathMetricsCacheV2;
 export 'src/serialization/scene_codec.dart'
     show
-        SceneJsonFormatException,
         decodeScene,
         decodeSceneFromJson,
         encodeScene,

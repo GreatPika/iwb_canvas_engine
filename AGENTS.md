@@ -32,7 +32,7 @@ A Flutter/Dart canvas engine package with scene model, rendering, input handling
 
 - Keep `CHANGELOG.md` updated for user-visible changes.
 - Add entries under `## Unreleased` while developing.
-- For release `X.Y.Z (YYYY-MM-DD)`, move entries from `Unreleased` into the release section and leave `Unreleased` empty.
+- For release `X.Y.Z (YYYY-MM-DD)`, move entries from `Unreleased` into the release section and delete `Unreleased`.
 - Prefix breaking changes with `Breaking:`.
 
 ## Required checks (run locally before pushing code changes)

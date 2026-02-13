@@ -21,7 +21,7 @@ Primary public abstractions:
 - Safe transactional write model: `SceneWriteTxn`
 - Write intents: `NodeSpec`
 - Partial mutation: `NodePatch` + `PatchField<T>`
-- Serialization: `encodeScene*`, `decodeScene*`, `SceneJsonFormatException`
+- Serialization: `encodeScene*`, `decodeScene*`, `SceneDataException`
 
 ## Internal structure
 
@@ -68,7 +68,7 @@ Key invariants:
 - Buffered signal/repaint effects are discarded when `write(...)` rolls back.
 - Node-id index state keeps `allNodeIds` and `nodeLocator` equal to committed scene ids/locations, while `nodeIdSeed` is a monotonic generator lower-bounded by committed scene ids.
 - Selection normalization preserves explicit non-selectable ids and drops only missing/background/invisible ids.
-- Runtime snapshot boundary (`initialSnapshot` / `replaceScene`) validates input strictly and fails fast with `ArgumentError` for malformed snapshots.
+- Runtime snapshot boundary (`initialSnapshot` / `replaceScene`) validates input strictly and fails fast with `SceneDataException` for malformed snapshots.
 - Text node box size is derived from text layout inputs and is not writable via public spec/patch APIs.
 - Runtime background-layer rule: at most one background layer; if present it is canonicalized to index `0`; missing background is allowed (no auto-insert on runtime boundary).
 - JSON decoder background-layer rule: canonicalizes to a single background layer at index `0`.
@@ -80,7 +80,7 @@ Key invariants:
 
 - Current write schema: `schemaVersion = 2`.
 - Accepted read schemas: `{2}`.
-- Encoder/decoder validate numeric and structural constraints and fail fast with `SceneJsonFormatException`.
+- Encoder/decoder validate numeric and structural constraints and fail fast with `SceneDataException`.
 
 ## Performance model
 

@@ -4,6 +4,7 @@ import 'dart:ui';
 import '../core/background_layer_invariants.dart';
 import '../core/hit_test.dart';
 import '../core/nodes.dart' show TextNode;
+import '../core/scene.dart' show Layer;
 import '../core/selection_policy.dart';
 import '../core/text_layout.dart';
 import '../core/transform2d.dart';
@@ -307,6 +308,10 @@ class SceneWriter implements SceneWriteTxn {
         );
       },
     );
+    if (scene.layers.isEmpty || !scene.layers.first.isBackground) {
+      scene.layers.insert(0, Layer(isBackground: true));
+      _ctx.changeSet.txnMarkStructuralChanged();
+    }
 
     final layers = scene.layers;
     final clearedIds = <NodeId>[

@@ -71,12 +71,16 @@ void main() {
     expect(encodeScene(decoded), encodeScene(scene));
   });
 
-  test('SceneJsonFormatException implements FormatException shape', () {
-    final error = SceneJsonFormatException('bad', 'source');
+  test('SceneDataException implements FormatException shape', () {
+    const error = SceneDataException(
+      code: SceneDataErrorCode.invalidValue,
+      message: 'bad',
+      source: 'source',
+    );
     expect(error.message, 'bad');
     expect(error.source, 'source');
     expect(error.offset, isNull);
-    expect(error.toString(), contains('SceneJsonFormatException'));
+    expect(error.toString(), contains('SceneDataException'));
   });
 
   test('decodeSceneFromJson rejects non-object root', () {
@@ -85,7 +89,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Root JSON must be an object.',
         ),
       ),
@@ -93,17 +97,13 @@ void main() {
   });
 
   test('decodeSceneFromJson wraps JSON parse failures', () {
-    expect(
-      () => decodeSceneFromJson('{'),
-      throwsA(isA<SceneJsonFormatException>()),
-    );
+    expect(() => decodeSceneFromJson('{'), throwsA(isA<SceneDataException>()));
   });
 
-  test('decodeScene canonicalizes missing background layer at index 0', () {
+  test('decodeScene does not auto-insert missing background layer', () {
     // INV:INV-SER-BACKGROUND-SINGLE-AT-ZERO
     final scene = decodeScene(_minimalSceneJson());
-    expect(scene.layers, hasLength(1));
-    expect(scene.layers.first.isBackground, isTrue);
+    expect(scene.layers, isEmpty);
   });
 
   test(
@@ -179,8 +179,8 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Scene must contain at most one background layer.',
+              e is SceneDataException &&
+              e.message == 'Must contain at most one background layer.',
         ),
       ),
     );
@@ -194,7 +194,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Layer must be an object.',
         ),
       ),
@@ -214,8 +214,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Node must be an object.',
+              e is SceneDataException && e.message == 'Node must be an object.',
         ),
       ),
     );
@@ -249,9 +248,8 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message ==
-                  'Duplicate node id: dup-node. Node ids must be unique.',
+              e is SceneDataException &&
+              e.message == 'Must be unique across scene layers.',
         ),
       ),
     );
@@ -264,7 +262,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Unknown node type: mystery.',
         ),
       ),
@@ -289,7 +287,7 @@ void main() {
       ],
     );
 
-    expect(() => encodeScene(scene), throwsA(isA<SceneJsonFormatException>()));
+    expect(() => encodeScene(scene), throwsA(isA<SceneDataException>()));
   });
 
   test('decodeScene rejects unknown fillRule', () {
@@ -305,7 +303,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Unknown fillRule: weird.',
         ),
       ),
@@ -325,8 +323,9 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'svgPathData must not be empty.',
+              e is SceneDataException &&
+              e.message ==
+                  'Field layers[0].nodes[0].svgPathData must not be empty.',
         ),
       ),
     );
@@ -345,8 +344,9 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Invalid svgPathData.',
+              e is SceneDataException &&
+              e.message ==
+                  'Field layers[0].nodes[0].svgPathData must be valid SVG path data.',
         ),
       ),
     );
@@ -355,11 +355,11 @@ void main() {
   test('decodeScene rejects invalid colors in 6- and 8-digit forms', () {
     final six = _minimalSceneJson();
     (six['background'] as Map<String, dynamic>)['color'] = '#GGGGGG';
-    expect(() => decodeScene(six), throwsA(isA<SceneJsonFormatException>()));
+    expect(() => decodeScene(six), throwsA(isA<SceneDataException>()));
 
     final eight = _minimalSceneJson();
     (eight['background'] as Map<String, dynamic>)['color'] = '#GGGGGGGG';
-    expect(() => decodeScene(eight), throwsA(isA<SceneJsonFormatException>()));
+    expect(() => decodeScene(eight), throwsA(isA<SceneDataException>()));
   });
 
   test('decodeScene accepts 6-digit colors', () {
@@ -383,7 +383,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field naturalSize must be an object.',
         ),
       ),
@@ -426,7 +426,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Unknown text align: start.',
         ),
       ),
@@ -446,7 +446,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'localPoints must be an object with x/y.',
         ),
       ),
@@ -463,7 +463,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Optional size must be numeric.',
         ),
       ),
@@ -486,7 +486,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field fontFamily must be a string.',
         ),
       ),
@@ -509,7 +509,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field maxWidth must be a number.',
         ),
       ),
@@ -526,7 +526,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field fillRule must be a string.',
         ),
       ),
@@ -541,7 +541,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field penColors must be a list.',
         ),
       ),
@@ -554,7 +554,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field color must be a string.',
         ),
       ),
@@ -567,7 +567,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field offsetX must be a number.',
         ),
       ),
@@ -587,7 +587,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field fillColor must be a string.',
         ),
       ),
@@ -597,17 +597,14 @@ void main() {
     (paletteWrong['palette'] as Map<String, dynamic>)['penColors'] = <dynamic>[
       123,
     ];
-    expect(
-      () => decodeScene(paletteWrong),
-      throwsA(isA<SceneJsonFormatException>()),
-    );
+    expect(() => decodeScene(paletteWrong), throwsA(isA<SceneDataException>()));
 
     final gridSizesWrong = _minimalSceneJson();
     (gridSizesWrong['palette'] as Map<String, dynamic>)['gridSizes'] =
         <dynamic>['10'];
     expect(
       () => decodeScene(gridSizesWrong),
-      throwsA(isA<SceneJsonFormatException>()),
+      throwsA(isA<SceneDataException>()),
     );
   });
 
@@ -620,8 +617,8 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Field penColors must not be empty.',
+              e is SceneDataException &&
+              e.message == 'Field palette.penColors must not be empty.',
         ),
       ),
     );
@@ -634,8 +631,8 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Field backgroundColors must not be empty.',
+              e is SceneDataException &&
+              e.message == 'Field palette.backgroundColors must not be empty.',
         ),
       ),
     );
@@ -648,8 +645,8 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Field gridSizes must not be empty.',
+              e is SceneDataException &&
+              e.message == 'Field palette.gridSizes must not be empty.',
         ),
       ),
     );
@@ -663,7 +660,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field schemaVersion must be an int.',
         ),
       ),
@@ -676,7 +673,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field camera must be an object.',
         ),
       ),
@@ -691,7 +688,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field enabled must be a bool.',
         ),
       ),
@@ -703,7 +700,7 @@ void main() {
     json['schemaVersion'] = 2.0;
 
     final scene = decodeScene(json);
-    expect(scene.layers.first.isBackground, isTrue);
+    expect(scene.layers, isEmpty);
   });
 
   test('decodeScene rejects non-integer numeric schemaVersion', () {
@@ -714,7 +711,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field schemaVersion must be an int.',
         ),
       ),
@@ -731,7 +728,7 @@ void main() {
         throwsA(
           predicate(
             (e) =>
-                e is SceneJsonFormatException &&
+                e is SceneDataException &&
                 e.message ==
                     'Unsupported schemaVersion: 1. Expected one of: [2].',
           ),
@@ -748,7 +745,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field offsetX must be finite.',
         ),
       ),
@@ -761,7 +758,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field offsetY must be finite.',
         ),
       ),
@@ -780,8 +777,9 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Field opacity must be within [0,1].',
+              e is SceneDataException &&
+              e.message ==
+                  'Field layers[0].nodes[0].opacity must be within [0,1].',
         ),
       ),
     );
@@ -799,7 +797,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message ==
                   'Field layers[0].nodes[0].opacity must be within [0,1].',
         ),
@@ -877,7 +875,7 @@ void main() {
         throwsA(
           predicate(
             (e) =>
-                e is SceneJsonFormatException &&
+                e is SceneDataException &&
                 e.message ==
                     'Field layers[1].nodes[0].id must be unique across scene layers.',
           ),
@@ -892,7 +890,7 @@ void main() {
         throwsA(
           predicate(
             (e) =>
-                e is SceneJsonFormatException &&
+                e is SceneDataException &&
                 e.message ==
                     'Field layers must contain at most one background layer.',
           ),
@@ -915,8 +913,8 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Field thickness must be > 0.',
+              e is SceneDataException &&
+              e.message == 'Field layers[0].nodes[0].thickness must be > 0.',
         ),
       ),
     );
@@ -936,7 +934,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field thickness must be finite.',
         ),
       ),
@@ -953,8 +951,8 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Field strokeWidth must be >= 0.',
+              e is SceneDataException &&
+              e.message == 'Field layers[0].nodes[0].strokeWidth must be >= 0.',
         ),
       ),
     );
@@ -970,7 +968,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field hitPadding must be finite.',
         ),
       ),
@@ -992,8 +990,8 @@ void main() {
           throwsA(
             predicate(
               (e) =>
-                  e is SceneJsonFormatException &&
-                  e.message == 'Field cellSize must be > 0.',
+                  e is SceneDataException &&
+                  e.message == 'Field background.grid.cellSize must be > 0.',
             ),
           ),
         );
@@ -1031,7 +1029,7 @@ void main() {
           throwsA(
             predicate(
               (e) =>
-                  e is SceneJsonFormatException &&
+                  e is SceneDataException &&
                   e.message == 'Field cellSize must be finite.',
             ),
           ),
@@ -1052,8 +1050,8 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Field w must be >= 0.',
+              e is SceneDataException &&
+              e.message == 'Field layers[0].nodes[0].size.w must be >= 0.',
         ),
       ),
     );
@@ -1072,7 +1070,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Optional size must be finite.',
         ),
       ),
@@ -1090,8 +1088,9 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Optional size must be non-negative.',
+              e is SceneDataException &&
+              e.message ==
+                  'Field layers[0].nodes[0].naturalSize.w must be >= 0.',
         ),
       ),
     );
@@ -1116,7 +1115,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field maxWidth must be finite.',
         ),
       ),
@@ -1140,8 +1139,8 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Field maxWidth must be > 0.',
+              e is SceneDataException &&
+              e.message == 'Field layers[0].nodes[0].maxWidth must be > 0.',
         ),
       ),
     );
@@ -1156,8 +1155,8 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Items of gridSizes must be > 0.',
+              e is SceneDataException &&
+              e.message == 'Field palette.gridSizes[0] must be > 0.',
         ),
       ),
     );
@@ -1174,7 +1173,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Items of gridSizes must be finite.',
         ),
       ),
@@ -1194,7 +1193,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field background.grid.cellSize must be > 0.',
         ),
       ),
@@ -1211,7 +1210,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field background.grid.cellSize must be > 0.',
         ),
       ),
@@ -1227,7 +1226,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field palette.penColors must not be empty.',
         ),
       ),
@@ -1242,7 +1241,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field palette.backgroundColors must not be empty.',
         ),
       ),
@@ -1257,7 +1256,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field palette.gridSizes must not be empty.',
         ),
       ),
@@ -1274,7 +1273,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field camera.offset.dx must be finite.',
         ),
       ),
@@ -1299,7 +1298,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field layers[0].nodes[0].hitPadding must be >= 0.',
         ),
       ),
@@ -1325,7 +1324,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field layers[0].nodes[0].fontSize must be > 0.',
         ),
       ),
@@ -1350,7 +1349,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message ==
                   'Field layers[0].nodes[0].opacity must be within [0,1].',
         ),

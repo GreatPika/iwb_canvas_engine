@@ -51,7 +51,7 @@ Runtime aliases exposed publicly:
   - `encodeSceneToJson`, `decodeSceneFromJson`
   - `encodeScene`, `decodeScene`
   - `schemaVersionWrite`, `schemaVersionsRead`
-  - `SceneJsonFormatException`
+  - `SceneDataException`
 - Rendering support:
   - `ImageResolverV2`
   - `SceneStaticLayerCacheV2`, `SceneTextLayoutCacheV2`, `SceneStrokePathCacheV2`, `ScenePathMetricsCacheV2`
@@ -194,7 +194,7 @@ final controller = SceneController(
 Construction validation notes:
 
 - `initialSnapshot` is validated strictly.
-- Malformed snapshot input throws `ArgumentError` (duplicate ids, invalid numeric fields, invalid `svgPathData`, invalid palette, multiple background layers).
+- Malformed snapshot input throws `SceneDataException` (duplicate ids, invalid numeric fields, invalid `svgPathData`, invalid palette, multiple background layers).
 - Runtime snapshot boundary does not auto-insert a background layer when missing.
 - If one background layer is present but misordered, it is canonicalized to index `0`.
 
@@ -252,7 +252,7 @@ Validation notes:
 
 - `setGridCellSize` requires finite positive value; with enabled grid it clamps to internal minimum safety limit.
 - `setCameraOffset` rejects non-finite offsets.
-- `replaceScene` validates snapshot input strictly and throws `ArgumentError` on malformed snapshots.
+- `replaceScene` validates snapshot input strictly and throws `SceneDataException` on malformed snapshots.
 
 Notification semantics:
 
@@ -490,11 +490,11 @@ Controller normalizes timestamps into a monotonic internal timeline.
 
 ### 11.3 Errors
 
-Invalid input throws `SceneJsonFormatException` with validation details.
+Invalid input throws `SceneDataException` with validation details.
 
 Encoding notes:
 
-- `encodeScene(...)` validates `SceneSnapshot` input before encoding and throws `SceneJsonFormatException` on malformed snapshots.
+- `encodeScene(...)` validates `SceneSnapshot` input before encoding and throws `SceneDataException` on malformed snapshots.
 
 ## 12. Full integration example
 
@@ -578,7 +578,7 @@ When an agent modifies integration code:
 
 1. Use `NodeSpec`/`NodePatch` in app code; avoid mutating internal scene structures directly.
 2. Keep app-owned undo/redo separate from engine internals.
-3. Handle `SceneJsonFormatException` around imports.
+3. Handle `SceneDataException` around imports.
 4. Keep `ActionCommitted.payload` parsing defensive via helper extensions.
 5. Respect background layer semantics and non-deletable/non-selectable flags.
 6. Prefer `SceneController`/`SceneView` aliases in app-facing docs/examples.
@@ -604,7 +604,7 @@ Required updates:
 Required updates:
 
 1. Remove `TextNodeSpec.size` and `TextNodePatch.size` usage; text bounds are runtime-derived from layout fields.
-2. Ensure `initialSnapshot`/`replaceScene(...)` inputs are strictly valid; malformed snapshots now throw `ArgumentError`.
+2. Ensure `initialSnapshot`/`replaceScene(...)` inputs are strictly valid; malformed snapshots now throw `SceneDataException`.
 3. Ensure `addNode(...)` and `patchNode(...)` inputs are valid at write boundary; malformed values now throw `ArgumentError`.
 4. If app logic depended on synchronous `actions`/`editTextRequests` delivery, update it for asynchronous stream delivery.
 

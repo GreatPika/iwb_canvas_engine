@@ -17,18 +17,12 @@ void main() {
 
   test('decodeSceneFromJson rejects invalid schema', () {
     const json = '{"schemaVersion": 999}';
-    expect(
-      () => decodeSceneFromJson(json),
-      throwsA(isA<SceneJsonFormatException>()),
-    );
+    expect(() => decodeSceneFromJson(json), throwsA(isA<SceneDataException>()));
   });
 
   test('decodeSceneFromJson rejects schemaVersion 1', () {
     const json = '{"schemaVersion": 1}';
-    expect(
-      () => decodeSceneFromJson(json),
-      throwsA(isA<SceneJsonFormatException>()),
-    );
+    expect(() => decodeSceneFromJson(json), throwsA(isA<SceneDataException>()));
   });
 
   test('decodeSceneFromJson rejects invalid color', () {
@@ -36,10 +30,7 @@ void main() {
     final encoded = encodeScene(scene);
     encoded['background']['color'] = 'not-a-color';
 
-    expect(
-      () => decodeScene(encoded),
-      throwsA(isA<SceneJsonFormatException>()),
-    );
+    expect(() => decodeScene(encoded), throwsA(isA<SceneDataException>()));
   });
 
   test('decodeScene returns immutable snapshots', () {

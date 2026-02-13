@@ -1,7 +1,12 @@
 ## Unreleased
 
+### Breaking
+
+- `SceneJsonFormatException` is removed from public API; scene import/serialization boundaries now throw `SceneDataException` with `SceneDataErrorCode`.
+
 ### Changed
 
+- Added public `SceneBuilder` as a unified immutable import gateway for both JSON maps and `SceneSnapshot`.
 - `SceneStrokePathCacheV2`, `SceneTextLayoutCacheV2`, and `ScenePathMetricsCacheV2` now throw `ArgumentError` for `maxEntries <= 0` in all build modes (not only debug).
 - Documentation now explicitly defines ownership/disposal responsibilities for external `SceneStaticLayerCacheV2` and app-managed `ImageResolverV2` images.
 
@@ -10,8 +15,8 @@
 ### Breaking
 
 - Runtime snapshot boundaries are now strict:
-  - `SceneController(initialSnapshot: ...)` throws `ArgumentError` for malformed snapshots.
-  - `replaceScene(...)` throws `ArgumentError` for malformed snapshots.
+  - `SceneController(initialSnapshot: ...)` throws `SceneDataException` for malformed snapshots.
+  - `replaceScene(...)` throws `SceneDataException` for malformed snapshots.
 - Runtime snapshot import no longer auto-inserts a missing background layer.
 - JSON codec now rejects non-positive `background.grid.cellSize` regardless of grid enabled state.
 - Write-boundary validation is now strict:
@@ -104,7 +109,7 @@
 ### Added
 
 - Stable interactive runtime aliases: `SceneController` and `SceneView` over v2 implementations.
-- Strict JSON v2 codec contracts (`schemaVersion = 2`) with canonical validation errors via `SceneJsonFormatException`.
+- Strict JSON v2 codec contracts (`schemaVersion = 2`) with canonical validation errors via `SceneDataException`.
 - Bounded render caches and spatial-index optimizations for interactive performance.
 - Expanded automated validation with parity, regression, invariant coverage, and import-boundary checks.
 

@@ -1,11 +1,10 @@
 import 'scene.dart';
 
 /// Ensures background-layer invariants for [layers]:
-/// - exactly one background layer,
-/// - background layer at index 0.
+/// - at most one background layer,
+/// - background layer at index 0 when present.
 ///
 /// Recoverable cases are canonicalized in place:
-/// - if no background exists, one is inserted at index 0;
 /// - if a single background exists but is misordered, it is moved to index 0
 ///   while preserving the relative order of non-background layers.
 ///
@@ -27,7 +26,6 @@ void canonicalizeBackgroundLayerInvariants(
   }
 
   if (backgroundCount == 0) {
-    layers.insert(0, Layer(isBackground: true));
     return;
   }
   if (backgroundCount > 1) {

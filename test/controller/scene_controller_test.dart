@@ -646,9 +646,9 @@ void main() {
     },
   );
 
-  test('initialSnapshot rejects malformed snapshots with ArgumentError', () {
+  test('initialSnapshot rejects malformed snapshots with SceneDataException', () {
     final malformedCases =
-        <({SceneSnapshot snapshot, String field, String message})>[
+        <({SceneSnapshot snapshot, String field, String expectedMessage})>[
           (
             snapshot: SceneSnapshot(
               layers: <LayerSnapshot>[
@@ -665,7 +665,7 @@ void main() {
               ],
             ),
             field: 'layers[1].nodes[0].id',
-            message: 'Must be unique across scene layers.',
+            expectedMessage: 'Must be unique across scene layers.',
           ),
           (
             snapshot: SceneSnapshot(
@@ -675,7 +675,7 @@ void main() {
               ],
             ),
             field: 'layers',
-            message: 'Must contain at most one background layer.',
+            expectedMessage: 'Must contain at most one background layer.',
           ),
           (
             snapshot: SceneSnapshot(
@@ -688,14 +688,15 @@ void main() {
               ],
             ),
             field: 'layers[0].nodes[0].svgPathData',
-            message: 'Must be valid SVG path data.',
+            expectedMessage:
+                'Field layers[0].nodes[0].svgPathData must be valid SVG path data.',
           ),
           (
             snapshot: SceneSnapshot(
               palette: ScenePaletteSnapshot(penColors: const <Color>[]),
             ),
             field: 'palette.penColors',
-            message: 'Must not be empty.',
+            expectedMessage: 'Field palette.penColors must not be empty.',
           ),
         ];
 
@@ -705,9 +706,9 @@ void main() {
         throwsA(
           predicate(
             (e) =>
-                e is ArgumentError &&
-                e.name == malformed.field &&
-                e.message == malformed.message,
+                e is SceneDataException &&
+                e.path == malformed.field &&
+                e.message == malformed.expectedMessage,
           ),
         ),
       );
@@ -767,9 +768,10 @@ void main() {
         throwsA(
           predicate(
             (e) =>
-                e is ArgumentError &&
-                e.name == 'layers[0].nodes[0].transform.a' &&
-                e.message == 'Must be finite.',
+                e is SceneDataException &&
+                e.path == 'layers[0].nodes[0].transform.a' &&
+                e.message ==
+                    'Field layers[0].nodes[0].transform.a must be finite.',
           ),
         ),
       );
@@ -883,7 +885,7 @@ void main() {
         layers: <LayerSnapshot>[
           LayerSnapshot(
             nodes: const <NodeSnapshot>[
-              RectNodeSnapshot(id: 'huge', size: Size(1e9, 1e9)),
+              RectNodeSnapshot(id: 'huge', size: Size(10000, 10000)),
             ],
           ),
         ],
@@ -899,7 +901,7 @@ void main() {
 
     controller.write<void>((writer) {
       writer.writeSelectionReplace(const <NodeId>{'huge'});
-      writer.writeSelectionTranslate(const Offset(2e9, 0));
+      writer.writeSelectionTranslate(const Offset(2e6, 0));
     });
 
     final oldProbe = controller.querySpatialCandidates(
@@ -908,7 +910,7 @@ void main() {
     expect(oldProbe, isEmpty);
 
     final movedProbe = controller.querySpatialCandidates(
-      const Rect.fromLTWH(2e9, 0, 10, 10),
+      const Rect.fromLTWH(2e6, 0, 10, 10),
     );
     expect(movedProbe.map((candidate) => candidate.node.id), <NodeId>['huge']);
     expect(controller.debugSpatialIndexBuildCount, 1);
