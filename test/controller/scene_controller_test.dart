@@ -729,7 +729,7 @@ void main() {
     },
   );
 
-  test('spatial index invalidates on bounds revision change', () {
+  test('spatial index updates incrementally on bounds revision change', () {
     final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
@@ -748,10 +748,11 @@ void main() {
       const Rect.fromLTWH(80, 0, 0, 0),
     );
     expect(afterQuery, isNotEmpty);
-    expect(controller.debugSpatialIndexBuildCount, 2);
+    expect(controller.debugSpatialIndexBuildCount, 1);
+    expect(controller.debugSpatialIndexIncrementalApplyCount, 1);
   });
 
-  test('spatial index invalidates on hitPadding change', () {
+  test('spatial index updates incrementally on hitPadding change', () {
     final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
@@ -778,10 +779,11 @@ void main() {
       afterQuery.map((candidate) => candidate.node.id),
       isNot(contains('r2')),
     );
-    expect(controller.debugSpatialIndexBuildCount, 2);
+    expect(controller.debugSpatialIndexBuildCount, 1);
+    expect(controller.debugSpatialIndexIncrementalApplyCount, 1);
   });
 
-  test('spatial index handles huge node and rebuilds after bounds change', () {
+  test('spatial index handles huge node and updates incrementally', () {
     final controller = SceneControllerV2(
       initialSnapshot: SceneSnapshot(
         layers: <LayerSnapshot>[
@@ -815,8 +817,84 @@ void main() {
       const Rect.fromLTWH(2e9, 0, 10, 10),
     );
     expect(movedProbe.map((candidate) => candidate.node.id), <NodeId>['huge']);
-    expect(controller.debugSpatialIndexBuildCount, 2);
+    expect(controller.debugSpatialIndexBuildCount, 1);
+    expect(controller.debugSpatialIndexIncrementalApplyCount, 1);
   });
+
+  test('spatial index invalidates and rebuilds after replaceScene', () {
+    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    final beforeQuery = controller.querySpatialCandidates(
+      const Rect.fromLTWH(0, 0, 0, 0),
+    );
+    expect(beforeQuery, isNotEmpty);
+    expect(controller.debugSpatialIndexBuildCount, 1);
+
+    controller.writeReplaceScene(
+      SceneSnapshot(
+        layers: <LayerSnapshot>[
+          LayerSnapshot(
+            nodes: const <NodeSnapshot>[
+              RectNodeSnapshot(id: 'fresh', size: Size(10, 10)),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    final afterQuery = controller.querySpatialCandidates(
+      const Rect.fromLTWH(0, 0, 0, 0),
+    );
+    expect(afterQuery.map((candidate) => candidate.node.id), <NodeId>['fresh']);
+    expect(controller.debugSpatialIndexBuildCount, 2);
+    expect(controller.debugSpatialIndexIncrementalApplyCount, 0);
+  });
+
+  test(
+    'spatial index keeps candidate indices after erase in middle of layer',
+    () {
+      final controller = SceneControllerV2(
+        initialSnapshot: SceneSnapshot(
+          layers: <LayerSnapshot>[
+            LayerSnapshot(
+              nodes: const <NodeSnapshot>[
+                RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
+                RectNodeSnapshot(id: 'r2', size: Size(10, 10)),
+                RectNodeSnapshot(id: 'r3', size: Size(10, 10)),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      controller.querySpatialCandidates(const Rect.fromLTWH(0, 0, 0, 0));
+      expect(controller.debugSpatialIndexBuildCount, 1);
+
+      controller.write<void>((writer) {
+        writer.writeNodeErase('r2');
+      });
+
+      final candidates = controller.querySpatialCandidates(
+        const Rect.fromLTWH(0, 0, 0, 0),
+      );
+      final byId = <NodeId, SceneSpatialCandidate>{
+        for (final candidate in candidates) candidate.node.id: candidate,
+      };
+      expect(byId.containsKey('r1'), isTrue);
+      expect(byId.containsKey('r2'), isFalse);
+      expect(byId.containsKey('r3'), isTrue);
+      expect(byId['r1']!.layerIndex, 0);
+      expect(byId['r1']!.nodeIndex, 0);
+      expect(byId['r3']!.layerIndex, 0);
+      expect(byId['r3']!.nodeIndex, 1);
+      expect(controller.resolveSpatialCandidateNode(byId['r1']!), isNotNull);
+      expect(controller.resolveSpatialCandidateNode(byId['r3']!), isNotNull);
+      expect(controller.debugSpatialIndexBuildCount, 1);
+      expect(controller.debugSpatialIndexIncrementalApplyCount, 1);
+    },
+  );
 
   test('no-op hitPadding patch does not bump bounds revision', () {
     final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
@@ -835,6 +913,7 @@ void main() {
 
     expect(controller.boundsRevision, beforeBounds);
     expect(controller.debugLastChangeSet.boundsChanged, isFalse);
+    expect(controller.debugLastChangeSet.hitGeometryChangedIds, isEmpty);
     expect(controller.debugSceneShallowClones, 0);
     expect(controller.debugLayerShallowClones, 0);
     expect(controller.debugNodeClones, 0);

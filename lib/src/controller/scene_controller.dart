@@ -96,6 +96,10 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
   int get debugSpatialIndexBuildCount => _spatialIndexSlice.debugBuildCount;
 
   @visibleForTesting
+  int get debugSpatialIndexIncrementalApplyCount =>
+      _spatialIndexSlice.debugIncrementalApplyCount;
+
+  @visibleForTesting
   int get debugSceneShallowClones => _debugLastSceneShallowClones;
 
   @visibleForTesting
@@ -116,9 +120,9 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
   List<SceneSpatialCandidate> querySpatialCandidates(Rect worldBounds) {
     return _spatialIndexSlice.writeQueryCandidates(
       scene: _store.sceneDoc,
+      nodeLocator: _store.nodeLocator,
       worldBounds: worldBounds,
       controllerEpoch: _store.controllerEpoch,
-      boundsRevision: _store.boundsRevision,
     );
   }
 
@@ -315,9 +319,10 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
     );
 
     _spatialIndexSlice.writeHandleCommit(
+      scene: committedScene,
+      nodeLocator: committedNodeLocator,
       changeSet: ctx.changeSet,
       controllerEpoch: nextEpoch,
-      boundsRevision: nextBoundsRevision,
     );
     commitPhases = <String>[...commitPhases, 'spatial_index'];
 

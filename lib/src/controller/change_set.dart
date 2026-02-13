@@ -12,6 +12,7 @@ class ChangeSet {
   final Set<NodeId> addedNodeIds = <NodeId>{};
   final Set<NodeId> removedNodeIds = <NodeId>{};
   final Set<NodeId> updatedNodeIds = <NodeId>{};
+  final Set<NodeId> hitGeometryChangedIds = <NodeId>{};
 
   bool get txnHasAnyChange =>
       documentReplaced ||
@@ -59,18 +60,26 @@ class ChangeSet {
     addedNodeIds.add(nodeId);
     removedNodeIds.remove(nodeId);
     updatedNodeIds.remove(nodeId);
+    hitGeometryChangedIds.remove(nodeId);
   }
 
   void txnTrackRemoved(NodeId nodeId) {
     removedNodeIds.add(nodeId);
     addedNodeIds.remove(nodeId);
     updatedNodeIds.remove(nodeId);
+    hitGeometryChangedIds.remove(nodeId);
   }
 
   void txnTrackUpdated(NodeId nodeId) {
     if (addedNodeIds.contains(nodeId)) return;
     if (removedNodeIds.contains(nodeId)) return;
     updatedNodeIds.add(nodeId);
+  }
+
+  void txnTrackHitGeometryChanged(NodeId nodeId) {
+    if (addedNodeIds.contains(nodeId)) return;
+    if (removedNodeIds.contains(nodeId)) return;
+    hitGeometryChangedIds.add(nodeId);
   }
 
   ChangeSet txnClone() {
@@ -84,6 +93,7 @@ class ChangeSet {
     out.addedNodeIds.addAll(addedNodeIds);
     out.removedNodeIds.addAll(removedNodeIds);
     out.updatedNodeIds.addAll(updatedNodeIds);
+    out.hitGeometryChangedIds.addAll(hitGeometryChangedIds);
     return out;
   }
 }

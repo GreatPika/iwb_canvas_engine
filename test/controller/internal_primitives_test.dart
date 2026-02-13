@@ -63,8 +63,16 @@ void main() {
 
     changeSet.txnTrackUpdated('n2');
     expect(changeSet.updatedNodeIds, <NodeId>{'n2'});
+    changeSet.txnTrackHitGeometryChanged('n2');
+    expect(changeSet.hitGeometryChangedIds, <NodeId>{'n2'});
     changeSet.txnTrackAdded('n2');
     expect(changeSet.updatedNodeIds, isEmpty);
+    expect(changeSet.hitGeometryChangedIds, isEmpty);
+
+    changeSet.txnTrackHitGeometryChanged('n3');
+    expect(changeSet.hitGeometryChangedIds, <NodeId>{'n3'});
+    changeSet.txnTrackRemoved('n3');
+    expect(changeSet.hitGeometryChangedIds, isEmpty);
 
     changeSet.txnMarkDocumentReplaced();
     expect(changeSet.documentReplaced, isTrue);
@@ -74,6 +82,7 @@ void main() {
     final clone = changeSet.txnClone();
     expect(clone.documentReplaced, changeSet.documentReplaced);
     expect(clone.addedNodeIds, changeSet.addedNodeIds);
+    expect(clone.hitGeometryChangedIds, changeSet.hitGeometryChangedIds);
     expect(clone, isNot(same(changeSet)));
   });
 
@@ -792,7 +801,7 @@ void main() {
   });
 
   test(
-    'V2SpatialIndexSlice caches, invalidates and rebuilds by commit signals',
+    'V2SpatialIndexSlice caches, applies incremental changes and falls back safely',
     () {
       final slice = V2SpatialIndexSlice();
       final scene = Scene(
@@ -802,64 +811,140 @@ void main() {
           ),
         ],
       );
+      final nodeLocator = <NodeId, ({int layerIndex, int nodeIndex})>{
+        'r1': (layerIndex: 0, nodeIndex: 0),
+      };
 
       final first = slice.writeQueryCandidates(
         scene: scene,
+        nodeLocator: nodeLocator,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
         controllerEpoch: 0,
-        boundsRevision: 0,
       );
       expect(first, isNotEmpty);
       expect(slice.debugBuildCount, 1);
+      expect(slice.debugIncrementalApplyCount, 0);
 
       slice.writeQueryCandidates(
         scene: scene,
+        nodeLocator: nodeLocator,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
         controllerEpoch: 0,
-        boundsRevision: 0,
       );
       expect(slice.debugBuildCount, 1);
 
       final noChange = ChangeSet();
       slice.writeHandleCommit(
+        scene: scene,
+        nodeLocator: nodeLocator,
         changeSet: noChange,
         controllerEpoch: 0,
-        boundsRevision: 0,
       );
       slice.writeQueryCandidates(
         scene: scene,
+        nodeLocator: nodeLocator,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
         controllerEpoch: 0,
-        boundsRevision: 0,
       );
       expect(slice.debugBuildCount, 1);
+      expect(slice.debugIncrementalApplyCount, 0);
 
+      final movedScene = Scene(
+        layers: <Layer>[
+          Layer(
+            nodes: <SceneNode>[
+              RectNode(
+                id: 'r1',
+                size: const Size(10, 10),
+                transform: Transform2D.translation(const Offset(100, 0)),
+              ),
+            ],
+          ),
+        ],
+      );
+      final movedLocator = <NodeId, ({int layerIndex, int nodeIndex})>{
+        'r1': (layerIndex: 0, nodeIndex: 0),
+      };
+      final movedChange = ChangeSet()
+        ..txnMarkBoundsChanged()
+        ..txnTrackUpdated('r1')
+        ..txnTrackHitGeometryChanged('r1');
       slice.writeHandleCommit(
-        changeSet: noChange,
-        controllerEpoch: 1,
-        boundsRevision: 0,
+        scene: movedScene,
+        nodeLocator: movedLocator,
+        changeSet: movedChange,
+        controllerEpoch: 0,
+      );
+      final movedCandidates = slice.writeQueryCandidates(
+        scene: movedScene,
+        nodeLocator: movedLocator,
+        worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
+        controllerEpoch: 0,
+      );
+      expect(movedCandidates, isNotEmpty);
+      expect(slice.debugBuildCount, 1);
+      expect(slice.debugIncrementalApplyCount, 1);
+
+      final malformedAdded = ChangeSet()
+        ..txnMarkStructuralChanged()
+        ..txnTrackAdded('ghost');
+      slice.writeHandleCommit(
+        scene: movedScene,
+        nodeLocator: movedLocator,
+        changeSet: malformedAdded,
+        controllerEpoch: 0,
       );
       slice.writeQueryCandidates(
-        scene: scene,
-        worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
-        controllerEpoch: 1,
-        boundsRevision: 0,
+        scene: movedScene,
+        nodeLocator: movedLocator,
+        worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
+        controllerEpoch: 0,
       );
       expect(slice.debugBuildCount, 2);
+
+      final malformedBoundsOnly = ChangeSet()..txnMarkBoundsChanged();
+      slice.writeHandleCommit(
+        scene: movedScene,
+        nodeLocator: movedLocator,
+        changeSet: malformedBoundsOnly,
+        controllerEpoch: 0,
+      );
+      slice.writeQueryCandidates(
+        scene: movedScene,
+        nodeLocator: movedLocator,
+        worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
+        controllerEpoch: 0,
+      );
+      expect(slice.debugBuildCount, 3);
+
+      slice.writeHandleCommit(
+        scene: movedScene,
+        nodeLocator: movedLocator,
+        changeSet: noChange,
+        controllerEpoch: 1,
+      );
+      slice.writeQueryCandidates(
+        scene: movedScene,
+        nodeLocator: movedLocator,
+        worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
+        controllerEpoch: 1,
+      );
+      expect(slice.debugBuildCount, 4);
 
       final gridOnly = ChangeSet()..txnMarkGridChanged();
       slice.writeHandleCommit(
+        scene: movedScene,
+        nodeLocator: movedLocator,
         changeSet: gridOnly,
         controllerEpoch: 1,
-        boundsRevision: 0,
       );
       slice.writeQueryCandidates(
-        scene: scene,
-        worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
+        scene: movedScene,
+        nodeLocator: movedLocator,
+        worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
         controllerEpoch: 1,
-        boundsRevision: 0,
       );
-      expect(slice.debugBuildCount, 2);
+      expect(slice.debugBuildCount, 4);
     },
   );
 

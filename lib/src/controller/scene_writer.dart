@@ -104,6 +104,7 @@ class SceneWriter implements SceneWriteTxn {
     final newCandidate = nodeHitTestCandidateBoundsWorld(found.node);
     if (oldCandidate != newCandidate) {
       _ctx.changeSet.txnMarkBoundsChanged();
+      _ctx.changeSet.txnTrackHitGeometryChanged(patch.id);
     } else {
       _ctx.changeSet.txnMarkVisualChanged();
     }
@@ -128,6 +129,7 @@ class SceneWriter implements SceneWriteTxn {
     final newCandidate = nodeHitTestCandidateBoundsWorld(found.node);
     if (oldCandidate != newCandidate) {
       _ctx.changeSet.txnMarkBoundsChanged();
+      _ctx.changeSet.txnTrackHitGeometryChanged(id);
     } else {
       _ctx.changeSet.txnMarkVisualChanged();
     }
@@ -214,6 +216,7 @@ class SceneWriter implements SceneWriteTxn {
 
     for (final nodeId in moved) {
       _ctx.changeSet.txnTrackUpdated(nodeId);
+      _ctx.changeSet.txnTrackHitGeometryChanged(nodeId);
     }
     _ctx.changeSet.txnMarkBoundsChanged();
     return moved.length;
@@ -244,6 +247,7 @@ class SceneWriter implements SceneWriteTxn {
       _ctx.changeSet.txnTrackUpdated(nodeId);
       if (beforeCandidate != afterCandidate) {
         _ctx.changeSet.txnMarkBoundsChanged();
+        _ctx.changeSet.txnTrackHitGeometryChanged(nodeId);
       } else {
         _ctx.changeSet.txnMarkVisualChanged();
       }

@@ -485,41 +485,42 @@ workingNodeIds.remove(nodeId);
 
 ---
 
-### [ ] Этап 8. Сделать обновление SpatialIndex инкрементальным (обязательно)
+### [x] Этап 8. Сделать обновление SpatialIndex инкрементальным (обязательно)
 
 **Цель:** локальные изменения не должны приводить к rebuild индекса по всей сцене.
 
 **Действия:**
 
-- [ ] 8.1. Расширить `ChangeSet`:
+- [x] 8.1. Расширить `ChangeSet`:
 
 * добавить `hitGeometryChangedIds: Set<NodeId>` (или более общий `spatialGeometryChangedIds`).
 
-- [ ] 8.2. В `SceneWriter`:
+- [x] 8.2. В `SceneWriter`:
 
 * при патчах/трансформациях/видимости/селектабельности, которые меняют **candidate bounds для попадания**, добавлять id в `hitGeometryChangedIds`.
   (Это напрямую связано с вашим этапом “hitGeometryRevision/hitBoundsWorld”: тут фиксируется “что именно изменилось для spatial”.)
 
-- [ ] 8.3. В `SpatialIndexSlice`:
+- [x] 8.3. Перенести обслуживающие структуры в `SceneSpatialIndex` (core), а `SpatialIndexSlice` оставить оркестратором:
 
-* хранить не только `_index`, но и “обслуживающие” структуры:
+* в `SceneSpatialIndex` хранить:
 
-  * `Map<NodeId, SceneSpatialCandidate>` (или записи, где лежит текущий candidateBounds)
-  * `Map<NodeId, List<_CellKey>>` покрытие ячеек для узла
-  * `Set<NodeId> largeObjects`
+  * `Map<NodeId, _SpatialEntry>` с текущим `candidateBounds`,
+  * `Map<_CellKey, Set<NodeId>>` покрытие ячеек,
+  * `Set<NodeId>` для крупных объектов.
+* в `SpatialIndexSlice` хранить `_index` и счётчики debug build/apply.
 
-- [ ] 8.4. На `update(store, changeSet)`:
+- [x] 8.4. На `update(store, changeSet)`:
 
 * **addedIds**: добавить кандидат (в grid либо в largeObjects)
 * **removedIds**: удалить кандидата из всех его ячеек/largeObjects
 * **hitGeometryChangedIds**: пересчитать покрытие ячеек (и при необходимости перевести узел grid↔largeObjects)
 
-- [ ] 8.5. Полный rebuild оставить только как аварийный путь:
+- [x] 8.5. Полный rebuild оставить только как аварийный путь:
 
 * при смене cellSize/политики индекса,
 * или если changeSet не может быть применён инкрементально (не должно происходить в штатном потоке после этапа 7).
 
-- [ ] **Критерий готовности:** “двигаем один узел 60 раз/сек” не вызывает O(N) rebuild индекса (проверяется счётчиком rebuild и профилировкой).
+- [x] **Критерий готовности:** локальные изменения hit-геометрии обновляют индекс инкрементально без O(N) rebuild (покрыто тестами со счётчиками build/apply и fallback-сценариями).
 
 ---
 
