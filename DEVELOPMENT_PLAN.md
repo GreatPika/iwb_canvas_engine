@@ -8,7 +8,7 @@ language: russian
 
 ## План задач (самодостаточный, без развилок)
 
-### ☐ 1) Ввести единый кэш геометрии для `NodeSnapshot` (вариант A)
+### ☑ 1) Ввести единый кэш геометрии для `NodeSnapshot` (вариант A)
 
 **Что делаем:** добавляем компонент `RenderGeometryCache`, который хранит предвычисленную геометрию узлов по `NodeId`.
 **Почему:** сейчас геометрия (особенно `Path`) пересчитывается многократно за кадр, а существующий кэш в `PathNode` не работает, потому что `PathNode` создаётся временно в painter.
@@ -36,7 +36,7 @@ language: russian
 
 ---
 
-### ☐ 2) Перевести расчёт bounds в painter на `RenderGeometryCache`
+### ☑ 2) Перевести расчёт bounds в painter на `RenderGeometryCache`
 
 **Что делаем:** `_nodeBoundsWorld(...)` перестаёт строить геометрию сам и берёт `worldBounds` из кэша.
 **Почему:** сейчас `_nodeBoundsWorld` для `Path` повторно парсит и строит путь, что даёт двойную работу и несогласованность правил.
@@ -51,6 +51,7 @@ language: russian
 * Убедиться, что `worldBounds` уже учитывает канонические `localBounds` и transform.
   **Критерии приёмки:**
 * `_nodeBoundsWorld` не вызывает `_buildPathNode`, `parseSvgPathData`, `buildLocalPath`, `getBounds()`.
+* Подтверждено тестами: `test/render/scene_painter_bounds_contract_test.dart`, `test/render/scene_painter_test.dart`.
 
 ---
 
