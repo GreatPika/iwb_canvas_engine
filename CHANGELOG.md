@@ -36,6 +36,9 @@
 - Added shared internal scene-value validation (`scene_value_validation.dart`) and wired it into runtime snapshot import and JSON encode/decode validation paths.
 - Selection transaction hot paths now keep a hash-based mutable working set in place (`toggle/clear/erase/delete/replace`) instead of rebuilding `Set` instances on each step.
 - Text node bounds are now derived in-engine from text layout inputs; snapshot/JSON import recomputes text size on load so stale serialized values do not stay authoritative at runtime.
+- Added load-profile benchmark tooling (`dart run tool/bench/run_load_profiles.dart --profile=<smoke|full>`) with structured JSON output and dedicated benchmark cases for large node/stroke scenes and worst-case spatial/path scenarios.
+- CI now runs smoke load profiles and uploads benchmark artifacts; a new nightly workflow runs full load profiles and extended randomized transaction fuzzing.
+- Randomized transaction fuzz tests now support environment-based scaling (`IWB_FUZZ_SEEDS`, `IWB_FUZZ_STEPS`, `IWB_FUZZ_BASE_SEED`) and explicitly assert finite numeric state after each step.
 
 ## 2.0.1 (2026-02-10)
 

@@ -47,6 +47,16 @@ jobs:
       - name: Coverage (100%)
         run: dart run tool/check_coverage.dart
 
+      - name: Load profiles (smoke)
+        run: dart run tool/bench/run_load_profiles.dart --profile=smoke --output=build/bench/load_profiles_smoke.json
+
+      - name: Upload smoke benchmark artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-profiles-smoke
+          path: build/bench/load_profiles_smoke.json
+
       - name: Dartdoc
         run: dart doc
 

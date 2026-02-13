@@ -818,6 +818,34 @@ void main() {
     expect(controller.debugSpatialIndexIncrementalApplyCount, 1);
   });
 
+  test(
+    'single-node transform stays incremental without full materialization',
+    () {
+      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      addTearDown(controller.dispose);
+
+      controller.querySpatialCandidates(const Rect.fromLTWH(0, 0, 0, 0));
+      expect(controller.debugSpatialIndexBuildCount, 1);
+
+      controller.write<void>((writer) {
+        final changed = writer.writeNodeTransformSet(
+          'r1',
+          Transform2D.translation(const Offset(100, 0)),
+        );
+        expect(changed, isTrue);
+      });
+
+      final moved = controller.querySpatialCandidates(
+        const Rect.fromLTWH(100, 0, 0, 0),
+      );
+      expect(moved.map((candidate) => candidate.node.id), contains('r1'));
+      expect(controller.debugSpatialIndexBuildCount, 1);
+      expect(controller.debugSpatialIndexIncrementalApplyCount, 1);
+      expect(controller.debugNodeIdSetMaterializations, 0);
+      expect(controller.debugNodeLocatorMaterializations, 0);
+    },
+  );
+
   test('spatial index updates incrementally on hitPadding change', () {
     final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);

@@ -618,29 +618,33 @@ workingNodeIds.remove(nodeId);
 
 ---
 
-### [ ] Минимальный “Definition of Done” для продакшена (я бы зафиксировал это как блокер-критерии)
+### [x] Минимальный “Definition of Done” для продакшена (я бы зафиксировал это как блокер-критерии)
 
-- [ ] **Нагрузочные профили** (автотест/бенч), которые покрывают:
+- [x] **Нагрузочные профили** (автотест/бенч), которые покрывают:
 
 * 10k / 50k / 100k узлов, локальные патчи, перемещения, выбор,
 * 1k–5k strokes с длинными списками точек,
 * худшие случаи (огромные bounds, огромный rect-select, path со сверхдлиной).
+  Реализация: `tool/bench/run_load_profiles.dart`, `tool/bench/load_profiles_cases_test.dart`, `.github/workflows/perf_nightly.yaml`.
 
-- [ ] **Гарантии отсутствия O(N) на локальных операциях**:
+- [x] **Гарантии отсутствия O(N) на локальных операциях**:
 
 * патч одного узла,
 * transform одного узла,
 * toggle selection,
 * перемещение selection (в вашем UX-цикле).
+  Покрытие: `test/controller/scene_controller_test.dart` (`single-node transform stays incremental without full materialization`), `test/controller/internal_primitives_test.dart` (`selection hot-path keeps in-place set on 1000 toggle/replace/erase ops`).
 
-- [ ] **Функциональные тесты инвариантов**:
+- [x] **Функциональные тесты инвариантов**:
 
 * hitPadding/изменение геометрии попадания всегда обновляет индекс,
 * большие объекты не взрывают индекс,
 * view-изменения не трогают document,
 * локальная модификация не клонирует всё.
+  Покрытие: `test/controller/scene_controller_test.dart` (`spatial index updates incrementally on hitPadding change`, `spatial index handles huge node and updates incrementally`, `camera offset write does not clone layers or nodes`, `single node patch clones exactly one layer and one node`), `test/core/scene_spatial_index_test.dart` (`huge query switches to fallback candidate scan`).
 
-- [ ] **Фуззинг последовательностей патчей** (property-based): случайные патчи + проверки инвариантов + отсутствие исключений/NaN.
+- [x] **Фуззинг последовательностей патчей** (property-based): случайные патчи + проверки инвариантов + отсутствие исключений/NaN.
+  Покрытие: `test/controller/scene_controller_randomized_txn_test.dart` (env-конфиг через `IWB_FUZZ_SEEDS`, `IWB_FUZZ_STEPS`, `IWB_FUZZ_BASE_SEED`; проверки инвариантов и non-finite значений после каждого шага).
 
 Если эти ворота пройдены, тогда утверждение “готово к проду” будет обоснованным.
 
