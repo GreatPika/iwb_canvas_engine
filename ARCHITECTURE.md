@@ -69,6 +69,7 @@ Key invariants:
 - Node-id index state keeps `allNodeIds` and `nodeLocator` equal to committed scene ids/locations, while `nodeIdSeed` is a monotonic generator lower-bounded by committed scene ids.
 - Selection normalization preserves explicit non-selectable ids and drops only missing/background/invisible ids.
 - Runtime snapshot boundary (`initialSnapshot` / `replaceScene`) validates input strictly and fails fast with `ArgumentError` for malformed snapshots.
+- Text node box size is derived from text layout inputs and is not writable via public spec/patch APIs.
 - Runtime background-layer rule: at most one background layer; if present it is canonicalized to index `0`; missing background is allowed (no auto-insert on runtime boundary).
 - JSON decoder background-layer rule: canonicalizes to a single background layer at index `0`.
 - Unique node ids across all layers.

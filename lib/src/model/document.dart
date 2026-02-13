@@ -3,6 +3,7 @@ import 'dart:ui';
 import '../core/grid_safety_limits.dart';
 import '../core/nodes.dart';
 import '../core/scene.dart';
+import '../core/text_layout.dart';
 import '../public/node_patch.dart';
 import '../public/node_spec.dart';
 import '../public/patch_field.dart';
@@ -162,7 +163,7 @@ SceneNode txnNodeFromSnapshot(NodeSnapshot node) {
         isTransformable: image.isTransformable,
       );
     case TextNodeSnapshot text:
-      return TextNode(
+      final node = TextNode(
         id: text.id,
         text: text.text,
         size: text.size,
@@ -184,6 +185,8 @@ SceneNode txnNodeFromSnapshot(NodeSnapshot node) {
         isDeletable: text.isDeletable,
         isTransformable: text.isTransformable,
       );
+      recomputeDerivedTextSize(node);
+      return node;
     case StrokeNodeSnapshot stroke:
       return StrokeNode(
         id: stroke.id,
@@ -390,10 +393,10 @@ SceneNode txnNodeFromSpec(NodeSpec spec, {required NodeId fallbackId}) {
         isTransformable: image.isTransformable,
       );
     case TextNodeSpec text:
-      return TextNode(
+      final node = TextNode(
         id: id,
         text: text.text,
-        size: text.size,
+        size: Size.zero,
         fontSize: text.fontSize,
         color: text.color,
         align: text.align,
@@ -412,6 +415,8 @@ SceneNode txnNodeFromSpec(NodeSpec spec, {required NodeId fallbackId}) {
         isDeletable: text.isDeletable,
         isTransformable: text.isTransformable,
       );
+      recomputeDerivedTextSize(node);
+      return node;
     case StrokeNodeSpec stroke:
       return StrokeNode(
         id: id,
@@ -519,11 +524,6 @@ bool txnApplyNodePatch(SceneNode node, NodePatch patch, {bool dryRun = false}) {
       changed =
           _txnSet(textPatch.text, text.text, (value) {
             text.text = value;
-          }, dryRun: dryRun) ||
-          changed;
-      changed =
-          _txnSet(textPatch.size, text.size, (value) {
-            text.size = value;
           }, dryRun: dryRun) ||
           changed;
       changed =

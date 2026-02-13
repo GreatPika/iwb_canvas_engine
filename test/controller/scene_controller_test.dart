@@ -12,6 +12,7 @@ import 'package:iwb_canvas_engine/src/input/slices/signals/signal_event.dart';
 // INV:INV-V2-SIGNALS-AFTER-COMMIT
 // INV:INV-V2-ID-INDEX-FROM-SCENE
 // INV:INV-V2-TXN-COPY-ON-WRITE
+// INV:INV-V2-TEXT-SIZE-DERIVED
 
 void main() {
   SceneSnapshot twoRectSnapshot() {
@@ -982,6 +983,87 @@ void main() {
     expect(controller.debugSceneShallowClones, 0);
     expect(controller.debugLayerShallowClones, 0);
     expect(controller.debugNodeClones, 0);
+  });
+
+  test(
+    'text layout patch recomputes derived size and bumps bounds revision',
+    () {
+      final controller = SceneControllerV2(
+        initialSnapshot: SceneSnapshot(
+          layers: <LayerSnapshot>[
+            LayerSnapshot(
+              nodes: const <NodeSnapshot>[
+                TextNodeSnapshot(
+                  id: 't1',
+                  text: 'hello',
+                  size: Size(1, 1),
+                  fontSize: 12,
+                  color: Color(0xFF000000),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      final beforeNode =
+          controller.snapshot.layers.first.nodes.single as TextNodeSnapshot;
+      final beforeSize = beforeNode.size;
+      final beforeBoundsRevision = controller.boundsRevision;
+
+      controller.write<void>((writer) {
+        writer.writeNodePatch(
+          const TextNodePatch(id: 't1', fontSize: PatchField<double>.value(36)),
+        );
+      });
+
+      final afterNode =
+          controller.snapshot.layers.first.nodes.single as TextNodeSnapshot;
+      expect(afterNode.size.height, greaterThan(beforeSize.height));
+      expect(controller.boundsRevision, beforeBoundsRevision + 1);
+      expect(controller.debugLastChangeSet.boundsChanged, isTrue);
+      expect(
+        controller.debugLastChangeSet.hitGeometryChangedIds,
+        contains('t1'),
+      );
+    },
+  );
+
+  test('text visual-only patch keeps bounds revision unchanged', () {
+    final controller = SceneControllerV2(
+      initialSnapshot: SceneSnapshot(
+        layers: <LayerSnapshot>[
+          LayerSnapshot(
+            nodes: const <NodeSnapshot>[
+              TextNodeSnapshot(
+                id: 't1',
+                text: 'hello',
+                size: Size(80, 24),
+                fontSize: 24,
+                color: Color(0xFF000000),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+    addTearDown(controller.dispose);
+
+    final beforeBoundsRevision = controller.boundsRevision;
+
+    controller.write<void>((writer) {
+      writer.writeNodePatch(
+        const TextNodePatch(
+          id: 't1',
+          color: PatchField<Color>.value(Color(0xFF00AA00)),
+        ),
+      );
+    });
+
+    expect(controller.boundsRevision, beforeBoundsRevision);
+    expect(controller.debugLastChangeSet.boundsChanged, isFalse);
+    expect(controller.debugLastChangeSet.hitGeometryChangedIds, isEmpty);
   });
 
   test('camera offset write does not clone layers or nodes', () {

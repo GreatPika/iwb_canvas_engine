@@ -8,6 +8,7 @@ import 'package:flutter/rendering.dart';
 import '../core/grid_safety_limits.dart';
 import '../core/nodes.dart' show PathFillRule, PathNode;
 import '../core/numeric_clamp.dart';
+import '../core/text_layout.dart';
 import '../core/transform2d.dart';
 import '../public/scene_render_state.dart';
 import '../public/snapshot.dart';
@@ -105,16 +106,11 @@ class SceneTextLayoutCacheV2 {
   TextPainter getOrBuild({
     required TextNodeSnapshot node,
     required TextStyle textStyle,
-    required double maxWidth,
+    required double? maxWidth,
     TextDirection textDirection = TextDirection.ltr,
   }) {
-    final safeFontSize = clampPositiveFinite(node.fontSize, fallback: 24);
-    final safeLineHeight =
-        (node.lineHeight != null &&
-            node.lineHeight!.isFinite &&
-            node.lineHeight! > 0)
-        ? node.lineHeight
-        : null;
+    final safeFontSize = normalizeTextLayoutFontSize(node.fontSize);
+    final safeLineHeight = normalizeTextLayoutLineHeight(node.lineHeight);
     final key = _TextLayoutKeyV2(
       text: node.text,
       fontSize: safeFontSize,
@@ -124,7 +120,7 @@ class SceneTextLayoutCacheV2 {
       isUnderline: node.isUnderline,
       align: node.align,
       lineHeight: safeLineHeight,
-      maxWidth: clampNonNegativeFinite(maxWidth),
+      maxWidth: normalizeTextLayoutMaxWidth(maxWidth),
       color: textStyle.color ?? const Color(0xFF000000),
       textDirection: textDirection,
     );
@@ -142,7 +138,11 @@ class SceneTextLayoutCacheV2 {
       textDirection: textDirection,
       maxLines: null,
     );
-    textPainter.layout(maxWidth: key.maxWidth);
+    if (key.maxWidth == null) {
+      textPainter.layout();
+    } else {
+      textPainter.layout(maxWidth: key.maxWidth!);
+    }
     _entries[key] = textPainter;
     _debugBuildCount += 1;
     _evictIfNeeded();
@@ -180,7 +180,7 @@ class _TextLayoutKeyV2 {
   final bool isUnderline;
   final TextAlign align;
   final double? lineHeight;
-  final double maxWidth;
+  final double? maxWidth;
   final Color color;
   final TextDirection textDirection;
 
@@ -1045,25 +1045,16 @@ class ScenePainterV2 extends CustomPainter {
       return;
     }
     final safeSize = clampNonNegativeSizeFinite(node.size);
-    final maxWidth = node.maxWidth ?? safeSize.width;
-    final safeFontSize = clampPositiveFinite(node.fontSize, fallback: 24);
-    final safeLineHeight =
-        (node.lineHeight != null &&
-            node.lineHeight!.isFinite &&
-            node.lineHeight! > 0)
-        ? node.lineHeight
-        : null;
-    final style = TextStyle(
+    final style = buildTextStyleForTextLayout(
       color: _applyOpacity(node.color, node.opacity),
-      fontSize: safeFontSize,
+      fontSize: node.fontSize,
       fontFamily: node.fontFamily,
-      fontWeight: node.isBold ? FontWeight.bold : FontWeight.normal,
-      fontStyle: node.isItalic ? FontStyle.italic : FontStyle.normal,
-      decoration: node.isUnderline
-          ? TextDecoration.underline
-          : TextDecoration.none,
-      height: safeLineHeight == null ? null : safeLineHeight / safeFontSize,
+      isBold: node.isBold,
+      isItalic: node.isItalic,
+      isUnderline: node.isUnderline,
+      lineHeight: node.lineHeight,
     );
+    final maxWidth = normalizeTextLayoutMaxWidth(node.maxWidth);
 
     final textPainter = textLayoutCache != null
         ? textLayoutCache!.getOrBuild(
@@ -1093,7 +1084,7 @@ class ScenePainterV2 extends CustomPainter {
   TextPainter _buildTextPainter(
     TextNodeSnapshot node,
     TextStyle style,
-    double maxWidth,
+    double? maxWidth,
   ) {
     final painter = TextPainter(
       text: TextSpan(text: node.text, style: style),
@@ -1101,7 +1092,12 @@ class ScenePainterV2 extends CustomPainter {
       textDirection: textDirection,
       maxLines: null,
     );
-    painter.layout(maxWidth: clampNonNegativeFinite(maxWidth));
+    final safeMaxWidth = normalizeTextLayoutMaxWidth(maxWidth);
+    if (safeMaxWidth == null) {
+      painter.layout();
+    } else {
+      painter.layout(maxWidth: safeMaxWidth);
+    }
     return painter;
   }
 

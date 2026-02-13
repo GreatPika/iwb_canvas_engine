@@ -55,7 +55,6 @@ class TextNodePatch extends NodePatch {
     required super.id,
     super.common,
     this.text = const PatchField<String>.absent(),
-    this.size = const PatchField<Size>.absent(),
     this.fontSize = const PatchField<double>.absent(),
     this.color = const PatchField<Color>.absent(),
     this.align = const PatchField<TextAlign>.absent(),
@@ -68,7 +67,6 @@ class TextNodePatch extends NodePatch {
   });
 
   final PatchField<String> text;
-  final PatchField<Size> size;
   final PatchField<double> fontSize;
   final PatchField<Color> color;
   final PatchField<TextAlign> align;

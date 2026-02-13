@@ -3,7 +3,9 @@ import 'dart:ui';
 
 import '../core/background_layer_invariants.dart';
 import '../core/hit_test.dart';
+import '../core/nodes.dart' show TextNode;
 import '../core/selection_policy.dart';
+import '../core/text_layout.dart';
 import '../core/transform2d.dart';
 import '../input/slices/signals/signal_event.dart';
 import '../model/document.dart';
@@ -96,6 +98,7 @@ class SceneWriter implements SceneWriteTxn {
     final found = _ctx.txnResolveMutableNode(patch.id);
     final oldCandidate = nodeHitTestCandidateBoundsWorld(found.node);
     txnApplyNodePatch(found.node, patch);
+    _txnRecomputeDerivedTextNodeSizeIfNeeded(node: found.node, patch: patch);
 
     _ctx.changeSet.txnTrackUpdated(patch.id);
     final newCandidate = nodeHitTestCandidateBoundsWorld(found.node);
@@ -406,6 +409,30 @@ class SceneWriter implements SceneWriteTxn {
   bool _txnPatchTouchesSelectionPolicy(NodePatch patch) {
     final common = patch.common;
     return !common.isVisible.isAbsent || !common.isSelectable.isAbsent;
+  }
+
+  void _txnRecomputeDerivedTextNodeSizeIfNeeded({
+    required Object node,
+    required NodePatch patch,
+  }) {
+    if (node is! TextNode || patch is! TextNodePatch) {
+      return;
+    }
+    if (!_txnTextPatchTouchesLayout(patch)) {
+      return;
+    }
+    recomputeDerivedTextSize(node);
+  }
+
+  bool _txnTextPatchTouchesLayout(TextNodePatch patch) {
+    return !patch.text.isAbsent ||
+        !patch.fontSize.isAbsent ||
+        !patch.isBold.isAbsent ||
+        !patch.isItalic.isAbsent ||
+        !patch.isUnderline.isAbsent ||
+        !patch.fontFamily.isAbsent ||
+        !patch.lineHeight.isAbsent ||
+        !patch.maxWidth.isAbsent;
   }
 
   void _txnRequireFiniteOffset(Offset value, {required String name}) {

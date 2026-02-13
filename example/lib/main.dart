@@ -39,6 +39,10 @@ class CanvasExampleScreen extends StatefulWidget {
 }
 
 class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
+  static const double _lineHeightMinMultiplier = 0.8;
+  static const double _lineHeightMaxMultiplier = 3.0;
+  static const double _defaultLineHeightMultiplier = 1.2;
+
   late final SceneController _controller;
   late final bool _ownsController;
   StreamSubscription<EditTextRequested>? _editTextSubscription;
@@ -430,18 +434,23 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                 "Line Height: ",
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
-              Slider(
-                value: (node.lineHeight ?? node.fontSize * 1.2).clamp(
-                  node.fontSize * 0.8,
-                  node.fontSize * 3.0,
-                ),
-                min: node.fontSize * 0.8,
-                max: node.fontSize * 3.0,
-                divisions: 20,
-                label: node.lineHeight == null
-                    ? 'Auto'
-                    : node.lineHeight!.toStringAsFixed(1),
-                onChanged: _setSelectedTextLineHeight,
+              Builder(
+                builder: (_) {
+                  final lineHeightMultiplier = _lineHeightMultiplierForNode(
+                    node,
+                  );
+                  return Slider(
+                    value: lineHeightMultiplier.clamp(
+                      _lineHeightMinMultiplier,
+                      _lineHeightMaxMultiplier,
+                    ),
+                    min: _lineHeightMinMultiplier,
+                    max: _lineHeightMaxMultiplier,
+                    divisions: 22,
+                    label: '${lineHeightMultiplier.toStringAsFixed(2)}x',
+                    onChanged: _setSelectedTextLineHeightMultiplier,
+                  );
+                },
               ),
               const VerticalDivider(width: 20),
               _ColorPalette(
@@ -856,27 +865,10 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
       if (save) {
         final newText = _textEditController?.text ?? "";
 
-        // Update node size to fit the text precisely
-        final textStyle = TextStyle(
-          fontSize: node.fontSize,
-          fontWeight: node.isBold ? FontWeight.bold : FontWeight.normal,
-          fontStyle: node.isItalic ? FontStyle.italic : FontStyle.normal,
-          fontFamily: node.fontFamily,
-          height: node.lineHeight == null
-              ? null
-              : node.lineHeight! / node.fontSize,
-        );
-        final tp = TextPainter(
-          text: TextSpan(text: newText, style: textStyle),
-          textDirection: TextDirection.ltr,
-          textAlign: node.align,
-        )..layout();
-
         _controller.patchNode(
           TextNodePatch(
             id: node.id,
             text: PatchField<String>.value(newText),
-            size: PatchField<Size>.value(Size(tp.width, tp.height)),
             common: const CommonNodePatch(
               isVisible: PatchField<bool>.value(true),
             ),
@@ -1074,25 +1066,13 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
       ),
     ];
 
-    // Calculate proper size for text node
     const sampleText = 'New Note';
     const sampleFontSize = 20.0;
-    final textStyle = const TextStyle(
-      fontSize: sampleFontSize,
-      fontWeight: FontWeight.normal,
-      fontStyle: FontStyle.normal,
-    );
-    final textPainter = TextPainter(
-      text: TextSpan(text: sampleText, style: textStyle),
-      textDirection: TextDirection.ltr,
-      textAlign: TextAlign.left,
-    )..layout();
 
     nodes.add(
       TextNodeSpec(
         id: 'sample-${_nodeSeed++}',
         text: sampleText,
-        size: Size(textPainter.width, textPainter.height),
         fontSize: sampleFontSize,
         color: Colors.black87,
         transform: Transform2D.translation(
@@ -1147,12 +1127,24 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   void _setSelectedTextAlign(TextAlign a) => _updateSelectedTextNodes(
     (n) => TextNodePatch(id: n.id, align: PatchField<TextAlign>.value(a)),
   );
-  void _setSelectedTextFontSize(double v) => _updateSelectedTextNodes(
-    (n) => TextNodePatch(id: n.id, fontSize: PatchField<double>.value(v)),
-  );
-  void _setSelectedTextLineHeight(double v) => _updateSelectedTextNodes(
-    (n) => TextNodePatch(id: n.id, lineHeight: PatchField<double?>.value(v)),
-  );
+  void _setSelectedTextFontSize(double v) => _updateSelectedTextNodes((n) {
+    final lineHeightPatch = _lineHeightPatchForFontSizeChange(
+      node: n,
+      nextFontSize: v,
+    );
+    return TextNodePatch(
+      id: n.id,
+      fontSize: PatchField<double>.value(v),
+      lineHeight: lineHeightPatch,
+    );
+  });
+  void _setSelectedTextLineHeightMultiplier(double v) =>
+      _updateSelectedTextNodes(
+        (n) => TextNodePatch(
+          id: n.id,
+          lineHeight: PatchField<double?>.value(v * n.fontSize),
+        ),
+      );
   void _toggleSelectedTextBold() => _updateSelectedTextNodes(
     (n) => TextNodePatch(id: n.id, isBold: PatchField<bool>.value(!n.isBold)),
   );
@@ -1166,6 +1158,28 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
       isUnderline: PatchField<bool>.value(!n.isUnderline),
     ),
   );
+
+  double _lineHeightMultiplierForNode(TextNodeSnapshot node) {
+    final lineHeight = node.lineHeight;
+    if (lineHeight == null) return _defaultLineHeightMultiplier;
+    final ratio = lineHeight / node.fontSize;
+    if (!ratio.isFinite || ratio <= 0) {
+      return _defaultLineHeightMultiplier;
+    }
+    return ratio;
+  }
+
+  PatchField<double?> _lineHeightPatchForFontSizeChange({
+    required TextNodeSnapshot node,
+    required double nextFontSize,
+  }) {
+    final lineHeight = node.lineHeight;
+    if (lineHeight == null) {
+      return const PatchField<double?>.absent();
+    }
+    final ratio = _lineHeightMultiplierForNode(node);
+    return PatchField<double?>.value(ratio * nextFontSize);
+  }
 }
 
 class _ColorPalette extends StatelessWidget {

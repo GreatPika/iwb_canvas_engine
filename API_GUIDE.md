@@ -130,6 +130,7 @@ Node spec variants:
 Validation notes:
 
 - `addNode(...)` validates incoming `NodeSpec` values strictly and throws `ArgumentError` for malformed numeric/geometry input (including non-finite `transform`, negative `hitPadding`, invalid geometry fields, invalid `svgPathData`, and `opacity` outside `[0,1]`).
+- `TextNodeSpec` no longer accepts `size`; text node size is derived from text layout (`text/fontSize/fontFamily/style/lineHeight/maxWidth`) inside the engine.
 
 ### 5.2 Patch nodes (`NodePatch`)
 
@@ -151,6 +152,7 @@ Validation notes:
 - `patchNode(...)` validates only fields present in `NodePatch`/`CommonNodePatch` and throws `ArgumentError` for malformed values.
 - `PatchField.nullValue()` is rejected for non-nullable fields with `ArgumentError`.
 - `CommonNodePatch.opacity` is strict at write boundary (`[0,1]`).
+- `TextNodePatch` no longer accepts `size`; text size is re-derived automatically when layout-affecting fields change (`text`, `fontSize`, `isBold`, `isItalic`, `isUnderline`, `fontFamily`, `lineHeight`, `maxWidth`).
 
 ### 5.3 Tri-state patch semantics (`PatchField<T>`)
 
@@ -569,10 +571,12 @@ Required updates:
    - Remove `scene: ...` from `SceneController(...)`.
    - Use `initialSnapshot: SceneSnapshot(...)` instead.
 3. Replace `addNode(Object ...)` calls with explicit `NodeSpec` variants.
+   - Remove `TextNodeSpec.size` from app code; use optional `maxWidth` when constrained wrapping is needed.
 4. Replace low-level write callbacks:
    - from `write((SceneWriter w) { ... })`
    - to `write((SceneWriteTxn txn) { ... })`
 5. Remove any dependency on legacy mutable getters (`controller.scene`, `controller.core`).
+6. Remove `TextNodePatch.size` writes; patch text/style fields only and let runtime derive box size.
 
 ## 15. Quick recipes
 

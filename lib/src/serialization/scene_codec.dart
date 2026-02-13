@@ -4,6 +4,7 @@ import 'dart:ui';
 import '../core/background_layer_invariants.dart';
 import '../core/nodes.dart';
 import '../core/scene.dart';
+import '../core/text_layout.dart';
 import '../core/transform2d.dart';
 import '../model/document.dart';
 import '../model/scene_value_validation.dart';
@@ -418,6 +419,7 @@ SceneNode _decodeNode(Map<String, dynamic> json) {
         isDeletable: isDeletable,
         isTransformable: isTransformable,
       );
+      recomputeDerivedTextSize(node as TextNode);
       break;
     case NodeType.stroke:
       node = StrokeNode(

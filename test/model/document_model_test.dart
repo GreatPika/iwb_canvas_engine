@@ -6,6 +6,8 @@ import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/model/document.dart';
 
+// INV:INV-V2-TEXT-SIZE-DERIVED
+
 void main() {
   Scene sceneWithAllNodeTypes() {
     return Scene(
@@ -430,7 +432,6 @@ void main() {
     final text = txnNodeFromSpec(
       TextNodeSpec(
         text: 't',
-        size: const Size(3, 4),
         maxWidth: 20,
         lineHeight: 1.5,
         color: const Color(0xFF000000),
@@ -481,6 +482,40 @@ void main() {
     expect(explicit.id, 'explicit');
   });
 
+  test('text node from spec derives size from text layout', () {
+    final node =
+        txnNodeFromSpec(
+              TextNodeSpec(
+                text: 'Derived size',
+                fontSize: 20,
+                color: const Color(0xFF000000),
+              ),
+              fallbackId: 'auto-text',
+            )
+            as TextNode;
+
+    expect(node.size.width, greaterThan(0));
+    expect(node.size.height, greaterThan(0));
+  });
+
+  test('text node from snapshot recomputes stale serialized size', () {
+    final node =
+        txnNodeFromSnapshot(
+              const TextNodeSnapshot(
+                id: 'text-stale',
+                text: 'Derived size',
+                size: Size(1, 1),
+                fontSize: 24,
+                color: Color(0xFF000000),
+              ),
+            )
+            as TextNode;
+
+    expect(node.size, isNot(const Size(1, 1)));
+    expect(node.size.width, greaterThan(1));
+    expect(node.size.height, greaterThan(1));
+  });
+
   test('node-from-spec rejects invalid numeric fields with field path', () {
     final invalidCases = <({NodeSpec spec, String field, String message})>[
       (
@@ -506,7 +541,6 @@ void main() {
       (
         spec: TextNodeSpec(
           text: 't',
-          size: const Size(1, 1),
           fontSize: 0,
           color: const Color(0xFF000000),
         ),
@@ -593,7 +627,6 @@ void main() {
         const TextNodePatch(
           id: 'txt',
           text: PatchField<String>.value('y'),
-          size: PatchField<Size>.value(Size(4, 4)),
           fontSize: PatchField<double>.value(18),
           color: PatchField<Color>.value(Color(0xFF111111)),
           align: PatchField<TextAlign>.value(TextAlign.right),

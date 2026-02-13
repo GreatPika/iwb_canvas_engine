@@ -218,7 +218,6 @@ void main() {
           TextNodeSpec(
             id: 'spec-text',
             text: 'hello',
-            size: const Size(80, 20),
             color: const Color(0xFF222222),
             align: TextAlign.center,
           ),
@@ -452,6 +451,17 @@ void main() {
       );
       addTearDown(controller.dispose);
       controller.setSelection(const <NodeId>{'text'});
+      final textSnapshotBeforeMove =
+          _nodeById(controller.snapshot, 'text') as TextNodeSnapshot;
+      final originalCenter = Offset(
+        textSnapshotBeforeMove.transform.tx,
+        textSnapshotBeforeMove.transform.ty,
+      );
+      final originalOnlyPoint = Offset(
+        originalCenter.dx - textSnapshotBeforeMove.size.width / 2 + 2,
+        originalCenter.dy,
+      );
+      final movedPoint = originalCenter.translate(40, 0);
 
       final requests = <EditTextRequested>[];
       final sub = controller.editTextRequests.listen(requests.add);
@@ -460,7 +470,7 @@ void main() {
       controller.handlePointer(
         _sample(
           pointerId: 1,
-          position: const Offset(100, 100),
+          position: originalCenter,
           timestampMs: 1,
           phase: PointerPhase.down,
         ),
@@ -468,26 +478,26 @@ void main() {
       controller.handlePointer(
         _sample(
           pointerId: 1,
-          position: const Offset(140, 100),
+          position: movedPoint,
           timestampMs: 2,
           phase: PointerPhase.move,
         ),
       );
 
       controller.handlePointerSignal(
-        const PointerSignal(
+        PointerSignal(
           type: PointerSignalType.doubleTap,
           pointerId: 9,
-          position: Offset(140, 100),
+          position: movedPoint,
           timestampMs: 3,
           kind: PointerDeviceKind.touch,
         ),
       );
       controller.handlePointerSignal(
-        const PointerSignal(
+        PointerSignal(
           type: PointerSignalType.doubleTap,
           pointerId: 9,
-          position: Offset(100, 100),
+          position: originalOnlyPoint,
           timestampMs: 4,
           kind: PointerDeviceKind.touch,
         ),
@@ -496,7 +506,7 @@ void main() {
       await pumpEventQueue();
       expect(requests.length, 1);
       expect(requests.single.nodeId, 'text');
-      expect(requests.single.position, const Offset(140, 100));
+      expect(requests.single.position, movedPoint);
     });
 
     test('move cancel keeps document unchanged and clears preview', () {

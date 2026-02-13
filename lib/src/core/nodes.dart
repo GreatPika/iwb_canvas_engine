@@ -282,7 +282,7 @@ class ImageNode extends SceneNode {
   Rect get localBounds => _localRect;
 }
 
-/// Text node with a fixed layout box ([size]) and basic styling.
+/// Text node with derived layout box ([size]) and basic styling.
 class TextNode extends SceneNode {
   TextNode({
     required super.id,

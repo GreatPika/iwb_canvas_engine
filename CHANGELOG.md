@@ -12,6 +12,9 @@
   - `patchNode(...)` rejects malformed present `NodePatch` fields with `ArgumentError`.
   - `writeNodeTransformSet(...)`, `writeSelectionTransform(...)`, and `writeSelectionTranslate(...)` reject non-finite `Transform2D`/`Offset`.
   - `opacity` is now strict at write boundary (`[0,1]`) instead of relying on soft normalization.
+- Text node write API is now size-derived:
+  - `TextNodeSpec` no longer accepts `size`.
+  - `TextNodePatch` no longer accepts `size`.
 - Interactive controller event streams (`actions`, `editTextRequests`) are now asynchronous; listeners are no longer invoked in the emitter call stack.
 
 ### Changed
@@ -32,6 +35,7 @@
 - Move-mode drag now uses preview translation during pointer move and commits scene translation once on pointer up; pointer cancel no longer mutates document state.
 - Added shared internal scene-value validation (`scene_value_validation.dart`) and wired it into runtime snapshot import and JSON encode/decode validation paths.
 - Selection transaction hot paths now keep a hash-based mutable working set in place (`toggle/clear/erase/delete/replace`) instead of rebuilding `Set` instances on each step.
+- Text node bounds are now derived in-engine from text layout inputs; snapshot/JSON import recomputes text size on load so stale serialized values do not stay authoritative at runtime.
 
 ## 2.0.1 (2026-02-10)
 

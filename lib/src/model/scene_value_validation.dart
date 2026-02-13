@@ -550,11 +550,6 @@ void sceneValidateNodeSpecValues(
         );
       }
     case TextNodeSpec text:
-      sceneValidateNonNegativeSize(
-        text.size,
-        field: '$field.size',
-        onError: onError,
-      );
       sceneValidatePositiveDouble(
         text.fontSize,
         field: '$field.fontSize',
@@ -673,16 +668,6 @@ void sceneValidateNodePatchValues(
         text.text,
         field: '$field.text',
         onError: onError,
-      );
-      _sceneValidateNonNullablePatchField(
-        text.size,
-        field: '$field.size',
-        onError: onError,
-        validate: (value) => sceneValidateNonNegativeSize(
-          value,
-          field: '$field.size',
-          onError: onError,
-        ),
       );
       _sceneValidateNonNullablePatchField(
         text.fontSize,

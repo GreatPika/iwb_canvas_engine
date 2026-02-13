@@ -1,10 +1,29 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/core/transform2d.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/public/scene_render_state.dart';
 import 'package:iwb_canvas_engine/src/public/snapshot.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
+
+class _FakeRenderState extends ChangeNotifier implements SceneRenderState {
+  _FakeRenderState({required this.snapshot, Set<NodeId>? selectedNodeIds})
+    : _selectedNodeIds = selectedNodeIds ?? const <NodeId>{};
+
+  @override
+  SceneSnapshot snapshot;
+  Set<NodeId> _selectedNodeIds;
+
+  @override
+  Set<NodeId> get selectedNodeIds => _selectedNodeIds;
+
+  set selectedNodeIds(Set<NodeId> value) {
+    _selectedNodeIds = value;
+    notifyListeners();
+  }
+}
 
 Future<Image> _solidImage(Color color, {int width = 8, int height = 8}) async {
   final recorder = PictureRecorder();
@@ -399,10 +418,11 @@ void main() {
                 TextNodeSnapshot(
                   id: 'text-$align',
                   text: 'StartEnd',
-                  size: const Size(120, 28),
+                  size: const Size(140, 28),
                   fontSize: 20,
                   color: const Color(0xFF000000),
                   align: align,
+                  maxWidth: 60,
                   transform: Transform2D.translation(const Offset(80, 40)),
                 ),
               ],
@@ -411,18 +431,12 @@ void main() {
         );
       }
 
-      final ltrController = SceneControllerV2(
-        initialSnapshot: snapshotFor(TextAlign.start),
-      );
-      final rtlController = SceneControllerV2(
-        initialSnapshot: snapshotFor(TextAlign.start),
-      );
-      addTearDown(ltrController.dispose);
-      addTearDown(rtlController.dispose);
+      final ltrState = _FakeRenderState(snapshot: snapshotFor(TextAlign.start));
+      final rtlState = _FakeRenderState(snapshot: snapshotFor(TextAlign.start));
 
       final ltrImage = await _paintToImage(
         ScenePainterV2(
-          controller: ltrController,
+          controller: ltrState,
           imageResolver: (_) => null,
           textDirection: TextDirection.ltr,
         ),
@@ -431,7 +445,7 @@ void main() {
       );
       final rtlImage = await _paintToImage(
         ScenePainterV2(
-          controller: rtlController,
+          controller: rtlState,
           imageResolver: (_) => null,
           textDirection: TextDirection.rtl,
         ),
@@ -442,18 +456,16 @@ void main() {
       final rtlCenterX = await _inkCentroidX(rtlImage, background);
       expect(rtlCenterX, greaterThan(ltrCenterX));
 
-      final ltrEndController = SceneControllerV2(
-        initialSnapshot: snapshotFor(TextAlign.end),
+      final ltrEndState = _FakeRenderState(
+        snapshot: snapshotFor(TextAlign.end),
       );
-      final rtlEndController = SceneControllerV2(
-        initialSnapshot: snapshotFor(TextAlign.end),
+      final rtlEndState = _FakeRenderState(
+        snapshot: snapshotFor(TextAlign.end),
       );
-      addTearDown(ltrEndController.dispose);
-      addTearDown(rtlEndController.dispose);
 
       final ltrEndImage = await _paintToImage(
         ScenePainterV2(
-          controller: ltrEndController,
+          controller: ltrEndState,
           imageResolver: (_) => null,
           textDirection: TextDirection.ltr,
         ),
@@ -462,7 +474,7 @@ void main() {
       );
       final rtlEndImage = await _paintToImage(
         ScenePainterV2(
-          controller: rtlEndController,
+          controller: rtlEndState,
           imageResolver: (_) => null,
           textDirection: TextDirection.rtl,
         ),
