@@ -6,6 +6,11 @@ import 'package:iwb_canvas_engine/src/public/snapshot.dart';
 import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 
 void main() {
+  test('RenderGeometryCache rejects non-positive maxEntries', () {
+    expect(() => RenderGeometryCache(maxEntries: 0), throwsArgumentError);
+    expect(() => RenderGeometryCache(maxEntries: -1), throwsArgumentError);
+  });
+
   test('RenderGeometryCache reuses entry for unchanged node geometry', () {
     final cache = RenderGeometryCache();
     const node = RectNodeSnapshot(
@@ -219,5 +224,58 @@ void main() {
 
     cache.get(node);
     expect(cache.debugBuildCount, 2);
+  });
+
+  test('RenderGeometryCache evicts least recently used entry', () {
+    final cache = RenderGeometryCache(maxEntries: 2);
+    const nodeA = RectNodeSnapshot(id: 'rect-a', size: Size(8, 8));
+    const nodeB = RectNodeSnapshot(id: 'rect-b', size: Size(8, 8));
+    const nodeC = RectNodeSnapshot(id: 'rect-c', size: Size(8, 8));
+
+    cache.get(nodeA);
+    cache.get(nodeB);
+    cache.get(nodeC);
+
+    expect(cache.debugSize, 2);
+    expect(cache.debugEvictCount, 1);
+
+    cache.get(nodeA);
+    expect(cache.debugBuildCount, 4);
+  });
+
+  test(
+    'RenderGeometryCache cache hit refreshes recency and keeps entry in cache',
+    () {
+      final cache = RenderGeometryCache(maxEntries: 2);
+      const nodeA = RectNodeSnapshot(id: 'rect-a', size: Size(8, 8));
+      const nodeB = RectNodeSnapshot(id: 'rect-b', size: Size(8, 8));
+      const nodeC = RectNodeSnapshot(id: 'rect-c', size: Size(8, 8));
+
+      cache.get(nodeA);
+      cache.get(nodeB);
+      cache.get(nodeA); // refresh A recency
+      cache.get(nodeC); // should evict B
+      cache.get(nodeA); // A must still be cached
+
+      expect(cache.debugSize, 2);
+      expect(cache.debugBuildCount, 3);
+      expect(cache.debugHitCount, 2);
+      expect(cache.debugEvictCount, 1);
+
+      cache.get(nodeB);
+      expect(cache.debugBuildCount, 4);
+      expect(cache.debugEvictCount, 2);
+    },
+  );
+
+  test('RenderGeometryCache stays bounded under heavy node-id churn', () {
+    final cache = RenderGeometryCache(maxEntries: 64);
+    for (var i = 0; i < 5000; i++) {
+      cache.get(RectNodeSnapshot(id: 'node-$i', size: const Size(10, 10)));
+    }
+
+    expect(cache.debugSize, 64);
+    expect(cache.debugBuildCount, 5000);
+    expect(cache.debugEvictCount, 4936);
   });
 }

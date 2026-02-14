@@ -642,7 +642,7 @@ void main() {
     });
 
     test(
-      'effectiveNodeBoundsWorld applies move preview delta for selected node',
+      'movePreviewDeltaForNode shifts effective bounds for selected node',
       () {
         final rect = RectNode(id: 'node', size: const Size(30, 20))
           ..position = const Offset(60, 60);
@@ -659,8 +659,11 @@ void main() {
 
         final nodeSnapshotBefore = _nodeById(controller.snapshot, 'node');
         final nodeBefore = txnNodeFromSnapshot(nodeSnapshotBefore);
+        final deltaBefore = controller.movePreviewDeltaForNode(
+          nodeSnapshotBefore.id,
+        );
         expect(
-          controller.effectiveNodeBoundsWorld(nodeBefore),
+          nodeBefore.boundsWorld.shift(deltaBefore),
           nodeBefore.boundsWorld,
         );
 
@@ -688,8 +691,12 @@ void main() {
         final nodeDuringPreview = txnNodeFromSnapshot(
           nodeSnapshotDuringPreview,
         );
+        final deltaDuringPreview = controller.movePreviewDeltaForNode(
+          nodeSnapshotDuringPreview.id,
+        );
+        expect(deltaDuringPreview, const Offset(30, -10));
         expect(
-          controller.effectiveNodeBoundsWorld(nodeDuringPreview),
+          nodeDuringPreview.boundsWorld.shift(deltaDuringPreview),
           nodeDuringPreview.boundsWorld.shift(const Offset(30, -10)),
         );
       },

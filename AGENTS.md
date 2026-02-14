@@ -58,11 +58,15 @@ A Flutter/Dart canvas engine package with scene model, rendering, input handling
 
 - `dart run tool/check_invariant_coverage.dart`
 
-6) Import boundary rules
+6) Guardrails
+
+- `dart run tool/check_guardrails.dart`
+
+7) Import boundary rules
 
 - `dart run tool/check_import_boundaries.dart`
 
-7) Documentation + publish sanity (recommended before release)
+8) Documentation + publish sanity (recommended before release)
 
 - `dart doc`
 - `dart pub publish --dry-run`

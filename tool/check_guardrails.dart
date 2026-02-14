@@ -517,6 +517,13 @@ void _checkControllerGuardrails({
 
       for (final match in symbolPattern.allMatches(line)) {
         final symbol = match.group(1)!;
+        final symbolStart = match.start;
+        if (symbolStart > 0) {
+          final prev = line[symbolStart - 1];
+          if (prev == '.') {
+            continue;
+          }
+        }
         if (ignoredSymbols.contains(symbol)) continue;
         if (allowedMutationPrefixes.any(symbol.startsWith)) continue;
         if (_looksMutatingSymbol(symbol)) {

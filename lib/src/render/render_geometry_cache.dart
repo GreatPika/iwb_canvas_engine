@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -21,17 +22,35 @@ class GeometryEntry {
   final Path? localPath;
 }
 
+int _requirePositiveGeometryCacheEntries(int maxEntries) {
+  if (maxEntries <= 0) {
+    throw ArgumentError.value(maxEntries, 'maxEntries', 'Must be > 0.');
+  }
+  return maxEntries;
+}
+
+/// Per-node geometry cache owned by `ScenePainterV2`.
+///
+/// Memory is bounded via LRU eviction (`maxEntries`), while `invalidateAll()`
+/// remains available for explicit full cache reset.
 class RenderGeometryCache {
-  final Map<_NodeInstanceKey, _GeometryCacheRecord> _entries =
-      <_NodeInstanceKey, _GeometryCacheRecord>{};
+  RenderGeometryCache({int maxEntries = 512})
+    : maxEntries = _requirePositiveGeometryCacheEntries(maxEntries);
+
+  final int maxEntries;
+  final LinkedHashMap<_NodeInstanceKey, _GeometryCacheRecord> _entries =
+      LinkedHashMap<_NodeInstanceKey, _GeometryCacheRecord>();
 
   int _debugBuildCount = 0;
   int _debugHitCount = 0;
+  int _debugEvictCount = 0;
 
   @visibleForTesting
   int get debugBuildCount => _debugBuildCount;
   @visibleForTesting
   int get debugHitCount => _debugHitCount;
+  @visibleForTesting
+  int get debugEvictCount => _debugEvictCount;
   @visibleForTesting
   int get debugSize => _entries.length;
 
@@ -41,8 +60,9 @@ class RenderGeometryCache {
       nodeId: node.id,
       instanceRevision: node.instanceRevision,
     );
-    final cached = _entries[entryKey];
+    final cached = _entries.remove(entryKey);
     if (cached != null && cached.key == key) {
+      _entries[entryKey] = cached;
       _debugHitCount += 1;
       return cached.entry;
     }
@@ -50,10 +70,18 @@ class RenderGeometryCache {
     final entry = _buildEntry(node);
     _entries[entryKey] = _GeometryCacheRecord(key: key, entry: entry);
     _debugBuildCount += 1;
+    _evictIfNeeded();
     return entry;
   }
 
   void invalidateAll() => _entries.clear();
+
+  void _evictIfNeeded() {
+    while (_entries.length > maxEntries) {
+      _entries.remove(_entries.keys.first);
+      _debugEvictCount += 1;
+    }
+  }
 
   GeometryEntry _buildEntry(NodeSnapshot node) {
     return switch (node) {
