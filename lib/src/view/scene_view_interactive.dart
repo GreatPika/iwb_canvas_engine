@@ -7,7 +7,6 @@ import '../core/geometry.dart';
 import '../core/pointer_input.dart';
 import '../interactive/scene_controller_interactive.dart';
 import '../public/canvas_pointer_input.dart';
-import '../render/render_geometry_cache.dart';
 import '../render/scene_painter.dart';
 import '../render/scene_render_caches.dart';
 
@@ -17,7 +16,6 @@ class SceneViewInteractiveV2 extends StatefulWidget {
   const SceneViewInteractiveV2({
     required this.controller,
     this.imageResolver,
-    this.geometryCache,
     this.selectionColor = const Color(0xFF1565C0),
     this.selectionStrokeWidth = 1,
     this.gridStrokeWidth = 1,
@@ -26,7 +24,6 @@ class SceneViewInteractiveV2 extends StatefulWidget {
 
   final SceneControllerInteractiveV2 controller;
   final ui.Image? Function(String imageId)? imageResolver;
-  final RenderGeometryCache? geometryCache;
   final Color selectionColor;
   final double selectionStrokeWidth;
   final double gridStrokeWidth;
@@ -75,11 +72,6 @@ class _SceneViewInteractiveV2State extends State<SceneViewInteractiveV2> {
       _nextPointerSlotId = 1;
       _lastEpoch = widget.controller.controllerEpoch;
       _clearAllCaches();
-    }
-    if (oldWidget.geometryCache != widget.geometryCache) {
-      final previous = _renderCaches;
-      _renderCaches = _createRenderCaches();
-      previous.disposeOwned();
     }
   }
 
@@ -274,7 +266,7 @@ class _SceneViewInteractiveV2State extends State<SceneViewInteractiveV2> {
   }
 
   SceneRenderCachesV2 _createRenderCaches() {
-    return SceneRenderCachesV2(geometryCache: widget.geometryCache);
+    return SceneRenderCachesV2();
   }
 
   CanvasPointerPhase _toCanvasPointerPhase(PointerPhase phase) {

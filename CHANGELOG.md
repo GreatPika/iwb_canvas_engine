@@ -12,6 +12,7 @@
   - removed public `handlePointer(PointerSample ...)` / `handlePointerSignal(PointerSignal ...)`,
   - added `handlePointer(CanvasPointerInput)` / `handleDoubleTap(...)`,
   - internal `PointerSample`/`PointerSignal` are no longer required for public usage.
+- `SceneViewInteractiveV2` no longer exposes `geometryCache` in its public constructor; geometry cache ownership is fully internal to keep non-exported render-cache types out of public signatures.
 
 ### Changed
 
@@ -21,7 +22,7 @@
 - Added public `SceneBuilder` as a unified immutable import gateway for both JSON maps and `SceneSnapshot`.
 - `SceneStrokePathCacheV2`, `SceneTextLayoutCacheV2`, and `ScenePathMetricsCacheV2` now throw `ArgumentError` for `maxEntries <= 0` in all build modes (not only debug).
 - `ScenePainterV2` now reuses per-node geometry via injected `RenderGeometryCache` (`NodeId` + validity key), removing duplicate path parsing/bounds calculations across culling, selection, and path drawing.
-- `SceneViewV2` and `SceneViewInteractiveV2` now own render-cache lifecycle consistently (including `RenderGeometryCache`), clear all render caches on controller epoch changes, and expose optional `geometryCache` injection for external ownership/customization.
+- `SceneViewV2` and `SceneViewInteractiveV2` now own render-cache lifecycle consistently (including `RenderGeometryCache`) and clear all render caches on controller epoch changes; only internal `SceneViewV2` keeps optional `geometryCache` injection for explicit ownership/customization.
 - Added immutable `instanceRevision` node identity across runtime/snapshot/JSON boundaries; render caches now isolate entries by `(nodeId, instanceRevision)` to prevent stale cache hits after id reuse.
 - Local bounds policy for `Rect`/`Path` is now unified between core nodes and render cache: stroke inflation applies only for enabled stroke and cache validity keys use effective stroke width, preventing edge culling regressions when stroke is disabled.
 - Bounds-based selection frame for `Image`/`Text`/`Rect` now uses the same render `worldBounds` source as culling, and hit candidate bounds parity is covered by dedicated regression tests.

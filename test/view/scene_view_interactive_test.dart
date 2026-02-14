@@ -8,7 +8,6 @@ import 'package:iwb_canvas_engine/src/core/pointer_input.dart'
 import 'package:iwb_canvas_engine/src/interactive/scene_controller_interactive.dart';
 import 'package:iwb_canvas_engine/src/public/canvas_pointer_input.dart';
 import 'package:iwb_canvas_engine/src/public/snapshot.dart';
-import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 import 'package:iwb_canvas_engine/src/view/scene_view_interactive.dart';
 
 SceneSnapshot _snapshot({required String text, bool includeImage = false}) {
@@ -38,7 +37,6 @@ SceneSnapshot _snapshot({required String text, bool includeImage = false}) {
 Widget _host(
   SceneControllerInteractiveV2 controller, {
   Image? Function(String imageId)? imageResolver,
-  RenderGeometryCache? geometryCache,
 }) {
   return Directionality(
     textDirection: TextDirection.ltr,
@@ -48,7 +46,6 @@ Widget _host(
       child: SceneViewInteractiveV2(
         controller: controller,
         imageResolver: imageResolver,
-        geometryCache: geometryCache,
       ),
     ),
   );
@@ -84,96 +81,21 @@ void main() {
     expect(find.byType(SceneViewInteractiveV2), findsOneWidget);
   });
 
-  testWidgets('SceneViewInteractiveV2 clears geometry cache on epoch change', (
-    tester,
-  ) async {
+  testWidgets('SceneViewInteractiveV2 handles replaceScene', (tester) async {
     final controller = SceneControllerInteractiveV2(
       initialSnapshot: _snapshot(text: 'epoch'),
     );
     addTearDown(controller.dispose);
-    final geometryCache = RenderGeometryCache(maxEntries: 8);
 
-    await tester.pumpWidget(_host(controller, geometryCache: geometryCache));
+    await tester.pumpWidget(_host(controller));
     await tester.pump();
-    expect(geometryCache.debugBuildCount, 1);
-    expect(geometryCache.debugHitCount, 0);
 
-    controller.replaceScene(_snapshot(text: 'epoch'));
+    controller.replaceScene(_snapshot(text: 'epoch-2'));
     await tester.pump();
     await tester.pump();
 
-    expect(geometryCache.debugBuildCount, 2);
-    expect(geometryCache.debugHitCount, 0);
+    expect(find.byType(SceneViewInteractiveV2), findsOneWidget);
   });
-
-  testWidgets(
-    'SceneViewInteractiveV2 clears geometry cache when controller is replaced',
-    (tester) async {
-      final controllerA = SceneControllerInteractiveV2(
-        initialSnapshot: _snapshot(text: 'swap'),
-      );
-      final controllerB = SceneControllerInteractiveV2(
-        initialSnapshot: _snapshot(text: 'swap'),
-      );
-      addTearDown(controllerA.dispose);
-      addTearDown(controllerB.dispose);
-      final geometryCache = RenderGeometryCache(maxEntries: 8);
-
-      await tester.pumpWidget(_host(controllerA, geometryCache: geometryCache));
-      await tester.pump();
-      expect(geometryCache.debugBuildCount, 1);
-      expect(geometryCache.debugHitCount, 0);
-
-      await tester.pumpWidget(_host(controllerB, geometryCache: geometryCache));
-      await tester.pump();
-
-      expect(geometryCache.debugBuildCount, 2);
-      expect(geometryCache.debugHitCount, 0);
-    },
-  );
-
-  testWidgets(
-    'SceneViewInteractiveV2 does not dispose externally provided geometry cache',
-    (tester) async {
-      final controller = SceneControllerInteractiveV2(
-        initialSnapshot: _snapshot(text: 'external-geometry'),
-      );
-      addTearDown(controller.dispose);
-      final geometryCache = RenderGeometryCache(maxEntries: 8);
-
-      await tester.pumpWidget(_host(controller, geometryCache: geometryCache));
-      await tester.pump();
-      expect(geometryCache.debugSize, greaterThan(0));
-
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
-      expect(geometryCache.debugSize, greaterThan(0));
-    },
-  );
-
-  testWidgets(
-    'SceneViewInteractiveV2 swaps geometry cache dependency without clearing previous external cache',
-    (tester) async {
-      final controller = SceneControllerInteractiveV2(
-        initialSnapshot: _snapshot(text: 'geometry-swap'),
-      );
-      addTearDown(controller.dispose);
-      final cacheA = RenderGeometryCache(maxEntries: 8);
-      final cacheB = RenderGeometryCache(maxEntries: 8);
-
-      await tester.pumpWidget(_host(controller, geometryCache: cacheA));
-      await tester.pump();
-      expect(cacheA.debugBuildCount, 1);
-      expect(cacheA.debugSize, greaterThan(0));
-
-      await tester.pumpWidget(_host(controller, geometryCache: cacheB));
-      await tester.pump();
-
-      expect(cacheB.debugBuildCount, 1);
-      expect(cacheB.debugSize, greaterThan(0));
-      expect(cacheA.debugSize, greaterThan(0));
-    },
-  );
 
   testWidgets('SceneViewInteractiveV2 flushes pending tap timer callback', (
     tester,

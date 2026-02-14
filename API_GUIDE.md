@@ -422,7 +422,6 @@ Delivery contract:
 SceneView(
   controller: controller,
   imageResolver: (imageId) => null,
-  geometryCache: null,
   selectionColor: const Color(0xFF1565C0),
   selectionStrokeWidth: 1,
   gridStrokeWidth: 1,
@@ -436,7 +435,6 @@ SceneView(
 - Paints scene via `ScenePainterV2`
 - Paints interactive overlays (in-progress stroke/line previews)
 - Owns render caches by default and clears them on controller epoch/document boundaries.
-- Accepts optional `geometryCache` for external geometry-cache ownership/customization.
 
 ### 9.3 Image resolver
 
