@@ -7,7 +7,9 @@ import '../core/geometry.dart';
 import '../core/pointer_input.dart';
 import '../interactive/scene_controller_interactive.dart';
 import '../public/canvas_pointer_input.dart';
+import '../render/render_geometry_cache.dart';
 import '../render/scene_painter.dart';
+import '../render/scene_render_caches.dart';
 
 ui.Image? _defaultImageResolver(String _) => null;
 
@@ -15,6 +17,7 @@ class SceneViewInteractiveV2 extends StatefulWidget {
   const SceneViewInteractiveV2({
     required this.controller,
     this.imageResolver,
+    this.geometryCache,
     this.selectionColor = const Color(0xFF1565C0),
     this.selectionStrokeWidth = 1,
     this.gridStrokeWidth = 1,
@@ -23,6 +26,7 @@ class SceneViewInteractiveV2 extends StatefulWidget {
 
   final SceneControllerInteractiveV2 controller;
   final ui.Image? Function(String imageId)? imageResolver;
+  final RenderGeometryCache? geometryCache;
   final Color selectionColor;
   final double selectionStrokeWidth;
   final double gridStrokeWidth;
@@ -40,17 +44,16 @@ class _SceneViewInteractiveV2State extends State<SceneViewInteractiveV2> {
   final Map<int, int> _pointerSlotByRawPointer = <int, int>{};
   final List<int> _freePointerSlots = <int>[];
   int _nextPointerSlotId = 1;
+  int _lastEpoch = 0;
 
-  late final SceneStaticLayerCacheV2 _staticLayerCache =
-      SceneStaticLayerCacheV2();
-  late final SceneTextLayoutCacheV2 _textLayoutCache = SceneTextLayoutCacheV2();
-  late final SceneStrokePathCacheV2 _strokePathCache = SceneStrokePathCacheV2();
-  late final ScenePathMetricsCacheV2 _pathMetricsCache =
-      ScenePathMetricsCacheV2();
+  late SceneRenderCachesV2 _renderCaches;
 
   @override
   void initState() {
     super.initState();
+    _renderCaches = _createRenderCaches();
+    _lastEpoch = widget.controller.controllerEpoch;
+    widget.controller.addListener(_handleControllerChanged);
     _pointerTracker = PointerInputTracker(
       settings: widget.controller.pointerSettings,
     );
@@ -60,6 +63,8 @@ class _SceneViewInteractiveV2State extends State<SceneViewInteractiveV2> {
   void didUpdateWidget(SceneViewInteractiveV2 oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_handleControllerChanged);
+      widget.controller.addListener(_handleControllerChanged);
       _pointerTracker = PointerInputTracker(
         settings: widget.controller.pointerSettings,
       );
@@ -68,17 +73,21 @@ class _SceneViewInteractiveV2State extends State<SceneViewInteractiveV2> {
       _pointerSlotByRawPointer.clear();
       _freePointerSlots.clear();
       _nextPointerSlotId = 1;
+      _lastEpoch = widget.controller.controllerEpoch;
       _clearAllCaches();
+    }
+    if (oldWidget.geometryCache != widget.geometryCache) {
+      final previous = _renderCaches;
+      _renderCaches = _createRenderCaches();
+      previous.disposeOwned();
     }
   }
 
   @override
   void dispose() {
+    widget.controller.removeListener(_handleControllerChanged);
     _clearPendingTapTimer();
-    _staticLayerCache.dispose();
-    _textLayoutCache.clear();
-    _strokePathCache.clear();
-    _pathMetricsCache.clear();
+    _renderCaches.disposeOwned();
     super.dispose();
   }
 
@@ -97,10 +106,11 @@ class _SceneViewInteractiveV2State extends State<SceneViewInteractiveV2> {
           controller: widget.controller,
           imageResolver: widget.imageResolver ?? _defaultImageResolver,
           nodePreviewOffsetResolver: widget.controller.movePreviewDeltaForNode,
-          staticLayerCache: _staticLayerCache,
-          textLayoutCache: _textLayoutCache,
-          strokePathCache: _strokePathCache,
-          pathMetricsCache: _pathMetricsCache,
+          staticLayerCache: _renderCaches.staticLayerCache,
+          textLayoutCache: _renderCaches.textLayoutCache,
+          strokePathCache: _renderCaches.strokePathCache,
+          pathMetricsCache: _renderCaches.pathMetricsCache,
+          geometryCache: _renderCaches.geometryCache,
           selectionRect: widget.controller.selectionRect,
           selectionColor: widget.selectionColor,
           selectionStrokeWidth: widget.selectionStrokeWidth,
@@ -251,10 +261,20 @@ class _SceneViewInteractiveV2State extends State<SceneViewInteractiveV2> {
   }
 
   void _clearAllCaches() {
-    _staticLayerCache.clear();
-    _textLayoutCache.clear();
-    _strokePathCache.clear();
-    _pathMetricsCache.clear();
+    _renderCaches.clearAll();
+  }
+
+  void _handleControllerChanged() {
+    final epoch = widget.controller.controllerEpoch;
+    if (epoch == _lastEpoch) {
+      return;
+    }
+    _lastEpoch = epoch;
+    _clearAllCaches();
+  }
+
+  SceneRenderCachesV2 _createRenderCaches() {
+    return SceneRenderCachesV2(geometryCache: widget.geometryCache);
   }
 
   CanvasPointerPhase _toCanvasPointerPhase(PointerPhase phase) {

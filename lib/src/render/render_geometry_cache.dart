@@ -29,7 +29,7 @@ int _requirePositiveGeometryCacheEntries(int maxEntries) {
   return maxEntries;
 }
 
-/// Per-node geometry cache owned by `ScenePainterV2`.
+/// Per-node geometry cache injected into `ScenePainterV2`.
 ///
 /// Memory is bounded via LRU eviction (`maxEntries`), while `invalidateAll()`
 /// remains available for explicit full cache reset.

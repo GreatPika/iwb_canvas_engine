@@ -88,8 +88,8 @@ Key invariants:
 - Mutating transactions use copy-on-write: first mutation creates a shallow scene clone, then only touched layers/nodes are cloned on demand; no-op patches do not trigger layer/node cloning.
 - Hot-path node lookup (`NodeId -> layer/node index`) uses committed `nodeLocator` instead of linear scene scans.
 - Viewport culling for offscreen nodes.
-- Bounded caches for text layout, stroke paths, and selected path metrics.
-- `ScenePainterV2` keeps an internal per-node `RenderGeometryCache` with bounded LRU memory (`maxEntries = 512`) that reuses path parsing and local/world bounds calculations across culling, selection, and drawing.
+- `SceneViewV2` / `SceneViewInteractiveV2` own render-cache lifecycle (`static/text/stroke/pathMetrics/geometry`), clear caches on controller epoch/document boundaries, and pass cache dependencies to `ScenePainterV2`.
+- Bounded caches for text layout, stroke paths, selected path metrics, and render geometry (`RenderGeometryCache.maxEntries = 512`).
 - Render-geometry cache validity for stroke nodes is based on stable scalar/revision inputs (`node.id`, `instanceRevision`, `transform`, `pointsRevision`, `thickness`) and does not depend on point-list object identity.
 - Stroke-path cache freshness is validated in O(1) by
   `(node.id, node.instanceRevision, pointsRevision)` instead of

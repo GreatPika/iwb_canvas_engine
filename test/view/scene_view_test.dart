@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
 import 'package:iwb_canvas_engine/src/public/snapshot.dart';
+import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 import 'package:iwb_canvas_engine/src/view/scene_view.dart';
 
@@ -45,6 +46,7 @@ void main() {
     final textCache = SceneTextLayoutCacheV2(maxEntries: 8);
     final strokeCache = SceneStrokePathCacheV2(maxEntries: 8);
     final staticCache = SceneStaticLayerCacheV2();
+    final geometryCache = RenderGeometryCache(maxEntries: 8);
 
     await tester.pumpWidget(
       Directionality(
@@ -58,6 +60,7 @@ void main() {
             textLayoutCache: textCache,
             strokePathCache: strokeCache,
             staticLayerCache: staticCache,
+            geometryCache: geometryCache,
           ),
         ),
       ),
@@ -67,8 +70,10 @@ void main() {
     expect(textCache.debugBuildCount, 1);
     expect(strokeCache.debugBuildCount, 1);
     expect(staticCache.debugBuildCount, 1);
+    expect(geometryCache.debugBuildCount, 2);
+    expect(geometryCache.debugHitCount, 0);
 
-    controller.writeReplaceScene(_snapshot(strokeY: 60, text: 'B'));
+    controller.writeReplaceScene(_snapshot(strokeY: 20, text: 'A'));
     await tester.pump();
     await tester.pump();
 
@@ -77,6 +82,8 @@ void main() {
     expect(strokeCache.debugBuildCount, 2);
     expect(strokeCache.debugHitCount, 0);
     expect(staticCache.debugBuildCount, 2);
+    expect(geometryCache.debugBuildCount, 4);
+    expect(geometryCache.debugHitCount, 0);
   });
 
   testWidgets('SceneViewV2 clears caches when controller is replaced', (
@@ -86,7 +93,7 @@ void main() {
       initialSnapshot: _snapshot(strokeY: 16, text: 'A'),
     );
     final controllerB = SceneControllerV2(
-      initialSnapshot: _snapshot(strokeY: 72, text: 'B'),
+      initialSnapshot: _snapshot(strokeY: 16, text: 'A'),
     );
     addTearDown(controllerA.dispose);
     addTearDown(controllerB.dispose);
@@ -94,6 +101,7 @@ void main() {
     final textCache = SceneTextLayoutCacheV2(maxEntries: 8);
     final strokeCache = SceneStrokePathCacheV2(maxEntries: 8);
     final staticCache = SceneStaticLayerCacheV2();
+    final geometryCache = RenderGeometryCache(maxEntries: 8);
 
     await tester.pumpWidget(
       Directionality(
@@ -107,6 +115,7 @@ void main() {
             textLayoutCache: textCache,
             strokePathCache: strokeCache,
             staticLayerCache: staticCache,
+            geometryCache: geometryCache,
           ),
         ),
       ),
@@ -115,6 +124,8 @@ void main() {
     expect(textCache.debugBuildCount, 1);
     expect(strokeCache.debugBuildCount, 1);
     expect(staticCache.debugBuildCount, 1);
+    expect(geometryCache.debugBuildCount, 2);
+    expect(geometryCache.debugHitCount, 0);
 
     await tester.pumpWidget(
       Directionality(
@@ -128,6 +139,7 @@ void main() {
             textLayoutCache: textCache,
             strokePathCache: strokeCache,
             staticLayerCache: staticCache,
+            geometryCache: geometryCache,
           ),
         ),
       ),
@@ -139,6 +151,8 @@ void main() {
     expect(strokeCache.debugBuildCount, 2);
     expect(strokeCache.debugHitCount, 0);
     expect(staticCache.debugBuildCount, 2);
+    expect(geometryCache.debugBuildCount, 4);
+    expect(geometryCache.debugHitCount, 0);
   });
 
   testWidgets(
@@ -166,6 +180,7 @@ void main() {
       expect(state.debugTextLayoutCache, isA<SceneTextLayoutCacheV2>());
       expect(state.debugStrokePathCache, isA<SceneStrokePathCacheV2>());
       expect(state.debugPathMetricsCache, isA<ScenePathMetricsCacheV2>());
+      expect(state.debugGeometryCache, isA<RenderGeometryCache>());
 
       final customPaint = tester.widget<CustomPaint>(find.byType(CustomPaint));
       final painter = customPaint.painter! as ScenePainterV2;
@@ -175,6 +190,7 @@ void main() {
       final extTextA = SceneTextLayoutCacheV2(maxEntries: 4);
       final extStrokeA = SceneStrokePathCacheV2(maxEntries: 4);
       final extPathA = ScenePathMetricsCacheV2(maxEntries: 4);
+      final extGeometryA = RenderGeometryCache(maxEntries: 4);
 
       await tester.pumpWidget(
         Directionality(
@@ -188,6 +204,7 @@ void main() {
               textLayoutCache: extTextA,
               strokePathCache: extStrokeA,
               pathMetricsCache: extPathA,
+              geometryCache: extGeometryA,
             ),
           ),
         ),
@@ -198,6 +215,7 @@ void main() {
       final extTextB = SceneTextLayoutCacheV2(maxEntries: 4);
       final extStrokeB = SceneStrokePathCacheV2(maxEntries: 4);
       final extPathB = ScenePathMetricsCacheV2(maxEntries: 4);
+      final extGeometryB = RenderGeometryCache(maxEntries: 4);
 
       await tester.pumpWidget(
         Directionality(
@@ -211,11 +229,13 @@ void main() {
               textLayoutCache: extTextB,
               strokePathCache: extStrokeB,
               pathMetricsCache: extPathB,
+              geometryCache: extGeometryB,
             ),
           ),
         ),
       );
       await tester.pump();
+      expect(extGeometryB.debugSize, greaterThan(0));
 
       await tester.pumpWidget(
         Directionality(
@@ -228,9 +248,11 @@ void main() {
         ),
       );
       await tester.pump();
+      expect(extGeometryB.debugSize, greaterThan(0));
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
+      expect(extGeometryB.debugSize, greaterThan(0));
     },
   );
 }
