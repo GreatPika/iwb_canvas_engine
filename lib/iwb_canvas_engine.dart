@@ -12,8 +12,9 @@ export 'src/public/scene_data_exception.dart';
 export 'src/public/scene_render_state.dart';
 export 'src/public/scene_write_txn.dart';
 export 'src/public/snapshot.dart';
-export 'src/core/action_events.dart';
-export 'src/core/interaction_types.dart';
+export 'src/core/action_events.dart'
+    show ActionCommitted, ActionCommittedDelta, ActionType, EditTextRequested;
+export 'src/core/interaction_types.dart' show CanvasMode, DrawTool;
 export 'src/core/pointer_input.dart' show PointerInputSettings;
 export 'src/core/transform2d.dart' show Transform2D;
 export 'src/interactive/scene_controller_interactive.dart';

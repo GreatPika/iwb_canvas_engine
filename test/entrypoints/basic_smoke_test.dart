@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'dart:io';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
@@ -80,4 +81,43 @@ void main() {
   test('advanced.dart entrypoint is removed', () {
     expect(File('lib/advanced.dart').existsSync(), isFalse);
   });
+
+  testWidgets(
+    'public entrypoint is enough for SceneView + controller + handlePointer',
+    (tester) async {
+      final controller = SceneController(
+        initialSnapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[ContentLayerSnapshot()],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox.expand(child: SceneView(controller: controller)),
+        ),
+      );
+      await tester.pump();
+
+      controller.handlePointer(
+        const CanvasPointerInput(
+          pointerId: 1,
+          position: Offset(32, 32),
+          phase: CanvasPointerPhase.down,
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      controller.handlePointer(
+        const CanvasPointerInput(
+          pointerId: 1,
+          position: Offset(40, 40),
+          phase: CanvasPointerPhase.up,
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+
+      expect(find.byType(SceneView), findsOneWidget);
+    },
+  );
 }
