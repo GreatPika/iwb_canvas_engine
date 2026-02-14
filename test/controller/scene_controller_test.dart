@@ -1028,6 +1028,90 @@ void main() {
     },
   );
 
+  test(
+    'spatial index stays incremental across bulk draw-erase-redraw cycle',
+    () {
+      final controller = SceneControllerV2(
+        initialSnapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[ContentLayerSnapshot()],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      const batchSize = 120;
+      final firstBandProbe = Rect.fromLTWH(-32, -32, batchSize * 16 + 64, 64);
+      final allBandsProbe = Rect.fromLTWH(-32, -32, batchSize * 16 + 64, 128);
+
+      controller.querySpatialCandidates(const Rect.fromLTWH(0, 0, 1, 1));
+      expect(controller.debugSpatialIndexBuildCount, 1);
+      expect(controller.debugSpatialIndexIncrementalApplyCount, 0);
+
+      controller.write<void>((writer) {
+        for (var i = 0; i < batchSize; i++) {
+          writer.writeNodeInsert(
+            RectNodeSpec(
+              id: 'a$i',
+              size: const Size(8, 8),
+              transform: Transform2D.translation(Offset(i * 16, 0)),
+            ),
+          );
+        }
+      });
+
+      final afterFirstDraw = controller.querySpatialCandidates(firstBandProbe);
+      expect(
+        afterFirstDraw.map((candidate) => candidate.node.id).toSet().length,
+        batchSize,
+      );
+      expect(controller.debugSpatialIndexBuildCount, 1);
+      expect(controller.debugSpatialIndexIncrementalApplyCount, 1);
+
+      controller.write<void>((writer) {
+        for (var i = 0; i < batchSize; i += 2) {
+          expect(writer.writeNodeErase('a$i'), isTrue);
+        }
+      });
+
+      final afterErase = controller.querySpatialCandidates(firstBandProbe);
+      final afterEraseIds = afterErase
+          .map((candidate) => candidate.node.id)
+          .toSet();
+      expect(afterEraseIds.length, batchSize ~/ 2);
+      expect(afterEraseIds.contains('a0'), isFalse);
+      expect(afterEraseIds.contains('a1'), isTrue);
+      expect(controller.debugSpatialIndexBuildCount, 1);
+      expect(controller.debugSpatialIndexIncrementalApplyCount, 2);
+
+      controller.write<void>((writer) {
+        for (var i = 0; i < batchSize; i++) {
+          writer.writeNodeInsert(
+            RectNodeSpec(
+              id: 'b$i',
+              size: const Size(8, 8),
+              transform: Transform2D.translation(Offset(i * 16, 64)),
+            ),
+          );
+        }
+      });
+
+      final afterSecondDraw = controller.querySpatialCandidates(allBandsProbe);
+      final idsAfterSecondDraw = afterSecondDraw
+          .map((candidate) => candidate.node.id)
+          .toSet();
+      expect(idsAfterSecondDraw.length, batchSize + batchSize ~/ 2);
+      expect(idsAfterSecondDraw.contains('b0'), isTrue);
+      expect(idsAfterSecondDraw.contains('a1'), isTrue);
+      expect(idsAfterSecondDraw.contains('a0'), isFalse);
+      expect(controller.debugSpatialIndexBuildCount, 1);
+      expect(controller.debugSpatialIndexIncrementalApplyCount, 3);
+
+      final repeatedQuery = controller.querySpatialCandidates(allBandsProbe);
+      expect(repeatedQuery.length, afterSecondDraw.length);
+      expect(controller.debugSpatialIndexBuildCount, 1);
+      expect(controller.debugSpatialIndexIncrementalApplyCount, 3);
+    },
+  );
+
   test('no-op hitPadding patch does not bump bounds revision', () {
     final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);

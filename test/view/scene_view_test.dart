@@ -33,6 +33,32 @@ SceneSnapshot _snapshot({required double strokeY, required String text}) {
   );
 }
 
+SceneSnapshot _churnSnapshot({required int pairCount, required String prefix}) {
+  return SceneSnapshot(
+    layers: <ContentLayerSnapshot>[
+      ContentLayerSnapshot(
+        nodes: <NodeSnapshot>[
+          for (var i = 0; i < pairCount; i++) ...<NodeSnapshot>[
+            TextNodeSnapshot(
+              id: '$prefix-text-$i',
+              text: '$prefix-$i',
+              size: const Size(80, 24),
+              color: const Color(0xFF000000),
+            ),
+            StrokeNodeSnapshot(
+              id: '$prefix-stroke-$i',
+              points: <Offset>[Offset(8, i * 4), Offset(72, i * 4)],
+              pointsRevision: i,
+              thickness: 3,
+              color: const Color(0xFF000000),
+            ),
+          ],
+        ],
+      ),
+    ],
+  );
+}
+
 void main() {
   testWidgets('SceneViewV2 clears all render caches on epoch change', (
     tester,
@@ -253,6 +279,64 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
       expect(extGeometryB.debugSize, greaterThan(0));
+    },
+  );
+
+  testWidgets(
+    'SceneViewV2 replaceScene clears stale cache tails after heavy churn',
+    (tester) async {
+      final controller = SceneControllerV2(
+        initialSnapshot: _churnSnapshot(pairCount: 24, prefix: 'old'),
+      );
+      addTearDown(controller.dispose);
+
+      final textCache = SceneTextLayoutCacheV2(maxEntries: 256);
+      final strokeCache = SceneStrokePathCacheV2(maxEntries: 256);
+      final pathMetricsCache = ScenePathMetricsCacheV2(maxEntries: 256);
+      final staticCache = SceneStaticLayerCacheV2();
+      final geometryCache = RenderGeometryCache(maxEntries: 256);
+
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox(
+            width: 96,
+            height: 96,
+            child: SceneViewV2(
+              controller: controller,
+              imageResolver: (_) => null,
+              textLayoutCache: textCache,
+              strokePathCache: strokeCache,
+              pathMetricsCache: pathMetricsCache,
+              staticLayerCache: staticCache,
+              geometryCache: geometryCache,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(textCache.debugSize, 24);
+      expect(strokeCache.debugSize, 24);
+      expect(pathMetricsCache.debugSize, 0);
+      expect(geometryCache.debugSize, 48);
+
+      controller.writeReplaceScene(
+        _churnSnapshot(pairCount: 2, prefix: 'fresh'),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(textCache.debugSize, 2);
+      expect(strokeCache.debugSize, 2);
+      expect(pathMetricsCache.debugSize, 0);
+      expect(geometryCache.debugSize, 4);
+      expect(
+        controller.snapshot.layers.first.nodes.every(
+          (node) => node.id.startsWith('fresh-'),
+        ),
+        isTrue,
+      );
     },
   );
 }

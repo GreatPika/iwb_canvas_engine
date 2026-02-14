@@ -1273,6 +1273,7 @@ void main() {
         changeSet: outOfRangeChange,
         controllerEpoch: 2,
       );
+      // INV:INV-V2-SPATIAL-INDEX-REBUILD-ON-INVALID
       final invalidSecond = slice.writeQueryCandidates(
         scene: outOfRangeScene,
         nodeLocator: outOfRangeLocator,
@@ -1280,7 +1281,16 @@ void main() {
         controllerEpoch: 2,
       );
       expect(invalidSecond, isNotEmpty);
-      expect(slice.debugBuildCount, 5);
+      expect(slice.debugBuildCount, 6);
+
+      final invalidThird = slice.writeQueryCandidates(
+        scene: outOfRangeScene,
+        nodeLocator: outOfRangeLocator,
+        worldBounds: outOfRangeBounds,
+        controllerEpoch: 2,
+      );
+      expect(invalidThird, isNotEmpty);
+      expect(slice.debugBuildCount, 6);
     },
   );
 

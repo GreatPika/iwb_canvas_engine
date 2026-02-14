@@ -73,10 +73,7 @@ class V2SpatialIndexSlice {
       hitGeometryChangedIds: changeSet.hitGeometryChangedIds,
     );
     if (!applied) {
-      if (!_index!.isValid) {
-        _indexEpoch = controllerEpoch;
-        return;
-      }
+      // applyIncremental=false always means rebuild is required.
       _invalidate();
       return;
     }

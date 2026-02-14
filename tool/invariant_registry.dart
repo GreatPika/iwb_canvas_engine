@@ -112,6 +112,12 @@ const List<Invariant> invariants = <Invariant>[
         'render geometry cache keys use stable scalar/revision inputs (no collection identity)',
   ),
   Invariant(
+    id: 'INV-V2-SPATIAL-INDEX-REBUILD-ON-INVALID',
+    scope: 'engine-runtime',
+    title:
+        'invalid spatial index in slice always transitions to rebuild-required state',
+  ),
+  Invariant(
     id: 'INV-SLICE-NO-PART',
     scope: 'input-slices',
     title: 'input/slices/** must not use part/part of',
