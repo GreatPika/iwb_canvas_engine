@@ -8,14 +8,18 @@ class CanvasPointerInput {
   const CanvasPointerInput({
     required this.pointerId,
     required this.position,
-    required this.timestampMs,
+    this.timestampMs,
     required this.phase,
     required this.kind,
   });
 
   final int pointerId;
   final Offset position;
-  final int timestampMs;
+
+  /// Optional timestamp hint in milliseconds.
+  ///
+  /// When `null`, controller assigns a monotonic internal timestamp.
+  final int? timestampMs;
   final CanvasPointerPhase phase;
   final PointerDeviceKind kind;
 }

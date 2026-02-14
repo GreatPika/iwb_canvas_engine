@@ -62,12 +62,19 @@ void main() {
       phase: CanvasPointerPhase.down,
       kind: PointerDeviceKind.touch,
     );
+    const inputWithoutTimestamp = CanvasPointerInput(
+      pointerId: 2,
+      position: Offset(30, 40),
+      phase: CanvasPointerPhase.move,
+      kind: PointerDeviceKind.mouse,
+    );
 
     expect(settings.tapSlop, 10);
     expect(settings.doubleTapSlop, 24);
     expect(settings.doubleTapMaxDelayMs, 500);
     expect(settings.deferSingleTap, isTrue);
     expect(input.phase, CanvasPointerPhase.down);
+    expect(inputWithoutTimestamp.timestampMs, isNull);
   });
 
   test('advanced.dart entrypoint is removed', () {

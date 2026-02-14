@@ -14,6 +14,7 @@ ui.Image? _defaultImageResolver(String _) => null;
 class SceneViewInteractiveV2 extends StatefulWidget {
   const SceneViewInteractiveV2({
     required this.controller,
+    this.imageResolver,
     this.selectionColor = const Color(0xFF1565C0),
     this.selectionStrokeWidth = 1,
     this.gridStrokeWidth = 1,
@@ -21,6 +22,7 @@ class SceneViewInteractiveV2 extends StatefulWidget {
   });
 
   final SceneControllerInteractiveV2 controller;
+  final ui.Image? Function(String imageId)? imageResolver;
   final Color selectionColor;
   final double selectionStrokeWidth;
   final double gridStrokeWidth;
@@ -93,7 +95,7 @@ class _SceneViewInteractiveV2State extends State<SceneViewInteractiveV2> {
       child: CustomPaint(
         painter: ScenePainterV2(
           controller: widget.controller,
-          imageResolver: _defaultImageResolver,
+          imageResolver: widget.imageResolver ?? _defaultImageResolver,
           nodePreviewOffsetResolver: widget.controller.movePreviewDeltaForNode,
           staticLayerCache: _staticLayerCache,
           textLayoutCache: _textLayoutCache,
@@ -125,7 +127,7 @@ class _SceneViewInteractiveV2State extends State<SceneViewInteractiveV2> {
     final sample = PointerSample(
       pointerId: input.pointerId,
       position: input.position,
-      timestampMs: input.timestampMs,
+      timestampMs: input.timestampMs ?? event.timeStamp.inMilliseconds,
       phase: phase,
       kind: input.kind,
     );
@@ -185,15 +187,9 @@ class _SceneViewInteractiveV2State extends State<SceneViewInteractiveV2> {
     _pendingTapFlushTimestampMs = null;
     if (flushTimestampMs == null) return;
 
-    final signals = _pointerTracker.flushPending(flushTimestampMs);
-    for (final signal in signals) {
-      if (signal.type == PointerSignalType.doubleTap) {
-        widget.controller.handleDoubleTap(
-          position: signal.position,
-          timestampMs: signal.timestampMs,
-        );
-      }
-    }
+    // Timer flush emits deferred single taps only; double taps are emitted in
+    // the immediate handle(...) path when the second tap arrives.
+    _pointerTracker.flushPending(flushTimestampMs);
     _syncPendingFlushTimer(referenceTimestampMs: flushTimestampMs);
   }
 

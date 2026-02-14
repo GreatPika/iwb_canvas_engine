@@ -1,8 +1,10 @@
 import 'dart:ui';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Image;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/core/interaction_types.dart';
+import 'package:iwb_canvas_engine/src/core/pointer_input.dart'
+    show PointerInputSettings;
 import 'package:iwb_canvas_engine/src/interactive/scene_controller_interactive.dart';
 import 'package:iwb_canvas_engine/src/public/canvas_pointer_input.dart';
 import 'package:iwb_canvas_engine/src/public/snapshot.dart';
@@ -32,13 +34,19 @@ SceneSnapshot _snapshot({required String text, bool includeImage = false}) {
   );
 }
 
-Widget _host(SceneControllerInteractiveV2 controller) {
+Widget _host(
+  SceneControllerInteractiveV2 controller, {
+  Image? Function(String imageId)? imageResolver,
+}) {
   return Directionality(
     textDirection: TextDirection.ltr,
     child: SizedBox(
       width: 120,
       height: 120,
-      child: SceneViewInteractiveV2(controller: controller),
+      child: SceneViewInteractiveV2(
+        controller: controller,
+        imageResolver: imageResolver,
+      ),
     ),
   );
 }
@@ -70,6 +78,25 @@ void main() {
     await tester.pump();
 
     // No crashes after controller swap.
+    expect(find.byType(SceneViewInteractiveV2), findsOneWidget);
+  });
+
+  testWidgets('SceneViewInteractiveV2 flushes pending tap timer callback', (
+    tester,
+  ) async {
+    final controller = SceneControllerInteractiveV2(
+      initialSnapshot: _snapshot(text: 'timer'),
+      pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 1),
+    );
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(_host(controller));
+    await tester.pump();
+
+    final gesture = await tester.startGesture(const Offset(50, 50), pointer: 8);
+    await gesture.up();
+    await tester.pump(const Duration(milliseconds: 16));
+
     expect(find.byType(SceneViewInteractiveV2), findsOneWidget);
   });
 
@@ -197,6 +224,29 @@ void main() {
 
     await gesture.up();
     await tester.pump();
+  });
+
+  testWidgets('SceneViewInteractiveV2 routes image ids to imageResolver', (
+    tester,
+  ) async {
+    final controller = SceneControllerInteractiveV2(
+      initialSnapshot: _snapshot(text: 'img', includeImage: true),
+    );
+    addTearDown(controller.dispose);
+
+    final requestedImageIds = <String>[];
+    await tester.pumpWidget(
+      _host(
+        controller,
+        imageResolver: (imageId) {
+          requestedImageIds.add(imageId);
+          return null;
+        },
+      ),
+    );
+    await tester.pump();
+
+    expect(requestedImageIds, contains('missing'));
   });
 
   testWidgets(

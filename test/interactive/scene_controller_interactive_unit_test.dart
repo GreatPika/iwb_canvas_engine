@@ -269,6 +269,67 @@ void main() {
       );
     });
 
+    test(
+      'handlePointer accepts null timestamp hint and keeps monotonic time',
+      () async {
+        final controller = _controllerFromScene(
+          Scene(layers: <ContentLayer>[ContentLayer(), ContentLayer()]),
+        );
+        addTearDown(controller.dispose);
+
+        controller.setMode(CanvasMode.draw);
+        controller.setDrawTool(DrawTool.pen);
+
+        final actions = <ActionCommitted>[];
+        final sub = controller.actions.listen(actions.add);
+        addTearDown(sub.cancel);
+
+        controller.handlePointer(
+          const CanvasPointerInput(
+            pointerId: 1,
+            position: Offset(12, 12),
+            phase: CanvasPointerPhase.down,
+            kind: PointerDeviceKind.touch,
+          ),
+        );
+        controller.handlePointer(
+          const CanvasPointerInput(
+            pointerId: 1,
+            position: Offset(20, 20),
+            phase: CanvasPointerPhase.up,
+            kind: PointerDeviceKind.touch,
+          ),
+        );
+
+        controller.handlePointer(
+          const CanvasPointerInput(
+            pointerId: 2,
+            position: Offset(30, 30),
+            phase: CanvasPointerPhase.down,
+            kind: PointerDeviceKind.touch,
+          ),
+        );
+        controller.handlePointer(
+          const CanvasPointerInput(
+            pointerId: 2,
+            position: Offset(40, 40),
+            phase: CanvasPointerPhase.up,
+            kind: PointerDeviceKind.touch,
+          ),
+        );
+
+        await pumpEventQueue();
+
+        expect(actions, hasLength(2));
+        expect(actions.first.type, ActionType.drawStroke);
+        expect(actions.last.type, ActionType.drawStroke);
+        expect(
+          actions.last.timestampMs,
+          greaterThan(actions.first.timestampMs),
+        );
+      },
+    );
+
     test('removeNode emits delete actions with monotonic timestamps', () async {
       final controller = SceneControllerInteractiveV2(
         initialSnapshot: SceneSnapshot(

@@ -421,6 +421,7 @@ Delivery contract:
 ```dart
 SceneView(
   controller: controller,
+  imageResolver: (imageId) => null,
   selectionColor: const Color(0xFF1565C0),
   selectionStrokeWidth: 1,
   gridStrokeWidth: 1,
@@ -433,6 +434,13 @@ SceneView(
 - Routes Flutter pointer input into controller interaction flow
 - Paints scene via `ScenePainterV2`
 - Paints interactive overlays (in-progress stroke/line previews)
+- Owns and disposes render caches internally.
+
+### 9.3 Image resolver
+
+- `imageResolver` is optional and accepts `ui.Image? Function(String imageId)`.
+- If not provided, image nodes are rendered as placeholders.
+- Image lifecycle ownership stays on app side (dispose app-owned images when no longer used).
 
 ## 10. Pointer contracts
 
@@ -442,9 +450,11 @@ Fields:
 
 - `pointerId`
 - `position` (view coordinates)
-- `timestampMs` (timestamp hint)
+- `timestampMs` (optional timestamp hint)
 - `phase` (`CanvasPointerPhase.down/move/up/cancel`)
 - `kind`
+
+Controller normalizes timestamps to a monotonic internal timeline.
 
 ### 10.2 `PointerInputSettings`
 

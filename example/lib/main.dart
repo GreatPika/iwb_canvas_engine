@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
@@ -42,6 +44,10 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   static const double _lineHeightMinMultiplier = 0.8;
   static const double _lineHeightMaxMultiplier = 3.0;
   static const double _defaultLineHeightMultiplier = 1.2;
+  static const String _sampleCatImageId = 'sample-cat';
+  static const String _sampleCatPackageAssetKey =
+      'packages/iwb_canvas_engine/image/cat.png';
+  static const String _sampleCatLocalAssetKey = 'image/cat.png';
 
   late final SceneController _controller;
   late final bool _ownsController;
@@ -52,6 +58,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   NodeId? _editingNodeId;
   TextEditingController? _textEditController;
   FocusNode? _textEditFocusNode;
+  ui.Image? _sampleCatImage;
 
   @override
   void initState() {
@@ -79,6 +86,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     _editTextSubscription = _controller.editTextRequests.listen(
       _beginInlineTextEdit,
     );
+    unawaited(_loadSampleCatImage());
   }
 
   @override
@@ -86,6 +94,8 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     _editTextSubscription?.cancel();
     _textEditController?.dispose();
     _textEditFocusNode?.dispose();
+    _sampleCatImage?.dispose();
+    _sampleCatImage = null;
     if (_ownsController) {
       _controller.dispose();
     }
@@ -785,6 +795,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
       children: [
         SceneView(
           controller: _controller,
+          imageResolver: _resolveSceneImage,
           selectionColor: const Color(0xFFFFFF00),
           selectionStrokeWidth: 4,
         ),
@@ -1048,6 +1059,63 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     _controller.replaceScene(decoded);
   }
 
+  Future<void> _loadSampleCatImage() async {
+    if (_sampleCatImage != null) return;
+    try {
+      final data = await _loadSampleCatAssetBytes();
+      final bytes = data.buffer.asUint8List(
+        data.offsetInBytes,
+        data.lengthInBytes,
+      );
+      final codec = await ui.instantiateImageCodec(bytes);
+      try {
+        final frame = await codec.getNextFrame();
+        if (!mounted) {
+          frame.image.dispose();
+          return;
+        }
+        final previousImage = _sampleCatImage;
+        setState(() {
+          _sampleCatImage = frame.image;
+        });
+        previousImage?.dispose();
+        _controller.notifySceneChanged();
+      } finally {
+        codec.dispose();
+      }
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Failed to load sample image. Tried keys: '
+        '"$_sampleCatPackageAssetKey", "$_sampleCatLocalAssetKey". '
+        'Error: $error',
+      );
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
+
+  Future<ByteData> _loadSampleCatAssetBytes() async {
+    final keys = <String>[_sampleCatPackageAssetKey, _sampleCatLocalAssetKey];
+    Object? lastError;
+    for (final key in keys) {
+      try {
+        return await rootBundle.load(key);
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    throw FlutterError(
+      'Unable to load sample cat image asset. Last error: $lastError',
+    );
+  }
+
+  ui.Image? _resolveSceneImage(String imageId) {
+    if (imageId == _sampleCatImageId) {
+      return _sampleCatImage;
+    }
+    return null;
+  }
+
   void _addSampleObjects() {
     final baseX = 100 + (_sampleSeed * 30);
     final baseY = 100 + (_sampleSeed * 20);
@@ -1079,6 +1147,19 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
         ),
       ),
     );
+
+    nodes.add(
+      ImageNodeSpec(
+        id: 'sample-${_nodeSeed++}',
+        imageId: _sampleCatImageId,
+        size: const Size(120, 180),
+        transform: Transform2D.translation(Offset(baseX + 80, baseY + 170)),
+      ),
+    );
+
+    if (_sampleCatImage == null) {
+      unawaited(_loadSampleCatImage());
+    }
 
     _sampleSeed++;
     for (final node in nodes) {

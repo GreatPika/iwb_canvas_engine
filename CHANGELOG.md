@@ -22,7 +22,8 @@
 - Added immutable `instanceRevision` node identity across runtime/snapshot/JSON boundaries; render caches now isolate entries by `(nodeId, instanceRevision)` to prevent stale cache hits after id reuse.
 - Local bounds policy for `Rect`/`Path` is now unified between core nodes and render cache: stroke inflation applies only for enabled stroke and cache validity keys use effective stroke width, preventing edge culling regressions when stroke is disabled.
 - Bounds-based selection frame for `Image`/`Text`/`Rect` now uses the same render `worldBounds` source as culling, and hit candidate bounds parity is covered by dedicated regression tests.
-- Documentation now explicitly defines ownership/disposal responsibilities for external `SceneStaticLayerCacheV2` and app-managed `ImageResolverV2` images.
+- `SceneView` now keeps render cache ownership internal while exposing an optional `imageResolver` callback (`ui.Image? Function(String imageId)`) so public image nodes remain renderable without exporting internal resolver/cache types.
+- `CanvasPointerInput.timestampMs` is now optional; when omitted, controller assigns a monotonic timestamp internally.
 - `SceneSpatialIndex` now exposes explicit validity state (`isValid`) and degrades to safe linear candidate scan when indexing cannot be maintained (including out-of-range/extreme geometry), preventing hard failures in query paths.
 - `V2SpatialIndexSlice` now keeps invalid index instances in fallback mode instead of forcing rebuild loops after failed incremental updates.
 - `SceneControllerV2.selectedNodeIds` now reuses a cached `UnmodifiableSetView` and refreshes it only when selection actually changes, removing per-read allocation on hot getter paths.

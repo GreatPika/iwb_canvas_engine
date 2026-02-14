@@ -108,9 +108,9 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - `SceneStrokePathCacheV2`, `SceneTextLayoutCacheV2`, and `ScenePathMetricsCacheV2` validate constructor input at runtime and throw `ArgumentError` when `maxEntries <= 0`.
 - Render caches isolate node instances by `(NodeId, instanceRevision)` and then validate geometry-specific freshness (for example stroke `pointsRevision`), so id reuse cannot return stale geometry.
 - `ScenePainterV2` uses an internal `RenderGeometryCache` keyed by node instance identity + geometry validity fields, so path parsing and local/world bounds computation are reused across culling, selection, and paint paths.
-- If `SceneView` creates caches internally, it owns their lifecycle.
-- If you pass an external `SceneStaticLayerCacheV2` through `staticLayerCache:`, your app owns it and must call `dispose()` when the owner is disposed.
-- `ImageResolverV2` returns `dart:ui Image` objects. The app that creates/caches those images owns their lifecycle and should dispose them when they are no longer needed.
+- `SceneView` owns and disposes all render caches internally.
+- `SceneView(imageResolver: ...)` accepts an optional callback (`ui.Image? Function(String imageId)`); when omitted, image nodes are rendered as placeholders.
+- The app that creates/caches `dart:ui Image` objects owns their lifecycle and should dispose them when those images are no longer needed.
 
 ## Invariants and quality gates
 
