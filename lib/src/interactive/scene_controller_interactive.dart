@@ -1138,7 +1138,6 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
 
   Rect _effectiveNodeBoundsWorld(SceneNode node) {
     final delta = movePreviewDeltaForNode(node.id);
-    if (delta == Offset.zero) return node.boundsWorld;
     return node.boundsWorld.shift(delta);
   }
 

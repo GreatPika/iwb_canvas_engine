@@ -16,6 +16,7 @@
 ### Changed
 
 - Internal `RenderGeometryCache` now uses bounded LRU eviction (`maxEntries = 512`) to prevent unbounded geometry-cache growth during long node churn (create/delete cycles).
+- Internal `RenderGeometryCache` stroke validity key now excludes point-list object identity and relies on stable scalar/revision geometry inputs (`pointsRevision`, transform, thickness), restoring cache hits across logically unchanged snapshots.
 - `iwb_canvas_engine.dart` export surface is narrowed: removed public exports of `defaults.dart`, `geometry.dart`, and render cache/resolver types from `scene_painter.dart`; pointer input export now exposes `PointerInputSettings` and new public `CanvasPointerInput` contracts.
 - Added public `SceneBuilder` as a unified immutable import gateway for both JSON maps and `SceneSnapshot`.
 - `SceneStrokePathCacheV2`, `SceneTextLayoutCacheV2`, and `ScenePathMetricsCacheV2` now throw `ArgumentError` for `maxEntries <= 0` in all build modes (not only debug).

@@ -1,10 +1,14 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
 import 'package:iwb_canvas_engine/src/core/transform2d.dart';
+import 'package:iwb_canvas_engine/src/public/node_patch.dart';
+import 'package:iwb_canvas_engine/src/public/patch_field.dart';
 import 'package:iwb_canvas_engine/src/public/snapshot.dart';
 import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 
+// INV:INV-V2-RENDER-GEOMETRY-KEY-STABLE
 void main() {
   test('RenderGeometryCache rejects non-positive maxEntries', () {
     expect(() => RenderGeometryCache(maxEntries: 0), throwsArgumentError);
@@ -53,6 +57,113 @@ void main() {
       expect(cache.debugBuildCount, 2);
       expect(cache.debugHitCount, 1);
       expect(cache.debugSize, 2);
+    },
+  );
+
+  test(
+    'RenderGeometryCache hits for equivalent stroke snapshots with stable revision/scalars',
+    () {
+      final cache = RenderGeometryCache();
+      final strokeA = StrokeNodeSnapshot(
+        id: 'stroke-eq',
+        instanceRevision: 7,
+        points: const <Offset>[Offset(0, 0), Offset(10, 5), Offset(20, 5)],
+        pointsRevision: 11,
+        thickness: 3,
+        color: const Color(0xFF000000),
+      );
+      final strokeA2 = StrokeNodeSnapshot(
+        id: 'stroke-eq',
+        instanceRevision: 7,
+        points: const <Offset>[Offset(0, 0), Offset(10, 5), Offset(20, 5)],
+        pointsRevision: 11,
+        thickness: 3,
+        color: const Color(0xFF000000),
+      );
+
+      final entryA = cache.get(strokeA);
+      final entryA2 = cache.get(strokeA2);
+
+      expect(identical(entryA, entryA2), isTrue);
+      expect(cache.debugBuildCount, 1);
+      expect(cache.debugHitCount, 1);
+    },
+  );
+
+  test(
+    'RenderGeometryCache rebuilds stroke entry when pointsRevision changes',
+    () {
+      final cache = RenderGeometryCache();
+      final strokeA = StrokeNodeSnapshot(
+        id: 'stroke-rev',
+        instanceRevision: 9,
+        points: const <Offset>[Offset(0, 0), Offset(10, 5), Offset(20, 5)],
+        pointsRevision: 11,
+        thickness: 3,
+        color: const Color(0xFF000000),
+      );
+      final strokeChanged = StrokeNodeSnapshot(
+        id: 'stroke-rev',
+        instanceRevision: 9,
+        points: const <Offset>[Offset(0, 0), Offset(10, 5), Offset(20, 5)],
+        pointsRevision: 12,
+        thickness: 3,
+        color: const Color(0xFF000000),
+      );
+
+      final entryA = cache.get(strokeA);
+      final entryChanged = cache.get(strokeChanged);
+
+      expect(identical(entryA, entryChanged), isFalse);
+      expect(cache.debugBuildCount, 2);
+      expect(cache.debugHitCount, 0);
+    },
+  );
+
+  test(
+    'RenderGeometryCache keeps hit for unchanged stroke across unrelated controller commit',
+    () {
+      // pointsRevision monotonicity itself is asserted in scene_controller_test.
+      final controller = SceneControllerV2(
+        initialSnapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              nodes: <NodeSnapshot>[
+                StrokeNodeSnapshot(
+                  id: 's',
+                  points: const <Offset>[Offset(0, 0), Offset(10, 0)],
+                  pointsRevision: 3,
+                  thickness: 2,
+                  color: const Color(0xFF000000),
+                ),
+                const RectNodeSnapshot(id: 'r', size: Size(10, 10)),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      final cache = RenderGeometryCache();
+      final strokeBefore =
+          controller.snapshot.layers.first.nodes.first as StrokeNodeSnapshot;
+      cache.get(strokeBefore);
+
+      controller.write<void>((writer) {
+        writer.writeNodePatch(
+          const RectNodePatch(
+            id: 'r',
+            size: PatchField<Size>.value(Size(20, 20)),
+          ),
+        );
+      });
+
+      final strokeAfter =
+          controller.snapshot.layers.first.nodes.first as StrokeNodeSnapshot;
+      cache.get(strokeAfter);
+
+      expect(cache.debugBuildCount, 1);
+      expect(cache.debugHitCount, 1);
     },
   );
 

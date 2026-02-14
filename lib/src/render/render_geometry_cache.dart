@@ -292,6 +292,8 @@ Object _buildValidityKey(NodeSnapshot node) {
       lineNode.end.dy,
       clampNonNegativeFinite(lineNode.thickness),
     ),
+    // Keep stroke key stable across logically equal snapshots:
+    // only scalar/revision geometry inputs, never collection identity.
     StrokeNodeSnapshot strokeNode => (
       'stroke',
       ta,
@@ -301,7 +303,6 @@ Object _buildValidityKey(NodeSnapshot node) {
       ttx,
       tty,
       strokeNode.pointsRevision,
-      strokeNode.points,
       clampNonNegativeFinite(strokeNode.thickness),
     ),
     PathNodeSnapshot pathNode => (

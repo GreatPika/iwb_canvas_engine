@@ -106,6 +106,12 @@ const List<Invariant> invariants = <Invariant>[
     title: 'replace-scene lifecycle preserves epoch invalidation',
   ),
   Invariant(
+    id: 'INV-V2-RENDER-GEOMETRY-KEY-STABLE',
+    scope: 'engine-runtime',
+    title:
+        'render geometry cache keys use stable scalar/revision inputs (no collection identity)',
+  ),
+  Invariant(
     id: 'INV-SLICE-NO-PART',
     scope: 'input-slices',
     title: 'input/slices/** must not use part/part of',

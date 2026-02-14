@@ -90,6 +90,7 @@ Key invariants:
 - Viewport culling for offscreen nodes.
 - Bounded caches for text layout, stroke paths, and selected path metrics.
 - `ScenePainterV2` keeps an internal per-node `RenderGeometryCache` with bounded LRU memory (`maxEntries = 512`) that reuses path parsing and local/world bounds calculations across culling, selection, and drawing.
+- Render-geometry cache validity for stroke nodes is based on stable scalar/revision inputs (`node.id`, `instanceRevision`, `transform`, `pointsRevision`, `thickness`) and does not depend on point-list object identity.
 - Stroke-path cache freshness is validated in O(1) by
   `(node.id, node.instanceRevision, pointsRevision)` instead of
   hashing/iterating point lists on every lookup.
