@@ -45,7 +45,7 @@ Runtime aliases exposed publicly:
   - `SceneWriteTxn`, `SceneRenderState`
 - Input/event contracts:
   - `CanvasMode`, `DrawTool`
-  - `PointerSample`, `PointerSignal`, `PointerInputSettings`
+  - `PointerSample`, `PointerSignal`, `PointerPhase`, `PointerSignalType`, `PointerInputSettings`
   - `ActionCommitted`, `ActionType`, `EditTextRequested`
 - Serialization:
   - `encodeSceneToJson`, `decodeSceneFromJson`

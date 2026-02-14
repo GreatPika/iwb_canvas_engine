@@ -15,7 +15,13 @@ export 'src/core/action_events.dart';
 export 'src/core/defaults.dart';
 export 'src/core/geometry.dart';
 export 'src/core/interaction_types.dart';
-export 'src/core/pointer_input.dart' show PointerInputSettings;
+export 'src/core/pointer_input.dart'
+    show
+        PointerInputSettings,
+        PointerPhase,
+        PointerSample,
+        PointerSignal,
+        PointerSignalType;
 export 'src/core/transform2d.dart';
 export 'src/interactive/scene_controller_interactive.dart';
 export 'src/view/scene_view_interactive.dart';

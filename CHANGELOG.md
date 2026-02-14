@@ -11,6 +11,7 @@
 
 ### Changed
 
+- `iwb_canvas_engine.dart` now exports low-level pointer input contracts (`PointerSample`, `PointerSignal`, `PointerPhase`, `PointerSignalType`) together with `PointerInputSettings` so `SceneController.handlePointer*` is fully usable from the public entrypoint.
 - Added public `SceneBuilder` as a unified immutable import gateway for both JSON maps and `SceneSnapshot`.
 - `SceneStrokePathCacheV2`, `SceneTextLayoutCacheV2`, and `ScenePathMetricsCacheV2` now throw `ArgumentError` for `maxEntries <= 0` in all build modes (not only debug).
 - `ScenePainterV2` now reuses per-node geometry via internal `RenderGeometryCache` (`NodeId` + validity key), removing duplicate path parsing/bounds calculations across culling, selection, and path drawing.

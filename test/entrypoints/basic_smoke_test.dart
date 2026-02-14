@@ -48,6 +48,23 @@ void main() {
     expect(decodedNode.id, 'rect-json-1');
   });
 
+  test('iwb_canvas_engine.dart exports low-level pointer input contracts', () {
+    const sample = PointerSample(
+      pointerId: 1,
+      position: Offset(10, 20),
+      timestampMs: 100,
+      phase: PointerPhase.down,
+    );
+    final signal = PointerSignal.fromSample(
+      sample,
+      PointerSignalType.doubleTap,
+    );
+
+    expect(sample.phase, PointerPhase.down);
+    expect(signal.type, PointerSignalType.doubleTap);
+    expect(signal.position, const Offset(10, 20));
+  });
+
   test('advanced.dart entrypoint is removed', () {
     expect(File('lib/advanced.dart').existsSync(), isFalse);
   });
