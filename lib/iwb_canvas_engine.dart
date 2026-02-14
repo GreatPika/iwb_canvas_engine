@@ -17,8 +17,10 @@ export 'src/core/action_events.dart'
 export 'src/core/interaction_types.dart' show CanvasMode, DrawTool;
 export 'src/core/pointer_input.dart' show PointerInputSettings;
 export 'src/core/transform2d.dart' show Transform2D;
-export 'src/interactive/scene_controller_interactive.dart';
-export 'src/view/scene_view_interactive.dart';
+export 'src/interactive/scene_controller_interactive.dart'
+    show SceneController, SceneControllerInteractiveV2;
+export 'src/view/scene_view_interactive.dart'
+    show SceneView, SceneViewInteractiveV2;
 export 'src/serialization/scene_codec.dart'
     show
         decodeScene,
