@@ -3,10 +3,9 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/core/interaction_types.dart';
-import 'package:iwb_canvas_engine/src/core/pointer_input.dart';
 import 'package:iwb_canvas_engine/src/interactive/scene_controller_interactive.dart';
+import 'package:iwb_canvas_engine/src/public/canvas_pointer_input.dart';
 import 'package:iwb_canvas_engine/src/public/snapshot.dart';
-import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 import 'package:iwb_canvas_engine/src/view/scene_view_interactive.dart';
 
 SceneSnapshot _snapshot({required String text, bool includeImage = false}) {
@@ -33,33 +32,19 @@ SceneSnapshot _snapshot({required String text, bool includeImage = false}) {
   );
 }
 
-Widget _host(
-  SceneControllerInteractiveV2 controller, {
-  SceneStaticLayerCacheV2? staticCache,
-  SceneTextLayoutCacheV2? textCache,
-  SceneStrokePathCacheV2? strokeCache,
-  ScenePathMetricsCacheV2? pathCache,
-}) {
+Widget _host(SceneControllerInteractiveV2 controller) {
   return Directionality(
     textDirection: TextDirection.ltr,
     child: SizedBox(
       width: 120,
       height: 120,
-      child: SceneViewInteractiveV2(
-        controller: controller,
-        staticLayerCache: staticCache,
-        textLayoutCache: textCache,
-        strokePathCache: strokeCache,
-        pathMetricsCache: pathCache,
-      ),
+      child: SceneViewInteractiveV2(controller: controller),
     ),
   );
 }
 
 void main() {
-  testWidgets('SceneViewInteractiveV2 handles controller swap and cache swap', (
-    tester,
-  ) async {
+  testWidgets('SceneViewInteractiveV2 handles controller swap', (tester) async {
     final controllerA = SceneControllerInteractiveV2(
       initialSnapshot: _snapshot(text: 'A', includeImage: true),
     );
@@ -68,11 +53,6 @@ void main() {
     );
     addTearDown(controllerA.dispose);
     addTearDown(controllerB.dispose);
-
-    final staticCache = SceneStaticLayerCacheV2();
-    final textCache = SceneTextLayoutCacheV2(maxEntries: 8);
-    final strokeCache = SceneStrokePathCacheV2(maxEntries: 8);
-    final pathCache = ScenePathMetricsCacheV2(maxEntries: 8);
 
     await tester.pumpWidget(_host(controllerA));
     await tester.pump();
@@ -86,21 +66,10 @@ void main() {
     await g2.cancel();
     await tester.pump();
 
-    await tester.pumpWidget(
-      _host(
-        controllerB,
-        staticCache: staticCache,
-        textCache: textCache,
-        strokeCache: strokeCache,
-        pathCache: pathCache,
-      ),
-    );
-    await tester.pump();
-
     await tester.pumpWidget(_host(controllerB));
     await tester.pump();
 
-    // No crashes and caches remain functional after sync/ownership switches.
+    // No crashes after controller swap.
     expect(find.byType(SceneViewInteractiveV2), findsOneWidget);
   });
 
@@ -176,11 +145,12 @@ void main() {
     await tester.pump();
 
     controller.handlePointer(
-      const PointerSample(
+      const CanvasPointerInput(
         pointerId: 301,
         position: Offset(40, 40),
         timestampMs: 1,
-        phase: PointerPhase.down,
+        phase: CanvasPointerPhase.down,
+        kind: PointerDeviceKind.touch,
       ),
     );
     await tester.pump();
@@ -189,11 +159,12 @@ void main() {
     expect(controller.activeStrokePreviewPoints.length, 1);
 
     controller.handlePointer(
-      const PointerSample(
+      const CanvasPointerInput(
         pointerId: 301,
         position: Offset(40, 40),
         timestampMs: 2,
-        phase: PointerPhase.up,
+        phase: CanvasPointerPhase.up,
+        kind: PointerDeviceKind.touch,
       ),
     );
     await tester.pump();

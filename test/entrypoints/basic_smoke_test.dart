@@ -48,21 +48,26 @@ void main() {
     expect(decodedNode.id, 'rect-json-1');
   });
 
-  test('iwb_canvas_engine.dart exports low-level pointer input contracts', () {
-    const sample = PointerSample(
+  test('iwb_canvas_engine.dart exports pointer input contracts', () {
+    const settings = PointerInputSettings(
+      tapSlop: 10,
+      doubleTapSlop: 24,
+      doubleTapMaxDelayMs: 500,
+      deferSingleTap: true,
+    );
+    const input = CanvasPointerInput(
       pointerId: 1,
       position: Offset(10, 20),
       timestampMs: 100,
-      phase: PointerPhase.down,
-    );
-    final signal = PointerSignal.fromSample(
-      sample,
-      PointerSignalType.doubleTap,
+      phase: CanvasPointerPhase.down,
+      kind: PointerDeviceKind.touch,
     );
 
-    expect(sample.phase, PointerPhase.down);
-    expect(signal.type, PointerSignalType.doubleTap);
-    expect(signal.position, const Offset(10, 20));
+    expect(settings.tapSlop, 10);
+    expect(settings.doubleTapSlop, 24);
+    expect(settings.doubleTapMaxDelayMs, 500);
+    expect(settings.deferSingleTap, isTrue);
+    expect(input.phase, CanvasPointerPhase.down);
   });
 
   test('advanced.dart entrypoint is removed', () {

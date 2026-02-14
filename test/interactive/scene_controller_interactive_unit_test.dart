@@ -16,17 +16,18 @@ NodeSnapshot _nodeById(SceneSnapshot snapshot, NodeId id) {
   throw StateError('Node not found: $id');
 }
 
-PointerSample _sample({
+CanvasPointerInput _sample({
   required int pointerId,
   required Offset position,
   required int timestampMs,
-  required PointerPhase phase,
+  required CanvasPointerPhase phase,
 }) {
-  return PointerSample(
+  return CanvasPointerInput(
     pointerId: pointerId,
     position: position,
     timestampMs: timestampMs,
     phase: phase,
+    kind: PointerDeviceKind.touch,
   );
 }
 
@@ -169,7 +170,7 @@ void main() {
             pointerId: 1,
             position: const Offset(80, 0),
             timestampMs: 1,
-            phase: PointerPhase.down,
+            phase: CanvasPointerPhase.down,
           ),
         );
         controller.handlePointer(
@@ -177,7 +178,7 @@ void main() {
             pointerId: 1,
             position: const Offset(180, 80),
             timestampMs: 2,
-            phase: PointerPhase.move,
+            phase: CanvasPointerPhase.move,
           ),
         );
         controller.handlePointer(
@@ -185,7 +186,7 @@ void main() {
             pointerId: 1,
             position: const Offset(180, 80),
             timestampMs: 3,
-            phase: PointerPhase.up,
+            phase: CanvasPointerPhase.up,
           ),
         );
 
@@ -349,43 +350,19 @@ void main() {
         addTearDown(sub.cancel);
 
         controller.setMode(CanvasMode.draw);
-        controller.handlePointerSignal(
-          const PointerSignal(
-            type: PointerSignalType.doubleTap,
-            pointerId: 1,
-            position: Offset(100, 100),
-            timestampMs: 10,
-            kind: PointerDeviceKind.touch,
-          ),
+        controller.handleDoubleTap(
+          position: const Offset(100, 100),
+          timestampMs: 10,
         );
 
         controller.setMode(CanvasMode.move);
-        controller.handlePointerSignal(
-          const PointerSignal(
-            type: PointerSignalType.tap,
-            pointerId: 1,
-            position: Offset(100, 100),
-            timestampMs: 11,
-            kind: PointerDeviceKind.touch,
-          ),
+        controller.handleDoubleTap(
+          position: const Offset(200, 100),
+          timestampMs: 12,
         );
-        controller.handlePointerSignal(
-          const PointerSignal(
-            type: PointerSignalType.doubleTap,
-            pointerId: 1,
-            position: Offset(200, 100),
-            timestampMs: 12,
-            kind: PointerDeviceKind.touch,
-          ),
-        );
-        controller.handlePointerSignal(
-          const PointerSignal(
-            type: PointerSignalType.doubleTap,
-            pointerId: 1,
-            position: Offset(100, 100),
-            timestampMs: 13,
-            kind: PointerDeviceKind.touch,
-          ),
+        controller.handleDoubleTap(
+          position: const Offset(100, 100),
+          timestampMs: 13,
         );
 
         await pumpEventQueue();
@@ -416,14 +393,9 @@ void main() {
       final sub = controller.editTextRequests.listen(requests.add);
       addTearDown(sub.cancel);
 
-      controller.handlePointerSignal(
-        const PointerSignal(
-          type: PointerSignalType.doubleTap,
-          pointerId: 1,
-          position: Offset(100, 100),
-          timestampMs: 10,
-          kind: PointerDeviceKind.touch,
-        ),
+      controller.handleDoubleTap(
+        position: const Offset(100, 100),
+        timestampMs: 10,
       );
       expect(requests, isEmpty);
 
@@ -471,7 +443,7 @@ void main() {
           pointerId: 1,
           position: originalCenter,
           timestampMs: 1,
-          phase: PointerPhase.down,
+          phase: CanvasPointerPhase.down,
         ),
       );
       controller.handlePointer(
@@ -479,28 +451,12 @@ void main() {
           pointerId: 1,
           position: movedPoint,
           timestampMs: 2,
-          phase: PointerPhase.move,
+          phase: CanvasPointerPhase.move,
         ),
       );
 
-      controller.handlePointerSignal(
-        PointerSignal(
-          type: PointerSignalType.doubleTap,
-          pointerId: 9,
-          position: movedPoint,
-          timestampMs: 3,
-          kind: PointerDeviceKind.touch,
-        ),
-      );
-      controller.handlePointerSignal(
-        PointerSignal(
-          type: PointerSignalType.doubleTap,
-          pointerId: 9,
-          position: originalOnlyPoint,
-          timestampMs: 4,
-          kind: PointerDeviceKind.touch,
-        ),
-      );
+      controller.handleDoubleTap(position: movedPoint, timestampMs: 3);
+      controller.handleDoubleTap(position: originalOnlyPoint, timestampMs: 4);
 
       await pumpEventQueue();
       expect(requests.length, 1);
@@ -531,7 +487,7 @@ void main() {
           pointerId: 1,
           position: const Offset(80, 80),
           timestampMs: 10,
-          phase: PointerPhase.down,
+          phase: CanvasPointerPhase.down,
         ),
       );
       controller.handlePointer(
@@ -539,7 +495,7 @@ void main() {
           pointerId: 1,
           position: const Offset(130, 80),
           timestampMs: 20,
-          phase: PointerPhase.move,
+          phase: CanvasPointerPhase.move,
         ),
       );
       final duringMove =
@@ -552,7 +508,7 @@ void main() {
           pointerId: 1,
           position: const Offset(130, 80),
           timestampMs: 21,
-          phase: PointerPhase.cancel,
+          phase: CanvasPointerPhase.cancel,
         ),
       );
 
@@ -585,7 +541,7 @@ void main() {
           pointerId: 1,
           position: const Offset(60, 60),
           timestampMs: 1,
-          phase: PointerPhase.down,
+          phase: CanvasPointerPhase.down,
         ),
       );
 
@@ -597,7 +553,7 @@ void main() {
             pointerId: 1,
             position: position,
             timestampMs: 2 + i,
-            phase: PointerPhase.move,
+            phase: CanvasPointerPhase.move,
           ),
         );
       }
@@ -613,7 +569,7 @@ void main() {
           pointerId: 1,
           position: position,
           timestampMs: 100,
-          phase: PointerPhase.up,
+          phase: CanvasPointerPhase.up,
         ),
       );
 
@@ -652,7 +608,7 @@ void main() {
             pointerId: 1,
             position: const Offset(60, 60),
             timestampMs: 1,
-            phase: PointerPhase.down,
+            phase: CanvasPointerPhase.down,
           ),
         );
         controller.handlePointer(
@@ -660,7 +616,7 @@ void main() {
             pointerId: 1,
             position: const Offset(90, 50),
             timestampMs: 2,
-            phase: PointerPhase.move,
+            phase: CanvasPointerPhase.move,
           ),
         );
 
@@ -702,7 +658,7 @@ void main() {
           pointerId: 1,
           position: const Offset(20, 20),
           timestampMs: 10,
-          phase: PointerPhase.down,
+          phase: CanvasPointerPhase.down,
         ),
       );
       expect(controller.hasActiveLinePreview, isFalse);
@@ -711,7 +667,7 @@ void main() {
           pointerId: 1,
           position: const Offset(50, 20),
           timestampMs: 11,
-          phase: PointerPhase.move,
+          phase: CanvasPointerPhase.move,
         ),
       );
       expect(controller.hasActiveLinePreview, isTrue);
@@ -722,7 +678,7 @@ void main() {
           pointerId: 1,
           position: const Offset(60, 20),
           timestampMs: 12,
-          phase: PointerPhase.up,
+          phase: CanvasPointerPhase.up,
         ),
       );
       expect(controller.hasActiveLinePreview, isFalse);
@@ -750,7 +706,7 @@ void main() {
           pointerId: 2,
           position: const Offset(100, 100),
           timestampMs: 30,
-          phase: PointerPhase.down,
+          phase: CanvasPointerPhase.down,
         ),
       );
       controller.handlePointer(
@@ -758,7 +714,7 @@ void main() {
           pointerId: 2,
           position: const Offset(100, 100),
           timestampMs: 31,
-          phase: PointerPhase.up,
+          phase: CanvasPointerPhase.up,
         ),
       );
       expect(controller.hasPendingLineStart, isTrue);
@@ -769,7 +725,7 @@ void main() {
           pointerId: 20,
           position: const Offset(220, 220),
           timestampMs: 32,
-          phase: PointerPhase.down,
+          phase: CanvasPointerPhase.down,
         ),
       );
       controller.handlePointer(
@@ -777,7 +733,7 @@ void main() {
           pointerId: 20,
           position: const Offset(280, 220),
           timestampMs: 33,
-          phase: PointerPhase.move,
+          phase: CanvasPointerPhase.move,
         ),
       );
       expect(controller.hasActiveLinePreview, isTrue);
@@ -788,7 +744,7 @@ void main() {
           pointerId: 20,
           position: const Offset(280, 220),
           timestampMs: 34,
-          phase: PointerPhase.up,
+          phase: CanvasPointerPhase.up,
         ),
       );
       controller.handlePointer(
@@ -796,7 +752,7 @@ void main() {
           pointerId: 3,
           position: const Offset(130, 130),
           timestampMs: 40,
-          phase: PointerPhase.down,
+          phase: CanvasPointerPhase.down,
         ),
       );
       controller.handlePointer(
@@ -804,7 +760,7 @@ void main() {
           pointerId: 3,
           position: const Offset(130, 130),
           timestampMs: 41,
-          phase: PointerPhase.up,
+          phase: CanvasPointerPhase.up,
         ),
       );
       controller.handlePointer(
@@ -812,7 +768,7 @@ void main() {
           pointerId: 4,
           position: const Offset(150, 150),
           timestampMs: 50,
-          phase: PointerPhase.down,
+          phase: CanvasPointerPhase.down,
         ),
       );
       controller.handlePointer(
@@ -820,7 +776,7 @@ void main() {
           pointerId: 4,
           position: const Offset(150, 150),
           timestampMs: 51,
-          phase: PointerPhase.up,
+          phase: CanvasPointerPhase.up,
         ),
       );
       controller.setDrawTool(DrawTool.pen);
@@ -872,7 +828,7 @@ void main() {
             pointerId: 1,
             position: const Offset(10, 10),
             timestampMs: 1,
-            phase: PointerPhase.down,
+            phase: CanvasPointerPhase.down,
           ),
         );
         controller.handlePointer(
@@ -880,7 +836,7 @@ void main() {
             pointerId: 1,
             position: const Offset(13, 10),
             timestampMs: 2,
-            phase: PointerPhase.up,
+            phase: CanvasPointerPhase.up,
           ),
         );
 
@@ -897,7 +853,7 @@ void main() {
             pointerId: 2,
             position: const Offset(11, 10),
             timestampMs: 3,
-            phase: PointerPhase.down,
+            phase: CanvasPointerPhase.down,
           ),
         );
         controller.handlePointer(
@@ -905,7 +861,7 @@ void main() {
             pointerId: 2,
             position: const Offset(11, 10),
             timestampMs: 4,
-            phase: PointerPhase.up,
+            phase: CanvasPointerPhase.up,
           ),
         );
 
@@ -939,7 +895,7 @@ void main() {
           pointerId: 1,
           position: const Offset(0, 0),
           timestampMs: 1,
-          phase: PointerPhase.down,
+          phase: CanvasPointerPhase.down,
         ),
       );
       for (var i = 1; i < totalRawPoints - 1; i++) {
@@ -948,7 +904,7 @@ void main() {
             pointerId: 1,
             position: Offset(i.toDouble(), 0),
             timestampMs: i + 1,
-            phase: PointerPhase.move,
+            phase: CanvasPointerPhase.move,
           ),
         );
       }
@@ -957,7 +913,7 @@ void main() {
           pointerId: 1,
           position: Offset((totalRawPoints - 1).toDouble(), 0),
           timestampMs: totalRawPoints + 1,
-          phase: PointerPhase.up,
+          phase: CanvasPointerPhase.up,
         ),
       );
 
@@ -994,7 +950,7 @@ void main() {
           pointerId: 1,
           position: const Offset(10, 10),
           timestampMs: 1,
-          phase: PointerPhase.down,
+          phase: CanvasPointerPhase.down,
         ),
       );
       expect(controller.hasActiveStrokePreview, isTrue);
@@ -1009,7 +965,7 @@ void main() {
           pointerId: 1,
           position: const Offset(14, 10),
           timestampMs: 2,
-          phase: PointerPhase.move,
+          phase: CanvasPointerPhase.move,
         ),
       );
       expect(controller.activeStrokePreviewPoints.length, 2);
@@ -1019,7 +975,7 @@ void main() {
           pointerId: 1,
           position: const Offset(14, 10),
           timestampMs: 3,
-          phase: PointerPhase.up,
+          phase: CanvasPointerPhase.up,
         ),
       );
       expect(controller.hasActiveStrokePreview, isFalse);
@@ -1048,7 +1004,7 @@ void main() {
             pointerId: 1,
             position: const Offset(10, 10),
             timestampMs: 1,
-            phase: PointerPhase.down,
+            phase: CanvasPointerPhase.down,
           ),
         );
         controller.handlePointer(
@@ -1056,7 +1012,7 @@ void main() {
             pointerId: 1,
             position: const Offset(18, 10),
             timestampMs: 2,
-            phase: PointerPhase.move,
+            phase: CanvasPointerPhase.move,
           ),
         );
         expect(controller.hasActiveLinePreview, isFalse);
@@ -1066,7 +1022,7 @@ void main() {
             pointerId: 1,
             position: const Offset(21, 10),
             timestampMs: 3,
-            phase: PointerPhase.move,
+            phase: CanvasPointerPhase.move,
           ),
         );
         expect(controller.hasActiveLinePreview, isTrue);
@@ -1076,7 +1032,7 @@ void main() {
             pointerId: 1,
             position: const Offset(21, 10),
             timestampMs: 4,
-            phase: PointerPhase.cancel,
+            phase: CanvasPointerPhase.cancel,
           ),
         );
         expect(controller.hasActiveLinePreview, isFalse);
@@ -1086,7 +1042,7 @@ void main() {
             pointerId: 2,
             position: const Offset(30, 30),
             timestampMs: 5,
-            phase: PointerPhase.down,
+            phase: CanvasPointerPhase.down,
           ),
         );
         controller.handlePointer(
@@ -1094,7 +1050,7 @@ void main() {
             pointerId: 2,
             position: const Offset(50, 30),
             timestampMs: 6,
-            phase: PointerPhase.move,
+            phase: CanvasPointerPhase.move,
           ),
         );
         expect(controller.hasActiveLinePreview, isTrue);
@@ -1107,7 +1063,7 @@ void main() {
             pointerId: 3,
             position: const Offset(30, 30),
             timestampMs: 7,
-            phase: PointerPhase.down,
+            phase: CanvasPointerPhase.down,
           ),
         );
         controller.handlePointer(
@@ -1115,7 +1071,7 @@ void main() {
             pointerId: 3,
             position: const Offset(50, 30),
             timestampMs: 8,
-            phase: PointerPhase.move,
+            phase: CanvasPointerPhase.move,
           ),
         );
         expect(controller.hasActiveLinePreview, isTrue);
@@ -1157,7 +1113,7 @@ void main() {
           pointerId: 1,
           position: const Offset(120, 120),
           timestampMs: 10,
-          phase: PointerPhase.down,
+          phase: CanvasPointerPhase.down,
         ),
       );
       controller.handlePointer(
@@ -1165,7 +1121,7 @@ void main() {
           pointerId: 1,
           position: const Offset(120, 120),
           timestampMs: 11,
-          phase: PointerPhase.up,
+          phase: CanvasPointerPhase.up,
         ),
       );
 
@@ -1174,7 +1130,7 @@ void main() {
           pointerId: 2,
           position: const Offset(170, 120),
           timestampMs: 20,
-          phase: PointerPhase.down,
+          phase: CanvasPointerPhase.down,
         ),
       );
       controller.handlePointer(
@@ -1182,7 +1138,7 @@ void main() {
           pointerId: 2,
           position: const Offset(176, 120),
           timestampMs: 21,
-          phase: PointerPhase.up,
+          phase: CanvasPointerPhase.up,
         ),
       );
 
@@ -1198,7 +1154,7 @@ void main() {
           pointerId: 3,
           position: const Offset(10, 10),
           timestampMs: 30,
-          phase: PointerPhase.down,
+          phase: CanvasPointerPhase.down,
         ),
       );
       controller.handlePointer(
@@ -1206,7 +1162,7 @@ void main() {
           pointerId: 3,
           position: const Offset(10, 10),
           timestampMs: 31,
-          phase: PointerPhase.cancel,
+          phase: CanvasPointerPhase.cancel,
         ),
       );
     });
@@ -1241,7 +1197,7 @@ void main() {
           pointerId: 1,
           position: const Offset(100, 100),
           timestampMs: 1,
-          phase: PointerPhase.down,
+          phase: CanvasPointerPhase.down,
         ),
       );
       controller.handlePointer(
@@ -1249,7 +1205,7 @@ void main() {
           pointerId: 1,
           position: const Offset(100, 100),
           timestampMs: 2,
-          phase: PointerPhase.up,
+          phase: CanvasPointerPhase.up,
         ),
       );
       expect(controller.selectedNodeIds, const <NodeId>{'fg'});
@@ -1259,7 +1215,7 @@ void main() {
           pointerId: 2,
           position: const Offset(80, 80),
           timestampMs: 3,
-          phase: PointerPhase.down,
+          phase: CanvasPointerPhase.down,
         ),
       );
       controller.handlePointer(
@@ -1267,7 +1223,7 @@ void main() {
           pointerId: 2,
           position: const Offset(120, 120),
           timestampMs: 4,
-          phase: PointerPhase.move,
+          phase: CanvasPointerPhase.move,
         ),
       );
       controller.handlePointer(
@@ -1275,7 +1231,7 @@ void main() {
           pointerId: 2,
           position: const Offset(120, 120),
           timestampMs: 5,
-          phase: PointerPhase.up,
+          phase: CanvasPointerPhase.up,
         ),
       );
       expect(controller.selectedNodeIds, const <NodeId>{'fg'});
@@ -1288,7 +1244,7 @@ void main() {
           pointerId: 3,
           position: const Offset(160, 100),
           timestampMs: 6,
-          phase: PointerPhase.down,
+          phase: CanvasPointerPhase.down,
         ),
       );
       controller.handlePointer(
@@ -1296,7 +1252,7 @@ void main() {
           pointerId: 3,
           position: const Offset(160, 100),
           timestampMs: 7,
-          phase: PointerPhase.up,
+          phase: CanvasPointerPhase.up,
         ),
       );
 
@@ -1388,7 +1344,7 @@ void main() {
           pointerId: 1,
           position: const Offset(60, 60),
           timestampMs: 1,
-          phase: PointerPhase.down,
+          phase: CanvasPointerPhase.down,
         ),
       );
       controller.handlePointer(
@@ -1396,7 +1352,7 @@ void main() {
           pointerId: 1,
           position: const Offset(90, 60),
           timestampMs: 2,
-          phase: PointerPhase.move,
+          phase: CanvasPointerPhase.move,
         ),
       );
       controller.handlePointer(
@@ -1404,7 +1360,7 @@ void main() {
           pointerId: 1,
           position: const Offset(100, 60),
           timestampMs: 3,
-          phase: PointerPhase.up,
+          phase: CanvasPointerPhase.up,
         ),
       );
 
@@ -1465,7 +1421,7 @@ void main() {
             pointerId: 1,
             position: const Offset(10, 10),
             timestampMs: 1,
-            phase: PointerPhase.down,
+            phase: CanvasPointerPhase.down,
           ),
         );
         controller.handlePointer(
@@ -1473,7 +1429,7 @@ void main() {
             pointerId: 1,
             position: const Offset(10, 10),
             timestampMs: 2,
-            phase: PointerPhase.up,
+            phase: CanvasPointerPhase.up,
           ),
         );
         expect(controller.hasPendingLineStart, isTrue);
@@ -1515,7 +1471,7 @@ void main() {
           pointerId: 1,
           position: const Offset(10, 10),
           timestampMs: 1,
-          phase: PointerPhase.down,
+          phase: CanvasPointerPhase.down,
         ),
       );
       controller.handlePointer(
@@ -1523,7 +1479,7 @@ void main() {
           pointerId: 1,
           position: const Offset(10, 10),
           timestampMs: 2,
-          phase: PointerPhase.up,
+          phase: CanvasPointerPhase.up,
         ),
       );
 
@@ -1559,7 +1515,7 @@ void main() {
             pointerId: 1,
             position: const Offset(10, 10),
             timestampMs: 1,
-            phase: PointerPhase.down,
+            phase: CanvasPointerPhase.down,
           ),
         );
         expect(controller.activeStrokePreviewColor, controller.drawColor);
@@ -1627,7 +1583,7 @@ void main() {
             pointerId: 10,
             position: const Offset(10, 20),
             timestampMs: 1,
-            phase: PointerPhase.down,
+            phase: CanvasPointerPhase.down,
           ),
         );
         controller.handlePointer(
@@ -1635,7 +1591,7 @@ void main() {
             pointerId: 10,
             position: const Offset(30, 20),
             timestampMs: 2,
-            phase: PointerPhase.move,
+            phase: CanvasPointerPhase.move,
           ),
         );
         controller.handlePointer(
@@ -1643,7 +1599,7 @@ void main() {
             pointerId: 10,
             position: const Offset(30, 20),
             timestampMs: 3,
-            phase: PointerPhase.up,
+            phase: CanvasPointerPhase.up,
           ),
         );
 
@@ -1678,7 +1634,7 @@ void main() {
             pointerId: 20,
             position: const Offset(0, 0),
             timestampMs: 10,
-            phase: PointerPhase.down,
+            phase: CanvasPointerPhase.down,
           ),
         );
         controller.handlePointer(
@@ -1686,7 +1642,7 @@ void main() {
             pointerId: 20,
             position: const Offset(80, 80),
             timestampMs: 11,
-            phase: PointerPhase.move,
+            phase: CanvasPointerPhase.move,
           ),
         );
         controller.handlePointer(
@@ -1694,7 +1650,7 @@ void main() {
             pointerId: 20,
             position: const Offset(80, 80),
             timestampMs: 12,
-            phase: PointerPhase.up,
+            phase: CanvasPointerPhase.up,
           ),
         );
 
@@ -1703,7 +1659,7 @@ void main() {
             pointerId: 21,
             position: const Offset(50, 50),
             timestampMs: 13,
-            phase: PointerPhase.down,
+            phase: CanvasPointerPhase.down,
           ),
         );
         controller.handlePointer(
@@ -1711,7 +1667,7 @@ void main() {
             pointerId: 21,
             position: const Offset(50, 50),
             timestampMs: 14,
-            phase: PointerPhase.up,
+            phase: CanvasPointerPhase.up,
           ),
         );
       },

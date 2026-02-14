@@ -18,6 +18,7 @@ import '../core/scene_spatial_index.dart';
 import '../core/transform2d.dart';
 import '../controller/scene_controller.dart';
 import '../model/document.dart';
+import '../public/canvas_pointer_input.dart';
 import '../public/node_patch.dart';
 import '../public/node_spec.dart';
 import '../public/scene_render_state.dart';
@@ -406,13 +407,13 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
     _core.requestRepaint();
   }
 
-  void handlePointer(PointerSample sample) {
+  void handlePointer(CanvasPointerInput input) {
     final resolvedSample = PointerSample(
-      pointerId: sample.pointerId,
-      position: sample.position,
-      timestampMs: _resolveTimestampMs(sample.timestampMs),
-      phase: sample.phase,
-      kind: sample.kind,
+      pointerId: input.pointerId,
+      position: input.position,
+      timestampMs: _resolveTimestampMs(input.timestampMs),
+      phase: _toInternalPointerPhase(input.phase),
+      kind: input.kind,
     );
 
     if (_mode == CanvasMode.move) {
@@ -422,21 +423,33 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
     }
   }
 
-  void handlePointerSignal(PointerSignal signal) {
-    if (signal.type != PointerSignalType.doubleTap) return;
+  void handleDoubleTap({required Offset position, int? timestampMs}) {
     if (_mode != CanvasMode.move) return;
 
-    final scenePoint = _toScenePoint(signal.position);
+    final scenePoint = _toScenePoint(position);
     final hit = _hitTestTopNode(scenePoint);
     if (hit == null || hit is! TextNode) return;
 
     _events.emitEditTextRequested(
       EditTextRequested(
         nodeId: hit.id,
-        timestampMs: _resolveTimestampMs(signal.timestampMs),
-        position: signal.position,
+        timestampMs: _resolveTimestampMs(timestampMs),
+        position: position,
       ),
     );
+  }
+
+  PointerPhase _toInternalPointerPhase(CanvasPointerPhase phase) {
+    switch (phase) {
+      case CanvasPointerPhase.down:
+        return PointerPhase.down;
+      case CanvasPointerPhase.move:
+        return PointerPhase.move;
+      case CanvasPointerPhase.up:
+        return PointerPhase.up;
+      case CanvasPointerPhase.cancel:
+        return PointerPhase.cancel;
+    }
   }
 
   void _handleMovePointer(PointerSample sample) {

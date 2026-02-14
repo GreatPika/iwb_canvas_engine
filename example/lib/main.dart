@@ -785,7 +785,6 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
       children: [
         SceneView(
           controller: _controller,
-          imageResolver: (_) => null,
           selectionColor: const Color(0xFFFFFF00),
           selectionStrokeWidth: 4,
         ),
@@ -903,7 +902,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     final node = _findTextNode(nodeId);
     if (node == null) return null;
 
-    final viewPosition = toView(
+    final viewPosition = _toViewPoint(
       node.transform.translation,
       _controller.snapshot.camera.offset,
     );
@@ -1235,7 +1234,7 @@ class _PendingLineMarkerPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final start = controller.pendingLineStart;
     if (start == null) return;
-    final viewPos = toView(start, controller.snapshot.camera.offset);
+    final viewPos = _toViewPoint(start, controller.snapshot.camera.offset);
     final paint = Paint()
       ..color = controller.drawColor.withAlpha(200)
       ..style = PaintingStyle.stroke
@@ -1256,4 +1255,11 @@ class _PendingLineMarkerPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _PendingLineMarkerPainter oldDelegate) =>
       oldDelegate.controller != controller;
+}
+
+Offset _toViewPoint(Offset scenePoint, Offset cameraOffset) {
+  return Offset(
+    scenePoint.dx - cameraOffset.dx,
+    scenePoint.dy - cameraOffset.dy,
+  );
 }

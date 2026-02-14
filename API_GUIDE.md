@@ -45,17 +45,13 @@ Runtime aliases exposed publicly:
   - `SceneWriteTxn`, `SceneRenderState`
 - Input/event contracts:
   - `CanvasMode`, `DrawTool`
-  - `PointerSample`, `PointerSignal`, `PointerPhase`, `PointerSignalType`, `PointerInputSettings`
+  - `PointerInputSettings`, `CanvasPointerInput`, `CanvasPointerPhase`
   - `ActionCommitted`, `ActionType`, `EditTextRequested`
 - Serialization:
   - `encodeSceneToJson`, `decodeSceneFromJson`
   - `encodeScene`, `decodeScene`
   - `schemaVersionWrite`, `schemaVersionsRead`
   - `SceneDataException`
-- Rendering support:
-  - `ImageResolverV2`
-  - `SceneStaticLayerCacheV2`, `SceneTextLayoutCacheV2`, `SceneStrokePathCacheV2`, `ScenePathMetricsCacheV2`
-
 ## 4. Scene data model
 
 ### 4.1 Root snapshot
@@ -308,11 +304,14 @@ Behavior notes:
 
 ### 6.7 Low-level input hooks
 
-- `handlePointer(PointerSample sample)`
-- `handlePointerSignal(PointerSignal signal)`
+- `handlePointer(CanvasPointerInput input)`
+- `handleDoubleTap({required Offset position, int? timestampMs})`
 
 Usually these are called by `SceneView` automatically.
 Direct usage is useful when embedding the controller in custom input pipelines.
+
+Internal low-level types (`PointerSample`, `PointerSignal`) are not part of the
+public API surface.
 
 ### 6.8 Direct transactional writes
 
@@ -422,11 +421,6 @@ Delivery contract:
 ```dart
 SceneView(
   controller: controller,
-  imageResolver: (imageId) => null,
-  staticLayerCache: null,
-  textLayoutCache: null,
-  strokePathCache: null,
-  pathMetricsCache: null,
   selectionColor: const Color(0xFF1565C0),
   selectionStrokeWidth: 1,
   gridStrokeWidth: 1,
@@ -436,58 +430,21 @@ SceneView(
 ### 9.2 What `SceneView` does
 
 - Captures pointer events via `Listener`
-- Converts Flutter pointer events into `PointerSample`
-- Feeds samples to `controller.handlePointer(...)`
-- Uses `PointerInputTracker` for tap/double-tap derivation and forwards double taps to controller
+- Routes Flutter pointer input into controller interaction flow
 - Paints scene via `ScenePainterV2`
 - Paints interactive overlays (in-progress stroke/line previews)
 
-### 9.3 Cache ownership semantics
-
-If you do not pass cache instances, `SceneView` creates and owns internal caches.
-If you pass external caches, ownership stays external.
-
-When controller instance changes, view resets pointer tracking state and clears caches to prevent stale reuse across scenes.
-
-`ScenePainterV2` also owns an internal geometry cache (`RenderGeometryCache`) that
-stores per-node local/world bounds and cached local path for `PathNodeSnapshot`.
-This cache is keyed by `NodeId` plus geometry-affecting fields and keeps culling,
-selection halo, and path rendering on the same geometry source.
-
-Runtime constructor validation:
-
-- `SceneStrokePathCacheV2(maxEntries: ...)`
-- `SceneTextLayoutCacheV2(maxEntries: ...)`
-- `ScenePathMetricsCacheV2(maxEntries: ...)`
-
-All three throw `ArgumentError` when `maxEntries <= 0`.
-
-Resource ownership note:
-
-- External `SceneStaticLayerCacheV2` must be disposed by the external owner.
-- `SceneView` disposes `SceneStaticLayerCacheV2` only when it created that cache internally.
-
-### 9.4 Image resolver lifecycle
-
-`ImageResolverV2` returns `dart:ui Image` instances:
-
-- `SceneView` and `ScenePainterV2` treat these images as borrowed render inputs.
-- The app-side image store/cache owns the image lifecycle.
-- Dispose app-owned images when evicting them from cache or when their owning object is disposed.
-
 ## 10. Pointer contracts
 
-### 10.1 `PointerSample`
+### 10.1 `CanvasPointerInput`
 
 Fields:
 
 - `pointerId`
-- `position` (view coords)
-- `timestampMs` (hint)
-- `phase` (`down/move/up/cancel`)
+- `position` (view coordinates)
+- `timestampMs` (timestamp hint)
+- `phase` (`CanvasPointerPhase.down/move/up/cancel`)
 - `kind`
-
-Controller normalizes timestamps into a monotonic internal timeline.
 
 ### 10.2 `PointerInputSettings`
 
@@ -587,7 +544,6 @@ class _CanvasScreenState extends State<CanvasScreen> {
     return Scaffold(
       body: SceneView(
         controller: controller,
-        imageResolver: (imageId) => null,
       ),
     );
   }

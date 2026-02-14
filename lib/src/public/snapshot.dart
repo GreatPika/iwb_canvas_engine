@@ -1,7 +1,28 @@
 import 'dart:ui';
 
-import '../core/defaults.dart';
 import '../core/transform2d.dart';
+
+const double _defaultGridCellSize = 10;
+const List<Color> _defaultPenColors = <Color>[
+  Color(0xFF000000),
+  Color(0xFFE53935),
+  Color(0xFF1E88E5),
+  Color(0xFF43A047),
+  Color(0xFFFB8C00),
+  Color(0xFF8E24AA),
+];
+const List<Color> _defaultBackgroundColors = <Color>[
+  Color(0xFFFFFFFF),
+  Color(0xFFFFF9C4),
+  Color(0xFFBBDEFB),
+  Color(0xFFC8E6C9),
+];
+const List<double> _defaultGridSizes = <double>[
+  _defaultGridCellSize,
+  20,
+  40,
+  80,
+];
 
 /// Stable node identifier for the v2 public model.
 typedef NodeId = String;
@@ -72,7 +93,7 @@ class BackgroundSnapshot {
 class GridSnapshot {
   const GridSnapshot({
     this.isEnabled = false,
-    this.cellSize = SceneDefaults.gridCellSize,
+    this.cellSize = _defaultGridCellSize,
     this.color = const Color(0x1F000000),
   });
 
@@ -88,19 +109,15 @@ class ScenePaletteSnapshot {
     List<Color>? backgroundColors,
     List<double>? gridSizes,
   }) : penColors = List<Color>.unmodifiable(
-         penColors == null
-             ? SceneDefaults.penColors
-             : List<Color>.from(penColors),
+         penColors == null ? _defaultPenColors : List<Color>.from(penColors),
        ),
        backgroundColors = List<Color>.unmodifiable(
          backgroundColors == null
-             ? SceneDefaults.backgroundColors
+             ? _defaultBackgroundColors
              : List<Color>.from(backgroundColors),
        ),
        gridSizes = List<double>.unmodifiable(
-         gridSizes == null
-             ? SceneDefaults.gridSizes
-             : List<double>.from(gridSizes),
+         gridSizes == null ? _defaultGridSizes : List<double>.from(gridSizes),
        );
 
   final List<Color> penColors;
