@@ -1,6 +1,8 @@
 import 'dart:ui';
 
+import '../core/nodes.dart' show PathFillRule;
 import '../core/transform2d.dart';
+export '../core/nodes.dart' show PathFillRule;
 
 const double _defaultGridCellSize = 10;
 const List<Color> _defaultPenColors = <Color>[
@@ -124,9 +126,6 @@ class ScenePaletteSnapshot {
   final List<Color> backgroundColors;
   final List<double> gridSizes;
 }
-
-/// Path fill rule value in the v2 public model.
-enum V2PathFillRule { nonZero, evenOdd }
 
 /// Immutable base node snapshot.
 sealed class NodeSnapshot {
@@ -295,7 +294,7 @@ class PathNodeSnapshot extends NodeSnapshot {
     this.fillColor,
     this.strokeColor,
     this.strokeWidth = 0,
-    this.fillRule = V2PathFillRule.nonZero,
+    this.fillRule = PathFillRule.nonZero,
     super.transform,
     super.opacity,
     super.hitPadding,
@@ -310,5 +309,5 @@ class PathNodeSnapshot extends NodeSnapshot {
   final Color? fillColor;
   final Color? strokeColor;
   final double strokeWidth;
-  final V2PathFillRule fillRule;
+  final PathFillRule fillRule;
 }

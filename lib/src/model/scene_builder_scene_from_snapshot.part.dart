@@ -160,7 +160,7 @@ SceneNode _sceneNodeFromSnapshot(
         fillColor: path.fillColor,
         strokeColor: path.strokeColor,
         strokeWidth: path.strokeWidth,
-        fillRule: _pathFillRuleFromV2(path.fillRule),
+        fillRule: path.fillRule,
         transform: path.transform,
         opacity: path.opacity,
         hitPadding: path.hitPadding,
@@ -213,11 +213,3 @@ int _resolveSnapshotInstanceRevision(
   return nextInstanceRevision();
 }
 
-PathFillRule _pathFillRuleFromV2(V2PathFillRule fillRule) {
-  switch (fillRule) {
-    case V2PathFillRule.nonZero:
-      return PathFillRule.nonZero;
-    case V2PathFillRule.evenOdd:
-      return PathFillRule.evenOdd;
-  }
-}

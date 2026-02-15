@@ -118,8 +118,8 @@ String _runRandomOperation({
                 strokeColor: _randomNullableColor(random),
                 strokeWidth: _randomNonNegative(random),
                 fillRule: random.nextBool()
-                    ? V2PathFillRule.nonZero
-                    : V2PathFillRule.evenOdd,
+                    ? PathFillRule.nonZero
+                    : PathFillRule.evenOdd,
                 transform: _randomTransform(random),
                 opacity: _randomOpacity(random),
                 hitPadding: _randomNonNegative(random),
@@ -414,8 +414,8 @@ NodePatch _typeSpecificPatchForNode(NodeSnapshot node, math.Random random) {
         fillColor: PatchField<Color?>.value(_randomNullableColor(random)),
         strokeColor: PatchField<Color?>.value(_randomNullableColor(random)),
         strokeWidth: PatchField<double>.value(_randomNonNegative(random)),
-        fillRule: PatchField<V2PathFillRule>.value(
-          random.nextBool() ? V2PathFillRule.nonZero : V2PathFillRule.evenOdd,
+        fillRule: PatchField<PathFillRule>.value(
+          random.nextBool() ? PathFillRule.nonZero : PathFillRule.evenOdd,
         ),
       );
     case LineNodeSnapshot():
@@ -527,8 +527,8 @@ NodeSnapshot _randomReplacementNodeSnapshot({
         strokeColor: _randomNullableColor(random),
         strokeWidth: _randomNonNegative(random),
         fillRule: random.nextBool()
-            ? V2PathFillRule.nonZero
-            : V2PathFillRule.evenOdd,
+            ? PathFillRule.nonZero
+            : PathFillRule.evenOdd,
         transform: _randomTransform(random),
         opacity: _randomOpacity(random),
         hitPadding: _randomNonNegative(random),

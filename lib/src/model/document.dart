@@ -256,7 +256,7 @@ SceneNode txnNodeFromSnapshot(
         fillColor: path.fillColor,
         strokeColor: path.strokeColor,
         strokeWidth: path.strokeWidth,
-        fillRule: _txnPathFillRuleFromV2(path.fillRule),
+        fillRule: path.fillRule,
         transform: path.transform,
         opacity: path.opacity,
         hitPadding: path.hitPadding,
@@ -376,7 +376,7 @@ NodeSnapshot txnNodeToSnapshot(SceneNode node) {
         fillColor: path.fillColor,
         strokeColor: path.strokeColor,
         strokeWidth: path.strokeWidth,
-        fillRule: _txnPathFillRuleToV2(path.fillRule),
+        fillRule: path.fillRule,
         transform: path.transform,
         opacity: path.opacity,
         hitPadding: path.hitPadding,
@@ -504,7 +504,7 @@ SceneNode txnNodeFromSpec(
         fillColor: path.fillColor,
         strokeColor: path.strokeColor,
         strokeWidth: path.strokeWidth,
-        fillRule: _txnPathFillRuleFromV2(path.fillRule),
+        fillRule: path.fillRule,
         transform: path.transform,
         opacity: path.opacity,
         hitPadding: path.hitPadding,
@@ -709,10 +709,8 @@ bool txnApplyNodePatch(SceneNode node, NodePatch patch, {bool dryRun = false}) {
           }, dryRun: dryRun) ||
           changed;
       changed =
-          _txnSet(pathPatch.fillRule, _txnPathFillRuleToV2(path.fillRule), (
-            value,
-          ) {
-            path.fillRule = _txnPathFillRuleFromV2(value);
+          _txnSet(pathPatch.fillRule, path.fillRule, (value) {
+            path.fillRule = value;
           }, dryRun: dryRun) ||
           changed;
     default:
@@ -853,23 +851,6 @@ bool txnNormalizeGrid(Scene scene) {
   return false;
 }
 
-PathFillRule _txnPathFillRuleFromV2(V2PathFillRule fillRule) {
-  switch (fillRule) {
-    case V2PathFillRule.nonZero:
-      return PathFillRule.nonZero;
-    case V2PathFillRule.evenOdd:
-      return PathFillRule.evenOdd;
-  }
-}
-
-V2PathFillRule _txnPathFillRuleToV2(PathFillRule fillRule) {
-  switch (fillRule) {
-    case PathFillRule.nonZero:
-      return V2PathFillRule.nonZero;
-    case PathFillRule.evenOdd:
-      return V2PathFillRule.evenOdd;
-  }
-}
 
 bool _txnApplyCommonPatch(
   SceneNode node,

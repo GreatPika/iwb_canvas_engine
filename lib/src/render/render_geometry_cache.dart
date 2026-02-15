@@ -334,8 +334,8 @@ Rect _toWorldBounds(Transform2D transform, Rect localBounds) {
   return worldBounds;
 }
 
-PathFillType _fillTypeFromSnapshot(V2PathFillRule rule) {
-  return rule == V2PathFillRule.evenOdd
+PathFillType _fillTypeFromSnapshot(PathFillRule rule) {
+  return rule == PathFillRule.evenOdd
       ? PathFillType.evenOdd
       : PathFillType.nonZero;
 }

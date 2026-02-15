@@ -53,7 +53,7 @@ void main() {
       const snapshot = PathNodeSnapshot(
         id: 'path-parity',
         svgPathData: 'M0 0 H20 V12 H0 Z',
-        fillRule: V2PathFillRule.evenOdd,
+        fillRule: PathFillRule.evenOdd,
         strokeColor: Color(0xFF000000),
         strokeWidth: 4,
         hitPadding: 2.5,

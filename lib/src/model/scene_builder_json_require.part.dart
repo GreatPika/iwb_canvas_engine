@@ -388,12 +388,12 @@ NodeType _parseNodeType(String value) {
   }
 }
 
-V2PathFillRule _parsePathFillRule(String value) {
+PathFillRule _parsePathFillRule(String value) {
   switch (value) {
     case 'nonZero':
-      return V2PathFillRule.nonZero;
+      return PathFillRule.nonZero;
     case 'evenOdd':
-      return V2PathFillRule.evenOdd;
+      return PathFillRule.evenOdd;
     default:
       throw SceneDataException(
         code: SceneDataErrorCode.invalidValue,

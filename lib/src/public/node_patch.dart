@@ -1,8 +1,9 @@
 import 'dart:ui';
 
+import '../core/nodes.dart' show PathFillRule;
 import '../core/transform2d.dart';
 import 'patch_field.dart';
-import 'snapshot.dart';
+import 'snapshot.dart' hide PathFillRule;
 
 /// Patch for common node fields shared by all node variants.
 class CommonNodePatch {
@@ -132,12 +133,12 @@ class PathNodePatch extends NodePatch {
     this.fillColor = const PatchField<Color?>.absent(),
     this.strokeColor = const PatchField<Color?>.absent(),
     this.strokeWidth = const PatchField<double>.absent(),
-    this.fillRule = const PatchField<V2PathFillRule>.absent(),
+    this.fillRule = const PatchField<PathFillRule>.absent(),
   });
 
   final PatchField<String> svgPathData;
   final PatchField<Color?> fillColor;
   final PatchField<Color?> strokeColor;
   final PatchField<double> strokeWidth;
-  final PatchField<V2PathFillRule> fillRule;
+  final PatchField<PathFillRule> fillRule;
 }

@@ -52,7 +52,7 @@ void main() {
     const nodeB = PathNodeSnapshot(
       id: 'p-1',
       svgPathData: 'M0 0 H10 V10 H0 Z',
-      fillRule: V2PathFillRule.evenOdd,
+      fillRule: PathFillRule.evenOdd,
     );
     final pathB = Path()..addRect(const Rect.fromLTWH(0, 0, 10, 10));
     final entry2 = cache.getOrBuild(node: nodeB, localPath: pathB);

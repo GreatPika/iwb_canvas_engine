@@ -560,7 +560,7 @@ void main() {
       fallbackId: 'auto-5',
     );
     final path = txnNodeFromSpec(
-      PathNodeSpec(svgPathData: 'M0 0 L1 1', fillRule: V2PathFillRule.evenOdd),
+      PathNodeSpec(svgPathData: 'M0 0 L1 1', fillRule: PathFillRule.evenOdd),
       fallbackId: 'auto-6',
     );
     final explicit = txnNodeFromSpec(
@@ -916,7 +916,7 @@ void main() {
           fillColor: PatchField<Color?>.value(Color(0xFF111111)),
           strokeColor: PatchField<Color?>.nullValue(),
           strokeWidth: PatchField<double>.value(4),
-          fillRule: PatchField<V2PathFillRule>.value(V2PathFillRule.evenOdd),
+          fillRule: PatchField<PathFillRule>.value(PathFillRule.evenOdd),
         ),
       ),
       isTrue,

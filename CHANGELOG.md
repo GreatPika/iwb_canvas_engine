@@ -15,6 +15,7 @@
 - Public view widget API removes `SceneViewInteractiveV2` from exports;
   use `SceneViewInteractive` (or `SceneView` alias).
 - `SceneViewInteractiveV2` no longer exposes `geometryCache` in its public constructor; geometry cache ownership is fully internal to keep non-exported render-cache types out of public signatures.
+- Removed public `V2PathFillRule`; path node public contracts now use `PathFillRule`.
 
 ### Changed
 

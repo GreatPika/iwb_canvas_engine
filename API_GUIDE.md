@@ -117,8 +117,8 @@ Variants:
 
 Path fill rule enum:
 
-- `V2PathFillRule.nonZero`
-- `V2PathFillRule.evenOdd`
+- `PathFillRule.nonZero`
+- `PathFillRule.evenOdd`
 
 ## 5. Write model: `NodeSpec`, `NodePatch`, `PatchField`
 

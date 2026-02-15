@@ -125,20 +125,20 @@
 
 ### 3.1 Удалить публичный `V2PathFillRule`
 
-* [ ] Удалить `enum V2PathFillRule` из `lib/src/public/snapshot.dart`
-* [ ] В `public/snapshot.dart`, `public/node_spec.dart`, `public/node_patch.dart`: заменить `V2PathFillRule` → `PathFillRule`
-* [ ] Включить `PathFillRule` как публично используемый тип (точечный импорт `show PathFillRule` из core)
+* [x] Удалить `enum V2PathFillRule` из `lib/src/public/snapshot.dart`
+* [x] В `public/snapshot.dart`, `public/node_spec.dart`, `public/node_patch.dart`: заменить `V2PathFillRule` → `PathFillRule`
+* [x] Включить `PathFillRule` как публично используемый тип (точечный импорт `show PathFillRule` из core)
 
 ### 3.2 Удалить/переименовать “V2”-функции конвертации
 
-* [ ] Удалить `_txnPathFillRuleFromV2/_txnPathFillRuleToV2`
-* [ ] Удалить `_pathFillRuleFromV2/_pathFillRuleToV2`
-* [ ] `_parsePathFillRule` должен возвращать `PathFillRule` (не `V2PathFillRule`)
+* [x] Удалить `_txnPathFillRuleFromV2/_txnPathFillRuleToV2`
+* [x] Удалить `_pathFillRuleFromV2/_pathFillRuleToV2`
+* [x] `_parsePathFillRule` должен возвращать `PathFillRule` (не `V2PathFillRule`)
 
 ### Проверки этапа
 
-* [ ] A + B
-* [ ] `flutter test test/public test/serialization --coverage`
+* [x] A + B
+* [x] `flutter test test/public test/serialization --coverage`
 
 ---
 

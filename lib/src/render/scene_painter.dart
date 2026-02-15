@@ -892,8 +892,8 @@ Path _buildStrokePath(List<Offset> points) {
   return path;
 }
 
-PathFillType _fillTypeFromSnapshot(V2PathFillRule rule) {
-  return rule == V2PathFillRule.evenOdd
+PathFillType _fillTypeFromSnapshot(PathFillRule rule) {
+  return rule == PathFillRule.evenOdd
       ? PathFillType.evenOdd
       : PathFillType.nonZero;
 }

@@ -155,7 +155,7 @@ void main() {
       fillColor: Color(0xFF123456),
       strokeColor: Color(0xFF654321),
       strokeWidth: 2.5,
-      fillRule: V2PathFillRule.evenOdd,
+      fillRule: PathFillRule.evenOdd,
     );
 
     expect(image.imageId, 'image://1');
@@ -165,7 +165,7 @@ void main() {
     expect(text.fontFamily, 'Mono');
     expect(line.end, const Offset(10, 10));
     expect(rect.strokeWidth, 1.5);
-    expect(path.fillRule, V2PathFillRule.evenOdd);
+    expect(path.fillRule, PathFillRule.evenOdd);
   });
 
   test('Scene-level snapshot value objects are configurable and immutable', () {

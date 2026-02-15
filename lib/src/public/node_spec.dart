@@ -1,7 +1,8 @@
 import 'dart:ui';
 
+import '../core/nodes.dart' show PathFillRule;
 import '../core/transform2d.dart';
-import 'snapshot.dart';
+import 'snapshot.dart' hide PathFillRule;
 
 /// Immutable node creation spec for v2 write APIs.
 sealed class NodeSpec {
@@ -158,7 +159,7 @@ class PathNodeSpec extends NodeSpec {
     this.fillColor,
     this.strokeColor,
     this.strokeWidth = 1,
-    this.fillRule = V2PathFillRule.nonZero,
+    this.fillRule = PathFillRule.nonZero,
     super.transform,
     super.opacity,
     super.hitPadding,
@@ -173,5 +174,5 @@ class PathNodeSpec extends NodeSpec {
   final Color? fillColor;
   final Color? strokeColor;
   final double strokeWidth;
-  final V2PathFillRule fillRule;
+  final PathFillRule fillRule;
 }

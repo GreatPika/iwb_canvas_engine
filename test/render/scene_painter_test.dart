@@ -223,7 +223,7 @@ void main() {
                 fillColor: const Color(0xFF81C784),
                 strokeColor: const Color(0xFF1B5E20),
                 strokeWidth: 2,
-                fillRule: V2PathFillRule.evenOdd,
+                fillRule: PathFillRule.evenOdd,
                 transform: Transform2D.translation(const Offset(85, 60)),
               ),
             ],

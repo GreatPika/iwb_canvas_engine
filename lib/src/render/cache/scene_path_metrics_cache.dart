@@ -121,7 +121,7 @@ class _PathMetricsEntry {
   });
 
   final String svgPathData;
-  final V2PathFillRule fillRule;
+  final PathFillRule fillRule;
   final PathSelectionContours contours;
 }
 
@@ -135,8 +135,8 @@ class PathSelectionContours {
   final List<Path> openContours;
 }
 
-PathFillType _fillTypeFromSnapshot(V2PathFillRule rule) {
-  return rule == V2PathFillRule.evenOdd
+PathFillType _fillTypeFromSnapshot(PathFillRule rule) {
+  return rule == PathFillRule.evenOdd
       ? PathFillType.evenOdd
       : PathFillType.nonZero;
 }
