@@ -11,7 +11,7 @@ import 'package:iwb_canvas_engine/src/model/document.dart';
 import 'package:iwb_canvas_engine/src/model/document_clone.dart';
 
 // INV:INV-G-NODEID-UNIQUE
-// INV:INV-V2-ID-INDEX-FROM-SCENE
+// INV:INV-ENG-ID-INDEX-FROM-SCENE
 
 void main() {
   final scenarioSeeds = _resolveScenarioSeeds();

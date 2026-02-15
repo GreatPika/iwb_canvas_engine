@@ -54,6 +54,14 @@ Canonical invariant registry:
 
 - `tool/invariant_registry.dart`
 
+Invariant ID naming:
+
+- Format: `INV-<DOMAIN>-<RULE>`.
+- Allowed domains: `G` (global guardrails), `ENG` (engine/runtime/controller), `SER` (serialization).
+- `RULE` must use `UPPER-KEBAB-CASE` (`A-Z`, `0-9`, `-` only).
+- Underscores in invariant IDs are forbidden.
+- Enforcement markers in `tool/**` and `test/**` must use exact IDs via `// INV:<id>`.
+
 Key invariants:
 
 - Single entrypoint: `iwb_canvas_engine.dart` only.

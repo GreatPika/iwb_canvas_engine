@@ -7,13 +7,13 @@ import 'package:iwb_canvas_engine/src/core/scene_spatial_index.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
 import 'package:iwb_canvas_engine/src/controller/internal/signal_event.dart';
 
-// INV:INV-V2-TXN-ATOMIC-COMMIT
-// INV:INV-V2-EPOCH-INVALIDATION
-// INV:INV-V2-SIGNALS-AFTER-COMMIT
-// INV:INV-V2-ID-INDEX-FROM-SCENE
-// INV:INV-V2-TXN-COPY-ON-WRITE
-// INV:INV-V2-TEXT-SIZE-DERIVED
-// INV:INV-V2-DISPOSE-FAIL-FAST
+// INV:INV-ENG-TXN-ATOMIC-COMMIT
+// INV:INV-ENG-EPOCH-INVALIDATION
+// INV:INV-ENG-SIGNALS-AFTER-COMMIT
+// INV:INV-ENG-ID-INDEX-FROM-SCENE
+// INV:INV-ENG-TXN-COPY-ON-WRITE
+// INV:INV-ENG-TEXT-SIZE-DERIVED
+// INV:INV-ENG-DISPOSE-FAIL-FAST
 
 void main() {
   SceneSnapshot twoRectSnapshot() {
@@ -1805,7 +1805,7 @@ void main() {
   );
 
   test('committed signals expose immutable payload and nodeIds', () async {
-    // INV:INV-V2-EVENTS-IMMUTABLE
+    // INV:INV-ENG-EVENTS-IMMUTABLE
     final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 

@@ -25,14 +25,18 @@ void main() {
       }
     });
 
-    test('rejects core -> input import', () async {
+    test('rejects core -> controller import', () async {
       final sandbox = await _createSandbox();
       try {
-        _writeFile(sandbox, 'lib/src/input/types.dart', 'class InputType {}\n');
+        _writeFile(
+          sandbox,
+          'lib/src/controller/types.dart',
+          'class ControllerType {}\n',
+        );
         _writeFile(
           sandbox,
           'lib/src/core/value.dart',
-          "import 'package:iwb_canvas_engine/src/input/types.dart';\n",
+          "import 'package:iwb_canvas_engine/src/controller/types.dart';\n",
         );
 
         final result = await _runTool(sandbox, 'check_import_boundaries.dart');
@@ -40,7 +44,7 @@ void main() {
         expect(
           result.stderr.toString(),
           contains(
-            'layer boundary violation: core/** must not import input/**',
+            'layer boundary violation: core/** must not import controller/**',
           ),
         );
       } finally {
@@ -48,25 +52,25 @@ void main() {
       }
     });
 
-    test('rejects cross-slice import', () async {
+    test('rejects internal -> commands import', () async {
       final sandbox = await _createSandbox();
       try {
         _writeFile(
           sandbox,
-          'lib/src/input/slices/a/a.dart',
-          'class SliceA {}\n',
+          'lib/src/controller/commands/a/a.dart',
+          'class CommandA {}\n',
         );
         _writeFile(
           sandbox,
-          'lib/src/input/slices/b/b.dart',
-          "import 'package:iwb_canvas_engine/src/input/slices/a/a.dart';\n",
+          'lib/src/controller/internal/b.dart',
+          "import 'package:iwb_canvas_engine/src/controller/commands/a/a.dart';\n",
         );
 
         final result = await _runTool(sandbox, 'check_import_boundaries.dart');
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          contains('slices/** must not import other slices'),
+          contains('internal/** must not import commands/**'),
         );
       } finally {
         sandbox.deleteSync(recursive: true);
@@ -100,9 +104,9 @@ void main() {
   });
 
   group('tool/check_guardrails.dart', () {
-    // INV:INV-V2-TXN-ATOMIC-COMMIT
+    // INV:INV-ENG-TXN-ATOMIC-COMMIT
     // INV:INV-G-PUBLIC-ENTRYPOINTS
-    // INV:INV-V2-SAFE-TXN-API
+    // INV:INV-ENG-SAFE-TXN-API
     test('passes for write/txn APIs and controllerEpoch usage', () async {
       final sandbox = await _createSandbox();
       try {
@@ -134,7 +138,7 @@ class Store {
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          contains('advanced.dart entrypoint is forbidden in v2'),
+          contains('advanced.dart entrypoint is forbidden'),
         );
       } finally {
         sandbox.deleteSync(recursive: true);

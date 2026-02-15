@@ -251,29 +251,29 @@
 
 ### 8.1 Переименовать инварианты (убрать `INV-V2-*` и “slice” из ID)
 
-* [ ] В `tool/invariant_registry.dart`: заменить `INV-V2-*` на нейтральные, например `INV-ENG-*`
-* [ ] Везде, где есть `// INV:INV-V2-...` — обновить на новые ID
-* [ ] То же для `INV-SLICE-*` / `INV-INTERNAL-*`: переименовать под `controller/commands` и `controller/internal`
+* [x] В `tool/invariant_registry.dart`: заменить `INV-V2-*` на нейтральные, например `INV-ENG-*`
+* [x] Везде, где есть `// INV:INV-V2-...` — обновить на новые ID
+* [x] То же для `INV-SLICE-*` / `INV-INTERNAL-*`: переименовать под `controller/commands` и `controller/internal`
 
 ### 8.2 Обновить `tool/check_import_boundaries.dart`
 
-* [ ] Удалить/заменить правила, привязанные к `lib/src/input/slices/**`
+* [x] Удалить/заменить правила, привязанные к `lib/src/input/slices/**`
 * [ ] Добавить правила для:
 
-  * [ ] `lib/src/controller/commands/**`
-  * [ ] `lib/src/controller/internal/**`
-* [ ] Сохранить смысл: запрет циклов и “модули не импортируют друг друга” (если это нужно)
+  * [x] `lib/src/controller/commands/**`
+  * [x] `lib/src/controller/internal/**`
+* [x] Сохранить смысл: запрет циклов и “модули не импортируют друг друга” (если это нужно)
 
 ### 8.3 Обновить `tool/check_guardrails.dart` и тесты тулов
 
-* [ ] Заменить упоминания старых инвариантов на новые
-* [ ] Обновить `test/tool/guardrails_tools_test.dart` (там есть синтетические “cross-slice import” кейсы)
+* [x] Заменить упоминания старых инвариантов на новые
+* [x] Обновить `test/tool/guardrails_tools_test.dart` (там есть синтетические “cross-slice import” кейсы)
 
 ### Проверки этапа
 
-* [ ] `dart run tool/check_import_boundaries.dart`
-* [ ] `dart run tool/check_invariant_coverage.dart`
-* [ ] `dart run tool/check_guardrails.dart`
+* [x] `dart run tool/check_import_boundaries.dart`
+* [x] `dart run tool/check_invariant_coverage.dart`
+* [x] `dart run tool/check_guardrails.dart`
 
 ---
 

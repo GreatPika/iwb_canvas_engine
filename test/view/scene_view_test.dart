@@ -63,7 +63,7 @@ void main() {
   testWidgets('SceneViewCore clears all render caches on epoch change', (
     tester,
   ) async {
-    // INV:INV-V2-EPOCH-INVALIDATION
+    // INV:INV-ENG-EPOCH-INVALIDATION
     final controller = SceneControllerCore(
       initialSnapshot: _snapshot(strokeY: 20, text: 'A'),
     );

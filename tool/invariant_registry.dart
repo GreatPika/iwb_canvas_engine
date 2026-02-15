@@ -4,8 +4,13 @@
 /// Tooling uses it to ensure every invariant has at least one enforcement
 /// marker in `tool/**` or `test/**`.
 ///
+/// Invariant ID naming convention:
+/// - Pattern: `INV-<DOMAIN>-<RULE>`
+/// - `DOMAIN` is one of: `G`, `ENG`, `SER`
+/// - `RULE` uses UPPER-KEBAB-CASE (`A-Z`, `0-9`, `-`)
+/// - Do not use underscores in IDs
+///
 /// To reference an invariant from a test/tool, add a marker comment:
-///   // INV:INV-EXAMPLE
 library;
 
 class Invariant {
@@ -41,117 +46,117 @@ const List<Invariant> invariants = <Invariant>[
     title: 'NodeId stays unique across all scene layers',
   ),
   Invariant(
-    id: 'INV-V2-NO-EXTERNAL-MUTATION',
+    id: 'INV-ENG-NO-EXTERNAL-MUTATION',
     scope: 'engine-api',
     title: 'public snapshots/specs do not expose mutable internals',
   ),
   Invariant(
-    id: 'INV-V2-WRITE-ONLY-MUTATION',
+    id: 'INV-ENG-WRITE-ONLY-MUTATION',
     scope: 'engine-controller',
     title: 'mutations are routed via write*/txn* APIs',
   ),
   Invariant(
-    id: 'INV-V2-SAFE-TXN-API',
+    id: 'INV-ENG-SAFE-TXN-API',
     scope: 'engine-controller',
     title:
         'public transaction API does not expose mutable scene escape hatches',
   ),
   Invariant(
-    id: 'INV-V2-TXN-ATOMIC-COMMIT',
+    id: 'INV-ENG-TXN-ATOMIC-COMMIT',
     scope: 'engine-controller',
     title: 'transaction commit remains atomic',
   ),
   Invariant(
-    id: 'INV-V2-TXN-COPY-ON-WRITE',
+    id: 'INV-ENG-TXN-COPY-ON-WRITE',
     scope: 'engine-controller',
     title:
         'transactions use scene/layer/node copy-on-write and avoid full scene deep clone',
   ),
   Invariant(
-    id: 'INV-V2-SIGNALS-AFTER-COMMIT',
+    id: 'INV-ENG-SIGNALS-AFTER-COMMIT',
     scope: 'engine-controller',
     title:
         'committed signals are delivered only after store commit is finalized',
   ),
   Invariant(
-    id: 'INV-V2-ID-INDEX-FROM-SCENE',
+    id: 'INV-ENG-ID-INDEX-FROM-SCENE',
     scope: 'engine-controller',
     title:
         'allNodeIds/nodeLocator match committed scene and nodeIdSeed is monotonic (lower-bounded by scene)',
   ),
   Invariant(
-    id: 'INV-V2-INSTANCE-REVISION-MONOTONIC',
+    id: 'INV-ENG-INSTANCE-REVISION-MONOTONIC',
     scope: 'engine-controller',
     title:
         'scene nodes keep instanceRevision >= 1 and nextInstanceRevision stays monotonic (lower-bounded by scene)',
   ),
   Invariant(
-    id: 'INV-V2-WRITE-NUMERIC-GUARDS',
+    id: 'INV-ENG-WRITE-NUMERIC-GUARDS',
     scope: 'engine-controller',
     title: 'writer rejects non-finite or invalid numeric write inputs',
   ),
   Invariant(
-    id: 'INV-V2-DISPOSE-FAIL-FAST',
+    id: 'INV-ENG-DISPOSE-FAIL-FAST',
     scope: 'engine-controller',
     title:
         'mutating/effectful core APIs fail fast after dispose and keep state/effects unchanged',
   ),
   Invariant(
-    id: 'INV-V2-TEXT-SIZE-DERIVED',
+    id: 'INV-ENG-TEXT-SIZE-DERIVED',
     scope: 'engine-controller',
     title: 'TextNode.size is always derived from text layout inputs',
   ),
   Invariant(
-    id: 'INV-V2-EVENTS-IMMUTABLE',
+    id: 'INV-ENG-EVENTS-IMMUTABLE',
     scope: 'engine-runtime',
     title: 'published events expose immutable nodeIds/payload snapshots',
   ),
   Invariant(
-    id: 'INV-V2-EPOCH-INVALIDATION',
+    id: 'INV-ENG-EPOCH-INVALIDATION',
     scope: 'engine-runtime',
     title: 'replace-scene lifecycle preserves epoch invalidation',
   ),
   Invariant(
-    id: 'INV-V2-RENDER-GEOMETRY-KEY-STABLE',
+    id: 'INV-ENG-RENDER-GEOMETRY-KEY-STABLE',
     scope: 'engine-runtime',
     title:
         'render geometry cache keys use stable scalar/revision inputs (no collection identity)',
   ),
   Invariant(
-    id: 'INV-V2-SPATIAL-INDEX-REBUILD-ON-INVALID',
+    id: 'INV-ENG-SPATIAL-INDEX-REBUILD-ON-INVALID',
     scope: 'engine-runtime',
+    title: 'invalid spatial index always transitions to rebuild-required state',
+  ),
+  Invariant(
+    id: 'INV-ENG-COMMANDS-NO-PART',
+    scope: 'controller-structure',
+    title: 'controller/commands/** must not use part/part of',
+  ),
+  Invariant(
+    id: 'INV-ENG-COMMANDS-NO-SCENE_CONTROLLER',
+    scope: 'controller-structure',
+    title: 'controller/commands/** must not import controller entrypoint',
+  ),
+  Invariant(
+    id: 'INV-ENG-COMMANDS-NO-CROSS_IMPORTS',
+    scope: 'controller-structure',
+    title: 'controller/commands/** must not import other command groups',
+  ),
+  Invariant(
+    id: 'INV-ENG-INTERNAL-NO-SCENE_CONTROLLER',
+    scope: 'controller-structure',
+    title: 'controller/internal/** must not import controller entrypoint',
+  ),
+  Invariant(
+    id: 'INV-ENG-INTERNAL-NO-COMMANDS-IMPORTS',
+    scope: 'controller-structure',
+    title: 'controller/internal/** must not import controller/commands/**',
+  ),
+  Invariant(
+    id: 'INV-ENG-SHARED-CONTROLLER-HELPERS',
+    scope: 'controller-structure',
     title:
-        'invalid spatial index in slice always transitions to rebuild-required state',
-  ),
-  Invariant(
-    id: 'INV-SLICE-NO-PART',
-    scope: 'input-slices',
-    title: 'input/slices/** must not use part/part of',
-  ),
-  Invariant(
-    id: 'INV-SLICE-NO-SCENE_CONTROLLER',
-    scope: 'input-slices',
-    title: 'input/slices/** must not import controller entrypoint',
-  ),
-  Invariant(
-    id: 'INV-SLICE-NO-CROSS_SLICE_IMPORTS',
-    scope: 'input-slices',
-    title: 'input/slices/** must not import other slices',
-  ),
-  Invariant(
-    id: 'INV-INTERNAL-NO-SCENE_CONTROLLER',
-    scope: 'input-slices',
-    title: 'input/internal/** must not import controller entrypoint',
-  ),
-  Invariant(
-    id: 'INV-INTERNAL-NO-SLICES_IMPORTS',
-    scope: 'input-slices',
-    title: 'input/internal/** must not import input/slices/**',
-  ),
-  Invariant(
-    id: 'INV-SHARED-INPUT-IN-INTERNAL',
-    scope: 'input-slices',
-    title: 'shared input helpers stay in core/** or input/internal/**',
+        'shared controller helpers stay in core/** or controller/internal/**',
   ),
   Invariant(
     id: 'INV-SER-JSON-NUMERIC-VALIDATION',

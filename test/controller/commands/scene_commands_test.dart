@@ -5,8 +5,8 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
 
 void main() {
-  // INV:INV-V2-TXN-ATOMIC-COMMIT
-  // INV:INV-V2-SIGNALS-AFTER-COMMIT
+  // INV:INV-ENG-TXN-ATOMIC-COMMIT
+  // INV:INV-ENG-SIGNALS-AFTER-COMMIT
 
   SceneControllerCore buildController() {
     return SceneControllerCore(

@@ -3,13 +3,13 @@ import 'dart:io';
 // Invariants enforced by this tool:
 // INV:INV-G-CORE-NO-LAYER-DEPS
 // INV:INV-G-LAYER-BOUNDARIES
-// INV:INV-V2-NO-EXTERNAL-MUTATION
-// INV:INV-SLICE-NO-PART
-// INV:INV-SLICE-NO-SCENE_CONTROLLER
-// INV:INV-SLICE-NO-CROSS_SLICE_IMPORTS
-// INV:INV-INTERNAL-NO-SCENE_CONTROLLER
-// INV:INV-INTERNAL-NO-SLICES_IMPORTS
-// INV:INV-SHARED-INPUT-IN-INTERNAL
+// INV:INV-ENG-NO-EXTERNAL-MUTATION
+// INV:INV-ENG-COMMANDS-NO-PART
+// INV:INV-ENG-COMMANDS-NO-SCENE_CONTROLLER
+// INV:INV-ENG-COMMANDS-NO-CROSS_IMPORTS
+// INV:INV-ENG-INTERNAL-NO-SCENE_CONTROLLER
+// INV:INV-ENG-INTERNAL-NO-COMMANDS-IMPORTS
+// INV:INV-ENG-SHARED-CONTROLLER-HELPERS
 
 class _Violation {
   _Violation({
@@ -63,11 +63,10 @@ String _posixJoin(String a, String b) {
 
 String _toPosixPath(String path) => path.replaceAll('\\', '/');
 
-enum _Layer { core, input, controller, render, serialization, view }
+enum _Layer { core, controller, render, serialization, view }
 
 _Layer? _layerForRepoRelPosixPath(String repoRelPosixPath) {
   if (repoRelPosixPath.startsWith('/lib/src/core/')) return _Layer.core;
-  if (repoRelPosixPath.startsWith('/lib/src/input/')) return _Layer.input;
   if (repoRelPosixPath.startsWith('/lib/src/controller/')) {
     return _Layer.controller;
   }
@@ -83,8 +82,6 @@ String _layerLabel(_Layer layer) {
   switch (layer) {
     case _Layer.core:
       return 'core';
-    case _Layer.input:
-      return 'input';
     case _Layer.controller:
       return 'controller';
     case _Layer.render:
@@ -102,18 +99,14 @@ bool _isAllowedLayerDependency({required _Layer from, required _Layer to}) {
       return to == _Layer.core;
     case _Layer.serialization:
       return to == _Layer.core || to == _Layer.serialization;
-    case _Layer.input:
-      return to == _Layer.core || to == _Layer.input;
     case _Layer.controller:
       return to == _Layer.core || to == _Layer.controller;
     case _Layer.render:
       return to == _Layer.core ||
-          to == _Layer.input ||
           to == _Layer.controller ||
           to == _Layer.render;
     case _Layer.view:
       return to == _Layer.core ||
-          to == _Layer.input ||
           to == _Layer.controller ||
           to == _Layer.render ||
           to == _Layer.view;
@@ -236,20 +229,6 @@ String? _commandGroupForFilePosix(String filePosixPath) {
   return after.substring(0, slash);
 }
 
-String? _legacySliceGroupForFilePosix(String filePosixPath) {
-  const marker = '/lib/src/input/slices/';
-  final idx = filePosixPath.indexOf(marker);
-  if (idx == -1) {
-    return null;
-  }
-  final after = filePosixPath.substring(idx + marker.length);
-  final slash = after.indexOf('/');
-  if (slash == -1) {
-    return null;
-  }
-  return after.substring(0, slash);
-}
-
 String? _resolveToRepoRelTargetPosix({
   required String targetPosix,
   required String packageName,
@@ -301,10 +280,6 @@ bool _isAllowedForCommands({
   if (resolvedRepoRelPosix.startsWith('/lib/src/public/')) return true;
   if (resolvedRepoRelPosix.startsWith('/lib/src/controller/commands/')) {
     final importedCommand = _commandGroupForFilePosix(resolvedRepoRelPosix);
-    return importedCommand == null || importedCommand == currentCommand;
-  }
-  if (resolvedRepoRelPosix.startsWith('/lib/src/input/slices/')) {
-    final importedCommand = _legacySliceGroupForFilePosix(resolvedRepoRelPosix);
     return importedCommand == null || importedCommand == currentCommand;
   }
   if (resolvedRepoRelPosix.startsWith('/lib/src/controller/internal/')) {
@@ -386,10 +361,7 @@ void main(List<String> args) {
     final isCommandFile = filePosixPath.startsWith(
       '/lib/src/controller/commands/',
     );
-    final isLegacySliceFile = filePosixPath.startsWith(
-      '/lib/src/input/slices/',
-    );
-    final isCommandScopeFile = isCommandFile || isLegacySliceFile;
+    final isCommandScopeFile = isCommandFile;
     final isInternalFile = filePosixPath.startsWith(
       '/lib/src/controller/internal/',
     );
@@ -398,9 +370,7 @@ void main(List<String> args) {
 
     final currentCommand = isCommandFile
         ? _commandGroupForFilePosix(filePosixPath)
-        : (isLegacySliceFile
-              ? _legacySliceGroupForFilePosix(filePosixPath)
-              : null);
+        : null;
     final fileDirRepoRelPosix = _posixDirname(filePosixPath);
 
     final lines = content.split('\n');
@@ -421,9 +391,7 @@ void main(List<String> args) {
             line: lineNo,
             directive: 'part',
             target: line.trim(),
-            message: isLegacySliceFile
-                ? 'slices/** must not use part/part of directives'
-                : 'commands/** must not use part/part of directives',
+            message: 'commands/** must not use part/part of directives',
           ),
         );
       }
@@ -488,10 +456,9 @@ void main(List<String> args) {
 
         if (resolvedRepoRelPosix != null) {
           if (isInternalFile &&
-              (resolvedRepoRelPosix.startsWith(
-                    '/lib/src/controller/commands/',
-                  ) ||
-                  resolvedRepoRelPosix.startsWith('/lib/src/input/slices/'))) {
+              resolvedRepoRelPosix.startsWith(
+                '/lib/src/controller/commands/',
+              )) {
             violations.add(
               _Violation(
                 filePath: filePosixPath,
@@ -505,14 +472,12 @@ void main(List<String> args) {
           }
 
           if (isCommandScopeFile &&
-              (resolvedRepoRelPosix.startsWith(
-                    '/lib/src/controller/commands/',
-                  ) ||
-                  resolvedRepoRelPosix.startsWith('/lib/src/input/slices/'))) {
-            final importedCommand =
-                resolvedRepoRelPosix.startsWith('/lib/src/controller/commands/')
-                ? _commandGroupForFilePosix(resolvedRepoRelPosix)
-                : _legacySliceGroupForFilePosix(resolvedRepoRelPosix);
+              resolvedRepoRelPosix.startsWith(
+                '/lib/src/controller/commands/',
+              )) {
+            final importedCommand = _commandGroupForFilePosix(
+              resolvedRepoRelPosix,
+            );
             if (currentCommand != null &&
                 importedCommand != null &&
                 importedCommand != currentCommand) {
@@ -522,11 +487,9 @@ void main(List<String> args) {
                   line: lineNo,
                   directive: directive,
                   target: target,
-                  message: isLegacySliceFile
-                      ? 'slices/** must not $directive other slices '
-                            '(current=$currentCommand, import=$importedCommand)'
-                      : 'commands/** must not $directive other commands '
-                            '(current=$currentCommand, import=$importedCommand)',
+                  message:
+                      'commands/** must not $directive other commands '
+                      '(current=$currentCommand, import=$importedCommand)',
                 ),
               );
               hasSpecificViolation = true;
@@ -546,9 +509,7 @@ void main(List<String> args) {
                 resolvedRepoRelPosix: resolvedRepoRelPosix,
               );
         if (!allowed && !hasSpecificViolation) {
-          final scope = isCommandScopeFile
-              ? (isLegacySliceFile ? 'slices/**' : 'commands/**')
-              : 'internal/**';
+          final scope = isCommandScopeFile ? 'commands/**' : 'internal/**';
           final details = resolvedRepoRelPosix ?? targetPosix;
           final isExternalPackage =
               resolvedRepoRelPosix == null &&

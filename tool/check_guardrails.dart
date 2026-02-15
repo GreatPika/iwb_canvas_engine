@@ -1,12 +1,12 @@
 import 'dart:io';
 
 // Invariants enforced by this tool:
-// INV:INV-V2-NO-EXTERNAL-MUTATION
-// INV:INV-V2-WRITE-ONLY-MUTATION
-// INV:INV-V2-TXN-ATOMIC-COMMIT
-// INV:INV-V2-EPOCH-INVALIDATION
+// INV:INV-ENG-NO-EXTERNAL-MUTATION
+// INV:INV-ENG-WRITE-ONLY-MUTATION
+// INV:INV-ENG-TXN-ATOMIC-COMMIT
+// INV:INV-ENG-EPOCH-INVALIDATION
 // INV:INV-G-PUBLIC-ENTRYPOINTS
-// INV:INV-V2-SAFE-TXN-API
+// INV:INV-ENG-SAFE-TXN-API
 
 class _Violation {
   _Violation({
@@ -277,7 +277,7 @@ Set<String> _checkEntrypointGuardrails({
       _Violation(
         filePath: '/lib/advanced.dart',
         line: 1,
-        message: 'advanced.dart entrypoint is forbidden in v2.',
+        message: 'advanced.dart entrypoint is forbidden.',
       ),
     );
   }

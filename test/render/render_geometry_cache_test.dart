@@ -8,7 +8,7 @@ import 'package:iwb_canvas_engine/src/public/patch_field.dart';
 import 'package:iwb_canvas_engine/src/public/snapshot.dart';
 import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 
-// INV:INV-V2-RENDER-GEOMETRY-KEY-STABLE
+// INV:INV-ENG-RENDER-GEOMETRY-KEY-STABLE
 void main() {
   test('RenderGeometryCache rejects non-positive maxEntries', () {
     expect(() => RenderGeometryCache(maxEntries: 0), throwsArgumentError);

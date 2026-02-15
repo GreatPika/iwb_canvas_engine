@@ -6,7 +6,7 @@ import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/model/document.dart';
 
-// INV:INV-V2-TEXT-SIZE-DERIVED
+// INV:INV-ENG-TEXT-SIZE-DERIVED
 
 void main() {
   Scene sceneWithAllNodeTypes() {

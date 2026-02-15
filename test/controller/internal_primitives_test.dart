@@ -15,7 +15,7 @@ import 'package:iwb_canvas_engine/src/controller/internal/signal_event.dart';
 import 'package:iwb_canvas_engine/src/controller/internal/spatial_index_cache.dart';
 import 'package:iwb_canvas_engine/src/model/document.dart';
 
-// INV:INV-V2-TXN-COPY-ON-WRITE
+// INV:INV-ENG-TXN-COPY-ON-WRITE
 
 class _LayerDropTxnContext extends TxnContext {
   _LayerDropTxnContext({
@@ -905,7 +905,7 @@ void main() {
   });
 
   test('SceneWriter writeNodeErase respects deletable layer policy', () {
-    // INV:INV-V2-WRITE-NUMERIC-GUARDS
+    // INV:INV-ENG-WRITE-NUMERIC-GUARDS
     final ctx = TxnContext(
       baseScene: Scene(
         layers: <ContentLayer>[
@@ -933,7 +933,7 @@ void main() {
   });
 
   test('SceneWriter rejects non-finite grid/camera values', () {
-    // INV:INV-V2-WRITE-NUMERIC-GUARDS
+    // INV:INV-ENG-WRITE-NUMERIC-GUARDS
     final ctx = TxnContext(
       baseScene: Scene(),
       workingSelection: <NodeId>{},
@@ -956,7 +956,7 @@ void main() {
   });
 
   test('SceneWriter rejects non-finite transform and translate values', () {
-    // INV:INV-V2-WRITE-NUMERIC-GUARDS
+    // INV:INV-ENG-WRITE-NUMERIC-GUARDS
     final ctx = TxnContext(
       baseScene: Scene(
         layers: <ContentLayer>[
@@ -1284,7 +1284,7 @@ void main() {
         changeSet: outOfRangeChange,
         controllerEpoch: 2,
       );
-      // INV:INV-V2-SPATIAL-INDEX-REBUILD-ON-INVALID
+      // INV:INV-ENG-SPATIAL-INDEX-REBUILD-ON-INVALID
       final invalidSecond = slice.writeQueryCandidates(
         scene: outOfRangeScene,
         nodeLocator: outOfRangeLocator,
