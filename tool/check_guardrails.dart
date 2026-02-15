@@ -172,7 +172,7 @@ void _checkPublicImports({
   if (!publicDir.existsSync()) return;
 
   final disallowedPrefixes = <String>[
-    '/lib/src/input/',
+    '/lib/src/controller/',
     '/lib/src/render/',
     '/lib/src/view/',
     '/lib/src/serialization/',
@@ -216,7 +216,7 @@ void _checkPublicImports({
               filePath: filePosixPath,
               line: lineNo,
               message:
-                  'public must not import/export input/render/view/serialization internals ($resolvedRepoRelPosix)',
+                  'public must not import/export controller/render/view/serialization internals ($resolvedRepoRelPosix)',
             ),
           );
         }

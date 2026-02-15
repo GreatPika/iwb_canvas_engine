@@ -251,14 +251,18 @@ class Store {
       }
     });
 
-    test('rejects public import from input layer', () async {
+    test('rejects public import from controller layer', () async {
       final sandbox = await _createSandbox();
       try {
-        _writeFile(sandbox, 'lib/src/input/types.dart', 'class InputType {}\n');
+        _writeFile(
+          sandbox,
+          'lib/src/controller/types.dart',
+          'class ControllerType {}\n',
+        );
         _writeFile(
           sandbox,
           'lib/src/public/snapshot.dart',
-          "import 'package:iwb_canvas_engine/src/input/types.dart';\n",
+          "import 'package:iwb_canvas_engine/src/controller/types.dart';\n",
         );
 
         final result = await _runTool(sandbox, 'check_guardrails.dart');
@@ -266,7 +270,7 @@ class Store {
         expect(
           result.stderr.toString(),
           contains(
-            'public must not import/export input/render/view/serialization internals',
+            'public must not import/export controller/render/view/serialization internals',
           ),
         );
       } finally {

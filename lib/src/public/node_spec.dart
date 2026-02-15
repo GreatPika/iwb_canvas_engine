@@ -4,7 +4,7 @@ import '../core/nodes.dart' show PathFillRule;
 import '../core/transform2d.dart';
 import 'snapshot.dart' hide PathFillRule;
 
-/// Immutable node creation spec for v2 write APIs.
+/// Immutable node creation spec for transactional write APIs.
 sealed class NodeSpec {
   const NodeSpec({
     this.id,

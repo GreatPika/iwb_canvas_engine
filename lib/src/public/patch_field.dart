@@ -1,4 +1,4 @@
-/// Tri-state wrapper for patch fields in the v2 public API.
+/// Tri-state wrapper for patch fields in the public patch API.
 ///
 /// A field can be:
 /// - [PatchFieldState.absent]: no change requested,

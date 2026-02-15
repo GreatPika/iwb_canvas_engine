@@ -55,7 +55,7 @@ abstract class SceneNode {
   final int instanceRevision;
 
   /// Additional hit-test tolerance in scene units.
-  /// (Serialized as part of JSON v2.)
+  /// (Serialized as part of JSON schema.)
   ///
   /// Expected to be finite and non-negative.
   ///

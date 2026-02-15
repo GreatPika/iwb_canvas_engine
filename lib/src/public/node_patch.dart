@@ -28,7 +28,7 @@ class CommonNodePatch {
   final PatchField<bool> isTransformable;
 }
 
-/// Partial node update request for v2 write APIs.
+/// Partial node update request for transactional write APIs.
 sealed class NodePatch {
   const NodePatch({required this.id, CommonNodePatch? common})
     : common = common ?? const CommonNodePatch();

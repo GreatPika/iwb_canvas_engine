@@ -26,10 +26,10 @@ const List<double> _defaultGridSizes = <double>[
   80,
 ];
 
-/// Stable node identifier for the v2 public model.
+/// Stable node identifier for the public model.
 typedef NodeId = String;
 
-/// Immutable scene snapshot exposed by the v2 public API.
+/// Immutable scene snapshot exposed by the public API.
 class SceneSnapshot {
   SceneSnapshot({
     List<ContentLayerSnapshot>? layers,
