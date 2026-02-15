@@ -143,6 +143,104 @@ void main() {
       addTearDown(editSub.cancel);
     });
 
+    test('handlePointer notifications are deferred', () async {
+      final controller = _controllerFromScene(
+        Scene(layers: <ContentLayer>[ContentLayer(), ContentLayer()]),
+      );
+      addTearDown(controller.dispose);
+
+      var notifications = 0;
+      controller.addListener(() {
+        notifications = notifications + 1;
+      });
+
+      controller.handlePointer(
+        _sample(
+          pointerId: 1,
+          position: const Offset(100, 100),
+          timestampMs: 1,
+          phase: CanvasPointerPhase.down,
+        ),
+      );
+
+      expect(notifications, 0);
+      await pumpEventQueue();
+      expect(notifications, 1);
+    });
+
+    test('interactive notify coalesces within same tick', () async {
+      final controller = _controllerFromScene(
+        Scene(layers: <ContentLayer>[ContentLayer(), ContentLayer()]),
+      );
+      addTearDown(controller.dispose);
+
+      var notifications = 0;
+      controller.addListener(() {
+        notifications = notifications + 1;
+      });
+
+      controller.setMode(CanvasMode.draw);
+      controller.setDrawTool(DrawTool.line);
+      controller.setDrawColor(const Color(0xFF123456));
+      controller.setDragStartSlop(9);
+
+      expect(notifications, 0);
+      await pumpEventQueue();
+      expect(notifications, 1);
+    });
+
+    test('core-change forwarding is deferred', () async {
+      final node = RectNode(id: 'n', size: const Size(10, 10))
+        ..position = const Offset(10, 10);
+      final controller = _controllerFromScene(
+        Scene(
+          layers: <ContentLayer>[
+            ContentLayer(),
+            ContentLayer(nodes: <SceneNode>[node]),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      var notifications = 0;
+      controller.addListener(() {
+        notifications = notifications + 1;
+      });
+
+      controller.setSelection(const <NodeId>{'n'});
+
+      expect(notifications, 0);
+      await pumpEventQueue(times: 2);
+      expect(notifications, 1);
+    });
+
+    test('reentrant handlePointer throws StateError', () {
+      final controller = _controllerFromScene(
+        Scene(layers: <ContentLayer>[ContentLayer(), ContentLayer()]),
+      );
+      addTearDown(controller.dispose);
+
+      final sample = _sample(
+        pointerId: 1,
+        position: const Offset(100, 100),
+        timestampMs: 1,
+        phase: CanvasPointerPhase.down,
+      );
+
+      Object? nestedError;
+      controller.debugBeforeHandlePointerDispatchHook = () {
+        controller.debugBeforeHandlePointerDispatchHook = null;
+        try {
+          controller.handlePointer(sample);
+        } catch (error) {
+          nestedError = error;
+        }
+      };
+
+      controller.handlePointer(sample);
+      expect(nestedError, isA<StateError>());
+    });
+
     test(
       'marquee emits select action when selection set changes with same length',
       () async {

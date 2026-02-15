@@ -266,6 +266,7 @@ Validation notes:
 Notification semantics:
 
 - Scene repaint notifications are deferred to a microtask after commit/repaint request.
+- Interactive controller `ChangeNotifier` callbacks are also deferred to microtask and coalesced per event-loop tick.
 - Multiple writes/repaint requests in the same event-loop tick are coalesced into one listener notification.
 - `requestRepaint()` called inside `write(...)` is buffered and published only after a successful transaction commit.
 - If `write(...)` rolls back with an exception, buffered repaint/signal effects are discarded.
@@ -309,6 +310,10 @@ Behavior notes:
 
 Usually these are called by `SceneView` automatically.
 Direct usage is useful when embedding the controller in custom input pipelines.
+
+Guardrail:
+
+- Reentrant `handlePointer(...)` in the same synchronous call stack throws `StateError`.
 
 Internal low-level types (`PointerSample`, `PointerSignal`) are not part of the
 public API surface.

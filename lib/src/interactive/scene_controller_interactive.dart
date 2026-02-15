@@ -84,6 +84,10 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
   Offset? _pendingLineStart;
   int? _pendingLineTimestampMs;
   Timer? _pendingLineTimer;
+  bool _notifyScheduled = false;
+  bool _notifyPending = false;
+  bool _isDisposed = false;
+  bool _handlingPointer = false;
 
   static const Duration _pendingLineTimeout = Duration(seconds: 10);
 
@@ -139,6 +143,8 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
   int get visualRevision => _core.visualRevision;
   @visibleForTesting
   int get debugCommitRevision => _core.debugCommitRevision;
+  @visibleForTesting
+  VoidCallback? debugBeforeHandlePointerDispatchHook;
 
   T write<T>(T Function(SceneWriteTxn writer) fn) => _core.write(fn);
 
@@ -161,7 +167,7 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
       _core.commands.writeSelectionReplace(const <NodeId>{});
     }
 
-    notifyListeners();
+    _scheduleNotify();
   }
 
   void setDrawTool(DrawTool value) {
@@ -169,18 +175,18 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
     _drawTool = value;
     _resetDrawGestureState();
     _clearPendingLine();
-    notifyListeners();
+    _scheduleNotify();
   }
 
   void setDrawColor(Color value) {
     if (_drawColor == value) return;
     _drawColor = value;
-    notifyListeners();
+    _scheduleNotify();
   }
 
   set penThickness(double value) {
     _penThickness = _requireFinitePositive(value, name: 'penThickness');
-    notifyListeners();
+    _scheduleNotify();
   }
 
   set highlighterThickness(double value) {
@@ -188,17 +194,17 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
       value,
       name: 'highlighterThickness',
     );
-    notifyListeners();
+    _scheduleNotify();
   }
 
   set lineThickness(double value) {
     _lineThickness = _requireFinitePositive(value, name: 'lineThickness');
-    notifyListeners();
+    _scheduleNotify();
   }
 
   set eraserThickness(double value) {
     _eraserThickness = _requireFinitePositive(value, name: 'eraserThickness');
-    notifyListeners();
+    _scheduleNotify();
   }
 
   set highlighterOpacity(double value) {
@@ -206,12 +212,12 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
       value,
       name: 'highlighterOpacity',
     );
-    notifyListeners();
+    _scheduleNotify();
   }
 
   void setPointerSettings(PointerInputSettings value) {
     _pointerSettings = value;
-    notifyListeners();
+    _scheduleNotify();
   }
 
   void setDragStartSlop(double? value) {
@@ -220,7 +226,7 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
         : _requireFinitePositive(value, name: 'dragStartSlop');
     if (_dragStartSlop == resolved) return;
     _dragStartSlop = resolved;
-    notifyListeners();
+    _scheduleNotify();
   }
 
   void setBackgroundColor(Color value) {
@@ -408,6 +414,10 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
   }
 
   void handlePointer(CanvasPointerInput input) {
+    if (_handlingPointer) {
+      throw StateError('Reentrant handlePointer(...) is not allowed.');
+    }
+
     final resolvedSample = PointerSample(
       pointerId: input.pointerId,
       position: input.position,
@@ -416,10 +426,19 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
       kind: input.kind,
     );
 
-    if (_mode == CanvasMode.move) {
-      _handleMovePointer(resolvedSample);
-    } else {
-      _handleDrawPointer(resolvedSample);
+    _handlingPointer = true;
+    try {
+      assert(() {
+        debugBeforeHandlePointerDispatchHook?.call();
+        return true;
+      }());
+      if (_mode == CanvasMode.move) {
+        _handleMovePointer(resolvedSample);
+      } else {
+        _handleDrawPointer(resolvedSample);
+      }
+    } finally {
+      _handlingPointer = false;
     }
   }
 
@@ -472,7 +491,7 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
       case PointerPhase.cancel:
         _resetMoveGestureState();
         _setSelectionRect(null);
-        notifyListeners();
+        _scheduleNotify();
         break;
     }
   }
@@ -494,14 +513,14 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
         previewNodeIds = <NodeId>{hit.id};
       }
       _startMovePreview(previewNodeIds);
-      notifyListeners();
+      _scheduleNotify();
       return;
     }
 
     _moveTarget = _MoveDragTarget.marquee;
     _movePendingClearSelection = true;
     _clearMovePreview();
-    notifyListeners();
+    _scheduleNotify();
   }
 
   void _moveHandleMove(PointerSample sample, Offset scenePoint) {
@@ -532,7 +551,7 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
       if (deltaStep == Offset.zero) return;
       _movePreviewDelta = _movePreviewDelta + deltaStep;
       _moveLastScene = scenePoint;
-      notifyListeners();
+      _scheduleNotify();
       return;
     }
 
@@ -578,7 +597,7 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
 
     _resetMoveGestureState();
     _setSelectionRect(null);
-    notifyListeners();
+    _scheduleNotify();
   }
 
   void _commitMarquee(int timestampMs) {
@@ -620,7 +639,7 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
         break;
       case PointerPhase.cancel:
         _resetDrawGestureState();
-        notifyListeners();
+        _scheduleNotify();
         break;
     }
   }
@@ -661,7 +680,7 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
               kInputDecimationMinStepScene,
             )) {
           _activeStrokePoints.add(scenePoint);
-          notifyListeners();
+          _scheduleNotify();
         }
         break;
       case DrawTool.line:
@@ -675,7 +694,7 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
           _clearPendingLine();
         }
         _setActiveLinePreview(_drawDownScene, scenePoint);
-        notifyListeners();
+        _scheduleNotify();
         break;
       case DrawTool.eraser:
         if (_activeEraserPoints.isEmpty) return;
@@ -685,7 +704,7 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
           kInputDecimationMinStepScene,
         )) {
           _activeEraserPoints.add(scenePoint);
-          notifyListeners();
+          _scheduleNotify();
         }
         break;
     }
@@ -1164,13 +1183,13 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
     }
     _activeLinePreviewStart = start;
     _activeLinePreviewEnd = end;
-    notifyListeners();
+    _scheduleNotify();
   }
 
   void _setSelectionRect(Rect? value) {
     if (_selectionRect == value) return;
     _selectionRect = value;
-    notifyListeners();
+    _scheduleNotify();
   }
 
   void _setPendingLineStart(Offset? start, int? timestampMs) {
@@ -1184,7 +1203,7 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
     if (_pendingLineStart != null) {
       _pendingLineTimer = Timer(_pendingLineTimeout, _clearPendingLine);
     }
-    notifyListeners();
+    _scheduleNotify();
   }
 
   void _clearPendingLine() {
@@ -1234,12 +1253,38 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
     return math.sqrt(math.max(0, lambdaMax));
   }
 
+  void _scheduleNotify() {
+    if (_isDisposed) {
+      return;
+    }
+    _notifyPending = true;
+    if (_notifyScheduled) {
+      return;
+    }
+    _notifyScheduled = true;
+
+    scheduleMicrotask(() {
+      _notifyScheduled = false;
+      if (_isDisposed || !_notifyPending) {
+        return;
+      }
+      _notifyPending = false;
+      notifyListeners();
+    });
+  }
+
   void _handleCoreChanged() {
-    notifyListeners();
+    _scheduleNotify();
   }
 
   @override
   void dispose() {
+    if (_isDisposed) {
+      return;
+    }
+    _isDisposed = true;
+    _notifyPending = false;
+    _notifyScheduled = false;
     _pendingLineTimer?.cancel();
     _pendingLineTimer = null;
     _core.removeListener(_handleCoreChanged);
