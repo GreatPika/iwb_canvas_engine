@@ -1043,6 +1043,130 @@ void main() {
   });
 
   test(
+    'spatial index stays consistent across insert-move-erase-replace-move',
+    () {
+      final controller = SceneControllerV2(
+        initialSnapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[ContentLayerSnapshot()],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      Set<NodeId> queryIds(Rect probe) {
+        return controller
+            .querySpatialCandidates(probe)
+            .map((candidate) => candidate.node.id)
+            .toSet();
+      }
+
+      void expectStableQuery({
+        required Rect probe,
+        required Set<NodeId> expectedPresent,
+        required Set<NodeId> expectedAbsent,
+      }) {
+        final first = queryIds(probe);
+        final second = queryIds(probe);
+        expect(first, expectedPresent);
+        expect(second, expectedPresent);
+        for (final id in expectedAbsent) {
+          expect(first.contains(id), isFalse);
+          expect(second.contains(id), isFalse);
+        }
+      }
+
+      const originProbe = Rect.fromLTWH(0, 0, 12, 12);
+      const movedProbe = Rect.fromLTWH(60, 0, 12, 12);
+      const replacedProbe = Rect.fromLTWH(200, 0, 12, 12);
+      const movedAfterReplaceProbe = Rect.fromLTWH(260, 0, 12, 12);
+
+      // Build index for the initial empty document.
+      expectStableQuery(
+        probe: originProbe,
+        expectedPresent: const <NodeId>{},
+        expectedAbsent: const <NodeId>{'r1', 'fresh'},
+      );
+      expect(controller.debugSpatialIndexBuildCount, 1);
+      expect(controller.debugSpatialIndexIncrementalApplyCount, 0);
+
+      controller.write<void>((writer) {
+        writer.writeNodeInsert(
+          RectNodeSpec(id: 'r1', size: const Size(10, 10)),
+        );
+      });
+      expectStableQuery(
+        probe: originProbe,
+        expectedPresent: const <NodeId>{'r1'},
+        expectedAbsent: const <NodeId>{'fresh'},
+      );
+
+      controller.write<void>((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'r1'});
+        writer.writeSelectionTranslate(const Offset(60, 0));
+      });
+      expectStableQuery(
+        probe: originProbe,
+        expectedPresent: const <NodeId>{},
+        expectedAbsent: const <NodeId>{'r1', 'fresh'},
+      );
+      expectStableQuery(
+        probe: movedProbe,
+        expectedPresent: const <NodeId>{'r1'},
+        expectedAbsent: const <NodeId>{'fresh'},
+      );
+
+      controller.write<void>((writer) {
+        expect(writer.writeNodeErase('r1'), isTrue);
+      });
+      expectStableQuery(
+        probe: movedProbe,
+        expectedPresent: const <NodeId>{},
+        expectedAbsent: const <NodeId>{'r1', 'fresh'},
+      );
+
+      final buildCountBeforeReplace = controller.debugSpatialIndexBuildCount;
+      controller.writeReplaceScene(
+        SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(
+                  id: 'fresh',
+                  size: const Size(10, 10),
+                  transform: Transform2D.translation(Offset(200, 0)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      expectStableQuery(
+        probe: replacedProbe,
+        expectedPresent: const <NodeId>{'fresh'},
+        expectedAbsent: const <NodeId>{'r1'},
+      );
+      expect(
+        controller.debugSpatialIndexBuildCount,
+        buildCountBeforeReplace + 1,
+      );
+
+      controller.write<void>((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'fresh'});
+        writer.writeSelectionTranslate(const Offset(60, 0));
+      });
+      expectStableQuery(
+        probe: replacedProbe,
+        expectedPresent: const <NodeId>{},
+        expectedAbsent: const <NodeId>{'fresh', 'r1'},
+      );
+      expectStableQuery(
+        probe: movedAfterReplaceProbe,
+        expectedPresent: const <NodeId>{'fresh'},
+        expectedAbsent: const <NodeId>{'r1'},
+      );
+    },
+  );
+
+  test(
     'spatial index keeps candidate indices after erase in middle of layer',
     () {
       final controller = SceneControllerV2(
