@@ -197,6 +197,34 @@ void main() {
     expect(ctx.nextInstanceRevision, 50);
   });
 
+  test('TxnContext mutating APIs throw after transaction close', () {
+    final baseScene = Scene(
+      backgroundLayer: BackgroundLayer(
+        nodes: <SceneNode>[RectNode(id: 'bg', size: const Size(1, 1))],
+      ),
+      layers: <ContentLayer>[
+        ContentLayer(
+          nodes: <SceneNode>[RectNode(id: 'r1', size: const Size(1, 1))],
+        ),
+      ],
+    );
+    final ctx = TxnContext(
+      baseScene: baseScene,
+      workingSelection: <NodeId>{},
+      baseAllNodeIds: <NodeId>{'bg', 'r1'},
+      nodeIdSeed: 2,
+      nextInstanceRevision: 1,
+    );
+
+    ctx.txnClose();
+
+    expect(() => ctx.txnEnsureMutableScene(), throwsStateError);
+    expect(() => ctx.txnEnsureMutableLayer(0), throwsStateError);
+    expect(() => ctx.txnEnsureMutableBackgroundLayer(), throwsStateError);
+    expect(() => ctx.txnResolveMutableNode('r1'), throwsStateError);
+    expect(() => ctx.txnAdoptScene(Scene()), throwsStateError);
+  });
+
   test(
     'TxnContext updates materialized node ids in place after commit view',
     () {

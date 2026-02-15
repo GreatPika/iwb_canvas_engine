@@ -50,8 +50,6 @@ class TxnContext {
   int debugNodeIdSetMaterializations = 0;
   int debugNodeLocatorMaterializations = 0;
 
-  bool get txnIsActive => _isActive;
-
   void txnClose() {
     _isActive = false;
   }
@@ -64,6 +62,7 @@ class TxnContext {
   }
 
   Scene txnEnsureMutableScene() {
+    txnEnsureActive();
     final existing = _mutableScene;
     if (existing != null) return existing;
     final cloned = txnCloneSceneShallow(_baseScene);
@@ -77,6 +76,7 @@ class TxnContext {
   }
 
   ContentLayer txnEnsureMutableLayer(int layerIndex) {
+    txnEnsureActive();
     final scene = txnEnsureMutableScene();
     if (layerIndex < 0 || layerIndex >= scene.layers.length) {
       throw RangeError.range(
@@ -108,6 +108,7 @@ class TxnContext {
   }
 
   BackgroundLayer txnEnsureMutableBackgroundLayer() {
+    txnEnsureActive();
     final scene = txnEnsureMutableScene();
     final current = scene.backgroundLayer;
     if (current == null) {
@@ -147,6 +148,7 @@ class TxnContext {
   ({SceneNode node, int layerIndex, int nodeIndex}) txnResolveMutableNode(
     NodeId id,
   ) {
+    txnEnsureActive();
     final foundInWorking = txnFindNodeById(id);
     if (foundInWorking == null) {
       throw StateError('Node not found: $id');
@@ -200,10 +202,12 @@ class TxnContext {
   }
 
   Map<NodeId, NodeLocatorEntry> txnEnsureMutableNodeLocator() {
+    txnEnsureActive();
     return _txnMaterializeNodeLocator();
   }
 
   void txnRebuildNodeLocatorFromWorkingScene() {
+    txnEnsureActive();
     final rebuilt = txnBuildNodeLocator(workingScene);
     if (_materializedNodeLocator == null) {
       debugNodeLocatorMaterializations = debugNodeLocatorMaterializations + 1;
@@ -226,6 +230,7 @@ class TxnContext {
   }
 
   void txnRememberNodeId(NodeId nodeId) {
+    txnEnsureActive();
     final materialized = _materializedAllNodeIds;
     if (materialized != null) {
       materialized.add(nodeId);
@@ -239,6 +244,7 @@ class TxnContext {
   }
 
   void txnForgetNodeId(NodeId nodeId) {
+    txnEnsureActive();
     final materialized = _materializedAllNodeIds;
     if (materialized != null) {
       materialized.remove(nodeId);
@@ -252,6 +258,7 @@ class TxnContext {
   }
 
   String txnNextNodeId() {
+    txnEnsureActive();
     while (true) {
       final candidate = 'node-$nodeIdSeed';
       nodeIdSeed = nodeIdSeed + 1;
@@ -263,12 +270,14 @@ class TxnContext {
   }
 
   int txnNextInstanceRevision() {
+    txnEnsureActive();
     final out = nextInstanceRevision;
     nextInstanceRevision = nextInstanceRevision + 1;
     return out;
   }
 
   void txnAdoptScene(Scene scene) {
+    txnEnsureActive();
     final prevNextInstanceRevision = nextInstanceRevision;
     _mutableScene = scene;
     _mutableSceneOwnedByTxn = true;
