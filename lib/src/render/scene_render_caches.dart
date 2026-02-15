@@ -1,5 +1,8 @@
 import 'render_geometry_cache.dart';
-import 'scene_painter.dart';
+import 'cache/scene_path_metrics_cache_v2.dart';
+import 'cache/scene_static_layer_cache_v2.dart';
+import 'cache/scene_stroke_path_cache_v2.dart';
+import 'cache/scene_text_layout_cache_v2.dart';
 
 /// Unified render-cache ownership for `SceneViewV2` variants.
 ///

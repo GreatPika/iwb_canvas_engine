@@ -202,6 +202,31 @@ void main() {
     },
   );
 
+  test('SceneStaticLayerCacheV2 applies stride for dense grid line counts', () {
+    final cache = SceneStaticLayerCacheV2();
+    const background = BackgroundSnapshot(
+      color: Color(0xFFFFFFFF),
+      grid: GridSnapshot(
+        isEnabled: true,
+        cellSize: 1,
+        color: Color(0xFFCCCCCC),
+      ),
+    );
+
+    final recorder = PictureRecorder();
+    cache.draw(
+      Canvas(recorder),
+      const Size(600, 400),
+      background: background,
+      cameraOffset: Offset.zero,
+      gridStrokeWidth: 1,
+    );
+    recorder.endRecording();
+
+    expect(cache.debugBuildCount, 1);
+    expect(cache.debugKeyHashCode, isNotNull);
+  });
+
   test(
     'SceneStaticLayerCacheV2 releases picture when grid becomes disabled',
     () {
