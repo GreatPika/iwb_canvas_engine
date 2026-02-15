@@ -26,6 +26,8 @@ Recommended import:
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 ```
 
+Imports from `package:iwb_canvas_engine/src/**` are unsupported and may break without notice.
+
 Runtime aliases exposed publicly:
 
 - `SceneController` is a typedef alias of `SceneControllerInteractive`

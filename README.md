@@ -42,6 +42,7 @@ flutter pub add iwb_canvas_engine
 ## Entrypoints
 
 - `package:iwb_canvas_engine/iwb_canvas_engine.dart` - single public entrypoint.
+- Imports from `package:iwb_canvas_engine/src/**` are unsupported and may break without notice.
 
 ## Quick start
 
