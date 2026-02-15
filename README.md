@@ -103,6 +103,7 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Runtime guardrails bound worst-case input/query cost: interactive stroke commits are capped to `20_000` points (deterministic downsampling), path-stroke precise hit-testing is capped to `2_048` samples per path metric, and oversized spatial queries switch to bounded candidate-scan fallback.
 - Runtime snapshot validation: `initialSnapshot` and `replaceScene` fail fast with `SceneDataException` for malformed snapshots (duplicate node ids, invalid numbers, invalid SVG path data, invalid palette, invalid typed layer fields).
 - Commit invariant checks fail fast with `StateError` in all build modes when committed store state violates runtime invariants.
+- Lifecycle fail-fast: after `dispose()`, mutating/effectful runtime calls (`write(...)`, `replaceScene(...)`, `notifySceneChanged()`/core repaint request) throw `StateError` and do not mutate state.
 
 ## Render cache and image lifecycle
 

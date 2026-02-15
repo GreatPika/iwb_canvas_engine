@@ -91,6 +91,12 @@ const List<Invariant> invariants = <Invariant>[
     title: 'writer rejects non-finite or invalid numeric write inputs',
   ),
   Invariant(
+    id: 'INV-V2-DISPOSE-FAIL-FAST',
+    scope: 'engine-controller',
+    title:
+        'mutating/effectful core APIs fail fast after dispose and keep state/effects unchanged',
+  ),
+  Invariant(
     id: 'INV-V2-TEXT-SIZE-DERIVED',
     scope: 'engine-controller',
     title: 'TextNode.size is always derived from text layout inputs',

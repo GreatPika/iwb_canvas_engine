@@ -270,6 +270,9 @@ Notification semantics:
 - Multiple writes/repaint requests in the same event-loop tick are coalesced into one listener notification.
 - `requestRepaint()` called inside `write(...)` is buffered and published only after a successful transaction commit.
 - If `write(...)` rolls back with an exception, buffered repaint/signal effects are discarded.
+- After `dispose()`, mutating/effectful runtime entrypoints fail fast with `StateError`:
+  `write(...)`, `replaceScene(...)`, and explicit repaint requests
+  (`notifySceneChanged()` / core `requestRepaint()`).
 
 ### 6.5 Node and selection methods
 
@@ -337,6 +340,7 @@ Write-notify semantics:
 - Commit invariant validation runs before finalizing transaction state and throws `StateError` on violations in all build modes (`debug`/`profile`/`release`).
 - Committed `signals` are emitted before repaint listener notification for the same successful commit.
 - Calling `write(...)` from `addListener(...)` is allowed; it runs after the original transaction is finished.
+- Calling `write(...)` after controller disposal throws `StateError` and does not mutate state or emit effects.
 
 ## 7. Interaction model details
 

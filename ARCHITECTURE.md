@@ -68,6 +68,7 @@ Key invariants:
 - Interactive `actions` / `editTextRequests` streams are delivered asynchronously (never in the same call stack as mutation methods).
 - Relative ordering between interactive stream delivery and repaint listener notification is intentionally not a public contract.
 - Buffered signal/repaint effects are discarded when `write(...)` rolls back.
+- After controller disposal, mutating/effectful runtime methods fail fast with `StateError` and keep state/effects unchanged.
 - Node-id index state keeps `allNodeIds` and `nodeLocator` equal to committed scene ids/locations, while `nodeIdSeed` is a monotonic generator lower-bounded by committed scene ids.
 - Node instance identity keeps `instanceRevision >= 1` for all committed nodes, and `nextInstanceRevision` is a monotonic generator lower-bounded by committed scene instance revisions.
 - Selection normalization preserves explicit non-selectable ids and drops only missing/background/invisible ids.

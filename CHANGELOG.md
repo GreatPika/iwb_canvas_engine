@@ -16,6 +16,7 @@
 
 ### Changed
 
+- `SceneControllerV2` now fails fast after `dispose()`: mutating/effectful calls (`write(...)`, `writeReplaceScene(...)`, `requestRepaint()`) throw `StateError` and keep runtime state/effects unchanged.
 - `SceneControllerInteractiveV2` listener notifications are now consistently microtask-deferred/coalesced (including pointer handling and core-change forwarding), so interactive listeners are never invoked synchronously inside `handlePointer(...)`.
 - `SceneControllerInteractiveV2.handlePointer(...)` now fails fast with `StateError` on same-stack reentrant calls.
 - Internal `RenderGeometryCache` now uses bounded LRU eviction (`maxEntries = 512`) to prevent unbounded geometry-cache growth during long node churn (create/delete cycles).

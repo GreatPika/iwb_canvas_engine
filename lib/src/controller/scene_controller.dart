@@ -156,6 +156,7 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
   }
 
   T write<T>(T Function(SceneWriteTxn txn) fn) {
+    _throwIfDisposed();
     if (_writeInProgress) {
       throw StateError('Nested write(...) calls are not allowed.');
     }
@@ -205,6 +206,7 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
   }
 
   void requestRepaint() {
+    _throwIfDisposed();
     _repaintSlice.writeMarkNeedsRepaint();
     if (_writeInProgress) {
       return;
@@ -395,6 +397,12 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
       _notifyPending = false;
       notifyListeners();
     });
+  }
+
+  void _throwIfDisposed() {
+    if (_isDisposed) {
+      throw StateError('Controller is disposed.');
+    }
   }
 
   void _debugAssertStoreInvariantsCandidate({
