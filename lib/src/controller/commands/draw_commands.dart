@@ -63,6 +63,7 @@ class DrawCommands {
       }
 
       if (removedCount > 0) {
+        removedIds.sort((a, b) => a.compareTo(b));
         writer.writeSignalEnqueue(type: 'draw.erase', nodeIds: removedIds);
       }
       return removedCount;

@@ -11,6 +11,12 @@ class SceneCommands {
 
   final T Function<T>(T Function(SceneWriteTxn writer) fn) _writeRunner;
 
+  List<NodeId> _sortedNodeIds(Iterable<NodeId> nodeIds) {
+    final sorted = nodeIds.toList(growable: false);
+    sorted.sort((a, b) => a.compareTo(b));
+    return sorted;
+  }
+
   String writeAddNode(NodeSpec spec, {int? layerIndex}) {
     return _writeRunner((writer) {
       final nodeId = writer.writeNodeInsert(spec, layerIndex: layerIndex);
@@ -46,38 +52,36 @@ class SceneCommands {
   }
 
   void writeSelectionReplace(Iterable<NodeId> nodeIds) {
-    _writeRunner((writer) {
+    _writeRunner<void>((writer) {
       final changed = writer.writeSelectionReplace(nodeIds);
       if (changed) {
+        final sortedNodeIds = _sortedNodeIds(writer.selectedNodeIds);
         writer.writeSignalEnqueue(
           type: 'selection.replaced',
-          nodeIds: writer.selectedNodeIds,
+          nodeIds: sortedNodeIds,
         );
       }
-      return null;
     });
   }
 
   void writeSelectionToggle(NodeId nodeId) {
-    _writeRunner((writer) {
+    _writeRunner<void>((writer) {
       final changed = writer.writeSelectionToggle(nodeId);
       if (changed) {
         writer.writeSignalEnqueue(
           type: 'selection.toggled',
-          nodeIds: <NodeId>[nodeId],
+          nodeIds: _sortedNodeIds(<NodeId>[nodeId]),
         );
       }
-      return null;
     });
   }
 
   void writeSelectionClear() {
-    _writeRunner((writer) {
+    _writeRunner<void>((writer) {
       final changed = writer.writeSelectionClear();
       if (changed) {
         writer.writeSignalEnqueue(type: 'selection.cleared');
       }
-      return null;
     });
   }
 
@@ -127,34 +131,30 @@ class SceneCommands {
   }
 
   void writeBackgroundColorSet(Color color) {
-    _writeRunner((writer) {
+    _writeRunner<void>((writer) {
       writer.writeBackgroundColor(color);
       writer.writeSignalEnqueue(type: 'background.updated');
-      return null;
     });
   }
 
   void writeGridEnabledSet(bool enabled) {
-    _writeRunner((writer) {
+    _writeRunner<void>((writer) {
       writer.writeGridEnable(enabled);
       writer.writeSignalEnqueue(type: 'grid.enabled.updated');
-      return null;
     });
   }
 
   void writeGridCellSizeSet(double size) {
-    _writeRunner((writer) {
+    _writeRunner<void>((writer) {
       writer.writeGridCellSize(size);
       writer.writeSignalEnqueue(type: 'grid.cell.updated');
-      return null;
     });
   }
 
   void writeCameraOffsetSet(Offset offset) {
-    _writeRunner((writer) {
+    _writeRunner<void>((writer) {
       writer.writeCameraOffset(offset);
       writer.writeSignalEnqueue(type: 'camera.updated');
-      return null;
     });
   }
 }

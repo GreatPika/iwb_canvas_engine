@@ -53,6 +53,8 @@
 - `SpatialIndexCache` now keeps invalid index instances in fallback mode instead of forcing rebuild loops after failed incremental updates.
 - `SceneControllerCore.selectedNodeIds` now reuses a cached `UnmodifiableSetView` and refreshes it only when selection actually changes, removing per-read allocation on hot getter paths.
 - Selection write commands now normalize ids at writer boundary: `writeSelectionReplace`/`writeSelectionToggle` ignore invalid (`missing`/`background`/`invisible`) ids as no-ops (`changed == false`), and `selection.replaced` signals now carry normalized committed ids.
+- Selection and erase signals now emit deterministic sorted `nodeIds` (`selection.replaced`, `selection.toggled`, `draw.erase`) to stabilize UI/tests for set-based inputs.
+- Internal command `void` write-runners now use explicit `_writeRunner<void>(...)` without `return null`, and static analysis enforces `avoid_returning_null_for_void`.
 - Render caches are extracted from `scene_painter.dart` into dedicated files under `lib/src/render/cache/` (`SceneStrokePathCache`, `SceneTextLayoutCache`, `ScenePathMetricsCache`, `SceneStaticLayerCache`), while keeping `ScenePainter` focused on frame rendering and preserving existing cache type availability via `scene_painter.dart` exports.
 - Internal scene value validation is split into focused `part` files (`primitives`, `palette/grid`, `node`, `top-level`) while preserving behavior, signatures, and error semantics.
 - `clearScene`/`writeClearSceneKeepBackground` now keep (or create) dedicated `backgroundLayer` and clear all content layers.

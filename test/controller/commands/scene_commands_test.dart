@@ -230,6 +230,37 @@ void main() {
     expect(controller.selectedNodeIds, equals(replacedIds!.toSet()));
   });
 
+  test('selection signal ids are sorted', () async {
+    final controller = buildController();
+    addTearDown(controller.dispose);
+
+    controller.commands.writeAddNode(
+      RectNodeSpec(id: 'z-node', size: const Size(8, 8)),
+    );
+    controller.commands.writeAddNode(
+      RectNodeSpec(id: 'a-node', size: const Size(8, 8)),
+    );
+    await pumpEventQueue();
+
+    List<NodeId>? replacedIds;
+    final sub = controller.signals.listen((signal) {
+      if (signal.type == 'selection.replaced') {
+        replacedIds = signal.nodeIds;
+      }
+    });
+    addTearDown(sub.cancel);
+
+    controller.commands.writeSelectionReplace(const <NodeId>{
+      'z-node',
+      'base',
+      'a-node',
+    });
+    await pumpEventQueue();
+
+    expect(replacedIds, const <NodeId>['a-node', 'base', 'z-node']);
+    expect(controller.selectedNodeIds, equals(replacedIds!.toSet()));
+  });
+
   test('selection replace filters invisible or background nodes', () async {
     final controller = SceneControllerCore(
       initialSnapshot: SceneSnapshot(

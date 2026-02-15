@@ -71,4 +71,35 @@ void main() {
     expect(controller.snapshot.layers, hasLength(1));
     expect(controller.snapshot.layers.first.nodes, hasLength(101));
   });
+
+  test('erase signal removedIds are sorted', () async {
+    final controller = buildController();
+    addTearDown(controller.dispose);
+
+    controller.commands.writeAddNode(
+      RectNodeSpec(id: 'z-node', size: const Size(6, 6)),
+    );
+    controller.commands.writeAddNode(
+      RectNodeSpec(id: 'a-node', size: const Size(6, 6)),
+    );
+    await pumpEventQueue();
+
+    List<NodeId>? erasedIds;
+    final sub = controller.signals.listen((signal) {
+      if (signal.type == 'draw.erase') {
+        erasedIds = signal.nodeIds;
+      }
+    });
+    addTearDown(sub.cancel);
+
+    final removedCount = controller.draw.writeEraseNodes(const <NodeId>{
+      'z-node',
+      'base',
+      'a-node',
+    });
+    await pumpEventQueue();
+
+    expect(removedCount, 3);
+    expect(erasedIds, const <NodeId>['a-node', 'base', 'z-node']);
+  });
 }
