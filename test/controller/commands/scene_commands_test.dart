@@ -22,7 +22,7 @@ void main() {
     );
   }
 
-  test('commands slice routes structural updates through write', () async {
+  test('scene commands route structural updates through write', () async {
     final controller = buildController();
     addTearDown(controller.dispose);
 
@@ -44,59 +44,8 @@ void main() {
     expect(notifications, 1);
   });
 
-  test('move slice translates selected nodes in one commit', () {
-    final controller = buildController();
-    addTearDown(controller.dispose);
-
-    controller.commands.writeSelectionReplace(const <NodeId>{'base'});
-    final moved = controller.move.writeTranslateSelection(const Offset(7, 3));
-
-    final node =
-        controller.snapshot.layers.first.nodes.first as RectNodeSnapshot;
-    expect(moved, 1);
-    expect(node.transform.tx, 7);
-    expect(node.transform.ty, 3);
-    expect(controller.boundsRevision, greaterThan(0));
-  });
-
-  test('draw slice creates line/stroke and erase removes node ids', () async {
-    final controller = buildController();
-    addTearDown(controller.dispose);
-
-    final signalTypes = <String>[];
-    final sub = controller.signals.listen((signal) {
-      signalTypes.add(signal.type);
-    });
-    addTearDown(sub.cancel);
-
-    final strokeId = controller.draw.writeDrawStroke(
-      points: const <Offset>[Offset(0, 0), Offset(10, 0)],
-      thickness: 2,
-      color: const Color(0xFF000000),
-    );
-    final lineId = controller.draw.writeDrawLine(
-      start: const Offset(0, 0),
-      end: const Offset(0, 10),
-      thickness: 3,
-      color: const Color(0xFF111111),
-    );
-
-    final removed = controller.draw.writeEraseNodes(<NodeId>[
-      strokeId,
-      'missing',
-    ]);
-    await pumpEventQueue();
-
-    expect(lineId, isNotEmpty);
-    expect(removed, 1);
-    expect(
-      signalTypes,
-      containsAll(<String>['draw.stroke', 'draw.line', 'draw.erase']),
-    );
-  });
-
   test(
-    'commands slice handles missing patch/delete and selection commands',
+    'scene commands handle missing patch/delete and selection commands',
     () async {
       final controller = buildController();
       addTearDown(controller.dispose);
@@ -143,7 +92,7 @@ void main() {
   );
 
   test(
-    'commands slice covers selection transform/delete/clear helpers',
+    'scene commands cover selection transform/delete/clear helpers',
     () async {
       final controller = buildController();
       addTearDown(controller.dispose);

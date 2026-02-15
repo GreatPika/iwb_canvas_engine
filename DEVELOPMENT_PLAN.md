@@ -233,17 +233,17 @@
 
 ## Этап 7 — Тесты: перенести и переименовать под новую структуру + убрать `V2` из названий
 
-* [ ] Перенести тесты из `test/input/slices/**` в:
+* [x] Перенести тесты из `test/input/slices/**` в:
 
-  * [ ] `test/controller/commands/**`
-  * [ ] `test/controller/internal/**`
-* [ ] Обновить все импорты на новые пути и новые имена типов
-* [ ] Удалить `V2` из строк-описаний тестов (например “ScenePainterV2 …”)
+  * [x] `test/controller/commands/**`
+  * [x] `test/controller/internal/**`
+* [x] Обновить все импорты на новые пути и новые имена типов
+* [x] Удалить `V2` из строк-описаний тестов (например “ScenePainterV2 …”)
 
 ### Проверки этапа
 
-* [ ] `flutter test --coverage`
-* [ ] `dart run tool/check_coverage.dart`
+* [x] `flutter test --coverage`
+* [x] `dart run tool/check_coverage.dart`
 
 ---
 

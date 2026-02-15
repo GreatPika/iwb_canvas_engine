@@ -4,25 +4,25 @@ import 'package:iwb_canvas_engine/src/controller/internal/signals_buffer.dart';
 
 void main() {
   test('writeTakeCommitted preserves signal order and increments ids', () {
-    final slice = SignalsBuffer();
-    addTearDown(slice.dispose);
+    final buffer = SignalsBuffer();
+    addTearDown(buffer.dispose);
 
-    slice.writeBufferSignal(
+    buffer.writeBufferSignal(
       BufferedSignal(type: 'type-0', nodeIds: const <String>['n0']),
     );
-    slice.writeBufferSignal(
+    buffer.writeBufferSignal(
       BufferedSignal(type: 'type-1', nodeIds: const <String>['n1']),
     );
-    slice.writeBufferSignal(
+    buffer.writeBufferSignal(
       BufferedSignal(type: 'type-2', nodeIds: const <String>['n2']),
     );
 
-    final committedA = slice.writeTakeCommitted(commitRevision: 7);
-    final committedB = slice.writeTakeCommitted(commitRevision: 8);
-    slice.writeBufferSignal(
+    final committedA = buffer.writeTakeCommitted(commitRevision: 7);
+    final committedB = buffer.writeTakeCommitted(commitRevision: 8);
+    buffer.writeBufferSignal(
       BufferedSignal(type: 'type-3', nodeIds: const <String>['n3']),
     );
-    final committedC = slice.writeTakeCommitted(commitRevision: 9);
+    final committedC = buffer.writeTakeCommitted(commitRevision: 9);
 
     expect(
       committedA.map((signal) => signal.type).toList(growable: false),
@@ -39,35 +39,35 @@ void main() {
     expect(committedB, isEmpty);
     expect(committedC.single.signalId, 's3');
     expect(committedC.single.commitRevision, 9);
-    expect(slice.writeHasBufferedSignals, isFalse);
+    expect(buffer.writeHasBufferedSignals, isFalse);
   });
 
   test('writeDiscardBuffered clears pending signals', () {
-    final slice = SignalsBuffer();
-    addTearDown(slice.dispose);
+    final buffer = SignalsBuffer();
+    addTearDown(buffer.dispose);
 
-    slice.writeBufferSignal(
+    buffer.writeBufferSignal(
       BufferedSignal(type: 'type-0', nodeIds: const <String>[]),
     );
-    expect(slice.writeHasBufferedSignals, isTrue);
+    expect(buffer.writeHasBufferedSignals, isTrue);
 
-    slice.writeDiscardBuffered();
-    expect(slice.writeHasBufferedSignals, isFalse);
-    expect(slice.writeTakeCommitted(commitRevision: 1), isEmpty);
+    buffer.writeDiscardBuffered();
+    expect(buffer.writeHasBufferedSignals, isFalse);
+    expect(buffer.writeTakeCommitted(commitRevision: 1), isEmpty);
   });
 
   test('writeTakeCommitted handles large batches with stable ordering', () {
-    final slice = SignalsBuffer();
-    addTearDown(slice.dispose);
+    final buffer = SignalsBuffer();
+    addTearDown(buffer.dispose);
     const totalSignals = 10000;
 
     for (var i = 0; i < totalSignals; i++) {
-      slice.writeBufferSignal(
+      buffer.writeBufferSignal(
         BufferedSignal(type: 'type-$i', nodeIds: const <String>[]),
       );
     }
 
-    final committed = slice.writeTakeCommitted(commitRevision: 42);
+    final committed = buffer.writeTakeCommitted(commitRevision: 42);
 
     expect(committed, hasLength(totalSignals));
     for (var i = 0; i < totalSignals; i++) {
@@ -75,6 +75,6 @@ void main() {
       expect(committed[i].signalId, 's$i');
       expect(committed[i].commitRevision, 42);
     }
-    expect(slice.writeHasBufferedSignals, isFalse);
+    expect(buffer.writeHasBufferedSignals, isFalse);
   });
 }
