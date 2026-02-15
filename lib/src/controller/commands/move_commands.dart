@@ -1,9 +1,9 @@
 import 'dart:ui';
 
-import '../../../public/scene_write_txn.dart';
+import '../../public/scene_write_txn.dart';
 
-class V2MoveSlice {
-  V2MoveSlice(this._writeRunner);
+class MoveCommands {
+  MoveCommands(this._writeRunner);
 
   final T Function<T>(T Function(SceneWriteTxn writer) fn) _writeRunner;
 

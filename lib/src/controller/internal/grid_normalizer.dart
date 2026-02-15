@@ -1,7 +1,7 @@
-import '../../../core/scene.dart';
-import '../../../model/document.dart';
+import '../../core/scene.dart';
+import '../../model/document.dart';
 
-class V2GridSlice {
+class GridNormalizer {
   bool writeNormalizeGrid({required Scene scene}) {
     return txnNormalizeGrid(scene);
   }

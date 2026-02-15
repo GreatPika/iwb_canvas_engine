@@ -154,4 +154,3 @@ NodeSnapshot _snapshotNodeFromScene(SceneNode node) {
       );
   }
 }
-

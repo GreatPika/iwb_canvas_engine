@@ -2,12 +2,12 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 
-import '../../../core/nodes.dart';
-import '../../../core/scene.dart';
-import '../../../core/scene_spatial_index.dart';
-import '../../../controller/change_set.dart';
+import '../../core/nodes.dart';
+import '../../core/scene.dart';
+import '../../core/scene_spatial_index.dart';
+import '../change_set.dart';
 
-class V2SpatialIndexSlice {
+class SpatialIndexCache {
   SceneSpatialIndex? _index;
   int _indexEpoch = -1;
   int _debugBuildCount = 0;

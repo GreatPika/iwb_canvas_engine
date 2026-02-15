@@ -6,7 +6,7 @@ import '../core/nodes.dart' show TextNode;
 import '../core/selection_policy.dart';
 import '../core/text_layout.dart';
 import '../core/transform2d.dart';
-import '../input/slices/signals/signal_event.dart';
+import 'internal/signal_event.dart';
 import '../model/document.dart';
 import '../public/node_patch.dart';
 import '../public/node_spec.dart';
@@ -18,7 +18,7 @@ class SceneWriter implements SceneWriteTxn {
   SceneWriter(this._ctx, {required this.txnSignalSink});
 
   final TxnContext _ctx;
-  final void Function(V2BufferedSignal signal) txnSignalSink;
+  final void Function(BufferedSignal signal) txnSignalSink;
 
   @override
   SceneSnapshot get snapshot => txnSceneToSnapshot(_ctx.workingScene);
@@ -388,7 +388,7 @@ class SceneWriter implements SceneWriteTxn {
     Map<String, Object?>? payload,
   }) {
     txnSignalSink(
-      V2BufferedSignal(
+      BufferedSignal(
         type: type,
         nodeIds: List<NodeId>.of(nodeIds),
         payload: payload,

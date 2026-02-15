@@ -7,15 +7,15 @@ import 'package:flutter/foundation.dart';
 import '../core/nodes.dart' show SceneNode;
 import '../core/scene.dart' show Scene;
 import '../core/scene_spatial_index.dart';
-import '../input/slices/commands/scene_commands.dart';
-import '../input/slices/draw/draw_slice.dart';
-import '../input/slices/grid/grid_slice.dart';
-import '../input/slices/move/move_slice.dart';
-import '../input/slices/repaint/repaint_slice.dart';
-import '../input/slices/selection/selection_slice.dart';
-import '../input/slices/signals/signal_event.dart';
-import '../input/slices/signals/signals_slice.dart';
-import '../input/slices/spatial_index/spatial_index_slice.dart';
+import 'commands/draw_commands.dart';
+import 'commands/move_commands.dart';
+import 'commands/scene_commands.dart';
+import 'internal/grid_normalizer.dart';
+import 'internal/repaint_flag.dart';
+import 'internal/selection_normalizer.dart';
+import 'internal/signal_event.dart';
+import 'internal/signals_buffer.dart';
+import 'internal/spatial_index_cache.dart';
 import '../model/document.dart';
 import '../public/scene_render_state.dart';
 import '../public/scene_write_txn.dart';
@@ -36,11 +36,11 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
 
   final V2Store _store;
 
-  final V2SelectionSlice _selectionSlice = V2SelectionSlice();
-  final V2GridSlice _gridSlice = V2GridSlice();
-  final V2SpatialIndexSlice _spatialIndexSlice = V2SpatialIndexSlice();
-  final V2SignalsSlice _signalsSlice = V2SignalsSlice();
-  final V2RepaintSlice _repaintSlice = V2RepaintSlice();
+  final SelectionNormalizer _selectionNormalizer = SelectionNormalizer();
+  final GridNormalizer _gridNormalizer = GridNormalizer();
+  final SpatialIndexCache _spatialIndexCache = SpatialIndexCache();
+  final SignalsBuffer _signalsBuffer = SignalsBuffer();
+  final RepaintFlag _repaintFlag = RepaintFlag();
 
   bool _writeInProgress = false;
   bool _notifyScheduled = false;
@@ -61,9 +61,9 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
   @visibleForTesting
   void Function()? debugBeforeSpatialPrepareCommitHook;
 
-  late final V2SceneCommandsSlice commands = V2SceneCommandsSlice(write);
-  late final V2MoveSlice move = V2MoveSlice(write);
-  late final V2DrawSlice draw = V2DrawSlice(write);
+  late final SceneCommands commands = SceneCommands(write);
+  late final MoveCommands move = MoveCommands(write);
+  late final DrawCommands draw = DrawCommands(write);
 
   @override
   SceneSnapshot get snapshot {
@@ -89,7 +89,7 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
   int get boundsRevision => _store.boundsRevision;
   int get visualRevision => _store.visualRevision;
 
-  Stream<V2CommittedSignal> get signals => _signalsSlice.signals;
+  Stream<CommittedSignal> get signals => _signalsBuffer.signals;
 
   @visibleForTesting
   List<String> get debugLastCommitPhases => _debugLastCommitPhases;
@@ -98,11 +98,11 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
   ChangeSet get debugLastChangeSet => _debugLastChangeSet.txnClone();
 
   @visibleForTesting
-  int get debugSpatialIndexBuildCount => _spatialIndexSlice.debugBuildCount;
+  int get debugSpatialIndexBuildCount => _spatialIndexCache.debugBuildCount;
 
   @visibleForTesting
   int get debugSpatialIndexIncrementalApplyCount =>
-      _spatialIndexSlice.debugIncrementalApplyCount;
+      _spatialIndexCache.debugIncrementalApplyCount;
 
   @visibleForTesting
   int get debugSceneShallowClones => _debugLastSceneShallowClones;
@@ -123,7 +123,7 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
   int get debugCommitRevision => _store.commitRevision;
 
   List<SceneSpatialCandidate> querySpatialCandidates(Rect worldBounds) {
-    return _spatialIndexSlice.writeQueryCandidates(
+    return _spatialIndexCache.writeQueryCandidates(
       scene: _store.sceneDoc,
       nodeLocator: _store.nodeLocator,
       worldBounds: worldBounds,
@@ -175,26 +175,26 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
 
     late final T result;
     var commitResult = const _TxnWriteCommitResult(
-      committedSignals: <V2CommittedSignal>[],
+      committedSignals: <CommittedSignal>[],
       needsNotify: false,
     );
 
     try {
       final writer = SceneWriter(
         ctx,
-        txnSignalSink: _signalsSlice.writeBufferSignal,
+        txnSignalSink: _signalsBuffer.writeBufferSignal,
       );
       result = fn(writer);
       commitResult = _txnWriteCommit(ctx);
     } catch (_) {
-      _signalsSlice.writeDiscardBuffered();
-      _repaintSlice.writeDiscardPending();
+      _signalsBuffer.writeDiscardBuffered();
+      _repaintFlag.writeDiscardPending();
       rethrow;
     } finally {
       _writeInProgress = false;
     }
 
-    _signalsSlice.emitCommitted(commitResult.committedSignals);
+    _signalsBuffer.emitCommitted(commitResult.committedSignals);
     if (commitResult.needsNotify) {
       _scheduleNotify();
     }
@@ -209,11 +209,11 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
 
   void requestRepaint() {
     _throwIfDisposed();
-    _repaintSlice.writeMarkNeedsRepaint();
+    _repaintFlag.writeMarkNeedsRepaint();
     if (_writeInProgress) {
       return;
     }
-    if (_repaintSlice.writeTakeNeedsNotify()) {
+    if (_repaintFlag.writeTakeNeedsNotify()) {
       _scheduleNotify();
     }
   }
@@ -226,7 +226,7 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
         ctx.changeSet.structuralChanged ||
         ctx.changeSet.documentReplaced;
     if (shouldNormalizeSelection) {
-      final selectionResult = _selectionSlice.writeNormalizeSelection(
+      final selectionResult = _selectionNormalizer.writeNormalizeSelection(
         rawSelection: ctx.workingSelection,
         scene: ctx.workingScene,
       );
@@ -244,7 +244,7 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
     final shouldNormalizeGrid =
         ctx.changeSet.gridChanged || ctx.changeSet.documentReplaced;
     if (shouldNormalizeGrid) {
-      final gridChanged = _gridSlice.writeNormalizeGrid(
+      final gridChanged = _gridNormalizer.writeNormalizeGrid(
         scene: ctx.workingScene,
       );
       commitPhases = <String>[...commitPhases, 'grid'];
@@ -254,20 +254,20 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
     }
 
     final hasStateChanges = ctx.changeSet.txnHasAnyChange;
-    final hasSignals = _signalsSlice.writeHasBufferedSignals;
-    final hasRepaint = _repaintSlice.needsNotify;
+    final hasSignals = _signalsBuffer.writeHasBufferedSignals;
+    final hasRepaint = _repaintFlag.needsNotify;
     if (!hasStateChanges && !hasSignals && !hasRepaint) {
       _debugLastCommitPhases = commitPhases;
       _debugLastChangeSet = ctx.changeSet.txnClone();
       _debugCaptureTxnCloneStats(ctx);
       return const _TxnWriteCommitResult(
-        committedSignals: <V2CommittedSignal>[],
+        committedSignals: <CommittedSignal>[],
         needsNotify: false,
       );
     }
 
     if (!hasStateChanges) {
-      var committedSignals = const <V2CommittedSignal>[];
+      var committedSignals = const <CommittedSignal>[];
       if (hasSignals) {
         final nextCommitRevision = _store.commitRevision + 1;
         _debugAssertStoreInvariantsCandidate(
@@ -279,14 +279,14 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
           nextInstanceRevision: _store.nextInstanceRevision,
           commitRevision: nextCommitRevision,
         );
-        committedSignals = _signalsSlice.writeTakeCommitted(
+        committedSignals = _signalsBuffer.writeTakeCommitted(
           commitRevision: nextCommitRevision,
         );
         commitPhases = <String>[...commitPhases, 'signals'];
         _store.commitRevision = nextCommitRevision;
       }
 
-      final needsNotify = _repaintSlice.writeTakeNeedsNotify();
+      final needsNotify = _repaintFlag.writeTakeNeedsNotify();
       if (needsNotify) {
         commitPhases = <String>[...commitPhases, 'repaint'];
       }
@@ -332,14 +332,14 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
     );
 
     debugBeforeSpatialPrepareCommitHook?.call();
-    final preparedSpatialCommit = _spatialIndexSlice.writePrepareCommit(
+    final preparedSpatialCommit = _spatialIndexCache.writePrepareCommit(
       scene: committedScene,
       nodeLocator: committedNodeLocator,
       changeSet: ctx.changeSet,
       controllerEpoch: nextEpoch,
     );
 
-    final committedSignals = _signalsSlice.writeTakeCommitted(
+    final committedSignals = _signalsBuffer.writeTakeCommitted(
       commitRevision: nextCommitRevision,
     );
 
@@ -356,12 +356,12 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
       nextVisualRevision: nextVisualRevision,
       nextCommitRevision: nextCommitRevision,
     );
-    _spatialIndexSlice.writeApplyPreparedCommit(preparedSpatialCommit);
+    _spatialIndexCache.writeApplyPreparedCommit(preparedSpatialCommit);
     commitPhases = <String>[...commitPhases, 'spatial_index'];
     commitPhases = <String>[...commitPhases, 'signals'];
 
-    _repaintSlice.writeMarkNeedsRepaint();
-    final needsNotify = _repaintSlice.writeTakeNeedsNotify();
+    _repaintFlag.writeMarkNeedsRepaint();
+    final needsNotify = _repaintFlag.writeTakeNeedsNotify();
     commitPhases = <String>[...commitPhases, 'repaint'];
 
     _debugLastCommitPhases = commitPhases;
@@ -466,7 +466,7 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
     _isDisposed = true;
     _notifyPending = false;
     _notifyScheduled = false;
-    _signalsSlice.dispose();
+    _signalsBuffer.dispose();
     super.dispose();
   }
 }
@@ -477,6 +477,6 @@ class _TxnWriteCommitResult {
     required this.needsNotify,
   });
 
-  final List<V2CommittedSignal> committedSignals;
+  final List<CommittedSignal> committedSignals;
   final bool needsNotify;
 }

@@ -1,13 +1,13 @@
 import 'dart:ui' show Color, Offset;
 
-import '../../../core/nodes.dart';
-import '../../../core/transform2d.dart';
-import '../../../public/node_patch.dart';
-import '../../../public/node_spec.dart';
-import '../../../public/scene_write_txn.dart';
+import '../../core/nodes.dart';
+import '../../core/transform2d.dart';
+import '../../public/node_patch.dart';
+import '../../public/node_spec.dart';
+import '../../public/scene_write_txn.dart';
 
-class V2SceneCommandsSlice {
-  V2SceneCommandsSlice(this._writeRunner);
+class SceneCommands {
+  SceneCommands(this._writeRunner);
 
   final T Function<T>(T Function(SceneWriteTxn writer) fn) _writeRunner;
 

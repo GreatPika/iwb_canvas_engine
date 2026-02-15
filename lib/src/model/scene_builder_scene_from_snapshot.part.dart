@@ -212,4 +212,3 @@ int _resolveSnapshotInstanceRevision(
   }
   return nextInstanceRevision();
 }
-

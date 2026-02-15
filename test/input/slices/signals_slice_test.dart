@@ -1,26 +1,26 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/src/input/slices/signals/signal_event.dart';
-import 'package:iwb_canvas_engine/src/input/slices/signals/signals_slice.dart';
+import 'package:iwb_canvas_engine/src/controller/internal/signal_event.dart';
+import 'package:iwb_canvas_engine/src/controller/internal/signals_buffer.dart';
 
 void main() {
   test('writeTakeCommitted preserves signal order and increments ids', () {
-    final slice = V2SignalsSlice();
+    final slice = SignalsBuffer();
     addTearDown(slice.dispose);
 
     slice.writeBufferSignal(
-      V2BufferedSignal(type: 'type-0', nodeIds: const <String>['n0']),
+      BufferedSignal(type: 'type-0', nodeIds: const <String>['n0']),
     );
     slice.writeBufferSignal(
-      V2BufferedSignal(type: 'type-1', nodeIds: const <String>['n1']),
+      BufferedSignal(type: 'type-1', nodeIds: const <String>['n1']),
     );
     slice.writeBufferSignal(
-      V2BufferedSignal(type: 'type-2', nodeIds: const <String>['n2']),
+      BufferedSignal(type: 'type-2', nodeIds: const <String>['n2']),
     );
 
     final committedA = slice.writeTakeCommitted(commitRevision: 7);
     final committedB = slice.writeTakeCommitted(commitRevision: 8);
     slice.writeBufferSignal(
-      V2BufferedSignal(type: 'type-3', nodeIds: const <String>['n3']),
+      BufferedSignal(type: 'type-3', nodeIds: const <String>['n3']),
     );
     final committedC = slice.writeTakeCommitted(commitRevision: 9);
 
@@ -43,11 +43,11 @@ void main() {
   });
 
   test('writeDiscardBuffered clears pending signals', () {
-    final slice = V2SignalsSlice();
+    final slice = SignalsBuffer();
     addTearDown(slice.dispose);
 
     slice.writeBufferSignal(
-      V2BufferedSignal(type: 'type-0', nodeIds: const <String>[]),
+      BufferedSignal(type: 'type-0', nodeIds: const <String>[]),
     );
     expect(slice.writeHasBufferedSignals, isTrue);
 
@@ -57,13 +57,13 @@ void main() {
   });
 
   test('writeTakeCommitted handles large batches with stable ordering', () {
-    final slice = V2SignalsSlice();
+    final slice = SignalsBuffer();
     addTearDown(slice.dispose);
     const totalSignals = 10000;
 
     for (var i = 0; i < totalSignals; i++) {
       slice.writeBufferSignal(
-        V2BufferedSignal(type: 'type-$i', nodeIds: const <String>[]),
+        BufferedSignal(type: 'type-$i', nodeIds: const <String>[]),
       );
     }
 

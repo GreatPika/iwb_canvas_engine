@@ -72,6 +72,31 @@ void main() {
         sandbox.deleteSync(recursive: true);
       }
     });
+
+    test('rejects cross-command import', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(
+          sandbox,
+          'lib/src/controller/commands/a/a.dart',
+          'class CommandA {}\n',
+        );
+        _writeFile(
+          sandbox,
+          'lib/src/controller/commands/b/b.dart',
+          "import 'package:iwb_canvas_engine/src/controller/commands/a/a.dart';\n",
+        );
+
+        final result = await _runTool(sandbox, 'check_import_boundaries.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains('commands/** must not import other commands'),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
   });
 
   group('tool/check_guardrails.dart', () {

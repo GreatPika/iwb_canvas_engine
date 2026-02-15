@@ -148,52 +148,52 @@
 
 **Команды (API-подобные группы)**
 
-* [ ] `lib/src/input/slices/commands/scene_commands.dart` → `lib/src/controller/commands/scene_commands.dart`
-* [ ] `lib/src/input/slices/draw/draw_slice.dart` → `lib/src/controller/commands/draw_commands.dart`
-* [ ] `lib/src/input/slices/move/move_slice.dart` → `lib/src/controller/commands/move_commands.dart`
+* [x] `lib/src/input/slices/commands/scene_commands.dart` → `lib/src/controller/commands/scene_commands.dart`
+* [x] `lib/src/input/slices/draw/draw_slice.dart` → `lib/src/controller/commands/draw_commands.dart`
+* [x] `lib/src/input/slices/move/move_slice.dart` → `lib/src/controller/commands/move_commands.dart`
 
 **Внутреннее (буферы/кэши/нормализация/флаги)**
 
-* [ ] `lib/src/input/slices/grid/grid_slice.dart` → `lib/src/controller/internal/grid_normalizer.dart`
-* [ ] `lib/src/input/slices/selection/selection_slice.dart` → `lib/src/controller/internal/selection_normalizer.dart`
-* [ ] `lib/src/input/slices/repaint/repaint_slice.dart` → `lib/src/controller/internal/repaint_flag.dart`
-* [ ] `lib/src/input/slices/signals/signal_event.dart` → `lib/src/controller/internal/signal_event.dart`
-* [ ] `lib/src/input/slices/signals/signals_slice.dart` → `lib/src/controller/internal/signals_buffer.dart`
-* [ ] `lib/src/input/slices/spatial_index/spatial_index_slice.dart` → `lib/src/controller/internal/spatial_index_cache.dart`
+* [x] `lib/src/input/slices/grid/grid_slice.dart` → `lib/src/controller/internal/grid_normalizer.dart`
+* [x] `lib/src/input/slices/selection/selection_slice.dart` → `lib/src/controller/internal/selection_normalizer.dart`
+* [x] `lib/src/input/slices/repaint/repaint_slice.dart` → `lib/src/controller/internal/repaint_flag.dart`
+* [x] `lib/src/input/slices/signals/signal_event.dart` → `lib/src/controller/internal/signal_event.dart`
+* [x] `lib/src/input/slices/signals/signals_slice.dart` → `lib/src/controller/internal/signals_buffer.dart`
+* [x] `lib/src/input/slices/spatial_index/spatial_index_slice.dart` → `lib/src/controller/internal/spatial_index_cache.dart`
 
 ### 4.2 Переименовать классы/типы (убрать `Slice` и `V2`)
 
 **Команды**
 
-* [ ] `V2SceneCommandsSlice` → `SceneCommands`
-* [ ] `V2DrawSlice` → `DrawCommands`
-* [ ] `V2MoveSlice` → `MoveCommands`
+* [x] `V2SceneCommandsSlice` → `SceneCommands`
+* [x] `V2DrawSlice` → `DrawCommands`
+* [x] `V2MoveSlice` → `MoveCommands`
 
 **Внутреннее**
 
-* [ ] `V2GridSlice` → `GridNormalizer`
-* [ ] `V2SelectionSlice` → `SelectionNormalizer`
-* [ ] `V2SelectionNormalizationResult` → `SelectionNormalizationResult`
-* [ ] `V2SignalsSlice` → `SignalsBuffer`
-* [ ] `V2BufferedSignal` → `BufferedSignal`
-* [ ] `V2CommittedSignal` → `CommittedSignal`
-* [ ] `V2SpatialIndexSlice` → `SpatialIndexCache`
-* [ ] `V2RepaintSlice` → `RepaintFlag`
+* [x] `V2GridSlice` → `GridNormalizer`
+* [x] `V2SelectionSlice` → `SelectionNormalizer`
+* [x] `V2SelectionNormalizationResult` → `SelectionNormalizationResult`
+* [x] `V2SignalsSlice` → `SignalsBuffer`
+* [x] `V2BufferedSignal` → `BufferedSignal`
+* [x] `V2CommittedSignal` → `CommittedSignal`
+* [x] `V2SpatialIndexSlice` → `SpatialIndexCache`
+* [x] `V2RepaintSlice` → `RepaintFlag`
 
 ### 4.3 Обновить импорты и поля в контроллере
 
-* [ ] В `lib/src/controller/scene_controller.dart`: заменить импорты со старых путей на `controller/commands/**` и `controller/internal/**`
-* [ ] Переименовать поля/геттеры с `...Slice` на смысловые (`signalsBuffer`, `repaintFlag`, `spatialIndexCache`, …)
-* [ ] Обновить типы потоков сигналов (CommittedSignal без V2)
+* [x] В `lib/src/controller/scene_controller.dart`: заменить импорты со старых путей на `controller/commands/**` и `controller/internal/**`
+* [x] Переименовать поля/геттеры с `...Slice` на смысловые (`signalsBuffer`, `repaintFlag`, `spatialIndexCache`, …)
+* [x] Обновить типы потоков сигналов (CommittedSignal без V2)
 
 ### 4.4 Удалить слой `input`
 
-* [ ] Удалить `lib/src/input/` (после того как не осталось ссылок)
+* [x] Удалить `lib/src/input/` (после того как не осталось ссылок)
 
 ### Проверки этапа
 
-* [ ] A + B
-* [ ] `flutter test test/controller --coverage` (можно временно падать из-за тестов, если они ещё не перенесены; но к концу этапа 7 всё должно стать зелёным)
+* [x] A + B
+* [x] `flutter test test/controller --coverage` (можно временно падать из-за тестов, если они ещё не перенесены; но к концу этапа 7 всё должно стать зелёным)
 
 ---
 

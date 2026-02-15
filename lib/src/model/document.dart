@@ -851,7 +851,6 @@ bool txnNormalizeGrid(Scene scene) {
   return false;
 }
 
-
 bool _txnApplyCommonPatch(
   SceneNode node,
   CommonNodePatch patch, {

@@ -5,7 +5,7 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart' show RectNode;
 import 'package:iwb_canvas_engine/src/core/scene_spatial_index.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
-import 'package:iwb_canvas_engine/src/input/slices/signals/signal_event.dart';
+import 'package:iwb_canvas_engine/src/controller/internal/signal_event.dart';
 
 // INV:INV-V2-TXN-ATOMIC-COMMIT
 // INV:INV-V2-EPOCH-INVALIDATION
@@ -327,7 +327,7 @@ void main() {
       notifications = notifications + 1;
     });
 
-    final emitted = <V2CommittedSignal>[];
+    final emitted = <CommittedSignal>[];
     final sub = controller.signals.listen(emitted.add);
     addTearDown(sub.cancel);
 
@@ -1779,7 +1779,7 @@ void main() {
     final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
-    final emitted = <V2CommittedSignal>[];
+    final emitted = <CommittedSignal>[];
     final sub = controller.signals.listen(emitted.add);
     addTearDown(sub.cancel);
 

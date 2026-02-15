@@ -1,9 +1,9 @@
-import '../../../core/nodes.dart';
-import '../../../core/scene.dart';
-import '../../../model/document.dart';
+import '../../core/nodes.dart';
+import '../../core/scene.dart';
+import '../../model/document.dart';
 
-class V2SelectionNormalizationResult {
-  const V2SelectionNormalizationResult({
+class SelectionNormalizationResult {
+  const SelectionNormalizationResult({
     required this.normalized,
     required this.normalizedChanged,
   });
@@ -12,8 +12,8 @@ class V2SelectionNormalizationResult {
   final bool normalizedChanged;
 }
 
-class V2SelectionSlice {
-  V2SelectionNormalizationResult writeNormalizeSelection({
+class SelectionNormalizer {
+  SelectionNormalizationResult writeNormalizeSelection({
     required Set<NodeId> rawSelection,
     required Scene scene,
   }) {
@@ -24,7 +24,7 @@ class V2SelectionSlice {
     final changed =
         normalized.length != rawSelection.length ||
         !normalized.containsAll(rawSelection);
-    return V2SelectionNormalizationResult(
+    return SelectionNormalizationResult(
       normalized: normalized,
       normalizedChanged: changed,
     );

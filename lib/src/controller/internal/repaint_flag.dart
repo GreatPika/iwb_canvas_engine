@@ -1,4 +1,4 @@
-class V2RepaintSlice {
+class RepaintFlag {
   bool _needsNotify = false;
 
   bool get needsNotify => _needsNotify;

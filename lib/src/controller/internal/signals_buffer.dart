@@ -2,18 +2,18 @@ import 'dart:async';
 
 import 'signal_event.dart';
 
-class V2SignalsSlice {
-  final StreamController<V2CommittedSignal> _signals =
-      StreamController<V2CommittedSignal>.broadcast();
+class SignalsBuffer {
+  final StreamController<CommittedSignal> _signals =
+      StreamController<CommittedSignal>.broadcast();
 
-  final List<V2BufferedSignal> _buffered = <V2BufferedSignal>[];
+  final List<BufferedSignal> _buffered = <BufferedSignal>[];
   int _signalCounter = 0;
   bool _isDisposed = false;
 
-  Stream<V2CommittedSignal> get signals => _signals.stream;
+  Stream<CommittedSignal> get signals => _signals.stream;
   bool get writeHasBufferedSignals => _buffered.isNotEmpty;
 
-  void writeBufferSignal(V2BufferedSignal signal) {
+  void writeBufferSignal(BufferedSignal signal) {
     if (_isDisposed) return;
     _buffered.add(signal);
   }
@@ -22,14 +22,12 @@ class V2SignalsSlice {
     _buffered.clear();
   }
 
-  List<V2CommittedSignal> writeTakeCommitted({required int commitRevision}) {
-    if (_isDisposed) return const <V2CommittedSignal>[];
-    if (_buffered.isEmpty) return const <V2CommittedSignal>[];
-    final committed = List<V2CommittedSignal>.generate(_buffered.length, (
-      index,
-    ) {
+  List<CommittedSignal> writeTakeCommitted({required int commitRevision}) {
+    if (_isDisposed) return const <CommittedSignal>[];
+    if (_buffered.isEmpty) return const <CommittedSignal>[];
+    final committed = List<CommittedSignal>.generate(_buffered.length, (index) {
       final signal = _buffered[index];
-      return V2CommittedSignal(
+      return CommittedSignal(
         signalId: 's${_signalCounter++}',
         type: signal.type,
         nodeIds: signal.nodeIds,
@@ -41,7 +39,7 @@ class V2SignalsSlice {
     return committed;
   }
 
-  void emitCommitted(Iterable<V2CommittedSignal> committed) {
+  void emitCommitted(Iterable<CommittedSignal> committed) {
     if (_isDisposed) return;
     for (final signal in committed) {
       if (_isDisposed) return;

@@ -10,9 +10,9 @@ import 'package:iwb_canvas_engine/src/controller/change_set.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_writer.dart';
 import 'package:iwb_canvas_engine/src/controller/store.dart';
 import 'package:iwb_canvas_engine/src/controller/txn_context.dart';
-import 'package:iwb_canvas_engine/src/input/slices/repaint/repaint_slice.dart';
-import 'package:iwb_canvas_engine/src/input/slices/signals/signal_event.dart';
-import 'package:iwb_canvas_engine/src/input/slices/spatial_index/spatial_index_slice.dart';
+import 'package:iwb_canvas_engine/src/controller/internal/repaint_flag.dart';
+import 'package:iwb_canvas_engine/src/controller/internal/signal_event.dart';
+import 'package:iwb_canvas_engine/src/controller/internal/spatial_index_cache.dart';
 import 'package:iwb_canvas_engine/src/model/document.dart';
 
 // INV:INV-V2-TXN-COPY-ON-WRITE
@@ -679,7 +679,7 @@ void main() {
   );
 
   test('SceneWriter handles write operations and updates changeset', () {
-    final bufferedSignals = <V2BufferedSignal>[];
+    final bufferedSignals = <BufferedSignal>[];
     final ctx = TxnContext(
       baseScene: Scene(
         layers: <ContentLayer>[
@@ -872,7 +872,7 @@ void main() {
       nodeIdSeed: 2,
       nextInstanceRevision: 1,
     );
-    final bufferedSignals = <V2BufferedSignal>[];
+    final bufferedSignals = <BufferedSignal>[];
     final writer = SceneWriter(ctx, txnSignalSink: bufferedSignals.add);
 
     final generatedId = writer.writeNodeInsert(
@@ -1090,9 +1090,9 @@ void main() {
   );
 
   test(
-    'V2SpatialIndexSlice caches, applies incremental changes and falls back safely',
+    'SpatialIndexCache caches, applies incremental changes and falls back safely',
     () {
-      final slice = V2SpatialIndexSlice();
+      final slice = SpatialIndexCache();
       final scene = Scene(
         layers: <ContentLayer>[
           ContentLayer(
@@ -1306,9 +1306,9 @@ void main() {
   );
 
   test(
-    'V2SpatialIndexSlice falls back to full rebuild when incremental prepare throws',
+    'SpatialIndexCache falls back to full rebuild when incremental prepare throws',
     () {
-      final slice = V2SpatialIndexSlice();
+      final slice = SpatialIndexCache();
       final scene = Scene(
         layers: <ContentLayer>[
           ContentLayer(
@@ -1383,9 +1383,9 @@ void main() {
   );
 
   test(
-    'V2SpatialIndexSlice rethrows when fallback rebuild also fails and keeps active index',
+    'SpatialIndexCache rethrows when fallback rebuild also fails and keeps active index',
     () {
-      final slice = V2SpatialIndexSlice();
+      final slice = SpatialIndexCache();
       final scene = Scene(
         layers: <ContentLayer>[
           ContentLayer(
@@ -1467,8 +1467,8 @@ void main() {
     },
   );
 
-  test('V2RepaintSlice marks/takes once and can discard pending', () {
-    final slice = V2RepaintSlice();
+  test('RepaintFlag marks/takes once and can discard pending', () {
+    final slice = RepaintFlag();
 
     expect(slice.needsNotify, isFalse);
     expect(slice.writeTakeNeedsNotify(), isFalse);

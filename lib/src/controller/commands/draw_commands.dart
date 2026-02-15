@@ -1,11 +1,11 @@
 import 'dart:ui';
 
-import '../../../core/nodes.dart';
-import '../../../public/node_spec.dart';
-import '../../../public/scene_write_txn.dart';
+import '../../core/nodes.dart';
+import '../../public/node_spec.dart';
+import '../../public/scene_write_txn.dart';
 
-class V2DrawSlice {
-  V2DrawSlice(this._writeRunner);
+class DrawCommands {
+  DrawCommands(this._writeRunner);
 
   final T Function<T>(T Function(SceneWriteTxn writer) fn) _writeRunner;
 
