@@ -279,12 +279,14 @@
 
 ## Этап 9 — Bench и example
 
-* [ ] В `tool/bench/load_profiles_cases_test.dart` заменить `SceneControllerV2` → `SceneControllerCore`
-* [ ] Прогнать smoke-профиль бенчмарка
+* [x] В `tool/bench/load_profiles_cases_test.dart` заменить `SceneControllerV2` → `SceneControllerCore`
+* [x] Прогнать smoke-профиль бенчмарка
+* [x] Прогнать smoke-проверку example: `(cd example && flutter test test/widget_test.dart)`
 
 ### Проверки этапа
 
-* [ ] `dart run tool/bench/run_load_profiles.dart --profile=smoke --output=build/bench/load_profiles_smoke.json`
+* [x] `dart run tool/bench/run_load_profiles.dart --profile=smoke --output=build/bench/load_profiles_smoke.json`
+* [x] `(cd example && flutter test test/widget_test.dart)`
 
 ---
 

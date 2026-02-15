@@ -5,6 +5,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/core/scene_limits.dart' show sceneSizeMax;
 
 const _resultPrefix = 'IWB_BENCH_RESULT ';
 
@@ -310,7 +311,7 @@ Map<String, Object?> _runHugeBoundsMetric({required int iterations}) {
     layers: <ContentLayerSnapshot>[
       ContentLayerSnapshot(
         nodes: const <NodeSnapshot>[
-          RectNodeSnapshot(id: 'huge', size: Size(1e9, 1e9)),
+          RectNodeSnapshot(id: 'huge', size: Size(sceneSizeMax, sceneSizeMax)),
         ],
       ),
     ],
