@@ -12,8 +12,8 @@ import '../render/scene_render_caches.dart';
 
 ui.Image? _defaultImageResolver(String _) => null;
 
-class SceneViewInteractiveV2 extends StatefulWidget {
-  const SceneViewInteractiveV2({
+class SceneViewInteractive extends StatefulWidget {
+  const SceneViewInteractive({
     required this.controller,
     this.imageResolver,
     this.selectionColor = const Color(0xFF1565C0),
@@ -29,10 +29,10 @@ class SceneViewInteractiveV2 extends StatefulWidget {
   final double gridStrokeWidth;
 
   @override
-  State<SceneViewInteractiveV2> createState() => _SceneViewInteractiveV2State();
+  State<SceneViewInteractive> createState() => _SceneViewInteractiveState();
 }
 
-class _SceneViewInteractiveV2State extends State<SceneViewInteractiveV2> {
+class _SceneViewInteractiveState extends State<SceneViewInteractive> {
   late PointerInputTracker _pointerTracker;
   Timer? _pendingTapTimer;
   int? _pendingTapFlushTimestampMs;
@@ -57,7 +57,7 @@ class _SceneViewInteractiveV2State extends State<SceneViewInteractiveV2> {
   }
 
   @override
-  void didUpdateWidget(SceneViewInteractiveV2 oldWidget) {
+  void didUpdateWidget(SceneViewInteractive oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller.removeListener(_handleControllerChanged);
@@ -109,7 +109,7 @@ class _SceneViewInteractiveV2State extends State<SceneViewInteractiveV2> {
           gridStrokeWidth: widget.gridStrokeWidth,
           textDirection: textDirection,
         ),
-        foregroundPainter: _SceneInteractiveOverlayPainterV2(
+        foregroundPainter: _SceneInteractiveOverlayPainter(
           controller: widget.controller,
         ),
         child: const SizedBox.expand(),
@@ -283,8 +283,8 @@ class _SceneViewInteractiveV2State extends State<SceneViewInteractiveV2> {
   }
 }
 
-class _SceneInteractiveOverlayPainterV2 extends CustomPainter {
-  const _SceneInteractiveOverlayPainterV2({required this.controller})
+class _SceneInteractiveOverlayPainter extends CustomPainter {
+  const _SceneInteractiveOverlayPainter({required this.controller})
     : super(repaint: controller);
 
   final SceneControllerInteractiveV2 controller;
@@ -297,7 +297,7 @@ class _SceneInteractiveOverlayPainterV2 extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _SceneInteractiveOverlayPainterV2 oldDelegate) {
+  bool shouldRepaint(covariant _SceneInteractiveOverlayPainter oldDelegate) {
     return oldDelegate.controller != controller;
   }
 
@@ -385,4 +385,4 @@ class _SceneInteractiveOverlayPainterV2 extends CustomPainter {
   }
 }
 
-typedef SceneView = SceneViewInteractiveV2;
+typedef SceneView = SceneViewInteractive;

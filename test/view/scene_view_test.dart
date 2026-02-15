@@ -60,7 +60,7 @@ SceneSnapshot _churnSnapshot({required int pairCount, required String prefix}) {
 }
 
 void main() {
-  testWidgets('SceneViewV2 clears all render caches on epoch change', (
+  testWidgets('SceneViewCore clears all render caches on epoch change', (
     tester,
   ) async {
     // INV:INV-V2-EPOCH-INVALIDATION
@@ -80,7 +80,7 @@ void main() {
         child: SizedBox(
           width: 96,
           height: 96,
-          child: SceneViewV2(
+          child: SceneViewCore(
             controller: controller,
             imageResolver: (_) => null,
             textLayoutCache: textCache,
@@ -112,7 +112,7 @@ void main() {
     expect(geometryCache.debugHitCount, 0);
   });
 
-  testWidgets('SceneViewV2 clears caches when controller is replaced', (
+  testWidgets('SceneViewCore clears caches when controller is replaced', (
     tester,
   ) async {
     final controllerA = SceneControllerV2(
@@ -135,7 +135,7 @@ void main() {
         child: SizedBox(
           width: 96,
           height: 96,
-          child: SceneViewV2(
+          child: SceneViewCore(
             controller: controllerA,
             imageResolver: (_) => null,
             textLayoutCache: textCache,
@@ -159,7 +159,7 @@ void main() {
         child: SizedBox(
           width: 96,
           height: 96,
-          child: SceneViewV2(
+          child: SceneViewCore(
             controller: controllerB,
             imageResolver: (_) => null,
             textLayoutCache: textCache,
@@ -182,7 +182,7 @@ void main() {
   });
 
   testWidgets(
-    'SceneViewV2 syncs owned/external caches and exposes debug getters',
+    'SceneViewCore syncs owned/external caches and exposes debug getters',
     (tester) async {
       final controller = SceneControllerV2(
         initialSnapshot: _snapshot(strokeY: 12, text: 'sync'),
@@ -195,13 +195,13 @@ void main() {
           child: SizedBox(
             width: 80,
             height: 80,
-            child: SceneViewV2(controller: controller),
+            child: SceneViewCore(controller: controller),
           ),
         ),
       );
       await tester.pump();
 
-      final state = tester.state(find.byType(SceneViewV2)) as dynamic;
+      final state = tester.state(find.byType(SceneViewCore)) as dynamic;
       expect(state.debugStaticLayerCache, isA<SceneStaticLayerCache>());
       expect(state.debugTextLayoutCache, isA<SceneTextLayoutCache>());
       expect(state.debugStrokePathCache, isA<SceneStrokePathCache>());
@@ -224,7 +224,7 @@ void main() {
           child: SizedBox(
             width: 80,
             height: 80,
-            child: SceneViewV2(
+            child: SceneViewCore(
               controller: controller,
               staticLayerCache: extStaticA,
               textLayoutCache: extTextA,
@@ -249,7 +249,7 @@ void main() {
           child: SizedBox(
             width: 80,
             height: 80,
-            child: SceneViewV2(
+            child: SceneViewCore(
               controller: controller,
               staticLayerCache: extStaticB,
               textLayoutCache: extTextB,
@@ -269,7 +269,7 @@ void main() {
           child: SizedBox(
             width: 80,
             height: 80,
-            child: SceneViewV2(controller: controller),
+            child: SceneViewCore(controller: controller),
           ),
         ),
       );
@@ -283,7 +283,7 @@ void main() {
   );
 
   testWidgets(
-    'SceneViewV2 replaceScene clears stale cache tails after heavy churn',
+    'SceneViewCore replaceScene clears stale cache tails after heavy churn',
     (tester) async {
       final controller = SceneControllerV2(
         initialSnapshot: _churnSnapshot(pairCount: 24, prefix: 'old'),
@@ -302,7 +302,7 @@ void main() {
           child: SizedBox(
             width: 96,
             height: 96,
-            child: SceneViewV2(
+            child: SceneViewCore(
               controller: controller,
               imageResolver: (_) => null,
               textLayoutCache: textCache,

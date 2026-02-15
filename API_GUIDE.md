@@ -29,7 +29,7 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 Runtime aliases exposed publicly:
 
 - `SceneController` is a typedef alias of `SceneControllerInteractiveV2`
-- `SceneView` is a typedef alias of `SceneViewInteractiveV2`
+- `SceneView` is a typedef alias of `SceneViewInteractive`
 
 ## 3. Public API map
 
@@ -442,7 +442,7 @@ SceneView(
 
 - Captures pointer events via `Listener`
 - Routes Flutter pointer input into controller interaction flow
-- Paints scene via `ScenePainterV2`
+- Paints scene via `ScenePainter`
 - Paints interactive overlays (in-progress stroke/line previews)
 - Owns render caches by default and clears them on controller epoch/document boundaries.
 

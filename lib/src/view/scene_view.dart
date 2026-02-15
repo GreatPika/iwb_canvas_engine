@@ -9,8 +9,8 @@ import '../render/scene_render_caches.dart';
 
 ui.Image? _defaultImageResolver(String _) => null;
 
-class SceneViewV2 extends StatefulWidget {
-  const SceneViewV2({
+class SceneViewCore extends StatefulWidget {
+  const SceneViewCore({
     required this.controller,
     this.imageResolver,
     this.staticLayerCache,
@@ -36,10 +36,10 @@ class SceneViewV2 extends StatefulWidget {
   final double gridStrokeWidth;
 
   @override
-  State<SceneViewV2> createState() => _SceneViewV2State();
+  State<SceneViewCore> createState() => _SceneViewCoreState();
 }
 
-class _SceneViewV2State extends State<SceneViewV2> {
+class _SceneViewCoreState extends State<SceneViewCore> {
   late SceneRenderCaches _renderCaches;
 
   int _lastEpoch = 0;
@@ -68,7 +68,7 @@ class _SceneViewV2State extends State<SceneViewV2> {
   }
 
   @override
-  void didUpdateWidget(SceneViewV2 oldWidget) {
+  void didUpdateWidget(SceneViewCore oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller.removeListener(_handleControllerChanged);
@@ -122,7 +122,7 @@ class _SceneViewV2State extends State<SceneViewV2> {
     _renderCaches.clearAll();
   }
 
-  bool _didCacheDepsChange(SceneViewV2 oldWidget) {
+  bool _didCacheDepsChange(SceneViewCore oldWidget) {
     return oldWidget.staticLayerCache != widget.staticLayerCache ||
         oldWidget.textLayoutCache != widget.textLayoutCache ||
         oldWidget.strokePathCache != widget.strokePathCache ||

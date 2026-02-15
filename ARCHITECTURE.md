@@ -45,7 +45,7 @@ lib/
 1. `SceneView` receives pointer events from Flutter.
 2. `SceneController` processes events and performs transactional writes.
 3. Controller updates the immutable `SceneSnapshot`.
-4. `ScenePainterV2` renders snapshot state via `CustomPaint`.
+4. `ScenePainter` renders snapshot state via `CustomPaint`.
 5. `actions` / `editTextRequests` streams expose asynchronous boundaries to the host app.
 
 ## Invariants
@@ -92,7 +92,7 @@ Key invariants:
 - Mutating transactions use copy-on-write: first mutation creates a shallow scene clone, then only touched layers/nodes are cloned on demand; no-op patches do not trigger layer/node cloning.
 - Hot-path node lookup (`NodeId -> layer/node index`) uses committed `nodeLocator` instead of linear scene scans.
 - Viewport culling for offscreen nodes.
-- `SceneViewV2` / `SceneViewInteractiveV2` own render-cache lifecycle (`static/text/stroke/pathMetrics/geometry`), clear caches on controller epoch/document boundaries, and pass cache dependencies to `ScenePainterV2`.
+- `SceneViewCore` / `SceneViewInteractive` own render-cache lifecycle (`static/text/stroke/pathMetrics/geometry`), clear caches on controller epoch/document boundaries, and pass cache dependencies to `ScenePainter`.
 - Bounded caches for text layout, stroke paths, selected path metrics, and render geometry (`RenderGeometryCache.maxEntries = 512`).
 - Render-geometry cache validity for stroke nodes is based on stable scalar/revision inputs (`node.id`, `instanceRevision`, `transform`, `pointsRevision`, `thickness`) and does not depend on point-list object identity.
 - Stroke-path cache freshness is validated in O(1) by

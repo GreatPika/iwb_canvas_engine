@@ -43,7 +43,7 @@ Widget _host(
     child: SizedBox(
       width: 120,
       height: 120,
-      child: SceneViewInteractiveV2(
+      child: SceneViewInteractive(
         controller: controller,
         imageResolver: imageResolver,
       ),
@@ -52,7 +52,7 @@ Widget _host(
 }
 
 void main() {
-  testWidgets('SceneViewInteractiveV2 handles controller swap', (tester) async {
+  testWidgets('SceneViewInteractive handles controller swap', (tester) async {
     final controllerA = SceneControllerInteractiveV2(
       initialSnapshot: _snapshot(text: 'A', includeImage: true),
     );
@@ -78,10 +78,10 @@ void main() {
     await tester.pump();
 
     // No crashes after controller swap.
-    expect(find.byType(SceneViewInteractiveV2), findsOneWidget);
+    expect(find.byType(SceneViewInteractive), findsOneWidget);
   });
 
-  testWidgets('SceneViewInteractiveV2 handles replaceScene', (tester) async {
+  testWidgets('SceneViewInteractive handles replaceScene', (tester) async {
     final controller = SceneControllerInteractiveV2(
       initialSnapshot: _snapshot(text: 'epoch'),
     );
@@ -94,10 +94,10 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.byType(SceneViewInteractiveV2), findsOneWidget);
+    expect(find.byType(SceneViewInteractive), findsOneWidget);
   });
 
-  testWidgets('SceneViewInteractiveV2 flushes pending tap timer callback', (
+  testWidgets('SceneViewInteractive flushes pending tap timer callback', (
     tester,
   ) async {
     final controller = SceneControllerInteractiveV2(
@@ -113,10 +113,10 @@ void main() {
     await gesture.up();
     await tester.pump(const Duration(milliseconds: 16));
 
-    expect(find.byType(SceneViewInteractiveV2), findsOneWidget);
+    expect(find.byType(SceneViewInteractive), findsOneWidget);
   });
 
-  testWidgets('SceneViewInteractiveV2 reuses freed pointer slot ids', (
+  testWidgets('SceneViewInteractive reuses freed pointer slot ids', (
     tester,
   ) async {
     final controller = SceneControllerInteractiveV2(
@@ -140,10 +140,10 @@ void main() {
     await g3.up();
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.byType(SceneViewInteractiveV2), findsOneWidget);
+    expect(find.byType(SceneViewInteractive), findsOneWidget);
   });
 
-  testWidgets('SceneViewInteractiveV2 chooses min free slot from unsorted list', (
+  testWidgets('SceneViewInteractive chooses min free slot from unsorted list', (
     tester,
   ) async {
     final controller = SceneControllerInteractiveV2(
@@ -170,10 +170,10 @@ void main() {
     await gNext.up();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.byType(SceneViewInteractiveV2), findsOneWidget);
+    expect(find.byType(SceneViewInteractive), findsOneWidget);
   });
 
-  testWidgets('SceneViewInteractiveV2 paints single-point stroke preview', (
+  testWidgets('SceneViewInteractive paints single-point stroke preview', (
     tester,
   ) async {
     final controller = SceneControllerInteractiveV2(
@@ -213,7 +213,7 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('SceneViewInteractiveV2 paints active line preview', (
+  testWidgets('SceneViewInteractive paints active line preview', (
     tester,
   ) async {
     final controller = SceneControllerInteractiveV2(
@@ -242,7 +242,7 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('SceneViewInteractiveV2 routes image ids to imageResolver', (
+  testWidgets('SceneViewInteractive routes image ids to imageResolver', (
     tester,
   ) async {
     final controller = SceneControllerInteractiveV2(
@@ -265,56 +265,53 @@ void main() {
     expect(requestedImageIds, contains('missing'));
   });
 
-  testWidgets(
-    'SceneViewInteractiveV2 overlay painter covers preview branches',
-    (tester) async {
-      final controller = _OverlayTestController(
-        initialSnapshot: _snapshot(text: 'overlay'),
-      );
-      addTearDown(controller.dispose);
+  testWidgets('SceneViewInteractive overlay painter covers preview branches', (
+    tester,
+  ) async {
+    final controller = _OverlayTestController(
+      initialSnapshot: _snapshot(text: 'overlay'),
+    );
+    addTearDown(controller.dispose);
 
-      Future<void> paintOverlay() async {
-        await tester.pumpWidget(_host(controller));
-        await tester.pump();
-        final customPaint = tester.widget<CustomPaint>(
-          find.byType(CustomPaint),
-        );
-        final overlay = customPaint.foregroundPainter!;
-        final recorder = PictureRecorder();
-        final canvas = Canvas(recorder);
-        overlay.paint(canvas, const Size(120, 120));
-        recorder.endRecording();
-      }
+    Future<void> paintOverlay() async {
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+      final customPaint = tester.widget<CustomPaint>(find.byType(CustomPaint));
+      final overlay = customPaint.foregroundPainter!;
+      final recorder = PictureRecorder();
+      final canvas = Canvas(recorder);
+      overlay.paint(canvas, const Size(120, 120));
+      recorder.endRecording();
+    }
 
-      controller.strokeActive = true;
-      controller.strokePoints = const <Offset>[];
-      await paintOverlay();
+    controller.strokeActive = true;
+    controller.strokePoints = const <Offset>[];
+    await paintOverlay();
 
-      controller.strokePoints = const <Offset>[Offset(10, 10)];
-      controller.strokeThickness = 0;
-      await paintOverlay();
+    controller.strokePoints = const <Offset>[Offset(10, 10)];
+    controller.strokeThickness = 0;
+    await paintOverlay();
 
-      controller.strokeThickness = 4;
-      controller.strokeOpacity = 2;
-      await paintOverlay();
+    controller.strokeThickness = 4;
+    controller.strokeOpacity = 2;
+    await paintOverlay();
 
-      controller.strokePoints = const <Offset>[Offset(10, 10), Offset(20, 20)];
-      await paintOverlay();
+    controller.strokePoints = const <Offset>[Offset(10, 10), Offset(20, 20)];
+    await paintOverlay();
 
-      controller.lineActive = true;
-      controller.lineStart = null;
-      controller.lineEnd = null;
-      await paintOverlay();
+    controller.lineActive = true;
+    controller.lineStart = null;
+    controller.lineEnd = null;
+    await paintOverlay();
 
-      controller.lineStart = const Offset(5, 5);
-      controller.lineEnd = const Offset(25, 25);
-      controller.linePreviewThickness = 0;
-      await paintOverlay();
+    controller.lineStart = const Offset(5, 5);
+    controller.lineEnd = const Offset(25, 25);
+    controller.linePreviewThickness = 0;
+    await paintOverlay();
 
-      controller.linePreviewThickness = 2;
-      await paintOverlay();
-    },
-  );
+    controller.linePreviewThickness = 2;
+    await paintOverlay();
+  });
 }
 
 class _OverlayTestController extends SceneControllerInteractiveV2 {

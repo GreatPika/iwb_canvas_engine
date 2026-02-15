@@ -104,20 +104,20 @@
 
 ### 2.1 Переименование виджетов и внутренних классов
 
-* [ ] `SceneViewV2` → `SceneViewCore`
-* [ ] `_SceneViewV2State` → `_SceneViewCoreState`
-* [ ] `SceneViewInteractiveV2` → `SceneViewInteractive`
-* [ ] `_SceneViewInteractiveV2State` → `_SceneViewInteractiveState`
-* [ ] `_SceneInteractiveOverlayPainterV2` → `_SceneInteractiveOverlayPainter`
+* [x] `SceneViewV2` → `SceneViewCore`
+* [x] `_SceneViewV2State` → `_SceneViewCoreState`
+* [x] `SceneViewInteractiveV2` → `SceneViewInteractive`
+* [x] `_SceneViewInteractiveV2State` → `_SceneViewInteractiveState`
+* [x] `_SceneInteractiveOverlayPainterV2` → `_SceneInteractiveOverlayPainter`
 
 ### 2.2 Публичный алиас (удобство)
 
-* [ ] `typedef SceneView = SceneViewInteractive;`
+* [x] `typedef SceneView = SceneViewInteractive;`
 
 ### Проверки этапа
 
-* [ ] A + B
-* [ ] `flutter test test/view --coverage`
+* [x] A + B
+* [x] `flutter test test/view --coverage`
 
 ---
 

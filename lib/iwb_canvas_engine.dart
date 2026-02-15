@@ -20,7 +20,7 @@ export 'src/core/transform2d.dart' show Transform2D;
 export 'src/interactive/scene_controller_interactive.dart'
     show SceneController, SceneControllerInteractiveV2;
 export 'src/view/scene_view_interactive.dart'
-    show SceneView, SceneViewInteractiveV2;
+    show SceneView, SceneViewInteractive;
 export 'src/serialization/scene_codec.dart'
     show
         decodeScene,
