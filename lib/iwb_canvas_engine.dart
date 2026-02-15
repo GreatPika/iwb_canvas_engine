@@ -1,6 +1,6 @@
 /// Public API exports for `iwb_canvas_engine`.
 ///
-/// This is the primary v2 entrypoint and recommended default import.
+/// This is the primary public entrypoint and recommended default import.
 library;
 
 export 'src/public/node_patch.dart';

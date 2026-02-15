@@ -12,25 +12,25 @@
   - removed public `handlePointer(PointerSample ...)` / `handlePointerSignal(PointerSignal ...)`,
   - added `handlePointer(CanvasPointerInput)` / `handleDoubleTap(...)`,
   - internal `PointerSample`/`PointerSignal` are no longer required for public usage.
-- Public view widget API removes `SceneViewInteractiveV2` from exports;
+- Public view widget API removes the legacy interactive view type from exports;
   use `SceneViewInteractive` (or `SceneView` alias).
-- Public interactive controller API removes `SceneControllerInteractiveV2` from exports;
+- Public interactive controller API removes the legacy interactive controller type from exports;
   use `SceneControllerInteractive` (or `SceneController` alias).
-- `SceneViewInteractiveV2` no longer exposes `geometryCache` in its public constructor; geometry cache ownership is fully internal to keep non-exported render-cache types out of public signatures.
-- Removed public `V2PathFillRule`; path node public contracts now use `PathFillRule`.
+- The legacy interactive view constructor no longer exposes `geometryCache`; geometry cache ownership is fully internal to keep non-exported render-cache types out of public signatures.
+- Removed public legacy path fill rule enum; path node public contracts now use `PathFillRule`.
 
 ### Changed
 
-- `SceneControllerV2` now fails fast after `dispose()`: mutating/effectful calls (`write(...)`, `writeReplaceScene(...)`, `requestRepaint()`) throw `StateError` and keep runtime state/effects unchanged.
-- `SceneControllerInteractiveV2` listener notifications are now consistently microtask-deferred/coalesced (including pointer handling and core-change forwarding), so interactive listeners are never invoked synchronously inside `handlePointer(...)`.
-- `SceneControllerInteractiveV2.handlePointer(...)` now fails fast with `StateError` on same-stack reentrant calls.
+- `SceneControllerCore` now fails fast after `dispose()`: mutating/effectful calls (`write(...)`, `writeReplaceScene(...)`, `requestRepaint()`) throw `StateError` and keep runtime state/effects unchanged.
+- `SceneControllerInteractive` listener notifications are now consistently microtask-deferred/coalesced (including pointer handling and core-change forwarding), so interactive listeners are never invoked synchronously inside `handlePointer(...)`.
+- `SceneControllerInteractive.handlePointer(...)` now fails fast with `StateError` on same-stack reentrant calls.
 - Internal `RenderGeometryCache` now uses bounded LRU eviction (`maxEntries = 512`) to prevent unbounded geometry-cache growth during long node churn (create/delete cycles).
 - Internal `RenderGeometryCache` stroke validity key now excludes point-list object identity and relies on stable scalar/revision geometry inputs (`pointsRevision`, transform, thickness), restoring cache hits across logically unchanged snapshots.
 - `iwb_canvas_engine.dart` export surface is narrowed: removed public exports of `defaults.dart`, `geometry.dart`, and render cache/resolver types from `scene_painter.dart`; pointer input export now exposes `PointerInputSettings` and new public `CanvasPointerInput` contracts.
 - Added public `SceneBuilder` as a unified immutable import gateway for both JSON maps and `SceneSnapshot`.
-- `SceneStrokePathCacheV2`, `SceneTextLayoutCacheV2`, and `ScenePathMetricsCacheV2` now throw `ArgumentError` for `maxEntries <= 0` in all build modes (not only debug).
-- `ScenePainterV2` now reuses per-node geometry via injected `RenderGeometryCache` (`NodeId` + validity key), removing duplicate path parsing/bounds calculations across culling, selection, and path drawing.
-- `SceneViewV2` and `SceneViewInteractiveV2` now own render-cache lifecycle consistently (including `RenderGeometryCache`) and clear all render caches on controller epoch changes; only internal `SceneViewV2` keeps optional `geometryCache` injection for explicit ownership/customization.
+- `SceneStrokePathCache`, `SceneTextLayoutCache`, and `ScenePathMetricsCache` now throw `ArgumentError` for `maxEntries <= 0` in all build modes (not only debug).
+- `ScenePainter` now reuses per-node geometry via injected `RenderGeometryCache` (`NodeId` + validity key), removing duplicate path parsing/bounds calculations across culling, selection, and path drawing.
+- `SceneViewCore` and `SceneViewInteractive` now own render-cache lifecycle consistently (including `RenderGeometryCache`) and clear all render caches on controller epoch changes; only internal `SceneViewCore` keeps optional `geometryCache` injection for explicit ownership/customization.
 - Internal view widget names are aligned with stage-2 naming:
   `SceneViewCore`, `SceneViewInteractive`, `_SceneInteractiveOverlayPainter`.
 - Added immutable `instanceRevision` node identity across runtime/snapshot/JSON boundaries; render caches now isolate entries by `(nodeId, instanceRevision)` to prevent stale cache hits after id reuse.
@@ -39,13 +39,13 @@
 - `SceneView` now keeps render cache ownership internal while exposing an optional `imageResolver` callback (`ui.Image? Function(String imageId)`) so public image nodes remain renderable without exporting internal resolver/cache types.
 - `CanvasPointerInput.timestampMs` is now optional; when omitted, controller assigns a monotonic timestamp internally.
 - `SceneSpatialIndex` now exposes explicit validity state (`isValid`) and degrades to safe linear candidate scan when indexing cannot be maintained (including out-of-range/extreme geometry), preventing hard failures in query paths.
-- `V2SpatialIndexSlice` now keeps invalid index instances in fallback mode instead of forcing rebuild loops after failed incremental updates.
-- `SceneControllerV2.selectedNodeIds` now reuses a cached `UnmodifiableSetView` and refreshes it only when selection actually changes, removing per-read allocation on hot getter paths.
-- Render caches are extracted from `scene_painter.dart` into dedicated files under `lib/src/render/cache/` (`SceneStrokePathCacheV2`, `SceneTextLayoutCacheV2`, `ScenePathMetricsCacheV2`, `SceneStaticLayerCacheV2`), while keeping `ScenePainterV2` focused on frame rendering and preserving existing cache type availability via `scene_painter.dart` exports.
+- `SpatialIndexCache` now keeps invalid index instances in fallback mode instead of forcing rebuild loops after failed incremental updates.
+- `SceneControllerCore.selectedNodeIds` now reuses a cached `UnmodifiableSetView` and refreshes it only when selection actually changes, removing per-read allocation on hot getter paths.
+- Render caches are extracted from `scene_painter.dart` into dedicated files under `lib/src/render/cache/` (`SceneStrokePathCache`, `SceneTextLayoutCache`, `ScenePathMetricsCache`, `SceneStaticLayerCache`), while keeping `ScenePainter` focused on frame rendering and preserving existing cache type availability via `scene_painter.dart` exports.
 - Internal scene value validation is split into focused `part` files (`primitives`, `palette/grid`, `node`, `top-level`) while preserving behavior, signatures, and error semantics.
 - `clearScene`/`writeClearSceneKeepBackground` now keep (or create) dedicated `backgroundLayer` and clear all content layers.
 - Snapshot/JSON import boundaries now canonicalize missing `backgroundLayer` to a dedicated empty background layer; JSON encode always writes canonical `backgroundLayer`.
-- `V2SignalsSlice` now buffers pending signals in-place and clears on take/discard, removing per-append list copying in large signal batches.
+- `SignalsBuffer` now buffers pending signals in-place and clears on take/discard, removing per-append list copying in large signal batches.
 - `PathNode` hit-testing now falls back to candidate bounds when node transform is non-invertible, keeping singular transformed paths selectable.
 - Commit invariant checks are now always enforced at runtime in all build modes (`debug`/`profile`/`release`) and throw `StateError` on violations.
 - CI now runs `dart run tool/check_guardrails.dart` in the main `ci.yaml` workflow.

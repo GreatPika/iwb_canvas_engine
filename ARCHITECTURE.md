@@ -30,8 +30,9 @@ lib/
   iwb_canvas_engine.dart
   src/
     core/           // model primitives, math, hit testing, defaults
-    controller/     // transactional writer/store internals
-    input/          // input slices and gesture-state helpers
+    controller/     // runtime store/writer + commands and internal helpers
+      commands/     // command groups used by controller/interactive runtime
+      internal/     // controller internals (normalizers, buffers, caches)
     interactive/    // public interactive controller facade
     model/          // scene <-> snapshot conversion helpers
     public/         // snapshot/spec/patch contracts

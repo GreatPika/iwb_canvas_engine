@@ -204,7 +204,7 @@ void main() {
               ),
               TextNodeSnapshot(
                 id: 'text-1',
-                text: 'V2',
+                text: 'TXT',
                 size: const Size(40, 20),
                 fontSize: 14,
                 color: const Color(0xFF000000),

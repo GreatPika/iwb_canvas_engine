@@ -107,7 +107,7 @@ class _CanvasScreenState extends State<CanvasScreen> {
 
 ## Render cache and image lifecycle
 
-- `SceneStrokePathCacheV2`, `SceneTextLayoutCacheV2`, and `ScenePathMetricsCacheV2` validate constructor input at runtime and throw `ArgumentError` when `maxEntries <= 0`.
+- `SceneStrokePathCache`, `SceneTextLayoutCache`, and `ScenePathMetricsCache` validate constructor input at runtime and throw `ArgumentError` when `maxEntries <= 0`.
 - Render caches isolate node instances by `(NodeId, instanceRevision)` and then validate geometry-specific freshness (for example stroke `pointsRevision`), so id reuse cannot return stale geometry.
 - `ScenePainter` consumes `RenderGeometryCache` keyed by node instance identity + geometry validity fields, so path parsing and local/world bounds computation are reused across culling, selection, and paint paths.
 - `SceneView` owns render caches by default and clears them on controller epoch/document boundaries.
