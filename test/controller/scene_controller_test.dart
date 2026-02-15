@@ -12,6 +12,7 @@ import 'package:iwb_canvas_engine/src/controller/internal/signal_event.dart';
 // INV:INV-ENG-SIGNALS-AFTER-COMMIT
 // INV:INV-ENG-ID-INDEX-FROM-SCENE
 // INV:INV-ENG-TXN-COPY-ON-WRITE
+// INV:INV-ENG-TXN-WRITER-LIFETIME
 // INV:INV-ENG-TEXT-SIZE-DERIVED
 // INV:INV-ENG-DISPOSE-FAIL-FAST
 
@@ -1852,6 +1853,155 @@ void main() {
       }),
       throwsStateError,
     );
+  });
+
+  test(
+    'stale txn handle after commit throws and does not emit effects',
+    () async {
+      final controller = SceneControllerCore(
+        initialSnapshot: twoRectSnapshot(),
+      );
+      addTearDown(controller.dispose);
+
+      final emitted = <String>[];
+      final sub = controller.signals.listen((signal) {
+        emitted.add(signal.type);
+      });
+      addTearDown(sub.cancel);
+
+      var notifications = 0;
+      controller.addListener(() {
+        notifications = notifications + 1;
+      });
+
+      late final SceneWriteTxn staleTxn;
+      controller.write<void>((writer) {
+        staleTxn = writer;
+        writer.writeSelectionReplace(const <NodeId>{'r1'});
+        writer.writeSignalEnqueue(type: 'initial.commit');
+      });
+      await pumpEventQueue(times: 2);
+
+      final beforeCommit = controller.debugCommitRevision;
+      final beforeEpoch = controller.controllerEpoch;
+      final beforeStructural = controller.structuralRevision;
+      final beforeBounds = controller.boundsRevision;
+      final beforeVisual = controller.visualRevision;
+      final beforeSelection = controller.selectedNodeIds;
+      final beforeSnapshot = controller.snapshot;
+
+      expect(
+        () => staleTxn.writeSelectionReplace(const <NodeId>{'r2'}),
+        throwsStateError,
+      );
+      expect(
+        () => staleTxn.writeSignalEnqueue(type: 'stale.signal'),
+        throwsStateError,
+      );
+      await pumpEventQueue(times: 2);
+
+      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.controllerEpoch, beforeEpoch);
+      expect(controller.structuralRevision, beforeStructural);
+      expect(controller.boundsRevision, beforeBounds);
+      expect(controller.visualRevision, beforeVisual);
+      expect(controller.selectedNodeIds, beforeSelection);
+      expect(controller.snapshot.layers.length, beforeSnapshot.layers.length);
+      expect(
+        controller.snapshot.layers.first.nodes.map((node) => node.id).toList(),
+        beforeSnapshot.layers.first.nodes.map((node) => node.id).toList(),
+      );
+      expect(emitted, const <String>['initial.commit']);
+      expect(notifications, 1);
+    },
+  );
+
+  test(
+    'stale txn handle after rollback throws and keeps state unchanged',
+    () async {
+      final controller = SceneControllerCore(
+        initialSnapshot: twoRectSnapshot(),
+      );
+      addTearDown(controller.dispose);
+
+      final beforeCommit = controller.debugCommitRevision;
+      final beforeEpoch = controller.controllerEpoch;
+      final beforeStructural = controller.structuralRevision;
+      final beforeBounds = controller.boundsRevision;
+      final beforeVisual = controller.visualRevision;
+      final beforeSelection = controller.selectedNodeIds;
+      final beforeSnapshot = controller.snapshot;
+
+      final emitted = <String>[];
+      final sub = controller.signals.listen((signal) {
+        emitted.add(signal.type);
+      });
+      addTearDown(sub.cancel);
+
+      var notifications = 0;
+      controller.addListener(() {
+        notifications = notifications + 1;
+      });
+
+      late final SceneWriteTxn staleTxn;
+      expect(
+        () => controller.write<void>((writer) {
+          staleTxn = writer;
+          writer.writeSelectionReplace(const <NodeId>{'r1'});
+          writer.writeSignalEnqueue(type: 'will.rollback');
+          throw StateError('rollback');
+        }),
+        throwsStateError,
+      );
+
+      expect(
+        () => staleTxn.writeSelectionReplace(const <NodeId>{'r2'}),
+        throwsStateError,
+      );
+      expect(() => staleTxn.writeNodeErase('r1'), throwsStateError);
+      await pumpEventQueue(times: 2);
+
+      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.controllerEpoch, beforeEpoch);
+      expect(controller.structuralRevision, beforeStructural);
+      expect(controller.boundsRevision, beforeBounds);
+      expect(controller.visualRevision, beforeVisual);
+      expect(controller.selectedNodeIds, beforeSelection);
+      expect(controller.snapshot.layers.length, beforeSnapshot.layers.length);
+      expect(
+        controller.snapshot.layers.first.nodes.map((node) => node.id).toList(),
+        beforeSnapshot.layers.first.nodes.map((node) => node.id).toList(),
+      );
+      expect(emitted, isEmpty);
+      expect(notifications, 0);
+    },
+  );
+
+  test('normal write still works after stale txn handle rejection', () async {
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    final emitted = <String>[];
+    final sub = controller.signals.listen((signal) {
+      emitted.add(signal.type);
+    });
+    addTearDown(sub.cancel);
+
+    late final SceneWriteTxn staleTxn;
+    controller.write<void>((writer) {
+      staleTxn = writer;
+      writer.writeSignalEnqueue(type: 'first');
+    });
+
+    expect(() => staleTxn.writeSignalEnqueue(type: 'stale'), throwsStateError);
+
+    controller.write<void>((writer) {
+      writer.writeSignalEnqueue(type: 'follow-up');
+    });
+    await pumpEventQueue(times: 2);
+
+    expect(emitted, const <String>['first', 'follow-up']);
+    expect(controller.debugCommitRevision, 2);
   });
 
   test(

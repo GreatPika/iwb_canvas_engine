@@ -29,6 +29,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   String writeNodeInsert(NodeSpec spec, {int? layerIndex}) {
+    _ensureTxnActive();
     final resolvedId = spec.id ?? _ctx.txnNextNodeId();
     if (spec.id != null && _ctx.txnHasNodeId(resolvedId)) {
       throw StateError('Node id must be unique: $resolvedId');
@@ -59,6 +60,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   bool writeNodeErase(NodeId nodeId) {
+    _ensureTxnActive();
     final existing = _ctx.txnFindNodeById(nodeId);
     if (existing == null) {
       return false;
@@ -89,6 +91,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   bool writeNodePatch(NodePatch patch) {
+    _ensureTxnActive();
     final existing = _ctx.txnFindNodeById(patch.id);
     if (existing == null) {
       return false;
@@ -119,6 +122,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   bool writeNodeTransformSet(NodeId id, Transform2D transform) {
+    _ensureTxnActive();
     _txnRequireFiniteTransform(transform, name: 'transform');
     final existing = _ctx.txnFindNodeById(id);
     if (existing == null) return false;
@@ -140,6 +144,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   void writeSelectionReplace(Iterable<NodeId> ids) {
+    _ensureTxnActive();
     final next = HashSet<NodeId>.of(ids);
     if (_txnSetsEqual(_ctx.workingSelection, next)) {
       return;
@@ -152,6 +157,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   void writeSelectionToggle(NodeId id) {
+    _ensureTxnActive();
     if (_ctx.workingSelection.contains(id)) {
       _ctx.workingSelection.remove(id);
     } else {
@@ -162,6 +168,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   bool writeSelectionClear() {
+    _ensureTxnActive();
     if (_ctx.workingSelection.isEmpty) {
       return false;
     }
@@ -172,6 +179,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   int writeSelectionSelectAll({bool onlySelectable = true}) {
+    _ensureTxnActive();
     final ids = HashSet<NodeId>();
     for (final layer in _ctx.workingScene.layers) {
       for (final node in layer.nodes) {
@@ -195,6 +203,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   int writeSelectionTranslate(Offset delta) {
+    _ensureTxnActive();
     _txnRequireFiniteOffset(delta, name: 'delta');
     if (delta == Offset.zero || _ctx.workingSelection.isEmpty) {
       return 0;
@@ -224,6 +233,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   int writeSelectionTransform(Transform2D delta) {
+    _ensureTxnActive();
     _txnRequireFiniteTransform(delta, name: 'delta');
     final selected = _ctx.workingSelection;
     if (selected.isEmpty) return 0;
@@ -257,6 +267,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   int writeDeleteSelection() {
+    _ensureTxnActive();
     final selected = _ctx.workingSelection;
     if (selected.isEmpty) return 0;
 
@@ -297,6 +308,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   List<NodeId> writeClearSceneKeepBackground() {
+    _ensureTxnActive();
     final scene = _ctx.txnEnsureMutableScene();
     if (scene.backgroundLayer == null) {
       _ctx.txnEnsureMutableBackgroundLayer();
@@ -328,6 +340,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   void writeCameraOffset(Offset offset) {
+    _ensureTxnActive();
     _txnRequireFiniteOffset(offset, name: 'offset');
     if (_ctx.workingScene.camera.offset == offset) return;
     final scene = _ctx.txnEnsureMutableScene();
@@ -337,6 +350,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   void writeGridEnable(bool enabled) {
+    _ensureTxnActive();
     if (_ctx.workingScene.background.grid.isEnabled == enabled) {
       return;
     }
@@ -347,6 +361,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   void writeGridCellSize(double cellSize) {
+    _ensureTxnActive();
     _txnRequireFinitePositive(cellSize, name: 'cellSize');
     if (_ctx.workingScene.background.grid.cellSize == cellSize) {
       return;
@@ -358,6 +373,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   void writeBackgroundColor(Color color) {
+    _ensureTxnActive();
     if (_ctx.workingScene.background.color == color) {
       return;
     }
@@ -368,6 +384,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   void writeDocumentReplace(SceneSnapshot snapshot) {
+    _ensureTxnActive();
     final hadSelection = _ctx.workingSelection.isNotEmpty;
     final nextScene = txnSceneFromSnapshot(
       snapshot,
@@ -387,6 +404,7 @@ class SceneWriter implements SceneWriteTxn {
     Iterable<NodeId> nodeIds = const <NodeId>[],
     Map<String, Object?>? payload,
   }) {
+    _ensureTxnActive();
     txnSignalSink(
       BufferedSignal(
         type: type,
@@ -446,5 +464,9 @@ class SceneWriter implements SceneWriteTxn {
   void _txnRequireFinitePositive(double value, {required String name}) {
     if (value.isFinite && value > 0) return;
     throw ArgumentError.value(value, name, 'Must be a finite number > 0.');
+  }
+
+  void _ensureTxnActive() {
+    _ctx.txnEnsureActive();
   }
 }

@@ -62,6 +62,12 @@ const List<Invariant> invariants = <Invariant>[
         'public transaction API does not expose mutable scene escape hatches',
   ),
   Invariant(
+    id: 'INV-ENG-TXN-WRITER-LIFETIME',
+    scope: 'engine-controller',
+    title:
+        'transaction writer remains valid only during the active write callback',
+  ),
+  Invariant(
     id: 'INV-ENG-TXN-ATOMIC-COMMIT',
     scope: 'engine-controller',
     title: 'transaction commit remains atomic',

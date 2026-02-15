@@ -69,6 +69,7 @@ Key invariants:
 - Single source of truth: runtime state is owned by controller snapshot.
 - Public API does not expose mutable core scene structures.
 - All state mutations flow through `write` transactions and safe txn operations.
+- Transaction writer lifetime is bounded to the active `write((txn) { ... })` callback; stale `write*` calls fail fast with `StateError`.
 - Runtime commit invariant checks are always enabled and fail fast with `StateError` in all build modes.
 - Committed signals are delivered only after store commit finalization.
 - For each successful commit, signal delivery happens before repaint listener notification.

@@ -90,6 +90,7 @@ class _CanvasScreenState extends State<CanvasScreen> {
 
 - Runtime: `SceneController`, `SceneView`, `SceneSnapshot`.
 - Safe transactional writes: `SceneWriteTxn` via `controller.write((txn) { ... })`.
+- Transaction handle lifetime: `SceneWriteTxn` write methods are valid only inside the active `write(...)` callback; post-callback `write*` calls throw `StateError`.
 - Write intents: `NodeSpec` variants.
 - Partial updates: `NodePatch` + tri-state `PatchField<T>`.
 - Text layout sizing is engine-derived: `TextNodeSpec`/`TextNodePatch` do not expose writable `size`; update text/style fields and the runtime recomputes text box bounds.
@@ -98,7 +99,7 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Event payload contract: `ActionCommitted.nodeIds/payload` are immutable snapshots.
 - Interactive event delivery contract: `actions` and `editTextRequests` are asynchronous; relative ordering against repaint/listener notifications is not a public contract.
 - Selection contract: commit normalization keeps explicit non-selectable ids valid while filtering missing/background/invisible ids.
-- Runtime notify contract: both core and interactive controller `ChangeNotifier` updates are deferred to a microtask and coalesced to at most one notification per event-loop tick.
+- Runtime notify contract: both core and interactive controller `ChangeNotifier` updates are deferred to a microtask and coalesced to at most one notification per event-loop tick (not one notification per transaction).
 - Move drag contract: pointer move updates only visual preview; scene translation is committed once on pointer up, and pointer cancel keeps the document unchanged.
 - Runtime guardrails bound worst-case input/query cost: interactive stroke commits are capped to `20_000` points (deterministic downsampling), path-stroke precise hit-testing is capped to `2_048` samples per path metric, and oversized spatial queries switch to bounded candidate-scan fallback.
 - Runtime snapshot validation: `initialSnapshot` and `replaceScene` fail fast with `SceneDataException` for malformed snapshots (duplicate node ids, invalid numbers, invalid SVG path data, invalid palette, invalid typed layer fields).

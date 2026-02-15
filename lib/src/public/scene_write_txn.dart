@@ -8,6 +8,9 @@ import 'snapshot.dart';
 /// Safe transactional write contract exposed by public controllers.
 ///
 /// This API intentionally avoids exposing mutable scene internals.
+/// A `SceneWriteTxn` instance is valid only inside the active
+/// `controller.write((txn) { ... })` callback.
+/// Calling any `write*` method after that callback returns throws `StateError`.
 abstract interface class SceneWriteTxn {
   /// Immutable read view of the transaction state.
   SceneSnapshot get snapshot;

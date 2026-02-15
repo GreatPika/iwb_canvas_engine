@@ -332,12 +332,14 @@ public API surface.
 - Does not expose mutable `Scene`/`SceneNode`.
 - Does not include `writeFindNode` or `writeMark*` escape methods.
 - Does not expose node-id bookkeeping internals; ids are allocated via structural writes (`writeNodeInsert`).
+- A transaction handle is valid only during the active `write((txn) { ... })` callback; calling any `write*` method after callback completion throws `StateError`.
 
 Prefer high-level command methods unless custom transactional logic is required.
 
 Write-notify semantics:
 
 - `write(...)` finalizes transaction state first, then schedules listener notification in a microtask when repaint is needed.
+- Listener notifications are coalesced to at most one notification per event-loop tick.
 - Commit invariant validation runs before finalizing transaction state and throws `StateError` on violations in all build modes (`debug`/`profile`/`release`).
 - Committed `signals` are emitted before repaint listener notification for the same successful commit.
 - Calling `write(...)` from `addListener(...)` is allowed; it runs after the original transaction is finished.

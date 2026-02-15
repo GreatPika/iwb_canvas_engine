@@ -26,6 +26,8 @@
 
 ### Changed
 
+- `SceneWriteTxn` write-method lifetime is now strictly bounded to the active `write((txn) { ... })` callback; stale post-callback `write*` calls fail fast with `StateError` and do not mutate state or emit effects.
+- `write(...)` notify semantics are now explicitly documented as microtask-deferred and coalesced to at most one listener notification per event-loop tick (not one notify per transaction).
 - `SceneControllerCore` now fails fast after `dispose()`: mutating/effectful calls (`write(...)`, `writeReplaceScene(...)`, `requestRepaint()`) throw `StateError` and keep runtime state/effects unchanged.
 - `SceneControllerInteractive` listener notifications are now consistently microtask-deferred/coalesced (including pointer handling and core-change forwarding), so interactive listeners are never invoked synchronously inside `handlePointer(...)`.
 - `SceneControllerInteractive.handlePointer(...)` now fails fast with `StateError` on same-stack reentrant calls.

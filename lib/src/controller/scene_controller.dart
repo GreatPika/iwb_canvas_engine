@@ -191,6 +191,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
       _repaintFlag.writeDiscardPending();
       rethrow;
     } finally {
+      ctx.txnClose();
       _writeInProgress = false;
     }
 

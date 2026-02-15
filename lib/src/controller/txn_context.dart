@@ -35,6 +35,7 @@ class TxnContext {
   bool _backgroundLayerCloned = false;
   final Set<NodeId> _clonedNodeIds = <NodeId>{};
   bool _mutableSceneOwnedByTxn = false;
+  bool _isActive = true;
 
   Scene get workingScene => _mutableScene ?? _baseScene;
   Scene txnSceneForCommit() => _mutableScene ?? _baseScene;
@@ -48,6 +49,19 @@ class TxnContext {
   int debugNodeClones = 0;
   int debugNodeIdSetMaterializations = 0;
   int debugNodeLocatorMaterializations = 0;
+
+  bool get txnIsActive => _isActive;
+
+  void txnClose() {
+    _isActive = false;
+  }
+
+  void txnEnsureActive() {
+    if (_isActive) {
+      return;
+    }
+    throw StateError('Transaction is closed.');
+  }
 
   Scene txnEnsureMutableScene() {
     final existing = _mutableScene;
