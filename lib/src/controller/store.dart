@@ -3,8 +3,8 @@ import '../core/scene.dart';
 import '../model/document.dart';
 import '../model/document_clone.dart';
 
-class V2Store {
-  V2Store({required this.sceneDoc, Set<NodeId>? selectedNodeIds})
+class SceneStore {
+  SceneStore({required this.sceneDoc, Set<NodeId>? selectedNodeIds})
     : selectedNodeIds = selectedNodeIds == null
           ? <NodeId>{}
           : Set<NodeId>.from(selectedNodeIds),

@@ -26,15 +26,15 @@ import 'scene_writer.dart';
 import 'store.dart';
 import 'txn_context.dart';
 
-class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
-  SceneControllerV2({SceneSnapshot? initialSnapshot})
-    : _store = V2Store(
+class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
+  SceneControllerCore({SceneSnapshot? initialSnapshot})
+    : _store = SceneStore(
         sceneDoc: txnSceneFromSnapshot(initialSnapshot ?? SceneSnapshot()),
       ) {
     _selectedNodeIdsView = UnmodifiableSetView<NodeId>(_store.selectedNodeIds);
   }
 
-  final V2Store _store;
+  final SceneStore _store;
 
   final SelectionNormalizer _selectionNormalizer = SelectionNormalizer();
   final GridNormalizer _gridNormalizer = GridNormalizer();
@@ -148,7 +148,7 @@ class SceneControllerV2 extends ChangeNotifier implements SceneRenderState {
       return node;
     }
 
-    // v2 commits may replace sceneDoc identity on structural/geometry writes.
+    // Commits may replace sceneDoc identity on structural/geometry writes.
     // For stale candidates after such commits, id/type still allows safe
     // fallback resolution when coordinates remain valid.
     if (node.id != candidate.node.id || node.type != candidate.node.type) {

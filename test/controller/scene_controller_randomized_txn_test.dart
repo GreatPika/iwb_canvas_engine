@@ -20,7 +20,9 @@ void main() {
   for (final seed in scenarioSeeds) {
     test('randomized transactional scenario keeps invariants (seed=$seed)', () {
       final random = math.Random(seed);
-      final controller = SceneControllerV2(initialSnapshot: _initialSnapshot());
+      final controller = SceneControllerCore(
+        initialSnapshot: _initialSnapshot(),
+      );
       addTearDown(controller.dispose);
 
       for (var step = 0; step < scenarioSteps; step++) {
@@ -62,7 +64,7 @@ enum _RandomOperation {
 }
 
 String _runRandomOperation({
-  required SceneControllerV2 controller,
+  required SceneControllerCore controller,
   required math.Random random,
   required int seed,
   required int step,
@@ -205,7 +207,7 @@ String _runRandomOperation({
 }
 
 void _assertPostConditions({
-  required SceneControllerV2 controller,
+  required SceneControllerCore controller,
   required int seed,
   required int step,
   required String operation,

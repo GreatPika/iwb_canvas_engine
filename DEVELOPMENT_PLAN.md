@@ -201,20 +201,20 @@
 
 ### 5.1 Переименовать классы (файлы можно оставить, чтобы не трогать лишнее)
 
-* [ ] `SceneControllerV2` → `SceneControllerCore` (в `lib/src/controller/scene_controller.dart`)
-* [ ] `V2Store` → `SceneStore` (в `lib/src/controller/store.dart`)
-* [ ] В `scene_writer.dart`: `V2*Signal` → `*Signal` (если ещё остались)
+* [x] `SceneControllerV2` → `SceneControllerCore` (в `lib/src/controller/scene_controller.dart`)
+* [x] `V2Store` → `SceneStore` (в `lib/src/controller/store.dart`)
+* [x] В `scene_writer.dart`: `V2*Signal` → `*Signal` (если ещё остались)
 
 ### 5.2 Обновить все использования
 
-* [ ] render/view/interactive
-* [ ] tests
-* [ ] tool/bench
+* [x] render/view/interactive
+* [x] tests
+* [x] tool/bench
 
 ### Проверки этапа
 
-* [ ] A + B
-* [ ] `flutter test test/controller --coverage`
+* [x] A + B
+* [x] `flutter test test/controller --coverage`
 
 ---
 

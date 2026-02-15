@@ -8,8 +8,8 @@ void main() {
   // INV:INV-V2-TXN-ATOMIC-COMMIT
   // INV:INV-V2-SIGNALS-AFTER-COMMIT
 
-  SceneControllerV2 buildController() {
-    return SceneControllerV2(
+  SceneControllerCore buildController() {
+    return SceneControllerCore(
       initialSnapshot: SceneSnapshot(
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(

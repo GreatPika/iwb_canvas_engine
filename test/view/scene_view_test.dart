@@ -64,7 +64,7 @@ void main() {
     tester,
   ) async {
     // INV:INV-V2-EPOCH-INVALIDATION
-    final controller = SceneControllerV2(
+    final controller = SceneControllerCore(
       initialSnapshot: _snapshot(strokeY: 20, text: 'A'),
     );
     addTearDown(controller.dispose);
@@ -115,10 +115,10 @@ void main() {
   testWidgets('SceneViewCore clears caches when controller is replaced', (
     tester,
   ) async {
-    final controllerA = SceneControllerV2(
+    final controllerA = SceneControllerCore(
       initialSnapshot: _snapshot(strokeY: 16, text: 'A'),
     );
-    final controllerB = SceneControllerV2(
+    final controllerB = SceneControllerCore(
       initialSnapshot: _snapshot(strokeY: 16, text: 'A'),
     );
     addTearDown(controllerA.dispose);
@@ -184,7 +184,7 @@ void main() {
   testWidgets(
     'SceneViewCore syncs owned/external caches and exposes debug getters',
     (tester) async {
-      final controller = SceneControllerV2(
+      final controller = SceneControllerCore(
         initialSnapshot: _snapshot(strokeY: 12, text: 'sync'),
       );
       addTearDown(controller.dispose);
@@ -285,7 +285,7 @@ void main() {
   testWidgets(
     'SceneViewCore replaceScene clears stale cache tails after heavy churn',
     (tester) async {
-      final controller = SceneControllerV2(
+      final controller = SceneControllerCore(
         initialSnapshot: _churnSnapshot(pairCount: 24, prefix: 'old'),
       );
       addTearDown(controller.dispose);

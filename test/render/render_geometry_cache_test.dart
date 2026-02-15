@@ -124,7 +124,7 @@ void main() {
     'RenderGeometryCache keeps hit for unchanged stroke across unrelated controller commit',
     () {
       // pointsRevision monotonicity itself is asserted in scene_controller_test.
-      final controller = SceneControllerV2(
+      final controller = SceneControllerCore(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(

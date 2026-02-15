@@ -127,7 +127,7 @@ Map<String, Object?> _runNodeScaleCase({
       ),
     ],
   );
-  final controller = SceneControllerV2(initialSnapshot: snapshot);
+  final controller = SceneControllerCore(initialSnapshot: snapshot);
   final targetId = 'n${nodeCount ~/ 2}';
 
   try {
@@ -217,7 +217,7 @@ Map<String, Object?> _runStrokeScaleCase({
   final snapshot = SceneSnapshot(
     layers: <ContentLayerSnapshot>[ContentLayerSnapshot(nodes: nodes)],
   );
-  final controller = SceneControllerV2(initialSnapshot: snapshot);
+  final controller = SceneControllerCore(initialSnapshot: snapshot);
   final targetId = 's${strokeCount ~/ 2}';
   final pointsA = _linearPoints(count: pointsPerStroke, y: 0);
   final pointsB = _linearPoints(count: pointsPerStroke, y: 5);
@@ -315,7 +315,7 @@ Map<String, Object?> _runHugeBoundsMetric({required int iterations}) {
       ),
     ],
   );
-  final controller = SceneControllerV2(initialSnapshot: snapshot);
+  final controller = SceneControllerCore(initialSnapshot: snapshot);
   try {
     final queryMetric = _measureOperation(
       iterations: iterations,
@@ -368,7 +368,7 @@ Map<String, Object?> _runHugeRectSelectMetric({
       ),
     ],
   );
-  final controller = SceneControllerV2(initialSnapshot: snapshot);
+  final controller = SceneControllerCore(initialSnapshot: snapshot);
   try {
     return _measureOperation(
       iterations: iterations,
@@ -403,7 +403,7 @@ Map<String, Object?> _runVeryLongPathMetric({
       ),
     ],
   );
-  final controller = SceneControllerV2(initialSnapshot: snapshot);
+  final controller = SceneControllerCore(initialSnapshot: snapshot);
   try {
     final patchMetric = _measureOperation(
       iterations: iterations,

@@ -36,11 +36,11 @@ class SceneControllerInteractiveV2 extends ChangeNotifier
     this.clearSelectionOnDrawModeEnter = false,
   }) : _pointerSettings = pointerSettings ?? const PointerInputSettings(),
        _dragStartSlop = dragStartSlop,
-       _core = SceneControllerV2(initialSnapshot: initialSnapshot) {
+       _core = SceneControllerCore(initialSnapshot: initialSnapshot) {
     _core.addListener(_handleCoreChanged);
   }
 
-  final SceneControllerV2 _core;
+  final SceneControllerCore _core;
   final _InteractiveEventDispatcher _events = _InteractiveEventDispatcher();
 
   PointerInputSettings _pointerSettings;

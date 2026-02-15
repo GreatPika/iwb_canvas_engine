@@ -24,7 +24,7 @@ class SceneViewCore extends StatefulWidget {
     super.key,
   });
 
-  final SceneControllerV2 controller;
+  final SceneControllerCore controller;
   final ImageResolver? imageResolver;
   final SceneStaticLayerCache? staticLayerCache;
   final SceneTextLayoutCache? textLayoutCache;

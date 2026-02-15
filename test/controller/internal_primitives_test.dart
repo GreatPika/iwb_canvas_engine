@@ -354,7 +354,7 @@ void main() {
     },
   );
 
-  test('V2Store initializes selections, id set and id seed from scene', () {
+  test('SceneStore initializes selections, id set and id seed from scene', () {
     final scene = Scene(
       layers: <ContentLayer>[
         ContentLayer(
@@ -368,7 +368,7 @@ void main() {
     );
 
     final incomingSelection = <NodeId>{'node-2'};
-    final storeWithSelection = V2Store(
+    final storeWithSelection = SceneStore(
       sceneDoc: scene,
       selectedNodeIds: incomingSelection,
     );
@@ -387,7 +387,7 @@ void main() {
     expect(storeWithSelection.nodeIdSeed, 10);
     expect(storeWithSelection.nextInstanceRevision, 2);
 
-    final storeWithoutSelection = V2Store(sceneDoc: Scene());
+    final storeWithoutSelection = SceneStore(sceneDoc: Scene());
     expect(storeWithoutSelection.selectedNodeIds, isEmpty);
     expect(storeWithoutSelection.nodeIdSeed, 0);
     expect(storeWithoutSelection.nextInstanceRevision, 1);

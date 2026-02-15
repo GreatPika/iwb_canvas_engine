@@ -47,7 +47,7 @@ void main() {
   }
 
   test('write is atomic and notifies once per commit', () async {
-    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     var notifications = 0;
@@ -80,7 +80,9 @@ void main() {
   test(
     'repaint notifications are coalesced within the same event-loop tick',
     () async {
-      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      final controller = SceneControllerCore(
+        initialSnapshot: twoRectSnapshot(),
+      );
       addTearDown(controller.dispose);
 
       var notifications = 0;
@@ -103,7 +105,7 @@ void main() {
   );
 
   test('requestRepaint outside write is deferred and coalesced', () async {
-    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final beforeCommit = controller.debugCommitRevision;
@@ -130,7 +132,7 @@ void main() {
   });
 
   test('no-op write keeps commit/revisions unchanged and does not notify', () {
-    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final beforeCommit = controller.debugCommitRevision;
@@ -154,7 +156,7 @@ void main() {
   });
 
   test('snapshot getter reuses immutable instance between reads', () {
-    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final first = controller.snapshot;
@@ -164,7 +166,7 @@ void main() {
   });
 
   test('selectedNodeIds getter reuses view between reads', () {
-    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final first = controller.selectedNodeIds;
@@ -174,7 +176,7 @@ void main() {
   });
 
   test('selectedNodeIds view survives commits without selection changes', () {
-    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     controller.write<void>((writer) {
@@ -196,7 +198,7 @@ void main() {
   });
 
   test('selectedNodeIds view identity changes after selection mutation', () {
-    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final before = controller.selectedNodeIds;
@@ -210,7 +212,7 @@ void main() {
   });
 
   test('snapshot cache survives selection-only and signals-only commits', () {
-    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final before = controller.snapshot;
@@ -228,7 +230,7 @@ void main() {
   });
 
   test('snapshot cache invalidates on scene identity change', () {
-    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final before = controller.snapshot;
@@ -246,7 +248,7 @@ void main() {
   test(
     'stroke pointsRevision stays monotonic across sequential geometry commits',
     () {
-      final controller = SceneControllerV2(
+      final controller = SceneControllerCore(
         initialSnapshot: singleStrokeSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -292,7 +294,7 @@ void main() {
   );
 
   test('snapshot cache invalidates after writeReplaceScene', () {
-    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final before = controller.snapshot;
@@ -314,7 +316,7 @@ void main() {
   });
 
   test('signals-only write bumps commit only and skips repaint', () async {
-    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final beforeCommit = controller.debugCommitRevision;
@@ -349,7 +351,9 @@ void main() {
   test(
     'write rollback keeps scene/revisions unchanged and emits no signals',
     () async {
-      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      final controller = SceneControllerCore(
+        initialSnapshot: twoRectSnapshot(),
+      );
       addTearDown(controller.dispose);
 
       final before = controller.snapshot;
@@ -394,7 +398,9 @@ void main() {
   test(
     'write rollback discards repaint request and emits no external effects',
     () async {
-      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      final controller = SceneControllerCore(
+        initialSnapshot: twoRectSnapshot(),
+      );
       addTearDown(controller.dispose);
 
       final beforeCommit = controller.debugCommitRevision;
@@ -431,7 +437,9 @@ void main() {
   test(
     'invariant pre-check failure in state-change branch keeps store and effects unchanged',
     () async {
-      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      final controller = SceneControllerCore(
+        initialSnapshot: twoRectSnapshot(),
+      );
       addTearDown(controller.dispose);
 
       final beforeSnapshot = controller.snapshot;
@@ -489,7 +497,9 @@ void main() {
   test(
     'spatial prepare failure in state-change branch keeps store and effects unchanged',
     () async {
-      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      final controller = SceneControllerCore(
+        initialSnapshot: twoRectSnapshot(),
+      );
       addTearDown(controller.dispose);
 
       final beforeSnapshot = controller.snapshot;
@@ -547,7 +557,9 @@ void main() {
   test(
     'invariant pre-check failure in signals-only branch keeps commit and effects unchanged',
     () async {
-      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      final controller = SceneControllerCore(
+        initialSnapshot: twoRectSnapshot(),
+      );
       addTearDown(controller.dispose);
 
       final beforeCommit = controller.debugCommitRevision;
@@ -590,7 +602,9 @@ void main() {
   test(
     'requestRepaint inside successful no-op write schedules one notification',
     () async {
-      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      final controller = SceneControllerCore(
+        initialSnapshot: twoRectSnapshot(),
+      );
       addTearDown(controller.dispose);
 
       final beforeCommit = controller.debugCommitRevision;
@@ -620,7 +634,7 @@ void main() {
   );
 
   test('changeset tracks added removed and updated node ids', () {
-    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     controller.write<void>((writer) {
@@ -638,7 +652,7 @@ void main() {
   });
 
   test('boundsChanged is auto-detected for transform patch', () {
-    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     controller.write<void>((writer) {
@@ -659,7 +673,7 @@ void main() {
   });
 
   test('node patch changing isSelectable keeps explicitly selected ids', () {
-    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     controller.write<void>((writer) {
@@ -683,7 +697,7 @@ void main() {
   test(
     'selectAll with onlySelectable false preserves non-selectable ids after commit',
     () {
-      final controller = SceneControllerV2(
+      final controller = SceneControllerCore(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
@@ -713,7 +727,9 @@ void main() {
   test(
     'writeReplaceScene increments epoch clears selection and has no action signal',
     () async {
-      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      final controller = SceneControllerCore(
+        initialSnapshot: twoRectSnapshot(),
+      );
       addTearDown(controller.dispose);
 
       controller.write<void>((writer) {
@@ -797,7 +813,7 @@ void main() {
 
     for (final malformed in malformedCases) {
       expect(
-        () => SceneControllerV2(initialSnapshot: malformed.snapshot),
+        () => SceneControllerCore(initialSnapshot: malformed.snapshot),
         throwsA(
           predicate(
             (e) =>
@@ -813,7 +829,9 @@ void main() {
   test(
     'writeReplaceScene rejects malformed snapshot without state changes or effects',
     () async {
-      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      final controller = SceneControllerCore(
+        initialSnapshot: twoRectSnapshot(),
+      );
       addTearDown(controller.dispose);
 
       controller.write<void>((writer) {
@@ -893,7 +911,7 @@ void main() {
   );
 
   test('spatial index updates incrementally on bounds revision change', () {
-    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final beforeQuery = controller.querySpatialCandidates(
@@ -918,7 +936,9 @@ void main() {
   test(
     'single-node transform stays incremental without full materialization',
     () {
-      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      final controller = SceneControllerCore(
+        initialSnapshot: twoRectSnapshot(),
+      );
       addTearDown(controller.dispose);
 
       controller.querySpatialCandidates(const Rect.fromLTWH(0, 0, 0, 0));
@@ -944,7 +964,7 @@ void main() {
   );
 
   test('spatial index updates incrementally on hitPadding change', () {
-    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final beforeQuery = controller.querySpatialCandidates(
@@ -975,7 +995,7 @@ void main() {
   });
 
   test('spatial index handles huge node and updates incrementally', () {
-    final controller = SceneControllerV2(
+    final controller = SceneControllerCore(
       initialSnapshot: SceneSnapshot(
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
@@ -1013,7 +1033,7 @@ void main() {
   });
 
   test('spatial index invalidates and rebuilds after replaceScene', () {
-    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final beforeQuery = controller.querySpatialCandidates(
@@ -1045,7 +1065,7 @@ void main() {
   test(
     'spatial index stays consistent across insert-move-erase-replace-move',
     () {
-      final controller = SceneControllerV2(
+      final controller = SceneControllerCore(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[ContentLayerSnapshot()],
         ),
@@ -1169,7 +1189,7 @@ void main() {
   test(
     'spatial index keeps candidate indices after erase in middle of layer',
     () {
-      final controller = SceneControllerV2(
+      final controller = SceneControllerCore(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
@@ -1214,7 +1234,7 @@ void main() {
   test(
     'spatial index stays incremental across bulk draw-erase-redraw cycle',
     () {
-      final controller = SceneControllerV2(
+      final controller = SceneControllerCore(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[ContentLayerSnapshot()],
         ),
@@ -1296,7 +1316,7 @@ void main() {
   );
 
   test('no-op hitPadding patch does not bump bounds revision', () {
-    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final beforeBounds = controller.boundsRevision;
@@ -1321,7 +1341,7 @@ void main() {
   test(
     'text layout patch recomputes derived size and bumps bounds revision',
     () {
-      final controller = SceneControllerV2(
+      final controller = SceneControllerCore(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
@@ -1364,7 +1384,7 @@ void main() {
   );
 
   test('text visual-only patch keeps bounds revision unchanged', () {
-    final controller = SceneControllerV2(
+    final controller = SceneControllerCore(
       initialSnapshot: SceneSnapshot(
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
@@ -1400,7 +1420,7 @@ void main() {
   });
 
   test('camera offset write does not clone layers or nodes', () {
-    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     controller.write<void>((writer) {
@@ -1413,7 +1433,7 @@ void main() {
   });
 
   test('single node patch clones exactly one layer and one node', () {
-    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     controller.write<void>((writer) {
@@ -1428,7 +1448,7 @@ void main() {
   });
 
   test('opacity patch commit does not materialize allNodeIds', () {
-    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     controller.write<void>((writer) {
@@ -1445,7 +1465,7 @@ void main() {
   });
 
   test('structural commit materializes allNodeIds once', () {
-    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     controller.write<void>((writer) {
@@ -1457,7 +1477,7 @@ void main() {
   });
 
   test('node id seed stays monotonic after deleting max node-* id', () {
-    final controller = SceneControllerV2(
+    final controller = SceneControllerCore(
       initialSnapshot: SceneSnapshot(
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
@@ -1486,7 +1506,7 @@ void main() {
   });
 
   test('nextInstanceRevision stays monotonic across replaceScene', () {
-    final controller = SceneControllerV2(
+    final controller = SceneControllerCore(
       initialSnapshot: SceneSnapshot(
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
@@ -1531,7 +1551,7 @@ void main() {
   });
 
   test('resolveSpatialCandidateNode accepts valid foreground candidate', () {
-    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final candidates = controller.querySpatialCandidates(
@@ -1547,7 +1567,7 @@ void main() {
   test(
     'resolveSpatialCandidateNode rejects candidate from background locator',
     () {
-      final controller = SceneControllerV2(
+      final controller = SceneControllerCore(
         initialSnapshot: SceneSnapshot(
           backgroundLayer: BackgroundLayerSnapshot(
             nodes: const <NodeSnapshot>[
@@ -1574,7 +1594,7 @@ void main() {
   );
 
   test('resolveSpatialCandidateNode rejects out-of-range indices', () {
-    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final node = RectNode(id: 'fake', size: const Size(4, 4));
@@ -1598,7 +1618,9 @@ void main() {
   test(
     'resolveSpatialCandidateNode rejects stale identity after replaceScene',
     () {
-      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      final controller = SceneControllerCore(
+        initialSnapshot: twoRectSnapshot(),
+      );
       addTearDown(controller.dispose);
 
       final stale = controller
@@ -1625,7 +1647,9 @@ void main() {
   test(
     'resolveSpatialCandidateNode accepts non-geometry clone after selection write',
     () {
-      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      final controller = SceneControllerCore(
+        initialSnapshot: twoRectSnapshot(),
+      );
       addTearDown(controller.dispose);
 
       final candidate = controller
@@ -1644,7 +1668,7 @@ void main() {
   );
 
   test('signals are emitted only after successful commit', () async {
-    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final emitted = <String>[];
@@ -1674,7 +1698,9 @@ void main() {
   test(
     'signals are delivered before repaint listeners for same commit',
     () async {
-      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      final controller = SceneControllerCore(
+        initialSnapshot: twoRectSnapshot(),
+      );
       addTearDown(controller.dispose);
 
       final observed = <String>[];
@@ -1699,7 +1725,9 @@ void main() {
   test(
     'signal listener observes committed state and can trigger follow-up write',
     () async {
-      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      final controller = SceneControllerCore(
+        initialSnapshot: twoRectSnapshot(),
+      );
       addTearDown(controller.dispose);
 
       final observed =
@@ -1746,7 +1774,9 @@ void main() {
   test(
     'change listener can trigger follow-up write without nested write error',
     () async {
-      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      final controller = SceneControllerCore(
+        initialSnapshot: twoRectSnapshot(),
+      );
       addTearDown(controller.dispose);
 
       Object? nestedWriteError;
@@ -1776,7 +1806,7 @@ void main() {
 
   test('committed signals expose immutable payload and nodeIds', () async {
     // INV:INV-V2-EVENTS-IMMUTABLE
-    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final emitted = <CommittedSignal>[];
@@ -1813,7 +1843,7 @@ void main() {
   });
 
   test('nested write throws and does not commit', () {
-    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     expect(
@@ -1827,7 +1857,9 @@ void main() {
   test(
     'write after dispose throws and keeps state/effects unchanged',
     () async {
-      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      final controller = SceneControllerCore(
+        initialSnapshot: twoRectSnapshot(),
+      );
 
       final beforeSnapshot = controller.snapshot;
       final beforeEpoch = controller.controllerEpoch;
@@ -1876,7 +1908,9 @@ void main() {
   test(
     'writeReplaceScene after dispose throws and keeps state unchanged',
     () async {
-      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      final controller = SceneControllerCore(
+        initialSnapshot: twoRectSnapshot(),
+      );
 
       final beforeSnapshot = controller.snapshot;
       final beforeEpoch = controller.controllerEpoch;
@@ -1933,7 +1967,9 @@ void main() {
   test(
     'requestRepaint after dispose throws and does not schedule notification',
     () async {
-      final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+      final controller = SceneControllerCore(
+        initialSnapshot: twoRectSnapshot(),
+      );
 
       final beforeSnapshot = controller.snapshot;
       final beforeEpoch = controller.controllerEpoch;
@@ -1977,7 +2013,7 @@ void main() {
   test(
     'controller commit handles 1000 mixed selection operations and stays correct',
     () {
-      final controller = SceneControllerV2(
+      final controller = SceneControllerCore(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
@@ -2029,7 +2065,7 @@ void main() {
   );
 
   test('commit normalization marks selection/grid changes when normalized', () {
-    final controller = SceneControllerV2(initialSnapshot: twoRectSnapshot());
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     controller.write<void>((writer) {

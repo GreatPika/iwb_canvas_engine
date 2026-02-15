@@ -165,7 +165,7 @@ void main() {
     const background = Color(0xFFFFFFFF);
     final image = await _solidImage(const Color(0xFFFF00FF));
 
-    final controller = SceneControllerV2(
+    final controller = SceneControllerCore(
       initialSnapshot: SceneSnapshot(
         camera: const CameraSnapshot(offset: Offset(4, -3)),
         background: const BackgroundSnapshot(
@@ -250,7 +250,7 @@ void main() {
 
   test('ScenePainter paints marquee selection rectangle', () async {
     const background = Color(0xFFFFFFFF);
-    final controller = SceneControllerV2(
+    final controller = SceneControllerCore(
       initialSnapshot: SceneSnapshot(
         background: const BackgroundSnapshot(color: background),
         layers: <ContentLayerSnapshot>[ContentLayerSnapshot()],
@@ -285,9 +285,9 @@ void main() {
     expect(nonBackgroundWith, greaterThan(nonBackgroundWithout));
   });
 
-  test('SceneControllerV2 rejects invalid numeric snapshot fields', () {
+  test('SceneControllerCore rejects invalid numeric snapshot fields', () {
     expect(
-      () => SceneControllerV2(
+      () => SceneControllerCore(
         initialSnapshot: SceneSnapshot(
           camera: const CameraSnapshot(offset: Offset(double.nan, 0)),
         ),
@@ -305,7 +305,7 @@ void main() {
 
   test('ScenePainter paints selected line and stroke', () async {
     const background = Color(0xFFFFFFFF);
-    final controller = SceneControllerV2(
+    final controller = SceneControllerCore(
       initialSnapshot: SceneSnapshot(
         background: const BackgroundSnapshot(color: background),
         layers: <ContentLayerSnapshot>[
@@ -373,7 +373,7 @@ void main() {
     'ScenePainter keeps grid visible with over-density via stride',
     () async {
       const background = Color(0xFFFFFFFF);
-      final controller = SceneControllerV2(
+      final controller = SceneControllerCore(
         initialSnapshot: SceneSnapshot(
           background: BackgroundSnapshot(
             color: background,
@@ -399,7 +399,7 @@ void main() {
 
   test('ScenePainter skips grid for invalid drawable state', () async {
     const background = Color(0xFFFFFFFF);
-    final controller = SceneControllerV2(
+    final controller = SceneControllerCore(
       initialSnapshot: SceneSnapshot(
         background: BackgroundSnapshot(
           color: background,
@@ -424,7 +424,7 @@ void main() {
 
   test('ScenePainter culls path nodes using stroke-inflated bounds', () async {
     const background = Color(0xFFFFFFFF);
-    final controller = SceneControllerV2(
+    final controller = SceneControllerCore(
       initialSnapshot: SceneSnapshot(
         background: const BackgroundSnapshot(
           color: background,
@@ -464,7 +464,7 @@ void main() {
 
   test('ScenePainter culls rect nodes using stroke-inflated bounds', () async {
     const background = Color(0xFFFFFFFF);
-    final controller = SceneControllerV2(
+    final controller = SceneControllerCore(
       initialSnapshot: SceneSnapshot(
         background: const BackgroundSnapshot(
           color: background,
@@ -524,7 +524,7 @@ void main() {
           .worldBounds
           .inflate(selectionStrokeWidth);
 
-      final controller = SceneControllerV2(
+      final controller = SceneControllerCore(
         initialSnapshot: SceneSnapshot(
           background: const BackgroundSnapshot(color: background),
           layers: <ContentLayerSnapshot>[
@@ -669,10 +669,10 @@ void main() {
         );
       }
 
-      final defaultController = SceneControllerV2(
+      final defaultController = SceneControllerCore(
         initialSnapshot: snapshotFor(null),
       );
-      final customController = SceneControllerV2(
+      final customController = SceneControllerCore(
         initialSnapshot: snapshotFor(24),
       );
       addTearDown(defaultController.dispose);
@@ -701,7 +701,7 @@ void main() {
     final strokeCache = SceneStrokePathCache(maxEntries: 8);
     final textCache = SceneTextLayoutCache(maxEntries: 8);
     final pathCache = ScenePathMetricsCache(maxEntries: 8);
-    final controller = SceneControllerV2(
+    final controller = SceneControllerCore(
       initialSnapshot: SceneSnapshot(
         background: const BackgroundSnapshot(color: background),
         layers: <ContentLayerSnapshot>[
@@ -758,7 +758,7 @@ void main() {
     'ScenePainter stroke cache rebuilds when node id is reused across commits',
     () async {
       final strokeCache = SceneStrokePathCache(maxEntries: 8);
-      final controller = SceneControllerV2(
+      final controller = SceneControllerCore(
         initialSnapshot: SceneSnapshot(
           background: const BackgroundSnapshot(color: Color(0xFFFFFFFF)),
           layers: <ContentLayerSnapshot>[
@@ -809,7 +809,7 @@ void main() {
     'ScenePainter stroke cache rebuilds when erase+insert same id happens in one write',
     () async {
       final strokeCache = SceneStrokePathCache(maxEntries: 8);
-      final controller = SceneControllerV2(
+      final controller = SceneControllerCore(
         initialSnapshot: SceneSnapshot(
           background: const BackgroundSnapshot(color: Color(0xFFFFFFFF)),
           layers: <ContentLayerSnapshot>[
@@ -858,7 +858,7 @@ void main() {
     'ScenePainter reuses path geometry across cull, draw and selection in one frame',
     () async {
       final geometryCache = RenderGeometryCache();
-      final controller = SceneControllerV2(
+      final controller = SceneControllerCore(
         initialSnapshot: SceneSnapshot(
           background: const BackgroundSnapshot(color: Color(0xFFFFFFFF)),
           layers: <ContentLayerSnapshot>[
@@ -907,7 +907,7 @@ void main() {
     'ScenePainter skips path metrics cache when local path is unavailable',
     () async {
       final pathCache = ScenePathMetricsCache(maxEntries: 8);
-      final controller = SceneControllerV2(
+      final controller = SceneControllerCore(
         initialSnapshot: SceneSnapshot(
           background: const BackgroundSnapshot(color: Color(0xFFFFFFFF)),
           layers: <ContentLayerSnapshot>[
@@ -946,7 +946,7 @@ void main() {
     'ScenePainter can use static layer cache across camera updates',
     () async {
       final staticCache = SceneStaticLayerCache();
-      final controller = SceneControllerV2(
+      final controller = SceneControllerCore(
         initialSnapshot: SceneSnapshot(
           background: BackgroundSnapshot(
             color: Color(0xFFFFFFFF),
@@ -991,7 +991,7 @@ void main() {
     'ScenePainter covers single-point stroke, image placeholder and text align branches',
     () async {
       const background = Color(0xFFFFFFFF);
-      final controller = SceneControllerV2(
+      final controller = SceneControllerCore(
         initialSnapshot: SceneSnapshot(
           background: const BackgroundSnapshot(color: background),
           layers: <ContentLayerSnapshot>[
@@ -1056,7 +1056,7 @@ void main() {
     'ScenePainter covers selection halo branches for image/text/stroke/path',
     () async {
       const background = Color(0xFFFFFFFF);
-      final controller = SceneControllerV2(
+      final controller = SceneControllerCore(
         initialSnapshot: SceneSnapshot(
           background: const BackgroundSnapshot(color: background),
           layers: <ContentLayerSnapshot>[
@@ -1152,8 +1152,8 @@ void main() {
   );
 
   test('ScenePainter shouldRepaint reflects individual fields', () {
-    final c1 = SceneControllerV2();
-    final c2 = SceneControllerV2();
+    final c1 = SceneControllerCore();
+    final c2 = SceneControllerCore();
     addTearDown(c1.dispose);
     addTearDown(c2.dispose);
 
@@ -1257,7 +1257,7 @@ void main() {
     'ScenePainter applies preview delta resolver for nodes and selection',
     () async {
       const background = Color(0xFFFFFFFF);
-      final controller = SceneControllerV2(
+      final controller = SceneControllerCore(
         initialSnapshot: SceneSnapshot(
           background: const BackgroundSnapshot(color: background),
           layers: <ContentLayerSnapshot>[
