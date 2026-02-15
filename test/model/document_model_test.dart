@@ -222,8 +222,7 @@ void main() {
       final exported = txnSceneToSnapshot(imported);
       final reimported = txnSceneFromSnapshot(exported);
 
-      expect(exported.backgroundLayer, isNotNull);
-      expect(exported.backgroundLayer!.nodes, isEmpty);
+      expect(exported.backgroundLayer.nodes, isEmpty);
       expect(reimported.backgroundLayer, isNotNull);
       expect(reimported.backgroundLayer!.nodes, isEmpty);
       expect(reimported.layers.length, 1);

@@ -4,21 +4,19 @@ void _validateStructuralInvariants(SceneSnapshot snapshot) {
   final seen = <String>{};
 
   final backgroundLayer = snapshot.backgroundLayer;
-  if (backgroundLayer != null) {
-    for (
-      var nodeIndex = 0;
-      nodeIndex < backgroundLayer.nodes.length;
-      nodeIndex++
-    ) {
-      final node = backgroundLayer.nodes[nodeIndex];
-      if (seen.add(node.id)) continue;
-      throw SceneDataException(
-        code: SceneDataErrorCode.duplicateNodeId,
-        path: 'backgroundLayer.nodes[$nodeIndex].id',
-        message: 'Must be unique across scene layers.',
-        source: node.id,
-      );
-    }
+  for (
+    var nodeIndex = 0;
+    nodeIndex < backgroundLayer.nodes.length;
+    nodeIndex++
+  ) {
+    final node = backgroundLayer.nodes[nodeIndex];
+    if (seen.add(node.id)) continue;
+    throw SceneDataException(
+      code: SceneDataErrorCode.duplicateNodeId,
+      path: 'backgroundLayer.nodes[$nodeIndex].id',
+      message: 'Must be unique across scene layers.',
+      source: node.id,
+    );
   }
 
   for (var layerIndex = 0; layerIndex < snapshot.layers.length; layerIndex++) {
@@ -49,15 +47,13 @@ void _validateSnapshotRanges(SceneSnapshot snapshot) {
   }
 
   final backgroundLayer = snapshot.backgroundLayer;
-  if (backgroundLayer != null) {
-    for (
-      var nodeIndex = 0;
-      nodeIndex < backgroundLayer.nodes.length;
-      nodeIndex++
-    ) {
-      final field = 'backgroundLayer.nodes[$nodeIndex]';
-      _validateNodeRanges(backgroundLayer.nodes[nodeIndex], field);
-    }
+  for (
+    var nodeIndex = 0;
+    nodeIndex < backgroundLayer.nodes.length;
+    nodeIndex++
+  ) {
+    final field = 'backgroundLayer.nodes[$nodeIndex]';
+    _validateNodeRanges(backgroundLayer.nodes[nodeIndex], field);
   }
 
   for (var layerIndex = 0; layerIndex < snapshot.layers.length; layerIndex++) {

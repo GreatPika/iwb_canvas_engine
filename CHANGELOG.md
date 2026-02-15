@@ -4,9 +4,10 @@
 
 - `SceneJsonFormatException` is removed from public API; scene import/serialization boundaries now throw `SceneDataException` with `SceneDataErrorCode`.
 - Typed layer model replaces `LayerSnapshot(isBackground: ...)`:
-  - `SceneSnapshot.backgroundLayer: BackgroundLayerSnapshot?`
+  - `SceneSnapshot.backgroundLayer: BackgroundLayerSnapshot`
   - `SceneSnapshot.layers: List<ContentLayerSnapshot>` (content-only)
   - `layerIndex` in write APIs addresses content layers only.
+  - runtime/public snapshots are canonical and always include dedicated `backgroundLayer`; missing background layer is accepted only at decode/import boundary and canonicalized before returning `SceneSnapshot`.
 - JSON codec now supports only `schemaVersion = 4`; schema `3` and legacy schema `2` are rejected.
 - Interactive input API is reshaped:
   - removed public `handlePointer(PointerSample ...)` / `handlePointerSignal(PointerSignal ...)`,
@@ -16,6 +17,10 @@
   use `SceneViewInteractive` (or `SceneView` alias).
 - Public interactive controller API removes the legacy interactive controller type from exports;
   use `SceneControllerInteractive` (or `SceneController` alias).
+- `SceneControllerInteractive` no longer exposes internal/debug surface:
+  - removed `controllerEpoch`, `structuralRevision`, `boundsRevision`, `visualRevision`,
+  - removed `debugCommitRevision`, `debugBeforeHandlePointerDispatchHook`,
+  - removed `movePreviewDeltaForNode(...)`.
 - The legacy interactive view constructor no longer exposes `geometryCache`; geometry cache ownership is fully internal to keep non-exported render-cache types out of public signatures.
 - Removed public legacy path fill rule enum; path node public contracts now use `PathFillRule`.
 

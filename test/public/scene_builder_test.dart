@@ -74,16 +74,14 @@ void main() {
       ),
     );
 
-    expect(result.backgroundLayer, isNotNull);
-    expect(result.backgroundLayer!.nodes.single.id, 'bg');
+    expect(result.backgroundLayer.nodes.single.id, 'bg');
     expect(result.layers.single.nodes.single.id, 'n1');
   });
 
   test('SceneBuilder.buildFromJson builds typed snapshot', () {
     final result = SceneBuilder.buildFromJson(_minimalSceneJson());
 
-    expect(result.backgroundLayer, isNotNull);
-    expect(result.backgroundLayer!.nodes.single.id, 'bg');
+    expect(result.backgroundLayer.nodes.single.id, 'bg');
     expect(result.layers.single.nodes.single.id, 'n1');
   });
 }

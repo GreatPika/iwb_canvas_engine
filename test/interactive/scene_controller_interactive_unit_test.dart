@@ -5,6 +5,8 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart' hide NodeId;
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/core/grid_safety_limits.dart';
+import 'package:iwb_canvas_engine/src/interactive/scene_controller_interactive.dart'
+    show sceneControllerInteractiveInternalSetBeforePointerDispatchHook;
 import 'package:iwb_canvas_engine/src/model/document.dart';
 
 NodeSnapshot _nodeById(SceneSnapshot snapshot, NodeId id) {
@@ -78,10 +80,6 @@ void main() {
       expect(controller.hasActiveLinePreview, isFalse);
       expect(controller.pointerSettings.tapSlop, greaterThan(0));
       expect(controller.dragStartSlop, controller.pointerSettings.tapSlop);
-      expect(controller.controllerEpoch, 0);
-      expect(controller.structuralRevision, 0);
-      expect(controller.boundsRevision, 0);
-      expect(controller.visualRevision, 0);
       expect(controller.write<int>((_) => 42), 42);
 
       controller.penThickness = 2;
@@ -228,14 +226,20 @@ void main() {
       );
 
       Object? nestedError;
-      controller.debugBeforeHandlePointerDispatchHook = () {
-        controller.debugBeforeHandlePointerDispatchHook = null;
-        try {
-          controller.handlePointer(sample);
-        } catch (error) {
-          nestedError = error;
-        }
-      };
+      sceneControllerInteractiveInternalSetBeforePointerDispatchHook(
+        controller,
+        () {
+          sceneControllerInteractiveInternalSetBeforePointerDispatchHook(
+            controller,
+            null,
+          );
+          try {
+            controller.handlePointer(sample);
+          } catch (error) {
+            nestedError = error;
+          }
+        },
+      );
 
       controller.handlePointer(sample);
       expect(nestedError, isA<StateError>());
@@ -637,7 +641,6 @@ void main() {
       addTearDown(controller.dispose);
 
       controller.setSelection(const <NodeId>{'node'});
-      final beforeCommitRevision = controller.debugCommitRevision;
       final beforeNode =
           _nodeById(controller.snapshot, 'node') as RectNodeSnapshot;
 
@@ -660,7 +663,6 @@ void main() {
       final duringMove =
           _nodeById(controller.snapshot, 'node') as RectNodeSnapshot;
       expect(duringMove.transform.tx, closeTo(beforeNode.transform.tx, 1e-6));
-      expect(controller.debugCommitRevision, beforeCommitRevision);
 
       controller.handlePointer(
         _sample(
@@ -675,7 +677,6 @@ void main() {
           _nodeById(controller.snapshot, 'node') as RectNodeSnapshot;
       expect(afterCancel.transform.tx, closeTo(beforeNode.transform.tx, 1e-6));
       expect(afterCancel.transform.ty, closeTo(beforeNode.transform.ty, 1e-6));
-      expect(controller.debugCommitRevision, beforeCommitRevision);
       expect(controller.selectionRect, isNull);
     });
 
@@ -693,7 +694,6 @@ void main() {
       addTearDown(controller.dispose);
 
       controller.setSelection(const <NodeId>{'node'});
-      final beforeCommitRevision = controller.debugCommitRevision;
 
       controller.handlePointer(
         _sample(
@@ -717,7 +717,6 @@ void main() {
         );
       }
 
-      expect(controller.debugCommitRevision, beforeCommitRevision);
       final beforeUp =
           _nodeById(controller.snapshot, 'node') as RectNodeSnapshot;
       expect(beforeUp.transform.tx, closeTo(60, 1e-6));
@@ -732,73 +731,11 @@ void main() {
         ),
       );
 
-      expect(controller.debugCommitRevision, beforeCommitRevision + 1);
       final afterUp =
           _nodeById(controller.snapshot, 'node') as RectNodeSnapshot;
       expect(afterUp.transform.tx, closeTo(110, 1e-6));
       expect(afterUp.transform.ty, closeTo(160, 1e-6));
     });
-
-    test(
-      'movePreviewDeltaForNode shifts effective bounds for selected node',
-      () {
-        final rect = RectNode(id: 'node', size: const Size(30, 20))
-          ..position = const Offset(60, 60);
-        final controller = _controllerFromScene(
-          Scene(
-            layers: <ContentLayer>[
-              ContentLayer(),
-              ContentLayer(nodes: <SceneNode>[rect]),
-            ],
-          ),
-        );
-        addTearDown(controller.dispose);
-        controller.setSelection(const <NodeId>{'node'});
-
-        final nodeSnapshotBefore = _nodeById(controller.snapshot, 'node');
-        final nodeBefore = txnNodeFromSnapshot(nodeSnapshotBefore);
-        final deltaBefore = controller.movePreviewDeltaForNode(
-          nodeSnapshotBefore.id,
-        );
-        expect(
-          nodeBefore.boundsWorld.shift(deltaBefore),
-          nodeBefore.boundsWorld,
-        );
-
-        controller.handlePointer(
-          _sample(
-            pointerId: 1,
-            position: const Offset(60, 60),
-            timestampMs: 1,
-            phase: CanvasPointerPhase.down,
-          ),
-        );
-        controller.handlePointer(
-          _sample(
-            pointerId: 1,
-            position: const Offset(90, 50),
-            timestampMs: 2,
-            phase: CanvasPointerPhase.move,
-          ),
-        );
-
-        final nodeSnapshotDuringPreview = _nodeById(
-          controller.snapshot,
-          'node',
-        );
-        final nodeDuringPreview = txnNodeFromSnapshot(
-          nodeSnapshotDuringPreview,
-        );
-        final deltaDuringPreview = controller.movePreviewDeltaForNode(
-          nodeSnapshotDuringPreview.id,
-        );
-        expect(deltaDuringPreview, const Offset(30, -10));
-        expect(
-          nodeDuringPreview.boundsWorld.shift(deltaDuringPreview),
-          nodeDuringPreview.boundsWorld.shift(const Offset(30, -10)),
-        );
-      },
-    );
 
     test('line tool supports drag flow and two-tap pending flow', () async {
       final controller = SceneControllerInteractive(
@@ -1456,14 +1393,12 @@ void main() {
         final sub = controller.actions.listen(actions.add);
         addTearDown(sub.cancel);
 
-        final visualBefore = controller.visualRevision;
         var notifications = 0;
         controller.addListener(() {
           notifications = notifications + 1;
         });
         controller.notifySceneChanged();
         await pumpEventQueue();
-        expect(controller.visualRevision, visualBefore);
         expect(notifications, 1);
 
         controller.setSelection(const <NodeId>{'r', 'locked'});

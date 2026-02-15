@@ -224,10 +224,9 @@ void _assertPostConditions({
   );
 
   expect(
-    snapshot.backgroundLayer == null ||
-        snapshot.backgroundLayer is BackgroundLayerSnapshot,
-    isTrue,
-    reason: '$context backgroundLayer must be nullable single layer',
+    snapshot.backgroundLayer,
+    isA<BackgroundLayerSnapshot>(),
+    reason: '$context backgroundLayer must be a dedicated single layer',
   );
 
   late final Scene scene;

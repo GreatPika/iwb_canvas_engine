@@ -17,14 +17,5 @@ BackgroundLayer ensureBackgroundLayer(Scene scene) {
 /// Canonical shape keeps a dedicated `backgroundLayer` present even when input
 /// omitted it.
 SceneSnapshot canonicalizeBackgroundLayerSnapshot(SceneSnapshot snapshot) {
-  if (snapshot.backgroundLayer != null) {
-    return snapshot;
-  }
-  return SceneSnapshot(
-    backgroundLayer: BackgroundLayerSnapshot(),
-    layers: snapshot.layers,
-    camera: snapshot.camera,
-    background: snapshot.background,
-    palette: snapshot.palette,
-  );
+  return snapshot;
 }

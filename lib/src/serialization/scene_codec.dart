@@ -105,7 +105,7 @@ Scene decodeSceneDocument(Map<String, Object?> json) {
 }
 
 Map<String, dynamic> _encodeSnapshot(SceneSnapshot snapshot) {
-  final backgroundLayer = snapshot.backgroundLayer!;
+  final backgroundLayer = snapshot.backgroundLayer;
   return <String, dynamic>{
     'schemaVersion': schemaVersionWrite,
     'camera': {

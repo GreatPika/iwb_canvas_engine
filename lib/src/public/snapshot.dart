@@ -33,7 +33,7 @@ typedef NodeId = String;
 class SceneSnapshot {
   SceneSnapshot({
     List<ContentLayerSnapshot>? layers,
-    this.backgroundLayer,
+    BackgroundLayerSnapshot? backgroundLayer,
     CameraSnapshot? camera,
     BackgroundSnapshot? background,
     ScenePaletteSnapshot? palette,
@@ -42,12 +42,13 @@ class SceneSnapshot {
              ? const <ContentLayerSnapshot>[]
              : List<ContentLayerSnapshot>.from(layers),
        ),
+       backgroundLayer = backgroundLayer ?? BackgroundLayerSnapshot(),
        camera = camera ?? const CameraSnapshot(),
        background = background ?? const BackgroundSnapshot(),
        palette = palette ?? ScenePaletteSnapshot();
 
   final List<ContentLayerSnapshot> layers;
-  final BackgroundLayerSnapshot? backgroundLayer;
+  final BackgroundLayerSnapshot backgroundLayer;
   final CameraSnapshot camera;
   final BackgroundSnapshot background;
   final ScenePaletteSnapshot palette;

@@ -7,18 +7,16 @@ Scene _sceneFromSnapshot(
   final instanceRevisionAllocator =
       nextInstanceRevision ?? _snapshotInstanceRevisionAllocator(snapshot);
   return Scene(
-    backgroundLayer: snapshot.backgroundLayer == null
-        ? null
-        : BackgroundLayer(
-            nodes: snapshot.backgroundLayer!.nodes
-                .map(
-                  (node) => _sceneNodeFromSnapshot(
-                    node,
-                    nextInstanceRevision: instanceRevisionAllocator,
-                  ),
-                )
-                .toList(growable: false),
-          ),
+    backgroundLayer: BackgroundLayer(
+      nodes: snapshot.backgroundLayer.nodes
+          .map(
+            (node) => _sceneNodeFromSnapshot(
+              node,
+              nextInstanceRevision: instanceRevisionAllocator,
+            ),
+          )
+          .toList(growable: false),
+    ),
     layers: snapshot.layers
         .map(
           (layer) => ContentLayer(
@@ -185,11 +183,9 @@ int Function() _snapshotInstanceRevisionAllocator(SceneSnapshot snapshot) {
 int _snapshotInitialNodeInstanceRevisionSeed(SceneSnapshot snapshot) {
   var maxRevision = 0;
   final backgroundLayer = snapshot.backgroundLayer;
-  if (backgroundLayer != null) {
-    for (final node in backgroundLayer.nodes) {
-      if (node.instanceRevision > maxRevision) {
-        maxRevision = node.instanceRevision;
-      }
+  for (final node in backgroundLayer.nodes) {
+    if (node.instanceRevision > maxRevision) {
+      maxRevision = node.instanceRevision;
     }
   }
   for (final layer in snapshot.layers) {

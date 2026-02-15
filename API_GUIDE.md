@@ -58,7 +58,7 @@ Runtime aliases exposed publicly:
 
 `SceneSnapshot` contains:
 
-- `backgroundLayer: BackgroundLayerSnapshot?`
+- `backgroundLayer: BackgroundLayerSnapshot`
 - `layers: List<ContentLayerSnapshot>`
 - `camera: CameraSnapshot` (`offset`)
 - `background: BackgroundSnapshot` (`color`, `grid`)
@@ -78,8 +78,9 @@ Typed layer boundary:
 
 - `backgroundLayer` is a dedicated typed layer (rendered below content).
 - `layers` is an ordered list of content layers only.
-- import/encode boundaries canonicalize missing `backgroundLayer` to an empty
-  dedicated background layer.
+- runtime/public snapshots are canonical and always include `backgroundLayer`.
+- decode/import boundaries accept missing `backgroundLayer` and canonicalize it
+  to an empty dedicated background layer before returning `SceneSnapshot`.
 
 ### 4.3 Node snapshots
 
@@ -607,8 +608,12 @@ Required updates:
 4. If app logic depended on synchronous `actions`/`editTextRequests` delivery, update it for asynchronous stream delivery.
 5. Replace layer model usage:
    - remove `LayerSnapshot(isBackground: ...)`,
-   - use `backgroundLayer: BackgroundLayerSnapshot?` + `layers: List<ContentLayerSnapshot>`.
+   - use `backgroundLayer: BackgroundLayerSnapshot` + `layers: List<ContentLayerSnapshot>`.
 6. JSON codec now writes/reads only schema `4`; schema `3` and legacy schema `2` are unsupported.
+7. Remove dependencies on interactive internal members that are no longer public:
+   - `controllerEpoch`, `structuralRevision`, `boundsRevision`, `visualRevision`,
+   - `debugCommitRevision`, `debugBeforeHandlePointerDispatchHook`,
+   - `movePreviewDeltaForNode(...)`.
 
 ## 15. Quick recipes
 

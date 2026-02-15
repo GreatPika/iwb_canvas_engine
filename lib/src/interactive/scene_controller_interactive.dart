@@ -27,6 +27,26 @@ import '../public/snapshot.dart';
 
 const int kMaxStrokePointsPerNode = 20000;
 
+int sceneControllerInteractiveInternalEpoch(
+  SceneControllerInteractive controller,
+) {
+  return controller._core.controllerEpoch;
+}
+
+Offset sceneControllerInteractiveInternalPreviewDeltaForNode(
+  SceneControllerInteractive controller,
+  NodeId nodeId,
+) {
+  return controller._movePreviewDeltaForNode(nodeId);
+}
+
+void sceneControllerInteractiveInternalSetBeforePointerDispatchHook(
+  SceneControllerInteractive controller,
+  VoidCallback? hook,
+) {
+  controller._debugBeforeHandlePointerDispatchHook = hook;
+}
+
 class SceneControllerInteractive extends ChangeNotifier
     implements SceneRenderState {
   SceneControllerInteractive({
@@ -88,6 +108,7 @@ class SceneControllerInteractive extends ChangeNotifier
   bool _notifyPending = false;
   bool _isDisposed = false;
   bool _handlingPointer = false;
+  VoidCallback? _debugBeforeHandlePointerDispatchHook;
 
   static const Duration _pendingLineTimeout = Duration(seconds: 10);
 
@@ -136,15 +157,6 @@ class SceneControllerInteractive extends ChangeNotifier
 
   Stream<ActionCommitted> get actions => _events.actions;
   Stream<EditTextRequested> get editTextRequests => _events.editTextRequests;
-
-  int get controllerEpoch => _core.controllerEpoch;
-  int get structuralRevision => _core.structuralRevision;
-  int get boundsRevision => _core.boundsRevision;
-  int get visualRevision => _core.visualRevision;
-  @visibleForTesting
-  int get debugCommitRevision => _core.debugCommitRevision;
-  @visibleForTesting
-  VoidCallback? debugBeforeHandlePointerDispatchHook;
 
   T write<T>(T Function(SceneWriteTxn writer) fn) => _core.write(fn);
 
@@ -429,7 +441,7 @@ class SceneControllerInteractive extends ChangeNotifier
     _handlingPointer = true;
     try {
       assert(() {
-        debugBeforeHandlePointerDispatchHook?.call();
+        _debugBeforeHandlePointerDispatchHook?.call();
         return true;
       }());
       if (_mode == CanvasMode.move) {
@@ -1149,19 +1161,19 @@ class SceneControllerInteractive extends ChangeNotifier
       _movePreviewNodeIds.isNotEmpty &&
       _movePreviewDelta != Offset.zero;
 
-  Offset movePreviewDeltaForNode(NodeId nodeId) {
+  Offset _movePreviewDeltaForNode(NodeId nodeId) {
     if (!_hasMovePreviewTranslation) return Offset.zero;
     if (!_movePreviewNodeIds.contains(nodeId)) return Offset.zero;
     return _movePreviewDelta;
   }
 
   Rect _effectiveNodeBoundsWorld(SceneNode node) {
-    final delta = movePreviewDeltaForNode(node.id);
+    final delta = _movePreviewDeltaForNode(node.id);
     return node.boundsWorld.shift(delta);
   }
 
   bool _hitTestNodeWithMovePreview(Offset scenePoint, SceneNode node) {
-    final delta = movePreviewDeltaForNode(node.id);
+    final delta = _movePreviewDeltaForNode(node.id);
     if (delta == Offset.zero) {
       return hitTestNode(scenePoint, node);
     }

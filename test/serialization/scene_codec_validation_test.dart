@@ -104,8 +104,7 @@ void main() {
     // INV:INV-SER-CANONICAL-BACKGROUND-LAYER
     final scene = decodeScene(_minimalSceneJson());
     expect(scene.layers, isEmpty);
-    expect(scene.backgroundLayer, isNotNull);
-    expect(scene.backgroundLayer!.nodes, isEmpty);
+    expect(scene.backgroundLayer.nodes, isEmpty);
   });
 
   test(
@@ -142,8 +141,7 @@ void main() {
 
       final scene = decodeScene(json);
 
-      expect(scene.backgroundLayer, isNotNull);
-      expect(scene.backgroundLayer!.nodes.single.id, 'bg');
+      expect(scene.backgroundLayer.nodes.single.id, 'bg');
       expect(scene.layers, hasLength(2));
       expect(scene.layers[0].nodes.single.id, 'n1');
       expect(scene.layers[1].nodes.single.id, 'n2');
@@ -726,8 +724,7 @@ void main() {
       final redecoded = decodeScene(encoded);
 
       expect((encoded['backgroundLayer'] as Map<String, dynamic>)['nodes'], []);
-      expect(redecoded.backgroundLayer, isNotNull);
-      expect(redecoded.backgroundLayer!.nodes, isEmpty);
+      expect(redecoded.backgroundLayer.nodes, isEmpty);
       expect(redecoded.layers, isEmpty);
     },
   );

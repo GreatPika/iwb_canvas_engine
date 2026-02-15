@@ -43,8 +43,7 @@ void main() {
 
       final canonical = canonicalizeBackgroundLayerSnapshot(snapshot);
 
-      expect(canonical.backgroundLayer, isNotNull);
-      expect(canonical.backgroundLayer!.nodes, isEmpty);
+      expect(canonical.backgroundLayer.nodes, isEmpty);
       expect(canonical.layers.single.nodes.single.id, 'n1');
     },
   );
@@ -64,7 +63,7 @@ void main() {
       final canonical = canonicalizeBackgroundLayerSnapshot(snapshot);
 
       expect(identical(canonical, snapshot), isTrue);
-      expect(canonical.backgroundLayer!.nodes.single.id, 'bg');
+      expect(canonical.backgroundLayer.nodes.single.id, 'bg');
     },
   );
 }

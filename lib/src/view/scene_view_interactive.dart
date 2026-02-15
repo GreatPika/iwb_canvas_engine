@@ -49,7 +49,7 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
   void initState() {
     super.initState();
     _renderCaches = _createRenderCaches();
-    _lastEpoch = widget.controller.controllerEpoch;
+    _lastEpoch = sceneControllerInteractiveInternalEpoch(widget.controller);
     widget.controller.addListener(_handleControllerChanged);
     _pointerTracker = PointerInputTracker(
       settings: widget.controller.pointerSettings,
@@ -70,7 +70,7 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
       _pointerSlotByRawPointer.clear();
       _freePointerSlots.clear();
       _nextPointerSlotId = 1;
-      _lastEpoch = widget.controller.controllerEpoch;
+      _lastEpoch = sceneControllerInteractiveInternalEpoch(widget.controller);
       _clearAllCaches();
     }
   }
@@ -97,7 +97,11 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
         painter: ScenePainter(
           controller: widget.controller,
           imageResolver: widget.imageResolver ?? _defaultImageResolver,
-          nodePreviewOffsetResolver: widget.controller.movePreviewDeltaForNode,
+          nodePreviewOffsetResolver: (nodeId) =>
+              sceneControllerInteractiveInternalPreviewDeltaForNode(
+                widget.controller,
+                nodeId,
+              ),
           staticLayerCache: _renderCaches.staticLayerCache,
           textLayoutCache: _renderCaches.textLayoutCache,
           strokePathCache: _renderCaches.strokePathCache,
@@ -257,7 +261,7 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
   }
 
   void _handleControllerChanged() {
-    final epoch = widget.controller.controllerEpoch;
+    final epoch = sceneControllerInteractiveInternalEpoch(widget.controller);
     if (epoch == _lastEpoch) {
       return;
     }

@@ -122,7 +122,8 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Typed layer contract:
   - snapshot/runtime model uses `backgroundLayer` as a dedicated typed field and `layers` as content-only ordered layers.
   - `writeNodeInsert(..., layerIndex)` addresses content layers only.
-  - input may omit `backgroundLayer`, but snapshot/JSON import and JSON encode canonicalize it to a dedicated empty layer.
+  - runtime/public `SceneSnapshot` always includes dedicated `backgroundLayer`.
+  - input may omit `backgroundLayer`, but decode/import boundaries canonicalize it to a dedicated empty layer.
 
 ## Development checks
 

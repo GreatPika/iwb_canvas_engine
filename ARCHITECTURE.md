@@ -83,7 +83,8 @@ Key invariants:
 - Selection normalization preserves explicit non-selectable ids and drops only missing/background/invisible ids.
 - Runtime snapshot boundary (`initialSnapshot` / `replaceScene`) validates input strictly and fails fast with `SceneDataException` for malformed snapshots.
 - Text node box size is derived from text layout inputs and is not writable via public spec/patch APIs.
-- Runtime typed-layer rule: snapshot/model uses dedicated `backgroundLayer` plus content-only `layers`; input may omit background layer, but import boundaries canonicalize it to an empty dedicated layer.
+- Runtime typed-layer rule: snapshot/model uses dedicated `backgroundLayer` plus content-only `layers`; runtime/public snapshots are canonical and always include dedicated background layer.
+- Import boundary rule: input may omit background layer, but decode/import boundaries canonicalize it to an empty dedicated layer.
 - JSON decoder rule: accepts `backgroundLayer` (optional) and `layers` (content-only); missing `backgroundLayer` is canonicalized on decode/encode boundaries; legacy `isBackground` layer flag is unsupported.
 - Unique node ids across all layers.
 - Input and render subsystems must not bypass controller transaction boundaries.
