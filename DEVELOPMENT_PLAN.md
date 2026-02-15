@@ -120,30 +120,30 @@
 
 ### 4.1 Создать `part`-файлы
 
-* [ ] В `lib/src/model/` создать:
+* [x] В `lib/src/model/` создать:
 
-  * [ ] `scene_builder_json_require.part.dart` (все `_require*`, `_cast*`, парсеры примитивов)
-  * [ ] `scene_builder_decode_json.part.dart` (`_decodeSnapshotFromJson` и весь `_decode*` блок)
-  * [ ] `scene_builder_scene_from_snapshot.part.dart` (`_sceneFromSnapshot`, `_sceneNodeFromSnapshot`, и т.п.)
-  * [ ] `scene_builder_snapshot_from_scene.part.dart` (`_snapshotFromScene` и обратные преобразования)
-  * [ ] `scene_builder_canonicalize_validate.part.dart` (канонизация/валидация, если сейчас размазано по файлу)
-* [ ] В каждом `part`-файле первой строкой:
+  * [x] `scene_builder_json_require.part.dart` (все `_require*`, `_cast*`, парсеры примитивов)
+  * [x] `scene_builder_decode_json.part.dart` (`_decodeSnapshotFromJson` и весь `_decode*` блок)
+  * [x] `scene_builder_scene_from_snapshot.part.dart` (`_sceneFromSnapshot`, `_sceneNodeFromSnapshot`, и т.п.)
+  * [x] `scene_builder_snapshot_from_scene.part.dart` (`_snapshotFromScene` и обратные преобразования)
+  * [x] `scene_builder_canonicalize_validate.part.dart` (канонизация/валидация, если сейчас размазано по файлу)
+* [x] В каждом `part`-файле первой строкой:
 
-  * [ ] `part of 'scene_builder.dart';`
+  * [x] `part of 'scene_builder.dart';`
 
 ### 4.2 Подключить `part`-директивы
 
-* [ ] В `lib/src/model/scene_builder.dart` после импортов добавить `part '...';` для всех файлов из шага 4.1
+* [x] В `lib/src/model/scene_builder.dart` после импортов добавить `part '...';` для всех файлов из шага 4.1
 
 ### 4.3 Разложить код (перенос 1:1)
 
-* [ ] Перенести соответствующие блоки функций в свои `part`-файлы, не меняя сигнатуры и порядок вызовов.
+* [x] Перенести соответствующие блоки функций в свои `part`-файлы, не меняя сигнатуры и порядок вызовов.
 
 ### 4.4 Проверки
 
-* [ ] `dart format ...`
-* [ ] `flutter analyze`
-* [ ] `flutter test`
+* [x] `dart format ...`
+* [x] `flutter analyze`
+* [x] `flutter test`
 
 ---
 
