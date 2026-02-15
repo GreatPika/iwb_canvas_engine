@@ -153,29 +153,29 @@
 
 ### 5.1 Создать `part`-файлы
 
-* [ ] В `lib/src/model/` создать:
+* [x] В `lib/src/model/` создать:
 
-  * [ ] `scene_value_validation_primitives.part.dart` (числа/Offset/Size/Transform2D и т.п.)
-  * [ ] `scene_value_validation_palette_grid.part.dart` (палитра/сетка)
-  * [ ] `scene_value_validation_node.part.dart` (проверки узлов/spec/patch + общие внутренние helpers)
-  * [ ] `scene_value_validation_top_level.part.dart` (`sceneValidateSnapshotValues`, `sceneValidateSceneValues` и верхний уровень)
-* [ ] В каждом `part`-файле первой строкой:
+  * [x] `scene_value_validation_primitives.part.dart` (числа/Offset/Size/Transform2D и т.п.)
+  * [x] `scene_value_validation_palette_grid.part.dart` (палитра/сетка)
+  * [x] `scene_value_validation_node.part.dart` (проверки узлов/spec/patch + общие внутренние helpers)
+  * [x] `scene_value_validation_top_level.part.dart` (`sceneValidateSnapshotValues`, `sceneValidateSceneValues` и верхний уровень)
+* [x] В каждом `part`-файле первой строкой:
 
-  * [ ] `part of 'scene_value_validation.dart';`
+  * [x] `part of 'scene_value_validation.dart';`
 
 ### 5.2 Подключить `part`-директивы
 
-* [ ] В `lib/src/model/scene_value_validation.dart` после импортов добавить `part '...';` для всех файлов из шага 5.1
+* [x] В `lib/src/model/scene_value_validation.dart` после импортов добавить `part '...';` для всех файлов из шага 5.1
 
 ### 5.3 Разложить код (перенос 1:1)
 
-* [ ] Перенести функции по группам без изменения сигнатур.
+* [x] Перенести функции по группам без изменения сигнатур.
 
 ### 5.4 Проверки
 
-* [ ] `dart format ...`
-* [ ] `flutter analyze`
-* [ ] `flutter test`
+* [x] `dart format ...`
+* [x] `flutter analyze`
+* [x] `flutter test`
 
 ---
 

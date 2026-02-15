@@ -35,6 +35,7 @@
 - `V2SpatialIndexSlice` now keeps invalid index instances in fallback mode instead of forcing rebuild loops after failed incremental updates.
 - `SceneControllerV2.selectedNodeIds` now reuses a cached `UnmodifiableSetView` and refreshes it only when selection actually changes, removing per-read allocation on hot getter paths.
 - Render caches are extracted from `scene_painter.dart` into dedicated files under `lib/src/render/cache/` (`SceneStrokePathCacheV2`, `SceneTextLayoutCacheV2`, `ScenePathMetricsCacheV2`, `SceneStaticLayerCacheV2`), while keeping `ScenePainterV2` focused on frame rendering and preserving existing cache type availability via `scene_painter.dart` exports.
+- Internal scene value validation is split into focused `part` files (`primitives`, `palette/grid`, `node`, `top-level`) while preserving behavior, signatures, and error semantics.
 - `clearScene`/`writeClearSceneKeepBackground` now keep (or create) dedicated `backgroundLayer` and clear all content layers.
 - Snapshot/JSON import boundaries now canonicalize missing `backgroundLayer` to a dedicated empty background layer; JSON encode always writes canonical `backgroundLayer`.
 - `V2SignalsSlice` now buffers pending signals in-place and clears on take/discard, removing per-append list copying in large signal batches.
