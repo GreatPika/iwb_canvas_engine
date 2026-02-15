@@ -60,6 +60,7 @@ Key invariants:
 - Single source of truth: runtime state is owned by controller snapshot.
 - Public API does not expose mutable core scene structures.
 - All state mutations flow through `write` transactions and safe txn operations.
+- Runtime commit invariant checks are always enabled and fail fast with `StateError` in all build modes.
 - Committed signals are delivered only after store commit finalization.
 - For each successful commit, signal delivery happens before repaint listener notification.
 - Repaint/listener notifications are scheduled after commit via microtask and coalesced per event-loop tick.
@@ -75,6 +76,7 @@ Key invariants:
 - JSON decoder rule: accepts `backgroundLayer` (optional) and `layers` (content-only); missing `backgroundLayer` is canonicalized on decode/encode boundaries; legacy `isBackground` layer flag is unsupported.
 - Unique node ids across all layers.
 - Input and render subsystems must not bypass controller transaction boundaries.
+- Guardrails and boundary contracts are enforced by `tool/check_guardrails.dart`.
 - Import boundaries are enforced by `tool/check_import_boundaries.dart`.
 
 ## Serialization contract

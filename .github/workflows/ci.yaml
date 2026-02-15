@@ -41,6 +41,9 @@ jobs:
       - name: Invariant coverage
         run: dart run tool/check_invariant_coverage.dart
 
+      - name: Guardrails
+        run: dart run tool/check_guardrails.dart
+
       - name: Test
         run: flutter test --coverage
 

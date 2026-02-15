@@ -131,23 +131,20 @@ void debugAssertTxnStoreInvariants({
   required int nextInstanceRevision,
   required int commitRevision,
 }) {
-  assert(() {
-    final violations = txnCollectStoreInvariantViolations(
-      scene: scene,
-      selectedNodeIds: selectedNodeIds,
-      allNodeIds: allNodeIds,
-      nodeLocator: nodeLocator,
-      nodeIdSeed: nodeIdSeed,
-      nextInstanceRevision: nextInstanceRevision,
-      commitRevision: commitRevision,
+  final violations = txnCollectStoreInvariantViolations(
+    scene: scene,
+    selectedNodeIds: selectedNodeIds,
+    allNodeIds: allNodeIds,
+    nodeLocator: nodeLocator,
+    nodeIdSeed: nodeIdSeed,
+    nextInstanceRevision: nextInstanceRevision,
+    commitRevision: commitRevision,
+  );
+  if (violations.isNotEmpty) {
+    throw StateError(
+      'Committed store invariants violated:\n- ${violations.join('\n- ')}',
     );
-    if (violations.isNotEmpty) {
-      throw StateError(
-        'Committed store invariants violated:\n- ${violations.join('\n- ')}',
-      );
-    }
-    return true;
-  }());
+  }
 }
 
 Iterable<SceneNode> _txnAllNodes(Scene scene) sync* {

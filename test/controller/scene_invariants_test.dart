@@ -259,7 +259,7 @@ void main() {
     );
   });
 
-  test('debug assert throws for invalid committed store', () {
+  test('runtime invariant check throws for invalid committed store', () {
     final scene = sceneFixture(cameraOffset: const Offset(double.nan, 0));
     expect(
       () => debugAssertTxnStoreInvariants(

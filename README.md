@@ -102,6 +102,7 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Move drag contract: pointer move updates only visual preview; scene translation is committed once on pointer up, and pointer cancel keeps the document unchanged.
 - Runtime guardrails bound worst-case input/query cost: interactive stroke commits are capped to `20_000` points (deterministic downsampling), path-stroke precise hit-testing is capped to `2_048` samples per path metric, and oversized spatial queries switch to bounded candidate-scan fallback.
 - Runtime snapshot validation: `initialSnapshot` and `replaceScene` fail fast with `SceneDataException` for malformed snapshots (duplicate node ids, invalid numbers, invalid SVG path data, invalid palette, invalid typed layer fields).
+- Commit invariant checks fail fast with `StateError` in all build modes when committed store state violates runtime invariants.
 
 ## Render cache and image lifecycle
 
@@ -116,6 +117,7 @@ class _CanvasScreenState extends State<CanvasScreen> {
 
 - Canonical invariants are defined in `tool/invariant_registry.dart`.
 - Validation checks are available in `tool/` and run in CI.
+- Runtime commit invariant checks are enforced in all build modes (`debug`/`profile`/`release`) and throw `StateError` on violations.
 - Typed layer contract:
   - snapshot/runtime model uses `backgroundLayer` as a dedicated typed field and `layers` as content-only ordered layers.
   - `writeNodeInsert(..., layerIndex)` addresses content layers only.
@@ -132,6 +134,7 @@ flutter test
 flutter test --coverage
 dart run tool/check_coverage.dart
 dart run tool/check_invariant_coverage.dart
+dart run tool/check_guardrails.dart
 dart run tool/check_import_boundaries.dart
 ```
 

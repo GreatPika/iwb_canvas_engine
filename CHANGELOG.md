@@ -36,6 +36,8 @@
 - Snapshot/JSON import boundaries now canonicalize missing `backgroundLayer` to a dedicated empty background layer; JSON encode always writes canonical `backgroundLayer`.
 - `V2SignalsSlice` now buffers pending signals in-place and clears on take/discard, removing per-append list copying in large signal batches.
 - `PathNode` hit-testing now falls back to candidate bounds when node transform is non-invertible, keeping singular transformed paths selectable.
+- Commit invariant checks are now always enforced at runtime in all build modes (`debug`/`profile`/`release`) and throw `StateError` on violations.
+- CI now runs `dart run tool/check_guardrails.dart` in the main `ci.yaml` workflow.
 
 ## 3.0.0 (2026-02-13)
 
