@@ -176,7 +176,7 @@ class SceneControllerInteractive extends ChangeNotifier
     if (value == CanvasMode.draw &&
         clearSelectionOnDrawModeEnter &&
         selectedNodeIds.isNotEmpty) {
-      _core.commands.writeSelectionReplace(const <NodeId>{});
+      _core.commands.writeSelectionClear();
     }
 
     _scheduleNotify();
@@ -551,7 +551,7 @@ class SceneControllerInteractive extends ChangeNotifier
       _moveDragStarted = true;
       if (_moveTarget == _MoveDragTarget.marquee &&
           _movePendingClearSelection) {
-        _core.commands.writeSelectionReplace(const <NodeId>{});
+        _core.commands.writeSelectionClear();
         _movePendingClearSelection = false;
       }
     }
@@ -603,7 +603,7 @@ class SceneControllerInteractive extends ChangeNotifier
       if (_moveDragStarted && _selectionRect != null) {
         _commitMarquee(sample.timestampMs);
       } else if (_movePendingClearSelection) {
-        _core.commands.writeSelectionReplace(const <NodeId>{});
+        _core.commands.writeSelectionClear();
       }
     }
 

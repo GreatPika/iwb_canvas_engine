@@ -27,7 +27,17 @@ abstract interface class SceneWriteTxn {
   bool writeNodePatch(NodePatch patch);
   bool writeNodeTransformSet(NodeId id, Transform2D transform);
 
+  /// Replaces selection with normalized visible content ids.
+  ///
+  /// Returns `true` only when resulting selection differs from current state.
+  /// If all input ids are invalid/missing/background/invisible, this is a no-op
+  /// and returns `false`.
   bool writeSelectionReplace(Iterable<NodeId> ids);
+
+  /// Toggles a single selection id when it points to a visible content node.
+  ///
+  /// Returns `true` only when selection changes.
+  /// Invalid/missing/background/invisible ids are ignored and return `false`.
   bool writeSelectionToggle(NodeId id);
   bool writeSelectionClear();
   int writeSelectionSelectAll({bool onlySelectable = true});

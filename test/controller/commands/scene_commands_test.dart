@@ -85,9 +85,12 @@ void main() {
       );
       final deleteMissing = controller.commands.writeDeleteNode('missing');
       final deleteExisting = controller.commands.writeDeleteNode('base');
+      controller.commands.writeAddNode(
+        RectNodeSpec(id: 'selected', size: const Size(8, 8)),
+      );
 
-      controller.commands.writeSelectionReplace(const <NodeId>{'base'});
-      controller.commands.writeSelectionToggle('base');
+      controller.commands.writeSelectionReplace(const <NodeId>{'selected'});
+      controller.commands.writeSelectionToggle('selected');
       await pumpEventQueue();
 
       expect(patchMissing, isFalse);
@@ -201,5 +204,116 @@ void main() {
     controller.commands.writeSelectionReplace(const <NodeId>{'base'});
     await pumpEventQueue();
     expect(signalTypes.where((type) => type == 'selection.replaced').length, 1);
+  });
+
+  test('selection signal ids equal committed selection', () async {
+    final controller = buildController();
+    addTearDown(controller.dispose);
+
+    List<NodeId>? replacedIds;
+    final sub = controller.signals.listen((signal) {
+      if (signal.type == 'selection.replaced') {
+        replacedIds = signal.nodeIds;
+      }
+    });
+    addTearDown(sub.cancel);
+
+    controller.commands.writeSelectionReplace(const <NodeId>{
+      'base',
+      'missing',
+    });
+    await pumpEventQueue();
+
+    expect(replacedIds, isNotNull);
+    expect(replacedIds, const <NodeId>['base']);
+    expect(controller.selectedNodeIds, const <NodeId>{'base'});
+    expect(controller.selectedNodeIds, equals(replacedIds!.toSet()));
+  });
+
+  test('selection replace filters invisible or background nodes', () async {
+    final controller = SceneControllerCore(
+      initialSnapshot: SceneSnapshot(
+        backgroundLayer: BackgroundLayerSnapshot(
+          nodes: const <NodeSnapshot>[
+            RectNodeSnapshot(id: 'bg', size: Size(20, 10)),
+          ],
+        ),
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
+            nodes: const <NodeSnapshot>[
+              RectNodeSnapshot(id: 'visible', size: Size(20, 10)),
+              RectNodeSnapshot(
+                id: 'hidden',
+                size: Size(20, 10),
+                isVisible: false,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+    addTearDown(controller.dispose);
+
+    List<NodeId>? replacedIds;
+    final sub = controller.signals.listen((signal) {
+      if (signal.type == 'selection.replaced') {
+        replacedIds = signal.nodeIds;
+      }
+    });
+    addTearDown(sub.cancel);
+
+    controller.commands.writeSelectionReplace(const <NodeId>{
+      'visible',
+      'hidden',
+      'bg',
+      'missing',
+    });
+    await pumpEventQueue();
+
+    expect(replacedIds, const <NodeId>['visible']);
+    expect(controller.selectedNodeIds, const <NodeId>{'visible'});
+  });
+
+  test(
+    'selection replace only missing ids emits no signal and keeps selection',
+    () async {
+      final controller = buildController();
+      addTearDown(controller.dispose);
+
+      var replacedSignals = 0;
+      final sub = controller.signals.listen((signal) {
+        if (signal.type == 'selection.replaced') {
+          replacedSignals = replacedSignals + 1;
+        }
+      });
+      addTearDown(sub.cancel);
+
+      controller.commands.writeSelectionReplace(const <NodeId>{'base'});
+      await pumpEventQueue();
+      expect(controller.selectedNodeIds, const <NodeId>{'base'});
+      expect(replacedSignals, 1);
+
+      controller.commands.writeSelectionReplace(const <NodeId>{'missing'});
+      await pumpEventQueue();
+      expect(controller.selectedNodeIds, const <NodeId>{'base'});
+      expect(replacedSignals, 1);
+    },
+  );
+
+  test('selection toggle missing id emits no signal', () async {
+    final controller = buildController();
+    addTearDown(controller.dispose);
+
+    final signalTypes = <String>[];
+    final sub = controller.signals.listen((signal) {
+      signalTypes.add(signal.type);
+    });
+    addTearDown(sub.cancel);
+
+    controller.commands.writeSelectionToggle('missing');
+    await pumpEventQueue();
+
+    expect(signalTypes, isNot(contains('selection.toggled')));
+    expect(controller.selectedNodeIds, isEmpty);
   });
 }

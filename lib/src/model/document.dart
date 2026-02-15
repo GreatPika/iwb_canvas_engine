@@ -808,20 +808,38 @@ int txnResolveInsertLayerIndex({required Scene scene, int? layerIndex}) {
 Set<NodeId> txnNormalizeSelection({
   required Set<NodeId> rawSelection,
   required Scene scene,
+  Map<NodeId, NodeLocatorEntry>? nodeLocator,
 }) {
-  // Commit-time normalization keeps selection ids that still point to visible
-  // content nodes. It intentionally does not enforce isSelectable to
-  // preserve explicit selection flows like selectAll(onlySelectable: false).
-  final normalizedCandidates = <NodeId>{
-    for (final layer in scene.layers)
-      for (final node in layer.nodes)
-        if (node.isVisible) node.id,
-  };
-
   return <NodeId>{
     for (final id in rawSelection)
-      if (normalizedCandidates.contains(id)) id,
+      if (txnIsSelectionCandidateId(
+        scene: scene,
+        nodeId: id,
+        nodeLocator: nodeLocator,
+      ))
+        id,
   };
+}
+
+bool txnIsSelectionCandidateId({
+  required Scene scene,
+  required NodeId nodeId,
+  Map<NodeId, NodeLocatorEntry>? nodeLocator,
+}) {
+  final found = nodeLocator == null
+      ? txnFindNodeById(scene, nodeId)
+      : txnFindNodeByLocator(
+          scene: scene,
+          nodeLocator: nodeLocator,
+          nodeId: nodeId,
+        );
+  if (found == null) {
+    return false;
+  }
+  if (found.layerIndex == -1) {
+    return false;
+  }
+  return found.node.isVisible;
 }
 
 Set<NodeId> txnTranslateSelection({

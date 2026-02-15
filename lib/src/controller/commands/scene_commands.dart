@@ -49,7 +49,10 @@ class SceneCommands {
     _writeRunner((writer) {
       final changed = writer.writeSelectionReplace(nodeIds);
       if (changed) {
-        writer.writeSignalEnqueue(type: 'selection.replaced', nodeIds: nodeIds);
+        writer.writeSignalEnqueue(
+          type: 'selection.replaced',
+          nodeIds: writer.selectedNodeIds,
+        );
       }
       return null;
     });

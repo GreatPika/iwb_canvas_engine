@@ -323,6 +323,11 @@ class TxnContext {
     return _txnMaterializeNodeLocator();
   }
 
+  Map<NodeId, NodeLocatorEntry> txnNodeLocatorView() {
+    txnEnsureActive();
+    return _workingNodeLocator;
+  }
+
   Set<NodeId> _txnMaterializeAllNodeIds() {
     final cached = _materializedAllNodeIds;
     if (cached != null) {

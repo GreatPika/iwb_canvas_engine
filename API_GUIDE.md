@@ -338,6 +338,12 @@ public API surface.
 - Selection write contracts are explicit about state-change:
   - `writeSelectionReplace(...) -> bool changed`
   - `writeSelectionToggle(...) -> bool changed`
+  - `writeSelectionReplace(...)` normalizes input to visible content ids only;
+    if normalized input is empty, operation is a no-op (`changed == false`).
+  - `writeSelectionToggle(...)` ignores invalid/missing/background/invisible
+    ids and returns `changed == false`.
+  - `selection.replaced` signal node ids are emitted from normalized committed
+    selection state.
   - `writeSelectionClear() -> bool changed`
 
 Prefer high-level command methods unless custom transactional logic is required.

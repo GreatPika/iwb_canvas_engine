@@ -222,6 +222,9 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
   _TxnWriteCommitResult _txnWriteCommit(TxnContext ctx) {
     var commitPhases = const <String>[];
 
+    // Selection commands normalize input at writer boundary. Commit-time
+    // normalization remains a safety net for structural/document changes and
+    // for non-command selection-affecting mutations (for example node patches).
     final shouldNormalizeSelection =
         ctx.changeSet.selectionChanged ||
         ctx.changeSet.structuralChanged ||
@@ -230,6 +233,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
       final selectionResult = _selectionNormalizer.writeNormalizeSelection(
         rawSelection: ctx.workingSelection,
         scene: ctx.workingScene,
+        nodeLocator: ctx.txnNodeLocatorView(),
       );
       commitPhases = <String>[...commitPhases, 'selection'];
       if (selectionResult.normalizedChanged) {

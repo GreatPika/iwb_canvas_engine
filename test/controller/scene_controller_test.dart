@@ -2219,7 +2219,13 @@ void main() {
     addTearDown(controller.dispose);
 
     controller.write<void>((writer) {
-      writer.writeSelectionReplace(const <NodeId>{'missing'});
+      writer.writeSelectionReplace(const <NodeId>{'r1'});
+      writer.writeNodePatch(
+        const RectNodePatch(
+          id: 'r1',
+          common: CommonNodePatch(isVisible: PatchField<bool>.value(false)),
+        ),
+      );
       writer.writeGridEnable(true);
       writer.writeGridCellSize(0.1);
     });

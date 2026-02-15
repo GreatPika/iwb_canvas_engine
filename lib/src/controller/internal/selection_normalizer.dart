@@ -16,10 +16,12 @@ class SelectionNormalizer {
   SelectionNormalizationResult writeNormalizeSelection({
     required Set<NodeId> rawSelection,
     required Scene scene,
+    Map<NodeId, NodeLocatorEntry>? nodeLocator,
   }) {
     final normalized = txnNormalizeSelection(
       rawSelection: rawSelection,
       scene: scene,
+      nodeLocator: nodeLocator,
     );
     final changed =
         normalized.length != rawSelection.length ||
