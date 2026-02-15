@@ -264,6 +264,68 @@ void main() {
     },
   );
 
+  test(
+    'cloneForIncrementalUpdate keeps source index unchanged before swap',
+    () {
+      final sourceScene = sceneWithRect(
+        RectNode(id: 'r1', size: const Size(10, 10)),
+      );
+      final sourceLocator = <NodeId, SpatialNodeLocation>{
+        'r1': (layerIndex: 0, nodeIndex: 0),
+      };
+      final sourceIndex = SceneSpatialIndex.build(
+        sourceScene,
+        nodeLocator: sourceLocator,
+      );
+
+      final movedScene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            nodes: <SceneNode>[
+              RectNode(
+                id: 'r1',
+                size: const Size(10, 10),
+                transform: Transform2D.translation(const Offset(100, 0)),
+              ),
+            ],
+          ),
+        ],
+      );
+      final movedLocator = <NodeId, SpatialNodeLocation>{
+        'r1': (layerIndex: 0, nodeIndex: 0),
+      };
+
+      final candidate = sourceIndex.cloneForIncrementalUpdate(
+        scene: movedScene,
+        nodeLocator: movedLocator,
+      );
+      final applied = candidate.applyIncremental(
+        scene: movedScene,
+        nodeLocator: movedLocator,
+        addedNodeIds: const <NodeId>{},
+        removedNodeIds: const <NodeId>{},
+        hitGeometryChangedIds: const <NodeId>{'r1'},
+      );
+      expect(applied, isTrue);
+
+      final sourceAtOld = sourceIndex.query(const Rect.fromLTWH(0, 0, 20, 20));
+      final sourceAtMoved = sourceIndex.query(
+        const Rect.fromLTWH(100, 0, 20, 20),
+      );
+      final candidateAtOld = candidate.query(const Rect.fromLTWH(0, 0, 20, 20));
+      final candidateAtMoved = candidate.query(
+        const Rect.fromLTWH(100, 0, 20, 20),
+      );
+
+      expect(sourceAtOld.map((candidate) => candidate.node.id), <NodeId>['r1']);
+      expect(sourceAtMoved, isEmpty);
+      expect(candidateAtOld, isEmpty);
+      expect(candidateAtMoved.map((candidate) => candidate.node.id), <NodeId>[
+        'r1',
+      ]);
+    },
+  );
+
   test('build catches scene iteration errors and marks index invalid', () {
     final index = SceneSpatialIndex.build(
       _ThrowingLayersScene(),

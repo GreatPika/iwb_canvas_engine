@@ -178,6 +178,28 @@ class SceneSpatialIndex {
     }
   }
 
+  /// Returns an independent candidate index for atomic incremental updates.
+  ///
+  /// The returned index does not share mutable containers with this instance.
+  SceneSpatialIndex cloneForIncrementalUpdate({
+    required Scene scene,
+    required Map<NodeId, SpatialNodeLocation> nodeLocator,
+  }) {
+    final clone = SceneSpatialIndex._(_cellSize);
+    clone._isValid = _isValid;
+    clone._debugFallbackQueryCount = _debugFallbackQueryCount;
+    clone._bindState(scene: scene, nodeLocator: nodeLocator);
+
+    for (final entry in _cells.entries) {
+      clone._cells[entry.key] = <NodeId>{...entry.value};
+    }
+    for (final entry in _entriesById.entries) {
+      clone._entriesById[entry.key] = entry.value._clone();
+    }
+    clone._largeNodeIds.addAll(_largeNodeIds);
+    return clone;
+  }
+
   void _rebuild({
     required Scene scene,
     required Map<NodeId, SpatialNodeLocation> nodeLocator,
@@ -406,6 +428,16 @@ class _SpatialEntry {
   final Rect candidateBoundsWorld;
   final Set<_CellKey> coveredCells = <_CellKey>{};
   bool isLarge = false;
+
+  _SpatialEntry _clone() {
+    final clone = _SpatialEntry(
+      nodeId: nodeId,
+      candidateBoundsWorld: candidateBoundsWorld,
+    );
+    clone.coveredCells.addAll(coveredCells);
+    clone.isLarge = isLarge;
+    return clone;
+  }
 }
 
 class _CellKey {
