@@ -63,6 +63,9 @@
 - `PathNode` hit-testing now falls back to candidate bounds when node transform is non-invertible, keeping singular transformed paths selectable.
 - Commit invariant checks are now always enforced at runtime in all build modes (`debug`/`profile`/`release`) and throw `StateError` on violations.
 - CI now runs `dart run tool/check_guardrails.dart` in the main `ci.yaml` workflow.
+- Draw command `writeDrawStroke(...)` now enforces `kMaxStrokePointsPerNode = 20_000` with deterministic index-uniform downsampling (endpoints preserved), matching interactive stroke guardrails.
+- Added shared command-test helper `test/utils/scene_invariants.dart` and wired scene invariant assertions into command test suites.
+- Added command-level negative contract tests for invalid `layerIndex`, non-finite translation delta, non-positive grid cell size, and non-positive line thickness.
 
 ## 3.0.0 (2026-02-13)
 

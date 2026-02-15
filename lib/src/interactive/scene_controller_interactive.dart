@@ -14,6 +14,7 @@ import '../core/input_sampling.dart';
 import '../core/interaction_types.dart';
 import '../core/nodes.dart' show LineNode, SceneNode, StrokeNode, TextNode;
 import '../core/pointer_input.dart';
+import '../core/scene_limits.dart';
 import '../core/scene_spatial_index.dart';
 import '../core/transform2d.dart';
 import '../controller/scene_controller.dart';
@@ -24,8 +25,6 @@ import '../public/node_spec.dart';
 import '../public/scene_render_state.dart';
 import '../public/scene_write_txn.dart';
 import '../public/snapshot.dart';
-
-const int kMaxStrokePointsPerNode = 20000;
 
 int sceneControllerInteractiveInternalEpoch(
   SceneControllerInteractive controller,

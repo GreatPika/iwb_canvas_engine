@@ -4,24 +4,33 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
 
+import '../../utils/scene_invariants.dart';
+
+// INV:INV-ENG-TXN-ATOMIC-COMMIT
+// INV:INV-ENG-SIGNALS-AFTER-COMMIT
+
+SceneControllerCore buildController() {
+  return SceneControllerCore(
+    initialSnapshot: SceneSnapshot(
+      layers: <ContentLayerSnapshot>[
+        ContentLayerSnapshot(
+          nodes: const <NodeSnapshot>[
+            RectNodeSnapshot(id: 'base', size: Size(20, 10)),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
+void assertControllerInvariants(SceneControllerCore controller) {
+  assertSceneInvariants(
+    controller.snapshot,
+    selectedNodeIds: controller.selectedNodeIds,
+  );
+}
+
 void main() {
-  // INV:INV-ENG-TXN-ATOMIC-COMMIT
-  // INV:INV-ENG-SIGNALS-AFTER-COMMIT
-
-  SceneControllerCore buildController() {
-    return SceneControllerCore(
-      initialSnapshot: SceneSnapshot(
-        layers: <ContentLayerSnapshot>[
-          ContentLayerSnapshot(
-            nodes: const <NodeSnapshot>[
-              RectNodeSnapshot(id: 'base', size: Size(20, 10)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   test('scene commands route structural updates through write', () async {
     final controller = buildController();
     addTearDown(controller.dispose);
@@ -42,6 +51,7 @@ void main() {
     expect(controller.snapshot.layers.first.nodes.last.id, 'cmd-added');
     expect(controller.structuralRevision, 1);
     expect(notifications, 1);
+    assertControllerInvariants(controller);
   });
 
   test('add node without layerIndex does not create extra layers', () async {
@@ -57,6 +67,22 @@ void main() {
 
     expect(controller.snapshot.layers, hasLength(1));
     expect(controller.snapshot.layers.first.nodes, hasLength(101));
+    assertControllerInvariants(controller);
+  });
+
+  test('add node with out of range layerIndex throws RangeError', () async {
+    final controller = buildController();
+    addTearDown(controller.dispose);
+
+    expect(
+      () => controller.commands.writeAddNode(
+        RectNodeSpec(id: 'bad-index', size: const Size(8, 8)),
+        layerIndex: 5,
+      ),
+      throwsRangeError,
+    );
+    await pumpEventQueue();
+    assertControllerInvariants(controller);
   });
 
   test(
@@ -106,6 +132,7 @@ void main() {
           'selection.toggled',
         ]),
       );
+      assertControllerInvariants(controller);
     },
   );
 
@@ -168,6 +195,7 @@ void main() {
           'camera.updated',
         ]),
       );
+      assertControllerInvariants(controller);
     },
   );
 
@@ -185,6 +213,7 @@ void main() {
     await pumpEventQueue();
 
     expect(signalTypes, isNot(contains('selection.cleared')));
+    assertControllerInvariants(controller);
   });
 
   test('selection replace same set emits no signal', () async {
@@ -204,6 +233,7 @@ void main() {
     controller.commands.writeSelectionReplace(const <NodeId>{'base'});
     await pumpEventQueue();
     expect(signalTypes.where((type) => type == 'selection.replaced').length, 1);
+    assertControllerInvariants(controller);
   });
 
   test('selection signal ids equal committed selection', () async {
@@ -228,6 +258,7 @@ void main() {
     expect(replacedIds, const <NodeId>['base']);
     expect(controller.selectedNodeIds, const <NodeId>{'base'});
     expect(controller.selectedNodeIds, equals(replacedIds!.toSet()));
+    assertControllerInvariants(controller);
   });
 
   test('selection signal ids are sorted', () async {
@@ -259,6 +290,7 @@ void main() {
 
     expect(replacedIds, const <NodeId>['a-node', 'base', 'z-node']);
     expect(controller.selectedNodeIds, equals(replacedIds!.toSet()));
+    assertControllerInvariants(controller);
   });
 
   test('selection replace filters invisible or background nodes', () async {
@@ -303,6 +335,7 @@ void main() {
 
     expect(replacedIds, const <NodeId>['visible']);
     expect(controller.selectedNodeIds, const <NodeId>{'visible'});
+    assertControllerInvariants(controller);
   });
 
   test(
@@ -328,6 +361,7 @@ void main() {
       await pumpEventQueue();
       expect(controller.selectedNodeIds, const <NodeId>{'base'});
       expect(replacedSignals, 1);
+      assertControllerInvariants(controller);
     },
   );
 
@@ -346,5 +380,18 @@ void main() {
 
     expect(signalTypes, isNot(contains('selection.toggled')));
     expect(controller.selectedNodeIds, isEmpty);
+    assertControllerInvariants(controller);
+  });
+
+  test('grid cell size non positive throws ArgumentError', () async {
+    final controller = buildController();
+    addTearDown(controller.dispose);
+
+    expect(
+      () => controller.commands.writeGridCellSizeSet(0),
+      throwsArgumentError,
+    );
+    await pumpEventQueue();
+    assertControllerInvariants(controller);
   });
 }

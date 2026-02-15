@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../../core/nodes.dart';
+import '../../core/scene_limits.dart';
 import '../../public/node_spec.dart';
 import '../../public/scene_write_txn.dart';
 
@@ -9,6 +10,20 @@ class DrawCommands {
 
   final T Function<T>(T Function(SceneWriteTxn writer) fn) _writeRunner;
 
+  List<Offset> _resampleStrokePointsToLimit(
+    List<Offset> points, {
+    required int limit,
+  }) {
+    if (points.length <= limit) {
+      return points;
+    }
+    final sourceCount = points.length;
+    return List<Offset>.generate(limit, (i) {
+      final sourceIndex = (i * (sourceCount - 1)) ~/ (limit - 1);
+      return points[sourceIndex];
+    }, growable: false);
+  }
+
   String writeDrawStroke({
     required List<Offset> points,
     required double thickness,
@@ -16,9 +31,13 @@ class DrawCommands {
     double opacity = 1,
   }) {
     return _writeRunner((writer) {
+      final committedPoints = _resampleStrokePointsToLimit(
+        points,
+        limit: kMaxStrokePointsPerNode,
+      );
       final nodeId = writer.writeNodeInsert(
         StrokeNodeSpec(
-          points: points,
+          points: committedPoints,
           thickness: thickness,
           color: color,
           opacity: opacity,
