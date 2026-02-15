@@ -12,13 +12,13 @@ int _requirePositiveCacheEntries(int maxEntries) {
   return maxEntries;
 }
 
-class SceneStrokePathCacheV2 {
-  SceneStrokePathCacheV2({int maxEntries = 512})
+class SceneStrokePathCache {
+  SceneStrokePathCache({int maxEntries = 512})
     : maxEntries = _requirePositiveCacheEntries(maxEntries);
 
   final int maxEntries;
-  final LinkedHashMap<_NodeInstanceKeyV2, _StrokePathEntryV2> _entries =
-      LinkedHashMap<_NodeInstanceKeyV2, _StrokePathEntryV2>();
+  final LinkedHashMap<_NodeInstanceKey, _StrokePathEntry> _entries =
+      LinkedHashMap<_NodeInstanceKey, _StrokePathEntry>();
 
   int _debugBuildCount = 0;
   int _debugHitCount = 0;
@@ -44,7 +44,7 @@ class SceneStrokePathCacheV2 {
         ..addOval(Rect.fromCircle(center: node.points.first, radius: 0));
     }
 
-    final key = _NodeInstanceKeyV2(
+    final key = _NodeInstanceKey(
       nodeId: node.id,
       instanceRevision: node.instanceRevision,
     );
@@ -56,7 +56,7 @@ class SceneStrokePathCacheV2 {
     }
 
     final path = _buildStrokePath(node.points);
-    _entries[key] = _StrokePathEntryV2(
+    _entries[key] = _StrokePathEntry(
       path: path,
       pointsRevision: node.pointsRevision,
     );
@@ -73,15 +73,15 @@ class SceneStrokePathCacheV2 {
   }
 }
 
-class _StrokePathEntryV2 {
-  const _StrokePathEntryV2({required this.path, required this.pointsRevision});
+class _StrokePathEntry {
+  const _StrokePathEntry({required this.path, required this.pointsRevision});
 
   final Path path;
   final int pointsRevision;
 }
 
-class _NodeInstanceKeyV2 {
-  const _NodeInstanceKeyV2({
+class _NodeInstanceKey {
+  const _NodeInstanceKey({
     required this.nodeId,
     required this.instanceRevision,
   });
@@ -91,7 +91,7 @@ class _NodeInstanceKeyV2 {
 
   @override
   bool operator ==(Object other) {
-    return other is _NodeInstanceKeyV2 &&
+    return other is _NodeInstanceKey &&
         other.nodeId == nodeId &&
         other.instanceRevision == instanceRevision;
   }

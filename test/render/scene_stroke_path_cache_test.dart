@@ -6,12 +6,12 @@ import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 
 void main() {
   test('v2 stroke cache rejects non-positive maxEntries', () {
-    expect(() => SceneStrokePathCacheV2(maxEntries: 0), throwsArgumentError);
-    expect(() => SceneStrokePathCacheV2(maxEntries: -1), throwsArgumentError);
+    expect(() => SceneStrokePathCache(maxEntries: 0), throwsArgumentError);
+    expect(() => SceneStrokePathCache(maxEntries: -1), throwsArgumentError);
   });
 
   test('v2 stroke cache handles empty/dot geometries safely', () {
-    final cache = SceneStrokePathCacheV2(maxEntries: 8);
+    final cache = SceneStrokePathCache(maxEntries: 8);
     final empty = StrokeNodeSnapshot(
       id: 'empty',
       points: const <Offset>[],
@@ -31,7 +31,7 @@ void main() {
   });
 
   test('v2 stroke cache rebuilds only when pointsRevision changes', () {
-    final cache = SceneStrokePathCacheV2(maxEntries: 8);
+    final cache = SceneStrokePathCache(maxEntries: 8);
     final strokeA = StrokeNodeSnapshot(
       id: 's1',
       points: const <Offset>[Offset(0, 0), Offset(10, 10)],
@@ -76,7 +76,7 @@ void main() {
   test(
     'v2 stroke cache treats same id with different instanceRevision as different entries',
     () {
-      final cache = SceneStrokePathCacheV2(maxEntries: 8);
+      final cache = SceneStrokePathCache(maxEntries: 8);
       final oldNode = StrokeNodeSnapshot(
         id: 'reuse-id',
         instanceRevision: 1,
@@ -106,7 +106,7 @@ void main() {
   );
 
   test('v2 stroke cache evicts least-recent entry (LRU)', () {
-    final cache = SceneStrokePathCacheV2(maxEntries: 2);
+    final cache = SceneStrokePathCache(maxEntries: 2);
     final a = StrokeNodeSnapshot(
       id: 'a',
       points: const <Offset>[Offset(0, 0), Offset(1, 0)],
@@ -140,7 +140,7 @@ void main() {
   });
 
   test('v2 stroke cache clear drops entries', () {
-    final cache = SceneStrokePathCacheV2(maxEntries: 8);
+    final cache = SceneStrokePathCache(maxEntries: 8);
     final stroke = StrokeNodeSnapshot(
       id: 'clear',
       points: const <Offset>[Offset(0, 0), Offset(10, 10)],

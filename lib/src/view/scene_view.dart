@@ -25,11 +25,11 @@ class SceneViewV2 extends StatefulWidget {
   });
 
   final SceneControllerV2 controller;
-  final ImageResolverV2? imageResolver;
-  final SceneStaticLayerCacheV2? staticLayerCache;
-  final SceneTextLayoutCacheV2? textLayoutCache;
-  final SceneStrokePathCacheV2? strokePathCache;
-  final ScenePathMetricsCacheV2? pathMetricsCache;
+  final ImageResolver? imageResolver;
+  final SceneStaticLayerCache? staticLayerCache;
+  final SceneTextLayoutCache? textLayoutCache;
+  final SceneStrokePathCache? strokePathCache;
+  final ScenePathMetricsCache? pathMetricsCache;
   final RenderGeometryCache? geometryCache;
   final Color selectionColor;
   final double selectionStrokeWidth;
@@ -40,21 +40,21 @@ class SceneViewV2 extends StatefulWidget {
 }
 
 class _SceneViewV2State extends State<SceneViewV2> {
-  late SceneRenderCachesV2 _renderCaches;
+  late SceneRenderCaches _renderCaches;
 
   int _lastEpoch = 0;
 
   @visibleForTesting
-  SceneStaticLayerCacheV2 get debugStaticLayerCache =>
+  SceneStaticLayerCache get debugStaticLayerCache =>
       _renderCaches.staticLayerCache;
   @visibleForTesting
-  SceneTextLayoutCacheV2 get debugTextLayoutCache =>
+  SceneTextLayoutCache get debugTextLayoutCache =>
       _renderCaches.textLayoutCache;
   @visibleForTesting
-  SceneStrokePathCacheV2 get debugStrokePathCache =>
+  SceneStrokePathCache get debugStrokePathCache =>
       _renderCaches.strokePathCache;
   @visibleForTesting
-  ScenePathMetricsCacheV2 get debugPathMetricsCache =>
+  ScenePathMetricsCache get debugPathMetricsCache =>
       _renderCaches.pathMetricsCache;
   @visibleForTesting
   RenderGeometryCache get debugGeometryCache => _renderCaches.geometryCache;
@@ -94,7 +94,7 @@ class _SceneViewV2State extends State<SceneViewV2> {
   Widget build(BuildContext context) {
     final textDirection = Directionality.maybeOf(context) ?? TextDirection.ltr;
     return CustomPaint(
-      painter: ScenePainterV2(
+      painter: ScenePainter(
         controller: widget.controller,
         imageResolver: widget.imageResolver ?? _defaultImageResolver,
         staticLayerCache: _renderCaches.staticLayerCache,
@@ -130,8 +130,8 @@ class _SceneViewV2State extends State<SceneViewV2> {
         oldWidget.geometryCache != widget.geometryCache;
   }
 
-  SceneRenderCachesV2 _createRenderCaches() {
-    return SceneRenderCachesV2(
+  SceneRenderCaches _createRenderCaches() {
+    return SceneRenderCaches(
       staticLayerCache: widget.staticLayerCache,
       textLayoutCache: widget.textLayoutCache,
       strokePathCache: widget.strokePathCache,

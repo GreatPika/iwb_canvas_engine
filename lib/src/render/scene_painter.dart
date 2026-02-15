@@ -9,24 +9,24 @@ import '../core/text_layout.dart';
 import '../core/transform2d.dart';
 import '../public/scene_render_state.dart';
 import '../public/snapshot.dart';
-import 'cache/scene_path_metrics_cache_v2.dart';
-import 'cache/scene_static_layer_cache_v2.dart';
-import 'cache/scene_stroke_path_cache_v2.dart';
-import 'cache/scene_text_layout_cache_v2.dart';
+import 'cache/scene_path_metrics_cache.dart';
+import 'cache/scene_static_layer_cache.dart';
+import 'cache/scene_stroke_path_cache.dart';
+import 'cache/scene_text_layout_cache.dart';
 import 'render_geometry_cache.dart';
 
-export 'cache/scene_path_metrics_cache_v2.dart';
-export 'cache/scene_static_layer_cache_v2.dart';
-export 'cache/scene_stroke_path_cache_v2.dart';
-export 'cache/scene_text_layout_cache_v2.dart';
+export 'cache/scene_path_metrics_cache.dart';
+export 'cache/scene_static_layer_cache.dart';
+export 'cache/scene_stroke_path_cache.dart';
+export 'cache/scene_text_layout_cache.dart';
 
-typedef ImageResolverV2 = Image? Function(String imageId);
-typedef NodePreviewOffsetResolverV2 = Offset Function(NodeId nodeId);
+typedef ImageResolver = Image? Function(String imageId);
+typedef NodePreviewOffsetResolver = Offset Function(NodeId nodeId);
 
-class ScenePainterV2 extends CustomPainter {
+class ScenePainter extends CustomPainter {
   static const double _cullPadding = 1.0;
 
-  ScenePainterV2({
+  ScenePainter({
     required this.controller,
     required this.imageResolver,
     this.nodePreviewOffsetResolver,
@@ -44,12 +44,12 @@ class ScenePainterV2 extends CustomPainter {
        super(repaint: controller);
 
   final SceneRenderState controller;
-  final ImageResolverV2 imageResolver;
-  final NodePreviewOffsetResolverV2? nodePreviewOffsetResolver;
-  final SceneStaticLayerCacheV2? staticLayerCache;
-  final SceneTextLayoutCacheV2? textLayoutCache;
-  final SceneStrokePathCacheV2? strokePathCache;
-  final ScenePathMetricsCacheV2? pathMetricsCache;
+  final ImageResolver imageResolver;
+  final NodePreviewOffsetResolver? nodePreviewOffsetResolver;
+  final SceneStaticLayerCache? staticLayerCache;
+  final SceneTextLayoutCache? textLayoutCache;
+  final SceneStrokePathCache? strokePathCache;
+  final ScenePathMetricsCache? pathMetricsCache;
   final Rect? selectionRect;
   final Color selectionColor;
   final double selectionStrokeWidth;
@@ -314,7 +314,7 @@ class ScenePainterV2 extends CustomPainter {
     }
   }
 
-  PathSelectionContoursV2 _buildPathSelectionContours({
+  PathSelectionContours _buildPathSelectionContours({
     required PathNodeSnapshot pathNode,
     required Path localPath,
   }) {
@@ -336,7 +336,7 @@ class ScenePainterV2 extends CustomPainter {
         openContours.add(contour);
       }
     }
-    return PathSelectionContoursV2(
+    return PathSelectionContours(
       closedContours: closedContours,
       openContours: openContours,
     );
@@ -758,7 +758,7 @@ class ScenePainterV2 extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant ScenePainterV2 oldDelegate) {
+  bool shouldRepaint(covariant ScenePainter oldDelegate) {
     return oldDelegate.controller != controller ||
         oldDelegate.imageResolver != imageResolver ||
         oldDelegate.nodePreviewOffsetResolver != nodePreviewOffsetResolver ||

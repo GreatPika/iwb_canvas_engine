@@ -12,13 +12,13 @@ int _requirePositiveCacheEntries(int maxEntries) {
   return maxEntries;
 }
 
-class ScenePathMetricsCacheV2 {
-  ScenePathMetricsCacheV2({int maxEntries = 512})
+class ScenePathMetricsCache {
+  ScenePathMetricsCache({int maxEntries = 512})
     : maxEntries = _requirePositiveCacheEntries(maxEntries);
 
   final int maxEntries;
-  final LinkedHashMap<_NodeInstanceKeyV2, _PathMetricsEntryV2> _entries =
-      LinkedHashMap<_NodeInstanceKeyV2, _PathMetricsEntryV2>();
+  final LinkedHashMap<_NodeInstanceKey, _PathMetricsEntry> _entries =
+      LinkedHashMap<_NodeInstanceKey, _PathMetricsEntry>();
 
   int _debugBuildCount = 0;
   int _debugHitCount = 0;
@@ -35,11 +35,11 @@ class ScenePathMetricsCacheV2 {
 
   void clear() => _entries.clear();
 
-  PathSelectionContoursV2 getOrBuild({
+  PathSelectionContours getOrBuild({
     required PathNodeSnapshot node,
     required Path localPath,
   }) {
-    final key = _NodeInstanceKeyV2(
+    final key = _NodeInstanceKey(
       nodeId: node.id,
       instanceRevision: node.instanceRevision,
     );
@@ -71,11 +71,11 @@ class ScenePathMetricsCacheV2 {
       }
     }
 
-    final contours = PathSelectionContoursV2(
+    final contours = PathSelectionContours(
       closedContours: closedContours,
       openContours: openContours,
     );
-    _entries[key] = _PathMetricsEntryV2(
+    _entries[key] = _PathMetricsEntry(
       svgPathData: node.svgPathData,
       fillRule: node.fillRule,
       contours: contours,
@@ -93,8 +93,8 @@ class ScenePathMetricsCacheV2 {
   }
 }
 
-class _NodeInstanceKeyV2 {
-  const _NodeInstanceKeyV2({
+class _NodeInstanceKey {
+  const _NodeInstanceKey({
     required this.nodeId,
     required this.instanceRevision,
   });
@@ -104,7 +104,7 @@ class _NodeInstanceKeyV2 {
 
   @override
   bool operator ==(Object other) {
-    return other is _NodeInstanceKeyV2 &&
+    return other is _NodeInstanceKey &&
         other.nodeId == nodeId &&
         other.instanceRevision == instanceRevision;
   }
@@ -113,8 +113,8 @@ class _NodeInstanceKeyV2 {
   int get hashCode => Object.hash(nodeId, instanceRevision);
 }
 
-class _PathMetricsEntryV2 {
-  const _PathMetricsEntryV2({
+class _PathMetricsEntry {
+  const _PathMetricsEntry({
     required this.svgPathData,
     required this.fillRule,
     required this.contours,
@@ -122,11 +122,11 @@ class _PathMetricsEntryV2 {
 
   final String svgPathData;
   final V2PathFillRule fillRule;
-  final PathSelectionContoursV2 contours;
+  final PathSelectionContours contours;
 }
 
-class PathSelectionContoursV2 {
-  const PathSelectionContoursV2({
+class PathSelectionContours {
+  const PathSelectionContours({
     required this.closedContours,
     required this.openContours,
   });

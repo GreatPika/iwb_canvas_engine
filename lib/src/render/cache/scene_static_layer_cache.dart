@@ -6,8 +6,8 @@ import '../../core/grid_safety_limits.dart';
 import '../../core/numeric_clamp.dart';
 import '../../public/snapshot.dart';
 
-class SceneStaticLayerCacheV2 {
-  _StaticLayerKeyV2? _key;
+class SceneStaticLayerCache {
+  _StaticLayerKey? _key;
   Picture? _gridPicture;
 
   int _debugBuildCount = 0;
@@ -50,7 +50,7 @@ class SceneStaticLayerCacheV2 {
       return;
     }
 
-    final key = _StaticLayerKeyV2(
+    final key = _StaticLayerKey(
       size: size,
       gridEnabled: true,
       gridCellSize: grid.cellSize,
@@ -99,8 +99,8 @@ class SceneStaticLayerCacheV2 {
   }
 }
 
-class _StaticLayerKeyV2 {
-  const _StaticLayerKeyV2({
+class _StaticLayerKey {
+  const _StaticLayerKey({
     required this.size,
     required this.gridEnabled,
     required this.gridCellSize,
@@ -116,7 +116,7 @@ class _StaticLayerKeyV2 {
 
   @override
   bool operator ==(Object other) {
-    return other is _StaticLayerKeyV2 &&
+    return other is _StaticLayerKey &&
         other.size == size &&
         other.gridEnabled == gridEnabled &&
         other.gridCellSize == gridCellSize &&

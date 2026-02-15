@@ -69,9 +69,9 @@ void main() {
     );
     addTearDown(controller.dispose);
 
-    final textCache = SceneTextLayoutCacheV2(maxEntries: 8);
-    final strokeCache = SceneStrokePathCacheV2(maxEntries: 8);
-    final staticCache = SceneStaticLayerCacheV2();
+    final textCache = SceneTextLayoutCache(maxEntries: 8);
+    final strokeCache = SceneStrokePathCache(maxEntries: 8);
+    final staticCache = SceneStaticLayerCache();
     final geometryCache = RenderGeometryCache(maxEntries: 8);
 
     await tester.pumpWidget(
@@ -124,9 +124,9 @@ void main() {
     addTearDown(controllerA.dispose);
     addTearDown(controllerB.dispose);
 
-    final textCache = SceneTextLayoutCacheV2(maxEntries: 8);
-    final strokeCache = SceneStrokePathCacheV2(maxEntries: 8);
-    final staticCache = SceneStaticLayerCacheV2();
+    final textCache = SceneTextLayoutCache(maxEntries: 8);
+    final strokeCache = SceneStrokePathCache(maxEntries: 8);
+    final staticCache = SceneStaticLayerCache();
     final geometryCache = RenderGeometryCache(maxEntries: 8);
 
     await tester.pumpWidget(
@@ -202,20 +202,20 @@ void main() {
       await tester.pump();
 
       final state = tester.state(find.byType(SceneViewV2)) as dynamic;
-      expect(state.debugStaticLayerCache, isA<SceneStaticLayerCacheV2>());
-      expect(state.debugTextLayoutCache, isA<SceneTextLayoutCacheV2>());
-      expect(state.debugStrokePathCache, isA<SceneStrokePathCacheV2>());
-      expect(state.debugPathMetricsCache, isA<ScenePathMetricsCacheV2>());
+      expect(state.debugStaticLayerCache, isA<SceneStaticLayerCache>());
+      expect(state.debugTextLayoutCache, isA<SceneTextLayoutCache>());
+      expect(state.debugStrokePathCache, isA<SceneStrokePathCache>());
+      expect(state.debugPathMetricsCache, isA<ScenePathMetricsCache>());
       expect(state.debugGeometryCache, isA<RenderGeometryCache>());
 
       final customPaint = tester.widget<CustomPaint>(find.byType(CustomPaint));
-      final painter = customPaint.painter! as ScenePainterV2;
+      final painter = customPaint.painter! as ScenePainter;
       expect(painter.imageResolver('missing'), isNull);
 
-      final extStaticA = SceneStaticLayerCacheV2();
-      final extTextA = SceneTextLayoutCacheV2(maxEntries: 4);
-      final extStrokeA = SceneStrokePathCacheV2(maxEntries: 4);
-      final extPathA = ScenePathMetricsCacheV2(maxEntries: 4);
+      final extStaticA = SceneStaticLayerCache();
+      final extTextA = SceneTextLayoutCache(maxEntries: 4);
+      final extStrokeA = SceneStrokePathCache(maxEntries: 4);
+      final extPathA = ScenePathMetricsCache(maxEntries: 4);
       final extGeometryA = RenderGeometryCache(maxEntries: 4);
 
       await tester.pumpWidget(
@@ -237,10 +237,10 @@ void main() {
       );
       await tester.pump();
 
-      final extStaticB = SceneStaticLayerCacheV2();
-      final extTextB = SceneTextLayoutCacheV2(maxEntries: 4);
-      final extStrokeB = SceneStrokePathCacheV2(maxEntries: 4);
-      final extPathB = ScenePathMetricsCacheV2(maxEntries: 4);
+      final extStaticB = SceneStaticLayerCache();
+      final extTextB = SceneTextLayoutCache(maxEntries: 4);
+      final extStrokeB = SceneStrokePathCache(maxEntries: 4);
+      final extPathB = ScenePathMetricsCache(maxEntries: 4);
       final extGeometryB = RenderGeometryCache(maxEntries: 4);
 
       await tester.pumpWidget(
@@ -290,10 +290,10 @@ void main() {
       );
       addTearDown(controller.dispose);
 
-      final textCache = SceneTextLayoutCacheV2(maxEntries: 256);
-      final strokeCache = SceneStrokePathCacheV2(maxEntries: 256);
-      final pathMetricsCache = ScenePathMetricsCacheV2(maxEntries: 256);
-      final staticCache = SceneStaticLayerCacheV2();
+      final textCache = SceneTextLayoutCache(maxEntries: 256);
+      final strokeCache = SceneStrokePathCache(maxEntries: 256);
+      final pathMetricsCache = ScenePathMetricsCache(maxEntries: 256);
+      final staticCache = SceneStaticLayerCache();
       final geometryCache = RenderGeometryCache(maxEntries: 256);
 
       await tester.pumpWidget(

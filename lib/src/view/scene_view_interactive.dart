@@ -43,7 +43,7 @@ class _SceneViewInteractiveV2State extends State<SceneViewInteractiveV2> {
   int _nextPointerSlotId = 1;
   int _lastEpoch = 0;
 
-  late SceneRenderCachesV2 _renderCaches;
+  late SceneRenderCaches _renderCaches;
 
   @override
   void initState() {
@@ -94,7 +94,7 @@ class _SceneViewInteractiveV2State extends State<SceneViewInteractiveV2> {
       onPointerCancel: (event) =>
           _handlePointerEvent(event, PointerPhase.cancel),
       child: CustomPaint(
-        painter: ScenePainterV2(
+        painter: ScenePainter(
           controller: widget.controller,
           imageResolver: widget.imageResolver ?? _defaultImageResolver,
           nodePreviewOffsetResolver: widget.controller.movePreviewDeltaForNode,
@@ -265,8 +265,8 @@ class _SceneViewInteractiveV2State extends State<SceneViewInteractiveV2> {
     _clearAllCaches();
   }
 
-  SceneRenderCachesV2 _createRenderCaches() {
-    return SceneRenderCachesV2();
+  SceneRenderCaches _createRenderCaches() {
+    return SceneRenderCaches();
   }
 
   CanvasPointerPhase _toCanvasPointerPhase(PointerPhase phase) {

@@ -8,13 +8,13 @@ import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('SceneTextLayoutCacheV2 rejects non-positive maxEntries', () {
-    expect(() => SceneTextLayoutCacheV2(maxEntries: 0), throwsArgumentError);
-    expect(() => SceneTextLayoutCacheV2(maxEntries: -1), throwsArgumentError);
+  test('SceneTextLayoutCache rejects non-positive maxEntries', () {
+    expect(() => SceneTextLayoutCache(maxEntries: 0), throwsArgumentError);
+    expect(() => SceneTextLayoutCache(maxEntries: -1), throwsArgumentError);
   });
 
-  test('SceneTextLayoutCacheV2 caches TextPainter layouts', () {
-    final cache = SceneTextLayoutCacheV2(maxEntries: 8);
+  test('SceneTextLayoutCache caches TextPainter layouts', () {
+    final cache = SceneTextLayoutCache(maxEntries: 8);
     final node = TextNodeSnapshot(
       id: 't-1',
       text: 'Hello',
@@ -36,8 +36,8 @@ void main() {
     expect(cache.debugSize, 1);
   });
 
-  test('SceneTextLayoutCacheV2 rebuilds on maxWidth change', () {
-    final cache = SceneTextLayoutCacheV2(maxEntries: 8);
+  test('SceneTextLayoutCache rebuilds on maxWidth change', () {
+    final cache = SceneTextLayoutCache(maxEntries: 8);
     final node = TextNodeSnapshot(
       id: 't-1',
       text: 'Hello',
@@ -53,8 +53,8 @@ void main() {
     expect(cache.debugBuildCount, 2);
   });
 
-  test('SceneTextLayoutCacheV2 key includes textDirection', () {
-    final cache = SceneTextLayoutCacheV2(maxEntries: 8);
+  test('SceneTextLayoutCache key includes textDirection', () {
+    final cache = SceneTextLayoutCache(maxEntries: 8);
     final node = TextNodeSnapshot(
       id: 't-dir',
       text: 'Hello',
@@ -81,8 +81,8 @@ void main() {
     expect(cache.debugBuildCount, 2);
   });
 
-  test('SceneTextLayoutCacheV2 key excludes node identity and box height', () {
-    final cache = SceneTextLayoutCacheV2(maxEntries: 8);
+  test('SceneTextLayoutCache key excludes node identity and box height', () {
+    final cache = SceneTextLayoutCache(maxEntries: 8);
     final nodeA = TextNodeSnapshot(
       id: 'node-a',
       text: 'Shared',
@@ -107,8 +107,8 @@ void main() {
     expect(cache.debugHitCount, 1);
   });
 
-  test('SceneTextLayoutCacheV2 key includes paint color', () {
-    final cache = SceneTextLayoutCacheV2(maxEntries: 8);
+  test('SceneTextLayoutCache key includes paint color', () {
+    final cache = SceneTextLayoutCache(maxEntries: 8);
     final node = TextNodeSnapshot(
       id: 'node-color',
       text: 'Shared',
@@ -134,8 +134,8 @@ void main() {
     expect(cache.debugBuildCount, 2);
   });
 
-  test('SceneTextLayoutCacheV2 key includes positive lineHeight', () {
-    final cache = SceneTextLayoutCacheV2(maxEntries: 8);
+  test('SceneTextLayoutCache key includes positive lineHeight', () {
+    final cache = SceneTextLayoutCache(maxEntries: 8);
     final node = TextNodeSnapshot(
       id: 'node-line-height',
       text: 'Shared',
@@ -157,8 +157,8 @@ void main() {
     expect(cache.debugHitCount, 1);
   });
 
-  test('SceneTextLayoutCacheV2 normalizes invalid lineHeight and maxWidth', () {
-    final cache = SceneTextLayoutCacheV2(maxEntries: 8);
+  test('SceneTextLayoutCache normalizes invalid lineHeight and maxWidth', () {
+    final cache = SceneTextLayoutCache(maxEntries: 8);
     final node = TextNodeSnapshot(
       id: 'node-invalid',
       text: 'Shared',
@@ -185,8 +185,8 @@ void main() {
     expect(cache.debugHitCount, 1);
   });
 
-  test('SceneTextLayoutCacheV2 evicts least-recent entries (LRU)', () {
-    final cache = SceneTextLayoutCacheV2(maxEntries: 2);
+  test('SceneTextLayoutCache evicts least-recent entries (LRU)', () {
+    final cache = SceneTextLayoutCache(maxEntries: 2);
     final style = const TextStyle(fontSize: 14, color: ui.Color(0xFF000000));
     final a = TextNodeSnapshot(
       id: 'a',
@@ -226,8 +226,8 @@ void main() {
     expect(cache.debugBuildCount, 4);
   });
 
-  test('SceneTextLayoutCacheV2 clear drops entries', () {
-    final cache = SceneTextLayoutCacheV2(maxEntries: 8);
+  test('SceneTextLayoutCache clear drops entries', () {
+    final cache = SceneTextLayoutCache(maxEntries: 8);
     final node = TextNodeSnapshot(
       id: 't-clear',
       text: 'Hello',

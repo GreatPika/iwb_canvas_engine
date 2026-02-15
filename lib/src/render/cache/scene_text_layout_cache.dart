@@ -13,13 +13,13 @@ int _requirePositiveCacheEntries(int maxEntries) {
   return maxEntries;
 }
 
-class SceneTextLayoutCacheV2 {
-  SceneTextLayoutCacheV2({int maxEntries = 256})
+class SceneTextLayoutCache {
+  SceneTextLayoutCache({int maxEntries = 256})
     : maxEntries = _requirePositiveCacheEntries(maxEntries);
 
   final int maxEntries;
-  final LinkedHashMap<_TextLayoutKeyV2, TextPainter> _entries =
-      LinkedHashMap<_TextLayoutKeyV2, TextPainter>();
+  final LinkedHashMap<_TextLayoutKey, TextPainter> _entries =
+      LinkedHashMap<_TextLayoutKey, TextPainter>();
 
   int _debugBuildCount = 0;
   int _debugHitCount = 0;
@@ -44,7 +44,7 @@ class SceneTextLayoutCacheV2 {
   }) {
     final safeFontSize = normalizeTextLayoutFontSize(node.fontSize);
     final safeLineHeight = normalizeTextLayoutLineHeight(node.lineHeight);
-    final key = _TextLayoutKeyV2(
+    final key = _TextLayoutKey(
       text: node.text,
       fontSize: safeFontSize,
       fontFamily: node.fontFamily,
@@ -90,8 +90,8 @@ class SceneTextLayoutCacheV2 {
   }
 }
 
-class _TextLayoutKeyV2 {
-  const _TextLayoutKeyV2({
+class _TextLayoutKey {
+  const _TextLayoutKey({
     required this.text,
     required this.fontSize,
     required this.fontFamily,
@@ -119,7 +119,7 @@ class _TextLayoutKeyV2 {
 
   @override
   bool operator ==(Object other) {
-    return other is _TextLayoutKeyV2 &&
+    return other is _TextLayoutKey &&
         other.text == text &&
         other.fontSize == fontSize &&
         other.fontFamily == fontFamily &&
