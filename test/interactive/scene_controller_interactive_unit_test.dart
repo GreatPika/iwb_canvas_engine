@@ -31,13 +31,13 @@ CanvasPointerInput _sample({
   );
 }
 
-SceneControllerInteractiveV2 _controllerFromScene(
+SceneControllerInteractive _controllerFromScene(
   Scene scene, {
   PointerInputSettings? pointerSettings,
   double? dragStartSlop,
   bool clearSelectionOnDrawModeEnter = false,
 }) {
-  return SceneControllerInteractiveV2(
+  return SceneControllerInteractive(
     initialSnapshot: txnSceneToSnapshot(scene),
     pointerSettings: pointerSettings,
     dragStartSlop: dragStartSlop,
@@ -46,7 +46,7 @@ SceneControllerInteractiveV2 _controllerFromScene(
 }
 
 void main() {
-  group('SceneControllerInteractiveV2 unit', () {
+  group('SceneControllerInteractive unit', () {
     test('read API + setters + validation', () {
       final controller = _controllerFromScene(
         Scene(
@@ -295,7 +295,7 @@ void main() {
     );
 
     test('addNode accepts NodeSpec variants', () {
-      final controller = SceneControllerInteractiveV2(
+      final controller = SceneControllerInteractive(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(),
@@ -429,7 +429,7 @@ void main() {
     );
 
     test('removeNode emits delete actions with monotonic timestamps', () async {
-      final controller = SceneControllerInteractiveV2(
+      final controller = SceneControllerInteractive(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(),
@@ -458,7 +458,7 @@ void main() {
     });
 
     test('actions stream delivery is asynchronous', () async {
-      final controller = SceneControllerInteractiveV2(
+      final controller = SceneControllerInteractive(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(),
@@ -801,7 +801,7 @@ void main() {
     );
 
     test('line tool supports drag flow and two-tap pending flow', () async {
-      final controller = SceneControllerInteractiveV2(
+      final controller = SceneControllerInteractive(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(),
@@ -976,7 +976,7 @@ void main() {
     test(
       'pen commit adds up-point and eraser single point hits stroke segment',
       () {
-        final controller = SceneControllerInteractiveV2(
+        final controller = SceneControllerInteractive(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
               ContentLayerSnapshot(),
@@ -1041,7 +1041,7 @@ void main() {
     );
 
     test('pen commit caps very long stroke and preserves endpoints', () {
-      final controller = SceneControllerInteractiveV2(
+      final controller = SceneControllerInteractive(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(),
@@ -1096,7 +1096,7 @@ void main() {
     });
 
     test('stroke preview is available during drag and clears on up', () {
-      final controller = SceneControllerInteractiveV2(
+      final controller = SceneControllerInteractive(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(),
@@ -1151,7 +1151,7 @@ void main() {
     test(
       'line preview starts after dragStartSlop and clears on cancel/tool/mode switch',
       () {
-        final controller = SceneControllerInteractiveV2(
+        final controller = SceneControllerInteractive(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
               ContentLayerSnapshot(),
@@ -1571,7 +1571,7 @@ void main() {
     test(
       'dispose clears pending line timer and supports replaceScene',
       () async {
-        final controller = SceneControllerInteractiveV2(
+        final controller = SceneControllerInteractive(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
               ContentLayerSnapshot(),
@@ -1620,7 +1620,7 @@ void main() {
     );
 
     testWidgets('pending two-tap line expires after timeout', (tester) async {
-      final controller = SceneControllerInteractiveV2(
+      final controller = SceneControllerInteractive(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(),

@@ -3,7 +3,7 @@ import 'dart:ui';
 /// Public pointer phase for manual controller input routing.
 enum CanvasPointerPhase { down, move, up, cancel }
 
-/// Public pointer input sample accepted by [SceneControllerInteractiveV2].
+/// Public pointer input sample accepted by [SceneControllerInteractive].
 class CanvasPointerInput {
   const CanvasPointerInput({
     required this.pointerId,

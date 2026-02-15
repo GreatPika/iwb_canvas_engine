@@ -35,7 +35,7 @@ SceneSnapshot _snapshot({required String text, bool includeImage = false}) {
 }
 
 Widget _host(
-  SceneControllerInteractiveV2 controller, {
+  SceneControllerInteractive controller, {
   Image? Function(String imageId)? imageResolver,
 }) {
   return Directionality(
@@ -53,10 +53,10 @@ Widget _host(
 
 void main() {
   testWidgets('SceneViewInteractive handles controller swap', (tester) async {
-    final controllerA = SceneControllerInteractiveV2(
+    final controllerA = SceneControllerInteractive(
       initialSnapshot: _snapshot(text: 'A', includeImage: true),
     );
-    final controllerB = SceneControllerInteractiveV2(
+    final controllerB = SceneControllerInteractive(
       initialSnapshot: _snapshot(text: 'B', includeImage: true),
     );
     addTearDown(controllerA.dispose);
@@ -82,7 +82,7 @@ void main() {
   });
 
   testWidgets('SceneViewInteractive handles replaceScene', (tester) async {
-    final controller = SceneControllerInteractiveV2(
+    final controller = SceneControllerInteractive(
       initialSnapshot: _snapshot(text: 'epoch'),
     );
     addTearDown(controller.dispose);
@@ -100,7 +100,7 @@ void main() {
   testWidgets('SceneViewInteractive flushes pending tap timer callback', (
     tester,
   ) async {
-    final controller = SceneControllerInteractiveV2(
+    final controller = SceneControllerInteractive(
       initialSnapshot: _snapshot(text: 'timer'),
       pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 1),
     );
@@ -119,7 +119,7 @@ void main() {
   testWidgets('SceneViewInteractive reuses freed pointer slot ids', (
     tester,
   ) async {
-    final controller = SceneControllerInteractiveV2(
+    final controller = SceneControllerInteractive(
       initialSnapshot: _snapshot(text: 'slots'),
     );
     addTearDown(controller.dispose);
@@ -146,7 +146,7 @@ void main() {
   testWidgets('SceneViewInteractive chooses min free slot from unsorted list', (
     tester,
   ) async {
-    final controller = SceneControllerInteractiveV2(
+    final controller = SceneControllerInteractive(
       initialSnapshot: _snapshot(text: 'slots-2'),
     );
     addTearDown(controller.dispose);
@@ -176,7 +176,7 @@ void main() {
   testWidgets('SceneViewInteractive paints single-point stroke preview', (
     tester,
   ) async {
-    final controller = SceneControllerInteractiveV2(
+    final controller = SceneControllerInteractive(
       initialSnapshot: _snapshot(text: 'preview-dot'),
     );
     addTearDown(controller.dispose);
@@ -216,7 +216,7 @@ void main() {
   testWidgets('SceneViewInteractive paints active line preview', (
     tester,
   ) async {
-    final controller = SceneControllerInteractiveV2(
+    final controller = SceneControllerInteractive(
       initialSnapshot: _snapshot(text: 'preview-line'),
     );
     addTearDown(controller.dispose);
@@ -245,7 +245,7 @@ void main() {
   testWidgets('SceneViewInteractive routes image ids to imageResolver', (
     tester,
   ) async {
-    final controller = SceneControllerInteractiveV2(
+    final controller = SceneControllerInteractive(
       initialSnapshot: _snapshot(text: 'img', includeImage: true),
     );
     addTearDown(controller.dispose);
@@ -314,7 +314,7 @@ void main() {
   });
 }
 
-class _OverlayTestController extends SceneControllerInteractiveV2 {
+class _OverlayTestController extends SceneControllerInteractive {
   _OverlayTestController({required super.initialSnapshot});
 
   bool strokeActive = false;

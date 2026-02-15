@@ -22,7 +22,7 @@ class SceneViewInteractive extends StatefulWidget {
     super.key,
   });
 
-  final SceneControllerInteractiveV2 controller;
+  final SceneControllerInteractive controller;
   final ui.Image? Function(String imageId)? imageResolver;
   final Color selectionColor;
   final double selectionStrokeWidth;
@@ -287,7 +287,7 @@ class _SceneInteractiveOverlayPainter extends CustomPainter {
   const _SceneInteractiveOverlayPainter({required this.controller})
     : super(repaint: controller);
 
-  final SceneControllerInteractiveV2 controller;
+  final SceneControllerInteractive controller;
 
   @override
   void paint(Canvas canvas, Size size) {

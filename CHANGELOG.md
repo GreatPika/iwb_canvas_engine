@@ -14,6 +14,8 @@
   - internal `PointerSample`/`PointerSignal` are no longer required for public usage.
 - Public view widget API removes `SceneViewInteractiveV2` from exports;
   use `SceneViewInteractive` (or `SceneView` alias).
+- Public interactive controller API removes `SceneControllerInteractiveV2` from exports;
+  use `SceneControllerInteractive` (or `SceneController` alias).
 - `SceneViewInteractiveV2` no longer exposes `geometryCache` in its public constructor; geometry cache ownership is fully internal to keep non-exported render-cache types out of public signatures.
 - Removed public `V2PathFillRule`; path node public contracts now use `PathFillRule`.
 

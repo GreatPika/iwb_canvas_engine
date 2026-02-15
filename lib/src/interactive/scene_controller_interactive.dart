@@ -27,9 +27,9 @@ import '../public/snapshot.dart';
 
 const int kMaxStrokePointsPerNode = 20000;
 
-class SceneControllerInteractiveV2 extends ChangeNotifier
+class SceneControllerInteractive extends ChangeNotifier
     implements SceneRenderState {
-  SceneControllerInteractiveV2({
+  SceneControllerInteractive({
     SceneSnapshot? initialSnapshot,
     PointerInputSettings? pointerSettings,
     double? dragStartSlop,
@@ -1361,4 +1361,4 @@ class _InteractiveEventDispatcher {
   }
 }
 
-typedef SceneController = SceneControllerInteractiveV2;
+typedef SceneController = SceneControllerInteractive;

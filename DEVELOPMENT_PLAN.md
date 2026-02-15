@@ -220,14 +220,14 @@
 
 ## Этап 6 — Interactive: убрать `V2`, файл не режем
 
-* [ ] `SceneControllerInteractiveV2` → `SceneControllerInteractive`
-* [ ] Заменить ссылки `SceneControllerV2` → `SceneControllerCore`
-* [ ] Добавить/обновить `typedef SceneController = SceneControllerInteractive;` (без V2)
+* [x] `SceneControllerInteractiveV2` → `SceneControllerInteractive`
+* [x] Заменить ссылки `SceneControllerV2` → `SceneControllerCore`
+* [x] Добавить/обновить `typedef SceneController = SceneControllerInteractive;` (без V2)
 
 ### Проверки этапа
 
-* [ ] A + B
-* [ ] `flutter test test/interactive --coverage`
+* [x] A + B
+* [x] `flutter test test/interactive --coverage`
 
 ---
 

@@ -28,7 +28,7 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 Runtime aliases exposed publicly:
 
-- `SceneController` is a typedef alias of `SceneControllerInteractiveV2`
+- `SceneController` is a typedef alias of `SceneControllerInteractive`
 - `SceneView` is a typedef alias of `SceneViewInteractive`
 
 ## 3. Public API map
