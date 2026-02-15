@@ -143,20 +143,21 @@ class SceneWriter implements SceneWriteTxn {
   }
 
   @override
-  void writeSelectionReplace(Iterable<NodeId> ids) {
+  bool writeSelectionReplace(Iterable<NodeId> ids) {
     _ensureTxnActive();
     final next = HashSet<NodeId>.of(ids);
     if (_txnSetsEqual(_ctx.workingSelection, next)) {
-      return;
+      return false;
     }
     _ctx.workingSelection
       ..clear()
       ..addAll(next);
     _ctx.changeSet.txnMarkSelectionChanged();
+    return true;
   }
 
   @override
-  void writeSelectionToggle(NodeId id) {
+  bool writeSelectionToggle(NodeId id) {
     _ensureTxnActive();
     if (_ctx.workingSelection.contains(id)) {
       _ctx.workingSelection.remove(id);
@@ -164,6 +165,7 @@ class SceneWriter implements SceneWriteTxn {
       _ctx.workingSelection.add(id);
     }
     _ctx.changeSet.txnMarkSelectionChanged();
+    return true;
   }
 
   @override

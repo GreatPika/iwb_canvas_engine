@@ -37,11 +37,26 @@ void main() {
     await pumpEventQueue();
 
     expect(created, 'cmd-added');
-    expect(controller.snapshot.layers, hasLength(2));
-    expect(controller.snapshot.layers.first.nodes.length, 1);
-    expect(controller.snapshot.layers.last.nodes.single.id, 'cmd-added');
+    expect(controller.snapshot.layers, hasLength(1));
+    expect(controller.snapshot.layers.first.nodes, hasLength(2));
+    expect(controller.snapshot.layers.first.nodes.last.id, 'cmd-added');
     expect(controller.structuralRevision, 1);
     expect(notifications, 1);
+  });
+
+  test('add node without layerIndex does not create extra layers', () async {
+    final controller = buildController();
+    addTearDown(controller.dispose);
+
+    for (var i = 0; i < 100; i++) {
+      controller.commands.writeAddNode(
+        RectNodeSpec(id: 'auto-$i', size: const Size(6, 6)),
+      );
+    }
+    await pumpEventQueue();
+
+    expect(controller.snapshot.layers, hasLength(1));
+    expect(controller.snapshot.layers.first.nodes, hasLength(101));
   });
 
   test(
@@ -103,6 +118,7 @@ void main() {
       });
       addTearDown(sub.cancel);
 
+      controller.commands.writeSelectionReplace(const <NodeId>{'base'});
       controller.commands.writeSelectionClear();
       await pumpEventQueue();
       expect(signalTypes, contains('selection.cleared'));
@@ -151,4 +167,39 @@ void main() {
       );
     },
   );
+
+  test('selection clear on empty emits no signal', () async {
+    final controller = buildController();
+    addTearDown(controller.dispose);
+
+    final signalTypes = <String>[];
+    final sub = controller.signals.listen((signal) {
+      signalTypes.add(signal.type);
+    });
+    addTearDown(sub.cancel);
+
+    controller.commands.writeSelectionClear();
+    await pumpEventQueue();
+
+    expect(signalTypes, isNot(contains('selection.cleared')));
+  });
+
+  test('selection replace same set emits no signal', () async {
+    final controller = buildController();
+    addTearDown(controller.dispose);
+
+    final signalTypes = <String>[];
+    final sub = controller.signals.listen((signal) {
+      signalTypes.add(signal.type);
+    });
+    addTearDown(sub.cancel);
+
+    controller.commands.writeSelectionReplace(const <NodeId>{'base'});
+    await pumpEventQueue();
+    expect(signalTypes.where((type) => type == 'selection.replaced').length, 1);
+
+    controller.commands.writeSelectionReplace(const <NodeId>{'base'});
+    await pumpEventQueue();
+    expect(signalTypes.where((type) => type == 'selection.replaced').length, 1);
+  });
 }

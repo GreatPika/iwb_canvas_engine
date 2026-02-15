@@ -331,8 +331,8 @@ void main() {
       nodeId: 'new',
     );
     expect(insertedFound, isNotNull);
-    expect(insertedFound!.layerIndex, 2);
-    expect(insertedFound.nodeIndex, scene.layers[2].nodes.length - 1);
+    expect(insertedFound!.layerIndex, 1);
+    expect(insertedFound.nodeIndex, scene.layers[1].nodes.length - 1);
 
     final erased = txnEraseNodeFromScene(
       scene: scene,
@@ -444,7 +444,7 @@ void main() {
   });
 
   test(
-    'resolve layer index validates range and creates non-background layer',
+    'resolve layer index validates range and uses last existing layer by default',
     () {
       final scene = Scene(layers: <ContentLayer>[ContentLayer()]);
 
@@ -458,11 +458,23 @@ void main() {
       );
 
       final index = txnResolveInsertLayerIndex(scene: scene, layerIndex: null);
-      expect(index, 1);
-      expect(scene.layers.length, 2);
+      expect(index, 0);
+      expect(scene.layers.length, 1);
       expect(scene.layers.last, isA<ContentLayer>());
     },
   );
+
+  test('resolve layer index creates one layer for empty scene by default', () {
+    final emptyScene = Scene();
+
+    final index = txnResolveInsertLayerIndex(
+      scene: emptyScene,
+      layerIndex: null,
+    );
+    expect(index, 0);
+    expect(emptyScene.layers.length, 1);
+    expect(emptyScene.layers.last, isA<ContentLayer>());
+  });
 
   test('selection/grid helpers enforce transaction invariants', () {
     final scene = Scene(

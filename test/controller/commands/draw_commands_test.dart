@@ -54,4 +54,21 @@ void main() {
       containsAll(<String>['draw.stroke', 'draw.line', 'draw.erase']),
     );
   });
+
+  test('draw stroke without layerIndex does not create extra layers', () async {
+    final controller = buildController();
+    addTearDown(controller.dispose);
+
+    for (var i = 0; i < 100; i++) {
+      controller.draw.writeDrawStroke(
+        points: <Offset>[Offset(i.toDouble(), 0), Offset(i.toDouble() + 1, 0)],
+        thickness: 2,
+        color: const Color(0xFF000000),
+      );
+    }
+    await pumpEventQueue();
+
+    expect(controller.snapshot.layers, hasLength(1));
+    expect(controller.snapshot.layers.first.nodes, hasLength(101));
+  });
 }

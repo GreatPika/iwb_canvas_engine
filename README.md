@@ -92,6 +92,8 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Runtime: `SceneController`, `SceneView`, `SceneSnapshot`.
 - Safe transactional writes: `SceneWriteTxn` via `controller.write((txn) { ... })`.
 - Transaction handle lifetime: `SceneWriteTxn` write methods are valid only inside the active `write(...)` callback; post-callback `write*` calls throw `StateError`.
+- Selection transaction methods report no-op vs change explicitly:
+  - `writeSelectionReplace(...)`, `writeSelectionToggle(...)`, `writeSelectionClear()` return `bool changed`.
 - Write intents: `NodeSpec` variants.
 - Partial updates: `NodePatch` + tri-state `PatchField<T>`.
 - Text layout sizing is engine-derived: `TextNodeSpec`/`TextNodePatch` do not expose writable `size`; update text/style fields and the runtime recomputes text box bounds.

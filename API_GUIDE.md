@@ -335,6 +335,10 @@ public API surface.
 - Does not include `writeFindNode` or `writeMark*` escape methods.
 - Does not expose node-id bookkeeping internals; ids are allocated via structural writes (`writeNodeInsert`).
 - A transaction handle is valid only during the active `write((txn) { ... })` callback; calling any `write*` method after callback completion throws `StateError`.
+- Selection write contracts are explicit about state-change:
+  - `writeSelectionReplace(...) -> bool changed`
+  - `writeSelectionToggle(...) -> bool changed`
+  - `writeSelectionClear() -> bool changed`
 
 Prefer high-level command methods unless custom transactional logic is required.
 

@@ -798,7 +798,10 @@ int txnResolveInsertLayerIndex({required Scene scene, int? layerIndex}) {
     }
     return layerIndex;
   }
-  scene.layers.add(ContentLayer());
+  if (scene.layers.isEmpty) {
+    scene.layers.add(ContentLayer());
+    return 0;
+  }
   return scene.layers.length - 1;
 }
 

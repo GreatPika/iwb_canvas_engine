@@ -47,27 +47,33 @@ class SceneCommands {
 
   void writeSelectionReplace(Iterable<NodeId> nodeIds) {
     _writeRunner((writer) {
-      writer.writeSelectionReplace(nodeIds);
-      writer.writeSignalEnqueue(type: 'selection.replaced', nodeIds: nodeIds);
+      final changed = writer.writeSelectionReplace(nodeIds);
+      if (changed) {
+        writer.writeSignalEnqueue(type: 'selection.replaced', nodeIds: nodeIds);
+      }
       return null;
     });
   }
 
   void writeSelectionToggle(NodeId nodeId) {
     _writeRunner((writer) {
-      writer.writeSelectionToggle(nodeId);
-      writer.writeSignalEnqueue(
-        type: 'selection.toggled',
-        nodeIds: <NodeId>[nodeId],
-      );
+      final changed = writer.writeSelectionToggle(nodeId);
+      if (changed) {
+        writer.writeSignalEnqueue(
+          type: 'selection.toggled',
+          nodeIds: <NodeId>[nodeId],
+        );
+      }
       return null;
     });
   }
 
   void writeSelectionClear() {
     _writeRunner((writer) {
-      writer.writeSelectionClear();
-      writer.writeSignalEnqueue(type: 'selection.cleared');
+      final changed = writer.writeSelectionClear();
+      if (changed) {
+        writer.writeSignalEnqueue(type: 'selection.cleared');
+      }
       return null;
     });
   }

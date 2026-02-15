@@ -23,6 +23,10 @@
   - removed `movePreviewDeltaForNode(...)`.
 - The legacy interactive view constructor no longer exposes `geometryCache`; geometry cache ownership is fully internal to keep non-exported render-cache types out of public signatures.
 - Removed public legacy path fill rule enum; path node public contracts now use `PathFillRule`.
+- `SceneWriteTxn` selection mutators now return `bool changed`:
+  - `writeSelectionReplace(Iterable<NodeId>) -> bool`
+  - `writeSelectionToggle(NodeId) -> bool`
+  - `writeSelectionClear() -> bool` (unchanged signature, now documented as changed/no-op contract alongside replace/toggle)
 
 ### Changed
 

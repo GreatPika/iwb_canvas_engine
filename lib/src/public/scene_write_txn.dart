@@ -27,8 +27,8 @@ abstract interface class SceneWriteTxn {
   bool writeNodePatch(NodePatch patch);
   bool writeNodeTransformSet(NodeId id, Transform2D transform);
 
-  void writeSelectionReplace(Iterable<NodeId> ids);
-  void writeSelectionToggle(NodeId id);
+  bool writeSelectionReplace(Iterable<NodeId> ids);
+  bool writeSelectionToggle(NodeId id);
   bool writeSelectionClear();
   int writeSelectionSelectAll({bool onlySelectable = true});
 
