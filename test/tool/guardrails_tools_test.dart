@@ -25,6 +25,48 @@ void main() {
       }
     });
 
+    test('allows view -> interactive import', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(
+          sandbox,
+          'lib/src/interactive/controller.dart',
+          'class InteractiveController {}\n',
+        );
+        _writeFile(
+          sandbox,
+          'lib/src/view/widget.dart',
+          "import 'package:iwb_canvas_engine/src/interactive/controller.dart';\n",
+        );
+
+        final result = await _runTool(sandbox, 'check_import_boundaries.dart');
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('allows serialization -> model import', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(
+          sandbox,
+          'lib/src/model/document.dart',
+          'class Document {}\n',
+        );
+        _writeFile(
+          sandbox,
+          'lib/src/serialization/codec.dart',
+          "import 'package:iwb_canvas_engine/src/model/document.dart';\n",
+        );
+
+        final result = await _runTool(sandbox, 'check_import_boundaries.dart');
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
     test('rejects core -> controller import', () async {
       final sandbox = await _createSandbox();
       try {
@@ -45,6 +87,29 @@ void main() {
           result.stderr.toString(),
           contains(
             'layer boundary violation: core/** must not import controller/**',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects core -> model import', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(sandbox, 'lib/src/model/types.dart', 'class ModelType {}\n');
+        _writeFile(
+          sandbox,
+          'lib/src/core/value.dart',
+          "import 'package:iwb_canvas_engine/src/model/types.dart';\n",
+        );
+
+        final result = await _runTool(sandbox, 'check_import_boundaries.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains(
+            'layer boundary violation: core/** must not import model/**',
           ),
         );
       } finally {
@@ -96,6 +161,24 @@ void main() {
         expect(
           result.stderr.toString(),
           contains('commands/** must not import other commands'),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects unknown layer under lib/src', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(sandbox, 'lib/src/unknown/z.dart', 'class Unknown {}\n');
+
+        final result = await _runTool(sandbox, 'check_import_boundaries.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains(
+            'layer classification violation: file is under lib/src/** but has no known layer',
+          ),
         );
       } finally {
         sandbox.deleteSync(recursive: true);

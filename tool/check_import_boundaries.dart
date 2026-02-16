@@ -63,12 +63,26 @@ String _posixJoin(String a, String b) {
 
 String _toPosixPath(String path) => path.replaceAll('\\', '/');
 
-enum _Layer { core, controller, render, serialization, view }
+enum _Layer {
+  core,
+  model,
+  publicApi,
+  controller,
+  interactive,
+  render,
+  serialization,
+  view,
+}
 
 _Layer? _layerForRepoRelPosixPath(String repoRelPosixPath) {
   if (repoRelPosixPath.startsWith('/lib/src/core/')) return _Layer.core;
+  if (repoRelPosixPath.startsWith('/lib/src/model/')) return _Layer.model;
+  if (repoRelPosixPath.startsWith('/lib/src/public/')) return _Layer.publicApi;
   if (repoRelPosixPath.startsWith('/lib/src/controller/')) {
     return _Layer.controller;
+  }
+  if (repoRelPosixPath.startsWith('/lib/src/interactive/')) {
+    return _Layer.interactive;
   }
   if (repoRelPosixPath.startsWith('/lib/src/render/')) return _Layer.render;
   if (repoRelPosixPath.startsWith('/lib/src/serialization/')) {
@@ -82,8 +96,14 @@ String _layerLabel(_Layer layer) {
   switch (layer) {
     case _Layer.core:
       return 'core';
+    case _Layer.model:
+      return 'model';
+    case _Layer.publicApi:
+      return 'public';
     case _Layer.controller:
       return 'controller';
+    case _Layer.interactive:
+      return 'interactive';
     case _Layer.render:
       return 'render';
     case _Layer.serialization:
@@ -94,22 +114,35 @@ String _layerLabel(_Layer layer) {
 }
 
 bool _isAllowedLayerDependency({required _Layer from, required _Layer to}) {
+  if (from == to) {
+    return true;
+  }
+
   switch (from) {
     case _Layer.core:
-      return to == _Layer.core;
+      return to == _Layer.publicApi;
+    case _Layer.model:
+      return to == _Layer.core || to == _Layer.publicApi;
+    case _Layer.publicApi:
+      return to == _Layer.core || to == _Layer.model;
     case _Layer.serialization:
-      return to == _Layer.core || to == _Layer.serialization;
+      return to == _Layer.core || to == _Layer.model || to == _Layer.publicApi;
     case _Layer.controller:
-      return to == _Layer.core || to == _Layer.controller;
-    case _Layer.render:
+      return to == _Layer.core || to == _Layer.model || to == _Layer.publicApi;
+    case _Layer.interactive:
       return to == _Layer.core ||
           to == _Layer.controller ||
-          to == _Layer.render;
+          to == _Layer.publicApi ||
+          to == _Layer.model;
+    case _Layer.render:
+      return to == _Layer.core || to == _Layer.model || to == _Layer.publicApi;
     case _Layer.view:
       return to == _Layer.core ||
           to == _Layer.controller ||
+          to == _Layer.interactive ||
           to == _Layer.render ||
-          to == _Layer.view;
+          to == _Layer.publicApi ||
+          to == _Layer.model;
   }
 }
 
@@ -355,6 +388,19 @@ void main(List<String> args) {
       rootAbsPosixPath: rootAbsPosix,
     );
     final fileLayer = _layerForRepoRelPosixPath(filePosixPath);
+    if (filePosixPath.startsWith('/lib/src/') && fileLayer == null) {
+      violations.add(
+        _Violation(
+          filePath: filePosixPath,
+          line: 1,
+          directive: 'layer',
+          target: filePosixPath,
+          message:
+              'layer classification violation: file is under lib/src/** but has no known layer',
+        ),
+      );
+      continue;
+    }
     if (fileLayer == null) {
       continue;
     }
@@ -418,8 +464,22 @@ void main(List<String> args) {
           if (resolvedRepoRelPosix != null &&
               resolvedRepoRelPosix.startsWith('/lib/src/')) {
             final targetLayer = _layerForRepoRelPosixPath(resolvedRepoRelPosix);
-            if (targetLayer != null &&
-                !_isAllowedLayerDependency(from: fileLayer, to: targetLayer)) {
+            if (targetLayer == null) {
+              violations.add(
+                _Violation(
+                  filePath: filePosixPath,
+                  line: lineNo,
+                  directive: directive,
+                  target: target,
+                  message:
+                      'layer classification violation: unresolved target layer '
+                      'for $resolvedRepoRelPosix',
+                ),
+              );
+            } else if (!_isAllowedLayerDependency(
+              from: fileLayer,
+              to: targetLayer,
+            )) {
               violations.add(
                 _Violation(
                   filePath: filePosixPath,
