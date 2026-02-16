@@ -60,6 +60,8 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
   void Function()? debugBeforeInvariantPrecheckHook;
   @visibleForTesting
   void Function()? debugBeforeSpatialPrepareCommitHook;
+  @visibleForTesting
+  void Function()? debugBeforeTxnContextCreateHook;
 
   late final SceneCommands commands = SceneCommands(write);
   late final MoveCommands move = MoveCommands(write);
@@ -164,14 +166,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
     }
 
     _writeInProgress = true;
-    final ctx = TxnContext(
-      baseScene: _store.sceneDoc,
-      workingSelection: HashSet<NodeId>.of(_store.selectedNodeIds),
-      baseAllNodeIds: _store.allNodeIds,
-      baseNodeLocator: _store.nodeLocator,
-      nodeIdSeed: _store.nodeIdSeed,
-      nextInstanceRevision: _store.nextInstanceRevision,
-    );
+    TxnContext? ctx;
 
     late final T result;
     var commitResult = const _TxnWriteCommitResult(
@@ -180,18 +175,28 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
     );
 
     try {
+      debugBeforeTxnContextCreateHook?.call();
+      final createdCtx = TxnContext(
+        baseScene: _store.sceneDoc,
+        workingSelection: HashSet<NodeId>.of(_store.selectedNodeIds),
+        baseAllNodeIds: _store.allNodeIds,
+        baseNodeLocator: _store.nodeLocator,
+        nodeIdSeed: _store.nodeIdSeed,
+        nextInstanceRevision: _store.nextInstanceRevision,
+      );
+      ctx = createdCtx;
       final writer = SceneWriter(
-        ctx,
+        createdCtx,
         txnSignalSink: _signalsBuffer.writeBufferSignal,
       );
       result = fn(writer);
-      commitResult = _txnWriteCommit(ctx);
+      commitResult = _txnWriteCommit(createdCtx);
     } catch (_) {
       _signalsBuffer.writeDiscardBuffered();
       _repaintFlag.writeDiscardPending();
       rethrow;
     } finally {
-      ctx.txnClose();
+      ctx?.txnClose();
       _writeInProgress = false;
     }
 

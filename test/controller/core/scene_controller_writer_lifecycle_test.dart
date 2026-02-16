@@ -32,6 +32,30 @@ void main() {
     );
   });
 
+  test('pre-context failure does not lock future writes', () {
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    controller.debugBeforeTxnContextCreateHook = () {
+      throw StateError('forced pre-context failure');
+    };
+
+    expect(
+      () => controller.write<void>((_) {}),
+      throwsStateError,
+    );
+
+    controller.debugBeforeTxnContextCreateHook = null;
+    expect(
+      () => controller.write<void>((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'r1'});
+      }),
+      returnsNormally,
+    );
+    expect(controller.selectedNodeIds, const <NodeId>{'r1'});
+    expect(controller.debugCommitRevision, 1);
+  });
+
   test(
     'stale txn handle after commit throws and does not emit effects',
     () async {
