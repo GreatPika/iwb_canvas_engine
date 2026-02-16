@@ -124,6 +124,12 @@ const List<Invariant> invariants = <Invariant>[
         'interactive pointer entrypoints ignore non-finite coordinates without mutating state or emitting effects',
   ),
   Invariant(
+    id: 'INV-ENG-INTERACTIVE-SINGLE-ACTIVE-POINTER',
+    scope: 'engine-runtime',
+    title:
+        'interactive gestures keep a single active pointer and ignore parallel pointer ids until gesture end',
+  ),
+  Invariant(
     id: 'INV-ENG-EPOCH-INVALIDATION',
     scope: 'engine-runtime',
     title: 'replace-scene lifecycle preserves epoch invalidation',

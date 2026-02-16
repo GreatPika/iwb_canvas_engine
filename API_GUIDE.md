@@ -366,6 +366,8 @@ Write-notify semantics:
 
 - `CanvasMode.move`: selection, drag move, marquee
 - `CanvasMode.draw`: pen/highlighter/line/eraser
+- Single-active-pointer policy: each active gesture is owned by one `pointerId`; events from parallel pointer ids are ignored until the active gesture ends with `up`/`cancel`.
+- After active gesture end (`up` or `cancel`), a new `pointerId` can immediately start the next gesture.
 
 ### 7.2 Draw tool behavior
 
@@ -383,6 +385,7 @@ Write-notify semantics:
 - During move drag, selected nodes are translated in preview only (render/hit-test use effective preview bounds).
 - The scene snapshot is committed once on pointer up with the accumulated drag delta.
 - Pointer cancel clears preview and does not mutate scene geometry.
+- While move drag is active, only the active `pointerId` can update/cancel/commit that gesture.
 
 ### 7.4 Double tap behavior
 

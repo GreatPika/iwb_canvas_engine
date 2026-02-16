@@ -77,6 +77,7 @@ Key invariants:
 - Interactive `ChangeNotifier` notifications are never synchronous inside `handlePointer(...)`; they are microtask-deferred and coalesced.
 - Interactive `actions` / `editTextRequests` streams are delivered asynchronously (never in the same call stack as mutation methods).
 - Interactive pointer entrypoints ignore non-finite coordinates (`NaN`/`Infinity`) as no-op without mutating state or emitting effects.
+- Interactive gesture processing keeps a single active pointer id; parallel pointer ids are ignored until the active gesture ends (`up`/`cancel`).
 - Interactive drag-start threshold uses `dragStartSlop` for both move and line gestures; when unset, it falls back to `pointerSettings.tapSlop`.
 - Interactive draw-pointer `cancel` clears active draw preview state and pending two-tap line start.
 - Relative ordering between interactive stream delivery and repaint listener notification is intentionally not a public contract.
