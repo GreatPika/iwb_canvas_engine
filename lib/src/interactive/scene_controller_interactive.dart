@@ -65,6 +65,22 @@ int sceneControllerInteractiveInternalActiveEraserPointsLength(
   return controller._activeEraserPoints.length;
 }
 
+int sceneControllerInteractiveInternalEraserSpatialQueryCount(
+  SceneControllerInteractive controller,
+) {
+  // Test-only metric: number of coarse spatial queries used by last eraser
+  // commit. Helps keep complexity guards deterministic across environments.
+  return controller._debugEraserSpatialQueryCount;
+}
+
+int sceneControllerInteractiveInternalEraserPreciseSegmentCheckCount(
+  SceneControllerInteractive controller,
+) {
+  // Test-only metric: number of exact segment-to-segment checks during last
+  // eraser commit. Used as primary perf acceptance signal.
+  return controller._debugEraserPreciseSegmentChecks;
+}
+
 class SceneControllerInteractive extends ChangeNotifier
     implements SceneRenderState {
   SceneControllerInteractive({
@@ -127,8 +143,21 @@ class SceneControllerInteractive extends ChangeNotifier
   bool _isDisposed = false;
   bool _handlingPointer = false;
   VoidCallback? _debugBeforeHandlePointerDispatchHook;
+  int _debugEraserSpatialQueryCount = 0;
+  int _debugEraserPreciseSegmentChecks = 0;
 
   static const Duration _pendingLineTimeout = Duration(seconds: 10);
+  // Eraser batching constants tune the coarse-vs-precise tradeoff:
+  // - larger values reduce spatial queries but widen candidate prefilter bounds;
+  // - smaller values increase query overhead.
+  // Invariant: complexity should stay sub-linear for spatial queries and bounded
+  // for precise checks in long gestures. Validate with:
+  // - "long eraser commit keeps bounded query/check complexity"
+  // - "eraser zigzag path keeps coarse prefilter correctness and bounded checks"
+  // Do not change these constants without updating perf acceptance tests.
+  static const int _eraserQueryBatchSegments = 64;
+  static const int _eraserHitBatchSegments = 64;
+  static const int _strokeHitBatchSegments = 32;
 
   @override
   SceneSnapshot get snapshot => _core.snapshot;
@@ -962,6 +991,8 @@ class SceneControllerInteractive extends ChangeNotifier
 
   void _commitEraser(int timestampMs, Offset scenePoint) {
     if (_activeEraserPoints.isEmpty) return;
+    _debugEraserSpatialQueryCount = 0;
+    _debugEraserPreciseSegmentChecks = 0;
     if (isDistanceGreaterThan(_activeEraserPoints.last, scenePoint, 0)) {
       _activeEraserPoints.add(scenePoint);
       _enforceGestureBufferSoftLimit(
@@ -1023,17 +1054,28 @@ class SceneControllerInteractive extends ChangeNotifier
         0,
         0,
       ).inflate(queryPadding);
-      for (final candidate in _core.querySpatialCandidates(probe)) {
+      for (final candidate in _querySpatialCandidatesForEraser(probe)) {
         byId[candidate.node.id] = candidate;
       }
       return byId.values.toList(growable: false);
     }
 
-    for (var i = 0; i < eraserPoints.length - 1; i++) {
-      final a = eraserPoints[i];
-      final b = eraserPoints[i + 1];
-      final segmentBounds = Rect.fromPoints(a, b).inflate(queryPadding);
-      for (final candidate in _core.querySpatialCandidates(segmentBounds)) {
+    final segmentCount = eraserPoints.length - 1;
+    for (
+      var segmentStart = 0;
+      segmentStart < segmentCount;
+      segmentStart += _eraserQueryBatchSegments
+    ) {
+      final segmentEndExclusive = math.min(
+        segmentStart + _eraserQueryBatchSegments,
+        segmentCount,
+      );
+      final batchBounds = _segmentRangeBounds(
+        eraserPoints,
+        segmentStart: segmentStart,
+        segmentEndExclusive: segmentEndExclusive,
+      ).inflate(queryPadding);
+      for (final candidate in _querySpatialCandidatesForEraser(batchBounds)) {
         byId[candidate.node.id] = candidate;
       }
     }
@@ -1075,15 +1117,26 @@ class SceneControllerInteractive extends ChangeNotifier
           thresholdSquared;
     }
 
-    for (var i = 0; i < localEraserPoints.length - 1; i++) {
-      if (distanceSquaredSegmentToSegment(
-            localEraserPoints[i],
-            localEraserPoints[i + 1],
-            line.start,
-            line.end,
-          ) <=
-          thresholdSquared) {
-        return true;
+    final lineBounds = Rect.fromPoints(line.start, line.end);
+    final eraserBatches = _buildSegmentBatches(
+      localEraserPoints,
+      batchSize: _eraserHitBatchSegments,
+    );
+    for (final batch in eraserBatches) {
+      if (!_rectsCanBeWithinDistance(batch.bounds, lineBounds, threshold)) {
+        continue;
+      }
+      for (var i = batch.startSegment; i < batch.endSegmentExclusive; i++) {
+        _debugEraserPreciseSegmentChecks = _debugEraserPreciseSegmentChecks + 1;
+        if (distanceSquaredSegmentToSegment(
+              localEraserPoints[i],
+              localEraserPoints[i + 1],
+              line.start,
+              line.end,
+            ) <=
+            thresholdSquared) {
+          return true;
+        }
       }
     }
     return false;
@@ -1133,21 +1186,125 @@ class SceneControllerInteractive extends ChangeNotifier
       return false;
     }
 
-    for (var i = 0; i < localEraserPoints.length - 1; i++) {
-      for (var j = 0; j < stroke.points.length - 1; j++) {
-        if (distanceSquaredSegmentToSegment(
-              localEraserPoints[i],
-              localEraserPoints[i + 1],
-              stroke.points[j],
-              stroke.points[j + 1],
-            ) <=
-            thresholdSquared) {
-          return true;
+    final eraserBatches = _buildSegmentBatches(
+      localEraserPoints,
+      batchSize: _eraserHitBatchSegments,
+    );
+    final strokeBatches = _buildSegmentBatches(
+      stroke.points,
+      batchSize: _strokeHitBatchSegments,
+    );
+    for (final eraserBatch in eraserBatches) {
+      for (final strokeBatch in strokeBatches) {
+        if (!_rectsCanBeWithinDistance(
+          eraserBatch.bounds,
+          strokeBatch.bounds,
+          threshold,
+        )) {
+          continue;
+        }
+        for (
+          var i = eraserBatch.startSegment;
+          i < eraserBatch.endSegmentExclusive;
+          i++
+        ) {
+          for (
+            var j = strokeBatch.startSegment;
+            j < strokeBatch.endSegmentExclusive;
+            j++
+          ) {
+            _debugEraserPreciseSegmentChecks =
+                _debugEraserPreciseSegmentChecks + 1;
+            if (distanceSquaredSegmentToSegment(
+                  localEraserPoints[i],
+                  localEraserPoints[i + 1],
+                  stroke.points[j],
+                  stroke.points[j + 1],
+                ) <=
+                thresholdSquared) {
+              return true;
+            }
+          }
         }
       }
     }
 
     return false;
+  }
+
+  List<SceneSpatialCandidate> _querySpatialCandidatesForEraser(Rect bounds) {
+    _debugEraserSpatialQueryCount = _debugEraserSpatialQueryCount + 1;
+    return _core.querySpatialCandidates(bounds);
+  }
+
+  List<_SegmentBatch> _buildSegmentBatches(
+    List<Offset> points, {
+    required int batchSize,
+  }) {
+    if (points.length <= 1) return const <_SegmentBatch>[];
+    final batches = <_SegmentBatch>[];
+    final segmentCount = points.length - 1;
+    for (
+      var segmentStart = 0;
+      segmentStart < segmentCount;
+      segmentStart += batchSize
+    ) {
+      final segmentEndExclusive = math.min(
+        segmentStart + batchSize,
+        segmentCount,
+      );
+      batches.add(
+        _SegmentBatch(
+          startSegment: segmentStart,
+          endSegmentExclusive: segmentEndExclusive,
+          bounds: _segmentRangeBounds(
+            points,
+            segmentStart: segmentStart,
+            segmentEndExclusive: segmentEndExclusive,
+          ),
+        ),
+      );
+    }
+    return batches;
+  }
+
+  Rect _segmentRangeBounds(
+    List<Offset> points, {
+    required int segmentStart,
+    required int segmentEndExclusive,
+  }) {
+    assert(points.length >= 2);
+    assert(segmentStart >= 0);
+    assert(segmentEndExclusive > segmentStart);
+    assert(segmentEndExclusive <= points.length - 1);
+    var minX = points[segmentStart].dx;
+    var minY = points[segmentStart].dy;
+    var maxX = minX;
+    var maxY = minY;
+    for (var i = segmentStart; i < segmentEndExclusive; i++) {
+      final a = points[i];
+      final b = points[i + 1];
+      minX = math.min(minX, math.min(a.dx, b.dx));
+      minY = math.min(minY, math.min(a.dy, b.dy));
+      maxX = math.max(maxX, math.max(a.dx, b.dx));
+      maxY = math.max(maxY, math.max(a.dy, b.dy));
+    }
+    return Rect.fromLTRB(minX, minY, maxX, maxY);
+  }
+
+  bool _rectsCanBeWithinDistance(Rect left, Rect right, double distance) {
+    final safeDistance = distance.isFinite ? math.max(0, distance) : 0.0;
+    final dx = left.right < right.left
+        ? right.left - left.right
+        : right.right < left.left
+        ? left.left - right.right
+        : 0.0;
+    final dy = left.bottom < right.top
+        ? right.top - left.bottom
+        : right.bottom < left.top
+        ? left.top - right.bottom
+        : 0.0;
+    return dx * dx + dy * dy <= safeDistance * safeDistance;
   }
 
   Set<NodeId> _nodesIntersecting(Rect rect) {
@@ -1464,6 +1621,18 @@ class SceneControllerInteractive extends ChangeNotifier
 }
 
 enum _MoveDragTarget { none, move, marquee }
+
+class _SegmentBatch {
+  const _SegmentBatch({
+    required this.startSegment,
+    required this.endSegmentExclusive,
+    required this.bounds,
+  });
+
+  final int startSegment;
+  final int endSegmentExclusive;
+  final Rect bounds;
+}
 
 class _InteractiveEventDispatcher {
   final StreamController<ActionCommitted> _actions =
