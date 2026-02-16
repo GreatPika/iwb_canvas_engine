@@ -66,6 +66,8 @@
 - Commit invariant checks are now always enforced at runtime in all build modes (`debug`/`profile`/`release`) and throw `StateError` on violations.
 - CI now runs `dart run tool/check_guardrails.dart` in the main `ci.yaml` workflow.
 - Draw command `writeDrawStroke(...)` now enforces `kMaxStrokePointsPerNode = 20_000` with deterministic index-uniform downsampling (endpoints preserved), matching interactive stroke guardrails.
+- Interactive long-gesture buffers are now bounded during active input: stroke preview uses soft-cap/trim (`22_000 -> 18_000`) and eraser path uses soft-cap/trim (`8_000 -> 4_000`) with deterministic endpoint-preserving downsampling.
+- Interactive gesture buffer soft-limit configuration now fails fast on invalid parameters (`softLimit >= 2`, `trimTo >= 2`, `trimTo < softLimit`) with explicit `ArgumentError`.
 - Added shared command-test helper `test/utils/scene_invariants.dart` and wired scene invariant assertions into command test suites.
 - Added command-level negative contract tests for invalid `layerIndex`, non-finite translation delta, non-positive grid cell size, and non-positive line thickness.
 

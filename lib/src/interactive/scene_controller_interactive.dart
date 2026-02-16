@@ -46,6 +46,25 @@ void sceneControllerInteractiveInternalSetBeforePointerDispatchHook(
   controller._debugBeforeHandlePointerDispatchHook = hook;
 }
 
+void sceneControllerInteractiveInternalEnforceGestureBufferSoftLimitForTest(
+  SceneControllerInteractive controller, {
+  required List<Offset> points,
+  required int softLimit,
+  required int trimTo,
+}) {
+  controller._enforceGestureBufferSoftLimit(
+    points,
+    softLimit: softLimit,
+    trimTo: trimTo,
+  );
+}
+
+int sceneControllerInteractiveInternalActiveEraserPointsLength(
+  SceneControllerInteractive controller,
+) {
+  return controller._activeEraserPoints.length;
+}
+
 class SceneControllerInteractive extends ChangeNotifier
     implements SceneRenderState {
   SceneControllerInteractive({
@@ -698,6 +717,11 @@ class SceneControllerInteractive extends ChangeNotifier
               kInputDecimationMinStepScene,
             )) {
           _activeStrokePoints.add(scenePoint);
+          _enforceGestureBufferSoftLimit(
+            _activeStrokePoints,
+            softLimit: kInteractiveStrokePointsSoftLimit,
+            trimTo: kInteractiveStrokePointsTrimTo,
+          );
           _scheduleNotify();
         }
         break;
@@ -722,6 +746,11 @@ class SceneControllerInteractive extends ChangeNotifier
           kInputDecimationMinStepScene,
         )) {
           _activeEraserPoints.add(scenePoint);
+          _enforceGestureBufferSoftLimit(
+            _activeEraserPoints,
+            softLimit: kInteractiveEraserPointsSoftLimit,
+            trimTo: kInteractiveEraserPointsTrimTo,
+          );
           _scheduleNotify();
         }
         break;
@@ -755,7 +784,7 @@ class SceneControllerInteractive extends ChangeNotifier
     if (isDistanceGreaterThan(_activeStrokePoints.last, scenePoint, 0)) {
       _activeStrokePoints.add(scenePoint);
     }
-    final committedPoints = _resampleStrokePointsToLimit(
+    final committedPoints = _resamplePointsToLimit(
       _activeStrokePoints,
       limit: kMaxStrokePointsPerNode,
     );
@@ -787,7 +816,7 @@ class SceneControllerInteractive extends ChangeNotifier
     _activeStrokePoints.clear();
   }
 
-  List<Offset> _resampleStrokePointsToLimit(
+  List<Offset> _resamplePointsToLimit(
     List<Offset> points, {
     required int limit,
   }) {
@@ -799,6 +828,56 @@ class SceneControllerInteractive extends ChangeNotifier
       final sourceIndex = (i * (sourceCount - 1)) ~/ (limit - 1);
       return points[sourceIndex];
     }, growable: false);
+  }
+
+  // Active gesture buffers are intentionally separate from committed scene
+  // state because they drive live preview and final commit geometry. Keep the
+  // buffers bounded and endpoint-preserving; validated by long-gesture tests.
+  void _enforceGestureBufferSoftLimit(
+    List<Offset> points, {
+    required int softLimit,
+    required int trimTo,
+  }) {
+    if (softLimit < 2) {
+      throw ArgumentError.value(
+        softLimit,
+        'softLimit',
+        'Must be >= 2 for endpoint-preserving resample.',
+      );
+    }
+    if (trimTo < 2) {
+      throw ArgumentError.value(
+        trimTo,
+        'trimTo',
+        'Must be >= 2 for endpoint-preserving resample.',
+      );
+    }
+    if (trimTo >= softLimit) {
+      throw ArgumentError.value(
+        trimTo,
+        'trimTo',
+        'Must be < softLimit to preserve hysteresis.',
+      );
+    }
+    assert(
+      softLimit >= 2,
+      'softLimit must be >= 2 for endpoint-preserving resample.',
+    );
+    assert(
+      trimTo >= 2,
+      'trimTo must be >= 2 for endpoint-preserving resample.',
+    );
+    assert(
+      trimTo < softLimit,
+      'trimTo must be < softLimit to preserve hysteresis.',
+    );
+    if (points.length <= softLimit) {
+      return;
+    }
+    final trimmed = _resamplePointsToLimit(points, limit: trimTo);
+    points
+      ..clear()
+      ..addAll(trimmed);
   }
 
   void _commitLine(int timestampMs, Offset scenePoint) {
@@ -852,6 +931,11 @@ class SceneControllerInteractive extends ChangeNotifier
     if (_activeEraserPoints.isEmpty) return;
     if (isDistanceGreaterThan(_activeEraserPoints.last, scenePoint, 0)) {
       _activeEraserPoints.add(scenePoint);
+      _enforceGestureBufferSoftLimit(
+        _activeEraserPoints,
+        softLimit: kInteractiveEraserPointsSoftLimit,
+        trimTo: kInteractiveEraserPointsTrimTo,
+      );
     }
 
     final deletedIds = _eraseAnnotations(_activeEraserPoints);

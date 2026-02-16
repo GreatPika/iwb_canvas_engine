@@ -5,8 +5,12 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart' hide NodeId;
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/core/grid_safety_limits.dart';
+import 'package:iwb_canvas_engine/src/core/scene_limits.dart';
 import 'package:iwb_canvas_engine/src/interactive/scene_controller_interactive.dart'
-    show sceneControllerInteractiveInternalSetBeforePointerDispatchHook;
+    show
+        sceneControllerInteractiveInternalActiveEraserPointsLength,
+        sceneControllerInteractiveInternalEnforceGestureBufferSoftLimitForTest,
+        sceneControllerInteractiveInternalSetBeforePointerDispatchHook;
 import 'package:iwb_canvas_engine/src/model/document.dart';
 
 NodeSnapshot _nodeById(SceneSnapshot snapshot, NodeId id) {
@@ -1239,6 +1243,280 @@ void main() {
       expect(
         strokeSnap.points.last,
         Offset((totalRawPoints - 1).toDouble(), 0),
+      );
+    });
+
+    test('pen preview buffer is soft-capped during long move', () {
+      final controller = SceneControllerInteractive(
+        initialSnapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(),
+            ContentLayerSnapshot(),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      controller.setMode(CanvasMode.draw);
+      controller.setDrawTool(DrawTool.pen);
+
+      controller.handlePointer(
+        _sample(
+          pointerId: 1,
+          position: const Offset(0, 0),
+          timestampMs: 1,
+          phase: CanvasPointerPhase.down,
+        ),
+      );
+
+      for (var i = 1; i <= 26000; i++) {
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: Offset(i.toDouble(), 0),
+            timestampMs: i + 1,
+            phase: CanvasPointerPhase.move,
+          ),
+        );
+      }
+
+      expect(controller.hasActiveStrokePreview, isTrue);
+      expect(
+        controller.activeStrokePreviewPoints.length,
+        lessThanOrEqualTo(kInteractiveStrokePointsSoftLimit),
+      );
+    });
+
+    test('soft-capped stroke preview keeps endpoints after pruning', () {
+      final controller = SceneControllerInteractive(
+        initialSnapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(),
+            ContentLayerSnapshot(),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      controller.setMode(CanvasMode.draw);
+      controller.setDrawTool(DrawTool.pen);
+
+      controller.handlePointer(
+        _sample(
+          pointerId: 1,
+          position: const Offset(0, 0),
+          timestampMs: 1,
+          phase: CanvasPointerPhase.down,
+        ),
+      );
+
+      const latestPoint = Offset(26000, 0);
+      for (var i = 1; i <= latestPoint.dx; i++) {
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: Offset(i.toDouble(), 0),
+            timestampMs: i + 1,
+            phase: CanvasPointerPhase.move,
+          ),
+        );
+      }
+
+      expect(controller.activeStrokePreviewPoints, isNotEmpty);
+      expect(controller.activeStrokePreviewPoints.first, const Offset(0, 0));
+      expect(controller.activeStrokePreviewPoints.last, latestPoint);
+    });
+
+    test('eraser long gesture remains bounded and erases near both ends', () {
+      final startLine = LineNode(
+        id: 'line-start',
+        start: const Offset(-12, 0),
+        end: const Offset(12, 0),
+        thickness: 2,
+        color: const Color(0xFF000000),
+      )..position = const Offset(20, 50);
+      final endLine = LineNode(
+        id: 'line-end',
+        start: const Offset(-12, 0),
+        end: const Offset(12, 0),
+        thickness: 2,
+        color: const Color(0xFF000000),
+      )..position = const Offset(9000, 50);
+
+      final controller = _controllerFromScene(
+        Scene(
+          layers: <ContentLayer>[
+            ContentLayer(),
+            ContentLayer(nodes: <SceneNode>[startLine, endLine]),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      controller.setMode(CanvasMode.draw);
+      controller.setDrawTool(DrawTool.eraser);
+      controller.eraserThickness = 24;
+
+      controller.handlePointer(
+        _sample(
+          pointerId: 1,
+          position: const Offset(20, 50),
+          timestampMs: 1,
+          phase: CanvasPointerPhase.down,
+        ),
+      );
+      for (var i = 21; i <= 9000; i++) {
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: Offset(i.toDouble(), 50),
+            timestampMs: i,
+            phase: CanvasPointerPhase.move,
+          ),
+        );
+      }
+      controller.handlePointer(
+        _sample(
+          pointerId: 1,
+          position: const Offset(9000, 50),
+          timestampMs: 9001,
+          phase: CanvasPointerPhase.up,
+        ),
+      );
+
+      final ids = <NodeId>{
+        for (final layer in controller.snapshot.layers)
+          for (final node in layer.nodes) node.id,
+      };
+      expect(ids.contains('line-start'), isFalse);
+      expect(ids.contains('line-end'), isFalse);
+    });
+
+    test('long eraser gesture does not throw', () {
+      final controller = SceneControllerInteractive(
+        initialSnapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(),
+            ContentLayerSnapshot(),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      controller.setMode(CanvasMode.draw);
+      controller.setDrawTool(DrawTool.eraser);
+
+      expect(() {
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: const Offset(0, 0),
+            timestampMs: 1,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+        for (var i = 1; i <= 20000; i++) {
+          controller.handlePointer(
+            _sample(
+              pointerId: 1,
+              position: Offset(i.toDouble(), 0),
+              timestampMs: i + 1,
+              phase: CanvasPointerPhase.move,
+            ),
+          );
+        }
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: const Offset(20000, 0),
+            timestampMs: 20002,
+            phase: CanvasPointerPhase.up,
+          ),
+        );
+      }, returnsNormally);
+    });
+
+    test('invalid soft-limit config throws ArgumentError', () {
+      final controller = SceneControllerInteractive(
+        initialSnapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(),
+            ContentLayerSnapshot(),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      final points = <Offset>[const Offset(0, 0), const Offset(1, 0)];
+
+      expect(
+        () =>
+            sceneControllerInteractiveInternalEnforceGestureBufferSoftLimitForTest(
+              controller,
+              points: points,
+              softLimit: 10,
+              trimTo: 1,
+            ),
+        throwsArgumentError,
+      );
+      expect(
+        () =>
+            sceneControllerInteractiveInternalEnforceGestureBufferSoftLimitForTest(
+              controller,
+              points: points,
+              softLimit: 5,
+              trimTo: 5,
+            ),
+        throwsArgumentError,
+      );
+      expect(
+        () =>
+            sceneControllerInteractiveInternalEnforceGestureBufferSoftLimitForTest(
+              controller,
+              points: points,
+              softLimit: 1,
+              trimTo: 1,
+            ),
+        throwsArgumentError,
+      );
+    });
+
+    test('eraser active buffer is capped during long move', () {
+      final controller = SceneControllerInteractive(
+        initialSnapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(),
+            ContentLayerSnapshot(),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      controller.setMode(CanvasMode.draw);
+      controller.setDrawTool(DrawTool.eraser);
+
+      controller.handlePointer(
+        _sample(
+          pointerId: 1,
+          position: const Offset(0, 0),
+          timestampMs: 1,
+          phase: CanvasPointerPhase.down,
+        ),
+      );
+      for (var i = 1; i <= 20000; i++) {
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: Offset(i.toDouble(), 0),
+            timestampMs: i + 1,
+            phase: CanvasPointerPhase.move,
+          ),
+        );
+      }
+
+      expect(
+        sceneControllerInteractiveInternalActiveEraserPointsLength(controller),
+        lessThanOrEqualTo(kInteractiveEraserPointsSoftLimit),
       );
     });
 
