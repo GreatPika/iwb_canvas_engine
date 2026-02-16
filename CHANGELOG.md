@@ -71,9 +71,12 @@
 - Draw command `writeDrawStroke(...)` now enforces `kMaxStrokePointsPerNode = 20_000` with deterministic index-uniform downsampling (endpoints preserved), matching interactive stroke guardrails.
 - Interactive long-gesture buffers are now bounded during active input: stroke preview uses soft-cap/trim (`22_000 -> 18_000`) and eraser path uses soft-cap/trim (`8_000 -> 4_000`) with deterministic endpoint-preserving downsampling.
 - Interactive gesture buffer soft-limit configuration now fails fast on invalid parameters (`softLimit >= 2`, `trimTo >= 2`, `trimTo < softLimit`) with explicit `ArgumentError`.
+- Internal interactive draw runtime is further decomposed into per-tool engines (`interactive_draw_stroke_engine`, `interactive_draw_line_engine`, `interactive_draw_eraser_engine`), with `InteractiveDrawCoordinator` reduced to pointer-lifecycle orchestration.
+- Large interactive/controller test monoliths are split into domain-focused suites (stroke/line/eraser guardrails and commit atomicity/effects/failures) without changing public behavior.
+- Remaining interactive/controller monolithic suites are split into focused files (`line pending cancel`, `hit-test foreground`, `actions effects`, `dispose fail-fast`, `single-pointer policy`, `line tool flow`, `invalid-pointer input`, `move preview invariants`, `spatial index`, `copy-on-write`, `spatial candidate resolution`, `signals delivery`, `writer lifecycle`, `core dispose fail-fast`) and internal draw runtime naming is aligned (`interactive_draw_coordinator.dart` / `InteractiveDrawCoordinator*`).
 - Added shared command-test helper `test/utils/scene_invariants.dart` and wired scene invariant assertions into command test suites.
 - Added command-level negative contract tests for invalid `layerIndex`, non-finite translation delta, non-positive grid cell size, and non-positive line thickness.
-- Internal interactive runtime is decomposed into focused modules (`InteractiveMoveSession`, `InteractiveDrawSession`, `InteractiveEventDispatcher`, and `interactive_geometry`) while keeping `SceneControllerInteractive` as the orchestration facade and preserving public API/behavior contracts.
+- Internal interactive runtime is decomposed into focused modules (`InteractiveMoveSession`, `InteractiveDrawCoordinator`, `InteractiveEventDispatcher`, and `interactive_geometry`) while keeping `SceneControllerInteractive` as the orchestration facade and preserving public API/behavior contracts.
 
 ## 3.0.0 (2026-02-13)
 

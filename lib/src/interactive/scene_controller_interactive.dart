@@ -18,7 +18,7 @@ import '../public/node_spec.dart';
 import '../public/scene_render_state.dart';
 import '../public/scene_write_txn.dart';
 import '../public/snapshot.dart';
-import 'internal/interactive_draw_session.dart';
+import 'internal/interactive_draw_coordinator.dart';
 import 'internal/interactive_event_dispatcher.dart';
 import 'internal/interactive_geometry.dart';
 import 'internal/interactive_move_session.dart';
@@ -56,7 +56,7 @@ void sceneControllerInteractiveInternalEnforceGestureBufferSoftLimitForTest(
 int sceneControllerInteractiveInternalActiveEraserPointsLength(
   SceneControllerInteractive controller,
 ) {
-  return controller._drawSession.activeEraserPointsLength;
+  return controller._drawCoordinator.activeEraserPointsLength;
 }
 
 int sceneControllerInteractiveInternalEraserSpatialQueryCount(
@@ -64,7 +64,7 @@ int sceneControllerInteractiveInternalEraserSpatialQueryCount(
 ) {
   // Test-only metric: number of coarse spatial queries used by last eraser
   // commit. Helps keep complexity guards deterministic across environments.
-  return controller._drawSession.debugEraserSpatialQueryCount;
+  return controller._drawCoordinator.debugEraserSpatialQueryCount;
 }
 
 int sceneControllerInteractiveInternalEraserPreciseSegmentCheckCount(
@@ -72,7 +72,7 @@ int sceneControllerInteractiveInternalEraserPreciseSegmentCheckCount(
 ) {
   // Test-only metric: number of exact segment-to-segment checks during last
   // eraser commit. Used as primary perf acceptance signal.
-  return controller._drawSession.debugEraserPreciseSegmentChecks;
+  return controller._drawCoordinator.debugEraserPreciseSegmentChecks;
 }
 
 class SceneControllerInteractive extends ChangeNotifier
@@ -102,8 +102,8 @@ class SceneControllerInteractive extends ChangeNotifier
         emitAction: _events.emitAction,
       ),
     );
-    _drawSession = InteractiveDrawSession(
-      callbacks: InteractiveDrawSessionCallbacks(
+    _drawCoordinator = InteractiveDrawCoordinator(
+      callbacks: InteractiveDrawCoordinatorCallbacks(
         onStateChanged: _scheduleNotify,
         emitAction: _events.emitAction,
         writeDrawStroke: _core.draw.writeDrawStroke,
@@ -118,7 +118,7 @@ class SceneControllerInteractive extends ChangeNotifier
 
   final SceneControllerCore _core;
   final InteractiveEventDispatcher _events = InteractiveEventDispatcher();
-  late final InteractiveDrawSession _drawSession;
+  late final InteractiveDrawCoordinator _drawCoordinator;
   late final InteractiveMoveSession _moveSession;
 
   PointerInputSettings _pointerSettings;
@@ -160,27 +160,27 @@ class SceneControllerInteractive extends ChangeNotifier
 
   Rect? get selectionRect => _moveSession.selectionRect;
 
-  Offset? get pendingLineStart => _drawSession.pendingLineStart;
-  int? get pendingLineTimestampMs => _drawSession.pendingLineTimestampMs;
-  bool get hasPendingLineStart => _drawSession.hasPendingLineStart;
+  Offset? get pendingLineStart => _drawCoordinator.pendingLineStart;
+  int? get pendingLineTimestampMs => _drawCoordinator.pendingLineTimestampMs;
+  bool get hasPendingLineStart => _drawCoordinator.hasPendingLineStart;
   bool get hasActiveStrokePreview =>
-      _drawSession.hasActivePointer &&
+      _drawCoordinator.hasActivePointer &&
       (_drawTool == DrawTool.pen || _drawTool == DrawTool.highlighter) &&
-      _drawSession.hasActiveStrokePoints;
+      _drawCoordinator.hasActiveStrokePoints;
   List<Offset> get activeStrokePreviewPoints =>
-      _drawSession.activeStrokePreviewPoints;
+      _drawCoordinator.activeStrokePreviewPoints;
   double get activeStrokePreviewThickness =>
       _drawTool == DrawTool.highlighter ? _highlighterThickness : _penThickness;
   Color get activeStrokePreviewColor => _drawColor;
   double get activeStrokePreviewOpacity =>
       _drawTool == DrawTool.highlighter ? _highlighterOpacity : 1;
   bool get hasActiveLinePreview =>
-      _drawSession.hasActivePointer &&
+      _drawCoordinator.hasActivePointer &&
       _drawTool == DrawTool.line &&
-      _drawSession.activeLinePreviewStart != null &&
-      _drawSession.activeLinePreviewEnd != null;
-  Offset? get activeLinePreviewStart => _drawSession.activeLinePreviewStart;
-  Offset? get activeLinePreviewEnd => _drawSession.activeLinePreviewEnd;
+      _drawCoordinator.activeLinePreviewStart != null &&
+      _drawCoordinator.activeLinePreviewEnd != null;
+  Offset? get activeLinePreviewStart => _drawCoordinator.activeLinePreviewStart;
+  Offset? get activeLinePreviewEnd => _drawCoordinator.activeLinePreviewEnd;
   double get activeLinePreviewThickness => _lineThickness;
   Color get activeLinePreviewColor => _drawColor;
 
@@ -201,8 +201,8 @@ class SceneControllerInteractive extends ChangeNotifier
     if (_mode == CanvasMode.move) {
       _moveSession.resetGestureState();
     } else {
-      _drawSession.resetGestureState();
-      _drawSession.clearPendingLine();
+      _drawCoordinator.resetGestureState();
+      _drawCoordinator.clearPendingLine();
     }
 
     _mode = value;
@@ -221,8 +221,8 @@ class SceneControllerInteractive extends ChangeNotifier
     _ensureNotDisposed();
     if (_drawTool == value) return;
     _drawTool = value;
-    _drawSession.resetGestureState();
-    _drawSession.clearPendingLine();
+    _drawCoordinator.resetGestureState();
+    _drawCoordinator.clearPendingLine();
     _scheduleNotify();
   }
 
@@ -478,7 +478,7 @@ class SceneControllerInteractive extends ChangeNotifier
   void replaceScene(SceneSnapshot snapshot) {
     _ensureNotDisposed();
     _core.writeReplaceScene(snapshot);
-    _drawSession.clearPendingLine();
+    _drawCoordinator.clearPendingLine();
     _moveSession.setSelectionRect(null);
   }
 
@@ -564,7 +564,7 @@ class SceneControllerInteractive extends ChangeNotifier
 
   void _handleDrawPointer(PointerSample sample) {
     final scenePoint = _toScenePoint(sample.position);
-    _drawSession.handlePointer(
+    _drawCoordinator.handlePointer(
       sample,
       scenePoint,
       drawTool: _drawTool,
@@ -657,7 +657,7 @@ class SceneControllerInteractive extends ChangeNotifier
     _notifyPending = false;
     _notifyScheduled = false;
     _moveSession.dispose();
-    _drawSession.dispose();
+    _drawCoordinator.dispose();
     _core.removeListener(_handleCoreChanged);
     _core.dispose();
     _events.dispose();

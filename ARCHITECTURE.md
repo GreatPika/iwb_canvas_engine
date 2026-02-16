@@ -53,9 +53,21 @@ lib/
 
 - `SceneControllerInteractive` is the orchestration facade: it validates/routes input, stores public interactive configuration, bridges transactional writes to `SceneControllerCore`, and exposes render-facing getters/events.
 - Move/marquee ephemeral state and transitions are owned by `InteractiveMoveSession` (`lib/src/interactive/internal/interactive_move_session.dart`).
-- Draw/line/eraser ephemeral state and transitions are owned by `InteractiveDrawSession` (`lib/src/interactive/internal/interactive_draw_session.dart`).
+- Draw/line/eraser ephemeral state and transitions are owned by `InteractiveDrawCoordinator` (`lib/src/interactive/internal/interactive_draw_coordinator.dart`).
 - Action/edit stream emission is isolated in `InteractiveEventDispatcher` (`lib/src/interactive/internal/interactive_event_dispatcher.dart`).
 - Pure geometry helpers used by interactive sessions are isolated in `interactive_geometry.dart`; helper modules remain stateless.
+
+### Production-to-test ownership (interactive/controller scope)
+
+| Production module | Primary test ownership |
+| --- | --- |
+| `lib/src/interactive/internal/interactive_draw_stroke_engine.dart` | `test/interactive/core/scene_controller_interactive_guardrails_stroke_test.dart` |
+| `lib/src/interactive/internal/interactive_draw_line_engine.dart` | `test/interactive/core/scene_controller_interactive_guardrails_line_test.dart`, `test/interactive/core/scene_controller_interactive_line_pending_cancel_test.dart`, `test/interactive/core/scene_controller_interactive_line_tool_flow_test.dart` |
+| `lib/src/interactive/internal/interactive_draw_eraser_engine.dart` | `test/interactive/core/scene_controller_interactive_guardrails_eraser_test.dart`, `test/interactive/core/scene_controller_interactive_guardrails_eraser_lifecycle_test.dart`, `test/interactive/core/scene_controller_interactive_hit_test_foreground_test.dart` |
+| `lib/src/interactive/internal/interactive_draw_coordinator.dart` | `test/interactive/core/scene_controller_interactive_actions_effects_test.dart`, `test/interactive/core/scene_controller_interactive_dispose_fail_fast_test.dart` |
+| `lib/src/interactive/scene_controller_interactive.dart` | `test/interactive/core/scene_controller_interactive_invalid_pointer_input_test.dart`, `test/interactive/core/scene_controller_interactive_move_preview_invariants_test.dart`, `test/interactive/core/scene_controller_interactive_single_pointer_policy_test.dart` |
+| `SceneControllerCore` spatial/candidate path | `test/controller/core/scene_controller_spatial_index_test.dart`, `test/controller/core/scene_controller_spatial_candidate_resolution_test.dart` |
+| `SceneControllerCore` copy-on-write/writer lifecycle path | `test/controller/core/scene_controller_copy_on_write_test.dart`, `test/controller/core/scene_controller_writer_lifecycle_test.dart`, `test/controller/core/scene_controller_core_dispose_fail_fast_test.dart`, `test/controller/core/scene_controller_signals_delivery_test.dart` |
 
 ## Invariants
 
