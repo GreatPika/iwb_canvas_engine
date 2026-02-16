@@ -49,6 +49,14 @@ lib/
 4. `ScenePainter` renders snapshot state via `CustomPaint`.
 5. `actions` / `editTextRequests` streams expose asynchronous boundaries to the host app.
 
+### Interactive composition
+
+- `SceneControllerInteractive` is the orchestration facade: it validates/routes input, stores public interactive configuration, bridges transactional writes to `SceneControllerCore`, and exposes render-facing getters/events.
+- Move/marquee ephemeral state and transitions are owned by `InteractiveMoveSession` (`lib/src/interactive/internal/interactive_move_session.dart`).
+- Draw/line/eraser ephemeral state and transitions are owned by `InteractiveDrawSession` (`lib/src/interactive/internal/interactive_draw_session.dart`).
+- Action/edit stream emission is isolated in `InteractiveEventDispatcher` (`lib/src/interactive/internal/interactive_event_dispatcher.dart`).
+- Pure geometry helpers used by interactive sessions are isolated in `interactive_geometry.dart`; helper modules remain stateless.
+
 ## Invariants
 
 Canonical invariant registry:

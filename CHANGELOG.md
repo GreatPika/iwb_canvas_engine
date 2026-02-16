@@ -73,6 +73,7 @@
 - Interactive gesture buffer soft-limit configuration now fails fast on invalid parameters (`softLimit >= 2`, `trimTo >= 2`, `trimTo < softLimit`) with explicit `ArgumentError`.
 - Added shared command-test helper `test/utils/scene_invariants.dart` and wired scene invariant assertions into command test suites.
 - Added command-level negative contract tests for invalid `layerIndex`, non-finite translation delta, non-positive grid cell size, and non-positive line thickness.
+- Internal interactive runtime is decomposed into focused modules (`InteractiveMoveSession`, `InteractiveDrawSession`, `InteractiveEventDispatcher`, and `interactive_geometry`) while keeping `SceneControllerInteractive` as the orchestration facade and preserving public API/behavior contracts.
 
 ## 3.0.0 (2026-02-13)
 
