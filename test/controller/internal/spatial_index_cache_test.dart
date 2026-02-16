@@ -1,0 +1,413 @@
+import 'dart:ui';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart' hide NodeId;
+import 'package:iwb_canvas_engine/src/core/nodes.dart';
+import 'package:iwb_canvas_engine/src/core/scene.dart';
+import 'package:iwb_canvas_engine/src/core/scene_limits.dart';
+import 'package:iwb_canvas_engine/src/controller/change_set.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_writer.dart';
+import 'package:iwb_canvas_engine/src/controller/txn_context.dart';
+import 'package:iwb_canvas_engine/src/controller/internal/spatial_index_cache.dart';
+
+// INV:INV-ENG-SPATIAL-INDEX-REBUILD-ON-INVALID
+
+void main() {
+  test(
+    'SceneWriter clearScene creates missing background layer and clears',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[ContentLayer(), ContentLayer()],
+        ),
+        workingSelection: <NodeId>{},
+        baseAllNodeIds: <NodeId>{},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+      final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+
+      expect(writer.writeClearSceneKeepBackground(), isEmpty);
+      expect(ctx.workingScene.layers, isEmpty);
+      expect(ctx.workingScene.backgroundLayer, isNotNull);
+    },
+  );
+
+  test(
+    'SpatialIndexCache caches, applies incremental changes and falls back safely',
+    () {
+      final slice = SpatialIndexCache();
+      final scene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            nodes: <SceneNode>[RectNode(id: 'r1', size: const Size(10, 10))],
+          ),
+        ],
+      );
+      final nodeLocator = <NodeId, ({int layerIndex, int nodeIndex})>{
+        'r1': (layerIndex: 0, nodeIndex: 0),
+      };
+
+      final first = slice.writeQueryCandidates(
+        scene: scene,
+        nodeLocator: nodeLocator,
+        worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
+        controllerEpoch: 0,
+      );
+      expect(first, isNotEmpty);
+      expect(slice.debugBuildCount, 1);
+      expect(slice.debugIncrementalApplyCount, 0);
+
+      slice.writeQueryCandidates(
+        scene: scene,
+        nodeLocator: nodeLocator,
+        worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
+        controllerEpoch: 0,
+      );
+      expect(slice.debugBuildCount, 1);
+
+      final noChange = ChangeSet();
+      slice.writeHandleCommit(
+        scene: scene,
+        nodeLocator: nodeLocator,
+        changeSet: noChange,
+        controllerEpoch: 0,
+      );
+      slice.writeQueryCandidates(
+        scene: scene,
+        nodeLocator: nodeLocator,
+        worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
+        controllerEpoch: 0,
+      );
+      expect(slice.debugBuildCount, 1);
+      expect(slice.debugIncrementalApplyCount, 0);
+
+      final movedScene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            nodes: <SceneNode>[
+              RectNode(
+                id: 'r1',
+                size: const Size(10, 10),
+                transform: Transform2D.translation(const Offset(100, 0)),
+              ),
+            ],
+          ),
+        ],
+      );
+      final movedLocator = <NodeId, ({int layerIndex, int nodeIndex})>{
+        'r1': (layerIndex: 0, nodeIndex: 0),
+      };
+      final movedChange = ChangeSet()
+        ..txnMarkBoundsChanged()
+        ..txnTrackUpdated('r1')
+        ..txnTrackHitGeometryChanged('r1');
+      slice.writeHandleCommit(
+        scene: movedScene,
+        nodeLocator: movedLocator,
+        changeSet: movedChange,
+        controllerEpoch: 0,
+      );
+      final movedCandidates = slice.writeQueryCandidates(
+        scene: movedScene,
+        nodeLocator: movedLocator,
+        worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
+        controllerEpoch: 0,
+      );
+      expect(movedCandidates, isNotEmpty);
+      final oldCandidatesAfterMove = slice.writeQueryCandidates(
+        scene: movedScene,
+        nodeLocator: movedLocator,
+        worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
+        controllerEpoch: 0,
+      );
+      expect(oldCandidatesAfterMove, isEmpty);
+      expect(slice.debugBuildCount, 1);
+      expect(slice.debugIncrementalApplyCount, 1);
+
+      final malformedAdded = ChangeSet()
+        ..txnMarkStructuralChanged()
+        ..txnTrackAdded('ghost');
+      slice.writeHandleCommit(
+        scene: movedScene,
+        nodeLocator: movedLocator,
+        changeSet: malformedAdded,
+        controllerEpoch: 0,
+      );
+      final rebuiltAfterMalformedAdd = slice.writeQueryCandidates(
+        scene: movedScene,
+        nodeLocator: movedLocator,
+        worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
+        controllerEpoch: 0,
+      );
+      expect(
+        rebuiltAfterMalformedAdd.map((candidate) => candidate.node.id),
+        <NodeId>['r1'],
+      );
+      expect(slice.debugBuildCount, 2);
+
+      final malformedBoundsOnly = ChangeSet()..txnMarkBoundsChanged();
+      slice.writeHandleCommit(
+        scene: movedScene,
+        nodeLocator: movedLocator,
+        changeSet: malformedBoundsOnly,
+        controllerEpoch: 0,
+      );
+      slice.writeQueryCandidates(
+        scene: movedScene,
+        nodeLocator: movedLocator,
+        worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
+        controllerEpoch: 0,
+      );
+      expect(slice.debugBuildCount, 3);
+
+      slice.writeHandleCommit(
+        scene: movedScene,
+        nodeLocator: movedLocator,
+        changeSet: noChange,
+        controllerEpoch: 1,
+      );
+      slice.writeQueryCandidates(
+        scene: movedScene,
+        nodeLocator: movedLocator,
+        worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
+        controllerEpoch: 1,
+      );
+      expect(slice.debugBuildCount, 4);
+
+      final gridOnly = ChangeSet()..txnMarkGridChanged();
+      slice.writeHandleCommit(
+        scene: movedScene,
+        nodeLocator: movedLocator,
+        changeSet: gridOnly,
+        controllerEpoch: 1,
+      );
+      slice.writeQueryCandidates(
+        scene: movedScene,
+        nodeLocator: movedLocator,
+        worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
+        controllerEpoch: 1,
+      );
+      expect(slice.debugBuildCount, 4);
+
+      final outOfRangeScene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            nodes: <SceneNode>[
+              RectNode(
+                id: 'r1',
+                size: const Size(10, 10),
+                transform: Transform2D.translation(
+                  Offset(sceneCoordMax + 500, 0),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+      final outOfRangeLocator = <NodeId, ({int layerIndex, int nodeIndex})>{
+        'r1': (layerIndex: 0, nodeIndex: 0),
+      };
+      final outOfRangeBounds = Rect.fromLTWH(sceneCoordMax + 450, -20, 100, 40);
+      final invalidFirst = slice.writeQueryCandidates(
+        scene: outOfRangeScene,
+        nodeLocator: outOfRangeLocator,
+        worldBounds: outOfRangeBounds,
+        controllerEpoch: 2,
+      );
+      expect(invalidFirst, isNotEmpty);
+      expect(slice.debugBuildCount, 5);
+
+      final outOfRangeChange = ChangeSet()
+        ..txnMarkBoundsChanged()
+        ..txnTrackUpdated('r1')
+        ..txnTrackHitGeometryChanged('r1');
+      slice.writeHandleCommit(
+        scene: outOfRangeScene,
+        nodeLocator: outOfRangeLocator,
+        changeSet: outOfRangeChange,
+        controllerEpoch: 2,
+      );
+      // INV:INV-ENG-SPATIAL-INDEX-REBUILD-ON-INVALID
+      final invalidSecond = slice.writeQueryCandidates(
+        scene: outOfRangeScene,
+        nodeLocator: outOfRangeLocator,
+        worldBounds: outOfRangeBounds,
+        controllerEpoch: 2,
+      );
+      expect(invalidSecond, isNotEmpty);
+      expect(slice.debugBuildCount, 6);
+
+      final invalidThird = slice.writeQueryCandidates(
+        scene: outOfRangeScene,
+        nodeLocator: outOfRangeLocator,
+        worldBounds: outOfRangeBounds,
+        controllerEpoch: 2,
+      );
+      expect(invalidThird, isNotEmpty);
+      expect(slice.debugBuildCount, 6);
+    },
+  );
+
+  test(
+    'SpatialIndexCache falls back to full rebuild when incremental prepare throws',
+    () {
+      final slice = SpatialIndexCache();
+      final scene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            nodes: <SceneNode>[RectNode(id: 'r1', size: const Size(10, 10))],
+          ),
+        ],
+      );
+      final nodeLocator = <NodeId, ({int layerIndex, int nodeIndex})>{
+        'r1': (layerIndex: 0, nodeIndex: 0),
+      };
+
+      slice.writeQueryCandidates(
+        scene: scene,
+        nodeLocator: nodeLocator,
+        worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
+        controllerEpoch: 0,
+      );
+      expect(slice.debugBuildCount, 1);
+      expect(slice.debugIncrementalApplyCount, 0);
+
+      final movedScene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            nodes: <SceneNode>[
+              RectNode(
+                id: 'r1',
+                size: const Size(10, 10),
+                transform: Transform2D.translation(const Offset(100, 0)),
+              ),
+            ],
+          ),
+        ],
+      );
+      final movedLocator = <NodeId, ({int layerIndex, int nodeIndex})>{
+        'r1': (layerIndex: 0, nodeIndex: 0),
+      };
+      final movedChange = ChangeSet()
+        ..txnMarkBoundsChanged()
+        ..txnTrackUpdated('r1')
+        ..txnTrackHitGeometryChanged('r1');
+
+      slice.debugBeforeIncrementalPrepareHook = () {
+        throw StateError('forced incremental prepare failure');
+      };
+      slice.writeHandleCommit(
+        scene: movedScene,
+        nodeLocator: movedLocator,
+        changeSet: movedChange,
+        controllerEpoch: 0,
+      );
+
+      final movedCandidates = slice.writeQueryCandidates(
+        scene: movedScene,
+        nodeLocator: movedLocator,
+        worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
+        controllerEpoch: 0,
+      );
+      final oldCandidates = slice.writeQueryCandidates(
+        scene: movedScene,
+        nodeLocator: movedLocator,
+        worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
+        controllerEpoch: 0,
+      );
+
+      expect(movedCandidates.map((candidate) => candidate.node.id), <NodeId>[
+        'r1',
+      ]);
+      expect(oldCandidates, isEmpty);
+      expect(slice.debugBuildCount, 2);
+      expect(slice.debugIncrementalApplyCount, 0);
+    },
+  );
+
+  test(
+    'SpatialIndexCache rethrows when fallback rebuild also fails and keeps active index',
+    () {
+      final slice = SpatialIndexCache();
+      final scene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            nodes: <SceneNode>[RectNode(id: 'r1', size: const Size(10, 10))],
+          ),
+        ],
+      );
+      final nodeLocator = <NodeId, ({int layerIndex, int nodeIndex})>{
+        'r1': (layerIndex: 0, nodeIndex: 0),
+      };
+
+      final initialCandidates = slice.writeQueryCandidates(
+        scene: scene,
+        nodeLocator: nodeLocator,
+        worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
+        controllerEpoch: 0,
+      );
+      expect(initialCandidates.map((candidate) => candidate.node.id), <NodeId>[
+        'r1',
+      ]);
+      expect(slice.debugBuildCount, 1);
+
+      final movedScene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            nodes: <SceneNode>[
+              RectNode(
+                id: 'r1',
+                size: const Size(10, 10),
+                transform: Transform2D.translation(const Offset(100, 0)),
+              ),
+            ],
+          ),
+        ],
+      );
+      final movedLocator = <NodeId, ({int layerIndex, int nodeIndex})>{
+        'r1': (layerIndex: 0, nodeIndex: 0),
+      };
+      final movedChange = ChangeSet()
+        ..txnMarkBoundsChanged()
+        ..txnTrackUpdated('r1')
+        ..txnTrackHitGeometryChanged('r1');
+
+      slice.debugBeforeIncrementalPrepareHook = () {
+        throw StateError('forced incremental prepare failure');
+      };
+      slice.debugBeforeFallbackRebuildHook = () {
+        throw StateError('forced fallback rebuild failure');
+      };
+
+      expect(
+        () => slice.writeHandleCommit(
+          scene: movedScene,
+          nodeLocator: movedLocator,
+          changeSet: movedChange,
+          controllerEpoch: 0,
+        ),
+        throwsStateError,
+      );
+
+      final stillOldAtOrigin = slice.writeQueryCandidates(
+        scene: scene,
+        nodeLocator: nodeLocator,
+        worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
+        controllerEpoch: 0,
+      );
+      final noMovedCandidates = slice.writeQueryCandidates(
+        scene: movedScene,
+        nodeLocator: movedLocator,
+        worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
+        controllerEpoch: 0,
+      );
+      expect(stillOldAtOrigin.map((candidate) => candidate.node.id), <NodeId>[
+        'r1',
+      ]);
+      expect(noMovedCandidates, isEmpty);
+      expect(slice.debugBuildCount, 1);
+      expect(slice.debugIncrementalApplyCount, 0);
+    },
+  );
+}
