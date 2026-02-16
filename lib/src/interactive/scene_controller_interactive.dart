@@ -549,7 +549,7 @@ class SceneControllerInteractive extends ChangeNotifier
         isDistanceGreaterThan(
           _movePointerDownScene!,
           scenePoint,
-          _pointerSettings.tapSlop,
+          dragStartSlop,
         );
 
     if (didStartDrag) {
@@ -655,6 +655,7 @@ class SceneControllerInteractive extends ChangeNotifier
         _drawHandleUp(sample, scenePoint);
         break;
       case PointerPhase.cancel:
+        _clearPendingLine();
         _resetDrawGestureState();
         _scheduleNotify();
         break;

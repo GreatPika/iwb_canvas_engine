@@ -103,7 +103,9 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Interactive event delivery contract: `actions` and `editTextRequests` are asynchronous; relative ordering against repaint/listener notifications is not a public contract.
 - Selection contract: commit normalization keeps explicit non-selectable ids valid while filtering missing/background/invisible ids.
 - Runtime notify contract: both core and interactive controller `ChangeNotifier` updates are deferred to a microtask and coalesced to at most one notification per event-loop tick (not one notification per transaction).
+- Drag-start threshold contract: `dragStartSlop` is used for move and line drag start; if unset, it falls back to `pointerSettings.tapSlop`.
 - Move drag contract: pointer move updates only visual preview; scene translation is committed once on pointer up, and pointer cancel keeps the document unchanged.
+- Line cancel contract: pointer cancel clears line preview and clears pending two-tap line start (`pendingLineStart`).
 - Runtime guardrails bound worst-case input/query cost: interactive stroke commits are capped to `20_000` points (deterministic downsampling), path-stroke precise hit-testing is capped to `2_048` samples per path metric, and oversized spatial queries switch to bounded candidate-scan fallback.
 - Runtime snapshot validation: `initialSnapshot` and `replaceScene` fail fast with `SceneDataException` for malformed snapshots (duplicate node ids, invalid numbers, invalid SVG path data, invalid palette, invalid typed layer fields).
 - Commit invariant checks fail fast with `StateError` in all build modes when committed store state violates runtime invariants.

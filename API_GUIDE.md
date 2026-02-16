@@ -196,7 +196,7 @@ final controller = SceneController(
     doubleTapMaxDelayMs: 450,
   ),
 
-  // Optional draw line slop override.
+  // Optional drag-start slop override for move/line gestures.
   dragStartSlop: 12,
 
   // Optional policy.
@@ -242,6 +242,8 @@ Construction validation notes:
 - `setDrawColor(Color value)`
 - `setPointerSettings(PointerInputSettings value)`
 - `setDragStartSlop(double? value)`
+
+`setDragStartSlop(...)` controls drag-start threshold for both move and line gestures; `null` restores fallback to `pointerSettings.tapSlop`.
 
 Numeric property setters validate values and throw `ArgumentError` on invalid input:
 
@@ -370,10 +372,14 @@ Write-notify semantics:
 - Pen/highlighter: freehand stroke commit on pointer up
 - Pen/highlighter guardrail: if captured stroke points exceed `20_000`, commit applies deterministic index-uniform downsampling while preserving first/last points.
 - Line: drag line or two-tap line (first tap sets pending start, second tap commits)
+- `dragStartSlop` is used as the line drag-start threshold.
+- Pointer `cancel` clears active line preview and clears pending two-tap line start (`pendingLineStart`).
 - Eraser: erases supported annotations (`StrokeNode`, `LineNode`) based on eraser trajectory
 
 ### 7.3 Move drag behavior
 
+- Move drag starts only after distance exceeds `dragStartSlop`.
+- If `dragStartSlop` is `null`, runtime falls back to `pointerSettings.tapSlop`.
 - During move drag, selected nodes are translated in preview only (render/hit-test use effective preview bounds).
 - The scene snapshot is committed once on pointer up with the accumulated drag delta.
 - Pointer cancel clears preview and does not mutate scene geometry.

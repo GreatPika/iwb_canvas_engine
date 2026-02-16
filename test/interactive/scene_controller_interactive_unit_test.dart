@@ -863,6 +863,90 @@ void main() {
       expect(afterUp.transform.ty, closeTo(160, 1e-6));
     });
 
+    test(
+      'move drag start threshold uses dragStartSlop and null fallback uses tapSlop',
+      () {
+        final rect = RectNode(id: 'node', size: const Size(30, 20))
+          ..position = const Offset(60, 60);
+        final controller = _controllerFromScene(
+          Scene(
+            layers: <ContentLayer>[
+              ContentLayer(),
+              ContentLayer(nodes: <SceneNode>[rect]),
+            ],
+          ),
+          pointerSettings: const PointerInputSettings(tapSlop: 4),
+          dragStartSlop: 12,
+        );
+        addTearDown(controller.dispose);
+
+        controller.setSelection(const <NodeId>{'node'});
+
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: const Offset(60, 60),
+            timestampMs: 1,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: const Offset(66, 60),
+            timestampMs: 2,
+            phase: CanvasPointerPhase.move,
+          ),
+        );
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: const Offset(66, 60),
+            timestampMs: 3,
+            phase: CanvasPointerPhase.up,
+          ),
+        );
+
+        final afterCustomSlop =
+            _nodeById(controller.snapshot, 'node') as RectNodeSnapshot;
+        expect(afterCustomSlop.transform.tx, closeTo(60, 1e-6));
+        expect(afterCustomSlop.transform.ty, closeTo(60, 1e-6));
+
+        controller.setDragStartSlop(null);
+        expect(controller.dragStartSlop, 4);
+
+        controller.handlePointer(
+          _sample(
+            pointerId: 2,
+            position: const Offset(60, 60),
+            timestampMs: 4,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+        controller.handlePointer(
+          _sample(
+            pointerId: 2,
+            position: const Offset(66, 60),
+            timestampMs: 5,
+            phase: CanvasPointerPhase.move,
+          ),
+        );
+        controller.handlePointer(
+          _sample(
+            pointerId: 2,
+            position: const Offset(66, 60),
+            timestampMs: 6,
+            phase: CanvasPointerPhase.up,
+          ),
+        );
+
+        final afterFallbackSlop =
+            _nodeById(controller.snapshot, 'node') as RectNodeSnapshot;
+        expect(afterFallbackSlop.transform.tx, closeTo(66, 1e-6));
+        expect(afterFallbackSlop.transform.ty, closeTo(60, 1e-6));
+      },
+    );
+
     test('line tool supports drag flow and two-tap pending flow', () async {
       final controller = SceneControllerInteractive(
         initialSnapshot: SceneSnapshot(
@@ -1308,6 +1392,102 @@ void main() {
         expect(controller.hasActiveLinePreview, isFalse);
       },
     );
+
+    test('line pending start is cleared on pointer cancel', () {
+      final controller = SceneControllerInteractive(
+        initialSnapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(),
+            ContentLayerSnapshot(),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      controller.setMode(CanvasMode.draw);
+      controller.setDrawTool(DrawTool.line);
+
+      controller.handlePointer(
+        _sample(
+          pointerId: 1,
+          position: const Offset(10, 10),
+          timestampMs: 1,
+          phase: CanvasPointerPhase.down,
+        ),
+      );
+      controller.handlePointer(
+        _sample(
+          pointerId: 1,
+          position: const Offset(10, 10),
+          timestampMs: 2,
+          phase: CanvasPointerPhase.up,
+        ),
+      );
+      expect(controller.hasPendingLineStart, isTrue);
+
+      controller.handlePointer(
+        _sample(
+          pointerId: 2,
+          position: const Offset(20, 20),
+          timestampMs: 3,
+          phase: CanvasPointerPhase.down,
+        ),
+      );
+      controller.handlePointer(
+        _sample(
+          pointerId: 2,
+          position: const Offset(20, 20),
+          timestampMs: 4,
+          phase: CanvasPointerPhase.cancel,
+        ),
+      );
+
+      expect(controller.hasPendingLineStart, isFalse);
+      expect(controller.pendingLineStart, isNull);
+      expect(controller.pendingLineTimestampMs, isNull);
+
+      controller.handlePointer(
+        _sample(
+          pointerId: 3,
+          position: const Offset(30, 30),
+          timestampMs: 5,
+          phase: CanvasPointerPhase.down,
+        ),
+      );
+      controller.handlePointer(
+        _sample(
+          pointerId: 3,
+          position: const Offset(30, 30),
+          timestampMs: 6,
+          phase: CanvasPointerPhase.up,
+        ),
+      );
+      expect(controller.hasPendingLineStart, isTrue);
+
+      controller.handlePointer(
+        _sample(
+          pointerId: 4,
+          position: const Offset(50, 30),
+          timestampMs: 7,
+          phase: CanvasPointerPhase.down,
+        ),
+      );
+      controller.handlePointer(
+        _sample(
+          pointerId: 4,
+          position: const Offset(50, 30),
+          timestampMs: 8,
+          phase: CanvasPointerPhase.up,
+        ),
+      );
+
+      expect(controller.hasPendingLineStart, isFalse);
+      final lineCount = controller.snapshot.layers
+          .expand((layer) => layer.nodes)
+          .whereType<LineNodeSnapshot>()
+          .length;
+      expect(lineCount, 1);
+    });
 
     test('eraser removes line and stroke nodes on pointer up', () {
       final line = LineNode(
