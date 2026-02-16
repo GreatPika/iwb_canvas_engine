@@ -320,6 +320,7 @@ Direct usage is useful when embedding the controller in custom input pipelines.
 Guardrail:
 
 - Reentrant `handlePointer(...)` in the same synchronous call stack throws `StateError`.
+- `handlePointer(...)` and `handleDoubleTap(...)` ignore non-finite coordinates (`NaN`/`Infinity`) as no-op (no state mutation, no event emission).
 
 Internal low-level types (`PointerSample`, `PointerSignal`) are not part of the
 public API surface.

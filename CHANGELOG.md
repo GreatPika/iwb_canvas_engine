@@ -35,6 +35,7 @@
 - `SceneControllerCore` now fails fast after `dispose()`: mutating/effectful calls (`write(...)`, `writeReplaceScene(...)`, `requestRepaint()`) throw `StateError` and keep runtime state/effects unchanged.
 - `SceneControllerInteractive` listener notifications are now consistently microtask-deferred/coalesced (including pointer handling and core-change forwarding), so interactive listeners are never invoked synchronously inside `handlePointer(...)`.
 - `SceneControllerInteractive.handlePointer(...)` now fails fast with `StateError` on same-stack reentrant calls.
+- `SceneControllerInteractive.handlePointer(...)` and `handleDoubleTap(...)` now ignore non-finite pointer coordinates (`NaN`/`Infinity`) as no-op without mutating state or emitting events.
 - Internal `RenderGeometryCache` now uses bounded LRU eviction (`maxEntries = 512`) to prevent unbounded geometry-cache growth during long node churn (create/delete cycles).
 - Internal `RenderGeometryCache` stroke validity key now excludes point-list object identity and relies on stable scalar/revision geometry inputs (`pointsRevision`, transform, thickness), restoring cache hits across logically unchanged snapshots.
 - `iwb_canvas_engine.dart` export surface is narrowed: removed public exports of `defaults.dart`, `geometry.dart`, and render cache/resolver types from `scene_painter.dart`; pointer input export now exposes `PointerInputSettings` and new public `CanvasPointerInput` contracts.

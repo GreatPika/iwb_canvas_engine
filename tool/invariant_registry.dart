@@ -118,6 +118,12 @@ const List<Invariant> invariants = <Invariant>[
     title: 'published events expose immutable nodeIds/payload snapshots',
   ),
   Invariant(
+    id: 'INV-ENG-INTERACTIVE-POINTER-FINITE',
+    scope: 'engine-runtime',
+    title:
+        'interactive pointer entrypoints ignore non-finite coordinates without mutating state or emitting effects',
+  ),
+  Invariant(
     id: 'INV-ENG-EPOCH-INVALIDATION',
     scope: 'engine-runtime',
     title: 'replace-scene lifecycle preserves epoch invalidation',

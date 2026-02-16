@@ -76,6 +76,7 @@ Key invariants:
 - Repaint/listener notifications are scheduled after commit via microtask and coalesced per event-loop tick.
 - Interactive `ChangeNotifier` notifications are never synchronous inside `handlePointer(...)`; they are microtask-deferred and coalesced.
 - Interactive `actions` / `editTextRequests` streams are delivered asynchronously (never in the same call stack as mutation methods).
+- Interactive pointer entrypoints ignore non-finite coordinates (`NaN`/`Infinity`) as no-op without mutating state or emitting effects.
 - Relative ordering between interactive stream delivery and repaint listener notification is intentionally not a public contract.
 - Buffered signal/repaint effects are discarded when `write(...)` rolls back.
 - After controller disposal, mutating/effectful runtime methods fail fast with `StateError` and keep state/effects unchanged.

@@ -428,6 +428,9 @@ class SceneControllerInteractive extends ChangeNotifier
     if (_handlingPointer) {
       throw StateError('Reentrant handlePointer(...) is not allowed.');
     }
+    if (!_isFiniteOffset(input.position)) {
+      return;
+    }
 
     final resolvedSample = PointerSample(
       pointerId: input.pointerId,
@@ -454,6 +457,9 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   void handleDoubleTap({required Offset position, int? timestampMs}) {
+    if (!_isFiniteOffset(position)) {
+      return;
+    }
     if (_mode != CanvasMode.move) return;
 
     final scenePoint = _toScenePoint(position);
@@ -1223,6 +1229,10 @@ class SceneControllerInteractive extends ChangeNotifier
 
   Offset _toScenePoint(Offset viewPoint) {
     return toScene(viewPoint, snapshot.camera.offset);
+  }
+
+  static bool _isFiniteOffset(Offset value) {
+    return value.dx.isFinite && value.dy.isFinite;
   }
 
   int _resolveTimestampMs(int? hintTimestampMs) {
