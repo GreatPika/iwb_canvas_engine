@@ -77,6 +77,33 @@ void main() {
   );
 
   test(
+    'signals stay ordered before notify in signals-plus-repaint commit',
+    () async {
+      final controller = SceneControllerCore(
+        initialSnapshot: twoRectSnapshot(),
+      );
+      addTearDown(controller.dispose);
+
+      final observed = <String>[];
+      final sub = controller.signals.listen((_) {
+        observed.add('signal');
+      });
+      addTearDown(sub.cancel);
+      controller.addListener(() {
+        observed.add('notify');
+      });
+
+      controller.write<void>((writer) {
+        writer.writeSignalEnqueue(type: 'signal.with.repaint');
+        controller.requestRepaint();
+      });
+      await pumpEventQueue(times: 2);
+
+      expect(observed, const <String>['signal', 'notify']);
+    },
+  );
+
+  test(
     'signal listener observes committed state and can trigger follow-up write',
     () async {
       final controller = SceneControllerCore(

@@ -57,6 +57,44 @@ void main() {
   });
 
   test(
+    'async write callback fails fast and rolls back state/effects',
+    () async {
+      final controller = SceneControllerCore(
+        initialSnapshot: twoRectSnapshot(),
+      );
+      addTearDown(controller.dispose);
+
+      final beforeCommit = controller.debugCommitRevision;
+      final beforeSelection = controller.selectedNodeIds;
+
+      final emitted = <String>[];
+      final sub = controller.signals.listen((signal) {
+        emitted.add(signal.type);
+      });
+      addTearDown(sub.cancel);
+
+      var notifications = 0;
+      controller.addListener(() {
+        notifications = notifications + 1;
+      });
+
+      expect(
+        () => controller.write<Future<void>>((writer) async {
+          writer.writeSelectionReplace(const <NodeId>{'r1'});
+          writer.writeSignalEnqueue(type: 'must.rollback');
+        }),
+        throwsStateError,
+      );
+      await pumpEventQueue(times: 2);
+
+      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.selectedNodeIds, beforeSelection);
+      expect(emitted, isEmpty);
+      expect(notifications, 0);
+    },
+  );
+
+  test(
     'stale txn handle after commit throws and does not emit effects',
     () async {
       final controller = SceneControllerCore(

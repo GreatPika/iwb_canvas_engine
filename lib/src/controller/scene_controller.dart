@@ -190,6 +190,12 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
         txnSignalSink: _signalsBuffer.writeBufferSignal,
       );
       result = fn(writer);
+      if (result is Future) {
+        throw StateError(
+          'Async write callbacks are not supported. '
+          'Return synchronously from write(...).',
+        );
+      }
       commitResult = _txnWriteCommit(createdCtx);
     } catch (_) {
       _signalsBuffer.writeDiscardBuffered();
@@ -200,10 +206,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
       _writeInProgress = false;
     }
 
-    _signalsBuffer.emitCommitted(commitResult.committedSignals);
-    if (commitResult.needsNotify) {
-      _scheduleNotify();
-    }
+    _dispatchPostCommitEffects(commitResult);
     return result;
   }
 
@@ -419,6 +422,27 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
     _debugLastNodeIdSetMaterializations = ctx.debugNodeIdSetMaterializations;
     _debugLastNodeLocatorMaterializations =
         ctx.debugNodeLocatorMaterializations;
+  }
+
+  void _dispatchPostCommitEffects(_TxnWriteCommitResult commitResult) {
+    final committedSignals = commitResult.committedSignals;
+    final needsNotify = commitResult.needsNotify;
+    if (committedSignals.isNotEmpty) {
+      _signalsBuffer.emitCommitted(committedSignals);
+    }
+    if (!needsNotify) {
+      return;
+    }
+    if (committedSignals.isEmpty) {
+      _scheduleNotify();
+      return;
+    }
+
+    // Keep deterministic post-commit order for same-commit observers:
+    // signals are enqueued first, notify is scheduled after a microtask hop.
+    scheduleMicrotask(() {
+      _scheduleNotify();
+    });
   }
 
   void _scheduleNotify() {
