@@ -34,6 +34,7 @@
 - `write(...)` notify semantics are now explicitly documented as microtask-deferred and coalesced to at most one listener notification per event-loop tick (not one notify per transaction).
 - `SceneControllerCore` now fails fast after `dispose()`: mutating/effectful calls (`write(...)`, `writeReplaceScene(...)`, `requestRepaint()`) throw `StateError` and keep runtime state/effects unchanged.
 - `SceneControllerInteractive` listener notifications are now consistently microtask-deferred/coalesced (including pointer handling and core-change forwarding), so interactive listeners are never invoked synchronously inside `handlePointer(...)`.
+- Documented and invariant-backed interactive async delivery contract (`INV-ENG-INTERACTIVE-ASYNC-DELIVERY`): `actions`/`editTextRequests` and interactive listener notifications are asynchronous, listener notifications are microtask-deferred/coalesced, and relative stream-vs-notify ordering remains intentionally unspecified.
 - `SceneControllerInteractive.handlePointer(...)` now fails fast with `StateError` on same-stack reentrant calls.
 - `SceneControllerInteractive.handlePointer(...)` and `handleDoubleTap(...)` now ignore non-finite pointer coordinates (`NaN`/`Infinity`) as no-op without mutating state or emitting events.
 - Interactive drag-start semantics are unified: `dragStartSlop` now applies to both move and line drag start (with `pointerSettings.tapSlop` fallback when unset), and line-flow pointer `cancel` clears pending two-tap line state (`pendingLineStart`).

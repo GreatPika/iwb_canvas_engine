@@ -263,6 +263,7 @@ void main() {
     });
 
     test('handlePointer notifications are deferred', () async {
+      // INV:INV-ENG-INTERACTIVE-ASYNC-DELIVERY
       final controller = _controllerFromScene(
         Scene(layers: <ContentLayer>[ContentLayer(), ContentLayer()]),
       );
@@ -288,6 +289,7 @@ void main() {
     });
 
     test('interactive notify coalesces within same tick', () async {
+      // INV:INV-ENG-INTERACTIVE-ASYNC-DELIVERY
       final controller = _controllerFromScene(
         Scene(layers: <ContentLayer>[ContentLayer(), ContentLayer()]),
       );
@@ -583,6 +585,7 @@ void main() {
     });
 
     test('actions stream delivery is asynchronous', () async {
+      // INV:INV-ENG-INTERACTIVE-ASYNC-DELIVERY
       final controller = SceneControllerInteractive(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
@@ -607,6 +610,43 @@ void main() {
       expect(actions, hasLength(1));
       expect(actions.single.type, ActionType.delete);
     });
+
+    test(
+      'interactive action stream and notify are async without strict ordering contract',
+      () async {
+        // INV:INV-ENG-INTERACTIVE-ASYNC-DELIVERY
+        final controller = SceneControllerInteractive(
+          initialSnapshot: SceneSnapshot(
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(),
+              ContentLayerSnapshot(
+                nodes: <NodeSnapshot>[
+                  RectNodeSnapshot(id: 'n1', size: Size(10, 10)),
+                ],
+              ),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+
+        final trace = <String>[];
+        controller.addListener(() {
+          trace.add('notify');
+        });
+        final sub = controller.actions.listen((_) {
+          trace.add('action');
+        });
+        addTearDown(sub.cancel);
+
+        expect(controller.removeNode('n1', timestampMs: 5), isTrue);
+        expect(trace, isEmpty);
+
+        await pumpEventQueue(times: 2);
+
+        expect(trace.where((entry) => entry == 'action'), hasLength(1));
+        expect(trace.where((entry) => entry == 'notify'), hasLength(1));
+      },
+    );
 
     test(
       'invalid pointer coordinates are ignored without side effects',
@@ -783,6 +823,7 @@ void main() {
     );
 
     test('editTextRequests stream delivery is asynchronous', () async {
+      // INV:INV-ENG-INTERACTIVE-ASYNC-DELIVERY
       final text = TextNode(
         id: 'text',
         text: 'note',

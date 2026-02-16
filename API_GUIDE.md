@@ -271,10 +271,11 @@ Validation notes:
 Notification semantics:
 
 - Scene repaint notifications are deferred to a microtask after commit/repaint request.
-- Interactive controller `ChangeNotifier` callbacks are also deferred to microtask and coalesced per event-loop tick.
+- Interactive controller `ChangeNotifier` callbacks are microtask-deferred (never in the same call stack as interactive mutating methods) and coalesced per event-loop tick.
 - Multiple writes/repaint requests in the same event-loop tick are coalesced into one listener notification.
 - `requestRepaint()` called inside `write(...)` is buffered and published only after a successful transaction commit.
 - If `write(...)` rolls back with an exception, buffered repaint/signal effects are discarded.
+- Interactive async/coalescing delivery contract is tracked by `INV-ENG-INTERACTIVE-ASYNC-DELIVERY`.
 - After `dispose()`, mutating/effectful runtime entrypoints fail fast with `StateError`:
   `write(...)`, `replaceScene(...)`, and explicit repaint requests
   (`notifySceneChanged()` / core `requestRepaint()`).
@@ -413,8 +414,9 @@ On double tap in move mode, if top hit node is a text node, controller emits `Ed
 
 Delivery and mutability contract:
 
-- Delivery is asynchronous; subscribers are called after the emitting controller method returns.
-- Relative ordering against `ChangeNotifier` listener notifications/repaint is not a public contract.
+- Delivery is asynchronous (never in the same call stack as the emitting controller method).
+- Relative ordering against `ChangeNotifier` listener notifications/repaint is intentionally not a public contract.
+- This async/ordering contract is tracked by `INV-ENG-INTERACTIVE-ASYNC-DELIVERY`.
 - `nodeIds` and `payload` are immutable snapshots; subscribers cannot mutate shared event data.
 
 `ActionType` values:
@@ -454,8 +456,9 @@ Use this to open app-level text editor overlays.
 
 Delivery contract:
 
-- Delivery is asynchronous; subscribers are called after the emitting controller method returns.
-- Relative ordering against `ChangeNotifier` listener notifications/repaint is not a public contract.
+- Delivery is asynchronous (never in the same call stack as the emitting controller method).
+- Relative ordering against `ChangeNotifier` listener notifications/repaint is intentionally not a public contract.
+- This async/ordering contract is tracked by `INV-ENG-INTERACTIVE-ASYNC-DELIVERY`.
 
 ## 9. View widget (`SceneView`)
 

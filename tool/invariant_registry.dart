@@ -118,6 +118,12 @@ const List<Invariant> invariants = <Invariant>[
     title: 'published events expose immutable nodeIds/payload snapshots',
   ),
   Invariant(
+    id: 'INV-ENG-INTERACTIVE-ASYNC-DELIVERY',
+    scope: 'engine-runtime',
+    title:
+        'interactive actions/editTextRequests are asynchronous; interactive listener notifications are microtask-deferred and coalesced per event-loop tick',
+  ),
+  Invariant(
     id: 'INV-ENG-INTERACTIVE-POINTER-FINITE',
     scope: 'engine-runtime',
     title:

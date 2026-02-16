@@ -76,12 +76,13 @@ Key invariants:
 - Repaint/listener notifications are scheduled after commit via microtask and coalesced per event-loop tick.
 - Interactive `ChangeNotifier` notifications are never synchronous inside `handlePointer(...)`; they are microtask-deferred and coalesced.
 - Interactive `actions` / `editTextRequests` streams are delivered asynchronously (never in the same call stack as mutation methods).
+- Interactive async delivery/coalescing contract is tracked by `INV-ENG-INTERACTIVE-ASYNC-DELIVERY`.
 - Interactive pointer entrypoints ignore non-finite coordinates (`NaN`/`Infinity`) as no-op without mutating state or emitting effects.
 - Interactive gesture processing keeps a single active pointer id; parallel pointer ids are ignored until the active gesture ends (`up`/`cancel`).
 - Interactive drag-start threshold uses `dragStartSlop` for both move and line gestures; when unset, it falls back to `pointerSettings.tapSlop`.
 - Interactive draw-pointer `cancel` clears active draw preview state and pending two-tap line start.
 - Interactive preview state (`move`/`draw`) is ephemeral and does not mutate committed scene before pointer `up`; pointer `cancel` clears preview without scene mutation.
-- Relative ordering between interactive stream delivery and repaint listener notification is intentionally not a public contract.
+- Relative ordering between interactive stream delivery and repaint listener notification is intentionally not a public contract (`INV-ENG-INTERACTIVE-ASYNC-DELIVERY`).
 - Buffered signal/repaint effects are discarded when `write(...)` rolls back.
 - After controller disposal, mutating/effectful runtime methods fail fast with `StateError` and keep state/effects unchanged, including interactive entrypoints (`handlePointer`, `handleDoubleTap`, mode/tool/settings setters, selection/scene mutators).
 - Node-id index state keeps `allNodeIds` and `nodeLocator` equal to committed scene ids/locations, while `nodeIdSeed` is a monotonic generator lower-bounded by committed scene ids.
