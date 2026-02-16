@@ -34,6 +34,13 @@ SceneSnapshot _snapshot({required String text, bool includeImage = false}) {
   );
 }
 
+TextNodeSnapshot _textNode(SceneControllerInteractive controller) {
+  return controller.snapshot.layers
+      .expand((layer) => layer.nodes)
+      .whereType<TextNodeSnapshot>()
+      .single;
+}
+
 Widget _host(
   SceneControllerInteractive controller, {
   Image? Function(String imageId)? imageResolver,
@@ -172,6 +179,72 @@ void main() {
 
     expect(find.byType(SceneViewInteractive), findsOneWidget);
   });
+
+  testWidgets(
+    'SceneViewInteractive keeps slot allocator healthy after cancel release',
+    (tester) async {
+      final controller = SceneControllerInteractive(
+        initialSnapshot: _snapshot(text: 'slots-cancel'),
+      );
+      addTearDown(controller.dispose);
+      controller.setSelection(const <String>{'txt'});
+
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+
+      final gA = await tester.startGesture(const Offset(10, 10), pointer: 401);
+      final gB = await tester.startGesture(const Offset(20, 10), pointer: 402);
+
+      await gB.cancel();
+      await tester.pump();
+      await gA.up();
+      await tester.pump();
+
+      final gNext = await tester.startGesture(
+        const Offset(10, 10),
+        pointer: 403,
+      );
+      await gNext.moveBy(const Offset(18, 0));
+      await gNext.up();
+      await tester.pump();
+
+      expect(_textNode(controller).transform.tx, closeTo(18, 1e-6));
+    },
+  );
+
+  testWidgets(
+    'SceneViewInteractive parallel pointer lifecycle does not keep active lock',
+    (tester) async {
+      final controller = SceneControllerInteractive(
+        initialSnapshot: _snapshot(text: 'parallel-lock'),
+      );
+      addTearDown(controller.dispose);
+      controller.setSelection(const <String>{'txt'});
+
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+
+      final g1 = await tester.startGesture(const Offset(10, 10), pointer: 501);
+      final g2 = await tester.startGesture(const Offset(12, 10), pointer: 502);
+      await g2.moveBy(const Offset(40, 0));
+      await g2.up();
+      await tester.pump();
+
+      expect(_textNode(controller).transform.tx, closeTo(0, 1e-6));
+
+      await g1.moveBy(const Offset(20, 0));
+      await g1.up();
+      await tester.pump();
+      expect(_textNode(controller).transform.tx, closeTo(20, 1e-6));
+
+      final g3 = await tester.startGesture(const Offset(30, 10), pointer: 503);
+      await g3.moveBy(const Offset(10, 0));
+      await g3.up();
+      await tester.pump();
+
+      expect(_textNode(controller).transform.tx, closeTo(30, 1e-6));
+    },
+  );
 
   testWidgets('SceneViewInteractive paints single-point stroke preview', (
     tester,

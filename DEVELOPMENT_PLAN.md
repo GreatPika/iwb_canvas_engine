@@ -65,7 +65,7 @@ language: russian
 
 ## P2 (укрепление качества и регрессионная защита)
 
-9. [ ] Расширить набор негативных/граничных тестов по интерактиву
+9. [x] Расширить набор негативных/граничных тестов по интерактиву
 Где: `/Users/blackpika/iwb_canvas_engine/test/interactive/scene_controller_interactive_unit_test.dart`, `/Users/blackpika/iwb_canvas_engine/test/view/scene_view_interactive_test.dart`.
 Почему: текущие тесты покрывают базовые сценарии, но остаются дыры, указанные в ревью (invalid input, длинные жесты, cancel+pending line).
 Как: добавить отдельные группы тестов `invalid pointer data`, `long gesture guardrails`, `line pending cancel semantics`, `single-active-pointer semantics`.

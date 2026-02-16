@@ -648,130 +648,228 @@ void main() {
       },
     );
 
-    test(
-      'invalid pointer coordinates are ignored without side effects',
-      () async {
+    // Gap matrix (P2 hardening):
+    // - invalid pointer data: existing non-finite down/move + new up/cancel recovery
+    // - long gesture guardrails: existing pen/eraser + new highlighter commit/preview
+    // - line pending cancel semantics: existing cancel clear + new invalid second-tap no-op
+    // - single-active-pointer semantics: existing move/draw policy group
+    group('interactive hardening: invalid pointer data', () {
+      test(
+        'invalid pointer coordinates are ignored without side effects',
+        () async {
+          // INV:INV-ENG-INTERACTIVE-POINTER-FINITE
+          final controller = SceneControllerInteractive(
+            initialSnapshot: SceneSnapshot(
+              layers: <ContentLayerSnapshot>[
+                ContentLayerSnapshot(),
+                ContentLayerSnapshot(),
+              ],
+            ),
+          );
+          addTearDown(controller.dispose);
+          controller.setMode(CanvasMode.draw);
+          controller.setDrawTool(DrawTool.pen);
+
+          final actions = <ActionCommitted>[];
+          final edits = <EditTextRequested>[];
+          final actionSub = controller.actions.listen(actions.add);
+          final editSub = controller.editTextRequests.listen(edits.add);
+          addTearDown(actionSub.cancel);
+          addTearDown(editSub.cancel);
+
+          final beforeSnapshot = controller.snapshot;
+
+          expect(
+            () => controller.handlePointer(
+              const CanvasPointerInput(
+                pointerId: 1,
+                position: Offset(double.nan, 0),
+                phase: CanvasPointerPhase.down,
+                kind: PointerDeviceKind.touch,
+              ),
+            ),
+            returnsNormally,
+          );
+          expect(
+            () => controller.handlePointer(
+              const CanvasPointerInput(
+                pointerId: 1,
+                position: Offset(double.infinity, 1),
+                phase: CanvasPointerPhase.move,
+                kind: PointerDeviceKind.touch,
+              ),
+            ),
+            returnsNormally,
+          );
+          expect(controller.snapshot, same(beforeSnapshot));
+          expect(controller.selectedNodeIds, isEmpty);
+          expect(controller.hasActiveStrokePreview, isFalse);
+          expect(controller.hasActiveLinePreview, isFalse);
+          expect(controller.hasPendingLineStart, isFalse);
+
+          controller.handlePointer(
+            const CanvasPointerInput(
+              pointerId: 1,
+              position: Offset(10, 10),
+              phase: CanvasPointerPhase.down,
+              kind: PointerDeviceKind.touch,
+            ),
+          );
+          controller.handlePointer(
+            const CanvasPointerInput(
+              pointerId: 1,
+              position: Offset(20, 20),
+              phase: CanvasPointerPhase.up,
+              kind: PointerDeviceKind.touch,
+            ),
+          );
+
+          await pumpEventQueue();
+          expect(actions, hasLength(1));
+          expect(actions.single.type, ActionType.drawStroke);
+          expect(actions.single.timestampMs, 1);
+          expect(edits, isEmpty);
+        },
+      );
+
+      test(
+        'invalid up/cancel coordinates are ignored and gesture can recover',
+        () async {
+          // INV:INV-ENG-INTERACTIVE-POINTER-FINITE
+          final controller = SceneControllerInteractive(
+            initialSnapshot: SceneSnapshot(
+              layers: <ContentLayerSnapshot>[
+                ContentLayerSnapshot(),
+                ContentLayerSnapshot(),
+              ],
+            ),
+          );
+          addTearDown(controller.dispose);
+          controller.setMode(CanvasMode.draw);
+          controller.setDrawTool(DrawTool.pen);
+
+          final actions = <ActionCommitted>[];
+          final actionSub = controller.actions.listen(actions.add);
+          addTearDown(actionSub.cancel);
+
+          controller.handlePointer(
+            const CanvasPointerInput(
+              pointerId: 1,
+              position: Offset(10, 10),
+              phase: CanvasPointerPhase.down,
+              kind: PointerDeviceKind.touch,
+            ),
+          );
+          expect(controller.hasActiveStrokePreview, isTrue);
+
+          expect(
+            () => controller.handlePointer(
+              const CanvasPointerInput(
+                pointerId: 1,
+                position: Offset(double.nan, 20),
+                phase: CanvasPointerPhase.up,
+                kind: PointerDeviceKind.touch,
+              ),
+            ),
+            returnsNormally,
+          );
+          expect(
+            () => controller.handlePointer(
+              const CanvasPointerInput(
+                pointerId: 1,
+                position: Offset(20, double.infinity),
+                phase: CanvasPointerPhase.cancel,
+                kind: PointerDeviceKind.touch,
+              ),
+            ),
+            returnsNormally,
+          );
+
+          await pumpEventQueue();
+          expect(actions, isEmpty);
+          expect(controller.hasActiveStrokePreview, isTrue);
+
+          controller.handlePointer(
+            const CanvasPointerInput(
+              pointerId: 1,
+              position: Offset(10, 10),
+              phase: CanvasPointerPhase.cancel,
+              kind: PointerDeviceKind.touch,
+            ),
+          );
+          expect(controller.hasActiveStrokePreview, isFalse);
+          expect(controller.activeStrokePreviewPoints, isEmpty);
+
+          controller.handlePointer(
+            const CanvasPointerInput(
+              pointerId: 2,
+              position: Offset(30, 30),
+              phase: CanvasPointerPhase.down,
+              kind: PointerDeviceKind.touch,
+            ),
+          );
+          controller.handlePointer(
+            const CanvasPointerInput(
+              pointerId: 2,
+              position: Offset(40, 30),
+              phase: CanvasPointerPhase.up,
+              kind: PointerDeviceKind.touch,
+            ),
+          );
+
+          await pumpEventQueue();
+          expect(actions, hasLength(1));
+          expect(actions.single.type, ActionType.drawStroke);
+        },
+      );
+
+      test('invalid double-tap coordinates are ignored', () async {
         // INV:INV-ENG-INTERACTIVE-POINTER-FINITE
-        final controller = SceneControllerInteractive(
-          initialSnapshot: SceneSnapshot(
-            layers: <ContentLayerSnapshot>[
-              ContentLayerSnapshot(),
-              ContentLayerSnapshot(),
+        final text = TextNode(
+          id: 'text',
+          text: 'note',
+          size: const Size(80, 30),
+          color: const Color(0xFF000000),
+        )..position = const Offset(100, 100);
+        final controller = _controllerFromScene(
+          Scene(
+            layers: <ContentLayer>[
+              ContentLayer(),
+              ContentLayer(nodes: <SceneNode>[text]),
             ],
           ),
         );
         addTearDown(controller.dispose);
-        controller.setMode(CanvasMode.draw);
-        controller.setDrawTool(DrawTool.pen);
 
-        final actions = <ActionCommitted>[];
-        final edits = <EditTextRequested>[];
-        final actionSub = controller.actions.listen(actions.add);
-        final editSub = controller.editTextRequests.listen(edits.add);
-        addTearDown(actionSub.cancel);
-        addTearDown(editSub.cancel);
-
-        final beforeSnapshot = controller.snapshot;
+        final requests = <EditTextRequested>[];
+        final sub = controller.editTextRequests.listen(requests.add);
+        addTearDown(sub.cancel);
 
         expect(
-          () => controller.handlePointer(
-            const CanvasPointerInput(
-              pointerId: 1,
-              position: Offset(double.nan, 0),
-              phase: CanvasPointerPhase.down,
-              kind: PointerDeviceKind.touch,
-            ),
+          () => controller.handleDoubleTap(
+            position: const Offset(double.nan, 100),
+            timestampMs: 10,
           ),
           returnsNormally,
         );
         expect(
-          () => controller.handlePointer(
-            const CanvasPointerInput(
-              pointerId: 1,
-              position: Offset(double.infinity, 1),
-              phase: CanvasPointerPhase.move,
-              kind: PointerDeviceKind.touch,
-            ),
+          () => controller.handleDoubleTap(
+            position: const Offset(100, double.infinity),
+            timestampMs: 11,
           ),
           returnsNormally,
         );
-        expect(controller.snapshot, same(beforeSnapshot));
-        expect(controller.selectedNodeIds, isEmpty);
-        expect(controller.hasActiveStrokePreview, isFalse);
-        expect(controller.hasActiveLinePreview, isFalse);
-        expect(controller.hasPendingLineStart, isFalse);
 
-        controller.handlePointer(
-          const CanvasPointerInput(
-            pointerId: 1,
-            position: Offset(10, 10),
-            phase: CanvasPointerPhase.down,
-            kind: PointerDeviceKind.touch,
-          ),
-        );
-        controller.handlePointer(
-          const CanvasPointerInput(
-            pointerId: 1,
-            position: Offset(20, 20),
-            phase: CanvasPointerPhase.up,
-            kind: PointerDeviceKind.touch,
-          ),
+        controller.handleDoubleTap(
+          position: const Offset(100, 100),
+          timestampMs: 12,
         );
 
         await pumpEventQueue();
-        expect(actions, hasLength(1));
-        expect(actions.single.type, ActionType.drawStroke);
-        expect(actions.single.timestampMs, 1);
-        expect(edits, isEmpty);
-      },
-    );
-
-    test('invalid double-tap coordinates are ignored', () async {
-      // INV:INV-ENG-INTERACTIVE-POINTER-FINITE
-      final text = TextNode(
-        id: 'text',
-        text: 'note',
-        size: const Size(80, 30),
-        color: const Color(0xFF000000),
-      )..position = const Offset(100, 100);
-      final controller = _controllerFromScene(
-        Scene(
-          layers: <ContentLayer>[
-            ContentLayer(),
-            ContentLayer(nodes: <SceneNode>[text]),
-          ],
-        ),
-      );
-      addTearDown(controller.dispose);
-
-      final requests = <EditTextRequested>[];
-      final sub = controller.editTextRequests.listen(requests.add);
-      addTearDown(sub.cancel);
-
-      expect(
-        () => controller.handleDoubleTap(
-          position: const Offset(double.nan, 100),
-          timestampMs: 10,
-        ),
-        returnsNormally,
-      );
-      expect(
-        () => controller.handleDoubleTap(
-          position: const Offset(100, double.infinity),
-          timestampMs: 11,
-        ),
-        returnsNormally,
-      );
-
-      controller.handleDoubleTap(
-        position: const Offset(100, 100),
-        timestampMs: 12,
-      );
-
-      await pumpEventQueue();
-      expect(requests, hasLength(1));
-      expect(requests.single.nodeId, 'text');
-      expect(requests.single.timestampMs, 12);
+        expect(requests, hasLength(1));
+        expect(requests.single.nodeId, 'text');
+        expect(requests.single.timestampMs, 12);
+      });
     });
 
     test(
@@ -1111,6 +1209,7 @@ void main() {
       },
     );
 
+    // Gap matrix axis: single-active-pointer semantics.
     group('single-active-pointer policy', () {
       test(
         'move mode ignores parallel pointer ids until active pointer ends',
@@ -1779,501 +1878,75 @@ void main() {
       },
     );
 
-    test('pen commit caps very long stroke and preserves endpoints', () {
-      final controller = SceneControllerInteractive(
-        initialSnapshot: SceneSnapshot(
-          layers: <ContentLayerSnapshot>[
-            ContentLayerSnapshot(),
-            ContentLayerSnapshot(),
-          ],
-        ),
-      );
-      addTearDown(controller.dispose);
-
-      controller.setMode(CanvasMode.draw);
-      controller.setDrawTool(DrawTool.pen);
-      controller.penThickness = 2;
-
-      const totalRawPoints = 20050;
-      controller.handlePointer(
-        _sample(
-          pointerId: 1,
-          position: const Offset(0, 0),
-          timestampMs: 1,
-          phase: CanvasPointerPhase.down,
-        ),
-      );
-      for (var i = 1; i < totalRawPoints - 1; i++) {
-        controller.handlePointer(
-          _sample(
-            pointerId: 1,
-            position: Offset(i.toDouble(), 0),
-            timestampMs: i + 1,
-            phase: CanvasPointerPhase.move,
-          ),
-        );
-      }
-      controller.handlePointer(
-        _sample(
-          pointerId: 1,
-          position: Offset((totalRawPoints - 1).toDouble(), 0),
-          timestampMs: totalRawPoints + 1,
-          phase: CanvasPointerPhase.up,
-        ),
-      );
-
-      final strokeSnap = controller.snapshot.layers
-          .expand((layer) => layer.nodes)
-          .whereType<StrokeNodeSnapshot>()
-          .single;
-      expect(strokeSnap.points.length, 20000);
-      expect(strokeSnap.points.first, const Offset(0, 0));
-      expect(
-        strokeSnap.points.last,
-        Offset((totalRawPoints - 1).toDouble(), 0),
-      );
-    });
-
-    test('pen preview buffer is soft-capped during long move', () {
-      final controller = SceneControllerInteractive(
-        initialSnapshot: SceneSnapshot(
-          layers: <ContentLayerSnapshot>[
-            ContentLayerSnapshot(),
-            ContentLayerSnapshot(),
-          ],
-        ),
-      );
-      addTearDown(controller.dispose);
-
-      controller.setMode(CanvasMode.draw);
-      controller.setDrawTool(DrawTool.pen);
-
-      controller.handlePointer(
-        _sample(
-          pointerId: 1,
-          position: const Offset(0, 0),
-          timestampMs: 1,
-          phase: CanvasPointerPhase.down,
-        ),
-      );
-
-      for (var i = 1; i <= 26000; i++) {
-        controller.handlePointer(
-          _sample(
-            pointerId: 1,
-            position: Offset(i.toDouble(), 0),
-            timestampMs: i + 1,
-            phase: CanvasPointerPhase.move,
-          ),
-        );
-      }
-
-      expect(controller.hasActiveStrokePreview, isTrue);
-      expect(
-        controller.activeStrokePreviewPoints.length,
-        lessThanOrEqualTo(kInteractiveStrokePointsSoftLimit),
-      );
-    });
-
-    test('soft-capped stroke preview keeps endpoints after pruning', () {
-      final controller = SceneControllerInteractive(
-        initialSnapshot: SceneSnapshot(
-          layers: <ContentLayerSnapshot>[
-            ContentLayerSnapshot(),
-            ContentLayerSnapshot(),
-          ],
-        ),
-      );
-      addTearDown(controller.dispose);
-
-      controller.setMode(CanvasMode.draw);
-      controller.setDrawTool(DrawTool.pen);
-
-      controller.handlePointer(
-        _sample(
-          pointerId: 1,
-          position: const Offset(0, 0),
-          timestampMs: 1,
-          phase: CanvasPointerPhase.down,
-        ),
-      );
-
-      const latestPoint = Offset(26000, 0);
-      for (var i = 1; i <= latestPoint.dx; i++) {
-        controller.handlePointer(
-          _sample(
-            pointerId: 1,
-            position: Offset(i.toDouble(), 0),
-            timestampMs: i + 1,
-            phase: CanvasPointerPhase.move,
-          ),
-        );
-      }
-
-      expect(controller.activeStrokePreviewPoints, isNotEmpty);
-      expect(controller.activeStrokePreviewPoints.first, const Offset(0, 0));
-      expect(controller.activeStrokePreviewPoints.last, latestPoint);
-    });
-
-    test('eraser long gesture remains bounded and erases near both ends', () {
-      final startLine = LineNode(
-        id: 'line-start',
-        start: const Offset(-12, 0),
-        end: const Offset(12, 0),
-        thickness: 2,
-        color: const Color(0xFF000000),
-      )..position = const Offset(20, 50);
-      final endLine = LineNode(
-        id: 'line-end',
-        start: const Offset(-12, 0),
-        end: const Offset(12, 0),
-        thickness: 2,
-        color: const Color(0xFF000000),
-      )..position = const Offset(9000, 50);
-
-      final controller = _controllerFromScene(
-        Scene(
-          layers: <ContentLayer>[
-            ContentLayer(),
-            ContentLayer(nodes: <SceneNode>[startLine, endLine]),
-          ],
-        ),
-      );
-      addTearDown(controller.dispose);
-
-      controller.setMode(CanvasMode.draw);
-      controller.setDrawTool(DrawTool.eraser);
-      controller.eraserThickness = 24;
-
-      controller.handlePointer(
-        _sample(
-          pointerId: 1,
-          position: const Offset(20, 50),
-          timestampMs: 1,
-          phase: CanvasPointerPhase.down,
-        ),
-      );
-      for (var i = 21; i <= 9000; i++) {
-        controller.handlePointer(
-          _sample(
-            pointerId: 1,
-            position: Offset(i.toDouble(), 50),
-            timestampMs: i,
-            phase: CanvasPointerPhase.move,
-          ),
-        );
-      }
-      controller.handlePointer(
-        _sample(
-          pointerId: 1,
-          position: const Offset(9000, 50),
-          timestampMs: 9001,
-          phase: CanvasPointerPhase.up,
-        ),
-      );
-
-      final ids = <NodeId>{
-        for (final layer in controller.snapshot.layers)
-          for (final node in layer.nodes) node.id,
-      };
-      expect(ids.contains('line-start'), isFalse);
-      expect(ids.contains('line-end'), isFalse);
-    });
-
-    test('long eraser stress keeps correctness on dense scene', () {
-      const gestureLength = 4096;
-      final nodes = <SceneNode>[];
-      for (var i = 0; i < 40; i++) {
-        final y = i.isEven ? 0.0 : 12.0;
-        nodes.add(
-          _horizontalStroke(
-            id: 'stroke-$i',
-            y: y,
-            length: gestureLength.toDouble(),
-            step: 8,
-            thickness: 2,
-          ),
-        );
-      }
-      for (var i = 0; i < 20; i++) {
-        nodes.add(
-          _horizontalStroke(
-            id: 'far-$i',
-            y: 220 + i.toDouble(),
-            length: gestureLength.toDouble(),
-            step: 8,
-            thickness: 2,
-          ),
-        );
-      }
-
-      final controller = _controllerFromScene(
-        Scene(
-          layers: <ContentLayer>[
-            ContentLayer(),
-            ContentLayer(nodes: nodes),
-          ],
-        ),
-      );
-      addTearDown(controller.dispose);
-
-      controller.setMode(CanvasMode.draw);
-      controller.setDrawTool(DrawTool.eraser);
-      controller.eraserThickness = 20;
-
-      controller.handlePointer(
-        _sample(
-          pointerId: 1,
-          position: const Offset(0, 0),
-          timestampMs: 1,
-          phase: CanvasPointerPhase.down,
-        ),
-      );
-      for (var i = 1; i <= gestureLength; i++) {
-        controller.handlePointer(
-          _sample(
-            pointerId: 1,
-            position: Offset(i.toDouble(), 0),
-            timestampMs: i + 1,
-            phase: CanvasPointerPhase.move,
-          ),
-        );
-      }
-      controller.handlePointer(
-        _sample(
-          pointerId: 1,
-          position: Offset(gestureLength.toDouble(), 0),
-          timestampMs: gestureLength + 2,
-          phase: CanvasPointerPhase.up,
-        ),
-      );
-
-      final ids = <NodeId>{
-        for (final layer in controller.snapshot.layers)
-          for (final node in layer.nodes) node.id,
-      };
-      for (var i = 0; i < 40; i++) {
-        expect(
-          ids.contains('stroke-$i'),
-          i.isEven ? isFalse : isTrue,
-          reason: 'stroke-$i',
-        );
-      }
-      for (var i = 0; i < 20; i++) {
-        expect(ids.contains('far-$i'), isTrue, reason: 'far-$i');
-      }
-    });
-
-    test('long eraser commit keeps bounded query/check complexity', () {
-      const gestureLength = 4096;
-      final nodes = <SceneNode>[];
-      for (var i = 0; i < 32; i++) {
-        final y = i.isEven ? 0.0 : 12.0;
-        nodes.add(
-          _horizontalStroke(
-            id: 'stress-$i',
-            y: y,
-            length: gestureLength.toDouble(),
-            step: 8,
-            thickness: 2,
-          ),
-        );
-      }
-
-      final controller = _controllerFromScene(
-        Scene(
-          layers: <ContentLayer>[
-            ContentLayer(),
-            ContentLayer(nodes: nodes),
-          ],
-        ),
-      );
-      addTearDown(controller.dispose);
-
-      controller.setMode(CanvasMode.draw);
-      controller.setDrawTool(DrawTool.eraser);
-      controller.eraserThickness = 20;
-
-      controller.handlePointer(
-        _sample(
-          pointerId: 1,
-          position: const Offset(0, 0),
-          timestampMs: 1,
-          phase: CanvasPointerPhase.down,
-        ),
-      );
-      for (var i = 1; i <= gestureLength; i++) {
-        controller.handlePointer(
-          _sample(
-            pointerId: 1,
-            position: Offset(i.toDouble(), 0),
-            timestampMs: i + 1,
-            phase: CanvasPointerPhase.move,
-          ),
-        );
-      }
-
-      final stopwatch = Stopwatch()..start();
-      controller.handlePointer(
-        _sample(
-          pointerId: 1,
-          position: Offset(gestureLength.toDouble(), 0),
-          timestampMs: gestureLength + 2,
-          phase: CanvasPointerPhase.up,
-        ),
-      );
-      stopwatch.stop();
-
-      final spatialQueryCount =
-          sceneControllerInteractiveInternalEraserSpatialQueryCount(controller);
-      final preciseChecks =
-          sceneControllerInteractiveInternalEraserPreciseSegmentCheckCount(
-            controller,
-          );
-      final expectedBatchQueryUpperBound = (gestureLength / 64).ceil() + 2;
-
-      // Deterministic perf guards are primary acceptance criteria.
-      expect(
-        spatialQueryCount,
-        lessThanOrEqualTo(expectedBatchQueryUpperBound),
-      );
-      expect(preciseChecks, lessThan(500000));
-      // Wall-clock bound is a secondary smoke guard only; if CI is noisy,
-      // deterministic counters above remain source-of-truth for regressions.
-      expect(stopwatch.elapsedMilliseconds, lessThan(2500));
-    });
-
-    test(
-      'eraser zigzag path keeps coarse prefilter correctness and bounded checks',
-      () {
-        const zigzagLength = 2000.0;
-        const int zigzagPoints = 200;
-        final zigzag = List<Offset>.generate(zigzagPoints, (index) {
-          final x = zigzagLength * index / (zigzagPoints - 1);
-          final y = index.isEven ? -8.0 : 8.0;
-          return Offset(x, y);
-        }, growable: false);
-
-        final targetNear = StrokeNode(
-          id: 'zigzag-target-near',
-          points: const <Offset>[Offset(100, 0), Offset(1900, 0)],
-          thickness: 2,
-          color: const Color(0xFF000000),
-        );
-        final targetCross = StrokeNode(
-          id: 'zigzag-target-cross',
-          points: const <Offset>[Offset(1000, -30), Offset(1000, 30)],
-          thickness: 2,
-          color: const Color(0xFF000000),
-        );
-        final safeFar = StrokeNode(
-          id: 'zigzag-safe-far',
-          points: const <Offset>[Offset(100, 80), Offset(1900, 80)],
-          thickness: 2,
-          color: const Color(0xFF000000),
-        );
-        final safeLow = StrokeNode(
-          id: 'zigzag-safe-low',
-          points: const <Offset>[Offset(100, -80), Offset(1900, -80)],
-          thickness: 2,
-          color: const Color(0xFF000000),
-        );
-
-        final controller = _controllerFromScene(
-          Scene(
-            layers: <ContentLayer>[
-              ContentLayer(),
-              ContentLayer(
-                nodes: <SceneNode>[targetNear, targetCross, safeFar, safeLow],
-              ),
+    group('interactive hardening: long gesture guardrails', () {
+      test('pen commit caps very long stroke and preserves endpoints', () {
+        final controller = SceneControllerInteractive(
+          initialSnapshot: SceneSnapshot(
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(),
+              ContentLayerSnapshot(),
             ],
           ),
         );
         addTearDown(controller.dispose);
 
         controller.setMode(CanvasMode.draw);
-        controller.setDrawTool(DrawTool.eraser);
-        controller.eraserThickness = 14;
+        controller.setDrawTool(DrawTool.pen);
+        controller.penThickness = 2;
 
+        const totalRawPoints = 20050;
         controller.handlePointer(
           _sample(
-            pointerId: 11,
-            position: zigzag.first,
+            pointerId: 1,
+            position: const Offset(0, 0),
             timestampMs: 1,
             phase: CanvasPointerPhase.down,
           ),
         );
-        for (var i = 1; i < zigzag.length; i++) {
-          final phase = i == zigzag.length - 1
-              ? CanvasPointerPhase.up
-              : CanvasPointerPhase.move;
+        for (var i = 1; i < totalRawPoints - 1; i++) {
           controller.handlePointer(
             _sample(
-              pointerId: 11,
-              position: zigzag[i],
+              pointerId: 1,
+              position: Offset(i.toDouble(), 0),
               timestampMs: i + 1,
-              phase: phase,
+              phase: CanvasPointerPhase.move,
             ),
           );
         }
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: Offset((totalRawPoints - 1).toDouble(), 0),
+            timestampMs: totalRawPoints + 1,
+            phase: CanvasPointerPhase.up,
+          ),
+        );
 
-        final ids = <NodeId>{
-          for (final layer in controller.snapshot.layers)
-            for (final node in layer.nodes) node.id,
-        };
-        expect(ids.contains('zigzag-target-near'), isFalse);
-        expect(ids.contains('zigzag-target-cross'), isFalse);
-        expect(ids.contains('zigzag-safe-far'), isTrue);
-        expect(ids.contains('zigzag-safe-low'), isTrue);
-
-        final preciseChecks =
-            sceneControllerInteractiveInternalEraserPreciseSegmentCheckCount(
-              controller,
-            );
-        final spatialQueries =
-            sceneControllerInteractiveInternalEraserSpatialQueryCount(
-              controller,
-            );
-        expect(preciseChecks, lessThan(15000));
+        final strokeSnap = controller.snapshot.layers
+            .expand((layer) => layer.nodes)
+            .whereType<StrokeNodeSnapshot>()
+            .single;
+        expect(strokeSnap.points.length, 20000);
+        expect(strokeSnap.points.first, const Offset(0, 0));
         expect(
-          spatialQueries,
-          lessThanOrEqualTo((zigzagPoints / 64).ceil() + 2),
+          strokeSnap.points.last,
+          Offset((totalRawPoints - 1).toDouble(), 0),
         );
-      },
-    );
+      });
 
-    test(
-      'eraser stroke coarse prefilter runs batched checks for non-hit geometry',
-      () {
-        final nonHitStroke = StrokeNode(
-          id: 'non-hit',
-          points: const <Offset>[
-            Offset(0, 100),
-            Offset(0, 200),
-            Offset(100, 200),
-          ],
-          thickness: 1,
-          color: const Color(0xFF000000),
-        );
-        final aboveStroke = StrokeNode(
-          id: 'above',
-          points: const <Offset>[Offset(0, -3), Offset(100, -3)],
-          thickness: 1,
-          color: const Color(0xFF000000),
-        );
-        final controller = _controllerFromScene(
-          Scene(
-            layers: <ContentLayer>[
-              ContentLayer(),
-              ContentLayer(nodes: <SceneNode>[nonHitStroke, aboveStroke]),
+      test('pen preview buffer is soft-capped during long move', () {
+        final controller = SceneControllerInteractive(
+          initialSnapshot: SceneSnapshot(
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(),
+              ContentLayerSnapshot(),
             ],
           ),
         );
         addTearDown(controller.dispose);
 
         controller.setMode(CanvasMode.draw);
-        controller.setDrawTool(DrawTool.eraser);
-        controller.eraserThickness = 1;
+        controller.setDrawTool(DrawTool.pen);
 
         controller.handlePointer(
           _sample(
@@ -2283,19 +1956,194 @@ void main() {
             phase: CanvasPointerPhase.down,
           ),
         );
-        controller.handlePointer(
-          _sample(
-            pointerId: 1,
-            position: const Offset(100, 0),
-            timestampMs: 2,
-            phase: CanvasPointerPhase.move,
+
+        for (var i = 1; i <= 26000; i++) {
+          controller.handlePointer(
+            _sample(
+              pointerId: 1,
+              position: Offset(i.toDouble(), 0),
+              timestampMs: i + 1,
+              phase: CanvasPointerPhase.move,
+            ),
+          );
+        }
+
+        expect(controller.hasActiveStrokePreview, isTrue);
+        expect(
+          controller.activeStrokePreviewPoints.length,
+          lessThanOrEqualTo(kInteractiveStrokePointsSoftLimit),
+        );
+      });
+
+      test('soft-capped stroke preview keeps endpoints after pruning', () {
+        final controller = SceneControllerInteractive(
+          initialSnapshot: SceneSnapshot(
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(),
+              ContentLayerSnapshot(),
+            ],
           ),
         );
+        addTearDown(controller.dispose);
+
+        controller.setMode(CanvasMode.draw);
+        controller.setDrawTool(DrawTool.pen);
+
         controller.handlePointer(
           _sample(
             pointerId: 1,
-            position: const Offset(100, 100),
-            timestampMs: 3,
+            position: const Offset(0, 0),
+            timestampMs: 1,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+
+        const latestPoint = Offset(26000, 0);
+        for (var i = 1; i <= latestPoint.dx; i++) {
+          controller.handlePointer(
+            _sample(
+              pointerId: 1,
+              position: Offset(i.toDouble(), 0),
+              timestampMs: i + 1,
+              phase: CanvasPointerPhase.move,
+            ),
+          );
+        }
+
+        expect(controller.activeStrokePreviewPoints, isNotEmpty);
+        expect(controller.activeStrokePreviewPoints.first, const Offset(0, 0));
+        expect(controller.activeStrokePreviewPoints.last, latestPoint);
+      });
+
+      test(
+        'highlighter long preview and commit keep soft-limit and endpoints',
+        () async {
+          final controller = SceneControllerInteractive(
+            initialSnapshot: SceneSnapshot(
+              layers: <ContentLayerSnapshot>[
+                ContentLayerSnapshot(),
+                ContentLayerSnapshot(),
+              ],
+            ),
+          );
+          addTearDown(controller.dispose);
+
+          controller.setMode(CanvasMode.draw);
+          controller.setDrawTool(DrawTool.highlighter);
+          controller.highlighterThickness = 7;
+          controller.highlighterOpacity = 0.35;
+
+          final actions = <ActionCommitted>[];
+          final sub = controller.actions.listen(actions.add);
+          addTearDown(sub.cancel);
+
+          const latestPoint = Offset(26000, 0);
+          controller.handlePointer(
+            _sample(
+              pointerId: 1,
+              position: const Offset(0, 0),
+              timestampMs: 1,
+              phase: CanvasPointerPhase.down,
+            ),
+          );
+          for (var i = 1; i <= latestPoint.dx; i++) {
+            controller.handlePointer(
+              _sample(
+                pointerId: 1,
+                position: Offset(i.toDouble(), 0),
+                timestampMs: i + 1,
+                phase: CanvasPointerPhase.move,
+              ),
+            );
+          }
+          expect(
+            controller.activeStrokePreviewPoints.length,
+            lessThanOrEqualTo(kInteractiveStrokePointsSoftLimit),
+          );
+          expect(
+            controller.activeStrokePreviewPoints.first,
+            const Offset(0, 0),
+          );
+          expect(controller.activeStrokePreviewPoints.last, latestPoint);
+
+          controller.handlePointer(
+            _sample(
+              pointerId: 1,
+              position: latestPoint,
+              timestampMs: 26002,
+              phase: CanvasPointerPhase.up,
+            ),
+          );
+          await pumpEventQueue();
+
+          expect(
+            actions.where((a) => a.type == ActionType.drawHighlighter),
+            hasLength(1),
+          );
+          final strokeSnap = controller.snapshot.layers
+              .expand((layer) => layer.nodes)
+              .whereType<StrokeNodeSnapshot>()
+              .single;
+          expect(strokeSnap.points.first, const Offset(0, 0));
+          expect(strokeSnap.points.last, latestPoint);
+          expect(strokeSnap.points.length, lessThanOrEqualTo(20000));
+          expect(strokeSnap.opacity, closeTo(0.35, 1e-6));
+        },
+      );
+
+      test('eraser long gesture remains bounded and erases near both ends', () {
+        final startLine = LineNode(
+          id: 'line-start',
+          start: const Offset(-12, 0),
+          end: const Offset(12, 0),
+          thickness: 2,
+          color: const Color(0xFF000000),
+        )..position = const Offset(20, 50);
+        final endLine = LineNode(
+          id: 'line-end',
+          start: const Offset(-12, 0),
+          end: const Offset(12, 0),
+          thickness: 2,
+          color: const Color(0xFF000000),
+        )..position = const Offset(9000, 50);
+
+        final controller = _controllerFromScene(
+          Scene(
+            layers: <ContentLayer>[
+              ContentLayer(),
+              ContentLayer(nodes: <SceneNode>[startLine, endLine]),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+
+        controller.setMode(CanvasMode.draw);
+        controller.setDrawTool(DrawTool.eraser);
+        controller.eraserThickness = 24;
+
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: const Offset(20, 50),
+            timestampMs: 1,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+        for (var i = 21; i <= 9000; i++) {
+          controller.handlePointer(
+            _sample(
+              pointerId: 1,
+              position: Offset(i.toDouble(), 50),
+              timestampMs: i,
+              phase: CanvasPointerPhase.move,
+            ),
+          );
+        }
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: const Offset(9000, 50),
+            timestampMs: 9001,
             phase: CanvasPointerPhase.up,
           ),
         );
@@ -2304,32 +2152,523 @@ void main() {
           for (final layer in controller.snapshot.layers)
             for (final node in layer.nodes) node.id,
         };
-        expect(ids.contains('non-hit'), isTrue);
-        expect(ids.contains('above'), isTrue);
-        expect(
-          sceneControllerInteractiveInternalEraserPreciseSegmentCheckCount(
-            controller,
+        expect(ids.contains('line-start'), isFalse);
+        expect(ids.contains('line-end'), isFalse);
+      });
+
+      test('long eraser stress keeps correctness on dense scene', () {
+        const gestureLength = 4096;
+        final nodes = <SceneNode>[];
+        for (var i = 0; i < 40; i++) {
+          final y = i.isEven ? 0.0 : 12.0;
+          nodes.add(
+            _horizontalStroke(
+              id: 'stroke-$i',
+              y: y,
+              length: gestureLength.toDouble(),
+              step: 8,
+              thickness: 2,
+            ),
+          );
+        }
+        for (var i = 0; i < 20; i++) {
+          nodes.add(
+            _horizontalStroke(
+              id: 'far-$i',
+              y: 220 + i.toDouble(),
+              length: gestureLength.toDouble(),
+              step: 8,
+              thickness: 2,
+            ),
+          );
+        }
+
+        final controller = _controllerFromScene(
+          Scene(
+            layers: <ContentLayer>[
+              ContentLayer(),
+              ContentLayer(nodes: nodes),
+            ],
           ),
-          greaterThan(0),
         );
-      },
-    );
+        addTearDown(controller.dispose);
 
-    test('long eraser gesture does not throw', () {
-      final controller = SceneControllerInteractive(
-        initialSnapshot: SceneSnapshot(
-          layers: <ContentLayerSnapshot>[
-            ContentLayerSnapshot(),
-            ContentLayerSnapshot(),
-          ],
-        ),
+        controller.setMode(CanvasMode.draw);
+        controller.setDrawTool(DrawTool.eraser);
+        controller.eraserThickness = 20;
+
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: const Offset(0, 0),
+            timestampMs: 1,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+        for (var i = 1; i <= gestureLength; i++) {
+          controller.handlePointer(
+            _sample(
+              pointerId: 1,
+              position: Offset(i.toDouble(), 0),
+              timestampMs: i + 1,
+              phase: CanvasPointerPhase.move,
+            ),
+          );
+        }
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: Offset(gestureLength.toDouble(), 0),
+            timestampMs: gestureLength + 2,
+            phase: CanvasPointerPhase.up,
+          ),
+        );
+
+        final ids = <NodeId>{
+          for (final layer in controller.snapshot.layers)
+            for (final node in layer.nodes) node.id,
+        };
+        for (var i = 0; i < 40; i++) {
+          expect(
+            ids.contains('stroke-$i'),
+            i.isEven ? isFalse : isTrue,
+            reason: 'stroke-$i',
+          );
+        }
+        for (var i = 0; i < 20; i++) {
+          expect(ids.contains('far-$i'), isTrue, reason: 'far-$i');
+        }
+      });
+
+      test('long eraser commit keeps bounded query/check complexity', () {
+        const gestureLength = 4096;
+        final nodes = <SceneNode>[];
+        for (var i = 0; i < 32; i++) {
+          final y = i.isEven ? 0.0 : 12.0;
+          nodes.add(
+            _horizontalStroke(
+              id: 'stress-$i',
+              y: y,
+              length: gestureLength.toDouble(),
+              step: 8,
+              thickness: 2,
+            ),
+          );
+        }
+
+        final controller = _controllerFromScene(
+          Scene(
+            layers: <ContentLayer>[
+              ContentLayer(),
+              ContentLayer(nodes: nodes),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+
+        controller.setMode(CanvasMode.draw);
+        controller.setDrawTool(DrawTool.eraser);
+        controller.eraserThickness = 20;
+
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: const Offset(0, 0),
+            timestampMs: 1,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+        for (var i = 1; i <= gestureLength; i++) {
+          controller.handlePointer(
+            _sample(
+              pointerId: 1,
+              position: Offset(i.toDouble(), 0),
+              timestampMs: i + 1,
+              phase: CanvasPointerPhase.move,
+            ),
+          );
+        }
+
+        final stopwatch = Stopwatch()..start();
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: Offset(gestureLength.toDouble(), 0),
+            timestampMs: gestureLength + 2,
+            phase: CanvasPointerPhase.up,
+          ),
+        );
+        stopwatch.stop();
+
+        final spatialQueryCount =
+            sceneControllerInteractiveInternalEraserSpatialQueryCount(
+              controller,
+            );
+        final preciseChecks =
+            sceneControllerInteractiveInternalEraserPreciseSegmentCheckCount(
+              controller,
+            );
+        final expectedBatchQueryUpperBound = (gestureLength / 64).ceil() + 2;
+
+        // Deterministic perf guards are primary acceptance criteria.
+        expect(
+          spatialQueryCount,
+          lessThanOrEqualTo(expectedBatchQueryUpperBound),
+        );
+        expect(preciseChecks, lessThan(500000));
+        // Wall-clock bound is a secondary smoke guard only; if CI is noisy,
+        // deterministic counters above remain source-of-truth for regressions.
+        expect(stopwatch.elapsedMilliseconds, lessThan(2500));
+      });
+
+      test(
+        'eraser zigzag path keeps coarse prefilter correctness and bounded checks',
+        () {
+          const zigzagLength = 2000.0;
+          const int zigzagPoints = 200;
+          final zigzag = List<Offset>.generate(zigzagPoints, (index) {
+            final x = zigzagLength * index / (zigzagPoints - 1);
+            final y = index.isEven ? -8.0 : 8.0;
+            return Offset(x, y);
+          }, growable: false);
+
+          final targetNear = StrokeNode(
+            id: 'zigzag-target-near',
+            points: const <Offset>[Offset(100, 0), Offset(1900, 0)],
+            thickness: 2,
+            color: const Color(0xFF000000),
+          );
+          final targetCross = StrokeNode(
+            id: 'zigzag-target-cross',
+            points: const <Offset>[Offset(1000, -30), Offset(1000, 30)],
+            thickness: 2,
+            color: const Color(0xFF000000),
+          );
+          final safeFar = StrokeNode(
+            id: 'zigzag-safe-far',
+            points: const <Offset>[Offset(100, 80), Offset(1900, 80)],
+            thickness: 2,
+            color: const Color(0xFF000000),
+          );
+          final safeLow = StrokeNode(
+            id: 'zigzag-safe-low',
+            points: const <Offset>[Offset(100, -80), Offset(1900, -80)],
+            thickness: 2,
+            color: const Color(0xFF000000),
+          );
+
+          final controller = _controllerFromScene(
+            Scene(
+              layers: <ContentLayer>[
+                ContentLayer(),
+                ContentLayer(
+                  nodes: <SceneNode>[targetNear, targetCross, safeFar, safeLow],
+                ),
+              ],
+            ),
+          );
+          addTearDown(controller.dispose);
+
+          controller.setMode(CanvasMode.draw);
+          controller.setDrawTool(DrawTool.eraser);
+          controller.eraserThickness = 14;
+
+          controller.handlePointer(
+            _sample(
+              pointerId: 11,
+              position: zigzag.first,
+              timestampMs: 1,
+              phase: CanvasPointerPhase.down,
+            ),
+          );
+          for (var i = 1; i < zigzag.length; i++) {
+            final phase = i == zigzag.length - 1
+                ? CanvasPointerPhase.up
+                : CanvasPointerPhase.move;
+            controller.handlePointer(
+              _sample(
+                pointerId: 11,
+                position: zigzag[i],
+                timestampMs: i + 1,
+                phase: phase,
+              ),
+            );
+          }
+
+          final ids = <NodeId>{
+            for (final layer in controller.snapshot.layers)
+              for (final node in layer.nodes) node.id,
+          };
+          expect(ids.contains('zigzag-target-near'), isFalse);
+          expect(ids.contains('zigzag-target-cross'), isFalse);
+          expect(ids.contains('zigzag-safe-far'), isTrue);
+          expect(ids.contains('zigzag-safe-low'), isTrue);
+
+          final preciseChecks =
+              sceneControllerInteractiveInternalEraserPreciseSegmentCheckCount(
+                controller,
+              );
+          final spatialQueries =
+              sceneControllerInteractiveInternalEraserSpatialQueryCount(
+                controller,
+              );
+          expect(preciseChecks, lessThan(15000));
+          expect(
+            spatialQueries,
+            lessThanOrEqualTo((zigzagPoints / 64).ceil() + 2),
+          );
+        },
       );
-      addTearDown(controller.dispose);
 
-      controller.setMode(CanvasMode.draw);
-      controller.setDrawTool(DrawTool.eraser);
+      test(
+        'eraser stroke coarse prefilter runs batched checks for non-hit geometry',
+        () {
+          final nonHitStroke = StrokeNode(
+            id: 'non-hit',
+            points: const <Offset>[
+              Offset(0, 100),
+              Offset(0, 200),
+              Offset(100, 200),
+            ],
+            thickness: 1,
+            color: const Color(0xFF000000),
+          );
+          final aboveStroke = StrokeNode(
+            id: 'above',
+            points: const <Offset>[Offset(0, -3), Offset(100, -3)],
+            thickness: 1,
+            color: const Color(0xFF000000),
+          );
+          final controller = _controllerFromScene(
+            Scene(
+              layers: <ContentLayer>[
+                ContentLayer(),
+                ContentLayer(nodes: <SceneNode>[nonHitStroke, aboveStroke]),
+              ],
+            ),
+          );
+          addTearDown(controller.dispose);
 
-      expect(() {
+          controller.setMode(CanvasMode.draw);
+          controller.setDrawTool(DrawTool.eraser);
+          controller.eraserThickness = 1;
+
+          controller.handlePointer(
+            _sample(
+              pointerId: 1,
+              position: const Offset(0, 0),
+              timestampMs: 1,
+              phase: CanvasPointerPhase.down,
+            ),
+          );
+          controller.handlePointer(
+            _sample(
+              pointerId: 1,
+              position: const Offset(100, 0),
+              timestampMs: 2,
+              phase: CanvasPointerPhase.move,
+            ),
+          );
+          controller.handlePointer(
+            _sample(
+              pointerId: 1,
+              position: const Offset(100, 100),
+              timestampMs: 3,
+              phase: CanvasPointerPhase.up,
+            ),
+          );
+
+          final ids = <NodeId>{
+            for (final layer in controller.snapshot.layers)
+              for (final node in layer.nodes) node.id,
+          };
+          expect(ids.contains('non-hit'), isTrue);
+          expect(ids.contains('above'), isTrue);
+          expect(
+            sceneControllerInteractiveInternalEraserPreciseSegmentCheckCount(
+              controller,
+            ),
+            greaterThan(0),
+          );
+        },
+      );
+
+      test('long eraser gesture does not throw', () {
+        final controller = SceneControllerInteractive(
+          initialSnapshot: SceneSnapshot(
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(),
+              ContentLayerSnapshot(),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+
+        controller.setMode(CanvasMode.draw);
+        controller.setDrawTool(DrawTool.eraser);
+
+        expect(() {
+          controller.handlePointer(
+            _sample(
+              pointerId: 1,
+              position: const Offset(0, 0),
+              timestampMs: 1,
+              phase: CanvasPointerPhase.down,
+            ),
+          );
+          for (var i = 1; i <= 20000; i++) {
+            controller.handlePointer(
+              _sample(
+                pointerId: 1,
+                position: Offset(i.toDouble(), 0),
+                timestampMs: i + 1,
+                phase: CanvasPointerPhase.move,
+              ),
+            );
+          }
+          controller.handlePointer(
+            _sample(
+              pointerId: 1,
+              position: const Offset(20000, 0),
+              timestampMs: 20002,
+              phase: CanvasPointerPhase.up,
+            ),
+          );
+        }, returnsNormally);
+      });
+
+      test('long eraser gesture cancel does not mutate scene', () async {
+        final startLine = LineNode(
+          id: 'cancel-line-start',
+          start: const Offset(-12, 0),
+          end: const Offset(12, 0),
+          thickness: 2,
+          color: const Color(0xFF000000),
+        )..position = const Offset(20, 50);
+        final endLine = LineNode(
+          id: 'cancel-line-end',
+          start: const Offset(-12, 0),
+          end: const Offset(12, 0),
+          thickness: 2,
+          color: const Color(0xFF000000),
+        )..position = const Offset(9000, 50);
+        final controller = _controllerFromScene(
+          Scene(
+            layers: <ContentLayer>[
+              ContentLayer(),
+              ContentLayer(nodes: <SceneNode>[startLine, endLine]),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+
+        controller.setMode(CanvasMode.draw);
+        controller.setDrawTool(DrawTool.eraser);
+        controller.eraserThickness = 24;
+
+        final actions = <ActionCommitted>[];
+        final sub = controller.actions.listen(actions.add);
+        addTearDown(sub.cancel);
+
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: const Offset(20, 50),
+            timestampMs: 1,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+        for (var i = 21; i <= 9000; i++) {
+          controller.handlePointer(
+            _sample(
+              pointerId: 1,
+              position: Offset(i.toDouble(), 50),
+              timestampMs: i,
+              phase: CanvasPointerPhase.move,
+            ),
+          );
+        }
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: const Offset(9000, 50),
+            timestampMs: 9001,
+            phase: CanvasPointerPhase.cancel,
+          ),
+        );
+
+        await pumpEventQueue();
+        final ids = <NodeId>{
+          for (final layer in controller.snapshot.layers)
+            for (final node in layer.nodes) node.id,
+        };
+        expect(ids.contains('cancel-line-start'), isTrue);
+        expect(ids.contains('cancel-line-end'), isTrue);
+        expect(
+          actions.where((event) => event.type == ActionType.erase),
+          isEmpty,
+        );
+      });
+
+      test('invalid soft-limit config throws ArgumentError', () {
+        final controller = SceneControllerInteractive(
+          initialSnapshot: SceneSnapshot(
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(),
+              ContentLayerSnapshot(),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+
+        final points = <Offset>[const Offset(0, 0), const Offset(1, 0)];
+
+        expect(
+          () =>
+              sceneControllerInteractiveInternalEnforceGestureBufferSoftLimitForTest(
+                controller,
+                points: points,
+                softLimit: 10,
+                trimTo: 1,
+              ),
+          throwsArgumentError,
+        );
+        expect(
+          () =>
+              sceneControllerInteractiveInternalEnforceGestureBufferSoftLimitForTest(
+                controller,
+                points: points,
+                softLimit: 5,
+                trimTo: 5,
+              ),
+          throwsArgumentError,
+        );
+        expect(
+          () =>
+              sceneControllerInteractiveInternalEnforceGestureBufferSoftLimitForTest(
+                controller,
+                points: points,
+                softLimit: 1,
+                trimTo: 1,
+              ),
+          throwsArgumentError,
+        );
+      });
+
+      test('eraser active buffer is capped during long move', () {
+        final controller = SceneControllerInteractive(
+          initialSnapshot: SceneSnapshot(
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(),
+              ContentLayerSnapshot(),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+
+        controller.setMode(CanvasMode.draw);
+        controller.setDrawTool(DrawTool.eraser);
+
         controller.handlePointer(
           _sample(
             pointerId: 1,
@@ -2348,99 +2687,14 @@ void main() {
             ),
           );
         }
-        controller.handlePointer(
-          _sample(
-            pointerId: 1,
-            position: const Offset(20000, 0),
-            timestampMs: 20002,
-            phase: CanvasPointerPhase.up,
+
+        expect(
+          sceneControllerInteractiveInternalActiveEraserPointsLength(
+            controller,
           ),
+          lessThanOrEqualTo(kInteractiveEraserPointsSoftLimit),
         );
-      }, returnsNormally);
-    });
-
-    test('invalid soft-limit config throws ArgumentError', () {
-      final controller = SceneControllerInteractive(
-        initialSnapshot: SceneSnapshot(
-          layers: <ContentLayerSnapshot>[
-            ContentLayerSnapshot(),
-            ContentLayerSnapshot(),
-          ],
-        ),
-      );
-      addTearDown(controller.dispose);
-
-      final points = <Offset>[const Offset(0, 0), const Offset(1, 0)];
-
-      expect(
-        () =>
-            sceneControllerInteractiveInternalEnforceGestureBufferSoftLimitForTest(
-              controller,
-              points: points,
-              softLimit: 10,
-              trimTo: 1,
-            ),
-        throwsArgumentError,
-      );
-      expect(
-        () =>
-            sceneControllerInteractiveInternalEnforceGestureBufferSoftLimitForTest(
-              controller,
-              points: points,
-              softLimit: 5,
-              trimTo: 5,
-            ),
-        throwsArgumentError,
-      );
-      expect(
-        () =>
-            sceneControllerInteractiveInternalEnforceGestureBufferSoftLimitForTest(
-              controller,
-              points: points,
-              softLimit: 1,
-              trimTo: 1,
-            ),
-        throwsArgumentError,
-      );
-    });
-
-    test('eraser active buffer is capped during long move', () {
-      final controller = SceneControllerInteractive(
-        initialSnapshot: SceneSnapshot(
-          layers: <ContentLayerSnapshot>[
-            ContentLayerSnapshot(),
-            ContentLayerSnapshot(),
-          ],
-        ),
-      );
-      addTearDown(controller.dispose);
-
-      controller.setMode(CanvasMode.draw);
-      controller.setDrawTool(DrawTool.eraser);
-
-      controller.handlePointer(
-        _sample(
-          pointerId: 1,
-          position: const Offset(0, 0),
-          timestampMs: 1,
-          phase: CanvasPointerPhase.down,
-        ),
-      );
-      for (var i = 1; i <= 20000; i++) {
-        controller.handlePointer(
-          _sample(
-            pointerId: 1,
-            position: Offset(i.toDouble(), 0),
-            timestampMs: i + 1,
-            phase: CanvasPointerPhase.move,
-          ),
-        );
-      }
-
-      expect(
-        sceneControllerInteractiveInternalActiveEraserPointsLength(controller),
-        lessThanOrEqualTo(kInteractiveEraserPointsSoftLimit),
-      );
+      });
     });
 
     test('stroke preview is available during drag and clears on up', () {
@@ -2547,9 +2801,106 @@ void main() {
       expect(controller.snapshot.layers[1].nodes.length, beforeNodeCount + 1);
     });
 
-    test(
-      'line preview starts after dragStartSlop and clears on cancel/tool/mode switch',
-      () {
+    group('interactive hardening: line pending cancel semantics', () {
+      test(
+        'line preview starts after dragStartSlop and clears on cancel/tool/mode switch',
+        () {
+          final controller = SceneControllerInteractive(
+            initialSnapshot: SceneSnapshot(
+              layers: <ContentLayerSnapshot>[
+                ContentLayerSnapshot(),
+                ContentLayerSnapshot(),
+              ],
+            ),
+            dragStartSlop: 10,
+          );
+          addTearDown(controller.dispose);
+
+          controller.setMode(CanvasMode.draw);
+          controller.setDrawTool(DrawTool.line);
+
+          controller.handlePointer(
+            _sample(
+              pointerId: 1,
+              position: const Offset(10, 10),
+              timestampMs: 1,
+              phase: CanvasPointerPhase.down,
+            ),
+          );
+          controller.handlePointer(
+            _sample(
+              pointerId: 1,
+              position: const Offset(18, 10),
+              timestampMs: 2,
+              phase: CanvasPointerPhase.move,
+            ),
+          );
+          expect(controller.hasActiveLinePreview, isFalse);
+
+          controller.handlePointer(
+            _sample(
+              pointerId: 1,
+              position: const Offset(21, 10),
+              timestampMs: 3,
+              phase: CanvasPointerPhase.move,
+            ),
+          );
+          expect(controller.hasActiveLinePreview, isTrue);
+
+          controller.handlePointer(
+            _sample(
+              pointerId: 1,
+              position: const Offset(21, 10),
+              timestampMs: 4,
+              phase: CanvasPointerPhase.cancel,
+            ),
+          );
+          expect(controller.hasActiveLinePreview, isFalse);
+
+          controller.handlePointer(
+            _sample(
+              pointerId: 2,
+              position: const Offset(30, 30),
+              timestampMs: 5,
+              phase: CanvasPointerPhase.down,
+            ),
+          );
+          controller.handlePointer(
+            _sample(
+              pointerId: 2,
+              position: const Offset(50, 30),
+              timestampMs: 6,
+              phase: CanvasPointerPhase.move,
+            ),
+          );
+          expect(controller.hasActiveLinePreview, isTrue);
+          controller.setDrawTool(DrawTool.pen);
+          expect(controller.hasActiveLinePreview, isFalse);
+
+          controller.setDrawTool(DrawTool.line);
+          controller.handlePointer(
+            _sample(
+              pointerId: 3,
+              position: const Offset(30, 30),
+              timestampMs: 7,
+              phase: CanvasPointerPhase.down,
+            ),
+          );
+          controller.handlePointer(
+            _sample(
+              pointerId: 3,
+              position: const Offset(50, 30),
+              timestampMs: 8,
+              phase: CanvasPointerPhase.move,
+            ),
+          );
+          expect(controller.hasActiveLinePreview, isTrue);
+          controller.setMode(CanvasMode.move);
+          expect(controller.hasActiveLinePreview, isFalse);
+        },
+      );
+
+      test('line pending start is cleared on pointer cancel', () {
         final controller = SceneControllerInteractive(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
@@ -2557,7 +2908,6 @@ void main() {
               ContentLayerSnapshot(),
             ],
           ),
-          dragStartSlop: 10,
         );
         addTearDown(controller.dispose);
 
@@ -2575,36 +2925,37 @@ void main() {
         controller.handlePointer(
           _sample(
             pointerId: 1,
-            position: const Offset(18, 10),
+            position: const Offset(10, 10),
             timestampMs: 2,
-            phase: CanvasPointerPhase.move,
+            phase: CanvasPointerPhase.up,
           ),
         );
-        expect(controller.hasActiveLinePreview, isFalse);
-
-        controller.handlePointer(
-          _sample(
-            pointerId: 1,
-            position: const Offset(21, 10),
-            timestampMs: 3,
-            phase: CanvasPointerPhase.move,
-          ),
-        );
-        expect(controller.hasActiveLinePreview, isTrue);
-
-        controller.handlePointer(
-          _sample(
-            pointerId: 1,
-            position: const Offset(21, 10),
-            timestampMs: 4,
-            phase: CanvasPointerPhase.cancel,
-          ),
-        );
-        expect(controller.hasActiveLinePreview, isFalse);
+        expect(controller.hasPendingLineStart, isTrue);
 
         controller.handlePointer(
           _sample(
             pointerId: 2,
+            position: const Offset(20, 20),
+            timestampMs: 3,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+        controller.handlePointer(
+          _sample(
+            pointerId: 2,
+            position: const Offset(20, 20),
+            timestampMs: 4,
+            phase: CanvasPointerPhase.cancel,
+          ),
+        );
+
+        expect(controller.hasPendingLineStart, isFalse);
+        expect(controller.pendingLineStart, isNull);
+        expect(controller.pendingLineTimestampMs, isNull);
+
+        controller.handlePointer(
+          _sample(
+            pointerId: 3,
             position: const Offset(30, 30),
             timestampMs: 5,
             phase: CanvasPointerPhase.down,
@@ -2612,133 +2963,111 @@ void main() {
         );
         controller.handlePointer(
           _sample(
-            pointerId: 2,
-            position: const Offset(50, 30),
-            timestampMs: 6,
-            phase: CanvasPointerPhase.move,
-          ),
-        );
-        expect(controller.hasActiveLinePreview, isTrue);
-        controller.setDrawTool(DrawTool.pen);
-        expect(controller.hasActiveLinePreview, isFalse);
-
-        controller.setDrawTool(DrawTool.line);
-        controller.handlePointer(
-          _sample(
             pointerId: 3,
             position: const Offset(30, 30),
+            timestampMs: 6,
+            phase: CanvasPointerPhase.up,
+          ),
+        );
+        expect(controller.hasPendingLineStart, isTrue);
+
+        controller.handlePointer(
+          _sample(
+            pointerId: 4,
+            position: const Offset(50, 30),
             timestampMs: 7,
             phase: CanvasPointerPhase.down,
           ),
         );
         controller.handlePointer(
           _sample(
-            pointerId: 3,
+            pointerId: 4,
             position: const Offset(50, 30),
             timestampMs: 8,
-            phase: CanvasPointerPhase.move,
+            phase: CanvasPointerPhase.up,
           ),
         );
-        expect(controller.hasActiveLinePreview, isTrue);
-        controller.setMode(CanvasMode.move);
-        expect(controller.hasActiveLinePreview, isFalse);
-      },
-    );
 
-    test('line pending start is cleared on pointer cancel', () {
-      final controller = SceneControllerInteractive(
-        initialSnapshot: SceneSnapshot(
-          layers: <ContentLayerSnapshot>[
-            ContentLayerSnapshot(),
-            ContentLayerSnapshot(),
-          ],
-        ),
-      );
-      addTearDown(controller.dispose);
+        expect(controller.hasPendingLineStart, isFalse);
+        final lineCount = controller.snapshot.layers
+            .expand((layer) => layer.nodes)
+            .whereType<LineNodeSnapshot>()
+            .length;
+        expect(lineCount, 1);
+      });
 
-      controller.setMode(CanvasMode.draw);
-      controller.setDrawTool(DrawTool.line);
+      test('line pending start survives invalid second tap input as no-op', () {
+        final controller = SceneControllerInteractive(
+          initialSnapshot: SceneSnapshot(
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(),
+              ContentLayerSnapshot(),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
 
-      controller.handlePointer(
-        _sample(
-          pointerId: 1,
-          position: const Offset(10, 10),
-          timestampMs: 1,
-          phase: CanvasPointerPhase.down,
-        ),
-      );
-      controller.handlePointer(
-        _sample(
-          pointerId: 1,
-          position: const Offset(10, 10),
-          timestampMs: 2,
-          phase: CanvasPointerPhase.up,
-        ),
-      );
-      expect(controller.hasPendingLineStart, isTrue);
+        controller.setMode(CanvasMode.draw);
+        controller.setDrawTool(DrawTool.line);
 
-      controller.handlePointer(
-        _sample(
-          pointerId: 2,
-          position: const Offset(20, 20),
-          timestampMs: 3,
-          phase: CanvasPointerPhase.down,
-        ),
-      );
-      controller.handlePointer(
-        _sample(
-          pointerId: 2,
-          position: const Offset(20, 20),
-          timestampMs: 4,
-          phase: CanvasPointerPhase.cancel,
-        ),
-      );
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: const Offset(10, 10),
+            timestampMs: 1,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+        controller.handlePointer(
+          _sample(
+            pointerId: 1,
+            position: const Offset(10, 10),
+            timestampMs: 2,
+            phase: CanvasPointerPhase.up,
+          ),
+        );
+        expect(controller.hasPendingLineStart, isTrue);
 
-      expect(controller.hasPendingLineStart, isFalse);
-      expect(controller.pendingLineStart, isNull);
-      expect(controller.pendingLineTimestampMs, isNull);
+        expect(
+          () => controller.handlePointer(
+            const CanvasPointerInput(
+              pointerId: 2,
+              position: Offset(double.nan, 20),
+              phase: CanvasPointerPhase.down,
+              kind: PointerDeviceKind.touch,
+              timestampMs: 3,
+            ),
+          ),
+          returnsNormally,
+        );
+        expect(controller.hasPendingLineStart, isTrue);
+        expect(controller.pendingLineStart, const Offset(10, 10));
+        expect(controller.pendingLineTimestampMs, 2);
 
-      controller.handlePointer(
-        _sample(
-          pointerId: 3,
-          position: const Offset(30, 30),
-          timestampMs: 5,
-          phase: CanvasPointerPhase.down,
-        ),
-      );
-      controller.handlePointer(
-        _sample(
-          pointerId: 3,
-          position: const Offset(30, 30),
-          timestampMs: 6,
-          phase: CanvasPointerPhase.up,
-        ),
-      );
-      expect(controller.hasPendingLineStart, isTrue);
+        controller.handlePointer(
+          _sample(
+            pointerId: 3,
+            position: const Offset(40, 30),
+            timestampMs: 4,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+        controller.handlePointer(
+          _sample(
+            pointerId: 3,
+            position: const Offset(40, 30),
+            timestampMs: 5,
+            phase: CanvasPointerPhase.up,
+          ),
+        );
 
-      controller.handlePointer(
-        _sample(
-          pointerId: 4,
-          position: const Offset(50, 30),
-          timestampMs: 7,
-          phase: CanvasPointerPhase.down,
-        ),
-      );
-      controller.handlePointer(
-        _sample(
-          pointerId: 4,
-          position: const Offset(50, 30),
-          timestampMs: 8,
-          phase: CanvasPointerPhase.up,
-        ),
-      );
-
-      expect(controller.hasPendingLineStart, isFalse);
-      final lineCount = controller.snapshot.layers
-          .expand((layer) => layer.nodes)
-          .whereType<LineNodeSnapshot>()
-          .length;
-      expect(lineCount, 1);
+        expect(controller.hasPendingLineStart, isFalse);
+        final lineCount = controller.snapshot.layers
+            .expand((layer) => layer.nodes)
+            .whereType<LineNodeSnapshot>()
+            .length;
+        expect(lineCount, 1);
+      });
     });
 
     test('eraser removes line and stroke nodes on pointer up', () {
