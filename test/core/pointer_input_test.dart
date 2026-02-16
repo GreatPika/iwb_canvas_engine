@@ -3,6 +3,8 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/core/pointer_input.dart';
 
+// INV:INV-ENG-POINTER-SETTINGS-VALIDATION
+
 PointerSample _sample({
   required int id,
   required PointerPhase phase,
@@ -18,6 +20,54 @@ PointerSample _sample({
 }
 
 void main() {
+  test('rejects invalid PointerInputSettings at tracker boundary', () {
+    expect(
+      () => PointerInputTracker(
+        settings: const PointerInputSettings(tapSlop: double.nan),
+      ),
+      throwsA(
+        isA<ArgumentError>().having((error) => error.name, 'name', 'tapSlop'),
+      ),
+    );
+    expect(
+      () => PointerInputTracker(
+        settings: const PointerInputSettings(doubleTapSlop: -1),
+      ),
+      throwsA(
+        isA<ArgumentError>().having(
+          (error) => error.name,
+          'name',
+          'doubleTapSlop',
+        ),
+      ),
+    );
+    expect(
+      () => PointerInputTracker(
+        settings: const PointerInputSettings(doubleTapMaxDelayMs: -1),
+      ),
+      throwsA(
+        isA<ArgumentError>().having(
+          (error) => error.name,
+          'name',
+          'doubleTapMaxDelayMs',
+        ),
+      ),
+    );
+  });
+
+  test('accepts zero thresholds in PointerInputSettings', () {
+    final tracker = PointerInputTracker(
+      settings: const PointerInputSettings(
+        tapSlop: 0,
+        doubleTapSlop: 0,
+        doubleTapMaxDelayMs: 0,
+      ),
+    );
+    expect(tracker.settings.tapSlop, 0);
+    expect(tracker.settings.doubleTapSlop, 0);
+    expect(tracker.settings.doubleTapMaxDelayMs, 0);
+  });
+
   test('emits base lifecycle signals for down/move/up/cancel', () {
     final tracker = PointerInputTracker();
 

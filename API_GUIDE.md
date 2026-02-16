@@ -244,6 +244,8 @@ Construction validation notes:
 - `setDragStartSlop(double? value)`
 
 `setDragStartSlop(...)` controls drag-start threshold for both move and line gestures; `null` restores fallback to `pointerSettings.tapSlop`.
+`setPointerSettings(...)` is applied live in `SceneView` on the same controller.
+If there is an active pointer gesture, the new settings are applied right after that gesture ends (`up`/`cancel`), so pointer session ids are not mixed mid-gesture.
 
 Numeric property setters validate values and throw `ArgumentError` on invalid input:
 
@@ -517,6 +519,12 @@ Controller normalizes timestamps to a monotonic internal timeline.
 - `doubleTapMaxDelayMs`
 - `deferSingleTap`
 
+Validation rules at runtime boundaries:
+
+- `tapSlop`: finite and `>= 0`
+- `doubleTapSlop`: finite and `>= 0`
+- `doubleTapMaxDelayMs`: `>= 0`
+
 ## 11. Serialization contracts
 
 ### 11.1 Functions
@@ -525,6 +533,7 @@ Controller normalizes timestamps to a monotonic internal timeline.
 - `SceneSnapshot decodeSceneFromJson(String json)`
 - `Map<String, dynamic> encodeScene(SceneSnapshot snapshot)`
 - `SceneSnapshot decodeScene(Map<String, dynamic> json)`
+- `SceneSnapshot SceneBuilder.buildFromJson(Map<String, dynamic> rawJson)`
 
 ### 11.2 Versioning
 

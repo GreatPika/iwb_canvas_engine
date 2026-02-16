@@ -100,6 +100,7 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Text layout sizing is engine-derived: `TextNodeSpec`/`TextNodePatch` do not expose writable `size`; update text/style fields and the runtime recomputes text box bounds.
 - Write-boundary validation: `addNode(...)`/`patchNode(...)` fail fast with `ArgumentError` for invalid `NodeSpec`/`NodePatch` values (including `transform`, `hitPadding`, and `opacity` outside `[0,1]`), and transform/translate write operations reject non-finite `Transform2D`/`Offset`.
 - Serialization: `encodeScene*`, `decodeScene*`, `SceneDataException`.
+- JSON map entrypoints accept `Map<String, dynamic>` (`decodeScene(...)`, `SceneBuilder.buildFromJson(...)`).
 - Event payload contract: `ActionCommitted.nodeIds/payload` are immutable snapshots.
 - Interactive event delivery contract: `actions` and `editTextRequests` are asynchronous; relative ordering against repaint/listener notifications is not a public contract.
 - Event-ordering guarantees:
@@ -113,6 +114,8 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Selection contract: commit normalization keeps explicit non-selectable ids valid while filtering missing/background/invisible ids.
 - Runtime notify contract: both core and interactive controller `ChangeNotifier` updates are deferred to a microtask and coalesced to at most one notification per event-loop tick (not one notification per transaction).
 - Drag-start threshold contract: `dragStartSlop` is used for move and line drag start; if unset, it falls back to `pointerSettings.tapSlop`.
+- Pointer settings validation contract: runtime boundaries reject invalid `PointerInputSettings` (`tapSlop`/`doubleTapSlop` must be finite and `>= 0`; `doubleTapMaxDelayMs >= 0`).
+- Live pointer settings contract: `setPointerSettings(...)` is applied by `SceneView` without controller remount; if a pointer gesture is active, the new settings are applied immediately after `up`/`cancel`.
 - Single-active-pointer contract: each active move/draw gesture is bound to one `pointerId`; parallel pointer ids are ignored until gesture end (`up`/`cancel`).
 - After gesture end via `up`/`cancel`, the next pointer can start a new gesture immediately.
 - Move drag contract: pointer move updates only visual preview; scene translation is committed once on pointer up, and pointer cancel keeps the document unchanged.

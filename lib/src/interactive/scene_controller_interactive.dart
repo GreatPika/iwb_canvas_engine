@@ -85,6 +85,7 @@ class SceneControllerInteractive extends ChangeNotifier
   }) : _pointerSettings = pointerSettings ?? const PointerInputSettings(),
        _dragStartSlop = dragStartSlop,
        _core = SceneControllerCore(initialSnapshot: initialSnapshot) {
+    validatePointerInputSettings(_pointerSettings);
     _moveSession = InteractiveMoveSession(
       callbacks: InteractiveMoveSessionCallbacks(
         onStateChanged: _scheduleNotify,
@@ -271,6 +272,7 @@ class SceneControllerInteractive extends ChangeNotifier
 
   void setPointerSettings(PointerInputSettings value) {
     _ensureNotDisposed();
+    validatePointerInputSettings(value);
     _pointerSettings = value;
     _scheduleNotify();
   }
@@ -297,7 +299,7 @@ class SceneControllerInteractive extends ChangeNotifier
 
   void setGridCellSize(double value) {
     _ensureNotDisposed();
-    _requireFinitePositive(value, name: 'value');
+    _requireFinitePositive(value, name: 'cellSize');
     final gridEnabled = snapshot.background.grid.isEnabled;
     final resolved = gridEnabled
         ? value.clamp(kMinGridCellSize, double.infinity).toDouble()

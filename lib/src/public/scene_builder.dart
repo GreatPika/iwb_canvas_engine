@@ -11,8 +11,10 @@ abstract final class SceneBuilder {
   }
 
   /// Validates and canonicalizes [rawJson], then returns canonical snapshot.
-  static SceneSnapshot buildFromJson(Map<String, Object?> rawJson) {
-    final scene = model.sceneBuildFromJsonMap(rawJson);
+  static SceneSnapshot buildFromJson(Map<String, dynamic> rawJson) {
+    final scene = model.sceneBuildFromJsonMap(
+      Map<String, Object?>.from(rawJson),
+    );
     return txnSceneToSnapshot(scene);
   }
 }

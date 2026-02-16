@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -68,6 +70,25 @@ void main() {
     final json = encodeSceneToJson(scene);
     final decoded = decodeSceneFromJson(json);
     expect(encodeScene(decoded), encodeScene(scene));
+  });
+
+  test('decodeScene accepts Map<String, dynamic> from jsonDecode', () {
+    final encoded = encodeScene(
+      SceneSnapshot(layers: <ContentLayerSnapshot>[ContentLayerSnapshot()]),
+    );
+    final decodedRaw = jsonDecode(jsonEncode(encoded)) as Map<String, dynamic>;
+    final snapshot = decodeScene(decodedRaw);
+
+    expect(snapshot.layers.length, 1);
+  });
+
+  test('SceneBuilder.buildFromJson accepts Map<String, dynamic>', () {
+    final decodedRaw =
+        jsonDecode(jsonEncode(_minimalSceneJson())) as Map<String, dynamic>;
+    final snapshot = SceneBuilder.buildFromJson(decodedRaw);
+
+    expect(snapshot.layers, isEmpty);
+    expect(snapshot.backgroundLayer.nodes, isEmpty);
   });
 
   test('SceneDataException implements FormatException shape', () {

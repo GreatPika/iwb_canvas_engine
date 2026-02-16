@@ -13,6 +13,7 @@ import 'package:iwb_canvas_engine/src/controller/internal/signal_event.dart';
 // INV:INV-ENG-TXN-WRITER-LIFETIME
 // INV:INV-ENG-TEXT-SIZE-DERIVED
 // INV:INV-ENG-DISPOSE-FAIL-FAST
+// INV:INV-ENG-NO-EXTERNAL-MUTATION
 
 void main() {
   SceneSnapshot twoRectSnapshot() {
@@ -289,6 +290,31 @@ void main() {
 
       expect(rev1, greaterThan(rev0));
       expect(rev2, greaterThan(rev1));
+    },
+  );
+
+  test(
+    'stroke patch points are copied on commit and do not alias input list',
+    () {
+      final controller = SceneControllerCore(
+        initialSnapshot: singleStrokeSnapshot(),
+      );
+      addTearDown(controller.dispose);
+
+      final points = <Offset>[const Offset(0, 0), const Offset(4, 4)];
+      controller.write<void>((writer) {
+        writer.writeNodePatch(
+          StrokeNodePatch(
+            id: 's1',
+            points: PatchField<List<Offset>>.value(points),
+          ),
+        );
+      });
+
+      points[1] = const Offset(100, 100);
+      final stroke =
+          controller.snapshot.layers.first.nodes.first as StrokeNodeSnapshot;
+      expect(stroke.points[1], const Offset(4, 4));
     },
   );
 

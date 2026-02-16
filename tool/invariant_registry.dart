@@ -130,6 +130,12 @@ const List<Invariant> invariants = <Invariant>[
         'interactive pointer entrypoints ignore non-finite coordinates without mutating state or emitting effects',
   ),
   Invariant(
+    id: 'INV-ENG-POINTER-SETTINGS-VALIDATION',
+    scope: 'engine-runtime',
+    title:
+        'pointer input settings reject non-finite/negative thresholds at runtime boundaries',
+  ),
+  Invariant(
     id: 'INV-ENG-INTERACTIVE-SINGLE-ACTIVE-POINTER',
     scope: 'engine-runtime',
     title:
@@ -164,6 +170,12 @@ const List<Invariant> invariants = <Invariant>[
     scope: 'view-runtime',
     title:
         'SceneView pointer signal tracking gates by a single active pointer and releases gate on up/cancel',
+  ),
+  Invariant(
+    id: 'INV-ENG-VIEW-POINTER-SETTINGS-LIVE-APPLY',
+    scope: 'view-runtime',
+    title:
+        'SceneView applies updated pointer settings on the same controller without remount',
   ),
   Invariant(
     id: 'INV-ENG-EPOCH-INVALIDATION',

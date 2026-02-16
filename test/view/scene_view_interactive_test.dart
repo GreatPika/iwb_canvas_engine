@@ -10,6 +10,8 @@ import 'package:iwb_canvas_engine/src/public/canvas_pointer_input.dart';
 import 'package:iwb_canvas_engine/src/public/snapshot.dart';
 import 'package:iwb_canvas_engine/src/view/scene_view_interactive.dart';
 
+// INV:INV-ENG-VIEW-POINTER-SETTINGS-LIVE-APPLY
+
 SceneSnapshot _snapshot({required String text, bool includeImage = false}) {
   return SceneSnapshot(
     layers: <ContentLayerSnapshot>[
@@ -122,6 +124,99 @@ void main() {
 
     expect(find.byType(SceneViewInteractive), findsOneWidget);
   });
+
+  testWidgets('SceneViewInteractive applies pointer settings updates live', (
+    tester,
+  ) async {
+    final controller = SceneControllerInteractive(
+      initialSnapshot: _snapshot(text: 'double-tap'),
+      pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 300),
+    );
+    addTearDown(controller.dispose);
+    final editRequests = <Object>[];
+    final editSub = controller.editTextRequests.listen(editRequests.add);
+    addTearDown(editSub.cancel);
+
+    await tester.pumpWidget(_host(controller));
+    await tester.pump();
+
+    Future<void> doubleTapWithGap(Duration gap) async {
+      final first = await tester.startGesture(const Offset(8, 8), pointer: 31);
+      await first.up();
+      await tester.pump(gap);
+      final second = await tester.startGesture(const Offset(8, 8), pointer: 31);
+      await second.up();
+      await tester.pump();
+      await tester.pump();
+    }
+
+    await doubleTapWithGap(const Duration(milliseconds: 20));
+    expect(editRequests.length, 1);
+
+    controller.setPointerSettings(
+      const PointerInputSettings(doubleTapMaxDelayMs: 1),
+    );
+    await tester.pump();
+
+    await doubleTapWithGap(const Duration(milliseconds: 20));
+    expect(editRequests.length, 1);
+  });
+
+  testWidgets(
+    'SceneViewInteractive defers pointer settings update until active pointer ends',
+    (tester) async {
+      final controller = SceneControllerInteractive(
+        initialSnapshot: _snapshot(text: 'deferred'),
+        pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 300),
+      );
+      addTearDown(controller.dispose);
+      final editRequests = <Object>[];
+      final editSub = controller.editTextRequests.listen(editRequests.add);
+      addTearDown(editSub.cancel);
+
+      controller.setSelection(const <String>{'txt'});
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+
+      final gesture = await tester.startGesture(
+        const Offset(10, 10),
+        pointer: 55,
+      );
+      await gesture.moveTo(const Offset(24, 10));
+      await tester.pump();
+
+      controller.setPointerSettings(
+        const PointerInputSettings(doubleTapMaxDelayMs: 1),
+      );
+      await tester.pump();
+
+      await gesture.moveTo(const Offset(40, 10));
+      await gesture.up();
+      await tester.pump();
+      await tester.pump();
+
+      expect(_textNode(controller).transform.tx, closeTo(30, 1e-6));
+
+      Future<void> doubleTapWithGap(Duration gap) async {
+        final first = await tester.startGesture(
+          const Offset(8, 8),
+          pointer: 56,
+        );
+        await first.up();
+        await tester.pump(gap);
+        final second = await tester.startGesture(
+          const Offset(8, 8),
+          pointer: 56,
+        );
+        await second.up();
+        await tester.pump();
+        await tester.pump();
+      }
+
+      await doubleTapWithGap(const Duration(milliseconds: 20));
+      expect(editRequests, isEmpty);
+    },
+  );
 
   testWidgets('SceneViewInteractive reuses freed pointer slot ids', (
     tester,

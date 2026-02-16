@@ -6,6 +6,10 @@
 - `SceneControllerCore.write(...)` now rejects async callback results (`Future`) with fail-fast `StateError`; such writes roll back buffered repaint/signals and do not commit.
 - Post-commit effect dispatch now enforces deterministic order for same-commit observers: committed `signals` are emitted before listener notification.
 - Runtime commit invariant precheck now runs in `debug`/`profile` builds only.
+- Public JSON map entrypoints now accept `Map<String, dynamic>` at API boundary (`decodeScene`, `SceneBuilder.buildFromJson`) and normalize to typed internal map shape.
+- `SceneViewInteractive` now applies `setPointerSettings(...)` updates live on the same controller; for active pointer gestures, settings are applied right after gesture end (`up`/`cancel`) to avoid mixed pointer-session ids.
+- Pointer settings are now validated at runtime boundaries (`tapSlop`/`doubleTapSlop` must be finite and `>= 0`; `doubleTapMaxDelayMs >= 0`) with `ArgumentError` on invalid input.
+- Interactive `setGridCellSize(...)` argument errors now report parameter name `cellSize` for accurate diagnostics.
 
 ## 4.0.0 (2026-02-16)
 

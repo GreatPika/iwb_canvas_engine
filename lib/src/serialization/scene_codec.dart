@@ -60,8 +60,8 @@ Map<String, dynamic> encodeScene(SceneSnapshot snapshot) {
 /// Only `schemaVersion = 4` is accepted.
 ///
 /// Throws [SceneDataException] when validation fails.
-SceneSnapshot decodeScene(Map<String, Object?> json) {
-  final sceneDoc = decodeSceneDocument(json);
+SceneSnapshot decodeScene(Map<String, dynamic> json) {
+  final sceneDoc = decodeSceneDocument(Map<String, Object?>.from(json));
   return txnSceneToSnapshot(sceneDoc);
 }
 

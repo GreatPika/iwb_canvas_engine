@@ -190,6 +190,27 @@ void main() {
     // INV:INV-ENG-TXN-ATOMIC-COMMIT
     // INV:INV-G-PUBLIC-ENTRYPOINTS
     // INV:INV-ENG-SAFE-TXN-API
+    test('does not require API_GUIDE.md', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(sandbox, 'lib/src/controller/store.dart', '''
+class Store {
+  int controllerEpoch = 0;
+
+  void writeMutations() {}
+
+  void txnCommit() {
+    writeMutations();
+  }
+}
+''');
+        final result = await _runTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
     test('passes for write/txn APIs and controllerEpoch usage', () async {
       final sandbox = await _createSandbox();
       try {

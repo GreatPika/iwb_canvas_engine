@@ -90,7 +90,16 @@ void main() {
       );
 
       controller.setGridEnabled(false);
-      expect(() => controller.setGridCellSize(-12), throwsArgumentError);
+      expect(
+        () => controller.setGridCellSize(-12),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.name,
+            'name',
+            'cellSize',
+          ),
+        ),
+      );
       controller.setGridEnabled(true);
       controller.setGridCellSize(0.5);
       expect(controller.snapshot.background.grid.cellSize, minGridCellSize);
@@ -99,6 +108,69 @@ void main() {
       final editSub = controller.editTextRequests.listen((_) {});
       addTearDown(actionSub.cancel);
       addTearDown(editSub.cancel);
+    });
+
+    test('setPointerSettings validates numeric fields', () {
+      final controller = controllerFromScene(
+        Scene(layers: <ContentLayer>[ContentLayer(), ContentLayer()]),
+      );
+      addTearDown(controller.dispose);
+
+      expect(
+        () => controller.setPointerSettings(
+          const PointerInputSettings(tapSlop: double.infinity),
+        ),
+        throwsA(
+          isA<ArgumentError>().having((error) => error.name, 'name', 'tapSlop'),
+        ),
+      );
+      expect(
+        () => controller.setPointerSettings(
+          const PointerInputSettings(doubleTapSlop: -1),
+        ),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.name,
+            'name',
+            'doubleTapSlop',
+          ),
+        ),
+      );
+      expect(
+        () => controller.setPointerSettings(
+          const PointerInputSettings(doubleTapMaxDelayMs: -10),
+        ),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.name,
+            'name',
+            'doubleTapMaxDelayMs',
+          ),
+        ),
+      );
+
+      controller.setPointerSettings(
+        const PointerInputSettings(
+          tapSlop: 0,
+          doubleTapSlop: 0,
+          doubleTapMaxDelayMs: 0,
+        ),
+      );
+      expect(controller.pointerSettings.doubleTapMaxDelayMs, 0);
+    });
+
+    test('constructor validates pointerSettings', () {
+      expect(
+        () => SceneControllerInteractive(
+          initialSnapshot: SceneSnapshot(
+            layers: <ContentLayerSnapshot>[ContentLayerSnapshot()],
+          ),
+          pointerSettings: const PointerInputSettings(tapSlop: -1),
+        ),
+        throwsA(
+          isA<ArgumentError>().having((error) => error.name, 'name', 'tapSlop'),
+        ),
+      );
     });
 
     test('handlePointer notifications are deferred', () async {

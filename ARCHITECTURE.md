@@ -22,6 +22,7 @@ Primary public abstractions:
 - Write intents: `NodeSpec`
 - Partial mutation: `NodePatch` + `PatchField<T>`
 - Serialization: `encodeScene*`, `decodeScene*`, `SceneDataException`
+- JSON map imports use `Map<String, dynamic>` at public boundaries (`decodeScene`, `SceneBuilder.buildFromJson`).
 
 ## Internal structure
 
@@ -101,10 +102,12 @@ Key invariants:
 - Interactive pointer entrypoints ignore non-finite coordinates (`NaN`/`Infinity`) as no-op without mutating state or emitting effects (`INV-ENG-INTERACTIVE-POINTER-FINITE`).
 - Interactive gesture processing keeps a single active pointer id; parallel pointer ids are ignored until the active gesture ends (`up`/`cancel`) (`INV-ENG-INTERACTIVE-SINGLE-ACTIVE-POINTER`).
 - Interactive drag-start threshold uses `dragStartSlop` for both move and line gestures; when unset, it falls back to `pointerSettings.tapSlop`.
+- Pointer settings are validated at runtime boundaries (`tapSlop`/`doubleTapSlop`: finite `>= 0`; `doubleTapMaxDelayMs >= 0`).
 - Interactive draw-pointer `cancel` clears active draw preview state and pending two-tap line start without commit (`INV-ENG-INTERACTIVE-CANCEL-STATE-RESET`).
 - Interactive preview state (`move`/`draw`) is ephemeral and does not mutate committed scene before pointer `up` commit (`INV-ENG-INTERACTIVE-PREVIEW-COMMIT-ON-UP`).
 - SceneView pointer-slot lifecycle releases slots on `up`/`cancel` and reuses minimum free slot ids (`INV-ENG-VIEW-POINTER-SLOT-LIFECYCLE`).
 - SceneView pointer signal tracking is gated by one active pointer and releases the gate on `up`/`cancel` (`INV-ENG-VIEW-ACTIVE-POINTER-GATE`).
+- SceneView applies `setPointerSettings(...)` updates on the same controller without remount; when a pointer gesture is active, settings are applied immediately after gesture end (`up`/`cancel`) (`INV-ENG-VIEW-POINTER-SETTINGS-LIVE-APPLY`).
 - Relative ordering between interactive stream delivery and repaint listener notification is intentionally not a public contract (`INV-ENG-INTERACTIVE-ASYNC-DELIVERY`).
 - Buffered signal/repaint effects are discarded when `write(...)` rolls back.
 - After controller disposal, mutating/effectful runtime methods fail fast with `StateError` and keep state/effects unchanged, including interactive entrypoints (`handlePointer`, `handleDoubleTap`, mode/tool/settings setters, selection/scene mutators).
