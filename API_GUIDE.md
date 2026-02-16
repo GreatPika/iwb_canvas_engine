@@ -127,7 +127,7 @@ Path fill rule enum:
 
 ### 5.1 Create nodes (`NodeSpec`)
 
-`SceneController.addNode(...)` accepts `NodeSpec` (preferred) and returns created node id.
+`SceneController.addNode(...)` accepts `NodeSpec` (preferred) and returns created `NodeId`.
 
 Node spec variants:
 
@@ -273,6 +273,8 @@ Notification semantics:
 - Scene repaint notifications are deferred to a microtask after commit/repaint request.
 - Interactive controller `ChangeNotifier` callbacks are microtask-deferred (never in the same call stack as interactive mutating methods) and coalesced per event-loop tick.
 - Multiple writes/repaint requests in the same event-loop tick are coalesced into one listener notification.
+- `notifyListeners()` is never called synchronously inside `write(...)`,
+  `handlePointer(...)`, or `handleDoubleTap(...)`.
 - `requestRepaint()` called inside `write(...)` is buffered and published only after a successful transaction commit.
 - If `write(...)` rolls back with an exception, buffered repaint/signal effects are discarded.
 - Interactive async/coalescing delivery contract is tracked by `INV-ENG-INTERACTIVE-ASYNC-DELIVERY`.
@@ -286,7 +288,7 @@ Notification semantics:
 
 ### 6.5 Node and selection methods
 
-- `String addNode(NodeSpec node, {int? layerIndex})`
+- `NodeId addNode(NodeSpec node, {int? layerIndex})`
 - `bool patchNode(NodePatch patch)`
 - `bool removeNode(NodeId id, {int? timestampMs})`
 - `setSelection(Iterable<NodeId> nodeIds)`
@@ -343,6 +345,7 @@ public API surface.
 - Does not expose mutable `Scene`/`SceneNode`.
 - Does not include `writeFindNode` or `writeMark*` escape methods.
 - Does not expose node-id bookkeeping internals; ids are allocated via structural writes (`writeNodeInsert`).
+- `writeNodeInsert(...)` returns `NodeId` (semantic id contract, not raw `String`).
 - A transaction handle is valid only during the active `write((txn) { ... })` callback; calling any `write*` method after callback completion throws `StateError`.
 - Selection write contracts are explicit about state-change:
   - `writeSelectionReplace(...) -> bool changed`
@@ -415,6 +418,8 @@ On double tap in move mode, if top hit node is a text node, controller emits `Ed
 Delivery and mutability contract:
 
 - Delivery is asynchronous (never in the same call stack as the emitting controller method).
+- Delivery does not guarantee a specific queue primitive; consumers must only rely
+  on the "not same synchronous stack" guarantee.
 - Relative ordering against `ChangeNotifier` listener notifications/repaint is intentionally not a public contract.
 - This async/ordering contract is tracked by `INV-ENG-INTERACTIVE-ASYNC-DELIVERY`.
 - `nodeIds` and `payload` are immutable snapshots; subscribers cannot mutate shared event data.
@@ -457,6 +462,8 @@ Use this to open app-level text editor overlays.
 Delivery contract:
 
 - Delivery is asynchronous (never in the same call stack as the emitting controller method).
+- Delivery does not guarantee a specific queue primitive; consumers must only rely
+  on the "not same synchronous stack" guarantee.
 - Relative ordering against `ChangeNotifier` listener notifications/repaint is intentionally not a public contract.
 - This async/ordering contract is tracked by `INV-ENG-INTERACTIVE-ASYNC-DELIVERY`.
 
@@ -525,7 +532,13 @@ Controller normalizes timestamps to a monotonic internal timeline.
 
 ### 11.3 Errors
 
-Invalid input throws `SceneDataException` with validation details.
+Public error taxonomy:
+
+| Error type | When it is used | Typical API boundaries |
+| --- | --- | --- |
+| `ArgumentError` | Caller provided invalid argument value/shape for a runtime write or setter. | `addNode`, `patchNode`, transform/translate writes, numeric runtime setters, cache constructors (`maxEntries <= 0`). |
+| `StateError` | Runtime lifecycle/contract violation (not bad input data): disposed controller call, same-stack reentrancy, stale txn handle, invariant violation. | `write(...)` after `dispose`, `handlePointer(...)` reentrancy, stale `SceneWriteTxn` write call, commit invariant failure. |
+| `SceneDataException` | Malformed scene/snapshot/json data at import/export/serialization boundary. | `initialSnapshot`, `replaceScene`, `SceneBuilder.buildFrom*`, `decodeScene*`, `encodeScene*`. |
 
 Encoding notes:
 
@@ -649,6 +662,21 @@ Required updates:
    - `controllerEpoch`, `structuralRevision`, `boundsRevision`, `visualRevision`,
    - `debugCommitRevision`, `debugBeforeHandlePointerDispatchHook`,
    - `movePreviewDeltaForNode(...)`.
+
+### 14.3 From 3.x to 4.0.0
+
+Required updates:
+
+1. If you depended on `String` return type in node-creation APIs, switch to `NodeId` in type annotations:
+   - `SceneController.addNode(...) -> NodeId`
+   - `SceneWriteTxn.writeNodeInsert(...) -> NodeId`
+2. Treat event ordering as a contract with only two guarantees:
+   - stream events (`actions`, `editTextRequests`) are never delivered in the same stack as mutating API calls;
+   - `ChangeNotifier` delivery is microtask-deferred/coalesced.
+   Relative stream-vs-notify ordering is intentionally unspecified.
+3. For import boundaries, rely on canonicalization contract:
+   missing `backgroundLayer` is accepted and canonicalized to an empty dedicated
+   layer before returning `SceneSnapshot`.
 
 ## 15. Quick recipes
 

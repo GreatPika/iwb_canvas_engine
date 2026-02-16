@@ -1,4 +1,4 @@
-## Unreleased
+## 4.0.0 (2026-02-16)
 
 ### Breaking
 
@@ -85,7 +85,9 @@
 - Runtime snapshot boundaries are now strict:
   - `SceneController(initialSnapshot: ...)` throws `SceneDataException` for malformed snapshots.
   - `replaceScene(...)` throws `SceneDataException` for malformed snapshots.
-- Runtime snapshot import no longer auto-inserts a missing background layer.
+- Runtime snapshot import no longer auto-inserts a missing background layer
+  (this was changed later in `4.0.0`, where import/decode boundaries
+  canonicalize missing `backgroundLayer` to an empty dedicated layer).
 - JSON codec now rejects non-positive `background.grid.cellSize` regardless of grid enabled state.
 - Write-boundary validation is now strict:
   - `addNode(...)` rejects malformed `NodeSpec` values with `ArgumentError`.

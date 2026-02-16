@@ -28,7 +28,7 @@ class SceneWriter implements SceneWriteTxn {
       Set<NodeId>.unmodifiable(_ctx.workingSelection);
 
   @override
-  String writeNodeInsert(NodeSpec spec, {int? layerIndex}) {
+  NodeId writeNodeInsert(NodeSpec spec, {int? layerIndex}) {
     _ensureTxnActive();
     final resolvedId = spec.id ?? _ctx.txnNextNodeId();
     if (spec.id != null && _ctx.txnHasNodeId(resolvedId)) {

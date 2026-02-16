@@ -17,7 +17,7 @@ class SceneCommands {
     return sorted;
   }
 
-  String writeAddNode(NodeSpec spec, {int? layerIndex}) {
+  NodeId writeAddNode(NodeSpec spec, {int? layerIndex}) {
     return _writeRunner((writer) {
       final nodeId = writer.writeNodeInsert(spec, layerIndex: layerIndex);
       writer.writeSignalEnqueue(type: 'node.added', nodeIds: <NodeId>[nodeId]);

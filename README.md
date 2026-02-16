@@ -9,9 +9,9 @@ and JSON serialization for whiteboard-style applications.
 - Demo: https://greatpika.github.io/iwb_canvas_engine/demo/
 - API docs: https://greatpika.github.io/iwb_canvas_engine/api/
 - Detailed usage guide: `API_GUIDE.md`
-- Current stable release: `3.0.0`
+- Current stable release: `4.0.0`
 
-## Release 3.0.0 highlights
+## Release 4.0.0 highlights
 
 - Strict runtime and write-boundary validation for snapshots/specs/patches.
 - Copy-on-write transaction path and incremental spatial-index updates for large scenes.
@@ -101,6 +101,14 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Serialization: `encodeScene*`, `decodeScene*`, `SceneDataException`.
 - Event payload contract: `ActionCommitted.nodeIds/payload` are immutable snapshots.
 - Interactive event delivery contract: `actions` and `editTextRequests` are asynchronous; relative ordering against repaint/listener notifications is not a public contract.
+- Event-ordering guarantees:
+  - no `actions`/`editTextRequests` delivery happens in the same call stack as mutating runtime API calls;
+  - no controller `notifyListeners()` happens synchronously inside `write(...)` or `handlePointer(...)`;
+  - listener notifications are always microtask-deferred and coalesced.
+- Public error taxonomy:
+  - `ArgumentError`: invalid write-boundary/runtime setter arguments;
+  - `StateError`: invalid lifecycle/contract state (`dispose`, reentrancy, stale txn handle, invariant violations);
+  - `SceneDataException`: malformed scene/snapshot/json import-export boundary data.
 - Selection contract: commit normalization keeps explicit non-selectable ids valid while filtering missing/background/invisible ids.
 - Runtime notify contract: both core and interactive controller `ChangeNotifier` updates are deferred to a microtask and coalesced to at most one notification per event-loop tick (not one notification per transaction).
 - Drag-start threshold contract: `dragStartSlop` is used for move and line drag start; if unset, it falls back to `pointerSettings.tapSlop`.

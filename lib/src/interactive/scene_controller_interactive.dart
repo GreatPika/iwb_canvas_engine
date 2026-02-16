@@ -311,7 +311,7 @@ class SceneControllerInteractive extends ChangeNotifier
     _core.commands.writeCameraOffsetSet(value);
   }
 
-  String addNode(NodeSpec node, {int? layerIndex}) {
+  NodeId addNode(NodeSpec node, {int? layerIndex}) {
     _ensureNotDisposed();
     return _core.commands.writeAddNode(node, layerIndex: layerIndex);
   }

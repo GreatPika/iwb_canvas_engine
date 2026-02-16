@@ -22,7 +22,7 @@ abstract interface class SceneWriteTxn {
   ///
   /// `layerIndex` addresses only `snapshot.layers` (content layers) and never
   /// the optional background layer.
-  String writeNodeInsert(NodeSpec spec, {int? layerIndex});
+  NodeId writeNodeInsert(NodeSpec spec, {int? layerIndex});
   bool writeNodeErase(NodeId nodeId);
   bool writeNodePatch(NodePatch patch);
   bool writeNodeTransformSet(NodeId id, Transform2D transform);
