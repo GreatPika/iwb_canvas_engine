@@ -108,10 +108,11 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - After gesture end via `up`/`cancel`, the next pointer can start a new gesture immediately.
 - Move drag contract: pointer move updates only visual preview; scene translation is committed once on pointer up, and pointer cancel keeps the document unchanged.
 - Line cancel contract: pointer cancel clears line preview and clears pending two-tap line start (`pendingLineStart`).
+- Draw preview contract: active stroke/line preview does not mutate committed scene before pointer up commit; pointer cancel clears preview without scene mutation.
 - Runtime guardrails bound worst-case input/query cost: interactive stroke commits are capped to `20_000` points (deterministic downsampling), path-stroke precise hit-testing is capped to `2_048` samples per path metric, and oversized spatial queries switch to bounded candidate-scan fallback.
 - Runtime snapshot validation: `initialSnapshot` and `replaceScene` fail fast with `SceneDataException` for malformed snapshots (duplicate node ids, invalid numbers, invalid SVG path data, invalid palette, invalid typed layer fields).
 - Commit invariant checks fail fast with `StateError` in all build modes when committed store state violates runtime invariants.
-- Lifecycle fail-fast: after `dispose()`, mutating/effectful runtime calls (`write(...)`, `replaceScene(...)`, `notifySceneChanged()`/core repaint request) throw `StateError` and do not mutate state.
+- Lifecycle fail-fast: after `dispose()`, mutating/effectful runtime calls (`write(...)`, `replaceScene(...)`, `notifySceneChanged()`/core repaint request, `handlePointer(...)`, `handleDoubleTap(...)`, interactive mode/tool/settings setters, selection/scene mutators) throw `StateError` and do not mutate state.
 
 ## Render cache and image lifecycle
 

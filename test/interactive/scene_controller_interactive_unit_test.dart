@@ -51,6 +51,99 @@ SceneControllerInteractive _controllerFromScene(
   );
 }
 
+typedef _InteractiveMutatingCall =
+    void Function(SceneControllerInteractive controller);
+
+class _InteractiveControllerStableState {
+  const _InteractiveControllerStableState({
+    required this.snapshot,
+    required this.selection,
+    required this.mode,
+    required this.drawTool,
+    required this.drawColor,
+    required this.penThickness,
+    required this.highlighterThickness,
+    required this.lineThickness,
+    required this.eraserThickness,
+    required this.highlighterOpacity,
+    required this.dragStartSlop,
+    required this.pointerSettings,
+    required this.selectionRect,
+    required this.pendingLineStart,
+    required this.pendingLineTimestampMs,
+    required this.hasPendingLineStart,
+  });
+
+  final SceneSnapshot snapshot;
+  final Set<NodeId> selection;
+  final CanvasMode mode;
+  final DrawTool drawTool;
+  final Color drawColor;
+  final double penThickness;
+  final double highlighterThickness;
+  final double lineThickness;
+  final double eraserThickness;
+  final double highlighterOpacity;
+  final double dragStartSlop;
+  final PointerInputSettings pointerSettings;
+  final Rect? selectionRect;
+  final Offset? pendingLineStart;
+  final int? pendingLineTimestampMs;
+  final bool hasPendingLineStart;
+}
+
+class _DisposeMatrixCase {
+  const _DisposeMatrixCase({required this.name, required this.call});
+
+  final String name;
+  final _InteractiveMutatingCall call;
+}
+
+_InteractiveControllerStableState _captureStableState(
+  SceneControllerInteractive controller,
+) {
+  return _InteractiveControllerStableState(
+    snapshot: controller.snapshot,
+    selection: controller.selectedNodeIds,
+    mode: controller.mode,
+    drawTool: controller.drawTool,
+    drawColor: controller.drawColor,
+    penThickness: controller.penThickness,
+    highlighterThickness: controller.highlighterThickness,
+    lineThickness: controller.lineThickness,
+    eraserThickness: controller.eraserThickness,
+    highlighterOpacity: controller.highlighterOpacity,
+    dragStartSlop: controller.dragStartSlop,
+    pointerSettings: controller.pointerSettings,
+    selectionRect: controller.selectionRect,
+    pendingLineStart: controller.pendingLineStart,
+    pendingLineTimestampMs: controller.pendingLineTimestampMs,
+    hasPendingLineStart: controller.hasPendingLineStart,
+  );
+}
+
+void _expectStableStateUnchanged(
+  SceneControllerInteractive controller,
+  _InteractiveControllerStableState before,
+) {
+  expect(controller.snapshot, same(before.snapshot));
+  expect(controller.selectedNodeIds, before.selection);
+  expect(controller.mode, before.mode);
+  expect(controller.drawTool, before.drawTool);
+  expect(controller.drawColor, before.drawColor);
+  expect(controller.penThickness, before.penThickness);
+  expect(controller.highlighterThickness, before.highlighterThickness);
+  expect(controller.lineThickness, before.lineThickness);
+  expect(controller.eraserThickness, before.eraserThickness);
+  expect(controller.highlighterOpacity, before.highlighterOpacity);
+  expect(controller.dragStartSlop, before.dragStartSlop);
+  expect(controller.pointerSettings, before.pointerSettings);
+  expect(controller.selectionRect, before.selectionRect);
+  expect(controller.pendingLineStart, before.pendingLineStart);
+  expect(controller.pendingLineTimestampMs, before.pendingLineTimestampMs);
+  expect(controller.hasPendingLineStart, before.hasPendingLineStart);
+}
+
 void main() {
   group('SceneControllerInteractive unit', () {
     test('read API + setters + validation', () {
@@ -758,6 +851,7 @@ void main() {
     });
 
     test('move cancel keeps document unchanged and clears preview', () {
+      // INV:INV-ENG-INTERACTIVE-PREVIEW-COMMIT-ON-UP
       final rect = RectNode(id: 'node', size: const Size(40, 20))
         ..position = const Offset(80, 80);
       final controller = _controllerFromScene(
@@ -811,6 +905,7 @@ void main() {
     });
 
     test('move drag commits once on up and applies total delta exactly', () {
+      // INV:INV-ENG-INTERACTIVE-PREVIEW-COMMIT-ON-UP
       final rect = RectNode(id: 'node', size: const Size(30, 20))
         ..position = const Offset(60, 60);
       final controller = _controllerFromScene(
@@ -1949,6 +2044,7 @@ void main() {
     });
 
     test('stroke preview is available during drag and clears on up', () {
+      // INV:INV-ENG-INTERACTIVE-PREVIEW-COMMIT-ON-UP
       final controller = SceneControllerInteractive(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
@@ -1999,6 +2095,56 @@ void main() {
       );
       expect(controller.hasActiveStrokePreview, isFalse);
       expect(controller.activeStrokePreviewPoints, isEmpty);
+    });
+
+    test('line preview does not mutate scene until pointer up commit', () {
+      // INV:INV-ENG-INTERACTIVE-PREVIEW-COMMIT-ON-UP
+      final controller = SceneControllerInteractive(
+        initialSnapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(),
+            ContentLayerSnapshot(),
+          ],
+        ),
+        dragStartSlop: 10,
+      );
+      addTearDown(controller.dispose);
+
+      controller.setMode(CanvasMode.draw);
+      controller.setDrawTool(DrawTool.line);
+
+      final beforeNodeCount = controller.snapshot.layers[1].nodes.length;
+      controller.handlePointer(
+        _sample(
+          pointerId: 1,
+          position: const Offset(10, 10),
+          timestampMs: 1,
+          phase: CanvasPointerPhase.down,
+        ),
+      );
+      controller.handlePointer(
+        _sample(
+          pointerId: 1,
+          position: const Offset(30, 10),
+          timestampMs: 2,
+          phase: CanvasPointerPhase.move,
+        ),
+      );
+
+      expect(controller.hasActiveLinePreview, isTrue);
+      expect(controller.snapshot.layers[1].nodes.length, beforeNodeCount);
+
+      controller.handlePointer(
+        _sample(
+          pointerId: 1,
+          position: const Offset(30, 10),
+          timestampMs: 3,
+          phase: CanvasPointerPhase.up,
+        ),
+      );
+
+      expect(controller.hasActiveLinePreview, isFalse);
+      expect(controller.snapshot.layers[1].nodes.length, beforeNodeCount + 1);
     });
 
     test(
@@ -2565,6 +2711,381 @@ void main() {
         controller.dispose();
       },
     );
+
+    test(
+      'after dispose handlePointer fails fast and keeps state/effects unchanged',
+      () async {
+        // INV:INV-ENG-DISPOSE-FAIL-FAST
+        final rect = RectNode(id: 'node', size: const Size(10, 10))
+          ..position = const Offset(40, 40);
+        final controller = _controllerFromScene(
+          Scene(
+            layers: <ContentLayer>[
+              ContentLayer(),
+              ContentLayer(nodes: <SceneNode>[rect]),
+            ],
+          ),
+        );
+
+        final beforeSnapshot = controller.snapshot;
+        final beforeSelection = controller.selectedNodeIds;
+        final beforeMode = controller.mode;
+        final beforeTool = controller.drawTool;
+
+        final actions = <ActionCommitted>[];
+        final edits = <EditTextRequested>[];
+        final actionSub = controller.actions.listen(actions.add);
+        final editSub = controller.editTextRequests.listen(edits.add);
+        addTearDown(actionSub.cancel);
+        addTearDown(editSub.cancel);
+
+        var notifications = 0;
+        controller.addListener(() {
+          notifications = notifications + 1;
+        });
+
+        controller.dispose();
+
+        expect(
+          () => controller.handlePointer(
+            _sample(
+              pointerId: 1,
+              position: const Offset(50, 50),
+              timestampMs: 1,
+              phase: CanvasPointerPhase.down,
+            ),
+          ),
+          throwsStateError,
+        );
+        await pumpEventQueue(times: 2);
+
+        expect(controller.snapshot, same(beforeSnapshot));
+        expect(controller.selectedNodeIds, beforeSelection);
+        expect(controller.mode, beforeMode);
+        expect(controller.drawTool, beforeTool);
+        expect(actions, isEmpty);
+        expect(edits, isEmpty);
+        expect(notifications, 0);
+      },
+    );
+
+    test(
+      'after dispose handleDoubleTap fails fast and does not emit edit request',
+      () async {
+        // INV:INV-ENG-DISPOSE-FAIL-FAST
+        final textNode = TextNode(
+          id: 'text',
+          text: 'hello',
+          size: const Size(40, 20),
+          color: const Color(0xFF000000),
+        )..position = const Offset(40, 40);
+        final controller = _controllerFromScene(
+          Scene(
+            layers: <ContentLayer>[
+              ContentLayer(),
+              ContentLayer(nodes: <SceneNode>[textNode]),
+            ],
+          ),
+        );
+
+        final beforeSnapshot = controller.snapshot;
+        final requests = <EditTextRequested>[];
+        final sub = controller.editTextRequests.listen(requests.add);
+        addTearDown(sub.cancel);
+
+        var notifications = 0;
+        controller.addListener(() {
+          notifications = notifications + 1;
+        });
+
+        controller.dispose();
+
+        expect(
+          () => controller.handleDoubleTap(
+            position: const Offset(40, 40),
+            timestampMs: 1,
+          ),
+          throwsStateError,
+        );
+        await pumpEventQueue(times: 2);
+
+        expect(controller.snapshot, same(beforeSnapshot));
+        expect(requests, isEmpty);
+        expect(notifications, 0);
+      },
+    );
+
+    test(
+      'after dispose representative mutating APIs fail fast and keep state',
+      () async {
+        // INV:INV-ENG-DISPOSE-FAIL-FAST
+        final rect = RectNode(id: 'node', size: const Size(10, 10))
+          ..position = const Offset(20, 20);
+        final controller = _controllerFromScene(
+          Scene(
+            layers: <ContentLayer>[
+              ContentLayer(),
+              ContentLayer(nodes: <SceneNode>[rect]),
+            ],
+          ),
+        );
+
+        final beforeSnapshot = controller.snapshot;
+        final beforeSelection = controller.selectedNodeIds;
+        final beforeMode = controller.mode;
+        final beforeColor = controller.drawColor;
+        final beforePenThickness = controller.penThickness;
+
+        var notifications = 0;
+        controller.addListener(() {
+          notifications = notifications + 1;
+        });
+
+        controller.dispose();
+
+        expect(
+          () => controller.setDrawColor(const Color(0xFF123456)),
+          throwsStateError,
+        );
+        expect(() => controller.penThickness = 2, throwsStateError);
+        expect(() => controller.clearSelection(), throwsStateError);
+        expect(
+          () => controller.write<void>((writer) {
+            writer.writeSelectionClear();
+          }),
+          throwsStateError,
+        );
+        expect(() => controller.notifySceneChanged(), throwsStateError);
+
+        await pumpEventQueue(times: 2);
+        expect(controller.snapshot, same(beforeSnapshot));
+        expect(controller.selectedNodeIds, beforeSelection);
+        expect(controller.mode, beforeMode);
+        expect(controller.drawColor, beforeColor);
+        expect(controller.penThickness, beforePenThickness);
+        expect(notifications, 0);
+      },
+    );
+
+    group('after dispose fail-fast matrix', () {
+      // INV:INV-ENG-DISPOSE-FAIL-FAST
+      final cases = <_DisposeMatrixCase>[
+        _DisposeMatrixCase(
+          name: 'setMode',
+          call: (controller) => controller.setMode(CanvasMode.draw),
+        ),
+        _DisposeMatrixCase(
+          name: 'setDrawTool',
+          call: (controller) => controller.setDrawTool(DrawTool.line),
+        ),
+        _DisposeMatrixCase(
+          name: 'setDrawColor',
+          call: (controller) =>
+              controller.setDrawColor(const Color(0xFF123456)),
+        ),
+        _DisposeMatrixCase(
+          name: 'setPointerSettings',
+          call: (controller) => controller.setPointerSettings(
+            const PointerInputSettings(
+              tapSlop: 9,
+              doubleTapSlop: 18,
+              doubleTapMaxDelayMs: 250,
+            ),
+          ),
+        ),
+        _DisposeMatrixCase(
+          name: 'setDragStartSlop',
+          call: (controller) => controller.setDragStartSlop(9),
+        ),
+        _DisposeMatrixCase(
+          name: 'set penThickness',
+          call: (controller) => controller.penThickness = 2,
+        ),
+        _DisposeMatrixCase(
+          name: 'set highlighterThickness',
+          call: (controller) => controller.highlighterThickness = 3,
+        ),
+        _DisposeMatrixCase(
+          name: 'set lineThickness',
+          call: (controller) => controller.lineThickness = 4,
+        ),
+        _DisposeMatrixCase(
+          name: 'set eraserThickness',
+          call: (controller) => controller.eraserThickness = 5,
+        ),
+        _DisposeMatrixCase(
+          name: 'set highlighterOpacity',
+          call: (controller) => controller.highlighterOpacity = 0.5,
+        ),
+        _DisposeMatrixCase(
+          name: 'setBackgroundColor',
+          call: (controller) =>
+              controller.setBackgroundColor(const Color(0xFF010203)),
+        ),
+        _DisposeMatrixCase(
+          name: 'setGridEnabled',
+          call: (controller) => controller.setGridEnabled(true),
+        ),
+        _DisposeMatrixCase(
+          name: 'setGridCellSize',
+          call: (controller) => controller.setGridCellSize(16),
+        ),
+        _DisposeMatrixCase(
+          name: 'setCameraOffset',
+          call: (controller) => controller.setCameraOffset(const Offset(4, 5)),
+        ),
+        _DisposeMatrixCase(
+          name: 'addNode',
+          call: (controller) => controller.addNode(
+            RectNodeSpec(id: 'added', size: const Size(10, 10)),
+          ),
+        ),
+        _DisposeMatrixCase(
+          name: 'patchNode',
+          call: (controller) => controller.patchNode(
+            const RectNodePatch(
+              id: 'a',
+              size: PatchField<Size>.value(Size(30, 20)),
+            ),
+          ),
+        ),
+        _DisposeMatrixCase(
+          name: 'removeNode',
+          call: (controller) => controller.removeNode('a'),
+        ),
+        _DisposeMatrixCase(
+          name: 'setSelection',
+          call: (controller) => controller.setSelection(const <NodeId>{'a'}),
+        ),
+        _DisposeMatrixCase(
+          name: 'toggleSelection',
+          call: (controller) => controller.toggleSelection('a'),
+        ),
+        _DisposeMatrixCase(
+          name: 'clearSelection',
+          call: (controller) => controller.clearSelection(),
+        ),
+        _DisposeMatrixCase(
+          name: 'selectAll',
+          call: (controller) => controller.selectAll(onlySelectable: true),
+        ),
+        _DisposeMatrixCase(
+          name: 'rotateSelection',
+          call: (controller) =>
+              controller.rotateSelection(clockwise: true, timestampMs: 10),
+        ),
+        _DisposeMatrixCase(
+          name: 'flipSelectionVertical',
+          call: (controller) =>
+              controller.flipSelectionVertical(timestampMs: 11),
+        ),
+        _DisposeMatrixCase(
+          name: 'flipSelectionHorizontal',
+          call: (controller) =>
+              controller.flipSelectionHorizontal(timestampMs: 12),
+        ),
+        _DisposeMatrixCase(
+          name: 'deleteSelection',
+          call: (controller) => controller.deleteSelection(timestampMs: 13),
+        ),
+        _DisposeMatrixCase(
+          name: 'clearScene',
+          call: (controller) => controller.clearScene(timestampMs: 14),
+        ),
+        _DisposeMatrixCase(
+          name: 'replaceScene',
+          call: (controller) => controller.replaceScene(
+            SceneSnapshot(
+              layers: <ContentLayerSnapshot>[
+                ContentLayerSnapshot(),
+                ContentLayerSnapshot(
+                  nodes: <NodeSnapshot>[
+                    RectNodeSnapshot(id: 'new', size: Size(5, 5)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        _DisposeMatrixCase(
+          name: 'notifySceneChanged',
+          call: (controller) => controller.notifySceneChanged(),
+        ),
+        _DisposeMatrixCase(
+          name: 'write',
+          call: (controller) => controller.write<void>((writer) {
+            writer.writeSelectionClear();
+          }),
+        ),
+        _DisposeMatrixCase(
+          name: 'handlePointer',
+          call: (controller) => controller.handlePointer(
+            _sample(
+              pointerId: 42,
+              position: const Offset(60, 60),
+              timestampMs: 100,
+              phase: CanvasPointerPhase.down,
+            ),
+          ),
+        ),
+        _DisposeMatrixCase(
+          name: 'handleDoubleTap',
+          call: (controller) =>
+              controller.handleDoubleTap(position: const Offset(60, 60)),
+        ),
+      ];
+
+      for (final testCase in cases) {
+        test(
+          'after dispose: ${testCase.name} throws StateError and has no side effects',
+          () async {
+            final rectA = RectNode(id: 'a', size: const Size(20, 10))
+              ..position = const Offset(40, 40);
+            final rectB = RectNode(id: 'b', size: const Size(20, 10))
+              ..position = const Offset(80, 40);
+            final textNode = TextNode(
+              id: 'text',
+              text: 'hello',
+              size: const Size(30, 20),
+              color: const Color(0xFF000000),
+            )..position = const Offset(60, 60);
+            final controller = _controllerFromScene(
+              Scene(
+                layers: <ContentLayer>[
+                  ContentLayer(),
+                  ContentLayer(nodes: <SceneNode>[rectA, rectB, textNode]),
+                ],
+              ),
+            );
+
+            controller.setSelection(const <NodeId>{'a', 'b'});
+            final before = _captureStableState(controller);
+
+            final actions = <ActionCommitted>[];
+            final edits = <EditTextRequested>[];
+            final actionSub = controller.actions.listen(actions.add);
+            final editSub = controller.editTextRequests.listen(edits.add);
+            addTearDown(actionSub.cancel);
+            addTearDown(editSub.cancel);
+
+            var notifications = 0;
+            controller.addListener(() {
+              notifications = notifications + 1;
+            });
+
+            controller.dispose();
+
+            expect(() => testCase.call(controller), throwsStateError);
+            await pumpEventQueue(times: 2);
+
+            _expectStableStateUnchanged(controller, before);
+            expect(actions, isEmpty);
+            expect(edits, isEmpty);
+            expect(notifications, 0);
+          },
+        );
+      }
+    });
 
     testWidgets('pending two-tap line expires after timeout', (tester) async {
       final controller = SceneControllerInteractive(

@@ -130,6 +130,12 @@ const List<Invariant> invariants = <Invariant>[
         'interactive gestures keep a single active pointer and ignore parallel pointer ids until gesture end',
   ),
   Invariant(
+    id: 'INV-ENG-INTERACTIVE-PREVIEW-COMMIT-ON-UP',
+    scope: 'engine-runtime',
+    title:
+        'interactive move/draw preview does not mutate scene before pointer up commit; cancel clears preview without scene mutation',
+  ),
+  Invariant(
     id: 'INV-ENG-EPOCH-INVALIDATION',
     scope: 'engine-runtime',
     title: 'replace-scene lifecycle preserves epoch invalidation',

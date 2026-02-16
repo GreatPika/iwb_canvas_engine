@@ -80,9 +80,10 @@ Key invariants:
 - Interactive gesture processing keeps a single active pointer id; parallel pointer ids are ignored until the active gesture ends (`up`/`cancel`).
 - Interactive drag-start threshold uses `dragStartSlop` for both move and line gestures; when unset, it falls back to `pointerSettings.tapSlop`.
 - Interactive draw-pointer `cancel` clears active draw preview state and pending two-tap line start.
+- Interactive preview state (`move`/`draw`) is ephemeral and does not mutate committed scene before pointer `up`; pointer `cancel` clears preview without scene mutation.
 - Relative ordering between interactive stream delivery and repaint listener notification is intentionally not a public contract.
 - Buffered signal/repaint effects are discarded when `write(...)` rolls back.
-- After controller disposal, mutating/effectful runtime methods fail fast with `StateError` and keep state/effects unchanged.
+- After controller disposal, mutating/effectful runtime methods fail fast with `StateError` and keep state/effects unchanged, including interactive entrypoints (`handlePointer`, `handleDoubleTap`, mode/tool/settings setters, selection/scene mutators).
 - Node-id index state keeps `allNodeIds` and `nodeLocator` equal to committed scene ids/locations, while `nodeIdSeed` is a monotonic generator lower-bounded by committed scene ids.
 - Node instance identity keeps `instanceRevision >= 1` for all committed nodes, and `nextInstanceRevision` is a monotonic generator lower-bounded by committed scene instance revisions.
 - Selection normalization preserves explicit non-selectable ids and drops only missing/background/invisible ids.

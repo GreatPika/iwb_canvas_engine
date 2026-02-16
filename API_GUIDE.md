@@ -278,6 +278,10 @@ Notification semantics:
 - After `dispose()`, mutating/effectful runtime entrypoints fail fast with `StateError`:
   `write(...)`, `replaceScene(...)`, and explicit repaint requests
   (`notifySceneChanged()` / core `requestRepaint()`).
+- After `dispose()`, interactive mutating/effectful entrypoints also fail fast
+  with `StateError` (for example: `handlePointer(...)`,
+  `handleDoubleTap(...)`, mode/tool/settings setters, selection/scene mutators),
+  and keep state/events/listener notifications unchanged.
 
 ### 6.5 Node and selection methods
 
@@ -323,6 +327,7 @@ Guardrail:
 
 - Reentrant `handlePointer(...)` in the same synchronous call stack throws `StateError`.
 - `handlePointer(...)` and `handleDoubleTap(...)` ignore non-finite coordinates (`NaN`/`Infinity`) as no-op (no state mutation, no event emission).
+- Calling `handlePointer(...)`/`handleDoubleTap(...)` after `dispose()` throws `StateError`.
 
 Internal low-level types (`PointerSample`, `PointerSignal`) are not part of the
 public API surface.
@@ -376,6 +381,9 @@ Write-notify semantics:
 - Line: drag line or two-tap line (first tap sets pending start, second tap commits)
 - `dragStartSlop` is used as the line drag-start threshold.
 - Pointer `cancel` clears active line preview and clears pending two-tap line start (`pendingLineStart`).
+- Draw preview is ephemeral: active stroke/line preview never mutates committed
+  scene snapshot before pointer `up` commit; pointer `cancel` clears preview
+  without scene mutation.
 - Eraser: erases supported annotations (`StrokeNode`, `LineNode`) based on eraser trajectory
 
 ### 7.3 Move drag behavior

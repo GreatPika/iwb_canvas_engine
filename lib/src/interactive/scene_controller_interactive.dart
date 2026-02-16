@@ -176,9 +176,13 @@ class SceneControllerInteractive extends ChangeNotifier
   Stream<ActionCommitted> get actions => _events.actions;
   Stream<EditTextRequested> get editTextRequests => _events.editTextRequests;
 
-  T write<T>(T Function(SceneWriteTxn writer) fn) => _core.write(fn);
+  T write<T>(T Function(SceneWriteTxn writer) fn) {
+    _ensureNotDisposed();
+    return _core.write(fn);
+  }
 
   void setMode(CanvasMode value) {
+    _ensureNotDisposed();
     if (_mode == value) return;
 
     if (_mode == CanvasMode.move) {
@@ -201,6 +205,7 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   void setDrawTool(DrawTool value) {
+    _ensureNotDisposed();
     if (_drawTool == value) return;
     _drawTool = value;
     _resetDrawGestureState();
@@ -209,17 +214,20 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   void setDrawColor(Color value) {
+    _ensureNotDisposed();
     if (_drawColor == value) return;
     _drawColor = value;
     _scheduleNotify();
   }
 
   set penThickness(double value) {
+    _ensureNotDisposed();
     _penThickness = _requireFinitePositive(value, name: 'penThickness');
     _scheduleNotify();
   }
 
   set highlighterThickness(double value) {
+    _ensureNotDisposed();
     _highlighterThickness = _requireFinitePositive(
       value,
       name: 'highlighterThickness',
@@ -228,16 +236,19 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   set lineThickness(double value) {
+    _ensureNotDisposed();
     _lineThickness = _requireFinitePositive(value, name: 'lineThickness');
     _scheduleNotify();
   }
 
   set eraserThickness(double value) {
+    _ensureNotDisposed();
     _eraserThickness = _requireFinitePositive(value, name: 'eraserThickness');
     _scheduleNotify();
   }
 
   set highlighterOpacity(double value) {
+    _ensureNotDisposed();
     _highlighterOpacity = _requireFiniteInUnitInterval(
       value,
       name: 'highlighterOpacity',
@@ -246,11 +257,13 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   void setPointerSettings(PointerInputSettings value) {
+    _ensureNotDisposed();
     _pointerSettings = value;
     _scheduleNotify();
   }
 
   void setDragStartSlop(double? value) {
+    _ensureNotDisposed();
     final resolved = value == null
         ? null
         : _requireFinitePositive(value, name: 'dragStartSlop');
@@ -260,14 +273,17 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   void setBackgroundColor(Color value) {
+    _ensureNotDisposed();
     _core.commands.writeBackgroundColorSet(value);
   }
 
   void setGridEnabled(bool value) {
+    _ensureNotDisposed();
     _core.commands.writeGridEnabledSet(value);
   }
 
   void setGridCellSize(double value) {
+    _ensureNotDisposed();
     _requireFinitePositive(value, name: 'value');
     final gridEnabled = snapshot.background.grid.isEnabled;
     final resolved = gridEnabled
@@ -277,19 +293,23 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   void setCameraOffset(Offset value) {
+    _ensureNotDisposed();
     _requireFiniteOffset(value, name: 'value');
     _core.commands.writeCameraOffsetSet(value);
   }
 
   String addNode(NodeSpec node, {int? layerIndex}) {
+    _ensureNotDisposed();
     return _core.commands.writeAddNode(node, layerIndex: layerIndex);
   }
 
   bool patchNode(NodePatch patch) {
+    _ensureNotDisposed();
     return _core.commands.writePatchNode(patch);
   }
 
   bool removeNode(NodeId id, {int? timestampMs}) {
+    _ensureNotDisposed();
     final deleted = _core.commands.writeDeleteNode(id);
     if (!deleted) return false;
     _events.emitAction(ActionType.delete, <NodeId>[
@@ -299,22 +319,27 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   void setSelection(Iterable<NodeId> nodeIds) {
+    _ensureNotDisposed();
     _core.commands.writeSelectionReplace(nodeIds);
   }
 
   void toggleSelection(NodeId nodeId) {
+    _ensureNotDisposed();
     _core.commands.writeSelectionToggle(nodeId);
   }
 
   void clearSelection() {
+    _ensureNotDisposed();
     _core.commands.writeSelectionClear();
   }
 
   void selectAll({bool onlySelectable = true}) {
+    _ensureNotDisposed();
     _core.commands.writeSelectionSelectAll(onlySelectable: onlySelectable);
   }
 
   void rotateSelection({required bool clockwise, int? timestampMs}) {
+    _ensureNotDisposed();
     final nodes = _selectedTransformableNodesInSnapshotOrder(
       snapshot: snapshot,
       selected: selectedNodeIds,
@@ -342,6 +367,7 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   void flipSelectionVertical({int? timestampMs}) {
+    _ensureNotDisposed();
     final nodes = _selectedTransformableNodesInSnapshotOrder(
       snapshot: snapshot,
       selected: selectedNodeIds,
@@ -373,6 +399,7 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   void flipSelectionHorizontal({int? timestampMs}) {
+    _ensureNotDisposed();
     final nodes = _selectedTransformableNodesInSnapshotOrder(
       snapshot: snapshot,
       selected: selectedNodeIds,
@@ -404,6 +431,7 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   void deleteSelection({int? timestampMs}) {
+    _ensureNotDisposed();
     final deletedIds = _deletableSelectedNodeIdsInSnapshot(
       snapshot: snapshot,
       selected: selectedNodeIds,
@@ -421,6 +449,7 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   void clearScene({int? timestampMs}) {
+    _ensureNotDisposed();
     final clearedIds = _core.write<List<NodeId>>((writer) {
       return writer.writeClearSceneKeepBackground();
     });
@@ -434,16 +463,19 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   void replaceScene(SceneSnapshot snapshot) {
+    _ensureNotDisposed();
     _core.writeReplaceScene(snapshot);
     _clearPendingLine();
     _setSelectionRect(null);
   }
 
   void notifySceneChanged() {
+    _ensureNotDisposed();
     _core.requestRepaint();
   }
 
   void handlePointer(CanvasPointerInput input) {
+    _ensureNotDisposed();
     if (_handlingPointer) {
       throw StateError('Reentrant handlePointer(...) is not allowed.');
     }
@@ -476,6 +508,7 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   void handleDoubleTap({required Offset position, int? timestampMs}) {
+    _ensureNotDisposed();
     if (!_isFiniteOffset(position)) {
       return;
     }
@@ -1381,6 +1414,14 @@ class SceneControllerInteractive extends ChangeNotifier
 
   void _handleCoreChanged() {
     _scheduleNotify();
+  }
+
+  void _ensureNotDisposed() {
+    if (_isDisposed) {
+      throw StateError(
+        'SceneControllerInteractive is disposed and no longer usable.',
+      );
+    }
   }
 
   @override
