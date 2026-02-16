@@ -480,6 +480,9 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
     required int nextInstanceRevision,
     required int commitRevision,
   }) {
+    if (!kDebugMode && !kProfileMode) {
+      return;
+    }
     assert(() {
       debugBeforeInvariantPrecheckHook?.call();
       return true;

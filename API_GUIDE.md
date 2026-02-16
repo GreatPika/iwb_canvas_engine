@@ -347,6 +347,7 @@ public API surface.
 - Does not expose node-id bookkeeping internals; ids are allocated via structural writes (`writeNodeInsert`).
 - `writeNodeInsert(...)` returns `NodeId` (semantic id contract, not raw `String`).
 - A transaction handle is valid only during the active `write((txn) { ... })` callback; calling any `write*` method after callback completion throws `StateError`.
+- `write(...)` callback must return synchronously; returning `Future` fails fast with `StateError` and rolls back buffered effects.
 - Selection write contracts are explicit about state-change:
   - `writeSelectionReplace(...) -> bool changed`
   - `writeSelectionToggle(...) -> bool changed`
@@ -364,7 +365,7 @@ Write-notify semantics:
 
 - `write(...)` finalizes transaction state first, then schedules listener notification in a microtask when repaint is needed.
 - Listener notifications are coalesced to at most one notification per event-loop tick.
-- Commit invariant validation runs before finalizing transaction state and throws `StateError` on violations in all build modes (`debug`/`profile`/`release`).
+- Commit invariant validation runs before finalizing transaction state and throws `StateError` on violations in `debug`/`profile` modes.
 - Committed `signals` are emitted before repaint listener notification for the same successful commit.
 - Calling `write(...)` from `addListener(...)` is allowed; it runs after the original transaction is finished.
 - Calling `write(...)` after controller disposal throws `StateError` and does not mutate state or emit effects.
@@ -537,7 +538,7 @@ Public error taxonomy:
 | Error type | When it is used | Typical API boundaries |
 | --- | --- | --- |
 | `ArgumentError` | Caller provided invalid argument value/shape for a runtime write or setter. | `addNode`, `patchNode`, transform/translate writes, numeric runtime setters, cache constructors (`maxEntries <= 0`). |
-| `StateError` | Runtime lifecycle/contract violation (not bad input data): disposed controller call, same-stack reentrancy, stale txn handle, invariant violation. | `write(...)` after `dispose`, `handlePointer(...)` reentrancy, stale `SceneWriteTxn` write call, commit invariant failure. |
+| `StateError` | Runtime lifecycle/contract violation (not bad input data): disposed controller call, same-stack reentrancy, stale txn handle, async `write(...)` callback, invariant violation (`debug`/`profile`). | `write(...)` after `dispose`, `write(...)` with `Future` callback result, `handlePointer(...)` reentrancy, stale `SceneWriteTxn` write call, commit invariant failure (`debug`/`profile`). |
 | `SceneDataException` | Malformed scene/snapshot/json data at import/export/serialization boundary. | `initialSnapshot`, `replaceScene`, `SceneBuilder.buildFrom*`, `decodeScene*`, `encodeScene*`. |
 
 Encoding notes:

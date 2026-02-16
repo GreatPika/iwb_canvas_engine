@@ -91,6 +91,7 @@ class _CanvasScreenState extends State<CanvasScreen> {
 
 - Runtime: `SceneController`, `SceneView`, `SceneSnapshot`.
 - Safe transactional writes: `SceneWriteTxn` via `controller.write((txn) { ... })`.
+- `write(...)` callback is synchronous-only; returning `Future` fails fast with `StateError`.
 - Transaction handle lifetime: `SceneWriteTxn` write methods are valid only inside the active `write(...)` callback; post-callback `write*` calls throw `StateError`.
 - Selection transaction methods report no-op vs change explicitly:
   - `writeSelectionReplace(...)`, `writeSelectionToggle(...)`, `writeSelectionClear()` return `bool changed`.
@@ -119,7 +120,7 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Draw preview contract: active stroke/line preview does not mutate committed scene before pointer up commit; pointer cancel clears preview without scene mutation.
 - Runtime guardrails bound worst-case input/query cost: interactive stroke commits are capped to `20_000` points (deterministic downsampling), path-stroke precise hit-testing is capped to `2_048` samples per path metric, and oversized spatial queries switch to bounded candidate-scan fallback.
 - Runtime snapshot validation: `initialSnapshot` and `replaceScene` fail fast with `SceneDataException` for malformed snapshots (duplicate node ids, invalid numbers, invalid SVG path data, invalid palette, invalid typed layer fields).
-- Commit invariant checks fail fast with `StateError` in all build modes when committed store state violates runtime invariants.
+- Commit invariant checks fail fast with `StateError` in `debug`/`profile` modes when committed store state violates runtime invariants.
 - Lifecycle fail-fast: after `dispose()`, mutating/effectful runtime calls (`write(...)`, `replaceScene(...)`, `notifySceneChanged()`/core repaint request, `handlePointer(...)`, `handleDoubleTap(...)`, interactive mode/tool/settings setters, selection/scene mutators) throw `StateError` and do not mutate state.
 
 ## Render cache and image lifecycle
@@ -135,7 +136,7 @@ class _CanvasScreenState extends State<CanvasScreen> {
 
 - Canonical invariants are defined in `tool/invariant_registry.dart`.
 - Validation checks are available in `tool/` and run in CI.
-- Runtime commit invariant checks are enforced in all build modes (`debug`/`profile`/`release`) and throw `StateError` on violations.
+- Runtime commit invariant checks are enforced in `debug`/`profile` modes and throw `StateError` on violations.
 - Typed layer contract:
   - snapshot/runtime model uses `backgroundLayer` as a dedicated typed field and `layers` as content-only ordered layers.
   - `writeNodeInsert(..., layerIndex)` addresses content layers only.

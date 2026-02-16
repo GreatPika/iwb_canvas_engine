@@ -1,3 +1,12 @@
+## Unreleased
+
+### Changed
+
+- `SceneControllerCore.write(...)` now guarantees `_writeInProgress` reset even when transaction context creation fails before commit path entry.
+- `SceneControllerCore.write(...)` now rejects async callback results (`Future`) with fail-fast `StateError`; such writes roll back buffered repaint/signals and do not commit.
+- Post-commit effect dispatch now enforces deterministic order for same-commit observers: committed `signals` are emitted before listener notification.
+- Runtime commit invariant precheck now runs in `debug`/`profile` builds only.
+
 ## 4.0.0 (2026-02-16)
 
 ### Breaking

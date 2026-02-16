@@ -40,10 +40,7 @@ void main() {
       throw StateError('forced pre-context failure');
     };
 
-    expect(
-      () => controller.write<void>((_) {}),
-      throwsStateError,
-    );
+    expect(() => controller.write<void>((_) {}), throwsStateError);
 
     controller.debugBeforeTxnContextCreateHook = null;
     expect(
