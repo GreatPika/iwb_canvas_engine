@@ -18,13 +18,15 @@ import '../core/scene_limits.dart';
 import '../core/scene_spatial_index.dart';
 import '../core/transform2d.dart';
 import '../controller/scene_controller.dart';
-import '../model/document.dart';
 import '../public/canvas_pointer_input.dart';
 import '../public/node_patch.dart';
 import '../public/node_spec.dart';
 import '../public/scene_render_state.dart';
 import '../public/scene_write_txn.dart';
 import '../public/snapshot.dart';
+import 'internal/interactive_event_dispatcher.dart';
+import 'internal/interactive_geometry.dart';
+import 'internal/interactive_selection_utils.dart';
 
 int sceneControllerInteractiveInternalEpoch(
   SceneControllerInteractive controller,
@@ -95,7 +97,7 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   final SceneControllerCore _core;
-  final _InteractiveEventDispatcher _events = _InteractiveEventDispatcher();
+  final InteractiveEventDispatcher _events = InteractiveEventDispatcher();
 
   PointerInputSettings _pointerSettings;
   double? _dragStartSlop;
@@ -369,13 +371,13 @@ class SceneControllerInteractive extends ChangeNotifier
 
   void rotateSelection({required bool clockwise, int? timestampMs}) {
     _ensureNotDisposed();
-    final nodes = _selectedTransformableNodesInSnapshotOrder(
+    final nodes = selectedTransformableNodesInSnapshotOrder(
       snapshot: snapshot,
       selected: selectedNodeIds,
     );
     if (nodes.isEmpty) return;
 
-    final center = _centerWorldForNodeSnapshots(nodes);
+    final center = centerWorldForNodeSnapshots(nodes);
     final pivot = Transform2D.translation(center);
     final unpivot = Transform2D.translation(Offset(-center.dx, -center.dy));
     final rotation = Transform2D.rotationDeg(clockwise ? 90 : -90);
@@ -397,13 +399,13 @@ class SceneControllerInteractive extends ChangeNotifier
 
   void flipSelectionVertical({int? timestampMs}) {
     _ensureNotDisposed();
-    final nodes = _selectedTransformableNodesInSnapshotOrder(
+    final nodes = selectedTransformableNodesInSnapshotOrder(
       snapshot: snapshot,
       selected: selectedNodeIds,
     );
     if (nodes.isEmpty) return;
 
-    final center = _centerWorldForNodeSnapshots(nodes);
+    final center = centerWorldForNodeSnapshots(nodes);
     final delta = Transform2D(
       a: 1,
       b: 0,
@@ -429,13 +431,13 @@ class SceneControllerInteractive extends ChangeNotifier
 
   void flipSelectionHorizontal({int? timestampMs}) {
     _ensureNotDisposed();
-    final nodes = _selectedTransformableNodesInSnapshotOrder(
+    final nodes = selectedTransformableNodesInSnapshotOrder(
       snapshot: snapshot,
       selected: selectedNodeIds,
     );
     if (nodes.isEmpty) return;
 
-    final center = _centerWorldForNodeSnapshots(nodes);
+    final center = centerWorldForNodeSnapshots(nodes);
     final delta = Transform2D(
       a: -1,
       b: 0,
@@ -461,7 +463,7 @@ class SceneControllerInteractive extends ChangeNotifier
 
   void deleteSelection({int? timestampMs}) {
     _ensureNotDisposed();
-    final deletedIds = _deletableSelectedNodeIdsInSnapshot(
+    final deletedIds = deletableSelectedNodeIdsInSnapshot(
       snapshot: snapshot,
       selected: selectedNodeIds,
     );
@@ -663,7 +665,7 @@ class SceneControllerInteractive extends ChangeNotifier
 
     if (_moveTarget == _MoveDragTarget.move) {
       final finalDelta = _movePreviewDelta;
-      final movedIds = _selectedTransformableNodesInSnapshotOrder(
+      final movedIds = selectedTransformableNodesInSnapshotOrder(
         snapshot: snapshot,
         selected: _movePreviewNodeIds,
       ).map((node) => node.id).toList(growable: false);
@@ -846,7 +848,7 @@ class SceneControllerInteractive extends ChangeNotifier
     if (isDistanceGreaterThan(_activeStrokePoints.last, scenePoint, 0)) {
       _activeStrokePoints.add(scenePoint);
     }
-    final committedPoints = _resamplePointsToLimit(
+    final committedPoints = resamplePointsToLimit(
       _activeStrokePoints,
       limit: kMaxStrokePointsPerNode,
     );
@@ -878,68 +880,12 @@ class SceneControllerInteractive extends ChangeNotifier
     _activeStrokePoints.clear();
   }
 
-  List<Offset> _resamplePointsToLimit(
-    List<Offset> points, {
-    required int limit,
-  }) {
-    if (points.length <= limit) {
-      return points;
-    }
-    final sourceCount = points.length;
-    return List<Offset>.generate(limit, (i) {
-      final sourceIndex = (i * (sourceCount - 1)) ~/ (limit - 1);
-      return points[sourceIndex];
-    }, growable: false);
-  }
-
-  // Active gesture buffers are intentionally separate from committed scene
-  // state because they drive live preview and final commit geometry. Keep the
-  // buffers bounded and endpoint-preserving; validated by long-gesture tests.
   void _enforceGestureBufferSoftLimit(
     List<Offset> points, {
     required int softLimit,
     required int trimTo,
   }) {
-    if (softLimit < 2) {
-      throw ArgumentError.value(
-        softLimit,
-        'softLimit',
-        'Must be >= 2 for endpoint-preserving resample.',
-      );
-    }
-    if (trimTo < 2) {
-      throw ArgumentError.value(
-        trimTo,
-        'trimTo',
-        'Must be >= 2 for endpoint-preserving resample.',
-      );
-    }
-    if (trimTo >= softLimit) {
-      throw ArgumentError.value(
-        trimTo,
-        'trimTo',
-        'Must be < softLimit to preserve hysteresis.',
-      );
-    }
-    assert(
-      softLimit >= 2,
-      'softLimit must be >= 2 for endpoint-preserving resample.',
-    );
-    assert(
-      trimTo >= 2,
-      'trimTo must be >= 2 for endpoint-preserving resample.',
-    );
-    assert(
-      trimTo < softLimit,
-      'trimTo must be < softLimit to preserve hysteresis.',
-    );
-    if (points.length <= softLimit) {
-      return;
-    }
-    final trimmed = _resamplePointsToLimit(points, limit: trimTo);
-    points
-      ..clear()
-      ..addAll(trimmed);
+    enforceGestureBufferSoftLimit(points, softLimit: softLimit, trimTo: trimTo);
   }
 
   void _commitLine(int timestampMs, Offset scenePoint) {
@@ -1070,7 +1016,7 @@ class SceneControllerInteractive extends ChangeNotifier
         segmentStart + _eraserQueryBatchSegments,
         segmentCount,
       );
-      final batchBounds = _segmentRangeBounds(
+      final batchBounds = segmentRangeBounds(
         eraserPoints,
         segmentStart: segmentStart,
         segmentEndExclusive: segmentEndExclusive,
@@ -1099,7 +1045,7 @@ class SceneControllerInteractive extends ChangeNotifier
     final localEraserPoints = eraserPoints
         .map(inverse.applyToPoint)
         .toList(growable: false);
-    final sigmaMax = _maxSingularValue2x2(
+    final sigmaMax = maxSingularValue2x2(
       inverse.a,
       inverse.b,
       inverse.c,
@@ -1118,12 +1064,12 @@ class SceneControllerInteractive extends ChangeNotifier
     }
 
     final lineBounds = Rect.fromPoints(line.start, line.end);
-    final eraserBatches = _buildSegmentBatches(
+    final eraserBatches = buildSegmentBatches(
       localEraserPoints,
       batchSize: _eraserHitBatchSegments,
     );
     for (final batch in eraserBatches) {
-      if (!_rectsCanBeWithinDistance(batch.bounds, lineBounds, threshold)) {
+      if (!rectsCanBeWithinDistance(batch.bounds, lineBounds, threshold)) {
         continue;
       }
       for (var i = batch.startSegment; i < batch.endSegmentExclusive; i++) {
@@ -1149,7 +1095,7 @@ class SceneControllerInteractive extends ChangeNotifier
     final localEraserPoints = eraserPoints
         .map(inverse.applyToPoint)
         .toList(growable: false);
-    final sigmaMax = _maxSingularValue2x2(
+    final sigmaMax = maxSingularValue2x2(
       inverse.a,
       inverse.b,
       inverse.c,
@@ -1186,17 +1132,17 @@ class SceneControllerInteractive extends ChangeNotifier
       return false;
     }
 
-    final eraserBatches = _buildSegmentBatches(
+    final eraserBatches = buildSegmentBatches(
       localEraserPoints,
       batchSize: _eraserHitBatchSegments,
     );
-    final strokeBatches = _buildSegmentBatches(
+    final strokeBatches = buildSegmentBatches(
       stroke.points,
       batchSize: _strokeHitBatchSegments,
     );
     for (final eraserBatch in eraserBatches) {
       for (final strokeBatch in strokeBatches) {
-        if (!_rectsCanBeWithinDistance(
+        if (!rectsCanBeWithinDistance(
           eraserBatch.bounds,
           strokeBatch.bounds,
           threshold,
@@ -1235,76 +1181,6 @@ class SceneControllerInteractive extends ChangeNotifier
   List<SceneSpatialCandidate> _querySpatialCandidatesForEraser(Rect bounds) {
     _debugEraserSpatialQueryCount = _debugEraserSpatialQueryCount + 1;
     return _core.querySpatialCandidates(bounds);
-  }
-
-  List<_SegmentBatch> _buildSegmentBatches(
-    List<Offset> points, {
-    required int batchSize,
-  }) {
-    if (points.length <= 1) return const <_SegmentBatch>[];
-    final batches = <_SegmentBatch>[];
-    final segmentCount = points.length - 1;
-    for (
-      var segmentStart = 0;
-      segmentStart < segmentCount;
-      segmentStart += batchSize
-    ) {
-      final segmentEndExclusive = math.min(
-        segmentStart + batchSize,
-        segmentCount,
-      );
-      batches.add(
-        _SegmentBatch(
-          startSegment: segmentStart,
-          endSegmentExclusive: segmentEndExclusive,
-          bounds: _segmentRangeBounds(
-            points,
-            segmentStart: segmentStart,
-            segmentEndExclusive: segmentEndExclusive,
-          ),
-        ),
-      );
-    }
-    return batches;
-  }
-
-  Rect _segmentRangeBounds(
-    List<Offset> points, {
-    required int segmentStart,
-    required int segmentEndExclusive,
-  }) {
-    assert(points.length >= 2);
-    assert(segmentStart >= 0);
-    assert(segmentEndExclusive > segmentStart);
-    assert(segmentEndExclusive <= points.length - 1);
-    var minX = points[segmentStart].dx;
-    var minY = points[segmentStart].dy;
-    var maxX = minX;
-    var maxY = minY;
-    for (var i = segmentStart; i < segmentEndExclusive; i++) {
-      final a = points[i];
-      final b = points[i + 1];
-      minX = math.min(minX, math.min(a.dx, b.dx));
-      minY = math.min(minY, math.min(a.dy, b.dy));
-      maxX = math.max(maxX, math.max(a.dx, b.dx));
-      maxY = math.max(maxY, math.max(a.dy, b.dy));
-    }
-    return Rect.fromLTRB(minX, minY, maxX, maxY);
-  }
-
-  bool _rectsCanBeWithinDistance(Rect left, Rect right, double distance) {
-    final safeDistance = distance.isFinite ? math.max(0, distance) : 0.0;
-    final dx = left.right < right.left
-        ? right.left - left.right
-        : right.right < left.left
-        ? left.left - right.right
-        : 0.0;
-    final dy = left.bottom < right.top
-        ? right.top - left.bottom
-        : right.bottom < left.top
-        ? left.top - right.bottom
-        : 0.0;
-    return dx * dx + dy * dy <= safeDistance * safeDistance;
   }
 
   Set<NodeId> _nodesIntersecting(Rect rect) {
@@ -1366,51 +1242,6 @@ class SceneControllerInteractive extends ChangeNotifier
         return right.nodeIndex.compareTo(left.nodeIndex);
       });
     return candidates;
-  }
-
-  List<NodeSnapshot> _selectedTransformableNodesInSnapshotOrder({
-    required SceneSnapshot snapshot,
-    required Set<NodeId> selected,
-  }) {
-    if (selected.isEmpty) return const <NodeSnapshot>[];
-
-    final nodes = <NodeSnapshot>[];
-    for (final layer in snapshot.layers) {
-      for (final node in layer.nodes) {
-        if (!selected.contains(node.id)) continue;
-        if (!node.isTransformable || node.isLocked) continue;
-        nodes.add(node);
-      }
-    }
-    return nodes;
-  }
-
-  List<NodeId> _deletableSelectedNodeIdsInSnapshot({
-    required SceneSnapshot snapshot,
-    required Set<NodeId> selected,
-  }) {
-    if (selected.isEmpty) return const <NodeId>[];
-
-    final ids = <NodeId>[];
-    for (final layer in snapshot.layers) {
-      for (final node in layer.nodes) {
-        if (!selected.contains(node.id)) continue;
-        if (!node.isDeletable) continue;
-        ids.add(node.id);
-      }
-    }
-    return ids;
-  }
-
-  Offset _centerWorldForNodeSnapshots(List<NodeSnapshot> nodes) {
-    Rect? bounds;
-    for (final nodeSnapshot in nodes) {
-      final boundsWorld = txnNodeFromSnapshot(nodeSnapshot).boundsWorld;
-      bounds = bounds == null
-          ? boundsWorld
-          : bounds.expandToInclude(boundsWorld);
-    }
-    return bounds?.center ?? Offset.zero;
   }
 
   void _resetMoveGestureState() {
@@ -1540,15 +1371,6 @@ class SceneControllerInteractive extends ChangeNotifier
     });
   }
 
-  double _maxSingularValue2x2(double a, double b, double c, double d) {
-    final t = a * a + b * b + c * c + d * d;
-    final det = a * d - b * c;
-    final discSquared = t * t - 4 * det * det;
-    final disc = math.sqrt(math.max(0, discSquared));
-    final lambdaMax = (t + disc) / 2;
-    return math.sqrt(math.max(0, lambdaMax));
-  }
-
   void _scheduleNotify() {
     if (_isDisposed) {
       return;
@@ -1621,60 +1443,5 @@ class SceneControllerInteractive extends ChangeNotifier
 }
 
 enum _MoveDragTarget { none, move, marquee }
-
-class _SegmentBatch {
-  const _SegmentBatch({
-    required this.startSegment,
-    required this.endSegmentExclusive,
-    required this.bounds,
-  });
-
-  final int startSegment;
-  final int endSegmentExclusive;
-  final Rect bounds;
-}
-
-class _InteractiveEventDispatcher {
-  final StreamController<ActionCommitted> _actions =
-      StreamController<ActionCommitted>.broadcast();
-  final StreamController<EditTextRequested> _editTextRequests =
-      StreamController<EditTextRequested>.broadcast();
-
-  int _actionCounter = 0;
-  bool _isDisposed = false;
-
-  Stream<ActionCommitted> get actions => _actions.stream;
-  Stream<EditTextRequested> get editTextRequests => _editTextRequests.stream;
-
-  void emitAction(
-    ActionType type,
-    List<NodeId> nodeIds,
-    int timestampMs, {
-    Map<String, Object?>? payload,
-  }) {
-    if (_isDisposed) return;
-    _actions.add(
-      ActionCommitted(
-        actionId: 'a${_actionCounter++}',
-        type: type,
-        nodeIds: List<NodeId>.from(nodeIds),
-        timestampMs: timestampMs,
-        payload: payload,
-      ),
-    );
-  }
-
-  void emitEditTextRequested(EditTextRequested req) {
-    if (_isDisposed) return;
-    _editTextRequests.add(req);
-  }
-
-  void dispose() {
-    if (_isDisposed) return;
-    _isDisposed = true;
-    _actions.close();
-    _editTextRequests.close();
-  }
-}
 
 typedef SceneController = SceneControllerInteractive;
