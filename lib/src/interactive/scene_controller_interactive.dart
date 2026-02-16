@@ -7,12 +7,9 @@ import '../core/action_events.dart';
 import '../core/defaults.dart';
 import '../core/geometry.dart';
 import '../core/grid_safety_limits.dart';
-import '../core/hit_test.dart';
-import '../core/input_sampling.dart';
 import '../core/interaction_types.dart';
-import '../core/nodes.dart' show SceneNode, TextNode;
+import '../core/nodes.dart' show TextNode;
 import '../core/pointer_input.dart';
-import '../core/scene_spatial_index.dart';
 import '../core/transform2d.dart';
 import '../controller/scene_controller.dart';
 import '../public/canvas_pointer_input.dart';
@@ -24,6 +21,7 @@ import '../public/snapshot.dart';
 import 'internal/interactive_draw_session.dart';
 import 'internal/interactive_event_dispatcher.dart';
 import 'internal/interactive_geometry.dart';
+import 'internal/interactive_move_session.dart';
 import 'internal/interactive_selection_utils.dart';
 
 int sceneControllerInteractiveInternalEpoch(
@@ -36,7 +34,7 @@ Offset sceneControllerInteractiveInternalPreviewDeltaForNode(
   SceneControllerInteractive controller,
   NodeId nodeId,
 ) {
-  return controller._movePreviewDeltaForNode(nodeId);
+  return controller._moveSession.movePreviewDeltaForNode(nodeId);
 }
 
 void sceneControllerInteractiveInternalSetBeforePointerDispatchHook(
@@ -87,6 +85,23 @@ class SceneControllerInteractive extends ChangeNotifier
   }) : _pointerSettings = pointerSettings ?? const PointerInputSettings(),
        _dragStartSlop = dragStartSlop,
        _core = SceneControllerCore(initialSnapshot: initialSnapshot) {
+    _moveSession = InteractiveMoveSession(
+      callbacks: InteractiveMoveSessionCallbacks(
+        onStateChanged: _scheduleNotify,
+        readSnapshot: () => snapshot,
+        readSelectedNodeIds: () => selectedNodeIds,
+        querySpatialCandidates: _core.querySpatialCandidates,
+        resolveSpatialCandidateNode: _core.resolveSpatialCandidateNode,
+        writeSelectionReplace: _core.commands.writeSelectionReplace,
+        writeSelectionClear: _core.commands.writeSelectionClear,
+        writeSelectionTranslate: (delta) {
+          return _core.write<int>((writer) {
+            return writer.writeSelectionTranslate(delta);
+          });
+        },
+        emitAction: _events.emitAction,
+      ),
+    );
     _drawSession = InteractiveDrawSession(
       callbacks: InteractiveDrawSessionCallbacks(
         onStateChanged: _scheduleNotify,
@@ -104,6 +119,7 @@ class SceneControllerInteractive extends ChangeNotifier
   final SceneControllerCore _core;
   final InteractiveEventDispatcher _events = InteractiveEventDispatcher();
   late final InteractiveDrawSession _drawSession;
+  late final InteractiveMoveSession _moveSession;
 
   PointerInputSettings _pointerSettings;
   double? _dragStartSlop;
@@ -119,19 +135,6 @@ class SceneControllerInteractive extends ChangeNotifier
   double _highlighterOpacity = SceneDefaults.highlighterOpacity;
 
   final bool clearSelectionOnDrawModeEnter;
-
-  Rect? _selectionRect;
-
-  int? _moveActivePointerId;
-  Offset? _movePointerDownScene;
-  Offset? _moveLastScene;
-  _MoveDragTarget _moveTarget = _MoveDragTarget.none;
-  bool _moveDragStarted = false;
-  bool _movePendingClearSelection = false;
-  Set<NodeId> _moveMarqueeBaseline = <NodeId>{};
-  bool _movePreviewActive = false;
-  Offset _movePreviewDelta = Offset.zero;
-  Set<NodeId> _movePreviewNodeIds = <NodeId>{};
 
   bool _notifyScheduled = false;
   bool _notifyPending = false;
@@ -155,7 +158,7 @@ class SceneControllerInteractive extends ChangeNotifier
   double get highlighterOpacity => _highlighterOpacity;
   double get dragStartSlop => _dragStartSlop ?? _pointerSettings.tapSlop;
 
-  Rect? get selectionRect => _selectionRect;
+  Rect? get selectionRect => _moveSession.selectionRect;
 
   Offset? get pendingLineStart => _drawSession.pendingLineStart;
   int? get pendingLineTimestampMs => _drawSession.pendingLineTimestampMs;
@@ -196,14 +199,14 @@ class SceneControllerInteractive extends ChangeNotifier
     if (_mode == value) return;
 
     if (_mode == CanvasMode.move) {
-      _resetMoveGestureState();
+      _moveSession.resetGestureState();
     } else {
       _drawSession.resetGestureState();
       _drawSession.clearPendingLine();
     }
 
     _mode = value;
-    _setSelectionRect(null);
+    _moveSession.setSelectionRect(null);
 
     if (value == CanvasMode.draw &&
         clearSelectionOnDrawModeEnter &&
@@ -476,7 +479,7 @@ class SceneControllerInteractive extends ChangeNotifier
     _ensureNotDisposed();
     _core.writeReplaceScene(snapshot);
     _drawSession.clearPendingLine();
-    _setSelectionRect(null);
+    _moveSession.setSelectionRect(null);
   }
 
   void notifySceneChanged() {
@@ -525,7 +528,7 @@ class SceneControllerInteractive extends ChangeNotifier
     if (_mode != CanvasMode.move) return;
 
     final scenePoint = _toScenePoint(position);
-    final hit = _hitTestTopNode(scenePoint);
+    final hit = _moveSession.hitTestTopNode(scenePoint);
     if (hit == null || hit is! TextNode) return;
 
     _events.emitEditTextRequested(
@@ -551,152 +554,12 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   void _handleMovePointer(PointerSample sample) {
-    if (_moveActivePointerId != null &&
-        _moveActivePointerId != sample.pointerId) {
-      return;
-    }
-
     final scenePoint = _toScenePoint(sample.position);
-    switch (sample.phase) {
-      case PointerPhase.down:
-        _moveHandleDown(sample, scenePoint);
-        break;
-      case PointerPhase.move:
-        _moveHandleMove(sample, scenePoint);
-        break;
-      case PointerPhase.up:
-        _moveHandleUp(sample, scenePoint);
-        break;
-      case PointerPhase.cancel:
-        _resetMoveGestureState();
-        _setSelectionRect(null);
-        _scheduleNotify();
-        break;
-    }
-  }
-
-  void _moveHandleDown(PointerSample sample, Offset scenePoint) {
-    _moveActivePointerId = sample.pointerId;
-    _movePointerDownScene = scenePoint;
-    _moveLastScene = scenePoint;
-    _moveDragStarted = false;
-    _movePendingClearSelection = false;
-    _moveMarqueeBaseline = Set<NodeId>.from(selectedNodeIds);
-
-    final hit = _hitTestTopNode(scenePoint);
-    if (hit != null) {
-      _moveTarget = _MoveDragTarget.move;
-      Set<NodeId> previewNodeIds = selectedNodeIds;
-      if (!selectedNodeIds.contains(hit.id)) {
-        _core.commands.writeSelectionReplace(<NodeId>{hit.id});
-        previewNodeIds = <NodeId>{hit.id};
-      }
-      _startMovePreview(previewNodeIds);
-      _scheduleNotify();
-      return;
-    }
-
-    _moveTarget = _MoveDragTarget.marquee;
-    _movePendingClearSelection = true;
-    _clearMovePreview();
-    _scheduleNotify();
-  }
-
-  void _moveHandleMove(PointerSample sample, Offset scenePoint) {
-    if (_moveActivePointerId != sample.pointerId) return;
-    if (_movePointerDownScene == null || _moveLastScene == null) return;
-
-    final didStartDrag =
-        !_moveDragStarted &&
-        isDistanceGreaterThan(
-          _movePointerDownScene!,
-          scenePoint,
-          dragStartSlop,
-        );
-
-    if (didStartDrag) {
-      _moveDragStarted = true;
-      if (_moveTarget == _MoveDragTarget.marquee &&
-          _movePendingClearSelection) {
-        _core.commands.writeSelectionClear();
-        _movePendingClearSelection = false;
-      }
-    }
-
-    if (!_moveDragStarted) return;
-
-    if (_moveTarget == _MoveDragTarget.move) {
-      final deltaStep = scenePoint - _moveLastScene!;
-      if (deltaStep == Offset.zero) return;
-      _movePreviewDelta = _movePreviewDelta + deltaStep;
-      _moveLastScene = scenePoint;
-      _scheduleNotify();
-      return;
-    }
-
-    if (_moveTarget == _MoveDragTarget.marquee) {
-      _setSelectionRect(Rect.fromPoints(_movePointerDownScene!, scenePoint));
-    }
-  }
-
-  void _moveHandleUp(PointerSample sample, Offset scenePoint) {
-    if (_moveActivePointerId != sample.pointerId) return;
-
-    if (_moveTarget == _MoveDragTarget.move) {
-      final finalDelta = _movePreviewDelta;
-      final movedIds = selectedTransformableNodesInSnapshotOrder(
-        snapshot: snapshot,
-        selected: _movePreviewNodeIds,
-      ).map((node) => node.id).toList(growable: false);
-      _clearMovePreview();
-      if (_moveDragStarted) {
-        var affected = 0;
-        if (finalDelta != Offset.zero) {
-          affected = _core.write<int>((writer) {
-            return writer.writeSelectionTranslate(finalDelta);
-          });
-        }
-        if (affected > 0 && movedIds.isNotEmpty) {
-          final delta = Transform2D.translation(finalDelta);
-          _events.emitAction(
-            ActionType.transform,
-            movedIds,
-            sample.timestampMs,
-            payload: <String, Object?>{'delta': delta.toJsonMap()},
-          );
-        }
-      }
-    } else if (_moveTarget == _MoveDragTarget.marquee) {
-      if (_moveDragStarted && _selectionRect != null) {
-        _commitMarquee(sample.timestampMs);
-      } else if (_movePendingClearSelection) {
-        _core.commands.writeSelectionClear();
-      }
-    }
-
-    _resetMoveGestureState();
-    _setSelectionRect(null);
-    _scheduleNotify();
-  }
-
-  void _commitMarquee(int timestampMs) {
-    final rect = _selectionRect;
-    if (rect == null) return;
-
-    final selected = _nodesIntersecting(rect);
-    _core.commands.writeSelectionReplace(selected);
-
-    final currentSelection = selectedNodeIds;
-    final didChange =
-        _moveMarqueeBaseline.length != currentSelection.length ||
-        !_moveMarqueeBaseline.containsAll(currentSelection);
-    if (didChange) {
-      _events.emitAction(
-        ActionType.selectMarquee,
-        currentSelection.toList(growable: false),
-        timestampMs,
-      );
-    }
+    _moveSession.handlePointer(
+      sample,
+      scenePoint,
+      dragStartSlop: dragStartSlop,
+    );
   }
 
   void _handleDrawPointer(PointerSample sample) {
@@ -713,120 +576,6 @@ class SceneControllerInteractive extends ChangeNotifier
       highlighterOpacity: _highlighterOpacity,
       dragStartSlop: dragStartSlop,
     );
-  }
-
-  Set<NodeId> _nodesIntersecting(Rect rect) {
-    final ids = <NodeId>{};
-    final candidates = _core.querySpatialCandidates(rect).toList(growable: true)
-      ..sort((left, right) {
-        final byLayer = left.layerIndex.compareTo(right.layerIndex);
-        if (byLayer != 0) return byLayer;
-        return left.nodeIndex.compareTo(right.nodeIndex);
-      });
-
-    for (final candidate in candidates) {
-      final node = _core.resolveSpatialCandidateNode(candidate);
-      if (node == null) continue;
-      if (!node.isVisible || !node.isSelectable) continue;
-      if (!_effectiveNodeBoundsWorld(node).overlaps(rect)) continue;
-      ids.add(node.id);
-    }
-
-    return ids;
-  }
-
-  SceneNode? _hitTestTopNode(Offset scenePoint) {
-    final candidates = _queryHitTestCandidates(scenePoint);
-
-    for (final candidate in candidates) {
-      final node = _core.resolveSpatialCandidateNode(candidate);
-      if (node == null) continue;
-      if (!node.isVisible || !node.isSelectable) continue;
-      if (_hitTestNodeWithMovePreview(scenePoint, node)) {
-        return node;
-      }
-    }
-
-    return null;
-  }
-
-  List<SceneSpatialCandidate> _queryHitTestCandidates(Offset scenePoint) {
-    final probe = Rect.fromLTWH(scenePoint.dx, scenePoint.dy, 0, 0);
-    final byNodeId = <NodeId, SceneSpatialCandidate>{};
-    for (final candidate in _core.querySpatialCandidates(probe)) {
-      byNodeId[candidate.node.id] = candidate;
-    }
-    if (_hasMovePreviewTranslation) {
-      final shiftedProbe = Rect.fromLTWH(
-        scenePoint.dx - _movePreviewDelta.dx,
-        scenePoint.dy - _movePreviewDelta.dy,
-        0,
-        0,
-      );
-      for (final candidate in _core.querySpatialCandidates(shiftedProbe)) {
-        byNodeId[candidate.node.id] = candidate;
-      }
-    }
-    final candidates = byNodeId.values.toList(growable: true)
-      ..sort((left, right) {
-        final byLayer = right.layerIndex.compareTo(left.layerIndex);
-        if (byLayer != 0) return byLayer;
-        return right.nodeIndex.compareTo(left.nodeIndex);
-      });
-    return candidates;
-  }
-
-  void _resetMoveGestureState() {
-    _moveActivePointerId = null;
-    _movePointerDownScene = null;
-    _moveLastScene = null;
-    _moveTarget = _MoveDragTarget.none;
-    _moveDragStarted = false;
-    _movePendingClearSelection = false;
-    _moveMarqueeBaseline = <NodeId>{};
-    _clearMovePreview();
-  }
-
-  void _startMovePreview(Set<NodeId> nodeIds) {
-    _movePreviewActive = true;
-    _movePreviewDelta = Offset.zero;
-    _movePreviewNodeIds = Set<NodeId>.from(nodeIds);
-  }
-
-  void _clearMovePreview() {
-    _movePreviewActive = false;
-    _movePreviewDelta = Offset.zero;
-    _movePreviewNodeIds = <NodeId>{};
-  }
-
-  bool get _hasMovePreviewTranslation =>
-      _movePreviewActive &&
-      _movePreviewNodeIds.isNotEmpty &&
-      _movePreviewDelta != Offset.zero;
-
-  Offset _movePreviewDeltaForNode(NodeId nodeId) {
-    if (!_hasMovePreviewTranslation) return Offset.zero;
-    if (!_movePreviewNodeIds.contains(nodeId)) return Offset.zero;
-    return _movePreviewDelta;
-  }
-
-  Rect _effectiveNodeBoundsWorld(SceneNode node) {
-    final delta = _movePreviewDeltaForNode(node.id);
-    return node.boundsWorld.shift(delta);
-  }
-
-  bool _hitTestNodeWithMovePreview(Offset scenePoint, SceneNode node) {
-    final delta = _movePreviewDeltaForNode(node.id);
-    if (delta == Offset.zero) {
-      return hitTestNode(scenePoint, node);
-    }
-    return hitTestNode(scenePoint - delta, node);
-  }
-
-  void _setSelectionRect(Rect? value) {
-    if (_selectionRect == value) return;
-    _selectionRect = value;
-    _scheduleNotify();
   }
 
   Offset _toScenePoint(Offset viewPoint) {
@@ -907,6 +656,7 @@ class SceneControllerInteractive extends ChangeNotifier
     _isDisposed = true;
     _notifyPending = false;
     _notifyScheduled = false;
+    _moveSession.dispose();
     _drawSession.dispose();
     _core.removeListener(_handleCoreChanged);
     _core.dispose();
@@ -936,7 +686,5 @@ class SceneControllerInteractive extends ChangeNotifier
     throw ArgumentError.value(value, name, 'Offset must be finite.');
   }
 }
-
-enum _MoveDragTarget { none, move, marquee }
 
 typedef SceneController = SceneControllerInteractive;
