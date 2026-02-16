@@ -71,10 +71,10 @@ language: russian
 Как: добавить отдельные группы тестов `invalid pointer data`, `long gesture guardrails`, `line pending cancel semantics`, `single-active-pointer semantics`.
 Проверка: стабильное прохождение `flutter test` без флаки.
 
-10. [ ] Привести guardrails интерактива к явному и проверяемому контракту
+10. [x] Привести guardrails интерактива к явному и проверяемому контракту
 Где: `/Users/blackpika/iwb_canvas_engine/tool/invariant_registry.dart`, ссылки `// INV:<id>` в тестах/утилитах.
 Почему: ключевые ограничения (валидность pointer input, лимиты буферов, правила cancel) должны быть формализованы как инварианты, иначе высокий риск “тихой” регрессии.
-Как: добавить/обновить инварианты и enforcement-ссылки в соответствующих тестах.
+Как: добавить/обновить инварианты и enforcement-ссылки в соответствующих тестах; добавлены `INV-ENG-INTERACTIVE-GESTURE-BUFFER-SOFT-CAP`, `INV-ENG-INTERACTIVE-CANCEL-STATE-RESET`, `INV-ENG-VIEW-POINTER-SLOT-LIFECYCLE`, `INV-ENG-VIEW-ACTIVE-POINTER-GATE`.
 Проверка: `dart run tool/check_invariant_coverage.dart` зелёный.
 
 ## Предлагаемые новые инварианты для интерактива

@@ -1015,6 +1015,7 @@ void main() {
 
     test('move cancel keeps document unchanged and clears preview', () {
       // INV:INV-ENG-INTERACTIVE-PREVIEW-COMMIT-ON-UP
+      // INV:INV-ENG-INTERACTIVE-CANCEL-STATE-RESET
       final rect = RectNode(id: 'node', size: const Size(40, 20))
         ..position = const Offset(80, 80);
       final controller = _controllerFromScene(
@@ -1935,6 +1936,7 @@ void main() {
       });
 
       test('pen preview buffer is soft-capped during long move', () {
+        // INV:INV-ENG-INTERACTIVE-GESTURE-BUFFER-SOFT-CAP
         final controller = SceneControllerInteractive(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
@@ -1976,6 +1978,7 @@ void main() {
       });
 
       test('soft-capped stroke preview keeps endpoints after pruning', () {
+        // INV:INV-ENG-INTERACTIVE-GESTURE-BUFFER-SOFT-CAP
         final controller = SceneControllerInteractive(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
@@ -2018,6 +2021,7 @@ void main() {
       test(
         'highlighter long preview and commit keep soft-limit and endpoints',
         () async {
+          // INV:INV-ENG-INTERACTIVE-GESTURE-BUFFER-SOFT-CAP
           final controller = SceneControllerInteractive(
             initialSnapshot: SceneSnapshot(
               layers: <ContentLayerSnapshot>[
@@ -2538,6 +2542,7 @@ void main() {
       });
 
       test('long eraser gesture cancel does not mutate scene', () async {
+        // INV:INV-ENG-INTERACTIVE-CANCEL-STATE-RESET
         final startLine = LineNode(
           id: 'cancel-line-start',
           start: const Offset(-12, 0),
@@ -2611,6 +2616,7 @@ void main() {
       });
 
       test('invalid soft-limit config throws ArgumentError', () {
+        // INV:INV-ENG-INTERACTIVE-GESTURE-BUFFER-SOFT-CAP
         final controller = SceneControllerInteractive(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
@@ -2656,6 +2662,7 @@ void main() {
       });
 
       test('eraser active buffer is capped during long move', () {
+        // INV:INV-ENG-INTERACTIVE-GESTURE-BUFFER-SOFT-CAP
         final controller = SceneControllerInteractive(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
@@ -2805,6 +2812,7 @@ void main() {
       test(
         'line preview starts after dragStartSlop and clears on cancel/tool/mode switch',
         () {
+          // INV:INV-ENG-INTERACTIVE-CANCEL-STATE-RESET
           final controller = SceneControllerInteractive(
             initialSnapshot: SceneSnapshot(
               layers: <ContentLayerSnapshot>[
@@ -2901,6 +2909,7 @@ void main() {
       );
 
       test('line pending start is cleared on pointer cancel', () {
+        // INV:INV-ENG-INTERACTIVE-CANCEL-STATE-RESET
         final controller = SceneControllerInteractive(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[

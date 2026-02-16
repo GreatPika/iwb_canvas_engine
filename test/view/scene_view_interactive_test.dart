@@ -126,6 +126,7 @@ void main() {
   testWidgets('SceneViewInteractive reuses freed pointer slot ids', (
     tester,
   ) async {
+    // INV:INV-ENG-VIEW-POINTER-SLOT-LIFECYCLE
     final controller = SceneControllerInteractive(
       initialSnapshot: _snapshot(text: 'slots'),
     );
@@ -153,6 +154,7 @@ void main() {
   testWidgets('SceneViewInteractive chooses min free slot from unsorted list', (
     tester,
   ) async {
+    // INV:INV-ENG-VIEW-POINTER-SLOT-LIFECYCLE
     final controller = SceneControllerInteractive(
       initialSnapshot: _snapshot(text: 'slots-2'),
     );
@@ -183,6 +185,7 @@ void main() {
   testWidgets(
     'SceneViewInteractive keeps slot allocator healthy after cancel release',
     (tester) async {
+      // INV:INV-ENG-VIEW-POINTER-SLOT-LIFECYCLE
       final controller = SceneControllerInteractive(
         initialSnapshot: _snapshot(text: 'slots-cancel'),
       );
@@ -215,6 +218,7 @@ void main() {
   testWidgets(
     'SceneViewInteractive parallel pointer lifecycle does not keep active lock',
     (tester) async {
+      // INV:INV-ENG-VIEW-ACTIVE-POINTER-GATE
       final controller = SceneControllerInteractive(
         initialSnapshot: _snapshot(text: 'parallel-lock'),
       );

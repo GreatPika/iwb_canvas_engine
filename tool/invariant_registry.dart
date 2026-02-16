@@ -136,10 +136,34 @@ const List<Invariant> invariants = <Invariant>[
         'interactive gestures keep a single active pointer and ignore parallel pointer ids until gesture end',
   ),
   Invariant(
+    id: 'INV-ENG-INTERACTIVE-GESTURE-BUFFER-SOFT-CAP',
+    scope: 'engine-runtime',
+    title:
+        'interactive stroke/eraser active gesture buffers are soft-capped with endpoint-preserving pruning and validated limits',
+  ),
+  Invariant(
+    id: 'INV-ENG-INTERACTIVE-CANCEL-STATE-RESET',
+    scope: 'engine-runtime',
+    title:
+        'interactive pointer cancel resets active gesture state (preview/pending buffers) without committing scene mutations',
+  ),
+  Invariant(
     id: 'INV-ENG-INTERACTIVE-PREVIEW-COMMIT-ON-UP',
     scope: 'engine-runtime',
     title:
-        'interactive move/draw preview does not mutate scene before pointer up commit; cancel clears preview without scene mutation',
+        'interactive move/draw preview remains ephemeral and does not mutate committed scene before pointer up commit',
+  ),
+  Invariant(
+    id: 'INV-ENG-VIEW-POINTER-SLOT-LIFECYCLE',
+    scope: 'view-runtime',
+    title:
+        'SceneView pointer-slot allocator releases slots on up/cancel and reuses the minimum free slot id',
+  ),
+  Invariant(
+    id: 'INV-ENG-VIEW-ACTIVE-POINTER-GATE',
+    scope: 'view-runtime',
+    title:
+        'SceneView pointer signal tracking gates by a single active pointer and releases gate on up/cancel',
   ),
   Invariant(
     id: 'INV-ENG-EPOCH-INVALIDATION',
