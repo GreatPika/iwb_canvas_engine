@@ -1,7 +1,21 @@
 ## Unreleased
 
+### Breaking
+
+- JSON codec now supports only `schemaVersion = 5`; schema `4` is rejected on read.
+- Public write APIs replaced `layerIndex` with `layerId` for content-layer addressing.
+- JSON content layer shape changed to require `layers[].id`.
+
+Migration:
+
+- Replace `addNode(..., layerIndex: i)` with `addNode(..., layerId: 'layer-i')`.
+- Update serialized scenes to include `layers[].id` and `schemaVersion: 5`.
+
 ### Changed
 
+- Scene import/build and write APIs now reject non-invertible (`singular`) `Transform2D` values in addition to non-finite checks, preventing interactive failures caused by non-invertible node transforms.
+- Eraser hit-testing now keeps a bounds-based fallback for nodes with singular transforms instead of always treating them as misses.
+- Low-level scene insertion now enforces `NodeId` uniqueness defensively and throws on duplicate ids to prevent locator inconsistency.
 - `SceneControllerCore.write(...)` now guarantees `_writeInProgress` reset even when transaction context creation fails before commit path entry.
 - `SceneControllerCore.write(...)` now rejects async callback results (`Future`) with fail-fast `StateError`; such writes roll back buffered repaint/signals and do not commit.
 - Post-commit effect dispatch now enforces deterministic order for same-commit observers: committed `signals` are emitted before listener notification.

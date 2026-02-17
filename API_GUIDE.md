@@ -10,7 +10,7 @@ It is designed for both human developers and coding agents.
 - Scene model (`SceneSnapshot`, layers, nodes)
 - Interactive runtime (`SceneController`, `SceneView`)
 - Input handling (move/select/draw tools)
-- JSON import/export (`schemaVersion = 4`)
+- JSON import/export (`schemaVersion = 5`)
 
 `iwb_canvas_engine` does not provide:
 
@@ -74,12 +74,15 @@ Runtime aliases exposed publicly:
 
 `ContentLayerSnapshot` contains:
 
+- `id: LayerId`
 - `nodes: List<NodeSnapshot>`
 
 Typed layer boundary:
 
 - `backgroundLayer` is a dedicated typed layer (rendered below content).
 - `layers` is an ordered list of content layers only.
+- `LayerId` is a stable layer identity and does not encode z-position.
+- z-order is defined only by the list order in `SceneSnapshot.layers`.
 - runtime/public snapshots are canonical and always include `backgroundLayer`.
 - decode/import boundaries accept missing `backgroundLayer` and canonicalize it
   to an empty dedicated background layer before returning `SceneSnapshot`.
@@ -185,7 +188,7 @@ final controller = SceneController(
   initialSnapshot: SceneSnapshot(
     backgroundLayer: BackgroundLayerSnapshot(),
     layers: [
-      ContentLayerSnapshot(),
+      ContentLayerSnapshot(id: 'layer-0'),
     ],
   ),
 
@@ -290,7 +293,7 @@ Notification semantics:
 
 ### 6.5 Node and selection methods
 
-- `NodeId addNode(NodeSpec node, {int? layerIndex})`
+- `NodeId addNode(NodeSpec node, {LayerId? layerId})`
 - `bool patchNode(NodePatch patch)`
 - `bool removeNode(NodeId id, {int? timestampMs})`
 - `setSelection(Iterable<NodeId> nodeIds)`
@@ -298,9 +301,22 @@ Notification semantics:
 - `clearSelection()`
 - `selectAll({bool onlySelectable = true})`
 
-`layerIndex` contract:
+`layerId` contract:
 
-- `addNode(..., layerIndex)` addresses `SceneSnapshot.layers` only (content layers).
+- `addNode(..., layerId)` addresses `SceneSnapshot.layers` only (content layers).
+- `layerId == null` inserts into the last content layer.
+- If there are no content layers, insertion auto-creates one with generated id (`layer-N`).
+- Unknown `layerId` throws `ArgumentError.value(layerId, 'layerId', 'Unknown content layer id.')`.
+
+Migration snippet:
+
+```dart
+// before
+controller.addNode(rectSpec, layerIndex: 1);
+
+// after
+controller.addNode(rectSpec, layerId: 'layer-1');
+```
 
 ### 6.6 Transform/delete/clear commands
 
@@ -537,8 +553,8 @@ Validation rules at runtime boundaries:
 
 ### 11.2 Versioning
 
-- `schemaVersionWrite == 4`
-- `schemaVersionsRead == {4}`
+- `schemaVersionWrite == 5`
+- `schemaVersionsRead == {5}`
 
 ### 11.3 Errors
 
@@ -581,7 +597,7 @@ class _CanvasScreenState extends State<CanvasScreen> {
       initialSnapshot: SceneSnapshot(
         backgroundLayer: BackgroundLayerSnapshot(),
         layers: [
-          ContentLayerSnapshot(),
+          ContentLayerSnapshot(id: 'layer-0'),
         ],
       ),
       pointerSettings: const PointerInputSettings(
