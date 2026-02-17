@@ -11,9 +11,11 @@ void main() {
     return Scene(
       layers: <ContentLayer>[
         ContentLayer(
+          id: 'layer-auto-0',
           nodes: <SceneNode>[RectNode(id: 'bg-0', size: const Size(100, 100))],
         ),
         ContentLayer(
+          id: 'layer-auto-1',
           nodes: <SceneNode>[
             ImageNode(
               id: 'node-1',
@@ -113,7 +115,7 @@ void main() {
     expect(clone.palette, isNot(same(source.palette)));
     expect(clone.palette.penColors, isNot(same(source.palette.penColors)));
 
-    clone.layers.add(ContentLayer());
+    clone.layers.add(ContentLayer(id: 'layer-auto-2'));
     clone.camera.offset = const Offset(42, 24);
     expect(source.layers.length, 2);
     expect(source.camera.offset, const Offset(10, 20));
@@ -264,6 +266,7 @@ void main() {
       final scene = Scene(
         layers: <ContentLayer>[
           ContentLayer(
+            id: 'layer-auto-4',
             nodes: <SceneNode>[
               RectNode(id: 'a', size: const Size(1, 1), instanceRevision: 3),
               RectNode(id: 'b', size: const Size(1, 1), instanceRevision: 10),

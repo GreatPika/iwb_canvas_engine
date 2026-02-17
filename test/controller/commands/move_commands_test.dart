@@ -11,6 +11,7 @@ SceneControllerCore buildController() {
     initialSnapshot: SceneSnapshot(
       layers: <ContentLayerSnapshot>[
         ContentLayerSnapshot(
+          id: 'layer-auto-0',
           nodes: const <NodeSnapshot>[
             RectNodeSnapshot(id: 'base', size: Size(20, 10)),
           ],

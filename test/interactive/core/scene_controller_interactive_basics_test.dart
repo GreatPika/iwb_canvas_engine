@@ -13,8 +13,9 @@ void main() {
       final controller = controllerFromScene(
         Scene(
           layers: <ContentLayer>[
-            ContentLayer(),
+            ContentLayer(id: 'layer-auto-9'),
             ContentLayer(
+              id: 'layer-auto-10',
               nodes: <SceneNode>[RectNode(id: 'n', size: const Size(10, 8))],
             ),
           ],
@@ -112,7 +113,12 @@ void main() {
 
     test('setPointerSettings validates numeric fields', () {
       final controller = controllerFromScene(
-        Scene(layers: <ContentLayer>[ContentLayer(), ContentLayer()]),
+        Scene(
+          layers: <ContentLayer>[
+            ContentLayer(id: 'layer-auto-11'),
+            ContentLayer(id: 'layer-auto-12'),
+          ],
+        ),
       );
       addTearDown(controller.dispose);
 
@@ -163,7 +169,9 @@ void main() {
       expect(
         () => SceneControllerInteractive(
           initialSnapshot: SceneSnapshot(
-            layers: <ContentLayerSnapshot>[ContentLayerSnapshot()],
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(id: 'layer-auto-0'),
+            ],
           ),
           pointerSettings: const PointerInputSettings(tapSlop: -1),
         ),
@@ -176,7 +184,12 @@ void main() {
     test('handlePointer notifications are deferred', () async {
       // INV:INV-ENG-INTERACTIVE-ASYNC-DELIVERY
       final controller = controllerFromScene(
-        Scene(layers: <ContentLayer>[ContentLayer(), ContentLayer()]),
+        Scene(
+          layers: <ContentLayer>[
+            ContentLayer(id: 'layer-auto-13'),
+            ContentLayer(id: 'layer-auto-14'),
+          ],
+        ),
       );
       addTearDown(controller.dispose);
 
@@ -202,7 +215,12 @@ void main() {
     test('interactive notify coalesces within same tick', () async {
       // INV:INV-ENG-INTERACTIVE-ASYNC-DELIVERY
       final controller = controllerFromScene(
-        Scene(layers: <ContentLayer>[ContentLayer(), ContentLayer()]),
+        Scene(
+          layers: <ContentLayer>[
+            ContentLayer(id: 'layer-auto-15'),
+            ContentLayer(id: 'layer-auto-16'),
+          ],
+        ),
       );
       addTearDown(controller.dispose);
 
@@ -227,8 +245,8 @@ void main() {
       final controller = controllerFromScene(
         Scene(
           layers: <ContentLayer>[
-            ContentLayer(),
-            ContentLayer(nodes: <SceneNode>[node]),
+            ContentLayer(id: 'layer-auto-17'),
+            ContentLayer(id: 'layer-auto-18', nodes: <SceneNode>[node]),
           ],
         ),
       );
@@ -248,7 +266,12 @@ void main() {
 
     test('reentrant handlePointer throws StateError', () {
       final controller = controllerFromScene(
-        Scene(layers: <ContentLayer>[ContentLayer(), ContentLayer()]),
+        Scene(
+          layers: <ContentLayer>[
+            ContentLayer(id: 'layer-auto-19'),
+            ContentLayer(id: 'layer-auto-20'),
+          ],
+        ),
       );
       addTearDown(controller.dispose);
 
@@ -283,8 +306,11 @@ void main() {
         final controller = controllerFromScene(
           Scene(
             layers: <ContentLayer>[
-              ContentLayer(),
-              ContentLayer(nodes: <SceneNode>[nodeA, nodeB]),
+              ContentLayer(id: 'layer-auto-21'),
+              ContentLayer(
+                id: 'layer-auto-22',
+                nodes: <SceneNode>[nodeA, nodeB],
+              ),
             ],
           ),
         );
@@ -330,8 +356,8 @@ void main() {
       final controller = SceneControllerInteractive(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
-            ContentLayerSnapshot(),
-            ContentLayerSnapshot(),
+            ContentLayerSnapshot(id: 'layer-auto-1'),
+            ContentLayerSnapshot(id: 'layer-auto-2'),
           ],
         ),
       );
@@ -403,7 +429,12 @@ void main() {
       'handlePointer accepts null timestamp hint and keeps monotonic time',
       () async {
         final controller = controllerFromScene(
-          Scene(layers: <ContentLayer>[ContentLayer(), ContentLayer()]),
+          Scene(
+            layers: <ContentLayer>[
+              ContentLayer(id: 'layer-auto-23'),
+              ContentLayer(id: 'layer-auto-24'),
+            ],
+          ),
         );
         addTearDown(controller.dispose);
 
@@ -464,8 +495,8 @@ void main() {
       final controller = SceneControllerInteractive(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
-            ContentLayerSnapshot(),
-            ContentLayerSnapshot(),
+            ContentLayerSnapshot(id: 'layer-auto-3'),
+            ContentLayerSnapshot(id: 'layer-auto-4'),
           ],
         ),
       );
@@ -494,8 +525,8 @@ void main() {
       final controller = SceneControllerInteractive(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
-            ContentLayerSnapshot(),
-            ContentLayerSnapshot(),
+            ContentLayerSnapshot(id: 'layer-auto-5'),
+            ContentLayerSnapshot(id: 'layer-auto-6'),
           ],
         ),
       );
@@ -523,8 +554,9 @@ void main() {
         final controller = SceneControllerInteractive(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
-              ContentLayerSnapshot(),
+              ContentLayerSnapshot(id: 'layer-auto-7'),
               ContentLayerSnapshot(
+                id: 'layer-auto-8',
                 nodes: <NodeSnapshot>[
                   RectNodeSnapshot(id: 'n1', size: Size(10, 10)),
                 ],

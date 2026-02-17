@@ -20,6 +20,7 @@ void main() {
     return SceneSnapshot(
       layers: <ContentLayerSnapshot>[
         ContentLayerSnapshot(
+          id: 'layer-auto-0',
           nodes: <NodeSnapshot>[
             const RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
             const RectNodeSnapshot(id: 'r2', size: Size(12, 12)),
@@ -33,6 +34,7 @@ void main() {
     return SceneSnapshot(
       layers: <ContentLayerSnapshot>[
         ContentLayerSnapshot(
+          id: 'layer-auto-1',
           nodes: <NodeSnapshot>[
             StrokeNodeSnapshot(
               id: 's1',
@@ -327,6 +329,7 @@ void main() {
       SceneSnapshot(
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
+            id: 'layer-auto-2',
             nodes: const <NodeSnapshot>[
               RectNodeSnapshot(id: 'fresh', size: Size(4, 4)),
             ],

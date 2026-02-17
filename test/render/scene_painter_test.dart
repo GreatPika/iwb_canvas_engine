@@ -178,6 +178,7 @@ void main() {
         ),
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
+            id: 'layer-auto-0',
             nodes: <NodeSnapshot>[
               RectNodeSnapshot(
                 id: 'rect-1',
@@ -253,7 +254,9 @@ void main() {
     final controller = SceneControllerCore(
       initialSnapshot: SceneSnapshot(
         background: const BackgroundSnapshot(color: background),
-        layers: <ContentLayerSnapshot>[ContentLayerSnapshot()],
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(id: 'layer-auto-1'),
+        ],
       ),
     );
     addTearDown(controller.dispose);
@@ -310,6 +313,7 @@ void main() {
         background: const BackgroundSnapshot(color: background),
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
+            id: 'layer-auto-2',
             nodes: <NodeSnapshot>[
               const LineNodeSnapshot(
                 id: 'line-valid',
@@ -436,6 +440,7 @@ void main() {
         ),
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
+            id: 'layer-auto-3',
             nodes: const <NodeSnapshot>[
               PathNodeSnapshot(
                 id: 'edge-path',
@@ -476,6 +481,7 @@ void main() {
         ),
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
+            id: 'layer-auto-4',
             nodes: const <NodeSnapshot>[
               RectNodeSnapshot(
                 id: 'edge-rect',
@@ -528,7 +534,10 @@ void main() {
         initialSnapshot: SceneSnapshot(
           background: const BackgroundSnapshot(color: background),
           layers: <ContentLayerSnapshot>[
-            ContentLayerSnapshot(nodes: const <NodeSnapshot>[node]),
+            ContentLayerSnapshot(
+              id: 'layer-auto-5',
+              nodes: const <NodeSnapshot>[node],
+            ),
           ],
         ),
       );
@@ -575,6 +584,7 @@ void main() {
         background: const BackgroundSnapshot(color: background),
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
+            id: 'layer-auto-6',
             nodes: <NodeSnapshot>[
               TextNodeSnapshot(
                 id: 'text-$align',
@@ -653,6 +663,7 @@ void main() {
           background: const BackgroundSnapshot(color: background),
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
+              id: 'layer-auto-7',
               nodes: <NodeSnapshot>[
                 TextNodeSnapshot(
                   id: 'text-line-height',
@@ -706,6 +717,7 @@ void main() {
         background: const BackgroundSnapshot(color: background),
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
+            id: 'layer-auto-8',
             nodes: <NodeSnapshot>[
               StrokeNodeSnapshot(
                 id: 'stroke',
@@ -763,6 +775,7 @@ void main() {
           background: const BackgroundSnapshot(color: Color(0xFFFFFFFF)),
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
+              id: 'layer-auto-9',
               nodes: <NodeSnapshot>[
                 StrokeNodeSnapshot(
                   id: 'A',
@@ -814,6 +827,7 @@ void main() {
           background: const BackgroundSnapshot(color: Color(0xFFFFFFFF)),
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
+              id: 'layer-auto-10',
               nodes: <NodeSnapshot>[
                 StrokeNodeSnapshot(
                   id: 'A',
@@ -863,6 +877,7 @@ void main() {
           background: const BackgroundSnapshot(color: Color(0xFFFFFFFF)),
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
+              id: 'layer-auto-11',
               nodes: const <NodeSnapshot>[
                 PathNodeSnapshot(
                   id: 'path-geometry-reuse',
@@ -912,6 +927,7 @@ void main() {
           background: const BackgroundSnapshot(color: Color(0xFFFFFFFF)),
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
+              id: 'layer-auto-12',
               nodes: <NodeSnapshot>[
                 PathNodeSnapshot(
                   id: 'path-degenerate',
@@ -996,6 +1012,7 @@ void main() {
           background: const BackgroundSnapshot(color: background),
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
+              id: 'layer-auto-13',
               nodes: <NodeSnapshot>[
                 StrokeNodeSnapshot(
                   id: 'dot',
@@ -1061,6 +1078,7 @@ void main() {
           background: const BackgroundSnapshot(color: background),
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
+              id: 'layer-auto-14',
               nodes: <NodeSnapshot>[
                 const ImageNodeSnapshot(
                   id: 'img-sel',
@@ -1262,6 +1280,7 @@ void main() {
           background: const BackgroundSnapshot(color: background),
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
+              id: 'layer-auto-15',
               nodes: <NodeSnapshot>[
                 RectNodeSnapshot(
                   id: 'previewed',

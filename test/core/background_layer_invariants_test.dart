@@ -7,7 +7,9 @@ import 'package:iwb_canvas_engine/src/public/snapshot.dart';
 
 void main() {
   test('ensureBackgroundLayer creates background layer when missing', () {
-    final scene = Scene(layers: <ContentLayer>[ContentLayer()]);
+    final scene = Scene(
+      layers: <ContentLayer>[ContentLayer(id: 'layer-auto-2')],
+    );
 
     final layer = ensureBackgroundLayer(scene);
 
@@ -19,7 +21,7 @@ void main() {
     final existing = BackgroundLayer();
     final scene = Scene(
       backgroundLayer: existing,
-      layers: <ContentLayer>[ContentLayer()],
+      layers: <ContentLayer>[ContentLayer(id: 'layer-auto-3')],
     );
 
     final resolved = ensureBackgroundLayer(scene);
@@ -34,6 +36,7 @@ void main() {
       final snapshot = SceneSnapshot(
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
+            id: 'layer-auto-0',
             nodes: const <NodeSnapshot>[
               RectNodeSnapshot(id: 'n1', size: Size(1, 1)),
             ],
@@ -57,7 +60,9 @@ void main() {
             RectNodeSnapshot(id: 'bg', size: Size(1, 1)),
           ],
         ),
-        layers: <ContentLayerSnapshot>[ContentLayerSnapshot()],
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(id: 'layer-auto-1'),
+        ],
       );
 
       final canonical = canonicalizeBackgroundLayerSnapshot(snapshot);

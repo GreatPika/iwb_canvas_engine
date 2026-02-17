@@ -10,8 +10,8 @@ void main() {
         final controller = SceneControllerInteractive(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
-              ContentLayerSnapshot(),
-              ContentLayerSnapshot(),
+              ContentLayerSnapshot(id: 'layer-auto-0'),
+              ContentLayerSnapshot(id: 'layer-auto-1'),
             ],
           ),
         );
@@ -66,8 +66,8 @@ void main() {
         final controller = SceneControllerInteractive(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
-              ContentLayerSnapshot(),
-              ContentLayerSnapshot(),
+              ContentLayerSnapshot(id: 'layer-auto-2'),
+              ContentLayerSnapshot(id: 'layer-auto-3'),
             ],
           ),
         );
@@ -108,8 +108,8 @@ void main() {
         final controller = SceneControllerInteractive(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
-              ContentLayerSnapshot(),
-              ContentLayerSnapshot(),
+              ContentLayerSnapshot(id: 'layer-auto-4'),
+              ContentLayerSnapshot(id: 'layer-auto-5'),
             ],
           ),
         );
@@ -151,8 +151,8 @@ void main() {
           final controller = SceneControllerInteractive(
             initialSnapshot: SceneSnapshot(
               layers: <ContentLayerSnapshot>[
-                ContentLayerSnapshot(),
-                ContentLayerSnapshot(),
+                ContentLayerSnapshot(id: 'layer-auto-6'),
+                ContentLayerSnapshot(id: 'layer-auto-7'),
               ],
             ),
           );
@@ -226,8 +226,8 @@ void main() {
         final controller = SceneControllerInteractive(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
-              ContentLayerSnapshot(),
-              ContentLayerSnapshot(),
+              ContentLayerSnapshot(id: 'layer-auto-8'),
+              ContentLayerSnapshot(id: 'layer-auto-9'),
             ],
           ),
         );
@@ -270,8 +270,8 @@ void main() {
       final controller = SceneControllerInteractive(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
-            ContentLayerSnapshot(),
-            ContentLayerSnapshot(),
+            ContentLayerSnapshot(id: 'layer-auto-10'),
+            ContentLayerSnapshot(id: 'layer-auto-11'),
           ],
         ),
       );

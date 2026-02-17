@@ -15,6 +15,7 @@ void main() {
     final scene = SceneSnapshot(
       layers: <ContentLayerSnapshot>[
         ContentLayerSnapshot(
+          id: 'layer-auto-0',
           nodes: <NodeSnapshot>[
             const RectNodeSnapshot(id: 'rect-1', size: Size(40, 20)),
           ],
@@ -35,6 +36,7 @@ void main() {
     final scene = SceneSnapshot(
       layers: <ContentLayerSnapshot>[
         ContentLayerSnapshot(
+          id: 'layer-auto-1',
           nodes: <NodeSnapshot>[
             const RectNodeSnapshot(id: 'rect-json-1', size: Size(2, 3)),
           ],
@@ -87,7 +89,9 @@ void main() {
     (tester) async {
       final controller = SceneController(
         initialSnapshot: SceneSnapshot(
-          layers: <ContentLayerSnapshot>[ContentLayerSnapshot()],
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(id: 'layer-auto-2'),
+          ],
         ),
       );
       addTearDown(controller.dispose);

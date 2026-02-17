@@ -11,6 +11,7 @@ void main() {
     return SceneSnapshot(
       layers: <ContentLayerSnapshot>[
         ContentLayerSnapshot(
+          id: 'layer-auto-0',
           nodes: <NodeSnapshot>[
             const RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
             const RectNodeSnapshot(id: 'r2', size: Size(12, 12)),
@@ -247,6 +248,7 @@ void main() {
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
+              id: 'layer-auto-1',
               nodes: <NodeSnapshot>[
                 for (var i = 0; i < 1000; i++)
                   RectNodeSnapshot(id: 'n$i', size: const Size(10, 10)),

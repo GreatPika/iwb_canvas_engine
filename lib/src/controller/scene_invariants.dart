@@ -5,6 +5,7 @@ import '../core/nodes.dart';
 import '../core/scene.dart';
 import '../model/document_clone.dart';
 import '../model/document.dart';
+import '../public/snapshot.dart' show LayerId;
 
 List<String> txnCollectStoreInvariantViolations({
   required Scene scene,
@@ -12,6 +13,7 @@ List<String> txnCollectStoreInvariantViolations({
   required Set<NodeId> allNodeIds,
   required Map<NodeId, NodeLocatorEntry> nodeLocator,
   required int nodeIdSeed,
+  required int layerIdSeed,
   required int nextInstanceRevision,
   required int commitRevision,
 }) {
@@ -50,6 +52,15 @@ List<String> txnCollectStoreInvariantViolations({
     ];
   }
 
+  final duplicateLayerIds = _txnCollectDuplicateLayerIds(scene);
+  if (duplicateLayerIds.isNotEmpty) {
+    violations = <String>[
+      ...violations,
+      'scene must not contain duplicate content layer ids. '
+          'duplicates=$duplicateLayerIds',
+    ];
+  }
+
   final normalizedSelection = txnNormalizeSelection(
     rawSelection: selectedNodeIds,
     scene: scene,
@@ -68,6 +79,15 @@ List<String> txnCollectStoreInvariantViolations({
       ...violations,
       'nodeIdSeed must be >= initialNodeIdSeed(scene). '
           'actual=$nodeIdSeed min=$expectedSeed',
+    ];
+  }
+
+  final expectedLayerSeed = txnInitialLayerIdSeed(scene);
+  if (layerIdSeed < expectedLayerSeed) {
+    violations = <String>[
+      ...violations,
+      'layerIdSeed must be >= initialLayerIdSeed(scene). '
+          'actual=$layerIdSeed min=$expectedLayerSeed',
     ];
   }
 
@@ -128,6 +148,7 @@ void debugAssertTxnStoreInvariants({
   required Set<NodeId> allNodeIds,
   required Map<NodeId, NodeLocatorEntry> nodeLocator,
   required int nodeIdSeed,
+  required int layerIdSeed,
   required int nextInstanceRevision,
   required int commitRevision,
 }) {
@@ -137,6 +158,7 @@ void debugAssertTxnStoreInvariants({
     allNodeIds: allNodeIds,
     nodeLocator: nodeLocator,
     nodeIdSeed: nodeIdSeed,
+    layerIdSeed: layerIdSeed,
     nextInstanceRevision: nextInstanceRevision,
     commitRevision: commitRevision,
   );
@@ -197,6 +219,17 @@ Set<NodeId> _txnCollectDuplicateNodeIds(Scene scene) {
       if (!seen.add(node.id)) {
         duplicates.add(node.id);
       }
+    }
+  }
+  return duplicates;
+}
+
+Set<LayerId> _txnCollectDuplicateLayerIds(Scene scene) {
+  final seen = <LayerId>{};
+  final duplicates = <LayerId>{};
+  for (final layer in scene.layers) {
+    if (!seen.add(layer.id)) {
+      duplicates.add(layer.id);
     }
   }
   return duplicates;

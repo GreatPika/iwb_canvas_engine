@@ -13,6 +13,7 @@ void main() {
     return SceneSnapshot(
       layers: <ContentLayerSnapshot>[
         ContentLayerSnapshot(
+          id: 'layer-auto-0',
           nodes: <NodeSnapshot>[
             const RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
             const RectNodeSnapshot(id: 'r2', size: Size(12, 12)),
@@ -46,7 +47,9 @@ void main() {
               RectNodeSnapshot(id: 'bg-node', size: Size(10, 10)),
             ],
           ),
-          layers: <ContentLayerSnapshot>[ContentLayerSnapshot()],
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(id: 'layer-auto-1'),
+          ],
         ),
       );
       addTearDown(controller.dispose);
@@ -103,6 +106,7 @@ void main() {
         SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
+              id: 'layer-auto-2',
               nodes: const <NodeSnapshot>[
                 RectNodeSnapshot(id: 'fresh-1', size: Size(10, 10)),
                 RectNodeSnapshot(id: 'fresh-2', size: Size(12, 12)),

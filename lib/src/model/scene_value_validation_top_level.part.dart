@@ -23,6 +23,7 @@ void sceneValidateSnapshotValues(
   );
 
   final seenNodeIds = <String>{};
+  final seenLayerIds = <LayerId>{};
   final backgroundLayer = snapshot.backgroundLayer;
   for (
     var nodeIndex = 0;
@@ -44,6 +45,14 @@ void sceneValidateSnapshotValues(
 
   for (var layerIndex = 0; layerIndex < snapshot.layers.length; layerIndex++) {
     final layer = snapshot.layers[layerIndex];
+    if (!seenLayerIds.add(layer.id)) {
+      _sceneValidationFail(
+        onError: onError,
+        value: layer.id,
+        field: 'layers[$layerIndex].id',
+        message: 'must be unique across content layers.',
+      );
+    }
     for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
       final field = 'layers[$layerIndex].nodes[$nodeIndex]';
       final node = layer.nodes[nodeIndex];
@@ -79,6 +88,7 @@ void sceneValidateSceneValues(
   sceneValidatePalette(scene.palette, field: 'palette', onError: onError);
 
   final seenNodeIds = <String>{};
+  final seenLayerIds = <LayerId>{};
   final backgroundLayer = scene.backgroundLayer;
   if (backgroundLayer != null) {
     for (
@@ -102,6 +112,14 @@ void sceneValidateSceneValues(
 
   for (var layerIndex = 0; layerIndex < scene.layers.length; layerIndex++) {
     final layer = scene.layers[layerIndex];
+    if (!seenLayerIds.add(layer.id)) {
+      _sceneValidationFail(
+        onError: onError,
+        value: layer.id,
+        field: 'layers[$layerIndex].id',
+        message: 'must be unique across content layers.',
+      );
+    }
     for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
       final field = 'layers[$layerIndex].nodes[$nodeIndex]';
       final node = layer.nodes[nodeIndex];

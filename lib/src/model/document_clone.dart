@@ -3,6 +3,7 @@ import 'dart:ui';
 import '../core/nodes.dart';
 import '../core/scene.dart';
 import '../core/transform2d.dart';
+import '../public/snapshot.dart' show LayerId;
 
 Scene txnCloneSceneShallow(Scene scene) {
   return Scene(
@@ -59,11 +60,12 @@ BackgroundLayer txnCloneBackgroundLayer(BackgroundLayer layer) {
 }
 
 ContentLayer txnCloneContentLayerShallow(ContentLayer layer) {
-  return ContentLayer(nodes: layer.nodes);
+  return ContentLayer(id: layer.id, nodes: layer.nodes);
 }
 
 ContentLayer txnCloneContentLayer(ContentLayer layer) {
   return ContentLayer(
+    id: layer.id,
     nodes: layer.nodes.map(txnCloneNode).toList(growable: false),
   );
 }
@@ -241,4 +243,22 @@ int txnInitialNodeInstanceRevisionSeed(Scene scene) {
     }
   }
   return maxRevision + 1;
+}
+
+Set<LayerId> txnCollectLayerIds(Scene scene) {
+  return <LayerId>{for (final layer in scene.layers) layer.id};
+}
+
+int txnInitialLayerIdSeed(Scene scene) {
+  var maxId = -1;
+  for (final layer in scene.layers) {
+    final id = layer.id;
+    if (!id.startsWith('layer-')) continue;
+    final parsed = int.tryParse(id.substring('layer-'.length));
+    if (parsed == null || parsed < 0) continue;
+    if (parsed > maxId) {
+      maxId = parsed;
+    }
+  }
+  return maxId + 1;
 }

@@ -2,12 +2,14 @@ import 'dart:ui';
 
 import 'defaults.dart';
 import 'nodes.dart';
+import '../public/snapshot.dart' show LayerId;
 
 /// A mutable scene graph used by the canvas engine.
 ///
 /// The scene is organized into optional [backgroundLayer] and ordered content
 /// [layers], with a [camera] offset and background visual settings. Nodes are
-/// stored in scene coordinates.
+/// stored with local geometry and positioned into scene/world coordinates via
+/// [SceneNode.transform].
 class Scene {
   Scene({
     List<ContentLayer>? layers,
@@ -53,8 +55,10 @@ class BackgroundLayer {
 /// Layers are rendered in list order. Nodes inside a layer are rendered in
 /// list order; the last node is considered the top-most for hit-testing.
 class ContentLayer {
-  ContentLayer({List<SceneNode>? nodes})
+  ContentLayer({required this.id, List<SceneNode>? nodes})
     : nodes = nodes == null ? <SceneNode>[] : List<SceneNode>.from(nodes);
+
+  final LayerId id;
 
   /// Node list owned by the layer.
   ///

@@ -15,8 +15,9 @@ import 'package:iwb_canvas_engine/src/view/scene_view_interactive.dart';
 SceneSnapshot _snapshot({required String text, bool includeImage = false}) {
   return SceneSnapshot(
     layers: <ContentLayerSnapshot>[
-      ContentLayerSnapshot(nodes: const <NodeSnapshot>[]),
+      ContentLayerSnapshot(id: 'layer-auto-0', nodes: const <NodeSnapshot>[]),
       ContentLayerSnapshot(
+        id: 'layer-auto-1',
         nodes: <NodeSnapshot>[
           TextNodeSnapshot(
             id: 'txt',

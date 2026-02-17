@@ -139,8 +139,9 @@ void main() {
           call: (controller) => controller.replaceScene(
             SceneSnapshot(
               layers: <ContentLayerSnapshot>[
-                ContentLayerSnapshot(),
+                ContentLayerSnapshot(id: 'layer-auto-0'),
                 ContentLayerSnapshot(
+                  id: 'layer-auto-1',
                   nodes: <NodeSnapshot>[
                     RectNodeSnapshot(id: 'new', size: Size(5, 5)),
                   ],
@@ -194,8 +195,11 @@ void main() {
             final controller = controllerFromScene(
               Scene(
                 layers: <ContentLayer>[
-                  ContentLayer(),
-                  ContentLayer(nodes: <SceneNode>[rectA, rectB, textNode]),
+                  ContentLayer(id: 'layer-auto-6'),
+                  ContentLayer(
+                    id: 'layer-auto-7',
+                    nodes: <SceneNode>[rectA, rectB, textNode],
+                  ),
                 ],
               ),
             );
@@ -233,8 +237,8 @@ void main() {
       final controller = SceneControllerInteractive(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
-            ContentLayerSnapshot(),
-            ContentLayerSnapshot(),
+            ContentLayerSnapshot(id: 'layer-auto-2'),
+            ContentLayerSnapshot(id: 'layer-auto-3'),
           ],
         ),
       );
@@ -270,8 +274,9 @@ void main() {
         final controller = controllerFromScene(
           Scene(
             layers: <ContentLayer>[
-              ContentLayer(),
+              ContentLayer(id: 'layer-auto-8'),
               ContentLayer(
+                id: 'layer-auto-9',
                 nodes: <SceneNode>[RectNode(id: 'n', size: const Size(10, 10))],
               ),
             ],
@@ -324,8 +329,9 @@ void main() {
         final controller = controllerFromScene(
           Scene(
             layers: <ContentLayer>[
-              ContentLayer(),
+              ContentLayer(id: 'layer-auto-10'),
               ContentLayer(
+                id: 'layer-auto-11',
                 nodes: <SceneNode>[
                   LineNode(
                     id: 'line-a',
@@ -385,8 +391,9 @@ void main() {
         controller.replaceScene(
           SceneSnapshot(
             layers: <ContentLayerSnapshot>[
-              ContentLayerSnapshot(),
+              ContentLayerSnapshot(id: 'layer-auto-4'),
               ContentLayerSnapshot(
+                id: 'layer-auto-5',
                 nodes: <NodeSnapshot>[
                   RectNodeSnapshot(
                     id: 'bottom',

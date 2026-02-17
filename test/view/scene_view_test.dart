@@ -10,6 +10,7 @@ SceneSnapshot _snapshot({required double strokeY, required String text}) {
   return SceneSnapshot(
     layers: <ContentLayerSnapshot>[
       ContentLayerSnapshot(
+        id: 'layer-auto-0',
         nodes: <NodeSnapshot>[
           TextNodeSnapshot(
             id: 'txt',
@@ -37,6 +38,7 @@ SceneSnapshot _churnSnapshot({required int pairCount, required String prefix}) {
   return SceneSnapshot(
     layers: <ContentLayerSnapshot>[
       ContentLayerSnapshot(
+        id: 'layer-auto-1',
         nodes: <NodeSnapshot>[
           for (var i = 0; i < pairCount; i++) ...<NodeSnapshot>[
             TextNodeSnapshot(

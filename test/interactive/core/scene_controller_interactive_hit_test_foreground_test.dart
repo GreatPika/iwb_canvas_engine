@@ -26,8 +26,8 @@ void main() {
       final controller = controllerFromScene(
         Scene(
           layers: <ContentLayer>[
-            ContentLayer(),
-            ContentLayer(nodes: <SceneNode>[line, stroke]),
+            ContentLayer(id: 'layer-auto-0'),
+            ContentLayer(id: 'layer-auto-1', nodes: <SceneNode>[line, stroke]),
           ],
         ),
       );
@@ -114,8 +114,14 @@ void main() {
       final controller = controllerFromScene(
         Scene(
           layers: <ContentLayer>[
-            ContentLayer(nodes: <SceneNode>[backgroundRect]),
-            ContentLayer(nodes: <SceneNode>[foregroundRect, foregroundLine]),
+            ContentLayer(
+              id: 'layer-auto-2',
+              nodes: <SceneNode>[backgroundRect],
+            ),
+            ContentLayer(
+              id: 'layer-auto-3',
+              nodes: <SceneNode>[foregroundRect, foregroundLine],
+            ),
           ],
         ),
       );

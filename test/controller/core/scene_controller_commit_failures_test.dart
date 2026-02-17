@@ -18,6 +18,7 @@ void main() {
     return SceneSnapshot(
       layers: <ContentLayerSnapshot>[
         ContentLayerSnapshot(
+          id: 'layer-auto-0',
           nodes: <NodeSnapshot>[
             const RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
             const RectNodeSnapshot(id: 'r2', size: Size(12, 12)),
@@ -290,6 +291,7 @@ void main() {
               ),
               layers: <ContentLayerSnapshot>[
                 ContentLayerSnapshot(
+                  id: 'layer-auto-1',
                   nodes: const <NodeSnapshot>[
                     RectNodeSnapshot(id: 'dup', size: Size(2, 2)),
                   ],
@@ -303,6 +305,7 @@ void main() {
             snapshot: SceneSnapshot(
               layers: <ContentLayerSnapshot>[
                 ContentLayerSnapshot(
+                  id: 'layer-auto-2',
                   nodes: const <NodeSnapshot>[
                     PathNodeSnapshot(id: 'p1', svgPathData: 'not-a-path'),
                   ],
@@ -369,6 +372,7 @@ void main() {
       final malformed = SceneSnapshot(
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
+            id: 'layer-auto-3',
             nodes: const <NodeSnapshot>[
               RectNodeSnapshot(
                 id: 'bad',

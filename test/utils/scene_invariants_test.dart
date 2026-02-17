@@ -14,6 +14,7 @@ SceneSnapshot _validSnapshot() {
     ),
     layers: <ContentLayerSnapshot>[
       ContentLayerSnapshot(
+        id: 'layer-auto-0',
         nodes: const <NodeSnapshot>[
           RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
           LineNodeSnapshot(
@@ -45,6 +46,7 @@ void main() {
       ),
       layers: <ContentLayerSnapshot>[
         ContentLayerSnapshot(
+          id: 'layer-auto-1',
           nodes: const <NodeSnapshot>[
             RectNodeSnapshot(id: 'dup', size: Size(10, 10)),
           ],
@@ -68,6 +70,7 @@ void main() {
     final snapshot = SceneSnapshot(
       layers: <ContentLayerSnapshot>[
         ContentLayerSnapshot(
+          id: 'layer-auto-2',
           nodes: const <NodeSnapshot>[
             RectNodeSnapshot(
               id: 'hidden',
@@ -89,6 +92,7 @@ void main() {
     final snapshot = SceneSnapshot(
       layers: <ContentLayerSnapshot>[
         ContentLayerSnapshot(
+          id: 'layer-auto-3',
           nodes: const <NodeSnapshot>[
             LineNodeSnapshot(
               id: 'bad-line',

@@ -70,8 +70,8 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
       _controller = SceneController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
-            ContentLayerSnapshot(),
-            ContentLayerSnapshot(),
+            ContentLayerSnapshot(id: 'layer-auto-0'),
+            ContentLayerSnapshot(id: 'layer-auto-1'),
           ],
         ),
         clearSelectionOnDrawModeEnter: true,

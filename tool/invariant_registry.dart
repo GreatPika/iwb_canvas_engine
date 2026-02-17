@@ -46,6 +46,16 @@ const List<Invariant> invariants = <Invariant>[
     title: 'NodeId stays unique across all scene layers',
   ),
   Invariant(
+    id: 'INV-G-LAYERID-UNIQUE',
+    scope: 'behavior',
+    title: 'LayerId stays unique across content layers',
+  ),
+  Invariant(
+    id: 'INV-G-LAYER-Z-ORDER-BY-LIST',
+    scope: 'behavior',
+    title: 'content layer z-order is defined by scene.layers list order',
+  ),
+  Invariant(
     id: 'INV-ENG-NO-EXTERNAL-MUTATION',
     scope: 'engine-api',
     title: 'public snapshots/specs do not expose mutable internals',

@@ -115,6 +115,7 @@ SceneSnapshot txnSceneToSnapshot(Scene scene) {
     layers: scene.layers
         .map(
           (layer) => ContentLayerSnapshot(
+            id: layer.id,
             nodes: layer.nodes.map(txnNodeToSnapshot).toList(growable: false),
           ),
         )
@@ -726,12 +727,20 @@ bool txnInsertNodeInScene({
   required Scene scene,
   required Map<NodeId, NodeLocatorEntry> nodeLocator,
   required SceneNode node,
-  int? layerIndex,
+  required int layerIndex,
 }) {
-  final targetLayerIndex = txnResolveInsertLayerIndex(
-    scene: scene,
-    layerIndex: layerIndex,
-  );
+  if (nodeLocator.containsKey(node.id)) {
+    throw StateError('Node id must be unique: ${node.id}');
+  }
+  final targetLayerIndex = layerIndex;
+  if (targetLayerIndex < 0 || targetLayerIndex >= scene.layers.length) {
+    throw RangeError.range(
+      targetLayerIndex,
+      0,
+      scene.layers.length - 1,
+      'layerIndex',
+    );
+  }
   final targetLayer = scene.layers[targetLayerIndex];
   final insertedNodeIndex = targetLayer.nodes.length;
   targetLayer.nodes.add(node);
@@ -786,23 +795,40 @@ SceneNode? txnEraseNodeFromScene({
   return removed;
 }
 
-int txnResolveInsertLayerIndex({required Scene scene, int? layerIndex}) {
-  if (layerIndex != null) {
-    if (layerIndex < 0 || layerIndex >= scene.layers.length) {
-      throw RangeError.range(
-        layerIndex,
-        0,
-        scene.layers.length - 1,
-        'layerIndex',
+int txnResolveInsertLayerIndex({
+  required Scene scene,
+  LayerId? layerId,
+  LayerId Function()? nextLayerId,
+}) {
+  if (layerId != null) {
+    final index = txnFindContentLayerIndexById(scene: scene, layerId: layerId);
+    if (index == null) {
+      throw ArgumentError.value(
+        layerId,
+        'layerId',
+        'Unknown content layer id.',
       );
     }
-    return layerIndex;
+    return index;
   }
   if (scene.layers.isEmpty) {
-    scene.layers.add(ContentLayer());
+    final generatedId = nextLayerId == null ? 'layer-0' : nextLayerId();
+    scene.layers.add(ContentLayer(id: generatedId));
     return 0;
   }
   return scene.layers.length - 1;
+}
+
+int? txnFindContentLayerIndexById({
+  required Scene scene,
+  required LayerId layerId,
+}) {
+  for (var index = 0; index < scene.layers.length; index++) {
+    if (scene.layers[index].id == layerId) {
+      return index;
+    }
+  }
+  return null;
 }
 
 Set<NodeId> txnNormalizeSelection({

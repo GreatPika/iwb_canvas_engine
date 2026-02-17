@@ -6,6 +6,8 @@ import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/core/transform2d.dart';
 
+// INV:INV-G-LAYER-Z-ORDER-BY-LIST
+
 void main() {
   test('primitive hit helpers work for rect/line/stroke', () {
     expect(
@@ -240,9 +242,10 @@ void main() {
       final scene = Scene(
         layers: <ContentLayer>[
           ContentLayer(
+            id: 'layer-auto-0',
             nodes: <SceneNode>[RectNode(id: 'bg', size: const Size(200, 200))],
           ),
-          ContentLayer(nodes: <SceneNode>[bottom, top]),
+          ContentLayer(id: 'layer-auto-1', nodes: <SceneNode>[bottom, top]),
         ],
       );
 

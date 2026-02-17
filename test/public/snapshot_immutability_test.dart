@@ -12,7 +12,10 @@ void main() {
       final sourceNodes = <NodeSnapshot>[
         const RectNodeSnapshot(id: 'rect-1', size: Size(10, 20)),
       ];
-      final layer = ContentLayerSnapshot(nodes: sourceNodes);
+      final layer = ContentLayerSnapshot(
+        id: 'layer-auto-0',
+        nodes: sourceNodes,
+      );
       sourceNodes.add(const RectNodeSnapshot(id: 'rect-2', size: Size(1, 1)));
 
       expect(layer.nodes.length, 1);
@@ -25,11 +28,11 @@ void main() {
 
       final sourceLayers = <ContentLayerSnapshot>[layer];
       final scene = SceneSnapshot(layers: sourceLayers);
-      sourceLayers.add(ContentLayerSnapshot());
+      sourceLayers.add(ContentLayerSnapshot(id: 'layer-auto-1'));
 
       expect(scene.layers.length, 1);
       expect(
-        () => scene.layers.add(ContentLayerSnapshot()),
+        () => scene.layers.add(ContentLayerSnapshot(id: 'layer-auto-2')),
         throwsUnsupportedError,
       );
 
@@ -180,7 +183,7 @@ void main() {
     final scene = SceneSnapshot(
       camera: camera,
       background: background,
-      layers: <ContentLayerSnapshot>[ContentLayerSnapshot()],
+      layers: <ContentLayerSnapshot>[ContentLayerSnapshot(id: 'layer-auto-3')],
       palette: ScenePaletteSnapshot(
         penColors: <Color>[Color(0xFF111111)],
         backgroundColors: <Color>[Color(0xFFEEEEEE)],

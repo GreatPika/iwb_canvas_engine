@@ -115,6 +115,7 @@ Map<String, Object?> _runNodeScaleCase({
   final snapshot = SceneSnapshot(
     layers: <ContentLayerSnapshot>[
       ContentLayerSnapshot(
+        id: 'layer-auto-0',
         nodes: <NodeSnapshot>[
           for (var i = 0; i < nodeCount; i++)
             RectNodeSnapshot(
@@ -216,7 +217,9 @@ Map<String, Object?> _runStrokeScaleCase({
       ),
   ];
   final snapshot = SceneSnapshot(
-    layers: <ContentLayerSnapshot>[ContentLayerSnapshot(nodes: nodes)],
+    layers: <ContentLayerSnapshot>[
+      ContentLayerSnapshot(id: 'layer-auto-1', nodes: nodes),
+    ],
   );
   final controller = SceneControllerCore(initialSnapshot: snapshot);
   final targetId = 's${strokeCount ~/ 2}';
@@ -310,6 +313,7 @@ Map<String, Object?> _runHugeBoundsMetric({required int iterations}) {
   final snapshot = SceneSnapshot(
     layers: <ContentLayerSnapshot>[
       ContentLayerSnapshot(
+        id: 'layer-auto-2',
         nodes: const <NodeSnapshot>[
           RectNodeSnapshot(id: 'huge', size: Size(sceneSizeMax, sceneSizeMax)),
         ],
@@ -356,6 +360,7 @@ Map<String, Object?> _runHugeRectSelectMetric({
   final snapshot = SceneSnapshot(
     layers: <ContentLayerSnapshot>[
       ContentLayerSnapshot(
+        id: 'layer-auto-3',
         nodes: <NodeSnapshot>[
           for (var i = 0; i < nodeCount; i++)
             RectNodeSnapshot(
@@ -393,6 +398,7 @@ Map<String, Object?> _runVeryLongPathMetric({
   final snapshot = SceneSnapshot(
     layers: <ContentLayerSnapshot>[
       ContentLayerSnapshot(
+        id: 'layer-auto-4',
         nodes: <NodeSnapshot>[
           PathNodeSnapshot(
             id: 'path',

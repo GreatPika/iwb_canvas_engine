@@ -12,6 +12,7 @@ SceneSnapshot _snapshotFromScene(Scene scene) {
     layers: scene.layers
         .map(
           (layer) => ContentLayerSnapshot(
+            id: layer.id,
             nodes: layer.nodes
                 .map(_snapshotNodeFromScene)
                 .toList(growable: false),

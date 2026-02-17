@@ -39,8 +39,8 @@ void main() {
 
     final scene = Scene(
       layers: <ContentLayer>[
-        ContentLayer(nodes: <SceneNode>[a]),
-        ContentLayer(nodes: <SceneNode>[b, c]),
+        ContentLayer(id: 'layer-auto-0', nodes: <SceneNode>[a]),
+        ContentLayer(id: 'layer-auto-1', nodes: <SceneNode>[b, c]),
       ],
     );
 

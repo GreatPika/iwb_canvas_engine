@@ -959,18 +959,21 @@ class PathNode extends SceneNode {
   /// The returned path is in the node's local coordinate space. The caller is
   /// responsible for applying [transform].
   ///
-  /// By default, this method returns a defensive copy of the cached geometry so
-  /// external callers cannot accidentally mutate internal cache state.
-  ///
-  /// For performance-sensitive internal call sites, pass `copy: false` and
-  /// treat the returned path as immutable (read-only).
-  Path? buildLocalPath({bool copy = true}) {
+  /// This method returns a defensive copy of the cached geometry so external
+  /// callers cannot accidentally mutate internal cache state.
+  Path? buildLocalPath() {
+    final cached = _ensureLocalPathCache();
+    if (cached == null) return null;
+    return _copyPath(cached);
+  }
+
+  Path? _ensureLocalPathCache() {
     if (_cacheResolved &&
         _cachedSvgPathData == _svgPathData &&
         _cachedFillRule == _fillRule) {
       final cached = _cachedLocalPath;
       if (cached == null) return null;
-      return copy ? _copyPath(cached) : cached;
+      return cached;
     }
     if (_svgPathData.trim().isEmpty) {
       _cacheResolved = true;
@@ -1012,7 +1015,7 @@ class PathNode extends SceneNode {
       _cachedLocalPath = centered;
       _cachedLocalPathBounds = centeredBounds;
       _clearBuildLocalPathFailure();
-      return copy ? _copyPath(centered) : centered;
+      return centered;
     } catch (e, st) {
       _cacheResolved = true;
       _cachedSvgPathData = _svgPathData;
@@ -1030,7 +1033,7 @@ class PathNode extends SceneNode {
 
   @override
   Rect get localBounds {
-    buildLocalPath(copy: false);
+    _ensureLocalPathCache();
     final bounds = _cachedLocalPathBounds;
     if (bounds == null) return Rect.zero;
     return strokeAwareLocalBounds(

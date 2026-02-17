@@ -38,7 +38,7 @@ lib/
     model/          // scene <-> snapshot conversion helpers
     public/         // snapshot/spec/patch contracts
     render/         // painter and render caches
-    serialization/  // JSON codec (schema v4)
+    serialization/  // JSON codec (schema v5)
     view/           // interactive Flutter widget
 ```
 
@@ -117,6 +117,7 @@ Key invariants:
 - Runtime snapshot boundary (`initialSnapshot` / `replaceScene`) validates input strictly and fails fast with `SceneDataException` for malformed snapshots.
 - Text node box size is derived from text layout inputs and is not writable via public spec/patch APIs.
 - Runtime typed-layer rule: snapshot/model uses dedicated `backgroundLayer` plus content-only `layers`; runtime/public snapshots are canonical and always include dedicated background layer.
+- Content-layer identity rule: each content layer has stable unique `LayerId`; z-order is defined only by list order in `layers` and not by `LayerId`.
 - Import boundary rule: input may omit background layer, but decode/import boundaries canonicalize it to an empty dedicated layer.
 - JSON decoder rule: accepts `backgroundLayer` (optional) and `layers` (content-only); missing `backgroundLayer` is canonicalized on decode/encode boundaries; legacy `isBackground` layer flag is unsupported.
 - Unique node ids across all layers.
@@ -126,8 +127,8 @@ Key invariants:
 
 ## Serialization contract
 
-- Current write schema: `schemaVersion = 4`.
-- Accepted read schemas: `{4}`.
+- Current write schema: `schemaVersion = 5`.
+- Accepted read schemas: `{5}`.
 - Encoder/decoder validate numeric and structural constraints and fail fast with `SceneDataException`.
 
 ## Performance model

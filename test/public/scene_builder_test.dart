@@ -29,7 +29,7 @@ Map<String, Object?> _minimalRectNodeJson({required String id}) {
 
 Map<String, Object?> _minimalSceneJson() {
   return <String, Object?>{
-    'schemaVersion': 4,
+    'schemaVersion': 5,
     'camera': <String, Object?>{'offsetX': 0, 'offsetY': 0},
     'background': <String, Object?>{
       'color': '#FFFFFFFF',
@@ -49,6 +49,7 @@ Map<String, Object?> _minimalSceneJson() {
     },
     'layers': <Object?>[
       <String, Object?>{
+        'id': 'layer-0',
         'nodes': <Object?>[_minimalRectNodeJson(id: 'n1')],
       },
     ],
@@ -66,6 +67,7 @@ void main() {
         ),
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
+            id: 'layer-auto-0',
             nodes: const <NodeSnapshot>[
               RectNodeSnapshot(id: 'n1', size: Size(1, 1)),
             ],

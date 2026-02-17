@@ -6,7 +6,7 @@ SceneSnapshot _decodeSnapshotFromJson(Map<String, Object?> json) {
     throw SceneDataException(
       code: SceneDataErrorCode.unsupportedSchemaVersion,
       path: 'schemaVersion',
-      message: 'Unsupported schemaVersion: $version. Expected one of: [4].',
+      message: 'Unsupported schemaVersion: $version. Expected one of: [5].',
     );
   }
 
@@ -62,18 +62,23 @@ SceneSnapshot _decodeSnapshotFromJson(Map<String, Object?> json) {
   }
 
   final layersJson = _requireList(json, 'layers');
-  final layers = layersJson
-      .map((layerJson) {
-        if (layerJson is! Map) {
-          throw SceneDataException(
-            code: SceneDataErrorCode.invalidFieldType,
-            path: 'layers',
-            message: 'Layer must be an object.',
-          );
-        }
-        return _decodeContentLayer(_castMap(layerJson));
-      })
-      .toList(growable: false);
+  final layers = <ContentLayerSnapshot>[];
+  for (var layerIndex = 0; layerIndex < layersJson.length; layerIndex++) {
+    final layerJson = layersJson[layerIndex];
+    if (layerJson is! Map) {
+      throw SceneDataException(
+        code: SceneDataErrorCode.invalidFieldType,
+        path: 'layers[$layerIndex]',
+        message: 'Layer must be an object.',
+      );
+    }
+    layers.add(
+      _decodeContentLayer(
+        _castMap(layerJson),
+        layerPath: 'layers[$layerIndex]',
+      ),
+    );
+  }
 
   return SceneSnapshot(
     backgroundLayer: backgroundLayer,
@@ -101,21 +106,41 @@ BackgroundLayerSnapshot _decodeBackgroundLayer(Map<String, Object?> json) {
   return BackgroundLayerSnapshot(nodes: nodes);
 }
 
-ContentLayerSnapshot _decodeContentLayer(Map<String, Object?> json) {
+ContentLayerSnapshot _decodeContentLayer(
+  Map<String, Object?> json, {
+  required String layerPath,
+}) {
+  final idRaw = json['id'];
+  if (idRaw == null) {
+    throw SceneDataException(
+      code: SceneDataErrorCode.missingField,
+      path: '$layerPath.id',
+      message: 'Field $layerPath.id must be a string.',
+    );
+  }
+  if (idRaw is! String) {
+    throw SceneDataException(
+      code: SceneDataErrorCode.invalidFieldType,
+      path: '$layerPath.id',
+      message: 'Field $layerPath.id must be a string.',
+      source: idRaw,
+    );
+  }
+  final id = idRaw;
   final nodesJson = _requireList(json, 'nodes');
   final nodes = nodesJson
       .map((nodeJson) {
         if (nodeJson is! Map) {
           throw SceneDataException(
             code: SceneDataErrorCode.invalidFieldType,
-            path: 'layers.nodes',
+            path: '$layerPath.nodes',
             message: 'Node must be an object.',
           );
         }
         return _decodeNode(_castMap(nodeJson));
       })
       .toList(growable: false);
-  return ContentLayerSnapshot(nodes: nodes);
+  return ContentLayerSnapshot(id: id, nodes: nodes);
 }
 
 NodeSnapshot _decodeNode(Map<String, Object?> json) {

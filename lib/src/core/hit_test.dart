@@ -182,7 +182,7 @@ bool hitTestNode(Offset point, SceneNode node) {
     case NodeType.path:
       final pathNode = node as PathNode;
       final baseHitPadding = clampNonNegativeFinite(pathNode.hitPadding);
-      final localPath = pathNode.buildLocalPath(copy: false);
+      final localPath = pathNode.buildLocalPath();
       // Invalid/unbuildable path data is non-interactive at runtime.
       if (localPath == null) return false;
       final candidateBounds = nodeHitTestCandidateBoundsWorld(pathNode);

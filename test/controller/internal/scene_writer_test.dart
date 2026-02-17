@@ -17,6 +17,7 @@ void main() {
       baseScene: Scene(
         layers: <ContentLayer>[
           ContentLayer(
+            id: 'layer-auto-1',
             nodes: <SceneNode>[RectNode(id: 'r1', size: const Size(10, 10))],
           ),
         ],
@@ -86,6 +87,7 @@ void main() {
       SceneSnapshot(
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
+            id: 'layer-auto-0',
             nodes: const <NodeSnapshot>[
               RectNodeSnapshot(id: 'fresh', size: Size(1, 1)),
             ],
@@ -105,6 +107,7 @@ void main() {
         baseScene: Scene(
           layers: <ContentLayer>[
             ContentLayer(
+              id: 'layer-auto-2',
               nodes: <SceneNode>[
                 RectNode(id: 'r1', size: const Size(10, 10)),
                 RectNode(id: 'r2', size: const Size(10, 10)),
@@ -146,7 +149,11 @@ void main() {
           RectNode(id: 'n$i', size: const Size(10, 10)),
       ];
       final ctx = TxnContext(
-        baseScene: Scene(layers: <ContentLayer>[ContentLayer(nodes: nodes)]),
+        baseScene: Scene(
+          layers: <ContentLayer>[
+            ContentLayer(id: 'layer-auto-3', nodes: nodes),
+          ],
+        ),
         workingSelection: <NodeId>{},
         baseAllNodeIds: <NodeId>{for (var i = 0; i < 1000; i++) 'n$i'},
         nodeIdSeed: 1000,
@@ -188,6 +195,7 @@ void main() {
       baseScene: Scene(
         layers: <ContentLayer>[
           ContentLayer(
+            id: 'layer-auto-4',
             nodes: <SceneNode>[
               RectNode(id: 'rect-1', size: const Size(10, 10)),
               RectNode(
@@ -243,6 +251,7 @@ void main() {
       baseScene: Scene(
         layers: <ContentLayer>[
           ContentLayer(
+            id: 'layer-auto-5',
             nodes: <SceneNode>[
               RectNode(
                 id: 'locked',
@@ -294,6 +303,7 @@ void main() {
       baseScene: Scene(
         layers: <ContentLayer>[
           ContentLayer(
+            id: 'layer-auto-6',
             nodes: <SceneNode>[RectNode(id: 'r1', size: const Size(10, 10))],
           ),
         ],
@@ -319,6 +329,19 @@ void main() {
       throwsArgumentError,
     );
     expect(
+      () => writer.writeNodeTransformSet(
+        'r1',
+        const Transform2D(a: 1, b: 2, c: 2, d: 4, tx: 0, ty: 0),
+      ),
+      throwsArgumentError,
+    );
+    expect(
+      () => writer.writeSelectionTransform(
+        const Transform2D(a: 1, b: 2, c: 2, d: 4, tx: 0, ty: 0),
+      ),
+      throwsArgumentError,
+    );
+    expect(
       () => writer.writeSelectionTranslate(const Offset(double.nan, 0)),
       throwsArgumentError,
     );
@@ -329,6 +352,7 @@ void main() {
       baseScene: Scene(
         layers: <ContentLayer>[
           ContentLayer(
+            id: 'layer-auto-7',
             nodes: <SceneNode>[
               LineNode(
                 id: 'line-static',
@@ -362,8 +386,9 @@ void main() {
     final ctx = TxnContext(
       baseScene: Scene(
         layers: <ContentLayer>[
-          ContentLayer(),
+          ContentLayer(id: 'layer-auto-8'),
           ContentLayer(
+            id: 'layer-auto-9',
             nodes: <SceneNode>[
               RectNode(
                 id: 'keep',

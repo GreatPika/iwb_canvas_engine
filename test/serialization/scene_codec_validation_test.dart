@@ -33,6 +33,7 @@ Map<String, dynamic> _sceneWithSingleNode(Map<String, dynamic> nodeJson) {
   final json = _minimalSceneJson();
   json['layers'] = <dynamic>[
     <String, dynamic>{
+      'id': 'layer-0',
       'nodes': <dynamic>[nodeJson],
     },
   ];
@@ -65,7 +66,10 @@ void main() {
   // INV:INV-SER-JSON-NUMERIC-VALIDATION
   test('encodeSceneToJson -> decodeSceneFromJson is stable', () {
     final scene = SceneSnapshot(
-      layers: [ContentLayerSnapshot(), ContentLayerSnapshot()],
+      layers: [
+        ContentLayerSnapshot(id: 'layer-auto-0'),
+        ContentLayerSnapshot(id: 'layer-auto-1'),
+      ],
     );
     final json = encodeSceneToJson(scene);
     final decoded = decodeSceneFromJson(json);
@@ -74,7 +78,11 @@ void main() {
 
   test('decodeScene accepts Map<String, dynamic> from jsonDecode', () {
     final encoded = encodeScene(
-      SceneSnapshot(layers: <ContentLayerSnapshot>[ContentLayerSnapshot()]),
+      SceneSnapshot(
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(id: 'layer-auto-2'),
+        ],
+      ),
     );
     final decodedRaw = jsonDecode(jsonEncode(encoded)) as Map<String, dynamic>;
     final snapshot = decodeScene(decodedRaw);
@@ -149,13 +157,16 @@ void main() {
         });
       final json = _minimalSceneJson();
       json['backgroundLayer'] = <String, dynamic>{
+        'id': 'layer-auto-json-0',
         'nodes': <dynamic>[bgNode],
       };
       json['layers'] = <dynamic>[
         <String, dynamic>{
+          'id': 'layer-auto-json-1',
           'nodes': <dynamic>[n1],
         },
         <String, dynamic>{
+          'id': 'layer-auto-json-2',
           'nodes': <dynamic>[n2],
         },
       ];
@@ -205,6 +216,7 @@ void main() {
     final json = _minimalSceneJson();
     json['layers'] = <dynamic>[
       <String, dynamic>{
+        'id': 'layer-auto-json-3',
         'nodes': <dynamic>[123],
       },
     ];
@@ -224,6 +236,7 @@ void main() {
     final json = _minimalSceneJson();
     json['layers'] = <dynamic>[
       <String, dynamic>{
+        'id': 'layer-auto-json-4',
         'nodes': <dynamic>[
           _baseNodeJson(id: 'dup-node', type: 'rect')..addAll(<String, dynamic>{
             'size': <String, dynamic>{'w': 10, 'h': 10},
@@ -232,6 +245,7 @@ void main() {
         ],
       },
       <String, dynamic>{
+        'id': 'layer-auto-json-5',
         'nodes': <dynamic>[
           _baseNodeJson(id: 'dup-node', type: 'rect')..addAll(<String, dynamic>{
             'size': <String, dynamic>{'w': 20, 'h': 20},
@@ -270,6 +284,7 @@ void main() {
     final scene = SceneSnapshot(
       layers: [
         ContentLayerSnapshot(
+          id: 'layer-auto-3',
           nodes: [
             TextNodeSnapshot(
               id: 'text-1',
@@ -692,7 +707,7 @@ void main() {
 
   test('decodeScene accepts integer-valued numeric schemaVersion', () {
     final json = _minimalSceneJson();
-    json['schemaVersion'] = 4.0;
+    json['schemaVersion'] = 5.0;
 
     final scene = decodeScene(json);
     expect(scene.layers, isEmpty);
@@ -726,7 +741,7 @@ void main() {
             (e) =>
                 e is SceneDataException &&
                 e.message ==
-                    'Unsupported schemaVersion: 1. Expected one of: [4].',
+                    'Unsupported schemaVersion: 1. Expected one of: [5].',
           ),
         ),
       );
@@ -801,7 +816,10 @@ void main() {
   test('encodeSceneDocument rejects mutable node opacity outside [0,1]', () {
     final scene = Scene(
       layers: <ContentLayer>[
-        ContentLayer(nodes: <SceneNode>[_BadOpacityNode(id: 'bad-opacity')]),
+        ContentLayer(
+          id: 'layer-auto-14',
+          nodes: <SceneNode>[_BadOpacityNode(id: 'bad-opacity')],
+        ),
       ],
     );
 
@@ -839,9 +857,11 @@ void main() {
       ),
       layers: <ContentLayer>[
         ContentLayer(
+          id: 'layer-auto-15',
           nodes: <SceneNode>[RectNode(id: 'fg-rect', size: const Size(3, 2))],
         ),
         ContentLayer(
+          id: 'layer-auto-16',
           nodes: <SceneNode>[RectNode(id: 'fg-rect-2', size: const Size(6, 4))],
         ),
       ],
@@ -892,6 +912,7 @@ void main() {
         ),
         layers: <ContentLayer>[
           ContentLayer(
+            id: 'layer-auto-17',
             nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(2, 2))],
           ),
         ],
@@ -1193,7 +1214,7 @@ void main() {
   test('encodeScene enforces grid and palette contracts', () {
     // INV:INV-SER-JSON-GRID-PALETTE-CONTRACTS
     final invalidGridScene = SceneSnapshot(
-      layers: [ContentLayerSnapshot()],
+      layers: [ContentLayerSnapshot(id: 'layer-auto-4')],
       background: BackgroundSnapshot(
         grid: GridSnapshot(isEnabled: false, cellSize: -12.5),
       ),
@@ -1210,7 +1231,7 @@ void main() {
     );
 
     final enabledGridScene = SceneSnapshot(
-      layers: [ContentLayerSnapshot()],
+      layers: [ContentLayerSnapshot(id: 'layer-auto-5')],
       background: BackgroundSnapshot(
         grid: GridSnapshot(isEnabled: true, cellSize: 0),
       ),
@@ -1229,7 +1250,7 @@ void main() {
     expect(
       () => encodeScene(
         SceneSnapshot(
-          layers: [ContentLayerSnapshot()],
+          layers: [ContentLayerSnapshot(id: 'layer-auto-6')],
           palette: ScenePaletteSnapshot(penColors: const []),
         ),
       ),
@@ -1244,7 +1265,7 @@ void main() {
     expect(
       () => encodeScene(
         SceneSnapshot(
-          layers: [ContentLayerSnapshot()],
+          layers: [ContentLayerSnapshot(id: 'layer-auto-7')],
           palette: ScenePaletteSnapshot(backgroundColors: const []),
         ),
       ),
@@ -1259,7 +1280,7 @@ void main() {
     expect(
       () => encodeScene(
         SceneSnapshot(
-          layers: [ContentLayerSnapshot()],
+          layers: [ContentLayerSnapshot(id: 'layer-auto-8')],
           palette: ScenePaletteSnapshot(gridSizes: const []),
         ),
       ),
@@ -1275,7 +1296,7 @@ void main() {
 
   test('encodeScene rejects invalid numeric fields', () {
     final cameraNaN = SceneSnapshot(
-      layers: [ContentLayerSnapshot()],
+      layers: [ContentLayerSnapshot(id: 'layer-auto-9')],
       camera: CameraSnapshot(offset: Offset(double.nan, 0)),
     );
     expect(
@@ -1292,6 +1313,7 @@ void main() {
     final negativeHitPaddingScene = SceneSnapshot(
       layers: [
         ContentLayerSnapshot(
+          id: 'layer-auto-10',
           nodes: [
             RectNodeSnapshot(
               id: 'r1',
@@ -1317,6 +1339,7 @@ void main() {
     final nonPositiveFontSizeScene = SceneSnapshot(
       layers: [
         ContentLayerSnapshot(
+          id: 'layer-auto-11',
           nodes: [
             TextNodeSnapshot(
               id: 't1',
@@ -1343,6 +1366,7 @@ void main() {
     final opacityOutOfRangeScene = SceneSnapshot(
       layers: [
         ContentLayerSnapshot(
+          id: 'layer-auto-12',
           nodes: [
             RectNodeSnapshot(
               id: 'r1',
@@ -1468,6 +1492,7 @@ void main() {
       SceneSnapshot(
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
+            id: 'layer-auto-13',
             nodes: const <NodeSnapshot>[
               RectNodeSnapshot(id: 'rect-inst', size: Size(10, 10)),
             ],

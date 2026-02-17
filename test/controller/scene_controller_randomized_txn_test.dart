@@ -244,6 +244,7 @@ void _assertPostConditions({
     allNodeIds: txnCollectNodeIds(scene),
     nodeLocator: txnBuildNodeLocator(scene),
     nodeIdSeed: txnInitialNodeIdSeed(scene),
+    layerIdSeed: txnInitialLayerIdSeed(scene),
     nextInstanceRevision: txnInitialNodeInstanceRevisionSeed(scene),
     commitRevision: controller.debugCommitRevision,
   );
@@ -258,6 +259,7 @@ SceneSnapshot _initialSnapshot() {
   return SceneSnapshot(
     layers: <ContentLayerSnapshot>[
       ContentLayerSnapshot(
+        id: 'layer-auto-0',
         nodes: const <NodeSnapshot>[
           RectNodeSnapshot(id: 'seed-r1', size: Size(10, 10)),
           RectNodeSnapshot(id: 'seed-r2', size: Size(12, 12)),
@@ -283,8 +285,8 @@ SceneSnapshot _randomReplacementSnapshot({
   ];
 
   final layers = <ContentLayerSnapshot>[
-    if (includeBackground) ContentLayerSnapshot(),
-    ContentLayerSnapshot(nodes: nodes),
+    if (includeBackground) ContentLayerSnapshot(id: 'layer-auto-1'),
+    ContentLayerSnapshot(id: 'layer-auto-2', nodes: nodes),
   ];
 
   return SceneSnapshot(

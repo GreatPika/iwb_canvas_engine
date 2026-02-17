@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "camera": { "offsetX": 7, "offsetY": -3 },
   "background": {
     "color": "#FFFFFFFF",
@@ -15,6 +15,7 @@
   },
   "layers": [
     {
+      "id": "layer-0",
       "nodes": [
         {
           "id": "stroke-1p",

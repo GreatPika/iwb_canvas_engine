@@ -15,8 +15,8 @@ void main() {
         final controller = SceneControllerInteractive(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
-              ContentLayerSnapshot(),
-              ContentLayerSnapshot(),
+              ContentLayerSnapshot(id: 'layer-auto-0'),
+              ContentLayerSnapshot(id: 'layer-auto-1'),
             ],
           ),
         );
@@ -44,8 +44,9 @@ void main() {
         controller.replaceScene(
           SceneSnapshot(
             layers: <ContentLayerSnapshot>[
-              ContentLayerSnapshot(),
+              ContentLayerSnapshot(id: 'layer-auto-2'),
               ContentLayerSnapshot(
+                id: 'layer-auto-3',
                 nodes: <NodeSnapshot>[
                   RectNodeSnapshot(id: 'new', size: Size(5, 5)),
                 ],
@@ -69,8 +70,8 @@ void main() {
         final controller = controllerFromScene(
           Scene(
             layers: <ContentLayer>[
-              ContentLayer(),
-              ContentLayer(nodes: <SceneNode>[rect]),
+              ContentLayer(id: 'layer-auto-4'),
+              ContentLayer(id: 'layer-auto-5', nodes: <SceneNode>[rect]),
             ],
           ),
         );
@@ -130,8 +131,8 @@ void main() {
         final controller = controllerFromScene(
           Scene(
             layers: <ContentLayer>[
-              ContentLayer(),
-              ContentLayer(nodes: <SceneNode>[textNode]),
+              ContentLayer(id: 'layer-auto-6'),
+              ContentLayer(id: 'layer-auto-7', nodes: <SceneNode>[textNode]),
             ],
           ),
         );
@@ -172,8 +173,8 @@ void main() {
         final controller = controllerFromScene(
           Scene(
             layers: <ContentLayer>[
-              ContentLayer(),
-              ContentLayer(nodes: <SceneNode>[rect]),
+              ContentLayer(id: 'layer-auto-8'),
+              ContentLayer(id: 'layer-auto-9', nodes: <SceneNode>[rect]),
             ],
           ),
         );

@@ -29,8 +29,11 @@ void main() {
         final controller = controllerFromScene(
           Scene(
             layers: <ContentLayer>[
-              ContentLayer(),
-              ContentLayer(nodes: <SceneNode>[startLine, endLine]),
+              ContentLayer(id: 'layer-auto-0'),
+              ContentLayer(
+                id: 'layer-auto-1',
+                nodes: <SceneNode>[startLine, endLine],
+              ),
             ],
           ),
         );
@@ -105,8 +108,8 @@ void main() {
         final controller = controllerFromScene(
           Scene(
             layers: <ContentLayer>[
-              ContentLayer(),
-              ContentLayer(nodes: nodes),
+              ContentLayer(id: 'layer-auto-2'),
+              ContentLayer(id: 'layer-auto-3', nodes: nodes),
             ],
           ),
         );
@@ -178,8 +181,8 @@ void main() {
         final controller = controllerFromScene(
           Scene(
             layers: <ContentLayer>[
-              ContentLayer(),
-              ContentLayer(nodes: nodes),
+              ContentLayer(id: 'layer-auto-4'),
+              ContentLayer(id: 'layer-auto-5', nodes: nodes),
             ],
           ),
         );
@@ -270,8 +273,9 @@ void main() {
           final controller = controllerFromScene(
             Scene(
               layers: <ContentLayer>[
-                ContentLayer(),
+                ContentLayer(id: 'layer-auto-6'),
                 ContentLayer(
+                  id: 'layer-auto-7',
                   nodes: <SceneNode>[targetNear, targetCross, safeFar, safeLow],
                 ),
               ],
@@ -346,8 +350,11 @@ void main() {
           final controller = controllerFromScene(
             Scene(
               layers: <ContentLayer>[
-                ContentLayer(),
-                ContentLayer(nodes: <SceneNode>[nonHitStroke, aboveStroke]),
+                ContentLayer(id: 'layer-auto-8'),
+                ContentLayer(
+                  id: 'layer-auto-9',
+                  nodes: <SceneNode>[nonHitStroke, aboveStroke],
+                ),
               ],
             ),
           );

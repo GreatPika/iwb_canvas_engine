@@ -15,8 +15,8 @@ void main() {
           final controller = SceneControllerInteractive(
             initialSnapshot: SceneSnapshot(
               layers: <ContentLayerSnapshot>[
-                ContentLayerSnapshot(),
-                ContentLayerSnapshot(),
+                ContentLayerSnapshot(id: 'layer-auto-0'),
+                ContentLayerSnapshot(id: 'layer-auto-1'),
               ],
             ),
             dragStartSlop: 10,
@@ -112,8 +112,8 @@ void main() {
         final controller = SceneControllerInteractive(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
-              ContentLayerSnapshot(),
-              ContentLayerSnapshot(),
+              ContentLayerSnapshot(id: 'layer-auto-2'),
+              ContentLayerSnapshot(id: 'layer-auto-3'),
             ],
           ),
         );
@@ -208,8 +208,8 @@ void main() {
         final controller = SceneControllerInteractive(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
-              ContentLayerSnapshot(),
-              ContentLayerSnapshot(),
+              ContentLayerSnapshot(id: 'layer-auto-4'),
+              ContentLayerSnapshot(id: 'layer-auto-5'),
             ],
           ),
         );

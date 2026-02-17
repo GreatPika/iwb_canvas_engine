@@ -124,6 +124,14 @@ void sceneValidateFiniteTransform2D(
   sceneValidateFiniteDouble(value.d, field: '$field.d', onError: onError);
   sceneValidateFiniteDouble(value.tx, field: '$field.tx', onError: onError);
   sceneValidateFiniteDouble(value.ty, field: '$field.ty', onError: onError);
+  if (value.invert() == null) {
+    _sceneValidationFail(
+      onError: onError,
+      value: value.toJsonMap(),
+      field: field,
+      message: 'must be invertible (non-singular).',
+    );
+  }
 }
 
 void sceneValidateNonEmptyList(

@@ -206,7 +206,14 @@ class InteractiveDrawEraserEngine {
     required double eraserThickness,
   }) {
     final inverse = line.transform.invert();
-    if (inverse == null) return false;
+    if (inverse == null) {
+      final eraserBounds = _eraserBoundsInWorld(eraserPoints);
+      return rectsCanBeWithinDistance(
+        eraserBounds,
+        line.boundsWorld,
+        eraserThickness / 2,
+      );
+    }
 
     final localEraserPoints = eraserPoints
         .map(inverse.applyToPoint)
@@ -261,7 +268,14 @@ class InteractiveDrawEraserEngine {
     required double eraserThickness,
   }) {
     final inverse = stroke.transform.invert();
-    if (inverse == null) return false;
+    if (inverse == null) {
+      final eraserBounds = _eraserBoundsInWorld(eraserPoints);
+      return rectsCanBeWithinDistance(
+        eraserBounds,
+        stroke.boundsWorld,
+        eraserThickness / 2,
+      );
+    }
 
     final localEraserPoints = eraserPoints
         .map(inverse.applyToPoint)
@@ -352,5 +366,16 @@ class InteractiveDrawEraserEngine {
   List<SceneSpatialCandidate> _querySpatialCandidatesForEraser(Rect bounds) {
     _debugEraserSpatialQueryCount = _debugEraserSpatialQueryCount + 1;
     return callbacks.querySpatialCandidates(bounds);
+  }
+
+  Rect _eraserBoundsInWorld(List<Offset> eraserPoints) {
+    if (eraserPoints.length == 1) {
+      return Rect.fromPoints(eraserPoints.first, eraserPoints.first);
+    }
+    return segmentRangeBounds(
+      eraserPoints,
+      segmentStart: 0,
+      segmentEndExclusive: eraserPoints.length - 1,
+    );
   }
 }

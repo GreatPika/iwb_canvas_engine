@@ -6,6 +6,7 @@ import '../core/nodes.dart';
 import '../core/scene.dart';
 import '../model/document.dart';
 import '../model/document_clone.dart';
+import '../public/snapshot.dart' show LayerId;
 import 'change_set.dart';
 
 class TxnContext {
@@ -15,12 +16,14 @@ class TxnContext {
     required Set<NodeId> baseAllNodeIds,
     Map<NodeId, NodeLocatorEntry>? baseNodeLocator,
     required this.nodeIdSeed,
+    int? layerIdSeed,
     required this.nextInstanceRevision,
     ChangeSet? changeSet,
   }) : _baseScene = baseScene,
        workingSelection = HashSet<NodeId>.of(workingSelection),
        _baseAllNodeIds = baseAllNodeIds,
        _baseNodeLocator = baseNodeLocator ?? txnBuildNodeLocator(baseScene),
+       layerIdSeed = layerIdSeed ?? txnInitialLayerIdSeed(baseScene),
        changeSet = changeSet ?? ChangeSet();
 
   final Scene _baseScene;
@@ -42,6 +45,7 @@ class TxnContext {
 
   final Set<NodeId> workingSelection;
   int nodeIdSeed;
+  int layerIdSeed;
   int nextInstanceRevision;
   final ChangeSet changeSet;
   int debugSceneShallowClones = 0;
@@ -269,6 +273,26 @@ class TxnContext {
     }
   }
 
+  bool txnHasLayerId(LayerId layerId) {
+    for (final layer in workingScene.layers) {
+      if (layer.id == layerId) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  LayerId txnNextLayerId() {
+    txnEnsureActive();
+    while (true) {
+      final candidate = 'layer-$layerIdSeed';
+      layerIdSeed = layerIdSeed + 1;
+      if (!txnHasLayerId(candidate)) {
+        return candidate;
+      }
+    }
+  }
+
   int txnNextInstanceRevision() {
     txnEnsureActive();
     final out = nextInstanceRevision;
@@ -291,6 +315,7 @@ class TxnContext {
     _materializedAllNodeIds = _baseAllNodeIds;
     _materializedNodeLocator = _baseNodeLocator;
     nodeIdSeed = txnInitialNodeIdSeed(scene);
+    layerIdSeed = txnInitialLayerIdSeed(scene);
     final adoptedSeed = txnInitialNodeInstanceRevisionSeed(scene);
     nextInstanceRevision = prevNextInstanceRevision >= adoptedSeed
         ? prevNextInstanceRevision

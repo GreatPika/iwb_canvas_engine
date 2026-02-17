@@ -14,6 +14,7 @@ SceneControllerCore buildController() {
     initialSnapshot: SceneSnapshot(
       layers: <ContentLayerSnapshot>[
         ContentLayerSnapshot(
+          id: 'layer-auto-0',
           nodes: const <NodeSnapshot>[
             RectNodeSnapshot(id: 'base', size: Size(20, 10)),
           ],
@@ -70,16 +71,16 @@ void main() {
     assertControllerInvariants(controller);
   });
 
-  test('add node with out of range layerIndex throws RangeError', () async {
+  test('add node with unknown layerId throws ArgumentError', () async {
     final controller = buildController();
     addTearDown(controller.dispose);
 
     expect(
       () => controller.commands.writeAddNode(
         RectNodeSpec(id: 'bad-index', size: const Size(8, 8)),
-        layerIndex: 5,
+        layerId: 'missing-layer',
       ),
-      throwsRangeError,
+      throwsArgumentError,
     );
     await pumpEventQueue();
     assertControllerInvariants(controller);
@@ -303,6 +304,7 @@ void main() {
         ),
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
+            id: 'layer-auto-1',
             nodes: const <NodeSnapshot>[
               RectNodeSnapshot(id: 'visible', size: Size(20, 10)),
               RectNodeSnapshot(

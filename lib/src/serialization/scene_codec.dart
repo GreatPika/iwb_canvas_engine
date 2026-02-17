@@ -10,10 +10,10 @@ import '../public/scene_data_exception.dart';
 import '../public/snapshot.dart' hide NodeId;
 
 /// JSON schema version written by this package.
-const int schemaVersionWrite = 4;
+const int schemaVersionWrite = 5;
 
 /// JSON schema versions accepted by this package.
-const Set<int> schemaVersionsRead = {4};
+const Set<int> schemaVersionsRead = {5};
 
 /// Encodes [snapshot] to a JSON string.
 String encodeSceneToJson(SceneSnapshot snapshot) {
@@ -22,7 +22,7 @@ String encodeSceneToJson(SceneSnapshot snapshot) {
 
 /// Decodes a [SceneSnapshot] from a JSON string.
 ///
-/// Only `schemaVersion = 4` is accepted.
+/// Only `schemaVersion = 5` is accepted.
 ///
 /// Throws [SceneDataException] when the JSON is invalid, the schema version is
 /// unsupported, or validation fails.
@@ -57,7 +57,7 @@ Map<String, dynamic> encodeScene(SceneSnapshot snapshot) {
 
 /// Decodes a [SceneSnapshot] from a JSON map (already parsed).
 ///
-/// Only `schemaVersion = 4` is accepted.
+/// Only `schemaVersion = 5` is accepted.
 ///
 /// Throws [SceneDataException] when validation fails.
 SceneSnapshot decodeScene(Map<String, dynamic> json) {
@@ -97,7 +97,7 @@ Map<String, dynamic> encodeSceneDocument(Scene scene) {
 
 /// Decodes internal mutable [Scene] document from a JSON map (already parsed).
 ///
-/// Only `schemaVersion = 4` is accepted.
+/// Only `schemaVersion = 5` is accepted.
 ///
 /// Throws [SceneDataException] when validation fails.
 Scene decodeSceneDocument(Map<String, Object?> json) {
@@ -135,6 +135,7 @@ Map<String, dynamic> _encodeSnapshot(SceneSnapshot snapshot) {
     'layers': snapshot.layers
         .map(
           (layer) => <String, dynamic>{
+            'id': layer.id,
             'nodes': layer.nodes
                 .map((node) => _encodeNode(txnNodeFromSnapshot(node)))
                 .toList(),
@@ -149,7 +150,10 @@ Map<String, dynamic> _encodeBackgroundLayer(BackgroundLayer layer) {
 }
 
 Map<String, dynamic> _encodeContentLayer(ContentLayer layer) {
-  return <String, dynamic>{'nodes': layer.nodes.map(_encodeNode).toList()};
+  return <String, dynamic>{
+    'id': layer.id,
+    'nodes': layer.nodes.map(_encodeNode).toList(),
+  };
 }
 
 Map<String, dynamic> _encodeNode(SceneNode node) {

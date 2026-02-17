@@ -146,6 +146,7 @@ void main() {
       Scene(
         layers: <ContentLayer>[
           ContentLayer(
+            id: 'layer-auto-0',
             nodes: <SceneNode>[
               RectNode(id: 'node-7', size: const Size(1, 1)),
               RectNode(id: 'manual', size: const Size(1, 1)),
@@ -182,6 +183,7 @@ void main() {
       Scene(
         layers: <ContentLayer>[
           ContentLayer(
+            id: 'layer-auto-1',
             nodes: <SceneNode>[RectNode(id: 'a', size: const Size(1, 1))],
           ),
         ],
@@ -191,6 +193,27 @@ void main() {
     expect(ctx.nextInstanceRevision, 50);
   });
 
+  test('TxnContext txnNextLayerId skips existing ids', () {
+    final ctx = TxnContext(
+      baseScene: Scene(
+        layers: <ContentLayer>[
+          ContentLayer(id: 'layer-0'),
+          ContentLayer(id: 'layer-1'),
+        ],
+      ),
+      workingSelection: <NodeId>{},
+      baseAllNodeIds: const <NodeId>{},
+      nodeIdSeed: 0,
+      layerIdSeed: 0,
+      nextInstanceRevision: 1,
+    );
+
+    final next = ctx.txnNextLayerId();
+
+    expect(next, 'layer-2');
+    expect(ctx.layerIdSeed, 3);
+  });
+
   test('TxnContext mutating APIs throw after transaction close', () {
     final baseScene = Scene(
       backgroundLayer: BackgroundLayer(
@@ -198,6 +221,7 @@ void main() {
       ),
       layers: <ContentLayer>[
         ContentLayer(
+          id: 'layer-auto-2',
           nodes: <SceneNode>[RectNode(id: 'r1', size: const Size(1, 1))],
         ),
       ],
@@ -251,6 +275,7 @@ void main() {
       final baseScene = Scene(
         layers: <ContentLayer>[
           ContentLayer(
+            id: 'layer-auto-3',
             nodes: <SceneNode>[RectNode(id: 'r1', size: const Size(1, 1))],
           ),
         ],
@@ -380,6 +405,7 @@ void main() {
     final scene = Scene(
       layers: <ContentLayer>[
         ContentLayer(
+          id: 'layer-auto-4',
           nodes: <SceneNode>[
             RectNode(id: 'node-2', size: const Size(1, 1)),
             RectNode(id: 'node-9', size: const Size(1, 1)),
@@ -419,6 +445,7 @@ void main() {
     final baseScene = Scene(
       layers: <ContentLayer>[
         ContentLayer(
+          id: 'layer-auto-5',
           nodes: <SceneNode>[RectNode(id: 'r1', size: const Size(10, 10))],
         ),
       ],
@@ -443,6 +470,7 @@ void main() {
     final baseScene = Scene(
       layers: <ContentLayer>[
         ContentLayer(
+          id: 'layer-auto-6',
           nodes: <SceneNode>[RectNode(id: 'r1', size: const Size(10, 10))],
         ),
       ],
@@ -476,6 +504,7 @@ void main() {
       final baseScene = Scene(
         layers: <ContentLayer>[
           ContentLayer(
+            id: 'layer-auto-7',
             nodes: <SceneNode>[
               RectNode(id: 'r1', size: const Size(10, 10)),
               RectNode(id: 'r2', size: const Size(12, 12)),
@@ -515,6 +544,7 @@ void main() {
     final adopted = Scene(
       layers: <ContentLayer>[
         ContentLayer(
+          id: 'layer-auto-8',
           nodes: <SceneNode>[RectNode(id: 'adopted', size: const Size(10, 10))],
         ),
       ],
@@ -542,7 +572,9 @@ void main() {
     'TxnContext ensureMutableLayer throws range error for invalid index',
     () {
       final ctx = TxnContext(
-        baseScene: Scene(layers: <ContentLayer>[ContentLayer()]),
+        baseScene: Scene(
+          layers: <ContentLayer>[ContentLayer(id: 'layer-auto-9')],
+        ),
         workingSelection: <NodeId>{},
         baseAllNodeIds: <NodeId>{},
         nodeIdSeed: 0,
@@ -559,6 +591,7 @@ void main() {
       final adopted = Scene(
         layers: <ContentLayer>[
           ContentLayer(
+            id: 'layer-auto-10',
             nodes: <SceneNode>[RectNode(id: 'n1', size: const Size(1, 1))],
           ),
         ],
@@ -597,6 +630,7 @@ void main() {
         baseScene: Scene(
           layers: <ContentLayer>[
             ContentLayer(
+              id: 'layer-auto-11',
               nodes: <SceneNode>[RectNode(id: 'n1', size: const Size(1, 1))],
             ),
           ],
@@ -616,7 +650,7 @@ void main() {
       backgroundLayer: BackgroundLayer(
         nodes: <SceneNode>[RectNode(id: 'bg', size: const Size(1, 1))],
       ),
-      layers: <ContentLayer>[ContentLayer()],
+      layers: <ContentLayer>[ContentLayer(id: 'layer-auto-12')],
     );
     final baseBackground = baseScene.backgroundLayer!;
     final ctx = TxnContext(
@@ -648,7 +682,7 @@ void main() {
         backgroundLayer: BackgroundLayer(
           nodes: <SceneNode>[RectNode(id: 'bg', size: const Size(1, 1))],
         ),
-        layers: <ContentLayer>[ContentLayer()],
+        layers: <ContentLayer>[ContentLayer(id: 'layer-auto-13')],
       );
       final ctx = TxnContext(
         baseScene: baseScene,
@@ -678,7 +712,7 @@ void main() {
           backgroundLayer: BackgroundLayer(
             nodes: <SceneNode>[RectNode(id: 'bg', size: const Size(1, 1))],
           ),
-          layers: <ContentLayer>[ContentLayer()],
+          layers: <ContentLayer>[ContentLayer(id: 'layer-auto-14')],
         ),
         workingSelection: <NodeId>{},
         baseAllNodeIds: <NodeId>{'bg'},

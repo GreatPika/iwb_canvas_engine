@@ -128,6 +128,7 @@ void main() {
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
+              id: 'layer-auto-0',
               nodes: <NodeSnapshot>[
                 StrokeNodeSnapshot(
                   id: 's',

@@ -10,8 +10,8 @@ void main() {
       final controller = SceneControllerInteractive(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
-            ContentLayerSnapshot(),
-            ContentLayerSnapshot(),
+            ContentLayerSnapshot(id: 'layer-auto-0'),
+            ContentLayerSnapshot(id: 'layer-auto-1'),
           ],
         ),
         dragStartSlop: 10,

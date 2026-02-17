@@ -20,6 +20,7 @@ Scene _sceneFromSnapshot(
     layers: snapshot.layers
         .map(
           (layer) => ContentLayer(
+            id: layer.id,
             nodes: layer.nodes
                 .map(
                   (node) => _sceneNodeFromSnapshot(

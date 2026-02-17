@@ -25,7 +25,7 @@ and JSON serialization for whiteboard-style applications.
 - Scene graph (`Scene -> backgroundLayer + content layers -> Node`) with deterministic draw order.
 - Interactive controller and widget for move/select/draw workflows.
 - Built-in tools: pen, highlighter, line, eraser, marquee selection.
-- JSON v4 codec for import/export (`schemaVersion = 4`).
+- JSON v5 codec for import/export (`schemaVersion = 5`).
 
 ### What this package does not provide
 
@@ -142,7 +142,9 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Runtime commit invariant checks are enforced in `debug`/`profile` modes and throw `StateError` on violations.
 - Typed layer contract:
   - snapshot/runtime model uses `backgroundLayer` as a dedicated typed field and `layers` as content-only ordered layers.
-  - `writeNodeInsert(..., layerIndex)` addresses content layers only.
+  - each `ContentLayerSnapshot` has stable `id: LayerId`.
+  - `writeNodeInsert(..., layerId)` addresses content layers by `LayerId`.
+  - z-order is defined only by list order in `layers` (not by `layerId`).
   - runtime/public `SceneSnapshot` always includes dedicated `backgroundLayer`.
   - input may omit `backgroundLayer`, but decode/import boundaries canonicalize it to a dedicated empty layer.
 

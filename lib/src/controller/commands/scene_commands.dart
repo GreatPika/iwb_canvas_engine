@@ -4,6 +4,7 @@ import '../../core/nodes.dart';
 import '../../core/transform2d.dart';
 import '../../public/node_patch.dart';
 import '../../public/node_spec.dart';
+import '../../public/snapshot.dart' show LayerId;
 import '../../public/scene_write_txn.dart';
 
 class SceneCommands {
@@ -17,9 +18,9 @@ class SceneCommands {
     return sorted;
   }
 
-  NodeId writeAddNode(NodeSpec spec, {int? layerIndex}) {
+  NodeId writeAddNode(NodeSpec spec, {LayerId? layerId}) {
     return _writeRunner((writer) {
-      final nodeId = writer.writeNodeInsert(spec, layerIndex: layerIndex);
+      final nodeId = writer.writeNodeInsert(spec, layerId: layerId);
       writer.writeSignalEnqueue(type: 'node.added', nodeIds: <NodeId>[nodeId]);
       return nodeId;
     });

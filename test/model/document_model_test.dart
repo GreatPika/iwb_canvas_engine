@@ -12,8 +12,9 @@ void main() {
   Scene sceneWithAllNodeTypes() {
     return Scene(
       layers: <ContentLayer>[
-        ContentLayer(nodes: <SceneNode>[]),
+        ContentLayer(id: 'layer-auto-9', nodes: <SceneNode>[]),
         ContentLayer(
+          id: 'layer-auto-10',
           nodes: <SceneNode>[
             ImageNode(
               id: 'img',
@@ -128,6 +129,7 @@ void main() {
         SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
+              id: 'layer-auto-0',
               nodes: <NodeSnapshot>[
                 StrokeNodeSnapshot(
                   id: 's',
@@ -164,11 +166,13 @@ void main() {
         ),
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
+            id: 'layer-auto-1',
             nodes: const <NodeSnapshot>[
               RectNodeSnapshot(id: 'n1', size: Size(1, 1)),
             ],
           ),
           ContentLayerSnapshot(
+            id: 'layer-auto-2',
             nodes: const <NodeSnapshot>[
               RectNodeSnapshot(id: 'n2', size: Size(1, 1)),
             ],
@@ -190,6 +194,7 @@ void main() {
       SceneSnapshot(
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
+            id: 'layer-auto-3',
             nodes: const <NodeSnapshot>[
               RectNodeSnapshot(id: 'n1', size: Size(1, 1)),
             ],
@@ -211,6 +216,7 @@ void main() {
         SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
+              id: 'layer-auto-4',
               nodes: const <NodeSnapshot>[
                 RectNodeSnapshot(id: 'n1', size: Size(1, 1)),
               ],
@@ -236,11 +242,13 @@ void main() {
         SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
+              id: 'layer-auto-5',
               nodes: const <NodeSnapshot>[
                 RectNodeSnapshot(id: 'dup', size: Size(1, 1)),
               ],
             ),
             ContentLayerSnapshot(
+              id: 'layer-auto-6',
               nodes: const <NodeSnapshot>[
                 RectNodeSnapshot(id: 'dup', size: Size(2, 2)),
               ],
@@ -266,6 +274,7 @@ void main() {
         SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
+              id: 'layer-auto-7',
               nodes: const <NodeSnapshot>[
                 RectNodeSnapshot(
                   id: 'r1',
@@ -324,7 +333,12 @@ void main() {
     );
 
     final inserted = RectNode(id: 'new', size: const Size(1, 1));
-    txnInsertNodeInScene(scene: scene, nodeLocator: locator, node: inserted);
+    txnInsertNodeInScene(
+      scene: scene,
+      nodeLocator: locator,
+      node: inserted,
+      layerIndex: 1,
+    );
     final insertedFound = txnFindNodeByLocator(
       scene: scene,
       nodeLocator: locator,
@@ -346,6 +360,45 @@ void main() {
     );
   });
 
+  test('txnInsertNodeInScene rejects duplicate node ids', () {
+    final scene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(
+          id: 'layer-auto-11',
+          nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(1, 1))],
+        ),
+      ],
+    );
+    final locator = txnBuildNodeLocator(scene);
+
+    expect(
+      () => txnInsertNodeInScene(
+        scene: scene,
+        nodeLocator: locator,
+        node: RectNode(id: 'dup', size: const Size(2, 2)),
+        layerIndex: 0,
+      ),
+      throwsStateError,
+    );
+  });
+
+  test('txnInsertNodeInScene rejects out-of-range layer index', () {
+    final scene = Scene(
+      layers: <ContentLayer>[ContentLayer(id: 'layer-auto-11a')],
+    );
+    final locator = txnBuildNodeLocator(scene);
+
+    expect(
+      () => txnInsertNodeInScene(
+        scene: scene,
+        nodeLocator: locator,
+        node: RectNode(id: 'new', size: const Size(2, 2)),
+        layerIndex: 2,
+      ),
+      throwsRangeError,
+    );
+  });
+
   test('find/locator/erase utilities handle dedicated background layer', () {
     final scene = Scene(
       backgroundLayer: BackgroundLayer(
@@ -356,6 +409,7 @@ void main() {
       ),
       layers: <ContentLayer>[
         ContentLayer(
+          id: 'layer-auto-12',
           nodes: <SceneNode>[RectNode(id: 'fg-a', size: const Size(1, 1))],
         ),
       ],
@@ -422,6 +476,7 @@ void main() {
     final scene = Scene(
       layers: <ContentLayer>[
         ContentLayer(
+          id: 'layer-auto-13',
           nodes: <SceneNode>[
             RectNode(id: 'a', size: const Size(1, 1)),
             RectNode(id: 'b', size: const Size(1, 1)),
@@ -444,20 +499,19 @@ void main() {
   });
 
   test(
-    'resolve layer index validates range and uses last existing layer by default',
+    'resolve layer index validates layerId and uses last layer by default',
     () {
-      final scene = Scene(layers: <ContentLayer>[ContentLayer()]);
-
-      expect(
-        () => txnResolveInsertLayerIndex(scene: scene, layerIndex: -1),
-        throwsRangeError,
-      );
-      expect(
-        () => txnResolveInsertLayerIndex(scene: scene, layerIndex: 10),
-        throwsRangeError,
+      final scene = Scene(
+        layers: <ContentLayer>[ContentLayer(id: 'layer-auto-14')],
       );
 
-      final index = txnResolveInsertLayerIndex(scene: scene, layerIndex: null);
+      expect(
+        () =>
+            txnResolveInsertLayerIndex(scene: scene, layerId: 'missing-layer'),
+        throwsArgumentError,
+      );
+
+      final index = txnResolveInsertLayerIndex(scene: scene, layerId: null);
       expect(index, 0);
       expect(scene.layers.length, 1);
       expect(scene.layers.last, isA<ContentLayer>());
@@ -469,10 +523,12 @@ void main() {
 
     final index = txnResolveInsertLayerIndex(
       scene: emptyScene,
-      layerIndex: null,
+      layerId: null,
+      nextLayerId: () => 'layer-0',
     );
     expect(index, 0);
     expect(emptyScene.layers.length, 1);
+    expect(emptyScene.layers.single.id, 'layer-0');
     expect(emptyScene.layers.last, isA<ContentLayer>());
   });
 
@@ -483,6 +539,7 @@ void main() {
       ),
       layers: <ContentLayer>[
         ContentLayer(
+          id: 'layer-auto-15',
           nodes: <SceneNode>[
             RectNode(id: 'ok', size: const Size(1, 1)),
             RectNode(id: 'hidden', size: const Size(1, 1), isVisible: false),
@@ -646,6 +703,7 @@ void main() {
         SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
+              id: 'layer-auto-8',
               nodes: const <NodeSnapshot>[
                 RectNodeSnapshot(id: 'a', size: Size(1, 1)),
                 RectNodeSnapshot(

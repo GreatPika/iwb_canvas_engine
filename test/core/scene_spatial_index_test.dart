@@ -72,7 +72,7 @@ void main() {
   Scene sceneWithRect(RectNode node) {
     return Scene(
       layers: <ContentLayer>[
-        ContentLayer(nodes: <SceneNode>[node]),
+        ContentLayer(id: 'layer-auto-0', nodes: <SceneNode>[node]),
       ],
     );
   }
@@ -108,6 +108,7 @@ void main() {
       final scene = Scene(
         layers: <ContentLayer>[
           ContentLayer(
+            id: 'layer-auto-1',
             nodes: <SceneNode>[
               RectNode(
                 id: 'oor',
@@ -198,7 +199,7 @@ void main() {
       ..position = const Offset(9999990, 9999990);
     final scene = Scene(
       layers: <ContentLayer>[
-        ContentLayer(nodes: <SceneNode>[inside, outside]),
+        ContentLayer(id: 'layer-auto-2', nodes: <SceneNode>[inside, outside]),
       ],
     );
 
@@ -281,6 +282,7 @@ void main() {
       final movedScene = Scene(
         layers: <ContentLayer>[
           ContentLayer(
+            id: 'layer-auto-3',
             nodes: <SceneNode>[
               RectNode(
                 id: 'r1',

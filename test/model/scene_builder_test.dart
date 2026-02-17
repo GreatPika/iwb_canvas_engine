@@ -36,7 +36,7 @@ Map<String, Object?> _minimalRectNodeJson({required String id}) {
 
 Map<String, Object?> _minimalSceneJson() {
   return <String, Object?>{
-    'schemaVersion': 4,
+    'schemaVersion': 5,
     'camera': <String, Object?>{'offsetX': 0, 'offsetY': 0},
     'background': <String, Object?>{
       'color': '#FFFFFFFF',
@@ -53,6 +53,7 @@ Map<String, Object?> _minimalSceneJson() {
     },
     'layers': <Object?>[
       <String, Object?>{
+        'id': 'layer-0',
         'nodes': <Object?>[_minimalRectNodeJson(id: 'n1')],
       },
     ],
@@ -102,6 +103,7 @@ void main() {
         backgroundLayer: BackgroundLayer(),
         layers: <ContentLayer>[
           ContentLayer(
+            id: 'layer-auto-5',
             nodes: <SceneNode>[
               ImageNode(
                 id: 'img',
@@ -169,6 +171,7 @@ void main() {
     final snapshot = SceneSnapshot(
       layers: <ContentLayerSnapshot>[
         ContentLayerSnapshot(
+          id: 'layer-auto-0',
           nodes: const <NodeSnapshot>[
             RectNodeSnapshot(
               id: 'r1',
@@ -195,6 +198,70 @@ void main() {
               e is SceneDataException &&
               e.code == SceneDataErrorCode.outOfRange &&
               e.path == 'layers[0].nodes[0].transform.tx',
+        ),
+      ),
+    );
+  });
+
+  test('sceneBuildFromSnapshot rejects singular transform values', () {
+    final snapshot = SceneSnapshot(
+      layers: <ContentLayerSnapshot>[
+        ContentLayerSnapshot(
+          id: 'layer-auto-1',
+          nodes: const <NodeSnapshot>[
+            RectNodeSnapshot(
+              id: 'r1',
+              size: Size(1, 1),
+              transform: Transform2D(a: 1, b: 2, c: 2, d: 4, tx: 0, ty: 0),
+            ),
+          ],
+        ),
+      ],
+    );
+
+    expect(
+      () => model_builder.sceneBuildFromSnapshot(snapshot),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers[0].nodes[0].transform' &&
+              e.message ==
+                  'Field layers[0].nodes[0].transform must be invertible (non-singular).',
+        ),
+      ),
+    );
+  });
+
+  test('sceneBuildFromSnapshot rejects duplicate content layer ids', () {
+    final snapshot = SceneSnapshot(
+      layers: <ContentLayerSnapshot>[
+        ContentLayerSnapshot(
+          id: 'layer-auto-dup',
+          nodes: const <NodeSnapshot>[
+            RectNodeSnapshot(id: 'r1', size: Size(1, 1)),
+          ],
+        ),
+        ContentLayerSnapshot(
+          id: 'layer-auto-dup',
+          nodes: const <NodeSnapshot>[
+            RectNodeSnapshot(id: 'r2', size: Size(1, 1)),
+          ],
+        ),
+      ],
+    );
+
+    expect(
+      () => model_builder.sceneBuildFromSnapshot(snapshot),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers[1].id' &&
+              e.message ==
+                  'Field layers[1].id must be unique across content layers.',
         ),
       ),
     );
@@ -298,6 +365,46 @@ void main() {
     );
   });
 
+  test('sceneBuildFromJsonMap rejects missing content layer id', () {
+    final json = _minimalSceneJson();
+    final layer =
+        (json['layers'] as List<Object?>).first as Map<String, Object?>;
+    layer.remove('id');
+
+    expect(
+      () => model_builder.sceneBuildFromJsonMap(json),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.missingField &&
+              e.path == 'layers[0].id' &&
+              e.message == 'Field layers[0].id must be a string.',
+        ),
+      ),
+    );
+  });
+
+  test('sceneBuildFromJsonMap rejects non-string content layer id', () {
+    final json = _minimalSceneJson();
+    final layer =
+        (json['layers'] as List<Object?>).first as Map<String, Object?>;
+    layer['id'] = 123;
+
+    expect(
+      () => model_builder.sceneBuildFromJsonMap(json),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidFieldType &&
+              e.path == 'layers[0].id' &&
+              e.message == 'Field layers[0].id must be a string.',
+        ),
+      ),
+    );
+  });
+
   test('sceneBuildFromJsonMap reports missing required bool fields', () {
     final json = _minimalSceneJson();
     final layer =
@@ -392,6 +499,7 @@ void main() {
         SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
+              id: 'layer-auto-2',
               nodes: const <NodeSnapshot>[
                 RectNodeSnapshot(id: 'dup', size: Size(1, 1)),
                 RectNodeSnapshot(id: 'dup', size: Size(1, 1)),
@@ -425,6 +533,54 @@ void main() {
     );
   });
 
+  test('sceneValidateSnapshotValues reports duplicate content layer ids', () {
+    SceneDataException asSceneDataException({
+      required Object? value,
+      required String field,
+      required String message,
+    }) {
+      return SceneDataException(
+        code: SceneDataErrorCode.invalidValue,
+        path: field,
+        message: 'Field $field $message',
+        source: value,
+      );
+    }
+
+    expect(
+      () => value_validation.sceneValidateSnapshotValues(
+        SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(id: 'layer-auto-dup-a'),
+            ContentLayerSnapshot(id: 'layer-auto-dup-a'),
+          ],
+        ),
+        onError:
+            ({
+              required Object? value,
+              required String field,
+              required String message,
+            }) {
+              throw asSceneDataException(
+                value: value,
+                field: field,
+                message: message,
+              );
+            },
+        requirePositiveGridCellSize: true,
+      ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.path == 'layers[1].id' &&
+              e.message ==
+                  'Field layers[1].id must be unique across content layers.',
+        ),
+      ),
+    );
+  });
+
   test('sceneBuildFromSnapshot rejects duplicate ids in background layer', () {
     final snapshot = SceneSnapshot(
       backgroundLayer: BackgroundLayerSnapshot(
@@ -433,7 +589,7 @@ void main() {
           RectNodeSnapshot(id: 'dup-bg', size: Size(2, 2)),
         ],
       ),
-      layers: <ContentLayerSnapshot>[ContentLayerSnapshot()],
+      layers: <ContentLayerSnapshot>[ContentLayerSnapshot(id: 'layer-auto-3')],
     );
 
     expect(
@@ -473,7 +629,9 @@ void main() {
               RectNodeSnapshot(id: 'dup-bg', size: Size(1, 1)),
             ],
           ),
-          layers: <ContentLayerSnapshot>[ContentLayerSnapshot()],
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(id: 'layer-auto-4'),
+          ],
         ),
         onError:
             ({
@@ -511,7 +669,7 @@ void main() {
               RectNode(id: 'dup-bg', size: const Size(1, 1)),
             ],
           ),
-          layers: <ContentLayer>[ContentLayer()],
+          layers: <ContentLayer>[ContentLayer(id: 'layer-auto-6')],
         ),
       ),
       throwsA(
@@ -521,6 +679,28 @@ void main() {
               e.path == 'backgroundLayer.nodes[1].id' &&
               e.message ==
                   'Field backgroundLayer.nodes[1].id must be unique across scene layers.',
+        ),
+      ),
+    );
+  });
+
+  test('sceneValidateCore reports duplicate content layer ids', () {
+    expect(
+      () => model_builder.sceneValidateCore(
+        Scene(
+          layers: <ContentLayer>[
+            ContentLayer(id: 'layer-auto-dup-b'),
+            ContentLayer(id: 'layer-auto-dup-b'),
+          ],
+        ),
+      ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.path == 'layers[1].id' &&
+              e.message ==
+                  'Field layers[1].id must be unique across content layers.',
         ),
       ),
     );

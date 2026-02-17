@@ -5,11 +5,13 @@ import 'package:iwb_canvas_engine/src/controller/scene_invariants.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/model/document.dart';
+import 'package:iwb_canvas_engine/src/model/document_clone.dart';
 
 // INV:INV-ENG-ID-INDEX-FROM-SCENE
 // INV:INV-ENG-INSTANCE-REVISION-MONOTONIC
 // INV:INV-ENG-WRITE-NUMERIC-GUARDS
 // INV:INV-G-NODEID-UNIQUE
+// INV:INV-G-LAYERID-UNIQUE
 
 void main() {
   Scene sceneFixture({
@@ -20,6 +22,7 @@ void main() {
     return Scene(
       layers: <ContentLayer>[
         ContentLayer(
+          id: 'layer-auto-0',
           nodes: <SceneNode>[RectNode(id: 'node-1', size: const Size(10, 10))],
         ),
       ],
@@ -40,6 +43,7 @@ void main() {
         'node-1': (layerIndex: 0, nodeIndex: 0),
       },
       nodeIdSeed: 2,
+      layerIdSeed: txnInitialLayerIdSeed(scene),
       nextInstanceRevision: 2,
       commitRevision: 1,
     );
@@ -59,6 +63,7 @@ void main() {
       allNodeIds: const <NodeId>{},
       nodeLocator: const <NodeId, NodeLocatorEntry>{},
       nodeIdSeed: 1,
+      layerIdSeed: txnInitialLayerIdSeed(scene),
       nextInstanceRevision: 2,
       commitRevision: -1,
     );
@@ -96,6 +101,7 @@ void main() {
         'node-1': (layerIndex: 0, nodeIndex: 0),
       },
       nodeIdSeed: 2,
+      layerIdSeed: txnInitialLayerIdSeed(scene),
       nextInstanceRevision: 2,
       commitRevision: 0,
     );
@@ -107,9 +113,11 @@ void main() {
     final scene = Scene(
       layers: <ContentLayer>[
         ContentLayer(
+          id: 'layer-auto-1',
           nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(10, 10))],
         ),
         ContentLayer(
+          id: 'layer-auto-2',
           nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(12, 12))],
         ),
       ],
@@ -122,6 +130,7 @@ void main() {
         'dup': (layerIndex: 0, nodeIndex: 0),
       },
       nodeIdSeed: 1,
+      layerIdSeed: txnInitialLayerIdSeed(scene),
       nextInstanceRevision: 2,
       commitRevision: 0,
     );
@@ -129,6 +138,30 @@ void main() {
     expect(
       violations.join('\n'),
       contains('scene must not contain duplicate node ids'),
+    );
+  });
+
+  test('detects duplicate content layer ids in committed scene', () {
+    final scene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(id: 'layer-auto-dup'),
+        ContentLayer(id: 'layer-auto-dup'),
+      ],
+    );
+    final violations = txnCollectStoreInvariantViolations(
+      scene: scene,
+      selectedNodeIds: const <NodeId>{},
+      allNodeIds: const <NodeId>{},
+      nodeLocator: const <NodeId, NodeLocatorEntry>{},
+      nodeIdSeed: 0,
+      layerIdSeed: txnInitialLayerIdSeed(scene),
+      nextInstanceRevision: 1,
+      commitRevision: 0,
+    );
+
+    expect(
+      violations.join('\n'),
+      contains('scene must not contain duplicate content layer ids'),
     );
   });
 
@@ -140,7 +173,7 @@ void main() {
           RectNode(id: 'dup-bg', size: const Size(12, 12)),
         ],
       ),
-      layers: <ContentLayer>[ContentLayer()],
+      layers: <ContentLayer>[ContentLayer(id: 'layer-auto-3')],
     );
     final violations = txnCollectStoreInvariantViolations(
       scene: scene,
@@ -150,6 +183,7 @@ void main() {
         'dup-bg': (layerIndex: -1, nodeIndex: 0),
       },
       nodeIdSeed: 1,
+      layerIdSeed: txnInitialLayerIdSeed(scene),
       nextInstanceRevision: 2,
       commitRevision: 0,
     );
@@ -167,6 +201,7 @@ void main() {
       ),
       layers: <ContentLayer>[
         ContentLayer(
+          id: 'layer-auto-4',
           nodes: <SceneNode>[RectNode(id: 'n1', size: const Size(10, 10))],
         ),
       ],
@@ -180,6 +215,7 @@ void main() {
         'n1': (layerIndex: 0, nodeIndex: 0),
       },
       nodeIdSeed: 2,
+      layerIdSeed: txnInitialLayerIdSeed(scene),
       nextInstanceRevision: 2,
       commitRevision: 0,
     );
@@ -194,6 +230,7 @@ void main() {
       ),
       layers: <ContentLayer>[
         ContentLayer(
+          id: 'layer-auto-5',
           nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(10, 10))],
         ),
       ],
@@ -206,6 +243,7 @@ void main() {
         'dup': (layerIndex: -1, nodeIndex: 0),
       },
       nodeIdSeed: 0,
+      layerIdSeed: txnInitialLayerIdSeed(scene),
       nextInstanceRevision: 2,
       commitRevision: 0,
     );
@@ -226,6 +264,7 @@ void main() {
         'node-1': (layerIndex: 0, nodeIndex: 0),
       },
       nodeIdSeed: 2,
+      layerIdSeed: txnInitialLayerIdSeed(scene),
       nextInstanceRevision: 1,
       commitRevision: 0,
     );
@@ -233,12 +272,28 @@ void main() {
     expect(violations.join('\n'), contains('nextInstanceRevision must be >='));
   });
 
+  test('detects layerIdSeed lower bound violation', () {
+    final scene = Scene(layers: <ContentLayer>[ContentLayer(id: 'layer-3')]);
+    final violations = txnCollectStoreInvariantViolations(
+      scene: scene,
+      selectedNodeIds: const <NodeId>{},
+      allNodeIds: const <NodeId>{},
+      nodeLocator: const <NodeId, NodeLocatorEntry>{},
+      nodeIdSeed: 0,
+      layerIdSeed: 0,
+      nextInstanceRevision: 1,
+      commitRevision: 0,
+    );
+
+    expect(violations.join('\n'), contains('layerIdSeed must be >='));
+  });
+
   test('detects invalid node instanceRevision in committed scene', () {
     final badNode = _BadInstanceRevisionNode(id: 'bad-rev')
       ..forceInvalidInstanceRevision();
     final scene = Scene(
       layers: <ContentLayer>[
-        ContentLayer(nodes: <SceneNode>[badNode]),
+        ContentLayer(id: 'layer-auto-6', nodes: <SceneNode>[badNode]),
       ],
     );
     final violations = txnCollectStoreInvariantViolations(
@@ -249,6 +304,7 @@ void main() {
         'bad-rev': (layerIndex: 0, nodeIndex: 0),
       },
       nodeIdSeed: 0,
+      layerIdSeed: txnInitialLayerIdSeed(scene),
       nextInstanceRevision: 1,
       commitRevision: 0,
     );
@@ -268,6 +324,7 @@ void main() {
         allNodeIds: const <NodeId>{},
         nodeLocator: const <NodeId, NodeLocatorEntry>{},
         nodeIdSeed: 0,
+        layerIdSeed: txnInitialLayerIdSeed(scene),
         nextInstanceRevision: 2,
         commitRevision: 0,
       ),
@@ -285,6 +342,7 @@ void main() {
         'node-1': (layerIndex: 0, nodeIndex: 7),
       },
       nodeIdSeed: 2,
+      layerIdSeed: txnInitialLayerIdSeed(scene),
       nextInstanceRevision: 2,
       commitRevision: 0,
     );
@@ -302,6 +360,7 @@ void main() {
       allNodeIds: const <NodeId>{'node-1'},
       nodeLocator: const <NodeId, NodeLocatorEntry>{},
       nodeIdSeed: 2,
+      layerIdSeed: txnInitialLayerIdSeed(scene),
       nextInstanceRevision: 2,
       commitRevision: 0,
     );

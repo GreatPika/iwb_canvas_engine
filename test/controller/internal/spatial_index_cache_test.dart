@@ -18,7 +18,10 @@ void main() {
     () {
       final ctx = TxnContext(
         baseScene: Scene(
-          layers: <ContentLayer>[ContentLayer(), ContentLayer()],
+          layers: <ContentLayer>[
+            ContentLayer(id: 'layer-auto-0'),
+            ContentLayer(id: 'layer-auto-1'),
+          ],
         ),
         workingSelection: <NodeId>{},
         baseAllNodeIds: <NodeId>{},
@@ -40,6 +43,7 @@ void main() {
       final scene = Scene(
         layers: <ContentLayer>[
           ContentLayer(
+            id: 'layer-auto-2',
             nodes: <SceneNode>[RectNode(id: 'r1', size: const Size(10, 10))],
           ),
         ],
@@ -85,6 +89,7 @@ void main() {
       final movedScene = Scene(
         layers: <ContentLayer>[
           ContentLayer(
+            id: 'layer-auto-3',
             nodes: <SceneNode>[
               RectNode(
                 id: 'r1',
@@ -193,6 +198,7 @@ void main() {
       final outOfRangeScene = Scene(
         layers: <ContentLayer>[
           ContentLayer(
+            id: 'layer-auto-4',
             nodes: <SceneNode>[
               RectNode(
                 id: 'r1',
@@ -256,6 +262,7 @@ void main() {
       final scene = Scene(
         layers: <ContentLayer>[
           ContentLayer(
+            id: 'layer-auto-5',
             nodes: <SceneNode>[RectNode(id: 'r1', size: const Size(10, 10))],
           ),
         ],
@@ -276,6 +283,7 @@ void main() {
       final movedScene = Scene(
         layers: <ContentLayer>[
           ContentLayer(
+            id: 'layer-auto-6',
             nodes: <SceneNode>[
               RectNode(
                 id: 'r1',
@@ -333,6 +341,7 @@ void main() {
       final scene = Scene(
         layers: <ContentLayer>[
           ContentLayer(
+            id: 'layer-auto-7',
             nodes: <SceneNode>[RectNode(id: 'r1', size: const Size(10, 10))],
           ),
         ],
@@ -355,6 +364,7 @@ void main() {
       final movedScene = Scene(
         layers: <ContentLayer>[
           ContentLayer(
+            id: 'layer-auto-8',
             nodes: <SceneNode>[
               RectNode(
                 id: 'r1',

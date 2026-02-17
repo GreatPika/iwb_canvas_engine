@@ -28,7 +28,7 @@ class SceneWriter implements SceneWriteTxn {
       Set<NodeId>.unmodifiable(_ctx.workingSelection);
 
   @override
-  NodeId writeNodeInsert(NodeSpec spec, {int? layerIndex}) {
+  NodeId writeNodeInsert(NodeSpec spec, {LayerId? layerId}) {
     _ensureTxnActive();
     final resolvedId = spec.id ?? _ctx.txnNextNodeId();
     if (spec.id != null && _ctx.txnHasNodeId(resolvedId)) {
@@ -43,7 +43,8 @@ class SceneWriter implements SceneWriteTxn {
     final scene = _ctx.txnEnsureMutableScene();
     final targetLayerIndex = txnResolveInsertLayerIndex(
       scene: scene,
-      layerIndex: layerIndex,
+      layerId: layerId,
+      nextLayerId: _ctx.txnNextLayerId,
     );
     _ctx.txnEnsureMutableLayer(targetLayerIndex);
     txnInsertNodeInScene(
@@ -469,12 +470,20 @@ class SceneWriter implements SceneWriteTxn {
   }
 
   void _txnRequireFiniteTransform(Transform2D value, {required String name}) {
-    if (value.isFinite) return;
-    throw ArgumentError.value(
-      value,
-      name,
-      'Transform2D fields must be finite.',
-    );
+    if (!value.isFinite) {
+      throw ArgumentError.value(
+        value,
+        name,
+        'Transform2D fields must be finite.',
+      );
+    }
+    if (value.invert() == null) {
+      throw ArgumentError.value(
+        value.toJsonMap(),
+        name,
+        'Transform2D must be invertible (non-singular).',
+      );
+    }
   }
 
   void _txnRequireFinitePositive(double value, {required String name}) {

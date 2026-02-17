@@ -12,6 +12,7 @@ void main() {
     return SceneSnapshot(
       layers: <ContentLayerSnapshot>[
         ContentLayerSnapshot(
+          id: 'layer-auto-0',
           nodes: <NodeSnapshot>[
             const RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
             const RectNodeSnapshot(id: 'r2', size: Size(12, 12)),
@@ -51,6 +52,7 @@ void main() {
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
+              id: 'layer-auto-1',
               nodes: const <NodeSnapshot>[
                 TextNodeSnapshot(
                   id: 't1',
@@ -94,6 +96,7 @@ void main() {
       initialSnapshot: SceneSnapshot(
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
+            id: 'layer-auto-2',
             nodes: const <NodeSnapshot>[
               TextNodeSnapshot(
                 id: 't1',
@@ -187,6 +190,7 @@ void main() {
       initialSnapshot: SceneSnapshot(
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
+            id: 'layer-auto-3',
             nodes: const <NodeSnapshot>[
               RectNodeSnapshot(id: 'node-1', size: Size(10, 10)),
               RectNodeSnapshot(id: 'node-9', size: Size(12, 12)),
@@ -216,6 +220,7 @@ void main() {
       initialSnapshot: SceneSnapshot(
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
+            id: 'layer-auto-4',
             nodes: const <NodeSnapshot>[
               RectNodeSnapshot(
                 id: 'high',
@@ -233,6 +238,7 @@ void main() {
       SceneSnapshot(
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
+            id: 'layer-auto-5',
             nodes: const <NodeSnapshot>[
               RectNodeSnapshot(
                 id: 'low',

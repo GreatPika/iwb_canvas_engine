@@ -29,6 +29,9 @@ const List<double> _defaultGridSizes = <double>[
 /// Stable node identifier for the public model.
 typedef NodeId = String;
 
+/// Stable content-layer identifier for the public model.
+typedef LayerId = String;
+
 /// Immutable scene snapshot exposed by the public API.
 class SceneSnapshot {
   SceneSnapshot({
@@ -66,11 +69,12 @@ class BackgroundLayerSnapshot {
 
 /// Immutable content layer snapshot.
 class ContentLayerSnapshot {
-  ContentLayerSnapshot({List<NodeSnapshot>? nodes})
+  ContentLayerSnapshot({required this.id, List<NodeSnapshot>? nodes})
     : nodes = List<NodeSnapshot>.unmodifiable(
         nodes == null ? const <NodeSnapshot>[] : List<NodeSnapshot>.from(nodes),
       );
 
+  final LayerId id;
   final List<NodeSnapshot> nodes;
 }
 
