@@ -190,6 +190,55 @@ void main() {
     },
   );
 
+  test('SceneWriter writeNodeInsert resolves target layer by layerId', () {
+    final baseScene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(id: 'layer-auto-10'),
+        ContentLayer(id: 'layer-auto-11'),
+      ],
+    );
+    final ctx = TxnContext(
+      baseScene: baseScene,
+      workingSelection: <NodeId>{},
+      baseAllNodeIds: const <NodeId>{},
+      nodeIdSeed: 0,
+      nextInstanceRevision: 1,
+    );
+    final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+
+    final insertedId = writer.writeNodeInsert(
+      RectNodeSpec(id: 'n-target', size: const Size(3, 3)),
+      layerId: 'layer-auto-10',
+    );
+    expect(insertedId, 'n-target');
+    expect(ctx.workingScene.layers[0].nodes.single.id, 'n-target');
+    expect(ctx.workingScene.layers[1].nodes, isEmpty);
+
+    expect(
+      () => writer.writeNodeInsert(
+        RectNodeSpec(id: 'bad-target', size: const Size(1, 1)),
+        layerId: 'missing-layer',
+      ),
+      throwsArgumentError,
+    );
+
+    final emptyCtx = TxnContext(
+      baseScene: Scene(),
+      workingSelection: <NodeId>{},
+      baseAllNodeIds: const <NodeId>{},
+      nodeIdSeed: 0,
+      nextInstanceRevision: 1,
+    );
+    final emptyWriter = SceneWriter(emptyCtx, txnSignalSink: (_) {});
+    final autoInsertedId = emptyWriter.writeNodeInsert(
+      RectNodeSpec(id: 'first', size: const Size(2, 2)),
+    );
+    expect(autoInsertedId, 'first');
+    expect(emptyCtx.workingScene.layers, hasLength(1));
+    expect(emptyCtx.workingScene.layers.single.id, 'layer-0');
+    expect(emptyCtx.workingScene.layers.single.nodes.single.id, 'first');
+  });
+
   test('SceneWriter covers id generation and selection branches', () {
     final ctx = TxnContext(
       baseScene: Scene(

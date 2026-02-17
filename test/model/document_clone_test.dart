@@ -237,6 +237,11 @@ void main() {
     );
   });
 
+  test('txnCollectLayerIds gathers unique content layer ids', () {
+    final ids = txnCollectLayerIds(sourceScene());
+    expect(ids, {'layer-auto-0', 'layer-auto-1'});
+  });
+
   test(
     'txnInitialNodeIdSeed finds max numeric node-* id and ignores invalid ids',
     () {

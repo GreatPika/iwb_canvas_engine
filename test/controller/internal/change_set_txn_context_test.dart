@@ -214,6 +214,95 @@ void main() {
     expect(ctx.layerIdSeed, 3);
   });
 
+  test('TxnContext materializes layerId index lazily', () {
+    final ctx = TxnContext(
+      baseScene: Scene(
+        layers: <ContentLayer>[
+          ContentLayer(id: 'layer-auto-10'),
+          ContentLayer(id: 'layer-auto-11'),
+        ],
+      ),
+      workingSelection: <NodeId>{},
+      baseAllNodeIds: const <NodeId>{},
+      nodeIdSeed: 0,
+      nextInstanceRevision: 1,
+    );
+
+    expect(ctx.debugLayerIdIndexMaterializations, 0);
+    expect(ctx.txnFindContentLayerIndexById('layer-auto-10'), 0);
+    expect(ctx.debugLayerIdIndexMaterializations, 1);
+  });
+
+  test('TxnContext reuses layerId index for repeated lookups', () {
+    final ctx = TxnContext(
+      baseScene: Scene(
+        layers: <ContentLayer>[
+          ContentLayer(id: 'layer-auto-20'),
+          ContentLayer(id: 'layer-auto-21'),
+        ],
+      ),
+      workingSelection: <NodeId>{},
+      baseAllNodeIds: const <NodeId>{},
+      nodeIdSeed: 0,
+      nextInstanceRevision: 1,
+    );
+
+    for (var i = 0; i < 1000; i++) {
+      expect(ctx.txnFindContentLayerIndexById('layer-auto-20'), 0);
+      expect(ctx.txnFindContentLayerIndexById('layer-auto-21'), 1);
+    }
+    expect(ctx.debugLayerIdIndexMaterializations, 1);
+  });
+
+  test('TxnContext resets layerId index after adoptScene', () {
+    final ctx = TxnContext(
+      baseScene: Scene(
+        layers: <ContentLayer>[ContentLayer(id: 'layer-auto-30')],
+      ),
+      workingSelection: <NodeId>{},
+      baseAllNodeIds: const <NodeId>{},
+      nodeIdSeed: 0,
+      nextInstanceRevision: 1,
+    );
+
+    expect(ctx.txnFindContentLayerIndexById('layer-auto-30'), 0);
+    expect(ctx.debugLayerIdIndexMaterializations, 1);
+
+    ctx.txnAdoptScene(
+      Scene(layers: <ContentLayer>[ContentLayer(id: 'layer-auto-40')]),
+    );
+
+    expect(ctx.txnFindContentLayerIndexById('layer-auto-40'), 0);
+    expect(ctx.debugLayerIdIndexMaterializations, 2);
+  });
+
+  test('TxnContext rebuilds stale layerId index on mismatch', () {
+    final ctx = TxnContext(
+      baseScene: Scene(
+        layers: <ContentLayer>[
+          ContentLayer(id: 'layer-auto-50'),
+          ContentLayer(id: 'layer-auto-51'),
+        ],
+      ),
+      workingSelection: <NodeId>{},
+      baseAllNodeIds: const <NodeId>{},
+      nodeIdSeed: 0,
+      nextInstanceRevision: 1,
+    );
+
+    expect(ctx.txnFindContentLayerIndexById('layer-auto-50'), 0);
+    expect(ctx.debugLayerIdIndexMaterializations, 1);
+
+    final mutableScene = ctx.txnEnsureMutableScene();
+    final firstLayer = mutableScene.layers[0];
+    mutableScene.layers[0] = mutableScene.layers[1];
+    mutableScene.layers[1] = firstLayer;
+
+    expect(ctx.txnFindContentLayerIndexById('layer-auto-50'), 1);
+    expect(ctx.txnFindContentLayerIndexById('layer-auto-51'), 0);
+    expect(ctx.debugLayerIdIndexMaterializations, 2);
+  });
+
   test('TxnContext mutating APIs throw after transaction close', () {
     final baseScene = Scene(
       backgroundLayer: BackgroundLayer(

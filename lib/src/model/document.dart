@@ -800,6 +800,8 @@ int txnResolveInsertLayerIndex({
   LayerId? layerId,
   LayerId Function()? nextLayerId,
 }) {
+  // Runtime hot-path uses TxnContext layer index fast-path.
+  // This helper remains for tests and model-level utilities.
   if (layerId != null) {
     final index = txnFindContentLayerIndexById(scene: scene, layerId: layerId);
     if (index == null) {

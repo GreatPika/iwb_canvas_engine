@@ -41,11 +41,7 @@ class SceneWriter implements SceneWriteTxn {
       nextInstanceRevision: _ctx.txnNextInstanceRevision,
     );
     final scene = _ctx.txnEnsureMutableScene();
-    final targetLayerIndex = txnResolveInsertLayerIndex(
-      scene: scene,
-      layerId: layerId,
-      nextLayerId: _ctx.txnNextLayerId,
-    );
+    final targetLayerIndex = _ctx.txnResolveInsertLayerIndex(layerId: layerId);
     _ctx.txnEnsureMutableLayer(targetLayerIndex);
     txnInsertNodeInScene(
       scene: scene,
