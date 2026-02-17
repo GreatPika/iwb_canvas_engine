@@ -182,6 +182,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
         baseAllNodeIds: _store.allNodeIds,
         baseNodeLocator: _store.nodeLocator,
         nodeIdSeed: _store.nodeIdSeed,
+        layerIdSeed: _store.layerIdSeed,
         nextInstanceRevision: _store.nextInstanceRevision,
       );
       ctx = createdCtx;
@@ -289,6 +290,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
           allNodeIds: _store.allNodeIds,
           nodeLocator: _store.nodeLocator,
           nodeIdSeed: _store.nodeIdSeed,
+          layerIdSeed: _store.layerIdSeed,
           nextInstanceRevision: _store.nextInstanceRevision,
           commitRevision: nextCommitRevision,
         );
@@ -333,6 +335,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
       structuralChanged: ctx.changeSet.structuralChanged,
     );
     final committedNodeIdSeed = ctx.nodeIdSeed;
+    final committedLayerIdSeed = ctx.layerIdSeed;
     final committedNextInstanceRevision = ctx.nextInstanceRevision;
     _debugAssertStoreInvariantsCandidate(
       scene: committedScene,
@@ -340,6 +343,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
       allNodeIds: committedNodeIds,
       nodeLocator: committedNodeLocator,
       nodeIdSeed: committedNodeIdSeed,
+      layerIdSeed: committedLayerIdSeed,
       nextInstanceRevision: committedNextInstanceRevision,
       commitRevision: nextCommitRevision,
     );
@@ -362,6 +366,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
       committedNodeIds: committedNodeIds,
       committedNodeLocator: committedNodeLocator,
       committedNodeIdSeed: committedNodeIdSeed,
+      committedLayerIdSeed: committedLayerIdSeed,
       committedNextInstanceRevision: committedNextInstanceRevision,
       nextEpoch: nextEpoch,
       nextStructuralRevision: nextStructuralRevision,
@@ -392,6 +397,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
     required Set<NodeId> committedNodeIds,
     required Map<NodeId, NodeLocatorEntry> committedNodeLocator,
     required int committedNodeIdSeed,
+    required int committedLayerIdSeed,
     required int committedNextInstanceRevision,
     required int nextEpoch,
     required int nextStructuralRevision,
@@ -407,6 +413,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
     _store.allNodeIds = committedNodeIds;
     _store.nodeLocator = committedNodeLocator;
     _store.nodeIdSeed = committedNodeIdSeed;
+    _store.layerIdSeed = committedLayerIdSeed;
     _store.nextInstanceRevision = committedNextInstanceRevision;
     _store.controllerEpoch = nextEpoch;
     _store.structuralRevision = nextStructuralRevision;
@@ -477,6 +484,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
     required Set<NodeId> allNodeIds,
     required Map<NodeId, NodeLocatorEntry> nodeLocator,
     required int nodeIdSeed,
+    required int layerIdSeed,
     required int nextInstanceRevision,
     required int commitRevision,
   }) {
@@ -493,6 +501,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
       allNodeIds: allNodeIds,
       nodeLocator: nodeLocator,
       nodeIdSeed: nodeIdSeed,
+      layerIdSeed: layerIdSeed,
       nextInstanceRevision: nextInstanceRevision,
       commitRevision: commitRevision,
     );

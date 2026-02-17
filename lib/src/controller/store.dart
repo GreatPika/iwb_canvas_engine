@@ -11,6 +11,7 @@ class SceneStore {
       allNodeIds = txnCollectNodeIds(sceneDoc),
       nodeLocator = txnBuildNodeLocator(sceneDoc),
       nodeIdSeed = txnInitialNodeIdSeed(sceneDoc),
+      layerIdSeed = txnInitialLayerIdSeed(sceneDoc),
       nextInstanceRevision = txnInitialNodeInstanceRevisionSeed(sceneDoc);
 
   Scene sceneDoc;
@@ -25,5 +26,6 @@ class SceneStore {
   int commitRevision = 0;
 
   int nodeIdSeed;
+  int layerIdSeed;
   int nextInstanceRevision;
 }

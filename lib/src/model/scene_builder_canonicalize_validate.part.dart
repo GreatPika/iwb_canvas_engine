@@ -2,6 +2,7 @@ part of 'scene_builder.dart';
 
 void _validateStructuralInvariants(SceneSnapshot snapshot) {
   final seen = <String>{};
+  final seenLayerIds = <LayerId>{};
 
   final backgroundLayer = snapshot.backgroundLayer;
   for (
@@ -21,6 +22,15 @@ void _validateStructuralInvariants(SceneSnapshot snapshot) {
 
   for (var layerIndex = 0; layerIndex < snapshot.layers.length; layerIndex++) {
     final layer = snapshot.layers[layerIndex];
+    if (!seenLayerIds.add(layer.id)) {
+      throw SceneDataException(
+        code: SceneDataErrorCode.invalidValue,
+        path: 'layers[$layerIndex].id',
+        message:
+            'Field layers[$layerIndex].id must be unique across content layers.',
+        source: layer.id,
+      );
+    }
     for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
       final node = layer.nodes[nodeIndex];
       if (seen.add(node.id)) continue;
@@ -173,6 +183,9 @@ void _validateTransformRanges(Transform2D transform, String path) {
     max: sceneScaleMax,
     path: '$path.scaleY',
   );
+  // Invertibility is already enforced earlier by scene value validation
+  // (sceneValidateFiniteTransform2D), so range validation stays focused on
+  // coordinate/scale limits only.
 }
 
 void _validateCoordinate(double value, String path) {
