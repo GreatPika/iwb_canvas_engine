@@ -1,6 +1,6 @@
 {
   "profile": "smoke",
-  "caseCount": 3,
+  "caseCount": 4,
   "cases": [
     {
       "name": "nodes_10000",
@@ -25,8 +25,23 @@
       "name": "worst_case",
       "profile": "smoke",
       "metrics": {
-        "patch_svg_path": {"avgUs": 230, "minUs": 220, "p95Us": 280, "maxUs": 290},
-        "query_candidates": {"avgUs": 600, "minUs": 560, "p95Us": 700, "maxUs": 740}
+        "huge_bounds": {
+          "query": {"avgUs": 80, "minUs": 60, "p95Us": 120, "maxUs": 140},
+          "move_selection": {"avgUs": 480, "minUs": 440, "p95Us": 560, "maxUs": 600}
+        },
+        "huge_rect_select": {"avgUs": 7200, "minUs": 6900, "p95Us": 8100, "maxUs": 8500},
+        "very_long_path": {
+          "patch_svg_path": {"avgUs": 5400, "minUs": 5100, "p95Us": 6200, "maxUs": 6600},
+          "query_candidates": {"avgUs": 180, "minUs": 150, "p95Us": 240, "maxUs": 280}
+        }
+      }
+    },
+    {
+      "name": "selection_path_metrics",
+      "profile": "smoke",
+      "metrics": {
+        "paint_no_selection": {"avgUs": 2500, "minUs": 2200, "p95Us": 3200, "maxUs": 3600},
+        "paint_with_selection": {"avgUs": 5400, "minUs": 5000, "p95Us": 6400, "maxUs": 6800}
       }
     }
   ]

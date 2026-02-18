@@ -132,18 +132,26 @@ Implement validated fixes from review with priority on public-contract correctne
   - `ClearSceneResult.removedNodeIds` is immutable-by-contract.
   - Non-finite validation tests are parser-independent and deterministic.
 
-### DP-10 (P3) Render-path efficiency backlog
+### [x] DP-10 (P3) Render-path efficiency backlog — Completed 2026-02-18
 - Scope:
-  - Evaluate and optionally implement:
-    - remove color from `SceneTextLayoutCache` key (if layout-only caching intent confirmed);
-    - lazy-build path metrics only when needed;
-    - optional spatial-candidate-based culling path for very large scenes.
+  - Evaluated render-path options and implemented the low-risk optimization set:
+    - kept `color` in `SceneTextLayoutCache` key because cache entries store paint-bound `TextPainter` instances (removing color would risk stale/wrong color reuse without a layout-only cache refactor);
+    - switched path selection metrics to lazy-build only when path selection halos are actually drawn (removed eager metrics build from regular path draw path);
+    - normalized benchmark diff operation-path schema (`metrics.*` and flat leaves now compare as the same operation path), added mixed-schema regression tests, and aligned benchmark baselines to current report structure;
+    - added dedicated `selection_path_metrics` micro-bench case to track lazy path-metrics impact in deterministic render scenarios;
+    - deferred spatial-candidate render culling as backlog/RFC due to ordering/background-layer parity constraints.
 - Acceptance:
   - Bench evidence from DP-06 reports before/after; no visual regressions.
+  - Smoke diff now produces comparable operation diffs (non-empty `operations`) for `nodes_10000`, `strokes_*`, and `worst_case`.
+  - Latest verification artifact: `build/bench/load_profiles_smoke_diff.json` with populated p95 deltas including `selection_path_metrics`.
 
-### DP-11 (P3) Runtime invariant enforcement mode review
+### [x] DP-11 (P3) Runtime invariant enforcement mode review — Completed 2026-02-18
 - Scope:
-  - Revisit debug/profile-only invariant checks and document rationale or migrate critical subset to release fail-fast.
+  - Adopted hybrid invariant enforcement mode:
+    - critical runtime commit checks now run in all build modes (`debug`/`profile`/`release`) with fail-fast `StateError`;
+    - critical commit monotonic check now enforces strict increase against previous committed revision (`newCommitRevision > previousCommitRevision`) instead of nominal self-comparison wiring;
+    - full committed-store invariant sweep remains in `debug`/`profile` only.
+  - Updated docs to record the chosen contract and rationale.
 - Acceptance:
   - Decision recorded in docs + tests for chosen behavior.
 

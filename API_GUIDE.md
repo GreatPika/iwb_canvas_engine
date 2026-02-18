@@ -392,7 +392,9 @@ Write-notify semantics:
 
 - `write(...)` finalizes transaction state first, then schedules listener notification in a microtask when repaint is needed.
 - Listener notifications are coalesced to at most one notification per event-loop tick.
-- Commit invariant validation runs before finalizing transaction state and throws `StateError` on violations in `debug`/`profile` modes.
+- Commit invariant validation runs before finalizing transaction state:
+  - critical checks throw `StateError` in all build modes (`debug`/`profile`/`release`) and include strict commit-revision monotonicity against previous committed state;
+  - full committed-store invariant sweep throws `StateError` in `debug`/`profile`.
 - Committed `signals` are emitted before repaint listener notification for the same successful commit.
 - Calling `write(...)` from `addListener(...)` is allowed; it runs after the original transaction is finished.
 - Calling `write(...)` after controller disposal throws `StateError` and does not mutate state or emit effects.
@@ -572,7 +574,7 @@ Public error taxonomy:
 | Error type | When it is used | Typical API boundaries |
 | --- | --- | --- |
 | `ArgumentError` | Caller provided invalid argument value/shape for a runtime write or setter. | `addNode`, `patchNode`, transform/translate writes, numeric runtime setters, cache constructors (`maxEntries <= 0`). |
-| `StateError` | Runtime lifecycle/contract violation (not bad input data): disposed controller call, same-stack reentrancy, stale txn handle, async `write(...)` callback, invariant violation (`debug`/`profile`). | `write(...)` after `dispose`, `write(...)` with `Future` callback result, `handlePointer(...)` reentrancy, stale `SceneWriteTxn` write call, commit invariant failure (`debug`/`profile`). |
+| `StateError` | Runtime lifecycle/contract violation (not bad input data): disposed controller call, same-stack reentrancy, stale txn handle, async `write(...)` callback, invariant violation (critical checks in all modes; full sweep in `debug`/`profile`). | `write(...)` after `dispose`, `write(...)` with `Future` callback result, `handlePointer(...)` reentrancy, stale `SceneWriteTxn` write call, commit invariant failure. |
 | `SceneDataException` | Malformed scene/snapshot/json data at import/export/serialization boundary. | `initialSnapshot`, `replaceScene`, `SceneBuilder.buildFrom*`, `decodeScene*`, `encodeScene*`. |
 
 Encoding notes:

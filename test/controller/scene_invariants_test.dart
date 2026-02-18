@@ -332,6 +332,76 @@ void main() {
     );
   });
 
+  test('critical runtime invariant check throws for invalid numeric state', () {
+    final scene = sceneFixture(
+      gridEnabled: false,
+      gridCellSize: double.nan,
+      cameraOffset: const Offset(double.infinity, 0),
+    );
+    expect(
+      () => assertCriticalTxnStoreInvariants(
+        scene: scene,
+        commitRevision: 0,
+        previousCommitRevision: -1,
+      ),
+      throwsStateError,
+    );
+  });
+
+  test(
+    'critical runtime invariant check reports negative commit and enabled min grid',
+    () {
+      final scene = sceneFixture(gridEnabled: true, gridCellSize: 0.5);
+      expect(
+        () => assertCriticalTxnStoreInvariants(
+          scene: scene,
+          commitRevision: -1,
+          previousCommitRevision: -2,
+        ),
+        throwsStateError,
+      );
+    },
+  );
+
+  test('critical runtime invariant check throws on commit regression', () {
+    final scene = sceneFixture();
+    expect(
+      () => assertCriticalTxnStoreInvariants(
+        scene: scene,
+        commitRevision: 3,
+        previousCommitRevision: 4,
+      ),
+      throwsStateError,
+    );
+  });
+
+  test('critical runtime invariant check throws on equal commit revision', () {
+    final scene = sceneFixture();
+    expect(
+      () => assertCriticalTxnStoreInvariants(
+        scene: scene,
+        commitRevision: 3,
+        previousCommitRevision: 3,
+      ),
+      throwsStateError,
+    );
+  });
+
+  test(
+    'critical runtime invariant check passes on strictly increasing revision',
+    () {
+      final scene = sceneFixture();
+      expect(
+        () => assertCriticalTxnStoreInvariants(
+          scene: scene,
+          commitRevision: 4,
+          previousCommitRevision: 3,
+        ),
+        returnsNormally,
+      );
+    },
+  );
+
   test('detects mismatched nodeLocator entries', () {
     final scene = sceneFixture();
     final violations = txnCollectStoreInvariantViolations(

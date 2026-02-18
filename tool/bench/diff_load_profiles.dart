@@ -390,7 +390,15 @@ void _collectMetricLeaves({
       }
       metricValues[metricKey] = raw.toDouble();
     }
-    final metricPath = pathPrefix.isEmpty ? 'root' : pathPrefix;
+    final rawMetricPath = pathPrefix.isEmpty ? 'root' : pathPrefix;
+    final metricPath = _normalizeOperationPath(rawMetricPath);
+    final existing = sink[metricPath];
+    if (existing != null && existing.toString() != metricValues.toString()) {
+      throw _DiffToolInputException(
+        'duplicate operation path after normalization: '
+        '$rawMetricPath -> $metricPath in $sourcePath',
+      );
+    }
     sink[metricPath] = metricValues;
     return;
   }
@@ -409,4 +417,15 @@ void _collectMetricLeaves({
       sink: sink,
     );
   }
+}
+
+String _normalizeOperationPath(String path) {
+  if (path == 'root') {
+    return path;
+  }
+  var normalized = path;
+  while (normalized.startsWith('metrics.')) {
+    normalized = normalized.substring('metrics.'.length);
+  }
+  return normalized;
 }

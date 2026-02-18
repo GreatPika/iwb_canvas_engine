@@ -284,7 +284,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
       var committedSignals = const <CommittedSignal>[];
       if (hasSignals) {
         final nextCommitRevision = _store.commitRevision + 1;
-        _debugAssertStoreInvariantsCandidate(
+        _assertStoreInvariantsCandidate(
           scene: _store.sceneDoc,
           selectedNodeIds: _store.selectedNodeIds,
           allNodeIds: _store.allNodeIds,
@@ -293,6 +293,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
           layerIdSeed: _store.layerIdSeed,
           nextInstanceRevision: _store.nextInstanceRevision,
           commitRevision: nextCommitRevision,
+          previousCommitRevision: _store.commitRevision,
         );
         committedSignals = _signalsBuffer.writeTakeCommitted(
           commitRevision: nextCommitRevision,
@@ -337,7 +338,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
     final committedNodeIdSeed = ctx.nodeIdSeed;
     final committedLayerIdSeed = ctx.layerIdSeed;
     final committedNextInstanceRevision = ctx.nextInstanceRevision;
-    _debugAssertStoreInvariantsCandidate(
+    _assertStoreInvariantsCandidate(
       scene: committedScene,
       selectedNodeIds: committedSelection,
       allNodeIds: committedNodeIds,
@@ -346,6 +347,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
       layerIdSeed: committedLayerIdSeed,
       nextInstanceRevision: committedNextInstanceRevision,
       commitRevision: nextCommitRevision,
+      previousCommitRevision: _store.commitRevision,
     );
 
     debugBeforeSpatialPrepareCommitHook?.call();
@@ -478,7 +480,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
     }
   }
 
-  void _debugAssertStoreInvariantsCandidate({
+  void _assertStoreInvariantsCandidate({
     required Scene scene,
     required Set<NodeId> selectedNodeIds,
     required Set<NodeId> allNodeIds,
@@ -487,7 +489,13 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
     required int layerIdSeed,
     required int nextInstanceRevision,
     required int commitRevision,
+    required int previousCommitRevision,
   }) {
+    assertCriticalTxnStoreInvariants(
+      scene: scene,
+      commitRevision: commitRevision,
+      previousCommitRevision: previousCommitRevision,
+    );
     if (!kDebugMode && !kProfileMode) {
       return;
     }

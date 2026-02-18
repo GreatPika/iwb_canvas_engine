@@ -142,6 +142,49 @@ List<String> txnCollectStoreInvariantViolations({
   return violations;
 }
 
+List<String> txnCollectCriticalStoreInvariantViolations({
+  required Scene scene,
+  required int commitRevision,
+  required int previousCommitRevision,
+}) {
+  var violations = const <String>[];
+
+  if (commitRevision <= previousCommitRevision) {
+    violations = <String>[
+      ...violations,
+      'commitRevision must be strictly monotonic. '
+          'actual=$commitRevision previous=$previousCommitRevision',
+    ];
+  }
+
+  if (commitRevision < 0) {
+    violations = <String>[
+      ...violations,
+      'commitRevision must be non-negative.',
+    ];
+  }
+
+  final cameraOffset = scene.camera.offset;
+  if (!_txnIsFiniteOffset(cameraOffset)) {
+    violations = <String>[...violations, 'camera.offset must be finite.'];
+  }
+
+  final grid = scene.background.grid;
+  if (!grid.cellSize.isFinite || grid.cellSize <= 0) {
+    violations = <String>[
+      ...violations,
+      'grid.cellSize must be finite and > 0.',
+    ];
+  } else if (grid.isEnabled && grid.cellSize < kMinGridCellSize) {
+    violations = <String>[
+      ...violations,
+      'enabled grid.cellSize must be >= $kMinGridCellSize.',
+    ];
+  }
+
+  return violations;
+}
+
 void debugAssertTxnStoreInvariants({
   required Scene scene,
   required Set<NodeId> selectedNodeIds,
@@ -165,6 +208,24 @@ void debugAssertTxnStoreInvariants({
   if (violations.isNotEmpty) {
     throw StateError(
       'Committed store invariants violated:\n- ${violations.join('\n- ')}',
+    );
+  }
+}
+
+void assertCriticalTxnStoreInvariants({
+  required Scene scene,
+  required int commitRevision,
+  required int previousCommitRevision,
+}) {
+  final violations = txnCollectCriticalStoreInvariantViolations(
+    scene: scene,
+    commitRevision: commitRevision,
+    previousCommitRevision: previousCommitRevision,
+  );
+  if (violations.isNotEmpty) {
+    throw StateError(
+      'Critical committed store invariants violated:\n- '
+      '${violations.join('\n- ')}',
     );
   }
 }

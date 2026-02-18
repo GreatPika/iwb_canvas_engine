@@ -131,7 +131,9 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Runtime snapshot validation: `initialSnapshot` and `replaceScene` fail fast with `SceneDataException` for malformed snapshots (duplicate node ids, invalid numbers, invalid SVG path data, invalid palette, invalid typed layer fields).
 - JSON decode boundary enforces hard payload limits: content layers `<= 4_096`, total scene nodes `<= 200_000`, stroke `localPoints` per node `<= 20_000`, and `svgPathData` length `<= 200_000`.
 - `clearScene` emits clear semantics on any clear-side state change: removing content nodes and/or creating missing dedicated `backgroundLayer` during clear canonicalization.
-- Commit invariant checks fail fast with `StateError` in `debug`/`profile` modes when committed store state violates runtime invariants.
+- Commit invariant checks are two-tiered:
+  - critical commit invariants fail fast with `StateError` in all build modes (`debug`/`profile`/`release`);
+  - full committed-store invariant sweep remains enabled in `debug`/`profile` modes.
 - Lifecycle fail-fast: after `dispose()`, mutating/effectful runtime calls (`write(...)`, `replaceScene(...)`, `notifySceneChanged()`/core repaint request, `handlePointer(...)`, `handleDoubleTap(...)`, interactive mode/tool/settings setters, selection/scene mutators) throw `StateError` and do not mutate state.
 
 ## Render cache and image lifecycle
@@ -147,7 +149,9 @@ class _CanvasScreenState extends State<CanvasScreen> {
 
 - Canonical invariants are defined in `tool/invariant_registry.dart`.
 - Validation checks are available in `tool/` and run in CI.
-- Runtime commit invariant checks are enforced in `debug`/`profile` modes and throw `StateError` on violations.
+- Runtime commit invariant checks are enforced as a two-tier contract:
+  - critical checks (`camera/grid finite+valid`, strictly monotonic commit revision vs previous committed state) run in all build modes;
+  - full committed-store invariant sweep runs in `debug`/`profile`.
 - Typed layer contract:
   - snapshot/runtime model uses `backgroundLayer` as a dedicated typed field and `layers` as content-only ordered layers.
   - each `ContentLayerSnapshot` has stable `id: LayerId`.

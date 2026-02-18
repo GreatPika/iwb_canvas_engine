@@ -724,10 +724,6 @@ class ScenePainter extends CustomPainter {
       return;
     }
 
-    if (pathMetricsCache != null) {
-      pathMetricsCache!.getOrBuild(node: node, localPath: localPath);
-    }
-
     canvas.save();
     canvas.transform(_toViewTransform(node.transform, cameraOffset));
 

@@ -934,6 +934,15 @@ void main() {
     expect(strokeCache.debugHitCount, greaterThanOrEqualTo(1));
     expect(textCache.debugBuildCount, 1);
     expect(textCache.debugHitCount, greaterThanOrEqualTo(1));
+    expect(pathCache.debugBuildCount, 0);
+    expect(pathCache.debugHitCount, 0);
+
+    controller.write<void>((writer) {
+      writer.writeSelectionReplace(const <NodeId>{'path'});
+    });
+    await _paintToImage(painter, width: 120, height: 100);
+    await _paintToImage(painter, width: 120, height: 100);
+
     expect(pathCache.debugBuildCount, 1);
     expect(pathCache.debugHitCount, greaterThanOrEqualTo(1));
   });

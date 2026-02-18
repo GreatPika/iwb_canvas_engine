@@ -20,6 +20,10 @@
 - Benchmark diff determinism coverage now asserts byte-identical output across repeated runs.
 - `ClearSceneResult.removedNodeIds` is now immutable-by-contract (defensive copy + unmodifiable snapshot in public type).
 - Benchmark non-finite validation coverage now uses deterministic in-memory `buildDiffReport(...)` tests instead of relying on JSON overflow parsing behavior.
+- `ScenePainter` now builds `ScenePathMetricsCache` entries lazily only when selected path-node selection halos require contour metrics (no eager metrics build in regular draw path).
+- Benchmark diff operation-path matching now normalizes mixed schema shapes (`metrics.*` and flat leaves), so baseline/current reports compare deterministically without false missing-operation noise.
+- Load-profile benchmarks now include dedicated `selection_path_metrics` render case (`paint_no_selection` / `paint_with_selection`) for tracking lazy path-metrics behavior.
+- Runtime commit invariant validation now uses two tiers: critical checks (`camera/grid numeric validity` + strictly monotonic commit revision against previous committed state) are enforced in all build modes, while the full committed-store invariant sweep remains enabled in `debug`/`profile`.
 
 ## 5.0.0 (2026-02-18)
 

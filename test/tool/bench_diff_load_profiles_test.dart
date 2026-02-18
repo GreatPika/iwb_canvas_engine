@@ -305,6 +305,90 @@ void main() {
         ),
       );
     });
+
+    test('matches flat baseline and nested current metrics paths', () {
+      final output = bench_diff.buildDiffReport(
+        baseline: _report(
+          profile: 'smoke',
+          cases: <Map<String, Object?>>[
+            _caseMetrics('nodes_path_norm', <String, Map<String, num>>{
+              'single_node_patch': _metrics(100, 90, 120, 130),
+            }),
+          ],
+        ),
+        current: <String, Object?>{
+          'profile': 'smoke',
+          'caseCount': 1,
+          'cases': <Map<String, Object?>>[
+            <String, Object?>{
+              'name': 'nodes_path_norm',
+              'profile': 'smoke',
+              'metrics': <String, Object?>{
+                'nodeCount': 10000,
+                'iterations': 3,
+                'metrics': <String, Object?>{
+                  'single_node_patch': _metrics(110, 95, 130, 140),
+                },
+              },
+            },
+          ],
+        },
+        baselinePath: 'baseline.json',
+        currentPath: 'current.json',
+      );
+
+      final case0 = (output['cases'] as List).single as Map<String, Object?>;
+      final summary = case0['summary'] as Map<String, Object?>;
+      expect(summary['missingOperationsInBaseline'], isEmpty);
+      expect(summary['missingOperationsInCurrent'], isEmpty);
+
+      final operations = case0['operations'] as List<Object?>;
+      expect(operations, hasLength(1));
+      final operation = operations.single as Map<String, Object?>;
+      expect(operation['operation'], 'single_node_patch');
+    });
+
+    test('matches nested baseline and flat current metrics paths', () {
+      final output = bench_diff.buildDiffReport(
+        baseline: <String, Object?>{
+          'profile': 'smoke',
+          'caseCount': 1,
+          'cases': <Map<String, Object?>>[
+            <String, Object?>{
+              'name': 'nodes_path_norm',
+              'profile': 'smoke',
+              'metrics': <String, Object?>{
+                'nodeCount': 10000,
+                'iterations': 3,
+                'metrics': <String, Object?>{
+                  'single_node_patch': _metrics(100, 90, 120, 130),
+                },
+              },
+            },
+          ],
+        },
+        current: _report(
+          profile: 'smoke',
+          cases: <Map<String, Object?>>[
+            _caseMetrics('nodes_path_norm', <String, Map<String, num>>{
+              'single_node_patch': _metrics(110, 95, 130, 140),
+            }),
+          ],
+        ),
+        baselinePath: 'baseline.json',
+        currentPath: 'current.json',
+      );
+
+      final case0 = (output['cases'] as List).single as Map<String, Object?>;
+      final summary = case0['summary'] as Map<String, Object?>;
+      expect(summary['missingOperationsInBaseline'], isEmpty);
+      expect(summary['missingOperationsInCurrent'], isEmpty);
+
+      final operations = case0['operations'] as List<Object?>;
+      expect(operations, hasLength(1));
+      final operation = operations.single as Map<String, Object?>;
+      expect(operation['operation'], 'single_node_patch');
+    });
   });
 }
 
