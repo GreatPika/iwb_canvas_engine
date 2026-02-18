@@ -92,21 +92,23 @@ class ScenePainter extends CustomPainter {
     ).inflate(_cullPadding);
 
     final selectedNodes = <NodeSnapshot>[];
+    _drawVisibleNodes(
+      canvas: canvas,
+      nodes: snapshot.backgroundLayer.nodes,
+      cameraOffset: cameraOffset,
+      viewRect: viewRect,
+      selectedIds: selectedIds,
+      selectedNodes: selectedNodes,
+    );
     for (final layer in snapshot.layers) {
-      for (final node in layer.nodes) {
-        if (!node.isVisible) {
-          continue;
-        }
-        final previewDelta = _nodePreviewOffset(node.id);
-        final bounds = _nodeBoundsWorld(node, previewDelta: previewDelta);
-        if (!_isFiniteRect(bounds) || !viewRect.overlaps(bounds)) {
-          continue;
-        }
-        _drawNode(canvas, node, cameraOffset, previewDelta: previewDelta);
-        if (selectedIds.contains(node.id)) {
-          selectedNodes.add(node);
-        }
-      }
+      _drawVisibleNodes(
+        canvas: canvas,
+        nodes: layer.nodes,
+        cameraOffset: cameraOffset,
+        viewRect: viewRect,
+        selectedIds: selectedIds,
+        selectedNodes: selectedNodes,
+      );
     }
 
     _drawSelection(
@@ -116,6 +118,30 @@ class ScenePainter extends CustomPainter {
       selectionRect,
       clampNonNegativeFinite(selectionStrokeWidth),
     );
+  }
+
+  void _drawVisibleNodes({
+    required Canvas canvas,
+    required Iterable<NodeSnapshot> nodes,
+    required Offset cameraOffset,
+    required Rect viewRect,
+    required Set<NodeId> selectedIds,
+    required List<NodeSnapshot> selectedNodes,
+  }) {
+    for (final node in nodes) {
+      if (!node.isVisible) {
+        continue;
+      }
+      final previewDelta = _nodePreviewOffset(node.id);
+      final bounds = _nodeBoundsWorld(node, previewDelta: previewDelta);
+      if (!_isFiniteRect(bounds) || !viewRect.overlaps(bounds)) {
+        continue;
+      }
+      _drawNode(canvas, node, cameraOffset, previewDelta: previewDelta);
+      if (selectedIds.contains(node.id)) {
+        selectedNodes.add(node);
+      }
+    }
   }
 
   void _drawSelection(

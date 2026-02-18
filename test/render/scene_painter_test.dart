@@ -74,6 +74,24 @@ Future<int> _countNonBackgroundPixels(Image image, Color background) async {
   return count;
 }
 
+Future<Color> _pixelColor(Image image, int x, int y) async {
+  if (x < 0 || y < 0 || x >= image.width || y >= image.height) {
+    throw ArgumentError('Pixel ($x, $y) is outside image bounds.');
+  }
+  final data = await image.toByteData(format: ImageByteFormat.rawRgba);
+  if (data == null) {
+    throw StateError('Failed to encode image to raw RGBA.');
+  }
+  final bytes = data.buffer.asUint8List();
+  final index = (y * image.width + x) * 4;
+  return Color.fromARGB(
+    bytes[index + 3],
+    bytes[index],
+    bytes[index + 1],
+    bytes[index + 2],
+  );
+}
+
 Future<double> _inkCentroidX(Image image, Color background) async {
   final data = await image.toByteData(format: ImageByteFormat.rawRgba);
   if (data == null) {
@@ -507,6 +525,160 @@ void main() {
     final bounds = await _inkBounds(image, background);
     expect(bounds.left, lessThanOrEqualTo(1.5));
   });
+
+  test('ScenePainter draws backgroundLayer below content layers', () async {
+    const background = Color(0xFFFFFFFF);
+    const backgroundNodeColor = Color(0xFF1E88E5);
+    const contentNodeColor = Color(0xFFE53935);
+    final controller = SceneControllerCore(
+      initialSnapshot: SceneSnapshot(
+        background: const BackgroundSnapshot(color: background),
+        backgroundLayer: BackgroundLayerSnapshot(
+          nodes: const <NodeSnapshot>[
+            RectNodeSnapshot(
+              id: 'bg-node',
+              size: Size(24, 24),
+              fillColor: backgroundNodeColor,
+              strokeWidth: 0,
+              transform: Transform2D(a: 1, b: 0, c: 0, d: 1, tx: 20, ty: 20),
+            ),
+          ],
+        ),
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
+            id: 'layer-auto-bg-order',
+            nodes: const <NodeSnapshot>[
+              RectNodeSnapshot(
+                id: 'content-node',
+                size: Size(12, 12),
+                fillColor: contentNodeColor,
+                strokeWidth: 0,
+                transform: Transform2D(a: 1, b: 0, c: 0, d: 1, tx: 20, ty: 20),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+    addTearDown(controller.dispose);
+
+    final image = await _paintToImage(
+      ScenePainter(controller: controller, imageResolver: (_) => null),
+      width: 40,
+      height: 40,
+    );
+
+    expect(await _pixelColor(image, 20, 20), contentNodeColor);
+    expect(await _pixelColor(image, 10, 10), backgroundNodeColor);
+  });
+
+  test(
+    'ScenePainter culls backgroundLayer nodes using stroke-inflated bounds',
+    () async {
+      const background = Color(0xFFFFFFFF);
+      final controller = SceneControllerCore(
+        initialSnapshot: SceneSnapshot(
+          background: const BackgroundSnapshot(
+            color: background,
+            grid: GridSnapshot(
+              isEnabled: false,
+              cellSize: 10,
+              color: Color(0xFF000000),
+            ),
+          ),
+          backgroundLayer: BackgroundLayerSnapshot(
+            nodes: const <NodeSnapshot>[
+              RectNodeSnapshot(
+                id: 'edge-bg-rect',
+                size: Size(10, 10),
+                strokeColor: Color(0xFF000000),
+                strokeWidth: 8,
+                transform: Transform2D(a: 1, b: 0, c: 0, d: 1, tx: -8, ty: 15),
+              ),
+            ],
+          ),
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      final image = await _paintToImage(
+        ScenePainter(controller: controller, imageResolver: (_) => null),
+        width: 30,
+        height: 30,
+      );
+
+      expect(
+        await _countNonBackgroundPixels(image, background),
+        greaterThan(0),
+      );
+      final bounds = await _inkBounds(image, background);
+      expect(bounds.left, lessThanOrEqualTo(1.5));
+    },
+  );
+
+  test(
+    'ScenePainter draws selection frame for backgroundLayer and keeps preview parity',
+    () async {
+      const background = Color(0xFFFFFFFF);
+      const node = RectNodeSnapshot(
+        id: 'bg-world-selection',
+        size: Size(20, 12),
+        transform: Transform2D(
+          a: 0.7071067811865476,
+          b: 0.7071067811865476,
+          c: -0.7071067811865476,
+          d: 0.7071067811865476,
+          tx: 40,
+          ty: 30,
+        ),
+      );
+      const selectionStrokeWidth = 3.0;
+      final expectedFrame = RenderGeometryCache()
+          .get(node)
+          .worldBounds
+          .inflate(selectionStrokeWidth);
+      final renderState = _FakeRenderState(
+        snapshot: SceneSnapshot(
+          background: const BackgroundSnapshot(color: background),
+          backgroundLayer: BackgroundLayerSnapshot(
+            nodes: const <NodeSnapshot>[node],
+          ),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(id: 'layer-auto-bg-selection'),
+          ],
+        ),
+        selectedNodeIds: const <NodeId>{'bg-world-selection'},
+      );
+
+      final baselineImage = await _paintToImage(
+        ScenePainter(
+          controller: renderState,
+          imageResolver: (_) => null,
+          selectionStrokeWidth: selectionStrokeWidth,
+          selectionColor: const Color(0xFFFF0000),
+        ),
+        width: 80,
+        height: 80,
+      );
+      final baselineBounds = await _inkBounds(baselineImage, background);
+      _expectRectNear(baselineBounds, expectedFrame);
+
+      const previewDelta = Offset(7, -5);
+      final previewImage = await _paintToImage(
+        ScenePainter(
+          controller: renderState,
+          imageResolver: (_) => null,
+          selectionStrokeWidth: selectionStrokeWidth,
+          selectionColor: const Color(0xFFFF0000),
+          nodePreviewOffsetResolver: (_) => previewDelta,
+        ),
+        width: 80,
+        height: 80,
+      );
+      final previewBounds = await _inkBounds(previewImage, background);
+      _expectRectNear(previewBounds, expectedFrame.shift(previewDelta));
+    },
+  );
 
   test(
     'ScenePainter draws rect selection frame from worldBounds and keeps preview parity',

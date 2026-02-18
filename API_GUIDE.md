@@ -704,6 +704,22 @@ Required updates:
    missing `backgroundLayer` is accepted and canonicalized to an empty dedicated
    layer before returning `SceneSnapshot`.
 
+### 14.4 From 4.x to 5.0.0
+
+Required updates:
+
+1. Update package dependency to `iwb_canvas_engine: ^5.0.0`.
+2. Ensure JSON import paths accept only schema `5`:
+   - writer contract: `schemaVersionWrite == 5`,
+   - reader contract: `schemaVersionsRead == {5}`.
+3. If your app consumed command signals as "method called", update it to
+   "state changed" semantics for:
+   - `selection.all`,
+   - `background.updated`,
+   - `grid.enabled.updated`,
+   - `grid.cell.updated`,
+   - `camera.updated`.
+
 ## 15. Quick recipes
 
 ### 15.1 Export/import JSON

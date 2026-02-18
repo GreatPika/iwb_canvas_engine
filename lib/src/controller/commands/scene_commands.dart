@@ -18,6 +18,10 @@ class SceneCommands {
     return sorted;
   }
 
+  bool _nodeIdSetsEqual(Set<NodeId> left, Set<NodeId> right) {
+    return left.length == right.length && left.containsAll(right);
+  }
+
   NodeId writeAddNode(NodeSpec spec, {LayerId? layerId}) {
     return _writeRunner((writer) {
       final nodeId = writer.writeNodeInsert(spec, layerId: layerId);
@@ -88,10 +92,12 @@ class SceneCommands {
 
   int writeSelectionSelectAll({bool onlySelectable = true}) {
     return _writeRunner((writer) {
+      final beforeSelection = Set<NodeId>.of(writer.selectedNodeIds);
       final count = writer.writeSelectionSelectAll(
         onlySelectable: onlySelectable,
       );
-      if (count > 0) {
+      final afterSelection = writer.selectedNodeIds;
+      if (!_nodeIdSetsEqual(beforeSelection, afterSelection)) {
         writer.writeSignalEnqueue(type: 'selection.all');
       }
       return count;
@@ -133,29 +139,41 @@ class SceneCommands {
 
   void writeBackgroundColorSet(Color color) {
     _writeRunner<void>((writer) {
+      final before = writer.snapshot.background.color;
       writer.writeBackgroundColor(color);
-      writer.writeSignalEnqueue(type: 'background.updated');
+      if (writer.snapshot.background.color != before) {
+        writer.writeSignalEnqueue(type: 'background.updated');
+      }
     });
   }
 
   void writeGridEnabledSet(bool enabled) {
     _writeRunner<void>((writer) {
+      final before = writer.snapshot.background.grid.isEnabled;
       writer.writeGridEnable(enabled);
-      writer.writeSignalEnqueue(type: 'grid.enabled.updated');
+      if (writer.snapshot.background.grid.isEnabled != before) {
+        writer.writeSignalEnqueue(type: 'grid.enabled.updated');
+      }
     });
   }
 
   void writeGridCellSizeSet(double size) {
     _writeRunner<void>((writer) {
+      final before = writer.snapshot.background.grid.cellSize;
       writer.writeGridCellSize(size);
-      writer.writeSignalEnqueue(type: 'grid.cell.updated');
+      if (writer.snapshot.background.grid.cellSize != before) {
+        writer.writeSignalEnqueue(type: 'grid.cell.updated');
+      }
     });
   }
 
   void writeCameraOffsetSet(Offset offset) {
     _writeRunner<void>((writer) {
+      final before = writer.snapshot.camera.offset;
       writer.writeCameraOffset(offset);
-      writer.writeSignalEnqueue(type: 'camera.updated');
+      if (writer.snapshot.camera.offset != before) {
+        writer.writeSignalEnqueue(type: 'camera.updated');
+      }
     });
   }
 }

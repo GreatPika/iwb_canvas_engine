@@ -1,5 +1,9 @@
 ## Unreleased
 
+- No changes yet.
+
+## 5.0.0 (2026-02-18)
+
 ### Breaking
 
 - JSON codec now supports only `schemaVersion = 5`; schema `4` is rejected on read.

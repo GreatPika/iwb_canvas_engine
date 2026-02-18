@@ -217,6 +217,43 @@ void main() {
     assertControllerInvariants(controller);
   });
 
+  test(
+    'selection selectAll emits signal when selection changes to empty',
+    () async {
+      final controller = buildController();
+      addTearDown(controller.dispose);
+
+      controller.commands.writeSelectionReplace(const <NodeId>{'base'});
+      await pumpEventQueue();
+      expect(controller.selectedNodeIds, const <NodeId>{'base'});
+
+      controller.commands.writePatchNode(
+        const RectNodePatch(
+          id: 'base',
+          common: CommonNodePatch(isSelectable: PatchField<bool>.value(false)),
+        ),
+      );
+      await pumpEventQueue();
+      expect(controller.selectedNodeIds, const <NodeId>{'base'});
+
+      var selectionAllSignals = 0;
+      final sub = controller.signals.listen((signal) {
+        if (signal.type == 'selection.all') {
+          selectionAllSignals = selectionAllSignals + 1;
+        }
+      });
+      addTearDown(sub.cancel);
+
+      final selectedCount = controller.commands.writeSelectionSelectAll();
+      await pumpEventQueue();
+
+      expect(selectedCount, 0);
+      expect(selectionAllSignals, 1);
+      expect(controller.selectedNodeIds, isEmpty);
+      assertControllerInvariants(controller);
+    },
+  );
+
   test('selection replace same set emits no signal', () async {
     final controller = buildController();
     addTearDown(controller.dispose);
@@ -384,6 +421,78 @@ void main() {
     expect(controller.selectedNodeIds, isEmpty);
     assertControllerInvariants(controller);
   });
+
+  test(
+    'no-op background/grid/camera setters emit no signal and keep commit revision',
+    () async {
+      final controller = buildController();
+      addTearDown(controller.dispose);
+
+      final initialRevision = controller.debugCommitRevision;
+      final snapshot = controller.snapshot;
+      final signalTypes = <String>[];
+      final sub = controller.signals.listen((signal) {
+        signalTypes.add(signal.type);
+      });
+      addTearDown(sub.cancel);
+
+      controller.commands.writeBackgroundColorSet(snapshot.background.color);
+      controller.commands.writeGridEnabledSet(
+        snapshot.background.grid.isEnabled,
+      );
+      controller.commands.writeGridCellSizeSet(
+        snapshot.background.grid.cellSize,
+      );
+      controller.commands.writeCameraOffsetSet(snapshot.camera.offset);
+      await pumpEventQueue();
+
+      final trackedSignalTypes = signalTypes
+          .where(
+            (type) =>
+                type == 'background.updated' ||
+                type == 'grid.enabled.updated' ||
+                type == 'grid.cell.updated' ||
+                type == 'camera.updated',
+          )
+          .toList(growable: false);
+      expect(trackedSignalTypes, isEmpty);
+      expect(controller.debugCommitRevision, initialRevision);
+      assertControllerInvariants(controller);
+    },
+  );
+
+  test(
+    'changed background/grid/camera setters emit signals and bump commit revision',
+    () async {
+      final controller = buildController();
+      addTearDown(controller.dispose);
+
+      final initialRevision = controller.debugCommitRevision;
+      final signalTypes = <String>[];
+      final sub = controller.signals.listen((signal) {
+        signalTypes.add(signal.type);
+      });
+      addTearDown(sub.cancel);
+
+      controller.commands.writeBackgroundColorSet(const Color(0xFFAA5500));
+      controller.commands.writeGridEnabledSet(true);
+      controller.commands.writeGridCellSizeSet(42);
+      controller.commands.writeCameraOffsetSet(const Offset(10, -4));
+      await pumpEventQueue();
+
+      expect(
+        signalTypes,
+        containsAll(<String>[
+          'background.updated',
+          'grid.enabled.updated',
+          'grid.cell.updated',
+          'camera.updated',
+        ]),
+      );
+      expect(controller.debugCommitRevision, initialRevision + 4);
+      assertControllerInvariants(controller);
+    },
+  );
 
   test('grid cell size non positive throws ArgumentError', () async {
     final controller = buildController();
