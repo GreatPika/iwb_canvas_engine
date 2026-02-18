@@ -30,7 +30,9 @@ void main() {
       );
       final writer = SceneWriter(ctx, txnSignalSink: (_) {});
 
-      expect(writer.writeClearSceneKeepBackground(), isEmpty);
+      final clearResult = writer.writeClearSceneKeepBackgroundResult();
+      expect(clearResult.removedNodeIds, isEmpty);
+      expect(clearResult.didStructuralClear, isTrue);
       expect(ctx.workingScene.layers, isEmpty);
       expect(ctx.workingScene.backgroundLayer, isNotNull);
     },

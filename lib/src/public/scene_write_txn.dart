@@ -5,6 +5,19 @@ import 'node_patch.dart';
 import 'node_spec.dart';
 import 'snapshot.dart';
 
+class ClearSceneResult {
+  ClearSceneResult({
+    required List<NodeId> removedNodeIds,
+    required this.didStructuralClear,
+  }) : removedNodeIds = List<NodeId>.unmodifiable(
+         List<NodeId>.from(removedNodeIds),
+       );
+
+  /// Immutable snapshot of removed ids; callers must treat it as read-only.
+  final List<NodeId> removedNodeIds;
+  final bool didStructuralClear;
+}
+
 /// Safe transactional write contract exposed by public controllers.
 ///
 /// This API intentionally avoids exposing mutable scene internals.
@@ -45,6 +58,13 @@ abstract interface class SceneWriteTxn {
   int writeSelectionTranslate(Offset delta);
   int writeSelectionTransform(Transform2D delta);
   int writeDeleteSelection();
+
+  /// Clears all content layers while keeping a dedicated background layer.
+  ///
+  /// `didStructuralClear` is `true` when clear causes any structural change,
+  /// including canonicalization such as creating a missing background layer.
+  /// For structural-only clear, `removedNodeIds` can be empty.
+  ClearSceneResult writeClearSceneKeepBackgroundResult();
   List<NodeId> writeClearSceneKeepBackground();
 
   void writeCameraOffset(Offset offset);

@@ -169,6 +169,8 @@ Validation notes:
 - `PatchField.nullValue()` is rejected for non-nullable fields with `ArgumentError`.
 - `CommonNodePatch.opacity` is strict at write boundary (`[0,1]`).
 - `TextNodePatch` no longer accepts `size`; text size is re-derived automatically when layout-affecting fields change (`text`, `fontSize`, `isBold`, `isItalic`, `isUnderline`, `fontFamily`, `lineHeight`, `maxWidth`).
+- Serialized `TextNode.size` is derived metadata and not a source of truth; decode/import and layout-affecting text patches re-derive it in-engine.
+- Cross-platform compatibility note: text-size snapshots can vary slightly across platforms due to font metric differences; prefer semantic assertions or tolerance-based numeric comparisons in integration tests.
 
 ### 5.3 Tri-state patch semantics (`PatchField<T>`)
 
@@ -335,6 +337,7 @@ Behavior notes:
 - `selectAll(onlySelectable: false)` also includes visible non-selectable foreground nodes.
 - Commit-time selection normalization removes only missing/background/invisible ids and preserves explicitly selected non-selectable nodes.
 - `clearScene` keeps/creates dedicated `backgroundLayer` and clears all content layers.
+- `clearScene`-related clear effects are state-change based: clear signal/action semantics apply when nodes are removed and also when a missing dedicated `backgroundLayer` is created during clear canonicalization (with empty `nodeIds` allowed for structural-only clear).
 
 ### 6.7 Low-level input hooks
 
@@ -369,6 +372,12 @@ public API surface.
 - Selection write contracts are explicit about state-change:
   - `writeSelectionReplace(...) -> bool changed`
   - `writeSelectionToggle(...) -> bool changed`
+  - `writeClearSceneKeepBackgroundResult() -> ClearSceneResult` where
+    `didStructuralClear` marks structural clear side effects (including
+    creating a missing dedicated `backgroundLayer`), and `removedNodeIds` may
+    be empty for structural-only clear.
+  - `ClearSceneResult.removedNodeIds` is an immutable snapshot (defensive copy
+    + unmodifiable).
   - `writeSelectionReplace(...)` normalizes input to visible content ids only;
     if normalized input is empty, operation is a no-op (`changed == false`).
   - `writeSelectionToggle(...)` ignores invalid/missing/background/invisible
@@ -727,7 +736,8 @@ Required updates:
    - `background.updated`,
    - `grid.enabled.updated`,
    - `grid.cell.updated`,
-   - `camera.updated`.
+   - `camera.updated`,
+   - `scene.cleared` on structural clear-side effects (for example creating missing dedicated `backgroundLayer` with empty `nodeIds`).
 
 ## 15. Quick recipes
 

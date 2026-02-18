@@ -60,6 +60,36 @@ jobs:
           name: load-profiles-smoke
           path: build/bench/load_profiles_smoke.json
 
+      - name: Diff smoke benchmark report vs baseline (Phase A, non-blocking)
+        if: always()
+        run: |
+          BASELINE=tool/bench/baselines/load_profiles_smoke_baseline.json
+          CURRENT=build/bench/load_profiles_smoke.json
+          OUTPUT=build/bench/load_profiles_smoke_diff.json
+          if [ -f "$BASELINE" ] && [ -f "$CURRENT" ]; then
+            dart run tool/bench/diff_load_profiles.dart \
+              --profile=smoke \
+              --baseline="$BASELINE" \
+              --current="$CURRENT" \
+              --output="$OUTPUT" || true
+          else
+            mkdir -p build/bench
+            cat > "$OUTPUT" <<'JSON'
+          {
+            "profile": "smoke",
+            "status": "skipped",
+            "reason": "baseline_or_current_report_missing"
+          }
+          JSON
+          fi
+
+      - name: Upload smoke benchmark diff artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-profiles-smoke-diff
+          path: build/bench/load_profiles_smoke_diff.json
+
       - name: Dartdoc
         run: dart doc
 

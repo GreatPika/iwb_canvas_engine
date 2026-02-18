@@ -1,0 +1,62 @@
+{
+  "profile": "full",
+  "caseCount": 6,
+  "cases": [
+    {
+      "name": "nodes_10000",
+      "profile": "full",
+      "metrics": {
+        "single_node_patch": {"avgUs": 160, "minUs": 140, "p95Us": 220, "maxUs": 240},
+        "single_node_transform": {"avgUs": 240, "minUs": 220, "p95Us": 320, "maxUs": 350},
+        "toggle_selection": {"avgUs": 100, "minUs": 90, "p95Us": 130, "maxUs": 150},
+        "move_selection": {"avgUs": 220, "minUs": 200, "p95Us": 300, "maxUs": 330}
+      }
+    },
+    {
+      "name": "nodes_50000",
+      "profile": "full",
+      "metrics": {
+        "single_node_patch": {"avgUs": 260, "minUs": 240, "p95Us": 340, "maxUs": 360},
+        "single_node_transform": {"avgUs": 420, "minUs": 380, "p95Us": 540, "maxUs": 580},
+        "toggle_selection": {"avgUs": 160, "minUs": 140, "p95Us": 220, "maxUs": 240},
+        "move_selection": {"avgUs": 410, "minUs": 370, "p95Us": 520, "maxUs": 560}
+      }
+    },
+    {
+      "name": "nodes_100000",
+      "profile": "full",
+      "metrics": {
+        "single_node_patch": {"avgUs": 400, "minUs": 360, "p95Us": 520, "maxUs": 560},
+        "single_node_transform": {"avgUs": 700, "minUs": 640, "p95Us": 900, "maxUs": 960},
+        "toggle_selection": {"avgUs": 260, "minUs": 230, "p95Us": 340, "maxUs": 370},
+        "move_selection": {"avgUs": 680, "minUs": 620, "p95Us": 880, "maxUs": 930}
+      }
+    },
+    {
+      "name": "strokes_1000_pts_1024",
+      "profile": "full",
+      "metrics": {
+        "single_stroke_patch_thickness": {"avgUs": 190, "minUs": 170, "p95Us": 250, "maxUs": 270},
+        "single_stroke_patch_points": {"avgUs": 620, "minUs": 560, "p95Us": 780, "maxUs": 820},
+        "toggle_selection": {"avgUs": 120, "minUs": 110, "p95Us": 160, "maxUs": 180}
+      }
+    },
+    {
+      "name": "strokes_5000_pts_512",
+      "profile": "full",
+      "metrics": {
+        "single_stroke_patch_thickness": {"avgUs": 280, "minUs": 250, "p95Us": 360, "maxUs": 390},
+        "single_stroke_patch_points": {"avgUs": 900, "minUs": 820, "p95Us": 1120, "maxUs": 1180},
+        "toggle_selection": {"avgUs": 180, "minUs": 160, "p95Us": 240, "maxUs": 260}
+      }
+    },
+    {
+      "name": "worst_case",
+      "profile": "full",
+      "metrics": {
+        "patch_svg_path": {"avgUs": 420, "minUs": 390, "p95Us": 530, "maxUs": 560},
+        "query_candidates": {"avgUs": 1350, "minUs": 1220, "p95Us": 1700, "maxUs": 1780}
+      }
+    }
+  ]
+}

@@ -2,7 +2,12 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/controller/commands/scene_commands.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_writer.dart';
+import 'package:iwb_canvas_engine/src/controller/txn_context.dart';
+import 'package:iwb_canvas_engine/src/controller/internal/signal_event.dart';
+import 'package:iwb_canvas_engine/src/core/scene.dart';
 
 import '../../utils/scene_invariants.dart';
 
@@ -32,6 +37,60 @@ void assertControllerInvariants(SceneControllerCore controller) {
 }
 
 void main() {
+  test(
+    'writeClearScene emits scene.cleared on structural clear-side effect',
+    () {
+      final bufferedSignals = <BufferedSignal>[];
+      final ctx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[ContentLayer(id: 'layer-auto-1')],
+        ),
+        workingSelection: <NodeId>{},
+        baseAllNodeIds: <NodeId>{},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+      T writeRunner<T>(T Function(SceneWriteTxn writer) fn) {
+        final writer = SceneWriter(ctx, txnSignalSink: bufferedSignals.add);
+        return fn(writer);
+      }
+
+      final commands = SceneCommands(writeRunner);
+
+      final removedCount = commands.writeClearScene();
+
+      expect(removedCount, 0);
+      expect(bufferedSignals, hasLength(1));
+      expect(bufferedSignals.single.type, 'scene.cleared');
+      expect(bufferedSignals.single.nodeIds, isEmpty);
+    },
+  );
+
+  test('writeClearScene no-op does not emit scene.cleared', () {
+    final bufferedSignals = <BufferedSignal>[];
+    final ctx = TxnContext(
+      baseScene: Scene(
+        backgroundLayer: BackgroundLayer(),
+        layers: <ContentLayer>[ContentLayer(id: 'layer-auto-2')],
+      ),
+      workingSelection: <NodeId>{},
+      baseAllNodeIds: <NodeId>{},
+      nodeIdSeed: 0,
+      nextInstanceRevision: 1,
+    );
+    T writeRunner<T>(T Function(SceneWriteTxn writer) fn) {
+      final writer = SceneWriter(ctx, txnSignalSink: bufferedSignals.add);
+      return fn(writer);
+    }
+
+    final commands = SceneCommands(writeRunner);
+
+    final removedCount = commands.writeClearScene();
+
+    expect(removedCount, 0);
+    expect(bufferedSignals, isEmpty);
+  });
+
   test('scene commands route structural updates through write', () async {
     final controller = buildController();
     addTearDown(controller.dispose);

@@ -58,11 +58,11 @@ Implement validated fixes from review with priority on public-contract correctne
 - Acceptance:
   - Guardrail fails when executable logic appears in `lib/*.dart`.
 
-### DP-06 (P1→P2) Introduce phased performance regression gate
-- Phase A:
-  - Add benchmark diff tool comparing current report vs baseline JSON (smoke/full).
-  - Publish diff artifact in CI/nightly; do not fail build yet.
-- Phase B:
+### [x] DP-06 (P1→P2) Introduce phased performance regression gate (Phase A) — Completed 2026-02-18
+- Phase A (done):
+  - Added benchmark diff tool comparing current report vs baseline JSON (smoke/full).
+  - CI/nightly now publish diff artifacts; build remains non-blocking for Phase A.
+- Phase B (pending):
   - Enable threshold-based fail gate (initially p95 deltas for key metrics).
 - Scope:
   - `tool/bench/*`, `.github/workflows/ci.yaml`, `.github/workflows/perf_nightly.yaml`.
@@ -71,7 +71,7 @@ Implement validated fixes from review with priority on public-contract correctne
 
 ## Wave 2 — P2/P3 (Previously omitted, now added)
 
-### DP-07 (P2) Clear-scene signal consistency edge case
+### [x] DP-07 (P2) Clear-scene signal consistency edge case — Completed 2026-02-18
 - Problem:
   - `writeClearSceneKeepBackground()` may create background-layer structure even when removed count is zero.
   - `scene.cleared` currently depends only on removed ids.
@@ -83,7 +83,7 @@ Implement validated fixes from review with priority on public-contract correctne
 - Acceptance:
   - Add tests for empty scene with missing background layer and for no-op clear semantics.
 
-### DP-08 (P2) TextNode explicit contract hardening (missing before)
+### [x] DP-08 (P2) TextNode explicit contract hardening (missing before) — Completed 2026-02-18
 - Problem:
   - `TextNode.size` is derived but this is easy to violate in integrations and can cause cross-platform drift in serialized payloads.
 - Scope:
@@ -101,6 +101,36 @@ Implement validated fixes from review with priority on public-contract correctne
   - Apply same finite/sanitize guard in `_SceneInteractiveOverlayPainter`.
 - Acceptance:
   - Add tests preventing NaN/Infinity camera crashes in overlay path.
+
+### [x] DP-12 (P2) Post-DP-06/07/08 hardening pass — Completed 2026-02-18
+- Problem:
+  - Clear-side effect reporting used downcast to concrete `SceneWriter`.
+  - Benchmark diff tool rounded numeric metrics to `int`, losing precision.
+  - Deterministic diff test asserted decoded equality instead of byte-level stability.
+- Scope:
+  - Add `SceneWriteTxn.writeClearSceneKeepBackgroundResult()` and public
+    `ClearSceneResult`, then remove clear-path downcasts.
+  - Preserve fractional benchmark metric values in diff parser/output and reject
+    non-finite metric inputs.
+  - Upgrade deterministic diff test to byte-identical output assertion.
+- Acceptance:
+  - No clear-path downcasts to `SceneWriter`.
+  - Diff tool keeps numeric precision and tests cover fractional/non-finite
+    cases plus byte-level determinism.
+
+### [x] DP-13 (P2) Post-DP-12 contract/test hardening — Completed 2026-02-18
+- Problem:
+  - `ClearSceneResult.removedNodeIds` immutability was implicit in writer
+    implementation, not guaranteed by public type contract.
+  - Non-finite bench validation test depended on JSON overflow parsing behavior.
+- Scope:
+  - Enforce defensive-copy + unmodifiable semantics in `ClearSceneResult`.
+  - Add unit tests for immutable snapshot and defensive copy behavior.
+  - Expose deterministic in-memory `buildDiffReport(...)` pipeline and test
+    non-finite validation using `double.infinity`/`double.nan`.
+- Acceptance:
+  - `ClearSceneResult.removedNodeIds` is immutable-by-contract.
+  - Non-finite validation tests are parser-independent and deterministic.
 
 ### DP-10 (P3) Render-path efficiency backlog
 - Scope:

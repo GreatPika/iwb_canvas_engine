@@ -2,9 +2,7 @@ import 'dart:collection';
 import 'dart:ui';
 
 import '../core/hit_test.dart';
-import '../core/nodes.dart' show TextNode;
 import '../core/selection_policy.dart';
-import '../core/text_layout.dart';
 import '../core/transform2d.dart';
 import 'internal/signal_event.dart';
 import '../model/document.dart';
@@ -100,7 +98,6 @@ class SceneWriter implements SceneWriteTxn {
     final found = _ctx.txnResolveMutableNode(patch.id);
     final oldCandidate = nodeHitTestCandidateBoundsWorld(found.node);
     txnApplyNodePatch(found.node, patch);
-    _txnRecomputeDerivedTextNodeSizeIfNeeded(node: found.node, patch: patch);
 
     _ctx.changeSet.txnTrackUpdated(patch.id);
     final newCandidate = nodeHitTestCandidateBoundsWorld(found.node);
@@ -321,11 +318,18 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   List<NodeId> writeClearSceneKeepBackground() {
+    return writeClearSceneKeepBackgroundResult().removedNodeIds;
+  }
+
+  @override
+  ClearSceneResult writeClearSceneKeepBackgroundResult() {
     _ensureTxnActive();
     final scene = _ctx.txnEnsureMutableScene();
+    var didStructuralClear = false;
     if (scene.backgroundLayer == null) {
       _ctx.txnEnsureMutableBackgroundLayer();
       _ctx.changeSet.txnMarkStructuralChanged();
+      didStructuralClear = true;
     }
 
     final clearedIds = <NodeId>[
@@ -336,7 +340,10 @@ class SceneWriter implements SceneWriteTxn {
     }
     scene.layers.clear();
     if (clearedIds.isEmpty) {
-      return const <NodeId>[];
+      return ClearSceneResult(
+        removedNodeIds: const <NodeId>[],
+        didStructuralClear: didStructuralClear,
+      );
     }
     _ctx.txnRebuildNodeLocatorFromWorkingScene();
 
@@ -348,7 +355,10 @@ class SceneWriter implements SceneWriteTxn {
       _ctx.workingSelection.clear();
       _ctx.changeSet.txnMarkSelectionChanged();
     }
-    return clearedIds;
+    return ClearSceneResult(
+      removedNodeIds: clearedIds,
+      didStructuralClear: true,
+    );
   }
 
   @override
@@ -434,30 +444,6 @@ class SceneWriter implements SceneWriteTxn {
   bool _txnPatchTouchesSelectionPolicy(NodePatch patch) {
     final common = patch.common;
     return !common.isVisible.isAbsent || !common.isSelectable.isAbsent;
-  }
-
-  void _txnRecomputeDerivedTextNodeSizeIfNeeded({
-    required Object node,
-    required NodePatch patch,
-  }) {
-    if (node is! TextNode || patch is! TextNodePatch) {
-      return;
-    }
-    if (!_txnTextPatchTouchesLayout(patch)) {
-      return;
-    }
-    recomputeDerivedTextSize(node);
-  }
-
-  bool _txnTextPatchTouchesLayout(TextNodePatch patch) {
-    return !patch.text.isAbsent ||
-        !patch.fontSize.isAbsent ||
-        !patch.isBold.isAbsent ||
-        !patch.isItalic.isAbsent ||
-        !patch.isUnderline.isAbsent ||
-        !patch.fontFamily.isAbsent ||
-        !patch.lineHeight.isAbsent ||
-        !patch.maxWidth.isAbsent;
   }
 
   void _txnRequireFiniteOffset(Offset value, {required String name}) {

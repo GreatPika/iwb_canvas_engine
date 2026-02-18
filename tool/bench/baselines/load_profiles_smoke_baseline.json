@@ -1,0 +1,33 @@
+{
+  "profile": "smoke",
+  "caseCount": 3,
+  "cases": [
+    {
+      "name": "nodes_10000",
+      "profile": "smoke",
+      "metrics": {
+        "single_node_patch": {"avgUs": 140, "minUs": 120, "p95Us": 180, "maxUs": 190},
+        "single_node_transform": {"avgUs": 210, "minUs": 190, "p95Us": 260, "maxUs": 270},
+        "toggle_selection": {"avgUs": 90, "minUs": 80, "p95Us": 120, "maxUs": 130},
+        "move_selection": {"avgUs": 200, "minUs": 180, "p95Us": 250, "maxUs": 270}
+      }
+    },
+    {
+      "name": "strokes_1000_pts_256",
+      "profile": "smoke",
+      "metrics": {
+        "single_stroke_patch_thickness": {"avgUs": 120, "minUs": 110, "p95Us": 150, "maxUs": 160},
+        "single_stroke_patch_points": {"avgUs": 260, "minUs": 240, "p95Us": 310, "maxUs": 320},
+        "toggle_selection": {"avgUs": 80, "minUs": 70, "p95Us": 110, "maxUs": 120}
+      }
+    },
+    {
+      "name": "worst_case",
+      "profile": "smoke",
+      "metrics": {
+        "patch_svg_path": {"avgUs": 230, "minUs": 220, "p95Us": 280, "maxUs": 290},
+        "query_candidates": {"avgUs": 600, "minUs": 560, "p95Us": 700, "maxUs": 740}
+      }
+    }
+  ]
+}

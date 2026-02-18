@@ -95,9 +95,14 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Transaction handle lifetime: `SceneWriteTxn` write methods are valid only inside the active `write(...)` callback; post-callback `write*` calls throw `StateError`.
 - Selection transaction methods report no-op vs change explicitly:
   - `writeSelectionReplace(...)`, `writeSelectionToggle(...)`, `writeSelectionClear()` return `bool changed`.
+- Clear transaction semantics are explicit:
+  - `writeClearSceneKeepBackgroundResult() -> ClearSceneResult`, where `didStructuralClear` marks structural clear side effects and `removedNodeIds` can be empty for structural-only clear.
+  - `ClearSceneResult.removedNodeIds` is returned as an immutable snapshot.
 - Write intents: `NodeSpec` variants.
 - Partial updates: `NodePatch` + tri-state `PatchField<T>`.
 - Text layout sizing is engine-derived: `TextNodeSpec`/`TextNodePatch` do not expose writable `size`; update text/style fields and the runtime recomputes text box bounds.
+- Serialized `TextNode.size` is derived metadata, not an authoritative input: decode/import and layout-affecting text patches re-derive size from text layout fields.
+- Cross-platform note: font metrics can differ slightly between platforms/font engines, so JSON snapshot comparisons should prefer semantic checks or numeric tolerance for text `size`.
 - Write-boundary validation: `addNode(...)`/`patchNode(...)` fail fast with `ArgumentError` for invalid `NodeSpec`/`NodePatch` values (including `transform`, `hitPadding`, and `opacity` outside `[0,1]`), and transform/translate write operations reject non-finite `Transform2D`/`Offset`.
 - Serialization: `encodeScene*`, `decodeScene*`, `SceneDataException`.
 - JSON map entrypoints accept `Map<String, dynamic>` (`decodeScene(...)`, `SceneBuilder.buildFromJson(...)`).
@@ -125,6 +130,7 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Runtime guardrails bound worst-case input/query cost: interactive stroke commits are capped to `20_000` points (deterministic downsampling), path-stroke precise hit-testing is capped to `2_048` samples per path metric, and oversized spatial queries switch to bounded candidate-scan fallback.
 - Runtime snapshot validation: `initialSnapshot` and `replaceScene` fail fast with `SceneDataException` for malformed snapshots (duplicate node ids, invalid numbers, invalid SVG path data, invalid palette, invalid typed layer fields).
 - JSON decode boundary enforces hard payload limits: content layers `<= 4_096`, total scene nodes `<= 200_000`, stroke `localPoints` per node `<= 20_000`, and `svgPathData` length `<= 200_000`.
+- `clearScene` emits clear semantics on any clear-side state change: removing content nodes and/or creating missing dedicated `backgroundLayer` during clear canonicalization.
 - Commit invariant checks fail fast with `StateError` in `debug`/`profile` modes when committed store state violates runtime invariants.
 - Lifecycle fail-fast: after `dispose()`, mutating/effectful runtime calls (`write(...)`, `replaceScene(...)`, `notifySceneChanged()`/core repaint request, `handlePointer(...)`, `handleDoubleTap(...)`, interactive mode/tool/settings setters, selection/scene mutators) throw `StateError` and do not mutate state.
 

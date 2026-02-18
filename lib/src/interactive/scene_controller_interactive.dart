@@ -465,14 +465,20 @@ class SceneControllerInteractive extends ChangeNotifier
 
   void clearScene({int? timestampMs}) {
     _ensureNotDisposed();
-    final clearedIds = _core.write<List<NodeId>>((writer) {
-      return writer.writeClearSceneKeepBackground();
+    final clearResult = _core.write<({List<NodeId> clearedIds, bool changed})>((
+      writer,
+    ) {
+      final result = writer.writeClearSceneKeepBackgroundResult();
+      return (
+        clearedIds: result.removedNodeIds,
+        changed: result.removedNodeIds.isNotEmpty || result.didStructuralClear,
+      );
     });
-    if (clearedIds.isEmpty) return;
+    if (!clearResult.changed) return;
 
     _events.emitAction(
       ActionType.clear,
-      clearedIds,
+      clearResult.clearedIds,
       _resolveTimestampMs(timestampMs),
     );
   }

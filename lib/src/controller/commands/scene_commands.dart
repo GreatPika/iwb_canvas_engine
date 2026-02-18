@@ -129,11 +129,15 @@ class SceneCommands {
 
   int writeClearScene() {
     return _writeRunner((writer) {
-      final removedIds = writer.writeClearSceneKeepBackground();
-      if (removedIds.isNotEmpty) {
-        writer.writeSignalEnqueue(type: 'scene.cleared', nodeIds: removedIds);
+      final clearResult = writer.writeClearSceneKeepBackgroundResult();
+      final removedNodeIds = clearResult.removedNodeIds;
+      if (removedNodeIds.isNotEmpty || clearResult.didStructuralClear) {
+        writer.writeSignalEnqueue(
+          type: 'scene.cleared',
+          nodeIds: removedNodeIds,
+        );
       }
-      return removedIds.length;
+      return removedNodeIds.length;
     });
   }
 

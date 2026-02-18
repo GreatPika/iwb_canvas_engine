@@ -66,6 +66,22 @@ void main() {
       },
     );
 
+    test('clearScene no-op does not emit clear action', () async {
+      final controller = controllerFromScene(
+        Scene(layers: <ContentLayer>[ContentLayer(id: 'layer-auto-empty')]),
+      );
+      addTearDown(controller.dispose);
+
+      final actions = <ActionCommitted>[];
+      final sub = controller.actions.listen(actions.add);
+      addTearDown(sub.cancel);
+
+      controller.clearScene(timestampMs: 205);
+      await pumpEventQueue();
+
+      expect(actions.where((a) => a.type == ActionType.clear), isEmpty);
+    });
+
     test('move drag up emits transform action with delta payload', () async {
       final rect = RectNode(id: 'node', size: const Size(30, 20))
         ..position = const Offset(60, 60);

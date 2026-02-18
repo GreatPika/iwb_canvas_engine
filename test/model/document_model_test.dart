@@ -759,6 +759,54 @@ void main() {
     expect(node.size.height, greaterThan(1));
   });
 
+  test('text node patch touching layout re-derives size', () {
+    final text = TextNode(
+      id: 'text-layout-patch',
+      text: 'Derived size',
+      size: const Size(1, 1),
+      fontSize: 24,
+      color: const Color(0xFF000000),
+    );
+
+    final changed = txnApplyNodePatch(
+      text,
+      const TextNodePatch(
+        id: 'text-layout-patch',
+        fontSize: PatchField<double>.value(28),
+      ),
+    );
+
+    expect(changed, isTrue);
+    expect(text.size, isNot(const Size(1, 1)));
+    expect(text.size.width, greaterThan(1));
+    expect(text.size.height, greaterThan(1));
+  });
+
+  test('text node patch without layout fields keeps derived size', () {
+    final text =
+        txnNodeFromSpec(
+              TextNodeSpec(
+                text: 'Stable derived size',
+                fontSize: 20,
+                color: const Color(0xFF000000),
+              ),
+              fallbackId: 'text-non-layout-patch',
+            )
+            as TextNode;
+    final sizeBefore = text.size;
+
+    final changed = txnApplyNodePatch(
+      text,
+      const TextNodePatch(
+        id: 'text-non-layout-patch',
+        color: PatchField<Color>.value(Color(0xFF123456)),
+      ),
+    );
+
+    expect(changed, isTrue);
+    expect(text.size, sizeBefore);
+  });
+
   test('node-from-spec rejects invalid numeric fields with field path', () {
     final invalidCases = <({NodeSpec spec, String field, String message})>[
       (

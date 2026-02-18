@@ -585,6 +585,35 @@ void main() {
     );
   });
 
+  test('decodeScene re-derives stale serialized text size on import', () {
+    final nodeJson = _baseNodeJson(id: 't-derived', type: 'text')
+      ..addAll(<String, dynamic>{
+        'text': 'Derived text size',
+        'size': <String, dynamic>{'w': 1, 'h': 1},
+        'fontSize': 24,
+        'color': '#FF000000',
+        'align': 'left',
+        'isBold': false,
+        'isItalic': false,
+        'isUnderline': false,
+      });
+
+    final decoded = decodeScene(_sceneWithSingleNode(nodeJson));
+    final text = decoded.layers.first.nodes.single as TextNodeSnapshot;
+    expect(text.size, isNot(const Size(1, 1)));
+    expect(text.size.width, greaterThan(1));
+    expect(text.size.height, greaterThan(1));
+
+    final encoded = encodeScene(decoded);
+    final layers = encoded['layers'] as List<dynamic>;
+    final layer = layers.single as Map<String, dynamic>;
+    final nodes = layer['nodes'] as List<dynamic>;
+    final encodedText = nodes.single as Map<String, dynamic>;
+    final encodedSize = encodedText['size'] as Map<String, dynamic>;
+    expect(encodedSize['w'], closeTo(text.size.width, 0.001));
+    expect(encodedSize['h'], closeTo(text.size.height, 0.001));
+  });
+
   test('decodeScene validates point and optional field types', () {
     final strokeJson = _baseNodeJson(id: 's1', type: 'stroke')
       ..addAll(<String, dynamic>{

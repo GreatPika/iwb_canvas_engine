@@ -12,6 +12,14 @@
 - `SceneViewInteractive` overlay painter now sanitizes camera offset (`NaN`/`Infinity` -> safe finite fallback) the same way as `ScenePainter`.
 - Guardrail tooling now enforces that root `lib/*.dart` files contain only `library` declaration, comments/docs, and `export` directives.
 - Guardrail root-entrypoint scanning now rejects executable code that appears after inline block comments on the same line (bypass closed).
+- Added benchmark diff tool (`tool/bench/diff_load_profiles.dart`) and baseline reports for smoke/full profiles; CI and nightly now publish non-blocking benchmark diff artifacts (Phase A rollout).
+- `scene.cleared`/`ActionType.clear` semantics now include structural clear-side effects: clear emits when content is removed and also when clear creates a missing dedicated `backgroundLayer` (with empty `nodeIds` for structural-only clear).
+- Text size derivation contract is now hardened on patch/import paths: layout-affecting text patches and decode/import re-derive `TextNode.size`; docs now explicitly mark serialized text `size` as derived metadata and note cross-platform font-metric variance.
+- `SceneWriteTxn` now exposes `writeClearSceneKeepBackgroundResult() -> ClearSceneResult`; clear-side effect flows no longer downcast to concrete `SceneWriter`.
+- Benchmark diff parsing now preserves fractional metric precision (`double`) and rejects non-finite metric values.
+- Benchmark diff determinism coverage now asserts byte-identical output across repeated runs.
+- `ClearSceneResult.removedNodeIds` is now immutable-by-contract (defensive copy + unmodifiable snapshot in public type).
+- Benchmark non-finite validation coverage now uses deterministic in-memory `buildDiffReport(...)` tests instead of relying on JSON overflow parsing behavior.
 
 ## 5.0.0 (2026-02-18)
 

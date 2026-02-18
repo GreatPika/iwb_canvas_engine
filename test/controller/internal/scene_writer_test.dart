@@ -464,15 +464,39 @@ void main() {
     expect(ctx.workingSelection, const <NodeId>{'keep'});
     expect(writer.writeDeleteSelection(), 0);
 
-    final cleared = writer.writeClearSceneKeepBackground();
-    expect(cleared, const <NodeId>['keep']);
+    final cleared = writer.writeClearSceneKeepBackgroundResult();
+    expect(cleared.removedNodeIds, const <NodeId>['keep']);
+    expect(cleared.didStructuralClear, isTrue);
     expect(ctx.workingScene.layers, isEmpty);
     expect(ctx.workingScene.backgroundLayer, isNotNull);
     expect(ctx.workingSelection, isEmpty);
-    expect(writer.writeClearSceneKeepBackground(), isEmpty);
+    final clearNoop = writer.writeClearSceneKeepBackgroundResult();
+    expect(clearNoop.removedNodeIds, isEmpty);
+    expect(clearNoop.didStructuralClear, isFalse);
     expect(ctx.changeSet.structuralChanged, isTrue);
     expect(ctx.changeSet.boundsChanged, isTrue);
     expect(ctx.changeSet.visualChanged, isTrue);
     expect(ctx.changeSet.selectionChanged, isTrue);
+  });
+
+  test('ClearSceneResult exposes immutable removedNodeIds snapshot', () {
+    final result = ClearSceneResult(
+      removedNodeIds: <NodeId>['a'],
+      didStructuralClear: true,
+    );
+
+    expect(() => result.removedNodeIds.add('b'), throwsUnsupportedError);
+    expect(result.removedNodeIds, <NodeId>['a']);
+  });
+
+  test('ClearSceneResult defensively copies removedNodeIds source', () {
+    final source = <NodeId>['a'];
+    final result = ClearSceneResult(
+      removedNodeIds: source,
+      didStructuralClear: false,
+    );
+
+    source.add('b');
+    expect(result.removedNodeIds, <NodeId>['a']);
   });
 }

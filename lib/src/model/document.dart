@@ -628,6 +628,13 @@ bool txnApplyNodePatch(SceneNode node, NodePatch patch, {bool dryRun = false}) {
             text.lineHeight = value;
           }, dryRun: dryRun) ||
           changed;
+      if (!dryRun && _txnTextPatchTouchesLayout(textPatch)) {
+        final beforeSize = text.size;
+        recomputeDerivedTextSize(text);
+        if (text.size != beforeSize) {
+          changed = true;
+        }
+      }
     case (StrokeNode stroke, StrokeNodePatch strokePatch):
       changed =
           _txnSetOffsets(strokePatch.points, stroke.points, (value) {
@@ -721,6 +728,17 @@ bool txnApplyNodePatch(SceneNode node, NodePatch patch, {bool dryRun = false}) {
   }
 
   return changed;
+}
+
+bool _txnTextPatchTouchesLayout(TextNodePatch patch) {
+  return !patch.text.isAbsent ||
+      !patch.fontSize.isAbsent ||
+      !patch.isBold.isAbsent ||
+      !patch.isItalic.isAbsent ||
+      !patch.isUnderline.isAbsent ||
+      !patch.fontFamily.isAbsent ||
+      !patch.lineHeight.isAbsent ||
+      !patch.maxWidth.isAbsent;
 }
 
 bool txnInsertNodeInScene({
