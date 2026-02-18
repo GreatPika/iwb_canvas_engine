@@ -101,6 +101,7 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Write-boundary validation: `addNode(...)`/`patchNode(...)` fail fast with `ArgumentError` for invalid `NodeSpec`/`NodePatch` values (including `transform`, `hitPadding`, and `opacity` outside `[0,1]`), and transform/translate write operations reject non-finite `Transform2D`/`Offset`.
 - Serialization: `encodeScene*`, `decodeScene*`, `SceneDataException`.
 - JSON map entrypoints accept `Map<String, dynamic>` (`decodeScene(...)`, `SceneBuilder.buildFromJson(...)`).
+- JSON decode/build diagnostics include fully-qualified field paths (for example `layers[0].nodes[0].isVisible`).
 - Event payload contract: `ActionCommitted.nodeIds/payload` are immutable snapshots.
 - Interactive event delivery contract: `actions` and `editTextRequests` are asynchronous; relative ordering against repaint/listener notifications is not a public contract.
 - Event-ordering guarantees:
@@ -123,6 +124,7 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Draw preview contract: active stroke/line preview does not mutate committed scene before pointer up commit; pointer cancel clears preview without scene mutation.
 - Runtime guardrails bound worst-case input/query cost: interactive stroke commits are capped to `20_000` points (deterministic downsampling), path-stroke precise hit-testing is capped to `2_048` samples per path metric, and oversized spatial queries switch to bounded candidate-scan fallback.
 - Runtime snapshot validation: `initialSnapshot` and `replaceScene` fail fast with `SceneDataException` for malformed snapshots (duplicate node ids, invalid numbers, invalid SVG path data, invalid palette, invalid typed layer fields).
+- JSON decode boundary enforces hard payload limits: content layers `<= 4_096`, total scene nodes `<= 200_000`, stroke `localPoints` per node `<= 20_000`, and `svgPathData` length `<= 200_000`.
 - Commit invariant checks fail fast with `StateError` in `debug`/`profile` modes when committed store state violates runtime invariants.
 - Lifecycle fail-fast: after `dispose()`, mutating/effectful runtime calls (`write(...)`, `replaceScene(...)`, `notifySceneChanged()`/core repaint request, `handlePointer(...)`, `handleDoubleTap(...)`, interactive mode/tool/settings setters, selection/scene mutators) throw `StateError` and do not mutate state.
 

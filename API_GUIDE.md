@@ -570,6 +570,15 @@ Encoding notes:
 
 - `encodeScene(...)` validates `SceneSnapshot` input before encoding and throws `SceneDataException` on malformed snapshots.
 
+Decoding/build notes:
+
+- `decodeScene(...)`, `decodeSceneFromJson(...)`, and `SceneBuilder.buildFromJson(...)` report fully-qualified `SceneDataException.path` values for nested fields (for example `layers[0].nodes[0].isVisible`).
+- JSON decode boundary rejects oversized payloads with `SceneDataException`:
+  - `layers.length <= 4096`,
+  - total node count across `backgroundLayer` + `layers` <= `200000`,
+  - stroke `localPoints.length <= 20000`,
+  - `svgPathData.length <= 200000`.
+
 ## 12. Full integration example
 
 ```dart

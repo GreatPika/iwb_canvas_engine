@@ -484,11 +484,20 @@ void main() {
 
     controller.linePreviewThickness = 2;
     await paintOverlay();
+
+    controller.snapshotOverride = SceneSnapshot(
+      camera: const CameraSnapshot(offset: Offset(double.nan, double.infinity)),
+      layers: const <ContentLayerSnapshot>[],
+    );
+    await paintOverlay();
+    controller.snapshotOverride = null;
   });
 }
 
 class _OverlayTestController extends SceneControllerInteractive {
   _OverlayTestController({required super.initialSnapshot});
+
+  SceneSnapshot? snapshotOverride;
 
   bool strokeActive = false;
   List<Offset> strokePoints = const <Offset>[];
@@ -501,6 +510,9 @@ class _OverlayTestController extends SceneControllerInteractive {
   Offset? lineEnd;
   double linePreviewThickness = 1;
   Color lineColor = const Color(0xFF654321);
+
+  @override
+  SceneSnapshot get snapshot => snapshotOverride ?? super.snapshot;
 
   @override
   bool get hasActiveStrokePreview => strokeActive;

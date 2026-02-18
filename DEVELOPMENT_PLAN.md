@@ -32,7 +32,7 @@ Implement validated fixes from review with priority on public-contract correctne
 - Acceptance:
   - No contradictory version/schema statements in docs/changelog.
 
-### DP-04 (P1) Improve JSON boundary diagnostics and payload hardening
+### [x] DP-04 (P1) Improve JSON boundary diagnostics and payload hardening — Completed 2026-02-18
 - Scope:
   - Add contextual path propagation (`pathPrefix`) across decode helpers in:
     - `lib/src/model/scene_builder_decode_json.part.dart`
@@ -43,16 +43,18 @@ Implement validated fixes from review with priority on public-contract correctne
     - max stroke points in decode path
     - max `svgPathData` length
   - Define limits in `lib/src/core/scene_limits.dart`.
+  - Post-review hardening: enforce `kMaxNodesPerScene` incrementally in node loops for fail-fast rejection.
 - Acceptance:
   - Extend `test/model/scene_builder_test.dart` and `test/serialization/scene_codec_validation_test.dart` with:
     - full-path error assertions
     - oversized payload rejection assertions
 
-### DP-05 (P1) Close root `lib/*.dart` coverage blind spot with guardrail
+### [x] DP-05 (P1) Close root `lib/*.dart` coverage blind spot with guardrail — Completed 2026-02-18
 - Scope:
   - Keep coverage scope `lib/src/**` unchanged.
   - Add rule in `tool/check_guardrails.dart`: files under `lib/*.dart` may contain only `library`, docs/comments, and `export` directives.
   - Add sandbox tests in `test/tool/guardrails_tools_test.dart`.
+  - Post-review hardening: close inline block-comment bypass in root entrypoint scanning.
 - Acceptance:
   - Guardrail fails when executable logic appears in `lib/*.dart`.
 
@@ -92,7 +94,7 @@ Implement validated fixes from review with priority on public-contract correctne
 - Acceptance:
   - Tests in `test/model/document_model_test.dart` + `test/serialization/scene_codec_validation_test.dart` covering derivation and deterministic expectations.
 
-### DP-09 (P2) Overlay painter camera sanitization parity
+### [x] DP-09 (P2) Overlay painter camera sanitization parity — Completed 2026-02-18
 - Problem:
   - Main painter sanitizes camera offset; overlay painter currently reads raw offset.
 - Scope:

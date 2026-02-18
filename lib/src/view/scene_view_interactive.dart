@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/widgets.dart';
 
 import '../core/geometry.dart';
+import '../core/numeric_clamp.dart';
 import '../core/pointer_input.dart';
 import '../interactive/scene_controller_interactive.dart';
 import '../public/canvas_pointer_input.dart';
@@ -325,7 +326,9 @@ class _SceneInteractiveOverlayPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final cameraOffset = controller.snapshot.camera.offset;
+    final cameraOffset = sanitizeFiniteOffset(
+      controller.snapshot.camera.offset,
+    );
     _paintStrokePreview(canvas, cameraOffset);
     _paintLinePreview(canvas, cameraOffset);
   }

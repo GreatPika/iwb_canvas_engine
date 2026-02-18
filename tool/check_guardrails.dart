@@ -310,6 +310,165 @@ Set<String> _checkEntrypointGuardrails({
   return exports;
 }
 
+bool _isAllowedRootLibStatement(String statement) {
+  final trimmed = statement.trim();
+  if (trimmed.isEmpty) return true;
+  if (trimmed == 'library;') return true;
+  if (RegExp(r'^library\s+[A-Za-z_][A-Za-z0-9_\.]*\s*;$').hasMatch(trimmed)) {
+    return true;
+  }
+  return trimmed.startsWith('export ') && trimmed.endsWith(';');
+}
+
+void _checkRootLibFilesAreExportOnly({
+  required Directory root,
+  required String rootAbsPosix,
+}) {
+  final libDir = Directory('${root.path}${Platform.pathSeparator}lib');
+  if (!libDir.existsSync()) return;
+
+  final rootLibFiles = libDir
+      .listSync(recursive: false, followLinks: false)
+      .whereType<File>()
+      .where((file) => file.path.endsWith('.dart'))
+      .toList(growable: false);
+
+  for (final file in rootLibFiles) {
+    final filePosixPath = _toRepoRelPosixPath(
+      absPosixPath: _toPosixPath(file.absolute.path),
+      rootAbsPosixPath: rootAbsPosix,
+    );
+    final lines = file.readAsLinesSync();
+    var inBlockComment = false;
+    var inSingleQuote = false;
+    var inDoubleQuote = false;
+    var singleQuoteEscaped = false;
+    var doubleQuoteEscaped = false;
+    final statementBuffer = StringBuffer();
+    int? statementStartLine;
+
+    void appendStatementChar(String char, int lineNo) {
+      if (statementBuffer.isEmpty && char.trim().isEmpty) {
+        return;
+      }
+      statementStartLine ??= lineNo;
+      statementBuffer.write(char);
+    }
+
+    Never failStatement(int lineNo) {
+      _fail(
+        _Violation(
+          filePath: filePosixPath,
+          line: statementStartLine ?? lineNo,
+          message:
+              'root lib/*.dart files must contain only library/docs/comments/export directives.',
+        ),
+      );
+    }
+
+    void validateCompletedStatement(int lineNo) {
+      final statement = statementBuffer.toString().trim();
+      if (statement.isEmpty) {
+        statementBuffer.clear();
+        statementStartLine = null;
+        return;
+      }
+      if (!_isAllowedRootLibStatement(statement)) {
+        failStatement(lineNo);
+      }
+      statementBuffer.clear();
+      statementStartLine = null;
+    }
+
+    for (var i = 0; i < lines.length; i++) {
+      final lineNo = i + 1;
+      final line = lines[i];
+      var index = 0;
+      while (index < line.length) {
+        final char = line[index];
+        final hasNext = index + 1 < line.length;
+        final nextChar = hasNext ? line[index + 1] : '';
+
+        if (inBlockComment) {
+          if (char == '*' && nextChar == '/') {
+            inBlockComment = false;
+            index += 2;
+            continue;
+          }
+          index++;
+          continue;
+        }
+
+        if (inSingleQuote) {
+          appendStatementChar(char, lineNo);
+          if (singleQuoteEscaped) {
+            singleQuoteEscaped = false;
+          } else if (char == r'\') {
+            singleQuoteEscaped = true;
+          } else if (char == "'") {
+            inSingleQuote = false;
+          }
+          index++;
+          continue;
+        }
+
+        if (inDoubleQuote) {
+          appendStatementChar(char, lineNo);
+          if (doubleQuoteEscaped) {
+            doubleQuoteEscaped = false;
+          } else if (char == r'\') {
+            doubleQuoteEscaped = true;
+          } else if (char == '"') {
+            inDoubleQuote = false;
+          }
+          index++;
+          continue;
+        }
+
+        if (char == '/' && nextChar == '/') {
+          break;
+        }
+        if (char == '/' && nextChar == '*') {
+          inBlockComment = true;
+          index += 2;
+          continue;
+        }
+        if (char == "'") {
+          appendStatementChar(char, lineNo);
+          inSingleQuote = true;
+          singleQuoteEscaped = false;
+          index++;
+          continue;
+        }
+        if (char == '"') {
+          appendStatementChar(char, lineNo);
+          inDoubleQuote = true;
+          doubleQuoteEscaped = false;
+          index++;
+          continue;
+        }
+
+        appendStatementChar(char, lineNo);
+        if (char == ';') {
+          validateCompletedStatement(lineNo);
+        }
+        index++;
+      }
+
+      if (!inBlockComment &&
+          !inSingleQuote &&
+          !inDoubleQuote &&
+          statementBuffer.isNotEmpty) {
+        statementBuffer.write('\n');
+      }
+    }
+
+    if (statementBuffer.toString().trim().isNotEmpty) {
+      failStatement(lines.isEmpty ? 1 : lines.length);
+    }
+  }
+}
+
 void _checkSceneWriteTxnContract({
   required Directory root,
   required String rootAbsPosix,
@@ -567,6 +726,7 @@ void main(List<String> args) {
     rootAbsPosix: rootAbsPosix,
     packageName: packageName,
   );
+  _checkRootLibFilesAreExportOnly(root: root, rootAbsPosix: rootAbsPosix);
   _checkSceneWriteTxnContract(root: root, rootAbsPosix: rootAbsPosix);
   _checkExportedApiMutableTypeLeak(
     root: root,

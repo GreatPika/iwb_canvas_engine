@@ -4,6 +4,12 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
+import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
+    show
+        kMaxContentLayersPerScene,
+        kMaxNodesPerScene,
+        kMaxStrokePointsPerNode,
+        kMaxSvgPathDataLength;
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/serialization/scene_codec.dart'
     show encodeSceneDocument;
@@ -225,7 +231,143 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneDataException && e.message == 'Node must be an object.',
+              e is SceneDataException &&
+              e.path == 'layers[0].nodes[0]' &&
+              e.message == 'Node must be an object.',
+        ),
+      ),
+    );
+  });
+
+  test('decodeScene rejects too many content layers', () {
+    final json = _minimalSceneJson();
+    json['layers'] = <dynamic>[
+      for (var i = 0; i < kMaxContentLayersPerScene + 1; i++)
+        <String, dynamic>{'id': 'layer-$i', 'nodes': <dynamic>[]},
+    ];
+
+    expect(
+      () => decodeScene(json),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers',
+        ),
+      ),
+    );
+  });
+
+  test('decodeScene rejects too many nodes in scene', () {
+    final json = _minimalSceneJson();
+    json['layers'] = <dynamic>[
+      <String, dynamic>{
+        'id': 'layer-0',
+        'nodes': <dynamic>[
+          for (var i = 0; i < kMaxNodesPerScene + 1; i++)
+            _baseNodeJson(id: 'n$i', type: 'rect')..addAll(<String, dynamic>{
+              'size': <String, dynamic>{'w': 1, 'h': 1},
+              'strokeWidth': 0,
+            }),
+        ],
+      },
+    ];
+
+    expect(
+      () => decodeScene(json),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers[0].nodes',
+        ),
+      ),
+    );
+  });
+
+  test(
+    'decodeScene rejects aggregated node overflow across background and content layers',
+    () {
+      final json = _minimalSceneJson();
+      final backgroundNode = _baseNodeJson(id: 'bg', type: 'rect')
+        ..addAll(<String, dynamic>{
+          'size': <String, dynamic>{'w': 1, 'h': 1},
+          'strokeWidth': 0,
+        });
+      final contentNode = _baseNodeJson(id: 'fg', type: 'rect')
+        ..addAll(<String, dynamic>{
+          'size': <String, dynamic>{'w': 1, 'h': 1},
+          'strokeWidth': 0,
+        });
+      json['backgroundLayer'] = <String, dynamic>{
+        'nodes': <dynamic>[
+          for (var i = 0; i < kMaxNodesPerScene; i++) backgroundNode,
+        ],
+      };
+      json['layers'] = <dynamic>[
+        <String, dynamic>{
+          'id': 'layer-0',
+          'nodes': <dynamic>[contentNode],
+        },
+      ];
+
+      expect(
+        () => decodeScene(json),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.code == SceneDataErrorCode.invalidValue &&
+                e.path == 'layers[0].nodes',
+          ),
+        ),
+      );
+    },
+  );
+
+  test('decodeScene rejects too many stroke localPoints', () {
+    final strokeJson = _baseNodeJson(id: 'stroke-overflow', type: 'stroke')
+      ..addAll(<String, dynamic>{
+        'localPoints': <dynamic>[
+          for (var i = 0; i < kMaxStrokePointsPerNode + 1; i++)
+            <String, dynamic>{'x': i.toDouble(), 'y': 0.0},
+        ],
+        'thickness': 1,
+        'color': '#FF000000',
+      });
+
+    expect(
+      () => decodeScene(_sceneWithSingleNode(strokeJson)),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers[0].nodes[0].localPoints',
+        ),
+      ),
+    );
+  });
+
+  test('decodeScene rejects oversized svgPathData payload', () {
+    final pathJson = _baseNodeJson(id: 'path-overflow', type: 'path')
+      ..addAll(<String, dynamic>{
+        'svgPathData':
+            "M0 0 ${List<String>.filled(kMaxSvgPathDataLength + 1, 'L1 1').join(' ')}",
+        'strokeWidth': 1,
+        'fillRule': 'nonZero',
+      });
+
+    expect(
+      () => decodeScene(_sceneWithSingleNode(pathJson)),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers[0].nodes[0].svgPathData',
         ),
       ),
     );
@@ -457,7 +599,9 @@ void main() {
         predicate(
           (e) =>
               e is SceneDataException &&
-              e.message == 'localPoints must be an object with x/y.',
+              e.path == 'layers[0].nodes[0].localPoints[0]' &&
+              e.message ==
+                  'layers[0].nodes[0].localPoints[0] must be an object with x/y.',
         ),
       ),
     );
@@ -497,6 +641,7 @@ void main() {
         predicate(
           (e) =>
               e is SceneDataException &&
+              e.path == 'layers[0].nodes[0].fontFamily' &&
               e.message == 'Field fontFamily must be a string.',
         ),
       ),
@@ -520,6 +665,7 @@ void main() {
         predicate(
           (e) =>
               e is SceneDataException &&
+              e.path == 'layers[0].nodes[0].maxWidth' &&
               e.message == 'Field maxWidth must be a number.',
         ),
       ),
@@ -552,6 +698,7 @@ void main() {
         predicate(
           (e) =>
               e is SceneDataException &&
+              e.path == 'palette.penColors' &&
               e.message == 'Field penColors must be a list.',
         ),
       ),

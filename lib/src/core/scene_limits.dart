@@ -11,7 +11,10 @@ const double sceneSizeMax = 1e7;
 const double sceneThicknessMax = 1e5;
 const double sceneHitPaddingMax = 1e5;
 
+const int kMaxContentLayersPerScene = 4096;
+const int kMaxNodesPerScene = 200000;
 const int kMaxStrokePointsPerNode = 20000;
+const int kMaxSvgPathDataLength = 200000;
 // Guardrail invariants:
 // - trimTo must be >= 2 (endpoint-preserving resample requires two points)
 // - trimTo must be < softLimit (hysteresis avoids resampling on every point)

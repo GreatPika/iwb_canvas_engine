@@ -233,6 +233,181 @@ class Store {
       }
     });
 
+    test('allows export-only root lib entrypoint files', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(sandbox, 'lib/src/controller/store.dart', '''
+class Store {
+  int controllerEpoch = 0;
+
+  void writeMutations() {}
+
+  void txnCommit() {
+    writeMutations();
+  }
+}
+''');
+        _writeFile(sandbox, 'lib/iwb_canvas_engine.dart', '''
+/// Public API exports for tests.
+library;
+
+export 'src/public/foo.dart'
+    show Foo;
+''');
+        _writeFile(sandbox, 'lib/src/public/foo.dart', '''
+abstract class Foo {}
+''');
+
+        final result = await _runTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test(
+      'allows export-only root lib entrypoint files with inline block comments',
+      () async {
+        final sandbox = await _createSandbox();
+        try {
+          _writeFile(sandbox, 'lib/src/controller/store.dart', '''
+class Store {
+  int controllerEpoch = 0;
+
+  void writeMutations() {}
+
+  void txnCommit() {
+    writeMutations();
+  }
+}
+''');
+          _writeFile(sandbox, 'lib/iwb_canvas_engine.dart', '''
+library;
+
+/* comment before export */
+export /* inline */ 'src/public/foo.dart'
+    show /* inline */ Foo;
+''');
+          _writeFile(sandbox, 'lib/src/public/foo.dart', '''
+abstract class Foo {}
+''');
+
+          final result = await _runTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, 0, reason: result.stderr.toString());
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test('rejects executable logic in root lib entrypoint files', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(sandbox, 'lib/src/controller/store.dart', '''
+class Store {
+  int controllerEpoch = 0;
+
+  void writeMutations() {}
+
+  void txnCommit() {
+    writeMutations();
+  }
+}
+''');
+        _writeFile(sandbox, 'lib/iwb_canvas_engine.dart', '''
+library;
+
+void bootstrap() {}
+''');
+
+        final result = await _runTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains(
+            'root lib/*.dart files must contain only library/docs/comments/export directives',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test(
+      'rejects executable logic after inline block comment in root entrypoint',
+      () async {
+        final sandbox = await _createSandbox();
+        try {
+          _writeFile(sandbox, 'lib/src/controller/store.dart', '''
+class Store {
+  int controllerEpoch = 0;
+
+  void writeMutations() {}
+
+  void txnCommit() {
+    writeMutations();
+  }
+}
+''');
+          _writeFile(sandbox, 'lib/iwb_canvas_engine.dart', '''
+library;
+
+/* safe comment */ void bootstrap() {}
+''');
+
+          final result = await _runTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            contains(
+              'root lib/*.dart files must contain only library/docs/comments/export directives',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects executable logic after export and inline block comment',
+      () async {
+        final sandbox = await _createSandbox();
+        try {
+          _writeFile(sandbox, 'lib/src/controller/store.dart', '''
+class Store {
+  int controllerEpoch = 0;
+
+  void writeMutations() {}
+
+  void txnCommit() {
+    writeMutations();
+  }
+}
+''');
+          _writeFile(sandbox, 'lib/iwb_canvas_engine.dart', '''
+library;
+
+export 'src/public/foo.dart'; /* c */ class A {}
+''');
+          _writeFile(sandbox, 'lib/src/public/foo.dart', '''
+abstract class Foo {}
+''');
+
+          final result = await _runTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            contains(
+              'root lib/*.dart files must contain only library/docs/comments/export directives',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
     test('rejects advanced.dart entrypoint', () async {
       final sandbox = await _createSandbox();
       try {

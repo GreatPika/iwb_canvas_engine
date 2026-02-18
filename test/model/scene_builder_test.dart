@@ -5,6 +5,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart' hide NodeId;
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
+import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
+    show
+        kMaxContentLayersPerScene,
+        kMaxNodesPerScene,
+        kMaxStrokePointsPerNode,
+        kMaxSvgPathDataLength;
 import 'package:iwb_canvas_engine/src/model/scene_builder.dart'
     as model_builder;
 import 'package:iwb_canvas_engine/src/model/scene_value_validation.dart'
@@ -299,7 +305,7 @@ void main() {
           ),
           (
             label: 'node.id',
-            expectedPath: 'id',
+            expectedPath: 'layers[0].nodes[0].id',
             json: (() {
               final json = _minimalSceneJson();
               final layer =
@@ -314,7 +320,7 @@ void main() {
           ),
           (
             label: 'node.hitPadding',
-            expectedPath: 'hitPadding',
+            expectedPath: 'layers[0].nodes[0].hitPadding',
             json: (() {
               final json = _minimalSceneJson();
               final layer =
@@ -358,7 +364,7 @@ void main() {
           (e) =>
               e is SceneDataException &&
               e.code == SceneDataErrorCode.invalidFieldType &&
-              e.path == 'backgroundLayer.nodes' &&
+              e.path == 'backgroundLayer.nodes[0]' &&
               e.message == 'Node must be an object.',
         ),
       ),
@@ -420,7 +426,7 @@ void main() {
           (e) =>
               e is SceneDataException &&
               e.code == SceneDataErrorCode.missingField &&
-              e.path == 'isVisible' &&
+              e.path == 'layers[0].nodes[0].isVisible' &&
               e.message == 'Field isVisible must be a bool.',
         ),
       ),
@@ -456,7 +462,7 @@ void main() {
           (e) =>
               e is SceneDataException &&
               e.code == SceneDataErrorCode.invalidFieldType &&
-              e.path == 'penColors' &&
+              e.path == 'palette.penColors[0]' &&
               e.message == 'Items of penColors must be strings.',
         ),
       ),
@@ -475,6 +481,147 @@ void main() {
               e is SceneDataException &&
               e.code == SceneDataErrorCode.invalidFieldType &&
               e.message == 'JSON object keys must be strings.',
+        ),
+      ),
+    );
+  });
+
+  test('sceneBuildFromJsonMap rejects too many content layers', () {
+    final json = _minimalSceneJson();
+    json['layers'] = <Object?>[
+      for (var i = 0; i < kMaxContentLayersPerScene + 1; i++)
+        <String, Object?>{'id': 'layer-$i', 'nodes': <Object?>[]},
+    ];
+
+    expect(
+      () => model_builder.sceneBuildFromJsonMap(json),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers',
+        ),
+      ),
+    );
+  });
+
+  test('sceneBuildFromJsonMap rejects too many nodes in scene', () {
+    final json = _minimalSceneJson();
+    json['layers'] = <Object?>[
+      <String, Object?>{
+        'id': 'layer-0',
+        'nodes': <Object?>[
+          for (var i = 0; i < kMaxNodesPerScene + 1; i++)
+            _minimalRectNodeJson(id: 'n$i'),
+        ],
+      },
+    ];
+
+    expect(
+      () => model_builder.sceneBuildFromJsonMap(json),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers[0].nodes',
+        ),
+      ),
+    );
+  });
+
+  test(
+    'sceneBuildFromJsonMap rejects aggregated node overflow across background and content layers',
+    () {
+      final json = _minimalSceneJson();
+      final backgroundNode = _minimalRectNodeJson(id: 'bg');
+      final contentNode = _minimalRectNodeJson(id: 'fg');
+      json['backgroundLayer'] = <String, Object?>{
+        'nodes': <Object?>[
+          for (var i = 0; i < kMaxNodesPerScene; i++) backgroundNode,
+        ],
+      };
+      json['layers'] = <Object?>[
+        <String, Object?>{
+          'id': 'layer-0',
+          'nodes': <Object?>[contentNode],
+        },
+      ];
+
+      expect(
+        () => model_builder.sceneBuildFromJsonMap(json),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.code == SceneDataErrorCode.invalidValue &&
+                e.path == 'layers[0].nodes',
+          ),
+        ),
+      );
+    },
+  );
+
+  test('sceneBuildFromJsonMap rejects too many stroke points', () {
+    final json = _minimalSceneJson();
+    json['layers'] = <Object?>[
+      <String, Object?>{
+        'id': 'layer-0',
+        'nodes': <Object?>[
+          <String, Object?>{
+            ..._minimalRectNodeJson(id: 's1'),
+            'type': 'stroke',
+            'localPoints': <Object?>[
+              for (var i = 0; i < kMaxStrokePointsPerNode + 1; i++)
+                <String, Object?>{'x': i.toDouble(), 'y': 0.0},
+            ],
+            'thickness': 1,
+            'color': '#FF000000',
+          },
+        ],
+      },
+    ];
+
+    expect(
+      () => model_builder.sceneBuildFromJsonMap(json),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers[0].nodes[0].localPoints',
+        ),
+      ),
+    );
+  });
+
+  test('sceneBuildFromJsonMap rejects oversized svgPathData', () {
+    final json = _minimalSceneJson();
+    json['layers'] = <Object?>[
+      <String, Object?>{
+        'id': 'layer-0',
+        'nodes': <Object?>[
+          <String, Object?>{
+            ..._minimalRectNodeJson(id: 'p1'),
+            'type': 'path',
+            'svgPathData':
+                "M0 0 ${List<String>.filled(kMaxSvgPathDataLength + 1, 'L1 1').join(' ')}",
+            'fillRule': 'nonZero',
+            'strokeWidth': 1,
+          },
+        ],
+      },
+    ];
+
+    expect(
+      () => model_builder.sceneBuildFromJsonMap(json),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers[0].nodes[0].svgPathData',
         ),
       ),
     );

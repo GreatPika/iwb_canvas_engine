@@ -1,6 +1,17 @@
 ## Unreleased
 
-- No changes yet.
+### Changed
+
+- JSON decode/build diagnostics now report fully-qualified nested `SceneDataException.path` values across decode helpers (including layer/node indexed paths).
+- JSON decode boundary now rejects oversized payloads with explicit limits:
+  - max content layers: `4096`,
+  - max total scene nodes: `200000`,
+  - max stroke points per node: `20000`,
+  - max `svgPathData` length: `200000`.
+- JSON decode now enforces `kMaxNodesPerScene` incrementally during node-loop parsing (fail-fast before decoding extra nodes beyond the limit).
+- `SceneViewInteractive` overlay painter now sanitizes camera offset (`NaN`/`Infinity` -> safe finite fallback) the same way as `ScenePainter`.
+- Guardrail tooling now enforces that root `lib/*.dart` files contain only `library` declaration, comments/docs, and `export` directives.
+- Guardrail root-entrypoint scanning now rejects executable code that appears after inline block comments on the same line (bypass closed).
 
 ## 5.0.0 (2026-02-18)
 
