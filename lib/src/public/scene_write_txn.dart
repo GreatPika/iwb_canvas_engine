@@ -35,7 +35,8 @@ abstract interface class SceneWriteTxn {
   ///
   /// `layerId` addresses only `snapshot.layers` (content layers) and never
   /// the optional background layer.
-  NodeId writeNodeInsert(NodeSpec spec, {LayerId? layerId});
+  NodeId writeNodeInsert(NodeSpec spec, {LayerId? layerId, int? insertIndex});
+  bool writeLayerEnsure(LayerId layerId, {int? index});
   bool writeNodeErase(NodeId nodeId);
   bool writeNodePatch(NodePatch patch);
   bool writeNodeTransformSet(NodeId id, Transform2D transform);

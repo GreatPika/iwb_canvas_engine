@@ -53,6 +53,11 @@ lib/
 ### Interactive composition
 
 - `SceneControllerInteractive` is the orchestration facade: it validates/routes input, stores public interactive configuration, bridges transactional writes to `SceneControllerCore`, and exposes render-facing getters/events.
+- The interactive move path supports an optional post-drag
+  `MoveCommitDeltaResolver`: preview remains ephemeral during pointer move,
+  while the final committed delta can be adjusted exactly once on pointer up
+  inside the final write transaction; public stateful/effectful controller
+  entrypoints are rejected while that callback is running.
 - Move/marquee ephemeral state and transitions are owned by `InteractiveMoveSession` (`lib/src/interactive/internal/interactive_move_session.dart`).
 - Draw/line/eraser ephemeral state and transitions are owned by `InteractiveDrawCoordinator` (`lib/src/interactive/internal/interactive_draw_coordinator.dart`).
 - Action/edit stream emission is isolated in `InteractiveEventDispatcher` (`lib/src/interactive/internal/interactive_event_dispatcher.dart`).
@@ -92,6 +97,9 @@ Key invariants:
 - All state mutations flow through `write` transactions and safe txn operations.
 - `write(...)` callbacks are synchronous-only; async callback results are rejected with fail-fast `StateError`.
 - Transaction writer lifetime is bounded to the active `write((txn) { ... })` callback; stale `write*` calls fail fast with `StateError`.
+- Write boundary now includes explicit layer creation (`writeLayerEnsure(...)`)
+  and explicit intra-layer z-order insertion (`writeNodeInsert(..., insertIndex: ...)`)
+  without introducing secondary sync paths.
 - Runtime commit invariant checks use a two-tier mode: critical checks (including strict commit-revision monotonicity vs previous committed state) run in all build modes, while full committed-store invariant sweep runs in `debug`/`profile`; both fail fast with `StateError`.
 - Committed signals are delivered only after store commit finalization.
 - For each successful commit, signal delivery happens before repaint listener notification.
@@ -147,7 +155,7 @@ Key invariants:
 - Hit-test guardrail: path-stroke precise hit-testing caps per-metric sampling to `2_048` points by increasing sampling step for long metrics.
 - Interactive draw guardrail: stroke commit caps points to `20_000` using deterministic index-uniform downsampling (endpoints preserved).
 - Interactive gesture guardrail: active stroke/eraser gesture buffers are soft-capped with deterministic endpoint-preserving downsampling before commit (`INV-ENG-INTERACTIVE-GESTURE-BUFFER-SOFT-CAP`).
-- Interactive move drag uses preview translation (single source in interactive controller) and commits translation once on pointer up; preview hit-testing merges spatial candidates for `point` and `point - delta`.
+- Interactive move drag uses preview translation (single source in interactive controller) and commits translation once on pointer up; an optional post-drag resolver can replace the final committed delta inside that same write transaction, public stateful/effectful controller entrypoints fail fast while the resolver runs, and preview hit-testing merges spatial candidates for `point` and `point - delta`.
 
 ## Non-goals
 

@@ -132,6 +132,10 @@ Path fill rule enum:
 
 `SceneController.addNode(...)` accepts `NodeSpec` (preferred) and returns created `NodeId`.
 
+`SceneControllerInteractive(textFontFamilyByDefault: '...')` can fill in a
+default `TextNodeSpec.fontFamily` at write boundary when the inserted text spec
+leaves `fontFamily` unset.
+
 Node spec variants:
 
 - `ImageNodeSpec`
@@ -295,7 +299,8 @@ Notification semantics:
 
 ### 6.5 Node and selection methods
 
-- `NodeId addNode(NodeSpec node, {LayerId? layerId})`
+- `NodeId addNode(NodeSpec node, {LayerId? layerId, int? insertIndex})`
+- `bool ensureLayer(LayerId layerId, {int? index})`
 - `bool patchNode(NodePatch patch)`
 - `bool removeNode(NodeId id, {int? timestampMs})`
 - `setSelection(Iterable<NodeId> nodeIds)`
@@ -307,8 +312,14 @@ Notification semantics:
 
 - `addNode(..., layerId)` addresses `SceneSnapshot.layers` only (content layers).
 - `layerId == null` inserts into the last content layer.
+- `insertIndex == null` appends to the end of the target layer; otherwise the
+  node is inserted at that exact position in the layer node list.
 - If there are no content layers, insertion auto-creates one with generated id (`layer-N`).
 - Unknown `layerId` throws `ArgumentError.value(layerId, 'layerId', 'Unknown content layer id.')`.
+- `ensureLayer(...)` creates a missing content layer only; if the layer already
+  exists it is a no-op and returns `false`.
+- `ensureLayer(index: ...)` validates strictly with `RangeError` and does not
+  reorder an existing layer.
 
 Migration snippet:
 
@@ -366,7 +377,10 @@ public API surface.
 - Does not expose mutable `Scene`/`SceneNode`.
 - Does not include `writeFindNode` or `writeMark*` escape methods.
 - Does not expose node-id bookkeeping internals; ids are allocated via structural writes (`writeNodeInsert`).
-- `writeNodeInsert(...)` returns `NodeId` (semantic id contract, not raw `String`).
+- `writeNodeInsert(..., {layerId, insertIndex})` returns `NodeId` (semantic id
+  contract, not raw `String`).
+- `writeLayerEnsure(...) -> bool created` explicitly creates a missing content
+  layer and returns `false` when the target `layerId` already exists.
 - A transaction handle is valid only during the active `write((txn) { ... })` callback; calling any `write*` method after callback completion throws `StateError`.
 - `write(...)` callback must return synchronously; returning `Future` fails fast with `StateError` and rolls back buffered effects.
 - Selection write contracts are explicit about state-change:
@@ -426,6 +440,11 @@ Write-notify semantics:
 - If `dragStartSlop` is `null`, runtime falls back to `pointerSettings.tapSlop`.
 - During move drag, selected nodes are translated in preview only (render/hit-test use effective preview bounds).
 - The scene snapshot is committed once on pointer up with the accumulated drag delta.
+- `MoveCommitDeltaResolver` can replace that final delta just before commit;
+  the resolved delta is applied in the same write transaction, is the value
+  emitted in `ActionType.transform`, and the callback must not call public
+  mutating/effectful `SceneControllerInteractive` APIs (those fail fast with
+  `StateError`).
 - Pointer cancel clears preview and does not mutate scene geometry.
 - While move drag is active, only the active `pointerId` can update/cancel/commit that gesture.
 

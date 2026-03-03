@@ -13,10 +13,15 @@ import '../public/snapshot.dart';
 import 'txn_context.dart';
 
 class SceneWriter implements SceneWriteTxn {
-  SceneWriter(this._ctx, {required this.txnSignalSink});
+  SceneWriter(
+    this._ctx, {
+    required this.txnSignalSink,
+    this.textFontFamilyByDefault,
+  });
 
   final TxnContext _ctx;
   final void Function(BufferedSignal signal) txnSignalSink;
+  final String? textFontFamilyByDefault;
 
   @override
   SceneSnapshot get snapshot => txnSceneToSnapshot(_ctx.workingScene);
@@ -26,15 +31,16 @@ class SceneWriter implements SceneWriteTxn {
       Set<NodeId>.unmodifiable(_ctx.workingSelection);
 
   @override
-  NodeId writeNodeInsert(NodeSpec spec, {LayerId? layerId}) {
+  NodeId writeNodeInsert(NodeSpec spec, {LayerId? layerId, int? insertIndex}) {
     _ensureTxnActive();
     final resolvedId = spec.id ?? _ctx.txnNextNodeId();
     if (spec.id != null && _ctx.txnHasNodeId(resolvedId)) {
       throw StateError('Node id must be unique: $resolvedId');
     }
 
+    final normalizedSpec = _normalizeInsertSpec(spec);
     final node = txnNodeFromSpec(
-      spec,
+      normalizedSpec,
       fallbackId: resolvedId,
       nextInstanceRevision: _ctx.txnNextInstanceRevision,
     );
@@ -46,11 +52,23 @@ class SceneWriter implements SceneWriteTxn {
       nodeLocator: _ctx.txnEnsureMutableNodeLocator(),
       node: node,
       layerIndex: targetLayerIndex,
+      insertIndex: insertIndex,
     );
     _ctx.txnRememberNodeId(node.id);
     _ctx.changeSet.txnMarkStructuralChanged();
     _ctx.changeSet.txnTrackAdded(node.id);
     return node.id;
+  }
+
+  @override
+  bool writeLayerEnsure(LayerId layerId, {int? index}) {
+    _ensureTxnActive();
+    final created = _ctx.txnEnsureContentLayer(layerId, index: index);
+    if (!created) {
+      return false;
+    }
+    _ctx.changeSet.txnMarkStructuralChanged();
+    return true;
   }
 
   @override
@@ -439,6 +457,37 @@ class SceneWriter implements SceneWriteTxn {
 
   bool _txnSetsEqual(Set<NodeId> left, Set<NodeId> right) {
     return left.length == right.length && left.containsAll(right);
+  }
+
+  NodeSpec _normalizeInsertSpec(NodeSpec spec) {
+    final defaultFontFamily = textFontFamilyByDefault;
+    if (defaultFontFamily == null) {
+      return spec;
+    }
+    if (spec case TextNodeSpec text when text.fontFamily == null) {
+      return TextNodeSpec(
+        id: text.id,
+        text: text.text,
+        fontSize: text.fontSize,
+        color: text.color,
+        align: text.align,
+        isBold: text.isBold,
+        isItalic: text.isItalic,
+        isUnderline: text.isUnderline,
+        fontFamily: defaultFontFamily,
+        maxWidth: text.maxWidth,
+        lineHeight: text.lineHeight,
+        transform: text.transform,
+        opacity: text.opacity,
+        hitPadding: text.hitPadding,
+        isVisible: text.isVisible,
+        isSelectable: text.isSelectable,
+        isLocked: text.isLocked,
+        isDeletable: text.isDeletable,
+        isTransformable: text.isTransformable,
+      );
+    }
+    return spec;
   }
 
   bool _txnPatchTouchesSelectionPolicy(NodePatch patch) {

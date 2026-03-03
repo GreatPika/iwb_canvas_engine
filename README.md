@@ -99,6 +99,9 @@ class _CanvasScreenState extends State<CanvasScreen> {
   - `writeClearSceneKeepBackgroundResult() -> ClearSceneResult`, where `didStructuralClear` marks structural clear side effects and `removedNodeIds` can be empty for structural-only clear.
   - `ClearSceneResult.removedNodeIds` is returned as an immutable snapshot.
 - Write intents: `NodeSpec` variants.
+- `SceneControllerInteractive(textFontFamilyByDefault: '...')` can stamp a
+  default `fontFamily` into newly inserted `TextNodeSpec` values when the spec
+  leaves `fontFamily` unset.
 - Partial updates: `NodePatch` + tri-state `PatchField<T>`.
 - Text layout sizing is engine-derived: `TextNodeSpec`/`TextNodePatch` do not expose writable `size`; update text/style fields and the runtime recomputes text box bounds.
 - Serialized `TextNode.size` is derived metadata, not an authoritative input: decode/import and layout-affecting text patches re-derive size from text layout fields.
@@ -125,6 +128,11 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Single-active-pointer contract: each active move/draw gesture is bound to one `pointerId`; parallel pointer ids are ignored until gesture end (`up`/`cancel`).
 - After gesture end via `up`/`cancel`, the next pointer can start a new gesture immediately.
 - Move drag contract: pointer move updates only visual preview; scene translation is committed once on pointer up, and pointer cancel keeps the document unchanged.
+- `MoveCommitDeltaResolver` can adjust the final committed move delta on
+  pointer up; the adjusted delta is applied in the same transaction, is the one
+  emitted in `ActionType.transform`, and the callback must stay pure with
+  respect to public mutating/effectful `SceneControllerInteractive` APIs (those
+  fail fast with `StateError`).
 - Line cancel contract: pointer cancel clears line preview and clears pending two-tap line start (`pendingLineStart`).
 - Draw preview contract: active stroke/line preview does not mutate committed scene before pointer up commit; pointer cancel clears preview without scene mutation.
 - Runtime guardrails bound worst-case input/query cost: interactive stroke commits are capped to `20_000` points (deterministic downsampling), path-stroke precise hit-testing is capped to `2_048` samples per path metric, and oversized spatial queries switch to bounded candidate-scan fallback.
@@ -155,7 +163,11 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Typed layer contract:
   - snapshot/runtime model uses `backgroundLayer` as a dedicated typed field and `layers` as content-only ordered layers.
   - each `ContentLayerSnapshot` has stable `id: LayerId`.
-  - `writeNodeInsert(..., layerId)` addresses content layers by `LayerId`.
+  - `writeNodeInsert(..., layerId, insertIndex)` addresses content layers by
+    `LayerId` and can place a node at an explicit z-order inside the layer.
+  - `writeLayerEnsure(layerId, index: ...)` creates a missing content layer
+    explicitly and keeps the existing fail-fast contract for unknown `layerId`
+    in node insertion APIs.
   - z-order is defined only by list order in `layers` (not by `layerId`).
   - runtime/public `SceneSnapshot` always includes dedicated `backgroundLayer`.
   - input may omit `backgroundLayer`, but decode/import boundaries canonicalize it to a dedicated empty layer.

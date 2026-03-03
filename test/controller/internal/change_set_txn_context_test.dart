@@ -303,6 +303,59 @@ void main() {
     expect(ctx.debugLayerIdIndexMaterializations, 2);
   });
 
+  test(
+    'TxnContext ensureContentLayer shifts node locator, cloned indexes and layer seed',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[
+            ContentLayer(id: 'layer-auto-60'),
+            ContentLayer(
+              id: 'layer-auto-61',
+              nodes: <SceneNode>[RectNode(id: 'tail', size: const Size(1, 1))],
+            ),
+          ],
+        ),
+        workingSelection: <NodeId>{},
+        baseAllNodeIds: const <NodeId>{'tail'},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+
+      final clonedLayer = ctx.txnEnsureMutableLayer(1);
+      expect(ctx.debugLayerShallowClones, 1);
+
+      expect(ctx.txnEnsureContentLayer('layer-10', index: 1), isTrue);
+      expect(
+        ctx.workingScene.layers
+            .map((layer) => layer.id)
+            .toList(growable: false),
+        <String>['layer-auto-60', 'layer-10', 'layer-auto-61'],
+      );
+      expect(ctx.txnFindNodeById('tail')?.layerIndex, 2);
+      expect(ctx.layerIdSeed, 11);
+      final resolvedTail = ctx.txnResolveMutableNode('tail');
+      expect(resolvedTail.node.id, 'tail');
+      expect(resolvedTail.layerIndex, 2);
+      expect(ctx.debugNodeClones, 1);
+      final resolvedTailAgain = ctx.txnResolveMutableNode('tail');
+      expect(resolvedTailAgain.node.id, 'tail');
+      expect(ctx.debugNodeClones, 1);
+
+      expect(ctx.txnEnsureContentLayer('tail-layer'), isTrue);
+      expect(ctx.workingScene.layers.last.id, 'tail-layer');
+
+      final shiftedLayer = ctx.txnEnsureMutableLayer(2);
+      expect(identical(shiftedLayer, clonedLayer), isTrue);
+      expect(ctx.debugLayerShallowClones, 1);
+
+      expect(
+        () => ctx.txnEnsureContentLayer('bad', index: -1),
+        throwsRangeError,
+      );
+    },
+  );
+
   test('TxnContext mutating APIs throw after transaction close', () {
     final baseScene = Scene(
       backgroundLayer: BackgroundLayer(

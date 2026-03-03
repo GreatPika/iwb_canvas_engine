@@ -239,6 +239,129 @@ void main() {
     expect(emptyCtx.workingScene.layers.single.nodes.single.id, 'first');
   });
 
+  test(
+    'SceneWriter inserts nodes at explicit index and shifts locator state',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-auto-12',
+              nodes: <SceneNode>[
+                RectNode(id: 'first', size: const Size(1, 1)),
+                RectNode(id: 'last', size: const Size(1, 1)),
+              ],
+            ),
+          ],
+        ),
+        workingSelection: <NodeId>{},
+        baseAllNodeIds: const <NodeId>{'first', 'last'},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+      final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+
+      writer.writeNodeInsert(
+        RectNodeSpec(id: 'middle', size: const Size(2, 2)),
+        insertIndex: 1,
+      );
+
+      expect(
+        ctx.workingScene.layers.single.nodes
+            .map((node) => node.id)
+            .toList(growable: false),
+        <String>['first', 'middle', 'last'],
+      );
+      expect(ctx.txnFindNodeById('last')?.nodeIndex, 2);
+      expect(
+        () => writer.writeNodeInsert(
+          RectNodeSpec(id: 'bad', size: const Size(1, 1)),
+          insertIndex: 4,
+        ),
+        throwsRangeError,
+      );
+    },
+  );
+
+  test(
+    'SceneWriter ensure layer is idempotent and updates shifted lookups',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[
+            ContentLayer(id: 'layer-auto-20'),
+            ContentLayer(
+              id: 'layer-auto-21',
+              nodes: <SceneNode>[RectNode(id: 'tail', size: const Size(1, 1))],
+            ),
+          ],
+        ),
+        workingSelection: <NodeId>{},
+        baseAllNodeIds: const <NodeId>{'tail'},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+      final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+
+      expect(writer.writeLayerEnsure('inserted', index: 1), isTrue);
+      expect(writer.writeLayerEnsure('inserted', index: 0), isFalse);
+      expect(
+        ctx.workingScene.layers
+            .map((layer) => layer.id)
+            .toList(growable: false),
+        <String>['layer-auto-20', 'inserted', 'layer-auto-21'],
+      );
+      expect(ctx.txnFindNodeById('tail')?.layerIndex, 2);
+      expect(
+        writer.writeNodeTransformSet(
+          'tail',
+          Transform2D.translation(const Offset(3, 0)),
+        ),
+        isTrue,
+      );
+      expect(() => writer.writeLayerEnsure('bad', index: 5), throwsRangeError);
+    },
+  );
+
+  test('SceneWriter applies default text font family only when absent', () {
+    final ctx = TxnContext(
+      baseScene: Scene(
+        layers: <ContentLayer>[ContentLayer(id: 'layer-auto-22')],
+      ),
+      workingSelection: <NodeId>{},
+      baseAllNodeIds: const <NodeId>{},
+      nodeIdSeed: 0,
+      nextInstanceRevision: 1,
+    );
+    final writer = SceneWriter(
+      ctx,
+      txnSignalSink: (_) {},
+      textFontFamilyByDefault: 'Mono',
+    );
+
+    writer.writeNodeInsert(
+      TextNodeSpec(
+        id: 'default-font',
+        text: 'hello',
+        color: const Color(0xFF111111),
+      ),
+    );
+    writer.writeNodeInsert(
+      TextNodeSpec(
+        id: 'explicit-font',
+        text: 'world',
+        color: const Color(0xFF111111),
+        fontFamily: 'Serif',
+      ),
+    );
+
+    final nodes = ctx.workingScene.layers.single.nodes
+        .whereType<TextNode>()
+        .toList(growable: false);
+    expect(nodes[0].fontFamily, 'Mono');
+    expect(nodes[1].fontFamily, 'Serif');
+  });
+
   test('SceneWriter covers id generation and selection branches', () {
     final ctx = TxnContext(
       baseScene: Scene(

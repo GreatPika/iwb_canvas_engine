@@ -32,6 +32,7 @@ class TxnContext {
   final Set<NodeId> _removedNodeIds = <NodeId>{};
   Set<NodeId>? _materializedAllNodeIds;
   Map<NodeId, NodeLocatorEntry> _baseNodeLocator;
+  Map<LayerId, int>? _baseLayerIndexById;
   Map<NodeId, NodeLocatorEntry>? _materializedNodeLocator;
   Map<LayerId, int>? _materializedLayerIndexById;
   Scene? _mutableScene;
@@ -100,8 +101,8 @@ class TxnContext {
     }
 
     final current = scene.layers[layerIndex];
-    final baseLayer = _txnBaseLayerAt(layerIndex);
-    if (!identical(current, baseLayer)) {
+    final baseLayer = _txnBaseLayerById(current.id);
+    if (baseLayer == null || !identical(current, baseLayer)) {
       _clonedLayerIndexes.add(layerIndex);
       return current;
     }
@@ -111,6 +112,51 @@ class TxnContext {
     _clonedLayerIndexes.add(layerIndex);
     debugLayerShallowClones = debugLayerShallowClones + 1;
     return cloned;
+  }
+
+  bool txnEnsureContentLayer(LayerId layerId, {int? index}) {
+    txnEnsureActive();
+    if (txnHasLayerId(layerId)) {
+      return false;
+    }
+
+    final scene = txnEnsureMutableScene();
+    final targetIndex = index ?? scene.layers.length;
+    if (targetIndex < 0 || targetIndex > scene.layers.length) {
+      throw RangeError.range(targetIndex, 0, scene.layers.length, 'index');
+    }
+
+    scene.layers.insert(targetIndex, ContentLayer(id: layerId));
+    if (targetIndex < scene.layers.length - 1) {
+      final nodeLocator = txnEnsureMutableNodeLocator();
+      for (final entry in nodeLocator.entries.toList(growable: false)) {
+        final location = entry.value;
+        if (location.layerIndex < targetIndex || location.layerIndex == -1) {
+          continue;
+        }
+        nodeLocator[entry.key] = (
+          layerIndex: location.layerIndex + 1,
+          nodeIndex: location.nodeIndex,
+        );
+      }
+    }
+    if (_clonedLayerIndexes.isNotEmpty) {
+      final shifted = <int>{};
+      for (final existingIndex in _clonedLayerIndexes) {
+        shifted.add(
+          existingIndex >= targetIndex ? existingIndex + 1 : existingIndex,
+        );
+      }
+      _clonedLayerIndexes
+        ..clear()
+        ..addAll(shifted);
+    }
+    _txnInvalidateLayerIdIndex();
+    final minimumLayerSeed = txnInitialLayerIdSeed(scene);
+    if (layerIdSeed < minimumLayerSeed) {
+      layerIdSeed = minimumLayerSeed;
+    }
+    return true;
   }
 
   BackgroundLayer txnEnsureMutableBackgroundLayer() {
@@ -177,11 +223,8 @@ class TxnContext {
     if (_clonedNodeIds.contains(id)) {
       return foundAfterLayerClone;
     }
-    final baseNode = _txnBaseNodeAt(
-      layerIndex: foundAfterLayerClone.layerIndex,
-      nodeIndex: foundAfterLayerClone.nodeIndex,
-    );
-    if (!identical(foundAfterLayerClone.node, baseNode)) {
+    final baseNode = _txnBaseNodeById(id);
+    if (baseNode == null || !identical(foundAfterLayerClone.node, baseNode)) {
       return foundAfterLayerClone;
     }
 
@@ -455,6 +498,60 @@ class TxnContext {
     _materializedLayerIndexById = null;
   }
 
+  ContentLayer? _txnBaseLayerById(LayerId id) {
+    final baseIndexById = _baseLayerIndexById ??= <LayerId, int>{
+      for (var index = 0; index < _baseScene.layers.length; index++)
+        _baseScene.layers[index].id: index,
+    };
+    final index = baseIndexById[id];
+    if (index == null || index < 0 || index >= _baseScene.layers.length) {
+      return null;
+    }
+    final layer = _baseScene.layers[index];
+    if (layer.id != id) {
+      return null;
+    }
+    return layer;
+  }
+
+  SceneNode? _txnBaseNodeById(NodeId id) {
+    final entry = _baseNodeLocator[id];
+    if (entry == null) {
+      return null;
+    }
+
+    if (entry.layerIndex == -1) {
+      final backgroundLayer = _baseScene.backgroundLayer;
+      if (backgroundLayer == null) {
+        return null;
+      }
+      final nodeIndex = entry.nodeIndex;
+      if (nodeIndex < 0 || nodeIndex >= backgroundLayer.nodes.length) {
+        return null;
+      }
+      final node = backgroundLayer.nodes[nodeIndex];
+      if (node.id != id) {
+        return null;
+      }
+      return node;
+    }
+
+    final layerIndex = entry.layerIndex;
+    if (layerIndex < 0 || layerIndex >= _baseScene.layers.length) {
+      return null;
+    }
+    final layer = _baseScene.layers[layerIndex];
+    final nodeIndex = entry.nodeIndex;
+    if (nodeIndex < 0 || nodeIndex >= layer.nodes.length) {
+      return null;
+    }
+    final node = layer.nodes[nodeIndex];
+    if (node.id != id) {
+      return null;
+    }
+    return node;
+  }
+
   Map<NodeId, NodeLocatorEntry> _txnMaterializeNodeLocator() {
     final cached = _materializedNodeLocator;
     if (cached != null) {
@@ -464,33 +561,5 @@ class TxnContext {
     _materializedNodeLocator = materialized;
     debugNodeLocatorMaterializations = debugNodeLocatorMaterializations + 1;
     return materialized;
-  }
-
-  ContentLayer? _txnBaseLayerAt(int layerIndex) {
-    if (layerIndex < 0 || layerIndex >= _baseScene.layers.length) {
-      return null;
-    }
-    return _baseScene.layers[layerIndex];
-  }
-
-  SceneNode? _txnBaseNodeAt({required int layerIndex, required int nodeIndex}) {
-    if (layerIndex == -1) {
-      final backgroundLayer = _baseScene.backgroundLayer;
-      if (backgroundLayer == null) {
-        return null;
-      }
-      if (nodeIndex < 0 || nodeIndex >= backgroundLayer.nodes.length) {
-        return null;
-      }
-      return backgroundLayer.nodes[nodeIndex];
-    }
-    final layer = _txnBaseLayerAt(layerIndex);
-    if (layer == null) {
-      return null;
-    }
-    if (nodeIndex < 0 || nodeIndex >= layer.nodes.length) {
-      return null;
-    }
-    return layer.nodes[nodeIndex];
   }
 }

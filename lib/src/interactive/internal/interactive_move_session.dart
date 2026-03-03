@@ -8,23 +8,25 @@ import '../../core/pointer_input.dart';
 import '../../core/scene_spatial_index.dart';
 import '../../core/transform2d.dart';
 import '../../public/snapshot.dart';
-import 'interactive_selection_utils.dart';
+
+typedef MoveCommitSelectionResult = ({
+  Offset appliedDelta,
+  List<NodeId> movedIds,
+});
 
 class InteractiveMoveSessionCallbacks {
   const InteractiveMoveSessionCallbacks({
     required this.onStateChanged,
-    required this.readSnapshot,
     required this.readSelectedNodeIds,
     required this.querySpatialCandidates,
     required this.resolveSpatialCandidateNode,
     required this.writeSelectionReplace,
     required this.writeSelectionClear,
-    required this.writeSelectionTranslate,
+    required this.commitMoveSelection,
     required this.emitAction,
   });
 
   final VoidCallback onStateChanged;
-  final SceneSnapshot Function() readSnapshot;
   final Set<NodeId> Function() readSelectedNodeIds;
   final List<SceneSpatialCandidate> Function(Rect bounds)
   querySpatialCandidates;
@@ -32,7 +34,8 @@ class InteractiveMoveSessionCallbacks {
   resolveSpatialCandidateNode;
   final void Function(Iterable<NodeId> nodeIds) writeSelectionReplace;
   final void Function() writeSelectionClear;
-  final int Function(Offset delta) writeSelectionTranslate;
+  final MoveCommitSelectionResult Function(Offset proposedDelta)
+  commitMoveSelection;
   final void Function(
     ActionType type,
     List<NodeId> nodeIds,
@@ -190,39 +193,34 @@ class InteractiveMoveSession {
   void _moveHandleUp(PointerSample sample, Offset scenePoint) {
     if (_moveActivePointerId != sample.pointerId) return;
 
-    if (_moveTarget == _MoveDragTarget.move) {
-      final finalDelta = _movePreviewDelta;
-      final movedIds = selectedTransformableNodesInSnapshotOrder(
-        snapshot: callbacks.readSnapshot(),
-        selected: _movePreviewNodeIds,
-      ).map((node) => node.id).toList(growable: false);
-      _clearMovePreview();
-      if (_moveDragStarted) {
-        var affected = 0;
-        if (finalDelta != Offset.zero) {
-          affected = callbacks.writeSelectionTranslate(finalDelta);
+    try {
+      if (_moveTarget == _MoveDragTarget.move) {
+        final proposedDelta = _movePreviewDelta;
+        if (_moveDragStarted && proposedDelta != Offset.zero) {
+          final moveCommit = callbacks.commitMoveSelection(proposedDelta);
+          if (moveCommit.appliedDelta != Offset.zero &&
+              moveCommit.movedIds.isNotEmpty) {
+            final delta = Transform2D.translation(moveCommit.appliedDelta);
+            callbacks.emitAction(
+              ActionType.transform,
+              moveCommit.movedIds,
+              sample.timestampMs,
+              payload: <String, Object?>{'delta': delta.toJsonMap()},
+            );
+          }
         }
-        if (affected > 0 && movedIds.isNotEmpty) {
-          final delta = Transform2D.translation(finalDelta);
-          callbacks.emitAction(
-            ActionType.transform,
-            movedIds,
-            sample.timestampMs,
-            payload: <String, Object?>{'delta': delta.toJsonMap()},
-          );
+      } else if (_moveTarget == _MoveDragTarget.marquee) {
+        if (_moveDragStarted && _selectionRect != null) {
+          _commitMarquee(sample.timestampMs);
+        } else if (_movePendingClearSelection) {
+          callbacks.writeSelectionClear();
         }
       }
-    } else if (_moveTarget == _MoveDragTarget.marquee) {
-      if (_moveDragStarted && _selectionRect != null) {
-        _commitMarquee(sample.timestampMs);
-      } else if (_movePendingClearSelection) {
-        callbacks.writeSelectionClear();
-      }
+    } finally {
+      resetGestureState();
+      setSelectionRect(null);
+      callbacks.onStateChanged();
     }
-
-    resetGestureState();
-    setSelectionRect(null);
-    callbacks.onStateChanged();
   }
 
   void _commitMarquee(int timestampMs) {

@@ -7,6 +7,7 @@ import 'dart:io';
 // INV:INV-ENG-EPOCH-INVALIDATION
 // INV:INV-G-PUBLIC-ENTRYPOINTS
 // INV:INV-ENG-SAFE-TXN-API
+// INV:INV-ENG-INTERACTIVE-RESOLVER-PURITY
 
 class _Violation {
   _Violation({
@@ -21,6 +22,18 @@ class _Violation {
 
   @override
   String toString() => '$filePath:$line: $message';
+}
+
+class _InteractiveEntrypointSignature {
+  _InteractiveEntrypointSignature({
+    required this.name,
+    required this.bodyRemainder,
+  });
+
+  final String name;
+  final String bodyRemainder;
+
+  bool get isDispose => name == 'dispose';
 }
 
 String _normalizePosixPath(String path) {
@@ -711,6 +724,258 @@ void _checkControllerGuardrails({
   }
 }
 
+int _braceDelta(String line) {
+  var delta = 0;
+  for (final codeUnit in line.codeUnits) {
+    if (codeUnit == 123) {
+      delta = delta + 1;
+    } else if (codeUnit == 125) {
+      delta = delta - 1;
+    }
+  }
+  return delta;
+}
+
+bool _isSkippableBodyLine(String text) {
+  final trimmed = text.trimLeft();
+  return trimmed.isEmpty ||
+      trimmed.startsWith('//') ||
+      trimmed.startsWith('/*') ||
+      trimmed.startsWith('*') ||
+      trimmed.startsWith('*/');
+}
+
+_InteractiveEntrypointSignature? _parseInteractiveEntrypointSignature(
+  String trimmed, {
+  required String filePath,
+  required int lineNo,
+}) {
+  if (trimmed.isEmpty ||
+      trimmed.startsWith('//') ||
+      trimmed.startsWith('@') ||
+      trimmed.startsWith('static ') ||
+      trimmed.startsWith('factory ')) {
+    return null;
+  }
+  if (trimmed.startsWith('set ')) {
+    final setterMatch = RegExp(
+      r'^set\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(',
+    ).firstMatch(trimmed);
+    if (setterMatch == null) {
+      return null;
+    }
+    final name = setterMatch.group(1)!;
+    if (name.startsWith('_')) {
+      return null;
+    }
+    final arrowBody = RegExp(r'\)\s*=>').firstMatch(trimmed);
+    if (arrowBody != null) {
+      _fail(
+        _Violation(
+          filePath: filePath,
+          line: lineNo,
+          message:
+              'public interactive entrypoint "$name" must use a block body guarded by _ensurePublicSideEffectAllowed(...).',
+        ),
+      );
+    }
+    final bodyOpen = RegExp(r'\)\s*\{').firstMatch(trimmed);
+    if (bodyOpen == null) {
+      _fail(
+        _Violation(
+          filePath: filePath,
+          line: lineNo,
+          message:
+              'public interactive entrypoint "$name" must keep its signature on one line so guardrails can verify _ensurePublicSideEffectAllowed(...).',
+        ),
+      );
+    }
+    return _InteractiveEntrypointSignature(
+      name: name,
+      bodyRemainder: trimmed.substring(bodyOpen.end),
+    );
+  }
+
+  if (trimmed.startsWith('get ') || trimmed.contains(' get ')) {
+    return null;
+  }
+  final parenIndex = trimmed.indexOf('(');
+  if (parenIndex < 0) {
+    return null;
+  }
+  final beforeParen = trimmed.substring(0, parenIndex).trimRight();
+  if (beforeParen.contains('=')) {
+    return null;
+  }
+  final nameMatch = RegExp(
+    r'([A-Za-z_][A-Za-z0-9_]*)\s*(?:<[^<>]*>)?$',
+  ).firstMatch(beforeParen);
+  if (nameMatch == null) {
+    return null;
+  }
+  final name = nameMatch.group(1)!;
+  if (name == 'SceneControllerInteractive' || name.startsWith('_')) {
+    return null;
+  }
+  final arrowBody = RegExp(r'\)\s*=>').firstMatch(trimmed);
+  if (arrowBody != null) {
+    _fail(
+      _Violation(
+        filePath: filePath,
+        line: lineNo,
+        message:
+            'public interactive entrypoint "$name" must use a block body guarded by _ensurePublicSideEffectAllowed(...).',
+      ),
+    );
+  }
+  final bodyOpen = RegExp(r'\)\s*\{').firstMatch(trimmed);
+  if (bodyOpen == null) {
+    _fail(
+      _Violation(
+        filePath: filePath,
+        line: lineNo,
+        message:
+            'public interactive entrypoint "$name" must keep its signature on one line so guardrails can verify _ensurePublicSideEffectAllowed(...).',
+      ),
+    );
+  }
+  return _InteractiveEntrypointSignature(
+    name: name,
+    bodyRemainder: trimmed.substring(bodyOpen.end),
+  );
+}
+
+void _validateInteractiveEntrypointGuard({
+  required _InteractiveEntrypointSignature signature,
+  required List<String> lines,
+  required int signatureLineIndex,
+  required String filePath,
+}) {
+  var guardLineIndex = signatureLineIndex;
+  var guardLine = signature.bodyRemainder.trimLeft();
+
+  while (_isSkippableBodyLine(guardLine)) {
+    guardLineIndex = guardLineIndex + 1;
+    if (guardLineIndex >= lines.length) {
+      _fail(
+        _Violation(
+          filePath: filePath,
+          line: signatureLineIndex + 1,
+          message:
+              'public interactive entrypoints must guard resolver purity with _ensurePublicSideEffectAllowed(...).',
+        ),
+      );
+    }
+    guardLine = lines[guardLineIndex].trimLeft();
+  }
+
+  if (!guardLine.startsWith('_ensurePublicSideEffectAllowed(')) {
+    _fail(
+      _Violation(
+        filePath: filePath,
+        line: guardLineIndex + 1,
+        message:
+            'public interactive entrypoints must guard resolver purity with _ensurePublicSideEffectAllowed(...).',
+      ),
+    );
+  }
+
+  final hasAllowAfterDispose = guardLine.contains('allowAfterDispose: true');
+  if (signature.isDispose) {
+    if (!hasAllowAfterDispose) {
+      _fail(
+        _Violation(
+          filePath: filePath,
+          line: guardLineIndex + 1,
+          message:
+              'dispose() must guard resolver purity with allowAfterDispose: true.',
+        ),
+      );
+    }
+    return;
+  }
+
+  if (hasAllowAfterDispose) {
+    _fail(
+      _Violation(
+        filePath: filePath,
+        line: guardLineIndex + 1,
+        message:
+            'only dispose() may call _ensurePublicSideEffectAllowed(..., allowAfterDispose: true).',
+      ),
+    );
+  }
+}
+
+void _checkInteractiveResolverPurityGuardrails({
+  required Directory root,
+  required String rootAbsPosix,
+}) {
+  final file = File(
+    '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}src${Platform.pathSeparator}interactive${Platform.pathSeparator}scene_controller_interactive.dart',
+  );
+  if (!file.existsSync()) {
+    return;
+  }
+
+  final filePosixPath = _toRepoRelPosixPath(
+    absPosixPath: _toPosixPath(file.absolute.path),
+    rootAbsPosixPath: rootAbsPosix,
+  );
+  final lines = file.readAsLinesSync();
+
+  var seenInteractiveClass = false;
+  var classBraceDepth = 0;
+  var ignoringConstructorDeclaration = false;
+  for (var i = 0; i < lines.length; i++) {
+    final line = lines[i];
+    final trimmed = line.trimLeft();
+
+    if (!seenInteractiveClass) {
+      if (!line.contains('class SceneControllerInteractive')) {
+        continue;
+      }
+      seenInteractiveClass = true;
+    }
+
+    if (classBraceDepth == 0) {
+      classBraceDepth = classBraceDepth + _braceDelta(line);
+      continue;
+    }
+
+    if (classBraceDepth == 1) {
+      if (ignoringConstructorDeclaration) {
+        if (RegExp(r'\)\s*\{').hasMatch(trimmed)) {
+          ignoringConstructorDeclaration = false;
+        }
+      } else if (trimmed.startsWith('SceneControllerInteractive(')) {
+        if (!RegExp(r'\)\s*\{').hasMatch(trimmed)) {
+          ignoringConstructorDeclaration = true;
+        }
+      } else {
+        final signature = _parseInteractiveEntrypointSignature(
+          trimmed,
+          filePath: filePosixPath,
+          lineNo: i + 1,
+        );
+        if (signature != null) {
+          _validateInteractiveEntrypointGuard(
+            signature: signature,
+            lines: lines,
+            signatureLineIndex: i,
+            filePath: filePosixPath,
+          );
+        }
+      }
+    }
+
+    classBraceDepth = classBraceDepth + _braceDelta(line);
+    if (classBraceDepth == 0) {
+      break;
+    }
+  }
+}
+
 void main(List<String> args) {
   final root = Directory.current;
   final rootAbsPosix = _toPosixPath(root.absolute.path);
@@ -732,6 +997,10 @@ void main(List<String> args) {
     root: root,
     rootAbsPosix: rootAbsPosix,
     exportedFiles: exportedFiles,
+  );
+  _checkInteractiveResolverPurityGuardrails(
+    root: root,
+    rootAbsPosix: rootAbsPosix,
   );
   _checkControllerGuardrails(root: root, rootAbsPosix: rootAbsPosix);
 

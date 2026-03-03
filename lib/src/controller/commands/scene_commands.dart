@@ -22,9 +22,13 @@ class SceneCommands {
     return left.length == right.length && left.containsAll(right);
   }
 
-  NodeId writeAddNode(NodeSpec spec, {LayerId? layerId}) {
+  NodeId writeAddNode(NodeSpec spec, {LayerId? layerId, int? insertIndex}) {
     return _writeRunner((writer) {
-      final nodeId = writer.writeNodeInsert(spec, layerId: layerId);
+      final nodeId = writer.writeNodeInsert(
+        spec,
+        layerId: layerId,
+        insertIndex: insertIndex,
+      );
       writer.writeSignalEnqueue(type: 'node.added', nodeIds: <NodeId>[nodeId]);
       return nodeId;
     });

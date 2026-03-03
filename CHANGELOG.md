@@ -24,6 +24,17 @@
 - Benchmark diff operation-path matching now normalizes mixed schema shapes (`metrics.*` and flat leaves), so baseline/current reports compare deterministically without false missing-operation noise.
 - Load-profile benchmarks now include dedicated `selection_path_metrics` render case (`paint_no_selection` / `paint_with_selection`) for tracking lazy path-metrics behavior.
 - Runtime commit invariant validation now uses two tiers: critical checks (`camera/grid numeric validity` + strictly monotonic commit revision against previous committed state) are enforced in all build modes, while the full committed-store invariant sweep remains enabled in `debug`/`profile`.
+- Interactive move commits now support an optional final-delta resolver on
+  pointer up, so drag snap adjustments can be applied in the same transaction
+  and emitted as a single `ActionType.transform`; public mutating/effectful
+  controller APIs are rejected while that resolver is running.
+- Node insertion now supports explicit intra-layer `insertIndex`, and
+  `SceneWriteTxn`/`SceneControllerInteractive` now expose explicit
+  `writeLayerEnsure(...)` / `ensureLayer(...)` helpers for content-layer
+  creation without changing the fail-fast unknown-`layerId` contract.
+- `SceneControllerInteractive(textFontFamilyByDefault: ...)` can now stamp a
+  default `fontFamily` into newly inserted text nodes when the incoming
+  `TextNodeSpec` leaves `fontFamily` unset.
 
 ## 5.0.0 (2026-02-18)
 

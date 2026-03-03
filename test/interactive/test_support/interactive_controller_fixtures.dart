@@ -12,6 +12,7 @@ import 'package:iwb_canvas_engine/src/interactive/scene_controller_interactive.d
         sceneControllerInteractiveInternalEraserPreciseSegmentCheckCount,
         sceneControllerInteractiveInternalEraserSpatialQueryCount,
         sceneControllerInteractiveInternalEnforceGestureBufferSoftLimitForTest,
+        sceneControllerInteractiveInternalRunMoveCommitDeltaResolverForTest,
         sceneControllerInteractiveInternalSetBeforePointerDispatchHook;
 import 'package:iwb_canvas_engine/src/model/document.dart';
 
@@ -49,12 +50,16 @@ SceneControllerInteractive controllerFromScene(
   PointerInputSettings? pointerSettings,
   double? dragStartSlop,
   bool clearSelectionOnDrawModeEnter = false,
+  MoveCommitDeltaResolver? moveCommitDeltaResolver,
+  String? textFontFamilyByDefault,
 }) {
   return SceneControllerInteractive(
     initialSnapshot: txnSceneToSnapshot(scene),
     pointerSettings: pointerSettings,
     dragStartSlop: dragStartSlop,
     clearSelectionOnDrawModeEnter: clearSelectionOnDrawModeEnter,
+    moveCommitDeltaResolver: moveCommitDeltaResolver,
+    textFontFamilyByDefault: textFontFamilyByDefault,
   );
 }
 
@@ -180,6 +185,20 @@ void setBeforePointerDispatchHook(
   sceneControllerInteractiveInternalSetBeforePointerDispatchHook(
     controller,
     hook,
+  );
+}
+
+Offset runMoveCommitDeltaResolverForTest(
+  SceneControllerInteractive controller, {
+  required SceneSnapshot snapshot,
+  required List<NodeSnapshot> movedNodes,
+  required Offset proposedDelta,
+}) {
+  return sceneControllerInteractiveInternalRunMoveCommitDeltaResolverForTest(
+    controller,
+    snapshot: snapshot,
+    movedNodes: movedNodes,
+    proposedDelta: proposedDelta,
   );
 }
 

@@ -145,6 +145,25 @@ void main() {
     assertControllerInvariants(controller);
   });
 
+  test('add node forwards insertIndex into target layer ordering', () async {
+    final controller = buildController();
+    addTearDown(controller.dispose);
+
+    controller.commands.writeAddNode(
+      RectNodeSpec(id: 'before-base', size: const Size(8, 8)),
+      insertIndex: 0,
+    );
+    await pumpEventQueue();
+
+    expect(
+      controller.snapshot.layers.single.nodes
+          .map((node) => node.id)
+          .toList(growable: false),
+      <String>['before-base', 'base'],
+    );
+    assertControllerInvariants(controller);
+  });
+
   test(
     'scene commands handle missing patch/delete and selection commands',
     () async {

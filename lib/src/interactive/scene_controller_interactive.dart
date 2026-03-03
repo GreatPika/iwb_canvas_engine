@@ -24,6 +24,13 @@ import 'internal/interactive_geometry.dart';
 import 'internal/interactive_move_session.dart';
 import 'internal/interactive_selection_utils.dart';
 
+typedef MoveCommitDeltaResolver =
+    Offset Function({
+      required SceneSnapshot snapshot,
+      required List<NodeSnapshot> movedNodes,
+      required Offset proposedDelta,
+    });
+
 int sceneControllerInteractiveInternalEpoch(
   SceneControllerInteractive controller,
 ) {
@@ -42,6 +49,19 @@ void sceneControllerInteractiveInternalSetBeforePointerDispatchHook(
   VoidCallback? hook,
 ) {
   controller._debugBeforeHandlePointerDispatchHook = hook;
+}
+
+Offset sceneControllerInteractiveInternalRunMoveCommitDeltaResolverForTest(
+  SceneControllerInteractive controller, {
+  required SceneSnapshot snapshot,
+  required List<NodeSnapshot> movedNodes,
+  required Offset proposedDelta,
+}) {
+  return controller._runMoveCommitDeltaResolver(
+    snapshot: snapshot,
+    movedNodes: movedNodes,
+    proposedDelta: proposedDelta,
+  );
 }
 
 void sceneControllerInteractiveInternalEnforceGestureBufferSoftLimitForTest(
@@ -82,22 +102,55 @@ class SceneControllerInteractive extends ChangeNotifier
     PointerInputSettings? pointerSettings,
     double? dragStartSlop,
     this.clearSelectionOnDrawModeEnter = false,
+    this.moveCommitDeltaResolver,
+    this.textFontFamilyByDefault,
   }) : _pointerSettings = pointerSettings ?? const PointerInputSettings(),
        _dragStartSlop = dragStartSlop,
-       _core = SceneControllerCore(initialSnapshot: initialSnapshot) {
+       _core = SceneControllerCore(
+         initialSnapshot: initialSnapshot,
+         textFontFamilyByDefault: textFontFamilyByDefault,
+       ) {
     validatePointerInputSettings(_pointerSettings);
     _moveSession = InteractiveMoveSession(
       callbacks: InteractiveMoveSessionCallbacks(
         onStateChanged: _scheduleNotify,
-        readSnapshot: () => snapshot,
         readSelectedNodeIds: () => selectedNodeIds,
         querySpatialCandidates: _core.querySpatialCandidates,
         resolveSpatialCandidateNode: _core.resolveSpatialCandidateNode,
         writeSelectionReplace: _core.commands.writeSelectionReplace,
         writeSelectionClear: _core.commands.writeSelectionClear,
-        writeSelectionTranslate: (delta) {
-          return _core.write<int>((writer) {
-            return writer.writeSelectionTranslate(delta);
+        commitMoveSelection: (proposedDelta) {
+          return _core.write<MoveCommitSelectionResult>((writer) {
+            final snapshot = writer.snapshot;
+            final movedNodes = selectedTransformableNodesInSnapshotOrder(
+              snapshot: snapshot,
+              selected: writer.selectedNodeIds,
+            );
+            if (movedNodes.isEmpty) {
+              return (appliedDelta: Offset.zero, movedIds: const <NodeId>[]);
+            }
+
+            final resolvedDelta = _runMoveCommitDeltaResolver(
+              snapshot: snapshot,
+              movedNodes: movedNodes,
+              proposedDelta: proposedDelta,
+            );
+            _requireFiniteOffset(resolvedDelta, name: 'resolvedDelta');
+            if (resolvedDelta == Offset.zero) {
+              return (appliedDelta: Offset.zero, movedIds: const <NodeId>[]);
+            }
+
+            final affected = writer.writeSelectionTranslate(resolvedDelta);
+            if (affected <= 0) {
+              return (appliedDelta: Offset.zero, movedIds: const <NodeId>[]);
+            }
+
+            return (
+              appliedDelta: resolvedDelta,
+              movedIds: movedNodes
+                  .map((node) => node.id)
+                  .toList(growable: false),
+            );
           });
         },
         emitAction: _events.emitAction,
@@ -136,11 +189,14 @@ class SceneControllerInteractive extends ChangeNotifier
   double _highlighterOpacity = SceneDefaults.highlighterOpacity;
 
   final bool clearSelectionOnDrawModeEnter;
+  final MoveCommitDeltaResolver? moveCommitDeltaResolver;
+  final String? textFontFamilyByDefault;
 
   bool _notifyScheduled = false;
   bool _notifyPending = false;
   bool _isDisposed = false;
   bool _handlingPointer = false;
+  bool _moveCommitResolverActive = false;
   VoidCallback? _debugBeforeHandlePointerDispatchHook;
 
   @override
@@ -191,12 +247,12 @@ class SceneControllerInteractive extends ChangeNotifier
   Stream<EditTextRequested> get editTextRequests => _events.editTextRequests;
 
   T write<T>(T Function(SceneWriteTxn writer) fn) {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('write');
     return _core.write(fn);
   }
 
   void setMode(CanvasMode value) {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('setMode');
     if (_mode == value) return;
 
     if (_mode == CanvasMode.move) {
@@ -219,7 +275,7 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   void setDrawTool(DrawTool value) {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('setDrawTool');
     if (_drawTool == value) return;
     _drawTool = value;
     _drawCoordinator.resetGestureState();
@@ -228,20 +284,20 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   void setDrawColor(Color value) {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('setDrawColor');
     if (_drawColor == value) return;
     _drawColor = value;
     _scheduleNotify();
   }
 
   set penThickness(double value) {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('penThickness');
     _penThickness = _requireFinitePositive(value, name: 'penThickness');
     _scheduleNotify();
   }
 
   set highlighterThickness(double value) {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('highlighterThickness');
     _highlighterThickness = _requireFinitePositive(
       value,
       name: 'highlighterThickness',
@@ -250,19 +306,19 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   set lineThickness(double value) {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('lineThickness');
     _lineThickness = _requireFinitePositive(value, name: 'lineThickness');
     _scheduleNotify();
   }
 
   set eraserThickness(double value) {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('eraserThickness');
     _eraserThickness = _requireFinitePositive(value, name: 'eraserThickness');
     _scheduleNotify();
   }
 
   set highlighterOpacity(double value) {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('highlighterOpacity');
     _highlighterOpacity = _requireFiniteInUnitInterval(
       value,
       name: 'highlighterOpacity',
@@ -271,14 +327,14 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   void setPointerSettings(PointerInputSettings value) {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('setPointerSettings');
     validatePointerInputSettings(value);
     _pointerSettings = value;
     _scheduleNotify();
   }
 
   void setDragStartSlop(double? value) {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('setDragStartSlop');
     final resolved = value == null
         ? null
         : _requireFinitePositive(value, name: 'dragStartSlop');
@@ -288,17 +344,17 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   void setBackgroundColor(Color value) {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('setBackgroundColor');
     _core.commands.writeBackgroundColorSet(value);
   }
 
   void setGridEnabled(bool value) {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('setGridEnabled');
     _core.commands.writeGridEnabledSet(value);
   }
 
   void setGridCellSize(double value) {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('setGridCellSize');
     _requireFinitePositive(value, name: 'cellSize');
     final gridEnabled = snapshot.background.grid.isEnabled;
     final resolved = gridEnabled
@@ -308,23 +364,34 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   void setCameraOffset(Offset value) {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('setCameraOffset');
     _requireFiniteOffset(value, name: 'value');
     _core.commands.writeCameraOffsetSet(value);
   }
 
-  NodeId addNode(NodeSpec node, {LayerId? layerId}) {
-    _ensureNotDisposed();
-    return _core.commands.writeAddNode(node, layerId: layerId);
+  NodeId addNode(NodeSpec node, {LayerId? layerId, int? insertIndex}) {
+    _ensurePublicSideEffectAllowed('addNode');
+    return _core.commands.writeAddNode(
+      node,
+      layerId: layerId,
+      insertIndex: insertIndex,
+    );
+  }
+
+  bool ensureLayer(LayerId layerId, {int? index}) {
+    _ensurePublicSideEffectAllowed('ensureLayer');
+    return _core.write((writer) {
+      return writer.writeLayerEnsure(layerId, index: index);
+    });
   }
 
   bool patchNode(NodePatch patch) {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('patchNode');
     return _core.commands.writePatchNode(patch);
   }
 
   bool removeNode(NodeId id, {int? timestampMs}) {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('removeNode');
     final deleted = _core.commands.writeDeleteNode(id);
     if (!deleted) return false;
     _events.emitAction(ActionType.delete, <NodeId>[
@@ -334,27 +401,27 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   void setSelection(Iterable<NodeId> nodeIds) {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('setSelection');
     _core.commands.writeSelectionReplace(nodeIds);
   }
 
   void toggleSelection(NodeId nodeId) {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('toggleSelection');
     _core.commands.writeSelectionToggle(nodeId);
   }
 
   void clearSelection() {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('clearSelection');
     _core.commands.writeSelectionClear();
   }
 
   void selectAll({bool onlySelectable = true}) {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('selectAll');
     _core.commands.writeSelectionSelectAll(onlySelectable: onlySelectable);
   }
 
   void rotateSelection({required bool clockwise, int? timestampMs}) {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('rotateSelection');
     final nodes = selectedTransformableNodesInSnapshotOrder(
       snapshot: snapshot,
       selected: selectedNodeIds,
@@ -382,7 +449,7 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   void flipSelectionVertical({int? timestampMs}) {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('flipSelectionVertical');
     final nodes = selectedTransformableNodesInSnapshotOrder(
       snapshot: snapshot,
       selected: selectedNodeIds,
@@ -414,7 +481,7 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   void flipSelectionHorizontal({int? timestampMs}) {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('flipSelectionHorizontal');
     final nodes = selectedTransformableNodesInSnapshotOrder(
       snapshot: snapshot,
       selected: selectedNodeIds,
@@ -446,7 +513,7 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   void deleteSelection({int? timestampMs}) {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('deleteSelection');
     final deletedIds = deletableSelectedNodeIdsInSnapshot(
       snapshot: snapshot,
       selected: selectedNodeIds,
@@ -464,7 +531,7 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   void clearScene({int? timestampMs}) {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('clearScene');
     final clearResult = _core.write<({List<NodeId> clearedIds, bool changed})>((
       writer,
     ) {
@@ -484,19 +551,19 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   void replaceScene(SceneSnapshot snapshot) {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('replaceScene');
     _core.writeReplaceScene(snapshot);
     _drawCoordinator.clearPendingLine();
     _moveSession.setSelectionRect(null);
   }
 
   void notifySceneChanged() {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('notifySceneChanged');
     _core.requestRepaint();
   }
 
   void handlePointer(CanvasPointerInput input) {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('handlePointer');
     if (_handlingPointer) {
       throw StateError('Reentrant handlePointer(...) is not allowed.');
     }
@@ -529,7 +596,7 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   void handleDoubleTap({required Offset position, int? timestampMs}) {
-    _ensureNotDisposed();
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
     if (!_isFiniteOffset(position)) {
       return;
     }
@@ -648,8 +715,43 @@ class SceneControllerInteractive extends ChangeNotifier
     _scheduleNotify();
   }
 
-  void _ensureNotDisposed() {
-    if (_isDisposed) {
+  Offset _runMoveCommitDeltaResolver({
+    required SceneSnapshot snapshot,
+    required List<NodeSnapshot> movedNodes,
+    required Offset proposedDelta,
+  }) {
+    final resolver = moveCommitDeltaResolver;
+    if (resolver == null) {
+      return proposedDelta;
+    }
+    if (_moveCommitResolverActive) {
+      throw StateError(
+        'Reentrant moveCommitDeltaResolver(...) is not allowed.',
+      );
+    }
+
+    _moveCommitResolverActive = true;
+    try {
+      return resolver(
+        snapshot: snapshot,
+        movedNodes: movedNodes,
+        proposedDelta: proposedDelta,
+      );
+    } finally {
+      _moveCommitResolverActive = false;
+    }
+  }
+
+  void _ensurePublicSideEffectAllowed(
+    String operation, {
+    bool allowAfterDispose = false,
+  }) {
+    if (_moveCommitResolverActive) {
+      throw StateError(
+        '$operation is not allowed during moveCommitDeltaResolver.',
+      );
+    }
+    if (!allowAfterDispose && _isDisposed) {
       throw StateError(
         'SceneControllerInteractive is disposed and no longer usable.',
       );
@@ -658,6 +760,7 @@ class SceneControllerInteractive extends ChangeNotifier
 
   @override
   void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
     if (_isDisposed) {
       return;
     }

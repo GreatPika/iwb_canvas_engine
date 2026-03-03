@@ -190,6 +190,7 @@ void main() {
     // INV:INV-ENG-TXN-ATOMIC-COMMIT
     // INV:INV-G-PUBLIC-ENTRYPOINTS
     // INV:INV-ENG-SAFE-TXN-API
+    // INV:INV-ENG-INTERACTIVE-RESOLVER-PURITY
     test('does not require API_GUIDE.md', () async {
       final sandbox = await _createSandbox();
       try {
@@ -556,6 +557,151 @@ class Store {
         sandbox.deleteSync(recursive: true);
       }
     });
+
+    test(
+      'accepts guarded public interactive entrypoints in SceneControllerInteractive',
+      () async {
+        final sandbox = await _createSandbox();
+        try {
+          _writeFile(sandbox, 'lib/src/controller/store.dart', '''
+class Store {
+  int controllerEpoch = 0;
+
+  void writeMutations() {}
+
+  void txnCommit() {
+    writeMutations();
+  }
+}
+''');
+          _writeFile(
+            sandbox,
+            'lib/src/interactive/scene_controller_interactive.dart',
+            '''
+class SceneControllerInteractive {
+  int get value => 1;
+
+  void handlePointer() {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  set mode(int value) {
+    _ensurePublicSideEffectAllowed('mode');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+
+  void _ensurePublicSideEffectAllowed(
+    String operation, {
+    bool allowAfterDispose = false,
+  }) {}
+}
+''',
+          );
+
+          final result = await _runTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, 0, reason: result.stderr.toString());
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects public interactive method without resolver purity guard',
+      () async {
+        final sandbox = await _createSandbox();
+        try {
+          _writeFile(sandbox, 'lib/src/controller/store.dart', '''
+class Store {
+  int controllerEpoch = 0;
+
+  void writeMutations() {}
+
+  void txnCommit() {
+    writeMutations();
+  }
+}
+''');
+          _writeFile(
+            sandbox,
+            'lib/src/interactive/scene_controller_interactive.dart',
+            '''
+class SceneControllerInteractive {
+  void handlePointer() {
+    print('missing guard');
+  }
+
+  void _ensurePublicSideEffectAllowed(
+    String operation, {
+    bool allowAfterDispose = false,
+  }) {}
+}
+''',
+          );
+
+          final result = await _runTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            contains(
+              'public interactive entrypoints must guard resolver purity with _ensurePublicSideEffectAllowed',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects dispose without allowAfterDispose true in purity guard',
+      () async {
+        final sandbox = await _createSandbox();
+        try {
+          _writeFile(sandbox, 'lib/src/controller/store.dart', '''
+class Store {
+  int controllerEpoch = 0;
+
+  void writeMutations() {}
+
+  void txnCommit() {
+    writeMutations();
+  }
+}
+''');
+          _writeFile(
+            sandbox,
+            'lib/src/interactive/scene_controller_interactive.dart',
+            '''
+class SceneControllerInteractive {
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose');
+  }
+
+  void _ensurePublicSideEffectAllowed(
+    String operation, {
+    bool allowAfterDispose = false,
+  }) {}
+}
+''',
+          );
+
+          final result = await _runTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            contains(
+              'dispose() must guard resolver purity with allowAfterDispose: true',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
   });
 }
 

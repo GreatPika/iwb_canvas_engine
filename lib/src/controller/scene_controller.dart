@@ -27,14 +27,17 @@ import 'store.dart';
 import 'txn_context.dart';
 
 class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
-  SceneControllerCore({SceneSnapshot? initialSnapshot})
-    : _store = SceneStore(
-        sceneDoc: txnSceneFromSnapshot(initialSnapshot ?? SceneSnapshot()),
-      ) {
+  SceneControllerCore({
+    SceneSnapshot? initialSnapshot,
+    this.textFontFamilyByDefault,
+  }) : _store = SceneStore(
+         sceneDoc: txnSceneFromSnapshot(initialSnapshot ?? SceneSnapshot()),
+       ) {
     _selectedNodeIdsView = UnmodifiableSetView<NodeId>(_store.selectedNodeIds);
   }
 
   final SceneStore _store;
+  final String? textFontFamilyByDefault;
 
   final SelectionNormalizer _selectionNormalizer = SelectionNormalizer();
   final GridNormalizer _gridNormalizer = GridNormalizer();
@@ -189,6 +192,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
       final writer = SceneWriter(
         createdCtx,
         txnSignalSink: _signalsBuffer.writeBufferSignal,
+        textFontFamilyByDefault: textFontFamilyByDefault,
       );
       result = fn(writer);
       if (result is Future) {

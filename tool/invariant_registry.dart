@@ -170,6 +170,12 @@ const List<Invariant> invariants = <Invariant>[
         'interactive move/draw preview remains ephemeral and does not mutate committed scene before pointer up commit',
   ),
   Invariant(
+    id: 'INV-ENG-INTERACTIVE-RESOLVER-PURITY',
+    scope: 'engine-runtime',
+    title:
+        'moveCommitDeltaResolver cannot call public stateful/effectful interactive controller entrypoints',
+  ),
+  Invariant(
     id: 'INV-ENG-VIEW-POINTER-SLOT-LIFECYCLE',
     scope: 'view-runtime',
     title:

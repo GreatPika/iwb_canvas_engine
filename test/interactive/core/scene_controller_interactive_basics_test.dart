@@ -426,6 +426,92 @@ void main() {
     });
 
     test(
+      'addNode supports insertIndex and ensureLayer preserves fail-fast ids',
+      () {
+        final controller = SceneControllerInteractive(
+          initialSnapshot: SceneSnapshot(
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(
+                id: 'layer-auto-3',
+                nodes: const <NodeSnapshot>[
+                  RectNodeSnapshot(id: 'base', size: Size(10, 10)),
+                ],
+              ),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+
+        expect(controller.ensureLayer('layer-auto-2', index: 0), isTrue);
+        expect(controller.ensureLayer('layer-auto-2', index: 1), isFalse);
+        controller.addNode(
+          RectNodeSpec(id: 'under-base', size: const Size(10, 8)),
+          layerId: 'layer-auto-3',
+          insertIndex: 0,
+        );
+
+        expect(
+          controller.snapshot.layers
+              .map((layer) => layer.id)
+              .toList(growable: false),
+          <String>['layer-auto-2', 'layer-auto-3'],
+        );
+        expect(
+          controller.snapshot.layers[1].nodes
+              .map((node) => node.id)
+              .toList(growable: false),
+          <String>['under-base', 'base'],
+        );
+        expect(
+          () => controller.addNode(
+            RectNodeSpec(id: 'bad-layer', size: const Size(4, 4)),
+            layerId: 'missing-layer',
+          ),
+          throwsArgumentError,
+        );
+      },
+    );
+
+    test(
+      'textFontFamilyByDefault applies to write inserts only when absent',
+      () {
+        final controller = SceneControllerInteractive(
+          initialSnapshot: SceneSnapshot(
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(id: 'layer-auto-4'),
+            ],
+          ),
+          textFontFamilyByDefault: 'Mono',
+        );
+        addTearDown(controller.dispose);
+
+        controller.write<void>((txn) {
+          txn.writeNodeInsert(
+            TextNodeSpec(
+              id: 'default-font',
+              text: 'hello',
+              color: const Color(0xFF111111),
+            ),
+          );
+          txn.writeNodeInsert(
+            TextNodeSpec(
+              id: 'explicit-font',
+              text: 'world',
+              color: const Color(0xFF111111),
+              fontFamily: 'Serif',
+            ),
+          );
+        });
+
+        final textNodes = controller.snapshot.layers.single.nodes
+            .whereType<TextNodeSnapshot>()
+            .toList(growable: false);
+        expect(textNodes[0].fontFamily, 'Mono');
+        expect(textNodes[1].fontFamily, 'Serif');
+      },
+    );
+
+    test(
       'handlePointer accepts null timestamp hint and keeps monotonic time',
       () async {
         final controller = controllerFromScene(

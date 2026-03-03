@@ -399,6 +399,47 @@ void main() {
     );
   });
 
+  test('txnInsertNodeInScene inserts by index and reindexes shifted nodes', () {
+    final scene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(
+          id: 'layer-auto-11b',
+          nodes: <SceneNode>[
+            RectNode(id: 'a', size: const Size(1, 1)),
+            RectNode(id: 'b', size: const Size(1, 1)),
+          ],
+        ),
+      ],
+    );
+    final locator = txnBuildNodeLocator(scene);
+
+    txnInsertNodeInScene(
+      scene: scene,
+      nodeLocator: locator,
+      node: RectNode(id: 'mid', size: const Size(2, 2)),
+      layerIndex: 0,
+      insertIndex: 1,
+    );
+
+    expect(
+      scene.layers.single.nodes.map((node) => node.id).toList(growable: false),
+      <String>['a', 'mid', 'b'],
+    );
+    expect(locator['mid'], (layerIndex: 0, nodeIndex: 1));
+    expect(locator['b'], (layerIndex: 0, nodeIndex: 2));
+
+    expect(
+      () => txnInsertNodeInScene(
+        scene: scene,
+        nodeLocator: locator,
+        node: RectNode(id: 'bad', size: const Size(1, 1)),
+        layerIndex: 0,
+        insertIndex: 4,
+      ),
+      throwsRangeError,
+    );
+  });
+
   test('find/locator/erase utilities handle dedicated background layer', () {
     final scene = Scene(
       backgroundLayer: BackgroundLayer(

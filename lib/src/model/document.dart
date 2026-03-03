@@ -746,6 +746,7 @@ bool txnInsertNodeInScene({
   required Map<NodeId, NodeLocatorEntry> nodeLocator,
   required SceneNode node,
   required int layerIndex,
+  int? insertIndex,
 }) {
   if (nodeLocator.containsKey(node.id)) {
     throw StateError('Node id must be unique: ${node.id}');
@@ -760,12 +761,35 @@ bool txnInsertNodeInScene({
     );
   }
   final targetLayer = scene.layers[targetLayerIndex];
-  final insertedNodeIndex = targetLayer.nodes.length;
-  targetLayer.nodes.add(node);
+  final insertedNodeIndex = insertIndex ?? targetLayer.nodes.length;
+  if (insertedNodeIndex < 0 || insertedNodeIndex > targetLayer.nodes.length) {
+    throw RangeError.range(
+      insertedNodeIndex,
+      0,
+      targetLayer.nodes.length,
+      'insertIndex',
+    );
+  }
+  if (insertedNodeIndex == targetLayer.nodes.length) {
+    targetLayer.nodes.add(node);
+  } else {
+    targetLayer.nodes.insert(insertedNodeIndex, node);
+  }
   nodeLocator[node.id] = (
     layerIndex: targetLayerIndex,
     nodeIndex: insertedNodeIndex,
   );
+  for (
+    var nodeIndex = insertedNodeIndex + 1;
+    nodeIndex < targetLayer.nodes.length;
+    nodeIndex++
+  ) {
+    final shiftedNode = targetLayer.nodes[nodeIndex];
+    nodeLocator[shiftedNode.id] = (
+      layerIndex: targetLayerIndex,
+      nodeIndex: nodeIndex,
+    );
+  }
   return true;
 }
 
