@@ -2,6 +2,19 @@
 
 All notable changes to `iwb_canvas_engine` are documented here.
 
+## 5.0.1 (2026-03-03)
+
+### Changed
+
+- Improved public API dartdoc coverage for key exported types:
+  - documented `ActionCommitted` and `EditTextRequested`
+  - documented `ActionType`, `CanvasMode`, and `DrawTool` values
+  - documented `SceneDataException`, `SceneDataErrorCode`, and
+    `ClearSceneResult`
+  - documented the remaining public `SceneWriteTxn` methods that previously had
+    no API comments
+- Release artifacts now advertise `5.0.1` as the current package version.
+
 ## 5.0.0 (2026-02-18)
 
 ### Breaking
