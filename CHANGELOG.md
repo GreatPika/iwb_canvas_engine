@@ -1,256 +1,124 @@
+# Changelog
+
+All notable changes to `iwb_canvas_engine` are documented here.
+
 ## Unreleased
 
 ### Changed
 
-- JSON decode/build diagnostics now report fully-qualified nested `SceneDataException.path` values across decode helpers (including layer/node indexed paths).
-- JSON decode boundary now rejects oversized payloads with explicit limits:
-  - max content layers: `4096`,
-  - max total scene nodes: `200000`,
-  - max stroke points per node: `20000`,
-  - max `svgPathData` length: `200000`.
-- JSON decode now enforces `kMaxNodesPerScene` incrementally during node-loop parsing (fail-fast before decoding extra nodes beyond the limit).
-- `SceneViewInteractive` overlay painter now sanitizes camera offset (`NaN`/`Infinity` -> safe finite fallback) the same way as `ScenePainter`.
-- Guardrail tooling now enforces that root `lib/*.dart` files contain only `library` declaration, comments/docs, and `export` directives.
-- Guardrail root-entrypoint scanning now rejects executable code that appears after inline block comments on the same line (bypass closed).
-- Added benchmark diff tool (`tool/bench/diff_load_profiles.dart`) and baseline reports for smoke/full profiles; CI and nightly now publish non-blocking benchmark diff artifacts (Phase A rollout).
-- `scene.cleared`/`ActionType.clear` semantics now include structural clear-side effects: clear emits when content is removed and also when clear creates a missing dedicated `backgroundLayer` (with empty `nodeIds` for structural-only clear).
-- Text size derivation contract is now hardened on patch/import paths: layout-affecting text patches and decode/import re-derive `TextNode.size`; docs now explicitly mark serialized text `size` as derived metadata and note cross-platform font-metric variance.
-- `SceneWriteTxn` now exposes `writeClearSceneKeepBackgroundResult() -> ClearSceneResult`; clear-side effect flows no longer downcast to concrete `SceneWriter`.
-- Benchmark diff parsing now preserves fractional metric precision (`double`) and rejects non-finite metric values.
-- Benchmark diff determinism coverage now asserts byte-identical output across repeated runs.
-- `ClearSceneResult.removedNodeIds` is now immutable-by-contract (defensive copy + unmodifiable snapshot in public type).
-- Benchmark non-finite validation coverage now uses deterministic in-memory `buildDiffReport(...)` tests instead of relying on JSON overflow parsing behavior.
-- `ScenePainter` now builds `ScenePathMetricsCache` entries lazily only when selected path-node selection halos require contour metrics (no eager metrics build in regular draw path).
-- Benchmark diff operation-path matching now normalizes mixed schema shapes (`metrics.*` and flat leaves), so baseline/current reports compare deterministically without false missing-operation noise.
-- Load-profile benchmarks now include dedicated `selection_path_metrics` render case (`paint_no_selection` / `paint_with_selection`) for tracking lazy path-metrics behavior.
-- Runtime commit invariant validation now uses two tiers: critical checks (`camera/grid numeric validity` + strictly monotonic commit revision against previous committed state) are enforced in all build modes, while the full committed-store invariant sweep remains enabled in `debug`/`profile`.
-- Interactive move commits now support an optional final-delta resolver on
-  pointer up, so drag snap adjustments can be applied in the same transaction
-  and emitted as a single `ActionType.transform`; public mutating/effectful
-  controller APIs are rejected while that resolver is running.
-- Node insertion now supports explicit intra-layer `insertIndex`, and
-  `SceneWriteTxn`/`SceneControllerInteractive` now expose explicit
-  `writeLayerEnsure(...)` / `ensureLayer(...)` helpers for content-layer
-  creation without changing the fail-fast unknown-`layerId` contract.
-- `SceneControllerInteractive(textFontFamilyByDefault: ...)` can now stamp a
-  default `fontFamily` into newly inserted text nodes when the incoming
-  `TextNodeSpec` leaves `fontFamily` unset.
+- Refreshed repository documentation for release readiness:
+  - `README.md` is now a concise package landing page
+  - `API_GUIDE.md` is the single integration reference
+  - `ARCHITECTURE.md` is focused on module boundaries and invariants
+  - `DEVELOPMENT_PLAN.md` is reduced to active-plan status only
+  - `AGENTS.md` now includes a clear document map and validation policy
+- Example docs were aligned with the current demo capabilities and platform
+  template guidance.
 
 ## 5.0.0 (2026-02-18)
 
 ### Breaking
 
-- JSON codec now supports only `schemaVersion = 5`; schema `4` is rejected on read.
-- Public write APIs replaced `layerIndex` with `layerId` for content-layer addressing.
-- JSON content layer shape changed to require `layers[].id`.
-
-Migration:
-
-- Replace `addNode(..., layerIndex: i)` with `addNode(..., layerId: 'layer-i')`.
-- Update serialized scenes to include `layers[].id` and `schemaVersion: 5`.
+- JSON read and write now support only `schemaVersion = 5`.
+- Public write APIs use `layerId` for content-layer addressing.
+- Serialized content layers require stable `layers[].id`.
 
 ### Changed
 
-- Scene import/build and write APIs now reject non-invertible (`singular`) `Transform2D` values in addition to non-finite checks, preventing interactive failures caused by non-invertible node transforms.
-- Eraser hit-testing now keeps a bounds-based fallback for nodes with singular transforms instead of always treating them as misses.
-- Low-level scene insertion now enforces `NodeId` uniqueness defensively and throws on duplicate ids to prevent locator inconsistency.
-- `SceneControllerCore.write(...)` now guarantees `_writeInProgress` reset even when transaction context creation fails before commit path entry.
-- `SceneControllerCore.write(...)` now rejects async callback results (`Future`) with fail-fast `StateError`; such writes roll back buffered repaint/signals and do not commit.
-- Post-commit effect dispatch now enforces deterministic order for same-commit observers: committed `signals` are emitted before listener notification.
-- Runtime commit invariant precheck now runs in `debug`/`profile` builds only.
-- Public JSON map entrypoints now accept `Map<String, dynamic>` at API boundary (`decodeScene`, `SceneBuilder.buildFromJson`) and normalize to typed internal map shape.
-- `SceneViewInteractive` now applies `setPointerSettings(...)` updates live on the same controller; for active pointer gestures, settings are applied right after gesture end (`up`/`cancel`) to avoid mixed pointer-session ids.
-- Pointer settings are now validated at runtime boundaries (`tapSlop`/`doubleTapSlop` must be finite and `>= 0`; `doubleTapMaxDelayMs >= 0`) with `ArgumentError` on invalid input.
-- Interactive `setGridCellSize(...)` argument errors now report parameter name `cellSize` for accurate diagnostics.
+- Release artifacts, docs, and public API wording were aligned to the `5.x`
+  line.
+- Command signals became strictly state-change based rather than
+  invocation-based.
+- Snapshot and JSON validation became stricter and more explicit.
+- Runtime now exposes clearer clear-scene semantics and better transaction
+  contracts.
 
 ## 4.0.0 (2026-02-16)
 
 ### Breaking
 
-- `SceneJsonFormatException` is removed from public API; scene import/serialization boundaries now throw `SceneDataException` with `SceneDataErrorCode`.
-- Typed layer model replaces `LayerSnapshot(isBackground: ...)`:
-  - `SceneSnapshot.backgroundLayer: BackgroundLayerSnapshot`
-  - `SceneSnapshot.layers: List<ContentLayerSnapshot>` (content-only)
-  - `layerIndex` in write APIs addresses content layers only.
-  - runtime/public snapshots are canonical and always include dedicated `backgroundLayer`; missing background layer is accepted only at decode/import boundary and canonicalized before returning `SceneSnapshot`.
-- JSON codec now supports only `schemaVersion = 4`; schema `3` and legacy schema `2` are rejected.
-- Interactive input API is reshaped:
-  - removed public `handlePointer(PointerSample ...)` / `handlePointerSignal(PointerSignal ...)`,
-  - added `handlePointer(CanvasPointerInput)` / `handleDoubleTap(...)`,
-  - internal `PointerSample`/`PointerSignal` are no longer required for public usage.
-- Public view widget API removes the legacy interactive view type from exports;
-  use `SceneViewInteractive` (or `SceneView` alias).
-- Public interactive controller API removes the legacy interactive controller type from exports;
-  use `SceneControllerInteractive` (or `SceneController` alias).
-- `SceneControllerInteractive` no longer exposes internal/debug surface:
-  - removed `controllerEpoch`, `structuralRevision`, `boundsRevision`, `visualRevision`,
-  - removed `debugCommitRevision`, `debugBeforeHandlePointerDispatchHook`,
-  - removed `movePreviewDeltaForNode(...)`.
-- The legacy interactive view constructor no longer exposes `geometryCache`; geometry cache ownership is fully internal to keep non-exported render-cache types out of public signatures.
-- Removed public legacy path fill rule enum; path node public contracts now use `PathFillRule`.
-- `SceneWriteTxn` selection mutators now return `bool changed`:
-  - `writeSelectionReplace(Iterable<NodeId>) -> bool`
-  - `writeSelectionToggle(NodeId) -> bool`
-  - `writeSelectionClear() -> bool` (unchanged signature, now documented as changed/no-op contract alongside replace/toggle)
+- The typed layer model replaced the legacy `LayerSnapshot(isBackground: ...)`
+  shape.
+- Public interactive input moved to `CanvasPointerInput` and
+  `handleDoubleTap(...)`.
+- Legacy public interactive and view types were removed in favor of
+  `SceneControllerInteractive` / `SceneViewInteractive` and their aliases.
+- `SceneWriteTxn` selection mutators now expose explicit changed/no-op semantics.
 
 ### Changed
 
-- `SceneWriteTxn` write-method lifetime is now strictly bounded to the active `write((txn) { ... })` callback; stale post-callback `write*` calls fail fast with `StateError` and do not mutate state or emit effects.
-- `write(...)` notify semantics are now explicitly documented as microtask-deferred and coalesced to at most one listener notification per event-loop tick (not one notify per transaction).
-- `SceneControllerCore` now fails fast after `dispose()`: mutating/effectful calls (`write(...)`, `writeReplaceScene(...)`, `requestRepaint()`) throw `StateError` and keep runtime state/effects unchanged.
-- `SceneControllerInteractive` listener notifications are now consistently microtask-deferred/coalesced (including pointer handling and core-change forwarding), so interactive listeners are never invoked synchronously inside `handlePointer(...)`.
-- Documented and invariant-backed interactive async delivery contract (`INV-ENG-INTERACTIVE-ASYNC-DELIVERY`): `actions`/`editTextRequests` and interactive listener notifications are asynchronous, listener notifications are microtask-deferred/coalesced, and relative stream-vs-notify ordering remains intentionally unspecified.
-- `SceneControllerInteractive.handlePointer(...)` now fails fast with `StateError` on same-stack reentrant calls.
-- `SceneControllerInteractive.handlePointer(...)` and `handleDoubleTap(...)` now ignore non-finite pointer coordinates (`NaN`/`Infinity`) as no-op without mutating state or emitting events.
-- Interactive drag-start semantics are unified: `dragStartSlop` now applies to both move and line drag start (with `pointerSettings.tapSlop` fallback when unset), and line-flow pointer `cancel` clears pending two-tap line state (`pendingLineStart`).
-- `SceneControllerInteractive` now fails fast after `dispose()`: interactive mutating/effectful entrypoints (`handlePointer(...)`, `handleDoubleTap(...)`, mode/tool/settings setters, selection/scene mutators, `write(...)`, `notifySceneChanged()`) throw `StateError` and keep state/events/listener notifications unchanged.
-- Interactive preview contract is now explicit and invariant-backed: move/draw preview state does not mutate committed scene before pointer `up` commit, and pointer `cancel` clears preview without scene mutation.
-- Internal `RenderGeometryCache` now uses bounded LRU eviction (`maxEntries = 512`) to prevent unbounded geometry-cache growth during long node churn (create/delete cycles).
-- Internal `RenderGeometryCache` stroke validity key now excludes point-list object identity and relies on stable scalar/revision geometry inputs (`pointsRevision`, transform, thickness), restoring cache hits across logically unchanged snapshots.
-- `iwb_canvas_engine.dart` export surface is narrowed: removed public exports of `defaults.dart`, `geometry.dart`, and render cache/resolver types from `scene_painter.dart`; pointer input export now exposes `PointerInputSettings` and new public `CanvasPointerInput` contracts.
-- Added public `SceneBuilder` as a unified immutable import gateway for both JSON maps and `SceneSnapshot`.
-- `SceneStrokePathCache`, `SceneTextLayoutCache`, and `ScenePathMetricsCache` now throw `ArgumentError` for `maxEntries <= 0` in all build modes (not only debug).
-- `ScenePainter` now reuses per-node geometry via injected `RenderGeometryCache` (`NodeId` + validity key), removing duplicate path parsing/bounds calculations across culling, selection, and path drawing.
-- `SceneViewCore` and `SceneViewInteractive` now own render-cache lifecycle consistently (including `RenderGeometryCache`) and clear all render caches on controller epoch changes; only internal `SceneViewCore` keeps optional `geometryCache` injection for explicit ownership/customization.
-- Internal view widget names are aligned with stage-2 naming:
-  `SceneViewCore`, `SceneViewInteractive`, `_SceneInteractiveOverlayPainter`.
-- Added immutable `instanceRevision` node identity across runtime/snapshot/JSON boundaries; render caches now isolate entries by `(nodeId, instanceRevision)` to prevent stale cache hits after id reuse.
-- Local bounds policy for `Rect`/`Path` is now unified between core nodes and render cache: stroke inflation applies only for enabled stroke and cache validity keys use effective stroke width, preventing edge culling regressions when stroke is disabled.
-- Bounds-based selection frame for `Image`/`Text`/`Rect` now uses the same render `worldBounds` source as culling, and hit candidate bounds parity is covered by dedicated regression tests.
-- `SceneView` now keeps render cache ownership internal while exposing an optional `imageResolver` callback (`ui.Image? Function(String imageId)`) so public image nodes remain renderable without exporting internal resolver/cache types.
-- `CanvasPointerInput.timestampMs` is now optional; when omitted, controller assigns a monotonic timestamp internally.
-- `SceneSpatialIndex` now exposes explicit validity state (`isValid`) and degrades to safe linear candidate scan when indexing cannot be maintained (including out-of-range/extreme geometry), preventing hard failures in query paths.
-- `SpatialIndexCache` now keeps invalid index instances in fallback mode instead of forcing rebuild loops after failed incremental updates.
-- `SceneControllerCore.selectedNodeIds` now reuses a cached `UnmodifiableSetView` and refreshes it only when selection actually changes, removing per-read allocation on hot getter paths.
-- Selection write commands now normalize ids at writer boundary: `writeSelectionReplace`/`writeSelectionToggle` ignore invalid (`missing`/`background`/`invisible`) ids as no-ops (`changed == false`), and `selection.replaced` signals now carry normalized committed ids.
-- Selection and erase signals now emit deterministic sorted `nodeIds` (`selection.replaced`, `selection.toggled`, `draw.erase`) to stabilize UI/tests for set-based inputs.
-- Internal command `void` write-runners now use explicit `_writeRunner<void>(...)` without `return null`, and static analysis enforces `avoid_returning_null_for_void`.
-- Render caches are extracted from `scene_painter.dart` into dedicated files under `lib/src/render/cache/` (`SceneStrokePathCache`, `SceneTextLayoutCache`, `ScenePathMetricsCache`, `SceneStaticLayerCache`), while keeping `ScenePainter` focused on frame rendering and preserving existing cache type availability via `scene_painter.dart` exports.
-- Internal scene value validation is split into focused `part` files (`primitives`, `palette/grid`, `node`, `top-level`) while preserving behavior, signatures, and error semantics.
-- `clearScene`/`writeClearSceneKeepBackground` now keep (or create) dedicated `backgroundLayer` and clear all content layers.
-- Snapshot/JSON import boundaries now canonicalize missing `backgroundLayer` to a dedicated empty background layer; JSON encode always writes canonical `backgroundLayer`.
-- `SignalsBuffer` now buffers pending signals in-place and clears on take/discard, removing per-append list copying in large signal batches.
-- `PathNode` hit-testing now falls back to candidate bounds when node transform is non-invertible, keeping singular transformed paths selectable.
-- Commit invariant checks are now always enforced at runtime in all build modes (`debug`/`profile`/`release`) and throw `StateError` on violations.
-- CI now runs `dart run tool/check_guardrails.dart` in the main `ci.yaml` workflow.
-- Draw command `writeDrawStroke(...)` now enforces `kMaxStrokePointsPerNode = 20_000` with deterministic index-uniform downsampling (endpoints preserved), matching interactive stroke guardrails.
-- Interactive long-gesture buffers are now bounded during active input: stroke preview uses soft-cap/trim (`22_000 -> 18_000`) and eraser path uses soft-cap/trim (`8_000 -> 4_000`) with deterministic endpoint-preserving downsampling.
-- Interactive gesture buffer soft-limit configuration now fails fast on invalid parameters (`softLimit >= 2`, `trimTo >= 2`, `trimTo < softLimit`) with explicit `ArgumentError`.
-- Internal interactive draw runtime is further decomposed into per-tool engines (`interactive_draw_stroke_engine`, `interactive_draw_line_engine`, `interactive_draw_eraser_engine`), with `InteractiveDrawCoordinator` reduced to pointer-lifecycle orchestration.
-- Large interactive/controller test monoliths are split into domain-focused suites (stroke/line/eraser guardrails and commit atomicity/effects/failures) without changing public behavior.
-- Remaining interactive/controller monolithic suites are split into focused files (`line pending cancel`, `hit-test foreground`, `actions effects`, `dispose fail-fast`, `single-pointer policy`, `line tool flow`, `invalid-pointer input`, `move preview invariants`, `spatial index`, `copy-on-write`, `spatial candidate resolution`, `signals delivery`, `writer lifecycle`, `core dispose fail-fast`) and internal draw runtime naming is aligned (`interactive_draw_coordinator.dart` / `InteractiveDrawCoordinator*`).
-- Added shared command-test helper `test/utils/scene_invariants.dart` and wired scene invariant assertions into command test suites.
-- Added command-level negative contract tests for invalid `layerIndex`, non-finite translation delta, non-positive grid cell size, and non-positive line thickness.
-- Internal interactive runtime is decomposed into focused modules (`InteractiveMoveSession`, `InteractiveDrawCoordinator`, `InteractiveEventDispatcher`, and `interactive_geometry`) while keeping `SceneControllerInteractive` as the orchestration facade and preserving public API/behavior contracts.
+- Listener notifications and interactive streams were formalized as asynchronous
+  boundaries.
+- Runtime fail-fast behavior after `dispose()` was expanded and documented.
+- Render caches became more consistent and more aggressively bounded.
+- The public export surface was narrowed to the supported API only.
+- `SceneBuilder` was added as a canonical import gateway.
 
 ## 3.0.0 (2026-02-13)
 
 ### Breaking
 
-- Runtime snapshot boundaries are now strict:
-  - `SceneController(initialSnapshot: ...)` throws `SceneDataException` for malformed snapshots.
-  - `replaceScene(...)` throws `SceneDataException` for malformed snapshots.
-- Runtime snapshot import no longer auto-inserts a missing background layer
-  (this was changed later in `4.0.0`, where import/decode boundaries
-  canonicalize missing `backgroundLayer` to an empty dedicated layer).
-- JSON codec now rejects non-positive `background.grid.cellSize` regardless of grid enabled state.
-- Write-boundary validation is now strict:
-  - `addNode(...)` rejects malformed `NodeSpec` values with `ArgumentError`.
-  - `patchNode(...)` rejects malformed present `NodePatch` fields with `ArgumentError`.
-  - `writeNodeTransformSet(...)`, `writeSelectionTransform(...)`, and `writeSelectionTranslate(...)` reject non-finite `Transform2D`/`Offset`.
-  - `opacity` is now strict at write boundary (`[0,1]`) instead of relying on soft normalization.
-- Text node write API is now size-derived:
-  - `TextNodeSpec` no longer accepts `size`.
-  - `TextNodePatch` no longer accepts `size`.
-- Interactive controller event streams (`actions`, `editTextRequests`) are now asynchronous; listeners are no longer invoked in the emitter call stack.
+- Runtime snapshot boundaries became strict and now throw `SceneDataException`
+  for malformed snapshots.
+- Public write APIs now reject malformed `NodeSpec`, `NodePatch`, and invalid
+  transform values.
+- Text write APIs no longer accept writable `size`.
+- Interactive streams became asynchronous.
 
 ### Changed
 
-- Controller repaint/listener notifications are now deferred to a microtask after commit and coalesced to one notification per event-loop tick, so `write(...)` calls inside listeners no longer trip nested-write guards from the originating transaction.
-- Transactional repaint requests are now buffered until successful commit; rollback discards buffered repaint/signals, and successful commit delivers signals before repaint listener notification.
-- Spatial-index invalidation now tracks hit candidate bounds (`nodeHitTestCandidateBoundsWorld`) so `hitPadding` updates rebuild candidate lookup correctly.
-- Spatial index now uses a dual-path layout (`grid cells` + `large candidates`) with `kMaxCellsPerNode = 1024`, so a single huge node can no longer explode per-cell indexing cost.
-- Spatial index construction is fixed to the internal index cell size and no longer depends on background visual grid settings.
-- Spatial index commits are now incremental: local hit-geometry changes update per-node cell coverage (`added/removed/hitGeometryChangedIds`) without full-index rebuild; rebuild is kept as a fallback path when incremental apply is not possible.
-- Interactive pen/highlighter commits now enforce `kMaxStrokePointsPerNode = 20_000` with deterministic index-uniform downsampling that preserves stroke endpoints.
-- Path-stroke precise hit-testing now enforces `kMaxStrokeHitSamplesPerMetric = 2_048` by increasing sampling step on very long path metrics.
-- Spatial index query now enforces `kMaxQueryCells = 50_000`; oversized queries switch to bounded all-candidate scan with exact intersection filtering instead of unbounded cell iteration.
-- Transaction write path now uses scene/layer/node copy-on-write: first mutation shallow-clones scene metadata and clones only touched layers/nodes, while no-op node patches skip COW cloning.
-- Commit state-change path now keeps node-id index incrementally: local non-structural commits reuse existing `allNodeIds`, structural commits materialize ids lazily once, and `nodeIdSeed` is treated as a monotonic generator (lower-bounded by committed scene ids).
-- Commit/store now maintain `nodeLocator` (`NodeId -> layer/node position`) and writer hot paths use locator-based O(1) lookup instead of linear node-id scans.
-- Stroke render-path cache now validates freshness by `(node.id, pointsRevision)` in O(1), avoiding per-frame point-list hashing/traversal in cache checks.
-- Move-mode drag now uses preview translation during pointer move and commits scene translation once on pointer up; pointer cancel no longer mutates document state.
-- Added shared internal scene-value validation (`scene_value_validation.dart`) and wired it into runtime snapshot import and JSON encode/decode validation paths.
-- Selection transaction hot paths now keep a hash-based mutable working set in place (`toggle/clear/erase/delete/replace`) instead of rebuilding `Set` instances on each step.
-- Text node bounds are now derived in-engine from text layout inputs; snapshot/JSON import recomputes text size on load so stale serialized values do not stay authoritative at runtime.
-- Added load-profile benchmark tooling (`dart run tool/bench/run_load_profiles.dart --profile=<smoke|full>`) with structured JSON output and dedicated benchmark cases for large node/stroke scenes and worst-case spatial/path scenarios.
-- CI now runs smoke load profiles and uploads benchmark artifacts; a new nightly workflow runs full load profiles and extended randomized transaction fuzzing.
-- Randomized transaction fuzz tests now support environment-based scaling (`IWB_FUZZ_SEEDS`, `IWB_FUZZ_STEPS`, `IWB_FUZZ_BASE_SEED`) and explicitly assert finite numeric state after each step.
+- Transactional repaint and signal delivery were deferred and coalesced.
+- Copy-on-write transactions and indexed lookup improved write-path cost.
+- Spatial index and hit-testing guardrails were added for large scenes.
+- Text bounds became engine-derived at runtime.
 
 ## 2.0.1 (2026-02-10)
 
 ### Breaking
 
-- `SceneWriteTxn` no longer exposes node-id bookkeeping methods (`writeNewNodeId`, `writeContainsNodeId`, `writeRegisterNodeId`, `writeUnregisterNodeId`, `writeRebuildNodeIdIndex`).
-- `ActionCommitted` and internal committed signal payloads are now immutable snapshots (mutating `nodeIds`/`payload` throws).
+- `SceneWriteTxn` stopped exposing internal node-id bookkeeping helpers.
+- `ActionCommitted` payloads and node ids became immutable snapshots.
 
 ### Changed
 
-- Commit pipeline now finalizes store state first and only then emits committed signals.
-- Controller commit now derives `allNodeIds` and `nodeIdSeed` from the committed scene as the single source of truth.
-- `SceneWriter.writeNodeErase` now respects deletable-layer policy consistently with selection delete flow.
-- `SceneWriter.writeGridCellSize` and `SceneWriter.writeCameraOffset` now reject non-finite/invalid inputs at write boundary.
-- Selection normalization now preserves explicit non-selectable ids, so `selectAll(onlySelectable: false)` remains stable after commit.
-- Commit state-change path no longer performs a redundant second deep clone of scene data; mutating transactions now clone once (clone-on-first-mutation).
-- Added runtime commit invariant assertions for store consistency in debug/test execution.
+- Commit finalization now completes before signal delivery.
+- Selection normalization and delete behavior were hardened.
+- Runtime commit invariant assertions were expanded.
 
 ## 2.0.0 (2026-02-10)
 
 ### Breaking
 
-- Removed `lib/advanced.dart`; `iwb_canvas_engine.dart` is now the single public entrypoint.
-- `iwb_canvas_engine.dart` no longer exports mutable core model files (`src/core/scene.dart`, `src/core/nodes.dart`).
-- `SceneControllerInteractiveV2` removed legacy mutable API:
-  - removed constructor parameter `scene`,
-  - removed getters `core` and `scene`,
-  - `addNode` now accepts only `NodeSpec`.
-- Public transactional write callback now uses `SceneWriteTxn` (safe contract without raw `scene`, `writeFindNode`, or `writeMark*` APIs).
+- `iwb_canvas_engine.dart` became the single supported public entrypoint.
+- Mutable scene internals were removed from the public surface.
+- Public write callbacks switched to `SceneWriteTxn`.
 
 ### Added
 
-- New public `SceneWriteTxn` contract (`lib/src/public/scene_write_txn.dart`).
-- New public `SceneRenderState` contract (`lib/src/public/scene_render_state.dart`) for painter/view integration.
-- `SceneControllerV2.requestRepaint()` for explicit repaint without transactional mutation.
-- Commit-path tests for no-op, signals-only, and selection-policy patch normalization.
-- Guardrails for single entrypoint and safe transaction API surface.
+- Stable public runtime aliases: `SceneController` and `SceneView`.
+- `SceneRenderState` as the supported view/painter read contract.
+- Guardrails around the single-entrypoint and safe transaction model.
 
 ### Changed
 
-- `TxnContext` now uses lazy scene clone-on-first-mutation.
-- Commit pipeline supports explicit branches:
-  - no-op: no commit/revision/repaint,
-  - signals-only: commit revision + signal flush without repaint,
-  - state-change/document-replace: full commit path.
-- Selection normalization now handles node patches that affect selection policy for selected nodes.
-- Interactive controller refactored to avoid read-only transaction misuse and raw writer mutations in move rollback.
+- Commit flow was split into clearer no-op, signals-only, and full state-change
+  branches.
+- Interactive controller internals were refactored away from raw writer misuse.
 
 ## 1.0.0 (2026-02-10)
 
 ### Breaking
 
-- Finalized the v2 public API in `iwb_canvas_engine.dart`/`advanced.dart` around immutable snapshots, specs, and patch semantics.
-- Removed the legacy mutable public surface from package entrypoints.
+- The initial immutable public API line was finalized and legacy mutable entry
+  points were removed.
 
 ### Added
 
-- Stable interactive runtime aliases: `SceneController` and `SceneView` over v2 implementations.
-- Strict JSON v2 codec contracts (`schemaVersion = 2`) with canonical validation errors via `SceneDataException`.
-- Bounded render caches and spatial-index optimizations for interactive performance.
-- Expanded automated validation with parity, regression, invariant coverage, and import-boundary checks.
+- Stable snapshot/spec/patch contracts.
+- Strict JSON codec contracts through `SceneDataException`.
+- Automated validation for invariants, import boundaries, and rendering parity.
 
 ### Changed
 
-- Hardened scene invariants: unique node ids, single canonical background layer, explicit constructor/decoder canonicalization.
-- Improved input transactional behavior for move/draw/eraser flows, including cancel safety and monotonic event timelines.
-- Improved rendering consistency and parity for selection visuals, text line-height semantics, and thin-line snapping behavior.
-- Refreshed package documentation (`README`, `API_GUIDE`, `ARCHITECTURE`) for the `1.0.0` release baseline.
+- Package documentation and release artifacts were aligned around the initial
+  stable release.

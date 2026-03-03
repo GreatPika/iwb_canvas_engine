@@ -1,13 +1,17 @@
-# iwb_canvas_engine_example
+# Example App
 
-Example app for `iwb_canvas_engine`.
+This app is a manual integration demo for `iwb_canvas_engine`. It is intended
+to exercise the public runtime API, not to serve as a reusable UI template.
 
 ## What it demonstrates
 
-- Rendering a scene with `SceneView` + `SceneController`
-- Move mode: selection, marquee, drag-move, rotate/flip/delete/clear
-- Draw mode: pen, highlighter, line (drag + two-tap), eraser
-- Background controls (color + grid) and camera offset
+- `SceneView` + `SceneController` wired through a real Flutter screen
+- Move mode: selection, marquee, drag move, rotate, flip, delete, and clear
+- Draw mode: pen, highlighter, line (drag and two-tap), and eraser
+- Inline text editing via `editTextRequests`
+- Background color, grid settings, and camera offset controls
+- JSON export/import through the public codec
+- Sample image nodes rendered through `imageResolver`
 
 ## Run
 
@@ -18,4 +22,5 @@ cd example
 flutter run
 ```
 
-You can choose a device via `flutter devices` and `flutter run -d <deviceId>`.
+Use `flutter devices` and `flutter run -d <deviceId>` if you want a specific
+target.

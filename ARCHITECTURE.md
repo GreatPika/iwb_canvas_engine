@@ -1,164 +1,120 @@
 # Architecture Overview
 
-This document describes the architecture of `iwb_canvas_engine` on the current mainline.
+This document describes the current mainline architecture of
+`iwb_canvas_engine`. It focuses on system shape, data flow, invariants, and the
+constraints that keep the public API stable.
 
 ## Goals
 
-- Provide a reusable Flutter canvas engine package (no app UI).
-- Keep a single source of truth for scene/runtime state.
-- Expose stable public contracts for runtime and JSON persistence.
+- Keep scene state in one place.
+- Expose stable public contracts around immutable snapshots and safe writes.
+- Separate product UI concerns from engine/runtime concerns.
 
-## Public surface
+## System boundary
 
-Entrypoints:
+- Public entrypoint: `package:iwb_canvas_engine/iwb_canvas_engine.dart`
+- Current serialization contract: write `schemaVersion = 5`, read `{5}`
+- Public runtime aliases: `SceneController`, `SceneView`
+- Public write boundary: `SceneWriteTxn`
 
-- `package:iwb_canvas_engine/iwb_canvas_engine.dart`
+The package is an engine. It does not own app UI, persistence, collaboration, or
+undo/redo policy.
 
-Primary public abstractions:
-
-- Runtime: `SceneController`, `SceneView`
-- Immutable read model: `SceneSnapshot`, `BackgroundLayerSnapshot`, `ContentLayerSnapshot`, `NodeSnapshot`
-- Safe transactional write model: `SceneWriteTxn`
-- Write intents: `NodeSpec`
-- Partial mutation: `NodePatch` + `PatchField<T>`
-- Serialization: `encodeScene*`, `decodeScene*`, `SceneDataException`
-- JSON map imports use `Map<String, dynamic>` at public boundaries (`decodeScene`, `SceneBuilder.buildFromJson`).
-
-## Internal structure
+## Module layout
 
 ```text
 lib/
   iwb_canvas_engine.dart
   src/
-    core/           // model primitives, math, hit testing, defaults
-    controller/     // runtime store/writer + commands and internal helpers
-      commands/     // command groups used by controller/interactive runtime
-      internal/     // controller internals (normalizers, buffers, caches)
-    interactive/    // public interactive controller facade
-    model/          // scene <-> snapshot conversion helpers
-    public/         // snapshot/spec/patch contracts
-    render/         // painter and render caches
-    serialization/  // JSON codec (schema v5)
-    view/           // interactive Flutter widget
+    core/           // primitives, defaults, math, event types
+    controller/     // committed store, command execution, transactional writes
+    interactive/    // public controller facade and gesture orchestration
+    model/          // conversions between internal document and public snapshot
+    public/         // exported immutable types, specs, patches, write contract
+    render/         // painter and render-cache implementations
+    serialization/  // JSON codec and validation boundary
+    view/           // Flutter widget that wires input + painting
 ```
 
-## Data flow
+## Runtime data flow
 
-1. `SceneView` receives pointer events from Flutter.
-2. `SceneController` processes events and performs transactional writes.
-3. Controller updates the immutable `SceneSnapshot`.
-4. `ScenePainter` renders snapshot state via `CustomPaint`.
-5. `actions` / `editTextRequests` streams expose asynchronous boundaries to the host app.
+1. `SceneView` receives Flutter pointer input and normalizes it into public
+   `CanvasPointerInput`.
+2. `SceneControllerInteractive` validates input, maintains interactive state,
+   and delegates committed mutations to `SceneControllerCore`.
+3. `SceneControllerCore` performs transactional writes and finalizes a canonical
+   immutable `SceneSnapshot`.
+4. `ScenePainter` renders the committed snapshot plus any ephemeral preview
+   state owned by the interactive controller.
+5. `actions` and `editTextRequests` expose asynchronous integration boundaries
+   back to the host app.
 
-### Interactive composition
+## State ownership model
 
-- `SceneControllerInteractive` is the orchestration facade: it validates/routes input, stores public interactive configuration, bridges transactional writes to `SceneControllerCore`, and exposes render-facing getters/events.
-- The interactive move path supports an optional post-drag
-  `MoveCommitDeltaResolver`: preview remains ephemeral during pointer move,
-  while the final committed delta can be adjusted exactly once on pointer up
-  inside the final write transaction; public stateful/effectful controller
-  entrypoints are rejected while that callback is running.
-- Move/marquee ephemeral state and transitions are owned by `InteractiveMoveSession` (`lib/src/interactive/internal/interactive_move_session.dart`).
-- Draw/line/eraser ephemeral state and transitions are owned by `InteractiveDrawCoordinator` (`lib/src/interactive/internal/interactive_draw_coordinator.dart`).
-- Action/edit stream emission is isolated in `InteractiveEventDispatcher` (`lib/src/interactive/internal/interactive_event_dispatcher.dart`).
-- Pure geometry helpers used by interactive sessions are isolated in `interactive_geometry.dart`; helper modules remain stateless.
+- The committed `SceneSnapshot` is the single source of truth.
+- Preview state for move/draw gestures is intentionally ephemeral and does not
+  mutate committed scene data until commit on `up`.
+- All committed mutations go through `write(...)` or higher-level controller
+  methods that delegate to the same write path.
+- Public API never exposes mutable internal scene objects.
 
-### Production-to-test ownership (interactive/controller scope)
+## Core invariants
 
-| Production module | Primary test ownership |
-| --- | --- |
-| `lib/src/interactive/internal/interactive_draw_stroke_engine.dart` | `test/interactive/core/scene_controller_interactive_guardrails_stroke_test.dart` |
-| `lib/src/interactive/internal/interactive_draw_line_engine.dart` | `test/interactive/core/scene_controller_interactive_guardrails_line_test.dart`, `test/interactive/core/scene_controller_interactive_line_pending_cancel_test.dart`, `test/interactive/core/scene_controller_interactive_line_tool_flow_test.dart` |
-| `lib/src/interactive/internal/interactive_draw_eraser_engine.dart` | `test/interactive/core/scene_controller_interactive_guardrails_eraser_test.dart`, `test/interactive/core/scene_controller_interactive_guardrails_eraser_lifecycle_test.dart`, `test/interactive/core/scene_controller_interactive_hit_test_foreground_test.dart` |
-| `lib/src/interactive/internal/interactive_draw_coordinator.dart` | `test/interactive/core/scene_controller_interactive_actions_effects_test.dart`, `test/interactive/core/scene_controller_interactive_dispose_fail_fast_test.dart` |
-| `lib/src/interactive/scene_controller_interactive.dart` | `test/interactive/core/scene_controller_interactive_invalid_pointer_input_test.dart`, `test/interactive/core/scene_controller_interactive_move_preview_invariants_test.dart`, `test/interactive/core/scene_controller_interactive_single_pointer_policy_test.dart` |
-| `SceneControllerCore` spatial/candidate path | `test/controller/core/scene_controller_spatial_index_test.dart`, `test/controller/core/scene_controller_spatial_candidate_resolution_test.dart` |
-| `SceneControllerCore` copy-on-write/writer lifecycle path | `test/controller/core/scene_controller_copy_on_write_test.dart`, `test/controller/core/scene_controller_writer_lifecycle_test.dart`, `test/controller/core/scene_controller_core_dispose_fail_fast_test.dart`, `test/controller/core/scene_controller_signals_delivery_test.dart` |
+Canonical invariant definitions live in `tool/invariant_registry.dart`. The
+most important architectural rules are:
 
-## Invariants
+- `write(...)` is synchronous-only; returning a `Future` is a contract error.
+- `SceneWriteTxn` is valid only inside the active write callback.
+- `backgroundLayer` is always distinct from ordered content `layers`.
+- Content layers are addressed by stable `LayerId`; z-order is defined only by
+  list order.
+- `TextNode.size` is derived from text layout inputs and is not a writable
+  public field.
+- Selection normalization drops only missing, background, or invisible ids;
+  explicit non-selectable ids remain stable.
+- Listener notifications are microtask-deferred and coalesced.
+- `actions` and `editTextRequests` are asynchronous; their relative ordering
+  against repaint notifications is intentionally not a public contract.
+- After `dispose()`, mutating or effectful public entrypoints fail fast with
+  `StateError`.
 
-Canonical invariant registry:
+## Transaction and signal model
 
-- `tool/invariant_registry.dart`
+- High-level methods such as `addNode`, `patchNode`, `clearScene`, and
+  transform commands all route through the same transactional core.
+- Successful commits finalize store state before publishing signals or repaint
+  notifications.
+- Committed signals are emitted before repaint listener notification for the
+  same successful commit.
+- Buffered effects are discarded if a transaction fails.
+- Runtime invariant enforcement is two-tiered:
+  - critical commit checks run in all build modes;
+  - the full committed-store sweep remains enabled in `debug` and `profile`.
 
-Invariant ID naming:
+## Serialization boundary
 
-- Format: `INV-<DOMAIN>-<RULE>`.
-- Allowed domains: `G` (global guardrails), `ENG` (engine/runtime/controller), `SER` (serialization).
-- `RULE` must use `UPPER-KEBAB-CASE` (`A-Z`, `0-9`, `-` only).
-- Underscores in invariant IDs are forbidden.
-- Enforcement markers in `tool/**` and `test/**` must use exact IDs via `// INV:<id>`.
-
-Key invariants:
-
-- Single entrypoint: `iwb_canvas_engine.dart` only.
-- Single source of truth: runtime state is owned by controller snapshot.
-- Public API does not expose mutable core scene structures.
-- All state mutations flow through `write` transactions and safe txn operations.
-- `write(...)` callbacks are synchronous-only; async callback results are rejected with fail-fast `StateError`.
-- Transaction writer lifetime is bounded to the active `write((txn) { ... })` callback; stale `write*` calls fail fast with `StateError`.
-- Write boundary now includes explicit layer creation (`writeLayerEnsure(...)`)
-  and explicit intra-layer z-order insertion (`writeNodeInsert(..., insertIndex: ...)`)
-  without introducing secondary sync paths.
-- Runtime commit invariant checks use a two-tier mode: critical checks (including strict commit-revision monotonicity vs previous committed state) run in all build modes, while full committed-store invariant sweep runs in `debug`/`profile`; both fail fast with `StateError`.
-- Committed signals are delivered only after store commit finalization.
-- For each successful commit, signal delivery happens before repaint listener notification.
-- Repaint/listener notifications are scheduled after commit via microtask and coalesced per event-loop tick.
-- Interactive `ChangeNotifier` notifications are never synchronous inside `handlePointer(...)`; they are microtask-deferred and coalesced.
-- Interactive `actions` / `editTextRequests` streams are delivered asynchronously (never in the same call stack as mutation methods).
-- Interactive async delivery/coalescing contract is tracked by `INV-ENG-INTERACTIVE-ASYNC-DELIVERY`.
-- Interactive pointer entrypoints ignore non-finite coordinates (`NaN`/`Infinity`) as no-op without mutating state or emitting effects (`INV-ENG-INTERACTIVE-POINTER-FINITE`).
-- Interactive gesture processing keeps a single active pointer id; parallel pointer ids are ignored until the active gesture ends (`up`/`cancel`) (`INV-ENG-INTERACTIVE-SINGLE-ACTIVE-POINTER`).
-- Interactive drag-start threshold uses `dragStartSlop` for both move and line gestures; when unset, it falls back to `pointerSettings.tapSlop`.
-- Pointer settings are validated at runtime boundaries (`tapSlop`/`doubleTapSlop`: finite `>= 0`; `doubleTapMaxDelayMs >= 0`).
-- Interactive draw-pointer `cancel` clears active draw preview state and pending two-tap line start without commit (`INV-ENG-INTERACTIVE-CANCEL-STATE-RESET`).
-- Interactive preview state (`move`/`draw`) is ephemeral and does not mutate committed scene before pointer `up` commit (`INV-ENG-INTERACTIVE-PREVIEW-COMMIT-ON-UP`).
-- SceneView pointer-slot lifecycle releases slots on `up`/`cancel` and reuses minimum free slot ids (`INV-ENG-VIEW-POINTER-SLOT-LIFECYCLE`).
-- SceneView pointer signal tracking is gated by one active pointer and releases the gate on `up`/`cancel` (`INV-ENG-VIEW-ACTIVE-POINTER-GATE`).
-- SceneView applies `setPointerSettings(...)` updates on the same controller without remount; when a pointer gesture is active, settings are applied immediately after gesture end (`up`/`cancel`) (`INV-ENG-VIEW-POINTER-SETTINGS-LIVE-APPLY`).
-- Relative ordering between interactive stream delivery and repaint listener notification is intentionally not a public contract (`INV-ENG-INTERACTIVE-ASYNC-DELIVERY`).
-- Buffered signal/repaint effects are discarded when `write(...)` rolls back.
-- After controller disposal, mutating/effectful runtime methods fail fast with `StateError` and keep state/effects unchanged, including interactive entrypoints (`handlePointer`, `handleDoubleTap`, mode/tool/settings setters, selection/scene mutators).
-- Node-id index state keeps `allNodeIds` and `nodeLocator` equal to committed scene ids/locations, while `nodeIdSeed` is a monotonic generator lower-bounded by committed scene ids.
-- Node instance identity keeps `instanceRevision >= 1` for all committed nodes, and `nextInstanceRevision` is a monotonic generator lower-bounded by committed scene instance revisions.
-- Selection normalization preserves explicit non-selectable ids and drops only missing/background/invisible ids.
-- Runtime snapshot boundary (`initialSnapshot` / `replaceScene`) validates input strictly and fails fast with `SceneDataException` for malformed snapshots.
-- Text node box size is derived from text layout inputs and is not writable via public spec/patch APIs.
-- Runtime typed-layer rule: snapshot/model uses dedicated `backgroundLayer` plus content-only `layers`; runtime/public snapshots are canonical and always include dedicated background layer.
-- Content-layer identity rule: each content layer has stable unique `LayerId`; z-order is defined only by list order in `layers` and not by `LayerId`.
-- Import boundary rule: input may omit background layer, but decode/import boundaries canonicalize it to an empty dedicated layer.
-- JSON decoder rule: accepts `backgroundLayer` (optional) and `layers` (content-only); missing `backgroundLayer` is canonicalized on decode/encode boundaries; legacy `isBackground` layer flag is unsupported.
-- Unique node ids across all layers.
-- Input and render subsystems must not bypass controller transaction boundaries.
-- Guardrails and boundary contracts are enforced by `tool/check_guardrails.dart`.
-- Import boundaries are enforced by `tool/check_import_boundaries.dart`.
-
-## Serialization contract
-
-- Current write schema: `schemaVersion = 5`.
-- Accepted read schemas: `{5}`.
-- Encoder/decoder validate numeric and structural constraints and fail fast with `SceneDataException`.
+- Public JSON APIs accept `Map<String, dynamic>` or JSON strings.
+- Decode/import canonicalizes missing `backgroundLayer` to an empty dedicated
+  layer before returning a `SceneSnapshot`.
+- Decode/import and runtime replacement paths validate structure and numeric
+  constraints and throw `SceneDataException` on malformed input.
+- JSON payload limits are enforced to keep import cost bounded.
 
 ## Performance model
 
-- Mutating transactions use copy-on-write: first mutation creates a shallow scene clone, then only touched layers/nodes are cloned on demand; no-op patches do not trigger layer/node cloning.
-- Hot-path node lookup (`NodeId -> layer/node index`) uses committed `nodeLocator` instead of linear scene scans.
-- Viewport culling for offscreen nodes.
-- `SceneViewCore` / `SceneViewInteractive` own render-cache lifecycle (`static/text/stroke/pathMetrics/geometry`), clear caches on controller epoch/document boundaries, and pass cache dependencies to `ScenePainter`.
-- Bounded caches for text layout, stroke paths, selected path metrics, and render geometry (`RenderGeometryCache.maxEntries = 512`).
-- Render-geometry cache validity for stroke nodes is based on stable scalar/revision inputs (`node.id`, `instanceRevision`, `transform`, `pointsRevision`, `thickness`) and does not depend on point-list object identity.
-- Stroke-path cache freshness is validated in O(1) by
-  `(node.id, node.instanceRevision, pointsRevision)` instead of
-  hashing/iterating point lists on every lookup.
-- Spatial index supports incremental commit updates (`added/removed/hitGeometryChangedIds`) for hit-testing hot paths; full rebuild is a fallback path only.
-- Spatial query guardrail: oversized query rectangles (`> 50_000` index cells) bypass cell loops and use bounded all-candidate scan with exact intersection filtering.
-- Hit-test guardrail: path-stroke precise hit-testing caps per-metric sampling to `2_048` points by increasing sampling step for long metrics.
-- Interactive draw guardrail: stroke commit caps points to `20_000` using deterministic index-uniform downsampling (endpoints preserved).
-- Interactive gesture guardrail: active stroke/eraser gesture buffers are soft-capped with deterministic endpoint-preserving downsampling before commit (`INV-ENG-INTERACTIVE-GESTURE-BUFFER-SOFT-CAP`).
-- Interactive move drag uses preview translation (single source in interactive controller) and commits translation once on pointer up; an optional post-drag resolver can replace the final committed delta inside that same write transaction, public stateful/effectful controller entrypoints fail fast while the resolver runs, and preview hit-testing merges spatial candidates for `point` and `point - delta`.
+- Transactions use copy-on-write: only touched scene parts are cloned.
+- Hot-path node lookup uses committed indexes instead of repeated linear scans.
+- Spatial queries use a bounded spatial index with a bounded fallback path for
+  oversized queries.
+- Render caches are owned by `SceneView` and reset on controller
+  epoch/document changes.
+- Stroke and path rendering use revision-based cache keys to avoid stale reuse
+  after node-id reuse or geometry changes.
+- Input and hit-testing guardrails cap worst-case work for long strokes and
+  large queries.
 
 ## Non-goals
 
-- App-level state management, storage, or collaboration backend.
-- App UI widgets outside canvas runtime/view.
-- Built-in undo/redo history storage.
+- Product-specific UI and workflows outside the canvas engine.
+- Network synchronization or backend protocols.
+- App-owned persistence and undo/redo history.
