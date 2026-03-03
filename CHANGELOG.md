@@ -2,19 +2,6 @@
 
 All notable changes to `iwb_canvas_engine` are documented here.
 
-## Unreleased
-
-### Changed
-
-- Refreshed repository documentation for release readiness:
-  - `README.md` is now a concise package landing page
-  - `API_GUIDE.md` is the single integration reference
-  - `ARCHITECTURE.md` is focused on module boundaries and invariants
-  - `DEVELOPMENT_PLAN.md` is reduced to active-plan status only
-  - `AGENTS.md` now includes a clear document map and validation policy
-- Example docs were aligned with the current demo capabilities and platform
-  template guidance.
-
 ## 5.0.0 (2026-02-18)
 
 ### Breaking
@@ -25,6 +12,14 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ### Changed
 
+- Refreshed repository documentation for release readiness:
+  - `README.md` is now a concise package landing page
+  - `API_GUIDE.md` is the single integration reference
+  - `ARCHITECTURE.md` is focused on module boundaries and invariants
+  - `DEVELOPMENT_PLAN.md` is reduced to active-plan status only
+  - `AGENTS.md` now includes a clear document map and validation policy
+  - example docs were aligned with current demo capabilities and platform
+    template guidance
 - Release artifacts, docs, and public API wording were aligned to the `5.x`
   line.
 - Command signals became strictly state-change based rather than
