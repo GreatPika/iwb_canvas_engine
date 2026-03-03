@@ -1,68 +1,68 @@
 # Project Context
 
-This file is the quick-start context for new sessions. Keep it concise and avoid duplicating `ARCHITECTURE.md` or `DEVELOPMENT_PLAN.md`.
+This file is the fast path for contributors and coding agents. Keep it concise,
+and use the documents below as the canonical source instead of duplicating them
+here.
 
-## What we are building
+## Product boundary
 
-A Flutter/Dart canvas engine package with scene model, rendering, input handling, and JSON serialization (no app UI or domain logic).
+`iwb_canvas_engine` is a Flutter/Dart canvas engine package. It owns scene
+modeling, rendering, input handling, and JSON serialization. It does not own
+app UI, product workflows, or backend logic.
 
-## Canonical sources
+## Document map
 
-- `ARCHITECTURE.md` (system overview and data flow)
-- `DEVELOPMENT_PLAN.md` (optional roadmap; may be empty between planning cycles)
-- `tool/invariant_registry.dart` (canonical machine-readable invariant list)
+| File | Primary audience | Purpose | Canonical for |
+| --- | --- | --- | --- |
+| `README.md` | External users | Package landing page | Scope, install, first-use guidance |
+| `API_GUIDE.md` | Integrators | Public API reference | Runtime, serialization, migration |
+| `ARCHITECTURE.md` | Maintainers | System design notes | Data flow, invariants, module boundaries |
+| `CHANGELOG.md` | Users and maintainers | Release history | Released and unreleased user-visible changes |
+| `DEVELOPMENT_PLAN.md` | Maintainers | Active roadmap only | Current planning wave, if any |
+| `tool/invariant_registry.dart` | Maintainers and CI | Machine-readable invariants | Invariant ids and ownership |
 
-## Rules for this repo
+## Working rules
 
-- Single source of truth: no sync glue or duplicated state between modules.
-- Group is ephemeral: no stored Group node.
-- Invariants must be explicit and enforced:
-  - Add/modify invariants in `tool/invariant_registry.dart`.
-  - Reference enforcement sites with `// INV:<id>` in `test/**` or `tool/**`.
-  - Keep `dart run tool/check_invariant_coverage.dart` green (CI enforces this).
-- When changing public behavior or public API, update documentation in the same change:
-  - `API_GUIDE.md`
+- Keep one source of truth for runtime state. Do not add sync glue.
+- Group is ephemeral. Do not introduce a stored Group node.
+- Public behavior changes must update:
   - `README.md`
-  - `ARCHITECTURE.md` (when architecture/invariants change)
-- Run linter/tests for code changes and report results.
-- For documentation-only changes, checks are not required.
-- Exception: if `tool/invariant_registry.dart` is changed, run and report `dart run tool/check_invariant_coverage.dart`.
+  - `API_GUIDE.md`
+  - `ARCHITECTURE.md` when invariants, architecture, or module ownership change
+  - `CHANGELOG.md`
+- Documentation should stay release-ready: concise, current, and free of stale
+  implementation detail.
 
-## Changelog
+## Invariant discipline
 
-- Keep `CHANGELOG.md` updated for user-visible changes.
-- Add entries under `## Unreleased` while developing.
-- For release `X.Y.Z (YYYY-MM-DD)`, move entries from `Unreleased` into the release section and leave `Unreleased` empty.
+- Add or modify invariant definitions in `tool/invariant_registry.dart`.
+- Reference enforcement with exact `// INV:<id>` markers in `test/**` or `tool/**`.
+- Keep `dart run tool/check_invariant_coverage.dart` green.
+
+## Validation policy
+
+- Run and report the standard checks for code changes.
+- Documentation-only changes do not require the full Flutter pipeline unless the
+  task also changes code, tooling contracts, or executable examples.
+- If `tool/invariant_registry.dart` changes, always run and report
+  `dart run tool/check_invariant_coverage.dart`.
+
+## Required checks for code changes
+
+1. `dart format --output=none --set-exit-if-changed lib test example/lib tool`
+2. `flutter analyze`
+3. `flutter test`
+4. `flutter test --coverage`
+5. `dart run tool/check_coverage.dart`
+6. `dart run tool/check_invariant_coverage.dart`
+7. `dart run tool/check_guardrails.dart`
+8. `dart run tool/check_import_boundaries.dart`
+
+## Release hygiene
+
+- Add user-visible changes under `## Unreleased` in `CHANGELOG.md`.
+- Move `Unreleased` entries into a versioned section during release cut.
 - Prefix breaking changes with `Breaking:`.
-
-## Required checks (run locally before pushing code changes)
-
-1) Formatting (fail on diffs)
-
-- `dart format --output=none --set-exit-if-changed lib test example/lib tool`
-
-2) Static analysis
-
-- `flutter analyze`
-
-3) Unit tests
-
-- `flutter test`
-
-4) Coverage gates (line coverage for `lib/src/**` must be 100%)
-
-- `flutter test --coverage`
-- `dart run tool/check_coverage.dart`
-
-5) Invariant coverage (every invariant must have enforcement)
-
-- `dart run tool/check_invariant_coverage.dart`
-
-6) Import boundary rules
-
-- `dart run tool/check_import_boundaries.dart`
-
-7) Documentation + publish sanity (recommended before release)
-
-- `dart doc`
-- `dart pub publish --dry-run`
+- Before publish, also run:
+  - `dart doc`
+  - `dart pub publish --dry-run`

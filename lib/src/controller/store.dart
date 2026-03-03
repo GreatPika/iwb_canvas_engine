@@ -3,14 +3,16 @@ import '../core/scene.dart';
 import '../model/document.dart';
 import '../model/document_clone.dart';
 
-class V2Store {
-  V2Store({required this.sceneDoc, Set<NodeId>? selectedNodeIds})
+class SceneStore {
+  SceneStore({required this.sceneDoc, Set<NodeId>? selectedNodeIds})
     : selectedNodeIds = selectedNodeIds == null
           ? <NodeId>{}
           : Set<NodeId>.from(selectedNodeIds),
       allNodeIds = txnCollectNodeIds(sceneDoc),
       nodeLocator = txnBuildNodeLocator(sceneDoc),
-      nodeIdSeed = txnInitialNodeIdSeed(sceneDoc);
+      nodeIdSeed = txnInitialNodeIdSeed(sceneDoc),
+      layerIdSeed = txnInitialLayerIdSeed(sceneDoc),
+      nextInstanceRevision = txnInitialNodeInstanceRevisionSeed(sceneDoc);
 
   Scene sceneDoc;
   Set<NodeId> selectedNodeIds;
@@ -24,4 +26,6 @@ class V2Store {
   int commitRevision = 0;
 
   int nodeIdSeed;
+  int layerIdSeed;
+  int nextInstanceRevision;
 }

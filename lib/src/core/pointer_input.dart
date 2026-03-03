@@ -75,13 +75,30 @@ class PointerInputSettings {
   final bool deferSingleTap;
 }
 
+/// Validates [PointerInputSettings] values at runtime boundaries.
+///
+/// Throws [ArgumentError] when any numeric field is non-finite or negative.
+void validatePointerInputSettings(PointerInputSettings settings) {
+  _requireFiniteNonNegative(settings.tapSlop, name: 'tapSlop');
+  _requireFiniteNonNegative(settings.doubleTapSlop, name: 'doubleTapSlop');
+  if (settings.doubleTapMaxDelayMs < 0) {
+    throw ArgumentError.value(
+      settings.doubleTapMaxDelayMs,
+      'doubleTapMaxDelayMs',
+      'Must be >= 0.',
+    );
+  }
+}
+
 /// Converts [PointerSample] input into a stream of [PointerSignal]s.
 ///
 /// The tracker is stateless with respect to the scene model and can be reused
 /// by hosts that want tap/double-tap detection.
 class PointerInputTracker {
   PointerInputTracker({PointerInputSettings? settings})
-    : settings = settings ?? const PointerInputSettings();
+    : settings = settings ?? const PointerInputSettings() {
+    validatePointerInputSettings(this.settings);
+  }
 
   final PointerInputSettings settings;
   final Map<int, _PointerDownState> _downStates = <int, _PointerDownState>{};
@@ -238,6 +255,13 @@ class PointerInputTracker {
     final doubleTapSlop = settings.doubleTapSlop;
     return distanceSquared <= doubleTapSlop * doubleTapSlop;
   }
+}
+
+double _requireFiniteNonNegative(double value, {required String name}) {
+  if (!value.isFinite || value < 0) {
+    throw ArgumentError.value(value, name, 'Must be finite and >= 0.');
+  }
+  return value;
 }
 
 class _PointerDownState {

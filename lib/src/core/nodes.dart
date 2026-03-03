@@ -6,6 +6,7 @@ import 'dart:collection';
 import 'package:path_drawing/path_drawing.dart';
 
 import 'geometry.dart';
+import 'local_bounds_policy.dart';
 import 'numeric_clamp.dart';
 import 'numeric_tolerance.dart';
 import 'transform2d.dart';
@@ -29,6 +30,7 @@ abstract class SceneNode {
   SceneNode({
     required this.id,
     required this.type,
+    this.instanceRevision = 1,
     this.hitPadding = 0,
     Transform2D? transform,
     double opacity = 1,
@@ -38,14 +40,22 @@ abstract class SceneNode {
     this.isDeletable = true,
     this.isTransformable = true,
   }) : transform = transform ?? Transform2D.identity {
+    if (instanceRevision < 1) {
+      throw ArgumentError.value(
+        instanceRevision,
+        'instanceRevision',
+        'must be >= 1',
+      );
+    }
     this.opacity = opacity;
   }
 
   final NodeId id;
   final NodeType type;
+  final int instanceRevision;
 
   /// Additional hit-test tolerance in scene units.
-  /// (Serialized as part of JSON v2.)
+  /// (Serialized as part of JSON schema.)
   ///
   /// Expected to be finite and non-negative.
   ///
@@ -213,6 +223,7 @@ class ImageNode extends SceneNode {
     required this.imageId,
     required this.size,
     this.naturalSize,
+    super.instanceRevision,
     super.hitPadding,
     super.transform,
     super.opacity,
@@ -297,6 +308,7 @@ class TextNode extends SceneNode {
     this.fontFamily,
     this.maxWidth,
     this.lineHeight,
+    super.instanceRevision,
     super.hitPadding,
     super.transform,
     super.opacity,
@@ -398,6 +410,7 @@ class StrokeNode extends SceneNode {
     int pointsRevision = 0,
     required this.thickness,
     required this.color,
+    super.instanceRevision,
     super.hitPadding,
     super.transform,
     super.opacity,
@@ -677,6 +690,7 @@ class LineNode extends SceneNode {
     required this.end,
     required this.thickness,
     required this.color,
+    super.instanceRevision,
     super.hitPadding,
     super.transform,
     super.opacity,
@@ -784,6 +798,7 @@ class RectNode extends SceneNode {
     this.fillColor,
     this.strokeColor,
     this.strokeWidth = 1,
+    super.instanceRevision,
     super.hitPadding,
     super.transform,
     super.opacity,
@@ -846,21 +861,14 @@ class RectNode extends SceneNode {
     position = position + delta;
   }
 
-  Rect get _localRect => Rect.fromCenter(
-    center: Offset.zero,
-    width: clampNonNegativeFinite(size.width),
-    height: clampNonNegativeFinite(size.height),
-  );
+  Rect get _localRect => centeredRectLocalBounds(size);
 
   @override
-  Rect get localBounds {
-    var rect = _localRect;
-    final baseStrokeWidth = clampNonNegativeFinite(strokeWidth);
-    if (strokeColor != null && baseStrokeWidth > 0) {
-      rect = rect.inflate(baseStrokeWidth / 2);
-    }
-    return rect;
-  }
+  Rect get localBounds => strokeAwareLocalBounds(
+    baseBounds: _localRect,
+    strokeColor: strokeColor,
+    strokeWidth: strokeWidth,
+  );
 }
 
 /// SVG-path based vector node.
@@ -879,6 +887,7 @@ class PathNode extends SceneNode {
     this.strokeColor,
     this.strokeWidth = 1,
     PathFillRule fillRule = PathFillRule.nonZero,
+    super.instanceRevision,
     super.hitPadding,
     super.transform,
     super.opacity,
@@ -950,18 +959,21 @@ class PathNode extends SceneNode {
   /// The returned path is in the node's local coordinate space. The caller is
   /// responsible for applying [transform].
   ///
-  /// By default, this method returns a defensive copy of the cached geometry so
-  /// external callers cannot accidentally mutate internal cache state.
-  ///
-  /// For performance-sensitive internal call sites, pass `copy: false` and
-  /// treat the returned path as immutable (read-only).
-  Path? buildLocalPath({bool copy = true}) {
+  /// This method returns a defensive copy of the cached geometry so external
+  /// callers cannot accidentally mutate internal cache state.
+  Path? buildLocalPath() {
+    final cached = _ensureLocalPathCache();
+    if (cached == null) return null;
+    return _copyPath(cached);
+  }
+
+  Path? _ensureLocalPathCache() {
     if (_cacheResolved &&
         _cachedSvgPathData == _svgPathData &&
         _cachedFillRule == _fillRule) {
       final cached = _cachedLocalPath;
       if (cached == null) return null;
-      return copy ? _copyPath(cached) : cached;
+      return cached;
     }
     if (_svgPathData.trim().isEmpty) {
       _cacheResolved = true;
@@ -1003,7 +1015,7 @@ class PathNode extends SceneNode {
       _cachedLocalPath = centered;
       _cachedLocalPathBounds = centeredBounds;
       _clearBuildLocalPathFailure();
-      return copy ? _copyPath(centered) : centered;
+      return centered;
     } catch (e, st) {
       _cacheResolved = true;
       _cachedSvgPathData = _svgPathData;
@@ -1021,16 +1033,14 @@ class PathNode extends SceneNode {
 
   @override
   Rect get localBounds {
-    buildLocalPath(copy: false);
+    _ensureLocalPathCache();
     final bounds = _cachedLocalPathBounds;
     if (bounds == null) return Rect.zero;
-    if (!_isFiniteRect(bounds)) return Rect.zero;
-    var rect = bounds;
-    final baseStrokeWidth = clampNonNegativeFinite(strokeWidth);
-    if (strokeColor != null && baseStrokeWidth > 0) {
-      rect = rect.inflate(baseStrokeWidth / 2);
-    }
-    return rect;
+    return strokeAwareLocalBounds(
+      baseBounds: bounds,
+      strokeColor: strokeColor,
+      strokeWidth: strokeWidth,
+    );
   }
 
   void _invalidatePathCache() {

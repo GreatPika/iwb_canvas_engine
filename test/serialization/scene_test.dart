@@ -17,18 +17,12 @@ void main() {
 
   test('decodeSceneFromJson rejects invalid schema', () {
     const json = '{"schemaVersion": 999}';
-    expect(
-      () => decodeSceneFromJson(json),
-      throwsA(isA<SceneJsonFormatException>()),
-    );
+    expect(() => decodeSceneFromJson(json), throwsA(isA<SceneDataException>()));
   });
 
   test('decodeSceneFromJson rejects schemaVersion 1', () {
     const json = '{"schemaVersion": 1}';
-    expect(
-      () => decodeSceneFromJson(json),
-      throwsA(isA<SceneJsonFormatException>()),
-    );
+    expect(() => decodeSceneFromJson(json), throwsA(isA<SceneDataException>()));
   });
 
   test('decodeSceneFromJson rejects invalid color', () {
@@ -36,15 +30,15 @@ void main() {
     final encoded = encodeScene(scene);
     encoded['background']['color'] = 'not-a-color';
 
-    expect(
-      () => decodeScene(encoded),
-      throwsA(isA<SceneJsonFormatException>()),
-    );
+    expect(() => decodeScene(encoded), throwsA(isA<SceneDataException>()));
   });
 
   test('decodeScene returns immutable snapshots', () {
     final scene = decodeScene(encodeScene(_buildScene()));
-    expect(() => scene.layers.add(LayerSnapshot()), throwsUnsupportedError);
+    expect(
+      () => scene.layers.add(ContentLayerSnapshot(id: 'layer-auto-0')),
+      throwsUnsupportedError,
+    );
     expect(
       () => scene.layers.first.nodes.add(
         const RectNodeSnapshot(id: 'extra', size: Size(1, 1)),
@@ -56,6 +50,28 @@ void main() {
       throwsUnsupportedError,
     );
   });
+
+  test(
+    'decodeScene accepts JSON without instanceRevision and re-encodes with it',
+    () {
+      final encoded = encodeScene(_buildScene());
+      final layers = encoded['layers'] as List<dynamic>;
+      final layer = layers[1] as Map<String, dynamic>;
+      final nodes = layer['nodes'] as List<dynamic>;
+      final firstNode = nodes.first as Map<String, dynamic>;
+      firstNode.remove('instanceRevision');
+
+      final decoded = decodeScene(encoded);
+      final reEncoded = encodeScene(decoded);
+      final reEncodedLayers = reEncoded['layers'] as List<dynamic>;
+      final reEncodedLayer = reEncodedLayers[1] as Map<String, dynamic>;
+      final reEncodedNodes = reEncodedLayer['nodes'] as List<dynamic>;
+      final reEncodedFirstNode = reEncodedNodes.first as Map<String, dynamic>;
+
+      expect(reEncodedFirstNode['instanceRevision'], isA<int>());
+      expect(reEncodedFirstNode['instanceRevision'], greaterThanOrEqualTo(1));
+    },
+  );
 
   test('decodeScene recomputes derived text size from content', () {
     final encoded = encodeScene(_buildScene());
@@ -107,9 +123,10 @@ SceneSnapshot _buildScene() {
   );
 
   return SceneSnapshot(
-    layers: <LayerSnapshot>[
-      LayerSnapshot(isBackground: true),
-      LayerSnapshot(
+    layers: <ContentLayerSnapshot>[
+      ContentLayerSnapshot(id: 'layer-auto-1'),
+      ContentLayerSnapshot(
+        id: 'layer-auto-2',
         nodes: <NodeSnapshot>[
           ImageNodeSnapshot(
             id: 'img-1',
@@ -183,7 +200,7 @@ SceneSnapshot _buildScene() {
             fillColor: Color(0xFF4CAF50),
             strokeColor: Color(0xFF1B5E20),
             strokeWidth: 2,
-            fillRule: V2PathFillRule.evenOdd,
+            fillRule: PathFillRule.evenOdd,
             transform: Transform2D.translation(Offset(100, -40)),
           ),
         ],

@@ -1,42 +1,81 @@
 import 'dart:ui';
 
-import '../core/defaults.dart';
+import '../core/nodes.dart' show PathFillRule;
 import '../core/transform2d.dart';
+export '../core/nodes.dart' show PathFillRule;
 
-/// Stable node identifier for the v2 public model.
+const double _defaultGridCellSize = 10;
+const List<Color> _defaultPenColors = <Color>[
+  Color(0xFF000000),
+  Color(0xFFE53935),
+  Color(0xFF1E88E5),
+  Color(0xFF43A047),
+  Color(0xFFFB8C00),
+  Color(0xFF8E24AA),
+];
+const List<Color> _defaultBackgroundColors = <Color>[
+  Color(0xFFFFFFFF),
+  Color(0xFFFFF9C4),
+  Color(0xFFBBDEFB),
+  Color(0xFFC8E6C9),
+];
+const List<double> _defaultGridSizes = <double>[
+  _defaultGridCellSize,
+  20,
+  40,
+  80,
+];
+
+/// Stable node identifier for the public model.
 typedef NodeId = String;
 
-/// Immutable scene snapshot exposed by the v2 public API.
+/// Stable content-layer identifier for the public model.
+typedef LayerId = String;
+
+/// Immutable scene snapshot exposed by the public API.
 class SceneSnapshot {
   SceneSnapshot({
-    List<LayerSnapshot>? layers,
+    List<ContentLayerSnapshot>? layers,
+    BackgroundLayerSnapshot? backgroundLayer,
     CameraSnapshot? camera,
     BackgroundSnapshot? background,
     ScenePaletteSnapshot? palette,
-  }) : layers = List<LayerSnapshot>.unmodifiable(
+  }) : layers = List<ContentLayerSnapshot>.unmodifiable(
          layers == null
-             ? const <LayerSnapshot>[]
-             : List<LayerSnapshot>.from(layers),
+             ? const <ContentLayerSnapshot>[]
+             : List<ContentLayerSnapshot>.from(layers),
        ),
+       backgroundLayer = backgroundLayer ?? BackgroundLayerSnapshot(),
        camera = camera ?? const CameraSnapshot(),
        background = background ?? const BackgroundSnapshot(),
        palette = palette ?? ScenePaletteSnapshot();
 
-  final List<LayerSnapshot> layers;
+  final List<ContentLayerSnapshot> layers;
+  final BackgroundLayerSnapshot backgroundLayer;
   final CameraSnapshot camera;
   final BackgroundSnapshot background;
   final ScenePaletteSnapshot palette;
 }
 
-/// Immutable layer snapshot.
-class LayerSnapshot {
-  LayerSnapshot({List<NodeSnapshot>? nodes, this.isBackground = false})
+/// Immutable dedicated background layer snapshot.
+class BackgroundLayerSnapshot {
+  BackgroundLayerSnapshot({List<NodeSnapshot>? nodes})
     : nodes = List<NodeSnapshot>.unmodifiable(
         nodes == null ? const <NodeSnapshot>[] : List<NodeSnapshot>.from(nodes),
       );
 
   final List<NodeSnapshot> nodes;
-  final bool isBackground;
+}
+
+/// Immutable content layer snapshot.
+class ContentLayerSnapshot {
+  ContentLayerSnapshot({required this.id, List<NodeSnapshot>? nodes})
+    : nodes = List<NodeSnapshot>.unmodifiable(
+        nodes == null ? const <NodeSnapshot>[] : List<NodeSnapshot>.from(nodes),
+      );
+
+  final LayerId id;
+  final List<NodeSnapshot> nodes;
 }
 
 /// Immutable camera state snapshot.
@@ -61,7 +100,7 @@ class BackgroundSnapshot {
 class GridSnapshot {
   const GridSnapshot({
     this.isEnabled = false,
-    this.cellSize = SceneDefaults.gridCellSize,
+    this.cellSize = _defaultGridCellSize,
     this.color = const Color(0x1F000000),
   });
 
@@ -77,19 +116,15 @@ class ScenePaletteSnapshot {
     List<Color>? backgroundColors,
     List<double>? gridSizes,
   }) : penColors = List<Color>.unmodifiable(
-         penColors == null
-             ? SceneDefaults.penColors
-             : List<Color>.from(penColors),
+         penColors == null ? _defaultPenColors : List<Color>.from(penColors),
        ),
        backgroundColors = List<Color>.unmodifiable(
          backgroundColors == null
-             ? SceneDefaults.backgroundColors
+             ? _defaultBackgroundColors
              : List<Color>.from(backgroundColors),
        ),
        gridSizes = List<double>.unmodifiable(
-         gridSizes == null
-             ? SceneDefaults.gridSizes
-             : List<double>.from(gridSizes),
+         gridSizes == null ? _defaultGridSizes : List<double>.from(gridSizes),
        );
 
   final List<Color> penColors;
@@ -97,13 +132,11 @@ class ScenePaletteSnapshot {
   final List<double> gridSizes;
 }
 
-/// Path fill rule value in the v2 public model.
-enum V2PathFillRule { nonZero, evenOdd }
-
 /// Immutable base node snapshot.
 sealed class NodeSnapshot {
   const NodeSnapshot({
     required this.id,
+    this.instanceRevision = 0,
     this.transform = Transform2D.identity,
     this.opacity = 1,
     this.hitPadding = 0,
@@ -115,6 +148,7 @@ sealed class NodeSnapshot {
   });
 
   final NodeId id;
+  final int instanceRevision;
   final Transform2D transform;
   final double opacity;
   final double hitPadding;
@@ -128,6 +162,7 @@ sealed class NodeSnapshot {
 class ImageNodeSnapshot extends NodeSnapshot {
   const ImageNodeSnapshot({
     required super.id,
+    super.instanceRevision,
     required this.imageId,
     required this.size,
     this.naturalSize,
@@ -149,6 +184,7 @@ class ImageNodeSnapshot extends NodeSnapshot {
 class TextNodeSnapshot extends NodeSnapshot {
   const TextNodeSnapshot({
     required super.id,
+    super.instanceRevision,
     required this.text,
     required this.size,
     this.fontSize = 24,
@@ -186,6 +222,7 @@ class TextNodeSnapshot extends NodeSnapshot {
 class StrokeNodeSnapshot extends NodeSnapshot {
   StrokeNodeSnapshot({
     required super.id,
+    super.instanceRevision,
     required List<Offset> points,
     this.pointsRevision = 0,
     required this.thickness,
@@ -209,6 +246,7 @@ class StrokeNodeSnapshot extends NodeSnapshot {
 class LineNodeSnapshot extends NodeSnapshot {
   const LineNodeSnapshot({
     required super.id,
+    super.instanceRevision,
     required this.start,
     required this.end,
     required this.thickness,
@@ -232,10 +270,11 @@ class LineNodeSnapshot extends NodeSnapshot {
 class RectNodeSnapshot extends NodeSnapshot {
   const RectNodeSnapshot({
     required super.id,
+    super.instanceRevision,
     required this.size,
     this.fillColor,
     this.strokeColor,
-    this.strokeWidth = 1,
+    this.strokeWidth = 0,
     super.transform,
     super.opacity,
     super.hitPadding,
@@ -255,11 +294,12 @@ class RectNodeSnapshot extends NodeSnapshot {
 class PathNodeSnapshot extends NodeSnapshot {
   const PathNodeSnapshot({
     required super.id,
+    super.instanceRevision,
     required this.svgPathData,
     this.fillColor,
     this.strokeColor,
-    this.strokeWidth = 1,
-    this.fillRule = V2PathFillRule.nonZero,
+    this.strokeWidth = 0,
+    this.fillRule = PathFillRule.nonZero,
     super.transform,
     super.opacity,
     super.hitPadding,
@@ -274,5 +314,5 @@ class PathNodeSnapshot extends NodeSnapshot {
   final Color? fillColor;
   final Color? strokeColor;
   final double strokeWidth;
-  final V2PathFillRule fillRule;
+  final PathFillRule fillRule;
 }

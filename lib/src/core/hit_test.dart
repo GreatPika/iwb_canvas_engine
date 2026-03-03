@@ -182,14 +182,18 @@ bool hitTestNode(Offset point, SceneNode node) {
     case NodeType.path:
       final pathNode = node as PathNode;
       final baseHitPadding = clampNonNegativeFinite(pathNode.hitPadding);
-      final localPath = pathNode.buildLocalPath(copy: false);
+      final localPath = pathNode.buildLocalPath();
       // Invalid/unbuildable path data is non-interactive at runtime.
       if (localPath == null) return false;
       final candidateBounds = nodeHitTestCandidateBoundsWorld(pathNode);
       if (!candidateBounds.contains(point)) return false;
 
       final inverse = pathNode.transform.invert();
-      if (pathNode.fillColor != null && inverse != null) {
+      if (inverse == null) {
+        // Fallback for singular transforms: keep PathNode selectable by bounds.
+        return true;
+      }
+      if (pathNode.fillColor != null) {
         final localPoint = inverse.applyToPoint(point);
         if (localPath.contains(localPoint)) return true;
       }
@@ -197,10 +201,6 @@ bool hitTestNode(Offset point, SceneNode node) {
       if (pathNode.strokeColor == null) return false;
       final baseStrokeWidth = clampNonNegativeFinite(pathNode.strokeWidth);
       if (baseStrokeWidth <= 0) return false;
-      if (inverse == null) {
-        // Stroke precision requires local-space distance checks.
-        return false;
-      }
 
       final localPoint = inverse.applyToPoint(point);
       final paddingScene = baseHitPadding + kHitSlop;
@@ -275,7 +275,6 @@ SceneNode? hitTestTopNode(Scene scene, Offset point) {
     layerIndex--
   ) {
     final layer = scene.layers[layerIndex];
-    if (layer.isBackground) continue;
     for (var nodeIndex = layer.nodes.length - 1; nodeIndex >= 0; nodeIndex--) {
       final node = layer.nodes[nodeIndex];
       if (hitTestNode(point, node)) {

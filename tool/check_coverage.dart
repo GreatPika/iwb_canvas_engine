@@ -14,6 +14,24 @@ class _FileCoverage {
   int get effectiveLh => lh ?? hitLines.length;
 }
 
+String _toPosixPath(String path) => path.replaceAll('\\', '/');
+
+Set<String> _collectLibSrcDartFiles({required String cwd}) {
+  final srcRoot = Directory('lib/src');
+  if (!srcRoot.existsSync()) {
+    return <String>{};
+  }
+
+  final files = <String>{};
+  for (final entity in srcRoot.listSync(recursive: true, followLinks: false)) {
+    if (entity is! File || !entity.path.endsWith('.dart')) {
+      continue;
+    }
+    files.add(_normalizePath(_toPosixPath(entity.path), cwd));
+  }
+  return files;
+}
+
 String _normalizePath(String path, String cwd) {
   var p = path.replaceAll('\\', '/');
   final libSrcIndex = p.lastIndexOf('lib/src/');
@@ -84,6 +102,18 @@ String _formatPercent(int lh, int lf) {
 
 void main(List<String> args) {
   final cwd = Directory.current.path;
+  // Declaration-only Dart units may not be emitted by VM lcov as SF records.
+  // Keep this list minimal and limited to const/enum/interface/typedef files.
+  const excludedFromLcov = <String>{
+    'lib/src/core/defaults.dart',
+    'lib/src/core/grid_safety_limits.dart',
+    'lib/src/core/interaction_types.dart',
+    'lib/src/core/scene_limits.dart',
+    'lib/src/model/scene_value_validation.dart',
+    'lib/src/public/scene_render_state.dart',
+    'lib/src/public/scene_write_txn.dart',
+  };
+  final libSrcFiles = _collectLibSrcDartFiles(cwd: cwd);
   final lcovFile = File('coverage/lcov.info');
   if (!lcovFile.existsSync()) {
     stderr.writeln(
@@ -95,6 +125,14 @@ void main(List<String> args) {
 
   final content = lcovFile.readAsStringSync();
   final all = _parseLcov(content, cwd: cwd);
+  final missingFromLcov =
+      libSrcFiles
+          .where(
+            (path) =>
+                !excludedFromLcov.contains(path) && !all.containsKey(path),
+          )
+          .toList()
+        ..sort();
   final entries = <_FileCoverage>[];
   for (final entry in all.entries) {
     final path = entry.key;
@@ -108,6 +146,18 @@ void main(List<String> args) {
   if (entries.isEmpty) {
     stderr.writeln('No coverage entries found for lib/src/**.');
     exitCode = 2;
+    return;
+  }
+
+  if (missingFromLcov.isNotEmpty) {
+    stderr.writeln(
+      'FAIL: ${missingFromLcov.length} lib/src/** file(s) are missing from coverage/lcov.info.',
+    );
+    stderr.writeln('These files are not covered at all (no lcov record):');
+    for (final path in missingFromLcov) {
+      stderr.writeln('  $path');
+    }
+    exitCode = 1;
     return;
   }
 

@@ -5,6 +5,7 @@ import '../core/nodes.dart';
 import '../core/scene.dart';
 import '../model/document_clone.dart';
 import '../model/document.dart';
+import '../public/snapshot.dart' show LayerId;
 
 List<String> txnCollectStoreInvariantViolations({
   required Scene scene,
@@ -12,6 +13,8 @@ List<String> txnCollectStoreInvariantViolations({
   required Set<NodeId> allNodeIds,
   required Map<NodeId, NodeLocatorEntry> nodeLocator,
   required int nodeIdSeed,
+  required int layerIdSeed,
+  required int nextInstanceRevision,
   required int commitRevision,
 }) {
   var violations = const <String>[];
@@ -49,19 +52,12 @@ List<String> txnCollectStoreInvariantViolations({
     ];
   }
 
-  final backgroundLayerIndexes = _txnCollectBackgroundLayerIndexes(scene);
-  if (backgroundLayerIndexes.length > 1) {
+  final duplicateLayerIds = _txnCollectDuplicateLayerIds(scene);
+  if (duplicateLayerIds.isNotEmpty) {
     violations = <String>[
       ...violations,
-      'scene must contain at most one background layer. '
-          'indexes=$backgroundLayerIndexes',
-    ];
-  } else if (backgroundLayerIndexes.isNotEmpty &&
-      backgroundLayerIndexes.single != 0) {
-    violations = <String>[
-      ...violations,
-      'background layer must be at index 0 when present. '
-          'actualIndex=${backgroundLayerIndexes.single}',
+      'scene must not contain duplicate content layer ids. '
+          'duplicates=$duplicateLayerIds',
     ];
   }
 
@@ -83,6 +79,81 @@ List<String> txnCollectStoreInvariantViolations({
       ...violations,
       'nodeIdSeed must be >= initialNodeIdSeed(scene). '
           'actual=$nodeIdSeed min=$expectedSeed',
+    ];
+  }
+
+  final expectedLayerSeed = txnInitialLayerIdSeed(scene);
+  if (layerIdSeed < expectedLayerSeed) {
+    violations = <String>[
+      ...violations,
+      'layerIdSeed must be >= initialLayerIdSeed(scene). '
+          'actual=$layerIdSeed min=$expectedLayerSeed',
+    ];
+  }
+
+  final expectedInstanceSeed = txnInitialNodeInstanceRevisionSeed(scene);
+  if (nextInstanceRevision < expectedInstanceSeed) {
+    violations = <String>[
+      ...violations,
+      'nextInstanceRevision must be >= '
+          'initialNodeInstanceRevisionSeed(scene). '
+          'actual=$nextInstanceRevision min=$expectedInstanceSeed',
+    ];
+  }
+
+  final invalidInstanceRevisionIds = <NodeId>[];
+  for (final node in _txnAllNodes(scene)) {
+    if (node.instanceRevision >= 1) continue;
+    invalidInstanceRevisionIds.add(node.id);
+  }
+  if (invalidInstanceRevisionIds.isNotEmpty) {
+    violations = <String>[
+      ...violations,
+      'scene nodes must have instanceRevision >= 1. '
+          'nodeIds=$invalidInstanceRevisionIds',
+    ];
+  }
+
+  if (commitRevision < 0) {
+    violations = <String>[
+      ...violations,
+      'commitRevision must be non-negative.',
+    ];
+  }
+
+  final cameraOffset = scene.camera.offset;
+  if (!_txnIsFiniteOffset(cameraOffset)) {
+    violations = <String>[...violations, 'camera.offset must be finite.'];
+  }
+
+  final grid = scene.background.grid;
+  if (!grid.cellSize.isFinite || grid.cellSize <= 0) {
+    violations = <String>[
+      ...violations,
+      'grid.cellSize must be finite and > 0.',
+    ];
+  } else if (grid.isEnabled && grid.cellSize < kMinGridCellSize) {
+    violations = <String>[
+      ...violations,
+      'enabled grid.cellSize must be >= $kMinGridCellSize.',
+    ];
+  }
+
+  return violations;
+}
+
+List<String> txnCollectCriticalStoreInvariantViolations({
+  required Scene scene,
+  required int commitRevision,
+  required int previousCommitRevision,
+}) {
+  var violations = const <String>[];
+
+  if (commitRevision <= previousCommitRevision) {
+    violations = <String>[
+      ...violations,
+      'commitRevision must be strictly monotonic. '
+          'actual=$commitRevision previous=$previousCommitRevision',
     ];
   }
 
@@ -120,24 +191,53 @@ void debugAssertTxnStoreInvariants({
   required Set<NodeId> allNodeIds,
   required Map<NodeId, NodeLocatorEntry> nodeLocator,
   required int nodeIdSeed,
+  required int layerIdSeed,
+  required int nextInstanceRevision,
   required int commitRevision,
 }) {
-  assert(() {
-    final violations = txnCollectStoreInvariantViolations(
-      scene: scene,
-      selectedNodeIds: selectedNodeIds,
-      allNodeIds: allNodeIds,
-      nodeLocator: nodeLocator,
-      nodeIdSeed: nodeIdSeed,
-      commitRevision: commitRevision,
+  final violations = txnCollectStoreInvariantViolations(
+    scene: scene,
+    selectedNodeIds: selectedNodeIds,
+    allNodeIds: allNodeIds,
+    nodeLocator: nodeLocator,
+    nodeIdSeed: nodeIdSeed,
+    layerIdSeed: layerIdSeed,
+    nextInstanceRevision: nextInstanceRevision,
+    commitRevision: commitRevision,
+  );
+  if (violations.isNotEmpty) {
+    throw StateError(
+      'Committed store invariants violated:\n- ${violations.join('\n- ')}',
     );
-    if (violations.isNotEmpty) {
-      throw StateError(
-        'Committed store invariants violated:\n- ${violations.join('\n- ')}',
-      );
-    }
-    return true;
-  }());
+  }
+}
+
+void assertCriticalTxnStoreInvariants({
+  required Scene scene,
+  required int commitRevision,
+  required int previousCommitRevision,
+}) {
+  final violations = txnCollectCriticalStoreInvariantViolations(
+    scene: scene,
+    commitRevision: commitRevision,
+    previousCommitRevision: previousCommitRevision,
+  );
+  if (violations.isNotEmpty) {
+    throw StateError(
+      'Critical committed store invariants violated:\n- '
+      '${violations.join('\n- ')}',
+    );
+  }
+}
+
+Iterable<SceneNode> _txnAllNodes(Scene scene) sync* {
+  final backgroundLayer = scene.backgroundLayer;
+  if (backgroundLayer != null) {
+    yield* backgroundLayer.nodes;
+  }
+  for (final layer in scene.layers) {
+    yield* layer.nodes;
+  }
 }
 
 bool _txnSetsEqual(Set<NodeId> left, Set<NodeId> right) {
@@ -167,6 +267,14 @@ bool _txnIsFiniteOffset(Offset value) {
 Set<NodeId> _txnCollectDuplicateNodeIds(Scene scene) {
   final seen = <NodeId>{};
   final duplicates = <NodeId>{};
+  final backgroundLayer = scene.backgroundLayer;
+  if (backgroundLayer != null) {
+    for (final node in backgroundLayer.nodes) {
+      if (!seen.add(node.id)) {
+        duplicates.add(node.id);
+      }
+    }
+  }
   for (final layer in scene.layers) {
     for (final node in layer.nodes) {
       if (!seen.add(node.id)) {
@@ -177,12 +285,13 @@ Set<NodeId> _txnCollectDuplicateNodeIds(Scene scene) {
   return duplicates;
 }
 
-List<int> _txnCollectBackgroundLayerIndexes(Scene scene) {
-  final out = <int>[];
-  for (var i = 0; i < scene.layers.length; i++) {
-    if (scene.layers[i].isBackground) {
-      out.add(i);
+Set<LayerId> _txnCollectDuplicateLayerIds(Scene scene) {
+  final seen = <LayerId>{};
+  final duplicates = <LayerId>{};
+  for (final layer in scene.layers) {
+    if (!seen.add(layer.id)) {
+      duplicates.add(layer.id);
     }
   }
-  return out;
+  return duplicates;
 }

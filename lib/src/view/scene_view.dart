@@ -3,72 +3,72 @@ import 'dart:ui' as ui;
 import 'package:flutter/widgets.dart';
 
 import '../controller/scene_controller.dart';
+import '../render/render_geometry_cache.dart';
 import '../render/scene_painter.dart';
+import '../render/scene_render_caches.dart';
 
 ui.Image? _defaultImageResolver(String _) => null;
 
-class SceneViewV2 extends StatefulWidget {
-  const SceneViewV2({
+class SceneViewCore extends StatefulWidget {
+  const SceneViewCore({
     required this.controller,
     this.imageResolver,
     this.staticLayerCache,
     this.textLayoutCache,
     this.strokePathCache,
     this.pathMetricsCache,
+    this.geometryCache,
     this.selectionColor = const Color(0xFF1565C0),
     this.selectionStrokeWidth = 1,
     this.gridStrokeWidth = 1,
     super.key,
   });
 
-  final SceneControllerV2 controller;
-  final ImageResolverV2? imageResolver;
-  final SceneStaticLayerCacheV2? staticLayerCache;
-  final SceneTextLayoutCacheV2? textLayoutCache;
-  final SceneStrokePathCacheV2? strokePathCache;
-  final ScenePathMetricsCacheV2? pathMetricsCache;
+  final SceneControllerCore controller;
+  final ImageResolver? imageResolver;
+  final SceneStaticLayerCache? staticLayerCache;
+  final SceneTextLayoutCache? textLayoutCache;
+  final SceneStrokePathCache? strokePathCache;
+  final ScenePathMetricsCache? pathMetricsCache;
+  final RenderGeometryCache? geometryCache;
   final Color selectionColor;
   final double selectionStrokeWidth;
   final double gridStrokeWidth;
 
   @override
-  State<SceneViewV2> createState() => _SceneViewV2State();
+  State<SceneViewCore> createState() => _SceneViewCoreState();
 }
 
-class _SceneViewV2State extends State<SceneViewV2> {
-  late SceneStaticLayerCacheV2 _staticLayerCache;
-  late bool _ownsStaticLayerCache;
-  late SceneTextLayoutCacheV2 _textLayoutCache;
-  late bool _ownsTextLayoutCache;
-  late SceneStrokePathCacheV2 _strokePathCache;
-  late bool _ownsStrokePathCache;
-  late ScenePathMetricsCacheV2 _pathMetricsCache;
-  late bool _ownsPathMetricsCache;
+class _SceneViewCoreState extends State<SceneViewCore> {
+  late SceneRenderCaches _renderCaches;
 
   int _lastEpoch = 0;
 
   @visibleForTesting
-  SceneStaticLayerCacheV2 get debugStaticLayerCache => _staticLayerCache;
+  SceneStaticLayerCache get debugStaticLayerCache =>
+      _renderCaches.staticLayerCache;
   @visibleForTesting
-  SceneTextLayoutCacheV2 get debugTextLayoutCache => _textLayoutCache;
+  SceneTextLayoutCache get debugTextLayoutCache =>
+      _renderCaches.textLayoutCache;
   @visibleForTesting
-  SceneStrokePathCacheV2 get debugStrokePathCache => _strokePathCache;
+  SceneStrokePathCache get debugStrokePathCache =>
+      _renderCaches.strokePathCache;
   @visibleForTesting
-  ScenePathMetricsCacheV2 get debugPathMetricsCache => _pathMetricsCache;
+  ScenePathMetricsCache get debugPathMetricsCache =>
+      _renderCaches.pathMetricsCache;
+  @visibleForTesting
+  RenderGeometryCache get debugGeometryCache => _renderCaches.geometryCache;
 
   @override
   void initState() {
     super.initState();
-    _initStaticLayerCache();
-    _initTextLayoutCache();
-    _initStrokePathCache();
-    _initPathMetricsCache();
+    _renderCaches = _createRenderCaches();
     _lastEpoch = widget.controller.controllerEpoch;
     widget.controller.addListener(_handleControllerChanged);
   }
 
   @override
-  void didUpdateWidget(SceneViewV2 oldWidget) {
+  void didUpdateWidget(SceneViewCore oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller.removeListener(_handleControllerChanged);
@@ -76,35 +76,17 @@ class _SceneViewV2State extends State<SceneViewV2> {
       _lastEpoch = widget.controller.controllerEpoch;
       _clearAllCaches();
     }
-    if (oldWidget.staticLayerCache != widget.staticLayerCache) {
-      _syncStaticLayerCache();
-    }
-    if (oldWidget.textLayoutCache != widget.textLayoutCache) {
-      _syncTextLayoutCache();
-    }
-    if (oldWidget.strokePathCache != widget.strokePathCache) {
-      _syncStrokePathCache();
-    }
-    if (oldWidget.pathMetricsCache != widget.pathMetricsCache) {
-      _syncPathMetricsCache();
+    if (_didCacheDepsChange(oldWidget)) {
+      final previous = _renderCaches;
+      _renderCaches = _createRenderCaches();
+      previous.disposeOwned();
     }
   }
 
   @override
   void dispose() {
     widget.controller.removeListener(_handleControllerChanged);
-    if (_ownsStaticLayerCache) {
-      _staticLayerCache.dispose();
-    }
-    if (_ownsTextLayoutCache) {
-      _textLayoutCache.clear();
-    }
-    if (_ownsStrokePathCache) {
-      _strokePathCache.clear();
-    }
-    if (_ownsPathMetricsCache) {
-      _pathMetricsCache.clear();
-    }
+    _renderCaches.disposeOwned();
     super.dispose();
   }
 
@@ -112,13 +94,14 @@ class _SceneViewV2State extends State<SceneViewV2> {
   Widget build(BuildContext context) {
     final textDirection = Directionality.maybeOf(context) ?? TextDirection.ltr;
     return CustomPaint(
-      painter: ScenePainterV2(
+      painter: ScenePainter(
         controller: widget.controller,
         imageResolver: widget.imageResolver ?? _defaultImageResolver,
-        staticLayerCache: _staticLayerCache,
-        textLayoutCache: _textLayoutCache,
-        strokePathCache: _strokePathCache,
-        pathMetricsCache: _pathMetricsCache,
+        staticLayerCache: _renderCaches.staticLayerCache,
+        textLayoutCache: _renderCaches.textLayoutCache,
+        strokePathCache: _renderCaches.strokePathCache,
+        pathMetricsCache: _renderCaches.pathMetricsCache,
+        geometryCache: _renderCaches.geometryCache,
         selectionColor: widget.selectionColor,
         selectionStrokeWidth: widget.selectionStrokeWidth,
         gridStrokeWidth: widget.gridStrokeWidth,
@@ -136,81 +119,24 @@ class _SceneViewV2State extends State<SceneViewV2> {
   }
 
   void _clearAllCaches() {
-    _staticLayerCache.clear();
-    _textLayoutCache.clear();
-    _strokePathCache.clear();
-    _pathMetricsCache.clear();
+    _renderCaches.clearAll();
   }
 
-  void _initStaticLayerCache() {
-    final external = widget.staticLayerCache;
-    if (external != null) {
-      _staticLayerCache = external;
-      _ownsStaticLayerCache = false;
-      return;
-    }
-    _staticLayerCache = SceneStaticLayerCacheV2();
-    _ownsStaticLayerCache = true;
+  bool _didCacheDepsChange(SceneViewCore oldWidget) {
+    return oldWidget.staticLayerCache != widget.staticLayerCache ||
+        oldWidget.textLayoutCache != widget.textLayoutCache ||
+        oldWidget.strokePathCache != widget.strokePathCache ||
+        oldWidget.pathMetricsCache != widget.pathMetricsCache ||
+        oldWidget.geometryCache != widget.geometryCache;
   }
 
-  void _syncStaticLayerCache() {
-    if (_ownsStaticLayerCache) {
-      _staticLayerCache.dispose();
-    }
-    _initStaticLayerCache();
-  }
-
-  void _initTextLayoutCache() {
-    final external = widget.textLayoutCache;
-    if (external != null) {
-      _textLayoutCache = external;
-      _ownsTextLayoutCache = false;
-      return;
-    }
-    _textLayoutCache = SceneTextLayoutCacheV2();
-    _ownsTextLayoutCache = true;
-  }
-
-  void _syncTextLayoutCache() {
-    if (_ownsTextLayoutCache) {
-      _textLayoutCache.clear();
-    }
-    _initTextLayoutCache();
-  }
-
-  void _initStrokePathCache() {
-    final external = widget.strokePathCache;
-    if (external != null) {
-      _strokePathCache = external;
-      _ownsStrokePathCache = false;
-      return;
-    }
-    _strokePathCache = SceneStrokePathCacheV2();
-    _ownsStrokePathCache = true;
-  }
-
-  void _syncStrokePathCache() {
-    if (_ownsStrokePathCache) {
-      _strokePathCache.clear();
-    }
-    _initStrokePathCache();
-  }
-
-  void _initPathMetricsCache() {
-    final external = widget.pathMetricsCache;
-    if (external != null) {
-      _pathMetricsCache = external;
-      _ownsPathMetricsCache = false;
-      return;
-    }
-    _pathMetricsCache = ScenePathMetricsCacheV2();
-    _ownsPathMetricsCache = true;
-  }
-
-  void _syncPathMetricsCache() {
-    if (_ownsPathMetricsCache) {
-      _pathMetricsCache.clear();
-    }
-    _initPathMetricsCache();
+  SceneRenderCaches _createRenderCaches() {
+    return SceneRenderCaches(
+      staticLayerCache: widget.staticLayerCache,
+      textLayoutCache: widget.textLayoutCache,
+      strokePathCache: widget.strokePathCache,
+      pathMetricsCache: widget.pathMetricsCache,
+      geometryCache: widget.geometryCache,
+    );
   }
 }

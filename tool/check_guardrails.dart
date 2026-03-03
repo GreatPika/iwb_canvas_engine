@@ -1,12 +1,13 @@
 import 'dart:io';
 
 // Invariants enforced by this tool:
-// INV:INV-V2-NO-EXTERNAL-MUTATION
-// INV:INV-V2-WRITE-ONLY-MUTATION
-// INV:INV-V2-TXN-ATOMIC-COMMIT
-// INV:INV-V2-EPOCH-INVALIDATION
+// INV:INV-ENG-NO-EXTERNAL-MUTATION
+// INV:INV-ENG-WRITE-ONLY-MUTATION
+// INV:INV-ENG-TXN-ATOMIC-COMMIT
+// INV:INV-ENG-EPOCH-INVALIDATION
 // INV:INV-G-PUBLIC-ENTRYPOINTS
-// INV:INV-V2-SAFE-TXN-API
+// INV:INV-ENG-SAFE-TXN-API
+// INV:INV-ENG-INTERACTIVE-RESOLVER-PURITY
 
 class _Violation {
   _Violation({
@@ -21,6 +22,18 @@ class _Violation {
 
   @override
   String toString() => '$filePath:$line: $message';
+}
+
+class _InteractiveEntrypointSignature {
+  _InteractiveEntrypointSignature({
+    required this.name,
+    required this.bodyRemainder,
+  });
+
+  final String name;
+  final String bodyRemainder;
+
+  bool get isDispose => name == 'dispose';
 }
 
 String _normalizePosixPath(String path) {
@@ -172,7 +185,7 @@ void _checkPublicImports({
   if (!publicDir.existsSync()) return;
 
   final disallowedPrefixes = <String>[
-    '/lib/src/input/',
+    '/lib/src/controller/',
     '/lib/src/render/',
     '/lib/src/view/',
     '/lib/src/serialization/',
@@ -216,7 +229,7 @@ void _checkPublicImports({
               filePath: filePosixPath,
               line: lineNo,
               message:
-                  'public must not import/export input/render/view/serialization internals ($resolvedRepoRelPosix)',
+                  'public must not import/export controller/render/view/serialization internals ($resolvedRepoRelPosix)',
             ),
           );
         }
@@ -277,7 +290,7 @@ Set<String> _checkEntrypointGuardrails({
       _Violation(
         filePath: '/lib/advanced.dart',
         line: 1,
-        message: 'advanced.dart entrypoint is forbidden in v2.',
+        message: 'advanced.dart entrypoint is forbidden.',
       ),
     );
   }
@@ -308,6 +321,165 @@ Set<String> _checkEntrypointGuardrails({
     }
   }
   return exports;
+}
+
+bool _isAllowedRootLibStatement(String statement) {
+  final trimmed = statement.trim();
+  if (trimmed.isEmpty) return true;
+  if (trimmed == 'library;') return true;
+  if (RegExp(r'^library\s+[A-Za-z_][A-Za-z0-9_\.]*\s*;$').hasMatch(trimmed)) {
+    return true;
+  }
+  return trimmed.startsWith('export ') && trimmed.endsWith(';');
+}
+
+void _checkRootLibFilesAreExportOnly({
+  required Directory root,
+  required String rootAbsPosix,
+}) {
+  final libDir = Directory('${root.path}${Platform.pathSeparator}lib');
+  if (!libDir.existsSync()) return;
+
+  final rootLibFiles = libDir
+      .listSync(recursive: false, followLinks: false)
+      .whereType<File>()
+      .where((file) => file.path.endsWith('.dart'))
+      .toList(growable: false);
+
+  for (final file in rootLibFiles) {
+    final filePosixPath = _toRepoRelPosixPath(
+      absPosixPath: _toPosixPath(file.absolute.path),
+      rootAbsPosixPath: rootAbsPosix,
+    );
+    final lines = file.readAsLinesSync();
+    var inBlockComment = false;
+    var inSingleQuote = false;
+    var inDoubleQuote = false;
+    var singleQuoteEscaped = false;
+    var doubleQuoteEscaped = false;
+    final statementBuffer = StringBuffer();
+    int? statementStartLine;
+
+    void appendStatementChar(String char, int lineNo) {
+      if (statementBuffer.isEmpty && char.trim().isEmpty) {
+        return;
+      }
+      statementStartLine ??= lineNo;
+      statementBuffer.write(char);
+    }
+
+    Never failStatement(int lineNo) {
+      _fail(
+        _Violation(
+          filePath: filePosixPath,
+          line: statementStartLine ?? lineNo,
+          message:
+              'root lib/*.dart files must contain only library/docs/comments/export directives.',
+        ),
+      );
+    }
+
+    void validateCompletedStatement(int lineNo) {
+      final statement = statementBuffer.toString().trim();
+      if (statement.isEmpty) {
+        statementBuffer.clear();
+        statementStartLine = null;
+        return;
+      }
+      if (!_isAllowedRootLibStatement(statement)) {
+        failStatement(lineNo);
+      }
+      statementBuffer.clear();
+      statementStartLine = null;
+    }
+
+    for (var i = 0; i < lines.length; i++) {
+      final lineNo = i + 1;
+      final line = lines[i];
+      var index = 0;
+      while (index < line.length) {
+        final char = line[index];
+        final hasNext = index + 1 < line.length;
+        final nextChar = hasNext ? line[index + 1] : '';
+
+        if (inBlockComment) {
+          if (char == '*' && nextChar == '/') {
+            inBlockComment = false;
+            index += 2;
+            continue;
+          }
+          index++;
+          continue;
+        }
+
+        if (inSingleQuote) {
+          appendStatementChar(char, lineNo);
+          if (singleQuoteEscaped) {
+            singleQuoteEscaped = false;
+          } else if (char == r'\') {
+            singleQuoteEscaped = true;
+          } else if (char == "'") {
+            inSingleQuote = false;
+          }
+          index++;
+          continue;
+        }
+
+        if (inDoubleQuote) {
+          appendStatementChar(char, lineNo);
+          if (doubleQuoteEscaped) {
+            doubleQuoteEscaped = false;
+          } else if (char == r'\') {
+            doubleQuoteEscaped = true;
+          } else if (char == '"') {
+            inDoubleQuote = false;
+          }
+          index++;
+          continue;
+        }
+
+        if (char == '/' && nextChar == '/') {
+          break;
+        }
+        if (char == '/' && nextChar == '*') {
+          inBlockComment = true;
+          index += 2;
+          continue;
+        }
+        if (char == "'") {
+          appendStatementChar(char, lineNo);
+          inSingleQuote = true;
+          singleQuoteEscaped = false;
+          index++;
+          continue;
+        }
+        if (char == '"') {
+          appendStatementChar(char, lineNo);
+          inDoubleQuote = true;
+          doubleQuoteEscaped = false;
+          index++;
+          continue;
+        }
+
+        appendStatementChar(char, lineNo);
+        if (char == ';') {
+          validateCompletedStatement(lineNo);
+        }
+        index++;
+      }
+
+      if (!inBlockComment &&
+          !inSingleQuote &&
+          !inDoubleQuote &&
+          statementBuffer.isNotEmpty) {
+        statementBuffer.write('\n');
+      }
+    }
+
+    if (statementBuffer.toString().trim().isNotEmpty) {
+      failStatement(lines.isEmpty ? 1 : lines.length);
+    }
+  }
 }
 
 void _checkSceneWriteTxnContract({
@@ -392,7 +564,7 @@ void _checkExportedApiMutableTypeLeak({
       .toList(growable: false);
   if (filesToCheck.isEmpty) return;
 
-  const mutableTypePattern = r'\b(?:Scene|Layer|SceneNode|NodeType)\b';
+  const mutableTypePattern = r'\b(?:Scene|ContentLayer|SceneNode|NodeType)\b';
   final mutableTypeRegex = RegExp(mutableTypePattern);
   const skipPrefixes = <String>[
     '//',
@@ -447,7 +619,7 @@ void _checkExportedApiMutableTypeLeak({
           filePath: repoRel,
           line: lineNo,
           message:
-              'public API must not expose mutable core types (Scene/Layer/SceneNode/NodeType).',
+              'public API must not expose mutable core types (Scene/ContentLayer/SceneNode/NodeType).',
         ),
       );
     }
@@ -517,6 +689,13 @@ void _checkControllerGuardrails({
 
       for (final match in symbolPattern.allMatches(line)) {
         final symbol = match.group(1)!;
+        final symbolStart = match.start;
+        if (symbolStart > 0) {
+          final prev = line[symbolStart - 1];
+          if (prev == '.') {
+            continue;
+          }
+        }
         if (ignoredSymbols.contains(symbol)) continue;
         if (allowedMutationPrefixes.any(symbol.startsWith)) continue;
         if (_looksMutatingSymbol(symbol)) {
@@ -545,6 +724,258 @@ void _checkControllerGuardrails({
   }
 }
 
+int _braceDelta(String line) {
+  var delta = 0;
+  for (final codeUnit in line.codeUnits) {
+    if (codeUnit == 123) {
+      delta = delta + 1;
+    } else if (codeUnit == 125) {
+      delta = delta - 1;
+    }
+  }
+  return delta;
+}
+
+bool _isSkippableBodyLine(String text) {
+  final trimmed = text.trimLeft();
+  return trimmed.isEmpty ||
+      trimmed.startsWith('//') ||
+      trimmed.startsWith('/*') ||
+      trimmed.startsWith('*') ||
+      trimmed.startsWith('*/');
+}
+
+_InteractiveEntrypointSignature? _parseInteractiveEntrypointSignature(
+  String trimmed, {
+  required String filePath,
+  required int lineNo,
+}) {
+  if (trimmed.isEmpty ||
+      trimmed.startsWith('//') ||
+      trimmed.startsWith('@') ||
+      trimmed.startsWith('static ') ||
+      trimmed.startsWith('factory ')) {
+    return null;
+  }
+  if (trimmed.startsWith('set ')) {
+    final setterMatch = RegExp(
+      r'^set\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(',
+    ).firstMatch(trimmed);
+    if (setterMatch == null) {
+      return null;
+    }
+    final name = setterMatch.group(1)!;
+    if (name.startsWith('_')) {
+      return null;
+    }
+    final arrowBody = RegExp(r'\)\s*=>').firstMatch(trimmed);
+    if (arrowBody != null) {
+      _fail(
+        _Violation(
+          filePath: filePath,
+          line: lineNo,
+          message:
+              'public interactive entrypoint "$name" must use a block body guarded by _ensurePublicSideEffectAllowed(...).',
+        ),
+      );
+    }
+    final bodyOpen = RegExp(r'\)\s*\{').firstMatch(trimmed);
+    if (bodyOpen == null) {
+      _fail(
+        _Violation(
+          filePath: filePath,
+          line: lineNo,
+          message:
+              'public interactive entrypoint "$name" must keep its signature on one line so guardrails can verify _ensurePublicSideEffectAllowed(...).',
+        ),
+      );
+    }
+    return _InteractiveEntrypointSignature(
+      name: name,
+      bodyRemainder: trimmed.substring(bodyOpen.end),
+    );
+  }
+
+  if (trimmed.startsWith('get ') || trimmed.contains(' get ')) {
+    return null;
+  }
+  final parenIndex = trimmed.indexOf('(');
+  if (parenIndex < 0) {
+    return null;
+  }
+  final beforeParen = trimmed.substring(0, parenIndex).trimRight();
+  if (beforeParen.contains('=')) {
+    return null;
+  }
+  final nameMatch = RegExp(
+    r'([A-Za-z_][A-Za-z0-9_]*)\s*(?:<[^<>]*>)?$',
+  ).firstMatch(beforeParen);
+  if (nameMatch == null) {
+    return null;
+  }
+  final name = nameMatch.group(1)!;
+  if (name == 'SceneControllerInteractive' || name.startsWith('_')) {
+    return null;
+  }
+  final arrowBody = RegExp(r'\)\s*=>').firstMatch(trimmed);
+  if (arrowBody != null) {
+    _fail(
+      _Violation(
+        filePath: filePath,
+        line: lineNo,
+        message:
+            'public interactive entrypoint "$name" must use a block body guarded by _ensurePublicSideEffectAllowed(...).',
+      ),
+    );
+  }
+  final bodyOpen = RegExp(r'\)\s*\{').firstMatch(trimmed);
+  if (bodyOpen == null) {
+    _fail(
+      _Violation(
+        filePath: filePath,
+        line: lineNo,
+        message:
+            'public interactive entrypoint "$name" must keep its signature on one line so guardrails can verify _ensurePublicSideEffectAllowed(...).',
+      ),
+    );
+  }
+  return _InteractiveEntrypointSignature(
+    name: name,
+    bodyRemainder: trimmed.substring(bodyOpen.end),
+  );
+}
+
+void _validateInteractiveEntrypointGuard({
+  required _InteractiveEntrypointSignature signature,
+  required List<String> lines,
+  required int signatureLineIndex,
+  required String filePath,
+}) {
+  var guardLineIndex = signatureLineIndex;
+  var guardLine = signature.bodyRemainder.trimLeft();
+
+  while (_isSkippableBodyLine(guardLine)) {
+    guardLineIndex = guardLineIndex + 1;
+    if (guardLineIndex >= lines.length) {
+      _fail(
+        _Violation(
+          filePath: filePath,
+          line: signatureLineIndex + 1,
+          message:
+              'public interactive entrypoints must guard resolver purity with _ensurePublicSideEffectAllowed(...).',
+        ),
+      );
+    }
+    guardLine = lines[guardLineIndex].trimLeft();
+  }
+
+  if (!guardLine.startsWith('_ensurePublicSideEffectAllowed(')) {
+    _fail(
+      _Violation(
+        filePath: filePath,
+        line: guardLineIndex + 1,
+        message:
+            'public interactive entrypoints must guard resolver purity with _ensurePublicSideEffectAllowed(...).',
+      ),
+    );
+  }
+
+  final hasAllowAfterDispose = guardLine.contains('allowAfterDispose: true');
+  if (signature.isDispose) {
+    if (!hasAllowAfterDispose) {
+      _fail(
+        _Violation(
+          filePath: filePath,
+          line: guardLineIndex + 1,
+          message:
+              'dispose() must guard resolver purity with allowAfterDispose: true.',
+        ),
+      );
+    }
+    return;
+  }
+
+  if (hasAllowAfterDispose) {
+    _fail(
+      _Violation(
+        filePath: filePath,
+        line: guardLineIndex + 1,
+        message:
+            'only dispose() may call _ensurePublicSideEffectAllowed(..., allowAfterDispose: true).',
+      ),
+    );
+  }
+}
+
+void _checkInteractiveResolverPurityGuardrails({
+  required Directory root,
+  required String rootAbsPosix,
+}) {
+  final file = File(
+    '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}src${Platform.pathSeparator}interactive${Platform.pathSeparator}scene_controller_interactive.dart',
+  );
+  if (!file.existsSync()) {
+    return;
+  }
+
+  final filePosixPath = _toRepoRelPosixPath(
+    absPosixPath: _toPosixPath(file.absolute.path),
+    rootAbsPosixPath: rootAbsPosix,
+  );
+  final lines = file.readAsLinesSync();
+
+  var seenInteractiveClass = false;
+  var classBraceDepth = 0;
+  var ignoringConstructorDeclaration = false;
+  for (var i = 0; i < lines.length; i++) {
+    final line = lines[i];
+    final trimmed = line.trimLeft();
+
+    if (!seenInteractiveClass) {
+      if (!line.contains('class SceneControllerInteractive')) {
+        continue;
+      }
+      seenInteractiveClass = true;
+    }
+
+    if (classBraceDepth == 0) {
+      classBraceDepth = classBraceDepth + _braceDelta(line);
+      continue;
+    }
+
+    if (classBraceDepth == 1) {
+      if (ignoringConstructorDeclaration) {
+        if (RegExp(r'\)\s*\{').hasMatch(trimmed)) {
+          ignoringConstructorDeclaration = false;
+        }
+      } else if (trimmed.startsWith('SceneControllerInteractive(')) {
+        if (!RegExp(r'\)\s*\{').hasMatch(trimmed)) {
+          ignoringConstructorDeclaration = true;
+        }
+      } else {
+        final signature = _parseInteractiveEntrypointSignature(
+          trimmed,
+          filePath: filePosixPath,
+          lineNo: i + 1,
+        );
+        if (signature != null) {
+          _validateInteractiveEntrypointGuard(
+            signature: signature,
+            lines: lines,
+            signatureLineIndex: i,
+            filePath: filePosixPath,
+          );
+        }
+      }
+    }
+
+    classBraceDepth = classBraceDepth + _braceDelta(line);
+    if (classBraceDepth == 0) {
+      break;
+    }
+  }
+}
+
 void main(List<String> args) {
   final root = Directory.current;
   final rootAbsPosix = _toPosixPath(root.absolute.path);
@@ -560,11 +991,16 @@ void main(List<String> args) {
     rootAbsPosix: rootAbsPosix,
     packageName: packageName,
   );
+  _checkRootLibFilesAreExportOnly(root: root, rootAbsPosix: rootAbsPosix);
   _checkSceneWriteTxnContract(root: root, rootAbsPosix: rootAbsPosix);
   _checkExportedApiMutableTypeLeak(
     root: root,
     rootAbsPosix: rootAbsPosix,
     exportedFiles: exportedFiles,
+  );
+  _checkInteractiveResolverPurityGuardrails(
+    root: root,
+    rootAbsPosix: rootAbsPosix,
   );
   _checkControllerGuardrails(root: root, rootAbsPosix: rootAbsPosix);
 

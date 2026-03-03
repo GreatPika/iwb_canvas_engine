@@ -1,19 +1,23 @@
 import 'dart:ui';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Image;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/core/interaction_types.dart';
-import 'package:iwb_canvas_engine/src/core/pointer_input.dart';
+import 'package:iwb_canvas_engine/src/core/pointer_input.dart'
+    show PointerInputSettings;
 import 'package:iwb_canvas_engine/src/interactive/scene_controller_interactive.dart';
+import 'package:iwb_canvas_engine/src/public/canvas_pointer_input.dart';
 import 'package:iwb_canvas_engine/src/public/snapshot.dart';
-import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 import 'package:iwb_canvas_engine/src/view/scene_view_interactive.dart';
+
+// INV:INV-ENG-VIEW-POINTER-SETTINGS-LIVE-APPLY
 
 SceneSnapshot _snapshot({required String text, bool includeImage = false}) {
   return SceneSnapshot(
-    layers: <LayerSnapshot>[
-      LayerSnapshot(isBackground: true, nodes: const <NodeSnapshot>[]),
-      LayerSnapshot(
+    layers: <ContentLayerSnapshot>[
+      ContentLayerSnapshot(id: 'layer-auto-0', nodes: const <NodeSnapshot>[]),
+      ContentLayerSnapshot(
+        id: 'layer-auto-1',
         nodes: <NodeSnapshot>[
           TextNodeSnapshot(
             id: 'txt',
@@ -33,46 +37,40 @@ SceneSnapshot _snapshot({required String text, bool includeImage = false}) {
   );
 }
 
+TextNodeSnapshot _textNode(SceneControllerInteractive controller) {
+  return controller.snapshot.layers
+      .expand((layer) => layer.nodes)
+      .whereType<TextNodeSnapshot>()
+      .single;
+}
+
 Widget _host(
-  SceneControllerInteractiveV2 controller, {
-  SceneStaticLayerCacheV2? staticCache,
-  SceneTextLayoutCacheV2? textCache,
-  SceneStrokePathCacheV2? strokeCache,
-  ScenePathMetricsCacheV2? pathCache,
+  SceneControllerInteractive controller, {
+  Image? Function(String imageId)? imageResolver,
 }) {
   return Directionality(
     textDirection: TextDirection.ltr,
     child: SizedBox(
       width: 120,
       height: 120,
-      child: SceneViewInteractiveV2(
+      child: SceneViewInteractive(
         controller: controller,
-        staticLayerCache: staticCache,
-        textLayoutCache: textCache,
-        strokePathCache: strokeCache,
-        pathMetricsCache: pathCache,
+        imageResolver: imageResolver,
       ),
     ),
   );
 }
 
 void main() {
-  testWidgets('SceneViewInteractiveV2 handles controller swap and cache swap', (
-    tester,
-  ) async {
-    final controllerA = SceneControllerInteractiveV2(
+  testWidgets('SceneViewInteractive handles controller swap', (tester) async {
+    final controllerA = SceneControllerInteractive(
       initialSnapshot: _snapshot(text: 'A', includeImage: true),
     );
-    final controllerB = SceneControllerInteractiveV2(
+    final controllerB = SceneControllerInteractive(
       initialSnapshot: _snapshot(text: 'B', includeImage: true),
     );
     addTearDown(controllerA.dispose);
     addTearDown(controllerB.dispose);
-
-    final staticCache = SceneStaticLayerCacheV2();
-    final textCache = SceneTextLayoutCacheV2(maxEntries: 8);
-    final strokeCache = SceneStrokePathCacheV2(maxEntries: 8);
-    final pathCache = ScenePathMetricsCacheV2(maxEntries: 8);
 
     await tester.pumpWidget(_host(controllerA));
     await tester.pump();
@@ -86,28 +84,146 @@ void main() {
     await g2.cancel();
     await tester.pump();
 
-    await tester.pumpWidget(
-      _host(
-        controllerB,
-        staticCache: staticCache,
-        textCache: textCache,
-        strokeCache: strokeCache,
-        pathCache: pathCache,
-      ),
-    );
-    await tester.pump();
-
     await tester.pumpWidget(_host(controllerB));
     await tester.pump();
 
-    // No crashes and caches remain functional after sync/ownership switches.
-    expect(find.byType(SceneViewInteractiveV2), findsOneWidget);
+    // No crashes after controller swap.
+    expect(find.byType(SceneViewInteractive), findsOneWidget);
   });
 
-  testWidgets('SceneViewInteractiveV2 reuses freed pointer slot ids', (
+  testWidgets('SceneViewInteractive handles replaceScene', (tester) async {
+    final controller = SceneControllerInteractive(
+      initialSnapshot: _snapshot(text: 'epoch'),
+    );
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(_host(controller));
+    await tester.pump();
+
+    controller.replaceScene(_snapshot(text: 'epoch-2'));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byType(SceneViewInteractive), findsOneWidget);
+  });
+
+  testWidgets('SceneViewInteractive flushes pending tap timer callback', (
     tester,
   ) async {
-    final controller = SceneControllerInteractiveV2(
+    final controller = SceneControllerInteractive(
+      initialSnapshot: _snapshot(text: 'timer'),
+      pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 1),
+    );
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(_host(controller));
+    await tester.pump();
+
+    final gesture = await tester.startGesture(const Offset(50, 50), pointer: 8);
+    await gesture.up();
+    await tester.pump(const Duration(milliseconds: 16));
+
+    expect(find.byType(SceneViewInteractive), findsOneWidget);
+  });
+
+  testWidgets('SceneViewInteractive applies pointer settings updates live', (
+    tester,
+  ) async {
+    final controller = SceneControllerInteractive(
+      initialSnapshot: _snapshot(text: 'double-tap'),
+      pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 300),
+    );
+    addTearDown(controller.dispose);
+    final editRequests = <Object>[];
+    final editSub = controller.editTextRequests.listen(editRequests.add);
+    addTearDown(editSub.cancel);
+
+    await tester.pumpWidget(_host(controller));
+    await tester.pump();
+
+    Future<void> doubleTapWithGap(Duration gap) async {
+      final first = await tester.startGesture(const Offset(8, 8), pointer: 31);
+      await first.up();
+      await tester.pump(gap);
+      final second = await tester.startGesture(const Offset(8, 8), pointer: 31);
+      await second.up();
+      await tester.pump();
+      await tester.pump();
+    }
+
+    await doubleTapWithGap(const Duration(milliseconds: 20));
+    expect(editRequests.length, 1);
+
+    controller.setPointerSettings(
+      const PointerInputSettings(doubleTapMaxDelayMs: 1),
+    );
+    await tester.pump();
+
+    await doubleTapWithGap(const Duration(milliseconds: 20));
+    expect(editRequests.length, 1);
+  });
+
+  testWidgets(
+    'SceneViewInteractive defers pointer settings update until active pointer ends',
+    (tester) async {
+      final controller = SceneControllerInteractive(
+        initialSnapshot: _snapshot(text: 'deferred'),
+        pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 300),
+      );
+      addTearDown(controller.dispose);
+      final editRequests = <Object>[];
+      final editSub = controller.editTextRequests.listen(editRequests.add);
+      addTearDown(editSub.cancel);
+
+      controller.setSelection(const <String>{'txt'});
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+
+      final gesture = await tester.startGesture(
+        const Offset(10, 10),
+        pointer: 55,
+      );
+      await gesture.moveTo(const Offset(24, 10));
+      await tester.pump();
+
+      controller.setPointerSettings(
+        const PointerInputSettings(doubleTapMaxDelayMs: 1),
+      );
+      await tester.pump();
+
+      await gesture.moveTo(const Offset(40, 10));
+      await gesture.up();
+      await tester.pump();
+      await tester.pump();
+
+      expect(_textNode(controller).transform.tx, closeTo(30, 1e-6));
+
+      Future<void> doubleTapWithGap(Duration gap) async {
+        final first = await tester.startGesture(
+          const Offset(8, 8),
+          pointer: 56,
+        );
+        await first.up();
+        await tester.pump(gap);
+        final second = await tester.startGesture(
+          const Offset(8, 8),
+          pointer: 56,
+        );
+        await second.up();
+        await tester.pump();
+        await tester.pump();
+      }
+
+      await doubleTapWithGap(const Duration(milliseconds: 20));
+      expect(editRequests, isEmpty);
+    },
+  );
+
+  testWidgets('SceneViewInteractive reuses freed pointer slot ids', (
+    tester,
+  ) async {
+    // INV:INV-ENG-VIEW-POINTER-SLOT-LIFECYCLE
+    final controller = SceneControllerInteractive(
       initialSnapshot: _snapshot(text: 'slots'),
     );
     addTearDown(controller.dispose);
@@ -128,13 +244,14 @@ void main() {
     await g3.up();
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.byType(SceneViewInteractiveV2), findsOneWidget);
+    expect(find.byType(SceneViewInteractive), findsOneWidget);
   });
 
-  testWidgets('SceneViewInteractiveV2 chooses min free slot from unsorted list', (
+  testWidgets('SceneViewInteractive chooses min free slot from unsorted list', (
     tester,
   ) async {
-    final controller = SceneControllerInteractiveV2(
+    // INV:INV-ENG-VIEW-POINTER-SLOT-LIFECYCLE
+    final controller = SceneControllerInteractive(
       initialSnapshot: _snapshot(text: 'slots-2'),
     );
     addTearDown(controller.dispose);
@@ -158,13 +275,81 @@ void main() {
     await gNext.up();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.byType(SceneViewInteractiveV2), findsOneWidget);
+    expect(find.byType(SceneViewInteractive), findsOneWidget);
   });
 
-  testWidgets('SceneViewInteractiveV2 paints single-point stroke preview', (
+  testWidgets(
+    'SceneViewInteractive keeps slot allocator healthy after cancel release',
+    (tester) async {
+      // INV:INV-ENG-VIEW-POINTER-SLOT-LIFECYCLE
+      final controller = SceneControllerInteractive(
+        initialSnapshot: _snapshot(text: 'slots-cancel'),
+      );
+      addTearDown(controller.dispose);
+      controller.setSelection(const <String>{'txt'});
+
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+
+      final gA = await tester.startGesture(const Offset(10, 10), pointer: 401);
+      final gB = await tester.startGesture(const Offset(20, 10), pointer: 402);
+
+      await gB.cancel();
+      await tester.pump();
+      await gA.up();
+      await tester.pump();
+
+      final gNext = await tester.startGesture(
+        const Offset(10, 10),
+        pointer: 403,
+      );
+      await gNext.moveBy(const Offset(18, 0));
+      await gNext.up();
+      await tester.pump();
+
+      expect(_textNode(controller).transform.tx, closeTo(18, 1e-6));
+    },
+  );
+
+  testWidgets(
+    'SceneViewInteractive parallel pointer lifecycle does not keep active lock',
+    (tester) async {
+      // INV:INV-ENG-VIEW-ACTIVE-POINTER-GATE
+      final controller = SceneControllerInteractive(
+        initialSnapshot: _snapshot(text: 'parallel-lock'),
+      );
+      addTearDown(controller.dispose);
+      controller.setSelection(const <String>{'txt'});
+
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+
+      final g1 = await tester.startGesture(const Offset(10, 10), pointer: 501);
+      final g2 = await tester.startGesture(const Offset(12, 10), pointer: 502);
+      await g2.moveBy(const Offset(40, 0));
+      await g2.up();
+      await tester.pump();
+
+      expect(_textNode(controller).transform.tx, closeTo(0, 1e-6));
+
+      await g1.moveBy(const Offset(20, 0));
+      await g1.up();
+      await tester.pump();
+      expect(_textNode(controller).transform.tx, closeTo(20, 1e-6));
+
+      final g3 = await tester.startGesture(const Offset(30, 10), pointer: 503);
+      await g3.moveBy(const Offset(10, 0));
+      await g3.up();
+      await tester.pump();
+
+      expect(_textNode(controller).transform.tx, closeTo(30, 1e-6));
+    },
+  );
+
+  testWidgets('SceneViewInteractive paints single-point stroke preview', (
     tester,
   ) async {
-    final controller = SceneControllerInteractiveV2(
+    final controller = SceneControllerInteractive(
       initialSnapshot: _snapshot(text: 'preview-dot'),
     );
     addTearDown(controller.dispose);
@@ -176,11 +361,12 @@ void main() {
     await tester.pump();
 
     controller.handlePointer(
-      const PointerSample(
+      const CanvasPointerInput(
         pointerId: 301,
         position: Offset(40, 40),
         timestampMs: 1,
-        phase: PointerPhase.down,
+        phase: CanvasPointerPhase.down,
+        kind: PointerDeviceKind.touch,
       ),
     );
     await tester.pump();
@@ -189,20 +375,21 @@ void main() {
     expect(controller.activeStrokePreviewPoints.length, 1);
 
     controller.handlePointer(
-      const PointerSample(
+      const CanvasPointerInput(
         pointerId: 301,
         position: Offset(40, 40),
         timestampMs: 2,
-        phase: PointerPhase.up,
+        phase: CanvasPointerPhase.up,
+        kind: PointerDeviceKind.touch,
       ),
     );
     await tester.pump();
   });
 
-  testWidgets('SceneViewInteractiveV2 paints active line preview', (
+  testWidgets('SceneViewInteractive paints active line preview', (
     tester,
   ) async {
-    final controller = SceneControllerInteractiveV2(
+    final controller = SceneControllerInteractive(
       initialSnapshot: _snapshot(text: 'preview-line'),
     );
     addTearDown(controller.dispose);
@@ -228,60 +415,89 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets(
-    'SceneViewInteractiveV2 overlay painter covers preview branches',
-    (tester) async {
-      final controller = _OverlayTestController(
-        initialSnapshot: _snapshot(text: 'overlay'),
-      );
-      addTearDown(controller.dispose);
+  testWidgets('SceneViewInteractive routes image ids to imageResolver', (
+    tester,
+  ) async {
+    final controller = SceneControllerInteractive(
+      initialSnapshot: _snapshot(text: 'img', includeImage: true),
+    );
+    addTearDown(controller.dispose);
 
-      Future<void> paintOverlay() async {
-        await tester.pumpWidget(_host(controller));
-        await tester.pump();
-        final customPaint = tester.widget<CustomPaint>(
-          find.byType(CustomPaint),
-        );
-        final overlay = customPaint.foregroundPainter!;
-        final recorder = PictureRecorder();
-        final canvas = Canvas(recorder);
-        overlay.paint(canvas, const Size(120, 120));
-        recorder.endRecording();
-      }
+    final requestedImageIds = <String>[];
+    await tester.pumpWidget(
+      _host(
+        controller,
+        imageResolver: (imageId) {
+          requestedImageIds.add(imageId);
+          return null;
+        },
+      ),
+    );
+    await tester.pump();
 
-      controller.strokeActive = true;
-      controller.strokePoints = const <Offset>[];
-      await paintOverlay();
+    expect(requestedImageIds, contains('missing'));
+  });
 
-      controller.strokePoints = const <Offset>[Offset(10, 10)];
-      controller.strokeThickness = 0;
-      await paintOverlay();
+  testWidgets('SceneViewInteractive overlay painter covers preview branches', (
+    tester,
+  ) async {
+    final controller = _OverlayTestController(
+      initialSnapshot: _snapshot(text: 'overlay'),
+    );
+    addTearDown(controller.dispose);
 
-      controller.strokeThickness = 4;
-      controller.strokeOpacity = 2;
-      await paintOverlay();
+    Future<void> paintOverlay() async {
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+      final customPaint = tester.widget<CustomPaint>(find.byType(CustomPaint));
+      final overlay = customPaint.foregroundPainter!;
+      final recorder = PictureRecorder();
+      final canvas = Canvas(recorder);
+      overlay.paint(canvas, const Size(120, 120));
+      recorder.endRecording();
+    }
 
-      controller.strokePoints = const <Offset>[Offset(10, 10), Offset(20, 20)];
-      await paintOverlay();
+    controller.strokeActive = true;
+    controller.strokePoints = const <Offset>[];
+    await paintOverlay();
 
-      controller.lineActive = true;
-      controller.lineStart = null;
-      controller.lineEnd = null;
-      await paintOverlay();
+    controller.strokePoints = const <Offset>[Offset(10, 10)];
+    controller.strokeThickness = 0;
+    await paintOverlay();
 
-      controller.lineStart = const Offset(5, 5);
-      controller.lineEnd = const Offset(25, 25);
-      controller.linePreviewThickness = 0;
-      await paintOverlay();
+    controller.strokeThickness = 4;
+    controller.strokeOpacity = 2;
+    await paintOverlay();
 
-      controller.linePreviewThickness = 2;
-      await paintOverlay();
-    },
-  );
+    controller.strokePoints = const <Offset>[Offset(10, 10), Offset(20, 20)];
+    await paintOverlay();
+
+    controller.lineActive = true;
+    controller.lineStart = null;
+    controller.lineEnd = null;
+    await paintOverlay();
+
+    controller.lineStart = const Offset(5, 5);
+    controller.lineEnd = const Offset(25, 25);
+    controller.linePreviewThickness = 0;
+    await paintOverlay();
+
+    controller.linePreviewThickness = 2;
+    await paintOverlay();
+
+    controller.snapshotOverride = SceneSnapshot(
+      camera: const CameraSnapshot(offset: Offset(double.nan, double.infinity)),
+      layers: const <ContentLayerSnapshot>[],
+    );
+    await paintOverlay();
+    controller.snapshotOverride = null;
+  });
 }
 
-class _OverlayTestController extends SceneControllerInteractiveV2 {
+class _OverlayTestController extends SceneControllerInteractive {
   _OverlayTestController({required super.initialSnapshot});
+
+  SceneSnapshot? snapshotOverride;
 
   bool strokeActive = false;
   List<Offset> strokePoints = const <Offset>[];
@@ -294,6 +510,9 @@ class _OverlayTestController extends SceneControllerInteractiveV2 {
   Offset? lineEnd;
   double linePreviewThickness = 1;
   Color lineColor = const Color(0xFF654321);
+
+  @override
+  SceneSnapshot get snapshot => snapshotOverride ?? super.snapshot;
 
   @override
   bool get hasActiveStrokePreview => strokeActive;

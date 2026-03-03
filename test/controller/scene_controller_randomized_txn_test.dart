@@ -11,7 +11,7 @@ import 'package:iwb_canvas_engine/src/model/document.dart';
 import 'package:iwb_canvas_engine/src/model/document_clone.dart';
 
 // INV:INV-G-NODEID-UNIQUE
-// INV:INV-V2-ID-INDEX-FROM-SCENE
+// INV:INV-ENG-ID-INDEX-FROM-SCENE
 
 void main() {
   final scenarioSeeds = _resolveScenarioSeeds();
@@ -20,7 +20,9 @@ void main() {
   for (final seed in scenarioSeeds) {
     test('randomized transactional scenario keeps invariants (seed=$seed)', () {
       final random = math.Random(seed);
-      final controller = SceneControllerV2(initialSnapshot: _initialSnapshot());
+      final controller = SceneControllerCore(
+        initialSnapshot: _initialSnapshot(),
+      );
       addTearDown(controller.dispose);
 
       for (var step = 0; step < scenarioSteps; step++) {
@@ -62,7 +64,7 @@ enum _RandomOperation {
 }
 
 String _runRandomOperation({
-  required SceneControllerV2 controller,
+  required SceneControllerCore controller,
   required math.Random random,
   required int seed,
   required int step,
@@ -118,8 +120,8 @@ String _runRandomOperation({
                 strokeColor: _randomNullableColor(random),
                 strokeWidth: _randomNonNegative(random),
                 fillRule: random.nextBool()
-                    ? V2PathFillRule.nonZero
-                    : V2PathFillRule.evenOdd,
+                    ? PathFillRule.nonZero
+                    : PathFillRule.evenOdd,
                 transform: _randomTransform(random),
                 opacity: _randomOpacity(random),
                 hitPadding: _randomNonNegative(random),
@@ -205,7 +207,7 @@ String _runRandomOperation({
 }
 
 void _assertPostConditions({
-  required SceneControllerV2 controller,
+  required SceneControllerCore controller,
   required int seed,
   required int step,
   required String operation,
@@ -221,24 +223,11 @@ void _assertPostConditions({
     reason: '$context duplicateNodeIds=$duplicateIds',
   );
 
-  final backgroundLayerIndexes = <int>[];
-  for (var i = 0; i < snapshot.layers.length; i++) {
-    if (snapshot.layers[i].isBackground) {
-      backgroundLayerIndexes.add(i);
-    }
-  }
   expect(
-    backgroundLayerIndexes.length <= 1,
-    isTrue,
-    reason: '$context backgroundLayerIndexes=$backgroundLayerIndexes',
+    snapshot.backgroundLayer,
+    isA<BackgroundLayerSnapshot>(),
+    reason: '$context backgroundLayer must be a dedicated single layer',
   );
-  if (backgroundLayerIndexes.isNotEmpty) {
-    expect(
-      backgroundLayerIndexes.single,
-      0,
-      reason: '$context backgroundLayerIndexes=$backgroundLayerIndexes',
-    );
-  }
 
   late final Scene scene;
   expect(
@@ -255,6 +244,8 @@ void _assertPostConditions({
     allNodeIds: txnCollectNodeIds(scene),
     nodeLocator: txnBuildNodeLocator(scene),
     nodeIdSeed: txnInitialNodeIdSeed(scene),
+    layerIdSeed: txnInitialLayerIdSeed(scene),
+    nextInstanceRevision: txnInitialNodeInstanceRevisionSeed(scene),
     commitRevision: controller.debugCommitRevision,
   );
   expect(
@@ -266,8 +257,9 @@ void _assertPostConditions({
 
 SceneSnapshot _initialSnapshot() {
   return SceneSnapshot(
-    layers: <LayerSnapshot>[
-      LayerSnapshot(
+    layers: <ContentLayerSnapshot>[
+      ContentLayerSnapshot(
+        id: 'layer-auto-0',
         nodes: const <NodeSnapshot>[
           RectNodeSnapshot(id: 'seed-r1', size: Size(10, 10)),
           RectNodeSnapshot(id: 'seed-r2', size: Size(12, 12)),
@@ -292,9 +284,9 @@ SceneSnapshot _randomReplacementSnapshot({
       ),
   ];
 
-  final layers = <LayerSnapshot>[
-    if (includeBackground) LayerSnapshot(isBackground: true),
-    LayerSnapshot(nodes: nodes),
+  final layers = <ContentLayerSnapshot>[
+    if (includeBackground) ContentLayerSnapshot(id: 'layer-auto-1'),
+    ContentLayerSnapshot(id: 'layer-auto-2', nodes: nodes),
   ];
 
   return SceneSnapshot(
@@ -425,8 +417,8 @@ NodePatch _typeSpecificPatchForNode(NodeSnapshot node, math.Random random) {
         fillColor: PatchField<Color?>.value(_randomNullableColor(random)),
         strokeColor: PatchField<Color?>.value(_randomNullableColor(random)),
         strokeWidth: PatchField<double>.value(_randomNonNegative(random)),
-        fillRule: PatchField<V2PathFillRule>.value(
-          random.nextBool() ? V2PathFillRule.nonZero : V2PathFillRule.evenOdd,
+        fillRule: PatchField<PathFillRule>.value(
+          random.nextBool() ? PathFillRule.nonZero : PathFillRule.evenOdd,
         ),
       );
     case LineNodeSnapshot():
@@ -538,8 +530,8 @@ NodeSnapshot _randomReplacementNodeSnapshot({
         strokeColor: _randomNullableColor(random),
         strokeWidth: _randomNonNegative(random),
         fillRule: random.nextBool()
-            ? V2PathFillRule.nonZero
-            : V2PathFillRule.evenOdd,
+            ? PathFillRule.nonZero
+            : PathFillRule.evenOdd,
         transform: _randomTransform(random),
         opacity: _randomOpacity(random),
         hitPadding: _randomNonNegative(random),
@@ -599,6 +591,11 @@ void _assertFiniteSnapshotNumbers({
   for (final layer in snapshot.layers) {
     for (final node in layer.nodes) {
       final nodeCtx = '$context node=${node.id}';
+      expect(
+        node.instanceRevision >= 0,
+        isTrue,
+        reason: '$nodeCtx instanceRevision',
+      );
       expect(
         _isFiniteTransform(node.transform),
         isTrue,

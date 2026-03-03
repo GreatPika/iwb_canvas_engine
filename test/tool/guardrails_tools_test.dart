@@ -25,14 +25,60 @@ void main() {
       }
     });
 
-    test('rejects core -> input import', () async {
+    test('allows view -> interactive import', () async {
       final sandbox = await _createSandbox();
       try {
-        _writeFile(sandbox, 'lib/src/input/types.dart', 'class InputType {}\n');
+        _writeFile(
+          sandbox,
+          'lib/src/interactive/controller.dart',
+          'class InteractiveController {}\n',
+        );
+        _writeFile(
+          sandbox,
+          'lib/src/view/widget.dart',
+          "import 'package:iwb_canvas_engine/src/interactive/controller.dart';\n",
+        );
+
+        final result = await _runTool(sandbox, 'check_import_boundaries.dart');
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('allows serialization -> model import', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(
+          sandbox,
+          'lib/src/model/document.dart',
+          'class Document {}\n',
+        );
+        _writeFile(
+          sandbox,
+          'lib/src/serialization/codec.dart',
+          "import 'package:iwb_canvas_engine/src/model/document.dart';\n",
+        );
+
+        final result = await _runTool(sandbox, 'check_import_boundaries.dart');
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects core -> controller import', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(
+          sandbox,
+          'lib/src/controller/types.dart',
+          'class ControllerType {}\n',
+        );
         _writeFile(
           sandbox,
           'lib/src/core/value.dart',
-          "import 'package:iwb_canvas_engine/src/input/types.dart';\n",
+          "import 'package:iwb_canvas_engine/src/controller/types.dart';\n",
         );
 
         final result = await _runTool(sandbox, 'check_import_boundaries.dart');
@@ -40,7 +86,7 @@ void main() {
         expect(
           result.stderr.toString(),
           contains(
-            'layer boundary violation: core/** must not import input/**',
+            'layer boundary violation: core/** must not import controller/**',
           ),
         );
       } finally {
@@ -48,25 +94,91 @@ void main() {
       }
     });
 
-    test('rejects cross-slice import', () async {
+    test('rejects core -> model import', () async {
       final sandbox = await _createSandbox();
       try {
+        _writeFile(sandbox, 'lib/src/model/types.dart', 'class ModelType {}\n');
         _writeFile(
           sandbox,
-          'lib/src/input/slices/a/a.dart',
-          'class SliceA {}\n',
-        );
-        _writeFile(
-          sandbox,
-          'lib/src/input/slices/b/b.dart',
-          "import 'package:iwb_canvas_engine/src/input/slices/a/a.dart';\n",
+          'lib/src/core/value.dart',
+          "import 'package:iwb_canvas_engine/src/model/types.dart';\n",
         );
 
         final result = await _runTool(sandbox, 'check_import_boundaries.dart');
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          contains('slices/** must not import other slices'),
+          contains(
+            'layer boundary violation: core/** must not import model/**',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects internal -> commands import', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(
+          sandbox,
+          'lib/src/controller/commands/a/a.dart',
+          'class CommandA {}\n',
+        );
+        _writeFile(
+          sandbox,
+          'lib/src/controller/internal/b.dart',
+          "import 'package:iwb_canvas_engine/src/controller/commands/a/a.dart';\n",
+        );
+
+        final result = await _runTool(sandbox, 'check_import_boundaries.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains('internal/** must not import commands/**'),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects cross-command import', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(
+          sandbox,
+          'lib/src/controller/commands/a/a.dart',
+          'class CommandA {}\n',
+        );
+        _writeFile(
+          sandbox,
+          'lib/src/controller/commands/b/b.dart',
+          "import 'package:iwb_canvas_engine/src/controller/commands/a/a.dart';\n",
+        );
+
+        final result = await _runTool(sandbox, 'check_import_boundaries.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains('commands/** must not import other commands'),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects unknown layer under lib/src', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(sandbox, 'lib/src/unknown/z.dart', 'class Unknown {}\n');
+
+        final result = await _runTool(sandbox, 'check_import_boundaries.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains(
+            'layer classification violation: file is under lib/src/** but has no known layer',
+          ),
         );
       } finally {
         sandbox.deleteSync(recursive: true);
@@ -75,9 +187,31 @@ void main() {
   });
 
   group('tool/check_guardrails.dart', () {
-    // INV:INV-V2-TXN-ATOMIC-COMMIT
+    // INV:INV-ENG-TXN-ATOMIC-COMMIT
     // INV:INV-G-PUBLIC-ENTRYPOINTS
-    // INV:INV-V2-SAFE-TXN-API
+    // INV:INV-ENG-SAFE-TXN-API
+    // INV:INV-ENG-INTERACTIVE-RESOLVER-PURITY
+    test('does not require API_GUIDE.md', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(sandbox, 'lib/src/controller/store.dart', '''
+class Store {
+  int controllerEpoch = 0;
+
+  void writeMutations() {}
+
+  void txnCommit() {
+    writeMutations();
+  }
+}
+''');
+        final result = await _runTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
     test('passes for write/txn APIs and controllerEpoch usage', () async {
       final sandbox = await _createSandbox();
       try {
@@ -100,6 +234,181 @@ class Store {
       }
     });
 
+    test('allows export-only root lib entrypoint files', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(sandbox, 'lib/src/controller/store.dart', '''
+class Store {
+  int controllerEpoch = 0;
+
+  void writeMutations() {}
+
+  void txnCommit() {
+    writeMutations();
+  }
+}
+''');
+        _writeFile(sandbox, 'lib/iwb_canvas_engine.dart', '''
+/// Public API exports for tests.
+library;
+
+export 'src/public/foo.dart'
+    show Foo;
+''');
+        _writeFile(sandbox, 'lib/src/public/foo.dart', '''
+abstract class Foo {}
+''');
+
+        final result = await _runTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test(
+      'allows export-only root lib entrypoint files with inline block comments',
+      () async {
+        final sandbox = await _createSandbox();
+        try {
+          _writeFile(sandbox, 'lib/src/controller/store.dart', '''
+class Store {
+  int controllerEpoch = 0;
+
+  void writeMutations() {}
+
+  void txnCommit() {
+    writeMutations();
+  }
+}
+''');
+          _writeFile(sandbox, 'lib/iwb_canvas_engine.dart', '''
+library;
+
+/* comment before export */
+export /* inline */ 'src/public/foo.dart'
+    show /* inline */ Foo;
+''');
+          _writeFile(sandbox, 'lib/src/public/foo.dart', '''
+abstract class Foo {}
+''');
+
+          final result = await _runTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, 0, reason: result.stderr.toString());
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test('rejects executable logic in root lib entrypoint files', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(sandbox, 'lib/src/controller/store.dart', '''
+class Store {
+  int controllerEpoch = 0;
+
+  void writeMutations() {}
+
+  void txnCommit() {
+    writeMutations();
+  }
+}
+''');
+        _writeFile(sandbox, 'lib/iwb_canvas_engine.dart', '''
+library;
+
+void bootstrap() {}
+''');
+
+        final result = await _runTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains(
+            'root lib/*.dart files must contain only library/docs/comments/export directives',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test(
+      'rejects executable logic after inline block comment in root entrypoint',
+      () async {
+        final sandbox = await _createSandbox();
+        try {
+          _writeFile(sandbox, 'lib/src/controller/store.dart', '''
+class Store {
+  int controllerEpoch = 0;
+
+  void writeMutations() {}
+
+  void txnCommit() {
+    writeMutations();
+  }
+}
+''');
+          _writeFile(sandbox, 'lib/iwb_canvas_engine.dart', '''
+library;
+
+/* safe comment */ void bootstrap() {}
+''');
+
+          final result = await _runTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            contains(
+              'root lib/*.dart files must contain only library/docs/comments/export directives',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects executable logic after export and inline block comment',
+      () async {
+        final sandbox = await _createSandbox();
+        try {
+          _writeFile(sandbox, 'lib/src/controller/store.dart', '''
+class Store {
+  int controllerEpoch = 0;
+
+  void writeMutations() {}
+
+  void txnCommit() {
+    writeMutations();
+  }
+}
+''');
+          _writeFile(sandbox, 'lib/iwb_canvas_engine.dart', '''
+library;
+
+export 'src/public/foo.dart'; /* c */ class A {}
+''');
+          _writeFile(sandbox, 'lib/src/public/foo.dart', '''
+abstract class Foo {}
+''');
+
+          final result = await _runTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            contains(
+              'root lib/*.dart files must contain only library/docs/comments/export directives',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
     test('rejects advanced.dart entrypoint', () async {
       final sandbox = await _createSandbox();
       try {
@@ -109,7 +418,7 @@ class Store {
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          contains('advanced.dart entrypoint is forbidden in v2'),
+          contains('advanced.dart entrypoint is forbidden'),
         );
       } finally {
         sandbox.deleteSync(recursive: true);
@@ -222,14 +531,18 @@ class Store {
       }
     });
 
-    test('rejects public import from input layer', () async {
+    test('rejects public import from controller layer', () async {
       final sandbox = await _createSandbox();
       try {
-        _writeFile(sandbox, 'lib/src/input/types.dart', 'class InputType {}\n');
+        _writeFile(
+          sandbox,
+          'lib/src/controller/types.dart',
+          'class ControllerType {}\n',
+        );
         _writeFile(
           sandbox,
           'lib/src/public/snapshot.dart',
-          "import 'package:iwb_canvas_engine/src/input/types.dart';\n",
+          "import 'package:iwb_canvas_engine/src/controller/types.dart';\n",
         );
 
         final result = await _runTool(sandbox, 'check_guardrails.dart');
@@ -237,13 +550,158 @@ class Store {
         expect(
           result.stderr.toString(),
           contains(
-            'public must not import/export input/render/view/serialization internals',
+            'public must not import/export controller/render/view/serialization internals',
           ),
         );
       } finally {
         sandbox.deleteSync(recursive: true);
       }
     });
+
+    test(
+      'accepts guarded public interactive entrypoints in SceneControllerInteractive',
+      () async {
+        final sandbox = await _createSandbox();
+        try {
+          _writeFile(sandbox, 'lib/src/controller/store.dart', '''
+class Store {
+  int controllerEpoch = 0;
+
+  void writeMutations() {}
+
+  void txnCommit() {
+    writeMutations();
+  }
+}
+''');
+          _writeFile(
+            sandbox,
+            'lib/src/interactive/scene_controller_interactive.dart',
+            '''
+class SceneControllerInteractive {
+  int get value => 1;
+
+  void handlePointer() {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  set mode(int value) {
+    _ensurePublicSideEffectAllowed('mode');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+
+  void _ensurePublicSideEffectAllowed(
+    String operation, {
+    bool allowAfterDispose = false,
+  }) {}
+}
+''',
+          );
+
+          final result = await _runTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, 0, reason: result.stderr.toString());
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects public interactive method without resolver purity guard',
+      () async {
+        final sandbox = await _createSandbox();
+        try {
+          _writeFile(sandbox, 'lib/src/controller/store.dart', '''
+class Store {
+  int controllerEpoch = 0;
+
+  void writeMutations() {}
+
+  void txnCommit() {
+    writeMutations();
+  }
+}
+''');
+          _writeFile(
+            sandbox,
+            'lib/src/interactive/scene_controller_interactive.dart',
+            '''
+class SceneControllerInteractive {
+  void handlePointer() {
+    print('missing guard');
+  }
+
+  void _ensurePublicSideEffectAllowed(
+    String operation, {
+    bool allowAfterDispose = false,
+  }) {}
+}
+''',
+          );
+
+          final result = await _runTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            contains(
+              'public interactive entrypoints must guard resolver purity with _ensurePublicSideEffectAllowed',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects dispose without allowAfterDispose true in purity guard',
+      () async {
+        final sandbox = await _createSandbox();
+        try {
+          _writeFile(sandbox, 'lib/src/controller/store.dart', '''
+class Store {
+  int controllerEpoch = 0;
+
+  void writeMutations() {}
+
+  void txnCommit() {
+    writeMutations();
+  }
+}
+''');
+          _writeFile(
+            sandbox,
+            'lib/src/interactive/scene_controller_interactive.dart',
+            '''
+class SceneControllerInteractive {
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose');
+  }
+
+  void _ensurePublicSideEffectAllowed(
+    String operation, {
+    bool allowAfterDispose = false,
+  }) {}
+}
+''',
+          );
+
+          final result = await _runTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            contains(
+              'dispose() must guard resolver purity with allowAfterDispose: true',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
   });
 }
 

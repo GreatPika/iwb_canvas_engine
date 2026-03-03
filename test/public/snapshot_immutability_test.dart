@@ -3,34 +3,43 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
-// INV:INV-V2-NO-EXTERNAL-MUTATION
+// INV:INV-ENG-NO-EXTERNAL-MUTATION
 
 void main() {
-  test('SceneSnapshot and LayerSnapshot defensively copy and freeze lists', () {
-    final sourceNodes = <NodeSnapshot>[
-      const RectNodeSnapshot(id: 'rect-1', size: Size(10, 20)),
-    ];
-    final layer = LayerSnapshot(nodes: sourceNodes);
-    sourceNodes.add(const RectNodeSnapshot(id: 'rect-2', size: Size(1, 1)));
+  test(
+    'SceneSnapshot and ContentLayerSnapshot defensively copy and freeze lists',
+    () {
+      final sourceNodes = <NodeSnapshot>[
+        const RectNodeSnapshot(id: 'rect-1', size: Size(10, 20)),
+      ];
+      final layer = ContentLayerSnapshot(
+        id: 'layer-auto-0',
+        nodes: sourceNodes,
+      );
+      sourceNodes.add(const RectNodeSnapshot(id: 'rect-2', size: Size(1, 1)));
 
-    expect(layer.nodes.length, 1);
-    expect(
-      () => layer.nodes.add(
-        const RectNodeSnapshot(id: 'rect-3', size: Size(1, 1)),
-      ),
-      throwsUnsupportedError,
-    );
+      expect(layer.nodes.length, 1);
+      expect(
+        () => layer.nodes.add(
+          const RectNodeSnapshot(id: 'rect-3', size: Size(1, 1)),
+        ),
+        throwsUnsupportedError,
+      );
 
-    final sourceLayers = <LayerSnapshot>[layer];
-    final scene = SceneSnapshot(layers: sourceLayers);
-    sourceLayers.add(LayerSnapshot());
+      final sourceLayers = <ContentLayerSnapshot>[layer];
+      final scene = SceneSnapshot(layers: sourceLayers);
+      sourceLayers.add(ContentLayerSnapshot(id: 'layer-auto-1'));
 
-    expect(scene.layers.length, 1);
-    expect(() => scene.layers.add(LayerSnapshot()), throwsUnsupportedError);
+      expect(scene.layers.length, 1);
+      expect(
+        () => scene.layers.add(ContentLayerSnapshot(id: 'layer-auto-2')),
+        throwsUnsupportedError,
+      );
 
-    final defaultScene = SceneSnapshot();
-    expect(defaultScene.layers, isEmpty);
-  });
+      final defaultScene = SceneSnapshot();
+      expect(defaultScene.layers, isEmpty);
+    },
+  );
 
   test('ScenePaletteSnapshot defensively copies and freezes lists', () {
     final sourcePen = <Color>[const Color(0xFF111111)];
@@ -61,9 +70,21 @@ void main() {
     expect(() => palette.gridSizes.add(8), throwsUnsupportedError);
 
     final defaultPalette = ScenePaletteSnapshot();
-    expect(defaultPalette.penColors, SceneDefaults.penColors);
-    expect(defaultPalette.backgroundColors, SceneDefaults.backgroundColors);
-    expect(defaultPalette.gridSizes, SceneDefaults.gridSizes);
+    expect(defaultPalette.penColors, const <Color>[
+      Color(0xFF000000),
+      Color(0xFFE53935),
+      Color(0xFF1E88E5),
+      Color(0xFF43A047),
+      Color(0xFFFB8C00),
+      Color(0xFF8E24AA),
+    ]);
+    expect(defaultPalette.backgroundColors, const <Color>[
+      Color(0xFFFFFFFF),
+      Color(0xFFFFF9C4),
+      Color(0xFFBBDEFB),
+      Color(0xFFC8E6C9),
+    ]);
+    expect(defaultPalette.gridSizes, const <double>[10, 20, 40, 80]);
   });
 
   test('StrokeNodeSnapshot defensively copies and freezes points', () {
@@ -137,7 +158,7 @@ void main() {
       fillColor: Color(0xFF123456),
       strokeColor: Color(0xFF654321),
       strokeWidth: 2.5,
-      fillRule: V2PathFillRule.evenOdd,
+      fillRule: PathFillRule.evenOdd,
     );
 
     expect(image.imageId, 'image://1');
@@ -147,7 +168,7 @@ void main() {
     expect(text.fontFamily, 'Mono');
     expect(line.end, const Offset(10, 10));
     expect(rect.strokeWidth, 1.5);
-    expect(path.fillRule, V2PathFillRule.evenOdd);
+    expect(path.fillRule, PathFillRule.evenOdd);
   });
 
   test('Scene-level snapshot value objects are configurable and immutable', () {
@@ -162,7 +183,7 @@ void main() {
     final scene = SceneSnapshot(
       camera: camera,
       background: background,
-      layers: <LayerSnapshot>[LayerSnapshot()],
+      layers: <ContentLayerSnapshot>[ContentLayerSnapshot(id: 'layer-auto-3')],
       palette: ScenePaletteSnapshot(
         penColors: <Color>[Color(0xFF111111)],
         backgroundColors: <Color>[Color(0xFFEEEEEE)],

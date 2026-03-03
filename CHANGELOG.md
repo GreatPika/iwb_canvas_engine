@@ -1,109 +1,119 @@
+# Changelog
+
+All notable changes to `iwb_canvas_engine` are documented here.
+
+## 5.0.0 (2026-02-18)
+
+### Breaking
+
+- JSON read and write now support only `schemaVersion = 5`.
+- Public write APIs use `layerId` for content-layer addressing.
+- Serialized content layers require stable `layers[].id`.
+
+### Changed
+
+- Refreshed repository documentation for release readiness:
+  - `README.md` is now a concise package landing page
+  - `API_GUIDE.md` is the single integration reference
+  - `ARCHITECTURE.md` is focused on module boundaries and invariants
+  - `DEVELOPMENT_PLAN.md` is reduced to active-plan status only
+  - `AGENTS.md` now includes a clear document map and validation policy
+  - example docs were aligned with current demo capabilities and platform
+    template guidance
+- Release artifacts, docs, and public API wording were aligned to the `5.x`
+  line.
+- Command signals became strictly state-change based rather than
+  invocation-based.
+- Snapshot and JSON validation became stricter and more explicit.
+- Runtime now exposes clearer clear-scene semantics and better transaction
+  contracts.
+
+## 4.0.0 (2026-02-16)
+
+### Breaking
+
+- The typed layer model replaced the legacy `LayerSnapshot(isBackground: ...)`
+  shape.
+- Public interactive input moved to `CanvasPointerInput` and
+  `handleDoubleTap(...)`.
+- Legacy public interactive and view types were removed in favor of
+  `SceneControllerInteractive` / `SceneViewInteractive` and their aliases.
+- `SceneWriteTxn` selection mutators now expose explicit changed/no-op semantics.
+
+### Changed
+
+- Listener notifications and interactive streams were formalized as asynchronous
+  boundaries.
+- Runtime fail-fast behavior after `dispose()` was expanded and documented.
+- Render caches became more consistent and more aggressively bounded.
+- The public export surface was narrowed to the supported API only.
+- `SceneBuilder` was added as a canonical import gateway.
+
 ## 3.0.0 (2026-02-13)
 
 ### Breaking
 
-- Runtime snapshot boundaries are now strict:
-  - `SceneController(initialSnapshot: ...)` throws `ArgumentError` for malformed snapshots.
-  - `replaceScene(...)` throws `ArgumentError` for malformed snapshots.
-- Runtime snapshot import no longer auto-inserts a missing background layer.
-- JSON codec now rejects non-positive `background.grid.cellSize` regardless of grid enabled state.
-- Write-boundary validation is now strict:
-  - `addNode(...)` rejects malformed `NodeSpec` values with `ArgumentError`.
-  - `patchNode(...)` rejects malformed present `NodePatch` fields with `ArgumentError`.
-  - `writeNodeTransformSet(...)`, `writeSelectionTransform(...)`, and `writeSelectionTranslate(...)` reject non-finite `Transform2D`/`Offset`.
-  - `opacity` is now strict at write boundary (`[0,1]`) instead of relying on soft normalization.
-- Text node write API is now size-derived:
-  - `TextNodeSpec` no longer accepts `size`.
-  - `TextNodePatch` no longer accepts `size`.
-- Interactive controller event streams (`actions`, `editTextRequests`) are now asynchronous; listeners are no longer invoked in the emitter call stack.
+- Runtime snapshot boundaries became strict and now throw `SceneDataException`
+  for malformed snapshots.
+- Public write APIs now reject malformed `NodeSpec`, `NodePatch`, and invalid
+  transform values.
+- Text write APIs no longer accept writable `size`.
+- Interactive streams became asynchronous.
 
 ### Changed
 
-- Controller repaint/listener notifications are now deferred to a microtask after commit and coalesced to one notification per event-loop tick, so `write(...)` calls inside listeners no longer trip nested-write guards from the originating transaction.
-- Transactional repaint requests are now buffered until successful commit; rollback discards buffered repaint/signals, and successful commit delivers signals before repaint listener notification.
-- Spatial-index invalidation now tracks hit candidate bounds (`nodeHitTestCandidateBoundsWorld`) so `hitPadding` updates rebuild candidate lookup correctly.
-- Spatial index now uses a dual-path layout (`grid cells` + `large candidates`) with `kMaxCellsPerNode = 1024`, so a single huge node can no longer explode per-cell indexing cost.
-- Spatial index construction is fixed to the internal index cell size and no longer depends on background visual grid settings.
-- Spatial index commits are now incremental: local hit-geometry changes update per-node cell coverage (`added/removed/hitGeometryChangedIds`) without full-index rebuild; rebuild is kept as a fallback path when incremental apply is not possible.
-- Interactive pen/highlighter commits now enforce `kMaxStrokePointsPerNode = 20_000` with deterministic index-uniform downsampling that preserves stroke endpoints.
-- Path-stroke precise hit-testing now enforces `kMaxStrokeHitSamplesPerMetric = 2_048` by increasing sampling step on very long path metrics.
-- Spatial index query now enforces `kMaxQueryCells = 50_000`; oversized queries switch to bounded all-candidate scan with exact intersection filtering instead of unbounded cell iteration.
-- Transaction write path now uses scene/layer/node copy-on-write: first mutation shallow-clones scene metadata and clones only touched layers/nodes, while no-op node patches skip COW cloning.
-- Commit state-change path now keeps node-id index incrementally: local non-structural commits reuse existing `allNodeIds`, structural commits materialize ids lazily once, and `nodeIdSeed` is treated as a monotonic generator (lower-bounded by committed scene ids).
-- Commit/store now maintain `nodeLocator` (`NodeId -> layer/node position`) and writer hot paths use locator-based O(1) lookup instead of linear node-id scans.
-- Stroke render-path cache now validates freshness by `(node.id, pointsRevision)` in O(1), avoiding per-frame point-list hashing/traversal in cache checks.
-- Move-mode drag now uses preview translation during pointer move and commits scene translation once on pointer up; pointer cancel no longer mutates document state.
-- Added shared internal scene-value validation (`scene_value_validation.dart`) and wired it into runtime snapshot import and JSON encode/decode validation paths.
-- Selection transaction hot paths now keep a hash-based mutable working set in place (`toggle/clear/erase/delete/replace`) instead of rebuilding `Set` instances on each step.
-- Text node bounds are now derived in-engine from text layout inputs; snapshot/JSON import recomputes text size on load so stale serialized values do not stay authoritative at runtime.
-- Added load-profile benchmark tooling (`dart run tool/bench/run_load_profiles.dart --profile=<smoke|full>`) with structured JSON output and dedicated benchmark cases for large node/stroke scenes and worst-case spatial/path scenarios.
-- CI now runs smoke load profiles and uploads benchmark artifacts; a new nightly workflow runs full load profiles and extended randomized transaction fuzzing.
-- Randomized transaction fuzz tests now support environment-based scaling (`IWB_FUZZ_SEEDS`, `IWB_FUZZ_STEPS`, `IWB_FUZZ_BASE_SEED`) and explicitly assert finite numeric state after each step.
+- Transactional repaint and signal delivery were deferred and coalesced.
+- Copy-on-write transactions and indexed lookup improved write-path cost.
+- Spatial index and hit-testing guardrails were added for large scenes.
+- Text bounds became engine-derived at runtime.
 
 ## 2.0.1 (2026-02-10)
 
 ### Breaking
 
-- `SceneWriteTxn` no longer exposes node-id bookkeeping methods (`writeNewNodeId`, `writeContainsNodeId`, `writeRegisterNodeId`, `writeUnregisterNodeId`, `writeRebuildNodeIdIndex`).
-- `ActionCommitted` and internal committed signal payloads are now immutable snapshots (mutating `nodeIds`/`payload` throws).
+- `SceneWriteTxn` stopped exposing internal node-id bookkeeping helpers.
+- `ActionCommitted` payloads and node ids became immutable snapshots.
 
 ### Changed
 
-- Commit pipeline now finalizes store state first and only then emits committed signals.
-- Controller commit now derives `allNodeIds` and `nodeIdSeed` from the committed scene as the single source of truth.
-- `SceneWriter.writeNodeErase` now respects deletable-layer policy consistently with selection delete flow.
-- `SceneWriter.writeGridCellSize` and `SceneWriter.writeCameraOffset` now reject non-finite/invalid inputs at write boundary.
-- Selection normalization now preserves explicit non-selectable ids, so `selectAll(onlySelectable: false)` remains stable after commit.
-- Commit state-change path no longer performs a redundant second deep clone of scene data; mutating transactions now clone once (clone-on-first-mutation).
-- Added runtime commit invariant assertions for store consistency in debug/test execution.
+- Commit finalization now completes before signal delivery.
+- Selection normalization and delete behavior were hardened.
+- Runtime commit invariant assertions were expanded.
 
 ## 2.0.0 (2026-02-10)
 
 ### Breaking
 
-- Removed `lib/advanced.dart`; `iwb_canvas_engine.dart` is now the single public entrypoint.
-- `iwb_canvas_engine.dart` no longer exports mutable core model files (`src/core/scene.dart`, `src/core/nodes.dart`).
-- `SceneControllerInteractiveV2` removed legacy mutable API:
-  - removed constructor parameter `scene`,
-  - removed getters `core` and `scene`,
-  - `addNode` now accepts only `NodeSpec`.
-- Public transactional write callback now uses `SceneWriteTxn` (safe contract without raw `scene`, `writeFindNode`, or `writeMark*` APIs).
+- `iwb_canvas_engine.dart` became the single supported public entrypoint.
+- Mutable scene internals were removed from the public surface.
+- Public write callbacks switched to `SceneWriteTxn`.
 
 ### Added
 
-- New public `SceneWriteTxn` contract (`lib/src/public/scene_write_txn.dart`).
-- New public `SceneRenderState` contract (`lib/src/public/scene_render_state.dart`) for painter/view integration.
-- `SceneControllerV2.requestRepaint()` for explicit repaint without transactional mutation.
-- Commit-path tests for no-op, signals-only, and selection-policy patch normalization.
-- Guardrails for single entrypoint and safe transaction API surface.
+- Stable public runtime aliases: `SceneController` and `SceneView`.
+- `SceneRenderState` as the supported view/painter read contract.
+- Guardrails around the single-entrypoint and safe transaction model.
 
 ### Changed
 
-- `TxnContext` now uses lazy scene clone-on-first-mutation.
-- Commit pipeline supports explicit branches:
-  - no-op: no commit/revision/repaint,
-  - signals-only: commit revision + signal flush without repaint,
-  - state-change/document-replace: full commit path.
-- Selection normalization now handles node patches that affect selection policy for selected nodes.
-- Interactive controller refactored to avoid read-only transaction misuse and raw writer mutations in move rollback.
+- Commit flow was split into clearer no-op, signals-only, and full state-change
+  branches.
+- Interactive controller internals were refactored away from raw writer misuse.
 
 ## 1.0.0 (2026-02-10)
 
 ### Breaking
 
-- Finalized the v2 public API in `iwb_canvas_engine.dart`/`advanced.dart` around immutable snapshots, specs, and patch semantics.
-- Removed the legacy mutable public surface from package entrypoints.
+- The initial immutable public API line was finalized and legacy mutable entry
+  points were removed.
 
 ### Added
 
-- Stable interactive runtime aliases: `SceneController` and `SceneView` over v2 implementations.
-- Strict JSON v2 codec contracts (`schemaVersion = 2`) with canonical validation errors via `SceneJsonFormatException`.
-- Bounded render caches and spatial-index optimizations for interactive performance.
-- Expanded automated validation with parity, regression, invariant coverage, and import-boundary checks.
+- Stable snapshot/spec/patch contracts.
+- Strict JSON codec contracts through `SceneDataException`.
+- Automated validation for invariants, import boundaries, and rendering parity.
 
 ### Changed
 
-- Hardened scene invariants: unique node ids, single canonical background layer, explicit constructor/decoder canonicalization.
-- Improved input transactional behavior for move/draw/eraser flows, including cancel safety and monotonic event timelines.
-- Improved rendering consistency and parity for selection visuals, text line-height semantics, and thin-line snapping behavior.
-- Refreshed package documentation (`README`, `API_GUIDE`, `ARCHITECTURE`) for the `1.0.0` release baseline.
+- Package documentation and release artifacts were aligned around the initial
+  stable release.

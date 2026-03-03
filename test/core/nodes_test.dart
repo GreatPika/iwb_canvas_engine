@@ -273,6 +273,17 @@ void main() {
     );
   });
 
+  test('scene node constructor rejects non-positive instanceRevision', () {
+    expect(
+      () => RectNode(
+        id: 'bad-instance-revision',
+        instanceRevision: 0,
+        size: const Size(1, 1),
+      ),
+      throwsArgumentError,
+    );
+  });
+
   test('path node builds, caches and invalidates local path data', () {
     final pathNode = PathNode(
       id: 'p',
@@ -287,14 +298,10 @@ void main() {
     expect(copyA, isNotNull);
     expect(copyB, isNotNull);
     expect(identical(copyA, copyB), isFalse);
-
-    final sameA = pathNode.buildLocalPath(copy: false);
-    final sameB = pathNode.buildLocalPath(copy: false);
-    expect(identical(sameA, sameB), isTrue);
     expect(pathNode.localBounds, isNot(Rect.zero));
 
     pathNode.fillRule = PathFillRule.evenOdd;
-    final evenOddPath = pathNode.buildLocalPath(copy: false);
+    final evenOddPath = pathNode.buildLocalPath();
     expect(evenOddPath, isNotNull);
     expect(evenOddPath!.fillType, PathFillType.evenOdd);
 

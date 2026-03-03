@@ -1,13 +1,10 @@
 import 'dart:collection';
 import 'dart:ui';
 
-import '../core/background_layer_invariants.dart';
 import '../core/hit_test.dart';
-import '../core/nodes.dart' show TextNode;
 import '../core/selection_policy.dart';
-import '../core/text_layout.dart';
 import '../core/transform2d.dart';
-import '../input/slices/signals/signal_event.dart';
+import 'internal/signal_event.dart';
 import '../model/document.dart';
 import '../public/node_patch.dart';
 import '../public/node_spec.dart';
@@ -16,10 +13,15 @@ import '../public/snapshot.dart';
 import 'txn_context.dart';
 
 class SceneWriter implements SceneWriteTxn {
-  SceneWriter(this._ctx, {required this.txnSignalSink});
+  SceneWriter(
+    this._ctx, {
+    required this.txnSignalSink,
+    this.textFontFamilyByDefault,
+  });
 
   final TxnContext _ctx;
-  final void Function(V2BufferedSignal signal) txnSignalSink;
+  final void Function(BufferedSignal signal) txnSignalSink;
+  final String? textFontFamilyByDefault;
 
   @override
   SceneSnapshot get snapshot => txnSceneToSnapshot(_ctx.workingScene);
@@ -29,24 +31,28 @@ class SceneWriter implements SceneWriteTxn {
       Set<NodeId>.unmodifiable(_ctx.workingSelection);
 
   @override
-  String writeNodeInsert(NodeSpec spec, {int? layerIndex}) {
+  NodeId writeNodeInsert(NodeSpec spec, {LayerId? layerId, int? insertIndex}) {
+    _ensureTxnActive();
     final resolvedId = spec.id ?? _ctx.txnNextNodeId();
     if (spec.id != null && _ctx.txnHasNodeId(resolvedId)) {
       throw StateError('Node id must be unique: $resolvedId');
     }
 
-    final node = txnNodeFromSpec(spec, fallbackId: resolvedId);
-    final scene = _ctx.txnEnsureMutableScene();
-    final targetLayerIndex = txnResolveInsertLayerIndex(
-      scene: scene,
-      layerIndex: layerIndex,
+    final normalizedSpec = _normalizeInsertSpec(spec);
+    final node = txnNodeFromSpec(
+      normalizedSpec,
+      fallbackId: resolvedId,
+      nextInstanceRevision: _ctx.txnNextInstanceRevision,
     );
+    final scene = _ctx.txnEnsureMutableScene();
+    final targetLayerIndex = _ctx.txnResolveInsertLayerIndex(layerId: layerId);
     _ctx.txnEnsureMutableLayer(targetLayerIndex);
     txnInsertNodeInScene(
       scene: scene,
       nodeLocator: _ctx.txnEnsureMutableNodeLocator(),
       node: node,
       layerIndex: targetLayerIndex,
+      insertIndex: insertIndex,
     );
     _ctx.txnRememberNodeId(node.id);
     _ctx.changeSet.txnMarkStructuralChanged();
@@ -55,13 +61,24 @@ class SceneWriter implements SceneWriteTxn {
   }
 
   @override
+  bool writeLayerEnsure(LayerId layerId, {int? index}) {
+    _ensureTxnActive();
+    final created = _ctx.txnEnsureContentLayer(layerId, index: index);
+    if (!created) {
+      return false;
+    }
+    _ctx.changeSet.txnMarkStructuralChanged();
+    return true;
+  }
+
+  @override
   bool writeNodeErase(NodeId nodeId) {
+    _ensureTxnActive();
     final existing = _ctx.txnFindNodeById(nodeId);
     if (existing == null) {
       return false;
     }
-    final layer = _ctx.workingScene.layers[existing.layerIndex];
-    if (!isNodeDeletableInLayer(existing.node, layer)) {
+    if (existing.layerIndex == -1 || !isNodeDeletableInLayer(existing.node)) {
       return false;
     }
     _ctx.txnEnsureMutableLayer(existing.layerIndex);
@@ -87,6 +104,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   bool writeNodePatch(NodePatch patch) {
+    _ensureTxnActive();
     final existing = _ctx.txnFindNodeById(patch.id);
     if (existing == null) {
       return false;
@@ -98,7 +116,6 @@ class SceneWriter implements SceneWriteTxn {
     final found = _ctx.txnResolveMutableNode(patch.id);
     final oldCandidate = nodeHitTestCandidateBoundsWorld(found.node);
     txnApplyNodePatch(found.node, patch);
-    _txnRecomputeDerivedTextNodeSizeIfNeeded(node: found.node, patch: patch);
 
     _ctx.changeSet.txnTrackUpdated(patch.id);
     final newCandidate = nodeHitTestCandidateBoundsWorld(found.node);
@@ -117,6 +134,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   bool writeNodeTransformSet(NodeId id, Transform2D transform) {
+    _ensureTxnActive();
     _txnRequireFiniteTransform(transform, name: 'transform');
     final existing = _ctx.txnFindNodeById(id);
     if (existing == null) return false;
@@ -137,29 +155,48 @@ class SceneWriter implements SceneWriteTxn {
   }
 
   @override
-  void writeSelectionReplace(Iterable<NodeId> ids) {
-    final next = HashSet<NodeId>.of(ids);
+  bool writeSelectionReplace(Iterable<NodeId> ids) {
+    _ensureTxnActive();
+    final next = txnNormalizeSelection(
+      rawSelection: ids.toSet(),
+      scene: _ctx.workingScene,
+      nodeLocator: _ctx.txnNodeLocatorView(),
+    );
+    if (next.isEmpty) {
+      return false;
+    }
     if (_txnSetsEqual(_ctx.workingSelection, next)) {
-      return;
+      return false;
     }
     _ctx.workingSelection
       ..clear()
       ..addAll(next);
     _ctx.changeSet.txnMarkSelectionChanged();
+    return true;
   }
 
   @override
-  void writeSelectionToggle(NodeId id) {
+  bool writeSelectionToggle(NodeId id) {
+    _ensureTxnActive();
+    if (!txnIsSelectionCandidateId(
+      scene: _ctx.workingScene,
+      nodeId: id,
+      nodeLocator: _ctx.txnNodeLocatorView(),
+    )) {
+      return false;
+    }
     if (_ctx.workingSelection.contains(id)) {
       _ctx.workingSelection.remove(id);
     } else {
       _ctx.workingSelection.add(id);
     }
     _ctx.changeSet.txnMarkSelectionChanged();
+    return true;
   }
 
   @override
   bool writeSelectionClear() {
+    _ensureTxnActive();
     if (_ctx.workingSelection.isEmpty) {
       return false;
     }
@@ -170,12 +207,12 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   int writeSelectionSelectAll({bool onlySelectable = true}) {
+    _ensureTxnActive();
     final ids = HashSet<NodeId>();
     for (final layer in _ctx.workingScene.layers) {
       for (final node in layer.nodes) {
         if (isNodeInteractiveForSelection(
           node,
-          layer,
           onlySelectable: onlySelectable,
         )) {
           ids.add(node.id);
@@ -194,6 +231,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   int writeSelectionTranslate(Offset delta) {
+    _ensureTxnActive();
     _txnRequireFiniteOffset(delta, name: 'delta');
     if (delta == Offset.zero || _ctx.workingSelection.isEmpty) {
       return 0;
@@ -204,8 +242,7 @@ class SceneWriter implements SceneWriteTxn {
     for (final nodeId in selectedIds) {
       final existing = _ctx.txnFindNodeById(nodeId);
       if (existing == null) continue;
-      final layer = _ctx.workingScene.layers[existing.layerIndex];
-      if (layer.isBackground) continue;
+      if (existing.layerIndex == -1) continue;
       if (existing.node.isLocked || !existing.node.isTransformable) continue;
 
       final mutable = _ctx.txnResolveMutableNode(nodeId);
@@ -224,6 +261,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   int writeSelectionTransform(Transform2D delta) {
+    _ensureTxnActive();
     _txnRequireFiniteTransform(delta, name: 'delta');
     final selected = _ctx.workingSelection;
     if (selected.isEmpty) return 0;
@@ -233,8 +271,7 @@ class SceneWriter implements SceneWriteTxn {
     for (final nodeId in selectedIds) {
       final existing = _ctx.txnFindNodeById(nodeId);
       if (existing == null) continue;
-      final layer = _ctx.workingScene.layers[existing.layerIndex];
-      if (layer.isBackground) continue;
+      if (existing.layerIndex == -1) continue;
       if (!existing.node.isTransformable || existing.node.isLocked) continue;
 
       final nextTransform = delta.multiply(existing.node.transform);
@@ -258,6 +295,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   int writeDeleteSelection() {
+    _ensureTxnActive();
     final selected = _ctx.workingSelection;
     if (selected.isEmpty) return 0;
 
@@ -268,7 +306,7 @@ class SceneWriter implements SceneWriteTxn {
       final layer = layers[layerIndex];
       for (final node in layer.nodes) {
         if (!selected.contains(node.id)) continue;
-        if (!isNodeDeletableInLayer(node, layer)) continue;
+        if (!isNodeDeletableInLayer(node)) continue;
         deleted.add(node.id);
         deletedByLayer.putIfAbsent(layerIndex, () => <NodeId>{}).add(node.id);
       }
@@ -298,29 +336,32 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   List<NodeId> writeClearSceneKeepBackground() {
-    final scene = _ctx.txnEnsureMutableScene();
-    canonicalizeBackgroundLayerInvariants(
-      scene.layers,
-      onMultipleBackgroundError: (count) {
-        throw StateError(
-          'clearScene requires at most one background layer; found $count.',
-        );
-      },
-    );
+    return writeClearSceneKeepBackgroundResult().removedNodeIds;
+  }
 
-    final layers = scene.layers;
+  @override
+  ClearSceneResult writeClearSceneKeepBackgroundResult() {
+    _ensureTxnActive();
+    final scene = _ctx.txnEnsureMutableScene();
+    var didStructuralClear = false;
+    if (scene.backgroundLayer == null) {
+      _ctx.txnEnsureMutableBackgroundLayer();
+      _ctx.changeSet.txnMarkStructuralChanged();
+      didStructuralClear = true;
+    }
+
     final clearedIds = <NodeId>[
-      for (var layerIndex = 1; layerIndex < layers.length; layerIndex++)
-        for (final node in layers[layerIndex].nodes) node.id,
+      for (final layer in scene.layers) ...layer.nodes.map((node) => node.id),
     ];
     for (final id in clearedIds) {
       _ctx.txnForgetNodeId(id);
     }
-    if (layers.length > 1) {
-      layers.length = 1;
-    }
+    scene.layers.clear();
     if (clearedIds.isEmpty) {
-      return const <NodeId>[];
+      return ClearSceneResult(
+        removedNodeIds: const <NodeId>[],
+        didStructuralClear: didStructuralClear,
+      );
     }
     _ctx.txnRebuildNodeLocatorFromWorkingScene();
 
@@ -332,11 +373,15 @@ class SceneWriter implements SceneWriteTxn {
       _ctx.workingSelection.clear();
       _ctx.changeSet.txnMarkSelectionChanged();
     }
-    return clearedIds;
+    return ClearSceneResult(
+      removedNodeIds: clearedIds,
+      didStructuralClear: true,
+    );
   }
 
   @override
   void writeCameraOffset(Offset offset) {
+    _ensureTxnActive();
     _txnRequireFiniteOffset(offset, name: 'offset');
     if (_ctx.workingScene.camera.offset == offset) return;
     final scene = _ctx.txnEnsureMutableScene();
@@ -346,6 +391,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   void writeGridEnable(bool enabled) {
+    _ensureTxnActive();
     if (_ctx.workingScene.background.grid.isEnabled == enabled) {
       return;
     }
@@ -356,6 +402,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   void writeGridCellSize(double cellSize) {
+    _ensureTxnActive();
     _txnRequireFinitePositive(cellSize, name: 'cellSize');
     if (_ctx.workingScene.background.grid.cellSize == cellSize) {
       return;
@@ -367,6 +414,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   void writeBackgroundColor(Color color) {
+    _ensureTxnActive();
     if (_ctx.workingScene.background.color == color) {
       return;
     }
@@ -377,8 +425,12 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   void writeDocumentReplace(SceneSnapshot snapshot) {
+    _ensureTxnActive();
     final hadSelection = _ctx.workingSelection.isNotEmpty;
-    final nextScene = txnSceneFromSnapshot(snapshot);
+    final nextScene = txnSceneFromSnapshot(
+      snapshot,
+      nextInstanceRevision: _ctx.txnNextInstanceRevision,
+    );
     _ctx.txnAdoptScene(nextScene);
     _ctx.workingSelection.clear();
     _ctx.changeSet.txnMarkDocumentReplaced();
@@ -393,8 +445,9 @@ class SceneWriter implements SceneWriteTxn {
     Iterable<NodeId> nodeIds = const <NodeId>[],
     Map<String, Object?>? payload,
   }) {
+    _ensureTxnActive();
     txnSignalSink(
-      V2BufferedSignal(
+      BufferedSignal(
         type: type,
         nodeIds: List<NodeId>.of(nodeIds),
         payload: payload,
@@ -406,33 +459,40 @@ class SceneWriter implements SceneWriteTxn {
     return left.length == right.length && left.containsAll(right);
   }
 
+  NodeSpec _normalizeInsertSpec(NodeSpec spec) {
+    final defaultFontFamily = textFontFamilyByDefault;
+    if (defaultFontFamily == null) {
+      return spec;
+    }
+    if (spec case TextNodeSpec text when text.fontFamily == null) {
+      return TextNodeSpec(
+        id: text.id,
+        text: text.text,
+        fontSize: text.fontSize,
+        color: text.color,
+        align: text.align,
+        isBold: text.isBold,
+        isItalic: text.isItalic,
+        isUnderline: text.isUnderline,
+        fontFamily: defaultFontFamily,
+        maxWidth: text.maxWidth,
+        lineHeight: text.lineHeight,
+        transform: text.transform,
+        opacity: text.opacity,
+        hitPadding: text.hitPadding,
+        isVisible: text.isVisible,
+        isSelectable: text.isSelectable,
+        isLocked: text.isLocked,
+        isDeletable: text.isDeletable,
+        isTransformable: text.isTransformable,
+      );
+    }
+    return spec;
+  }
+
   bool _txnPatchTouchesSelectionPolicy(NodePatch patch) {
     final common = patch.common;
     return !common.isVisible.isAbsent || !common.isSelectable.isAbsent;
-  }
-
-  void _txnRecomputeDerivedTextNodeSizeIfNeeded({
-    required Object node,
-    required NodePatch patch,
-  }) {
-    if (node is! TextNode || patch is! TextNodePatch) {
-      return;
-    }
-    if (!_txnTextPatchTouchesLayout(patch)) {
-      return;
-    }
-    recomputeDerivedTextSize(node);
-  }
-
-  bool _txnTextPatchTouchesLayout(TextNodePatch patch) {
-    return !patch.text.isAbsent ||
-        !patch.fontSize.isAbsent ||
-        !patch.isBold.isAbsent ||
-        !patch.isItalic.isAbsent ||
-        !patch.isUnderline.isAbsent ||
-        !patch.fontFamily.isAbsent ||
-        !patch.lineHeight.isAbsent ||
-        !patch.maxWidth.isAbsent;
   }
 
   void _txnRequireFiniteOffset(Offset value, {required String name}) {
@@ -441,16 +501,28 @@ class SceneWriter implements SceneWriteTxn {
   }
 
   void _txnRequireFiniteTransform(Transform2D value, {required String name}) {
-    if (value.isFinite) return;
-    throw ArgumentError.value(
-      value,
-      name,
-      'Transform2D fields must be finite.',
-    );
+    if (!value.isFinite) {
+      throw ArgumentError.value(
+        value,
+        name,
+        'Transform2D fields must be finite.',
+      );
+    }
+    if (value.invert() == null) {
+      throw ArgumentError.value(
+        value.toJsonMap(),
+        name,
+        'Transform2D must be invertible (non-singular).',
+      );
+    }
   }
 
   void _txnRequireFinitePositive(double value, {required String name}) {
     if (value.isFinite && value > 0) return;
     throw ArgumentError.value(value, name, 'Must be a finite number > 0.');
+  }
+
+  void _ensureTxnActive() {
+    _ctx.txnEnsureActive();
   }
 }

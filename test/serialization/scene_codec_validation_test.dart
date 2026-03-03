@@ -1,7 +1,15 @@
+import 'dart:convert';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
+import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
+    show
+        kMaxContentLayersPerScene,
+        kMaxNodesPerScene,
+        kMaxStrokePointsPerNode,
+        kMaxSvgPathDataLength;
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/serialization/scene_codec.dart'
     show encodeSceneDocument;
@@ -31,7 +39,7 @@ Map<String, dynamic> _sceneWithSingleNode(Map<String, dynamic> nodeJson) {
   final json = _minimalSceneJson();
   json['layers'] = <dynamic>[
     <String, dynamic>{
-      'isBackground': false,
+      'id': 'layer-0',
       'nodes': <dynamic>[nodeJson],
     },
   ];
@@ -64,19 +72,49 @@ void main() {
   // INV:INV-SER-JSON-NUMERIC-VALIDATION
   test('encodeSceneToJson -> decodeSceneFromJson is stable', () {
     final scene = SceneSnapshot(
-      layers: [LayerSnapshot(isBackground: true), LayerSnapshot()],
+      layers: [
+        ContentLayerSnapshot(id: 'layer-auto-0'),
+        ContentLayerSnapshot(id: 'layer-auto-1'),
+      ],
     );
     final json = encodeSceneToJson(scene);
     final decoded = decodeSceneFromJson(json);
     expect(encodeScene(decoded), encodeScene(scene));
   });
 
-  test('SceneJsonFormatException implements FormatException shape', () {
-    final error = SceneJsonFormatException('bad', 'source');
+  test('decodeScene accepts Map<String, dynamic> from jsonDecode', () {
+    final encoded = encodeScene(
+      SceneSnapshot(
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(id: 'layer-auto-2'),
+        ],
+      ),
+    );
+    final decodedRaw = jsonDecode(jsonEncode(encoded)) as Map<String, dynamic>;
+    final snapshot = decodeScene(decodedRaw);
+
+    expect(snapshot.layers.length, 1);
+  });
+
+  test('SceneBuilder.buildFromJson accepts Map<String, dynamic>', () {
+    final decodedRaw =
+        jsonDecode(jsonEncode(_minimalSceneJson())) as Map<String, dynamic>;
+    final snapshot = SceneBuilder.buildFromJson(decodedRaw);
+
+    expect(snapshot.layers, isEmpty);
+    expect(snapshot.backgroundLayer.nodes, isEmpty);
+  });
+
+  test('SceneDataException implements FormatException shape', () {
+    const error = SceneDataException(
+      code: SceneDataErrorCode.invalidValue,
+      message: 'bad',
+      source: 'source',
+    );
     expect(error.message, 'bad');
     expect(error.source, 'source');
     expect(error.offset, isNull);
-    expect(error.toString(), contains('SceneJsonFormatException'));
+    expect(error.toString(), contains('SceneDataException'));
   });
 
   test('decodeSceneFromJson rejects non-object root', () {
@@ -85,7 +123,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Root JSON must be an object.',
         ),
       ),
@@ -93,23 +131,21 @@ void main() {
   });
 
   test('decodeSceneFromJson wraps JSON parse failures', () {
-    expect(
-      () => decodeSceneFromJson('{'),
-      throwsA(isA<SceneJsonFormatException>()),
-    );
+    expect(() => decodeSceneFromJson('{'), throwsA(isA<SceneDataException>()));
   });
 
-  test('decodeScene canonicalizes missing background layer at index 0', () {
-    // INV:INV-SER-BACKGROUND-SINGLE-AT-ZERO
+  test('decodeScene canonicalizes missing background layer', () {
+    // INV:INV-SER-TYPED-LAYER-SPLIT
+    // INV:INV-SER-CANONICAL-BACKGROUND-LAYER
     final scene = decodeScene(_minimalSceneJson());
-    expect(scene.layers, hasLength(1));
-    expect(scene.layers.first.isBackground, isTrue);
+    expect(scene.layers, isEmpty);
+    expect(scene.backgroundLayer.nodes, isEmpty);
   });
 
   test(
-    'decodeScene moves misordered background layer to index 0 preserving order',
+    'decodeScene reads typed backgroundLayer and preserves content order',
     () {
-      // INV:INV-SER-BACKGROUND-SINGLE-AT-ZERO
+      // INV:INV-SER-TYPED-LAYER-SPLIT
       final bgNode = _baseNodeJson(id: 'bg', type: 'rect')
         ..addAll(<String, dynamic>{
           'size': <String, dynamic>{'w': 1, 'h': 1},
@@ -126,61 +162,42 @@ void main() {
           'strokeWidth': 0,
         });
       final json = _minimalSceneJson();
+      json['backgroundLayer'] = <String, dynamic>{
+        'id': 'layer-auto-json-0',
+        'nodes': <dynamic>[bgNode],
+      };
       json['layers'] = <dynamic>[
         <String, dynamic>{
-          'isBackground': false,
+          'id': 'layer-auto-json-1',
           'nodes': <dynamic>[n1],
         },
         <String, dynamic>{
-          'isBackground': true,
-          'nodes': <dynamic>[bgNode],
-        },
-        <String, dynamic>{
-          'isBackground': false,
+          'id': 'layer-auto-json-2',
           'nodes': <dynamic>[n2],
         },
       ];
 
       final scene = decodeScene(json);
 
-      expect(scene.layers, hasLength(3));
-      expect(scene.layers.first.isBackground, isTrue);
-      expect(scene.layers[1].nodes.single.id, 'n1');
-      expect(scene.layers[2].nodes.single.id, 'n2');
+      expect(scene.backgroundLayer.nodes.single.id, 'bg');
+      expect(scene.layers, hasLength(2));
+      expect(scene.layers[0].nodes.single.id, 'n1');
+      expect(scene.layers[1].nodes.single.id, 'n2');
     },
   );
 
-  test('decodeScene rejects multiple background layers', () {
-    // INV:INV-SER-BACKGROUND-SINGLE-AT-ZERO
-    final firstBg = _baseNodeJson(id: 'bg-1', type: 'rect')
-      ..addAll(<String, dynamic>{
-        'size': <String, dynamic>{'w': 1, 'h': 1},
-        'strokeWidth': 0,
-      });
-    final secondBg = _baseNodeJson(id: 'bg-2', type: 'rect')
-      ..addAll(<String, dynamic>{
-        'size': <String, dynamic>{'w': 1, 'h': 1},
-        'strokeWidth': 0,
-      });
+  test('decodeScene rejects non-object backgroundLayer', () {
     final json = _minimalSceneJson();
-    json['layers'] = <dynamic>[
-      <String, dynamic>{
-        'isBackground': true,
-        'nodes': <dynamic>[firstBg],
-      },
-      <String, dynamic>{
-        'isBackground': true,
-        'nodes': <dynamic>[secondBg],
-      },
-    ];
+    json['backgroundLayer'] = 'invalid';
 
     expect(
       () => decodeScene(json),
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Scene must contain at most one background layer.',
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidFieldType &&
+              e.path == 'backgroundLayer',
         ),
       ),
     );
@@ -194,7 +211,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Layer must be an object.',
         ),
       ),
@@ -205,7 +222,7 @@ void main() {
     final json = _minimalSceneJson();
     json['layers'] = <dynamic>[
       <String, dynamic>{
-        'isBackground': false,
+        'id': 'layer-auto-json-3',
         'nodes': <dynamic>[123],
       },
     ];
@@ -214,8 +231,143 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
+              e.path == 'layers[0].nodes[0]' &&
               e.message == 'Node must be an object.',
+        ),
+      ),
+    );
+  });
+
+  test('decodeScene rejects too many content layers', () {
+    final json = _minimalSceneJson();
+    json['layers'] = <dynamic>[
+      for (var i = 0; i < kMaxContentLayersPerScene + 1; i++)
+        <String, dynamic>{'id': 'layer-$i', 'nodes': <dynamic>[]},
+    ];
+
+    expect(
+      () => decodeScene(json),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers',
+        ),
+      ),
+    );
+  });
+
+  test('decodeScene rejects too many nodes in scene', () {
+    final json = _minimalSceneJson();
+    json['layers'] = <dynamic>[
+      <String, dynamic>{
+        'id': 'layer-0',
+        'nodes': <dynamic>[
+          for (var i = 0; i < kMaxNodesPerScene + 1; i++)
+            _baseNodeJson(id: 'n$i', type: 'rect')..addAll(<String, dynamic>{
+              'size': <String, dynamic>{'w': 1, 'h': 1},
+              'strokeWidth': 0,
+            }),
+        ],
+      },
+    ];
+
+    expect(
+      () => decodeScene(json),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers[0].nodes',
+        ),
+      ),
+    );
+  });
+
+  test(
+    'decodeScene rejects aggregated node overflow across background and content layers',
+    () {
+      final json = _minimalSceneJson();
+      final backgroundNode = _baseNodeJson(id: 'bg', type: 'rect')
+        ..addAll(<String, dynamic>{
+          'size': <String, dynamic>{'w': 1, 'h': 1},
+          'strokeWidth': 0,
+        });
+      final contentNode = _baseNodeJson(id: 'fg', type: 'rect')
+        ..addAll(<String, dynamic>{
+          'size': <String, dynamic>{'w': 1, 'h': 1},
+          'strokeWidth': 0,
+        });
+      json['backgroundLayer'] = <String, dynamic>{
+        'nodes': <dynamic>[
+          for (var i = 0; i < kMaxNodesPerScene; i++) backgroundNode,
+        ],
+      };
+      json['layers'] = <dynamic>[
+        <String, dynamic>{
+          'id': 'layer-0',
+          'nodes': <dynamic>[contentNode],
+        },
+      ];
+
+      expect(
+        () => decodeScene(json),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.code == SceneDataErrorCode.invalidValue &&
+                e.path == 'layers[0].nodes',
+          ),
+        ),
+      );
+    },
+  );
+
+  test('decodeScene rejects too many stroke localPoints', () {
+    final strokeJson = _baseNodeJson(id: 'stroke-overflow', type: 'stroke')
+      ..addAll(<String, dynamic>{
+        'localPoints': <dynamic>[
+          for (var i = 0; i < kMaxStrokePointsPerNode + 1; i++)
+            <String, dynamic>{'x': i.toDouble(), 'y': 0.0},
+        ],
+        'thickness': 1,
+        'color': '#FF000000',
+      });
+
+    expect(
+      () => decodeScene(_sceneWithSingleNode(strokeJson)),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers[0].nodes[0].localPoints',
+        ),
+      ),
+    );
+  });
+
+  test('decodeScene rejects oversized svgPathData payload', () {
+    final pathJson = _baseNodeJson(id: 'path-overflow', type: 'path')
+      ..addAll(<String, dynamic>{
+        'svgPathData':
+            "M0 0 ${List<String>.filled(kMaxSvgPathDataLength + 1, 'L1 1').join(' ')}",
+        'strokeWidth': 1,
+        'fillRule': 'nonZero',
+      });
+
+    expect(
+      () => decodeScene(_sceneWithSingleNode(pathJson)),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers[0].nodes[0].svgPathData',
         ),
       ),
     );
@@ -226,7 +378,7 @@ void main() {
     final json = _minimalSceneJson();
     json['layers'] = <dynamic>[
       <String, dynamic>{
-        'isBackground': false,
+        'id': 'layer-auto-json-4',
         'nodes': <dynamic>[
           _baseNodeJson(id: 'dup-node', type: 'rect')..addAll(<String, dynamic>{
             'size': <String, dynamic>{'w': 10, 'h': 10},
@@ -235,7 +387,7 @@ void main() {
         ],
       },
       <String, dynamic>{
-        'isBackground': false,
+        'id': 'layer-auto-json-5',
         'nodes': <dynamic>[
           _baseNodeJson(id: 'dup-node', type: 'rect')..addAll(<String, dynamic>{
             'size': <String, dynamic>{'w': 20, 'h': 20},
@@ -249,9 +401,8 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message ==
-                  'Duplicate node id: dup-node. Node ids must be unique.',
+              e is SceneDataException &&
+              e.message == 'Must be unique across scene layers.',
         ),
       ),
     );
@@ -264,7 +415,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Unknown node type: mystery.',
         ),
       ),
@@ -274,7 +425,8 @@ void main() {
   test('encodeScene rejects unsupported TextAlign values', () {
     final scene = SceneSnapshot(
       layers: [
-        LayerSnapshot(
+        ContentLayerSnapshot(
+          id: 'layer-auto-3',
           nodes: [
             TextNodeSnapshot(
               id: 'text-1',
@@ -289,7 +441,7 @@ void main() {
       ],
     );
 
-    expect(() => encodeScene(scene), throwsA(isA<SceneJsonFormatException>()));
+    expect(() => encodeScene(scene), throwsA(isA<SceneDataException>()));
   });
 
   test('decodeScene rejects unknown fillRule', () {
@@ -305,7 +457,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Unknown fillRule: weird.',
         ),
       ),
@@ -325,8 +477,9 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'svgPathData must not be empty.',
+              e is SceneDataException &&
+              e.message ==
+                  'Field layers[0].nodes[0].svgPathData must not be empty.',
         ),
       ),
     );
@@ -345,8 +498,9 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Invalid svgPathData.',
+              e is SceneDataException &&
+              e.message ==
+                  'Field layers[0].nodes[0].svgPathData must be valid SVG path data.',
         ),
       ),
     );
@@ -355,11 +509,11 @@ void main() {
   test('decodeScene rejects invalid colors in 6- and 8-digit forms', () {
     final six = _minimalSceneJson();
     (six['background'] as Map<String, dynamic>)['color'] = '#GGGGGG';
-    expect(() => decodeScene(six), throwsA(isA<SceneJsonFormatException>()));
+    expect(() => decodeScene(six), throwsA(isA<SceneDataException>()));
 
     final eight = _minimalSceneJson();
     (eight['background'] as Map<String, dynamic>)['color'] = '#GGGGGGGG';
-    expect(() => decodeScene(eight), throwsA(isA<SceneJsonFormatException>()));
+    expect(() => decodeScene(eight), throwsA(isA<SceneDataException>()));
   });
 
   test('decodeScene accepts 6-digit colors', () {
@@ -383,7 +537,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field naturalSize must be an object.',
         ),
       ),
@@ -404,9 +558,7 @@ void main() {
       });
 
     final scene = decodeScene(_sceneWithSingleNode(nodeJson));
-    final node =
-        scene.layers.firstWhere((layer) => !layer.isBackground).nodes.single
-            as TextNodeSnapshot;
+    final node = scene.layers.first.nodes.single as TextNodeSnapshot;
     expect(node.align, TextAlign.right);
 
     final invalidAlignJson = _baseNodeJson(id: 't2', type: 'text')
@@ -426,11 +578,40 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Unknown text align: start.',
         ),
       ),
     );
+  });
+
+  test('decodeScene re-derives stale serialized text size on import', () {
+    final nodeJson = _baseNodeJson(id: 't-derived', type: 'text')
+      ..addAll(<String, dynamic>{
+        'text': 'Derived text size',
+        'size': <String, dynamic>{'w': 1, 'h': 1},
+        'fontSize': 24,
+        'color': '#FF000000',
+        'align': 'left',
+        'isBold': false,
+        'isItalic': false,
+        'isUnderline': false,
+      });
+
+    final decoded = decodeScene(_sceneWithSingleNode(nodeJson));
+    final text = decoded.layers.first.nodes.single as TextNodeSnapshot;
+    expect(text.size, isNot(const Size(1, 1)));
+    expect(text.size.width, greaterThan(1));
+    expect(text.size.height, greaterThan(1));
+
+    final encoded = encodeScene(decoded);
+    final layers = encoded['layers'] as List<dynamic>;
+    final layer = layers.single as Map<String, dynamic>;
+    final nodes = layer['nodes'] as List<dynamic>;
+    final encodedText = nodes.single as Map<String, dynamic>;
+    final encodedSize = encodedText['size'] as Map<String, dynamic>;
+    expect(encodedSize['w'], closeTo(text.size.width, 0.001));
+    expect(encodedSize['h'], closeTo(text.size.height, 0.001));
   });
 
   test('decodeScene validates point and optional field types', () {
@@ -446,8 +627,10 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'localPoints must be an object with x/y.',
+              e is SceneDataException &&
+              e.path == 'layers[0].nodes[0].localPoints[0]' &&
+              e.message ==
+                  'layers[0].nodes[0].localPoints[0] must be an object with x/y.',
         ),
       ),
     );
@@ -463,7 +646,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Optional size must be numeric.',
         ),
       ),
@@ -486,7 +669,8 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
+              e.path == 'layers[0].nodes[0].fontFamily' &&
               e.message == 'Field fontFamily must be a string.',
         ),
       ),
@@ -509,7 +693,8 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
+              e.path == 'layers[0].nodes[0].maxWidth' &&
               e.message == 'Field maxWidth must be a number.',
         ),
       ),
@@ -526,7 +711,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field fillRule must be a string.',
         ),
       ),
@@ -541,7 +726,8 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
+              e.path == 'palette.penColors' &&
               e.message == 'Field penColors must be a list.',
         ),
       ),
@@ -554,7 +740,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field color must be a string.',
         ),
       ),
@@ -567,7 +753,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field offsetX must be a number.',
         ),
       ),
@@ -587,7 +773,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field fillColor must be a string.',
         ),
       ),
@@ -597,17 +783,14 @@ void main() {
     (paletteWrong['palette'] as Map<String, dynamic>)['penColors'] = <dynamic>[
       123,
     ];
-    expect(
-      () => decodeScene(paletteWrong),
-      throwsA(isA<SceneJsonFormatException>()),
-    );
+    expect(() => decodeScene(paletteWrong), throwsA(isA<SceneDataException>()));
 
     final gridSizesWrong = _minimalSceneJson();
     (gridSizesWrong['palette'] as Map<String, dynamic>)['gridSizes'] =
         <dynamic>['10'];
     expect(
       () => decodeScene(gridSizesWrong),
-      throwsA(isA<SceneJsonFormatException>()),
+      throwsA(isA<SceneDataException>()),
     );
   });
 
@@ -620,8 +803,8 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Field penColors must not be empty.',
+              e is SceneDataException &&
+              e.message == 'Field palette.penColors must not be empty.',
         ),
       ),
     );
@@ -634,8 +817,8 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Field backgroundColors must not be empty.',
+              e is SceneDataException &&
+              e.message == 'Field palette.backgroundColors must not be empty.',
         ),
       ),
     );
@@ -648,8 +831,8 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Field gridSizes must not be empty.',
+              e is SceneDataException &&
+              e.message == 'Field palette.gridSizes must not be empty.',
         ),
       ),
     );
@@ -663,7 +846,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field schemaVersion must be an int.',
         ),
       ),
@@ -676,7 +859,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field camera must be an object.',
         ),
       ),
@@ -691,7 +874,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field enabled must be a bool.',
         ),
       ),
@@ -700,10 +883,11 @@ void main() {
 
   test('decodeScene accepts integer-valued numeric schemaVersion', () {
     final json = _minimalSceneJson();
-    json['schemaVersion'] = 2.0;
+    json['schemaVersion'] = 5.0;
 
     final scene = decodeScene(json);
-    expect(scene.layers.first.isBackground, isTrue);
+    expect(scene.layers, isEmpty);
+    expect(scene.backgroundLayer, isNotNull);
   });
 
   test('decodeScene rejects non-integer numeric schemaVersion', () {
@@ -714,7 +898,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field schemaVersion must be an int.',
         ),
       ),
@@ -731,12 +915,29 @@ void main() {
         throwsA(
           predicate(
             (e) =>
-                e is SceneJsonFormatException &&
+                e is SceneDataException &&
                 e.message ==
-                    'Unsupported schemaVersion: 1. Expected one of: [2].',
+                    'Unsupported schemaVersion: 1. Expected one of: [5].',
           ),
         ),
       );
+    },
+  );
+
+  test(
+    'decode -> encode -> decode keeps canonical background layer for JSON missing backgroundLayer',
+    () {
+      // INV:INV-SER-CANONICAL-BACKGROUND-LAYER
+      final input = _minimalSceneJson();
+      input.remove('backgroundLayer');
+
+      final decoded = decodeScene(input);
+      final encoded = encodeScene(decoded);
+      final redecoded = decodeScene(encoded);
+
+      expect((encoded['backgroundLayer'] as Map<String, dynamic>)['nodes'], []);
+      expect(redecoded.backgroundLayer.nodes, isEmpty);
+      expect(redecoded.layers, isEmpty);
     },
   );
 
@@ -748,7 +949,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field offsetX must be finite.',
         ),
       ),
@@ -761,7 +962,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field offsetY must be finite.',
         ),
       ),
@@ -780,8 +981,9 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Field opacity must be within [0,1].',
+              e is SceneDataException &&
+              e.message ==
+                  'Field layers[0].nodes[0].opacity must be within [0,1].',
         ),
       ),
     );
@@ -789,8 +991,11 @@ void main() {
 
   test('encodeSceneDocument rejects mutable node opacity outside [0,1]', () {
     final scene = Scene(
-      layers: <Layer>[
-        Layer(nodes: <SceneNode>[_BadOpacityNode(id: 'bad-opacity')]),
+      layers: <ContentLayer>[
+        ContentLayer(
+          id: 'layer-auto-14',
+          nodes: <SceneNode>[_BadOpacityNode(id: 'bad-opacity')],
+        ),
       ],
     );
 
@@ -799,7 +1004,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message ==
                   'Field layers[0].nodes[0].opacity must be within [0,1].',
         ),
@@ -823,13 +1028,17 @@ void main() {
         backgroundColors: <Color>[const Color(0xFF222222)],
         gridSizes: <double>[8, 16],
       ),
-      layers: <Layer>[
-        Layer(
-          isBackground: true,
-          nodes: <SceneNode>[RectNode(id: 'bg-rect', size: const Size(10, 5))],
-        ),
-        Layer(
+      backgroundLayer: BackgroundLayer(
+        nodes: <SceneNode>[RectNode(id: 'bg-rect', size: const Size(10, 5))],
+      ),
+      layers: <ContentLayer>[
+        ContentLayer(
+          id: 'layer-auto-15',
           nodes: <SceneNode>[RectNode(id: 'fg-rect', size: const Size(3, 2))],
+        ),
+        ContentLayer(
+          id: 'layer-auto-16',
+          nodes: <SceneNode>[RectNode(id: 'fg-rect-2', size: const Size(6, 4))],
         ),
       ],
     );
@@ -853,21 +1062,33 @@ void main() {
     expect(palette['backgroundColors'], <String>['#FF222222']);
     expect(palette['gridSizes'], <double>[8, 16]);
 
+    final backgroundLayer = encoded['backgroundLayer'] as Map<String, dynamic>;
+    final backgroundNodes = backgroundLayer['nodes'] as List<dynamic>;
+    expect(backgroundNodes, hasLength(1));
+    expect((backgroundNodes.single as Map<String, dynamic>)['id'], 'bg-rect');
+
     final layers = encoded['layers'] as List<dynamic>;
     expect(layers, hasLength(2));
-    expect((layers[0] as Map<String, dynamic>)['isBackground'], isTrue);
-    expect((layers[1] as Map<String, dynamic>)['isBackground'], isFalse);
+    expect(
+      (layers[0] as Map<String, dynamic>).containsKey('isBackground'),
+      isFalse,
+    );
+    expect(
+      (layers[1] as Map<String, dynamic>).containsKey('isBackground'),
+      isFalse,
+    );
   });
 
   test(
-    'encodeSceneDocument rejects duplicate node ids and multiple background layers',
+    'encodeSceneDocument rejects duplicate node ids across background/content',
     () {
       final duplicateIds = Scene(
-        layers: <Layer>[
-          Layer(
-            nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(1, 1))],
-          ),
-          Layer(
+        backgroundLayer: BackgroundLayer(
+          nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(1, 1))],
+        ),
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-auto-17',
             nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(2, 2))],
           ),
         ],
@@ -877,24 +1098,8 @@ void main() {
         throwsA(
           predicate(
             (e) =>
-                e is SceneJsonFormatException &&
-                e.message ==
-                    'Field layers[1].nodes[0].id must be unique across scene layers.',
-          ),
-        ),
-      );
-
-      final multipleBackground = Scene(
-        layers: <Layer>[Layer(isBackground: true), Layer(isBackground: true)],
-      );
-      expect(
-        () => encodeSceneDocument(multipleBackground),
-        throwsA(
-          predicate(
-            (e) =>
-                e is SceneJsonFormatException &&
-                e.message ==
-                    'Field layers must contain at most one background layer.',
+                e is SceneDataException &&
+                e.message.contains('must be unique across scene layers.'),
           ),
         ),
       );
@@ -915,8 +1120,8 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Field thickness must be > 0.',
+              e is SceneDataException &&
+              e.message == 'Field layers[0].nodes[0].thickness must be > 0.',
         ),
       ),
     );
@@ -936,7 +1141,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field thickness must be finite.',
         ),
       ),
@@ -953,8 +1158,8 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Field strokeWidth must be >= 0.',
+              e is SceneDataException &&
+              e.message == 'Field layers[0].nodes[0].strokeWidth must be >= 0.',
         ),
       ),
     );
@@ -970,7 +1175,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field hitPadding must be finite.',
         ),
       ),
@@ -992,8 +1197,8 @@ void main() {
           throwsA(
             predicate(
               (e) =>
-                  e is SceneJsonFormatException &&
-                  e.message == 'Field cellSize must be > 0.',
+                  e is SceneDataException &&
+                  e.message == 'Field background.grid.cellSize must be > 0.',
             ),
           ),
         );
@@ -1031,7 +1236,7 @@ void main() {
           throwsA(
             predicate(
               (e) =>
-                  e is SceneJsonFormatException &&
+                  e is SceneDataException &&
                   e.message == 'Field cellSize must be finite.',
             ),
           ),
@@ -1052,8 +1257,8 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Field w must be >= 0.',
+              e is SceneDataException &&
+              e.message == 'Field layers[0].nodes[0].size.w must be >= 0.',
         ),
       ),
     );
@@ -1072,7 +1277,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Optional size must be finite.',
         ),
       ),
@@ -1090,8 +1295,9 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Optional size must be non-negative.',
+              e is SceneDataException &&
+              e.message ==
+                  'Field layers[0].nodes[0].naturalSize.w must be >= 0.',
         ),
       ),
     );
@@ -1116,7 +1322,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field maxWidth must be finite.',
         ),
       ),
@@ -1140,8 +1346,8 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Field maxWidth must be > 0.',
+              e is SceneDataException &&
+              e.message == 'Field layers[0].nodes[0].maxWidth must be > 0.',
         ),
       ),
     );
@@ -1156,8 +1362,8 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
-              e.message == 'Items of gridSizes must be > 0.',
+              e is SceneDataException &&
+              e.message == 'Field palette.gridSizes[0] must be > 0.',
         ),
       ),
     );
@@ -1174,7 +1380,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Items of gridSizes must be finite.',
         ),
       ),
@@ -1184,7 +1390,7 @@ void main() {
   test('encodeScene enforces grid and palette contracts', () {
     // INV:INV-SER-JSON-GRID-PALETTE-CONTRACTS
     final invalidGridScene = SceneSnapshot(
-      layers: [LayerSnapshot()],
+      layers: [ContentLayerSnapshot(id: 'layer-auto-4')],
       background: BackgroundSnapshot(
         grid: GridSnapshot(isEnabled: false, cellSize: -12.5),
       ),
@@ -1194,14 +1400,14 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field background.grid.cellSize must be > 0.',
         ),
       ),
     );
 
     final enabledGridScene = SceneSnapshot(
-      layers: [LayerSnapshot()],
+      layers: [ContentLayerSnapshot(id: 'layer-auto-5')],
       background: BackgroundSnapshot(
         grid: GridSnapshot(isEnabled: true, cellSize: 0),
       ),
@@ -1211,7 +1417,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field background.grid.cellSize must be > 0.',
         ),
       ),
@@ -1220,14 +1426,14 @@ void main() {
     expect(
       () => encodeScene(
         SceneSnapshot(
-          layers: [LayerSnapshot()],
+          layers: [ContentLayerSnapshot(id: 'layer-auto-6')],
           palette: ScenePaletteSnapshot(penColors: const []),
         ),
       ),
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field palette.penColors must not be empty.',
         ),
       ),
@@ -1235,14 +1441,14 @@ void main() {
     expect(
       () => encodeScene(
         SceneSnapshot(
-          layers: [LayerSnapshot()],
+          layers: [ContentLayerSnapshot(id: 'layer-auto-7')],
           palette: ScenePaletteSnapshot(backgroundColors: const []),
         ),
       ),
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field palette.backgroundColors must not be empty.',
         ),
       ),
@@ -1250,14 +1456,14 @@ void main() {
     expect(
       () => encodeScene(
         SceneSnapshot(
-          layers: [LayerSnapshot()],
+          layers: [ContentLayerSnapshot(id: 'layer-auto-8')],
           palette: ScenePaletteSnapshot(gridSizes: const []),
         ),
       ),
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field palette.gridSizes must not be empty.',
         ),
       ),
@@ -1266,7 +1472,7 @@ void main() {
 
   test('encodeScene rejects invalid numeric fields', () {
     final cameraNaN = SceneSnapshot(
-      layers: [LayerSnapshot()],
+      layers: [ContentLayerSnapshot(id: 'layer-auto-9')],
       camera: CameraSnapshot(offset: Offset(double.nan, 0)),
     );
     expect(
@@ -1274,7 +1480,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field camera.offset.dx must be finite.',
         ),
       ),
@@ -1282,7 +1488,8 @@ void main() {
 
     final negativeHitPaddingScene = SceneSnapshot(
       layers: [
-        LayerSnapshot(
+        ContentLayerSnapshot(
+          id: 'layer-auto-10',
           nodes: [
             RectNodeSnapshot(
               id: 'r1',
@@ -1299,7 +1506,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field layers[0].nodes[0].hitPadding must be >= 0.',
         ),
       ),
@@ -1307,7 +1514,8 @@ void main() {
 
     final nonPositiveFontSizeScene = SceneSnapshot(
       layers: [
-        LayerSnapshot(
+        ContentLayerSnapshot(
+          id: 'layer-auto-11',
           nodes: [
             TextNodeSnapshot(
               id: 't1',
@@ -1325,7 +1533,7 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message == 'Field layers[0].nodes[0].fontSize must be > 0.',
         ),
       ),
@@ -1333,7 +1541,8 @@ void main() {
 
     final opacityOutOfRangeScene = SceneSnapshot(
       layers: [
-        LayerSnapshot(
+        ContentLayerSnapshot(
+          id: 'layer-auto-12',
           nodes: [
             RectNodeSnapshot(
               id: 'r1',
@@ -1350,12 +1559,130 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is SceneJsonFormatException &&
+              e is SceneDataException &&
               e.message ==
                   'Field layers[0].nodes[0].opacity must be within [0,1].',
         ),
       ),
     );
+  });
+
+  test('decodeScene rejects non-integer instanceRevision', () {
+    final nodeJson = _baseNodeJson(id: 'r-inst-type', type: 'rect')
+      ..addAll(<String, dynamic>{
+        'instanceRevision': 1.5,
+        'size': <String, dynamic>{'w': 10, 'h': 10},
+        'strokeWidth': 0,
+      });
+
+    expect(
+      () => decodeScene(_sceneWithSingleNode(nodeJson)),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.message == 'Field instanceRevision must be an int.',
+        ),
+      ),
+    );
+  });
+
+  test('decodeScene rejects non-numeric instanceRevision', () {
+    final nodeJson = _baseNodeJson(id: 'r-inst-string', type: 'rect')
+      ..addAll(<String, dynamic>{
+        'instanceRevision': 'abc',
+        'size': <String, dynamic>{'w': 10, 'h': 10},
+        'strokeWidth': 0,
+      });
+
+    expect(
+      () => decodeScene(_sceneWithSingleNode(nodeJson)),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidFieldType &&
+              e.message == 'Field instanceRevision must be an int.',
+        ),
+      ),
+    );
+  });
+
+  test('decodeScene rejects out-of-range numeric instanceRevision', () {
+    final nodeJson = _baseNodeJson(id: 'r-inst-huge', type: 'rect')
+      ..addAll(<String, dynamic>{
+        'instanceRevision': 9007199254740992.0,
+        'size': <String, dynamic>{'w': 10, 'h': 10},
+        'strokeWidth': 0,
+      });
+
+    expect(
+      () => decodeScene(_sceneWithSingleNode(nodeJson)),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.message == 'Field instanceRevision must be an int.',
+        ),
+      ),
+    );
+  });
+
+  test('decodeScene accepts integer-valued double instanceRevision', () {
+    final nodeJson = _baseNodeJson(id: 'r-inst-double-int', type: 'rect')
+      ..addAll(<String, dynamic>{
+        'instanceRevision': 3.0,
+        'size': <String, dynamic>{'w': 10, 'h': 10},
+        'strokeWidth': 0,
+      });
+
+    final decoded = decodeScene(_sceneWithSingleNode(nodeJson));
+    final node = decoded.layers.single.nodes.single as RectNodeSnapshot;
+    expect(node.instanceRevision, 3);
+  });
+
+  test('decodeScene rejects negative instanceRevision', () {
+    final nodeJson = _baseNodeJson(id: 'r-inst-negative', type: 'rect')
+      ..addAll(<String, dynamic>{
+        'instanceRevision': -1,
+        'size': <String, dynamic>{'w': 10, 'h': 10},
+        'strokeWidth': 0,
+      });
+
+    expect(
+      () => decodeScene(_sceneWithSingleNode(nodeJson)),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.message ==
+                  'Field layers[0].nodes[0].instanceRevision must be >= 0.',
+        ),
+      ),
+    );
+  });
+
+  test('encodeScene always writes instanceRevision for nodes', () {
+    final encoded = encodeScene(
+      SceneSnapshot(
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
+            id: 'layer-auto-13',
+            nodes: const <NodeSnapshot>[
+              RectNodeSnapshot(id: 'rect-inst', size: Size(10, 10)),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    final layers = encoded['layers'] as List<dynamic>;
+    final layer0 = layers[0] as Map<String, dynamic>;
+    final nodes = layer0['nodes'] as List<dynamic>;
+    final node = nodes[0] as Map<String, dynamic>;
+    expect(node['instanceRevision'], isA<int>());
+    expect(node['instanceRevision'], greaterThanOrEqualTo(1));
   });
 }
 

@@ -1,441 +1,32 @@
-import 'dart:collection';
-import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 
 import '../core/grid_safety_limits.dart';
-import '../core/nodes.dart' show PathFillRule, PathNode;
 import '../core/numeric_clamp.dart';
 import '../core/text_layout.dart';
 import '../core/transform2d.dart';
 import '../public/scene_render_state.dart';
 import '../public/snapshot.dart';
+import 'cache/scene_path_metrics_cache.dart';
+import 'cache/scene_static_layer_cache.dart';
+import 'cache/scene_stroke_path_cache.dart';
+import 'cache/scene_text_layout_cache.dart';
+import 'render_geometry_cache.dart';
 
-typedef ImageResolverV2 = Image? Function(String imageId);
-typedef NodePreviewOffsetResolverV2 = Offset Function(NodeId nodeId);
+export 'cache/scene_path_metrics_cache.dart';
+export 'cache/scene_static_layer_cache.dart';
+export 'cache/scene_stroke_path_cache.dart';
+export 'cache/scene_text_layout_cache.dart';
 
-class SceneStrokePathCacheV2 {
-  SceneStrokePathCacheV2({this.maxEntries = 512})
-    : assert(maxEntries > 0, 'maxEntries must be > 0.');
+typedef ImageResolver = Image? Function(String imageId);
+typedef NodePreviewOffsetResolver = Offset Function(NodeId nodeId);
 
-  final int maxEntries;
-  final LinkedHashMap<NodeId, _StrokePathEntryV2> _entries =
-      LinkedHashMap<NodeId, _StrokePathEntryV2>();
-
-  int _debugBuildCount = 0;
-  int _debugHitCount = 0;
-  int _debugEvictCount = 0;
-
-  @visibleForTesting
-  int get debugBuildCount => _debugBuildCount;
-  @visibleForTesting
-  int get debugHitCount => _debugHitCount;
-  @visibleForTesting
-  int get debugEvictCount => _debugEvictCount;
-  @visibleForTesting
-  int get debugSize => _entries.length;
-
-  void clear() => _entries.clear();
-
-  Path getOrBuild(StrokeNodeSnapshot node) {
-    if (node.points.isEmpty) {
-      return Path();
-    }
-    if (node.points.length == 1) {
-      return Path()
-        ..addOval(Rect.fromCircle(center: node.points.first, radius: 0));
-    }
-
-    final cached = _entries.remove(node.id);
-    if (cached != null && cached.pointsRevision == node.pointsRevision) {
-      _entries[node.id] = cached;
-      _debugHitCount += 1;
-      return cached.path;
-    }
-
-    final path = _buildStrokePath(node.points);
-    _entries[node.id] = _StrokePathEntryV2(
-      path: path,
-      pointsRevision: node.pointsRevision,
-    );
-    _debugBuildCount += 1;
-    _evictIfNeeded();
-    return path;
-  }
-
-  void _evictIfNeeded() {
-    while (_entries.length > maxEntries) {
-      _entries.remove(_entries.keys.first);
-      _debugEvictCount += 1;
-    }
-  }
-}
-
-class _StrokePathEntryV2 {
-  const _StrokePathEntryV2({required this.path, required this.pointsRevision});
-
-  final Path path;
-  final int pointsRevision;
-}
-
-class SceneTextLayoutCacheV2 {
-  SceneTextLayoutCacheV2({this.maxEntries = 256})
-    : assert(maxEntries > 0, 'maxEntries must be > 0.');
-
-  final int maxEntries;
-  final LinkedHashMap<_TextLayoutKeyV2, TextPainter> _entries =
-      LinkedHashMap<_TextLayoutKeyV2, TextPainter>();
-
-  int _debugBuildCount = 0;
-  int _debugHitCount = 0;
-  int _debugEvictCount = 0;
-
-  @visibleForTesting
-  int get debugBuildCount => _debugBuildCount;
-  @visibleForTesting
-  int get debugHitCount => _debugHitCount;
-  @visibleForTesting
-  int get debugEvictCount => _debugEvictCount;
-  @visibleForTesting
-  int get debugSize => _entries.length;
-
-  void clear() => _entries.clear();
-
-  TextPainter getOrBuild({
-    required TextNodeSnapshot node,
-    required TextStyle textStyle,
-    required double? maxWidth,
-    TextDirection textDirection = TextDirection.ltr,
-  }) {
-    final safeFontSize = normalizeTextLayoutFontSize(node.fontSize);
-    final safeLineHeight = normalizeTextLayoutLineHeight(node.lineHeight);
-    final key = _TextLayoutKeyV2(
-      text: node.text,
-      fontSize: safeFontSize,
-      fontFamily: node.fontFamily,
-      isBold: node.isBold,
-      isItalic: node.isItalic,
-      isUnderline: node.isUnderline,
-      align: node.align,
-      lineHeight: safeLineHeight,
-      maxWidth: normalizeTextLayoutMaxWidth(maxWidth),
-      color: textStyle.color ?? const Color(0xFF000000),
-      textDirection: textDirection,
-    );
-
-    final cached = _entries.remove(key);
-    if (cached != null) {
-      _entries[key] = cached;
-      _debugHitCount += 1;
-      return cached;
-    }
-
-    final textPainter = TextPainter(
-      text: TextSpan(text: node.text, style: textStyle),
-      textAlign: node.align,
-      textDirection: textDirection,
-      maxLines: null,
-    );
-    if (key.maxWidth == null) {
-      textPainter.layout();
-    } else {
-      textPainter.layout(maxWidth: key.maxWidth!);
-    }
-    _entries[key] = textPainter;
-    _debugBuildCount += 1;
-    _evictIfNeeded();
-    return textPainter;
-  }
-
-  void _evictIfNeeded() {
-    while (_entries.length > maxEntries) {
-      _entries.remove(_entries.keys.first);
-      _debugEvictCount += 1;
-    }
-  }
-}
-
-class _TextLayoutKeyV2 {
-  const _TextLayoutKeyV2({
-    required this.text,
-    required this.fontSize,
-    required this.fontFamily,
-    required this.isBold,
-    required this.isItalic,
-    required this.isUnderline,
-    required this.align,
-    required this.lineHeight,
-    required this.maxWidth,
-    required this.color,
-    required this.textDirection,
-  });
-
-  final String text;
-  final double fontSize;
-  final String? fontFamily;
-  final bool isBold;
-  final bool isItalic;
-  final bool isUnderline;
-  final TextAlign align;
-  final double? lineHeight;
-  final double? maxWidth;
-  final Color color;
-  final TextDirection textDirection;
-
-  @override
-  bool operator ==(Object other) {
-    return other is _TextLayoutKeyV2 &&
-        other.text == text &&
-        other.fontSize == fontSize &&
-        other.fontFamily == fontFamily &&
-        other.isBold == isBold &&
-        other.isItalic == isItalic &&
-        other.isUnderline == isUnderline &&
-        other.align == align &&
-        other.lineHeight == lineHeight &&
-        other.maxWidth == maxWidth &&
-        other.color == color &&
-        other.textDirection == textDirection;
-  }
-
-  @override
-  int get hashCode => Object.hash(
-    text,
-    fontSize,
-    fontFamily,
-    isBold,
-    isItalic,
-    isUnderline,
-    align,
-    lineHeight,
-    maxWidth,
-    color,
-    textDirection,
-  );
-}
-
-class ScenePathMetricsCacheV2 {
-  ScenePathMetricsCacheV2({this.maxEntries = 512})
-    : assert(maxEntries > 0, 'maxEntries must be > 0.');
-
-  final int maxEntries;
-  final LinkedHashMap<NodeId, _PathMetricsEntryV2> _entries =
-      LinkedHashMap<NodeId, _PathMetricsEntryV2>();
-
-  int _debugBuildCount = 0;
-  int _debugHitCount = 0;
-  int _debugEvictCount = 0;
-
-  @visibleForTesting
-  int get debugBuildCount => _debugBuildCount;
-  @visibleForTesting
-  int get debugHitCount => _debugHitCount;
-  @visibleForTesting
-  int get debugEvictCount => _debugEvictCount;
-  @visibleForTesting
-  int get debugSize => _entries.length;
-
-  void clear() => _entries.clear();
-
-  PathSelectionContoursV2 getOrBuild({
-    required PathNodeSnapshot node,
-    required Path localPath,
-  }) {
-    final cached = _entries.remove(node.id);
-    if (cached != null &&
-        cached.svgPathData == node.svgPathData &&
-        cached.fillRule == node.fillRule) {
-      _entries[node.id] = cached;
-      _debugHitCount += 1;
-      return cached.contours;
-    }
-
-    final fillType = _fillTypeFromSnapshot(node.fillRule);
-    Path? closedContours;
-    final openContours = <Path>[];
-    for (final metric in localPath.computeMetrics()) {
-      final contour = metric.extractPath(
-        0,
-        metric.length,
-        startWithMoveTo: true,
-      );
-      contour.fillType = fillType;
-      if (metric.isClosed) {
-        contour.close();
-        closedContours ??= Path()..fillType = fillType;
-        closedContours.addPath(contour, Offset.zero);
-      } else {
-        openContours.add(contour);
-      }
-    }
-
-    final contours = PathSelectionContoursV2(
-      closedContours: closedContours,
-      openContours: openContours,
-    );
-    _entries[node.id] = _PathMetricsEntryV2(
-      svgPathData: node.svgPathData,
-      fillRule: node.fillRule,
-      contours: contours,
-    );
-    _debugBuildCount += 1;
-    _evictIfNeeded();
-    return contours;
-  }
-
-  void _evictIfNeeded() {
-    while (_entries.length > maxEntries) {
-      _entries.remove(_entries.keys.first);
-      _debugEvictCount += 1;
-    }
-  }
-}
-
-class _PathMetricsEntryV2 {
-  const _PathMetricsEntryV2({
-    required this.svgPathData,
-    required this.fillRule,
-    required this.contours,
-  });
-
-  final String svgPathData;
-  final V2PathFillRule fillRule;
-  final PathSelectionContoursV2 contours;
-}
-
-class PathSelectionContoursV2 {
-  const PathSelectionContoursV2({
-    required this.closedContours,
-    required this.openContours,
-  });
-
-  final Path? closedContours;
-  final List<Path> openContours;
-}
-
-class SceneStaticLayerCacheV2 {
-  _StaticLayerKeyV2? _key;
-  Picture? _gridPicture;
-
-  int _debugBuildCount = 0;
-  int _debugDisposeCount = 0;
-
-  @visibleForTesting
-  int get debugBuildCount => _debugBuildCount;
-  @visibleForTesting
-  int get debugDisposeCount => _debugDisposeCount;
-  @visibleForTesting
-  int? get debugKeyHashCode => _key?.hashCode;
-
-  void clear() {
-    _disposeGridPictureIfNeeded();
-    _key = null;
-  }
-
-  void dispose() => clear();
-
-  void draw(
-    Canvas canvas,
-    Size size, {
-    required BackgroundSnapshot background,
-    required Offset cameraOffset,
-    required double gridStrokeWidth,
-  }) {
-    _drawBackground(canvas, size, background.color);
-
-    final safeOffset = sanitizeFiniteOffset(cameraOffset);
-    final safeGridStrokeWidth = clampNonNegativeFinite(gridStrokeWidth);
-    final grid = background.grid;
-    final enabled = _isGridDrawable(
-      grid,
-      size: size,
-      cameraOffset: Offset.zero,
-    );
-    final cellSize = enabled ? grid.cellSize : 0.0;
-    final key = _StaticLayerKeyV2(
-      size: size,
-      gridEnabled: enabled,
-      gridCellSize: cellSize,
-      gridColor: grid.color,
-      gridStrokeWidth: safeGridStrokeWidth,
-    );
-
-    if (_gridPicture == null || _key != key) {
-      _disposeGridPictureIfNeeded();
-      _key = key;
-      _gridPicture = _recordGridPicture(size, grid, safeGridStrokeWidth);
-      _debugBuildCount += 1;
-    }
-
-    if (!_key!.gridEnabled) {
-      return;
-    }
-    final shift = _gridShiftForCameraOffset(safeOffset, _key!.gridCellSize);
-    canvas.save();
-    canvas.clipRect(Offset.zero & size);
-    canvas.translate(shift.dx, shift.dy);
-    canvas.drawPicture(_gridPicture!);
-    canvas.restore();
-  }
-
-  Picture _recordGridPicture(
-    Size size,
-    GridSnapshot grid,
-    double gridStrokeWidth,
-  ) {
-    final recorder = PictureRecorder();
-    final canvas = Canvas(recorder);
-    _drawGrid(canvas, size, grid, Offset.zero, gridStrokeWidth);
-    return recorder.endRecording();
-  }
-
-  void _disposeGridPictureIfNeeded() {
-    final picture = _gridPicture;
-    if (picture == null) {
-      return;
-    }
-    _gridPicture = null;
-    picture.dispose();
-    _debugDisposeCount += 1;
-  }
-}
-
-class _StaticLayerKeyV2 {
-  const _StaticLayerKeyV2({
-    required this.size,
-    required this.gridEnabled,
-    required this.gridCellSize,
-    required this.gridColor,
-    required this.gridStrokeWidth,
-  });
-
-  final Size size;
-  final bool gridEnabled;
-  final double gridCellSize;
-  final Color gridColor;
-  final double gridStrokeWidth;
-
-  @override
-  bool operator ==(Object other) {
-    return other is _StaticLayerKeyV2 &&
-        other.size == size &&
-        other.gridEnabled == gridEnabled &&
-        other.gridCellSize == gridCellSize &&
-        other.gridColor == gridColor &&
-        other.gridStrokeWidth == gridStrokeWidth;
-  }
-
-  @override
-  int get hashCode =>
-      Object.hash(size, gridEnabled, gridCellSize, gridColor, gridStrokeWidth);
-}
-
-class ScenePainterV2 extends CustomPainter {
+class ScenePainter extends CustomPainter {
   static const double _cullPadding = 1.0;
 
-  ScenePainterV2({
+  ScenePainter({
     required this.controller,
     required this.imageResolver,
     this.nodePreviewOffsetResolver,
@@ -443,25 +34,28 @@ class ScenePainterV2 extends CustomPainter {
     this.textLayoutCache,
     this.strokePathCache,
     this.pathMetricsCache,
+    RenderGeometryCache? geometryCache,
     this.selectionRect,
     this.selectionColor = const Color(0xFF1565C0),
     this.selectionStrokeWidth = 1,
     this.gridStrokeWidth = 1,
     this.textDirection = TextDirection.ltr,
-  }) : super(repaint: controller);
+  }) : _geometryCache = geometryCache ?? RenderGeometryCache(),
+       super(repaint: controller);
 
   final SceneRenderState controller;
-  final ImageResolverV2 imageResolver;
-  final NodePreviewOffsetResolverV2? nodePreviewOffsetResolver;
-  final SceneStaticLayerCacheV2? staticLayerCache;
-  final SceneTextLayoutCacheV2? textLayoutCache;
-  final SceneStrokePathCacheV2? strokePathCache;
-  final ScenePathMetricsCacheV2? pathMetricsCache;
+  final ImageResolver imageResolver;
+  final NodePreviewOffsetResolver? nodePreviewOffsetResolver;
+  final SceneStaticLayerCache? staticLayerCache;
+  final SceneTextLayoutCache? textLayoutCache;
+  final SceneStrokePathCache? strokePathCache;
+  final ScenePathMetricsCache? pathMetricsCache;
   final Rect? selectionRect;
   final Color selectionColor;
   final double selectionStrokeWidth;
   final double gridStrokeWidth;
   final TextDirection textDirection;
+  final RenderGeometryCache _geometryCache;
 
   final Float64List _transformBuffer = Float64List(16);
 
@@ -498,21 +92,23 @@ class ScenePainterV2 extends CustomPainter {
     ).inflate(_cullPadding);
 
     final selectedNodes = <NodeSnapshot>[];
+    _drawVisibleNodes(
+      canvas: canvas,
+      nodes: snapshot.backgroundLayer.nodes,
+      cameraOffset: cameraOffset,
+      viewRect: viewRect,
+      selectedIds: selectedIds,
+      selectedNodes: selectedNodes,
+    );
     for (final layer in snapshot.layers) {
-      for (final node in layer.nodes) {
-        if (!node.isVisible) {
-          continue;
-        }
-        final previewDelta = _nodePreviewOffset(node.id);
-        final bounds = _nodeBoundsWorld(node, previewDelta: previewDelta);
-        if (!_isFiniteRect(bounds) || !viewRect.overlaps(bounds)) {
-          continue;
-        }
-        _drawNode(canvas, node, cameraOffset, previewDelta: previewDelta);
-        if (selectedIds.contains(node.id)) {
-          selectedNodes.add(node);
-        }
-      }
+      _drawVisibleNodes(
+        canvas: canvas,
+        nodes: layer.nodes,
+        cameraOffset: cameraOffset,
+        viewRect: viewRect,
+        selectedIds: selectedIds,
+        selectedNodes: selectedNodes,
+      );
     }
 
     _drawSelection(
@@ -522,6 +118,30 @@ class ScenePainterV2 extends CustomPainter {
       selectionRect,
       clampNonNegativeFinite(selectionStrokeWidth),
     );
+  }
+
+  void _drawVisibleNodes({
+    required Canvas canvas,
+    required Iterable<NodeSnapshot> nodes,
+    required Offset cameraOffset,
+    required Rect viewRect,
+    required Set<NodeId> selectedIds,
+    required List<NodeSnapshot> selectedNodes,
+  }) {
+    for (final node in nodes) {
+      if (!node.isVisible) {
+        continue;
+      }
+      final previewDelta = _nodePreviewOffset(node.id);
+      final bounds = _nodeBoundsWorld(node, previewDelta: previewDelta);
+      if (!_isFiniteRect(bounds) || !viewRect.overlaps(bounds)) {
+        continue;
+      }
+      _drawNode(canvas, node, cameraOffset, previewDelta: previewDelta);
+      if (selectedIds.contains(node.id)) {
+        selectedNodes.add(node);
+      }
+    }
   }
 
   void _drawSelection(
@@ -578,40 +198,17 @@ class ScenePainterV2 extends CustomPainter {
     }
     switch (node) {
       case ImageNodeSnapshot image:
-        _drawBoxSelection(
+        _drawWorldBoundsSelection(
           canvas,
-          image.transform,
+          image,
           cameraOffset,
-          image.size,
           color,
           haloWidth,
-          baseStrokeWidth: 0,
-          clearFill: true,
         );
       case TextNodeSnapshot text:
-        _drawBoxSelection(
-          canvas,
-          text.transform,
-          cameraOffset,
-          text.size,
-          color,
-          haloWidth,
-          baseStrokeWidth: 0,
-          clearFill: true,
-        );
+        _drawWorldBoundsSelection(canvas, text, cameraOffset, color, haloWidth);
       case RectNodeSnapshot rect:
-        final safeStrokeWidth = clampNonNegativeFinite(rect.strokeWidth);
-        final hasStroke = rect.strokeColor != null && safeStrokeWidth > 0;
-        _drawBoxSelection(
-          canvas,
-          rect.transform,
-          cameraOffset,
-          rect.size,
-          color,
-          haloWidth,
-          baseStrokeWidth: hasStroke ? safeStrokeWidth : 0,
-          clearFill: true,
-        );
+        _drawWorldBoundsSelection(canvas, rect, cameraOffset, color, haloWidth);
       case LineNodeSnapshot line:
         if (!line.transform.isFinite ||
             !_isFiniteOffset(line.start) ||
@@ -686,8 +283,7 @@ class ScenePainterV2 extends CustomPainter {
         if (!pathNode.transform.isFinite) {
           return;
         }
-        final pathNodeModel = _buildPathNode(pathNode);
-        final localPath = pathNodeModel.buildLocalPath(copy: false);
+        final localPath = _geometryCache.get(pathNode).localPath;
         if (localPath == null) {
           return;
         }
@@ -744,7 +340,7 @@ class ScenePainterV2 extends CustomPainter {
     }
   }
 
-  PathSelectionContoursV2 _buildPathSelectionContours({
+  PathSelectionContours _buildPathSelectionContours({
     required PathNodeSnapshot pathNode,
     required Path localPath,
   }) {
@@ -766,36 +362,25 @@ class ScenePainterV2 extends CustomPainter {
         openContours.add(contour);
       }
     }
-    return PathSelectionContoursV2(
+    return PathSelectionContours(
       closedContours: closedContours,
       openContours: openContours,
     );
   }
 
-  void _drawBoxSelection(
+  void _drawWorldBoundsSelection(
     Canvas canvas,
-    Transform2D nodeTransform,
+    NodeSnapshot node,
     Offset cameraOffset,
-    Size size,
     Color color,
-    double haloWidth, {
-    required double baseStrokeWidth,
-    required bool clearFill,
-  }) {
-    if (!nodeTransform.isFinite) {
+    double haloWidth,
+  ) {
+    final worldBounds = _nodeBoundsWorld(node, previewDelta: Offset.zero);
+    if (!_isFiniteRect(worldBounds)) {
       return;
     }
-    canvas.save();
-    canvas.transform(_toViewTransform(nodeTransform, cameraOffset));
-    _drawRectHalo(
-      canvas,
-      _centerRect(size),
-      color,
-      clampNonNegativeFinite(haloWidth),
-      baseStrokeWidth: clampNonNegativeFinite(baseStrokeWidth),
-      clearFill: clearFill,
-    );
-    canvas.restore();
+    final viewRect = worldBounds.shift(-cameraOffset);
+    _drawRectHalo(canvas, viewRect, color, haloWidth, clearFill: true);
   }
 
   Paint _haloPaint(
@@ -841,30 +426,20 @@ class ScenePainterV2 extends CustomPainter {
     Rect rect,
     Color color,
     double haloWidth, {
-    required double baseStrokeWidth,
     required bool clearFill,
   }) {
     canvas.saveLayer(null, Paint());
     final safeHaloWidth = clampNonNegativeFinite(haloWidth);
-    final safeBaseStrokeWidth = clampNonNegativeFinite(baseStrokeWidth);
     canvas.drawRect(
       rect,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = clampNonNegativeFinite(
-          safeBaseStrokeWidth + safeHaloWidth * 2,
-        )
+        ..strokeWidth = clampNonNegativeFinite(safeHaloWidth * 2)
         ..color = color,
     );
     final clearPaint = Paint()..blendMode = BlendMode.clear;
     if (clearFill) {
       clearPaint.style = PaintingStyle.fill;
-      canvas.drawRect(rect, clearPaint);
-    }
-    if (safeBaseStrokeWidth > 0) {
-      clearPaint
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = safeBaseStrokeWidth;
       canvas.drawRect(rect, clearPaint);
     }
     canvas.restore();
@@ -1144,14 +719,9 @@ class ScenePainterV2 extends CustomPainter {
       return;
     }
 
-    final localPath = _buildPathNode(node).buildLocalPath(copy: false);
+    final localPath = _geometryCache.get(node).localPath;
     if (localPath == null) {
       return;
-    }
-    localPath.fillType = _fillTypeFromSnapshot(node.fillRule);
-
-    if (pathMetricsCache != null) {
-      pathMetricsCache!.getOrBuild(node: node, localPath: localPath);
     }
 
     canvas.save();
@@ -1180,69 +750,13 @@ class ScenePainterV2 extends CustomPainter {
   }
 
   Rect _nodeBoundsWorld(NodeSnapshot node, {required Offset previewDelta}) {
-    if (!node.transform.isFinite) {
-      return Rect.zero;
-    }
-
-    late final Rect bounds;
-    switch (node) {
-      case RectNodeSnapshot rectNode:
-        bounds = node.transform.applyToRect(_centerRect(rectNode.size));
-      case ImageNodeSnapshot imageNode:
-        bounds = node.transform.applyToRect(_centerRect(imageNode.size));
-      case TextNodeSnapshot textNode:
-        bounds = node.transform.applyToRect(_centerRect(textNode.size));
-      case LineNodeSnapshot lineNode:
-        final local = Rect.fromPoints(
-          lineNode.start,
-          lineNode.end,
-        ).inflate(clampNonNegativeFinite(lineNode.thickness) / 2);
-        bounds = node.transform.applyToRect(local);
-      case StrokeNodeSnapshot strokeNode:
-        if (strokeNode.points.isEmpty) {
-          bounds = Rect.zero;
-          break;
-        }
-        final local = _aabbFromPoints(
-          strokeNode.points,
-        ).inflate(clampNonNegativeFinite(strokeNode.thickness) / 2);
-        bounds = node.transform.applyToRect(local);
-      case PathNodeSnapshot pathNode:
-        final localPath = _buildPathNode(pathNode).buildLocalPath(copy: false);
-        if (localPath == null) {
-          bounds = Rect.zero;
-          break;
-        }
-        bounds = node.transform.applyToRect(localPath.getBounds());
-    }
-
+    final bounds = _geometryCache.get(node).worldBounds;
     if (previewDelta == Offset.zero) return bounds;
     return bounds.shift(previewDelta);
   }
 
   Offset _nodePreviewOffset(NodeId nodeId) {
     return nodePreviewOffsetResolver?.call(nodeId) ?? Offset.zero;
-  }
-
-  PathNode _buildPathNode(PathNodeSnapshot snapshot) {
-    return PathNode(
-      id: snapshot.id,
-      svgPathData: snapshot.svgPathData,
-      fillColor: snapshot.fillColor,
-      strokeColor: snapshot.strokeColor,
-      strokeWidth: snapshot.strokeWidth,
-      fillRule: snapshot.fillRule == V2PathFillRule.evenOdd
-          ? PathFillRule.evenOdd
-          : PathFillRule.nonZero,
-      transform: snapshot.transform,
-      opacity: snapshot.opacity,
-      hitPadding: snapshot.hitPadding,
-      isVisible: snapshot.isVisible,
-      isSelectable: snapshot.isSelectable,
-      isLocked: snapshot.isLocked,
-      isDeletable: snapshot.isDeletable,
-      isTransformable: snapshot.isTransformable,
-    );
   }
 
   Float64List _toViewTransform(Transform2D transform, Offset cameraOffset) {
@@ -1266,7 +780,7 @@ class ScenePainterV2 extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant ScenePainterV2 oldDelegate) {
+  bool shouldRepaint(covariant ScenePainter oldDelegate) {
     return oldDelegate.controller != controller ||
         oldDelegate.imageResolver != imageResolver ||
         oldDelegate.nodePreviewOffsetResolver != nodePreviewOffsetResolver ||
@@ -1372,19 +886,6 @@ double _gridStart(double offset, double cell) {
   return rem > 0 ? rem - cell : rem;
 }
 
-Offset _gridShiftForCameraOffset(Offset cameraOffset, double cellSize) {
-  if (!_isFiniteOffset(cameraOffset)) {
-    return Offset.zero;
-  }
-  if (!cellSize.isFinite || cellSize <= 0) {
-    return Offset.zero;
-  }
-  return Offset(
-    _gridStart(-cameraOffset.dx, cellSize),
-    _gridStart(-cameraOffset.dy, cellSize),
-  );
-}
-
 Rect _centerRect(Size size) {
   final safe = clampNonNegativeSizeFinite(size);
   return Rect.fromCenter(
@@ -1402,21 +903,6 @@ Rect _normalizeRect(Rect rect) {
   return Rect.fromLTRB(left, top, right, bottom);
 }
 
-Rect _aabbFromPoints(List<Offset> points) {
-  var minX = points.first.dx;
-  var minY = points.first.dy;
-  var maxX = minX;
-  var maxY = minY;
-  for (var i = 1; i < points.length; i++) {
-    final point = points[i];
-    minX = math.min(minX, point.dx);
-    minY = math.min(minY, point.dy);
-    maxX = math.max(maxX, point.dx);
-    maxY = math.max(maxY, point.dy);
-  }
-  return Rect.fromLTRB(minX, minY, maxX, maxY);
-}
-
 Path _buildStrokePath(List<Offset> points) {
   final path = Path()..fillType = PathFillType.nonZero;
   final first = points.first;
@@ -1428,8 +914,8 @@ Path _buildStrokePath(List<Offset> points) {
   return path;
 }
 
-PathFillType _fillTypeFromSnapshot(V2PathFillRule rule) {
-  return rule == V2PathFillRule.evenOdd
+PathFillType _fillTypeFromSnapshot(PathFillRule rule) {
+  return rule == PathFillRule.evenOdd
       ? PathFillType.evenOdd
       : PathFillType.nonZero;
 }

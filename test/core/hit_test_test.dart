@@ -6,6 +6,8 @@ import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/core/transform2d.dart';
 
+// INV:INV-G-LAYER-Z-ORDER-BY-LIST
+
 void main() {
   test('primitive hit helpers work for rect/line/stroke', () {
     expect(
@@ -183,7 +185,8 @@ void main() {
       strokeWidth: 2,
       transform: const Transform2D(a: 0, b: 0, c: 0, d: 0, tx: 0, ty: 0),
     );
-    expect(hitTestNode(Offset.zero, singular), isFalse);
+    expect(hitTestNode(Offset.zero, singular), isTrue);
+    expect(hitTestNode(const Offset(10, 0), singular), isFalse);
 
     final shortPath = PathNode(
       id: 'p5',
@@ -237,12 +240,12 @@ void main() {
         ..position = const Offset(10, 10);
 
       final scene = Scene(
-        layers: <Layer>[
-          Layer(
-            isBackground: true,
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-auto-0',
             nodes: <SceneNode>[RectNode(id: 'bg', size: const Size(200, 200))],
           ),
-          Layer(nodes: <SceneNode>[bottom, top]),
+          ContentLayer(id: 'layer-auto-1', nodes: <SceneNode>[bottom, top]),
         ],
       );
 

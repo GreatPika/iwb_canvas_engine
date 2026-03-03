@@ -1,86 +1,129 @@
 # iwb_canvas_engine API Guide
 
-This guide is a complete, implementation-aligned reference for integrating `iwb_canvas_engine` (`3.0.0`) in Flutter apps.
-It is designed for both human developers and coding agents.
+This document is the canonical integration reference for the current mainline.
+It describes the supported public API, the runtime contracts that matter in
+production, and the migration expectations for the `5.x` line.
 
-## 1. Package purpose and boundaries
+## 1. Package boundary
 
 `iwb_canvas_engine` provides:
 
-- Scene model (`SceneSnapshot`, layers, nodes)
-- Interactive runtime (`SceneController`, `SceneView`)
-- Input handling (move/select/draw tools)
-- JSON import/export (`schemaVersion = 2`)
+- an immutable scene model
+- a Flutter runtime controller and view
+- interactive input handling for move/select/draw flows
+- JSON import/export for scene snapshots
 
 `iwb_canvas_engine` does not provide:
 
-- Application UI shell (toolbars, side panels, dialogs)
-- Undo/redo history storage
-- Network/storage backends
+- product UI such as toolbars, dialogs, or side panels
+- app-level undo/redo storage
+- persistence, sync, or backend collaboration
 
-## 2. Entrypoints and aliases
+Current public contract:
 
-Recommended import:
+- package version: `5.0.0`
+- single supported import:
 
 ```dart
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 ```
 
-Runtime aliases exposed publicly:
+- current JSON write version: `schemaVersion = 5`
+- current JSON read set: `{5}`
 
-- `SceneController` is a typedef alias of `SceneControllerInteractiveV2`
-- `SceneView` is a typedef alias of `SceneViewInteractiveV2`
+Do not import from `package:iwb_canvas_engine/src/**`.
 
-## 3. Public API map
+## 2. Public surface at a glance
 
 `iwb_canvas_engine.dart` exports:
 
-- Public immutable model contracts:
-  - `SceneSnapshot`, `LayerSnapshot`, `NodeSnapshot` variants
+- scene model:
+  - `SceneSnapshot`
+  - `BackgroundLayerSnapshot`
+  - `ContentLayerSnapshot`
+  - `NodeSnapshot` variants
+- write contracts:
   - `NodeSpec` variants
   - `NodePatch` variants
-  - `PatchField<T>` and `PatchFieldState`
-- Runtime:
-  - `SceneController`, `SceneView`
-  - `SceneWriteTxn`, `SceneRenderState`
-- Input/event contracts:
-  - `CanvasMode`, `DrawTool`
-  - `PointerSample`, `PointerSignal`, `PointerInputSettings`
-  - `ActionCommitted`, `ActionType`, `EditTextRequested`
-- Serialization:
-  - `encodeSceneToJson`, `decodeSceneFromJson`
-  - `encodeScene`, `decodeScene`
-  - `schemaVersionWrite`, `schemaVersionsRead`
-  - `SceneJsonFormatException`
-- Rendering support:
-  - `ImageResolverV2`
-  - `SceneStaticLayerCacheV2`, `SceneTextLayoutCacheV2`, `SceneStrokePathCacheV2`, `ScenePathMetricsCacheV2`
+  - `PatchField<T>`
+  - `PatchFieldState`
+  - `SceneWriteTxn`
+  - `ClearSceneResult`
+- runtime:
+  - `SceneController`
+  - `SceneControllerInteractive`
+  - `SceneView`
+  - `SceneViewInteractive`
+  - `SceneRenderState`
+- input and interaction:
+  - `CanvasMode`
+  - `DrawTool`
+  - `CanvasPointerInput`
+  - `CanvasPointerPhase`
+  - `PointerInputSettings`
+  - `MoveCommitDeltaResolver`
+- events:
+  - `ActionCommitted`
+  - `ActionCommittedDelta`
+  - `ActionType`
+  - `EditTextRequested`
+- utilities:
+  - `Transform2D`
+  - `SceneBuilder`
+- serialization:
+  - `encodeScene`
+  - `encodeSceneToJson`
+  - `decodeScene`
+  - `decodeSceneFromJson`
+  - `schemaVersionWrite`
+  - `schemaVersionsRead`
+  - `SceneDataException`
 
-## 4. Scene data model
+Public aliases:
 
-### 4.1 Root snapshot
+- `SceneController` is a typedef alias of `SceneControllerInteractive`
+- `SceneView` is a typedef alias of `SceneViewInteractive`
 
-`SceneSnapshot` contains:
+## 3. Scene model
 
-- `layers: List<LayerSnapshot>`
-- `camera: CameraSnapshot` (`offset`)
-- `background: BackgroundSnapshot` (`color`, `grid`)
-- `palette: ScenePaletteSnapshot` (`penColors`, `backgroundColors`, `gridSizes`)
+### 3.1 Root snapshot
 
-### 4.2 Layer
+`SceneSnapshot` is the immutable document boundary returned by the runtime and
+serialization APIs.
 
-`LayerSnapshot` contains:
+Fields:
 
-- `nodes: List<NodeSnapshot>`
-- `isBackground: bool`
+- `backgroundLayer: BackgroundLayerSnapshot`
+- `layers: List<ContentLayerSnapshot>`
+- `camera: CameraSnapshot`
+- `background: BackgroundSnapshot`
+- `palette: ScenePaletteSnapshot`
 
-Background layer constraints are canonicalized/validated by runtime and decoder.
+Constructor defaults:
 
-### 4.3 Node snapshots
+- omitting `backgroundLayer` creates an empty dedicated background layer
+- omitting `layers` creates no content layers
+- camera, background, and palette default to safe built-in values
 
-`NodeSnapshot` base fields:
+### 3.2 Layer model
+
+Layer semantics are explicit:
+
+- `backgroundLayer` is always a dedicated layer rendered below content
+- `layers` contains content layers only
+- each content layer has a stable `LayerId`
+- z-order is defined only by list order in `layers`
+- `LayerId` is identity, not ordering
+
+Write APIs target content layers only. The background layer is never addressed
+through `LayerId`.
+
+### 3.3 Node snapshots
+
+Base `NodeSnapshot` fields:
 
 - `id`
+- `instanceRevision`
 - `transform`
 - `opacity`
 - `hitPadding`
@@ -90,7 +133,7 @@ Background layer constraints are canonicalized/validated by runtime and decoder.
 - `isDeletable`
 - `isTransformable`
 
-Variants:
+Public variants:
 
 - `ImageNodeSnapshot`
 - `TextNodeSnapshot`
@@ -99,24 +142,31 @@ Variants:
 - `RectNodeSnapshot`
 - `PathNodeSnapshot`
 
-`StrokeNodeSnapshot` runtime fields:
+Important runtime details:
 
-- `pointsRevision` is a non-negative monotonic geometry revision used by
-  render caches for O(1) stroke-path freshness checks.
-- `pointsRevision` is runtime metadata and is not serialized into JSON.
+- `StrokeNodeSnapshot.pointsRevision` is runtime metadata used by render caches
+- `pointsRevision` is not serialized into JSON
+- `instanceRevision` is part of runtime node identity and is serialized
+- `PathNodeSnapshot` uses `PathFillRule`
 
-Path fill rule enum:
+### 3.4 Text sizing contract
 
-- `V2PathFillRule.nonZero`
-- `V2PathFillRule.evenOdd`
+`TextNode.size` is derived metadata.
 
-## 5. Write model: `NodeSpec`, `NodePatch`, `PatchField`
+- `TextNodeSpec` does not expose writable `size`
+- `TextNodePatch` does not expose writable `size`
+- import/decode and layout-affecting text patches re-derive the box size inside
+  the engine
 
-### 5.1 Create nodes (`NodeSpec`)
+If you compare serialized text sizes across platforms, use semantic assertions
+or numeric tolerance. Font metrics can differ slightly by platform and font
+engine.
 
-`SceneController.addNode(...)` accepts `NodeSpec` (preferred) and returns created node id.
+## 4. Creating and updating nodes
 
-Node spec variants:
+### 4.1 `NodeSpec`
+
+Use `NodeSpec` variants for creation:
 
 - `ImageNodeSpec`
 - `TextNodeSpec`
@@ -125,18 +175,23 @@ Node spec variants:
 - `RectNodeSpec`
 - `PathNodeSpec`
 
-`NodeSpec.id` is optional; controller can generate ids.
+Shared base fields:
 
-Validation notes:
+- optional `id`
+- `transform`
+- `opacity`
+- `hitPadding`
+- visibility / selection / lock policy flags
 
-- `addNode(...)` validates incoming `NodeSpec` values strictly and throws `ArgumentError` for malformed numeric/geometry input (including non-finite `transform`, negative `hitPadding`, invalid geometry fields, invalid `svgPathData`, and `opacity` outside `[0,1]`).
-- `TextNodeSpec` no longer accepts `size`; text node size is derived from text layout (`text/fontSize/fontFamily/style/lineHeight/maxWidth`) inside the engine.
+Key rules:
 
-### 5.2 Patch nodes (`NodePatch`)
+- `SceneController.addNode(...)` accepts only `NodeSpec`
+- `NodeSpec.id` is optional; the controller can generate ids
+- malformed values fail fast with `ArgumentError`
 
-`SceneController.patchNode(...)` accepts `NodePatch` and returns `bool` (true when node was updated).
+### 4.2 `NodePatch`
 
-Patch variants:
+Use `NodePatch` variants for partial updates:
 
 - `ImageNodePatch`
 - `TextNodePatch`
@@ -145,218 +200,373 @@ Patch variants:
 - `RectNodePatch`
 - `PathNodePatch`
 
-Common patch fields are grouped in `CommonNodePatch`.
+Patch semantics use `PatchField<T>`:
 
-Validation notes:
+- `PatchField.absent()` leaves a field unchanged
+- `PatchField.value(x)` writes a value
+- `PatchField.nullValue()` explicitly clears a nullable field
 
-- `patchNode(...)` validates only fields present in `NodePatch`/`CommonNodePatch` and throws `ArgumentError` for malformed values.
-- `PatchField.nullValue()` is rejected for non-nullable fields with `ArgumentError`.
-- `CommonNodePatch.opacity` is strict at write boundary (`[0,1]`).
-- `TextNodePatch` no longer accepts `size`; text size is re-derived automatically when layout-affecting fields change (`text`, `fontSize`, `isBold`, `isItalic`, `isUnderline`, `fontFamily`, `lineHeight`, `maxWidth`).
+`PatchField.nullValue()` is invalid for non-nullable fields and throws
+`ArgumentError`.
 
-### 5.3 Tri-state patch semantics (`PatchField<T>`)
+### 4.3 Write-boundary validation
 
-- `PatchField.absent()` -> leave field unchanged
-- `PatchField.value(x)` -> set field to `x`
-- `PatchField.nullValue()` -> explicitly set nullable field to `null`
+Runtime write APIs validate aggressively:
 
-Use `nullValue()` only for nullable fields.
+- invalid `NodeSpec` or `NodePatch` values throw `ArgumentError`
+- non-finite `Transform2D` and `Offset` values are rejected by transform and
+  translate write paths
+- `opacity` is strict at the public boundary and must stay in `[0, 1]`
 
-## 6. Runtime controller (`SceneController`)
+## 5. Runtime controller
 
-### 6.1 Construction
+`SceneController` is the primary runtime entrypoint.
+
+### 5.1 Construction
 
 ```dart
 final controller = SceneController(
-  // Optional immutable startup scene.
   initialSnapshot: SceneSnapshot(
-    layers: [
-      LayerSnapshot(isBackground: true),
-      LayerSnapshot(),
-    ],
+    layers: [ContentLayerSnapshot(id: 'layer-0')],
   ),
-
-  // Optional input settings.
   pointerSettings: const PointerInputSettings(
     tapSlop: 16,
     doubleTapSlop: 32,
     doubleTapMaxDelayMs: 450,
   ),
-
-  // Optional draw line slop override.
   dragStartSlop: 12,
-
-  // Optional policy.
   clearSelectionOnDrawModeEnter: true,
+  moveCommitDeltaResolver: null,
+  textFontFamilyByDefault: 'Roboto',
 );
 ```
 
-Construction validation notes:
+Constructor parameters:
 
-- `initialSnapshot` is validated strictly.
-- Malformed snapshot input throws `ArgumentError` (duplicate ids, invalid numeric fields, invalid `svgPathData`, invalid palette, multiple background layers).
-- Runtime snapshot boundary does not auto-insert a background layer when missing.
-- If one background layer is present but misordered, it is canonicalized to index `0`.
+- `initialSnapshot`
+- `pointerSettings`
+- `dragStartSlop`
+- `clearSelectionOnDrawModeEnter`
+- `moveCommitDeltaResolver`
+- `textFontFamilyByDefault`
 
-### 6.2 Read-only state
+Validation notes:
 
-- `snapshot: SceneSnapshot`
-- `selectedNodeIds: Set<NodeId>`
-- `mode: CanvasMode`
-- `drawTool: DrawTool`
-- `drawColor: Color`
-- Thickness/opacity properties:
-  - `penThickness`
-  - `highlighterThickness`
-  - `lineThickness`
-  - `eraserThickness`
-  - `highlighterOpacity`
-- Interaction state:
-  - `selectionRect`
-  - `pendingLineStart`
-  - `pendingLineTimestampMs`
-  - `hasPendingLineStart`
-  - `hasActiveStrokePreview`
-  - `activeStrokePreviewPoints`
-  - `hasActiveLinePreview`
-- Streams:
-  - `actions`
-  - `editTextRequests`
+- malformed `initialSnapshot` throws `SceneDataException`
+- invalid `pointerSettings` throws `ArgumentError`
+- `textFontFamilyByDefault` is used only when newly inserted `TextNodeSpec`
+  leaves `fontFamily` unset
 
-### 6.3 Runtime configuration methods
+### 5.2 Read-only runtime state
+
+Committed state:
+
+- `snapshot`
+- `selectedNodeIds`
+- `mode`
+- `drawTool`
+- `drawColor`
+- `pointerSettings`
+- resolved `dragStartSlop`
+
+Editable drawing properties:
+
+- `penThickness`
+- `highlighterThickness`
+- `lineThickness`
+- `eraserThickness`
+- `highlighterOpacity`
+
+Interactive preview state:
+
+- `selectionRect`
+- `pendingLineStart`
+- `pendingLineTimestampMs`
+- `hasPendingLineStart`
+- `hasActiveStrokePreview`
+- `activeStrokePreviewPoints`
+- `activeStrokePreviewThickness`
+- `activeStrokePreviewColor`
+- `activeStrokePreviewOpacity`
+- `hasActiveLinePreview`
+- `activeLinePreviewStart`
+- `activeLinePreviewEnd`
+- `activeLinePreviewThickness`
+- `activeLinePreviewColor`
+
+Streams:
+
+- `actions`
+- `editTextRequests`
+
+### 5.3 Configuration methods
+
+```dart
+controller.setMode(CanvasMode.draw);
+controller.setDrawTool(DrawTool.pen);
+controller.setDrawColor(const Color(0xFF1565C0));
+controller.setPointerSettings(const PointerInputSettings());
+controller.setDragStartSlop(12);
+```
+
+Available methods:
 
 - `setMode(CanvasMode value)`
 - `setDrawTool(DrawTool value)`
 - `setDrawColor(Color value)`
 - `setPointerSettings(PointerInputSettings value)`
 - `setDragStartSlop(double? value)`
-
-Numeric property setters validate values and throw `ArgumentError` on invalid input:
-
-- `penThickness = ...` (finite > 0)
-- `highlighterThickness = ...` (finite > 0)
-- `lineThickness = ...` (finite > 0)
-- `eraserThickness = ...` (finite > 0)
-- `highlighterOpacity = ...` (finite in `[0,1]`)
-
-### 6.4 Scene/background/camera methods
-
 - `setBackgroundColor(Color value)`
 - `setGridEnabled(bool value)`
 - `setGridCellSize(double value)`
 - `setCameraOffset(Offset value)`
-- `replaceScene(SceneSnapshot snapshot)`
 - `notifySceneChanged()`
 
-Validation notes:
+Important behavior:
 
-- `setGridCellSize` requires finite positive value; with enabled grid it clamps to internal minimum safety limit.
-- `setCameraOffset` rejects non-finite offsets.
-- `replaceScene` validates snapshot input strictly and throws `ArgumentError` on malformed snapshots.
+- `setDragStartSlop(null)` restores fallback to `pointerSettings.tapSlop`
+- `setPointerSettings(...)` is applied live by `SceneView`
+- if a gesture is already active, new pointer settings take effect after
+  `up` or `cancel`
+- `setGridCellSize(...)` requires a finite positive value and applies an
+  internal safety minimum when the grid is enabled
+- invalid numeric settings throw `ArgumentError`
 
-Notification semantics:
+### 5.4 Scene and node mutation methods
 
-- Scene repaint notifications are deferred to a microtask after commit/repaint request.
-- Multiple writes/repaint requests in the same event-loop tick are coalesced into one listener notification.
-- `requestRepaint()` called inside `write(...)` is buffered and published only after a successful transaction commit.
-- If `write(...)` rolls back with an exception, buffered repaint/signal effects are discarded.
+Node and layer writes:
 
-### 6.5 Node and selection methods
-
-- `String addNode(NodeSpec node, {int? layerIndex})`
+- `NodeId addNode(NodeSpec node, {LayerId? layerId, int? insertIndex})`
+- `bool ensureLayer(LayerId layerId, {int? index})`
 - `bool patchNode(NodePatch patch)`
 - `bool removeNode(NodeId id, {int? timestampMs})`
+
+Selection helpers:
+
 - `setSelection(Iterable<NodeId> nodeIds)`
 - `toggleSelection(NodeId nodeId)`
 - `clearSelection()`
 - `selectAll({bool onlySelectable = true})`
 
-### 6.6 Transform/delete/clear commands
+Transform and document helpers:
 
 - `rotateSelection({required bool clockwise, int? timestampMs})`
 - `flipSelectionVertical({int? timestampMs})`
 - `flipSelectionHorizontal({int? timestampMs})`
 - `deleteSelection({int? timestampMs})`
 - `clearScene({int? timestampMs})`
+- `replaceScene(SceneSnapshot snapshot)`
 
-Behavior notes:
+Layer rules:
 
-- Transform operations affect transformable, unlocked selected nodes.
-- Transform/translate write operations reject non-finite deltas (`Transform2D`/`Offset`) with `ArgumentError`.
-- Background/non-deletable policy is respected by delete flows.
-- `selectAll(onlySelectable: true)` selects visible selectable foreground nodes.
-- `selectAll(onlySelectable: false)` also includes visible non-selectable foreground nodes.
-- Commit-time selection normalization removes only missing/background/invisible ids and preserves explicitly selected non-selectable nodes.
-- `clearScene` keeps canonical background layer and clears non-background content.
+- `layerId` addresses only content layers
+- `layerId == null` inserts into the last content layer
+- if there are no content layers, `addNode(...)` creates one automatically
+- `insertIndex` controls explicit z-position inside the target content layer
+- unknown `layerId` throws `ArgumentError`
+- `ensureLayer(...)` creates a missing content layer and returns `false` when
+  the layer already exists
 
-### 6.7 Low-level input hooks
+Selection rules:
 
-- `handlePointer(PointerSample sample)`
-- `handlePointerSignal(PointerSignal signal)`
+- `selectAll(onlySelectable: true)` targets visible selectable foreground nodes
+- `selectAll(onlySelectable: false)` may include visible non-selectable
+  foreground nodes
+- committed normalization removes only missing, background, or invisible ids
 
-Usually these are called by `SceneView` automatically.
-Direct usage is useful when embedding the controller in custom input pipelines.
+Clear rules:
 
-### 6.8 Direct transactional writes
+- `clearScene()` keeps or creates the dedicated background layer
+- a clear action can be structural-only, even if no node ids were removed
+- `replaceScene(...)` validates the snapshot boundary and throws
+  `SceneDataException` for malformed input
 
-- `write<T>(T Function(SceneWriteTxn txn) fn)`
+### 5.5 Low-level input hooks
 
-`SceneWriteTxn` is a safe contract:
+```dart
+controller.handlePointer(
+  const CanvasPointerInput(
+    pointerId: 1,
+    position: Offset(100, 100),
+    phase: CanvasPointerPhase.down,
+    kind: PointerDeviceKind.touch,
+  ),
+);
+```
 
-- Includes state snapshots (`snapshot`, `selectedNodeIds`) and explicit write operations.
-- Does not expose mutable `Scene`/`SceneNode`.
-- Does not include `writeFindNode` or `writeMark*` escape methods.
-- Does not expose node-id bookkeeping internals; ids are allocated via structural writes (`writeNodeInsert`).
+Public hooks:
 
-Prefer high-level command methods unless custom transactional logic is required.
+- `handlePointer(CanvasPointerInput input)`
+- `handleDoubleTap({required Offset position, int? timestampMs})`
 
-Write-notify semantics:
+Use these only when you are not relying on `SceneView` to route input.
 
-- `write(...)` finalizes transaction state first, then schedules listener notification in a microtask when repaint is needed.
-- Committed `signals` are emitted before repaint listener notification for the same successful commit.
-- Calling `write(...)` from `addListener(...)` is allowed; it runs after the original transaction is finished.
+Guardrails:
 
-## 7. Interaction model details
+- same-stack `handlePointer(...)` reentrancy throws `StateError`
+- non-finite coordinates are ignored as a no-op
+- after `dispose()`, mutating and effectful entrypoints throw `StateError`
 
-### 7.1 Modes
+### 5.6 Lifecycle and notification semantics
 
-- `CanvasMode.move`: selection, drag move, marquee
-- `CanvasMode.draw`: pen/highlighter/line/eraser
+- `dispose()` releases controller resources and closes future mutating or
+  effectful entrypoints with fail-fast `StateError`
+- `write(...)`, `handlePointer(...)`, and `handleDoubleTap(...)` never call
+  `notifyListeners()` synchronously
+- listener notifications are scheduled in a microtask
+- multiple writes in one event-loop tick are coalesced into one listener update
+- `actions` and `editTextRequests` are asynchronous streams
+- relative ordering between stream delivery and repaint notifications is not a
+  public contract
 
-### 7.2 Draw tool behavior
+## 6. Transactional writes
 
-- Pen/highlighter: freehand stroke commit on pointer up
-- Pen/highlighter guardrail: if captured stroke points exceed `20_000`, commit applies deterministic index-uniform downsampling while preserving first/last points.
-- Line: drag line or two-tap line (first tap sets pending start, second tap commits)
-- Eraser: erases supported annotations (`StrokeNode`, `LineNode`) based on eraser trajectory
+### 6.1 Public transaction entrypoint
 
-### 7.3 Move drag behavior
+```dart
+controller.write<void>((txn) {
+  txn.writeLayerEnsure('annotations');
+  txn.writeNodeInsert(
+    RectNodeSpec(
+      id: 'note-1',
+      size: const Size(120, 80),
+      fillColor: const Color(0xFFFFF59D),
+    ),
+    layerId: 'annotations',
+  );
+});
+```
 
-- During move drag, selected nodes are translated in preview only (render/hit-test use effective preview bounds).
-- The scene snapshot is committed once on pointer up with the accumulated drag delta.
-- Pointer cancel clears preview and does not mutate scene geometry.
+Signature:
 
-### 7.4 Double tap behavior
+- `T write<T>(T Function(SceneWriteTxn txn) fn)`
 
-On double tap in move mode, if top hit node is a text node, controller emits `EditTextRequested`.
+Contract:
 
-## 8. Events and payload contracts
+- the callback must complete synchronously
+- returning a `Future` throws `StateError`
+- buffered side effects roll back if the transaction fails
 
-### 8.1 `actions` stream
+### 6.2 `SceneWriteTxn`
 
-`actions` emits `ActionCommitted` with:
+`SceneWriteTxn` exposes immutable reads plus explicit write operations.
 
-- `actionId` (`a0`, `a1`, ...)
-- `type: ActionType`
+Read access:
+
+- `snapshot`
+- `selectedNodeIds`
+
+Structural and content writes:
+
+- `writeNodeInsert(...)`
+- `writeLayerEnsure(...)`
+- `writeNodeErase(...)`
+- `writeNodePatch(...)`
+- `writeNodeTransformSet(...)`
+- `writeClearSceneKeepBackgroundResult()`
+- `writeClearSceneKeepBackground()`
+- `writeDocumentReplace(...)`
+
+Selection writes:
+
+- `writeSelectionReplace(...)`
+- `writeSelectionToggle(...)`
+- `writeSelectionClear()`
+- `writeSelectionSelectAll(...)`
+- `writeSelectionTranslate(...)`
+- `writeSelectionTransform(...)`
+- `writeDeleteSelection()`
+
+Scene settings writes:
+
+- `writeCameraOffset(...)`
+- `writeGridEnable(...)`
+- `writeGridCellSize(...)`
+- `writeBackgroundColor(...)`
+
+Signal write:
+
+- `writeSignalEnqueue(...)`
+
+Transaction handle lifetime:
+
+- a transaction handle is valid only inside the active callback
+- calling a `write*` method after callback completion throws `StateError`
+
+### 6.3 `ClearSceneResult`
+
+`writeClearSceneKeepBackgroundResult()` returns `ClearSceneResult`:
+
+- `removedNodeIds`
+- `didStructuralClear`
+
+Contract:
+
+- `removedNodeIds` is an immutable snapshot
+- `didStructuralClear` is `true` for any structural clear effect, including
+  creating a missing dedicated background layer
+
+## 7. Interaction model
+
+### 7.1 Modes and pointer policy
+
+- `CanvasMode.move` handles selection, marquee, and drag-move
+- `CanvasMode.draw` handles pen, highlighter, line, and eraser
+- each active gesture belongs to one `pointerId`
+- parallel pointer ids are ignored until the active gesture ends with `up` or
+  `cancel`
+
+### 7.2 Draw and move behavior
+
+- pen and highlighter commit a stroke on pointer `up`
+- long strokes are capped to `20_000` points with deterministic downsampling
+- line supports drag creation and two-tap creation
+- `dragStartSlop` applies to both move and line drag start
+- preview state is ephemeral and does not mutate the committed snapshot
+- pointer `cancel` clears preview state without committing
+
+### 7.3 `MoveCommitDeltaResolver`
+
+`MoveCommitDeltaResolver` runs once, on pointer `up`, before the final move
+commit.
+
+Callback shape:
+
+```dart
+Offset Function({
+  required SceneSnapshot snapshot,
+  required List<NodeSnapshot> movedNodes,
+  required Offset proposedDelta,
+})
+```
+
+Rules:
+
+- return the final delta that should be committed
+- the returned delta is also the one emitted in `ActionType.transform`
+- do not call public mutating or effectful controller APIs from inside this
+  callback; those fail fast with `StateError`
+
+### 7.4 Text editing hook
+
+On double tap in move mode, if the top hit node is a text node, the controller
+emits `EditTextRequested`.
+
+Use that event to open your own text editor UI.
+
+## 8. Events
+
+### 8.1 `actions`
+
+`actions` emits `ActionCommitted`.
+
+Fields:
+
+- `actionId`
+- `type`
 - `nodeIds`
 - `timestampMs`
 - optional `payload`
-
-Delivery and mutability contract:
-
-- Delivery is asynchronous; subscribers are called after the emitting controller method returns.
-- Relative ordering against `ChangeNotifier` listener notifications/repaint is not a public contract.
-- `nodeIds` and `payload` are immutable snapshots; subscribers cannot mutate shared event data.
 
 `ActionType` values:
 
@@ -370,35 +580,31 @@ Delivery and mutability contract:
 - `drawLine`
 - `erase`
 
-Known payload schemas:
-
-- transform: `{delta: {a,b,c,d,tx,ty}}`
-- draw stroke/highlighter/line: `{tool: String, color: int, thickness: double}`
-- erase: `{eraserThickness: double}`
-
-Helper parsers on `ActionCommitted`:
+Payload helpers are provided by the `ActionCommittedDelta` extension:
 
 - `tryTransformDelta()`
 - `tryMoveLayerIndices()`
 - `tryDrawStyle()`
 - `tryEraserThickness()`
 
-### 8.2 `editTextRequests` stream
+Delivery contract:
 
-`EditTextRequested` provides:
+- delivery is asynchronous
+- `nodeIds` and `payload` are immutable snapshots
+- consumers must not depend on relative ordering against `ChangeNotifier`
+  updates
+
+### 8.2 `editTextRequests`
+
+`EditTextRequested` contains:
 
 - `nodeId`
 - `timestampMs`
-- `position` (view coordinates)
+- `position`
 
-Use this to open app-level text editor overlays.
+Delivery is asynchronous under the same contract as `actions`.
 
-Delivery contract:
-
-- Delivery is asynchronous; subscribers are called after the emitting controller method returns.
-- Relative ordering against `ChangeNotifier` listener notifications/repaint is not a public contract.
-
-## 9. View widget (`SceneView`)
+## 9. `SceneView`
 
 ### 9.1 Constructor
 
@@ -406,76 +612,127 @@ Delivery contract:
 SceneView(
   controller: controller,
   imageResolver: (imageId) => null,
-  staticLayerCache: null,
-  textLayoutCache: null,
-  strokePathCache: null,
-  pathMetricsCache: null,
   selectionColor: const Color(0xFF1565C0),
   selectionStrokeWidth: 1,
   gridStrokeWidth: 1,
 )
 ```
 
-### 9.2 What `SceneView` does
+Parameters:
 
-- Captures pointer events via `Listener`
-- Converts Flutter pointer events into `PointerSample`
-- Feeds samples to `controller.handlePointer(...)`
-- Uses `PointerInputTracker` for tap/double-tap derivation and forwards double taps to controller
-- Paints scene via `ScenePainterV2`
-- Paints interactive overlays (in-progress stroke/line previews)
+- `controller`
+- `imageResolver`
+- `selectionColor`
+- `selectionStrokeWidth`
+- `gridStrokeWidth`
 
-### 9.3 Cache ownership semantics
+### 9.2 Responsibilities
 
-If you do not pass cache instances, `SceneView` creates and owns internal caches.
-If you pass external caches, ownership stays external.
+`SceneView`:
 
-When controller instance changes, view resets pointer tracking state and clears caches to prevent stale reuse across scenes.
+- captures pointer events from Flutter
+- routes them into controller input handling
+- paints the committed scene
+- paints interactive previews
+- owns render caches by default and resets them on document/epoch boundaries
+
+### 9.3 Image resolver
+
+`imageResolver` has type `ui.Image? Function(String imageId)?`.
+
+- if omitted, image nodes render as placeholders
+- image lifecycle ownership stays with the host app
+- dispose app-owned `ui.Image` instances when they are no longer needed
 
 ## 10. Pointer contracts
 
-### 10.1 `PointerSample`
+### 10.1 `CanvasPointerInput`
 
 Fields:
 
 - `pointerId`
-- `position` (view coords)
-- `timestampMs` (hint)
-- `phase` (`down/move/up/cancel`)
+- `position`
+- optional `timestampMs`
+- `phase`
 - `kind`
 
-Controller normalizes timestamps into a monotonic internal timeline.
+`CanvasPointerPhase` values:
+
+- `down`
+- `move`
+- `up`
+- `cancel`
+
+When `timestampMs` is `null`, the controller assigns a monotonic internal
+timestamp.
 
 ### 10.2 `PointerInputSettings`
+
+Fields:
 
 - `tapSlop`
 - `doubleTapSlop`
 - `doubleTapMaxDelayMs`
 - `deferSingleTap`
 
-## 11. Serialization contracts
+Validation rules:
 
-### 11.1 Functions
+- `tapSlop` must be finite and `>= 0`
+- `doubleTapSlop` must be finite and `>= 0`
+- `doubleTapMaxDelayMs` must be `>= 0`
+
+## 11. Serialization
+
+### 11.1 Public functions
 
 - `String encodeSceneToJson(SceneSnapshot snapshot)`
 - `SceneSnapshot decodeSceneFromJson(String json)`
 - `Map<String, dynamic> encodeScene(SceneSnapshot snapshot)`
 - `SceneSnapshot decodeScene(Map<String, dynamic> json)`
 
-### 11.2 Versioning
+### 11.2 `SceneBuilder`
 
-- `schemaVersionWrite == 2`
-- `schemaVersionsRead == {2}`
+`SceneBuilder` is the unified import and canonicalization helper:
 
-### 11.3 Errors
+- `SceneSnapshot buildFromSnapshot(SceneSnapshot raw)`
+- `SceneSnapshot buildFromJson(Map<String, dynamic> rawJson)`
 
-Invalid input throws `SceneJsonFormatException` with validation details.
+Use it when you want validation and canonicalization without going through a
+controller.
 
-Encoding notes:
+### 11.3 Decode and import guarantees
 
-- `encodeScene(...)` validates `SceneSnapshot` input before encoding and throws `SceneJsonFormatException` on malformed snapshots.
+- nested validation errors include a fully-qualified `SceneDataException.path`
+- decode accepts a missing `backgroundLayer` field and canonicalizes it to an
+  empty dedicated layer
+- decode rejects oversized payloads:
+  - content layers must stay `<= 4096`
+  - total node count must stay `<= 200000`
+  - stroke point count per node must stay `<= 20000`
+  - `svgPathData` length must stay `<= 200000`
 
-## 12. Full integration example
+## 12. Error taxonomy
+
+| Error type | Meaning | Typical boundaries |
+| --- | --- | --- |
+| `ArgumentError` | The caller passed an invalid runtime argument. | `addNode`, `patchNode`, transforms, numeric setters, invalid pointer settings |
+| `StateError` | The runtime contract was violated. | disposed controller calls, stale transaction handle, async `write(...)`, reentrant `handlePointer(...)`, invariant failures |
+| `SceneDataException` | Scene or JSON data is malformed. | `initialSnapshot`, `replaceScene`, `SceneBuilder`, `decodeScene*`, `encodeScene*` |
+
+## 13. Migration checklist for current integrations
+
+If you are aligning older integration code to the current `5.x` contract:
+
+1. Use only `package:iwb_canvas_engine/iwb_canvas_engine.dart`.
+2. Use `NodeSpec` and `NodePatch`; do not depend on internal mutable scene
+   types.
+3. Use typed layers: `backgroundLayer` plus content-only `layers`.
+4. Address content layers by `LayerId`, not legacy layer indexes in write APIs.
+5. Treat JSON as schema `5` only.
+6. Treat `TextNode.size` as derived metadata, not a source of truth.
+7. Treat `actions` and `editTextRequests` as asynchronous.
+
+## 14. Integration example
 
 ```dart
 import 'dart:async';
@@ -491,8 +748,7 @@ class CanvasScreen extends StatefulWidget {
 
 class _CanvasScreenState extends State<CanvasScreen> {
   late final SceneController controller;
-  StreamSubscription<ActionCommitted>? actionsSub;
-  StreamSubscription<EditTextRequested>? editTextSub;
+  StreamSubscription<EditTextRequested>? editSub;
 
   @override
   void initState() {
@@ -500,120 +756,33 @@ class _CanvasScreenState extends State<CanvasScreen> {
 
     controller = SceneController(
       initialSnapshot: SceneSnapshot(
-        layers: [
-          LayerSnapshot(isBackground: true),
-          LayerSnapshot(),
-        ],
+        layers: [ContentLayerSnapshot(id: 'layer-0')],
       ),
-      pointerSettings: const PointerInputSettings(
-        tapSlop: 16,
-        doubleTapSlop: 32,
-        doubleTapMaxDelayMs: 450,
-      ),
-      clearSelectionOnDrawModeEnter: true,
     );
 
     controller.addNode(
-      RectNodeSpec(
-        id: 'rect-1',
-        size: const Size(120, 80),
-        fillColor: const Color(0xFF2196F3),
+      TextNodeSpec(
+        id: 'title',
+        text: 'Hello',
+        color: const Color(0xFF111111),
       ),
     );
 
-    actionsSub = controller.actions.listen((event) {
-      // App-level undo/redo boundary.
-      // Persist event or derive command history.
-    });
-
-    editTextSub = controller.editTextRequests.listen((event) {
-      // Open app-level text editor for event.nodeId.
+    editSub = controller.editTextRequests.listen((event) {
+      // Open app-owned text editing UI for event.nodeId.
     });
   }
 
   @override
   void dispose() {
-    actionsSub?.cancel();
-    editTextSub?.cancel();
+    editSub?.cancel();
     controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SceneView(
-        controller: controller,
-        imageResolver: (imageId) => null,
-      ),
-    );
+    return SceneView(controller: controller);
   }
 }
-```
-
-## 13. Agent checklist for safe edits
-
-When an agent modifies integration code:
-
-1. Use `NodeSpec`/`NodePatch` in app code; avoid mutating internal scene structures directly.
-2. Keep app-owned undo/redo separate from engine internals.
-3. Handle `SceneJsonFormatException` around imports.
-4. Keep `ActionCommitted.payload` parsing defensive via helper extensions.
-5. Respect background layer semantics and non-deletable/non-selectable flags.
-6. Prefer `SceneController`/`SceneView` aliases in app-facing docs/examples.
-
-## 14. Migration notes
-
-### 14.1 From 1.x to 2.x
-
-Required updates:
-
-1. Remove `advanced.dart` imports and use `iwb_canvas_engine.dart` only.
-2. Replace legacy constructor usage:
-   - Remove `scene: ...` from `SceneController(...)`.
-   - Use `initialSnapshot: SceneSnapshot(...)` instead.
-3. Replace `addNode(Object ...)` calls with explicit `NodeSpec` variants.
-4. Replace low-level write callbacks:
-   - from `write((SceneWriter w) { ... })`
-   - to `write((SceneWriteTxn txn) { ... })`
-5. Remove any dependency on legacy mutable getters (`controller.scene`, `controller.core`).
-
-### 14.2 From 2.x to 3.0.0
-
-Required updates:
-
-1. Remove `TextNodeSpec.size` and `TextNodePatch.size` usage; text bounds are runtime-derived from layout fields.
-2. Ensure `initialSnapshot`/`replaceScene(...)` inputs are strictly valid; malformed snapshots now throw `ArgumentError`.
-3. Ensure `addNode(...)` and `patchNode(...)` inputs are valid at write boundary; malformed values now throw `ArgumentError`.
-4. If app logic depended on synchronous `actions`/`editTextRequests` delivery, update it for asynchronous stream delivery.
-
-## 15. Quick recipes
-
-### 15.1 Export/import JSON
-
-```dart
-final json = encodeSceneToJson(controller.snapshot);
-final restored = decodeSceneFromJson(json);
-controller.replaceScene(restored);
-```
-
-### 15.2 Rotate selected nodes clockwise
-
-```dart
-controller.rotateSelection(clockwise: true);
-```
-
-### 15.3 Toggle draw mode and set pen style
-
-```dart
-controller.setMode(CanvasMode.draw);
-controller.setDrawTool(DrawTool.pen);
-controller.setDrawColor(const Color(0xFF0D47A1));
-controller.penThickness = 4;
-```
-
-### 15.4 Clear scene while keeping background
-
-```dart
-controller.clearScene();
 ```

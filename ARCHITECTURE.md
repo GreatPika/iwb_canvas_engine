@@ -1,103 +1,120 @@
 # Architecture Overview
 
-This document describes the architecture of `iwb_canvas_engine` for release `3.0.0`.
+This document describes the current mainline architecture of
+`iwb_canvas_engine`. It focuses on system shape, data flow, invariants, and the
+constraints that keep the public API stable.
 
 ## Goals
 
-- Provide a reusable Flutter canvas engine package (no app UI).
-- Keep a single source of truth for scene/runtime state.
-- Expose stable public contracts for runtime and JSON persistence.
+- Keep scene state in one place.
+- Expose stable public contracts around immutable snapshots and safe writes.
+- Separate product UI concerns from engine/runtime concerns.
 
-## Public surface
+## System boundary
 
-Entrypoints:
+- Public entrypoint: `package:iwb_canvas_engine/iwb_canvas_engine.dart`
+- Current serialization contract: write `schemaVersion = 5`, read `{5}`
+- Public runtime aliases: `SceneController`, `SceneView`
+- Public write boundary: `SceneWriteTxn`
 
-- `package:iwb_canvas_engine/iwb_canvas_engine.dart`
+The package is an engine. It does not own app UI, persistence, collaboration, or
+undo/redo policy.
 
-Primary public abstractions:
-
-- Runtime: `SceneController`, `SceneView`
-- Immutable read model: `SceneSnapshot`, `LayerSnapshot`, `NodeSnapshot`
-- Safe transactional write model: `SceneWriteTxn`
-- Write intents: `NodeSpec`
-- Partial mutation: `NodePatch` + `PatchField<T>`
-- Serialization: `encodeScene*`, `decodeScene*`, `SceneJsonFormatException`
-
-## Internal structure
+## Module layout
 
 ```text
 lib/
   iwb_canvas_engine.dart
   src/
-    core/           // model primitives, math, hit testing, defaults
-    controller/     // transactional writer/store internals
-    input/          // input slices and gesture-state helpers
-    interactive/    // public interactive controller facade
-    model/          // scene <-> snapshot conversion helpers
-    public/         // snapshot/spec/patch contracts
-    render/         // painter and render caches
-    serialization/  // JSON codec (schema v2)
-    view/           // interactive Flutter widget
+    core/           // primitives, defaults, math, event types
+    controller/     // committed store, command execution, transactional writes
+    interactive/    // public controller facade and gesture orchestration
+    model/          // conversions between internal document and public snapshot
+    public/         // exported immutable types, specs, patches, write contract
+    render/         // painter and render-cache implementations
+    serialization/  // JSON codec and validation boundary
+    view/           // Flutter widget that wires input + painting
 ```
 
-## Data flow
+## Runtime data flow
 
-1. `SceneView` receives pointer events from Flutter.
-2. `SceneController` processes events and performs transactional writes.
-3. Controller updates the immutable `SceneSnapshot`.
-4. `ScenePainterV2` renders snapshot state via `CustomPaint`.
-5. `actions` / `editTextRequests` streams expose asynchronous boundaries to the host app.
+1. `SceneView` receives Flutter pointer input and normalizes it into public
+   `CanvasPointerInput`.
+2. `SceneControllerInteractive` validates input, maintains interactive state,
+   and delegates committed mutations to `SceneControllerCore`.
+3. `SceneControllerCore` performs transactional writes and finalizes a canonical
+   immutable `SceneSnapshot`.
+4. `ScenePainter` renders the committed snapshot plus any ephemeral preview
+   state owned by the interactive controller.
+5. `actions` and `editTextRequests` expose asynchronous integration boundaries
+   back to the host app.
 
-## Invariants
+## State ownership model
 
-Canonical invariant registry:
+- The committed `SceneSnapshot` is the single source of truth.
+- Preview state for move/draw gestures is intentionally ephemeral and does not
+  mutate committed scene data until commit on `up`.
+- All committed mutations go through `write(...)` or higher-level controller
+  methods that delegate to the same write path.
+- Public API never exposes mutable internal scene objects.
 
-- `tool/invariant_registry.dart`
+## Core invariants
 
-Key invariants:
+Canonical invariant definitions live in `tool/invariant_registry.dart`. The
+most important architectural rules are:
 
-- Single entrypoint: `iwb_canvas_engine.dart` only.
-- Single source of truth: runtime state is owned by controller snapshot.
-- Public API does not expose mutable core scene structures.
-- All state mutations flow through `write` transactions and safe txn operations.
-- Committed signals are delivered only after store commit finalization.
-- For each successful commit, signal delivery happens before repaint listener notification.
-- Repaint/listener notifications are scheduled after commit via microtask and coalesced per event-loop tick.
-- Interactive `actions` / `editTextRequests` streams are delivered asynchronously (never in the same call stack as mutation methods).
-- Relative ordering between interactive stream delivery and repaint listener notification is intentionally not a public contract.
-- Buffered signal/repaint effects are discarded when `write(...)` rolls back.
-- Node-id index state keeps `allNodeIds` and `nodeLocator` equal to committed scene ids/locations, while `nodeIdSeed` is a monotonic generator lower-bounded by committed scene ids.
-- Selection normalization preserves explicit non-selectable ids and drops only missing/background/invisible ids.
-- Runtime snapshot boundary (`initialSnapshot` / `replaceScene`) validates input strictly and fails fast with `ArgumentError` for malformed snapshots.
-- Text node box size is derived from text layout inputs and is not writable via public spec/patch APIs.
-- Runtime background-layer rule: at most one background layer; if present it is canonicalized to index `0`; missing background is allowed (no auto-insert on runtime boundary).
-- JSON decoder background-layer rule: canonicalizes to a single background layer at index `0`.
-- Unique node ids across all layers.
-- Input and render subsystems must not bypass controller transaction boundaries.
-- Import boundaries are enforced by `tool/check_import_boundaries.dart`.
+- `write(...)` is synchronous-only; returning a `Future` is a contract error.
+- `SceneWriteTxn` is valid only inside the active write callback.
+- `backgroundLayer` is always distinct from ordered content `layers`.
+- Content layers are addressed by stable `LayerId`; z-order is defined only by
+  list order.
+- `TextNode.size` is derived from text layout inputs and is not a writable
+  public field.
+- Selection normalization drops only missing, background, or invisible ids;
+  explicit non-selectable ids remain stable.
+- Listener notifications are microtask-deferred and coalesced.
+- `actions` and `editTextRequests` are asynchronous; their relative ordering
+  against repaint notifications is intentionally not a public contract.
+- After `dispose()`, mutating or effectful public entrypoints fail fast with
+  `StateError`.
 
-## Serialization contract
+## Transaction and signal model
 
-- Current write schema: `schemaVersion = 2`.
-- Accepted read schemas: `{2}`.
-- Encoder/decoder validate numeric and structural constraints and fail fast with `SceneJsonFormatException`.
+- High-level methods such as `addNode`, `patchNode`, `clearScene`, and
+  transform commands all route through the same transactional core.
+- Successful commits finalize store state before publishing signals or repaint
+  notifications.
+- Committed signals are emitted before repaint listener notification for the
+  same successful commit.
+- Buffered effects are discarded if a transaction fails.
+- Runtime invariant enforcement is two-tiered:
+  - critical commit checks run in all build modes;
+  - the full committed-store sweep remains enabled in `debug` and `profile`.
+
+## Serialization boundary
+
+- Public JSON APIs accept `Map<String, dynamic>` or JSON strings.
+- Decode/import canonicalizes missing `backgroundLayer` to an empty dedicated
+  layer before returning a `SceneSnapshot`.
+- Decode/import and runtime replacement paths validate structure and numeric
+  constraints and throw `SceneDataException` on malformed input.
+- JSON payload limits are enforced to keep import cost bounded.
 
 ## Performance model
 
-- Mutating transactions use copy-on-write: first mutation creates a shallow scene clone, then only touched layers/nodes are cloned on demand; no-op patches do not trigger layer/node cloning.
-- Hot-path node lookup (`NodeId -> layer/node index`) uses committed `nodeLocator` instead of linear scene scans.
-- Viewport culling for offscreen nodes.
-- Bounded caches for text layout, stroke paths, and selected path metrics.
-- Stroke-path cache freshness is validated in O(1) by `(node.id, pointsRevision)`
-  instead of hashing/iterating point lists on every lookup.
-- Spatial index supports incremental commit updates (`added/removed/hitGeometryChangedIds`) for hit-testing hot paths; full rebuild is a fallback path only.
-- Spatial query guardrail: oversized query rectangles (`> 50_000` index cells) bypass cell loops and use bounded all-candidate scan with exact intersection filtering.
-- Hit-test guardrail: path-stroke precise hit-testing caps per-metric sampling to `2_048` points by increasing sampling step for long metrics.
-- Interactive draw guardrail: stroke commit caps points to `20_000` using deterministic index-uniform downsampling (endpoints preserved).
-- Interactive move drag uses preview translation (single source in interactive controller) and commits translation once on pointer up; preview hit-testing merges spatial candidates for `point` and `point - delta`.
+- Transactions use copy-on-write: only touched scene parts are cloned.
+- Hot-path node lookup uses committed indexes instead of repeated linear scans.
+- Spatial queries use a bounded spatial index with a bounded fallback path for
+  oversized queries.
+- Render caches are owned by `SceneView` and reset on controller
+  epoch/document changes.
+- Stroke and path rendering use revision-based cache keys to avoid stale reuse
+  after node-id reuse or geometry changes.
+- Input and hit-testing guardrails cap worst-case work for long strokes and
+  large queries.
 
 ## Non-goals
 
-- App-level state management, storage, or collaboration backend.
-- App UI widgets outside canvas runtime/view.
-- Built-in undo/redo history storage.
+- Product-specific UI and workflows outside the canvas engine.
+- Network synchronization or backend protocols.
+- App-owned persistence and undo/redo history.

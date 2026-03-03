@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 5,
   "camera": { "offsetX": 7, "offsetY": -3 },
   "background": {
     "color": "#FFFFFFFF",
@@ -10,16 +10,16 @@
     "backgroundColors": ["#FFFFFFFF"],
     "gridSizes": [10, 20]
   },
+  "backgroundLayer": {
+    "nodes": []
+  },
   "layers": [
     {
-      "isBackground": true,
-      "nodes": []
-    },
-    {
-      "isBackground": false,
+      "id": "layer-0",
       "nodes": [
         {
           "id": "stroke-1p",
+          "instanceRevision": 1,
           "type": "stroke",
           "transform": { "a": 1, "b": 0, "c": 0, "d": 1, "tx": 10, "ty": 20 },
           "hitPadding": 0,
@@ -35,6 +35,7 @@
         },
         {
           "id": "stroke-2p",
+          "instanceRevision": 2,
           "type": "stroke",
           "transform": { "a": 1, "b": 0, "c": 0, "d": 1, "tx": 0, "ty": 0 },
           "hitPadding": 1.5,
@@ -54,6 +55,7 @@
         },
         {
           "id": "line-1",
+          "instanceRevision": 3,
           "type": "line",
           "transform": { "a": 1, "b": 0, "c": 0, "d": 1, "tx": 12, "ty": 12 },
           "hitPadding": 0,
@@ -70,6 +72,7 @@
         },
         {
           "id": "path-fill",
+          "instanceRevision": 4,
           "type": "path",
           "transform": { "a": 1, "b": 0, "c": 0, "d": 1, "tx": 100, "ty": -40 },
           "hitPadding": 0,
@@ -87,6 +90,7 @@
         },
         {
           "id": "path-stroke",
+          "instanceRevision": 5,
           "type": "path",
           "transform": { "a": 1, "b": 0, "c": 0, "d": 1, "tx": -30, "ty": 40 },
           "hitPadding": 0,
@@ -103,6 +107,7 @@
         },
         {
           "id": "text-1",
+          "instanceRevision": 6,
           "type": "text",
           "transform": { "a": 0, "b": -1, "c": 1, "d": 0, "tx": 50, "ty": 50 },
           "hitPadding": 0,
@@ -126,6 +131,7 @@
         },
         {
           "id": "img-1",
+          "instanceRevision": 7,
           "type": "image",
           "transform": { "a": 0, "b": 1, "c": 1, "d": 0, "tx": 10, "ty": 20 },
           "hitPadding": 0,

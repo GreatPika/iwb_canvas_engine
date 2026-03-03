@@ -5,6 +5,8 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/core/scene_limits.dart' show sceneSizeMax;
+import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 
 const _resultPrefix = 'IWB_BENCH_RESULT ';
 
@@ -51,6 +53,23 @@ void main() {
   }
 
   test(
+    'load profile selection-path-metrics profile=$profile',
+    () {
+      final metrics = _runSelectionPathMetricsCase(
+        pathNodeCount: config.selectionPathNodeCount,
+        pathSegments: config.selectionPathSegments,
+        iterations: config.selectionPathIterations,
+      );
+      _emitResult(
+        profile: profile,
+        name: 'selection_path_metrics',
+        metrics: metrics,
+      );
+    },
+    timeout: const Timeout(Duration(minutes: 10)),
+  );
+
+  test(
     'load profile worst-case profile=$profile',
     () {
       final metrics = _runWorstCaseProfile(
@@ -85,6 +104,9 @@ _BenchConfig _configForProfile(String profile) {
           _StrokeCase(strokeCount: 1000, pointsPerStroke: 256),
         ],
         strokeIterations: 2,
+        selectionPathNodeCount: 400,
+        selectionPathSegments: 128,
+        selectionPathIterations: 3,
         largeQueryNodeCount: 10000,
         longPathSegments: 2000,
         worstCaseIterations: 2,
@@ -98,6 +120,9 @@ _BenchConfig _configForProfile(String profile) {
           _StrokeCase(strokeCount: 5000, pointsPerStroke: 512),
         ],
         strokeIterations: 3,
+        selectionPathNodeCount: 2000,
+        selectionPathSegments: 256,
+        selectionPathIterations: 4,
         largeQueryNodeCount: 50000,
         longPathSegments: 12000,
         worstCaseIterations: 3,
@@ -112,8 +137,9 @@ Map<String, Object?> _runNodeScaleCase({
   required int iterations,
 }) {
   final snapshot = SceneSnapshot(
-    layers: <LayerSnapshot>[
-      LayerSnapshot(
+    layers: <ContentLayerSnapshot>[
+      ContentLayerSnapshot(
+        id: 'layer-auto-0',
         nodes: <NodeSnapshot>[
           for (var i = 0; i < nodeCount; i++)
             RectNodeSnapshot(
@@ -127,7 +153,7 @@ Map<String, Object?> _runNodeScaleCase({
       ),
     ],
   );
-  final controller = SceneControllerV2(initialSnapshot: snapshot);
+  final controller = SceneControllerCore(initialSnapshot: snapshot);
   final targetId = 'n${nodeCount ~/ 2}';
 
   try {
@@ -215,9 +241,11 @@ Map<String, Object?> _runStrokeScaleCase({
       ),
   ];
   final snapshot = SceneSnapshot(
-    layers: <LayerSnapshot>[LayerSnapshot(nodes: nodes)],
+    layers: <ContentLayerSnapshot>[
+      ContentLayerSnapshot(id: 'layer-auto-1', nodes: nodes),
+    ],
   );
-  final controller = SceneControllerV2(initialSnapshot: snapshot);
+  final controller = SceneControllerCore(initialSnapshot: snapshot);
   final targetId = 's${strokeCount ~/ 2}';
   final pointsA = _linearPoints(count: pointsPerStroke, y: 0);
   final pointsB = _linearPoints(count: pointsPerStroke, y: 5);
@@ -305,17 +333,89 @@ Map<String, Object?> _runWorstCaseProfile({
   };
 }
 
+Map<String, Object?> _runSelectionPathMetricsCase({
+  required int pathNodeCount,
+  required int pathSegments,
+  required int iterations,
+}) {
+  final pathData = _horizontalPath(segments: pathSegments);
+  final nodes = <NodeSnapshot>[
+    for (var i = 0; i < pathNodeCount; i++)
+      PathNodeSnapshot(
+        id: 'spm-$i',
+        svgPathData: pathData,
+        strokeColor: const Color(0xFF000000),
+        strokeWidth: 2,
+        transform: Transform2D.translation(
+          Offset((i % 50) * 40.0 + 20.0, (i ~/ 50) * 30.0 + 20.0),
+        ),
+      ),
+  ];
+  final snapshot = SceneSnapshot(
+    layers: <ContentLayerSnapshot>[
+      ContentLayerSnapshot(id: 'layer-auto-selection-path', nodes: nodes),
+    ],
+  );
+  final controller = SceneControllerCore(initialSnapshot: snapshot);
+  final pathCache = ScenePathMetricsCache(maxEntries: pathNodeCount * 2);
+  final painter = ScenePainter(
+    controller: controller,
+    imageResolver: (_) => null,
+    pathMetricsCache: pathCache,
+  );
+  final selectedIds = <NodeId>{
+    for (var i = 0; i < pathNodeCount; i++) 'spm-$i',
+  };
+  const canvasSize = Size(2200, 1400);
+
+  try {
+    final noSelectionMetric = _measureOperation(
+      iterations: iterations,
+      run: (_) {
+        controller.write<void>((writer) {
+          writer.writeSelectionClear();
+        });
+        _paintScene(painter, canvasSize);
+      },
+    );
+
+    pathCache.clear();
+    final withSelectionMetric = _measureOperation(
+      iterations: iterations,
+      run: (_) {
+        controller.write<void>((writer) {
+          writer.writeSelectionReplace(selectedIds);
+        });
+        _paintScene(painter, canvasSize);
+      },
+    );
+
+    return <String, Object?>{
+      'pathNodeCount': pathNodeCount,
+      'pathSegments': pathSegments,
+      'iterations': iterations,
+      'metrics': <String, Object?>{
+        'paint_no_selection': noSelectionMetric,
+        'paint_with_selection': withSelectionMetric,
+      },
+    };
+  } finally {
+    controller.dispose();
+  }
+}
+
 Map<String, Object?> _runHugeBoundsMetric({required int iterations}) {
   final snapshot = SceneSnapshot(
-    layers: <LayerSnapshot>[
-      LayerSnapshot(
+    layers: <ContentLayerSnapshot>[
+      ContentLayerSnapshot(
+        id: 'layer-auto-2',
         nodes: const <NodeSnapshot>[
-          RectNodeSnapshot(id: 'huge', size: Size(1e9, 1e9)),
+          RectNodeSnapshot(id: 'huge', size: Size(sceneSizeMax, sceneSizeMax)),
         ],
       ),
     ],
   );
-  final controller = SceneControllerV2(initialSnapshot: snapshot);
+  final controller = SceneControllerCore(initialSnapshot: snapshot);
   try {
     final queryMetric = _measureOperation(
       iterations: iterations,
@@ -353,8 +453,9 @@ Map<String, Object?> _runHugeRectSelectMetric({
   required int iterations,
 }) {
   final snapshot = SceneSnapshot(
-    layers: <LayerSnapshot>[
-      LayerSnapshot(
+    layers: <ContentLayerSnapshot>[
+      ContentLayerSnapshot(
+        id: 'layer-auto-3',
         nodes: <NodeSnapshot>[
           for (var i = 0; i < nodeCount; i++)
             RectNodeSnapshot(
@@ -368,7 +469,7 @@ Map<String, Object?> _runHugeRectSelectMetric({
       ),
     ],
   );
-  final controller = SceneControllerV2(initialSnapshot: snapshot);
+  final controller = SceneControllerCore(initialSnapshot: snapshot);
   try {
     return _measureOperation(
       iterations: iterations,
@@ -390,8 +491,9 @@ Map<String, Object?> _runVeryLongPathMetric({
   final pathA = _horizontalPath(segments: segments);
   final pathB = _horizontalPath(segments: segments + 100);
   final snapshot = SceneSnapshot(
-    layers: <LayerSnapshot>[
-      LayerSnapshot(
+    layers: <ContentLayerSnapshot>[
+      ContentLayerSnapshot(
+        id: 'layer-auto-4',
         nodes: <NodeSnapshot>[
           PathNodeSnapshot(
             id: 'path',
@@ -403,7 +505,7 @@ Map<String, Object?> _runVeryLongPathMetric({
       ),
     ],
   );
-  final controller = SceneControllerV2(initialSnapshot: snapshot);
+  final controller = SceneControllerCore(initialSnapshot: snapshot);
   try {
     final patchMetric = _measureOperation(
       iterations: iterations,
@@ -472,6 +574,14 @@ String _horizontalPath({required int segments}) {
   return buf.toString();
 }
 
+void _paintScene(ScenePainter painter, Size size) {
+  final recorder = PictureRecorder();
+  final canvas = Canvas(recorder);
+  painter.paint(canvas, size);
+  final picture = recorder.endRecording();
+  picture.dispose();
+}
+
 void _emitResult({
   required String profile,
   required String name,
@@ -493,6 +603,9 @@ class _BenchConfig {
     required this.nodeIterations,
     required this.strokeCases,
     required this.strokeIterations,
+    required this.selectionPathNodeCount,
+    required this.selectionPathSegments,
+    required this.selectionPathIterations,
     required this.largeQueryNodeCount,
     required this.longPathSegments,
     required this.worstCaseIterations,
@@ -502,6 +615,9 @@ class _BenchConfig {
   final int nodeIterations;
   final List<_StrokeCase> strokeCases;
   final int strokeIterations;
+  final int selectionPathNodeCount;
+  final int selectionPathSegments;
+  final int selectionPathIterations;
   final int largeQueryNodeCount;
   final int longPathSegments;
   final int worstCaseIterations;

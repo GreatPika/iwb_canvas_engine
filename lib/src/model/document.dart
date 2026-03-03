@@ -8,6 +8,7 @@ import '../public/node_patch.dart';
 import '../public/node_spec.dart';
 import '../public/patch_field.dart';
 import '../public/snapshot.dart' hide NodeId;
+import 'scene_builder.dart' as model_builder;
 import 'scene_value_validation.dart';
 
 typedef NodeLocatorEntry = ({int layerIndex, int nodeIndex});
@@ -16,6 +17,19 @@ typedef NodeLocatorEntry = ({int layerIndex, int nodeIndex});
   Scene scene,
   NodeId id,
 ) {
+  final backgroundLayer = scene.backgroundLayer;
+  if (backgroundLayer != null) {
+    for (
+      var nodeIndex = 0;
+      nodeIndex < backgroundLayer.nodes.length;
+      nodeIndex++
+    ) {
+      final node = backgroundLayer.nodes[nodeIndex];
+      if (node.id == id) {
+        return (node: node, layerIndex: -1, nodeIndex: nodeIndex);
+      }
+    }
+  }
   for (var layerIndex = 0; layerIndex < scene.layers.length; layerIndex++) {
     final layer = scene.layers[layerIndex];
     for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
@@ -30,6 +44,17 @@ typedef NodeLocatorEntry = ({int layerIndex, int nodeIndex});
 
 Map<NodeId, NodeLocatorEntry> txnBuildNodeLocator(Scene scene) {
   final locator = <NodeId, NodeLocatorEntry>{};
+  final backgroundLayer = scene.backgroundLayer;
+  if (backgroundLayer != null) {
+    for (
+      var nodeIndex = 0;
+      nodeIndex < backgroundLayer.nodes.length;
+      nodeIndex++
+    ) {
+      final node = backgroundLayer.nodes[nodeIndex];
+      locator[node.id] = (layerIndex: -1, nodeIndex: nodeIndex);
+    }
+  }
   for (var layerIndex = 0; layerIndex < scene.layers.length; layerIndex++) {
     final layer = scene.layers[layerIndex];
     for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
@@ -49,6 +74,19 @@ Map<NodeId, NodeLocatorEntry> txnBuildNodeLocator(Scene scene) {
   if (entry == null) {
     return null;
   }
+  if (entry.layerIndex == -1) {
+    final backgroundLayer = scene.backgroundLayer;
+    if (backgroundLayer == null) return null;
+    final nodeIndex = entry.nodeIndex;
+    if (nodeIndex < 0 || nodeIndex >= backgroundLayer.nodes.length) {
+      return null;
+    }
+    final node = backgroundLayer.nodes[nodeIndex];
+    if (node.id != nodeId) {
+      return null;
+    }
+    return (node: node, layerIndex: -1, nodeIndex: nodeIndex);
+  }
   final layerIndex = entry.layerIndex;
   if (layerIndex < 0 || layerIndex >= scene.layers.length) {
     return null;
@@ -67,10 +105,17 @@ Map<NodeId, NodeLocatorEntry> txnBuildNodeLocator(Scene scene) {
 
 SceneSnapshot txnSceneToSnapshot(Scene scene) {
   return SceneSnapshot(
+    backgroundLayer: scene.backgroundLayer == null
+        ? null
+        : BackgroundLayerSnapshot(
+            nodes: scene.backgroundLayer!.nodes
+                .map(txnNodeToSnapshot)
+                .toList(growable: false),
+          ),
     layers: scene.layers
         .map(
-          (layer) => LayerSnapshot(
-            isBackground: layer.isBackground,
+          (layer) => ContentLayerSnapshot(
+            id: layer.id,
             nodes: layer.nodes.map(txnNodeToSnapshot).toList(growable: false),
           ),
         )
@@ -92,64 +137,29 @@ SceneSnapshot txnSceneToSnapshot(Scene scene) {
   );
 }
 
-Scene txnSceneFromSnapshot(SceneSnapshot snapshot) {
-  sceneValidateSnapshotValues(
+Scene txnSceneFromSnapshot(
+  SceneSnapshot snapshot, {
+  int Function()? nextInstanceRevision,
+}) {
+  return model_builder.sceneBuildFromSnapshot(
     snapshot,
-    onError: _txnSnapshotValidationError,
-    requirePositiveGridCellSize: true,
-  );
-  final canonicalLayers = _txnCanonicalizeSnapshotLayers(snapshot.layers);
-  return Scene(
-    layers: canonicalLayers
-        .map(
-          (layer) => Layer(
-            isBackground: layer.isBackground,
-            nodes: layer.nodes.map(txnNodeFromSnapshot).toList(growable: false),
-          ),
-        )
-        .toList(growable: false),
-    camera: Camera(offset: snapshot.camera.offset),
-    background: Background(
-      color: snapshot.background.color,
-      grid: GridSettings(
-        isEnabled: snapshot.background.grid.isEnabled,
-        cellSize: snapshot.background.grid.cellSize,
-        color: snapshot.background.grid.color,
-      ),
-    ),
-    palette: ScenePalette(
-      penColors: snapshot.palette.penColors,
-      backgroundColors: snapshot.palette.backgroundColors,
-      gridSizes: snapshot.palette.gridSizes,
-    ),
+    nextInstanceRevision: nextInstanceRevision,
   );
 }
 
-List<LayerSnapshot> _txnCanonicalizeSnapshotLayers(List<LayerSnapshot> layers) {
-  var backgroundIndex = -1;
-  for (var i = 0; i < layers.length; i++) {
-    if (!layers[i].isBackground) continue;
-    backgroundIndex = i;
-    break;
-  }
-
-  if (backgroundIndex <= 0) {
-    return layers;
-  }
-
-  final out = <LayerSnapshot>[layers[backgroundIndex]];
-  for (var i = 0; i < layers.length; i++) {
-    if (i == backgroundIndex) continue;
-    out.add(layers[i]);
-  }
-  return out;
-}
-
-SceneNode txnNodeFromSnapshot(NodeSnapshot node) {
+SceneNode txnNodeFromSnapshot(
+  NodeSnapshot node, {
+  int Function()? nextInstanceRevision,
+}) {
+  final instanceRevision = _txnResolveSnapshotInstanceRevision(
+    node,
+    nextInstanceRevision: nextInstanceRevision,
+  );
   switch (node) {
     case ImageNodeSnapshot image:
       return ImageNode(
         id: image.id,
+        instanceRevision: instanceRevision,
         imageId: image.imageId,
         size: image.size,
         naturalSize: image.naturalSize,
@@ -165,6 +175,7 @@ SceneNode txnNodeFromSnapshot(NodeSnapshot node) {
     case TextNodeSnapshot text:
       final node = TextNode(
         id: text.id,
+        instanceRevision: instanceRevision,
         text: text.text,
         size: text.size,
         fontSize: text.fontSize,
@@ -190,6 +201,7 @@ SceneNode txnNodeFromSnapshot(NodeSnapshot node) {
     case StrokeNodeSnapshot stroke:
       return StrokeNode(
         id: stroke.id,
+        instanceRevision: instanceRevision,
         points: stroke.points,
         pointsRevision: stroke.pointsRevision,
         thickness: stroke.thickness,
@@ -206,6 +218,7 @@ SceneNode txnNodeFromSnapshot(NodeSnapshot node) {
     case LineNodeSnapshot line:
       return LineNode(
         id: line.id,
+        instanceRevision: instanceRevision,
         start: line.start,
         end: line.end,
         thickness: line.thickness,
@@ -222,6 +235,7 @@ SceneNode txnNodeFromSnapshot(NodeSnapshot node) {
     case RectNodeSnapshot rect:
       return RectNode(
         id: rect.id,
+        instanceRevision: instanceRevision,
         size: rect.size,
         fillColor: rect.fillColor,
         strokeColor: rect.strokeColor,
@@ -238,11 +252,12 @@ SceneNode txnNodeFromSnapshot(NodeSnapshot node) {
     case PathNodeSnapshot path:
       return PathNode(
         id: path.id,
+        instanceRevision: instanceRevision,
         svgPathData: path.svgPathData,
         fillColor: path.fillColor,
         strokeColor: path.strokeColor,
         strokeWidth: path.strokeWidth,
-        fillRule: _txnPathFillRuleFromV2(path.fillRule),
+        fillRule: path.fillRule,
         transform: path.transform,
         opacity: path.opacity,
         hitPadding: path.hitPadding,
@@ -261,6 +276,7 @@ NodeSnapshot txnNodeToSnapshot(SceneNode node) {
       final image = node as ImageNode;
       return ImageNodeSnapshot(
         id: image.id,
+        instanceRevision: image.instanceRevision,
         imageId: image.imageId,
         size: image.size,
         naturalSize: image.naturalSize,
@@ -277,6 +293,7 @@ NodeSnapshot txnNodeToSnapshot(SceneNode node) {
       final text = node as TextNode;
       return TextNodeSnapshot(
         id: text.id,
+        instanceRevision: text.instanceRevision,
         text: text.text,
         size: text.size,
         fontSize: text.fontSize,
@@ -301,6 +318,7 @@ NodeSnapshot txnNodeToSnapshot(SceneNode node) {
       final stroke = node as StrokeNode;
       return StrokeNodeSnapshot(
         id: stroke.id,
+        instanceRevision: stroke.instanceRevision,
         points: stroke.points,
         pointsRevision: stroke.pointsRevision,
         thickness: stroke.thickness,
@@ -318,6 +336,7 @@ NodeSnapshot txnNodeToSnapshot(SceneNode node) {
       final line = node as LineNode;
       return LineNodeSnapshot(
         id: line.id,
+        instanceRevision: line.instanceRevision,
         start: line.start,
         end: line.end,
         thickness: line.thickness,
@@ -335,6 +354,7 @@ NodeSnapshot txnNodeToSnapshot(SceneNode node) {
       final rect = node as RectNode;
       return RectNodeSnapshot(
         id: rect.id,
+        instanceRevision: rect.instanceRevision,
         size: rect.size,
         fillColor: rect.fillColor,
         strokeColor: rect.strokeColor,
@@ -352,11 +372,12 @@ NodeSnapshot txnNodeToSnapshot(SceneNode node) {
       final path = node as PathNode;
       return PathNodeSnapshot(
         id: path.id,
+        instanceRevision: path.instanceRevision,
         svgPathData: path.svgPathData,
         fillColor: path.fillColor,
         strokeColor: path.strokeColor,
         strokeWidth: path.strokeWidth,
-        fillRule: _txnPathFillRuleToV2(path.fillRule),
+        fillRule: path.fillRule,
         transform: path.transform,
         opacity: path.opacity,
         hitPadding: path.hitPadding,
@@ -369,17 +390,25 @@ NodeSnapshot txnNodeToSnapshot(SceneNode node) {
   }
 }
 
-SceneNode txnNodeFromSpec(NodeSpec spec, {required NodeId fallbackId}) {
+SceneNode txnNodeFromSpec(
+  NodeSpec spec, {
+  required NodeId fallbackId,
+  int Function()? nextInstanceRevision,
+}) {
   sceneValidateNodeSpecValues(
     spec,
     field: 'spec',
     onError: _txnSnapshotValidationError,
   );
   final id = spec.id ?? fallbackId;
+  final instanceRevision = _txnResolveSpecInstanceRevision(
+    nextInstanceRevision: nextInstanceRevision,
+  );
   switch (spec) {
     case ImageNodeSpec image:
       return ImageNode(
         id: id,
+        instanceRevision: instanceRevision,
         imageId: image.imageId,
         size: image.size,
         naturalSize: image.naturalSize,
@@ -395,6 +424,7 @@ SceneNode txnNodeFromSpec(NodeSpec spec, {required NodeId fallbackId}) {
     case TextNodeSpec text:
       final node = TextNode(
         id: id,
+        instanceRevision: instanceRevision,
         text: text.text,
         size: Size.zero,
         fontSize: text.fontSize,
@@ -420,6 +450,7 @@ SceneNode txnNodeFromSpec(NodeSpec spec, {required NodeId fallbackId}) {
     case StrokeNodeSpec stroke:
       return StrokeNode(
         id: id,
+        instanceRevision: instanceRevision,
         points: stroke.points,
         thickness: stroke.thickness,
         color: stroke.color,
@@ -435,6 +466,7 @@ SceneNode txnNodeFromSpec(NodeSpec spec, {required NodeId fallbackId}) {
     case LineNodeSpec line:
       return LineNode(
         id: id,
+        instanceRevision: instanceRevision,
         start: line.start,
         end: line.end,
         thickness: line.thickness,
@@ -451,6 +483,7 @@ SceneNode txnNodeFromSpec(NodeSpec spec, {required NodeId fallbackId}) {
     case RectNodeSpec rect:
       return RectNode(
         id: id,
+        instanceRevision: instanceRevision,
         size: rect.size,
         fillColor: rect.fillColor,
         strokeColor: rect.strokeColor,
@@ -467,11 +500,12 @@ SceneNode txnNodeFromSpec(NodeSpec spec, {required NodeId fallbackId}) {
     case PathNodeSpec path:
       return PathNode(
         id: id,
+        instanceRevision: instanceRevision,
         svgPathData: path.svgPathData,
         fillColor: path.fillColor,
         strokeColor: path.strokeColor,
         strokeWidth: path.strokeWidth,
-        fillRule: _txnPathFillRuleFromV2(path.fillRule),
+        fillRule: path.fillRule,
         transform: path.transform,
         opacity: path.opacity,
         hitPadding: path.hitPadding,
@@ -482,6 +516,29 @@ SceneNode txnNodeFromSpec(NodeSpec spec, {required NodeId fallbackId}) {
         isTransformable: path.isTransformable,
       );
   }
+}
+
+int _txnResolveSnapshotInstanceRevision(
+  NodeSnapshot node, {
+  int Function()? nextInstanceRevision,
+}) {
+  final existing = node.instanceRevision;
+  if (existing > 0) {
+    return existing;
+  }
+  final allocator = nextInstanceRevision;
+  if (allocator != null) {
+    return allocator();
+  }
+  return 1;
+}
+
+int _txnResolveSpecInstanceRevision({int Function()? nextInstanceRevision}) {
+  final allocator = nextInstanceRevision;
+  if (allocator != null) {
+    return allocator();
+  }
+  return 1;
 }
 
 bool txnApplyNodePatch(SceneNode node, NodePatch patch, {bool dryRun = false}) {
@@ -571,6 +628,13 @@ bool txnApplyNodePatch(SceneNode node, NodePatch patch, {bool dryRun = false}) {
             text.lineHeight = value;
           }, dryRun: dryRun) ||
           changed;
+      if (!dryRun && _txnTextPatchTouchesLayout(textPatch)) {
+        final beforeSize = text.size;
+        recomputeDerivedTextSize(text);
+        if (text.size != beforeSize) {
+          changed = true;
+        }
+      }
     case (StrokeNode stroke, StrokeNodePatch strokePatch):
       changed =
           _txnSetOffsets(strokePatch.points, stroke.points, (value) {
@@ -653,10 +717,8 @@ bool txnApplyNodePatch(SceneNode node, NodePatch patch, {bool dryRun = false}) {
           }, dryRun: dryRun) ||
           changed;
       changed =
-          _txnSet(pathPatch.fillRule, _txnPathFillRuleToV2(path.fillRule), (
-            value,
-          ) {
-            path.fillRule = _txnPathFillRuleFromV2(value);
+          _txnSet(pathPatch.fillRule, path.fillRule, (value) {
+            path.fillRule = value;
           }, dryRun: dryRun) ||
           changed;
     default:
@@ -668,23 +730,66 @@ bool txnApplyNodePatch(SceneNode node, NodePatch patch, {bool dryRun = false}) {
   return changed;
 }
 
+bool _txnTextPatchTouchesLayout(TextNodePatch patch) {
+  return !patch.text.isAbsent ||
+      !patch.fontSize.isAbsent ||
+      !patch.isBold.isAbsent ||
+      !patch.isItalic.isAbsent ||
+      !patch.isUnderline.isAbsent ||
+      !patch.fontFamily.isAbsent ||
+      !patch.lineHeight.isAbsent ||
+      !patch.maxWidth.isAbsent;
+}
+
 bool txnInsertNodeInScene({
   required Scene scene,
   required Map<NodeId, NodeLocatorEntry> nodeLocator,
   required SceneNode node,
-  int? layerIndex,
+  required int layerIndex,
+  int? insertIndex,
 }) {
-  final targetLayerIndex = txnResolveInsertLayerIndex(
-    scene: scene,
-    layerIndex: layerIndex,
-  );
+  if (nodeLocator.containsKey(node.id)) {
+    throw StateError('Node id must be unique: ${node.id}');
+  }
+  final targetLayerIndex = layerIndex;
+  if (targetLayerIndex < 0 || targetLayerIndex >= scene.layers.length) {
+    throw RangeError.range(
+      targetLayerIndex,
+      0,
+      scene.layers.length - 1,
+      'layerIndex',
+    );
+  }
   final targetLayer = scene.layers[targetLayerIndex];
-  final insertedNodeIndex = targetLayer.nodes.length;
-  targetLayer.nodes.add(node);
+  final insertedNodeIndex = insertIndex ?? targetLayer.nodes.length;
+  if (insertedNodeIndex < 0 || insertedNodeIndex > targetLayer.nodes.length) {
+    throw RangeError.range(
+      insertedNodeIndex,
+      0,
+      targetLayer.nodes.length,
+      'insertIndex',
+    );
+  }
+  if (insertedNodeIndex == targetLayer.nodes.length) {
+    targetLayer.nodes.add(node);
+  } else {
+    targetLayer.nodes.insert(insertedNodeIndex, node);
+  }
   nodeLocator[node.id] = (
     layerIndex: targetLayerIndex,
     nodeIndex: insertedNodeIndex,
   );
+  for (
+    var nodeIndex = insertedNodeIndex + 1;
+    nodeIndex < targetLayer.nodes.length;
+    nodeIndex++
+  ) {
+    final shiftedNode = targetLayer.nodes[nodeIndex];
+    nodeLocator[shiftedNode.id] = (
+      layerIndex: targetLayerIndex,
+      nodeIndex: nodeIndex,
+    );
+  }
   return true;
 }
 
@@ -701,6 +806,23 @@ SceneNode? txnEraseNodeFromScene({
   if (found == null) {
     return null;
   }
+  if (found.layerIndex == -1) {
+    final backgroundLayer = scene.backgroundLayer;
+    if (backgroundLayer == null) {
+      return null;
+    }
+    final removed = backgroundLayer.nodes.removeAt(found.nodeIndex);
+    nodeLocator.remove(nodeId);
+    for (
+      var nodeIndex = found.nodeIndex;
+      nodeIndex < backgroundLayer.nodes.length;
+      nodeIndex++
+    ) {
+      final node = backgroundLayer.nodes[nodeIndex];
+      nodeLocator[node.id] = (layerIndex: -1, nodeIndex: nodeIndex);
+    }
+    return removed;
+  }
   final layer = scene.layers[found.layerIndex];
   final removed = layer.nodes.removeAt(found.nodeIndex);
   nodeLocator.remove(nodeId);
@@ -715,46 +837,79 @@ SceneNode? txnEraseNodeFromScene({
   return removed;
 }
 
-int txnResolveInsertLayerIndex({required Scene scene, int? layerIndex}) {
-  if (layerIndex != null) {
-    if (layerIndex < 0 || layerIndex >= scene.layers.length) {
-      throw RangeError.range(
-        layerIndex,
-        0,
-        scene.layers.length - 1,
-        'layerIndex',
+int txnResolveInsertLayerIndex({
+  required Scene scene,
+  LayerId? layerId,
+  LayerId Function()? nextLayerId,
+}) {
+  // Runtime hot-path uses TxnContext layer index fast-path.
+  // This helper remains for tests and model-level utilities.
+  if (layerId != null) {
+    final index = txnFindContentLayerIndexById(scene: scene, layerId: layerId);
+    if (index == null) {
+      throw ArgumentError.value(
+        layerId,
+        'layerId',
+        'Unknown content layer id.',
       );
     }
-    return layerIndex;
+    return index;
   }
+  if (scene.layers.isEmpty) {
+    final generatedId = nextLayerId == null ? 'layer-0' : nextLayerId();
+    scene.layers.add(ContentLayer(id: generatedId));
+    return 0;
+  }
+  return scene.layers.length - 1;
+}
 
-  for (var i = 0; i < scene.layers.length; i++) {
-    if (!scene.layers[i].isBackground) {
-      return i;
+int? txnFindContentLayerIndexById({
+  required Scene scene,
+  required LayerId layerId,
+}) {
+  for (var index = 0; index < scene.layers.length; index++) {
+    if (scene.layers[index].id == layerId) {
+      return index;
     }
   }
-
-  scene.layers.add(Layer());
-  return scene.layers.length - 1;
+  return null;
 }
 
 Set<NodeId> txnNormalizeSelection({
   required Set<NodeId> rawSelection,
   required Scene scene,
+  Map<NodeId, NodeLocatorEntry>? nodeLocator,
 }) {
-  // Commit-time normalization keeps selection ids that still point to visible
-  // non-background nodes. It intentionally does not enforce isSelectable to
-  // preserve explicit selection flows like selectAll(onlySelectable: false).
-  final normalizedCandidates = <NodeId>{
-    for (final layer in scene.layers)
-      for (final node in layer.nodes)
-        if (!layer.isBackground && node.isVisible) node.id,
-  };
-
   return <NodeId>{
     for (final id in rawSelection)
-      if (normalizedCandidates.contains(id)) id,
+      if (txnIsSelectionCandidateId(
+        scene: scene,
+        nodeId: id,
+        nodeLocator: nodeLocator,
+      ))
+        id,
   };
+}
+
+bool txnIsSelectionCandidateId({
+  required Scene scene,
+  required NodeId nodeId,
+  Map<NodeId, NodeLocatorEntry>? nodeLocator,
+}) {
+  final found = nodeLocator == null
+      ? txnFindNodeById(scene, nodeId)
+      : txnFindNodeByLocator(
+          scene: scene,
+          nodeLocator: nodeLocator,
+          nodeId: nodeId,
+        );
+  if (found == null) {
+    return false;
+  }
+  if (found.layerIndex == -1) {
+    return false;
+  }
+  return found.node.isVisible;
 }
 
 Set<NodeId> txnTranslateSelection({
@@ -770,7 +925,6 @@ Set<NodeId> txnTranslateSelection({
   for (final layer in scene.layers) {
     for (final node in layer.nodes) {
       if (!selectedNodeIds.contains(node.id)) continue;
-      if (layer.isBackground) continue;
       if (node.isLocked || !node.isTransformable) continue;
       node.position = node.position + delta;
       moved.add(node.id);
@@ -786,24 +940,6 @@ bool txnNormalizeGrid(Scene scene) {
     return true;
   }
   return false;
-}
-
-PathFillRule _txnPathFillRuleFromV2(V2PathFillRule fillRule) {
-  switch (fillRule) {
-    case V2PathFillRule.nonZero:
-      return PathFillRule.nonZero;
-    case V2PathFillRule.evenOdd:
-      return PathFillRule.evenOdd;
-  }
-}
-
-V2PathFillRule _txnPathFillRuleToV2(PathFillRule fillRule) {
-  switch (fillRule) {
-    case PathFillRule.nonZero:
-      return V2PathFillRule.nonZero;
-    case PathFillRule.evenOdd:
-      return V2PathFillRule.evenOdd;
-  }
 }
 
 bool _txnApplyCommonPatch(

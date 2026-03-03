@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
-// INV:INV-V2-NO-EXTERNAL-MUTATION
+// INV:INV-ENG-NO-EXTERNAL-MUTATION
 
 void main() {
   test('PatchField supports absent/value/nullValue states', () {
@@ -112,7 +112,7 @@ void main() {
       fillColor: PatchField<Color?>.value(Color(0xFF222222)),
       strokeColor: PatchField<Color?>.nullValue(),
       strokeWidth: PatchField<double>.value(2),
-      fillRule: PatchField<V2PathFillRule>.value(V2PathFillRule.evenOdd),
+      fillRule: PatchField<PathFillRule>.value(PathFillRule.evenOdd),
     );
 
     expect(image.common.opacity.value, 0.8);
@@ -132,7 +132,7 @@ void main() {
     expect(rect.fillColor.isNullValue, isTrue);
     expect(rect.strokeColor.value, const Color(0xFF111111));
 
-    expect(path.fillRule.value, V2PathFillRule.evenOdd);
+    expect(path.fillRule.value, PathFillRule.evenOdd);
     expect(path.strokeColor.isNullValue, isTrue);
   });
 
@@ -162,7 +162,7 @@ void main() {
     );
     final pathPatch = PathNodePatch(
       id: 'path-runtime',
-      fillRule: PatchField<V2PathFillRule>.value(V2PathFillRule.nonZero),
+      fillRule: PatchField<PathFillRule>.value(PathFillRule.nonZero),
     );
 
     expect(imagePatch.imageId.value, 'runtime');
@@ -170,6 +170,6 @@ void main() {
     expect(strokePatch.thickness.value, 2);
     expect(linePatch.start.value, const Offset(1, 1));
     expect(rectPatch.strokeWidth.value, 3);
-    expect(pathPatch.fillRule.value, V2PathFillRule.nonZero);
+    expect(pathPatch.fillRule.value, PathFillRule.nonZero);
   });
 }

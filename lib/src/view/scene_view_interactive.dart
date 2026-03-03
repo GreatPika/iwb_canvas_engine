@@ -4,42 +4,39 @@ import 'dart:ui' as ui;
 import 'package:flutter/widgets.dart';
 
 import '../core/geometry.dart';
+import '../core/numeric_clamp.dart';
 import '../core/pointer_input.dart';
 import '../interactive/scene_controller_interactive.dart';
+import '../public/canvas_pointer_input.dart';
 import '../render/scene_painter.dart';
+import '../render/scene_render_caches.dart';
 
 ui.Image? _defaultImageResolver(String _) => null;
 
-class SceneViewInteractiveV2 extends StatefulWidget {
-  const SceneViewInteractiveV2({
+class SceneViewInteractive extends StatefulWidget {
+  const SceneViewInteractive({
     required this.controller,
     this.imageResolver,
-    this.staticLayerCache,
-    this.textLayoutCache,
-    this.strokePathCache,
-    this.pathMetricsCache,
     this.selectionColor = const Color(0xFF1565C0),
     this.selectionStrokeWidth = 1,
     this.gridStrokeWidth = 1,
     super.key,
   });
 
-  final SceneControllerInteractiveV2 controller;
-  final ImageResolverV2? imageResolver;
-  final SceneStaticLayerCacheV2? staticLayerCache;
-  final SceneTextLayoutCacheV2? textLayoutCache;
-  final SceneStrokePathCacheV2? strokePathCache;
-  final ScenePathMetricsCacheV2? pathMetricsCache;
+  final SceneControllerInteractive controller;
+  final ui.Image? Function(String imageId)? imageResolver;
   final Color selectionColor;
   final double selectionStrokeWidth;
   final double gridStrokeWidth;
 
   @override
-  State<SceneViewInteractiveV2> createState() => _SceneViewInteractiveV2State();
+  State<SceneViewInteractive> createState() => _SceneViewInteractiveState();
 }
 
-class _SceneViewInteractiveV2State extends State<SceneViewInteractiveV2> {
+class _SceneViewInteractiveState extends State<SceneViewInteractive> {
   late PointerInputTracker _pointerTracker;
+  late PointerInputSettings _lastPointerSettings;
+  PointerInputSettings? _pendingPointerSettings;
   Timer? _pendingTapTimer;
   int? _pendingTapFlushTimestampMs;
   int? _activePointerId;
@@ -47,71 +44,37 @@ class _SceneViewInteractiveV2State extends State<SceneViewInteractiveV2> {
   final Map<int, int> _pointerSlotByRawPointer = <int, int>{};
   final List<int> _freePointerSlots = <int>[];
   int _nextPointerSlotId = 1;
+  int _lastEpoch = 0;
 
-  late SceneStaticLayerCacheV2 _staticLayerCache;
-  late bool _ownsStaticLayerCache;
-  late SceneTextLayoutCacheV2 _textLayoutCache;
-  late bool _ownsTextLayoutCache;
-  late SceneStrokePathCacheV2 _strokePathCache;
-  late bool _ownsStrokePathCache;
-  late ScenePathMetricsCacheV2 _pathMetricsCache;
-  late bool _ownsPathMetricsCache;
+  late SceneRenderCaches _renderCaches;
 
   @override
   void initState() {
     super.initState();
-    _pointerTracker = PointerInputTracker(
-      settings: widget.controller.pointerSettings,
-    );
-    _initStaticLayerCache();
-    _initTextLayoutCache();
-    _initStrokePathCache();
-    _initPathMetricsCache();
+    _renderCaches = _createRenderCaches();
+    _lastEpoch = sceneControllerInteractiveInternalEpoch(widget.controller);
+    widget.controller.addListener(_handleControllerChanged);
+    _lastPointerSettings = widget.controller.pointerSettings;
+    _pointerTracker = PointerInputTracker(settings: _lastPointerSettings);
   }
 
   @override
-  void didUpdateWidget(SceneViewInteractiveV2 oldWidget) {
+  void didUpdateWidget(SceneViewInteractive oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
-      _pointerTracker = PointerInputTracker(
-        settings: widget.controller.pointerSettings,
-      );
-      _activePointerId = null;
-      _clearPendingTapTimer();
-      _pointerSlotByRawPointer.clear();
-      _freePointerSlots.clear();
-      _nextPointerSlotId = 1;
+      oldWidget.controller.removeListener(_handleControllerChanged);
+      widget.controller.addListener(_handleControllerChanged);
+      _resetPointerTracking(settings: widget.controller.pointerSettings);
+      _lastEpoch = sceneControllerInteractiveInternalEpoch(widget.controller);
       _clearAllCaches();
-    }
-    if (oldWidget.staticLayerCache != widget.staticLayerCache) {
-      _syncStaticLayerCache();
-    }
-    if (oldWidget.textLayoutCache != widget.textLayoutCache) {
-      _syncTextLayoutCache();
-    }
-    if (oldWidget.strokePathCache != widget.strokePathCache) {
-      _syncStrokePathCache();
-    }
-    if (oldWidget.pathMetricsCache != widget.pathMetricsCache) {
-      _syncPathMetricsCache();
     }
   }
 
   @override
   void dispose() {
+    widget.controller.removeListener(_handleControllerChanged);
     _clearPendingTapTimer();
-    if (_ownsStaticLayerCache) {
-      _staticLayerCache.dispose();
-    }
-    if (_ownsTextLayoutCache) {
-      _textLayoutCache.clear();
-    }
-    if (_ownsStrokePathCache) {
-      _strokePathCache.clear();
-    }
-    if (_ownsPathMetricsCache) {
-      _pathMetricsCache.clear();
-    }
+    _renderCaches.disposeOwned();
     super.dispose();
   }
 
@@ -126,21 +89,26 @@ class _SceneViewInteractiveV2State extends State<SceneViewInteractiveV2> {
       onPointerCancel: (event) =>
           _handlePointerEvent(event, PointerPhase.cancel),
       child: CustomPaint(
-        painter: ScenePainterV2(
+        painter: ScenePainter(
           controller: widget.controller,
           imageResolver: widget.imageResolver ?? _defaultImageResolver,
-          nodePreviewOffsetResolver: widget.controller.movePreviewDeltaForNode,
-          staticLayerCache: _staticLayerCache,
-          textLayoutCache: _textLayoutCache,
-          strokePathCache: _strokePathCache,
-          pathMetricsCache: _pathMetricsCache,
+          nodePreviewOffsetResolver: (nodeId) =>
+              sceneControllerInteractiveInternalPreviewDeltaForNode(
+                widget.controller,
+                nodeId,
+              ),
+          staticLayerCache: _renderCaches.staticLayerCache,
+          textLayoutCache: _renderCaches.textLayoutCache,
+          strokePathCache: _renderCaches.strokePathCache,
+          pathMetricsCache: _renderCaches.pathMetricsCache,
+          geometryCache: _renderCaches.geometryCache,
           selectionRect: widget.controller.selectionRect,
           selectionColor: widget.selectionColor,
           selectionStrokeWidth: widget.selectionStrokeWidth,
           gridStrokeWidth: widget.gridStrokeWidth,
           textDirection: textDirection,
         ),
-        foregroundPainter: _SceneInteractiveOverlayPainterV2(
+        foregroundPainter: _SceneInteractiveOverlayPainter(
           controller: widget.controller,
         ),
         child: const SizedBox.expand(),
@@ -150,22 +118,32 @@ class _SceneViewInteractiveV2State extends State<SceneViewInteractiveV2> {
 
   void _handlePointerEvent(PointerEvent event, PointerPhase phase) {
     final pointerId = _resolvePointerId(event, phase);
-    final sample = PointerSample(
+    final input = CanvasPointerInput(
       pointerId: pointerId,
       position: event.localPosition,
       timestampMs: event.timeStamp.inMilliseconds,
-      phase: phase,
+      phase: _toCanvasPointerPhase(phase),
       kind: event.kind,
+    );
+    final sample = PointerSample(
+      pointerId: input.pointerId,
+      position: input.position,
+      timestampMs: input.timestampMs ?? event.timeStamp.inMilliseconds,
+      phase: phase,
+      kind: input.kind,
     );
 
     _captureActivePointer(sample);
-    widget.controller.handlePointer(sample);
+    widget.controller.handlePointer(input);
 
     if (_shouldTrackSignals(sample)) {
       final signals = _pointerTracker.handle(sample);
       for (final signal in signals) {
         if (signal.type == PointerSignalType.doubleTap) {
-          widget.controller.handlePointerSignal(signal);
+          widget.controller.handleDoubleTap(
+            position: signal.position,
+            timestampMs: signal.timestampMs,
+          );
         }
       }
     }
@@ -210,10 +188,9 @@ class _SceneViewInteractiveV2State extends State<SceneViewInteractiveV2> {
     _pendingTapFlushTimestampMs = null;
     if (flushTimestampMs == null) return;
 
-    final signals = _pointerTracker.flushPending(flushTimestampMs);
-    for (final signal in signals) {
-      widget.controller.handlePointerSignal(signal);
-    }
+    // Timer flush emits deferred single taps only; double taps are emitted in
+    // the immediate handle(...) path when the second tap arrives.
+    _pointerTracker.flushPending(flushTimestampMs);
     _syncPendingFlushTimer(referenceTimestampMs: flushTimestampMs);
   }
 
@@ -236,6 +213,7 @@ class _SceneViewInteractiveV2State extends State<SceneViewInteractiveV2> {
     }
     if (_activePointerId != sample.pointerId) return;
     _activePointerId = null;
+    _applyPendingPointerSettingsIfPossible();
   }
 
   int _resolvePointerId(PointerEvent event, PointerPhase phase) {
@@ -275,100 +253,88 @@ class _SceneViewInteractiveV2State extends State<SceneViewInteractiveV2> {
   }
 
   void _clearAllCaches() {
-    _staticLayerCache.clear();
-    _textLayoutCache.clear();
-    _strokePathCache.clear();
-    _pathMetricsCache.clear();
+    _renderCaches.clearAll();
   }
 
-  void _initStaticLayerCache() {
-    final external = widget.staticLayerCache;
-    if (external != null) {
-      _staticLayerCache = external;
-      _ownsStaticLayerCache = false;
+  void _handleControllerChanged() {
+    final nextPointerSettings = widget.controller.pointerSettings;
+    if (!_pointerSettingsEqual(_lastPointerSettings, nextPointerSettings)) {
+      if (_activePointerId != null) {
+        _pendingPointerSettings = nextPointerSettings;
+      } else {
+        _resetPointerTracking(settings: nextPointerSettings);
+      }
+    }
+    final epoch = sceneControllerInteractiveInternalEpoch(widget.controller);
+    if (epoch == _lastEpoch) {
       return;
     }
-    _staticLayerCache = SceneStaticLayerCacheV2();
-    _ownsStaticLayerCache = true;
+    _lastEpoch = epoch;
+    _clearAllCaches();
   }
 
-  void _syncStaticLayerCache() {
-    if (_ownsStaticLayerCache) {
-      _staticLayerCache.dispose();
-    }
-    _initStaticLayerCache();
+  SceneRenderCaches _createRenderCaches() {
+    return SceneRenderCaches();
   }
 
-  void _initTextLayoutCache() {
-    final external = widget.textLayoutCache;
-    if (external != null) {
-      _textLayoutCache = external;
-      _ownsTextLayoutCache = false;
-      return;
-    }
-    _textLayoutCache = SceneTextLayoutCacheV2();
-    _ownsTextLayoutCache = true;
+  void _resetPointerTracking({required PointerInputSettings settings}) {
+    _pendingPointerSettings = null;
+    _lastPointerSettings = settings;
+    _pointerTracker = PointerInputTracker(settings: settings);
+    _activePointerId = null;
+    _clearPendingTapTimer();
+    _pointerSlotByRawPointer.clear();
+    _freePointerSlots.clear();
+    _nextPointerSlotId = 1;
   }
 
-  void _syncTextLayoutCache() {
-    if (_ownsTextLayoutCache) {
-      _textLayoutCache.clear();
-    }
-    _initTextLayoutCache();
+  void _applyPendingPointerSettingsIfPossible() {
+    final pending = _pendingPointerSettings;
+    if (pending == null || _activePointerId != null) return;
+    _resetPointerTracking(settings: pending);
   }
 
-  void _initStrokePathCache() {
-    final external = widget.strokePathCache;
-    if (external != null) {
-      _strokePathCache = external;
-      _ownsStrokePathCache = false;
-      return;
-    }
-    _strokePathCache = SceneStrokePathCacheV2();
-    _ownsStrokePathCache = true;
+  bool _pointerSettingsEqual(
+    PointerInputSettings left,
+    PointerInputSettings right,
+  ) {
+    return left.tapSlop == right.tapSlop &&
+        left.doubleTapSlop == right.doubleTapSlop &&
+        left.doubleTapMaxDelayMs == right.doubleTapMaxDelayMs &&
+        left.deferSingleTap == right.deferSingleTap;
   }
 
-  void _syncStrokePathCache() {
-    if (_ownsStrokePathCache) {
-      _strokePathCache.clear();
+  CanvasPointerPhase _toCanvasPointerPhase(PointerPhase phase) {
+    switch (phase) {
+      case PointerPhase.down:
+        return CanvasPointerPhase.down;
+      case PointerPhase.move:
+        return CanvasPointerPhase.move;
+      case PointerPhase.up:
+        return CanvasPointerPhase.up;
+      case PointerPhase.cancel:
+        return CanvasPointerPhase.cancel;
     }
-    _initStrokePathCache();
-  }
-
-  void _initPathMetricsCache() {
-    final external = widget.pathMetricsCache;
-    if (external != null) {
-      _pathMetricsCache = external;
-      _ownsPathMetricsCache = false;
-      return;
-    }
-    _pathMetricsCache = ScenePathMetricsCacheV2();
-    _ownsPathMetricsCache = true;
-  }
-
-  void _syncPathMetricsCache() {
-    if (_ownsPathMetricsCache) {
-      _pathMetricsCache.clear();
-    }
-    _initPathMetricsCache();
   }
 }
 
-class _SceneInteractiveOverlayPainterV2 extends CustomPainter {
-  const _SceneInteractiveOverlayPainterV2({required this.controller})
+class _SceneInteractiveOverlayPainter extends CustomPainter {
+  const _SceneInteractiveOverlayPainter({required this.controller})
     : super(repaint: controller);
 
-  final SceneControllerInteractiveV2 controller;
+  final SceneControllerInteractive controller;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final cameraOffset = controller.snapshot.camera.offset;
+    final cameraOffset = sanitizeFiniteOffset(
+      controller.snapshot.camera.offset,
+    );
     _paintStrokePreview(canvas, cameraOffset);
     _paintLinePreview(canvas, cameraOffset);
   }
 
   @override
-  bool shouldRepaint(covariant _SceneInteractiveOverlayPainterV2 oldDelegate) {
+  bool shouldRepaint(covariant _SceneInteractiveOverlayPainter oldDelegate) {
     return oldDelegate.controller != controller;
   }
 
@@ -456,4 +422,4 @@ class _SceneInteractiveOverlayPainterV2 extends CustomPainter {
   }
 }
 
-typedef SceneView = SceneViewInteractiveV2;
+typedef SceneView = SceneViewInteractive;

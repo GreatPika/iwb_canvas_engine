@@ -6,14 +6,15 @@ import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/model/document.dart';
 
-// INV:INV-V2-TEXT-SIZE-DERIVED
+// INV:INV-ENG-TEXT-SIZE-DERIVED
 
 void main() {
   Scene sceneWithAllNodeTypes() {
     return Scene(
-      layers: <Layer>[
-        Layer(isBackground: true, nodes: <SceneNode>[]),
-        Layer(
+      layers: <ContentLayer>[
+        ContentLayer(id: 'layer-auto-9', nodes: <SceneNode>[]),
+        ContentLayer(
+          id: 'layer-auto-10',
           nodes: <SceneNode>[
             ImageNode(
               id: 'img',
@@ -126,8 +127,9 @@ void main() {
     expect(
       () => txnSceneFromSnapshot(
         SceneSnapshot(
-          layers: <LayerSnapshot>[
-            LayerSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-auto-0',
               nodes: <NodeSnapshot>[
                 StrokeNodeSnapshot(
                   id: 's',
@@ -144,64 +146,93 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is ArgumentError &&
-              e.name == 'layers[0].nodes[0].pointsRevision' &&
-              e.message == 'Must be >= 0.',
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers[0].nodes[0].pointsRevision' &&
+              e.message ==
+                  'Field layers[0].nodes[0].pointsRevision must be >= 0.',
         ),
       ),
     );
   });
 
+  test('txnSceneFromSnapshot preserves dedicated background layer', () {
+    final scene = txnSceneFromSnapshot(
+      SceneSnapshot(
+        backgroundLayer: BackgroundLayerSnapshot(
+          nodes: const <NodeSnapshot>[
+            RectNodeSnapshot(id: 'bg', size: Size(1, 1)),
+          ],
+        ),
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
+            id: 'layer-auto-1',
+            nodes: const <NodeSnapshot>[
+              RectNodeSnapshot(id: 'n1', size: Size(1, 1)),
+            ],
+          ),
+          ContentLayerSnapshot(
+            id: 'layer-auto-2',
+            nodes: const <NodeSnapshot>[
+              RectNodeSnapshot(id: 'n2', size: Size(1, 1)),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    expect(scene.backgroundLayer, isNotNull);
+    expect(scene.backgroundLayer!.nodes.single.id, 'bg');
+    expect(scene.layers.length, 2);
+    expect(scene.layers[0].nodes.single.id, 'n1');
+    expect(scene.layers[1].nodes.single.id, 'n2');
+  });
+
+  test('txnSceneFromSnapshot canonicalizes missing background layer', () {
+    // INV:INV-SER-CANONICAL-BACKGROUND-LAYER
+    final scene = txnSceneFromSnapshot(
+      SceneSnapshot(
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
+            id: 'layer-auto-3',
+            nodes: const <NodeSnapshot>[
+              RectNodeSnapshot(id: 'n1', size: Size(1, 1)),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    expect(scene.layers.length, 1);
+    expect(scene.backgroundLayer, isNotNull);
+    expect(scene.backgroundLayer!.nodes, isEmpty);
+  });
+
   test(
-    'txnSceneFromSnapshot canonicalizes a single background layer to index 0',
+    'snapshot import/export round-trip keeps canonical single background layer',
     () {
-      final scene = txnSceneFromSnapshot(
+      // INV:INV-SER-CANONICAL-BACKGROUND-LAYER
+      final imported = txnSceneFromSnapshot(
         SceneSnapshot(
-          layers: <LayerSnapshot>[
-            LayerSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-auto-4',
               nodes: const <NodeSnapshot>[
                 RectNodeSnapshot(id: 'n1', size: Size(1, 1)),
-              ],
-            ),
-            LayerSnapshot(
-              isBackground: true,
-              nodes: const <NodeSnapshot>[
-                RectNodeSnapshot(id: 'bg', size: Size(1, 1)),
-              ],
-            ),
-            LayerSnapshot(
-              nodes: const <NodeSnapshot>[
-                RectNodeSnapshot(id: 'n2', size: Size(1, 1)),
               ],
             ),
           ],
         ),
       );
 
-      expect(scene.layers.length, 3);
-      expect(scene.layers.first.isBackground, isTrue);
-      expect(scene.layers[1].nodes.single.id, 'n1');
-      expect(scene.layers[2].nodes.single.id, 'n2');
-    },
-  );
+      final exported = txnSceneToSnapshot(imported);
+      final reimported = txnSceneFromSnapshot(exported);
 
-  test(
-    'txnSceneFromSnapshot does not auto-insert missing background layer',
-    () {
-      final scene = txnSceneFromSnapshot(
-        SceneSnapshot(
-          layers: <LayerSnapshot>[
-            LayerSnapshot(
-              nodes: const <NodeSnapshot>[
-                RectNodeSnapshot(id: 'n1', size: Size(1, 1)),
-              ],
-            ),
-          ],
-        ),
-      );
-
-      expect(scene.layers.length, 1);
-      expect(scene.layers.first.isBackground, isFalse);
+      expect(exported.backgroundLayer.nodes, isEmpty);
+      expect(reimported.backgroundLayer, isNotNull);
+      expect(reimported.backgroundLayer!.nodes, isEmpty);
+      expect(reimported.layers.length, 1);
+      expect(reimported.layers[0].nodes.single.id, 'n1');
     },
   );
 
@@ -209,13 +240,15 @@ void main() {
     expect(
       () => txnSceneFromSnapshot(
         SceneSnapshot(
-          layers: <LayerSnapshot>[
-            LayerSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-auto-5',
               nodes: const <NodeSnapshot>[
                 RectNodeSnapshot(id: 'dup', size: Size(1, 1)),
               ],
             ),
-            LayerSnapshot(
+            ContentLayerSnapshot(
+              id: 'layer-auto-6',
               nodes: const <NodeSnapshot>[
                 RectNodeSnapshot(id: 'dup', size: Size(2, 2)),
               ],
@@ -226,8 +259,9 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is ArgumentError &&
-              e.name == 'layers[1].nodes[0].id' &&
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.duplicateNodeId &&
+              e.path == 'layers[1].nodes[0].id' &&
               e.message == 'Must be unique across scene layers.',
         ),
       ),
@@ -238,8 +272,9 @@ void main() {
     expect(
       () => txnSceneFromSnapshot(
         SceneSnapshot(
-          layers: <LayerSnapshot>[
-            LayerSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-auto-7',
               nodes: const <NodeSnapshot>[
                 RectNodeSnapshot(
                   id: 'r1',
@@ -261,9 +296,11 @@ void main() {
       throwsA(
         predicate(
           (e) =>
-              e is ArgumentError &&
-              e.name == 'layers[0].nodes[0].transform.a' &&
-              e.message == 'Must be finite.',
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers[0].nodes[0].transform.a' &&
+              e.message ==
+                  'Field layers[0].nodes[0].transform.a must be finite.',
         ),
       ),
     );
@@ -296,7 +333,12 @@ void main() {
     );
 
     final inserted = RectNode(id: 'new', size: const Size(1, 1));
-    txnInsertNodeInScene(scene: scene, nodeLocator: locator, node: inserted);
+    txnInsertNodeInScene(
+      scene: scene,
+      nodeLocator: locator,
+      node: inserted,
+      layerIndex: 1,
+    );
     final insertedFound = txnFindNodeByLocator(
       scene: scene,
       nodeLocator: locator,
@@ -318,10 +360,164 @@ void main() {
     );
   });
 
+  test('txnInsertNodeInScene rejects duplicate node ids', () {
+    final scene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(
+          id: 'layer-auto-11',
+          nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(1, 1))],
+        ),
+      ],
+    );
+    final locator = txnBuildNodeLocator(scene);
+
+    expect(
+      () => txnInsertNodeInScene(
+        scene: scene,
+        nodeLocator: locator,
+        node: RectNode(id: 'dup', size: const Size(2, 2)),
+        layerIndex: 0,
+      ),
+      throwsStateError,
+    );
+  });
+
+  test('txnInsertNodeInScene rejects out-of-range layer index', () {
+    final scene = Scene(
+      layers: <ContentLayer>[ContentLayer(id: 'layer-auto-11a')],
+    );
+    final locator = txnBuildNodeLocator(scene);
+
+    expect(
+      () => txnInsertNodeInScene(
+        scene: scene,
+        nodeLocator: locator,
+        node: RectNode(id: 'new', size: const Size(2, 2)),
+        layerIndex: 2,
+      ),
+      throwsRangeError,
+    );
+  });
+
+  test('txnInsertNodeInScene inserts by index and reindexes shifted nodes', () {
+    final scene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(
+          id: 'layer-auto-11b',
+          nodes: <SceneNode>[
+            RectNode(id: 'a', size: const Size(1, 1)),
+            RectNode(id: 'b', size: const Size(1, 1)),
+          ],
+        ),
+      ],
+    );
+    final locator = txnBuildNodeLocator(scene);
+
+    txnInsertNodeInScene(
+      scene: scene,
+      nodeLocator: locator,
+      node: RectNode(id: 'mid', size: const Size(2, 2)),
+      layerIndex: 0,
+      insertIndex: 1,
+    );
+
+    expect(
+      scene.layers.single.nodes.map((node) => node.id).toList(growable: false),
+      <String>['a', 'mid', 'b'],
+    );
+    expect(locator['mid'], (layerIndex: 0, nodeIndex: 1));
+    expect(locator['b'], (layerIndex: 0, nodeIndex: 2));
+
+    expect(
+      () => txnInsertNodeInScene(
+        scene: scene,
+        nodeLocator: locator,
+        node: RectNode(id: 'bad', size: const Size(1, 1)),
+        layerIndex: 0,
+        insertIndex: 4,
+      ),
+      throwsRangeError,
+    );
+  });
+
+  test('find/locator/erase utilities handle dedicated background layer', () {
+    final scene = Scene(
+      backgroundLayer: BackgroundLayer(
+        nodes: <SceneNode>[
+          RectNode(id: 'bg-a', size: const Size(1, 1)),
+          RectNode(id: 'bg-b', size: const Size(1, 1)),
+        ],
+      ),
+      layers: <ContentLayer>[
+        ContentLayer(
+          id: 'layer-auto-12',
+          nodes: <SceneNode>[RectNode(id: 'fg-a', size: const Size(1, 1))],
+        ),
+      ],
+    );
+    final locator = txnBuildNodeLocator(scene);
+
+    final bgFound = txnFindNodeById(scene, 'bg-a');
+    expect(bgFound, isNotNull);
+    expect(bgFound!.layerIndex, -1);
+    expect(bgFound.nodeIndex, 0);
+
+    final bgByLocator = txnFindNodeByLocator(
+      scene: scene,
+      nodeLocator: locator,
+      nodeId: 'bg-b',
+    );
+    expect(bgByLocator, isNotNull);
+    expect(bgByLocator!.layerIndex, -1);
+    expect(bgByLocator.nodeIndex, 1);
+
+    final wrongIndexLocator = <NodeId, NodeLocatorEntry>{
+      ...locator,
+      'bg-b': (layerIndex: -1, nodeIndex: 99),
+    };
+    expect(
+      txnFindNodeByLocator(
+        scene: scene,
+        nodeLocator: wrongIndexLocator,
+        nodeId: 'bg-b',
+      ),
+      isNull,
+    );
+
+    final wrongIdLocator = <NodeId, NodeLocatorEntry>{
+      ...locator,
+      'bg-a': (layerIndex: -1, nodeIndex: 1),
+    };
+    expect(
+      txnFindNodeByLocator(
+        scene: scene,
+        nodeLocator: wrongIdLocator,
+        nodeId: 'bg-a',
+      ),
+      isNull,
+    );
+
+    final removed = txnEraseNodeFromScene(
+      scene: scene,
+      nodeLocator: locator,
+      nodeId: 'bg-a',
+    );
+    expect(removed, isNotNull);
+    expect(locator.containsKey('bg-a'), isFalse);
+    expect(locator['bg-b'], (layerIndex: -1, nodeIndex: 0));
+
+    scene.backgroundLayer = null;
+    expect(
+      txnFindNodeByLocator(scene: scene, nodeLocator: locator, nodeId: 'bg-b'),
+      isNull,
+    );
+  });
+
   test('erase updates locator indexes for layer tail', () {
     final scene = Scene(
-      layers: <Layer>[
-        Layer(
+      layers: <ContentLayer>[
+        ContentLayer(
+          id: 'layer-auto-13',
           nodes: <SceneNode>[
             RectNode(id: 'a', size: const Size(1, 1)),
             RectNode(id: 'b', size: const Size(1, 1)),
@@ -344,34 +540,47 @@ void main() {
   });
 
   test(
-    'resolve layer index validates range and creates non-background layer',
+    'resolve layer index validates layerId and uses last layer by default',
     () {
-      final scene = Scene(layers: <Layer>[Layer(isBackground: true)]);
-
-      expect(
-        () => txnResolveInsertLayerIndex(scene: scene, layerIndex: -1),
-        throwsRangeError,
-      );
-      expect(
-        () => txnResolveInsertLayerIndex(scene: scene, layerIndex: 10),
-        throwsRangeError,
+      final scene = Scene(
+        layers: <ContentLayer>[ContentLayer(id: 'layer-auto-14')],
       );
 
-      final index = txnResolveInsertLayerIndex(scene: scene, layerIndex: null);
-      expect(index, 1);
-      expect(scene.layers.length, 2);
-      expect(scene.layers.last.isBackground, isFalse);
+      expect(
+        () =>
+            txnResolveInsertLayerIndex(scene: scene, layerId: 'missing-layer'),
+        throwsArgumentError,
+      );
+
+      final index = txnResolveInsertLayerIndex(scene: scene, layerId: null);
+      expect(index, 0);
+      expect(scene.layers.length, 1);
+      expect(scene.layers.last, isA<ContentLayer>());
     },
   );
 
+  test('resolve layer index creates one layer for empty scene by default', () {
+    final emptyScene = Scene();
+
+    final index = txnResolveInsertLayerIndex(
+      scene: emptyScene,
+      layerId: null,
+      nextLayerId: () => 'layer-0',
+    );
+    expect(index, 0);
+    expect(emptyScene.layers.length, 1);
+    expect(emptyScene.layers.single.id, 'layer-0');
+    expect(emptyScene.layers.last, isA<ContentLayer>());
+  });
+
   test('selection/grid helpers enforce transaction invariants', () {
     final scene = Scene(
-      layers: <Layer>[
-        Layer(
-          isBackground: true,
-          nodes: <SceneNode>[RectNode(id: 'bg', size: const Size(1, 1))],
-        ),
-        Layer(
+      backgroundLayer: BackgroundLayer(
+        nodes: <SceneNode>[RectNode(id: 'bg', size: const Size(1, 1))],
+      ),
+      layers: <ContentLayer>[
+        ContentLayer(
+          id: 'layer-auto-15',
           nodes: <SceneNode>[
             RectNode(id: 'ok', size: const Size(1, 1)),
             RectNode(id: 'hidden', size: const Size(1, 1), isVisible: false),
@@ -460,7 +669,7 @@ void main() {
       fallbackId: 'auto-5',
     );
     final path = txnNodeFromSpec(
-      PathNodeSpec(svgPathData: 'M0 0 L1 1', fillRule: V2PathFillRule.evenOdd),
+      PathNodeSpec(svgPathData: 'M0 0 L1 1', fillRule: PathFillRule.evenOdd),
       fallbackId: 'auto-6',
     );
     final explicit = txnNodeFromSpec(
@@ -481,6 +690,81 @@ void main() {
     expect((path as PathNode).fillRule, PathFillRule.evenOdd);
     expect(explicit.id, 'explicit');
   });
+
+  test('node-from-spec allocates instanceRevision from allocator', () {
+    var nextInstanceRevision = 5;
+    int allocate() => nextInstanceRevision++;
+
+    final a = txnNodeFromSpec(
+      RectNodeSpec(size: const Size(1, 1)),
+      fallbackId: 'a',
+      nextInstanceRevision: allocate,
+    );
+    final b = txnNodeFromSpec(
+      RectNodeSpec(size: const Size(1, 1)),
+      fallbackId: 'b',
+      nextInstanceRevision: allocate,
+    );
+
+    expect(a.instanceRevision, 5);
+    expect(b.instanceRevision, 6);
+  });
+
+  test(
+    'node-from-snapshot preserves positive instanceRevision and allocates non-positive',
+    () {
+      var nextInstanceRevision = 10;
+      int allocate() => nextInstanceRevision++;
+
+      final preserved = txnNodeFromSnapshot(
+        const RectNodeSnapshot(
+          id: 'preserved',
+          instanceRevision: 7,
+          size: Size(1, 1),
+        ),
+        nextInstanceRevision: allocate,
+      );
+      final allocated = txnNodeFromSnapshot(
+        const RectNodeSnapshot(id: 'allocated', size: Size(1, 1)),
+        nextInstanceRevision: allocate,
+      );
+
+      expect(preserved.instanceRevision, 7);
+      expect(allocated.instanceRevision, 10);
+    },
+  );
+
+  test(
+    'txnSceneFromSnapshot allocates instanceRevision for non-positive values',
+    () {
+      var nextInstanceRevision = 20;
+      int allocate() => nextInstanceRevision++;
+
+      final scene = txnSceneFromSnapshot(
+        SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-auto-8',
+              nodes: const <NodeSnapshot>[
+                RectNodeSnapshot(id: 'a', size: Size(1, 1)),
+                RectNodeSnapshot(
+                  id: 'b',
+                  instanceRevision: 9,
+                  size: Size(1, 1),
+                ),
+              ],
+            ),
+          ],
+        ),
+        nextInstanceRevision: allocate,
+      );
+
+      final nodeA = txnFindNodeById(scene, 'a')!.node;
+      final nodeB = txnFindNodeById(scene, 'b')!.node;
+      expect(nodeA.instanceRevision, 20);
+      expect(nodeB.instanceRevision, 9);
+    },
+  );
 
   test('text node from spec derives size from text layout', () {
     final node =
@@ -514,6 +798,54 @@ void main() {
     expect(node.size, isNot(const Size(1, 1)));
     expect(node.size.width, greaterThan(1));
     expect(node.size.height, greaterThan(1));
+  });
+
+  test('text node patch touching layout re-derives size', () {
+    final text = TextNode(
+      id: 'text-layout-patch',
+      text: 'Derived size',
+      size: const Size(1, 1),
+      fontSize: 24,
+      color: const Color(0xFF000000),
+    );
+
+    final changed = txnApplyNodePatch(
+      text,
+      const TextNodePatch(
+        id: 'text-layout-patch',
+        fontSize: PatchField<double>.value(28),
+      ),
+    );
+
+    expect(changed, isTrue);
+    expect(text.size, isNot(const Size(1, 1)));
+    expect(text.size.width, greaterThan(1));
+    expect(text.size.height, greaterThan(1));
+  });
+
+  test('text node patch without layout fields keeps derived size', () {
+    final text =
+        txnNodeFromSpec(
+              TextNodeSpec(
+                text: 'Stable derived size',
+                fontSize: 20,
+                color: const Color(0xFF000000),
+              ),
+              fallbackId: 'text-non-layout-patch',
+            )
+            as TextNode;
+    final sizeBefore = text.size;
+
+    final changed = txnApplyNodePatch(
+      text,
+      const TextNodePatch(
+        id: 'text-non-layout-patch',
+        color: PatchField<Color>.value(Color(0xFF123456)),
+      ),
+    );
+
+    expect(changed, isTrue);
+    expect(text.size, sizeBefore);
   });
 
   test('node-from-spec rejects invalid numeric fields with field path', () {
@@ -742,7 +1074,7 @@ void main() {
           fillColor: PatchField<Color?>.value(Color(0xFF111111)),
           strokeColor: PatchField<Color?>.nullValue(),
           strokeWidth: PatchField<double>.value(4),
-          fillRule: PatchField<V2PathFillRule>.value(V2PathFillRule.evenOdd),
+          fillRule: PatchField<PathFillRule>.value(PathFillRule.evenOdd),
         ),
       ),
       isTrue,
