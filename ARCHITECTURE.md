@@ -36,6 +36,41 @@ lib/
     view/           // Flutter widget that wires input + painting
 ```
 
+## Layer migration note (ADR)
+
+This repository is in a transitional architecture state during the `public/` to
+`contract/` cleanup wave.
+
+- Public API is defined only by exports from
+  `lib/iwb_canvas_engine.dart`.
+- `lib/src/public/` is a transitional internal bucket scheduled for removal.
+- `contract/` is the target low-level layer for stable API contracts and
+  shared contract-facing value types.
+- The target `lib/src` dependency graph is explicit and acyclic.
+
+Current transitional layout:
+
+- `public/` still contains exported immutable types and a small number of
+  facades while the migration is in progress.
+- The current directory layout is intentionally not yet the final ownership map.
+
+Target end-state for this migration wave:
+
+- `contract -> none`
+- `core -> contract`
+- `model -> core + contract`
+- `serialization -> model + core + contract`
+- `controller -> model + core + contract`
+- `interactive -> controller + model + core + contract`
+- `render -> model + core + contract`
+- `view -> interactive + controller + render + model + core + contract`
+
+Ownership decisions for the target state:
+
+- `SceneBuilder` is not part of `contract/`; it belongs to `model/`.
+- Runtime orchestration and owner-specific facades do not move into
+  `contract/`.
+
 ## Runtime data flow
 
 1. `SceneView` receives Flutter pointer input and normalizes it into public

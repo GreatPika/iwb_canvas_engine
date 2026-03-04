@@ -1,7 +1,7 @@
 import 'dart:io';
 
 // Invariants enforced by this tool:
-// INV:INV-G-CORE-NO-LAYER-DEPS
+// INV:INV-G-LAYER-DAG
 // INV:INV-G-LAYER-BOUNDARIES
 // INV:INV-ENG-NO-EXTERNAL-MUTATION
 // INV:INV-ENG-COMMANDS-NO-PART
@@ -74,6 +74,33 @@ enum _Layer {
   view,
 }
 
+const Map<_Layer, Set<_Layer>> _allowedLayerDependencies = <_Layer, Set<_Layer>>{
+  _Layer.core: <_Layer>{_Layer.publicApi},
+  _Layer.model: <_Layer>{_Layer.core, _Layer.publicApi},
+  _Layer.publicApi: <_Layer>{_Layer.core, _Layer.model},
+  _Layer.controller: <_Layer>{_Layer.core, _Layer.model, _Layer.publicApi},
+  _Layer.interactive: <_Layer>{
+    _Layer.core,
+    _Layer.controller,
+    _Layer.publicApi,
+    _Layer.model,
+  },
+  _Layer.render: <_Layer>{_Layer.core, _Layer.model, _Layer.publicApi},
+  _Layer.serialization: <_Layer>{
+    _Layer.core,
+    _Layer.model,
+    _Layer.publicApi,
+  },
+  _Layer.view: <_Layer>{
+    _Layer.core,
+    _Layer.controller,
+    _Layer.interactive,
+    _Layer.render,
+    _Layer.publicApi,
+    _Layer.model,
+  },
+};
+
 _Layer? _layerForRepoRelPosixPath(String repoRelPosixPath) {
   if (repoRelPosixPath.startsWith('/lib/src/core/')) return _Layer.core;
   if (repoRelPosixPath.startsWith('/lib/src/model/')) return _Layer.model;
@@ -117,33 +144,7 @@ bool _isAllowedLayerDependency({required _Layer from, required _Layer to}) {
   if (from == to) {
     return true;
   }
-
-  switch (from) {
-    case _Layer.core:
-      return to == _Layer.publicApi;
-    case _Layer.model:
-      return to == _Layer.core || to == _Layer.publicApi;
-    case _Layer.publicApi:
-      return to == _Layer.core || to == _Layer.model;
-    case _Layer.serialization:
-      return to == _Layer.core || to == _Layer.model || to == _Layer.publicApi;
-    case _Layer.controller:
-      return to == _Layer.core || to == _Layer.model || to == _Layer.publicApi;
-    case _Layer.interactive:
-      return to == _Layer.core ||
-          to == _Layer.controller ||
-          to == _Layer.publicApi ||
-          to == _Layer.model;
-    case _Layer.render:
-      return to == _Layer.core || to == _Layer.model || to == _Layer.publicApi;
-    case _Layer.view:
-      return to == _Layer.core ||
-          to == _Layer.controller ||
-          to == _Layer.interactive ||
-          to == _Layer.render ||
-          to == _Layer.publicApi ||
-          to == _Layer.model;
-  }
+  return _allowedLayerDependencies[from]?.contains(to) ?? false;
 }
 
 String _posixDirname(String posixPath) {
@@ -487,7 +488,7 @@ void main(List<String> args) {
                   directive: directive,
                   target: target,
                   message:
-                      'layer boundary violation: '
+                      'layer DAG violation: '
                       '${_layerLabel(fileLayer)}/** must not $directive '
                       '${_layerLabel(targetLayer)}/** '
                       '($resolvedRepoRelPosix)',

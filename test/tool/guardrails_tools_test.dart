@@ -86,7 +86,7 @@ void main() {
         expect(
           result.stderr.toString(),
           contains(
-            'layer boundary violation: core/** must not import controller/**',
+            'layer DAG violation: core/** must not import controller/**',
           ),
         );
       } finally {
@@ -109,7 +109,7 @@ void main() {
         expect(
           result.stderr.toString(),
           contains(
-            'layer boundary violation: core/** must not import model/**',
+            'layer DAG violation: core/** must not import model/**',
           ),
         );
       } finally {

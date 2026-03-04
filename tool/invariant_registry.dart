@@ -25,9 +25,9 @@ class Invariant {
 
 const List<Invariant> invariants = <Invariant>[
   Invariant(
-    id: 'INV-G-CORE-NO-LAYER-DEPS',
+    id: 'INV-G-LAYER-DAG',
     scope: 'layering',
-    title: 'core/** must not depend on higher layers',
+    title: 'lib/src layer DAG is explicit and enforced',
   ),
   Invariant(
     id: 'INV-G-LAYER-BOUNDARIES',

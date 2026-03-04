@@ -1,36 +1,205 @@
 # Development Plan
 
-There is no active development wave in this file right now. The `5.0.0`
-stabilization and release-prep work was completed on `2026-02-18`, and this
-document stays intentionally minimal between planning cycles.
+Objective: remove `lib/src/public/` as an internal architectural layer, replace
+it with a single explicit low-level `contract/` layer for stable API
+contracts and shared contract-facing value types, and make "public API" mean
+only "exported from `lib/iwb_canvas_engine.dart`". Release target: `5.1.0` as
+the next non-breaking minor; if the work uncovers an unavoidable external
+contract break, split the breaking portion into a separate `6.0.0` wave
+instead of weakening the design.
 
-## Current status
+## Scope
 
-- There is no active roadmap tracked in this file until a new scoped workstream
-  is opened.
-- Historical implementation detail belongs in `CHANGELOG.md` and git history,
-  not in this file.
-- The next active plan should replace this document with a fresh, decision-ready
-  roadmap for the new work.
+- In: internal module reshaping, import graph cleanup, invariant/guardrail
+  updates, test coverage updates, and documentation alignment required to make
+  the new structure self-explanatory.
+- Out: product-level features, new runtime capabilities, JSON schema changes,
+  app-owned persistence, collaboration, and temporary long-lived compatibility
+  shims that preserve the old `src/public/**` layer shape.
+- Out: compatibility guarantees for unsupported `package:iwb_canvas_engine/src/**`
+  imports outside this repository; repo-owned tests and tooling must migrate,
+  but external consumers are supported only through `lib/iwb_canvas_engine.dart`.
 
-## When opening the next wave
+## Success criteria
 
-- Start with one objective and explicit release target.
-- Record only active items, not completed history.
-- Link to `ARCHITECTURE.md` when a task changes invariants or module boundaries.
-- Update `API_GUIDE.md`, `README.md`, and `CHANGELOG.md` in the same change when
-  public behavior changes.
+- [ ] The `lib/src/public/` directory no longer exists in the merged design.
+- [ ] Stable API contracts live in a dedicated layer whose name matches its
+      architectural role.
+- [ ] The import DAG has no special-case rule that treats "public" as both a
+      top layer and a shared dependency.
+- [ ] `lib/iwb_canvas_engine.dart` preserves the intended external API surface
+      unless an explicitly approved breaking change is split into a later wave.
+- [ ] `ARCHITECTURE.md`, `API_GUIDE.md`, `README.md`, `CHANGELOG.md`, and the
+      guardrail tools describe the same module model.
 
-## Validation baseline for code changes
+## Target ownership map
 
-1. `dart format --output=none --set-exit-if-changed lib test example/lib tool`
-2. `flutter analyze`
-3. `flutter test`
-4. `flutter test --coverage`
-5. `dart run tool/check_coverage.dart`
-6. `dart run tool/check_invariant_coverage.dart`
-7. `dart run tool/check_guardrails.dart`
-8. `dart run tool/check_import_boundaries.dart`
+- [ ] Move `lib/src/public/canvas_pointer_input.dart` to
+      `lib/src/contract/canvas_pointer_input.dart`.
+- [ ] Move `lib/src/public/node_patch.dart` to
+      `lib/src/contract/node_patch.dart`.
+- [ ] Move `lib/src/public/node_spec.dart` to
+      `lib/src/contract/node_spec.dart`.
+- [ ] Move `lib/src/public/patch_field.dart` to
+      `lib/src/contract/patch_field.dart`.
+- [ ] Move `lib/src/public/scene_data_exception.dart` to
+      `lib/src/contract/scene_data_exception.dart`.
+- [ ] Move `lib/src/public/scene_render_state.dart` to
+      `lib/src/contract/scene_render_state.dart`.
+- [ ] Move `lib/src/public/scene_write_txn.dart` to
+      `lib/src/contract/scene_write_txn.dart`.
+- [ ] Move `lib/src/public/snapshot.dart` to `lib/src/contract/snapshot.dart`.
+- [ ] Move `lib/src/core/transform2d.dart` to `lib/src/contract/transform2d.dart`.
+- [ ] Split `PathFillRule` out of `lib/src/core/nodes.dart` into
+      `lib/src/contract/path_fill_rule.dart`.
+- [ ] Move the public `SceneBuilder` facade out of `public/` into
+      `lib/src/model/scene_builder_api.dart`; keep the exported class name
+      `SceneBuilder` stable even if internal helper files in `model/` are
+      renamed to avoid collisions.
 
-For documentation-only changes, these checks are optional unless a task modifies
-tooling contracts or references.
+## Required architecture decisions
+
+- [ ] Treat `contract/` as the single low-level home for stable API data
+      contracts; do not place runtime orchestration, stateful facades, or
+      owner-specific adapters there.
+- [ ] Keep this wave strictly `contract/`-only. Do not introduce
+      `lib/src/foundation/`; `Transform2D` and `PathFillRule` move into
+      `contract/` as part of the supported contract language.
+- [ ] Keep existing public symbol names stable unless an explicit breaking
+      change is separately approved; file moves are internal, export names are
+      not.
+- [ ] Preserve package-level public access only through
+      `lib/iwb_canvas_engine.dart`; do not add a new secondary public entrypoint
+      to compensate for internal file moves.
+
+## Phase 1: Freeze the target architecture and file ownership
+
+- [x] Write an ADR-style note in `ARCHITECTURE.md` that defines the target
+      import DAG, states that "public API" is determined by package exports only,
+      and defines `contract/` as the stable low-level contract layer.
+- [ ] Inventory every file currently in `lib/src/public/` and classify it as one
+      of: stable contract, low-level value type, or owner-specific facade, using
+      the target ownership map above as the default unless code evidence forces
+      a documented exception.
+- [ ] Inventory every symbol currently exported from
+      `lib/iwb_canvas_engine.dart` and map each symbol to its long-term owning
+      layer so that exports remain stable even if file locations change.
+- [ ] Confirm that `Transform2D` and `PathFillRule` can move into `contract/`
+      without dragging runtime-only concerns with them; if they cannot, stop and
+      record the blocking dependency before moving any files.
+- [ ] Resolve `Transform2D`'s current dependency on `core/numeric_tolerance.dart`
+      as part of the move: either inline the minimal tolerance helper it needs
+      into `contract/transform2d.dart` or extract a contract-local helper. Do
+      not leave `contract/transform2d.dart` importing from `core/`.
+- [ ] Define non-goals for the wave: do not introduce a new "shared" junk
+      drawer; every moved file must have a single, named ownership reason.
+
+## Phase 2: Establish the new low-level contract boundary
+
+- [ ] Create `lib/src/contract/` and move stable API contracts there:
+      immutable snapshots, ids, specs, patches, write contracts, render-state
+      contracts, and data-shape exceptions that are part of the supported API.
+- [ ] Split `PathFillRule` out of `core/nodes.dart` and move `Transform2D` out
+      of `core/`; place both in `contract/`. Do not leave `contract/`
+      depending on `core/` in the final state.
+- [ ] Remove `Transform2D`'s dependency on `core/numeric_tolerance.dart` during
+      the move by keeping only the small numerical helper needed for inversion
+      near the transform code, rather than widening `contract/` with unrelated
+      core math helpers.
+- [ ] Keep `contract/` free of runtime orchestration dependencies: it may depend
+      only on other `contract/` files and SDK/framework primitives that are
+      already part of the supported API surface.
+- [ ] Replace cross-layer leakage where `core/` currently imports API contracts
+      from `public/` by importing the new contract layer directly, with ids and
+      immutable data shapes sourced from a single place.
+- [ ] Preserve one source of truth for ids and snapshot types during the move;
+      do not duplicate typedefs or mirror contract classes across layers.
+
+## Phase 3: Move facades to their real owners and delete the old layer
+
+- [ ] Move owner-specific facades out of the old `public/` bucket and into the
+      layer that actually owns their behavior. `SceneBuilder` is owned by
+      `model/` and should end in `lib/src/model/scene_builder_api.dart`, not in
+      `contract/` and not in `serialization/`.
+- [ ] Update imports across `core/`, `model/`, `controller/`, `interactive/`,
+      `render/`, `serialization/`, and `view/` to point at the new layer names
+      and remove all direct references to `lib/src/public/**`.
+- [ ] Keep package exports stable by changing only export sources inside
+      `lib/iwb_canvas_engine.dart`; the entrypoint remains the single supported
+      public import path.
+- [ ] Remove `lib/src/public/` completely once all consumers compile against the
+      new ownership model.
+- [ ] Avoid transitional alias files in `src/` as a steady state; if a short
+      migration shim is temporarily needed inside the branch, delete it before
+      merge so the final graph is unambiguous.
+
+## Phase 4: Rebuild guardrails around the new graph
+
+- [x] Rename and reword `INV-G-CORE-NO-LAYER-DEPS` in
+      `tool/invariant_registry.dart` so the invariant describes the actual DAG
+      instead of implying a vague "higher layers" model.
+- [ ] Rewrite `tool/check_import_boundaries.dart` to encode the new explicit DAG
+      (`contract -> none`, `core -> contract`, `model -> core + contract`, and
+      so on), with no exceptional "core -> public" rule.
+- [ ] Add guardrail coverage that fails if `lib/src/public/` is reintroduced or
+      if new files bypass the approved layer map.
+- [ ] Update every path-based tool and test that currently hardcodes
+      `src/public/**`, including `tool/check_guardrails.dart`,
+      `tool/check_coverage.dart`, and `test/tool/guardrails_tools_test.dart`,
+      so guardrails enforce the new structure instead of the deleted one.
+- [ ] Update any invariant coverage markers and supporting tests so
+      `tool/check_invariant_coverage.dart` remains authoritative after the
+      reorganization.
+- [ ] Review adjacent guardrails (`tool/check_guardrails.dart`,
+      `tool/check_import_boundaries.dart`, related tests) to ensure naming and
+      diagnostics now teach the same architecture a new contributor should infer.
+
+## Phase 5: Lock behavior, docs, and release hygiene
+
+- [ ] Add or update tests that prove the public package import still exposes the
+      same supported symbols and that runtime behavior remains unchanged after
+      the internal move.
+- [ ] Add focused tests for edge cases introduced by the move, especially
+      contract/value types that changed ownership and any tools that scan paths
+      by directory name.
+- [ ] Migrate repo-owned tests that import `package:iwb_canvas_engine/src/public/**`
+      to the new internal paths or to `package:iwb_canvas_engine/iwb_canvas_engine.dart`
+      where package-level coverage is the real intent; do not preserve old
+      unsupported `src/public/**` imports as a compatibility contract.
+- [ ] Rename test buckets whose directory names encode the deleted layer
+      (for example `test/public/`) if they would otherwise preserve stale
+      architecture terminology after the migration.
+- [ ] Update `ARCHITECTURE.md` module layout, state-ownership language, and
+      layer descriptions so the document no longer references `public/` as an
+      internal layer.
+- [ ] Update `API_GUIDE.md` and `README.md` only where wording about internal
+      ownership or package boundaries changed; keep user-facing API guidance
+      stable unless an approved behavior change is intentional.
+- [ ] Add a `CHANGELOG.md` entry under `## Unreleased` summarizing the internal
+      architectural cleanup and any public-facing clarifications or migration
+      notes.
+
+## Validation gates
+
+- [x] Run `dart format --output=none --set-exit-if-changed lib test example/lib tool`.
+- [x] Run `flutter analyze`.
+- [x] Run `flutter test`.
+- [x] Run `flutter test --coverage`.
+- [x] Run `dart run tool/check_coverage.dart`.
+- [x] Run `dart run tool/check_invariant_coverage.dart`.
+- [x] Run `dart run tool/check_guardrails.dart`.
+- [x] Run `dart run tool/check_import_boundaries.dart`.
+- [ ] Run `dart doc` before the release cut if exported symbol ownership or docs
+      moved.
+- [ ] Run `dart pub publish --dry-run` before publishing the release candidate.
+
+## Sequencing notes
+
+- [ ] Land the wave in reviewable slices: first architecture decision and
+      guardrail direction, then contract extraction, then consumer rewiring,
+      then documentation and release hygiene.
+- [ ] Keep each slice buildable and guarded; do not mix speculative renames with
+      behavior changes in the same patch unless required to preserve a single
+      source of truth.
+- [ ] Treat any newly discovered external API break as a hard stop for the
+      `5.1.0` target and split it into an explicitly approved follow-up plan.
