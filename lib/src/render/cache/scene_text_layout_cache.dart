@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 
 import '../../core/text_layout.dart';
-import '../../public/snapshot.dart';
+import '../../contract/snapshot.dart';
 
 int _requirePositiveCacheEntries(int maxEntries) {
   if (maxEntries <= 0) {

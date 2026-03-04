@@ -6,10 +6,10 @@ import '../core/selection_policy.dart';
 import '../contract/transform2d.dart';
 import 'internal/signal_event.dart';
 import '../model/document.dart';
-import '../public/node_patch.dart';
-import '../public/node_spec.dart';
-import '../public/scene_write_txn.dart';
-import '../public/snapshot.dart';
+import '../contract/node_patch.dart';
+import '../contract/node_spec.dart';
+import '../contract/scene_write_txn.dart';
+import '../contract/snapshot.dart';
 import 'txn_context.dart';
 
 class SceneWriter implements SceneWriteTxn {

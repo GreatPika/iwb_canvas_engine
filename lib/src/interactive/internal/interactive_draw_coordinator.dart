@@ -5,7 +5,7 @@ import '../../core/interaction_types.dart';
 import '../../core/nodes.dart' show SceneNode;
 import '../../core/pointer_input.dart';
 import '../../core/scene_spatial_index.dart';
-import '../../public/snapshot.dart';
+import '../../contract/snapshot.dart';
 import 'interactive_draw_eraser_engine.dart';
 import 'interactive_draw_line_engine.dart';
 import 'interactive_draw_stroke_engine.dart';

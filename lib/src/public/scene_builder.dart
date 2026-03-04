@@ -1,6 +1,6 @@
 import '../model/document.dart';
 import '../model/scene_builder.dart' as model;
-import 'snapshot.dart';
+import '../contract/snapshot.dart';
 
 /// Unified scene-import gateway for snapshot/json inputs.
 abstract final class SceneBuilder {

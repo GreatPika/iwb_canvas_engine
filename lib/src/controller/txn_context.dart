@@ -6,7 +6,7 @@ import '../core/nodes.dart';
 import '../core/scene.dart';
 import '../model/document.dart';
 import '../model/document_clone.dart';
-import '../public/snapshot.dart' show LayerId;
+import '../contract/snapshot.dart' show LayerId;
 import 'change_set.dart';
 
 class TxnContext {

@@ -4,10 +4,10 @@ import '../core/grid_safety_limits.dart';
 import '../core/nodes.dart';
 import '../core/scene.dart';
 import '../core/text_layout.dart';
-import '../public/node_patch.dart';
-import '../public/node_spec.dart';
-import '../public/patch_field.dart';
-import '../public/snapshot.dart' hide NodeId;
+import '../contract/node_patch.dart';
+import '../contract/node_spec.dart';
+import '../contract/patch_field.dart';
+import '../contract/snapshot.dart' hide NodeId;
 import 'scene_builder.dart' as model_builder;
 import 'scene_value_validation.dart';
 

@@ -225,10 +225,10 @@ instead of weakening the design.
 - [x] Keep `contract/` free of runtime orchestration dependencies: it may depend
       only on other `contract/` files and SDK/framework primitives that are
       already part of the supported API surface.
-- [ ] Replace cross-layer leakage where `core/` currently imports API contracts
+- [x] Replace cross-layer leakage where `core/` currently imports API contracts
       from `public/` by importing the new contract layer directly, with ids and
       immutable data shapes sourced from a single place.
-- [ ] Preserve one source of truth for ids and snapshot types during the move;
+- [x] Preserve one source of truth for ids and snapshot types during the move;
       do not duplicate typedefs or mirror contract classes across layers.
 
 ## Phase 3: Move facades to their real owners and delete the old layer

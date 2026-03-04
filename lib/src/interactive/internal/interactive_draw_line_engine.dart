@@ -4,7 +4,7 @@ import 'dart:ui';
 import '../../core/action_events.dart';
 import '../../core/input_sampling.dart';
 import '../../core/interaction_types.dart';
-import '../../public/snapshot.dart';
+import '../../contract/snapshot.dart';
 
 class InteractiveDrawLineEngineCallbacks {
   const InteractiveDrawLineEngineCallbacks({

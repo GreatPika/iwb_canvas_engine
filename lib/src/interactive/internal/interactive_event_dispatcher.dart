@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import '../../core/action_events.dart';
-import '../../public/snapshot.dart';
+import '../../contract/snapshot.dart';
 
 class InteractiveEventDispatcher {
   final StreamController<ActionCommitted> _actions =

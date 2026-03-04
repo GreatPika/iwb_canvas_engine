@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../core/grid_safety_limits.dart';
 import '../../core/numeric_clamp.dart';
-import '../../public/snapshot.dart';
+import '../../contract/snapshot.dart';
 
 class SceneStaticLayerCache {
   _StaticLayerKey? _key;

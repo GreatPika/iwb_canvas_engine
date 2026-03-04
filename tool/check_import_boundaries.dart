@@ -78,33 +78,21 @@ enum _Layer {
 const Map<_Layer, Set<_Layer>> _allowedLayerDependencies =
     <_Layer, Set<_Layer>>{
       _Layer.contract: <_Layer>{},
-      _Layer.core: <_Layer>{_Layer.contract, _Layer.publicApi},
-      _Layer.model: <_Layer>{_Layer.contract, _Layer.core, _Layer.publicApi},
-      _Layer.publicApi: <_Layer>{_Layer.contract, _Layer.core, _Layer.model},
-      _Layer.controller: <_Layer>{
-        _Layer.contract,
-        _Layer.core,
-        _Layer.model,
-        _Layer.publicApi,
-      },
+      _Layer.core: <_Layer>{_Layer.contract},
+      _Layer.model: <_Layer>{_Layer.contract, _Layer.core},
+      _Layer.publicApi: <_Layer>{_Layer.contract, _Layer.model},
+      _Layer.controller: <_Layer>{_Layer.contract, _Layer.core, _Layer.model},
       _Layer.interactive: <_Layer>{
         _Layer.contract,
         _Layer.core,
         _Layer.controller,
-        _Layer.publicApi,
         _Layer.model,
       },
-      _Layer.render: <_Layer>{
-        _Layer.contract,
-        _Layer.core,
-        _Layer.model,
-        _Layer.publicApi,
-      },
+      _Layer.render: <_Layer>{_Layer.contract, _Layer.core, _Layer.model},
       _Layer.serialization: <_Layer>{
         _Layer.contract,
         _Layer.core,
         _Layer.model,
-        _Layer.publicApi,
       },
       _Layer.view: <_Layer>{
         _Layer.contract,
@@ -112,7 +100,6 @@ const Map<_Layer, Set<_Layer>> _allowedLayerDependencies =
         _Layer.controller,
         _Layer.interactive,
         _Layer.render,
-        _Layer.publicApi,
         _Layer.model,
       },
     };

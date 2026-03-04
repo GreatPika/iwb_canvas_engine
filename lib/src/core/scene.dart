@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'defaults.dart';
 import 'nodes.dart';
-import '../public/snapshot.dart' show LayerId;
+import '../contract/snapshot.dart' show LayerId;
 
 /// A mutable scene graph used by the canvas engine.
 ///

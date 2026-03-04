@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-import '../../public/scene_write_txn.dart';
+import '../../contract/scene_write_txn.dart';
 
 class MoveCommands {
   MoveCommands(this._writeRunner);

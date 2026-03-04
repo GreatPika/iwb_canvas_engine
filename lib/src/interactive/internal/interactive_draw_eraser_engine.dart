@@ -7,7 +7,7 @@ import '../../core/input_sampling.dart';
 import '../../core/nodes.dart' show LineNode, SceneNode, StrokeNode;
 import '../../core/scene_limits.dart';
 import '../../core/scene_spatial_index.dart';
-import '../../public/snapshot.dart';
+import '../../contract/snapshot.dart';
 import 'interactive_geometry.dart';
 
 class InteractiveDrawEraserEngineCallbacks {

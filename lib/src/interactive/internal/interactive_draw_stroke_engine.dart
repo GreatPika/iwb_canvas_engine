@@ -5,7 +5,7 @@ import '../../core/action_events.dart';
 import '../../core/input_sampling.dart';
 import '../../core/interaction_types.dart';
 import '../../core/scene_limits.dart';
-import '../../public/snapshot.dart';
+import '../../contract/snapshot.dart';
 import 'interactive_geometry.dart';
 
 class InteractiveDrawStrokeEngineCallbacks {

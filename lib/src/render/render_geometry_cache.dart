@@ -8,7 +8,7 @@ import '../core/geometry.dart';
 import '../core/local_bounds_policy.dart';
 import '../core/numeric_clamp.dart';
 import '../contract/transform2d.dart';
-import '../public/snapshot.dart';
+import '../contract/snapshot.dart';
 
 class GeometryEntry {
   const GeometryEntry({

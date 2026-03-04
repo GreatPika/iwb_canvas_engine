@@ -1,5 +1,5 @@
 import '../../core/immutable_collections.dart';
-import '../../public/snapshot.dart';
+import '../../contract/snapshot.dart';
 
 class BufferedSignal {
   factory BufferedSignal({

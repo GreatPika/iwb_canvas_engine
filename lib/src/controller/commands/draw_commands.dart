@@ -2,8 +2,8 @@ import 'dart:ui';
 
 import '../../core/nodes.dart';
 import '../../core/scene_limits.dart';
-import '../../public/node_spec.dart';
-import '../../public/scene_write_txn.dart';
+import '../../contract/node_spec.dart';
+import '../../contract/scene_write_txn.dart';
 
 class DrawCommands {
   DrawCommands(this._writeRunner);

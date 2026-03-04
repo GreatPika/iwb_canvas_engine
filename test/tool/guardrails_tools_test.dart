@@ -25,6 +25,35 @@ void main() {
       }
     });
 
+    test('allows public facade -> model and contract imports', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(
+          sandbox,
+          'lib/src/model/document.dart',
+          'class DocumentModel {}\n',
+        );
+        _writeFile(
+          sandbox,
+          'lib/src/contract/snapshot.dart',
+          'class SceneSnapshot {}\n',
+        );
+        _writeFile(sandbox, 'lib/src/public/scene_builder.dart', '''
+import 'package:iwb_canvas_engine/src/model/document.dart';
+import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
+
+class SceneBuilder {
+  SceneSnapshot build(DocumentModel document) => SceneSnapshot();
+}
+''');
+
+        final result = await _runTool(sandbox, 'check_import_boundaries.dart');
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
     test('rejects contract -> core/transform2d import', () async {
       final sandbox = await _createSandbox();
       try {
@@ -93,6 +122,76 @@ void main() {
         );
       } finally {
         sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects core -> public import', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(
+          sandbox,
+          'lib/src/public/value.dart',
+          'class PublicValue {}\n',
+        );
+        _writeFile(
+          sandbox,
+          'lib/src/core/value.dart',
+          "import 'package:iwb_canvas_engine/src/public/value.dart';\n",
+        );
+
+        final result = await _runTool(sandbox, 'check_import_boundaries.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains('layer DAG violation: core/** must not import public/**'),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects higher layers -> public imports', () async {
+      const layerCases = <({String filePath, String label})>[
+        (filePath: 'lib/src/model/value.dart', label: 'model'),
+        (filePath: 'lib/src/controller/value.dart', label: 'controller'),
+        (filePath: 'lib/src/interactive/value.dart', label: 'interactive'),
+        (filePath: 'lib/src/render/value.dart', label: 'render'),
+        (filePath: 'lib/src/serialization/value.dart', label: 'serialization'),
+        (filePath: 'lib/src/view/value.dart', label: 'view'),
+      ];
+
+      for (final layerCase in layerCases) {
+        final sandbox = await _createSandbox();
+        try {
+          _writeFile(
+            sandbox,
+            'lib/src/public/value.dart',
+            'class PublicValue {}\n',
+          );
+          _writeFile(
+            sandbox,
+            layerCase.filePath,
+            "import 'package:iwb_canvas_engine/src/public/value.dart';\n",
+          );
+
+          final result = await _runTool(
+            sandbox,
+            'check_import_boundaries.dart',
+          );
+          expect(
+            result.exitCode,
+            isNonZero,
+            reason: '${layerCase.label} unexpectedly imported public/**',
+          );
+          expect(
+            result.stderr.toString(),
+            contains(
+              'layer DAG violation: ${layerCase.label}/** must not import public/**',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
       }
     });
 

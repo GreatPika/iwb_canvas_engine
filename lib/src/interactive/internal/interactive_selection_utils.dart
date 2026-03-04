@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import '../../model/document.dart';
-import '../../public/snapshot.dart';
+import '../../contract/snapshot.dart';
 
 List<NodeSnapshot> selectedTransformableNodesInSnapshotOrder({
   required SceneSnapshot snapshot,

@@ -4,10 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
-import 'package:iwb_canvas_engine/src/public/node_spec.dart';
-import 'package:iwb_canvas_engine/src/public/scene_data_exception.dart';
-import 'package:iwb_canvas_engine/src/public/scene_render_state.dart';
-import 'package:iwb_canvas_engine/src/public/snapshot.dart';
+import 'package:iwb_canvas_engine/src/contract/node_spec.dart';
+import 'package:iwb_canvas_engine/src/contract/scene_data_exception.dart';
+import 'package:iwb_canvas_engine/src/contract/scene_render_state.dart';
+import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 

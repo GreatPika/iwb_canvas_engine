@@ -7,7 +7,7 @@ import '../../core/nodes.dart' show SceneNode;
 import '../../core/pointer_input.dart';
 import '../../core/scene_spatial_index.dart';
 import '../../contract/transform2d.dart';
-import '../../public/snapshot.dart';
+import '../../contract/snapshot.dart';
 
 typedef MoveCommitSelectionResult = ({
   Offset appliedDelta,

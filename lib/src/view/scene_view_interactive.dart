@@ -7,7 +7,7 @@ import '../core/geometry.dart';
 import '../core/numeric_clamp.dart';
 import '../core/pointer_input.dart';
 import '../interactive/scene_controller_interactive.dart';
-import '../public/canvas_pointer_input.dart';
+import '../contract/canvas_pointer_input.dart';
 import '../render/scene_painter.dart';
 import '../render/scene_render_caches.dart';
 

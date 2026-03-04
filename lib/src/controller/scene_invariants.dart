@@ -5,7 +5,7 @@ import '../core/nodes.dart';
 import '../core/scene.dart';
 import '../model/document_clone.dart';
 import '../model/document.dart';
-import '../public/snapshot.dart' show LayerId;
+import '../contract/snapshot.dart' show LayerId;
 
 List<String> txnCollectStoreInvariantViolations({
   required Scene scene,

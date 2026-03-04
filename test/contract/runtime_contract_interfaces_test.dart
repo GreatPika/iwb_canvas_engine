@@ -2,11 +2,11 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
-import 'package:iwb_canvas_engine/src/public/node_spec.dart';
-import 'package:iwb_canvas_engine/src/public/scene_render_state.dart';
+import 'package:iwb_canvas_engine/src/contract/node_spec.dart';
+import 'package:iwb_canvas_engine/src/contract/scene_render_state.dart';
 
 void main() {
-  group('public interfaces', () {
+  group('runtime contract interfaces', () {
     test('SceneControllerCore is consumable as SceneRenderState', () async {
       final controller = SceneControllerCore();
       addTearDown(controller.dispose);

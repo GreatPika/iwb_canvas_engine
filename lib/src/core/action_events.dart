@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import '../contract/transform2d.dart';
-import '../public/snapshot.dart';
+import '../contract/snapshot.dart';
 import 'immutable_collections.dart';
 
 /// Discrete actions emitted by interactive controllers for app-level undo/redo.

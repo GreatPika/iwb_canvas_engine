@@ -1,5 +1,5 @@
 import 'scene.dart';
-import '../public/snapshot.dart';
+import '../contract/snapshot.dart';
 
 /// Ensures [scene] has a background layer and returns it.
 BackgroundLayer ensureBackgroundLayer(Scene scene) {

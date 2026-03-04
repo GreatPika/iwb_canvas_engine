@@ -3,7 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 
-import '../../public/snapshot.dart';
+import '../../contract/snapshot.dart';
 
 int _requirePositiveCacheEntries(int maxEntries) {
   if (maxEntries <= 0) {

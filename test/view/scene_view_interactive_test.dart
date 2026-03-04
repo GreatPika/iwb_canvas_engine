@@ -6,8 +6,8 @@ import 'package:iwb_canvas_engine/src/core/interaction_types.dart';
 import 'package:iwb_canvas_engine/src/core/pointer_input.dart'
     show PointerInputSettings;
 import 'package:iwb_canvas_engine/src/interactive/scene_controller_interactive.dart';
-import 'package:iwb_canvas_engine/src/public/canvas_pointer_input.dart';
-import 'package:iwb_canvas_engine/src/public/snapshot.dart';
+import 'package:iwb_canvas_engine/src/contract/canvas_pointer_input.dart';
+import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/view/scene_view_interactive.dart';
 
 // INV:INV-ENG-VIEW-POINTER-SETTINGS-LIVE-APPLY
