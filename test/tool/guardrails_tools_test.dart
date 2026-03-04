@@ -2,6 +2,69 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+const _canonicalPublicExportFiles = <String>[
+  'lib/src/contract/node_patch.dart',
+  'lib/src/contract/node_spec.dart',
+  'lib/src/contract/patch_field.dart',
+  'lib/src/contract/canvas_pointer_input.dart',
+  'lib/src/model/scene_builder_api.dart',
+  'lib/src/contract/scene_data_exception.dart',
+  'lib/src/contract/scene_render_state.dart',
+  'lib/src/contract/scene_write_txn.dart',
+  'lib/src/contract/snapshot.dart',
+  'lib/src/core/action_events.dart',
+  'lib/src/core/interaction_types.dart',
+  'lib/src/core/pointer_input.dart',
+  'lib/src/contract/transform2d.dart',
+  'lib/src/interactive/scene_controller_interactive.dart',
+  'lib/src/view/scene_view_interactive.dart',
+  'lib/src/serialization/scene_codec.dart',
+];
+
+const _canonicalPublicExportLines = <String>[
+  "export 'src/contract/node_patch.dart';",
+  "export 'src/contract/node_spec.dart';",
+  "export 'src/contract/patch_field.dart';",
+  "export 'src/contract/canvas_pointer_input.dart';",
+  "export 'src/model/scene_builder_api.dart';",
+  "export 'src/contract/scene_data_exception.dart';",
+  "export 'src/contract/scene_render_state.dart';",
+  "export 'src/contract/scene_write_txn.dart';",
+  "export 'src/contract/snapshot.dart';",
+  "export 'src/core/action_events.dart';",
+  "export 'src/core/interaction_types.dart';",
+  "export 'src/core/pointer_input.dart';",
+  "export 'src/contract/transform2d.dart';",
+  "export 'src/interactive/scene_controller_interactive.dart';",
+  "export 'src/view/scene_view_interactive.dart';",
+  "export 'src/serialization/scene_codec.dart';",
+];
+
+Matcher _diagnostic({required String category, required String detail}) {
+  return allOf(contains('$category violation:'), contains(detail));
+}
+
+String _canonicalPublicEntrypoint({
+  bool withInlineComments = false,
+  bool withTrailingLogicAfterFirstExport = false,
+}) {
+  final lines = <String>['/// Public API exports for tests.', 'library;', ''];
+
+  for (var i = 0; i < _canonicalPublicExportLines.length; i++) {
+    var line = _canonicalPublicExportLines[i];
+    if (i == 0 && withInlineComments) {
+      lines.add('/* comment before export */');
+      line = "export /* inline */ 'src/contract/node_patch.dart';";
+    }
+    if (i == 0 && withTrailingLogicAfterFirstExport) {
+      line = "export 'src/contract/node_patch.dart'; /* c */ class A {}";
+    }
+    lines.add(line);
+  }
+
+  return '${lines.join('\n')}\n';
+}
+
 void main() {
   group('tool/check_import_boundaries.dart', () {
     test('allows contract -> contract export', () async {
@@ -143,7 +206,10 @@ class SceneBuilder {
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          contains('uses unapproved top-level layer "unknown"'),
+          allOf(
+            contains('layer layout violation:'),
+            contains('uses unapproved top-level layer "unknown"'),
+          ),
         );
       } finally {
         sandbox.deleteSync(recursive: true);
@@ -174,7 +240,10 @@ class SceneBuilder {
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          contains('uses deleted top-level layer "public"'),
+          allOf(
+            contains('layer layout violation:'),
+            contains('uses deleted top-level layer "public"'),
+          ),
         );
       } finally {
         sandbox.deleteSync(recursive: true);
@@ -194,7 +263,10 @@ class SceneBuilder {
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          contains('uses deleted top-level layer "public"'),
+          allOf(
+            contains('layer layout violation:'),
+            contains('uses deleted top-level layer "public"'),
+          ),
         );
       } finally {
         sandbox.deleteSync(recursive: true);
@@ -214,7 +286,10 @@ class SceneBuilder {
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          contains('uses unapproved top-level layer "unknown"'),
+          allOf(
+            contains('layer layout violation:'),
+            contains('uses unapproved top-level layer "unknown"'),
+          ),
         );
       } finally {
         sandbox.deleteSync(recursive: true);
@@ -256,7 +331,10 @@ class SceneBuilder {
           );
           expect(
             result.stderr.toString(),
-            contains('uses unapproved top-level layer "unknown"'),
+            allOf(
+              contains('layer layout violation:'),
+              contains('uses unapproved top-level layer "unknown"'),
+            ),
           );
         } finally {
           sandbox.deleteSync(recursive: true);
@@ -416,7 +494,10 @@ class SceneBuilder {
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          contains('internal/** must not import commands/**'),
+          _diagnostic(
+            category: 'controller structure',
+            detail: 'internal/** must not import commands/**',
+          ),
         );
       } finally {
         sandbox.deleteSync(recursive: true);
@@ -441,7 +522,80 @@ class SceneBuilder {
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          contains('commands/** must not import other commands'),
+          _diagnostic(
+            category: 'controller structure',
+            detail: 'commands/** must not import other commands',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects commands part directives', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(
+          sandbox,
+          'lib/src/controller/commands/a/a.dart',
+          "part 'a.part.dart';\n",
+        );
+
+        final result = await _runTool(sandbox, 'check_import_boundaries.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          _diagnostic(
+            category: 'controller structure',
+            detail: 'commands/** must not use part/part of directives',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects internal -> scene_controller import', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(
+          sandbox,
+          'lib/src/controller/internal/b.dart',
+          "import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';\n",
+        );
+
+        final result = await _runTool(sandbox, 'check_import_boundaries.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          _diagnostic(
+            category: 'controller structure',
+            detail:
+                'internal/** must not import controller/scene_controller.dart',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects internal -> disallowed external package import', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(
+          sandbox,
+          'lib/src/controller/internal/b.dart',
+          "import 'package:external/pkg.dart';\n",
+        );
+
+        final result = await _runTool(sandbox, 'check_import_boundaries.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          _diagnostic(
+            category: 'controller structure',
+            detail: 'internal/** has a disallowed external package import',
+          ),
         );
       } finally {
         sandbox.deleteSync(recursive: true);
@@ -457,7 +611,10 @@ class SceneBuilder {
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          contains('uses unapproved top-level layer "unknown"'),
+          allOf(
+            contains('layer layout violation:'),
+            contains('uses unapproved top-level layer "unknown"'),
+          ),
         );
       } finally {
         sandbox.deleteSync(recursive: true);
@@ -515,7 +672,10 @@ class Store {
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          contains('uses deleted top-level layer "public"'),
+          allOf(
+            contains('layer layout violation:'),
+            contains('uses deleted top-level layer "public"'),
+          ),
         );
       } finally {
         sandbox.deleteSync(recursive: true);
@@ -546,7 +706,10 @@ class Store {
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          contains('uses unapproved top-level layer "unknown"'),
+          allOf(
+            contains('layer layout violation:'),
+            contains('uses unapproved top-level layer "unknown"'),
+          ),
         );
       } finally {
         sandbox.deleteSync(recursive: true);
@@ -615,16 +778,7 @@ class Store {
   }
 }
 ''');
-        _writeFile(sandbox, 'lib/iwb_canvas_engine.dart', '''
-/// Public API exports for tests.
-library;
-
-export 'src/contract/foo.dart'
-    show Foo;
-''');
-        _writeFile(sandbox, 'lib/src/contract/foo.dart', '''
-abstract class Foo {}
-''');
+        _writeCanonicalPublicExportScaffold(sandbox);
 
         final result = await _runTool(sandbox, 'check_guardrails.dart');
         expect(result.exitCode, 0, reason: result.stderr.toString());
@@ -649,16 +803,12 @@ class Store {
   }
 }
 ''');
-          _writeFile(sandbox, 'lib/iwb_canvas_engine.dart', '''
-library;
-
-/* comment before export */
-export /* inline */ 'src/contract/foo.dart'
-    show /* inline */ Foo;
-''');
-          _writeFile(sandbox, 'lib/src/contract/foo.dart', '''
-abstract class Foo {}
-''');
+          _writeCanonicalPublicExportScaffold(sandbox);
+          _writeFile(
+            sandbox,
+            'lib/iwb_canvas_engine.dart',
+            _canonicalPublicEntrypoint(withInlineComments: true),
+          );
 
           final result = await _runTool(sandbox, 'check_guardrails.dart');
           expect(result.exitCode, 0, reason: result.stderr.toString());
@@ -692,8 +842,11 @@ void bootstrap() {}
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          contains(
-            'root lib/*.dart files must contain only library/docs/comments/export directives',
+          _diagnostic(
+            category: 'public entrypoint',
+            detail:
+                'root lib/*.dart files must contain only '
+                'library/docs/comments/export directives',
           ),
         );
       } finally {
@@ -727,8 +880,11 @@ library;
           expect(result.exitCode, isNonZero);
           expect(
             result.stderr.toString(),
-            contains(
-              'root lib/*.dart files must contain only library/docs/comments/export directives',
+            _diagnostic(
+              category: 'public entrypoint',
+              detail:
+                  'root lib/*.dart files must contain only '
+                  'library/docs/comments/export directives',
             ),
           );
         } finally {
@@ -736,6 +892,38 @@ library;
         }
       },
     );
+
+    test('rejects stale non-contract export scan policy entry', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeCanonicalPublicExportScaffold(sandbox);
+        _writeFile(
+          sandbox,
+          'lib/iwb_canvas_engine.dart',
+          _canonicalPublicEntrypoint().replaceFirst(
+            "export 'src/view/scene_view_interactive.dart';\n",
+            '',
+          ),
+        );
+
+        final result = await _runTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          allOf(
+            _diagnostic(
+              category: 'public entrypoint',
+              detail:
+                  'exported API policy entry '
+                  '/lib/src/view/scene_view_interactive.dart is stale',
+            ),
+            contains('view widgets expose framework UI types'),
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
 
     test(
       'rejects executable logic after export and inline block comment',
@@ -753,21 +941,22 @@ class Store {
   }
 }
 ''');
-          _writeFile(sandbox, 'lib/iwb_canvas_engine.dart', '''
-library;
-
-export 'src/contract/foo.dart'; /* c */ class A {}
-''');
-          _writeFile(sandbox, 'lib/src/contract/foo.dart', '''
-abstract class Foo {}
-''');
+          _writeCanonicalPublicExportScaffold(sandbox);
+          _writeFile(
+            sandbox,
+            'lib/iwb_canvas_engine.dart',
+            _canonicalPublicEntrypoint(withTrailingLogicAfterFirstExport: true),
+          );
 
           final result = await _runTool(sandbox, 'check_guardrails.dart');
           expect(result.exitCode, isNonZero);
           expect(
             result.stderr.toString(),
-            contains(
-              'root lib/*.dart files must contain only library/docs/comments/export directives',
+            _diagnostic(
+              category: 'public entrypoint',
+              detail:
+                  'root lib/*.dart files must contain only '
+                  'library/docs/comments/export directives',
             ),
           );
         } finally {
@@ -785,7 +974,10 @@ abstract class Foo {}
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          contains('advanced.dart entrypoint is forbidden'),
+          _diagnostic(
+            category: 'public entrypoint',
+            detail: 'advanced.dart is forbidden',
+          ),
         );
       } finally {
         sandbox.deleteSync(recursive: true);
@@ -795,17 +987,22 @@ abstract class Foo {}
     test('rejects mutable core exports from iwb_canvas_engine.dart', () async {
       final sandbox = await _createSandbox();
       try {
+        _writeCanonicalPublicExportScaffold(sandbox);
         _writeFile(
           sandbox,
           'lib/iwb_canvas_engine.dart',
-          "export 'src/core/scene.dart';\n",
+          "${_canonicalPublicEntrypoint()}export 'src/core/scene.dart';\n",
         );
 
         final result = await _runTool(sandbox, 'check_guardrails.dart');
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          contains('iwb_canvas_engine.dart must not export mutable core model'),
+          _diagnostic(
+            category: 'public export',
+            detail:
+                'lib/iwb_canvas_engine.dart must not export mutable core model',
+          ),
         );
       } finally {
         sandbox.deleteSync(recursive: true);
@@ -813,15 +1010,44 @@ abstract class Foo {}
     });
 
     test(
+      'rejects non-contract export without mutable-type leak scan policy',
+      () async {
+        // INV:INV-G-PUBLIC-ENTRYPOINTS
+        final sandbox = await _createSandbox();
+        try {
+          _writeCanonicalPublicExportScaffold(sandbox);
+          _writeFile(
+            sandbox,
+            'lib/iwb_canvas_engine.dart',
+            "${_canonicalPublicEntrypoint()}export 'src/view/foo.dart';\n",
+          );
+          _writeFile(sandbox, 'lib/src/view/foo.dart', '''
+class SceneView {}
+''');
+
+          final result = await _runTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            _diagnostic(
+              category: 'public entrypoint',
+              detail:
+                  'must declare a mutable-type leak scan policy in '
+                  'tool/check_guardrails.dart',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
       'rejects scene/writeFindNode/writeMark*/id-bookkeeping in exported txn API',
       () async {
         final sandbox = await _createSandbox();
         try {
-          _writeFile(
-            sandbox,
-            'lib/iwb_canvas_engine.dart',
-            "export 'src/contract/scene_write_txn.dart';\n",
-          );
+          _writeCanonicalPublicExportScaffold(sandbox);
           _writeFile(sandbox, 'lib/src/contract/scene_write_txn.dart', '''
 abstract interface class SceneWriteTxn {
   Object get scene;
@@ -836,10 +1062,27 @@ abstract interface class SceneWriteTxn {
           expect(
             result.stderr.toString(),
             anyOf(
-              contains('must not expose raw scene access'),
-              contains('must not expose writeFindNode'),
-              contains('must not expose writeMark* escape hatches'),
-              contains('must not expose node-id bookkeeping methods'),
+              _diagnostic(
+                category: 'public contract',
+                detail:
+                    'exported SceneWriteTxn must not expose raw scene access',
+              ),
+              _diagnostic(
+                category: 'public contract',
+                detail: 'exported SceneWriteTxn must not expose writeFindNode',
+              ),
+              _diagnostic(
+                category: 'public contract',
+                detail:
+                    'exported SceneWriteTxn must not expose writeMark* '
+                    'escape hatches',
+              ),
+              _diagnostic(
+                category: 'public contract',
+                detail:
+                    'exported SceneWriteTxn must not expose node-id '
+                    'bookkeeping methods',
+              ),
             ),
           );
         } finally {
@@ -849,16 +1092,34 @@ abstract interface class SceneWriteTxn {
     );
 
     test(
-      'rejects mutable core type in exported public API signature',
+      'skips mutable-type leak scan for explicitly classified exported view API',
       () async {
+        // INV:INV-ENG-NO-EXTERNAL-MUTATION
         final sandbox = await _createSandbox();
         try {
-          _writeFile(
-            sandbox,
-            'lib/iwb_canvas_engine.dart',
-            "export 'src/contract/foo.dart';\n",
-          );
-          _writeFile(sandbox, 'lib/src/contract/foo.dart', '''
+          _writeCanonicalPublicExportScaffold(sandbox);
+          _writeFile(sandbox, 'lib/src/view/scene_view_interactive.dart', '''
+abstract class SceneView {
+  Scene get scene;
+}
+''');
+
+          final result = await _runTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, 0, reason: result.stderr.toString());
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects mutable core type in exported public API signature',
+      () async {
+        // INV:INV-ENG-NO-EXTERNAL-MUTATION
+        final sandbox = await _createSandbox();
+        try {
+          _writeCanonicalPublicExportScaffold(sandbox);
+          _writeFile(sandbox, 'lib/src/contract/snapshot.dart', '''
 abstract class Foo {
   Scene get scene;
 }
@@ -868,7 +1129,10 @@ abstract class Foo {
           expect(result.exitCode, isNonZero);
           expect(
             result.stderr.toString(),
-            contains('must not expose mutable core types'),
+            _diagnostic(
+              category: 'public contract',
+              detail: 'exported API must not expose mutable core types',
+            ),
           );
         } finally {
           sandbox.deleteSync(recursive: true);
@@ -891,7 +1155,12 @@ class Store {
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          contains('must be routed through write*/txn* transaction API'),
+          _diagnostic(
+            category: 'controller API',
+            detail:
+                'mutating symbol "replaceScene" must be routed through '
+                'write*/txn* transaction API',
+          ),
         );
       } finally {
         sandbox.deleteSync(recursive: true);
@@ -901,11 +1170,7 @@ class Store {
     test('rejects exported contract import from controller layer', () async {
       final sandbox = await _createSandbox();
       try {
-        _writeFile(sandbox, 'lib/iwb_canvas_engine.dart', '''
-library;
-
-export 'src/contract/snapshot.dart';
-''');
+        _writeCanonicalPublicExportScaffold(sandbox);
         _writeFile(sandbox, 'lib/src/controller/store.dart', '''
 class Store {
   int controllerEpoch = 0;
@@ -926,8 +1191,12 @@ class Store {
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          contains(
-            'exported contract/model API must not import/export controller/render/view/serialization internals',
+          _diagnostic(
+            category: 'public export',
+            detail:
+                'exported contract/** and the model facade must not '
+                'import/export controller/**, render/**, view/**, or '
+                'serialization/**',
           ),
         );
       } finally {
@@ -1023,8 +1292,11 @@ class SceneControllerInteractive {
           expect(result.exitCode, isNonZero);
           expect(
             result.stderr.toString(),
-            contains(
-              'public interactive entrypoints must guard resolver purity with _ensurePublicSideEffectAllowed',
+            _diagnostic(
+              category: 'interactive API',
+              detail:
+                  'public SceneControllerInteractive entrypoints must guard '
+                  'resolver purity with _ensurePublicSideEffectAllowed',
             ),
           );
         } finally {
@@ -1070,8 +1342,11 @@ class SceneControllerInteractive {
           expect(result.exitCode, isNonZero);
           expect(
             result.stderr.toString(),
-            contains(
-              'dispose() must guard resolver purity with allowAfterDispose: true',
+            _diagnostic(
+              category: 'interactive API',
+              detail:
+                  'dispose() must guard resolver purity with '
+                  'allowAfterDispose: true',
             ),
           );
         } finally {
@@ -1108,6 +1383,17 @@ environment:
   );
 
   return sandbox;
+}
+
+void _writeCanonicalPublicExportScaffold(Directory sandbox) {
+  _writeFile(
+    sandbox,
+    'lib/iwb_canvas_engine.dart',
+    _canonicalPublicEntrypoint(),
+  );
+  for (final filePath in _canonicalPublicExportFiles) {
+    _writeFile(sandbox, filePath, '// stub\n');
+  }
 }
 
 void _copyFile(String from, String to) {

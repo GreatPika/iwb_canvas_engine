@@ -458,7 +458,7 @@ void main(List<String> args) {
           target: filePosixPath,
           message:
               layoutViolation ??
-              'layer classification violation: file is under lib/src/** '
+              'layer layout violation: file is under lib/src/** '
                   'but has no known layer',
         ),
       );
@@ -500,7 +500,9 @@ void main(List<String> args) {
             line: lineNo,
             directive: 'part',
             target: line.trim(),
-            message: 'commands/** must not use part/part of directives',
+            message:
+                'controller structure violation: commands/** must not use '
+                'part/part of directives',
           ),
         );
       }
@@ -539,7 +541,7 @@ void main(List<String> args) {
                   target: target,
                   message:
                       layoutViolation ??
-                      'layer classification violation: unresolved target '
+                      'layer layout violation: unresolved target '
                           'layer for $resolvedRepoRelPosix',
                 ),
               );
@@ -566,6 +568,9 @@ void main(List<String> args) {
         }
 
         var hasSpecificViolation = false;
+        final controllerScope = isCommandScopeFile
+            ? 'commands/**'
+            : 'internal/**';
 
         if (resolvedRepoRelPosix ==
             '/lib/src/controller/scene_controller.dart') {
@@ -575,7 +580,9 @@ void main(List<String> args) {
               line: lineNo,
               directive: directive,
               target: target,
-              message: "must not $directive controller/scene_controller.dart",
+              message:
+                  'controller structure violation: $controllerScope must not '
+                  '$directive controller/scene_controller.dart',
             ),
           );
           hasSpecificViolation = true;
@@ -592,7 +599,9 @@ void main(List<String> args) {
                 line: lineNo,
                 directive: directive,
                 target: target,
-                message: 'internal/** must not $directive commands/**',
+                message:
+                    'controller structure violation: internal/** must not '
+                    '$directive commands/**',
               ),
             );
             hasSpecificViolation = true;
@@ -615,7 +624,8 @@ void main(List<String> args) {
                   directive: directive,
                   target: target,
                   message:
-                      'commands/** must not $directive other commands '
+                      'controller structure violation: commands/** must not '
+                      '$directive other commands '
                       '(current=$currentCommand, import=$importedCommand)',
                 ),
               );
@@ -636,14 +646,15 @@ void main(List<String> args) {
                 resolvedRepoRelPosix: resolvedRepoRelPosix,
               );
         if (!allowed && !hasSpecificViolation) {
-          final scope = isCommandScopeFile ? 'commands/**' : 'internal/**';
           final details = resolvedRepoRelPosix ?? targetPosix;
           final isExternalPackage =
               resolvedRepoRelPosix == null &&
               targetPosix.startsWith('package:');
           final message = isExternalPackage
-              ? '$scope has a disallowed external package $directive'
-              : '$scope has a disallowed $directive target';
+              ? 'controller structure violation: $controllerScope has a '
+                    'disallowed external package $directive'
+              : 'controller structure violation: $controllerScope has a '
+                    'disallowed $directive target';
           violations.add(
             _Violation(
               filePath: filePosixPath,

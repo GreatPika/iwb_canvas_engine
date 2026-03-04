@@ -76,11 +76,11 @@ String? describeLibSrcLayoutViolation(String repoRelPosixPath) {
   }
 
   if (isDeletedTopLevelLibSrcLayer(topLevelLayer)) {
-    return 'deleted layer violation: $repoRelPosixPath uses deleted '
+    return 'layer layout violation: $repoRelPosixPath uses deleted '
         'top-level layer "$topLevelLayer"';
   }
   if (!isApprovedTopLevelLibSrcLayer(topLevelLayer)) {
-    return 'layer classification violation: $repoRelPosixPath uses '
+    return 'layer layout violation: $repoRelPosixPath uses '
         'unapproved top-level layer "$topLevelLayer"';
   }
 

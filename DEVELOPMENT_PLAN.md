@@ -251,8 +251,8 @@ instead of weakening the design.
 
 ## Phase 4: Rebuild guardrails around the new graph
 
-The first two Phase 4 items were completed during the earlier `contract/`
-migration slices; this follow-up closes the next two structural guardrail items.
+The Phase 4 guardrail follow-up is complete; the checklist below records the
+closed structural guardrail work for the `contract/` migration.
 
 - [x] Rename and reword `INV-G-CORE-NO-LAYER-DEPS` in
       `tool/invariant_registry.dart` so the invariant describes the actual DAG
@@ -266,13 +266,13 @@ migration slices; this follow-up closes the next two structural guardrail items.
       `src/public/**`, including `tool/check_guardrails.dart`,
       `tool/check_coverage.dart`, and `test/tool/guardrails_tools_test.dart`,
       so guardrails enforce the new structure instead of the deleted one.
-- [ ] Keep the exported-owner file set in `tool/check_guardrails.dart`
+- [x] Keep the exported-owner file set in `tool/check_guardrails.dart`
       declarative and aligned with `lib/iwb_canvas_engine.dart`, so mutable-type
       leak coverage does not silently drift when the package export map changes.
-- [ ] Update any invariant coverage markers and supporting tests so
+- [x] Update any invariant coverage markers and supporting tests so
       `tool/check_invariant_coverage.dart` remains authoritative after the
       reorganization.
-- [ ] Review adjacent guardrails (`tool/check_guardrails.dart`,
+- [x] Review adjacent guardrails (`tool/check_guardrails.dart`,
       `tool/check_import_boundaries.dart`, related tests) to ensure naming and
       diagnostics now teach the same architecture a new contributor should infer.
 

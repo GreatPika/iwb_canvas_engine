@@ -38,12 +38,39 @@ class _InteractiveEntrypointSignature {
   bool get isDispose => name == 'dispose';
 }
 
-const _fullyScannedExportedApiOwnerFiles = <String>{
-  '/lib/src/core/action_events.dart',
-  '/lib/src/core/interaction_types.dart',
-  '/lib/src/core/pointer_input.dart',
-  '/lib/src/interactive/scene_controller_interactive.dart',
-  '/lib/src/model/scene_builder_api.dart',
+enum _ExportedApiScanMode { fullScan, skip }
+
+class _ExportedApiScanPolicy {
+  const _ExportedApiScanPolicy.fullScan()
+    : mode = _ExportedApiScanMode.fullScan,
+      reason = null;
+
+  const _ExportedApiScanPolicy.skip(this.reason)
+    : mode = _ExportedApiScanMode.skip;
+
+  final _ExportedApiScanMode mode;
+  final String? reason;
+}
+
+const _nonContractExportedApiScanPolicies = <String, _ExportedApiScanPolicy>{
+  '/lib/src/core/action_events.dart': _ExportedApiScanPolicy.fullScan(),
+  '/lib/src/core/interaction_types.dart': _ExportedApiScanPolicy.fullScan(),
+  '/lib/src/core/pointer_input.dart': _ExportedApiScanPolicy.fullScan(),
+  '/lib/src/model/scene_builder_api.dart': _ExportedApiScanPolicy.fullScan(),
+  '/lib/src/interactive/scene_controller_interactive.dart':
+      _ExportedApiScanPolicy.skip(
+        'interactive controller entrypoints expose stateful runtime behavior '
+        'that is guarded by dedicated API checks instead of regex signature '
+        'scans',
+      ),
+  '/lib/src/view/scene_view_interactive.dart': _ExportedApiScanPolicy.skip(
+    'view widgets expose framework UI types that are outside the mutable core '
+    'model leak scan',
+  ),
+  '/lib/src/serialization/scene_codec.dart': _ExportedApiScanPolicy.skip(
+    'serialization exports are function entrypoints validated by codec tests, '
+    'not contract-style type signatures',
+  ),
 };
 
 String _normalizePosixPath(String path) {
@@ -267,8 +294,9 @@ void _checkExportedApiImports({
               filePath: filePosixPath,
               line: lineNo,
               message:
-                  'exported contract/model API must not import/export '
-                  'controller/render/view/serialization internals '
+                  'public export violation: exported contract/** and the '
+                  'model facade must not import/export controller/**, '
+                  'render/**, view/**, or serialization/** '
                   '($resolvedRepoRelPosix)',
             ),
           );
@@ -330,7 +358,9 @@ Set<String> _checkEntrypointGuardrails({
       _Violation(
         filePath: '/lib/advanced.dart',
         line: 1,
-        message: 'advanced.dart entrypoint is forbidden.',
+        message:
+            'public entrypoint violation: advanced.dart is forbidden; '
+            'lib/iwb_canvas_engine.dart is the only supported root entrypoint.',
       ),
     );
   }
@@ -355,7 +385,8 @@ Set<String> _checkEntrypointGuardrails({
           filePath: '/lib/iwb_canvas_engine.dart',
           line: 1,
           message:
-              'iwb_canvas_engine.dart must not export mutable core model ($path).',
+              'public export violation: lib/iwb_canvas_engine.dart must not '
+              'export mutable core model ($path).',
         ),
       );
     }
@@ -414,7 +445,8 @@ void _checkRootLibFilesAreExportOnly({
           filePath: filePosixPath,
           line: statementStartLine ?? lineNo,
           message:
-              'root lib/*.dart files must contain only library/docs/comments/export directives.',
+              'public entrypoint violation: root lib/*.dart files must '
+              'contain only library/docs/comments/export directives.',
         ),
       );
     }
@@ -550,7 +582,9 @@ void _checkSceneWriteTxnContract({
         _Violation(
           filePath: filePosixPath,
           line: lineNo,
-          message: 'exported SceneWriteTxn must not expose raw scene access.',
+          message:
+              'public contract violation: exported SceneWriteTxn must not '
+              'expose raw scene access.',
         ),
       );
     }
@@ -559,7 +593,9 @@ void _checkSceneWriteTxnContract({
         _Violation(
           filePath: filePosixPath,
           line: lineNo,
-          message: 'exported SceneWriteTxn must not expose writeFindNode.',
+          message:
+              'public contract violation: exported SceneWriteTxn must not '
+              'expose writeFindNode.',
         ),
       );
     }
@@ -569,7 +605,8 @@ void _checkSceneWriteTxnContract({
           filePath: filePosixPath,
           line: lineNo,
           message:
-              'exported SceneWriteTxn must not expose writeMark* escape hatches.',
+              'public contract violation: exported SceneWriteTxn must not '
+              'expose writeMark* escape hatches.',
         ),
       );
     }
@@ -583,7 +620,8 @@ void _checkSceneWriteTxnContract({
           filePath: filePosixPath,
           line: lineNo,
           message:
-              'exported SceneWriteTxn must not expose node-id bookkeeping methods.',
+              'public contract violation: exported SceneWriteTxn must not '
+              'expose node-id bookkeeping methods.',
         ),
       );
     }
@@ -596,10 +634,54 @@ void _checkExportedApiMutableTypeLeak({
   required Set<String> exportedFiles,
 }) {
   if (exportedFiles.isEmpty) return;
+  final policyKeys = _nonContractExportedApiScanPolicies.keys.toSet();
+  final nonContractExports = exportedFiles
+      .where((path) => !path.startsWith('/lib/src/contract/'))
+      .toList(growable: false);
+  final nonContractExportSet = nonContractExports.toSet();
+  final missingPolicyEntries =
+      nonContractExportSet.difference(policyKeys).toList(growable: false)
+        ..sort();
+  if (missingPolicyEntries.isNotEmpty) {
+    final path = missingPolicyEntries.first;
+    _fail(
+      _Violation(
+        filePath: '/lib/iwb_canvas_engine.dart',
+        line: 1,
+        message:
+            'public entrypoint violation: exported API owner $path must '
+            'declare a mutable-type leak scan policy in '
+            'tool/check_guardrails.dart.',
+      ),
+    );
+  }
+  final stalePolicyEntries =
+      policyKeys.difference(nonContractExportSet).toList(growable: false)
+        ..sort();
+  if (stalePolicyEntries.isNotEmpty) {
+    final path = stalePolicyEntries.first;
+    final policy = _nonContractExportedApiScanPolicies[path]!;
+    final reasonSuffix =
+        policy.mode == _ExportedApiScanMode.skip && policy.reason != null
+        ? ' Remove or update this skip policy: ${policy.reason}.'
+        : '';
+    _fail(
+      _Violation(
+        filePath: '/lib/iwb_canvas_engine.dart',
+        line: 1,
+        message:
+            'public entrypoint violation: exported API policy entry $path is '
+            'stale because lib/iwb_canvas_engine.dart no longer exports it.'
+            '$reasonSuffix',
+      ),
+    );
+  }
+
   final filesToCheck = exportedFiles
       .where((path) {
-        return path.startsWith('/lib/src/contract/') ||
-            _fullyScannedExportedApiOwnerFiles.contains(path);
+        if (path.startsWith('/lib/src/contract/')) return true;
+        final policy = _nonContractExportedApiScanPolicies[path];
+        return policy?.mode == _ExportedApiScanMode.fullScan;
       })
       .toList(growable: false);
   if (filesToCheck.isEmpty) return;
@@ -659,7 +741,9 @@ void _checkExportedApiMutableTypeLeak({
           filePath: repoRel,
           line: lineNo,
           message:
-              'public API must not expose mutable core types (Scene/ContentLayer/SceneNode/NodeType).',
+              'public contract violation: exported API must not expose '
+              'mutable core types '
+              '(Scene/ContentLayer/SceneNode/NodeType).',
         ),
       );
     }
@@ -722,7 +806,9 @@ void _checkControllerGuardrails({
             filePath: filePosixPath,
             line: lineNo,
             message:
-                'replaceScene-like entrypoints must preserve epoch invalidation (missing controllerEpoch usage in file)',
+                'controller API violation: replaceScene-like entrypoints '
+                'must preserve epoch invalidation '
+                '(missing controllerEpoch usage in file)',
           ),
         );
       }
@@ -744,7 +830,8 @@ void _checkControllerGuardrails({
               filePath: filePosixPath,
               line: lineNo,
               message:
-                  'mutating symbol "$symbol" must be routed through write*/txn* transaction API',
+                  'controller API violation: mutating symbol "$symbol" must '
+                  'be routed through write*/txn* transaction API',
             ),
           );
         }
@@ -758,7 +845,8 @@ void _checkControllerGuardrails({
         filePath: '/lib/src/controller',
         line: 1,
         message:
-            'controllerEpoch symbol is required for epoch invalidation guardrails',
+            'controller API violation: controllerEpoch symbol is required '
+            'for epoch invalidation guardrails',
       ),
     );
   }
@@ -815,7 +903,9 @@ _InteractiveEntrypointSignature? _parseInteractiveEntrypointSignature(
           filePath: filePath,
           line: lineNo,
           message:
-              'public interactive entrypoint "$name" must use a block body guarded by _ensurePublicSideEffectAllowed(...).',
+              'interactive API violation: public SceneControllerInteractive '
+              'entrypoint "$name" must use a block body guarded by '
+              '_ensurePublicSideEffectAllowed(...).',
         ),
       );
     }
@@ -826,7 +916,9 @@ _InteractiveEntrypointSignature? _parseInteractiveEntrypointSignature(
           filePath: filePath,
           line: lineNo,
           message:
-              'public interactive entrypoint "$name" must keep its signature on one line so guardrails can verify _ensurePublicSideEffectAllowed(...).',
+              'interactive API violation: public SceneControllerInteractive '
+              'entrypoint "$name" must keep its signature on one line so '
+              'guardrails can verify _ensurePublicSideEffectAllowed(...).',
         ),
       );
     }
@@ -864,7 +956,9 @@ _InteractiveEntrypointSignature? _parseInteractiveEntrypointSignature(
         filePath: filePath,
         line: lineNo,
         message:
-            'public interactive entrypoint "$name" must use a block body guarded by _ensurePublicSideEffectAllowed(...).',
+            'interactive API violation: public SceneControllerInteractive '
+            'entrypoint "$name" must use a block body guarded by '
+            '_ensurePublicSideEffectAllowed(...).',
       ),
     );
   }
@@ -875,7 +969,9 @@ _InteractiveEntrypointSignature? _parseInteractiveEntrypointSignature(
         filePath: filePath,
         line: lineNo,
         message:
-            'public interactive entrypoint "$name" must keep its signature on one line so guardrails can verify _ensurePublicSideEffectAllowed(...).',
+            'interactive API violation: public SceneControllerInteractive '
+            'entrypoint "$name" must keep its signature on one line so '
+            'guardrails can verify _ensurePublicSideEffectAllowed(...).',
       ),
     );
   }
@@ -902,7 +998,9 @@ void _validateInteractiveEntrypointGuard({
           filePath: filePath,
           line: signatureLineIndex + 1,
           message:
-              'public interactive entrypoints must guard resolver purity with _ensurePublicSideEffectAllowed(...).',
+              'interactive API violation: public SceneControllerInteractive '
+              'entrypoints must guard resolver purity with '
+              '_ensurePublicSideEffectAllowed(...).',
         ),
       );
     }
@@ -915,7 +1013,9 @@ void _validateInteractiveEntrypointGuard({
         filePath: filePath,
         line: guardLineIndex + 1,
         message:
-            'public interactive entrypoints must guard resolver purity with _ensurePublicSideEffectAllowed(...).',
+            'interactive API violation: public SceneControllerInteractive '
+            'entrypoints must guard resolver purity with '
+            '_ensurePublicSideEffectAllowed(...).',
       ),
     );
   }
@@ -928,7 +1028,8 @@ void _validateInteractiveEntrypointGuard({
           filePath: filePath,
           line: guardLineIndex + 1,
           message:
-              'dispose() must guard resolver purity with allowAfterDispose: true.',
+              'interactive API violation: dispose() must guard resolver '
+              'purity with allowAfterDispose: true.',
         ),
       );
     }
@@ -941,7 +1042,8 @@ void _validateInteractiveEntrypointGuard({
         filePath: filePath,
         line: guardLineIndex + 1,
         message:
-            'only dispose() may call _ensurePublicSideEffectAllowed(..., allowAfterDispose: true).',
+            'interactive API violation: only dispose() may call '
+            '_ensurePublicSideEffectAllowed(..., allowAfterDispose: true).',
       ),
     );
   }
