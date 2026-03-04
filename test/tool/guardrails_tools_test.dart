@@ -1,68 +1,10 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-
-const _canonicalPublicExportFiles = <String>[
-  'lib/src/contract/node_patch.dart',
-  'lib/src/contract/node_spec.dart',
-  'lib/src/contract/patch_field.dart',
-  'lib/src/contract/canvas_pointer_input.dart',
-  'lib/src/model/scene_builder_api.dart',
-  'lib/src/contract/scene_data_exception.dart',
-  'lib/src/contract/scene_render_state.dart',
-  'lib/src/contract/scene_write_txn.dart',
-  'lib/src/contract/snapshot.dart',
-  'lib/src/core/action_events.dart',
-  'lib/src/core/interaction_types.dart',
-  'lib/src/core/pointer_input.dart',
-  'lib/src/contract/transform2d.dart',
-  'lib/src/interactive/scene_controller_interactive.dart',
-  'lib/src/view/scene_view_interactive.dart',
-  'lib/src/serialization/scene_codec.dart',
-];
-
-const _canonicalPublicExportLines = <String>[
-  "export 'src/contract/node_patch.dart';",
-  "export 'src/contract/node_spec.dart';",
-  "export 'src/contract/patch_field.dart';",
-  "export 'src/contract/canvas_pointer_input.dart';",
-  "export 'src/model/scene_builder_api.dart';",
-  "export 'src/contract/scene_data_exception.dart';",
-  "export 'src/contract/scene_render_state.dart';",
-  "export 'src/contract/scene_write_txn.dart';",
-  "export 'src/contract/snapshot.dart';",
-  "export 'src/core/action_events.dart';",
-  "export 'src/core/interaction_types.dart';",
-  "export 'src/core/pointer_input.dart';",
-  "export 'src/contract/transform2d.dart';",
-  "export 'src/interactive/scene_controller_interactive.dart';",
-  "export 'src/view/scene_view_interactive.dart';",
-  "export 'src/serialization/scene_codec.dart';",
-];
+import '../utils/public_entrypoint_contract.dart';
 
 Matcher _diagnostic({required String category, required String detail}) {
   return allOf(contains('$category violation:'), contains(detail));
-}
-
-String _canonicalPublicEntrypoint({
-  bool withInlineComments = false,
-  bool withTrailingLogicAfterFirstExport = false,
-}) {
-  final lines = <String>['/// Public API exports for tests.', 'library;', ''];
-
-  for (var i = 0; i < _canonicalPublicExportLines.length; i++) {
-    var line = _canonicalPublicExportLines[i];
-    if (i == 0 && withInlineComments) {
-      lines.add('/* comment before export */');
-      line = "export /* inline */ 'src/contract/node_patch.dart';";
-    }
-    if (i == 0 && withTrailingLogicAfterFirstExport) {
-      line = "export 'src/contract/node_patch.dart'; /* c */ class A {}";
-    }
-    lines.add(line);
-  }
-
-  return '${lines.join('\n')}\n';
 }
 
 void main() {
@@ -385,6 +327,22 @@ class SceneBuilder {
         }
       },
     );
+
+    test('allows approved contract top-level layer without imports', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(
+          sandbox,
+          'lib/src/contract/value.dart',
+          'class ContractValue {}\n',
+        );
+
+        final result = await _runTool(sandbox, 'check_import_boundaries.dart');
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
 
     test('allows view -> interactive import', () async {
       final sandbox = await _createSandbox();
@@ -742,6 +700,33 @@ class Store {
       },
     );
 
+    test('allows approved contract top-level layer without imports', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(sandbox, 'lib/src/controller/store.dart', '''
+class Store {
+  int controllerEpoch = 0;
+
+  void writeMutations() {}
+
+  void txnCommit() {
+    writeMutations();
+  }
+}
+''');
+        _writeFile(
+          sandbox,
+          'lib/src/contract/value.dart',
+          'class ContractValue {}\n',
+        );
+
+        final result = await _runTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
     test('passes for write/txn APIs and controllerEpoch usage', () async {
       final sandbox = await _createSandbox();
       try {
@@ -807,7 +792,7 @@ class Store {
           _writeFile(
             sandbox,
             'lib/iwb_canvas_engine.dart',
-            _canonicalPublicEntrypoint(withInlineComments: true),
+            canonicalPublicEntrypoint(withInlineComments: true),
           );
 
           final result = await _runTool(sandbox, 'check_guardrails.dart');
@@ -900,8 +885,8 @@ library;
         _writeFile(
           sandbox,
           'lib/iwb_canvas_engine.dart',
-          _canonicalPublicEntrypoint().replaceFirst(
-            "export 'src/view/scene_view_interactive.dart';\n",
+          canonicalPublicEntrypoint().replaceFirst(
+            '$canonicalViewPublicExportDirective\n',
             '',
           ),
         );
@@ -945,7 +930,7 @@ class Store {
           _writeFile(
             sandbox,
             'lib/iwb_canvas_engine.dart',
-            _canonicalPublicEntrypoint(withTrailingLogicAfterFirstExport: true),
+            canonicalPublicEntrypoint(withTrailingLogicAfterFirstExport: true),
           );
 
           final result = await _runTool(sandbox, 'check_guardrails.dart');
@@ -991,7 +976,7 @@ class Store {
         _writeFile(
           sandbox,
           'lib/iwb_canvas_engine.dart',
-          "${_canonicalPublicEntrypoint()}export 'src/core/scene.dart';\n",
+          "${canonicalPublicEntrypoint()}export 'src/core/scene.dart';\n",
         );
 
         final result = await _runTool(sandbox, 'check_guardrails.dart');
@@ -1019,7 +1004,7 @@ class Store {
           _writeFile(
             sandbox,
             'lib/iwb_canvas_engine.dart',
-            "${_canonicalPublicEntrypoint()}export 'src/view/foo.dart';\n",
+            "${canonicalPublicEntrypoint()}export 'src/view/foo.dart';\n",
           );
           _writeFile(sandbox, 'lib/src/view/foo.dart', '''
 class SceneView {}
@@ -1389,9 +1374,9 @@ void _writeCanonicalPublicExportScaffold(Directory sandbox) {
   _writeFile(
     sandbox,
     'lib/iwb_canvas_engine.dart',
-    _canonicalPublicEntrypoint(),
+    canonicalPublicEntrypoint(),
   );
-  for (final filePath in _canonicalPublicExportFiles) {
+  for (final filePath in canonicalPublicExportFiles) {
     _writeFile(sandbox, filePath, '// stub\n');
   }
 }

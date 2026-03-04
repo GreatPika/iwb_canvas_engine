@@ -278,26 +278,31 @@ closed structural guardrail work for the `contract/` migration.
 
 ## Phase 5: Lock behavior, docs, and release hygiene
 
-- [ ] Add or update tests that prove the public package import still exposes the
+- [x] Add or update tests that prove the public package import still exposes the
       same supported symbols and that runtime behavior remains unchanged after
       the internal move.
-- [ ] Add focused tests for edge cases introduced by the move, especially
+- [x] Add focused tests for edge cases introduced by the move, especially
       contract/value types that changed ownership and any tools that scan paths
       by directory name.
-- [ ] Migrate repo-owned tests that import `package:iwb_canvas_engine/src/public/**`
+- [x] Migrate repo-owned tests that import `package:iwb_canvas_engine/src/public/**`
       to the new internal paths or to `package:iwb_canvas_engine/iwb_canvas_engine.dart`
-      where package-level coverage is the real intent; do not preserve old
-      unsupported `src/public/**` imports as a compatibility contract.
-- [ ] Rename test buckets whose directory names encode the deleted layer
+      where package-level coverage is the real intent; audit complete:
+      repo-owned tests no longer use direct `src/public/**` imports, and the
+      old unsupported path remains covered only as a negative tooling fixture.
+- [x] Rename test buckets whose directory names encode the deleted layer
       (for example `test/public/`) if they would otherwise preserve stale
-      architecture terminology after the migration.
-- [ ] Update `ARCHITECTURE.md` module layout, state-ownership language, and
+      architecture terminology after the migration. Audit complete:
+      `test/public/` does not exist; `test/public_api/` remains as a package
+      boundary test bucket, not an internal layer alias.
+- [x] Update `ARCHITECTURE.md` module layout, state-ownership language, and
       layer descriptions so the document no longer references `public/` as an
       internal layer.
-- [ ] Update `API_GUIDE.md` and `README.md` only where wording about internal
+- [x] Update `API_GUIDE.md` and `README.md` only where wording about internal
       ownership or package boundaries changed; keep user-facing API guidance
-      stable unless an approved behavior change is intentional.
-- [ ] Add a `CHANGELOG.md` entry under `## Unreleased` summarizing the internal
+      stable unless an approved behavior change is intentional. Audit complete:
+      both documents already reflected the current package boundary, so no
+      wording change was required.
+- [x] Add a `CHANGELOG.md` entry under `## Unreleased` summarizing the internal
       architectural cleanup and any public-facing clarifications or migration
       notes.
 

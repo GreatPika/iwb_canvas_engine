@@ -4,12 +4,52 @@ import 'dart:io';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import '../utils/public_entrypoint_contract.dart';
 
 // INV:INV-ENG-NO-EXTERNAL-MUTATION
 // INV:INV-G-PUBLIC-ENTRYPOINTS
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('iwb_canvas_engine.dart keeps the exact supported export surface', () {
+    final source = File('lib/iwb_canvas_engine.dart').readAsStringSync();
+
+    expect(
+      extractNormalizedExportDirectives(source),
+      canonicalPublicExportDirectives,
+    );
+  });
+
+  test(
+    'iwb_canvas_engine.dart exports representative symbols across layers',
+    () {
+      final scene = SceneSnapshot(
+        layers: <ContentLayerSnapshot>[ContentLayerSnapshot(id: 'layer-api-0')],
+      );
+      final json = encodeSceneToJson(scene);
+      final canonicalFromSnapshot = SceneBuilder.buildFromSnapshot(scene);
+      final canonicalFromJson = SceneBuilder.buildFromJson(encodeScene(scene));
+      final controller = SceneController(initialSnapshot: scene);
+
+      addTearDown(controller.dispose);
+
+      expect(Transform2D.identity.translation, Offset.zero);
+      expect(PathFillRule.evenOdd.name, 'evenOdd');
+      expect(CanvasMode.move, CanvasMode.move);
+      expect(DrawTool.pen, DrawTool.pen);
+      expect(json, contains('"schemaVersion":$schemaVersionWrite'));
+      expect(decodeSceneFromJson(json).layers.single.id, 'layer-api-0');
+      expect(canonicalFromSnapshot.layers.single.id, 'layer-api-0');
+      expect(canonicalFromJson.layers.single.id, 'layer-api-0');
+
+      controller.write((txn) {
+        expect(txn, isA<SceneWriteTxn>());
+        expect(txn.snapshot.layers.single.id, 'layer-api-0');
+        return null;
+      });
+    },
+  );
 
   test('iwb_canvas_engine.dart exports immutable snapshots/specs/patches', () {
     final scene = SceneSnapshot(

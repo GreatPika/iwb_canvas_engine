@@ -2,6 +2,17 @@
 
 All notable changes to `iwb_canvas_engine` are documented here.
 
+## Unreleased
+
+### Changed
+
+- Completed the `src/public/` cleanup wave:
+  - removed the deleted mixed-responsibility internal layer from the active
+    architecture
+  - consolidated stable contract types under `src/contract/`
+  - aligned guardrails, package-entrypoint tests, and architecture docs with
+    the current module model
+
 ## 5.0.1 (2026-03-03)
 
 ### Changed

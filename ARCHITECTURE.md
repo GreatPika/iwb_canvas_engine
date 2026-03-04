@@ -22,47 +22,31 @@ undo/redo policy.
 
 ## Module layout
 
-Current repository layout (transitional state before `contract/` is created):
+Current repository layout:
 
 ```text
 lib/
   iwb_canvas_engine.dart
   src/
+    contract/       // stable API contracts and contract-facing value types
     core/           // primitives, defaults, math, event types
     controller/     // committed store, command execution, transactional writes
     interactive/    // public controller facade and gesture orchestration
     model/          // conversions between internal document and public snapshot
-    public/         // transitional exported types and facades pending migration
     render/         // painter and render-cache implementations
     serialization/  // JSON codec and validation boundary
     view/           // Flutter widget that wires input + painting
 ```
 
-Planned addition during this migration:
-
-```text
-lib/src/contract/   // target low-level contract layer (not created yet)
-```
-
-## Layer migration note (ADR)
-
-This repository is in a transitional architecture state during the `public/` to
-`contract/` cleanup wave.
+## Layer ownership note (ADR)
 
 - Public API is defined only by exports from
   `lib/iwb_canvas_engine.dart`.
-- `lib/src/public/` is a transitional internal bucket scheduled for removal.
-- `contract/` is the target low-level layer for stable API contracts and
+- `contract/` is the low-level layer for stable API contracts and
   shared contract-facing value types.
-- The target `lib/src` dependency graph is explicit and acyclic.
+- The `lib/src` dependency graph is explicit and acyclic.
 
-Current transitional layout:
-
-- `public/` still contains exported immutable types and a small number of
-  facades while the migration is in progress.
-- The current directory layout is intentionally not yet the final ownership map.
-
-Target end-state for this migration wave:
+Current dependency DAG:
 
 - `contract -> none`
 - `core -> contract`
@@ -76,12 +60,12 @@ Target end-state for this migration wave:
 Ownership decisions for the target state:
 
 - `SceneBuilder` is not part of `contract/`; it belongs to `model/`.
-- `Transform2D` is part of the supported contract language and moves to
+- `Transform2D` is part of the supported contract language and lives in
   `contract/` as a contract-facing value type; its file move does not change
   the public symbol name.
-- `PathFillRule` is part of the supported contract language and will be split
-  out of `core/nodes.dart` into `contract/path_fill_rule.dart`; `core/nodes.dart`
-  becomes a consumer rather than the long-term owner of that enum.
+- `PathFillRule` is part of the supported contract language and lives in
+  `contract/path_fill_rule.dart`; `core/nodes.dart` is a consumer rather than
+  the long-term owner of that enum.
 - `contract/transform_tolerance.dart` is the single internal source of truth
   for the near-singular 2x2 criterion used by `contract/transform2d.dart` and
   downstream `core/` consumers; `contract/` must not import
