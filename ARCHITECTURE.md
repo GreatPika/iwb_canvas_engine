@@ -22,6 +22,8 @@ undo/redo policy.
 
 ## Module layout
 
+Current repository layout (transitional state before `contract/` is created):
+
 ```text
 lib/
   iwb_canvas_engine.dart
@@ -30,10 +32,16 @@ lib/
     controller/     // committed store, command execution, transactional writes
     interactive/    // public controller facade and gesture orchestration
     model/          // conversions between internal document and public snapshot
-    public/         // exported immutable types, specs, patches, write contract
+    public/         // transitional exported types and facades pending migration
     render/         // painter and render-cache implementations
     serialization/  // JSON codec and validation boundary
     view/           // Flutter widget that wires input + painting
+```
+
+Planned addition during this migration:
+
+```text
+lib/src/contract/   // target low-level contract layer (not created yet)
 ```
 
 ## Layer migration note (ADR)
@@ -68,6 +76,16 @@ Target end-state for this migration wave:
 Ownership decisions for the target state:
 
 - `SceneBuilder` is not part of `contract/`; it belongs to `model/`.
+- `Transform2D` is part of the supported contract language and moves to
+  `contract/` as a contract-facing value type; its file move does not change
+  the public symbol name.
+- `PathFillRule` is part of the supported contract language and will be split
+  out of `core/nodes.dart` into `contract/path_fill_rule.dart`; `core/nodes.dart`
+  becomes a consumer rather than the long-term owner of that enum.
+- `contract/transform_tolerance.dart` is the single internal source of truth
+  for the near-singular 2x2 criterion used by `contract/transform2d.dart` and
+  downstream `core/` consumers; `contract/` must not import
+  `core/numeric_tolerance.dart`.
 - Runtime orchestration and owner-specific facades do not move into
   `contract/`.
 

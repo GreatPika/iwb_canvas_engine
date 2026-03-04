@@ -74,32 +74,33 @@ enum _Layer {
   view,
 }
 
-const Map<_Layer, Set<_Layer>> _allowedLayerDependencies = <_Layer, Set<_Layer>>{
-  _Layer.core: <_Layer>{_Layer.publicApi},
-  _Layer.model: <_Layer>{_Layer.core, _Layer.publicApi},
-  _Layer.publicApi: <_Layer>{_Layer.core, _Layer.model},
-  _Layer.controller: <_Layer>{_Layer.core, _Layer.model, _Layer.publicApi},
-  _Layer.interactive: <_Layer>{
-    _Layer.core,
-    _Layer.controller,
-    _Layer.publicApi,
-    _Layer.model,
-  },
-  _Layer.render: <_Layer>{_Layer.core, _Layer.model, _Layer.publicApi},
-  _Layer.serialization: <_Layer>{
-    _Layer.core,
-    _Layer.model,
-    _Layer.publicApi,
-  },
-  _Layer.view: <_Layer>{
-    _Layer.core,
-    _Layer.controller,
-    _Layer.interactive,
-    _Layer.render,
-    _Layer.publicApi,
-    _Layer.model,
-  },
-};
+const Map<_Layer, Set<_Layer>> _allowedLayerDependencies =
+    <_Layer, Set<_Layer>>{
+      _Layer.core: <_Layer>{_Layer.publicApi},
+      _Layer.model: <_Layer>{_Layer.core, _Layer.publicApi},
+      _Layer.publicApi: <_Layer>{_Layer.core, _Layer.model},
+      _Layer.controller: <_Layer>{_Layer.core, _Layer.model, _Layer.publicApi},
+      _Layer.interactive: <_Layer>{
+        _Layer.core,
+        _Layer.controller,
+        _Layer.publicApi,
+        _Layer.model,
+      },
+      _Layer.render: <_Layer>{_Layer.core, _Layer.model, _Layer.publicApi},
+      _Layer.serialization: <_Layer>{
+        _Layer.core,
+        _Layer.model,
+        _Layer.publicApi,
+      },
+      _Layer.view: <_Layer>{
+        _Layer.core,
+        _Layer.controller,
+        _Layer.interactive,
+        _Layer.render,
+        _Layer.publicApi,
+        _Layer.model,
+      },
+    };
 
 _Layer? _layerForRepoRelPosixPath(String repoRelPosixPath) {
   if (repoRelPosixPath.startsWith('/lib/src/core/')) return _Layer.core;

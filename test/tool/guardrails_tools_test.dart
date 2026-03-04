@@ -108,9 +108,7 @@ void main() {
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          contains(
-            'layer DAG violation: core/** must not import model/**',
-          ),
+          contains('layer DAG violation: core/** must not import model/**'),
         );
       } finally {
         sandbox.deleteSync(recursive: true);

@@ -59,18 +59,24 @@ instead of weakening the design.
 
 ## Required architecture decisions
 
-- [ ] Treat `contract/` as the single low-level home for stable API data
+- [x] Treat `contract/` as the single low-level home for stable API data
       contracts; do not place runtime orchestration, stateful facades, or
-      owner-specific adapters there.
-- [ ] Keep this wave strictly `contract/`-only. Do not introduce
+      owner-specific adapters there. Ratified by `Phase 1` inventory and
+      ownership mapping: stable contracts move into `contract/`, while
+      `SceneBuilder` remains owned by `model/`.
+- [x] Keep this wave strictly `contract/`-only. Do not introduce
       `lib/src/foundation/`; `Transform2D` and `PathFillRule` move into
-      `contract/` as part of the supported contract language.
-- [ ] Keep existing public symbol names stable unless an explicit breaking
+      `contract/` as part of the supported contract language. Ratified by
+      `Phase 1`: this wave adds no alternate low-level bucket and no new
+      catch-all layer.
+- [x] Keep existing public symbol names stable unless an explicit breaking
       change is separately approved; file moves are internal, export names are
-      not.
-- [ ] Preserve package-level public access only through
+      not. Ratified by the package export map: ownership changes may update
+      source files, but exported symbol names stay unchanged.
+- [x] Preserve package-level public access only through
       `lib/iwb_canvas_engine.dart`; do not add a new secondary public entrypoint
-      to compensate for internal file moves.
+      to compensate for internal file moves. Ratified by `Phase 1`: package
+      exports remain the single supported public API boundary.
 
 ## Phase 1: Freeze the target architecture and file ownership
 
@@ -110,18 +116,99 @@ instead of weakening the design.
       No file in `lib/src/public/` is best classified as a standalone low-level
       value type; that role is expected to be filled by the Phase 2 extraction
       of `Transform2D` and `PathFillRule` into `contract/`.
-- [ ] Inventory every symbol currently exported from
+- [x] Inventory every symbol currently exported from
       `lib/iwb_canvas_engine.dart` and map each symbol to its long-term owning
       layer so that exports remain stable even if file locations change.
-- [ ] Confirm that `Transform2D` and `PathFillRule` can move into `contract/`
+      Current package export map:
+      - `contract/` ownership:
+        `CanvasPointerPhase`, `CanvasPointerInput` ->
+        `lib/src/contract/canvas_pointer_input.dart`;
+        `CommonNodePatch`, `NodePatch`, `ImageNodePatch`,
+        `TextNodePatch`, `StrokeNodePatch`, `LineNodePatch`,
+        `RectNodePatch`, `PathNodePatch` ->
+        `lib/src/contract/node_patch.dart`;
+        `NodeSpec`, `ImageNodeSpec`, `TextNodeSpec`, `StrokeNodeSpec`,
+        `LineNodeSpec`, `RectNodeSpec`, `PathNodeSpec` ->
+        `lib/src/contract/node_spec.dart`;
+        `PatchFieldState`, `PatchField` ->
+        `lib/src/contract/patch_field.dart`;
+        `SceneDataException`, `SceneDataErrorCode` ->
+        `lib/src/contract/scene_data_exception.dart`;
+        `SceneRenderState` ->
+        `lib/src/contract/scene_render_state.dart`;
+        `ClearSceneResult`, `SceneWriteTxn` ->
+        `lib/src/contract/scene_write_txn.dart`;
+        `NodeId`, `LayerId`, `SceneSnapshot`, `BackgroundLayerSnapshot`,
+        `ContentLayerSnapshot`, `CameraSnapshot`, `BackgroundSnapshot`,
+        `GridSnapshot`, `ScenePaletteSnapshot`, `NodeSnapshot`,
+        `ImageNodeSnapshot`, `TextNodeSnapshot`, `StrokeNodeSnapshot`,
+        `LineNodeSnapshot`, `RectNodeSnapshot`, `PathNodeSnapshot` ->
+        `lib/src/contract/snapshot.dart`;
+        `PathFillRule` -> `lib/src/contract/path_fill_rule.dart`
+        (still re-exported as part of the public contract surface);
+        `Transform2D` remains publicly exported but its long-term owner moves
+        from `lib/src/core/transform2d.dart` to
+        `lib/src/contract/transform2d.dart`.
+      - `core/` ownership:
+        `ActionType`, `ActionCommitted`, `ActionCommittedDelta`,
+        `EditTextRequested` -> `lib/src/core/action_events.dart`;
+        `CanvasMode`, `DrawTool` ->
+        `lib/src/core/interaction_types.dart`;
+        `PointerInputSettings` -> `lib/src/core/pointer_input.dart`.
+      - `model/` ownership:
+        `SceneBuilder` -> `lib/src/model/scene_builder_api.dart`.
+      - `interactive/` ownership:
+        `MoveCommitDeltaResolver`, `SceneControllerInteractive`,
+        `SceneController` ->
+        `lib/src/interactive/scene_controller_interactive.dart`.
+      - `view/` ownership:
+        `SceneViewInteractive`, `SceneView` ->
+        `lib/src/view/scene_view_interactive.dart`.
+      - `serialization/` ownership:
+        `decodeSceneFromJson`, `decodeScene`, `encodeSceneToJson`,
+        `encodeScene`, `schemaVersionWrite`, `schemaVersionsRead` ->
+        `lib/src/serialization/scene_codec.dart`.
+      No currently exported symbol is intended to keep `public/` as a
+      long-term owner after the migration.
+- [x] Confirm that `Transform2D` and `PathFillRule` can move into `contract/`
       without dragging runtime-only concerns with them; if they cannot, stop and
-      record the blocking dependency before moving any files.
-- [ ] Resolve `Transform2D`'s current dependency on `core/numeric_tolerance.dart`
-      as part of the move: either inline the minimal tolerance helper it needs
-      into `contract/transform2d.dart` or extract a contract-local helper. Do
-      not leave `contract/transform2d.dart` importing from `core/`.
-- [ ] Define non-goals for the wave: do not introduce a new "shared" junk
+      record the blocking dependency before moving any files. Confirmation:
+      `Transform2D` is a standalone affine value type whose current file depends
+      only on SDK primitives plus `core/numeric_tolerance.dart`, and
+      `PathFillRule` is a pure enum currently embedded in `core/nodes.dart`
+      even though it is already part of the supported contract language through
+      `snapshot.dart`, `node_spec.dart`, and `node_patch.dart`. No inspected
+      dependency requires moving mutable scene nodes, controller logic, render
+      logic, or serialization orchestration into `contract/`. The only blocking
+      edge to remove before the move is `Transform2D`'s import of
+      `core/numeric_tolerance.dart`. `PathFillRule` will move into
+      `lib/src/contract/path_fill_rule.dart`, and `lib/src/core/nodes.dart`
+      will become a consumer of both `contract/path_fill_rule.dart` and
+      `contract/transform2d.dart` instead of owning either type.
+- [x] Resolve `Transform2D`'s current dependency on `core/numeric_tolerance.dart`
+      as part of the move by creating one shared contract-local helper file at
+      `lib/src/contract/transform_tolerance.dart` and move only the 2x2
+      near-singular criterion needed by contract-facing transform math there.
+      Do not leave `contract/transform2d.dart` importing from `core/`. The
+      future `contract/transform2d.dart` uses that helper, and
+      `core/nodes.dart` uses the same helper after `core -> contract` imports
+      are rewired, so the near-singular check keeps one source of truth after
+      the migration. `contract/` must not import `core/numeric_tolerance.dart`
+      and must not absorb unrelated UI-oriented helpers such as `kUiEpsilon`,
+      `kUiEpsilonSquared`, or `nearZero` unless a later wave explicitly makes
+      them part of contract-facing math.
+- [x] Define non-goals for the wave: do not introduce a new "shared" junk
       drawer; every moved file must have a single, named ownership reason.
+      Non-goals confirmed for this migration wave:
+      - do not introduce `lib/src/shared/`, `lib/src/foundation/`, or any other
+        new catch-all layer to avoid making ownership ambiguous again;
+      - do not preserve `public/` semantics under a different folder name by
+        creating a second mixed-responsibility bucket;
+      - do not duplicate contract-facing types across `contract/` and `core/`;
+        each moved symbol keeps exactly one owning source file;
+      - do not broaden this wave into runtime behavior changes, serialization
+        schema changes, or long-lived compatibility shims for old
+        `src/public/**` imports.
 
 ## Phase 2: Establish the new low-level contract boundary
 
