@@ -4,6 +4,8 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ## Unreleased
 
+## 5.1.0 (2026-03-04)
+
 ### Changed
 
 - Completed the `src/public/` cleanup wave:
@@ -12,6 +14,7 @@ All notable changes to `iwb_canvas_engine` are documented here.
   - consolidated stable contract types under `src/contract/`
   - aligned guardrails, package-entrypoint tests, and architecture docs with
     the current module model
+- Release artifacts now advertise `5.1.0` as the current package version.
 
 ## 5.0.1 (2026-03-03)
 

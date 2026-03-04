@@ -8,7 +8,7 @@ provides an immutable scene model, rendering, interactive input handling, and
 JSON serialization. It does not include app UI, persistence, or undo/redo
 storage.
 
-- Current package version: `5.0.1`
+- Current package version: `5.1.0`
 - Single public import: `package:iwb_canvas_engine/iwb_canvas_engine.dart`
 - JSON contract: write `schemaVersion = 5`, read `{5}`
 - Demo: https://greatpika.github.io/iwb_canvas_engine/demo/

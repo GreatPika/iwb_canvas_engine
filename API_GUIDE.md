@@ -21,7 +21,7 @@ production, and the migration expectations for the `5.x` line.
 
 Current public contract:
 
-- package version: `5.0.1`
+- package version: `5.1.0`
 - single supported import:
 
 ```dart
