@@ -1,9 +1,9 @@
 import 'dart:ui';
 
-import '../core/nodes.dart' show PathFillRule;
-import '../core/transform2d.dart';
 import 'patch_field.dart';
+import 'path_fill_rule.dart';
 import 'snapshot.dart' hide PathFillRule;
+import 'transform2d.dart';
 
 /// Patch for common node fields shared by all node variants.
 class CommonNodePatch {

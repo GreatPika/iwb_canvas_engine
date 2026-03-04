@@ -1,8 +1,8 @@
 import 'dart:ui';
 
-import '../core/nodes.dart' show PathFillRule;
-import '../core/transform2d.dart';
+import 'path_fill_rule.dart';
 import 'snapshot.dart' hide PathFillRule;
+import 'transform2d.dart';
 
 /// Immutable node creation spec for transactional write APIs.
 sealed class NodeSpec {

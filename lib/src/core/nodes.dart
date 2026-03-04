@@ -5,17 +5,17 @@ import 'dart:collection';
 
 import 'package:path_drawing/path_drawing.dart';
 
+import '../contract/path_fill_rule.dart';
+import '../contract/transform_tolerance.dart'
+    show isNearSingular2x2, kEpsilon, norm1_2x2;
+import '../contract/transform2d.dart';
 import 'geometry.dart';
 import 'local_bounds_policy.dart';
 import 'numeric_clamp.dart';
-import 'numeric_tolerance.dart';
-import 'transform2d.dart';
+import 'numeric_tolerance.dart' show kUiEpsilonSquared, nearZero;
 
 /// Supported node variants in a [Scene].
 enum NodeType { image, text, stroke, line, rect, path }
-
-/// Fill rule for [PathNode] geometry.
-enum PathFillRule { nonZero, evenOdd }
 
 /// Stable node identifier used for selection and action events.
 typedef NodeId = String;

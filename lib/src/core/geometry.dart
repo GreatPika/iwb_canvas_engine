@@ -1,7 +1,8 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
-import 'numeric_tolerance.dart';
+import '../contract/transform_tolerance.dart' show kEpsilon;
+import 'numeric_tolerance.dart' show kEpsilonSquared, nearZero;
 
 /// Converts a point from view/screen coordinates to scene coordinates.
 Offset toScene(Offset viewPoint, Offset cameraOffset) {

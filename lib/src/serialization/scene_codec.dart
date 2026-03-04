@@ -3,7 +3,7 @@ import 'dart:ui';
 
 import '../core/nodes.dart';
 import '../core/scene.dart';
-import '../core/transform2d.dart';
+import '../contract/transform2d.dart';
 import '../model/document.dart';
 import '../model/scene_builder.dart' as model_builder;
 import '../public/scene_data_exception.dart';

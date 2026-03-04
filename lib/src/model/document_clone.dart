@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import '../core/nodes.dart';
 import '../core/scene.dart';
-import '../core/transform2d.dart';
+import '../contract/transform2d.dart';
 import '../public/snapshot.dart' show LayerId;
 
 Scene txnCloneSceneShallow(Scene scene) {

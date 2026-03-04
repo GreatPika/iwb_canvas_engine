@@ -16,7 +16,7 @@ export 'src/core/action_events.dart'
     show ActionCommitted, ActionCommittedDelta, ActionType, EditTextRequested;
 export 'src/core/interaction_types.dart' show CanvasMode, DrawTool;
 export 'src/core/pointer_input.dart' show PointerInputSettings;
-export 'src/core/transform2d.dart' show Transform2D;
+export 'src/contract/transform2d.dart' show Transform2D;
 export 'src/interactive/scene_controller_interactive.dart'
     show MoveCommitDeltaResolver, SceneController, SceneControllerInteractive;
 export 'src/view/scene_view_interactive.dart'

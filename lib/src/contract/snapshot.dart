@@ -1,8 +1,8 @@
 import 'dart:ui';
 
-import '../core/nodes.dart' show PathFillRule;
-import '../core/transform2d.dart';
-export '../core/nodes.dart' show PathFillRule;
+export 'path_fill_rule.dart' show PathFillRule;
+import 'path_fill_rule.dart';
+import 'transform2d.dart';
 
 const double _defaultGridCellSize = 10;
 const List<Color> _defaultPenColors = <Color>[

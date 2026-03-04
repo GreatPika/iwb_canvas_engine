@@ -6,7 +6,7 @@ import '../core/nodes.dart';
 import '../core/scene.dart';
 import '../core/scene_limits.dart';
 import '../core/text_layout.dart';
-import '../core/transform2d.dart';
+import '../contract/transform2d.dart';
 import '../public/scene_data_exception.dart';
 import '../public/snapshot.dart' hide NodeId;
 import 'scene_value_validation.dart';

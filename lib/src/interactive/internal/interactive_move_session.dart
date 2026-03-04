@@ -6,7 +6,7 @@ import '../../core/input_sampling.dart';
 import '../../core/nodes.dart' show SceneNode;
 import '../../core/pointer_input.dart';
 import '../../core/scene_spatial_index.dart';
-import '../../core/transform2d.dart';
+import '../../contract/transform2d.dart';
 import '../../public/snapshot.dart';
 
 typedef MoveCommitSelectionResult = ({

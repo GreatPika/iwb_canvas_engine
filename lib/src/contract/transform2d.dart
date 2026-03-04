@@ -1,8 +1,8 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui';
-import 'dart:math' as math;
 
-import 'numeric_tolerance.dart';
+import 'transform_tolerance.dart';
 
 /// A 2D affine transform represented as a 2×3 matrix.
 ///

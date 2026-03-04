@@ -1,9 +1,9 @@
 import 'dart:ui';
 
-import '../core/transform2d.dart';
 import 'node_patch.dart';
 import 'node_spec.dart';
 import 'snapshot.dart';
+import 'transform2d.dart';
 
 /// Result of clearing content layers while preserving the background layer.
 class ClearSceneResult {

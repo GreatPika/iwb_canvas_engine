@@ -49,8 +49,8 @@ instead of weakening the design.
 - [ ] Move `lib/src/public/scene_write_txn.dart` to
       `lib/src/contract/scene_write_txn.dart`.
 - [ ] Move `lib/src/public/snapshot.dart` to `lib/src/contract/snapshot.dart`.
-- [ ] Move `lib/src/core/transform2d.dart` to `lib/src/contract/transform2d.dart`.
-- [ ] Split `PathFillRule` out of `lib/src/core/nodes.dart` into
+- [x] Move `lib/src/core/transform2d.dart` to `lib/src/contract/transform2d.dart`.
+- [x] Split `PathFillRule` out of `lib/src/core/nodes.dart` into
       `lib/src/contract/path_fill_rule.dart`.
 - [ ] Move the public `SceneBuilder` facade out of `public/` into
       `lib/src/model/scene_builder_api.dart`; keep the exported class name
@@ -215,14 +215,14 @@ instead of weakening the design.
 - [x] Create `lib/src/contract/` and move stable API contracts there:
       immutable snapshots, ids, specs, patches, write contracts, render-state
       contracts, and data-shape exceptions that are part of the supported API.
-- [ ] Split `PathFillRule` out of `core/nodes.dart` and move `Transform2D` out
+- [x] Split `PathFillRule` out of `core/nodes.dart` and move `Transform2D` out
       of `core/`; place both in `contract/`. Do not leave `contract/`
       depending on `core/` in the final state.
-- [ ] Remove `Transform2D`'s dependency on `core/numeric_tolerance.dart` during
+- [x] Remove `Transform2D`'s dependency on `core/numeric_tolerance.dart` during
       the move by keeping only the small numerical helper needed for inversion
       near the transform code, rather than widening `contract/` with unrelated
       core math helpers.
-- [ ] Keep `contract/` free of runtime orchestration dependencies: it may depend
+- [x] Keep `contract/` free of runtime orchestration dependencies: it may depend
       only on other `contract/` files and SDK/framework primitives that are
       already part of the supported API surface.
 - [ ] Replace cross-layer leakage where `core/` currently imports API contracts
@@ -297,17 +297,17 @@ instead of weakening the design.
 
 ## Validation gates
 
-- [x] Run `dart format --output=none --set-exit-if-changed lib test example/lib tool`.
-- [x] Run `flutter analyze`.
-- [x] Run `flutter test`.
-- [x] Run `flutter test --coverage`.
-- [x] Run `dart run tool/check_coverage.dart`.
-- [x] Run `dart run tool/check_invariant_coverage.dart`.
-- [x] Run `dart run tool/check_guardrails.dart`.
-- [x] Run `dart run tool/check_import_boundaries.dart`.
-- [ ] Run `dart doc` before the release cut if exported symbol ownership or docs
+  Run `dart format --output=none --set-exit-if-changed lib test example/lib tool`.
+- Run `flutter analyze`.
+- Run `flutter test`.
+- Run `flutter test --coverage`.
+- Run `dart run tool/check_coverage.dart`.
+- Run `dart run tool/check_invariant_coverage.dart`.
+- Run `dart run tool/check_guardrails.dart`.
+- Run `dart run tool/check_import_boundaries.dart`.
+- Run `dart doc` before the release cut if exported symbol ownership or docs
       moved.
-- [ ] Run `dart pub publish --dry-run` before publishing the release candidate.
+- Run `dart pub publish --dry-run` before publishing the release candidate.
 
 ## Sequencing notes
 

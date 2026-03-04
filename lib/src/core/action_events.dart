@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-import 'transform2d.dart';
+import '../contract/transform2d.dart';
 import '../public/snapshot.dart';
 import 'immutable_collections.dart';
 

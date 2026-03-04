@@ -3,7 +3,7 @@ import 'dart:ui';
 
 import '../core/hit_test.dart';
 import '../core/selection_policy.dart';
-import '../core/transform2d.dart';
+import '../contract/transform2d.dart';
 import 'internal/signal_event.dart';
 import '../model/document.dart';
 import '../public/node_patch.dart';

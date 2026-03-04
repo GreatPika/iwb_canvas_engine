@@ -10,7 +10,7 @@ import '../core/grid_safety_limits.dart';
 import '../core/interaction_types.dart';
 import '../core/nodes.dart' show TextNode;
 import '../core/pointer_input.dart';
-import '../core/transform2d.dart';
+import '../contract/transform2d.dart';
 import '../controller/scene_controller.dart';
 import '../public/canvas_pointer_input.dart';
 import '../public/node_patch.dart';

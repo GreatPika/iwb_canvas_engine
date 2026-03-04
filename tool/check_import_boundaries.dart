@@ -166,18 +166,6 @@ bool _isAllowedLayerDependency({required _Layer from, required _Layer to}) {
   return _allowedLayerDependencies[from]?.contains(to) ?? false;
 }
 
-bool _isAllowedTemporaryContractToCoreEdge({
-  required String fromRepoRelPosix,
-  required String toRepoRelPosix,
-}) {
-  if (!fromRepoRelPosix.startsWith('/lib/src/contract/')) {
-    return false;
-  }
-
-  return toRepoRelPosix == '/lib/src/core/transform2d.dart' ||
-      toRepoRelPosix == '/lib/src/core/nodes.dart';
-}
-
 String _posixDirname(String posixPath) {
   final n = _normalizePosixPath(posixPath);
   if (n == '/' || n.isEmpty) {
@@ -518,16 +506,6 @@ void main(List<String> args) {
               from: fileLayer,
               to: targetLayer,
             )) {
-              final isTemporaryContractToCoreEdge =
-                  fileLayer == _Layer.contract &&
-                  targetLayer == _Layer.core &&
-                  _isAllowedTemporaryContractToCoreEdge(
-                    fromRepoRelPosix: filePosixPath,
-                    toRepoRelPosix: resolvedRepoRelPosix,
-                  );
-              if (isTemporaryContractToCoreEdge) {
-                continue;
-              }
               violations.add(
                 _Violation(
                   filePath: filePosixPath,

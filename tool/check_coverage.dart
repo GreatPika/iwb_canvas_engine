@@ -133,6 +133,7 @@ void main(List<String> args) {
     'lib/src/core/grid_safety_limits.dart',
     'lib/src/core/interaction_types.dart',
     'lib/src/core/scene_limits.dart',
+    'lib/src/contract/path_fill_rule.dart',
     'lib/src/contract/scene_render_state.dart',
     'lib/src/contract/scene_write_txn.dart',
     'lib/src/model/scene_value_validation.dart',

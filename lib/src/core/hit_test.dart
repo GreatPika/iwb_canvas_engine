@@ -5,7 +5,7 @@ import 'geometry.dart';
 import 'nodes.dart';
 import 'scene.dart';
 import 'numeric_clamp.dart';
-import 'transform2d.dart';
+import '../contract/transform2d.dart';
 
 /// Extra hit-test tolerance applied by this package, in scene units.
 ///

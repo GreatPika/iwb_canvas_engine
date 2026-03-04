@@ -4,7 +4,7 @@ import 'package:path_drawing/path_drawing.dart';
 
 import '../core/nodes.dart';
 import '../core/scene.dart';
-import '../core/transform2d.dart';
+import '../contract/transform2d.dart';
 import '../public/node_patch.dart';
 import '../public/node_spec.dart';
 import '../public/patch_field.dart';

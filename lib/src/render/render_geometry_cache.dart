@@ -7,7 +7,7 @@ import 'package:path_drawing/path_drawing.dart';
 import '../core/geometry.dart';
 import '../core/local_bounds_policy.dart';
 import '../core/numeric_clamp.dart';
-import '../core/transform2d.dart';
+import '../contract/transform2d.dart';
 import '../public/snapshot.dart';
 
 class GeometryEntry {

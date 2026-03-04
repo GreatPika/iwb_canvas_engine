@@ -1,7 +1,7 @@
 import 'dart:ui' show Color, Offset;
 
 import '../../core/nodes.dart';
-import '../../core/transform2d.dart';
+import '../../contract/transform2d.dart';
 import '../../public/node_patch.dart';
 import '../../public/node_spec.dart';
 import '../../public/snapshot.dart' show LayerId;

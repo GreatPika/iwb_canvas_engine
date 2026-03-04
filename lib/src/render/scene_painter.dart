@@ -6,7 +6,7 @@ import 'package:flutter/rendering.dart';
 import '../core/grid_safety_limits.dart';
 import '../core/numeric_clamp.dart';
 import '../core/text_layout.dart';
-import '../core/transform2d.dart';
+import '../contract/transform2d.dart';
 import '../public/scene_render_state.dart';
 import '../public/snapshot.dart';
 import 'cache/scene_path_metrics_cache.dart';

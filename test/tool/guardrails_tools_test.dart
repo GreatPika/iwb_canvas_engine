@@ -25,34 +25,32 @@ void main() {
       }
     });
 
-    test(
-      'allows contract -> core/transform2d import during migration',
-      () async {
-        final sandbox = await _createSandbox();
-        try {
-          _writeFile(
-            sandbox,
-            'lib/src/core/transform2d.dart',
-            'class Transform2D {}\n',
-          );
-          _writeFile(
-            sandbox,
-            'lib/src/contract/value.dart',
-            "import 'package:iwb_canvas_engine/src/core/transform2d.dart';\n",
-          );
+    test('rejects contract -> core/transform2d import', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(
+          sandbox,
+          'lib/src/core/transform2d.dart',
+          'class Transform2D {}\n',
+        );
+        _writeFile(
+          sandbox,
+          'lib/src/contract/value.dart',
+          "import 'package:iwb_canvas_engine/src/core/transform2d.dart';\n",
+        );
 
-          final result = await _runTool(
-            sandbox,
-            'check_import_boundaries.dart',
-          );
-          expect(result.exitCode, 0, reason: result.stderr.toString());
-        } finally {
-          sandbox.deleteSync(recursive: true);
-        }
-      },
-    );
+        final result = await _runTool(sandbox, 'check_import_boundaries.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains('layer DAG violation: contract/** must not import core/**'),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
 
-    test('allows contract -> core/nodes import during migration', () async {
+    test('rejects contract -> core/nodes import', () async {
       final sandbox = await _createSandbox();
       try {
         _writeFile(
@@ -67,7 +65,11 @@ void main() {
         );
 
         final result = await _runTool(sandbox, 'check_import_boundaries.dart');
-        expect(result.exitCode, 0, reason: result.stderr.toString());
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains('layer DAG violation: contract/** must not import core/**'),
+        );
       } finally {
         sandbox.deleteSync(recursive: true);
       }
