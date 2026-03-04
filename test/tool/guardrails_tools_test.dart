@@ -143,9 +143,7 @@ class SceneBuilder {
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          contains(
-            'layer classification violation: unresolved target layer for /lib/src/unknown/value.dart',
-          ),
+          contains('uses unapproved top-level layer "unknown"'),
         );
       } finally {
         sandbox.deleteSync(recursive: true);
@@ -160,7 +158,6 @@ class SceneBuilder {
         final deletedLayerFilePath = 'lib/$deletedLayerPathSuffix';
         final deletedLayerImportTarget =
             'package:iwb_canvas_engine/$deletedLayerPathSuffix';
-        final deletedLayerRepoPath = '/lib/$deletedLayerPathSuffix';
 
         _writeFile(
           sandbox,
@@ -177,9 +174,47 @@ class SceneBuilder {
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          contains(
-            'layer classification violation: unresolved target layer for $deletedLayerRepoPath',
-          ),
+          contains('uses deleted top-level layer "public"'),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects reintroduced deleted public layer without imports', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(
+          sandbox,
+          'lib/src/public/value.dart',
+          'class DeletedLayerValue {}\n',
+        );
+
+        final result = await _runTool(sandbox, 'check_import_boundaries.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains('uses deleted top-level layer "public"'),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects unknown top-level lib/src layer without imports', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(
+          sandbox,
+          'lib/src/unknown/value.dart',
+          'class UnknownValue {}\n',
+        );
+
+        final result = await _runTool(sandbox, 'check_import_boundaries.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains('uses unapproved top-level layer "unknown"'),
         );
       } finally {
         sandbox.deleteSync(recursive: true);
@@ -221,9 +256,7 @@ class SceneBuilder {
           );
           expect(
             result.stderr.toString(),
-            contains(
-              'layer classification violation: unresolved target layer for /lib/src/unknown/value.dart',
-            ),
+            contains('uses unapproved top-level layer "unknown"'),
           );
         } finally {
           sandbox.deleteSync(recursive: true);
@@ -251,6 +284,29 @@ class SceneBuilder {
         sandbox.deleteSync(recursive: true);
       }
     });
+
+    test(
+      'allows top-level lib/src file without treating it as a layer',
+      () async {
+        final sandbox = await _createSandbox();
+        try {
+          _writeFile(sandbox, 'lib/src/version.dart', 'const version = 1;\n');
+          _writeFile(
+            sandbox,
+            'lib/src/core/value.dart',
+            'class CoreValue {}\n',
+          );
+
+          final result = await _runTool(
+            sandbox,
+            'check_import_boundaries.dart',
+          );
+          expect(result.exitCode, 0, reason: result.stderr.toString());
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
 
     test('allows view -> interactive import', () async {
       final sandbox = await _createSandbox();
@@ -401,9 +457,7 @@ class SceneBuilder {
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          contains(
-            'layer classification violation: file is under lib/src/** but has no known layer',
-          ),
+          contains('uses unapproved top-level layer "unknown"'),
         );
       } finally {
         sandbox.deleteSync(recursive: true);
@@ -436,6 +490,94 @@ class Store {
         sandbox.deleteSync(recursive: true);
       }
     });
+
+    test('rejects reintroduced deleted public layer without imports', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(sandbox, 'lib/src/controller/store.dart', '''
+class Store {
+  int controllerEpoch = 0;
+
+  void writeMutations() {}
+
+  void txnCommit() {
+    writeMutations();
+  }
+}
+''');
+        _writeFile(
+          sandbox,
+          'lib/src/public/value.dart',
+          'class PublicValue {}\n',
+        );
+
+        final result = await _runTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains('uses deleted top-level layer "public"'),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects unknown top-level lib/src layer without imports', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(sandbox, 'lib/src/controller/store.dart', '''
+class Store {
+  int controllerEpoch = 0;
+
+  void writeMutations() {}
+
+  void txnCommit() {
+    writeMutations();
+  }
+}
+''');
+        _writeFile(
+          sandbox,
+          'lib/src/unknown/value.dart',
+          'class UnknownValue {}\n',
+        );
+
+        final result = await _runTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains('uses unapproved top-level layer "unknown"'),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test(
+      'allows top-level lib/src file without treating it as a layer',
+      () async {
+        final sandbox = await _createSandbox();
+        try {
+          _writeFile(sandbox, 'lib/src/controller/store.dart', '''
+class Store {
+  int controllerEpoch = 0;
+
+  void writeMutations() {}
+
+  void txnCommit() {
+    writeMutations();
+  }
+}
+''');
+          _writeFile(sandbox, 'lib/src/version.dart', 'const version = 1;\n');
+
+          final result = await _runTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, 0, reason: result.stderr.toString());
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
 
     test('passes for write/txn APIs and controllerEpoch usage', () async {
       final sandbox = await _createSandbox();
@@ -959,6 +1101,10 @@ environment:
   _copyFile(
     '$sourceRoot/tool/check_guardrails.dart',
     '${sandbox.path}/tool/check_guardrails.dart',
+  );
+  _copyFile(
+    '$sourceRoot/tool/src/layer_guardrails.dart',
+    '${sandbox.path}/tool/src/layer_guardrails.dart',
   );
 
   return sandbox;

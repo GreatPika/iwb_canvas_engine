@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'src/layer_guardrails.dart';
+
 // Invariants enforced by this tool:
 // INV:INV-ENG-NO-EXTERNAL-MUTATION
 // INV:INV-ENG-WRITE-ONLY-MUTATION
@@ -180,6 +182,33 @@ Never _fail(_Violation violation) {
   stderr.writeln('FAIL: guardrails');
   stderr.writeln('- $violation');
   exit(1);
+}
+
+void _checkLibSrcStructuralGuardrails({
+  required Directory root,
+  required String rootAbsPosix,
+}) {
+  final srcRoot = Directory(
+    '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}src',
+  );
+  if (!srcRoot.existsSync()) {
+    return;
+  }
+
+  final violations = collectTopLevelLibSrcLayoutViolations(
+    srcRoot: srcRoot,
+    rootAbsPosixPath: rootAbsPosix,
+    toPosixPath: _toPosixPath,
+    toRepoRelPosixPath: _toRepoRelPosixPath,
+  );
+  if (violations.isEmpty) {
+    return;
+  }
+
+  final violation = violations.first;
+  _fail(
+    _Violation(filePath: violation.path, line: 1, message: violation.message),
+  );
 }
 
 void _checkExportedApiImports({
@@ -991,6 +1020,7 @@ void main(List<String> args) {
   final root = Directory.current;
   final rootAbsPosix = _toPosixPath(root.absolute.path);
   final packageName = _readPackageNameOrFallback(root);
+  _checkLibSrcStructuralGuardrails(root: root, rootAbsPosix: rootAbsPosix);
   final exportedFiles = _checkEntrypointGuardrails(
     root: root,
     rootAbsPosix: rootAbsPosix,

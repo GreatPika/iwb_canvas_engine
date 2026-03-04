@@ -251,15 +251,18 @@ instead of weakening the design.
 
 ## Phase 4: Rebuild guardrails around the new graph
 
-- [ ] Rename and reword `INV-G-CORE-NO-LAYER-DEPS` in
+The first two Phase 4 items were completed during the earlier `contract/`
+migration slices; this follow-up closes the next two structural guardrail items.
+
+- [x] Rename and reword `INV-G-CORE-NO-LAYER-DEPS` in
       `tool/invariant_registry.dart` so the invariant describes the actual DAG
       instead of implying a vague "higher layers" model.
-- [ ] Rewrite `tool/check_import_boundaries.dart` to encode the new explicit DAG
+- [x] Rewrite `tool/check_import_boundaries.dart` to encode the new explicit DAG
       (`contract -> none`, `core -> contract`, `model -> core + contract`, and
       so on), with no exceptional "core -> public" rule.
-- [ ] Add guardrail coverage that fails if `lib/src/public/` is reintroduced or
+- [x] Add guardrail coverage that fails if `lib/src/public/` is reintroduced or
       if new files bypass the approved layer map.
-- [ ] Update every path-based tool and test that currently hardcodes
+- [x] Update every path-based tool and test that currently hardcodes
       `src/public/**`, including `tool/check_guardrails.dart`,
       `tool/check_coverage.dart`, and `test/tool/guardrails_tools_test.dart`,
       so guardrails enforce the new structure instead of the deleted one.

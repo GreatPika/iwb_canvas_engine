@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'src/layer_guardrails.dart';
+
 // Invariants enforced by this tool:
 // INV:INV-G-LAYER-DAG
 // INV:INV-G-LAYER-BOUNDARIES
@@ -103,21 +105,47 @@ const Map<_Layer, Set<_Layer>> _allowedLayerDependencies =
     };
 
 _Layer? _layerForRepoRelPosixPath(String repoRelPosixPath) {
-  if (repoRelPosixPath.startsWith('/lib/src/contract/')) return _Layer.contract;
-  if (repoRelPosixPath.startsWith('/lib/src/core/')) return _Layer.core;
-  if (repoRelPosixPath.startsWith('/lib/src/model/')) return _Layer.model;
-  if (repoRelPosixPath.startsWith('/lib/src/controller/')) {
-    return _Layer.controller;
+  switch (topLevelLibSrcLayerForRepoRelPosixPath(repoRelPosixPath)) {
+    case 'contract':
+      return _Layer.contract;
+    case 'core':
+      return _Layer.core;
+    case 'model':
+      return _Layer.model;
+    case 'controller':
+      return _Layer.controller;
+    case 'interactive':
+      return _Layer.interactive;
+    case 'render':
+      return _Layer.render;
+    case 'serialization':
+      return _Layer.serialization;
+    case 'view':
+      return _Layer.view;
+    case null:
+    case _:
+      return null;
   }
-  if (repoRelPosixPath.startsWith('/lib/src/interactive/')) {
-    return _Layer.interactive;
+}
+
+bool _isInDisallowedTopLevelLibSrcLayer(
+  String repoRelPosixPath,
+  Set<String> disallowedTopLevelLayers,
+) {
+  final topLevelLayer = topLevelLibSrcLayerForRepoRelPosixPath(
+    repoRelPosixPath,
+  );
+  if (topLevelLayer == null) {
+    return false;
   }
-  if (repoRelPosixPath.startsWith('/lib/src/render/')) return _Layer.render;
-  if (repoRelPosixPath.startsWith('/lib/src/serialization/')) {
-    return _Layer.serialization;
+  return disallowedTopLevelLayers.contains(topLevelLayer);
+}
+
+String? _nestedLibSrcLayoutViolation(String repoRelPosixPath) {
+  if (directChildUnderLibSrcForRepoRelPosixPath(repoRelPosixPath) != null) {
+    return null;
   }
-  if (repoRelPosixPath.startsWith('/lib/src/view/')) return _Layer.view;
-  return null;
+  return describeLibSrcLayoutViolation(repoRelPosixPath);
 }
 
 String _layerLabel(_Layer layer) {
@@ -377,6 +405,25 @@ void main(List<String> args) {
   }
 
   final violations = <_Violation>[];
+  final topLevelLayoutViolations = collectTopLevelLibSrcLayoutViolations(
+    srcRoot: srcRoot,
+    rootAbsPosixPath: rootAbsPosix,
+    toPosixPath: _toPosixPath,
+    toRepoRelPosixPath: _toRepoRelPosixPath,
+  );
+  final disallowedTopLevelLayers = <String>{};
+  for (final layoutViolation in topLevelLayoutViolations) {
+    disallowedTopLevelLayers.add(layoutViolation.layer);
+    violations.add(
+      _Violation(
+        filePath: layoutViolation.path,
+        line: 1,
+        directive: 'layer',
+        target: layoutViolation.path,
+        message: layoutViolation.message,
+      ),
+    );
+  }
 
   for (final entity in srcRoot.listSync(recursive: true, followLinks: false)) {
     if (entity is! File) {
@@ -391,8 +438,18 @@ void main(List<String> args) {
       absPosixPath: fileAbsPosixPath,
       rootAbsPosixPath: rootAbsPosix,
     );
+    if (directChildUnderLibSrcForRepoRelPosixPath(filePosixPath) != null) {
+      continue;
+    }
+    if (_isInDisallowedTopLevelLibSrcLayer(
+      filePosixPath,
+      disallowedTopLevelLayers,
+    )) {
+      continue;
+    }
     final fileLayer = _layerForRepoRelPosixPath(filePosixPath);
     if (filePosixPath.startsWith('/lib/src/') && fileLayer == null) {
+      final layoutViolation = _nestedLibSrcLayoutViolation(filePosixPath);
       violations.add(
         _Violation(
           filePath: filePosixPath,
@@ -400,7 +457,9 @@ void main(List<String> args) {
           directive: 'layer',
           target: filePosixPath,
           message:
-              'layer classification violation: file is under lib/src/** but has no known layer',
+              layoutViolation ??
+              'layer classification violation: file is under lib/src/** '
+                  'but has no known layer',
         ),
       );
       continue;
@@ -469,6 +528,9 @@ void main(List<String> args) {
               resolvedRepoRelPosix.startsWith('/lib/src/')) {
             final targetLayer = _layerForRepoRelPosixPath(resolvedRepoRelPosix);
             if (targetLayer == null) {
+              final layoutViolation = _nestedLibSrcLayoutViolation(
+                resolvedRepoRelPosix,
+              );
               violations.add(
                 _Violation(
                   filePath: filePosixPath,
@@ -476,8 +538,9 @@ void main(List<String> args) {
                   directive: directive,
                   target: target,
                   message:
-                      'layer classification violation: unresolved target layer '
-                      'for $resolvedRepoRelPosix',
+                      layoutViolation ??
+                      'layer classification violation: unresolved target '
+                          'layer for $resolvedRepoRelPosix',
                 ),
               );
             } else if (!_isAllowedLayerDependency(
