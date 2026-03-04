@@ -100,6 +100,30 @@ String _formatPercent(int lh, int lf) {
   return '${pct.toStringAsFixed(2)}%';
 }
 
+bool _isExportOnlyUnit(String repoRelativePath) {
+  final file = File(repoRelativePath);
+  if (!file.existsSync()) {
+    return false;
+  }
+
+  final meaningfulLines = <String>[];
+  for (final rawLine in file.readAsLinesSync()) {
+    final trimmed = rawLine.trim();
+    if (trimmed.isEmpty) continue;
+    if (trimmed.startsWith('//')) continue;
+    if (trimmed.startsWith('/*')) continue;
+    if (trimmed.startsWith('*')) continue;
+    if (trimmed.startsWith('*/')) continue;
+    meaningfulLines.add(trimmed);
+  }
+
+  if (meaningfulLines.isEmpty) {
+    return false;
+  }
+
+  return meaningfulLines.every((line) => line.startsWith('export '));
+}
+
 void main(List<String> args) {
   final cwd = Directory.current.path;
   // Declaration-only Dart units may not be emitted by VM lcov as SF records.
@@ -109,9 +133,9 @@ void main(List<String> args) {
     'lib/src/core/grid_safety_limits.dart',
     'lib/src/core/interaction_types.dart',
     'lib/src/core/scene_limits.dart',
+    'lib/src/contract/scene_render_state.dart',
+    'lib/src/contract/scene_write_txn.dart',
     'lib/src/model/scene_value_validation.dart',
-    'lib/src/public/scene_render_state.dart',
-    'lib/src/public/scene_write_txn.dart',
   };
   final libSrcFiles = _collectLibSrcDartFiles(cwd: cwd);
   final lcovFile = File('coverage/lcov.info');
@@ -129,7 +153,9 @@ void main(List<String> args) {
       libSrcFiles
           .where(
             (path) =>
-                !excludedFromLcov.contains(path) && !all.containsKey(path),
+                !excludedFromLcov.contains(path) &&
+                !all.containsKey(path) &&
+                !_isExportOnlyUnit(path),
           )
           .toList()
         ..sort();

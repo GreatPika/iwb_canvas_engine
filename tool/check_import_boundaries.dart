@@ -64,6 +64,7 @@ String _posixJoin(String a, String b) {
 String _toPosixPath(String path) => path.replaceAll('\\', '/');
 
 enum _Layer {
+  contract,
   core,
   model,
   publicApi,
@@ -76,23 +77,37 @@ enum _Layer {
 
 const Map<_Layer, Set<_Layer>> _allowedLayerDependencies =
     <_Layer, Set<_Layer>>{
-      _Layer.core: <_Layer>{_Layer.publicApi},
-      _Layer.model: <_Layer>{_Layer.core, _Layer.publicApi},
-      _Layer.publicApi: <_Layer>{_Layer.core, _Layer.model},
-      _Layer.controller: <_Layer>{_Layer.core, _Layer.model, _Layer.publicApi},
+      _Layer.contract: <_Layer>{},
+      _Layer.core: <_Layer>{_Layer.contract, _Layer.publicApi},
+      _Layer.model: <_Layer>{_Layer.contract, _Layer.core, _Layer.publicApi},
+      _Layer.publicApi: <_Layer>{_Layer.contract, _Layer.core, _Layer.model},
+      _Layer.controller: <_Layer>{
+        _Layer.contract,
+        _Layer.core,
+        _Layer.model,
+        _Layer.publicApi,
+      },
       _Layer.interactive: <_Layer>{
+        _Layer.contract,
         _Layer.core,
         _Layer.controller,
         _Layer.publicApi,
         _Layer.model,
       },
-      _Layer.render: <_Layer>{_Layer.core, _Layer.model, _Layer.publicApi},
+      _Layer.render: <_Layer>{
+        _Layer.contract,
+        _Layer.core,
+        _Layer.model,
+        _Layer.publicApi,
+      },
       _Layer.serialization: <_Layer>{
+        _Layer.contract,
         _Layer.core,
         _Layer.model,
         _Layer.publicApi,
       },
       _Layer.view: <_Layer>{
+        _Layer.contract,
         _Layer.core,
         _Layer.controller,
         _Layer.interactive,
@@ -103,6 +118,7 @@ const Map<_Layer, Set<_Layer>> _allowedLayerDependencies =
     };
 
 _Layer? _layerForRepoRelPosixPath(String repoRelPosixPath) {
+  if (repoRelPosixPath.startsWith('/lib/src/contract/')) return _Layer.contract;
   if (repoRelPosixPath.startsWith('/lib/src/core/')) return _Layer.core;
   if (repoRelPosixPath.startsWith('/lib/src/model/')) return _Layer.model;
   if (repoRelPosixPath.startsWith('/lib/src/public/')) return _Layer.publicApi;
@@ -122,6 +138,8 @@ _Layer? _layerForRepoRelPosixPath(String repoRelPosixPath) {
 
 String _layerLabel(_Layer layer) {
   switch (layer) {
+    case _Layer.contract:
+      return 'contract';
     case _Layer.core:
       return 'core';
     case _Layer.model:
@@ -146,6 +164,18 @@ bool _isAllowedLayerDependency({required _Layer from, required _Layer to}) {
     return true;
   }
   return _allowedLayerDependencies[from]?.contains(to) ?? false;
+}
+
+bool _isAllowedTemporaryContractToCoreEdge({
+  required String fromRepoRelPosix,
+  required String toRepoRelPosix,
+}) {
+  if (!fromRepoRelPosix.startsWith('/lib/src/contract/')) {
+    return false;
+  }
+
+  return toRepoRelPosix == '/lib/src/core/transform2d.dart' ||
+      toRepoRelPosix == '/lib/src/core/nodes.dart';
 }
 
 String _posixDirname(String posixPath) {
@@ -310,6 +340,9 @@ bool _isAllowedForCommands({
   if (resolvedRepoRelPosix.startsWith('/lib/src/core/')) {
     return true;
   }
+  if (resolvedRepoRelPosix.startsWith('/lib/src/contract/')) {
+    return true;
+  }
   if (resolvedRepoRelPosix.startsWith('/lib/src/controller/')) return true;
   if (resolvedRepoRelPosix.startsWith('/lib/src/model/')) return true;
   if (resolvedRepoRelPosix.startsWith('/lib/src/public/')) return true;
@@ -343,6 +376,9 @@ bool _isAllowedForInternal({
   }
 
   if (resolvedRepoRelPosix.startsWith('/lib/src/core/')) {
+    return true;
+  }
+  if (resolvedRepoRelPosix.startsWith('/lib/src/contract/')) {
     return true;
   }
   if (resolvedRepoRelPosix.startsWith('/lib/src/model/')) {
@@ -482,6 +518,16 @@ void main(List<String> args) {
               from: fileLayer,
               to: targetLayer,
             )) {
+              final isTemporaryContractToCoreEdge =
+                  fileLayer == _Layer.contract &&
+                  targetLayer == _Layer.core &&
+                  _isAllowedTemporaryContractToCoreEdge(
+                    fromRepoRelPosix: filePosixPath,
+                    toRepoRelPosix: resolvedRepoRelPosix,
+                  );
+              if (isTemporaryContractToCoreEdge) {
+                continue;
+              }
               violations.add(
                 _Violation(
                   filePath: filePosixPath,

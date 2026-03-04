@@ -4,6 +4,96 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('tool/check_import_boundaries.dart', () {
+    test('allows public -> contract export', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(
+          sandbox,
+          'lib/src/contract/value.dart',
+          'class ContractValue {}\n',
+        );
+        _writeFile(
+          sandbox,
+          'lib/src/public/value.dart',
+          "export 'package:iwb_canvas_engine/src/contract/value.dart';\n",
+        );
+
+        final result = await _runTool(sandbox, 'check_import_boundaries.dart');
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test(
+      'allows contract -> core/transform2d import during migration',
+      () async {
+        final sandbox = await _createSandbox();
+        try {
+          _writeFile(
+            sandbox,
+            'lib/src/core/transform2d.dart',
+            'class Transform2D {}\n',
+          );
+          _writeFile(
+            sandbox,
+            'lib/src/contract/value.dart',
+            "import 'package:iwb_canvas_engine/src/core/transform2d.dart';\n",
+          );
+
+          final result = await _runTool(
+            sandbox,
+            'check_import_boundaries.dart',
+          );
+          expect(result.exitCode, 0, reason: result.stderr.toString());
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test('allows contract -> core/nodes import during migration', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(
+          sandbox,
+          'lib/src/core/nodes.dart',
+          'enum PathFillRule { nonZero }\n',
+        );
+        _writeFile(
+          sandbox,
+          'lib/src/contract/value.dart',
+          "import 'package:iwb_canvas_engine/src/core/nodes.dart';\n",
+        );
+
+        final result = await _runTool(sandbox, 'check_import_boundaries.dart');
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects arbitrary contract -> core import', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(sandbox, 'lib/src/core/value.dart', 'class CoreValue {}\n');
+        _writeFile(
+          sandbox,
+          'lib/src/contract/value.dart',
+          "import 'package:iwb_canvas_engine/src/core/value.dart';\n",
+        );
+
+        final result = await _runTool(sandbox, 'check_import_boundaries.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains('layer DAG violation: contract/** must not import core/**'),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
     test('allows view -> render import', () async {
       final sandbox = await _createSandbox();
       try {

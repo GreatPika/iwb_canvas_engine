@@ -52,6 +52,80 @@ end_of_record
         sandbox.deleteSync(recursive: true);
       }
     });
+
+    test('passes when missing file is a pure export-only shim', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(sandbox, 'lib/src/contract/a.dart', 'int covered() => 1;\n');
+        _writeFile(
+          sandbox,
+          'lib/src/public/a.dart',
+          "export 'package:iwb_canvas_engine/src/contract/a.dart';\n",
+        );
+        _writeFile(sandbox, 'coverage/lcov.info', '''
+TN:
+SF:lib/src/contract/a.dart
+DA:1,1
+LF:1
+LH:1
+end_of_record
+''');
+
+        final result = await _runTool(sandbox, 'check_coverage.dart');
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects missing shim file when logic leaks back into it', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(sandbox, 'lib/src/contract/a.dart', 'int covered() => 1;\n');
+        _writeFile(sandbox, 'lib/src/public/a.dart', '''
+export 'package:iwb_canvas_engine/src/contract/a.dart';
+int leaked() => 1;
+''');
+        _writeFile(sandbox, 'coverage/lcov.info', '''
+TN:
+SF:lib/src/contract/a.dart
+DA:1,1
+LF:1
+LH:1
+end_of_record
+''');
+
+        final result = await _runTool(sandbox, 'check_coverage.dart');
+        expect(result.exitCode, isNonZero);
+        expect(result.stderr.toString(), contains('lib/src/public/a.dart'));
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('passes when export-only shim includes comment wrapper', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFile(sandbox, 'lib/src/contract/a.dart', 'int covered() => 1;\n');
+        _writeFile(sandbox, 'lib/src/public/a.dart', '''
+// comment
+export 'package:iwb_canvas_engine/src/contract/a.dart';
+''');
+        _writeFile(sandbox, 'coverage/lcov.info', '''
+TN:
+SF:lib/src/contract/a.dart
+DA:1,1
+LF:1
+LH:1
+end_of_record
+''');
+
+        final result = await _runTool(sandbox, 'check_coverage.dart');
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
   });
 }
 

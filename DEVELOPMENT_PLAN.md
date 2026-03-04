@@ -212,7 +212,7 @@ instead of weakening the design.
 
 ## Phase 2: Establish the new low-level contract boundary
 
-- [ ] Create `lib/src/contract/` and move stable API contracts there:
+- [x] Create `lib/src/contract/` and move stable API contracts there:
       immutable snapshots, ids, specs, patches, write contracts, render-state
       contracts, and data-shape exceptions that are part of the supported API.
 - [ ] Split `PathFillRule` out of `core/nodes.dart` and move `Transform2D` out
@@ -251,7 +251,7 @@ instead of weakening the design.
 
 ## Phase 4: Rebuild guardrails around the new graph
 
-- [x] Rename and reword `INV-G-CORE-NO-LAYER-DEPS` in
+- [ ] Rename and reword `INV-G-CORE-NO-LAYER-DEPS` in
       `tool/invariant_registry.dart` so the invariant describes the actual DAG
       instead of implying a vague "higher layers" model.
 - [ ] Rewrite `tool/check_import_boundaries.dart` to encode the new explicit DAG
