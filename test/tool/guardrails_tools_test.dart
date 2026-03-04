@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('tool/check_import_boundaries.dart', () {
-    test('allows public -> contract export', () async {
+    test('allows contract -> contract export', () async {
       final sandbox = await _createSandbox();
       try {
         _writeFile(
@@ -14,7 +14,7 @@ void main() {
         );
         _writeFile(
           sandbox,
-          'lib/src/public/value.dart',
+          'lib/src/contract/api.dart',
           "export 'package:iwb_canvas_engine/src/contract/value.dart';\n",
         );
 
@@ -25,7 +25,7 @@ void main() {
       }
     });
 
-    test('allows public facade -> model and contract imports', () async {
+    test('allows model facade -> model and contract imports', () async {
       final sandbox = await _createSandbox();
       try {
         _writeFile(
@@ -38,7 +38,7 @@ void main() {
           'lib/src/contract/snapshot.dart',
           'class SceneSnapshot {}\n',
         );
-        _writeFile(sandbox, 'lib/src/public/scene_builder.dart', '''
+        _writeFile(sandbox, 'lib/src/model/scene_builder_api.dart', '''
 import 'package:iwb_canvas_engine/src/model/document.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 
@@ -125,32 +125,68 @@ class SceneBuilder {
       }
     });
 
-    test('rejects core -> public import', () async {
+    test('rejects core -> unknown target layer import', () async {
       final sandbox = await _createSandbox();
       try {
         _writeFile(
           sandbox,
-          'lib/src/public/value.dart',
-          'class PublicValue {}\n',
+          'lib/src/unknown/value.dart',
+          'class UnknownValue {}\n',
         );
         _writeFile(
           sandbox,
           'lib/src/core/value.dart',
-          "import 'package:iwb_canvas_engine/src/public/value.dart';\n",
+          "import 'package:iwb_canvas_engine/src/unknown/value.dart';\n",
         );
 
         final result = await _runTool(sandbox, 'check_import_boundaries.dart');
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          contains('layer DAG violation: core/** must not import public/**'),
+          contains(
+            'layer classification violation: unresolved target layer for /lib/src/unknown/value.dart',
+          ),
         );
       } finally {
         sandbox.deleteSync(recursive: true);
       }
     });
 
-    test('rejects higher layers -> public imports', () async {
+    test('rejects core -> reintroduced deleted public layer import', () async {
+      final sandbox = await _createSandbox();
+      try {
+        final deletedLayerSegments = ['src', 'public', 'value.dart'];
+        final deletedLayerPathSuffix = deletedLayerSegments.join('/');
+        final deletedLayerFilePath = 'lib/$deletedLayerPathSuffix';
+        final deletedLayerImportTarget =
+            'package:iwb_canvas_engine/$deletedLayerPathSuffix';
+        final deletedLayerRepoPath = '/lib/$deletedLayerPathSuffix';
+
+        _writeFile(
+          sandbox,
+          deletedLayerFilePath,
+          'class DeletedLayerValue {}\n',
+        );
+        _writeFile(
+          sandbox,
+          'lib/src/core/value.dart',
+          "import '$deletedLayerImportTarget';\n",
+        );
+
+        final result = await _runTool(sandbox, 'check_import_boundaries.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains(
+            'layer classification violation: unresolved target layer for $deletedLayerRepoPath',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects higher layers -> unknown target layer imports', () async {
       const layerCases = <({String filePath, String label})>[
         (filePath: 'lib/src/model/value.dart', label: 'model'),
         (filePath: 'lib/src/controller/value.dart', label: 'controller'),
@@ -165,13 +201,13 @@ class SceneBuilder {
         try {
           _writeFile(
             sandbox,
-            'lib/src/public/value.dart',
-            'class PublicValue {}\n',
+            'lib/src/unknown/value.dart',
+            'class UnknownValue {}\n',
           );
           _writeFile(
             sandbox,
             layerCase.filePath,
-            "import 'package:iwb_canvas_engine/src/public/value.dart';\n",
+            "import 'package:iwb_canvas_engine/src/unknown/value.dart';\n",
           );
 
           final result = await _runTool(
@@ -181,12 +217,12 @@ class SceneBuilder {
           expect(
             result.exitCode,
             isNonZero,
-            reason: '${layerCase.label} unexpectedly imported public/**',
+            reason: '${layerCase.label} unexpectedly imported unknown layer',
           );
           expect(
             result.stderr.toString(),
             contains(
-              'layer DAG violation: ${layerCase.label}/** must not import public/**',
+              'layer classification violation: unresolved target layer for /lib/src/unknown/value.dart',
             ),
           );
         } finally {
@@ -441,10 +477,10 @@ class Store {
 /// Public API exports for tests.
 library;
 
-export 'src/public/foo.dart'
+export 'src/contract/foo.dart'
     show Foo;
 ''');
-        _writeFile(sandbox, 'lib/src/public/foo.dart', '''
+        _writeFile(sandbox, 'lib/src/contract/foo.dart', '''
 abstract class Foo {}
 ''');
 
@@ -475,10 +511,10 @@ class Store {
 library;
 
 /* comment before export */
-export /* inline */ 'src/public/foo.dart'
+export /* inline */ 'src/contract/foo.dart'
     show /* inline */ Foo;
 ''');
-          _writeFile(sandbox, 'lib/src/public/foo.dart', '''
+          _writeFile(sandbox, 'lib/src/contract/foo.dart', '''
 abstract class Foo {}
 ''');
 
@@ -578,9 +614,9 @@ class Store {
           _writeFile(sandbox, 'lib/iwb_canvas_engine.dart', '''
 library;
 
-export 'src/public/foo.dart'; /* c */ class A {}
+export 'src/contract/foo.dart'; /* c */ class A {}
 ''');
-          _writeFile(sandbox, 'lib/src/public/foo.dart', '''
+          _writeFile(sandbox, 'lib/src/contract/foo.dart', '''
 abstract class Foo {}
 ''');
 
@@ -635,16 +671,16 @@ abstract class Foo {}
     });
 
     test(
-      'rejects scene/writeFindNode/writeMark*/id-bookkeeping in public txn API',
+      'rejects scene/writeFindNode/writeMark*/id-bookkeeping in exported txn API',
       () async {
         final sandbox = await _createSandbox();
         try {
           _writeFile(
             sandbox,
             'lib/iwb_canvas_engine.dart',
-            "export 'src/public/scene_write_txn.dart';\n",
+            "export 'src/contract/scene_write_txn.dart';\n",
           );
-          _writeFile(sandbox, 'lib/src/public/scene_write_txn.dart', '''
+          _writeFile(sandbox, 'lib/src/contract/scene_write_txn.dart', '''
 abstract interface class SceneWriteTxn {
   Object get scene;
   Object? writeFindNode(String id);
@@ -678,9 +714,9 @@ abstract interface class SceneWriteTxn {
           _writeFile(
             sandbox,
             'lib/iwb_canvas_engine.dart',
-            "export 'src/public/foo.dart';\n",
+            "export 'src/contract/foo.dart';\n",
           );
-          _writeFile(sandbox, 'lib/src/public/foo.dart', '''
+          _writeFile(sandbox, 'lib/src/contract/foo.dart', '''
 abstract class Foo {
   Scene get scene;
 }
@@ -720,9 +756,19 @@ class Store {
       }
     });
 
-    test('rejects public import from controller layer', () async {
+    test('rejects exported contract import from controller layer', () async {
       final sandbox = await _createSandbox();
       try {
+        _writeFile(sandbox, 'lib/iwb_canvas_engine.dart', '''
+library;
+
+export 'src/contract/snapshot.dart';
+''');
+        _writeFile(sandbox, 'lib/src/controller/store.dart', '''
+class Store {
+  int controllerEpoch = 0;
+}
+''');
         _writeFile(
           sandbox,
           'lib/src/controller/types.dart',
@@ -730,7 +776,7 @@ class Store {
         );
         _writeFile(
           sandbox,
-          'lib/src/public/snapshot.dart',
+          'lib/src/contract/snapshot.dart',
           "import 'package:iwb_canvas_engine/src/controller/types.dart';\n",
         );
 
@@ -739,7 +785,7 @@ class Store {
         expect(
           result.stderr.toString(),
           contains(
-            'public must not import/export controller/render/view/serialization internals',
+            'exported contract/model API must not import/export controller/render/view/serialization internals',
           ),
         );
       } finally {

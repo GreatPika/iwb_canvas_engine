@@ -67,7 +67,6 @@ enum _Layer {
   contract,
   core,
   model,
-  publicApi,
   controller,
   interactive,
   render,
@@ -80,7 +79,6 @@ const Map<_Layer, Set<_Layer>> _allowedLayerDependencies =
       _Layer.contract: <_Layer>{},
       _Layer.core: <_Layer>{_Layer.contract},
       _Layer.model: <_Layer>{_Layer.contract, _Layer.core},
-      _Layer.publicApi: <_Layer>{_Layer.contract, _Layer.model},
       _Layer.controller: <_Layer>{_Layer.contract, _Layer.core, _Layer.model},
       _Layer.interactive: <_Layer>{
         _Layer.contract,
@@ -108,7 +106,6 @@ _Layer? _layerForRepoRelPosixPath(String repoRelPosixPath) {
   if (repoRelPosixPath.startsWith('/lib/src/contract/')) return _Layer.contract;
   if (repoRelPosixPath.startsWith('/lib/src/core/')) return _Layer.core;
   if (repoRelPosixPath.startsWith('/lib/src/model/')) return _Layer.model;
-  if (repoRelPosixPath.startsWith('/lib/src/public/')) return _Layer.publicApi;
   if (repoRelPosixPath.startsWith('/lib/src/controller/')) {
     return _Layer.controller;
   }
@@ -131,8 +128,6 @@ String _layerLabel(_Layer layer) {
       return 'core';
     case _Layer.model:
       return 'model';
-    case _Layer.publicApi:
-      return 'public';
     case _Layer.controller:
       return 'controller';
     case _Layer.interactive:
@@ -320,7 +315,6 @@ bool _isAllowedForCommands({
   }
   if (resolvedRepoRelPosix.startsWith('/lib/src/controller/')) return true;
   if (resolvedRepoRelPosix.startsWith('/lib/src/model/')) return true;
-  if (resolvedRepoRelPosix.startsWith('/lib/src/public/')) return true;
   if (resolvedRepoRelPosix.startsWith('/lib/src/controller/commands/')) {
     final importedCommand = _commandGroupForFilePosix(resolvedRepoRelPosix);
     return importedCommand == null || importedCommand == currentCommand;
@@ -357,9 +351,6 @@ bool _isAllowedForInternal({
     return true;
   }
   if (resolvedRepoRelPosix.startsWith('/lib/src/model/')) {
-    return true;
-  }
-  if (resolvedRepoRelPosix.startsWith('/lib/src/public/')) {
     return true;
   }
   if (resolvedRepoRelPosix == '/lib/src/controller/change_set.dart') {

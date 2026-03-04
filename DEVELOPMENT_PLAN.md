@@ -233,19 +233,19 @@ instead of weakening the design.
 
 ## Phase 3: Move facades to their real owners and delete the old layer
 
-- [ ] Move owner-specific facades out of the old `public/` bucket and into the
+- [x] Move owner-specific facades out of the old `public/` bucket and into the
       layer that actually owns their behavior. `SceneBuilder` is owned by
       `model/` and should end in `lib/src/model/scene_builder_api.dart`, not in
       `contract/` and not in `serialization/`.
-- [ ] Update imports across `core/`, `model/`, `controller/`, `interactive/`,
+- [x] Update imports across `core/`, `model/`, `controller/`, `interactive/`,
       `render/`, `serialization/`, and `view/` to point at the new layer names
       and remove all direct references to `lib/src/public/**`.
-- [ ] Keep package exports stable by changing only export sources inside
+- [x] Keep package exports stable by changing only export sources inside
       `lib/iwb_canvas_engine.dart`; the entrypoint remains the single supported
       public import path.
-- [ ] Remove `lib/src/public/` completely once all consumers compile against the
+- [x] Remove `lib/src/public/` completely once all consumers compile against the
       new ownership model.
-- [ ] Avoid transitional alias files in `src/` as a steady state; if a short
+- [x] Avoid transitional alias files in `src/` as a steady state; if a short
       migration shim is temporarily needed inside the branch, delete it before
       merge so the final graph is unambiguous.
 
@@ -263,6 +263,9 @@ instead of weakening the design.
       `src/public/**`, including `tool/check_guardrails.dart`,
       `tool/check_coverage.dart`, and `test/tool/guardrails_tools_test.dart`,
       so guardrails enforce the new structure instead of the deleted one.
+- [ ] Keep the exported-owner file set in `tool/check_guardrails.dart`
+      declarative and aligned with `lib/iwb_canvas_engine.dart`, so mutable-type
+      leak coverage does not silently drift when the package export map changes.
 - [ ] Update any invariant coverage markers and supporting tests so
       `tool/check_invariant_coverage.dart` remains authoritative after the
       reorganization.

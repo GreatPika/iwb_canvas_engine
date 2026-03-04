@@ -1,5 +1,5 @@
-import '../model/document.dart';
-import '../model/scene_builder.dart' as model;
+import 'document.dart';
+import 'scene_builder.dart' as model;
 import '../contract/snapshot.dart';
 
 /// Unified scene-import gateway for snapshot/json inputs.

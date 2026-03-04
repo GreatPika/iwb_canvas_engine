@@ -3,15 +3,15 @@
 /// This is the primary public entrypoint and recommended default import.
 library;
 
-export 'src/public/node_patch.dart';
-export 'src/public/node_spec.dart';
-export 'src/public/patch_field.dart';
-export 'src/public/canvas_pointer_input.dart';
-export 'src/public/scene_builder.dart';
-export 'src/public/scene_data_exception.dart';
-export 'src/public/scene_render_state.dart';
-export 'src/public/scene_write_txn.dart';
-export 'src/public/snapshot.dart';
+export 'src/contract/node_patch.dart';
+export 'src/contract/node_spec.dart';
+export 'src/contract/patch_field.dart';
+export 'src/contract/canvas_pointer_input.dart';
+export 'src/model/scene_builder_api.dart';
+export 'src/contract/scene_data_exception.dart';
+export 'src/contract/scene_render_state.dart';
+export 'src/contract/scene_write_txn.dart';
+export 'src/contract/snapshot.dart';
 export 'src/core/action_events.dart'
     show ActionCommitted, ActionCommittedDelta, ActionType, EditTextRequested;
 export 'src/core/interaction_types.dart' show CanvasMode, DrawTool;

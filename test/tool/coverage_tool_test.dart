@@ -59,7 +59,7 @@ end_of_record
         _writeFile(sandbox, 'lib/src/contract/a.dart', 'int covered() => 1;\n');
         _writeFile(
           sandbox,
-          'lib/src/public/a.dart',
+          'lib/src/shim.dart',
           "export 'package:iwb_canvas_engine/src/contract/a.dart';\n",
         );
         _writeFile(sandbox, 'coverage/lcov.info', '''
@@ -82,7 +82,7 @@ end_of_record
       final sandbox = await _createSandbox();
       try {
         _writeFile(sandbox, 'lib/src/contract/a.dart', 'int covered() => 1;\n');
-        _writeFile(sandbox, 'lib/src/public/a.dart', '''
+        _writeFile(sandbox, 'lib/src/shim.dart', '''
 export 'package:iwb_canvas_engine/src/contract/a.dart';
 int leaked() => 1;
 ''');
@@ -97,7 +97,7 @@ end_of_record
 
         final result = await _runTool(sandbox, 'check_coverage.dart');
         expect(result.exitCode, isNonZero);
-        expect(result.stderr.toString(), contains('lib/src/public/a.dart'));
+        expect(result.stderr.toString(), contains('lib/src/shim.dart'));
       } finally {
         sandbox.deleteSync(recursive: true);
       }
@@ -107,7 +107,7 @@ end_of_record
       final sandbox = await _createSandbox();
       try {
         _writeFile(sandbox, 'lib/src/contract/a.dart', 'int covered() => 1;\n');
-        _writeFile(sandbox, 'lib/src/public/a.dart', '''
+        _writeFile(sandbox, 'lib/src/shim.dart', '''
 // comment
 export 'package:iwb_canvas_engine/src/contract/a.dart';
 ''');

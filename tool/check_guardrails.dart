@@ -36,6 +36,14 @@ class _InteractiveEntrypointSignature {
   bool get isDispose => name == 'dispose';
 }
 
+const _fullyScannedExportedApiOwnerFiles = <String>{
+  '/lib/src/core/action_events.dart',
+  '/lib/src/core/interaction_types.dart',
+  '/lib/src/core/pointer_input.dart',
+  '/lib/src/interactive/scene_controller_interactive.dart',
+  '/lib/src/model/scene_builder_api.dart',
+};
+
 String _normalizePosixPath(String path) {
   final isAbs = path.startsWith('/');
   final parts = path.split('/').where((p) => p.isNotEmpty).toList();
@@ -174,16 +182,12 @@ Never _fail(_Violation violation) {
   exit(1);
 }
 
-void _checkPublicImports({
+void _checkExportedApiImports({
   required Directory root,
   required String rootAbsPosix,
   required String packageName,
+  required Set<String> exportedFiles,
 }) {
-  final publicDir = Directory(
-    '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}src${Platform.pathSeparator}public',
-  );
-  if (!publicDir.existsSync()) return;
-
   final disallowedPrefixes = <String>[
     '/lib/src/controller/',
     '/lib/src/render/',
@@ -191,19 +195,24 @@ void _checkPublicImports({
     '/lib/src/serialization/',
   ];
 
-  for (final entity in publicDir.listSync(
-    recursive: true,
-    followLinks: false,
-  )) {
-    if (entity is! File || !entity.path.endsWith('.dart')) continue;
+  final filesToCheck = exportedFiles
+      .where(
+        (path) =>
+            path.startsWith('/lib/src/contract/') ||
+            path == '/lib/src/model/scene_builder_api.dart',
+      )
+      .toList(growable: false);
+  if (filesToCheck.isEmpty) return;
 
-    final fileAbsPosixPath = _toPosixPath(entity.absolute.path);
-    final filePosixPath = _toRepoRelPosixPath(
-      absPosixPath: fileAbsPosixPath,
-      rootAbsPosixPath: rootAbsPosix,
+  for (final filePosixPath in filesToCheck) {
+    final absPath = _toPosixPath(
+      _posixJoin(root.path, filePosixPath.substring(1)),
     );
+    final file = File(absPath);
+    if (!file.existsSync()) continue;
+
     final fileDirRepoRelPosix = _posixDirname(filePosixPath);
-    final lines = entity.readAsLinesSync();
+    final lines = file.readAsLinesSync();
 
     for (var i = 0; i < lines.length; i++) {
       final lineNo = i + 1;
@@ -229,7 +238,9 @@ void _checkPublicImports({
               filePath: filePosixPath,
               line: lineNo,
               message:
-                  'public must not import/export controller/render/view/serialization internals ($resolvedRepoRelPosix)',
+                  'exported contract/model API must not import/export '
+                  'controller/render/view/serialization internals '
+                  '($resolvedRepoRelPosix)',
             ),
           );
         }
@@ -487,7 +498,7 @@ void _checkSceneWriteTxnContract({
   required String rootAbsPosix,
 }) {
   final txnApiFile = File(
-    '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}src${Platform.pathSeparator}public${Platform.pathSeparator}scene_write_txn.dart',
+    '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}src${Platform.pathSeparator}contract${Platform.pathSeparator}scene_write_txn.dart',
   );
   if (!txnApiFile.existsSync()) return;
 
@@ -510,7 +521,7 @@ void _checkSceneWriteTxnContract({
         _Violation(
           filePath: filePosixPath,
           line: lineNo,
-          message: 'public SceneWriteTxn must not expose raw scene access.',
+          message: 'exported SceneWriteTxn must not expose raw scene access.',
         ),
       );
     }
@@ -519,7 +530,7 @@ void _checkSceneWriteTxnContract({
         _Violation(
           filePath: filePosixPath,
           line: lineNo,
-          message: 'public SceneWriteTxn must not expose writeFindNode.',
+          message: 'exported SceneWriteTxn must not expose writeFindNode.',
         ),
       );
     }
@@ -529,7 +540,7 @@ void _checkSceneWriteTxnContract({
           filePath: filePosixPath,
           line: lineNo,
           message:
-              'public SceneWriteTxn must not expose writeMark* escape hatches.',
+              'exported SceneWriteTxn must not expose writeMark* escape hatches.',
         ),
       );
     }
@@ -543,7 +554,7 @@ void _checkSceneWriteTxnContract({
           filePath: filePosixPath,
           line: lineNo,
           message:
-              'public SceneWriteTxn must not expose node-id bookkeeping methods.',
+              'exported SceneWriteTxn must not expose node-id bookkeeping methods.',
         ),
       );
     }
@@ -558,8 +569,8 @@ void _checkExportedApiMutableTypeLeak({
   if (exportedFiles.isEmpty) return;
   final filesToCheck = exportedFiles
       .where((path) {
-        return path.startsWith('/lib/src/public/') ||
-            path == '/lib/src/interactive/scene_controller_interactive.dart';
+        return path.startsWith('/lib/src/contract/') ||
+            _fullyScannedExportedApiOwnerFiles.contains(path);
       })
       .toList(growable: false);
   if (filesToCheck.isEmpty) return;
@@ -986,10 +997,11 @@ void main(List<String> args) {
     packageName: packageName,
   );
 
-  _checkPublicImports(
+  _checkExportedApiImports(
     root: root,
     rootAbsPosix: rootAbsPosix,
     packageName: packageName,
+    exportedFiles: exportedFiles,
   );
   _checkRootLibFilesAreExportOnly(root: root, rootAbsPosix: rootAbsPosix);
   _checkSceneWriteTxnContract(root: root, rootAbsPosix: rootAbsPosix);
