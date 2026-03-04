@@ -77,10 +77,39 @@ instead of weakening the design.
 - [x] Write an ADR-style note in `ARCHITECTURE.md` that defines the target
       import DAG, states that "public API" is determined by package exports only,
       and defines `contract/` as the stable low-level contract layer.
-- [ ] Inventory every file currently in `lib/src/public/` and classify it as one
+- [x] Inventory every file currently in `lib/src/public/` and classify it as one
       of: stable contract, low-level value type, or owner-specific facade, using
       the target ownership map above as the default unless code evidence forces
-      a documented exception.
+      a documented exception. Observed inventory: 9 files and no nested
+      subdirectories. No exceptions found; current file inventory:
+      - `canvas_pointer_input.dart` -> stable contract -> `contract/` -> pointer
+        input enum/value object for API-facing controller input; depends only on
+        SDK/UI primitives.
+      - `node_patch.dart` -> stable contract -> `contract/` -> immutable patch
+        request types; currently imports `Transform2D` and `PathFillRule` from
+        `core/`, which Phase 2 must eliminate.
+      - `node_spec.dart` -> stable contract -> `contract/` -> immutable node
+        creation specs; currently imports `Transform2D` and `PathFillRule` from
+        `core/`, which Phase 2 must eliminate.
+      - `patch_field.dart` -> stable contract -> `contract/` -> tri-state patch
+        wrapper used directly by the public write contract.
+      - `scene_data_exception.dart` -> stable contract -> `contract/` -> stable
+        error shape and error-code enum for import/build/serialization
+        boundaries.
+      - `scene_render_state.dart` -> stable contract -> `contract/` -> read-only
+        painter-facing interface for snapshot/selection access.
+      - `scene_write_txn.dart` -> stable contract -> `contract/` -> transactional
+        write interface and clear-scene result; currently imports
+        `Transform2D` from `core/`, which Phase 2 must eliminate.
+      - `snapshot.dart` -> stable contract -> `contract/` -> immutable snapshot,
+        ids, and related value shapes; currently imports `Transform2D` and
+        re-exports `PathFillRule` from `core/`, which Phase 2 must eliminate.
+      - `scene_builder.dart` -> owner-specific facade -> `model/` -> thin public
+        facade over `model.sceneBuild*` canonicalization entrypoints; not a
+        low-level contract because it imports and orchestrates model behavior.
+      No file in `lib/src/public/` is best classified as a standalone low-level
+      value type; that role is expected to be filled by the Phase 2 extraction
+      of `Transform2D` and `PathFillRule` into `contract/`.
 - [ ] Inventory every symbol currently exported from
       `lib/iwb_canvas_engine.dart` and map each symbol to its long-term owning
       layer so that exports remain stable even if file locations change.
