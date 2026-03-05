@@ -48,9 +48,9 @@ app UI, product workflows, or backend logic.
   `.github/workflows/ci.yaml`:
   - `tool/**`
   - `test/tool/**`
-  - `test/utils/guardrails_tool_test_support.dart`
-  - `test/utils/tool_process_test_support.dart`
-  - `test/utils/public_entrypoint_contract.dart`
+  - `test/tool/support/guardrails_tool_test_support.dart`
+  - `test/tool/support/tool_process_test_support.dart`
+  - `test/tool/support/public_entrypoint_contract.dart`
   - `pubspec.yaml`
   - `pubspec.lock`
 - Documentation-only changes do not require the full Flutter pipeline unless the

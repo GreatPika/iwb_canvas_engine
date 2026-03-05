@@ -3,9 +3,9 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 
-import '../utils/guardrails_tool_test_support.dart';
-import '../utils/public_entrypoint_contract.dart';
-import '../utils/tool_process_test_support.dart';
+import 'support/guardrails_tool_test_support.dart';
+import 'support/public_entrypoint_contract.dart';
+import 'support/tool_process_test_support.dart';
 
 void main() {
   group('tool/check_guardrails.dart', () {
