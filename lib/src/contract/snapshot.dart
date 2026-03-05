@@ -203,6 +203,10 @@ class TextNodeSnapshot extends NodeSnapshot {
   });
 
   final String text;
+  /// Canonical output metadata derived from text layout inputs.
+  ///
+  /// During snapshot import/canonicalization, the engine may ignore the input
+  /// value and recompute it from `text`, font/style fields, and `maxWidth`.
   final Size size;
   final double fontSize;
   final Color color;

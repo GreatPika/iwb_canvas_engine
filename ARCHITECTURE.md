@@ -108,7 +108,8 @@ most important architectural rules are:
 - Content layers are addressed by stable `LayerId`; z-order is defined only by
   list order.
 - `TextNode.size` is derived from text layout inputs and is not a writable
-  public field.
+  public field; `TextNodeSnapshot.size` is canonical output metadata and is
+  non-authoritative on import.
 - Selection normalization drops only missing, background, or invisible ids;
   explicit non-selectable ids remain stable.
 - Listener notifications are microtask-deferred and coalesced.

@@ -86,8 +86,9 @@ class _CanvasScreenState extends State<CanvasScreen> {
 
 ## Runtime contracts worth knowing
 
-- `TextNode.size` is derived metadata. Public `TextNodeSpec` and
-  `TextNodePatch` do not expose writable `size`.
+- `TextNode.size` and `TextNodeSnapshot.size` are derived metadata.
+  `TextNodeSpec` and `TextNodePatch` do not expose writable `size`, and import
+  paths may ignore incoming text `size` and recompute canonical bounds.
 - `backgroundLayer` is always distinct from content `layers`; content writes use
   `LayerId`.
 - `ensureLayer(...)` and `writeLayerEnsure(...)` are the supported APIs for

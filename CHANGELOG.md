@@ -20,6 +20,9 @@ All notable changes to `iwb_canvas_engine` are documented here.
   (`dart:ui` + `Listenable`) and is not a pure Dart compatibility boundary.
 - `writeNodeInsert(...)` / `addNode(...)` now throw `ArgumentError` (instead of
   `StateError`) when a caller provides a duplicate explicit `NodeSpec.id`.
+- Clarified and enforced text snapshot canonicalization: import now treats
+  `TextNodeSnapshot.size` as derived/non-authoritative metadata and always
+  recomputes canonical bounds from layout inputs.
 
 ## 5.1.0 (2026-03-04)
 

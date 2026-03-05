@@ -79,7 +79,8 @@ SceneNode _sceneNodeFromSnapshot(
         id: text.id,
         instanceRevision: instanceRevision,
         text: text.text,
-        size: text.size,
+        // Text size is derived from layout inputs during import.
+        size: Size.zero,
         fontSize: text.fontSize,
         color: text.color,
         align: text.align,

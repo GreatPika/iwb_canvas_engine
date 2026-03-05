@@ -157,12 +157,14 @@ Important runtime details:
 
 ### 3.4 Text sizing contract
 
-`TextNode.size` is derived metadata.
+`TextNode.size` and `TextNodeSnapshot.size` are derived metadata.
 
 - `TextNodeSpec` does not expose writable `size`
 - `TextNodePatch` does not expose writable `size`
 - import/decode and layout-affecting text patches re-derive the box size inside
   the engine
+- incoming `TextNodeSnapshot.size` is treated as non-authoritative and may be
+  ignored during canonicalization/import
 
 If you compare serialized text sizes across platforms, use semantic assertions
 or numeric tolerance. Font metrics can differ slightly by platform and font
@@ -716,6 +718,8 @@ controller.
 - nested validation errors include a fully-qualified `SceneDataException.path`
 - decode accepts a missing `backgroundLayer` field and canonicalizes it to an
   empty dedicated layer
+- text node bounds are canonicalized from layout inputs; incoming serialized
+  text `size` is not treated as the source of truth
 - decode rejects oversized payloads:
   - content layers must stay `<= 4096`
   - total node count must stay `<= 200000`
@@ -740,7 +744,8 @@ If you are aligning older integration code to the current `5.x` contract:
 3. Use typed layers: `backgroundLayer` plus content-only `layers`.
 4. Address content layers by `LayerId`, not legacy layer indexes in write APIs.
 5. Treat JSON as schema `5` only.
-6. Treat `TextNode.size` as derived metadata, not a source of truth.
+6. Treat `TextNode.size` / `TextNodeSnapshot.size` as derived metadata, not a
+   source of truth.
 7. Treat `actions` and `editTextRequests` as asynchronous.
 
 ## 14. Integration example

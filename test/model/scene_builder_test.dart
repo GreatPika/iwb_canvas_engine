@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart' hide NodeId;
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
+import 'package:iwb_canvas_engine/src/core/text_layout.dart'
+    show buildTextStyleForTextLayout, measureTextLayoutSize;
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
     show
         kMaxContentLayersPerScene,
@@ -272,6 +274,53 @@ void main() {
       ),
     );
   });
+
+  test(
+    'sceneBuildFromSnapshot ignores input text size and re-derives canonical size',
+    () {
+      const textSnapshot = TextNodeSnapshot(
+        id: 't-derived',
+        text: 'Derived text size',
+        size: Size(999, 777),
+        fontSize: 24,
+        color: Color(0xFF000000),
+        align: TextAlign.left,
+        isBold: false,
+        isItalic: false,
+        isUnderline: false,
+      );
+      final snapshot = SceneSnapshot(
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
+            id: 'layer-auto-text',
+            nodes: const <NodeSnapshot>[textSnapshot],
+          ),
+        ],
+      );
+
+      final expectedSize = measureTextLayoutSize(
+        text: textSnapshot.text,
+        textStyle: buildTextStyleForTextLayout(
+          color: textSnapshot.color,
+          fontSize: textSnapshot.fontSize,
+          isBold: textSnapshot.isBold,
+          isItalic: textSnapshot.isItalic,
+          isUnderline: textSnapshot.isUnderline,
+          fontFamily: textSnapshot.fontFamily,
+          lineHeight: textSnapshot.lineHeight,
+        ),
+        textAlign: textSnapshot.align,
+        maxWidth: textSnapshot.maxWidth,
+      );
+
+      final scene = model_builder.sceneBuildFromSnapshot(snapshot);
+      final textNode = scene.layers.first.nodes.single as TextNode;
+
+      expect(textNode.size, isNot(textSnapshot.size));
+      expect(textNode.size.width, closeTo(expectedSize.width, 0.001));
+      expect(textNode.size.height, closeTo(expectedSize.height, 0.001));
+    },
+  );
 
   test('sceneBuildFromJsonMap reports missing required fields', () {
     final missingCases =
