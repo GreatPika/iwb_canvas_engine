@@ -11,6 +11,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  tool-test-changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      should_run: ${{ steps.filter.outputs.tool_tests }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect tool-test-impacting changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            tool_tests:
+              - 'tool/**'
+              - 'test/tool/**'
+              - 'test/utils/guardrails_tool_test_support.dart'
+              - 'test/utils/tool_process_test_support.dart'
+              - 'test/utils/public_entrypoint_contract.dart'
+              - 'pubspec.yaml'
+              - 'pubspec.lock'
+
   static-checks:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -75,10 +99,42 @@ jobs:
           echo "jobs=$JOBS" >> "$GITHUB_OUTPUT"
 
       - name: Test
-        run: flutter test --coverage --no-pub -j "${{ steps.test-jobs.outputs.jobs }}"
+        run: flutter test --coverage --no-pub --exclude-tags=tool -j "${{ steps.test-jobs.outputs.jobs }}"
 
       - name: Coverage (100%)
         run: dart run tool/check_coverage.dart
+
+  tool-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: tool-test-changes
+    if: needs.tool-test-changes.outputs.should_run == 'true'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.38.9"
+          cache: true
+
+      - name: Pub get
+        run: flutter pub get
+
+      - name: Resolve test concurrency
+        id: test-jobs
+        run: |
+          JOBS="$(getconf _NPROCESSORS_ONLN)"
+          if [ "$JOBS" -gt 1 ]; then
+            JOBS=$((JOBS - 1))
+          fi
+          echo "jobs=$JOBS" >> "$GITHUB_OUTPUT"
+
+      - name: Tool tests
+        run: flutter test --no-pub --tags=tool -j "${{ steps.test-jobs.outputs.jobs }}"
 
   smoke-bench:
     runs-on: ubuntu-latest

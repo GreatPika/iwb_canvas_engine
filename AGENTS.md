@@ -42,7 +42,17 @@ app UI, product workflows, or backend logic.
 ## Validation policy
 
 - Run and report the standard checks for code changes.
-- Always run the full test suite for code changes (no quick/full split).
+- Run the main test suite for code changes with `--exclude-tags=tool`.
+- Run tagged tool tests with `--tags=tool` when the change touches tool-test
+  surface. The trigger list in this file must stay identical to
+  `.github/workflows/ci.yaml`:
+  - `tool/**`
+  - `test/tool/**`
+  - `test/utils/guardrails_tool_test_support.dart`
+  - `test/utils/tool_process_test_support.dart`
+  - `test/utils/public_entrypoint_contract.dart`
+  - `pubspec.yaml`
+  - `pubspec.lock`
 - Documentation-only changes do not require the full Flutter pipeline unless the
   task also changes code, tooling contracts, or executable examples.
 - If `tool/invariant_registry.dart` changes, always run and report
@@ -52,12 +62,13 @@ app UI, product workflows, or backend logic.
 
 1. `dart format --output=none --set-exit-if-changed lib test example/lib tool`
 2. `flutter analyze`
-3. `JOBS=$(getconf _NPROCESSORS_ONLN); JOBS=$((JOBS>1?JOBS-1:1)); flutter test --coverage --no-pub -j "$JOBS"`
+3. `JOBS=$(getconf _NPROCESSORS_ONLN); JOBS=$((JOBS>1?JOBS-1:1)); flutter test --coverage --no-pub --exclude-tags=tool -j "$JOBS"`
 4. `dart run tool/check_coverage.dart`
 5. `dart run tool/check_invariant_coverage.dart`
 6. `dart run tool/check_guardrails.dart`
 7. `dart run tool/check_import_boundaries.dart`
 8. `dart run tool/check_public_api_surface.dart`
+9. `JOBS=$(getconf _NPROCESSORS_ONLN); JOBS=$((JOBS>1?JOBS-1:1)); flutter test --no-pub --tags=tool -j "$JOBS"` when the tool-test trigger list above matches the change
 
 ## Release hygiene
 
