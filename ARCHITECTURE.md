@@ -139,6 +139,9 @@ most important architectural rules are:
 - Decode/import and runtime replacement paths validate structure and numeric
   constraints and throw `SceneDataException` on malformed input.
 - JSON payload limits are enforced to keep import cost bounded.
+- Guardrails cover both collection sizes (layers, nodes, points, palette item
+  lists) and string lengths (for example node ids, layer ids, text/image ids,
+  and path payloads).
 
 ## Performance model
 

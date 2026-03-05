@@ -11,8 +11,10 @@ import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
     show
         kMaxContentLayersPerScene,
         kMaxNodesPerScene,
+        kMaxPaletteItems,
         kMaxStrokePointsPerNode,
-        kMaxSvgPathDataLength;
+        kMaxSvgPathDataLength,
+        kMaxTextLength;
 import 'package:iwb_canvas_engine/src/model/scene_builder.dart'
     as model_builder;
 import 'package:iwb_canvas_engine/src/model/scene_value_validation.dart'
@@ -671,6 +673,60 @@ void main() {
               e is SceneDataException &&
               e.code == SceneDataErrorCode.invalidValue &&
               e.path == 'layers[0].nodes[0].svgPathData',
+        ),
+      ),
+    );
+  });
+
+  test('sceneBuildFromJsonMap rejects oversized text payload', () {
+    final json = _minimalSceneJson();
+    json['layers'] = <Object?>[
+      <String, Object?>{
+        'id': 'layer-0',
+        'nodes': <Object?>[
+          <String, Object?>{
+            ..._minimalRectNodeJson(id: 't1'),
+            'type': 'text',
+            'text': List<String>.filled(kMaxTextLength + 1, 'a').join(),
+            'size': <String, Object?>{'w': 1, 'h': 1},
+            'fontSize': 14,
+            'color': '#FF000000',
+            'align': 'left',
+            'isBold': false,
+            'isItalic': false,
+            'isUnderline': false,
+          },
+        ],
+      },
+    ];
+
+    expect(
+      () => model_builder.sceneBuildFromJsonMap(json),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers[0].nodes[0].text',
+        ),
+      ),
+    );
+  });
+
+  test('sceneBuildFromJsonMap rejects oversized palette penColors', () {
+    final json = _minimalSceneJson();
+    (json['palette'] as Map<String, Object?>)['penColors'] = <Object?>[
+      for (var i = 0; i < kMaxPaletteItems + 1; i++) '#FF000000',
+    ];
+
+    expect(
+      () => model_builder.sceneBuildFromJsonMap(json),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'palette.penColors',
         ),
       ),
     );

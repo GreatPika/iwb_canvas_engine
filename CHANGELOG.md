@@ -23,6 +23,9 @@ All notable changes to `iwb_canvas_engine` are documented here.
 - Clarified and enforced text snapshot canonicalization: import now treats
   `TextNodeSnapshot.size` as derived/non-authoritative metadata and always
   recomputes canonical bounds from layout inputs.
+- Hardened JSON decode guardrails against oversized string and palette payloads
+  by enforcing max lengths for layer/node/image/font ids and text, plus max
+  palette item counts.
 
 ## 5.1.0 (2026-03-04)
 

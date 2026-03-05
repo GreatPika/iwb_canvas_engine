@@ -50,6 +50,7 @@ List<Object?> _requireList(
   Map<String, Object?> json,
   String key, {
   String pathPrefix = '',
+  int? maxLength,
 }) {
   final path = _pathAt(pathPrefix, key);
   if (!json.containsKey(key)) {
@@ -67,13 +68,23 @@ List<Object?> _requireList(
       message: 'Field $key must be a list.',
     );
   }
-  return List<Object?>.from(value);
+  final list = List<Object?>.from(value);
+  if (maxLength != null && list.length > maxLength) {
+    throw SceneDataException(
+      code: SceneDataErrorCode.invalidValue,
+      path: path,
+      message: 'Field $path must contain at most $maxLength items.',
+      source: list.length,
+    );
+  }
+  return list;
 }
 
 String _requireString(
   Map<String, Object?> json,
   String key, {
   String pathPrefix = '',
+  int? maxLength,
 }) {
   final path = _pathAt(pathPrefix, key);
   if (!json.containsKey(key)) {
@@ -89,6 +100,14 @@ String _requireString(
       code: SceneDataErrorCode.invalidFieldType,
       path: path,
       message: 'Field $key must be a string.',
+    );
+  }
+  if (maxLength != null && value.length > maxLength) {
+    throw SceneDataException(
+      code: SceneDataErrorCode.invalidValue,
+      path: path,
+      message: 'Field $path length must be <= $maxLength characters.',
+      source: value.length,
     );
   }
   return value;
@@ -302,6 +321,7 @@ String? _optionalString(
   Map<String, Object?> json,
   String key, {
   String pathPrefix = '',
+  int? maxLength,
 }) {
   if (!json.containsKey(key)) return null;
   final value = json[key];
@@ -312,6 +332,14 @@ String? _optionalString(
       code: SceneDataErrorCode.invalidFieldType,
       path: path,
       message: 'Field $key must be a string.',
+    );
+  }
+  if (maxLength != null && value.length > maxLength) {
+    throw SceneDataException(
+      code: SceneDataErrorCode.invalidValue,
+      path: path,
+      message: 'Field $path length must be <= $maxLength characters.',
+      source: value.length,
     );
   }
   return value;

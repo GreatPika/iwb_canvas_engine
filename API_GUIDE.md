@@ -725,6 +725,13 @@ controller.
   - total node count must stay `<= 200000`
   - stroke point count per node must stay `<= 20000`
   - `svgPathData` length must stay `<= 200000`
+  - content layer id length must stay `<= 256`
+  - node id length must stay `<= 256`
+  - image id length must stay `<= 1024`
+  - text length must stay `<= 100000`
+  - text `fontFamily` length must stay `<= 256`
+  - palette list sizes (`penColors`, `backgroundColors`, `gridSizes`) must stay
+    `<= 1024` items each
 
 ## 12. Error taxonomy
 

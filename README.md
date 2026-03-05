@@ -24,6 +24,8 @@ storage.
 - Transactional write API via `SceneWriteTxn`.
 - Explicit path fill-rule contract via `PathFillRule`.
 - JSON import/export with strict validation and canonicalization.
+- Bounded JSON import guardrails for layers/nodes/points/path data plus string
+  and palette payload sizes.
 
 ## What it does not provide
 

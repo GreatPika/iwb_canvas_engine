@@ -52,16 +52,19 @@ SceneSnapshot _decodeSnapshotFromJson(Map<String, Object?> json) {
     paletteJson,
     'penColors',
     pathPrefix: 'palette',
+    maxLength: kMaxPaletteItems,
   );
   final backgroundColorsJson = _requireList(
     paletteJson,
     'backgroundColors',
     pathPrefix: 'palette',
+    maxLength: kMaxPaletteItems,
   );
   final gridSizesJson = _requireList(
     paletteJson,
     'gridSizes',
     pathPrefix: 'palette',
+    maxLength: kMaxPaletteItems,
   );
 
   final penColorsPath = 'palette.penColors';
@@ -215,6 +218,15 @@ ContentLayerSnapshot _decodeContentLayer(
       source: idRaw,
     );
   }
+  if (idRaw.length > kMaxLayerIdLength) {
+    throw SceneDataException(
+      code: SceneDataErrorCode.invalidValue,
+      path: '$layerPath.id',
+      message:
+          'Field $layerPath.id length must be <= $kMaxLayerIdLength characters.',
+      source: idRaw.length,
+    );
+  }
   final id = idRaw;
 
   final nodesJson = _requireList(json, 'nodes', pathPrefix: layerPath);
@@ -262,7 +274,12 @@ NodeSnapshot _decodeNode(
     _requireString(json, 'type', pathPrefix: nodePath),
     pathPrefix: nodePath,
   );
-  final id = _requireString(json, 'id', pathPrefix: nodePath);
+  final id = _requireString(
+    json,
+    'id',
+    pathPrefix: nodePath,
+    maxLength: kMaxNodeIdLength,
+  );
   final instanceRevision =
       _optionalInt(json, 'instanceRevision', pathPrefix: nodePath) ?? 0;
   final transform = _decodeTransform2D(
@@ -286,7 +303,12 @@ NodeSnapshot _decodeNode(
       return ImageNodeSnapshot(
         id: id,
         instanceRevision: instanceRevision,
-        imageId: _requireString(json, 'imageId', pathPrefix: nodePath),
+        imageId: _requireString(
+          json,
+          'imageId',
+          pathPrefix: nodePath,
+          maxLength: kMaxImageIdLength,
+        ),
         size: _requireSize(json, 'size', pathPrefix: nodePath),
         naturalSize: _optionalSizeMap(
           json,
@@ -306,7 +328,12 @@ NodeSnapshot _decodeNode(
       return TextNodeSnapshot(
         id: id,
         instanceRevision: instanceRevision,
-        text: _requireString(json, 'text', pathPrefix: nodePath),
+        text: _requireString(
+          json,
+          'text',
+          pathPrefix: nodePath,
+          maxLength: kMaxTextLength,
+        ),
         size: _requireSize(json, 'size', pathPrefix: nodePath),
         fontSize: _requireDouble(json, 'fontSize', pathPrefix: nodePath),
         color: _parseColor(
@@ -320,7 +347,12 @@ NodeSnapshot _decodeNode(
         isBold: _requireBool(json, 'isBold', pathPrefix: nodePath),
         isItalic: _requireBool(json, 'isItalic', pathPrefix: nodePath),
         isUnderline: _requireBool(json, 'isUnderline', pathPrefix: nodePath),
-        fontFamily: _optionalString(json, 'fontFamily', pathPrefix: nodePath),
+        fontFamily: _optionalString(
+          json,
+          'fontFamily',
+          pathPrefix: nodePath,
+          maxLength: kMaxFontFamilyLength,
+        ),
         maxWidth: _optionalDouble(json, 'maxWidth', pathPrefix: nodePath),
         lineHeight: _optionalDouble(json, 'lineHeight', pathPrefix: nodePath),
         hitPadding: hitPadding,

@@ -8,8 +8,10 @@ import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
     show
         kMaxContentLayersPerScene,
         kMaxNodesPerScene,
+        kMaxPaletteItems,
         kMaxStrokePointsPerNode,
-        kMaxSvgPathDataLength;
+        kMaxSvgPathDataLength,
+        kMaxTextLength;
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/serialization/scene_codec.dart'
     show encodeSceneDocument;
@@ -368,6 +370,51 @@ void main() {
               e is SceneDataException &&
               e.code == SceneDataErrorCode.invalidValue &&
               e.path == 'layers[0].nodes[0].svgPathData',
+        ),
+      ),
+    );
+  });
+
+  test('decodeScene rejects oversized text payload', () {
+    final textJson = _baseNodeJson(id: 'text-overflow', type: 'text')
+      ..addAll(<String, dynamic>{
+        'text': List<String>.filled(kMaxTextLength + 1, 'a').join(),
+        'size': <String, dynamic>{'w': 1, 'h': 1},
+        'fontSize': 14,
+        'color': '#FF000000',
+        'align': 'left',
+        'isBold': false,
+        'isItalic': false,
+        'isUnderline': false,
+      });
+
+    expect(
+      () => decodeScene(_sceneWithSingleNode(textJson)),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers[0].nodes[0].text',
+        ),
+      ),
+    );
+  });
+
+  test('decodeScene rejects oversized palette penColors', () {
+    final json = _minimalSceneJson();
+    (json['palette'] as Map<String, dynamic>)['penColors'] = <dynamic>[
+      for (var i = 0; i < kMaxPaletteItems + 1; i++) '#FF000000',
+    ];
+
+    expect(
+      () => decodeScene(json),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'palette.penColors',
         ),
       ),
     );
