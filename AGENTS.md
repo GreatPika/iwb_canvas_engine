@@ -57,6 +57,7 @@ app UI, product workflows, or backend logic.
 6. `dart run tool/check_invariant_coverage.dart`
 7. `dart run tool/check_guardrails.dart`
 8. `dart run tool/check_import_boundaries.dart`
+9. `dart run tool/check_public_api_surface.dart`
 
 ## Release hygiene
 

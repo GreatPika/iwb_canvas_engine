@@ -72,6 +72,8 @@ Ownership decisions for the target state:
   `core/numeric_tolerance.dart`.
 - Runtime orchestration and owner-specific facades do not move into
   `contract/`.
+- `contract/` is low-level but not pure Dart: contract types intentionally use
+  `dart:ui`, and `SceneRenderState` depends on Flutter `Listenable`.
 
 ## Runtime data flow
 

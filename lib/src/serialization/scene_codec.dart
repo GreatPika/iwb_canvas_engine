@@ -7,7 +7,7 @@ import '../contract/transform2d.dart';
 import '../model/document.dart';
 import '../model/scene_builder.dart' as model_builder;
 import '../contract/scene_data_exception.dart';
-import '../contract/snapshot.dart' hide NodeId;
+import '../contract/snapshot.dart';
 
 /// JSON schema version written by this package.
 const int schemaVersionWrite = 5;

@@ -8,7 +8,7 @@ import '../core/scene_limits.dart';
 import '../core/text_layout.dart';
 import '../contract/transform2d.dart';
 import '../contract/scene_data_exception.dart';
-import '../contract/snapshot.dart' hide NodeId;
+import '../contract/snapshot.dart';
 import 'scene_value_validation.dart';
 
 part 'scene_builder_json_require.part.dart';

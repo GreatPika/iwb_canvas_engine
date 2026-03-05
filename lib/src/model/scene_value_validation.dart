@@ -8,7 +8,7 @@ import '../contract/transform2d.dart';
 import '../contract/node_patch.dart';
 import '../contract/node_spec.dart';
 import '../contract/patch_field.dart';
-import '../contract/snapshot.dart' hide NodeId;
+import '../contract/snapshot.dart';
 
 part 'scene_value_validation_primitives.part.dart';
 part 'scene_value_validation_palette_grid.part.dart';

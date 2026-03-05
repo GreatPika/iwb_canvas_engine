@@ -1,6 +1,8 @@
 import 'dart:ui';
 
+export 'ids.dart' show LayerId, NodeId;
 export 'path_fill_rule.dart' show PathFillRule;
+import 'ids.dart';
 import 'path_fill_rule.dart';
 import 'transform2d.dart';
 
@@ -25,12 +27,6 @@ const List<double> _defaultGridSizes = <double>[
   40,
   80,
 ];
-
-/// Stable node identifier for the public model.
-typedef NodeId = String;
-
-/// Stable content-layer identifier for the public model.
-typedef LayerId = String;
 
 /// Immutable scene snapshot exposed by the public API.
 class SceneSnapshot {

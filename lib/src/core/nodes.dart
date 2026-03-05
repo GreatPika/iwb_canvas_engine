@@ -5,6 +5,8 @@ import 'dart:collection';
 
 import 'package:path_drawing/path_drawing.dart';
 
+export '../contract/ids.dart' show NodeId;
+import '../contract/ids.dart';
 import '../contract/path_fill_rule.dart';
 import '../contract/transform_tolerance.dart'
     show isNearSingular2x2, kEpsilon, norm1_2x2;
@@ -16,9 +18,6 @@ import 'numeric_tolerance.dart' show kUiEpsilonSquared, nearZero;
 
 /// Supported node variants in a [Scene].
 enum NodeType { image, text, stroke, line, rect, path }
-
-/// Stable node identifier used for selection and action events.
-typedef NodeId = String;
 
 /// Base class for all nodes stored in a [Scene].
 ///

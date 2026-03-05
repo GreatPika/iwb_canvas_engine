@@ -22,6 +22,7 @@ storage.
 - Public runtime aliases `SceneController` and `SceneView` for move, select,
   draw, and edit flows.
 - Transactional write API via `SceneWriteTxn`.
+- Explicit path fill-rule contract via `PathFillRule`.
 - JSON import/export with strict validation and canonicalization.
 
 ## What it does not provide

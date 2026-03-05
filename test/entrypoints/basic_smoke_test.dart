@@ -4,22 +4,12 @@ import 'dart:io';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import '../utils/public_entrypoint_contract.dart';
 
 // INV:INV-ENG-NO-EXTERNAL-MUTATION
 // INV:INV-G-PUBLIC-ENTRYPOINTS
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-
-  test('iwb_canvas_engine.dart keeps the exact supported export surface', () {
-    final source = File('lib/iwb_canvas_engine.dart').readAsStringSync();
-
-    expect(
-      extractNormalizedExportDirectives(source),
-      canonicalPublicExportDirectives,
-    );
-  });
 
   test(
     'iwb_canvas_engine.dart exports representative symbols across layers',

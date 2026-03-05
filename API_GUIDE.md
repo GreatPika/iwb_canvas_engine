@@ -12,6 +12,7 @@ production, and the migration expectations for the `5.x` line.
 - a Flutter runtime controller and view
 - interactive input handling for move/select/draw flows
 - JSON import/export for scene snapshots
+- contract-facing value types built on Flutter primitives (`dart:ui`)
 
 `iwb_canvas_engine` does not provide:
 
@@ -33,6 +34,10 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 Do not import from `package:iwb_canvas_engine/src/**`.
 
+The package is not designed as a pure Dart engine. Public contract types rely
+on Flutter-oriented primitives (`dart:ui`), and `SceneRenderState` uses
+`Listenable` from `package:flutter/foundation.dart`.
+
 ## 2. Public surface at a glance
 
 `iwb_canvas_engine.dart` exports:
@@ -42,6 +47,7 @@ Do not import from `package:iwb_canvas_engine/src/**`.
   - `BackgroundLayerSnapshot`
   - `ContentLayerSnapshot`
   - `NodeSnapshot` variants
+  - `PathFillRule`
 - write contracts:
   - `NodeSpec` variants
   - `NodePatch` variants

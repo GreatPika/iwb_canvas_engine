@@ -4,6 +4,18 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ## Unreleased
 
+### Changed
+
+- Consolidated `NodeId`/`LayerId` ownership under `src/contract/ids.dart` and
+  removed duplicate local `NodeId` declarations from core internals.
+- Added `tool/check_public_api_surface.dart` with
+  `tool/goldens/public_api_symbols.txt` to enforce a stable exported symbol set
+  from `lib/iwb_canvas_engine.dart`.
+- Expanded docs to improve `PathFillRule` discoverability in public API
+  references.
+- Documented that the `contract/` layer is intentionally Flutter-oriented
+  (`dart:ui` + `Listenable`) and is not a pure Dart compatibility boundary.
+
 ## 5.1.0 (2026-03-04)
 
 ### Changed
