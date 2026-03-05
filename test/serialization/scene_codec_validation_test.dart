@@ -7,6 +7,8 @@ import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
     show
         kMaxContentLayersPerScene,
+        kMaxFontFamilyLength,
+        kMaxLayerIdLength,
         kMaxNodesPerScene,
         kMaxPaletteItems,
         kMaxStrokePointsPerNode,
@@ -68,6 +70,11 @@ Map<String, dynamic> _baseNodeJson({required String id, required String type}) {
     'isDeletable': true,
     'isTransformable': true,
   };
+}
+
+String _expectedSchemaVersionsMessage() {
+  final versions = schemaVersionsRead.toList()..sort((a, b) => a.compareTo(b));
+  return versions.join(', ');
 }
 
 void main() {
@@ -928,6 +935,56 @@ void main() {
     );
   });
 
+  test(
+    'decodeScene validates max lengths for layer and optional string fields',
+    () {
+      final overlongLayerId = _minimalSceneJson();
+      overlongLayerId['layers'] = <dynamic>[
+        <String, dynamic>{
+          'id': 'l' * (kMaxLayerIdLength + 1),
+          'nodes': <dynamic>[],
+        },
+      ];
+      expect(
+        () => decodeScene(overlongLayerId),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.path == 'layers[0].id' &&
+                e.message ==
+                    'Field layers[0].id length must be <= $kMaxLayerIdLength characters.',
+          ),
+        ),
+      );
+
+      final textJson = _baseNodeJson(id: 't-overlong-font-family', type: 'text')
+        ..addAll(<String, dynamic>{
+          'text': 'Hello',
+          'size': <String, dynamic>{'w': 10, 'h': 10},
+          'fontSize': 12,
+          'color': '#FF000000',
+          'align': 'left',
+          'isBold': false,
+          'isItalic': false,
+          'isUnderline': false,
+          'fontFamily': 'f' * (kMaxFontFamilyLength + 1),
+        });
+      expect(
+        () => decodeScene(_sceneWithSingleNode(textJson)),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.path == 'layers[0].nodes[0].fontFamily' &&
+                e.message ==
+                    'Field layers[0].nodes[0].fontFamily length must be <= $kMaxFontFamilyLength characters.',
+          ),
+        ),
+      );
+    },
+  );
+
   test('decodeScene accepts integer-valued numeric schemaVersion', () {
     final json = _minimalSceneJson();
     json['schemaVersion'] = 5.0;
@@ -935,6 +992,10 @@ void main() {
     final scene = decodeScene(json);
     expect(scene.layers, isEmpty);
     expect(scene.backgroundLayer, isNotNull);
+  });
+
+  test('schema write version is included in read versions', () {
+    expect(schemaVersionsRead, contains(schemaVersionWrite));
   });
 
   test('decodeScene rejects non-integer numeric schemaVersion', () {
@@ -964,7 +1025,7 @@ void main() {
             (e) =>
                 e is SceneDataException &&
                 e.message ==
-                    'Unsupported schemaVersion: 1. Expected one of: [5].',
+                    'Unsupported schemaVersion: 1. Expected one of: [${_expectedSchemaVersionsMessage()}].',
           ),
         ),
       );

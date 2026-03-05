@@ -3,6 +3,8 @@ import 'dart:ui';
 
 import '../core/nodes.dart';
 import '../core/scene.dart';
+import '../core/scene_limits.dart'
+    show sceneSchemaVersionWrite, sceneSchemaVersionsRead;
 import '../contract/transform2d.dart';
 import '../model/document.dart';
 import '../model/scene_builder.dart' as model_builder;
@@ -10,10 +12,10 @@ import '../contract/scene_data_exception.dart';
 import '../contract/snapshot.dart';
 
 /// JSON schema version written by this package.
-const int schemaVersionWrite = 5;
+const int schemaVersionWrite = sceneSchemaVersionWrite;
 
 /// JSON schema versions accepted by this package.
-const Set<int> schemaVersionsRead = {5};
+const Set<int> schemaVersionsRead = sceneSchemaVersionsRead;
 
 /// Encodes [snapshot] to a JSON string.
 String encodeSceneToJson(SceneSnapshot snapshot) {
@@ -22,7 +24,7 @@ String encodeSceneToJson(SceneSnapshot snapshot) {
 
 /// Decodes a [SceneSnapshot] from a JSON string.
 ///
-/// Only `schemaVersion = 5` is accepted.
+/// Only schema versions listed in [schemaVersionsRead] are accepted.
 ///
 /// Throws [SceneDataException] when the JSON is invalid, the schema version is
 /// unsupported, or validation fails.
@@ -57,7 +59,7 @@ Map<String, dynamic> encodeScene(SceneSnapshot snapshot) {
 
 /// Decodes a [SceneSnapshot] from a JSON map (already parsed).
 ///
-/// Only `schemaVersion = 5` is accepted.
+/// Only schema versions listed in [schemaVersionsRead] are accepted.
 ///
 /// Throws [SceneDataException] when validation fails.
 SceneSnapshot decodeScene(Map<String, dynamic> json) {
@@ -97,7 +99,7 @@ Map<String, dynamic> encodeSceneDocument(Scene scene) {
 
 /// Decodes internal mutable [Scene] document from a JSON map (already parsed).
 ///
-/// Only `schemaVersion = 5` is accepted.
+/// Only schema versions listed in [schemaVersionsRead] are accepted.
 ///
 /// Throws [SceneDataException] when validation fails.
 Scene decodeSceneDocument(Map<String, Object?> json) {

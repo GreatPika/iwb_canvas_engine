@@ -61,7 +61,7 @@ void main() {
       expect(sceneCoordMin, lessThan(sceneCoordMax));
       expect(sceneScaleMin, greaterThan(0));
       expect(sceneScaleMin, lessThan(sceneScaleMax));
-      expect(sceneSchemaVersionMin, lessThanOrEqualTo(sceneSchemaVersionMax));
+      expect(sceneSchemaVersionsRead, contains(sceneSchemaVersionWrite));
     });
 
     test(

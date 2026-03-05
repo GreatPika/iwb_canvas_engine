@@ -2,11 +2,15 @@ part of 'scene_builder.dart';
 
 SceneSnapshot _decodeSnapshotFromJson(Map<String, Object?> json) {
   final version = _requireInt(json, 'schemaVersion');
-  if (version < sceneSchemaVersionMin || version > sceneSchemaVersionMax) {
+  if (!sceneSchemaVersionsRead.contains(version)) {
+    final expectedVersions = sceneSchemaVersionsRead.toList()
+      ..sort((a, b) => a.compareTo(b));
+    final expectedVersionsMessage = expectedVersions.join(', ');
     throw SceneDataException(
       code: SceneDataErrorCode.unsupportedSchemaVersion,
       path: 'schemaVersion',
-      message: 'Unsupported schemaVersion: $version. Expected one of: [5].',
+      message:
+          'Unsupported schemaVersion: $version. Expected one of: [$expectedVersionsMessage].',
     );
   }
 
