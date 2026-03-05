@@ -32,7 +32,7 @@ Map<String, Object?> _requireMap(
     throw SceneDataException(
       code: SceneDataErrorCode.missingField,
       path: path,
-      message: 'Field $key must be an object.',
+      message: 'Missing required field $path.',
     );
   }
   final value = json[key];
@@ -57,7 +57,7 @@ List<Object?> _requireList(
     throw SceneDataException(
       code: SceneDataErrorCode.missingField,
       path: path,
-      message: 'Field $key must be a list.',
+      message: 'Missing required field $path.',
     );
   }
   final value = json[key];
@@ -91,7 +91,7 @@ String _requireString(
     throw SceneDataException(
       code: SceneDataErrorCode.missingField,
       path: path,
-      message: 'Field $key must be a string.',
+      message: 'Missing required field $path.',
     );
   }
   final value = json[key];
@@ -138,7 +138,7 @@ bool _requireBool(
     throw SceneDataException(
       code: SceneDataErrorCode.missingField,
       path: path,
-      message: 'Field $key must be a bool.',
+      message: 'Missing required field $path.',
     );
   }
   final value = json[key];
@@ -162,7 +162,7 @@ int _requireInt(
     throw SceneDataException(
       code: SceneDataErrorCode.missingField,
       path: path,
-      message: 'Field $key must be an int.',
+      message: 'Missing required field $path.',
     );
   }
   final value = json[key];
@@ -205,7 +205,7 @@ double _requireDouble(
     throw SceneDataException(
       code: SceneDataErrorCode.missingField,
       path: path,
-      message: 'Field $key must be a number.',
+      message: 'Missing required field $path.',
     );
   }
   final value = json[key];

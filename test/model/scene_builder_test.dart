@@ -436,7 +436,7 @@ void main() {
               e is SceneDataException &&
               e.code == SceneDataErrorCode.missingField &&
               e.path == 'layers[0].id' &&
-              e.message == 'Field layers[0].id must be a string.',
+              e.message == 'Missing required field layers[0].id.',
         ),
       ),
     );
@@ -478,7 +478,40 @@ void main() {
               e is SceneDataException &&
               e.code == SceneDataErrorCode.missingField &&
               e.path == 'layers[0].nodes[0].isVisible' &&
-              e.message == 'Field isVisible must be a bool.',
+              e.message ==
+                  'Missing required field layers[0].nodes[0].isVisible.',
+        ),
+      ),
+    );
+  });
+
+  test('sceneBuildFromJsonMap distinguishes missingField and invalidFieldType '
+      'messages for schemaVersion', () {
+    final missingJson = _minimalSceneJson()..remove('schemaVersion');
+    expect(
+      () => model_builder.sceneBuildFromJsonMap(missingJson),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.missingField &&
+              e.path == 'schemaVersion' &&
+              e.message == 'Missing required field schemaVersion.',
+        ),
+      ),
+    );
+
+    final wrongTypeJson = _minimalSceneJson();
+    wrongTypeJson['schemaVersion'] = '1';
+    expect(
+      () => model_builder.sceneBuildFromJsonMap(wrongTypeJson),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidFieldType &&
+              e.path == 'schemaVersion' &&
+              e.message == 'Field schemaVersion must be an int.',
         ),
       ),
     );

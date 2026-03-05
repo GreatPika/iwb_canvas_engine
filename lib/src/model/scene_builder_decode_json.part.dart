@@ -211,7 +211,7 @@ ContentLayerSnapshot _decodeContentLayer(
     throw SceneDataException(
       code: SceneDataErrorCode.missingField,
       path: '$layerPath.id',
-      message: 'Field $layerPath.id must be a string.',
+      message: 'Missing required field $layerPath.id.',
     );
   }
   if (idRaw is! String) {
