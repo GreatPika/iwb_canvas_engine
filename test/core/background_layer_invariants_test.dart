@@ -30,45 +30,19 @@ void main() {
     expect(identical(scene.backgroundLayer, existing), isTrue);
   });
 
-  test(
-    'canonicalizeBackgroundLayerSnapshot adds empty background layer when missing',
-    () {
-      final snapshot = SceneSnapshot(
-        layers: <ContentLayerSnapshot>[
-          ContentLayerSnapshot(
-            id: 'layer-auto-0',
-            nodes: const <NodeSnapshot>[
-              RectNodeSnapshot(id: 'n1', size: Size(1, 1)),
-            ],
-          ),
-        ],
-      );
-
-      final canonical = canonicalizeBackgroundLayerSnapshot(snapshot);
-
-      expect(canonical.backgroundLayer.nodes, isEmpty);
-      expect(canonical.layers.single.nodes.single.id, 'n1');
-    },
-  );
-
-  test(
-    'canonicalizeBackgroundLayerSnapshot keeps identity when already canonical',
-    () {
-      final snapshot = SceneSnapshot(
-        backgroundLayer: BackgroundLayerSnapshot(
+  test('SceneSnapshot provides empty background layer when omitted', () {
+    final snapshot = SceneSnapshot(
+      layers: <ContentLayerSnapshot>[
+        ContentLayerSnapshot(
+          id: 'layer-auto-0',
           nodes: const <NodeSnapshot>[
-            RectNodeSnapshot(id: 'bg', size: Size(1, 1)),
+            RectNodeSnapshot(id: 'n1', size: Size(1, 1)),
           ],
         ),
-        layers: <ContentLayerSnapshot>[
-          ContentLayerSnapshot(id: 'layer-auto-1'),
-        ],
-      );
+      ],
+    );
 
-      final canonical = canonicalizeBackgroundLayerSnapshot(snapshot);
-
-      expect(identical(canonical, snapshot), isTrue);
-      expect(canonical.backgroundLayer.nodes.single.id, 'bg');
-    },
-  );
+    expect(snapshot.backgroundLayer.nodes, isEmpty);
+    expect(snapshot.layers.single.nodes.single.id, 'n1');
+  });
 }

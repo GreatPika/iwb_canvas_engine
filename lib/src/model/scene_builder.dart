@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
-import '../core/background_layer_invariants.dart';
 import '../core/nodes.dart';
 import '../core/scene.dart';
 import '../core/scene_limits.dart';
@@ -44,15 +43,14 @@ Scene sceneBuildFromJsonMap(Map<String, Object?> rawJson) {
 }
 
 SceneSnapshot sceneCanonicalizeAndValidateSnapshot(SceneSnapshot rawSnapshot) {
-  final canonicalSnapshot = canonicalizeBackgroundLayerSnapshot(rawSnapshot);
-  _validateStructuralInvariants(canonicalSnapshot);
+  _validateStructuralInvariants(rawSnapshot);
   sceneValidateSnapshotValues(
-    canonicalSnapshot,
+    rawSnapshot,
     onError: _snapshotValidationError,
     requirePositiveGridCellSize: true,
   );
-  _validateSnapshotRanges(canonicalSnapshot);
-  return canonicalSnapshot;
+  _validateSnapshotRanges(rawSnapshot);
+  return rawSnapshot;
 }
 
 Scene sceneCanonicalizeAndValidateScene(Scene rawScene) {
