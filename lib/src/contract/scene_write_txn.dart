@@ -39,6 +39,8 @@ abstract interface class SceneWriteTxn {
   ///
   /// `layerId` addresses only `snapshot.layers` (content layers) and never
   /// the optional background layer.
+  /// Throws `ArgumentError` when `spec.id` is explicitly provided and already
+  /// exists in the scene.
   NodeId writeNodeInsert(NodeSpec spec, {LayerId? layerId, int? insertIndex});
 
   /// Ensures a content layer with [layerId] exists.

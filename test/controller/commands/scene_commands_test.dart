@@ -145,6 +145,22 @@ void main() {
     assertControllerInvariants(controller);
   });
 
+  test('add node with duplicate explicit id throws ArgumentError', () async {
+    final controller = buildController();
+    addTearDown(controller.dispose);
+
+    expect(
+      () => controller.commands.writeAddNode(
+        RectNodeSpec(id: 'base', size: const Size(8, 8)),
+      ),
+      throwsA(
+        isA<ArgumentError>().having((error) => error.name, 'name', 'spec.id'),
+      ),
+    );
+    await pumpEventQueue();
+    assertControllerInvariants(controller);
+  });
+
   test('add node forwards insertIndex into target layer ordering', () async {
     final controller = buildController();
     addTearDown(controller.dispose);

@@ -93,6 +93,8 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - `ensureLayer(...)` and `writeLayerEnsure(...)` are the supported APIs for
   explicit content-layer creation.
 - `write(...)` is synchronous-only. Returning a `Future` throws `StateError`.
+- explicit duplicate `NodeSpec.id` in `addNode(...)` or `writeNodeInsert(...)`
+  throws `ArgumentError`.
 - `actions`, `editTextRequests`, and `ChangeNotifier` updates are asynchronous;
   listener notifications are microtask-deferred and coalesced.
 - `setPointerSettings(...)` is applied live by `SceneView`; active gestures keep

@@ -220,6 +220,8 @@ Patch semantics use `PatchField<T>`:
 Runtime write APIs validate aggressively:
 
 - invalid `NodeSpec` or `NodePatch` values throw `ArgumentError`
+- duplicate explicit `NodeSpec.id` in `addNode(...)` / `writeNodeInsert(...)`
+  throws `ArgumentError`
 - non-finite `Transform2D` and `Offset` values are rejected by transform and
   translate write paths
 - `opacity` is strict at the public boundary and must stay in `[0, 1]`
@@ -473,6 +475,9 @@ Structural and content writes:
 - `writeClearSceneKeepBackground()`
 - `writeDocumentReplace(...)`
 
+`writeNodeInsert(...)` throws `ArgumentError` when `spec.id` is explicitly set
+and already exists in the scene.
+
 Selection writes:
 
 - `writeSelectionReplace(...)`
@@ -721,7 +726,7 @@ controller.
 
 | Error type | Meaning | Typical boundaries |
 | --- | --- | --- |
-| `ArgumentError` | The caller passed an invalid runtime argument. | `addNode`, `patchNode`, transforms, numeric setters, invalid pointer settings |
+| `ArgumentError` | The caller passed an invalid runtime argument. | `addNode` (including duplicate explicit `NodeSpec.id`), `patchNode`, transforms, numeric setters, invalid pointer settings |
 | `StateError` | The runtime contract was violated. | disposed controller calls, stale transaction handle, async `write(...)`, reentrant `handlePointer(...)`, invariant failures |
 | `SceneDataException` | Scene or JSON data is malformed. | `initialSnapshot`, `replaceScene`, `SceneBuilder`, `decodeScene*`, `encodeScene*` |
 

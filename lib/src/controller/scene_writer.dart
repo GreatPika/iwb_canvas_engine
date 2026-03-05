@@ -35,7 +35,11 @@ class SceneWriter implements SceneWriteTxn {
     _ensureTxnActive();
     final resolvedId = spec.id ?? _ctx.txnNextNodeId();
     if (spec.id != null && _ctx.txnHasNodeId(resolvedId)) {
-      throw StateError('Node id must be unique: $resolvedId');
+      throw ArgumentError.value(
+        resolvedId,
+        'spec.id',
+        'Node id must be unique.',
+      );
     }
 
     final normalizedSpec = _normalizeInsertSpec(spec);

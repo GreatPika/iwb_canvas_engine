@@ -36,7 +36,9 @@ void main() {
       () => writer.writeNodeInsert(
         RectNodeSpec(id: 'r1', size: const Size(1, 1)),
       ),
-      throwsStateError,
+      throwsA(
+        isA<ArgumentError>().having((error) => error.name, 'name', 'spec.id'),
+      ),
     );
 
     final generatedId = writer.writeNodeInsert(

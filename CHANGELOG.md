@@ -18,6 +18,8 @@ All notable changes to `iwb_canvas_engine` are documented here.
   references.
 - Documented that the `contract/` layer is intentionally Flutter-oriented
   (`dart:ui` + `Listenable`) and is not a pure Dart compatibility boundary.
+- `writeNodeInsert(...)` / `addNode(...)` now throw `ArgumentError` (instead of
+  `StateError`) when a caller provides a duplicate explicit `NodeSpec.id`.
 
 ## 5.1.0 (2026-03-04)
 
