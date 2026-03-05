@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
 
-import '../../utils/scene_invariants.dart';
+import '../support/scene_snapshot_invariant_assertions.dart';
 
 SceneControllerCore buildController() {
   return SceneControllerCore(

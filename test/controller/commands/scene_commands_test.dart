@@ -9,7 +9,7 @@ import 'package:iwb_canvas_engine/src/controller/txn_context.dart';
 import 'package:iwb_canvas_engine/src/controller/internal/signal_event.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 
-import '../../utils/scene_invariants.dart';
+import '../support/scene_snapshot_invariant_assertions.dart';
 
 // INV:INV-ENG-TXN-ATOMIC-COMMIT
 // INV:INV-ENG-SIGNALS-AFTER-COMMIT
