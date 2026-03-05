@@ -1,5 +1,10 @@
 import 'dart:io';
 
+import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
+import 'package:analyzer/dart/analysis/results.dart';
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
+
 import 'src/layer_guardrails.dart';
 
 // Invariants enforced by this tool:
@@ -26,16 +31,11 @@ class _Violation {
   String toString() => '$filePath:$line: $message';
 }
 
-class _InteractiveEntrypointSignature {
-  _InteractiveEntrypointSignature({
-    required this.name,
-    required this.bodyRemainder,
-  });
+class _DirectiveUriRef {
+  const _DirectiveUriRef({required this.uri, required this.offset});
 
-  final String name;
-  final String bodyRemainder;
-
-  bool get isDispose => name == 'dispose';
+  final String uri;
+  final int offset;
 }
 
 enum _ExportedApiScanMode { fullScan, skip }
@@ -50,6 +50,102 @@ class _ExportedApiScanPolicy {
 
   final _ExportedApiScanMode mode;
   final String? reason;
+}
+
+class _EnsureCallInfo {
+  const _EnsureCallInfo({required this.hasAllowAfterDispose});
+
+  final bool hasAllowAfterDispose;
+}
+
+class _ControllerSymbolOccurrence {
+  const _ControllerSymbolOccurrence({required this.name, required this.offset});
+
+  final String name;
+  final int offset;
+}
+
+class _ControllerSymbolCollector extends RecursiveAstVisitor<void> {
+  final List<_ControllerSymbolOccurrence> occurrences =
+      <_ControllerSymbolOccurrence>[];
+  bool hasControllerEpoch = false;
+
+  @override
+  void visitVariableDeclaration(VariableDeclaration node) {
+    if (node.name.lexeme == 'controllerEpoch') {
+      hasControllerEpoch = true;
+    }
+    super.visitVariableDeclaration(node);
+  }
+
+  @override
+  void visitMethodDeclaration(MethodDeclaration node) {
+    occurrences.add(
+      _ControllerSymbolOccurrence(
+        name: node.name.lexeme,
+        offset: node.name.offset,
+      ),
+    );
+    super.visitMethodDeclaration(node);
+  }
+
+  @override
+  void visitFunctionDeclaration(FunctionDeclaration node) {
+    occurrences.add(
+      _ControllerSymbolOccurrence(
+        name: node.name.lexeme,
+        offset: node.name.offset,
+      ),
+    );
+    super.visitFunctionDeclaration(node);
+  }
+
+  @override
+  void visitMethodInvocation(MethodInvocation node) {
+    if (node.target == null && !node.isCascaded) {
+      occurrences.add(
+        _ControllerSymbolOccurrence(
+          name: node.methodName.name,
+          offset: node.methodName.offset,
+        ),
+      );
+    }
+    super.visitMethodInvocation(node);
+  }
+
+  @override
+  void visitFunctionExpressionInvocation(FunctionExpressionInvocation node) {
+    final function = node.function;
+    if (function is SimpleIdentifier) {
+      occurrences.add(
+        _ControllerSymbolOccurrence(
+          name: function.name,
+          offset: function.offset,
+        ),
+      );
+    }
+    super.visitFunctionExpressionInvocation(node);
+  }
+}
+
+class _MutableTypeReferenceVisitor extends RecursiveAstVisitor<void> {
+  _MutableTypeReferenceVisitor(this.bannedTypeNames);
+
+  final Set<String> bannedTypeNames;
+  AstNode? firstMatch;
+
+  @override
+  void visitNamedType(NamedType node) {
+    if (firstMatch != null) {
+      return;
+    }
+    final typeName = node.name.lexeme;
+    if (bannedTypeNames.contains(typeName)) {
+      firstMatch = node;
+      return;
+    }
+    super.visitNamedType(node);
+  }
 }
 
 const _nonContractExportedApiScanPolicies = <String, _ExportedApiScanPolicy>{
@@ -71,6 +167,21 @@ const _nonContractExportedApiScanPolicies = <String, _ExportedApiScanPolicy>{
     'serialization exports are function entrypoints validated by codec tests, '
     'not contract-style type signatures',
   ),
+};
+
+const _mutableCoreTypeNames = <String>{
+  'Scene',
+  'ContentLayer',
+  'SceneNode',
+  'NodeType',
+};
+
+const _nodeIdBookkeepingNames = <String>{
+  'writeNewNodeId',
+  'writeContainsNodeId',
+  'writeRegisterNodeId',
+  'writeUnregisterNodeId',
+  'writeRebuildNodeIdIndex',
 };
 
 String _normalizePosixPath(String path) {
@@ -131,47 +242,6 @@ String _readPackageNameOrFallback(Directory root) {
   return 'iwb_canvas_engine';
 }
 
-List<String> _extractAllQuotedStrings(String text) {
-  final out = <String>[];
-  for (var i = 0; i < text.length; i++) {
-    final ch = text[i];
-    if (ch != "'" && ch != '"') continue;
-
-    final quote = ch;
-    final buf = StringBuffer();
-    var escaped = false;
-    var j = i + 1;
-    for (; j < text.length; j++) {
-      final c = text[j];
-      if (escaped) {
-        buf.write(c);
-        escaped = false;
-        continue;
-      }
-      if (c == r'\') {
-        escaped = true;
-        continue;
-      }
-      if (c == quote) break;
-      buf.write(c);
-    }
-    if (j >= text.length) break;
-    out.add(buf.toString());
-    i = j;
-  }
-  return out;
-}
-
-List<String>? _extractDirectiveTargets(
-  String line, {
-  required String directive,
-}) {
-  final trimmed = line.trimLeft();
-  if (trimmed.startsWith('//')) return null;
-  if (!trimmed.startsWith('$directive ')) return null;
-  return _extractAllQuotedStrings(trimmed);
-}
-
 String? _resolveToRepoRelTargetPosix({
   required String targetPosix,
   required String packageName,
@@ -211,6 +281,333 @@ Never _fail(_Violation violation) {
   exit(1);
 }
 
+List<_DirectiveUriRef> _collectDirectiveUriRefs(UriBasedDirective directive) {
+  final refs = <_DirectiveUriRef>[];
+
+  void addUri(StringLiteral literal) {
+    final uri = literal.stringValue;
+    if (uri == null || uri.isEmpty) {
+      return;
+    }
+    refs.add(_DirectiveUriRef(uri: uri, offset: literal.offset));
+  }
+
+  addUri(directive.uri);
+  if (directive is NamespaceDirective) {
+    for (final configuration in directive.configurations) {
+      addUri(configuration.uri);
+    }
+  }
+
+  return refs;
+}
+
+int _lineForOffset(ParsedUnitResult result, int offset) {
+  return result.lineInfo.getLocation(offset).lineNumber;
+}
+
+Future<ParsedUnitResult> _parseUnitOrFail({
+  required AnalysisContextCollection analysisCollection,
+  required String absPath,
+  required String filePathForDiag,
+}) {
+  final context = analysisCollection.contextFor(absPath);
+  final result = context.currentSession.getParsedUnit(absPath);
+  if (result is ParsedUnitResult) {
+    return Future<ParsedUnitResult>.value(result);
+  }
+  _fail(
+    _Violation(
+      filePath: filePathForDiag,
+      line: 1,
+      message:
+          'tool failure: unable to parse Dart unit (result: ${result.runtimeType})',
+    ),
+  );
+}
+
+bool _isPublicName(String name) => !name.startsWith('_');
+
+AstNode? _firstMutableTypeInNode(AstNode? node) {
+  if (node == null) {
+    return null;
+  }
+  final visitor = _MutableTypeReferenceVisitor(_mutableCoreTypeNames);
+  node.accept(visitor);
+  return visitor.firstMatch;
+}
+
+AstNode? _firstMutableTypeInNodes(Iterable<AstNode?> nodes) {
+  for (final node in nodes) {
+    final match = _firstMutableTypeInNode(node);
+    if (match != null) {
+      return match;
+    }
+  }
+  return null;
+}
+
+void _collectTypeNodesFromTypeParameters(
+  TypeParameterList? typeParameters,
+  List<AstNode?> out,
+) {
+  if (typeParameters == null) {
+    return;
+  }
+  for (final typeParameter in typeParameters.typeParameters) {
+    out.add(typeParameter.bound);
+  }
+}
+
+void _collectTypeNodesFromFormalParameter(
+  FormalParameter parameter,
+  List<AstNode?> out,
+) {
+  if (parameter is DefaultFormalParameter) {
+    _collectTypeNodesFromFormalParameter(parameter.parameter, out);
+    return;
+  }
+  if (parameter is SimpleFormalParameter) {
+    out.add(parameter.type);
+    return;
+  }
+  if (parameter is FieldFormalParameter) {
+    out.add(parameter.type);
+    final nested = parameter.parameters;
+    if (nested != null) {
+      _collectTypeNodesFromFormalParameterList(nested, out);
+    }
+    return;
+  }
+  if (parameter is SuperFormalParameter) {
+    out.add(parameter.type);
+    final nested = parameter.parameters;
+    if (nested != null) {
+      _collectTypeNodesFromFormalParameterList(nested, out);
+    }
+    return;
+  }
+  if (parameter is FunctionTypedFormalParameter) {
+    out.add(parameter.returnType);
+    _collectTypeNodesFromTypeParameters(parameter.typeParameters, out);
+    _collectTypeNodesFromFormalParameterList(parameter.parameters, out);
+    return;
+  }
+}
+
+void _collectTypeNodesFromFormalParameterList(
+  FormalParameterList? parameters,
+  List<AstNode?> out,
+) {
+  if (parameters == null) {
+    return;
+  }
+  for (final parameter in parameters.parameters) {
+    _collectTypeNodesFromFormalParameter(parameter, out);
+  }
+}
+
+AstNode? _firstMutableTypeInFunctionSignature({
+  required TypeAnnotation? returnType,
+  required TypeParameterList? typeParameters,
+  required FormalParameterList? parameters,
+}) {
+  final typeNodes = <AstNode?>[];
+  typeNodes.add(returnType);
+  _collectTypeNodesFromTypeParameters(typeParameters, typeNodes);
+  _collectTypeNodesFromFormalParameterList(parameters, typeNodes);
+  return _firstMutableTypeInNodes(typeNodes);
+}
+
+AstNode? _firstMutableTypeInClassMemberSignature(ClassMember member) {
+  if (member is FieldDeclaration) {
+    final hasPublicVariable = member.fields.variables.any(
+      (variable) => _isPublicName(variable.name.lexeme),
+    );
+    if (!hasPublicVariable) {
+      return null;
+    }
+    return _firstMutableTypeInNode(member.fields.type);
+  }
+
+  if (member is MethodDeclaration) {
+    if (!_isPublicName(member.name.lexeme)) {
+      return null;
+    }
+    if (member.isGetter) {
+      return _firstMutableTypeInNode(member.returnType);
+    }
+    if (member.isSetter) {
+      return _firstMutableTypeInFunctionSignature(
+        returnType: null,
+        typeParameters: null,
+        parameters: member.parameters,
+      );
+    }
+    return _firstMutableTypeInFunctionSignature(
+      returnType: member.returnType,
+      typeParameters: member.typeParameters,
+      parameters: member.parameters,
+    );
+  }
+
+  if (member is ConstructorDeclaration) {
+    final constructorName = member.name?.lexeme;
+    if (constructorName != null && !_isPublicName(constructorName)) {
+      return null;
+    }
+    final typeNodes = <AstNode?>[];
+    _collectTypeNodesFromFormalParameterList(member.parameters, typeNodes);
+    typeNodes.add(member.redirectedConstructor?.type);
+    return _firstMutableTypeInNodes(typeNodes);
+  }
+
+  return null;
+}
+
+AstNode? _firstMutableTypeInDeclarationSignature(CompilationUnitMember member) {
+  if (member is ClassDeclaration) {
+    if (!_isPublicName(member.name.lexeme)) {
+      return null;
+    }
+    final declarationMatch = _firstMutableTypeInNodes(<AstNode?>[
+      member.typeParameters,
+      member.extendsClause,
+      member.withClause,
+      member.implementsClause,
+    ]);
+    if (declarationMatch != null) {
+      return declarationMatch;
+    }
+    for (final classMember in member.members) {
+      final memberMatch = _firstMutableTypeInClassMemberSignature(classMember);
+      if (memberMatch != null) {
+        return memberMatch;
+      }
+    }
+    return null;
+  }
+
+  if (member is EnumDeclaration) {
+    if (!_isPublicName(member.name.lexeme)) {
+      return null;
+    }
+    final declarationMatch = _firstMutableTypeInNodes(<AstNode?>[
+      member.withClause,
+      member.implementsClause,
+    ]);
+    if (declarationMatch != null) {
+      return declarationMatch;
+    }
+    for (final enumMember in member.members) {
+      final memberMatch = _firstMutableTypeInClassMemberSignature(enumMember);
+      if (memberMatch != null) {
+        return memberMatch;
+      }
+    }
+    return null;
+  }
+
+  if (member is MixinDeclaration) {
+    if (!_isPublicName(member.name.lexeme)) {
+      return null;
+    }
+    final declarationMatch = _firstMutableTypeInNodes(<AstNode?>[
+      member.typeParameters,
+      member.onClause,
+      member.implementsClause,
+    ]);
+    if (declarationMatch != null) {
+      return declarationMatch;
+    }
+    for (final mixinMember in member.members) {
+      final memberMatch = _firstMutableTypeInClassMemberSignature(mixinMember);
+      if (memberMatch != null) {
+        return memberMatch;
+      }
+    }
+    return null;
+  }
+
+  if (member is ExtensionDeclaration) {
+    final extensionName = member.name?.lexeme;
+    if (extensionName != null && !_isPublicName(extensionName)) {
+      return null;
+    }
+    final declarationMatch = _firstMutableTypeInNodes(<AstNode?>[
+      member.typeParameters,
+      member.onClause,
+    ]);
+    if (declarationMatch != null) {
+      return declarationMatch;
+    }
+    for (final extensionMember in member.members) {
+      final memberMatch = _firstMutableTypeInClassMemberSignature(
+        extensionMember,
+      );
+      if (memberMatch != null) {
+        return memberMatch;
+      }
+    }
+    return null;
+  }
+
+  if (member is ClassTypeAlias) {
+    if (!_isPublicName(member.name.lexeme)) {
+      return null;
+    }
+    return _firstMutableTypeInNodes(<AstNode?>[
+      member.typeParameters,
+      member.superclass,
+      member.withClause,
+      member.implementsClause,
+    ]);
+  }
+
+  if (member is GenericTypeAlias) {
+    if (!_isPublicName(member.name.lexeme)) {
+      return null;
+    }
+    return _firstMutableTypeInNodes(<AstNode?>[
+      member.typeParameters,
+      member.functionType,
+    ]);
+  }
+
+  if (member is FunctionDeclaration) {
+    if (!_isPublicName(member.name.lexeme)) {
+      return null;
+    }
+    if (member.isGetter) {
+      return _firstMutableTypeInNode(member.returnType);
+    }
+    if (member.isSetter) {
+      return _firstMutableTypeInFunctionSignature(
+        returnType: null,
+        typeParameters: null,
+        parameters: member.functionExpression.parameters,
+      );
+    }
+    return _firstMutableTypeInFunctionSignature(
+      returnType: member.returnType,
+      typeParameters: member.functionExpression.typeParameters,
+      parameters: member.functionExpression.parameters,
+    );
+  }
+
+  if (member is TopLevelVariableDeclaration) {
+    final hasPublicVariable = member.variables.variables.any(
+      (variable) => _isPublicName(variable.name.lexeme),
+    );
+    if (!hasPublicVariable) {
+      return null;
+    }
+    return _firstMutableTypeInNode(member.variables.type);
+  }
+
+  return null;
+}
+
 void _checkLibSrcStructuralGuardrails({
   required Directory root,
   required String rootAbsPosix,
@@ -238,12 +635,13 @@ void _checkLibSrcStructuralGuardrails({
   );
 }
 
-void _checkExportedApiImports({
+Future<void> _checkExportedApiImports({
   required Directory root,
   required String rootAbsPosix,
   required String packageName,
   required Set<String> exportedFiles,
-}) {
+  required AnalysisContextCollection analysisCollection,
+}) async {
   final disallowedPrefixes = <String>[
     '/lib/src/controller/',
     '/lib/src/render/',
@@ -251,13 +649,15 @@ void _checkExportedApiImports({
     '/lib/src/serialization/',
   ];
 
-  final filesToCheck = exportedFiles
-      .where(
-        (path) =>
-            path.startsWith('/lib/src/contract/') ||
-            path == '/lib/src/model/scene_builder_api.dart',
-      )
-      .toList(growable: false);
+  final filesToCheck =
+      exportedFiles
+          .where(
+            (path) =>
+                path.startsWith('/lib/src/contract/') ||
+                path == '/lib/src/model/scene_builder_api.dart',
+          )
+          .toList(growable: false)
+        ..sort();
   if (filesToCheck.isEmpty) return;
 
   for (final filePosixPath in filesToCheck) {
@@ -268,19 +668,20 @@ void _checkExportedApiImports({
     if (!file.existsSync()) continue;
 
     final fileDirRepoRelPosix = _posixDirname(filePosixPath);
-    final lines = file.readAsLinesSync();
+    final parsed = await _parseUnitOrFail(
+      analysisCollection: analysisCollection,
+      absPath: file.absolute.path,
+      filePathForDiag: filePosixPath,
+    );
 
-    for (var i = 0; i < lines.length; i++) {
-      final lineNo = i + 1;
-      final line = lines[i];
-      final importTargets = _extractDirectiveTargets(line, directive: 'import');
-      final exportTargets = _extractDirectiveTargets(line, directive: 'export');
-      final targets = importTargets ?? exportTargets;
-      if (targets == null) continue;
-
-      for (final target in targets) {
+    for (final directive in parsed.unit.directives) {
+      if (directive is! ImportDirective && directive is! ExportDirective) {
+        continue;
+      }
+      final uriDirective = directive as UriBasedDirective;
+      for (final uriRef in _collectDirectiveUriRefs(uriDirective)) {
         final resolvedRepoRelPosix = _resolveToRepoRelTargetPosix(
-          targetPosix: _toPosixPath(target),
+          targetPosix: _toPosixPath(uriRef.uri),
           packageName: packageName,
           fileDirRepoRelPosix: fileDirRepoRelPosix,
         );
@@ -292,7 +693,7 @@ void _checkExportedApiImports({
           _fail(
             _Violation(
               filePath: filePosixPath,
-              line: lineNo,
+              line: _lineForOffset(parsed, uriRef.offset),
               message:
                   'public export violation: exported contract/** and the '
                   'model facade must not import/export controller/**, '
@@ -306,11 +707,12 @@ void _checkExportedApiImports({
   }
 }
 
-Set<String> _collectEntrypointExportTargets({
+Future<Set<String>> _collectEntrypointExportTargets({
   required Directory root,
   required String rootAbsPosix,
   required String packageName,
-}) {
+  required AnalysisContextCollection analysisCollection,
+}) async {
   final entrypointFile = File(
     '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}iwb_canvas_engine.dart',
   );
@@ -325,15 +727,17 @@ Set<String> _collectEntrypointExportTargets({
   );
   final entrypointDirRepoRelPosix = _posixDirname(entrypointPosixPath);
   final targets = <String>{};
-  final lines = entrypointFile.readAsLinesSync();
 
-  for (final line in lines) {
-    final exportTargets = _extractDirectiveTargets(line, directive: 'export');
-    if (exportTargets == null) continue;
+  final parsed = await _parseUnitOrFail(
+    analysisCollection: analysisCollection,
+    absPath: entrypointFile.absolute.path,
+    filePathForDiag: entrypointPosixPath,
+  );
 
-    for (final target in exportTargets) {
+  for (final directive in parsed.unit.directives.whereType<ExportDirective>()) {
+    for (final uriRef in _collectDirectiveUriRefs(directive)) {
       final resolvedRepoRelPosix = _resolveToRepoRelTargetPosix(
-        targetPosix: _toPosixPath(target),
+        targetPosix: _toPosixPath(uriRef.uri),
         packageName: packageName,
         fileDirRepoRelPosix: entrypointDirRepoRelPosix,
       );
@@ -345,11 +749,12 @@ Set<String> _collectEntrypointExportTargets({
   return targets;
 }
 
-Set<String> _checkEntrypointGuardrails({
+Future<Set<String>> _checkEntrypointGuardrails({
   required Directory root,
   required String rootAbsPosix,
   required String packageName,
-}) {
+  required AnalysisContextCollection analysisCollection,
+}) async {
   final advancedFile = File(
     '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}advanced.dart',
   );
@@ -365,10 +770,11 @@ Set<String> _checkEntrypointGuardrails({
     );
   }
 
-  final exports = _collectEntrypointExportTargets(
+  final exports = await _collectEntrypointExportTargets(
     root: root,
     rootAbsPosix: rootAbsPosix,
     packageName: packageName,
+    analysisCollection: analysisCollection,
   );
   if (exports.isEmpty) {
     return exports;
@@ -394,56 +800,41 @@ Set<String> _checkEntrypointGuardrails({
   return exports;
 }
 
-bool _isAllowedRootLibStatement(String statement) {
-  final trimmed = statement.trim();
-  if (trimmed.isEmpty) return true;
-  if (trimmed == 'library;') return true;
-  if (RegExp(r'^library\s+[A-Za-z_][A-Za-z0-9_\.]*\s*;$').hasMatch(trimmed)) {
-    return true;
-  }
-  return trimmed.startsWith('export ') && trimmed.endsWith(';');
-}
-
-void _checkRootLibFilesAreExportOnly({
+Future<void> _checkRootLibFilesAreExportOnly({
   required Directory root,
   required String rootAbsPosix,
-}) {
+  required AnalysisContextCollection analysisCollection,
+}) async {
   final libDir = Directory('${root.path}${Platform.pathSeparator}lib');
   if (!libDir.existsSync()) return;
 
-  final rootLibFiles = libDir
-      .listSync(recursive: false, followLinks: false)
-      .whereType<File>()
-      .where((file) => file.path.endsWith('.dart'))
-      .toList(growable: false);
+  final rootLibFiles =
+      libDir
+          .listSync(recursive: false, followLinks: false)
+          .whereType<File>()
+          .where((file) => file.path.endsWith('.dart'))
+          .toList(growable: false)
+        ..sort((a, b) => a.path.compareTo(b.path));
 
   for (final file in rootLibFiles) {
     final filePosixPath = _toRepoRelPosixPath(
       absPosixPath: _toPosixPath(file.absolute.path),
       rootAbsPosixPath: rootAbsPosix,
     );
-    final lines = file.readAsLinesSync();
-    var inBlockComment = false;
-    var inSingleQuote = false;
-    var inDoubleQuote = false;
-    var singleQuoteEscaped = false;
-    var doubleQuoteEscaped = false;
-    final statementBuffer = StringBuffer();
-    int? statementStartLine;
+    final parsed = await _parseUnitOrFail(
+      analysisCollection: analysisCollection,
+      absPath: file.absolute.path,
+      filePathForDiag: filePosixPath,
+    );
 
-    void appendStatementChar(String char, int lineNo) {
-      if (statementBuffer.isEmpty && char.trim().isEmpty) {
-        return;
+    for (final directive in parsed.unit.directives) {
+      if (directive is LibraryDirective || directive is ExportDirective) {
+        continue;
       }
-      statementStartLine ??= lineNo;
-      statementBuffer.write(char);
-    }
-
-    Never failStatement(int lineNo) {
       _fail(
         _Violation(
           filePath: filePosixPath,
-          line: statementStartLine ?? lineNo,
+          line: _lineForOffset(parsed, directive.offset),
           message:
               'public entrypoint violation: root lib/*.dart files must '
               'contain only library/docs/comments/export directives.',
@@ -451,113 +842,98 @@ void _checkRootLibFilesAreExportOnly({
       );
     }
 
-    void validateCompletedStatement(int lineNo) {
-      final statement = statementBuffer.toString().trim();
-      if (statement.isEmpty) {
-        statementBuffer.clear();
-        statementStartLine = null;
-        return;
-      }
-      if (!_isAllowedRootLibStatement(statement)) {
-        failStatement(lineNo);
-      }
-      statementBuffer.clear();
-      statementStartLine = null;
-    }
-
-    for (var i = 0; i < lines.length; i++) {
-      final lineNo = i + 1;
-      final line = lines[i];
-      var index = 0;
-      while (index < line.length) {
-        final char = line[index];
-        final hasNext = index + 1 < line.length;
-        final nextChar = hasNext ? line[index + 1] : '';
-
-        if (inBlockComment) {
-          if (char == '*' && nextChar == '/') {
-            inBlockComment = false;
-            index += 2;
-            continue;
-          }
-          index++;
-          continue;
-        }
-
-        if (inSingleQuote) {
-          appendStatementChar(char, lineNo);
-          if (singleQuoteEscaped) {
-            singleQuoteEscaped = false;
-          } else if (char == r'\') {
-            singleQuoteEscaped = true;
-          } else if (char == "'") {
-            inSingleQuote = false;
-          }
-          index++;
-          continue;
-        }
-
-        if (inDoubleQuote) {
-          appendStatementChar(char, lineNo);
-          if (doubleQuoteEscaped) {
-            doubleQuoteEscaped = false;
-          } else if (char == r'\') {
-            doubleQuoteEscaped = true;
-          } else if (char == '"') {
-            inDoubleQuote = false;
-          }
-          index++;
-          continue;
-        }
-
-        if (char == '/' && nextChar == '/') {
-          break;
-        }
-        if (char == '/' && nextChar == '*') {
-          inBlockComment = true;
-          index += 2;
-          continue;
-        }
-        if (char == "'") {
-          appendStatementChar(char, lineNo);
-          inSingleQuote = true;
-          singleQuoteEscaped = false;
-          index++;
-          continue;
-        }
-        if (char == '"') {
-          appendStatementChar(char, lineNo);
-          inDoubleQuote = true;
-          doubleQuoteEscaped = false;
-          index++;
-          continue;
-        }
-
-        appendStatementChar(char, lineNo);
-        if (char == ';') {
-          validateCompletedStatement(lineNo);
-        }
-        index++;
-      }
-
-      if (!inBlockComment &&
-          !inSingleQuote &&
-          !inDoubleQuote &&
-          statementBuffer.isNotEmpty) {
-        statementBuffer.write('\n');
-      }
-    }
-
-    if (statementBuffer.toString().trim().isNotEmpty) {
-      failStatement(lines.isEmpty ? 1 : lines.length);
+    if (parsed.unit.declarations.isNotEmpty) {
+      final declaration = parsed.unit.declarations.first;
+      _fail(
+        _Violation(
+          filePath: filePosixPath,
+          line: _lineForOffset(parsed, declaration.offset),
+          message:
+              'public entrypoint violation: root lib/*.dart files must '
+              'contain only library/docs/comments/export directives.',
+        ),
+      );
     }
   }
 }
 
-void _checkSceneWriteTxnContract({
+void _checkSceneWriteTxnMember({
+  required ClassMember member,
+  required ParsedUnitResult parsed,
+  required String filePosixPath,
+}) {
+  String? memberName;
+  if (member is MethodDeclaration) {
+    memberName = member.name.lexeme;
+  } else if (member is FieldDeclaration) {
+    for (final variable in member.fields.variables) {
+      final name = variable.name.lexeme;
+      if (!_isPublicName(name)) {
+        continue;
+      }
+      memberName = name;
+      break;
+    }
+  }
+
+  if (memberName == null || !_isPublicName(memberName)) {
+    return;
+  }
+
+  if (memberName == 'scene') {
+    _fail(
+      _Violation(
+        filePath: filePosixPath,
+        line: _lineForOffset(parsed, member.offset),
+        message:
+            'public contract violation: exported SceneWriteTxn must not '
+            'expose raw scene access.',
+      ),
+    );
+  }
+
+  if (memberName == 'writeFindNode') {
+    _fail(
+      _Violation(
+        filePath: filePosixPath,
+        line: _lineForOffset(parsed, member.offset),
+        message:
+            'public contract violation: exported SceneWriteTxn must not '
+            'expose writeFindNode.',
+      ),
+    );
+  }
+
+  if (RegExp(r'^writeMark[A-Za-z0-9_]*$').hasMatch(memberName)) {
+    _fail(
+      _Violation(
+        filePath: filePosixPath,
+        line: _lineForOffset(parsed, member.offset),
+        message:
+            'public contract violation: exported SceneWriteTxn must not '
+            'expose writeMark* escape hatches.',
+      ),
+    );
+  }
+
+  if (_nodeIdBookkeepingNames.contains(memberName)) {
+    _fail(
+      _Violation(
+        filePath: filePosixPath,
+        line: _lineForOffset(parsed, member.offset),
+        message:
+            'public contract violation: exported SceneWriteTxn must not '
+            'expose node-id bookkeeping methods.',
+      ),
+    );
+  }
+}
+
+Future<void> _checkSceneWriteTxnContract({
   required Directory root,
   required String rootAbsPosix,
-}) {
+  required AnalysisContextCollection analysisCollection,
+}) async {
   final txnApiFile = File(
     '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}src${Platform.pathSeparator}contract${Platform.pathSeparator}scene_write_txn.dart',
   );
@@ -568,71 +944,38 @@ void _checkSceneWriteTxnContract({
     absPosixPath: fileAbsPosixPath,
     rootAbsPosixPath: rootAbsPosix,
   );
-  final lines = txnApiFile.readAsLinesSync();
 
-  for (var i = 0; i < lines.length; i++) {
-    final lineNo = i + 1;
-    final line = lines[i];
-    final trimmed = line.trimLeft();
-    if (trimmed.startsWith('//')) continue;
+  final parsed = await _parseUnitOrFail(
+    analysisCollection: analysisCollection,
+    absPath: txnApiFile.absolute.path,
+    filePathForDiag: filePosixPath,
+  );
 
-    if (RegExp(r'\bget\s+scene\b').hasMatch(line) ||
-        RegExp(r'\bscene\s*=>').hasMatch(line)) {
-      _fail(
-        _Violation(
-          filePath: filePosixPath,
-          line: lineNo,
-          message:
-              'public contract violation: exported SceneWriteTxn must not '
-              'expose raw scene access.',
-        ),
+  for (final declaration in parsed.unit.declarations) {
+    if (declaration is! ClassDeclaration) {
+      continue;
+    }
+    if (declaration.name.lexeme != 'SceneWriteTxn') {
+      continue;
+    }
+
+    for (final member in declaration.members) {
+      _checkSceneWriteTxnMember(
+        member: member,
+        parsed: parsed,
+        filePosixPath: filePosixPath,
       );
     }
-    if (RegExp(r'\bwriteFindNode\s*\(').hasMatch(line)) {
-      _fail(
-        _Violation(
-          filePath: filePosixPath,
-          line: lineNo,
-          message:
-              'public contract violation: exported SceneWriteTxn must not '
-              'expose writeFindNode.',
-        ),
-      );
-    }
-    if (RegExp(r'\bwriteMark[A-Za-z0-9_]*\s*\(').hasMatch(line)) {
-      _fail(
-        _Violation(
-          filePath: filePosixPath,
-          line: lineNo,
-          message:
-              'public contract violation: exported SceneWriteTxn must not '
-              'expose writeMark* escape hatches.',
-        ),
-      );
-    }
-    if (RegExp(r'\bwriteNewNodeId\s*\(').hasMatch(line) ||
-        RegExp(r'\bwriteContainsNodeId\s*\(').hasMatch(line) ||
-        RegExp(r'\bwriteRegisterNodeId\s*\(').hasMatch(line) ||
-        RegExp(r'\bwriteUnregisterNodeId\s*\(').hasMatch(line) ||
-        RegExp(r'\bwriteRebuildNodeIdIndex\s*\(').hasMatch(line)) {
-      _fail(
-        _Violation(
-          filePath: filePosixPath,
-          line: lineNo,
-          message:
-              'public contract violation: exported SceneWriteTxn must not '
-              'expose node-id bookkeeping methods.',
-        ),
-      );
-    }
+    return;
   }
 }
 
-void _checkExportedApiMutableTypeLeak({
+Future<void> _checkExportedApiMutableTypeLeak({
   required Directory root,
   required String rootAbsPosix,
   required Set<String> exportedFiles,
-}) {
+  required AnalysisContextCollection analysisCollection,
+}) async {
   if (exportedFiles.isEmpty) return;
   final policyKeys = _nonContractExportedApiScanPolicies.keys.toSet();
   final nonContractExports = exportedFiles
@@ -677,69 +1020,40 @@ void _checkExportedApiMutableTypeLeak({
     );
   }
 
-  final filesToCheck = exportedFiles
-      .where((path) {
-        if (path.startsWith('/lib/src/contract/')) return true;
-        final policy = _nonContractExportedApiScanPolicies[path];
-        return policy?.mode == _ExportedApiScanMode.fullScan;
-      })
-      .toList(growable: false);
+  final filesToCheck =
+      exportedFiles
+          .where((path) {
+            if (path.startsWith('/lib/src/contract/')) return true;
+            final policy = _nonContractExportedApiScanPolicies[path];
+            return policy?.mode == _ExportedApiScanMode.fullScan;
+          })
+          .toList(growable: false)
+        ..sort();
   if (filesToCheck.isEmpty) return;
-
-  const mutableTypePattern = r'\b(?:Scene|ContentLayer|SceneNode|NodeType)\b';
-  final mutableTypeRegex = RegExp(mutableTypePattern);
-  const skipPrefixes = <String>[
-    '//',
-    'import ',
-    'export ',
-    'part ',
-    '@',
-    'if ',
-    'for ',
-    'while ',
-    'switch ',
-    'return ',
-  ];
 
   for (final repoRel in filesToCheck) {
     final absPath = _toPosixPath(_posixJoin(root.path, repoRel.substring(1)));
     final file = File(absPath);
     if (!file.existsSync()) continue;
 
-    final lines = file.readAsLinesSync();
-    for (var i = 0; i < lines.length; i++) {
-      final lineNo = i + 1;
-      final line = lines[i];
-      final trimmed = line.trimLeft();
-      if (!mutableTypeRegex.hasMatch(line)) continue;
-      if (skipPrefixes.any(trimmed.startsWith)) continue;
+    final parsed = await _parseUnitOrFail(
+      analysisCollection: analysisCollection,
+      absPath: file.absolute.path,
+      filePathForDiag: repoRel,
+    );
 
-      final isPublicDeclarationLine =
-          RegExp(
-            r'^\s*(?:class|typedef|enum|mixin|extension)\s+[A-Za-z]',
-          ).hasMatch(line) ||
-          RegExp(r'\bget\s+[A-Za-z][A-Za-z0-9_]*\b').hasMatch(line) ||
-          RegExp(r'\bset\s+[A-Za-z][A-Za-z0-9_]*\s*\(').hasMatch(line) ||
-          RegExp(
-            r'\b[A-Za-z][A-Za-z0-9_]*\s*\([^)]*\)\s*(?:=>|{|;)',
-          ).hasMatch(line) ||
-          RegExp(
-            r'^\s*(?:final|const|late|static|var)\s+[A-Za-z0-9_<>,? ]+\s+[A-Za-z][A-Za-z0-9_]*\s*(?:=|;)',
-          ).hasMatch(line);
-      if (!isPublicDeclarationLine) continue;
-
-      final publicNameMatch =
-          RegExp(
-            r'\b(?:get|set|class|typedef|enum|mixin|extension)\s+([A-Za-z][A-Za-z0-9_]*)\b',
-          ).firstMatch(line) ??
-          RegExp(r'\b([A-Za-z][A-Za-z0-9_]*)\s*\(').firstMatch(line);
-      final publicName = publicNameMatch?.group(1);
-      if (publicName != null && publicName.startsWith('_')) continue;
+    for (final declaration in parsed.unit.declarations) {
+      final mutableTypeMatch = _firstMutableTypeInDeclarationSignature(
+        declaration,
+      );
+      if (mutableTypeMatch == null) {
+        continue;
+      }
 
       _fail(
         _Violation(
           filePath: repoRel,
-          line: lineNo,
+          line: _lineForOffset(parsed, mutableTypeMatch.offset),
           message:
               'public contract violation: exported API must not expose '
               'mutable core types '
@@ -750,25 +1064,210 @@ void _checkExportedApiMutableTypeLeak({
   }
 }
 
-void _checkControllerGuardrails({
+String? _interactiveEntrypointName(ClassMember member) {
+  if (member is! MethodDeclaration) {
+    return null;
+  }
+  if (member.isStatic || member.isGetter) {
+    return null;
+  }
+  final name = member.name.lexeme;
+  if (!_isPublicName(name) || name == 'SceneControllerInteractive') {
+    return null;
+  }
+  return name;
+}
+
+_EnsureCallInfo? _ensureCallInfoFromExpression(Expression expression) {
+  if (expression is! MethodInvocation) {
+    return null;
+  }
+  if (expression.target != null) {
+    return null;
+  }
+  if (expression.methodName.name != '_ensurePublicSideEffectAllowed') {
+    return null;
+  }
+
+  var hasAllowAfterDispose = false;
+  for (final argument in expression.argumentList.arguments) {
+    if (argument is! NamedExpression) {
+      continue;
+    }
+    if (argument.name.label.name != 'allowAfterDispose') {
+      continue;
+    }
+    final value = argument.expression;
+    if (value is BooleanLiteral && value.value) {
+      hasAllowAfterDispose = true;
+    }
+  }
+
+  return _EnsureCallInfo(hasAllowAfterDispose: hasAllowAfterDispose);
+}
+
+void _checkInteractiveEntrypointGuard({
+  required MethodDeclaration member,
+  required String name,
+  required ParsedUnitResult parsed,
+  required String filePath,
+}) {
+  final body = member.body;
+  if (body is! BlockFunctionBody) {
+    _fail(
+      _Violation(
+        filePath: filePath,
+        line: _lineForOffset(parsed, member.offset),
+        message:
+            'interactive API violation: public SceneControllerInteractive '
+            'entrypoint "$name" must use a block body guarded by '
+            '_ensurePublicSideEffectAllowed(...).',
+      ),
+    );
+  }
+
+  final statements = body.block.statements;
+  if (statements.isEmpty) {
+    _fail(
+      _Violation(
+        filePath: filePath,
+        line: _lineForOffset(parsed, member.offset),
+        message:
+            'interactive API violation: public SceneControllerInteractive '
+            'entrypoints must guard resolver purity with '
+            '_ensurePublicSideEffectAllowed(...).',
+      ),
+    );
+  }
+
+  final firstStatement = statements.first;
+  if (firstStatement is! ExpressionStatement) {
+    _fail(
+      _Violation(
+        filePath: filePath,
+        line: _lineForOffset(parsed, firstStatement.offset),
+        message:
+            'interactive API violation: public SceneControllerInteractive '
+            'entrypoints must guard resolver purity with '
+            '_ensurePublicSideEffectAllowed(...).',
+      ),
+    );
+  }
+
+  final ensureCallInfo = _ensureCallInfoFromExpression(
+    firstStatement.expression,
+  );
+  if (ensureCallInfo == null) {
+    _fail(
+      _Violation(
+        filePath: filePath,
+        line: _lineForOffset(parsed, firstStatement.offset),
+        message:
+            'interactive API violation: public SceneControllerInteractive '
+            'entrypoints must guard resolver purity with '
+            '_ensurePublicSideEffectAllowed(...).',
+      ),
+    );
+  }
+
+  if (name == 'dispose') {
+    if (!ensureCallInfo.hasAllowAfterDispose) {
+      _fail(
+        _Violation(
+          filePath: filePath,
+          line: _lineForOffset(parsed, firstStatement.offset),
+          message:
+              'interactive API violation: dispose() must guard resolver '
+              'purity with allowAfterDispose: true.',
+        ),
+      );
+    }
+    return;
+  }
+
+  if (ensureCallInfo.hasAllowAfterDispose) {
+    _fail(
+      _Violation(
+        filePath: filePath,
+        line: _lineForOffset(parsed, firstStatement.offset),
+        message:
+            'interactive API violation: only dispose() may call '
+            '_ensurePublicSideEffectAllowed(..., allowAfterDispose: true).',
+      ),
+    );
+  }
+}
+
+Future<void> _checkInteractiveResolverPurityGuardrails({
   required Directory root,
   required String rootAbsPosix,
-}) {
+  required AnalysisContextCollection analysisCollection,
+}) async {
+  final file = File(
+    '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}src${Platform.pathSeparator}interactive${Platform.pathSeparator}scene_controller_interactive.dart',
+  );
+  if (!file.existsSync()) {
+    return;
+  }
+
+  final filePosixPath = _toRepoRelPosixPath(
+    absPosixPath: _toPosixPath(file.absolute.path),
+    rootAbsPosixPath: rootAbsPosix,
+  );
+
+  final parsed = await _parseUnitOrFail(
+    analysisCollection: analysisCollection,
+    absPath: file.absolute.path,
+    filePathForDiag: filePosixPath,
+  );
+
+  ClassDeclaration? interactiveClass;
+  for (final declaration in parsed.unit.declarations) {
+    if (declaration is ClassDeclaration &&
+        declaration.name.lexeme == 'SceneControllerInteractive') {
+      interactiveClass = declaration;
+      break;
+    }
+  }
+  if (interactiveClass == null) {
+    return;
+  }
+
+  for (final member in interactiveClass.members) {
+    final name = _interactiveEntrypointName(member);
+    if (name == null) {
+      continue;
+    }
+    _checkInteractiveEntrypointGuard(
+      member: member as MethodDeclaration,
+      name: name,
+      parsed: parsed,
+      filePath: filePosixPath,
+    );
+  }
+}
+
+Future<void> _checkControllerGuardrails({
+  required Directory root,
+  required String rootAbsPosix,
+  required AnalysisContextCollection analysisCollection,
+}) async {
   final controllerDir = Directory(
     '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}src${Platform.pathSeparator}controller',
   );
   if (!controllerDir.existsSync()) return;
 
-  final dartFiles = controllerDir
-      .listSync(recursive: true, followLinks: false)
-      .whereType<File>()
-      .where((f) => f.path.endsWith('.dart'))
-      .toList(growable: false);
+  final dartFiles =
+      controllerDir
+          .listSync(recursive: true, followLinks: false)
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.dart'))
+          .toList(growable: false)
+        ..sort((a, b) => a.path.compareTo(b.path));
   if (dartFiles.isEmpty) return;
 
   var hasControllerEpoch = false;
   const allowedMutationPrefixes = <String>['write', 'txn'];
-  final symbolPattern = RegExp(r'\b([A-Za-z_][A-Za-z0-9_]*)\s*\(');
   const ignoredSymbols = <String>{
     'if',
     'for',
@@ -786,55 +1285,51 @@ void _checkControllerGuardrails({
       absPosixPath: fileAbsPosixPath,
       rootAbsPosixPath: rootAbsPosix,
     );
-    final lines = file.readAsLinesSync();
-    final fullText = lines.join('\n');
 
-    if (fullText.contains('controllerEpoch')) {
+    final parsed = await _parseUnitOrFail(
+      analysisCollection: analysisCollection,
+      absPath: file.absolute.path,
+      filePathForDiag: filePosixPath,
+    );
+
+    final collector = _ControllerSymbolCollector();
+    parsed.unit.accept(collector);
+
+    if (collector.hasControllerEpoch) {
       hasControllerEpoch = true;
     }
 
-    for (var i = 0; i < lines.length; i++) {
-      final lineNo = i + 1;
-      final line = lines[i];
-      final trimmed = line.trimLeft();
-      if (trimmed.startsWith('//')) continue;
+    final replaceSceneOccurrence = collector.occurrences.firstWhere(
+      (occurrence) => occurrence.name == 'replaceScene',
+      orElse: () => const _ControllerSymbolOccurrence(name: '', offset: -1),
+    );
+    if (replaceSceneOccurrence.offset != -1 && !collector.hasControllerEpoch) {
+      _fail(
+        _Violation(
+          filePath: filePosixPath,
+          line: _lineForOffset(parsed, replaceSceneOccurrence.offset),
+          message:
+              'controller API violation: replaceScene-like entrypoints '
+              'must preserve epoch invalidation '
+              '(missing controllerEpoch usage in file)',
+        ),
+      );
+    }
 
-      if (line.contains('replaceScene(') &&
-          !fullText.contains('controllerEpoch')) {
+    for (final occurrence in collector.occurrences) {
+      final symbol = occurrence.name;
+      if (ignoredSymbols.contains(symbol)) continue;
+      if (allowedMutationPrefixes.any(symbol.startsWith)) continue;
+      if (_looksMutatingSymbol(symbol)) {
         _fail(
           _Violation(
             filePath: filePosixPath,
-            line: lineNo,
+            line: _lineForOffset(parsed, occurrence.offset),
             message:
-                'controller API violation: replaceScene-like entrypoints '
-                'must preserve epoch invalidation '
-                '(missing controllerEpoch usage in file)',
+                'controller API violation: mutating symbol "$symbol" must '
+                'be routed through write*/txn* transaction API',
           ),
         );
-      }
-
-      for (final match in symbolPattern.allMatches(line)) {
-        final symbol = match.group(1)!;
-        final symbolStart = match.start;
-        if (symbolStart > 0) {
-          final prev = line[symbolStart - 1];
-          if (prev == '.') {
-            continue;
-          }
-        }
-        if (ignoredSymbols.contains(symbol)) continue;
-        if (allowedMutationPrefixes.any(symbol.startsWith)) continue;
-        if (_looksMutatingSymbol(symbol)) {
-          _fail(
-            _Violation(
-              filePath: filePosixPath,
-              line: lineNo,
-              message:
-                  'controller API violation: mutating symbol "$symbol" must '
-                  'be routed through write*/txn* transaction API',
-            ),
-          );
-        }
       }
     }
   }
@@ -852,301 +1347,56 @@ void _checkControllerGuardrails({
   }
 }
 
-int _braceDelta(String line) {
-  var delta = 0;
-  for (final codeUnit in line.codeUnits) {
-    if (codeUnit == 123) {
-      delta = delta + 1;
-    } else if (codeUnit == 125) {
-      delta = delta - 1;
-    }
-  }
-  return delta;
-}
-
-bool _isSkippableBodyLine(String text) {
-  final trimmed = text.trimLeft();
-  return trimmed.isEmpty ||
-      trimmed.startsWith('//') ||
-      trimmed.startsWith('/*') ||
-      trimmed.startsWith('*') ||
-      trimmed.startsWith('*/');
-}
-
-_InteractiveEntrypointSignature? _parseInteractiveEntrypointSignature(
-  String trimmed, {
-  required String filePath,
-  required int lineNo,
-}) {
-  if (trimmed.isEmpty ||
-      trimmed.startsWith('//') ||
-      trimmed.startsWith('@') ||
-      trimmed.startsWith('static ') ||
-      trimmed.startsWith('factory ')) {
-    return null;
-  }
-  if (trimmed.startsWith('set ')) {
-    final setterMatch = RegExp(
-      r'^set\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(',
-    ).firstMatch(trimmed);
-    if (setterMatch == null) {
-      return null;
-    }
-    final name = setterMatch.group(1)!;
-    if (name.startsWith('_')) {
-      return null;
-    }
-    final arrowBody = RegExp(r'\)\s*=>').firstMatch(trimmed);
-    if (arrowBody != null) {
-      _fail(
-        _Violation(
-          filePath: filePath,
-          line: lineNo,
-          message:
-              'interactive API violation: public SceneControllerInteractive '
-              'entrypoint "$name" must use a block body guarded by '
-              '_ensurePublicSideEffectAllowed(...).',
-        ),
-      );
-    }
-    final bodyOpen = RegExp(r'\)\s*\{').firstMatch(trimmed);
-    if (bodyOpen == null) {
-      _fail(
-        _Violation(
-          filePath: filePath,
-          line: lineNo,
-          message:
-              'interactive API violation: public SceneControllerInteractive '
-              'entrypoint "$name" must keep its signature on one line so '
-              'guardrails can verify _ensurePublicSideEffectAllowed(...).',
-        ),
-      );
-    }
-    return _InteractiveEntrypointSignature(
-      name: name,
-      bodyRemainder: trimmed.substring(bodyOpen.end),
-    );
-  }
-
-  if (trimmed.startsWith('get ') || trimmed.contains(' get ')) {
-    return null;
-  }
-  final parenIndex = trimmed.indexOf('(');
-  if (parenIndex < 0) {
-    return null;
-  }
-  final beforeParen = trimmed.substring(0, parenIndex).trimRight();
-  if (beforeParen.contains('=')) {
-    return null;
-  }
-  final nameMatch = RegExp(
-    r'([A-Za-z_][A-Za-z0-9_]*)\s*(?:<[^<>]*>)?$',
-  ).firstMatch(beforeParen);
-  if (nameMatch == null) {
-    return null;
-  }
-  final name = nameMatch.group(1)!;
-  if (name == 'SceneControllerInteractive' || name.startsWith('_')) {
-    return null;
-  }
-  final arrowBody = RegExp(r'\)\s*=>').firstMatch(trimmed);
-  if (arrowBody != null) {
-    _fail(
-      _Violation(
-        filePath: filePath,
-        line: lineNo,
-        message:
-            'interactive API violation: public SceneControllerInteractive '
-            'entrypoint "$name" must use a block body guarded by '
-            '_ensurePublicSideEffectAllowed(...).',
-      ),
-    );
-  }
-  final bodyOpen = RegExp(r'\)\s*\{').firstMatch(trimmed);
-  if (bodyOpen == null) {
-    _fail(
-      _Violation(
-        filePath: filePath,
-        line: lineNo,
-        message:
-            'interactive API violation: public SceneControllerInteractive '
-            'entrypoint "$name" must keep its signature on one line so '
-            'guardrails can verify _ensurePublicSideEffectAllowed(...).',
-      ),
-    );
-  }
-  return _InteractiveEntrypointSignature(
-    name: name,
-    bodyRemainder: trimmed.substring(bodyOpen.end),
-  );
-}
-
-void _validateInteractiveEntrypointGuard({
-  required _InteractiveEntrypointSignature signature,
-  required List<String> lines,
-  required int signatureLineIndex,
-  required String filePath,
-}) {
-  var guardLineIndex = signatureLineIndex;
-  var guardLine = signature.bodyRemainder.trimLeft();
-
-  while (_isSkippableBodyLine(guardLine)) {
-    guardLineIndex = guardLineIndex + 1;
-    if (guardLineIndex >= lines.length) {
-      _fail(
-        _Violation(
-          filePath: filePath,
-          line: signatureLineIndex + 1,
-          message:
-              'interactive API violation: public SceneControllerInteractive '
-              'entrypoints must guard resolver purity with '
-              '_ensurePublicSideEffectAllowed(...).',
-        ),
-      );
-    }
-    guardLine = lines[guardLineIndex].trimLeft();
-  }
-
-  if (!guardLine.startsWith('_ensurePublicSideEffectAllowed(')) {
-    _fail(
-      _Violation(
-        filePath: filePath,
-        line: guardLineIndex + 1,
-        message:
-            'interactive API violation: public SceneControllerInteractive '
-            'entrypoints must guard resolver purity with '
-            '_ensurePublicSideEffectAllowed(...).',
-      ),
-    );
-  }
-
-  final hasAllowAfterDispose = guardLine.contains('allowAfterDispose: true');
-  if (signature.isDispose) {
-    if (!hasAllowAfterDispose) {
-      _fail(
-        _Violation(
-          filePath: filePath,
-          line: guardLineIndex + 1,
-          message:
-              'interactive API violation: dispose() must guard resolver '
-              'purity with allowAfterDispose: true.',
-        ),
-      );
-    }
-    return;
-  }
-
-  if (hasAllowAfterDispose) {
-    _fail(
-      _Violation(
-        filePath: filePath,
-        line: guardLineIndex + 1,
-        message:
-            'interactive API violation: only dispose() may call '
-            '_ensurePublicSideEffectAllowed(..., allowAfterDispose: true).',
-      ),
-    );
-  }
-}
-
-void _checkInteractiveResolverPurityGuardrails({
-  required Directory root,
-  required String rootAbsPosix,
-}) {
-  final file = File(
-    '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}src${Platform.pathSeparator}interactive${Platform.pathSeparator}scene_controller_interactive.dart',
-  );
-  if (!file.existsSync()) {
-    return;
-  }
-
-  final filePosixPath = _toRepoRelPosixPath(
-    absPosixPath: _toPosixPath(file.absolute.path),
-    rootAbsPosixPath: rootAbsPosix,
-  );
-  final lines = file.readAsLinesSync();
-
-  var seenInteractiveClass = false;
-  var classBraceDepth = 0;
-  var ignoringConstructorDeclaration = false;
-  for (var i = 0; i < lines.length; i++) {
-    final line = lines[i];
-    final trimmed = line.trimLeft();
-
-    if (!seenInteractiveClass) {
-      if (!line.contains('class SceneControllerInteractive')) {
-        continue;
-      }
-      seenInteractiveClass = true;
-    }
-
-    if (classBraceDepth == 0) {
-      classBraceDepth = classBraceDepth + _braceDelta(line);
-      continue;
-    }
-
-    if (classBraceDepth == 1) {
-      if (ignoringConstructorDeclaration) {
-        if (RegExp(r'\)\s*\{').hasMatch(trimmed)) {
-          ignoringConstructorDeclaration = false;
-        }
-      } else if (trimmed.startsWith('SceneControllerInteractive(')) {
-        if (!RegExp(r'\)\s*\{').hasMatch(trimmed)) {
-          ignoringConstructorDeclaration = true;
-        }
-      } else {
-        final signature = _parseInteractiveEntrypointSignature(
-          trimmed,
-          filePath: filePosixPath,
-          lineNo: i + 1,
-        );
-        if (signature != null) {
-          _validateInteractiveEntrypointGuard(
-            signature: signature,
-            lines: lines,
-            signatureLineIndex: i,
-            filePath: filePosixPath,
-          );
-        }
-      }
-    }
-
-    classBraceDepth = classBraceDepth + _braceDelta(line);
-    if (classBraceDepth == 0) {
-      break;
-    }
-  }
-}
-
-void main(List<String> args) {
+Future<void> main(List<String> args) async {
   final root = Directory.current;
   final rootAbsPosix = _toPosixPath(root.absolute.path);
   final packageName = _readPackageNameOrFallback(root);
-  _checkLibSrcStructuralGuardrails(root: root, rootAbsPosix: rootAbsPosix);
-  final exportedFiles = _checkEntrypointGuardrails(
-    root: root,
-    rootAbsPosix: rootAbsPosix,
-    packageName: packageName,
+  final analysisCollection = AnalysisContextCollection(
+    includedPaths: <String>[root.absolute.path],
   );
 
-  _checkExportedApiImports(
+  _checkLibSrcStructuralGuardrails(root: root, rootAbsPosix: rootAbsPosix);
+
+  final exportedFiles = await _checkEntrypointGuardrails(
+    root: root,
+    rootAbsPosix: rootAbsPosix,
+    packageName: packageName,
+    analysisCollection: analysisCollection,
+  );
+
+  await _checkExportedApiImports(
     root: root,
     rootAbsPosix: rootAbsPosix,
     packageName: packageName,
     exportedFiles: exportedFiles,
+    analysisCollection: analysisCollection,
   );
-  _checkRootLibFilesAreExportOnly(root: root, rootAbsPosix: rootAbsPosix);
-  _checkSceneWriteTxnContract(root: root, rootAbsPosix: rootAbsPosix);
-  _checkExportedApiMutableTypeLeak(
+  await _checkRootLibFilesAreExportOnly(
+    root: root,
+    rootAbsPosix: rootAbsPosix,
+    analysisCollection: analysisCollection,
+  );
+  await _checkSceneWriteTxnContract(
+    root: root,
+    rootAbsPosix: rootAbsPosix,
+    analysisCollection: analysisCollection,
+  );
+  await _checkExportedApiMutableTypeLeak(
     root: root,
     rootAbsPosix: rootAbsPosix,
     exportedFiles: exportedFiles,
+    analysisCollection: analysisCollection,
   );
-  _checkInteractiveResolverPurityGuardrails(
+  await _checkInteractiveResolverPurityGuardrails(
     root: root,
     rootAbsPosix: rootAbsPosix,
+    analysisCollection: analysisCollection,
   );
-  _checkControllerGuardrails(root: root, rootAbsPosix: rootAbsPosix);
+  await _checkControllerGuardrails(
+    root: root,
+    rootAbsPosix: rootAbsPosix,
+    analysisCollection: analysisCollection,
+  );
 
   stdout.writeln('OK: guardrails');
 }

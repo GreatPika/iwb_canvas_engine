@@ -11,6 +11,9 @@ All notable changes to `iwb_canvas_engine` are documented here.
 - Added `tool/check_public_api_surface.dart` with
   `tool/goldens/public_api_symbols.txt` to enforce a stable exported symbol set
   from `lib/iwb_canvas_engine.dart`.
+- Migrated `tool/check_guardrails.dart` and
+  `tool/check_import_boundaries.dart` to `package:analyzer` AST parsing to
+  harden multiline `import`/`export`/`part` and signature guardrails.
 - Expanded docs to improve `PathFillRule` discoverability in public API
   references.
 - Documented that the `contract/` layer is intentionally Flutter-oriented

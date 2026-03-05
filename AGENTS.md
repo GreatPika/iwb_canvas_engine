@@ -51,13 +51,12 @@ app UI, product workflows, or backend logic.
 
 1. `dart format --output=none --set-exit-if-changed lib test example/lib tool`
 2. `flutter analyze`
-3. `flutter test`
-4. `flutter test --coverage`
-5. `dart run tool/check_coverage.dart`
-6. `dart run tool/check_invariant_coverage.dart`
-7. `dart run tool/check_guardrails.dart`
-8. `dart run tool/check_import_boundaries.dart`
-9. `dart run tool/check_public_api_surface.dart`
+3. `flutter test --coverage`
+4. `dart run tool/check_coverage.dart`
+5. `dart run tool/check_invariant_coverage.dart`
+6. `dart run tool/check_guardrails.dart`
+7. `dart run tool/check_import_boundaries.dart`
+8. `dart run tool/check_public_api_surface.dart`
 
 ## Release hygiene
 

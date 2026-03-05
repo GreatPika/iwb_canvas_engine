@@ -1,5 +1,9 @@
 import 'dart:io';
 
+import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
+import 'package:analyzer/dart/analysis/results.dart';
+import 'package:analyzer/dart/ast/ast.dart';
+
 import 'src/layer_guardrails.dart';
 
 // Invariants enforced by this tool:
@@ -30,6 +34,34 @@ class _Violation {
 
   @override
   String toString() => '$filePath:$line: $message ($directive: $target)';
+}
+
+class _DirectiveUriRef {
+  const _DirectiveUriRef({required this.uri, required this.offset});
+
+  final String uri;
+  final int offset;
+}
+
+List<_DirectiveUriRef> _collectDirectiveUriRefs(UriBasedDirective directive) {
+  final refs = <_DirectiveUriRef>[];
+
+  void addUri(StringLiteral literal) {
+    final uri = literal.stringValue;
+    if (uri == null || uri.isEmpty) {
+      return;
+    }
+    refs.add(_DirectiveUriRef(uri: uri, offset: literal.offset));
+  }
+
+  addUri(directive.uri);
+  if (directive is NamespaceDirective) {
+    for (final configuration in directive.configurations) {
+      addUri(configuration.uri);
+    }
+  }
+
+  return refs;
 }
 
 String _normalizePosixPath(String path) {
@@ -220,60 +252,6 @@ String _readPackageNameOrFallback(Directory root) {
   return 'iwb_canvas_engine';
 }
 
-List<String> _extractAllQuotedStrings(String text) {
-  final out = <String>[];
-
-  for (var i = 0; i < text.length; i++) {
-    final ch = text[i];
-    if (ch != "'" && ch != '"') {
-      continue;
-    }
-
-    final quote = ch;
-    final buf = StringBuffer();
-    var escaped = false;
-    var j = i + 1;
-    for (; j < text.length; j++) {
-      final c = text[j];
-      if (escaped) {
-        buf.write(c);
-        escaped = false;
-        continue;
-      }
-      if (c == r'\') {
-        escaped = true;
-        continue;
-      }
-      if (c == quote) {
-        break;
-      }
-      buf.write(c);
-    }
-    if (j >= text.length) {
-      break;
-    }
-
-    out.add(buf.toString());
-    i = j;
-  }
-
-  return out;
-}
-
-List<String>? _extractDirectiveTargets(
-  String line, {
-  required String directive,
-}) {
-  final trimmed = line.trimLeft();
-  if (trimmed.startsWith('//')) {
-    return null;
-  }
-  if (!trimmed.startsWith('$directive ')) {
-    return null;
-  }
-  return _extractAllQuotedStrings(trimmed);
-}
-
 String? _commandGroupForFilePosix(String filePosixPath) {
   const marker = '/lib/src/controller/commands/';
   final idx = filePosixPath.indexOf(marker);
@@ -312,7 +290,6 @@ String? _resolveToRepoRelTargetPosix({
     return _normalizePosixPath('/lib/$rest');
   }
 
-  // Relative (including "file:"-like oddities is intentionally not supported).
   return _posixJoin(fileDirRepoRelPosix, targetPosix);
 }
 
@@ -391,7 +368,30 @@ bool _isAllowedForInternal({
   return false;
 }
 
-void main(List<String> args) {
+Future<ParsedUnitResult> _parseUnitOrFail({
+  required AnalysisContextCollection collection,
+  required String absPath,
+  required String repoRelPath,
+}) {
+  final context = collection.contextFor(absPath);
+  final result = context.currentSession.getParsedUnit(absPath);
+  if (result is ParsedUnitResult) {
+    return Future<ParsedUnitResult>.value(result);
+  }
+
+  stderr.writeln('FAIL: import boundary violations (1)');
+  stderr.writeln(
+    '- $repoRelPath:1: tool failure: unable to parse Dart unit '
+    '(result: ${result.runtimeType}) (parse: $repoRelPath)',
+  );
+  exit(1);
+}
+
+int _lineForOffset(ParsedUnitResult result, int offset) {
+  return result.lineInfo.getLocation(offset).lineNumber;
+}
+
+Future<void> main(List<String> args) async {
   final root = Directory.current;
   final rootAbsPosix = _toPosixPath(root.absolute.path);
   final packageName = _readPackageNameOrFallback(root);
@@ -403,6 +403,10 @@ void main(List<String> args) {
     stderr.writeln('No lib/src directory found. Nothing to check.');
     exit(0);
   }
+
+  final analysisCollection = AnalysisContextCollection(
+    includedPaths: <String>[root.absolute.path],
+  );
 
   final violations = <_Violation>[];
   final topLevelLayoutViolations = collectTopLevelLibSrcLayoutViolations(
@@ -425,14 +429,15 @@ void main(List<String> args) {
     );
   }
 
-  for (final entity in srcRoot.listSync(recursive: true, followLinks: false)) {
-    if (entity is! File) {
-      continue;
-    }
-    if (!entity.path.endsWith('.dart')) {
-      continue;
-    }
+  final dartFiles =
+      srcRoot
+          .listSync(recursive: true, followLinks: false)
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.dart'))
+          .toList(growable: false)
+        ..sort((a, b) => a.path.compareTo(b.path));
 
+  for (final entity in dartFiles) {
     final fileAbsPosixPath = _toPosixPath(entity.absolute.path);
     final filePosixPath = _toRepoRelPosixPath(
       absPosixPath: fileAbsPosixPath,
@@ -467,6 +472,13 @@ void main(List<String> args) {
     if (fileLayer == null) {
       continue;
     }
+
+    final parsed = await _parseUnitOrFail(
+      collection: analysisCollection,
+      absPath: entity.absolute.path,
+      repoRelPath: filePosixPath,
+    );
+
     final isCommandFile = filePosixPath.startsWith(
       '/lib/src/controller/commands/',
     );
@@ -475,31 +487,22 @@ void main(List<String> args) {
       '/lib/src/controller/internal/',
     );
 
-    final content = entity.readAsStringSync();
-
     final currentCommand = isCommandFile
         ? _commandGroupForFilePosix(filePosixPath)
         : null;
     final fileDirRepoRelPosix = _posixDirname(filePosixPath);
 
-    final lines = content.split('\n');
-    for (var i = 0; i < lines.length; i++) {
-      final lineNo = i + 1;
-      final line = lines[i];
+    for (final directive in parsed.unit.directives) {
+      final directiveLineNo = _lineForOffset(parsed, directive.offset);
 
-      final partTargets = _extractDirectiveTargets(line, directive: 'part');
-      final partOfTargets = _extractDirectiveTargets(
-        line,
-        directive: 'part of',
-      );
       if (isCommandScopeFile &&
-          (partTargets != null || partOfTargets != null)) {
+          (directive is PartDirective || directive is PartOfDirective)) {
         violations.add(
           _Violation(
             filePath: filePosixPath,
-            line: lineNo,
+            line: directiveLineNo,
             directive: 'part',
-            target: line.trim(),
+            target: directive.toSource(),
             message:
                 'controller structure violation: commands/** must not use '
                 'part/part of directives',
@@ -507,17 +510,17 @@ void main(List<String> args) {
         );
       }
 
-      final importTargets = _extractDirectiveTargets(line, directive: 'import');
-      final exportTargets = _extractDirectiveTargets(line, directive: 'export');
-      final directive = importTargets != null
-          ? 'import'
-          : (exportTargets != null ? 'export' : null);
-      final targets = importTargets ?? exportTargets;
-      if (directive == null || targets == null) {
+      final isImport = directive is ImportDirective;
+      final isExport = directive is ExportDirective;
+      if (!isImport && !isExport) {
         continue;
       }
 
-      for (final target in targets) {
+      final directiveKind = isImport ? 'import' : 'export';
+      final uriDirective = directive as UriBasedDirective;
+      for (final uriRef in _collectDirectiveUriRefs(uriDirective)) {
+        final lineNo = _lineForOffset(parsed, uriRef.offset);
+        final target = uriRef.uri;
         final targetPosix = _toPosixPath(target);
         final resolvedRepoRelPosix = _resolveToRepoRelTargetPosix(
           targetPosix: targetPosix,
@@ -537,7 +540,7 @@ void main(List<String> args) {
                 _Violation(
                   filePath: filePosixPath,
                   line: lineNo,
-                  directive: directive,
+                  directive: directiveKind,
                   target: target,
                   message:
                       layoutViolation ??
@@ -553,11 +556,11 @@ void main(List<String> args) {
                 _Violation(
                   filePath: filePosixPath,
                   line: lineNo,
-                  directive: directive,
+                  directive: directiveKind,
                   target: target,
                   message:
                       'layer DAG violation: '
-                      '${_layerLabel(fileLayer)}/** must not $directive '
+                      '${_layerLabel(fileLayer)}/** must not $directiveKind '
                       '${_layerLabel(targetLayer)}/** '
                       '($resolvedRepoRelPosix)',
                 ),
@@ -578,11 +581,11 @@ void main(List<String> args) {
             _Violation(
               filePath: filePosixPath,
               line: lineNo,
-              directive: directive,
+              directive: directiveKind,
               target: target,
               message:
                   'controller structure violation: $controllerScope must not '
-                  '$directive controller/scene_controller.dart',
+                  '$directiveKind controller/scene_controller.dart',
             ),
           );
           hasSpecificViolation = true;
@@ -597,11 +600,11 @@ void main(List<String> args) {
               _Violation(
                 filePath: filePosixPath,
                 line: lineNo,
-                directive: directive,
+                directive: directiveKind,
                 target: target,
                 message:
                     'controller structure violation: internal/** must not '
-                    '$directive commands/**',
+                    '$directiveKind commands/**',
               ),
             );
             hasSpecificViolation = true;
@@ -621,11 +624,11 @@ void main(List<String> args) {
                 _Violation(
                   filePath: filePosixPath,
                   line: lineNo,
-                  directive: directive,
+                  directive: directiveKind,
                   target: target,
                   message:
                       'controller structure violation: commands/** must not '
-                      '$directive other commands '
+                      '$directiveKind other commands '
                       '(current=$currentCommand, import=$importedCommand)',
                 ),
               );
@@ -652,14 +655,14 @@ void main(List<String> args) {
               targetPosix.startsWith('package:');
           final message = isExternalPackage
               ? 'controller structure violation: $controllerScope has a '
-                    'disallowed external package $directive'
+                    'disallowed external package $directiveKind'
               : 'controller structure violation: $controllerScope has a '
-                    'disallowed $directive target';
+                    'disallowed $directiveKind target';
           violations.add(
             _Violation(
               filePath: filePosixPath,
               line: lineNo,
-              directive: directive,
+              directive: directiveKind,
               target: target,
               message: '$message ($details)',
             ),
