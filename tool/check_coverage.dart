@@ -129,12 +129,13 @@ void main(List<String> args) {
   // Declaration-only Dart units may not be emitted by VM lcov as SF records.
   // Keep this list minimal and limited to const/enum/interface/typedef files.
   const excludedFromLcov = <String>{
-    'lib/src/core/defaults.dart',
+    'lib/src/core/tool_defaults.dart',
     'lib/src/core/grid_safety_limits.dart',
     'lib/src/core/interaction_types.dart',
     'lib/src/core/scene_limits.dart',
     'lib/src/contract/ids.dart',
     'lib/src/contract/path_fill_rule.dart',
+    'lib/src/contract/scene_defaults.dart',
     'lib/src/contract/scene_render_state.dart',
     'lib/src/contract/scene_write_txn.dart',
     'lib/src/model/scene_value_validation.dart',

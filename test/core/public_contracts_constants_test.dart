@@ -1,8 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/src/core/defaults.dart';
+import 'package:iwb_canvas_engine/src/contract/scene_defaults.dart';
+import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/core/grid_safety_limits.dart';
 import 'package:iwb_canvas_engine/src/core/interaction_types.dart';
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart';
+import 'package:iwb_canvas_engine/src/core/tool_defaults.dart';
 
 void main() {
   group('Scene defaults', () {
@@ -26,10 +28,26 @@ void main() {
     );
 
     test('tool defaults are within sane UI ranges', () {
-      expect(SceneDefaults.penThickness, greaterThan(0));
-      expect(SceneDefaults.highlighterThickness, greaterThan(0));
-      expect(SceneDefaults.eraserThickness, greaterThan(0));
-      expect(SceneDefaults.highlighterOpacity, inInclusiveRange(0.0, 1.0));
+      expect(ToolDefaults.penThickness, greaterThan(0));
+      expect(ToolDefaults.highlighterThickness, greaterThan(0));
+      expect(ToolDefaults.eraserThickness, greaterThan(0));
+      expect(ToolDefaults.highlighterOpacity, inInclusiveRange(0.0, 1.0));
+    });
+
+    test('public snapshot defaults stay aligned with shared defaults', () {
+      final snapshotPalette = ScenePaletteSnapshot();
+      const snapshotGrid = GridSnapshot();
+      const snapshotBackground = BackgroundSnapshot();
+
+      expect(SceneDefaults.penColors, orderedEquals(snapshotPalette.penColors));
+      expect(
+        SceneDefaults.backgroundColors,
+        orderedEquals(snapshotPalette.backgroundColors),
+      );
+      expect(SceneDefaults.gridSizes, orderedEquals(snapshotPalette.gridSizes));
+      expect(snapshotGrid.cellSize, SceneDefaults.gridCellSize);
+      expect(snapshotGrid.color, SceneDefaults.gridColor);
+      expect(snapshotBackground.color, SceneDefaults.backgroundColors.first);
     });
   });
 

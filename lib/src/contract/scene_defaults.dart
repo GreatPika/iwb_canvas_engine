@@ -1,7 +1,9 @@
 import 'dart:ui';
 
-/// Default values used by the engine for palettes and tool settings.
+/// Shared palette/grid defaults used across public snapshots and core scene.
 class SceneDefaults {
+  static const double gridCellSize = 10;
+
   static const List<Color> penColors = <Color>[
     Color(0xFF000000),
     Color(0xFFE53935),
@@ -11,20 +13,14 @@ class SceneDefaults {
     Color(0xFF8E24AA),
   ];
 
+  static const Color backgroundColor = Color(0xFFFFFFFF);
   static const List<Color> backgroundColors = <Color>[
-    Color(0xFFFFFFFF),
+    backgroundColor,
     Color(0xFFFFF9C4),
     Color(0xFFBBDEFB),
     Color(0xFFC8E6C9),
   ];
 
-  static const double gridCellSize = 10;
   static const List<double> gridSizes = <double>[gridCellSize, 20, 40, 80];
-
-  static const double penThickness = 3;
-  static const double highlighterThickness = 12;
-  static const double highlighterOpacity = 0.4;
-  static const double eraserThickness = 20;
-
   static const Color gridColor = Color(0x1F000000);
 }

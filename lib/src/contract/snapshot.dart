@@ -4,29 +4,8 @@ export 'ids.dart' show LayerId, NodeId;
 export 'path_fill_rule.dart' show PathFillRule;
 import 'ids.dart';
 import 'path_fill_rule.dart';
+import 'scene_defaults.dart';
 import 'transform2d.dart';
-
-const double _defaultGridCellSize = 10;
-const List<Color> _defaultPenColors = <Color>[
-  Color(0xFF000000),
-  Color(0xFFE53935),
-  Color(0xFF1E88E5),
-  Color(0xFF43A047),
-  Color(0xFFFB8C00),
-  Color(0xFF8E24AA),
-];
-const List<Color> _defaultBackgroundColors = <Color>[
-  Color(0xFFFFFFFF),
-  Color(0xFFFFF9C4),
-  Color(0xFFBBDEFB),
-  Color(0xFFC8E6C9),
-];
-const List<double> _defaultGridSizes = <double>[
-  _defaultGridCellSize,
-  20,
-  40,
-  80,
-];
 
 /// Immutable scene snapshot exposed by the public API.
 class SceneSnapshot {
@@ -84,7 +63,7 @@ class CameraSnapshot {
 /// Immutable background snapshot.
 class BackgroundSnapshot {
   const BackgroundSnapshot({
-    this.color = const Color(0xFFFFFFFF),
+    this.color = SceneDefaults.backgroundColor,
     this.grid = const GridSnapshot(),
   });
 
@@ -96,8 +75,8 @@ class BackgroundSnapshot {
 class GridSnapshot {
   const GridSnapshot({
     this.isEnabled = false,
-    this.cellSize = _defaultGridCellSize,
-    this.color = const Color(0x1F000000),
+    this.cellSize = SceneDefaults.gridCellSize,
+    this.color = SceneDefaults.gridColor,
   });
 
   final bool isEnabled;
@@ -112,15 +91,19 @@ class ScenePaletteSnapshot {
     List<Color>? backgroundColors,
     List<double>? gridSizes,
   }) : penColors = List<Color>.unmodifiable(
-         penColors == null ? _defaultPenColors : List<Color>.from(penColors),
+         penColors == null
+             ? SceneDefaults.penColors
+             : List<Color>.from(penColors),
        ),
        backgroundColors = List<Color>.unmodifiable(
          backgroundColors == null
-             ? _defaultBackgroundColors
+             ? SceneDefaults.backgroundColors
              : List<Color>.from(backgroundColors),
        ),
        gridSizes = List<double>.unmodifiable(
-         gridSizes == null ? _defaultGridSizes : List<double>.from(gridSizes),
+         gridSizes == null
+             ? SceneDefaults.gridSizes
+             : List<double>.from(gridSizes),
        );
 
   final List<Color> penColors;
@@ -203,6 +186,7 @@ class TextNodeSnapshot extends NodeSnapshot {
   });
 
   final String text;
+
   /// Canonical output metadata derived from text layout inputs.
   ///
   /// During snapshot import/canonicalization, the engine may ignore the input

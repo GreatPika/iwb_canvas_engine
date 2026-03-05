@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-import 'defaults.dart';
+import '../contract/scene_defaults.dart';
 import 'nodes.dart';
 import '../contract/snapshot.dart' show LayerId;
 

@@ -4,17 +4,18 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 
 import '../core/action_events.dart';
-import '../core/defaults.dart';
 import '../core/geometry.dart';
 import '../core/grid_safety_limits.dart';
 import '../core/interaction_types.dart';
 import '../core/nodes.dart' show TextNode;
 import '../core/pointer_input.dart';
+import '../core/tool_defaults.dart';
 import '../contract/transform2d.dart';
 import '../controller/scene_controller.dart';
 import '../contract/canvas_pointer_input.dart';
 import '../contract/node_patch.dart';
 import '../contract/node_spec.dart';
+import '../contract/scene_defaults.dart';
 import '../contract/scene_render_state.dart';
 import '../contract/scene_write_txn.dart';
 import '../contract/snapshot.dart';
@@ -182,11 +183,11 @@ class SceneControllerInteractive extends ChangeNotifier
   CanvasMode _mode = CanvasMode.move;
   DrawTool _drawTool = DrawTool.pen;
   Color _drawColor = SceneDefaults.penColors.first;
-  double _penThickness = SceneDefaults.penThickness;
-  double _highlighterThickness = SceneDefaults.highlighterThickness;
-  double _lineThickness = SceneDefaults.penThickness;
-  double _eraserThickness = SceneDefaults.eraserThickness;
-  double _highlighterOpacity = SceneDefaults.highlighterOpacity;
+  double _penThickness = ToolDefaults.penThickness;
+  double _highlighterThickness = ToolDefaults.highlighterThickness;
+  double _lineThickness = ToolDefaults.penThickness;
+  double _eraserThickness = ToolDefaults.eraserThickness;
+  double _highlighterOpacity = ToolDefaults.highlighterOpacity;
 
   final bool clearSelectionOnDrawModeEnter;
   final MoveCommitDeltaResolver? moveCommitDeltaResolver;
