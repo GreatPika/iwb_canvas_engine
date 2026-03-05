@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
+  static-checks:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -47,11 +47,56 @@ jobs:
       - name: Public API surface
         run: dart run tool/check_public_api_surface.dart
 
+  tests-coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.38.9"
+          cache: true
+
+      - name: Pub get
+        run: flutter pub get
+
+      - name: Resolve test concurrency
+        id: test-jobs
+        run: |
+          JOBS="$(getconf _NPROCESSORS_ONLN)"
+          if [ "$JOBS" -gt 1 ]; then
+            JOBS=$((JOBS - 1))
+          fi
+          echo "jobs=$JOBS" >> "$GITHUB_OUTPUT"
+
       - name: Test
-        run: flutter test --coverage
+        run: flutter test --coverage --no-pub -j "${{ steps.test-jobs.outputs.jobs }}"
 
       - name: Coverage (100%)
         run: dart run tool/check_coverage.dart
+
+  smoke-bench:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.38.9"
+          cache: true
+
+      - name: Pub get
+        run: flutter pub get
 
       - name: Load profiles (smoke)
         run: dart run tool/bench/run_load_profiles.dart --profile=smoke --output=build/bench/load_profiles_smoke.json
@@ -92,6 +137,24 @@ jobs:
         with:
           name: load-profiles-smoke-diff
           path: build/bench/load_profiles_smoke_diff.json
+
+  release-hygiene:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.38.9"
+          cache: true
+
+      - name: Pub get
+        run: flutter pub get
 
       - name: Dartdoc
         run: dart doc

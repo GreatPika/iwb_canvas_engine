@@ -42,6 +42,7 @@ app UI, product workflows, or backend logic.
 ## Validation policy
 
 - Run and report the standard checks for code changes.
+- Always run the full test suite for code changes (no quick/full split).
 - Documentation-only changes do not require the full Flutter pipeline unless the
   task also changes code, tooling contracts, or executable examples.
 - If `tool/invariant_registry.dart` changes, always run and report
@@ -51,7 +52,7 @@ app UI, product workflows, or backend logic.
 
 1. `dart format --output=none --set-exit-if-changed lib test example/lib tool`
 2. `flutter analyze`
-3. `flutter test --coverage`
+3. `JOBS=$(getconf _NPROCESSORS_ONLN); JOBS=$((JOBS>1?JOBS-1:1)); flutter test --coverage --no-pub -j "$JOBS"`
 4. `dart run tool/check_coverage.dart`
 5. `dart run tool/check_invariant_coverage.dart`
 6. `dart run tool/check_guardrails.dart`
