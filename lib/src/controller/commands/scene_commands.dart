@@ -1,10 +1,10 @@
 import 'dart:ui' show Color, Offset;
 
 import '../../core/nodes.dart';
+import '../../contract/ids.dart' show LayerId;
 import '../../contract/transform2d.dart';
 import '../../contract/node_patch.dart';
 import '../../contract/node_spec.dart';
-import '../../contract/snapshot.dart' show LayerId;
 import '../../contract/scene_write_txn.dart';
 
 class SceneCommands {

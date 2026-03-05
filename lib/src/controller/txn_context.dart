@@ -2,11 +2,11 @@ import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
 
+import '../contract/ids.dart' show LayerId;
 import '../core/nodes.dart';
 import '../core/scene.dart';
 import '../model/document.dart';
 import '../model/document_clone.dart';
-import '../contract/snapshot.dart' show LayerId;
 import 'change_set.dart';
 
 class TxnContext {

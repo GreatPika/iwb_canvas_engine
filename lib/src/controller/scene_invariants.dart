@@ -3,9 +3,9 @@ import 'dart:ui';
 import '../core/grid_safety_limits.dart';
 import '../core/nodes.dart';
 import '../core/scene.dart';
+import '../contract/ids.dart' show LayerId;
 import '../model/document_clone.dart';
 import '../model/document.dart';
-import '../contract/snapshot.dart' show LayerId;
 
 List<String> txnCollectStoreInvariantViolations({
   required Scene scene,
