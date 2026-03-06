@@ -13,7 +13,8 @@ language: russian
 ## Файлы шагов
 
 - [x] [Шаг 1. Зафиксировать среду, конвейер и правила анализа](development_plan/step_01_environment_pipeline_and_analysis.md)
-- [ ] [Шаг 2. Ввести валидированные типы и фабрики на публичной границе](development_plan/step_02_validated_boundary_types_and_factories.md)
+- [x] [Шаг 2. Ввести валидированные типы и фабрики на публичной границе](development_plan/step_02_validated_boundary_types_and_factories.md)
+- [x] [Шаг 2.1. Закрыть boundary-drift после шага 2](development_plan/step_02_1_close_boundary_drift_after_step_2.md)
 - [ ] [Шаг 3. Закрыть сырые публичные конструкторы и зафиксировать boundary-семантику](development_plan/step_03_public_boundary_constructors_and_semantics.md)
 - [ ] [Шаг 4. Сразу выровнять точный публичный API-контракт](development_plan/step_04_public_api_contract_alignment.md)
 - [ ] [Шаг 5. Ввести единый `ScenePolicy`](development_plan/step_05_scene_policy.md)

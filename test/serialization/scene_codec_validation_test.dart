@@ -115,7 +115,7 @@ void main() {
   });
 
   test('SceneDataException implements FormatException shape', () {
-    const error = SceneDataException(
+    final error = SceneDataException(
       code: SceneDataErrorCode.invalidValue,
       message: 'bad',
       source: 'source',
@@ -684,7 +684,7 @@ void main() {
               e is SceneDataException &&
               e.path == 'layers[0].nodes[0].localPoints[0]' &&
               e.message ==
-                  'layers[0].nodes[0].localPoints[0] must be an object with x/y.',
+                  'Field layers[0].nodes[0].localPoints[0] must be an object with x/y.',
         ),
       ),
     );

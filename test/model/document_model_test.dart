@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart' hide NodeId;
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
+import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
+    show kMaxImageIdLength;
 import 'package:iwb_canvas_engine/src/model/document.dart';
 
 // INV:INV-ENG-TEXT-SIZE-DERIVED
@@ -889,6 +891,14 @@ void main() {
         message: 'Must be finite.',
       ),
       (
+        spec: ImageNodeSpec(
+          imageId: 'x' * (kMaxImageIdLength + 1),
+          size: const Size(1, 1),
+        ),
+        field: 'spec.imageId',
+        message: 'Length must be <= $kMaxImageIdLength characters.',
+      ),
+      (
         spec: RectNodeSpec(size: const Size(1, 1), strokeWidth: -1),
         field: 'spec.strokeWidth',
         message: 'Must be >= 0.',
@@ -1159,6 +1169,22 @@ void main() {
           field: 'patch.size',
           message: 'PatchField.nullValue() is invalid for non-nullable field.',
         ),
+        (
+          patch: const RectNodePatch(
+            id: 'r1',
+            common: CommonNodePatch(hitPadding: PatchField<double>.value(-1)),
+          ),
+          field: 'patch.common.hitPadding',
+          message: 'Must be >= 0.',
+        ),
+        (
+          patch: const RectNodePatch(
+            id: 'r1',
+            strokeWidth: PatchField<double>.value(-1),
+          ),
+          field: 'patch.strokeWidth',
+          message: 'Must be >= 0.',
+        ),
       ];
 
       for (final invalid in invalidCases) {
@@ -1176,4 +1202,76 @@ void main() {
       }
     },
   );
+
+  test('node patch rejects invalid image and text boundary values', () {
+    final image = ImageNode(
+      id: 'img-boundary',
+      imageId: 'asset:ok',
+      size: const Size(1, 1),
+    );
+    expect(
+      () => txnApplyNodePatch(
+        image,
+        ImageNodePatch(
+          id: 'img-boundary',
+          imageId: PatchField<String>.value('x' * (kMaxImageIdLength + 1)),
+        ),
+      ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is ArgumentError &&
+              e.name == 'patch.imageId' &&
+              e.message == 'Length must be <= $kMaxImageIdLength characters.',
+        ),
+      ),
+    );
+
+    final text = TextNode(
+      id: 'text-boundary',
+      text: 'x',
+      size: const Size(1, 1),
+      color: const Color(0xFF000000),
+    );
+    final invalidCases = <({NodePatch patch, String field, String message})>[
+      (
+        patch: const TextNodePatch(
+          id: 'text-boundary',
+          fontSize: PatchField<double>.value(0),
+        ),
+        field: 'patch.fontSize',
+        message: 'Must be > 0.',
+      ),
+      (
+        patch: const TextNodePatch(
+          id: 'text-boundary',
+          maxWidth: PatchField<double?>.value(0),
+        ),
+        field: 'patch.maxWidth',
+        message: 'Must be > 0.',
+      ),
+      (
+        patch: const TextNodePatch(
+          id: 'text-boundary',
+          lineHeight: PatchField<double?>.value(0),
+        ),
+        field: 'patch.lineHeight',
+        message: 'Must be > 0.',
+      ),
+    ];
+
+    for (final invalid in invalidCases) {
+      expect(
+        () => txnApplyNodePatch(text, invalid.patch),
+        throwsA(
+          predicate(
+            (e) =>
+                e is ArgumentError &&
+                e.name == invalid.field &&
+                e.message == invalid.message,
+          ),
+        ),
+      );
+    }
+  });
 }

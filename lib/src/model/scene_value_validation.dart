@@ -1,7 +1,5 @@
 import 'dart:ui';
 
-import 'package:path_drawing/path_drawing.dart';
-
 import '../core/nodes.dart';
 import '../core/scene.dart';
 import '../contract/transform2d.dart';
@@ -9,6 +7,18 @@ import '../contract/node_patch.dart';
 import '../contract/node_spec.dart';
 import '../contract/patch_field.dart';
 import '../contract/snapshot.dart';
+import '../contract/validated/finite_offset_value.dart';
+import '../contract/validated/font_family_value.dart';
+import '../contract/validated/image_id_value.dart';
+import '../contract/validated/instance_revision_value.dart';
+import '../contract/validated/layer_id_value.dart';
+import '../contract/validated/node_id_value.dart';
+import '../contract/validated/non_negative_finite_double_value.dart';
+import '../contract/validated/opacity_value.dart';
+import '../contract/validated/positive_finite_double_value.dart';
+import '../contract/validated/svg_path_data_value.dart';
+import '../contract/validated/text_content_value.dart';
+import '../contract/validated/validated_value_support.dart';
 
 part 'scene_value_validation_primitives.part.dart';
 part 'scene_value_validation_palette_grid.part.dart';

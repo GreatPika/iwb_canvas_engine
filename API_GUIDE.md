@@ -76,6 +76,18 @@ on Flutter-oriented primitives (`dart:ui`), and `SceneRenderState` uses
 - utilities:
   - `Transform2D`
   - `SceneBuilder`
+  - validated boundary values:
+    - `NodeIdValue`
+    - `LayerIdValue`
+    - `ImageIdValue`
+    - `InstanceRevisionValue`
+    - `FiniteOffsetValue`
+    - `PositiveFiniteDoubleValue`
+    - `NonNegativeFiniteDoubleValue`
+    - `OpacityValue`
+    - `SvgPathDataValue`
+    - `TextContentValue`
+    - `FontFamilyValue`
 - serialization:
   - `encodeScene`
   - `encodeSceneToJson`
@@ -195,6 +207,13 @@ Key rules:
 
 - `SceneController.addNode(...)` accepts only `NodeSpec`
 - `NodeSpec.id` is optional; the controller can generate ids
+- explicit ids remain `String`-compatible at the public API boundary, but the
+  supported parsing/generation policy is now exposed through `NodeIdValue`,
+  `LayerIdValue`, `parseNodeId(...)`, `parseLayerId(...)`,
+  `generateNodeId(...)`, `generateLayerId(...)`,
+  `tryParseGeneratedNodeIdSeed(...)`, and `tryParseGeneratedLayerIdSeed(...)`
+- generated-id recognition is canonical-only: helper parsing accepts
+  `node-<n>` / `layer-<n>` without leading-zero variants
 - malformed values fail fast with `ArgumentError`
 
 ### 4.2 `NodePatch`
@@ -224,9 +243,27 @@ Runtime write APIs validate aggressively:
 - invalid `NodeSpec` or `NodePatch` values throw `ArgumentError`
 - duplicate explicit `NodeSpec.id` in `addNode(...)` / `writeNodeInsert(...)`
   throws `ArgumentError`
+- validated boundary value types expose the supported parse rules without
+  changing the wire/runtime representation used by `SceneSnapshot`, `NodeSpec`,
+  `NodePatch`, `NodeId`, or `LayerId`
+- supported validated-value factory surface is `parse(...)`, `of(...)`, and
+  `fromJson(...)`; no validation-bypass fast path is part of the public
+  contract
+- `NodeIdValue` / `LayerIdValue` reject blank ids, enforce max lengths, and
+  keep the legacy generated-id policy (`node-<n>`, `layer-<n>`) explicit with
+  canonical-only recognition
+- `ImageIdValue` enforces the public max length for image ids while preserving
+  the current empty-string runtime contract
+- `InstanceRevisionValue` keeps the zero-allowed snapshot policy separate from
+  the positive-only internal-scene policy
+- `TextContentValue` enforces text length while still allowing empty text
+- `FontFamilyValue` rejects blank values and enforces the public max length
+- `SvgPathDataValue` enforces non-empty bounded path payloads and SVG parsing
 - non-finite `Transform2D` and `Offset` values are rejected by transform and
   translate write paths
 - `opacity` is strict at the public boundary and must stay in `[0, 1]`
+- in-memory write/import validation now mirrors the same id/text/font-family,
+  revision, opacity, and finite-offset rules used by the JSON boundary
 
 ## 5. Runtime controller
 
@@ -720,6 +757,12 @@ controller.
   empty dedicated layer
 - text node bounds are canonicalized from layout inputs; incoming serialized
   text `size` is not treated as the source of truth
+- decode/build paths reuse the exported validated boundary value types for ids,
+  image ids, revisions, text/font payloads, SVG path data, opacity, finite
+  offsets, and bounded numeric node fields
+- when `SceneDataException.source` would otherwise capture mutable or oversized
+  payloads, the boundary stores an immutable snapshot or sanitized preview
+  instead of a live raw object
 - decode rejects oversized payloads:
   - content layers must stay `<= 4096`
   - total node count must stay `<= 200000`
@@ -739,7 +782,7 @@ controller.
 | --- | --- | --- |
 | `ArgumentError` | The caller passed an invalid runtime argument. | `addNode` (including duplicate explicit `NodeSpec.id`), `patchNode`, transforms, numeric setters, invalid pointer settings |
 | `StateError` | The runtime contract was violated. | disposed controller calls, stale transaction handle, async `write(...)`, reentrant `handlePointer(...)`, invariant failures |
-| `SceneDataException` | Scene or JSON data is malformed. | `initialSnapshot`, `replaceScene`, `SceneBuilder`, `decodeScene*`, `encodeScene*` |
+| `SceneDataException` | Scene or JSON data is malformed. `source` preserves small scalar values, snapshots small structured payloads into immutable containers, and sanitizes oversized or opaque objects into previews. The constructor is not `const`. | `initialSnapshot`, `replaceScene`, `SceneBuilder`, `decodeScene*`, `encodeScene*` |
 
 ## 13. Migration checklist for current integrations
 

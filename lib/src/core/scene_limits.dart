@@ -1,6 +1,15 @@
 /// Global numeric/scheme limits enforced by scene import/build pipeline.
 library;
 
+export '../contract/scene_contract_limits.dart'
+    show
+        kMaxFontFamilyLength,
+        kMaxImageIdLength,
+        kMaxLayerIdLength,
+        kMaxNodeIdLength,
+        kMaxSvgPathDataLength,
+        kMaxTextLength;
+
 const double sceneCoordMin = -1e7;
 const double sceneCoordMax = 1e7;
 
@@ -14,12 +23,6 @@ const double sceneHitPaddingMax = 1e5;
 const int kMaxContentLayersPerScene = 4096;
 const int kMaxNodesPerScene = 200000;
 const int kMaxStrokePointsPerNode = 20000;
-const int kMaxSvgPathDataLength = 200000;
-const int kMaxLayerIdLength = 256;
-const int kMaxNodeIdLength = 256;
-const int kMaxImageIdLength = 1024;
-const int kMaxFontFamilyLength = 256;
-const int kMaxTextLength = 100000;
 const int kMaxPaletteItems = 1024;
 // Guardrail invariants:
 // - trimTo must be >= 2 (endpoint-preserving resample requires two points)

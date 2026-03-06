@@ -12,6 +12,7 @@ export 'src/contract/scene_data_exception.dart';
 export 'src/contract/scene_render_state.dart';
 export 'src/contract/scene_write_txn.dart';
 export 'src/contract/snapshot.dart';
+export 'src/contract/validated.dart';
 export 'src/core/action_events.dart'
     show ActionCommitted, ActionCommittedDelta, ActionType, EditTextRequested;
 export 'src/core/interaction_types.dart' show CanvasMode, DrawTool;

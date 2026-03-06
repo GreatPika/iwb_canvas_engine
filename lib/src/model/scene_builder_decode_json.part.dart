@@ -206,32 +206,19 @@ ContentLayerSnapshot _decodeContentLayer(
   required String layerPath,
   required void Function(String nodesPath) onNodeDecoded,
 }) {
-  final idRaw = json['id'];
-  if (idRaw == null) {
+  final idPath = '$layerPath.id';
+  if (!json.containsKey('id')) {
     throw SceneDataException(
       code: SceneDataErrorCode.missingField,
-      path: '$layerPath.id',
-      message: 'Missing required field $layerPath.id.',
+      path: idPath,
+      message: 'Missing required field $idPath.',
     );
   }
-  if (idRaw is! String) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidFieldType,
-      path: '$layerPath.id',
-      message: 'Field $layerPath.id must be a string.',
-      source: idRaw,
-    );
-  }
-  if (idRaw.length > kMaxLayerIdLength) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidValue,
-      path: '$layerPath.id',
-      message:
-          'Field $layerPath.id length must be <= $kMaxLayerIdLength characters.',
-      source: idRaw.length,
-    );
-  }
-  final id = idRaw;
+  final id = LayerIdValue.fromJson(
+    json['id'],
+    path: idPath,
+    fieldName: idPath,
+  ).value;
 
   final nodesJson = _requireList(json, 'nodes', pathPrefix: layerPath);
   final nodesPath = _pathAt(layerPath, 'nodes');
@@ -278,20 +265,39 @@ NodeSnapshot _decodeNode(
     _requireString(json, 'type', pathPrefix: nodePath),
     pathPrefix: nodePath,
   );
-  final id = _requireString(
-    json,
-    'id',
-    pathPrefix: nodePath,
-    maxLength: kMaxNodeIdLength,
-  );
+  final idPath = _pathAt(nodePath, 'id');
+  if (!json.containsKey('id')) {
+    throw SceneDataException(
+      code: SceneDataErrorCode.missingField,
+      path: idPath,
+      message: 'Missing required field $idPath.',
+    );
+  }
+  final id = NodeIdValue.fromJson(
+    json['id'],
+    path: idPath,
+    fieldName: 'id',
+  ).value;
+  final instanceRevisionPath = _pathAt(nodePath, 'instanceRevision');
   final instanceRevision =
-      _optionalInt(json, 'instanceRevision', pathPrefix: nodePath) ?? 0;
+      !json.containsKey('instanceRevision') || json['instanceRevision'] == null
+      ? 0
+      : InstanceRevisionValue.fromJson(
+          json['instanceRevision'],
+          path: instanceRevisionPath,
+          fieldName: 'instanceRevision',
+          allowZero: true,
+        ).value;
   final transform = _decodeTransform2D(
     _requireMap(json, 'transform', pathPrefix: nodePath),
     pathPrefix: _pathAt(nodePath, 'transform'),
   );
-  final hitPadding = _requireDouble(json, 'hitPadding', pathPrefix: nodePath);
-  final opacity = _requireDouble(json, 'opacity', pathPrefix: nodePath);
+  final hitPadding = _decodeRequiredNonNegativeFiniteDouble(
+    json,
+    'hitPadding',
+    pathPrefix: nodePath,
+  );
+  final opacity = _decodeRequiredOpacity(json, 'opacity', pathPrefix: nodePath);
   final isVisible = _requireBool(json, 'isVisible', pathPrefix: nodePath);
   final isSelectable = _requireBool(json, 'isSelectable', pathPrefix: nodePath);
   final isLocked = _requireBool(json, 'isLocked', pathPrefix: nodePath);
@@ -307,12 +313,11 @@ NodeSnapshot _decodeNode(
       return ImageNodeSnapshot(
         id: id,
         instanceRevision: instanceRevision,
-        imageId: _requireString(
-          json,
-          'imageId',
-          pathPrefix: nodePath,
-          maxLength: kMaxImageIdLength,
-        ),
+        imageId: ImageIdValue.fromJson(
+          _requireField(json, 'imageId', pathPrefix: nodePath),
+          path: _pathAt(nodePath, 'imageId'),
+          fieldName: 'imageId',
+        ).value,
         size: _requireSize(json, 'size', pathPrefix: nodePath),
         naturalSize: _optionalSizeMap(
           json,
@@ -332,14 +337,17 @@ NodeSnapshot _decodeNode(
       return TextNodeSnapshot(
         id: id,
         instanceRevision: instanceRevision,
-        text: _requireString(
-          json,
-          'text',
-          pathPrefix: nodePath,
-          maxLength: kMaxTextLength,
-        ),
+        text: TextContentValue.fromJson(
+          _requireString(json, 'text', pathPrefix: nodePath),
+          path: _pathAt(nodePath, 'text'),
+          fieldName: 'text',
+        ).value,
         size: _requireSize(json, 'size', pathPrefix: nodePath),
-        fontSize: _requireDouble(json, 'fontSize', pathPrefix: nodePath),
+        fontSize: _decodeRequiredPositiveFiniteDouble(
+          json,
+          'fontSize',
+          pathPrefix: nodePath,
+        ),
         color: _parseColor(
           _requireString(json, 'color', pathPrefix: nodePath),
           path: _pathAt(nodePath, 'color'),
@@ -351,14 +359,17 @@ NodeSnapshot _decodeNode(
         isBold: _requireBool(json, 'isBold', pathPrefix: nodePath),
         isItalic: _requireBool(json, 'isItalic', pathPrefix: nodePath),
         isUnderline: _requireBool(json, 'isUnderline', pathPrefix: nodePath),
-        fontFamily: _optionalString(
+        fontFamily: _decodeOptionalFontFamily(json, pathPrefix: nodePath),
+        maxWidth: _decodeOptionalPositiveFiniteDouble(
           json,
-          'fontFamily',
+          'maxWidth',
           pathPrefix: nodePath,
-          maxLength: kMaxFontFamilyLength,
         ),
-        maxWidth: _optionalDouble(json, 'maxWidth', pathPrefix: nodePath),
-        lineHeight: _optionalDouble(json, 'lineHeight', pathPrefix: nodePath),
+        lineHeight: _decodeOptionalPositiveFiniteDouble(
+          json,
+          'lineHeight',
+          pathPrefix: nodePath,
+        ),
         hitPadding: hitPadding,
         transform: transform,
         opacity: opacity,
@@ -387,14 +398,22 @@ NodeSnapshot _decodeNode(
       final points = <Offset>[];
       for (var i = 0; i < pointsJson.length; i++) {
         points.add(
-          _parsePoint(pointsJson[i], pathPrefix: _pathAt(pointsPath, '[$i]')),
+          FiniteOffsetValue.fromJson(
+            pointsJson[i],
+            path: _pathAt(pointsPath, '[$i]'),
+            fieldName: _pathAt(pointsPath, '[$i]'),
+          ).value,
         );
       }
       return StrokeNodeSnapshot(
         id: id,
         instanceRevision: instanceRevision,
         points: points,
-        thickness: _requireDouble(json, 'thickness', pathPrefix: nodePath),
+        thickness: _decodeRequiredPositiveFiniteDouble(
+          json,
+          'thickness',
+          pathPrefix: nodePath,
+        ),
         color: _parseColor(
           _requireString(json, 'color', pathPrefix: nodePath),
           path: _pathAt(nodePath, 'color'),
@@ -412,15 +431,17 @@ NodeSnapshot _decodeNode(
       return LineNodeSnapshot(
         id: id,
         instanceRevision: instanceRevision,
-        start: _parsePoint(
-          _requireMap(json, 'localA', pathPrefix: nodePath),
-          pathPrefix: _pathAt(nodePath, 'localA'),
+        start: _decodeRequiredFiniteOffset(
+          json,
+          'localA',
+          pathPrefix: nodePath,
         ),
-        end: _parsePoint(
-          _requireMap(json, 'localB', pathPrefix: nodePath),
-          pathPrefix: _pathAt(nodePath, 'localB'),
+        end: _decodeRequiredFiniteOffset(json, 'localB', pathPrefix: nodePath),
+        thickness: _decodeRequiredPositiveFiniteDouble(
+          json,
+          'thickness',
+          pathPrefix: nodePath,
         ),
-        thickness: _requireDouble(json, 'thickness', pathPrefix: nodePath),
         color: _parseColor(
           _requireString(json, 'color', pathPrefix: nodePath),
           path: _pathAt(nodePath, 'color'),
@@ -441,7 +462,11 @@ NodeSnapshot _decodeNode(
         size: _requireSize(json, 'size', pathPrefix: nodePath),
         fillColor: _optionalColor(json, 'fillColor', pathPrefix: nodePath),
         strokeColor: _optionalColor(json, 'strokeColor', pathPrefix: nodePath),
-        strokeWidth: _requireDouble(json, 'strokeWidth', pathPrefix: nodePath),
+        strokeWidth: _decodeRequiredNonNegativeFiniteDouble(
+          json,
+          'strokeWidth',
+          pathPrefix: nodePath,
+        ),
         hitPadding: hitPadding,
         transform: transform,
         opacity: opacity,
@@ -452,27 +477,22 @@ NodeSnapshot _decodeNode(
         isTransformable: isTransformable,
       );
     case NodeType.path:
-      final svgPathData = _requireString(
-        json,
-        'svgPathData',
-        pathPrefix: nodePath,
-      );
-      if (svgPathData.length > kMaxSvgPathDataLength) {
-        throw SceneDataException(
-          code: SceneDataErrorCode.invalidValue,
-          path: _pathAt(nodePath, 'svgPathData'),
-          message:
-              'Field svgPathData length must be <= $kMaxSvgPathDataLength characters.',
-          source: svgPathData.length,
-        );
-      }
+      final svgPathData = SvgPathDataValue.fromJson(
+        _requireString(json, 'svgPathData', pathPrefix: nodePath),
+        path: _pathAt(nodePath, 'svgPathData'),
+        fieldName: 'svgPathData',
+      ).value;
       return PathNodeSnapshot(
         id: id,
         instanceRevision: instanceRevision,
         svgPathData: svgPathData,
         fillColor: _optionalColor(json, 'fillColor', pathPrefix: nodePath),
         strokeColor: _optionalColor(json, 'strokeColor', pathPrefix: nodePath),
-        strokeWidth: _requireDouble(json, 'strokeWidth', pathPrefix: nodePath),
+        strokeWidth: _decodeRequiredNonNegativeFiniteDouble(
+          json,
+          'strokeWidth',
+          pathPrefix: nodePath,
+        ),
         fillRule: _parsePathFillRule(
           _requireString(json, 'fillRule', pathPrefix: nodePath),
           pathPrefix: nodePath,
@@ -487,4 +507,95 @@ NodeSnapshot _decodeNode(
         isTransformable: isTransformable,
       );
   }
+}
+
+String? _decodeOptionalFontFamily(
+  Map<String, Object?> json, {
+  required String pathPrefix,
+}) {
+  if (!json.containsKey('fontFamily')) {
+    return null;
+  }
+  final value = json['fontFamily'];
+  if (value == null) {
+    return null;
+  }
+  final path = _pathAt(pathPrefix, 'fontFamily');
+  return FontFamilyValue.fromJson(
+    value,
+    path: path,
+    fieldName: 'fontFamily',
+  ).value;
+}
+
+double _decodeRequiredNonNegativeFiniteDouble(
+  Map<String, Object?> json,
+  String key, {
+  required String pathPrefix,
+}) {
+  final path = _pathAt(pathPrefix, key);
+  return NonNegativeFiniteDoubleValue.fromJson(
+    _requireField(json, key, pathPrefix: pathPrefix),
+    path: path,
+    fieldName: key,
+  ).value;
+}
+
+double _decodeRequiredPositiveFiniteDouble(
+  Map<String, Object?> json,
+  String key, {
+  required String pathPrefix,
+}) {
+  final path = _pathAt(pathPrefix, key);
+  return PositiveFiniteDoubleValue.fromJson(
+    _requireField(json, key, pathPrefix: pathPrefix),
+    path: path,
+    fieldName: key,
+  ).value;
+}
+
+double? _decodeOptionalPositiveFiniteDouble(
+  Map<String, Object?> json,
+  String key, {
+  required String pathPrefix,
+}) {
+  if (!json.containsKey(key)) {
+    return null;
+  }
+  final value = json[key];
+  if (value == null) {
+    return null;
+  }
+  final path = _pathAt(pathPrefix, key);
+  return PositiveFiniteDoubleValue.fromJson(
+    value,
+    path: path,
+    fieldName: key,
+  ).value;
+}
+
+double _decodeRequiredOpacity(
+  Map<String, Object?> json,
+  String key, {
+  required String pathPrefix,
+}) {
+  final path = _pathAt(pathPrefix, key);
+  return OpacityValue.fromJson(
+    _requireField(json, key, pathPrefix: pathPrefix),
+    path: path,
+    fieldName: key,
+  ).value;
+}
+
+Offset _decodeRequiredFiniteOffset(
+  Map<String, Object?> json,
+  String key, {
+  required String pathPrefix,
+}) {
+  final path = _pathAt(pathPrefix, key);
+  return FiniteOffsetValue.fromJson(
+    _requireField(json, key, pathPrefix: pathPrefix),
+    path: path,
+    fieldName: path,
+  ).value;
 }

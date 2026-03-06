@@ -29,6 +29,7 @@ lib/
   iwb_canvas_engine.dart
   src/
     contract/       // stable API contracts and contract-facing value types
+      validated/    // boundary value objects and id/revision parsing rules
     core/           // primitives, defaults, math, event types
     controller/     // committed store, command execution, transactional writes
     interactive/    // public controller facade and gesture orchestration
@@ -44,6 +45,9 @@ lib/
   `lib/iwb_canvas_engine.dart`.
 - `contract/` is the low-level layer for stable API contracts and
   shared contract-facing value types.
+- `contract/validated/**` is the single contract-facing home for boundary value
+  parsing/generation rules; `model/` and `serialization/` consume it rather
+  than re-owning those rules independently.
 - The `lib/src` dependency graph is explicit and acyclic.
 
 Current dependency DAG:
@@ -110,6 +114,11 @@ most important architectural rules are:
 - `TextNode.size` is derived from text layout inputs and is not a writable
   public field; `TextNodeSnapshot.size` is canonical output metadata and is
   non-authoritative on import.
+- Boundary validation has one source of truth per rule: limits come from
+  `core/scene_limits.dart`, boundary value parsing/generation lives in
+  `contract/validated/**`, and model/serialization layers reuse those rules.
+- Legacy generated ids remain explicit contract policy: node ids use
+  `node-<n>`, layer ids use `layer-<n>`, and recognition is canonical-only.
 - Selection normalization drops only missing, background, or invisible ids;
   explicit non-selectable ids remain stable.
 - Listener notifications are microtask-deferred and coalesced.
@@ -138,6 +147,11 @@ most important architectural rules are:
   layer before returning a `SceneSnapshot`.
 - Decode/import and runtime replacement paths validate structure and numeric
   constraints and throw `SceneDataException` on malformed input.
+- `imageId` follows the same validated boundary-owner policy on decode/import,
+  snapshot/spec/patch validation, and runtime scene validation.
+- Encode/decode/build boundaries sanitize oversized `SceneDataException.source`
+  payloads into compact previews and snapshot small structured payloads into
+  immutable containers while preserving `code`, `message`, and `path`.
 - JSON payload limits are enforced to keep import cost bounded.
 - Guardrails cover both collection sizes (layers, nodes, points, palette item
   lists) and string lengths (for example node ids, layer ids, text/image ids,

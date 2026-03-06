@@ -49,8 +49,7 @@ language: russian
 3. Дать этим типам единый boundary API:
    - `parse(...)` для входной строки/сырого значения;
    - `of(...)` для уже типизированного runtime-ввода;
-   - `fromJson(...)` только там, где это действительно JSON boundary;
-   - `validated(...)` как внутренний fast-path для уже доказанно корректного значения.
+   - `fromJson(...)` только там, где это действительно JSON boundary.
 4. Не делать на этом шаге тотальную замену всех публичных полей на новые типы. Этот шаг должен подготовить строительные блоки и migration surface, а закрытие сырых публичных конструкторов пойдёт в следующем шаге.
 5. Одновременно нормализовать `SceneDataException`, чтобы ошибки на boundary возвращали компактный, безопасный и предсказуемый payload вместо сырого большого `source`.
 
@@ -65,12 +64,40 @@ language: russian
 
 Не рекомендуется просто "раскидать проверки" по конструкторам `SceneSnapshot`, `NodeSpec`, `NodePatch`, `ids.dart` и JSON decode независимо друг от друга. Это даст быстрый локальный эффект, но создаст несколько почти одинаковых наборов правил для длины, finite-checks, safe-int и `svgPathData`, которые начнут расходиться при первом же изменении лимитов или текста ошибок.
 
+## Итог реализации
+
+1. В `lib/src/contract/validated/**` добавлен единый public boundary-layer:
+   - `NodeIdValue`
+   - `LayerIdValue`
+   - `InstanceRevisionValue`
+   - `FiniteOffsetValue`
+   - `PositiveFiniteDoubleValue`
+   - `NonNegativeFiniteDoubleValue`
+   - `OpacityValue`
+   - `SvgPathDataValue`
+   - `TextContentValue`
+   - `FontFamilyValue`
+2. Общие primitive rules вынесены в `validated_value_support.dart` и используют:
+   - лимиты из `lib/src/core/scene_limits.dart`;
+   - единый safe-int policy;
+   - общий SVG parse-path.
+3. `lib/src/contract/ids.dart` больше не ограничивается alias:
+   - добавлены parse/generate/recognize helpers;
+   - legacy-policy `node-<n>` / `layer-<n>` зафиксирована явно;
+   - `NodeId` и `LayerId` остаются `String`-совместимыми.
+4. `SceneDataException` теперь sanitizes oversized `source`, превращает маленькие structured values в immutable snapshots и не удерживает live mutable payload.
+5. Новый validated layer подключён в:
+   - runtime/model validation для `snapshot/spec/patch`;
+   - JSON decode-path для `id`, `instanceRevision`, `text`, `fontFamily`, `svgPathData`, `opacity`, bounded numeric fields и finite offsets;
+   - encode-path для known-path ошибок вроде unsupported `TextAlign`.
+6. Шаг по-прежнему не закрывает сырые публичные конструкторы; это остаётся задачей шага 3.
+
 ## Что именно менять
 
 ### `lib/src/contract/validated/**`
 
-[ ] Создать каталог `lib/src/contract/validated/**` как единый boundary-layer для value objects, а не как набор разрозненных helper-функций.
-[ ] Добавить intent-revealing entry files:
+[x] Создать каталог `lib/src/contract/validated/**` как единый boundary-layer для value objects, а не как набор разрозненных helper-функций.
+[x] Добавить intent-revealing entry files:
     - `node_id_value.dart`
     - `layer_id_value.dart`
     - `instance_revision_value.dart`
@@ -81,42 +108,41 @@ language: russian
     - `svg_path_data_value.dart`
     - `text_content_value.dart`
     - `font_family_value.dart`
-[ ] Не копировать в каждый файл одинаковую low-level логику; вынести общие проверки пустоты, длины, finite, знака и safe-int в один внутренний helper рядом с этим каталогом.
-[ ] Привязать все длины и числовые лимиты к `lib/src/core/scene_limits.dart`, а не дублировать числа в новых типах.
-[ ] Зафиксировать единый контракт фабрик:
+[x] Не копировать в каждый файл одинаковую low-level логику; вынести общие проверки пустоты, длины, finite, знака и safe-int в один внутренний helper рядом с этим каталогом.
+[x] Привязать все длины и числовые лимиты к `lib/src/core/scene_limits.dart`, а не дублировать числа в новых типах.
+[x] Зафиксировать единый контракт фабрик:
     - `parse(...)` для внешнего необработанного ввода;
     - `of(...)` для runtime-значений;
-    - `fromJson(...)` только для JSON boundary;
-    - `validated(...)` только как внутренний shortcut без повторной логики на каждом call site.
-[ ] Для `SvgPathDataValue`, `TextContentValue`, `FontFamilyValue`, `NodeIdValue`, `LayerIdValue` явно покрыть проверки пустоты/длины.
-[ ] Для `InstanceRevisionValue` явно покрыть safe-int и политику знака: определить отдельно допустимость `0` на snapshot boundary и обязательную положительность для internal scene node.
-[ ] Для `OpacityValue`, `PositiveFiniteDoubleValue`, `NonNegativeFiniteDoubleValue`, `FiniteOffsetValue` использовать существующие finite/range semantics, а не придумывать новую математику.
+    - `fromJson(...)` только для JSON boundary.
+[x] Для `SvgPathDataValue`, `TextContentValue`, `FontFamilyValue`, `NodeIdValue`, `LayerIdValue` явно покрыть проверки пустоты/длины.
+[x] Для `InstanceRevisionValue` явно покрыть safe-int и политику знака: определить отдельно допустимость `0` на snapshot boundary и обязательную положительность для internal scene node.
+[x] Для `OpacityValue`, `PositiveFiniteDoubleValue`, `NonNegativeFiniteDoubleValue`, `FiniteOffsetValue` использовать существующие finite/range semantics, а не придумывать новую математику.
 
 ### `lib/src/contract/ids.dart`
 
-[ ] Убрать ситуацию, где `ids.dart` выражает только alias без правил создания и разбора.
-[ ] Оставить наружную совместимость на переходном этапе, но ввести фабричный слой поверх `NodeIdValue` и `LayerIdValue`, чтобы новый код больше не создавал id напрямую через "любой String".
-[ ] Явно разделить три сценария:
+[x] Убрать ситуацию, где `ids.dart` выражает только alias без правил создания и разбора.
+[x] Оставить наружную совместимость на переходном этапе, но ввести фабричный слой поверх `NodeIdValue` и `LayerIdValue`, чтобы новый код больше не создавал id напрямую через "любой String".
+[x] Явно разделить три сценария:
     - parse входного id;
     - generate нового id;
     - validate/recognize legacy-generated id формата `node-<n>` и `layer-<n>`.
-[ ] Не ломать существующие `txnNextNodeId()`, `txnNextLayerId()`, `txnInitialNodeIdSeed()` и `txnInitialLayerIdSeed()` на этом шаге; вместо этого подготовить для них migration seam.
-[ ] Зафиксировать, где остаётся `String`-совместимость ради API, а где новый код обязан идти через фабрики.
+[x] Не ломать существующие `txnNextNodeId()`, `txnNextLayerId()`, `txnInitialNodeIdSeed()` и `txnInitialLayerIdSeed()` на этом шаге; вместо этого подготовить для них migration seam.
+[x] Зафиксировать, где остаётся `String`-совместимость ради API, а где новый код обязан идти через фабрики.
 
 ### `lib/src/contract/scene_data_exception.dart`
 
-[ ] Ввести нормализацию `source`, чтобы большие JSON payloads, длинные `svgPathData` и другие oversized values не сохранялись целиком в исключении.
-[ ] Сделать усечение и sanitation источника данных детерминированными:
+[x] Ввести нормализацию `source`, чтобы большие JSON payloads, длинные `svgPathData` и другие oversized values не сохранялись целиком в исключении.
+[x] Сделать усечение и sanitation источника данных детерминированными:
     - ограничить длину строк;
     - безопасно представлять большие коллекции/карты;
     - не терять типовую диагностику для маленьких значений.
-[ ] Нормализовать создание ошибки через единый internal constructor/helper, чтобы `code`, `path` и безопасный `source` оформлялись одинаково.
-[ ] Сохранить и расширить политику обязательного `path` для boundary-ошибок там, где путь известен:
+[x] Нормализовать создание ошибки через единый internal constructor/helper, чтобы `code`, `path` и безопасный `source` оформлялись одинаково.
+[x] Сохранить и расширить политику обязательного `path` для boundary-ошибок там, где путь известен:
     - JSON decode;
     - scene build/canonicalization;
     - encode-path;
     - enum parsing вроде `TextAlign`.
-[ ] Не превращать `SceneDataException` в контейнер для полного сырого документа; он должен нести диагноз, а не копию входа.
+[x] Не превращать `SceneDataException` в контейнер для полного сырого документа; он должен нести диагноз, а не копию входа.
 
 ## Конкретизация внедрения по порядку
 
@@ -137,24 +163,23 @@ language: russian
 
 ## Критерии приемки
 
-[ ] Для каждого инварианта из шага 2 указано одно место истины: лимит, range-rule или safe-int policy не продублированы бесконтрольно в нескольких слоях.
-[ ] `lib/src/contract/validated/**` содержит отдельные value types для id/revision/numeric/text/svg boundary-value сценариев и не сводится к набору несвязанных util-функций.
-[ ] Новый boundary-layer покрывает те же проверки, которые уже обязательны в JSON decode-path, для значений `id`, `text`, `fontFamily`, `svgPathData`, `opacity`, finite offsets и revision.
-[ ] `ids.dart` больше не оставляет создание новых id на усмотрение любого произвольного `String`, при этом legacy-формат `node-*` / `layer-*` остаётся явно поддержанным и распознаваемым.
-[ ] `SceneDataException` больше не хранит целиком oversized `source`, но сохраняет полезные `code`, `message`, `path` и безопасный контекст.
-[ ] Ошибки decode/build/encode boundary используют согласованную policy для `path`; существующие сценарии вроде ошибки `TextAlign` не деградируют.
-[ ] Шаг подготавливает миграцию на валидированные публичные конструкторы, но сам по себе не требует мгновенного тотального rewrite всех `snapshot/spec/patch` call sites.
+[x] Для каждого инварианта из шага 2 указано одно место истины: лимит, range-rule или safe-int policy не продублированы бесконтрольно в нескольких слоях.
+[x] `lib/src/contract/validated/**` содержит отдельные value types для id/revision/numeric/text/svg boundary-value сценариев и не сводится к набору несвязанных util-функций.
+[x] Новый boundary-layer покрывает те же проверки, которые уже обязательны в JSON decode-path, для значений `id`, `text`, `fontFamily`, `svgPathData`, `opacity`, finite offsets и revision.
+[x] `ids.dart` больше не оставляет создание новых id на усмотрение любого произвольного `String`, при этом legacy-формат `node-*` / `layer-*` остаётся явно поддержанным и распознаваемым.
+[x] `SceneDataException` больше не хранит целиком oversized `source`, не удерживает live mutable structured payload и сохраняет полезные `code`, `message`, `path` и безопасный контекст.
+[x] Ошибки decode/build/encode boundary используют согласованную policy для `path`; существующие сценарии вроде ошибки `TextAlign` не деградируют.
+[x] Шаг подготавливает миграцию на валидированные публичные конструкторы, но сам по себе не требует мгновенного тотального rewrite всех `snapshot/spec/patch` call sites.
 
 ## Чеклист выполнения
 
-[ ] Подтвердить полный список инвариантов, которые уже есть в `scene_limits.dart`, decode-пути и model validation.
-[ ] Создать `lib/src/contract/validated/**` и общий helper без копипаста primitive checks.
-[ ] Реализовать `NodeIdValue` и `LayerIdValue` с parse/generate/legacy-format policy.
-[ ] Реализовать `InstanceRevisionValue`, `FiniteOffsetValue`, `PositiveFiniteDoubleValue`, `NonNegativeFiniteDoubleValue`, `OpacityValue`.
-[ ] Реализовать `SvgPathDataValue`, `TextContentValue`, `FontFamilyValue` на базе существующих лимитов длины и parse-policy.
-[ ] Подключить `lib/src/contract/ids.dart` к новому фабричному слою без мгновенного массового переписывания всех call sites.
-[ ] Нормализовать `lib/src/contract/scene_data_exception.dart`, включая усечение и sanitation `source`.
-[ ] Зафиксировать policy обязательного `path` для decode/build/encode boundary.
-[ ] Добавить тесты на validated values, legacy id format, safe-int, длины и sanitation ошибок.
-[ ] Убедиться, что шаг 3 сможет использовать новый validated layer как единственный источник boundary-валидации, а не добавлять ещё один.
-
+[x] Подтвердить полный список инвариантов, которые уже есть в `scene_limits.dart`, decode-пути и model validation.
+[x] Создать `lib/src/contract/validated/**` и общий helper без копипаста primitive checks.
+[x] Реализовать `NodeIdValue` и `LayerIdValue` с parse/generate/legacy-format policy.
+[x] Реализовать `InstanceRevisionValue`, `FiniteOffsetValue`, `PositiveFiniteDoubleValue`, `NonNegativeFiniteDoubleValue`, `OpacityValue`.
+[x] Реализовать `SvgPathDataValue`, `TextContentValue`, `FontFamilyValue` на базе существующих лимитов длины и parse-policy.
+[x] Подключить `lib/src/contract/ids.dart` к новому фабричному слою без мгновенного массового переписывания всех call sites.
+[x] Нормализовать `lib/src/contract/scene_data_exception.dart`, включая усечение и sanitation `source`.
+[x] Зафиксировать policy обязательного `path` для decode/build/encode boundary.
+[x] Добавить тесты на validated values, legacy id format, safe-int, длины и sanitation ошибок.
+[x] Убедиться, что шаг 3 сможет использовать новый validated layer как единственный источник boundary-валидации, а не добавлять ещё один.

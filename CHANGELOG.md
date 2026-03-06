@@ -4,6 +4,15 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ## Unreleased
 
+### Breaking
+
+- `SceneDataException(...)` is no longer `const`. The constructor now
+  sanitizes `source` eagerly and may replace structured values with immutable
+  snapshots or preview payloads.
+- Exported validated boundary value types no longer expose unsupported
+  `validated(...)` fast-path constructors. Supported factory entrypoints are
+  `parse(...)`, `of(...)`, and `fromJson(...)`.
+
 ### Changed
 
 - Consolidated `NodeId`/`LayerId` ownership under `src/contract/ids.dart` and
@@ -26,6 +35,25 @@ All notable changes to `iwb_canvas_engine` are documented here.
 - Hardened JSON decode guardrails against oversized string and palette payloads
   by enforcing max lengths for layer/node/image/font ids and text, plus max
   palette item counts.
+- Added a public `contract/validated/**` boundary-value layer with typed
+  parsing/generation for ids, image ids, revisions, finite offsets, bounded
+  text/font values, SVG path payloads, and bounded numeric semantics.
+- Added explicit id factory helpers for the legacy generated-id policy
+  (`node-<n>` / `layer-<n>`) while keeping `NodeId` and `LayerId`
+  `String`-compatible.
+- `SceneDataException.source` now snapshots small structured values into
+  bounded immutable payloads and sanitizes oversized strings, collections,
+  errors, and arbitrary objects into deterministic previews instead of
+  retaining raw live input.
+- Safe-int enforcement now rejects unsafe JSON integer literals and generated-id
+  recognition no longer accepts overlong, overflow, or non-canonical
+  leading-zero legacy ids that factory generation would never emit.
+- JSON decode/build boundaries now route id, revision, text, font-family,
+  SVG-path, opacity, finite-offset, and bounded numeric fields through the same
+  exported validated boundary helpers used by runtime-facing callers.
+- `imageId` now uses the same exported validated boundary owner across
+  decode/build, snapshot validation, runtime scene validation, `NodeSpec`, and
+  `NodePatch`.
 
 ## 5.1.0 (2026-03-04)
 

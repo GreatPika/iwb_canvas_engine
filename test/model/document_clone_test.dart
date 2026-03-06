@@ -256,6 +256,9 @@ void main() {
       scene.layers[1].nodes.add(
         RectNode(id: 'node-abc', size: const Size(1, 1)),
       );
+      scene.layers[1].nodes.add(
+        RectNode(id: 'node-01', size: const Size(1, 1)),
+      );
       scene.layers[1].nodes.add(RectNode(id: 'node-', size: const Size(1, 1)));
       scene.layers[1].nodes.add(
         RectNode(id: 'plain-id', size: const Size(1, 1)),
@@ -285,4 +288,16 @@ void main() {
       expect(txnInitialNodeInstanceRevisionSeed(Scene()), 1);
     },
   );
+
+  test('txnInitialLayerIdSeed ignores non-canonical generated layer ids', () {
+    final scene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(id: 'layer-2'),
+        ContentLayer(id: 'layer-0007'),
+        ContentLayer(id: 'layer-10'),
+      ],
+    );
+
+    expect(txnInitialLayerIdSeed(scene), 11);
+  });
 }

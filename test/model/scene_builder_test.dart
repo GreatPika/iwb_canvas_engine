@@ -10,6 +10,7 @@ import 'package:iwb_canvas_engine/src/core/text_layout.dart'
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
     show
         kMaxContentLayersPerScene,
+        kMaxImageIdLength,
         kMaxNodesPerScene,
         kMaxPaletteItems,
         kMaxStrokePointsPerNode,
@@ -100,7 +101,8 @@ void main() {
           (e) =>
               e is SceneDataException &&
               e.code == SceneDataErrorCode.invalidJson &&
-              e.source is StateError,
+              e.source is Map<String, Object?> &&
+              (e.source! as Map<String, Object?>)['type'] == 'StateError',
         ),
       ),
     );
@@ -346,6 +348,16 @@ void main() {
             })(),
           ),
           (
+            label: 'camera.offsetX',
+            expectedPath: 'camera.offsetX',
+            json: (() {
+              final json = _minimalSceneJson();
+              final camera = json['camera'] as Map<String, Object?>;
+              camera.remove('offsetX');
+              return json;
+            })(),
+          ),
+          (
             label: 'layers',
             expectedPath: 'layers',
             json: (() {
@@ -529,6 +541,22 @@ void main() {
               e is SceneDataException &&
               e.code == SceneDataErrorCode.invalidValue &&
               e.path == 'schemaVersion',
+        ),
+      ),
+    );
+
+    final intLiteralJson = _minimalSceneJson();
+    intLiteralJson['schemaVersion'] = 9007199254740992;
+
+    expect(
+      () => model_builder.sceneBuildFromJsonMap(intLiteralJson),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'schemaVersion' &&
+              e.message == 'Field schemaVersion must be an int.',
         ),
       ),
     );
@@ -760,6 +788,37 @@ void main() {
               e is SceneDataException &&
               e.code == SceneDataErrorCode.invalidValue &&
               e.path == 'palette.penColors',
+        ),
+      ),
+    );
+  });
+
+  test('sceneBuildFromSnapshot rejects oversized image ids at boundary', () {
+    final snapshot = SceneSnapshot(
+      layers: <ContentLayerSnapshot>[
+        ContentLayerSnapshot(
+          id: 'layer-image-boundary',
+          nodes: <NodeSnapshot>[
+            ImageNodeSnapshot(
+              id: 'img-boundary',
+              imageId: 'x' * (kMaxImageIdLength + 1),
+              size: const Size(1, 1),
+            ),
+          ],
+        ),
+      ],
+    );
+
+    expect(
+      () => model_builder.sceneBuildFromSnapshot(snapshot),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.path == 'layers[0].nodes[0].imageId' &&
+              e.message ==
+                  'Field layers[0].nodes[0].imageId length must be <= '
+                      '$kMaxImageIdLength characters.',
         ),
       ),
     );

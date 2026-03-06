@@ -28,6 +28,8 @@ void main() {
       expect(PathFillRule.evenOdd.name, 'evenOdd');
       expect(CanvasMode.move, CanvasMode.move);
       expect(DrawTool.pen, DrawTool.pen);
+      expect(parseNodeId('node-api-0'), 'node-api-0');
+      expect(tryParseGeneratedLayerIdSeed(generateLayerId(3)), 3);
       expect(json, contains('"schemaVersion":$schemaVersionWrite'));
       expect(decodeSceneFromJson(json).layers.single.id, 'layer-api-0');
       expect(canonicalFromSnapshot.layers.single.id, 'layer-api-0');

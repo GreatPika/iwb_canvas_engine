@@ -5,12 +5,11 @@ void sceneValidateFiniteDouble(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  if (value.isFinite) return;
-  _sceneValidationFail(
-    onError: onError,
-    value: value,
+  _sceneValidateArgumentBoundary(
     field: field,
-    message: 'must be finite.',
+    value: value,
+    onError: onError,
+    validate: () => validatedRequireFiniteDouble(value, name: field),
   );
 }
 
@@ -19,13 +18,11 @@ void sceneValidateNonNegativeDouble(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  sceneValidateFiniteDouble(value, field: field, onError: onError);
-  if (value >= 0) return;
-  _sceneValidationFail(
-    onError: onError,
-    value: value,
+  _sceneValidateArgumentBoundary(
     field: field,
-    message: 'must be >= 0.',
+    value: value,
+    onError: onError,
+    validate: () => NonNegativeFiniteDoubleValue.of(value, name: field),
   );
 }
 
@@ -34,13 +31,11 @@ void sceneValidatePositiveDouble(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  sceneValidateFiniteDouble(value, field: field, onError: onError);
-  if (value > 0) return;
-  _sceneValidationFail(
-    onError: onError,
-    value: value,
+  _sceneValidateArgumentBoundary(
     field: field,
-    message: 'must be > 0.',
+    value: value,
+    onError: onError,
+    validate: () => PositiveFiniteDoubleValue.of(value, name: field),
   );
 }
 
@@ -49,13 +44,11 @@ void sceneValidateClamped01Double(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  sceneValidateFiniteDouble(value, field: field, onError: onError);
-  if (value >= 0 && value <= 1) return;
-  _sceneValidationFail(
-    onError: onError,
-    value: value,
+  _sceneValidateArgumentBoundary(
     field: field,
-    message: 'must be within [0,1].',
+    value: value,
+    onError: onError,
+    validate: () => OpacityValue.of(value, name: field),
   );
 }
 
@@ -92,8 +85,12 @@ void sceneValidateFiniteOffset(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  sceneValidateFiniteDouble(value.dx, field: '$field.dx', onError: onError);
-  sceneValidateFiniteDouble(value.dy, field: '$field.dy', onError: onError);
+  _sceneValidateArgumentBoundary(
+    field: field,
+    value: value,
+    onError: onError,
+    validate: () => FiniteOffsetValue.of(value, name: field),
+  );
 }
 
 void sceneValidateNonNegativeSize(
@@ -118,12 +115,42 @@ void sceneValidateFiniteTransform2D(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  sceneValidateFiniteDouble(value.a, field: '$field.a', onError: onError);
-  sceneValidateFiniteDouble(value.b, field: '$field.b', onError: onError);
-  sceneValidateFiniteDouble(value.c, field: '$field.c', onError: onError);
-  sceneValidateFiniteDouble(value.d, field: '$field.d', onError: onError);
-  sceneValidateFiniteDouble(value.tx, field: '$field.tx', onError: onError);
-  sceneValidateFiniteDouble(value.ty, field: '$field.ty', onError: onError);
+  _sceneValidateArgumentBoundary(
+    field: '$field.a',
+    value: value.a,
+    onError: onError,
+    validate: () => validatedRequireFiniteDouble(value.a, name: '$field.a'),
+  );
+  _sceneValidateArgumentBoundary(
+    field: '$field.b',
+    value: value.b,
+    onError: onError,
+    validate: () => validatedRequireFiniteDouble(value.b, name: '$field.b'),
+  );
+  _sceneValidateArgumentBoundary(
+    field: '$field.c',
+    value: value.c,
+    onError: onError,
+    validate: () => validatedRequireFiniteDouble(value.c, name: '$field.c'),
+  );
+  _sceneValidateArgumentBoundary(
+    field: '$field.d',
+    value: value.d,
+    onError: onError,
+    validate: () => validatedRequireFiniteDouble(value.d, name: '$field.d'),
+  );
+  _sceneValidateArgumentBoundary(
+    field: '$field.tx',
+    value: value.tx,
+    onError: onError,
+    validate: () => validatedRequireFiniteDouble(value.tx, name: '$field.tx'),
+  );
+  _sceneValidateArgumentBoundary(
+    field: '$field.ty',
+    value: value.ty,
+    onError: onError,
+    validate: () => validatedRequireFiniteDouble(value.ty, name: '$field.ty'),
+  );
   if (value.invert() == null) {
     _sceneValidationFail(
       onError: onError,
@@ -153,24 +180,12 @@ void sceneValidateSvgPathData(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  if (value.trim().isEmpty) {
-    _sceneValidationFail(
-      onError: onError,
-      value: value,
-      field: field,
-      message: 'must not be empty.',
-    );
-  }
-  try {
-    parseSvgPathData(value);
-  } catch (_) {
-    _sceneValidationFail(
-      onError: onError,
-      value: value,
-      field: field,
-      message: 'must be valid SVG path data.',
-    );
-  }
+  _sceneValidateArgumentBoundary(
+    field: field,
+    value: value,
+    onError: onError,
+    validate: () => SvgPathDataValue.of(value, name: field),
+  );
 }
 
 Never _sceneValidationFail({

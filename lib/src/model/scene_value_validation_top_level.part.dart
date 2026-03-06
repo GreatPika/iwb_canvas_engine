@@ -32,6 +32,12 @@ void sceneValidateSnapshotValues(
   ) {
     final field = 'backgroundLayer.nodes[$nodeIndex]';
     final node = backgroundLayer.nodes[nodeIndex];
+    _sceneValidateArgumentBoundary(
+      field: '$field.id',
+      value: node.id,
+      onError: onError,
+      validate: () => NodeIdValue.of(node.id, name: '$field.id'),
+    );
     if (!seenNodeIds.add(node.id)) {
       _sceneValidationFail(
         onError: onError,
@@ -45,6 +51,12 @@ void sceneValidateSnapshotValues(
 
   for (var layerIndex = 0; layerIndex < snapshot.layers.length; layerIndex++) {
     final layer = snapshot.layers[layerIndex];
+    _sceneValidateArgumentBoundary(
+      field: 'layers[$layerIndex].id',
+      value: layer.id,
+      onError: onError,
+      validate: () => LayerIdValue.of(layer.id, name: 'layers[$layerIndex].id'),
+    );
     if (!seenLayerIds.add(layer.id)) {
       _sceneValidationFail(
         onError: onError,
@@ -56,6 +68,12 @@ void sceneValidateSnapshotValues(
     for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
       final field = 'layers[$layerIndex].nodes[$nodeIndex]';
       final node = layer.nodes[nodeIndex];
+      _sceneValidateArgumentBoundary(
+        field: '$field.id',
+        value: node.id,
+        onError: onError,
+        validate: () => NodeIdValue.of(node.id, name: '$field.id'),
+      );
       if (!seenNodeIds.add(node.id)) {
         _sceneValidationFail(
           onError: onError,
@@ -98,6 +116,12 @@ void sceneValidateSceneValues(
     ) {
       final field = 'backgroundLayer.nodes[$nodeIndex]';
       final node = backgroundLayer.nodes[nodeIndex];
+      _sceneValidateArgumentBoundary(
+        field: '$field.id',
+        value: node.id,
+        onError: onError,
+        validate: () => NodeIdValue.of(node.id, name: '$field.id'),
+      );
       if (!seenNodeIds.add(node.id)) {
         _sceneValidationFail(
           onError: onError,
@@ -112,6 +136,12 @@ void sceneValidateSceneValues(
 
   for (var layerIndex = 0; layerIndex < scene.layers.length; layerIndex++) {
     final layer = scene.layers[layerIndex];
+    _sceneValidateArgumentBoundary(
+      field: 'layers[$layerIndex].id',
+      value: layer.id,
+      onError: onError,
+      validate: () => LayerIdValue.of(layer.id, name: 'layers[$layerIndex].id'),
+    );
     if (!seenLayerIds.add(layer.id)) {
       _sceneValidationFail(
         onError: onError,
@@ -123,6 +153,12 @@ void sceneValidateSceneValues(
     for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
       final field = 'layers[$layerIndex].nodes[$nodeIndex]';
       final node = layer.nodes[nodeIndex];
+      _sceneValidateArgumentBoundary(
+        field: '$field.id',
+        value: node.id,
+        onError: onError,
+        validate: () => NodeIdValue.of(node.id, name: '$field.id'),
+      );
       if (!seenNodeIds.add(node.id)) {
         _sceneValidationFail(
           onError: onError,

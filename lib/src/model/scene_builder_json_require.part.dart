@@ -80,11 +80,26 @@ List<Object?> _requireList(
   return list;
 }
 
+Object? _requireField(
+  Map<String, Object?> json,
+  String key, {
+  String pathPrefix = '',
+}) {
+  final path = _pathAt(pathPrefix, key);
+  if (!json.containsKey(key)) {
+    throw SceneDataException(
+      code: SceneDataErrorCode.missingField,
+      path: path,
+      message: 'Missing required field $path.',
+    );
+  }
+  return json[key];
+}
+
 String _requireString(
   Map<String, Object?> json,
   String key, {
   String pathPrefix = '',
-  int? maxLength,
 }) {
   final path = _pathAt(pathPrefix, key);
   if (!json.containsKey(key)) {
@@ -100,14 +115,6 @@ String _requireString(
       code: SceneDataErrorCode.invalidFieldType,
       path: path,
       message: 'Field $key must be a string.',
-    );
-  }
-  if (maxLength != null && value.length > maxLength) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidValue,
-      path: path,
-      message: 'Field $path length must be <= $maxLength characters.',
-      source: value.length,
     );
   }
   return value;
@@ -165,34 +172,12 @@ int _requireInt(
       message: 'Missing required field $path.',
     );
   }
-  final value = json[key];
-  if (value is int) {
-    return value;
-  }
-  if (value is! num) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidFieldType,
-      path: path,
-      message: 'Field $key must be an int.',
-    );
-  }
-  final asDouble = value.toDouble();
-  if (!asDouble.isFinite || asDouble.truncateToDouble() != asDouble) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidFieldType,
-      path: path,
-      message: 'Field $key must be an int.',
-    );
-  }
-  if (asDouble.abs() > 9007199254740991) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidValue,
-      path: path,
-      message: 'Field $key must be an int.',
-      source: value,
-    );
-  }
-  return asDouble.toInt();
+  return validatedRequireJsonInt(
+    json[key],
+    path: path,
+    fieldName: key,
+    allowZero: false,
+  );
 }
 
 double _requireDouble(
@@ -208,24 +193,11 @@ double _requireDouble(
       message: 'Missing required field $path.',
     );
   }
-  final value = json[key];
-  if (value is! num) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidFieldType,
-      path: path,
-      message: 'Field $key must be a number.',
-    );
-  }
-  final out = value.toDouble();
-  if (!out.isFinite) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidValue,
-      path: path,
-      message: 'Field $key must be finite.',
-      source: value,
-    );
-  }
-  return out;
+  return validatedRequireJsonFiniteDouble(
+    json[key],
+    path: path,
+    fieldName: key,
+  );
 }
 
 double _requireDoubleValue(
@@ -233,23 +205,11 @@ double _requireDoubleValue(
   required String field,
   required String path,
 }) {
-  if (value is! num) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidFieldType,
-      path: path,
-      message: 'Items of $field must be numbers.',
-    );
-  }
-  final out = value.toDouble();
-  if (!out.isFinite) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidValue,
-      path: path,
-      message: 'Items of $field must be finite.',
-      source: value,
-    );
-  }
-  return out;
+  return validatedRequireJsonFiniteDoubleItem(
+    value,
+    path: path,
+    fieldName: field,
+  );
 }
 
 Transform2D _decodeTransform2D(
@@ -315,115 +275,6 @@ Size? _optionalSizeMap(
     );
   }
   return Size(w, h);
-}
-
-String? _optionalString(
-  Map<String, Object?> json,
-  String key, {
-  String pathPrefix = '',
-  int? maxLength,
-}) {
-  if (!json.containsKey(key)) return null;
-  final value = json[key];
-  if (value == null) return null;
-  final path = _pathAt(pathPrefix, key);
-  if (value is! String) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidFieldType,
-      path: path,
-      message: 'Field $key must be a string.',
-    );
-  }
-  if (maxLength != null && value.length > maxLength) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidValue,
-      path: path,
-      message: 'Field $path length must be <= $maxLength characters.',
-      source: value.length,
-    );
-  }
-  return value;
-}
-
-double? _optionalDouble(
-  Map<String, Object?> json,
-  String key, {
-  String pathPrefix = '',
-}) {
-  if (!json.containsKey(key)) return null;
-  final value = json[key];
-  if (value == null) return null;
-  final path = _pathAt(pathPrefix, key);
-  if (value is! num) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidFieldType,
-      path: path,
-      message: 'Field $key must be a number.',
-    );
-  }
-  final out = value.toDouble();
-  if (!out.isFinite) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidValue,
-      path: path,
-      message: 'Field $key must be finite.',
-      source: value,
-    );
-  }
-  return out;
-}
-
-int? _optionalInt(
-  Map<String, Object?> json,
-  String key, {
-  String pathPrefix = '',
-}) {
-  if (!json.containsKey(key)) return null;
-  final value = json[key];
-  if (value == null) return null;
-  final path = _pathAt(pathPrefix, key);
-  if (value is int) {
-    return value;
-  }
-  if (value is! num) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidFieldType,
-      path: path,
-      message: 'Field $key must be an int.',
-    );
-  }
-  final asDouble = value.toDouble();
-  if (!asDouble.isFinite || asDouble.truncateToDouble() != asDouble) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidFieldType,
-      path: path,
-      message: 'Field $key must be an int.',
-    );
-  }
-  if (asDouble.abs() > 9007199254740991) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidValue,
-      path: path,
-      message: 'Field $key must be an int.',
-      source: value,
-    );
-  }
-  return asDouble.toInt();
-}
-
-Offset _parsePoint(Object? value, {required String pathPrefix}) {
-  if (value is! Map) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidFieldType,
-      path: pathPrefix,
-      message: '$pathPrefix must be an object with x/y.',
-    );
-  }
-  final map = _castMap(value, path: pathPrefix);
-  return Offset(
-    _requireDouble(map, 'x', pathPrefix: pathPrefix),
-    _requireDouble(map, 'y', pathPrefix: pathPrefix),
-  );
 }
 
 Color _parseColor(String value, {String? path}) {

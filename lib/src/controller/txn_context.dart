@@ -2,7 +2,7 @@ import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
 
-import '../contract/ids.dart' show LayerId;
+import '../contract/ids.dart' show LayerId, generateLayerId, generateNodeId;
 import '../core/nodes.dart';
 import '../core/scene.dart';
 import '../model/document.dart';
@@ -309,7 +309,7 @@ class TxnContext {
   String txnNextNodeId() {
     txnEnsureActive();
     while (true) {
-      final candidate = 'node-$nodeIdSeed';
+      final candidate = generateNodeId(nodeIdSeed);
       nodeIdSeed = nodeIdSeed + 1;
       if (!txnHasNodeId(candidate)) {
         txnRememberNodeId(candidate);
@@ -376,7 +376,7 @@ class TxnContext {
   LayerId txnNextLayerId() {
     txnEnsureActive();
     while (true) {
-      final candidate = 'layer-$layerIdSeed';
+      final candidate = generateLayerId(layerIdSeed);
       layerIdSeed = layerIdSeed + 1;
       if (!txnHasLayerId(candidate)) {
         return candidate;

@@ -1,6 +1,17 @@
 import 'dart:ui';
 
-export 'ids.dart' show LayerId, NodeId;
+export 'ids.dart'
+    show
+        LayerId,
+        NodeId,
+        generateLayerId,
+        generateNodeId,
+        isGeneratedLayerId,
+        isGeneratedNodeId,
+        parseLayerId,
+        parseNodeId,
+        tryParseGeneratedLayerIdSeed,
+        tryParseGeneratedNodeIdSeed;
 export 'path_fill_rule.dart' show PathFillRule;
 import 'ids.dart';
 import 'path_fill_rule.dart';

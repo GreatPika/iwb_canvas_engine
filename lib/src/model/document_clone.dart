@@ -1,6 +1,12 @@
 import 'dart:ui';
 
-import '../contract/ids.dart' show LayerId;
+import '../contract/ids.dart'
+    show
+        LayerId,
+        isGeneratedLayerId,
+        isGeneratedNodeId,
+        tryParseGeneratedLayerIdSeed,
+        tryParseGeneratedNodeIdSeed;
 import '../core/nodes.dart';
 import '../core/scene.dart';
 import '../contract/transform2d.dart';
@@ -220,8 +226,8 @@ int txnInitialNodeIdSeed(Scene scene) {
   ];
   for (final node in nodes) {
     final id = node.id;
-    if (!id.startsWith('node-')) continue;
-    final parsed = int.tryParse(id.substring('node-'.length));
+    if (!isGeneratedNodeId(id)) continue;
+    final parsed = tryParseGeneratedNodeIdSeed(id);
     if (parsed == null || parsed < 0) continue;
     if (parsed > maxId) {
       maxId = parsed;
@@ -253,8 +259,8 @@ int txnInitialLayerIdSeed(Scene scene) {
   var maxId = -1;
   for (final layer in scene.layers) {
     final id = layer.id;
-    if (!id.startsWith('layer-')) continue;
-    final parsed = int.tryParse(id.substring('layer-'.length));
+    if (!isGeneratedLayerId(id)) continue;
+    final parsed = tryParseGeneratedLayerIdSeed(id);
     if (parsed == null || parsed < 0) continue;
     if (parsed > maxId) {
       maxId = parsed;

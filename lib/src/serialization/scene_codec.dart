@@ -71,6 +71,32 @@ SceneSnapshot decodeScene(Map<String, dynamic> json) {
 Map<String, dynamic> encodeSceneDocument(Scene scene) {
   final canonicalScene = model_builder.sceneValidateCore(scene);
   final backgroundLayer = canonicalScene.backgroundLayer!;
+  final backgroundNodes = <Map<String, dynamic>>[];
+  for (
+    var nodeIndex = 0;
+    nodeIndex < backgroundLayer.nodes.length;
+    nodeIndex++
+  ) {
+    backgroundNodes.add(
+      _encodeNode(
+        backgroundLayer.nodes[nodeIndex],
+        nodePath: 'backgroundLayer.nodes[$nodeIndex]',
+      ),
+    );
+  }
+  final layers = <Map<String, dynamic>>[];
+  for (
+    var layerIndex = 0;
+    layerIndex < canonicalScene.layers.length;
+    layerIndex++
+  ) {
+    layers.add(
+      _encodeContentLayer(
+        canonicalScene.layers[layerIndex],
+        layerPath: 'layers[$layerIndex]',
+      ),
+    );
+  }
   return <String, dynamic>{
     'schemaVersion': schemaVersionWrite,
     'camera': {
@@ -92,8 +118,8 @@ Map<String, dynamic> encodeSceneDocument(Scene scene) {
           .toList(),
       'gridSizes': canonicalScene.palette.gridSizes,
     },
-    'backgroundLayer': _encodeBackgroundLayer(backgroundLayer),
-    'layers': canonicalScene.layers.map(_encodeContentLayer).toList(),
+    'backgroundLayer': <String, dynamic>{'nodes': backgroundNodes},
+    'layers': layers,
   };
 }
 
@@ -108,6 +134,33 @@ Scene decodeSceneDocument(Map<String, Object?> json) {
 
 Map<String, dynamic> _encodeSnapshot(SceneSnapshot snapshot) {
   final backgroundLayer = snapshot.backgroundLayer;
+  final backgroundNodes = <Map<String, dynamic>>[];
+  for (
+    var nodeIndex = 0;
+    nodeIndex < backgroundLayer.nodes.length;
+    nodeIndex++
+  ) {
+    backgroundNodes.add(
+      _encodeNode(
+        txnNodeFromSnapshot(backgroundLayer.nodes[nodeIndex]),
+        nodePath: 'backgroundLayer.nodes[$nodeIndex]',
+      ),
+    );
+  }
+  final layers = <Map<String, dynamic>>[];
+  for (var layerIndex = 0; layerIndex < snapshot.layers.length; layerIndex++) {
+    final layer = snapshot.layers[layerIndex];
+    final nodes = <Map<String, dynamic>>[];
+    for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
+      nodes.add(
+        _encodeNode(
+          txnNodeFromSnapshot(layer.nodes[nodeIndex]),
+          nodePath: 'layers[$layerIndex].nodes[$nodeIndex]',
+        ),
+      );
+    }
+    layers.add(<String, dynamic>{'id': layer.id, 'nodes': nodes});
+  }
   return <String, dynamic>{
     'schemaVersion': schemaVersionWrite,
     'camera': {
@@ -129,36 +182,28 @@ Map<String, dynamic> _encodeSnapshot(SceneSnapshot snapshot) {
           .toList(),
       'gridSizes': snapshot.palette.gridSizes,
     },
-    'backgroundLayer': <String, dynamic>{
-      'nodes': backgroundLayer.nodes
-          .map((node) => _encodeNode(txnNodeFromSnapshot(node)))
-          .toList(),
-    },
-    'layers': snapshot.layers
-        .map(
-          (layer) => <String, dynamic>{
-            'id': layer.id,
-            'nodes': layer.nodes
-                .map((node) => _encodeNode(txnNodeFromSnapshot(node)))
-                .toList(),
-          },
-        )
-        .toList(),
+    'backgroundLayer': <String, dynamic>{'nodes': backgroundNodes},
+    'layers': layers,
   };
 }
 
-Map<String, dynamic> _encodeBackgroundLayer(BackgroundLayer layer) {
-  return <String, dynamic>{'nodes': layer.nodes.map(_encodeNode).toList()};
+Map<String, dynamic> _encodeContentLayer(
+  ContentLayer layer, {
+  required String layerPath,
+}) {
+  final nodes = <Map<String, dynamic>>[];
+  for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
+    nodes.add(
+      _encodeNode(
+        layer.nodes[nodeIndex],
+        nodePath: '$layerPath.nodes[$nodeIndex]',
+      ),
+    );
+  }
+  return <String, dynamic>{'id': layer.id, 'nodes': nodes};
 }
 
-Map<String, dynamic> _encodeContentLayer(ContentLayer layer) {
-  return <String, dynamic>{
-    'id': layer.id,
-    'nodes': layer.nodes.map(_encodeNode).toList(),
-  };
-}
-
-Map<String, dynamic> _encodeNode(SceneNode node) {
+Map<String, dynamic> _encodeNode(SceneNode node, {required String nodePath}) {
   final base = <String, dynamic>{
     'id': node.id,
     'instanceRevision': node.instanceRevision,
@@ -192,7 +237,7 @@ Map<String, dynamic> _encodeNode(SceneNode node) {
         'size': _encodeSize(text.size),
         'fontSize': text.fontSize,
         'color': _colorToHex(text.color),
-        'align': _textAlignToString(text.align),
+        'align': _textAlignToString(text.align, path: '$nodePath.align'),
         'isBold': text.isBold,
         'isItalic': text.isItalic,
         'isUnderline': text.isUnderline,
@@ -269,7 +314,7 @@ String _pathFillRuleToString(PathFillRule rule) {
   }
 }
 
-String _textAlignToString(TextAlign align) {
+String _textAlignToString(TextAlign align, {required String path}) {
   switch (align) {
     case TextAlign.left:
       return 'left';
@@ -281,6 +326,7 @@ String _textAlignToString(TextAlign align) {
       throw SceneDataException(
         code: SceneDataErrorCode.invalidValue,
         message: 'Unsupported TextAlign: $align.',
+        path: path,
         source: align,
       );
   }
