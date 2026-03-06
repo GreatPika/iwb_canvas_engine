@@ -806,7 +806,7 @@ void main() {
 
     final changed = txnApplyNodePatch(
       text,
-      const TextNodePatch(
+      TextNodePatch(
         id: 'text-layout-patch',
         fontSize: PatchField<double>.value(28),
       ),
@@ -833,7 +833,7 @@ void main() {
 
     final changed = txnApplyNodePatch(
       text,
-      const TextNodePatch(
+      TextNodePatch(
         id: 'text-non-layout-patch',
         color: PatchField<Color>.value(Color(0xFF123456)),
       ),
@@ -844,68 +844,69 @@ void main() {
   });
 
   test('node-from-spec rejects invalid numeric fields with field path', () {
-    final invalidCases = <({NodeSpec spec, String field, String message})>[
-      (
-        spec: RectNodeSpec(size: const Size(1, 1), opacity: 1.1),
-        field: 'spec.opacity',
-        message: 'Must be within [0,1].',
-      ),
-      (
-        spec: RectNodeSpec(
-          size: const Size(1, 1),
-          transform: const Transform2D(
-            a: double.nan,
-            b: 0,
-            c: 0,
-            d: 1,
-            tx: 0,
-            ty: 0,
+    final invalidCases =
+        <({NodeSpec Function() create, String field, String message})>[
+          (
+            create: () => RectNodeSpec(size: const Size(1, 1), opacity: 1.1),
+            field: 'opacity',
+            message: 'Must be within [0,1].',
           ),
-        ),
-        field: 'spec.transform.a',
-        message: 'Must be finite.',
-      ),
-      (
-        spec: TextNodeSpec(
-          text: 't',
-          fontSize: 0,
-          color: const Color(0xFF000000),
-        ),
-        field: 'spec.fontSize',
-        message: 'Must be > 0.',
-      ),
-      (
-        spec: StrokeNodeSpec(
-          points: <Offset>[const Offset(double.infinity, 0)],
-          thickness: 1,
-          color: const Color(0xFF000000),
-        ),
-        field: 'spec.points[0].dx',
-        message: 'Must be finite.',
-      ),
-      (
-        spec: ImageNodeSpec(
-          imageId: 'x' * (kMaxImageIdLength + 1),
-          size: const Size(1, 1),
-        ),
-        field: 'spec.imageId',
-        message: 'Length must be <= $kMaxImageIdLength characters.',
-      ),
-      (
-        spec: RectNodeSpec(size: const Size(1, 1), strokeWidth: -1),
-        field: 'spec.strokeWidth',
-        message: 'Must be >= 0.',
-      ),
-      (
-        spec: PathNodeSpec(svgPathData: 'not-a-path'),
-        field: 'spec.svgPathData',
-        message: 'Must be valid SVG path data.',
-      ),
-    ];
+          (
+            create: () => RectNodeSpec(
+              size: const Size(1, 1),
+              transform: const Transform2D(
+                a: double.nan,
+                b: 0,
+                c: 0,
+                d: 1,
+                tx: 0,
+                ty: 0,
+              ),
+            ),
+            field: 'transform.a',
+            message: 'Must be finite.',
+          ),
+          (
+            create: () => TextNodeSpec(
+              text: 't',
+              fontSize: 0,
+              color: const Color(0xFF000000),
+            ),
+            field: 'fontSize',
+            message: 'Must be > 0.',
+          ),
+          (
+            create: () => StrokeNodeSpec(
+              points: <Offset>[const Offset(double.infinity, 0)],
+              thickness: 1,
+              color: const Color(0xFF000000),
+            ),
+            field: 'points[0].dx',
+            message: 'Must be finite.',
+          ),
+          (
+            create: () => ImageNodeSpec(
+              imageId: 'x' * (kMaxImageIdLength + 1),
+              size: const Size(1, 1),
+            ),
+            field: 'imageId',
+            message: 'Length must be <= $kMaxImageIdLength characters.',
+          ),
+          (
+            create: () => RectNodeSpec(size: const Size(1, 1), strokeWidth: -1),
+            field: 'strokeWidth',
+            message: 'Must be >= 0.',
+          ),
+          (
+            create: () => PathNodeSpec(svgPathData: 'not-a-path'),
+            field: 'svgPathData',
+            message: 'Must be valid SVG path data.',
+          ),
+        ];
 
     for (final invalid in invalidCases) {
       expect(
-        () => txnNodeFromSpec(invalid.spec, fallbackId: 'auto-id'),
+        invalid.create,
         throwsA(
           predicate(
             (e) =>
@@ -923,7 +924,7 @@ void main() {
     expect(
       txnApplyNodePatch(
         image,
-        const ImageNodePatch(
+        ImageNodePatch(
           id: 'img',
           common: CommonNodePatch(
             opacity: PatchField<double>.value(0.5),
@@ -959,7 +960,7 @@ void main() {
     expect(
       txnApplyNodePatch(
         text,
-        const TextNodePatch(
+        TextNodePatch(
           id: 'txt',
           text: PatchField<String>.value('y'),
           fontSize: PatchField<double>.value(18),
@@ -989,7 +990,7 @@ void main() {
     expect(
       txnApplyNodePatch(
         stroke,
-        const StrokeNodePatch(
+        StrokeNodePatch(
           id: 'str',
           points: PatchField<List<Offset>>.value(<Offset>[
             Offset(2, 2),
@@ -1008,7 +1009,7 @@ void main() {
     expect(
       txnApplyNodePatch(
         stroke,
-        const StrokeNodePatch(
+        StrokeNodePatch(
           id: 'str',
           color: PatchField<Color>.value(Color(0xFF222222)),
         ),
@@ -1016,6 +1017,23 @@ void main() {
       isTrue,
     );
     expect(stroke.pointsRevision, strokeRevisionAfterGeometryPatch);
+
+    final strokePointsBeforeNoop = stroke.points;
+    expect(
+      txnApplyNodePatch(
+        stroke,
+        StrokeNodePatch(
+          id: 'str',
+          points: PatchField<List<Offset>>.value(<Offset>[
+            const Offset(2, 2),
+            const Offset(3, 3),
+          ]),
+        ),
+      ),
+      isFalse,
+    );
+    expect(stroke.pointsRevision, strokeRevisionAfterGeometryPatch);
+    expect(identical(stroke.points, strokePointsBeforeNoop), isTrue);
 
     final line = LineNode(
       id: 'lin',
@@ -1027,7 +1045,7 @@ void main() {
     expect(
       txnApplyNodePatch(
         line,
-        const LineNodePatch(
+        LineNodePatch(
           id: 'lin',
           start: PatchField<Offset>.value(Offset(2, 0)),
           end: PatchField<Offset>.value(Offset(5, 1)),
@@ -1049,7 +1067,7 @@ void main() {
     expect(
       txnApplyNodePatch(
         rect,
-        const RectNodePatch(
+        RectNodePatch(
           id: 'rec',
           size: PatchField<Size>.value(Size(6, 7)),
           fillColor: PatchField<Color?>.nullValue(),
@@ -1071,7 +1089,7 @@ void main() {
     expect(
       txnApplyNodePatch(
         path,
-        const PathNodePatch(
+        PathNodePatch(
           id: 'pth',
           svgPathData: PatchField<String>.value('M0 0 L5 5'),
           fillColor: PatchField<Color?>.value(Color(0xFF111111)),
@@ -1089,22 +1107,22 @@ void main() {
 
   test('node patch validates id, patch type and nullability constraints', () {
     final rectNoop = RectNode(id: 'x', size: const Size(1, 1));
-    expect(txnApplyNodePatch(rectNoop, const RectNodePatch(id: 'x')), isFalse);
+    expect(txnApplyNodePatch(rectNoop, RectNodePatch(id: 'x')), isFalse);
 
     final rect = RectNode(id: 'r1', size: const Size(1, 1));
     expect(
-      () => txnApplyNodePatch(rect, const RectNodePatch(id: 'other')),
+      () => txnApplyNodePatch(rect, RectNodePatch(id: 'other')),
       throwsArgumentError,
     );
     expect(
       () => txnApplyNodePatch(
         rect,
-        const RectNodePatch(id: 'r1', size: PatchField<Size>.nullValue()),
+        RectNodePatch(id: 'r1', size: PatchField<Size>.nullValue()),
       ),
       throwsArgumentError,
     );
     expect(
-      () => txnApplyNodePatch(rect, const PathNodePatch(id: 'r1')),
+      () => txnApplyNodePatch(rect, PathNodePatch(id: 'r1')),
       throwsArgumentError,
     );
 
@@ -1117,10 +1135,7 @@ void main() {
     expect(
       () => txnApplyNodePatch(
         stroke,
-        const StrokeNodePatch(
-          id: 's1',
-          points: PatchField<List<Offset>>.nullValue(),
-        ),
+        StrokeNodePatch(id: 's1', points: PatchField<List<Offset>>.nullValue()),
       ),
       throwsArgumentError,
     );
@@ -1131,58 +1146,60 @@ void main() {
     () {
       final rect = RectNode(id: 'r1', size: const Size(1, 1));
 
-      expect(txnApplyNodePatch(rect, const RectNodePatch(id: 'r1')), isFalse);
+      expect(txnApplyNodePatch(rect, RectNodePatch(id: 'r1')), isFalse);
 
-      final invalidCases = <({NodePatch patch, String field, String message})>[
-        (
-          patch: const RectNodePatch(
-            id: 'r1',
-            common: CommonNodePatch(opacity: PatchField<double>.value(1.1)),
-          ),
-          field: 'patch.common.opacity',
-          message: 'Must be within [0,1].',
-        ),
-        (
-          patch: const RectNodePatch(
-            id: 'r1',
-            common: CommonNodePatch(
-              transform: PatchField<Transform2D>.value(
-                Transform2D(a: 1, b: 0, c: 0, d: 1, tx: double.nan, ty: 0),
+      final invalidCases =
+          <({NodePatch Function() create, String field, String message})>[
+            (
+              create: () => RectNodePatch(
+                id: 'r1',
+                common: CommonNodePatch(opacity: PatchField<double>.value(1.1)),
               ),
+              field: 'opacity',
+              message: 'Must be within [0,1].',
             ),
-          ),
-          field: 'patch.common.transform.tx',
-          message: 'Must be finite.',
-        ),
-        (
-          patch: const RectNodePatch(
-            id: 'r1',
-            size: PatchField<Size>.nullValue(),
-          ),
-          field: 'patch.size',
-          message: 'PatchField.nullValue() is invalid for non-nullable field.',
-        ),
-        (
-          patch: const RectNodePatch(
-            id: 'r1',
-            common: CommonNodePatch(hitPadding: PatchField<double>.value(-1)),
-          ),
-          field: 'patch.common.hitPadding',
-          message: 'Must be >= 0.',
-        ),
-        (
-          patch: const RectNodePatch(
-            id: 'r1',
-            strokeWidth: PatchField<double>.value(-1),
-          ),
-          field: 'patch.strokeWidth',
-          message: 'Must be >= 0.',
-        ),
-      ];
+            (
+              create: () => RectNodePatch(
+                id: 'r1',
+                common: CommonNodePatch(
+                  transform: PatchField<Transform2D>.value(
+                    Transform2D(a: 1, b: 0, c: 0, d: 1, tx: double.nan, ty: 0),
+                  ),
+                ),
+              ),
+              field: 'transform.tx',
+              message: 'Must be finite.',
+            ),
+            (
+              create: () =>
+                  RectNodePatch(id: 'r1', size: PatchField<Size>.nullValue()),
+              field: 'size',
+              message:
+                  'PatchField.nullValue() is invalid for non-nullable field.',
+            ),
+            (
+              create: () => RectNodePatch(
+                id: 'r1',
+                common: CommonNodePatch(
+                  hitPadding: PatchField<double>.value(-1),
+                ),
+              ),
+              field: 'hitPadding',
+              message: 'Must be >= 0.',
+            ),
+            (
+              create: () => RectNodePatch(
+                id: 'r1',
+                strokeWidth: PatchField<double>.value(-1),
+              ),
+              field: 'strokeWidth',
+              message: 'Must be >= 0.',
+            ),
+          ];
 
       for (final invalid in invalidCases) {
         expect(
-          () => txnApplyNodePatch(rect, invalid.patch),
+          invalid.create,
           throwsA(
             predicate(
               (e) =>
@@ -1197,65 +1214,52 @@ void main() {
   );
 
   test('node patch rejects invalid image and text boundary values', () {
-    final image = ImageNode(
-      id: 'img-boundary',
-      imageId: 'asset:ok',
-      size: const Size(1, 1),
-    );
     expect(
-      () => txnApplyNodePatch(
-        image,
-        ImageNodePatch(
-          id: 'img-boundary',
-          imageId: PatchField<String>.value('x' * (kMaxImageIdLength + 1)),
-        ),
+      () => ImageNodePatch(
+        id: 'img-boundary',
+        imageId: PatchField<String>.value('x' * (kMaxImageIdLength + 1)),
       ),
       throwsA(
         predicate(
           (e) =>
               e is ArgumentError &&
-              e.name == 'patch.imageId' &&
+              e.name == 'imageId' &&
               e.message == 'Length must be <= $kMaxImageIdLength characters.',
         ),
       ),
     );
 
-    final text = TextNode(
-      id: 'text-boundary',
-      text: 'x',
-      size: const Size(1, 1),
-      color: const Color(0xFF000000),
-    );
-    final invalidCases = <({NodePatch patch, String field, String message})>[
-      (
-        patch: const TextNodePatch(
-          id: 'text-boundary',
-          fontSize: PatchField<double>.value(0),
-        ),
-        field: 'patch.fontSize',
-        message: 'Must be > 0.',
-      ),
-      (
-        patch: const TextNodePatch(
-          id: 'text-boundary',
-          maxWidth: PatchField<double?>.value(0),
-        ),
-        field: 'patch.maxWidth',
-        message: 'Must be > 0.',
-      ),
-      (
-        patch: const TextNodePatch(
-          id: 'text-boundary',
-          lineHeight: PatchField<double?>.value(0),
-        ),
-        field: 'patch.lineHeight',
-        message: 'Must be > 0.',
-      ),
-    ];
+    final invalidCases =
+        <({NodePatch Function() create, String field, String message})>[
+          (
+            create: () => TextNodePatch(
+              id: 'text-boundary',
+              fontSize: PatchField<double>.value(0),
+            ),
+            field: 'fontSize',
+            message: 'Must be > 0.',
+          ),
+          (
+            create: () => TextNodePatch(
+              id: 'text-boundary',
+              maxWidth: PatchField<double?>.value(0),
+            ),
+            field: 'maxWidth',
+            message: 'Must be > 0.',
+          ),
+          (
+            create: () => TextNodePatch(
+              id: 'text-boundary',
+              lineHeight: PatchField<double?>.value(0),
+            ),
+            field: 'lineHeight',
+            message: 'Must be > 0.',
+          ),
+        ];
 
     for (final invalid in invalidCases) {
       expect(
-        () => txnApplyNodePatch(text, invalid.patch),
+        invalid.create,
         throwsA(
           predicate(
             (e) =>

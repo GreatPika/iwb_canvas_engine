@@ -857,7 +857,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     _controller.patchNode(
       TextNodePatch(
         id: node.id,
-        common: const CommonNodePatch(isVisible: PatchField<bool>.value(false)),
+        common: CommonNodePatch(isVisible: PatchField<bool>.value(false)),
       ),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -879,18 +879,14 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
           TextNodePatch(
             id: node.id,
             text: PatchField<String>.value(newText),
-            common: const CommonNodePatch(
-              isVisible: PatchField<bool>.value(true),
-            ),
+            common: CommonNodePatch(isVisible: PatchField<bool>.value(true)),
           ),
         );
       } else {
         _controller.patchNode(
           TextNodePatch(
             id: node.id,
-            common: const CommonNodePatch(
-              isVisible: PatchField<bool>.value(true),
-            ),
+            common: CommonNodePatch(isVisible: PatchField<bool>.value(true)),
           ),
         );
       }

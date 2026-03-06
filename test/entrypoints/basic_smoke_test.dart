@@ -57,7 +57,7 @@ void main() {
 
     expect(scene.layers.single.nodes.single.id, 'rect-1');
 
-    const patch = RectNodePatch(
+    final patch = RectNodePatch(
       id: 'rect-1',
       size: PatchField<Size>.value(Size(50, 30)),
     );

@@ -85,10 +85,7 @@ void main() {
         DisposeMatrixCase(
           name: 'patchNode',
           call: (controller) => controller.patchNode(
-            const RectNodePatch(
-              id: 'a',
-              size: PatchField<Size>.value(Size(30, 20)),
-            ),
+            RectNodePatch(id: 'a', size: PatchField<Size>.value(Size(30, 20))),
           ),
         ),
         DisposeMatrixCase(
@@ -309,10 +306,7 @@ void main() {
 
         expect(
           controller.patchNode(
-            const RectNodePatch(
-              id: 'n',
-              size: PatchField<Size>.value(Size(20, 10)),
-            ),
+            RectNodePatch(id: 'n', size: PatchField<Size>.value(Size(20, 10))),
           ),
           isTrue,
         );

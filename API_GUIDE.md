@@ -209,6 +209,8 @@ Shared base fields:
 Key rules:
 
 - `SceneController.addNode(...)` accepts only `NodeSpec`
+- public `NodeSpec` constructors validate boundary values eagerly and are
+  runtime constructors rather than `const` entry points
 - `NodeSpec.id` is optional; the controller can generate ids
 - explicit ids remain `String`-compatible at the public API boundary, but the
   supported parsing/generation policy is now exposed through `NodeIdValue`,
@@ -239,11 +241,18 @@ Patch semantics use `PatchField<T>`:
 `PatchField.nullValue()` is invalid for non-nullable fields and throws
 `ArgumentError`.
 
+Public `NodePatch` and `CommonNodePatch` constructors validate only present
+fields eagerly and are runtime constructors rather than `const` entry points.
+Collection payloads such as stroke points are captured as immutable snapshots
+at the boundary.
+
 ### 4.3 Write-boundary validation
 
 Runtime write APIs validate aggressively:
 
 - invalid `NodeSpec` or `NodePatch` values throw `ArgumentError`
+- `PatchField.absent()` is not validated just for symmetry; only present patch
+  fields are checked at the public boundary
 - duplicate explicit `NodeSpec.id` in `addNode(...)` / `writeNodeInsert(...)`
   throws `ArgumentError`
 - validated boundary value types expose the supported parse rules without

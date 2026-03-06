@@ -1029,7 +1029,7 @@ bool _txnSetOffsets(
   required bool dryRun,
 }) {
   if (patch.isAbsent) return false;
-  final next = List<Offset>.from(patch.value);
+  final next = patch.value;
   if (_txnOffsetListsEqual(current, next)) return false;
   if (!dryRun) {
     assign(next);

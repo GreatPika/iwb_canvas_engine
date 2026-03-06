@@ -11,6 +11,8 @@ All notable changes to `iwb_canvas_engine` are documented here.
   snapshots or preview payloads.
 - Public snapshot/node constructors are no longer `const`; they now validate
   boundary ids and numeric values eagerly.
+- Public `NodeSpec`, `NodePatch`, and `CommonNodePatch` constructors are no
+  longer `const`; they now validate write-boundary values eagerly.
 - Exported validated boundary value types no longer expose unsupported
   `validated(...)` fast-path constructors. Supported factory entrypoints are
   `parse(...)`, `of(...)`, and `fromJson(...)`.
@@ -59,6 +61,9 @@ All notable changes to `iwb_canvas_engine` are documented here.
 - `imageId` now uses the same exported validated boundary owner across
   decode/build, snapshot validation, runtime scene validation, `NodeSpec`, and
   `NodePatch`.
+- Public `NodePatch` now validates only present fields at construction time,
+  and stroke point patches defensively copy once at the boundary before runtime
+  no-op checks.
 
 ## 5.1.0 (2026-03-04)
 

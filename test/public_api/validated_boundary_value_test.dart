@@ -190,6 +190,138 @@ void main() {
       );
     });
 
+    test(
+      'public node spec constructors reject invalid write values eagerly',
+      () {
+        expect(
+          () => RectNodeSpec(size: const Size(1, 1), opacity: 1.1),
+          throwsA(
+            isA<ArgumentError>().having(
+              (error) => error.name,
+              'name',
+              'opacity',
+            ),
+          ),
+        );
+        expect(
+          () => TextNodeSpec(
+            text: 'hello',
+            fontSize: 0,
+            color: const Color(0xFF000000),
+          ),
+          throwsA(
+            isA<ArgumentError>().having(
+              (error) => error.name,
+              'name',
+              'fontSize',
+            ),
+          ),
+        );
+        expect(
+          () => PathNodeSpec(svgPathData: 'not-a-path'),
+          throwsA(
+            isA<ArgumentError>().having(
+              (error) => error.name,
+              'name',
+              'svgPathData',
+            ),
+          ),
+        );
+        expect(
+          () => RectNodeSpec(
+            size: const Size(1, 1),
+            transform: const Transform2D(a: 0, b: 0, c: 0, d: 0, tx: 0, ty: 0),
+          ),
+          throwsA(
+            isA<ArgumentError>().having(
+              (error) => error.name,
+              'name',
+              'transform',
+            ),
+          ),
+        );
+      },
+    );
+
+    test(
+      'public node patch constructors validate present fields and keep absent fields untouched',
+      () {
+        expect(() => RectNodePatch(id: 'node-1'), returnsNormally);
+        expect(
+          () => RectNodePatch(
+            id: 'node-1',
+            common: CommonNodePatch(opacity: PatchField<double>.value(1.1)),
+          ),
+          throwsA(
+            isA<ArgumentError>().having(
+              (error) => error.name,
+              'name',
+              'opacity',
+            ),
+          ),
+        );
+        expect(
+          () => RectNodePatch(id: 'node-1', size: PatchField<Size>.nullValue()),
+          throwsA(
+            isA<ArgumentError>().having((error) => error.name, 'name', 'size'),
+          ),
+        );
+        expect(
+          () => TextNodePatch(
+            id: 'node-1',
+            maxWidth: PatchField<double?>.value(0),
+          ),
+          throwsA(
+            isA<ArgumentError>().having(
+              (error) => error.name,
+              'name',
+              'maxWidth',
+            ),
+          ),
+        );
+        expect(
+          () => CommonNodePatch(
+            transform: PatchField<Transform2D>.value(
+              const Transform2D(a: 0, b: 0, c: 0, d: 0, tx: 0, ty: 0),
+            ),
+          ),
+          throwsA(
+            isA<ArgumentError>().having(
+              (error) => error.name,
+              'name',
+              'transform',
+            ),
+          ),
+        );
+      },
+    );
+
+    test('stroke spec and patch copy point lists at the public boundary', () {
+      final specPoints = <Offset>[const Offset(0, 0), const Offset(1, 1)];
+      final patchPoints = <Offset>[const Offset(0, 0), const Offset(2, 2)];
+
+      final spec = StrokeNodeSpec(
+        points: specPoints,
+        thickness: 1,
+        color: const Color(0xFF000000),
+      );
+      final patch = StrokeNodePatch(
+        id: 'node-1',
+        points: PatchField<List<Offset>>.value(patchPoints),
+      );
+
+      specPoints[1] = const Offset(10, 10);
+      patchPoints[1] = const Offset(20, 20);
+
+      expect(spec.points[1], const Offset(1, 1));
+      expect(patch.points.value[1], const Offset(2, 2));
+      expect(() => spec.points.add(const Offset(3, 3)), throwsUnsupportedError);
+      expect(
+        () => patch.points.value.add(const Offset(4, 4)),
+        throwsUnsupportedError,
+      );
+    });
+
     test('scene palette boundary rejects empty public lists', () {
       expect(
         () => ScenePaletteSnapshot(penColors: const <Color>[]),

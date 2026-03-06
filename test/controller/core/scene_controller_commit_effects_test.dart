@@ -35,7 +35,7 @@ void main() {
     controller.write<void>((writer) {
       writer.writeNodeInsert(RectNodeSpec(id: 'r3', size: const Size(8, 8)));
       writer.writeNodePatch(
-        const RectNodePatch(id: 'r1', strokeWidth: PatchField<double>.value(2)),
+        RectNodePatch(id: 'r1', strokeWidth: PatchField<double>.value(2)),
       );
       writer.writeNodeErase('r2');
     });
@@ -52,7 +52,7 @@ void main() {
 
     controller.write<void>((writer) {
       writer.writeNodePatch(
-        const RectNodePatch(
+        RectNodePatch(
           id: 'r1',
           common: CommonNodePatch(
             transform: PatchField<Transform2D>.value(
@@ -78,7 +78,7 @@ void main() {
 
     controller.write<void>((writer) {
       writer.writeNodePatch(
-        const RectNodePatch(
+        RectNodePatch(
           id: 'r1',
           common: CommonNodePatch(isSelectable: PatchField<bool>.value(false)),
         ),

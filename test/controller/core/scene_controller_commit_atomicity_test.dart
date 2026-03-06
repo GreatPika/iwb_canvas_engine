@@ -262,7 +262,7 @@ void main() {
 
       controller.write<void>((writer) {
         writer.writeNodePatch(
-          const StrokeNodePatch(
+          StrokeNodePatch(
             id: 's1',
             points: PatchField<List<Offset>>.value(<Offset>[
               Offset(0, 0),
@@ -277,7 +277,7 @@ void main() {
 
       controller.write<void>((writer) {
         writer.writeNodePatch(
-          const StrokeNodePatch(
+          StrokeNodePatch(
             id: 's1',
             points: PatchField<List<Offset>>.value(<Offset>[
               Offset(0, 0),

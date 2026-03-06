@@ -152,10 +152,7 @@ void main() {
 
       controller.write<void>((writer) {
         writer.writeNodePatch(
-          const RectNodePatch(
-            id: 'r',
-            size: PatchField<Size>.value(Size(20, 20)),
-          ),
+          RectNodePatch(id: 'r', size: PatchField<Size>.value(Size(20, 20))),
         );
       });
 

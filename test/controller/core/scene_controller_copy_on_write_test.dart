@@ -30,7 +30,7 @@ void main() {
 
     controller.write<void>((writer) {
       writer.writeNodePatch(
-        const RectNodePatch(
+        RectNodePatch(
           id: 'r1',
           common: CommonNodePatch(hitPadding: PatchField<double>.value(0)),
         ),
@@ -75,7 +75,7 @@ void main() {
 
       controller.write<void>((writer) {
         writer.writeNodePatch(
-          const TextNodePatch(id: 't1', fontSize: PatchField<double>.value(36)),
+          TextNodePatch(id: 't1', fontSize: PatchField<double>.value(36)),
         );
       });
 
@@ -116,7 +116,7 @@ void main() {
 
     controller.write<void>((writer) {
       writer.writeNodePatch(
-        const TextNodePatch(
+        TextNodePatch(
           id: 't1',
           color: PatchField<Color>.value(Color(0xFF00AA00)),
         ),
@@ -147,7 +147,7 @@ void main() {
 
     controller.write<void>((writer) {
       writer.writeNodePatch(
-        const RectNodePatch(id: 'r1', strokeWidth: PatchField<double>.value(2)),
+        RectNodePatch(id: 'r1', strokeWidth: PatchField<double>.value(2)),
       );
     });
 
@@ -162,7 +162,7 @@ void main() {
 
     controller.write<void>((writer) {
       writer.writeNodePatch(
-        const RectNodePatch(
+        RectNodePatch(
           id: 'r1',
           common: CommonNodePatch(opacity: PatchField<double>.value(0.5)),
         ),

@@ -1,0 +1,167 @@
+import 'dart:ui';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart' hide NodeId;
+import 'package:iwb_canvas_engine/src/contract/node_patch.dart';
+import 'package:iwb_canvas_engine/src/contract/node_spec.dart';
+import 'package:iwb_canvas_engine/src/core/nodes.dart';
+import 'package:iwb_canvas_engine/src/model/document.dart';
+
+void main() {
+  test('validated spec fast-path helpers build typed boundary objects', () {
+    final image = imageNodeSpecFromValidated(
+      id: 'img-1',
+      imageId: 'asset:1',
+      size: const Size(10, 20),
+      naturalSize: const Size(30, 40),
+    );
+    final text = textNodeSpecFromValidated(
+      id: 'text-1',
+      text: 'hello',
+      fontSize: 18,
+      color: const Color(0xFF000000),
+      fontFamily: 'Mono',
+      maxWidth: 120,
+      lineHeight: 1.4,
+    );
+    final stroke = strokeNodeSpecFromValidated(
+      id: 'stroke-1',
+      points: const <Offset>[Offset(0, 0), Offset(1, 1)],
+      thickness: 2,
+      color: const Color(0xFF111111),
+    );
+    final line = lineNodeSpecFromValidated(
+      id: 'line-1',
+      start: const Offset(0, 0),
+      end: const Offset(5, 5),
+      thickness: 3,
+      color: const Color(0xFF222222),
+    );
+    final rect = rectNodeSpecFromValidated(
+      id: 'rect-1',
+      size: const Size(8, 9),
+      strokeWidth: 1.5,
+    );
+    final path = pathNodeSpecFromValidated(
+      id: 'path-1',
+      svgPathData: 'M0 0 L10 10',
+      strokeWidth: 2,
+      fillRule: PathFillRule.evenOdd,
+    );
+
+    expect(image.imageId, 'asset:1');
+    expect(text.fontFamily, 'Mono');
+    expect(stroke.points, const <Offset>[Offset(0, 0), Offset(1, 1)]);
+    expect(line.end, const Offset(5, 5));
+    expect(rect.strokeWidth, 1.5);
+    expect(path.fillRule, PathFillRule.evenOdd);
+  });
+
+  test('validated patch fast-path helpers build typed boundary objects', () {
+    final common = commonNodePatchFromValidated(
+      transform: PatchField<Transform2D>.value(Transform2D.identity),
+      opacity: PatchField<double>.value(0.5),
+      hitPadding: PatchField<double>.value(2),
+      isVisible: PatchField<bool>.value(false),
+    );
+    final image = imageNodePatchFromValidated(
+      id: 'img-1',
+      common: common,
+      imageId: PatchField<String>.value('asset:2'),
+      size: PatchField<Size>.value(const Size(4, 5)),
+      naturalSize: PatchField<Size?>.value(null),
+    );
+    final text = textNodePatchFromValidated(
+      id: 'text-1',
+      text: PatchField<String>.value('updated'),
+      fontFamily: PatchField<String?>.value('Mono'),
+    );
+    final stroke = strokeNodePatchFromValidated(
+      id: 'stroke-1',
+      points: PatchField<List<Offset>>.value(const <Offset>[
+        Offset(1, 2),
+        Offset(3, 4),
+      ]),
+    );
+    final line = lineNodePatchFromValidated(
+      id: 'line-1',
+      start: PatchField<Offset>.value(const Offset(2, 0)),
+    );
+    final rect = rectNodePatchFromValidated(
+      id: 'rect-1',
+      strokeWidth: PatchField<double>.value(2),
+    );
+    final path = pathNodePatchFromValidated(
+      id: 'path-1',
+      fillRule: PatchField<PathFillRule>.value(PathFillRule.evenOdd),
+    );
+
+    expect(image.common.opacity.value, 0.5);
+    expect(image.naturalSize.valueOrNull, isNull);
+    expect(text.text.value, 'updated');
+    expect(stroke.points.value, const <Offset>[Offset(1, 2), Offset(3, 4)]);
+    expect(line.start.value, const Offset(2, 0));
+    expect(rect.strokeWidth.value, 2);
+    expect(path.fillRule.value, PathFillRule.evenOdd);
+  });
+
+  test(
+    'validated patch fast-path snapshots stroke point payload ownership',
+    () {
+      final points = <Offset>[const Offset(1, 2), const Offset(3, 4)];
+
+      final patch = strokeNodePatchFromValidated(
+        id: 'stroke-owned',
+        points: PatchField<List<Offset>>.value(points),
+      );
+
+      points[1] = const Offset(30, 40);
+
+      expect(patch.points.value, const <Offset>[Offset(1, 2), Offset(3, 4)]);
+      expect(
+        () => patch.points.value.add(const Offset(5, 6)),
+        throwsUnsupportedError,
+      );
+    },
+  );
+
+  test(
+    'runtime safety-net rejects invalid fast-path spec and patch payloads',
+    () {
+      expect(
+        () => txnNodeFromSpec(
+          rectNodeSpecFromValidated(
+            size: const Size(1, 1),
+            transform: const Transform2D(a: 0, b: 0, c: 0, d: 0, tx: 0, ty: 0),
+          ),
+          fallbackId: 'auto-id',
+        ),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.name,
+            'name',
+            'spec.transform',
+          ),
+        ),
+      );
+
+      final rect = RectNode(id: 'r1', size: const Size(1, 1));
+      expect(
+        () => txnApplyNodePatch(
+          rect,
+          rectNodePatchFromValidated(
+            id: 'r1',
+            size: PatchField<Size>.nullValue(),
+          ),
+        ),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.name,
+            'name',
+            'patch.size',
+          ),
+        ),
+      );
+    },
+  );
+}

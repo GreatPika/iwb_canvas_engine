@@ -34,7 +34,7 @@ void main() {
   });
 
   test('CommonNodePatch defaults to absent for all fields', () {
-    const patch = CommonNodePatch();
+    final patch = CommonNodePatch();
 
     expect(patch.transform.isAbsent, isTrue);
     expect(patch.opacity.isAbsent, isTrue);
@@ -47,7 +47,7 @@ void main() {
   });
 
   test('NodePatch variants expose typed tri-state payloads', () {
-    const common = CommonNodePatch(
+    final common = CommonNodePatch(
       transform: PatchField<Transform2D>.value(Transform2D.identity),
       opacity: PatchField<double>.value(0.8),
       hitPadding: PatchField<double>.value(2),
@@ -58,7 +58,7 @@ void main() {
       isTransformable: PatchField<bool>.value(true),
     );
 
-    const image = ImageNodePatch(
+    final image = ImageNodePatch(
       id: 'img-1',
       common: common,
       imageId: PatchField<String>.value('image://1'),
@@ -66,7 +66,7 @@ void main() {
       naturalSize: PatchField<Size?>.nullValue(),
     );
 
-    const text = TextNodePatch(
+    final text = TextNodePatch(
       id: 'text-1',
       text: PatchField<String>.value('hello'),
       fontSize: PatchField<double>.value(16),
@@ -80,7 +80,7 @@ void main() {
       lineHeight: PatchField<double?>.nullValue(),
     );
 
-    const stroke = StrokeNodePatch(
+    final stroke = StrokeNodePatch(
       id: 'stroke-1',
       points: PatchField<List<Offset>>.value(<Offset>[
         Offset(1, 2),
@@ -90,7 +90,7 @@ void main() {
       color: PatchField<Color>.value(Color(0xFFABCDEF)),
     );
 
-    const line = LineNodePatch(
+    final line = LineNodePatch(
       id: 'line-1',
       start: PatchField<Offset>.value(Offset(0, 0)),
       end: PatchField<Offset>.value(Offset(5, 5)),
@@ -98,7 +98,7 @@ void main() {
       color: PatchField<Color>.value(Color(0xFF123456)),
     );
 
-    const rect = RectNodePatch(
+    final rect = RectNodePatch(
       id: 'rect-1',
       size: PatchField<Size>.value(Size(7, 9)),
       fillColor: PatchField<Color?>.nullValue(),
@@ -106,7 +106,7 @@ void main() {
       strokeWidth: PatchField<double>.value(1.5),
     );
 
-    const path = PathNodePatch(
+    final path = PathNodePatch(
       id: 'path-1',
       svgPathData: PatchField<String>.value('M0 0 L10 10'),
       fillColor: PatchField<Color?>.value(Color(0xFF222222)),
@@ -139,6 +139,7 @@ void main() {
   test('Patch constructors are callable at runtime (non-const path)', () {
     final dynamicValue = PatchField<String>.value('runtime');
     final dynamicNull = PatchField<String?>.nullValue();
+    final explicitNullValue = PatchField<double?>.value(null);
 
     final imagePatch = ImageNodePatch(
       id: 'image-runtime',
@@ -147,6 +148,7 @@ void main() {
     final textPatch = TextNodePatch(
       id: 'text-runtime',
       fontFamily: dynamicNull,
+      lineHeight: explicitNullValue,
     );
     final strokePatch = StrokeNodePatch(
       id: 'stroke-runtime',
@@ -167,6 +169,7 @@ void main() {
 
     expect(imagePatch.imageId.value, 'runtime');
     expect(textPatch.fontFamily.isNullValue, isTrue);
+    expect(textPatch.lineHeight.valueOrNull, isNull);
     expect(strokePatch.thickness.value, 2);
     expect(linePatch.start.value, const Offset(1, 1));
     expect(rectPatch.strokeWidth.value, 3);

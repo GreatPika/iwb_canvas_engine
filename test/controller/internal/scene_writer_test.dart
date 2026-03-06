@@ -48,11 +48,11 @@ void main() {
     expect(ctx.changeSet.structuralChanged, isTrue);
     expect(ctx.changeSet.addedNodeIds, contains('node-0'));
 
-    expect(writer.writeNodePatch(const RectNodePatch(id: 'missing')), isFalse);
-    expect(writer.writeNodePatch(const RectNodePatch(id: 'r1')), isFalse);
+    expect(writer.writeNodePatch(RectNodePatch(id: 'missing')), isFalse);
+    expect(writer.writeNodePatch(RectNodePatch(id: 'r1')), isFalse);
     expect(
       writer.writeNodePatch(
-        const RectNodePatch(id: 'r1', strokeWidth: PatchField<double>.value(2)),
+        RectNodePatch(id: 'r1', strokeWidth: PatchField<double>.value(2)),
       ),
       isTrue,
     );

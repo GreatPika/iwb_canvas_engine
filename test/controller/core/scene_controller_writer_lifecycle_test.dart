@@ -303,7 +303,7 @@ void main() {
     controller.write<void>((writer) {
       writer.writeSelectionReplace(const <NodeId>{'r1'});
       writer.writeNodePatch(
-        const RectNodePatch(
+        RectNodePatch(
           id: 'r1',
           common: CommonNodePatch(isVisible: PatchField<bool>.value(false)),
         ),

@@ -193,16 +193,10 @@ void main() {
       addTearDown(sub.cancel);
 
       final patchMissing = controller.commands.writePatchNode(
-        const RectNodePatch(
-          id: 'missing',
-          strokeWidth: PatchField<double>.value(2),
-        ),
+        RectNodePatch(id: 'missing', strokeWidth: PatchField<double>.value(2)),
       );
       final patchExisting = controller.commands.writePatchNode(
-        const RectNodePatch(
-          id: 'base',
-          strokeWidth: PatchField<double>.value(3),
-        ),
+        RectNodePatch(id: 'base', strokeWidth: PatchField<double>.value(3)),
       );
       final deleteMissing = controller.commands.writeDeleteNode('missing');
       final deleteExisting = controller.commands.writeDeleteNode('base');
@@ -322,7 +316,7 @@ void main() {
       expect(controller.selectedNodeIds, const <NodeId>{'base'});
 
       controller.commands.writePatchNode(
-        const RectNodePatch(
+        RectNodePatch(
           id: 'base',
           common: CommonNodePatch(isSelectable: PatchField<bool>.value(false)),
         ),

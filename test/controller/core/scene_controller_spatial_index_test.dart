@@ -87,7 +87,7 @@ void main() {
 
     controller.write<void>((writer) {
       writer.writeNodePatch(
-        const RectNodePatch(
+        RectNodePatch(
           id: 'r1',
           common: CommonNodePatch(hitPadding: PatchField<double>.value(22)),
         ),
