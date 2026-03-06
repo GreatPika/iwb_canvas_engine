@@ -248,13 +248,18 @@ at the boundary.
 
 ### 4.3 Write-boundary validation
 
-Runtime write APIs validate aggressively:
+Public write-boundary values validate eagerly at construction time:
 
-- invalid `NodeSpec` or `NodePatch` values throw `ArgumentError`
+- invalid `NodeSpec`, `NodePatch`, or `CommonNodePatch` values throw
+  `ArgumentError` at the public boundary
 - `PatchField.absent()` is not validated just for symmetry; only present patch
   fields are checked at the public boundary
 - duplicate explicit `NodeSpec.id` in `addNode(...)` / `writeNodeInsert(...)`
   throws `ArgumentError`
+- runtime write/model paths consume already validated boundary objects and own
+  only runtime/stateful semantics such as target existence, patch target
+  id/type compatibility, range/index checks, canonicalization, and derived
+  recomputation
 - validated boundary value types expose the supported parse rules without
   changing the wire/runtime representation used by `SceneSnapshot`, `NodeSpec`,
   `NodePatch`, `NodeId`, or `LayerId`
@@ -273,6 +278,8 @@ Runtime write APIs validate aggressively:
 - `SvgPathDataValue` enforces non-empty bounded path payloads and SVG parsing
 - non-finite `Transform2D` and `Offset` values are rejected by transform and
   translate write paths
+- non-finite camera offsets and non-positive/non-finite grid cell sizes are
+  rejected by their runtime write paths
 - `opacity` is strict at the public boundary and must stay in `[0, 1]`
 - in-memory write/import validation now mirrors the same id/text/font-family,
   revision, opacity, and finite-offset rules used by the JSON boundary
@@ -514,8 +521,8 @@ Contract:
 
 Read access:
 
-- `snapshot`
-- `selectedNodeIds`
+- `snapshot` is an immutable snapshot of the current transaction state
+- `selectedNodeIds` is an immutable view of the current normalized selection
 
 Structural and content writes:
 
@@ -528,8 +535,20 @@ Structural and content writes:
 - `writeClearSceneKeepBackground()`
 - `writeDocumentReplace(...)`
 
-`writeNodeInsert(...)` throws `ArgumentError` when `spec.id` is explicitly set
-and already exists in the scene.
+Runtime contract highlights:
+
+- `writeNodeInsert(...)` throws `ArgumentError` for duplicate explicit
+  `spec.id` and unknown content `layerId`, and `RangeError` for out-of-bounds
+  `insertIndex`
+- `writeLayerEnsure(...)` throws `RangeError` for an out-of-bounds explicit
+  insertion index
+- `writeNodePatch(...)` returns `false` when the target node is missing or the
+  patch is a semantic no-op, and throws `ArgumentError` only when patch id/type
+  runtime semantics do not match the target node
+- `writeNodeTransformSet(...)`, `writeSelectionTranslate(...)`,
+  `writeSelectionTransform(...)`, `writeCameraOffset(...)`, and
+  `writeGridCellSize(...)` validate only the runtime numeric arguments required
+  by those operations
 
 Selection writes:
 
@@ -540,6 +559,12 @@ Selection writes:
 - `writeSelectionTranslate(...)`
 - `writeSelectionTransform(...)`
 - `writeDeleteSelection()`
+
+Selection semantics:
+
+- `writeSelectionReplace(...)` normalizes input to visible content-node ids
+- if normalization produces an empty set, `writeSelectionReplace(...)` is a
+  no-op and returns `false`; use `writeSelectionClear()` for explicit clearing
 
 Scene settings writes:
 
@@ -567,6 +592,8 @@ Transaction handle lifetime:
 Contract:
 
 - `removedNodeIds` is an immutable snapshot
+- `writeClearSceneKeepBackground()` returns the same immutable removed-id
+  snapshot contract without the extra metadata wrapper
 - `didStructuralClear` is `true` for any structural clear effect, including
   creating a missing dedicated background layer
 

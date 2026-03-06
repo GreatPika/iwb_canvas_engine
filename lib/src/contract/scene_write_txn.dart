@@ -32,36 +32,50 @@ abstract interface class SceneWriteTxn {
   /// Immutable read view of the transaction state.
   SceneSnapshot get snapshot;
 
-  /// Current selection snapshot for the transaction.
+  /// Current immutable selection view for the transaction.
   Set<NodeId> get selectedNodeIds;
 
   /// Inserts a node into content layers.
   ///
   /// `layerId` addresses only `snapshot.layers` (content layers) and never
   /// the optional background layer.
-  /// Throws `ArgumentError` when `spec.id` is explicitly provided and already
-  /// exists in the scene.
+  /// Throws [ArgumentError] when:
+  /// - `spec.id` is explicitly provided and already exists in the scene;
+  /// - `layerId` does not address an existing content layer.
+  ///
+  /// Throws [RangeError] when `insertIndex` is outside the target layer bounds.
   NodeId writeNodeInsert(NodeSpec spec, {LayerId? layerId, int? insertIndex});
 
   /// Ensures a content layer with [layerId] exists.
   ///
   /// Returns `true` only when a new layer is created.
+  ///
+  /// Throws [RangeError] when `index` is outside the content-layer bounds.
   bool writeLayerEnsure(LayerId layerId, {int? index});
 
   /// Removes a single node by id.
   bool writeNodeErase(NodeId nodeId);
 
   /// Applies a partial node update.
+  ///
+  /// Returns `false` when the target node does not exist or the patch is a
+  /// semantic no-op for the current node state.
+  ///
+  /// Throws [ArgumentError] when [patch] does not match the target node type.
   bool writeNodePatch(NodePatch patch);
 
   /// Replaces a node transform.
+  ///
+  /// Throws [ArgumentError] when [transform] contains non-finite fields or is
+  /// non-invertible.
   bool writeNodeTransformSet(NodeId id, Transform2D transform);
 
   /// Replaces selection with normalized visible content ids.
   ///
   /// Returns `true` only when resulting selection differs from current state.
   /// If all input ids are invalid/missing/background/invisible, this is a no-op
-  /// and returns `false`.
+  /// and returns `false`; use [writeSelectionClear] to clear selection
+  /// explicitly.
   bool writeSelectionReplace(Iterable<NodeId> ids);
 
   /// Toggles a single selection id when it points to a visible content node.
@@ -77,9 +91,14 @@ abstract interface class SceneWriteTxn {
   int writeSelectionSelectAll({bool onlySelectable = true});
 
   /// Translates the current selection by [delta].
+  ///
+  /// Throws [ArgumentError] when [delta] is not finite.
   int writeSelectionTranslate(Offset delta);
 
   /// Applies [delta] as a transform to the current selection.
+  ///
+  /// Throws [ArgumentError] when [delta] contains non-finite fields or is
+  /// non-invertible.
   int writeSelectionTransform(Transform2D delta);
 
   /// Deletes deletable nodes in the current selection.
@@ -93,15 +112,21 @@ abstract interface class SceneWriteTxn {
   ClearSceneResult writeClearSceneKeepBackgroundResult();
 
   /// Clears all content layers and returns removed node ids only.
+  ///
+  /// The returned list is an immutable snapshot detached from writer internals.
   List<NodeId> writeClearSceneKeepBackground();
 
   /// Replaces the camera offset.
+  ///
+  /// Throws [ArgumentError] when [offset] is not finite.
   void writeCameraOffset(Offset offset);
 
   /// Enables or disables the background grid.
   void writeGridEnable(bool enabled);
 
   /// Replaces the background grid cell size.
+  ///
+  /// Throws [ArgumentError] when [cellSize] is non-finite or not positive.
   void writeGridCellSize(double cellSize);
 
   /// Replaces the background color.

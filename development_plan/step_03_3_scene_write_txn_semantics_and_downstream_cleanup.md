@@ -1,98 +1,80 @@
 language: russian
 
-# Шаг 3.3. Зафиксировать SceneWriteTxn semantics и убрать downstream primitive-дублирование
+# Шаг 3.3. Развести boundary validation и runtime write semantics как подготовку к write core
 
 ## Цель шага
 
-После шагов `3.1` и `3.2` публичная boundary уже должна валидировать `snapshot`, `spec` и `patch` на входе. Задача этого шага: закрепить точную публичную семантику `SceneWriteTxn` и убрать лишнюю downstream primitive-валидацию в `spec/patch` runtime paths, чтобы после завершения boundary-этапа в проекте остался один владелец primitive-rules и один согласованный контракт write-транзакций.
-
-Этот шаг не добавляет новый функционал в `SceneWriteTxn`. Он фиксирует уже существующее поведение, чистит дублирование и подготавливает чистую передачу в шаг `4`, где дальше выравнивается уже public API contract и diagnostics.
+После шагов `3.1` и `3.2` primitive boundary-rules для `snapshot/spec/patch`
+должны жить только в `contract/validated/**` и публичных validating entry
+points. Этот шаг закрепляет `SceneWriteTxn` как долгоживущий write seam и
+убирает downstream primitive-дублирование из write/runtime path, оставляя там
+только runtime/stateful semantics, которые потом без изменения модели можно
+перенести в шаг `8`.
 
 ## Что этот шаг считает своим владельцем
 
-1. Публичную семантику:
+1. Публичный contract-seam:
    - `SceneWriteTxn`
    - `ClearSceneResult`
    - `writeSelectionReplace(...)`
-   - immutability snapshots, которые возвращаются наружу
-   - documented throws contract
-2. Cleanup:
-   - удаление или схлопывание независимой primitive-валидации в downstream `spec/patch` путях после перевода public boundary на validated semantics
+   - immutable snapshots/views, которые выдаются наружу
+   - точные `throws` там, где они принадлежат runtime apply semantics
+2. Архитектурное расслоение:
+   - boundary validation остаётся на public constructors и validated-layer;
+   - write/model path владеет только target/type/state checks, canonicalization
+     и derived recomputation.
 3. Границу:
-   - без изменения public `NodeSpec`/`NodePatch` surface сверх решений шага `3.2`
-   - без задач шага `4` по barrel/export/docs alignment
+   - без `mutation_op.dart` / `mutation_executor.dart` из шага `8`;
+   - без ownership/allocation redesign из шага `3.4`;
+   - без public API alignment из шага `4`.
 
-## Что уже подтверждено по текущему состоянию
-
-1. `writeSelectionReplace(...)` сейчас фактически работает как no-op для пустого или полностью отфильтрованного набора ids, а не как clear.
-2. `ClearSceneResult.removedNodeIds` уже копируется в immutable snapshot.
-3. `selectedNodeIds` в транзакции уже выдаётся наружу как immutable view.
-4. `snapshot/spec`-контракты уже выдают immutable views для коллекций, поэтому задача шага не в "изобретении immutability с нуля", а в точной контрактной фиксации и покрытии тестами там, где это уже считается публичным поведением.
-5. Поздняя primitive-валидация для `NodeSpec`/`NodePatch` всё ещё живёт в downstream runtime/model paths, потому что до завершения шага `3.2` она нужна как фактическая boundary-защита.
-6. После завершения `3.1` и `3.2` часть этой downstream primitive-валидации станет дублированием и должна быть либо удалена, либо сведена к вызову того же validated owner.
-
-## Рекомендуемое решение
-
-Рекомендуемый вариант: сначала зафиксировать точные `SceneWriteTxn` semantics как публичный контракт, затем схлопнуть downstream primitive-дублирование в `spec/patch` путях, оставив внутри только scene-level invariants, canonicalization и runtime-specific checks.
-
-Что это означает на практике:
-
-1. `writeSelectionReplace(...)` официально остаётся no-op при пустом/невалидном после normalization наборе ids; явное очищение selection остаётся обязанностью `writeSelectionClear()`.
-2. Публичные возвращаемые структуры и снапшоты транзакции фиксируются как immutable contract, а не как случайная реализация.
-3. `throws`-контракты `SceneWriteTxn` описываются точно:
-   - `StateError` после завершения txn;
-   - `ArgumentError`/`RangeError` только там, где они реально возможны;
-   - без расплывчатых формулировок.
-4. Downstream runtime/model paths перестают быть вторым владельцем primitive-rules после того, как public boundary уже валидирует те же данные.
-
-## Что именно менять
+## Что реализовано
 
 ### `lib/src/contract/scene_write_txn.dart`
 
-[ ] Явно закрепить `writeSelectionReplace(...)` как no-op, а не clear, для пустого или полностью отфильтрованного набора ids.
-[ ] Зафиксировать immutable semantics для `ClearSceneResult.removedNodeIds`, `selectedNodeIds` и других публично возвращаемых коллекций, если они входят в transaction contract.
-[ ] Описать точные `throws`-контракты публичных методов без расплывчатых формулировок.
-[ ] Не менять поведение ради документации, если текущая реализация уже корректна; при подтверждённой корректности ограничиться фиксацией contract + test.
+[x] `writeSelectionReplace(...)` явно зафиксирован как no-op, если normalized
+набор пуст; clear остаётся обязанностью `writeSelectionClear()`.
+[x] `selectedNodeIds` и `writeClearSceneKeepBackground()` задокументированы как
+immutable views/snapshots.
+[x] `ClearSceneResult.removedNodeIds` остаётся immutable snapshot.
+[x] `throws`-контракты уточнены только там, где они реально принадлежат
+runtime/write semantics: duplicate id, missing layer, range/index, finite /
+invertible transform, finite offset, positive grid size.
 
-### Downstream `spec/patch` cleanup
+### Write/runtime seam
 
-[ ] После завершения `3.1` и `3.2` инвентаризировать, какие primitive-checks в `txnNodeFromSpec(...)`, `txnApplyNodePatch(...)`, `sceneValidateNodeSpecValues(...)`, `sceneValidateNodePatchValues(...)` и соседних путях стали дублированием.
-[ ] Удалить или свести эти проверки к вызову того же validated owner из шага `2`, не оставляя независимую копию правил.
-[ ] Оставить внутри только:
-   - scene-level invariants;
-   - canonicalization;
-   - runtime-specific checks;
-   - поведение, завязанное на уже существующее состояние документа.
+[x] `txnNodeFromSpec(...)` больше не повторяет boundary validation already
+validated `NodeSpec`.
+[x] `txnApplyNodePatch(...)` больше не повторяет boundary validation already
+validated `NodePatch`.
+[x] Вместо late primitive-validation в write-path остались только runtime
+preconditions:
+   - `patch.id` должен совпадать с target node id;
+   - тип patch должен соответствовать типу target node;
+   - дальнейшее apply-поведение остаётся stateful/no-op aware.
+[x] Cleanup не трогает writer-owned guards в `SceneWriter` для finite /
+invertible transform, camera/grid/delta и document-lifecycle semantics.
 
-### Граница с соседними шагами
+### Тестовый контур
 
-[ ] Не переносить сюда перевод `snapshot`-boundary; это владелец шага `3.1`.
-[ ] Не переносить сюда перевод public `NodeSpec`/`NodePatch`; это владелец шага `3.2`.
-[ ] Не переносить сюда barrel/export-surface и общий public API alignment; это владелец шага `4`.
-
-## Конкретизация внедрения по порядку
-
-1. Сначала зафиксировать контракт `SceneWriteTxn` в точках, где поведение уже подтверждено кодом.
-2. Затем добавить тесты на `writeSelectionReplace(...)`, immutability и documented throws.
-3. После этого инвентаризировать downstream primitive-checks, которые больше не нужны после `3.1` и `3.2`.
-4. Удалить или схлопнуть только подтверждённые дубли, не трогая scene-level/runtime-specific validation.
-5. Завершить шаг только когда public write semantics и downstream ownership of rules перестанут расходиться.
+[x] Добавлены тесты на immutable `selectedNodeIds` внутри writer transaction.
+[x] Добавлены тесты на `writeSelectionReplace([])` и fully-filtered input как
+no-op без implicit clear.
+[x] Добавлен тест на immutable список из `writeClearSceneKeepBackground()`.
+[x] Удалён regression-test, который закреплял неправильную роль runtime
+safety-net для invalid fast-path primitive payloads.
+[x] Сохранены runtime-only regression tests на mismatch id/type, range/index,
+duplicate id, text layout recomputation и canonical clear semantics.
 
 ## Критерии приемки
 
-[ ] `writeSelectionReplace(...)` имеет один явный контракт и совпадает с реализацией и тестами.
-[ ] `SceneWriteTxn` не получает новый функционал, а лишь фиксирует точную семантику уже существующего поведения.
-[ ] Публичные возвращаемые структуры транзакции не отдают наружу изменяемые внутренние коллекции.
-[ ] Уже существующая immutability discipline не теряется при cleanup: шаг фиксирует её как контракт и не ослабляет возвращаемые snapshot/view semantics.
-[ ] `throws`-контракты `SceneWriteTxn` совпадают с фактическим поведением реализации.
-[ ] После завершения cleanup downstream `spec/patch` paths больше не владеют собственной независимой primitive boundary-валидацией.
-[ ] В runtime/model остаются только scene-level invariants, canonicalization и runtime-specific checks.
-[ ] Граница со шагом `4` остаётся чистой: этот шаг не расширяется в public API alignment, export-surface и diagnostics beyond write contract.
-
-## Тестовый контур
-
-[ ] Добавить тесты на `writeSelectionReplace([])` как no-op.
-[ ] Добавить тесты на immutable `removedNodeIds` и `selectedNodeIds`.
-[ ] Добавить тесты на точные `StateError`/`ArgumentError`/`RangeError` сценарии там, где они реально задокументированы.
-[ ] Добавить regression-тесты на отсутствие поведения, завязанного на удалённую downstream primitive-дубликацию.
-[ ] Убедиться, что после cleanup scene-level/runtime-specific checks продолжают ловить свои сценарии и не деградируют.
+[x] `SceneWriteTxn` остался тонким публичным контрактом без нового функционала.
+[x] Публичные write-semantics, immutability и lifecycle contract совпадают с
+реализацией и тестами.
+[x] `contract/validated/**` и public constructors остаются единственным
+владельцем primitive boundary-rules для `spec/patch`.
+[x] Downstream write/model path больше не владеет независимой primitive
+валидацией `NodeSpec`/`NodePatch`.
+[x] В write/model path остаются только runtime/stateful semantics, пригодные к
+дальнейшему механическому переносу в шаг `8`.
+[x] Граница с шагами `3.4`, `4` и `8` остаётся чистой.

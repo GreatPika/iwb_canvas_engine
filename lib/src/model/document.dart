@@ -9,7 +9,6 @@ import '../contract/node_spec.dart';
 import '../contract/patch_field.dart';
 import '../contract/snapshot.dart';
 import 'scene_builder.dart' as model_builder;
-import 'scene_value_validation.dart';
 
 typedef NodeLocatorEntry = ({int layerIndex, int nodeIndex});
 
@@ -395,11 +394,6 @@ SceneNode txnNodeFromSpec(
   required NodeId fallbackId,
   int Function()? nextInstanceRevision,
 }) {
-  sceneValidateNodeSpecValues(
-    spec,
-    field: 'spec',
-    onError: _txnSnapshotValidationError,
-  );
   final id = spec.id ?? fallbackId;
   final instanceRevision = _txnResolveSpecInstanceRevision(
     nextInstanceRevision: nextInstanceRevision,
@@ -543,25 +537,17 @@ int _txnResolveSpecInstanceRevision({int Function()? nextInstanceRevision}) {
 
 bool txnApplyNodePatch(SceneNode node, NodePatch patch, {bool dryRun = false}) {
   var changed = false;
-
-  if (node.id != patch.id) {
-    throw ArgumentError.value(
-      patch.id,
-      'patch.id',
-      'NodePatch id does not match target node id ${node.id}.',
-    );
-  }
-
-  sceneValidateNodePatchValues(
-    patch,
-    field: 'patch',
-    onError: _txnSnapshotValidationError,
+  final patchKind = _txnValidatePatchTargetRuntimeSemantics(
+    node: node,
+    patch: patch,
   );
 
   changed = _txnApplyCommonPatch(node, patch.common, dryRun: dryRun) || changed;
 
-  switch ((node, patch)) {
-    case (ImageNode image, ImageNodePatch imagePatch):
+  switch (patchKind) {
+    case _TxnPatchTargetKind.image:
+      final image = node as ImageNode;
+      final imagePatch = patch as ImageNodePatch;
       changed =
           _txnSet(imagePatch.imageId, image.imageId, (value) {
             image.imageId = value;
@@ -577,7 +563,9 @@ bool txnApplyNodePatch(SceneNode node, NodePatch patch, {bool dryRun = false}) {
             image.naturalSize = value;
           }, dryRun: dryRun) ||
           changed;
-    case (TextNode text, TextNodePatch textPatch):
+    case _TxnPatchTargetKind.text:
+      final text = node as TextNode;
+      final textPatch = patch as TextNodePatch;
       changed =
           _txnSet(textPatch.text, text.text, (value) {
             text.text = value;
@@ -635,7 +623,9 @@ bool txnApplyNodePatch(SceneNode node, NodePatch patch, {bool dryRun = false}) {
           changed = true;
         }
       }
-    case (StrokeNode stroke, StrokeNodePatch strokePatch):
+    case _TxnPatchTargetKind.stroke:
+      final stroke = node as StrokeNode;
+      final strokePatch = patch as StrokeNodePatch;
       changed =
           _txnSetOffsets(strokePatch.points, stroke.points, (value) {
             stroke.points
@@ -653,7 +643,9 @@ bool txnApplyNodePatch(SceneNode node, NodePatch patch, {bool dryRun = false}) {
             stroke.color = value;
           }, dryRun: dryRun) ||
           changed;
-    case (LineNode line, LineNodePatch linePatch):
+    case _TxnPatchTargetKind.line:
+      final line = node as LineNode;
+      final linePatch = patch as LineNodePatch;
       changed =
           _txnSet(linePatch.start, line.start, (value) {
             line.start = value;
@@ -674,7 +666,9 @@ bool txnApplyNodePatch(SceneNode node, NodePatch patch, {bool dryRun = false}) {
             line.color = value;
           }, dryRun: dryRun) ||
           changed;
-    case (RectNode rect, RectNodePatch rectPatch):
+    case _TxnPatchTargetKind.rect:
+      final rect = node as RectNode;
+      final rectPatch = patch as RectNodePatch;
       changed =
           _txnSet(rectPatch.size, rect.size, (value) {
             rect.size = value;
@@ -695,7 +689,9 @@ bool txnApplyNodePatch(SceneNode node, NodePatch patch, {bool dryRun = false}) {
             rect.strokeWidth = value;
           }, dryRun: dryRun) ||
           changed;
-    case (PathNode path, PathNodePatch pathPatch):
+    case _TxnPatchTargetKind.path:
+      final path = node as PathNode;
+      final pathPatch = patch as PathNodePatch;
       changed =
           _txnSet(pathPatch.svgPathData, path.svgPathData, (value) {
             path.svgPathData = value;
@@ -721,13 +717,41 @@ bool txnApplyNodePatch(SceneNode node, NodePatch patch, {bool dryRun = false}) {
             path.fillRule = value;
           }, dryRun: dryRun) ||
           changed;
-    default:
-      throw ArgumentError(
-        'Patch type ${patch.runtimeType} does not match node ${node.runtimeType}.',
-      );
   }
 
   return changed;
+}
+
+enum _TxnPatchTargetKind { image, text, stroke, line, rect, path }
+
+_TxnPatchTargetKind _txnValidatePatchTargetRuntimeSemantics({
+  required SceneNode node,
+  required NodePatch patch,
+}) {
+  if (node.id != patch.id) {
+    throw ArgumentError.value(
+      patch.id,
+      'patch.id',
+      'NodePatch id does not match target node id ${node.id}.',
+    );
+  }
+
+  final kind = switch ((node, patch)) {
+    (ImageNode _, ImageNodePatch _) => _TxnPatchTargetKind.image,
+    (TextNode _, TextNodePatch _) => _TxnPatchTargetKind.text,
+    (StrokeNode _, StrokeNodePatch _) => _TxnPatchTargetKind.stroke,
+    (LineNode _, LineNodePatch _) => _TxnPatchTargetKind.line,
+    (RectNode _, RectNodePatch _) => _TxnPatchTargetKind.rect,
+    (PathNode _, PathNodePatch _) => _TxnPatchTargetKind.path,
+    _ => null,
+  };
+  if (kind != null) {
+    return kind;
+  }
+
+  throw ArgumentError(
+    'Patch type ${patch.runtimeType} does not match node ${node.runtimeType}.',
+  );
 }
 
 bool _txnTextPatchTouchesLayout(TextNodePatch patch) {
@@ -1043,21 +1067,4 @@ bool _txnOffsetListsEqual(List<Offset> left, List<Offset> right) {
     if (left[i] != right[i]) return false;
   }
   return true;
-}
-
-Never _txnSnapshotValidationError({
-  required Object? value,
-  required String field,
-  required String message,
-}) {
-  throw ArgumentError.value(
-    value,
-    field,
-    _txnCapitalizeValidationMessage(message),
-  );
-}
-
-String _txnCapitalizeValidationMessage(String message) {
-  if (message.isEmpty) return message;
-  return '${message[0].toUpperCase()}${message.substring(1)}';
 }

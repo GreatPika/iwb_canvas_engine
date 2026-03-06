@@ -143,6 +143,27 @@ void main() {
     },
   );
 
+  test('SceneWriter selectedNodeIds exposes immutable transaction view', () {
+    final ctx = TxnContext(
+      baseScene: Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-auto-2b',
+            nodes: <SceneNode>[RectNode(id: 'r1', size: const Size(10, 10))],
+          ),
+        ],
+      ),
+      workingSelection: <NodeId>{'r1'},
+      baseAllNodeIds: const <NodeId>{'r1'},
+      nodeIdSeed: 0,
+      nextInstanceRevision: 1,
+    );
+    final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+
+    expect(() => writer.selectedNodeIds.add('other'), throwsUnsupportedError);
+    expect(writer.selectedNodeIds, const <NodeId>{'r1'});
+  });
+
   test(
     'SceneWriter selection hot-path keeps in-place set on 1000 toggle/replace/erase ops',
     () {
@@ -419,6 +440,44 @@ void main() {
     expect(writer.writeSelectionSelectAll(), 0);
   });
 
+  test(
+    'SceneWriter selection replace keeps current selection on empty normalized input',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(
+          backgroundLayer: BackgroundLayer(
+            nodes: <SceneNode>[RectNode(id: 'bg', size: const Size(4, 4))],
+          ),
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-auto-4b',
+              nodes: <SceneNode>[
+                RectNode(id: 'visible', size: const Size(10, 10)),
+                RectNode(
+                  id: 'hidden',
+                  size: const Size(10, 10),
+                  isVisible: false,
+                ),
+              ],
+            ),
+          ],
+        ),
+        workingSelection: <NodeId>{'visible'},
+        baseAllNodeIds: const <NodeId>{'bg', 'visible', 'hidden'},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+      final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+
+      expect(writer.writeSelectionReplace(const <NodeId>{}), isFalse);
+      expect(
+        writer.writeSelectionReplace(const <NodeId>{'missing', 'bg', 'hidden'}),
+        isFalse,
+      );
+      expect(writer.selectedNodeIds, const <NodeId>{'visible'});
+    },
+  );
+
   test('SceneWriter writeNodeErase respects deletable layer policy', () {
     // INV:INV-ENG-WRITE-NUMERIC-GUARDS
     final ctx = TxnContext(
@@ -613,6 +672,32 @@ void main() {
     expect(() => result.removedNodeIds.add('b'), throwsUnsupportedError);
     expect(result.removedNodeIds, <NodeId>['a']);
   });
+
+  test(
+    'writeClearSceneKeepBackground returns immutable removedNodeIds snapshot',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-auto-9b',
+              nodes: <SceneNode>[RectNode(id: 'gone', size: const Size(1, 1))],
+            ),
+          ],
+        ),
+        workingSelection: const <NodeId>{},
+        baseAllNodeIds: const <NodeId>{'gone'},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+      final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+
+      final removedNodeIds = writer.writeClearSceneKeepBackground();
+
+      expect(removedNodeIds, const <NodeId>['gone']);
+      expect(() => removedNodeIds.add('other'), throwsUnsupportedError);
+    },
+  );
 
   test('ClearSceneResult defensively copies removedNodeIds source', () {
     final source = <NodeId>['a'];

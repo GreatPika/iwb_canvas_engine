@@ -4,8 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart' hide NodeId;
 import 'package:iwb_canvas_engine/src/contract/node_patch.dart';
 import 'package:iwb_canvas_engine/src/contract/node_spec.dart';
-import 'package:iwb_canvas_engine/src/core/nodes.dart';
-import 'package:iwb_canvas_engine/src/model/document.dart';
 
 void main() {
   test('validated spec fast-path helpers build typed boundary objects', () {
@@ -121,46 +119,6 @@ void main() {
       expect(
         () => patch.points.value.add(const Offset(5, 6)),
         throwsUnsupportedError,
-      );
-    },
-  );
-
-  test(
-    'runtime safety-net rejects invalid fast-path spec and patch payloads',
-    () {
-      expect(
-        () => txnNodeFromSpec(
-          rectNodeSpecFromValidated(
-            size: const Size(1, 1),
-            transform: const Transform2D(a: 0, b: 0, c: 0, d: 0, tx: 0, ty: 0),
-          ),
-          fallbackId: 'auto-id',
-        ),
-        throwsA(
-          isA<ArgumentError>().having(
-            (error) => error.name,
-            'name',
-            'spec.transform',
-          ),
-        ),
-      );
-
-      final rect = RectNode(id: 'r1', size: const Size(1, 1));
-      expect(
-        () => txnApplyNodePatch(
-          rect,
-          rectNodePatchFromValidated(
-            id: 'r1',
-            size: PatchField<Size>.nullValue(),
-          ),
-        ),
-        throwsA(
-          isA<ArgumentError>().having(
-            (error) => error.name,
-            'name',
-            'patch.size',
-          ),
-        ),
       );
     },
   );

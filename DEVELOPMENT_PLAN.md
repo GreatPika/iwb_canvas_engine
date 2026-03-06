@@ -18,7 +18,7 @@ language: russian
 - [ ] [Шаг 3. Закрыть boundary-этап через подшаги 3.1-3.4](development_plan/step_03_public_boundary_constructors_and_semantics.md)
 - [x] [Шаг 3.1. Перевести public snapshot boundary на validated semantics](development_plan/step_03_1_public_snapshot_boundary_on_validated_semantics.md)
 - [x] [Шаг 3.2. Перевести public NodeSpec/NodePatch boundary на validated semantics](development_plan/step_03_2_public_node_spec_and_patch_boundary_on_validated_semantics.md)
-- [ ] [Шаг 3.3. Зафиксировать SceneWriteTxn semantics и убрать downstream primitive-дублирование](development_plan/step_03_3_scene_write_txn_semantics_and_downstream_cleanup.md)
+- [x] [Шаг 3.3. Развести boundary validation и runtime write semantics как подготовку к write core](development_plan/step_03_3_scene_write_txn_semantics_and_downstream_cleanup.md)
 - [ ] [Шаг 3.4. Выровнять ownership и allocation policy для collection payloads](development_plan/step_03_4_collection_payload_ownership_and_allocation_policy.md)
 - [ ] [Шаг 4. Сразу выровнять точный публичный API-контракт](development_plan/step_04_public_api_contract_alignment.md)
 - [ ] [Шаг 5. Ввести единый `ScenePolicy`](development_plan/step_05_scene_policy.md)
