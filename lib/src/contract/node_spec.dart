@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 
+import 'owned_collections.dart';
 import 'path_fill_rule.dart';
 import 'snapshot.dart' hide PathFillRule;
 import 'transform2d.dart';
@@ -250,7 +251,7 @@ class StrokeNodeSpec extends NodeSpec {
 
   StrokeNodeSpec._internal({
     super.id,
-    required List<Offset> points,
+    required Iterable<Offset> points,
     required this.thickness,
     required this.color,
     super.transform,
@@ -261,10 +262,11 @@ class StrokeNodeSpec extends NodeSpec {
     super.isLocked,
     super.isDeletable,
     super.isTransformable,
-  }) : points = List<Offset>.unmodifiable(points),
+  }) : _points = OwnedList<Offset>.of(points),
        super._internal();
 
-  final List<Offset> points;
+  final OwnedList<Offset> _points;
+  List<Offset> get points => _points;
   final double thickness;
   final Color color;
 }
@@ -558,11 +560,11 @@ Size _validateNonNegativeSize(Size value, {required String name}) {
   );
 }
 
-List<Offset> _validateFiniteOffsetList(
+OwnedList<Offset> _validateFiniteOffsetList(
   List<Offset> values, {
   required String name,
 }) {
-  return List<Offset>.unmodifiable(
+  return OwnedList<Offset>.of(
     List<Offset>.generate(
       values.length,
       (index) =>

@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 
+import 'owned_collections.dart';
 import 'patch_field.dart';
 import 'path_fill_rule.dart';
 import 'snapshot.dart' hide PathFillRule;
@@ -241,13 +242,14 @@ class StrokeNodePatch extends NodePatch {
     );
   }
 
-  const StrokeNodePatch._internal({
+  StrokeNodePatch._internal({
     required super.id,
     required super.common,
-    this.points = const PatchField<List<Offset>>.absent(),
+    PatchField<List<Offset>> points = const PatchField<List<Offset>>.absent(),
     this.thickness = const PatchField<double>.absent(),
     this.color = const PatchField<Color>.absent(),
-  }) : super._internal();
+  }) : points = _snapshotOffsetListPatchField(points),
+       super._internal();
 
   final PatchField<List<Offset>> points;
   final PatchField<double> thickness;
@@ -458,11 +460,11 @@ Size _validateNonNegativeSize(Size value, {required String name}) {
   );
 }
 
-List<Offset> _validateFiniteOffsetList(
+OwnedList<Offset> _validateFiniteOffsetList(
   List<Offset> values, {
   required String name,
 }) {
-  return List<Offset>.unmodifiable(
+  return OwnedList<Offset>.of(
     List<Offset>.generate(
       values.length,
       (index) =>
@@ -476,7 +478,6 @@ PatchField<List<Offset>> _snapshotOffsetListPatchField(
   PatchField<List<Offset>> patch,
 ) {
   if (patch.isAbsent) return patch;
-  return PatchField<List<Offset>>.value(
-    List<Offset>.unmodifiable(List<Offset>.from(patch.value)),
-  );
+  final points = patch.value;
+  return PatchField<List<Offset>>.value(OwnedList<Offset>.of(points));
 }

@@ -5,6 +5,7 @@ import '../core/nodes.dart';
 import '../core/scene.dart';
 import '../core/text_layout.dart';
 import '../contract/node_patch.dart';
+import '../contract/owned_collections.dart';
 import '../contract/node_spec.dart';
 import '../contract/patch_field.dart';
 import '../contract/snapshot.dart';
@@ -1049,22 +1050,14 @@ bool _txnSetNullable<T>(
 bool _txnSetOffsets(
   PatchField<List<Offset>> patch,
   List<Offset> current,
-  void Function(List<Offset> value) assign, {
+  void Function(OwnedList<Offset> value) assign, {
   required bool dryRun,
 }) {
   if (patch.isAbsent) return false;
-  final next = patch.value;
-  if (_txnOffsetListsEqual(current, next)) return false;
+  final next = patch.value as OwnedList<Offset>;
+  if (next.hasSameElements(current)) return false;
   if (!dryRun) {
     assign(next);
-  }
-  return true;
-}
-
-bool _txnOffsetListsEqual(List<Offset> left, List<Offset> right) {
-  if (left.length != right.length) return false;
-  for (var i = 0; i < left.length; i++) {
-    if (left[i] != right[i]) return false;
   }
   return true;
 }

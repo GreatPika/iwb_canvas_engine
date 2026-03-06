@@ -986,22 +986,21 @@ void main() {
       thickness: 1,
       color: const Color(0xFF000000),
     );
+    final sourcePatchPoints = <Offset>[const Offset(2, 2), const Offset(3, 3)];
     final strokeRevisionBeforePatch = stroke.pointsRevision;
     expect(
       txnApplyNodePatch(
         stroke,
         StrokeNodePatch(
           id: 'str',
-          points: PatchField<List<Offset>>.value(<Offset>[
-            Offset(2, 2),
-            Offset(3, 3),
-          ]),
+          points: PatchField<List<Offset>>.value(sourcePatchPoints),
           thickness: PatchField<double>.value(4),
           color: PatchField<Color>.value(Color(0xFF333333)),
         ),
       ),
       isTrue,
     );
+    sourcePatchPoints[1] = const Offset(30, 30);
     expect(stroke.points, <Offset>[const Offset(2, 2), const Offset(3, 3)]);
     expect(stroke.pointsRevision, greaterThan(strokeRevisionBeforePatch));
 

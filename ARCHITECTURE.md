@@ -118,9 +118,10 @@ most important architectural rules are:
   `core/scene_limits.dart`, boundary value parsing/generation lives in
   `contract/validated/**`, and model/serialization layers reuse those rules.
 - Public snapshot/spec/patch constructors enforce those primitive boundary
-  rules eagerly; internal decode/runtime producers use contract-local fast
-  paths so already validated data does not pay the same constructor boundary
-  twice while preserving immutable ownership for collection payloads.
+  rules eagerly; `contract/owned_collections.dart` is the single structural
+  owner for immutable collection payload ownership; internal decode/runtime
+  producers use contract-local fast paths so already validated data does not
+  pay the same constructor boundary twice or fork collection semantics.
 - Transactional write/model paths consume those already validated contract
   objects and own only runtime/stateful semantics such as target existence,
   type compatibility, live-scene duplicate checks, index/range checks,

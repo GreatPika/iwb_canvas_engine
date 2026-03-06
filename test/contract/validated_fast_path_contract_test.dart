@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart' hide NodeId;
 import 'package:iwb_canvas_engine/src/contract/node_patch.dart';
 import 'package:iwb_canvas_engine/src/contract/node_spec.dart';
+import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 
 void main() {
   test('validated spec fast-path helpers build typed boundary objects', () {
@@ -102,6 +103,38 @@ void main() {
     expect(rect.strokeWidth.value, 2);
     expect(path.fillRule.value, PathFillRule.evenOdd);
   });
+
+  test(
+    'validated spec and snapshot fast-paths snapshot stroke point ownership',
+    () {
+      final specPoints = <Offset>[const Offset(1, 2), const Offset(3, 4)];
+      final snapshotPoints = <Offset>[const Offset(5, 6), const Offset(7, 8)];
+
+      final spec = strokeNodeSpecFromValidated(
+        id: 'stroke-spec-owned',
+        points: specPoints,
+        thickness: 2,
+        color: const Color(0xFF111111),
+      );
+      final snapshot = strokeNodeSnapshotFromValidated(
+        id: 'stroke-snapshot-owned',
+        points: snapshotPoints,
+        thickness: 3,
+        color: const Color(0xFF222222),
+      );
+
+      specPoints[1] = const Offset(30, 40);
+      snapshotPoints[1] = const Offset(70, 80);
+
+      expect(spec.points, const <Offset>[Offset(1, 2), Offset(3, 4)]);
+      expect(snapshot.points, const <Offset>[Offset(5, 6), Offset(7, 8)]);
+      expect(() => spec.points.add(const Offset(9, 9)), throwsUnsupportedError);
+      expect(
+        () => snapshot.points.add(const Offset(10, 10)),
+        throwsUnsupportedError,
+      );
+    },
+  );
 
   test(
     'validated patch fast-path snapshots stroke point payload ownership',

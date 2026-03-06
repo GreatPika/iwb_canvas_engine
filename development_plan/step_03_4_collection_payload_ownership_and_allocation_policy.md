@@ -44,21 +44,22 @@ language: russian
 
 ### Ownership model
 
-[ ] Инвентаризировать все collection payloads на boundary, а не только `StrokeNodePatch.points`.
-[ ] Подтвердить, какие из них реально нуждаются в dedicated immutable/owned representation, а какие уже достаточно безопасны и не создают allocation pressure.
-[ ] Выбрать одну ownership-модель, одинаковую для public constructors, validated fast-path helpers и runtime apply paths.
+[x] Инвентаризация подтвердила, что реальный ownership/allocation конфликт на этом шаге сосредоточен в `Stroke.points`; snapshot-only списки (`layers`, `nodes`, palette, `selectedNodeIds`, `removedNodeIds`) не требуют tri-state-aware redesign.
+[x] Выбран один structural owner: package-internal `OwnedList<T>` в `contract/owned_collections.dart`.
+[x] Ownership-модель выровнена для public constructors, validated fast-path helpers и runtime apply paths без расширения public API.
 
 ### Dedicated collection representations
 
-[ ] Если без этого нельзя одновременно сохранить immutable contract и убрать лишние allocations, ввести dedicated immutable/owned collection representations для list-like payloads.
-[ ] Не вводить такой type точечно только для одного call-site; owner должен быть reusable и объяснимым.
-[ ] По умолчанию оставлять решение internal-first; публичное раскрытие нового type допустимо только если без него нельзя удержать один честный контракт.
+[x] Введён reusable internal owner `OwnedList<T>`, а не локальный special-case только в `NodePatch`.
+[x] `StrokeNodeSpec`, `StrokeNodePatch`, `StrokeNodeSnapshot` и validated fast-path helpers переведены на этот owner без изменения публичных сигнатур.
+[x] Решение оставлено internal-first; вопрос публичного раскрытия representation отложен до шага `4`.
 
 ### Runtime/application policy
 
-[ ] После выбора ownership-model определить, где copy обязателен всегда, а где допустим safe reuse.
-[ ] Отдельно описать no-op/change-path policy для patch application, чтобы оптимизация не зависела от неявных свойств `List` или случайной unmodifiable-обёртки.
-[ ] Не смешивать эту работу с primitive validation, `SceneWriteTxn` contract или export-surface alignment.
+[x] Boundary всегда materialize/snapshot-ит внешний mutable input в `OwnedList<T>`.
+[x] Runtime no-op path для stroke patching сравнивает live `_RevisionedOffsetList` с `OwnedList<Offset>` по значениям без дополнительной materialization.
+[x] Changed path копирует точки только при записи в live runtime storage; runtime state не алиасит внешний mutable payload.
+[x] Primitive validation, `SceneWriteTxn` contract и export-surface alignment не переоткрывались.
 
 ## Граница с соседними шагами
 
@@ -75,13 +76,13 @@ language: russian
 
 ## Критерии приемки
 
-[ ] Для collection payloads существует один понятный ownership contract, одинаковый на public boundary, validated fast-path и runtime paths.
-[ ] Optimization no-op/change paths больше не требует ослаблять immutable semantics `NodePatch`/`NodeSpec`/`Snapshot`.
-[ ] `PatchField` не получает скрытых обязанностей по ownership/allocation policy.
-[ ] Решение не размазывает special-case logic по нескольким владельцам и не требует новых sync glue paths.
+[x] Для `Stroke.points` существует один понятный ownership contract, одинаковый на public boundary, validated fast-path и runtime paths.
+[x] Optimization no-op/change paths больше не требует ослаблять immutable semantics `NodePatch`/`NodeSpec`/`Snapshot`.
+[x] `PatchField` не получает скрытых обязанностей по ownership/allocation policy.
+[x] Решение не размазывает special-case logic по нескольким владельцам и не требует новых sync glue paths.
 
 ## Тестовый контур
 
-[ ] Добавить regression-тесты на ownership/immutability для collection payloads в public boundary и validated fast-path.
-[ ] Добавить regression-тесты на apply-path reuse/copy policy в no-op и changed scenarios после выбора representation.
-[ ] Убедиться, что runtime state не начинает алиасить внешние mutable collections.
+[x] Добавлены unit-тесты на `OwnedList<T>`: detach, read-only semantics, value-based equality, empty/non-empty behavior и reuse already-owned input.
+[x] Расширены regression-тесты на ownership/immutability для validated fast-path `StrokeNodeSpec`/`StrokeNodePatch`/`StrokeNodeSnapshot`.
+[x] Runtime regression-тесты подтверждают, что stroke apply-path сохраняет no-op semantics и не начинает алиасить внешний mutable payload.

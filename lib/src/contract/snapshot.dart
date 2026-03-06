@@ -16,6 +16,7 @@ export 'ids.dart'
         tryParseGeneratedNodeIdSeed;
 export 'path_fill_rule.dart' show PathFillRule;
 import 'ids.dart';
+import 'owned_collections.dart';
 import 'path_fill_rule.dart';
 import 'scene_defaults.dart';
 import 'transform2d.dart';
@@ -477,7 +478,7 @@ class StrokeNodeSnapshot extends NodeSnapshot {
   StrokeNodeSnapshot._internal({
     required super.id,
     super.instanceRevision,
-    required List<Offset> points,
+    required Iterable<Offset> points,
     this.pointsRevision = 0,
     required this.thickness,
     required this.color,
@@ -489,10 +490,11 @@ class StrokeNodeSnapshot extends NodeSnapshot {
     super.isLocked,
     super.isDeletable,
     super.isTransformable,
-  }) : points = List<Offset>.unmodifiable(List<Offset>.from(points)),
+  }) : _points = OwnedList<Offset>.of(points),
        super._internal();
 
-  final List<Offset> points;
+  final OwnedList<Offset> _points;
+  List<Offset> get points => _points;
   final int pointsRevision;
   final double thickness;
   final Color color;
