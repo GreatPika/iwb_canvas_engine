@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
     show
@@ -1500,9 +1501,11 @@ void main() {
 
   test('encodeScene enforces grid and palette contracts', () {
     // INV:INV-SER-JSON-GRID-PALETTE-CONTRACTS
-    final invalidGridScene = SceneSnapshot(
-      layers: [ContentLayerSnapshot(id: 'layer-auto-4')],
-      background: BackgroundSnapshot(
+    final invalidGridScene = sceneSnapshotFromValidated(
+      layers: <ContentLayerSnapshot>[
+        contentLayerSnapshotFromValidated(id: 'layer-auto-4'),
+      ],
+      background: const BackgroundSnapshot(
         grid: GridSnapshot(isEnabled: false, cellSize: -12.5),
       ),
     );
@@ -1517,9 +1520,11 @@ void main() {
       ),
     );
 
-    final enabledGridScene = SceneSnapshot(
-      layers: [ContentLayerSnapshot(id: 'layer-auto-5')],
-      background: BackgroundSnapshot(
+    final enabledGridScene = sceneSnapshotFromValidated(
+      layers: <ContentLayerSnapshot>[
+        contentLayerSnapshotFromValidated(id: 'layer-auto-5'),
+      ],
+      background: const BackgroundSnapshot(
         grid: GridSnapshot(isEnabled: true, cellSize: 0),
       ),
     );
@@ -1536,9 +1541,11 @@ void main() {
 
     expect(
       () => encodeScene(
-        SceneSnapshot(
-          layers: [ContentLayerSnapshot(id: 'layer-auto-6')],
-          palette: ScenePaletteSnapshot(penColors: const []),
+        sceneSnapshotFromValidated(
+          layers: <ContentLayerSnapshot>[
+            contentLayerSnapshotFromValidated(id: 'layer-auto-6'),
+          ],
+          palette: scenePaletteSnapshotFromValidated(penColors: const []),
         ),
       ),
       throwsA(
@@ -1551,9 +1558,13 @@ void main() {
     );
     expect(
       () => encodeScene(
-        SceneSnapshot(
-          layers: [ContentLayerSnapshot(id: 'layer-auto-7')],
-          palette: ScenePaletteSnapshot(backgroundColors: const []),
+        sceneSnapshotFromValidated(
+          layers: <ContentLayerSnapshot>[
+            contentLayerSnapshotFromValidated(id: 'layer-auto-7'),
+          ],
+          palette: scenePaletteSnapshotFromValidated(
+            backgroundColors: const [],
+          ),
         ),
       ),
       throwsA(
@@ -1566,9 +1577,11 @@ void main() {
     );
     expect(
       () => encodeScene(
-        SceneSnapshot(
-          layers: [ContentLayerSnapshot(id: 'layer-auto-8')],
-          palette: ScenePaletteSnapshot(gridSizes: const []),
+        sceneSnapshotFromValidated(
+          layers: <ContentLayerSnapshot>[
+            contentLayerSnapshotFromValidated(id: 'layer-auto-8'),
+          ],
+          palette: scenePaletteSnapshotFromValidated(gridSizes: const []),
         ),
       ),
       throwsA(
@@ -1582,9 +1595,11 @@ void main() {
   });
 
   test('encodeScene rejects invalid numeric fields', () {
-    final cameraNaN = SceneSnapshot(
-      layers: [ContentLayerSnapshot(id: 'layer-auto-9')],
-      camera: CameraSnapshot(offset: Offset(double.nan, 0)),
+    final cameraNaN = sceneSnapshotFromValidated(
+      layers: <ContentLayerSnapshot>[
+        contentLayerSnapshotFromValidated(id: 'layer-auto-9'),
+      ],
+      camera: const CameraSnapshot(offset: Offset(double.nan, 0)),
     );
     expect(
       () => encodeScene(cameraNaN),
@@ -1597,12 +1612,12 @@ void main() {
       ),
     );
 
-    final negativeHitPaddingScene = SceneSnapshot(
-      layers: [
-        ContentLayerSnapshot(
+    final negativeHitPaddingScene = sceneSnapshotFromValidated(
+      layers: <ContentLayerSnapshot>[
+        contentLayerSnapshotFromValidated(
           id: 'layer-auto-10',
-          nodes: [
-            RectNodeSnapshot(
+          nodes: <NodeSnapshot>[
+            rectNodeSnapshotFromValidated(
               id: 'r1',
               size: const Size(10, 10),
               fillColor: const Color(0xFF000000),
@@ -1623,12 +1638,12 @@ void main() {
       ),
     );
 
-    final nonPositiveFontSizeScene = SceneSnapshot(
-      layers: [
-        ContentLayerSnapshot(
+    final nonPositiveFontSizeScene = sceneSnapshotFromValidated(
+      layers: <ContentLayerSnapshot>[
+        contentLayerSnapshotFromValidated(
           id: 'layer-auto-11',
-          nodes: [
-            TextNodeSnapshot(
+          nodes: <NodeSnapshot>[
+            textNodeSnapshotFromValidated(
               id: 't1',
               text: 'Hello',
               size: const Size(10, 10),
@@ -1650,12 +1665,12 @@ void main() {
       ),
     );
 
-    final opacityOutOfRangeScene = SceneSnapshot(
-      layers: [
-        ContentLayerSnapshot(
+    final opacityOutOfRangeScene = sceneSnapshotFromValidated(
+      layers: <ContentLayerSnapshot>[
+        contentLayerSnapshotFromValidated(
           id: 'layer-auto-12',
-          nodes: [
-            RectNodeSnapshot(
+          nodes: <NodeSnapshot>[
+            rectNodeSnapshotFromValidated(
               id: 'r1',
               size: const Size(10, 10),
               fillColor: const Color(0xFF000000),
@@ -1780,7 +1795,7 @@ void main() {
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
             id: 'layer-auto-13',
-            nodes: const <NodeSnapshot>[
+            nodes: <NodeSnapshot>[
               RectNodeSnapshot(id: 'rect-inst', size: Size(10, 10)),
             ],
           ),

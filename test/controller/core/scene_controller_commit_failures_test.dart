@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
 
 // INV:INV-ENG-TXN-ATOMIC-COMMIT
@@ -20,8 +21,8 @@ void main() {
         ContentLayerSnapshot(
           id: 'layer-auto-0',
           nodes: <NodeSnapshot>[
-            const RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
-            const RectNodeSnapshot(id: 'r2', size: Size(12, 12)),
+            RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
+            RectNodeSnapshot(id: 'r2', size: Size(12, 12)),
           ],
         ),
       ],
@@ -285,14 +286,14 @@ void main() {
           (
             snapshot: SceneSnapshot(
               backgroundLayer: BackgroundLayerSnapshot(
-                nodes: const <NodeSnapshot>[
+                nodes: <NodeSnapshot>[
                   RectNodeSnapshot(id: 'dup', size: Size(1, 1)),
                 ],
               ),
               layers: <ContentLayerSnapshot>[
                 ContentLayerSnapshot(
                   id: 'layer-auto-1',
-                  nodes: const <NodeSnapshot>[
+                  nodes: <NodeSnapshot>[
                     RectNodeSnapshot(id: 'dup', size: Size(2, 2)),
                   ],
                 ),
@@ -302,12 +303,15 @@ void main() {
             expectedMessage: 'Must be unique across scene layers.',
           ),
           (
-            snapshot: SceneSnapshot(
+            snapshot: sceneSnapshotFromValidated(
               layers: <ContentLayerSnapshot>[
-                ContentLayerSnapshot(
+                contentLayerSnapshotFromValidated(
                   id: 'layer-auto-2',
-                  nodes: const <NodeSnapshot>[
-                    PathNodeSnapshot(id: 'p1', svgPathData: 'not-a-path'),
+                  nodes: <NodeSnapshot>[
+                    pathNodeSnapshotFromValidated(
+                      id: 'p1',
+                      svgPathData: 'not-a-path',
+                    ),
                   ],
                 ),
               ],
@@ -317,8 +321,10 @@ void main() {
                 'Field layers[0].nodes[0].svgPathData must be valid SVG path data.',
           ),
           (
-            snapshot: SceneSnapshot(
-              palette: ScenePaletteSnapshot(penColors: const <Color>[]),
+            snapshot: sceneSnapshotFromValidated(
+              palette: scenePaletteSnapshotFromValidated(
+                penColors: const <Color>[],
+              ),
             ),
             field: 'palette.penColors',
             expectedMessage: 'Field palette.penColors must not be empty.',
@@ -369,15 +375,15 @@ void main() {
         notifications = notifications + 1;
       });
 
-      final malformed = SceneSnapshot(
+      final malformed = sceneSnapshotFromValidated(
         layers: <ContentLayerSnapshot>[
-          ContentLayerSnapshot(
+          contentLayerSnapshotFromValidated(
             id: 'layer-auto-3',
-            nodes: const <NodeSnapshot>[
-              RectNodeSnapshot(
+            nodes: <NodeSnapshot>[
+              rectNodeSnapshotFromValidated(
                 id: 'bad',
-                size: Size(10, 10),
-                transform: Transform2D(
+                size: const Size(10, 10),
+                transform: const Transform2D(
                   a: double.infinity,
                   b: 0,
                   c: 0,

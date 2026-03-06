@@ -49,7 +49,7 @@ void main() {
         ContentLayerSnapshot(
           id: 'layer-auto-0',
           nodes: <NodeSnapshot>[
-            const RectNodeSnapshot(id: 'rect-1', size: Size(40, 20)),
+            RectNodeSnapshot(id: 'rect-1', size: Size(40, 20)),
           ],
         ),
       ],
@@ -70,7 +70,7 @@ void main() {
         ContentLayerSnapshot(
           id: 'layer-auto-1',
           nodes: <NodeSnapshot>[
-            const RectNodeSnapshot(id: 'rect-json-1', size: Size(2, 3)),
+            RectNodeSnapshot(id: 'rect-json-1', size: Size(2, 3)),
           ],
         ),
       ],

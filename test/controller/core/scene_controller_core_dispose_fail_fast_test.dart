@@ -13,8 +13,8 @@ void main() {
         ContentLayerSnapshot(
           id: 'layer-auto-0',
           nodes: <NodeSnapshot>[
-            const RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
-            const RectNodeSnapshot(id: 'r2', size: Size(12, 12)),
+            RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
+            RectNodeSnapshot(id: 'r2', size: Size(12, 12)),
           ],
         ),
       ],
@@ -104,7 +104,7 @@ void main() {
             layers: <ContentLayerSnapshot>[
               ContentLayerSnapshot(
                 id: 'layer-auto-1',
-                nodes: const <NodeSnapshot>[
+                nodes: <NodeSnapshot>[
                   RectNodeSnapshot(id: 'new', size: Size(5, 5)),
                 ],
               ),

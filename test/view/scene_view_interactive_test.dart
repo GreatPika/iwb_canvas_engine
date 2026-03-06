@@ -15,7 +15,7 @@ import 'package:iwb_canvas_engine/src/view/scene_view_interactive.dart';
 SceneSnapshot _snapshot({required String text, bool includeImage = false}) {
   return SceneSnapshot(
     layers: <ContentLayerSnapshot>[
-      ContentLayerSnapshot(id: 'layer-auto-0', nodes: const <NodeSnapshot>[]),
+      ContentLayerSnapshot(id: 'layer-auto-0', nodes: <NodeSnapshot>[]),
       ContentLayerSnapshot(
         id: 'layer-auto-1',
         nodes: <NodeSnapshot>[
@@ -26,7 +26,7 @@ SceneSnapshot _snapshot({required String text, bool includeImage = false}) {
             color: const Color(0xFF000000),
           ),
           if (includeImage)
-            const ImageNodeSnapshot(
+            ImageNodeSnapshot(
               id: 'img',
               imageId: 'missing',
               size: Size(20, 20),
@@ -485,7 +485,7 @@ void main() {
     controller.linePreviewThickness = 2;
     await paintOverlay();
 
-    controller.snapshotOverride = SceneSnapshot(
+    controller.snapshotOverride = sceneSnapshotFromValidated(
       camera: const CameraSnapshot(offset: Offset(double.nan, double.infinity)),
       layers: const <ContentLayerSnapshot>[],
     );

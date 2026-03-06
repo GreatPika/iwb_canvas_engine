@@ -361,7 +361,7 @@ Map<String, Object?> _runHugeBoundsMetric({required int iterations}) {
     layers: <ContentLayerSnapshot>[
       ContentLayerSnapshot(
         id: 'layer-auto-2',
-        nodes: const <NodeSnapshot>[
+        nodes: <NodeSnapshot>[
           RectNodeSnapshot(id: 'huge', size: Size(sceneSizeMax, sceneSizeMax)),
         ],
       ),

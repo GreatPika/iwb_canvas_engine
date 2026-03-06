@@ -7,7 +7,7 @@ List<NodeSnapshot> selectedTransformableNodesInSnapshotOrder({
   required SceneSnapshot snapshot,
   required Set<NodeId> selected,
 }) {
-  if (selected.isEmpty) return const <NodeSnapshot>[];
+  if (selected.isEmpty) return <NodeSnapshot>[];
 
   final nodes = <NodeSnapshot>[];
   for (final layer in snapshot.layers) {

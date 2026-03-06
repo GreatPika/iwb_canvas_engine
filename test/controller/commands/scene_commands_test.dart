@@ -20,7 +20,7 @@ SceneControllerCore buildController() {
       layers: <ContentLayerSnapshot>[
         ContentLayerSnapshot(
           id: 'layer-auto-0',
-          nodes: const <NodeSnapshot>[
+          nodes: <NodeSnapshot>[
             RectNodeSnapshot(id: 'base', size: Size(20, 10)),
           ],
         ),
@@ -429,14 +429,12 @@ void main() {
     final controller = SceneControllerCore(
       initialSnapshot: SceneSnapshot(
         backgroundLayer: BackgroundLayerSnapshot(
-          nodes: const <NodeSnapshot>[
-            RectNodeSnapshot(id: 'bg', size: Size(20, 10)),
-          ],
+          nodes: <NodeSnapshot>[RectNodeSnapshot(id: 'bg', size: Size(20, 10))],
         ),
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
             id: 'layer-auto-1',
-            nodes: const <NodeSnapshot>[
+            nodes: <NodeSnapshot>[
               RectNodeSnapshot(id: 'visible', size: Size(20, 10)),
               RectNodeSnapshot(
                 id: 'hidden',

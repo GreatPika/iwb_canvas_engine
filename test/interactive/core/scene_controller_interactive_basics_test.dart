@@ -433,7 +433,7 @@ void main() {
             layers: <ContentLayerSnapshot>[
               ContentLayerSnapshot(
                 id: 'layer-auto-3',
-                nodes: const <NodeSnapshot>[
+                nodes: <NodeSnapshot>[
                   RectNodeSnapshot(id: 'base', size: Size(10, 10)),
                 ],
               ),

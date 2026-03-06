@@ -1,17 +1,17 @@
 part of 'scene_builder.dart';
 
 SceneSnapshot _snapshotFromScene(Scene scene) {
-  return SceneSnapshot(
+  return sceneSnapshotFromValidated(
     backgroundLayer: scene.backgroundLayer == null
         ? null
-        : BackgroundLayerSnapshot(
+        : backgroundLayerSnapshotFromValidated(
             nodes: scene.backgroundLayer!.nodes
                 .map(_snapshotNodeFromScene)
                 .toList(growable: false),
           ),
     layers: scene.layers
         .map(
-          (layer) => ContentLayerSnapshot(
+          (layer) => contentLayerSnapshotFromValidated(
             id: layer.id,
             nodes: layer.nodes
                 .map(_snapshotNodeFromScene)
@@ -19,16 +19,16 @@ SceneSnapshot _snapshotFromScene(Scene scene) {
           ),
         )
         .toList(growable: false),
-    camera: CameraSnapshot(offset: scene.camera.offset),
-    background: BackgroundSnapshot(
+    camera: cameraSnapshotFromValidated(offset: scene.camera.offset),
+    background: backgroundSnapshotFromValidated(
       color: scene.background.color,
-      grid: GridSnapshot(
+      grid: gridSnapshotFromValidated(
         isEnabled: scene.background.grid.isEnabled,
         cellSize: scene.background.grid.cellSize,
         color: scene.background.grid.color,
       ),
     ),
-    palette: ScenePaletteSnapshot(
+    palette: scenePaletteSnapshotFromValidated(
       penColors: scene.palette.penColors,
       backgroundColors: scene.palette.backgroundColors,
       gridSizes: scene.palette.gridSizes,
@@ -40,7 +40,7 @@ NodeSnapshot _snapshotNodeFromScene(SceneNode node) {
   switch (node.type) {
     case NodeType.image:
       final image = node as ImageNode;
-      return ImageNodeSnapshot(
+      return imageNodeSnapshotFromValidated(
         id: image.id,
         instanceRevision: image.instanceRevision,
         imageId: image.imageId,
@@ -57,7 +57,7 @@ NodeSnapshot _snapshotNodeFromScene(SceneNode node) {
       );
     case NodeType.text:
       final text = node as TextNode;
-      return TextNodeSnapshot(
+      return textNodeSnapshotFromValidated(
         id: text.id,
         instanceRevision: text.instanceRevision,
         text: text.text,
@@ -82,7 +82,7 @@ NodeSnapshot _snapshotNodeFromScene(SceneNode node) {
       );
     case NodeType.stroke:
       final stroke = node as StrokeNode;
-      return StrokeNodeSnapshot(
+      return strokeNodeSnapshotFromValidated(
         id: stroke.id,
         instanceRevision: stroke.instanceRevision,
         points: stroke.points,
@@ -100,7 +100,7 @@ NodeSnapshot _snapshotNodeFromScene(SceneNode node) {
       );
     case NodeType.line:
       final line = node as LineNode;
-      return LineNodeSnapshot(
+      return lineNodeSnapshotFromValidated(
         id: line.id,
         instanceRevision: line.instanceRevision,
         start: line.start,
@@ -118,7 +118,7 @@ NodeSnapshot _snapshotNodeFromScene(SceneNode node) {
       );
     case NodeType.rect:
       final rect = node as RectNode;
-      return RectNodeSnapshot(
+      return rectNodeSnapshotFromValidated(
         id: rect.id,
         instanceRevision: rect.instanceRevision,
         size: rect.size,
@@ -136,7 +136,7 @@ NodeSnapshot _snapshotNodeFromScene(SceneNode node) {
       );
     case NodeType.path:
       final path = node as PathNode;
-      return PathNodeSnapshot(
+      return pathNodeSnapshotFromValidated(
         id: path.id,
         instanceRevision: path.instanceRevision,
         svgPathData: path.svgPathData,

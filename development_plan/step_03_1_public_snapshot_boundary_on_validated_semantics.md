@@ -57,17 +57,17 @@ language: russian
 
 ### `lib/src/contract/snapshot.dart`
 
-[ ] Перевести публичное создание `SceneSnapshot` и `NodeSnapshot`-вариантов на валидирующие entry points, которые используют validated-layer из шага `2`.
-[ ] Пропускать общие boundary-поля `id`, `instanceRevision`, `transform`, `opacity`, `hitPadding`, `size`, `thickness`, `fontSize`, `maxWidth`, `lineHeight`, `start`, `end`, `points` через единый validated owner/helper, а не через локальные ad-hoc checks.
-[ ] Явно закрепить, что `TextNodeSnapshot.size` является derived metadata, а не свободным пользовательским вводом.
-[ ] Сохранить и формализовать canonical non-null public semantics для `SceneSnapshot.backgroundLayer`.
-[ ] Ввести внутренний fast-path только для уже валидированных snapshot-данных, чтобы runtime/builder не платили повторной boundary-валидацией там, где данные уже каноничны.
+[x] Перевести публичное создание `SceneSnapshot` и `NodeSnapshot`-вариантов на валидирующие entry points, которые используют validated-layer из шага `2`.
+[x] Пропускать общие boundary-поля `id`, `instanceRevision`, `transform`, `opacity`, `hitPadding`, `size`, `thickness`, `fontSize`, `maxWidth`, `lineHeight`, `start`, `end`, `points` через единый validated owner/helper, а не через локальные ad-hoc checks.
+[x] Явно закрепить, что `TextNodeSnapshot.size` является derived metadata, а не свободным пользовательским вводом.
+[x] Сохранить и формализовать canonical non-null public semantics для `SceneSnapshot.backgroundLayer`.
+[x] Ввести внутренний fast-path только для уже валидированных snapshot-данных, чтобы runtime/builder не платили повторной boundary-валидацией там, где данные уже каноничны.
 
 ### Граница с соседними шагами
 
-[ ] Не переносить сюда `NodeSpec`/`NodePatch`; это владелец шага `3.2`.
-[ ] Не переносить сюда `SceneWriteTxn`, `writeSelectionReplace(...)`, immutability/throws semantics и downstream cleanup; это владелец шага `3.3`.
-[ ] Не переносить сюда barrel/export-surface, release-facing docs и точный public API contract; это владелец шага `4`.
+[x] Не переносить сюда `NodeSpec`/`NodePatch`; это владелец шага `3.2`.
+[x] Не переносить сюда `SceneWriteTxn`, `writeSelectionReplace(...)`, immutability/throws semantics и downstream cleanup; это владелец шага `3.3`.
+[x] Не переносить сюда barrel/export-surface, release-facing docs и точный public API contract; это владелец шага `4`.
 
 ## Конкретизация внедрения по порядку
 
@@ -82,18 +82,18 @@ language: russian
 
 ## Критерии приемки
 
-[ ] Публичные snapshot entry points больше не являются тонкой оболочкой над сырыми примитивами.
-[ ] Уже существующая immutability discipline snapshot-коллекций сохранена и дополнена validating semantics, а не сломана или заменена новым sync-layer.
-[ ] Вся boundary-валидация snapshot-полей использует validated-layer из шагов `2` и `2.1` как единственный источник primitive-правил.
-[ ] `TextNodeSnapshot.size` имеет одну явную семантику: derived metadata, а не произвольный пользовательский источник истины.
-[ ] `SceneSnapshot.backgroundLayer` имеет одну явную публичную семантику: после создания snapshot он всегда canonical и non-null.
-[ ] Internal fast-path существует только для уже валидированных данных и не становится альтернативным публичным API.
-[ ] В builder/runtime path не появляется второй независимый набор primitive-checks.
+[x] Публичные snapshot entry points больше не являются тонкой оболочкой над сырыми примитивами.
+[x] Уже существующая immutability discipline snapshot-коллекций сохранена и дополнена validating semantics, а не сломана или заменена новым sync-layer.
+[x] Вся boundary-валидация snapshot-полей использует validated-layer из шагов `2` и `2.1` как единственный источник primitive-правил.
+[x] `TextNodeSnapshot.size` имеет одну явную семантику: derived metadata, а не произвольный пользовательский источник истины.
+[x] `SceneSnapshot.backgroundLayer` имеет одну явную публичную семантику: после создания snapshot он всегда canonical и non-null.
+[x] Internal fast-path существует только для уже валидированных данных и не становится альтернативным публичным API.
+[x] В builder/runtime path не появляется второй независимый набор primitive-checks.
 
 ## Тестовый контур
 
-[ ] Добавить тесты на public creation `SceneSnapshot` и `NodeSnapshot`-вариантов через validated semantics.
-[ ] Добавить тесты на rejection невалидных id, revision, ranges, non-finite geometry и строковых boundary-values на snapshot boundary.
-[ ] Добавить тесты на canonical non-null `backgroundLayer`.
-[ ] Добавить тесты на derived handling `TextNodeSnapshot.size`, включая сценарий, где import/build path пересчитывает размер.
-[ ] Добавить тесты на то, что internal fast-path не становится обходом публичной boundary-валидации.
+[x] Добавить тесты на public creation `SceneSnapshot` и `NodeSnapshot`-вариантов через validated semantics.
+[x] Добавить тесты на rejection невалидных id, revision, ranges, non-finite geometry и строковых boundary-values на snapshot boundary.
+[x] Добавить тесты на canonical non-null `backgroundLayer`.
+[x] Добавить тесты на derived handling `TextNodeSnapshot.size`, включая сценарий, где import/build path пересчитывает размер.
+[x] Добавить тесты на то, что internal fast-path не становится обходом публичной boundary-валидации.

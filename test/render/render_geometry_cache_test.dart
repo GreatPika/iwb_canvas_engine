@@ -17,7 +17,7 @@ void main() {
 
   test('RenderGeometryCache reuses entry for unchanged node geometry', () {
     final cache = RenderGeometryCache();
-    const node = RectNodeSnapshot(
+    final node = RectNodeSnapshot(
       id: 'rect-1',
       size: Size(20, 10),
       strokeColor: Color(0xFF000000),
@@ -37,12 +37,12 @@ void main() {
     'RenderGeometryCache treats same id with different instanceRevision as different entries',
     () {
       final cache = RenderGeometryCache();
-      const oldNode = RectNodeSnapshot(
+      final oldNode = RectNodeSnapshot(
         id: 'reuse-id',
         instanceRevision: 1,
         size: Size(20, 10),
       );
-      const newNode = RectNodeSnapshot(
+      final newNode = RectNodeSnapshot(
         id: 'reuse-id',
         instanceRevision: 2,
         size: Size(20, 10),
@@ -137,7 +137,7 @@ void main() {
                   thickness: 2,
                   color: const Color(0xFF000000),
                 ),
-                const RectNodeSnapshot(id: 'r', size: Size(10, 10)),
+                RectNodeSnapshot(id: 'r', size: Size(10, 10)),
               ],
             ),
           ],
@@ -170,8 +170,8 @@ void main() {
 
   test('RenderGeometryCache rebuilds when path geometry key changes', () {
     final cache = RenderGeometryCache();
-    const nodeA = PathNodeSnapshot(id: 'path-1', svgPathData: 'M0 0 H10');
-    const nodeB = PathNodeSnapshot(id: 'path-1', svgPathData: 'M0 0 H20');
+    final nodeA = PathNodeSnapshot(id: 'path-1', svgPathData: 'M0 0 H10');
+    final nodeB = PathNodeSnapshot(id: 'path-1', svgPathData: 'M0 0 H20');
 
     final entryA = cache.get(nodeA);
     final entryB = cache.get(nodeB);
@@ -183,13 +183,13 @@ void main() {
 
   test('RenderGeometryCache rect bounds include stroke only when enabled', () {
     final cache = RenderGeometryCache();
-    const withStroke = RectNodeSnapshot(
+    final withStroke = RectNodeSnapshot(
       id: 'rect-with-stroke',
       size: Size(10, 6),
       strokeColor: Color(0xFF000000),
       strokeWidth: 4,
     );
-    const noStroke = RectNodeSnapshot(
+    final noStroke = RectNodeSnapshot(
       id: 'rect-no-stroke',
       size: Size(10, 6),
       strokeWidth: 4,
@@ -204,13 +204,13 @@ void main() {
 
   test('RenderGeometryCache path bounds include stroke only when enabled', () {
     final cache = RenderGeometryCache();
-    const withStroke = PathNodeSnapshot(
+    final withStroke = PathNodeSnapshot(
       id: 'path-with-stroke',
       svgPathData: 'M0 0 H10 V10 H0 Z',
       strokeColor: Color(0xFF000000),
       strokeWidth: 4,
     );
-    const noStroke = PathNodeSnapshot(
+    final noStroke = PathNodeSnapshot(
       id: 'path-no-stroke',
       svgPathData: 'M0 0 H10 V10 H0 Z',
       strokeWidth: 4,
@@ -227,12 +227,12 @@ void main() {
     'RenderGeometryCache ignores strokeWidth key changes when stroke is disabled',
     () {
       final cache = RenderGeometryCache();
-      const nodeA = PathNodeSnapshot(
+      final nodeA = PathNodeSnapshot(
         id: 'path-disabled-stroke',
         svgPathData: 'M0 0 H10 V10 H0 Z',
         strokeWidth: 1,
       );
-      const nodeB = PathNodeSnapshot(
+      final nodeB = PathNodeSnapshot(
         id: 'path-disabled-stroke',
         svgPathData: 'M0 0 H10 V10 H0 Z',
         strokeWidth: 64,
@@ -250,12 +250,12 @@ void main() {
 
   test('RenderGeometryCache rebuilds when path stroke enablement changes', () {
     final cache = RenderGeometryCache();
-    const nodeWithoutStroke = PathNodeSnapshot(
+    final nodeWithoutStroke = PathNodeSnapshot(
       id: 'path-enable-stroke',
       svgPathData: 'M0 0 H10 V10 H0 Z',
       strokeWidth: 4,
     );
-    const nodeWithStroke = PathNodeSnapshot(
+    final nodeWithStroke = PathNodeSnapshot(
       id: 'path-enable-stroke',
       svgPathData: 'M0 0 H10 V10 H0 Z',
       strokeColor: Color(0xFF000000),
@@ -274,7 +274,7 @@ void main() {
 
   test('RenderGeometryCache builds centered path and world bounds', () {
     final cache = RenderGeometryCache();
-    const node = PathNodeSnapshot(
+    final node = PathNodeSnapshot(
       id: 'path-centered',
       svgPathData: 'M0 0 H10 V10 H0 Z',
       strokeColor: Color(0xFF000000),
@@ -293,7 +293,10 @@ void main() {
     'RenderGeometryCache returns safe zero bounds for invalid path data',
     () {
       final cache = RenderGeometryCache();
-      const node = PathNodeSnapshot(id: 'path-invalid', svgPathData: 'invalid');
+      final node = pathNodeSnapshotFromValidated(
+        id: 'path-invalid',
+        svgPathData: 'invalid',
+      );
 
       final entry = cache.get(node);
 
@@ -307,7 +310,7 @@ void main() {
     'RenderGeometryCache returns zero world bounds for non-finite transform',
     () {
       final cache = RenderGeometryCache();
-      final node = RectNodeSnapshot(
+      final node = rectNodeSnapshotFromValidated(
         id: 'rect-non-finite-transform',
         size: const Size(10, 10),
         transform: Transform2D(a: 1, b: 0, c: 0, d: 1, tx: double.nan, ty: 0),
@@ -322,7 +325,7 @@ void main() {
 
   test('RenderGeometryCache invalidateAll clears cached entries', () {
     final cache = RenderGeometryCache();
-    const node = ImageNodeSnapshot(
+    final node = ImageNodeSnapshot(
       id: 'image-1',
       imageId: 'img',
       size: Size(20, 20),
@@ -340,9 +343,9 @@ void main() {
 
   test('RenderGeometryCache evicts least recently used entry', () {
     final cache = RenderGeometryCache(maxEntries: 2);
-    const nodeA = RectNodeSnapshot(id: 'rect-a', size: Size(8, 8));
-    const nodeB = RectNodeSnapshot(id: 'rect-b', size: Size(8, 8));
-    const nodeC = RectNodeSnapshot(id: 'rect-c', size: Size(8, 8));
+    final nodeA = RectNodeSnapshot(id: 'rect-a', size: Size(8, 8));
+    final nodeB = RectNodeSnapshot(id: 'rect-b', size: Size(8, 8));
+    final nodeC = RectNodeSnapshot(id: 'rect-c', size: Size(8, 8));
 
     cache.get(nodeA);
     cache.get(nodeB);
@@ -359,9 +362,9 @@ void main() {
     'RenderGeometryCache cache hit refreshes recency and keeps entry in cache',
     () {
       final cache = RenderGeometryCache(maxEntries: 2);
-      const nodeA = RectNodeSnapshot(id: 'rect-a', size: Size(8, 8));
-      const nodeB = RectNodeSnapshot(id: 'rect-b', size: Size(8, 8));
-      const nodeC = RectNodeSnapshot(id: 'rect-c', size: Size(8, 8));
+      final nodeA = RectNodeSnapshot(id: 'rect-a', size: Size(8, 8));
+      final nodeB = RectNodeSnapshot(id: 'rect-b', size: Size(8, 8));
+      final nodeC = RectNodeSnapshot(id: 'rect-c', size: Size(8, 8));
 
       cache.get(nodeA);
       cache.get(nodeB);

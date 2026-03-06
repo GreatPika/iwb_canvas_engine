@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart' hide NodeId;
+import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
@@ -128,12 +129,12 @@ void main() {
   test('txnSceneFromSnapshot rejects negative stroke pointsRevision', () {
     expect(
       () => txnSceneFromSnapshot(
-        SceneSnapshot(
+        sceneSnapshotFromValidated(
           layers: <ContentLayerSnapshot>[
-            ContentLayerSnapshot(
+            contentLayerSnapshotFromValidated(
               id: 'layer-auto-0',
               nodes: <NodeSnapshot>[
-                StrokeNodeSnapshot(
+                strokeNodeSnapshotFromValidated(
                   id: 's',
                   points: const <Offset>[Offset(0, 0), Offset(1, 1)],
                   pointsRevision: -1,
@@ -162,22 +163,16 @@ void main() {
     final scene = txnSceneFromSnapshot(
       SceneSnapshot(
         backgroundLayer: BackgroundLayerSnapshot(
-          nodes: const <NodeSnapshot>[
-            RectNodeSnapshot(id: 'bg', size: Size(1, 1)),
-          ],
+          nodes: <NodeSnapshot>[RectNodeSnapshot(id: 'bg', size: Size(1, 1))],
         ),
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
             id: 'layer-auto-1',
-            nodes: const <NodeSnapshot>[
-              RectNodeSnapshot(id: 'n1', size: Size(1, 1)),
-            ],
+            nodes: <NodeSnapshot>[RectNodeSnapshot(id: 'n1', size: Size(1, 1))],
           ),
           ContentLayerSnapshot(
             id: 'layer-auto-2',
-            nodes: const <NodeSnapshot>[
-              RectNodeSnapshot(id: 'n2', size: Size(1, 1)),
-            ],
+            nodes: <NodeSnapshot>[RectNodeSnapshot(id: 'n2', size: Size(1, 1))],
           ),
         ],
       ),
@@ -197,9 +192,7 @@ void main() {
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
             id: 'layer-auto-3',
-            nodes: const <NodeSnapshot>[
-              RectNodeSnapshot(id: 'n1', size: Size(1, 1)),
-            ],
+            nodes: <NodeSnapshot>[RectNodeSnapshot(id: 'n1', size: Size(1, 1))],
           ),
         ],
       ),
@@ -219,7 +212,7 @@ void main() {
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
               id: 'layer-auto-4',
-              nodes: const <NodeSnapshot>[
+              nodes: <NodeSnapshot>[
                 RectNodeSnapshot(id: 'n1', size: Size(1, 1)),
               ],
             ),
@@ -245,13 +238,13 @@ void main() {
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
               id: 'layer-auto-5',
-              nodes: const <NodeSnapshot>[
+              nodes: <NodeSnapshot>[
                 RectNodeSnapshot(id: 'dup', size: Size(1, 1)),
               ],
             ),
             ContentLayerSnapshot(
               id: 'layer-auto-6',
-              nodes: const <NodeSnapshot>[
+              nodes: <NodeSnapshot>[
                 RectNodeSnapshot(id: 'dup', size: Size(2, 2)),
               ],
             ),
@@ -273,15 +266,15 @@ void main() {
   test('txnSceneFromSnapshot rejects non-finite transform values', () {
     expect(
       () => txnSceneFromSnapshot(
-        SceneSnapshot(
+        sceneSnapshotFromValidated(
           layers: <ContentLayerSnapshot>[
-            ContentLayerSnapshot(
+            contentLayerSnapshotFromValidated(
               id: 'layer-auto-7',
-              nodes: const <NodeSnapshot>[
-                RectNodeSnapshot(
+              nodes: <NodeSnapshot>[
+                rectNodeSnapshotFromValidated(
                   id: 'r1',
-                  size: Size(1, 1),
-                  transform: Transform2D(
+                  size: const Size(1, 1),
+                  transform: const Transform2D(
                     a: double.nan,
                     b: 0,
                     c: 0,
@@ -719,7 +712,7 @@ void main() {
       int allocate() => nextInstanceRevision++;
 
       final preserved = txnNodeFromSnapshot(
-        const RectNodeSnapshot(
+        RectNodeSnapshot(
           id: 'preserved',
           instanceRevision: 7,
           size: Size(1, 1),
@@ -727,7 +720,7 @@ void main() {
         nextInstanceRevision: allocate,
       );
       final allocated = txnNodeFromSnapshot(
-        const RectNodeSnapshot(id: 'allocated', size: Size(1, 1)),
+        RectNodeSnapshot(id: 'allocated', size: Size(1, 1)),
         nextInstanceRevision: allocate,
       );
 
@@ -747,7 +740,7 @@ void main() {
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
               id: 'layer-auto-8',
-              nodes: const <NodeSnapshot>[
+              nodes: <NodeSnapshot>[
                 RectNodeSnapshot(id: 'a', size: Size(1, 1)),
                 RectNodeSnapshot(
                   id: 'b',
@@ -787,7 +780,7 @@ void main() {
   test('text node from snapshot recomputes stale serialized size', () {
     final node =
         txnNodeFromSnapshot(
-              const TextNodeSnapshot(
+              TextNodeSnapshot(
                 id: 'text-stale',
                 text: 'Derived size',
                 size: Size(1, 1),

@@ -19,7 +19,7 @@ void main() {
     'rect hit candidate bounds are derived from the same render worldBounds',
     () {
       final cache = RenderGeometryCache();
-      const snapshot = RectNodeSnapshot(
+      final snapshot = RectNodeSnapshot(
         id: 'rect-parity',
         size: Size(30, 10),
         strokeColor: Color(0xFF000000),
@@ -50,7 +50,7 @@ void main() {
     'path hit candidate bounds are derived from the same render worldBounds',
     () {
       final cache = RenderGeometryCache();
-      const snapshot = PathNodeSnapshot(
+      final snapshot = PathNodeSnapshot(
         id: 'path-parity',
         svgPathData: 'M0 0 H20 V12 H0 Z',
         fillRule: PathFillRule.evenOdd,

@@ -41,7 +41,7 @@ void main() {
     );
     expect(
       () => scene.layers.first.nodes.add(
-        const RectNodeSnapshot(id: 'extra', size: Size(1, 1)),
+        RectNodeSnapshot(id: 'extra', size: Size(1, 1)),
       ),
       throwsUnsupportedError,
     );
@@ -179,7 +179,7 @@ SceneSnapshot _buildScene() {
             color: Color(0xFF000000),
             opacity: 0.4,
           ),
-          const LineNodeSnapshot(
+          LineNodeSnapshot(
             id: 'line-1',
             start: Offset(5, 5),
             end: Offset(15, 15),

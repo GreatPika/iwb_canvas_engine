@@ -10,19 +10,17 @@ void main() {
     'SceneSnapshot and ContentLayerSnapshot defensively copy and freeze lists',
     () {
       final sourceNodes = <NodeSnapshot>[
-        const RectNodeSnapshot(id: 'rect-1', size: Size(10, 20)),
+        RectNodeSnapshot(id: 'rect-1', size: Size(10, 20)),
       ];
       final layer = ContentLayerSnapshot(
         id: 'layer-auto-0',
         nodes: sourceNodes,
       );
-      sourceNodes.add(const RectNodeSnapshot(id: 'rect-2', size: Size(1, 1)));
+      sourceNodes.add(RectNodeSnapshot(id: 'rect-2', size: Size(1, 1)));
 
       expect(layer.nodes.length, 1);
       expect(
-        () => layer.nodes.add(
-          const RectNodeSnapshot(id: 'rect-3', size: Size(1, 1)),
-        ),
+        () => layer.nodes.add(RectNodeSnapshot(id: 'rect-3', size: Size(1, 1))),
         throwsUnsupportedError,
       );
 
@@ -106,7 +104,7 @@ void main() {
   test('NodeSnapshot variants keep provided immutable values', () {
     const transform = Transform2D(a: 1, b: 0, c: 0, d: 1, tx: 10, ty: 20);
 
-    const image = ImageNodeSnapshot(
+    final image = ImageNodeSnapshot(
       id: 'img-1',
       imageId: 'image://1',
       size: Size(100, 80),
@@ -121,7 +119,7 @@ void main() {
       isTransformable: false,
     );
 
-    const text = TextNodeSnapshot(
+    final text = TextNodeSnapshot(
       id: 'txt-1',
       text: 'hello',
       size: Size(50, 20),
@@ -136,7 +134,7 @@ void main() {
       lineHeight: 1.3,
     );
 
-    const line = LineNodeSnapshot(
+    final line = LineNodeSnapshot(
       id: 'line-1',
       start: Offset(0, 0),
       end: Offset(10, 10),
@@ -144,7 +142,7 @@ void main() {
       color: Color(0xFF00FF00),
     );
 
-    const rect = RectNodeSnapshot(
+    final rect = RectNodeSnapshot(
       id: 'rect-1',
       size: Size(40, 30),
       fillColor: Color(0xFFFF0000),
@@ -152,7 +150,7 @@ void main() {
       strokeWidth: 1.5,
     );
 
-    const path = PathNodeSnapshot(
+    final path = PathNodeSnapshot(
       id: 'path-1',
       svgPathData: 'M0 0 L10 10',
       fillColor: Color(0xFF123456),

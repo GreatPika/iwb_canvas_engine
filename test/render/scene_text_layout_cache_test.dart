@@ -159,7 +159,7 @@ void main() {
 
   test('SceneTextLayoutCache normalizes invalid lineHeight and maxWidth', () {
     final cache = SceneTextLayoutCache(maxEntries: 8);
-    final node = TextNodeSnapshot(
+    final node = textNodeSnapshotFromValidated(
       id: 'node-invalid',
       text: 'Shared',
       size: const ui.Size(100, 20),

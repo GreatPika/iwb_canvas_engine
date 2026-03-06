@@ -61,16 +61,12 @@ void main() {
     final result = SceneBuilder.buildFromSnapshot(
       SceneSnapshot(
         backgroundLayer: BackgroundLayerSnapshot(
-          nodes: const <NodeSnapshot>[
-            RectNodeSnapshot(id: 'bg', size: Size(1, 1)),
-          ],
+          nodes: <NodeSnapshot>[RectNodeSnapshot(id: 'bg', size: Size(1, 1))],
         ),
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
             id: 'layer-auto-0',
-            nodes: const <NodeSnapshot>[
-              RectNodeSnapshot(id: 'n1', size: Size(1, 1)),
-            ],
+            nodes: <NodeSnapshot>[RectNodeSnapshot(id: 'n1', size: Size(1, 1))],
           ),
         ],
       ),

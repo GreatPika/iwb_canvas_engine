@@ -206,7 +206,7 @@ void main() {
                 strokeWidth: 2,
                 transform: Transform2D.translation(const Offset(20, 20)),
               ),
-              const LineNodeSnapshot(
+              LineNodeSnapshot(
                 id: 'line-1',
                 start: Offset(0, 0),
                 end: Offset(20, 0),
@@ -309,7 +309,7 @@ void main() {
   test('SceneControllerCore rejects invalid numeric snapshot fields', () {
     expect(
       () => SceneControllerCore(
-        initialSnapshot: SceneSnapshot(
+        initialSnapshot: sceneSnapshotFromValidated(
           camera: const CameraSnapshot(offset: Offset(double.nan, 0)),
         ),
       ),
@@ -333,7 +333,7 @@ void main() {
           ContentLayerSnapshot(
             id: 'layer-auto-2',
             nodes: <NodeSnapshot>[
-              const LineNodeSnapshot(
+              LineNodeSnapshot(
                 id: 'line-valid',
                 start: Offset(0, 0),
                 end: Offset(20, 0),
@@ -459,7 +459,7 @@ void main() {
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
             id: 'layer-auto-3',
-            nodes: const <NodeSnapshot>[
+            nodes: <NodeSnapshot>[
               PathNodeSnapshot(
                 id: 'edge-path',
                 svgPathData: 'M0 0 H10 V10 H0 Z',
@@ -500,7 +500,7 @@ void main() {
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
             id: 'layer-auto-4',
-            nodes: const <NodeSnapshot>[
+            nodes: <NodeSnapshot>[
               RectNodeSnapshot(
                 id: 'edge-rect',
                 size: Size(10, 10),
@@ -534,7 +534,7 @@ void main() {
       initialSnapshot: SceneSnapshot(
         background: const BackgroundSnapshot(color: background),
         backgroundLayer: BackgroundLayerSnapshot(
-          nodes: const <NodeSnapshot>[
+          nodes: <NodeSnapshot>[
             RectNodeSnapshot(
               id: 'bg-node',
               size: Size(24, 24),
@@ -547,7 +547,7 @@ void main() {
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
             id: 'layer-auto-bg-order',
-            nodes: const <NodeSnapshot>[
+            nodes: <NodeSnapshot>[
               RectNodeSnapshot(
                 id: 'content-node',
                 size: Size(12, 12),
@@ -587,7 +587,7 @@ void main() {
             ),
           ),
           backgroundLayer: BackgroundLayerSnapshot(
-            nodes: const <NodeSnapshot>[
+            nodes: <NodeSnapshot>[
               RectNodeSnapshot(
                 id: 'edge-bg-rect',
                 size: Size(10, 10),
@@ -620,7 +620,7 @@ void main() {
     'ScenePainter draws selection frame for backgroundLayer and keeps preview parity',
     () async {
       const background = Color(0xFFFFFFFF);
-      const node = RectNodeSnapshot(
+      final node = RectNodeSnapshot(
         id: 'bg-world-selection',
         size: Size(20, 12),
         transform: Transform2D(
@@ -640,9 +640,7 @@ void main() {
       final renderState = _FakeRenderState(
         snapshot: SceneSnapshot(
           background: const BackgroundSnapshot(color: background),
-          backgroundLayer: BackgroundLayerSnapshot(
-            nodes: const <NodeSnapshot>[node],
-          ),
+          backgroundLayer: BackgroundLayerSnapshot(nodes: <NodeSnapshot>[node]),
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(id: 'layer-auto-bg-selection'),
           ],
@@ -684,7 +682,7 @@ void main() {
     'ScenePainter draws rect selection frame from worldBounds and keeps preview parity',
     () async {
       const background = Color(0xFFFFFFFF);
-      const node = RectNodeSnapshot(
+      final node = RectNodeSnapshot(
         id: 'rect-world-selection',
         size: Size(20, 12),
         transform: Transform2D(
@@ -708,7 +706,7 @@ void main() {
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
               id: 'layer-auto-5',
-              nodes: const <NodeSnapshot>[node],
+              nodes: <NodeSnapshot>[node],
             ),
           ],
         ),
@@ -1059,7 +1057,7 @@ void main() {
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
               id: 'layer-auto-11',
-              nodes: const <NodeSnapshot>[
+              nodes: <NodeSnapshot>[
                 PathNodeSnapshot(
                   id: 'path-geometry-reuse',
                   svgPathData: 'M0 0 H30 V20 H0 Z',
@@ -1201,7 +1199,7 @@ void main() {
                   thickness: 8,
                   color: const Color(0xFF000000),
                 ),
-                const ImageNodeSnapshot(
+                ImageNodeSnapshot(
                   id: 'image-missing',
                   imageId: 'missing',
                   size: Size(20, 16),
@@ -1261,7 +1259,7 @@ void main() {
             ContentLayerSnapshot(
               id: 'layer-auto-14',
               nodes: <NodeSnapshot>[
-                const ImageNodeSnapshot(
+                ImageNodeSnapshot(
                   id: 'img-sel',
                   imageId: 'missing',
                   size: Size(20, 16),
@@ -1293,7 +1291,7 @@ void main() {
                   thickness: 4,
                   color: Color(0xFF000000),
                 ),
-                const PathNodeSnapshot(
+                PathNodeSnapshot(
                   id: 'path-open-sel',
                   svgPathData: 'M0 0 L30 0',
                   strokeColor: Color(0xFF000000),

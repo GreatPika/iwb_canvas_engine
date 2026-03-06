@@ -9,6 +9,8 @@ All notable changes to `iwb_canvas_engine` are documented here.
 - `SceneDataException(...)` is no longer `const`. The constructor now
   sanitizes `source` eagerly and may replace structured values with immutable
   snapshots or preview payloads.
+- Public snapshot/node constructors are no longer `const`; they now validate
+  boundary ids and numeric values eagerly.
 - Exported validated boundary value types no longer expose unsupported
   `validated(...)` fast-path constructors. Supported factory entrypoints are
   `parse(...)`, `of(...)`, and `fromJson(...)`.
@@ -32,6 +34,9 @@ All notable changes to `iwb_canvas_engine` are documented here.
 - Clarified and enforced text snapshot canonicalization: import now treats
   `TextNodeSnapshot.size` as derived/non-authoritative metadata and always
   recomputes canonical bounds from layout inputs.
+- Moved public `SceneSnapshot`/`NodeSnapshot` constructor validation onto the
+  snapshot boundary while keeping internal decode/runtime producers on fast
+  paths for already validated data.
 - Hardened JSON decode guardrails against oversized string and palette payloads
   by enforcing max lengths for layer/node/image/font ids and text, plus max
   palette item counts.

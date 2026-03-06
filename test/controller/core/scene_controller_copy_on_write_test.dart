@@ -14,8 +14,8 @@ void main() {
         ContentLayerSnapshot(
           id: 'layer-auto-0',
           nodes: <NodeSnapshot>[
-            const RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
-            const RectNodeSnapshot(id: 'r2', size: Size(12, 12)),
+            RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
+            RectNodeSnapshot(id: 'r2', size: Size(12, 12)),
           ],
         ),
       ],
@@ -53,7 +53,7 @@ void main() {
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
               id: 'layer-auto-1',
-              nodes: const <NodeSnapshot>[
+              nodes: <NodeSnapshot>[
                 TextNodeSnapshot(
                   id: 't1',
                   text: 'hello',
@@ -97,7 +97,7 @@ void main() {
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
             id: 'layer-auto-2',
-            nodes: const <NodeSnapshot>[
+            nodes: <NodeSnapshot>[
               TextNodeSnapshot(
                 id: 't1',
                 text: 'hello',
@@ -191,7 +191,7 @@ void main() {
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
             id: 'layer-auto-3',
-            nodes: const <NodeSnapshot>[
+            nodes: <NodeSnapshot>[
               RectNodeSnapshot(id: 'node-1', size: Size(10, 10)),
               RectNodeSnapshot(id: 'node-9', size: Size(12, 12)),
             ],
@@ -221,7 +221,7 @@ void main() {
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
             id: 'layer-auto-4',
-            nodes: const <NodeSnapshot>[
+            nodes: <NodeSnapshot>[
               RectNodeSnapshot(
                 id: 'high',
                 instanceRevision: 100,
@@ -239,7 +239,7 @@ void main() {
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
             id: 'layer-auto-5',
-            nodes: const <NodeSnapshot>[
+            nodes: <NodeSnapshot>[
               RectNodeSnapshot(
                 id: 'low',
                 instanceRevision: 3,

@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart' hide NodeId;
+import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/core/text_layout.dart'
@@ -184,7 +185,7 @@ void main() {
       layers: <ContentLayerSnapshot>[
         ContentLayerSnapshot(
           id: 'layer-auto-0',
-          nodes: const <NodeSnapshot>[
+          nodes: <NodeSnapshot>[
             RectNodeSnapshot(
               id: 'r1',
               size: Size(1, 1),
@@ -216,15 +217,22 @@ void main() {
   });
 
   test('sceneBuildFromSnapshot rejects singular transform values', () {
-    final snapshot = SceneSnapshot(
+    final snapshot = sceneSnapshotFromValidated(
       layers: <ContentLayerSnapshot>[
-        ContentLayerSnapshot(
+        contentLayerSnapshotFromValidated(
           id: 'layer-auto-1',
-          nodes: const <NodeSnapshot>[
-            RectNodeSnapshot(
+          nodes: <NodeSnapshot>[
+            rectNodeSnapshotFromValidated(
               id: 'r1',
-              size: Size(1, 1),
-              transform: Transform2D(a: 1, b: 2, c: 2, d: 4, tx: 0, ty: 0),
+              size: const Size(1, 1),
+              transform: const Transform2D(
+                a: 1,
+                b: 2,
+                c: 2,
+                d: 4,
+                tx: 0,
+                ty: 0,
+              ),
             ),
           ],
         ),
@@ -251,15 +259,11 @@ void main() {
       layers: <ContentLayerSnapshot>[
         ContentLayerSnapshot(
           id: 'layer-auto-dup',
-          nodes: const <NodeSnapshot>[
-            RectNodeSnapshot(id: 'r1', size: Size(1, 1)),
-          ],
+          nodes: <NodeSnapshot>[RectNodeSnapshot(id: 'r1', size: Size(1, 1))],
         ),
         ContentLayerSnapshot(
           id: 'layer-auto-dup',
-          nodes: const <NodeSnapshot>[
-            RectNodeSnapshot(id: 'r2', size: Size(1, 1)),
-          ],
+          nodes: <NodeSnapshot>[RectNodeSnapshot(id: 'r2', size: Size(1, 1))],
         ),
       ],
     );
@@ -282,7 +286,7 @@ void main() {
   test(
     'sceneBuildFromSnapshot ignores input text size and re-derives canonical size',
     () {
-      const textSnapshot = TextNodeSnapshot(
+      final textSnapshot = TextNodeSnapshot(
         id: 't-derived',
         text: 'Derived text size',
         size: Size(999, 777),
@@ -297,7 +301,7 @@ void main() {
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
             id: 'layer-auto-text',
-            nodes: const <NodeSnapshot>[textSnapshot],
+            nodes: <NodeSnapshot>[textSnapshot],
           ),
         ],
       );
@@ -793,34 +797,14 @@ void main() {
     );
   });
 
-  test('sceneBuildFromSnapshot rejects oversized image ids at boundary', () {
-    final snapshot = SceneSnapshot(
-      layers: <ContentLayerSnapshot>[
-        ContentLayerSnapshot(
-          id: 'layer-image-boundary',
-          nodes: <NodeSnapshot>[
-            ImageNodeSnapshot(
-              id: 'img-boundary',
-              imageId: 'x' * (kMaxImageIdLength + 1),
-              size: const Size(1, 1),
-            ),
-          ],
-        ),
-      ],
-    );
-
+  test('public snapshot boundary rejects oversized image ids', () {
     expect(
-      () => model_builder.sceneBuildFromSnapshot(snapshot),
-      throwsA(
-        predicate(
-          (e) =>
-              e is SceneDataException &&
-              e.path == 'layers[0].nodes[0].imageId' &&
-              e.message ==
-                  'Field layers[0].nodes[0].imageId length must be <= '
-                      '$kMaxImageIdLength characters.',
-        ),
+      () => ImageNodeSnapshot(
+        id: 'img-boundary',
+        imageId: 'x' * (kMaxImageIdLength + 1),
+        size: const Size(1, 1),
       ),
+      throwsA(isA<ArgumentError>()),
     );
   });
 
@@ -844,7 +828,7 @@ void main() {
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
               id: 'layer-auto-2',
-              nodes: const <NodeSnapshot>[
+              nodes: <NodeSnapshot>[
                 RectNodeSnapshot(id: 'dup', size: Size(1, 1)),
                 RectNodeSnapshot(id: 'dup', size: Size(1, 1)),
               ],
@@ -928,7 +912,7 @@ void main() {
   test('sceneBuildFromSnapshot rejects duplicate ids in background layer', () {
     final snapshot = SceneSnapshot(
       backgroundLayer: BackgroundLayerSnapshot(
-        nodes: const <NodeSnapshot>[
+        nodes: <NodeSnapshot>[
           RectNodeSnapshot(id: 'dup-bg', size: Size(1, 1)),
           RectNodeSnapshot(id: 'dup-bg', size: Size(2, 2)),
         ],
@@ -968,7 +952,7 @@ void main() {
       () => value_validation.sceneValidateSnapshotValues(
         SceneSnapshot(
           backgroundLayer: BackgroundLayerSnapshot(
-            nodes: const <NodeSnapshot>[
+            nodes: <NodeSnapshot>[
               RectNodeSnapshot(id: 'dup-bg', size: Size(1, 1)),
               RectNodeSnapshot(id: 'dup-bg', size: Size(1, 1)),
             ],

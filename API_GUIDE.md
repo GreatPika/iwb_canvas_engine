@@ -122,6 +122,9 @@ Constructor defaults:
 - omitting `backgroundLayer` creates an empty dedicated background layer
 - omitting `layers` creates no content layers
 - camera, background, and palette default to safe built-in values
+- public snapshot/layer/node constructors validate boundary ids and numeric
+  fields eagerly and therefore are runtime constructors rather than `const`
+  entry points
 
 ### 3.2 Layer model
 
@@ -299,7 +302,9 @@ Constructor parameters:
 
 Validation notes:
 
-- malformed `initialSnapshot` throws `SceneDataException`
+- malformed snapshot boundary values fail fast with `ArgumentError` during
+  snapshot construction; scene-level invariant failures still throw
+  `SceneDataException` when the controller canonicalizes `initialSnapshot`
 - invalid `pointerSettings` throws `ArgumentError`
 - `textFontFamilyByDefault` is used only when newly inserted `TextNodeSpec`
   leaves `fontFamily` unset

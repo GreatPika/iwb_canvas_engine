@@ -13,12 +13,12 @@ void main() {
         ContentLayerSnapshot(
           id: 'layer-1',
           nodes: <NodeSnapshot>[
-            const RectNodeSnapshot(
+            RectNodeSnapshot(
               id: 'rect-1',
               size: Size(10, 12),
               strokeColor: Color(0xFF000000),
             ),
-            const PathNodeSnapshot(
+            PathNodeSnapshot(
               id: 'path-1',
               svgPathData: 'M0 0 L1 1',
               strokeColor: Color(0xFF000000),

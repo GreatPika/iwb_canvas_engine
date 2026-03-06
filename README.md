@@ -95,6 +95,8 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - `TextNode.size` and `TextNodeSnapshot.size` are derived metadata.
   `TextNodeSpec` and `TextNodePatch` do not expose writable `size`, and import
   paths may ignore incoming text `size` and recompute canonical bounds.
+- Public snapshot/node constructors validate boundary ids and numeric values
+  eagerly and are runtime constructors rather than `const` entry points.
 - `backgroundLayer` is always distinct from content `layers`; content writes use
   `LayerId`.
 - Boundary helpers such as `parseNodeId(...)`, `generateLayerId(...)`,

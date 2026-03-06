@@ -15,7 +15,7 @@ SceneSnapshot _decodeSnapshotFromJson(Map<String, Object?> json) {
   }
 
   final cameraJson = _requireMap(json, 'camera');
-  final camera = CameraSnapshot(
+  final camera = cameraSnapshotFromValidated(
     offset: Offset(
       _requireDouble(cameraJson, 'offsetX', pathPrefix: 'camera'),
       _requireDouble(cameraJson, 'offsetY', pathPrefix: 'camera'),
@@ -28,12 +28,12 @@ SceneSnapshot _decodeSnapshotFromJson(Map<String, Object?> json) {
     'grid',
     pathPrefix: 'background',
   );
-  final background = BackgroundSnapshot(
+  final background = backgroundSnapshotFromValidated(
     color: _parseColor(
       _requireString(backgroundJson, 'color', pathPrefix: 'background'),
       path: 'background.color',
     ),
-    grid: GridSnapshot(
+    grid: gridSnapshotFromValidated(
       isEnabled: _requireBool(
         gridJson,
         'enabled',
@@ -105,7 +105,7 @@ SceneSnapshot _decodeSnapshotFromJson(Map<String, Object?> json) {
     );
   }
 
-  final palette = ScenePaletteSnapshot(
+  final palette = scenePaletteSnapshotFromValidated(
     penColors: penColors,
     backgroundColors: backgroundColors,
     gridSizes: gridSizes,
@@ -166,7 +166,7 @@ SceneSnapshot _decodeSnapshotFromJson(Map<String, Object?> json) {
     layers.add(layer);
   }
 
-  return SceneSnapshot(
+  return sceneSnapshotFromValidated(
     backgroundLayer: backgroundLayer,
     layers: layers,
     camera: camera,
@@ -198,7 +198,7 @@ BackgroundLayerSnapshot _decodeBackgroundLayer(
       _decodeNode(_castMap(nodeJson, path: nodePath), nodePath: nodePath),
     );
   }
-  return BackgroundLayerSnapshot(nodes: nodes);
+  return backgroundLayerSnapshotFromValidated(nodes: nodes);
 }
 
 ContentLayerSnapshot _decodeContentLayer(
@@ -238,7 +238,7 @@ ContentLayerSnapshot _decodeContentLayer(
       _decodeNode(_castMap(nodeJson, path: nodePath), nodePath: nodePath),
     );
   }
-  return ContentLayerSnapshot(id: id, nodes: nodes);
+  return contentLayerSnapshotFromValidated(id: id, nodes: nodes);
 }
 
 int _consumeSceneNodeBudget({
@@ -310,7 +310,7 @@ NodeSnapshot _decodeNode(
 
   switch (type) {
     case NodeType.image:
-      return ImageNodeSnapshot(
+      return imageNodeSnapshotFromValidated(
         id: id,
         instanceRevision: instanceRevision,
         imageId: ImageIdValue.fromJson(
@@ -334,7 +334,7 @@ NodeSnapshot _decodeNode(
         isTransformable: isTransformable,
       );
     case NodeType.text:
-      return TextNodeSnapshot(
+      return textNodeSnapshotFromValidated(
         id: id,
         instanceRevision: instanceRevision,
         text: TextContentValue.fromJson(
@@ -405,7 +405,7 @@ NodeSnapshot _decodeNode(
           ).value,
         );
       }
-      return StrokeNodeSnapshot(
+      return strokeNodeSnapshotFromValidated(
         id: id,
         instanceRevision: instanceRevision,
         points: points,
@@ -428,7 +428,7 @@ NodeSnapshot _decodeNode(
         isTransformable: isTransformable,
       );
     case NodeType.line:
-      return LineNodeSnapshot(
+      return lineNodeSnapshotFromValidated(
         id: id,
         instanceRevision: instanceRevision,
         start: _decodeRequiredFiniteOffset(
@@ -456,7 +456,7 @@ NodeSnapshot _decodeNode(
         isTransformable: isTransformable,
       );
     case NodeType.rect:
-      return RectNodeSnapshot(
+      return rectNodeSnapshotFromValidated(
         id: id,
         instanceRevision: instanceRevision,
         size: _requireSize(json, 'size', pathPrefix: nodePath),
@@ -482,7 +482,7 @@ NodeSnapshot _decodeNode(
         path: _pathAt(nodePath, 'svgPathData'),
         fieldName: 'svgPathData',
       ).value;
-      return PathNodeSnapshot(
+      return pathNodeSnapshotFromValidated(
         id: id,
         instanceRevision: instanceRevision,
         svgPathData: svgPathData,

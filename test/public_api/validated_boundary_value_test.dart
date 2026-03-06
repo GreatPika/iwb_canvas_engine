@@ -179,6 +179,32 @@ void main() {
       );
     });
 
+    test('public snapshot constructors reject singular transforms', () {
+      expect(
+        () => RectNodeSnapshot(
+          id: 'rect-singular',
+          size: const Size(10, 10),
+          transform: const Transform2D(a: 0, b: 0, c: 0, d: 0, tx: 0, ty: 0),
+        ),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+
+    test('scene palette boundary rejects empty public lists', () {
+      expect(
+        () => ScenePaletteSnapshot(penColors: const <Color>[]),
+        throwsA(isA<ArgumentError>()),
+      );
+      expect(
+        () => ScenePaletteSnapshot(backgroundColors: const <Color>[]),
+        throwsA(isA<ArgumentError>()),
+      );
+      expect(
+        () => ScenePaletteSnapshot(gridSizes: const <double>[]),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+
     test('fromJson helpers report boundary-specific validation errors', () {
       expect(
         () => NodeIdValue.fromJson(1, path: 'node.id'),
@@ -540,7 +566,7 @@ void main() {
         final encoded = encodeScene(
           SceneSnapshot(
             backgroundLayer: BackgroundLayerSnapshot(
-              nodes: const <NodeSnapshot>[
+              nodes: <NodeSnapshot>[
                 RectNodeSnapshot(id: 'bg', size: Size(1, 1)),
               ],
             ),
@@ -557,55 +583,22 @@ void main() {
       },
     );
 
-    test(
-      'SceneBuilder.buildFromSnapshot rejects blank ids and font family',
-      () {
-        expect(
-          () => SceneBuilder.buildFromSnapshot(
-            SceneSnapshot(
-              layers: <ContentLayerSnapshot>[
-                ContentLayerSnapshot(
-                  id: 'layer-0',
-                  nodes: const <NodeSnapshot>[
-                    TextNodeSnapshot(
-                      id: 'node-0',
-                      text: 'hello',
-                      size: Size(1, 1),
-                      color: Color(0xFF000000),
-                      fontFamily: '',
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          throwsA(
-            predicate(
-              (error) =>
-                  error is SceneDataException &&
-                  error.path == 'layers[0].nodes[0].fontFamily' &&
-                  error.message ==
-                      'Field layers[0].nodes[0].fontFamily must not be empty.',
-            ),
-          ),
-        );
-        expect(
-          () => SceneBuilder.buildFromSnapshot(
-            SceneSnapshot(
-              layers: <ContentLayerSnapshot>[ContentLayerSnapshot(id: ' ')],
-            ),
-          ),
-          throwsA(
-            predicate(
-              (error) =>
-                  error is SceneDataException &&
-                  error.path == 'layers[0].id' &&
-                  error.message == 'Field layers[0].id must not be empty.',
-            ),
-          ),
-        );
-      },
-    );
+    test('public snapshot constructors reject blank ids and font family', () {
+      expect(
+        () => TextNodeSnapshot(
+          id: 'node-0',
+          text: 'hello',
+          size: const Size(1, 1),
+          color: const Color(0xFF000000),
+          fontFamily: '',
+        ),
+        throwsA(isA<ArgumentError>()),
+      );
+      expect(
+        () => ContentLayerSnapshot(id: ' '),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
 
     test(
       'SceneBuilder.buildFromSnapshot accepts valid explicit font family',
@@ -615,7 +608,7 @@ void main() {
             layers: <ContentLayerSnapshot>[
               ContentLayerSnapshot(
                 id: 'layer-0',
-                nodes: const <NodeSnapshot>[
+                nodes: <NodeSnapshot>[
                   TextNodeSnapshot(
                     id: 'node-0',
                     text: 'hello',

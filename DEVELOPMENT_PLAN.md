@@ -16,7 +16,7 @@ language: russian
 - [x] [Шаг 2. Ввести валидированные типы и фабрики на публичной границе](development_plan/step_02_validated_boundary_types_and_factories.md)
 - [x] [Шаг 2.1. Закрыть boundary-drift после шага 2](development_plan/step_02_1_close_boundary_drift_after_step_2.md)
 - [ ] [Шаг 3. Закрыть boundary-этап через подшаги 3.1-3.3](development_plan/step_03_public_boundary_constructors_and_semantics.md)
-- [ ] [Шаг 3.1. Перевести public snapshot boundary на validated semantics](development_plan/step_03_1_public_snapshot_boundary_on_validated_semantics.md)
+- [x] [Шаг 3.1. Перевести public snapshot boundary на validated semantics](development_plan/step_03_1_public_snapshot_boundary_on_validated_semantics.md)
 - [ ] [Шаг 3.2. Перевести public NodeSpec/NodePatch boundary на validated semantics](development_plan/step_03_2_public_node_spec_and_patch_boundary_on_validated_semantics.md)
 - [ ] [Шаг 3.3. Зафиксировать SceneWriteTxn semantics и убрать downstream primitive-дублирование](development_plan/step_03_3_scene_write_txn_semantics_and_downstream_cleanup.md)
 - [ ] [Шаг 4. Сразу выровнять точный публичный API-контракт](development_plan/step_04_public_api_contract_alignment.md)

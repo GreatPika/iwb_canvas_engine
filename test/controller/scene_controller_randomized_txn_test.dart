@@ -260,7 +260,7 @@ SceneSnapshot _initialSnapshot() {
     layers: <ContentLayerSnapshot>[
       ContentLayerSnapshot(
         id: 'layer-auto-0',
-        nodes: const <NodeSnapshot>[
+        nodes: <NodeSnapshot>[
           RectNodeSnapshot(id: 'seed-r1', size: Size(10, 10)),
           RectNodeSnapshot(id: 'seed-r2', size: Size(12, 12)),
         ],

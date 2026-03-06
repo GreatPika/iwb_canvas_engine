@@ -35,9 +35,7 @@ void main() {
       layers: <ContentLayerSnapshot>[
         ContentLayerSnapshot(
           id: 'layer-auto-0',
-          nodes: const <NodeSnapshot>[
-            RectNodeSnapshot(id: 'n1', size: Size(1, 1)),
-          ],
+          nodes: <NodeSnapshot>[RectNodeSnapshot(id: 'n1', size: Size(1, 1))],
         ),
       ],
     );

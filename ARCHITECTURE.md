@@ -117,6 +117,9 @@ most important architectural rules are:
 - Boundary validation has one source of truth per rule: limits come from
   `core/scene_limits.dart`, boundary value parsing/generation lives in
   `contract/validated/**`, and model/serialization layers reuse those rules.
+- Public snapshot constructors enforce those primitive boundary rules eagerly;
+  internal decode/runtime producers use contract-local fast paths so already
+  validated data does not pay the same constructor boundary twice.
 - Legacy generated ids remain explicit contract policy: node ids use
   `node-<n>`, layer ids use `layer-<n>`, and recognition is canonical-only.
 - Selection normalization drops only missing, background, or invisible ids;

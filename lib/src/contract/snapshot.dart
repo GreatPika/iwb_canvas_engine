@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
+
 export 'ids.dart'
     show
         LayerId,
@@ -17,10 +19,43 @@ import 'ids.dart';
 import 'path_fill_rule.dart';
 import 'scene_defaults.dart';
 import 'transform2d.dart';
+import 'validated/finite_offset_value.dart';
+import 'validated/font_family_value.dart';
+import 'validated/image_id_value.dart';
+import 'validated/instance_revision_value.dart';
+import 'validated/layer_id_value.dart';
+import 'validated/node_id_value.dart';
+import 'validated/non_negative_finite_double_value.dart';
+import 'validated/opacity_value.dart';
+import 'validated/positive_finite_double_value.dart';
+import 'validated/svg_path_data_value.dart';
+import 'validated/text_content_value.dart';
+import 'validated/validated_value_support.dart';
+
+part 'internal/snapshot_fast_path.part.dart';
 
 /// Immutable scene snapshot exposed by the public API.
 class SceneSnapshot {
-  SceneSnapshot({
+  factory SceneSnapshot({
+    List<ContentLayerSnapshot>? layers,
+    BackgroundLayerSnapshot? backgroundLayer,
+    CameraSnapshot? camera,
+    BackgroundSnapshot? background,
+    ScenePaletteSnapshot? palette,
+  }) {
+    return SceneSnapshot._internal(
+      layers: layers,
+      backgroundLayer: backgroundLayer ?? BackgroundLayerSnapshot(),
+      camera: _validateSceneCameraSnapshot(camera ?? const CameraSnapshot()),
+      background: _validateSceneBackgroundSnapshot(
+        background ?? const BackgroundSnapshot(),
+      ),
+      palette: palette ?? ScenePaletteSnapshot(),
+    );
+  }
+
+  /// Internal fast path for already validated snapshot data.
+  SceneSnapshot._internal({
     List<ContentLayerSnapshot>? layers,
     BackgroundLayerSnapshot? backgroundLayer,
     CameraSnapshot? camera,
@@ -31,10 +66,10 @@ class SceneSnapshot {
              ? const <ContentLayerSnapshot>[]
              : List<ContentLayerSnapshot>.from(layers),
        ),
-       backgroundLayer = backgroundLayer ?? BackgroundLayerSnapshot(),
+       backgroundLayer = backgroundLayer ?? BackgroundLayerSnapshot._internal(),
        camera = camera ?? const CameraSnapshot(),
        background = background ?? const BackgroundSnapshot(),
-       palette = palette ?? ScenePaletteSnapshot();
+       palette = palette ?? ScenePaletteSnapshot._internal();
 
   final List<ContentLayerSnapshot> layers;
   final BackgroundLayerSnapshot backgroundLayer;
@@ -45,9 +80,14 @@ class SceneSnapshot {
 
 /// Immutable dedicated background layer snapshot.
 class BackgroundLayerSnapshot {
-  BackgroundLayerSnapshot({List<NodeSnapshot>? nodes})
+  factory BackgroundLayerSnapshot({List<NodeSnapshot>? nodes}) {
+    return BackgroundLayerSnapshot._internal(nodes: nodes);
+  }
+
+  /// Internal fast path for already validated snapshot data.
+  BackgroundLayerSnapshot._internal({List<NodeSnapshot>? nodes})
     : nodes = List<NodeSnapshot>.unmodifiable(
-        nodes == null ? const <NodeSnapshot>[] : List<NodeSnapshot>.from(nodes),
+        nodes == null ? <NodeSnapshot>[] : List<NodeSnapshot>.from(nodes),
       );
 
   final List<NodeSnapshot> nodes;
@@ -55,9 +95,20 @@ class BackgroundLayerSnapshot {
 
 /// Immutable content layer snapshot.
 class ContentLayerSnapshot {
-  ContentLayerSnapshot({required this.id, List<NodeSnapshot>? nodes})
+  factory ContentLayerSnapshot({
+    required LayerId id,
+    List<NodeSnapshot>? nodes,
+  }) {
+    return ContentLayerSnapshot._internal(
+      id: LayerIdValue.of(id, name: 'id').value,
+      nodes: nodes,
+    );
+  }
+
+  /// Internal fast path for already validated snapshot data.
+  ContentLayerSnapshot._internal({required this.id, List<NodeSnapshot>? nodes})
     : nodes = List<NodeSnapshot>.unmodifiable(
-        nodes == null ? const <NodeSnapshot>[] : List<NodeSnapshot>.from(nodes),
+        nodes == null ? <NodeSnapshot>[] : List<NodeSnapshot>.from(nodes),
       );
 
   final LayerId id;
@@ -97,7 +148,37 @@ class GridSnapshot {
 
 /// Immutable palette snapshot.
 class ScenePaletteSnapshot {
-  ScenePaletteSnapshot({
+  factory ScenePaletteSnapshot({
+    List<Color>? penColors,
+    List<Color>? backgroundColors,
+    List<double>? gridSizes,
+  }) {
+    final resolvedPenColors = List<Color>.from(
+      penColors ?? SceneDefaults.penColors,
+    );
+    final resolvedBackgroundColors = List<Color>.from(
+      backgroundColors ?? SceneDefaults.backgroundColors,
+    );
+    final resolvedGridSizes = List<double>.from(
+      gridSizes ?? SceneDefaults.gridSizes,
+    );
+    _requireNonEmptyList(resolvedPenColors, name: 'penColors');
+    _requireNonEmptyList(resolvedBackgroundColors, name: 'backgroundColors');
+    _requireNonEmptyList(resolvedGridSizes, name: 'gridSizes');
+    return ScenePaletteSnapshot._internal(
+      penColors: resolvedPenColors,
+      backgroundColors: resolvedBackgroundColors,
+      gridSizes: resolvedGridSizes
+          .map(
+            (value) =>
+                PositiveFiniteDoubleValue.of(value, name: 'gridSizes').value,
+          )
+          .toList(growable: false),
+    );
+  }
+
+  /// Internal fast path for already validated snapshot data.
+  ScenePaletteSnapshot._internal({
     List<Color>? penColors,
     List<Color>? backgroundColors,
     List<double>? gridSizes,
@@ -124,7 +205,7 @@ class ScenePaletteSnapshot {
 
 /// Immutable base node snapshot.
 sealed class NodeSnapshot {
-  const NodeSnapshot({
+  const NodeSnapshot._internal({
     required this.id,
     this.instanceRevision = 0,
     this.transform = Transform2D.identity,
@@ -150,7 +231,54 @@ sealed class NodeSnapshot {
 }
 
 class ImageNodeSnapshot extends NodeSnapshot {
-  const ImageNodeSnapshot({
+  factory ImageNodeSnapshot({
+    required NodeId id,
+    int instanceRevision = 0,
+    required String imageId,
+    required Size size,
+    Size? naturalSize,
+    Transform2D transform = Transform2D.identity,
+    double opacity = 1,
+    double hitPadding = 0,
+    bool isVisible = true,
+    bool isSelectable = true,
+    bool isLocked = false,
+    bool isDeletable = true,
+    bool isTransformable = true,
+  }) {
+    final common = _validateNodeSnapshotCommonFields(
+      id: id,
+      instanceRevision: instanceRevision,
+      transform: transform,
+      opacity: opacity,
+      hitPadding: hitPadding,
+      isVisible: isVisible,
+      isSelectable: isSelectable,
+      isLocked: isLocked,
+      isDeletable: isDeletable,
+      isTransformable: isTransformable,
+    );
+    return ImageNodeSnapshot._internal(
+      id: common.id,
+      instanceRevision: common.instanceRevision,
+      imageId: ImageIdValue.of(imageId, name: 'imageId').value,
+      size: _validateNonNegativeSize(size, name: 'size'),
+      naturalSize: naturalSize == null
+          ? null
+          : _validateNonNegativeSize(naturalSize, name: 'naturalSize'),
+      transform: common.transform,
+      opacity: common.opacity,
+      hitPadding: common.hitPadding,
+      isVisible: common.isVisible,
+      isSelectable: common.isSelectable,
+      isLocked: common.isLocked,
+      isDeletable: common.isDeletable,
+      isTransformable: common.isTransformable,
+    );
+  }
+
+  /// Internal fast path for already validated snapshot data.
+  const ImageNodeSnapshot._internal({
     required super.id,
     super.instanceRevision,
     required this.imageId,
@@ -164,7 +292,7 @@ class ImageNodeSnapshot extends NodeSnapshot {
     super.isLocked,
     super.isDeletable,
     super.isTransformable,
-  });
+  }) : super._internal();
 
   final String imageId;
   final Size size;
@@ -172,7 +300,74 @@ class ImageNodeSnapshot extends NodeSnapshot {
 }
 
 class TextNodeSnapshot extends NodeSnapshot {
-  const TextNodeSnapshot({
+  factory TextNodeSnapshot({
+    required NodeId id,
+    int instanceRevision = 0,
+    required String text,
+    required Size size,
+    double fontSize = 24,
+    required Color color,
+    TextAlign align = TextAlign.left,
+    bool isBold = false,
+    bool isItalic = false,
+    bool isUnderline = false,
+    String? fontFamily,
+    double? maxWidth,
+    double? lineHeight,
+    Transform2D transform = Transform2D.identity,
+    double opacity = 1,
+    double hitPadding = 0,
+    bool isVisible = true,
+    bool isSelectable = true,
+    bool isLocked = false,
+    bool isDeletable = true,
+    bool isTransformable = true,
+  }) {
+    final common = _validateNodeSnapshotCommonFields(
+      id: id,
+      instanceRevision: instanceRevision,
+      transform: transform,
+      opacity: opacity,
+      hitPadding: hitPadding,
+      isVisible: isVisible,
+      isSelectable: isSelectable,
+      isLocked: isLocked,
+      isDeletable: isDeletable,
+      isTransformable: isTransformable,
+    );
+    return TextNodeSnapshot._internal(
+      id: common.id,
+      instanceRevision: common.instanceRevision,
+      text: TextContentValue.of(text, name: 'text').value,
+      size: _validateNonNegativeSize(size, name: 'size'),
+      fontSize: PositiveFiniteDoubleValue.of(fontSize, name: 'fontSize').value,
+      color: color,
+      align: align,
+      isBold: isBold,
+      isItalic: isItalic,
+      isUnderline: isUnderline,
+      fontFamily: fontFamily == null
+          ? null
+          : FontFamilyValue.of(fontFamily, name: 'fontFamily').value,
+      maxWidth: maxWidth == null
+          ? null
+          : PositiveFiniteDoubleValue.of(maxWidth, name: 'maxWidth').value,
+      lineHeight: lineHeight == null
+          ? null
+          : PositiveFiniteDoubleValue.of(lineHeight, name: 'lineHeight').value,
+      transform: common.transform,
+      opacity: common.opacity,
+      hitPadding: common.hitPadding,
+      isVisible: common.isVisible,
+      isSelectable: common.isSelectable,
+      isLocked: common.isLocked,
+      isDeletable: common.isDeletable,
+      isTransformable: common.isTransformable,
+    );
+  }
+
+  /// Internal fast path for already validated snapshot data.
+  const TextNodeSnapshot._internal({
     required super.id,
     super.instanceRevision,
     required this.text,
@@ -194,7 +389,7 @@ class TextNodeSnapshot extends NodeSnapshot {
     super.isLocked,
     super.isDeletable,
     super.isTransformable,
-  });
+  }) : super._internal();
 
   final String text;
 
@@ -215,7 +410,71 @@ class TextNodeSnapshot extends NodeSnapshot {
 }
 
 class StrokeNodeSnapshot extends NodeSnapshot {
-  StrokeNodeSnapshot({
+  factory StrokeNodeSnapshot({
+    required NodeId id,
+    int instanceRevision = 0,
+    required List<Offset> points,
+    int pointsRevision = 0,
+    required double thickness,
+    required Color color,
+    Transform2D transform = Transform2D.identity,
+    double opacity = 1,
+    double hitPadding = 0,
+    bool isVisible = true,
+    bool isSelectable = true,
+    bool isLocked = false,
+    bool isDeletable = true,
+    bool isTransformable = true,
+  }) {
+    final common = _validateNodeSnapshotCommonFields(
+      id: id,
+      instanceRevision: instanceRevision,
+      transform: transform,
+      opacity: opacity,
+      hitPadding: hitPadding,
+      isVisible: isVisible,
+      isSelectable: isSelectable,
+      isLocked: isLocked,
+      isDeletable: isDeletable,
+      isTransformable: isTransformable,
+    );
+    final validatedPoints = List<Offset>.from(points, growable: false)
+        .asMap()
+        .entries
+        .map(
+          (entry) => FiniteOffsetValue.of(
+            entry.value,
+            name: 'points[${entry.key}]',
+          ).value,
+        )
+        .toList(growable: false);
+    return StrokeNodeSnapshot._internal(
+      id: common.id,
+      instanceRevision: common.instanceRevision,
+      points: validatedPoints,
+      pointsRevision: InstanceRevisionValue.of(
+        pointsRevision,
+        name: 'pointsRevision',
+        allowZero: true,
+      ).value,
+      thickness: PositiveFiniteDoubleValue.of(
+        thickness,
+        name: 'thickness',
+      ).value,
+      color: color,
+      transform: common.transform,
+      opacity: common.opacity,
+      hitPadding: common.hitPadding,
+      isVisible: common.isVisible,
+      isSelectable: common.isSelectable,
+      isLocked: common.isLocked,
+      isDeletable: common.isDeletable,
+      isTransformable: common.isTransformable,
+    );
+  }
+
+  /// Internal fast path for already validated snapshot data.
+  StrokeNodeSnapshot._internal({
     required super.id,
     super.instanceRevision,
     required List<Offset> points,
@@ -230,7 +489,8 @@ class StrokeNodeSnapshot extends NodeSnapshot {
     super.isLocked,
     super.isDeletable,
     super.isTransformable,
-  }) : points = List<Offset>.unmodifiable(List<Offset>.from(points));
+  }) : points = List<Offset>.unmodifiable(List<Offset>.from(points)),
+       super._internal();
 
   final List<Offset> points;
   final int pointsRevision;
@@ -239,7 +499,57 @@ class StrokeNodeSnapshot extends NodeSnapshot {
 }
 
 class LineNodeSnapshot extends NodeSnapshot {
-  const LineNodeSnapshot({
+  factory LineNodeSnapshot({
+    required NodeId id,
+    int instanceRevision = 0,
+    required Offset start,
+    required Offset end,
+    required double thickness,
+    required Color color,
+    Transform2D transform = Transform2D.identity,
+    double opacity = 1,
+    double hitPadding = 0,
+    bool isVisible = true,
+    bool isSelectable = true,
+    bool isLocked = false,
+    bool isDeletable = true,
+    bool isTransformable = true,
+  }) {
+    final common = _validateNodeSnapshotCommonFields(
+      id: id,
+      instanceRevision: instanceRevision,
+      transform: transform,
+      opacity: opacity,
+      hitPadding: hitPadding,
+      isVisible: isVisible,
+      isSelectable: isSelectable,
+      isLocked: isLocked,
+      isDeletable: isDeletable,
+      isTransformable: isTransformable,
+    );
+    return LineNodeSnapshot._internal(
+      id: common.id,
+      instanceRevision: common.instanceRevision,
+      start: FiniteOffsetValue.of(start, name: 'start').value,
+      end: FiniteOffsetValue.of(end, name: 'end').value,
+      thickness: PositiveFiniteDoubleValue.of(
+        thickness,
+        name: 'thickness',
+      ).value,
+      color: color,
+      transform: common.transform,
+      opacity: common.opacity,
+      hitPadding: common.hitPadding,
+      isVisible: common.isVisible,
+      isSelectable: common.isSelectable,
+      isLocked: common.isLocked,
+      isDeletable: common.isDeletable,
+      isTransformable: common.isTransformable,
+    );
+  }
+
+  /// Internal fast path for already validated snapshot data.
+  const LineNodeSnapshot._internal({
     required super.id,
     super.instanceRevision,
     required this.start,
@@ -254,7 +564,7 @@ class LineNodeSnapshot extends NodeSnapshot {
     super.isLocked,
     super.isDeletable,
     super.isTransformable,
-  });
+  }) : super._internal();
 
   final Offset start;
   final Offset end;
@@ -263,7 +573,57 @@ class LineNodeSnapshot extends NodeSnapshot {
 }
 
 class RectNodeSnapshot extends NodeSnapshot {
-  const RectNodeSnapshot({
+  factory RectNodeSnapshot({
+    required NodeId id,
+    int instanceRevision = 0,
+    required Size size,
+    Color? fillColor,
+    Color? strokeColor,
+    double strokeWidth = 0,
+    Transform2D transform = Transform2D.identity,
+    double opacity = 1,
+    double hitPadding = 0,
+    bool isVisible = true,
+    bool isSelectable = true,
+    bool isLocked = false,
+    bool isDeletable = true,
+    bool isTransformable = true,
+  }) {
+    final common = _validateNodeSnapshotCommonFields(
+      id: id,
+      instanceRevision: instanceRevision,
+      transform: transform,
+      opacity: opacity,
+      hitPadding: hitPadding,
+      isVisible: isVisible,
+      isSelectable: isSelectable,
+      isLocked: isLocked,
+      isDeletable: isDeletable,
+      isTransformable: isTransformable,
+    );
+    return RectNodeSnapshot._internal(
+      id: common.id,
+      instanceRevision: common.instanceRevision,
+      size: _validateNonNegativeSize(size, name: 'size'),
+      fillColor: fillColor,
+      strokeColor: strokeColor,
+      strokeWidth: NonNegativeFiniteDoubleValue.of(
+        strokeWidth,
+        name: 'strokeWidth',
+      ).value,
+      transform: common.transform,
+      opacity: common.opacity,
+      hitPadding: common.hitPadding,
+      isVisible: common.isVisible,
+      isSelectable: common.isSelectable,
+      isLocked: common.isLocked,
+      isDeletable: common.isDeletable,
+      isTransformable: common.isTransformable,
+    );
+  }
+
+  /// Internal fast path for already validated snapshot data.
+  const RectNodeSnapshot._internal({
     required super.id,
     super.instanceRevision,
     required this.size,
@@ -278,7 +638,7 @@ class RectNodeSnapshot extends NodeSnapshot {
     super.isLocked,
     super.isDeletable,
     super.isTransformable,
-  });
+  }) : super._internal();
 
   final Size size;
   final Color? fillColor;
@@ -287,7 +647,59 @@ class RectNodeSnapshot extends NodeSnapshot {
 }
 
 class PathNodeSnapshot extends NodeSnapshot {
-  const PathNodeSnapshot({
+  factory PathNodeSnapshot({
+    required NodeId id,
+    int instanceRevision = 0,
+    required String svgPathData,
+    Color? fillColor,
+    Color? strokeColor,
+    double strokeWidth = 0,
+    PathFillRule fillRule = PathFillRule.nonZero,
+    Transform2D transform = Transform2D.identity,
+    double opacity = 1,
+    double hitPadding = 0,
+    bool isVisible = true,
+    bool isSelectable = true,
+    bool isLocked = false,
+    bool isDeletable = true,
+    bool isTransformable = true,
+  }) {
+    final common = _validateNodeSnapshotCommonFields(
+      id: id,
+      instanceRevision: instanceRevision,
+      transform: transform,
+      opacity: opacity,
+      hitPadding: hitPadding,
+      isVisible: isVisible,
+      isSelectable: isSelectable,
+      isLocked: isLocked,
+      isDeletable: isDeletable,
+      isTransformable: isTransformable,
+    );
+    return PathNodeSnapshot._internal(
+      id: common.id,
+      instanceRevision: common.instanceRevision,
+      svgPathData: SvgPathDataValue.of(svgPathData, name: 'svgPathData').value,
+      fillColor: fillColor,
+      strokeColor: strokeColor,
+      strokeWidth: NonNegativeFiniteDoubleValue.of(
+        strokeWidth,
+        name: 'strokeWidth',
+      ).value,
+      fillRule: fillRule,
+      transform: common.transform,
+      opacity: common.opacity,
+      hitPadding: common.hitPadding,
+      isVisible: common.isVisible,
+      isSelectable: common.isSelectable,
+      isLocked: common.isLocked,
+      isDeletable: common.isDeletable,
+      isTransformable: common.isTransformable,
+    );
+  }
+
+  /// Internal fast path for already validated snapshot data.
+  const PathNodeSnapshot._internal({
     required super.id,
     super.instanceRevision,
     required this.svgPathData,
@@ -303,11 +715,126 @@ class PathNodeSnapshot extends NodeSnapshot {
     super.isLocked,
     super.isDeletable,
     super.isTransformable,
-  });
+  }) : super._internal();
 
   final String svgPathData;
   final Color? fillColor;
   final Color? strokeColor;
   final double strokeWidth;
   final PathFillRule fillRule;
+}
+
+class _ValidatedNodeSnapshotCommonFields {
+  const _ValidatedNodeSnapshotCommonFields({
+    required this.id,
+    required this.instanceRevision,
+    required this.transform,
+    required this.opacity,
+    required this.hitPadding,
+    required this.isVisible,
+    required this.isSelectable,
+    required this.isLocked,
+    required this.isDeletable,
+    required this.isTransformable,
+  });
+
+  final NodeId id;
+  final int instanceRevision;
+  final Transform2D transform;
+  final double opacity;
+  final double hitPadding;
+  final bool isVisible;
+  final bool isSelectable;
+  final bool isLocked;
+  final bool isDeletable;
+  final bool isTransformable;
+}
+
+_ValidatedNodeSnapshotCommonFields _validateNodeSnapshotCommonFields({
+  required NodeId id,
+  required int instanceRevision,
+  required Transform2D transform,
+  required double opacity,
+  required double hitPadding,
+  required bool isVisible,
+  required bool isSelectable,
+  required bool isLocked,
+  required bool isDeletable,
+  required bool isTransformable,
+}) {
+  return _ValidatedNodeSnapshotCommonFields(
+    id: NodeIdValue.of(id, name: 'id').value,
+    instanceRevision: InstanceRevisionValue.of(
+      instanceRevision,
+      name: 'instanceRevision',
+      allowZero: true,
+    ).value,
+    transform: _validateFiniteInvertibleTransform2D(
+      transform,
+      name: 'transform',
+    ),
+    opacity: OpacityValue.of(opacity, name: 'opacity').value,
+    hitPadding: NonNegativeFiniteDoubleValue.of(
+      hitPadding,
+      name: 'hitPadding',
+    ).value,
+    isVisible: isVisible,
+    isSelectable: isSelectable,
+    isLocked: isLocked,
+    isDeletable: isDeletable,
+    isTransformable: isTransformable,
+  );
+}
+
+Transform2D _validateFiniteInvertibleTransform2D(
+  Transform2D value, {
+  required String name,
+}) {
+  validatedRequireFiniteDouble(value.a, name: '$name.a');
+  validatedRequireFiniteDouble(value.b, name: '$name.b');
+  validatedRequireFiniteDouble(value.c, name: '$name.c');
+  validatedRequireFiniteDouble(value.d, name: '$name.d');
+  validatedRequireFiniteDouble(value.tx, name: '$name.tx');
+  validatedRequireFiniteDouble(value.ty, name: '$name.ty');
+  if (value.invert() == null) {
+    throw ArgumentError.value(
+      value.toJsonMap(),
+      name,
+      'Must be invertible (non-singular).',
+    );
+  }
+  return value;
+}
+
+Size _validateNonNegativeSize(Size value, {required String name}) {
+  NonNegativeFiniteDoubleValue.of(value.width, name: '$name.width');
+  NonNegativeFiniteDoubleValue.of(value.height, name: '$name.height');
+  return value;
+}
+
+void _requireNonEmptyList<T>(List<T> values, {required String name}) {
+  if (values.isNotEmpty) {
+    return;
+  }
+  throw ArgumentError.value(values, name, 'Must not be empty.');
+}
+
+CameraSnapshot _validateSceneCameraSnapshot(CameraSnapshot value) {
+  return CameraSnapshot(
+    offset: FiniteOffsetValue.of(value.offset, name: 'camera.offset').value,
+  );
+}
+
+BackgroundSnapshot _validateSceneBackgroundSnapshot(BackgroundSnapshot value) {
+  return BackgroundSnapshot(
+    color: value.color,
+    grid: GridSnapshot(
+      isEnabled: value.grid.isEnabled,
+      cellSize: PositiveFiniteDoubleValue.of(
+        value.grid.cellSize,
+        name: 'background.grid.cellSize',
+      ).value,
+      color: value.grid.color,
+    ),
+  );
 }

@@ -1,21 +1,19 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 
 import 'support/scene_snapshot_invariant_assertions.dart';
 
 SceneSnapshot _validSnapshot() {
   return SceneSnapshot(
     backgroundLayer: BackgroundLayerSnapshot(
-      nodes: const <NodeSnapshot>[
-        RectNodeSnapshot(id: 'bg', size: Size(100, 100)),
-      ],
+      nodes: <NodeSnapshot>[RectNodeSnapshot(id: 'bg', size: Size(100, 100))],
     ),
     layers: <ContentLayerSnapshot>[
       ContentLayerSnapshot(
         id: 'layer-auto-0',
-        nodes: const <NodeSnapshot>[
+        nodes: <NodeSnapshot>[
           RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
           LineNodeSnapshot(
             id: 'l1',
@@ -40,14 +38,12 @@ void main() {
   test('fails on duplicate NodeId across background and content', () {
     final snapshot = SceneSnapshot(
       backgroundLayer: BackgroundLayerSnapshot(
-        nodes: const <NodeSnapshot>[
-          RectNodeSnapshot(id: 'dup', size: Size(10, 10)),
-        ],
+        nodes: <NodeSnapshot>[RectNodeSnapshot(id: 'dup', size: Size(10, 10))],
       ),
       layers: <ContentLayerSnapshot>[
         ContentLayerSnapshot(
           id: 'layer-auto-1',
-          nodes: const <NodeSnapshot>[
+          nodes: <NodeSnapshot>[
             RectNodeSnapshot(id: 'dup', size: Size(10, 10)),
           ],
         ),
@@ -71,7 +67,7 @@ void main() {
       layers: <ContentLayerSnapshot>[
         ContentLayerSnapshot(
           id: 'layer-auto-2',
-          nodes: const <NodeSnapshot>[
+          nodes: <NodeSnapshot>[
             RectNodeSnapshot(
               id: 'hidden',
               size: Size(10, 10),
@@ -89,17 +85,17 @@ void main() {
   });
 
   test('fails on non finite geometry', () {
-    final snapshot = SceneSnapshot(
+    final snapshot = sceneSnapshotFromValidated(
       layers: <ContentLayerSnapshot>[
-        ContentLayerSnapshot(
+        contentLayerSnapshotFromValidated(
           id: 'layer-auto-3',
-          nodes: const <NodeSnapshot>[
-            LineNodeSnapshot(
+          nodes: <NodeSnapshot>[
+            lineNodeSnapshotFromValidated(
               id: 'bad-line',
-              start: Offset(double.nan, 0),
-              end: Offset(10, 0),
+              start: const Offset(double.nan, 0),
+              end: const Offset(10, 0),
               thickness: 2,
-              color: Color(0xFF000000),
+              color: const Color(0xFF000000),
             ),
           ],
         ),
