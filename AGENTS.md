@@ -60,15 +60,17 @@ app UI, product workflows, or backend logic.
 
 ## Required checks for code changes
 
-1. `dart format --output=none --set-exit-if-changed lib test example/lib tool`
+1. `dart format --output=none --set-exit-if-changed lib test example/lib example/test tool`
 2. `flutter analyze`
-3. `JOBS=$(getconf _NPROCESSORS_ONLN); JOBS=$((JOBS>1?JOBS-1:1)); flutter test --coverage --no-pub --exclude-tags=tool -j "$JOBS"`
-4. `dart run tool/check_coverage.dart`
-5. `dart run tool/check_invariant_coverage.dart`
-6. `dart run tool/check_guardrails.dart`
-7. `dart run tool/check_import_boundaries.dart`
-8. `dart run tool/check_public_api_surface.dart`
-9. `JOBS=$(getconf _NPROCESSORS_ONLN); JOBS=$((JOBS>1?JOBS-1:1)); flutter test --no-pub --tags=tool -j "$JOBS"` when the tool-test trigger list above matches the change
+3. `(cd example && flutter analyze lib test)`
+4. `JOBS=$(getconf _NPROCESSORS_ONLN); JOBS=$((JOBS>1?JOBS-1:1)); flutter test --coverage --no-pub --exclude-tags=tool -j "$JOBS"`
+5. `(cd example && flutter test --no-pub)`
+6. `dart run tool/check_coverage.dart`
+7. `dart run tool/check_invariant_coverage.dart`
+8. `dart run tool/check_guardrails.dart`
+9. `dart run tool/check_import_boundaries.dart`
+10. `dart run tool/check_public_api_surface.dart`
+11. `JOBS=$(getconf _NPROCESSORS_ONLN); JOBS=$((JOBS>1?JOBS-1:1)); flutter test --no-pub --tags=tool -j "$JOBS"` when the tool-test trigger list above matches the change
 
 ## Release hygiene
 

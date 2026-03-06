@@ -54,10 +54,22 @@ jobs:
         run: flutter pub get
 
       - name: Format (check)
-        run: dart format --output=none --set-exit-if-changed lib test example/lib tool
+        run: dart format --output=none --set-exit-if-changed lib test example/lib example/test tool
 
       - name: Analyze
         run: flutter analyze
+
+      - name: Example pub get
+        working-directory: example
+        run: flutter pub get
+
+      - name: Example analyze
+        working-directory: example
+        run: flutter analyze lib test
+
+      - name: Example test
+        working-directory: example
+        run: flutter test --no-pub
 
       - name: Import boundaries
         run: dart run tool/check_import_boundaries.dart
@@ -164,28 +176,9 @@ jobs:
           name: load-profiles-smoke
           path: build/bench/load_profiles_smoke.json
 
-      - name: Diff smoke benchmark report vs baseline (Phase A, non-blocking)
+      - name: Diff smoke benchmark report vs baseline
         if: always()
-        run: |
-          BASELINE=tool/bench/baselines/load_profiles_smoke_baseline.json
-          CURRENT=build/bench/load_profiles_smoke.json
-          OUTPUT=build/bench/load_profiles_smoke_diff.json
-          if [ -f "$BASELINE" ] && [ -f "$CURRENT" ]; then
-            dart run tool/bench/diff_load_profiles.dart \
-              --profile=smoke \
-              --baseline="$BASELINE" \
-              --current="$CURRENT" \
-              --output="$OUTPUT" || true
-          else
-            mkdir -p build/bench
-            cat > "$OUTPUT" <<'JSON'
-          {
-            "profile": "smoke",
-            "status": "skipped",
-            "reason": "baseline_or_current_report_missing"
-          }
-          JSON
-          fi
+        run: dart run tool/bench/diff_load_profiles.dart --profile=smoke --baseline=tool/bench/baselines/load_profiles_smoke_baseline.json --current=build/bench/load_profiles_smoke.json --output=build/bench/load_profiles_smoke_diff.json
 
       - name: Upload smoke benchmark diff artifact
         if: always()

@@ -12,7 +12,7 @@ language: russian
 
 ## Файлы шагов
 
-- [ ] [Шаг 1. Зафиксировать среду, конвейер и правила анализа](development_plan/step_01_environment_pipeline_and_analysis.md)
+- [x] [Шаг 1. Зафиксировать среду, конвейер и правила анализа](development_plan/step_01_environment_pipeline_and_analysis.md)
 - [ ] [Шаг 2. Ввести валидированные типы и фабрики на публичной границе](development_plan/step_02_validated_boundary_types_and_factories.md)
 - [ ] [Шаг 3. Закрыть сырые публичные конструкторы и зафиксировать boundary-семантику](development_plan/step_03_public_boundary_constructors_and_semantics.md)
 - [ ] [Шаг 4. Сразу выровнять точный публичный API-контракт](development_plan/step_04_public_api_contract_alignment.md)

@@ -1043,7 +1043,10 @@ void main() {
       final encoded = encodeScene(decoded);
       final redecoded = decodeScene(encoded);
 
-      expect((encoded['backgroundLayer'] as Map<String, dynamic>)['nodes'], []);
+      expect(
+        (encoded['backgroundLayer'] as Map<String, dynamic>)['nodes'],
+        <Object?>[],
+      );
       expect(redecoded.backgroundLayer.nodes, isEmpty);
       expect(redecoded.layers, isEmpty);
     },

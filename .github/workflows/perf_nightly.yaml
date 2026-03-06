@@ -50,28 +50,9 @@ jobs:
           name: load-profiles-full
           path: build/bench/load_profiles_full.json
 
-      - name: Diff full benchmark report vs baseline (Phase A, non-blocking)
+      - name: Diff full benchmark report vs baseline
         if: always()
-        run: |
-          BASELINE=tool/bench/baselines/load_profiles_full_baseline.json
-          CURRENT=build/bench/load_profiles_full.json
-          OUTPUT=build/bench/load_profiles_full_diff.json
-          if [ -f "$BASELINE" ] && [ -f "$CURRENT" ]; then
-            dart run tool/bench/diff_load_profiles.dart \
-              --profile=full \
-              --baseline="$BASELINE" \
-              --current="$CURRENT" \
-              --output="$OUTPUT" || true
-          else
-            mkdir -p build/bench
-            cat > "$OUTPUT" <<'JSON'
-          {
-            "profile": "full",
-            "status": "skipped",
-            "reason": "baseline_or_current_report_missing"
-          }
-          JSON
-          fi
+        run: dart run tool/bench/diff_load_profiles.dart --profile=full --baseline=tool/bench/baselines/load_profiles_full_baseline.json --current=build/bench/load_profiles_full.json --output=build/bench/load_profiles_full_diff.json
 
       - name: Upload full benchmark diff artifact
         if: always()

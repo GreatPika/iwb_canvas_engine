@@ -8,45 +8,38 @@ import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart' show sceneSizeMax;
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 
+import 'load_profile_policy.dart';
+
 const _resultPrefix = 'IWB_BENCH_RESULT ';
 
 void main() {
   final profile = _resolveProfile();
-  final config = _configForProfile(profile);
+  final policy = loadProfilePolicyFor(profile);
 
-  for (final nodeCount in config.nodeCounts) {
+  for (final nodeCase in policy.nodeCases) {
     test(
-      'load profile nodes=$nodeCount profile=$profile',
+      'load profile nodes=${nodeCase.nodeCount} profile=$profile',
       () {
         final metrics = _runNodeScaleCase(
-          nodeCount: nodeCount,
-          iterations: config.nodeIterations,
+          nodeCount: nodeCase.nodeCount,
+          iterations: policy.nodeIterations,
         );
-        _emitResult(
-          profile: profile,
-          name: 'nodes_$nodeCount',
-          metrics: metrics,
-        );
+        _emitResult(profile: profile, name: nodeCase.name, metrics: metrics);
       },
       timeout: const Timeout(Duration(minutes: 10)),
     );
   }
 
-  for (final strokeCase in config.strokeCases) {
+  for (final strokeCase in policy.strokeCases) {
     test(
       'load profile strokes=${strokeCase.strokeCount} points=${strokeCase.pointsPerStroke} profile=$profile',
       () {
         final metrics = _runStrokeScaleCase(
           strokeCount: strokeCase.strokeCount,
           pointsPerStroke: strokeCase.pointsPerStroke,
-          iterations: config.strokeIterations,
+          iterations: policy.strokeIterations,
         );
-        _emitResult(
-          profile: profile,
-          name:
-              'strokes_${strokeCase.strokeCount}_pts_${strokeCase.pointsPerStroke}',
-          metrics: metrics,
-        );
+        _emitResult(profile: profile, name: strokeCase.name, metrics: metrics);
       },
       timeout: const Timeout(Duration(minutes: 10)),
     );
@@ -56,13 +49,13 @@ void main() {
     'load profile selection-path-metrics profile=$profile',
     () {
       final metrics = _runSelectionPathMetricsCase(
-        pathNodeCount: config.selectionPathNodeCount,
-        pathSegments: config.selectionPathSegments,
-        iterations: config.selectionPathIterations,
+        pathNodeCount: policy.selectionPathNodeCount,
+        pathSegments: policy.selectionPathSegments,
+        iterations: policy.selectionPathIterations,
       );
       _emitResult(
         profile: profile,
-        name: 'selection_path_metrics',
+        name: selectionPathCaseName,
         metrics: metrics,
       );
     },
@@ -73,11 +66,11 @@ void main() {
     'load profile worst-case profile=$profile',
     () {
       final metrics = _runWorstCaseProfile(
-        largeQueryNodeCount: config.largeQueryNodeCount,
-        longPathSegments: config.longPathSegments,
-        iterations: config.worstCaseIterations,
+        largeQueryNodeCount: policy.largeQueryNodeCount,
+        longPathSegments: policy.longPathSegments,
+        iterations: policy.worstCaseIterations,
       );
-      _emitResult(profile: profile, name: 'worst_case', metrics: metrics);
+      _emitResult(profile: profile, name: worstCaseName, metrics: metrics);
     },
     timeout: const Timeout(Duration(minutes: 10)),
   );
@@ -88,48 +81,7 @@ String _resolveProfile() {
   if (raw == null || raw.isEmpty) {
     return 'smoke';
   }
-  if (raw == 'smoke' || raw == 'full') {
-    return raw;
-  }
-  throw ArgumentError.value(raw, 'IWB_BENCH_PROFILE', 'Must be smoke or full.');
-}
-
-_BenchConfig _configForProfile(String profile) {
-  switch (profile) {
-    case 'smoke':
-      return const _BenchConfig(
-        nodeCounts: <int>[10000],
-        nodeIterations: 3,
-        strokeCases: <_StrokeCase>[
-          _StrokeCase(strokeCount: 1000, pointsPerStroke: 256),
-        ],
-        strokeIterations: 2,
-        selectionPathNodeCount: 400,
-        selectionPathSegments: 128,
-        selectionPathIterations: 3,
-        largeQueryNodeCount: 10000,
-        longPathSegments: 2000,
-        worstCaseIterations: 2,
-      );
-    case 'full':
-      return const _BenchConfig(
-        nodeCounts: <int>[10000, 50000, 100000],
-        nodeIterations: 4,
-        strokeCases: <_StrokeCase>[
-          _StrokeCase(strokeCount: 1000, pointsPerStroke: 1024),
-          _StrokeCase(strokeCount: 5000, pointsPerStroke: 512),
-        ],
-        strokeIterations: 3,
-        selectionPathNodeCount: 2000,
-        selectionPathSegments: 256,
-        selectionPathIterations: 4,
-        largeQueryNodeCount: 50000,
-        longPathSegments: 12000,
-        worstCaseIterations: 3,
-      );
-    default:
-      throw StateError('Unsupported profile: $profile');
-  }
+  return loadProfilePolicyFor(raw).profile;
 }
 
 Map<String, Object?> _runNodeScaleCase({
@@ -543,22 +495,47 @@ Map<String, Object?> _measureOperation({
   required int iterations,
   required void Function(int iteration) run,
 }) {
-  final samples = <int>[];
+  final latencySamplesUs = <int>[];
+  final rssDeltaSamplesBytes = <int>[];
   for (var i = 0; i < iterations; i++) {
+    final baselineRssBytes = ProcessInfo.currentRss;
     final sw = Stopwatch()..start();
     run(i);
     sw.stop();
-    samples.add(sw.elapsedMicroseconds);
+    final currentRssBytes = ProcessInfo.currentRss;
+    latencySamplesUs.add(sw.elapsedMicroseconds);
+    rssDeltaSamplesBytes.add(
+      currentRssBytes > baselineRssBytes
+          ? currentRssBytes - baselineRssBytes
+          : 0,
+    );
   }
-  samples.sort();
-  final total = samples.fold<int>(0, (sum, value) => sum + value);
+  latencySamplesUs.sort();
+  rssDeltaSamplesBytes.sort();
+  final totalLatencyUs = latencySamplesUs.fold<int>(
+    0,
+    (sum, value) => sum + value,
+  );
+  final totalRssDeltaBytes = rssDeltaSamplesBytes.fold<int>(
+    0,
+    (sum, value) => sum + value,
+  );
   final p95Index =
-      ((samples.length * 95) / 100).ceil().clamp(1, samples.length) - 1;
+      ((latencySamplesUs.length * 95) / 100).ceil().clamp(
+        1,
+        latencySamplesUs.length,
+      ) -
+      1;
   return <String, Object?>{
-    'avgUs': (total / samples.length).round(),
-    'minUs': samples.first,
-    'p95Us': samples[p95Index],
-    'maxUs': samples.last,
+    'avgUs': (totalLatencyUs / latencySamplesUs.length).round(),
+    'minUs': latencySamplesUs.first,
+    'p95Us': latencySamplesUs[p95Index],
+    'maxUs': latencySamplesUs.last,
+    'avgRssDeltaBytes': (totalRssDeltaBytes / rssDeltaSamplesBytes.length)
+        .round(),
+    'minRssDeltaBytes': rssDeltaSamplesBytes.first,
+    'p95RssDeltaBytes': rssDeltaSamplesBytes[p95Index],
+    'maxRssDeltaBytes': rssDeltaSamplesBytes.last,
   };
 }
 
@@ -595,37 +572,4 @@ void _emitResult({
   final line = '$_resultPrefix${jsonEncode(record)}';
   // ignore: avoid_print
   print(line);
-}
-
-class _BenchConfig {
-  const _BenchConfig({
-    required this.nodeCounts,
-    required this.nodeIterations,
-    required this.strokeCases,
-    required this.strokeIterations,
-    required this.selectionPathNodeCount,
-    required this.selectionPathSegments,
-    required this.selectionPathIterations,
-    required this.largeQueryNodeCount,
-    required this.longPathSegments,
-    required this.worstCaseIterations,
-  });
-
-  final List<int> nodeCounts;
-  final int nodeIterations;
-  final List<_StrokeCase> strokeCases;
-  final int strokeIterations;
-  final int selectionPathNodeCount;
-  final int selectionPathSegments;
-  final int selectionPathIterations;
-  final int largeQueryNodeCount;
-  final int longPathSegments;
-  final int worstCaseIterations;
-}
-
-class _StrokeCase {
-  const _StrokeCase({required this.strokeCount, required this.pointsPerStroke});
-
-  final int strokeCount;
-  final int pointsPerStroke;
 }

@@ -6,7 +6,7 @@ String _pathAt(String pathPrefix, String segment) {
   return '$pathPrefix.$segment';
 }
 
-Map<String, Object?> _castMap(Map value, {String? path}) {
+Map<String, Object?> _castMap(Map<Object?, Object?> value, {String? path}) {
   final out = <String, Object?>{};
   for (final entry in value.entries) {
     final key = entry.key;
@@ -36,7 +36,7 @@ Map<String, Object?> _requireMap(
     );
   }
   final value = json[key];
-  if (value is! Map) {
+  if (value is! Map<Object?, Object?>) {
     throw SceneDataException(
       code: SceneDataErrorCode.invalidFieldType,
       path: path,

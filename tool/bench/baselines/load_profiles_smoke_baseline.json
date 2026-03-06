@@ -1,4 +1,5 @@
 {
+  "generatedAtUtc": "2026-03-06T12:38:44.336703Z",
   "profile": "smoke",
   "caseCount": 4,
   "cases": [
@@ -6,33 +7,90 @@
       "name": "nodes_10000",
       "profile": "smoke",
       "metrics": {
-        "single_node_patch": {"avgUs": 140, "minUs": 120, "p95Us": 180, "maxUs": 190},
-        "single_node_transform": {"avgUs": 210, "minUs": 190, "p95Us": 260, "maxUs": 270},
-        "toggle_selection": {"avgUs": 90, "minUs": 80, "p95Us": 120, "maxUs": 130},
-        "move_selection": {"avgUs": 200, "minUs": 180, "p95Us": 250, "maxUs": 270}
+        "nodeCount": 10000,
+        "iterations": 3,
+        "metrics": {
+          "single_node_patch": {
+            "avgUs": 17194,
+            "minUs": 6361,
+            "p95Us": 38768,
+            "maxUs": 38768,
+            "avgRssDeltaBytes": 573440,
+            "minRssDeltaBytes": 0,
+            "p95RssDeltaBytes": 1179648,
+            "maxRssDeltaBytes": 1179648
+          },
+          "single_node_transform": {
+            "avgUs": 23512,
+            "minUs": 17959,
+            "p95Us": 33963,
+            "maxUs": 33963,
+            "avgRssDeltaBytes": 31741269,
+            "minRssDeltaBytes": 28131328,
+            "p95RssDeltaBytes": 34619392,
+            "maxRssDeltaBytes": 34619392
+          },
+          "toggle_selection": {
+            "avgUs": 11400,
+            "minUs": 10369,
+            "p95Us": 12466,
+            "maxUs": 12466,
+            "avgRssDeltaBytes": 15930709,
+            "minRssDeltaBytes": 11780096,
+            "p95RssDeltaBytes": 20545536,
+            "maxRssDeltaBytes": 20545536
+          },
+          "move_selection": {
+            "avgUs": 22371,
+            "minUs": 18828,
+            "p95Us": 24693,
+            "maxUs": 24693,
+            "avgRssDeltaBytes": 29649579,
+            "minRssDeltaBytes": 21495808,
+            "p95RssDeltaBytes": 40910848,
+            "maxRssDeltaBytes": 40910848
+          }
+        }
       }
     },
     {
       "name": "strokes_1000_pts_256",
       "profile": "smoke",
       "metrics": {
-        "single_stroke_patch_thickness": {"avgUs": 120, "minUs": 110, "p95Us": 150, "maxUs": 160},
-        "single_stroke_patch_points": {"avgUs": 260, "minUs": 240, "p95Us": 310, "maxUs": 320},
-        "toggle_selection": {"avgUs": 80, "minUs": 70, "p95Us": 110, "maxUs": 120}
-      }
-    },
-    {
-      "name": "worst_case",
-      "profile": "smoke",
-      "metrics": {
-        "huge_bounds": {
-          "query": {"avgUs": 80, "minUs": 60, "p95Us": 120, "maxUs": 140},
-          "move_selection": {"avgUs": 480, "minUs": 440, "p95Us": 560, "maxUs": 600}
-        },
-        "huge_rect_select": {"avgUs": 7200, "minUs": 6900, "p95Us": 8100, "maxUs": 8500},
-        "very_long_path": {
-          "patch_svg_path": {"avgUs": 5400, "minUs": 5100, "p95Us": 6200, "maxUs": 6600},
-          "query_candidates": {"avgUs": 180, "minUs": 150, "p95Us": 240, "maxUs": 280}
+        "strokeCount": 1000,
+        "pointsPerStroke": 256,
+        "iterations": 2,
+        "metrics": {
+          "single_stroke_patch_thickness": {
+            "avgUs": 1553,
+            "minUs": 883,
+            "p95Us": 2222,
+            "maxUs": 2222,
+            "avgRssDeltaBytes": 0,
+            "minRssDeltaBytes": 0,
+            "p95RssDeltaBytes": 0,
+            "maxRssDeltaBytes": 0
+          },
+          "single_stroke_patch_points": {
+            "avgUs": 1559,
+            "minUs": 915,
+            "p95Us": 2202,
+            "maxUs": 2202,
+            "avgRssDeltaBytes": 8192,
+            "minRssDeltaBytes": 0,
+            "p95RssDeltaBytes": 16384,
+            "maxRssDeltaBytes": 16384
+          },
+          "toggle_selection": {
+            "avgUs": 665,
+            "minUs": 594,
+            "p95Us": 735,
+            "maxUs": 735,
+            "avgRssDeltaBytes": 0,
+            "minRssDeltaBytes": 0,
+            "p95RssDeltaBytes": 0,
+            "maxRssDeltaBytes": 0
+          }
         }
       }
     },
@@ -40,8 +98,96 @@
       "name": "selection_path_metrics",
       "profile": "smoke",
       "metrics": {
-        "paint_no_selection": {"avgUs": 2500, "minUs": 2200, "p95Us": 3200, "maxUs": 3600},
-        "paint_with_selection": {"avgUs": 5400, "minUs": 5000, "p95Us": 6400, "maxUs": 6800}
+        "pathNodeCount": 400,
+        "pathSegments": 128,
+        "iterations": 3,
+        "metrics": {
+          "paint_no_selection": {
+            "avgUs": 11402,
+            "minUs": 2089,
+            "p95Us": 29681,
+            "maxUs": 29681,
+            "avgRssDeltaBytes": 5461,
+            "minRssDeltaBytes": 0,
+            "p95RssDeltaBytes": 16384,
+            "maxRssDeltaBytes": 16384
+          },
+          "paint_with_selection": {
+            "avgUs": 6855,
+            "minUs": 2554,
+            "p95Us": 13596,
+            "maxUs": 13596,
+            "avgRssDeltaBytes": 120149,
+            "minRssDeltaBytes": 16384,
+            "p95RssDeltaBytes": 294912,
+            "maxRssDeltaBytes": 294912
+          }
+        }
+      }
+    },
+    {
+      "name": "worst_case",
+      "profile": "smoke",
+      "metrics": {
+        "largeQueryNodeCount": 10000,
+        "longPathSegments": 2000,
+        "iterations": 2,
+        "metrics": {
+          "huge_bounds": {
+            "query": {
+              "avgUs": 155,
+              "minUs": 3,
+              "p95Us": 306,
+              "maxUs": 306,
+              "avgRssDeltaBytes": 0,
+              "minRssDeltaBytes": 0,
+              "p95RssDeltaBytes": 0,
+              "maxRssDeltaBytes": 0
+            },
+            "move_selection": {
+              "avgUs": 702,
+              "minUs": 57,
+              "p95Us": 1347,
+              "maxUs": 1347,
+              "avgRssDeltaBytes": 8192,
+              "minRssDeltaBytes": 0,
+              "p95RssDeltaBytes": 16384,
+              "maxRssDeltaBytes": 16384
+            }
+          },
+          "huge_rect_select": {
+            "avgUs": 8039,
+            "minUs": 4956,
+            "p95Us": 11121,
+            "maxUs": 11121,
+            "avgRssDeltaBytes": 3964928,
+            "minRssDeltaBytes": 278528,
+            "p95RssDeltaBytes": 7651328,
+            "maxRssDeltaBytes": 7651328
+          },
+          "very_long_path": {
+            "patch_svg_path": {
+              "avgUs": 1878,
+              "minUs": 742,
+              "p95Us": 3014,
+              "maxUs": 3014,
+              "avgRssDeltaBytes": 8192,
+              "minRssDeltaBytes": 0,
+              "p95RssDeltaBytes": 16384,
+              "maxRssDeltaBytes": 16384
+            },
+            "query_candidates": {
+              "avgUs": 121,
+              "minUs": 24,
+              "p95Us": 217,
+              "maxUs": 217,
+              "avgRssDeltaBytes": 0,
+              "minRssDeltaBytes": 0,
+              "p95RssDeltaBytes": 0,
+              "maxRssDeltaBytes": 0
+            }
+          }
+        }
       }
     }
   ]

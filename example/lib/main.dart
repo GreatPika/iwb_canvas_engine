@@ -994,7 +994,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   Future<void> _exportSceneJson() async {
     final json = encodeSceneToJson(_controller.snapshot);
     _lastExportedJson = json;
-    await showDialog(
+    await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Scene JSON'),

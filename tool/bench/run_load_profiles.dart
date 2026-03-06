@@ -1,11 +1,14 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'load_profile_policy.dart';
+
 const _resultPrefix = 'IWB_BENCH_RESULT ';
 
 Future<void> main(List<String> args) async {
   final options = _parseArgs(args);
-  final profile = options.profile;
+  final policy = loadProfilePolicyFor(options.profile);
+  final profile = policy.profile;
   final outputPath =
       options.outputPath ?? 'build/bench/load_profiles_$profile.json';
 
@@ -58,6 +61,16 @@ Future<void> main(List<String> args) async {
     stderr.writeln('FAIL: no benchmark cases were produced.');
     exit(1);
   }
+  final validationIssues = validateCollectedBenchmarkCases(
+    policy: policy,
+    parsedCases: parsedCases,
+  );
+  if (validationIssues.isNotEmpty) {
+    for (final issue in validationIssues) {
+      stderr.writeln('FAIL: $issue');
+    }
+    exit(1);
+  }
 
   final report = <String, Object?>{
     'generatedAtUtc': DateTime.now().toUtc().toIso8601String(),
@@ -71,6 +84,24 @@ Future<void> main(List<String> args) async {
   final encoder = const JsonEncoder.withIndent('  ');
   outputFile.writeAsStringSync('${encoder.convert(report)}\n');
   stdout.writeln('Benchmark report written: ${outputFile.path}');
+}
+
+List<String> validateCollectedBenchmarkCases({
+  required LoadProfilePolicy policy,
+  required List<Map<String, Object?>> parsedCases,
+}) {
+  final caseNames = <String>[];
+  for (var i = 0; i < parsedCases.length; i++) {
+    final rawName = parsedCases[i]['name'];
+    if (rawName is! String || rawName.isEmpty) {
+      return <String>['benchmark case #$i is missing a non-empty "name"'];
+    }
+    caseNames.add(rawName);
+  }
+  return validateProducedLoadProfileCaseNames(
+    policy: policy,
+    caseNames: caseNames,
+  );
 }
 
 _Options _parseArgs(List<String> args) {
@@ -93,10 +124,7 @@ _Options _parseArgs(List<String> args) {
     _printUsageAndExit(2);
   }
 
-  if (profile != 'smoke' && profile != 'full') {
-    stderr.writeln('Invalid --profile value: $profile');
-    _printUsageAndExit(2);
-  }
+  loadProfilePolicyFor(profile);
 
   return _Options(profile: profile, outputPath: outputPath);
 }
