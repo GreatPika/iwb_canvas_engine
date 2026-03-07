@@ -97,6 +97,9 @@ abstract interface class SceneWriteTxn {
 
   /// Applies [delta] as a transform to the current selection.
   ///
+  /// Composition uses pre-multiply semantics:
+  /// `nextTransform = delta.multiply(existingTransform)`.
+  ///
   /// Throws [ArgumentError] when [delta] contains non-finite fields or is
   /// non-invertible.
   int writeSelectionTransform(Transform2D delta);

@@ -1,156 +1,99 @@
 language: russian
 
-# Шаг 4. Сразу выровнять точный публичный API-контракт
+# Шаг 4. Закрыть public API contract alignment через подшаги 4.1-4.4
 
 ## Цель шага
 
-Этот шаг не про расширение API, а про снятие расхождений между публичной поверхностью пакета и его фактическим поведением. Нужно точно локализовать, где контракт уже корректен, но не зафиксирован явно, а где реально протекают внутренние детали: неточный export-surface, расплывчатые `throws`, неполный `SceneDataException.path`, незафиксированная семантика `TextAlign`, ослабленные return-типы и неявный порядок композиции transform. Делать это нужно через уже существующие public entrypoints, guardrails и тесты, без второго barrel-файла, compat-layer или новой "sync glue" логики.
+Шаг `4` больше не должен жить как один тяжёлый кусок работы. После завершения boundary-перехода в шагах `2` и `3.x` здесь остаётся не один рефакторинг, а несколько почти независимых contract-контуров:
 
-## Что уже подтверждено по текущему состоянию
+- public entrypoint и export surface;
+- `SceneBuilder` и codec entrypoints;
+- единая политика `TextAlign`;
+- writer/controller return types и transform semantics.
 
-1. `lib/iwb_canvas_engine.dart` уже является единственной публичной точкой входа, а инвариант поддерживается `tool/check_guardrails.dart`, `tool/check_public_api_surface.dart` и `test/entrypoints/**`; проблема не в отсутствии barrel, а в точности и устойчивости контракта на этой поверхности.
-2. Barrel уже экспортирует `src/model/scene_builder_api.dart` и `src/serialization/scene_codec.dart`, то есть `buildFromSnapshot/buildFromJson` и `encode/decode` уже являются частью внешнего API, а не внутренней детали реализации.
-3. В `lib/src/serialization/scene_codec.dart` функция `_textAlignToString(...)` при unsupported `TextAlign` бросает `SceneDataException` с `code` и `source`, но без `path`; это уже конкретная локализованная дыра в encode-path диагностике.
-4. В `lib/src/model/scene_builder_api.dart` публичные `buildFromSnapshot(...)` и `buildFromJson(...)` документированы слишком общо и не фиксируют точный `throws`-контракт, хотя фактически являются canonical public import gateway.
-5. В `lib/src/controller/commands/draw_commands.dart` методы `writeDrawStroke(...)` и `writeDrawLine(...)` возвращают `String`, хотя внутренний публичный writer-контракт уже работает через `NodeId`; даже при текущем `typedef NodeId = String` это теряет намерение API и будущий migration seam.
-6. В `lib/src/controller/scene_writer.dart` `writeSelectionTransform(...)` использует конкретный порядок композиции `delta.multiply(existing.node.transform)`, но этот порядок пока зафиксирован только кодом, а не публичным контрактом и тестами.
-7. Guardrails уже защищают single-entrypoint и запрет экспорта mutable-core типов, но шаг должен отдельно подтвердить, что использование `lib/src/**` не закрепляется как поддерживаемый интеграционный путь через docs, tests и public surface tooling.
-8. `TextAlign` уже проходит через `snapshot`, `node_spec`, `node_patch`, сериализацию и runtime builder, поэтому здесь нельзя оставлять "полуподдержанную" семантику: нужна одна явная политика на всей публичной границе.
+Этот umbrella-шаг нужен, чтобы развести владельцев ответственности и не смешивать в одном документе guardrails, serialization contract, enum semantics и controller-facing API.
 
-## Рекомендуемое решение
+## Как разбит этап
 
-Рекомендуемый вариант: не расширять API и не добавлять новый entrypoint, а сделать текущую публичную поверхность точной, минимальной и проверяемой.
+### Шаг 4.1
 
-Что это означает на практике:
+`development_plan/step_04_1_public_entrypoint_and_export_surface_contract.md`
 
-1. Barrel `lib/iwb_canvas_engine.dart` остаётся единственным публичным входом, а состав экспортов проверяется не вручную, а через существующие guardrails и public API tests.
-2. Для codec/builder/writer фиксируется точный контракт: какие типы возвращаются, какие ошибки допустимы, где обязателен `path`, и какая именно семантика считается поддержанной.
-3. По `TextAlign` выбирается одна финальная политика и одинаково проводится через `snapshot/spec/patch`, `encode/decode` и runtime builder, чтобы unsupported-case не жил отдельно только в serializer.
-4. Все публичные изменения этого шага остаются направленными на ясность контракта, а не на изобретение новых фасадов или "улучшайзинг" структуры пакета.
+Владелец public surface для:
 
-Почему это лучший вариант:
+- `lib/iwb_canvas_engine.dart` как единственного public entrypoint;
+- `validated.dart` как поддерживаемой части внешнего API;
+- guardrails/public API surface tooling;
+- правил, не позволяющих `src/**` стать скрыто поддерживаемым integration contract.
 
-1. Он устраняет реальный contract drift без добавления второго источника истины в виде нового barrel-файла, адаптерного слоя или отдельного public-wrapper API.
-2. Он подготавливает безопасную базу для следующих шагов с validated values и усилением типизации, не ломая пакет массовым рефакторингом публичной поверхности.
-3. Он переиспользует уже существующие guardrails, `test/entrypoints/**`, public API surface checks и codec tests вместо параллельной ручной валидации.
-4. Он позволяет в каждом пункте явно развести две ситуации:
-   - проблема реально подтверждена и код надо менять;
-   - проблема не подтверждена, тогда меняется формулировка контракта, тест или guardrail, а не поведение ради самого изменения.
+### Шаг 4.2
 
-## Альтернатива, которую не рекомендуется брать
+`development_plan/step_04_2_scene_builder_and_codec_contract.md`
 
-Не рекомендуется решать этот шаг через новый `advanced.dart`, отдельный "public facade" поверх существующего API или через чисто документальный проход без проверки реального поведения. Первый вариант создаст второй источник истины для экспортов и контрактов. Второй оставит пользователя с красивой документацией, которая всё ещё может расходиться с фактическим `throws`, `path`, return types и semantics в рантайме.
+Владелец точного контракта для:
 
-## Что именно менять
+- `SceneBuilder.buildFromSnapshot(...)`;
+- `SceneBuilder.buildFromJson(...)`;
+- `encodeScene(...)` / `encodeSceneToJson(...)`;
+- `decodeScene(...)` / `decodeSceneFromJson(...)`;
+- `SceneDataException.path` и `throws` semantics на public import/codec boundary.
 
-### `lib/iwb_canvas_engine.dart`
+### Шаг 4.3
 
-[ ] Подтвердить, что barrel экспортирует только поддерживаемые публичные типы и функции, а не внутренние model/runtime детали.
-[ ] Проверить, нужен ли экспорт validated types/factories из шага 2 для внешнего контракта; если не нужен, явно зафиксировать, что они остаются внутренним строительным слоем и barrel не расширяется.
-[ ] Не допускать экспорта mutable-core типов и прямого нормализованного `src/**` surface сверх уже одобренного списка.
-[ ] Если проблема не подтверждается и текущий export list уже корректен, ограничиться фиксацией этого решения в тестах/guardrails, а не менять файл ради косметики.
+`development_plan/step_04_3_text_align_boundary_and_serialization_policy.md`
 
-### `lib/src/serialization/scene_codec.dart`
+Владелец единой политики `TextAlign` для:
 
-[ ] Зафиксировать точные `throws`-контракты для `encodeSceneToJson(...)`, `decodeSceneFromJson(...)`, `encodeScene(...)` и `decodeScene(...)`, без расплывчатых формулировок "может бросить ошибку".
-[ ] Привести doc comments к реальному поведению: где выполняется canonicalization, какие schema versions принимаются, где именно ожидается `SceneDataException`.
-[ ] Для unsupported `TextAlign` на encode-path обеспечить не только корректный `code`, но и заполненный `path`, если путь на этом уровне известен или может быть прокинут без дублирования логики.
-[ ] Если `_textAlignToString(...)` остаётся отдельной функцией, либо передавать в неё path-context явно, либо вызывать её только из места, где этот контекст уже определён и может быть инкапсулирован без второй независимой ветки ошибок.
-[ ] Подтвердить или опровергнуть, что unsupported `TextAlign` должен отлавливаться именно в codec boundary; если правильнее ловить его раньше на canonicalization boundary, зафиксировать это и убрать двусмысленность контракта.
+- `snapshot/spec/patch` boundary;
+- JSON encode/decode;
+- builder/import semantics;
+- общей договорённости по supported values и error diagnostics.
 
-### `lib/src/model/scene_builder_api.dart`
+### Шаг 4.4
 
-[ ] Зафиксировать точный публичный контракт `buildFromSnapshot(...)` и `buildFromJson(...)`: что считается валидным входом, когда возвращается канонический `SceneSnapshot`, какие ошибки допустимы и на каком boundary они возникают.
-[ ] Явно описать различие между "raw snapshot import" и "raw JSON import", если у них разные пути валидации, canonicalization или диагностики.
-[ ] Не оставлять builder как "тонкий хелпер без контракта": раз он экспортируется из barrel, его doc comments и tests должны быть достаточны для внешнего интегратора.
+`development_plan/step_04_4_writer_return_types_and_transform_semantics.md`
 
-### `lib/src/contract/**` и `lib/src/serialization/**`
+Владелец controller/write contract для:
 
-[ ] По `TextAlign` выбрать одну финальную стратегию:
-    - либо сузить публичный контракт до реально поддерживаемых значений;
-    - либо полноценно поддержать весь релевантный набор значений в сериализации и модели.
-[ ] Привести эту политику к одному источнику истины в:
-    - `snapshot`;
-    - `spec`;
-    - `patch`;
-    - `encode/decode`;
-    - `builder/runtime`.
-[ ] Зафиксировать единое поведение ошибки на unsupported align:
-    - детерминированный `code`;
-    - заполненный `path`, когда он известен;
-    - одинаковая семантика для всех публичных входов.
-[ ] Если после локализации выяснится, что проблема лежит не в `TextAlign`, а в общем расхождении enum-boundary semantics, сузить формулировку шага до реальной проблемы и не раздувать изменение до "переписать все enum-ы".
+- `DrawCommands.writeDrawStroke(...)`;
+- `DrawCommands.writeDrawLine(...)`;
+- `SceneWriteTxn.writeSelectionTransform(...)`;
+- явной фиксации return-type и transform composition semantics в docs/tests.
 
-### `lib/src/controller/commands/draw_commands.dart`
+## Карта переноса деталей из исходного шага 4
 
-[ ] Вернуть из `writeDrawStroke(...)` и `writeDrawLine(...)` `NodeId`, а не голый `String`, чтобы публичная сигнатура совпадала с writer-контрактом и не теряла смысловой тип.
-[ ] Проверить остальные command-layer return types на ту же проблему и менять их только там, где это действительно публичный contract mismatch, а не вкусовщина.
+1. Подтверждённая тема single-entrypoint и export-surface закрепляется в `4.1`.
+2. Точный `throws`-контракт `SceneBuilder` и codec entrypoints закрепляется в `4.2`.
+3. Дыра с `SceneDataException.path` для unsupported `TextAlign` и общее выравнивание enum semantics закрепляются в `4.3`.
+4. Ослабленные `String` return types и незафиксированный порядок композиции transform закрепляются в `4.4`.
+5. Решение по `validated.dart` фиксируется в `4.1`: этот экспорт остаётся официальной частью public API, а шаг не откатывает результат шагов `2` и `2.1`.
 
-### `lib/src/controller/scene_writer.dart`
+## Общие правила для всех подшагов
 
-[ ] Формально закрепить порядок композиции transform в `writeSelectionTransform(...)`, который сейчас фактически равен `delta.multiply(existing.node.transform)`.
-[ ] Зафиксировать этот порядок как публичную семантику в doc comments и тестах, а не как случайную реализацию.
-[ ] Подтвердить, нет ли других публичных write-методов, где behavior уже де-факто является контрактом, но пока не зафиксирован явно; если такие места есть, сузить их до минимально необходимого набора и не превращать шаг в общий rewrite всей документации writer-а.
+1. `lib/iwb_canvas_engine.dart` остаётся единственным поддерживаемым public import root; новый `advanced.dart`, compat-layer или второй barrel не вводятся.
+2. Подшаги `4.2-4.4` уточняют контракт уже существующего API и не добавляют новые фасады.
+3. Документация обновляется внутри соответствующего подшага вместе с кодом и тестами; отдельный docs-only follow-up не создаётся.
+4. Шаг `4` не забирает scope следующих этапов:
+   - `ScenePolicy` и scene-level orchestration остаются в шаге `5`;
+   - общая нормализация external data/error boundary остаётся в шаге `6`;
+   - id/revision safety policy остаётся в шаге `7`.
+5. Если в каком-то подпункте проблема не подтверждается кодом, подшаг фиксирует это через docs/tests/guardrails, а не придумывает изменение ради симметрии.
 
-### `tool/check_guardrails.dart` и `test/**`
+## Критерии готовности umbrella-шага
 
-[ ] Защитить правило "один публичный импортный вход" так, чтобы использование `package:iwb_canvas_engine/src/**` не закреплялось как нормальный контракт интеграции ни в tooling, ни в тестовой поверхности.
-[ ] Проверить, достаточно ли текущих `test/entrypoints/**`, `test/public_api/**` и tool-tests, чтобы поймать:
-    - лишний экспорт из barrel;
-    - рассинхрон public surface;
-    - ослабление `NodeId` до `String`;
-    - потерю `path` в codec diagnostics;
-    - смену порядка transform composition.
-[ ] Если существующих тестов уже достаточно для части пунктов, не плодить новые проверки без необходимости; доработать только те, которые закрывают реально неподтверждённые контракты.
-
-## Конкретизация внедрения по порядку
-
-1. Начать с точной инвентаризации публичной поверхности шага:
-   - barrel exports;
-   - codec functions;
-   - `SceneBuilder`;
-   - command-layer return types;
-   - writer semantics;
-   - `TextAlign` boundary path.
-2. Для каждого пункта отдельно отметить, проблема подтверждена кодом или нет:
-   - если подтверждена, менять реализацию и тест;
-   - если не подтверждена, сужать план до явной фиксации контракта через docs/tests/guardrails.
-3. Сначала принять одно решение по `TextAlign`, потому что от него зависит и serializer contract, и builder semantics, и набор допустимых doc comments/tests.
-4. Затем выровнять barrel и публичные сигнатуры:
-   - проверить export list;
-   - решить вопрос с validated exports;
-   - вернуть `NodeId` в draw commands.
-5. После этого выровнять public docs и diagnostics:
-   - codec `throws`;
-   - builder `throws`;
-   - заполненный `path` для unsupported align;
-   - единая формулировка supported/unsupported semantics.
-6. Затем зафиксировать публичный behavior `writeSelectionTransform(...)` тестом и doc comments, чтобы порядок композиции перестал быть скрытой деталью реализации.
-7. Завершать шаг только после того, как публичный API можно описать одной непротиворечивой моделью: barrel/export surface, сигнатуры, `throws`, ошибки и semantics больше не расходятся между собой.
-
-## Критерии приемки
-
-[ ] Для каждого риска внутри Шага 4 явно указано, он подтверждён кодом или опровергнут; в плане не осталось расплывчатых формулировок вида "проверить на всякий случай".
-[ ] `lib/iwb_canvas_engine.dart` остаётся единственным публичным root entrypoint и не экспортирует mutable-core или случайные внутренние типы.
-[ ] Решение по validated exports принято явно: либо они экспортируются как часть контракта, либо подтверждено, что они остаются внутренним слоем и barrel не расширяется.
-[ ] `draw_commands` возвращает смысловой `NodeId` там, где публичный контракт работает с id узла, а не ослабляет его до `String`.
-[ ] `SceneBuilder.buildFromSnapshot(...)` и `SceneBuilder.buildFromJson(...)` имеют точный, проверяемый `throws`-контракт и описанную boundary-семантику.
-[ ] `encodeScene*` и `decodeScene*` имеют точный, проверяемый `throws`-контракт, совпадающий с фактическим поведением реализации.
-[ ] Политика по `TextAlign` едина для `snapshot/spec/patch`, serialization и builder/runtime; unsupported-case не даёт расходящихся сценариев между входами.
-[ ] Ошибка на unsupported `TextAlign` имеет детерминированный `code`, а `path` заполнен везде, где boundary уже знает точное расположение значения.
-[ ] Порядок композиции в `writeSelectionTransform(...)` зафиксирован как публичная семантика и покрыт тестом.
-[ ] Guardrails и public API tests гарантируют, что `src/**` не становится скрыто поддерживаемым публичным контрактом интеграции.
+1. Для шагов `4.1`, `4.2`, `4.3`, `4.4` существуют отдельные step-файлы с собственной целью, границей ответственности, критериями приёмки и тестовым контуром.
+2. В описании подшагов не осталось пересечений по владению:
+   - `4.1` отвечает за entrypoint/export surface;
+   - `4.2` отвечает за `SceneBuilder` и codec `throws/path` contract;
+   - `4.3` отвечает за `TextAlign` policy;
+   - `4.4` отвечает за writer/controller contract.
+3. Для каждого риска исходного шага `4` явно указано, он подтверждён кодом или опровергнут; после разбиения не осталось расплывчатых формулировок вида "проверить на всякий случай".
+4. Граница со следующими шагами остаётся чистой: шаг `4.x` не расширяется до scene-policy refactor, общей error-boundary нормализации или id/revision redesign.
 
 ## Чеклист выполнения
 
-[ ] Инвентаризировать текущую публичную поверхность `lib/iwb_canvas_engine.dart`, `scene_codec.dart`, `scene_builder_api.dart`, `draw_commands.dart` и `scene_writer.dart`.
-[ ] Для каждого пункта Шага 4 отметить: проблема подтверждена кодом или опровергнута.
-[ ] Принять и зафиксировать одно финальное решение по `TextAlign`.
-[ ] Проверить, нужен ли export validated-layer из шага 2, и либо добавить его осознанно, либо явно зафиксировать отсутствие такого экспорта как норму.
-[ ] Уточнить и при необходимости исправить `throws`-контракты codec entrypoints.
-[ ] Уточнить и при необходимости исправить `throws`-контракты `SceneBuilder`.
-[ ] Обеспечить заполненный `path` для unsupported `TextAlign` на корректном boundary.
-[ ] Вернуть `NodeId` из публичных draw command entrypoints.
-[ ] Зафиксировать и протестировать порядок композиции в `writeSelectionTransform(...)`.
-[ ] Доработать guardrails и public API tests только там, где они реально не ловят contract drift этого шага.
-
+[ ] Переформулировать шаг `4` как umbrella-этап и вынести решение по реализации в `4.1`, `4.2`, `4.3`, `4.4`.
+[ ] В `4.1` явно зафиксировать, что `validated.dart` остаётся частью поддерживаемого public API.
+[ ] В `4.2` сузить `SceneBuilder` и codec до точного `throws/path`-контракта без расплывчатых формулировок.
+[ ] В `4.3` принять одну финальную политику `TextAlign` для boundary, serialization и builder/import.
+[ ] В `4.4` закрепить `NodeId` return types и transform composition semantics как публичный контракт.

@@ -580,6 +580,41 @@ void main() {
     );
   });
 
+  test('writeSelectionTransform composes delta before existing transform', () {
+    final existingTransform = Transform2D.rotationDeg(90);
+    final delta = Transform2D.translation(const Offset(5, 7));
+    final ctx = TxnContext(
+      baseScene: Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-auto-6',
+            nodes: <SceneNode>[
+              RectNode(
+                id: 'r1',
+                size: const Size(10, 10),
+                transform: existingTransform,
+              ),
+            ],
+          ),
+        ],
+      ),
+      workingSelection: <NodeId>{'r1'},
+      baseAllNodeIds: <NodeId>{'r1'},
+      nodeIdSeed: 0,
+      nextInstanceRevision: 1,
+    );
+    final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+
+    final affected = writer.writeSelectionTransform(delta);
+    final updated = ctx.workingScene.layers.single.nodes.single as RectNode;
+    final expected = delta.multiply(existingTransform);
+    final reverseOrder = existingTransform.multiply(delta);
+
+    expect(affected, 1);
+    expect(updated.transform.toJsonMap(), expected.toJsonMap());
+    expect(updated.transform.toJsonMap(), isNot(reverseOrder.toJsonMap()));
+  });
+
   test('writeNodeTransformSet marks visual change when bounds stay same', () {
     final ctx = TxnContext(
       baseScene: Scene(

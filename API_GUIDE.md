@@ -549,6 +549,8 @@ Runtime contract highlights:
   `writeSelectionTransform(...)`, `writeCameraOffset(...)`, and
   `writeGridCellSize(...)` validate only the runtime numeric arguments required
   by those operations
+- `writeSelectionTransform(...)` composes transforms with pre-multiply
+  semantics: `delta.multiply(existingTransform)`
 
 Selection writes:
 
@@ -791,13 +793,21 @@ Validation rules:
 Use it when you want validation and canonicalization without going through a
 controller.
 
+Both methods throw `SceneDataException` when the input violates schema or
+boundary validation rules.
+
 ### 11.3 Decode and import guarantees
 
 - nested validation errors include a fully-qualified `SceneDataException.path`
+- root-level parse or schema failures may omit `path` when the boundary does
+  not yet know a more specific field location
 - decode accepts a missing `backgroundLayer` field and canonicalizes it to an
   empty dedicated layer
 - text node bounds are canonicalized from layout inputs; incoming serialized
   text `size` is not treated as the source of truth
+- supported text-align values stay aligned across boundary constructors,
+  serialization, and import/runtime semantics:
+  `left`, `center`, `right`, `justify`, `start`, `end`
 - decode/build paths reuse the exported validated boundary value types for ids,
   image ids, revisions, text/font payloads, SVG path data, opacity, finite
   offsets, and bounded numeric node fields

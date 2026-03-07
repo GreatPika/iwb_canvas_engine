@@ -17,7 +17,10 @@ const int schemaVersionWrite = sceneSchemaVersionWrite;
 /// JSON schema versions accepted by this package.
 const Set<int> schemaVersionsRead = sceneSchemaVersionsRead;
 
-/// Encodes [snapshot] to a JSON string.
+/// Encodes [snapshot] to a JSON string after validation and canonicalization.
+///
+/// Throws [SceneDataException] when [snapshot] violates the public scene
+/// contract.
 String encodeSceneToJson(SceneSnapshot snapshot) {
   return jsonEncode(encodeScene(snapshot));
 }
@@ -26,8 +29,9 @@ String encodeSceneToJson(SceneSnapshot snapshot) {
 ///
 /// Only schema versions listed in [schemaVersionsRead] are accepted.
 ///
-/// Throws [SceneDataException] when the JSON is invalid, the schema version is
-/// unsupported, or validation fails.
+/// Throws [SceneDataException] when the JSON cannot be parsed, the root value
+/// is not an object, the schema version is unsupported, or import validation
+/// fails.
 SceneSnapshot decodeSceneFromJson(String json) {
   try {
     final raw = jsonDecode(json);
@@ -49,7 +53,10 @@ SceneSnapshot decodeSceneFromJson(String json) {
   }
 }
 
-/// Encodes [snapshot] into a JSON-serializable map.
+/// Encodes [snapshot] into a canonical JSON-serializable map.
+///
+/// Throws [SceneDataException] when [snapshot] violates the public scene
+/// contract.
 Map<String, dynamic> encodeScene(SceneSnapshot snapshot) {
   final canonicalSnapshot = model_builder.sceneCanonicalizeAndValidateSnapshot(
     snapshot,
@@ -61,7 +68,9 @@ Map<String, dynamic> encodeScene(SceneSnapshot snapshot) {
 ///
 /// Only schema versions listed in [schemaVersionsRead] are accepted.
 ///
-/// Throws [SceneDataException] when validation fails.
+/// Throws [SceneDataException] when schema or nested field validation fails.
+/// Nested boundary failures include [SceneDataException.path] when the decode
+/// boundary knows the exact field location.
 SceneSnapshot decodeScene(Map<String, dynamic> json) {
   final sceneDoc = decodeSceneDocument(Map<String, Object?>.from(json));
   return txnSceneToSnapshot(sceneDoc);
@@ -237,7 +246,7 @@ Map<String, dynamic> _encodeNode(SceneNode node, {required String nodePath}) {
         'size': _encodeSize(text.size),
         'fontSize': text.fontSize,
         'color': _colorToHex(text.color),
-        'align': _textAlignToString(text.align, path: '$nodePath.align'),
+        'align': _textAlignToString(text.align),
         'isBold': text.isBold,
         'isItalic': text.isItalic,
         'isUnderline': text.isUnderline,
@@ -314,7 +323,7 @@ String _pathFillRuleToString(PathFillRule rule) {
   }
 }
 
-String _textAlignToString(TextAlign align, {required String path}) {
+String _textAlignToString(TextAlign align) {
   switch (align) {
     case TextAlign.left:
       return 'left';
@@ -322,13 +331,12 @@ String _textAlignToString(TextAlign align, {required String path}) {
       return 'center';
     case TextAlign.right:
       return 'right';
-    default:
-      throw SceneDataException(
-        code: SceneDataErrorCode.invalidValue,
-        message: 'Unsupported TextAlign: $align.',
-        path: path,
-        source: align,
-      );
+    case TextAlign.justify:
+      return 'justify';
+    case TextAlign.start:
+      return 'start';
+    case TextAlign.end:
+      return 'end';
   }
 }
 

@@ -477,26 +477,43 @@ void main() {
     );
   });
 
-  test('encodeScene rejects unsupported TextAlign values', () {
-    final scene = SceneSnapshot(
-      layers: [
-        ContentLayerSnapshot(
-          id: 'layer-auto-3',
-          nodes: [
-            TextNodeSnapshot(
-              id: 'text-1',
-              text: 'Hello',
-              size: const Size(10, 10),
-              fontSize: 12,
-              color: const Color(0xFF000000),
-              align: TextAlign.justify,
-            ),
-          ],
-        ),
-      ],
-    );
+  test('encodeScene round-trips supported extended TextAlign values', () {
+    SceneSnapshot sceneFor(TextAlign align, String id) {
+      return SceneSnapshot(
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
+            id: 'layer-auto-3',
+            nodes: <NodeSnapshot>[
+              TextNodeSnapshot(
+                id: id,
+                text: 'Hello',
+                size: const Size(10, 10),
+                fontSize: 12,
+                color: const Color(0xFF000000),
+                align: align,
+              ),
+            ],
+          ),
+        ],
+      );
+    }
 
-    expect(() => encodeScene(scene), throwsA(isA<SceneDataException>()));
+    for (final entry in <(TextAlign, String)>[
+      (TextAlign.justify, 'justify'),
+      (TextAlign.start, 'start'),
+      (TextAlign.end, 'end'),
+    ]) {
+      final encoded = encodeScene(sceneFor(entry.$1, 'text-${entry.$2}'));
+      final nodeJson =
+          ((encoded['layers'] as List<dynamic>).single
+                  as Map<String, dynamic>)['nodes']
+              as List<dynamic>;
+      expect((nodeJson.single as Map<String, dynamic>)['align'], entry.$2);
+
+      final decoded = decodeScene(encoded);
+      final node = decoded.layers.single.nodes.single as TextNodeSnapshot;
+      expect(node.align, entry.$1);
+    }
   });
 
   test('decodeScene rejects unknown fillRule', () {
@@ -599,30 +616,39 @@ void main() {
     );
   });
 
-  test('decodeScene parses text align right and rejects unknown aligns', () {
-    final nodeJson = _baseNodeJson(id: 't1', type: 'text')
-      ..addAll(<String, dynamic>{
-        'text': 'Hello',
-        'size': <String, dynamic>{'w': 10, 'h': 10},
-        'fontSize': 12,
-        'color': '#FF000000',
-        'align': 'right',
-        'isBold': false,
-        'isItalic': false,
-        'isUnderline': false,
-      });
+  test('decodeScene parses full supported text align set', () {
+    for (final entry in <(String, TextAlign)>[
+      ('right', TextAlign.right),
+      ('justify', TextAlign.justify),
+      ('start', TextAlign.start),
+      ('end', TextAlign.end),
+    ]) {
+      final nodeJson = _baseNodeJson(id: 't-${entry.$1}', type: 'text')
+        ..addAll(<String, dynamic>{
+          'text': 'Hello',
+          'size': <String, dynamic>{'w': 10, 'h': 10},
+          'fontSize': 12,
+          'color': '#FF000000',
+          'align': entry.$1,
+          'isBold': false,
+          'isItalic': false,
+          'isUnderline': false,
+        });
 
-    final scene = decodeScene(_sceneWithSingleNode(nodeJson));
-    final node = scene.layers.first.nodes.single as TextNodeSnapshot;
-    expect(node.align, TextAlign.right);
+      final scene = decodeScene(_sceneWithSingleNode(nodeJson));
+      final node = scene.layers.first.nodes.single as TextNodeSnapshot;
+      expect(node.align, entry.$2);
+    }
+  });
 
+  test('decodeScene rejects unknown aligns with path-aware diagnostics', () {
     final invalidAlignJson = _baseNodeJson(id: 't2', type: 'text')
       ..addAll(<String, dynamic>{
         'text': 'Hello',
         'size': <String, dynamic>{'w': 10, 'h': 10},
         'fontSize': 12,
         'color': '#FF000000',
-        'align': 'start',
+        'align': 'diagonal',
         'isBold': false,
         'isItalic': false,
         'isUnderline': false,
@@ -634,7 +660,8 @@ void main() {
         predicate(
           (e) =>
               e is SceneDataException &&
-              e.message == 'Unknown text align: start.',
+              e.path == 'layers[0].nodes[0].align' &&
+              e.message == 'Unknown text align: diagonal.',
         ),
       ),
     );

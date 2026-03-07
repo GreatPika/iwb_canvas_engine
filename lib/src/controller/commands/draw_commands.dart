@@ -24,7 +24,7 @@ class DrawCommands {
     }, growable: false);
   }
 
-  String writeDrawStroke({
+  NodeId writeDrawStroke({
     required List<Offset> points,
     required double thickness,
     required Color color,
@@ -48,7 +48,7 @@ class DrawCommands {
     });
   }
 
-  String writeDrawLine({
+  NodeId writeDrawLine({
     required Offset start,
     required Offset end,
     required double thickness,

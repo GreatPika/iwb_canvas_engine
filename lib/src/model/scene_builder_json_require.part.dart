@@ -378,6 +378,12 @@ TextAlign _parseTextAlign(String value, {required String pathPrefix}) {
       return TextAlign.center;
     case 'right':
       return TextAlign.right;
+    case 'justify':
+      return TextAlign.justify;
+    case 'start':
+      return TextAlign.start;
+    case 'end':
+      return TextAlign.end;
     default:
       throw SceneDataException(
         code: SceneDataErrorCode.invalidValue,
