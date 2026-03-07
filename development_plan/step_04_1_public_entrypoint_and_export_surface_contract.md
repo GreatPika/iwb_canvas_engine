@@ -43,22 +43,22 @@ language: russian
 
 ### `lib/iwb_canvas_engine.dart`
 
-[ ] Подтвердить, что barrel остаётся единственным публичным входом.
-[ ] Сохранить экспорт `validated.dart` как часть поддерживаемого public surface.
-[ ] Не добавлять новые entrypoint-файлы или дополнительные фасады.
+[x] Подтвердить, что barrel остаётся единственным публичным входом.
+[x] Сохранить экспорт `validated.dart` как часть поддерживаемого public surface.
+[x] Не добавлять новые entrypoint-файлы или дополнительные фасады.
 
 ### `tool/check_guardrails.dart` и `test/tool/**`
 
-[ ] Проверить, что guardrails продолжают запрещать:
+[x] Проверить, что guardrails продолжают запрещать:
    - лишние root entrypoints;
    - mutable-core exports;
    - неоговорённый export drift.
-[ ] Доработать tests/tooling только если текущий enforcement реально не закрывает этот риск.
+[x] Убрать ручное дублирование export surface в test-support и строить canonical scaffold из реального `lib/iwb_canvas_engine.dart`.
 
 ### `tool/check_public_api_surface.dart` и `tool/goldens/public_api_symbols.txt`
 
-[ ] Подтвердить, что golden symbol surface совпадает с barrel exports.
-[ ] Не менять golden без подтверждённого изменения поддерживаемого контракта.
+[x] Подтвердить, что golden symbol surface совпадает с barrel exports.
+[x] Не менять golden без подтверждённого изменения поддерживаемого контракта.
 
 ## Конкретизация внедрения по порядку
 
@@ -69,11 +69,11 @@ language: russian
 
 ## Критерии приемки
 
-[ ] `lib/iwb_canvas_engine.dart` остаётся единственным поддерживаемым public entrypoint.
-[ ] `validated.dart` явно признан частью публичного контракта этого пакета.
-[ ] Guardrails продолжают ловить mutable-core leaks и запрещённые entrypoint-ы.
-[ ] Golden public symbol surface совпадает с barrel.
-[ ] Использование `src/**` не закреплено как поддерживаемый путь интеграции.
+[x] `lib/iwb_canvas_engine.dart` остаётся единственным поддерживаемым public entrypoint.
+[x] `validated.dart` явно признан частью публичного контракта этого пакета.
+[x] Guardrails продолжают ловить mutable-core leaks и запрещённые entrypoint-ы.
+[x] Golden public symbol surface совпадает с barrel.
+[x] Использование `src/**` не закреплено как поддерживаемый путь интеграции.
 
 ## Тестовый контур
 

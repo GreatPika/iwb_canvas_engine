@@ -13,6 +13,8 @@ constraints that keep the public API stable.
 ## System boundary
 
 - Public entrypoint: `package:iwb_canvas_engine/iwb_canvas_engine.dart`
+- Supported public surface: exactly the exports declared by
+  `lib/iwb_canvas_engine.dart`
 - Current serialization contract: write `schemaVersion = 5`, read `{5}`
 - Public runtime aliases: `SceneController`, `SceneView`
 - Public write boundary: `SceneWriteTxn`
@@ -43,6 +45,11 @@ lib/
 
 - Public API is defined only by exports from
   `lib/iwb_canvas_engine.dart`.
+- `src/**` remains internal package structure rather than a supported external
+  import contract.
+- `src/contract/validated.dart` is part of the supported public API because it
+  is exported by the package barrel; no separate compat or advanced entrypoint
+  exists for it.
 - `contract/` is the low-level layer for stable API contracts and
   shared contract-facing value types.
 - `contract/validated/**` is the single contract-facing home for boundary value

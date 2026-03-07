@@ -1,6 +1,8 @@
 @Tags(['tool'])
 library;
 
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/guardrails_tool_test_support.dart';
@@ -23,6 +25,23 @@ void main() {
       } finally {
         sandbox.deleteSync(recursive: true);
       }
+    });
+
+    test('canonical test scaffold mirrors the real public barrel exports', () {
+      final source = File('lib/iwb_canvas_engine.dart').readAsStringSync();
+      final directives = extractNormalizedExportDirectives(source);
+      final ownerFiles = extractExportOwnerFiles(source);
+
+      expect(canonicalPublicExportDirectives, directives);
+      expect(canonicalPublicExportFiles, ownerFiles);
+      expect(
+        canonicalPublicExportFiles,
+        contains('lib/src/contract/validated.dart'),
+      );
+      expect(
+        canonicalViewPublicExportDirective,
+        contains("'src/view/scene_view_interactive.dart'"),
+      );
     });
 
     test('rejects reintroduced deleted public layer without imports', () async {
@@ -153,8 +172,11 @@ void main() {
           sandbox,
           'lib/iwb_canvas_engine.dart',
           canonicalPublicEntrypoint().replaceFirst(
-            "export 'src/contract/node_patch.dart';",
-            "export\n  'src/contract/node_patch.dart';",
+            canonicalFirstPublicExportDirective,
+            canonicalFirstPublicExportDirective.replaceFirst(
+              'export ',
+              'export\n  ',
+            ),
           ),
         );
 

@@ -42,6 +42,9 @@ app UI, product workflows, or backend logic.
 ## Validation policy
 
 - Run and report the standard checks for code changes.
+- Use `dart format lib test example/lib example/test tool` when you need to
+  apply formatting locally. Keep the required check below as the non-mutating
+  verification step.
 - Run the main test suite for code changes with `--exclude-tags=tool`.
 - Run tagged tool tests with `--tags=tool` when the change touches tool-test
   surface. The trigger list in this file must stay identical to

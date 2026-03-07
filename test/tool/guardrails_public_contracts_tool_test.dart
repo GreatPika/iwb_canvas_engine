@@ -89,7 +89,7 @@ class NodePatch {}
             sandbox,
             'lib/iwb_canvas_engine.dart',
             canonicalPublicEntrypoint().replaceFirst(
-              "export 'src/contract/node_patch.dart';",
+              canonicalFirstPublicExportDirective,
               "export 'src/contract/node_patch.dart' if (dart.library.io) 'src/core/scene.dart';",
             ),
           );

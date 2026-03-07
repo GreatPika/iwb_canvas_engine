@@ -1,4 +1,6 @@
-const canonicalPublicExportFiles = <String>[
+import 'dart:io';
+
+const List<String> canonicalPublicExportFiles = <String>[
   'lib/src/contract/node_patch.dart',
   'lib/src/contract/node_spec.dart',
   'lib/src/contract/patch_field.dart',
@@ -18,30 +20,16 @@ const canonicalPublicExportFiles = <String>[
   'lib/src/serialization/scene_codec.dart',
 ];
 
-const canonicalPublicExportDirectives = <String>[
-  "export 'src/contract/node_patch.dart';",
-  "export 'src/contract/node_spec.dart';",
-  "export 'src/contract/patch_field.dart';",
-  "export 'src/contract/canvas_pointer_input.dart';",
-  "export 'src/model/scene_builder_api.dart';",
-  "export 'src/contract/scene_data_exception.dart';",
-  "export 'src/contract/scene_render_state.dart';",
-  "export 'src/contract/scene_write_txn.dart';",
-  "export 'src/contract/snapshot.dart';",
-  "export 'src/contract/validated.dart';",
-  "export 'src/core/action_events.dart' show ActionCommitted, ActionCommittedDelta, ActionType, EditTextRequested;",
-  "export 'src/core/interaction_types.dart' show CanvasMode, DrawTool;",
-  "export 'src/core/pointer_input.dart' show PointerInputSettings;",
-  "export 'src/contract/transform2d.dart' show Transform2D;",
-  "export 'src/interactive/scene_controller_interactive.dart' show MoveCommitDeltaResolver, SceneController, SceneControllerInteractive;",
-  "export 'src/view/scene_view_interactive.dart' show SceneView, SceneViewInteractive;",
-  "export 'src/serialization/scene_codec.dart' show decodeScene, decodeSceneFromJson, encodeScene, encodeSceneToJson, schemaVersionWrite, schemaVersionsRead;",
-];
+final List<String> canonicalPublicExportDirectives = _loadCanonicalExports();
 
-const canonicalFirstPublicExportDirective =
-    "export 'src/contract/node_patch.dart';";
-const canonicalViewPublicExportDirective =
-    "export 'src/view/scene_view_interactive.dart' show SceneView, SceneViewInteractive;";
+final String canonicalFirstPublicExportDirective =
+    canonicalPublicExportDirectives.first;
+
+final String canonicalViewPublicExportDirective =
+    canonicalPublicExportDirectives.firstWhere(
+      (directive) =>
+          directive.contains("'src/view/scene_view_interactive.dart'"),
+    );
 
 String canonicalPublicEntrypoint({
   bool withInlineComments = false,
@@ -53,10 +41,10 @@ String canonicalPublicEntrypoint({
     var line = canonicalPublicExportDirectives[i];
     if (i == 0 && withInlineComments) {
       lines.add('/* comment before export */');
-      line = "export /* inline */ 'src/contract/node_patch.dart';";
+      line = line.replaceFirst('export ', 'export /* inline */ ');
     }
     if (i == 0 && withTrailingLogicAfterFirstExport) {
-      line = "export 'src/contract/node_patch.dart'; /* c */ class A {}";
+      line = '$line /* c */ class A {}';
     }
     lines.add(line);
   }
@@ -113,6 +101,64 @@ List<String> extractNormalizedExportDirectives(String source) {
   return directives;
 }
 
+List<String> extractExportOwnerFiles(String source) {
+  return extractNormalizedExportDirectives(
+    source,
+  ).map(exportDirectiveToFilePath).toList(growable: false);
+}
+
 String _normalizeWhitespace(String value) {
   return value.replaceAll(RegExp(r'\s+'), ' ').trim();
+}
+
+List<String> _loadCanonicalExports() {
+  final source = File('lib/iwb_canvas_engine.dart').readAsStringSync();
+  final directives = extractNormalizedExportDirectives(source);
+  if (directives.isEmpty) {
+    throw StateError(
+      'Expected lib/iwb_canvas_engine.dart to define at least one export '
+      'directive for public-entrypoint tool tests.',
+    );
+  }
+
+  final actualOwnerFiles = extractExportOwnerFiles(source);
+  if (!_listsEqual(actualOwnerFiles, canonicalPublicExportFiles)) {
+    throw StateError(
+      'Public entrypoint export owners drifted from the canonical manifest.\n'
+      'Expected: ${canonicalPublicExportFiles.join(', ')}\n'
+      'Actual: ${actualOwnerFiles.join(', ')}',
+    );
+  }
+
+  return List<String>.unmodifiable(directives);
+}
+
+String exportDirectiveToFilePath(String directive) {
+  final match = RegExp(r"^export\s+'([^']+)").firstMatch(directive);
+  if (match == null) {
+    throw StateError(
+      'Unsupported export directive format in lib/iwb_canvas_engine.dart: '
+      '$directive',
+    );
+  }
+
+  final target = match.group(1)!;
+  if (!target.startsWith('src/')) {
+    throw StateError(
+      'Expected canonical public export to target src/**, got: $directive',
+    );
+  }
+  return 'lib/$target';
+}
+
+bool _listsEqual(List<String> left, List<String> right) {
+  if (left.length != right.length) {
+    return false;
+  }
+  for (var i = 0; i < left.length; i++) {
+    if (left[i] != right[i]) {
+      return false;
+    }
+  }
+  return true;
 }

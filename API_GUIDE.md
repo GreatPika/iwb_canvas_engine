@@ -29,10 +29,18 @@ Current public contract:
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 ```
 
+- the supported public surface is exactly the export surface of
+  `lib/iwb_canvas_engine.dart`
+- `validated.dart` is part of that supported public surface through the package
+  barrel export
+
 - current JSON write version: `schemaVersion = 5`
 - current JSON read set: `{5}`
 
 Do not import from `package:iwb_canvas_engine/src/**`.
+Imports under `src/**` are internal implementation details and are not a
+supported integration contract, even if package tests use them for white-box
+coverage.
 
 The package is not designed as a pure Dart engine. Public contract types rely
 on Flutter-oriented primitives (`dart:ui`), and `SceneRenderState` uses

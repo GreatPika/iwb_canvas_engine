@@ -112,6 +112,15 @@ void main() {
     expect(inputWithoutTimestamp.timestampMs, isNull);
   });
 
+  test('iwb_canvas_engine.dart exports validated boundary values', () {
+    expect(NodeIdValue.parse('node-public-1').value, 'node-public-1');
+    expect(LayerIdValue.generate(2).value, 'layer-2');
+    expect(
+      FiniteOffsetValue.of(const Offset(12, 24)).value,
+      const Offset(12, 24),
+    );
+  });
+
   test('advanced.dart entrypoint is removed', () {
     expect(File('lib/advanced.dart').existsSync(), isFalse);
   });

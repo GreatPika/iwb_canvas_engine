@@ -21,6 +21,9 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 - Consolidated `NodeId`/`LayerId` ownership under `src/contract/ids.dart` and
   removed duplicate local `NodeId` declarations from core internals.
+- Tightened public-entrypoint contract enforcement so tool tests derive the
+  canonical export scaffold from `lib/iwb_canvas_engine.dart` while keeping an
+  explicit canonical export-owner manifest in test support.
 - Added `tool/check_public_api_surface.dart` with
   `tool/goldens/public_api_symbols.txt` to enforce a stable exported symbol set
   from `lib/iwb_canvas_engine.dart`.
