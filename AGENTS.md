@@ -1,10 +1,4 @@
-# Project Context
-
-This file is the fast path for contributors and coding agents. Keep it concise,
-and use the documents below as the canonical source instead of duplicating them
-here.
-
-## Product boundary
+# Product boundary
 
 `iwb_canvas_engine` is a Flutter/Dart canvas engine package. It owns scene
 modeling, rendering, input handling, and JSON serialization. It does not own
@@ -12,14 +6,12 @@ app UI, product workflows, or backend logic.
 
 ## Document map
 
-| File | Primary audience | Purpose | Canonical for |
-| --- | --- | --- | --- |
-| `README.md` | External users | Package landing page | Scope, install, first-use guidance |
-| `API_GUIDE.md` | Integrators | Public API reference | Runtime, serialization, migration |
-| `ARCHITECTURE.md` | Maintainers | System design notes | Data flow, invariants, module boundaries |
-| `CHANGELOG.md` | Users and maintainers | Release history | Released and unreleased user-visible changes |
-| `DEVELOPMENT_PLAN.md` | Maintainers | Active roadmap only | Current planning wave, if any |
-| `tool/invariant_registry.dart` | Maintainers and CI | Machine-readable invariants | Invariant ids and ownership |
+- `README.md` for package overview and getting started.
+- `API_GUIDE.md` for public API, runtime behavior, and migration notes.
+- `ARCHITECTURE.md` for architecture, invariants, and module boundaries.
+- `CHANGELOG.md` for released and unreleased user-visible changes.
+- `DEVELOPMENT_PLAN.md` for the active roadmap.
+- `tool/invariant_registry.dart` for invariant ids and ownership.
 
 ## Working rules
 
@@ -45,10 +37,10 @@ app UI, product workflows, or backend logic.
 - Use `dart format lib test example/lib example/test tool` when you need to
   apply formatting locally. Keep the required check below as the non-mutating
   verification step.
-- Run the main test suite for code changes with `--exclude-tags=tool`.
-- Run tagged tool tests with `--tags=tool` when the change touches tool-test
-  surface. The trigger list in this file must stay identical to
-  `.github/workflows/ci.yaml`:
+- Run package and example tests via the MCP test runner.
+- Keep test runs sharded.
+- Run tool tests only when the change touches tool-test surface. The trigger
+  list in this file must stay identical to `.github/workflows/ci.yaml`:
   - `tool/**`
   - `test/tool/**`
   - `test/tool/support/guardrails_tool_test_support.dart`
@@ -56,6 +48,7 @@ app UI, product workflows, or backend logic.
   - `test/tool/support/public_entrypoint_contract.dart`
   - `pubspec.yaml`
   - `pubspec.lock`
+- Run `test/tool` file-by-file.
 - Documentation-only changes do not require the full Flutter pipeline unless the
   task also changes code, tooling contracts, or executable examples.
 - If `tool/invariant_registry.dart` changes, always run and report
@@ -66,14 +59,21 @@ app UI, product workflows, or backend logic.
 1. `dart format --output=none --set-exit-if-changed lib test example/lib example/test tool`
 2. `flutter analyze`
 3. `(cd example && flutter analyze lib test)`
-4. `JOBS=$(getconf _NPROCESSORS_ONLN); JOBS=$((JOBS>1?JOBS-1:1)); flutter test --coverage --no-pub --exclude-tags=tool -j "$JOBS"`
-5. `(cd example && flutter test --no-pub)`
-6. `dart run tool/check_coverage.dart`
-7. `dart run tool/check_invariant_coverage.dart`
-8. `dart run tool/check_guardrails.dart`
-9. `dart run tool/check_import_boundaries.dart`
-10. `dart run tool/check_public_api_surface.dart`
-11. `JOBS=$(getconf _NPROCESSORS_ONLN); JOBS=$((JOBS>1?JOBS-1:1)); flutter test --no-pub --tags=tool -j "$JOBS"` when the tool-test trigger list above matches the change
+4. Run these MCP test shards:
+   - `test/core`
+   - `test/model test/serialization test/contract test/public_api test/entrypoints`
+   - `test/controller/internal`
+   - `test/controller/core test/controller/commands test/controller/*.dart`
+   - `test/render test/view`
+   - `test/interactive`
+   - `example/test`
+5. `dart run tool/check_coverage.dart`
+6. `dart run tool/check_invariant_coverage.dart`
+7. `dart run tool/check_guardrails.dart`
+8. `dart run tool/check_import_boundaries.dart`
+9. `dart run tool/check_public_api_surface.dart`
+10. Run `test/tool` file-by-file when the tool-test trigger list above matches
+    the change.
 
 ## Release hygiene
 
