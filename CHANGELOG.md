@@ -37,6 +37,10 @@ All notable changes to `iwb_canvas_engine` are documented here.
   model-local guard so builder/decode parity stays anchored on stable
   `SceneDataException.code` / `path` / `details` without adding a
   `model -> serialization` dependency.
+- `scene_codec.dart` now adopts the unified boundary contract across
+  `decodeSceneFromJson(...)`, `decodeScene(...)`, `encodeScene(...)`, and
+  `encodeSceneDocument(...)`, keeping builder/decode/encode parity anchored on
+  stable `SceneDataException.code` / `path` / `details`.
 - Clarified step `5.1` `backgroundLayer` policy: mutable runtime `Scene`
   keeps `backgroundLayer` nullable, while snapshot/JSON boundaries continue to
   canonicalize it to a dedicated single layer.

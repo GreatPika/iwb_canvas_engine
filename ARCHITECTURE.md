@@ -185,6 +185,10 @@ most important architectural rules are:
   immutable containers while preserving stable `code`, `path`, and immutable
   `details`; `message` is a derived user-facing rendering owned by
   `scene_data_exception.dart`.
+- `scene_codec.dart` is a thin boundary adapter: string decode uses
+  serialization-local guards, parsed-map decode delegates to the model-owned
+  parsed-map guard, and snapshot/runtime encode entrypoints reuse the shared
+  codec error factory instead of owning parallel transport mappings.
 - JSON payload limits are enforced to keep import cost bounded.
 - Guardrails cover both collection sizes (layers, nodes, points, palette item
   lists) and string lengths (for example node ids, layer ids, text/image ids,

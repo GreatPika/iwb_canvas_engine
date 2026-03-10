@@ -27,7 +27,9 @@ const Set<int> schemaVersionsRead = sceneSchemaVersionsRead;
 /// This is the string-producing serialization gateway on the public boundary.
 ///
 /// Throws [SceneDataException] when [snapshot] violates the public scene
-/// contract.
+/// contract. Compare boundary failures by [SceneDataException.code],
+/// [SceneDataException.path], and immutable [SceneDataException.details];
+/// [SceneDataException.message] is derived user-facing text.
 String encodeSceneToJson(SceneSnapshot snapshot) {
   return _guardEncode(() => jsonEncode(encodeScene(snapshot)));
 }
@@ -67,12 +69,15 @@ T debugGuardEncodeForTest<T>(T Function() encode) {
 /// This is the parsed-map serialization gateway on the public boundary.
 ///
 /// Throws [SceneDataException] when [snapshot] violates the public scene
-/// contract.
+/// contract. Compare boundary failures by [SceneDataException.code],
+/// [SceneDataException.path], and immutable [SceneDataException.details];
+/// [SceneDataException.message] is derived user-facing text.
 Map<String, dynamic> encodeScene(SceneSnapshot snapshot) {
-  final canonicalSnapshot = model_builder.sceneCanonicalizeAndValidateSnapshot(
-    snapshot,
-  );
-  return _encodeCanonicalSnapshot(canonicalSnapshot);
+  return _guardEncode(() {
+    final canonicalSnapshot =
+        model_builder.sceneCanonicalizeAndValidateSnapshot(snapshot);
+    return _encodeCanonicalSnapshot(canonicalSnapshot);
+  });
 }
 
 /// Decodes a [SceneSnapshot] from a parsed JSON map.
@@ -83,17 +88,25 @@ Map<String, dynamic> encodeScene(SceneSnapshot snapshot) {
 /// Nested boundary failures include [SceneDataException.path] when the decode
 /// boundary knows the exact field location. Root-level failures may omit
 /// [SceneDataException.path] when the boundary cannot attribute a more
-/// specific field.
+/// specific field. Compare boundary failures by [SceneDataException.code],
+/// [SceneDataException.path], and immutable [SceneDataException.details];
+/// [SceneDataException.message] is derived user-facing text.
 SceneSnapshot decodeScene(Map<String, dynamic> json) {
-  final sceneDoc = _guardParsedDecode(json, decodeSceneDocument);
+  final sceneDoc = model_builder.sceneBuildFromDynamicJsonMap(json);
   return txnSceneToSnapshot(sceneDoc);
 }
 
 /// Encodes internal mutable [Scene] document into a JSON-serializable map.
+///
+/// Compare boundary failures by [SceneDataException.code],
+/// [SceneDataException.path], and immutable [SceneDataException.details];
+/// [SceneDataException.message] is derived user-facing text.
 Map<String, dynamic> encodeSceneDocument(Scene scene) {
-  final canonicalScene = model_builder.sceneValidateCore(scene);
-  final canonicalSnapshot = txnSceneToSnapshot(canonicalScene);
-  return _encodeCanonicalSnapshot(canonicalSnapshot);
+  return _guardEncode(() {
+    final canonicalScene = model_builder.sceneValidateCore(scene);
+    final canonicalSnapshot = txnSceneToSnapshot(canonicalScene);
+    return _encodeCanonicalSnapshot(canonicalSnapshot);
+  });
 }
 
 /// Decodes internal mutable [Scene] document from a JSON map (already parsed).
@@ -158,21 +171,6 @@ Map<String, dynamic> _encodeCanonicalSnapshot(SceneSnapshot snapshot) {
     'backgroundLayer': <String, dynamic>{'nodes': backgroundNodes},
     'layers': layers,
   };
-}
-
-T _guardParsedDecode<T>(
-  Map<String, dynamic> rawJson,
-  T Function(Map<String, Object?> raw) decode,
-) {
-  try {
-    return decode(Map<String, Object?>.from(rawJson));
-  } on SceneDataException {
-    rethrow;
-  } on FormatException catch (error) {
-    throw SceneDataException.invalidJsonPayload(source: error);
-  } catch (error) {
-    throw SceneDataException.invalidJsonPayload(source: error);
-  }
 }
 
 Map<String, dynamic> _encodeNode(SceneNode node, {required String nodePath}) {

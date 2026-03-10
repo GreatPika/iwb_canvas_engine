@@ -129,8 +129,11 @@ class _CanvasScreenState extends State<CanvasScreen> {
   `ImageIdValue` keep external payload checks aligned with import/build rules.
   See `API_GUIDE.md` for the full list.
 - For import/build/encode failures, compare `SceneDataException` instances by
-  `code` / `path` / `details`; treat `message` as user-facing text rather than
-  the primary machine contract.
+  `code` / `path` / `details`; this parity is shared by
+  `SceneBuilder.buildFromJson(...)`, `decodeScene(...)`,
+  `decodeSceneFromJson(...)`, `encodeScene(...)`, and `encodeSceneDocument(...)`.
+  Treat `message` as user-facing text rather than the primary machine
+  contract.
 - `ensureLayer(...)` and `writeLayerEnsure(...)` are the supported APIs for
   explicit content-layer creation.
 - `write(...)` is synchronous-only. Returning a `Future` throws `StateError`.

@@ -89,6 +89,24 @@ Map<String, Object?> _textNodeJson({
   };
 }
 
+SceneDataException _captureSceneDataException(Object? Function() callback) {
+  try {
+    callback();
+    fail('Expected SceneDataException');
+  } on SceneDataException catch (error) {
+    return error;
+  }
+}
+
+void _expectSameSceneDataContract(
+  SceneDataException actual,
+  SceneDataException expected,
+) {
+  expect(actual.code, expected.code);
+  expect(actual.path, expected.path);
+  expect(actual.details, expected.details);
+}
+
 void main() {
   test('SceneBuilder.buildFromSnapshot keeps typed background layer', () {
     final result = SceneBuilder.buildFromSnapshot(
@@ -139,23 +157,14 @@ void main() {
         },
       ];
 
-      SceneDataException capture(Object Function() callback) {
-        try {
-          callback();
-          fail('Expected SceneDataException');
-        } on SceneDataException catch (error) {
-          return error;
-        }
-      }
-
-      final fromBuilder = capture(() => SceneBuilder.buildFromJson(raw));
-      final fromCodec = capture(
+      final fromBuilder = _captureSceneDataException(
+        () => SceneBuilder.buildFromJson(raw),
+      );
+      final fromCodec = _captureSceneDataException(
         () => decodeScene(Map<String, dynamic>.from(raw)),
       );
 
-      expect(fromBuilder.code, fromCodec.code);
-      expect(fromBuilder.details, fromCodec.details);
-      expect(fromBuilder.path, fromCodec.path);
+      _expectSameSceneDataContract(fromBuilder, fromCodec);
       expect(fromBuilder.path, 'layers[0].nodes[0].align');
     },
   );
@@ -201,23 +210,14 @@ void main() {
         ],
       };
 
-      SceneDataException capture(Object Function() callback) {
-        try {
-          callback();
-          fail('Expected SceneDataException');
-        } on SceneDataException catch (error) {
-          return error;
-        }
-      }
-
-      final fromBuilder = capture(() => SceneBuilder.buildFromJson(raw));
-      final fromCodec = capture(
+      final fromBuilder = _captureSceneDataException(
+        () => SceneBuilder.buildFromJson(raw),
+      );
+      final fromCodec = _captureSceneDataException(
         () => decodeScene(Map<String, dynamic>.from(raw)),
       );
 
-      expect(fromBuilder.code, fromCodec.code);
-      expect(fromBuilder.details, fromCodec.details);
-      expect(fromBuilder.path, fromCodec.path);
+      _expectSameSceneDataContract(fromBuilder, fromCodec);
       expect(fromBuilder.code, SceneDataErrorCode.duplicateNodeId);
       expect(fromBuilder.path, 'backgroundLayer.nodes[1].id');
       expect(fromBuilder.details, const <String, Object?>{

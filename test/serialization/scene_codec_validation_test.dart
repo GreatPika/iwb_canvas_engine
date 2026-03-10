@@ -79,6 +79,24 @@ String _expectedSchemaVersionsMessage() {
   return versions.join(', ');
 }
 
+SceneDataException _captureSceneDataException(Object? Function() callback) {
+  try {
+    callback();
+    fail('Expected SceneDataException');
+  } on SceneDataException catch (error) {
+    return error;
+  }
+}
+
+void _expectSameSceneDataContract(
+  SceneDataException actual,
+  SceneDataException expected,
+) {
+  expect(actual.code, expected.code);
+  expect(actual.path, expected.path);
+  expect(actual.details, expected.details);
+}
+
 void main() {
   // INV:INV-SER-JSON-NUMERIC-VALIDATION
   test('encodeSceneToJson -> decodeSceneFromJson is stable', () {
@@ -124,25 +142,14 @@ void main() {
         1: 'non-string-key',
       };
 
-      SceneDataException capture(void Function() callback) {
-        try {
-          callback();
-          fail('Expected SceneDataException');
-        } on SceneDataException catch (error) {
-          return error;
-        }
-      }
-
-      final fromBuilder = capture(
+      final fromBuilder = _captureSceneDataException(
         () => SceneBuilder.buildFromJson(malformed.cast<String, Object?>()),
       );
-      final fromCodec = capture(
+      final fromCodec = _captureSceneDataException(
         () => decodeScene(malformed.cast<String, Object?>()),
       );
 
-      expect(fromBuilder.code, fromCodec.code);
-      expect(fromBuilder.details, fromCodec.details);
-      expect(fromBuilder.path, fromCodec.path);
+      _expectSameSceneDataContract(fromBuilder, fromCodec);
       expect(fromBuilder.code, SceneDataErrorCode.invalidJson);
       expect(fromBuilder.details, const <String, Object?>{
         'template': 'invalidJsonPayload',
@@ -326,23 +333,14 @@ void main() {
         });
       final raw = _sceneWithSingleNode(invalidAlignJson);
 
-      SceneDataException capture(void Function() callback) {
-        try {
-          callback();
-          fail('Expected SceneDataException');
-        } on SceneDataException catch (error) {
-          return error;
-        }
-      }
-
-      final fromBuilder = capture(() => SceneBuilder.buildFromJson(raw));
-      final fromCodec = capture(
+      final fromBuilder = _captureSceneDataException(
+        () => SceneBuilder.buildFromJson(raw),
+      );
+      final fromCodec = _captureSceneDataException(
         () => decodeScene(Map<String, Object?>.from(raw)),
       );
 
-      expect(fromBuilder.code, fromCodec.code);
-      expect(fromBuilder.details, fromCodec.details);
-      expect(fromBuilder.path, fromCodec.path);
+      _expectSameSceneDataContract(fromBuilder, fromCodec);
       expect(fromBuilder.path, 'layers[0].nodes[0].align');
     },
   );
@@ -364,23 +362,14 @@ void main() {
         },
       ];
 
-      SceneDataException capture(void Function() callback) {
-        try {
-          callback();
-          fail('Expected SceneDataException');
-        } on SceneDataException catch (error) {
-          return error;
-        }
-      }
-
-      final fromBuilder = capture(() => SceneBuilder.buildFromJson(json));
-      final fromCodec = capture(
+      final fromBuilder = _captureSceneDataException(
+        () => SceneBuilder.buildFromJson(json),
+      );
+      final fromCodec = _captureSceneDataException(
         () => decodeScene(Map<String, Object?>.from(json)),
       );
 
-      expect(fromBuilder.code, fromCodec.code);
-      expect(fromBuilder.details, fromCodec.details);
-      expect(fromBuilder.path, fromCodec.path);
+      _expectSameSceneDataContract(fromBuilder, fromCodec);
       expect(fromBuilder.code, SceneDataErrorCode.invalidValue);
       expect(fromBuilder.path, 'layers[0].nodes');
     },
@@ -396,23 +385,14 @@ void main() {
         null,
       ];
 
-      SceneDataException capture(void Function() callback) {
-        try {
-          callback();
-          fail('Expected SceneDataException');
-        } on SceneDataException catch (error) {
-          return error;
-        }
-      }
-
-      final fromBuilder = capture(() => SceneBuilder.buildFromJson(json));
-      final fromCodec = capture(
+      final fromBuilder = _captureSceneDataException(
+        () => SceneBuilder.buildFromJson(json),
+      );
+      final fromCodec = _captureSceneDataException(
         () => decodeScene(Map<String, Object?>.from(json)),
       );
 
-      expect(fromBuilder.code, fromCodec.code);
-      expect(fromBuilder.details, fromCodec.details);
-      expect(fromBuilder.path, fromCodec.path);
+      _expectSameSceneDataContract(fromBuilder, fromCodec);
       expect(fromBuilder.code, SceneDataErrorCode.invalidValue);
       expect(fromBuilder.path, 'layers');
     },
@@ -446,25 +426,49 @@ void main() {
         },
       ];
 
-      SceneDataException capture(void Function() callback) {
-        try {
-          callback();
-          fail('Expected SceneDataException');
-        } on SceneDataException catch (error) {
-          return error;
-        }
-      }
-
-      final fromBuilder = capture(() => SceneBuilder.buildFromJson(json));
-      final fromCodec = capture(
+      final fromBuilder = _captureSceneDataException(
+        () => SceneBuilder.buildFromJson(json),
+      );
+      final fromCodec = _captureSceneDataException(
         () => decodeScene(Map<String, Object?>.from(json)),
       );
 
-      expect(fromBuilder.code, fromCodec.code);
-      expect(fromBuilder.details, fromCodec.details);
-      expect(fromBuilder.path, fromCodec.path);
+      _expectSameSceneDataContract(fromBuilder, fromCodec);
       expect(fromBuilder.code, SceneDataErrorCode.invalidValue);
       expect(fromBuilder.path, 'layers[0].nodes');
+    },
+  );
+
+  test(
+    'decodeSceneFromJson, decodeScene, and SceneBuilder.buildFromJson share nested contract triples',
+    () {
+      final raw = _sceneWithSingleNode(
+        _baseNodeJson(id: 't3', type: 'text')..addAll(<String, Object?>{
+          'text': 'Hello',
+          'size': <String, Object?>{'w': 10, 'h': 10},
+          'fontSize': 12,
+          'color': '#FF000000',
+          'align': 'diagonal',
+          'isBold': false,
+          'isItalic': false,
+          'isUnderline': false,
+        }),
+      );
+      final rawJson = jsonEncode(raw);
+
+      final fromString = _captureSceneDataException(
+        () => decodeSceneFromJson(rawJson),
+      );
+      final fromMap = _captureSceneDataException(
+        () => decodeScene(Map<String, dynamic>.from(raw)),
+      );
+      final fromBuilder = _captureSceneDataException(
+        () => SceneBuilder.buildFromJson(raw),
+      );
+
+      _expectSameSceneDataContract(fromString, fromMap);
+      _expectSameSceneDataContract(fromBuilder, fromMap);
+      expect(fromMap.path, 'layers[0].nodes[0].align');
     },
   );
 
@@ -1645,6 +1649,50 @@ void main() {
       ),
     );
   });
+
+  test(
+    'encodeSceneDocument and encodeScene keep matching duplicate-id contracts',
+    () {
+      final runtimeScene = Scene(
+        backgroundLayer: BackgroundLayer(
+          nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(1, 1))],
+        ),
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-auto-dup-runtime',
+            nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(2, 2))],
+          ),
+        ],
+      );
+      final snapshot = SceneSnapshot(
+        backgroundLayer: BackgroundLayerSnapshot(
+          nodes: <NodeSnapshot>[
+            RectNodeSnapshot(id: 'dup', size: const Size(1, 1)),
+          ],
+        ),
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
+            id: 'layer-auto-dup-snapshot',
+            nodes: <NodeSnapshot>[
+              RectNodeSnapshot(id: 'dup', size: const Size(2, 2)),
+            ],
+          ),
+        ],
+      );
+
+      final fromDocument = _captureSceneDataException(
+        () => encodeSceneDocument(runtimeScene),
+      );
+      final fromSnapshot = _captureSceneDataException(() => encodeScene(snapshot));
+
+      _expectSameSceneDataContract(fromDocument, fromSnapshot);
+      expect(fromDocument.code, SceneDataErrorCode.duplicateNodeId);
+      expect(fromDocument.path, 'layers[0].nodes[0].id');
+      expect(fromDocument.details, const <String, Object?>{
+        'template': 'duplicateNodeId',
+      });
+    },
+  );
 
   test('decodeScene rejects non-positive thickness', () {
     final nodeJson = _baseNodeJson(id: 's1', type: 'stroke')

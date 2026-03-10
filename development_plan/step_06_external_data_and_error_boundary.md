@@ -165,10 +165,10 @@ codec и builder.
 [x] В `6.2` описать serialization-local guards, использующие primitives шага
     `6.1`, без нарушения layer DAG, второго sanitizer или нового codec
     god-object.
-[ ] В `6.3` перевести `SceneBuilder.buildFromJson(...)` на model-local
+[x] В `6.3` перевести `SceneBuilder.buildFromJson(...)` на model-local
     `_guardBuild(...)` и закрыть unguarded map-normalization path.
-[ ] В `6.4` перевести `scene_codec.dart` на unified boundary и явно описать
+[x] В `6.4` перевести `scene_codec.dart` на unified boundary и явно описать
     migration docs/tests от `message`-driven контрактов к `code/path/details`.
-[ ] Удержать чистую границу со шагами `5.x`: detection scene-level defects
+[x] Удержать чистую границу со шагами `5.x`: detection scene-level defects
     остаётся в `ScenePolicy`, а `6.x` отвечает только за external
     representation и transport guards.

@@ -839,6 +839,14 @@ controller.
 - `decodeScene(...)` is the parsed-map boundary:
   - it throws `SceneDataException` for schema and nested import validation
     failures
+  - it reuses the same parsed-map guard contract as
+    `SceneBuilder.buildFromJson(...)` so malformed map normalization stays
+    aligned on `code` / `path` / `details`
+- `encodeScene(...)` and `encodeSceneDocument(...)` are the snapshot/runtime
+  encode boundaries:
+  - they preserve policy-owned validation diagnostics and route unexpected
+    transport failures through the same `SceneDataException` invalid-json
+    factory used by the other codec entrypoints
 - nested validation errors include a fully-qualified `SceneDataException.path`
 - root-level parse or schema failures may omit `path` when the boundary does
   not yet know a more specific field location
@@ -861,7 +869,8 @@ controller.
 - scene-level duplicate/count/range policy has a single owner:
   `ScenePolicy`
 - for the same scene defect, `SceneBuilder.buildFromSnapshot(...)`,
-  `SceneBuilder.buildFromJson(...)`, `decodeScene(...)`, `decodeSceneFromJson(...)`,
+  `SceneBuilder.buildFromJson(...)`, `decodeScene(...)`,
+  `decodeSceneFromJson(...)`, `encodeScene(...)`, `encodeSceneDocument(...)`,
   and runtime scene canonicalization return the same deterministic
   `SceneDataException.code`, `path`, and `details`
 - scene-level error contract:
