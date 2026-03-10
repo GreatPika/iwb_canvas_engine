@@ -2,6 +2,22 @@ language: russian
 
 # Шаг 8. Ввести ядро операций записи через подшаги 8.1-8.4
 
+## Диагностические метрики
+
+Этот блок нужен как диагностический радар после изменений шага, а не как
+отдельный критерий готовности. Шаг должен упростить write hot path через
+единый исполнитель операций, а не просто перераспределить длинные методы по
+новым файлам.
+
+- Смотреть в первую очередь `cyclomatic-complexity` и `source-lines-of-code`.
+- Дополнительно смотреть `maximum-nesting-level` в commit/apply/postcheck
+  маршрутах.
+- Контрольные файлы:
+  - `lib/src/controller/mutation_executor.dart`
+  - `lib/src/controller/scene_controller.dart`
+  - `lib/src/controller/scene_writer.dart`
+  - `lib/src/controller/txn_context.dart`
+
 ## Цель шага
 
 После шагов `3.x-7.x` boundary, policy, id allocation и revision contract уже
