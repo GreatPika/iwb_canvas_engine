@@ -4,108 +4,90 @@ language: russian
 
 ## Цель шага
 
-После подшагов `5.1-5.3` нужно убедиться, что serialization/import/runtime
-boundary действительно описывают одну и ту же модель сцены. Сейчас
+После шагов `5.1-5.3` owner policy уже зафиксирован в
+[scene_policy.dart](/Users/blackpika/iwb_canvas_engine/lib/src/model/scene_policy.dart),
+но в
 [scene_codec.dart](/Users/blackpika/iwb_canvas_engine/lib/src/serialization/scene_codec.dart)
-частично опирается на builder/runtime validation, но при этом хранит отдельные
-предположения о каноничности сцены, например non-null assertion для
-`backgroundLayer`.
+остались локальные допущения (включая non-null assertion для
+`backgroundLayer`) и дублирование encode-пути. Этот подшаг закрывает только
+serialization alignment и cleanup мёртвых policy-веток.
 
-Задача подшага: перевести encode/decode/runtime alignment на тот же owner
-policy, убрать обходные предположения вне `ScenePolicy` и зачистить мёртвые
-ветки, которые остались после локализации решения в `5.1-5.3`.
+## Зафиксированные решения (без повторного обсуждения в реализации)
 
-## Что этот шаг считает своим владельцем
+1. Единственный owner policy для encode/runtime/import boundary в `5.4`:
+   `ScenePolicy` через builder entrypoints из `scene_builder.dart`.
+2. `encodeScene(SceneSnapshot)` остаётся snapshot-boundary entrypoint и
+   использует `sceneCanonicalizeAndValidateSnapshot(...)`; отдельный
+   scene-level policy внутри codec не добавляется.
+3. `encodeSceneDocument(Scene)` обязан идти через encode-oriented policy путь
+   (`sceneValidateCore(...)`) и затем сериализоваться через тот же общий
+   encode-контур, что и `encodeScene(...)`, без отдельной ручной сборки JSON.
+4. Non-null assertion `backgroundLayer!` в codec считается ad hoc policy
+   допущением и удаляется; canonical background-layer гарантия должна следовать
+   из policy+canonicalization, а не из `!` в boundary-коде.
+5. Целевая семантика `backgroundLayer` не меняется:
+   runtime `Scene.backgroundLayer` остаётся nullable;
+   serialized boundary всегда содержит canonical
+   `backgroundLayer: {"nodes": [...]}`.
+6. `decodeScene(...)` и `decodeSceneFromJson(...)` не получают в `5.4` новых
+   guard/factory/error-details механизмов; это scope шага `6`.
+7. В `5.4` не вводятся новые публичные error-коды и не меняется публичный API.
+8. Любая policy/error ветка в codec, не имеющая достижимого сценария после
+   `5.1-5.3`, удаляется, а не оставляется "на всякий случай".
 
-1. Serialization/runtime alignment для:
-   - `encodeScene(...)`;
-   - `encodeSceneToJson(...)`;
-   - `encodeSceneDocument(...)`;
-   - `decodeScene(...)`;
-   - `decodeSceneFromJson(...)`.
-2. Перевод `scene_codec.dart` на encode-oriented entrypoint `ScenePolicy`,
-   введённый в `5.2`.
-3. Symmetry-сценарии:
-   - `decode -> encode -> decode`;
-   - `Scene -> encodeSceneDocument(...)`.
-4. Cleanup неподтверждённых и dead policy branches, найденных в предыдущих
-   подшагах.
+## Граница шага
 
-## Что уже подтверждено по текущему состоянию
+- In:
+  - выравнивание encode/decode/runtime boundary вокруг уже принятого owner-а;
+  - удаление ad hoc policy assumptions в codec;
+  - устранение дублирующих encode-веток, ведущих к drift.
+- Out:
+  - payload-size guards, unified error factory, `details`-contract и прочая
+    внешняя error-boundary нормализация шага `6`;
+  - новые policy-решения по `backgroundLayer`, duplicate-id и range semantics
+    (они уже приняты в `5.1-5.3`).
 
-1. Encode-path уже опирается на canonical scene/snapshot форму, но часть
-   предположений выражена напрямую в codec-коде.
-2. Snapshot import и runtime scene validation проходят через builder, но после
-   шага `5.2` и `5.3` owner policy должен быть выражен явно, а не через
-   исторический обход.
-3. Canonical background semantics уже проверяются тестами round-trip, но это
-   нужно связать с новым policy-owner без параллельных допущений.
+## Последовательность реализации (только действия)
 
-## Рекомендуемое решение
+[x] В
+    [lib/src/serialization/scene_codec.dart](/Users/blackpika/iwb_canvas_engine/lib/src/serialization/scene_codec.dart)
+    свести `encodeScene(...)` и `encodeSceneDocument(...)` к одному
+    serialization-контуру, чтобы JSON-структура собиралась в одном месте.
+[x] Перевести `encodeSceneDocument(...)` на явную цепочку:
+    `sceneValidateCore(...)` -> canonical representation -> общий encode-контур,
+    без локальной ручной policy-логики в codec.
+[x] Удалить из codec non-null assertion и связанные suppressions/комментарии,
+    которые дублируют policy-gарантии вместо использования результата
+    canonicalization.
+[x] Проверить, что `decodeScene(...)` и `decodeSceneFromJson(...)` остаются
+    в текущем scope (без внедрения шага `6`), но продолжают давать контракт,
+    согласованный с `5.3`, для дефектов, уже покрытых `ScenePolicy`.
+[x] Удалить мёртвые/private helper-ветки codec, ставшие неиспользуемыми после
+    схлопывания encode-path (например, локальные encoder-ветки, не являющиеся
+    общим контуром).
+[x] Обновить этот step-файл: отметить выполненные пункты и не переоткрывать
+    зафиксированные решения.
 
-Рекомендуемый вариант: использовать в encode/runtime boundary тот же
-`ScenePolicy`, который уже принят как owner scene-level orchestration, и убрать
-остаточные policy assumptions из `scene_codec.dart`, где они больше не нужны.
+## Критерии приёмки
 
-Что это означает на практике:
+[x] `encodeScene(...)` и `encodeSceneDocument(...)` используют один и тот же
+    policy-aligned encode-контур и не расходятся по canonical JSON форме.
+[x] В codec нет `backgroundLayer!` и других ad hoc policy-допущений о
+    каноничности сцены вне `ScenePolicy`-пути.
+[x] `decode -> encode -> decode` сохраняет canonical background semantics и
+    не даёт drift по duplicate/range диагностике, уже закреплённой в `5.3`.
+[x] `Scene(with backgroundLayer == null) -> encodeSceneDocument(...)`
+    детерминированно сериализуется с dedicated `backgroundLayer.nodes`.
+[x] Подшаг не добавляет scope шага `6` (payload-size guards, unified boundary
+    factory, `details`-model, новые error-codes).
 
-1. `encodeSceneDocument(...)` использует тот же encode-oriented policy entrypoint,
-   а не полагается на ad hoc предположения о каноничности.
-2. `encodeScene(...)`, `decodeScene(...)` и builder/import semantics
-   интерпретируют одну и ту же модель `backgroundLayer`, duplicate-id и range
-   policy.
-3. Любые неподтверждённые error/code branches, пережившие `5.1-5.3`,
-   удаляются, а не остаются "на всякий случай".
-4. Подшаг не принимает новое policy-решение по `backgroundLayer`, а только
-   переводит serialization boundary на уже принятые правила и entrypoints.
+## Тестовый контур шага
 
-## Что именно менять
-
-### `lib/src/serialization/scene_codec.dart`
-
-[ ] Подтвердить, что encode-path использует тот же owner policy, что и import и
-    runtime validation.
-[ ] Перевести `scene_codec.dart` на encode-oriented entrypoint `ScenePolicy`,
-    принятый в `5.2`, вместо локальных ad hoc допущений.
-[ ] Убрать обходные предположения о каноничности сцены вне `ScenePolicy`, если
-    после `5.2-5.3` они становятся лишними.
-[ ] Зафиксировать одну boundary-семантику для `backgroundLayer`:
-    - runtime может оставаться nullable;
-    - наружу сериализуется canonical dedicated background layer.
-
-### `lib/src/model/scene_builder.dart`
-
-[ ] Убедиться, что import/runtime validation и serialization preflight опираются
-    на один и тот же policy owner, а не на исторически разные ветки.
-
-### Cleanup dead branches
-
-[ ] Удалить неподтверждённые policy/error ветки, оставшиеся после решений
-    `5.1-5.3`.
-[ ] Не переносить в этот подшаг payload-size limits и общие codec guards:
-    это остаётся в шаге `6`.
-
-## Критерии приемки
-
-[ ] `encodeScene(...)`, `encodeSceneToJson(...)`, `encodeSceneDocument(...)`,
-    `decodeScene(...)` и `decodeSceneFromJson(...)` описывают одну и ту же
-    scene policy модель.
-[ ] `decode -> encode -> decode` сохраняет canonical background semantics без
-    drift между runtime и serialization boundary.
-[ ] `Scene -> encodeSceneDocument(...)` не зависит от скрытых ad hoc
-    предположений вне `ScenePolicy`.
-[ ] Подшаг не переоткрывает policy по `backgroundLayer`, а использует решение
-    из `5.1` и encode-oriented entrypoint из `5.2`.
-[ ] Все найденные dead policy branches либо удалены, либо явно подтверждены
-    как достижимые и нужные.
-[ ] Подшаг не разрастается до общей external data/error boundary нормализации
-    шага `6`.
-
-## Тестовый контур
-
-[ ] `test/serialization/scene_codec_validation_test.dart`
-[ ] `test/model/document_model_test.dart`
-[ ] `test/public_api/scene_builder_test.dart`
-[ ] Symmetry-сценарии:
-    - `decode -> encode -> decode`
-    - `Scene -> encodeSceneDocument(...)`
+[x] `test/serialization/scene_codec_validation_test.dart`
+[x] `test/model/document_model_test.dart`
+[x] `test/public_api/scene_builder_test.dart`
+[x] Точечные сценарии:
+    - `encodeSceneDocument canonicalizes null runtime background layer`
+    - `encodeSceneDocument rejects duplicate node ids across background/content`
+    - `encodeScene preserves import-boundary duplicate-id diagnostics`
+    - symmetry: `decode -> encode -> decode`

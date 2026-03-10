@@ -116,13 +116,13 @@ language: russian
 
 ## Чеклист выполнения
 
-[ ] Переформулировать шаг `5` как umbrella-этап и вынести решение по
+[x] Переформулировать шаг `5` как umbrella-этап и вынести решение по
     реализации в `5.1`, `5.2`, `5.3`, `5.4`.
-[ ] В `5.1` явно зафиксировать nullable runtime `backgroundLayer` и canonical
+[x] В `5.1` явно зафиксировать nullable runtime `backgroundLayer` и canonical
     non-null boundary как рекомендуемый дефолт.
-[ ] В `5.2` описать компактный internal API `ScenePolicy` и builder delegation
+[x] В `5.2` описать компактный internal API `ScenePolicy` и builder delegation
     без повторного обсуждения duplicate/range semantics.
-[ ] В `5.3` свести duplicate-id, counts/ranges и scene traversal к одному
+[x] В `5.3` свести duplicate-id, counts/ranges и scene traversal к одному
     owner-у с единым error-contract.
-[ ] В `5.4` закрепить serialization/runtime alignment и cleanup dead policy
+[x] В `5.4` закрепить serialization/runtime alignment и cleanup dead policy
     branches без захвата scope шага `6`.

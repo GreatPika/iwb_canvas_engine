@@ -287,6 +287,32 @@ void main() {
     expect((encoded['layers'] as List<Object?>).length, 1);
   });
 
+  test(
+    'encodeSceneDocument -> decodeScene keeps canonical background layer',
+    () {
+      final encoded = encodeSceneDocument(
+        Scene(
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-auto-encode-0b',
+              nodes: <SceneNode>[
+                RectNode(id: 'n1', size: const Size(1, 1), strokeWidth: 0),
+              ],
+            ),
+          ],
+        ),
+      );
+      final decoded = decodeScene(encoded);
+
+      expect(
+        (encoded['backgroundLayer'] as Map<String, Object?>)['nodes'],
+        <Object?>[],
+      );
+      expect(decoded.backgroundLayer.nodes, isEmpty);
+      expect(decoded.layers.single.nodes.single.id, 'n1');
+    },
+  );
+
   test('decodeScene rejects non-object backgroundLayer', () {
     final json = _minimalSceneJson();
     json['backgroundLayer'] = 'invalid';

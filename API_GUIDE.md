@@ -843,6 +843,35 @@ controller.
 - decode/build paths reuse the exported validated boundary value types for ids,
   image ids, revisions, text/font payloads, SVG path data, opacity, finite
   offsets, and bounded numeric node fields
+- scene-level duplicate/count/range policy has a single owner:
+  `ScenePolicy`
+- for the same scene defect, `SceneBuilder.buildFromSnapshot(...)`,
+  `SceneBuilder.buildFromJson(...)`, `decodeScene(...)`, `decodeSceneFromJson(...)`,
+  and runtime scene canonicalization return the same deterministic
+  `SceneDataException.code`, `path`, and `message`
+- scene-level error contract:
+  - duplicate node id:
+    `code = SceneDataErrorCode.duplicateNodeId`,
+    `message = Must be unique across scene layers.`, and `path` points to the
+    repeated id field (`backgroundLayer.nodes[i].id` or
+    `layers[l].nodes[n].id`)
+  - duplicate content layer id:
+    `code = SceneDataErrorCode.invalidValue`,
+    `message = Field layers[i].id must be unique across content layers.`, and
+    `path = layers[i].id`
+  - scene-level numeric range violations:
+    `code = SceneDataErrorCode.outOfRange`,
+    `message = Field <path> must be within [<min>, <max>].`, and `path`
+    points to the exact offending field
+  - content-layer count overflow:
+    `code = SceneDataErrorCode.invalidValue`,
+    `message = Field layers must contain at most <limit> items.`, and
+    `path = layers`
+  - scene-wide node-count overflow:
+    `code = SceneDataErrorCode.invalidValue`,
+    `message = Scene must contain at most <limit> nodes.`, and `path` is the
+    collection where overflow was observed (`backgroundLayer.nodes` or
+    `layers[i].nodes`)
 - when `SceneDataException.source` would otherwise capture mutable or oversized
   payloads, the boundary stores an immutable snapshot or sanitized preview
   instead of a live raw object

@@ -69,7 +69,7 @@ Map<String, dynamic> encodeScene(SceneSnapshot snapshot) {
   final canonicalSnapshot = model_builder.sceneCanonicalizeAndValidateSnapshot(
     snapshot,
   );
-  return _encodeSnapshot(canonicalSnapshot);
+  return _encodeCanonicalSnapshot(canonicalSnapshot);
 }
 
 /// Decodes a [SceneSnapshot] from a parsed JSON map.
@@ -89,58 +89,8 @@ SceneSnapshot decodeScene(Map<String, dynamic> json) {
 /// Encodes internal mutable [Scene] document into a JSON-serializable map.
 Map<String, dynamic> encodeSceneDocument(Scene scene) {
   final canonicalScene = model_builder.sceneValidateCore(scene);
-  // ignore: avoid-non-null-assertion, validated scene always has backgroundLayer
-  final backgroundLayer = canonicalScene.backgroundLayer!;
-  final backgroundNodes = <Map<String, dynamic>>[];
-  for (
-    var nodeIndex = 0;
-    nodeIndex < backgroundLayer.nodes.length;
-    nodeIndex++
-  ) {
-    backgroundNodes.add(
-      _encodeNode(
-        backgroundLayer.nodes[nodeIndex],
-        nodePath: 'backgroundLayer.nodes[$nodeIndex]',
-      ),
-    );
-  }
-  final layers = <Map<String, dynamic>>[];
-  for (
-    var layerIndex = 0;
-    layerIndex < canonicalScene.layers.length;
-    layerIndex++
-  ) {
-    layers.add(
-      _encodeContentLayer(
-        canonicalScene.layers[layerIndex],
-        layerPath: 'layers[$layerIndex]',
-      ),
-    );
-  }
-  return <String, dynamic>{
-    'schemaVersion': schemaVersionWrite,
-    'camera': {
-      'offsetX': canonicalScene.camera.offset.dx,
-      'offsetY': canonicalScene.camera.offset.dy,
-    },
-    'background': {
-      'color': _colorToHex(canonicalScene.background.color),
-      'grid': {
-        'enabled': canonicalScene.background.grid.isEnabled,
-        'cellSize': canonicalScene.background.grid.cellSize,
-        'color': _colorToHex(canonicalScene.background.grid.color),
-      },
-    },
-    'palette': {
-      'penColors': canonicalScene.palette.penColors.map(_colorToHex).toList(),
-      'backgroundColors': canonicalScene.palette.backgroundColors
-          .map(_colorToHex)
-          .toList(),
-      'gridSizes': canonicalScene.palette.gridSizes,
-    },
-    'backgroundLayer': <String, dynamic>{'nodes': backgroundNodes},
-    'layers': layers,
-  };
+  final canonicalSnapshot = txnSceneToSnapshot(canonicalScene);
+  return _encodeCanonicalSnapshot(canonicalSnapshot);
 }
 
 /// Decodes internal mutable [Scene] document from a JSON map (already parsed).
@@ -152,7 +102,7 @@ Scene decodeSceneDocument(Map<String, Object?> json) {
   return model_builder.sceneBuildFromJsonMap(json);
 }
 
-Map<String, dynamic> _encodeSnapshot(SceneSnapshot snapshot) {
+Map<String, dynamic> _encodeCanonicalSnapshot(SceneSnapshot snapshot) {
   final backgroundLayer = snapshot.backgroundLayer;
   final backgroundNodes = <Map<String, dynamic>>[];
   for (
@@ -205,22 +155,6 @@ Map<String, dynamic> _encodeSnapshot(SceneSnapshot snapshot) {
     'backgroundLayer': <String, dynamic>{'nodes': backgroundNodes},
     'layers': layers,
   };
-}
-
-Map<String, dynamic> _encodeContentLayer(
-  ContentLayer layer, {
-  required String layerPath,
-}) {
-  final nodes = <Map<String, dynamic>>[];
-  for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
-    nodes.add(
-      _encodeNode(
-        layer.nodes[nodeIndex],
-        nodePath: '$layerPath.nodes[$nodeIndex]',
-      ),
-    );
-  }
-  return <String, dynamic>{'id': layer.id, 'nodes': nodes};
 }
 
 Map<String, dynamic> _encodeNode(SceneNode node, {required String nodePath}) {

@@ -22,6 +22,11 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ### Changed
 
+- Unified scene-level validation ownership under `ScenePolicy` so import,
+  decode, and runtime scene canonicalization now report the same deterministic
+  `SceneDataException.code` / `path` / `message` for duplicate node ids,
+  duplicate content-layer ids, scene-wide count limits, and scene-level range
+  violations.
 - Clarified step `5.1` `backgroundLayer` policy: mutable runtime `Scene`
   keeps `backgroundLayer` nullable, while snapshot/JSON boundaries continue to
   canonicalize it to a dedicated single layer.

@@ -168,6 +168,11 @@ most important architectural rules are:
   second canonical runtime model.
 - Decode/import and runtime replacement paths validate structure and numeric
   constraints and throw `SceneDataException` on malformed input.
+- `ScenePolicy` is the single owner for scene-level traversal semantics across
+  import, decode, and runtime scene canonicalization:
+  duplicate node ids, duplicate content-layer ids, scene-wide node/layer
+  limits, and scene-level numeric range enforcement must not be re-owned by
+  parallel validation paths.
 - `imageId` follows the same validated boundary-owner policy on decode/import,
   snapshot/spec/patch validation, and runtime scene validation.
 - Encode/decode/build boundaries sanitize oversized `SceneDataException.source`
