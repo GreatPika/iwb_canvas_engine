@@ -179,7 +179,7 @@ decode-orchestration.
     owner-у с единым error-contract.
 [x] В `5.4` закрепить serialization/runtime alignment и cleanup dead policy
     branches без захвата scope шага `6`.
-[ ] В `5.5` разрезать decode-orchestration так, чтобы decode-path не оставался
+[x] В `5.5` разрезать decode-orchestration так, чтобы decode-path не оставался
     вторым owner-ом scene-level policy.
-[ ] В `5.6` разрезать giant validators и закрыть оставшиеся watchpoints шага 5
+[x] В `5.6` разрезать giant validators и закрыть оставшиеся watchpoints шага 5
     без ввода нового публичного API.

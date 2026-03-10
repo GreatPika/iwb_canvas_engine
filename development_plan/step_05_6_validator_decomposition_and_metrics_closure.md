@@ -48,50 +48,50 @@ validator слое всё ещё остаются giant функции в
 
 ## Последовательность реализации (только действия)
 
-[ ] Разделить `sceneValidateNode(...)` и `sceneValidateNodeSnapshot(...)` на
+[x] Разделить `sceneValidateNode(...)` и `sceneValidateNodeSnapshot(...)` на
     helper-ы по семействам инвариантов или группам полей, чтобы giant-функции
     перестали быть единственной точкой для всех node checks.
-[ ] Проверить, можно ли удалить или дополнительно истончить
+[x] Проверить, можно ли удалить или дополнительно истончить
     `scene_value_validation_top_level.part.dart`, не возвращая ему владение
     scene-level policy.
-[ ] Разделить крупные private helper-ы в
+[x] Разделить крупные private helper-ы в
     [scene_policy.dart](/Users/blackpika/iwb_canvas_engine/lib/src/model/scene_policy.dart)
     по смысловым группам (`structural duplicates`, `scene count limits`,
     `range application`), не вытягивая primitive validation внутрь policy.
-[ ] Явно проверить текущие offending symbols шага 5:
+[x] Явно проверить текущие offending symbols шага 5:
     `sceneValidateNode(...)`,
     `sceneValidateNodeSnapshot(...)`,
     `sceneValidateSceneValues(...)`,
     `sceneValidateSnapshotValues(...)`,
     `_validateStructuralInvariants(...)`,
     `_validateNodeRanges(...)`.
-[ ] Повторно прогнать диагностические метрики шага 5 и зафиксировать остаточные
+[x] Повторно прогнать диагностические метрики шага 5 и зафиксировать остаточные
     watchpoints только там, где соответствующий owner реально исчез или стал
     thin helper без прежней зоны ответственности.
-[ ] Обновить umbrella-файл шага 5 и этот step-файл после реализации.
+[x] Обновить umbrella-файл шага 5 и этот step-файл после реализации.
 
 ## Критерии приёмки
 
-[ ] Giant-функции validator/policy слоя больше не совмещают слишком много
+[x] Giant-функции validator/policy слоя больше не совмещают слишком много
     разных invariant groups в одном теле без необходимости.
-[ ] `scene_value_validation_node.part.dart` улучшается по
+[x] `scene_value_validation_node.part.dart` улучшается по
     `cyclomatic-complexity` и `source-lines-of-code`.
-[ ] `scene_value_validation_top_level.part.dart` не остаётся скрытым вторым
+[x] `scene_value_validation_top_level.part.dart` не остаётся скрытым вторым
     owner-ом scene-level orchestration.
-[ ] `scene_policy.dart` не продолжает разрастаться как central god-object.
-[ ] Для текущих offending symbols шага 5 не остаётся необъяснённых
+[x] `scene_policy.dart` не продолжает разрастаться как central god-object.
+[x] Для текущих offending symbols шага 5 не остаётся необъяснённых
     превышений, которые просто перенесены в новые helper-ы без смены ownership.
-[ ] После шага остаётся понятная карта ownership между
+[x] После шага остаётся понятная карта ownership между
     `scene_policy.dart`, `scene_value_validation_node.part.dart` и возможным
     top-level helper-слоем.
 
 ## Тестовый контур шага
 
-[ ] `test/model/scene_builder_test.dart`
-[ ] `test/public_api/scene_builder_test.dart`
-[ ] `test/serialization/scene_codec_validation_test.dart`
-[ ] `test/model/document_model_test.dart`
-[ ] Точечные сценарии:
+[x] `test/model/scene_builder_test.dart`
+[x] `test/public_api/scene_builder_test.dart`
+[x] `test/serialization/scene_codec_validation_test.dart`
+[x] `test/model/document_model_test.dart`
+[x] Точечные сценарии:
     - node validation parity for runtime and snapshot paths
     - scene-level range/count/duplicate semantics stay unchanged
     - diagnostic metric rerun is attached to the step result

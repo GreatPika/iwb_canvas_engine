@@ -21,44 +21,13 @@ void sceneValidateSnapshotValues(
     field: 'palette',
     onError: onError,
   );
-
-  final backgroundLayer = snapshot.backgroundLayer;
-  for (
-    var nodeIndex = 0;
-    nodeIndex < backgroundLayer.nodes.length;
-    nodeIndex++
-  ) {
-    final field = 'backgroundLayer.nodes[$nodeIndex]';
-    final node = backgroundLayer.nodes[nodeIndex];
-    _sceneValidateArgumentBoundary(
-      field: '$field.id',
-      value: node.id,
-      onError: onError,
-      validate: () => NodeIdValue.of(node.id, name: '$field.id'),
-    );
-    sceneValidateNodeSnapshot(node, field: field, onError: onError);
-  }
-
-  for (var layerIndex = 0; layerIndex < snapshot.layers.length; layerIndex++) {
-    final layer = snapshot.layers[layerIndex];
-    _sceneValidateArgumentBoundary(
-      field: 'layers[$layerIndex].id',
-      value: layer.id,
-      onError: onError,
-      validate: () => LayerIdValue.of(layer.id, name: 'layers[$layerIndex].id'),
-    );
-    for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
-      final field = 'layers[$layerIndex].nodes[$nodeIndex]';
-      final node = layer.nodes[nodeIndex];
-      _sceneValidateArgumentBoundary(
-        field: '$field.id',
-        value: node.id,
-        onError: onError,
-        validate: () => NodeIdValue.of(node.id, name: '$field.id'),
-      );
-      sceneValidateNodeSnapshot(node, field: field, onError: onError);
-    }
-  }
+  _sceneValidateSnapshotLayerNodes(
+    snapshot.backgroundLayer.nodes,
+    field: 'backgroundLayer',
+    onError: onError,
+    validateNode: sceneValidateNodeSnapshot,
+  );
+  _sceneValidateSnapshotContentLayers(snapshot.layers, onError: onError);
 }
 
 void sceneValidateSceneValues(
@@ -81,41 +50,111 @@ void sceneValidateSceneValues(
 
   final backgroundLayer = scene.backgroundLayer;
   if (backgroundLayer != null) {
-    for (
-      var nodeIndex = 0;
-      nodeIndex < backgroundLayer.nodes.length;
-      nodeIndex++
-    ) {
-      final field = 'backgroundLayer.nodes[$nodeIndex]';
-      final node = backgroundLayer.nodes[nodeIndex];
-      _sceneValidateArgumentBoundary(
-        field: '$field.id',
-        value: node.id,
-        onError: onError,
-        validate: () => NodeIdValue.of(node.id, name: '$field.id'),
-      );
-      sceneValidateNode(node, field: field, onError: onError);
-    }
+    _sceneValidateRuntimeLayerNodes(
+      backgroundLayer.nodes,
+      field: 'backgroundLayer',
+      onError: onError,
+      validateNode: sceneValidateNode,
+    );
   }
 
-  for (var layerIndex = 0; layerIndex < scene.layers.length; layerIndex++) {
-    final layer = scene.layers[layerIndex];
-    _sceneValidateArgumentBoundary(
-      field: 'layers[$layerIndex].id',
-      value: layer.id,
+  _sceneValidateRuntimeContentLayers(scene.layers, onError: onError);
+}
+
+void _sceneValidateSnapshotContentLayers(
+  List<ContentLayerSnapshot> layers, {
+  required SceneValidationErrorReporter onError,
+}) {
+  for (var layerIndex = 0; layerIndex < layers.length; layerIndex++) {
+    final layer = layers[layerIndex];
+    final field = 'layers[$layerIndex]';
+    _sceneValidateLayerId(layer.id, field: '$field.id', onError: onError);
+    _sceneValidateSnapshotLayerNodes(
+      layer.nodes,
+      field: field,
       onError: onError,
-      validate: () => LayerIdValue.of(layer.id, name: 'layers[$layerIndex].id'),
+      validateNode: sceneValidateNodeSnapshot,
     );
-    for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
-      final field = 'layers[$layerIndex].nodes[$nodeIndex]';
-      final node = layer.nodes[nodeIndex];
-      _sceneValidateArgumentBoundary(
-        field: '$field.id',
-        value: node.id,
-        onError: onError,
-        validate: () => NodeIdValue.of(node.id, name: '$field.id'),
-      );
-      sceneValidateNode(node, field: field, onError: onError);
-    }
   }
+}
+
+void _sceneValidateRuntimeContentLayers(
+  List<ContentLayer> layers, {
+  required SceneValidationErrorReporter onError,
+}) {
+  for (var layerIndex = 0; layerIndex < layers.length; layerIndex++) {
+    final layer = layers[layerIndex];
+    final field = 'layers[$layerIndex]';
+    _sceneValidateLayerId(layer.id, field: '$field.id', onError: onError);
+    _sceneValidateRuntimeLayerNodes(
+      layer.nodes,
+      field: field,
+      onError: onError,
+      validateNode: sceneValidateNode,
+    );
+  }
+}
+
+void _sceneValidateSnapshotLayerNodes(
+  List<NodeSnapshot> nodes, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+  required void Function(
+    NodeSnapshot node, {
+    required String field,
+    required SceneValidationErrorReporter onError,
+  })
+  validateNode,
+}) {
+  for (var nodeIndex = 0; nodeIndex < nodes.length; nodeIndex++) {
+    final node = nodes[nodeIndex];
+    final nodeField = '$field.nodes[$nodeIndex]';
+    _sceneValidateNodeId(node.id, field: '$nodeField.id', onError: onError);
+    validateNode(node, field: nodeField, onError: onError);
+  }
+}
+
+void _sceneValidateRuntimeLayerNodes(
+  List<SceneNode> nodes, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+  required void Function(
+    SceneNode node, {
+    required String field,
+    required SceneValidationErrorReporter onError,
+  })
+  validateNode,
+}) {
+  for (var nodeIndex = 0; nodeIndex < nodes.length; nodeIndex++) {
+    final node = nodes[nodeIndex];
+    final nodeField = '$field.nodes[$nodeIndex]';
+    _sceneValidateNodeId(node.id, field: '$nodeField.id', onError: onError);
+    validateNode(node, field: nodeField, onError: onError);
+  }
+}
+
+void _sceneValidateLayerId(
+  String value, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+}) {
+  _sceneValidateArgumentBoundary(
+    field: field,
+    value: value,
+    onError: onError,
+    validate: () => LayerIdValue.of(value, name: field),
+  );
+}
+
+void _sceneValidateNodeId(
+  String value, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+}) {
+  _sceneValidateArgumentBoundary(
+    field: field,
+    value: value,
+    onError: onError,
+    validate: () => NodeIdValue.of(value, name: field),
+  );
 }

@@ -68,59 +68,131 @@ void _validateStructuralInvariants(SceneSnapshot snapshot) {
   var totalNodeCount = 0;
 
   sceneRequireContentLayerLimit(snapshot.layers.length);
-
-  final backgroundLayer = snapshot.backgroundLayer;
-  for (
-    var nodeIndex = 0;
-    nodeIndex < backgroundLayer.nodes.length;
-    nodeIndex++
-  ) {
-    totalNodeCount = sceneConsumeNodeBudget(
-      totalNodeCount: totalNodeCount,
-      path: 'backgroundLayer.nodes',
-    );
-    final node = backgroundLayer.nodes[nodeIndex];
-    if (seen.add(node.id)) continue;
-    throw SceneDataException(
-      code: SceneDataErrorCode.duplicateNodeId,
-      path: 'backgroundLayer.nodes[$nodeIndex].id',
-      message: 'Must be unique across scene layers.',
-      source: node.id,
-    );
-  }
-
-  for (var layerIndex = 0; layerIndex < snapshot.layers.length; layerIndex++) {
-    final layer = snapshot.layers[layerIndex];
-    if (!seenLayerIds.add(layer.id)) {
-      throw SceneDataException(
-        code: SceneDataErrorCode.invalidValue,
-        path: 'layers[$layerIndex].id',
-        message:
-            'Field layers[$layerIndex].id must be unique across content layers.',
-        source: layer.id,
-      );
-    }
-    for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
-      totalNodeCount = sceneConsumeNodeBudget(
-        totalNodeCount: totalNodeCount,
-        path: 'layers[$layerIndex].nodes',
-      );
-      final node = layer.nodes[nodeIndex];
-      if (seen.add(node.id)) continue;
-      throw SceneDataException(
-        code: SceneDataErrorCode.duplicateNodeId,
-        path: 'layers[$layerIndex].nodes[$nodeIndex].id',
-        message: 'Must be unique across scene layers.',
-        source: node.id,
-      );
-    }
-  }
+  totalNodeCount = _validateBackgroundLayerStructure(
+    snapshot.backgroundLayer,
+    seenNodeIds: seen,
+    totalNodeCount: totalNodeCount,
+  );
+  _validateContentLayerStructure(
+    snapshot.layers,
+    seenNodeIds: seen,
+    seenLayerIds: seenLayerIds,
+    totalNodeCount: totalNodeCount,
+  );
 }
 
 void _validateSnapshotRanges(SceneSnapshot snapshot) {
+  _validateSceneRanges(snapshot);
+  _validateBackgroundLayerRanges(snapshot.backgroundLayer);
+  _validateContentLayerRanges(snapshot.layers);
+}
+
+void _validateNodeRanges(NodeSnapshot node, String field) {
+  _validateCommonNodeRanges(node, field);
+
+  switch (node) {
+    case ImageNodeSnapshot image:
+      _validateImageNodeRanges(image, field);
+    case TextNodeSnapshot text:
+      _validateTextNodeRanges(text, field);
+    case StrokeNodeSnapshot stroke:
+      _validateStrokeNodeRanges(stroke, field);
+    case LineNodeSnapshot line:
+      _validateLineNodeRanges(line, field);
+    case RectNodeSnapshot rect:
+      _validateRectNodeRanges(rect, field);
+    case PathNodeSnapshot path:
+      _validatePathNodeRanges(path, field);
+  }
+}
+
+int _validateBackgroundLayerStructure(
+  BackgroundLayerSnapshot backgroundLayer, {
+  required Set<String> seenNodeIds,
+  required int totalNodeCount,
+}) {
+  return _validateLayerNodeUniqueness(
+    backgroundLayer.nodes,
+    nodesPath: 'backgroundLayer.nodes',
+    seenNodeIds: seenNodeIds,
+    totalNodeCount: totalNodeCount,
+  );
+}
+
+void _validateContentLayerStructure(
+  List<ContentLayerSnapshot> layers, {
+  required Set<String> seenNodeIds,
+  required Set<LayerId> seenLayerIds,
+  required int totalNodeCount,
+}) {
+  for (var layerIndex = 0; layerIndex < layers.length; layerIndex++) {
+    final layer = layers[layerIndex];
+    _validateContentLayerId(
+      layer.id,
+      layerIndex: layerIndex,
+      seenLayerIds: seenLayerIds,
+    );
+    totalNodeCount = _validateLayerNodeUniqueness(
+      layer.nodes,
+      nodesPath: 'layers[$layerIndex].nodes',
+      seenNodeIds: seenNodeIds,
+      totalNodeCount: totalNodeCount,
+    );
+  }
+}
+
+int _validateLayerNodeUniqueness(
+  List<NodeSnapshot> nodes, {
+  required String nodesPath,
+  required Set<String> seenNodeIds,
+  required int totalNodeCount,
+}) {
+  for (var nodeIndex = 0; nodeIndex < nodes.length; nodeIndex++) {
+    totalNodeCount = sceneConsumeNodeBudget(
+      totalNodeCount: totalNodeCount,
+      path: nodesPath,
+    );
+    _validateNodeIdUniqueness(
+      nodes[nodeIndex].id,
+      path: '$nodesPath[$nodeIndex].id',
+      seenNodeIds: seenNodeIds,
+    );
+  }
+  return totalNodeCount;
+}
+
+void _validateContentLayerId(
+  LayerId layerId, {
+  required int layerIndex,
+  required Set<LayerId> seenLayerIds,
+}) {
+  if (seenLayerIds.add(layerId)) return;
+  throw SceneDataException(
+    code: SceneDataErrorCode.invalidValue,
+    path: 'layers[$layerIndex].id',
+    message:
+        'Field layers[$layerIndex].id must be unique across content layers.',
+    source: layerId,
+  );
+}
+
+void _validateNodeIdUniqueness(
+  String nodeId, {
+  required String path,
+  required Set<String> seenNodeIds,
+}) {
+  if (seenNodeIds.add(nodeId)) return;
+  throw SceneDataException(
+    code: SceneDataErrorCode.duplicateNodeId,
+    path: path,
+    message: 'Must be unique across scene layers.',
+    source: nodeId,
+  );
+}
+
+void _validateSceneRanges(SceneSnapshot snapshot) {
   _validateCoordinate(snapshot.camera.offset.dx, 'camera.offset.dx');
   _validateCoordinate(snapshot.camera.offset.dy, 'camera.offset.dy');
-
   _validateSizeUpper(
     snapshot.background.grid.cellSize,
     'background.grid.cellSize',
@@ -128,27 +200,34 @@ void _validateSnapshotRanges(SceneSnapshot snapshot) {
   for (var i = 0; i < snapshot.palette.gridSizes.length; i++) {
     _validateSizeUpper(snapshot.palette.gridSizes[i], 'palette.gridSizes[$i]');
   }
+}
 
-  final backgroundLayer = snapshot.backgroundLayer;
-  for (
-    var nodeIndex = 0;
-    nodeIndex < backgroundLayer.nodes.length;
-    nodeIndex++
-  ) {
-    final field = 'backgroundLayer.nodes[$nodeIndex]';
-    _validateNodeRanges(backgroundLayer.nodes[nodeIndex], field);
-  }
+void _validateBackgroundLayerRanges(BackgroundLayerSnapshot backgroundLayer) {
+  _validateLayerNodeRanges(
+    backgroundLayer.nodes,
+    layerField: 'backgroundLayer',
+  );
+}
 
-  for (var layerIndex = 0; layerIndex < snapshot.layers.length; layerIndex++) {
-    final layer = snapshot.layers[layerIndex];
-    for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
-      final field = 'layers[$layerIndex].nodes[$nodeIndex]';
-      _validateNodeRanges(layer.nodes[nodeIndex], field);
-    }
+void _validateContentLayerRanges(List<ContentLayerSnapshot> layers) {
+  for (var layerIndex = 0; layerIndex < layers.length; layerIndex++) {
+    _validateLayerNodeRanges(
+      layers[layerIndex].nodes,
+      layerField: 'layers[$layerIndex]',
+    );
   }
 }
 
-void _validateNodeRanges(NodeSnapshot node, String field) {
+void _validateLayerNodeRanges(
+  List<NodeSnapshot> nodes, {
+  required String layerField,
+}) {
+  for (var nodeIndex = 0; nodeIndex < nodes.length; nodeIndex++) {
+    _validateNodeRanges(nodes[nodeIndex], '$layerField.nodes[$nodeIndex]');
+  }
+}
+
+void _validateCommonNodeRanges(NodeSnapshot node, String field) {
   _validateTransformRanges(node.transform, '$field.transform');
   _validateInRange(
     node.hitPadding,
@@ -156,82 +235,79 @@ void _validateNodeRanges(NodeSnapshot node, String field) {
     max: sceneHitPaddingMax,
     path: '$field.hitPadding',
   );
+}
 
-  switch (node) {
-    case ImageNodeSnapshot image:
-      _validateSize(image.size.width, '$field.size.w');
-      _validateSize(image.size.height, '$field.size.h');
-      final naturalSize = image.naturalSize;
-      if (naturalSize != null) {
-        _validateSize(naturalSize.width, '$field.naturalSize.w');
-        _validateSize(naturalSize.height, '$field.naturalSize.h');
-      }
-    case TextNodeSnapshot text:
-      _validateSize(text.size.width, '$field.size.w');
-      _validateSize(text.size.height, '$field.size.h');
-      _validateInRange(
-        text.fontSize,
-        min: 0,
-        max: sceneSizeMax,
-        path: '$field.fontSize',
-      );
-      final maxWidth = text.maxWidth;
-      if (maxWidth != null) {
-        _validateInRange(
-          maxWidth,
-          min: 0,
-          max: sceneSizeMax,
-          path: '$field.maxWidth',
-        );
-      }
-      final lineHeight = text.lineHeight;
-      if (lineHeight != null) {
-        _validateInRange(
-          lineHeight,
-          min: 0,
-          max: sceneSizeMax,
-          path: '$field.lineHeight',
-        );
-      }
-    case StrokeNodeSnapshot stroke:
-      _validateInRange(
-        stroke.thickness,
-        min: 0,
-        max: sceneThicknessMax,
-        path: '$field.thickness',
-      );
-      for (var i = 0; i < stroke.points.length; i++) {
-        _validateCoordinate(stroke.points[i].dx, '$field.points[$i].x');
-        _validateCoordinate(stroke.points[i].dy, '$field.points[$i].y');
-      }
-    case LineNodeSnapshot line:
-      _validateInRange(
-        line.thickness,
-        min: 0,
-        max: sceneThicknessMax,
-        path: '$field.thickness',
-      );
-      _validateCoordinate(line.start.dx, '$field.start.x');
-      _validateCoordinate(line.start.dy, '$field.start.y');
-      _validateCoordinate(line.end.dx, '$field.end.x');
-      _validateCoordinate(line.end.dy, '$field.end.y');
-    case RectNodeSnapshot rect:
-      _validateSize(rect.size.width, '$field.size.w');
-      _validateSize(rect.size.height, '$field.size.h');
-      _validateInRange(
-        rect.strokeWidth,
-        min: 0,
-        max: sceneThicknessMax,
-        path: '$field.strokeWidth',
-      );
-    case PathNodeSnapshot path:
-      _validateInRange(
-        path.strokeWidth,
-        min: 0,
-        max: sceneThicknessMax,
-        path: '$field.strokeWidth',
-      );
+void _validateImageNodeRanges(ImageNodeSnapshot image, String field) {
+  _validateSize(image.size.width, '$field.size.w');
+  _validateSize(image.size.height, '$field.size.h');
+  final naturalSize = image.naturalSize;
+  if (naturalSize == null) return;
+  _validateSize(naturalSize.width, '$field.naturalSize.w');
+  _validateSize(naturalSize.height, '$field.naturalSize.h');
+}
+
+void _validateTextNodeRanges(TextNodeSnapshot text, String field) {
+  _validateSize(text.size.width, '$field.size.w');
+  _validateSize(text.size.height, '$field.size.h');
+  _validateInRange(
+    text.fontSize,
+    min: 0,
+    max: sceneSizeMax,
+    path: '$field.fontSize',
+  );
+  _validateOptionalNodeSize(text.maxWidth, '$field.maxWidth');
+  _validateOptionalNodeSize(text.lineHeight, '$field.lineHeight');
+}
+
+void _validateStrokeNodeRanges(StrokeNodeSnapshot stroke, String field) {
+  _validateInRange(
+    stroke.thickness,
+    min: 0,
+    max: sceneThicknessMax,
+    path: '$field.thickness',
+  );
+  for (var i = 0; i < stroke.points.length; i++) {
+    _validateCoordinate(stroke.points[i].dx, '$field.points[$i].x');
+    _validateCoordinate(stroke.points[i].dy, '$field.points[$i].y');
   }
+}
+
+void _validateLineNodeRanges(LineNodeSnapshot line, String field) {
+  _validateInRange(
+    line.thickness,
+    min: 0,
+    max: sceneThicknessMax,
+    path: '$field.thickness',
+  );
+  _validateCoordinate(line.start.dx, '$field.start.x');
+  _validateCoordinate(line.start.dy, '$field.start.y');
+  _validateCoordinate(line.end.dx, '$field.end.x');
+  _validateCoordinate(line.end.dy, '$field.end.y');
+}
+
+void _validateRectNodeRanges(RectNodeSnapshot rect, String field) {
+  _validateSize(rect.size.width, '$field.size.w');
+  _validateSize(rect.size.height, '$field.size.h');
+  _validateInRange(
+    rect.strokeWidth,
+    min: 0,
+    max: sceneThicknessMax,
+    path: '$field.strokeWidth',
+  );
+}
+
+void _validatePathNodeRanges(PathNodeSnapshot path, String field) {
+  _validateInRange(
+    path.strokeWidth,
+    min: 0,
+    max: sceneThicknessMax,
+    path: '$field.strokeWidth',
+  );
+}
+
+void _validateOptionalNodeSize(double? value, String path) {
+  if (value == null) return;
+  _validateInRange(value, min: 0, max: sceneSizeMax, path: path);
 }
 
 void _validateTransformRanges(Transform2D transform, String path) {

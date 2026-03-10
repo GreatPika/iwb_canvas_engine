@@ -41,6 +41,9 @@ app UI, product workflows, or backend logic.
   apply formatting locally. Keep the required check below as the non-mutating
   verification step.
 - Run package and example tests via the MCP test runner.
+- MCP test runs do not generate `coverage/lcov.info`; use
+  `flutter test --coverage --no-pub --exclude-tags=tool` before
+  `dart run tool/check_coverage.dart`.
 - Run example-package tests from the `example/` project root so
   `package:iwb_canvas_engine_example/...` imports resolve correctly.
 - Keep test runs sharded.
@@ -72,12 +75,13 @@ app UI, product workflows, or backend logic.
    - `test/render test/view`
    - `test/interactive`
    - `example/test` with MCP root `example/`
-5. `dart run tool/check_coverage.dart`
-6. `dart run tool/check_invariant_coverage.dart`
-7. `dart run tool/check_guardrails.dart`
-8. `dart run tool/check_import_boundaries.dart`
-9. `dart run tool/check_public_api_surface.dart`
-10. Run `test/tool` file-by-file when the tool-test trigger list above matches
+5. `flutter test --coverage --no-pub --exclude-tags=tool`
+6. `dart run tool/check_coverage.dart`
+7. `dart run tool/check_invariant_coverage.dart`
+8. `dart run tool/check_guardrails.dart`
+9. `dart run tool/check_import_boundaries.dart`
+10. `dart run tool/check_public_api_surface.dart`
+11. Run `test/tool` file-by-file when the tool-test trigger list above matches
     the change.
 
 ## Release hygiene
