@@ -6,8 +6,10 @@ import 'cache/scene_text_layout_cache.dart';
 
 /// Unified render-cache ownership for scene view variants.
 ///
-/// Views own cache lifecycle (clear on epoch/document boundary, dispose when
-/// owned), while `ScenePainter` only consumes provided cache instances.
+/// Views own cache lifecycle and must clear all caches on controller epoch or
+/// controller-instance boundary changes. Individual caches therefore keep
+/// document lifecycle out of their keys and only track local geometry/layout
+/// validity.
 class SceneRenderCaches {
   SceneRenderCaches({
     SceneStaticLayerCache? staticLayerCache,
@@ -38,6 +40,7 @@ class SceneRenderCaches {
   final bool _ownsPathMetricsCache;
   final bool _ownsGeometryCache;
 
+  /// Clears all render caches for an epoch/document boundary transition.
   void clearAll() {
     staticLayerCache.clear();
     textLayoutCache.clear();

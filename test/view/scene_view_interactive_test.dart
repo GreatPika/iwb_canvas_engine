@@ -61,6 +61,45 @@ Widget _host(
   );
 }
 
+SceneSnapshot _cacheSnapshot({
+  required String text,
+  required String pathSvg,
+  required double strokeY,
+}) {
+  return SceneSnapshot(
+    layers: <ContentLayerSnapshot>[
+      ContentLayerSnapshot(
+        id: 'layer-auto-0',
+        nodes: <NodeSnapshot>[
+          TextNodeSnapshot(
+            id: 'txt',
+            text: text,
+            size: const Size(60, 20),
+            color: const Color(0xFF000000),
+          ),
+          StrokeNodeSnapshot(
+            id: 'stroke',
+            points: <Offset>[Offset(8, strokeY), Offset(72, strokeY)],
+            pointsRevision: strokeY.abs().round(),
+            thickness: 3,
+            color: const Color(0xFF000000),
+          ),
+          PathNodeSnapshot(
+            id: 'path',
+            svgPathData: pathSvg,
+            fillColor: const Color(0x22000000),
+            strokeColor: const Color(0xFF000000),
+            strokeWidth: 1,
+          ),
+        ],
+      ),
+    ],
+    background: const BackgroundSnapshot(
+      grid: GridSnapshot(isEnabled: true, cellSize: 12),
+    ),
+  );
+}
+
 void main() {
   testWidgets('SceneViewInteractive handles controller swap', (tester) async {
     final controllerA = SceneControllerInteractive(
@@ -106,6 +145,104 @@ void main() {
 
     expect(find.byType(SceneViewInteractive), findsOneWidget);
   });
+
+  testWidgets('SceneViewInteractive clears render caches on epoch change', (
+    tester,
+  ) async {
+    // INV:INV-ENG-EPOCH-INVALIDATION
+    final controller = SceneControllerInteractive(
+      initialSnapshot: _cacheSnapshot(
+        text: 'epoch-a',
+        pathSvg: 'M0 0 H10 V10 H0 Z',
+        strokeY: 20,
+      ),
+    );
+    addTearDown(controller.dispose);
+    controller.setSelection(const <String>{'path'});
+
+    await tester.pumpWidget(_host(controller));
+    await tester.pump();
+
+    final caches = debugSceneViewInteractiveRenderCachesOf(
+      tester.element(find.byType(SceneViewInteractive)),
+    );
+    expect(caches.staticLayerCache.debugBuildCount, 1);
+    expect(caches.textLayoutCache.debugBuildCount, 1);
+    expect(caches.strokePathCache.debugBuildCount, 1);
+    expect(caches.pathMetricsCache.debugBuildCount, 1);
+    expect(caches.geometryCache.debugBuildCount, 3);
+
+    controller.replaceScene(
+      _cacheSnapshot(
+        text: 'epoch-a',
+        pathSvg: 'M0 0 H10 V10 H0 Z',
+        strokeY: 20,
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(caches.staticLayerCache.debugBuildCount, 2);
+    expect(caches.textLayoutCache.debugBuildCount, 2);
+    expect(caches.strokePathCache.debugBuildCount, 2);
+    expect(caches.pathMetricsCache.debugBuildCount, 1);
+    expect(caches.pathMetricsCache.debugSize, 0);
+    expect(caches.geometryCache.debugBuildCount, 6);
+    expect(caches.textLayoutCache.debugHitCount, 0);
+    expect(caches.strokePathCache.debugHitCount, 0);
+    expect(caches.pathMetricsCache.debugHitCount, 0);
+  });
+
+  testWidgets(
+    'debugSceneViewInteractiveRenderCachesOf supports descendant contexts',
+    (tester) async {
+      final controller = SceneControllerInteractive(
+        initialSnapshot: _cacheSnapshot(
+          text: 'ctx',
+          pathSvg: 'M0 0 H10',
+          strokeY: 12,
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+
+      final descendantContext = tester.element(find.byType(CustomPaint));
+      final caches = debugSceneViewInteractiveRenderCachesOf(descendantContext);
+
+      expect(caches.staticLayerCache, isNotNull);
+      expect(caches.textLayoutCache, isNotNull);
+      expect(caches.strokePathCache, isNotNull);
+      expect(caches.pathMetricsCache, isNotNull);
+      expect(caches.geometryCache, isNotNull);
+    },
+  );
+
+  testWidgets(
+    'debugSceneViewInteractiveRenderCachesOf throws without SceneViewInteractive',
+    (tester) async {
+      await tester.pumpWidget(
+        const Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox(width: 40, height: 40),
+        ),
+      );
+
+      expect(
+        () => debugSceneViewInteractiveRenderCachesOf(
+          tester.element(find.byType(SizedBox)),
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            'No SceneViewInteractive state found for the provided BuildContext.',
+          ),
+        ),
+      );
+    },
+  );
 
   testWidgets('SceneViewInteractive flushes pending tap timer callback', (
     tester,

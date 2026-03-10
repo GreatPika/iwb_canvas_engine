@@ -9,9 +9,33 @@ import '../core/pointer_input.dart';
 import '../interactive/scene_controller_interactive.dart';
 import '../contract/canvas_pointer_input.dart';
 import '../render/scene_painter.dart';
+import '../render/render_geometry_cache.dart';
 import '../render/scene_render_caches.dart';
 
 ui.Image? _defaultImageResolver(String _) => null;
+
+@visibleForTesting
+SceneRenderCaches debugSceneViewInteractiveRenderCachesOf(
+  BuildContext context,
+) {
+  final state = switch (context) {
+    StatefulElement(:final state) when state is _SceneViewInteractiveState =>
+      state,
+    _ => context.findAncestorStateOfType<_SceneViewInteractiveState>(),
+  };
+  if (state == null) {
+    throw StateError(
+      'No SceneViewInteractive state found for the provided BuildContext.',
+    );
+  }
+  return SceneRenderCaches(
+    staticLayerCache: state.debugStaticLayerCache,
+    textLayoutCache: state.debugTextLayoutCache,
+    strokePathCache: state.debugStrokePathCache,
+    pathMetricsCache: state.debugPathMetricsCache,
+    geometryCache: state.debugGeometryCache,
+  );
+}
 
 class SceneViewInteractive extends StatefulWidget {
   const SceneViewInteractive({
@@ -47,6 +71,21 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
   int _lastEpoch = 0;
 
   late SceneRenderCaches _renderCaches;
+
+  @visibleForTesting
+  SceneStaticLayerCache get debugStaticLayerCache =>
+      _renderCaches.staticLayerCache;
+  @visibleForTesting
+  SceneTextLayoutCache get debugTextLayoutCache =>
+      _renderCaches.textLayoutCache;
+  @visibleForTesting
+  SceneStrokePathCache get debugStrokePathCache =>
+      _renderCaches.strokePathCache;
+  @visibleForTesting
+  ScenePathMetricsCache get debugPathMetricsCache =>
+      _renderCaches.pathMetricsCache;
+  @visibleForTesting
+  RenderGeometryCache get debugGeometryCache => _renderCaches.geometryCache;
 
   @override
   void initState() {

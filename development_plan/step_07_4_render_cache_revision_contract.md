@@ -107,32 +107,32 @@ invalidation contract и зафиксировать, где достаточно
 
 ## Последовательность реализации (только действия)
 
-[ ] Зафиксировать для каждого render/cache owner-а его invalidation contract.
-[ ] Перепроверить `RenderGeometryCache`, `SceneStrokePathCache` и
+[x] Зафиксировать для каждого render/cache owner-а его invalidation contract.
+[x] Перепроверить `RenderGeometryCache`, `SceneStrokePathCache` и
     `ScenePathMetricsCache` на stale-hit сценарии после adopt/replaceScene и
     revision overflow semantics.
-[ ] Оставить owner-side `clearAll()` единственным epoch invalidation
+[x] Оставить owner-side `clearAll()` единственным epoch invalidation
     механизмом там, где это уже достаточно и проверяемо тестами.
-[ ] Не добавлять `epoch` ни в один render cache key; вместо этого закрепить
+[x] Не добавлять `epoch` ни в один render cache key; вместо этого закрепить
     per-cache owner contract и tests на `clearAll()` boundary.
-[ ] Обновить render/view tests так, чтобы они проверяли финальный contract, а
+[x] Обновить render/view tests так, чтобы они проверяли финальный contract, а
     не случайную комбинацию текущих key fields.
 
 ## Критерии приёмки
 
-[ ] Для каждого render cache есть явный и единый invalidation contract.
-[ ] Не остаётся двусмысленного пункта "при необходимости добавить epoch в
+[x] Для каждого render cache есть явный и единый invalidation contract.
+[x] Не остаётся двусмысленного пункта "при необходимости добавить epoch в
     ключи": решение зафиксировано как "не добавлять никуда".
-[ ] Ни один render cache key не содержит `epoch`; epoch используется только
+[x] Ни один render cache key не содержит `epoch`; epoch используется только
     как owner-level `clearAll()` boundary.
-[ ] replaceScene / epoch bump / revision overflow не приводят к stale-hit в
+[x] replaceScene / epoch bump / revision overflow не приводят к stale-hit в
     render caches.
-[ ] Render tests проверяют именно composite revision contract и owner lifecycle.
+[x] Render tests проверяют именно composite revision contract и owner lifecycle.
 
 ## Тестовый контур шага
 
-[ ] `test/view/scene_view_test.dart`
-[ ] `test/view/scene_view_interactive_test.dart`
-[ ] `test/render/render_geometry_cache_test.dart`
-[ ] Новые targeted tests для `scene_stroke_path_cache.dart`
-[ ] Новые targeted tests для `scene_path_metrics_cache.dart`
+[x] `test/view/scene_view_test.dart`
+[x] `test/view/scene_view_interactive_test.dart`
+[x] `test/render/render_geometry_cache_test.dart`
+[x] Новые targeted tests для `scene_stroke_path_cache.dart`
+[x] Новые targeted tests для `scene_path_metrics_cache.dart`

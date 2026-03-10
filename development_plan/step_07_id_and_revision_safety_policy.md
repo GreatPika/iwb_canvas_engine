@@ -149,13 +149,13 @@ contract удаляется и не сохраняется как режим с�
 
 ## Чеклист выполнения
 
-[ ] Переформулировать шаг `7` как umbrella-этап и вынести реализацию в `7.1`,
+[x] Переформулировать шаг `7` как umbrella-этап и вынести реализацию в `7.1`,
     `7.2`, `7.3`, `7.4`.
-[ ] В `7.1` принять финальное решение по public/generated-id contract и owner
+[x] В `7.1` принять финальное решение по public/generated-id contract и owner
     `id_generator.dart` с удалением старого generated-id contract.
-[ ] В `7.2` убрать scene-scan/max-generated-id как runtime owner из store/txn
+[x] В `7.2` убрать scene-scan/max-generated-id как runtime owner из store/txn
     и `document_clone.dart`.
-[ ] В `7.3` формализовать composite revision policy для
+[x] В `7.3` формализовать composite revision policy для
     `instanceRevision + epoch`, включая overflow semantics.
-[ ] В `7.4` зафиксировать render-cache invalidation contract без двойной
+[x] В `7.4` зафиксировать render-cache invalidation contract без двойной
     invalidation-механики.

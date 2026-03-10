@@ -20,6 +20,10 @@ class SceneStaticLayerCache {
   @visibleForTesting
   int? get debugKeyHashCode => _key?.hashCode;
 
+  /// Owner-level invalidation for controller epoch/document boundaries.
+  ///
+  /// The recorded picture key stays local to grid inputs and does not include
+  /// document lifecycle fields such as `epoch`.
   void clear() {
     _disposeGridPictureIfNeeded();
     _key = null;

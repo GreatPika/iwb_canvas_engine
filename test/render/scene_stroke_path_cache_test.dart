@@ -5,6 +5,7 @@ import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 
 void main() {
+  // INV:INV-ENG-EPOCH-INVALIDATION
   test('stroke path cache rejects non-positive maxEntries', () {
     expect(() => SceneStrokePathCache(maxEntries: 0), throwsArgumentError);
     expect(() => SceneStrokePathCache(maxEntries: -1), throwsArgumentError);
@@ -179,4 +180,28 @@ void main() {
     cache.clear();
     expect(cache.debugSize, 0);
   });
+
+  test(
+    'stroke path cache clear forces rebuild after revision reuse across documents',
+    () {
+      final cache = SceneStrokePathCache(maxEntries: 8);
+      final stroke = StrokeNodeSnapshot(
+        id: 'reuse-id',
+        instanceRevision: 1,
+        points: const <Offset>[Offset(0, 0), Offset(10, 10)],
+        pointsRevision: 1,
+        thickness: 2,
+        color: const Color(0xFF000000),
+      );
+
+      final beforeBoundary = cache.getOrBuild(stroke);
+      cache.clear();
+      final afterBoundary = cache.getOrBuild(stroke);
+
+      expect(identical(beforeBoundary, afterBoundary), isFalse);
+      expect(cache.debugBuildCount, 2);
+      expect(cache.debugHitCount, 0);
+      expect(cache.debugSize, 1);
+    },
+  );
 }

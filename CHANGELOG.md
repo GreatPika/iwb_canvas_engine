@@ -29,6 +29,11 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ### Changed
 
+- Render-cache invalidation is now explicitly owned by
+  `SceneRenderCaches.clearAll()` on controller epoch/document boundaries;
+  render cache keys stay scoped to local revision/layout inputs only, while
+  text layout cache keys still include paint color because cached
+  `TextPainter` instances retain render style.
 - Unified scene-level validation ownership under `ScenePolicy` so import,
   decode, and runtime scene canonicalization now report the same deterministic
   `SceneDataException.code` / `path` / `details` contract for duplicate node

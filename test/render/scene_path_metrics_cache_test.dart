@@ -5,6 +5,7 @@ import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 
 void main() {
+  // INV:INV-ENG-EPOCH-INVALIDATION
   test('ScenePathMetricsCache rejects non-positive maxEntries', () {
     expect(() => ScenePathMetricsCache(maxEntries: 0), throwsArgumentError);
     expect(() => ScenePathMetricsCache(maxEntries: -1), throwsArgumentError);
@@ -176,4 +177,26 @@ void main() {
     cache.clear();
     expect(cache.debugSize, 0);
   });
+
+  test(
+    'ScenePathMetricsCache clear forces rebuild after revision reuse across documents',
+    () {
+      final cache = ScenePathMetricsCache(maxEntries: 8);
+      final node = PathNodeSnapshot(
+        id: 'reuse-id',
+        instanceRevision: 1,
+        svgPathData: 'M0 0 H10 V10 H0 Z',
+      );
+      final localPath = Path()..addRect(const Rect.fromLTWH(0, 0, 10, 10));
+
+      final beforeBoundary = cache.getOrBuild(node: node, localPath: localPath);
+      cache.clear();
+      final afterBoundary = cache.getOrBuild(node: node, localPath: localPath);
+
+      expect(identical(beforeBoundary, afterBoundary), isFalse);
+      expect(cache.debugBuildCount, 2);
+      expect(cache.debugHitCount, 0);
+      expect(cache.debugSize, 1);
+    },
+  );
 }

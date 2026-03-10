@@ -32,7 +32,8 @@ int _requirePositiveGeometryCacheEntries(int maxEntries) {
 /// Per-node geometry cache injected into `ScenePainter`.
 ///
 /// Memory is bounded via LRU eviction (`maxEntries`), while `invalidateAll()`
-/// remains available for explicit full cache reset.
+/// remains available for explicit full cache reset on owner epoch/document
+/// boundaries. `epoch` is intentionally not part of per-entry keys.
 class RenderGeometryCache {
   RenderGeometryCache({int maxEntries = 512})
     : maxEntries = _requirePositiveGeometryCacheEntries(maxEntries);

@@ -61,6 +61,27 @@ void main() {
   );
 
   test(
+    'RenderGeometryCache invalidateAll forces rebuild after revision reuse across documents',
+    () {
+      final cache = RenderGeometryCache();
+      final node = RectNodeSnapshot(
+        id: 'reuse-id',
+        instanceRevision: 1,
+        size: const Size(20, 10),
+      );
+
+      final beforeBoundary = cache.get(node);
+      cache.invalidateAll();
+      final afterBoundary = cache.get(node);
+
+      expect(identical(beforeBoundary, afterBoundary), isFalse);
+      expect(cache.debugBuildCount, 2);
+      expect(cache.debugHitCount, 0);
+      expect(cache.debugSize, 1);
+    },
+  );
+
+  test(
     'RenderGeometryCache hits for equivalent stroke snapshots with stable revision/scalars',
     () {
       final cache = RenderGeometryCache();

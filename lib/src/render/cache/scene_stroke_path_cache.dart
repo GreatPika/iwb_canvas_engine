@@ -33,6 +33,10 @@ class SceneStrokePathCache {
   @visibleForTesting
   int get debugSize => _entries.length;
 
+  /// Owner-level invalidation for controller epoch/document boundaries.
+  ///
+  /// Keys stay scoped to `(nodeId, instanceRevision)` and local stroke inputs;
+  /// `epoch` is intentionally not part of this cache key.
   void clear() => _entries.clear();
 
   Path getOrBuild(StrokeNodeSnapshot node) {
