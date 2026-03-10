@@ -65,7 +65,7 @@ language: russian
 1. Подтверждённая тема single-entrypoint и export-surface закрепляется в `4.1`.
 2. Точный `throws`-контракт `SceneBuilder` и codec entrypoints закрепляется в `4.2`.
 3. Дыра с `SceneDataException.path` для unsupported `TextAlign` и общее выравнивание enum semantics закрепляются в `4.3`.
-4. Ослабленные `String` return types и незафиксированный порядок композиции transform закрепляются в `4.4`.
+4. Contract drift around draw return types и порядка композиции transform закрывается в `4.4`.
 5. Решение по `validated.dart` фиксируется в `4.1`: этот экспорт остаётся официальной частью public API, а шаг не откатывает результат шагов `2` и `2.1`.
 
 ## Общие правила для всех подшагов
@@ -92,8 +92,8 @@ language: russian
 
 ## Чеклист выполнения
 
-[ ] Переформулировать шаг `4` как umbrella-этап и вынести решение по реализации в `4.1`, `4.2`, `4.3`, `4.4`.
-[ ] В `4.1` явно зафиксировать, что `validated.dart` остаётся частью поддерживаемого public API.
-[ ] В `4.2` сузить `SceneBuilder` и codec до точного `throws/path`-контракта без расплывчатых формулировок.
-[ ] В `4.3` принять одну финальную политику `TextAlign` для boundary, serialization и builder/import.
-[ ] В `4.4` закрепить `NodeId` return types и transform composition semantics как публичный контракт.
+[x] Переформулировать шаг `4` как umbrella-этап и вынести решение по реализации в `4.1`, `4.2`, `4.3`, `4.4`.
+[x] В `4.1` явно зафиксировать, что `validated.dart` остаётся частью поддерживаемого public API.
+[x] В `4.2` сузить `SceneBuilder` и codec до точного `throws/path`-контракта без расплывчатых формулировок.
+[x] В `4.3` принять одну финальную политику `TextAlign` для boundary, serialization и builder/import.
+[x] В `4.4` закрепить `NodeId` return types и transform composition semantics как публичный контракт.

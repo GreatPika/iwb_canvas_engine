@@ -19,6 +19,10 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ### Changed
 
+- Clarified the writer/controller contract for step `4.4`: draw command
+  entrypoints return committed `NodeId` values, and
+  `writeSelectionTransform(...)` is documented with pre-multiply semantics
+  (`nextTransform = delta.multiply(existingTransform)`).
 - Consolidated `NodeId`/`LayerId` ownership under `src/contract/ids.dart` and
   removed duplicate local `NodeId` declarations from core internals.
 - Tightened public-entrypoint contract enforcement so tool tests derive the

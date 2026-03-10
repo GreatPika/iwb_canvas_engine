@@ -4,7 +4,7 @@ language: russian
 
 ## Цель шага
 
-Этот шаг закрывает controller-facing contract drift там, где поведение уже существует, но выражено неточно. Сейчас draw entrypoints возвращают `String`, хотя публичный writer contract оперирует `NodeId`, а `writeSelectionTransform(...)` уже использует конкретный порядок композиции transform, который пока зафиксирован только кодом. Нужно подтянуть именно эти подтверждённые несоответствия без косметического переписывания всего command layer.
+Этот шаг закрывает controller-facing contract drift там, где поведение уже существовало, но было выражено неточно. Аудит подтвердил, что `DrawCommands.writeDrawStroke(...)` и `DrawCommands.writeDrawLine(...)` уже возвращают `NodeId`, а `writeSelectionTransform(...)` уже использует pre-multiply порядок композиции transform. Для закрытия шага нужно было зафиксировать это как публичный контракт в документации, тестах и plan artifacts без косметического переписывания всего command layer.
 
 ## Что этот шаг считает своим владельцем
 
@@ -18,54 +18,56 @@ language: russian
 
 ## Что уже подтверждено по текущему состоянию
 
-1. Внутренний writer contract уже работает через `NodeId`, а `String` в draw commands только ослабляет выраженность public API.
-2. `writeSelectionTransform(...)` уже использует `delta.multiply(existingTransform)`, но это поведение пока не описано как публичная семантика.
-3. Для остальных command-layer return types подтверждённого public mismatch сейчас нет, поэтому шаг не должен разрастаться до общего cleanup.
+1. `lib/src/controller/commands/draw_commands.dart` уже возвращает `NodeId` из `writeDrawStroke(...)` и `writeDrawLine(...)`.
+2. `lib/src/contract/scene_write_txn.dart` уже фиксирует `writeSelectionTransform(...)` как pre-multiply semantics: `nextTransform = delta.multiply(existingTransform)`.
+3. `lib/src/controller/scene_writer.dart` уже реализует тот же порядок через `delta.multiply(existing.node.transform)`.
+4. `test/controller/internal/scene_writer_test.dart` уже содержит order-sensitive test, который ломается при смене порядка композиции.
+5. Для остальных command-layer return types подтверждённого public mismatch нет, поэтому шаг не должен разрастаться до общего cleanup.
 
 ## Рекомендуемое решение
 
-Рекомендуемый вариант: исправить только подтверждённые public mismatches и зафиксировать их тестами/доками.
+Рекомендуемый вариант: не добавлять новые runtime-изменения там, где контракт уже реализован, а закрыть шаг через audit, release-ready docs и синхронизацию roadmap с фактом реализации.
 
 Что это означает на практике:
 
-1. `writeDrawStroke(...)` и `writeDrawLine(...)` возвращают `NodeId`.
-2. `writeSelectionTransform(...)` документируется как pre-multiply semantics:
+1. `writeDrawStroke(...)` и `writeDrawLine(...)` остаются `NodeId`-returning contract.
+2. `writeSelectionTransform(...)` остаётся задокументированным как pre-multiply semantics:
    - `nextTransform = delta.multiply(existingTransform)`
-3. Остальные command-layer сигнатуры меняются только при подтверждённом contract drift.
+3. Остальные command-layer сигнатуры не меняются без подтверждённого contract drift.
 
 ## Что именно менять
 
 ### `lib/src/controller/commands/draw_commands.dart`
 
-[ ] Заменить `String` на `NodeId` в `writeDrawStroke(...)`.
-[ ] Заменить `String` на `NodeId` в `writeDrawLine(...)`.
+[x] Подтвердить audit-ом, что `writeDrawStroke(...)` уже возвращает `NodeId`.
+[x] Подтвердить audit-ом, что `writeDrawLine(...)` уже возвращает `NodeId`.
 
 ### `lib/src/contract/scene_write_txn.dart`
 
-[ ] Явно зафиксировать порядок композиции для `writeSelectionTransform(...)` в doc comments.
+[x] Подтвердить и сохранить явную фиксацию порядка композиции для `writeSelectionTransform(...)` в doc comments.
 
 ### `lib/src/controller/scene_writer.dart`
 
-[ ] Убедиться, что реализация соответствует публично задокументированному порядку композиции.
-[ ] Не расширять этот шаг до rewrite других write methods без подтверждённого contract drift.
-[ ] Если обнаружатся другие public write methods с уже де-факто закреплённым behavior, сузить изменение до минимально необходимого набора и не превращать подшаг в общий rewrite writer documentation.
+[x] Подтвердить, что реализация соответствует публично задокументированному порядку композиции.
+[x] Не расширять этот шаг до rewrite других write methods без подтверждённого contract drift.
+[x] Зафиксировать шаг как narrow contract-alignment без общего rewrite writer documentation.
 
 ## Конкретизация внедрения по порядку
 
-1. Выравнять return types draw entrypoints до `NodeId`.
-2. Зафиксировать pre-multiply semantics в public doc comment `SceneWriteTxn`.
-3. Добавить отдельный тест на порядок композиции transform.
-4. Проверить, что существующие controller tests по-прежнему проходят без дополнительных сигнатурных обходных слоёв.
+1. Подтвердить аудитом `NodeId` return types draw entrypoints.
+2. Подтвердить и сохранить pre-multiply semantics в public doc comment `SceneWriteTxn`.
+3. Подтвердить существующий отдельный тест на порядок композиции transform.
+4. Обновить release-ready docs и plan artifacts, чтобы шаг не оставался открытым после фактического закрытия контракта.
 
 ## Критерии приемки
 
-[ ] `writeDrawStroke(...)` и `writeDrawLine(...)` возвращают `NodeId`, а не ослабленный `String`.
-[ ] Контракт `writeSelectionTransform(...)` явно описывает pre-multiply semantics.
-[ ] Есть отдельный тест, который ломается при смене порядка композиции transform.
-[ ] Шаг не превращается в cosmetic cleanup всего controller command layer.
+[x] `writeDrawStroke(...)` и `writeDrawLine(...)` возвращают `NodeId`, а не ослабленный `String`.
+[x] Контракт `writeSelectionTransform(...)` явно описывает pre-multiply semantics.
+[x] Есть отдельный тест, который ломается при смене порядка композиции transform.
+[x] Шаг не превращается в cosmetic cleanup всего controller command layer.
 
 ## Тестовый контур
 
-[ ] `test/controller/commands/draw_commands_test.dart`
-[ ] `test/controller/commands/scene_commands_test.dart`
-[ ] `test/controller/internal/scene_writer_test.dart` при необходимости
+[x] `test/controller/commands/draw_commands_test.dart`
+[x] `test/controller/commands/scene_commands_test.dart`
+[x] `test/controller/internal/scene_writer_test.dart`

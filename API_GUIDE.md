@@ -558,7 +558,7 @@ Runtime contract highlights:
   `writeGridCellSize(...)` validate only the runtime numeric arguments required
   by those operations
 - `writeSelectionTransform(...)` composes transforms with pre-multiply
-  semantics: `delta.multiply(existingTransform)`
+  semantics: `nextTransform = delta.multiply(existingTransform)`
 
 Selection writes:
 
