@@ -159,6 +159,10 @@ most important architectural rules are:
 
 - High-level methods such as `addNode`, `patchNode`, `clearScene`, and
   transform commands all route through the same transactional core.
+- Scene-mutating runtime intents are modeled as internal `MutationOp` values
+  and executed by `MutationExecutor`; `SceneWriteTxn` stays the public write
+  seam, while `SceneControllerCore` remains the owner of commit/store/signal
+  lifecycle.
 - Successful commits finalize store state before publishing signals or repaint
   notifications.
 - Committed signals are emitted before repaint listener notification for the

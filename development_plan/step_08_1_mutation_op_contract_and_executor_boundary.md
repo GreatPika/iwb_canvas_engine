@@ -38,8 +38,9 @@ scene-mutating operations и зафиксировать, где заканчив
 
 Рекомендуемый вариант: сделать `mutation_op.dart` sealed internal contract для
 канонических scene-mutating intent-ов, а `mutation_executor.dart` сделать одним
-owner-ом operation pipeline, который возвращает подготовленный commit candidate,
-но не коммитит store сам.
+owner-ом operation pipeline. Executor должен иметь cheap apply path для hot
+write-calls и отдельный rich path, который подготавливает commit candidate, но
+не коммитит store сам.
 
 Почему это лучший вариант:
 
@@ -75,10 +76,10 @@ Selection-only write methods и signal enqueue в этот список не в�
    - `TxnContext`
    - operation instance
    - зависимости runtime-layer, которые реально нужны для pre/post checks
-2. `MutationExecutor` возвращает result, в котором уже зафиксированы:
-   - факт `changed` / no-op;
-   - обновлённый `ChangeSet`;
-   - commit candidate data, необходимая controller commit-phase.
+2. `MutationExecutor` разделяет два результата:
+   - cheap `MutationApplyResult` c `changed` / no-op и operation value;
+   - rich result с `ChangeSet` snapshot и commit candidate data для
+     controller commit-phase.
 3. `MutationExecutor` не:
    - пишет в store;
    - не эмитит committed signals;
@@ -89,9 +90,9 @@ Selection-only write methods и signal enqueue в этот список не в�
 
 1. Если executor сам пишет в store, он начинает дублировать роль
    `SceneControllerCore` и размывает owner-а lifecycle-effects.
-2. Если executor не возвращает commit candidate, controller вынужден повторно
-   читать txn state и заново решать, что именно коммитить. Это снова создаёт
-   двойной orchestration owner.
+2. Если executor не умеет по явному запросу подготовить commit candidate,
+   controller вынужден повторно читать txn state и заново решать, что именно
+   коммитить. Это снова создаёт двойной orchestration owner.
 3. Отдельный operation set полезен только если он выражает устойчивые
    mutation intent-ы, а не каждую мелкую helper-функцию или selection-only
    toggle. Иначе `mutation_op.dart` быстро станет псевдо-командным слоем.
@@ -118,38 +119,38 @@ Selection-only write methods и signal enqueue в этот список не в�
    - `preconditions`
    - `apply`
    - `postcheck`
-   - `changeSet finalization`
-   - `commit preparation`
+   - optional `changeSet finalization`
+   - optional `commit preparation`
 4. `postcheck` выполняется после `apply`, потому что часть runtime invariants
    зависит от уже изменённого txn-state.
-5. Commit preparation формирует candidate поверх текущего `TxnContext`, но не
-   пишет его в store.
+5. Commit preparation формирует candidate поверх текущего `TxnContext` только
+   на rich path, но не пишет его в store.
 6. Selection-only методы `SceneWriter` остаются вне `mutation_op.dart` и не
    требуют adapter-обёрток "ради единообразия".
 
 ## Последовательность реализации (только действия)
 
-[ ] Создать `lib/src/controller/mutation_op.dart` с финальным internal
+[x] Создать `lib/src/controller/mutation_op.dart` с финальным internal
     operation set.
-[ ] Создать `lib/src/controller/mutation_executor.dart` как owner operation
+[x] Создать `lib/src/controller/mutation_executor.dart` как owner operation
     pipeline и commit-candidate preparation.
-[ ] Зафиксировать в шаге и тестах, что selection-only methods и
+[x] Зафиксировать в шаге и тестах, что selection-only methods и
     `writeSignalEnqueue(...)` не входят в `mutation_op.dart`.
-[ ] Зафиксировать в коде boundary: executor готовит commit candidate, а store
+[x] Зафиксировать в коде boundary: executor готовит commit candidate, а store
     apply остаётся в `SceneControllerCore`.
 
 ## Критерии приёмки
 
-[ ] `mutation_op.dart` выражает ровно canonical scene-mutating operations, а не
+[x] `mutation_op.dart` выражает ровно canonical scene-mutating operations, а не
     произвольные helper branches.
-[ ] `mutation_executor.dart` становится одним owner-ом operation lifecycle.
-[ ] Граница между executor и controller commit lifecycle описана явно и не
+[x] `mutation_executor.dart` становится одним owner-ом operation lifecycle.
+[x] Граница между executor и controller commit lifecycle описана явно и не
     требует повторного чтения txn-state "на глаз".
-[ ] Selection-only write methods и signals не размывают operation contract.
+[x] Selection-only write methods и signals не размывают operation contract.
 
 ## Тестовый контур шага
 
-[ ] `test/controller/internal/change_set_txn_context_test.dart`
-[ ] `test/controller/internal/scene_writer_test.dart`
-[ ] `test/controller/core/scene_controller_commit_atomicity_test.dart`
-[ ] Новый targeted test для `lib/src/controller/mutation_executor.dart`
+[x] `test/controller/internal/change_set_txn_context_test.dart`
+[x] `test/controller/internal/scene_writer_test.dart`
+[x] `test/controller/core/scene_controller_commit_atomicity_test.dart`
+[x] Новый targeted test для `lib/src/controller/mutation_executor.dart`

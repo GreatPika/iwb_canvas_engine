@@ -507,6 +507,33 @@ void main() {
     expect(writer.writeNodeErase('free'), isTrue);
   });
 
+  test('SceneWriter mutation hot path avoids commit-state materialization', () {
+    final ctx = TxnContext(
+      baseScene: Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-auto-5b',
+            nodes: <SceneNode>[
+              for (var i = 0; i < 8; i++)
+                RectNode(id: 'n$i', size: const Size(10, 10)),
+            ],
+          ),
+        ],
+      ),
+      workingSelection: <NodeId>{},
+      baseAllNodeIds: <NodeId>{for (var i = 0; i < 8; i++) 'n$i'},
+      nodeIdSeed: 0,
+      nextInstanceRevision: 1,
+    );
+    final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+
+    for (var i = 0; i < 8; i++) {
+      expect(writer.writeNodeErase('n$i'), isTrue);
+    }
+
+    expect(ctx.debugNodeIdSetMaterializations, 0);
+  });
+
   test('SceneWriter rejects non-finite grid/camera values', () {
     // INV:INV-ENG-WRITE-NUMERIC-GUARDS
     final ctx = TxnContext(
