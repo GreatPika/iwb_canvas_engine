@@ -30,6 +30,8 @@ language: russian
 3. Проверять write-only mutation по AST и опасным операциям, а не по имени.
 4. Проверять epoch invalidation по смыслу, а не по наличию слова.
 5. Защитить правило “один публичный вход”.
+6. Запретить прямой `throw SceneDataException` вне централизованного
+   boundary error factory (с явным allow-list для factory/тестов).
 
 ## `tool/check_invariant_coverage.dart`
 
@@ -76,4 +78,3 @@ language: russian
    * fake `controllerEpoch`
    * мутирующий метод с нейтральным именем
    * формальное `INV:` без реальной проверки
-

@@ -53,8 +53,9 @@ language: russian
 - background-related scene traversal;
 - детерминированного `SceneDataException.code` / `path` semantics;
 - схлопывания дублей между
-  `scene_builder_canonicalize_validate.part.dart` и
-  `scene_value_validation_top_level.part.dart`.
+  `scene_policy.dart`,
+  `scene_value_validation_top_level.part.dart` и
+  `scene_builder_decode_json.part.dart`.
 
 ### Шаг 5.4
 
