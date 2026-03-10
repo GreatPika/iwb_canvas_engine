@@ -6,6 +6,9 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ### Breaking
 
+- `SceneDataErrorCode.multipleBackgroundLayers` was removed as an unreachable
+  public contract branch. Integrations must stop matching this enum value and
+  treat background-layer canonicalization as a single-layer boundary rule.
 - `SceneDataException(...)` is no longer `const`. The constructor now
   sanitizes `source` eagerly and may replace structured values with immutable
   snapshots or preview payloads.
@@ -19,6 +22,9 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ### Changed
 
+- Clarified step `5.1` `backgroundLayer` policy: mutable runtime `Scene`
+  keeps `backgroundLayer` nullable, while snapshot/JSON boundaries continue to
+  canonicalize it to a dedicated single layer.
 - Clarified the writer/controller contract for step `4.4`: draw command
   entrypoints return committed `NodeId` values, and
   `writeSelectionTransform(...)` is documented with pre-multiply semantics

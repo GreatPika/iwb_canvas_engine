@@ -78,51 +78,51 @@ snapshot/JSON/encode boundary.
 
 ### `lib/src/core/scene.dart`
 
-[ ] Явно зафиксировать через step/docs/tests, что nullable `backgroundLayer` у
+[x] Явно зафиксировать через step/docs/tests, что nullable `backgroundLayer` у
     runtime `Scene` остаётся допустимой внутренней формой.
-[ ] Не переводить runtime `Scene` в always-present `backgroundLayer` без
+[x] Не переводить runtime `Scene` в always-present `backgroundLayer` без
     отдельного подтверждённого архитектурного основания.
 
 ### `lib/src/core/background_layer_invariants.dart`
 
-[ ] Зафиксировать `ensureBackgroundLayer(...)` как runtime utility, а не как
+[x] Зафиксировать `ensureBackgroundLayer(...)` как runtime utility, а не как
     механизм синхронизации двух разных источников истины.
-[ ] Проверить, что её использование остаётся локальным и осознанным на путях
+[x] Проверить, что её использование остаётся локальным и осознанным на путях
     записи.
 
 ### `lib/src/contract/scene_data_exception.dart`
 
-[ ] Подтвердить достижимость `SceneDataErrorCode.multipleBackgroundLayers`.
-[ ] Если достижимый boundary не найден, удалить этот error code как мёртвую
+[x] Подтвердить достижимость `SceneDataErrorCode.multipleBackgroundLayers`.
+[x] Если достижимый boundary не найден, удалить этот error code как мёртвую
     ветку контракта и отразить это в step/docs/tests.
 [ ] Если достижимый boundary найден, явно закрепить, какой именно вход может
     породить ошибку и почему это не противоречит typed модели.
 
 ### `tool/invariant_registry.dart`
 
-[ ] Менять только если после решения по `backgroundLayer` нужно уточнить уже
+[x] Менять только если после решения по `backgroundLayer` нужно уточнить уже
     существующие invariants или убрать устаревшую формулировку.
-[ ] Не вводить новый invariant "на всякий случай", если существующие уже
+[x] Не вводить новый invariant "на всякий случай", если существующие уже
     покрывают принятую модель.
 
 ## Критерии приемки
 
-[ ] Зафиксирована одна непротиворечивая модель:
+[x] Зафиксирована одна непротиворечивая модель:
     - runtime `Scene.backgroundLayer` остаётся nullable;
     - snapshot/JSON/encode boundary остаётся canonical non-null.
-[ ] `ensureBackgroundLayer(...)` описан как runtime utility, а не скрытый
+[x] `ensureBackgroundLayer(...)` описан как runtime utility, а не скрытый
     compensating sync layer.
-[ ] По `SceneDataErrorCode.multipleBackgroundLayers` принято решение на фактах:
+[x] По `SceneDataErrorCode.multipleBackgroundLayers` принято решение на фактах:
     ветка либо подтверждена и локализована, либо удалена как мёртвая.
-[ ] Подшаг принимает policy-решение по `backgroundLayer`, но не вводит
+[x] Подшаг принимает policy-решение по `backgroundLayer`, но не вводит
     encode-oriented entrypoint `ScenePolicy` и не делает codec wiring.
-[ ] Подшаг не захватывает scope шага `6`: payload-size и codec guards сюда не
+[x] Подшаг не захватывает scope шага `6`: payload-size и codec guards сюда не
     перетаскиваются.
 
 ## Тестовый контур
 
-[ ] `test/core/background_layer_invariants_test.dart`
-[ ] `test/model/document_model_test.dart`
-[ ] `test/serialization/scene_codec_validation_test.dart`
-[ ] `dart run tool/check_invariant_coverage.dart` только если меняется
+[x] `test/core/background_layer_invariants_test.dart`
+[x] `test/model/document_model_test.dart`
+[x] `test/serialization/scene_codec_validation_test.dart`
+[x] `dart run tool/check_invariant_coverage.dart` только если меняется
     `tool/invariant_registry.dart`

@@ -6,6 +6,14 @@ import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 
 void main() {
+  test('Scene runtime may keep background layer absent', () {
+    final scene = Scene(
+      layers: <ContentLayer>[ContentLayer(id: 'layer-auto-1')],
+    );
+
+    expect(scene.backgroundLayer, isNull);
+  });
+
   test('ensureBackgroundLayer creates background layer when missing', () {
     final scene = Scene(
       layers: <ContentLayer>[ContentLayer(id: 'layer-auto-2')],
@@ -31,6 +39,7 @@ void main() {
   });
 
   test('SceneSnapshot provides empty background layer when omitted', () {
+    // INV:INV-SER-CANONICAL-BACKGROUND-LAYER
     final snapshot = SceneSnapshot(
       layers: <ContentLayerSnapshot>[
         ContentLayerSnapshot(

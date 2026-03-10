@@ -68,9 +68,6 @@ enum SceneDataErrorCode {
   /// The payload contains duplicate node ids.
   duplicateNodeId,
 
-  /// The payload encodes more than one background layer.
-  multipleBackgroundLayers,
-
   /// A numeric or indexed value is outside the accepted range.
   outOfRange,
 }

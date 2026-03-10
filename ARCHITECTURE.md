@@ -115,7 +115,9 @@ most important architectural rules are:
 
 - `write(...)` is synchronous-only; returning a `Future` is a contract error.
 - `SceneWriteTxn` is valid only inside the active write callback.
-- `backgroundLayer` is always distinct from ordered content `layers`.
+- Snapshot/JSON boundaries keep `backgroundLayer` distinct from ordered content
+  `layers`; mutable runtime `Scene.backgroundLayer` may remain `null` until a
+  write path materializes it.
 - Content layers are addressed by stable `LayerId`; z-order is defined only by
   list order.
 - `TextNode.size` is derived from text layout inputs and is not a writable
@@ -161,6 +163,9 @@ most important architectural rules are:
 - Public JSON APIs accept `Map<String, dynamic>` or JSON strings.
 - Decode/import canonicalizes missing `backgroundLayer` to an empty dedicated
   layer before returning a `SceneSnapshot`.
+- Mutable runtime `Scene` keeps `backgroundLayer` nullable as an internal
+  shape; local write paths materialize it on demand instead of maintaining a
+  second canonical runtime model.
 - Decode/import and runtime replacement paths validate structure and numeric
   constraints and throw `SceneDataException` on malformed input.
 - `imageId` follows the same validated boundary-owner policy on decode/import,

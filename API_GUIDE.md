@@ -138,7 +138,8 @@ Constructor defaults:
 
 Layer semantics are explicit:
 
-- `backgroundLayer` is always a dedicated layer rendered below content
+- `backgroundLayer` is always a dedicated layer on the snapshot/JSON boundary
+  and is rendered below content
 - `layers` contains content layers only
 - each content layer has a stable `LayerId`
 - z-order is defined only by list order in `layers`
@@ -146,6 +147,14 @@ Layer semantics are explicit:
 
 Write APIs target content layers only. The background layer is never addressed
 through `LayerId`.
+
+Runtime note:
+
+- mutable internal `Scene.backgroundLayer` may stay `null`
+- runtime write paths materialize it only when background-node mutation needs
+  it
+- this runtime-nullable shape is internal and does not change the canonical
+  snapshot/JSON contract
 
 ### 3.3 Node snapshots
 
@@ -824,6 +833,8 @@ controller.
   not yet know a more specific field location
 - decode accepts a missing `backgroundLayer` field and canonicalizes it to an
   empty dedicated layer
+- decode/build boundaries expose a canonical single-background-layer contract;
+  nullable `Scene.backgroundLayer` remains an internal runtime shape
 - text node bounds are canonicalized from layout inputs; incoming serialized
   text `size` is not treated as the source of truth
 - supported text-align values stay aligned across boundary constructors,

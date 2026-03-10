@@ -17,8 +17,8 @@ storage.
 
 ## What it provides
 
-- Deterministic scene rendering with a dedicated `backgroundLayer` plus ordered
-  content `layers`.
+- Deterministic scene rendering with a dedicated boundary `backgroundLayer`
+  plus ordered content `layers`.
 - Public runtime aliases `SceneController` and `SceneView` for move, select,
   draw, and edit flows.
 - Transactional write API via `SceneWriteTxn`.
@@ -115,8 +115,9 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Public snapshot/node/spec/patch constructors validate boundary ids and
   numeric values eagerly and are runtime constructors rather than `const`
   entry points.
-- `backgroundLayer` is always distinct from content `layers`; content writes use
-  `LayerId`.
+- runtime `Scene.backgroundLayer` may be absent internally, while snapshot/JSON
+  boundaries canonicalize it to a dedicated layer distinct from content
+  `layers`; content writes use `LayerId`.
 - Boundary helpers such as `parseNodeId(...)`, `generateLayerId(...)`,
   canonical generated-id parsing, and validated value types including
   `ImageIdValue` keep external payload checks aligned with import/build rules.

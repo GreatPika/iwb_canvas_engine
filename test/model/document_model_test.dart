@@ -211,6 +211,24 @@ void main() {
     expect(backgroundLayer.nodes, isEmpty);
   });
 
+  test('txnSceneToSnapshot canonicalizes null runtime background layer', () {
+    // INV:INV-SER-TYPED-LAYER-SPLIT
+    // INV:INV-SER-CANONICAL-BACKGROUND-LAYER
+    final snapshot = txnSceneToSnapshot(
+      Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-auto-3a',
+            nodes: <SceneNode>[RectNode(id: 'n1', size: const Size(1, 1))],
+          ),
+        ],
+      ),
+    );
+
+    expect(snapshot.backgroundLayer.nodes, isEmpty);
+    expect(snapshot.layers.single.nodes.single.id, 'n1');
+  });
+
   test(
     'snapshot import/export round-trip keeps canonical single background layer',
     () {

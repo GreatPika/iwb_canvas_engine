@@ -245,7 +245,6 @@ void main() {
         });
       final json = _minimalSceneJson();
       json['backgroundLayer'] = <String, Object?>{
-        'id': 'layer-auto-json-0',
         'nodes': <Object?>[bgNode],
       };
       json['layers'] = <Object?>[
@@ -267,6 +266,26 @@ void main() {
       expect(scene.layers[1].nodes.single.id, 'n2');
     },
   );
+
+  test('encodeSceneDocument canonicalizes null runtime background layer', () {
+    // INV:INV-SER-TYPED-LAYER-SPLIT
+    // INV:INV-SER-CANONICAL-BACKGROUND-LAYER
+    final encoded = encodeSceneDocument(
+      Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-auto-encode-0',
+            nodes: <SceneNode>[
+              RectNode(id: 'n1', size: const Size(1, 1), strokeWidth: 0),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    expect(encoded['backgroundLayer'], <String, Object?>{'nodes': <Object?>[]});
+    expect((encoded['layers'] as List<Object?>).length, 1);
+  });
 
   test('decodeScene rejects non-object backgroundLayer', () {
     final json = _minimalSceneJson();

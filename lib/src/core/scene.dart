@@ -6,10 +6,14 @@ import 'nodes.dart';
 
 /// A mutable scene graph used by the canvas engine.
 ///
-/// The scene is organized into optional [backgroundLayer] and ordered content
-/// [layers], with a [camera] offset and background visual settings. Nodes are
-/// stored with local geometry and positioned into scene/world coordinates via
-/// [SceneNode.transform].
+/// Runtime scenes may keep [backgroundLayer] absent as an internal shape until
+/// a write path needs to materialize it. Snapshot/JSON boundaries canonicalize
+/// the same concept into a dedicated always-present background layer, so this
+/// nullable field is a runtime detail rather than a competing source of truth.
+///
+/// Content [layers] stay ordered, with a [camera] offset and background visual
+/// settings. Nodes are stored with local geometry and positioned into
+/// scene/world coordinates via [SceneNode.transform].
 class Scene {
   Scene({
     List<ContentLayer>? layers,
@@ -30,7 +34,11 @@ class Scene {
   /// original list after construction does not affect this scene.
   final List<ContentLayer> layers;
 
-  /// Optional background layer rendered below all content layers.
+  /// Optional runtime background layer rendered below all content layers.
+  ///
+  /// Runtime code may leave this `null` until a mutation path explicitly needs
+  /// background nodes. Snapshot and JSON boundaries canonicalize the same state
+  /// into a dedicated non-null background layer.
   BackgroundLayer? backgroundLayer;
 
   Camera camera;
@@ -39,6 +47,9 @@ class Scene {
 }
 
 /// A dedicated background node layer.
+///
+/// Runtime scenes may materialize this layer lazily; typed and JSON boundaries
+/// always treat it as a dedicated single layer below content layers.
 class BackgroundLayer {
   BackgroundLayer({List<SceneNode>? nodes})
     : nodes = nodes == null ? <SceneNode>[] : List<SceneNode>.from(nodes);

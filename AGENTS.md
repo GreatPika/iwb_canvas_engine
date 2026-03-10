@@ -17,6 +17,9 @@ app UI, product workflows, or backend logic.
 
 - Keep one source of truth for runtime state. Do not add sync glue.
 - Group is ephemeral. Do not introduce a stored Group node.
+- After completing a plan step, update the corresponding checkbox entries in
+  `DEVELOPMENT_PLAN.md` and any linked step document so finished items are
+  marked done in the same change.
 - Public behavior changes must update:
   - `README.md`
   - `API_GUIDE.md`
@@ -38,6 +41,8 @@ app UI, product workflows, or backend logic.
   apply formatting locally. Keep the required check below as the non-mutating
   verification step.
 - Run package and example tests via the MCP test runner.
+- Run example-package tests from the `example/` project root so
+  `package:iwb_canvas_engine_example/...` imports resolve correctly.
 - Keep test runs sharded.
 - Run tool tests only when the change touches tool-test surface. The trigger
   list in this file must stay identical to `.github/workflows/ci.yaml`:
@@ -66,7 +71,7 @@ app UI, product workflows, or backend logic.
    - `test/controller/core test/controller/commands test/controller/*.dart`
    - `test/render test/view`
    - `test/interactive`
-   - `example/test`
+   - `example/test` with MCP root `example/`
 5. `dart run tool/check_coverage.dart`
 6. `dart run tool/check_invariant_coverage.dart`
 7. `dart run tool/check_guardrails.dart`
