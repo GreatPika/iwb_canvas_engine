@@ -24,6 +24,9 @@ storage.
 - Transactional write API via `SceneWriteTxn`.
 - Explicit path fill-rule contract via `PathFillRule`.
 - JSON import/export with strict validation and canonicalization.
+- Parsed-map import via `SceneBuilder.buildFromJson(...)` with the same stable
+  `SceneDataException.code` / `path` / `details` contract used by
+  `decodeScene(...)`.
 - Bounded JSON import guardrails for layers/nodes/points/path data plus string
   and palette payload sizes, including a raw `decodeSceneFromJson(...)` input
   limit of `33554432` characters before parsing.

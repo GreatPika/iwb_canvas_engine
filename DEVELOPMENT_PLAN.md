@@ -35,7 +35,7 @@ language: russian
 - [ ] [Шаг 6. Нормализовать внешнюю границу данных и ошибок через подшаги 6.1-6.4](development_plan/step_06_external_data_and_error_boundary.md)
 - [x] [Шаг 6.1. Зафиксировать контракт `SceneDataException` и taxonomy error-codes](development_plan/step_06_1_scene_data_exception_contract_and_error_codes.md)
 - [x] [Шаг 6.2. Ввести `codec_guards.dart` без нарушения layer DAG](development_plan/step_06_2_codec_guards_and_boundary_factory.md)
-- [ ] [Шаг 6.3. Перевести `SceneBuilder.buildFromJson(...)` на model-local boundary guard](development_plan/step_06_3_scene_builder_json_boundary_guard.md)
+- [x] [Шаг 6.3. Перевести `SceneBuilder.buildFromJson(...)` на model-local boundary guard](development_plan/step_06_3_scene_builder_json_boundary_guard.md)
 - [ ] [Шаг 6.4. Довести `scene_codec.dart` до единого `code/path/details` boundary](development_plan/step_06_4_scene_codec_boundary_adoption_and_contract_matrix.md)
 - [ ] [Шаг 7. Перевести id и ревизии на безопасную политику](development_plan/step_07_id_and_revision_safety_policy.md)
 - [ ] [Шаг 8. Ввести ядро операций записи](development_plan/step_08_write_operations_core.md)

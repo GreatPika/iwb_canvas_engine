@@ -49,6 +49,10 @@ Scene sceneBuildFromJsonMap(Map<String, Object?> rawJson) {
   }
 }
 
+Scene sceneBuildFromDynamicJsonMap(Map<String, dynamic> rawJson) {
+  return _guardBuild(rawJson, sceneBuildFromJsonMap);
+}
+
 SceneSnapshot sceneCanonicalizeAndValidateSnapshot(SceneSnapshot rawSnapshot) {
   return ScenePolicy.validateImportSnapshot(rawSnapshot);
 }
@@ -67,4 +71,19 @@ Scene sceneValidateCore(Scene scene) {
     snapshotFromScene: _snapshotFromScene,
     sceneFromSnapshot: (snapshot) => _sceneFromSnapshot(snapshot),
   );
+}
+
+T _guardBuild<T>(
+  Map<String, dynamic> rawJson,
+  T Function(Map<String, Object?> raw) build,
+) {
+  try {
+    return build(Map<String, Object?>.from(rawJson));
+  } on SceneDataException {
+    rethrow;
+  } on FormatException catch (error) {
+    throw SceneDataException.invalidJsonPayload(source: error);
+  } catch (error) {
+    throw SceneDataException.invalidJsonPayload(source: error);
+  }
 }

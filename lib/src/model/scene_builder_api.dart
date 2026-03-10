@@ -31,12 +31,13 @@ abstract final class SceneBuilder {
   /// step performed by [decodeSceneFromJson].
   ///
   /// Throws [SceneDataException] when [rawJson] violates scene schema or import
-  /// validation requirements. Nested failures include [SceneDataException.path]
-  /// when the import boundary knows the exact field location.
+  /// validation requirements. Compare failures by
+  /// [SceneDataException.code], [SceneDataException.path], and immutable
+  /// [SceneDataException.details]; [SceneDataException.message] is derived
+  /// user-facing text. Nested failures include [SceneDataException.path] when
+  /// the import boundary knows the exact field location.
   static SceneSnapshot buildFromJson(Map<String, dynamic> rawJson) {
-    final scene = model.sceneBuildFromJsonMap(
-      Map<String, Object?>.from(rawJson),
-    );
+    final scene = model.sceneBuildFromDynamicJsonMap(rawJson);
     return txnSceneToSnapshot(scene);
   }
 }

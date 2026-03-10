@@ -85,7 +85,7 @@ Map<String, dynamic> encodeScene(SceneSnapshot snapshot) {
 /// [SceneDataException.path] when the boundary cannot attribute a more
 /// specific field.
 SceneSnapshot decodeScene(Map<String, dynamic> json) {
-  final sceneDoc = decodeSceneDocument(Map<String, Object?>.from(json));
+  final sceneDoc = _guardParsedDecode(json, decodeSceneDocument);
   return txnSceneToSnapshot(sceneDoc);
 }
 
@@ -158,6 +158,21 @@ Map<String, dynamic> _encodeCanonicalSnapshot(SceneSnapshot snapshot) {
     'backgroundLayer': <String, dynamic>{'nodes': backgroundNodes},
     'layers': layers,
   };
+}
+
+T _guardParsedDecode<T>(
+  Map<String, dynamic> rawJson,
+  T Function(Map<String, Object?> raw) decode,
+) {
+  try {
+    return decode(Map<String, Object?>.from(rawJson));
+  } on SceneDataException {
+    rethrow;
+  } on FormatException catch (error) {
+    throw SceneDataException.invalidJsonPayload(source: error);
+  } catch (error) {
+    throw SceneDataException.invalidJsonPayload(source: error);
+  }
 }
 
 Map<String, dynamic> _encodeNode(SceneNode node, {required String nodePath}) {

@@ -117,6 +117,40 @@ void main() {
   });
 
   test(
+    'SceneBuilder.buildFromJson and decodeScene match invalidJsonPayload on malformed parsed maps',
+    () {
+      final malformed = <Object?, Object?>{
+        'schemaVersion': schemaVersionWrite,
+        1: 'non-string-key',
+      };
+
+      SceneDataException capture(void Function() callback) {
+        try {
+          callback();
+          fail('Expected SceneDataException');
+        } on SceneDataException catch (error) {
+          return error;
+        }
+      }
+
+      final fromBuilder = capture(
+        () => SceneBuilder.buildFromJson(malformed.cast<String, dynamic>()),
+      );
+      final fromCodec = capture(
+        () => decodeScene(malformed.cast<String, dynamic>()),
+      );
+
+      expect(fromBuilder.code, fromCodec.code);
+      expect(fromBuilder.details, fromCodec.details);
+      expect(fromBuilder.path, fromCodec.path);
+      expect(fromBuilder.code, SceneDataErrorCode.invalidJson);
+      expect(fromBuilder.details, const <String, Object?>{
+        'template': 'invalidJsonPayload',
+      });
+    },
+  );
+
+  test(
     'SceneBuilder.buildFromJson matches decodeScene for the same payload',
     () {
       final raw = _minimalSceneJson();

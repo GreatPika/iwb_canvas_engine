@@ -44,42 +44,42 @@ normalization и гарантирует parity с `decodeScene(...)` по `code/
 
 ## Последовательность реализации (только действия)
 
-[ ] Обернуть
+[x] Обернуть
     [SceneBuilder.buildFromJson(...)](/Users/blackpika/iwb_canvas_engine/lib/src/model/scene_builder_api.dart)
     в model-local `_guardBuild(...)`, собранный на shared contract primitives
     из `6.1`.
-[ ] Убрать сырой `Map<String, Object?>.from(rawJson)` из открытого пути
+[x] Убрать сырой `Map<String, Object?>.from(rawJson)` из открытого пути
     `scene_builder_api.dart`, чтобы parsed-map normalization происходила только
     внутри builder-local wrapper.
-[ ] Проверить parity `buildFromJson(...)` и `decodeScene(...)` по
+[x] Проверить parity `buildFromJson(...)` и `decodeScene(...)` по
     `code/path/details` на nested decode errors и policy-owned scene-level
     diagnostics.
-[ ] Явно подтвердить, что реализация не вводит import `model -> serialization`
+[x] Явно подтвердить, что реализация не вводит import `model -> serialization`
     и не ломает layer DAG.
-[ ] Обновить публичную документацию builder boundary так, чтобы она ссылалась
+[x] Обновить публичную документацию builder boundary так, чтобы она ссылалась
     на новый contract шага `6.1`, а не на exact `message`.
-[ ] Явно оставить `buildFromSnapshot(...)` вне scope transport guards, кроме
+[x] Явно оставить `buildFromSnapshot(...)` вне scope transport guards, кроме
     минимальных docs/tests правок по новому error-contract.
 
 ## Критерии приёмки
 
-[ ] `SceneBuilder.buildFromJson(...)` использует model-local `_guardBuild(...)`
+[x] `SceneBuilder.buildFromJson(...)` использует model-local `_guardBuild(...)`
     и не содержит открытой transport normalization логики в API entrypoint-е.
-[ ] Для одного и того же parsed payload `buildFromJson(...)` и `decodeScene(...)`
+[x] Для одного и того же parsed payload `buildFromJson(...)` и `decodeScene(...)`
     совпадают по `code/path/details`.
-[ ] `scene_builder_api.dart` остаётся thin public boundary entrypoint, а не
+[x] `scene_builder_api.dart` остаётся thin public boundary entrypoint, а не
     вторым owner-ом guard/factory semantics.
-[ ] Реализация builder guard не нарушает dependency DAG (`model` не зависит от
+[x] Реализация builder guard не нарушает dependency DAG (`model` не зависит от
     `serialization`).
-[ ] Публичные docs/tests для builder boundary не опираются на точный `message`
+[x] Публичные docs/tests для builder boundary не опираются на точный `message`
     как на единственный контракт эквивалентности.
 
 ## Тестовый контур шага
 
-[ ] `test/public_api/scene_builder_test.dart`
-[ ] `test/serialization/scene_codec_validation_test.dart`
-[ ] `test/tool/import_boundaries_layers_tool_test.dart`
-[ ] Точечные сценарии:
+[x] `test/public_api/scene_builder_test.dart`
+[x] `test/serialization/scene_codec_validation_test.dart`
+[x] `test/tool/import_boundaries_layers_tool_test.dart`
+[x] Точечные сценарии:
     - builder/decode parsed-map parity for nested path-aware validation errors
     - builder/decode parity for policy-owned duplicate/range defects
     - builder guard preserves `model -> contract` only dependency shape

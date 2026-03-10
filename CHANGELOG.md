@@ -33,6 +33,10 @@ All notable changes to `iwb_canvas_engine` are documented here.
 - `decodeSceneFromJson(...)` now routes transport-level parse/root/oversize
   failures through serialization-local codec guards and rejects raw JSON
   strings longer than `33554432` characters before `jsonDecode`.
+- `SceneBuilder.buildFromJson(...)` now normalizes parsed maps behind a
+  model-local guard so builder/decode parity stays anchored on stable
+  `SceneDataException.code` / `path` / `details` without adding a
+  `model -> serialization` dependency.
 - Clarified step `5.1` `backgroundLayer` policy: mutable runtime `Scene`
   keeps `backgroundLayer` nullable, while snapshot/JSON boundaries continue to
   canonicalize it to a dedicated single layer.

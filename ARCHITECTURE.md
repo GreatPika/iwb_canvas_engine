@@ -71,6 +71,9 @@ Current dependency DAG:
 Ownership decisions for the target state:
 
 - `SceneBuilder` is not part of `contract/`; it belongs to `model/`.
+- Parsed-map normalization for `SceneBuilder.buildFromJson(...)` stays in the
+  `model/` layer via a model-local guard; `model/` must not import
+  `serialization/` to reuse transport wrappers.
 - `Transform2D` is part of the supported contract language and lives in
   `contract/` as a contract-facing value type; its file move does not change
   the public symbol name.

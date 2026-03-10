@@ -96,6 +96,27 @@ class _ThrowingMap extends MapBase<String, Object?> {
   bool containsKey(Object? key) => throw StateError('boom');
 }
 
+class _FormatThrowingMap extends MapBase<String, Object?> {
+  @override
+  Object? operator [](Object? key) => throw const FormatException('bad map');
+
+  @override
+  void operator []=(String key, Object? value) =>
+      throw UnsupportedError('noop');
+
+  @override
+  void clear() => throw UnsupportedError('noop');
+
+  @override
+  Iterable<String> get keys => const <String>['schemaVersion'];
+
+  @override
+  Object? remove(Object? key) => throw UnsupportedError('noop');
+
+  @override
+  bool containsKey(Object? key) => throw const FormatException('bad map');
+}
+
 void main() {
   test('sceneBuildFromJsonMap wraps unexpected parser errors', () {
     expect(
@@ -111,6 +132,48 @@ void main() {
       ),
     );
   });
+
+  test(
+    'sceneBuildFromDynamicJsonMap maps parsed-map normalization failures to invalidJsonPayload',
+    () {
+      final malformed = <Object?, Object?>{
+        'schemaVersion': 5,
+        1: 'non-string-key',
+      };
+
+      expect(
+        () => model_builder.sceneBuildFromDynamicJsonMap(
+          malformed.cast<String, Object?>(),
+        ),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.code == SceneDataErrorCode.invalidJson &&
+                e.path == null &&
+                e.details['template'] == 'invalidJsonPayload',
+          ),
+        ),
+      );
+    },
+  );
+
+  test(
+    'sceneBuildFromDynamicJsonMap maps FormatException failures to invalidJsonPayload',
+    () {
+      expect(
+        () => model_builder.sceneBuildFromDynamicJsonMap(_FormatThrowingMap()),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.code == SceneDataErrorCode.invalidJson &&
+                e.details['template'] == 'invalidJsonPayload',
+          ),
+        ),
+      );
+    },
+  );
 
   test(
     'sceneValidateCore canonicalizes background and preserves all node types',

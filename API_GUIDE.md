@@ -820,11 +820,15 @@ controller.
 
 - `buildFromSnapshot(...)` is the typed-snapshot import path.
 - `buildFromJson(...)` is the parsed-map import path and reuses the same import
-  boundary as `decodeScene(...)`, but skips JSON string parsing.
+  boundary as `decodeScene(...)`, but skips JSON string parsing. Parsed-map
+  normalization stays inside the `SceneBuilder` model boundary rather than in
+  the public API entrypoint.
 - both methods throw `SceneDataException` when the input violates schema or
   boundary validation rules
 - nested validation failures include `SceneDataException.path` when the
   boundary can identify the exact field location
+- compare builder/decode failures by `SceneDataException.code`, `path`, and
+  immutable `details`; `message` is derived user-facing text
 
 ### 11.3 Decode and import guarantees
 
