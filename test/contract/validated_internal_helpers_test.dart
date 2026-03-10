@@ -15,13 +15,14 @@ import 'package:iwb_canvas_engine/src/contract/validated/text_content_value.dart
 
 void main() {
   test('contract boundary limits stay positive and ordered', () {
-    expect(sceneContractLimitValues(), hasLength(6));
+    expect(sceneContractLimitValues(), hasLength(7));
     expect(kMaxSvgPathDataLength, greaterThan(0));
     expect(kMaxLayerIdLength, greaterThan(0));
     expect(kMaxNodeIdLength, greaterThan(0));
     expect(kMaxImageIdLength, greaterThanOrEqualTo(kMaxNodeIdLength));
     expect(kMaxFontFamilyLength, greaterThan(0));
     expect(kMaxTextLength, greaterThan(kMaxFontFamilyLength));
+    expect(kMaxRawSceneJsonLength, greaterThan(kMaxTextLength));
   });
 
   test('generated id helpers reject ids outside generation constraints', () {

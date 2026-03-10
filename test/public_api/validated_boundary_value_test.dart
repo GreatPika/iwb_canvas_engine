@@ -582,6 +582,9 @@ void main() {
         path: 'layers[0].id',
       );
       final invalidJsonPayload = SceneDataException.invalidJsonPayload();
+      final jsonPayloadTooLarge = SceneDataException.jsonPayloadTooLarge(
+        maxLength: 1024,
+      );
       final genericPath = SceneDataException(
         code: SceneDataErrorCode.invalidValue,
         path: 'layers[0]',
@@ -602,6 +605,10 @@ void main() {
 
       expect(missingField.message, 'Missing required field layers[0].id.');
       expect(invalidJsonPayload.message, 'Invalid scene JSON payload.');
+      expect(
+        jsonPayloadTooLarge.message,
+        'Scene JSON payload must be <= 1024 characters.',
+      );
       expect(genericPath.message, 'Field layers[0] is invalid.');
       expect(genericCode.message, 'Unsupported scene schema version.');
       expect(
@@ -693,21 +700,24 @@ void main() {
       expect(() => error.details['later'] = true, throwsUnsupportedError);
     });
 
-    test('message derivation uses raw details before diagnostics sanitization', () {
-      final longFieldName = 'x' * 200;
-      final error = SceneDataException(
-        code: SceneDataErrorCode.invalidFieldType,
-        path: 'layers[0].id',
-        details: <String, Object?>{
-          'template': 'fieldType',
-          'fieldName': longFieldName,
-          'expected': 'string',
-        },
-      );
+    test(
+      'message derivation uses raw details before diagnostics sanitization',
+      () {
+        final longFieldName = 'x' * 200;
+        final error = SceneDataException(
+          code: SceneDataErrorCode.invalidFieldType,
+          path: 'layers[0].id',
+          details: <String, Object?>{
+            'template': 'fieldType',
+            'fieldName': longFieldName,
+            'expected': 'string',
+          },
+        );
 
-      expect(error.message, 'Field $longFieldName must be a string.');
-      expect(error.details['fieldName'], isA<Map<String, Object?>>());
-    });
+        expect(error.message, 'Field $longFieldName must be a string.');
+        expect(error.details['fieldName'], isA<Map<String, Object?>>());
+      },
+    );
 
     test('copies small structured source values into immutable snapshots', () {
       final scalarError = SceneDataException(

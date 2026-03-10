@@ -162,7 +162,7 @@ codec и builder.
     `6.2`, `6.3`, `6.4`.
 [x] В `6.1` зафиксировать `SceneDataException.details`, derived `message` и
     отдельный `duplicateLayerId` без повторного обсуждения scene-level owner-а.
-[ ] В `6.2` описать serialization-local guards, использующие primitives шага
+[x] В `6.2` описать serialization-local guards, использующие primitives шага
     `6.1`, без нарушения layer DAG, второго sanitizer или нового codec
     god-object.
 [ ] В `6.3` перевести `SceneBuilder.buildFromJson(...)` на model-local

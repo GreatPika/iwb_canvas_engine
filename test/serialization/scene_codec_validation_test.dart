@@ -12,12 +12,13 @@ import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
         kMaxLayerIdLength,
         kMaxNodesPerScene,
         kMaxPaletteItems,
+        kMaxRawSceneJsonLength,
         kMaxStrokePointsPerNode,
         kMaxSvgPathDataLength,
         kMaxTextLength;
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/serialization/scene_codec.dart'
-    show encodeSceneDocument;
+    show debugGuardDecodeForTest, debugGuardEncodeForTest, encodeSceneDocument;
 
 Map<String, Object?> _minimalSceneJson() {
   return <String, Object?>{
@@ -185,6 +186,95 @@ void main() {
       ),
     );
   });
+
+  test('debugGuardDecodeForTest rethrows nested SceneDataException', () {
+    final nested = SceneDataException.missingField(path: 'layers');
+
+    expect(
+      () => debugGuardDecodeForTest('{}', (_) => throw nested),
+      throwsA(same(nested)),
+    );
+  });
+
+  test(
+    'debugGuardDecodeForTest maps callback failures to invalidJsonPayload',
+    () {
+      expect(
+        () => debugGuardDecodeForTest('{}', (_) => throw StateError('boom')),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.code == SceneDataErrorCode.invalidJson &&
+                e.details['template'] == 'invalidJsonPayload',
+          ),
+        ),
+      );
+    },
+  );
+
+  test('decodeSceneFromJson rejects oversized raw JSON before parsing', () {
+    final oversizedJson = '${' ' * kMaxRawSceneJsonLength}[';
+
+    expect(
+      () => decodeSceneFromJson(oversizedJson),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidJson &&
+              e.path == null &&
+              e.details['template'] == 'jsonPayloadTooLarge' &&
+              e.details['maxLength'] == kMaxRawSceneJsonLength,
+        ),
+      ),
+    );
+  });
+
+  test('debugGuardEncodeForTest rethrows nested SceneDataException', () {
+    final nested = SceneDataException.invalidJsonPayload();
+
+    expect(
+      () => debugGuardEncodeForTest<Never>(() => throw nested),
+      throwsA(same(nested)),
+    );
+  });
+
+  test(
+    'debugGuardEncodeForTest maps format failures to invalidJsonPayload',
+    () {
+      expect(
+        () => debugGuardEncodeForTest<Never>(
+          () => throw const FormatException('bad'),
+        ),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.code == SceneDataErrorCode.invalidJson &&
+                e.details['template'] == 'invalidJsonPayload',
+          ),
+        ),
+      );
+    },
+  );
+
+  test(
+    'debugGuardEncodeForTest maps generic failures to invalidJsonPayload',
+    () {
+      expect(
+        () => debugGuardEncodeForTest<Never>(() => throw StateError('bad')),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.code == SceneDataErrorCode.invalidJson &&
+                e.details['template'] == 'invalidJsonPayload',
+          ),
+        ),
+      );
+    },
+  );
 
   test(
     'SceneBuilder.buildFromJson and decodeScene report matching nested validation diagnostics',

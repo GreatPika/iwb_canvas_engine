@@ -100,10 +100,17 @@ on Flutter-oriented primitives (`dart:ui`), and `SceneRenderState` uses
   - `encodeScene`
   - `encodeSceneToJson`
   - `decodeScene`
-  - `decodeSceneFromJson`
-  - `schemaVersionWrite`
-  - `schemaVersionsRead`
+- `decodeSceneFromJson`
+- `schemaVersionWrite`
+- `schemaVersionsRead`
   - `SceneDataException`
+
+JSON string boundary note:
+
+- `decodeSceneFromJson(...)` rejects raw JSON strings longer than
+  `33554432` characters before `jsonDecode`
+- oversized raw JSON is reported as `SceneDataErrorCode.invalidJson` with
+  `details.template == 'jsonPayloadTooLarge'`
 
 Public aliases:
 

@@ -161,6 +161,8 @@ most important architectural rules are:
 ## Serialization boundary
 
 - Public JSON APIs accept `Map<String, dynamic>` or JSON strings.
+- `decodeSceneFromJson(...)` rejects raw JSON strings longer than `33554432`
+  characters before parser allocation.
 - Decode/import canonicalizes missing `backgroundLayer` to an empty dedicated
   layer before returning a `SceneSnapshot`.
 - Mutable runtime `Scene` keeps `backgroundLayer` nullable as an internal

@@ -53,45 +53,45 @@ language: russian
 
 ## Последовательность реализации (только действия)
 
-[ ] Создать
+[x] Создать
     [lib/src/serialization/codec_guards.dart](/Users/blackpika/iwb_canvas_engine/lib/src/serialization/codec_guards.dart)
     и определить в нём `_guardDecode`, `_guardEncode`.
-[ ] Явно потреблять shared contract primitives шага `6.1`, не дублируя
+[x] Явно потреблять shared contract primitives шага `6.1`, не дублируя
     factory/template semantics локально в `serialization/`.
-[ ] Вынести в guard-layer payload-size limit для string JSON до `jsonDecode`.
-[ ] Если вводится отдельный raw JSON size limit, оформить его как named
+[x] Вынести в guard-layer payload-size limit для string JSON до `jsonDecode`.
+[x] Если вводится отдельный raw JSON size limit, оформить его как named
     constant и задокументировать как публичный boundary contract в том же
     изменении.
-[ ] Централизовать перевод системных исключений и transport-level boundary
+[x] Централизовать перевод системных исключений и transport-level boundary
     context в `SceneDataException` через factory/template path из `6.1`.
-[ ] Локализовать в одном месте path/context normalization для codec boundary,
+[x] Локализовать в одном месте path/context normalization для codec boundary,
     не затягивая builder wrapper в `serialization/`.
-[ ] Явно отделить transport-level fail-fast guardrails от уже готовых
+[x] Явно отделить transport-level fail-fast guardrails от уже готовых
     `ScenePolicy`/decode ошибок, чтобы guard-layer не стал вторым owner-ом
     scene semantics.
-[ ] Подготовить точечные tests для huge JSON, non-object root, dependency-DAG
+[x] Подготовить точечные tests для huge JSON, non-object root, dependency-DAG
     и общего mapping transport failures, не смешивая их с full codec rollout.
 
 ## Критерии приёмки
 
-[ ] `codec_guards.dart` становится единственным owner-ом serialization
+[x] `codec_guards.dart` становится единственным owner-ом serialization
     transport guards для string/encode boundary.
-[ ] Oversized JSON payload отсекается до `jsonDecode`.
-[ ] Raw JSON size limit, если он добавлен, не скрыт в guard helper и имеет
+[x] Oversized JSON payload отсекается до `jsonDecode`.
+[x] Raw JSON size limit, если он добавлен, не скрыт в guard helper и имеет
     явное документированное значение.
-[ ] System/transport failures нормализуются в тот же contract
+[x] System/transport failures нормализуются в тот же contract
     `code/path/details`, что и остальные boundary.
-[ ] `scene_codec.dart` больше не обязан держать собственные ad hoc
+[x] `scene_codec.dart` больше не обязан держать собственные ad hoc
     catch/mapping ветки для transport-level concerns.
-[ ] Новый guard-layer не забирает ownership scene-level policy semantics и не
+[x] Новый guard-layer не забирает ownership scene-level policy semantics и не
     нарушает import boundaries проекта.
 
 ## Тестовый контур шага
 
-[ ] `test/serialization/scene_codec_validation_test.dart`
-[ ] `test/tool/import_boundaries_layers_tool_test.dart`
-[ ] `test/model/scene_builder_test.dart`
-[ ] Точечные сценарии:
+[x] `test/serialization/scene_codec_validation_test.dart`
+[x] `test/tool/import_boundaries_layers_tool_test.dart`
+[x] `test/model/scene_builder_test.dart`
+[x] Точечные сценарии:
     - huge JSON fails before `jsonDecode`
     - non-object root goes through unified guard contract
     - system exception mapping keeps deterministic `code/path/details`

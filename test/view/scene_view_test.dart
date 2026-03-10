@@ -68,7 +68,13 @@ void main() {
     final controller = SceneControllerCore(
       initialSnapshot: _snapshot(strokeY: 10, text: 'ctx'),
     );
+    final staticLayerCache = SceneStaticLayerCache();
+    final textLayoutCache = SceneTextLayoutCache();
+    final strokePathCache = SceneStrokePathCache();
+    final pathMetricsCache = ScenePathMetricsCache();
+    final geometryCache = RenderGeometryCache();
     addTearDown(controller.dispose);
+    addTearDown(staticLayerCache.dispose);
 
     await tester.pumpWidget(
       Directionality(
@@ -79,6 +85,11 @@ void main() {
           child: SceneViewCore(
             controller: controller,
             imageResolver: (_) => null,
+            staticLayerCache: staticLayerCache,
+            textLayoutCache: textLayoutCache,
+            strokePathCache: strokePathCache,
+            pathMetricsCache: pathMetricsCache,
+            geometryCache: geometryCache,
           ),
         ),
       ),
@@ -87,13 +98,12 @@ void main() {
 
     final descendantContext = tester.element(find.byType(CustomPaint));
     final renderCaches = debugSceneViewRenderCachesOf(descendantContext);
-    final state = tester.state(find.byType(SceneViewCore)) as dynamic;
 
-    expect(renderCaches.staticLayerCache, same(state.debugStaticLayerCache));
-    expect(renderCaches.textLayoutCache, same(state.debugTextLayoutCache));
-    expect(renderCaches.strokePathCache, same(state.debugStrokePathCache));
-    expect(renderCaches.pathMetricsCache, same(state.debugPathMetricsCache));
-    expect(renderCaches.geometryCache, same(state.debugGeometryCache));
+    expect(renderCaches.staticLayerCache, same(staticLayerCache));
+    expect(renderCaches.textLayoutCache, same(textLayoutCache));
+    expect(renderCaches.strokePathCache, same(strokePathCache));
+    expect(renderCaches.pathMetricsCache, same(pathMetricsCache));
+    expect(renderCaches.geometryCache, same(geometryCache));
   });
 
   testWidgets('debugSceneViewRenderCachesOf throws without SceneViewCore', (

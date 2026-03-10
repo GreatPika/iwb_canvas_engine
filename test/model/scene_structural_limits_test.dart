@@ -4,24 +4,27 @@ import 'package:iwb_canvas_engine/src/core/scene_limits.dart';
 import 'package:iwb_canvas_engine/src/model/scene_structural_limits.dart';
 
 void main() {
-  test('sceneRequireContentLayerLimit accepts boundary and rejects overflow', () {
-    expect(
-      () => sceneRequireContentLayerLimit(kMaxContentLayersPerScene),
-      returnsNormally,
-    );
+  test(
+    'sceneRequireContentLayerLimit accepts boundary and rejects overflow',
+    () {
+      expect(
+        () => sceneRequireContentLayerLimit(kMaxContentLayersPerScene),
+        returnsNormally,
+      );
 
-    expect(
-      () => sceneRequireContentLayerLimit(kMaxContentLayersPerScene + 1),
-      throwsA(
-        predicate(
-          (error) =>
-              error is SceneDataException &&
-              error.code == SceneDataErrorCode.invalidValue &&
-              error.path == 'layers',
+      expect(
+        () => sceneRequireContentLayerLimit(kMaxContentLayersPerScene + 1),
+        throwsA(
+          predicate(
+            (error) =>
+                error is SceneDataException &&
+                error.code == SceneDataErrorCode.invalidValue &&
+                error.path == 'layers',
+          ),
         ),
-      ),
-    );
-  });
+      );
+    },
+  );
 
   test('sceneConsumeNodeBudget increments to limit and rejects overflow', () {
     expect(

@@ -30,6 +30,9 @@ All notable changes to `iwb_canvas_engine` are documented here.
   `SceneDataException.code` / `path` / `details` contract for duplicate node
   ids, duplicate content-layer ids, scene-wide count limits, and scene-level
   range violations; `message` is now documented as derived user-facing text.
+- `decodeSceneFromJson(...)` now routes transport-level parse/root/oversize
+  failures through serialization-local codec guards and rejects raw JSON
+  strings longer than `33554432` characters before `jsonDecode`.
 - Clarified step `5.1` `backgroundLayer` policy: mutable runtime `Scene`
   keeps `backgroundLayer` nullable, while snapshot/JSON boundaries continue to
   canonicalize it to a dedicated single layer.

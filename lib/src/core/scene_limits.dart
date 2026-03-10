@@ -7,6 +7,7 @@ export '../contract/scene_contract_limits.dart'
         kMaxImageIdLength,
         kMaxLayerIdLength,
         kMaxNodeIdLength,
+        kMaxRawSceneJsonLength,
         kMaxSvgPathDataLength,
         kMaxTextLength;
 

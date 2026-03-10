@@ -17,11 +17,7 @@ class SceneDataException implements FormatException {
       source: _sanitizeSceneDataSource(source),
       message:
           message ??
-          _deriveSceneDataMessage(
-            code: code,
-            path: path,
-            details: rawDetails,
-          ),
+          _deriveSceneDataMessage(code: code, path: path, details: rawDetails),
     );
   }
 
@@ -64,6 +60,21 @@ class SceneDataException implements FormatException {
     return SceneDataException.boundary(
       code: SceneDataErrorCode.invalidJson,
       details: const <String, Object?>{'template': 'invalidJsonPayload'},
+      source: source,
+    );
+  }
+
+  /// Reports that the raw JSON string exceeds the supported boundary length.
+  factory SceneDataException.jsonPayloadTooLarge({
+    required int maxLength,
+    Object? source,
+  }) {
+    return SceneDataException.boundary(
+      code: SceneDataErrorCode.invalidJson,
+      details: <String, Object?>{
+        'template': 'jsonPayloadTooLarge',
+        'maxLength': maxLength,
+      },
       source: source,
     );
   }
@@ -436,6 +447,9 @@ String _deriveSceneDataMessage({
         return 'Root JSON must be an object.';
       case 'invalidJsonPayload':
         return 'Invalid scene JSON payload.';
+      case 'jsonPayloadTooLarge':
+        final maxLength = details['maxLength'] ?? '?';
+        return 'Scene JSON payload must be <= $maxLength characters.';
       case 'missingField':
         return 'Missing required field ${path ?? '<unknown>'}.';
       case 'fieldType':

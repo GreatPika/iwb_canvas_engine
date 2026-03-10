@@ -432,6 +432,36 @@ class SceneBuilder {
       }
     });
 
+    test('rejects model -> serialization import', () async {
+      final sandbox = await createImportBoundariesSandbox();
+      try {
+        writeSandboxFile(
+          sandbox,
+          'lib/src/serialization/codec_guards.dart',
+          'void guardCodec() {}\n',
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/model/scene_builder.dart',
+          "import 'package:iwb_canvas_engine/src/serialization/codec_guards.dart';\n",
+        );
+
+        final result = await runSandboxTool(
+          sandbox,
+          'check_import_boundaries.dart',
+        );
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains(
+            'layer DAG violation: model/** must not import serialization/**',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
     test('rejects core -> controller import', () async {
       final sandbox = await createImportBoundariesSandbox();
       try {

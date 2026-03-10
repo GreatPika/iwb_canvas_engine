@@ -25,7 +25,8 @@ storage.
 - Explicit path fill-rule contract via `PathFillRule`.
 - JSON import/export with strict validation and canonicalization.
 - Bounded JSON import guardrails for layers/nodes/points/path data plus string
-  and palette payload sizes.
+  and palette payload sizes, including a raw `decodeSceneFromJson(...)` input
+  limit of `33554432` characters before parsing.
 - Boundary failures expose stable `SceneDataException.code`, `path`, and
   immutable `details`; `message` remains a derived human-readable summary.
 - Public validated boundary value types such as `NodeIdValue`,

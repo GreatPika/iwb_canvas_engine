@@ -4,12 +4,17 @@ import 'dart:ui';
 import '../core/nodes.dart';
 import '../core/scene.dart';
 import '../core/scene_limits.dart'
-    show sceneSchemaVersionWrite, sceneSchemaVersionsRead;
+    show
+        kMaxRawSceneJsonLength,
+        sceneSchemaVersionWrite,
+        sceneSchemaVersionsRead;
 import '../contract/transform2d.dart';
 import '../model/document.dart';
 import '../model/scene_builder.dart' as model_builder;
 import '../contract/scene_data_exception.dart';
 import '../contract/snapshot.dart';
+
+part 'codec_guards.dart';
 
 /// JSON schema version written by this package.
 const int schemaVersionWrite = sceneSchemaVersionWrite;
@@ -24,7 +29,7 @@ const Set<int> schemaVersionsRead = sceneSchemaVersionsRead;
 /// Throws [SceneDataException] when [snapshot] violates the public scene
 /// contract.
 String encodeSceneToJson(SceneSnapshot snapshot) {
-  return jsonEncode(encodeScene(snapshot));
+  return _guardEncode(() => jsonEncode(encodeScene(snapshot)));
 }
 
 /// Decodes a [SceneSnapshot] from a JSON string.
@@ -38,23 +43,23 @@ String encodeSceneToJson(SceneSnapshot snapshot) {
 /// validation failures are delegated to [decodeScene]. Root-level failures may
 /// omit [SceneDataException.path] when the boundary does not yet know a more
 /// specific field location.
+///
+/// Raw JSON strings longer than [kMaxRawSceneJsonLength] characters are
+/// rejected before `jsonDecode`.
 SceneSnapshot decodeSceneFromJson(String json) {
-  try {
-    final raw = jsonDecode(json);
-    if (raw is! Map) {
-      throw SceneDataException.invalidJsonRoot(source: raw);
-    }
-    return decodeScene(Map<String, Object?>.from(raw));
-  } on SceneDataException {
-    rethrow;
-  } on FormatException catch (error) {
-    throw SceneDataException.boundary(
-      code: SceneDataErrorCode.invalidJson,
-      message: error.message,
-      details: const <String, Object?>{'template': 'formatException'},
-      source: error.source,
-    );
-  }
+  final scene = _guardDecode(json, decodeSceneDocument);
+  return txnSceneToSnapshot(scene);
+}
+
+T debugGuardDecodeForTest<T>(
+  String rawJson,
+  T Function(Map<String, Object?> raw) decode,
+) {
+  return _guardDecode(rawJson, decode);
+}
+
+T debugGuardEncodeForTest<T>(T Function() encode) {
+  return _guardEncode(encode);
 }
 
 /// Encodes [snapshot] into a canonical JSON-serializable map.

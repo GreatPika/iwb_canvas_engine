@@ -11,17 +11,22 @@ ui.Image? _defaultImageResolver(String _) => null;
 
 @visibleForTesting
 SceneRenderCaches debugSceneViewRenderCachesOf(BuildContext context) {
-  final state =
-      switch (context) {
-        StatefulElement(:final state) when state is _SceneViewCoreState => state,
-        _ => context.findAncestorStateOfType<_SceneViewCoreState>(),
-      };
+  final state = switch (context) {
+    StatefulElement(:final state) when state is _SceneViewCoreState => state,
+    _ => context.findAncestorStateOfType<_SceneViewCoreState>(),
+  };
   if (state == null) {
     throw StateError(
       'No SceneViewCore state found for the provided BuildContext.',
     );
   }
-  return state._renderCaches;
+  return SceneRenderCaches(
+    staticLayerCache: state.debugStaticLayerCache,
+    textLayoutCache: state.debugTextLayoutCache,
+    strokePathCache: state.debugStrokePathCache,
+    pathMetricsCache: state.debugPathMetricsCache,
+    geometryCache: state.debugGeometryCache,
+  );
 }
 
 class SceneViewCore extends StatefulWidget {
