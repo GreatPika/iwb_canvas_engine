@@ -19,6 +19,7 @@ import '../core/text_layout.dart';
 import '../contract/transform2d.dart';
 import '../contract/scene_data_exception.dart';
 import '../contract/snapshot.dart';
+import 'scene_structural_limits.dart';
 import 'scene_policy.dart';
 
 part 'scene_builder_json_require.part.dart';

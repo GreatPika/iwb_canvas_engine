@@ -216,6 +216,127 @@ void main() {
     },
   );
 
+  test(
+    'SceneBuilder.buildFromJson and decodeScene keep matching policy-owned scene overflow diagnostics',
+    () {
+      final json = _minimalSceneJson();
+      json['layers'] = <Object?>[
+        <String, Object?>{
+          'id': 'layer-0',
+          'nodes': <Object?>[
+            for (var i = 0; i < kMaxNodesPerScene + 1; i++)
+              _baseNodeJson(id: 'n$i', type: 'rect')..addAll(<String, Object?>{
+                'size': <String, Object?>{'w': 1, 'h': 1},
+                'strokeWidth': 0,
+              }),
+          ],
+        },
+      ];
+
+      SceneDataException capture(void Function() callback) {
+        try {
+          callback();
+          fail('Expected SceneDataException');
+        } on SceneDataException catch (error) {
+          return error;
+        }
+      }
+
+      final fromBuilder = capture(() => SceneBuilder.buildFromJson(json));
+      final fromCodec = capture(
+        () => decodeScene(Map<String, Object?>.from(json)),
+      );
+
+      expect(fromBuilder.code, fromCodec.code);
+      expect(fromBuilder.message, fromCodec.message);
+      expect(fromBuilder.path, fromCodec.path);
+      expect(fromBuilder.code, SceneDataErrorCode.invalidValue);
+      expect(fromBuilder.path, 'layers[0].nodes');
+    },
+  );
+
+  test(
+    'SceneBuilder.buildFromJson and decodeScene keep layer overflow ahead of extra layer shape errors',
+    () {
+      final json = _minimalSceneJson();
+      json['layers'] = <Object?>[
+        for (var i = 0; i < kMaxContentLayersPerScene; i++)
+          <String, Object?>{'id': 'layer-$i', 'nodes': <Object?>[]},
+        null,
+      ];
+
+      SceneDataException capture(void Function() callback) {
+        try {
+          callback();
+          fail('Expected SceneDataException');
+        } on SceneDataException catch (error) {
+          return error;
+        }
+      }
+
+      final fromBuilder = capture(() => SceneBuilder.buildFromJson(json));
+      final fromCodec = capture(
+        () => decodeScene(Map<String, Object?>.from(json)),
+      );
+
+      expect(fromBuilder.code, fromCodec.code);
+      expect(fromBuilder.message, fromCodec.message);
+      expect(fromBuilder.path, fromCodec.path);
+      expect(fromBuilder.code, SceneDataErrorCode.invalidValue);
+      expect(fromBuilder.path, 'layers');
+    },
+  );
+
+  test(
+    'SceneBuilder.buildFromJson and decodeScene keep node overflow ahead of extra node shape errors',
+    () {
+      final json = _minimalSceneJson();
+      json['layers'] = <Object?>[
+        <String, Object?>{
+          'id': 'layer-0',
+          'nodes': <Object?>[
+            for (var i = 0; i < kMaxNodesPerScene; i++)
+              _baseNodeJson(id: 'n$i', type: 'rect')..addAll(<String, Object?>{
+                'size': <String, Object?>{'w': 1, 'h': 1},
+                'strokeWidth': 0,
+              }),
+            <String, Object?>{
+              'id': 'overflow-node',
+              'transform': <String, Object?>{
+                'a': 1,
+                'b': 0,
+                'c': 0,
+                'd': 1,
+                'tx': 0,
+                'ty': 0,
+              },
+            },
+          ],
+        },
+      ];
+
+      SceneDataException capture(void Function() callback) {
+        try {
+          callback();
+          fail('Expected SceneDataException');
+        } on SceneDataException catch (error) {
+          return error;
+        }
+      }
+
+      final fromBuilder = capture(() => SceneBuilder.buildFromJson(json));
+      final fromCodec = capture(
+        () => decodeScene(Map<String, Object?>.from(json)),
+      );
+
+      expect(fromBuilder.code, fromCodec.code);
+      expect(fromBuilder.message, fromCodec.message);
+      expect(fromBuilder.path, fromCodec.path);
+      expect(fromBuilder.code, SceneDataErrorCode.invalidValue);
+      expect(fromBuilder.path, 'layers[0].nodes');
+    },
+  );
+
   test('decodeScene canonicalizes missing background layer', () {
     // INV:INV-SER-TYPED-LAYER-SPLIT
     // INV:INV-SER-CANONICAL-BACKGROUND-LAYER
@@ -418,11 +539,6 @@ void main() {
     'decodeScene rejects aggregated node overflow across background and content layers',
     () {
       final json = _minimalSceneJson();
-      final backgroundNode = _baseNodeJson(id: 'bg', type: 'rect')
-        ..addAll(<String, Object?>{
-          'size': <String, Object?>{'w': 1, 'h': 1},
-          'strokeWidth': 0,
-        });
       final contentNode = _baseNodeJson(id: 'fg', type: 'rect')
         ..addAll(<String, Object?>{
           'size': <String, Object?>{'w': 1, 'h': 1},
@@ -430,7 +546,11 @@ void main() {
         });
       json['backgroundLayer'] = <String, Object?>{
         'nodes': <Object?>[
-          for (var i = 0; i < kMaxNodesPerScene; i++) backgroundNode,
+          for (var i = 0; i < kMaxNodesPerScene; i++)
+            _baseNodeJson(id: 'bg-$i', type: 'rect')..addAll(<String, Object?>{
+              'size': <String, Object?>{'w': 1, 'h': 1},
+              'strokeWidth': 0,
+            }),
         ],
       };
       json['layers'] = <Object?>[

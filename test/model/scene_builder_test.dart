@@ -694,6 +694,30 @@ void main() {
     );
   });
 
+  test(
+    'sceneBuildFromJsonMap reports content layer overflow before extra layer shape errors',
+    () {
+      final json = _minimalSceneJson();
+      json['layers'] = <Object?>[
+        for (var i = 0; i < kMaxContentLayersPerScene; i++)
+          <String, Object?>{'id': 'layer-$i', 'nodes': <Object?>[]},
+        null,
+      ];
+
+      expect(
+        () => model_builder.sceneBuildFromJsonMap(json),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.code == SceneDataErrorCode.invalidValue &&
+                e.path == 'layers',
+          ),
+        ),
+      );
+    },
+  );
+
   test('sceneBuildFromJsonMap rejects too many nodes in scene', () {
     final json = _minimalSceneJson();
     json['layers'] = <Object?>[
@@ -720,14 +744,53 @@ void main() {
   });
 
   test(
+    'sceneBuildFromJsonMap reports node overflow before extra node shape errors',
+    () {
+      final json = _minimalSceneJson();
+      json['layers'] = <Object?>[
+        <String, Object?>{
+          'id': 'layer-0',
+          'nodes': <Object?>[
+            for (var i = 0; i < kMaxNodesPerScene; i++)
+              _minimalRectNodeJson(id: 'n$i'),
+            <String, Object?>{
+              'id': 'overflow-node',
+              'transform': <String, Object?>{
+                'a': 1,
+                'b': 0,
+                'c': 0,
+                'd': 1,
+                'tx': 0,
+                'ty': 0,
+              },
+            },
+          ],
+        },
+      ];
+
+      expect(
+        () => model_builder.sceneBuildFromJsonMap(json),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.code == SceneDataErrorCode.invalidValue &&
+                e.path == 'layers[0].nodes',
+          ),
+        ),
+      );
+    },
+  );
+
+  test(
     'sceneBuildFromJsonMap rejects aggregated node overflow across background and content layers',
     () {
       final json = _minimalSceneJson();
-      final backgroundNode = _minimalRectNodeJson(id: 'bg');
       final contentNode = _minimalRectNodeJson(id: 'fg');
       json['backgroundLayer'] = <String, Object?>{
         'nodes': <Object?>[
-          for (var i = 0; i < kMaxNodesPerScene; i++) backgroundNode,
+          for (var i = 0; i < kMaxNodesPerScene; i++)
+            _minimalRectNodeJson(id: 'bg-$i'),
         ],
       };
       json['layers'] = <Object?>[
@@ -990,50 +1053,53 @@ void main() {
     );
   });
 
-  test('sceneValidateSnapshotValues skips background duplicate-node policy', () {
-    SceneDataException asSceneDataException({
-      required Object? value,
-      required String field,
-      required String message,
-    }) {
-      return SceneDataException(
-        code: SceneDataErrorCode.invalidValue,
-        path: field,
-        message: 'Field $field $message',
-        source: value,
-      );
-    }
+  test(
+    'sceneValidateSnapshotValues skips background duplicate-node policy',
+    () {
+      SceneDataException asSceneDataException({
+        required Object? value,
+        required String field,
+        required String message,
+      }) {
+        return SceneDataException(
+          code: SceneDataErrorCode.invalidValue,
+          path: field,
+          message: 'Field $field $message',
+          source: value,
+        );
+      }
 
-    expect(
-      () => value_validation.sceneValidateSnapshotValues(
-        SceneSnapshot(
-          backgroundLayer: BackgroundLayerSnapshot(
-            nodes: <NodeSnapshot>[
-              RectNodeSnapshot(id: 'dup-bg', size: Size(1, 1)),
-              RectNodeSnapshot(id: 'dup-bg', size: Size(1, 1)),
+      expect(
+        () => value_validation.sceneValidateSnapshotValues(
+          SceneSnapshot(
+            backgroundLayer: BackgroundLayerSnapshot(
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(id: 'dup-bg', size: Size(1, 1)),
+                RectNodeSnapshot(id: 'dup-bg', size: Size(1, 1)),
+              ],
+            ),
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(id: 'layer-auto-4'),
             ],
           ),
-          layers: <ContentLayerSnapshot>[
-            ContentLayerSnapshot(id: 'layer-auto-4'),
-          ],
+          onError:
+              ({
+                required Object? value,
+                required String field,
+                required String message,
+              }) {
+                throw asSceneDataException(
+                  value: value,
+                  field: field,
+                  message: message,
+                );
+              },
+          requirePositiveGridCellSize: true,
         ),
-        onError:
-            ({
-              required Object? value,
-              required String field,
-              required String message,
-            }) {
-              throw asSceneDataException(
-                value: value,
-                field: field,
-                message: message,
-              );
-            },
-        requirePositiveGridCellSize: true,
-      ),
-      returnsNormally,
-    );
-  });
+        returnsNormally,
+      );
+    },
+  );
 
   test('sceneValidateCore reports background duplicate node ids', () {
     expect(

@@ -51,47 +51,47 @@ policy.
 
 ## Последовательность реализации (только действия)
 
-[ ] Разбить `_decodeSnapshotFromJson(...)` на короткие phase-specific helper-ы:
+[x] Разбить `_decodeSnapshotFromJson(...)` на короткие phase-specific helper-ы:
     decode envelope, decode layers/background payload, finalize through
     policy-owned validation path.
-[ ] Разбить `_decodeNode(...)` на type-dispatch и field-extraction helper-ы так,
+[x] Разбить `_decodeNode(...)` на type-dispatch и field-extraction helper-ы так,
     чтобы одна функция не совмещала traversal, branching и full payload
     assembly.
-[ ] Убрать из decode helper-ов ad hoc policy checks, если та же семантика уже
+[x] Убрать из decode helper-ов ad hoc policy checks, если та же семантика уже
     принадлежит `ScenePolicy`; при fail-fast оставить только вызов
     policy-owned contract либо shape-level guardrail.
-[ ] Проверить, что decode path больше не является вторым owner-ом duplicate id,
+[x] Проверить, что decode path больше не является вторым owner-ом duplicate id,
     scene counts/ranges и background policy semantics.
-[ ] Сохранить точные `path` для shape/parsing ошибок, не смешивая их с
+[x] Сохранить точные `path` для shape/parsing ошибок, не смешивая их с
     scene-level policy diagnostics.
-[ ] Убедиться, что разрезание `_decodeSnapshotFromJson(...)` и `_decodeNode(...)`
+[x] Убедиться, что разрезание `_decodeSnapshotFromJson(...)` и `_decodeNode(...)`
     не добавило лишний полный проход по сцене или второе materialized
     representation между decode и policy validation.
-[ ] Обновить этот step-файл после реализации и не переоткрывать решения выше.
+[x] Обновить этот step-файл после реализации и не переоткрывать решения выше.
 
 ## Критерии приёмки
 
-[ ] В
+[x] В
     [scene_builder_decode_json.part.dart](/Users/blackpika/iwb_canvas_engine/lib/src/model/scene_builder_decode_json.part.dart)
     больше нет giant decode-функций, одновременно владеющих parsing,
     traversal и policy mapping.
-[ ] Decode helper-ы разделены по фазам и имеют явно локальную ответственность.
-[ ] Один и тот же scene-level дефект после decode продолжает идти через
+[x] Decode helper-ы разделены по фазам и имеют явно локальную ответственность.
+[x] Один и тот же scene-level дефект после decode продолжает идти через
     policy-owned `code/path/message`, а не через локальную decode-ветку.
-[ ] `scene_builder_decode_json.part.dart` не забирает обратно scope шага `6`.
-[ ] `_decodeSnapshotFromJson(...)` больше не остаётся giant decode-orchestrator
+[x] `scene_builder_decode_json.part.dart` не забирает обратно scope шага `6`.
+[x] `_decodeSnapshotFromJson(...)` больше не остаётся giant decode-orchestrator
     по `source-lines-of-code`, а `_decodeNode(...)` улучшается и по
     `source-lines-of-code`, и по `cyclomatic-complexity`.
-[ ] Декомпозиция decode-path не добавляет лишнюю materialization cost или
+[x] Декомпозиция decode-path не добавляет лишнюю materialization cost или
     дополнительный полный traversal поверх уже существующего decode/policy
     контура.
 
 ## Тестовый контур шага
 
-[ ] `test/serialization/scene_codec_validation_test.dart`
-[ ] `test/model/scene_builder_test.dart`
-[ ] `test/public_api/scene_builder_test.dart`
-[ ] Точечные сценарии:
+[x] `test/serialization/scene_codec_validation_test.dart`
+[x] `test/model/scene_builder_test.dart`
+[x] `test/public_api/scene_builder_test.dart`
+[x] Точечные сценарии:
     - invalid JSON shape errors keep exact decode paths
     - duplicate/range defects still use policy-owned diagnostics after decode
     - decode of heterogeneous node types is covered through split helpers

@@ -4,6 +4,7 @@ import '../contract/snapshot.dart';
 import '../contract/transform2d.dart';
 import '../core/scene.dart';
 import '../core/scene_limits.dart';
+import 'scene_structural_limits.dart';
 import 'scene_value_validation.dart';
 
 typedef ScenePolicySnapshotFromScene = SceneSnapshot Function(Scene scene);
@@ -66,15 +67,7 @@ void _validateStructuralInvariants(SceneSnapshot snapshot) {
   final seenLayerIds = <LayerId>{};
   var totalNodeCount = 0;
 
-  if (snapshot.layers.length > kMaxContentLayersPerScene) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidValue,
-      path: 'layers',
-      message:
-          'Field layers must contain at most $kMaxContentLayersPerScene items.',
-      source: snapshot.layers.length,
-    );
-  }
+  sceneRequireContentLayerLimit(snapshot.layers.length);
 
   final backgroundLayer = snapshot.backgroundLayer;
   for (
@@ -82,7 +75,7 @@ void _validateStructuralInvariants(SceneSnapshot snapshot) {
     nodeIndex < backgroundLayer.nodes.length;
     nodeIndex++
   ) {
-    totalNodeCount = _consumeSceneNodeBudget(
+    totalNodeCount = sceneConsumeNodeBudget(
       totalNodeCount: totalNodeCount,
       path: 'backgroundLayer.nodes',
     );
@@ -108,7 +101,7 @@ void _validateStructuralInvariants(SceneSnapshot snapshot) {
       );
     }
     for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
-      totalNodeCount = _consumeSceneNodeBudget(
+      totalNodeCount = sceneConsumeNodeBudget(
         totalNodeCount: totalNodeCount,
         path: 'layers[$layerIndex].nodes',
       );
@@ -122,22 +115,6 @@ void _validateStructuralInvariants(SceneSnapshot snapshot) {
       );
     }
   }
-}
-
-int _consumeSceneNodeBudget({
-  required int totalNodeCount,
-  required String path,
-}) {
-  final nextTotalNodeCount = totalNodeCount + 1;
-  if (nextTotalNodeCount <= kMaxNodesPerScene) {
-    return nextTotalNodeCount;
-  }
-  throw SceneDataException(
-    code: SceneDataErrorCode.invalidValue,
-    path: path,
-    message: 'Scene must contain at most $kMaxNodesPerScene nodes.',
-    source: nextTotalNodeCount,
-  );
 }
 
 void _validateSnapshotRanges(SceneSnapshot snapshot) {

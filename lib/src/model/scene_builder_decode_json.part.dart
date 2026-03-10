@@ -1,34 +1,107 @@
 part of 'scene_builder.dart';
 
+typedef _DecodedScenePayload = ({
+  CameraSnapshot camera,
+  BackgroundSnapshot background,
+  ScenePaletteSnapshot palette,
+  BackgroundLayerSnapshot? backgroundLayer,
+  List<ContentLayerSnapshot> layers,
+});
+
+typedef _DecodedNodeBaseFields = ({
+  String id,
+  int instanceRevision,
+  Transform2D transform,
+  double hitPadding,
+  double opacity,
+  bool isVisible,
+  bool isSelectable,
+  bool isLocked,
+  bool isDeletable,
+  bool isTransformable,
+});
+
+typedef _DecodedTextFields = ({
+  String text,
+  Size size,
+  double fontSize,
+  Color color,
+  TextAlign align,
+  bool isBold,
+  bool isItalic,
+  bool isUnderline,
+  String? fontFamily,
+  double? maxWidth,
+  double? lineHeight,
+});
+
 SceneSnapshot _decodeSnapshotFromJson(Map<String, Object?> json) {
+  _requireSupportedSchemaVersion(json);
+  final payload = _decodeScenePayload(json);
+  return sceneSnapshotFromValidated(
+    backgroundLayer: payload.backgroundLayer,
+    layers: payload.layers,
+    camera: payload.camera,
+    background: payload.background,
+    palette: payload.palette,
+  );
+}
+
+void _requireSupportedSchemaVersion(Map<String, Object?> json) {
   final version = _requireInt(json, 'schemaVersion');
-  if (!sceneSchemaVersionsRead.contains(version)) {
-    final expectedVersions = sceneSchemaVersionsRead.toList()
-      ..sort((a, b) => a.compareTo(b));
-    final expectedVersionsMessage = expectedVersions.join(', ');
-    throw SceneDataException(
-      code: SceneDataErrorCode.unsupportedSchemaVersion,
-      path: 'schemaVersion',
-      message:
-          'Unsupported schemaVersion: $version. Expected one of: [$expectedVersionsMessage].',
+  if (sceneSchemaVersionsRead.contains(version)) {
+    return;
+  }
+  final expectedVersions = sceneSchemaVersionsRead.toList()
+    ..sort((a, b) => a.compareTo(b));
+  final expectedVersionsMessage = expectedVersions.join(', ');
+  throw SceneDataException(
+    code: SceneDataErrorCode.unsupportedSchemaVersion,
+    path: 'schemaVersion',
+    message:
+        'Unsupported schemaVersion: $version. Expected one of: [$expectedVersionsMessage].',
+  );
+}
+
+_DecodedScenePayload _decodeScenePayload(Map<String, Object?> json) {
+  var totalNodeCount = 0;
+  void consumeNodeBudget(String path) {
+    totalNodeCount = sceneConsumeNodeBudget(
+      totalNodeCount: totalNodeCount,
+      path: path,
     );
   }
 
+  return (
+    camera: _decodeCameraSnapshot(json),
+    background: _decodeBackgroundSnapshot(json),
+    palette: _decodePaletteSnapshot(json),
+    backgroundLayer: _decodeOptionalBackgroundLayer(
+      json,
+      onNodeDecoded: consumeNodeBudget,
+    ),
+    layers: _decodeContentLayers(json, onNodeDecoded: consumeNodeBudget),
+  );
+}
+
+CameraSnapshot _decodeCameraSnapshot(Map<String, Object?> json) {
   final cameraJson = _requireMap(json, 'camera');
-  final camera = cameraSnapshotFromValidated(
+  return cameraSnapshotFromValidated(
     offset: Offset(
       _requireDouble(cameraJson, 'offsetX', pathPrefix: 'camera'),
       _requireDouble(cameraJson, 'offsetY', pathPrefix: 'camera'),
     ),
   );
+}
 
+BackgroundSnapshot _decodeBackgroundSnapshot(Map<String, Object?> json) {
   final backgroundJson = _requireMap(json, 'background');
   final gridJson = _requireMap(
     backgroundJson,
     'grid',
     pathPrefix: 'background',
   );
-  final background = backgroundSnapshotFromValidated(
+  return backgroundSnapshotFromValidated(
     color: _parseColor(
       _requireString(backgroundJson, 'color', pathPrefix: 'background'),
       path: 'background.color',
@@ -50,129 +123,106 @@ SceneSnapshot _decodeSnapshotFromJson(Map<String, Object?> json) {
       ),
     ),
   );
+}
 
+ScenePaletteSnapshot _decodePaletteSnapshot(Map<String, Object?> json) {
   final paletteJson = _requireMap(json, 'palette');
-  final penColorsJson = _requireList(
+  return scenePaletteSnapshotFromValidated(
+    penColors: _decodePaletteColors(
+      paletteJson,
+      key: 'penColors',
+      pathPrefix: 'palette',
+    ),
+    backgroundColors: _decodePaletteColors(
+      paletteJson,
+      key: 'backgroundColors',
+      pathPrefix: 'palette',
+    ),
+    gridSizes: _decodePaletteGridSizes(paletteJson),
+  );
+}
+
+List<Color> _decodePaletteColors(
+  Map<String, Object?> paletteJson, {
+  required String key,
+  required String pathPrefix,
+}) {
+  final colorsJson = _requireList(
     paletteJson,
-    'penColors',
-    pathPrefix: 'palette',
+    key,
+    pathPrefix: pathPrefix,
     maxLength: kMaxPaletteItems,
   );
-  final backgroundColorsJson = _requireList(
-    paletteJson,
-    'backgroundColors',
-    pathPrefix: 'palette',
-    maxLength: kMaxPaletteItems,
-  );
+  final colorsPath = _pathAt(pathPrefix, key);
+  final colors = <Color>[];
+  for (var i = 0; i < colorsJson.length; i++) {
+    final path = _pathAt(colorsPath, '[$i]');
+    final value = _requireStringValue(colorsJson[i], field: key, path: path);
+    colors.add(_parseColor(value, path: path));
+  }
+  return colors;
+}
+
+List<double> _decodePaletteGridSizes(Map<String, Object?> paletteJson) {
   final gridSizesJson = _requireList(
     paletteJson,
     'gridSizes',
     pathPrefix: 'palette',
     maxLength: kMaxPaletteItems,
   );
-
-  final penColorsPath = 'palette.penColors';
-  final backgroundColorsPath = 'palette.backgroundColors';
-  final gridSizesPath = 'palette.gridSizes';
-
-  final penColors = <Color>[];
-  for (var i = 0; i < penColorsJson.length; i++) {
-    final path = _pathAt(penColorsPath, '[$i]');
-    final value = _requireStringValue(
-      penColorsJson[i],
-      field: 'penColors',
-      path: path,
-    );
-    penColors.add(_parseColor(value, path: path));
-  }
-
-  final backgroundColors = <Color>[];
-  for (var i = 0; i < backgroundColorsJson.length; i++) {
-    final path = _pathAt(backgroundColorsPath, '[$i]');
-    final value = _requireStringValue(
-      backgroundColorsJson[i],
-      field: 'backgroundColors',
-      path: path,
-    );
-    backgroundColors.add(_parseColor(value, path: path));
-  }
-
+  const gridSizesField = 'gridSizes';
+  const gridSizesPath = 'palette.gridSizes';
   final gridSizes = <double>[];
   for (var i = 0; i < gridSizesJson.length; i++) {
     final path = _pathAt(gridSizesPath, '[$i]');
     gridSizes.add(
-      _requireDoubleValue(gridSizesJson[i], field: 'gridSizes', path: path),
+      _requireDoubleValue(gridSizesJson[i], field: gridSizesField, path: path),
     );
   }
+  return gridSizes;
+}
 
-  final palette = scenePaletteSnapshotFromValidated(
-    penColors: penColors,
-    backgroundColors: backgroundColors,
-    gridSizes: gridSizes,
-  );
-
-  var totalNodeCount = 0;
-  void countNode(String nodesPath) {
-    totalNodeCount = _consumeSceneNodeBudget(
-      totalNodeCount: totalNodeCount,
-      path: nodesPath,
-    );
-  }
-
-  BackgroundLayerSnapshot? backgroundLayer;
+BackgroundLayerSnapshot? _decodeOptionalBackgroundLayer(
+  Map<String, Object?> json, {
+  required void Function(String nodesPath) onNodeDecoded,
+}) {
   final backgroundLayerJson = json['backgroundLayer'];
-  if (backgroundLayerJson != null) {
-    if (backgroundLayerJson is! Map) {
-      throw SceneDataException(
-        code: SceneDataErrorCode.invalidFieldType,
-        path: 'backgroundLayer',
-        message: 'Layer must be an object.',
-      );
-    }
-    backgroundLayer = _decodeBackgroundLayer(
-      _castMap(backgroundLayerJson, path: 'backgroundLayer'),
-      layerPath: 'backgroundLayer',
-      onNodeDecoded: countNode,
-    );
+  if (backgroundLayerJson == null) {
+    return null;
   }
+  return _decodeBackgroundLayer(
+    _requireObjectValue(
+      backgroundLayerJson,
+      path: 'backgroundLayer',
+      objectName: 'Layer',
+    ),
+    layerPath: 'backgroundLayer',
+    onNodeDecoded: onNodeDecoded,
+  );
+}
 
+List<ContentLayerSnapshot> _decodeContentLayers(
+  Map<String, Object?> json, {
+  required void Function(String nodesPath) onNodeDecoded,
+}) {
   final layersJson = _requireList(json, 'layers');
-  if (layersJson.length > kMaxContentLayersPerScene) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidValue,
-      path: 'layers',
-      message:
-          'Field layers must contain at most $kMaxContentLayersPerScene items.',
-      source: layersJson.length,
-    );
-  }
-
+  sceneRequireContentLayerLimit(layersJson.length);
   final layers = <ContentLayerSnapshot>[];
   for (var layerIndex = 0; layerIndex < layersJson.length; layerIndex++) {
     final layerPath = 'layers[$layerIndex]';
-    final layerJson = layersJson[layerIndex];
-    if (layerJson is! Map) {
-      throw SceneDataException(
-        code: SceneDataErrorCode.invalidFieldType,
-        path: layerPath,
-        message: 'Layer must be an object.',
-      );
-    }
-    final layer = _decodeContentLayer(
-      _castMap(layerJson, path: layerPath),
-      layerPath: layerPath,
-      onNodeDecoded: countNode,
+    layers.add(
+      _decodeContentLayer(
+        _requireObjectValue(
+          layersJson[layerIndex],
+          path: layerPath,
+          objectName: 'Layer',
+        ),
+        layerPath: layerPath,
+        onNodeDecoded: onNodeDecoded,
+      ),
     );
-    layers.add(layer);
   }
-
-  return sceneSnapshotFromValidated(
-    backgroundLayer: backgroundLayer,
-    layers: layers,
-    camera: camera,
-    background: background,
-    palette: palette,
-  );
+  return layers;
 }
 
 BackgroundLayerSnapshot _decodeBackgroundLayer(
@@ -180,25 +230,13 @@ BackgroundLayerSnapshot _decodeBackgroundLayer(
   required String layerPath,
   required void Function(String nodesPath) onNodeDecoded,
 }) {
-  final nodesJson = _requireList(json, 'nodes', pathPrefix: layerPath);
-  final nodesPath = _pathAt(layerPath, 'nodes');
-  final nodes = <NodeSnapshot>[];
-  for (var nodeIndex = 0; nodeIndex < nodesJson.length; nodeIndex++) {
-    onNodeDecoded(nodesPath);
-    final nodePath = _pathAt(nodesPath, '[$nodeIndex]');
-    final nodeJson = nodesJson[nodeIndex];
-    if (nodeJson is! Map) {
-      throw SceneDataException(
-        code: SceneDataErrorCode.invalidFieldType,
-        path: nodePath,
-        message: 'Node must be an object.',
-      );
-    }
-    nodes.add(
-      _decodeNode(_castMap(nodeJson, path: nodePath), nodePath: nodePath),
-    );
-  }
-  return backgroundLayerSnapshotFromValidated(nodes: nodes);
+  return backgroundLayerSnapshotFromValidated(
+    nodes: _decodeLayerNodes(
+      json,
+      layerPath: layerPath,
+      onNodeDecoded: onNodeDecoded,
+    ),
+  );
 }
 
 ContentLayerSnapshot _decodeContentLayer(
@@ -206,7 +244,18 @@ ContentLayerSnapshot _decodeContentLayer(
   required String layerPath,
   required void Function(String nodesPath) onNodeDecoded,
 }) {
-  final idPath = '$layerPath.id';
+  return contentLayerSnapshotFromValidated(
+    id: _decodeLayerId(json, layerPath: layerPath),
+    nodes: _decodeLayerNodes(
+      json,
+      layerPath: layerPath,
+      onNodeDecoded: onNodeDecoded,
+    ),
+  );
+}
+
+String _decodeLayerId(Map<String, Object?> json, {required String layerPath}) {
+  final idPath = _pathAt(layerPath, 'id');
   if (!json.containsKey('id')) {
     throw SceneDataException(
       code: SceneDataErrorCode.missingField,
@@ -214,57 +263,112 @@ ContentLayerSnapshot _decodeContentLayer(
       message: 'Missing required field $idPath.',
     );
   }
-  final id = LayerIdValue.fromJson(
+  return LayerIdValue.fromJson(
     json['id'],
     path: idPath,
     fieldName: idPath,
   ).value;
+}
 
+List<NodeSnapshot> _decodeLayerNodes(
+  Map<String, Object?> json, {
+  required String layerPath,
+  required void Function(String nodesPath) onNodeDecoded,
+}) {
   final nodesJson = _requireList(json, 'nodes', pathPrefix: layerPath);
   final nodesPath = _pathAt(layerPath, 'nodes');
   final nodes = <NodeSnapshot>[];
   for (var nodeIndex = 0; nodeIndex < nodesJson.length; nodeIndex++) {
     onNodeDecoded(nodesPath);
     final nodePath = _pathAt(nodesPath, '[$nodeIndex]');
-    final nodeJson = nodesJson[nodeIndex];
-    if (nodeJson is! Map) {
-      throw SceneDataException(
-        code: SceneDataErrorCode.invalidFieldType,
-        path: nodePath,
-        message: 'Node must be an object.',
-      );
-    }
     nodes.add(
-      _decodeNode(_castMap(nodeJson, path: nodePath), nodePath: nodePath),
+      _decodeNode(
+        _requireObjectValue(
+          nodesJson[nodeIndex],
+          path: nodePath,
+          objectName: 'Node',
+        ),
+        nodePath: nodePath,
+      ),
     );
   }
-  return contentLayerSnapshotFromValidated(id: id, nodes: nodes);
+  return nodes;
 }
 
-int _consumeSceneNodeBudget({
-  required int totalNodeCount,
+Map<String, Object?> _requireObjectValue(
+  Object? value, {
   required String path,
+  required String objectName,
 }) {
-  final nextTotalNodeCount = totalNodeCount + 1;
-  if (nextTotalNodeCount <= kMaxNodesPerScene) {
-    return nextTotalNodeCount;
+  if (value is! Map) {
+    throw SceneDataException(
+      code: SceneDataErrorCode.invalidFieldType,
+      path: path,
+      message: '$objectName must be an object.',
+    );
   }
-  throw SceneDataException(
-    code: SceneDataErrorCode.invalidValue,
-    path: path,
-    message: 'Scene must contain at most $kMaxNodesPerScene nodes.',
-    source: nextTotalNodeCount,
-  );
+  return _castMap(value, path: path);
 }
 
 NodeSnapshot _decodeNode(
   Map<String, Object?> json, {
   required String nodePath,
 }) {
-  final type = _parseNodeType(
+  final type = _decodeNodeType(json, nodePath: nodePath);
+  final base = _decodeNodeBaseFields(json, nodePath: nodePath);
+  switch (type) {
+    case NodeType.image:
+      return _decodeImageNode(json, nodePath: nodePath, base: base);
+    case NodeType.text:
+      return _decodeTextNode(json, nodePath: nodePath, base: base);
+    case NodeType.stroke:
+      return _decodeStrokeNode(json, nodePath: nodePath, base: base);
+    case NodeType.line:
+      return _decodeLineNode(json, nodePath: nodePath, base: base);
+    case NodeType.rect:
+      return _decodeRectNode(json, nodePath: nodePath, base: base);
+    case NodeType.path:
+      return _decodePathNode(json, nodePath: nodePath, base: base);
+  }
+}
+
+NodeType _decodeNodeType(
+  Map<String, Object?> json, {
+  required String nodePath,
+}) {
+  return _parseNodeType(
     _requireString(json, 'type', pathPrefix: nodePath),
     pathPrefix: nodePath,
   );
+}
+
+_DecodedNodeBaseFields _decodeNodeBaseFields(
+  Map<String, Object?> json, {
+  required String nodePath,
+}) {
+  return (
+    id: _decodeNodeId(json, nodePath: nodePath),
+    instanceRevision: _decodeNodeInstanceRevision(json, nodePath: nodePath),
+    transform: _decodeNodeTransform(json, nodePath: nodePath),
+    hitPadding: _decodeRequiredNonNegativeFiniteDouble(
+      json,
+      'hitPadding',
+      pathPrefix: nodePath,
+    ),
+    opacity: _decodeRequiredOpacity(json, 'opacity', pathPrefix: nodePath),
+    isVisible: _requireBool(json, 'isVisible', pathPrefix: nodePath),
+    isSelectable: _requireBool(json, 'isSelectable', pathPrefix: nodePath),
+    isLocked: _requireBool(json, 'isLocked', pathPrefix: nodePath),
+    isDeletable: _requireBool(json, 'isDeletable', pathPrefix: nodePath),
+    isTransformable: _requireBool(
+      json,
+      'isTransformable',
+      pathPrefix: nodePath,
+    ),
+  );
+}
+
+String _decodeNodeId(Map<String, Object?> json, {required String nodePath}) {
   final idPath = _pathAt(nodePath, 'id');
   if (!json.containsKey('id')) {
     throw SceneDataException(
@@ -273,240 +377,280 @@ NodeSnapshot _decodeNode(
       message: 'Missing required field $idPath.',
     );
   }
-  final id = NodeIdValue.fromJson(
-    json['id'],
-    path: idPath,
-    fieldName: 'id',
+  return NodeIdValue.fromJson(json['id'], path: idPath, fieldName: 'id').value;
+}
+
+int _decodeNodeInstanceRevision(
+  Map<String, Object?> json, {
+  required String nodePath,
+}) {
+  if (!json.containsKey('instanceRevision') ||
+      json['instanceRevision'] == null) {
+    return 0;
+  }
+  return InstanceRevisionValue.fromJson(
+    json['instanceRevision'],
+    path: _pathAt(nodePath, 'instanceRevision'),
+    fieldName: 'instanceRevision',
+    allowZero: true,
   ).value;
-  final instanceRevisionPath = _pathAt(nodePath, 'instanceRevision');
-  final instanceRevision =
-      !json.containsKey('instanceRevision') || json['instanceRevision'] == null
-      ? 0
-      : InstanceRevisionValue.fromJson(
-          json['instanceRevision'],
-          path: instanceRevisionPath,
-          fieldName: 'instanceRevision',
-          allowZero: true,
-        ).value;
-  final transform = _decodeTransform2D(
+}
+
+Transform2D _decodeNodeTransform(
+  Map<String, Object?> json, {
+  required String nodePath,
+}) {
+  return _decodeTransform2D(
     _requireMap(json, 'transform', pathPrefix: nodePath),
     pathPrefix: _pathAt(nodePath, 'transform'),
   );
-  final hitPadding = _decodeRequiredNonNegativeFiniteDouble(
-    json,
-    'hitPadding',
-    pathPrefix: nodePath,
-  );
-  final opacity = _decodeRequiredOpacity(json, 'opacity', pathPrefix: nodePath);
-  final isVisible = _requireBool(json, 'isVisible', pathPrefix: nodePath);
-  final isSelectable = _requireBool(json, 'isSelectable', pathPrefix: nodePath);
-  final isLocked = _requireBool(json, 'isLocked', pathPrefix: nodePath);
-  final isDeletable = _requireBool(json, 'isDeletable', pathPrefix: nodePath);
-  final isTransformable = _requireBool(
-    json,
-    'isTransformable',
-    pathPrefix: nodePath,
-  );
+}
 
-  switch (type) {
-    case NodeType.image:
-      return imageNodeSnapshotFromValidated(
-        id: id,
-        instanceRevision: instanceRevision,
-        imageId: ImageIdValue.fromJson(
-          _requireField(json, 'imageId', pathPrefix: nodePath),
-          path: _pathAt(nodePath, 'imageId'),
-          fieldName: 'imageId',
-        ).value,
-        size: _requireSize(json, 'size', pathPrefix: nodePath),
-        naturalSize: _optionalSizeMap(
-          json,
-          'naturalSize',
-          pathPrefix: nodePath,
-        ),
-        hitPadding: hitPadding,
-        transform: transform,
-        opacity: opacity,
-        isVisible: isVisible,
-        isSelectable: isSelectable,
-        isLocked: isLocked,
-        isDeletable: isDeletable,
-        isTransformable: isTransformable,
-      );
-    case NodeType.text:
-      return textNodeSnapshotFromValidated(
-        id: id,
-        instanceRevision: instanceRevision,
-        text: TextContentValue.fromJson(
-          _requireString(json, 'text', pathPrefix: nodePath),
-          path: _pathAt(nodePath, 'text'),
-          fieldName: 'text',
-        ).value,
-        size: _requireSize(json, 'size', pathPrefix: nodePath),
-        fontSize: _decodeRequiredPositiveFiniteDouble(
-          json,
-          'fontSize',
-          pathPrefix: nodePath,
-        ),
-        color: _parseColor(
-          _requireString(json, 'color', pathPrefix: nodePath),
-          path: _pathAt(nodePath, 'color'),
-        ),
-        align: _parseTextAlign(
-          _requireString(json, 'align', pathPrefix: nodePath),
-          pathPrefix: nodePath,
-        ),
-        isBold: _requireBool(json, 'isBold', pathPrefix: nodePath),
-        isItalic: _requireBool(json, 'isItalic', pathPrefix: nodePath),
-        isUnderline: _requireBool(json, 'isUnderline', pathPrefix: nodePath),
-        fontFamily: _decodeOptionalFontFamily(json, pathPrefix: nodePath),
-        maxWidth: _decodeOptionalPositiveFiniteDouble(
-          json,
-          'maxWidth',
-          pathPrefix: nodePath,
-        ),
-        lineHeight: _decodeOptionalPositiveFiniteDouble(
-          json,
-          'lineHeight',
-          pathPrefix: nodePath,
-        ),
-        hitPadding: hitPadding,
-        transform: transform,
-        opacity: opacity,
-        isVisible: isVisible,
-        isSelectable: isSelectable,
-        isLocked: isLocked,
-        isDeletable: isDeletable,
-        isTransformable: isTransformable,
-      );
-    case NodeType.stroke:
-      final pointsPath = _pathAt(nodePath, 'localPoints');
-      final pointsJson = _requireList(
-        json,
-        'localPoints',
-        pathPrefix: nodePath,
-      );
-      if (pointsJson.length > kMaxStrokePointsPerNode) {
-        throw SceneDataException(
-          code: SceneDataErrorCode.invalidValue,
-          path: pointsPath,
-          message:
-              'Field localPoints must contain at most $kMaxStrokePointsPerNode points.',
-          source: pointsJson.length,
-        );
-      }
-      final points = <Offset>[];
-      for (var i = 0; i < pointsJson.length; i++) {
-        points.add(
-          FiniteOffsetValue.fromJson(
-            pointsJson[i],
-            path: _pathAt(pointsPath, '[$i]'),
-            fieldName: _pathAt(pointsPath, '[$i]'),
-          ).value,
-        );
-      }
-      return strokeNodeSnapshotFromValidated(
-        id: id,
-        instanceRevision: instanceRevision,
-        points: points,
-        thickness: _decodeRequiredPositiveFiniteDouble(
-          json,
-          'thickness',
-          pathPrefix: nodePath,
-        ),
-        color: _parseColor(
-          _requireString(json, 'color', pathPrefix: nodePath),
-          path: _pathAt(nodePath, 'color'),
-        ),
-        hitPadding: hitPadding,
-        transform: transform,
-        opacity: opacity,
-        isVisible: isVisible,
-        isSelectable: isSelectable,
-        isLocked: isLocked,
-        isDeletable: isDeletable,
-        isTransformable: isTransformable,
-      );
-    case NodeType.line:
-      return lineNodeSnapshotFromValidated(
-        id: id,
-        instanceRevision: instanceRevision,
-        start: _decodeRequiredFiniteOffset(
-          json,
-          'localA',
-          pathPrefix: nodePath,
-        ),
-        end: _decodeRequiredFiniteOffset(json, 'localB', pathPrefix: nodePath),
-        thickness: _decodeRequiredPositiveFiniteDouble(
-          json,
-          'thickness',
-          pathPrefix: nodePath,
-        ),
-        color: _parseColor(
-          _requireString(json, 'color', pathPrefix: nodePath),
-          path: _pathAt(nodePath, 'color'),
-        ),
-        hitPadding: hitPadding,
-        transform: transform,
-        opacity: opacity,
-        isVisible: isVisible,
-        isSelectable: isSelectable,
-        isLocked: isLocked,
-        isDeletable: isDeletable,
-        isTransformable: isTransformable,
-      );
-    case NodeType.rect:
-      return rectNodeSnapshotFromValidated(
-        id: id,
-        instanceRevision: instanceRevision,
-        size: _requireSize(json, 'size', pathPrefix: nodePath),
-        fillColor: _optionalColor(json, 'fillColor', pathPrefix: nodePath),
-        strokeColor: _optionalColor(json, 'strokeColor', pathPrefix: nodePath),
-        strokeWidth: _decodeRequiredNonNegativeFiniteDouble(
-          json,
-          'strokeWidth',
-          pathPrefix: nodePath,
-        ),
-        hitPadding: hitPadding,
-        transform: transform,
-        opacity: opacity,
-        isVisible: isVisible,
-        isSelectable: isSelectable,
-        isLocked: isLocked,
-        isDeletable: isDeletable,
-        isTransformable: isTransformable,
-      );
-    case NodeType.path:
-      final svgPathData = SvgPathDataValue.fromJson(
-        _requireString(json, 'svgPathData', pathPrefix: nodePath),
-        path: _pathAt(nodePath, 'svgPathData'),
-        fieldName: 'svgPathData',
-      ).value;
-      return pathNodeSnapshotFromValidated(
-        id: id,
-        instanceRevision: instanceRevision,
-        svgPathData: svgPathData,
-        fillColor: _optionalColor(json, 'fillColor', pathPrefix: nodePath),
-        strokeColor: _optionalColor(json, 'strokeColor', pathPrefix: nodePath),
-        strokeWidth: _decodeRequiredNonNegativeFiniteDouble(
-          json,
-          'strokeWidth',
-          pathPrefix: nodePath,
-        ),
-        fillRule: _parsePathFillRule(
-          _requireString(json, 'fillRule', pathPrefix: nodePath),
-          pathPrefix: nodePath,
-        ),
-        hitPadding: hitPadding,
-        transform: transform,
-        opacity: opacity,
-        isVisible: isVisible,
-        isSelectable: isSelectable,
-        isLocked: isLocked,
-        isDeletable: isDeletable,
-        isTransformable: isTransformable,
-      );
+ImageNodeSnapshot _decodeImageNode(
+  Map<String, Object?> json, {
+  required String nodePath,
+  required _DecodedNodeBaseFields base,
+}) {
+  return imageNodeSnapshotFromValidated(
+    id: base.id,
+    instanceRevision: base.instanceRevision,
+    imageId: ImageIdValue.fromJson(
+      _requireField(json, 'imageId', pathPrefix: nodePath),
+      path: _pathAt(nodePath, 'imageId'),
+      fieldName: 'imageId',
+    ).value,
+    size: _requireSize(json, 'size', pathPrefix: nodePath),
+    naturalSize: _optionalSizeMap(json, 'naturalSize', pathPrefix: nodePath),
+    hitPadding: base.hitPadding,
+    transform: base.transform,
+    opacity: base.opacity,
+    isVisible: base.isVisible,
+    isSelectable: base.isSelectable,
+    isLocked: base.isLocked,
+    isDeletable: base.isDeletable,
+    isTransformable: base.isTransformable,
+  );
+}
+
+TextNodeSnapshot _decodeTextNode(
+  Map<String, Object?> json, {
+  required String nodePath,
+  required _DecodedNodeBaseFields base,
+}) {
+  final textFields = _decodeTextFields(json, nodePath: nodePath);
+  return textNodeSnapshotFromValidated(
+    id: base.id,
+    instanceRevision: base.instanceRevision,
+    text: textFields.text,
+    size: textFields.size,
+    fontSize: textFields.fontSize,
+    color: textFields.color,
+    align: textFields.align,
+    isBold: textFields.isBold,
+    isItalic: textFields.isItalic,
+    isUnderline: textFields.isUnderline,
+    fontFamily: textFields.fontFamily,
+    maxWidth: textFields.maxWidth,
+    lineHeight: textFields.lineHeight,
+    hitPadding: base.hitPadding,
+    transform: base.transform,
+    opacity: base.opacity,
+    isVisible: base.isVisible,
+    isSelectable: base.isSelectable,
+    isLocked: base.isLocked,
+    isDeletable: base.isDeletable,
+    isTransformable: base.isTransformable,
+  );
+}
+
+_DecodedTextFields _decodeTextFields(
+  Map<String, Object?> json, {
+  required String nodePath,
+}) {
+  return (
+    text: TextContentValue.fromJson(
+      _requireString(json, 'text', pathPrefix: nodePath),
+      path: _pathAt(nodePath, 'text'),
+      fieldName: 'text',
+    ).value,
+    size: _requireSize(json, 'size', pathPrefix: nodePath),
+    fontSize: _decodeRequiredPositiveFiniteDouble(
+      json,
+      'fontSize',
+      pathPrefix: nodePath,
+    ),
+    color: _parseColor(
+      _requireString(json, 'color', pathPrefix: nodePath),
+      path: _pathAt(nodePath, 'color'),
+    ),
+    align: _parseTextAlign(
+      _requireString(json, 'align', pathPrefix: nodePath),
+      pathPrefix: nodePath,
+    ),
+    isBold: _requireBool(json, 'isBold', pathPrefix: nodePath),
+    isItalic: _requireBool(json, 'isItalic', pathPrefix: nodePath),
+    isUnderline: _requireBool(json, 'isUnderline', pathPrefix: nodePath),
+    fontFamily: _decodeOptionalFontFamily(json, pathPrefix: nodePath),
+    maxWidth: _decodeOptionalPositiveFiniteDouble(
+      json,
+      'maxWidth',
+      pathPrefix: nodePath,
+    ),
+    lineHeight: _decodeOptionalPositiveFiniteDouble(
+      json,
+      'lineHeight',
+      pathPrefix: nodePath,
+    ),
+  );
+}
+
+StrokeNodeSnapshot _decodeStrokeNode(
+  Map<String, Object?> json, {
+  required String nodePath,
+  required _DecodedNodeBaseFields base,
+}) {
+  return strokeNodeSnapshotFromValidated(
+    id: base.id,
+    instanceRevision: base.instanceRevision,
+    points: _decodeStrokePoints(json, nodePath: nodePath),
+    thickness: _decodeRequiredPositiveFiniteDouble(
+      json,
+      'thickness',
+      pathPrefix: nodePath,
+    ),
+    color: _parseColor(
+      _requireString(json, 'color', pathPrefix: nodePath),
+      path: _pathAt(nodePath, 'color'),
+    ),
+    hitPadding: base.hitPadding,
+    transform: base.transform,
+    opacity: base.opacity,
+    isVisible: base.isVisible,
+    isSelectable: base.isSelectable,
+    isLocked: base.isLocked,
+    isDeletable: base.isDeletable,
+    isTransformable: base.isTransformable,
+  );
+}
+
+List<Offset> _decodeStrokePoints(
+  Map<String, Object?> json, {
+  required String nodePath,
+}) {
+  final pointsPath = _pathAt(nodePath, 'localPoints');
+  final pointsJson = _requireList(json, 'localPoints', pathPrefix: nodePath);
+  if (pointsJson.length > kMaxStrokePointsPerNode) {
+    throw SceneDataException(
+      code: SceneDataErrorCode.invalidValue,
+      path: pointsPath,
+      message:
+          'Field localPoints must contain at most $kMaxStrokePointsPerNode points.',
+      source: pointsJson.length,
+    );
   }
+  final points = <Offset>[];
+  for (var i = 0; i < pointsJson.length; i++) {
+    points.add(
+      FiniteOffsetValue.fromJson(
+        pointsJson[i],
+        path: _pathAt(pointsPath, '[$i]'),
+        fieldName: _pathAt(pointsPath, '[$i]'),
+      ).value,
+    );
+  }
+  return points;
+}
+
+LineNodeSnapshot _decodeLineNode(
+  Map<String, Object?> json, {
+  required String nodePath,
+  required _DecodedNodeBaseFields base,
+}) {
+  return lineNodeSnapshotFromValidated(
+    id: base.id,
+    instanceRevision: base.instanceRevision,
+    start: _decodeRequiredFiniteOffset(json, 'localA', pathPrefix: nodePath),
+    end: _decodeRequiredFiniteOffset(json, 'localB', pathPrefix: nodePath),
+    thickness: _decodeRequiredPositiveFiniteDouble(
+      json,
+      'thickness',
+      pathPrefix: nodePath,
+    ),
+    color: _parseColor(
+      _requireString(json, 'color', pathPrefix: nodePath),
+      path: _pathAt(nodePath, 'color'),
+    ),
+    hitPadding: base.hitPadding,
+    transform: base.transform,
+    opacity: base.opacity,
+    isVisible: base.isVisible,
+    isSelectable: base.isSelectable,
+    isLocked: base.isLocked,
+    isDeletable: base.isDeletable,
+    isTransformable: base.isTransformable,
+  );
+}
+
+RectNodeSnapshot _decodeRectNode(
+  Map<String, Object?> json, {
+  required String nodePath,
+  required _DecodedNodeBaseFields base,
+}) {
+  return rectNodeSnapshotFromValidated(
+    id: base.id,
+    instanceRevision: base.instanceRevision,
+    size: _requireSize(json, 'size', pathPrefix: nodePath),
+    fillColor: _optionalColor(json, 'fillColor', pathPrefix: nodePath),
+    strokeColor: _optionalColor(json, 'strokeColor', pathPrefix: nodePath),
+    strokeWidth: _decodeRequiredNonNegativeFiniteDouble(
+      json,
+      'strokeWidth',
+      pathPrefix: nodePath,
+    ),
+    hitPadding: base.hitPadding,
+    transform: base.transform,
+    opacity: base.opacity,
+    isVisible: base.isVisible,
+    isSelectable: base.isSelectable,
+    isLocked: base.isLocked,
+    isDeletable: base.isDeletable,
+    isTransformable: base.isTransformable,
+  );
+}
+
+PathNodeSnapshot _decodePathNode(
+  Map<String, Object?> json, {
+  required String nodePath,
+  required _DecodedNodeBaseFields base,
+}) {
+  return pathNodeSnapshotFromValidated(
+    id: base.id,
+    instanceRevision: base.instanceRevision,
+    svgPathData: SvgPathDataValue.fromJson(
+      _requireString(json, 'svgPathData', pathPrefix: nodePath),
+      path: _pathAt(nodePath, 'svgPathData'),
+      fieldName: 'svgPathData',
+    ).value,
+    fillColor: _optionalColor(json, 'fillColor', pathPrefix: nodePath),
+    strokeColor: _optionalColor(json, 'strokeColor', pathPrefix: nodePath),
+    strokeWidth: _decodeRequiredNonNegativeFiniteDouble(
+      json,
+      'strokeWidth',
+      pathPrefix: nodePath,
+    ),
+    fillRule: _parsePathFillRule(
+      _requireString(json, 'fillRule', pathPrefix: nodePath),
+      pathPrefix: nodePath,
+    ),
+    hitPadding: base.hitPadding,
+    transform: base.transform,
+    opacity: base.opacity,
+    isVisible: base.isVisible,
+    isSelectable: base.isSelectable,
+    isLocked: base.isLocked,
+    isDeletable: base.isDeletable,
+    isTransformable: base.isTransformable,
+  );
 }
 
 String? _decodeOptionalFontFamily(

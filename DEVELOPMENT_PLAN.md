@@ -30,7 +30,7 @@ language: russian
 - [x] [Шаг 5.2. Ввести entrypoints `ScenePolicy` и делегацию из builder](development_plan/step_05_2_scene_policy_entrypoints_and_builder_delegation.md)
 - [x] [Шаг 5.3. Свести scene-level validation к одному владельцу и единому error-contract](development_plan/step_05_3_scene_level_validation_owner_and_error_contract.md)
 - [x] [Шаг 5.4. Выровнять serialization boundary и зачистить мёртвые policy-ветки](development_plan/step_05_4_serialization_alignment_and_dead_policy_cleanup.md)
-- [ ] [Шаг 5.5. Разрезать decode pipeline и убрать второй owner policy в JSON decode](development_plan/step_05_5_decode_pipeline_decomposition_and_policy_boundary.md)
+- [x] [Шаг 5.5. Разрезать decode pipeline и убрать второй owner policy в JSON decode](development_plan/step_05_5_decode_pipeline_decomposition_and_policy_boundary.md)
 - [ ] [Шаг 5.6. Разрезать giant validators и закрыть диагностические watchpoints шага 5](development_plan/step_05_6_validator_decomposition_and_metrics_closure.md)
 - [ ] [Шаг 6. Нормализовать всю внешнюю границу данных и ошибок](development_plan/step_06_external_data_and_error_boundary.md)
 - [ ] [Шаг 7. Перевести id и ревизии на безопасную политику](development_plan/step_07_id_and_revision_safety_policy.md)
