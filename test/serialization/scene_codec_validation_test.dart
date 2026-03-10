@@ -1329,10 +1329,9 @@ void main() {
           predicate(
             (e) =>
                 e is SceneDataException &&
-                e.code == SceneDataErrorCode.invalidValue &&
+                e.code == SceneDataErrorCode.duplicateNodeId &&
                 e.path == 'layers[0].nodes[0].id' &&
-                e.message ==
-                    'Field layers[0].nodes[0].id must be unique across scene layers.',
+                e.message == 'Must be unique across scene layers.',
           ),
         ),
       );

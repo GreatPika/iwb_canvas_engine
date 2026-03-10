@@ -22,8 +22,6 @@ void sceneValidateSnapshotValues(
     onError: onError,
   );
 
-  final seenNodeIds = <String>{};
-  final seenLayerIds = <LayerId>{};
   final backgroundLayer = snapshot.backgroundLayer;
   for (
     var nodeIndex = 0;
@@ -38,14 +36,6 @@ void sceneValidateSnapshotValues(
       onError: onError,
       validate: () => NodeIdValue.of(node.id, name: '$field.id'),
     );
-    if (!seenNodeIds.add(node.id)) {
-      _sceneValidationFail(
-        onError: onError,
-        value: node.id,
-        field: '$field.id',
-        message: 'must be unique across scene layers.',
-      );
-    }
     sceneValidateNodeSnapshot(node, field: field, onError: onError);
   }
 
@@ -57,14 +47,6 @@ void sceneValidateSnapshotValues(
       onError: onError,
       validate: () => LayerIdValue.of(layer.id, name: 'layers[$layerIndex].id'),
     );
-    if (!seenLayerIds.add(layer.id)) {
-      _sceneValidationFail(
-        onError: onError,
-        value: layer.id,
-        field: 'layers[$layerIndex].id',
-        message: 'must be unique across content layers.',
-      );
-    }
     for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
       final field = 'layers[$layerIndex].nodes[$nodeIndex]';
       final node = layer.nodes[nodeIndex];
@@ -74,14 +56,6 @@ void sceneValidateSnapshotValues(
         onError: onError,
         validate: () => NodeIdValue.of(node.id, name: '$field.id'),
       );
-      if (!seenNodeIds.add(node.id)) {
-        _sceneValidationFail(
-          onError: onError,
-          value: node.id,
-          field: '$field.id',
-          message: 'must be unique across scene layers.',
-        );
-      }
       sceneValidateNodeSnapshot(node, field: field, onError: onError);
     }
   }
@@ -105,8 +79,6 @@ void sceneValidateSceneValues(
   );
   sceneValidatePalette(scene.palette, field: 'palette', onError: onError);
 
-  final seenNodeIds = <String>{};
-  final seenLayerIds = <LayerId>{};
   final backgroundLayer = scene.backgroundLayer;
   if (backgroundLayer != null) {
     for (
@@ -122,14 +94,6 @@ void sceneValidateSceneValues(
         onError: onError,
         validate: () => NodeIdValue.of(node.id, name: '$field.id'),
       );
-      if (!seenNodeIds.add(node.id)) {
-        _sceneValidationFail(
-          onError: onError,
-          value: node.id,
-          field: '$field.id',
-          message: 'must be unique across scene layers.',
-        );
-      }
       sceneValidateNode(node, field: field, onError: onError);
     }
   }
@@ -142,14 +106,6 @@ void sceneValidateSceneValues(
       onError: onError,
       validate: () => LayerIdValue.of(layer.id, name: 'layers[$layerIndex].id'),
     );
-    if (!seenLayerIds.add(layer.id)) {
-      _sceneValidationFail(
-        onError: onError,
-        value: layer.id,
-        field: 'layers[$layerIndex].id',
-        message: 'must be unique across content layers.',
-      );
-    }
     for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
       final field = 'layers[$layerIndex].nodes[$nodeIndex]';
       final node = layer.nodes[nodeIndex];
@@ -159,14 +115,6 @@ void sceneValidateSceneValues(
         onError: onError,
         validate: () => NodeIdValue.of(node.id, name: '$field.id'),
       );
-      if (!seenNodeIds.add(node.id)) {
-        _sceneValidationFail(
-          onError: onError,
-          value: node.id,
-          field: '$field.id',
-          message: 'must be unique across scene layers.',
-        );
-      }
       sceneValidateNode(node, field: field, onError: onError);
     }
   }

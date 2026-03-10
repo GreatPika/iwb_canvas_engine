@@ -70,48 +70,48 @@ duplicate/count/range policy и сделать единый детерминир
 
 ## Последовательность реализации (только действия)
 
-[ ] Зафиксировать в `scene_policy.dart` единый scene-level traversal для
+[x] Зафиксировать в `scene_policy.dart` единый scene-level traversal для
     `backgroundLayer.nodes`, `layers`, `layers[*].nodes` и вынести туда
     duplicate/count/range decisions как единственный policy-owner.
-[ ] Перевести `scene_value_validation_top_level.part.dart` в helper-only режим:
+[x] Перевести `scene_value_validation_top_level.part.dart` в helper-only режим:
     убрать из него duplicate `NodeId`, duplicate `LayerId`, scene-level count
     limits и range policy decisions.
-[ ] Сохранить `scene_value_validation_primitives.part.dart` и
+[x] Сохранить `scene_value_validation_primitives.part.dart` и
     `scene_value_validation_node.part.dart` как переиспользуемый низкоуровневый
     validation слой без scene-level policy владения.
-[ ] В `scene_builder_decode_json.part.dart` оставить только decode guardrails и
+[x] В `scene_builder_decode_json.part.dart` оставить только decode guardrails и
     выровнять их ошибки с policy-owned contract по `code/path/message`.
-[ ] Убедиться, что `scene_builder.dart` и его entrypoints
+[x] Убедиться, что `scene_builder.dart` и его entrypoints
     (`sceneCanonicalizeAndValidateSnapshot`, `sceneCanonicalizeAndValidateScene`,
     `sceneValidateCore`) используют только policy-owner и не имеют
     параллельного top-level policy path.
-[ ] Обновить тестовые ожидания там, где сейчас зафиксирован drift между
+[x] Обновить тестовые ожидания там, где сейчас зафиксирован drift между
     `invalidValue` и `duplicateNodeId`, а также между разными message/path для
     одного дефекта.
-[ ] Обновить описание шага и чекбоксы в этом файле после завершения реализации
+[x] Обновить описание шага и чекбоксы в этом файле после завершения реализации
     без переоткрытия решений выше.
 
 ## Критерии приемки
 
-[ ] Для каждого дефекта из таблицы выше существует ровно один owner и один
+[x] Для каждого дефекта из таблицы выше существует ровно один owner и один
     детерминированный `code/path/message` контракт.
-[ ] Один и тот же дефект сцены даёт одинаковую ошибку независимо от boundary
+[x] Один и тот же дефект сцены даёт одинаковую ошибку независимо от boundary
     (`sceneBuildFromSnapshot`, `sceneCanonicalizeAndValidateScene`,
     codec-related пути, где применим этот шаг).
-[ ] `scene_value_validation_top_level.part.dart` не является вторым owner-ом
+[x] `scene_value_validation_top_level.part.dart` не является вторым owner-ом
     scene-level duplicate/count/range policy.
-[ ] Scene-level применение `kMax*` больше не размазано между конкурирующими
+[x] Scene-level применение `kMax*` больше не размазано между конкурирующими
     validation-path.
-[ ] Подшаг не заходит в scope `5.4` и `6`.
+[x] Подшаг не заходит в scope `5.4` и `6`.
 
 ## Тестовый контур шага
 
-[ ] `test/model/scene_builder_test.dart`
-[ ] `test/public_api/scene_builder_test.dart`
-[ ] `test/serialization/scene_codec_validation_test.dart`
-[ ] `test/model/document_model_test.dart`
-[ ] `test/controller/core/scene_controller_commit_failures_test.dart`
-[ ] Точечные сценарии:
+[x] `test/model/scene_builder_test.dart`
+[x] `test/public_api/scene_builder_test.dart`
+[x] `test/serialization/scene_codec_validation_test.dart`
+[x] `test/model/document_model_test.dart`
+[x] `test/controller/core/scene_controller_commit_failures_test.dart`
+[x] Точечные сценарии:
     - duplicate node id (`backgroundLayer` и `layers`)
     - duplicate content layer id
     - scene-level count limits (`kMaxNodesPerScene`, `kMaxContentLayersPerScene`)

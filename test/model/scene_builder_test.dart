@@ -242,10 +242,9 @@ void main() {
             predicate(
               (e) =>
                   e is SceneDataException &&
-                  e.code == SceneDataErrorCode.invalidValue &&
+                  e.code == SceneDataErrorCode.duplicateNodeId &&
                   e.path == 'layers[0].nodes[0].id' &&
-                  e.message ==
-                      'Field layers[0].nodes[0].id must be unique across scene layers.',
+                  e.message == 'Must be unique across scene layers.',
             ),
           ),
         );
@@ -881,7 +880,7 @@ void main() {
     );
   });
 
-  test('sceneValidateSnapshotValues reports duplicate node ids', () {
+  test('sceneValidateSnapshotValues skips duplicate node-id policy', () {
     SceneDataException asSceneDataException({
       required Object? value,
       required String field,
@@ -922,19 +921,11 @@ void main() {
             },
         requirePositiveGridCellSize: true,
       ),
-      throwsA(
-        predicate(
-          (e) =>
-              e is SceneDataException &&
-              e.path == 'layers[0].nodes[1].id' &&
-              e.message ==
-                  'Field layers[0].nodes[1].id must be unique across scene layers.',
-        ),
-      ),
+      returnsNormally,
     );
   });
 
-  test('sceneValidateSnapshotValues reports duplicate content layer ids', () {
+  test('sceneValidateSnapshotValues skips duplicate content-layer policy', () {
     SceneDataException asSceneDataException({
       required Object? value,
       required String field,
@@ -970,15 +961,7 @@ void main() {
             },
         requirePositiveGridCellSize: true,
       ),
-      throwsA(
-        predicate(
-          (e) =>
-              e is SceneDataException &&
-              e.path == 'layers[1].id' &&
-              e.message ==
-                  'Field layers[1].id must be unique across content layers.',
-        ),
-      ),
+      returnsNormally,
     );
   });
 
@@ -1007,7 +990,7 @@ void main() {
     );
   });
 
-  test('sceneValidateSnapshotValues reports background duplicate node ids', () {
+  test('sceneValidateSnapshotValues skips background duplicate-node policy', () {
     SceneDataException asSceneDataException({
       required Object? value,
       required String field,
@@ -1048,15 +1031,7 @@ void main() {
             },
         requirePositiveGridCellSize: true,
       ),
-      throwsA(
-        predicate(
-          (e) =>
-              e is SceneDataException &&
-              e.path == 'backgroundLayer.nodes[1].id' &&
-              e.message ==
-                  'Field backgroundLayer.nodes[1].id must be unique across scene layers.',
-        ),
-      ),
+      returnsNormally,
     );
   });
 
@@ -1077,10 +1052,9 @@ void main() {
         predicate(
           (e) =>
               e is SceneDataException &&
-              e.code == SceneDataErrorCode.invalidValue &&
+              e.code == SceneDataErrorCode.duplicateNodeId &&
               e.path == 'backgroundLayer.nodes[1].id' &&
-              e.message ==
-                  'Field backgroundLayer.nodes[1].id must be unique across scene layers.',
+              e.message == 'Must be unique across scene layers.',
         ),
       ),
     );

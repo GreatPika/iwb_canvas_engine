@@ -28,7 +28,7 @@ language: russian
 - [ ] [Шаг 5. Ввести единый `ScenePolicy` через подшаги 5.1-5.4](development_plan/step_05_scene_policy.md)
 - [x] [Шаг 5.1. Зафиксировать runtime и boundary policy для `backgroundLayer`](development_plan/step_05_1_background_layer_runtime_and_boundary_policy.md)
 - [x] [Шаг 5.2. Ввести entrypoints `ScenePolicy` и делегацию из builder](development_plan/step_05_2_scene_policy_entrypoints_and_builder_delegation.md)
-- [ ] [Шаг 5.3. Свести scene-level validation к одному владельцу и единому error-contract](development_plan/step_05_3_scene_level_validation_owner_and_error_contract.md)
+- [x] [Шаг 5.3. Свести scene-level validation к одному владельцу и единому error-contract](development_plan/step_05_3_scene_level_validation_owner_and_error_contract.md)
 - [ ] [Шаг 5.4. Выровнять serialization boundary и зачистить мёртвые policy-ветки](development_plan/step_05_4_serialization_alignment_and_dead_policy_cleanup.md)
 - [ ] [Шаг 6. Нормализовать всю внешнюю границу данных и ошибок](development_plan/step_06_external_data_and_error_boundary.md)
 - [ ] [Шаг 7. Перевести id и ревизии на безопасную политику](development_plan/step_07_id_and_revision_safety_policy.md)
