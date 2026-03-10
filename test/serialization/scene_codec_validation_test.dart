@@ -1329,12 +1329,46 @@ void main() {
           predicate(
             (e) =>
                 e is SceneDataException &&
-                e.message.contains('must be unique across scene layers.'),
+                e.code == SceneDataErrorCode.invalidValue &&
+                e.path == 'layers[0].nodes[0].id' &&
+                e.message ==
+                    'Field layers[0].nodes[0].id must be unique across scene layers.',
           ),
         ),
       );
     },
   );
+
+  test('encodeScene preserves import-boundary duplicate-id diagnostics', () {
+    final snapshot = SceneSnapshot(
+      backgroundLayer: BackgroundLayerSnapshot(
+        nodes: <NodeSnapshot>[
+          RectNodeSnapshot(id: 'dup', size: const Size(1, 1)),
+        ],
+      ),
+      layers: <ContentLayerSnapshot>[
+        ContentLayerSnapshot(
+          id: 'layer-auto-dup-encode',
+          nodes: <NodeSnapshot>[
+            RectNodeSnapshot(id: 'dup', size: const Size(2, 2)),
+          ],
+        ),
+      ],
+    );
+
+    expect(
+      () => encodeScene(snapshot),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.duplicateNodeId &&
+              e.path == 'layers[0].nodes[0].id' &&
+              e.message == 'Must be unique across scene layers.',
+        ),
+      ),
+    );
+  });
 
   test('decodeScene rejects non-positive thickness', () {
     final nodeJson = _baseNodeJson(id: 's1', type: 'stroke')

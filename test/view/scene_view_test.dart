@@ -208,11 +208,19 @@ void main() {
       if (painter == null) {
         fail('Expected ScenePainter.');
       }
+      final renderCaches = debugSceneViewRenderCachesOf(
+        tester.element(find.byType(SceneViewCore)),
+      );
       final scenePainter = painter as ScenePainter;
       expect(scenePainter.staticLayerCache, isA<SceneStaticLayerCache>());
       expect(scenePainter.textLayoutCache, isA<SceneTextLayoutCache>());
       expect(scenePainter.strokePathCache, isA<SceneStrokePathCache>());
       expect(scenePainter.pathMetricsCache, isA<ScenePathMetricsCache>());
+      expect(renderCaches.staticLayerCache, same(scenePainter.staticLayerCache));
+      expect(renderCaches.textLayoutCache, same(scenePainter.textLayoutCache));
+      expect(renderCaches.strokePathCache, same(scenePainter.strokePathCache));
+      expect(renderCaches.pathMetricsCache, same(scenePainter.pathMetricsCache));
+      expect(renderCaches.geometryCache, isA<RenderGeometryCache>());
       expect(scenePainter.imageResolver('missing'), isNull);
 
       final extStaticA = SceneStaticLayerCache();

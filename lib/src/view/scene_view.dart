@@ -9,6 +9,21 @@ import '../render/scene_render_caches.dart';
 
 ui.Image? _defaultImageResolver(String _) => null;
 
+@visibleForTesting
+SceneRenderCaches debugSceneViewRenderCachesOf(BuildContext context) {
+  final state =
+      switch (context) {
+        StatefulElement(:final state) when state is _SceneViewCoreState => state,
+        _ => context.findAncestorStateOfType<_SceneViewCoreState>(),
+      };
+  if (state == null) {
+    throw StateError(
+      'No SceneViewCore state found for the provided BuildContext.',
+    );
+  }
+  return state._renderCaches;
+}
+
 class SceneViewCore extends StatefulWidget {
   const SceneViewCore({
     required this.controller,

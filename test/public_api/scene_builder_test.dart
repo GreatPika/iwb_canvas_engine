@@ -189,4 +189,38 @@ void main() {
       );
     },
   );
+
+  test(
+    'SceneBuilder.buildFromJson preserves duplicate-id diagnostics of decodeScene',
+    () {
+      final raw = _minimalSceneJson();
+      raw['backgroundLayer'] = <String, Object?>{
+        'nodes': <Object?>[
+          _minimalRectNodeJson(id: 'dup-bg'),
+          _minimalRectNodeJson(id: 'dup-bg'),
+        ],
+      };
+
+      SceneDataException capture(Object Function() callback) {
+        try {
+          callback();
+          fail('Expected SceneDataException');
+        } on SceneDataException catch (error) {
+          return error;
+        }
+      }
+
+      final fromBuilder = capture(() => SceneBuilder.buildFromJson(raw));
+      final fromCodec = capture(
+        () => decodeScene(Map<String, dynamic>.from(raw)),
+      );
+
+      expect(fromBuilder.code, fromCodec.code);
+      expect(fromBuilder.message, fromCodec.message);
+      expect(fromBuilder.path, fromCodec.path);
+      expect(fromBuilder.code, SceneDataErrorCode.duplicateNodeId);
+      expect(fromBuilder.path, 'backgroundLayer.nodes[1].id');
+      expect(fromBuilder.message, 'Must be unique across scene layers.');
+    },
+  );
 }

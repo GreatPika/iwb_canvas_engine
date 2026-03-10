@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui';
 
 import '../core/nodes.dart';
@@ -20,13 +19,12 @@ import '../core/text_layout.dart';
 import '../contract/transform2d.dart';
 import '../contract/scene_data_exception.dart';
 import '../contract/snapshot.dart';
-import 'scene_value_validation.dart';
+import 'scene_policy.dart';
 
 part 'scene_builder_json_require.part.dart';
 part 'scene_builder_decode_json.part.dart';
 part 'scene_builder_scene_from_snapshot.part.dart';
 part 'scene_builder_snapshot_from_scene.part.dart';
-part 'scene_builder_canonicalize_validate.part.dart';
 
 Scene sceneBuildFromSnapshot(
   SceneSnapshot rawSnapshot, {
@@ -55,27 +53,21 @@ Scene sceneBuildFromJsonMap(Map<String, Object?> rawJson) {
 }
 
 SceneSnapshot sceneCanonicalizeAndValidateSnapshot(SceneSnapshot rawSnapshot) {
-  _validateStructuralInvariants(rawSnapshot);
-  sceneValidateSnapshotValues(
-    rawSnapshot,
-    onError: _snapshotValidationError,
-    requirePositiveGridCellSize: true,
-  );
-  _validateSnapshotRanges(rawSnapshot);
-  return rawSnapshot;
+  return ScenePolicy.validateImportSnapshot(rawSnapshot);
 }
 
 Scene sceneCanonicalizeAndValidateScene(Scene rawScene) {
-  sceneValidateSceneValues(
+  return ScenePolicy.validateRuntimeScene(
     rawScene,
-    onError: _sceneValidationError,
-    requirePositiveGridCellSize: true,
+    snapshotFromScene: _snapshotFromScene,
+    sceneFromSnapshot: (snapshot) => _sceneFromSnapshot(snapshot),
   );
-  final rawSnapshot = _snapshotFromScene(rawScene);
-  final canonicalSnapshot = sceneCanonicalizeAndValidateSnapshot(rawSnapshot);
-  return _sceneFromSnapshot(canonicalSnapshot);
 }
 
 Scene sceneValidateCore(Scene scene) {
-  return sceneCanonicalizeAndValidateScene(scene);
+  return ScenePolicy.validateEncodeScene(
+    scene,
+    snapshotFromScene: _snapshotFromScene,
+    sceneFromSnapshot: (snapshot) => _sceneFromSnapshot(snapshot),
+  );
 }

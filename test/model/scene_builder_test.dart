@@ -19,6 +19,9 @@ import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
         kMaxTextLength;
 import 'package:iwb_canvas_engine/src/model/scene_builder.dart'
     as model_builder;
+import 'package:iwb_canvas_engine/src/model/document.dart'
+    show txnSceneFromSnapshot, txnSceneToSnapshot;
+import 'package:iwb_canvas_engine/src/model/scene_policy.dart';
 import 'package:iwb_canvas_engine/src/model/scene_value_validation.dart'
     as value_validation;
 
@@ -177,6 +180,76 @@ void main() {
       expect(nodes[6], isA<PathNode>());
       expect((nodes[5] as PathNode).fillRule, PathFillRule.nonZero);
       expect((nodes[6] as PathNode).fillRule, PathFillRule.evenOdd);
+    },
+  );
+
+  test('sceneCanonicalizeAndValidateScene canonicalizes runtime scene', () {
+    final scene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(
+          id: 'layer-auto-delegate',
+          nodes: <SceneNode>[
+            RectNode(id: 'rect-runtime', size: const Size(4, 5)),
+          ],
+        ),
+      ],
+    );
+
+    final canonical = model_builder.sceneCanonicalizeAndValidateScene(scene);
+
+    expect(canonical.backgroundLayer, isNotNull);
+    expect(canonical.layers.single.nodes.single.id, 'rect-runtime');
+  });
+
+  test(
+    'ScenePolicy runtime and encode entrypoints preserve runtime diagnostics',
+    () {
+      Scene duplicateScene() {
+        return Scene(
+          backgroundLayer: BackgroundLayer(
+            nodes: <SceneNode>[
+              RectNode(id: 'dup-runtime', size: const Size(1, 1)),
+            ],
+          ),
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-auto-runtime-dup',
+              nodes: <SceneNode>[
+                RectNode(id: 'dup-runtime', size: const Size(2, 2)),
+              ],
+            ),
+          ],
+        );
+      }
+
+      final validators = <Scene Function(Scene)>[
+        (scene) => ScenePolicy.validateRuntimeScene(
+          scene,
+          snapshotFromScene: txnSceneToSnapshot,
+          sceneFromSnapshot: txnSceneFromSnapshot,
+        ),
+        (scene) => ScenePolicy.validateEncodeScene(
+          scene,
+          snapshotFromScene: txnSceneToSnapshot,
+          sceneFromSnapshot: txnSceneFromSnapshot,
+        ),
+      ];
+
+      for (final validate in validators) {
+        expect(
+          () => validate(duplicateScene()),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is SceneDataException &&
+                  e.code == SceneDataErrorCode.invalidValue &&
+                  e.path == 'layers[0].nodes[0].id' &&
+                  e.message ==
+                      'Field layers[0].nodes[0].id must be unique across scene layers.',
+            ),
+          ),
+        );
+      }
     },
   );
 
@@ -1004,6 +1077,7 @@ void main() {
         predicate(
           (e) =>
               e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
               e.path == 'backgroundLayer.nodes[1].id' &&
               e.message ==
                   'Field backgroundLayer.nodes[1].id must be unique across scene layers.',
@@ -1026,6 +1100,7 @@ void main() {
         predicate(
           (e) =>
               e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
               e.path == 'layers[1].id' &&
               e.message ==
                   'Field layers[1].id must be unique across content layers.',

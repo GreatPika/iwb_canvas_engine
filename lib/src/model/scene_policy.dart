@@ -1,4 +1,65 @@
-part of 'scene_builder.dart';
+import 'dart:math' as math;
+import '../contract/scene_data_exception.dart';
+import '../contract/snapshot.dart';
+import '../contract/transform2d.dart';
+import '../core/scene.dart';
+import '../core/scene_limits.dart';
+import 'scene_value_validation.dart';
+
+typedef ScenePolicySnapshotFromScene = SceneSnapshot Function(Scene scene);
+typedef ScenePolicySceneFromSnapshot = Scene Function(SceneSnapshot snapshot);
+
+abstract final class ScenePolicy {
+  static SceneSnapshot validateImportSnapshot(SceneSnapshot rawSnapshot) {
+    _validateStructuralInvariants(rawSnapshot);
+    sceneValidateSnapshotValues(
+      rawSnapshot,
+      onError: _snapshotValidationError,
+      requirePositiveGridCellSize: true,
+    );
+    _validateSnapshotRanges(rawSnapshot);
+    return rawSnapshot;
+  }
+
+  static Scene validateRuntimeScene(
+    Scene rawScene, {
+    required ScenePolicySnapshotFromScene snapshotFromScene,
+    required ScenePolicySceneFromSnapshot sceneFromSnapshot,
+  }) {
+    return _validateSceneBoundary(
+      rawScene,
+      snapshotFromScene: snapshotFromScene,
+      sceneFromSnapshot: sceneFromSnapshot,
+    );
+  }
+
+  static Scene validateEncodeScene(
+    Scene scene, {
+    required ScenePolicySnapshotFromScene snapshotFromScene,
+    required ScenePolicySceneFromSnapshot sceneFromSnapshot,
+  }) {
+    return _validateSceneBoundary(
+      scene,
+      snapshotFromScene: snapshotFromScene,
+      sceneFromSnapshot: sceneFromSnapshot,
+    );
+  }
+
+  static Scene _validateSceneBoundary(
+    Scene rawScene, {
+    required ScenePolicySnapshotFromScene snapshotFromScene,
+    required ScenePolicySceneFromSnapshot sceneFromSnapshot,
+  }) {
+    sceneValidateSceneValues(
+      rawScene,
+      onError: _sceneValidationError,
+      requirePositiveGridCellSize: true,
+    );
+    final rawSnapshot = snapshotFromScene(rawScene);
+    final canonicalSnapshot = validateImportSnapshot(rawSnapshot);
+    return sceneFromSnapshot(canonicalSnapshot);
+  }
+}
 
 void _validateStructuralInvariants(SceneSnapshot snapshot) {
   final seen = <String>{};
@@ -183,9 +244,6 @@ void _validateTransformRanges(Transform2D transform, String path) {
     max: sceneScaleMax,
     path: '$path.scaleY',
   );
-  // Invertibility is already enforced earlier by scene value validation
-  // (sceneValidateFiniteTransform2D), so range validation stays focused on
-  // coordinate/scale limits only.
 }
 
 void _validateCoordinate(double value, String path) {

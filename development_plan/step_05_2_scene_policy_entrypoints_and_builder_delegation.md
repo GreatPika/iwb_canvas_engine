@@ -63,47 +63,47 @@ scene-level orchestration. Сейчас
 
 ### `lib/src/model/scene_policy.dart`
 
-[ ] Создать internal orchestrator для scene-level policy.
-[ ] Держать API компактным и boundary-oriented, без длинного списка
+[x] Создать internal orchestrator для scene-level policy.
+[x] Держать API компактным и boundary-oriented, без длинного списка
     равноправных top-level функций.
-[ ] Явно зафиксировать, какие boundary он обслуживает:
+[x] Явно зафиксировать, какие boundary он обслуживает:
     - snapshot import;
     - runtime scene validation;
     - encode-oriented validation entrypoint для последующего codec wiring.
 
 ### `lib/src/model/scene_builder.dart`
 
-[ ] Перевести `sceneCanonicalizeAndValidateSnapshot(...)` на делегацию в
+[x] Перевести `sceneCanonicalizeAndValidateSnapshot(...)` на делегацию в
     `ScenePolicy`.
-[ ] Перевести `sceneCanonicalizeAndValidateScene(...)` на делегацию в
+[x] Перевести `sceneCanonicalizeAndValidateScene(...)` на делегацию в
     `ScenePolicy` с сохранением текущей внешней семантики.
-[ ] Сохранить за builder ответственность за
+[x] Сохранить за builder ответственность за
     `snapshot <-> scene` conversion, а не за orchestration policy.
 
 ### `lib/src/model/scene_builder_canonicalize_validate.part.dart`
 
-[ ] Оставить рядом только те helper-ы, которые после шага `5.2` действительно
+[x] Оставить рядом только те helper-ы, которые после шага `5.2` действительно
     являются internal implementation detail builder/policy wiring.
-[ ] Удалить или сузить private helper-ы, которые больше не нужны как
+[x] Удалить или сузить private helper-ы, которые больше не нужны как
     самостоятельные entrypoints.
 
 ## Критерии приемки
 
-[ ] `ScenePolicy` существует как один явный owner scene-level orchestration.
-[ ] `scene_builder.dart` больше не собирает policy вручную из нескольких
+[x] `ScenePolicy` существует как один явный owner scene-level orchestration.
+[x] `scene_builder.dart` больше не собирает policy вручную из нескольких
     top-level validation entrypoints.
-[ ] Builder остаётся ответственным за преобразование между snapshot и runtime
+[x] Builder остаётся ответственным за преобразование между snapshot и runtime
     scene, а не за независимое владение scene policy.
-[ ] Подшаг не дублирует работу `5.3`: duplicate/range error semantics здесь не
+[x] Подшаг не дублирует работу `5.3`: duplicate/range error semantics здесь не
     нормализуются повторно, кроме необходимого wiring.
-[ ] Подшаг не переоткрывает policy по `backgroundLayer` и не забирает
+[x] Подшаг не переоткрывает policy по `backgroundLayer` и не забирает
     serialization alignment из `5.4`.
 
 ## Тестовый контур
 
-[ ] `test/model/scene_builder_test.dart`
-[ ] `test/public_api/scene_builder_test.dart`
-[ ] `test/serialization/scene_codec_validation_test.dart`
-[ ] Проверка, что `sceneBuildFromSnapshot(...)`,
+[x] `test/model/scene_builder_test.dart`
+[x] `test/public_api/scene_builder_test.dart`
+[x] `test/serialization/scene_codec_validation_test.dart`
+[x] Проверка, что `sceneBuildFromSnapshot(...)`,
     `sceneBuildFromJsonMap(...)`, `sceneCanonicalizeAndValidateScene(...)`
     сохраняют прежнее поведение после делегации
