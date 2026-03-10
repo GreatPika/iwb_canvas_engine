@@ -5,7 +5,7 @@ Scene _sceneFromSnapshot(
   int Function()? nextInstanceRevision,
 }) {
   final instanceRevisionAllocator =
-      nextInstanceRevision ?? _snapshotInstanceRevisionAllocator(snapshot);
+      nextInstanceRevision ?? createLocalRevisionAllocator();
   return Scene(
     backgroundLayer: BackgroundLayer(
       nodes: snapshot.backgroundLayer.nodes
@@ -173,40 +173,12 @@ SceneNode _sceneNodeFromSnapshot(
   }
 }
 
-int Function() _snapshotInstanceRevisionAllocator(SceneSnapshot snapshot) {
-  var next = _snapshotInitialNodeInstanceRevisionSeed(snapshot);
-  return () {
-    final out = next;
-    next = next + 1;
-    return out;
-  };
-}
-
-int _snapshotInitialNodeInstanceRevisionSeed(SceneSnapshot snapshot) {
-  var maxRevision = 0;
-  final backgroundLayer = snapshot.backgroundLayer;
-  for (final node in backgroundLayer.nodes) {
-    if (node.instanceRevision > maxRevision) {
-      maxRevision = node.instanceRevision;
-    }
-  }
-  for (final layer in snapshot.layers) {
-    for (final node in layer.nodes) {
-      if (node.instanceRevision > maxRevision) {
-        maxRevision = node.instanceRevision;
-      }
-    }
-  }
-  return maxRevision + 1;
-}
-
 int _resolveSnapshotInstanceRevision(
   NodeSnapshot node, {
   required int Function() nextInstanceRevision,
 }) {
-  final existing = node.instanceRevision;
-  if (existing > 0) {
-    return existing;
-  }
-  return nextInstanceRevision();
+  return resolveImportedInstanceRevision(
+    node.instanceRevision,
+    allocateNextInstanceRevision: nextInstanceRevision,
+  );
 }

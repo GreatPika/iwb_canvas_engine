@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import '../core/nodes.dart' show SceneNode;
 import '../core/id_generator.dart' show IdGeneratorState;
+import '../core/revision_policy.dart';
 import '../core/scene.dart' show Scene;
 import '../core/scene_spatial_index.dart';
 import 'commands/draw_commands.dart';
@@ -190,7 +191,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
         baseAllNodeIds: _store.allNodeIds,
         baseNodeLocator: _store.nodeLocator,
         idGeneratorState: _store.idGeneratorState,
-        nextInstanceRevision: _store.nextInstanceRevision,
+        revisionState: _store.revisionState,
       );
       ctx = createdCtx;
       final writer = SceneWriter(
@@ -298,7 +299,8 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
           allNodeIds: _store.allNodeIds,
           nodeLocator: _store.nodeLocator,
           idGeneratorState: _store.idGeneratorState,
-          nextInstanceRevision: _store.nextInstanceRevision,
+          controllerEpoch: _store.controllerEpoch,
+          revisionState: _store.revisionState,
           commitRevision: nextCommitRevision,
           previousCommitRevision: _store.commitRevision,
         );
@@ -322,8 +324,11 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
       );
     }
 
-    final nextEpoch =
-        _store.controllerEpoch + (ctx.changeSet.documentReplaced ? 1 : 0);
+    final nextEpoch = resolveNextControllerEpoch(
+      currentEpoch: _store.controllerEpoch,
+      documentReplaced: ctx.changeSet.documentReplaced,
+      revisionState: ctx.revisionState,
+    );
     final nextStructuralRevision =
         _store.structuralRevision + (ctx.changeSet.structuralChanged ? 1 : 0);
     final nextBoundsRevision =
@@ -343,14 +348,17 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
       structuralChanged: ctx.changeSet.structuralChanged,
     );
     final committedIdGeneratorState = ctx.idGeneratorState.copy();
-    final committedNextInstanceRevision = ctx.nextInstanceRevision;
+    final committedRevisionState = resolvedCommittedRevisionAllocatorState(
+      ctx.revisionState,
+    );
     _assertStoreInvariantsCandidate(
       scene: committedScene,
       selectedNodeIds: committedSelection,
       allNodeIds: committedNodeIds,
       nodeLocator: committedNodeLocator,
       idGeneratorState: committedIdGeneratorState,
-      nextInstanceRevision: committedNextInstanceRevision,
+      controllerEpoch: nextEpoch,
+      revisionState: committedRevisionState,
       commitRevision: nextCommitRevision,
       previousCommitRevision: _store.commitRevision,
     );
@@ -373,7 +381,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
       committedNodeIds: committedNodeIds,
       committedNodeLocator: committedNodeLocator,
       committedIdGeneratorState: committedIdGeneratorState,
-      committedNextInstanceRevision: committedNextInstanceRevision,
+      committedRevisionState: committedRevisionState,
       nextEpoch: nextEpoch,
       nextStructuralRevision: nextStructuralRevision,
       nextBoundsRevision: nextBoundsRevision,
@@ -403,7 +411,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
     required Set<NodeId> committedNodeIds,
     required Map<NodeId, NodeLocatorEntry> committedNodeLocator,
     required IdGeneratorState committedIdGeneratorState,
-    required int committedNextInstanceRevision,
+    required RevisionAllocatorState committedRevisionState,
     required int nextEpoch,
     required int nextStructuralRevision,
     required int nextBoundsRevision,
@@ -418,7 +426,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
     _store.allNodeIds = committedNodeIds;
     _store.nodeLocator = committedNodeLocator;
     _store.idGeneratorState = committedIdGeneratorState;
-    _store.nextInstanceRevision = committedNextInstanceRevision;
+    _store.revisionState = committedRevisionState;
     _store.controllerEpoch = nextEpoch;
     _store.structuralRevision = nextStructuralRevision;
     _store.boundsRevision = nextBoundsRevision;
@@ -488,7 +496,8 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
     required Set<NodeId> allNodeIds,
     required Map<NodeId, NodeLocatorEntry> nodeLocator,
     required IdGeneratorState idGeneratorState,
-    required int nextInstanceRevision,
+    required int controllerEpoch,
+    required RevisionAllocatorState revisionState,
     required int commitRevision,
     required int previousCommitRevision,
   }) {
@@ -510,7 +519,8 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
       allNodeIds: allNodeIds,
       nodeLocator: nodeLocator,
       idGeneratorState: idGeneratorState,
-      nextInstanceRevision: nextInstanceRevision,
+      controllerEpoch: controllerEpoch,
+      revisionState: revisionState,
       commitRevision: commitRevision,
     );
   }

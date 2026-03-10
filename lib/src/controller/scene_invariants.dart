@@ -3,10 +3,11 @@ import 'dart:ui';
 import '../core/id_generator.dart';
 import '../core/grid_safety_limits.dart';
 import '../core/nodes.dart';
+import '../core/revision_policy.dart';
 import '../core/scene.dart';
 import '../contract/ids.dart' show LayerId;
-import '../model/document_clone.dart';
 import '../model/document.dart';
+import '../model/document_clone.dart';
 
 List<String> txnCollectStoreInvariantViolations({
   required Scene scene,
@@ -14,7 +15,9 @@ List<String> txnCollectStoreInvariantViolations({
   required Set<NodeId> allNodeIds,
   required Map<NodeId, NodeLocatorEntry> nodeLocator,
   required IdGeneratorState idGeneratorState,
-  required int nextInstanceRevision,
+  int controllerEpoch = 0,
+  RevisionAllocatorState? revisionState,
+  int nextInstanceRevision = 1,
   required int commitRevision,
 }) {
   var violations = const <String>[];
@@ -96,13 +99,32 @@ List<String> txnCollectStoreInvariantViolations({
     ];
   }
 
-  final expectedInstanceSeed = txnInitialNodeInstanceRevisionSeed(scene);
-  if (nextInstanceRevision < expectedInstanceSeed) {
+  if (controllerEpoch < 0 || controllerEpoch > kMaxControllerEpoch) {
     violations = <String>[
       ...violations,
-      'nextInstanceRevision must be >= '
-          'initialNodeInstanceRevisionSeed(scene). '
-          'actual=$nextInstanceRevision min=$expectedInstanceSeed',
+      'controllerEpoch must stay within [0, $kMaxControllerEpoch]. '
+          'actual=$controllerEpoch',
+    ];
+  }
+
+  final effectiveRevisionState =
+      revisionState ??
+      createInitialRevisionAllocatorState(
+        nextInstanceRevision: nextInstanceRevision,
+      );
+  final nextRevision = effectiveRevisionState.nextInstanceRevision;
+  if (nextRevision < 1 || nextRevision > kMaxInstanceRevision) {
+    violations = <String>[
+      ...violations,
+      'revisionState.nextInstanceRevision must stay within '
+          '[1, $kMaxInstanceRevision]. actual=$nextRevision',
+    ];
+  }
+
+  if (effectiveRevisionState.epochBumpRequested) {
+    violations = <String>[
+      ...violations,
+      'committed revisionState.epochBumpRequested must be false.',
     ];
   }
 
@@ -196,7 +218,9 @@ void debugAssertTxnStoreInvariants({
   required Set<NodeId> allNodeIds,
   required Map<NodeId, NodeLocatorEntry> nodeLocator,
   required IdGeneratorState idGeneratorState,
-  required int nextInstanceRevision,
+  int controllerEpoch = 0,
+  RevisionAllocatorState? revisionState,
+  int nextInstanceRevision = 1,
   required int commitRevision,
 }) {
   final violations = txnCollectStoreInvariantViolations(
@@ -205,6 +229,8 @@ void debugAssertTxnStoreInvariants({
     allNodeIds: allNodeIds,
     nodeLocator: nodeLocator,
     idGeneratorState: idGeneratorState,
+    controllerEpoch: controllerEpoch,
+    revisionState: revisionState,
     nextInstanceRevision: nextInstanceRevision,
     commitRevision: commitRevision,
   );

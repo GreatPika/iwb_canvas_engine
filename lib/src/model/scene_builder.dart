@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../core/nodes.dart';
+import '../core/revision_policy.dart';
 import '../core/scene.dart';
 import '../core/scene_limits.dart';
 import '../contract/validated/finite_offset_value.dart';

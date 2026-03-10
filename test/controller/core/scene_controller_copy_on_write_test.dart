@@ -219,50 +219,56 @@ void main() {
     },
   );
 
-  test('nextInstanceRevision stays monotonic across replaceScene', () {
-    final controller = SceneControllerCore(
-      initialSnapshot: SceneSnapshot(
-        layers: <ContentLayerSnapshot>[
-          ContentLayerSnapshot(
-            id: 'layer-auto-4',
-            nodes: <NodeSnapshot>[
-              RectNodeSnapshot(
-                id: 'high',
-                instanceRevision: 100,
-                size: Size(10, 10),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-    addTearDown(controller.dispose);
+  test(
+    'replaceScene keeps runtime revision allocator independent from snapshot max',
+    () {
+      final controller = SceneControllerCore(
+        initialSnapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-auto-4',
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(
+                  id: 'high',
+                  instanceRevision: 100,
+                  size: Size(10, 10),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
 
-    controller.writeReplaceScene(
-      SceneSnapshot(
-        layers: <ContentLayerSnapshot>[
-          ContentLayerSnapshot(
-            id: 'layer-auto-5',
-            nodes: <NodeSnapshot>[
-              RectNodeSnapshot(
-                id: 'low',
-                instanceRevision: 3,
-                size: Size(10, 10),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
+      controller.writeReplaceScene(
+        SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-auto-5',
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(
+                  id: 'low',
+                  instanceRevision: 3,
+                  size: Size(10, 10),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
 
-    late final NodeId insertedId;
-    controller.write<void>((writer) {
-      insertedId = writer.writeNodeInsert(RectNodeSpec(size: const Size(4, 4)));
-    });
+      late final NodeId insertedId;
+      controller.write<void>((writer) {
+        insertedId = writer.writeNodeInsert(
+          RectNodeSpec(size: const Size(4, 4)),
+        );
+      });
 
-    final inserted = controller.snapshot.layers
-        .expand((layer) => layer.nodes)
-        .firstWhere((node) => node.id == insertedId);
-    expect(inserted.instanceRevision, greaterThanOrEqualTo(101));
-  });
+      final inserted = controller.snapshot.layers
+          .expand((layer) => layer.nodes)
+          .firstWhere((node) => node.id == insertedId);
+      expect(controller.controllerEpoch, 1);
+      expect(inserted.instanceRevision, 1);
+    },
+  );
 }

@@ -137,37 +137,37 @@ semantics, а затем перевести на этот contract `TxnContext`,
 
 ## Последовательность реализации (только действия)
 
-[ ] Создать `lib/src/core/revision_policy.dart` как owner safe range,
+[x] Создать `lib/src/core/revision_policy.dart` как owner safe range,
     `(epoch, revision)` contract и overflow policy.
-[ ] Перевести `TxnContext.txnNextInstanceRevision()` на новый revision policy.
-[ ] Заменить в `TxnContext` голый `nextInstanceRevision` на
+[x] Перевести `TxnContext.txnNextInstanceRevision()` на новый revision policy.
+[x] Заменить в `TxnContext` голый `nextInstanceRevision` на
     `RevisionAllocatorState`.
-[ ] Убрать ad hoc seed/max-from-scene semantics из runtime/import paths, где
+[x] Убрать ad hoc seed/max-from-scene semantics из runtime/import paths, где
     revision state уже должен жить в store/runtime owner-е.
-[ ] Обновить `SceneBuilder` snapshot import path так, чтобы missing/invalid
+[x] Обновить `SceneBuilder` snapshot import path так, чтобы missing/invalid
     revisions нормализовались через `revision_policy.dart` с local start `1`, а
     не через `max(snapshot)+1`.
-[ ] Обновить invariants, чтобы они описывали composite revision policy и
+[x] Обновить invariants, чтобы они описывали composite revision policy и
     overflow behavior, а не только `nextInstanceRevision >= max(scene) + 1`.
 
 ## Критерии приёмки
 
-[ ] `revision_policy.dart` является одним owner-ом safe revision semantics.
-[ ] `instanceRevision` и `controllerEpoch` описаны как единый composite
+[x] `revision_policy.dart` является одним owner-ом safe revision semantics.
+[x] `instanceRevision` и `controllerEpoch` описаны как единый composite
     invalidation contract.
-[ ] Overflow ревизий реализован только через `epoch bump + revision reset`;
+[x] Overflow ревизий реализован только через `epoch bump + revision reset`;
     saturating behavior и тихий wraparound отсутствуют.
-[ ] `SceneBuilder`, store и txn path используют одну и ту же revision policy.
-[ ] Runtime path больше не вычисляет future revision через `max(scene)+1`.
-[ ] Invariants и tests проверяют новый contract, включая overflow и adopt /
+[x] `SceneBuilder`, store и txn path используют одну и ту же revision policy.
+[x] Runtime path больше не вычисляет future revision через `max(scene)+1`.
+[x] Invariants и tests проверяют новый contract, включая overflow и adopt /
     replaceScene lifecycle.
 
 ## Тестовый контур шага
 
-[ ] `test/controller/internal/change_set_txn_context_test.dart`
-[ ] `test/controller/scene_invariants_test.dart`
-[ ] `test/controller/core/scene_controller_copy_on_write_test.dart`
-[ ] `test/model/document_model_test.dart`
-[ ] Новый targeted test для `lib/src/core/revision_policy.dart`
-[ ] `dart run tool/check_invariant_coverage.dart` если меняется
+[x] `test/controller/internal/change_set_txn_context_test.dart`
+[x] `test/controller/scene_invariants_test.dart`
+[x] `test/controller/core/scene_controller_copy_on_write_test.dart`
+[x] `test/model/document_model_test.dart`
+[x] Новый targeted test для `lib/src/core/revision_policy.dart`
+[x] `dart run tool/check_invariant_coverage.dart` если меняется
     `tool/invariant_registry.dart`

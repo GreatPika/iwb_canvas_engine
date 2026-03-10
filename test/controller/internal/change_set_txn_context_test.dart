@@ -168,7 +168,7 @@ void main() {
       },
     );
     expect(ctx.nodeIdSeed, 1);
-    expect(ctx.nextInstanceRevision, 2);
+    expect(ctx.nextInstanceRevision, 1);
   });
 
   test(
@@ -603,12 +603,39 @@ void main() {
       'custom': (layerIndex: 0, nodeIndex: 2),
     });
     expect(storeWithSelection.nodeIdSeed, 1);
-    expect(storeWithSelection.nextInstanceRevision, 2);
+    expect(storeWithSelection.nextInstanceRevision, 1);
 
     final storeWithoutSelection = SceneStore(sceneDoc: Scene());
     expect(storeWithoutSelection.selectedNodeIds, isEmpty);
     expect(storeWithoutSelection.nodeIdSeed, 1);
     expect(storeWithoutSelection.nextInstanceRevision, 1);
+  });
+
+  test('SceneStore proxy setters update owned allocator state', () {
+    final store = SceneStore(sceneDoc: Scene());
+
+    store.nextInstanceRevision = 9;
+    store.nodeIdSeed = 11;
+    store.layerIdSeed = 13;
+
+    expect(store.nextInstanceRevision, 9);
+    expect(store.idGeneratorState.nextNodeCounter, 11);
+    expect(store.layerIdSeed, 13);
+    expect(store.idGeneratorState.nextLayerCounter, 13);
+    expect(() => store.nextInstanceRevision = 0, throwsArgumentError);
+  });
+
+  test('TxnContext nextInstanceRevision setter validates revision range', () {
+    final ctx = TxnContext(
+      baseScene: Scene(),
+      workingSelection: <NodeId>{},
+      baseAllNodeIds: const <NodeId>{},
+      nextInstanceRevision: 1,
+    );
+
+    ctx.nextInstanceRevision = 3;
+    expect(ctx.nextInstanceRevision, 3);
+    expect(() => ctx.nextInstanceRevision = 0, throwsArgumentError);
   });
 
   test('TxnContext scene-for-commit uses base scene until first mutation', () {

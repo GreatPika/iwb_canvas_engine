@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../core/grid_safety_limits.dart';
 import '../core/nodes.dart';
+import '../core/revision_policy.dart';
 import '../core/scene.dart';
 import '../core/text_layout.dart';
 import '../contract/node_patch.dart';
@@ -518,15 +519,17 @@ int _txnResolveSnapshotInstanceRevision(
   NodeSnapshot node, {
   int Function()? nextInstanceRevision,
 }) {
-  final existing = node.instanceRevision;
-  if (existing > 0) {
-    return existing;
-  }
   final allocator = nextInstanceRevision;
   if (allocator != null) {
-    return allocator();
+    return resolveImportedInstanceRevision(
+      node.instanceRevision,
+      allocateNextInstanceRevision: allocator,
+    );
   }
-  return 1;
+  return resolveImportedInstanceRevision(
+    node.instanceRevision,
+    allocateNextInstanceRevision: createLocalRevisionAllocator(),
+  );
 }
 
 int _txnResolveSpecInstanceRevision({int Function()? nextInstanceRevision}) {

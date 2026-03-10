@@ -1,6 +1,7 @@
 import '../core/nodes.dart';
 import '../core/scene.dart';
 import '../core/id_generator.dart';
+import '../core/revision_policy.dart';
 import '../model/document.dart';
 import '../model/document_clone.dart';
 
@@ -12,13 +13,14 @@ class SceneStore {
       allNodeIds = txnCollectNodeIds(sceneDoc),
       nodeLocator = txnBuildNodeLocator(sceneDoc),
       idGeneratorState = createInitialIdGeneratorState(),
-      nextInstanceRevision = txnInitialNodeInstanceRevisionSeed(sceneDoc);
+      revisionState = createInitialRevisionAllocatorState();
 
   Scene sceneDoc;
   Set<NodeId> selectedNodeIds;
   Set<NodeId> allNodeIds;
   Map<NodeId, NodeLocatorEntry> nodeLocator;
   IdGeneratorState idGeneratorState;
+  RevisionAllocatorState revisionState;
 
   int controllerEpoch = 0;
   int structuralRevision = 0;
@@ -26,7 +28,13 @@ class SceneStore {
   int visualRevision = 0;
   int commitRevision = 0;
 
-  int nextInstanceRevision;
+  int get nextInstanceRevision => revisionState.nextInstanceRevision;
+  set nextInstanceRevision(int value) {
+    revisionState.nextInstanceRevision = requireRevisionCounter(
+      value,
+      name: 'nextInstanceRevision',
+    );
+  }
 
   int get nodeIdSeed => idGeneratorState.nextNodeCounter;
   set nodeIdSeed(int value) {

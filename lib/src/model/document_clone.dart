@@ -214,22 +214,6 @@ Set<NodeId> txnCollectNodeIds(Scene scene) {
   };
 }
 
-int txnInitialNodeInstanceRevisionSeed(Scene scene) {
-  var maxRevision = 0;
-  final backgroundLayer = scene.backgroundLayer;
-  final nodes = <SceneNode>[
-    if (backgroundLayer != null) ...backgroundLayer.nodes,
-    for (final layer in scene.layers) ...layer.nodes,
-  ];
-  for (final node in nodes) {
-    final revision = node.instanceRevision;
-    if (revision > maxRevision) {
-      maxRevision = revision;
-    }
-  }
-  return maxRevision + 1;
-}
-
 Set<LayerId> txnCollectLayerIds(Scene scene) {
   return <LayerId>{for (final layer in scene.layers) layer.id};
 }

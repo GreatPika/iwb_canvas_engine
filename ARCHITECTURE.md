@@ -110,6 +110,12 @@ Ownership decisions for the target state:
 - All committed mutations go through `write(...)` or higher-level controller
   methods that delegate to the same write path.
 - Public API never exposes mutable internal scene objects.
+- Runtime revision allocation is store-owned. The store keeps one composite
+  invalidation identity from `controllerEpoch` plus node `instanceRevision`;
+  commits never derive the next revision by scanning scene data.
+- When the runtime revision counter reaches the safe-int ceiling, allocation
+  resets the next revision to `1` and the commit must bump `controllerEpoch`.
+  If the epoch cannot be bumped safely, the commit fails fast.
 
 ## Core invariants
 

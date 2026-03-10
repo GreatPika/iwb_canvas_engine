@@ -104,7 +104,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-INSTANCE-REVISION-MONOTONIC',
     scope: 'engine-controller',
     title:
-        'scene nodes keep instanceRevision >= 1 and nextInstanceRevision stays monotonic (lower-bounded by scene)',
+        'scene nodes keep instanceRevision >= 1 and committed runtime revision state stays within the composite epoch/revision contract',
   ),
   Invariant(
     id: 'INV-ENG-WRITE-NUMERIC-GUARDS',

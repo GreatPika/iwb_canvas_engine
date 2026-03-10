@@ -250,24 +250,4 @@ void main() {
     final ids = txnCollectLayerIds(sourceScene());
     expect(ids, {'layer-auto-0', 'layer-auto-1'});
   });
-
-  test(
-    'txnInitialNodeInstanceRevisionSeed finds max instanceRevision and keeps min 1',
-    () {
-      final scene = Scene(
-        layers: <ContentLayer>[
-          ContentLayer(
-            id: 'layer-auto-4',
-            nodes: <SceneNode>[
-              RectNode(id: 'a', size: const Size(1, 1), instanceRevision: 3),
-              RectNode(id: 'b', size: const Size(1, 1), instanceRevision: 10),
-            ],
-          ),
-        ],
-      );
-
-      expect(txnInitialNodeInstanceRevisionSeed(scene), 11);
-      expect(txnInitialNodeInstanceRevisionSeed(Scene()), 1);
-    },
-  );
 }

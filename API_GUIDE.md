@@ -192,6 +192,12 @@ Important runtime details:
 - `StrokeNodeSnapshot.pointsRevision` is runtime metadata used by render caches
 - `pointsRevision` is not serialized into JSON
 - `instanceRevision` is part of runtime node identity and is serialized
+- runtime invalidation identity is composite: `controllerEpoch + instanceRevision`
+- snapshot/import preserves existing positive safe-int `instanceRevision`
+  values; missing or non-positive values are normalized from a local allocator
+  that starts at `1`
+- runtime revision overflow does not saturate or wrap: it resets the next
+  revision to `1` and requires an epoch bump
 - `PathNodeSnapshot` uses `PathFillRule`
 
 ### 3.4 Text sizing contract

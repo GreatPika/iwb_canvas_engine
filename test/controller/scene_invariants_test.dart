@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_invariants.dart';
 import 'package:iwb_canvas_engine/src/core/id_generator.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
+import 'package:iwb_canvas_engine/src/core/revision_policy.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/model/document.dart';
 
@@ -258,8 +259,10 @@ void main() {
     );
   });
 
-  test('detects nextInstanceRevision lower bound violation', () {
+  test('detects committed epoch bump request in store state', () {
     final scene = sceneFixture();
+    final revisionState = createInitialRevisionAllocatorState();
+    revisionState.epochBumpRequested = true;
     final violations = txnCollectStoreInvariantViolations(
       scene: scene,
       selectedNodeIds: const <NodeId>{'node-1'},
@@ -268,11 +271,14 @@ void main() {
         'node-1': (layerIndex: 0, nodeIndex: 0),
       },
       idGeneratorState: state(nextNodeCounter: 2),
-      nextInstanceRevision: 1,
+      revisionState: revisionState,
       commitRevision: 0,
     );
 
-    expect(violations.join('\n'), contains('nextInstanceRevision must be >='));
+    expect(
+      violations.join('\n'),
+      contains('committed revisionState.epochBumpRequested must be false'),
+    );
   });
 
   test('detects invalid allocator counters', () {
@@ -294,6 +300,45 @@ void main() {
     expect(
       violations.join('\n'),
       contains('idGeneratorState.nextLayerCounter must be >= 1'),
+    );
+  });
+
+  test('detects invalid committed controllerEpoch', () {
+    final scene = sceneFixture();
+    final violations = txnCollectStoreInvariantViolations(
+      scene: scene,
+      selectedNodeIds: const <NodeId>{'node-1'},
+      allNodeIds: const <NodeId>{'node-1'},
+      nodeLocator: const <NodeId, NodeLocatorEntry>{
+        'node-1': (layerIndex: 0, nodeIndex: 0),
+      },
+      idGeneratorState: state(nextNodeCounter: 2),
+      controllerEpoch: -1,
+      commitRevision: 0,
+    );
+
+    expect(violations.join('\n'), contains('controllerEpoch must stay within'));
+  });
+
+  test('detects invalid committed revisionState counter', () {
+    final scene = sceneFixture();
+    final revisionState = createInitialRevisionAllocatorState();
+    revisionState.nextInstanceRevision = kMaxInstanceRevision + 1;
+    final violations = txnCollectStoreInvariantViolations(
+      scene: scene,
+      selectedNodeIds: const <NodeId>{'node-1'},
+      allNodeIds: const <NodeId>{'node-1'},
+      nodeLocator: const <NodeId, NodeLocatorEntry>{
+        'node-1': (layerIndex: 0, nodeIndex: 0),
+      },
+      idGeneratorState: state(nextNodeCounter: 2),
+      revisionState: revisionState,
+      commitRevision: 0,
+    );
+
+    expect(
+      violations.join('\n'),
+      contains('revisionState.nextInstanceRevision must stay within'),
     );
   });
 

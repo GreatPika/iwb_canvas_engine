@@ -245,7 +245,7 @@ void _assertPostConditions({
     allNodeIds: txnCollectNodeIds(scene),
     nodeLocator: txnBuildNodeLocator(scene),
     idGeneratorState: controller.debugIdGeneratorState,
-    nextInstanceRevision: txnInitialNodeInstanceRevisionSeed(scene),
+    nextInstanceRevision: 1,
     commitRevision: controller.debugCommitRevision,
   );
   expect(

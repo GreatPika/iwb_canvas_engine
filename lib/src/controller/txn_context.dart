@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../contract/ids.dart' show LayerId;
 import '../core/id_generator.dart';
 import '../core/nodes.dart';
+import '../core/revision_policy.dart';
 import '../core/scene.dart';
 import '../model/document.dart';
 import '../model/document_clone.dart';
@@ -19,7 +20,8 @@ class TxnContext {
     int? nodeIdSeed,
     int? layerIdSeed,
     IdGeneratorState? idGeneratorState,
-    required this.nextInstanceRevision,
+    RevisionAllocatorState? revisionState,
+    int nextInstanceRevision = 1,
     ChangeSet? changeSet,
   }) : _baseScene = baseScene,
        workingSelection = HashSet<NodeId>.of(workingSelection),
@@ -30,6 +32,11 @@ class TxnContext {
            createIdGeneratorStateForTesting(
              nextNodeCounter: _normalizeLegacySeed(nodeIdSeed),
              nextLayerCounter: _normalizeLegacySeed(layerIdSeed),
+           ),
+       revisionState =
+           revisionState?.copy() ??
+           createInitialRevisionAllocatorState(
+             nextInstanceRevision: nextInstanceRevision,
            ),
        changeSet = changeSet ?? ChangeSet();
 
@@ -54,7 +61,7 @@ class TxnContext {
 
   final Set<NodeId> workingSelection;
   IdGeneratorState idGeneratorState;
-  int nextInstanceRevision;
+  RevisionAllocatorState revisionState;
   final ChangeSet changeSet;
   int debugSceneShallowClones = 0;
   int debugLayerShallowClones = 0;
@@ -71,6 +78,14 @@ class TxnContext {
   int get layerIdSeed => idGeneratorState.nextLayerCounter;
   set layerIdSeed(int value) {
     idGeneratorState.nextLayerCounter = value;
+  }
+
+  int get nextInstanceRevision => revisionState.nextInstanceRevision;
+  set nextInstanceRevision(int value) {
+    revisionState.nextInstanceRevision = requireRevisionCounter(
+      value,
+      name: 'nextInstanceRevision',
+    );
   }
 
   void txnClose() {
@@ -393,14 +408,11 @@ class TxnContext {
 
   int txnNextInstanceRevision() {
     txnEnsureActive();
-    final out = nextInstanceRevision;
-    nextInstanceRevision = nextInstanceRevision + 1;
-    return out;
+    return allocateNextInstanceRevision(revisionState);
   }
 
   void txnAdoptScene(Scene scene) {
     txnEnsureActive();
-    final prevNextInstanceRevision = nextInstanceRevision;
     _mutableScene = scene;
     _mutableSceneOwnedByTxn = true;
     _clonedLayerIndexes.clear();
@@ -413,10 +425,6 @@ class TxnContext {
     _materializedAllNodeIds = _baseAllNodeIds;
     _materializedNodeLocator = _baseNodeLocator;
     _materializedLayerIndexById = null;
-    final adoptedSeed = txnInitialNodeInstanceRevisionSeed(scene);
-    nextInstanceRevision = prevNextInstanceRevision >= adoptedSeed
-        ? prevNextInstanceRevision
-        : adoptedSeed;
   }
 
   Set<NodeId> txnAllNodeIdsForCommit({required bool structuralChanged}) {

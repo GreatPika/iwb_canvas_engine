@@ -68,9 +68,36 @@ void main() {
 
     expect(identical(first, second), isTrue);
     expect(identical(second, third), isFalse);
-    expect(identical(third, fourth), isTrue);
+    expect(identical(third, fourth), isFalse);
+    expect(cache.debugBuildCount, 3);
+    expect(cache.debugHitCount, 1);
+  });
+
+  test('stroke path cache rebuilds when points change under same revision', () {
+    final cache = SceneStrokePathCache(maxEntries: 8);
+    final strokeA = StrokeNodeSnapshot(
+      id: 'same-revision',
+      instanceRevision: 1,
+      points: const <Offset>[Offset(0, 0), Offset(10, 0)],
+      pointsRevision: 0,
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+    final strokeB = StrokeNodeSnapshot(
+      id: 'same-revision',
+      instanceRevision: 1,
+      points: const <Offset>[Offset(0, 0), Offset(0, 10)],
+      pointsRevision: 0,
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+
+    final first = cache.getOrBuild(strokeA);
+    final second = cache.getOrBuild(strokeB);
+
+    expect(identical(first, second), isFalse);
     expect(cache.debugBuildCount, 2);
-    expect(cache.debugHitCount, 2);
+    expect(cache.debugHitCount, 0);
   });
 
   test(

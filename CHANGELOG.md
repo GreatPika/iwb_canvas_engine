@@ -52,6 +52,11 @@ All notable changes to `iwb_canvas_engine` are documented here.
   a fresh `IdGeneratorState`, commit/adopt/replace preserve allocator state
   verbatim, and future generated ids are no longer reconstructed from scene
   scans or legacy generated-id parsing.
+- Runtime revision allocation is now store-owned and composite with
+  `controllerEpoch`: snapshot/import preserves valid positive revisions,
+  replace/adopt no longer reseed from `max(scene)`, and revision overflow now
+  fails through `epoch bump + revision reset` instead of silent saturation or
+  wraparound.
 - Clarified the writer/controller contract for step `4.4`: draw command
   entrypoints return committed `NodeId` values, and
   `writeSelectionTransform(...)` is documented with pre-multiply semantics

@@ -57,4 +57,17 @@ void main() {
       throwsA(isA<ArgumentError>()),
     );
   });
+
+  test('generator rejects empty session token', () {
+    final state = createIdGeneratorStateForTesting(
+      sessionToken: '',
+      nextNodeCounter: 1,
+      nextLayerCounter: 1,
+    );
+
+    expect(
+      () => generateNextNodeId(state, containsNodeId: (_) => false),
+      throwsA(isA<ArgumentError>()),
+    );
+  });
 }
