@@ -236,13 +236,11 @@ Key rules:
 - public `NodeSpec` constructors validate boundary values eagerly and are
   runtime constructors rather than `const` entry points
 - `NodeSpec.id` is optional; the controller can generate ids
-- explicit ids remain `String`-compatible at the public API boundary, but the
-  supported parsing/generation policy is now exposed through `NodeIdValue`,
-  `LayerIdValue`, `parseNodeId(...)`, `parseLayerId(...)`,
-  `generateNodeId(...)`, `generateLayerId(...)`,
-  `tryParseGeneratedNodeIdSeed(...)`, and `tryParseGeneratedLayerIdSeed(...)`
-- generated-id recognition is canonical-only: helper parsing accepts
-  `node-<n>` / `layer-<n>` without leading-zero variants
+- explicit ids remain `String`-compatible at the public API boundary, and the
+  supported validation surface is `NodeIdValue`, `LayerIdValue`,
+  `parseNodeId(...)`, and `parseLayerId(...)`
+- runtime-generated ids are internal allocator output; callers must treat them
+  as opaque strings rather than depend on a parseable public format
 - malformed values fail fast with `ArgumentError`
 
 ### 4.2 `NodePatch`
@@ -290,9 +288,8 @@ Public write-boundary values validate eagerly at construction time:
 - supported validated-value factory surface is `parse(...)`, `of(...)`, and
   `fromJson(...)`; no validation-bypass fast path is part of the public
   contract
-- `NodeIdValue` / `LayerIdValue` reject blank ids, enforce max lengths, and
-  keep the legacy generated-id policy (`node-<n>`, `layer-<n>`) explicit with
-  canonical-only recognition
+- `NodeIdValue` / `LayerIdValue` reject blank ids and enforce max lengths for
+  explicit public ids
 - `ImageIdValue` enforces the public max length for image ids while preserving
   the current empty-string runtime contract
 - `InstanceRevisionValue` keeps the zero-allowed snapshot policy separate from

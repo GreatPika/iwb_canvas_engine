@@ -1,8 +1,6 @@
 import '../scene_contract_limits.dart';
 import 'validated_value_support.dart';
 
-const String _layerIdGeneratedPrefix = 'layer-';
-
 class LayerIdValue {
   const LayerIdValue._(this.value);
 
@@ -36,29 +34,6 @@ class LayerIdValue {
         maxLength: kMaxLayerIdLength,
         allowEmpty: false,
       ),
-    );
-  }
-
-  static LayerIdValue generate(int seed) {
-    return LayerIdValue._(
-      validatedParseGeneratedId(
-        prefix: _layerIdGeneratedPrefix,
-        seed: seed,
-        maxLength: kMaxLayerIdLength,
-        name: 'layerIdSeed',
-      ),
-    );
-  }
-
-  static bool isGeneratedLegacyFormat(String value) {
-    return tryParseGeneratedSeed(value) != null;
-  }
-
-  static int? tryParseGeneratedSeed(String value) {
-    return validatedTryParseGeneratedSeed(
-      value,
-      prefix: _layerIdGeneratedPrefix,
-      maxLength: kMaxLayerIdLength,
     );
   }
 

@@ -1,8 +1,6 @@
 import '../scene_contract_limits.dart';
 import 'validated_value_support.dart';
 
-const String _nodeIdGeneratedPrefix = 'node-';
-
 class NodeIdValue {
   const NodeIdValue._(this.value);
 
@@ -36,29 +34,6 @@ class NodeIdValue {
         maxLength: kMaxNodeIdLength,
         allowEmpty: false,
       ),
-    );
-  }
-
-  static NodeIdValue generate(int seed) {
-    return NodeIdValue._(
-      validatedParseGeneratedId(
-        prefix: _nodeIdGeneratedPrefix,
-        seed: seed,
-        maxLength: kMaxNodeIdLength,
-        name: 'nodeIdSeed',
-      ),
-    );
-  }
-
-  static bool isGeneratedLegacyFormat(String value) {
-    return tryParseGeneratedSeed(value) != null;
-  }
-
-  static int? tryParseGeneratedSeed(String value) {
-    return validatedTryParseGeneratedSeed(
-      value,
-      prefix: _nodeIdGeneratedPrefix,
-      maxLength: kMaxNodeIdLength,
     );
   }
 

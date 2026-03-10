@@ -27,44 +27,14 @@ Map<String, Object?> _singleNodeJson(Map<String, Object?> sceneJson) {
 
 void main() {
   group('validated boundary values', () {
-    test('public id helpers preserve string typedef behavior', () {
+    test('public id helpers preserve explicit string typedef behavior', () {
       expect(parseNodeId('node-custom'), 'node-custom');
       expect(parseLayerId('layer-custom'), 'layer-custom');
-      expect(generateNodeId(3), 'node-3');
-      expect(generateLayerId(4), 'layer-4');
-      expect(isGeneratedNodeId('node-3'), isTrue);
-      expect(isGeneratedLayerId('layer-4'), isTrue);
-      expect(isGeneratedNodeId('custom'), isFalse);
-      expect(isGeneratedLayerId('custom'), isFalse);
-      expect(tryParseGeneratedNodeIdSeed('node-3'), 3);
-      expect(tryParseGeneratedLayerIdSeed('layer-4'), 4);
-      expect(tryParseGeneratedNodeIdSeed('node-'), isNull);
-      expect(tryParseGeneratedNodeIdSeed('node--1'), isNull);
-      expect(tryParseGeneratedNodeIdSeed('node-01'), isNull);
-      expect(tryParseGeneratedNodeIdSeed('layer-1'), isNull);
-      expect(tryParseGeneratedLayerIdSeed('layer-foo'), isNull);
-      expect(tryParseGeneratedLayerIdSeed('layer-0007'), isNull);
-      expect(
-        tryParseGeneratedNodeIdSeed('node-${'1' * kMaxNodeIdLength}'),
-        isNull,
-      );
-      expect(
-        tryParseGeneratedLayerIdSeed('layer-${'1' * kMaxLayerIdLength}'),
-        isNull,
-      );
-      expect(tryParseGeneratedNodeIdSeed('node-${'9' * 30}'), isNull);
-      expect(tryParseGeneratedLayerIdSeed('layer-${'9' * 30}'), isNull);
     });
 
-    test('id values parse, generate and recognize legacy seeds', () {
+    test('id values parse explicit public ids', () {
       expect(NodeIdValue.parse('node-custom').value, 'node-custom');
       expect(LayerIdValue.parse('layer-custom').value, 'layer-custom');
-      expect(NodeIdValue.generate(12).value, 'node-12');
-      expect(LayerIdValue.generate(7).value, 'layer-7');
-      expect(NodeIdValue.isGeneratedLegacyFormat('node-12'), isTrue);
-      expect(LayerIdValue.isGeneratedLegacyFormat('layer-7'), isTrue);
-      expect(NodeIdValue.tryParseGeneratedSeed('node-12'), 12);
-      expect(LayerIdValue.tryParseGeneratedSeed('layer-7'), 7);
     });
 
     test('id values reject blank and oversized input', () {
@@ -77,7 +47,6 @@ void main() {
         () => NodeIdValue.parse('x' * (kMaxNodeIdLength + 1)),
         throwsA(isA<ArgumentError>()),
       );
-      expect(() => NodeIdValue.generate(-1), throwsA(isA<ArgumentError>()));
     });
 
     test('image id value preserves current string boundary policy', () {

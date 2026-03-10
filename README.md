@@ -124,10 +124,11 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - runtime `Scene.backgroundLayer` may be absent internally, while snapshot/JSON
   boundaries canonicalize it to a dedicated layer distinct from content
   `layers`; content writes use `LayerId`.
-- Boundary helpers such as `parseNodeId(...)`, `generateLayerId(...)`,
-  canonical generated-id parsing, and validated value types including
-  `ImageIdValue` keep external payload checks aligned with import/build rules.
-  See `API_GUIDE.md` for the full list.
+- Boundary helpers such as `parseNodeId(...)`, `parseLayerId(...)`, and
+  validated value types including `ImageIdValue` keep external payload checks
+  aligned with import/build rules. Runtime-generated ids are internal engine
+  details rather than a public compatibility promise. See `API_GUIDE.md` for
+  the full list.
 - For import/build/encode failures, compare `SceneDataException` instances by
   `code` / `path` / `details`; this parity is shared by
   `SceneBuilder.buildFromJson(...)`, `decodeScene(...)`,

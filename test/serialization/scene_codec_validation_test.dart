@@ -1683,7 +1683,9 @@ void main() {
       final fromDocument = _captureSceneDataException(
         () => encodeSceneDocument(runtimeScene),
       );
-      final fromSnapshot = _captureSceneDataException(() => encodeScene(snapshot));
+      final fromSnapshot = _captureSceneDataException(
+        () => encodeScene(snapshot),
+      );
 
       _expectSameSceneDataContract(fromDocument, fromSnapshot);
       expect(fromDocument.code, SceneDataErrorCode.duplicateNodeId);

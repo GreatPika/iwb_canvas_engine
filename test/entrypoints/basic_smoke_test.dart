@@ -29,7 +29,7 @@ void main() {
       expect(CanvasMode.move, CanvasMode.move);
       expect(DrawTool.pen, DrawTool.pen);
       expect(parseNodeId('node-api-0'), 'node-api-0');
-      expect(tryParseGeneratedLayerIdSeed(generateLayerId(3)), 3);
+      expect(parseLayerId('layer-api-0'), 'layer-api-0');
       expect(json, contains('"schemaVersion":$schemaVersionWrite'));
       expect(decodeSceneFromJson(json).layers.single.id, 'layer-api-0');
       expect(canonicalFromSnapshot.layers.single.id, 'layer-api-0');
@@ -114,7 +114,7 @@ void main() {
 
   test('iwb_canvas_engine.dart exports validated boundary values', () {
     expect(NodeIdValue.parse('node-public-1').value, 'node-public-1');
-    expect(LayerIdValue.generate(2).value, 'layer-2');
+    expect(LayerIdValue.parse('layer-public-2').value, 'layer-public-2');
     expect(
       FiniteOffsetValue.of(const Offset(12, 24)).value,
       const Offset(12, 24),

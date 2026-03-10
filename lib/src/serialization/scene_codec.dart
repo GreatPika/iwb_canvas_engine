@@ -74,8 +74,8 @@ T debugGuardEncodeForTest<T>(T Function() encode) {
 /// [SceneDataException.message] is derived user-facing text.
 Map<String, dynamic> encodeScene(SceneSnapshot snapshot) {
   return _guardEncode(() {
-    final canonicalSnapshot =
-        model_builder.sceneCanonicalizeAndValidateSnapshot(snapshot);
+    final canonicalSnapshot = model_builder
+        .sceneCanonicalizeAndValidateSnapshot(snapshot);
     return _encodeCanonicalSnapshot(canonicalSnapshot);
   });
 }

@@ -8,6 +8,7 @@ import 'package:iwb_canvas_engine/src/controller/change_set.dart';
 import 'package:iwb_canvas_engine/src/controller/store.dart';
 import 'package:iwb_canvas_engine/src/controller/txn_context.dart';
 import 'package:iwb_canvas_engine/src/model/document.dart';
+import 'package:iwb_canvas_engine/src/model/document_clone.dart';
 
 // INV:INV-ENG-TXN-COPY-ON-WRITE
 
@@ -169,6 +170,33 @@ void main() {
     expect(ctx.nodeIdSeed, 8);
     expect(ctx.nextInstanceRevision, 2);
   });
+
+  test(
+    'TxnContext fallback seed init and seed setters proxy idGeneratorState',
+    () {
+      final scene = Scene(
+        backgroundLayer: BackgroundLayer(
+          nodes: <SceneNode>[RectNode(id: 'node-2', size: const Size(1, 1))],
+        ),
+        layers: <ContentLayer>[ContentLayer(id: 'layer-4')],
+      );
+      final ctx = TxnContext(
+        baseScene: scene,
+        workingSelection: <NodeId>{},
+        baseAllNodeIds: txnCollectNodeIds(scene),
+        nextInstanceRevision: 1,
+      );
+
+      expect(ctx.nodeIdSeed, 3);
+      expect(ctx.layerIdSeed, 5);
+
+      ctx.nodeIdSeed = 11;
+      ctx.layerIdSeed = 13;
+
+      expect(ctx.idGeneratorState.nextNodeCounter, 11);
+      expect(ctx.idGeneratorState.nextLayerCounter, 13);
+    },
+  );
 
   test('TxnContext keeps nextInstanceRevision monotonic on adopt', () {
     final ctx = TxnContext(

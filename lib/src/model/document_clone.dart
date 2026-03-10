@@ -1,14 +1,10 @@
 import 'dart:ui';
 
-import '../contract/ids.dart'
-    show
-        LayerId,
-        isGeneratedLayerId,
-        isGeneratedNodeId,
-        tryParseGeneratedLayerIdSeed,
-        tryParseGeneratedNodeIdSeed;
 import '../core/nodes.dart';
 import '../core/scene.dart';
+import '../core/id_generator.dart'
+    show initialGeneratedLayerCounter, initialGeneratedNodeCounter;
+import '../contract/ids.dart' show LayerId;
 import '../contract/transform2d.dart';
 
 Scene txnCloneSceneShallow(Scene scene) {
@@ -221,22 +217,7 @@ Set<NodeId> txnCollectNodeIds(Scene scene) {
 }
 
 int txnInitialNodeIdSeed(Scene scene) {
-  var maxId = -1;
-  final backgroundLayer = scene.backgroundLayer;
-  final nodes = <SceneNode>[
-    if (backgroundLayer != null) ...backgroundLayer.nodes,
-    for (final layer in scene.layers) ...layer.nodes,
-  ];
-  for (final node in nodes) {
-    final id = node.id;
-    if (!isGeneratedNodeId(id)) continue;
-    final parsed = tryParseGeneratedNodeIdSeed(id);
-    if (parsed == null || parsed < 0) continue;
-    if (parsed > maxId) {
-      maxId = parsed;
-    }
-  }
-  return maxId + 1;
+  return initialGeneratedNodeCounter(scene);
 }
 
 int txnInitialNodeInstanceRevisionSeed(Scene scene) {
@@ -260,15 +241,5 @@ Set<LayerId> txnCollectLayerIds(Scene scene) {
 }
 
 int txnInitialLayerIdSeed(Scene scene) {
-  var maxId = -1;
-  for (final layer in scene.layers) {
-    final id = layer.id;
-    if (!isGeneratedLayerId(id)) continue;
-    final parsed = tryParseGeneratedLayerIdSeed(id);
-    if (parsed == null || parsed < 0) continue;
-    if (parsed > maxId) {
-      maxId = parsed;
-    }
-  }
-  return maxId + 1;
+  return initialGeneratedLayerCounter(scene);
 }

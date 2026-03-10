@@ -167,35 +167,35 @@ generated-id logic после шага `7.1` живёт только во вну
 
 ## Последовательность реализации (только действия)
 
-[ ] Создать `lib/src/core/id_generator.dart` как единственный internal owner
+[x] Создать `lib/src/core/id_generator.dart` как единственный internal owner
     runtime generated ids.
-[ ] Зафиксировать в шаге и документации, что public boundary по-прежнему
+[x] Зафиксировать в шаге и документации, что public boundary по-прежнему
     принимает explicit string-compatible `NodeId` / `LayerId`, но runtime
     generated ids больше не являются public compatibility promise.
-[ ] Удалить из public surface все generated-id helper-ы на `ids.dart` и
+[x] Удалить из public surface все generated-id helper-ы на `ids.dart` и
     `NodeIdValue` / `LayerIdValue`, оставив только explicit-id validation API.
-[ ] Обновить `README.md`, `API_GUIDE.md`, `ARCHITECTURE.md`, `CHANGELOG.md`
+[x] Обновить `README.md`, `API_GUIDE.md`, `ARCHITECTURE.md`, `CHANGELOG.md`
     как часть breaking generated-id contract change.
-[ ] Обновить публичные и contract-level тесты так, чтобы они проверяли новый
+[x] Обновить публичные и contract-level тесты так, чтобы они проверяли новый
     owner generated ids, а не старый seed-based format.
 
 ## Критерии приёмки
 
-[ ] Generated-id policy имеет одного owner-а:
+[x] Generated-id policy имеет одного owner-а:
     [id_generator.dart](/Users/blackpika/iwb_canvas_engine/lib/src/core/id_generator.dart).
-[ ] Internal generated ids описаны через обязательные свойства, а не через
+[x] Internal generated ids описаны через обязательные свойства, а не через
     публично зафиксированный строковый шаблон; allocator state хранится только
     в `IdGeneratorState`.
-[ ] Public API больше не содержит generated-id helper-ов; он содержит только
+[x] Public API больше не содержит generated-id helper-ов; он содержит только
     explicit-id validation API.
-[ ] Explicit `NodeId` / `LayerId` validation остаётся отдельной boundary-задачей
+[x] Explicit `NodeId` / `LayerId` validation остаётся отдельной boundary-задачей
     и не смешивается с runtime generation policy.
-[ ] Документация и public tests больше не закрепляют старый generated-id
+[x] Документация и public tests больше не закрепляют старый generated-id
     contract как обязательное поведение.
 
 ## Тестовый контур шага
 
-[ ] `test/public_api/validated_boundary_value_test.dart`
-[ ] `test/entrypoints/basic_smoke_test.dart`
-[ ] Новый targeted test для `lib/src/core/id_generator.dart`
-[ ] `dart run tool/check_public_api_surface.dart`
+[x] `test/public_api/validated_boundary_value_test.dart`
+[x] `test/entrypoints/basic_smoke_test.dart`
+[x] Новый targeted test для `lib/src/core/id_generator.dart`
+[x] `dart run tool/check_public_api_surface.dart`

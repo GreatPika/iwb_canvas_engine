@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/src/contract/ids.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_contract_limits.dart';
 import 'package:iwb_canvas_engine/src/contract/validated/finite_offset_value.dart';
 import 'package:iwb_canvas_engine/src/contract/validated/font_family_value.dart';
@@ -23,18 +22,6 @@ void main() {
     expect(kMaxFontFamilyLength, greaterThan(0));
     expect(kMaxTextLength, greaterThan(kMaxFontFamilyLength));
     expect(kMaxRawSceneJsonLength, greaterThan(kMaxTextLength));
-  });
-
-  test('generated id helpers reject ids outside generation constraints', () {
-    final oversizedNodeId = 'node-${'1' * kMaxNodeIdLength}';
-    final oversizedLayerId = 'layer-${'1' * kMaxLayerIdLength}';
-
-    expect(tryParseGeneratedNodeIdSeed(oversizedNodeId), isNull);
-    expect(tryParseGeneratedLayerIdSeed(oversizedLayerId), isNull);
-    expect(tryParseGeneratedNodeIdSeed('node-${'9' * 30}'), isNull);
-    expect(tryParseGeneratedLayerIdSeed('layer-${'9' * 30}'), isNull);
-    expect(tryParseGeneratedNodeIdSeed('node-01'), isNull);
-    expect(tryParseGeneratedLayerIdSeed('layer-0007'), isNull);
   });
 
   test('validated value types implement equality and hashCode explicitly', () {

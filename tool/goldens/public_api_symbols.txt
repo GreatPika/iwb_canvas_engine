@@ -68,13 +68,7 @@ decodeScene
 decodeSceneFromJson
 encodeScene
 encodeSceneToJson
-generateLayerId
-generateNodeId
-isGeneratedLayerId
-isGeneratedNodeId
 parseLayerId
 parseNodeId
 schemaVersionWrite
 schemaVersionsRead
-tryParseGeneratedLayerIdSeed
-tryParseGeneratedNodeIdSeed

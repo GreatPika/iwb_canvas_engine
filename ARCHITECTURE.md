@@ -138,8 +138,9 @@ most important architectural rules are:
   objects and own only runtime/stateful semantics such as target existence,
   type compatibility, live-scene duplicate checks, index/range checks,
   canonicalization, and derived-value recomputation.
-- Legacy generated ids remain explicit contract policy: node ids use
-  `node-<n>`, layer ids use `layer-<n>`, and recognition is canonical-only.
+- Generated-id policy is internal runtime ownership in
+  `src/core/id_generator.dart`; public boundary code validates only explicit
+  ids and must not depend on a generated-id string format.
 - Selection normalization drops only missing, background, or invisible ids;
   explicit non-selectable ids remain stable.
 - Listener notifications are microtask-deferred and coalesced.

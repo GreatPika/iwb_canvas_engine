@@ -2,7 +2,8 @@ import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
 
-import '../contract/ids.dart' show LayerId, generateLayerId, generateNodeId;
+import '../contract/ids.dart' show LayerId;
+import '../core/id_generator.dart';
 import '../core/nodes.dart';
 import '../core/scene.dart';
 import '../model/document.dart';
@@ -15,15 +16,21 @@ class TxnContext {
     required Set<NodeId> workingSelection,
     required Set<NodeId> baseAllNodeIds,
     Map<NodeId, NodeLocatorEntry>? baseNodeLocator,
-    required this.nodeIdSeed,
+    int? nodeIdSeed,
     int? layerIdSeed,
+    IdGeneratorState? idGeneratorState,
     required this.nextInstanceRevision,
     ChangeSet? changeSet,
   }) : _baseScene = baseScene,
        workingSelection = HashSet<NodeId>.of(workingSelection),
        _baseAllNodeIds = baseAllNodeIds,
        _baseNodeLocator = baseNodeLocator ?? txnBuildNodeLocator(baseScene),
-       layerIdSeed = layerIdSeed ?? txnInitialLayerIdSeed(baseScene),
+       idGeneratorState =
+           idGeneratorState?.copy() ??
+           createIdGeneratorStateForTesting(
+             nextNodeCounter: nodeIdSeed ?? txnInitialNodeIdSeed(baseScene),
+             nextLayerCounter: layerIdSeed ?? txnInitialLayerIdSeed(baseScene),
+           ),
        changeSet = changeSet ?? ChangeSet();
 
   final Scene _baseScene;
@@ -46,8 +53,7 @@ class TxnContext {
   Scene txnSceneForCommit() => _mutableScene ?? _baseScene;
 
   final Set<NodeId> workingSelection;
-  int nodeIdSeed;
-  int layerIdSeed;
+  IdGeneratorState idGeneratorState;
   int nextInstanceRevision;
   final ChangeSet changeSet;
   int debugSceneShallowClones = 0;
@@ -56,6 +62,16 @@ class TxnContext {
   int debugNodeIdSetMaterializations = 0;
   int debugNodeLocatorMaterializations = 0;
   int debugLayerIdIndexMaterializations = 0;
+
+  int get nodeIdSeed => idGeneratorState.nextNodeCounter;
+  set nodeIdSeed(int value) {
+    idGeneratorState.nextNodeCounter = value;
+  }
+
+  int get layerIdSeed => idGeneratorState.nextLayerCounter;
+  set layerIdSeed(int value) {
+    idGeneratorState.nextLayerCounter = value;
+  }
 
   void txnClose() {
     _isActive = false;
@@ -152,10 +168,7 @@ class TxnContext {
         ..addAll(shifted);
     }
     _txnInvalidateLayerIdIndex();
-    final minimumLayerSeed = txnInitialLayerIdSeed(scene);
-    if (layerIdSeed < minimumLayerSeed) {
-      layerIdSeed = minimumLayerSeed;
-    }
+    syncIdGeneratorStateWithSceneLowerBounds(idGeneratorState, scene);
     return true;
   }
 
@@ -308,14 +321,12 @@ class TxnContext {
 
   String txnNextNodeId() {
     txnEnsureActive();
-    while (true) {
-      final candidate = generateNodeId(nodeIdSeed);
-      nodeIdSeed = nodeIdSeed + 1;
-      if (!txnHasNodeId(candidate)) {
-        txnRememberNodeId(candidate);
-        return candidate;
-      }
-    }
+    final candidate = generateNextNodeId(
+      idGeneratorState,
+      containsNodeId: txnHasNodeId,
+    );
+    txnRememberNodeId(candidate);
+    return candidate;
   }
 
   bool txnHasLayerId(LayerId layerId) {
@@ -375,13 +386,10 @@ class TxnContext {
 
   LayerId txnNextLayerId() {
     txnEnsureActive();
-    while (true) {
-      final candidate = generateLayerId(layerIdSeed);
-      layerIdSeed = layerIdSeed + 1;
-      if (!txnHasLayerId(candidate)) {
-        return candidate;
-      }
-    }
+    return generateNextLayerId(
+      idGeneratorState,
+      containsLayerId: txnHasLayerId,
+    );
   }
 
   int txnNextInstanceRevision() {
@@ -406,8 +414,7 @@ class TxnContext {
     _materializedAllNodeIds = _baseAllNodeIds;
     _materializedNodeLocator = _baseNodeLocator;
     _materializedLayerIndexById = null;
-    nodeIdSeed = txnInitialNodeIdSeed(scene);
-    layerIdSeed = txnInitialLayerIdSeed(scene);
+    syncIdGeneratorStateWithSceneLowerBounds(idGeneratorState, scene);
     final adoptedSeed = txnInitialNodeInstanceRevisionSeed(scene);
     nextInstanceRevision = prevNextInstanceRevision >= adoptedSeed
         ? prevNextInstanceRevision

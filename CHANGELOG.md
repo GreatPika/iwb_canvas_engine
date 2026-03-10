@@ -22,6 +22,10 @@ All notable changes to `iwb_canvas_engine` are documented here.
 - Exported validated boundary value types no longer expose unsupported
   `validated(...)` fast-path constructors. Supported factory entrypoints are
   `parse(...)`, `of(...)`, and `fromJson(...)`.
+- Public generated-id helpers were removed from the package surface.
+  Integrations must stop depending on `generate*`, `isGenerated*`, and
+  `tryParseGenerated*` helpers or on the legacy `node-<n>` / `layer-<n>`
+  runtime format as a public contract.
 
 ### Changed
 
@@ -77,9 +81,9 @@ All notable changes to `iwb_canvas_engine` are documented here.
 - Added a public `contract/validated/**` boundary-value layer with typed
   parsing/generation for ids, image ids, revisions, finite offsets, bounded
   text/font values, SVG path payloads, and bounded numeric semantics.
-- Added explicit id factory helpers for the legacy generated-id policy
-  (`node-<n>` / `layer-<n>`) while keeping `NodeId` and `LayerId`
-  `String`-compatible.
+- Runtime generated-id ownership now lives under `src/core/id_generator.dart`;
+  public boundary code keeps only explicit id validation helpers while runtime
+  generation remains an internal concern.
 - `SceneDataException.source` now snapshots small structured values into
   bounded immutable payloads and sanitizes oversized strings, collections,
   errors, and arbitrary objects into deterministic previews instead of

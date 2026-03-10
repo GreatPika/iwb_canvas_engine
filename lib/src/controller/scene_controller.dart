@@ -184,8 +184,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
         workingSelection: HashSet<NodeId>.of(_store.selectedNodeIds),
         baseAllNodeIds: _store.allNodeIds,
         baseNodeLocator: _store.nodeLocator,
-        nodeIdSeed: _store.nodeIdSeed,
-        layerIdSeed: _store.layerIdSeed,
+        idGeneratorState: _store.idGeneratorState,
         nextInstanceRevision: _store.nextInstanceRevision,
       );
       ctx = createdCtx;

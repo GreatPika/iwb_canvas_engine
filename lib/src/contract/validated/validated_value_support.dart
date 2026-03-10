@@ -311,50 +311,6 @@ Offset validatedRequireJsonFiniteOffset(
   return offset;
 }
 
-String validatedParseGeneratedId({
-  required String prefix,
-  required int seed,
-  required int maxLength,
-  required String name,
-}) {
-  if (seed < 0) {
-    throw ArgumentError.value(seed, name, 'Must be >= 0.');
-  }
-  final generated = '$prefix$seed';
-  validatedRequireString(
-    generated,
-    name: name,
-    maxLength: maxLength,
-    allowEmpty: false,
-  );
-  return generated;
-}
-
-int? validatedTryParseGeneratedSeed(
-  String value, {
-  required String prefix,
-  required int maxLength,
-}) {
-  if (value.length > maxLength) {
-    return null;
-  }
-  if (!value.startsWith(prefix)) {
-    return null;
-  }
-  final rawSeed = value.substring(prefix.length);
-  if (rawSeed.isEmpty) {
-    return null;
-  }
-  final parsed = int.tryParse(rawSeed);
-  if (parsed == null || parsed < 0) {
-    return null;
-  }
-  if (rawSeed != parsed.toString()) {
-    return null;
-  }
-  return parsed;
-}
-
 double validatedRequireJsonFiniteDoubleItem(
   Object? raw, {
   required String path,
