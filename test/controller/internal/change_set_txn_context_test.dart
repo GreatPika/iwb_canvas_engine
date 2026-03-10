@@ -167,12 +167,12 @@ void main() {
         'manual': (layerIndex: 0, nodeIndex: 1),
       },
     );
-    expect(ctx.nodeIdSeed, 8);
+    expect(ctx.nodeIdSeed, 1);
     expect(ctx.nextInstanceRevision, 2);
   });
 
   test(
-    'TxnContext fallback seed init and seed setters proxy idGeneratorState',
+    'TxnContext default allocator state starts fresh and seed setters proxy idGeneratorState',
     () {
       final scene = Scene(
         backgroundLayer: BackgroundLayer(
@@ -187,8 +187,8 @@ void main() {
         nextInstanceRevision: 1,
       );
 
-      expect(ctx.nodeIdSeed, 3);
-      expect(ctx.layerIdSeed, 5);
+      expect(ctx.nodeIdSeed, 1);
+      expect(ctx.layerIdSeed, 1);
 
       ctx.nodeIdSeed = 11;
       ctx.layerIdSeed = 13;
@@ -238,8 +238,8 @@ void main() {
 
     final next = ctx.txnNextLayerId();
 
-    expect(next, 'layer-2');
-    expect(ctx.layerIdSeed, 3);
+    expect(next, 'gen-l-test-1');
+    expect(ctx.layerIdSeed, 2);
   });
 
   test('TxnContext materializes layerId index lazily', () {
@@ -361,7 +361,7 @@ void main() {
         <String>['layer-auto-60', 'layer-10', 'layer-auto-61'],
       );
       expect(ctx.txnFindNodeById('tail')?.layerIndex, 2);
-      expect(ctx.layerIdSeed, 11);
+      expect(ctx.layerIdSeed, 1);
       final resolvedTail = ctx.txnResolveMutableNode('tail');
       expect(resolvedTail.node.id, 'tail');
       expect(resolvedTail.layerIndex, 2);
@@ -602,12 +602,12 @@ void main() {
       'node-9': (layerIndex: 0, nodeIndex: 1),
       'custom': (layerIndex: 0, nodeIndex: 2),
     });
-    expect(storeWithSelection.nodeIdSeed, 10);
+    expect(storeWithSelection.nodeIdSeed, 1);
     expect(storeWithSelection.nextInstanceRevision, 2);
 
     final storeWithoutSelection = SceneStore(sceneDoc: Scene());
     expect(storeWithoutSelection.selectedNodeIds, isEmpty);
-    expect(storeWithoutSelection.nodeIdSeed, 0);
+    expect(storeWithoutSelection.nodeIdSeed, 1);
     expect(storeWithoutSelection.nextInstanceRevision, 1);
   });
 

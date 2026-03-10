@@ -1,29 +1,13 @@
-import 'dart:ui';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/core/id_generator.dart';
-import 'package:iwb_canvas_engine/src/core/scene.dart';
-import 'package:iwb_canvas_engine/src/core/nodes.dart';
 
 void main() {
-  test('createInitialIdGeneratorState scans legacy ids into counters', () {
-    final scene = Scene(
-      backgroundLayer: BackgroundLayer(
-        nodes: <SceneNode>[RectNode(id: 'node-4', size: const Size(1, 1))],
-      ),
-      layers: <ContentLayer>[
-        ContentLayer(
-          id: 'layer-3',
-          nodes: <SceneNode>[RectNode(id: 'node-9', size: const Size(2, 2))],
-        ),
-      ],
-    );
-
-    final state = createInitialIdGeneratorState(scene);
+  test('createInitialIdGeneratorState starts a fresh allocator session', () {
+    final state = createInitialIdGeneratorState();
 
     expect(state.sessionToken, isNotEmpty);
-    expect(state.nextNodeCounter, 10);
-    expect(state.nextLayerCounter, 4);
+    expect(state.nextNodeCounter, 1);
+    expect(state.nextLayerCounter, 1);
   });
 
   test('generateNextNodeId and generateNextLayerId use collision barrier', () {
@@ -34,43 +18,38 @@ void main() {
 
     final nodeId = generateNextNodeId(
       state,
-      containsNodeId: (id) => id == 'node-2',
+      containsNodeId: (id) => id == 'gen-n-test-2',
     );
     final layerId = generateNextLayerId(
       state,
-      containsLayerId: (id) => id == 'layer-5',
+      containsLayerId: (id) => id == 'gen-l-test-5',
     );
 
-    expect(nodeId, 'node-3');
-    expect(layerId, 'layer-6');
+    expect(nodeId, 'gen-n-test-3');
+    expect(layerId, 'gen-l-test-6');
     expect(state.nextNodeCounter, 4);
     expect(state.nextLayerCounter, 7);
   });
 
-  test('syncIdGeneratorStateWithSceneLowerBounds preserves session token', () {
-    final scene = Scene(
-      layers: <ContentLayer>[ContentLayer(id: 'layer-8')],
-      backgroundLayer: BackgroundLayer(
-        nodes: <SceneNode>[RectNode(id: 'node-11', size: const Size(1, 1))],
-      ),
-    );
+  test('copy preserves allocator state snapshot', () {
     final state = createIdGeneratorStateForTesting(
       sessionToken: 'session-fixed',
-      nextNodeCounter: 1,
-      nextLayerCounter: 1,
+      nextNodeCounter: 4,
+      nextLayerCounter: 7,
     );
 
-    syncIdGeneratorStateWithSceneLowerBounds(state, scene);
+    final copy = state.copy();
 
-    expect(state.sessionToken, 'session-fixed');
-    expect(state.nextNodeCounter, 12);
-    expect(state.nextLayerCounter, 9);
+    expect(copy, isNot(same(state)));
+    expect(copy.sessionToken, 'session-fixed');
+    expect(copy.nextNodeCounter, 4);
+    expect(copy.nextLayerCounter, 7);
   });
 
-  test('generator rejects negative counters', () {
+  test('generator rejects non-positive counters', () {
     final negativeNodeState = createIdGeneratorStateForTesting(
-      nextNodeCounter: -1,
-      nextLayerCounter: 0,
+      nextNodeCounter: 0,
+      nextLayerCounter: 1,
     );
 
     expect(

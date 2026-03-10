@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import '../core/id_generator.dart';
 import '../core/grid_safety_limits.dart';
 import '../core/nodes.dart';
 import '../core/scene.dart';
@@ -12,8 +13,7 @@ List<String> txnCollectStoreInvariantViolations({
   required Set<NodeId> selectedNodeIds,
   required Set<NodeId> allNodeIds,
   required Map<NodeId, NodeLocatorEntry> nodeLocator,
-  required int nodeIdSeed,
-  required int layerIdSeed,
+  required IdGeneratorState idGeneratorState,
   required int nextInstanceRevision,
   required int commitRevision,
 }) {
@@ -73,21 +73,26 @@ List<String> txnCollectStoreInvariantViolations({
     ];
   }
 
-  final expectedSeed = txnInitialNodeIdSeed(scene);
-  if (nodeIdSeed < expectedSeed) {
+  if (idGeneratorState.sessionToken.isEmpty) {
     violations = <String>[
       ...violations,
-      'nodeIdSeed must be >= initialNodeIdSeed(scene). '
-          'actual=$nodeIdSeed min=$expectedSeed',
+      'idGeneratorState.sessionToken must not be empty.',
     ];
   }
 
-  final expectedLayerSeed = txnInitialLayerIdSeed(scene);
-  if (layerIdSeed < expectedLayerSeed) {
+  if (idGeneratorState.nextNodeCounter < 1) {
     violations = <String>[
       ...violations,
-      'layerIdSeed must be >= initialLayerIdSeed(scene). '
-          'actual=$layerIdSeed min=$expectedLayerSeed',
+      'idGeneratorState.nextNodeCounter must be >= 1. '
+          'actual=${idGeneratorState.nextNodeCounter}',
+    ];
+  }
+
+  if (idGeneratorState.nextLayerCounter < 1) {
+    violations = <String>[
+      ...violations,
+      'idGeneratorState.nextLayerCounter must be >= 1. '
+          'actual=${idGeneratorState.nextLayerCounter}',
     ];
   }
 
@@ -190,8 +195,7 @@ void debugAssertTxnStoreInvariants({
   required Set<NodeId> selectedNodeIds,
   required Set<NodeId> allNodeIds,
   required Map<NodeId, NodeLocatorEntry> nodeLocator,
-  required int nodeIdSeed,
-  required int layerIdSeed,
+  required IdGeneratorState idGeneratorState,
   required int nextInstanceRevision,
   required int commitRevision,
 }) {
@@ -200,8 +204,7 @@ void debugAssertTxnStoreInvariants({
     selectedNodeIds: selectedNodeIds,
     allNodeIds: allNodeIds,
     nodeLocator: nodeLocator,
-    nodeIdSeed: nodeIdSeed,
-    layerIdSeed: layerIdSeed,
+    idGeneratorState: idGeneratorState,
     nextInstanceRevision: nextInstanceRevision,
     commitRevision: commitRevision,
   );

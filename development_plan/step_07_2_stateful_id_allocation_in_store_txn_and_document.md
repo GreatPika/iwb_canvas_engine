@@ -112,35 +112,35 @@ runtime owner-е, а не вычисляется повторно по уже с
 
 ## Последовательность реализации (только действия)
 
-[ ] Заменить `nodeIdSeed` / `layerIdSeed` в `SceneStore` на
+[x] Заменить `nodeIdSeed` / `layerIdSeed` в `SceneStore` на
     `IdGeneratorState idGeneratorState`, owned by new `id_generator.dart`.
-[ ] Переписать `TxnContext.txnNextNodeId()` и `TxnContext.txnNextLayerId()` на
+[x] Переписать `TxnContext.txnNextNodeId()` и `TxnContext.txnNextLayerId()` на
     allocator helper-ы из `id_generator.dart`, работающие через
     `sessionToken + counter`.
-[ ] Обновить adopt/commit/replaceScene lifecycle так, чтобы allocator state
+[x] Обновить adopt/commit/replaceScene lifecycle так, чтобы allocator state
     переносился явно и не переизобретался через scene-scan на hot path.
-[ ] Удалить из `document_clone.dart` `txnInitialNodeIdSeed(...)` и
+[x] Удалить из `document_clone.dart` `txnInitialNodeIdSeed(...)` и
     `txnInitialLayerIdSeed(...)`, оставив только structural collect/clone
     helpers.
-[ ] Переписать store invariants и tests на новый `IdGeneratorState` contract.
+[x] Переписать store invariants и tests на новый `IdGeneratorState` contract.
 
 ## Критерии приёмки
 
-[ ] `TxnContext` выдаёт новые `NodeId` / `LayerId` через stateful allocator, а
+[x] `TxnContext` выдаёт новые `NodeId` / `LayerId` через stateful allocator, а
     не через старый seed-цикл.
-[ ] `SceneStore` хранит `IdGeneratorState` как runtime source of truth.
-[ ] `document_clone.dart` больше не сканирует сцену ради расчёта будущих
+[x] `SceneStore` хранит `IdGeneratorState` как runtime source of truth.
+[x] `document_clone.dart` больше не сканирует сцену ради расчёта будущих
     generated ids.
-[ ] Collision protection на committed scene сохраняется, но не подменяет собой
+[x] Collision protection на committed scene сохраняется, но не подменяет собой
     owner-а generation policy.
-[ ] Invariants и tests описывают уже новый `sessionToken + counter` contract, а
+[x] Invariants и tests описывают уже новый `sessionToken + counter` contract, а
     не старую lower-bound seed-модель и не конкретный строковый шаблон id.
 
 ## Тестовый контур шага
 
-[ ] `test/controller/internal/change_set_txn_context_test.dart`
-[ ] `test/controller/internal/scene_writer_test.dart`
-[ ] `test/controller/scene_invariants_test.dart`
-[ ] `test/controller/core/scene_controller_copy_on_write_test.dart`
-[ ] `test/model/document_clone_test.dart`
-[ ] Новый targeted test на bootstrap/adopt semantics для `IdGeneratorState`
+[x] `test/controller/internal/change_set_txn_context_test.dart`
+[x] `test/controller/internal/scene_writer_test.dart`
+[x] `test/controller/scene_invariants_test.dart`
+[x] `test/controller/core/scene_controller_copy_on_write_test.dart`
+[x] `test/model/document_clone_test.dart`
+[x] Новый targeted test на bootstrap/adopt semantics для `IdGeneratorState`

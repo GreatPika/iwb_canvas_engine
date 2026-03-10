@@ -11,7 +11,7 @@ class SceneStore {
           : Set<NodeId>.from(selectedNodeIds),
       allNodeIds = txnCollectNodeIds(sceneDoc),
       nodeLocator = txnBuildNodeLocator(sceneDoc),
-      idGeneratorState = createInitialIdGeneratorState(sceneDoc),
+      idGeneratorState = createInitialIdGeneratorState(),
       nextInstanceRevision = txnInitialNodeInstanceRevisionSeed(sceneDoc);
 
   Scene sceneDoc;

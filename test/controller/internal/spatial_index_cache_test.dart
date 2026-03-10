@@ -5,6 +5,7 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart' hide NodeId;
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart';
+import 'package:iwb_canvas_engine/src/core/id_generator.dart';
 import 'package:iwb_canvas_engine/src/controller/change_set.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_writer.dart';
 import 'package:iwb_canvas_engine/src/controller/txn_context.dart';
@@ -25,7 +26,10 @@ void main() {
         ),
         workingSelection: <NodeId>{},
         baseAllNodeIds: <NodeId>{},
-        nodeIdSeed: 0,
+        idGeneratorState: createIdGeneratorStateForTesting(
+          nextNodeCounter: 1,
+          nextLayerCounter: 1,
+        ),
         nextInstanceRevision: 1,
       );
       final writer = SceneWriter(ctx, txnSignalSink: (_) {});

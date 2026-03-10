@@ -28,8 +28,8 @@ class TxnContext {
        idGeneratorState =
            idGeneratorState?.copy() ??
            createIdGeneratorStateForTesting(
-             nextNodeCounter: nodeIdSeed ?? txnInitialNodeIdSeed(baseScene),
-             nextLayerCounter: layerIdSeed ?? txnInitialLayerIdSeed(baseScene),
+             nextNodeCounter: _normalizeLegacySeed(nodeIdSeed),
+             nextLayerCounter: _normalizeLegacySeed(layerIdSeed),
            ),
        changeSet = changeSet ?? ChangeSet();
 
@@ -168,7 +168,6 @@ class TxnContext {
         ..addAll(shifted);
     }
     _txnInvalidateLayerIdIndex();
-    syncIdGeneratorStateWithSceneLowerBounds(idGeneratorState, scene);
     return true;
   }
 
@@ -414,7 +413,6 @@ class TxnContext {
     _materializedAllNodeIds = _baseAllNodeIds;
     _materializedNodeLocator = _baseNodeLocator;
     _materializedLayerIndexById = null;
-    syncIdGeneratorStateWithSceneLowerBounds(idGeneratorState, scene);
     final adoptedSeed = txnInitialNodeInstanceRevisionSeed(scene);
     nextInstanceRevision = prevNextInstanceRevision >= adoptedSeed
         ? prevNextInstanceRevision
@@ -569,4 +567,11 @@ class TxnContext {
     debugNodeLocatorMaterializations = debugNodeLocatorMaterializations + 1;
     return materialized;
   }
+}
+
+int _normalizeLegacySeed(int? value) {
+  if (value == null || value < 1) {
+    return 1;
+  }
+  return value;
 }

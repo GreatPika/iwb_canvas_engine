@@ -252,32 +252,6 @@ void main() {
   });
 
   test(
-    'txnInitialNodeIdSeed finds max numeric node-* id and ignores invalid ids',
-    () {
-      final scene = sourceScene();
-      scene.layers[1].nodes.add(
-        RectNode(id: 'node-10', size: const Size(1, 1)),
-      );
-      scene.layers[1].nodes.add(
-        RectNode(id: 'node--1', size: const Size(1, 1)),
-      );
-      scene.layers[1].nodes.add(
-        RectNode(id: 'node-abc', size: const Size(1, 1)),
-      );
-      scene.layers[1].nodes.add(
-        RectNode(id: 'node-01', size: const Size(1, 1)),
-      );
-      scene.layers[1].nodes.add(RectNode(id: 'node-', size: const Size(1, 1)));
-      scene.layers[1].nodes.add(
-        RectNode(id: 'plain-id', size: const Size(1, 1)),
-      );
-
-      expect(txnInitialNodeIdSeed(scene), 11);
-      expect(txnInitialNodeIdSeed(Scene()), 0);
-    },
-  );
-
-  test(
     'txnInitialNodeInstanceRevisionSeed finds max instanceRevision and keeps min 1',
     () {
       final scene = Scene(
@@ -296,16 +270,4 @@ void main() {
       expect(txnInitialNodeInstanceRevisionSeed(Scene()), 1);
     },
   );
-
-  test('txnInitialLayerIdSeed ignores non-canonical generated layer ids', () {
-    final scene = Scene(
-      layers: <ContentLayer>[
-        ContentLayer(id: 'layer-2'),
-        ContentLayer(id: 'layer-0007'),
-        ContentLayer(id: 'layer-10'),
-      ],
-    );
-
-    expect(txnInitialLayerIdSeed(scene), 11);
-  });
 }

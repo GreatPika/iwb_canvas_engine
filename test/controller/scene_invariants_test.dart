@@ -2,10 +2,10 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_invariants.dart';
+import 'package:iwb_canvas_engine/src/core/id_generator.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/model/document.dart';
-import 'package:iwb_canvas_engine/src/model/document_clone.dart';
 
 // INV:INV-ENG-ID-INDEX-FROM-SCENE
 // INV:INV-ENG-INSTANCE-REVISION-MONOTONIC
@@ -33,6 +33,18 @@ void main() {
     );
   }
 
+  IdGeneratorState state({
+    int nextNodeCounter = 1,
+    int nextLayerCounter = 1,
+    String sessionToken = 'test-session',
+  }) {
+    return createIdGeneratorStateForTesting(
+      sessionToken: sessionToken,
+      nextNodeCounter: nextNodeCounter,
+      nextLayerCounter: nextLayerCounter,
+    );
+  }
+
   test('returns no violations for valid committed store', () {
     final scene = sceneFixture(gridEnabled: true, gridCellSize: 16);
     final violations = txnCollectStoreInvariantViolations(
@@ -42,8 +54,7 @@ void main() {
       nodeLocator: const <NodeId, NodeLocatorEntry>{
         'node-1': (layerIndex: 0, nodeIndex: 0),
       },
-      nodeIdSeed: 2,
-      layerIdSeed: txnInitialLayerIdSeed(scene),
+      idGeneratorState: state(nextNodeCounter: 2),
       nextInstanceRevision: 2,
       commitRevision: 1,
     );
@@ -62,8 +73,7 @@ void main() {
       selectedNodeIds: const <NodeId>{'missing'},
       allNodeIds: const <NodeId>{},
       nodeLocator: const <NodeId, NodeLocatorEntry>{},
-      nodeIdSeed: 1,
-      layerIdSeed: txnInitialLayerIdSeed(scene),
+      idGeneratorState: state(sessionToken: ''),
       nextInstanceRevision: 2,
       commitRevision: -1,
     );
@@ -78,7 +88,7 @@ void main() {
     );
     expect(
       violations.join('\n'),
-      contains('nodeIdSeed must be >= initialNodeIdSeed(scene)'),
+      contains('idGeneratorState.sessionToken must not be empty'),
     );
     expect(
       violations.join('\n'),
@@ -100,8 +110,7 @@ void main() {
       nodeLocator: const <NodeId, NodeLocatorEntry>{
         'node-1': (layerIndex: 0, nodeIndex: 0),
       },
-      nodeIdSeed: 2,
-      layerIdSeed: txnInitialLayerIdSeed(scene),
+      idGeneratorState: state(nextNodeCounter: 2),
       nextInstanceRevision: 2,
       commitRevision: 0,
     );
@@ -129,8 +138,7 @@ void main() {
       nodeLocator: const <NodeId, NodeLocatorEntry>{
         'dup': (layerIndex: 0, nodeIndex: 0),
       },
-      nodeIdSeed: 1,
-      layerIdSeed: txnInitialLayerIdSeed(scene),
+      idGeneratorState: state(),
       nextInstanceRevision: 2,
       commitRevision: 0,
     );
@@ -153,8 +161,7 @@ void main() {
       selectedNodeIds: const <NodeId>{},
       allNodeIds: const <NodeId>{},
       nodeLocator: const <NodeId, NodeLocatorEntry>{},
-      nodeIdSeed: 0,
-      layerIdSeed: txnInitialLayerIdSeed(scene),
+      idGeneratorState: state(),
       nextInstanceRevision: 1,
       commitRevision: 0,
     );
@@ -182,8 +189,7 @@ void main() {
       nodeLocator: const <NodeId, NodeLocatorEntry>{
         'dup-bg': (layerIndex: -1, nodeIndex: 0),
       },
-      nodeIdSeed: 1,
-      layerIdSeed: txnInitialLayerIdSeed(scene),
+      idGeneratorState: state(),
       nextInstanceRevision: 2,
       commitRevision: 0,
     );
@@ -214,8 +220,7 @@ void main() {
         'bg': (layerIndex: -1, nodeIndex: 0),
         'n1': (layerIndex: 0, nodeIndex: 0),
       },
-      nodeIdSeed: 2,
-      layerIdSeed: txnInitialLayerIdSeed(scene),
+      idGeneratorState: state(nextNodeCounter: 2),
       nextInstanceRevision: 2,
       commitRevision: 0,
     );
@@ -242,8 +247,7 @@ void main() {
       nodeLocator: const <NodeId, NodeLocatorEntry>{
         'dup': (layerIndex: -1, nodeIndex: 0),
       },
-      nodeIdSeed: 0,
-      layerIdSeed: txnInitialLayerIdSeed(scene),
+      idGeneratorState: state(),
       nextInstanceRevision: 2,
       commitRevision: 0,
     );
@@ -263,8 +267,7 @@ void main() {
       nodeLocator: const <NodeId, NodeLocatorEntry>{
         'node-1': (layerIndex: 0, nodeIndex: 0),
       },
-      nodeIdSeed: 2,
-      layerIdSeed: txnInitialLayerIdSeed(scene),
+      idGeneratorState: state(nextNodeCounter: 2),
       nextInstanceRevision: 1,
       commitRevision: 0,
     );
@@ -272,20 +275,26 @@ void main() {
     expect(violations.join('\n'), contains('nextInstanceRevision must be >='));
   });
 
-  test('detects layerIdSeed lower bound violation', () {
+  test('detects invalid allocator counters', () {
     final scene = Scene(layers: <ContentLayer>[ContentLayer(id: 'layer-3')]);
     final violations = txnCollectStoreInvariantViolations(
       scene: scene,
       selectedNodeIds: const <NodeId>{},
       allNodeIds: const <NodeId>{},
       nodeLocator: const <NodeId, NodeLocatorEntry>{},
-      nodeIdSeed: 0,
-      layerIdSeed: 0,
+      idGeneratorState: state(nextNodeCounter: 0, nextLayerCounter: 0),
       nextInstanceRevision: 1,
       commitRevision: 0,
     );
 
-    expect(violations.join('\n'), contains('layerIdSeed must be >='));
+    expect(
+      violations.join('\n'),
+      contains('idGeneratorState.nextNodeCounter must be >= 1'),
+    );
+    expect(
+      violations.join('\n'),
+      contains('idGeneratorState.nextLayerCounter must be >= 1'),
+    );
   });
 
   test('detects invalid node instanceRevision in committed scene', () {
@@ -303,8 +312,7 @@ void main() {
       nodeLocator: const <NodeId, NodeLocatorEntry>{
         'bad-rev': (layerIndex: 0, nodeIndex: 0),
       },
-      nodeIdSeed: 0,
-      layerIdSeed: txnInitialLayerIdSeed(scene),
+      idGeneratorState: state(),
       nextInstanceRevision: 1,
       commitRevision: 0,
     );
@@ -323,8 +331,7 @@ void main() {
         selectedNodeIds: const <NodeId>{},
         allNodeIds: const <NodeId>{},
         nodeLocator: const <NodeId, NodeLocatorEntry>{},
-        nodeIdSeed: 0,
-        layerIdSeed: txnInitialLayerIdSeed(scene),
+        idGeneratorState: state(),
         nextInstanceRevision: 2,
         commitRevision: 0,
       ),
@@ -411,8 +418,7 @@ void main() {
       nodeLocator: const <NodeId, NodeLocatorEntry>{
         'node-1': (layerIndex: 0, nodeIndex: 7),
       },
-      nodeIdSeed: 2,
-      layerIdSeed: txnInitialLayerIdSeed(scene),
+      idGeneratorState: state(nextNodeCounter: 2),
       nextInstanceRevision: 2,
       commitRevision: 0,
     );
@@ -429,8 +435,7 @@ void main() {
       selectedNodeIds: const <NodeId>{'node-1'},
       allNodeIds: const <NodeId>{'node-1'},
       nodeLocator: const <NodeId, NodeLocatorEntry>{},
-      nodeIdSeed: 2,
-      layerIdSeed: txnInitialLayerIdSeed(scene),
+      idGeneratorState: state(nextNodeCounter: 2),
       nextInstanceRevision: 2,
       commitRevision: 0,
     );

@@ -7,6 +7,7 @@ import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_writer.dart';
 import 'package:iwb_canvas_engine/src/controller/txn_context.dart';
 import 'package:iwb_canvas_engine/src/controller/internal/signal_event.dart';
+import 'package:iwb_canvas_engine/src/core/id_generator.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 
 import '../support/scene_snapshot_invariant_assertions.dart';
@@ -47,7 +48,10 @@ void main() {
         ),
         workingSelection: <NodeId>{},
         baseAllNodeIds: <NodeId>{},
-        nodeIdSeed: 0,
+        idGeneratorState: createIdGeneratorStateForTesting(
+          nextNodeCounter: 1,
+          nextLayerCounter: 1,
+        ),
         nextInstanceRevision: 1,
       );
       T writeRunner<T>(T Function(SceneWriteTxn writer) fn) {
@@ -75,7 +79,10 @@ void main() {
       ),
       workingSelection: <NodeId>{},
       baseAllNodeIds: <NodeId>{},
-      nodeIdSeed: 0,
+      idGeneratorState: createIdGeneratorStateForTesting(
+        nextNodeCounter: 1,
+        nextLayerCounter: 1,
+      ),
       nextInstanceRevision: 1,
     );
     T writeRunner<T>(T Function(SceneWriteTxn writer) fn) {

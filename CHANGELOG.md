@@ -48,6 +48,10 @@ All notable changes to `iwb_canvas_engine` are documented here.
 - Clarified step `5.1` `backgroundLayer` policy: mutable runtime `Scene`
   keeps `backgroundLayer` nullable, while snapshot/JSON boundaries continue to
   canonicalize it to a dedicated single layer.
+- Runtime id allocation is now fully store-owned: controller bootstrap starts
+  a fresh `IdGeneratorState`, commit/adopt/replace preserve allocator state
+  verbatim, and future generated ids are no longer reconstructed from scene
+  scans or legacy generated-id parsing.
 - Clarified the writer/controller contract for step `4.4`: draw command
   entrypoints return committed `NodeId` values, and
   `writeSelectionTransform(...)` is documented with pre-multiply semantics

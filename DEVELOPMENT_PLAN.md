@@ -39,7 +39,7 @@ language: russian
 - [x] [Шаг 6.4. Довести `scene_codec.dart` до единого `code/path/details` boundary](development_plan/step_06_4_scene_codec_boundary_adoption_and_contract_matrix.md)
 - [ ] [Шаг 7. Ввести безопасную политику id и revision через подшаги 7.1-7.4](development_plan/step_07_id_and_revision_safety_policy.md)
 - [x] [Шаг 7.1. Зафиксировать новый generated-id contract и owner `id_generator`](development_plan/step_07_1_generated_id_contract_and_generator_owner.md)
-- [ ] [Шаг 7.2. Перевести store/txn/document на stateful id allocation без scene-scan](development_plan/step_07_2_stateful_id_allocation_in_store_txn_and_document.md)
+- [x] [Шаг 7.2. Перевести store/txn/document на stateful id allocation без scene-scan](development_plan/step_07_2_stateful_id_allocation_in_store_txn_and_document.md)
 - [ ] [Шаг 7.3. Ввести безопасную revision policy и связать её с `epoch`](development_plan/step_07_3_revision_policy_and_epoch_contract.md)
 - [ ] [Шаг 7.4. Зафиксировать render-cache invalidation на composite revision contract](development_plan/step_07_4_render_cache_revision_contract.md)
 - [ ] [Шаг 8. Ввести ядро операций записи](development_plan/step_08_write_operations_core.md)

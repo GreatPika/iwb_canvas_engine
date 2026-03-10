@@ -1,8 +1,4 @@
 import '../contract/ids.dart' show LayerId, NodeId;
-import '../contract/scene_contract_limits.dart'
-    show kMaxLayerIdLength, kMaxNodeIdLength;
-import '../core/nodes.dart';
-import '../core/scene.dart';
 
 /// Internal mutable owner of runtime generated-id allocation state.
 class IdGeneratorState {
@@ -25,11 +21,11 @@ class IdGeneratorState {
   }
 }
 
-IdGeneratorState createInitialIdGeneratorState(Scene scene) {
+IdGeneratorState createInitialIdGeneratorState() {
   return IdGeneratorState(
     sessionToken: _nextSessionToken(),
-    nextNodeCounter: initialGeneratedNodeCounter(scene),
-    nextLayerCounter: initialGeneratedLayerCounter(scene),
+    nextNodeCounter: 1,
+    nextLayerCounter: 1,
   );
 }
 
@@ -45,27 +41,15 @@ IdGeneratorState createIdGeneratorStateForTesting({
   );
 }
 
-void syncIdGeneratorStateWithSceneLowerBounds(
-  IdGeneratorState state,
-  Scene scene,
-) {
-  final minimumNodeCounter = initialGeneratedNodeCounter(scene);
-  if (state.nextNodeCounter < minimumNodeCounter) {
-    state.nextNodeCounter = minimumNodeCounter;
-  }
-
-  final minimumLayerCounter = initialGeneratedLayerCounter(scene);
-  if (state.nextLayerCounter < minimumLayerCounter) {
-    state.nextLayerCounter = minimumLayerCounter;
-  }
-}
-
 NodeId generateNextNodeId(
   IdGeneratorState state, {
   required bool Function(NodeId id) containsNodeId,
 }) {
   while (true) {
-    final candidate = _generateNodeId(state.nextNodeCounter);
+    final candidate = _generateNodeId(
+      sessionToken: state.sessionToken,
+      counter: state.nextNodeCounter,
+    );
     state.nextNodeCounter = state.nextNodeCounter + 1;
     if (!containsNodeId(candidate)) {
       return candidate;
@@ -78,7 +62,10 @@ LayerId generateNextLayerId(
   required bool Function(LayerId id) containsLayerId,
 }) {
   while (true) {
-    final candidate = _generateLayerId(state.nextLayerCounter);
+    final candidate = _generateLayerId(
+      sessionToken: state.sessionToken,
+      counter: state.nextLayerCounter,
+    );
     state.nextLayerCounter = state.nextLayerCounter + 1;
     if (!containsLayerId(candidate)) {
       return candidate;
@@ -86,49 +73,8 @@ LayerId generateNextLayerId(
   }
 }
 
-int initialGeneratedNodeCounter(Scene scene) {
-  var maxCounter = -1;
-  final backgroundLayer = scene.backgroundLayer;
-  final nodes = <SceneNode>[
-    if (backgroundLayer != null) ...backgroundLayer.nodes,
-    for (final layer in scene.layers) ...layer.nodes,
-  ];
-  for (final node in nodes) {
-    final parsed = _tryParseLegacyGeneratedCounter(
-      node.id,
-      prefix: _nodeIdGeneratedPrefix,
-      maxLength: kMaxNodeIdLength,
-    );
-    if (parsed == null || parsed < 0) {
-      continue;
-    }
-    if (parsed > maxCounter) {
-      maxCounter = parsed;
-    }
-  }
-  return maxCounter + 1;
-}
-
-int initialGeneratedLayerCounter(Scene scene) {
-  var maxCounter = -1;
-  for (final layer in scene.layers) {
-    final parsed = _tryParseLegacyGeneratedCounter(
-      layer.id,
-      prefix: _layerIdGeneratedPrefix,
-      maxLength: kMaxLayerIdLength,
-    );
-    if (parsed == null || parsed < 0) {
-      continue;
-    }
-    if (parsed > maxCounter) {
-      maxCounter = parsed;
-    }
-  }
-  return maxCounter + 1;
-}
-
-const String _nodeIdGeneratedPrefix = 'node-';
-const String _layerIdGeneratedPrefix = 'layer-';
+const String _nodeIdGeneratedPrefix = 'gen-n-';
+const String _layerIdGeneratedPrefix = 'gen-l-';
 
 int _sessionTokenCounter = 0;
 
@@ -138,17 +84,19 @@ String _nextSessionToken() {
   return token;
 }
 
-NodeId _generateNodeId(int counter) {
+NodeId _generateNodeId({required String sessionToken, required int counter}) {
   return _formatLegacyGeneratedId(
     prefix: _nodeIdGeneratedPrefix,
+    sessionToken: sessionToken,
     counter: counter,
     name: 'nodeIdCounter',
   );
 }
 
-LayerId _generateLayerId(int counter) {
+LayerId _generateLayerId({required String sessionToken, required int counter}) {
   return _formatLegacyGeneratedId(
     prefix: _layerIdGeneratedPrefix,
+    sessionToken: sessionToken,
     counter: counter,
     name: 'layerIdCounter',
   );
@@ -156,33 +104,19 @@ LayerId _generateLayerId(int counter) {
 
 String _formatLegacyGeneratedId({
   required String prefix,
+  required String sessionToken,
   required int counter,
   required String name,
 }) {
-  if (counter < 0) {
-    throw ArgumentError.value(counter, name, 'Must be >= 0.');
+  if (sessionToken.isEmpty) {
+    throw ArgumentError.value(
+      sessionToken,
+      'sessionToken',
+      'Must not be empty.',
+    );
   }
-  return '$prefix$counter';
-}
-
-int? _tryParseLegacyGeneratedCounter(
-  String value, {
-  required String prefix,
-  required int maxLength,
-}) {
-  if (value.length > maxLength || !value.startsWith(prefix)) {
-    return null;
+  if (counter < 1) {
+    throw ArgumentError.value(counter, name, 'Must be >= 1.');
   }
-  final rawCounter = value.substring(prefix.length);
-  if (rawCounter.isEmpty) {
-    return null;
-  }
-  final parsed = int.tryParse(rawCounter);
-  if (parsed == null || parsed < 0) {
-    return null;
-  }
-  if (rawCounter != parsed.toString()) {
-    return null;
-  }
-  return parsed;
+  return '$prefix$sessionToken-${counter.toRadixString(36)}';
 }

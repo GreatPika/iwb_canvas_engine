@@ -44,9 +44,9 @@ void main() {
     final generatedId = writer.writeNodeInsert(
       RectNodeSpec(size: const Size(2, 2)),
     );
-    expect(generatedId, 'node-0');
+    expect(generatedId, 'gen-n-test-1');
     expect(ctx.changeSet.structuralChanged, isTrue);
-    expect(ctx.changeSet.addedNodeIds, contains('node-0'));
+    expect(ctx.changeSet.addedNodeIds, contains('gen-n-test-1'));
 
     expect(writer.writeNodePatch(RectNodePatch(id: 'missing')), isFalse);
     expect(writer.writeNodePatch(RectNodePatch(id: 'r1')), isFalse);
@@ -64,10 +64,10 @@ void main() {
     expect(ctx.workingSelection, isNot(contains('r1')));
     expect(ctx.changeSet.selectionChanged, isTrue);
 
-    writer.writeSelectionReplace(<NodeId>{'node-0'});
-    writer.writeSelectionReplace(<NodeId>{'node-0'});
-    writer.writeSelectionToggle('node-0');
-    writer.writeSelectionToggle('node-0');
+    writer.writeSelectionReplace(<NodeId>{'gen-n-test-1'});
+    writer.writeSelectionReplace(<NodeId>{'gen-n-test-1'});
+    writer.writeSelectionToggle('gen-n-test-1');
+    writer.writeSelectionToggle('gen-n-test-1');
 
     expect(writer.writeSelectionTranslate(Offset.zero), 0);
     expect(writer.writeSelectionTranslate(const Offset(5, 0)), 1);
@@ -81,7 +81,7 @@ void main() {
 
     writer.writeSignalEnqueue(
       type: 'custom.signal',
-      nodeIds: <NodeId>{'node-0'},
+      nodeIds: <NodeId>{'gen-n-test-1'},
     );
     expect(bufferedSignals.single.type, 'custom.signal');
 
@@ -258,7 +258,7 @@ void main() {
     );
     expect(autoInsertedId, 'first');
     expect(emptyCtx.workingScene.layers, hasLength(1));
-    expect(emptyCtx.workingScene.layers.single.id, 'layer-0');
+    expect(emptyCtx.workingScene.layers.single.id, 'gen-l-test-1');
     expect(emptyCtx.workingScene.layers.single.nodes.single.id, 'first');
   });
 
@@ -414,7 +414,7 @@ void main() {
     final generatedId = writer.writeNodeInsert(
       RectNodeSpec(size: const Size(2, 2)),
     );
-    expect(generatedId, 'node-2');
+    expect(generatedId, 'gen-n-test-2');
     expect(ctx.txnHasNodeId('rect-1'), isTrue);
     expect(ctx.txnHasNodeId('locked'), isTrue);
 
@@ -436,7 +436,7 @@ void main() {
 
     final selectAll = writer.writeSelectionSelectAll();
     expect(selectAll, 2);
-    expect(writer.selectedNodeIds, const <NodeId>{'rect-1', 'node-2'});
+    expect(writer.selectedNodeIds, const <NodeId>{'rect-1', 'gen-n-test-2'});
     expect(writer.writeSelectionSelectAll(), 0);
   });
 

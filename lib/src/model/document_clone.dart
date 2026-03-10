@@ -2,8 +2,6 @@ import 'dart:ui';
 
 import '../core/nodes.dart';
 import '../core/scene.dart';
-import '../core/id_generator.dart'
-    show initialGeneratedLayerCounter, initialGeneratedNodeCounter;
 import '../contract/ids.dart' show LayerId;
 import '../contract/transform2d.dart';
 
@@ -216,10 +214,6 @@ Set<NodeId> txnCollectNodeIds(Scene scene) {
   };
 }
 
-int txnInitialNodeIdSeed(Scene scene) {
-  return initialGeneratedNodeCounter(scene);
-}
-
 int txnInitialNodeInstanceRevisionSeed(Scene scene) {
   var maxRevision = 0;
   final backgroundLayer = scene.backgroundLayer;
@@ -238,8 +232,4 @@ int txnInitialNodeInstanceRevisionSeed(Scene scene) {
 
 Set<LayerId> txnCollectLayerIds(Scene scene) {
   return <LayerId>{for (final layer in scene.layers) layer.id};
-}
-
-int txnInitialLayerIdSeed(Scene scene) {
-  return initialGeneratedLayerCounter(scene);
 }

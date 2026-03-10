@@ -185,35 +185,39 @@ void main() {
     expect(controller.debugNodeLocatorMaterializations, 1);
   });
 
-  test('node id seed stays monotonic after deleting max node-* id', () {
-    final controller = SceneControllerCore(
-      initialSnapshot: SceneSnapshot(
-        layers: <ContentLayerSnapshot>[
-          ContentLayerSnapshot(
-            id: 'layer-auto-3',
-            nodes: <NodeSnapshot>[
-              RectNodeSnapshot(id: 'node-1', size: Size(10, 10)),
-              RectNodeSnapshot(id: 'node-9', size: Size(12, 12)),
-            ],
-          ),
-        ],
-      ),
-    );
-    addTearDown(controller.dispose);
-
-    controller.write<void>((writer) {
-      writer.writeNodeErase('node-9');
-    });
-
-    late final NodeId generatedId;
-    controller.write<void>((writer) {
-      generatedId = writer.writeNodeInsert(
-        RectNodeSpec(size: const Size(6, 6)),
+  test(
+    'node allocation stays runtime-owned after deleting explicit max id',
+    () {
+      final controller = SceneControllerCore(
+        initialSnapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-auto-3',
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(id: 'node-1', size: Size(10, 10)),
+                RectNodeSnapshot(id: 'node-9', size: Size(12, 12)),
+              ],
+            ),
+          ],
+        ),
       );
-    });
+      addTearDown(controller.dispose);
 
-    expect(generatedId, 'node-10');
-  });
+      controller.write<void>((writer) {
+        writer.writeNodeErase('node-9');
+      });
+
+      late final NodeId generatedId;
+      controller.write<void>((writer) {
+        generatedId = writer.writeNodeInsert(
+          RectNodeSpec(size: const Size(6, 6)),
+        );
+      });
+
+      expect(generatedId, startsWith('gen-n-'));
+      expect(generatedId, isNot(anyOf('node-1', 'node-9')));
+    },
+  );
 
   test('nextInstanceRevision stays monotonic across replaceScene', () {
     final controller = SceneControllerCore(
