@@ -134,10 +134,10 @@ void main() {
       }
 
       final fromBuilder = capture(
-        () => SceneBuilder.buildFromJson(malformed.cast<String, dynamic>()),
+        () => SceneBuilder.buildFromJson(malformed.cast<String, Object?>()),
       );
       final fromCodec = capture(
-        () => decodeScene(malformed.cast<String, dynamic>()),
+        () => decodeScene(malformed.cast<String, Object?>()),
       );
 
       expect(fromBuilder.code, fromCodec.code);
