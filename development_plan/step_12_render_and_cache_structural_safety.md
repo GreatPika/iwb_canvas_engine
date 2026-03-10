@@ -2,6 +2,20 @@ language: russian
 
 # Шаг 12. Перевести рендер и кеши на структурно безопасную форму
 
+## Диагностические метрики
+
+Этот блок нужен как диагностический радар после изменений шага, а не как отдельный критерий готовности. В этом шаге важно не просто "разбить painter", а убедиться, что structural complexity уходит из render/cache/hit-test контура целиком.
+
+- Смотреть в первую очередь `cyclomatic-complexity`, `source-lines-of-code` и `maximum-nesting-level`.
+- Контрольные файлы:
+  - `lib/src/render/scene_painter.dart`
+  - `lib/src/render/render_geometry_cache.dart`
+  - `lib/src/render/cache/scene_static_layer_cache.dart`
+  - `lib/src/core/scene_spatial_index.dart`
+  - `lib/src/core/hit_test.dart`
+  - `lib/src/core/geometry.dart`
+- Полезный сигнал после шага: painter, spatial index и hit-test больше не дублируют structural branching и не требуют длинных switch-like маршрутов для тех же render cases.
+
 ## Создать `lib/src/render/canvas_scope.dart`
 
 Добавить:
@@ -54,4 +68,3 @@ language: russian
 2. Инвариант контракта ревизий.
 3. Инвариант монотонности timestamp.
 4. Инвариант неизменяемости `ClearSceneResult`.
-

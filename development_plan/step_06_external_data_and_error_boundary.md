@@ -2,6 +2,19 @@ language: russian
 
 # Шаг 6. Нормализовать всю внешнюю границу данных и ошибок
 
+## Диагностические метрики
+
+Этот блок нужен как диагностический радар после изменений шага, а не как отдельный критерий готовности. Здесь важнее не уменьшить количество helper-ов, а убедиться, что guard/error boundary становится компактнее и не размазан между codec и sanitization.
+
+- Смотреть в первую очередь `cyclomatic-complexity` и `source-lines-of-code`.
+- `number-of-parameters` здесь вторична и сама по себе не является целью шага.
+- Контрольные файлы:
+  - `lib/src/serialization/codec_guards.dart`
+  - `lib/src/serialization/scene_codec.dart`
+  - `lib/src/contract/scene_data_exception.dart`
+  - `lib/src/model/scene_builder_api.dart`
+- Полезный сигнал после шага: encode/decode guards и sanitization больше не живут в нескольких тяжёлых ветках с дублирующимся error-mapping, а новый guard-layer не становится новым местом концентрации всей boundary-логики.
+
 ## `lib/src/model/scene_builder_api.dart`
 
 Сделать:
@@ -37,4 +50,3 @@ language: russian
 4. усечение `source`
 5. нормализацию `path`
 6. перевод системных исключений в доменные
-

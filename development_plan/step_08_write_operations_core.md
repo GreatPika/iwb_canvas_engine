@@ -2,6 +2,21 @@ language: russian
 
 # Шаг 8. Ввести ядро операций записи
 
+## Диагностические метрики
+
+Этот блок нужен как диагностический радар после изменений шага, а не как отдельный критерий готовности. Шаг должен упростить write hot path через единый исполнитель операций, а не просто перераспределить длинные методы по новым файлам.
+
+- Смотреть в первую очередь `cyclomatic-complexity` и `source-lines-of-code`.
+- Дополнительно смотреть `maximum-nesting-level` в commit/apply/postcheck маршрутах.
+- Контрольные файлы:
+  - `lib/src/controller/mutation_executor.dart`
+  - `lib/src/controller/scene_controller.dart`
+  - `lib/src/controller/scene_writer.dart`
+  - `lib/src/controller/txn_context.dart`
+  - `lib/src/controller/scene_invariants.dart`
+  - `lib/src/model/document.dart`
+- Полезный сигнал после шага: commit/apply path больше не держит в одном месте preconditions, mutation, invariant checks и commit preparation, а `mutation_executor.dart` не становится новой monolith-точкой записи.
+
 ## Создать `lib/src/controller/mutation_op.dart`
 
 Добавить типы операций:
@@ -52,4 +67,3 @@ language: russian
    * debug copies,
    * commit phase copying,
    * лишние списки и клонирования.
-

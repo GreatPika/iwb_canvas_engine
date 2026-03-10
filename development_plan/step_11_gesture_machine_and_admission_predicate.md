@@ -2,6 +2,20 @@ language: russian
 
 # Шаг 11. Вынести gesture-machine и единый предикат допустимости
 
+## Диагностические метрики
+
+Этот блок нужен как диагностический радар после изменений шага, а не как отдельный критерий готовности. Здесь метрики нужны, чтобы проверить не только вынос eligibility policy, но и то, что preview/commit/cancel больше не живут в нескольких похожих тяжёлых ветках.
+
+- Смотреть в первую очередь `cyclomatic-complexity`, `maximum-nesting-level` и `source-lines-of-code`.
+- Контрольные файлы:
+  - `lib/src/interactive/interaction_eligibility_policy.dart`
+  - `lib/src/interactive/scene_controller_interactive.dart`
+  - `lib/src/interactive/internal/interactive_move_session.dart`
+  - `lib/src/interactive/internal/interactive_draw_coordinator.dart`
+  - `lib/src/interactive/internal/interactive_draw_line_engine.dart`
+  - `lib/src/interactive/internal/interactive_draw_eraser_engine.dart`
+- Полезный сигнал после шага: eligibility, preview, commit и cancel-path используют одну policy-модель вместо нескольких частично пересекающихся веток, а `interaction_eligibility_policy.dart` остаётся компактным правилом допуска, а не новым центром всей интерактивной логики.
+
 ## `lib/src/interactive/scene_controller_interactive.dart`
 
 Сделать:
@@ -73,4 +87,3 @@ language: russian
 * selection
 * delete
 * writer/runtime, где релевантно
-

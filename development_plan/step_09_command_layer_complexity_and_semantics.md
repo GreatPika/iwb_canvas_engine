@@ -2,6 +2,19 @@ language: russian
 
 # Шаг 9. Довести командный слой до правильной сложности и семантики
 
+## Диагностические метрики
+
+Этот блок нужен как диагностический радар после изменений шага, а не как отдельный критерий готовности. Цель шага не в косметическом снижении метрик, а в том, чтобы command-layer перестал тянуть лишние проходы, копии и no-op mutation paths.
+
+- Смотреть в первую очередь `cyclomatic-complexity` и `source-lines-of-code`.
+- Дополнительно смотреть `maximum-nesting-level` на путях transform/delete/update.
+- Контрольные файлы:
+  - `lib/src/controller/commands/draw_commands.dart`
+  - `lib/src/controller/commands/scene_commands.dart`
+  - `lib/src/controller/scene_writer.dart`
+  - `lib/src/model/document.dart`
+- Полезный сигнал после шага: no-op и bulk paths выражены явно, а write commands перестают опираться на full snapshot rebuild и лишние копии.
+
 ## `lib/src/controller/commands/draw_commands.dart`
 
 Сделать:
@@ -59,4 +72,3 @@ language: russian
 3. Убрать лишние копии.
 4. Закрепить transform order.
 5. Закрепить семантику пустой selection replacement.
-

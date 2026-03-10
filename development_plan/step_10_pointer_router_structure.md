@@ -2,6 +2,16 @@ language: russian
 
 # Шаг 10. Вынести pointer-router в правильную форму
 
+## Диагностические метрики
+
+Этот блок нужен как диагностический радар после изменений шага, а не как отдельный критерий готовности. Метрики здесь помогают проверить, что pointer-router действительно локализован, а сложность не утекла в соседние interactive paths.
+
+- Смотреть в первую очередь `cyclomatic-complexity`, `maximum-nesting-level` и `source-lines-of-code`.
+- Контрольные файлы:
+  - `lib/src/view/scene_view_interactive.dart`
+  - `lib/src/interactive/scene_controller_interactive.dart`
+- Полезный сигнал после шага: pointer id routing, reset policy и deferred flush logic не требуют нескольких тяжёлых веток для одной и той же жизненной фазы указателя, а pointer-router concern не расползается обратно по соседним interactive owner-ам.
+
 ## `lib/src/view/scene_view_interactive.dart`
 
 Сделать:
@@ -47,4 +57,3 @@ language: russian
 10. Проверить `mounted` во всех отложенных путях и слушателях.
 
 11. Пересмотреть смену pointer settings при активном жесте.
-

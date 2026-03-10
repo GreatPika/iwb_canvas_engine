@@ -6,6 +6,20 @@ language: russian
 
 Этот шаг не про добавление ещё одного слоя валидации поверх уже существующих helper-ов, а про наведение одного владельца для scene-level policy. Сейчас правила сцены размазаны между `scene_builder.dart`, `scene_builder_canonicalize_validate.part.dart`, `scene_value_validation*.part.dart`, JSON decode-путём и сериализацией. Из-за этого один и тот же инвариант проверяется в нескольких местах, а `backgroundLayer` живёт в двух разных семантиках: обязательный в `SceneSnapshot`, но опциональный в mutable `Scene`. Задача шага: локализовать реальные дубли, собрать orchestration в одном месте и оставить primitive/node validators внутренними зависимостями, а не параллельным источником истины.
 
+## Диагностические метрики
+
+Этот блок нужен как диагностический радар после изменений шага, а не как отдельный критерий готовности. Цель не "лечить числа", а проверять, что scene-level policy действительно уходит из giant validators и decode-orchestration.
+
+- Смотреть в первую очередь `cyclomatic-complexity` и `source-lines-of-code`.
+- Вторично смотреть `maximum-nesting-level`, если после разрезания logic flow остаётся трудно читаемым.
+- Контрольные файлы:
+  - `lib/src/model/scene_policy.dart`
+  - `lib/src/model/scene_builder_decode_json.part.dart`
+  - `lib/src/model/scene_builder_canonicalize_validate.part.dart`
+  - `lib/src/model/scene_value_validation_node.part.dart`
+  - `lib/src/model/scene_value_validation_top_level.part.dart`
+- Полезный сигнал после шага: не остаётся giant top-level validators/decoders, которые одновременно владеют traversal, policy decision и error mapping, а новый `ScenePolicy` не превращается в ещё один central god-object.
+
 ## Что уже подтверждено по текущему состоянию
 
 1. `lib/src/model/scene_builder.dart` сейчас собирает политику сцены из трёх независимых кусков:
@@ -189,4 +203,3 @@ language: russian
 [ ] Выровнять error-code и `path` semantics для duplicate id и других scene-level policy ошибок.
 [ ] Проверить, что encode-path использует ту же каноническую policy-модель сцены.
 [ ] Явно вынести из Шага 5 всё, что после локализации относится к codec guards, а не к scene policy.
-
