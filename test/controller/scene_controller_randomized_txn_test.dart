@@ -24,6 +24,7 @@ void main() {
         initialSnapshot: _initialSnapshot(),
       );
       addTearDown(controller.dispose);
+      expect(scenarioSteps, greaterThan(0));
 
       for (var step = 0; step < scenarioSteps; step++) {
         final operation = _runRandomOperation(

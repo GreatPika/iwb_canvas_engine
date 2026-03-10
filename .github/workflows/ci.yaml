@@ -53,6 +53,14 @@ jobs:
       - name: Pub get
         run: flutter pub get
 
+      - name: Install DCM
+        uses: CQLabs/setup-dcm@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: DCM analyze
+        run: dcm analyze .
+
       - name: Format (check)
         run: dart format --output=none --set-exit-if-changed lib test example/lib example/test tool
 

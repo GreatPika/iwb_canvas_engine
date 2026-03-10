@@ -215,11 +215,15 @@ void main() {
 
     final signal = emitted.single;
     expect(signal.nodeIds, const <NodeId>['r1']);
-    expect((signal.payload!['nested']! as Map<String, Object?>)['value'], 1);
-    expect(signal.payload!['items'], const <Object?>[1, 2]);
+    final payloadSnapshot = signal.payload;
+    if (payloadSnapshot == null) {
+      fail('Expected emitted signal payload.');
+    }
+    expect((payloadSnapshot['nested'] as Map<String, Object?>)['value'], 1);
+    expect(payloadSnapshot['items'], const <Object?>[1, 2]);
     expect(() => signal.nodeIds.add('x'), throwsUnsupportedError);
     expect(
-      () => (signal.payload!['nested'] as Map<Object?, Object?>)['value'] = 7,
+      () => (payloadSnapshot['nested'] as Map<Object?, Object?>)['value'] = 7,
       throwsUnsupportedError,
     );
   });

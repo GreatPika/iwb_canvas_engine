@@ -246,7 +246,10 @@ String _readPackageNameOrFallback(Directory root) {
     final trimmed = line.trimLeft();
     final match = RegExp(r'^name:\s*([A-Za-z0-9_]+)\s*$').firstMatch(trimmed);
     if (match != null) {
-      return match.group(1)!;
+      final packageName = match.group(1);
+      if (packageName != null) {
+        return packageName;
+      }
     }
   }
   return 'iwb_canvas_engine';
@@ -391,7 +394,7 @@ int _lineForOffset(ParsedUnitResult result, int offset) {
   return result.lineInfo.getLocation(offset).lineNumber;
 }
 
-Future<void> main(List<String> args) async {
+Future<void> main(List<String> _) async {
   final root = Directory.current;
   final rootAbsPosix = _toPosixPath(root.absolute.path);
   final packageName = _readPackageNameOrFallback(root);

@@ -38,10 +38,16 @@ void main() {
         transform: snapshot.transform,
       );
 
-      _expectRectClose(coreNode.boundsWorld, renderBounds);
-      _expectRectClose(
-        nodeHitTestCandidateBoundsWorld(coreNode),
-        renderBounds.inflate(snapshot.hitPadding + kHitSlop),
+      expect(
+        () => _expectRectClose(coreNode.boundsWorld, renderBounds),
+        returnsNormally,
+      );
+      expect(
+        () => _expectRectClose(
+          nodeHitTestCandidateBoundsWorld(coreNode),
+          renderBounds.inflate(snapshot.hitPadding + kHitSlop),
+        ),
+        returnsNormally,
       );
     },
   );
@@ -71,10 +77,16 @@ void main() {
         transform: snapshot.transform,
       );
 
-      _expectRectClose(coreNode.boundsWorld, renderBounds);
-      _expectRectClose(
-        nodeHitTestCandidateBoundsWorld(coreNode),
-        renderBounds.inflate(snapshot.hitPadding + kHitSlop),
+      expect(
+        () => _expectRectClose(coreNode.boundsWorld, renderBounds),
+        returnsNormally,
+      );
+      expect(
+        () => _expectRectClose(
+          nodeHitTestCandidateBoundsWorld(coreNode),
+          renderBounds.inflate(snapshot.hitPadding + kHitSlop),
+        ),
+        returnsNormally,
       );
     },
   );

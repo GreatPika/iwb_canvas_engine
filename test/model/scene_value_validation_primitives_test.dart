@@ -111,18 +111,21 @@ void main() {
     });
 
     test('sceneValidateNode accepts valid text node fontFamily boundary', () {
-      sceneValidateNode(
-        TextNode(
-          id: 'node-0',
-          instanceRevision: 1,
-          text: 'hello',
-          size: const Size(1, 1),
-          fontSize: 16,
-          color: const Color(0xFF000000),
-          fontFamily: 'Inter',
+      expect(
+        () => sceneValidateNode(
+          TextNode(
+            id: 'node-0',
+            instanceRevision: 1,
+            text: 'hello',
+            size: const Size(1, 1),
+            fontSize: 16,
+            color: const Color(0xFF000000),
+            fontFamily: 'Inter',
+          ),
+          field: 'node',
+          onError: _throwFailure,
         ),
-        field: 'node',
-        onError: _throwFailure,
+        returnsNormally,
       );
     });
   });

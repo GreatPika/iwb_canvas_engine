@@ -43,7 +43,10 @@ void assertSceneInvariants(
     expect(contentNodeIds.contains(selectedId), isTrue);
     final node = _findContentNodeById(snapshot: snapshot, id: selectedId);
     expect(node, isNotNull);
-    expect(node!.isVisible, isTrue);
+    if (node == null) {
+      fail('Expected selected node $selectedId to exist in content layers.');
+    }
+    expect(node.isVisible, isTrue);
   }
 }
 
@@ -69,17 +72,20 @@ void _expectNodeFinite(NodeSnapshot node) {
   switch (node) {
     case ImageNodeSnapshot image:
       _expectFiniteSize(image.size);
-      if (image.naturalSize != null) {
-        _expectFiniteSize(image.naturalSize!);
+      final naturalSize = image.naturalSize;
+      if (naturalSize != null) {
+        _expectFiniteSize(naturalSize);
       }
     case TextNodeSnapshot text:
       _expectFiniteSize(text.size);
       expect(text.fontSize.isFinite, isTrue);
-      if (text.maxWidth != null) {
-        expect(text.maxWidth!.isFinite, isTrue);
+      final maxWidth = text.maxWidth;
+      if (maxWidth != null) {
+        expect(maxWidth.isFinite, isTrue);
       }
-      if (text.lineHeight != null) {
-        expect(text.lineHeight!.isFinite, isTrue);
+      final lineHeight = text.lineHeight;
+      if (lineHeight != null) {
+        expect(lineHeight.isFinite, isTrue);
       }
     case StrokeNodeSnapshot stroke:
       expect(stroke.thickness.isFinite, isTrue);

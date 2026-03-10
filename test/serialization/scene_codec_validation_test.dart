@@ -19,43 +19,43 @@ import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/serialization/scene_codec.dart'
     show encodeSceneDocument;
 
-Map<String, dynamic> _minimalSceneJson() {
-  return <String, dynamic>{
+Map<String, Object?> _minimalSceneJson() {
+  return <String, Object?>{
     'schemaVersion': schemaVersionWrite,
-    'camera': <String, dynamic>{'offsetX': 0, 'offsetY': 0},
-    'background': <String, dynamic>{
+    'camera': <String, Object?>{'offsetX': 0, 'offsetY': 0},
+    'background': <String, Object?>{
       'color': '#FFFFFFFF',
-      'grid': <String, dynamic>{
+      'grid': <String, Object?>{
         'enabled': false,
         'cellSize': 10,
         'color': '#1F000000',
       },
     },
-    'palette': <String, dynamic>{
-      'penColors': <dynamic>['#FF000000'],
-      'backgroundColors': <dynamic>['#FFFFFFFF'],
-      'gridSizes': <dynamic>[10],
+    'palette': <String, Object?>{
+      'penColors': <Object?>['#FF000000'],
+      'backgroundColors': <Object?>['#FFFFFFFF'],
+      'gridSizes': <Object?>[10],
     },
-    'layers': <dynamic>[],
+    'layers': <Object?>[],
   };
 }
 
-Map<String, dynamic> _sceneWithSingleNode(Map<String, dynamic> nodeJson) {
+Map<String, Object?> _sceneWithSingleNode(Map<String, Object?> nodeJson) {
   final json = _minimalSceneJson();
-  json['layers'] = <dynamic>[
-    <String, dynamic>{
+  json['layers'] = <Object?>[
+    <String, Object?>{
       'id': 'layer-0',
-      'nodes': <dynamic>[nodeJson],
+      'nodes': <Object?>[nodeJson],
     },
   ];
   return json;
 }
 
-Map<String, dynamic> _baseNodeJson({required String id, required String type}) {
-  return <String, dynamic>{
+Map<String, Object?> _baseNodeJson({required String id, required String type}) {
+  return <String, Object?>{
     'id': id,
     'type': type,
-    'transform': <String, dynamic>{
+    'transform': <String, Object?>{
       'a': 1,
       'b': 0,
       'c': 0,
@@ -92,7 +92,7 @@ void main() {
     expect(encodeScene(decoded), encodeScene(scene));
   });
 
-  test('decodeScene accepts Map<String, dynamic> from jsonDecode', () {
+  test('decodeScene accepts Map<String, Object?> from jsonDecode', () {
     final encoded = encodeScene(
       SceneSnapshot(
         layers: <ContentLayerSnapshot>[
@@ -100,15 +100,15 @@ void main() {
         ],
       ),
     );
-    final decodedRaw = jsonDecode(jsonEncode(encoded)) as Map<String, dynamic>;
+    final decodedRaw = jsonDecode(jsonEncode(encoded)) as Map<String, Object?>;
     final snapshot = decodeScene(decodedRaw);
 
     expect(snapshot.layers.length, 1);
   });
 
-  test('SceneBuilder.buildFromJson accepts Map<String, dynamic>', () {
+  test('SceneBuilder.buildFromJson accepts Map<String, Object?>', () {
     final decodedRaw =
-        jsonDecode(jsonEncode(_minimalSceneJson())) as Map<String, dynamic>;
+        jsonDecode(jsonEncode(_minimalSceneJson())) as Map<String, Object?>;
     final snapshot = SceneBuilder.buildFromJson(decodedRaw);
 
     expect(snapshot.layers, isEmpty);
@@ -119,12 +119,12 @@ void main() {
     'SceneBuilder.buildFromJson matches decodeScene for the same payload',
     () {
       final raw = _minimalSceneJson();
-      raw['layers'] = <dynamic>[
-        <String, dynamic>{
+      raw['layers'] = <Object?>[
+        <String, Object?>{
           'id': 'layer-0',
-          'nodes': <dynamic>[
-            _baseNodeJson(id: 'n1', type: 'rect')..addAll(<String, dynamic>{
-              'size': <String, dynamic>{'w': 1, 'h': 1},
+          'nodes': <Object?>[
+            _baseNodeJson(id: 'n1', type: 'rect')..addAll(<String, Object?>{
+              'size': <String, Object?>{'w': 1, 'h': 1},
               'strokeWidth': 0,
             }),
           ],
@@ -133,7 +133,7 @@ void main() {
 
       expect(
         encodeScene(SceneBuilder.buildFromJson(raw)),
-        encodeScene(decodeScene(Map<String, dynamic>.from(raw))),
+        encodeScene(decodeScene(Map<String, Object?>.from(raw))),
       );
     },
   );
@@ -183,9 +183,9 @@ void main() {
     'SceneBuilder.buildFromJson and decodeScene report matching nested validation diagnostics',
     () {
       final invalidAlignJson = _baseNodeJson(id: 't2', type: 'text')
-        ..addAll(<String, dynamic>{
+        ..addAll(<String, Object?>{
           'text': 'Hello',
-          'size': <String, dynamic>{'w': 10, 'h': 10},
+          'size': <String, Object?>{'w': 10, 'h': 10},
           'fontSize': 12,
           'color': '#FF000000',
           'align': 'diagonal',
@@ -206,7 +206,7 @@ void main() {
 
       final fromBuilder = capture(() => SceneBuilder.buildFromJson(raw));
       final fromCodec = capture(
-        () => decodeScene(Map<String, dynamic>.from(raw)),
+        () => decodeScene(Map<String, Object?>.from(raw)),
       );
 
       expect(fromBuilder.code, fromCodec.code);
@@ -229,33 +229,33 @@ void main() {
     () {
       // INV:INV-SER-TYPED-LAYER-SPLIT
       final bgNode = _baseNodeJson(id: 'bg', type: 'rect')
-        ..addAll(<String, dynamic>{
-          'size': <String, dynamic>{'w': 1, 'h': 1},
+        ..addAll(<String, Object?>{
+          'size': <String, Object?>{'w': 1, 'h': 1},
           'strokeWidth': 0,
         });
       final n1 = _baseNodeJson(id: 'n1', type: 'rect')
-        ..addAll(<String, dynamic>{
-          'size': <String, dynamic>{'w': 1, 'h': 1},
+        ..addAll(<String, Object?>{
+          'size': <String, Object?>{'w': 1, 'h': 1},
           'strokeWidth': 0,
         });
       final n2 = _baseNodeJson(id: 'n2', type: 'rect')
-        ..addAll(<String, dynamic>{
-          'size': <String, dynamic>{'w': 1, 'h': 1},
+        ..addAll(<String, Object?>{
+          'size': <String, Object?>{'w': 1, 'h': 1},
           'strokeWidth': 0,
         });
       final json = _minimalSceneJson();
-      json['backgroundLayer'] = <String, dynamic>{
+      json['backgroundLayer'] = <String, Object?>{
         'id': 'layer-auto-json-0',
-        'nodes': <dynamic>[bgNode],
+        'nodes': <Object?>[bgNode],
       };
-      json['layers'] = <dynamic>[
-        <String, dynamic>{
+      json['layers'] = <Object?>[
+        <String, Object?>{
           'id': 'layer-auto-json-1',
-          'nodes': <dynamic>[n1],
+          'nodes': <Object?>[n1],
         },
-        <String, dynamic>{
+        <String, Object?>{
           'id': 'layer-auto-json-2',
-          'nodes': <dynamic>[n2],
+          'nodes': <Object?>[n2],
         },
       ];
 
@@ -287,7 +287,7 @@ void main() {
 
   test('decodeScene rejects non-object layer entries', () {
     final json = _minimalSceneJson();
-    json['layers'] = <dynamic>[123];
+    json['layers'] = <Object?>[123];
     expect(
       () => decodeScene(json),
       throwsA(
@@ -302,10 +302,10 @@ void main() {
 
   test('decodeScene rejects non-object node entries', () {
     final json = _minimalSceneJson();
-    json['layers'] = <dynamic>[
-      <String, dynamic>{
+    json['layers'] = <Object?>[
+      <String, Object?>{
         'id': 'layer-auto-json-3',
-        'nodes': <dynamic>[123],
+        'nodes': <Object?>[123],
       },
     ];
     expect(
@@ -323,9 +323,9 @@ void main() {
 
   test('decodeScene rejects too many content layers', () {
     final json = _minimalSceneJson();
-    json['layers'] = <dynamic>[
+    json['layers'] = <Object?>[
       for (var i = 0; i < kMaxContentLayersPerScene + 1; i++)
-        <String, dynamic>{'id': 'layer-$i', 'nodes': <dynamic>[]},
+        <String, Object?>{'id': 'layer-$i', 'nodes': <Object?>[]},
     ];
 
     expect(
@@ -343,13 +343,13 @@ void main() {
 
   test('decodeScene rejects too many nodes in scene', () {
     final json = _minimalSceneJson();
-    json['layers'] = <dynamic>[
-      <String, dynamic>{
+    json['layers'] = <Object?>[
+      <String, Object?>{
         'id': 'layer-0',
-        'nodes': <dynamic>[
+        'nodes': <Object?>[
           for (var i = 0; i < kMaxNodesPerScene + 1; i++)
-            _baseNodeJson(id: 'n$i', type: 'rect')..addAll(<String, dynamic>{
-              'size': <String, dynamic>{'w': 1, 'h': 1},
+            _baseNodeJson(id: 'n$i', type: 'rect')..addAll(<String, Object?>{
+              'size': <String, Object?>{'w': 1, 'h': 1},
               'strokeWidth': 0,
             }),
         ],
@@ -374,24 +374,24 @@ void main() {
     () {
       final json = _minimalSceneJson();
       final backgroundNode = _baseNodeJson(id: 'bg', type: 'rect')
-        ..addAll(<String, dynamic>{
-          'size': <String, dynamic>{'w': 1, 'h': 1},
+        ..addAll(<String, Object?>{
+          'size': <String, Object?>{'w': 1, 'h': 1},
           'strokeWidth': 0,
         });
       final contentNode = _baseNodeJson(id: 'fg', type: 'rect')
-        ..addAll(<String, dynamic>{
-          'size': <String, dynamic>{'w': 1, 'h': 1},
+        ..addAll(<String, Object?>{
+          'size': <String, Object?>{'w': 1, 'h': 1},
           'strokeWidth': 0,
         });
-      json['backgroundLayer'] = <String, dynamic>{
-        'nodes': <dynamic>[
+      json['backgroundLayer'] = <String, Object?>{
+        'nodes': <Object?>[
           for (var i = 0; i < kMaxNodesPerScene; i++) backgroundNode,
         ],
       };
-      json['layers'] = <dynamic>[
-        <String, dynamic>{
+      json['layers'] = <Object?>[
+        <String, Object?>{
           'id': 'layer-0',
-          'nodes': <dynamic>[contentNode],
+          'nodes': <Object?>[contentNode],
         },
       ];
 
@@ -411,10 +411,10 @@ void main() {
 
   test('decodeScene rejects too many stroke localPoints', () {
     final strokeJson = _baseNodeJson(id: 'stroke-overflow', type: 'stroke')
-      ..addAll(<String, dynamic>{
-        'localPoints': <dynamic>[
+      ..addAll(<String, Object?>{
+        'localPoints': <Object?>[
           for (var i = 0; i < kMaxStrokePointsPerNode + 1; i++)
-            <String, dynamic>{'x': i.toDouble(), 'y': 0.0},
+            <String, Object?>{'x': i.toDouble(), 'y': 0.0},
         ],
         'thickness': 1,
         'color': '#FF000000',
@@ -435,7 +435,7 @@ void main() {
 
   test('decodeScene rejects oversized svgPathData payload', () {
     final pathJson = _baseNodeJson(id: 'path-overflow', type: 'path')
-      ..addAll(<String, dynamic>{
+      ..addAll(<String, Object?>{
         'svgPathData':
             "M0 0 ${List<String>.filled(kMaxSvgPathDataLength + 1, 'L1 1').join(' ')}",
         'strokeWidth': 1,
@@ -457,9 +457,9 @@ void main() {
 
   test('decodeScene rejects oversized text payload', () {
     final textJson = _baseNodeJson(id: 'text-overflow', type: 'text')
-      ..addAll(<String, dynamic>{
+      ..addAll(<String, Object?>{
         'text': List<String>.filled(kMaxTextLength + 1, 'a').join(),
-        'size': <String, dynamic>{'w': 1, 'h': 1},
+        'size': <String, Object?>{'w': 1, 'h': 1},
         'fontSize': 14,
         'color': '#FF000000',
         'align': 'left',
@@ -483,7 +483,7 @@ void main() {
 
   test('decodeScene rejects oversized palette penColors', () {
     final json = _minimalSceneJson();
-    (json['palette'] as Map<String, dynamic>)['penColors'] = <dynamic>[
+    (json['palette'] as Map<String, Object?>)['penColors'] = <Object?>[
       for (var i = 0; i < kMaxPaletteItems + 1; i++) '#FF000000',
     ];
 
@@ -503,21 +503,21 @@ void main() {
   test('decodeScene rejects duplicate node ids across layers', () {
     // INV:INV-G-NODEID-UNIQUE
     final json = _minimalSceneJson();
-    json['layers'] = <dynamic>[
-      <String, dynamic>{
+    json['layers'] = <Object?>[
+      <String, Object?>{
         'id': 'layer-auto-json-4',
-        'nodes': <dynamic>[
-          _baseNodeJson(id: 'dup-node', type: 'rect')..addAll(<String, dynamic>{
-            'size': <String, dynamic>{'w': 10, 'h': 10},
+        'nodes': <Object?>[
+          _baseNodeJson(id: 'dup-node', type: 'rect')..addAll(<String, Object?>{
+            'size': <String, Object?>{'w': 10, 'h': 10},
             'strokeWidth': 0,
           }),
         ],
       },
-      <String, dynamic>{
+      <String, Object?>{
         'id': 'layer-auto-json-5',
-        'nodes': <dynamic>[
-          _baseNodeJson(id: 'dup-node', type: 'rect')..addAll(<String, dynamic>{
-            'size': <String, dynamic>{'w': 20, 'h': 20},
+        'nodes': <Object?>[
+          _baseNodeJson(id: 'dup-node', type: 'rect')..addAll(<String, Object?>{
+            'size': <String, Object?>{'w': 20, 'h': 20},
             'strokeWidth': 0,
           }),
         ],
@@ -577,10 +577,10 @@ void main() {
     ]) {
       final encoded = encodeScene(sceneFor(entry.$1, 'text-${entry.$2}'));
       final nodeJson =
-          ((encoded['layers'] as List<dynamic>).single
-                  as Map<String, dynamic>)['nodes']
-              as List<dynamic>;
-      expect((nodeJson.single as Map<String, dynamic>)['align'], entry.$2);
+          ((encoded['layers'] as List<Object?>).single
+                  as Map<String, Object?>)['nodes']
+              as List<Object?>;
+      expect((nodeJson.single as Map<String, Object?>)['align'], entry.$2);
 
       final decoded = decodeScene(encoded);
       final node = decoded.layers.single.nodes.single as TextNodeSnapshot;
@@ -590,7 +590,7 @@ void main() {
 
   test('decodeScene rejects unknown fillRule', () {
     final nodeJson = _baseNodeJson(id: 'p1', type: 'path')
-      ..addAll(<String, dynamic>{
+      ..addAll(<String, Object?>{
         'svgPathData': 'M0 0 H10 V10 H0 Z',
         'strokeWidth': 1,
         'fillRule': 'weird',
@@ -610,7 +610,7 @@ void main() {
 
   test('decodeScene rejects empty svgPathData', () {
     final nodeJson = _baseNodeJson(id: 'p1', type: 'path')
-      ..addAll(<String, dynamic>{
+      ..addAll(<String, Object?>{
         'svgPathData': '   ',
         'strokeWidth': 1,
         'fillRule': 'nonZero',
@@ -631,7 +631,7 @@ void main() {
 
   test('decodeScene rejects invalid svgPathData', () {
     final nodeJson = _baseNodeJson(id: 'p1', type: 'path')
-      ..addAll(<String, dynamic>{
+      ..addAll(<String, Object?>{
         'svgPathData': 'not-a-path',
         'strokeWidth': 1,
         'fillRule': 'nonZero',
@@ -652,17 +652,17 @@ void main() {
 
   test('decodeScene rejects invalid colors in 6- and 8-digit forms', () {
     final six = _minimalSceneJson();
-    (six['background'] as Map<String, dynamic>)['color'] = '#GGGGGG';
+    (six['background'] as Map<String, Object?>)['color'] = '#GGGGGG';
     expect(() => decodeScene(six), throwsA(isA<SceneDataException>()));
 
     final eight = _minimalSceneJson();
-    (eight['background'] as Map<String, dynamic>)['color'] = '#GGGGGGGG';
+    (eight['background'] as Map<String, Object?>)['color'] = '#GGGGGGGG';
     expect(() => decodeScene(eight), throwsA(isA<SceneDataException>()));
   });
 
   test('decodeScene accepts 6-digit colors', () {
     final json = _minimalSceneJson();
-    (json['background'] as Map<String, dynamic>)['color'] = '#112233';
+    (json['background'] as Map<String, Object?>)['color'] = '#112233';
 
     final scene = decodeScene(json);
     expect(scene.background.color, const Color(0xFF112233));
@@ -670,9 +670,9 @@ void main() {
 
   test('decodeScene rejects non-object naturalSize for image nodes', () {
     final nodeJson = _baseNodeJson(id: 'img-1', type: 'image')
-      ..addAll(<String, dynamic>{
+      ..addAll(<String, Object?>{
         'imageId': 'image-1',
-        'size': <String, dynamic>{'w': 10, 'h': 20},
+        'size': <String, Object?>{'w': 10, 'h': 20},
         'naturalSize': 'oops',
       });
 
@@ -696,9 +696,9 @@ void main() {
       ('end', TextAlign.end),
     ]) {
       final nodeJson = _baseNodeJson(id: 't-${entry.$1}', type: 'text')
-        ..addAll(<String, dynamic>{
+        ..addAll(<String, Object?>{
           'text': 'Hello',
-          'size': <String, dynamic>{'w': 10, 'h': 10},
+          'size': <String, Object?>{'w': 10, 'h': 10},
           'fontSize': 12,
           'color': '#FF000000',
           'align': entry.$1,
@@ -715,9 +715,9 @@ void main() {
 
   test('decodeScene rejects unknown aligns with path-aware diagnostics', () {
     final invalidAlignJson = _baseNodeJson(id: 't2', type: 'text')
-      ..addAll(<String, dynamic>{
+      ..addAll(<String, Object?>{
         'text': 'Hello',
-        'size': <String, dynamic>{'w': 10, 'h': 10},
+        'size': <String, Object?>{'w': 10, 'h': 10},
         'fontSize': 12,
         'color': '#FF000000',
         'align': 'diagonal',
@@ -741,9 +741,9 @@ void main() {
 
   test('decodeScene re-derives stale serialized text size on import', () {
     final nodeJson = _baseNodeJson(id: 't-derived', type: 'text')
-      ..addAll(<String, dynamic>{
+      ..addAll(<String, Object?>{
         'text': 'Derived text size',
-        'size': <String, dynamic>{'w': 1, 'h': 1},
+        'size': <String, Object?>{'w': 1, 'h': 1},
         'fontSize': 24,
         'color': '#FF000000',
         'align': 'left',
@@ -759,19 +759,19 @@ void main() {
     expect(text.size.height, greaterThan(1));
 
     final encoded = encodeScene(decoded);
-    final layers = encoded['layers'] as List<dynamic>;
-    final layer = layers.single as Map<String, dynamic>;
-    final nodes = layer['nodes'] as List<dynamic>;
-    final encodedText = nodes.single as Map<String, dynamic>;
-    final encodedSize = encodedText['size'] as Map<String, dynamic>;
+    final layers = encoded['layers'] as List<Object?>;
+    final layer = layers.single as Map<String, Object?>;
+    final nodes = layer['nodes'] as List<Object?>;
+    final encodedText = nodes.single as Map<String, Object?>;
+    final encodedSize = encodedText['size'] as Map<String, Object?>;
     expect(encodedSize['w'], closeTo(text.size.width, 0.001));
     expect(encodedSize['h'], closeTo(text.size.height, 0.001));
   });
 
   test('decodeScene validates point and optional field types', () {
     final strokeJson = _baseNodeJson(id: 's1', type: 'stroke')
-      ..addAll(<String, dynamic>{
-        'localPoints': <dynamic>[123],
+      ..addAll(<String, Object?>{
+        'localPoints': <Object?>[123],
         'thickness': 2,
         'color': '#FF000000',
       });
@@ -790,10 +790,10 @@ void main() {
     );
 
     final imageJson = _baseNodeJson(id: 'img1', type: 'image')
-      ..addAll(<String, dynamic>{
+      ..addAll(<String, Object?>{
         'imageId': 'asset:sample',
-        'size': <String, dynamic>{'w': 10, 'h': 10},
-        'naturalSize': <String, dynamic>{'w': 'x', 'h': 10},
+        'size': <String, Object?>{'w': 10, 'h': 10},
+        'naturalSize': <String, Object?>{'w': 'x', 'h': 10},
       });
     expect(
       () => decodeScene(_sceneWithSingleNode(imageJson)),
@@ -807,9 +807,9 @@ void main() {
     );
 
     final textJson = _baseNodeJson(id: 't1', type: 'text')
-      ..addAll(<String, dynamic>{
+      ..addAll(<String, Object?>{
         'text': 'Hello',
-        'size': <String, dynamic>{'w': 10, 'h': 10},
+        'size': <String, Object?>{'w': 10, 'h': 10},
         'fontSize': 12,
         'color': '#FF000000',
         'align': 'left',
@@ -831,9 +831,9 @@ void main() {
     );
 
     final textJsonWidth = _baseNodeJson(id: 't2', type: 'text')
-      ..addAll(<String, dynamic>{
+      ..addAll(<String, Object?>{
         'text': 'Hello',
-        'size': <String, dynamic>{'w': 10, 'h': 10},
+        'size': <String, Object?>{'w': 10, 'h': 10},
         'fontSize': 12,
         'color': '#FF000000',
         'align': 'left',
@@ -855,7 +855,7 @@ void main() {
     );
 
     final pathJson = _baseNodeJson(id: 'p1', type: 'path')
-      ..addAll(<String, dynamic>{
+      ..addAll(<String, Object?>{
         'svgPathData': 'M0 0 H10 V10 H0 Z',
         'strokeWidth': 1,
         'fillRule': 123,
@@ -874,7 +874,7 @@ void main() {
 
   test('decodeScene validates required string/list/number field types', () {
     final listWrong = _minimalSceneJson();
-    (listWrong['palette'] as Map<String, dynamic>)['penColors'] = 'not-a-list';
+    (listWrong['palette'] as Map<String, Object?>)['penColors'] = 'not-a-list';
     expect(
       () => decodeScene(listWrong),
       throwsA(
@@ -888,7 +888,7 @@ void main() {
     );
 
     final stringWrong = _minimalSceneJson();
-    (stringWrong['background'] as Map<String, dynamic>)['color'] = 123;
+    (stringWrong['background'] as Map<String, Object?>)['color'] = 123;
     expect(
       () => decodeScene(stringWrong),
       throwsA(
@@ -901,7 +901,7 @@ void main() {
     );
 
     final numberWrong = _minimalSceneJson();
-    (numberWrong['camera'] as Map<String, dynamic>)['offsetX'] = '0';
+    (numberWrong['camera'] as Map<String, Object?>)['offsetX'] = '0';
     expect(
       () => decodeScene(numberWrong),
       throwsA(
@@ -916,8 +916,8 @@ void main() {
 
   test('decodeScene validates optional and list item types', () {
     final rectJson = _baseNodeJson(id: 'r1', type: 'rect')
-      ..addAll(<String, dynamic>{
-        'size': <String, dynamic>{'w': 10, 'h': 10},
+      ..addAll(<String, Object?>{
+        'size': <String, Object?>{'w': 10, 'h': 10},
         'strokeWidth': 1,
         'fillColor': 123,
       });
@@ -934,14 +934,14 @@ void main() {
     );
 
     final paletteWrong = _minimalSceneJson();
-    (paletteWrong['palette'] as Map<String, dynamic>)['penColors'] = <dynamic>[
+    (paletteWrong['palette'] as Map<String, Object?>)['penColors'] = <Object?>[
       123,
     ];
     expect(() => decodeScene(paletteWrong), throwsA(isA<SceneDataException>()));
 
     final gridSizesWrong = _minimalSceneJson();
-    (gridSizesWrong['palette'] as Map<String, dynamic>)['gridSizes'] =
-        <dynamic>['10'];
+    (gridSizesWrong['palette'] as Map<String, Object?>)['gridSizes'] =
+        <Object?>['10'];
     expect(
       () => decodeScene(gridSizesWrong),
       throwsA(isA<SceneDataException>()),
@@ -951,7 +951,7 @@ void main() {
   test('decodeScene rejects empty palette lists', () {
     // INV:INV-SER-JSON-GRID-PALETTE-CONTRACTS
     final emptyPen = _minimalSceneJson();
-    (emptyPen['palette'] as Map<String, dynamic>)['penColors'] = <dynamic>[];
+    (emptyPen['palette'] as Map<String, Object?>)['penColors'] = <Object?>[];
     expect(
       () => decodeScene(emptyPen),
       throwsA(
@@ -964,8 +964,8 @@ void main() {
     );
 
     final emptyBackground = _minimalSceneJson();
-    (emptyBackground['palette'] as Map<String, dynamic>)['backgroundColors'] =
-        <dynamic>[];
+    (emptyBackground['palette'] as Map<String, Object?>)['backgroundColors'] =
+        <Object?>[];
     expect(
       () => decodeScene(emptyBackground),
       throwsA(
@@ -978,8 +978,8 @@ void main() {
     );
 
     final emptyGridSizes = _minimalSceneJson();
-    (emptyGridSizes['palette'] as Map<String, dynamic>)['gridSizes'] =
-        <dynamic>[];
+    (emptyGridSizes['palette'] as Map<String, Object?>)['gridSizes'] =
+        <Object?>[];
     expect(
       () => decodeScene(emptyGridSizes),
       throwsA(
@@ -1007,7 +1007,7 @@ void main() {
     );
 
     final cameraWrong = _minimalSceneJson();
-    cameraWrong['camera'] = <dynamic>[];
+    cameraWrong['camera'] = <Object?>[];
     expect(
       () => decodeScene(cameraWrong),
       throwsA(
@@ -1020,8 +1020,8 @@ void main() {
     );
 
     final enabledWrong = _minimalSceneJson();
-    ((enabledWrong['background'] as Map<String, dynamic>)['grid']
-            as Map<String, dynamic>)['enabled'] =
+    ((enabledWrong['background'] as Map<String, Object?>)['grid']
+            as Map<String, Object?>)['enabled'] =
         1;
     expect(
       () => decodeScene(enabledWrong),
@@ -1039,10 +1039,10 @@ void main() {
     'decodeScene validates max lengths for layer and optional string fields',
     () {
       final overlongLayerId = _minimalSceneJson();
-      overlongLayerId['layers'] = <dynamic>[
-        <String, dynamic>{
+      overlongLayerId['layers'] = <Object?>[
+        <String, Object?>{
           'id': 'l' * (kMaxLayerIdLength + 1),
-          'nodes': <dynamic>[],
+          'nodes': <Object?>[],
         },
       ];
       expect(
@@ -1059,9 +1059,9 @@ void main() {
       );
 
       final textJson = _baseNodeJson(id: 't-overlong-font-family', type: 'text')
-        ..addAll(<String, dynamic>{
+        ..addAll(<String, Object?>{
           'text': 'Hello',
-          'size': <String, dynamic>{'w': 10, 'h': 10},
+          'size': <String, Object?>{'w': 10, 'h': 10},
           'fontSize': 12,
           'color': '#FF000000',
           'align': 'left',
@@ -1144,7 +1144,7 @@ void main() {
       final redecoded = decodeScene(encoded);
 
       expect(
-        (encoded['backgroundLayer'] as Map<String, dynamic>)['nodes'],
+        (encoded['backgroundLayer'] as Map<String, Object?>)['nodes'],
         <Object?>[],
       );
       expect(redecoded.backgroundLayer.nodes, isEmpty);
@@ -1154,7 +1154,7 @@ void main() {
 
   test('decodeScene rejects NaN/Infinity numeric fields', () {
     final json = _minimalSceneJson();
-    (json['camera'] as Map<String, dynamic>)['offsetX'] = double.nan;
+    (json['camera'] as Map<String, Object?>)['offsetX'] = double.nan;
     expect(
       () => decodeScene(json),
       throwsA(
@@ -1167,7 +1167,7 @@ void main() {
     );
 
     final json2 = _minimalSceneJson();
-    (json2['camera'] as Map<String, dynamic>)['offsetY'] = double.infinity;
+    (json2['camera'] as Map<String, Object?>)['offsetY'] = double.infinity;
     expect(
       () => decodeScene(json2),
       throwsA(
@@ -1182,8 +1182,8 @@ void main() {
 
   test('decodeScene rejects opacity outside [0,1]', () {
     final nodeJson = _baseNodeJson(id: 'n1', type: 'rect')
-      ..addAll(<String, dynamic>{
-        'size': <String, dynamic>{'w': 10, 'h': 10},
+      ..addAll(<String, Object?>{
+        'size': <String, Object?>{'w': 10, 'h': 10},
         'strokeWidth': 1,
       });
     nodeJson['opacity'] = 2;
@@ -1257,35 +1257,35 @@ void main() {
     final encoded = encodeSceneDocument(scene);
     expect(encoded['schemaVersion'], schemaVersionWrite);
 
-    final camera = encoded['camera'] as Map<String, dynamic>;
+    final camera = encoded['camera'] as Map<String, Object?>;
     expect(camera['offsetX'], 12);
     expect(camera['offsetY'], -7);
 
-    final background = encoded['background'] as Map<String, dynamic>;
+    final background = encoded['background'] as Map<String, Object?>;
     expect(background['color'], '#FF010203');
-    final grid = background['grid'] as Map<String, dynamic>;
+    final grid = background['grid'] as Map<String, Object?>;
     expect(grid['enabled'], isTrue);
     expect(grid['cellSize'], 16);
     expect(grid['color'], '#FF040506');
 
-    final palette = encoded['palette'] as Map<String, dynamic>;
+    final palette = encoded['palette'] as Map<String, Object?>;
     expect(palette['penColors'], <String>['#FF111111']);
     expect(palette['backgroundColors'], <String>['#FF222222']);
     expect(palette['gridSizes'], <double>[8, 16]);
 
-    final backgroundLayer = encoded['backgroundLayer'] as Map<String, dynamic>;
-    final backgroundNodes = backgroundLayer['nodes'] as List<dynamic>;
+    final backgroundLayer = encoded['backgroundLayer'] as Map<String, Object?>;
+    final backgroundNodes = backgroundLayer['nodes'] as List<Object?>;
     expect(backgroundNodes, hasLength(1));
-    expect((backgroundNodes.single as Map<String, dynamic>)['id'], 'bg-rect');
+    expect((backgroundNodes.single as Map<String, Object?>)['id'], 'bg-rect');
 
-    final layers = encoded['layers'] as List<dynamic>;
+    final layers = encoded['layers'] as List<Object?>;
     expect(layers, hasLength(2));
     expect(
-      (layers[0] as Map<String, dynamic>).containsKey('isBackground'),
+      (layers[0] as Map<String, Object?>).containsKey('isBackground'),
       isFalse,
     );
     expect(
-      (layers[1] as Map<String, dynamic>).containsKey('isBackground'),
+      (layers[1] as Map<String, Object?>).containsKey('isBackground'),
       isFalse,
     );
   });
@@ -1319,9 +1319,9 @@ void main() {
 
   test('decodeScene rejects non-positive thickness', () {
     final nodeJson = _baseNodeJson(id: 's1', type: 'stroke')
-      ..addAll(<String, dynamic>{
-        'localPoints': <dynamic>[
-          <String, dynamic>{'x': 0, 'y': 0},
+      ..addAll(<String, Object?>{
+        'localPoints': <Object?>[
+          <String, Object?>{'x': 0, 'y': 0},
         ],
         'thickness': 0,
         'color': '#FF000000',
@@ -1340,9 +1340,9 @@ void main() {
 
   test('decodeScene rejects invalid width-like numeric fields', () {
     final strokeWithNonFiniteThickness = _baseNodeJson(id: 's2', type: 'stroke')
-      ..addAll(<String, dynamic>{
-        'localPoints': <dynamic>[
-          <String, dynamic>{'x': 0, 'y': 0},
+      ..addAll(<String, Object?>{
+        'localPoints': <Object?>[
+          <String, Object?>{'x': 0, 'y': 0},
         ],
         'thickness': double.nan,
         'color': '#FF000000',
@@ -1359,7 +1359,7 @@ void main() {
     );
 
     final pathWithNegativeStrokeWidth = _baseNodeJson(id: 'p2', type: 'path')
-      ..addAll(<String, dynamic>{
+      ..addAll(<String, Object?>{
         'svgPathData': 'M0 0 H10 V10 H0 Z',
         'strokeWidth': -1,
         'fillRule': 'nonZero',
@@ -1376,8 +1376,8 @@ void main() {
     );
 
     final rectWithNonFiniteHitPadding = _baseNodeJson(id: 'r1', type: 'rect')
-      ..addAll(<String, dynamic>{
-        'size': <String, dynamic>{'w': 10, 'h': 10},
+      ..addAll(<String, Object?>{
+        'size': <String, Object?>{'w': 10, 'h': 10},
         'strokeWidth': 1,
         'hitPadding': double.infinity,
       });
@@ -1398,8 +1398,8 @@ void main() {
       for (final value in <double>[0, -12.5]) {
         final json = _minimalSceneJson();
         final grid =
-            (json['background'] as Map<String, dynamic>)['grid']
-                as Map<String, dynamic>;
+            (json['background'] as Map<String, Object?>)['grid']
+                as Map<String, Object?>;
         grid['enabled'] = enabled;
         grid['cellSize'] = value;
 
@@ -1421,8 +1421,8 @@ void main() {
     for (final value in <double>[0.125, 1, 12.5]) {
       final json = _minimalSceneJson();
       final grid =
-          (json['background'] as Map<String, dynamic>)['grid']
-              as Map<String, dynamic>;
+          (json['background'] as Map<String, Object?>)['grid']
+              as Map<String, Object?>;
       grid['enabled'] = false;
       grid['cellSize'] = value;
 
@@ -1438,8 +1438,8 @@ void main() {
       for (final enabled in <bool>[false, true]) {
         final json = _minimalSceneJson();
         final grid =
-            (json['background'] as Map<String, dynamic>)['grid']
-                as Map<String, dynamic>;
+            (json['background'] as Map<String, Object?>)['grid']
+                as Map<String, Object?>;
         grid['enabled'] = enabled;
         grid['cellSize'] = double.infinity;
         expect(
@@ -1458,9 +1458,9 @@ void main() {
 
   test('decodeScene rejects negative sizes', () {
     final nodeJson = _baseNodeJson(id: 'img-1', type: 'image')
-      ..addAll(<String, dynamic>{
+      ..addAll(<String, Object?>{
         'imageId': 'image-1',
-        'size': <String, dynamic>{'w': -10, 'h': 20},
+        'size': <String, Object?>{'w': -10, 'h': 20},
       });
 
     expect(
@@ -1477,10 +1477,10 @@ void main() {
 
   test('decodeScene rejects invalid optional naturalSize values', () {
     final nonFinite = _baseNodeJson(id: 'img-1', type: 'image')
-      ..addAll(<String, dynamic>{
+      ..addAll(<String, Object?>{
         'imageId': 'image-1',
-        'size': <String, dynamic>{'w': 10, 'h': 20},
-        'naturalSize': <String, dynamic>{'w': double.infinity, 'h': 20},
+        'size': <String, Object?>{'w': 10, 'h': 20},
+        'naturalSize': <String, Object?>{'w': double.infinity, 'h': 20},
       });
 
     expect(
@@ -1495,10 +1495,10 @@ void main() {
     );
 
     final negative = _baseNodeJson(id: 'img-1', type: 'image')
-      ..addAll(<String, dynamic>{
+      ..addAll(<String, Object?>{
         'imageId': 'image-1',
-        'size': <String, dynamic>{'w': 10, 'h': 20},
-        'naturalSize': <String, dynamic>{'w': -1, 'h': 20},
+        'size': <String, Object?>{'w': 10, 'h': 20},
+        'naturalSize': <String, Object?>{'w': -1, 'h': 20},
       });
 
     expect(
@@ -1516,9 +1516,9 @@ void main() {
 
   test('decodeScene rejects invalid optional doubles for TextNode', () {
     final nonFiniteMaxWidth = _baseNodeJson(id: 't1', type: 'text')
-      ..addAll(<String, dynamic>{
+      ..addAll(<String, Object?>{
         'text': 'Hello',
-        'size': <String, dynamic>{'w': 10, 'h': 10},
+        'size': <String, Object?>{'w': 10, 'h': 10},
         'fontSize': 12,
         'color': '#FF000000',
         'align': 'left',
@@ -1540,9 +1540,9 @@ void main() {
     );
 
     final nonPositiveMaxWidth = _baseNodeJson(id: 't1', type: 'text')
-      ..addAll(<String, dynamic>{
+      ..addAll(<String, Object?>{
         'text': 'Hello',
-        'size': <String, dynamic>{'w': 10, 'h': 10},
+        'size': <String, Object?>{'w': 10, 'h': 10},
         'fontSize': 12,
         'color': '#FF000000',
         'align': 'left',
@@ -1566,7 +1566,7 @@ void main() {
 
   test('decodeScene rejects non-positive palette gridSizes', () {
     final json = _minimalSceneJson();
-    (json['palette'] as Map<String, dynamic>)['gridSizes'] = <dynamic>[0];
+    (json['palette'] as Map<String, Object?>)['gridSizes'] = <Object?>[0];
 
     expect(
       () => decodeScene(json),
@@ -1582,7 +1582,7 @@ void main() {
 
   test('decodeScene rejects non-finite palette gridSizes', () {
     final json = _minimalSceneJson();
-    (json['palette'] as Map<String, dynamic>)['gridSizes'] = <dynamic>[
+    (json['palette'] as Map<String, Object?>)['gridSizes'] = <Object?>[
       double.infinity,
     ];
 
@@ -1794,9 +1794,9 @@ void main() {
 
   test('decodeScene rejects non-integer instanceRevision', () {
     final nodeJson = _baseNodeJson(id: 'r-inst-type', type: 'rect')
-      ..addAll(<String, dynamic>{
+      ..addAll(<String, Object?>{
         'instanceRevision': 1.5,
-        'size': <String, dynamic>{'w': 10, 'h': 10},
+        'size': <String, Object?>{'w': 10, 'h': 10},
         'strokeWidth': 0,
       });
 
@@ -1814,9 +1814,9 @@ void main() {
 
   test('decodeScene rejects non-numeric instanceRevision', () {
     final nodeJson = _baseNodeJson(id: 'r-inst-string', type: 'rect')
-      ..addAll(<String, dynamic>{
+      ..addAll(<String, Object?>{
         'instanceRevision': 'abc',
-        'size': <String, dynamic>{'w': 10, 'h': 10},
+        'size': <String, Object?>{'w': 10, 'h': 10},
         'strokeWidth': 0,
       });
 
@@ -1835,9 +1835,9 @@ void main() {
 
   test('decodeScene rejects out-of-range numeric instanceRevision', () {
     final nodeJson = _baseNodeJson(id: 'r-inst-huge', type: 'rect')
-      ..addAll(<String, dynamic>{
+      ..addAll(<String, Object?>{
         'instanceRevision': 9007199254740992.0,
-        'size': <String, dynamic>{'w': 10, 'h': 10},
+        'size': <String, Object?>{'w': 10, 'h': 10},
         'strokeWidth': 0,
       });
 
@@ -1856,9 +1856,9 @@ void main() {
 
   test('decodeScene accepts integer-valued double instanceRevision', () {
     final nodeJson = _baseNodeJson(id: 'r-inst-double-int', type: 'rect')
-      ..addAll(<String, dynamic>{
+      ..addAll(<String, Object?>{
         'instanceRevision': 3.0,
-        'size': <String, dynamic>{'w': 10, 'h': 10},
+        'size': <String, Object?>{'w': 10, 'h': 10},
         'strokeWidth': 0,
       });
 
@@ -1869,9 +1869,9 @@ void main() {
 
   test('decodeScene rejects negative instanceRevision', () {
     final nodeJson = _baseNodeJson(id: 'r-inst-negative', type: 'rect')
-      ..addAll(<String, dynamic>{
+      ..addAll(<String, Object?>{
         'instanceRevision': -1,
-        'size': <String, dynamic>{'w': 10, 'h': 10},
+        'size': <String, Object?>{'w': 10, 'h': 10},
         'strokeWidth': 0,
       });
 
@@ -1902,10 +1902,10 @@ void main() {
       ),
     );
 
-    final layers = encoded['layers'] as List<dynamic>;
-    final layer0 = layers[0] as Map<String, dynamic>;
-    final nodes = layer0['nodes'] as List<dynamic>;
-    final node = nodes[0] as Map<String, dynamic>;
+    final layers = encoded['layers'] as List<Object?>;
+    final layer0 = layers[0] as Map<String, Object?>;
+    final nodes = layer0['nodes'] as List<Object?>;
+    final node = nodes[0] as Map<String, Object?>;
     expect(node['instanceRevision'], isA<int>());
     expect(node['instanceRevision'], greaterThanOrEqualTo(1));
   });

@@ -141,12 +141,7 @@ int validatedRequireJsonInt(
         source: raw,
       );
     }
-    return _validateJsonRevisionValue(
-      raw,
-      path: path,
-      fieldName: fieldName,
-      allowZero: allowZero,
-    );
+    return _validateJsonRevisionValue(raw, path: path, allowZero: allowZero);
   }
   if (raw is! num) {
     throw SceneDataException.boundary(
@@ -176,7 +171,6 @@ int validatedRequireJsonInt(
   return _validateJsonRevisionValue(
     asDouble.toInt(),
     path: path,
-    fieldName: fieldName,
     allowZero: allowZero,
   );
 }
@@ -184,7 +178,6 @@ int validatedRequireJsonInt(
 int _validateJsonRevisionValue(
   int value, {
   required String path,
-  required String fieldName,
   required bool allowZero,
 }) {
   final minimum = allowZero ? 0 : 1;

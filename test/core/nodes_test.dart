@@ -304,7 +304,10 @@ void main() {
     pathNode.fillRule = PathFillRule.evenOdd;
     final evenOddPath = pathNode.buildLocalPath();
     expect(evenOddPath, isNotNull);
-    expect(evenOddPath!.fillType, PathFillType.evenOdd);
+    if (evenOddPath == null) {
+      fail('Expected svg path to build after fillRule change.');
+    }
+    expect(evenOddPath.fillType, PathFillType.evenOdd);
 
     pathNode.svgPathData = pathNode.svgPathData;
     expect(pathNode.buildLocalPath(), isNotNull);

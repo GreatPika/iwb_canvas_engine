@@ -570,6 +570,6 @@ void _emitResult({
     'metrics': metrics,
   };
   final line = '$_resultPrefix${jsonEncode(record)}';
-  // ignore: avoid_print
+  // ignore: avoid_print, benchmark helper emits machine-readable JSON lines
   print(line);
 }

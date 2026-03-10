@@ -112,7 +112,6 @@ class ImageNodePatch extends NodePatch {
       ),
       naturalSize: _validateNullablePatchField(
         naturalSize,
-        name: 'naturalSize',
         transformValue: (value) =>
             _validateNonNegativeSize(value, name: 'naturalSize'),
       ),
@@ -169,19 +168,16 @@ class TextNodePatch extends NodePatch {
       isUnderline: isUnderline,
       fontFamily: _validateNullablePatchField(
         fontFamily,
-        name: 'fontFamily',
         transformValue: (value) =>
             FontFamilyValue.of(value, name: 'fontFamily').value,
       ),
       maxWidth: _validateNullablePatchField(
         maxWidth,
-        name: 'maxWidth',
         transformValue: (value) =>
             PositiveFiniteDoubleValue.of(value, name: 'maxWidth').value,
       ),
       lineHeight: _validateNullablePatchField(
         lineHeight,
-        name: 'lineHeight',
         transformValue: (value) =>
             PositiveFiniteDoubleValue.of(value, name: 'lineHeight').value,
       ),
@@ -416,7 +412,6 @@ PatchField<T> _validateNonNullablePatchField<T>(
 
 PatchField<T?> _validateNullablePatchField<T>(
   PatchField<T?> patch, {
-  required String name,
   required T Function(T value) transformValue,
 }) {
   if (patch.isAbsent || patch.isNullValue) return patch;

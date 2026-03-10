@@ -51,7 +51,7 @@ String _toRepoRelPosixPath({
   return rel.startsWith('/') ? rel : '/$rel';
 }
 
-void main(List<String> args) {
+void main(List<String> _) {
   final root = Directory.current;
   final rootAbsPosix = _toPosixPath(root.absolute.path);
 
@@ -97,7 +97,10 @@ void main(List<String> args) {
         final lineNo = i + 1;
         final line = lines[i];
         for (final match in _invRef.allMatches(line)) {
-          final id = match.group(1)!;
+          final id = match.group(1);
+          if (id == null) {
+            continue;
+          }
           if (!knownIds.contains(id)) {
             unknownRefs.add(
               _Finding(

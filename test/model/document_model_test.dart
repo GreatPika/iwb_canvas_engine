@@ -179,7 +179,11 @@ void main() {
     );
 
     expect(scene.backgroundLayer, isNotNull);
-    expect(scene.backgroundLayer!.nodes.single.id, 'bg');
+    final backgroundLayer = scene.backgroundLayer;
+    if (backgroundLayer == null) {
+      fail('Expected canonical background layer.');
+    }
+    expect(backgroundLayer.nodes.single.id, 'bg');
     expect(scene.layers.length, 2);
     expect(scene.layers[0].nodes.single.id, 'n1');
     expect(scene.layers[1].nodes.single.id, 'n2');
@@ -200,7 +204,11 @@ void main() {
 
     expect(scene.layers.length, 1);
     expect(scene.backgroundLayer, isNotNull);
-    expect(scene.backgroundLayer!.nodes, isEmpty);
+    final backgroundLayer = scene.backgroundLayer;
+    if (backgroundLayer == null) {
+      fail('Expected canonical background layer.');
+    }
+    expect(backgroundLayer.nodes, isEmpty);
   });
 
   test(
@@ -225,7 +233,11 @@ void main() {
 
       expect(exported.backgroundLayer.nodes, isEmpty);
       expect(reimported.backgroundLayer, isNotNull);
-      expect(reimported.backgroundLayer!.nodes, isEmpty);
+      final reimportedBackgroundLayer = reimported.backgroundLayer;
+      if (reimportedBackgroundLayer == null) {
+        fail('Expected canonical background layer after reimport.');
+      }
+      expect(reimportedBackgroundLayer.nodes, isEmpty);
       expect(reimported.layers.length, 1);
       expect(reimported.layers[0].nodes.single.id, 'n1');
     },
@@ -307,7 +319,10 @@ void main() {
 
     final found = txnFindNodeById(scene, 'txt');
     expect(found, isNotNull);
-    expect(found!.layerIndex, 1);
+    if (found == null) {
+      fail('Expected locator result for txt.');
+    }
+    expect(found.layerIndex, 1);
     expect(found.nodeIndex, 1);
     expect(txnFindNodeById(scene, 'missing'), isNull);
     final foundByLocator = txnFindNodeByLocator(
@@ -316,7 +331,10 @@ void main() {
       nodeId: 'txt',
     );
     expect(foundByLocator, isNotNull);
-    expect(foundByLocator!.layerIndex, 1);
+    if (foundByLocator == null) {
+      fail('Expected node locator entry for txt.');
+    }
+    expect(foundByLocator.layerIndex, 1);
     expect(foundByLocator.nodeIndex, 1);
     expect(
       txnFindNodeByLocator(
@@ -340,7 +358,10 @@ void main() {
       nodeId: 'new',
     );
     expect(insertedFound, isNotNull);
-    expect(insertedFound!.layerIndex, 1);
+    if (insertedFound == null) {
+      fail('Expected inserted node locator entry.');
+    }
+    expect(insertedFound.layerIndex, 1);
     expect(insertedFound.nodeIndex, scene.layers[1].nodes.length - 1);
 
     final erased = txnEraseNodeFromScene(
@@ -454,7 +475,10 @@ void main() {
 
     final bgFound = txnFindNodeById(scene, 'bg-a');
     expect(bgFound, isNotNull);
-    expect(bgFound!.layerIndex, -1);
+    if (bgFound == null) {
+      fail('Expected background node lookup result.');
+    }
+    expect(bgFound.layerIndex, -1);
     expect(bgFound.nodeIndex, 0);
 
     final bgByLocator = txnFindNodeByLocator(
@@ -463,7 +487,10 @@ void main() {
       nodeId: 'bg-b',
     );
     expect(bgByLocator, isNotNull);
-    expect(bgByLocator!.layerIndex, -1);
+    if (bgByLocator == null) {
+      fail('Expected background locator result.');
+    }
+    expect(bgByLocator.layerIndex, -1);
     expect(bgByLocator.nodeIndex, 1);
 
     final wrongIndexLocator = <NodeId, NodeLocatorEntry>{
@@ -616,7 +643,11 @@ void main() {
     );
     expect(moved, <NodeId>{'ok'});
 
-    final ok = txnFindNodeById(scene, 'ok')!.node as RectNode;
+    final okEntry = txnFindNodeById(scene, 'ok');
+    if (okEntry == null) {
+      fail('Expected translated node lookup result.');
+    }
+    final ok = okEntry.node as RectNode;
     expect(ok.transform.tx, 10);
 
     expect(txnNormalizeGrid(scene), isTrue);
@@ -754,8 +785,13 @@ void main() {
         nextInstanceRevision: allocate,
       );
 
-      final nodeA = txnFindNodeById(scene, 'a')!.node;
-      final nodeB = txnFindNodeById(scene, 'b')!.node;
+      final nodeAEntry = txnFindNodeById(scene, 'a');
+      final nodeBEntry = txnFindNodeById(scene, 'b');
+      if (nodeAEntry == null || nodeBEntry == null) {
+        fail('Expected both nodes to exist after revision normalization.');
+      }
+      final nodeA = nodeAEntry.node;
+      final nodeB = nodeBEntry.node;
       expect(nodeA.instanceRevision, 20);
       expect(nodeB.instanceRevision, 9);
     },

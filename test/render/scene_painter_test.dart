@@ -659,7 +659,10 @@ void main() {
         height: 80,
       );
       final baselineBounds = await _inkBounds(baselineImage, background);
-      _expectRectNear(baselineBounds, expectedFrame);
+      expect(
+        () => _expectRectNear(baselineBounds, expectedFrame),
+        returnsNormally,
+      );
 
       const previewDelta = Offset(7, -5);
       final previewImage = await _paintToImage(
@@ -674,7 +677,10 @@ void main() {
         height: 80,
       );
       final previewBounds = await _inkBounds(previewImage, background);
-      _expectRectNear(previewBounds, expectedFrame.shift(previewDelta));
+      expect(
+        () => _expectRectNear(previewBounds, expectedFrame.shift(previewDelta)),
+        returnsNormally,
+      );
     },
   );
 
@@ -727,7 +733,10 @@ void main() {
         height: 80,
       );
       final baselineBounds = await _inkBounds(baselineImage, background);
-      _expectRectNear(baselineBounds, expectedFrame);
+      expect(
+        () => _expectRectNear(baselineBounds, expectedFrame),
+        returnsNormally,
+      );
 
       const previewDelta = Offset(7, -5);
       final previewImage = await _paintToImage(
@@ -742,7 +751,10 @@ void main() {
         height: 80,
       );
       final previewBounds = await _inkBounds(previewImage, background);
-      _expectRectNear(previewBounds, expectedFrame.shift(previewDelta));
+      expect(
+        () => _expectRectNear(previewBounds, expectedFrame.shift(previewDelta)),
+        returnsNormally,
+      );
     },
   );
 

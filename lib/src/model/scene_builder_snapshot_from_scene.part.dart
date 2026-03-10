@@ -1,11 +1,12 @@
 part of 'scene_builder.dart';
 
 SceneSnapshot _snapshotFromScene(Scene scene) {
+  final backgroundLayer = scene.backgroundLayer;
   return sceneSnapshotFromValidated(
-    backgroundLayer: scene.backgroundLayer == null
+    backgroundLayer: backgroundLayer == null
         ? null
         : backgroundLayerSnapshotFromValidated(
-            nodes: scene.backgroundLayer!.nodes
+            nodes: backgroundLayer.nodes
                 .map(_snapshotNodeFromScene)
                 .toList(growable: false),
           ),

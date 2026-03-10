@@ -55,18 +55,18 @@ void main() {
     'decodeScene accepts JSON without instanceRevision and re-encodes with it',
     () {
       final encoded = encodeScene(_buildScene());
-      final layers = encoded['layers'] as List<dynamic>;
-      final layer = layers[1] as Map<String, dynamic>;
-      final nodes = layer['nodes'] as List<dynamic>;
-      final firstNode = nodes.first as Map<String, dynamic>;
+      final layers = encoded['layers'] as List<Object?>;
+      final layer = layers[1] as Map<String, Object?>;
+      final nodes = layer['nodes'] as List<Object?>;
+      final firstNode = nodes.first as Map<String, Object?>;
       firstNode.remove('instanceRevision');
 
       final decoded = decodeScene(encoded);
       final reEncoded = encodeScene(decoded);
-      final reEncodedLayers = reEncoded['layers'] as List<dynamic>;
-      final reEncodedLayer = reEncodedLayers[1] as Map<String, dynamic>;
-      final reEncodedNodes = reEncodedLayer['nodes'] as List<dynamic>;
-      final reEncodedFirstNode = reEncodedNodes.first as Map<String, dynamic>;
+      final reEncodedLayers = reEncoded['layers'] as List<Object?>;
+      final reEncodedLayer = reEncodedLayers[1] as Map<String, Object?>;
+      final reEncodedNodes = reEncodedLayer['nodes'] as List<Object?>;
+      final reEncodedFirstNode = reEncodedNodes.first as Map<String, Object?>;
 
       expect(reEncodedFirstNode['instanceRevision'], isA<int>());
       expect(reEncodedFirstNode['instanceRevision'], greaterThanOrEqualTo(1));
@@ -76,12 +76,14 @@ void main() {
   test('decodeScene recomputes derived text size from content', () {
     final encoded = encodeScene(_buildScene());
     final textNode =
-        (encoded['layers'] as List<dynamic>)[1]['nodes'][1]
-            as Map<String, dynamic>;
-    textNode['text'] = 'Auto-derived size from decode';
-    textNode['fontSize'] = 28.0;
-    textNode['size'] = <String, dynamic>{'w': 1.0, 'h': 1.0};
-    textNode['maxWidth'] = null;
+        ((encoded['layers'] as List<Object?>)[1]
+                as Map<String, Object?>)['nodes']
+            as List<Object?>;
+    final textNodeMap = textNode[1] as Map<String, Object?>;
+    textNodeMap['text'] = 'Auto-derived size from decode';
+    textNodeMap['fontSize'] = 28.0;
+    textNodeMap['size'] = <String, Object?>{'w': 1.0, 'h': 1.0};
+    textNodeMap['maxWidth'] = null;
 
     final decoded = decodeScene(encoded);
     final decodedText = decoded.layers[1].nodes[1] as TextNodeSnapshot;

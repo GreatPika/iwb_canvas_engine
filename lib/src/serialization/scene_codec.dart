@@ -89,6 +89,7 @@ SceneSnapshot decodeScene(Map<String, dynamic> json) {
 /// Encodes internal mutable [Scene] document into a JSON-serializable map.
 Map<String, dynamic> encodeSceneDocument(Scene scene) {
   final canonicalScene = model_builder.sceneValidateCore(scene);
+  // ignore: avoid-non-null-assertion, validated scene always has backgroundLayer
   final backgroundLayer = canonicalScene.backgroundLayer!;
   final backgroundNodes = <Map<String, dynamic>>[];
   for (
@@ -223,6 +224,7 @@ Map<String, dynamic> _encodeContentLayer(
 }
 
 Map<String, dynamic> _encodeNode(SceneNode node, {required String nodePath}) {
+  assert(nodePath.isNotEmpty, 'nodePath must not be empty.');
   final base = <String, dynamic>{
     'id': node.id,
     'instanceRevision': node.instanceRevision,
@@ -240,13 +242,12 @@ Map<String, dynamic> _encodeNode(SceneNode node, {required String nodePath}) {
   switch (node.type) {
     case NodeType.image:
       final image = node as ImageNode;
+      final naturalSize = image.naturalSize;
       return {
         ...base,
         'imageId': image.imageId,
         'size': _encodeSize(image.size),
-        if (image.naturalSize != null) ...{
-          'naturalSize': _encodeSize(image.naturalSize!),
-        },
+        if (naturalSize != null) ...{'naturalSize': _encodeSize(naturalSize)},
       };
     case NodeType.text:
       final text = node as TextNode;
@@ -285,24 +286,26 @@ Map<String, dynamic> _encodeNode(SceneNode node, {required String nodePath}) {
       };
     case NodeType.rect:
       final rect = node as RectNode;
+      final fillColor = rect.fillColor;
+      final strokeColor = rect.strokeColor;
       return {
         ...base,
         'size': _encodeSize(rect.size),
         'strokeWidth': rect.strokeWidth,
-        if (rect.fillColor != null) 'fillColor': _colorToHex(rect.fillColor!),
-        if (rect.strokeColor != null)
-          'strokeColor': _colorToHex(rect.strokeColor!),
+        if (fillColor != null) 'fillColor': _colorToHex(fillColor),
+        if (strokeColor != null) 'strokeColor': _colorToHex(strokeColor),
       };
     case NodeType.path:
       final path = node as PathNode;
+      final fillColor = path.fillColor;
+      final strokeColor = path.strokeColor;
       return {
         ...base,
         'svgPathData': path.svgPathData,
         'fillRule': _pathFillRuleToString(path.fillRule),
         'strokeWidth': path.strokeWidth,
-        if (path.fillColor != null) 'fillColor': _colorToHex(path.fillColor!),
-        if (path.strokeColor != null)
-          'strokeColor': _colorToHex(path.strokeColor!),
+        if (fillColor != null) 'fillColor': _colorToHex(fillColor),
+        if (strokeColor != null) 'strokeColor': _colorToHex(strokeColor),
       };
   }
 }

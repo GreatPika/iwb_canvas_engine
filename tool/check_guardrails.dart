@@ -237,7 +237,12 @@ String _readPackageNameOrFallback(Directory root) {
   for (final line in pubspec.readAsLinesSync()) {
     final trimmed = line.trimLeft();
     final match = RegExp(r'^name:\s*([A-Za-z0-9_]+)\s*$').firstMatch(trimmed);
-    if (match != null) return match.group(1)!;
+    if (match != null) {
+      final packageName = match.group(1);
+      if (packageName != null) {
+        return packageName;
+      }
+    }
   }
   return 'iwb_canvas_engine';
 }
@@ -637,7 +642,6 @@ void _checkLibSrcStructuralGuardrails({
 
 Future<void> _checkExportedApiImports({
   required Directory root,
-  required String rootAbsPosix,
   required String packageName,
   required Set<String> exportedFiles,
   required AnalysisContextCollection analysisCollection,
@@ -972,7 +976,6 @@ Future<void> _checkSceneWriteTxnContract({
 
 Future<void> _checkExportedApiMutableTypeLeak({
   required Directory root,
-  required String rootAbsPosix,
   required Set<String> exportedFiles,
   required AnalysisContextCollection analysisCollection,
 }) async {
@@ -1347,7 +1350,7 @@ Future<void> _checkControllerGuardrails({
   }
 }
 
-Future<void> main(List<String> args) async {
+Future<void> main(List<String> _) async {
   final root = Directory.current;
   final rootAbsPosix = _toPosixPath(root.absolute.path);
   final packageName = _readPackageNameOrFallback(root);
@@ -1366,7 +1369,6 @@ Future<void> main(List<String> args) async {
 
   await _checkExportedApiImports(
     root: root,
-    rootAbsPosix: rootAbsPosix,
     packageName: packageName,
     exportedFiles: exportedFiles,
     analysisCollection: analysisCollection,
@@ -1383,7 +1385,6 @@ Future<void> main(List<String> args) async {
   );
   await _checkExportedApiMutableTypeLeak(
     root: root,
-    rootAbsPosix: rootAbsPosix,
     exportedFiles: exportedFiles,
     analysisCollection: analysisCollection,
   );

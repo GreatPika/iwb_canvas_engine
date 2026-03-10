@@ -794,7 +794,10 @@ void main() {
       ),
       layers: <ContentLayer>[ContentLayer(id: 'layer-auto-12')],
     );
-    final baseBackground = baseScene.backgroundLayer!;
+    final baseBackground = baseScene.backgroundLayer;
+    if (baseBackground == null) {
+      fail('Expected base scene background layer.');
+    }
     final ctx = TxnContext(
       baseScene: baseScene,
       workingSelection: <NodeId>{},

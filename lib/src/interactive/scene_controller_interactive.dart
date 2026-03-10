@@ -66,7 +66,7 @@ Offset sceneControllerInteractiveInternalRunMoveCommitDeltaResolverForTest(
 }
 
 void sceneControllerInteractiveInternalEnforceGestureBufferSoftLimitForTest(
-  SceneControllerInteractive controller, {
+  SceneControllerInteractive _, {
   required List<Offset> points,
   required int softLimit,
   required int trimTo,

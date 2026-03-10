@@ -138,7 +138,10 @@ void main() {
 
       final resolved = controller.resolveSpatialCandidateNode(candidate);
       expect(resolved, isNotNull);
-      expect(resolved!.id, candidate.node.id);
+      if (resolved == null) {
+        fail('Expected spatial candidate resolution to return selected node.');
+      }
+      expect(resolved.id, candidate.node.id);
       expect(resolved.type, candidate.node.type);
     },
   );

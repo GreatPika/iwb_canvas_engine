@@ -78,9 +78,12 @@ void main() {
       const t = Transform2D(a: 2, b: 0, c: 0, d: 4, tx: 10, ty: -8);
       final inv = t.invert();
       expect(inv, isNotNull);
+      if (inv == null) {
+        fail('Expected invertible transform to produce inverse.');
+      }
 
       final p = const Offset(3, 5);
-      expect(inv!.applyToPoint(t.applyToPoint(p)).dx, closeTo(p.dx, 1e-9));
+      expect(inv.applyToPoint(t.applyToPoint(p)).dx, closeTo(p.dx, 1e-9));
       expect(inv.applyToPoint(t.applyToPoint(p)).dy, closeTo(p.dy, 1e-9));
 
       const singular = Transform2D(a: 1, b: 2, c: 2, d: 4, tx: 0, ty: 0);

@@ -450,7 +450,10 @@ void main() {
       await tester.pumpWidget(_host(controller));
       await tester.pump();
       final customPaint = tester.widget<CustomPaint>(find.byType(CustomPaint));
-      final overlay = customPaint.foregroundPainter!;
+      final overlay = customPaint.foregroundPainter;
+      if (overlay == null) {
+        fail('Expected overlay foreground painter.');
+      }
       final recorder = PictureRecorder();
       final canvas = Canvas(recorder);
       overlay.paint(canvas, const Size(120, 120));
@@ -460,6 +463,7 @@ void main() {
     controller.strokeActive = true;
     controller.strokePoints = const <Offset>[];
     await paintOverlay();
+    expect(controller.strokePoints, isEmpty);
 
     controller.strokePoints = const <Offset>[Offset(10, 10)];
     controller.strokeThickness = 0;
@@ -468,6 +472,7 @@ void main() {
     controller.strokeThickness = 4;
     controller.strokeOpacity = 2;
     await paintOverlay();
+    expect(controller.strokeOpacity, 2);
 
     controller.strokePoints = const <Offset>[Offset(10, 10), Offset(20, 20)];
     await paintOverlay();

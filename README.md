@@ -43,6 +43,23 @@ storage.
 flutter pub add iwb_canvas_engine
 ```
 
+## Developer tooling
+
+This repository uses the external DCM CLI for additional static analysis on top
+of `flutter analyze`.
+
+1. Install DCM for your platform by following the official guide:
+   [Installation](https://dcm.dev/docs/getting-started/for-developers/installation/).
+2. Run the repository checks:
+
+```sh
+dcm analyze .
+flutter analyze
+```
+
+In CI, DCM is installed with the official GitHub Action before the static
+checks job runs.
+
 ## Quick start
 
 ```dart

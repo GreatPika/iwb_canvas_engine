@@ -155,15 +155,13 @@ class InteractiveMoveSession {
     required double dragStartSlop,
   }) {
     if (_moveActivePointerId != sample.pointerId) return;
-    if (_movePointerDownScene == null || _moveLastScene == null) return;
+    final movePointerDownScene = _movePointerDownScene;
+    final moveLastScene = _moveLastScene;
+    if (movePointerDownScene == null || moveLastScene == null) return;
 
     final didStartDrag =
         !_moveDragStarted &&
-        isDistanceGreaterThan(
-          _movePointerDownScene!,
-          scenePoint,
-          dragStartSlop,
-        );
+        isDistanceGreaterThan(movePointerDownScene, scenePoint, dragStartSlop);
 
     if (didStartDrag) {
       _moveDragStarted = true;
@@ -177,7 +175,7 @@ class InteractiveMoveSession {
     if (!_moveDragStarted) return;
 
     if (_moveTarget == _MoveDragTarget.move) {
-      final deltaStep = scenePoint - _moveLastScene!;
+      final deltaStep = scenePoint - moveLastScene;
       if (deltaStep == Offset.zero) return;
       _movePreviewDelta = _movePreviewDelta + deltaStep;
       _moveLastScene = scenePoint;
@@ -186,11 +184,11 @@ class InteractiveMoveSession {
     }
 
     if (_moveTarget == _MoveDragTarget.marquee) {
-      setSelectionRect(Rect.fromPoints(_movePointerDownScene!, scenePoint));
+      setSelectionRect(Rect.fromPoints(movePointerDownScene, scenePoint));
     }
   }
 
-  void _moveHandleUp(PointerSample sample, Offset scenePoint) {
+  void _moveHandleUp(PointerSample sample, Offset _) {
     if (_moveActivePointerId != sample.pointerId) return;
 
     try {

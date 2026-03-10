@@ -44,6 +44,7 @@ class SceneTextLayoutCache {
   }) {
     final safeFontSize = normalizeTextLayoutFontSize(node.fontSize);
     final safeLineHeight = normalizeTextLayoutLineHeight(node.lineHeight);
+    final layoutMaxWidth = normalizeTextLayoutMaxWidth(maxWidth);
     final key = _TextLayoutKey(
       text: node.text,
       fontSize: safeFontSize,
@@ -53,7 +54,7 @@ class SceneTextLayoutCache {
       isUnderline: node.isUnderline,
       align: node.align,
       lineHeight: safeLineHeight,
-      maxWidth: normalizeTextLayoutMaxWidth(maxWidth),
+      maxWidth: layoutMaxWidth,
       color: textStyle.color ?? const Color(0xFF000000),
       textDirection: textDirection,
     );
@@ -71,10 +72,10 @@ class SceneTextLayoutCache {
       textDirection: textDirection,
       maxLines: null,
     );
-    if (key.maxWidth == null) {
+    if (layoutMaxWidth == null) {
       textPainter.layout();
     } else {
-      textPainter.layout(maxWidth: key.maxWidth!);
+      textPainter.layout(maxWidth: layoutMaxWidth);
     }
     _entries[key] = textPainter;
     _debugBuildCount += 1;

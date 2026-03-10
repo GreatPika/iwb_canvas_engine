@@ -383,7 +383,11 @@ void main() {
     expect(replacedIds, isNotNull);
     expect(replacedIds, const <NodeId>['base']);
     expect(controller.selectedNodeIds, const <NodeId>{'base'});
-    expect(controller.selectedNodeIds, equals(replacedIds!.toSet()));
+    final sortedReplacedIds = replacedIds;
+    if (sortedReplacedIds == null) {
+      fail('Expected selection.replaced signal.');
+    }
+    expect(controller.selectedNodeIds, equals(sortedReplacedIds.toSet()));
     assertControllerInvariants(controller);
   });
 
@@ -415,7 +419,11 @@ void main() {
     await pumpEventQueue();
 
     expect(replacedIds, const <NodeId>['a-node', 'base', 'z-node']);
-    expect(controller.selectedNodeIds, equals(replacedIds!.toSet()));
+    final sortedReplacedIds = replacedIds;
+    if (sortedReplacedIds == null) {
+      fail('Expected selection.replaced signal.');
+    }
+    expect(controller.selectedNodeIds, equals(sortedReplacedIds.toSet()));
     assertControllerInvariants(controller);
   });
 

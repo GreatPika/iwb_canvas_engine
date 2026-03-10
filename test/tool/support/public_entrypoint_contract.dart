@@ -75,10 +75,11 @@ List<String> extractNormalizedExportDirectives(String source) {
 
   for (final line in source.split('\n')) {
     final trimmed = line.trim();
-    if (currentDirective != null) {
+    final directiveBuffer = currentDirective;
+    if (directiveBuffer != null) {
       if (trimmed.isNotEmpty) {
-        currentDirective!.write(' ');
-        currentDirective!.write(trimmed);
+        directiveBuffer.write(' ');
+        directiveBuffer.write(trimmed);
       }
       flushIfComplete();
       continue;
@@ -142,7 +143,10 @@ String exportDirectiveToFilePath(String directive) {
     );
   }
 
-  final target = match.group(1)!;
+  final target = match.group(1);
+  if (target == null) {
+    throw StateError('Expected export target capture in directive: $directive');
+  }
   if (!target.startsWith('src/')) {
     throw StateError(
       'Expected canonical public export to target src/**, got: $directive',

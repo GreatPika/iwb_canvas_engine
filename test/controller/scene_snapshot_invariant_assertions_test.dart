@@ -32,7 +32,13 @@ void main() {
   test('assertSceneInvariants passes on valid typed snapshot', () {
     final snapshot = _validSnapshot();
 
-    assertSceneInvariants(snapshot, selectedNodeIds: const <NodeId>{'r1'});
+    expect(
+      () => assertSceneInvariants(
+        snapshot,
+        selectedNodeIds: const <NodeId>{'r1'},
+      ),
+      returnsNormally,
+    );
   });
 
   test('fails on duplicate NodeId across background and content', () {

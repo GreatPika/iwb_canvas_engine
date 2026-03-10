@@ -136,11 +136,9 @@ Object? _sanitizeSceneDataSource(Object? source, {int depth = 0}) {
   if (source is Map) {
     if (_canKeepSceneDataSourceVerbatim(source, depth: depth)) {
       final snapshot = <Object?, Object?>{};
-      for (final entry in source.entries) {
-        snapshot[entry.key] = _sanitizeSceneDataSource(
-          entry.value,
-          depth: depth + 1,
-        );
+      for (final entry in source.entries.cast<MapEntry<Object?, Object?>>()) {
+        final key = entry.key;
+        snapshot[key] = _sanitizeSceneDataSource(entry.value, depth: depth + 1);
       }
       return Map<Object?, Object?>.unmodifiable(snapshot);
     }

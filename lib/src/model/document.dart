@@ -104,11 +104,12 @@ Map<NodeId, NodeLocatorEntry> txnBuildNodeLocator(Scene scene) {
 }
 
 SceneSnapshot txnSceneToSnapshot(Scene scene) {
+  final backgroundLayer = scene.backgroundLayer;
   return sceneSnapshotFromValidated(
-    backgroundLayer: scene.backgroundLayer == null
+    backgroundLayer: backgroundLayer == null
         ? null
         : backgroundLayerSnapshotFromValidated(
-            nodes: scene.backgroundLayer!.nodes
+            nodes: backgroundLayer.nodes
                 .map(txnNodeToSnapshot)
                 .toList(growable: false),
           ),

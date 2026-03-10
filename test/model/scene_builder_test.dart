@@ -103,7 +103,7 @@ void main() {
               e is SceneDataException &&
               e.code == SceneDataErrorCode.invalidJson &&
               e.source is Map<String, Object?> &&
-              (e.source! as Map<String, Object?>)['type'] == 'StateError',
+              (e.source as Map<String, Object?>)['type'] == 'StateError',
         ),
       ),
     );

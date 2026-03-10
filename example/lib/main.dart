@@ -64,7 +64,11 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   void initState() {
     super.initState();
     if (widget.controller != null) {
-      _controller = widget.controller!;
+      final controller = widget.controller;
+      if (controller == null) {
+        throw StateError('controller must be available when provided.');
+      }
+      _controller = controller;
       _ownsController = false;
     } else {
       _controller = SceneController(
@@ -917,6 +921,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     final scaleX = _scaleXFromTransform(node.transform);
     final scaleY = _scaleYFromTransform(node.transform);
     final alignment = _mapTextAlignToAlignment(node.align);
+    final lineHeight = node.lineHeight;
 
     return Positioned(
       left: viewPosition.dx,
@@ -943,9 +948,9 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                 onTapOutside: (_) => _finishInlineTextEdit(save: true),
                 strutStyle: StrutStyle(
                   fontSize: node.fontSize,
-                  height: node.lineHeight == null
+                  height: lineHeight == null
                       ? null
-                      : node.lineHeight! / node.fontSize,
+                      : lineHeight / node.fontSize,
                   forceStrutHeight: true,
                 ),
                 style: TextStyle(
@@ -959,9 +964,9 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                       ? TextDecoration.underline
                       : null,
                   fontFamily: node.fontFamily,
-                  height: node.lineHeight == null
+                  height: lineHeight == null
                       ? null
-                      : node.lineHeight! / node.fontSize,
+                      : lineHeight / node.fontSize,
                 ),
                 decoration: const InputDecoration(
                   border: InputBorder.none,

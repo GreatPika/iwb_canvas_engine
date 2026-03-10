@@ -11,6 +11,20 @@ import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
         kMaxSvgPathDataLength,
         kMaxTextLength;
 
+T _requireValue<T>(T? value, String description) {
+  if (value == null) {
+    fail(description);
+  }
+  return value;
+}
+
+Map<String, Object?> _singleNodeJson(Map<String, Object?> sceneJson) {
+  final layers = sceneJson['layers'] as List<Object?>;
+  final layer = layers.single as Map<String, Object?>;
+  final nodes = layer['nodes'] as List<Object?>;
+  return nodes.single as Map<String, Object?>;
+}
+
 void main() {
   group('validated boundary values', () {
     test('public id helpers preserve string typedef behavior', () {
@@ -565,24 +579,29 @@ void main() {
       expect(scalarError.source, 42);
       expect(listError.source, <Object?>[1, 'two', true]);
       expect(listError.source, isNot(same(listSource)));
-      expect(
-        () => (listError.source! as List<Object?>).add('later'),
-        throwsUnsupportedError,
+      final listSourceCopy = _requireValue<List<Object?>>(
+        listError.source as List<Object?>?,
+        'Expected copied list source.',
       );
+      expect(() => listSourceCopy.add('later'), throwsUnsupportedError);
 
       expect(setError.source, <Object?>{'one', 2, true});
       expect(setError.source, isNot(same(setSource)));
-      expect(
-        () => (setError.source! as Set<Object?>).add('later'),
-        throwsUnsupportedError,
+      final setSourceCopy = _requireValue<Set<Object?>>(
+        setError.source as Set<Object?>?,
+        'Expected copied set source.',
       );
+      expect(() => setSourceCopy.add('later'), throwsUnsupportedError);
 
       expect(mapError.source, <Object?, Object?>{
         'ok': 1,
         'nested': <Object?>['x'],
       });
       expect(mapError.source, isNot(same(mapSource)));
-      final copiedMap = mapError.source! as Map<Object?, Object?>;
+      final copiedMap = _requireValue<Map<Object?, Object?>>(
+        mapError.source as Map<Object?, Object?>?,
+        'Expected copied map source.',
+      );
       expect(copiedMap['nested'], isNot(same(nestedList)));
       expect(() => copiedMap['later'] = 3, throwsUnsupportedError);
     });
@@ -595,10 +614,17 @@ void main() {
       );
 
       expect(error.source, isA<Map<String, Object?>>());
-      final source = error.source! as Map<String, Object?>;
+      final source = _requireValue<Map<String, Object?>>(
+        error.source as Map<String, Object?>?,
+        'Expected summarized string source.',
+      );
       expect(source['kind'], 'string');
       expect(source['length'], 300);
-      expect((source['preview']! as String).length, greaterThan(256));
+      final preview = _requireValue<String>(
+        source['preview'] as String?,
+        'Expected string preview.',
+      );
+      expect(preview.length, greaterThan(256));
     });
 
     test('summarizes large collections and previews object diagnostics', () {
@@ -648,44 +674,79 @@ void main() {
       );
 
       expect(listError.source, isA<Map<String, Object?>>());
-      final listSource = listError.source! as Map<String, Object?>;
+      final listSource = _requireValue<Map<String, Object?>>(
+        listError.source as Map<String, Object?>?,
+        'Expected list summary source.',
+      );
       expect(listSource['kind'], 'list');
       expect(listSource['length'], 20);
-      expect((listSource['preview']! as List<Object?>).length, 5);
+      final listPreview = _requireValue<List<Object?>>(
+        listSource['preview'] as List<Object?>?,
+        'Expected list preview.',
+      );
+      expect(listPreview.length, 5);
 
       expect(setError.source, isA<Map<String, Object?>>());
-      final setSource = setError.source! as Map<String, Object?>;
+      final setSource = _requireValue<Map<String, Object?>>(
+        setError.source as Map<String, Object?>?,
+        'Expected set summary source.',
+      );
       expect(setSource['kind'], 'set');
       expect(setSource['length'], 6);
-      expect((setSource['preview']! as List<Object?>).length, 5);
+      final setPreview = _requireValue<List<Object?>>(
+        setSource['preview'] as List<Object?>?,
+        'Expected set preview.',
+      );
+      expect(setPreview.length, 5);
 
       expect(mapError.source, isA<Map<String, Object?>>());
-      final mapSource = mapError.source! as Map<String, Object?>;
+      final mapSource = _requireValue<Map<String, Object?>>(
+        mapError.source as Map<String, Object?>?,
+        'Expected map summary source.',
+      );
       expect(mapSource['kind'], 'map');
       expect(mapSource['length'], 6);
-      final mapPreview = mapSource['preview']! as Map<String, Object?>;
+      final mapPreview = _requireValue<Map<String, Object?>>(
+        mapSource['preview'] as Map<String, Object?>?,
+        'Expected map preview.',
+      );
       expect(mapPreview.containsKey('short'), isTrue);
       expect(mapPreview.keys.any((key) => key.contains('...')), isTrue);
 
       expect(iterableError.source, isA<Map<String, Object?>>());
-      final iterableSource = iterableError.source! as Map<String, Object?>;
+      final iterableSource = _requireValue<Map<String, Object?>>(
+        iterableError.source as Map<String, Object?>?,
+        'Expected iterable summary source.',
+      );
       expect(iterableSource['kind'], 'iterable');
-      expect((iterableSource['preview']! as List<Object?>).length, 5);
+      final iterablePreview = _requireValue<List<Object?>>(
+        iterableSource['preview'] as List<Object?>?,
+        'Expected iterable preview.',
+      );
+      expect(iterablePreview.length, 5);
 
       expect(diagnosticError.source, isA<Map<String, Object?>>());
-      final diagnosticSource = diagnosticError.source! as Map<String, Object?>;
+      final diagnosticSource = _requireValue<Map<String, Object?>>(
+        diagnosticError.source as Map<String, Object?>?,
+        'Expected diagnostic source.',
+      );
       expect(diagnosticSource['kind'], 'object');
       expect(diagnosticSource['type'], 'StateError');
       expect(diagnosticSource['preview'], contains('boom'));
 
       expect(objectError.source, isA<Map<String, Object?>>());
-      final objectSource = objectError.source! as Map<String, Object?>;
+      final objectSource = _requireValue<Map<String, Object?>>(
+        objectError.source as Map<String, Object?>?,
+        'Expected object source.',
+      );
       expect(objectSource['kind'], 'object');
       expect(objectSource['type'], '_ExampleSource');
 
       expect(shortObjectError.source, isA<Map<String, Object?>>());
-      final shortObjectSource =
-          shortObjectError.source! as Map<String, Object?>;
+      final shortObjectSource = _requireValue<Map<String, Object?>>(
+        shortObjectError.source as Map<String, Object?>?,
+        'Expected short object source.',
+      );
       expect(shortObjectSource['kind'], 'object');
       expect(shortObjectSource['preview'], 'ShortExampleSource(ok)');
     });
@@ -707,11 +768,20 @@ void main() {
         );
 
         expect(encoded['backgroundLayer'], isA<Map<String, Object?>>());
-        final backgroundLayer =
-            encoded['backgroundLayer']! as Map<String, Object?>;
-        final nodes = backgroundLayer['nodes']! as List<Object?>;
+        final backgroundLayer = _requireValue<Map<String, Object?>>(
+          encoded['backgroundLayer'] as Map<String, Object?>?,
+          'Expected encoded background layer.',
+        );
+        final nodes = _requireValue<List<Object?>>(
+          backgroundLayer['nodes'] as List<Object?>?,
+          'Expected encoded background nodes.',
+        );
         expect(nodes, hasLength(1));
-        expect((nodes.single! as Map<String, Object?>)['id'], 'bg');
+        final node = _requireValue<Map<String, Object?>>(
+          nodes.single as Map<String, Object?>?,
+          'Expected encoded background node.',
+        );
+        expect(node['id'], 'bg');
       },
     );
 
@@ -761,24 +831,24 @@ void main() {
     );
 
     test('decodeScene rejects blank layer ids and blank font family', () {
-      final blankLayerId = <String, dynamic>{
+      final blankLayerId = <String, Object?>{
         'schemaVersion': schemaVersionWrite,
-        'camera': <String, dynamic>{'offsetX': 0, 'offsetY': 0},
-        'background': <String, dynamic>{
+        'camera': <String, Object?>{'offsetX': 0, 'offsetY': 0},
+        'background': <String, Object?>{
           'color': '#FFFFFFFF',
-          'grid': <String, dynamic>{
+          'grid': <String, Object?>{
             'enabled': false,
             'cellSize': 10,
             'color': '#1F000000',
           },
         },
-        'palette': <String, dynamic>{
-          'penColors': <dynamic>['#FF000000'],
-          'backgroundColors': <dynamic>['#FFFFFFFF'],
-          'gridSizes': <dynamic>[10],
+        'palette': <String, Object?>{
+          'penColors': <Object?>['#FF000000'],
+          'backgroundColors': <Object?>['#FFFFFFFF'],
+          'gridSizes': <Object?>[10],
         },
-        'layers': <dynamic>[
-          <String, dynamic>{'id': '', 'nodes': <dynamic>[]},
+        'layers': <Object?>[
+          <String, Object?>{'id': '', 'nodes': <Object?>[]},
         ],
       };
       expect(
@@ -793,16 +863,16 @@ void main() {
         ),
       );
 
-      final blankFontFamily = <String, dynamic>{
+      final blankFontFamily = <String, Object?>{
         ...blankLayerId,
-        'layers': <dynamic>[
-          <String, dynamic>{
+        'layers': <Object?>[
+          <String, Object?>{
             'id': 'layer-0',
-            'nodes': <dynamic>[
-              <String, dynamic>{
+            'nodes': <Object?>[
+              <String, Object?>{
                 'id': 'node-0',
                 'type': 'text',
-                'transform': <String, dynamic>{
+                'transform': <String, Object?>{
                   'a': 1,
                   'b': 0,
                   'c': 0,
@@ -818,7 +888,7 @@ void main() {
                 'isDeletable': true,
                 'isTransformable': true,
                 'text': 'hello',
-                'size': <String, dynamic>{'w': 1, 'h': 1},
+                'size': <String, Object?>{'w': 1, 'h': 1},
                 'fontSize': 16,
                 'color': '#FF000000',
                 'align': 'left',
@@ -848,7 +918,11 @@ void main() {
 
     test('decodeScene reports required string boundary failures', () {
       final missingColor = _minimalSceneJson();
-      (missingColor['background']! as Map<String, Object?>).remove('color');
+      final missingColorBackground = _requireValue<Map<String, Object?>>(
+        missingColor['background'] as Map<String, Object?>?,
+        'Expected background payload.',
+      );
+      missingColorBackground.remove('color');
       expect(
         () => decodeScene(missingColor),
         throwsA(
@@ -862,7 +936,11 @@ void main() {
       );
 
       final invalidColorType = _minimalSceneJson();
-      (invalidColorType['background']! as Map<String, Object?>)['color'] = 1;
+      final invalidColorBackground = _requireValue<Map<String, Object?>>(
+        invalidColorType['background'] as Map<String, Object?>?,
+        'Expected background payload.',
+      );
+      invalidColorBackground['color'] = 1;
       expect(
         () => decodeScene(invalidColorType),
         throwsA(
@@ -908,12 +986,7 @@ void main() {
       'decodeScene rejects integer unsafe revisions and numeric boundaries',
       () {
         final unsafeRevisionScene = _minimalSceneJson();
-        final unsafeRevisionNode =
-            (((unsafeRevisionScene['layers']! as List<Object?>).single!
-                            as Map<String, Object?>)['nodes']!
-                        as List<Object?>)
-                    .single!
-                as Map<String, Object?>;
+        final unsafeRevisionNode = _singleNodeJson(unsafeRevisionScene);
         unsafeRevisionNode['instanceRevision'] = 9007199254740992;
 
         expect(
@@ -929,12 +1002,7 @@ void main() {
         );
 
         final negativeStrokeWidth = _minimalSceneJson();
-        ((((negativeStrokeWidth['layers']! as List<Object?>).single!
-                            as Map<String, Object?>)['nodes']!
-                        as List<Object?>)
-                    .single!
-                as Map<String, Object?>)['strokeWidth'] =
-            -1;
+        _singleNodeJson(negativeStrokeWidth)['strokeWidth'] = -1;
         expect(
           () => decodeScene(negativeStrokeWidth),
           throwsA(

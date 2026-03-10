@@ -33,6 +33,7 @@ class SpatialIndexCache {
       _indexEpoch = controllerEpoch;
       _debugBuildCount = _debugBuildCount + 1;
     }
+    // ignore: avoid-non-null-assertion, build above guarantees _index
     return _index!.query(worldBounds);
   }
 
@@ -88,6 +89,7 @@ class SpatialIndexCache {
 
     try {
       debugBeforeIncrementalPrepareHook?.call();
+      // ignore: avoid-non-null-assertion, _index null already returned above
       final candidate = _index!.cloneForIncrementalUpdate(
         scene: scene,
         nodeLocator: nodeLocator,
@@ -122,6 +124,7 @@ class SpatialIndexCache {
       case _PreparedSpatialIndexCommitMode.noop:
         return;
       case _PreparedSpatialIndexCommitMode.setEpochOnly:
+        // ignore: avoid-non-null-assertion, setEpochOnly always stores epoch
         _indexEpoch = prepared.controllerEpoch!;
         return;
       case _PreparedSpatialIndexCommitMode.invalidate:
@@ -129,11 +132,13 @@ class SpatialIndexCache {
         return;
       case _PreparedSpatialIndexCommitMode.swapIncremental:
         _index = prepared.candidate;
+        // ignore: avoid-non-null-assertion, swapIncremental always stores epoch
         _indexEpoch = prepared.controllerEpoch!;
         _debugIncrementalApplyCount = _debugIncrementalApplyCount + 1;
         return;
       case _PreparedSpatialIndexCommitMode.replaceRebuilt:
         _index = prepared.candidate;
+        // ignore: avoid-non-null-assertion, replaceRebuilt always stores epoch
         _indexEpoch = prepared.controllerEpoch!;
         _debugBuildCount = _debugBuildCount + 1;
         return;

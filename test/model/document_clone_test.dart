@@ -191,31 +191,39 @@ void main() {
         RectNode(id: 'bg-node-2', size: const Size(10, 10)),
       ],
     );
+    final sourceBackgroundLayer = source.backgroundLayer;
+    if (sourceBackgroundLayer == null) {
+      fail('Expected source background layer.');
+    }
 
-    final shallow = txnCloneBackgroundLayerShallow(source.backgroundLayer!);
-    final deep = txnCloneBackgroundLayer(source.backgroundLayer!);
+    final shallow = txnCloneBackgroundLayerShallow(sourceBackgroundLayer);
+    final deep = txnCloneBackgroundLayer(sourceBackgroundLayer);
     final sceneClone = txnCloneScene(source);
 
-    expect(shallow, isNot(same(source.backgroundLayer)));
-    expect(shallow.nodes, isNot(same(source.backgroundLayer!.nodes)));
+    expect(shallow, isNot(same(sourceBackgroundLayer)));
+    expect(shallow.nodes, isNot(same(sourceBackgroundLayer.nodes)));
     expect(
-      identical(shallow.nodes.first, source.backgroundLayer!.nodes.first),
+      identical(shallow.nodes.first, sourceBackgroundLayer.nodes.first),
       isTrue,
     );
 
-    expect(deep, isNot(same(source.backgroundLayer)));
-    expect(deep.nodes, isNot(same(source.backgroundLayer!.nodes)));
+    expect(deep, isNot(same(sourceBackgroundLayer)));
+    expect(deep.nodes, isNot(same(sourceBackgroundLayer.nodes)));
     expect(
-      identical(deep.nodes.first, source.backgroundLayer!.nodes.first),
+      identical(deep.nodes.first, sourceBackgroundLayer.nodes.first),
       isFalse,
     );
 
     expect(sceneClone.backgroundLayer, isNotNull);
-    expect(sceneClone.backgroundLayer, isNot(same(source.backgroundLayer)));
+    expect(sceneClone.backgroundLayer, isNot(same(sourceBackgroundLayer)));
+    final clonedBackgroundLayer = sceneClone.backgroundLayer;
+    if (clonedBackgroundLayer == null) {
+      fail('Expected scene clone background layer.');
+    }
     expect(
       identical(
-        sceneClone.backgroundLayer!.nodes.first,
-        source.backgroundLayer!.nodes.first,
+        clonedBackgroundLayer.nodes.first,
+        sourceBackgroundLayer.nodes.first,
       ),
       isFalse,
     );

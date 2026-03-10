@@ -203,16 +203,17 @@ void main() {
       );
       await tester.pump();
 
-      final state = tester.state(find.byType(SceneViewCore)) as dynamic;
-      expect(state.debugStaticLayerCache, isA<SceneStaticLayerCache>());
-      expect(state.debugTextLayoutCache, isA<SceneTextLayoutCache>());
-      expect(state.debugStrokePathCache, isA<SceneStrokePathCache>());
-      expect(state.debugPathMetricsCache, isA<ScenePathMetricsCache>());
-      expect(state.debugGeometryCache, isA<RenderGeometryCache>());
-
       final customPaint = tester.widget<CustomPaint>(find.byType(CustomPaint));
-      final painter = customPaint.painter! as ScenePainter;
-      expect(painter.imageResolver('missing'), isNull);
+      final painter = customPaint.painter;
+      if (painter == null) {
+        fail('Expected ScenePainter.');
+      }
+      final scenePainter = painter as ScenePainter;
+      expect(scenePainter.staticLayerCache, isA<SceneStaticLayerCache>());
+      expect(scenePainter.textLayoutCache, isA<SceneTextLayoutCache>());
+      expect(scenePainter.strokePathCache, isA<SceneStrokePathCache>());
+      expect(scenePainter.pathMetricsCache, isA<ScenePathMetricsCache>());
+      expect(scenePainter.imageResolver('missing'), isNull);
 
       final extStaticA = SceneStaticLayerCache();
       final extTextA = SceneTextLayoutCache(maxEntries: 4);

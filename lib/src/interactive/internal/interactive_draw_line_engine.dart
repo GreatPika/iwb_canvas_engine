@@ -120,7 +120,10 @@ class InteractiveDrawLineEngine {
       return;
     }
 
-    final start = _pendingLineStart!;
+    final start = _pendingLineStart;
+    if (start == null) {
+      return;
+    }
     clearPendingLine();
     final lineId = callbacks.writeDrawLineFromWorldSegment(
       start: start,

@@ -65,8 +65,9 @@ class ScenePainter extends CustomPainter {
     final selectedIds = controller.selectedNodeIds;
     final cameraOffset = sanitizeFiniteOffset(snapshot.camera.offset);
 
+    final staticLayerCache = this.staticLayerCache;
     if (staticLayerCache != null) {
-      staticLayerCache!.draw(
+      staticLayerCache.draw(
         canvas,
         size,
         background: snapshot.background,
@@ -256,8 +257,9 @@ class ScenePainter extends CustomPainter {
             haloWidth,
           );
         } else {
+          final strokePathCache = this.strokePathCache;
           final path = strokePathCache != null
-              ? strokePathCache!.getOrBuild(stroke)
+              ? strokePathCache.getOrBuild(stroke)
               : _buildStrokePath(stroke.points);
           canvas.drawPath(
             path,
@@ -292,16 +294,18 @@ class ScenePainter extends CustomPainter {
         final safeStrokeWidth = clampNonNegativeFinite(pathNode.strokeWidth);
         final hasStroke = pathNode.strokeColor != null && safeStrokeWidth > 0;
         final baseStrokeWidth = hasStroke ? safeStrokeWidth : 0.0;
+        final pathMetricsCache = this.pathMetricsCache;
         final contours = pathMetricsCache != null
-            ? pathMetricsCache!.getOrBuild(node: pathNode, localPath: localPath)
+            ? pathMetricsCache.getOrBuild(node: pathNode, localPath: localPath)
             : _buildPathSelectionContours(
                 pathNode: pathNode,
                 localPath: localPath,
               );
-        if (contours.closedContours != null) {
+        final closedContours = contours.closedContours;
+        if (closedContours != null) {
           _drawPathHalo(
             canvas,
-            contours.closedContours!,
+            closedContours,
             color,
             haloWidth,
             baseStrokeWidth: baseStrokeWidth,
@@ -523,22 +527,24 @@ class ScenePainter extends CustomPainter {
     final rect = _centerRect(node.size);
     canvas.save();
     canvas.transform(_toViewTransform(node.transform, cameraOffset));
-    if (node.fillColor != null) {
+    final fillColor = node.fillColor;
+    if (fillColor != null) {
       canvas.drawRect(
         rect,
         Paint()
           ..style = PaintingStyle.fill
-          ..color = _applyOpacity(node.fillColor!, node.opacity),
+          ..color = _applyOpacity(fillColor, node.opacity),
       );
     }
     final strokeWidth = clampNonNegativeFinite(node.strokeWidth);
-    if (node.strokeColor != null && strokeWidth > 0) {
+    final strokeColor = node.strokeColor;
+    if (strokeColor != null && strokeWidth > 0) {
       canvas.drawRect(
         rect,
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = strokeWidth
-          ..color = _applyOpacity(node.strokeColor!, node.opacity),
+          ..color = _applyOpacity(strokeColor, node.opacity),
       );
     }
     canvas.restore();
@@ -595,8 +601,9 @@ class ScenePainter extends CustomPainter {
       return;
     }
 
+    final strokePathCache = this.strokePathCache;
     final path = strokePathCache != null
-        ? strokePathCache!.getOrBuild(node)
+        ? strokePathCache.getOrBuild(node)
         : _buildStrokePath(node.points);
 
     canvas.drawPath(
@@ -631,8 +638,9 @@ class ScenePainter extends CustomPainter {
     );
     final maxWidth = normalizeTextLayoutMaxWidth(node.maxWidth);
 
+    final textLayoutCache = this.textLayoutCache;
     final textPainter = textLayoutCache != null
-        ? textLayoutCache!.getOrBuild(
+        ? textLayoutCache.getOrBuild(
             node: node,
             textStyle: style,
             maxWidth: maxWidth,
@@ -727,23 +735,25 @@ class ScenePainter extends CustomPainter {
     canvas.save();
     canvas.transform(_toViewTransform(node.transform, cameraOffset));
 
-    if (node.fillColor != null) {
+    final fillColor = node.fillColor;
+    if (fillColor != null) {
       canvas.drawPath(
         localPath,
         Paint()
           ..style = PaintingStyle.fill
-          ..color = _applyOpacity(node.fillColor!, node.opacity),
+          ..color = _applyOpacity(fillColor, node.opacity),
       );
     }
 
     final strokeWidth = clampNonNegativeFinite(node.strokeWidth);
-    if (node.strokeColor != null && strokeWidth > 0) {
+    final strokeColor = node.strokeColor;
+    if (strokeColor != null && strokeWidth > 0) {
       canvas.drawPath(
         localPath,
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = strokeWidth
-          ..color = _applyOpacity(node.strokeColor!, node.opacity),
+          ..color = _applyOpacity(strokeColor, node.opacity),
       );
     }
     canvas.restore();

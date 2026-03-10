@@ -33,11 +33,12 @@ Scene txnCloneSceneShallow(Scene scene) {
 }
 
 Scene txnCloneScene(Scene scene) {
+  final backgroundLayer = scene.backgroundLayer;
   return Scene(
     layers: scene.layers.map(txnCloneContentLayer).toList(growable: false),
-    backgroundLayer: scene.backgroundLayer == null
+    backgroundLayer: backgroundLayer == null
         ? null
-        : txnCloneBackgroundLayer(scene.backgroundLayer!),
+        : txnCloneBackgroundLayer(backgroundLayer),
     camera: Camera(offset: scene.camera.offset),
     background: Background(
       color: scene.background.color,
@@ -210,9 +211,10 @@ Transform2D _txnCloneTransform(Transform2D transform) {
 }
 
 Set<NodeId> txnCollectNodeIds(Scene scene) {
+  final backgroundLayer = scene.backgroundLayer;
   return <NodeId>{
-    if (scene.backgroundLayer != null)
-      for (final node in scene.backgroundLayer!.nodes) node.id,
+    if (backgroundLayer != null)
+      for (final node in backgroundLayer.nodes) node.id,
     for (final layer in scene.layers)
       for (final node in layer.nodes) node.id,
   };
@@ -220,8 +222,9 @@ Set<NodeId> txnCollectNodeIds(Scene scene) {
 
 int txnInitialNodeIdSeed(Scene scene) {
   var maxId = -1;
+  final backgroundLayer = scene.backgroundLayer;
   final nodes = <SceneNode>[
-    if (scene.backgroundLayer != null) ...scene.backgroundLayer!.nodes,
+    if (backgroundLayer != null) ...backgroundLayer.nodes,
     for (final layer in scene.layers) ...layer.nodes,
   ];
   for (final node in nodes) {
@@ -238,8 +241,9 @@ int txnInitialNodeIdSeed(Scene scene) {
 
 int txnInitialNodeInstanceRevisionSeed(Scene scene) {
   var maxRevision = 0;
+  final backgroundLayer = scene.backgroundLayer;
   final nodes = <SceneNode>[
-    if (scene.backgroundLayer != null) ...scene.backgroundLayer!.nodes,
+    if (backgroundLayer != null) ...backgroundLayer.nodes,
     for (final layer in scene.layers) ...layer.nodes,
   ];
   for (final node in nodes) {

@@ -877,6 +877,7 @@ class PathNode extends SceneNode {
   ///
   /// By default, failures are silent in release builds and are only recorded
   /// when assertions are enabled (debug/profile).
+  // ignore: avoid-global-state, intentional process-wide diagnostics toggle
   static bool enableBuildLocalPathDiagnostics = false;
 
   PathNode({

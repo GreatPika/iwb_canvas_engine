@@ -124,7 +124,7 @@ bool _isExportOnlyUnit(String repoRelativePath) {
   return meaningfulLines.every((line) => line.startsWith('export '));
 }
 
-void main(List<String> args) {
+void main(List<String> _) {
   final cwd = Directory.current.path;
   // Declaration-only Dart units may not be emitted by VM lcov as SF records.
   // Keep this list minimal and limited to const/enum/interface/typedef files.
