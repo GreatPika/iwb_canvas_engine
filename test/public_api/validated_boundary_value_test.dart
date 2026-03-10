@@ -538,16 +538,175 @@ void main() {
   });
 
   group('scene data exception sanitation', () {
-    test('boundary factory preserves path and sanitized source', () {
+    test('boundary factory preserves path, details, and sanitized source', () {
       final error = SceneDataException.boundary(
         code: SceneDataErrorCode.invalidValue,
-        message: 'bad',
         path: 'layers[0].id',
+        details: const <String, Object?>{
+          'template': 'duplicateLayerId',
+          'opaque': <String, Object?>{'nested': 'ok'},
+        },
         source: 'x' * 400,
       );
 
       expect(error.path, 'layers[0].id');
+      expect(error.details['template'], 'duplicateLayerId');
+      expect(
+        error.message,
+        'Field layers[0].id must be unique across content layers.',
+      );
+      expect(() => error.details['later'] = true, throwsUnsupportedError);
       expect(error.source, isA<Map<String, Object?>>());
+    });
+
+    test('duplicate layer id uses dedicated code and stable details', () {
+      final error = SceneDataException.duplicateLayerId(
+        path: 'layers[1].id',
+        layerId: 'layer-dup',
+      );
+
+      expect(error.code, SceneDataErrorCode.duplicateLayerId);
+      expect(error.path, 'layers[1].id');
+      expect(error.details, const <String, Object?>{
+        'template': 'duplicateLayerId',
+      });
+      expect(
+        error.message,
+        'Field layers[1].id must be unique across content layers.',
+      );
+      expect(error.source, 'layer-dup');
+    });
+
+    test('message factories cover missing field and generic invalid json', () {
+      final missingField = SceneDataException.missingField(
+        path: 'layers[0].id',
+      );
+      final invalidJsonPayload = SceneDataException.invalidJsonPayload();
+      final genericPath = SceneDataException(
+        code: SceneDataErrorCode.invalidValue,
+        path: 'layers[0]',
+        details: const <String, Object?>{'template': 'unknown'},
+      );
+      final genericCode = SceneDataException(
+        code: SceneDataErrorCode.unsupportedSchemaVersion,
+      );
+      final duplicateNodeFallback = SceneDataException(
+        code: SceneDataErrorCode.duplicateNodeId,
+      );
+      final duplicateLayerFallback = SceneDataException(
+        code: SceneDataErrorCode.duplicateLayerId,
+      );
+      final outOfRangeFallback = SceneDataException(
+        code: SceneDataErrorCode.outOfRange,
+      );
+
+      expect(missingField.message, 'Missing required field layers[0].id.');
+      expect(invalidJsonPayload.message, 'Invalid scene JSON payload.');
+      expect(genericPath.message, 'Field layers[0] is invalid.');
+      expect(genericCode.message, 'Unsupported scene schema version.');
+      expect(
+        duplicateNodeFallback.message,
+        'Duplicate node id is not allowed.',
+      );
+      expect(
+        duplicateLayerFallback.message,
+        'Duplicate content layer id is not allowed.',
+      );
+      expect(outOfRangeFallback.message, 'Field value is out of range.');
+    });
+
+    test('details sanitization keeps immutable json-like previews', () {
+      final deepList = <Object?>[
+        <Object?>[
+          <Object?>[_ShortExampleSource()],
+        ],
+      ];
+      final error = SceneDataException(
+        code: SceneDataErrorCode.invalidValue,
+        details: <String, Object?>{
+          'longString': 'x' * 200,
+          'smallList': <Object?>[1, 'two'],
+          'largeList': List<int>.generate(20, (index) => index),
+          'largeMap': <Object?, Object?>{
+            for (var index = 0; index < 12; index++) 'k$index': index,
+          },
+          'iterable': Iterable<int>.generate(20, (index) => index),
+          'deepList': deepList,
+          'object': _ExampleSource(),
+        },
+      );
+
+      final longString = _requireValue<Map<String, Object?>>(
+        error.details['longString'] as Map<String, Object?>?,
+        'Expected long string preview.',
+      );
+      expect(longString['kind'], 'string');
+
+      expect(error.details['smallList'], <Object?>[1, 'two']);
+
+      final largeList = _requireValue<Map<String, Object?>>(
+        error.details['largeList'] as Map<String, Object?>?,
+        'Expected large list preview.',
+      );
+      expect(largeList['kind'], 'list');
+      expect(() => largeList['kind'] = 'changed', throwsUnsupportedError);
+      expect(
+        () => (largeList['preview'] as List<Object?>).add(99),
+        throwsUnsupportedError,
+      );
+
+      final largeMap = _requireValue<Map<String, Object?>>(
+        error.details['largeMap'] as Map<String, Object?>?,
+        'Expected large map preview.',
+      );
+      expect(largeMap['kind'], 'map');
+      expect(
+        () => (largeMap['preview'] as Map<String, Object?>)['later'] = true,
+        throwsUnsupportedError,
+      );
+
+      final iterable = _requireValue<Map<String, Object?>>(
+        error.details['iterable'] as Map<String, Object?>?,
+        'Expected iterable preview.',
+      );
+      expect(iterable['kind'], 'iterable');
+      expect(
+        () => (iterable['preview'] as List<Object?>).add(42),
+        throwsUnsupportedError,
+      );
+
+      final deepListPreview = _requireValue<List<Object?>>(
+        error.details['deepList'] as List<Object?>?,
+        'Expected deep list snapshot.',
+      );
+      expect(deepListPreview.single, isA<List<Object?>>());
+      final nestedPreview =
+          ((deepListPreview.single as List<Object?>).single as List<Object?>)
+              .single;
+      expect(nestedPreview, isA<Map<String, Object?>>());
+
+      final objectPreview = _requireValue<Map<String, Object?>>(
+        error.details['object'] as Map<String, Object?>?,
+        'Expected object preview.',
+      );
+      expect(objectPreview['kind'], 'object');
+      expect(() => error.details['later'] = true, throwsUnsupportedError);
+    });
+
+    test('message derivation uses raw details before diagnostics sanitization', () {
+      final longFieldName = 'x' * 200;
+      final error = SceneDataException(
+        code: SceneDataErrorCode.invalidFieldType,
+        path: 'layers[0].id',
+        details: <String, Object?>{
+          'template': 'fieldType',
+          'fieldName': longFieldName,
+          'expected': 'string',
+        },
+      );
+
+      expect(error.message, 'Field $longFieldName must be a string.');
+      expect(error.details['fieldName'], isA<Map<String, Object?>>());
     });
 
     test('copies small structured source values into immutable snapshots', () {

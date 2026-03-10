@@ -831,6 +831,10 @@ controller.
 - nested validation errors include a fully-qualified `SceneDataException.path`
 - root-level parse or schema failures may omit `path` when the boundary does
   not yet know a more specific field location
+- compare boundary-equivalent failures by `SceneDataException.code`,
+  `path`, and immutable `details`; `message` is derived user-facing text
+- `SceneDataException.source` remains a diagnostic/`FormatException`
+  compatibility field and is not part of cross-boundary parity
 - decode accepts a missing `backgroundLayer` field and canonicalizes it to an
   empty dedicated layer
 - decode/build boundaries expose a canonical single-background-layer contract;
@@ -848,30 +852,35 @@ controller.
 - for the same scene defect, `SceneBuilder.buildFromSnapshot(...)`,
   `SceneBuilder.buildFromJson(...)`, `decodeScene(...)`, `decodeSceneFromJson(...)`,
   and runtime scene canonicalization return the same deterministic
-  `SceneDataException.code`, `path`, and `message`
+  `SceneDataException.code`, `path`, and `details`
 - scene-level error contract:
   - duplicate node id:
     `code = SceneDataErrorCode.duplicateNodeId`,
-    `message = Must be unique across scene layers.`, and `path` points to the
+    `details = {'template': 'duplicateNodeId'}`, and `path` points to the
     repeated id field (`backgroundLayer.nodes[i].id` or
-    `layers[l].nodes[n].id`)
+    `layers[l].nodes[n].id`); `message` is derived as
+    `Must be unique across scene layers.`
   - duplicate content layer id:
-    `code = SceneDataErrorCode.invalidValue`,
-    `message = Field layers[i].id must be unique across content layers.`, and
-    `path = layers[i].id`
+    `code = SceneDataErrorCode.duplicateLayerId`,
+    `details = {'template': 'duplicateLayerId'}`, and `path = layers[i].id`;
+    `message` is derived as
+    `Field layers[i].id must be unique across content layers.`
   - scene-level numeric range violations:
     `code = SceneDataErrorCode.outOfRange`,
-    `message = Field <path> must be within [<min>, <max>].`, and `path`
-    points to the exact offending field
+    `details = {'template': 'outOfRange', 'min': <min>, 'max': <max>}`, and
+    `path` points to the exact offending field; `message` is derived as
+    `Field <path> must be within [<min>, <max>].`
   - content-layer count overflow:
     `code = SceneDataErrorCode.invalidValue`,
-    `message = Field layers must contain at most <limit> items.`, and
-    `path = layers`
+    `details = {'template': 'maxItems', 'maxItems': <limit>}`, and
+    `path = layers`; `message` is derived as
+    `Field layers must contain at most <limit> items.`
   - scene-wide node-count overflow:
     `code = SceneDataErrorCode.invalidValue`,
-    `message = Scene must contain at most <limit> nodes.`, and `path` is the
-    collection where overflow was observed (`backgroundLayer.nodes` or
-    `layers[i].nodes`)
+    `details = {'template': 'maxNodes', 'maxNodes': <limit>}`, and `path` is
+    the collection where overflow was observed (`backgroundLayer.nodes` or
+    `layers[i].nodes`); `message` is derived as
+    `Scene must contain at most <limit> nodes.`
 - when `SceneDataException.source` would otherwise capture mutable or oversized
   payloads, the boundary stores an immutable snapshot or sanitized preview
   instead of a live raw object
@@ -894,7 +903,7 @@ controller.
 | --- | --- | --- |
 | `ArgumentError` | The caller passed an invalid runtime argument. | `addNode` (including duplicate explicit `NodeSpec.id`), `patchNode`, transforms, numeric setters, invalid pointer settings |
 | `StateError` | The runtime contract was violated. | disposed controller calls, stale transaction handle, async `write(...)`, reentrant `handlePointer(...)`, invariant failures |
-| `SceneDataException` | Scene or JSON data is malformed. `source` preserves small scalar values, snapshots small structured payloads into immutable containers, and sanitizes oversized or opaque objects into previews. The constructor is not `const`. | `initialSnapshot`, `replaceScene`, `SceneBuilder`, `decodeScene*`, `encodeScene*` |
+| `SceneDataException` | Scene or JSON data is malformed. Stable machine-readable fields are `code`, `path`, and immutable `details`; `message` is derived user-facing text. `source` preserves small scalar values, snapshots small structured payloads into immutable containers, and sanitizes oversized or opaque objects into previews. The constructor is not `const`. | `initialSnapshot`, `replaceScene`, `SceneBuilder`, `decodeScene*`, `encodeScene*` |
 
 ## 13. Migration checklist for current integrations
 

@@ -346,8 +346,9 @@ void main() {
         predicate(
           (e) =>
               e is SceneDataException &&
-              e.code == SceneDataErrorCode.invalidValue &&
+              e.code == SceneDataErrorCode.duplicateLayerId &&
               e.path == 'layers[1].id' &&
+              e.details['template'] == 'duplicateLayerId' &&
               e.message ==
                   'Field layers[1].id must be unique across content layers.',
         ),
@@ -1140,8 +1141,9 @@ void main() {
         predicate(
           (e) =>
               e is SceneDataException &&
-              e.code == SceneDataErrorCode.invalidValue &&
+              e.code == SceneDataErrorCode.duplicateLayerId &&
               e.path == 'layers[1].id' &&
+              e.details['template'] == 'duplicateLayerId' &&
               e.message ==
                   'Field layers[1].id must be unique across content layers.',
         ),

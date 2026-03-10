@@ -140,11 +140,18 @@ void main() {
 
   test('SceneDataException implements FormatException shape', () {
     final error = SceneDataException(
-      code: SceneDataErrorCode.invalidValue,
-      message: 'bad',
+      code: SceneDataErrorCode.duplicateLayerId,
+      path: 'layers[0].id',
+      details: const <String, Object?>{'template': 'duplicateLayerId'},
       source: 'source',
     );
-    expect(error.message, 'bad');
+    expect(
+      error.message,
+      'Field layers[0].id must be unique across content layers.',
+    );
+    expect(error.details, const <String, Object?>{
+      'template': 'duplicateLayerId',
+    });
     expect(error.source, 'source');
     expect(error.offset, isNull);
     expect(error.toString(), contains('SceneDataException'));
@@ -210,7 +217,7 @@ void main() {
       );
 
       expect(fromBuilder.code, fromCodec.code);
-      expect(fromBuilder.message, fromCodec.message);
+      expect(fromBuilder.details, fromCodec.details);
       expect(fromBuilder.path, fromCodec.path);
       expect(fromBuilder.path, 'layers[0].nodes[0].align');
     },
@@ -248,7 +255,7 @@ void main() {
       );
 
       expect(fromBuilder.code, fromCodec.code);
-      expect(fromBuilder.message, fromCodec.message);
+      expect(fromBuilder.details, fromCodec.details);
       expect(fromBuilder.path, fromCodec.path);
       expect(fromBuilder.code, SceneDataErrorCode.invalidValue);
       expect(fromBuilder.path, 'layers[0].nodes');
@@ -280,7 +287,7 @@ void main() {
       );
 
       expect(fromBuilder.code, fromCodec.code);
-      expect(fromBuilder.message, fromCodec.message);
+      expect(fromBuilder.details, fromCodec.details);
       expect(fromBuilder.path, fromCodec.path);
       expect(fromBuilder.code, SceneDataErrorCode.invalidValue);
       expect(fromBuilder.path, 'layers');
@@ -330,7 +337,7 @@ void main() {
       );
 
       expect(fromBuilder.code, fromCodec.code);
-      expect(fromBuilder.message, fromCodec.message);
+      expect(fromBuilder.details, fromCodec.details);
       expect(fromBuilder.path, fromCodec.path);
       expect(fromBuilder.code, SceneDataErrorCode.invalidValue);
       expect(fromBuilder.path, 'layers[0].nodes');

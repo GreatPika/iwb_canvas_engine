@@ -167,12 +167,9 @@ void _validateContentLayerId(
   required Set<LayerId> seenLayerIds,
 }) {
   if (seenLayerIds.add(layerId)) return;
-  throw SceneDataException(
-    code: SceneDataErrorCode.invalidValue,
+  throw SceneDataException.duplicateLayerId(
     path: 'layers[$layerIndex].id',
-    message:
-        'Field layers[$layerIndex].id must be unique across content layers.',
-    source: layerId,
+    layerId: layerId,
   );
 }
 
@@ -182,12 +179,7 @@ void _validateNodeIdUniqueness(
   required Set<String> seenNodeIds,
 }) {
   if (seenNodeIds.add(nodeId)) return;
-  throw SceneDataException(
-    code: SceneDataErrorCode.duplicateNodeId,
-    path: path,
-    message: 'Must be unique across scene layers.',
-    source: nodeId,
-  );
+  throw SceneDataException.duplicateNodeId(path: path, nodeId: nodeId);
 }
 
 void _validateSceneRanges(SceneSnapshot snapshot) {
@@ -353,10 +345,10 @@ void _validateInRange(
   required String path,
 }) {
   if (value >= min && value <= max) return;
-  throw SceneDataException(
-    code: SceneDataErrorCode.outOfRange,
+  throw SceneDataException.outOfRange(
     path: path,
-    message: 'Field $path must be within [$min, $max].',
+    min: min,
+    max: max,
     source: value,
   );
 }

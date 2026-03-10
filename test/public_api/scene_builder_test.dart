@@ -154,7 +154,7 @@ void main() {
       );
 
       expect(fromBuilder.code, fromCodec.code);
-      expect(fromBuilder.message, fromCodec.message);
+      expect(fromBuilder.details, fromCodec.details);
       expect(fromBuilder.path, fromCodec.path);
       expect(fromBuilder.path, 'layers[0].nodes[0].align');
     },
@@ -183,7 +183,7 @@ void main() {
                 error is SceneDataException &&
                 error.code == SceneDataErrorCode.duplicateNodeId &&
                 error.path == 'backgroundLayer.nodes[1].id' &&
-                error.message == 'Must be unique across scene layers.',
+                error.details['template'] == 'duplicateNodeId',
           ),
         ),
       );
@@ -216,11 +216,13 @@ void main() {
       );
 
       expect(fromBuilder.code, fromCodec.code);
-      expect(fromBuilder.message, fromCodec.message);
+      expect(fromBuilder.details, fromCodec.details);
       expect(fromBuilder.path, fromCodec.path);
       expect(fromBuilder.code, SceneDataErrorCode.duplicateNodeId);
       expect(fromBuilder.path, 'backgroundLayer.nodes[1].id');
-      expect(fromBuilder.message, 'Must be unique across scene layers.');
+      expect(fromBuilder.details, const <String, Object?>{
+        'template': 'duplicateNodeId',
+      });
     },
   );
 }

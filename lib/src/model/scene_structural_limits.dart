@@ -5,11 +5,9 @@ void sceneRequireContentLayerLimit(int layerCount) {
   if (layerCount <= kMaxContentLayersPerScene) {
     return;
   }
-  throw SceneDataException(
-    code: SceneDataErrorCode.invalidValue,
+  throw SceneDataException.maxItems(
     path: 'layers',
-    message:
-        'Field layers must contain at most $kMaxContentLayersPerScene items.',
+    maxItems: kMaxContentLayersPerScene,
     source: layerCount,
   );
 }
@@ -22,10 +20,9 @@ int sceneConsumeNodeBudget({
   if (nextTotalNodeCount <= kMaxNodesPerScene) {
     return nextTotalNodeCount;
   }
-  throw SceneDataException(
-    code: SceneDataErrorCode.invalidValue,
+  throw SceneDataException.maxNodes(
     path: path,
-    message: 'Scene must contain at most $kMaxNodesPerScene nodes.',
+    maxNodes: kMaxNodesPerScene,
     source: nextTotalNodeCount,
   );
 }

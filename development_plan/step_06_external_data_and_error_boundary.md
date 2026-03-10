@@ -160,7 +160,7 @@ codec и builder.
 
 [ ] Переформулировать шаг `6` как umbrella-этап и вынести реализацию в `6.1`,
     `6.2`, `6.3`, `6.4`.
-[ ] В `6.1` зафиксировать `SceneDataException.details`, derived `message` и
+[x] В `6.1` зафиксировать `SceneDataException.details`, derived `message` и
     отдельный `duplicateLayerId` без повторного обсуждения scene-level owner-а.
 [ ] В `6.2` описать serialization-local guards, использующие primitives шага
     `6.1`, без нарушения layer DAG, второго sanitizer или нового codec

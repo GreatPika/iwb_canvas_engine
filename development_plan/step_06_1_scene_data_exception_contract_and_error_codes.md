@@ -49,39 +49,39 @@ scene-level дефектам, но публичный contract по-прежне
 
 ## Последовательность реализации (только действия)
 
-[ ] Расширить
+[x] Расширить
     [lib/src/contract/scene_data_exception.dart](/Users/blackpika/iwb_canvas_engine/lib/src/contract/scene_data_exception.dart)
     полем `details` и зафиксировать его immutable JSON-like форму.
-[ ] Ввести factory/template слой, который строит `message` из
+[x] Ввести factory/template слой, который строит `message` из
     `code/path/details`, чтобы boundary callers перестали собирать стабильные
     сообщения ad hoc.
-[ ] Добавить `SceneDataErrorCode.duplicateLayerId` и описать migration от
+[x] Добавить `SceneDataErrorCode.duplicateLayerId` и описать migration от
     текущего `invalidValue` для duplicate content layer id.
-[ ] Зафиксировать в docs, что `source` остаётся diagnostic/FormatException
+[x] Зафиксировать в docs, что `source` остаётся diagnostic/FormatException
     compatibility полем и не участвует в cross-boundary contract parity.
-[ ] Обновить `README.md`, `API_GUIDE.md`, `ARCHITECTURE.md`, `CHANGELOG.md`
+[x] Обновить `README.md`, `API_GUIDE.md`, `ARCHITECTURE.md`, `CHANGELOG.md`
     так, чтобы public contract ссылался на `code/path/details`, а не на
     обязательный exact `message`.
-[ ] Сузить message-based проверки в tests/docs до template-focused snapshot
+[x] Сузить message-based проверки в tests/docs до template-focused snapshot
     сценариев и не оставлять массовых контрактных сравнений по тексту.
 
 ## Критерии приёмки
 
-[ ] `SceneDataException` явно экспонирует stable contract
+[x] `SceneDataException` явно экспонирует stable contract
     `code/path/details`.
-[ ] `message` документирован как derived user-facing field, а не как primary
+[x] `message` документирован как derived user-facing field, а не как primary
     machine contract.
-[ ] `duplicateLayerId` имеет отдельную стабильную категорию ошибки.
-[ ] Sanitization/preview diagnostic payload-ов централизованы в
+[x] `duplicateLayerId` имеет отдельную стабильную категорию ошибки.
+[x] Sanitization/preview diagnostic payload-ов централизованы в
     `scene_data_exception.dart`, без parallel sanitizer-веток в других слоях.
-[ ] Публичные docs и контрактные tests больше не требуют exact `message` для
+[x] Публичные docs и контрактные tests больше не требуют exact `message` для
     доказательства эквивалентности дефекта между boundary.
 
 ## Тестовый контур шага
 
-[ ] `test/public_api/validated_boundary_value_test.dart`
-[ ] `test/serialization/scene_codec_validation_test.dart`
-[ ] Точечные сценарии:
+[x] `test/public_api/validated_boundary_value_test.dart`
+[x] `test/serialization/scene_codec_validation_test.dart`
+[x] Точечные сценарии:
     - `SceneDataException` keeps `FormatException` shape while exposing
       `details`
     - `duplicateLayerId` uses dedicated error code and stable details payload

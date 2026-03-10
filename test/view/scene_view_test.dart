@@ -62,6 +62,62 @@ SceneSnapshot _churnSnapshot({required int pairCount, required String prefix}) {
 }
 
 void main() {
+  testWidgets('debugSceneViewRenderCachesOf supports descendant contexts', (
+    tester,
+  ) async {
+    final controller = SceneControllerCore(
+      initialSnapshot: _snapshot(strokeY: 10, text: 'ctx'),
+    );
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 80,
+          height: 80,
+          child: SceneViewCore(
+            controller: controller,
+            imageResolver: (_) => null,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final descendantContext = tester.element(find.byType(CustomPaint));
+    final renderCaches = debugSceneViewRenderCachesOf(descendantContext);
+    final state = tester.state(find.byType(SceneViewCore)) as dynamic;
+
+    expect(renderCaches.staticLayerCache, same(state.debugStaticLayerCache));
+    expect(renderCaches.textLayoutCache, same(state.debugTextLayoutCache));
+    expect(renderCaches.strokePathCache, same(state.debugStrokePathCache));
+    expect(renderCaches.pathMetricsCache, same(state.debugPathMetricsCache));
+    expect(renderCaches.geometryCache, same(state.debugGeometryCache));
+  });
+
+  testWidgets('debugSceneViewRenderCachesOf throws without SceneViewCore', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(width: 40, height: 40),
+      ),
+    );
+
+    expect(
+      () => debugSceneViewRenderCachesOf(tester.element(find.byType(SizedBox))),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          'No SceneViewCore state found for the provided BuildContext.',
+        ),
+      ),
+    );
+  });
+
   testWidgets('SceneViewCore clears all render caches on epoch change', (
     tester,
   ) async {
@@ -216,10 +272,16 @@ void main() {
       expect(scenePainter.textLayoutCache, isA<SceneTextLayoutCache>());
       expect(scenePainter.strokePathCache, isA<SceneStrokePathCache>());
       expect(scenePainter.pathMetricsCache, isA<ScenePathMetricsCache>());
-      expect(renderCaches.staticLayerCache, same(scenePainter.staticLayerCache));
+      expect(
+        renderCaches.staticLayerCache,
+        same(scenePainter.staticLayerCache),
+      );
       expect(renderCaches.textLayoutCache, same(scenePainter.textLayoutCache));
       expect(renderCaches.strokePathCache, same(scenePainter.strokePathCache));
-      expect(renderCaches.pathMetricsCache, same(scenePainter.pathMetricsCache));
+      expect(
+        renderCaches.pathMetricsCache,
+        same(scenePainter.pathMetricsCache),
+      );
       expect(renderCaches.geometryCache, isA<RenderGeometryCache>());
       expect(scenePainter.imageResolver('missing'), isNull);
 

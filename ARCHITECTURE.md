@@ -177,7 +177,9 @@ most important architectural rules are:
   snapshot/spec/patch validation, and runtime scene validation.
 - Encode/decode/build boundaries sanitize oversized `SceneDataException.source`
   payloads into compact previews and snapshot small structured payloads into
-  immutable containers while preserving `code`, `message`, and `path`.
+  immutable containers while preserving stable `code`, `path`, and immutable
+  `details`; `message` is a derived user-facing rendering owned by
+  `scene_data_exception.dart`.
 - JSON payload limits are enforced to keep import cost bounded.
 - Guardrails cover both collection sizes (layers, nodes, points, palette item
   lists) and string lengths (for example node ids, layer ids, text/image ids,

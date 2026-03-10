@@ -9,6 +9,9 @@ All notable changes to `iwb_canvas_engine` are documented here.
 - `SceneDataErrorCode.multipleBackgroundLayers` was removed as an unreachable
   public contract branch. Integrations must stop matching this enum value and
   treat background-layer canonicalization as a single-layer boundary rule.
+- Duplicate content-layer ids now use the dedicated
+  `SceneDataErrorCode.duplicateLayerId` contract instead of
+  `SceneDataErrorCode.invalidValue`.
 - `SceneDataException(...)` is no longer `const`. The constructor now
   sanitizes `source` eagerly and may replace structured values with immutable
   snapshots or preview payloads.
@@ -24,9 +27,9 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 - Unified scene-level validation ownership under `ScenePolicy` so import,
   decode, and runtime scene canonicalization now report the same deterministic
-  `SceneDataException.code` / `path` / `message` for duplicate node ids,
-  duplicate content-layer ids, scene-wide count limits, and scene-level range
-  violations.
+  `SceneDataException.code` / `path` / `details` contract for duplicate node
+  ids, duplicate content-layer ids, scene-wide count limits, and scene-level
+  range violations; `message` is now documented as derived user-facing text.
 - Clarified step `5.1` `backgroundLayer` policy: mutable runtime `Scene`
   keeps `backgroundLayer` nullable, while snapshot/JSON boundaries continue to
   canonicalize it to a dedicated single layer.

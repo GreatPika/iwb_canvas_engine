@@ -26,6 +26,8 @@ storage.
 - JSON import/export with strict validation and canonicalization.
 - Bounded JSON import guardrails for layers/nodes/points/path data plus string
   and palette payload sizes.
+- Boundary failures expose stable `SceneDataException.code`, `path`, and
+  immutable `details`; `message` remains a derived human-readable summary.
 - Public validated boundary value types such as `NodeIdValue`,
   `LayerIdValue`, `ImageIdValue`, `FiniteOffsetValue`, and `OpacityValue` for
   pre-validating external inputs before snapshot/spec construction and for
@@ -122,6 +124,9 @@ class _CanvasScreenState extends State<CanvasScreen> {
   canonical generated-id parsing, and validated value types including
   `ImageIdValue` keep external payload checks aligned with import/build rules.
   See `API_GUIDE.md` for the full list.
+- For import/build/encode failures, compare `SceneDataException` instances by
+  `code` / `path` / `details`; treat `message` as user-facing text rather than
+  the primary machine contract.
 - `ensureLayer(...)` and `writeLayerEnsure(...)` are the supported APIs for
   explicit content-layer creation.
 - `write(...)` is synchronous-only. Returning a `Future` throws `StateError`.

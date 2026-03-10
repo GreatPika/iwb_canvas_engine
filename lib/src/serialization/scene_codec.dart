@@ -42,18 +42,16 @@ SceneSnapshot decodeSceneFromJson(String json) {
   try {
     final raw = jsonDecode(json);
     if (raw is! Map) {
-      throw SceneDataException(
-        code: SceneDataErrorCode.invalidJson,
-        message: 'Root JSON must be an object.',
-      );
+      throw SceneDataException.invalidJsonRoot(source: raw);
     }
     return decodeScene(Map<String, Object?>.from(raw));
   } on SceneDataException {
     rethrow;
   } on FormatException catch (error) {
-    throw SceneDataException(
+    throw SceneDataException.boundary(
       code: SceneDataErrorCode.invalidJson,
       message: error.message,
+      details: const <String, Object?>{'template': 'formatException'},
       source: error.source,
     );
   }

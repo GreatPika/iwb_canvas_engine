@@ -34,26 +34,20 @@ String validatedRequireJsonString(
   bool allowEmpty = true,
 }) {
   if (raw is! String) {
-    throw SceneDataException.boundary(
-      code: SceneDataErrorCode.invalidFieldType,
+    throw SceneDataException.invalidFieldType(
       path: path,
-      message: 'Field $fieldName must be a string.',
+      fieldName: fieldName,
+      expected: 'string',
       source: raw,
     );
   }
   if (!allowEmpty && raw.trim().isEmpty) {
-    throw SceneDataException.boundary(
-      code: SceneDataErrorCode.invalidValue,
-      path: path,
-      message: 'Field $path must not be empty.',
-      source: raw,
-    );
+    throw SceneDataException.fieldMustNotBeEmpty(path: path, source: raw);
   }
   if (maxLength != null && raw.length > maxLength) {
-    throw SceneDataException.boundary(
-      code: SceneDataErrorCode.invalidValue,
+    throw SceneDataException.fieldMaxLength(
       path: path,
-      message: 'Field $path length must be <= $maxLength characters.',
+      maxLength: maxLength,
       source: raw.length,
     );
   }
@@ -134,37 +128,37 @@ int validatedRequireJsonInt(
 }) {
   if (raw is int) {
     if (raw.abs() > validatedSafeIntegerMax) {
-      throw SceneDataException.boundary(
+      throw SceneDataException.fieldMustBeInt(
         code: SceneDataErrorCode.invalidValue,
         path: path,
-        message: 'Field $fieldName must be an int.',
+        fieldName: fieldName,
         source: raw,
       );
     }
     return _validateJsonRevisionValue(raw, path: path, allowZero: allowZero);
   }
   if (raw is! num) {
-    throw SceneDataException.boundary(
+    throw SceneDataException.fieldMustBeInt(
       code: SceneDataErrorCode.invalidFieldType,
       path: path,
-      message: 'Field $fieldName must be an int.',
+      fieldName: fieldName,
       source: raw,
     );
   }
   final asDouble = raw.toDouble();
   if (!asDouble.isFinite || asDouble.truncateToDouble() != asDouble) {
-    throw SceneDataException.boundary(
+    throw SceneDataException.fieldMustBeInt(
       code: SceneDataErrorCode.invalidFieldType,
       path: path,
-      message: 'Field $fieldName must be an int.',
+      fieldName: fieldName,
       source: raw,
     );
   }
   if (asDouble.abs() > validatedSafeIntegerMax) {
-    throw SceneDataException.boundary(
+    throw SceneDataException.fieldMustBeInt(
       code: SceneDataErrorCode.invalidValue,
       path: path,
-      message: 'Field $fieldName must be an int.',
+      fieldName: fieldName,
       source: raw,
     );
   }
@@ -182,12 +176,17 @@ int _validateJsonRevisionValue(
 }) {
   final minimum = allowZero ? 0 : 1;
   if (value < minimum) {
-    throw SceneDataException.boundary(
-      code: SceneDataErrorCode.invalidValue,
-      path: path,
-      message: 'Field $path must be ${allowZero ? '>= 0' : '> 0'}.',
-      source: value,
-    );
+    throw allowZero
+        ? SceneDataException.fieldMustBeAtLeast(
+            path: path,
+            limit: 0,
+            source: value,
+          )
+        : SceneDataException.fieldMustBeGreaterThan(
+            path: path,
+            limit: 0,
+            source: value,
+          );
   }
   return value;
 }
@@ -198,19 +197,18 @@ double validatedRequireJsonFiniteDouble(
   required String fieldName,
 }) {
   if (raw is! num) {
-    throw SceneDataException.boundary(
-      code: SceneDataErrorCode.invalidFieldType,
+    throw SceneDataException.invalidFieldType(
       path: path,
-      message: 'Field $fieldName must be a number.',
+      fieldName: fieldName,
+      expected: 'number',
       source: raw,
     );
   }
   final value = raw.toDouble();
   if (!value.isFinite) {
-    throw SceneDataException.boundary(
-      code: SceneDataErrorCode.invalidValue,
+    throw SceneDataException.fieldMustBeFinite(
       path: path,
-      message: 'Field $fieldName must be finite.',
+      fieldName: fieldName,
       source: raw,
     );
   }
@@ -228,10 +226,9 @@ double validatedRequireJsonNonNegativeFiniteDouble(
     fieldName: fieldName,
   );
   if (value < 0) {
-    throw SceneDataException.boundary(
-      code: SceneDataErrorCode.invalidValue,
+    throw SceneDataException.fieldMustBeAtLeast(
       path: path,
-      message: 'Field $path must be >= 0.',
+      limit: 0,
       source: value,
     );
   }
@@ -249,10 +246,9 @@ double validatedRequireJsonPositiveFiniteDouble(
     fieldName: fieldName,
   );
   if (value <= 0) {
-    throw SceneDataException.boundary(
-      code: SceneDataErrorCode.invalidValue,
+    throw SceneDataException.fieldMustBeGreaterThan(
       path: path,
-      message: 'Field $path must be > 0.',
+      limit: 0,
       source: value,
     );
   }

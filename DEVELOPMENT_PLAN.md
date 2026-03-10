@@ -33,7 +33,7 @@ language: russian
 - [x] [Шаг 5.5. Разрезать decode pipeline и убрать второй owner policy в JSON decode](development_plan/step_05_5_decode_pipeline_decomposition_and_policy_boundary.md)
 - [x] [Шаг 5.6. Разрезать giant validators и закрыть диагностические watchpoints шага 5](development_plan/step_05_6_validator_decomposition_and_metrics_closure.md)
 - [ ] [Шаг 6. Нормализовать внешнюю границу данных и ошибок через подшаги 6.1-6.4](development_plan/step_06_external_data_and_error_boundary.md)
-- [ ] [Шаг 6.1. Зафиксировать контракт `SceneDataException` и taxonomy error-codes](development_plan/step_06_1_scene_data_exception_contract_and_error_codes.md)
+- [x] [Шаг 6.1. Зафиксировать контракт `SceneDataException` и taxonomy error-codes](development_plan/step_06_1_scene_data_exception_contract_and_error_codes.md)
 - [ ] [Шаг 6.2. Ввести `codec_guards.dart` без нарушения layer DAG](development_plan/step_06_2_codec_guards_and_boundary_factory.md)
 - [ ] [Шаг 6.3. Перевести `SceneBuilder.buildFromJson(...)` на model-local boundary guard](development_plan/step_06_3_scene_builder_json_boundary_guard.md)
 - [ ] [Шаг 6.4. Довести `scene_codec.dart` до единого `code/path/details` boundary](development_plan/step_06_4_scene_codec_boundary_adoption_and_contract_matrix.md)

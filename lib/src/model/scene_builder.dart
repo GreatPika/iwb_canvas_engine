@@ -45,11 +45,7 @@ Scene sceneBuildFromJsonMap(Map<String, Object?> rawJson) {
   } on SceneDataException {
     rethrow;
   } catch (error) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidJson,
-      message: 'Invalid scene JSON payload.',
-      source: error,
-    );
+    throw SceneDataException.invalidJsonPayload(source: error);
   }
 }
 
