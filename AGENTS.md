@@ -39,7 +39,9 @@ app UI, product workflows, or backend logic.
 - Run and report the standard checks for code changes.
 - Use `dart format lib test example/lib example/test tool` when you need to
   apply formatting locally. Keep the required check below as the non-mutating
-  verification step.
+  verification step. `dart format --output=none --set-exit-if-changed ...`
+  must not write files, even though Dart may still print `Changed ...` for
+  files that would need formatting.
 - Run package and example tests via the MCP test runner.
 - MCP test runs do not generate `coverage/lcov.info`; use
   `flutter test --coverage --no-pub --exclude-tags=tool` before
@@ -64,7 +66,8 @@ app UI, product workflows, or backend logic.
 
 ## Required checks for code changes
 
-1. `dart format --output=none --set-exit-if-changed lib test example/lib example/test tool`
+1. Non-mutating formatting check:
+   `dart format --output=none --set-exit-if-changed lib test example/lib example/test tool`
 2. `dcm analyze .`
 3. `flutter analyze`
 4. `(cd example && flutter analyze lib test)`
@@ -72,7 +75,8 @@ app UI, product workflows, or backend logic.
    - `test/core`
    - `test/model test/serialization test/contract test/public_api test/entrypoints`
    - `test/controller/internal`
-   - `test/controller/core test/controller/commands test/controller/*.dart`
+   - `test/controller/core test/controller/commands` plus controller-root
+     `*_test.dart` files (the MCP runner does not expand shell globs)
    - `test/render test/view`
    - `test/interactive`
    - `example/test` with MCP root `example/`
