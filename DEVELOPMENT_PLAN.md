@@ -22,7 +22,7 @@ language: russian
 - [x] [Шаг 3.4. Выровнять ownership и allocation policy для collection payloads](development_plan/step_03_4_collection_payload_ownership_and_allocation_policy.md)
 - [ ] [Шаг 4. Закрыть public API contract alignment через подшаги 4.1-4.4](development_plan/step_04_public_api_contract_alignment.md)
 - [x] [Шаг 4.1. Зафиксировать public entrypoint и export surface](development_plan/step_04_1_public_entrypoint_and_export_surface_contract.md)
-- [ ] [Шаг 4.2. Уточнить контракт `SceneBuilder` и codec entrypoints](development_plan/step_04_2_scene_builder_and_codec_contract.md)
+- [x] [Шаг 4.2. Уточнить контракт `SceneBuilder` и codec entrypoints](development_plan/step_04_2_scene_builder_and_codec_contract.md)
 - [ ] [Шаг 4.3. Выровнять политику `TextAlign` на публичной границе и в сериализации](development_plan/step_04_3_text_align_boundary_and_serialization_policy.md)
 - [ ] [Шаг 4.4. Довести writer/controller contract до точной публичной семантики](development_plan/step_04_4_writer_return_types_and_transform_semantics.md)
 - [ ] [Шаг 5. Ввести единый `ScenePolicy`](development_plan/step_05_scene_policy.md)

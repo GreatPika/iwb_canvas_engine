@@ -115,6 +115,29 @@ void main() {
     expect(snapshot.backgroundLayer.nodes, isEmpty);
   });
 
+  test(
+    'SceneBuilder.buildFromJson matches decodeScene for the same payload',
+    () {
+      final raw = _minimalSceneJson();
+      raw['layers'] = <dynamic>[
+        <String, dynamic>{
+          'id': 'layer-0',
+          'nodes': <dynamic>[
+            _baseNodeJson(id: 'n1', type: 'rect')..addAll(<String, dynamic>{
+              'size': <String, dynamic>{'w': 1, 'h': 1},
+              'strokeWidth': 0,
+            }),
+          ],
+        },
+      ];
+
+      expect(
+        encodeScene(SceneBuilder.buildFromJson(raw)),
+        encodeScene(decodeScene(Map<String, dynamic>.from(raw))),
+      );
+    },
+  );
+
   test('SceneDataException implements FormatException shape', () {
     final error = SceneDataException(
       code: SceneDataErrorCode.invalidValue,
@@ -134,6 +157,8 @@ void main() {
         predicate(
           (e) =>
               e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidJson &&
+              e.path == null &&
               e.message == 'Root JSON must be an object.',
         ),
       ),
@@ -141,8 +166,55 @@ void main() {
   });
 
   test('decodeSceneFromJson wraps JSON parse failures', () {
-    expect(() => decodeSceneFromJson('{'), throwsA(isA<SceneDataException>()));
+    expect(
+      () => decodeSceneFromJson('{'),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidJson &&
+              e.path == null,
+        ),
+      ),
+    );
   });
+
+  test(
+    'SceneBuilder.buildFromJson and decodeScene report matching nested validation diagnostics',
+    () {
+      final invalidAlignJson = _baseNodeJson(id: 't2', type: 'text')
+        ..addAll(<String, dynamic>{
+          'text': 'Hello',
+          'size': <String, dynamic>{'w': 10, 'h': 10},
+          'fontSize': 12,
+          'color': '#FF000000',
+          'align': 'diagonal',
+          'isBold': false,
+          'isItalic': false,
+          'isUnderline': false,
+        });
+      final raw = _sceneWithSingleNode(invalidAlignJson);
+
+      SceneDataException capture(void Function() callback) {
+        try {
+          callback();
+          fail('Expected SceneDataException');
+        } on SceneDataException catch (error) {
+          return error;
+        }
+      }
+
+      final fromBuilder = capture(() => SceneBuilder.buildFromJson(raw));
+      final fromCodec = capture(
+        () => decodeScene(Map<String, dynamic>.from(raw)),
+      );
+
+      expect(fromBuilder.code, fromCodec.code);
+      expect(fromBuilder.message, fromCodec.message);
+      expect(fromBuilder.path, fromCodec.path);
+      expect(fromBuilder.path, 'layers[0].nodes[0].align');
+    },
+  );
 
   test('decodeScene canonicalizes missing background layer', () {
     // INV:INV-SER-TYPED-LAYER-SPLIT

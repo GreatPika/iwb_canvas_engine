@@ -56,6 +56,39 @@ Map<String, Object?> _minimalSceneJson() {
   };
 }
 
+Map<String, Object?> _textNodeJson({
+  required String id,
+  required String align,
+}) {
+  return <String, Object?>{
+    'id': id,
+    'type': 'text',
+    'transform': <String, Object?>{
+      'a': 1,
+      'b': 0,
+      'c': 0,
+      'd': 1,
+      'tx': 0,
+      'ty': 0,
+    },
+    'hitPadding': 0,
+    'opacity': 1,
+    'isVisible': true,
+    'isSelectable': true,
+    'isLocked': false,
+    'isDeletable': true,
+    'isTransformable': true,
+    'text': 'hello',
+    'size': <String, Object?>{'w': 10, 'h': 10},
+    'fontSize': 12,
+    'color': '#FF000000',
+    'align': align,
+    'isBold': false,
+    'isItalic': false,
+    'isUnderline': false,
+  };
+}
+
 void main() {
   test('SceneBuilder.buildFromSnapshot keeps typed background layer', () {
     final result = SceneBuilder.buildFromSnapshot(
@@ -82,4 +115,78 @@ void main() {
     expect(result.backgroundLayer.nodes.single.id, 'bg');
     expect(result.layers.single.nodes.single.id, 'n1');
   });
+
+  test(
+    'SceneBuilder.buildFromJson matches decodeScene for the same payload',
+    () {
+      final raw = _minimalSceneJson();
+
+      expect(
+        encodeScene(SceneBuilder.buildFromJson(raw)),
+        encodeScene(decodeScene(Map<String, dynamic>.from(raw))),
+      );
+    },
+  );
+
+  test(
+    'SceneBuilder.buildFromJson surfaces the same path-aware diagnostics as decodeScene',
+    () {
+      final raw = _minimalSceneJson();
+      raw['layers'] = <Object?>[
+        <String, Object?>{
+          'id': 'layer-0',
+          'nodes': <Object?>[_textNodeJson(id: 't1', align: 'diagonal')],
+        },
+      ];
+
+      SceneDataException capture(Object Function() callback) {
+        try {
+          callback();
+          fail('Expected SceneDataException');
+        } on SceneDataException catch (error) {
+          return error;
+        }
+      }
+
+      final fromBuilder = capture(() => SceneBuilder.buildFromJson(raw));
+      final fromCodec = capture(
+        () => decodeScene(Map<String, dynamic>.from(raw)),
+      );
+
+      expect(fromBuilder.code, fromCodec.code);
+      expect(fromBuilder.message, fromCodec.message);
+      expect(fromBuilder.path, fromCodec.path);
+      expect(fromBuilder.path, 'layers[0].nodes[0].align');
+    },
+  );
+
+  test(
+    'SceneBuilder.buildFromSnapshot reports path-aware duplicate-id failures',
+    () {
+      final snapshot = SceneSnapshot(
+        backgroundLayer: BackgroundLayerSnapshot(
+          nodes: <NodeSnapshot>[
+            RectNodeSnapshot(id: 'dup-bg', size: const Size(1, 1)),
+            RectNodeSnapshot(id: 'dup-bg', size: const Size(2, 2)),
+          ],
+        ),
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(id: 'layer-auto-0'),
+        ],
+      );
+
+      expect(
+        () => SceneBuilder.buildFromSnapshot(snapshot),
+        throwsA(
+          predicate(
+            (error) =>
+                error is SceneDataException &&
+                error.code == SceneDataErrorCode.duplicateNodeId &&
+                error.path == 'backgroundLayer.nodes[1].id' &&
+                error.message == 'Must be unique across scene layers.',
+          ),
+        ),
+      );
+    },
+  );
 }

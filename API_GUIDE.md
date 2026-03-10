@@ -793,7 +793,8 @@ Validation rules:
 
 ### 11.2 `SceneBuilder`
 
-`SceneBuilder` is the unified import and canonicalization helper:
+`SceneBuilder` is the public import and canonicalization gateway for callers
+that already have typed snapshots or parsed JSON maps:
 
 - `SceneSnapshot buildFromSnapshot(SceneSnapshot raw)`
 - `SceneSnapshot buildFromJson(Map<String, dynamic> rawJson)`
@@ -801,11 +802,23 @@ Validation rules:
 Use it when you want validation and canonicalization without going through a
 controller.
 
-Both methods throw `SceneDataException` when the input violates schema or
-boundary validation rules.
+- `buildFromSnapshot(...)` is the typed-snapshot import path.
+- `buildFromJson(...)` is the parsed-map import path and reuses the same import
+  boundary as `decodeScene(...)`, but skips JSON string parsing.
+- both methods throw `SceneDataException` when the input violates schema or
+  boundary validation rules
+- nested validation failures include `SceneDataException.path` when the
+  boundary can identify the exact field location
 
 ### 11.3 Decode and import guarantees
 
+- `decodeSceneFromJson(...)` is the string-JSON boundary:
+  - it always throws `SceneDataException` for public decode failures
+  - JSON parse failures and non-object root values use
+    `SceneDataErrorCode.invalidJson`
+- `decodeScene(...)` is the parsed-map boundary:
+  - it throws `SceneDataException` for schema and nested import validation
+    failures
 - nested validation errors include a fully-qualified `SceneDataException.path`
 - root-level parse or schema failures may omit `path` when the boundary does
   not yet know a more specific field location

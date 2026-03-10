@@ -19,6 +19,8 @@ const Set<int> schemaVersionsRead = sceneSchemaVersionsRead;
 
 /// Encodes [snapshot] to a JSON string after validation and canonicalization.
 ///
+/// This is the string-producing serialization gateway on the public boundary.
+///
 /// Throws [SceneDataException] when [snapshot] violates the public scene
 /// contract.
 String encodeSceneToJson(SceneSnapshot snapshot) {
@@ -29,9 +31,13 @@ String encodeSceneToJson(SceneSnapshot snapshot) {
 ///
 /// Only schema versions listed in [schemaVersionsRead] are accepted.
 ///
-/// Throws [SceneDataException] when the JSON cannot be parsed, the root value
-/// is not an object, the schema version is unsupported, or import validation
-/// fails.
+/// Throws [SceneDataException] for all public decode failures.
+///
+/// JSON parse failures and non-object root values are reported with
+/// [SceneDataErrorCode.invalidJson]. More specific schema and nested import
+/// validation failures are delegated to [decodeScene]. Root-level failures may
+/// omit [SceneDataException.path] when the boundary does not yet know a more
+/// specific field location.
 SceneSnapshot decodeSceneFromJson(String json) {
   try {
     final raw = jsonDecode(json);
@@ -55,6 +61,8 @@ SceneSnapshot decodeSceneFromJson(String json) {
 
 /// Encodes [snapshot] into a canonical JSON-serializable map.
 ///
+/// This is the parsed-map serialization gateway on the public boundary.
+///
 /// Throws [SceneDataException] when [snapshot] violates the public scene
 /// contract.
 Map<String, dynamic> encodeScene(SceneSnapshot snapshot) {
@@ -64,13 +72,15 @@ Map<String, dynamic> encodeScene(SceneSnapshot snapshot) {
   return _encodeSnapshot(canonicalSnapshot);
 }
 
-/// Decodes a [SceneSnapshot] from a JSON map (already parsed).
+/// Decodes a [SceneSnapshot] from a parsed JSON map.
 ///
 /// Only schema versions listed in [schemaVersionsRead] are accepted.
 ///
-/// Throws [SceneDataException] when schema or nested field validation fails.
+/// Throws [SceneDataException] when schema or import validation fails.
 /// Nested boundary failures include [SceneDataException.path] when the decode
-/// boundary knows the exact field location.
+/// boundary knows the exact field location. Root-level failures may omit
+/// [SceneDataException.path] when the boundary cannot attribute a more
+/// specific field.
 SceneSnapshot decodeScene(Map<String, dynamic> json) {
   final sceneDoc = decodeSceneDocument(Map<String, Object?>.from(json));
   return txnSceneToSnapshot(sceneDoc);

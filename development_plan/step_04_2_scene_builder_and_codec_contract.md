@@ -46,21 +46,21 @@ language: russian
 
 ### `lib/src/model/scene_builder_api.dart`
 
-[ ] Уточнить doc comments для `buildFromSnapshot(...)` и `buildFromJson(...)`.
-[ ] Явно зафиксировать, что эти entrypoints выполняют validation и canonicalization.
-[ ] Явно описать `SceneDataException` как ожидаемый failure contract для malformed input.
-[ ] Если между raw snapshot import и raw JSON import остаются разные пути validation/canonicalization/diagnostics, описать это различие явно, а не оставлять его скрытой деталью реализации.
+[x] Уточнить doc comments для `buildFromSnapshot(...)` и `buildFromJson(...)`.
+[x] Явно зафиксировать, что эти entrypoints выполняют validation и canonicalization.
+[x] Явно описать `SceneDataException` как ожидаемый failure contract для malformed input.
+[x] Если между raw snapshot import и raw JSON import остаются разные пути validation/canonicalization/diagnostics, описать это различие явно, а не оставлять его скрытой деталью реализации.
 
 ### `lib/src/serialization/scene_codec.dart`
 
-[ ] Уточнить doc comments для `encodeSceneToJson(...)`, `decodeSceneFromJson(...)`, `encodeScene(...)` и `decodeScene(...)`.
-[ ] Зафиксировать фактический `throws`-контракт через `SceneDataException`.
-[ ] Зафиксировать, где boundary гарантирует заполненный `path`, а где root-level failures допустимо обходятся без него.
+[x] Уточнить doc comments для `encodeSceneToJson(...)`, `decodeSceneFromJson(...)`, `encodeScene(...)` и `decodeScene(...)`.
+[x] Зафиксировать фактический `throws`-контракт через `SceneDataException`.
+[x] Зафиксировать, где boundary гарантирует заполненный `path`, а где root-level failures допустимо обходятся без него.
 
 ### `API_GUIDE.md`
 
-[ ] Синхронизировать описание `SceneBuilder` и serialization boundary с реальным поведением.
-[ ] Не обещать более сильные гарантии по `path`, чем реально даёт код.
+[x] Синхронизировать описание `SceneBuilder` и serialization boundary с реальным поведением.
+[x] Не обещать более сильные гарантии по `path`, чем реально даёт код.
 
 ## Конкретизация внедрения по порядку
 
@@ -71,14 +71,14 @@ language: russian
 
 ## Критерии приемки
 
-[ ] `SceneBuilder.buildFromSnapshot(...)` и `SceneBuilder.buildFromJson(...)` описаны как public import/canonicalization gateway.
-[ ] `decodeSceneFromJson(...)` явно документирует wrapping JSON parse failures в `SceneDataException` с `invalidJson`.
-[ ] `encodeScene*` и `decodeScene*` имеют точный публичный `throws`-контракт, совпадающий с кодом.
-[ ] Гарантия по `SceneDataException.path` сформулирована точно и не расходится с фактическим поведением boundary.
-[ ] Различие между snapshot-import и JSON-import path либо задокументировано явно, либо подтверждено, что внешне они образуют один и тот же contract surface.
+[x] `SceneBuilder.buildFromSnapshot(...)` и `SceneBuilder.buildFromJson(...)` описаны как public import/canonicalization gateway.
+[x] `decodeSceneFromJson(...)` явно документирует wrapping JSON parse failures в `SceneDataException` с `invalidJson`.
+[x] `encodeScene*` и `decodeScene*` имеют точный публичный `throws`-контракт, совпадающий с кодом.
+[x] Гарантия по `SceneDataException.path` сформулирована точно и не расходится с фактическим поведением boundary.
+[x] Различие между snapshot-import и JSON-import path либо задокументировано явно, либо подтверждено, что внешне они образуют один и тот же contract surface.
 
 ## Тестовый контур
 
-[ ] `test/public_api/scene_builder_test.dart`
-[ ] `test/serialization/scene_test.dart`
-[ ] `test/serialization/scene_codec_validation_test.dart`
+[x] `test/public_api/scene_builder_test.dart`
+[x] `test/serialization/scene_test.dart`
+[x] `test/serialization/scene_codec_validation_test.dart`
