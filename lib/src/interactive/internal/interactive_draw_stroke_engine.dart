@@ -7,6 +7,7 @@ import '../../core/interaction_types.dart';
 import '../../core/scene_limits.dart';
 import '../../contract/snapshot.dart';
 import 'interactive_geometry.dart';
+import 'interactive_draw_line_engine.dart' show InteractiveDrawStyle;
 
 class InteractiveDrawStrokeEngineCallbacks {
   const InteractiveDrawStrokeEngineCallbacks({
@@ -75,11 +76,7 @@ class InteractiveDrawStrokeEngine {
   void commitOnUp(
     int timestampMs,
     Offset scenePoint, {
-    required DrawTool drawTool,
-    required Color drawColor,
-    required double penThickness,
-    required double highlighterThickness,
-    required double highlighterOpacity,
+    required InteractiveDrawStyle style,
   }) {
     if (_activeStrokePoints.isEmpty) return;
     if (isDistanceGreaterThan(_activeStrokePoints.last, scenePoint, 0)) {
@@ -90,27 +87,25 @@ class InteractiveDrawStrokeEngine {
       _activeStrokePoints,
       limit: kMaxStrokePointsPerNode,
     );
+    final isHighlighter = style.drawTool == DrawTool.highlighter;
+    final thickness = isHighlighter
+        ? style.highlighterThickness
+        : style.penThickness;
     final strokeId = callbacks.writeDrawStroke(
       points: committedPoints,
-      thickness: drawTool == DrawTool.highlighter
-          ? highlighterThickness
-          : penThickness,
-      color: drawColor,
-      opacity: drawTool == DrawTool.highlighter ? highlighterOpacity : 1,
+      thickness: thickness,
+      color: style.drawColor,
+      opacity: isHighlighter ? style.highlighterOpacity : 1,
     );
 
     callbacks.emitAction(
-      drawTool == DrawTool.highlighter
-          ? ActionType.drawHighlighter
-          : ActionType.drawStroke,
+      isHighlighter ? ActionType.drawHighlighter : ActionType.drawStroke,
       <NodeId>[strokeId],
       timestampMs,
       payload: <String, Object?>{
-        'tool': drawTool.name,
-        'color': drawColor.toARGB32(),
-        'thickness': drawTool == DrawTool.highlighter
-            ? highlighterThickness
-            : penThickness,
+        'tool': style.drawTool.name,
+        'color': style.drawColor.toARGB32(),
+        'thickness': thickness,
       },
     );
 

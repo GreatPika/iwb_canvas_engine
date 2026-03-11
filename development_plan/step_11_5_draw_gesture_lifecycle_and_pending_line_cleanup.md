@@ -13,9 +13,10 @@ language: russian
 - держать cleanup pending line и timer-а в нескольких местах;
 - смешивать draw lifecycle и delete admissibility.
 
-Задача подшага: перевести draw-side lifecycle на controller-owned gesture
-machine из `11.2`, привязать eraser delete admissibility к policy owner-у из
-`11.3` и замкнуть draw-local reset contract так, чтобы:
+Задача подшага: довести уже начатое в `11.2` draw-side adoption
+controller-owned gesture machine до полного draw-local owner contract-а,
+привязать eraser delete admissibility к policy owner-у из `11.3` и замкнуть
+draw-local reset contract так, чтобы:
 
 - pending line;
 - pending timer;
@@ -33,7 +34,8 @@ boundary call sites.
 ## Что уже подтверждено по текущему состоянию
 
 1. [interactive_draw_coordinator.dart](/Users/blackpika/iwb_canvas_engine/lib/src/interactive/internal/interactive_draw_coordinator.dart)
-   сейчас сам хранит `_activePointerId`.
+   уже не хранит pointer owner state после `11.2`, но всё ещё держит draw-local
+   cancel/reset path, который не сведён к одному owner contract-у.
 2. `cancel` path там же очищает pending line и reset-ит draw state локально,
    не будучи привязанным к одному draw-side owner contract-у.
 3. [interactive_draw_line_engine.dart](/Users/blackpika/iwb_canvas_engine/lib/src/interactive/internal/interactive_draw_line_engine.dart)
@@ -94,7 +96,7 @@ boundary call sites.
 ## Граница шага
 
 - In:
-  - draw-side adoption controller-owned lifecycle;
+  - closure draw-side adoption controller-owned lifecycle;
   - draw-local смысл normalized `cancel` для active и idle pending-line state;
   - erase/delete admissibility;
   - pending-line owner contract;
@@ -109,10 +111,11 @@ boundary call sites.
 
 ## Точная реализация, которую должен описывать код
 
-1. `InteractiveDrawCoordinator` больше не фильтрует pointer events по
-   собственному `_activePointerId`.
-2. Draw lifecycle dispatch использует controller-approved owner context из
-   `11.2`.
+1. `InteractiveDrawCoordinator` не владеет pointer identity и не принимает
+   owner decision локально; этот contract остаётся у gesture-machine из `11.2`.
+2. Draw lifecycle dispatch продолжает использовать controller-approved owner
+   context из `11.2`, а этот подшаг не возвращает pointer ownership обратно в
+   coordinator или engine-ы.
 3. `InteractiveDrawLineEngine` получает один owner-level reset API, который:
    - очищает active preview;
    - очищает pending line;
@@ -132,41 +135,43 @@ boundary call sites.
 
 ## Последовательность реализации (только действия)
 
-[ ] Перевести draw coordinator на controller-approved lifecycle callbacks.
-[ ] Явно зафиксировать draw-local semantics для idle pending-line abort и stray
+[x] Зафиксировать в коде и тексте шага, что draw coordinator уже живёт на
+    controller-approved lifecycle callbacks из `11.2`, и не возвращать в него
+    pointer ownership.
+[x] Явно зафиксировать draw-local semantics для idle pending-line abort и stray
     normalized terminal input.
-[ ] Замкнуть forced reset на один draw-side owner cleanup contract.
-[ ] Удалить compatibility cleanup и ad hoc `clearPendingLine()` обходы вне
+[x] Замкнуть forced reset на один draw-side owner cleanup contract.
+[x] Удалить compatibility cleanup и ad hoc `clearPendingLine()` обходы вне
     owner contract.
-[ ] Перевести eraser delete admissibility на `canDelete(...)`.
-[ ] Зафиксировать, что forced reset не оставляет pending line и preview leaks.
-[ ] Разрезать `_handleUp(...)`, `_eraserHitsLine(...)` и
+[x] Перевести eraser delete admissibility на `canDelete(...)`.
+[x] Зафиксировать, что forced reset не оставляет pending line и preview leaks.
+[x] Разрезать `_handleUp(...)`, `_eraserHitsLine(...)` и
     `_eraserHitsStroke(...)`, если это требуется для закрытия metric gate.
-[ ] Не менять erase geometry semantics сверх behavior-preserving decomposition.
+[x] Не менять erase geometry semantics сверх behavior-preserving decomposition.
 
 ## Критерии приёмки
 
-[ ] Draw-side lifecycle больше не владеет pointer identity отдельно от
+[x] Draw-side lifecycle не возвращает pointer identity ownership отдельно от
     controller gesture-machine.
-[ ] `cancel` и forced reset используют один draw-side owner contract.
-[ ] Explicit abort pending-line state и stray normalized terminal input
+[x] `cancel` и forced reset используют один draw-side owner contract.
+[x] Explicit abort pending-line state и stray normalized terminal input
     используют явно описанный draw-local contract вместо скрытой логики в
     `11.1`/`11.2`.
-[ ] Pending line, pending timer и active line preview очищаются на
+[x] Pending line, pending timer и active line preview очищаются на
     `replaceScene(...)`, `setCameraOffset(...)`, mode/tool change и `dispose()`
     через один owner contract без controller-side compatibility cleanup.
-[ ] Eraser delete admissibility использует shared policy owner.
-[ ] Параллельный не-владеющий pointer не может сбросить чужой draw gesture.
-[ ] Trigger forced reset-а остаётся ownership `11.2`, а этот подшаг владеет
+[x] Eraser delete admissibility использует shared policy owner.
+[x] Параллельный не-владеющий pointer не может сбросить чужой draw gesture.
+[x] Trigger forced reset-а остаётся ownership `11.2`, а этот подшаг владеет
     только draw-local cleanup owner-ом по этому trigger.
-[ ] `InteractiveDrawCoordinator._handleUp(...)`,
+[x] `InteractiveDrawCoordinator._handleUp(...)`,
     `InteractiveDrawEraserEngine._eraserHitsLine(...)` и
     `InteractiveDrawEraserEngine._eraserHitsStroke(...)` перестают быть
     `HIGH`/`VERY HIGH` по `cyclomatic-complexity`,
     `maximum-nesting-level` и `source-lines-of-code`.
-[ ] После завершения шага controller boundary methods больше не содержат
+[x] После завершения шага controller boundary methods больше не содержат
     временный compatibility cleanup, который был допустим в `11.2`.
-[ ] Повторная диагностика
+[x] Повторная диагностика
     `dcm calculate-metrics lib/src/interactive/internal/interactive_draw_coordinator.dart lib/src/interactive/internal/interactive_draw_line_engine.dart lib/src/interactive/internal/interactive_draw_eraser_engine.dart --report-all`
     приложена к результату шага; новые или step-owned methods не содержат
     `HIGH`/`VERY HIGH` по `cyclomatic-complexity`,
@@ -175,19 +180,19 @@ boundary call sites.
 
 ## Тестовый контур шага
 
-[ ] `test/interactive/core/scene_controller_interactive_line_pending_cancel_test.dart`
+[x] `test/interactive/core/scene_controller_interactive_line_pending_cancel_test.dart`
     с покрытием:
     - pending line не переживает forced reset
     - explicit abort idle pending-line state имеет явный draw-local contract
     - stray normalized terminal input не ломает draw-local contract
-[ ] `test/interactive/core/interactive_draw_eraser_engine_test.dart`
+[x] `test/interactive/core/interactive_draw_eraser_engine_test.dart`
     с покрытием:
     - erase admission использует `canDelete(...)`
     - `_eraserHitsLine(...)` и `_eraserHitsStroke(...)` после разреза сохраняют
       hit correctness
-[ ] `test/interactive/core/scene_controller_interactive_guardrails_line_test.dart`
+[x] `test/interactive/core/scene_controller_interactive_guardrails_line_test.dart`
     как boundary-check line lifecycle после удаления compatibility cleanup
-[ ] `test/interactive/core/scene_controller_interactive_guardrails_eraser_lifecycle_test.dart`
+[x] `test/interactive/core/scene_controller_interactive_guardrails_eraser_lifecycle_test.dart`
     с покрытием delete admissibility и forced reset
-[ ] `test/interactive/core/scene_controller_interactive_single_pointer_policy_test.dart`
+[x] `test/interactive/core/scene_controller_interactive_single_pointer_policy_test.dart`
     с draw-side case для не-владеющего pointer-а

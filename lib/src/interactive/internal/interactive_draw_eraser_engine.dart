@@ -8,7 +8,16 @@ import '../../core/nodes.dart' show LineNode, SceneNode, StrokeNode;
 import '../../core/scene_limits.dart';
 import '../../core/scene_spatial_index.dart';
 import '../../contract/snapshot.dart';
+import '../../contract/transform2d.dart';
+import '../interaction_eligibility_policy.dart'
+    as interaction_eligibility_policy;
 import 'interactive_geometry.dart';
+
+typedef _ProjectedEraser = ({
+  List<Offset> points,
+  double threshold,
+  double thresholdSquared,
+});
 
 class InteractiveDrawEraserEngineCallbacks {
   const InteractiveDrawEraserEngineCallbacks({
@@ -112,10 +121,8 @@ class InteractiveDrawEraserEngine {
 
     final ids = <NodeId>[];
     for (final candidate in candidates) {
-      final node = callbacks.resolveSpatialCandidateNode(candidate);
+      final node = _resolveDeletableDrawableNode(candidate);
       if (node == null) continue;
-      if (node is! StrokeNode && node is! LineNode) continue;
-      if (!node.isDeletable) continue;
       if (!_eraserHitsNode(
         eraserPoints,
         node,
@@ -132,6 +139,14 @@ class InteractiveDrawEraserEngine {
     if (removedCount <= 0) return const <NodeId>[];
 
     return ids;
+  }
+
+  SceneNode? _resolveDeletableDrawableNode(SceneSpatialCandidate candidate) {
+    final node = callbacks.resolveSpatialCandidateNode(candidate);
+    if (node == null) return null;
+    if (node is! StrokeNode && node is! LineNode) return null;
+    if (!interaction_eligibility_policy.canDeleteSceneNode(node)) return null;
+    return node;
   }
 
   List<SceneSpatialCandidate> _queryEraserCandidates(
@@ -205,55 +220,56 @@ class InteractiveDrawEraserEngine {
     LineNode line, {
     required double eraserThickness,
   }) {
-    final inverse = line.transform.invert();
-    if (inverse == null) {
-      final eraserBounds = _eraserBoundsInWorld(eraserPoints);
-      return rectsCanBeWithinDistance(
-        eraserBounds,
-        line.boundsWorld,
-        eraserThickness / 2,
+    final projected = _projectEraserToLocal(
+      eraserPoints,
+      transform: line.transform,
+      nodeThickness: line.thickness,
+      eraserThickness: eraserThickness,
+    );
+    if (projected == null) {
+      return _fallbackWorldBoundsHit(
+        eraserPoints,
+        boundsWorld: line.boundsWorld,
+        eraserThickness: eraserThickness,
       );
     }
+    if (_singleLocalPointHitsLine(projected, line)) return true;
+    return _localEraserSegmentsHitLine(projected, line);
+  }
 
-    final localEraserPoints = eraserPoints
-        .map(inverse.applyToPoint)
-        .toList(growable: false);
-    final sigmaMax = maxSingularValue2x2(
-      inverse.a,
-      inverse.b,
-      inverse.c,
-      inverse.d,
-    );
-    final threshold = line.thickness / 2 + (eraserThickness / 2) * sigmaMax;
-    final thresholdSquared = threshold * threshold;
+  bool _singleLocalPointHitsLine(_ProjectedEraser projected, LineNode line) {
+    if (projected.points.length != 1) return false;
+    return distanceSquaredPointToSegment(
+          projected.points.first,
+          line.start,
+          line.end,
+        ) <=
+        projected.thresholdSquared;
+  }
 
-    if (localEraserPoints.length == 1) {
-      return distanceSquaredPointToSegment(
-            localEraserPoints.first,
-            line.start,
-            line.end,
-          ) <=
-          thresholdSquared;
-    }
-
+  bool _localEraserSegmentsHitLine(_ProjectedEraser projected, LineNode line) {
     final lineBounds = Rect.fromPoints(line.start, line.end);
     final eraserBatches = buildSegmentBatches(
-      localEraserPoints,
+      projected.points,
       batchSize: _eraserHitBatchSegments,
     );
     for (final batch in eraserBatches) {
-      if (!rectsCanBeWithinDistance(batch.bounds, lineBounds, threshold)) {
+      if (!rectsCanBeWithinDistance(
+        batch.bounds,
+        lineBounds,
+        projected.threshold,
+      )) {
         continue;
       }
       for (var i = batch.startSegment; i < batch.endSegmentExclusive; i++) {
         _debugEraserPreciseSegmentChecks = _debugEraserPreciseSegmentChecks + 1;
         if (distanceSquaredSegmentToSegment(
-              localEraserPoints[i],
-              localEraserPoints[i + 1],
+              projected.points[i],
+              projected.points[i + 1],
               line.start,
               line.end,
             ) <=
-            thresholdSquared) {
+            projected.thresholdSquared) {
           return true;
         }
       }
@@ -267,58 +283,60 @@ class InteractiveDrawEraserEngine {
     StrokeNode stroke, {
     required double eraserThickness,
   }) {
-    final inverse = stroke.transform.invert();
-    if (inverse == null) {
-      final eraserBounds = _eraserBoundsInWorld(eraserPoints);
-      return rectsCanBeWithinDistance(
-        eraserBounds,
-        stroke.boundsWorld,
-        eraserThickness / 2,
+    final projected = _projectEraserToLocal(
+      eraserPoints,
+      transform: stroke.transform,
+      nodeThickness: stroke.thickness,
+      eraserThickness: eraserThickness,
+    );
+    if (projected == null) {
+      return _fallbackWorldBoundsHit(
+        eraserPoints,
+        boundsWorld: stroke.boundsWorld,
+        eraserThickness: eraserThickness,
       );
     }
-
-    final localEraserPoints = eraserPoints
-        .map(inverse.applyToPoint)
-        .toList(growable: false);
-    final sigmaMax = maxSingularValue2x2(
-      inverse.a,
-      inverse.b,
-      inverse.c,
-      inverse.d,
-    );
-    final threshold = stroke.thickness / 2 + (eraserThickness / 2) * sigmaMax;
-    final thresholdSquared = threshold * threshold;
-
     if (stroke.points.isEmpty) return false;
+    if (_strokeSinglePointHit(projected, stroke)) return true;
+    if (_singleEraserPointHitsStroke(projected, stroke)) return true;
+    return _eraserSegmentsHitStroke(projected, stroke);
+  }
 
-    if (stroke.points.length == 1) {
-      final point = stroke.points.first;
-      for (final eraserPoint in localEraserPoints) {
-        final delta = eraserPoint - point;
-        if (delta.dx * delta.dx + delta.dy * delta.dy <= thresholdSquared) {
-          return true;
-        }
+  bool _strokeSinglePointHit(_ProjectedEraser projected, StrokeNode stroke) {
+    if (stroke.points.length != 1) return false;
+    final point = stroke.points.first;
+    for (final eraserPoint in projected.points) {
+      final delta = eraserPoint - point;
+      if (delta.dx * delta.dx + delta.dy * delta.dy <=
+          projected.thresholdSquared) {
+        return true;
       }
-      return false;
     }
+    return false;
+  }
 
-    if (localEraserPoints.length == 1) {
-      final eraserPoint = localEraserPoints.first;
-      for (var i = 0; i < stroke.points.length - 1; i++) {
-        if (distanceSquaredPointToSegment(
-              eraserPoint,
-              stroke.points[i],
-              stroke.points[i + 1],
-            ) <=
-            thresholdSquared) {
-          return true;
-        }
+  bool _singleEraserPointHitsStroke(
+    _ProjectedEraser projected,
+    StrokeNode stroke,
+  ) {
+    if (projected.points.length != 1) return false;
+    final eraserPoint = projected.points.first;
+    for (var i = 0; i < stroke.points.length - 1; i++) {
+      if (distanceSquaredPointToSegment(
+            eraserPoint,
+            stroke.points[i],
+            stroke.points[i + 1],
+          ) <=
+          projected.thresholdSquared) {
+        return true;
       }
-      return false;
     }
+    return false;
+  }
 
+  bool _eraserSegmentsHitStroke(_ProjectedEraser projected, StrokeNode stroke) {
     final eraserBatches = buildSegmentBatches(
-      localEraserPoints,
+      projected.points,
       batchSize: _eraserHitBatchSegments,
     );
     final strokeBatches = buildSegmentBatches(
@@ -326,41 +344,124 @@ class InteractiveDrawEraserEngine {
       batchSize: _strokeHitBatchSegments,
     );
     for (final eraserBatch in eraserBatches) {
-      for (final strokeBatch in strokeBatches) {
-        if (!rectsCanBeWithinDistance(
-          eraserBatch.bounds,
-          strokeBatch.bounds,
-          threshold,
-        )) {
-          continue;
-        }
-        for (
-          var i = eraserBatch.startSegment;
-          i < eraserBatch.endSegmentExclusive;
-          i++
-        ) {
-          for (
-            var j = strokeBatch.startSegment;
-            j < strokeBatch.endSegmentExclusive;
-            j++
-          ) {
-            _debugEraserPreciseSegmentChecks =
-                _debugEraserPreciseSegmentChecks + 1;
-            if (distanceSquaredSegmentToSegment(
-                  localEraserPoints[i],
-                  localEraserPoints[i + 1],
-                  stroke.points[j],
-                  stroke.points[j + 1],
-                ) <=
-                thresholdSquared) {
-              return true;
-            }
-          }
-        }
+      if (_eraserBatchHitsStrokeBatches(
+        projected,
+        stroke,
+        eraserBatch,
+        strokeBatches,
+      )) {
+        return true;
       }
     }
 
     return false;
+  }
+
+  bool _eraserBatchHitsStrokeBatches(
+    _ProjectedEraser projected,
+    StrokeNode stroke,
+    SegmentBatch eraserBatch,
+    List<SegmentBatch> strokeBatches,
+  ) {
+    for (final strokeBatch in strokeBatches) {
+      if (!rectsCanBeWithinDistance(
+        eraserBatch.bounds,
+        strokeBatch.bounds,
+        projected.threshold,
+      )) {
+        continue;
+      }
+      if (_segmentBatchPairHitsStroke(
+        projected,
+        stroke,
+        eraserBatch,
+        strokeBatch,
+      )) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool _segmentBatchPairHitsStroke(
+    _ProjectedEraser projected,
+    StrokeNode stroke,
+    SegmentBatch eraserBatch,
+    SegmentBatch strokeBatch,
+  ) {
+    for (
+      var i = eraserBatch.startSegment;
+      i < eraserBatch.endSegmentExclusive;
+      i++
+    ) {
+      if (_eraserSegmentHitsStrokeBatch(projected, stroke, i, strokeBatch)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool _eraserSegmentHitsStrokeBatch(
+    _ProjectedEraser projected,
+    StrokeNode stroke,
+    int eraserSegmentIndex,
+    SegmentBatch strokeBatch,
+  ) {
+    for (
+      var j = strokeBatch.startSegment;
+      j < strokeBatch.endSegmentExclusive;
+      j++
+    ) {
+      _debugEraserPreciseSegmentChecks = _debugEraserPreciseSegmentChecks + 1;
+      if (distanceSquaredSegmentToSegment(
+            projected.points[eraserSegmentIndex],
+            projected.points[eraserSegmentIndex + 1],
+            stroke.points[j],
+            stroke.points[j + 1],
+          ) <=
+          projected.thresholdSquared) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  _ProjectedEraser? _projectEraserToLocal(
+    List<Offset> eraserPoints, {
+    required Transform2D transform,
+    required double nodeThickness,
+    required double eraserThickness,
+  }) {
+    final inverse = transform.invert();
+    if (inverse == null) return null;
+
+    final points = eraserPoints
+        .map<Offset>(inverse.applyToPoint)
+        .toList(growable: false);
+    final sigmaMax = maxSingularValue2x2(
+      inverse.a,
+      inverse.b,
+      inverse.c,
+      inverse.d,
+    );
+    final threshold = nodeThickness / 2 + (eraserThickness / 2) * sigmaMax;
+    return (
+      points: points,
+      threshold: threshold,
+      thresholdSquared: threshold * threshold,
+    );
+  }
+
+  bool _fallbackWorldBoundsHit(
+    List<Offset> eraserPoints, {
+    required Rect boundsWorld,
+    required double eraserThickness,
+  }) {
+    return rectsCanBeWithinDistance(
+      _eraserBoundsInWorld(eraserPoints),
+      boundsWorld,
+      eraserThickness / 2,
+    );
   }
 
   List<SceneSpatialCandidate> _querySpatialCandidatesForEraser(Rect bounds) {

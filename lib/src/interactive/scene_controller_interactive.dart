@@ -26,6 +26,7 @@ import 'internal/interactive_event_dispatcher.dart';
 import 'internal/interactive_gesture_machine.dart';
 import 'internal/interactive_geometry.dart';
 import 'internal/interactive_move_session.dart';
+import 'internal/interactive_draw_line_engine.dart' show InteractiveDrawStyle;
 
 typedef MoveCommitDeltaResolver =
     Offset Function({
@@ -207,9 +208,7 @@ class SceneControllerInteractive extends ChangeNotifier
     if (_mode == value) return;
 
     _forceResetActiveGestureIfNeeded();
-    if (_mode == CanvasMode.draw) {
-      _drawCoordinator.clearPendingLine();
-    }
+    _resetDrawLatentState();
 
     _mode = value;
     _moveSession.setSelectionRect(null);
@@ -228,7 +227,7 @@ class SceneControllerInteractive extends ChangeNotifier
     if (_drawTool == value) return;
     _forceResetActiveGestureIfNeeded();
     _drawTool = value;
-    _drawCoordinator.clearPendingLine();
+    _resetDrawLatentState();
     _scheduleNotify();
   }
 
@@ -317,6 +316,7 @@ class SceneControllerInteractive extends ChangeNotifier
       return;
     }
     _forceResetActiveGestureIfNeeded();
+    _resetDrawLatentState();
     _core.commands.writeCameraOffsetSet(value);
   }
 
@@ -519,8 +519,8 @@ class SceneControllerInteractive extends ChangeNotifier
     _ensurePublicSideEffectAllowed('replaceScene');
     txnSceneFromSnapshot(snapshot);
     _forceResetActiveGestureIfNeeded();
+    _resetDrawLatentState();
     _core.writeReplaceScene(snapshot);
-    _drawCoordinator.clearPendingLine();
     _moveSession.setSelectionRect(null);
     _lastFinitePointerPositionById.clear();
   }
@@ -775,13 +775,7 @@ class SceneControllerInteractive extends ChangeNotifier
         _drawCoordinator.handlePointer(
           sample,
           scenePoint,
-          drawTool: _drawTool,
-          drawColor: _drawColor,
-          penThickness: _penThickness,
-          highlighterThickness: _highlighterThickness,
-          lineThickness: _lineThickness,
-          eraserThickness: _eraserThickness,
-          highlighterOpacity: _highlighterOpacity,
+          style: _currentDrawStyle,
           dragStartSlop: dragStartSlop,
         );
         break;
@@ -802,11 +796,24 @@ class SceneControllerInteractive extends ChangeNotifier
         _moveSession.setSelectionRect(null);
         break;
       case InteractiveGestureFamily.draw:
-        _drawCoordinator.resetGestureState();
         break;
       case null:
         break;
     }
+  }
+
+  InteractiveDrawStyle get _currentDrawStyle => (
+    drawTool: _drawTool,
+    drawColor: _drawColor,
+    penThickness: _penThickness,
+    highlighterThickness: _highlighterThickness,
+    lineThickness: _lineThickness,
+    eraserThickness: _eraserThickness,
+    highlighterOpacity: _highlighterOpacity,
+  );
+
+  void _resetDrawLatentState() {
+    _drawCoordinator.resetOwnedState();
   }
 
   Offset _toScenePoint(Offset viewPoint) {
@@ -936,6 +943,7 @@ class SceneControllerInteractive extends ChangeNotifier
       return;
     }
     _forceResetActiveGestureIfNeeded();
+    _resetDrawLatentState();
     _core.dispose();
     _isDisposed = true;
     _notifyPending = false;

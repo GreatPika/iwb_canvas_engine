@@ -100,44 +100,30 @@ class InteractiveDrawCoordinator {
   void handlePointer(
     PointerSample sample,
     Offset scenePoint, {
-    required DrawTool drawTool,
-    required Color drawColor,
-    required double penThickness,
-    required double highlighterThickness,
-    required double lineThickness,
-    required double eraserThickness,
-    required double highlighterOpacity,
+    required InteractiveDrawStyle style,
     required double dragStartSlop,
   }) {
     switch (sample.phase) {
       case PointerPhase.down:
-        _handleDown(scenePoint, drawTool: drawTool);
+        _handleDown(scenePoint, drawTool: style.drawTool);
         break;
       case PointerPhase.move:
         _handleMove(
           scenePoint,
-          drawTool: drawTool,
+          drawTool: style.drawTool,
           dragStartSlop: dragStartSlop,
         );
         break;
       case PointerPhase.up:
         _handleUp(
-          sample.timestampMs,
+          sample,
           scenePoint,
-          drawTool: drawTool,
-          drawColor: drawColor,
-          penThickness: penThickness,
-          highlighterThickness: highlighterThickness,
-          lineThickness: lineThickness,
-          eraserThickness: eraserThickness,
-          highlighterOpacity: highlighterOpacity,
+          style: style,
           dragStartSlop: dragStartSlop,
         );
         break;
       case PointerPhase.cancel:
-        clearPendingLine();
-        resetGestureState();
-        callbacks.onStateChanged();
+        cancelGesture();
         break;
     }
   }
@@ -150,8 +136,14 @@ class InteractiveDrawCoordinator {
     _lineEngine.resetGestureState();
   }
 
-  void clearPendingLine() {
-    _lineEngine.clearPendingLine();
+  void resetOwnedState() {
+    resetGestureState();
+    _lineEngine.resetOwnedState();
+  }
+
+  void cancelGesture() {
+    resetOwnedState();
+    callbacks.onStateChanged();
   }
 
   void dispose() {
@@ -201,53 +193,38 @@ class InteractiveDrawCoordinator {
   }
 
   void _handleUp(
-    int timestampMs,
+    PointerSample sample,
     Offset scenePoint, {
-    required DrawTool drawTool,
-    required Color drawColor,
-    required double penThickness,
-    required double highlighterThickness,
-    required double lineThickness,
-    required double eraserThickness,
-    required double highlighterOpacity,
+    required InteractiveDrawStyle style,
     required double dragStartSlop,
   }) {
-    switch (drawTool) {
+    switch (style.drawTool) {
       case DrawTool.pen:
       case DrawTool.highlighter:
-        _strokeEngine.commitOnUp(
-          timestampMs,
-          scenePoint,
-          drawTool: drawTool,
-          drawColor: drawColor,
-          penThickness: penThickness,
-          highlighterThickness: highlighterThickness,
-          highlighterOpacity: highlighterOpacity,
-        );
+        _strokeEngine.commitOnUp(sample.timestampMs, scenePoint, style: style);
         break;
       case DrawTool.line:
-        _lineEngine.commitOnUp(
-          timestampMs,
-          scenePoint,
+        _lineEngine.commitOnUp((
+          timestampMs: sample.timestampMs,
+          scenePoint: scenePoint,
           downScene: _downScene,
           moved: _moved,
-          drawTool: drawTool,
-          drawColor: drawColor,
-          lineThickness: lineThickness,
           dragStartSlop: dragStartSlop,
-        );
+        ), style: style);
         break;
       case DrawTool.eraser:
         final deletedIds = _eraserEngine.commitOnUp(
           scenePoint,
-          eraserThickness: eraserThickness,
+          eraserThickness: style.eraserThickness,
         );
         if (deletedIds.isNotEmpty) {
           callbacks.emitAction(
             ActionType.erase,
             deletedIds,
-            timestampMs,
-            payload: <String, Object?>{'eraserThickness': eraserThickness},
+            sample.timestampMs,
+            payload: <String, Object?>{
+              'eraserThickness': style.eraserThickness,
+            },
           );
         }
         break;

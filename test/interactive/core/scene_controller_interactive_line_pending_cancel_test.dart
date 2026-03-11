@@ -107,6 +107,87 @@ void main() {
         },
       );
 
+      test(
+        'forced reset clears pending line and stray normalized terminal stays no-op',
+        () async {
+          // INV:INV-ENG-INTERACTIVE-CANCEL-STATE-RESET
+          final controller = SceneControllerInteractive(
+            initialSnapshot: SceneSnapshot(
+              layers: <ContentLayerSnapshot>[
+                ContentLayerSnapshot(id: 'layer-auto-10'),
+                ContentLayerSnapshot(id: 'layer-auto-11'),
+              ],
+            ),
+          );
+          addTearDown(controller.dispose);
+
+          final actions = <ActionCommitted>[];
+          final sub = controller.actions.listen(actions.add);
+          addTearDown(sub.cancel);
+
+          controller.setMode(CanvasMode.draw);
+          controller.setDrawTool(DrawTool.line);
+
+          controller.handlePointer(
+            sampleInput(
+              pointerId: 1,
+              position: const Offset(10, 10),
+              timestampMs: 1,
+              phase: CanvasPointerPhase.down,
+            ),
+          );
+          controller.handlePointer(
+            sampleInput(
+              pointerId: 1,
+              position: const Offset(10, 10),
+              timestampMs: 2,
+              phase: CanvasPointerPhase.up,
+            ),
+          );
+          expect(controller.hasPendingLineStart, isTrue);
+
+          controller.handlePointer(
+            sampleInput(
+              pointerId: 2,
+              position: const Offset(40, 20),
+              timestampMs: 3,
+              phase: CanvasPointerPhase.down,
+            ),
+          );
+          controller.setCameraOffset(const Offset(5, 5));
+
+          expect(controller.hasPendingLineStart, isFalse);
+          expect(controller.hasActiveLinePreview, isFalse);
+
+          expect(
+            () => controller.handlePointer(
+              const CanvasPointerInput(
+                pointerId: 2,
+                position: Offset(double.nan, 20),
+                timestampMs: 4,
+                phase: CanvasPointerPhase.up,
+                kind: PointerDeviceKind.touch,
+              ),
+            ),
+            returnsNormally,
+          );
+
+          await pumpEventQueue();
+          expect(controller.hasPendingLineStart, isFalse);
+          expect(controller.hasActiveLinePreview, isFalse);
+          expect(
+            actions.where((event) => event.type == ActionType.drawLine),
+            isEmpty,
+          );
+          expect(
+            controller.snapshot.layers
+                .expand((layer) => layer.nodes)
+                .whereType<LineNodeSnapshot>(),
+            isEmpty,
+          );
+        },
+      );
+
       test('line pending start is cleared on pointer cancel', () {
         // INV:INV-ENG-INTERACTIVE-CANCEL-STATE-RESET
         final controller = SceneControllerInteractive(

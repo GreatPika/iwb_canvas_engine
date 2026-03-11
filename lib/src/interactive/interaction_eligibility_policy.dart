@@ -32,7 +32,11 @@ bool canCommitMove(NodeSnapshot node) {
 
 /// Pure interactive preflight policy for delete eligibility.
 bool canDelete(NodeSnapshot node) {
-  return node.isDeletable;
+  return _canDeleteFlag(isDeletable: node.isDeletable);
+}
+
+bool canDeleteSceneNode(SceneNode node) {
+  return _canDeleteFlag(isDeletable: node.isDeletable);
 }
 
 bool canSelectSceneNode(SceneNode node) {
@@ -140,4 +144,8 @@ bool _canTransformFlags({
   if (!isTransformable) return false;
   if (isLocked) return false;
   return true;
+}
+
+bool _canDeleteFlag({required bool isDeletable}) {
+  return isDeletable;
 }
