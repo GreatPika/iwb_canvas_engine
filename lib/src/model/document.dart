@@ -4,6 +4,7 @@ import '../core/grid_safety_limits.dart';
 import '../core/nodes.dart';
 import '../core/revision_policy.dart';
 import '../core/scene.dart';
+import '../core/selection_policy.dart';
 import '../core/text_layout.dart';
 import '../contract/node_patch.dart';
 import '../contract/owned_collections.dart';
@@ -13,6 +14,18 @@ import '../contract/snapshot.dart';
 import 'scene_builder.dart' as model_builder;
 
 typedef NodeLocatorEntry = ({int layerIndex, int nodeIndex});
+
+class TxnClearSceneKeepBackgroundResult {
+  TxnClearSceneKeepBackgroundResult({
+    required List<NodeId> removedNodeIds,
+    required this.didStructuralClear,
+  }) : removedNodeIds = List<NodeId>.unmodifiable(
+         List<NodeId>.from(removedNodeIds),
+       );
+
+  final List<NodeId> removedNodeIds;
+  final bool didStructuralClear;
+}
 
 ({SceneNode node, int layerIndex, int nodeIndex})? txnFindNodeById(
   Scene scene,
@@ -864,6 +877,80 @@ SceneNode? txnEraseNodeFromScene({
     nodeLocator[node.id] = (layerIndex: found.layerIndex, nodeIndex: nodeIndex);
   }
   return removed;
+}
+
+List<NodeId> txnEraseNodesFromScene({
+  required Scene scene,
+  required Map<NodeId, NodeLocatorEntry> nodeLocator,
+  required Set<NodeId> nodeIds,
+}) {
+  if (nodeIds.isEmpty) {
+    return const <NodeId>[];
+  }
+
+  final removalsByLayer = <int, List<({NodeId nodeId, int nodeIndex})>>{};
+  final removedNodeIds = <NodeId>[];
+  for (var layerIndex = 0; layerIndex < scene.layers.length; layerIndex++) {
+    final layer = scene.layers[layerIndex];
+    for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
+      final node = layer.nodes[nodeIndex];
+      if (!nodeIds.contains(node.id) || !isNodeDeletableInLayer(node)) {
+        continue;
+      }
+      removalsByLayer
+          .putIfAbsent(layerIndex, () => <({NodeId nodeId, int nodeIndex})>[])
+          .add((nodeId: node.id, nodeIndex: nodeIndex));
+      removedNodeIds.add(node.id);
+    }
+  }
+  if (removedNodeIds.isEmpty) {
+    return const <NodeId>[];
+  }
+
+  for (final entry in removalsByLayer.entries) {
+    entry.value.sort(
+      (left, right) => right.nodeIndex.compareTo(left.nodeIndex),
+    );
+    final layer = scene.layers[entry.key];
+    for (final removal in entry.value) {
+      layer.nodes.removeAt(removal.nodeIndex);
+      nodeLocator.remove(removal.nodeId);
+    }
+    for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
+      final node = layer.nodes[nodeIndex];
+      nodeLocator[node.id] = (layerIndex: entry.key, nodeIndex: nodeIndex);
+    }
+  }
+  return List<NodeId>.unmodifiable(removedNodeIds);
+}
+
+TxnClearSceneKeepBackgroundResult txnClearSceneKeepBackground({
+  required Scene scene,
+  required Map<NodeId, NodeLocatorEntry> nodeLocator,
+}) {
+  final removedNodeIds = <NodeId>[
+    for (final layer in scene.layers) ...layer.nodes.map((node) => node.id),
+  ];
+  var didStructuralClear = false;
+
+  if (scene.backgroundLayer == null) {
+    scene.backgroundLayer = BackgroundLayer();
+    didStructuralClear = true;
+  }
+  if (scene.layers.isNotEmpty) {
+    scene.layers.clear();
+    didStructuralClear = true;
+  }
+  if (removedNodeIds.isNotEmpty) {
+    for (final nodeId in removedNodeIds) {
+      nodeLocator.remove(nodeId);
+    }
+  }
+
+  return TxnClearSceneKeepBackgroundResult(
+    removedNodeIds: removedNodeIds,
+    didStructuralClear: didStructuralClear,
+  );
 }
 
 int txnResolveInsertLayerIndex({

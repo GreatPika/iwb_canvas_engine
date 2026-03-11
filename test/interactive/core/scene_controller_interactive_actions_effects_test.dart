@@ -66,7 +66,7 @@ void main() {
       },
     );
 
-    test('clearScene no-op does not emit clear action', () async {
+    test('clearScene emits clear action for structural-only clear', () async {
       final controller = controllerFromScene(
         Scene(layers: <ContentLayer>[ContentLayer(id: 'layer-auto-empty')]),
       );
@@ -77,6 +77,24 @@ void main() {
       addTearDown(sub.cancel);
 
       controller.clearScene(timestampMs: 205);
+      await pumpEventQueue();
+
+      final clearActions = actions.where((a) => a.type == ActionType.clear);
+      expect(clearActions, hasLength(1));
+      expect(clearActions.single.nodeIds, isEmpty);
+    });
+
+    test('clearScene no-op does not emit clear action', () async {
+      final controller = controllerFromScene(
+        Scene(backgroundLayer: BackgroundLayer()),
+      );
+      addTearDown(controller.dispose);
+
+      final actions = <ActionCommitted>[];
+      final sub = controller.actions.listen(actions.add);
+      addTearDown(sub.cancel);
+
+      controller.clearScene(timestampMs: 206);
       await pumpEventQueue();
 
       expect(actions.where((a) => a.type == ActionType.clear), isEmpty);

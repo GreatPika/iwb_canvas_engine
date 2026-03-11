@@ -539,7 +539,7 @@ class SceneControllerInteractive extends ChangeNotifier
       final result = writer.writeClearSceneKeepBackgroundResult();
       return (
         clearedIds: result.removedNodeIds,
-        changed: result.removedNodeIds.isNotEmpty || result.didStructuralClear,
+        changed: result.didStructuralClear,
       );
     });
     if (!clearResult.changed) return;

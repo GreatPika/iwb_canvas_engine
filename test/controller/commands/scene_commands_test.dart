@@ -73,10 +73,7 @@ void main() {
   test('writeClearScene no-op does not emit scene.cleared', () {
     final bufferedSignals = <BufferedSignal>[];
     final ctx = TxnContext(
-      baseScene: Scene(
-        backgroundLayer: BackgroundLayer(),
-        layers: <ContentLayer>[ContentLayer(id: 'layer-auto-2')],
-      ),
+      baseScene: Scene(backgroundLayer: BackgroundLayer()),
       workingSelection: <NodeId>{},
       baseAllNodeIds: <NodeId>{},
       idGeneratorState: createIdGeneratorStateForTesting(

@@ -44,7 +44,7 @@ language: russian
 - [x] [Шаг 7.4. Зафиксировать render-cache invalidation на composite revision contract](development_plan/step_07_4_render_cache_revision_contract.md)
 - [ ] [Шаг 8. Ввести ядро операций записи через подшаги 8.1-8.4](development_plan/step_08_write_operations_core.md)
 - [x] [Шаг 8.1. Зафиксировать контракт операций и границу `mutation_executor`](development_plan/step_08_1_mutation_op_contract_and_executor_boundary.md)
-- [ ] [Шаг 8.2. Подготовить `TxnContext` и `document.dart` к operation-oriented apply](development_plan/step_08_2_txn_apply_semantics_and_document_helpers.md)
+- [x] [Шаг 8.2. Подготовить `TxnContext` и `document.dart` к operation-oriented apply](development_plan/step_08_2_txn_apply_semantics_and_document_helpers.md)
 - [ ] [Шаг 8.3. Перевести `SceneWriter` на executor и зачистить write-boundary drift](development_plan/step_08_3_scene_writer_executor_adoption.md)
 - [ ] [Шаг 8.4. Довести `SceneControllerCore` до ясного commit pipeline и dispose contract](development_plan/step_08_4_scene_controller_commit_pipeline.md)
 - [ ] [Шаг 9. Довести командный слой до правильной сложности и семантики](development_plan/step_09_command_layer_complexity_and_semantics.md)

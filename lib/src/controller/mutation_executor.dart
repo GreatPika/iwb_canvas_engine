@@ -281,12 +281,12 @@ class MutationExecutor {
       return const MutationApplyResult(value: false, changed: false);
     }
     ctx.txnEnsureMutableLayer(existing.layerIndex);
-    final removed = txnEraseNodeFromScene(
+    final removedNodeIds = txnEraseNodesFromScene(
       scene: ctx.txnEnsureMutableScene(),
       nodeLocator: ctx.txnEnsureMutableNodeLocator(),
-      nodeId: nodeId,
+      nodeIds: <NodeId>{nodeId},
     );
-    if (removed == null) {
+    if (removedNodeIds.isEmpty) {
       return const MutationApplyResult(value: false, changed: false);
     }
 
@@ -306,18 +306,30 @@ class MutationExecutor {
       return const MutationApplyResult(value: 0, changed: false);
     }
 
-    final deleted = <NodeId>{};
-    final deletedByLayer = <int, Set<NodeId>>{};
-    final layers = ctx.workingScene.layers;
-    for (var layerIndex = 0; layerIndex < layers.length; layerIndex++) {
-      final layer = layers[layerIndex];
-      for (final node in layer.nodes) {
-        if (!nodeIds.contains(node.id)) continue;
-        if (!isNodeDeletableInLayer(node)) continue;
-        deleted.add(node.id);
-        deletedByLayer.putIfAbsent(layerIndex, () => <NodeId>{}).add(node.id);
+    final targetLayerIndexes = <int>{};
+    for (final nodeId in nodeIds) {
+      final existing = ctx.txnFindNodeById(nodeId);
+      if (existing == null ||
+          existing.layerIndex == -1 ||
+          !isNodeDeletableInLayer(existing.node)) {
+        continue;
       }
+      targetLayerIndexes.add(existing.layerIndex);
     }
+    if (targetLayerIndexes.isEmpty) {
+      return const MutationApplyResult(value: 0, changed: false);
+    }
+    final sortedLayerIndexes = targetLayerIndexes.toList(growable: false)
+      ..sort();
+    for (final layerIndex in sortedLayerIndexes) {
+      ctx.txnEnsureMutableLayer(layerIndex);
+    }
+
+    final deleted = txnEraseNodesFromScene(
+      scene: ctx.txnEnsureMutableScene(),
+      nodeLocator: ctx.txnEnsureMutableNodeLocator(),
+      nodeIds: nodeIds,
+    );
     if (deleted.isEmpty) {
       return const MutationApplyResult(value: 0, changed: false);
     }
@@ -325,14 +337,6 @@ class MutationExecutor {
     for (final id in deleted) {
       ctx.txnForgetNodeId(id);
     }
-    for (final entry in deletedByLayer.entries) {
-      final mutableLayer = ctx.txnEnsureMutableLayer(entry.key);
-      final layerDeletedIds = entry.value;
-      mutableLayer.nodes.retainWhere(
-        (node) => !layerDeletedIds.contains(node.id),
-      );
-    }
-    ctx.txnRebuildNodeLocatorFromWorkingScene();
     ctx.changeSet.txnMarkStructuralChanged();
     for (final id in deleted) {
       ctx.changeSet.txnTrackRemoved(id);
@@ -346,34 +350,25 @@ class MutationExecutor {
   }
 
   MutationApplyResult _clearSceneKeepBackground(TxnContext ctx) {
-    final scene = ctx.txnEnsureMutableScene();
-    var didStructuralClear = false;
-    if (scene.backgroundLayer == null) {
-      ctx.txnEnsureMutableBackgroundLayer();
-      ctx.changeSet.txnMarkStructuralChanged();
-      didStructuralClear = true;
-    }
-
-    final clearedIds = <NodeId>[
-      for (final layer in scene.layers) ...layer.nodes.map((node) => node.id),
-    ];
-    for (final id in clearedIds) {
+    final result = txnClearSceneKeepBackground(
+      scene: ctx.txnEnsureMutableScene(),
+      nodeLocator: ctx.txnEnsureMutableNodeLocator(),
+    );
+    for (final id in result.removedNodeIds) {
       ctx.txnForgetNodeId(id);
     }
-    scene.layers.clear();
-    if (clearedIds.isEmpty) {
+    if (!result.didStructuralClear) {
       return MutationApplyResult(
         value: ClearSceneResult(
-          removedNodeIds: const <NodeId>[],
-          didStructuralClear: didStructuralClear,
+          removedNodeIds: result.removedNodeIds,
+          didStructuralClear: false,
         ),
-        changed: didStructuralClear,
+        changed: false,
       );
     }
 
-    ctx.txnRebuildNodeLocatorFromWorkingScene();
     ctx.changeSet.txnMarkStructuralChanged();
-    for (final id in clearedIds) {
+    for (final id in result.removedNodeIds) {
       ctx.changeSet.txnTrackRemoved(id);
     }
     if (ctx.workingSelection.isNotEmpty) {
@@ -382,7 +377,7 @@ class MutationExecutor {
     }
     return MutationApplyResult(
       value: ClearSceneResult(
-        removedNodeIds: clearedIds,
+        removedNodeIds: result.removedNodeIds,
         didStructuralClear: true,
       ),
       changed: true,

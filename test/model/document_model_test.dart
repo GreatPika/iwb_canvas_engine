@@ -580,6 +580,93 @@ void main() {
   });
 
   test(
+    'txnEraseNodesFromScene removes deletable content nodes in deterministic scene order',
+    () {
+      final scene = Scene(
+        backgroundLayer: BackgroundLayer(
+          nodes: <SceneNode>[RectNode(id: 'bg', size: const Size(1, 1))],
+        ),
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-auto-13a',
+            nodes: <SceneNode>[
+              RectNode(id: 'a', size: const Size(1, 1)),
+              RectNode(
+                id: 'locked',
+                size: const Size(1, 1),
+                isDeletable: false,
+              ),
+            ],
+          ),
+          ContentLayer(
+            id: 'layer-auto-13b',
+            nodes: <SceneNode>[
+              RectNode(id: 'b', size: const Size(1, 1)),
+              RectNode(id: 'c', size: const Size(1, 1)),
+            ],
+          ),
+        ],
+      );
+      final locator = txnBuildNodeLocator(scene);
+
+      final removed = txnEraseNodesFromScene(
+        scene: scene,
+        nodeLocator: locator,
+        nodeIds: const <NodeId>{'c', 'bg', 'a', 'missing', 'locked'},
+      );
+
+      expect(removed, const <NodeId>['a', 'c']);
+      expect(() => removed.add('late'), throwsUnsupportedError);
+      expect(
+        scene.layers[0].nodes.map((node) => node.id).toList(growable: false),
+        const <NodeId>['locked'],
+      );
+      expect(
+        scene.layers[1].nodes.map((node) => node.id).toList(growable: false),
+        const <NodeId>['b'],
+      );
+      expect(locator['bg'], (layerIndex: -1, nodeIndex: 0));
+      expect(locator['locked'], (layerIndex: 0, nodeIndex: 0));
+      expect(locator['b'], (layerIndex: 1, nodeIndex: 0));
+    },
+  );
+
+  test(
+    'txnClearSceneKeepBackground removes content layers and marks structural-only clear',
+    () {
+      final scene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(id: 'layer-auto-13c'),
+          ContentLayer(
+            id: 'layer-auto-13d',
+            nodes: <SceneNode>[RectNode(id: 'a', size: const Size(1, 1))],
+          ),
+        ],
+      );
+      final locator = txnBuildNodeLocator(scene);
+
+      final cleared = txnClearSceneKeepBackground(
+        scene: scene,
+        nodeLocator: locator,
+      );
+
+      expect(cleared.didStructuralClear, isTrue);
+      expect(cleared.removedNodeIds, const <NodeId>['a']);
+      expect(() => cleared.removedNodeIds.add('late'), throwsUnsupportedError);
+      expect(scene.layers, isEmpty);
+      expect(scene.backgroundLayer, isNotNull);
+      expect(locator, isEmpty);
+
+      final noop = txnClearSceneKeepBackground(
+        scene: scene,
+        nodeLocator: locator,
+      );
+      expect(noop.didStructuralClear, isFalse);
+      expect(noop.removedNodeIds, isEmpty);
+    },
+  );
+
+  test(
     'resolve layer index validates layerId and uses last layer by default',
     () {
       final scene = Scene(

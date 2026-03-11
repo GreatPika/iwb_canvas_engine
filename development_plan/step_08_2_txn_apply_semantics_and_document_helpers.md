@@ -143,47 +143,47 @@ derived state и без дублирования node/document mutation logic.
 
 ## Последовательность реализации (только действия)
 
-[ ] Зафиксировать в коде owner-границы шага:
+[x] Зафиксировать в коде owner-границы шага:
     `TxnContext` для runtime state, `document.dart` для pure helpers,
     `MutationExecutor` для orchestration и `ChangeSet`.
-[ ] Ввести в `document.dart` канонические pure helper-ы
+[x] Ввести в `document.dart` канонические pure helper-ы
     `txnEraseNodesFromScene(...)` и `txnClearSceneKeepBackground(...)`.
-[ ] Перевести single delete path на делегацию в bulk helper.
-[ ] Проверить, что patch/insert/replace-scene helpers и runtime helpers
+[x] Перевести single delete path на делегацию в bulk helper.
+[x] Проверить, что patch/insert/replace-scene helpers и runtime helpers
     полностью покрывают executor apply stage без snapshot diff.
-[ ] Уточнить `TxnContext` helpers так, чтобы executor и controller могли
+[x] Уточнить `TxnContext` helpers так, чтобы executor и controller могли
     готовить commit candidate без дублирования locator/id bookkeeping.
-[ ] Реализовать зафиксированную семантику `clearSceneKeepBackground` для
+[x] Реализовать зафиксированную семантику `clearSceneKeepBackground` для
     structural changes без удалённых node ids и выровнять tests вокруг неё.
-[ ] Добавить regression tests на locator-shift-before-delete, structural clear
+[x] Добавить regression tests на locator-shift-before-delete, structural clear
     без node removals и отсутствие мутаций `_baseScene`.
-[ ] Обновить tests на low-level apply semantics и `ChangeSet` bookkeeping.
+[x] Обновить tests на low-level apply semantics и `ChangeSet` bookkeeping.
 
 ## Критерии приёмки
 
-[ ] Executor использует один согласованный набор txn/document helpers и не
+[x] Executor использует один согласованный набор txn/document helpers и не
     дублирует mutation semantics вторым competing engine.
-[ ] Bulk delete имеет одного owner-а и не выражен только как writer-local loop
+[x] Bulk delete имеет одного owner-а и не выражен только как writer-local loop
     или несколькими несогласованными branches.
-[ ] `ChangeSet` по-прежнему описывает mutation facts напрямую, без snapshot
+[x] `ChangeSet` по-прежнему описывает mutation facts напрямую, без snapshot
     diff owner-а.
-[ ] Replace/adopt path не ломает allocator/revision contracts из шага `7`.
-[ ] Structural clear коммитится как реальное structural change даже без
+[x] Replace/adopt path не ломает allocator/revision contracts из шага `7`.
+[x] Structural clear коммитится как реальное structural change даже без
     removed node ids.
-[ ] Structural clear удаляет пустые content layers и эмитит
+[x] Structural clear удаляет пустые content layers и эмитит
     `didStructuralClear == true`, если scene shape изменился.
-[ ] Locator остаётся корректным после вставки слоя и последующего удаления в
+[x] Locator остаётся корректным после вставки слоя и последующего удаления в
     рамках одной транзакции.
-[ ] Structural apply paths сохраняют copy-on-write contract и не мутируют
+[x] Structural apply paths сохраняют copy-on-write contract и не мутируют
     pre-transaction scene.
 
 ## Тестовый контур шага
 
-[ ] `test/controller/internal/change_set_txn_context_test.dart`
-[ ] `test/controller/internal/scene_writer_test.dart`
-[ ] `test/controller/internal/mutation_executor_test.dart`
-[ ] `test/model/document_model_test.dart`
-[ ] `test/controller/commands/scene_commands_test.dart`
-[ ] `test/controller/internal/spatial_index_cache_test.dart`
-[ ] `test/controller/scene_invariants_test.dart`
-[ ] Новый targeted test на locator-shift-before-delete / structural-clear-no-nodes / base-scene-COW
+[x] `test/controller/internal/change_set_txn_context_test.dart`
+[x] `test/controller/internal/scene_writer_test.dart`
+[x] `test/controller/internal/mutation_executor_test.dart`
+[x] `test/model/document_model_test.dart`
+[x] `test/controller/commands/scene_commands_test.dart`
+[x] `test/controller/internal/spatial_index_cache_test.dart`
+[x] `test/controller/scene_invariants_test.dart`
+[x] Новый targeted test на locator-shift-before-delete / structural-clear-no-nodes / base-scene-COW

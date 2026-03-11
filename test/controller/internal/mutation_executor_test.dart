@@ -149,6 +149,156 @@ void main() {
   );
 
   test(
+    'MutationExecutor keeps locator correct after inserted layer and same-txn delete',
+    () {
+      final baseScene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(id: 'layer-auto-3a'),
+          ContentLayer(
+            id: 'layer-auto-3b',
+            nodes: <SceneNode>[RectNode(id: 'tail', size: const Size(1, 1))],
+          ),
+        ],
+      );
+      final ctx = TxnContext(
+        baseScene: baseScene,
+        workingSelection: const <NodeId>{},
+        baseAllNodeIds: const <NodeId>{'tail'},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+      final executor = MutationExecutor();
+
+      final ensureResult = executor.execute(
+        ctx,
+        const EnsureLayerOp('layer-inserted', index: 1),
+      );
+      expect(ensureResult.changed, isTrue);
+      expect(ctx.txnFindNodeById('tail')?.layerIndex, 2);
+
+      final deleteResult = executor.execute(ctx, const DeleteNodeOp('tail'));
+
+      expect(deleteResult.changed, isTrue);
+      expect(ctx.txnFindNodeById('tail'), isNull);
+      expect(
+        ctx.workingScene.layers
+            .map((layer) => layer.id)
+            .toList(growable: false),
+        const <LayerId>['layer-auto-3a', 'layer-inserted', 'layer-auto-3b'],
+      );
+    },
+  );
+
+  test(
+    'MutationExecutor clear marks structural change without removed nodes',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[ContentLayer(id: 'layer-auto-3c')],
+        ),
+        workingSelection: const <NodeId>{},
+        baseAllNodeIds: const <NodeId>{},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+      final executor = MutationExecutor();
+
+      final result = executor.executeWithPreparedCommit(
+        ctx,
+        const ClearSceneKeepBackgroundOp(),
+      );
+
+      expect(result.applyResult.changed, isTrue);
+      expect(
+        result.applyResult.value,
+        isA<ClearSceneResult>()
+            .having((value) => value.removedNodeIds, 'removedNodeIds', isEmpty)
+            .having(
+              (value) => value.didStructuralClear,
+              'didStructuralClear',
+              isTrue,
+            ),
+      );
+      expect(result.changeSet.structuralChanged, isTrue);
+      expect(result.changeSet.removedNodeIds, isEmpty);
+      expect(result.commitCandidate, isNotNull);
+      expect(ctx.workingScene.layers, isEmpty);
+      expect(ctx.workingScene.backgroundLayer, isNotNull);
+    },
+  );
+
+  test(
+    'MutationExecutor structural apply preserves base-scene copy-on-write',
+    () {
+      final baseScene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-auto-3d',
+            nodes: <SceneNode>[RectNode(id: 'gone', size: const Size(1, 1))],
+          ),
+        ],
+      );
+      final ctx = TxnContext(
+        baseScene: baseScene,
+        workingSelection: const <NodeId>{'gone'},
+        baseAllNodeIds: const <NodeId>{'gone'},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+      final executor = MutationExecutor();
+
+      executor.execute(ctx, const ClearSceneKeepBackgroundOp());
+
+      expect(baseScene.layers, hasLength(1));
+      expect(baseScene.layers.single.nodes.single.id, 'gone');
+      expect(baseScene.backgroundLayer, isNull);
+      expect(ctx.workingScene.layers, isEmpty);
+      expect(ctx.workingScene.backgroundLayer, isNotNull);
+    },
+  );
+
+  test('MutationExecutor bulk delete preserves base-scene copy-on-write', () {
+    final baseScene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(
+          id: 'layer-auto-3e',
+          nodes: <SceneNode>[
+            RectNode(id: 'a', size: const Size(1, 1)),
+            RectNode(id: 'b', size: const Size(1, 1)),
+          ],
+        ),
+      ],
+    );
+    final ctx = TxnContext(
+      baseScene: baseScene,
+      workingSelection: const <NodeId>{'a', 'b'},
+      baseAllNodeIds: const <NodeId>{'a', 'b'},
+      nodeIdSeed: 0,
+      nextInstanceRevision: 1,
+    );
+    final executor = MutationExecutor();
+
+    final result = executor.execute(
+      ctx,
+      DeleteNodesBulkOp(const <NodeId>{'a'}),
+    );
+
+    expect(result.changed, isTrue);
+    expect(
+      baseScene.layers.single.nodes
+          .map((node) => node.id)
+          .toList(growable: false),
+      const <NodeId>['a', 'b'],
+    );
+    expect(
+      ctx.workingScene.layers.single.nodes
+          .map((node) => node.id)
+          .toList(growable: false),
+      const <NodeId>['b'],
+    );
+  });
+
+  test(
     'MutationExecutor replace scene clears selection and marks document replace',
     () {
       final ctx = TxnContext(
