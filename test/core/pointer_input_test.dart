@@ -195,6 +195,72 @@ void main() {
     expect(tracker.nextPendingFlushTimestampMs, isNull);
   });
 
+  test('flushPendingTo emits deferred taps without list wrapper semantics', () {
+    final tracker = PointerInputTracker(
+      settings: const PointerInputSettings(
+        doubleTapMaxDelayMs: 100,
+        deferSingleTap: true,
+      ),
+    );
+
+    tracker.handle(
+      _sample(
+        id: 9,
+        phase: PointerPhase.down,
+        position: const Offset(3, 3),
+        t: 10,
+      ),
+    );
+    tracker.handle(
+      _sample(
+        id: 9,
+        phase: PointerPhase.up,
+        position: const Offset(3, 3),
+        t: 11,
+      ),
+    );
+
+    final emitted = <PointerSignal>[];
+    tracker.flushPendingTo(200, emitted.add);
+
+    expect(emitted.map((signal) => signal.type), <PointerSignalType>[
+      PointerSignalType.tap,
+    ]);
+    expect(tracker.hasPendingTap, isFalse);
+  });
+
+  test('discardPointer drops pending and down state without signals', () {
+    final tracker = PointerInputTracker(
+      settings: const PointerInputSettings(
+        doubleTapMaxDelayMs: 100,
+        deferSingleTap: true,
+      ),
+    );
+
+    tracker.handle(
+      _sample(
+        id: 5,
+        phase: PointerPhase.down,
+        position: const Offset(0, 0),
+        t: 0,
+      ),
+    );
+    tracker.handle(
+      _sample(
+        id: 5,
+        phase: PointerPhase.up,
+        position: const Offset(0, 0),
+        t: 1,
+      ),
+    );
+
+    expect(tracker.hasPendingTap, isTrue);
+    tracker.discardPointer(5);
+    expect(tracker.hasPendingTap, isFalse);
+    expect(tracker.nextPendingFlushTimestampMs, isNull);
+    expect(tracker.flushPending(200), isEmpty);
+  });
+
   test('nextPendingFlushTimestampMs picks earliest pending tap', () {
     final tracker = PointerInputTracker(
       settings: const PointerInputSettings(doubleTapMaxDelayMs: 100),

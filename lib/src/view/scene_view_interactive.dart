@@ -14,21 +14,25 @@ import '../render/scene_render_caches.dart';
 import 'scene_view_pointer_router.dart';
 
 ui.Image? _defaultImageResolver(String _) => null;
+void _discardPointerSignal(PointerSignal _) {}
+
+_SceneViewInteractiveState _sceneViewInteractiveStateOf(BuildContext context) {
+  return switch (context) {
+        StatefulElement(:final state)
+            when state is _SceneViewInteractiveState =>
+          state,
+        _ => context.findAncestorStateOfType<_SceneViewInteractiveState>(),
+      } ??
+      (throw StateError(
+        'No SceneViewInteractive state found for the provided BuildContext.',
+      ));
+}
 
 @visibleForTesting
 SceneRenderCaches debugSceneViewInteractiveRenderCachesOf(
   BuildContext context,
 ) {
-  final state = switch (context) {
-    StatefulElement(:final state) when state is _SceneViewInteractiveState =>
-      state,
-    _ => context.findAncestorStateOfType<_SceneViewInteractiveState>(),
-  };
-  if (state == null) {
-    throw StateError(
-      'No SceneViewInteractive state found for the provided BuildContext.',
-    );
-  }
+  final state = _sceneViewInteractiveStateOf(context);
   return SceneRenderCaches(
     staticLayerCache: state.debugStaticLayerCache,
     textLayoutCache: state.debugTextLayoutCache,
@@ -36,6 +40,18 @@ SceneRenderCaches debugSceneViewInteractiveRenderCachesOf(
     pathMetricsCache: state.debugPathMetricsCache,
     geometryCache: state.debugGeometryCache,
   );
+}
+
+@visibleForTesting
+int debugSceneViewInteractiveLiveRawPointerCountOf(BuildContext context) {
+  return _sceneViewInteractiveStateOf(context).debugLiveRawPointerCount;
+}
+
+@visibleForTesting
+int? debugSceneViewInteractivePendingTapFlushTimestampMsOf(
+  BuildContext context,
+) {
+  return _sceneViewInteractiveStateOf(context).debugPendingTapFlushTimestampMs;
 }
 
 class SceneViewInteractive extends StatefulWidget {
@@ -65,6 +81,9 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
   Timer? _pendingTapTimer;
   int? _pendingTapFlushTimestampMs;
   final SceneViewPointerRouter _pointerRouter = SceneViewPointerRouter();
+  late VoidCallback _controllerListener;
+  int _controllerListenerGeneration = 0;
+  int _pointerTrackerGeneration = 0;
   int _lastEpoch = 0;
 
   late SceneRenderCaches _renderCaches;
@@ -83,23 +102,28 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
       _renderCaches.pathMetricsCache;
   @visibleForTesting
   RenderGeometryCache get debugGeometryCache => _renderCaches.geometryCache;
+  @visibleForTesting
+  int get debugLiveRawPointerCount => _pointerRouter.liveRawPointerCount;
+  @visibleForTesting
+  int? get debugPendingTapFlushTimestampMs => _pendingTapFlushTimestampMs;
 
   @override
   void initState() {
     super.initState();
     _renderCaches = _createRenderCaches();
     _lastEpoch = sceneControllerInteractiveInternalEpoch(widget.controller);
-    widget.controller.addListener(_handleControllerChanged);
     _lastPointerSettings = widget.controller.pointerSettings;
     _pointerTracker = PointerInputTracker(settings: _lastPointerSettings);
+    _pointerTrackerGeneration = 1;
+    _subscribeToController(widget.controller);
   }
 
   @override
   void didUpdateWidget(SceneViewInteractive oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
-      oldWidget.controller.removeListener(_handleControllerChanged);
-      widget.controller.addListener(_handleControllerChanged);
+      _unsubscribeFromController(oldWidget.controller);
+      _subscribeToController(widget.controller);
       _resetPointerTracking(settings: widget.controller.pointerSettings);
       _lastEpoch = sceneControllerInteractiveInternalEpoch(widget.controller);
       _clearAllCaches();
@@ -108,7 +132,7 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
 
   @override
   void dispose() {
-    widget.controller.removeListener(_handleControllerChanged);
+    _unsubscribeFromController(widget.controller);
     _clearPendingTapTimer();
     _renderCaches.disposeOwned();
     super.dispose();
@@ -153,37 +177,32 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
   }
 
   void _handlePointerEvent(PointerEvent event, PointerPhase phase) {
-    final routedPointer = _pointerRouter.route(
-      rawPointer: event.pointer,
-      phase: phase,
-    );
-    if (routedPointer.isStray) {
+    if (_shouldDropInvalidFiniteAdmission(event, phase)) {
+      return;
+    }
+    if (_isInvalidTerminalHostEvent(event, phase)) {
+      _handleInvalidTerminalHostEvent(
+        rawPointer: event.pointer,
+        phase: phase,
+        referenceTimestampMs: event.timeStamp.inMilliseconds,
+      );
       return;
     }
 
-    final pointerId = routedPointer.pointerId;
+    final pointerId = _routePointerId(rawPointer: event.pointer, phase: phase);
     if (pointerId == null) {
       return;
     }
-    final input = CanvasPointerInput(
-      pointerId: pointerId,
-      position: event.localPosition,
-      timestampMs: event.timeStamp.inMilliseconds,
-      phase: _toCanvasPointerPhase(phase),
-      kind: event.kind,
-    );
-    final sample = PointerSample(
-      pointerId: input.pointerId,
-      position: input.position,
-      timestampMs: input.timestampMs ?? event.timeStamp.inMilliseconds,
-      phase: phase,
-      kind: input.kind,
-    );
 
-    widget.controller.handlePointer(input);
+    final sample = _createPointerSample(
+      pointerId: pointerId,
+      event: event,
+      phase: phase,
+    );
+    widget.controller.handlePointer(_toCanvasPointerInput(sample));
     _handleTrackedSignals(sample);
     _syncPendingFlushTimer(referenceTimestampMs: sample.timestampMs);
-    _releasePointerIfEnded(event.pointer, phase);
+    _releasePointerIfEnded(rawPointer: event.pointer, phase: phase);
   }
 
   void _handleTrackedSignals(PointerSample sample) {
@@ -222,26 +241,42 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
 
     _clearPendingTapTimer();
     _pendingTapFlushTimestampMs = nextFlushTimestampMs;
-    final delayMs = (nextFlushTimestampMs - referenceTimestampMs).clamp(
-      0,
-      1 << 30,
-    );
+    final delayMs = (nextFlushTimestampMs - referenceTimestampMs)
+        .clamp(0, 1 << 30)
+        .toInt();
+    final ownerGeneration = _pointerTrackerGeneration;
     _pendingTapTimer = Timer(
       Duration(milliseconds: delayMs),
-      _handlePendingTapTimer,
+      () => _handlePendingTapTimer(
+        expectedFlushTimestampMs: nextFlushTimestampMs,
+        ownerGeneration: ownerGeneration,
+      ),
     );
   }
 
-  void _handlePendingTapTimer() {
-    final flushTimestampMs = _pendingTapFlushTimestampMs;
+  void _handlePendingTapTimer({
+    required int expectedFlushTimestampMs,
+    required int ownerGeneration,
+  }) {
+    if (!mounted ||
+        ownerGeneration != _pointerTrackerGeneration ||
+        _pendingTapFlushTimestampMs != expectedFlushTimestampMs) {
+      return;
+    }
+
     _pendingTapTimer = null;
     _pendingTapFlushTimestampMs = null;
-    if (flushTimestampMs == null) return;
 
     // Timer flush emits deferred single taps only; double taps are emitted in
     // the immediate handle(...) path when the second tap arrives.
-    _pointerTracker.flushPending(flushTimestampMs);
-    _syncPendingFlushTimer(referenceTimestampMs: flushTimestampMs);
+    _pointerTracker.flushPendingTo(
+      expectedFlushTimestampMs,
+      _discardPointerSignal,
+    );
+    if (!mounted || ownerGeneration != _pointerTrackerGeneration) {
+      return;
+    }
+    _syncPendingFlushTimer(referenceTimestampMs: expectedFlushTimestampMs);
   }
 
   void _clearPendingTapTimer() {
@@ -250,21 +285,30 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
     _pendingTapFlushTimestampMs = null;
   }
 
-  void _releasePointerIfEnded(int rawPointer, PointerPhase phase) {
-    if (phase != PointerPhase.up && phase != PointerPhase.cancel) {
+  void _releasePointerIfEnded({
+    required int rawPointer,
+    required PointerPhase phase,
+  }) {
+    if (!_isTerminalPhase(phase)) {
       return;
     }
     final release = _pointerRouter.release(rawPointer);
-    if (release.isIdleAfterRelease) {
-      _applyPendingPointerSettingsIfPossible();
-    }
+    _finalizeRelease(release);
   }
 
   void _clearAllCaches() {
     _renderCaches.clearAll();
   }
 
-  void _handleControllerChanged() {
+  void _handleControllerChanged({
+    required SceneControllerInteractive controller,
+    required int ownerGeneration,
+  }) {
+    if (!mounted ||
+        ownerGeneration != _controllerListenerGeneration ||
+        !identical(controller, widget.controller)) {
+      return;
+    }
     final nextPointerSettings = widget.controller.pointerSettings;
     if (!_pointerSettingsEqual(_lastPointerSettings, nextPointerSettings)) {
       if (_pointerRouter.hasLiveRawPointers) {
@@ -289,6 +333,7 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
     _pendingPointerSettings = null;
     _lastPointerSettings = settings;
     _pointerTracker = PointerInputTracker(settings: settings);
+    _pointerTrackerGeneration++;
     _clearPendingTapTimer();
     _pointerRouter.reset();
   }
@@ -319,6 +364,100 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
         return CanvasPointerPhase.up;
       case PointerPhase.cancel:
         return CanvasPointerPhase.cancel;
+    }
+  }
+
+  void _subscribeToController(SceneControllerInteractive controller) {
+    _controllerListenerGeneration++;
+    final ownerGeneration = _controllerListenerGeneration;
+    _controllerListener = () => _handleControllerChanged(
+      controller: controller,
+      ownerGeneration: ownerGeneration,
+    );
+    controller.addListener(_controllerListener);
+  }
+
+  void _unsubscribeFromController(SceneControllerInteractive controller) {
+    controller.removeListener(_controllerListener);
+  }
+
+  bool _shouldDropInvalidFiniteAdmission(
+    PointerEvent event,
+    PointerPhase phase,
+  ) {
+    return !_hasFiniteLocalPosition(event) &&
+        (phase == PointerPhase.down || phase == PointerPhase.move);
+  }
+
+  bool _isInvalidTerminalHostEvent(PointerEvent event, PointerPhase phase) {
+    return !_hasFiniteLocalPosition(event) && _isTerminalPhase(phase);
+  }
+
+  bool _hasFiniteLocalPosition(PointerEvent event) {
+    return event.localPosition.dx.isFinite && event.localPosition.dy.isFinite;
+  }
+
+  bool _isTerminalPhase(PointerPhase phase) {
+    return phase == PointerPhase.up || phase == PointerPhase.cancel;
+  }
+
+  int? _routePointerId({required int rawPointer, required PointerPhase phase}) {
+    final routedPointer = _pointerRouter.route(
+      rawPointer: rawPointer,
+      phase: phase,
+    );
+    if (routedPointer.isStray || routedPointer.pointerId == null) {
+      return null;
+    }
+    return routedPointer.pointerId;
+  }
+
+  PointerSample _createPointerSample({
+    required int pointerId,
+    required PointerEvent event,
+    required PointerPhase phase,
+  }) {
+    return PointerSample(
+      pointerId: pointerId,
+      position: event.localPosition,
+      timestampMs: event.timeStamp.inMilliseconds,
+      phase: phase,
+      kind: event.kind,
+    );
+  }
+
+  CanvasPointerInput _toCanvasPointerInput(PointerSample sample) {
+    return CanvasPointerInput(
+      pointerId: sample.pointerId,
+      position: sample.position,
+      timestampMs: sample.timestampMs,
+      phase: _toCanvasPointerPhase(sample.phase),
+      kind: sample.kind,
+    );
+  }
+
+  void _handleInvalidTerminalHostEvent({
+    required int rawPointer,
+    required PointerPhase phase,
+    required int referenceTimestampMs,
+  }) {
+    final pointerId = _routePointerId(rawPointer: rawPointer, phase: phase);
+    if (pointerId == null) {
+      return;
+    }
+
+    _pointerTracker.discardPointer(pointerId);
+    final release = _pointerRouter.release(rawPointer);
+    if (release.isIdleAfterRelease) {
+      _applyPendingPointerSettingsIfPossible();
+      return;
+    }
+    _syncPendingFlushTimer(referenceTimestampMs: referenceTimestampMs);
+  }
+
+  void _finalizeRelease(SceneViewPointerReleaseResult release) {
+    if (release.isIdleAfterRelease) {
+      _applyPendingPointerSettingsIfPossible();
     }
   }
 }
@@ -366,9 +505,8 @@ class _SceneInteractiveOverlayPainter extends CustomPainter {
     if (points.length == 1) {
       _drawSinglePointStrokePreview(
         canvas: canvas,
-        cameraOffset: cameraOffset,
-        point: points.first,
-        thickness: thickness,
+        viewPoint: toView(points.first, cameraOffset),
+        radius: thickness / 2,
         color: color,
       );
       return;
@@ -382,14 +520,13 @@ class _SceneInteractiveOverlayPainter extends CustomPainter {
 
   void _drawSinglePointStrokePreview({
     required Canvas canvas,
-    required Offset cameraOffset,
-    required Offset point,
-    required double thickness,
+    required Offset viewPoint,
+    required double radius,
     required Color color,
   }) {
     canvas.drawCircle(
-      toView(point, cameraOffset),
-      thickness / 2,
+      viewPoint,
+      radius,
       Paint()
         ..style = PaintingStyle.fill
         ..color = color,

@@ -161,7 +161,29 @@ class PointerInputTracker {
   /// Call this from a timer/tick in the host app if there are no pointer
   /// events.
   List<PointerSignal> flushPending(int timestampMs) {
-    return _flushExpired(timestampMs);
+    final signals = <PointerSignal>[];
+    flushPendingTo(timestampMs, signals.add);
+    return signals;
+  }
+
+  /// Emits deferred single-tap signals into [emit] without allocating a list.
+  ///
+  /// Hosts that only need the side effect can use this as the canonical flush
+  /// primitive and avoid materializing a temporary collection.
+  void flushPendingTo(
+    int timestampMs,
+    void Function(PointerSignal signal) emit,
+  ) {
+    _flushExpiredTo(timestampMs, emit);
+  }
+
+  /// Drops transient tracker state for [pointerId] without emitting signals.
+  ///
+  /// Host runtimes use this when the host lifecycle ends a routed pointer
+  /// without forwarding a terminal sample into the controller/tracker pipeline.
+  void discardPointer(int pointerId) {
+    _downStates.remove(pointerId);
+    _pendingTapByPointerId.remove(pointerId);
   }
 
   PointerSignalType _signalTypeFor(PointerPhase phase) {
@@ -213,10 +235,18 @@ class PointerInputTracker {
   }
 
   List<PointerSignal> _flushExpired(int timestampMs) {
-    if (_pendingTapByPointerId.isEmpty) return const <PointerSignal>[];
+    final signals = <PointerSignal>[];
+    _flushExpiredTo(timestampMs, signals.add);
+    return signals;
+  }
+
+  void _flushExpiredTo(
+    int timestampMs,
+    void Function(PointerSignal signal) emit,
+  ) {
+    if (_pendingTapByPointerId.isEmpty) return;
 
     final expiredPointerIds = <int>[];
-    final signals = <PointerSignal>[];
 
     _pendingTapByPointerId.forEach((pointerId, pendingTap) {
       final timeDelta = timestampMs - pendingTap.timestampMs;
@@ -225,7 +255,7 @@ class PointerInputTracker {
 
       expiredPointerIds.add(pointerId);
       if (settings.deferSingleTap) {
-        signals.add(
+        emit(
           PointerSignal(
             type: PointerSignalType.tap,
             pointerId: pendingTap.pointerId,
@@ -240,8 +270,6 @@ class PointerInputTracker {
     for (final pointerId in expiredPointerIds) {
       _pendingTapByPointerId.remove(pointerId);
     }
-
-    return signals;
   }
 
   bool _isDoubleTap(PointerSample sample, _PendingTap pendingTap) {

@@ -56,7 +56,7 @@ language: russian
 - [x] [Шаг 9.3. Перевести `DrawCommands` и `SceneCommands` на exact writer semantics](development_plan/step_09_3_command_adapters_exact_signal_and_input_semantics.md)
 - [ ] [Шаг 10. Вынести pointer-router в правильную форму через подшаги 10.1-10.3](development_plan/step_10_pointer_router_structure.md)
 - [x] [Шаг 10.1. Зафиксировать owner `scene_view_pointer_router` и контракт raw-to-slot routing](development_plan/step_10_1_scene_view_pointer_router_owner_and_slot_contract.md)
-- [ ] [Шаг 10.2. Зафиксировать host admission, host terminal cleanup и flush/timer lifecycle в `SceneViewInteractive`](development_plan/step_10_2_pointer_event_admission_and_flush_lifecycle.md)
+- [x] [Шаг 10.2. Зафиксировать host admission, host terminal cleanup и flush/timer lifecycle в `SceneViewInteractive`](development_plan/step_10_2_pointer_event_admission_and_flush_lifecycle.md)
 - [ ] [Шаг 10.3. Зафиксировать `PointerInputSettings` как value object и apply-on-idle contract](development_plan/step_10_3_pointer_settings_transition_and_value_semantics.md)
 - [ ] [Шаг 11. Вынести gesture-machine и единый предикат допустимости](development_plan/step_11_gesture_machine_and_admission_predicate.md)
 - [ ] [Шаг 12. Перевести рендер и кеши на структурно безопасную форму](development_plan/step_12_render_and_cache_structural_safety.md)

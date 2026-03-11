@@ -61,6 +61,26 @@ Widget _host(
   );
 }
 
+BuildContext _sceneViewContext(WidgetTester tester) {
+  return tester.element(find.byType(SceneViewInteractive));
+}
+
+void _dispatchHostPointerEvent(WidgetTester tester, PointerEvent event) {
+  final listener = tester.widget<Listener>(find.byType(Listener));
+  switch (event) {
+    case PointerDownEvent():
+      listener.onPointerDown?.call(event);
+    case PointerMoveEvent():
+      listener.onPointerMove?.call(event);
+    case PointerUpEvent():
+      listener.onPointerUp?.call(event);
+    case PointerCancelEvent():
+      listener.onPointerCancel?.call(event);
+    default:
+      fail('Unsupported test pointer event: ${event.runtimeType}.');
+  }
+}
+
 SceneSnapshot _cacheSnapshot({
   required String text,
   required String pathSvg,
@@ -261,6 +281,282 @@ void main() {
     await tester.pump(const Duration(milliseconds: 16));
 
     expect(find.byType(SceneViewInteractive), findsOneWidget);
+  });
+
+  testWidgets(
+    'SceneViewInteractive drops invalid down and move before host side effects',
+    (tester) async {
+      final controller = _RecordingPointerController(
+        initialSnapshot: _snapshot(text: 'invalid-host-admission'),
+      );
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerDownEvent(
+          pointer: 8101,
+          position: Offset(double.nan, 12),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      await tester.pump();
+
+      expect(controller.recordedInputs, isEmpty);
+      expect(
+        debugSceneViewInteractiveLiveRawPointerCountOf(
+          _sceneViewContext(tester),
+        ),
+        0,
+      );
+      expect(
+        debugSceneViewInteractivePendingTapFlushTimestampMsOf(
+          _sceneViewContext(tester),
+        ),
+        isNull,
+      );
+
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerDownEvent(
+          pointer: 8101,
+          position: Offset(12, 12),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerMoveEvent(
+          pointer: 8101,
+          position: Offset(double.infinity, 20),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        controller.recordedInputs
+            .map((input) => (input.pointerId, input.phase))
+            .toList(),
+        <(int, CanvasPointerPhase)>[(1, CanvasPointerPhase.down)],
+      );
+      expect(
+        debugSceneViewInteractiveLiveRawPointerCountOf(
+          _sceneViewContext(tester),
+        ),
+        1,
+      );
+      expect(
+        debugSceneViewInteractivePendingTapFlushTimestampMsOf(
+          _sceneViewContext(tester),
+        ),
+        isNull,
+      );
+    },
+  );
+
+  testWidgets(
+    'SceneViewInteractive cleans up host state for invalid terminal events only',
+    (tester) async {
+      final controller = _RecordingPointerController(
+        initialSnapshot: _snapshot(text: 'invalid-terminal-cleanup'),
+      );
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerDownEvent(
+          pointer: 8201,
+          position: Offset(16, 16),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerUpEvent(
+          pointer: 8201,
+          position: Offset(16, double.nan),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        controller.recordedInputs
+            .map((input) => (input.pointerId, input.phase))
+            .toList(),
+        <(int, CanvasPointerPhase)>[(1, CanvasPointerPhase.down)],
+      );
+      expect(
+        debugSceneViewInteractiveLiveRawPointerCountOf(
+          _sceneViewContext(tester),
+        ),
+        0,
+      );
+
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerDownEvent(
+          pointer: 8202,
+          position: Offset(20, 20),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        controller.recordedInputs
+            .map((input) => (input.pointerId, input.phase))
+            .toList(),
+        <(int, CanvasPointerPhase)>[
+          (1, CanvasPointerPhase.down),
+          (1, CanvasPointerPhase.down),
+        ],
+      );
+    },
+  );
+
+  testWidgets(
+    'SceneViewInteractive keeps remaining raw pointers alive after invalid terminal cleanup',
+    (tester) async {
+      final controller = _RecordingPointerController(
+        initialSnapshot: _snapshot(text: 'invalid-terminal-non-idle'),
+      );
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerDownEvent(
+          pointer: 8251,
+          position: Offset(16, 16),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerDownEvent(
+          pointer: 8252,
+          position: Offset(18, 18),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerCancelEvent(
+          pointer: 8251,
+          position: Offset(double.nan, 16),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        debugSceneViewInteractiveLiveRawPointerCountOf(
+          _sceneViewContext(tester),
+        ),
+        1,
+      );
+      expect(
+        controller.recordedInputs
+            .map((input) => (input.pointerId, input.phase))
+            .toList(),
+        <(int, CanvasPointerPhase)>[
+          (1, CanvasPointerPhase.down),
+          (2, CanvasPointerPhase.down),
+        ],
+      );
+    },
+  );
+
+  testWidgets(
+    'SceneViewInteractive cancels stale pending tap timer on controller swap',
+    (tester) async {
+      final controllerA = _RecordingPointerController(
+        initialSnapshot: _snapshot(text: 'swap-a'),
+        pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 100),
+      );
+      final controllerB = _RecordingPointerController(
+        initialSnapshot: _snapshot(text: 'swap-b'),
+        pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 100),
+      );
+      addTearDown(controllerA.dispose);
+      addTearDown(controllerB.dispose);
+
+      await tester.pumpWidget(_host(controllerA));
+      await tester.pump();
+
+      final gesture = await tester.startGesture(
+        const Offset(24, 24),
+        pointer: 8301,
+      );
+      await gesture.up();
+      await tester.pump();
+
+      expect(
+        debugSceneViewInteractivePendingTapFlushTimestampMsOf(
+          _sceneViewContext(tester),
+        ),
+        isNotNull,
+      );
+
+      await tester.pumpWidget(_host(controllerB));
+      await tester.pump();
+      expect(
+        debugSceneViewInteractivePendingTapFlushTimestampMsOf(
+          _sceneViewContext(tester),
+        ),
+        isNull,
+      );
+
+      await tester.pump(const Duration(milliseconds: 150));
+      expect(
+        debugSceneViewInteractivePendingTapFlushTimestampMsOf(
+          _sceneViewContext(tester),
+        ),
+        isNull,
+      );
+      expect(controllerB.recordedInputs, isEmpty);
+    },
+  );
+
+  testWidgets('SceneViewInteractive ignores pending tap timer after dispose', (
+    tester,
+  ) async {
+    final controller = SceneControllerInteractive(
+      initialSnapshot: _snapshot(text: 'dispose-timer'),
+      pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 100),
+    );
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(_host(controller));
+    await tester.pump();
+
+    final gesture = await tester.startGesture(
+      const Offset(30, 30),
+      pointer: 8401,
+    );
+    await gesture.up();
+    await tester.pump();
+
+    expect(
+      debugSceneViewInteractivePendingTapFlushTimestampMsOf(
+        _sceneViewContext(tester),
+      ),
+      isNotNull,
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 150));
+
+    expect(find.byType(SceneViewInteractive), findsNothing);
   });
 
   testWidgets('SceneViewInteractive applies pointer settings updates live', (

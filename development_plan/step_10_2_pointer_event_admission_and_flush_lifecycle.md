@@ -143,31 +143,31 @@ owner-ом шага `11`.
 
 ## Последовательность реализации (только действия)
 
-[ ] Вынести host finite admission для invalid `down/move` в явную раннюю фазу
+[x] Вынести host finite admission для invalid `down/move` в явную раннюю фазу
     `_handlePointerEvent(...)`.
-[ ] Выделить host-owned terminal cleanup для invalid `up/cancel` без
+[x] Выделить host-owned terminal cleanup для invalid `up/cancel` без
     controller-side recovery bridge.
-[ ] Исправить timer delay на явный `int`.
-[ ] Ввести no-allocation flush primitive в `PointerInputTracker` и перевести на
+[x] Исправить timer delay на явный `int`.
+[x] Ввести no-allocation flush primitive в `PointerInputTracker` и перевести на
     него host timer path.
-[ ] Зафиксировать `mounted`-guard во всех deferred/listener путях этого owner-а.
+[x] Зафиксировать `mounted`-guard во всех deferred/listener путях этого owner-а.
 
 ## Критерии приёмки
 
-[ ] `SceneViewInteractive` имеет один явный host pipeline и не смешивает host
+[x] `SceneViewInteractive` имеет один явный host pipeline и не смешивает host
     lifecycle с controller gesture semantics.
-[ ] Invalid `down/move` не создают routed slot и не вызывают
+[x] Invalid `down/move` не создают routed slot и не вызывают
     router/controller/tracker/timer side effects.
-[ ] Invalid terminal host events делают только host-owned cleanup для
+[x] Invalid terminal host events делают только host-owned cleanup для
     router/tracker/timer state и не создают view-side terminal bridge в
     controller.
-[ ] Valid `up/cancel` сохраняют прежний routed dispatch path.
-[ ] Deferred timer path не создаёт лишнюю коллекцию сигналов, если host её не
+[x] Valid `up/cancel` сохраняют прежний routed dispatch path.
+[x] Deferred timer path не создаёт лишнюю коллекцию сигналов, если host её не
     использует.
-[ ] Timer/listener callbacks безопасны относительно `mounted` и controller swap.
-[ ] Шаг `10.2` не добавляет новый internal controller API ради invalid terminal
+[x] Timer/listener callbacks безопасны относительно `mounted` и controller swap.
+[x] Шаг `10.2` не добавляет новый internal controller API ради invalid terminal
     recovery из view.
-[ ] Повторная диагностика
+[x] Повторная диагностика
     `dcm calculate-metrics lib/src/view/scene_view_interactive.dart lib/src/core/pointer_input.dart --report-all`
     приложена к результату шага; новые или step-owned host lifecycle methods и
     flush primitive не содержат `HIGH` по `cyclomatic-complexity`,
@@ -176,13 +176,21 @@ owner-ом шага `11`.
 
 ## Тестовый контур шага
 
-[ ] `test/view/scene_view_interactive_test.dart`
+[x] `test/view/scene_view_interactive_test.dart`
     с новыми targeted cases для:
     - invalid `down/move` не создают slot, gate и pending timer
     - invalid terminal host events освобождают host gate/router state без
       проверки controller-side preview/commit recovery
     - timer safety после dispose/controller swap
     - deferred flush без лишнего host-side signal materialization
-[ ] `test/core/pointer_input_test.dart`
-[ ] `dart run tool/check_invariant_coverage.dart` если меняется
-    `tool/invariant_registry.dart`
+[x] `test/core/pointer_input_test.dart`
+[x] `dart run tool/check_invariant_coverage.dart` если меняется
+    `tool/invariant_registry.dart` (не требовалось: `tool/invariant_registry.dart`
+    не менялся)
+
+## Диагностика шага
+
+- `dcm calculate-metrics lib/src/view/scene_view_interactive.dart lib/src/core/pointer_input.dart --report-all`
+  завершился без `HIGH`; целевые step-owned methods остаются в пределах
+  `cyclomatic-complexity <= 10`, `maximum-nesting-level <= 4`,
+  `source-lines-of-code <= 40`.
