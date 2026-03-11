@@ -808,6 +808,12 @@ Validation rules:
 - `tapSlop` must be finite and `>= 0`
 - `doubleTapSlop` must be finite and `>= 0`
 - `doubleTapMaxDelayMs` must be `>= 0`
+- value semantics include all four fields (`==` / `hashCode`)
+- `SceneView` applies updated settings immediately only when the raw-pointer
+  router is idle
+- when raw host pointers are still live, `SceneView` keeps one pending settings
+  value and applies only the last update after router idle
+- controller swaps discard pending settings from the previous controller owner
 
 ## 11. Serialization
 

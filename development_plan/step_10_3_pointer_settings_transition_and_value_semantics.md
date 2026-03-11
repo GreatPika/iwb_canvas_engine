@@ -103,26 +103,26 @@ host сравнивает и применяет `PointerInputSettings`: лока
 
 ## Последовательность реализации (только действия)
 
-[ ] Ввести value semantics для `PointerInputSettings`.
-[ ] Удалить manual compare settings из `SceneViewInteractive`.
-[ ] Разделить applied/pending tracker settings state.
-[ ] Зафиксировать `last write wins` и apply-on-router-idle contract.
-[ ] Явно задокументировать boundary со шагом `11` по `dragStartSlop`,
+[x] Ввести value semantics для `PointerInputSettings`.
+[x] Удалить manual compare settings из `SceneViewInteractive`.
+[x] Разделить applied/pending tracker settings state.
+[x] Зафиксировать `last write wins` и apply-on-router-idle contract.
+[x] Явно задокументировать boundary со шагом `11` по `dragStartSlop`,
     invalid terminal semantics и active gesture owner.
 
 ## Критерии приёмки
 
-[ ] `PointerInputSettings` сравнивается по value semantics, а не через
+[x] `PointerInputSettings` сравнивается по value semantics, а не через
     view-local manual comparator.
-[ ] `SceneViewInteractive` хранит отдельно applied и pending settings.
-[ ] Новые tracker settings не применяются, пока router не стал idle.
-[ ] При серии обновлений во время живых raw pointers применяется только
+[x] `SceneViewInteractive` хранит отдельно applied и pending settings.
+[x] Новые tracker settings не применяются, пока router не стал idle.
+[x] При серии обновлений во время живых raw pointers применяется только
     последнее pending значение.
-[ ] `scene_controller_interactive.dart` не получает view-side pointer-router
+[x] `scene_controller_interactive.dart` не получает view-side pointer-router
     state и не становится вторым owner-ом settings transition policy.
-[ ] Шаг `10.3` не добавляет controller bridge для invalid terminal или gesture
+[x] Шаг `10.3` не добавляет controller bridge для invalid terminal или gesture
     baseline semantics.
-[ ] Повторная диагностика
+[x] Повторная диагностика
     `dcm calculate-metrics lib/src/view/scene_view_interactive.dart lib/src/core/pointer_input.dart --report-all`
     приложена к результату шага; `HIGH` не остаётся в step-owned settings
     owner-ах и методах, а `scene_controller_interactive.dart` рассматривается
@@ -131,12 +131,12 @@ host сравнивает и применяет `PointerInputSettings`: лока
 
 ## Тестовый контур шага
 
-[ ] `test/view/scene_view_interactive_test.dart`
+[x] `test/view/scene_view_interactive_test.dart`
     с покрытием:
     - `INV-ENG-VIEW-POINTER-SETTINGS-LIVE-APPLY`
     - pending settings `last write wins`
     - apply-on-idle, а не apply-on-tracked-pointer-release
-[ ] `test/core/pointer_input_test.dart`
+[x] `test/core/pointer_input_test.dart`
     с отдельной проверкой value semantics `PointerInputSettings`
-[ ] `test/interactive/core/scene_controller_interactive_basics_test.dart`
+[x] `test/interactive/core/scene_controller_interactive_basics_test.dart`
     только как boundary-check для public validation surface

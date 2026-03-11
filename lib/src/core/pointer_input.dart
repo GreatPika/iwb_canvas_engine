@@ -73,6 +73,20 @@ class PointerInputSettings {
 
   /// When true, single tap is emitted only after the double-tap window passes.
   final bool deferSingleTap;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is PointerInputSettings &&
+            tapSlop == other.tapSlop &&
+            doubleTapSlop == other.doubleTapSlop &&
+            doubleTapMaxDelayMs == other.doubleTapMaxDelayMs &&
+            deferSingleTap == other.deferSingleTap;
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(tapSlop, doubleTapSlop, doubleTapMaxDelayMs, deferSingleTap);
 }
 
 /// Validates [PointerInputSettings] values at runtime boundaries.

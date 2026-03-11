@@ -34,6 +34,9 @@ All notable changes to `iwb_canvas_engine` are documented here.
   only on `down`, stray non-down host events are dropped, minimum free slot
   reuse stays deterministic, and pending pointer-setting resets wait for full
   router idle instead of only the tracked pointer.
+- `PointerInputSettings` now uses value semantics, and `SceneViewInteractive`
+  keeps explicit applied/pending tracker settings with last-write-wins
+  apply-on-idle behavior for live raw pointers.
 - Render-cache invalidation is now explicitly owned by
   `SceneRenderCaches.clearAll()` on controller epoch/document boundaries;
   render cache keys stay scoped to local revision/layout inputs only, while

@@ -183,9 +183,9 @@ language: russian
     `10.1`, `10.2`, `10.3`.
 [x] В `10.1` принять финальное решение по owner-у raw-to-slot routing,
     active-pointer gate и slot reuse contract.
-[ ] В `10.2` зафиксировать host admission, host-owned terminal cleanup и
+[x] В `10.2` зафиксировать host admission, host-owned terminal cleanup и
     flush/timer lifecycle без view-side terminal bridge в controller.
-[ ] В `10.3` зафиксировать value semantics и pending-apply contract для
+[x] В `10.3` зафиксировать value semantics и pending-apply contract для
     `PointerInputSettings` без overlap со шагом `11`.
 [x] Закрепить в критериях приёмки каждого подшага повторную диагностику
     метрик с порогами `cyclomatic-complexity <= 10`,

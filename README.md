@@ -144,7 +144,9 @@ class _CanvasScreenState extends State<CanvasScreen> {
   listener notifications are microtask-deferred and coalesced.
 - `setPointerSettings(...)` is applied live by `SceneView`; active gestures keep
   their current settings until `up` or `cancel`, and parallel raw host pointers
-  do not force an early reset of routed pointer tracking.
+  do not force an early reset of routed pointer tracking. Settings are treated
+  as a value object, and while raw pointers remain live the view keeps only the
+  last pending update until router idle.
 
 ## Where to look next
 

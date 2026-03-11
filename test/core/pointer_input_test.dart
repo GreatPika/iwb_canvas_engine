@@ -68,6 +68,31 @@ void main() {
     expect(tracker.settings.doubleTapMaxDelayMs, 0);
   });
 
+  test('PointerInputSettings uses value semantics', () {
+    const left = PointerInputSettings(
+      tapSlop: 12,
+      doubleTapSlop: 32,
+      doubleTapMaxDelayMs: 450,
+      deferSingleTap: false,
+    );
+    const same = PointerInputSettings(
+      tapSlop: 12,
+      doubleTapSlop: 32,
+      doubleTapMaxDelayMs: 450,
+      deferSingleTap: false,
+    );
+    const different = PointerInputSettings(
+      tapSlop: 13,
+      doubleTapSlop: 32,
+      doubleTapMaxDelayMs: 450,
+      deferSingleTap: false,
+    );
+
+    expect(left, same);
+    expect(left.hashCode, same.hashCode);
+    expect(left, isNot(different));
+  });
+
   test('emits base lifecycle signals for down/move/up/cancel', () {
     final tracker = PointerInputTracker();
 

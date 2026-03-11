@@ -76,7 +76,7 @@ class SceneViewInteractive extends StatefulWidget {
 
 class _SceneViewInteractiveState extends State<SceneViewInteractive> {
   late PointerInputTracker _pointerTracker;
-  late PointerInputSettings _lastPointerSettings;
+  late PointerInputSettings _appliedPointerSettings;
   PointerInputSettings? _pendingPointerSettings;
   Timer? _pendingTapTimer;
   int? _pendingTapFlushTimestampMs;
@@ -112,8 +112,8 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
     super.initState();
     _renderCaches = _createRenderCaches();
     _lastEpoch = sceneControllerInteractiveInternalEpoch(widget.controller);
-    _lastPointerSettings = widget.controller.pointerSettings;
-    _pointerTracker = PointerInputTracker(settings: _lastPointerSettings);
+    _appliedPointerSettings = widget.controller.pointerSettings;
+    _pointerTracker = PointerInputTracker(settings: _appliedPointerSettings);
     _pointerTrackerGeneration = 1;
     _subscribeToController(widget.controller);
   }
@@ -124,7 +124,7 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
     if (oldWidget.controller != widget.controller) {
       _unsubscribeFromController(oldWidget.controller);
       _subscribeToController(widget.controller);
-      _resetPointerTracking(settings: widget.controller.pointerSettings);
+      _replacePointerTrackingOwner(settings: widget.controller.pointerSettings);
       _lastEpoch = sceneControllerInteractiveInternalEpoch(widget.controller);
       _clearAllCaches();
     }
@@ -310,13 +310,7 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
       return;
     }
     final nextPointerSettings = widget.controller.pointerSettings;
-    if (!_pointerSettingsEqual(_lastPointerSettings, nextPointerSettings)) {
-      if (_pointerRouter.hasLiveRawPointers) {
-        _pendingPointerSettings = nextPointerSettings;
-      } else {
-        _resetPointerTracking(settings: nextPointerSettings);
-      }
-    }
+    _adoptPointerSettings(nextPointerSettings);
     final epoch = sceneControllerInteractiveInternalEpoch(widget.controller);
     if (epoch == _lastEpoch) {
       return;
@@ -331,27 +325,35 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
 
   void _resetPointerTracking({required PointerInputSettings settings}) {
     _pendingPointerSettings = null;
-    _lastPointerSettings = settings;
+    _appliedPointerSettings = settings;
     _pointerTracker = PointerInputTracker(settings: settings);
     _pointerTrackerGeneration++;
     _clearPendingTapTimer();
     _pointerRouter.reset();
   }
 
+  void _replacePointerTrackingOwner({required PointerInputSettings settings}) {
+    _resetPointerTracking(settings: settings);
+  }
+
+  void _adoptPointerSettings(PointerInputSettings nextSettings) {
+    if (_pointerRouter.hasLiveRawPointers) {
+      _pendingPointerSettings = nextSettings == _appliedPointerSettings
+          ? null
+          : nextSettings;
+      return;
+    }
+    if (nextSettings == _appliedPointerSettings) {
+      _pendingPointerSettings = null;
+      return;
+    }
+    _resetPointerTracking(settings: nextSettings);
+  }
+
   void _applyPendingPointerSettingsIfPossible() {
     final pending = _pendingPointerSettings;
     if (pending == null || !_pointerRouter.isIdle) return;
     _resetPointerTracking(settings: pending);
-  }
-
-  bool _pointerSettingsEqual(
-    PointerInputSettings left,
-    PointerInputSettings right,
-  ) {
-    return left.tapSlop == right.tapSlop &&
-        left.doubleTapSlop == right.doubleTapSlop &&
-        left.doubleTapMaxDelayMs == right.doubleTapMaxDelayMs &&
-        left.deferSingleTap == right.deferSingleTap;
   }
 
   CanvasPointerPhase _toCanvasPointerPhase(PointerPhase phase) {

@@ -93,7 +93,8 @@ Ownership decisions for the target state:
 
 1. `SceneView` receives Flutter pointer input and normalizes it into public
    `CanvasPointerInput`, while its view-local pointer router owns raw Flutter
-   pointer lifetimes and routed runtime `pointerId` allocation.
+   pointer lifetimes, routed runtime `pointerId` allocation, and apply-on-idle
+   adoption of `PointerInputSettings`.
 2. `SceneControllerInteractive` validates input, maintains interactive state,
    and delegates committed mutations to `SceneControllerCore`.
 3. `SceneControllerCore` performs transactional writes and finalizes a canonical
@@ -153,6 +154,10 @@ most important architectural rules are:
 - Listener notifications are microtask-deferred and coalesced.
 - `actions` and `editTextRequests` are asynchronous; their relative ordering
   against repaint notifications is intentionally not a public contract.
+- `PointerInputSettings` is a value object. `SceneView` owns the
+  applied-versus-pending transition state and may rebuild its
+  `PointerInputTracker` only after the raw-pointer router becomes idle; pending
+  updates are last-write-wins and do not move into the interactive controller.
 - After `dispose()`, mutating or effectful public entrypoints fail fast with
   `StateError`.
 

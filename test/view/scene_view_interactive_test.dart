@@ -599,6 +599,7 @@ void main() {
   testWidgets(
     'SceneViewInteractive defers pointer settings update until active pointer ends',
     (tester) async {
+      // INV:INV-ENG-VIEW-POINTER-SETTINGS-LIVE-APPLY
       final controller = SceneControllerInteractive(
         initialSnapshot: _snapshot(text: 'deferred'),
         pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 300),
@@ -641,6 +642,60 @@ void main() {
         final second = await tester.startGesture(
           const Offset(8, 8),
           pointer: 56,
+        );
+        await second.up();
+        await tester.pump();
+        await tester.pump();
+      }
+
+      await doubleTapWithGap(const Duration(milliseconds: 20));
+      expect(editRequests, isEmpty);
+    },
+  );
+
+  testWidgets(
+    'SceneViewInteractive keeps only the last pending pointer settings value',
+    (tester) async {
+      // INV:INV-ENG-VIEW-POINTER-SETTINGS-LIVE-APPLY
+      final controller = SceneControllerInteractive(
+        initialSnapshot: _snapshot(text: 'last-write-wins'),
+        pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 300),
+      );
+      addTearDown(controller.dispose);
+      final editRequests = <Object>[];
+      final editSub = controller.editTextRequests.listen(editRequests.add);
+      addTearDown(editSub.cancel);
+
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+
+      final hold = await tester.startGesture(const Offset(10, 10), pointer: 57);
+      await tester.pump();
+
+      controller.setPointerSettings(
+        const PointerInputSettings(doubleTapMaxDelayMs: 1),
+      );
+      controller.setPointerSettings(
+        const PointerInputSettings(doubleTapMaxDelayMs: 300),
+      );
+      controller.setPointerSettings(
+        const PointerInputSettings(doubleTapMaxDelayMs: 1),
+      );
+      await tester.pump();
+
+      await hold.up();
+      await tester.pump();
+
+      Future<void> doubleTapWithGap(Duration gap) async {
+        final first = await tester.startGesture(
+          const Offset(8, 8),
+          pointer: 58,
+        );
+        await first.up();
+        await tester.pump(gap);
+        final second = await tester.startGesture(
+          const Offset(8, 8),
+          pointer: 58,
         );
         await second.up();
         await tester.pump();
