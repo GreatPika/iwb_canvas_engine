@@ -63,10 +63,12 @@ class MutationExecutor {
 
   MutationApplyResult execute(TxnContext ctx, MutationOp op) {
     ctx.txnEnsureActive();
-    _runPreconditions(ctx, op);
-    final applyResult = _apply(ctx, op);
-    _runPostcheck(ctx, op, changed: applyResult.changed);
-    return applyResult;
+    return switch (op) {
+      StructuralDocumentMutationOp() => _executeStructuralDocumentOp(ctx, op),
+      NodeMutationOp() => _executeNodeMutationOp(ctx, op),
+      SceneSettingsMutationOp() => _executeSceneSettingsOp(ctx, op),
+      SelectionTransformMutationOp() => _executeSelectionTransformOp(ctx, op),
+    };
   }
 
   MutationExecutionResult executeWithPreparedCommit(
@@ -90,46 +92,26 @@ class MutationExecutor {
     );
   }
 
-  void _runPreconditions(TxnContext ctx, MutationOp op) {
-    if (op case InsertNodeOp(:final spec)) {
-      final explicitId = spec.id;
-      if (explicitId != null && ctx.txnHasNodeId(explicitId)) {
-        throw ArgumentError.value(
-          explicitId,
-          'spec.id',
-          'Node id must be unique.',
-        );
-      }
-      return;
-    }
-    if (op case SetNodeTransformOp(:final transform)) {
-      _requireFiniteTransform(transform, name: 'transform');
-      return;
-    }
-    if (op case SetGridCellSizeOp(:final cellSize)) {
-      _requireFinitePositive(cellSize, name: 'cellSize');
-      return;
-    }
-    if (op case SetCameraOffsetOp(:final offset)) {
-      _requireFiniteOffset(offset, name: 'offset');
-      return;
-    }
-    if (op case TransformSelectionOp(:final delta)) {
-      _requireFiniteTransform(delta, name: 'delta');
-      return;
-    }
-    if (op case TranslateSelectionOp(:final delta)) {
-      _requireFiniteOffset(delta, name: 'delta');
-    }
-  }
-
-  MutationApplyResult _apply(TxnContext ctx, MutationOp op) {
+  MutationApplyResult _executeStructuralDocumentOp(
+    TxnContext ctx,
+    StructuralDocumentMutationOp op,
+  ) {
     return switch (op) {
       EnsureLayerOp(:final layerId, :final index) => _ensureLayer(
         ctx,
         layerId,
         index: index,
       ),
+      ClearSceneKeepBackgroundOp() => _clearSceneKeepBackground(ctx),
+      ReplaceSceneOp(:final snapshot) => _replaceScene(ctx, snapshot),
+    };
+  }
+
+  MutationApplyResult _executeNodeMutationOp(
+    TxnContext ctx,
+    NodeMutationOp op,
+  ) {
+    return switch (op) {
       InsertNodeOp(:final spec, :final layerId, :final insertIndex) => _insert(
         ctx,
         spec,
@@ -144,38 +126,29 @@ class MutationExecutor {
       ),
       DeleteNodeOp(:final nodeId) => _deleteNode(ctx, nodeId),
       DeleteNodesBulkOp(:final nodeIds) => _deleteNodesBulk(ctx, nodeIds),
-      ClearSceneKeepBackgroundOp() => _clearSceneKeepBackground(ctx),
-      ReplaceSceneOp(:final snapshot) => _replaceScene(ctx, snapshot),
+    };
+  }
+
+  MutationApplyResult _executeSceneSettingsOp(
+    TxnContext ctx,
+    SceneSettingsMutationOp op,
+  ) {
+    return switch (op) {
       SetBackgroundColorOp(:final color) => _setBackgroundColor(ctx, color),
       SetGridEnabledOp(:final enabled) => _setGridEnabled(ctx, enabled),
       SetGridCellSizeOp(:final cellSize) => _setGridCellSize(ctx, cellSize),
       SetCameraOffsetOp(:final offset) => _setCameraOffset(ctx, offset),
-      TransformSelectionOp(:final delta) => _transformSelection(ctx, delta),
-      TranslateSelectionOp(:final delta) => _translateSelection(ctx, delta),
     };
   }
 
-  void _runPostcheck(TxnContext ctx, MutationOp op, {required bool changed}) {
-    if (!changed) {
-      return;
-    }
-    switch (op) {
-      case EnsureLayerOp():
-      case InsertNodeOp():
-      case PatchNodeOp():
-      case SetNodeTransformOp():
-      case DeleteNodeOp():
-      case DeleteNodesBulkOp():
-      case ClearSceneKeepBackgroundOp():
-      case ReplaceSceneOp():
-      case SetBackgroundColorOp():
-      case SetGridEnabledOp():
-      case SetGridCellSizeOp():
-      case SetCameraOffsetOp():
-      case TransformSelectionOp():
-      case TranslateSelectionOp():
-        ctx.txnEnsureActive();
-    }
+  MutationApplyResult _executeSelectionTransformOp(
+    TxnContext ctx,
+    SelectionTransformMutationOp op,
+  ) {
+    return switch (op) {
+      TransformSelectionOp(:final delta) => _transformSelection(ctx, delta),
+      TranslateSelectionOp(:final delta) => _translateSelection(ctx, delta),
+    };
   }
 
   MutationCommitCandidate? _prepareCommitCandidate(TxnContext ctx) {
@@ -215,6 +188,14 @@ class MutationExecutor {
     LayerId? layerId,
     int? insertIndex,
   }) {
+    final explicitId = spec.id;
+    if (explicitId != null && ctx.txnHasNodeId(explicitId)) {
+      throw ArgumentError.value(
+        explicitId,
+        'spec.id',
+        'Node id must be unique.',
+      );
+    }
     final resolvedId = spec.id ?? ctx.txnNextNodeId();
     final node = txnNodeFromSpec(
       _normalizeInsertSpec(spec),
@@ -272,6 +253,7 @@ class MutationExecutor {
     NodeId nodeId,
     Transform2D transform,
   ) {
+    _requireFiniteTransform(transform, name: 'transform');
     final existing = ctx.txnFindNodeById(nodeId);
     if (existing == null || existing.node.transform == transform) {
       return const MutationApplyResult(value: false, changed: false);
@@ -321,11 +303,39 @@ class MutationExecutor {
   }
 
   MutationApplyResult _deleteNodesBulk(TxnContext ctx, Set<NodeId> nodeIds) {
-    if (nodeIds.isEmpty) {
+    final plan = _prepareBulkDelete(ctx, nodeIds);
+    if (plan == null) {
+      return const MutationApplyResult(value: 0, changed: false);
+    }
+    for (final layerIndex in plan.targetLayerIndexes) {
+      ctx.txnEnsureMutableLayer(layerIndex);
+    }
+
+    final deleted = txnEraseNodesFromScene(
+      scene: ctx.txnEnsureMutableScene(),
+      nodeLocator: ctx.txnEnsureMutableNodeLocator(),
+      nodeIds: plan.deletableNodeIds,
+    );
+    if (deleted.isEmpty) {
       return const MutationApplyResult(value: 0, changed: false);
     }
 
+    _finalizeDeletedNodes(ctx, deleted);
+    if (plan.selectionMayChange) {
+      ctx.workingSelection.removeAll(deleted);
+      ctx.changeSet.txnMarkSelectionChanged();
+    }
+    return MutationApplyResult(value: deleted.length, changed: true);
+  }
+
+  _PreparedBulkDelete? _prepareBulkDelete(TxnContext ctx, Set<NodeId> nodeIds) {
+    if (nodeIds.isEmpty) {
+      return null;
+    }
+
+    final deletableNodeIds = <NodeId>{};
     final targetLayerIndexes = <int>{};
+    var selectionMayChange = false;
     for (final nodeId in nodeIds) {
       final existing = ctx.txnFindNodeById(nodeId);
       if (existing == null ||
@@ -333,39 +343,30 @@ class MutationExecutor {
           !isNodeDeletableInLayer(existing.node)) {
         continue;
       }
+      deletableNodeIds.add(nodeId);
       targetLayerIndexes.add(existing.layerIndex);
+      if (!selectionMayChange && ctx.workingSelection.contains(nodeId)) {
+        selectionMayChange = true;
+      }
     }
-    if (targetLayerIndexes.isEmpty) {
-      return const MutationApplyResult(value: 0, changed: false);
+    if (deletableNodeIds.isEmpty) {
+      return null;
     }
     final sortedLayerIndexes = targetLayerIndexes.toList(growable: false)
       ..sort();
-    for (final layerIndex in sortedLayerIndexes) {
-      ctx.txnEnsureMutableLayer(layerIndex);
-    }
-
-    final deleted = txnEraseNodesFromScene(
-      scene: ctx.txnEnsureMutableScene(),
-      nodeLocator: ctx.txnEnsureMutableNodeLocator(),
-      nodeIds: nodeIds,
+    return _PreparedBulkDelete(
+      deletableNodeIds: Set<NodeId>.unmodifiable(deletableNodeIds),
+      targetLayerIndexes: sortedLayerIndexes,
+      selectionMayChange: selectionMayChange,
     );
-    if (deleted.isEmpty) {
-      return const MutationApplyResult(value: 0, changed: false);
-    }
+  }
 
-    for (final id in deleted) {
-      ctx.txnForgetNodeId(id);
-    }
+  void _finalizeDeletedNodes(TxnContext ctx, Iterable<NodeId> deletedNodeIds) {
     ctx.changeSet.txnMarkStructuralChanged();
-    for (final id in deleted) {
-      ctx.changeSet.txnTrackRemoved(id);
+    for (final nodeId in deletedNodeIds) {
+      ctx.txnForgetNodeId(nodeId);
+      ctx.changeSet.txnTrackRemoved(nodeId);
     }
-    final hadSelection = deleted.any(ctx.workingSelection.contains);
-    ctx.workingSelection.removeAll(deleted);
-    if (hadSelection) {
-      ctx.changeSet.txnMarkSelectionChanged();
-    }
-    return MutationApplyResult(value: deleted.length, changed: true);
   }
 
   MutationApplyResult _clearSceneKeepBackground(TxnContext ctx) {
@@ -439,6 +440,7 @@ class MutationExecutor {
   }
 
   MutationApplyResult _setGridCellSize(TxnContext ctx, double cellSize) {
+    _requireFinitePositive(cellSize, name: 'cellSize');
     if (ctx.workingScene.background.grid.cellSize == cellSize) {
       return const MutationApplyResult(value: null, changed: false);
     }
@@ -449,6 +451,7 @@ class MutationExecutor {
   }
 
   MutationApplyResult _setCameraOffset(TxnContext ctx, Offset offset) {
+    _requireFiniteOffset(offset, name: 'offset');
     if (ctx.workingScene.camera.offset == offset) {
       return const MutationApplyResult(value: null, changed: false);
     }
@@ -459,6 +462,7 @@ class MutationExecutor {
   }
 
   MutationApplyResult _transformSelection(TxnContext ctx, Transform2D delta) {
+    _requireFiniteTransform(delta, name: 'delta');
     final selected = ctx.workingSelection;
     if (selected.isEmpty) {
       return const MutationApplyResult(value: 0, changed: false);
@@ -498,6 +502,7 @@ class MutationExecutor {
   }
 
   MutationApplyResult _translateSelection(TxnContext ctx, Offset delta) {
+    _requireFiniteOffset(delta, name: 'delta');
     if (delta == Offset.zero || ctx.workingSelection.isEmpty) {
       return const MutationApplyResult(value: 0, changed: false);
     }
@@ -603,4 +608,16 @@ class MutationApplyResult {
 
   final Object? value;
   final bool changed;
+}
+
+class _PreparedBulkDelete {
+  const _PreparedBulkDelete({
+    required this.deletableNodeIds,
+    required this.targetLayerIndexes,
+    required this.selectionMayChange,
+  });
+
+  final Set<NodeId> deletableNodeIds;
+  final List<int> targetLayerIndexes;
+  final bool selectionMayChange;
 }

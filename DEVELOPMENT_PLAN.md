@@ -48,7 +48,7 @@ language: russian
 - [x] [Шаг 8.3. Перевести `SceneWriter` на executor и зачистить write-boundary drift](development_plan/step_08_3_scene_writer_executor_adoption.md)
 - [x] [Шаг 8.4. Довести `SceneControllerCore` до ясного commit pipeline и dispose contract](development_plan/step_08_4_scene_controller_commit_pipeline.md)
 - [x] [Шаг 8.5. Свести controller commit к одному internal plan и схлопнуть ветвления](development_plan/step_08_5_controller_commit_plan_and_branch_collapse.md)
-- [ ] [Шаг 8.6. Довести `MutationExecutor` до operation-family hot path без пустого postcheck](development_plan/step_08_6_executor_operation_family_cleanup.md)
+- [x] [Шаг 8.6. Довести `MutationExecutor` до operation-family hot path без пустого postcheck](development_plan/step_08_6_executor_operation_family_cleanup.md)
 - [ ] [Шаг 8.7. Упростить `TxnContext` hot primitives без второго runtime cache](development_plan/step_08_7_txn_context_hot_path_primitives.md)
 - [ ] [Шаг 9. Довести командный слой до правильной сложности и семантики](development_plan/step_09_command_layer_complexity_and_semantics.md)
 - [ ] [Шаг 10. Вынести pointer-router в правильную форму](development_plan/step_10_pointer_router_structure.md)

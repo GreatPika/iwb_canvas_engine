@@ -98,45 +98,63 @@ apply и bookkeeping в одном методе.
 
 ## Последовательность реализации (только действия)
 
-[ ] Разбить executor routing на устойчивые operation families без переноса
+[x] Разбить executor routing на устойчивые operation families без переноса
     поведения в `MutationOp`.
-[ ] Удалить или резко сузить `_runPostcheck(...)`, оставив postcheck только
+[x] Удалить или резко сузить `_runPostcheck(...)`, оставив postcheck только
     там, где он реально защищает invariant или contract.
-[ ] Перевести `_runPreconditions(...)` на тот же family-based routing, чтобы
+[x] Перевести `_runPreconditions(...)` на тот же family-based routing, чтобы
     рост operation set не перенёс giant dispatcher из `_apply(...)` в другой
     lifecycle hook.
-[ ] Вынести bulk delete prepare phase в отдельный narrow helper/value object,
+[x] Вынести bulk delete prepare phase в отдельный narrow helper/value object,
     чтобы `_deleteNodesBulk(...)` перестал смешивать discovery и finalize.
-[ ] Передавать в low-level erase уже отфильтрованный deletable id set, а не
+[x] Передавать в low-level erase уже отфильтрованный deletable id set, а не
     исходный входной набор.
-[ ] Сохранить один low-level erase call для bulk delete и один finalize pass по
+[x] Сохранить один low-level erase call для bulk delete и один finalize pass по
     selection / `ChangeSet`.
-[ ] Перепроверить node/transform/settings routes, чтобы decomposition не
+[x] Перепроверить node/transform/settings routes, чтобы decomposition не
     добавила повторные scene/node lookups и лишние копии.
-[ ] Повторно снять диагностические метрики по executor watchpoint-owner-ам и
+[x] Повторно снять диагностические метрики по executor watchpoint-owner-ам и
     зафиксировать, что прежние giant методы либо упрощены, либо исчезли.
 
 ## Критерии приёмки
 
-[ ] `MutationExecutor` остаётся единственным owner-ом operation orchestration.
-[ ] В коде не остаётся формального postcheck switch-а, который не выполняет
+[x] `MutationExecutor` остаётся единственным owner-ом operation orchestration.
+[x] В коде не остаётся формального postcheck switch-а, который не выполняет
     реальной post-apply проверки.
-[ ] В коде не появляется новый giant dispatcher в `_runPreconditions(...)`.
-[ ] Bulk delete выражен как явный двухфазный hot path без смешения discovery,
+[x] В коде не появляется новый giant dispatcher в `_runPreconditions(...)`.
+[x] Bulk delete выражен как явный двухфазный hot path без смешения discovery,
     erase и bookkeeping в одном giant method body.
-[ ] Bulk delete decomposition не сохраняет скрытую двойную работу через
+[x] Bulk delete decomposition не сохраняет скрытую двойную работу через
     повторную передачу неотфильтрованного набора в low-level erase path.
-[ ] Family decomposition не создаёт новый visitor/framework и не ухудшает
+[x] Family decomposition не создаёт новый visitor/framework и не ухудшает
     runtime cost лишними проходами или копиями.
-[ ] Для executor watchpoint зоны шага `8` не остаётся необъяснённых
+[x] Для executor watchpoint зоны шага `8` не остаётся необъяснённых
     превышений, которые просто переехали в новые helper-ы без смены ownership.
 
 ## Тестовый контур шага
 
-[ ] `test/controller/internal/mutation_executor_test.dart`
-[ ] `test/controller/internal/scene_writer_test.dart`
-[ ] `test/controller/internal/spatial_index_cache_test.dart`
-[ ] Точечные сценарии:
+[x] `test/controller/internal/mutation_executor_test.dart`
+[x] `test/controller/internal/scene_writer_test.dart`
+[x] `test/controller/internal/spatial_index_cache_test.dart`
+[x] Точечные сценарии:
     - bulk delete удаляет только deletable content nodes
     - no-op routes не трогают `ChangeSet`
     - decomposition не меняет transform/delete semantics
+
+## Итоговые метрики
+
+1. Повторная диагностика `dcm calculate-metrics lib/src/controller/mutation_executor.dart --report-all`
+   показывает:
+   - `MutationExecutor.execute(...)`: `cyclomatic-complexity = 4`,
+     `source-lines-of-code = 7`
+   - `MutationExecutor._executeNodeMutationOp(...)`:
+     `cyclomatic-complexity = 5`, `source-lines-of-code = 16`
+   - `MutationExecutor._deleteNodesBulk(...)`:
+     `cyclomatic-complexity = 5`, `source-lines-of-code = 21`
+2. Прежние giant owner-ы шага исчезли:
+   - `_apply(...)` удалён;
+   - `_runPreconditions(...)` удалён;
+   - `_runPostcheck(...)` удалён.
+3. Bulk delete hot path теперь закрывается через `_prepareBulkDelete(...)` +
+   один `txnEraseNodesFromScene(...)` + один `_finalizeDeletedNodes(...)`
+   проход без повторной передачи исходного `nodeIds`.

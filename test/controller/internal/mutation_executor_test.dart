@@ -298,6 +298,48 @@ void main() {
     );
   });
 
+  test('MutationExecutor bulk delete no-op keeps changeset untouched', () {
+    final ctx = TxnContext(
+      baseScene: Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-auto-3f',
+            nodes: <SceneNode>[
+              RectNode(
+                id: 'locked',
+                size: const Size(1, 1),
+                isDeletable: false,
+              ),
+            ],
+          ),
+        ],
+      ),
+      workingSelection: const <NodeId>{'locked'},
+      baseAllNodeIds: const <NodeId>{'locked'},
+      nodeIdSeed: 0,
+      nextInstanceRevision: 1,
+    );
+    final executor = MutationExecutor();
+
+    final result = executor.execute(
+      ctx,
+      DeleteNodesBulkOp(const <NodeId>{'missing', 'locked'}),
+    );
+
+    expect(result.changed, isFalse);
+    expect(result.value, 0);
+    expect(ctx.changeSet.txnHasAnyChange, isFalse);
+    expect(ctx.changeSet.removedNodeIds, isEmpty);
+    expect(ctx.changeSet.selectionChanged, isFalse);
+    expect(ctx.workingSelection, const <NodeId>{'locked'});
+    expect(
+      ctx.workingScene.layers.single.nodes
+          .map((node) => node.id)
+          .toList(growable: false),
+      const <NodeId>['locked'],
+    );
+  });
+
   test(
     'MutationExecutor replace scene clears selection and marks document replace',
     () {
