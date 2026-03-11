@@ -177,4 +177,52 @@ void main() {
       expect(notifications, 0);
     },
   );
+
+  test(
+    'dispose during active write fails fast and does not poison commit lifecycle',
+    () async {
+      final controller = SceneControllerCore(
+        initialSnapshot: twoRectSnapshot(),
+      );
+      addTearDown(controller.dispose);
+
+      final signals = <String>[];
+      final sub = controller.signals.listen((signal) {
+        signals.add(signal.type);
+      });
+      addTearDown(sub.cancel);
+
+      var notifications = 0;
+      controller.addListener(() {
+        notifications = notifications + 1;
+      });
+
+      controller.write<void>((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'r1'});
+        expect(() => controller.dispose(), throwsStateError);
+        writer.writeSelectionTranslate(const Offset(8, 0));
+        writer.writeSignalEnqueue(type: 'commit.survived');
+      });
+      await pumpEventQueue(times: 2);
+
+      final moved =
+          controller.snapshot.layers.first.nodes.first as RectNodeSnapshot;
+      expect(moved.transform.tx, 8);
+      expect(controller.selectedNodeIds, const <NodeId>{'r1'});
+      expect(controller.debugCommitRevision, 1);
+      expect(signals, const <String>['commit.survived']);
+      expect(notifications, 1);
+
+      expect(
+        () => controller.write<void>((writer) {
+          writer.writeSignalEnqueue(type: 'second.commit');
+        }),
+        returnsNormally,
+      );
+      await pumpEventQueue(times: 2);
+
+      expect(controller.debugCommitRevision, 2);
+      expect(signals, const <String>['commit.survived', 'second.commit']);
+    },
+  );
 }

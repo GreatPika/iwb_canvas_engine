@@ -80,6 +80,80 @@ void main() {
   });
 
   test(
+    'commit handles locator shift before delete without leaving stale node',
+    () {
+      final controller = SceneControllerCore(
+        initialSnapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(id: 'layer-auto-0'),
+            ContentLayerSnapshot(
+              id: 'layer-auto-1',
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(id: 'tail', size: const Size(10, 10)),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      controller.write<void>((writer) {
+        expect(writer.writeLayerEnsure('layer-inserted', index: 1), isTrue);
+        expect(writer.writeNodeErase('tail'), isTrue);
+      });
+
+      expect(
+        controller.snapshot.layers.map((layer) => layer.id).toList(),
+        const <LayerId>['layer-auto-0', 'layer-inserted', 'layer-auto-1'],
+      );
+      expect(controller.snapshot.layers.last.nodes, isEmpty);
+      expect(
+        controller.querySpatialCandidates(const Rect.fromLTWH(0, 0, 20, 20)),
+        isEmpty,
+      );
+      expect(controller.debugLastCommitPhases, const <String>[
+        'selection',
+        'spatial_index',
+        'signals',
+        'repaint',
+      ]);
+    },
+  );
+
+  test(
+    'structural clear without removed nodes still commits through state path',
+    () {
+      final controller = SceneControllerCore(
+        initialSnapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(id: 'layer-empty'),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      late final ClearSceneResult clearResult;
+      controller.write<void>((writer) {
+        clearResult = writer.writeClearSceneKeepBackgroundResult();
+      });
+
+      expect(clearResult.removedNodeIds, isEmpty);
+      expect(clearResult.didStructuralClear, isTrue);
+      expect(controller.snapshot.layers, isEmpty);
+      expect(controller.structuralRevision, 1);
+      expect(controller.boundsRevision, 1);
+      expect(controller.visualRevision, 1);
+      expect(controller.debugCommitRevision, 1);
+      expect(controller.debugLastCommitPhases, const <String>[
+        'selection',
+        'spatial_index',
+        'signals',
+        'repaint',
+      ]);
+    },
+  );
+
+  test(
     'repaint notifications are coalesced within the same event-loop tick',
     () async {
       final controller = SceneControllerCore(

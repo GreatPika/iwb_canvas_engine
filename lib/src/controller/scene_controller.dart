@@ -281,12 +281,14 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
       }
     }
 
-    final hasStateChanges = ctx.changeSet.txnHasAnyChange;
+    final preparedCommit = _mutationExecutor.prepareCommitResult(ctx);
+    final changeSet = preparedCommit.changeSet;
+    final commitCandidate = preparedCommit.commitCandidate;
     final hasSignals = _signalsBuffer.writeHasBufferedSignals;
     final hasRepaint = _repaintFlag.needsNotify;
-    if (!hasStateChanges && !hasSignals && !hasRepaint) {
+    if (commitCandidate == null && !hasSignals && !hasRepaint) {
       _debugLastCommitPhases = commitPhases;
-      _debugLastChangeSet = ctx.changeSet.txnClone();
+      _debugLastChangeSet = changeSet;
       _debugCaptureTxnCloneStats(ctx);
       return const _TxnWriteCommitResult(
         committedSignals: <CommittedSignal>[],
@@ -294,7 +296,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
       );
     }
 
-    if (!hasStateChanges) {
+    if (commitCandidate == null) {
       var committedSignals = const <CommittedSignal>[];
       if (hasSignals) {
         final nextCommitRevision = _store.commitRevision + 1;
@@ -321,7 +323,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
         commitPhases = <String>[...commitPhases, 'repaint'];
       }
       _debugLastCommitPhases = commitPhases;
-      _debugLastChangeSet = ctx.changeSet.txnClone();
+      _debugLastChangeSet = changeSet;
       _debugCaptureTxnCloneStats(ctx);
       return _TxnWriteCommitResult(
         committedSignals: committedSignals,
@@ -329,39 +331,32 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
       );
     }
 
+    final committed = commitCandidate;
+    final committedSelection = changeSet.selectionChanged
+        ? committed.selection
+        : _store.selectedNodeIds;
     final nextEpoch = resolveNextControllerEpoch(
       currentEpoch: _store.controllerEpoch,
-      documentReplaced: ctx.changeSet.documentReplaced,
-      revisionState: ctx.revisionState,
+      documentReplaced: changeSet.documentReplaced,
+      revisionState: committed.revisionState,
     );
     final nextStructuralRevision =
-        _store.structuralRevision + (ctx.changeSet.structuralChanged ? 1 : 0);
+        _store.structuralRevision + (changeSet.structuralChanged ? 1 : 0);
     final nextBoundsRevision =
-        _store.boundsRevision + (ctx.changeSet.boundsChanged ? 1 : 0);
+        _store.boundsRevision + (changeSet.boundsChanged ? 1 : 0);
     // In state-change branch any committed mutation must bump visual revision.
     final nextVisualRevision = _store.visualRevision + 1;
 
     final nextCommitRevision = _store.commitRevision + 1;
-    final committedScene = ctx.txnSceneForCommit();
-    final committedSelection = ctx.changeSet.selectionChanged
-        ? HashSet<NodeId>.of(ctx.workingSelection)
-        : _store.selectedNodeIds;
-    final committedNodeIds = ctx.txnAllNodeIdsForCommit(
-      structuralChanged: ctx.changeSet.structuralChanged,
-    );
-    final committedNodeLocator = ctx.txnNodeLocatorForCommit(
-      structuralChanged: ctx.changeSet.structuralChanged,
-    );
-    final committedIdGeneratorState = ctx.idGeneratorState.copy();
     final committedRevisionState = resolvedCommittedRevisionAllocatorState(
-      ctx.revisionState,
+      committed.revisionState,
     );
     _assertStoreInvariantsCandidate(
-      scene: committedScene,
+      scene: committed.scene,
       selectedNodeIds: committedSelection,
-      allNodeIds: committedNodeIds,
-      nodeLocator: committedNodeLocator,
-      idGeneratorState: committedIdGeneratorState,
+      allNodeIds: committed.allNodeIds,
+      nodeLocator: committed.nodeLocator,
+      idGeneratorState: committed.idGeneratorState,
       controllerEpoch: nextEpoch,
       revisionState: committedRevisionState,
       commitRevision: nextCommitRevision,
@@ -370,9 +365,9 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
 
     debugBeforeSpatialPrepareCommitHook?.call();
     final preparedSpatialCommit = _spatialIndexCache.writePrepareCommit(
-      scene: committedScene,
-      nodeLocator: committedNodeLocator,
-      changeSet: ctx.changeSet,
+      scene: committed.scene,
+      nodeLocator: committed.nodeLocator,
+      changeSet: changeSet,
       controllerEpoch: nextEpoch,
     );
 
@@ -381,11 +376,11 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
     );
 
     _applyCommittedStore(
-      committedScene: committedScene,
+      committedScene: committed.scene,
       committedSelection: committedSelection,
-      committedNodeIds: committedNodeIds,
-      committedNodeLocator: committedNodeLocator,
-      committedIdGeneratorState: committedIdGeneratorState,
+      committedNodeIds: committed.allNodeIds,
+      committedNodeLocator: committed.nodeLocator,
+      committedIdGeneratorState: committed.idGeneratorState,
       committedRevisionState: committedRevisionState,
       nextEpoch: nextEpoch,
       nextStructuralRevision: nextStructuralRevision,
@@ -402,7 +397,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
     commitPhases = <String>[...commitPhases, 'repaint'];
 
     _debugLastCommitPhases = commitPhases;
-    _debugLastChangeSet = ctx.changeSet.txnClone();
+    _debugLastChangeSet = changeSet;
     _debugCaptureTxnCloneStats(ctx);
     return _TxnWriteCommitResult(
       committedSignals: committedSignals,
@@ -532,6 +527,12 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
 
   @override
   void dispose() {
+    if (_writeInProgress) {
+      throw StateError('dispose() is not allowed during active write(...).');
+    }
+    if (_isDisposed) {
+      return;
+    }
     _isDisposed = true;
     _notifyPending = false;
     _notifyScheduled = false;

@@ -765,13 +765,12 @@ class SceneControllerInteractive extends ChangeNotifier
     if (_isDisposed) {
       return;
     }
+    _core.dispose();
     _isDisposed = true;
     _notifyPending = false;
     _notifyScheduled = false;
     _moveSession.dispose();
     _drawCoordinator.dispose();
-    _core.removeListener(_handleCoreChanged);
-    _core.dispose();
     _events.dispose();
     super.dispose();
   }

@@ -206,15 +206,15 @@ language: russian
 
 ## Чеклист выполнения
 
-[ ] Переформулировать шаг `8` как umbrella-этап и вынести реализацию в `8.1`,
+[x] Переформулировать шаг `8` как umbrella-этап и вынести реализацию в `8.1`,
     `8.2`, `8.3`, `8.4`.
-[ ] В `8.1` зафиксировать final operation set и executor boundary без
+[x] В `8.1` зафиксировать final operation set и executor boundary без
     разрастания public surface.
-[ ] В `8.2` довести `TxnContext` и `document.dart` до executor-ready apply
+[x] В `8.2` довести `TxnContext` и `document.dart` до executor-ready apply
     semantics без snapshot diff owner-а.
 [x] В `8.3` перевести `SceneWriter` на executor и убрать лишние selection /
     signal materializations.
-[ ] В `8.4` переписать controller commit pipeline так, чтобы commit всегда
+[x] В `8.4` переписать controller commit pipeline так, чтобы commit всегда
     выполнялся только после postcheck и fail-fast dispose semantics.
-[ ] Для `8.2` и `8.4` зафиксировать regression coverage на locator-shift перед
+[x] Для `8.2` и `8.4` зафиксировать regression coverage на locator-shift перед
     delete, structural clear без removed nodes и сохранение base-scene COW.

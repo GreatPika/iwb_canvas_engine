@@ -96,30 +96,30 @@ executor-а. `dispose()` во время активного write запрещё
 
 ## Последовательность реализации (только действия)
 
-[ ] Перевести `SceneControllerCore.write(...)` и `_txnWriteCommit(...)` на
+[x] Перевести `SceneControllerCore.write(...)` и `_txnWriteCommit(...)` на
     prepared result executor-а.
-[ ] Сохранить invariant precheck строго перед store apply.
-[ ] Перевести signals-only и repaint-only branches на тот же prepared result
+[x] Сохранить invariant precheck строго перед store apply.
+[x] Перевести signals-only и repaint-only branches на тот же prepared result
     contract без повторного вычисления commit data из `TxnContext`.
-[ ] Упростить state-change и signals-only branches без потери atomicity.
-[ ] Зафиксировать fail-fast `dispose()` during write и добавить отдельные tests.
+[x] Упростить state-change и signals-only branches без потери atomicity.
+[x] Зафиксировать fail-fast `dispose()` during write и добавить отдельные tests.
 
 ## Критерии приёмки
 
-[ ] Controller остаётся единственным owner-ом store commit и post-commit
+[x] Controller остаётся единственным owner-ом store commit и post-commit
     lifecycle.
-[ ] Commit выполняется только после executor postcheck и invariant precheck.
-[ ] Signal/repaint branches не ломают atomicity и не требуют ad hoc условий.
-[ ] `dispose()` во время write завершается fail-fast ошибкой и не оставляет
+[x] Commit выполняется только после executor postcheck и invariant precheck.
+[x] Signal/repaint branches не ломают atomicity и не требуют ad hoc условий.
+[x] `dispose()` во время write завершается fail-fast ошибкой и не оставляет
     controller в half-disposed состоянии.
-[ ] Controller использует prepared result как единственный commit contract и не
+[x] Controller использует prepared result как единственный commit contract и не
     держит второй независимый path сборки commit candidate.
 
 ## Тестовый контур шага
 
-[ ] `test/controller/core/scene_controller_commit_atomicity_test.dart`
-[ ] `test/controller/core/scene_controller_commit_failures_test.dart`
-[ ] `test/controller/core/scene_controller_signals_delivery_test.dart`
-[ ] `test/controller/core/scene_controller_writer_lifecycle_test.dart`
-[ ] `test/controller/core/scene_controller_core_dispose_fail_fast_test.dart`
-[ ] `test/controller/core/scene_controller_spatial_index_test.dart`
+[x] `test/controller/core/scene_controller_commit_atomicity_test.dart`
+[x] `test/controller/core/scene_controller_commit_failures_test.dart`
+[x] `test/controller/core/scene_controller_signals_delivery_test.dart`
+[x] `test/controller/core/scene_controller_writer_lifecycle_test.dart`
+[x] `test/controller/core/scene_controller_core_dispose_fail_fast_test.dart`
+[x] `test/controller/core/scene_controller_spatial_index_test.dart`

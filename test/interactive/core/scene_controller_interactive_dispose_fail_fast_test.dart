@@ -215,5 +215,62 @@ void main() {
         expect(notifications, 0);
       },
     );
+
+    test(
+      'dispose during interactive write fails fast and keeps controller usable',
+      () async {
+        // INV:INV-ENG-DISPOSE-FAIL-FAST
+        final rect = RectNode(id: 'node', size: const Size(10, 10))
+          ..position = const Offset(20, 20);
+        final controller = controllerFromScene(
+          Scene(
+            layers: <ContentLayer>[
+              ContentLayer(id: 'layer-auto-10'),
+              ContentLayer(id: 'layer-auto-11', nodes: <SceneNode>[rect]),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+
+        final actions = <ActionCommitted>[];
+        final edits = <EditTextRequested>[];
+        final actionSub = controller.actions.listen(actions.add);
+        final editSub = controller.editTextRequests.listen(edits.add);
+        addTearDown(actionSub.cancel);
+        addTearDown(editSub.cancel);
+
+        var notifications = 0;
+        controller.addListener(() {
+          notifications = notifications + 1;
+        });
+
+        controller.write<void>((writer) {
+          writer.writeSelectionReplace(const <NodeId>{'node'});
+          expect(() => controller.dispose(), throwsStateError);
+          writer.writeSelectionTranslate(const Offset(8, 0));
+        });
+        await pumpEventQueue(times: 2);
+
+        final moved =
+            controller.snapshot.layers.last.nodes.single as RectNodeSnapshot;
+        expect(moved.transform.tx, 28);
+        expect(controller.selectedNodeIds, const <NodeId>{'node'});
+        expect(notifications, 1);
+        expect(actions, isEmpty);
+        expect(edits, isEmpty);
+
+        expect(
+          () => controller.write<void>((writer) {
+            writer.writeSelectionTranslate(const Offset(2, 0));
+          }),
+          returnsNormally,
+        );
+        await pumpEventQueue(times: 2);
+
+        final movedAgain =
+            controller.snapshot.layers.last.nodes.single as RectNodeSnapshot;
+        expect(movedAgain.transform.tx, 30);
+      },
+    );
   });
 }

@@ -46,6 +46,16 @@ class MutationExecutionResult {
   final MutationCommitCandidate? commitCandidate;
 }
 
+class MutationPreparedCommitResult {
+  const MutationPreparedCommitResult({
+    required this.changeSet,
+    required this.commitCandidate,
+  });
+
+  final ChangeSet changeSet;
+  final MutationCommitCandidate? commitCandidate;
+}
+
 class MutationExecutor {
   const MutationExecutor({this.textFontFamilyByDefault});
 
@@ -64,8 +74,17 @@ class MutationExecutor {
     MutationOp op,
   ) {
     final applyResult = execute(ctx, op);
+    final preparedCommit = prepareCommitResult(ctx);
     return MutationExecutionResult(
       applyResult: applyResult,
+      changeSet: preparedCommit.changeSet,
+      commitCandidate: preparedCommit.commitCandidate,
+    );
+  }
+
+  MutationPreparedCommitResult prepareCommitResult(TxnContext ctx) {
+    ctx.txnEnsureActive();
+    return MutationPreparedCommitResult(
       changeSet: ctx.changeSet.txnClone(),
       commitCandidate: _prepareCommitCandidate(ctx),
     );
