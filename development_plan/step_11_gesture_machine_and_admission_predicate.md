@@ -1,10 +1,39 @@
 language: russian
 
-# Шаг 11. Вынести gesture-machine и единый предикат допустимости
+# Шаг 11. Вынести gesture-machine и единый предикат допустимости через подшаги 11.1-11.5
+
+## Диагностические метрики
+
+Этот блок остаётся диагностическим радаром шага, но для `11.x` он также
+обязан быть отражён в критериях приёмки каждого подшага: новые owner-ы и
+step-owned методы не должны пробивать пороги из
+[analysis_options.yaml](/Users/blackpika/iwb_canvas_engine/analysis_options.yaml).
+
+- Смотреть в первую очередь `cyclomatic-complexity`,
+  `maximum-nesting-level` и `source-lines-of-code`.
+- Пороговые значения для новых owner-ов и step-owned методов:
+  - `cyclomatic-complexity <= 10`
+  - `maximum-nesting-level <= 4`
+  - `source-lines-of-code <= 40`
+- Контрольные файлы:
+  - `lib/src/interactive/scene_controller_interactive.dart`
+  - `lib/src/interactive/interaction_eligibility_policy.dart`
+  - `lib/src/interactive/internal/interactive_gesture_machine.dart`
+  - `lib/src/interactive/internal/interactive_move_session.dart`
+  - `lib/src/interactive/internal/interactive_draw_coordinator.dart`
+  - `lib/src/interactive/internal/interactive_draw_line_engine.dart`
+  - `lib/src/interactive/internal/interactive_draw_eraser_engine.dart`
+- Acceptance gate ставится и на новые owner-ы, и на целевые файлы этого шага.
+  Если в контрольном файле уже есть hotspot, он обязан быть явно закреплён за
+  одним из подшагов `11.x`, чтобы к концу шага `11` в перечисленных файлах не
+  оставалось `HIGH`/`VERY HIGH` по этим трём метрикам.
+- Полезный сигнал после шага: invalid terminal semantics, active gesture owner,
+  preview/commit/cancel admissibility и forced reset живут в одном controller
+  contract, а не размазаны между view, controller и внутренними session-ами.
 
 ## Цель шага
 
-После `10.1-10.3` view/runtime boundary уже должна владеть только:
+После шагов `10.1-10.3` view/runtime boundary уже должна владеть только:
 
 - raw-to-slot routing;
 - host admission;
@@ -12,169 +41,193 @@ language: russian
 - timer/listener lifecycle;
 - apply-on-idle settings contract.
 
-Всё, что придаёт terminal event смысл для активного gesture, должно
-сконцентрироваться здесь. Задача шага `11`: сделать controller-side
-gesture-machine единственным source of truth для:
+Следующий системный drift теперь в controller-side интерактивности:
 
-- active gesture owner;
-- invalid terminal semantics;
-- cancel/abort recovery;
-- preview/commit admissibility.
+- `SceneControllerInteractive.handlePointer(...)` и direct entry path
+  расходятся по семантике invalid terminal input;
+- active gesture owner размазан между controller, move session и draw
+  coordinator;
+- `dragStartSlop` и forced reset lifecycle не описаны как один controller-owned
+  contract;
+- preview, commit, selection hit-test и delete используют несколько похожих,
+  но не одинаковых admissibility правил.
 
-## Диагностические метрики
+Исходный шаг `11` перечислял правильные задачи, но без декомпозиции они
+смешивали как минимум пять разных ownership-областей. Без их разведения
+реализация почти неизбежно либо возвращает view-side bridge из шага `10`,
+либо делает `interaction_eligibility_policy.dart` новым «бог-объектом».
 
-Этот блок нужен как диагностический радар после изменений шага, а не как
-отдельный критерий готовности. Здесь метрики нужны, чтобы проверить не только
-вынос eligibility policy, но и то, что preview/commit/cancel больше не живут в
-нескольких похожих тяжёлых ветках.
+## Как разбит этап
 
-- Смотреть в первую очередь `cyclomatic-complexity`,
-  `maximum-nesting-level` и `source-lines-of-code`.
-- Контрольные файлы:
-  - `lib/src/interactive/interaction_eligibility_policy.dart`
-  - `lib/src/interactive/scene_controller_interactive.dart`
-  - `lib/src/interactive/internal/interactive_move_session.dart`
-  - `lib/src/interactive/internal/interactive_draw_coordinator.dart`
-  - `lib/src/interactive/internal/interactive_draw_line_engine.dart`
-  - `lib/src/interactive/internal/interactive_draw_eraser_engine.dart`
-- Полезный сигнал после шага: active gesture owner, invalid terminal recovery,
-  preview, commit и cancel-path используют одну policy-модель вместо нескольких
-  частично пересекающихся веток, а `interaction_eligibility_policy.dart`
-  остаётся компактным правилом допуска, а не новым центром всей интерактивной
-  логики.
+### Шаг 11.1
 
-## Граница шага
+`development_plan/step_11_1_controller_pointer_entry_and_terminal_semantics.md`
 
-- In:
-  - controller-side трактовка invalid `up/cancel`;
-  - active gesture owner и правило, какой pointer может abort/reset текущий
-    gesture;
-  - единый cancel/abort contract;
-  - baseline `dragStartSlop` для текущего gesture lifecycle;
-  - общий eligibility policy для preview/commit.
-- Out:
-  - raw-to-slot router owner;
-  - host timer/listener lifecycle;
-  - value semantics `PointerInputSettings`;
-  - apply-on-idle settings contract.
+Владелец решения по:
 
-## Зафиксированные решения (без повторного обсуждения в реализации)
+- contract `SceneControllerInteractive.handlePointer(...)`;
+- канонической трактовке invalid `up/cancel`;
+- единому правилу валидации `dragStartSlop`;
+- сохранению controller-owned монотонности `timestampMs`.
 
-1. `SceneControllerInteractive` и его internal session-ы становятся
-   единственным owner-ом active gesture meaning после routed dispatch.
-2. View не имеет права:
-   - синтезировать safe terminal `up/cancel` для controller;
-   - вызывать ad hoc abort bridge в controller;
-   - принимать решение, как invalid terminal input влияет на active gesture.
-3. Каноническое правило для invalid terminal input фиксируется в
-   `handlePointer(...)`:
-   - invalid `cancel` не отбрасывается и трактуется как terminal `cancel`;
-   - invalid `up` трактуется как `cancel`;
-   - direct controller entrypoint и path через view используют одну и ту же
-     semantics.
-4. Terminal recovery применяется только к активному controller-side gesture
-   owner-у. Параллельный не-владеющий pointer не имеет права сбрасывать чужой
-   gesture.
-5. `replaceScene(...)` и `setCameraOffset(...)` отменяют активный gesture
-   полностью здесь, а не через view-side workaround.
-6. Preview/commit/cancel используют один eligibility policy вместо нескольких
-   разрозненных ad hoc проверок.
-7. Монотонность `timestampMs` сохраняется.
+### Шаг 11.2
 
-## `lib/src/interactive/scene_controller_interactive.dart`
+`development_plan/step_11_2_controller_gesture_owner_and_lifecycle_reset.md`
 
-Сделать:
+Владелец решения по:
 
-1. В конструкторе та же валидация `dragStartSlop`, что и в сеттере.
-2. Отдельно выбрать и закрепить **одно правило** для:
-   - `setDragStartSlop(...)`
-   - `pointerSettings.tapSlop`
-   если сейчас одно допускает `0`, а другое требует `> 0`.
-3. В `handlePointer(...)`:
-   - `cancel` не отбрасывается из-за невалидной позиции;
-   - `up` с невалидной позицией трактуется как `cancel`;
-   - semantics одинаковы для direct entrypoint и routed path через view.
-4. Явно держать active gesture owner на controller-side и не путать его с
-   router/tracker gate из шага `10.1`.
-5. На `down` фиксировать baseline `dragStartSlop` для текущего gesture.
-6. `replaceScene(...)` отменяет активный gesture полностью.
-7. `setCameraOffset(...)` отменяет активный gesture полностью.
-8. Сохранить монотонность `timestampMs`.
-9. Привести preview/commit к одному предикату допустимости.
+- одному controller-owned owner-у active gesture;
+- baseline `dragStartSlop` на gesture lifetime;
+- forced reset/cancel lifecycle для `replaceScene(...)`,
+  `setCameraOffset(...)`, mode/tool transition и dispose;
+- явной границе между router gate из шага `10` и active gesture owner-ом
+  шага `11`.
 
-## `lib/src/interactive/internal/interactive_move_session.dart`
+### Шаг 11.3
 
-Сделать:
+`development_plan/step_11_3_interaction_eligibility_policy_owner.md`
 
-1. Preview использует тот же предикат, что commit:
-   - `isLocked`
-   - `isTransformable`
-   - `isSelectable`
-2. На `cancel` откатить baseline выбора.
-3. Убрать дублирующие `onStateChanged`.
-4. Логику допустимости держать не в нескольких местах, а в одном.
+Владелец решения по:
 
-## `lib/src/interactive/internal/interactive_draw_coordinator.dart`
+- `lib/src/interactive/interaction_eligibility_policy.dart` как одному owner-у
+  interactive composite admissibility;
+- устранению overlap между `interactive_selection_utils.dart`,
+  controller-side preflight checks и ad hoc move/delete composition поверх
+  низкоуровневых scene predicates;
+- adoption этой policy в controller/runtime путях вне move/draw session-ов.
 
-Сделать:
+### Шаг 11.4
 
-1. Допустимость удаления и рисования привести к общей политике.
-2. Проверить восстановление после безопасного `cancel`.
-3. Зафиксировать, что reset/abort относится только к активному draw gesture
-   owner-у.
+`development_plan/step_11_4_move_session_policy_and_cancel_semantics.md`
 
-## `lib/src/interactive/internal/interactive_draw_line_engine.dart`
+Владелец решения по:
 
-Сделать:
+- переносу move-flow на controller-owned gesture lifecycle;
+- одному admissibility contract для move preview и move commit;
+- cancel semantics и восстановлению baseline selection;
+- зачистке duplicate notify/reset веток внутри move session.
 
-1. Пересмотреть таймеры и pending-state при cancel и при смене сцены.
-2. Не допускать утечки активной pending-линии после общего сброса интерактива.
+### Шаг 11.5
 
-## Создать `lib/src/interactive/interaction_eligibility_policy.dart`
+`development_plan/step_11_5_draw_gesture_lifecycle_and_pending_line_cleanup.md`
 
-Добавить:
+Владелец решения по:
 
-1. `canSelect(...)`
-2. `canPreviewMove(...)`
-3. `canCommitMove(...)`
-4. `canDelete(...)`
-5. `canTransform(...)`
+- draw-side adoption controller-owned gesture lifecycle;
+- safe cancel/reset semantics для line/stroke/eraser flow;
+- owner-у pending-line timer/state;
+- delete admissibility в eraser path и closure metric hotspot-ов draw-path.
 
-Этим модулем должны пользоваться:
+## Карта переноса деталей из исходного шага 11
 
-- interactive move
-- selection
-- delete
-- writer/runtime, где релевантно
+1. Валидация `dragStartSlop` в конструкторе, единое правило для
+   `setDragStartSlop(...)` и `pointerSettings.tapSlop`, а также canonical
+   invalid `up/cancel` в `handlePointer(...)` переносятся в `11.1`.
+2. Controller-side active gesture owner, baseline `dragStartSlop`, forced reset
+   на `replaceScene(...)` и `setCameraOffset(...)`, а также запрет
+   не-владеющему pointer-у сбрасывать чужой gesture переносятся в `11.2`.
+3. Создание `lib/src/interactive/interaction_eligibility_policy.dart` и
+   консолидация `canSelect(...)`, `canPreviewMove(...)`,
+   `canCommitMove(...)`, `canDelete(...)`, `canTransform(...)` переносятся
+   в `11.3`.
+4. Приведение move preview и move commit к одной policy-модели, восстановление
+   baseline selection на cancel и удаление duplicate `onStateChanged`
+   переносятся в `11.4`.
+5. Draw/delete admissibility, safe cancel recovery, active draw gesture owner
+   contract, timer/pending-line cleanup и closure metric hotspot-ов
+   `interactive_draw_coordinator.dart` /
+   `interactive_draw_eraser_engine.dart` переносятся в `11.5`.
+6. Boundary-check, что
+   [scene_view_interactive.dart](/Users/blackpika/iwb_canvas_engine/lib/src/view/scene_view_interactive.dart)
+   не возвращает synthetic terminal dispatch и abort bridge в controller,
+   остаётся обязательной проверкой шага `11`, но ownership этого поведения
+   не переносится обратно из шага `10`.
 
-## Критерии приёмки
+## Уже принятые архитектурные решения
 
-[ ] Controller-side gesture machine является единственным owner-ом active
-    gesture semantics.
-[ ] Invalid `up/cancel` трактуются по одному каноническому правилу в
-    `handlePointer(...)`.
-[ ] View больше не содержит synthetic terminal dispatch или abort bridge в
-    controller.
-[ ] Параллельный не-владеющий pointer не сбрасывает активный gesture другого
-    pointer-а.
-[ ] `replaceScene(...)` и `setCameraOffset(...)` полностью отменяют активный
-    gesture.
-[ ] Preview/commit/cancel используют один eligibility policy.
-[ ] Повторная диагностика
-    `dcm calculate-metrics lib/src/interactive/scene_controller_interactive.dart lib/src/interactive/internal/interactive_move_session.dart lib/src/interactive/internal/interactive_draw_coordinator.dart lib/src/interactive/internal/interactive_draw_line_engine.dart lib/src/interactive/internal/interactive_draw_eraser_engine.dart --report-all`
-    приложена к результату шага; новые или step-owned methods не содержат
-    `HIGH` по `cyclomatic-complexity`, `maximum-nesting-level` и
-    `source-lines-of-code`.
+1. После routed dispatch из шага `10` active gesture meaning принадлежит только
+   controller-side owner-у. View не принимает решений про invalid terminal
+   semantics, forced abort и preview/commit admissibility.
+2. `SceneControllerInteractive` получает один internal owner gesture lifecycle.
+   Если для этого создаётся отдельный helper, он остаётся internal-only и не
+   становится новым public/runtime service.
+3. Invalid terminal input нормализуется на controller boundary до dispatch в
+   session-ы:
+   - invalid `cancel` трактуется как terminal `cancel`;
+   - invalid `up` трактуется как terminal `cancel`;
+   - invalid `down/move` продолжают отбрасываться.
+4. Baseline `dragStartSlop` фиксируется один раз на `down` и не меняется до
+   завершения текущего gesture, даже если `pointerSettings` или explicit
+   `dragStartSlop` обновились в процессе.
+5. `interaction_eligibility_policy.dart` становится owner-ом только для
+   interactive preflight и selection shaping. Низкоуровневый
+   [mutation_executor.dart](/Users/blackpika/iwb_canvas_engine/lib/src/controller/mutation_executor.dart)
+   остаётся defensive write barrier и не импортирует interactive layer.
+   [selection_policy.dart](/Users/blackpika/iwb_canvas_engine/lib/src/core/selection_policy.dart)
+   допускается как low-level leaf dependency, если не становится вторым owner-ом
+   interactive composite policy и не начинает кодировать move/delete/preview
+   composition шага `11`.
+6. Step `11` не возвращает router/tracker/timer lifecycle обратно в controller
+   и не вводит sync glue между raw-pointer host state и active gesture state.
+7. Для каждого подшага повторная диагностика метрик является частью acceptance
+   gate, а не справочным комментарием.
 
-## Тестовый контур шага
+## Общие правила для всех подшагов
 
-[ ] `test/interactive/core/scene_controller_interactive_invalid_pointer_input_test.dart`
-    с покрытием:
-    - invalid `cancel` не теряется;
-    - invalid `up` трактуется как `cancel`;
-    - параллельный не-владеющий pointer не сбрасывает активный gesture
-[ ] `test/interactive/core/scene_controller_interactive_move_preview_invariants_test.dart`
-[ ] `test/interactive/core/scene_controller_interactive_line_pending_cancel_test.dart`
-[ ] `test/view/scene_view_interactive_test.dart`
-    только как boundary-check, что view не добавляет terminal bridge в
-    controller
+1. Один owner отвечает за active gesture identity. Нельзя одновременно держать
+   competing mutable pointer-owner state и в controller, и в move/draw session.
+2. Один owner отвечает за admissibility policy. Нельзя оставлять параллельно
+   `interactive_selection_utils.dart`, controller-side ad hoc checks и новые
+   helper-ы как competing источники одной и той же interactive composite
+   policy. Низкоуровневые leaf predicates допустимы только как dependency, а не
+   как второй owner move/delete/preview semantics.
+3. Forced reset для camera/scene/mode/tool обязан идти через controller-owned
+   gesture lifecycle, а не через view-side cleanup и не через ad hoc прямые
+   вызовы отдельных session helper-ов из разных мест.
+4. Если в рамках подшага меняется `tool/invariant_registry.dart`, этот подшаг
+   обязан прогонять `dart run tool/check_invariant_coverage.dart`.
+5. Любой новый internal owner этого этапа обязан проходить предел `10 / 4 / 40`
+   по `cyclomatic-complexity`, `maximum-nesting-level` и
+   `source-lines-of-code`.
+
+## Критерии готовности umbrella-шага
+
+1. Для шагов `11.1`, `11.2`, `11.3`, `11.4`, `11.5` существуют отдельные
+   step-файлы с собственной целью, границей ответственности, критериями
+   приёмки и тестовым контуром.
+2. В описании подшагов не осталось пересечений по владению:
+   - `11.1` отвечает за controller pointer entry contract и canonical terminal
+     semantics;
+   - `11.2` отвечает за active gesture owner и forced reset lifecycle;
+   - `11.3` отвечает за owner admissibility policy;
+   - `11.4` отвечает за move-session adoption этой policy и cancel semantics;
+   - `11.5` отвечает за draw-side lifecycle и pending-line cleanup.
+3. Ни один пункт исходного шага `11` не потерян при переносе, включая блок
+   диагностических метрик и требование не пробивать пороги `10 / 4 / 40`.
+4. Граница между шагами `10` и `11` зафиксирована явно:
+   - шаг `10` закрывает view/runtime pointer-router boundary;
+   - шаг `11` закрывает invalid terminal semantics, active gesture owner,
+     eligibility policy и forced gesture lifecycle на controller side.
+5. После реализации шага `11.x` повторный прогон
+   `dcm calculate-metrics lib/src/interactive/scene_controller_interactive.dart lib/src/interactive/interaction_eligibility_policy.dart lib/src/interactive/internal/interactive_gesture_machine.dart lib/src/interactive/internal/interactive_move_session.dart lib/src/interactive/internal/interactive_draw_coordinator.dart lib/src/interactive/internal/interactive_draw_line_engine.dart lib/src/interactive/internal/interactive_draw_eraser_engine.dart --report-all`
+   приложен к результату шага; в перечисленных контрольных файлах и новых
+   owner-ах не остаётся `HIGH`/`VERY HIGH` по
+   `cyclomatic-complexity`, `maximum-nesting-level` и
+   `source-lines-of-code`.
+
+## Чеклист выполнения
+
+[ ] Переформулировать шаг `11` как umbrella-этап и вынести реализацию в
+    `11.1`, `11.2`, `11.3`, `11.4`, `11.5`.
+[ ] В `11.1` зафиксировать controller pointer entry contract, unified
+    `dragStartSlop` validation и canonical invalid terminal semantics.
+[ ] В `11.2` ввести одного controller-owned owner-а active gesture и forced
+    reset lifecycle без overlap со шагом `10`.
+[ ] В `11.3` ввести одного owner-а interactive admissibility без инверсии layer
+    DAG и без второго write-guard owner-а.
+[ ] В `11.4` перевести move session на общий policy contract и cancel restore.
+[ ] В `11.5` перевести draw/eraser/line lifecycle на controller-owned reset,
+    закрыть pending-line cleanup и убрать metric hotspot-ы draw-path.
+[ ] Закрепить в критериях приёмки каждого подшага повторную диагностику
+    метрик с порогами `cyclomatic-complexity <= 10`,
+    `maximum-nesting-level <= 4`, `source-lines-of-code <= 40`.
