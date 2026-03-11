@@ -116,6 +116,28 @@ void main() {
     assertControllerInvariants(controller);
   });
 
+  test('draw erase no-op emits no signal and keeps commit revision', () async {
+    final controller = buildController();
+    addTearDown(controller.dispose);
+
+    final initialRevision = controller.debugCommitRevision;
+    final signalTypes = <String>[];
+    final sub = controller.signals.listen((signal) {
+      signalTypes.add(signal.type);
+    });
+    addTearDown(sub.cancel);
+
+    final removedCount = controller.draw.writeEraseNodes(const <NodeId>{
+      'missing',
+    });
+    await pumpEventQueue();
+
+    expect(removedCount, 0);
+    expect(signalTypes, isNot(contains('draw.erase')));
+    expect(controller.debugCommitRevision, initialRevision);
+    assertControllerInvariants(controller);
+  });
+
   test('draw stroke resamples when exceeds max points', () async {
     final controller = buildController();
     addTearDown(controller.dispose);

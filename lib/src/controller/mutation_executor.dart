@@ -309,7 +309,7 @@ class MutationExecutor {
   MutationApplyResult _deleteNodesBulk(TxnContext ctx, Set<NodeId> nodeIds) {
     final plan = _prepareBulkDelete(ctx, nodeIds);
     if (plan == null) {
-      return const MutationApplyResult(value: 0, changed: false);
+      return const MutationApplyResult(value: <NodeId>[], changed: false);
     }
     for (final layerIndex in plan.targetLayerIndexes) {
       ctx.txnEnsureMutableLayer(layerIndex);
@@ -321,7 +321,7 @@ class MutationExecutor {
       removalsByLayer: plan.preparedRemovalsByLayer,
     );
     if (deleted.isEmpty) {
-      return const MutationApplyResult(value: 0, changed: false);
+      return const MutationApplyResult(value: <NodeId>[], changed: false);
     }
 
     _finalizeDeletedNodes(ctx, deleted);
@@ -329,7 +329,10 @@ class MutationExecutor {
       ctx.workingSelection.removeAll(deleted);
       ctx.changeSet.txnMarkSelectionChanged();
     }
-    return MutationApplyResult(value: deleted.length, changed: true);
+    return MutationApplyResult(
+      value: List<NodeId>.unmodifiable(deleted),
+      changed: true,
+    );
   }
 
   _PreparedBulkDelete? _prepareBulkDelete(TxnContext ctx, Set<NodeId> nodeIds) {

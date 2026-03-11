@@ -218,14 +218,46 @@ drift всё ещё не закрыт: command-layer остаётся архит
 
 ## Чеклист выполнения
 
-[ ] Переформулировать шаг `9` как umbrella-этап и вынести реализацию в `9.1`,
+[x] Переформулировать шаг `9` как umbrella-этап и вынести реализацию в `9.1`,
     `9.2`, `9.3`.
-[ ] В `9.1` довести `document.dart` до targeted delete и точной stroke
+[x] В `9.1` довести `document.dart` до targeted delete и точной stroke
     patch/no-op semantics без скрытых full-scene scan path.
-[ ] В `9.2` зафиксировать `SceneWriter` как owner selection/signal boundary с
+[x] В `9.2` зафиксировать `SceneWriter` как owner selection/signal boundary с
     одним internal-result seam и без лишней copy/freeze работы.
-[ ] В `9.3` перевести `DrawCommands` и `SceneCommands` на exact writer results
+[x] В `9.3` перевести `DrawCommands` и `SceneCommands` на exact writer results
     без snapshot diff и single-delete loops.
-[ ] Повторно прогнать aggregate diagnostics:
+[x] Повторно прогнать aggregate diagnostics:
     `dcm calculate-metrics lib/src/controller/commands/draw_commands.dart lib/src/controller/commands/scene_commands.dart lib/src/controller/scene_writer.dart lib/src/model/document.dart --report-all`
     и зафиксировать итоговые watchpoints в step `9` и `9.1-9.3`.
+
+## Результат шага
+
+- `document.dart`, `SceneWriter`, `DrawCommands` и `SceneCommands` закрыты по
+  owner-границам без нового orchestration слоя.
+- Command-layer больше не использует snapshot diff для scalar settings и не
+  держит bulk erase как цикл single-delete.
+- `DrawCommands` и `SceneCommands` работают через `SceneWriter`-typed internal
+  runner и опираются на exact writer results для signal/no-op decision.
+
+## Итоговые watchpoints
+
+- `draw_commands.dart`:
+  - `writeEraseNodes(...)`: `cyclomatic-complexity = 2`,
+    `maximum-nesting-level = 2`, `source-lines-of-code = 7`
+  - `writeDrawStroke(...)`: `cyclomatic-complexity = 1`,
+    `maximum-nesting-level = 1`, `number-of-parameters = 4` (`NEAR`),
+    `source-lines-of-code = 19`
+  - `writeDrawLine(...)`: `cyclomatic-complexity = 1`,
+    `maximum-nesting-level = 1`, `number-of-parameters = 4` (`NEAR`),
+    `source-lines-of-code = 16`
+- `scene_commands.dart`:
+  - `writeSelectionReplace(...)`: `cyclomatic-complexity = 2`,
+    `maximum-nesting-level = 2`, `source-lines-of-code = 9`
+  - `writeDeleteSelection(...)`: `cyclomatic-complexity = 2`,
+    `maximum-nesting-level = 2`, `source-lines-of-code = 10`
+  - `writeClearScene(...)`: `cyclomatic-complexity = 3`,
+    `maximum-nesting-level = 2`, `source-lines-of-code = 11`
+  - scalar setter commands остаются `BELOW` по всем диагностируемым порогам
+- `scene_writer.dart` и `document.dart` остаются в рамках уже зафиксированных
+  closure шагов `9.2` и `9.1`; новых drift по aggregate diagnostics не
+  появилось.

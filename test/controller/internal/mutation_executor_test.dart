@@ -132,7 +132,7 @@ void main() {
       );
 
       expect(result.applyResult.changed, isTrue);
-      expect(result.applyResult.value, 1);
+      expect(result.applyResult.value, const <NodeId>['gone']);
       expect(result.changeSet.removedNodeIds, const <NodeId>{'gone'});
       expect(result.changeSet.selectionChanged, isTrue);
       expect(ctx.workingSelection, const <NodeId>{'keep'});
@@ -327,7 +327,7 @@ void main() {
     );
 
     expect(result.changed, isFalse);
-    expect(result.value, 0);
+    expect(result.value, isEmpty);
     expect(ctx.changeSet.txnHasAnyChange, isFalse);
     expect(ctx.changeSet.removedNodeIds, isEmpty);
     expect(ctx.changeSet.selectionChanged, isFalse);

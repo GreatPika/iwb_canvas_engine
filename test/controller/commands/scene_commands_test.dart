@@ -55,7 +55,7 @@ void main() {
         ),
         nextInstanceRevision: 1,
       );
-      T writeRunner<T>(T Function(SceneWriteTxn writer) fn) {
+      T writeRunner<T>(T Function(SceneWriter writer) fn) {
         final writer = SceneWriter(
           ctx,
           mutationExecutor: MutationExecutor(),
@@ -87,7 +87,7 @@ void main() {
       ),
       nextInstanceRevision: 1,
     );
-    T writeRunner<T>(T Function(SceneWriteTxn writer) fn) {
+    T writeRunner<T>(T Function(SceneWriter writer) fn) {
       final writer = SceneWriter(
         ctx,
         mutationExecutor: MutationExecutor(),
@@ -528,6 +528,29 @@ void main() {
     expect(controller.selectedNodeIds, isEmpty);
     assertControllerInvariants(controller);
   });
+
+  test(
+    'selection delete no-op emits no signal and keeps commit revision',
+    () async {
+      final controller = buildController();
+      addTearDown(controller.dispose);
+
+      final initialRevision = controller.debugCommitRevision;
+      final signalTypes = <String>[];
+      final sub = controller.signals.listen((signal) {
+        signalTypes.add(signal.type);
+      });
+      addTearDown(sub.cancel);
+
+      final deleted = controller.commands.writeDeleteSelection();
+      await pumpEventQueue();
+
+      expect(deleted, 0);
+      expect(signalTypes, isNot(contains('selection.deleted')));
+      expect(controller.debugCommitRevision, initialRevision);
+      assertControllerInvariants(controller);
+    },
+  );
 
   test(
     'no-op background/grid/camera setters emit no signal and keep commit revision',

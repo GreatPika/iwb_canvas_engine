@@ -3,19 +3,16 @@ import 'dart:ui';
 import '../../core/nodes.dart';
 import '../../core/scene_limits.dart';
 import '../../contract/node_spec.dart';
-import '../../contract/scene_write_txn.dart';
 import '../scene_writer.dart';
+
+typedef DrawCommandRunner = T Function<T>(T Function(SceneWriter writer) fn);
 
 class DrawCommands {
   DrawCommands(this._writeRunner);
 
-  final T Function<T>(T Function(SceneWriteTxn writer) fn) _writeRunner;
+  final DrawCommandRunner _writeRunner;
 
-  SceneWriter _sceneWriter(SceneWriteTxn writer) {
-    return writer as SceneWriter;
-  }
-
-  List<Offset> _resampleStrokePointsToLimit(
+  List<Offset> _committedStrokePoints(
     List<Offset> points, {
     required int limit,
   }) {
@@ -36,7 +33,7 @@ class DrawCommands {
     double opacity = 1,
   }) {
     return _writeRunner((writer) {
-      final committedPoints = _resampleStrokePointsToLimit(
+      final committedPoints = _committedStrokePoints(
         points,
         limit: kMaxStrokePointsPerNode,
       );
@@ -48,9 +45,10 @@ class DrawCommands {
           opacity: opacity,
         ),
       );
-      _sceneWriter(
-        writer,
-      ).writeOwnedSignalEnqueue(type: 'draw.stroke', nodeIds: <NodeId>[nodeId]);
+      writer.writeOwnedSignalEnqueue(
+        type: 'draw.stroke',
+        nodeIds: <NodeId>[nodeId],
+      );
       return nodeId;
     });
   }
@@ -71,31 +69,21 @@ class DrawCommands {
           opacity: opacity,
         ),
       );
-      _sceneWriter(
-        writer,
-      ).writeOwnedSignalEnqueue(type: 'draw.line', nodeIds: <NodeId>[nodeId]);
+      writer.writeOwnedSignalEnqueue(
+        type: 'draw.line',
+        nodeIds: <NodeId>[nodeId],
+      );
       return nodeId;
     });
   }
 
   int writeEraseNodes(Iterable<NodeId> nodeIds) {
     return _writeRunner((writer) {
-      var removedCount = 0;
-      final removedIds = <NodeId>[];
-      for (final nodeId in nodeIds) {
-        final removed = writer.writeNodeErase(nodeId);
-        if (!removed) continue;
-        removedCount = removedCount + 1;
-        removedIds.add(nodeId);
+      final removedIds = writer.writeDeleteNodesResult(nodeIds);
+      if (removedIds.isNotEmpty) {
+        writer.writeOwnedSignalEnqueue(type: 'draw.erase', nodeIds: removedIds);
       }
-
-      if (removedCount > 0) {
-        removedIds.sort((a, b) => a.compareTo(b));
-        _sceneWriter(
-          writer,
-        ).writeOwnedSignalEnqueue(type: 'draw.erase', nodeIds: removedIds);
-      }
-      return removedCount;
+      return removedIds.length;
     });
   }
 }

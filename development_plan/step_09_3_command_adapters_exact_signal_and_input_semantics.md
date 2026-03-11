@@ -95,40 +95,74 @@ internal adapters поверх writer-owned results, без расширения
 
 ## Последовательность реализации (только действия)
 
-[ ] Перевести `DrawCommands` и `SceneCommands` на writer-local internal seam из
+[x] Перевести `DrawCommands` и `SceneCommands` на writer-local internal seam из
     `9.2`.
-[ ] Убрать snapshot before/after diff из scalar settings commands.
-[ ] Перевести draw erase на один bulk delete route.
-[ ] Зафиксировать одну каноническую draw stroke points policy без утечки
+[x] Убрать snapshot before/after diff из scalar settings commands.
+[x] Перевести draw erase на один bulk delete route.
+[x] Зафиксировать одну каноническую draw stroke points policy без утечки
     intermediate raw list semantics.
-[ ] Убрать selection set copy, которая нужна только для вторичного signal
+[x] Убрать selection set copy, которая нужна только для вторичного signal
     decision.
-[ ] Перепроверить tests на no-op signal behavior и commit revision drift.
-[ ] Повторно прогнать
+[x] Перепроверить tests на no-op signal behavior и commit revision drift.
+[x] Повторно прогнать
     `dcm calculate-metrics lib/src/controller/commands/draw_commands.dart lib/src/controller/commands/scene_commands.dart --report-all`
     и зафиксировать итоговые watchpoints этих owner-ов в результате шага.
 
 ## Критерии приёмки
 
-[ ] `DrawCommands` и `SceneCommands` остаются thin internal adapters и не
+[x] `DrawCommands` и `SceneCommands` остаются thin internal adapters и не
     создают новый owner command orchestration.
-[ ] Scalar settings commands не используют full snapshot diff.
-[ ] Draw erase больше не реализован через цикл single-delete.
-[ ] Draw command return types закреплены как `NodeId`.
-[ ] Canonical draw stroke points policy выражена явно и не зависит от
+[x] Scalar settings commands не используют full snapshot diff.
+[x] Draw erase больше не реализован через цикл single-delete.
+[x] Draw command return types закреплены как `NodeId`.
+[x] Canonical draw stroke points policy выражена явно и не зависит от
     случайного reuse caller-owned raw list.
-[ ] No-op normalized settings/selection commands не шлют ложные сигналы и не
+[x] No-op normalized settings/selection commands не шлют ложные сигналы и не
     вызывают лишний commit revision drift.
-[ ] Повторная диагностика
+[x] Повторная диагностика
     `dcm calculate-metrics lib/src/controller/commands/draw_commands.dart lib/src/controller/commands/scene_commands.dart --report-all`
     приложена к результату шага; для step-owned watchpoints command adapters не
     остаётся необъяснённого snapshot-diff/bulk-loop drift.
 
 ## Тестовый контур шага
 
-[ ] `test/controller/commands/draw_commands_test.dart`
-[ ] `test/controller/commands/scene_commands_test.dart`
-[ ] `test/interactive/core/interactive_draw_eraser_engine_test.dart`
-[ ] `test/controller/core/scene_controller_spatial_index_test.dart`
-[ ] Повторная диагностика:
+[x] `test/controller/commands/draw_commands_test.dart`
+[x] `test/controller/commands/scene_commands_test.dart`
+[x] `test/interactive/core/interactive_draw_eraser_engine_test.dart`
+[x] `test/controller/core/scene_controller_spatial_index_test.dart`
+[x] Повторная диагностика:
     `dcm calculate-metrics lib/src/controller/commands/draw_commands.dart lib/src/controller/commands/scene_commands.dart --report-all`
+
+## Результат шага
+
+- `DrawCommands` переведён на `SceneWriter`-typed internal runner и использует
+  exact bulk-delete result вместо цикла `writeNodeErase(...)`.
+- `SceneCommands` переведён на тот же internal seam и опирается на
+  `SceneWriter` exact-result helpers для selection/scalar signal semantics.
+- `SceneWriter` получил internal-only bulk delete helpers
+  `writeDeleteNodesResult(...)` и `writeDeleteSelectionResult(...)`, поэтому
+  command adapters больше не восстанавливают committed ids из входа.
+- Закреплены tests на no-op erase/delete signal behavior и отсутствие лишнего
+  commit revision drift.
+
+## Метрики и watchpoints
+
+- `dcm calculate-metrics lib/src/controller/commands/draw_commands.dart lib/src/controller/commands/scene_commands.dart --report-all`
+  после шага:
+  - `DrawCommands.writeEraseNodes(...)`: cyclomatic complexity `2`, nesting
+    `2`, source lines `7`
+  - `DrawCommands.writeDrawStroke(...)`: cyclomatic complexity `1`, nesting
+    `1`, parameters `4` (`NEAR`), source lines `19`
+  - `DrawCommands.writeDrawLine(...)`: cyclomatic complexity `1`, nesting `1`,
+    parameters `4` (`NEAR`), source lines `16`
+  - `SceneCommands.writeSelectionReplace(...)`: cyclomatic complexity `2`,
+    nesting `2`, source lines `9`
+  - `SceneCommands.writeDeleteSelection(...)`: cyclomatic complexity `2`,
+    nesting `2`, source lines `10`
+  - `SceneCommands.writeClearScene(...)`: cyclomatic complexity `3`, nesting
+    `2`, source lines `11`
+  - scalar setter commands `writeBackgroundColorSet(...)`,
+    `writeGridEnabledSet(...)`, `writeGridCellSizeSet(...)`,
+    `writeCameraOffsetSet(...)` остаются `BELOW` по всем метрикам
+- Итог: для step-owned command adapters нет `HIGH`; остаются только ожидаемые
+  `NEAR` по `number-of-parameters` у draw create commands.

@@ -598,6 +598,45 @@ void main() {
     expect(writer.writeNodeErase('free'), isTrue);
   });
 
+  test(
+    'SceneWriter writeDeleteNodesResult returns sorted committed ids for internal commands',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-auto-5a',
+              nodes: <SceneNode>[
+                RectNode(id: 'z-node', size: const Size(10, 10)),
+                RectNode(
+                  id: 'locked',
+                  size: const Size(10, 10),
+                  isDeletable: false,
+                ),
+                RectNode(id: 'a-node', size: const Size(10, 10)),
+              ],
+            ),
+          ],
+        ),
+        workingSelection: <NodeId>{'z-node'},
+        baseAllNodeIds: const <NodeId>{'z-node', 'locked', 'a-node'},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+      final writer = newWriter(ctx, txnSignalSink: (_) {});
+
+      final removedIds = writer.writeDeleteNodesResult(const <NodeId>{
+        'z-node',
+        'locked',
+        'a-node',
+        'missing',
+      });
+
+      expect(removedIds, const <NodeId>['a-node', 'z-node']);
+      expect(ctx.workingSelection, isEmpty);
+    },
+  );
+
   test('SceneWriter mutation hot path avoids commit-state materialization', () {
     final ctx = TxnContext(
       baseScene: Scene(

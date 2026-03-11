@@ -61,6 +61,14 @@ class SceneWriter implements SceneWriteTxn {
     return _mutationExecutor.execute(_ctx, DeleteNodeOp(nodeId)).value as bool;
   }
 
+  List<NodeId> writeDeleteNodesResult(Iterable<NodeId> nodeIds) {
+    _ensureTxnActive();
+    final removedIds =
+        _mutationExecutor.execute(_ctx, DeleteNodesBulkOp(nodeIds)).value
+            as List<NodeId>;
+    return _sortedRemovedNodeIds(removedIds);
+  }
+
   @override
   bool writeNodePatch(NodePatch patch) {
     _ensureTxnActive();
@@ -179,11 +187,20 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   int writeDeleteSelection() {
+    return writeDeleteSelectionResult().length;
+  }
+
+  List<NodeId> writeDeleteSelectionResult() {
     _ensureTxnActive();
-    return _mutationExecutor
-            .execute(_ctx, DeleteNodesBulkOp.borrowed(_ctx.workingSelection))
-            .value
-        as int;
+    final removedIds =
+        _mutationExecutor
+                .execute(
+                  _ctx,
+                  DeleteNodesBulkOp.borrowed(_ctx.workingSelection),
+                )
+                .value
+            as List<NodeId>;
+    return _sortedRemovedNodeIds(removedIds);
   }
 
   @override
@@ -275,6 +292,15 @@ class SceneWriter implements SceneWriteTxn {
     final ids = _ctx.workingSelection.toList(growable: false);
     ids.sort((a, b) => a.compareTo(b));
     return ids;
+  }
+
+  List<NodeId> _sortedRemovedNodeIds(List<NodeId> removedIds) {
+    if (removedIds.length < 2) {
+      return removedIds;
+    }
+    final sortedIds = removedIds.toList(growable: false);
+    sortedIds.sort((a, b) => a.compareTo(b));
+    return sortedIds;
   }
 
   bool _txnSetsEqual(Set<NodeId> left, Set<NodeId> right) {

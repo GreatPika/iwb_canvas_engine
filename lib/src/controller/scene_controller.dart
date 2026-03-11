@@ -73,9 +73,9 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
   @visibleForTesting
   void Function()? debugBeforeTxnContextCreateHook;
 
-  late final SceneCommands commands = SceneCommands(write);
+  late final SceneCommands commands = SceneCommands(_writeWithSceneWriter);
   late final MoveCommands move = MoveCommands(write);
-  late final DrawCommands draw = DrawCommands(write);
+  late final DrawCommands draw = DrawCommands(_writeWithSceneWriter);
 
   @override
   SceneSnapshot get snapshot {
@@ -223,6 +223,10 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
 
     _dispatchPostCommitEffects(commitResult);
     return result;
+  }
+
+  T _writeWithSceneWriter<T>(T Function(SceneWriter writer) fn) {
+    return write<T>((writer) => fn(writer as SceneWriter));
   }
 
   void writeReplaceScene(SceneSnapshot snapshot) {
