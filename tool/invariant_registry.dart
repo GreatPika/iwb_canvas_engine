@@ -137,7 +137,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-INTERACTIVE-POINTER-FINITE',
     scope: 'engine-runtime',
     title:
-        'interactive pointer entrypoints ignore non-finite coordinates without mutating state or emitting effects',
+        'interactive pointer entrypoints drop non-finite down/move input and preserve terminal up/cancel only when a last finite pointer position exists',
   ),
   Invariant(
     id: 'INV-ENG-POINTER-SETTINGS-VALIDATION',

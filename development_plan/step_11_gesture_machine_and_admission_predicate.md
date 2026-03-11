@@ -66,7 +66,7 @@ step-owned методы не должны пробивать пороги из
 Владелец решения по:
 
 - contract `SceneControllerInteractive.handlePointer(...)`;
-- канонической нормализации invalid terminal input на controller boundary;
+- transport-normalization invalid terminal input на controller boundary;
 - единому правилу валидации `dragStartSlop`;
 - сохранению controller-owned монотонности `timestampMs`.
 
@@ -121,9 +121,9 @@ step-owned методы не должны пробивать пороги из
 ## Карта переноса деталей из исходного шага 11
 
 1. Валидация `dragStartSlop` в конструкторе, единое правило для
-   `setDragStartSlop(...)` и `pointerSettings.tapSlop`, а также canonical
-   invalid terminal input normalization в `handlePointer(...)` переносятся в
-   `11.1`.
+   `setDragStartSlop(...)` и `pointerSettings.tapSlop`, а также terminal
+   transport normalization invalid terminal input в `handlePointer(...)`
+   переносятся в `11.1`.
 2. Controller-side active gesture owner, baseline `dragStartSlop`, forced reset
    на `replaceScene(...)` и `setCameraOffset(...)`, а также запрет
    не-владеющему pointer-у сбрасывать чужой gesture переносятся в `11.2`.
@@ -155,12 +155,15 @@ step-owned методы не должны пробивать пороги из
    становится новым public/runtime service.
 3. Invalid terminal input нормализуется на controller boundary до dispatch в
    owner-level lifecycle:
-   - invalid `cancel` трактуется как terminal `cancel`;
-   - invalid `up` трактуется как terminal `cancel`;
-   - invalid `down/move` продолжают отбрасываться.
-   Эта нормализация фиксирует только event shape и boundary contract.
-   Move-local и draw-local смысл полученного `cancel`, включая rollback,
-   preview cleanup и pending-line abort, остаётся ownership `11.4` и `11.5`.
+   - invalid `down/move` продолжают отбрасываться;
+   - invalid terminal `up/cancel` не теряются только при cache hit по
+     finite-позиции того же `pointerId`;
+   - terminal phase сохраняется;
+   - invalid terminal sample без cached finite-позиции остаётся no-op.
+   Эта нормализация фиксирует только transport contract на boundary.
+   Move-local и draw-local смысл terminal `up/cancel`, включая rollback,
+   preview cleanup, pending-line abort и commit policy, остаётся ownership
+   `11.4` и `11.5`.
 4. Baseline `dragStartSlop` фиксируется один раз на `down` и не меняется до
    завершения текущего gesture, даже если `pointerSettings` или explicit
    `dragStartSlop` обновились в процессе.
@@ -200,8 +203,9 @@ step-owned методы не должны пробивать пороги из
 
 ## Ownership Matrix
 
-- `11.1` владеет только boundary-normalization входного pointer event:
-  phase, `pointerId`, monotonic `timestampMs`, finite/drop rules.
+- `11.1` владеет только boundary transport-normalization входного pointer
+  event: phase, `pointerId`, monotonic `timestampMs`, finite/drop rules и
+  fallback terminal position только при cache hit.
 - `11.2` владеет только owner-level delivery/reset decision:
   какой controller-level `pointerId` активен, кому разрешён terminal dispatch,
   когда запускается forced reset.
@@ -245,9 +249,9 @@ step-owned методы не должны пробивать пороги из
 
 [ ] Переформулировать шаг `11` как umbrella-этап и вынести реализацию в
     `11.1`, `11.2`, `11.3`, `11.4`, `11.5`.
-[ ] В `11.1` зафиксировать controller pointer entry contract, unified
-    `dragStartSlop` validation и canonical invalid terminal input
-    normalization.
+[x] В `11.1` зафиксировать controller pointer entry contract, unified
+    `dragStartSlop` validation и terminal transport normalization для invalid
+    terminal input.
 [ ] В `11.2` ввести одного controller-owned owner-а active gesture и forced
     reset lifecycle без overlap со шагом `10`.
 [ ] В `11.3` ввести одного owner-а interactive admissibility без инверсии layer

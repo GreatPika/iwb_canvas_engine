@@ -1,6 +1,6 @@
 language: russian
 
-# Шаг 11.1. Зафиксировать controller pointer entry contract и canonical terminal input normalization
+# Шаг 11.1. Зафиксировать controller pointer entry contract и terminal transport normalization
 
 ## Цель шага
 
@@ -18,9 +18,9 @@ language: russian
   controller entrypoint не задаёт канонический event contract.
 
 Задача подшага: зафиксировать единый controller boundary для
-`handlePointer(...)`, где invalid terminal input приводится к одной и той же
-controller-level форме для всех callers, `dragStartSlop` валидируется по
-одному правилу, а монотонность `timestampMs` остаётся строго
+`handlePointer(...)`, где invalid terminal input получает один
+controller-owned transport contract для всех callers, `dragStartSlop`
+валидируется по одному правилу, а монотонность `timestampMs` остаётся строго
 controller-owned.
 
 ## Что уже подтверждено по текущему состоянию
@@ -59,10 +59,12 @@ controller-owned.
    - одинаковое в конструкторе и в `setDragStartSlop(...)`.
    Это правило намеренно выравнивается с `PointerInputSettings.tapSlop`, а не
    оставляет второй "почти такой же" numeric contract.
-3. Controller boundary нормализует фазы так:
+3. Controller boundary нормализует terminal transport так:
    - invalid `down` и `move` отбрасываются;
-   - invalid `cancel` трактуется как terminal `cancel`;
-   - invalid `up` трактуется как terminal `cancel`.
+   - invalid terminal `up/cancel` не теряются только при cache hit по
+     finite-позиции того же `pointerId`;
+   - terminal phase (`up` vs `cancel`) сохраняется;
+   - если cached finite-позиции нет, invalid terminal sample остаётся no-op.
 4. Нормализация invalid terminal input выполняется до dispatch в
    controller-owned lifecycle из `11.2`.
 5. `timestampMs` нормализуется только через controller-owned
@@ -86,8 +88,9 @@ controller-owned.
 2. Разный numeric contract для `dragStartSlop` и `tapSlop` создаёт скрытую
    несовместимость в том самом месте, где нужен fallback от explicit значения к
    settings.
-3. invalid `up -> cancel` безопаснее, чем тихий drop: gesture получает
-   terminal meaning, но не получает фальшивого commit-разрешения.
+3. Boundary transport normalization не должна переписывать semantic meaning
+   terminal event, потому что downstream move/draw lifecycle уже различает
+   `up` и `cancel`.
 4. Сохранять controller-owned монотонность timestamp важно, потому что именно
    controller, а не view, отвечает за deterministic action ordering и internal
    lifecycle.
@@ -96,7 +99,7 @@ controller-owned.
 
 - In:
   - constructor/setter validation для `dragStartSlop`;
-  - controller entry normalization в `handlePointer(...)`;
+  - controller entry transport normalization в `handlePointer(...)`;
   - равенство entry normalization для direct path и routed path;
   - сохранение controller-owned монотонности `timestampMs`;
   - только тот constructor-side wiring, который нужен для unified validation.
@@ -118,12 +121,14 @@ controller-owned.
    - phase;
    - pointerId;
    - normalized `timestampMs`;
-   - optional finite position только там, где она реально нужна downstream
-     dispatch-у.
+   - resolved position, где invalid terminal input может переиспользовать
+     последнюю finite-позицию того же `pointerId` только при cache hit.
 4. Invalid terminal input не приводит к early `return` до controller-side
-   owner dispatch decision.
-5. Подшаг фиксирует только форму terminal event на boundary и не вводит новый
-   draw-local или move-local cleanup contract для idle/active state.
+   owner dispatch decision, но boundary не меняет semantic type terminal
+   event.
+5. Подшаг фиксирует только transport contract terminal event на boundary и не
+   вводит новый draw-local или move-local cleanup/commit contract для
+   idle/active state.
 6. Подшаг не вводит новый view-to-controller bridge API. Единственный вход
    остаётся `handlePointer(...)`.
 7. Если для unified validation нужен небольшой private helper, он остаётся
@@ -132,33 +137,37 @@ controller-owned.
 
 ## Последовательность реализации (только действия)
 
-[ ] Выровнять numeric contract `dragStartSlop` между конструктором, сеттером и
+[x] Выровнять numeric contract `dragStartSlop` между конструктором, сеттером и
     fallback к `pointerSettings.tapSlop`.
-[ ] Вынести canonical controller normalization для invalid terminal input.
-[ ] Убедиться, что direct `handlePointer(...)` и routed path через view
+[x] Вынести controller-owned transport normalization для invalid terminal
+    input.
+[x] Убедиться, что direct `handlePointer(...)` и routed path через view
     не получают competing terminal input normalization.
-[ ] Сохранить controller-owned монотонность `timestampMs` после нормализации.
-[ ] Вынести только тот validation helper, который нужен для unified
+[x] Сохранить controller-owned монотонность `timestampMs` после нормализации.
+[x] Вынести только тот validation helper, который нужен для unified
     constructor/setter contract `dragStartSlop`.
-[ ] Не принимать в этом подшаге решения за move/draw-local cancel cleanup,
+[x] Не принимать в этом подшаге решения за move/draw-local cancel cleanup,
     которые принадлежат `11.4` и `11.5`.
 
 ## Критерии приёмки
 
-[ ] Constructor и `setDragStartSlop(...)` используют одно и то же правило
+[x] Constructor и `setDragStartSlop(...)` используют одно и то же правило
     валидации `dragStartSlop`.
-[ ] Invalid `cancel` не теряется и нормализуется в terminal `cancel`.
-[ ] Invalid `up` нормализуется в terminal `cancel`, а не в drop или fake `up`.
-[ ] Invalid `down/move` по-прежнему не создают controller-side interactive
+[x] Invalid `cancel` не теряется и сохраняет terminal phase `cancel`.
+[x] Invalid `up` не теряется и сохраняет terminal phase `up`.
+[x] Invalid terminal input переиспользует последнюю finite-позицию того же
+    `pointerId` только при cache hit.
+[x] Invalid terminal input без cached finite-позиции остаётся no-op.
+[x] Invalid `down/move` по-прежнему не создают controller-side interactive
     side effects.
-[ ] Direct controller entry остаётся единственным owner-ом terminal input
+[x] Direct controller entry остаётся единственным owner-ом terminal input
     normalization, а routed path через view не вводит competing boundary
     contract.
-[ ] Монотонность `timestampMs` сохраняется.
-[ ] Подшаг не вводит новый owner contract для move-local или draw-local
-    cleanup после normalized `cancel`; это остаётся ownership `11.2`, `11.4`
-    и `11.5`.
-[ ] Повторная диагностика
+[x] Монотонность `timestampMs` сохраняется.
+[x] Подшаг не вводит новый owner contract для move-local или draw-local
+    cleanup/commit после invalid terminal input; это остаётся ownership
+    `11.2`, `11.4` и `11.5`.
+[x] Повторная диагностика
     `dcm calculate-metrics lib/src/interactive/scene_controller_interactive.dart --report-all`
     приложена к результату шага; `handlePointer(...)`, constructor-side
     validation helper-ы и новые или step-owned methods этого подшага не
@@ -168,15 +177,31 @@ controller-owned.
 
 ## Тестовый контур шага
 
-[ ] `test/interactive/core/scene_controller_interactive_basics_test.dart`
+[x] `test/interactive/core/scene_controller_interactive_basics_test.dart`
     с покрытием unified validation для constructor/setter `dragStartSlop`
-[ ] `test/interactive/core/scene_controller_interactive_invalid_pointer_input_test.dart`
+[x] `test/interactive/core/scene_controller_interactive_invalid_pointer_input_test.dart`
     с покрытием:
     - invalid `cancel` не теряется на boundary
-    - invalid `up` нормализуется в `cancel`
+    - invalid `up` сохраняет phase `up`
+    - invalid terminal input переиспользует последнюю finite-позицию pointer-а
+      только при cache hit
+    - invalid terminal input без cached finite-позиции остаётся no-op
     - invalid `down/move` остаются no-op
-[ ] `test/view/scene_view_interactive_test.dart`
+[x] `test/view/scene_view_interactive_test.dart`
     только как boundary-check, что view не добавляет terminal bridge обратно в
     controller
-[ ] Cleanup semantics для move/draw-local state после normalized `cancel`
+[x] Cleanup/commit semantics для move/draw-local state после invalid terminal
     остаются вне тестового контура этого подшага и проверяются в `11.4`/`11.5`
+
+## Диагностика шага
+
+- `dcm calculate-metrics lib/src/interactive/scene_controller_interactive.dart --report-all`
+  после шага не содержит `HIGH` по step-owned constructor/helper surface.
+- Зафиксированные значения для методов, которые этот подшаг добавил или
+  переподчинил своему ownership:
+  - `SceneControllerInteractive.SceneControllerInteractive`: `cyclomatic-complexity = 2`, `maximum-nesting-level = 0`, `source-lines-of-code = 4`
+  - `SceneControllerInteractive._createMoveSession`: `1 / 0 / 12`
+  - `SceneControllerInteractive._createDrawCoordinator`: `1 / 0 / 11`
+  - `SceneControllerInteractive._commitMoveSelection`: `4 / 2 / 27`
+  - `SceneControllerInteractive.handlePointer`: `4 / 2 / 23`
+  - `SceneControllerInteractive._normalizePointerInput`: `7 / 1 / 22`

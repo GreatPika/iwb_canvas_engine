@@ -87,10 +87,17 @@ void main() {
       doubleTapMaxDelayMs: 450,
       deferSingleTap: false,
     );
+    const differentDeferMode = PointerInputSettings(
+      tapSlop: 12,
+      doubleTapSlop: 32,
+      doubleTapMaxDelayMs: 450,
+      deferSingleTap: true,
+    );
 
     expect(left, same);
     expect(left.hashCode, same.hashCode);
     expect(left, isNot(different));
+    expect(left, isNot(differentDeferMode));
   });
 
   test('emits base lifecycle signals for down/move/up/cancel', () {

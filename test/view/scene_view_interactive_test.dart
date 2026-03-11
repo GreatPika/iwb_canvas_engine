@@ -358,7 +358,7 @@ void main() {
   );
 
   testWidgets(
-    'SceneViewInteractive cleans up host state for invalid terminal events only',
+    'SceneViewInteractive forwards invalid terminal events without rewriting terminal phase',
     (tester) async {
       final controller = _RecordingPointerController(
         initialSnapshot: _snapshot(text: 'invalid-terminal-cleanup'),
@@ -390,7 +390,10 @@ void main() {
         controller.recordedInputs
             .map((input) => (input.pointerId, input.phase))
             .toList(),
-        <(int, CanvasPointerPhase)>[(1, CanvasPointerPhase.down)],
+        <(int, CanvasPointerPhase)>[
+          (1, CanvasPointerPhase.down),
+          (1, CanvasPointerPhase.up),
+        ],
       );
       expect(
         debugSceneViewInteractiveLiveRawPointerCountOf(
@@ -415,6 +418,7 @@ void main() {
             .toList(),
         <(int, CanvasPointerPhase)>[
           (1, CanvasPointerPhase.down),
+          (1, CanvasPointerPhase.up),
           (1, CanvasPointerPhase.down),
         ],
       );
@@ -471,6 +475,7 @@ void main() {
         <(int, CanvasPointerPhase)>[
           (1, CanvasPointerPhase.down),
           (2, CanvasPointerPhase.down),
+          (1, CanvasPointerPhase.cancel),
         ],
       );
     },

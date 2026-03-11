@@ -147,6 +147,12 @@ class _CanvasScreenState extends State<CanvasScreen> {
   do not force an early reset of routed pointer tracking. Settings are treated
   as a value object, and while raw pointers remain live the view keeps only the
   last pending update until router idle.
+- `handlePointer(...)` treats non-finite `down`/`move` as no-op admission
+  failures. For non-finite terminal `up`/`cancel`, the controller preserves the
+  original terminal phase only when the same `pointerId` already has a cached
+  finite position; otherwise the terminal sample stays a no-op. Explicit
+  `dragStartSlop` uses the same finite `>= 0` contract in both the constructor
+  and `setDragStartSlop(...)`.
 
 ## Where to look next
 

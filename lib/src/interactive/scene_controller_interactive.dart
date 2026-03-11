@@ -106,68 +106,14 @@ class SceneControllerInteractive extends ChangeNotifier
     this.moveCommitDeltaResolver,
     this.textFontFamilyByDefault,
   }) : _pointerSettings = pointerSettings ?? const PointerInputSettings(),
-       _dragStartSlop = dragStartSlop,
+       _dragStartSlop = _validateDragStartSlop(dragStartSlop),
        _core = SceneControllerCore(
          initialSnapshot: initialSnapshot,
          textFontFamilyByDefault: textFontFamilyByDefault,
        ) {
     validatePointerInputSettings(_pointerSettings);
-    _moveSession = InteractiveMoveSession(
-      callbacks: InteractiveMoveSessionCallbacks(
-        onStateChanged: _scheduleNotify,
-        readSelectedNodeIds: () => selectedNodeIds,
-        querySpatialCandidates: _core.querySpatialCandidates,
-        resolveSpatialCandidateNode: _core.resolveSpatialCandidateNode,
-        writeSelectionReplace: _core.commands.writeSelectionReplace,
-        writeSelectionClear: _core.commands.writeSelectionClear,
-        commitMoveSelection: (proposedDelta) {
-          return _core.write<MoveCommitSelectionResult>((writer) {
-            final snapshot = writer.snapshot;
-            final movedNodes = selectedTransformableNodesInSnapshotOrder(
-              snapshot: snapshot,
-              selected: writer.selectedNodeIds,
-            );
-            if (movedNodes.isEmpty) {
-              return (appliedDelta: Offset.zero, movedIds: const <NodeId>[]);
-            }
-
-            final resolvedDelta = _runMoveCommitDeltaResolver(
-              snapshot: snapshot,
-              movedNodes: movedNodes,
-              proposedDelta: proposedDelta,
-            );
-            _requireFiniteOffset(resolvedDelta, name: 'resolvedDelta');
-            if (resolvedDelta == Offset.zero) {
-              return (appliedDelta: Offset.zero, movedIds: const <NodeId>[]);
-            }
-
-            final affected = writer.writeSelectionTranslate(resolvedDelta);
-            if (affected <= 0) {
-              return (appliedDelta: Offset.zero, movedIds: const <NodeId>[]);
-            }
-
-            return (
-              appliedDelta: resolvedDelta,
-              movedIds: movedNodes
-                  .map((node) => node.id)
-                  .toList(growable: false),
-            );
-          });
-        },
-        emitAction: _events.emitAction,
-      ),
-    );
-    _drawCoordinator = InteractiveDrawCoordinator(
-      callbacks: InteractiveDrawCoordinatorCallbacks(
-        onStateChanged: _scheduleNotify,
-        emitAction: _events.emitAction,
-        writeDrawStroke: _core.draw.writeDrawStroke,
-        writeDrawLineFromWorldSegment: _writeDrawLineFromWorldSegment,
-        querySpatialCandidates: _core.querySpatialCandidates,
-        resolveSpatialCandidateNode: _core.resolveSpatialCandidateNode,
-        writeEraseNodes: _core.draw.writeEraseNodes,
-      ),
-    );
+    _moveSession = _createMoveSession();
+    _drawCoordinator = _createDrawCoordinator();
     _core.addListener(_handleCoreChanged);
   }
 
@@ -179,6 +125,7 @@ class SceneControllerInteractive extends ChangeNotifier
   PointerInputSettings _pointerSettings;
   double? _dragStartSlop;
   int _timestampCursorMs = -1;
+  final Map<int, Offset> _lastFinitePointerPositionById = <int, Offset>{};
 
   CanvasMode _mode = CanvasMode.move;
   DrawTool _drawTool = DrawTool.pen;
@@ -336,9 +283,7 @@ class SceneControllerInteractive extends ChangeNotifier
 
   void setDragStartSlop(double? value) {
     _ensurePublicSideEffectAllowed('setDragStartSlop');
-    final resolved = value == null
-        ? null
-        : _requireFinitePositive(value, name: 'dragStartSlop');
+    final resolved = _validateDragStartSlop(value);
     if (_dragStartSlop == resolved) return;
     _dragStartSlop = resolved;
     _scheduleNotify();
@@ -556,6 +501,7 @@ class SceneControllerInteractive extends ChangeNotifier
     _core.writeReplaceScene(snapshot);
     _drawCoordinator.clearPendingLine();
     _moveSession.setSelectionRect(null);
+    _lastFinitePointerPositionById.clear();
   }
 
   void notifySceneChanged() {
@@ -568,17 +514,10 @@ class SceneControllerInteractive extends ChangeNotifier
     if (_handlingPointer) {
       throw StateError('Reentrant handlePointer(...) is not allowed.');
     }
-    if (!_isFiniteOffset(input.position)) {
+    final resolvedSample = _normalizePointerInput(input);
+    if (resolvedSample == null) {
       return;
     }
-
-    final resolvedSample = PointerSample(
-      pointerId: input.pointerId,
-      position: input.position,
-      timestampMs: _resolveTimestampMs(input.timestampMs),
-      phase: _toInternalPointerPhase(input.phase),
-      kind: input.kind,
-    );
 
     _handlingPointer = true;
     try {
@@ -592,6 +531,7 @@ class SceneControllerInteractive extends ChangeNotifier
         _handleDrawPointer(resolvedSample);
       }
     } finally {
+      _releaseNormalizedPointerState(resolvedSample);
       _handlingPointer = false;
     }
   }
@@ -629,6 +569,101 @@ class SceneControllerInteractive extends ChangeNotifier
     }
   }
 
+  PointerSample? _normalizePointerInput(CanvasPointerInput input) {
+    final phase = _toInternalPointerPhase(input.phase);
+    final hasFinitePosition = _isFiniteOffset(input.position);
+    if (!hasFinitePosition &&
+        (phase == PointerPhase.down || phase == PointerPhase.move)) {
+      return null;
+    }
+    final resolvedPosition = hasFinitePosition
+        ? input.position
+        : _lastFinitePointerPositionById[input.pointerId];
+    if (resolvedPosition == null) {
+      return null;
+    }
+    if (hasFinitePosition) {
+      _lastFinitePointerPositionById[input.pointerId] = input.position;
+    }
+
+    return PointerSample(
+      pointerId: input.pointerId,
+      position: resolvedPosition,
+      timestampMs: _resolveTimestampMs(input.timestampMs),
+      phase: phase,
+      kind: input.kind,
+    );
+  }
+
+  void _releaseNormalizedPointerState(PointerSample sample) {
+    if (!_isTerminalPointerPhase(sample.phase)) {
+      return;
+    }
+    _lastFinitePointerPositionById.remove(sample.pointerId);
+  }
+
+  InteractiveMoveSession _createMoveSession() {
+    return InteractiveMoveSession(
+      callbacks: InteractiveMoveSessionCallbacks(
+        onStateChanged: _scheduleNotify,
+        readSelectedNodeIds: () => selectedNodeIds,
+        querySpatialCandidates: _core.querySpatialCandidates,
+        resolveSpatialCandidateNode: _core.resolveSpatialCandidateNode,
+        writeSelectionReplace: _core.commands.writeSelectionReplace,
+        writeSelectionClear: _core.commands.writeSelectionClear,
+        commitMoveSelection: _commitMoveSelection,
+        emitAction: _events.emitAction,
+      ),
+    );
+  }
+
+  InteractiveDrawCoordinator _createDrawCoordinator() {
+    return InteractiveDrawCoordinator(
+      callbacks: InteractiveDrawCoordinatorCallbacks(
+        onStateChanged: _scheduleNotify,
+        emitAction: _events.emitAction,
+        writeDrawStroke: _core.draw.writeDrawStroke,
+        writeDrawLineFromWorldSegment: _writeDrawLineFromWorldSegment,
+        querySpatialCandidates: _core.querySpatialCandidates,
+        resolveSpatialCandidateNode: _core.resolveSpatialCandidateNode,
+        writeEraseNodes: _core.draw.writeEraseNodes,
+      ),
+    );
+  }
+
+  MoveCommitSelectionResult _commitMoveSelection(Offset proposedDelta) {
+    return _core.write<MoveCommitSelectionResult>((writer) {
+      final snapshot = writer.snapshot;
+      final movedNodes = selectedTransformableNodesInSnapshotOrder(
+        snapshot: snapshot,
+        selected: writer.selectedNodeIds,
+      );
+      if (movedNodes.isEmpty) {
+        return (appliedDelta: Offset.zero, movedIds: const <NodeId>[]);
+      }
+
+      final resolvedDelta = _runMoveCommitDeltaResolver(
+        snapshot: snapshot,
+        movedNodes: movedNodes,
+        proposedDelta: proposedDelta,
+      );
+      _requireFiniteOffset(resolvedDelta, name: 'resolvedDelta');
+      if (resolvedDelta == Offset.zero) {
+        return (appliedDelta: Offset.zero, movedIds: const <NodeId>[]);
+      }
+
+      final affected = writer.writeSelectionTranslate(resolvedDelta);
+      if (affected <= 0) {
+        return (appliedDelta: Offset.zero, movedIds: const <NodeId>[]);
+      }
+
+      return (
+        appliedDelta: resolvedDelta,
+        movedIds: movedNodes.map((node) => node.id).toList(growable: false),
+      );
+    });
+  }
+
   void _handleMovePointer(PointerSample sample) {
     final scenePoint = _toScenePoint(sample.position);
     _moveSession.handlePointer(
@@ -660,6 +695,15 @@ class SceneControllerInteractive extends ChangeNotifier
 
   static bool _isFiniteOffset(Offset value) {
     return value.dx.isFinite && value.dy.isFinite;
+  }
+
+  static bool _isTerminalPointerPhase(PointerPhase phase) {
+    return phase == PointerPhase.up || phase == PointerPhase.cancel;
+  }
+
+  static double? _validateDragStartSlop(double? value) {
+    if (value == null) return null;
+    return _requireFiniteNonNegative(value, name: 'dragStartSlop');
   }
 
   int _resolveTimestampMs(int? hintTimestampMs) {
@@ -769,6 +813,7 @@ class SceneControllerInteractive extends ChangeNotifier
     _isDisposed = true;
     _notifyPending = false;
     _notifyScheduled = false;
+    _lastFinitePointerPositionById.clear();
     _moveSession.dispose();
     _drawCoordinator.dispose();
     _events.dispose();
@@ -778,6 +823,14 @@ class SceneControllerInteractive extends ChangeNotifier
   static double _requireFinitePositive(double value, {required String name}) {
     if (value.isFinite && value > 0) return value;
     throw ArgumentError.value(value, name, 'Must be a finite number > 0.');
+  }
+
+  static double _requireFiniteNonNegative(
+    double value, {
+    required String name,
+  }) {
+    if (value.isFinite && value >= 0) return value;
+    throw ArgumentError.value(value, name, 'Must be a finite number >= 0.');
   }
 
   static double _requireFiniteInUnitInterval(

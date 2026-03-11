@@ -92,7 +92,8 @@ lifecycle в
    - какой pointer имеет право получить `move/up/cancel`;
    - когда controller запускает forced cancel/reset.
    Move-local rollback и draw-local cleanup, включая pending-line semantics
-   после release owner-а, сюда не входят.
+   после release owner-а, сюда не входят. Подшаг также не имеет права
+   переписывать terminal phase, которую передал boundary contract `11.1`.
 9. Этот подшаг владеет structural constructor rewiring
    `SceneControllerInteractive(...)`, которое требуется для подключения нового
    gesture owner-а. `11.1` владеет только constructor-side validation для

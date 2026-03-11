@@ -349,6 +349,8 @@ Validation notes:
   snapshot construction; scene-level invariant failures still throw
   `SceneDataException` when the controller canonicalizes `initialSnapshot`
 - invalid `pointerSettings` throws `ArgumentError`
+- explicit `dragStartSlop` must be finite and `>= 0`; `null` keeps the
+  fallback to `pointerSettings.tapSlop`
 - `textFontFamilyByDefault` is used only when newly inserted `TextNodeSpec`
   leaves `fontFamily` unset
 
@@ -420,6 +422,8 @@ Available methods:
 Important behavior:
 
 - `setDragStartSlop(null)` restores fallback to `pointerSettings.tapSlop`
+- explicit `dragStartSlop` uses the same finite `>= 0` rule in the constructor
+  and in `setDragStartSlop(...)`
 - `setPointerSettings(...)` is applied live by `SceneView`
 - if a gesture is already active, new pointer settings take effect after
   `up` or `cancel`
@@ -499,7 +503,13 @@ Use these only when you are not relying on `SceneView` to route input.
 Guardrails:
 
 - same-stack `handlePointer(...)` reentrancy throws `StateError`
-- non-finite coordinates are ignored as a no-op
+- non-finite `down`/`move` are ignored as a no-op
+- non-finite `up`/`cancel` keep their original terminal phase only when the
+  same `pointerId` already has a cached finite position; otherwise they stay
+  a no-op
+- `SceneView` forwards invalid terminal host events through
+  `handlePointer(...)` and leaves canonical terminal normalization to the
+  controller boundary
 - after `dispose()`, mutating and effectful entrypoints throw `StateError`
 
 ### 5.6 Lifecycle and notification semantics

@@ -94,9 +94,13 @@ Ownership decisions for the target state:
 1. `SceneView` receives Flutter pointer input and normalizes it into public
    `CanvasPointerInput`, while its view-local pointer router owns raw Flutter
    pointer lifetimes, routed runtime `pointerId` allocation, and apply-on-idle
-   adoption of `PointerInputSettings`.
-2. `SceneControllerInteractive` validates input, maintains interactive state,
-   and delegates committed mutations to `SceneControllerCore`.
+   adoption of `PointerInputSettings`. Invalid terminal host events are still
+   forwarded through `handlePointer(...)`; `SceneView` does not own terminal
+   normalization semantics.
+2. `SceneControllerInteractive` validates input, preserves terminal `up`/`cancel`
+   semantics for non-finite terminal samples only when the pointer already has
+   a cached finite position, maintains interactive state, and delegates
+   committed mutations to `SceneControllerCore`.
 3. `SceneControllerCore` performs transactional writes and finalizes a canonical
    immutable `SceneSnapshot`.
 4. `ScenePainter` renders the committed snapshot plus any ephemeral preview

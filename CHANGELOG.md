@@ -29,6 +29,13 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ### Changed
 
+- `SceneControllerInteractive.handlePointer(...)` now owns canonical terminal
+  pointer normalization for both direct and `SceneView`-routed input:
+  non-finite `down`/`move` are still dropped, while non-finite terminal
+  `up`/`cancel` preserve their original phase only when the same `pointerId`
+  already has a cached finite position; otherwise they stay a no-op. Explicit
+  `dragStartSlop` now uses the same finite `>= 0` validation rule in both the
+  constructor and `setDragStartSlop(...)`.
 - `SceneViewInteractive` now owns raw Flutter pointer routing through the
   dedicated `SceneViewPointerRouter`, so routed `pointerId` values are created
   only on `down`, stray non-down host events are dropped, minimum free slot

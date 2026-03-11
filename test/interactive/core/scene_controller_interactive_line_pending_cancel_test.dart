@@ -276,6 +276,79 @@ void main() {
             .length;
         expect(lineCount, 1);
       });
+
+      test(
+        'invalid second tap up preserves line commit semantics via last finite position',
+        () async {
+          final controller = SceneControllerInteractive(
+            initialSnapshot: SceneSnapshot(
+              layers: <ContentLayerSnapshot>[
+                ContentLayerSnapshot(id: 'layer-auto-6'),
+                ContentLayerSnapshot(id: 'layer-auto-7'),
+              ],
+            ),
+          );
+          addTearDown(controller.dispose);
+
+          controller.setMode(CanvasMode.draw);
+          controller.setDrawTool(DrawTool.line);
+
+          final actions = <ActionCommitted>[];
+          final actionSub = controller.actions.listen(actions.add);
+          addTearDown(actionSub.cancel);
+
+          controller.handlePointer(
+            sampleInput(
+              pointerId: 1,
+              position: const Offset(10, 10),
+              timestampMs: 1,
+              phase: CanvasPointerPhase.down,
+            ),
+          );
+          controller.handlePointer(
+            sampleInput(
+              pointerId: 1,
+              position: const Offset(10, 10),
+              timestampMs: 2,
+              phase: CanvasPointerPhase.up,
+            ),
+          );
+          expect(controller.hasPendingLineStart, isTrue);
+
+          controller.handlePointer(
+            sampleInput(
+              pointerId: 2,
+              position: const Offset(40, 30),
+              timestampMs: 3,
+              phase: CanvasPointerPhase.down,
+            ),
+          );
+          controller.handlePointer(
+            const CanvasPointerInput(
+              pointerId: 2,
+              position: Offset(double.nan, 30),
+              timestampMs: 4,
+              phase: CanvasPointerPhase.up,
+              kind: PointerDeviceKind.touch,
+            ),
+          );
+
+          await pumpEventQueue();
+          expect(controller.hasPendingLineStart, isFalse);
+          expect(actions, hasLength(1));
+          expect(actions.single.type, ActionType.drawLine);
+          expect(actions.single.timestampMs, 4);
+
+          final lineNodes = controller.snapshot.layers
+              .expand((layer) => layer.nodes)
+              .whereType<LineNodeSnapshot>()
+              .toList(growable: false);
+          expect(lineNodes, hasLength(1));
+          final line = lineNodes.single;
+          expect(line.transform.applyToPoint(line.start), const Offset(10, 10));
+          expect(line.transform.applyToPoint(line.end), const Offset(40, 30));
+        },
+      );
     });
   });
 }

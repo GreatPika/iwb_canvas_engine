@@ -181,11 +181,7 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
       return;
     }
     if (_isInvalidTerminalHostEvent(event, phase)) {
-      _handleInvalidTerminalHostEvent(
-        rawPointer: event.pointer,
-        phase: phase,
-        referenceTimestampMs: event.timeStamp.inMilliseconds,
-      );
+      _forwardInvalidTerminalHostEvent(event, phase);
       return;
     }
 
@@ -439,15 +435,43 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
   }
 
   void _handleInvalidTerminalHostEvent({
-    required int rawPointer,
+    required PointerEvent event,
+    required int pointerId,
     required PointerPhase phase,
-    required int referenceTimestampMs,
   }) {
-    final pointerId = _routePointerId(rawPointer: rawPointer, phase: phase);
+    widget.controller.handlePointer(
+      _toCanvasPointerInput(
+        _createPointerSample(pointerId: pointerId, event: event, phase: phase),
+      ),
+    );
+  }
+
+  void _forwardInvalidTerminalHostEvent(
+    PointerEvent event,
+    PointerPhase phase,
+  ) {
+    final pointerId = _routePointerId(rawPointer: event.pointer, phase: phase);
     if (pointerId == null) {
       return;
     }
 
+    _handleInvalidTerminalHostEvent(
+      event: event,
+      pointerId: pointerId,
+      phase: phase,
+    );
+    _cleanupInvalidTerminalHostEvent(
+      pointerId: pointerId,
+      rawPointer: event.pointer,
+      referenceTimestampMs: event.timeStamp.inMilliseconds,
+    );
+  }
+
+  void _cleanupInvalidTerminalHostEvent({
+    required int pointerId,
+    required int rawPointer,
+    required int referenceTimestampMs,
+  }) {
     _pointerTracker.discardPointer(pointerId);
     final release = _pointerRouter.release(rawPointer);
     if (release.isIdleAfterRelease) {

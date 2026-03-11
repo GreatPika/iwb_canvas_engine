@@ -69,6 +69,8 @@ void main() {
 
       controller.setDragStartSlop(9);
       expect(controller.dragStartSlop, 9);
+      controller.setDragStartSlop(0);
+      expect(controller.dragStartSlop, 0);
       controller.setDragStartSlop(null);
       expect(controller.dragStartSlop, 12);
 
@@ -178,6 +180,51 @@ void main() {
         throwsA(
           isA<ArgumentError>().having((error) => error.name, 'name', 'tapSlop'),
         ),
+      );
+    });
+
+    test('constructor and setter share dragStartSlop validation contract', () {
+      final controller = SceneControllerInteractive(
+        initialSnapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(id: 'layer-auto-0'),
+          ],
+        ),
+        dragStartSlop: 0,
+      );
+      addTearDown(controller.dispose);
+
+      expect(controller.dragStartSlop, 0);
+      controller.setDragStartSlop(0);
+      expect(controller.dragStartSlop, 0);
+
+      expect(
+        () => SceneControllerInteractive(
+          initialSnapshot: SceneSnapshot(
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(id: 'layer-auto-1'),
+            ],
+          ),
+          dragStartSlop: -1,
+        ),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.name,
+            'name',
+            'dragStartSlop',
+          ),
+        ),
+      );
+      expect(
+        () => SceneControllerInteractive(
+          initialSnapshot: SceneSnapshot(
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(id: 'layer-auto-2'),
+            ],
+          ),
+          dragStartSlop: double.nan,
+        ),
+        throwsArgumentError,
       );
     });
 
