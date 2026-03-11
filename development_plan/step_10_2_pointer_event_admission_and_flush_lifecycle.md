@@ -1,27 +1,37 @@
 language: russian
 
-# Шаг 10.2. Нормализовать pointer event admission и flush/timer lifecycle в `SceneViewInteractive`
+# Шаг 10.2. Зафиксировать host admission, host terminal cleanup и flush/timer lifecycle в `SceneViewInteractive`
 
 ## Цель шага
 
-После `10.1` raw routing уже должен иметь одного owner-а, но сам widget-host
-всё ещё останется хрупким, если `_handlePointerEvent(...)`, deferred flush
-timer и controller listener-ы продолжат смешивать event admission, timer
-reschedule и mounted lifecycle в одном месте.
+После `10.1` raw routing уже имеет одного owner-а, но сам widget-host всё ещё
+легко превращается во второй gesture-owner, если в `_handlePointerEvent(...)`
+вместе живут:
 
-Задача подшага: закрепить один host contract для pointer event admission,
-deferred tap flush и mounted-safe отложенных путей так, чтобы
-`SceneViewInteractive` остался owner-ом widget lifecycle, но перестал быть
-источником случайных invalid/timer drift-ов.
+- finite filtering host event-ов;
+- terminal cleanup для router/tracker/timer;
+- deferred tap timer и listener lifecycle;
+- ad hoc попытки восстановить controller-side gesture semantics.
+
+Задача подшага: сузить `SceneViewInteractive` до одного host runtime contract:
+
+- admission для invalid host events;
+- host-owned terminal cleanup для router/tracker/timer;
+- deferred tap timer;
+- mounted-safe listener/deferred lifecycle.
+
+Controller-side meaning invalid `up/cancel`, active gesture recovery,
+preview/commit/cancel semantics и abort contract сюда не входят и остаются
+owner-ом шага `11`.
 
 ## Что уже подтверждено по текущему состоянию
 
 1. [scene_view_interactive.dart](/Users/blackpika/iwb_canvas_engine/lib/src/view/scene_view_interactive.dart)
    сейчас в `_handlePointerEvent(...)` строит `CanvasPointerInput` и
-   `PointerSample`, а затем трогает controller, tracker и timer path в одном
-   методе.
-2. Там же finite gate для `NaN/Infinity` отсутствует на host boundary до
-   controller/tracker side effects.
+   `PointerSample`, а затем трогает router, controller, tracker и timer path в
+   одном методе.
+2. Там же finite gate для invalid `down/move` отсутствует на host boundary до
+   router/controller/tracker/timer side effects.
 3. `_syncPendingFlushTimer(...)` использует `Duration(milliseconds: delayMs)`,
    где `delayMs` приходит из `num` после `clamp(...)`, а не из явно
    нормализованного `int`.
@@ -32,45 +42,54 @@ deferred tap flush и mounted-safe отложенных путей так, чт�
    [pointer_input.dart](/Users/blackpika/iwb_canvas_engine/lib/src/core/pointer_input.dart)
    `flushPending(...)` возвращает `List<PointerSignal>`, хотя host timer path в
    `SceneViewInteractive` этот результат не использует.
+6. Invalid terminal host event сейчас легко провоцирует overlap: если чинить его
+   локально в view через synthetic dispatch или controller abort bridge, виджет
+   начинает принимать controller-side terminal decisions, которые по плану
+   принадлежат шагу `11`.
 
 ## Зафиксированные решения (без повторного обсуждения в реализации)
 
 1. `SceneViewInteractive` остаётся owner-ом:
-   - Flutter `PointerEvent` admission;
+   - Flutter `PointerEvent` host admission;
+   - host interaction с `SceneViewPointerRouter`;
    - `PointerInputTracker` lifecycle;
    - deferred tap timer;
    - controller subscription/unsubscription.
    Этот lifecycle не переносится в router и не проталкивается в controller.
 2. Finite admission на host boundary фиксируется так:
-   - `down` и `move` с невалидной позицией отбрасываются до любых
-     controller/tracker/timer side effects;
-   - `up` и `cancel` с невалидной позицией не должны оставлять host или
-     controller в подвешенном terminal state;
-   - view-host не пробрасывает invalid coordinates как есть в downstream math,
-     но и не теряет terminal semantics pointer lifecycle.
-3. `Duration(milliseconds: ...)` строится только из явно нормализованного
+   - invalid `down` и `move` отбрасываются до любых
+     router/controller/tracker/timer side effects;
+   - valid события идут по обычному routed path;
+   - invalid `up/cancel` не превращаются здесь в synthetic safe dispatch в
+     controller.
+3. Для invalid `up/cancel` шаг `10.2` владеет только host-owned cleanup:
+   - release routed raw pointer в router;
+   - drop active tracker state для этого routed `pointerId`, если это нужно
+     host lifecycle;
+   - cleanup/reschedule host timer state только как части host contract.
+   Этот шаг не определяет controller-side смысл такого terminal event.
+4. `Duration(milliseconds: ...)` строится только из явно нормализованного
    `int` через `toInt()` после `clamp(...)`.
-4. `PointerInputTracker` получает no-allocation primitive для host discard path:
+5. `PointerInputTracker` получает no-allocation primitive для host discard path:
    host timer больше не обязан материализовывать `List<PointerSignal>`, если
    эти сигналы не используются. List-returning `flushPending(...)` при этом
-   остаётся лишь thin wrapper над одной канонической primitive, а не вторым
-   owner-ом той же логики.
-5. Все deferred paths и listener callbacks, которые могут сработать после
+   остаётся thin wrapper над одной канонической primitive, а не вторым owner-ом
+   той же логики.
+6. Все deferred paths и listener callbacks, которые могут сработать после
    dispose/controller swap, обязаны проверять `mounted` и актуальность owner-а
    до изменения state или повторного планирования timer-а.
-6. Шаг `10.2` не меняет final direct controller API contract для публичного
-   `handlePointer(...)`. Каноническая трактовка invalid `up/cancel` для direct
-   controller entrypoint остаётся задачей шага `11`; host step здесь только
-   обязан не потерять terminal lifecycle.
+7. Шаг `10.2` не добавляет новый internal controller API, единственная цель
+   которого состоит во view-side recovery invalid terminal input.
 
 Почему именно так:
 
-1. View boundary должна первой отсекать host invalid data, иначе raw event
-   lifecycle, controller semantics и tracker lifecycle снова связываются через
-   ad hoc guard-ы.
-2. Timer path принадлежит widget-host owner-у, потому что он зависит от
-   `mounted`, `dispose`, controller swap и конкретного event loop lifecycle.
-3. No-allocation flush primitive нужен не ради микрооптимизации, а чтобы host
+1. View boundary должна закрывать host leaks и invalid host data, но не должна
+   становиться второй gesture-machine.
+2. Router/tracker/timer path принадлежат widget-host owner-у, потому что
+   зависят от `mounted`, `dispose`, controller swap и event loop lifecycle.
+3. Active gesture meaning знает только controller-side gesture owner; если
+   view начнёт восстанавливать его локально, шаг `10.2` снова залезет в `11`.
+4. No-allocation flush primitive нужен не ради микрооптимизации, а чтобы host
    не создавал временную коллекцию в path, где результат заведомо не
    используется.
 
@@ -78,49 +97,56 @@ deferred tap flush и mounted-safe отложенных путей так, чт�
 
 - In:
   - `_handlePointerEvent(...)` и связанные host helper-ы;
+  - ранний gate для invalid `down/move`;
+  - host-owned terminal cleanup для invalid `up/cancel` в router/tracker/timer
+    path;
   - `PointerInputTracker` flush primitive для discard path;
   - mounted-safe timer/listener lifecycle.
 - Out:
   - raw-to-slot router owner;
   - value semantics `PointerInputSettings`;
-  - controller-side invalid pointer API contract.
+  - controller-side invalid pointer API contract;
+  - controller abort/recovery API для invalid terminal input.
 
 ## Точная реализация, которую должен описывать код
 
 1. `SceneViewInteractive` разделяет:
-   - event admission;
+   - host admission;
    - routed dispatch;
    - signal tracking;
-   - timer reschedule/finalize.
+   - timer reschedule/finalize;
+   - host terminal cleanup.
    Эти фазы больше не сливаются в одно неявное тело.
 2. Host finite gate срабатывает до вызовов:
+   - router route для invalid `down/move`;
    - `widget.controller.handlePointer(...)`;
    - `_pointerTracker.handle(...)`;
    - `_syncPendingFlushTimer(...)`.
-3. `_handlePendingTapTimer()` после подшага:
+3. Valid `up/cancel` продолжают идти по обычному routed path без изменения
+   controller semantics шага `10.2`.
+4. Invalid `up/cancel` обновляют только host-owned router/tracker/timer state:
+   - без synthetic safe `up`;
+   - без synthetic `cancel` в controller;
+   - без controller abort bridge из view.
+5. `_handlePendingTapTimer()` после подшага:
    - не работает, если widget уже unmounted;
    - не reschedule-ит timer после dispose/controller swap;
    - использует discard-friendly flush primitive.
-4. `_handleControllerChanged()` после подшага:
+6. `_handleControllerChanged()` после подшага:
    - остаётся owner-ом listener lifecycle и epoch adoption;
    - вызывает settings transition policy, определённую в `10.3`, а не
      дублирует её локально;
    - не мутирует host state после dispose;
    - не делает лишнего reset/resubscribe при stale callback.
-5. Для invalid terminal event host делает одно из двух, но не смешивает оба
-   пути одновременно:
-   - либо локально нормализует событие в безопасный terminal dispatch без
-     invalid coordinates;
-   - либо вызывает отдельный terminal-reset path, который гарантированно не
-     оставляет controller/router/tracker в зависшем состоянии.
-   Выбор между этими двумя вариантами должен быть совместим с controller-side
-   contract шага `11`, а не вводить третий ad hoc режим.
+7. `PointerInputTracker.flushPendingTo(...)` становится канонической primitive,
+   а `flushPending(...)` остаётся thin wrapper над ней.
 
 ## Последовательность реализации (только действия)
 
-[ ] Вынести host finite admission в явную раннюю фазу `_handlePointerEvent(...)`.
-[ ] Нормализовать terminal cleanup для invalid `up/cancel` без проброса invalid
-    coordinates в tracker/controller.
+[ ] Вынести host finite admission для invalid `down/move` в явную раннюю фазу
+    `_handlePointerEvent(...)`.
+[ ] Выделить host-owned terminal cleanup для invalid `up/cancel` без
+    controller-side recovery bridge.
 [ ] Исправить timer delay на явный `int`.
 [ ] Ввести no-allocation flush primitive в `PointerInputTracker` и перевести на
     него host timer path.
@@ -128,14 +154,19 @@ deferred tap flush и mounted-safe отложенных путей так, чт�
 
 ## Критерии приёмки
 
-[ ] `SceneViewInteractive` имеет один явный host admission/flush lifecycle и не
-    смешивает его с router ownership.
-[ ] Invalid `down/move` не вызывают controller/tracker side effects.
-[ ] Invalid `up/cancel` не пробрасывают invalid coordinates как есть в
-    downstream math, но и не оставляют terminal lifecycle в зависшем состоянии.
+[ ] `SceneViewInteractive` имеет один явный host pipeline и не смешивает host
+    lifecycle с controller gesture semantics.
+[ ] Invalid `down/move` не создают routed slot и не вызывают
+    router/controller/tracker/timer side effects.
+[ ] Invalid terminal host events делают только host-owned cleanup для
+    router/tracker/timer state и не создают view-side terminal bridge в
+    controller.
+[ ] Valid `up/cancel` сохраняют прежний routed dispatch path.
 [ ] Deferred timer path не создаёт лишнюю коллекцию сигналов, если host её не
     использует.
 [ ] Timer/listener callbacks безопасны относительно `mounted` и controller swap.
+[ ] Шаг `10.2` не добавляет новый internal controller API ради invalid terminal
+    recovery из view.
 [ ] Повторная диагностика
     `dcm calculate-metrics lib/src/view/scene_view_interactive.dart lib/src/core/pointer_input.dart --report-all`
     приложена к результату шага; новые или step-owned host lifecycle methods и
@@ -148,8 +179,9 @@ deferred tap flush и mounted-safe отложенных путей так, чт�
 [ ] `test/view/scene_view_interactive_test.dart`
     с новыми targeted cases для:
     - invalid `down/move` не создают slot, gate и pending timer
-    - invalid terminal host events не оставляют stuck gesture / stuck gate;
-    - timer safety после dispose/controller swap;
+    - invalid terminal host events освобождают host gate/router state без
+      проверки controller-side preview/commit recovery
+    - timer safety после dispose/controller swap
     - deferred flush без лишнего host-side signal materialization
 [ ] `test/core/pointer_input_test.dart`
 [ ] `dart run tool/check_invariant_coverage.dart` если меняется

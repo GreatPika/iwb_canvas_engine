@@ -24,9 +24,10 @@ language: russian
   неотносящиеся к шагу `10`, части тех же файлов уже могут иметь свои
   исторические watchpoints.
 - Полезный сигнал после шага: raw-pointer lifecycle, routed slot ids,
-  deferred flush/timer lifecycle и pointer-settings transition имеют одного
-  owner-а на view-runtime boundary, а `scene_controller_interactive.dart` не
-  получает обратно view-only pointer-router concern.
+  host-owned terminal cleanup, deferred flush/timer lifecycle и
+  pointer-settings transition имеют одного owner-а на view-runtime boundary,
+  а invalid terminal semantics, active gesture owner и cancel/abort recovery
+  остаются в `scene_controller_interactive.dart` и шаге `11`.
 
 ## Цель шага
 
@@ -58,7 +59,7 @@ language: russian
 - `lib/src/view/scene_view_pointer_router.dart` как одному owner-у raw-to-slot
   routing;
 - явному разделению raw pointer ids и routed pointer ids;
-- slot reuse policy и active-pointer gate;
+- slot reuse policy и signal-tracking gate для tracker/double-tap lifecycle;
 - правилу, когда router считается idle и когда разрешён reset host tracking.
 
 ### Шаг 10.2
@@ -68,9 +69,11 @@ language: russian
 Владелец решения по:
 
 - admission policy pointer events на widget-host boundary;
+- host-owned terminal cleanup для router/tracker/timer path;
 - timer/flush lifecycle для deferred taps;
 - mounted-safe поведению отложенных путей и controller listener-ов;
-- устранению лишних allocation-path в host flush logic.
+- устранению лишних allocation-path в host flush logic;
+- явному запрету на view-side terminal bridge в controller.
 
 ### Шаг 10.3
 
@@ -79,14 +82,16 @@ language: russian
 Владелец решения по:
 
 - value semantics для `PointerInputSettings`;
-- одному контракту сравнения и применения pointer settings;
+- одному apply-on-router-idle контракту сравнения и применения pointer
+  settings;
 - pending-settings lifecycle при живых raw pointers;
 - явной границе между view-side settings adoption и controller-side
   gesture semantics шага `11`.
 
 ## Карта переноса деталей из исходного шага 10
 
-1. Ранний finite-gate в `_handlePointerEvent(...)` переносится в `10.2`.
+1. Ранний finite-gate для invalid `down/move` в `_handlePointerEvent(...)`
+   переносится в `10.2`.
 2. `Duration(milliseconds: ...)` через явный `toInt()` переносится в `10.2`.
 3. Разделение raw pointer ids и internal slot ids переносится в `10.1`.
 4. Стабильный routed id на весь raw-pointer lifetime переносится в `10.1`.
@@ -100,7 +105,11 @@ language: russian
 9. Устранение лишних коллекций в `flushPending` переносится в `10.2`.
 10. `mounted`-проверки во всех отложенных путях и listener-ах переносятся в
     `10.2`.
-11. Финальный контракт смены pointer settings при активном gesture lifecycle
+11. Host-owned terminal cleanup для invalid `up/cancel` в
+    router/tracker/timer path переносится в `10.2`.
+12. Controller-side трактовка invalid `up/cancel`, active gesture owner и
+    cancel/abort recovery переносятся в `11`.
+13. Финальный контракт смены pointer settings при живых raw pointers
     переносится в `10.3`.
 
 ## Уже принятые архитектурные решения
@@ -125,6 +134,9 @@ language: russian
 8. Шаг `10` не принимает controller-side решения про gesture admissibility,
    preview/commit/cancel semantics и baseline `dragStartSlop`. Это полностью
    остаётся за шагом `11`.
+9. Шаг `10.2` может делать только host-owned cleanup для router/tracker/timer
+   state. Synthetic terminal dispatch в controller и view-side abort bridge не
+   допускаются.
 
 ## Общие правила для всех подшагов
 
@@ -135,9 +147,11 @@ language: russian
    listener knowledge.
 3. `SceneControllerInteractive` после шага `10` продолжает принимать routed
    `pointerId` как opaque integer и не знает о raw Flutter pointer ids.
-4. Если в рамках подшага меняется `tool/invariant_registry.dart`, этот подшаг
+4. View boundary не имеет права принимать решение, как invalid terminal input
+   влияет на active gesture внутри controller. Это owner шага `11`.
+5. Если в рамках подшага меняется `tool/invariant_registry.dart`, этот подшаг
    обязан прогонять `dart run tool/check_invariant_coverage.dart`.
-5. Для каждого подшага повторная диагностика метрик обязана быть частью
+6. Для каждого подшага повторная диагностика метрик обязана быть частью
    критериев приёмки, а не только фоновым комментарием.
 
 ## Критерии готовности umbrella-шага
@@ -147,13 +161,15 @@ language: russian
    контуром.
 2. В описании подшагов не осталось пересечений по владению:
    - `10.1` отвечает за router owner и slot contract;
-   - `10.2` отвечает за event admission, timer/flush и mounted lifecycle;
+   - `10.2` отвечает за host admission, host terminal cleanup, timer/flush и
+     mounted lifecycle;
    - `10.3` отвечает за settings transition и value semantics.
 3. Ни один пункт исходного шага `10` не потерян при переносе, включая блок
    диагностических метрик и требование не пробивать пороги `10 / 4 / 40`.
 4. Граница между шагами `10` и `11` зафиксирована явно:
    - шаг `10` закрывает view/runtime pointer-router boundary;
-   - шаг `11` закрывает gesture-machine, admissibility и controller semantics.
+   - шаг `11` закрывает gesture-machine, invalid terminal semantics,
+     admissibility и controller semantics.
 5. После реализации шага `10.x` повторный прогон
    `dcm calculate-metrics lib/src/view/scene_view_interactive.dart lib/src/view/scene_view_pointer_router.dart lib/src/core/pointer_input.dart --report-all`
    приложен к результату шага; `HIGH` по `cyclomatic-complexity`,
@@ -167,8 +183,8 @@ language: russian
     `10.1`, `10.2`, `10.3`.
 [x] В `10.1` принять финальное решение по owner-у raw-to-slot routing,
     active-pointer gate и slot reuse contract.
-[ ] В `10.2` зафиксировать один host admission/flush lifecycle без утечки
-    invalid/timer logic в controller.
+[ ] В `10.2` зафиксировать host admission, host-owned terminal cleanup и
+    flush/timer lifecycle без view-side terminal bridge в controller.
 [ ] В `10.3` зафиксировать value semantics и pending-apply contract для
     `PointerInputSettings` без overlap со шагом `11`.
 [x] Закрепить в критериях приёмки каждого подшага повторную диагностику
