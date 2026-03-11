@@ -465,6 +465,39 @@ void main() {
     },
   );
 
+  test(
+    'TxnContext rebuildNodeLocator materializes once from current working scene',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[ContentLayer(id: 'layer-auto-3b')],
+        ),
+        workingSelection: <NodeId>{},
+        baseAllNodeIds: const <NodeId>{},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+
+      ctx.txnEnsureContentLayer('layer-extra');
+      ctx.txnEnsureMutableScene().layers[1].nodes.add(
+        RectNode(id: 'rebuilt', size: const Size(1, 1)),
+      );
+
+      expect(ctx.debugNodeLocatorMaterializations, 0);
+
+      ctx.txnRebuildNodeLocatorFromWorkingScene();
+
+      expect(ctx.debugNodeLocatorMaterializations, 1);
+      expect(
+        ctx.debugNodeLocatorView(structuralChanged: false),
+        containsPair('rebuilt', (layerIndex: 1, nodeIndex: 0)),
+      );
+
+      ctx.txnRebuildNodeLocatorFromWorkingScene();
+      expect(ctx.debugNodeLocatorMaterializations, 1);
+    },
+  );
+
   test('TxnContext keeps workingSelection hash-based and mutable in place', () {
     final inputSelection = <NodeId>{'a', 'b'};
     final ctx = TxnContext(
@@ -874,6 +907,27 @@ void main() {
     expect(resolved.node, isA<RectNode>());
     expect(identical(resolved.node, baseBackground.nodes.first), isFalse);
   });
+
+  test(
+    'TxnContext ensureMutableBackgroundLayer creates missing background layer',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[ContentLayer(id: 'layer-auto-12b')],
+        ),
+        workingSelection: <NodeId>{},
+        baseAllNodeIds: const <NodeId>{},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+
+      final mutable = ctx.txnEnsureMutableBackgroundLayer();
+
+      expect(identical(ctx.workingScene.backgroundLayer, mutable), isTrue);
+      expect(mutable.nodes, isEmpty);
+      expect(ctx.debugLayerShallowClones, 1);
+    },
+  );
 
   test(
     'TxnContext background ensureMutable respects externally replaced layer identity',

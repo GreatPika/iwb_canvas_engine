@@ -212,7 +212,7 @@ language: russian
     разрастания public surface.
 [ ] В `8.2` довести `TxnContext` и `document.dart` до executor-ready apply
     semantics без snapshot diff owner-а.
-[ ] В `8.3` перевести `SceneWriter` на executor и убрать лишние selection /
+[x] В `8.3` перевести `SceneWriter` на executor и убрать лишние selection /
     signal materializations.
 [ ] В `8.4` переписать controller commit pipeline так, чтобы commit всегда
     выполнялся только после postcheck и fail-fast dispose semantics.

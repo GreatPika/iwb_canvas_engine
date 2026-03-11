@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart' hide NodeId;
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
+import 'package:iwb_canvas_engine/src/controller/mutation_executor.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_writer.dart';
 import 'package:iwb_canvas_engine/src/controller/txn_context.dart';
 import 'package:iwb_canvas_engine/src/controller/internal/signal_event.dart';
@@ -11,6 +12,20 @@ import 'package:iwb_canvas_engine/src/controller/internal/signal_event.dart';
 // INV:INV-ENG-WRITE-NUMERIC-GUARDS
 
 void main() {
+  SceneWriter newWriter(
+    TxnContext ctx, {
+    required void Function(BufferedSignal signal) txnSignalSink,
+    String? textFontFamilyByDefault,
+  }) {
+    return SceneWriter(
+      ctx,
+      mutationExecutor: MutationExecutor(
+        textFontFamilyByDefault: textFontFamilyByDefault,
+      ),
+      txnSignalSink: txnSignalSink,
+    );
+  }
+
   test('SceneWriter handles write operations and updates changeset', () {
     final bufferedSignals = <BufferedSignal>[];
     final ctx = TxnContext(
@@ -27,7 +42,7 @@ void main() {
       nodeIdSeed: 0,
       nextInstanceRevision: 1,
     );
-    final writer = SceneWriter(ctx, txnSignalSink: bufferedSignals.add);
+    final writer = newWriter(ctx, txnSignalSink: bufferedSignals.add);
 
     expect(writer.snapshot.layers.single.nodes.single.id, 'r1');
     expect(writer.selectedNodeIds, <NodeId>{'r1'});
@@ -123,7 +138,7 @@ void main() {
         nodeIdSeed: 0,
         nextInstanceRevision: 1,
       );
-      final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+      final writer = newWriter(ctx, txnSignalSink: (_) {});
       final selectionRef = ctx.workingSelection;
 
       writer.writeSelectionToggle('r3');
@@ -158,10 +173,42 @@ void main() {
       nodeIdSeed: 0,
       nextInstanceRevision: 1,
     );
-    final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+    final writer = newWriter(ctx, txnSignalSink: (_) {});
 
     expect(() => writer.selectedNodeIds.add('other'), throwsUnsupportedError);
     expect(writer.selectedNodeIds, const <NodeId>{'r1'});
+  });
+
+  test('SceneWriter selectedNodeIds reuses stable transaction view', () {
+    final ctx = TxnContext(
+      baseScene: Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-auto-2c',
+            nodes: <SceneNode>[
+              RectNode(id: 'r1', size: const Size(10, 10)),
+              RectNode(id: 'r2', size: const Size(10, 10)),
+            ],
+          ),
+        ],
+      ),
+      workingSelection: <NodeId>{'r1'},
+      baseAllNodeIds: const <NodeId>{'r1', 'r2'},
+      nodeIdSeed: 0,
+      nextInstanceRevision: 1,
+    );
+    final writer = newWriter(ctx, txnSignalSink: (_) {});
+
+    final first = writer.selectedNodeIds;
+    final second = writer.selectedNodeIds;
+
+    expect(identical(first, second), isTrue);
+
+    writer.writeSelectionToggle('r2');
+
+    final afterToggle = writer.selectedNodeIds;
+    expect(identical(first, afterToggle), isTrue);
+    expect(afterToggle, const <NodeId>{'r1', 'r2'});
   });
 
   test(
@@ -182,7 +229,7 @@ void main() {
         nodeIdSeed: 1000,
         nextInstanceRevision: 1,
       );
-      final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+      final writer = newWriter(ctx, txnSignalSink: (_) {});
       final selectionRef = ctx.workingSelection;
       final expected = <NodeId>{};
 
@@ -227,7 +274,7 @@ void main() {
       nodeIdSeed: 0,
       nextInstanceRevision: 1,
     );
-    final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+    final writer = newWriter(ctx, txnSignalSink: (_) {});
 
     final insertedId = writer.writeNodeInsert(
       RectNodeSpec(id: 'n-target', size: const Size(3, 3)),
@@ -252,7 +299,7 @@ void main() {
       nodeIdSeed: 0,
       nextInstanceRevision: 1,
     );
-    final emptyWriter = SceneWriter(emptyCtx, txnSignalSink: (_) {});
+    final emptyWriter = newWriter(emptyCtx, txnSignalSink: (_) {});
     final autoInsertedId = emptyWriter.writeNodeInsert(
       RectNodeSpec(id: 'first', size: const Size(2, 2)),
     );
@@ -282,7 +329,7 @@ void main() {
         nodeIdSeed: 0,
         nextInstanceRevision: 1,
       );
-      final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+      final writer = newWriter(ctx, txnSignalSink: (_) {});
 
       writer.writeNodeInsert(
         RectNodeSpec(id: 'middle', size: const Size(2, 2)),
@@ -324,7 +371,7 @@ void main() {
         nodeIdSeed: 0,
         nextInstanceRevision: 1,
       );
-      final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+      final writer = newWriter(ctx, txnSignalSink: (_) {});
 
       expect(writer.writeLayerEnsure('inserted', index: 1), isTrue);
       expect(writer.writeLayerEnsure('inserted', index: 0), isFalse);
@@ -356,7 +403,7 @@ void main() {
       nodeIdSeed: 0,
       nextInstanceRevision: 1,
     );
-    final writer = SceneWriter(
+    final writer = newWriter(
       ctx,
       txnSignalSink: (_) {},
       textFontFamilyByDefault: 'Mono',
@@ -409,7 +456,7 @@ void main() {
       nextInstanceRevision: 1,
     );
     final bufferedSignals = <BufferedSignal>[];
-    final writer = SceneWriter(ctx, txnSignalSink: bufferedSignals.add);
+    final writer = newWriter(ctx, txnSignalSink: bufferedSignals.add);
 
     final generatedId = writer.writeNodeInsert(
       RectNodeSpec(size: const Size(2, 2)),
@@ -467,7 +514,7 @@ void main() {
         nodeIdSeed: 0,
         nextInstanceRevision: 1,
       );
-      final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+      final writer = newWriter(ctx, txnSignalSink: (_) {});
 
       expect(writer.writeSelectionReplace(const <NodeId>{}), isFalse);
       expect(
@@ -501,7 +548,7 @@ void main() {
       nodeIdSeed: 0,
       nextInstanceRevision: 1,
     );
-    final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+    final writer = newWriter(ctx, txnSignalSink: (_) {});
 
     expect(writer.writeNodeErase('locked'), isFalse);
     expect(writer.writeNodeErase('free'), isTrue);
@@ -525,7 +572,7 @@ void main() {
       nodeIdSeed: 0,
       nextInstanceRevision: 1,
     );
-    final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+    final writer = newWriter(ctx, txnSignalSink: (_) {});
 
     for (var i = 0; i < 8; i++) {
       expect(writer.writeNodeErase('n$i'), isTrue);
@@ -543,7 +590,7 @@ void main() {
       nodeIdSeed: 0,
       nextInstanceRevision: 1,
     );
-    final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+    final writer = newWriter(ctx, txnSignalSink: (_) {});
 
     expect(() => writer.writeGridCellSize(double.nan), throwsArgumentError);
     expect(() => writer.writeGridCellSize(0), throwsArgumentError);
@@ -573,7 +620,7 @@ void main() {
       nodeIdSeed: 0,
       nextInstanceRevision: 1,
     );
-    final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+    final writer = newWriter(ctx, txnSignalSink: (_) {});
 
     expect(
       () => writer.writeNodeTransformSet(
@@ -630,7 +677,7 @@ void main() {
       nodeIdSeed: 0,
       nextInstanceRevision: 1,
     );
-    final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+    final writer = newWriter(ctx, txnSignalSink: (_) {});
 
     final affected = writer.writeSelectionTransform(delta);
     final updated = ctx.workingScene.layers.single.nodes.single as RectNode;
@@ -665,7 +712,7 @@ void main() {
       nodeIdSeed: 0,
       nextInstanceRevision: 1,
     );
-    final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+    final writer = newWriter(ctx, txnSignalSink: (_) {});
 
     final changed = writer.writeNodeTransformSet(
       'line-static',
@@ -700,7 +747,7 @@ void main() {
       nodeIdSeed: 0,
       nextInstanceRevision: 1,
     );
-    final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+    final writer = newWriter(ctx, txnSignalSink: (_) {});
 
     expect(writer.writeDeleteSelection(), 1);
     expect(
@@ -752,7 +799,7 @@ void main() {
         nodeIdSeed: 0,
         nextInstanceRevision: 1,
       );
-      final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+      final writer = newWriter(ctx, txnSignalSink: (_) {});
 
       final removedNodeIds = writer.writeClearSceneKeepBackground();
 

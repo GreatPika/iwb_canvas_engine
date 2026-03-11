@@ -23,6 +23,7 @@ import '../contract/scene_render_state.dart';
 import '../contract/scene_write_txn.dart';
 import '../contract/snapshot.dart';
 import 'change_set.dart';
+import 'mutation_executor.dart';
 import 'scene_invariants.dart';
 import 'scene_writer.dart';
 import 'store.dart';
@@ -36,10 +37,14 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
          sceneDoc: txnSceneFromSnapshot(initialSnapshot ?? SceneSnapshot()),
        ) {
     _selectedNodeIdsView = UnmodifiableSetView<NodeId>(_store.selectedNodeIds);
+    _mutationExecutor = MutationExecutor(
+      textFontFamilyByDefault: textFontFamilyByDefault,
+    );
   }
 
   final SceneStore _store;
   final String? textFontFamilyByDefault;
+  late final MutationExecutor _mutationExecutor;
 
   final SelectionNormalizer _selectionNormalizer = SelectionNormalizer();
   final GridNormalizer _gridNormalizer = GridNormalizer();
@@ -196,8 +201,8 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
       ctx = createdCtx;
       final writer = SceneWriter(
         createdCtx,
+        mutationExecutor: _mutationExecutor,
         txnSignalSink: _signalsBuffer.writeBufferSignal,
-        textFontFamilyByDefault: textFontFamilyByDefault,
       );
       result = fn(writer);
       if (result is Future) {

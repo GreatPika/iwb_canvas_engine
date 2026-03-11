@@ -16,22 +16,23 @@ import 'txn_context.dart';
 class SceneWriter implements SceneWriteTxn {
   SceneWriter(
     this._ctx, {
+    required MutationExecutor mutationExecutor,
     required this.txnSignalSink,
-    String? textFontFamilyByDefault,
-  }) : _mutationExecutor = MutationExecutor(
-         textFontFamilyByDefault: textFontFamilyByDefault,
+  }) : _mutationExecutor = mutationExecutor,
+       _selectedNodeIdsView = UnmodifiableSetView<NodeId>(
+         _ctx.workingSelection,
        );
 
   final TxnContext _ctx;
   final void Function(BufferedSignal signal) txnSignalSink;
   final MutationExecutor _mutationExecutor;
+  final UnmodifiableSetView<NodeId> _selectedNodeIdsView;
 
   @override
   SceneSnapshot get snapshot => txnSceneToSnapshot(_ctx.workingScene);
 
   @override
-  Set<NodeId> get selectedNodeIds =>
-      Set<NodeId>.unmodifiable(_ctx.workingSelection);
+  Set<NodeId> get selectedNodeIds => _selectedNodeIdsView;
 
   @override
   NodeId writeNodeInsert(NodeSpec spec, {LayerId? layerId, int? insertIndex}) {

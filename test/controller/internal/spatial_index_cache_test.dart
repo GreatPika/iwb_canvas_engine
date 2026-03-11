@@ -7,6 +7,7 @@ import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart';
 import 'package:iwb_canvas_engine/src/core/id_generator.dart';
 import 'package:iwb_canvas_engine/src/controller/change_set.dart';
+import 'package:iwb_canvas_engine/src/controller/mutation_executor.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_writer.dart';
 import 'package:iwb_canvas_engine/src/controller/txn_context.dart';
 import 'package:iwb_canvas_engine/src/controller/internal/spatial_index_cache.dart';
@@ -32,7 +33,11 @@ void main() {
         ),
         nextInstanceRevision: 1,
       );
-      final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+      final writer = SceneWriter(
+        ctx,
+        mutationExecutor: MutationExecutor(),
+        txnSignalSink: (_) {},
+      );
 
       final clearResult = writer.writeClearSceneKeepBackgroundResult();
       expect(clearResult.removedNodeIds, isEmpty);

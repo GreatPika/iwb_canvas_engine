@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/controller/commands/scene_commands.dart';
+import 'package:iwb_canvas_engine/src/controller/mutation_executor.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_writer.dart';
 import 'package:iwb_canvas_engine/src/controller/txn_context.dart';
@@ -55,7 +56,11 @@ void main() {
         nextInstanceRevision: 1,
       );
       T writeRunner<T>(T Function(SceneWriteTxn writer) fn) {
-        final writer = SceneWriter(ctx, txnSignalSink: bufferedSignals.add);
+        final writer = SceneWriter(
+          ctx,
+          mutationExecutor: MutationExecutor(),
+          txnSignalSink: bufferedSignals.add,
+        );
         return fn(writer);
       }
 
@@ -83,7 +88,11 @@ void main() {
       nextInstanceRevision: 1,
     );
     T writeRunner<T>(T Function(SceneWriteTxn writer) fn) {
-      final writer = SceneWriter(ctx, txnSignalSink: bufferedSignals.add);
+      final writer = SceneWriter(
+        ctx,
+        mutationExecutor: MutationExecutor(),
+        txnSignalSink: bufferedSignals.add,
+      );
       return fn(writer);
     }
 

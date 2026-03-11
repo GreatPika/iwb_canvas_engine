@@ -77,27 +77,27 @@ language: russian
 
 ## Последовательность реализации (только действия)
 
-[ ] Перевести scene-mutating methods `SceneWriter` на вызовы executor-а.
-[ ] Вынести создание `MutationExecutor` из writer constructor, чтобы writer
+[x] Перевести scene-mutating methods `SceneWriter` на вызовы executor-а.
+[x] Вынести создание `MutationExecutor` из writer constructor, чтобы writer
     принимал готовую зависимость и оставался тонким seam.
-[ ] Оставить selection-only methods в `SceneWriter` и явно не протаскивать их в
+[x] Оставить selection-only methods в `SceneWriter` и явно не протаскивать их в
     `mutation_op.dart`.
-[ ] Заменить per-read materialization `selectedNodeIds` на стабильный read-only
+[x] Заменить per-read materialization `selectedNodeIds` на стабильный read-only
     txn view.
-[ ] Перепроверить `writeSignalEnqueue(...)`, чтобы cleanup hot path не убрал
+[x] Перепроверить `writeSignalEnqueue(...)`, чтобы cleanup hot path не убрал
     boundary safety-copy.
 
 ## Критерии приёмки
 
-[ ] `SceneWriter` больше не является главным owner-ом scene mutation pipeline и
+[x] `SceneWriter` больше не является главным owner-ом scene mutation pipeline и
     не создаёт executor как скрытую внутреннюю инфраструктуру.
-[ ] Public `SceneWriteTxn` surface не меняется.
-[ ] `selectedNodeIds` не создаёт новый immutable set на каждом чтении.
-[ ] Writer не дублирует policy и apply semantics, у которых уже есть owner.
+[x] Public `SceneWriteTxn` surface не меняется.
+[x] `selectedNodeIds` не создаёт новый immutable set на каждом чтении.
+[x] Writer не дублирует policy и apply semantics, у которых уже есть owner.
 
 ## Тестовый контур шага
 
-[ ] `test/controller/internal/scene_writer_test.dart`
-[ ] `test/controller/core/scene_controller_writer_lifecycle_test.dart`
-[ ] `test/controller/core/scene_controller_commit_effects_test.dart`
-[ ] `test/controller/commands/scene_commands_test.dart`
+[x] `test/controller/internal/scene_writer_test.dart`
+[x] `test/controller/core/scene_controller_writer_lifecycle_test.dart`
+[x] `test/controller/core/scene_controller_commit_effects_test.dart`
+[x] `test/controller/commands/scene_commands_test.dart`
