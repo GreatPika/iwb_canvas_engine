@@ -252,7 +252,7 @@ step-owned методы не должны пробивать пороги из
 [x] В `11.1` зафиксировать controller pointer entry contract, unified
     `dragStartSlop` validation и terminal transport normalization для invalid
     terminal input.
-[ ] В `11.2` ввести одного controller-owned owner-а active gesture и forced
+[x] В `11.2` ввести одного controller-owned owner-а active gesture и forced
     reset lifecycle без overlap со шагом `10`.
 [ ] В `11.3` ввести одного owner-а interactive admissibility без инверсии layer
     DAG и без второго write-guard owner-а.

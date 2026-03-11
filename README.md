@@ -147,6 +147,11 @@ class _CanvasScreenState extends State<CanvasScreen> {
   do not force an early reset of routed pointer tracking. Settings are treated
   as a value object, and while raw pointers remain live the view keeps only the
   last pending update until router idle.
+- `SceneControllerInteractive` keeps one controller-owned active gesture owner:
+  parallel `pointerId`s are ignored until the owner ends, and
+  `replaceScene(...)`, `setCameraOffset(...)`, mode/tool changes, and `dispose()`
+  force-release the active gesture only when the boundary mutation will proceed
+  with an observable state change.
 - `handlePointer(...)` treats non-finite `down`/`move` as no-op admission
   failures. For non-finite terminal `up`/`cancel`, the controller preserves the
   original terminal phase only when the same `pointerId` already has a cached

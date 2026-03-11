@@ -99,8 +99,11 @@ Ownership decisions for the target state:
    normalization semantics.
 2. `SceneControllerInteractive` validates input, preserves terminal `up`/`cancel`
    semantics for non-finite terminal samples only when the pointer already has
-   a cached finite position, maintains interactive state, and delegates
-   committed mutations to `SceneControllerCore`.
+   a cached finite position, owns one controller-level active gesture machine
+   (pointer owner + baseline `dragStartSlop` + forced boundary reset only on
+   successful observable boundary transitions), maintains interactive state, and
+   delegates committed mutations to
+   `SceneControllerCore`.
 3. `SceneControllerCore` performs transactional writes and finalizes a canonical
    immutable `SceneSnapshot`.
 4. `ScenePainter` renders the committed snapshot plus any ephemeral preview
@@ -113,6 +116,8 @@ Ownership decisions for the target state:
 - The committed `SceneSnapshot` is the single source of truth.
 - Preview state for move/draw gestures is intentionally ephemeral and does not
   mutate committed scene data until commit on `up`.
+- Active gesture identity is controller-owned; move/draw helpers do not own a
+  competing pointer lock.
 - All committed mutations go through `write(...)` or higher-level controller
   methods that delegate to the same write path.
 - Public API never exposes mutable internal scene objects.

@@ -427,6 +427,11 @@ Important behavior:
 - `setPointerSettings(...)` is applied live by `SceneView`
 - if a gesture is already active, new pointer settings take effect after
   `up` or `cancel`
+- active gesture ownership is controller-local: parallel `pointerId`s are
+  ignored until terminal release, and `replaceScene(...)`, `setCameraOffset(...)`,
+  `setMode(...)`, `setDrawTool(...)`, and `dispose()` force-reset the active
+  gesture only when the boundary transition will actually continue with an
+  observable state change
 - `setGridCellSize(...)` requires a finite positive value and applies an
   internal safety minimum when the grid is enabled
 - invalid numeric settings throw `ArgumentError`
@@ -645,6 +650,8 @@ Contract:
 - each active gesture belongs to one `pointerId`
 - parallel pointer ids are ignored until the active gesture ends with `up` or
   `cancel`
+- `dragStartSlop` is captured once on pointer `down` and stays fixed for that
+  gesture lifetime, even if pointer settings change before terminal release
 
 ### 7.2 Draw and move behavior
 

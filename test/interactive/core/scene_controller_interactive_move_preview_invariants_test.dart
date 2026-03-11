@@ -263,5 +263,89 @@ void main() {
         expect(afterFallbackSlop.transform.ty, closeTo(60, 1e-6));
       },
     );
+
+    test(
+      'active gesture keeps dragStartSlop baseline fixed until terminal',
+      () {
+        final rect = RectNode(id: 'node', size: const Size(30, 20))
+          ..position = const Offset(60, 60);
+        final controller = controllerFromScene(
+          Scene(
+            layers: <ContentLayer>[
+              ContentLayer(id: 'layer-auto-8'),
+              ContentLayer(id: 'layer-auto-9', nodes: <SceneNode>[rect]),
+            ],
+          ),
+          pointerSettings: const PointerInputSettings(tapSlop: 4),
+          dragStartSlop: 12,
+        );
+        addTearDown(controller.dispose);
+        controller.setSelection(const <NodeId>{'node'});
+
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(60, 60),
+            timestampMs: 1,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+
+        controller.setDragStartSlop(null);
+        expect(controller.dragStartSlop, 4);
+
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(66, 60),
+            timestampMs: 2,
+            phase: CanvasPointerPhase.move,
+          ),
+        );
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(66, 60),
+            timestampMs: 3,
+            phase: CanvasPointerPhase.up,
+          ),
+        );
+
+        final afterBaselineGesture =
+            nodeById(controller.snapshot, 'node') as RectNodeSnapshot;
+        expect(afterBaselineGesture.transform.tx, closeTo(60, 1e-6));
+        expect(afterBaselineGesture.transform.ty, closeTo(60, 1e-6));
+
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 2,
+            position: const Offset(60, 60),
+            timestampMs: 4,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 2,
+            position: const Offset(66, 60),
+            timestampMs: 5,
+            phase: CanvasPointerPhase.move,
+          ),
+        );
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 2,
+            position: const Offset(66, 60),
+            timestampMs: 6,
+            phase: CanvasPointerPhase.up,
+          ),
+        );
+
+        final afterNextGesture =
+            nodeById(controller.snapshot, 'node') as RectNodeSnapshot;
+        expect(afterNextGesture.transform.tx, closeTo(66, 1e-6));
+        expect(afterNextGesture.transform.ty, closeTo(60, 1e-6));
+      },
+    );
   });
 }

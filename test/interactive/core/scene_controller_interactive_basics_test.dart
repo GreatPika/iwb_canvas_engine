@@ -718,6 +718,352 @@ void main() {
       },
     );
 
+    test(
+      'setCameraOffset forces active gesture reset before camera mutation',
+      () {
+        final controller = controllerFromScene(
+          Scene(
+            layers: <ContentLayer>[
+              ContentLayer(id: 'layer-auto-15'),
+              ContentLayer(id: 'layer-auto-16'),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(10, 10),
+            timestampMs: 1,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(40, 40),
+            timestampMs: 2,
+            phase: CanvasPointerPhase.move,
+          ),
+        );
+        expect(controller.selectionRect, isNotNull);
+
+        controller.setCameraOffset(const Offset(5, 6));
+
+        expect(controller.snapshot.camera.offset, const Offset(5, 6));
+        expect(controller.selectionRect, isNull);
+        expect(controller.selectedNodeIds, isEmpty);
+
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(40, 40),
+            timestampMs: 3,
+            phase: CanvasPointerPhase.up,
+          ),
+        );
+
+        expect(controller.selectionRect, isNull);
+        expect(controller.selectedNodeIds, isEmpty);
+      },
+    );
+
+    test('setCameraOffset no-op preserves active move gesture state', () {
+      final controller = controllerFromScene(
+        Scene(
+          layers: <ContentLayer>[
+            ContentLayer(id: 'layer-auto-19'),
+            ContentLayer(id: 'layer-auto-20'),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      controller.handlePointer(
+        sampleInput(
+          pointerId: 1,
+          position: const Offset(10, 10),
+          timestampMs: 1,
+          phase: CanvasPointerPhase.down,
+        ),
+      );
+      controller.handlePointer(
+        sampleInput(
+          pointerId: 1,
+          position: const Offset(40, 40),
+          timestampMs: 2,
+          phase: CanvasPointerPhase.move,
+        ),
+      );
+      expect(controller.selectionRect, isNotNull);
+
+      controller.setCameraOffset(controller.snapshot.camera.offset);
+
+      expect(controller.selectionRect, isNotNull);
+
+      controller.handlePointer(
+        sampleInput(
+          pointerId: 1,
+          position: const Offset(40, 40),
+          timestampMs: 3,
+          phase: CanvasPointerPhase.up,
+        ),
+      );
+
+      expect(controller.selectionRect, isNull);
+    });
+
+    test('setCameraOffset no-op preserves active draw gesture state', () {
+      final controller = controllerFromScene(
+        Scene(
+          layers: <ContentLayer>[
+            ContentLayer(id: 'layer-auto-21'),
+            ContentLayer(id: 'layer-auto-22'),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+      controller.setMode(CanvasMode.draw);
+      controller.setDrawTool(DrawTool.pen);
+
+      controller.handlePointer(
+        sampleInput(
+          pointerId: 1,
+          position: const Offset(10, 10),
+          timestampMs: 1,
+          phase: CanvasPointerPhase.down,
+        ),
+      );
+      controller.handlePointer(
+        sampleInput(
+          pointerId: 1,
+          position: const Offset(20, 10),
+          timestampMs: 2,
+          phase: CanvasPointerPhase.move,
+        ),
+      );
+      expect(controller.hasActiveStrokePreview, isTrue);
+      expect(controller.activeStrokePreviewPoints, <Offset>[
+        const Offset(10, 10),
+        const Offset(20, 10),
+      ]);
+
+      controller.setCameraOffset(controller.snapshot.camera.offset);
+
+      expect(controller.hasActiveStrokePreview, isTrue);
+      expect(controller.activeStrokePreviewPoints, <Offset>[
+        const Offset(10, 10),
+        const Offset(20, 10),
+      ]);
+
+      controller.handlePointer(
+        sampleInput(
+          pointerId: 1,
+          position: const Offset(30, 10),
+          timestampMs: 3,
+          phase: CanvasPointerPhase.move,
+        ),
+      );
+
+      expect(controller.activeStrokePreviewPoints, <Offset>[
+        const Offset(10, 10),
+        const Offset(20, 10),
+        const Offset(30, 10),
+      ]);
+    });
+
+    test(
+      'replaceScene validation failure preserves active move gesture state',
+      () {
+        final controller = controllerFromScene(
+          Scene(
+            layers: <ContentLayer>[
+              ContentLayer(id: 'layer-auto-23'),
+              ContentLayer(id: 'layer-auto-24'),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(10, 10),
+            timestampMs: 1,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(40, 40),
+            timestampMs: 2,
+            phase: CanvasPointerPhase.move,
+          ),
+        );
+        expect(controller.selectionRect, isNotNull);
+
+        expect(
+          () => controller.replaceScene(
+            SceneSnapshot(
+              layers: <ContentLayerSnapshot>[
+                ContentLayerSnapshot(id: 'layer-invalid-0'),
+                ContentLayerSnapshot(
+                  id: 'layer-invalid-1',
+                  nodes: <NodeSnapshot>[
+                    RectNodeSnapshot(id: 'dup', size: Size(5, 5)),
+                    RectNodeSnapshot(id: 'dup', size: Size(6, 6)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          throwsA(isA<SceneDataException>()),
+        );
+
+        expect(controller.selectionRect, isNotNull);
+
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(50, 50),
+            timestampMs: 3,
+            phase: CanvasPointerPhase.move,
+          ),
+        );
+        expect(controller.selectionRect, isNotNull);
+
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(50, 50),
+            timestampMs: 4,
+            phase: CanvasPointerPhase.up,
+          ),
+        );
+
+        expect(controller.selectionRect, isNull);
+      },
+    );
+
+    test(
+      'replaceScene validation failure preserves active draw gesture state',
+      () async {
+        final controller = controllerFromScene(
+          Scene(
+            layers: <ContentLayer>[
+              ContentLayer(id: 'layer-auto-25'),
+              ContentLayer(id: 'layer-auto-26'),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+        controller.setMode(CanvasMode.draw);
+        controller.setDrawTool(DrawTool.pen);
+
+        final actions = <ActionCommitted>[];
+        final sub = controller.actions.listen(actions.add);
+        addTearDown(sub.cancel);
+
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(10, 10),
+            timestampMs: 1,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(20, 10),
+            timestampMs: 2,
+            phase: CanvasPointerPhase.move,
+          ),
+        );
+        expect(controller.hasActiveStrokePreview, isTrue);
+
+        expect(
+          () => controller.replaceScene(
+            SceneSnapshot(
+              layers: <ContentLayerSnapshot>[
+                ContentLayerSnapshot(id: 'layer-invalid-2'),
+                ContentLayerSnapshot(
+                  id: 'layer-invalid-3',
+                  nodes: <NodeSnapshot>[
+                    RectNodeSnapshot(id: 'dup-draw', size: Size(5, 5)),
+                    RectNodeSnapshot(id: 'dup-draw', size: Size(6, 6)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          throwsA(isA<SceneDataException>()),
+        );
+
+        expect(controller.hasActiveStrokePreview, isTrue);
+        expect(controller.activeStrokePreviewPoints, <Offset>[
+          const Offset(10, 10),
+          const Offset(20, 10),
+        ]);
+
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(30, 10),
+            timestampMs: 3,
+            phase: CanvasPointerPhase.move,
+          ),
+        );
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(30, 10),
+            timestampMs: 4,
+            phase: CanvasPointerPhase.up,
+          ),
+        );
+
+        await pumpEventQueue();
+        expect(
+          actions.where((event) => event.type == ActionType.drawStroke),
+          hasLength(1),
+        );
+      },
+    );
+
+    test('down dispatch resets active gesture owner when dispatch throws', () {
+      final rect = RectNode(id: 'node', size: const Size(20, 20))
+        ..position = const Offset(40, 40);
+      final controller = controllerFromScene(
+        Scene(
+          layers: <ContentLayer>[
+            ContentLayer(id: 'layer-auto-17'),
+            ContentLayer(id: 'layer-auto-18', nodes: <SceneNode>[rect]),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      setBeforePointerDispatchHook(controller, () {
+        setBeforePointerDispatchHook(controller, null);
+        controller.dispose();
+      });
+
+      expect(
+        () => controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(40, 40),
+            timestampMs: 1,
+            phase: CanvasPointerPhase.down,
+          ),
+        ),
+        throwsStateError,
+      );
+    });
+
     // Gap matrix (P2 hardening):
     // - invalid pointer data: existing non-finite down/move + new up/cancel recovery
     // - long gesture guardrails: existing pen/eraser + new highlighter commit/preview

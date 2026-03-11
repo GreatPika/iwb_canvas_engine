@@ -60,7 +60,7 @@ language: russian
 - [x] [Шаг 10.3. Зафиксировать `PointerInputSettings` как value object и apply-on-idle contract](development_plan/step_10_3_pointer_settings_transition_and_value_semantics.md)
 - [ ] [Шаг 11. Вынести gesture-machine и единый предикат допустимости через подшаги 11.1-11.5](development_plan/step_11_gesture_machine_and_admission_predicate.md)
 - [x] [Шаг 11.1. Зафиксировать controller pointer entry contract и canonical terminal semantics](development_plan/step_11_1_controller_pointer_entry_and_terminal_semantics.md)
-- [ ] [Шаг 11.2. Ввести одного controller-owned owner-а active gesture и forced reset lifecycle](development_plan/step_11_2_controller_gesture_owner_and_lifecycle_reset.md)
+- [x] [Шаг 11.2. Ввести одного controller-owned owner-а active gesture и forced reset lifecycle](development_plan/step_11_2_controller_gesture_owner_and_lifecycle_reset.md)
 - [ ] [Шаг 11.3. Ввести одного owner-а interactive admissibility в `interaction_eligibility_policy.dart`](development_plan/step_11_3_interaction_eligibility_policy_owner.md)
 - [ ] [Шаг 11.4. Перевести move session на shared eligibility policy и canonical cancel semantics](development_plan/step_11_4_move_session_policy_and_cancel_semantics.md)
 - [ ] [Шаг 11.5. Перевести draw lifecycle, delete admissibility и pending-line cleanup на controller-owned contract](development_plan/step_11_5_draw_gesture_lifecycle_and_pending_line_cleanup.md)

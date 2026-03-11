@@ -77,11 +77,8 @@ class InteractiveDrawCoordinator {
   late final InteractiveDrawLineEngine _lineEngine;
   late final InteractiveDrawEraserEngine _eraserEngine;
 
-  int? _activePointerId;
   Offset? _downScene;
   bool _moved = false;
-
-  bool get hasActivePointer => _activePointerId != null;
 
   Offset? get pendingLineStart => _lineEngine.pendingLineStart;
   int? get pendingLineTimestampMs => _lineEngine.pendingLineTimestampMs;
@@ -112,17 +109,12 @@ class InteractiveDrawCoordinator {
     required double highlighterOpacity,
     required double dragStartSlop,
   }) {
-    if (_activePointerId != null && _activePointerId != sample.pointerId) {
-      return;
-    }
-
     switch (sample.phase) {
       case PointerPhase.down:
-        _handleDown(sample.pointerId, scenePoint, drawTool: drawTool);
+        _handleDown(scenePoint, drawTool: drawTool);
         break;
       case PointerPhase.move:
         _handleMove(
-          sample.pointerId,
           scenePoint,
           drawTool: drawTool,
           dragStartSlop: dragStartSlop,
@@ -130,7 +122,6 @@ class InteractiveDrawCoordinator {
         break;
       case PointerPhase.up:
         _handleUp(
-          sample.pointerId,
           sample.timestampMs,
           scenePoint,
           drawTool: drawTool,
@@ -152,7 +143,6 @@ class InteractiveDrawCoordinator {
   }
 
   void resetGestureState() {
-    _activePointerId = null;
     _downScene = null;
     _moved = false;
     _strokeEngine.resetGestureState();
@@ -168,12 +158,7 @@ class InteractiveDrawCoordinator {
     _lineEngine.dispose();
   }
 
-  void _handleDown(
-    int pointerId,
-    Offset scenePoint, {
-    required DrawTool drawTool,
-  }) {
-    _activePointerId = pointerId;
+  void _handleDown(Offset scenePoint, {required DrawTool drawTool}) {
     _downScene = scenePoint;
     _moved = false;
 
@@ -192,13 +177,10 @@ class InteractiveDrawCoordinator {
   }
 
   void _handleMove(
-    int pointerId,
     Offset scenePoint, {
     required DrawTool drawTool,
     required double dragStartSlop,
   }) {
-    if (_activePointerId != pointerId) return;
-
     switch (drawTool) {
       case DrawTool.pen:
       case DrawTool.highlighter:
@@ -219,7 +201,6 @@ class InteractiveDrawCoordinator {
   }
 
   void _handleUp(
-    int pointerId,
     int timestampMs,
     Offset scenePoint, {
     required DrawTool drawTool,
@@ -231,8 +212,6 @@ class InteractiveDrawCoordinator {
     required double highlighterOpacity,
     required double dragStartSlop,
   }) {
-    if (_activePointerId != pointerId) return;
-
     switch (drawTool) {
       case DrawTool.pen:
       case DrawTool.highlighter:
@@ -274,7 +253,6 @@ class InteractiveDrawCoordinator {
         break;
     }
 
-    _activePointerId = null;
     _downScene = null;
     _moved = false;
     _lineEngine.resetGestureState();

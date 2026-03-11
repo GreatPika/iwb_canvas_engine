@@ -36,6 +36,11 @@ All notable changes to `iwb_canvas_engine` are documented here.
   already has a cached finite position; otherwise they stay a no-op. Explicit
   `dragStartSlop` now uses the same finite `>= 0` validation rule in both the
   constructor and `setDragStartSlop(...)`.
+- `SceneControllerInteractive` now owns one internal active-gesture machine:
+  it captures baseline `dragStartSlop` on `down`, ignores parallel
+  non-owning `pointerId`s until terminal release, and force-resets the active
+  gesture only when `replaceScene(...)`, `setCameraOffset(...)`, mode/tool
+  transitions, and `dispose()` continue with an observable boundary change.
 - `SceneViewInteractive` now owns raw Flutter pointer routing through the
   dedicated `SceneViewPointerRouter`, so routed `pointerId` values are created
   only on `down`, stray non-down host events are dropped, minimum free slot

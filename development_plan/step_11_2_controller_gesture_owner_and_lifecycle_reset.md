@@ -141,6 +141,10 @@ lifecycle в
 4. Boundary methods используют один controller-owned decision point для reset
    active gesture, но при этом не теряют pre-existing cleanup behavior для
    latent state, который ещё не получил собственного owner contract-а.
+   No-op boundary mutation не имеет права молча прерывать active gesture, если
+   после вызова не будет observable update.
+   Rejected boundary mutation не имеет права прерывать active gesture, если
+   validation/commit не дошли до observable state change.
 5. `replaceScene(...)`, `setCameraOffset(...)`, `setMode(...)`,
    `setDrawTool(...)` и `dispose()` после подшага не должны демонстрировать
    user-visible регрессию относительно поведения до внедрения gesture-machine.
@@ -153,44 +157,48 @@ lifecycle в
 
 ## Последовательность реализации (только действия)
 
-[ ] Создать `lib/src/interactive/internal/interactive_gesture_machine.dart`
+[x] Создать `lib/src/interactive/internal/interactive_gesture_machine.dart`
     как internal owner active gesture lifecycle.
-[ ] Перевести `SceneControllerInteractive` на один owner dispatch contract.
-[ ] Перенести structural constructor rewiring под новый gesture owner в этот
+[x] Перевести `SceneControllerInteractive` на один owner dispatch contract.
+[x] Перенести structural constructor rewiring под новый gesture owner в этот
     подшаг, не затрагивая `11.1` сверх unified validation.
-[ ] Зафиксировать baseline `dragStartSlop` на gesture `down`.
-[ ] Ввести единый controller-owned reset trigger для `replaceScene(...)`,
+[x] Зафиксировать baseline `dragStartSlop` на gesture `down`.
+[x] Ввести единый controller-owned reset trigger для `replaceScene(...)`,
     `setCameraOffset(...)`, `setMode(...)`, `setDrawTool(...)` и `dispose()`.
-[ ] Сохранить pre-existing boundary cleanup behavior там, где latent
+[x] Сохранить pre-existing boundary cleanup behavior там, где latent
     mode-local state ещё не получил собственного owner contract-а.
-[ ] Убрать overlap между router gate из шага `10` и active gesture owner-ом
+[x] Убрать overlap между router gate из шага `10` и active gesture owner-ом
     шага `11`.
 
 ## Критерии приёмки
 
-[ ] Controller-side gesture-machine является единственным owner-ом active
+[x] Controller-side gesture-machine является единственным owner-ом active
     gesture identity.
-[ ] Baseline `dragStartSlop` фиксируется на `down` и не меняется до terminal
+[x] Baseline `dragStartSlop` фиксируется на `down` и не меняется до terminal
     завершения текущего gesture.
-[ ] Параллельный не-владеющий pointer не может сбросить, закоммитить или
+[x] Параллельный не-владеющий pointer не может сбросить, закоммитить или
     отменить активный gesture другого pointer-а.
-[ ] `replaceScene(...)`, `setCameraOffset(...)`, `setMode(...)`,
+[x] `replaceScene(...)`, `setCameraOffset(...)`, `setMode(...)`,
     `setDrawTool(...)` и `dispose()` используют один controller-owned decision
     point для reset active gesture.
-[ ] После завершения шага нет user-visible регрессий в уже существовавшем
+[x] No-op boundary mutation не может silently abort-ить active gesture без
+    последующего observable update.
+[x] Rejected boundary mutation не может abort-ить active gesture, если
+    операция завершилась exception до observable commit.
+[x] После завершения шага нет user-visible регрессий в уже существовавшем
     boundary cleanup behavior, даже если часть cleanup временно остаётся на
     controller call sites как compatibility path.
-[ ] Gesture-machine не импортирует и не дублирует view-side router/tracker
+[x] Gesture-machine не импортирует и не дублирует view-side router/tracker
     state шага `10`.
-[ ] Gesture-machine работает только с controller-level `pointerId` и не
+[x] Gesture-machine работает только с controller-level `pointerId` и не
     различает routed/direct path после boundary normalization `11.1`.
-[ ] Gesture-machine не становится owner-ом move-local rollback или draw-local
+[x] Gesture-machine не становится owner-ом move-local rollback или draw-local
     pending-line cleanup semantics.
-[ ] Шаг закрывается самостоятельно и не требует завершения `11.5` для
+[x] Шаг закрывается самостоятельно и не требует завершения `11.5` для
     корректности behavior и acceptance.
-[ ] Structural constructor rewiring `SceneControllerInteractive(...)`
+[x] Structural constructor rewiring `SceneControllerInteractive(...)`
     принадлежит этому подшагу и не требует возвращаться в `11.1`.
-[ ] Повторная диагностика
+[x] Повторная диагностика
     `dcm calculate-metrics lib/src/interactive/scene_controller_interactive.dart lib/src/interactive/internal/interactive_gesture_machine.dart --report-all`
     приложена к результату шага; новый owner-файл и step-owned methods не
     содержат `HIGH` по `cyclomatic-complexity`, `maximum-nesting-level` и
@@ -198,15 +206,16 @@ lifecycle в
 
 ## Тестовый контур шага
 
-[ ] `test/interactive/core/scene_controller_interactive_single_pointer_policy_test.dart`
+[x] `test/interactive/core/scene_controller_interactive_single_pointer_policy_test.dart`
     с покрытием:
     - не-владеющий pointer не сбрасывает чужой gesture
     - новый pointer допускается только после terminal release owner-а
-[ ] `test/interactive/core/scene_controller_interactive_basics_test.dart`
-    с boundary-check на `setCameraOffset(...)`
-[ ] `test/interactive/core/scene_controller_interactive_line_pending_cancel_test.dart`
+[x] `test/interactive/core/scene_controller_interactive_basics_test.dart`
+    с boundary-check на `setCameraOffset(...)` и `replaceScene(...)`,
+    включая no-op и rejected path без silent gesture abort
+[x] `test/interactive/core/scene_controller_interactive_line_pending_cancel_test.dart`
     как regression guard, что mode/tool transitions не теряют pre-existing
     pending-line cleanup behavior
-[ ] `test/interactive/core/scene_controller_interactive_dispose_fail_fast_test.dart`
+[x] `test/interactive/core/scene_controller_interactive_dispose_fail_fast_test.dart`
     как regression guard, что `replaceScene(...)` и `dispose()` не теряют
     pre-existing cleanup behavior при внедрении нового owner-а

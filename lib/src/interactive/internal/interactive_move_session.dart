@@ -52,7 +52,6 @@ class InteractiveMoveSession {
 
   Rect? _selectionRect;
 
-  int? _moveActivePointerId;
   Offset? _movePointerDownScene;
   Offset? _moveLastScene;
   _MoveDragTarget _moveTarget = _MoveDragTarget.none;
@@ -82,7 +81,6 @@ class InteractiveMoveSession {
   }
 
   void resetGestureState() {
-    _moveActivePointerId = null;
     _movePointerDownScene = null;
     _moveLastScene = null;
     _moveTarget = _MoveDragTarget.none;
@@ -99,11 +97,6 @@ class InteractiveMoveSession {
     Offset scenePoint, {
     required double dragStartSlop,
   }) {
-    if (_moveActivePointerId != null &&
-        _moveActivePointerId != sample.pointerId) {
-      return;
-    }
-
     switch (sample.phase) {
       case PointerPhase.down:
         _moveHandleDown(sample, scenePoint);
@@ -122,8 +115,7 @@ class InteractiveMoveSession {
     }
   }
 
-  void _moveHandleDown(PointerSample sample, Offset scenePoint) {
-    _moveActivePointerId = sample.pointerId;
+  void _moveHandleDown(PointerSample _, Offset scenePoint) {
     _movePointerDownScene = scenePoint;
     _moveLastScene = scenePoint;
     _moveDragStarted = false;
@@ -150,11 +142,10 @@ class InteractiveMoveSession {
   }
 
   void _moveHandleMove(
-    PointerSample sample,
+    PointerSample _,
     Offset scenePoint, {
     required double dragStartSlop,
   }) {
-    if (_moveActivePointerId != sample.pointerId) return;
     final movePointerDownScene = _movePointerDownScene;
     final moveLastScene = _moveLastScene;
     if (movePointerDownScene == null || moveLastScene == null) return;
@@ -189,8 +180,6 @@ class InteractiveMoveSession {
   }
 
   void _moveHandleUp(PointerSample sample, Offset _) {
-    if (_moveActivePointerId != sample.pointerId) return;
-
     try {
       if (_moveTarget == _MoveDragTarget.move) {
         final proposedDelta = _movePreviewDelta;
