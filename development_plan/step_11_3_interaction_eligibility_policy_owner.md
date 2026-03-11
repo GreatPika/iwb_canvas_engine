@@ -123,33 +123,33 @@ owner-ом interactive composite preflight и selection shaping, а
 
 ## Последовательность реализации (только действия)
 
-[ ] Создать `lib/src/interactive/interaction_eligibility_policy.dart`.
-[ ] Перенести в него overlapping interactive composite rules из старых helper-ов.
-[ ] Перевести controller-side preflight callers вне session-ов на новый policy
+[x] Создать `lib/src/interactive/interaction_eligibility_policy.dart`.
+[x] Перенести в него overlapping interactive composite rules из старых helper-ов.
+[x] Перевести controller-side preflight callers вне session-ов на новый policy
     owner.
-[ ] Явно оставить session-local adoption policy для `11.4` и `11.5`, чтобы
+[x] Явно оставить session-local adoption policy для `11.4` и `11.5`, чтобы
     не возник overlap по ownership.
-[ ] Удалить или раз-owner-ить прежние helper-ы, чтобы не осталось dual-source
+[x] Удалить или раз-owner-ить прежние helper-ы, чтобы не осталось dual-source
     of truth.
-[ ] Зафиксировать boundary между preflight policy и write-layer defensive guard.
+[x] Зафиксировать boundary между preflight policy и write-layer defensive guard.
 
 ## Критерии приёмки
 
-[ ] `interaction_eligibility_policy.dart` является одним owner-ом interactive
+[x] `interaction_eligibility_policy.dart` является одним owner-ом interactive
     composite admissibility.
-[ ] `canSelect(...)`, `canPreviewMove(...)`, `canCommitMove(...)`,
+[x] `canSelect(...)`, `canPreviewMove(...)`, `canCommitMove(...)`,
     `canDelete(...)` и `canTransform(...)` определены однозначно и не дублируют
     друг друга в нескольких файлах.
-[ ] `interactive_selection_utils.dart` больше не является competing source of
+[x] `interactive_selection_utils.dart` больше не является competing source of
     truth для той же interactive composite semantics.
-[ ] `selection_policy.dart` используется только как low-level leaf dependency и
+[x] `selection_policy.dart` используется только как low-level leaf dependency и
     не становится вторым owner-ом move/delete/preview composition.
-[ ] Controller-side preflight callers используют новый policy owner.
-[ ] Session-local adoption policy остаётся вне scope этого подшага и не
+[x] Controller-side preflight callers используют новый policy owner.
+[x] Session-local adoption policy остаётся вне scope этого подшага и не
     пересекается с `11.4`/`11.5`.
-[ ] `mutation_executor.dart` не импортирует interactive layer и остаётся только
+[x] `mutation_executor.dart` не импортирует interactive layer и остаётся только
     defensive write barrier-ом.
-[ ] Повторная диагностика
+[x] Повторная диагностика
     `dcm calculate-metrics lib/src/interactive/interaction_eligibility_policy.dart lib/src/interactive/scene_controller_interactive.dart lib/src/interactive/internal/interactive_selection_utils.dart lib/src/core/selection_policy.dart --report-all`
     приложена к результату шага; новый owner-файл и step-owned methods не
     содержат `HIGH`/`VERY HIGH` по `cyclomatic-complexity`,
@@ -158,9 +158,9 @@ owner-ом interactive composite preflight и selection shaping, а
 
 ## Тестовый контур шага
 
-[ ] Новый targeted test:
+[x] Новый targeted test:
     `test/interactive/core/interaction_eligibility_policy_test.dart`
-[ ] `test/interactive/core/scene_controller_interactive_actions_effects_test.dart`
+[x] `test/interactive/core/scene_controller_interactive_actions_effects_test.dart`
     с покрытием delete/transform preflight на shared policy
-[ ] `test/interactive/core/scene_controller_interactive_basics_test.dart`
+[x] `test/interactive/core/scene_controller_interactive_basics_test.dart`
     как boundary-check, что public interactive APIs не обходят новый policy

@@ -793,5 +793,75 @@ void main() {
       expect(transformActions, isNotEmpty);
       expect(transformActions.last.nodeIds.toSet(), const <NodeId>{'a', 'b'});
     });
+
+    test(
+      'transform and delete actions use shared preflight eligibility',
+      () async {
+        final movable = RectNode(id: 'movable', size: const Size(30, 20))
+          ..position = const Offset(40, 40);
+        final locked = RectNode(
+          id: 'locked',
+          size: const Size(30, 20),
+          isLocked: true,
+        )..position = const Offset(120, 40);
+        final protected = RectNode(
+          id: 'protected',
+          size: const Size(30, 20),
+          isDeletable: false,
+        )..position = const Offset(200, 40);
+        final controller = controllerFromScene(
+          Scene(
+            layers: <ContentLayer>[
+              ContentLayer(id: 'layer-auto-6'),
+              ContentLayer(
+                id: 'layer-auto-7',
+                nodes: <SceneNode>[movable, locked, protected],
+              ),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+
+        final actions = <ActionCommitted>[];
+        final sub = controller.actions.listen(actions.add);
+        addTearDown(sub.cancel);
+
+        controller.setSelection(const <NodeId>{
+          'movable',
+          'locked',
+          'protected',
+        });
+        controller.rotateSelection(clockwise: true, timestampMs: 300);
+        controller.deleteSelection(timestampMs: 301);
+
+        await pumpEventQueue();
+
+        final transformActions = actions
+            .where((event) => event.type == ActionType.transform)
+            .toList(growable: false);
+        expect(transformActions, hasLength(1));
+        expect(transformActions.single.nodeIds, const <NodeId>[
+          'movable',
+          'protected',
+        ]);
+
+        final deleteActions = actions
+            .where((event) => event.type == ActionType.delete)
+            .toList(growable: false);
+        expect(deleteActions, hasLength(1));
+        expect(deleteActions.single.nodeIds, const <NodeId>[
+          'movable',
+          'locked',
+        ]);
+
+        final remaining = <NodeId>{
+          for (final layer in controller.snapshot.layers)
+            for (final node in layer.nodes) node.id,
+        };
+        expect(remaining.contains('protected'), isTrue);
+        expect(remaining.contains('movable'), isFalse);
+        expect(remaining.contains('locked'), isFalse);
+      },
+    );
   });
 }

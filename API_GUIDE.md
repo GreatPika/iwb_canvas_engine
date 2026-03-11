@@ -432,6 +432,9 @@ Important behavior:
   `setMode(...)`, `setDrawTool(...)`, and `dispose()` force-reset the active
   gesture only when the boundary transition will actually continue with an
   observable state change
+- interactive rotate/flip/delete preflight uses one internal snapshot-based
+  eligibility policy owner; write-layer guards remain separate defensive
+  barriers in the transactional core
 - `setGridCellSize(...)` requires a finite positive value and applies an
   internal safety minimum when the grid is enabled
 - invalid numeric settings throw `ArgumentError`

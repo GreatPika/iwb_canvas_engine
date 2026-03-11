@@ -20,6 +20,7 @@ import '../contract/scene_render_state.dart';
 import '../contract/scene_write_txn.dart';
 import '../contract/snapshot.dart';
 import '../model/document.dart' show txnSceneFromSnapshot;
+import 'interaction_eligibility_policy.dart' as interaction_eligibility_policy;
 import 'internal/interactive_draw_coordinator.dart';
 import 'internal/interactive_event_dispatcher.dart';
 import 'internal/interactive_gesture_machine.dart';
@@ -373,13 +374,16 @@ class SceneControllerInteractive extends ChangeNotifier
 
   void rotateSelection({required bool clockwise, int? timestampMs}) {
     _ensurePublicSideEffectAllowed('rotateSelection');
-    final nodes = selectedTransformableNodesInSnapshotOrder(
-      snapshot: snapshot,
-      selected: selectedNodeIds,
-    );
+    final nodes = interaction_eligibility_policy
+        .selectedTransformableNodesInSnapshotOrder(
+          snapshot: snapshot,
+          selected: selectedNodeIds,
+        );
     if (nodes.isEmpty) return;
 
-    final center = centerWorldForNodeSnapshots(nodes);
+    final center = interaction_eligibility_policy.centerWorldForNodeSnapshots(
+      nodes,
+    );
     final pivot = Transform2D.translation(center);
     final unpivot = Transform2D.translation(Offset(-center.dx, -center.dy));
     final rotation = Transform2D.rotationDeg(clockwise ? 90 : -90);
@@ -401,13 +405,16 @@ class SceneControllerInteractive extends ChangeNotifier
 
   void flipSelectionVertical({int? timestampMs}) {
     _ensurePublicSideEffectAllowed('flipSelectionVertical');
-    final nodes = selectedTransformableNodesInSnapshotOrder(
-      snapshot: snapshot,
-      selected: selectedNodeIds,
-    );
+    final nodes = interaction_eligibility_policy
+        .selectedTransformableNodesInSnapshotOrder(
+          snapshot: snapshot,
+          selected: selectedNodeIds,
+        );
     if (nodes.isEmpty) return;
 
-    final center = centerWorldForNodeSnapshots(nodes);
+    final center = interaction_eligibility_policy.centerWorldForNodeSnapshots(
+      nodes,
+    );
     final delta = Transform2D(
       a: 1,
       b: 0,
@@ -433,13 +440,16 @@ class SceneControllerInteractive extends ChangeNotifier
 
   void flipSelectionHorizontal({int? timestampMs}) {
     _ensurePublicSideEffectAllowed('flipSelectionHorizontal');
-    final nodes = selectedTransformableNodesInSnapshotOrder(
-      snapshot: snapshot,
-      selected: selectedNodeIds,
-    );
+    final nodes = interaction_eligibility_policy
+        .selectedTransformableNodesInSnapshotOrder(
+          snapshot: snapshot,
+          selected: selectedNodeIds,
+        );
     if (nodes.isEmpty) return;
 
-    final center = centerWorldForNodeSnapshots(nodes);
+    final center = interaction_eligibility_policy.centerWorldForNodeSnapshots(
+      nodes,
+    );
     final delta = Transform2D(
       a: -1,
       b: 0,
@@ -465,10 +475,11 @@ class SceneControllerInteractive extends ChangeNotifier
 
   void deleteSelection({int? timestampMs}) {
     _ensurePublicSideEffectAllowed('deleteSelection');
-    final deletedIds = deletableSelectedNodeIdsInSnapshot(
-      snapshot: snapshot,
-      selected: selectedNodeIds,
-    );
+    final deletedIds = interaction_eligibility_policy
+        .deletableSelectedNodeIdsInSnapshot(
+          snapshot: snapshot,
+          selected: selectedNodeIds,
+        );
     if (deletedIds.isEmpty) return;
 
     final removedCount = _core.commands.writeDeleteSelection();

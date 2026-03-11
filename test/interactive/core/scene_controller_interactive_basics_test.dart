@@ -1069,5 +1069,61 @@ void main() {
     // - long gesture guardrails: existing pen/eraser + new highlighter commit/preview
     // - line pending cancel semantics: existing cancel clear + new invalid second-tap no-op
     // - single-active-pointer semantics: existing move/draw policy group
+
+    test(
+      'transform and delete public APIs stay no-op for ineligible selection',
+      () async {
+        final controller = controllerFromScene(
+          Scene(
+            layers: <ContentLayer>[
+              ContentLayer(id: 'layer-auto-15'),
+              ContentLayer(
+                id: 'layer-auto-16',
+                nodes: <SceneNode>[
+                  RectNode(
+                    id: 'locked-protected',
+                    size: const Size(10, 8),
+                    isLocked: true,
+                    isDeletable: false,
+                  ),
+                  RectNode(
+                    id: 'rigid-protected',
+                    size: const Size(10, 8),
+                    isTransformable: false,
+                    isDeletable: false,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+
+        final actions = <ActionCommitted>[];
+        final sub = controller.actions.listen(actions.add);
+        addTearDown(sub.cancel);
+
+        controller.setSelection(const <NodeId>{
+          'locked-protected',
+          'rigid-protected',
+        });
+        controller.rotateSelection(clockwise: true, timestampMs: 30);
+        controller.flipSelectionHorizontal(timestampMs: 31);
+        controller.flipSelectionVertical(timestampMs: 32);
+        controller.deleteSelection(timestampMs: 33);
+
+        await pumpEventQueue();
+
+        expect(actions, isEmpty);
+        final remaining = <NodeId>{
+          for (final layer in controller.snapshot.layers)
+            for (final node in layer.nodes) node.id,
+        };
+        expect(remaining, const <NodeId>{
+          'locked-protected',
+          'rigid-protected',
+        });
+      },
+    );
   });
 }

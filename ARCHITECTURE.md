@@ -101,8 +101,9 @@ Ownership decisions for the target state:
    semantics for non-finite terminal samples only when the pointer already has
    a cached finite position, owns one controller-level active gesture machine
    (pointer owner + baseline `dragStartSlop` + forced boundary reset only on
-   successful observable boundary transitions), maintains interactive state, and
-   delegates committed mutations to
+   successful observable boundary transitions), owns the snapshot-based
+   eligibility policy used by controller-side transform/delete preflight,
+   maintains interactive state, and delegates committed mutations to
    `SceneControllerCore`.
 3. `SceneControllerCore` performs transactional writes and finalizes a canonical
    immutable `SceneSnapshot`.
@@ -118,6 +119,10 @@ Ownership decisions for the target state:
   mutate committed scene data until commit on `up`.
 - Active gesture identity is controller-owned; move/draw helpers do not own a
   competing pointer lock.
+- Interactive admissibility has one owner per boundary: snapshot-based
+  transform/delete preflight lives under `interactive/`, while
+  `controller/mutation_executor.dart` keeps write guards as commit-time
+  defensive barriers and does not import interactive-layer policy code.
 - All committed mutations go through `write(...)` or higher-level controller
   methods that delegate to the same write path.
 - Public API never exposes mutable internal scene objects.

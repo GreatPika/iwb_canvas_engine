@@ -41,6 +41,11 @@ All notable changes to `iwb_canvas_engine` are documented here.
   non-owning `pointerId`s until terminal release, and force-resets the active
   gesture only when `replaceScene(...)`, `setCameraOffset(...)`, mode/tool
   transitions, and `dispose()` continue with an observable boundary change.
+- Interactive transform/delete preflight now has one owner in
+  `src/interactive/interaction_eligibility_policy.dart`: controller-side
+  rotate/flip/delete entrypoints use shared snapshot-based admissibility,
+  while `MutationExecutor` keeps its write-layer guards as a separate
+  defensive barrier rather than a competing policy owner.
 - `SceneViewInteractive` now owns raw Flutter pointer routing through the
   dedicated `SceneViewPointerRouter`, so routed `pointerId` values are created
   only on `down`, stray non-down host events are dropped, minimum free slot

@@ -152,6 +152,9 @@ class _CanvasScreenState extends State<CanvasScreen> {
   `replaceScene(...)`, `setCameraOffset(...)`, mode/tool changes, and `dispose()`
   force-release the active gesture only when the boundary mutation will proceed
   with an observable state change.
+- Interactive transform/delete preflight is snapshot-based and shared:
+  controller-side rotate/flip/delete entrypoints use one internal eligibility
+  policy owner, while write-layer guards remain defensive commit barriers.
 - `handlePointer(...)` treats non-finite `down`/`move` as no-op admission
   failures. For non-finite terminal `up`/`cancel`, the controller preserves the
   original terminal phase only when the same `pointerId` already has a cached
