@@ -1,59 +1,176 @@
 language: russian
 
-# Шаг 10. Вынести pointer-router в правильную форму
+# Шаг 10. Вынести pointer-router в правильную форму через подшаги 10.1-10.3
 
 ## Диагностические метрики
 
-Этот блок нужен как диагностический радар после изменений шага, а не как отдельный критерий готовности. Метрики здесь помогают проверить, что pointer-router действительно локализован, а сложность не утекла в соседние interactive paths.
+Этот блок остаётся диагностическим радаром шага, но для `10.x` он также
+обязан быть отражён в критериях приёмки: step-owned целевые файлы после
+реализации не должны пробивать пороги из `analysis_options.yaml`.
 
-- Смотреть в первую очередь `cyclomatic-complexity`, `maximum-nesting-level` и `source-lines-of-code`.
+- Смотреть в первую очередь `cyclomatic-complexity`,
+  `maximum-nesting-level` и `source-lines-of-code`.
+- Пороговые значения для step-owned owner-ов:
+  - `cyclomatic-complexity <= 10`
+  - `maximum-nesting-level <= 4`
+  - `source-lines-of-code <= 40`
 - Контрольные файлы:
   - `lib/src/view/scene_view_interactive.dart`
+  - `lib/src/view/scene_view_pointer_router.dart`
+  - `lib/src/core/pointer_input.dart`
   - `lib/src/interactive/scene_controller_interactive.dart`
-- Полезный сигнал после шага: pointer id routing, reset policy и deferred flush logic не требуют нескольких тяжёлых веток для одной и той же жизненной фазы указателя, а pointer-router concern не расползается обратно по соседним interactive owner-ам.
+- Acceptance gate по метрикам ставится не на весь файл целиком, а на
+  step-owned owner-ы и методы этого этапа. Это важно, потому что соседние,
+  неотносящиеся к шагу `10`, части тех же файлов уже могут иметь свои
+  исторические watchpoints.
+- Полезный сигнал после шага: raw-pointer lifecycle, routed slot ids,
+  deferred flush/timer lifecycle и pointer-settings transition имеют одного
+  owner-а на view-runtime boundary, а `scene_controller_interactive.dart` не
+  получает обратно view-only pointer-router concern.
 
-## `lib/src/view/scene_view_interactive.dart`
+## Цель шага
 
-Сделать:
+После шагов `7.x-9.x` controller и render lifecycle уже достаточно выровнены,
+чтобы закрыть следующий системный drift: pointer-routing на view boundary всё
+ещё не имеет одного owner-а и сейчас смешивает в
+`lib/src/view/scene_view_interactive.dart` несколько разных задач:
 
-1. В самом начале `_handlePointerEvent(...)`:
+- raw Flutter pointer lifecycle;
+- internal routed pointer ids и slot reuse policy;
+- active-pointer gate для signal tracking;
+- deferred single-tap flush timer;
+- live adoption `PointerInputSettings` при незавершённых указателях.
 
-   * отсекать `NaN/Infinity`
-   * до:
+Исходный шаг `10` перечислял правильные проблемы, но в одном списке были
+смешаны как минимум три разные ответственности. Без их декомпозиции
+реализация почти неизбежно либо оставляет логику в `SceneViewInteractive`,
+либо проталкивает view-runtime детали в `SceneControllerInteractive`, который
+должен заниматься уже gesture-machine semantics из шага `11`.
 
-     * `_captureActivePointer`
-     * `handlePointer`
-     * `_pointerTracker.handle`
-     * `_syncPendingFlushTimer`
+## Как разбит этап
 
-2. Исправить `Duration(milliseconds: ...)` через явный `toInt()`.
+### Шаг 10.1
 
-3. Развести пространства:
+`development_plan/step_10_1_scene_view_pointer_router_owner_and_slot_contract.md`
 
-   * raw pointer ids
-   * internal slot ids
+Владелец решения по:
 
-4. Исправить `_resolvePointerId(...)`:
+- `lib/src/view/scene_view_pointer_router.dart` как одному owner-у raw-to-slot
+  routing;
+- явному разделению raw pointer ids и routed pointer ids;
+- slot reuse policy и active-pointer gate;
+- правилу, когда router считается idle и когда разрешён reset host tracking.
 
-   * удерживаемый raw-pointer сохраняет свой internal id до конца жизни.
+### Шаг 10.2
 
-5. Изменить reset-политику:
+`development_plan/step_10_2_pointer_event_admission_and_flush_lifecycle.md`
 
-   * нельзя сбрасывать tracking, пока есть хоть один живой raw-pointer.
+Владелец решения по:
 
-6. Изменить порядок:
+- admission policy pointer events на widget-host boundary;
+- timer/flush lifecycle для deferred taps;
+- mounted-safe поведению отложенных путей и controller listener-ов;
+- устранению лишних allocation-path в host flush logic.
 
-   * сначала release slot,
-   * потом reset и очистка таблиц.
+### Шаг 10.3
 
-7. Убрать линейный поиск минимума в `_acquirePointerSlot()`.
+`development_plan/step_10_3_pointer_settings_transition_and_value_semantics.md`
 
-8. Заменить ручное сравнение `PointerInputSettings` по полям на более надёжную схему.
+Владелец решения по:
 
-9. `flushPending`:
+- value semantics для `PointerInputSettings`;
+- одному контракту сравнения и применения pointer settings;
+- pending-settings lifecycle при живых raw pointers;
+- явной границе между view-side settings adoption и controller-side
+  gesture semantics шага `11`.
 
-   * не создавать коллекции, если результат дальше не используется.
+## Карта переноса деталей из исходного шага 10
 
-10. Проверить `mounted` во всех отложенных путях и слушателях.
+1. Ранний finite-gate в `_handlePointerEvent(...)` переносится в `10.2`.
+2. `Duration(milliseconds: ...)` через явный `toInt()` переносится в `10.2`.
+3. Разделение raw pointer ids и internal slot ids переносится в `10.1`.
+4. Стабильный routed id на весь raw-pointer lifetime переносится в `10.1`.
+5. Запрет reset tracking при любом живом raw-pointer переносится в `10.1`.
+6. Порядок `release slot -> only then idle reset/apply pending` переносится в
+   `10.1`.
+7. Замена линейного поиска минимума в `_acquirePointerSlot()` переносится в
+   `10.1`.
+8. Удаление ручного сравнения `PointerInputSettings` по полям переносится в
+   `10.3`.
+9. Устранение лишних коллекций в `flushPending` переносится в `10.2`.
+10. `mounted`-проверки во всех отложенных путях и listener-ах переносятся в
+    `10.2`.
+11. Финальный контракт смены pointer settings при активном gesture lifecycle
+    переносится в `10.3`.
 
-11. Пересмотреть смену pointer settings при активном жесте.
+## Уже принятые архитектурные решения
+
+1. Pointer-router concern фиксируется как view-runtime boundary и не
+   переносится в `SceneControllerInteractive`.
+2. Raw pointer ids и routed pointer ids после шага `10` живут в разных
+   пространствах. Controller и `PointerInputTracker` получают только routed id
+   как opaque runtime value.
+3. Новый routed pointer id создаётся только на `down`. Unknown non-down raw
+   pointer не имеет права синтезировать routed id из raw значения.
+4. Router state считается idle только когда завершились все живые raw pointers.
+   Освобождение tracked pointer gate раньше idle не даёт права reset-ить host
+   tracking и применять pending settings.
+5. Reuse свободного routed slot id остаётся policy owner-а router-а, но
+   реализуется через упорядоченную структуру, а не через линейный scan.
+6. `PointerInputSettings` фиксируется как immutable value object. View не
+   держит локальный manual comparator по полям.
+7. Смена pointer settings во время живых raw pointers работает по правилу
+   "last write wins, apply on router idle". Частичное hot-swap поведение в
+   середине raw-pointer lifetime не допускается.
+8. Шаг `10` не принимает controller-side решения про gesture admissibility,
+   preview/commit/cancel semantics и baseline `dragStartSlop`. Это полностью
+   остаётся за шагом `11`.
+
+## Общие правила для всех подшагов
+
+1. Один owner отвечает за raw-pointer routing. Нельзя оставлять одновременно
+   routing state и в `SceneViewInteractive`, и в новом router helper-е.
+2. Один owner отвечает за host timer/flush lifecycle. Router не должен
+   становиться новым `StatefulWidget`-substitute с `Timer`, `mounted` и
+   listener knowledge.
+3. `SceneControllerInteractive` после шага `10` продолжает принимать routed
+   `pointerId` как opaque integer и не знает о raw Flutter pointer ids.
+4. Если в рамках подшага меняется `tool/invariant_registry.dart`, этот подшаг
+   обязан прогонять `dart run tool/check_invariant_coverage.dart`.
+5. Для каждого подшага повторная диагностика метрик обязана быть частью
+   критериев приёмки, а не только фоновым комментарием.
+
+## Критерии готовности umbrella-шага
+
+1. Для шагов `10.1`, `10.2`, `10.3` существуют отдельные step-файлы с
+   собственной целью, границей ответственности, критериями приёмки и тестовым
+   контуром.
+2. В описании подшагов не осталось пересечений по владению:
+   - `10.1` отвечает за router owner и slot contract;
+   - `10.2` отвечает за event admission, timer/flush и mounted lifecycle;
+   - `10.3` отвечает за settings transition и value semantics.
+3. Ни один пункт исходного шага `10` не потерян при переносе, включая блок
+   диагностических метрик и требование не пробивать пороги `10 / 4 / 40`.
+4. Граница между шагами `10` и `11` зафиксирована явно:
+   - шаг `10` закрывает view/runtime pointer-router boundary;
+   - шаг `11` закрывает gesture-machine, admissibility и controller semantics.
+5. После реализации шага `10.x` повторный прогон
+   `dcm calculate-metrics lib/src/view/scene_view_interactive.dart lib/src/view/scene_view_pointer_router.dart lib/src/core/pointer_input.dart --report-all`
+   приложен к результату шага; `HIGH` по `cyclomatic-complexity`,
+   `maximum-nesting-level` и `source-lines-of-code` не остаётся в step-owned
+   owner-ах и методах шага `10`, а `scene_controller_interactive.dart`
+   отдельно используется только как boundary watchpoint для шага `11`.
+
+## Чеклист выполнения
+
+[ ] Переформулировать шаг `10` как umbrella-этап и вынести реализацию в
+    `10.1`, `10.2`, `10.3`.
+[ ] В `10.1` принять финальное решение по owner-у raw-to-slot routing,
+    active-pointer gate и slot reuse contract.
+[ ] В `10.2` зафиксировать один host admission/flush lifecycle без утечки
+    invalid/timer logic в controller.
+[ ] В `10.3` зафиксировать value semantics и pending-apply contract для
+    `PointerInputSettings` без overlap со шагом `11`.
+[ ] Закрепить в критериях приёмки каждого подшага повторную диагностику
+    метрик с порогами `cyclomatic-complexity <= 10`,
+    `maximum-nesting-level <= 4`, `source-lines-of-code <= 40`.
