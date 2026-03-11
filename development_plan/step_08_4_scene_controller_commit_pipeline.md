@@ -28,14 +28,14 @@ invariant precheck, spatial prepare/apply и post-commit effects, а также
 4. Invariant precheck уже существует как отдельный safety barrier и должен
    остаться строго перед store apply.
 
-## Рекомендуемое решение
+## Принятое решение
 
-Рекомендуемый вариант: оставить `SceneControllerCore` единственным owner-ом
-store commit и post-commit lifecycle, но перевести его с raw `TxnContext` на
-prepared result executor-а. Одновременно нужно явно запретить `dispose()` во
-время активного write, чтобы controller не входил в half-disposed state.
+`SceneControllerCore` остаётся единственным owner-ом store commit и
+post-commit lifecycle, но переводится с raw `TxnContext` на prepared result
+executor-а. `dispose()` во время активного write запрещён и завершает вызов
+через `StateError`, не меняя runtime state controller-а.
 
-Почему это лучший вариант:
+Почему принято именно это решение:
 
 1. Он сохраняет один owner store lifecycle и не даёт executor-у тихо
    эволюционировать в "второй controller".
@@ -86,12 +86,21 @@ prepared result executor-а. Одновременно нужно явно зап
    runtime state в store.
 5. `dispose()` во время `_writeInProgress == true` выбрасывает `StateError` и
    не меняет runtime state controller-а.
+6. Prepared result используется как единственный источник commit data:
+   controller не пересобирает `scene`, `allNodeIds`, `nodeLocator`,
+   allocator-state и revision-state повторным чтением из `TxnContext`.
+7. Signal-only и repaint-only fast path принимают решение только по prepared
+   result и buffered side effects:
+   - если prepared state candidate отсутствует, state commit не выполняется;
+   - если candidate присутствует, commit path идёт через общий store apply.
 
 ## Последовательность реализации (только действия)
 
 [ ] Перевести `SceneControllerCore.write(...)` и `_txnWriteCommit(...)` на
     prepared result executor-а.
 [ ] Сохранить invariant precheck строго перед store apply.
+[ ] Перевести signals-only и repaint-only branches на тот же prepared result
+    contract без повторного вычисления commit data из `TxnContext`.
 [ ] Упростить state-change и signals-only branches без потери atomicity.
 [ ] Зафиксировать fail-fast `dispose()` during write и добавить отдельные tests.
 
@@ -103,6 +112,8 @@ prepared result executor-а. Одновременно нужно явно зап
 [ ] Signal/repaint branches не ломают atomicity и не требуют ad hoc условий.
 [ ] `dispose()` во время write завершается fail-fast ошибкой и не оставляет
     controller в half-disposed состоянии.
+[ ] Controller использует prepared result как единственный commit contract и не
+    держит второй независимый path сборки commit candidate.
 
 ## Тестовый контур шага
 

@@ -121,8 +121,9 @@ language: russian
    Нельзя вводить второй working scene / selection / locator state внутри
    executor-а.
 4. `document.dart` и связанные model helpers остаются owner-ами low-level node
-   и scene mutation semantics. Executor координирует операции, а не дублирует
-   node-specific mutation logic.
+   mutation semantics над `Scene` и `nodeLocator`, а `TxnContext` остаётся
+   owner-ом runtime-owned state и commit-facing views. Executor координирует
+   операции, а не дублирует node-specific mutation logic.
 5. Канонический operation set шага `8` обязан покрывать все scene-mutating
    writer methods:
    - `writeLayerEnsure(...)`
@@ -151,6 +152,17 @@ language: russian
    ради микропроизводительности нельзя.
 9. `dispose()` во время активного `write(...)` запрещён и должен завершаться
    fail-fast ошибкой. Отложенный dispose lifecycle в шаг `8` не вводится.
+10. `clearSceneKeepBackground` считается structural mutation всякий раз, когда
+    меняется scene shape: удаляются content layers, материализуется background
+    layer или выполняется любая иная structural clear-side effect, даже если
+    removed node ids пуст.
+11. Write-core обязан явно сохранять copy-on-write contract: structural apply
+    helpers не должны мутировать pre-transaction scene.
+12. Канонические helper owner-ы фиксируются окончательно:
+    - `TxnContext`: runtime-owned state, layer bookkeeping, adopt/commit views;
+    - `document.dart`: pure low-level apply helpers над `scene + locator`;
+    - `MutationExecutor`: orchestration, preconditions, selection, `ChangeSet`;
+    - `SceneControllerCore`: prepared-result commit, spatial/signals/repaint.
 
 ## Общие правила для всех подшагов
 
@@ -204,3 +216,5 @@ language: russian
     signal materializations.
 [ ] В `8.4` переписать controller commit pipeline так, чтобы commit всегда
     выполнялся только после postcheck и fail-fast dispose semantics.
+[ ] Для `8.2` и `8.4` зафиксировать regression coverage на locator-shift перед
+    delete, structural clear без removed nodes и сохранение base-scene COW.

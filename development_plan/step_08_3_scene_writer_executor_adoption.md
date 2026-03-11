@@ -15,7 +15,9 @@ language: russian
 ## Что уже подтверждено по текущему состоянию
 
 1. [scene_writer.dart](/Users/blackpika/iwb_canvas_engine/lib/src/controller/scene_writer.dart)
-   сейчас сам владеет почти всем write apply path для scene-mutating methods.
+   уже делегирует scene-mutating methods в
+   [mutation_executor.dart](/Users/blackpika/iwb_canvas_engine/lib/src/controller/mutation_executor.dart),
+   но ещё не доведён до полностью тонкого boundary seam.
 2. `selectedNodeIds` сейчас возвращается как `Set<NodeId>.unmodifiable(...)`,
    то есть materialization выполняется на каждом чтении getter-а.
 3. `snapshot` каждый раз строится через `txnSceneToSnapshot(_ctx.workingScene)`,
@@ -23,6 +25,8 @@ language: russian
    executor apply path.
 4. `writeSignalEnqueue(...)` уже делает defensive copy `nodeIds`, и эту границу
    безопасности нельзя случайно потерять при cleanup hot path.
+5. `SceneWriter` пока сам создаёт `MutationExecutor`, поэтому dependency
+   boundary между writer/executor ещё не выражена явно.
 
 ## Зафиксированные решения (без повторного обсуждения в реализации)
 
@@ -74,6 +78,8 @@ language: russian
 ## Последовательность реализации (только действия)
 
 [ ] Перевести scene-mutating methods `SceneWriter` на вызовы executor-а.
+[ ] Вынести создание `MutationExecutor` из writer constructor, чтобы writer
+    принимал готовую зависимость и оставался тонким seam.
 [ ] Оставить selection-only methods в `SceneWriter` и явно не протаскивать их в
     `mutation_op.dart`.
 [ ] Заменить per-read materialization `selectedNodeIds` на стабильный read-only
@@ -83,7 +89,8 @@ language: russian
 
 ## Критерии приёмки
 
-[ ] `SceneWriter` больше не является главным owner-ом scene mutation pipeline.
+[ ] `SceneWriter` больше не является главным owner-ом scene mutation pipeline и
+    не создаёт executor как скрытую внутреннюю инфраструктуру.
 [ ] Public `SceneWriteTxn` surface не меняется.
 [ ] `selectedNodeIds` не создаёт новый immutable set на каждом чтении.
 [ ] Writer не дублирует policy и apply semantics, у которых уже есть owner.
