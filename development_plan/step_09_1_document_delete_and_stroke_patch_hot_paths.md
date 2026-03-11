@@ -121,32 +121,32 @@ stroke patch semantics, чтобы верхние слои больше не п�
 
 ## Последовательность реализации (только действия)
 
-[ ] Ввести канонический targeted low-level erase helper поверх
+[x] Ввести канонический targeted low-level erase helper поверх
     `Scene + nodeLocator`.
-[ ] Перевести single и bulk delete на один и тот же low-level erase path.
-[ ] Убрать из low-level bulk delete скрытый full-scene rescan для уже
+[x] Перевести single и bulk delete на один и тот же low-level erase path.
+[x] Убрать из low-level bulk delete скрытый full-scene rescan для уже
     подготовленного targeted набора.
-[ ] Вынести stroke points patch semantics в отдельный narrow helper.
-[ ] Зафиксировать через tests, что no-op stroke patch не трогает
+[x] Вынести stroke points patch semantics в отдельный narrow helper.
+[x] Зафиксировать через tests, что no-op stroke patch не трогает
     `pointsRevision` и не делает лишнюю мутацию списка.
-[ ] Повторно прогнать
+[x] Повторно прогнать
     `dcm calculate-metrics lib/src/model/document.dart --report-all`
     и зафиксировать итоговые watchpoints этого owner-а в результате шага.
 
 ## Критерии приёмки
 
-[ ] В `document.dart` не остаётся двух независимых low-level delete algorithms
+[x] В `document.dart` не остаётся двух независимых low-level delete algorithms
     для single и bulk erase.
-[ ] Targeted delete path больше не навязывает full-scene scan, если верхний
+[x] Targeted delete path больше не навязывает full-scene scan, если верхний
     слой уже подготовил remove plan через locator.
-[ ] Step-owned quadratic/delete drift удалён: после подготовки deletable
+[x] Step-owned quadratic/delete drift удалён: после подготовки deletable
     targets low-level erase не повторяет те же поиски по документу.
-[ ] Stroke points no-op patch не меняет список и не меняет `pointsRevision`.
-[ ] Реальное изменение stroke points по-прежнему приводит к корректному
+[x] Stroke points no-op patch не меняет список и не меняет `pointsRevision`.
+[x] Реальное изменение stroke points по-прежнему приводит к корректному
     revision bump через owner `_RevisionedOffsetList`.
-[ ] Giant `txnApplyNodePatch(...)` перестаёт наращивать step-owned complexity
+[x] Giant `txnApplyNodePatch(...)` перестаёт наращивать step-owned complexity
     именно за счёт stroke points semantics.
-[ ] Повторная диагностика
+[x] Повторная диагностика
     `dcm calculate-metrics lib/src/model/document.dart --report-all`
     приложена к результату шага; для step-owned watchpoints
     `txnApplyNodePatch(...)`, `txnFindNodeByLocator(...)`,
@@ -155,10 +155,35 @@ stroke patch semantics, чтобы верхние слои больше не п�
 
 ## Тестовый контур шага
 
-[ ] `test/model/document_model_test.dart`
-[ ] `test/controller/internal/mutation_executor_test.dart`
-[ ] `test/render/render_geometry_cache_test.dart`
-[ ] `test/render/scene_stroke_path_cache_test.dart`
-[ ] Новые targeted tests для locator-driven bulk delete и no-op stroke patch
-[ ] Повторная диагностика:
+[x] `test/model/document_model_test.dart`
+[x] `test/controller/internal/mutation_executor_test.dart`
+[x] `test/render/render_geometry_cache_test.dart`
+[x] `test/render/scene_stroke_path_cache_test.dart`
+[x] Новые targeted tests для locator-driven bulk delete и no-op stroke patch
+[x] Повторная диагностика:
     `dcm calculate-metrics lib/src/model/document.dart --report-all`
+
+## Result metrics
+
+- `txnApplyNodePatch(...)`: `cyclomatic-complexity = 2`,
+  `source-lines-of-code = 6`
+- `txnFindNodeByLocator(...)`: `cyclomatic-complexity = 12`
+- `txnErasePreparedNodesFromScene(...)`: `cyclomatic-complexity = 4`,
+  `source-lines-of-code = 20`
+- `txnEraseNodesFromScene(...)`: `cyclomatic-complexity = 6`,
+  `source-lines-of-code = 24`
+
+### Metric note
+
+- `txnEraseNodesFromScene(...)` ушёл ниже step-owned watchpoint-а и теперь
+  остаётся thin adapter-ом, который готовит locator-driven removals и
+  делегирует в canonical primitive.
+- `txnErasePreparedNodesFromScene(...)` теперь остаётся thin orchestrator-ом:
+  per-layer validation, erase и locator reindex вынесены в узкие helper-ы, а
+  публичный primitive сохранил ownership low-level delete semantics.
+- `txnApplyNodePatch(...)` теперь сведен к dispatcher-у над common patch и
+  typed helper-ами по node kind; giant switch больше не держит patch-apply
+  semantics внутри одного hot path.
+- `txnFindNodeByLocator(...)` не менялся по форме в рамках 9.1; его
+  превышение осталось стабильным и не связано с delete/stroke drift, который
+  закрывался этим подшагом.

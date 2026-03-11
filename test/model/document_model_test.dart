@@ -648,6 +648,100 @@ void main() {
   );
 
   test(
+    'txnErasePreparedNodesFromScene removes prepared targets without scene rescan',
+    () {
+      final scene = Scene(
+        backgroundLayer: BackgroundLayer(
+          nodes: <SceneNode>[
+            RectNode(id: 'bg-a', size: const Size(1, 1)),
+            RectNode(id: 'bg-b', size: const Size(1, 1)),
+          ],
+        ),
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-auto-13aa',
+            nodes: <SceneNode>[
+              RectNode(id: 'a', size: const Size(1, 1)),
+              RectNode(id: 'b', size: const Size(1, 1)),
+            ],
+          ),
+          ContentLayer(
+            id: 'layer-auto-13ab',
+            nodes: <SceneNode>[
+              RectNode(id: 'c', size: const Size(1, 1)),
+              RectNode(id: 'd', size: const Size(1, 1)),
+            ],
+          ),
+        ],
+      );
+      final locator = txnBuildNodeLocator(scene);
+
+      final removed = txnErasePreparedNodesFromScene(
+        scene: scene,
+        nodeLocator: locator,
+        removalsByLayer: <int, List<PreparedNodeRemoval>>{
+          1: <PreparedNodeRemoval>[(nodeId: 'd', nodeIndex: 1)],
+          -1: <PreparedNodeRemoval>[(nodeId: 'bg-a', nodeIndex: 0)],
+          0: <PreparedNodeRemoval>[(nodeId: 'b', nodeIndex: 1)],
+        },
+      );
+
+      expect(removed, const <NodeId>['bg-a', 'b', 'd']);
+      expect(() => removed.add('late'), throwsUnsupportedError);
+      expect(
+        scene.backgroundLayer?.nodes
+            .map((node) => node.id)
+            .toList(growable: false),
+        const <NodeId>['bg-b'],
+      );
+      expect(
+        scene.layers[0].nodes.map((node) => node.id).toList(growable: false),
+        const <NodeId>['a'],
+      );
+      expect(
+        scene.layers[1].nodes.map((node) => node.id).toList(growable: false),
+        const <NodeId>['c'],
+      );
+      expect(locator['bg-b'], (layerIndex: -1, nodeIndex: 0));
+      expect(locator['a'], (layerIndex: 0, nodeIndex: 0));
+      expect(locator['c'], (layerIndex: 1, nodeIndex: 0));
+    },
+  );
+
+  test(
+    'txnErasePreparedNodesFromScene asserts on duplicate prepared removals',
+    () {
+      final scene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-auto-13ac',
+            nodes: <SceneNode>[
+              RectNode(id: 'a', size: const Size(1, 1)),
+              RectNode(id: 'b', size: const Size(1, 1)),
+              RectNode(id: 'c', size: const Size(1, 1)),
+            ],
+          ),
+        ],
+      );
+      final locator = txnBuildNodeLocator(scene);
+
+      expect(
+        () => txnErasePreparedNodesFromScene(
+          scene: scene,
+          nodeLocator: locator,
+          removalsByLayer: <int, List<PreparedNodeRemoval>>{
+            0: <PreparedNodeRemoval>[
+              (nodeId: 'b', nodeIndex: 1),
+              (nodeId: 'b', nodeIndex: 1),
+            ],
+          },
+        ),
+        throwsA(isA<AssertionError>()),
+      );
+    },
+  );
+
+  test(
     'txnClearSceneKeepBackground removes content layers and marks structural-only clear',
     () {
       final scene = Scene(
@@ -1159,7 +1253,7 @@ void main() {
     );
     sourcePatchPoints[1] = const Offset(30, 30);
     expect(stroke.points, <Offset>[const Offset(2, 2), const Offset(3, 3)]);
-    expect(stroke.pointsRevision, greaterThan(strokeRevisionBeforePatch));
+    expect(stroke.pointsRevision, strokeRevisionBeforePatch + 1);
 
     final strokeRevisionAfterGeometryPatch = stroke.pointsRevision;
     expect(

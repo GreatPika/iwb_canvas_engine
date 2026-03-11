@@ -282,10 +282,14 @@ class MutationExecutor {
       return const MutationApplyResult(value: false, changed: false);
     }
     ctx.txnEnsureMutableLayer(existing.layerIndex);
-    final removedNodeIds = txnEraseNodesFromScene(
+    final removedNodeIds = txnErasePreparedNodesFromScene(
       scene: ctx.txnEnsureMutableScene(),
       nodeLocator: ctx.txnEnsureMutableNodeLocator(),
-      nodeIds: <NodeId>{nodeId},
+      removalsByLayer: <int, List<PreparedNodeRemoval>>{
+        existing.layerIndex: <PreparedNodeRemoval>[
+          (nodeId: nodeId, nodeIndex: existing.nodeIndex),
+        ],
+      },
     );
     if (removedNodeIds.isEmpty) {
       return const MutationApplyResult(value: false, changed: false);
@@ -311,10 +315,10 @@ class MutationExecutor {
       ctx.txnEnsureMutableLayer(layerIndex);
     }
 
-    final deleted = txnEraseNodesFromScene(
+    final deleted = txnErasePreparedNodesFromScene(
       scene: ctx.txnEnsureMutableScene(),
       nodeLocator: ctx.txnEnsureMutableNodeLocator(),
-      nodeIds: plan.deletableNodeIds,
+      removalsByLayer: plan.preparedRemovalsByLayer,
     );
     if (deleted.isEmpty) {
       return const MutationApplyResult(value: 0, changed: false);
@@ -334,6 +338,7 @@ class MutationExecutor {
     }
 
     final deletableNodeIds = <NodeId>{};
+    final preparedRemovalsByLayer = <int, List<PreparedNodeRemoval>>{};
     final targetLayerIndexes = <int>{};
     var selectionMayChange = false;
     for (final nodeId in nodeIds) {
@@ -345,6 +350,9 @@ class MutationExecutor {
       }
       deletableNodeIds.add(nodeId);
       targetLayerIndexes.add(existing.layerIndex);
+      preparedRemovalsByLayer
+          .putIfAbsent(existing.layerIndex, () => <PreparedNodeRemoval>[])
+          .add((nodeId: nodeId, nodeIndex: existing.nodeIndex));
       if (!selectionMayChange && ctx.workingSelection.contains(nodeId)) {
         selectionMayChange = true;
       }
@@ -356,6 +364,7 @@ class MutationExecutor {
       ..sort();
     return _PreparedBulkDelete(
       deletableNodeIds: Set<NodeId>.unmodifiable(deletableNodeIds),
+      preparedRemovalsByLayer: preparedRemovalsByLayer,
       targetLayerIndexes: sortedLayerIndexes,
       selectionMayChange: selectionMayChange,
     );
@@ -613,11 +622,13 @@ class MutationApplyResult {
 class _PreparedBulkDelete {
   const _PreparedBulkDelete({
     required this.deletableNodeIds,
+    required this.preparedRemovalsByLayer,
     required this.targetLayerIndexes,
     required this.selectionMayChange,
   });
 
   final Set<NodeId> deletableNodeIds;
+  final PreparedNodeRemovalsByLayer preparedRemovalsByLayer;
   final List<int> targetLayerIndexes;
   final bool selectionMayChange;
 }

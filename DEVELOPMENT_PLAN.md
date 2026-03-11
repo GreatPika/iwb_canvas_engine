@@ -51,7 +51,7 @@ language: russian
 - [x] [Шаг 8.6. Довести `MutationExecutor` до operation-family hot path без пустого postcheck](development_plan/step_08_6_executor_operation_family_cleanup.md)
 - [x] [Шаг 8.7. Упростить `TxnContext` hot primitives без второго runtime cache](development_plan/step_08_7_txn_context_hot_path_primitives.md)
 - [ ] [Шаг 9. Довести command-layer до правильной сложности и семантики через подшаги 9.1-9.3](development_plan/step_09_command_layer_complexity_and_semantics.md)
-- [ ] [Шаг 9.1. Довести low-level delete и stroke patch semantics в `document.dart`](development_plan/step_09_1_document_delete_and_stroke_patch_hot_paths.md)
+- [x] [Шаг 9.1. Довести low-level delete и stroke patch semantics в `document.dart`](development_plan/step_09_1_document_delete_and_stroke_patch_hot_paths.md)
 - [ ] [Шаг 9.2. Зафиксировать `SceneWriter` как owner selection/signal hot path](development_plan/step_09_2_scene_writer_selection_and_signal_hot_path.md)
 - [ ] [Шаг 9.3. Перевести `DrawCommands` и `SceneCommands` на exact writer semantics](development_plan/step_09_3_command_adapters_exact_signal_and_input_semantics.md)
 - [ ] [Шаг 10. Вынести pointer-router в правильную форму](development_plan/step_10_pointer_router_structure.md)

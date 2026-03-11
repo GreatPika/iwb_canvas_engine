@@ -14,6 +14,8 @@ import '../contract/snapshot.dart';
 import 'scene_builder.dart' as model_builder;
 
 typedef NodeLocatorEntry = ({int layerIndex, int nodeIndex});
+typedef PreparedNodeRemoval = ({NodeId nodeId, int nodeIndex});
+typedef PreparedNodeRemovalsByLayer = Map<int, List<PreparedNodeRemoval>>;
 
 class TxnClearSceneKeepBackgroundResult {
   TxnClearSceneKeepBackgroundResult({
@@ -570,189 +572,10 @@ int _txnResolveSpecInstanceRevision({int Function()? nextInstanceRevision}) {
 }
 
 bool txnApplyNodePatch(SceneNode node, NodePatch patch, {bool dryRun = false}) {
-  var changed = false;
-  final patchKind = _txnValidatePatchTargetRuntimeSemantics(
-    node: node,
-    patch: patch,
-  );
+  _txnValidatePatchTargetRuntimeSemantics(node: node, patch: patch);
 
-  changed = _txnApplyCommonPatch(node, patch.common, dryRun: dryRun) || changed;
-
-  switch (patchKind) {
-    case _TxnPatchTargetKind.image:
-      final image = node as ImageNode;
-      final imagePatch = patch as ImageNodePatch;
-      changed =
-          _txnSet(imagePatch.imageId, image.imageId, (value) {
-            image.imageId = value;
-          }, dryRun: dryRun) ||
-          changed;
-      changed =
-          _txnSet(imagePatch.size, image.size, (value) {
-            image.size = value;
-          }, dryRun: dryRun) ||
-          changed;
-      changed =
-          _txnSetNullable(imagePatch.naturalSize, image.naturalSize, (value) {
-            image.naturalSize = value;
-          }, dryRun: dryRun) ||
-          changed;
-    case _TxnPatchTargetKind.text:
-      final text = node as TextNode;
-      final textPatch = patch as TextNodePatch;
-      changed =
-          _txnSet(textPatch.text, text.text, (value) {
-            text.text = value;
-          }, dryRun: dryRun) ||
-          changed;
-      changed =
-          _txnSet(textPatch.fontSize, text.fontSize, (value) {
-            text.fontSize = value;
-          }, dryRun: dryRun) ||
-          changed;
-      changed =
-          _txnSet(textPatch.color, text.color, (value) {
-            text.color = value;
-          }, dryRun: dryRun) ||
-          changed;
-      changed =
-          _txnSet(textPatch.align, text.align, (value) {
-            text.align = value;
-          }, dryRun: dryRun) ||
-          changed;
-      changed =
-          _txnSet(textPatch.isBold, text.isBold, (value) {
-            text.isBold = value;
-          }, dryRun: dryRun) ||
-          changed;
-      changed =
-          _txnSet(textPatch.isItalic, text.isItalic, (value) {
-            text.isItalic = value;
-          }, dryRun: dryRun) ||
-          changed;
-      changed =
-          _txnSet(textPatch.isUnderline, text.isUnderline, (value) {
-            text.isUnderline = value;
-          }, dryRun: dryRun) ||
-          changed;
-      changed =
-          _txnSetNullable(textPatch.fontFamily, text.fontFamily, (value) {
-            text.fontFamily = value;
-          }, dryRun: dryRun) ||
-          changed;
-      changed =
-          _txnSetNullable(textPatch.maxWidth, text.maxWidth, (value) {
-            text.maxWidth = value;
-          }, dryRun: dryRun) ||
-          changed;
-      changed =
-          _txnSetNullable(textPatch.lineHeight, text.lineHeight, (value) {
-            text.lineHeight = value;
-          }, dryRun: dryRun) ||
-          changed;
-      if (!dryRun && _txnTextPatchTouchesLayout(textPatch)) {
-        final beforeSize = text.size;
-        recomputeDerivedTextSize(text);
-        if (text.size != beforeSize) {
-          changed = true;
-        }
-      }
-    case _TxnPatchTargetKind.stroke:
-      final stroke = node as StrokeNode;
-      final strokePatch = patch as StrokeNodePatch;
-      changed =
-          _txnSetOffsets(strokePatch.points, stroke.points, (value) {
-            stroke.points
-              ..clear()
-              ..addAll(value);
-          }, dryRun: dryRun) ||
-          changed;
-      changed =
-          _txnSet(strokePatch.thickness, stroke.thickness, (value) {
-            stroke.thickness = value;
-          }, dryRun: dryRun) ||
-          changed;
-      changed =
-          _txnSet(strokePatch.color, stroke.color, (value) {
-            stroke.color = value;
-          }, dryRun: dryRun) ||
-          changed;
-    case _TxnPatchTargetKind.line:
-      final line = node as LineNode;
-      final linePatch = patch as LineNodePatch;
-      changed =
-          _txnSet(linePatch.start, line.start, (value) {
-            line.start = value;
-          }, dryRun: dryRun) ||
-          changed;
-      changed =
-          _txnSet(linePatch.end, line.end, (value) {
-            line.end = value;
-          }, dryRun: dryRun) ||
-          changed;
-      changed =
-          _txnSet(linePatch.thickness, line.thickness, (value) {
-            line.thickness = value;
-          }, dryRun: dryRun) ||
-          changed;
-      changed =
-          _txnSet(linePatch.color, line.color, (value) {
-            line.color = value;
-          }, dryRun: dryRun) ||
-          changed;
-    case _TxnPatchTargetKind.rect:
-      final rect = node as RectNode;
-      final rectPatch = patch as RectNodePatch;
-      changed =
-          _txnSet(rectPatch.size, rect.size, (value) {
-            rect.size = value;
-          }, dryRun: dryRun) ||
-          changed;
-      changed =
-          _txnSetNullable(rectPatch.fillColor, rect.fillColor, (value) {
-            rect.fillColor = value;
-          }, dryRun: dryRun) ||
-          changed;
-      changed =
-          _txnSetNullable(rectPatch.strokeColor, rect.strokeColor, (value) {
-            rect.strokeColor = value;
-          }, dryRun: dryRun) ||
-          changed;
-      changed =
-          _txnSet(rectPatch.strokeWidth, rect.strokeWidth, (value) {
-            rect.strokeWidth = value;
-          }, dryRun: dryRun) ||
-          changed;
-    case _TxnPatchTargetKind.path:
-      final path = node as PathNode;
-      final pathPatch = patch as PathNodePatch;
-      changed =
-          _txnSet(pathPatch.svgPathData, path.svgPathData, (value) {
-            path.svgPathData = value;
-          }, dryRun: dryRun) ||
-          changed;
-      changed =
-          _txnSetNullable(pathPatch.fillColor, path.fillColor, (value) {
-            path.fillColor = value;
-          }, dryRun: dryRun) ||
-          changed;
-      changed =
-          _txnSetNullable(pathPatch.strokeColor, path.strokeColor, (value) {
-            path.strokeColor = value;
-          }, dryRun: dryRun) ||
-          changed;
-      changed =
-          _txnSet(pathPatch.strokeWidth, path.strokeWidth, (value) {
-            path.strokeWidth = value;
-          }, dryRun: dryRun) ||
-          changed;
-      changed =
-          _txnSet(pathPatch.fillRule, path.fillRule, (value) {
-            path.fillRule = value;
-          }, dryRun: dryRun) ||
-          changed;
-  }
-
+  var changed = _txnApplyCommonPatch(node, patch.common, dryRun: dryRun);
+  changed = _txnApplyTypedNodePatch(node, patch, dryRun: dryRun) || changed;
   return changed;
 }
 
@@ -864,35 +687,49 @@ SceneNode? txnEraseNodeFromScene({
   if (found == null) {
     return null;
   }
-  if (found.layerIndex == -1) {
-    final backgroundLayer = scene.backgroundLayer;
-    if (backgroundLayer == null) {
-      return null;
-    }
-    final removed = backgroundLayer.nodes.removeAt(found.nodeIndex);
-    nodeLocator.remove(nodeId);
-    for (
-      var nodeIndex = found.nodeIndex;
-      nodeIndex < backgroundLayer.nodes.length;
-      nodeIndex++
-    ) {
-      final node = backgroundLayer.nodes[nodeIndex];
-      nodeLocator[node.id] = (layerIndex: -1, nodeIndex: nodeIndex);
-    }
-    return removed;
-  }
-  final layer = scene.layers[found.layerIndex];
-  final removed = layer.nodes.removeAt(found.nodeIndex);
-  nodeLocator.remove(nodeId);
-  for (
-    var nodeIndex = found.nodeIndex;
-    nodeIndex < layer.nodes.length;
-    nodeIndex++
-  ) {
-    final node = layer.nodes[nodeIndex];
-    nodeLocator[node.id] = (layerIndex: found.layerIndex, nodeIndex: nodeIndex);
+  final removed = found.node;
+  final removedNodeIds = txnErasePreparedNodesFromScene(
+    scene: scene,
+    nodeLocator: nodeLocator,
+    removalsByLayer: <int, List<PreparedNodeRemoval>>{
+      found.layerIndex: <PreparedNodeRemoval>[
+        (nodeId: nodeId, nodeIndex: found.nodeIndex),
+      ],
+    },
+  );
+  if (removedNodeIds.isEmpty) {
+    return null;
   }
   return removed;
+}
+
+List<NodeId> txnErasePreparedNodesFromScene({
+  required Scene scene,
+  required Map<NodeId, NodeLocatorEntry> nodeLocator,
+  required PreparedNodeRemovalsByLayer removalsByLayer,
+}) {
+  if (removalsByLayer.isEmpty) {
+    return const <NodeId>[];
+  }
+
+  final removedNodeIds = <NodeId>[];
+  final sortedLayerIndexes = removalsByLayer.keys.toList(growable: false)
+    ..sort();
+  for (final layerIndex in sortedLayerIndexes) {
+    removedNodeIds.addAll(
+      _txnErasePreparedNodesFromLayer(
+        scene: scene,
+        nodeLocator: nodeLocator,
+        layerIndex: layerIndex,
+        preparedRemovals: removalsByLayer[layerIndex],
+      ),
+    );
+  }
+
+  if (removedNodeIds.isEmpty) {
+    return const <NodeId>[];
+  }
+  return List<NodeId>.unmodifiable(removedNodeIds);
 }
 
 List<NodeId> txnEraseNodesFromScene({
@@ -904,40 +741,27 @@ List<NodeId> txnEraseNodesFromScene({
     return const <NodeId>[];
   }
 
-  final removalsByLayer = <int, List<({NodeId nodeId, int nodeIndex})>>{};
-  final removedNodeIds = <NodeId>[];
-  for (var layerIndex = 0; layerIndex < scene.layers.length; layerIndex++) {
-    final layer = scene.layers[layerIndex];
-    for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
-      final node = layer.nodes[nodeIndex];
-      if (!nodeIds.contains(node.id) || !isNodeDeletableInLayer(node)) {
-        continue;
-      }
-      removalsByLayer
-          .putIfAbsent(layerIndex, () => <({NodeId nodeId, int nodeIndex})>[])
-          .add((nodeId: node.id, nodeIndex: nodeIndex));
-      removedNodeIds.add(node.id);
-    }
-  }
-  if (removedNodeIds.isEmpty) {
-    return const <NodeId>[];
-  }
-
-  for (final entry in removalsByLayer.entries) {
-    entry.value.sort(
-      (left, right) => right.nodeIndex.compareTo(left.nodeIndex),
+  final removalsByLayer = <int, List<PreparedNodeRemoval>>{};
+  for (final nodeId in nodeIds) {
+    final found = txnFindNodeByLocator(
+      scene: scene,
+      nodeLocator: nodeLocator,
+      nodeId: nodeId,
     );
-    final layer = scene.layers[entry.key];
-    for (final removal in entry.value) {
-      layer.nodes.removeAt(removal.nodeIndex);
-      nodeLocator.remove(removal.nodeId);
+    if (found == null ||
+        found.layerIndex == -1 ||
+        !isNodeDeletableInLayer(found.node)) {
+      continue;
     }
-    for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
-      final node = layer.nodes[nodeIndex];
-      nodeLocator[node.id] = (layerIndex: entry.key, nodeIndex: nodeIndex);
-    }
+    removalsByLayer
+        .putIfAbsent(found.layerIndex, () => <PreparedNodeRemoval>[])
+        .add((nodeId: found.node.id, nodeIndex: found.nodeIndex));
   }
-  return List<NodeId>.unmodifiable(removedNodeIds);
+  return txnErasePreparedNodesFromScene(
+    scene: scene,
+    nodeLocator: nodeLocator,
+    removalsByLayer: removalsByLayer,
+  );
 }
 
 TxnClearSceneKeepBackgroundResult txnClearSceneKeepBackground({
@@ -1123,6 +947,197 @@ bool _txnApplyCommonPatch(
   return changed;
 }
 
+bool _txnApplyImagePatch(
+  ImageNode image,
+  ImageNodePatch patch, {
+  required bool dryRun,
+}) {
+  var changed = false;
+  changed =
+      _txnSet(patch.imageId, image.imageId, (value) {
+        image.imageId = value;
+      }, dryRun: dryRun) ||
+      changed;
+  changed =
+      _txnSet(patch.size, image.size, (value) {
+        image.size = value;
+      }, dryRun: dryRun) ||
+      changed;
+  changed =
+      _txnSetNullable(patch.naturalSize, image.naturalSize, (value) {
+        image.naturalSize = value;
+      }, dryRun: dryRun) ||
+      changed;
+  return changed;
+}
+
+bool _txnApplyTypedNodePatch(
+  SceneNode node,
+  NodePatch patch, {
+  required bool dryRun,
+}) {
+  return switch ((node, patch)) {
+    (ImageNode image, ImageNodePatch imagePatch) => _txnApplyImagePatch(
+      image,
+      imagePatch,
+      dryRun: dryRun,
+    ),
+    (TextNode text, TextNodePatch textPatch) => _txnApplyTextPatch(
+      text,
+      textPatch,
+      dryRun: dryRun,
+    ),
+    (StrokeNode stroke, StrokeNodePatch strokePatch) => _txnApplyStrokePatch(
+      stroke,
+      strokePatch,
+      dryRun: dryRun,
+    ),
+    (LineNode line, LineNodePatch linePatch) => _txnApplyLinePatch(
+      line,
+      linePatch,
+      dryRun: dryRun,
+    ),
+    (RectNode rect, RectNodePatch rectPatch) => _txnApplyRectPatch(
+      rect,
+      rectPatch,
+      dryRun: dryRun,
+    ),
+    (PathNode path, PathNodePatch pathPatch) => _txnApplyPathPatch(
+      path,
+      pathPatch,
+      dryRun: dryRun,
+    ),
+    _ => false,
+  };
+}
+
+bool _txnApplyTextPatch(
+  TextNode text,
+  TextNodePatch patch, {
+  required bool dryRun,
+}) {
+  var changed = _txnApplyTextContentPatch(text, patch, dryRun: dryRun);
+  changed =
+      _txnApplyTextLayoutStylePatch(text, patch, dryRun: dryRun) || changed;
+  changed =
+      _txnRecomputeTextSizeAfterPatch(text, patch, dryRun: dryRun) || changed;
+  return changed;
+}
+
+bool _txnApplyStrokePatch(
+  StrokeNode stroke,
+  StrokeNodePatch patch, {
+  required bool dryRun,
+}) {
+  var changed = false;
+  changed =
+      _txnApplyStrokePointsPatch(stroke, patch.points, dryRun: dryRun) ||
+      changed;
+  changed =
+      _txnSet(patch.thickness, stroke.thickness, (value) {
+        stroke.thickness = value;
+      }, dryRun: dryRun) ||
+      changed;
+  changed =
+      _txnSet(patch.color, stroke.color, (value) {
+        stroke.color = value;
+      }, dryRun: dryRun) ||
+      changed;
+  return changed;
+}
+
+bool _txnApplyLinePatch(
+  LineNode line,
+  LineNodePatch patch, {
+  required bool dryRun,
+}) {
+  var changed = false;
+  changed =
+      _txnSet(patch.start, line.start, (value) {
+        line.start = value;
+      }, dryRun: dryRun) ||
+      changed;
+  changed =
+      _txnSet(patch.end, line.end, (value) {
+        line.end = value;
+      }, dryRun: dryRun) ||
+      changed;
+  changed =
+      _txnSet(patch.thickness, line.thickness, (value) {
+        line.thickness = value;
+      }, dryRun: dryRun) ||
+      changed;
+  changed =
+      _txnSet(patch.color, line.color, (value) {
+        line.color = value;
+      }, dryRun: dryRun) ||
+      changed;
+  return changed;
+}
+
+bool _txnApplyRectPatch(
+  RectNode rect,
+  RectNodePatch patch, {
+  required bool dryRun,
+}) {
+  var changed = false;
+  changed =
+      _txnSet(patch.size, rect.size, (value) {
+        rect.size = value;
+      }, dryRun: dryRun) ||
+      changed;
+  changed =
+      _txnSetNullable(patch.fillColor, rect.fillColor, (value) {
+        rect.fillColor = value;
+      }, dryRun: dryRun) ||
+      changed;
+  changed =
+      _txnSetNullable(patch.strokeColor, rect.strokeColor, (value) {
+        rect.strokeColor = value;
+      }, dryRun: dryRun) ||
+      changed;
+  changed =
+      _txnSet(patch.strokeWidth, rect.strokeWidth, (value) {
+        rect.strokeWidth = value;
+      }, dryRun: dryRun) ||
+      changed;
+  return changed;
+}
+
+bool _txnApplyPathPatch(
+  PathNode path,
+  PathNodePatch patch, {
+  required bool dryRun,
+}) {
+  var changed = false;
+  changed =
+      _txnSet(patch.svgPathData, path.svgPathData, (value) {
+        path.svgPathData = value;
+      }, dryRun: dryRun) ||
+      changed;
+  changed =
+      _txnSetNullable(patch.fillColor, path.fillColor, (value) {
+        path.fillColor = value;
+      }, dryRun: dryRun) ||
+      changed;
+  changed =
+      _txnSetNullable(patch.strokeColor, path.strokeColor, (value) {
+        path.strokeColor = value;
+      }, dryRun: dryRun) ||
+      changed;
+  changed =
+      _txnSet(patch.strokeWidth, path.strokeWidth, (value) {
+        path.strokeWidth = value;
+      }, dryRun: dryRun) ||
+      changed;
+  changed =
+      _txnSet(patch.fillRule, path.fillRule, (value) {
+        path.fillRule = value;
+      }, dryRun: dryRun) ||
+      changed;
+  return changed;
+}
+
 bool _txnSet<T>(
   PatchField<T> patch,
   T current,
@@ -1154,17 +1169,219 @@ bool _txnSetNullable<T>(
   return true;
 }
 
-bool _txnSetOffsets(
-  PatchField<List<Offset>> patch,
-  List<Offset> current,
-  void Function(OwnedList<Offset> value) assign, {
+bool _txnApplyStrokePointsPatch(
+  StrokeNode stroke,
+  PatchField<List<Offset>> patch, {
   required bool dryRun,
 }) {
   if (patch.isAbsent) return false;
   final next = patch.value as OwnedList<Offset>;
-  if (next.hasSameElements(current)) return false;
+  if (!_txnHasDifferentStrokePoints(next, stroke.points)) return false;
   if (!dryRun) {
-    assign(next);
+    stroke.points.replaceRange(0, stroke.points.length, next);
   }
   return true;
+}
+
+bool _txnHasDifferentStrokePoints(
+  OwnedList<Offset> next,
+  List<Offset> current,
+) {
+  if (next.length != current.length) {
+    return true;
+  }
+  for (var index = 0; index < current.length; index++) {
+    if (next[index] != current[index]) {
+      return true;
+    }
+  }
+  return false;
+}
+
+List<PreparedNodeRemoval> _txnCollectValidPreparedRemovals({
+  required List<SceneNode> layerNodes,
+  required List<PreparedNodeRemoval> preparedRemovals,
+}) {
+  final validRemovals = <PreparedNodeRemoval>[];
+  final seenRemovalKeys = <(NodeId, int)>{};
+  var hasDuplicateRemovals = false;
+  for (final removal in preparedRemovals) {
+    final nodeIndex = removal.nodeIndex;
+    if (nodeIndex < 0 || nodeIndex >= layerNodes.length) {
+      continue;
+    }
+    if (layerNodes[nodeIndex].id != removal.nodeId) {
+      continue;
+    }
+    final removalKey = (removal.nodeId, nodeIndex);
+    if (!seenRemovalKeys.add(removalKey)) {
+      hasDuplicateRemovals = true;
+      continue;
+    }
+    validRemovals.add(removal);
+  }
+  assert(
+    !hasDuplicateRemovals,
+    'Prepared node removals must not contain duplicate nodeId/nodeIndex pairs.',
+  );
+  validRemovals.sort(
+    (left, right) => left.nodeIndex.compareTo(right.nodeIndex),
+  );
+  return validRemovals;
+}
+
+List<NodeId> _txnErasePreparedNodesFromLayer({
+  required Scene scene,
+  required Map<NodeId, NodeLocatorEntry> nodeLocator,
+  required int layerIndex,
+  required List<PreparedNodeRemoval>? preparedRemovals,
+}) {
+  if (preparedRemovals == null || preparedRemovals.isEmpty) {
+    return const <NodeId>[];
+  }
+  final layerNodes = _txnResolveLayerNodesForErase(
+    scene: scene,
+    layerIndex: layerIndex,
+  );
+  if (layerNodes == null) {
+    return const <NodeId>[];
+  }
+  final validRemovals = _txnCollectValidPreparedRemovals(
+    layerNodes: layerNodes,
+    preparedRemovals: preparedRemovals,
+  );
+  if (validRemovals.isEmpty) {
+    return const <NodeId>[];
+  }
+  final removedNodeIds = _txnEraseValidatedRemovals(
+    nodeLocator: nodeLocator,
+    layerNodes: layerNodes,
+    validRemovals: validRemovals,
+  );
+  _txnReindexLayerNodesAfterErase(
+    nodeLocator: nodeLocator,
+    layerIndex: layerIndex,
+    layerNodes: layerNodes,
+  );
+  return removedNodeIds;
+}
+
+List<NodeId> _txnEraseValidatedRemovals({
+  required Map<NodeId, NodeLocatorEntry> nodeLocator,
+  required List<SceneNode> layerNodes,
+  required List<PreparedNodeRemoval> validRemovals,
+}) {
+  final removedNodeIds = validRemovals
+      .map((removal) => removal.nodeId)
+      .toList(growable: false);
+  for (final removal in validRemovals.reversed) {
+    layerNodes.removeAt(removal.nodeIndex);
+    nodeLocator.remove(removal.nodeId);
+  }
+  return removedNodeIds;
+}
+
+bool _txnApplyTextContentPatch(
+  TextNode text,
+  TextNodePatch patch, {
+  required bool dryRun,
+}) {
+  var changed = false;
+  changed =
+      _txnSet(patch.text, text.text, (value) {
+        text.text = value;
+      }, dryRun: dryRun) ||
+      changed;
+  changed =
+      _txnSet(patch.fontSize, text.fontSize, (value) {
+        text.fontSize = value;
+      }, dryRun: dryRun) ||
+      changed;
+  changed =
+      _txnSet(patch.color, text.color, (value) {
+        text.color = value;
+      }, dryRun: dryRun) ||
+      changed;
+  changed =
+      _txnSet(patch.align, text.align, (value) {
+        text.align = value;
+      }, dryRun: dryRun) ||
+      changed;
+  return changed;
+}
+
+bool _txnApplyTextLayoutStylePatch(
+  TextNode text,
+  TextNodePatch patch, {
+  required bool dryRun,
+}) {
+  var changed = false;
+  changed =
+      _txnSet(patch.isBold, text.isBold, (value) {
+        text.isBold = value;
+      }, dryRun: dryRun) ||
+      changed;
+  changed =
+      _txnSet(patch.isItalic, text.isItalic, (value) {
+        text.isItalic = value;
+      }, dryRun: dryRun) ||
+      changed;
+  changed =
+      _txnSet(patch.isUnderline, text.isUnderline, (value) {
+        text.isUnderline = value;
+      }, dryRun: dryRun) ||
+      changed;
+  changed =
+      _txnSetNullable(patch.fontFamily, text.fontFamily, (value) {
+        text.fontFamily = value;
+      }, dryRun: dryRun) ||
+      changed;
+  changed =
+      _txnSetNullable(patch.maxWidth, text.maxWidth, (value) {
+        text.maxWidth = value;
+      }, dryRun: dryRun) ||
+      changed;
+  changed =
+      _txnSetNullable(patch.lineHeight, text.lineHeight, (value) {
+        text.lineHeight = value;
+      }, dryRun: dryRun) ||
+      changed;
+  return changed;
+}
+
+bool _txnRecomputeTextSizeAfterPatch(
+  TextNode text,
+  TextNodePatch patch, {
+  required bool dryRun,
+}) {
+  if (dryRun || !_txnTextPatchTouchesLayout(patch)) {
+    return false;
+  }
+  final beforeSize = text.size;
+  recomputeDerivedTextSize(text);
+  return text.size != beforeSize;
+}
+
+List<SceneNode>? _txnResolveLayerNodesForErase({
+  required Scene scene,
+  required int layerIndex,
+}) {
+  if (layerIndex == -1) {
+    return scene.backgroundLayer?.nodes;
+  }
+  if (layerIndex < 0 || layerIndex >= scene.layers.length) {
+    return null;
+  }
+  return scene.layers[layerIndex].nodes;
+}
+
+void _txnReindexLayerNodesAfterErase({
+  required Map<NodeId, NodeLocatorEntry> nodeLocator,
+  required int layerIndex,
+  required List<SceneNode> layerNodes,
+}) {
+  for (var nodeIndex = 0; nodeIndex < layerNodes.length; nodeIndex++) {
+    final node = layerNodes[nodeIndex];
+    nodeLocator[node.id] = (layerIndex: layerIndex, nodeIndex: nodeIndex);
+  }
 }
