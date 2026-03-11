@@ -1,22 +1,27 @@
 language: russian
 
-# Шаг 11.2. Ввести одного controller-owned owner-а active gesture и forced reset lifecycle
+# Шаг 11.2. Ввести одного controller-owned owner-а active gesture и единый reset trigger
 
 ## Цель шага
 
 После `11.1` controller entrypoint уже должен принимать terminal input по
-одному канону, но gesture lifecycle всё ещё останется размазанным, если active
-pointer и его reset semantics продолжат жить одновременно в:
+одному канону, но active gesture lifecycle всё ещё останется размазанным, если
+pointer owner и baseline drag-threshold продолжат жить одновременно в:
 
 - `SceneControllerInteractive`;
 - `InteractiveMoveSession`;
 - `InteractiveDrawCoordinator`.
 
-Задача подшага: ввести одного controller-owned owner-а active gesture, который
-фиксирует pointer-владельца и baseline `dragStartSlop` на весь gesture
-lifetime, а также делает forced reset на `replaceScene(...)`,
-`setCameraOffset(...)`, mode/tool transitions и других controller-owned
-boundary changes.
+Задача подшага: ввести одного controller-owned owner-а active gesture, который:
+
+- фиксирует pointer-владельца;
+- фиксирует baseline `dragStartSlop` на весь gesture lifetime;
+- определяет, когда controller boundary обязан завершить active gesture до
+  mutation или mode/tool transition.
+
+Подшаг обязан закрываться самостоятельно. Он не может зависеть от реализации
+`11.5` для корректности user-visible поведения и не имеет права вносить
+регрессии в уже существующие reset/cleanup эффекты boundary methods.
 
 ## Что уже подтверждено по текущему состоянию
 
@@ -27,12 +32,13 @@ boundary changes.
 3. [scene_controller_interactive.dart](/Users/blackpika/iwb_canvas_engine/lib/src/interactive/scene_controller_interactive.dart)
    сейчас лишь переключает dispatch между `_moveSession` и `_drawCoordinator`
    и передаёт им текущее значение `dragStartSlop`, а не baseline gesture state.
-4. `replaceScene(...)` в
-   [scene_controller_interactive.dart](/Users/blackpika/iwb_canvas_engine/lib/src/interactive/scene_controller_interactive.dart)
-   очищает только pending line и selection rect, но не делает единый forced
-   cancel active gesture.
-5. `setCameraOffset(...)` там же сейчас меняет камеру без общей gesture
-   cancellation semantics.
+4. Boundary methods уже имеют observable reset/cleanup behavior:
+   `replaceScene(...)`, `setCameraOffset(...)`, mode/tool transitions и
+   `dispose()` по-разному чистят selection rect, pending line и другие
+   mode-local состояния.
+5. Эти boundary cleanup эффекты существуют независимо от того, есть ли сейчас
+   active gesture owner. Поэтому нельзя приписывать весь их behavior одному
+   только owner-у active gesture.
 6. Constructor `SceneControllerInteractive(...)` уже перегружен wiring-логикой,
    и именно этот подшаг неизбежно меняет его structural shape, если появляется
    новый internal owner gesture lifecycle.
@@ -47,7 +53,8 @@ lifecycle в
 - получает canonical input из `11.1`;
 - спрашивает gesture-machine, кому разрешён dispatch;
 - вызывает mode-specific session entrypoints;
-- инициирует forced cancel/reset на controller boundary changes.
+- через один controller-owned trigger решает, когда active gesture должен быть
+  завершён до boundary mutation.
 
 Почему это лучший вариант:
 
@@ -58,8 +65,12 @@ lifecycle в
    gesture-machine знает только controller-level `pointerId`, одинаково
    пригодный для routed и direct path, но не raw host pointer ids.
 4. Он даёт чистую границу со `11.1`: `11.1` фиксирует канонический входной
-   contract, а `11.2` владеет новым owner-ом lifecycle и constructor rewiring
+   contract, а `11.2` владеет owner-ом active gesture и constructor rewiring
    вокруг него.
+5. Он позволяет сохранить текущее boundary behavior без искусственной
+   зависимости от `11.5`: active gesture owner меняется уже здесь, а cleanup
+   latent mode-local state временно остаётся behavior-preserving на существующих
+   call sites, пока соответствующий owner contract не будет введён отдельно.
 
 ## Зафиксированные решения (без повторного обсуждения в реализации)
 
@@ -69,50 +80,53 @@ lifecycle в
    - `pointerId` владельца;
    - режим gesture family (`move` / `draw`);
    - baseline `dragStartSlop`;
-   - признак активного forced-cancel transition, если он нужен для
-     детерминированного dispatch-а.
+   - при необходимости internal flag для deterministic release/reset path.
 3. Baseline `dragStartSlop` фиксируется на `down` и не меняется до terminal
    завершения текущего gesture.
 4. Параллельный не-владеющий pointer:
    - не коммитит;
    - не отменяет;
    - не сбрасывает чужой gesture.
-5. Forced reset lifecycle принадлежит controller boundary:
-   - `replaceScene(...)`
-   - `setCameraOffset(...)`
-   - `setMode(...)`
-   - `setDrawTool(...)`
-   - `dispose()`
-   используют один controller-owned путь отмены активного gesture.
-6. Gesture-machine не становится вторым public API. Это internal-only owner,
-   доступный только внутри interactive controller слоя.
-7. Подшаг не определяет, как именно move/draw session восстанавливает свой
-   внутренний state после cancel. Это ownership `11.4` и `11.5`.
-8. Подшаг определяет только owner-level delivery/reset contract:
+5. Этот подшаг определяет только controller-owned reset trigger:
    - какой pointer имеет право получить `move/up/cancel`;
-   - когда controller запускает forced cancel/reset.
-   Move-local rollback и draw-local cleanup, включая pending-line semantics
-   после release owner-а, сюда не входят. Подшаг также не имеет права
-   переписывать terminal phase, которую передал boundary contract `11.1`.
-9. Этот подшаг владеет structural constructor rewiring
-   `SceneControllerInteractive(...)`, которое требуется для подключения нового
-   gesture owner-а. `11.1` владеет только constructor-side validation для
-   `dragStartSlop`.
+   - когда controller обязан завершить active gesture перед boundary mutation.
+6. Этот подшаг не становится owner-ом move-local rollback,
+   draw-local pending-line cleanup, timer cleanup или других latent
+   mode-local состояний, которые могут жить после release active owner-а.
+7. Однако подшаг обязан сохранить pre-existing observable behavior boundary
+   methods. Если boundary method до начала шага уже очищал pending line,
+   selection rect или другой latent state, это поведение не может пропасть
+   только потому, что появился новый owner active gesture.
+8. Следовательно, `11.2` допускает временный compatibility cleanup на
+   существующих controller call sites, если это нужно для отсутствия
+   регрессий. Такой cleanup не делает controller owner-ом draw-local semantics;
+   он лишь сохраняет текущий контракт до следующего шага.
+9. Полный owner contract для draw-local latent state остаётся ownership `11.5`.
+   Но `11.5` не нужен для завершения `11.2`; он только убирает временный
+   compatibility cleanup и замыкает его на draw-side owner.
+10. Gesture-machine не становится вторым public API. Это internal-only owner,
+    доступный только внутри interactive controller слоя.
+11. Этот подшаг владеет structural constructor rewiring
+    `SceneControllerInteractive(...)`, которое требуется для подключения нового
+    gesture owner-а. `11.1` владеет только constructor-side validation для
+    `dragStartSlop`.
 
 ## Граница шага
 
 - In:
   - controller-owned active gesture identity;
   - baseline `dragStartSlop`;
-  - forced reset/cancel lifecycle;
+  - controller-owned reset trigger перед boundary mutation;
   - dispatch contract между controller и mode-specific session-ами;
-  - structural rewiring `SceneControllerInteractive(...)` под новый owner.
+  - structural rewiring `SceneControllerInteractive(...)` под новый owner;
+  - behavior-preserving compatibility cleanup на boundary call sites, если без
+    него возникнет регрессия.
 - Out:
   - controller pointer-entry normalization;
   - shared eligibility policy;
   - move-specific cancel restore;
-  - draw-specific pending-line cleanup details;
-  - idle draw-local pending state semantics после завершения active owner-а.
+  - draw-specific owner contract для pending line/timer cleanup;
+  - архитектурное удаление compatibility cleanup из controller boundary methods.
 
 ## Точная реализация, которую должен описывать код
 
@@ -121,30 +135,34 @@ lifecycle в
 2. Один controller-owned owner определяет:
    - можно ли принять `down` как новый gesture;
    - какой pointer имеет право получить `move/up/cancel`;
-   - должен ли controller выполнить forced cancel перед boundary mutation.
-   Но он не кодирует сам move-local rollback или draw-local cleanup effect.
+   - должен ли controller завершить active gesture перед boundary mutation.
 3. Dispatch в move/draw session после подшага использует уже разрешённый owner
    context, а не переигрывает pointer ownership внутри session-а.
-4. `replaceScene(...)` и `setCameraOffset(...)` отменяют активный gesture через
-   тот же lifecycle owner, а не через отдельные локальные workaround-вызовы.
-5. Граница между шагами `10` и `11` остаётся жёсткой:
+4. Boundary methods используют один controller-owned decision point для reset
+   active gesture, но при этом не теряют pre-existing cleanup behavior для
+   latent state, который ещё не получил собственного owner contract-а.
+5. `replaceScene(...)`, `setCameraOffset(...)`, `setMode(...)`,
+   `setDrawTool(...)` и `dispose()` после подшага не должны демонстрировать
+   user-visible регрессию относительно поведения до внедрения gesture-machine.
+6. Граница между шагами `10` и `11` остаётся жёсткой:
    gesture-machine не знает о raw host pointer ids, tracker state и timer path.
    Она работает только с controller-level `pointerId`, независимо от того,
    пришёл ли он из routed view path или direct controller entry.
-6. Constructor `SceneControllerInteractive(...)` создаёт и подключает новый
+7. Constructor `SceneControllerInteractive(...)` создаёт и подключает новый
    internal owner lifecycle; это не считается overlap с `11.1`.
 
 ## Последовательность реализации (только действия)
 
 [ ] Создать `lib/src/interactive/internal/interactive_gesture_machine.dart`
     как internal owner active gesture lifecycle.
-[ ] Перевести `SceneControllerInteractive` на один owner dispatch/reset
-    contract.
+[ ] Перевести `SceneControllerInteractive` на один owner dispatch contract.
 [ ] Перенести structural constructor rewiring под новый gesture owner в этот
     подшаг, не затрагивая `11.1` сверх unified validation.
 [ ] Зафиксировать baseline `dragStartSlop` на gesture `down`.
-[ ] Перевести `replaceScene(...)`, `setCameraOffset(...)`, `setMode(...)`,
-    `setDrawTool(...)` и `dispose()` на единый forced cancel path.
+[ ] Ввести единый controller-owned reset trigger для `replaceScene(...)`,
+    `setCameraOffset(...)`, `setMode(...)`, `setDrawTool(...)` и `dispose()`.
+[ ] Сохранить pre-existing boundary cleanup behavior там, где latent
+    mode-local state ещё не получил собственного owner contract-а.
 [ ] Убрать overlap между router gate из шага `10` и active gesture owner-ом
     шага `11`.
 
@@ -156,16 +174,20 @@ lifecycle в
     завершения текущего gesture.
 [ ] Параллельный не-владеющий pointer не может сбросить, закоммитить или
     отменить активный gesture другого pointer-а.
-[ ] `replaceScene(...)` и `setCameraOffset(...)` полностью отменяют активный
-    gesture через общий controller-owned path.
-[ ] `setMode(...)`, `setDrawTool(...)` и `dispose()` используют тот же forced
-    reset owner, а не отдельные ad hoc ветки.
+[ ] `replaceScene(...)`, `setCameraOffset(...)`, `setMode(...)`,
+    `setDrawTool(...)` и `dispose()` используют один controller-owned decision
+    point для reset active gesture.
+[ ] После завершения шага нет user-visible регрессий в уже существовавшем
+    boundary cleanup behavior, даже если часть cleanup временно остаётся на
+    controller call sites как compatibility path.
 [ ] Gesture-machine не импортирует и не дублирует view-side router/tracker
     state шага `10`.
 [ ] Gesture-machine работает только с controller-level `pointerId` и не
     различает routed/direct path после boundary normalization `11.1`.
 [ ] Gesture-machine не становится owner-ом move-local rollback или draw-local
     pending-line cleanup semantics.
+[ ] Шаг закрывается самостоятельно и не требует завершения `11.5` для
+    корректности behavior и acceptance.
 [ ] Structural constructor rewiring `SceneControllerInteractive(...)`
     принадлежит этому подшагу и не требует возвращаться в `11.1`.
 [ ] Повторная диагностика
@@ -180,7 +202,11 @@ lifecycle в
     с покрытием:
     - не-владеющий pointer не сбрасывает чужой gesture
     - новый pointer допускается только после terminal release owner-а
-[ ] `test/interactive/core/scene_controller_interactive_dispose_fail_fast_test.dart`
-    с покрытием forced reset на `replaceScene(...)` и `dispose()`
 [ ] `test/interactive/core/scene_controller_interactive_basics_test.dart`
     с boundary-check на `setCameraOffset(...)`
+[ ] `test/interactive/core/scene_controller_interactive_line_pending_cancel_test.dart`
+    как regression guard, что mode/tool transitions не теряют pre-existing
+    pending-line cleanup behavior
+[ ] `test/interactive/core/scene_controller_interactive_dispose_fail_fast_test.dart`
+    как regression guard, что `replaceScene(...)` и `dispose()` не теряют
+    pre-existing cleanup behavior при внедрении нового owner-а
