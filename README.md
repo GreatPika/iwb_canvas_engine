@@ -66,6 +66,15 @@ flutter analyze
 In CI, DCM is installed with the official GitHub Action before the static
 checks job runs.
 
+For clone-hunting during refactors, use the development-only analyzer script:
+
+```sh
+dart run tool/analysis/find_similar_clones.dart . 60 30 5 4 0.55 12
+```
+
+Use `dart run tool/analysis/find_similar_clones.dart --help` for the full
+argument list and additional examples.
+
 ## Quick start
 
 ```dart
