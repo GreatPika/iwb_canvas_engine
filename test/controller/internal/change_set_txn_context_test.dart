@@ -282,6 +282,26 @@ void main() {
     expect(ctx.debugLayerIdIndexMaterializations, 1);
   });
 
+  test('TxnContext does not rebuild layerId index for repeated misses', () {
+    final ctx = TxnContext(
+      baseScene: Scene(
+        layers: <ContentLayer>[
+          ContentLayer(id: 'layer-auto-22'),
+          ContentLayer(id: 'layer-auto-23'),
+        ],
+      ),
+      workingSelection: <NodeId>{},
+      baseAllNodeIds: const <NodeId>{},
+      nodeIdSeed: 0,
+      nextInstanceRevision: 1,
+    );
+
+    for (var i = 0; i < 1000; i++) {
+      expect(ctx.txnFindContentLayerIndexById('layer-auto-missing'), isNull);
+    }
+    expect(ctx.debugLayerIdIndexMaterializations, 1);
+  });
+
   test('TxnContext resets layerId index after adoptScene', () {
     final ctx = TxnContext(
       baseScene: Scene(
@@ -332,7 +352,7 @@ void main() {
   });
 
   test(
-    'TxnContext ensureContentLayer shifts node locator, cloned indexes and layer seed',
+    'TxnContext ensureContentLayer shifts node locator, preserves cloned layer identity and layer seed',
     () {
       final ctx = TxnContext(
         baseScene: Scene(

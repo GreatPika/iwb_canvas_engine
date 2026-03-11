@@ -50,7 +50,7 @@ class TxnContext {
   Map<NodeId, NodeLocatorEntry>? _materializedNodeLocator;
   Map<LayerId, int>? _materializedLayerIndexById;
   Scene? _mutableScene;
-  final Set<int> _clonedLayerIndexes = <int>{};
+  final Set<LayerId> _clonedLayerIds = <LayerId>{};
   bool _backgroundLayerCloned = false;
   final Set<NodeId> _clonedNodeIds = <NodeId>{};
   bool _mutableSceneOwnedByTxn = false;
@@ -106,7 +106,7 @@ class TxnContext {
     final cloned = txnCloneSceneShallow(_baseScene);
     _mutableScene = cloned;
     _mutableSceneOwnedByTxn = false;
-    _clonedLayerIndexes.clear();
+    _clonedLayerIds.clear();
     _backgroundLayerCloned = false;
     _clonedNodeIds.clear();
     debugSceneShallowClones = debugSceneShallowClones + 1;
@@ -127,20 +127,19 @@ class TxnContext {
     if (_mutableSceneOwnedByTxn) {
       return scene.layers[layerIndex];
     }
-    if (_clonedLayerIndexes.contains(layerIndex)) {
+    final current = scene.layers[layerIndex];
+    if (_clonedLayerIds.contains(current.id)) {
       return scene.layers[layerIndex];
     }
-
-    final current = scene.layers[layerIndex];
     final baseLayer = _txnBaseLayerById(current.id);
     if (baseLayer == null || !identical(current, baseLayer)) {
-      _clonedLayerIndexes.add(layerIndex);
+      _clonedLayerIds.add(current.id);
       return current;
     }
 
     final cloned = txnCloneContentLayerShallow(current);
     scene.layers[layerIndex] = cloned;
-    _clonedLayerIndexes.add(layerIndex);
+    _clonedLayerIds.add(cloned.id);
     debugLayerShallowClones = debugLayerShallowClones + 1;
     return cloned;
   }
@@ -159,28 +158,10 @@ class TxnContext {
 
     scene.layers.insert(targetIndex, ContentLayer(id: layerId));
     if (targetIndex < scene.layers.length - 1) {
-      final nodeLocator = txnEnsureMutableNodeLocator();
-      for (final entry in nodeLocator.entries.toList(growable: false)) {
-        final location = entry.value;
-        if (location.layerIndex < targetIndex || location.layerIndex == -1) {
-          continue;
-        }
-        nodeLocator[entry.key] = (
-          layerIndex: location.layerIndex + 1,
-          nodeIndex: location.nodeIndex,
-        );
-      }
-    }
-    if (_clonedLayerIndexes.isNotEmpty) {
-      final shifted = <int>{};
-      for (final existingIndex in _clonedLayerIndexes) {
-        shifted.add(
-          existingIndex >= targetIndex ? existingIndex + 1 : existingIndex,
-        );
-      }
-      _clonedLayerIndexes
-        ..clear()
-        ..addAll(shifted);
+      txnShiftNodeLocatorLayersFrom(
+        nodeLocator: txnEnsureMutableNodeLocator(),
+        startLayerIndex: targetIndex,
+      );
     }
     _txnInvalidateLayerIdIndex();
     return true;
@@ -228,53 +209,8 @@ class TxnContext {
     NodeId id,
   ) {
     txnEnsureActive();
-    final foundInWorking = txnFindNodeById(id);
-    if (foundInWorking == null) {
-      throw StateError('Node not found: $id');
-    }
-
-    if (_mutableSceneOwnedByTxn) {
-      return foundInWorking;
-    }
-
-    if (foundInWorking.layerIndex == -1) {
-      txnEnsureMutableBackgroundLayer();
-    } else {
-      txnEnsureMutableLayer(foundInWorking.layerIndex);
-    }
-    final foundAfterLayerClone = txnFindNodeById(id);
-    if (foundAfterLayerClone == null) {
-      throw StateError('Node not found after layer clone: $id');
-    }
-
-    if (_clonedNodeIds.contains(id)) {
-      return foundAfterLayerClone;
-    }
-    final baseNode = _txnBaseNodeById(id);
-    if (baseNode == null || !identical(foundAfterLayerClone.node, baseNode)) {
-      return foundAfterLayerClone;
-    }
-
-    final clonedNode = txnCloneNode(foundAfterLayerClone.node);
-    if (foundAfterLayerClone.layerIndex == -1) {
-      final backgroundLayer = workingScene.backgroundLayer;
-      if (backgroundLayer == null) {
-        throw StateError('Background layer missing after mutable clone: $id');
-      }
-      backgroundLayer.nodes[foundAfterLayerClone.nodeIndex] = clonedNode;
-    } else {
-      workingScene
-              .layers[foundAfterLayerClone.layerIndex]
-              .nodes[foundAfterLayerClone.nodeIndex] =
-          clonedNode;
-    }
-    _clonedNodeIds.add(id);
-    debugNodeClones = debugNodeClones + 1;
-    return (
-      node: clonedNode,
-      layerIndex: foundAfterLayerClone.layerIndex,
-      nodeIndex: foundAfterLayerClone.nodeIndex,
-    );
+    final prepared = _txnPrepareMutableNodeSlot(id);
+    return _txnCloneResolvedNodeIfNeeded(prepared);
   }
 
   Map<NodeId, NodeLocatorEntry> txnEnsureMutableNodeLocator() {
@@ -349,29 +285,22 @@ class TxnContext {
 
   int? txnFindContentLayerIndexById(LayerId layerId) {
     txnEnsureActive();
-    var indexById = _materializedLayerIndexById;
-    indexById ??= _txnMaterializeLayerIdIndexFromWorkingScene();
-    final index = indexById[layerId];
-    if (index == null) {
-      return null;
-    }
     final scene = workingScene;
-    if (index >= 0 &&
-        index < scene.layers.length &&
-        scene.layers[index].id == layerId) {
-      return index;
-    }
-    indexById = _txnMaterializeLayerIdIndexFromWorkingScene(forceRebuild: true);
-    final rebuiltIndex = indexById[layerId];
-    if (rebuiltIndex == null) {
+    final indexById =
+        _materializedLayerIndexById ??
+        _txnMaterializeLayerIdIndexFromWorkingScene();
+    if (!indexById.containsKey(layerId)) {
       return null;
     }
-    if (rebuiltIndex >= 0 &&
-        rebuiltIndex < scene.layers.length &&
-        scene.layers[rebuiltIndex].id == layerId) {
-      return rebuiltIndex;
+    final cachedIndex = _txnResolveLayerIndexFromMap(
+      indexById: indexById,
+      scene: scene,
+      layerId: layerId,
+    );
+    if (cachedIndex != null) {
+      return cachedIndex;
     }
-    return null;
+    return _txnResolveLayerIndexByRebuild(scene: scene, layerId: layerId);
   }
 
   int txnResolveInsertLayerIndex({LayerId? layerId}) {
@@ -415,7 +344,7 @@ class TxnContext {
     txnEnsureActive();
     _mutableScene = scene;
     _mutableSceneOwnedByTxn = true;
-    _clonedLayerIndexes.clear();
+    _clonedLayerIds.clear();
     _backgroundLayerCloned = false;
     _clonedNodeIds.clear();
     _baseAllNodeIds = txnCollectNodeIds(scene);
@@ -507,6 +436,34 @@ class TxnContext {
     return indexById;
   }
 
+  int? _txnResolveLayerIndexByRebuild({
+    required Scene scene,
+    required LayerId layerId,
+  }) {
+    return _txnResolveLayerIndexFromMap(
+      indexById: _txnMaterializeLayerIdIndexFromWorkingScene(
+        forceRebuild: true,
+      ),
+      scene: scene,
+      layerId: layerId,
+    );
+  }
+
+  int? _txnResolveLayerIndexFromMap({
+    required Map<LayerId, int> indexById,
+    required Scene scene,
+    required LayerId layerId,
+  }) {
+    final index = indexById[layerId];
+    if (index == null) {
+      return null;
+    }
+    if (index < 0 || index >= scene.layers.length) {
+      return null;
+    }
+    return scene.layers[index].id == layerId ? index : null;
+  }
+
   void _txnInvalidateLayerIdIndex() {
     _materializedLayerIndexById = null;
   }
@@ -528,41 +485,11 @@ class TxnContext {
   }
 
   SceneNode? _txnBaseNodeById(NodeId id) {
-    final entry = _baseNodeLocator[id];
-    if (entry == null) {
-      return null;
-    }
-
-    if (entry.layerIndex == -1) {
-      final backgroundLayer = _baseScene.backgroundLayer;
-      if (backgroundLayer == null) {
-        return null;
-      }
-      final nodeIndex = entry.nodeIndex;
-      if (nodeIndex < 0 || nodeIndex >= backgroundLayer.nodes.length) {
-        return null;
-      }
-      final node = backgroundLayer.nodes[nodeIndex];
-      if (node.id != id) {
-        return null;
-      }
-      return node;
-    }
-
-    final layerIndex = entry.layerIndex;
-    if (layerIndex < 0 || layerIndex >= _baseScene.layers.length) {
-      return null;
-    }
-    final layer = _baseScene.layers[layerIndex];
-    final nodeIndex = entry.nodeIndex;
-    if (nodeIndex < 0 || nodeIndex >= layer.nodes.length) {
-      return null;
-    }
-    final node = layer.nodes[nodeIndex];
-    if (node.id != id) {
-      return null;
-    }
-    return node;
+    return txnFindNodeByLocator(
+      scene: _baseScene,
+      nodeLocator: _baseNodeLocator,
+      nodeId: id,
+    )?.node;
   }
 
   Map<NodeId, NodeLocatorEntry> _txnMaterializeNodeLocator() {
@@ -574,6 +501,65 @@ class TxnContext {
     _materializedNodeLocator = materialized;
     debugNodeLocatorMaterializations = debugNodeLocatorMaterializations + 1;
     return materialized;
+  }
+
+  ({SceneNode node, int layerIndex, int nodeIndex}) _txnPrepareMutableNodeSlot(
+    NodeId id,
+  ) {
+    final foundInWorking = txnFindNodeById(id);
+    if (foundInWorking == null) {
+      throw StateError('Node not found: $id');
+    }
+    if (_mutableSceneOwnedByTxn) {
+      return foundInWorking;
+    }
+
+    if (foundInWorking.layerIndex == -1) {
+      txnEnsureMutableBackgroundLayer();
+    } else {
+      txnEnsureMutableLayer(foundInWorking.layerIndex);
+    }
+
+    final prepared = txnFindNodeById(id);
+    if (prepared == null) {
+      throw StateError('Node not found after layer clone: $id');
+    }
+    return prepared;
+  }
+
+  ({SceneNode node, int layerIndex, int nodeIndex})
+  _txnCloneResolvedNodeIfNeeded(
+    ({SceneNode node, int layerIndex, int nodeIndex}) resolved,
+  ) {
+    final nodeId = resolved.node.id;
+    if (_clonedNodeIds.contains(nodeId)) {
+      return resolved;
+    }
+    final baseNode = _txnBaseNodeById(nodeId);
+    if (baseNode == null || !identical(resolved.node, baseNode)) {
+      return resolved;
+    }
+
+    final clonedNode = txnCloneNode(resolved.node);
+    if (resolved.layerIndex == -1) {
+      final backgroundLayer = workingScene.backgroundLayer;
+      if (backgroundLayer == null) {
+        throw StateError(
+          'Background layer missing after mutable clone: ${resolved.node.id}',
+        );
+      }
+      backgroundLayer.nodes[resolved.nodeIndex] = clonedNode;
+    } else {
+      workingScene.layers[resolved.layerIndex].nodes[resolved.nodeIndex] =
+          clonedNode;
+    }
+    _clonedNodeIds.add(nodeId);
+    debugNodeClones = debugNodeClones + 1;
+    return (
+      node: clonedNode,
+      layerIndex: resolved.layerIndex,
+      nodeIndex: resolved.nodeIndex,
+    );
   }
 }
 

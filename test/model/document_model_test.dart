@@ -394,6 +394,22 @@ void main() {
     );
   });
 
+  test('txnShiftNodeLocatorLayersFrom shifts only content-layer entries', () {
+    final locator = <NodeId, NodeLocatorEntry>{
+      'bg': (layerIndex: -1, nodeIndex: 0),
+      'a': (layerIndex: 0, nodeIndex: 0),
+      'b': (layerIndex: 1, nodeIndex: 0),
+      'c': (layerIndex: 2, nodeIndex: 3),
+    };
+
+    txnShiftNodeLocatorLayersFrom(nodeLocator: locator, startLayerIndex: 1);
+
+    expect(locator['bg'], (layerIndex: -1, nodeIndex: 0));
+    expect(locator['a'], (layerIndex: 0, nodeIndex: 0));
+    expect(locator['b'], (layerIndex: 2, nodeIndex: 0));
+    expect(locator['c'], (layerIndex: 3, nodeIndex: 3));
+  });
+
   test('txnInsertNodeInScene rejects duplicate node ids', () {
     final scene = Scene(
       layers: <ContentLayer>[

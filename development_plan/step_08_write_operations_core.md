@@ -327,7 +327,7 @@ language: russian
     delete, structural clear без removed nodes и сохранение base-scene COW.
 [x] В `8.5` ввести один internal commit plan и убрать giant branch из
     `_txnWriteCommit(...)` без нового commit owner-а.
-[ ] В `8.6` схлопнуть executor apply/postcheck до устойчивых operation
+[x] В `8.6` схлопнуть executor apply/postcheck до устойчивых operation
     families и убрать формальный postcheck dispatch.
-[ ] В `8.7` убрать лишний layer-index bookkeeping и упростить node/layer hot
+[x] В `8.7` убрать лишний layer-index bookkeeping и упростить node/layer hot
     primitives в `TxnContext` без второго runtime cache.

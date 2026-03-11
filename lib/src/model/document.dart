@@ -117,6 +117,22 @@ Map<NodeId, NodeLocatorEntry> txnBuildNodeLocator(Scene scene) {
   return (node: node, layerIndex: layerIndex, nodeIndex: nodeIndex);
 }
 
+void txnShiftNodeLocatorLayersFrom({
+  required Map<NodeId, NodeLocatorEntry> nodeLocator,
+  required int startLayerIndex,
+}) {
+  for (final entry in nodeLocator.entries.toList(growable: false)) {
+    final location = entry.value;
+    if (location.layerIndex == -1 || location.layerIndex < startLayerIndex) {
+      continue;
+    }
+    nodeLocator[entry.key] = (
+      layerIndex: location.layerIndex + 1,
+      nodeIndex: location.nodeIndex,
+    );
+  }
+}
+
 SceneSnapshot txnSceneToSnapshot(Scene scene) {
   final backgroundLayer = scene.backgroundLayer;
   return sceneSnapshotFromValidated(
