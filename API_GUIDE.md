@@ -751,7 +751,8 @@ Parameters:
 `SceneView`:
 
 - captures pointer events from Flutter
-- routes them into controller input handling
+- routes them into controller input handling through a view-owned routed
+  `pointerId` space
 - paints the committed scene
 - paints interactive previews
 - owns render caches by default and resets them on document/epoch boundaries
@@ -785,6 +786,13 @@ Fields:
 
 When `timestampMs` is `null`, the controller assigns a monotonic internal
 timestamp.
+
+When input comes from `SceneView`, `pointerId` is a view-routed runtime value:
+
+- a routed id is allocated only on pointer `down`
+- the same routed id stays stable until matching `up` or `cancel`
+- stray non-down Flutter host events are dropped instead of falling back to raw
+  host pointer ids
 
 ### 10.2 `PointerInputSettings`
 

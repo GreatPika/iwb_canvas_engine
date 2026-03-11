@@ -29,6 +29,11 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ### Changed
 
+- `SceneViewInteractive` now owns raw Flutter pointer routing through the
+  dedicated `SceneViewPointerRouter`, so routed `pointerId` values are created
+  only on `down`, stray non-down host events are dropped, minimum free slot
+  reuse stays deterministic, and pending pointer-setting resets wait for full
+  router idle instead of only the tracked pointer.
 - Render-cache invalidation is now explicitly owned by
   `SceneRenderCaches.clearAll()` on controller epoch/document boundaries;
   render cache keys stay scoped to local revision/layout inputs only, while

@@ -126,26 +126,26 @@ owner raw-pointer lifecycle и routed slot ids, а также зафиксиро
 
 ## Последовательность реализации (только действия)
 
-[ ] Создать `lib/src/view/scene_view_pointer_router.dart` как owner
+[x] Создать `lib/src/view/scene_view_pointer_router.dart` как owner
     raw-to-slot lifecycle.
-[ ] Перевести `SceneViewInteractive` с прямых коллекций на новый router API.
-[ ] Убрать fallback raw pointer id для unknown non-down events.
-[ ] Перевести free-slot reuse на упорядоченную структуру без линейного scan.
-[ ] Зафиксировать idle/gate contract так, чтобы reset/apply pending были
+[x] Перевести `SceneViewInteractive` с прямых коллекций на новый router API.
+[x] Убрать fallback raw pointer id для unknown non-down events.
+[x] Перевести free-slot reuse на упорядоченную структуру без линейного scan.
+[x] Зафиксировать idle/gate contract так, чтобы reset/apply pending были
     возможны только после полного release всех raw pointers.
 
 ## Критерии приёмки
 
-[ ] `SceneViewPointerRouter` является одним owner-ом raw-to-slot routing и
+[x] `SceneViewPointerRouter` является одним owner-ом raw-to-slot routing и
     active signal gate.
-[ ] Raw pointer ids и routed pointer ids больше не смешиваются в одном
+[x] Raw pointer ids и routed pointer ids больше не смешиваются в одном
     пространстве.
-[ ] Unknown non-down raw pointer не получает synthetic routed id и не
+[x] Unknown non-down raw pointer не получает synthetic routed id и не
     пробрасывается дальше как raw-id fallback.
-[ ] Один raw pointer сохраняет routed slot id до terminal release, после чего
+[x] Один raw pointer сохраняет routed slot id до terminal release, после чего
     slot возвращается в минимальный свободный pool.
-[ ] Host не делает reset/apply pending, пока router не стал idle.
-[ ] Повторная диагностика
+[x] Host не делает reset/apply pending, пока router не стал idle.
+[x] Повторная диагностика
     `dcm calculate-metrics lib/src/view/scene_view_interactive.dart lib/src/view/scene_view_pointer_router.dart --report-all`
     приложена к результату шага; новый owner-файл
     `scene_view_pointer_router.dart` и step-owned router methods не содержат
@@ -154,9 +154,9 @@ owner raw-pointer lifecycle и routed slot ids, а также зафиксиро
 
 ## Тестовый контур шага
 
-[ ] Новый targeted test:
+[x] Новый targeted test:
     `test/view/scene_view_pointer_router_test.dart`
-[ ] `test/view/scene_view_interactive_test.dart`
+[x] `test/view/scene_view_interactive_test.dart`
     с покрытием:
     - `INV-ENG-VIEW-POINTER-SLOT-LIFECYCLE`
     - `INV-ENG-VIEW-ACTIVE-POINTER-GATE`
@@ -164,3 +164,34 @@ owner raw-pointer lifecycle и routed slot ids, а также зафиксиро
     - порядок `release slot -> only then reset/apply pending`
 [ ] `dart run tool/check_invariant_coverage.dart` если меняется
     `tool/invariant_registry.dart`
+
+## Повторная диагностика метрик
+
+Команда:
+
+```sh
+dcm calculate-metrics lib/src/view/scene_view_interactive.dart lib/src/view/scene_view_pointer_router.dart --report-all
+```
+
+Зафиксированный результат для step-owned owner-ов и методов шага `10.1`:
+
+- `SceneViewPointerRouter.route`: `cyclomatic-complexity = 3`,
+  `maximum-nesting-level = 1`, `source-lines-of-code = 10`
+- `SceneViewPointerRouter.shouldTrackSignals`: `4 / 2 / 12`
+- `SceneViewPointerRouter.release`: `5 / 1 / 20`
+- `SceneViewPointerRouter.reset`: `1 / 0 / 5`
+- `SceneViewPointerRouter._allocatePointerId`: `2 / 1 / 6`
+- `_SceneViewInteractiveState._handlePointerEvent`: `4 / 1 / 29`
+- `_SceneViewInteractiveState._handleTrackedSignals`: `3 / 1 / 9`
+- `_SceneViewInteractiveState._handlePointerSignal`: `2 / 1 / 7`
+- `_SceneViewInteractiveState._releasePointerIfEnded`: `4 / 1 / 7`
+
+Вывод по шагу:
+
+- step-owned методы `10.1` не содержат `HIGH` по
+  `cyclomatic-complexity`, `maximum-nesting-level` и
+  `source-lines-of-code`
+- новый owner-файл `scene_view_pointer_router.dart` проходит целевой предел
+  `10 / 4 / 40` с запасом
+- исторические watchpoints вне границы шага не использовались как acceptance
+  gate для `10.1`

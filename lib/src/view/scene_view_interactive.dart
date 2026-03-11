@@ -11,6 +11,7 @@ import '../contract/canvas_pointer_input.dart';
 import '../render/scene_painter.dart';
 import '../render/render_geometry_cache.dart';
 import '../render/scene_render_caches.dart';
+import 'scene_view_pointer_router.dart';
 
 ui.Image? _defaultImageResolver(String _) => null;
 
@@ -63,11 +64,7 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
   PointerInputSettings? _pendingPointerSettings;
   Timer? _pendingTapTimer;
   int? _pendingTapFlushTimestampMs;
-  int? _activePointerId;
-
-  final Map<int, int> _pointerSlotByRawPointer = <int, int>{};
-  final List<int> _freePointerSlots = <int>[];
-  int _nextPointerSlotId = 1;
+  final SceneViewPointerRouter _pointerRouter = SceneViewPointerRouter();
   int _lastEpoch = 0;
 
   late SceneRenderCaches _renderCaches;
@@ -156,7 +153,18 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
   }
 
   void _handlePointerEvent(PointerEvent event, PointerPhase phase) {
-    final pointerId = _resolvePointerId(event, phase);
+    final routedPointer = _pointerRouter.route(
+      rawPointer: event.pointer,
+      phase: phase,
+    );
+    if (routedPointer.isStray) {
+      return;
+    }
+
+    final pointerId = routedPointer.pointerId;
+    if (pointerId == null) {
+      return;
+    }
     final input = CanvasPointerInput(
       pointerId: pointerId,
       position: event.localPosition,
@@ -172,29 +180,32 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
       kind: input.kind,
     );
 
-    _captureActivePointer(sample);
     widget.controller.handlePointer(input);
-
-    if (_shouldTrackSignals(sample)) {
-      final signals = _pointerTracker.handle(sample);
-      for (final signal in signals) {
-        if (signal.type == PointerSignalType.doubleTap) {
-          widget.controller.handleDoubleTap(
-            position: signal.position,
-            timestampMs: signal.timestampMs,
-          );
-        }
-      }
-    }
-
+    _handleTrackedSignals(sample);
     _syncPendingFlushTimer(referenceTimestampMs: sample.timestampMs);
-    _releaseActivePointerIfEnded(sample);
-    _releasePointerSlotIfEnded(event, phase);
+    _releasePointerIfEnded(event.pointer, phase);
   }
 
-  bool _shouldTrackSignals(PointerSample sample) {
-    final active = _activePointerId;
-    return active == null || active == sample.pointerId;
+  void _handleTrackedSignals(PointerSample sample) {
+    if (!_pointerRouter.shouldTrackSignals(
+      pointerId: sample.pointerId,
+      phase: sample.phase,
+    )) {
+      return;
+    }
+    for (final signal in _pointerTracker.handle(sample)) {
+      _handlePointerSignal(signal);
+    }
+  }
+
+  void _handlePointerSignal(PointerSignal signal) {
+    if (signal.type != PointerSignalType.doubleTap) {
+      return;
+    }
+    widget.controller.handleDoubleTap(
+      position: signal.position,
+      timestampMs: signal.timestampMs,
+    );
   }
 
   void _syncPendingFlushTimer({required int referenceTimestampMs}) {
@@ -239,56 +250,14 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
     _pendingTapFlushTimestampMs = null;
   }
 
-  void _captureActivePointer(PointerSample sample) {
-    if (sample.phase == PointerPhase.down && _activePointerId == null) {
-      _activePointerId = sample.pointerId;
-    }
-  }
-
-  void _releaseActivePointerIfEnded(PointerSample sample) {
-    if (sample.phase != PointerPhase.up &&
-        sample.phase != PointerPhase.cancel) {
+  void _releasePointerIfEnded(int rawPointer, PointerPhase phase) {
+    if (phase != PointerPhase.up && phase != PointerPhase.cancel) {
       return;
     }
-    if (_activePointerId != sample.pointerId) return;
-    _activePointerId = null;
-    _applyPendingPointerSettingsIfPossible();
-  }
-
-  int _resolvePointerId(PointerEvent event, PointerPhase phase) {
-    final rawPointer = event.pointer;
-    final existing = _pointerSlotByRawPointer[rawPointer];
-    if (existing != null) return existing;
-    if (phase != PointerPhase.down) return rawPointer;
-
-    final slotId = _acquirePointerSlot();
-    _pointerSlotByRawPointer[rawPointer] = slotId;
-    return slotId;
-  }
-
-  int _acquirePointerSlot() {
-    if (_freePointerSlots.isEmpty) {
-      return _nextPointerSlotId++;
+    final release = _pointerRouter.release(rawPointer);
+    if (release.isIdleAfterRelease) {
+      _applyPendingPointerSettingsIfPossible();
     }
-
-    var minIndex = 0;
-    var minValue = _freePointerSlots.first;
-    for (var i = 1; i < _freePointerSlots.length; i++) {
-      final value = _freePointerSlots[i];
-      if (value < minValue) {
-        minValue = value;
-        minIndex = i;
-      }
-    }
-    _freePointerSlots.removeAt(minIndex);
-    return minValue;
-  }
-
-  void _releasePointerSlotIfEnded(PointerEvent event, PointerPhase phase) {
-    if (phase != PointerPhase.up && phase != PointerPhase.cancel) return;
-    final slotId = _pointerSlotByRawPointer.remove(event.pointer);
-    if (slotId == null) return;
-    _freePointerSlots.add(slotId);
   }
 
   void _clearAllCaches() {
@@ -298,7 +267,7 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
   void _handleControllerChanged() {
     final nextPointerSettings = widget.controller.pointerSettings;
     if (!_pointerSettingsEqual(_lastPointerSettings, nextPointerSettings)) {
-      if (_activePointerId != null) {
+      if (_pointerRouter.hasLiveRawPointers) {
         _pendingPointerSettings = nextPointerSettings;
       } else {
         _resetPointerTracking(settings: nextPointerSettings);
@@ -320,16 +289,13 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
     _pendingPointerSettings = null;
     _lastPointerSettings = settings;
     _pointerTracker = PointerInputTracker(settings: settings);
-    _activePointerId = null;
     _clearPendingTapTimer();
-    _pointerSlotByRawPointer.clear();
-    _freePointerSlots.clear();
-    _nextPointerSlotId = 1;
+    _pointerRouter.reset();
   }
 
   void _applyPendingPointerSettingsIfPossible() {
     final pending = _pendingPointerSettings;
-    if (pending == null || _activePointerId != null) return;
+    if (pending == null || !_pointerRouter.isIdle) return;
     _resetPointerTracking(settings: pending);
   }
 
@@ -398,16 +364,39 @@ class _SceneInteractiveOverlayPainter extends CustomPainter {
     );
 
     if (points.length == 1) {
-      canvas.drawCircle(
-        toView(points.first, cameraOffset),
-        thickness / 2,
-        Paint()
-          ..style = PaintingStyle.fill
-          ..color = color,
+      _drawSinglePointStrokePreview(
+        canvas: canvas,
+        cameraOffset: cameraOffset,
+        point: points.first,
+        thickness: thickness,
+        color: color,
       );
       return;
     }
 
+    canvas.drawPath(
+      _buildStrokePreviewPath(points, cameraOffset),
+      _buildStrokePreviewPaint(thickness, color),
+    );
+  }
+
+  void _drawSinglePointStrokePreview({
+    required Canvas canvas,
+    required Offset cameraOffset,
+    required Offset point,
+    required double thickness,
+    required Color color,
+  }) {
+    canvas.drawCircle(
+      toView(point, cameraOffset),
+      thickness / 2,
+      Paint()
+        ..style = PaintingStyle.fill
+        ..color = color,
+    );
+  }
+
+  Path _buildStrokePreviewPath(List<Offset> points, Offset cameraOffset) {
     final path = Path()
       ..moveTo(
         points.first.dx - cameraOffset.dx,
@@ -417,15 +406,16 @@ class _SceneInteractiveOverlayPainter extends CustomPainter {
       final point = points[i];
       path.lineTo(point.dx - cameraOffset.dx, point.dy - cameraOffset.dy);
     }
-    canvas.drawPath(
-      path,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = thickness
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round
-        ..color = color,
-    );
+    return path;
+  }
+
+  Paint _buildStrokePreviewPaint(double thickness, Color color) {
+    return Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = thickness
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..color = color;
   }
 
   void _paintLinePreview(Canvas canvas, Offset cameraOffset) {

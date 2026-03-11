@@ -163,14 +163,14 @@ language: russian
 
 ## Чеклист выполнения
 
-[ ] Переформулировать шаг `10` как umbrella-этап и вынести реализацию в
+[x] Переформулировать шаг `10` как umbrella-этап и вынести реализацию в
     `10.1`, `10.2`, `10.3`.
-[ ] В `10.1` принять финальное решение по owner-у raw-to-slot routing,
+[x] В `10.1` принять финальное решение по owner-у raw-to-slot routing,
     active-pointer gate и slot reuse contract.
 [ ] В `10.2` зафиксировать один host admission/flush lifecycle без утечки
     invalid/timer logic в controller.
 [ ] В `10.3` зафиксировать value semantics и pending-apply contract для
     `PointerInputSettings` без overlap со шагом `11`.
-[ ] Закрепить в критериях приёмки каждого подшага повторную диагностику
+[x] Закрепить в критериях приёмки каждого подшага повторную диагностику
     метрик с порогами `cyclomatic-complexity <= 10`,
     `maximum-nesting-level <= 4`, `source-lines-of-code <= 40`.

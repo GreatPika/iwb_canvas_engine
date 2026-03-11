@@ -143,7 +143,8 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - `actions`, `editTextRequests`, and `ChangeNotifier` updates are asynchronous;
   listener notifications are microtask-deferred and coalesced.
 - `setPointerSettings(...)` is applied live by `SceneView`; active gestures keep
-  their current settings until `up` or `cancel`.
+  their current settings until `up` or `cancel`, and parallel raw host pointers
+  do not force an early reset of routed pointer tracking.
 
 ## Where to look next
 

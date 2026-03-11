@@ -92,7 +92,8 @@ Ownership decisions for the target state:
 ## Runtime data flow
 
 1. `SceneView` receives Flutter pointer input and normalizes it into public
-   `CanvasPointerInput`.
+   `CanvasPointerInput`, while its view-local pointer router owns raw Flutter
+   pointer lifetimes and routed runtime `pointerId` allocation.
 2. `SceneControllerInteractive` validates input, maintains interactive state,
    and delegates committed mutations to `SceneControllerCore`.
 3. `SceneControllerCore` performs transactional writes and finalizes a canonical

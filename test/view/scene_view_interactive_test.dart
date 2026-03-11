@@ -483,6 +483,94 @@ void main() {
     },
   );
 
+  testWidgets(
+    'SceneViewInteractive drops stray non-down host events before controller routing',
+    (tester) async {
+      final controller = _RecordingPointerController(
+        initialSnapshot: _snapshot(text: 'stray'),
+      );
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+
+      await tester.sendEventToBinding(
+        const PointerMoveEvent(
+          pointer: 9001,
+          position: Offset(20, 20),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      await tester.sendEventToBinding(
+        const PointerUpEvent(
+          pointer: 9001,
+          position: Offset(20, 20),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      await tester.pump();
+
+      expect(controller.recordedInputs, isEmpty);
+    },
+  );
+
+  testWidgets(
+    'SceneViewInteractive delays pointer reset until all raw pointers are released',
+    (tester) async {
+      // INV:INV-ENG-VIEW-POINTER-SLOT-LIFECYCLE
+      // INV:INV-ENG-VIEW-ACTIVE-POINTER-GATE
+      final controller = _RecordingPointerController(
+        initialSnapshot: _snapshot(text: 'idle-gate'),
+        pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 300),
+      );
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+
+      final first = await tester.startGesture(
+        const Offset(10, 10),
+        pointer: 701,
+      );
+      final second = await tester.startGesture(
+        const Offset(12, 10),
+        pointer: 702,
+      );
+      controller.setPointerSettings(
+        const PointerInputSettings(doubleTapMaxDelayMs: 1),
+      );
+      await tester.pump();
+
+      await first.up();
+      await tester.pump();
+      await second.moveBy(const Offset(8, 0));
+      await second.up();
+      await tester.pump();
+
+      final third = await tester.startGesture(
+        const Offset(14, 10),
+        pointer: 703,
+      );
+      await third.up();
+      await tester.pump();
+
+      expect(
+        controller.recordedInputs
+            .map((input) => (input.pointerId, input.phase))
+            .toList(),
+        <(int, CanvasPointerPhase)>[
+          (1, CanvasPointerPhase.down),
+          (2, CanvasPointerPhase.down),
+          (1, CanvasPointerPhase.up),
+          (2, CanvasPointerPhase.move),
+          (2, CanvasPointerPhase.up),
+          (1, CanvasPointerPhase.down),
+          (1, CanvasPointerPhase.up),
+        ],
+      );
+    },
+  );
+
   testWidgets('SceneViewInteractive paints single-point stroke preview', (
     tester,
   ) async {
@@ -685,4 +773,19 @@ class _OverlayTestController extends SceneControllerInteractive {
 
   @override
   Color get activeLinePreviewColor => lineColor;
+}
+
+class _RecordingPointerController extends SceneControllerInteractive {
+  _RecordingPointerController({
+    required super.initialSnapshot,
+    super.pointerSettings,
+  });
+
+  final List<CanvasPointerInput> recordedInputs = <CanvasPointerInput>[];
+
+  @override
+  void handlePointer(CanvasPointerInput input) {
+    recordedInputs.add(input);
+    super.handlePointer(input);
+  }
 }
