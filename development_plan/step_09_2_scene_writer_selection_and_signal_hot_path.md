@@ -97,34 +97,34 @@ signal copy/freeze работу без явного owner-решения.
 
 ## Последовательность реализации (только действия)
 
-[ ] Добавить narrow internal-only writer result seam для command adapters.
-[ ] Оставить public `SceneWriteTxn` без новых internal-convenience методов.
-[ ] Довести `writeSelectionSelectAll(...)` до одного materialized target set и
+[x] Добавить narrow internal-only writer result seam для command adapters.
+[x] Оставить public `SceneWriteTxn` без новых internal-convenience методов.
+[x] Довести `writeSelectionSelectAll(...)` до одного materialized target set и
     одного equality decision.
-[ ] Перевести `writeDeleteSelection(...)` на канонический bulk delete path из
+[x] Перевести `writeDeleteSelection(...)` на канонический bulk delete path из
     `9.1` без ad hoc delete semantics.
-[ ] Убрать лишнюю промежуточную copy/freeze работу из `writeSignalEnqueue(...)`
+[x] Убрать лишнюю промежуточную copy/freeze работу из `writeSignalEnqueue(...)`
     при сохранении immutability boundary.
-[ ] Закрепить tests на empty selection replacement и transform order как на
+[x] Закрепить tests на empty selection replacement и transform order как на
     explicit writer contract.
-[ ] Повторно прогнать
+[x] Повторно прогнать
     `dcm calculate-metrics lib/src/controller/scene_writer.dart --report-all`
     и зафиксировать итоговые watchpoints этого owner-а в результате шага.
 
 ## Критерии приёмки
 
-[ ] `SceneWriter` остаётся единственным owner-ом selection-only mutations и
+[x] `SceneWriter` остаётся единственным owner-ом selection-only mutations и
     signal buffering boundary.
-[ ] Internal commands получают exact writer results без `snapshot` diff.
-[ ] `SceneWriteTxn` не расширяется ради internal command convenience.
-[ ] Empty normalized selection replacement остаётся no-op.
-[ ] `writeSelectionSelectAll(...)` не делает лишнюю материализацию current vs
+[x] Internal commands получают exact writer results без `snapshot` diff.
+[x] `SceneWriteTxn` не расширяется ради internal command convenience.
+[x] Empty normalized selection replacement остаётся no-op.
+[x] `writeSelectionSelectAll(...)` не делает лишнюю материализацию current vs
     next selection сверх одного target set.
-[ ] `writeSignalEnqueue(...)` больше не платит лишней промежуточной копией
+[x] `writeSignalEnqueue(...)` больше не платит лишней промежуточной копией
     поверх обязательного immutability barrier.
-[ ] Transform order закреплён tests и step contract как
+[x] Transform order закреплён tests и step contract как
     `delta.multiply(existingTransform)`.
-[ ] Повторная диагностика
+[x] Повторная диагностика
     `dcm calculate-metrics lib/src/controller/scene_writer.dart --report-all`
     приложена к результату шага; для step-owned watchpoints
     `writeSelectionSelectAll(...)` и `writeSignalEnqueue(...)` не остаётся
@@ -132,12 +132,44 @@ signal copy/freeze работу без явного owner-решения.
 
 ## Тестовый контур шага
 
-[ ] `test/controller/internal/scene_writer_test.dart`
-[ ] `test/controller/core/scene_controller_commit_atomicity_test.dart`
-[ ] `test/controller/scene_controller_randomized_txn_test.dart`
-[ ] Точечные сценарии:
+[x] `test/controller/internal/scene_writer_test.dart`
+[x] `test/controller/core/scene_controller_commit_atomicity_test.dart`
+[x] `test/controller/scene_controller_randomized_txn_test.dart`
+[x] Точечные сценарии:
     - empty normalized selection replacement остаётся no-op
     - select-all не создаёт ложный selection drift
     - signal enqueue не делает двойную copy/freeze работу
-[ ] Повторная диагностика:
+[x] Повторная диагностика:
     `dcm calculate-metrics lib/src/controller/scene_writer.dart --report-all`
+
+## Результат шага
+
+- `SceneWriter` получил internal-only seam:
+  `writeSelectionReplaceResult(...)`,
+  `writeSelectionSelectAllResult(...)`,
+  `writeOwnedSignalEnqueue(...)` и точные `...Changed(...)` helpers для
+  scene-setting commands.
+- Internal commands больше не используют `snapshot` diff для selection/grid/
+  camera/background сигналов и не расширяют public `SceneWriteTxn`.
+- `writeDeleteSelection(...)` теперь идёт через `DeleteNodesBulkOp.borrowed(...)`
+  поверх writer-owned selection source of truth без лишней предварительной
+  materialization.
+
+## Метрики и watchpoints
+
+- `dcm calculate-metrics lib/src/controller/scene_writer.dart --report-all`
+  после шага:
+  - `writeSelectionReplaceResult(...)`: cyclomatic complexity `3`, nesting `1`,
+    source lines `17`
+  - `writeSelectionSelectAllResult(...)`: cyclomatic complexity `5`, nesting
+    `3`, source lines `20`
+  - `writeSignalEnqueue(...)`: cyclomatic complexity `1`, nesting `0`,
+    source lines `6`
+  - `writeOwnedSignalEnqueue(...)`: cyclomatic complexity `1`, nesting `0`,
+    source lines `4`
+- Дополнительно проверены связанные adapters:
+  - `scene_commands.dart`: без `HIGH`, selection/signal helpers остаются в
+    пределах порогов
+  - `draw_commands.dart`: после схлопывания line segment в record-параметр
+    `writeDrawLine(...)` снижен до `number-of-parameters = 4` (`NEAR`, без
+    `HIGH`)

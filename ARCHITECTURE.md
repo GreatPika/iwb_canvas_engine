@@ -163,6 +163,10 @@ most important architectural rules are:
   and executed by `MutationExecutor`; `SceneWriteTxn` stays the public write
   seam, while `SceneControllerCore` remains the owner of commit/store/signal
   lifecycle.
+- `SceneWriter` is the internal owner for selection-only transitions, exact
+  command-facing mutation results, and the buffered signal enqueue boundary;
+  internal commands consume that writer-local seam directly instead of
+  expanding the public `SceneWriteTxn` contract.
 - Successful commits finalize store state before publishing signals or repaint
   notifications.
 - Committed signals are emitted before repaint listener notification for the

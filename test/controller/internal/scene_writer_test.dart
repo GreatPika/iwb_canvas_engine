@@ -525,6 +525,50 @@ void main() {
     },
   );
 
+  test(
+    'SceneWriter writeSelectionReplaceResult returns sorted committed ids for internal commands',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-auto-4c',
+              nodes: <SceneNode>[
+                RectNode(id: 'z-node', size: const Size(10, 10)),
+                RectNode(id: 'a-node', size: const Size(10, 10)),
+                RectNode(id: 'base', size: const Size(10, 10)),
+              ],
+            ),
+          ],
+        ),
+        workingSelection: <NodeId>{'base'},
+        baseAllNodeIds: const <NodeId>{'z-node', 'a-node', 'base'},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+      final writer = newWriter(ctx, txnSignalSink: (_) {});
+
+      final changedIds = writer.writeSelectionReplaceResult(const <NodeId>{
+        'z-node',
+        'a-node',
+        'base',
+      });
+      final noChange = writer.writeSelectionReplaceResult(const <NodeId>{
+        'base',
+        'a-node',
+        'z-node',
+      });
+
+      expect(changedIds, const <NodeId>['a-node', 'base', 'z-node']);
+      expect(noChange, isNull);
+      expect(writer.selectedNodeIds, const <NodeId>{
+        'z-node',
+        'a-node',
+        'base',
+      });
+    },
+  );
+
   test('SceneWriter writeNodeErase respects deletable layer policy', () {
     // INV:INV-ENG-WRITE-NUMERIC-GUARDS
     final ctx = TxnContext(
@@ -689,6 +733,40 @@ void main() {
     expect(updated.transform.toJsonMap(), isNot(reverseOrder.toJsonMap()));
   });
 
+  test(
+    'writeSelectionSelectAllResult keeps exact changed semantics for empty selection result',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-auto-6b',
+              nodes: <SceneNode>[
+                RectNode(
+                  id: 'locked',
+                  size: const Size(10, 10),
+                  isSelectable: false,
+                ),
+              ],
+            ),
+          ],
+        ),
+        workingSelection: <NodeId>{'locked'},
+        baseAllNodeIds: const <NodeId>{'locked'},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+      final writer = newWriter(ctx, txnSignalSink: (_) {});
+
+      final changedToEmpty = writer.writeSelectionSelectAllResult();
+      final stableEmpty = writer.writeSelectionSelectAllResult();
+
+      expect(changedToEmpty, (selectedCount: 0, changed: true));
+      expect(stableEmpty, (selectedCount: 0, changed: false));
+      expect(writer.selectedNodeIds, isEmpty);
+    },
+  );
+
   test('writeNodeTransformSet marks visual change when bounds stay same', () {
     final ctx = TxnContext(
       baseScene: Scene(
@@ -722,6 +800,29 @@ void main() {
     expect(changed, isTrue);
     expect(ctx.changeSet.boundsChanged, isFalse);
     expect(ctx.changeSet.visualChanged, isTrue);
+  });
+
+  test('writeOwnedSignalEnqueue keeps single immutability boundary', () {
+    final bufferedSignals = <BufferedSignal>[];
+    final ctx = TxnContext(
+      baseScene: Scene(),
+      workingSelection: <NodeId>{},
+      baseAllNodeIds: const <NodeId>{},
+      nodeIdSeed: 0,
+      nextInstanceRevision: 1,
+    );
+    final writer = newWriter(ctx, txnSignalSink: bufferedSignals.add);
+    final nodeIds = <NodeId>['a', 'b'];
+
+    writer.writeOwnedSignalEnqueue(type: 'owned.signal', nodeIds: nodeIds);
+    nodeIds.add('c');
+
+    expect(bufferedSignals.single.type, 'owned.signal');
+    expect(bufferedSignals.single.nodeIds, const <NodeId>['a', 'b']);
+    expect(
+      () => bufferedSignals.single.nodeIds.add('d'),
+      throwsUnsupportedError,
+    );
   });
 
   test('SceneWriter covers clear/delete/mark helpers', () {

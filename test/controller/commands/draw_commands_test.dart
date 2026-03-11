@@ -46,8 +46,7 @@ void main() {
       color: const Color(0xFF000000),
     );
     final lineId = controller.draw.writeDrawLine(
-      start: const Offset(0, 0),
-      end: const Offset(0, 10),
+      segment: (start: const Offset(0, 0), end: const Offset(0, 10)),
       thickness: 3,
       color: const Color(0xFF111111),
     );
@@ -155,8 +154,7 @@ void main() {
 
     expect(
       () => controller.draw.writeDrawLine(
-        start: const Offset(0, 0),
-        end: const Offset(10, 10),
+        segment: (start: const Offset(0, 0), end: const Offset(10, 10)),
         thickness: 0,
         color: const Color(0xFF000000),
       ),

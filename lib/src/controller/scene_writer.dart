@@ -78,6 +78,10 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   bool writeSelectionReplace(Iterable<NodeId> ids) {
+    return writeSelectionReplaceResult(ids) != null;
+  }
+
+  List<NodeId>? writeSelectionReplaceResult(Iterable<NodeId> ids) {
     _ensureTxnActive();
     final next = txnNormalizeSelection(
       rawSelection: ids.toSet(),
@@ -85,16 +89,16 @@ class SceneWriter implements SceneWriteTxn {
       nodeLocator: _ctx.txnNodeLocatorView(),
     );
     if (next.isEmpty) {
-      return false;
+      return null;
     }
     if (_txnSetsEqual(_ctx.workingSelection, next)) {
-      return false;
+      return null;
     }
     _ctx.workingSelection
       ..clear()
       ..addAll(next);
     _ctx.changeSet.txnMarkSelectionChanged();
-    return true;
+    return _sortedSelectionNodeIds();
   }
 
   @override
@@ -129,26 +133,34 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   int writeSelectionSelectAll({bool onlySelectable = true}) {
+    return writeSelectionSelectAllResult(
+      onlySelectable: onlySelectable,
+    ).selectedCount;
+  }
+
+  ({int selectedCount, bool changed}) writeSelectionSelectAllResult({
+    bool onlySelectable = true,
+  }) {
     _ensureTxnActive();
-    final ids = HashSet<NodeId>();
+    final targetSelection = HashSet<NodeId>();
     for (final layer in _ctx.workingScene.layers) {
       for (final node in layer.nodes) {
         if (isNodeInteractiveForSelection(
           node,
           onlySelectable: onlySelectable,
         )) {
-          ids.add(node.id);
+          targetSelection.add(node.id);
         }
       }
     }
-    if (_txnSetsEqual(_ctx.workingSelection, ids)) {
-      return 0;
+    if (_txnSetsEqual(_ctx.workingSelection, targetSelection)) {
+      return (selectedCount: 0, changed: false);
     }
     _ctx.workingSelection
       ..clear()
-      ..addAll(ids);
+      ..addAll(targetSelection);
     _ctx.changeSet.txnMarkSelectionChanged();
-    return ids.length;
+    return (selectedCount: targetSelection.length, changed: true);
   }
 
   @override
@@ -169,7 +181,7 @@ class SceneWriter implements SceneWriteTxn {
   int writeDeleteSelection() {
     _ensureTxnActive();
     return _mutationExecutor
-            .execute(_ctx, DeleteNodesBulkOp(_ctx.workingSelection))
+            .execute(_ctx, DeleteNodesBulkOp.borrowed(_ctx.workingSelection))
             .value
         as int;
   }
@@ -190,26 +202,42 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   void writeCameraOffset(Offset offset) {
+    writeCameraOffsetChanged(offset);
+  }
+
+  bool writeCameraOffsetChanged(Offset offset) {
     _ensureTxnActive();
-    _mutationExecutor.execute(_ctx, SetCameraOffsetOp(offset));
+    return _mutationExecutor.execute(_ctx, SetCameraOffsetOp(offset)).changed;
   }
 
   @override
   void writeGridEnable(bool enabled) {
+    writeGridEnableChanged(enabled);
+  }
+
+  bool writeGridEnableChanged(bool enabled) {
     _ensureTxnActive();
-    _mutationExecutor.execute(_ctx, SetGridEnabledOp(enabled));
+    return _mutationExecutor.execute(_ctx, SetGridEnabledOp(enabled)).changed;
   }
 
   @override
   void writeGridCellSize(double cellSize) {
+    writeGridCellSizeChanged(cellSize);
+  }
+
+  bool writeGridCellSizeChanged(double cellSize) {
     _ensureTxnActive();
-    _mutationExecutor.execute(_ctx, SetGridCellSizeOp(cellSize));
+    return _mutationExecutor.execute(_ctx, SetGridCellSizeOp(cellSize)).changed;
   }
 
   @override
   void writeBackgroundColor(Color color) {
+    writeBackgroundColorChanged(color);
+  }
+
+  bool writeBackgroundColorChanged(Color color) {
     _ensureTxnActive();
-    _mutationExecutor.execute(_ctx, SetBackgroundColorOp(color));
+    return _mutationExecutor.execute(_ctx, SetBackgroundColorOp(color)).changed;
   }
 
   @override
@@ -225,13 +253,28 @@ class SceneWriter implements SceneWriteTxn {
     Map<String, Object?>? payload,
   }) {
     _ensureTxnActive();
-    txnSignalSink(
-      BufferedSignal(
-        type: type,
-        nodeIds: List<NodeId>.of(nodeIds),
-        payload: payload,
-      ),
+    writeOwnedSignalEnqueue(
+      type: type,
+      nodeIds: List<NodeId>.of(nodeIds),
+      payload: payload,
     );
+  }
+
+  void writeOwnedSignalEnqueue({
+    required String type,
+    List<NodeId> nodeIds = const <NodeId>[],
+    Map<String, Object?>? payload,
+  }) {
+    _ensureTxnActive();
+    txnSignalSink(
+      BufferedSignal(type: type, nodeIds: nodeIds, payload: payload),
+    );
+  }
+
+  List<NodeId> _sortedSelectionNodeIds() {
+    final ids = _ctx.workingSelection.toList(growable: false);
+    ids.sort((a, b) => a.compareTo(b));
+    return ids;
   }
 
   bool _txnSetsEqual(Set<NodeId> left, Set<NodeId> right) {

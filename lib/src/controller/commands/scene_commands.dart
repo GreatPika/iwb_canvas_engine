@@ -6,6 +6,7 @@ import '../../contract/transform2d.dart';
 import '../../contract/node_patch.dart';
 import '../../contract/node_spec.dart';
 import '../../contract/scene_write_txn.dart';
+import '../scene_writer.dart';
 
 class SceneCommands {
   SceneCommands(this._writeRunner);
@@ -18,8 +19,8 @@ class SceneCommands {
     return sorted;
   }
 
-  bool _nodeIdSetsEqual(Set<NodeId> left, Set<NodeId> right) {
-    return left.length == right.length && left.containsAll(right);
+  SceneWriter _sceneWriter(SceneWriteTxn writer) {
+    return writer as SceneWriter;
   }
 
   NodeId writeAddNode(NodeSpec spec, {LayerId? layerId, int? insertIndex}) {
@@ -29,7 +30,9 @@ class SceneCommands {
         layerId: layerId,
         insertIndex: insertIndex,
       );
-      writer.writeSignalEnqueue(type: 'node.added', nodeIds: <NodeId>[nodeId]);
+      _sceneWriter(
+        writer,
+      ).writeOwnedSignalEnqueue(type: 'node.added', nodeIds: <NodeId>[nodeId]);
       return nodeId;
     });
   }
@@ -38,7 +41,7 @@ class SceneCommands {
     return _writeRunner((writer) {
       final changed = writer.writeNodePatch(patch);
       if (changed) {
-        writer.writeSignalEnqueue(
+        _sceneWriter(writer).writeOwnedSignalEnqueue(
           type: 'node.updated',
           nodeIds: <NodeId>[patch.id],
         );
@@ -51,7 +54,7 @@ class SceneCommands {
     return _writeRunner((writer) {
       final deleted = writer.writeNodeErase(nodeId);
       if (deleted) {
-        writer.writeSignalEnqueue(
+        _sceneWriter(writer).writeOwnedSignalEnqueue(
           type: 'node.removed',
           nodeIds: <NodeId>[nodeId],
         );
@@ -62,10 +65,11 @@ class SceneCommands {
 
   void writeSelectionReplace(Iterable<NodeId> nodeIds) {
     _writeRunner<void>((writer) {
-      final changed = writer.writeSelectionReplace(nodeIds);
-      if (changed) {
-        final sortedNodeIds = _sortedNodeIds(writer.selectedNodeIds);
-        writer.writeSignalEnqueue(
+      final sortedNodeIds = _sceneWriter(
+        writer,
+      ).writeSelectionReplaceResult(nodeIds);
+      if (sortedNodeIds != null) {
+        _sceneWriter(writer).writeOwnedSignalEnqueue(
           type: 'selection.replaced',
           nodeIds: sortedNodeIds,
         );
@@ -77,7 +81,7 @@ class SceneCommands {
     _writeRunner<void>((writer) {
       final changed = writer.writeSelectionToggle(nodeId);
       if (changed) {
-        writer.writeSignalEnqueue(
+        _sceneWriter(writer).writeOwnedSignalEnqueue(
           type: 'selection.toggled',
           nodeIds: _sortedNodeIds(<NodeId>[nodeId]),
         );
@@ -89,22 +93,20 @@ class SceneCommands {
     _writeRunner<void>((writer) {
       final changed = writer.writeSelectionClear();
       if (changed) {
-        writer.writeSignalEnqueue(type: 'selection.cleared');
+        _sceneWriter(writer).writeOwnedSignalEnqueue(type: 'selection.cleared');
       }
     });
   }
 
   int writeSelectionSelectAll({bool onlySelectable = true}) {
     return _writeRunner((writer) {
-      final beforeSelection = Set<NodeId>.of(writer.selectedNodeIds);
-      final count = writer.writeSelectionSelectAll(
-        onlySelectable: onlySelectable,
-      );
-      final afterSelection = writer.selectedNodeIds;
-      if (!_nodeIdSetsEqual(beforeSelection, afterSelection)) {
-        writer.writeSignalEnqueue(type: 'selection.all');
+      final result = _sceneWriter(
+        writer,
+      ).writeSelectionSelectAllResult(onlySelectable: onlySelectable);
+      if (result.changed) {
+        _sceneWriter(writer).writeOwnedSignalEnqueue(type: 'selection.all');
       }
-      return count;
+      return result.selectedCount;
     });
   }
 
@@ -112,7 +114,7 @@ class SceneCommands {
     return _writeRunner((writer) {
       final affected = writer.writeSelectionTransform(delta);
       if (affected > 0) {
-        writer.writeSignalEnqueue(
+        _sceneWriter(writer).writeOwnedSignalEnqueue(
           type: 'selection.transformed',
           payload: <String, Object?>{'delta': delta.toJsonMap()},
         );
@@ -125,7 +127,7 @@ class SceneCommands {
     return _writeRunner((writer) {
       final removed = writer.writeDeleteSelection();
       if (removed > 0) {
-        writer.writeSignalEnqueue(type: 'selection.deleted');
+        _sceneWriter(writer).writeOwnedSignalEnqueue(type: 'selection.deleted');
       }
       return removed;
     });
@@ -136,7 +138,7 @@ class SceneCommands {
       final clearResult = writer.writeClearSceneKeepBackgroundResult();
       final removedNodeIds = clearResult.removedNodeIds;
       if (removedNodeIds.isNotEmpty || clearResult.didStructuralClear) {
-        writer.writeSignalEnqueue(
+        _sceneWriter(writer).writeOwnedSignalEnqueue(
           type: 'scene.cleared',
           nodeIds: removedNodeIds,
         );
@@ -147,40 +149,36 @@ class SceneCommands {
 
   void writeBackgroundColorSet(Color color) {
     _writeRunner<void>((writer) {
-      final before = writer.snapshot.background.color;
-      writer.writeBackgroundColor(color);
-      if (writer.snapshot.background.color != before) {
-        writer.writeSignalEnqueue(type: 'background.updated');
+      if (_sceneWriter(writer).writeBackgroundColorChanged(color)) {
+        _sceneWriter(
+          writer,
+        ).writeOwnedSignalEnqueue(type: 'background.updated');
       }
     });
   }
 
   void writeGridEnabledSet(bool enabled) {
     _writeRunner<void>((writer) {
-      final before = writer.snapshot.background.grid.isEnabled;
-      writer.writeGridEnable(enabled);
-      if (writer.snapshot.background.grid.isEnabled != before) {
-        writer.writeSignalEnqueue(type: 'grid.enabled.updated');
+      if (_sceneWriter(writer).writeGridEnableChanged(enabled)) {
+        _sceneWriter(
+          writer,
+        ).writeOwnedSignalEnqueue(type: 'grid.enabled.updated');
       }
     });
   }
 
   void writeGridCellSizeSet(double size) {
     _writeRunner<void>((writer) {
-      final before = writer.snapshot.background.grid.cellSize;
-      writer.writeGridCellSize(size);
-      if (writer.snapshot.background.grid.cellSize != before) {
-        writer.writeSignalEnqueue(type: 'grid.cell.updated');
+      if (_sceneWriter(writer).writeGridCellSizeChanged(size)) {
+        _sceneWriter(writer).writeOwnedSignalEnqueue(type: 'grid.cell.updated');
       }
     });
   }
 
   void writeCameraOffsetSet(Offset offset) {
     _writeRunner<void>((writer) {
-      final before = writer.snapshot.camera.offset;
-      writer.writeCameraOffset(offset);
-      if (writer.snapshot.camera.offset != before) {
-        writer.writeSignalEnqueue(type: 'camera.updated');
+      if (_sceneWriter(writer).writeCameraOffsetChanged(offset)) {
+        _sceneWriter(writer).writeOwnedSignalEnqueue(type: 'camera.updated');
       }
     });
   }

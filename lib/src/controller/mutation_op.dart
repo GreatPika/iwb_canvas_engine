@@ -64,6 +64,8 @@ final class DeleteNodesBulkOp extends NodeMutationOp {
   DeleteNodesBulkOp(Iterable<NodeId> nodeIds)
     : nodeIds = Set<NodeId>.unmodifiable(nodeIds.toSet());
 
+  DeleteNodesBulkOp.borrowed(this.nodeIds);
+
   final Set<NodeId> nodeIds;
 }
 

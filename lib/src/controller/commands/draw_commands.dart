@@ -4,11 +4,16 @@ import '../../core/nodes.dart';
 import '../../core/scene_limits.dart';
 import '../../contract/node_spec.dart';
 import '../../contract/scene_write_txn.dart';
+import '../scene_writer.dart';
 
 class DrawCommands {
   DrawCommands(this._writeRunner);
 
   final T Function<T>(T Function(SceneWriteTxn writer) fn) _writeRunner;
+
+  SceneWriter _sceneWriter(SceneWriteTxn writer) {
+    return writer as SceneWriter;
+  }
 
   List<Offset> _resampleStrokePointsToLimit(
     List<Offset> points, {
@@ -43,14 +48,15 @@ class DrawCommands {
           opacity: opacity,
         ),
       );
-      writer.writeSignalEnqueue(type: 'draw.stroke', nodeIds: <NodeId>[nodeId]);
+      _sceneWriter(
+        writer,
+      ).writeOwnedSignalEnqueue(type: 'draw.stroke', nodeIds: <NodeId>[nodeId]);
       return nodeId;
     });
   }
 
   NodeId writeDrawLine({
-    required Offset start,
-    required Offset end,
+    required ({Offset start, Offset end}) segment,
     required double thickness,
     required Color color,
     double opacity = 1,
@@ -58,14 +64,16 @@ class DrawCommands {
     return _writeRunner((writer) {
       final nodeId = writer.writeNodeInsert(
         LineNodeSpec(
-          start: start,
-          end: end,
+          start: segment.start,
+          end: segment.end,
           thickness: thickness,
           color: color,
           opacity: opacity,
         ),
       );
-      writer.writeSignalEnqueue(type: 'draw.line', nodeIds: <NodeId>[nodeId]);
+      _sceneWriter(
+        writer,
+      ).writeOwnedSignalEnqueue(type: 'draw.line', nodeIds: <NodeId>[nodeId]);
       return nodeId;
     });
   }
@@ -83,7 +91,9 @@ class DrawCommands {
 
       if (removedCount > 0) {
         removedIds.sort((a, b) => a.compareTo(b));
-        writer.writeSignalEnqueue(type: 'draw.erase', nodeIds: removedIds);
+        _sceneWriter(
+          writer,
+        ).writeOwnedSignalEnqueue(type: 'draw.erase', nodeIds: removedIds);
       }
       return removedCount;
     });
