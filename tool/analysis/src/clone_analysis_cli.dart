@@ -1,0 +1,240 @@
+import 'dart:io';
+
+import 'clone_analysis_config.dart';
+import 'clone_analysis_engine.dart';
+import 'clone_analysis_report.dart';
+
+const String _usage = '''
+Usage:
+  dart run tool/analysis/find_similar_clones.dart [options] [rootPath] [minTokens] [kGramSize] [windowSize] [minSharedFingerprints] [minOverlap] [maxBucketSize]
+
+Options:
+  -h, --help          Show this help message
+  --json              Emit JSON instead of text
+  --exclude-main      Skip top-level function blocks named main
+  --top N             Limit the report to the top N pairs
+  --top=N             Limit the report to the top N pairs
+
+Examples:
+  dart run tool/analysis/find_similar_clones.dart
+  dart run tool/analysis/find_similar_clones.dart . 60 30 5 4 0.55 12
+  dart run tool/analysis/find_similar_clones.dart lib 50 30 5 4 0.55 12
+  dart run tool/analysis/find_similar_clones.dart --exclude-main test 60 30 5 4 0.70 10
+  dart run tool/analysis/find_similar_clones.dart --json --top 20 . 60 30 5 4 0.55 12
+''';
+
+Future<int> runCloneAnalysisCli(
+  List<String> args, {
+  required Stdout stdout,
+  required IOSink stderr,
+}) async {
+  final parseResult = parseCloneAnalysisArgs(args);
+  if (parseResult.showHelp) {
+    stdout.writeln(_usage.trim());
+    return 0;
+  }
+
+  final errorMessage = parseResult.errorMessage;
+  if (errorMessage != null) {
+    return _writeUsageError(stderr, errorMessage);
+  }
+
+  final config = parseResult.config;
+  if (config == null) {
+    return _writeUsageError(stderr, 'Missing clone analysis configuration.');
+  }
+
+  final validationError = config.validate();
+  if (validationError != null) {
+    return _writeUsageError(stderr, validationError);
+  }
+
+  final report = runCloneAnalysis(config);
+  if (report.scannedFiles == 0) {
+    stderr.writeln('No Dart files found.');
+    return 1;
+  }
+
+  _writeParseErrorsIfNeeded(config, report.parseErrors, stderr);
+  stdout.writeln(renderCloneAnalysisReport(report));
+  return 0;
+}
+
+CloneAnalysisParseResult parseCloneAnalysisArgs(List<String> args) {
+  var config = CloneAnalysisConfig.defaults();
+  final positionals = <String>[];
+
+  for (var i = 0; i < args.length; i++) {
+    final arg = args[i];
+    final optionResult = _handleOption(arg, args, i, config);
+    switch (optionResult) {
+      case _OptionHelp():
+        return CloneAnalysisParseResult.help();
+      case _OptionError(:final message):
+        return CloneAnalysisParseResult.error(message);
+      case _OptionConfig(:final nextConfig, :final nextIndex):
+        config = nextConfig;
+        i = nextIndex;
+      case _OptionNone():
+        if (arg.startsWith('--')) {
+          return CloneAnalysisParseResult.error('Unknown option: $arg');
+        }
+        positionals.add(arg);
+    }
+  }
+
+  return CloneAnalysisParseResult.success(
+    _applyPositionalArgs(config, positionals),
+  );
+}
+
+CloneAnalysisConfig _applyPositionalArgs(
+  CloneAnalysisConfig config,
+  List<String> positionals,
+) {
+  if (positionals.isEmpty) {
+    return config;
+  }
+
+  return config.copyWith(
+    rootPath: positionals[0],
+    minTokens: _parseInt(positionals, 1) ?? config.minTokens,
+    kGramSize: _parseInt(positionals, 2) ?? config.kGramSize,
+    windowSize: _parseInt(positionals, 3) ?? config.windowSize,
+    minSharedFingerprints:
+        _parseInt(positionals, 4) ?? config.minSharedFingerprints,
+    minOverlap: _parseDouble(positionals, 5) ?? config.minOverlap,
+    maxBucketSize: _parseInt(positionals, 6) ?? config.maxBucketSize,
+  );
+}
+
+int _writeUsageError(IOSink stderr, String message) {
+  stderr.writeln(message);
+  stderr.writeln('');
+  stderr.writeln(_usage.trim());
+  return 64;
+}
+
+void _writeParseErrorsIfNeeded(
+  CloneAnalysisConfig config,
+  List<String> parseErrors,
+  IOSink stderr,
+) {
+  if (config.outputFormat != CloneAnalysisOutputFormat.text ||
+      parseErrors.isEmpty) {
+    return;
+  }
+
+  for (final parseError in parseErrors) {
+    stderr.writeln(parseError);
+  }
+}
+
+sealed class _OptionResult {}
+
+final class _OptionNone extends _OptionResult {}
+
+final class _OptionHelp extends _OptionResult {}
+
+final class _OptionError extends _OptionResult {
+  _OptionError(this.message);
+
+  final String message;
+}
+
+final class _OptionConfig extends _OptionResult {
+  _OptionConfig({required this.nextConfig, required this.nextIndex});
+
+  final CloneAnalysisConfig nextConfig;
+  final int nextIndex;
+}
+
+_OptionResult _handleOption(
+  String arg,
+  List<String> args,
+  int index,
+  CloneAnalysisConfig config,
+) {
+  final simpleFlagResult = _handleSimpleFlag(arg, config, index);
+  if (simpleFlagResult is! _OptionNone) {
+    return simpleFlagResult;
+  }
+
+  if (arg.startsWith('--top=')) {
+    return _handleTopValue(arg.substring('--top='.length), config, index);
+  }
+  if (arg == '--top') {
+    return _handleSeparateTopOption(args, index, config);
+  }
+
+  return _OptionNone();
+}
+
+_OptionResult _handleSimpleFlag(
+  String arg,
+  CloneAnalysisConfig config,
+  int index,
+) {
+  switch (arg) {
+    case '-h':
+    case '--help':
+      return _OptionHelp();
+    case '--json':
+      return _OptionConfig(
+        nextConfig: config.copyWith(
+          outputFormat: CloneAnalysisOutputFormat.json,
+        ),
+        nextIndex: index,
+      );
+    case '--exclude-main':
+      return _OptionConfig(
+        nextConfig: config.copyWith(excludeMain: true),
+        nextIndex: index,
+      );
+    default:
+      return _OptionNone();
+  }
+}
+
+_OptionResult _handleSeparateTopOption(
+  List<String> args,
+  int index,
+  CloneAnalysisConfig config,
+) {
+  final valueIndex = index + 1;
+  if (valueIndex >= args.length) {
+    return _OptionError('Missing integer value after --top.');
+  }
+
+  return _handleTopValue(args[valueIndex], config, valueIndex);
+}
+
+_OptionResult _handleTopValue(
+  String rawValue,
+  CloneAnalysisConfig config,
+  int nextIndex,
+) {
+  final top = int.tryParse(rawValue);
+  if (top == null) {
+    return _OptionError('Invalid value for --top: $rawValue');
+  }
+
+  return _OptionConfig(
+    nextConfig: config.copyWith(topResults: top),
+    nextIndex: nextIndex,
+  );
+}
+
+int? _parseInt(List<String> values, int index) {
+  if (index >= values.length) {
+    return null;
+  }
+  return int.tryParse(values[index]);
+}
+
+double? _parseDouble(List<String> values, int index) {
+  if (index >= values.length) {
+    return null;
+  }
+  return double.tryParse(values[index]);
+}

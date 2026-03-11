@@ -73,7 +73,12 @@ dart run tool/analysis/find_similar_clones.dart . 60 30 5 4 0.55 12
 ```
 
 Use `dart run tool/analysis/find_similar_clones.dart --help` for the full
-argument list and additional examples.
+argument list and additional examples. Useful variants:
+
+```sh
+dart run tool/analysis/find_similar_clones.dart --exclude-main test 60 30 5 4 0.70 10
+dart run tool/analysis/find_similar_clones.dart --json --top 20 lib 50 30 5 4 0.55 12
+```
 
 ## Quick start
 
