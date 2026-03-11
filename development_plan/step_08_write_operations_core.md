@@ -1,6 +1,6 @@
 language: russian
 
-# Шаг 8. Ввести ядро операций записи через подшаги 8.1-8.4
+# Шаг 8. Ввести ядро операций записи через подшаги 8.1-8.7
 
 ## Диагностические метрики
 
@@ -18,6 +18,37 @@ language: russian
   - `lib/src/controller/scene_writer.dart`
   - `lib/src/controller/txn_context.dart`
 
+## Почему шаг открыт повторно
+
+Повторный прогон диагностических метрик после закрытия `8.4` показал, что
+базовая архитектура write-core действительно выровнена, но часть hot path
+осталась слишком крупной и ветвистой именно в тех owner-ах, которые шаг `8`
+должен был довести до устойчивой формы.
+
+Текущие watchpoints:
+
+1. `SceneControllerCore._txnWriteCommit(...)`:
+   - `cyclomatic-complexity = 19`
+   - `source-lines-of-code = 144`
+2. `MutationExecutor._apply(...)`:
+   - `cyclomatic-complexity = 14`
+3. `MutationExecutor._runPostcheck(...)`:
+   - `cyclomatic-complexity = 15`
+4. `MutationExecutor._deleteNodesBulk(...)`:
+   - `cyclomatic-complexity = 12`
+   - `source-lines-of-code = 42`
+5. `TxnContext.txnEnsureContentLayer(...)`:
+   - `cyclomatic-complexity = 12`
+6. `TxnContext.txnResolveMutableNode(...)`:
+   - `source-lines-of-code = 44`
+7. `TxnContext._txnBaseNodeById(...)`:
+   - `cyclomatic-complexity = 12`
+
+Это означает, что шаг `8` нельзя считать полностью закрытым: часть сложности не
+исчезла, а лишь сменила форму и owner-а. Поэтому umbrella-шаг расширяется ещё
+на три подшага, которые закрывают именно controller/executor/txn hot path без
+переноса этой работы в шаг `9`.
+
 ## Цель шага
 
 После шагов `3.x-7.x` boundary, policy, id allocation и revision contract уже
@@ -34,13 +65,18 @@ language: russian
   в канонический pipeline.
 
 Этот umbrella-шаг нужен, чтобы не пытаться одним документом одновременно
-решить четыре разные задачи:
+решить семь разных задач:
 
 - зафиксировать контракт операций и границу `mutation_executor.dart`;
 - подготовить `TxnContext` и `document.dart` к operation-oriented apply;
 - перевести `SceneWriter` на executor без изменения public `SceneWriteTxn`;
 - сузить `SceneControllerCore` до commit/store owner-а с ясной dispose
   семантикой.
+- схлопнуть giant commit branch в controller до одного internal plan;
+- довести executor routing до устойчивых operation families и убрать
+  формальный postcheck;
+- упростить `TxnContext` hot primitives так, чтобы они не держали лишнюю
+  сложность и index-shift bookkeeping.
 
 ## Как разбит этап
 
@@ -91,6 +127,37 @@ language: russian
 - wiring executor result в store/spatial/signals/repaint paths;
 - fail-fast dispose semantics во время write.
 
+### Шаг 8.5
+
+`development_plan/step_08_5_controller_commit_plan_and_branch_collapse.md`
+
+Владелец closure для:
+
+- giant commit branch в `lib/src/controller/scene_controller.dart`;
+- одного internal commit plan поверх prepared result и buffered side effects;
+- схлопывания signal-only / repaint-only / state-commit веток без второго
+  owner-а commit semantics.
+
+### Шаг 8.6
+
+`development_plan/step_08_6_executor_operation_family_cleanup.md`
+
+Владелец closure для:
+
+- `lib/src/controller/mutation_executor.dart`;
+- operation-family routing вместо одного giant apply/postcheck switch-а;
+- bulk delete hot path без смешения routing, erase и bookkeeping в одном теле.
+
+### Шаг 8.7
+
+`development_plan/step_08_7_txn_context_hot_path_primitives.md`
+
+Владелец closure для:
+
+- `lib/src/controller/txn_context.dart`;
+- упрощения mutable layer/node resolution primitives;
+- удаления лишнего layer-index bookkeeping и дублированного base-node resolve.
+
 ## Карта переноса деталей из исходного шага 8
 
 1. Создание `lib/src/controller/mutation_op.dart`, точный список операций
@@ -103,6 +170,12 @@ language: russian
    copies и безопасное представление `selectedNodeIds` переносится в `8.3`.
 4. Перевод `SceneControllerCore.write(...)` на executor result, запрет
    `dispose()` во время write и cleanup commit hot path переносится в `8.4`.
+5. Дополнительное сужение giant commit branch через один internal commit plan
+   и явные branch kinds переносится в `8.5`.
+6. Финальная зачистка executor hot path, включая bulk delete и postcheck
+   contract, переносится в `8.6`.
+7. Финальная зачистка `TxnContext` hot primitives и layer/node bookkeeping
+   переносится в `8.7`.
 
 ## Уже принятые архитектурные решения
 
@@ -163,6 +236,31 @@ language: russian
     - `document.dart`: pure low-level apply helpers над `scene + locator`;
     - `MutationExecutor`: orchestration, preconditions, selection, `ChangeSet`;
     - `SceneControllerCore`: prepared-result commit, spatial/signals/repaint.
+13. Дополнительная closure работа `8.5-8.7` не должна переносить commit или
+    apply ownership в новый сервис, registry, visitor framework или отдельный
+    derived change model. Если вводятся новые типы, они должны быть либо
+    private value objects, либо narrow helpers рядом с текущим owner-ом.
+14. `SceneControllerCore` закрывает giant commit branch через один internal
+    commit plan, собранный из prepared result, buffered signals и repaint flag.
+    Второй owner decision tree поверх тех же данных не допускается. Этот plan
+    хранит только decision data и committed refs; он не владеет одноразовыми
+    side effects вроде already-drained signals или prepared spatial commit.
+15. `MutationExecutor` сохраняет data-only `MutationOp` contract. Поведение не
+    переезжает в op-классы через visitor/virtual dispatch; closure строится
+    через устойчивые operation families внутри owner-а executor-а для всего
+    lifecycle `preconditions -> apply -> postcheck`.
+16. Postcheck в executor допустим только там, где он реально проверяет
+    op-local post-apply invariant или contract. Selection/grid normalization,
+    store invariants и spatial preparation остаются вне executor. Формальный
+    switch, который лишь повторно делает `txnEnsureActive()`, не считается
+    корректным final design.
+17. `TxnContext` не получает второй locator/index cache ради closure метрик.
+    Если нужно убрать index-shift bookkeeping, это делается через более
+    подходящую identity (`LayerId` вместо layer index) или reuse существующих
+    helpers, а не через дублирование derived state.
+18. Если `TxnContext` переходит на tracking cloned content layers по `LayerId`,
+    это допустимо только при сохранении invariant-а уникальности content-layer
+    ids внутри scene.
 
 ## Общие правила для всех подшагов
 
@@ -186,14 +284,18 @@ language: russian
 
 ## Критерии готовности umbrella-шага
 
-1. Для шагов `8.1`, `8.2`, `8.3`, `8.4` существуют отдельные step-файлы с
+1. Для шагов `8.1`, `8.2`, `8.3`, `8.4`, `8.5`, `8.6`, `8.7` существуют
+   отдельные step-файлы с
    собственной целью, границей ответственности, критериями приёмки и тестовым
    контуром.
 2. В описании подшагов не осталось пересечений по владению:
    - `8.1` отвечает за контракт операций и executor boundary;
    - `8.2` отвечает за txn/document apply semantics;
    - `8.3` отвечает за adoption в `SceneWriter`;
-   - `8.4` отвечает за controller commit lifecycle и dispose contract.
+   - `8.4` отвечает за controller commit lifecycle и dispose contract;
+   - `8.5` отвечает за commit plan и branch collapse в controller;
+   - `8.6` отвечает за executor operation-family hot path;
+   - `8.7` отвечает за txn hot primitives и bookkeeping cleanup.
 3. План явно фиксирует полный coverage scene-mutating writer methods,
    включая `writeLayerEnsure(...)`, `writeNodeTransformSet(...)` и
    `writeClearSceneKeepBackgroundResult(...)`.
@@ -203,6 +305,11 @@ language: russian
 5. После завершения `8.x` write-path больше не зависит от неформального
    смешения responsibility между `SceneWriter`, `SceneControllerCore`,
    `TxnContext` и `document.dart`.
+6. Диагностические watchpoints umbrella-шага для
+   `scene_controller.dart`, `mutation_executor.dart` и `txn_context.dart`
+   либо закрыты по `cyclomatic-complexity` / `source-lines-of-code`, либо сам
+   прежний watchpoint-owner исчез как owner соответствующей зоны
+   ответственности.
 
 ## Чеклист выполнения
 
@@ -218,3 +325,9 @@ language: russian
     выполнялся только после postcheck и fail-fast dispose semantics.
 [x] Для `8.2` и `8.4` зафиксировать regression coverage на locator-shift перед
     delete, structural clear без removed nodes и сохранение base-scene COW.
+[ ] В `8.5` ввести один internal commit plan и убрать giant branch из
+    `_txnWriteCommit(...)` без нового commit owner-а.
+[ ] В `8.6` схлопнуть executor apply/postcheck до устойчивых operation
+    families и убрать формальный postcheck dispatch.
+[ ] В `8.7` убрать лишний layer-index bookkeeping и упростить node/layer hot
+    primitives в `TxnContext` без второго runtime cache.
