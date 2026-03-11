@@ -325,7 +325,7 @@ language: russian
     выполнялся только после postcheck и fail-fast dispose semantics.
 [x] Для `8.2` и `8.4` зафиксировать regression coverage на locator-shift перед
     delete, structural clear без removed nodes и сохранение base-scene COW.
-[ ] В `8.5` ввести один internal commit plan и убрать giant branch из
+[x] В `8.5` ввести один internal commit plan и убрать giant branch из
     `_txnWriteCommit(...)` без нового commit owner-а.
 [ ] В `8.6` схлопнуть executor apply/postcheck до устойчивых operation
     families и убрать формальный postcheck dispatch.

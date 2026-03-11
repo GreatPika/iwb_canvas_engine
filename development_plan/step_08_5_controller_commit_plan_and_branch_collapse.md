@@ -105,45 +105,55 @@ post-commit orchestration.
 
 ## Последовательность реализации (только действия)
 
-[ ] Ввести private `_ControllerCommitPlan` и явный `branch kind` рядом с
+[x] Ввести private `_ControllerCommitPlan` и явный `branch kind` рядом с
     `SceneControllerCore`, не вынося это в новый внешний owner.
-[ ] Вынести из `_txnWriteCommit(...)` отдельную сборку plan после normalization
+[x] Вынести из `_txnWriteCommit(...)` отдельную сборку plan после normalization
     и prepared result executor-а.
-[ ] Вынести selection/grid normalization в явную pre-plan stage или narrow
+[x] Вынести selection/grid normalization в явную pre-plan stage или narrow
     helper, чтобы `_txnWriteCommit(...)` не оставался большим даже после
     появления `_ControllerCommitPlan`.
-[ ] Свести revision/epoch derivation и invariant-precheck inputs к одному месту
+[x] Свести revision/epoch derivation и invariant-precheck inputs к одному месту
     сборки plan.
-[ ] Разделить исполнение на узкие ветки `effects-only` и `state-commit`,
+[x] Разделить исполнение на узкие ветки `effects-only` и `state-commit`,
     сохранив `_applyCommittedStore(...)` единственной точкой записи store.
-[ ] Оставить signal/repaint fast path, но перевести его на тот же commit plan,
+[x] Оставить signal/repaint fast path, но перевести его на тот же commit plan,
     а не на отдельные ad hoc условия.
-[ ] Повторно снять диагностические метрики для `_txnWriteCommit(...)` и
+[x] Повторно снять диагностические метрики для `_txnWriteCommit(...)` и
     убедиться, что giant branch больше не остаётся owner-ом всей commit зоны.
 
 ## Критерии приёмки
 
-[ ] `SceneControllerCore` остаётся единственным owner-ом commit lifecycle.
-[ ] `_txnWriteCommit(...)` больше не совмещает branch selection, revision
+[x] `SceneControllerCore` остаётся единственным owner-ом commit lifecycle.
+[x] `_txnWriteCommit(...)` больше не совмещает branch selection, revision
     derivation, invariant input assembly, normalization prelude и post-effect
     orchestration в одном giant method body.
-[ ] В коде существует один internal commit plan, а не несколько параллельных
+[x] В коде существует один internal commit plan, а не несколько параллельных
     decision tree поверх prepared result и buffered effects.
-[ ] `_ControllerCommitPlan` не становится вторым execution owner-ом для
+[x] `_ControllerCommitPlan` не становится вторым execution owner-ом для
     одноразовых side effects.
-[ ] Signal-only и repaint-only writes не теряют fast path, но используют тот
+[x] Signal-only и repaint-only writes не теряют fast path, но используют тот
     же commit contract, что и state-change path.
-[ ] Для controller watchpoint зоны шага `8` не остаётся необъяснённого giant
+[x] Для controller watchpoint зоны шага `8` не остаётся необъяснённого giant
     owner-а по `cyclomatic-complexity` и `source-lines-of-code`.
 
 ## Тестовый контур шага
 
-[ ] `test/controller/core/scene_controller_commit_atomicity_test.dart`
-[ ] `test/controller/core/scene_controller_commit_failures_test.dart`
-[ ] `test/controller/core/scene_controller_signals_delivery_test.dart`
-[ ] `test/controller/core/scene_controller_commit_effects_test.dart`
-[ ] Точечные сценарии:
+[x] `test/controller/core/scene_controller_commit_atomicity_test.dart`
+[x] `test/controller/core/scene_controller_commit_failures_test.dart`
+[x] `test/controller/core/scene_controller_signals_delivery_test.dart`
+[x] `test/controller/core/scene_controller_commit_effects_test.dart`
+[x] Точечные сценарии:
     - `effects-only` commit не делает store apply
     - `state-commit` path использует prepared result без повторного derive
     - `debugLastCommitPhases` и `debugLastChangeSet` сохраняют прежнюю
       семантику
+
+## Итоговые метрики
+
+1. Повторная диагностика `dcm calculate-metrics lib/src/controller/scene_controller.dart --report-all`
+   показывает для `_txnWriteCommit(...)`:
+   - `cyclomatic-complexity = 1`
+   - `source-lines-of-code = 10`
+2. Giant branch больше не живёт в одном owner-method: decision data собирается
+   в `_buildControllerCommitPlan(...)`, а execution разбит между
+   `_executeEffectsOnlyCommitPlan(...)` и `_executeStateCommitPlan(...)`.
