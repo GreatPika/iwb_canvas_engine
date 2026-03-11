@@ -432,6 +432,9 @@ Important behavior:
   `setMode(...)`, `setDrawTool(...)`, and `dispose()` force-reset the active
   gesture only when the boundary transition will actually continue with an
   observable state change
+- `setSelection(...)`, `toggleSelection(...)`, `clearSelection()`, and
+  `selectAll(...)` throw `StateError` while an active move/draw gesture owns
+  the controller
 - interactive rotate/flip/delete preflight uses one internal snapshot-based
   eligibility policy owner; write-layer guards remain separate defensive
   barriers in the transactional core
@@ -454,6 +457,14 @@ Selection helpers:
 - `toggleSelection(NodeId nodeId)`
 - `clearSelection()`
 - `selectAll({bool onlySelectable = true})`
+
+Selection exclusivity:
+
+- `setSelection(...)`, `toggleSelection(...)`, `clearSelection()`, and
+  `selectAll(...)` are external selection mutations
+- external selection mutations throw `StateError` while an active move/draw
+  gesture is in progress
+- after terminal `up` or `cancel`, these APIs become available again
 
 Transform and document helpers:
 
@@ -663,7 +674,17 @@ Contract:
 - line supports drag creation and two-tap creation
 - `dragStartSlop` applies to both move and line drag start
 - preview state is ephemeral and does not mutate the committed snapshot
-- pointer `cancel` clears preview state without committing
+- move-mode hit-testing and marquee inclusion use the same selection
+  admissibility owner (`canSelect(...)`)
+- move preview and move commit use the same move admissibility owner, so
+  selectable-but-non-previewable nodes may still become selected on `down` but
+  never start move preview or move commit
+- pointer `cancel` clears preview state without committing and restores the
+  baseline selection if that gesture changed selection locally before terminal
+  completion
+- while a gesture is active, external `setSelection(...)`,
+  `toggleSelection(...)`, `clearSelection()`, and `selectAll(...)` are
+  rejected so gesture-local selection lifecycle has one owner
 
 ### 7.3 `MoveCommitDeltaResolver`
 

@@ -8,6 +8,8 @@ import '../../core/pointer_input.dart';
 import '../../core/scene_spatial_index.dart';
 import '../../contract/transform2d.dart';
 import '../../contract/snapshot.dart';
+import '../interaction_eligibility_policy.dart'
+    as interaction_eligibility_policy;
 
 typedef MoveCommitSelectionResult = ({
   Offset appliedDelta,
@@ -17,6 +19,7 @@ typedef MoveCommitSelectionResult = ({
 class InteractiveMoveSessionCallbacks {
   const InteractiveMoveSessionCallbacks({
     required this.onStateChanged,
+    required this.readSnapshot,
     required this.readSelectedNodeIds,
     required this.querySpatialCandidates,
     required this.resolveSpatialCandidateNode,
@@ -27,6 +30,7 @@ class InteractiveMoveSessionCallbacks {
   });
 
   final VoidCallback onStateChanged;
+  final SceneSnapshot Function() readSnapshot;
   final Set<NodeId> Function() readSelectedNodeIds;
   final List<SceneSpatialCandidate> Function(Rect bounds)
   querySpatialCandidates;
@@ -58,6 +62,7 @@ class InteractiveMoveSession {
   bool _moveDragStarted = false;
   bool _movePendingClearSelection = false;
   Set<NodeId> _moveMarqueeBaseline = <NodeId>{};
+  bool _moveSelectionChangedLocally = false;
   bool _movePreviewActive = false;
   Offset _movePreviewDelta = Offset.zero;
   Set<NodeId> _movePreviewNodeIds = <NodeId>{};
@@ -87,6 +92,7 @@ class InteractiveMoveSession {
     _moveDragStarted = false;
     _movePendingClearSelection = false;
     _moveMarqueeBaseline = <NodeId>{};
+    _moveSelectionChangedLocally = false;
     _clearMovePreview();
   }
 
@@ -97,117 +103,177 @@ class InteractiveMoveSession {
     Offset scenePoint, {
     required double dragStartSlop,
   }) {
-    switch (sample.phase) {
-      case PointerPhase.down:
-        _moveHandleDown(sample, scenePoint);
-        break;
-      case PointerPhase.move:
-        _moveHandleMove(sample, scenePoint, dragStartSlop: dragStartSlop);
-        break;
-      case PointerPhase.up:
-        _moveHandleUp(sample, scenePoint);
-        break;
-      case PointerPhase.cancel:
-        resetGestureState();
-        setSelectionRect(null);
-        callbacks.onStateChanged();
-        break;
+    final shouldNotify = switch (sample.phase) {
+      PointerPhase.down => _moveHandleDown(scenePoint),
+      PointerPhase.move => _moveHandleMove(
+        scenePoint,
+        dragStartSlop: dragStartSlop,
+      ),
+      PointerPhase.up => _moveHandleUp(sample),
+      PointerPhase.cancel => _moveHandleCancel(),
+    };
+    if (shouldNotify) {
+      callbacks.onStateChanged();
     }
   }
 
-  void _moveHandleDown(PointerSample _, Offset scenePoint) {
-    _movePointerDownScene = scenePoint;
-    _moveLastScene = scenePoint;
-    _moveDragStarted = false;
-    _movePendingClearSelection = false;
-    _moveMarqueeBaseline = Set<NodeId>.from(callbacks.readSelectedNodeIds());
+  bool _moveHandleDown(Offset scenePoint) {
+    _beginGesture(scenePoint);
 
     final hit = _hitTestTopNode(scenePoint);
-    if (hit != null) {
-      _moveTarget = _MoveDragTarget.move;
-      Set<NodeId> previewNodeIds = callbacks.readSelectedNodeIds();
-      if (!previewNodeIds.contains(hit.id)) {
-        callbacks.writeSelectionReplace(<NodeId>{hit.id});
-        previewNodeIds = <NodeId>{hit.id};
-      }
-      _startMovePreview(previewNodeIds);
-      callbacks.onStateChanged();
-      return;
+    if (hit == null) {
+      _moveTarget = _MoveDragTarget.marquee;
+      _movePendingClearSelection = true;
+      return true;
     }
 
-    _moveTarget = _MoveDragTarget.marquee;
-    _movePendingClearSelection = true;
-    _clearMovePreview();
-    callbacks.onStateChanged();
+    _selectHitNodeIfNeeded(hit.id);
+    final previewNodeIds = _resolvePreviewNodeIds();
+    if (previewNodeIds.contains(hit.id)) {
+      _moveTarget = _MoveDragTarget.move;
+      return _startMovePreview(previewNodeIds);
+    }
+
+    _moveTarget = _MoveDragTarget.none;
+    return false;
   }
 
-  void _moveHandleMove(
-    PointerSample _,
-    Offset scenePoint, {
-    required double dragStartSlop,
-  }) {
+  bool _moveHandleMove(Offset scenePoint, {required double dragStartSlop}) {
     final movePointerDownScene = _movePointerDownScene;
     final moveLastScene = _moveLastScene;
-    if (movePointerDownScene == null || moveLastScene == null) return;
+    if (movePointerDownScene == null || moveLastScene == null) return false;
 
-    final didStartDrag =
-        !_moveDragStarted &&
-        isDistanceGreaterThan(movePointerDownScene, scenePoint, dragStartSlop);
+    if (!_moveDragStarted &&
+        !isDistanceGreaterThan(
+          movePointerDownScene,
+          scenePoint,
+          dragStartSlop,
+        )) {
+      return false;
+    }
 
-    if (didStartDrag) {
+    if (!_moveDragStarted) {
       _moveDragStarted = true;
       if (_moveTarget == _MoveDragTarget.marquee &&
           _movePendingClearSelection) {
-        callbacks.writeSelectionClear();
+        _writeSelectionClearIfChanged();
         _movePendingClearSelection = false;
       }
     }
 
-    if (!_moveDragStarted) return;
+    return switch (_moveTarget) {
+      _MoveDragTarget.move => _advanceMovePreview(scenePoint, moveLastScene),
+      _MoveDragTarget.marquee => _updateSelectionRect(scenePoint),
+      _MoveDragTarget.none => false,
+    };
+  }
+
+  bool _moveHandleUp(PointerSample sample) {
+    var shouldNotify = false;
+    try {
+      _commitMoveGesture(sample);
+    } finally {
+      shouldNotify = _resetGestureStateForTerminal();
+    }
+    return shouldNotify;
+  }
+
+  bool _moveHandleCancel() {
+    _restoreBaselineSelectionIfNeeded();
+    return _resetGestureStateForTerminal();
+  }
+
+  void _beginGesture(Offset scenePoint) {
+    _movePointerDownScene = scenePoint;
+    _moveLastScene = scenePoint;
+    _moveDragStarted = false;
+    _movePendingClearSelection = false;
+    _moveTarget = _MoveDragTarget.none;
+    _moveMarqueeBaseline = Set<NodeId>.from(callbacks.readSelectedNodeIds());
+    _moveSelectionChangedLocally = false;
+    _clearMovePreview();
+  }
+
+  void _selectHitNodeIfNeeded(NodeId nodeId) {
+    final selection = callbacks.readSelectedNodeIds();
+    if (selection.contains(nodeId)) {
+      return;
+    }
+    _writeSelectionReplaceIfChanged(<NodeId>{nodeId});
+  }
+
+  Set<NodeId> _resolvePreviewNodeIds() {
+    final previewableNodes = interaction_eligibility_policy
+        .selectedPreviewMovableNodesInSnapshotOrder(
+          snapshot: callbacks.readSnapshot(),
+          selected: callbacks.readSelectedNodeIds(),
+        );
+    return previewableNodes.map((node) => node.id).toSet();
+  }
+
+  bool _advanceMovePreview(Offset scenePoint, Offset moveLastScene) {
+    final deltaStep = scenePoint - moveLastScene;
+    if (deltaStep == Offset.zero) return false;
+    _movePreviewDelta = _movePreviewDelta + deltaStep;
+    _moveLastScene = scenePoint;
+    return true;
+  }
+
+  bool _updateSelectionRect(Offset scenePoint) {
+    final movePointerDownScene = _movePointerDownScene;
+    if (movePointerDownScene == null) {
+      return false;
+    }
+    return _setSelectionRect(Rect.fromPoints(movePointerDownScene, scenePoint));
+  }
+
+  void _commitMoveGesture(PointerSample sample) {
+    switch (sample.phase) {
+      case PointerPhase.down:
+      case PointerPhase.move:
+      case PointerPhase.cancel:
+        return;
+      case PointerPhase.up:
+        break;
+    }
 
     if (_moveTarget == _MoveDragTarget.move) {
-      final deltaStep = scenePoint - moveLastScene;
-      if (deltaStep == Offset.zero) return;
-      _movePreviewDelta = _movePreviewDelta + deltaStep;
-      _moveLastScene = scenePoint;
-      callbacks.onStateChanged();
+      _commitMovePreview(sample);
       return;
     }
 
-    if (_moveTarget == _MoveDragTarget.marquee) {
-      setSelectionRect(Rect.fromPoints(movePointerDownScene, scenePoint));
+    if (_moveTarget != _MoveDragTarget.marquee) {
+      return;
+    }
+
+    if (_moveDragStarted && _selectionRect != null) {
+      _commitMarquee(sample.timestampMs);
+      return;
+    }
+
+    if (_movePendingClearSelection) {
+      _writeSelectionClearIfChanged();
     }
   }
 
-  void _moveHandleUp(PointerSample sample, Offset _) {
-    try {
-      if (_moveTarget == _MoveDragTarget.move) {
-        final proposedDelta = _movePreviewDelta;
-        if (_moveDragStarted && proposedDelta != Offset.zero) {
-          final moveCommit = callbacks.commitMoveSelection(proposedDelta);
-          if (moveCommit.appliedDelta != Offset.zero &&
-              moveCommit.movedIds.isNotEmpty) {
-            final delta = Transform2D.translation(moveCommit.appliedDelta);
-            callbacks.emitAction(
-              ActionType.transform,
-              moveCommit.movedIds,
-              sample.timestampMs,
-              payload: <String, Object?>{'delta': delta.toJsonMap()},
-            );
-          }
-        }
-      } else if (_moveTarget == _MoveDragTarget.marquee) {
-        if (_moveDragStarted && _selectionRect != null) {
-          _commitMarquee(sample.timestampMs);
-        } else if (_movePendingClearSelection) {
-          callbacks.writeSelectionClear();
-        }
-      }
-    } finally {
-      resetGestureState();
-      setSelectionRect(null);
-      callbacks.onStateChanged();
+  void _commitMovePreview(PointerSample sample) {
+    final proposedDelta = _movePreviewDelta;
+    if (!_moveDragStarted || proposedDelta == Offset.zero) {
+      return;
     }
+
+    final moveCommit = callbacks.commitMoveSelection(proposedDelta);
+    if (moveCommit.appliedDelta == Offset.zero || moveCommit.movedIds.isEmpty) {
+      return;
+    }
+
+    final delta = Transform2D.translation(moveCommit.appliedDelta);
+    callbacks.emitAction(
+      ActionType.transform,
+      moveCommit.movedIds,
+      sample.timestampMs,
+      payload: <String, Object?>{'delta': delta.toJsonMap()},
+    );
   }
 
   void _commitMarquee(int timestampMs) {
@@ -243,7 +309,7 @@ class InteractiveMoveSession {
     for (final candidate in candidates) {
       final node = callbacks.resolveSpatialCandidateNode(candidate);
       if (node == null) continue;
-      if (!node.isVisible || !node.isSelectable) continue;
+      if (!interaction_eligibility_policy.canSelectSceneNode(node)) continue;
       if (!_effectiveNodeBoundsWorld(node).overlaps(rect)) continue;
       ids.add(node.id);
     }
@@ -257,7 +323,7 @@ class InteractiveMoveSession {
     for (final candidate in candidates) {
       final node = callbacks.resolveSpatialCandidateNode(candidate);
       if (node == null) continue;
-      if (!node.isVisible || !node.isSelectable) continue;
+      if (!interaction_eligibility_policy.canSelectSceneNode(node)) continue;
       if (_hitTestNodeWithMovePreview(scenePoint, node)) {
         return node;
       }
@@ -292,10 +358,11 @@ class InteractiveMoveSession {
     return candidates;
   }
 
-  void _startMovePreview(Set<NodeId> nodeIds) {
+  bool _startMovePreview(Set<NodeId> nodeIds) {
     _movePreviewActive = true;
     _movePreviewDelta = Offset.zero;
     _movePreviewNodeIds = Set<NodeId>.from(nodeIds);
+    return true;
   }
 
   void _clearMovePreview() {
@@ -308,6 +375,56 @@ class InteractiveMoveSession {
       _movePreviewActive &&
       _movePreviewNodeIds.isNotEmpty &&
       _movePreviewDelta != Offset.zero;
+
+  bool _setSelectionRect(Rect? value) {
+    if (_selectionRect == value) return false;
+    _selectionRect = value;
+    return true;
+  }
+
+  bool _resetGestureStateForTerminal() {
+    final didChange = _selectionRect != null || _movePreviewActive;
+    resetGestureState();
+    _setSelectionRect(null);
+    return didChange;
+  }
+
+  void _restoreBaselineSelectionIfNeeded() {
+    if (!_moveSelectionChangedLocally) {
+      return;
+    }
+    final baseline = _moveMarqueeBaseline;
+    final current = callbacks.readSelectedNodeIds();
+    if (_sameNodeSet(current, baseline)) {
+      return;
+    }
+    if (baseline.isEmpty) {
+      callbacks.writeSelectionClear();
+      return;
+    }
+    callbacks.writeSelectionReplace(baseline);
+  }
+
+  bool _sameNodeSet(Set<NodeId> left, Set<NodeId> right) {
+    return left.length == right.length && left.containsAll(right);
+  }
+
+  void _writeSelectionReplaceIfChanged(Set<NodeId> nextSelection) {
+    final current = callbacks.readSelectedNodeIds();
+    if (_sameNodeSet(current, nextSelection)) {
+      return;
+    }
+    callbacks.writeSelectionReplace(nextSelection);
+    _moveSelectionChangedLocally = true;
+  }
+
+  void _writeSelectionClearIfChanged() {
+    if (callbacks.readSelectedNodeIds().isEmpty) {
+      return;
+    }
+    callbacks.writeSelectionClear();
+    _moveSelectionChangedLocally = true;
+  }
 
   Rect _effectiveNodeBoundsWorld(SceneNode node) {
     final delta = movePreviewDeltaForNode(node.id);

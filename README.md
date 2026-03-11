@@ -152,9 +152,17 @@ class _CanvasScreenState extends State<CanvasScreen> {
   `replaceScene(...)`, `setCameraOffset(...)`, mode/tool changes, and `dispose()`
   force-release the active gesture only when the boundary mutation will proceed
   with an observable state change.
+- Public selection mutations are gesture-exclusive: `setSelection(...)`,
+  `toggleSelection(...)`, `clearSelection()`, and `selectAll(...)` throw
+  `StateError` while an active move/draw gesture is in progress.
 - Interactive transform/delete preflight is snapshot-based and shared:
   controller-side rotate/flip/delete entrypoints use one internal eligibility
   policy owner, while write-layer guards remain defensive commit barriers.
+- Move-mode hit-testing, marquee selection, move preview, and move commit now
+  share one internal eligibility policy: selectable-but-non-movable nodes can
+  still become the selection target, but they do not start move preview, and
+  pointer `cancel` restores the gesture baseline selection after any temporary
+  move-local selection change.
 - `handlePointer(...)` treats non-finite `down`/`move` as no-op admission
   failures. For non-finite terminal `up`/`cancel`, the controller preserves the
   original terminal phase only when the same `pointerId` already has a cached

@@ -123,6 +123,187 @@ void main() {
       expect(controller.selectionRect, isNull);
     });
 
+    test(
+      'move cancel restores baseline selection after marquee changed it',
+      () {
+        // INV:INV-ENG-INTERACTIVE-CANCEL-STATE-RESET
+        final baseline = RectNode(id: 'baseline', size: const Size(40, 20))
+          ..position = const Offset(40, 40);
+        final other = RectNode(id: 'other', size: const Size(40, 20))
+          ..position = const Offset(180, 40);
+        final controller = controllerFromScene(
+          Scene(
+            layers: <ContentLayer>[
+              ContentLayer(id: 'layer-auto-20'),
+              ContentLayer(
+                id: 'layer-auto-21',
+                nodes: <SceneNode>[baseline, other],
+              ),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+
+        controller.setSelection(const <NodeId>{'baseline'});
+
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(300, 300),
+            timestampMs: 1,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(320, 320),
+            timestampMs: 2,
+            phase: CanvasPointerPhase.move,
+          ),
+        );
+        expect(controller.selectedNodeIds, isEmpty);
+        expect(controller.selectionRect, isNotNull);
+
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(320, 320),
+            timestampMs: 3,
+            phase: CanvasPointerPhase.cancel,
+          ),
+        );
+
+        expect(controller.selectedNodeIds, const <NodeId>{'baseline'});
+        expect(controller.selectionRect, isNull);
+      },
+    );
+
+    test(
+      'selectable locked node changes selection but never starts move preview',
+      () async {
+        final baseline = TextNode(
+          id: 'baseline',
+          text: 'baseline',
+          size: const Size(50, 20),
+          color: const Color(0xFF000000),
+        )..position = const Offset(40, 40);
+        final locked = TextNode(
+          id: 'locked',
+          text: 'locked',
+          size: const Size(50, 20),
+          color: const Color(0xFF000000),
+          isLocked: true,
+        )..position = const Offset(140, 40);
+        final controller = controllerFromScene(
+          Scene(
+            layers: <ContentLayer>[
+              ContentLayer(id: 'layer-auto-22'),
+              ContentLayer(
+                id: 'layer-auto-23',
+                nodes: <SceneNode>[baseline, locked],
+              ),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+
+        final requests = <EditTextRequested>[];
+        final sub = controller.editTextRequests.listen(requests.add);
+        addTearDown(sub.cancel);
+
+        controller.setSelection(const <NodeId>{'baseline'});
+
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(140, 40),
+            timestampMs: 1,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(200, 40),
+            timestampMs: 2,
+            phase: CanvasPointerPhase.move,
+          ),
+        );
+
+        controller.handleDoubleTap(
+          position: const Offset(140, 40),
+          timestampMs: 3,
+        );
+        controller.handleDoubleTap(
+          position: const Offset(260, 40),
+          timestampMs: 4,
+        );
+
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(200, 40),
+            timestampMs: 5,
+            phase: CanvasPointerPhase.up,
+          ),
+        );
+
+        await pumpEventQueue();
+        expect(controller.selectedNodeIds, const <NodeId>{'locked'});
+        expect(requests, hasLength(1));
+        expect(requests.single.nodeId, 'locked');
+        expect(requests.single.position, const Offset(140, 40));
+
+        final lockedAfter =
+            nodeById(controller.snapshot, 'locked') as TextNodeSnapshot;
+        expect(lockedAfter.transform.tx, closeTo(140, 1e-6));
+        expect(lockedAfter.transform.ty, closeTo(40, 1e-6));
+      },
+    );
+
+    test('move cancel clears selection when gesture baseline was empty', () {
+      // INV:INV-ENG-INTERACTIVE-CANCEL-STATE-RESET
+      final locked = RectNode(
+        id: 'locked',
+        size: const Size(40, 20),
+        isLocked: true,
+      )..position = const Offset(140, 40);
+      final controller = controllerFromScene(
+        Scene(
+          layers: <ContentLayer>[
+            ContentLayer(id: 'layer-auto-24'),
+            ContentLayer(id: 'layer-auto-25', nodes: <SceneNode>[locked]),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      expect(controller.selectedNodeIds, isEmpty);
+
+      controller.handlePointer(
+        sampleInput(
+          pointerId: 1,
+          position: const Offset(140, 40),
+          timestampMs: 1,
+          phase: CanvasPointerPhase.down,
+        ),
+      );
+      expect(controller.selectedNodeIds, const <NodeId>{'locked'});
+
+      controller.handlePointer(
+        sampleInput(
+          pointerId: 1,
+          position: const Offset(140, 40),
+          timestampMs: 2,
+          phase: CanvasPointerPhase.cancel,
+        ),
+      );
+
+      expect(controller.selectedNodeIds, isEmpty);
+      expect(controller.selectionRect, isNull);
+    });
+
     test('move drag commits once on up and applies total delta exactly', () {
       // INV:INV-ENG-INTERACTIVE-PREVIEW-COMMIT-ON-UP
       final rect = RectNode(id: 'node', size: const Size(30, 20))

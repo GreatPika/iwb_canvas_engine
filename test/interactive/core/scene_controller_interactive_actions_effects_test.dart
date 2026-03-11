@@ -863,5 +863,155 @@ void main() {
         expect(remaining.contains('locked'), isFalse);
       },
     );
+
+    test(
+      'move transform action uses the same eligibility as move preview',
+      () async {
+        // INV:INV-ENG-INTERACTIVE-PREVIEW-COMMIT-ON-UP
+        final movable = RectNode(id: 'movable', size: const Size(30, 20))
+          ..position = const Offset(40, 40);
+        final locked = RectNode(
+          id: 'locked',
+          size: const Size(30, 20),
+          isLocked: true,
+        )..position = const Offset(120, 40);
+        final controller = controllerFromScene(
+          Scene(
+            layers: <ContentLayer>[
+              ContentLayer(id: 'layer-auto-8'),
+              ContentLayer(
+                id: 'layer-auto-9',
+                nodes: <SceneNode>[movable, locked],
+              ),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+
+        final actions = <ActionCommitted>[];
+        final sub = controller.actions.listen(actions.add);
+        addTearDown(sub.cancel);
+
+        controller.setSelection(const <NodeId>{'movable', 'locked'});
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(40, 40),
+            timestampMs: 1,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(80, 40),
+            timestampMs: 2,
+            phase: CanvasPointerPhase.move,
+          ),
+        );
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(80, 40),
+            timestampMs: 3,
+            phase: CanvasPointerPhase.up,
+          ),
+        );
+
+        await pumpEventQueue();
+
+        final transformActions = actions
+            .where((event) => event.type == ActionType.transform)
+            .toList(growable: false);
+        expect(transformActions, hasLength(1));
+        expect(transformActions.single.nodeIds, const <NodeId>['movable']);
+        expect(
+          transformActions.single.tryTransformDelta()?.tx,
+          closeTo(40, 1e-6),
+        );
+
+        final movableAfter =
+            nodeById(controller.snapshot, 'movable') as RectNodeSnapshot;
+        final lockedAfter =
+            nodeById(controller.snapshot, 'locked') as RectNodeSnapshot;
+        expect(movableAfter.transform.tx, closeTo(80, 1e-6));
+        expect(lockedAfter.transform.tx, closeTo(120, 1e-6));
+      },
+    );
+
+    test(
+      'move commit does not translate visible non-selectable selected nodes',
+      () async {
+        final movable = RectNode(id: 'movable', size: const Size(30, 20))
+          ..position = const Offset(40, 40);
+        final hiddenFromSelectionPolicy = RectNode(
+          id: 'non-selectable',
+          size: const Size(30, 20),
+          isSelectable: false,
+        )..position = const Offset(120, 40);
+        final controller = controllerFromScene(
+          Scene(
+            layers: <ContentLayer>[
+              ContentLayer(id: 'layer-auto-10'),
+              ContentLayer(
+                id: 'layer-auto-11',
+                nodes: <SceneNode>[movable, hiddenFromSelectionPolicy],
+              ),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+
+        final actions = <ActionCommitted>[];
+        final sub = controller.actions.listen(actions.add);
+        addTearDown(sub.cancel);
+
+        controller.setSelection(const <NodeId>{'movable', 'non-selectable'});
+        expect(controller.selectedNodeIds, const <NodeId>{
+          'movable',
+          'non-selectable',
+        });
+
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(40, 40),
+            timestampMs: 1,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(80, 40),
+            timestampMs: 2,
+            phase: CanvasPointerPhase.move,
+          ),
+        );
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(80, 40),
+            timestampMs: 3,
+            phase: CanvasPointerPhase.up,
+          ),
+        );
+
+        await pumpEventQueue();
+
+        final transformActions = actions
+            .where((event) => event.type == ActionType.transform)
+            .toList(growable: false);
+        expect(transformActions, hasLength(1));
+        expect(transformActions.single.nodeIds, const <NodeId>['movable']);
+
+        final movableAfter =
+            nodeById(controller.snapshot, 'movable') as RectNodeSnapshot;
+        final nonSelectableAfter =
+            nodeById(controller.snapshot, 'non-selectable') as RectNodeSnapshot;
+        expect(movableAfter.transform.tx, closeTo(80, 1e-6));
+        expect(nonSelectableAfter.transform.tx, closeTo(120, 1e-6));
+      },
+    );
   });
 }

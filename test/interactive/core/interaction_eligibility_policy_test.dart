@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/interactive/interaction_eligibility_policy.dart'
     as interaction_eligibility_policy;
 import 'package:iwb_canvas_engine/src/interactive/internal/interactive_selection_utils.dart'
@@ -203,6 +204,37 @@ void main() {
         interaction_eligibility_policy.centerWorldForNodeSnapshots(
           <NodeSnapshot>[previewable, lockedProtected],
         ),
+      );
+    });
+
+    test('runtime scene-node helpers follow the shared move policy', () {
+      final movable = RectNode(id: 'movable', size: const Size(20, 10));
+      final hidden = RectNode(
+        id: 'hidden',
+        size: const Size(20, 10),
+        isVisible: false,
+      );
+      final locked = RectNode(
+        id: 'locked',
+        size: const Size(20, 10),
+        isLocked: true,
+      );
+
+      expect(
+        interaction_eligibility_policy.canSelectSceneNode(movable),
+        isTrue,
+      );
+      expect(
+        interaction_eligibility_policy.canSelectSceneNode(hidden),
+        isFalse,
+      );
+      expect(
+        interaction_eligibility_policy.canPreviewMoveSceneNode(movable),
+        isTrue,
+      );
+      expect(
+        interaction_eligibility_policy.canPreviewMoveSceneNode(locked),
+        isFalse,
       );
     });
   });

@@ -83,24 +83,24 @@ move preview, move commit и именно move-local cancel semantics испол
 
 ## Последовательность реализации (только действия)
 
-[ ] Перевести move session на controller-approved lifecycle callbacks.
-[ ] Применить shared policy к hit-test, preview, commit и marquee selection.
-[ ] Восстановить baseline selection на cancel.
-[ ] Убрать duplicate notify/reset ветки.
-[ ] Зафиксировать, что preview и commit используют один predicate owner.
+[x] Перевести move session на controller-approved lifecycle callbacks.
+[x] Применить shared policy к hit-test, preview, commit и marquee selection.
+[x] Восстановить baseline selection на cancel.
+[x] Убрать duplicate notify/reset ветки.
+[x] Зафиксировать, что preview и commit используют один predicate owner.
 
 ## Критерии приёмки
 
-[ ] Move session не владеет pointer identity и не конфликтует с controller
+[x] Move session не владеет pointer identity и не конфликтует с controller
     gesture-machine.
-[ ] Preview и commit используют одну и ту же admissibility model.
-[ ] Selectable, но non-previewable node не запускает move preview.
-[ ] Marquee selection использует `canSelect(...)`.
-[ ] `cancel` восстанавливает baseline selection и очищает preview/selectionRect.
-[ ] Move-local cancel semantics определяются здесь, а не неявно в `11.1` или
+[x] Preview и commit используют одну и ту же admissibility model.
+[x] Selectable, но non-previewable node не запускает move preview.
+[x] Marquee selection использует `canSelect(...)`.
+[x] `cancel` восстанавливает baseline selection и очищает preview/selectionRect.
+[x] Move-local cancel semantics определяются здесь, а не неявно в `11.1` или
     `11.2`.
-[ ] Step-owned move methods не содержат duplicate `onStateChanged` веток.
-[ ] Повторная диагностика
+[x] Step-owned move methods не содержат duplicate `onStateChanged` веток.
+[x] Повторная диагностика
     `dcm calculate-metrics lib/src/interactive/internal/interactive_move_session.dart --report-all`
     приложена к результату шага; новые или step-owned methods не содержат
     `HIGH`/`VERY HIGH` по `cyclomatic-complexity`,
@@ -109,10 +109,10 @@ move preview, move commit и именно move-local cancel semantics испол
 
 ## Тестовый контур шага
 
-[ ] `test/interactive/core/scene_controller_interactive_move_preview_invariants_test.dart`
+[x] `test/interactive/core/scene_controller_interactive_move_preview_invariants_test.dart`
     с покрытием:
     - preview использует ту же admissibility model, что и commit
     - cancel восстанавливает baseline selection
     - hit-test использует preview-shifted geometry без второго owner-а policy
-[ ] `test/interactive/core/scene_controller_interactive_actions_effects_test.dart`
+[x] `test/interactive/core/scene_controller_interactive_actions_effects_test.dart`
     с покрытием move commit/action semantics после policy unification

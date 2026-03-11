@@ -46,6 +46,15 @@ All notable changes to `iwb_canvas_engine` are documented here.
   rotate/flip/delete entrypoints use shared snapshot-based admissibility,
   while `MutationExecutor` keeps its write-layer guards as a separate
   defensive barrier rather than a competing policy owner.
+- Move-mode hit-test, marquee selection, preview, and commit now use one
+  shared interactive eligibility contract: selectable-but-non-movable nodes
+  can still become selected on pointer `down`, but they no longer start move
+  preview, and pointer `cancel` restores the gesture baseline selection after
+  move-local selection changes.
+- `SceneControllerInteractive` now rejects external `setSelection(...)`,
+  `toggleSelection(...)`, `clearSelection()`, and `selectAll(...)` while an
+  active move/draw gesture is in progress, so selection lifecycle has one
+  controller-owned gesture owner between `down` and terminal `up`/`cancel`.
 - `SceneViewInteractive` now owns raw Flutter pointer routing through the
   dedicated `SceneViewPointerRouter`, so routed `pointerId` values are created
   only on `down`, stray non-down host events are dropped, minimum free slot

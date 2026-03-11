@@ -1,6 +1,6 @@
 language: russian
 
-# Шаг 11. Вынести gesture-machine и единый предикат допустимости через подшаги 11.1-11.5
+# Шаг 11. Вынести gesture-machine и единый предикат допустимости через подшаги 11.1-11.6
 
 ## Диагностические метрики
 
@@ -118,6 +118,18 @@ step-owned методы не должны пробивать пороги из
 - owner-у pending-line timer/state;
 - delete admissibility в eraser path и closure metric hotspot-ов draw-path.
 
+### Шаг 11.6
+
+`development_plan/step_11_6_selection_api_gesture_exclusivity.md`
+
+Владелец решения по:
+
+- exclusivity contract для public selection APIs во время active gesture;
+- явному приоритету controller-owned gesture lifecycle над внешними
+  `setSelection(...)`, `toggleSelection(...)`, `clearSelection(...)`;
+- устранению конкурирующих selection transitions между gesture-local state и
+  public controller side effects.
+
 ## Карта переноса деталей из исходного шага 11
 
 1. Валидация `dragStartSlop` в конструкторе, единое правило для
@@ -138,7 +150,10 @@ step-owned методы не должны пробивать пороги из
    contract, timer/pending-line cleanup и closure metric hotspot-ов
    `interactive_draw_coordinator.dart` /
    `interactive_draw_eraser_engine.dart` переносятся в `11.5`.
-6. Boundary-check, что
+6. Exclusivity contract для public selection APIs во время active gesture,
+   включая явный запрет competing selection mutations поверх gesture-owned
+   lifecycle, переносится в `11.6`.
+7. Boundary-check, что
    [scene_view_interactive.dart](/Users/blackpika/iwb_canvas_engine/lib/src/view/scene_view_interactive.dart)
    не возвращает synthetic terminal dispatch и abort bridge в controller,
    остаётся обязательной проверкой шага `11`, но ownership этого поведения
@@ -179,6 +194,10 @@ step-owned методы не должны пробивать пороги из
    и не вводит sync glue между raw-pointer host state и active gesture state.
 7. Для каждого подшага повторная диагностика метрик является частью acceptance
    gate, а не справочным комментарием.
+8. Во время active gesture приоритет над selection lifecycle остаётся у
+   controller-owned gesture owner-а. Если public selection APIs остаются
+   доступными в runtime, это должно быть явно доказано отдельным подшагом, а
+   не неявным поведением rollback/cancel логики.
 
 ## Общие правила для всех подшагов
 
@@ -215,12 +234,14 @@ step-owned методы не должны пробивать пороги из
   policy внутри move session.
 - `11.5` владеет draw-local смыслом `cancel`, pending-line semantics,
   cleanup/timer owner contract и adoption policy внутри draw path.
+- `11.6` владеет exclusivity contract между active gesture и public selection
+  APIs.
 - Ни один подшаг не должен одновременно владеть и event normalization, и
   local cleanup semantics одного и того же terminal случая.
 
 ## Критерии готовности umbrella-шага
 
-1. Для шагов `11.1`, `11.2`, `11.3`, `11.4`, `11.5` существуют отдельные
+1. Для шагов `11.1`, `11.2`, `11.3`, `11.4`, `11.5`, `11.6` существуют отдельные
    step-файлы с собственной целью, границей ответственности, критериями
    приёмки и тестовым контуром.
 2. В описании подшагов не осталось пересечений по владению:
@@ -231,7 +252,9 @@ step-owned методы не должны пробивать пороги из
    - `11.4` отвечает за move-session adoption этой policy и move-local cancel
      semantics;
    - `11.5` отвечает за draw-side lifecycle, terminal cleanup и pending-line
-     cleanup.
+     cleanup;
+   - `11.6` отвечает за exclusivity contract между active gesture и public
+     selection APIs.
 3. Ни один пункт исходного шага `11` не потерян при переносе, включая блок
    диагностических метрик и требование не пробивать пороги `10 / 4 / 40`.
 4. Граница между шагами `10` и `11` зафиксирована явно:
@@ -256,10 +279,12 @@ step-owned методы не должны пробивать пороги из
     reset lifecycle без overlap со шагом `10`.
 [ ] В `11.3` ввести одного owner-а interactive admissibility без инверсии layer
     DAG и без второго write-guard owner-а.
-[ ] В `11.4` перевести move session на общий policy contract и move-local
+[x] В `11.4` перевести move session на общий policy contract и move-local
     cancel restore.
 [ ] В `11.5` перевести draw/eraser/line lifecycle на controller-owned reset,
     закрыть terminal/pending-line cleanup и убрать metric hotspot-ы draw-path.
+[x] В `11.6` закрепить exclusivity contract между active gesture и public
+    selection mutations.
 [ ] Закрепить в критериях приёмки каждого подшага повторную диагностику
     метрик с порогами `cyclomatic-complexity <= 10`,
     `maximum-nesting-level <= 4`, `source-lines-of-code <= 40`.

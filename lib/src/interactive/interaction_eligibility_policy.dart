@@ -1,20 +1,23 @@
 import 'dart:ui';
 
+import '../core/nodes.dart' show SceneNode;
 import '../contract/snapshot.dart';
 import '../model/document.dart';
 
 /// Pure interactive preflight policy for runtime snapshot-based admissibility.
 bool canSelect(NodeSnapshot node) {
-  if (!node.isVisible) return false;
-  if (!node.isSelectable) return false;
-  return true;
+  return _canSelectFlags(
+    isVisible: node.isVisible,
+    isSelectable: node.isSelectable,
+  );
 }
 
 /// Pure interactive preflight policy for transform eligibility.
 bool canTransform(NodeSnapshot node) {
-  if (!node.isTransformable) return false;
-  if (node.isLocked) return false;
-  return true;
+  return _canTransformFlags(
+    isTransformable: node.isTransformable,
+    isLocked: node.isLocked,
+  );
 }
 
 /// Pure interactive preflight policy for move-preview eligibility.
@@ -30,6 +33,21 @@ bool canCommitMove(NodeSnapshot node) {
 /// Pure interactive preflight policy for delete eligibility.
 bool canDelete(NodeSnapshot node) {
   return node.isDeletable;
+}
+
+bool canSelectSceneNode(SceneNode node) {
+  return _canSelectFlags(
+    isVisible: node.isVisible,
+    isSelectable: node.isSelectable,
+  );
+}
+
+bool canPreviewMoveSceneNode(SceneNode node) {
+  return canSelectSceneNode(node) &&
+      _canTransformFlags(
+        isTransformable: node.isTransformable,
+        isLocked: node.isLocked,
+      );
 }
 
 List<NodeSnapshot> selectedNodesInSnapshotOrder({
@@ -72,6 +90,17 @@ List<NodeSnapshot> selectedPreviewMovableNodesInSnapshotOrder({
   );
 }
 
+List<NodeSnapshot> selectedCommitMovableNodesInSnapshotOrder({
+  required SceneSnapshot snapshot,
+  required Set<NodeId> selected,
+}) {
+  return selectedNodesInSnapshotOrder(
+    snapshot: snapshot,
+    selected: selected,
+    predicate: canCommitMove,
+  );
+}
+
 List<NodeId> deletableSelectedNodeIdsInSnapshot({
   required SceneSnapshot snapshot,
   required Set<NodeId> selected,
@@ -96,4 +125,19 @@ Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> nodes) {
     bounds = bounds == null ? boundsWorld : bounds.expandToInclude(boundsWorld);
   }
   return bounds?.center ?? Offset.zero;
+}
+
+bool _canSelectFlags({required bool isVisible, required bool isSelectable}) {
+  if (!isVisible) return false;
+  if (!isSelectable) return false;
+  return true;
+}
+
+bool _canTransformFlags({
+  required bool isTransformable,
+  required bool isLocked,
+}) {
+  if (!isTransformable) return false;
+  if (isLocked) return false;
+  return true;
 }

@@ -192,6 +192,55 @@ void main() {
         expect(afterCancelRecovery.transform.ty, closeTo(60, 1e-6));
       });
 
+      test('move mode rejects external selection mutations while active', () {
+        final rect = RectNode(id: 'node', size: const Size(30, 20))
+          ..position = const Offset(60, 60);
+        final other = RectNode(id: 'other', size: const Size(30, 20))
+          ..position = const Offset(120, 60);
+        final controller = controllerFromScene(
+          Scene(
+            layers: <ContentLayer>[
+              ContentLayer(id: 'layer-auto-30'),
+              ContentLayer(
+                id: 'layer-auto-31',
+                nodes: <SceneNode>[rect, other],
+              ),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+        controller.setSelection(const <NodeId>{'node'});
+
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(60, 60),
+            timestampMs: 1,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+
+        expect(
+          () => controller.setSelection(const <NodeId>{'other'}),
+          throwsStateError,
+        );
+        expect(() => controller.toggleSelection('other'), throwsStateError);
+        expect(() => controller.clearSelection(), throwsStateError);
+        expect(() => controller.selectAll(), throwsStateError);
+
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(60, 60),
+            timestampMs: 2,
+            phase: CanvasPointerPhase.cancel,
+          ),
+        );
+
+        controller.setSelection(const <NodeId>{'other'});
+        expect(controller.selectedNodeIds, const <NodeId>{'other'});
+      });
+
       test(
         'draw line ignores parallel pointer ids and accepts new pointer after up',
         () async {
@@ -435,6 +484,50 @@ void main() {
           );
         },
       );
+
+      test('draw mode rejects external selection mutations while active', () {
+        final controller = SceneControllerInteractive(
+          initialSnapshot: SceneSnapshot(
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(id: 'layer-auto-40'),
+              ContentLayerSnapshot(id: 'layer-auto-41'),
+            ],
+          ),
+          dragStartSlop: 0.001,
+        );
+        addTearDown(controller.dispose);
+        controller.setMode(CanvasMode.draw);
+        controller.setDrawTool(DrawTool.line);
+
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(10, 10),
+            timestampMs: 1,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+
+        expect(
+          () => controller.setSelection(const <NodeId>{'x'}),
+          throwsStateError,
+        );
+        expect(() => controller.toggleSelection('x'), throwsStateError);
+        expect(() => controller.clearSelection(), throwsStateError);
+        expect(() => controller.selectAll(), throwsStateError);
+
+        controller.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(10, 10),
+            timestampMs: 2,
+            phase: CanvasPointerPhase.cancel,
+          ),
+        );
+
+        controller.clearSelection();
+        expect(controller.selectedNodeIds, isEmpty);
+      });
     });
   });
 }

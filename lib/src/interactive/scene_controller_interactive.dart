@@ -26,7 +26,6 @@ import 'internal/interactive_event_dispatcher.dart';
 import 'internal/interactive_gesture_machine.dart';
 import 'internal/interactive_geometry.dart';
 import 'internal/interactive_move_session.dart';
-import 'internal/interactive_selection_utils.dart';
 
 typedef MoveCommitDeltaResolver =
     Offset Function({
@@ -354,21 +353,25 @@ class SceneControllerInteractive extends ChangeNotifier
 
   void setSelection(Iterable<NodeId> nodeIds) {
     _ensurePublicSideEffectAllowed('setSelection');
+    _ensureExternalSelectionMutationAllowed('setSelection');
     _core.commands.writeSelectionReplace(nodeIds);
   }
 
   void toggleSelection(NodeId nodeId) {
     _ensurePublicSideEffectAllowed('toggleSelection');
+    _ensureExternalSelectionMutationAllowed('toggleSelection');
     _core.commands.writeSelectionToggle(nodeId);
   }
 
   void clearSelection() {
     _ensurePublicSideEffectAllowed('clearSelection');
+    _ensureExternalSelectionMutationAllowed('clearSelection');
     _core.commands.writeSelectionClear();
   }
 
   void selectAll({bool onlySelectable = true}) {
     _ensurePublicSideEffectAllowed('selectAll');
+    _ensureExternalSelectionMutationAllowed('selectAll');
     _core.commands.writeSelectionSelectAll(onlySelectable: onlySelectable);
   }
 
@@ -624,6 +627,7 @@ class SceneControllerInteractive extends ChangeNotifier
     return InteractiveMoveSession(
       callbacks: InteractiveMoveSessionCallbacks(
         onStateChanged: _scheduleNotify,
+        readSnapshot: () => snapshot,
         readSelectedNodeIds: () => selectedNodeIds,
         querySpatialCandidates: _core.querySpatialCandidates,
         resolveSpatialCandidateNode: _core.resolveSpatialCandidateNode,
@@ -652,10 +656,11 @@ class SceneControllerInteractive extends ChangeNotifier
   MoveCommitSelectionResult _commitMoveSelection(Offset proposedDelta) {
     return _core.write<MoveCommitSelectionResult>((writer) {
       final snapshot = writer.snapshot;
-      final movedNodes = selectedTransformableNodesInSnapshotOrder(
-        snapshot: snapshot,
-        selected: writer.selectedNodeIds,
-      );
+      final movedNodes = interaction_eligibility_policy
+          .selectedCommitMovableNodesInSnapshotOrder(
+            snapshot: snapshot,
+            selected: writer.selectedNodeIds,
+          );
       if (movedNodes.isEmpty) {
         return (appliedDelta: Offset.zero, movedIds: const <NodeId>[]);
       }
@@ -670,15 +675,21 @@ class SceneControllerInteractive extends ChangeNotifier
         return (appliedDelta: Offset.zero, movedIds: const <NodeId>[]);
       }
 
-      final affected = writer.writeSelectionTranslate(resolvedDelta);
-      if (affected <= 0) {
+      final movedIds = <NodeId>[];
+      for (final node in movedNodes) {
+        final nextTransform = node.transform.withTranslation(
+          node.transform.translation + resolvedDelta,
+        );
+        if (!writer.writeNodeTransformSet(node.id, nextTransform)) {
+          continue;
+        }
+        movedIds.add(node.id);
+      }
+      if (movedIds.isEmpty) {
         return (appliedDelta: Offset.zero, movedIds: const <NodeId>[]);
       }
 
-      return (
-        appliedDelta: resolvedDelta,
-        movedIds: movedNodes.map((node) => node.id).toList(growable: false),
-      );
+      return (appliedDelta: resolvedDelta, movedIds: movedIds);
     });
   }
 
@@ -909,6 +920,12 @@ class SceneControllerInteractive extends ChangeNotifier
       throw StateError(
         'SceneControllerInteractive is disposed and no longer usable.',
       );
+    }
+  }
+
+  void _ensureExternalSelectionMutationAllowed(String operation) {
+    if (_gestureMachine.hasActiveGesture) {
+      throw StateError('$operation is not allowed during an active gesture.');
     }
   }
 
