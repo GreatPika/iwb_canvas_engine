@@ -12,7 +12,9 @@ owner и отдельные reset semantics в `InteractiveDrawCoordinator` и
 Задача подшага: перевести draw-side lifecycle на controller-owned gesture
 machine из `11.2`, привязать eraser delete admissibility к policy owner-у из
 `11.3` и закрыть pending-line timer/state так, чтобы forced reset больше не
-оставлял утечек preview или pending line.
+оставлял утечек preview или pending line. Сюда же входит draw-local смысл
+terminal `cancel` после boundary-normalization из `11.1`, включая explicit
+abort и поведение idle pending-line state между двумя tap-ами line tool.
 
 ## Что уже подтверждено по текущему состоянию
 
@@ -44,10 +46,16 @@ machine из `11.2`, привязать eraser delete admissibility к policy ow
 2. Draw-side cancel/reset semantics становятся position-agnostic и idempotent:
    forced cancel не зависит от того, пришёл ли real terminal input или
    controller boundary reset.
-3. Pending line и его timer имеют одного owner-а:
+3. Pending line после первого tap line tool считается draw-local latent state,
+   а не controller-owned active gesture owner state. Поэтому решение о том,
+   должен ли `cancel`:
+   - очистить pending line как explicit abort;
+   - проигнорироваться как stray terminal input;
+   принадлежит этому подшагу, а не `11.1` или `11.2`.
+4. Pending line и его timer имеют одного owner-а:
    `InteractiveDrawLineEngine`.
    Controller и coordinator не держат параллельный cleanup path.
-4. Любой forced reset:
+5. Любой forced reset:
    - `replaceScene(...)`
    - `setCameraOffset(...)`
    - `setMode(...)`
@@ -55,14 +63,14 @@ machine из `11.2`, привязать eraser delete admissibility к policy ow
    - `dispose()`
    проходит через draw-side owner contract и очищает pending line/timer ровно
    один раз.
-5. Eraser delete admissibility использует `canDelete(...)` из
+6. Eraser delete admissibility использует `canDelete(...)` из
    `interaction_eligibility_policy.dart`.
-6. `_eraserHitsLine(...)` и `_eraserHitsStroke(...)` входят в прямой scope
+7. `_eraserHitsLine(...)` и `_eraserHitsStroke(...)` входят в прямой scope
    этого подшага и обязаны перестать быть metric hotspot-ами. Это не refactor
    render/cache шага `12`, а closure draw-path control file шага `11`.
-7. `11.2` владеет trigger forced reset-а, а этот подшаг владеет только
+8. `11.2` владеет trigger forced reset-а, а этот подшаг владеет только
    draw-local cleanup, который этот trigger вызывает.
-8. Разрезание `_eraserHitsLine(...)` и `_eraserHitsStroke(...)` здесь
+9. Разрезание `_eraserHitsLine(...)` и `_eraserHitsStroke(...)` здесь
    допускается только как behavior-preserving decomposition для closure metric
    gate. Изменение erase geometry semantics не входит в scope подшага.
 
@@ -70,6 +78,7 @@ machine из `11.2`, привязать eraser delete admissibility к policy ow
 
 - In:
   - draw-side adoption controller-owned lifecycle;
+  - draw-local смысл normalized `cancel` для active и idle pending-line state;
   - erase/delete admissibility;
   - pending-line owner contract;
   - forced reset cleanup для line/stroke/eraser state;
@@ -90,17 +99,22 @@ machine из `11.2`, привязать eraser delete admissibility к policy ow
    - очищает pending line;
    - отменяет pending timer;
    - безопасен при повторном вызове.
-4. `SceneControllerInteractive` и `InteractiveDrawCoordinator` больше не
+4. Draw-side owner contract явно описывает поведение terminal `cancel` для
+   idle pending-line state после release owner-а, чтобы explicit abort и stray
+   normalized terminal input не зависели от неявных правил `11.1`/`11.2`.
+5. `SceneControllerInteractive` и `InteractiveDrawCoordinator` больше не
    обходят line-owner ad hoc вызовами, которые дублируют его cleanup logic.
-5. Eraser path определяет delete eligibility только через shared policy owner.
-6. `_handleUp(...)`, `_eraserHitsLine(...)`, `_eraserHitsStroke(...)` и новые
+6. Eraser path определяет delete eligibility только через shared policy owner.
+7. `_handleUp(...)`, `_eraserHitsLine(...)`, `_eraserHitsStroke(...)` и новые
    step-owned helper-ы после подшага укладываются в предел `10 / 4 / 40`.
-7. Если для closure metric gate требуется разрезать eraser geometry methods,
+8. Если для closure metric gate требуется разрезать eraser geometry methods,
    это делается без изменения erase hit semantics.
 
 ## Последовательность реализации (только действия)
 
 [ ] Перевести draw coordinator на controller-approved lifecycle callbacks.
+[ ] Явно зафиксировать draw-local semantics для idle pending-line abort и stray
+    normalized terminal input.
 [ ] Замкнуть forced reset на один line-owner cleanup contract.
 [ ] Убрать ad hoc `clearPendingLine()` обходы вне owner contract.
 [ ] Перевести eraser delete admissibility на `canDelete(...)`.
@@ -114,6 +128,9 @@ machine из `11.2`, привязать eraser delete admissibility к policy ow
 [ ] Draw-side lifecycle больше не владеет pointer identity отдельно от
     controller gesture-machine.
 [ ] `cancel` и forced reset используют один owner contract.
+[ ] Explicit abort pending-line state и stray normalized terminal input
+    используют явно описанный draw-local contract вместо скрытой логики в
+    `11.1`/`11.2`.
 [ ] Pending line, pending timer и active line preview очищаются на
     `replaceScene(...)`, `setCameraOffset(...)`, mode/tool change и dispose.
 [ ] Eraser delete admissibility использует shared policy owner.
@@ -138,6 +155,8 @@ machine из `11.2`, привязать eraser delete admissibility к policy ow
     с покрытием:
     - pending line не переживает forced reset
     - cancel и replaceScene используют один cleanup contract
+    - explicit abort pending line и stray normalized terminal input закрыты
+      явным draw-local contract
 [ ] `test/interactive/core/interactive_draw_eraser_engine_test.dart`
     с покрытием:
     - erase admission использует `canDelete(...)`

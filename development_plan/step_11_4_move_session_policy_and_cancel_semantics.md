@@ -1,6 +1,6 @@
 language: russian
 
-# Шаг 11.4. Перевести move session на shared eligibility policy и canonical cancel semantics
+# Шаг 11.4. Перевести move session на shared eligibility policy и move-local cancel semantics
 
 ## Цель шага
 
@@ -13,8 +13,8 @@ language: russian
 
 Задача подшага: перевести move session на controller-owned gesture lifecycle из
 `11.2` и на shared admissibility policy из `11.3`, чтобы selection hit-test,
-move preview, move commit и cancel semantics использовали один согласованный
-contract.
+move preview, move commit и именно move-local cancel semantics использовали
+один согласованный contract.
 
 ## Что уже подтверждено по текущему состоянию
 
@@ -38,6 +38,8 @@ contract.
 
 1. `InteractiveMoveSession` больше не является owner-ом pointer identity. Она
    получает только controller-approved lifecycle callbacks из `11.2`.
+   Нормализация terminal input к этому моменту уже принадлежит `11.1`, а owner
+   dispatch terminal event-а принадлежит `11.2`.
 2. Move preview и move commit используют одну и ту же admissibility model:
    node участвует в preview только если проходит `canPreviewMove(...)`, и тот
    же predicate определяет eligibility для commit.
@@ -61,7 +63,8 @@ contract.
 - Out:
   - controller-owned active gesture machine;
   - draw-side lifecycle и pending line;
-  - policy owner outside move session.
+  - policy owner outside move session;
+  - boundary-normalization terminal input.
 
 ## Точная реализация, которую должен описывать код
 
@@ -94,6 +97,8 @@ contract.
 [ ] Selectable, но non-previewable node не запускает move preview.
 [ ] Marquee selection использует `canSelect(...)`.
 [ ] `cancel` восстанавливает baseline selection и очищает preview/selectionRect.
+[ ] Move-local cancel semantics определяются здесь, а не неявно в `11.1` или
+    `11.2`.
 [ ] Step-owned move methods не содержат duplicate `onStateChanged` веток.
 [ ] Повторная диагностика
     `dcm calculate-metrics lib/src/interactive/internal/interactive_move_session.dart --report-all`

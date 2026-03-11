@@ -55,14 +55,15 @@ lifecycle в
 2. Он позволяет фиксировать baseline `dragStartSlop` один раз на `down`, а не
    тянуть текущее значение через каждый `move/up`.
 3. Он не возвращает raw-pointer lifecycle из шага `10` обратно в controller:
-   gesture-machine знает только routed `pointerId`.
+   gesture-machine знает только controller-level `pointerId`, одинаково
+   пригодный для routed и direct path, но не raw host pointer ids.
 4. Он даёт чистую границу со `11.1`: `11.1` фиксирует канонический входной
    contract, а `11.2` владеет новым owner-ом lifecycle и constructor rewiring
    вокруг него.
 
 ## Зафиксированные решения (без повторного обсуждения в реализации)
 
-1. После routed dispatch из шага `10` active gesture owner живёт только в
+1. После controller boundary admission active gesture owner живёт только в
    controller-side gesture-machine.
 2. Gesture-machine хранит минимум следующий controller-owned state:
    - `pointerId` владельца;
@@ -87,7 +88,12 @@ lifecycle в
    доступный только внутри interactive controller слоя.
 7. Подшаг не определяет, как именно move/draw session восстанавливает свой
    внутренний state после cancel. Это ownership `11.4` и `11.5`.
-8. Этот подшаг владеет structural constructor rewiring
+8. Подшаг определяет только owner-level delivery/reset contract:
+   - какой pointer имеет право получить `move/up/cancel`;
+   - когда controller запускает forced cancel/reset.
+   Move-local rollback и draw-local cleanup, включая pending-line semantics
+   после release owner-а, сюда не входят.
+9. Этот подшаг владеет structural constructor rewiring
    `SceneControllerInteractive(...)`, которое требуется для подключения нового
    gesture owner-а. `11.1` владеет только constructor-side validation для
    `dragStartSlop`.
@@ -104,7 +110,8 @@ lifecycle в
   - controller pointer-entry normalization;
   - shared eligibility policy;
   - move-specific cancel restore;
-  - draw-specific pending-line cleanup details.
+  - draw-specific pending-line cleanup details;
+  - idle draw-local pending state semantics после завершения active owner-а.
 
 ## Точная реализация, которую должен описывать код
 
@@ -114,12 +121,15 @@ lifecycle в
    - можно ли принять `down` как новый gesture;
    - какой pointer имеет право получить `move/up/cancel`;
    - должен ли controller выполнить forced cancel перед boundary mutation.
+   Но он не кодирует сам move-local rollback или draw-local cleanup effect.
 3. Dispatch в move/draw session после подшага использует уже разрешённый owner
    context, а не переигрывает pointer ownership внутри session-а.
 4. `replaceScene(...)` и `setCameraOffset(...)` отменяют активный gesture через
    тот же lifecycle owner, а не через отдельные локальные workaround-вызовы.
 5. Граница между шагами `10` и `11` остаётся жёсткой:
    gesture-machine не знает о raw host pointer ids, tracker state и timer path.
+   Она работает только с controller-level `pointerId`, независимо от того,
+   пришёл ли он из routed view path или direct controller entry.
 6. Constructor `SceneControllerInteractive(...)` создаёт и подключает новый
    internal owner lifecycle; это не считается overlap с `11.1`.
 
@@ -151,6 +161,10 @@ lifecycle в
     reset owner, а не отдельные ad hoc ветки.
 [ ] Gesture-machine не импортирует и не дублирует view-side router/tracker
     state шага `10`.
+[ ] Gesture-machine работает только с controller-level `pointerId` и не
+    различает routed/direct path после boundary normalization `11.1`.
+[ ] Gesture-machine не становится owner-ом move-local rollback или draw-local
+    pending-line cleanup semantics.
 [ ] Structural constructor rewiring `SceneControllerInteractive(...)`
     принадлежит этому подшагу и не требует возвращаться в `11.1`.
 [ ] Повторная диагностика

@@ -43,7 +43,7 @@ step-owned методы не должны пробивать пороги из
 
 Следующий системный drift теперь в controller-side интерактивности:
 
-- `SceneControllerInteractive.handlePointer(...)` и direct entry path
+- routed path через view и direct controller entry
   расходятся по семантике invalid terminal input;
 - active gesture owner размазан между controller, move session и draw
   coordinator;
@@ -66,7 +66,7 @@ step-owned методы не должны пробивать пороги из
 Владелец решения по:
 
 - contract `SceneControllerInteractive.handlePointer(...)`;
-- канонической трактовке invalid `up/cancel`;
+- канонической нормализации invalid terminal input на controller boundary;
 - единому правилу валидации `dragStartSlop`;
 - сохранению controller-owned монотонности `timestampMs`.
 
@@ -104,7 +104,7 @@ step-owned методы не должны пробивать пороги из
 
 - переносу move-flow на controller-owned gesture lifecycle;
 - одному admissibility contract для move preview и move commit;
-- cancel semantics и восстановлению baseline selection;
+- move-local cancel semantics и восстановлению baseline selection;
 - зачистке duplicate notify/reset веток внутри move session.
 
 ### Шаг 11.5
@@ -122,7 +122,8 @@ step-owned методы не должны пробивать пороги из
 
 1. Валидация `dragStartSlop` в конструкторе, единое правило для
    `setDragStartSlop(...)` и `pointerSettings.tapSlop`, а также canonical
-   invalid `up/cancel` в `handlePointer(...)` переносятся в `11.1`.
+   invalid terminal input normalization в `handlePointer(...)` переносятся в
+   `11.1`.
 2. Controller-side active gesture owner, baseline `dragStartSlop`, forced reset
    на `replaceScene(...)` и `setCameraOffset(...)`, а также запрет
    не-владеющему pointer-у сбрасывать чужой gesture переносятся в `11.2`.
@@ -145,17 +146,21 @@ step-owned методы не должны пробивать пороги из
 
 ## Уже принятые архитектурные решения
 
-1. После routed dispatch из шага `10` active gesture meaning принадлежит только
-   controller-side owner-у. View не принимает решений про invalid terminal
-   semantics, forced abort и preview/commit admissibility.
+1. После controller boundary admission active gesture meaning принадлежит
+   только controller-side owner-у. View не принимает решений про invalid
+   terminal semantics, forced abort и preview/commit admissibility, а direct
+   controller entry использует тот же controller-owned owner contract.
 2. `SceneControllerInteractive` получает один internal owner gesture lifecycle.
    Если для этого создаётся отдельный helper, он остаётся internal-only и не
    становится новым public/runtime service.
 3. Invalid terminal input нормализуется на controller boundary до dispatch в
-   session-ы:
+   owner-level lifecycle:
    - invalid `cancel` трактуется как terminal `cancel`;
    - invalid `up` трактуется как terminal `cancel`;
    - invalid `down/move` продолжают отбрасываться.
+   Эта нормализация фиксирует только event shape и boundary contract.
+   Move-local и draw-local смысл полученного `cancel`, включая rollback,
+   preview cleanup и pending-line abort, остаётся ownership `11.4` и `11.5`.
 4. Baseline `dragStartSlop` фиксируется один раз на `down` и не меняется до
    завершения текущего gesture, даже если `pointerSettings` или explicit
    `dragStartSlop` обновились в процессе.
@@ -176,6 +181,9 @@ step-owned методы не должны пробивать пороги из
 
 1. Один owner отвечает за active gesture identity. Нельзя одновременно держать
    competing mutable pointer-owner state и в controller, и в move/draw session.
+   При этом boundary-normalization terminal input из `11.1` не должна сама по
+   себе решать move/draw-local cleanup semantics, если для этого ещё нет
+   единого owner contract из `11.2`, `11.4` и `11.5`.
 2. Один owner отвечает за admissibility policy. Нельзя оставлять параллельно
    `interactive_selection_utils.dart`, controller-side ad hoc checks и новые
    helper-ы как competing источники одной и той же interactive composite
@@ -190,6 +198,22 @@ step-owned методы не должны пробивать пороги из
    по `cyclomatic-complexity`, `maximum-nesting-level` и
    `source-lines-of-code`.
 
+## Ownership Matrix
+
+- `11.1` владеет только boundary-normalization входного pointer event:
+  phase, `pointerId`, monotonic `timestampMs`, finite/drop rules.
+- `11.2` владеет только owner-level delivery/reset decision:
+  какой controller-level `pointerId` активен, кому разрешён terminal dispatch,
+  когда запускается forced reset.
+- `11.3` владеет только определением interactive composite policy и
+  controller-side preflight adoption вне session-ов.
+- `11.4` владеет move-local смыслом `cancel`, rollback selection и adoption
+  policy внутри move session.
+- `11.5` владеет draw-local смыслом `cancel`, pending-line semantics,
+  cleanup/timer owner contract и adoption policy внутри draw path.
+- Ни один подшаг не должен одновременно владеть и event normalization, и
+  local cleanup semantics одного и того же terminal случая.
+
 ## Критерии готовности umbrella-шага
 
 1. Для шагов `11.1`, `11.2`, `11.3`, `11.4`, `11.5` существуют отдельные
@@ -197,11 +221,13 @@ step-owned методы не должны пробивать пороги из
    приёмки и тестовым контуром.
 2. В описании подшагов не осталось пересечений по владению:
    - `11.1` отвечает за controller pointer entry contract и canonical terminal
-     semantics;
+     input normalization;
    - `11.2` отвечает за active gesture owner и forced reset lifecycle;
    - `11.3` отвечает за owner admissibility policy;
-   - `11.4` отвечает за move-session adoption этой policy и cancel semantics;
-   - `11.5` отвечает за draw-side lifecycle и pending-line cleanup.
+   - `11.4` отвечает за move-session adoption этой policy и move-local cancel
+     semantics;
+   - `11.5` отвечает за draw-side lifecycle, terminal cleanup и pending-line
+     cleanup.
 3. Ни один пункт исходного шага `11` не потерян при переносе, включая блок
    диагностических метрик и требование не пробивать пороги `10 / 4 / 40`.
 4. Граница между шагами `10` и `11` зафиксирована явно:
@@ -220,14 +246,16 @@ step-owned методы не должны пробивать пороги из
 [ ] Переформулировать шаг `11` как umbrella-этап и вынести реализацию в
     `11.1`, `11.2`, `11.3`, `11.4`, `11.5`.
 [ ] В `11.1` зафиксировать controller pointer entry contract, unified
-    `dragStartSlop` validation и canonical invalid terminal semantics.
+    `dragStartSlop` validation и canonical invalid terminal input
+    normalization.
 [ ] В `11.2` ввести одного controller-owned owner-а active gesture и forced
     reset lifecycle без overlap со шагом `10`.
 [ ] В `11.3` ввести одного owner-а interactive admissibility без инверсии layer
     DAG и без второго write-guard owner-а.
-[ ] В `11.4` перевести move session на общий policy contract и cancel restore.
+[ ] В `11.4` перевести move session на общий policy contract и move-local
+    cancel restore.
 [ ] В `11.5` перевести draw/eraser/line lifecycle на controller-owned reset,
-    закрыть pending-line cleanup и убрать metric hotspot-ы draw-path.
+    закрыть terminal/pending-line cleanup и убрать metric hotspot-ы draw-path.
 [ ] Закрепить в критериях приёмки каждого подшага повторную диагностику
     метрик с порогами `cyclomatic-complexity <= 10`,
     `maximum-nesting-level <= 4`, `source-lines-of-code <= 40`.

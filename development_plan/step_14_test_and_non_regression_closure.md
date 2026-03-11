@@ -52,13 +52,14 @@ language: russian
 
 1. `dragStartSlop` constructor validation
 2. `dragStartSlop` frozen on down
-3. invalid `up/cancel`
+3. controller-boundary normalization for invalid `up/cancel`
 4. cancel rollback of selection baseline
 5. replaceScene cancels active gesture
 6. setCameraOffset cancels active gesture
 7. monotonic timestamp
 8. preview/commit parity for locked/untransformable nodes
 9. единое правило для `dragStartSlop` и `tapSlop = 0`
+10. draw pending-line explicit abort vs stray normalized terminal input
 
 ## `test/view/**`
 
