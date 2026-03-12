@@ -1,6 +1,6 @@
 language: russian
 
-# Шаг 13. Ужесточить guardrails и реестр инвариантов через подшаги 13.1-13.5
+# Шаг 13. Ужесточить guardrails и реестр инвариантов через подшаги 13.1-13.6
 
 ## Диагностические метрики
 
@@ -96,7 +96,19 @@ closure. Без разведения этих обязанностей реал�
 
 ### Шаг 13.3
 
-`development_plan/step_13_3_semantic_ast_guardrails_for_mutation_epoch_and_boundary_errors.md`
+`development_plan/step_13_3_guardrail_tooling_decomposition.md`
+
+Владелец решения по:
+
+- декомпозиции `tool/check_import_boundaries.dart` и
+  `tool/check_guardrails.dart` на доменные модули;
+- выносу общего analyzer/path/AST support в одну shared-зону;
+- добавлению понятных подпапок под `tool/src/**` и `test/tool/**`;
+- зеркальной нарезке tool-тестов без смены CLI contract и без новых правил.
+
+### Шаг 13.4
+
+`development_plan/step_13_4_semantic_ast_guardrails_for_mutation_epoch_and_boundary_errors.md`
 
 Владелец решения по:
 
@@ -108,9 +120,9 @@ closure. Без разведения этих обязанностей реал�
 - разграничению между public/export checks из `13.2` и semantic runtime/tool
   checks этого подшага.
 
-### Шаг 13.4
+### Шаг 13.5
 
-`development_plan/step_13_4_invariant_registry_and_proof_coverage_contract.md`
+`development_plan/step_13_5_invariant_registry_and_proof_coverage_contract.md`
 
 Владелец решения по:
 
@@ -119,9 +131,9 @@ closure. Без разведения этих обязанностей реал�
 - добавлению недостающих invariant ids и унификации naming contract;
 - запрету comment-only coverage и `_` в новых invariant ids.
 
-### Шаг 13.5
+### Шаг 13.6
 
-`development_plan/step_13_5_coverage_gate_and_negative_tool_regression_matrix.md`
+`development_plan/step_13_6_coverage_gate_and_negative_tool_regression_matrix.md`
 
 Владелец решения по:
 
@@ -139,18 +151,21 @@ closure. Без разведения этих обязанностей реал�
    `lib/*.dart` переносятся в `13.1`.
 2. Снятие `skip` для `interactive/view`, проверка утечки изменяемых типов в
    сигнатуры и защита правила «один публичный вход» переносятся в `13.2`.
-3. Семантическая проверка write-only mutation по AST и опасным операциям,
+3. Декомпозиция `check_import_boundaries.dart`, `check_guardrails.dart` и
+   зеркальная нарезка `test/tool/**` без смены CLI contract переносятся в
+   `13.3`.
+4. Семантическая проверка write-only mutation по AST и опасным операциям,
    semantic проверка `epoch invalidation` и запрет прямого
-   `throw SceneDataException` вне boundary factory переносятся в `13.3`.
-4. Новый invariant-пакет:
+   `throw SceneDataException` вне boundary factory переносятся в `13.4`.
+5. Новый invariant-пакет:
    - `INV-SER-SCHEMA-VERSION-CONTRACT`
    - invariant монотонности `timestampMs`
    - invariant invalidation `PathNode` cache
    - invariant неизменяемости `ClearSceneResult.removedNodeIds`
    - invariant корректного `code` для unsupported schema version
    а также rename legacy ids с `_`, запрет `_` в новых id и proof-based
-   coverage вместо comment-only marker-ов переносятся в `13.4`.
-5. Снятие исключения coverage для файла с реальной логикой, ужесточение
+   coverage вместо comment-only marker-ов переносятся в `13.5`.
+6. Снятие исключения coverage для файла с реальной логикой, ужесточение
    coverage policy для критичных файлов и отрицательные tool-test сценарии на:
    - boundary-bypassing `Link`
    - `part` как обход boundary-rule
@@ -159,8 +174,8 @@ closure. Без разведения этих обязанностей реал�
    - fake `controllerEpoch`
    - мутирующий метод с нейтральным именем
    - формальное `INV:` без реальной проверки
-   переносятся в `13.5`.
-6. Ничего из исходного шага не теряется:
+   переносятся в `13.6`.
+7. Ничего из исходного шага не теряется:
    - `## Диагностические метрики` остаются обязательной частью acceptance gate
      каждого подшага;
    - целевые файлы не имеют права пробивать пороги;
@@ -200,7 +215,7 @@ closure. Без разведения этих обязанностей реал�
    - инструментальную проверку;
    - явный механизм доказательства.
 8. Invariant ids используют только `UPPER-KEBAB-CASE`.
-   Legacy ids с `_` должны быть переименованы в рамках `13.4`; после этого
+   Legacy ids с `_` должны быть переименованы в рамках `13.5`; после этого
    новые ids с `_` не допускаются.
 9. `tool/check_coverage.dart` может исключать только declaration-only или
    export-only units. Файл с реальной логикой не имеет права оставаться в
@@ -218,10 +233,10 @@ closure. Без разведения этих обязанностей реал�
    - invariant registry/coverage;
    - coverage gate и negative regression matrix.
    Нельзя дублировать одну и ту же policy в двух tool-файлах.
-2. Подшаги `13.2` и `13.3` не имеют права конкурировать за одну и ту же
+2. Подшаги `13.2` и `13.4` не имеют права конкурировать за одну и ту же
    проверку в `tool/check_guardrails.dart`:
    - `13.2` владеет signature/public surface checks;
-   - `13.3` владеет semantic AST/runtime boundary checks.
+   - `13.4` владеет semantic AST/runtime boundary checks.
 3. Comment marker `// INV:<id>` сам по себе не является доказательством
    invariants после шага `13`. Если marker остаётся, он должен быть привязан к
    реальной проверке.
@@ -237,36 +252,41 @@ closure. Без разведения этих обязанностей реал�
   package boundaries.
 - `13.2` владеет только public/export surface guardrails, mutable type leak
   detection в signatures и single-public-entrypoint discipline.
-- `13.3` владеет только semantic AST-guardrails для mutation/epoch/boundary
+- `13.3` владеет только структурной декомпозицией tooling-файлов и
+  зеркальной декомпозицией tool-тестов без изменения policy.
+- `13.4` владеет только semantic AST-guardrails для mutation/epoch/boundary
   errors.
-- `13.4` владеет только canonical invariant registry и criteria того, что
+- `13.5` владеет только canonical invariant registry и criteria того, что
   считается доказательством invariant-а.
-- `13.5` владеет только coverage gate для `lib/src/**` и negative regression
+- `13.6` владеет только coverage gate для `lib/src/**` и negative regression
   matrix для tooling этого шага.
 - Ни один подшаг не должен одновременно владеть и определением invariant id,
   и line-coverage allow-list, и import topology одного и того же файла.
 
 ## Критерии готовности umbrella-шага
 
-1. Для шагов `13.1`, `13.2`, `13.3`, `13.4`, `13.5` существуют отдельные
+1. Для шагов `13.1`, `13.2`, `13.3`, `13.4`, `13.5`, `13.6` существуют отдельные
    step-файлы с собственной целью, границей ответственности, критериями
    приёмки и тестовым контуром.
 2. В описании подшагов не осталось пересечений по владению:
    - `13.1` отвечает только за import topology и layer layout;
    - `13.2` отвечает только за public/export guardrails;
-   - `13.3` отвечает только за semantic AST guardrails;
-   - `13.4` отвечает только за invariant registry и proof coverage contract;
-   - `13.5` отвечает только за coverage gate и negative tool regression
+   - `13.3` отвечает только за structural decomposition tool-файлов и
+     зеркальную декомпозицию tool-тестов;
+   - `13.4` отвечает только за semantic AST guardrails;
+   - `13.5` отвечает только за invariant registry и proof coverage contract;
+   - `13.6` отвечает только за coverage gate и negative tool regression
      matrix.
 3. Ни один пункт исходного шага `13` не потерян при переносе, включая блок
    диагностических метрик и требование не пробивать пороги `10 / 4 / 40`.
 4. Между подшагами зафиксирована жёсткая граница:
    - `13.1` не проверяет public signature semantics;
    - `13.2` не определяет AST semantics write-only mutation;
-   - `13.3` не вводит новые invariant ids;
-   - `13.4` не меняет coverage allow-list `lib/src/**`;
-   - `13.5` не становится вторым owner-ом import/public/invariant policy.
-5. Шаг готов к имплементации только если для каждого из пяти подшагов уже
+   - `13.3` не меняет policy semantics, а только декомпозирует tooling;
+   - `13.4` не вводит новые invariant ids;
+   - `13.5` не меняет coverage allow-list `lib/src/**`;
+   - `13.6` не становится вторым owner-ом import/public/invariant policy.
+5. Шаг готов к имплементации только если для каждого из шести подшагов уже
    однозначно определены:
    - owner;
    - целевые файлы;

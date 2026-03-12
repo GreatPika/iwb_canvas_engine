@@ -3,9 +3,9 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'support/guardrails_tool_test_support.dart';
-import 'support/public_entrypoint_contract.dart';
-import 'support/tool_process_test_support.dart';
+import '../support/guardrails_tool_test_support.dart';
+import '../support/public_entrypoint_contract.dart';
+import '../support/tool_process_test_support.dart';
 
 void main() {
   group('tool/check_guardrails.dart', () {
@@ -16,11 +16,6 @@ void main() {
     _registerDuplicateExportCombinatorViolationTests();
     _registerMissingScanPolicyViolationTests();
     _registerTxnContractViolationTests();
-    _registerMutableLeakSurfaceTests();
-    _registerMutableCoreLeakTests();
-    _registerMultilineMutableCoreLeakTests();
-    _registerMutableRuntimeLeakTests();
-    _registerControllerGuardrailTests();
     _registerExportImportBoundaryTests();
   });
 }
@@ -291,148 +286,6 @@ abstract interface class SceneWriteTxn {
       }
     },
   );
-}
-
-void _registerMutableLeakSurfaceTests() {
-  test(
-    'ignores non-exported view declarations while scanning exported surface',
-    () async {
-      final sandbox = await createGuardrailsSandbox();
-      try {
-        writeCanonicalPublicExportScaffold(sandbox);
-        writeSandboxFile(
-          sandbox,
-          'lib/src/view/scene_view_interactive.dart',
-          '''
-Scene debugLeakedScene() => throw UnimplementedError();
-
-class SceneViewInteractive {
-  SceneControllerInteractive get controller => throw UnimplementedError();
-}
-
-typedef SceneView = SceneViewInteractive;
-''',
-        );
-
-        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-        expect(result.exitCode, 0, reason: result.stderr.toString());
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    },
-  );
-}
-
-void _registerMutableCoreLeakTests() {
-  test('rejects mutable core type in exported public API signature', () async {
-    // INV:INV-ENG-NO-EXTERNAL-MUTATION
-    final sandbox = await createGuardrailsSandbox();
-    try {
-      writeCanonicalPublicExportScaffold(sandbox);
-      writeSandboxFile(sandbox, 'lib/src/contract/snapshot.dart', '''
-abstract class Foo {
-  Scene get scene;
-}
-''');
-
-      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-      expect(result.exitCode, isNonZero);
-      expect(
-        result.stderr.toString(),
-        diagnostic(
-          category: 'public contract',
-          detail: 'exported API must not expose mutable core types',
-        ),
-      );
-    } finally {
-      sandbox.deleteSync(recursive: true);
-    }
-  });
-}
-
-void _registerMultilineMutableCoreLeakTests() {
-  test(
-    'rejects multiline mutable core type in exported public API signature',
-    () async {
-      final sandbox = await createGuardrailsSandbox();
-      try {
-        writeCanonicalPublicExportScaffold(sandbox);
-        writeSandboxFile(sandbox, 'lib/src/contract/snapshot.dart', '''
-abstract class Foo {
-  Scene
-  get scene;
-}
-''');
-
-        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-        expect(result.exitCode, isNonZero);
-        expect(
-          result.stderr.toString(),
-          diagnostic(
-            category: 'public contract',
-            detail: 'exported API must not expose mutable core types',
-          ),
-        );
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    },
-  );
-}
-
-void _registerMutableRuntimeLeakTests() {
-  test('rejects mutable runtime type in exported contract signature', () async {
-    final sandbox = await createGuardrailsSandbox();
-    try {
-      writeCanonicalPublicExportScaffold(sandbox);
-      writeSandboxFile(sandbox, 'lib/src/contract/snapshot.dart', '''
-abstract class Foo {
-  SceneControllerInteractive get controller;
-}
-''');
-
-      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-      expect(result.exitCode, isNonZero);
-      expect(
-        result.stderr.toString(),
-        diagnostic(
-          category: 'public contract',
-          detail: 'exported API must not expose mutable core types',
-        ),
-      );
-    } finally {
-      sandbox.deleteSync(recursive: true);
-    }
-  });
-}
-
-void _registerControllerGuardrailTests() {
-  test('rejects mutating symbol outside write/txn prefixes', () async {
-    final sandbox = await createGuardrailsSandbox();
-    try {
-      writeSandboxFile(sandbox, 'lib/src/controller/store.dart', '''
-class Store {
-  int controllerEpoch = 0;
-
-  void replaceScene() {}
-}
-''');
-
-      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-      expect(result.exitCode, isNonZero);
-      expect(
-        result.stderr.toString(),
-        diagnostic(
-          category: 'controller API',
-          detail:
-              'mutating symbol "replaceScene" must be routed through '
-              'write*/txn* transaction API',
-        ),
-      );
-    } finally {
-      sandbox.deleteSync(recursive: true);
-    }
-  });
 }
 
 void _registerExportImportBoundaryTests() {

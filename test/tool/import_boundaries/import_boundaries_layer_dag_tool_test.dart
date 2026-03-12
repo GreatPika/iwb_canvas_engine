@@ -3,8 +3,8 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'support/guardrails_tool_test_support.dart';
-import 'support/tool_process_test_support.dart';
+import '../support/guardrails_tool_test_support.dart';
+import '../support/tool_process_test_support.dart';
 
 void main() {
   group('tool/check_import_boundaries.dart', () {
@@ -148,226 +148,6 @@ class SceneBuilder {
       }
     });
 
-    test(
-      'rejects core -> external package through lib barrel re-export',
-      () async {
-        final sandbox = await createImportBoundariesSandbox();
-        try {
-          writeSandboxFile(
-            sandbox,
-            'lib/widgets_api.dart',
-            "export 'package:flutter/widgets.dart';\n",
-          );
-          writeSandboxFile(
-            sandbox,
-            'lib/src/core/value.dart',
-            "import 'package:iwb_canvas_engine/widgets_api.dart';\n",
-          );
-
-          final result = await runSandboxTool(
-            sandbox,
-            'check_import_boundaries.dart',
-          );
-          expect(result.exitCode, isNonZero);
-          expect(
-            result.stderr.toString(),
-            contains(
-              'external package violation: core/** must not import '
-              'package:flutter/widgets.dart',
-            ),
-          );
-        } finally {
-          sandbox.deleteSync(recursive: true);
-        }
-      },
-    );
-
-    test('rejects core -> unknown target layer import', () async {
-      final sandbox = await createImportBoundariesSandbox();
-      try {
-        writeSandboxFile(
-          sandbox,
-          'lib/src/unknown/value.dart',
-          'class UnknownValue {}\n',
-        );
-        writeSandboxFile(
-          sandbox,
-          'lib/src/core/value.dart',
-          "import 'package:iwb_canvas_engine/src/unknown/value.dart';\n",
-        );
-
-        final result = await runSandboxTool(
-          sandbox,
-          'check_import_boundaries.dart',
-        );
-        expect(result.exitCode, isNonZero);
-        expect(
-          result.stderr.toString(),
-          allOf(
-            contains('layer layout violation:'),
-            contains('uses unapproved top-level layer "unknown"'),
-          ),
-        );
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
-
-    test('rejects core -> reintroduced deleted public layer import', () async {
-      final sandbox = await createImportBoundariesSandbox();
-      try {
-        final deletedLayerSegments = ['src', 'public', 'value.dart'];
-        final deletedLayerPathSuffix = deletedLayerSegments.join('/');
-        final deletedLayerFilePath = 'lib/$deletedLayerPathSuffix';
-        final deletedLayerImportTarget =
-            'package:iwb_canvas_engine/$deletedLayerPathSuffix';
-
-        writeSandboxFile(
-          sandbox,
-          deletedLayerFilePath,
-          'class DeletedLayerValue {}\n',
-        );
-        writeSandboxFile(
-          sandbox,
-          'lib/src/core/value.dart',
-          "import '$deletedLayerImportTarget';\n",
-        );
-
-        final result = await runSandboxTool(
-          sandbox,
-          'check_import_boundaries.dart',
-        );
-        expect(result.exitCode, isNonZero);
-        expect(
-          result.stderr.toString(),
-          allOf(
-            contains('layer layout violation:'),
-            contains('uses deleted top-level layer "public"'),
-          ),
-        );
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
-
-    test('rejects reintroduced deleted public layer without imports', () async {
-      final sandbox = await createImportBoundariesSandbox();
-      try {
-        writeSandboxFile(
-          sandbox,
-          'lib/src/public/value.dart',
-          'class DeletedLayerValue {}\n',
-        );
-
-        final result = await runSandboxTool(
-          sandbox,
-          'check_import_boundaries.dart',
-        );
-        expect(result.exitCode, isNonZero);
-        expect(
-          result.stderr.toString(),
-          allOf(
-            contains('layer layout violation:'),
-            contains('uses deleted top-level layer "public"'),
-          ),
-        );
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
-
-    test('rejects unknown top-level lib/src layer without imports', () async {
-      final sandbox = await createImportBoundariesSandbox();
-      try {
-        writeSandboxFile(
-          sandbox,
-          'lib/src/unknown/value.dart',
-          'class UnknownValue {}\n',
-        );
-
-        final result = await runSandboxTool(
-          sandbox,
-          'check_import_boundaries.dart',
-        );
-        expect(result.exitCode, isNonZero);
-        expect(
-          result.stderr.toString(),
-          allOf(
-            contains('layer layout violation:'),
-            contains('uses unapproved top-level layer "unknown"'),
-          ),
-        );
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
-
-    test('ignores non-Dart top-level lib/src files', () async {
-      final sandbox = await createImportBoundariesSandbox();
-      try {
-        writeSandboxFile(sandbox, 'lib/src/README.md', '# Internal notes\n');
-        writeSandboxFile(
-          sandbox,
-          'lib/src/core/value.dart',
-          'class CoreValue {}\n',
-        );
-
-        final result = await runSandboxTool(
-          sandbox,
-          'check_import_boundaries.dart',
-        );
-        expect(result.exitCode, 0, reason: result.stderr.toString());
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
-
-    test('rejects higher layers -> unknown target layer imports', () async {
-      const layerCases = <({String filePath, String label})>[
-        (filePath: 'lib/src/model/value.dart', label: 'model'),
-        (filePath: 'lib/src/controller/value.dart', label: 'controller'),
-        (filePath: 'lib/src/interactive/value.dart', label: 'interactive'),
-        (filePath: 'lib/src/render/value.dart', label: 'render'),
-        (filePath: 'lib/src/serialization/value.dart', label: 'serialization'),
-        (filePath: 'lib/src/view/value.dart', label: 'view'),
-      ];
-
-      for (final layerCase in layerCases) {
-        final sandbox = await createImportBoundariesSandbox();
-        try {
-          writeSandboxFile(
-            sandbox,
-            'lib/src/unknown/value.dart',
-            'class UnknownValue {}\n',
-          );
-          writeSandboxFile(
-            sandbox,
-            layerCase.filePath,
-            "import 'package:iwb_canvas_engine/src/unknown/value.dart';\n",
-          );
-
-          final result = await runSandboxTool(
-            sandbox,
-            'check_import_boundaries.dart',
-          );
-          expect(
-            result.exitCode,
-            isNonZero,
-            reason: '${layerCase.label} unexpectedly imported unknown layer',
-          );
-          expect(
-            result.stderr.toString(),
-            allOf(
-              contains('layer layout violation:'),
-              contains('uses unapproved top-level layer "unknown"'),
-            ),
-          );
-        } finally {
-          sandbox.deleteSync(recursive: true);
-        }
-      }
-    });
-
     test('allows view -> render import', () async {
       final sandbox = await createImportBoundariesSandbox();
       try {
@@ -392,68 +172,18 @@ class SceneBuilder {
       }
     });
 
-    test('rejects unapproved top-level lib/src leaf file', () async {
-      final sandbox = await createImportBoundariesSandbox();
-      try {
-        writeSandboxFile(
-          sandbox,
-          'lib/src/version.dart',
-          'const version = 1;\n',
-        );
-        writeSandboxFile(
-          sandbox,
-          'lib/src/core/value.dart',
-          'class CoreValue {}\n',
-        );
-
-        final result = await runSandboxTool(
-          sandbox,
-          'check_import_boundaries.dart',
-        );
-        expect(result.exitCode, isNonZero);
-        expect(
-          result.stderr.toString(),
-          allOf(
-            contains('layer layout violation:'),
-            contains('uses unapproved top-level lib/src leaf "version.dart"'),
-          ),
-        );
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
-
-    test('allows approved contract top-level layer without imports', () async {
-      final sandbox = await createImportBoundariesSandbox();
-      try {
-        writeSandboxFile(
-          sandbox,
-          'lib/src/contract/value.dart',
-          'class ContractValue {}\n',
-        );
-
-        final result = await runSandboxTool(
-          sandbox,
-          'check_import_boundaries.dart',
-        );
-        expect(result.exitCode, 0, reason: result.stderr.toString());
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
-
     test('allows view -> interactive import', () async {
       final sandbox = await createImportBoundariesSandbox();
       try {
         writeSandboxFile(
           sandbox,
-          'lib/src/interactive/controller.dart',
-          'class InteractiveController {}\n',
+          'lib/src/interactive/scene_controller_interactive.dart',
+          'class SceneControllerInteractive {}\n',
         );
         writeSandboxFile(
           sandbox,
-          'lib/src/view/widget.dart',
-          "import 'package:iwb_canvas_engine/src/interactive/controller.dart';\n",
+          'lib/src/view/scene_view_interactive.dart',
+          "import 'package:iwb_canvas_engine/src/interactive/scene_controller_interactive.dart';\n",
         );
 
         final result = await runSandboxTool(
@@ -471,13 +201,13 @@ class SceneBuilder {
       try {
         writeSandboxFile(
           sandbox,
-          'lib/src/model/document.dart',
-          'class Document {}\n',
+          'lib/src/model/types.dart',
+          'class ModelType {}\n',
         );
         writeSandboxFile(
           sandbox,
           'lib/src/serialization/codec.dart',
-          "import 'package:iwb_canvas_engine/src/model/document.dart';\n",
+          "import 'package:iwb_canvas_engine/src/model/types.dart';\n",
         );
 
         final result = await runSandboxTool(
@@ -495,13 +225,13 @@ class SceneBuilder {
       try {
         writeSandboxFile(
           sandbox,
-          'lib/src/serialization/codec_guards.dart',
-          'void guardCodec() {}\n',
+          'lib/src/serialization/codec.dart',
+          'class SceneCodec {}\n',
         );
         writeSandboxFile(
           sandbox,
-          'lib/src/model/scene_builder.dart',
-          "import 'package:iwb_canvas_engine/src/serialization/codec_guards.dart';\n",
+          'lib/src/model/types.dart',
+          "import 'package:iwb_canvas_engine/src/serialization/codec.dart';\n",
         );
 
         final result = await runSandboxTool(
@@ -525,13 +255,13 @@ class SceneBuilder {
       try {
         writeSandboxFile(
           sandbox,
-          'lib/src/controller/types.dart',
-          'class ControllerType {}\n',
+          'lib/src/controller/store.dart',
+          'class Store {}\n',
         );
         writeSandboxFile(
           sandbox,
           'lib/src/core/value.dart',
-          "import 'package:iwb_canvas_engine/src/controller/types.dart';\n",
+          "import 'package:iwb_canvas_engine/src/controller/store.dart';\n",
         );
 
         final result = await runSandboxTool(

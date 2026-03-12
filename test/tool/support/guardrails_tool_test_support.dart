@@ -12,20 +12,14 @@ Matcher diagnostic({required String category, required String detail}) {
 Future<Directory> createGuardrailsSandbox() {
   return createToolSandbox(
     tempPrefix: 'iwb_canvas_engine_guardrails_tool_test_',
-    toolFiles: const <String>[
-      'tool/check_guardrails.dart',
-      'tool/src/layer_guardrails.dart',
-    ],
+    toolFiles: const <String>['tool/check_guardrails.dart', 'tool/src'],
   );
 }
 
 Future<Directory> createImportBoundariesSandbox() {
   return createToolSandbox(
     tempPrefix: 'iwb_canvas_engine_import_boundaries_tool_test_',
-    toolFiles: const <String>[
-      'tool/check_import_boundaries.dart',
-      'tool/src/layer_guardrails.dart',
-    ],
+    toolFiles: const <String>['tool/check_import_boundaries.dart', 'tool/src'],
   );
 }
 

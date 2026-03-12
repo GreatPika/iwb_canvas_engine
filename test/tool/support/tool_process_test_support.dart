@@ -20,7 +20,7 @@ Future<Directory> createToolSandbox({
 
   final sourceRoot = Directory.current.path;
   for (final toolFile in toolFiles) {
-    _copyFile('$sourceRoot/$toolFile', '${sandbox.path}/$toolFile');
+    _copyPath('$sourceRoot/$toolFile', '${sandbox.path}/$toolFile');
   }
 
   return sandbox;
@@ -44,9 +44,29 @@ Future<ProcessResult> runSandboxTool(
   ], workingDirectory: sandbox.path);
 }
 
-void _copyFile(String from, String to) {
-  final source = File(from);
-  final target = File(to);
-  target.parent.createSync(recursive: true);
-  source.copySync(target.path);
+void _copyPath(String from, String to) {
+  final sourceFile = File(from);
+  if (sourceFile.existsSync()) {
+    final target = File(to);
+    target.parent.createSync(recursive: true);
+    sourceFile.copySync(target.path);
+    return;
+  }
+
+  final sourceDir = Directory(from);
+  if (!sourceDir.existsSync()) {
+    throw FileSystemException('Tool path not found', from);
+  }
+  for (final entity in sourceDir.listSync(
+    recursive: true,
+    followLinks: false,
+  )) {
+    if (entity is! File) {
+      continue;
+    }
+    final relativePath = entity.path.substring(sourceDir.path.length + 1);
+    final target = File('$to/$relativePath');
+    target.parent.createSync(recursive: true);
+    entity.copySync(target.path);
+  }
 }

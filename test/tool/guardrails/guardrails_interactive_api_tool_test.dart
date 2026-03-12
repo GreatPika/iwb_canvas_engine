@@ -3,14 +3,13 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'support/guardrails_tool_test_support.dart';
-import 'support/tool_process_test_support.dart';
+import '../support/guardrails_tool_test_support.dart';
+import '../support/tool_process_test_support.dart';
 
 void main() {
   group('tool/check_guardrails.dart', () {
     _registerInteractiveAcceptanceTests();
     _registerInteractiveGuardViolationTests();
-    _registerInteractiveMutableLeakTests();
     _registerInteractiveDisposeGuardTests();
   });
 }
@@ -139,48 +138,6 @@ class SceneControllerInteractive {
       }
     },
   );
-}
-
-void _registerInteractiveMutableLeakTests() {
-  test('rejects mutable core type in exported interactive surface', () async {
-    final sandbox = await createGuardrailsSandbox();
-    try {
-      writeMinimalControllerStore(sandbox);
-      writeCanonicalPublicExportScaffold(sandbox);
-      writeSandboxFile(
-        sandbox,
-        'lib/src/interactive/scene_controller_interactive.dart',
-        '''
-class SceneControllerInteractive {
-  Scene get snapshot => throw UnimplementedError();
-
-  void dispose() {
-    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
-  }
-
-  void _ensurePublicSideEffectAllowed(
-    String operation, {
-    bool allowAfterDispose = false,
-  }) {}
-}
-
-typedef SceneController = SceneControllerInteractive;
-''',
-      );
-
-      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-      expect(result.exitCode, isNonZero);
-      expect(
-        result.stderr.toString(),
-        diagnostic(
-          category: 'public contract',
-          detail: 'exported API must not expose mutable core types',
-        ),
-      );
-    } finally {
-      sandbox.deleteSync(recursive: true);
-    }
-  });
 }
 
 void _registerInteractiveDisposeGuardTests() {

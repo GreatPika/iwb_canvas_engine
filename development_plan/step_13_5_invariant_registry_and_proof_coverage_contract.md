@@ -1,10 +1,10 @@
 language: russian
 
-# Шаг 13.4. Довести invariant registry до canonical ids и proof-based coverage
+# Шаг 13.5. Довести invariant registry до canonical ids и proof-based coverage
 
 ## Цель шага
 
-После `13.3` tooling уже должен ловить structural и semantic drift, но сами
+После `13.4` tooling уже должен ловить structural и semantic drift, но сами
 invariants всё ещё останутся неполноценными, если registry и coverage policy
 не отделяют реальное доказательство от формального маркера:
 
@@ -38,7 +38,7 @@ comment marker без реальной enforcement-точки больше не 
    - инструментальную проверку;
    - явный механизм доказательства.
 3. Comment marker без доказательства не считается coverage.
-4. В `13.4` добавляются и фиксируются следующие invariants:
+4. В `13.5` добавляются и фиксируются следующие invariants:
    - `INV-SER-SCHEMA-VERSION-CONTRACT`
    - invariant монотонности `timestampMs`
    - invariant invalidation `PathNode` cache
@@ -121,4 +121,4 @@ comment marker без реальной enforcement-точки больше не 
 - [ ] Любые новые parsing/proof-classification helper-ы укладываются в предел
       `10 / 4 / 40`.
 - [ ] Если hotspot останется в coverage tool, он закреплён за этим подшагом и
-      не переносится в `13.5`.
+      не переносится в `13.6`.

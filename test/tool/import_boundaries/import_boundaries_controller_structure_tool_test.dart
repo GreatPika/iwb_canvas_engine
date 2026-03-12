@@ -3,8 +3,8 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'support/guardrails_tool_test_support.dart';
-import 'support/tool_process_test_support.dart';
+import '../support/guardrails_tool_test_support.dart';
+import '../support/tool_process_test_support.dart';
 
 void main() {
   group('tool/check_import_boundaries.dart', () {
@@ -239,32 +239,6 @@ part
           diagnostic(
             category: 'controller structure',
             detail: 'internal/** must not import commands/**',
-          ),
-        );
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
-
-    test('rejects unknown layer under lib/src', () async {
-      final sandbox = await createImportBoundariesSandbox();
-      try {
-        writeSandboxFile(
-          sandbox,
-          'lib/src/unknown/z.dart',
-          'class Unknown {}\n',
-        );
-
-        final result = await runSandboxTool(
-          sandbox,
-          'check_import_boundaries.dart',
-        );
-        expect(result.exitCode, isNonZero);
-        expect(
-          result.stderr.toString(),
-          allOf(
-            contains('layer layout violation:'),
-            contains('uses unapproved top-level layer "unknown"'),
           ),
         );
       } finally {

@@ -1,10 +1,11 @@
 language: russian
 
-# Шаг 13.3. Перевести mutation, epoch invalidation и boundary-error rules на semantic AST guardrails
+# Шаг 13.4. Перевести mutation, epoch invalidation и boundary-error rules на semantic AST guardrails
 
 ## Цель шага
 
-После `13.2` public surface уже должен быть просканирован, но behavioral drift
+После `13.2` и `13.3` public surface и структура tooling уже должны быть
+выровнены, но behavioral drift
 всё ещё останется возможным, если `tool/check_guardrails.dart` продолжит
 полагаться на слабые признаки:
 
@@ -30,7 +31,7 @@ tooling смотрит на опасные операции и реальный 
 
 ## Зафиксированные решения (без повторного обсуждения в реализации)
 
-1. `13.3` владеет только semantic AST-guardrails в `check_guardrails.dart`.
+1. `13.4` владеет только semantic AST-guardrails в `check_guardrails.dart`.
 2. Write-only mutation определяется по опасным операциям и mutation surface,
    а не по префиксу имени или whitelist-у удобных названий.
 3. `epoch invalidation` считается выполненным только при наличии реального
@@ -113,4 +114,4 @@ tooling смотрит на опасные операции и реальный 
 - [ ] Любые новые visitor/helper-модули для AST detection укладываются в предел
       `10 / 4 / 40`.
 - [ ] Если hotspot остаётся в `check_guardrails.dart`, он явно закреплён за
-      semantic ownership этого подшага, а не размыт между `13.2` и `13.3`.
+      semantic ownership этого подшага, а не размыт между `13.2` и `13.4`.

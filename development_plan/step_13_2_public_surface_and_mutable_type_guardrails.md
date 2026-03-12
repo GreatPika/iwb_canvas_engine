@@ -16,7 +16,7 @@ surface всё ещё останется уязвимым, если `tool/check_
 
 Задача подшага: сделать `tool/check_guardrails.dart` owner-ом public/export
 guardrails и mutable type leak detection в signatures без смешивания с semantic
-AST-проверками `13.3`.
+AST-проверками `13.4`.
 
 ## Что уже подтверждено по текущему состоянию
 
@@ -37,7 +37,7 @@ AST-проверками `13.3`.
    конкретный surface реально можно и нужно просканировать как exported API.
    Исключения допустимы только точечные и мотивированные.
 3. Guardrail mutable type leak-ов проверяет именно сигнатуры exported/runtime
-   API и не подменяет semantic mutation checks `13.3`.
+   API и не подменяет semantic mutation checks `13.4`.
 4. Правило «один публичный вход» остаётся owner-ом этого подшага:
    public surface должен оставаться выровненным на sanctioned entrypoint-ы и
    не открывать обходные export-пути.
@@ -73,7 +73,7 @@ AST-проверками `13.3`.
 4. Проверка single public entrypoint ловит как прямые, так и обходные способы
    открыть дополнительный public surface.
 5. Подшаг не меняет detection rules write-only mutation или epoch invalidation;
-   это остаётся ownership `13.3`.
+   это остаётся ownership `13.4`.
 
 ## Последовательность реализации (только действия)
 
@@ -83,7 +83,7 @@ AST-проверками `13.3`.
       public surface.
 - [x] Ужесточить guardrail mutable type leak-ов в сигнатурах.
 - [x] Защитить правило «один публичный вход» от обходов через export surface.
-- [x] Не смешивать эти проверки с semantic AST-rules шага `13.3`.
+- [x] Не смешивать эти проверки с semantic AST-rules шага `13.4`.
 
 ## Критерии приёмки
 
@@ -95,7 +95,7 @@ AST-проверками `13.3`.
       tool failure.
 - [x] Single-public-entry rule защищён от обходных export/public entrypoint-ов.
 - [x] Подшаг не вводит semantic AST rules для write-only mutation,
-      `controllerEpoch` или `SceneDataException`; это остаётся `13.3`.
+      `controllerEpoch` или `SceneDataException`; это остаётся `13.4`.
 - [x] Повторная диагностика
       `dcm calculate-metrics tool/check_guardrails.dart test/tool/guardrails_layout_and_entrypoints_tool_test.dart test/tool/guardrails_public_contracts_tool_test.dart test/tool/guardrails_interactive_api_tool_test.dart --report-all`
       приложена к результату шага; новые или step-owned methods не содержат
@@ -122,4 +122,4 @@ AST-проверками `13.3`.
 - [x] Signature-scan helper-ы и новые exported-surface predicates
       укладываются в предел `10 / 4 / 40`.
 - [x] Ни один hotspot в `tool/check_guardrails.dart`, относящийся к public
-      surface scan, не остаётся «ничьим» между `13.2` и `13.3`.
+      surface scan, не остаётся «ничьим» между `13.2` и `13.4`.
