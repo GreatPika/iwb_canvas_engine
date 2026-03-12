@@ -46,59 +46,52 @@ String _extractMethodBody({
 
 void main() {
   test(
-    '_nodeBoundsWorld delegates world bounds to RenderGeometryCache only',
+    '_resolveNodePaintData reads geometry from RenderGeometryCache once',
     () {
       final source = File(
         'lib/src/render/scene_painter.dart',
       ).readAsStringSync();
       final body = _extractMethodBody(
         source: source,
-        methodStart: 'Rect _nodeBoundsWorld(',
+        methodStart: '_ResolvedNodePaintData _resolveNodePaintData(',
       );
 
-      expect(
-        body,
-        contains('final bounds = _geometryCache.get(node).worldBounds;'),
-      );
+      expect(body, contains('geometry: _geometryCache.get(node),'));
       expect(body, isNot(contains('parseSvgPathData')));
       expect(body, isNot(contains('buildLocalPath')));
       expect(body, isNot(contains('_buildPathNode')));
-      expect(body, isNot(contains('getBounds(')));
     },
   );
 
-  test('_drawPathNode reads localPath from RenderGeometryCache only', () {
-    final source = File('lib/src/render/scene_painter.dart').readAsStringSync();
-    final body = _extractMethodBody(
-      source: source,
-      methodStart: 'void _drawPathNode(',
-    );
-
-    expect(
-      body,
-      contains('final localPath = _geometryCache.get(node).localPath;'),
-    );
-    expect(body, isNot(contains('parseSvgPathData')));
-    expect(body, isNot(contains('buildLocalPath')));
-    expect(body, isNot(contains('_buildPathNode')));
-  });
-
   test(
-    '_drawSelectionForNode uses worldBounds-based selection for box nodes',
+    '_drawPathNode consumes frame-local localPath instead of querying cache',
     () {
       final source = File(
         'lib/src/render/scene_painter.dart',
       ).readAsStringSync();
+      expect(source, contains('required Path? localPath'));
       final body = _extractMethodBody(
         source: source,
-        methodStart: 'void _drawSelectionForNode(',
+        methodStart: 'void _drawPathNode(',
       );
 
-      expect(body, contains('case ImageNodeSnapshot image:'));
-      expect(body, contains('case TextNodeSnapshot text:'));
-      expect(body, contains('case RectNodeSnapshot rect:'));
-      expect(body, contains('_drawWorldBoundsSelection('));
-      expect(body, isNot(contains('_drawBoxSelection(')));
+      expect(body, isNot(contains('_geometryCache.get(')));
     },
   );
+
+  test('_drawSelectionForNode uses resolved frame data for box selections', () {
+    final source = File('lib/src/render/scene_painter.dart').readAsStringSync();
+    final body = _extractMethodBody(
+      source: source,
+      methodStart: 'void _drawSelectionForNode(',
+    );
+
+    expect(body, contains('case ImageNodeSnapshot():'));
+    expect(body, contains('case TextNodeSnapshot():'));
+    expect(body, contains('case RectNodeSnapshot():'));
+    expect(body, contains('_drawWorldBoundsSelection('));
+    expect(body, isNot(contains('_drawBoxSelection(')));
+    expect(body, isNot(contains('_nodePreviewOffset(')));
+    expect(body, isNot(contains('_geometryCache.get(')));
+  });
 }

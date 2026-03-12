@@ -392,6 +392,59 @@ void main() {
   });
 
   test(
+    'ScenePainter keeps canvas save stack balanced across preview and selection scopes',
+    () {
+      final controller = SceneControllerCore(
+        initialSnapshot: SceneSnapshot(
+          background: const BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-save-restore',
+              nodes: <NodeSnapshot>[
+                PathNodeSnapshot(
+                  id: 'path-selected',
+                  svgPathData: 'M0 0 H24 V16 H0 Z',
+                  fillColor: Color(0xFF81C784),
+                  strokeColor: Color(0xFF000000),
+                  strokeWidth: 2,
+                  transform: Transform2D.translation(const Offset(40, 40)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+      controller.write<void>((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'path-selected'});
+      });
+
+      final canvas = TestRecordingCanvas();
+      final painter = ScenePainter(
+        controller: controller,
+        imageResolver: (_) => null,
+        nodePreviewOffsetResolver: (_) => const Offset(6, -4),
+        selectionColor: const Color(0xFFFF0000),
+        selectionStrokeWidth: 2,
+      );
+
+      painter.paint(canvas, const Size(120, 100));
+
+      expect(canvas.getSaveCount(), 0);
+      final saveCount = canvas.invocations
+          .where((invocation) => invocation.invocation.memberName == #save)
+          .length;
+      final saveLayerCount = canvas.invocations
+          .where((invocation) => invocation.invocation.memberName == #saveLayer)
+          .length;
+      final restoreCount = canvas.invocations
+          .where((invocation) => invocation.invocation.memberName == #restore)
+          .length;
+      expect(restoreCount, saveCount + saveLayerCount);
+    },
+  );
+
+  test(
     'ScenePainter keeps grid visible with over-density via stride',
     () async {
       const background = Color(0xFFFFFFFF);
@@ -1104,7 +1157,7 @@ void main() {
       await _paintToImage(painter, width: 120, height: 100);
 
       expect(geometryCache.debugBuildCount, 1);
-      expect(geometryCache.debugHitCount, greaterThanOrEqualTo(2));
+      expect(geometryCache.debugHitCount, 0);
       expect(geometryCache.debugSize, 1);
     },
   );

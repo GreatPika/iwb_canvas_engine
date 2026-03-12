@@ -116,35 +116,35 @@ context, который живёт только в пределах одного
 
 ## Последовательность реализации (только действия)
 
-[ ] Создать `lib/src/render/canvas_scope.dart` с тремя scoped helper-ами.
-[ ] Перевести painter-side `save/restore` на `canvas_scope.dart`.
-[ ] Ввести один frame-local resolved node context на время `paint(...)`.
-[ ] Зафиксировать один owner-level contract для `previewDelta` в culling,
+[x] Создать `lib/src/render/canvas_scope.dart` с тремя scoped helper-ами.
+[x] Перевести painter-side `save/restore` на `canvas_scope.dart`.
+[x] Ввести один frame-local resolved node context на время `paint(...)`.
+[x] Зафиксировать один owner-level contract для `previewDelta` в culling,
     draw и selection.
-[ ] Убрать повторные geometry lookup в пределах одного кадра.
-[ ] Разрезать `_drawSelectionForNode(...)` и упростить `shouldRepaint(...)` до
+[x] Убрать повторные geometry lookup в пределах одного кадра.
+[x] Разрезать `_drawSelectionForNode(...)` и упростить `shouldRepaint(...)` до
     прохождения metric gate.
-[ ] Не переносить в этот подшаг grid semantics и cache key policy.
+[x] Не переносить в этот подшаг grid semantics и cache key policy.
 
 ## Критерии приёмки
 
-[ ] `canvas_scope.dart` создан и остаётся render-local utility без hidden
+[x] `canvas_scope.dart` создан и остаётся render-local utility без hidden
     state.
-[ ] Painter-side scoped `save/restore` больше не размазаны ad hoc по нескольким
+[x] Painter-side scoped `save/restore` больше не размазаны ad hoc по нескольким
     веткам.
-[ ] `previewDelta` для одного node-а резолвится один раз на кадр и одинаково
+[x] `previewDelta` для одного node-а резолвится один раз на кадр и одинаково
     используется в culling/draw/selection.
-[ ] В пределах одного `paint(...)` один node не инициирует конкурирующие
+[x] В пределах одного `paint(...)` один node не инициирует конкурирующие
     запросы `RenderGeometryCache.get(...)` ради тех же derived данных.
-[ ] `ScenePainter._drawSelectionForNode(...)` больше не является
+[x] `ScenePainter._drawSelectionForNode(...)` больше не является
     `HIGH`/`VERY HIGH` по `cyclomatic-complexity`,
     `maximum-nesting-level` и `source-lines-of-code`.
-[ ] `ScenePainter.shouldRepaint(...)` больше не является `HIGH`/`VERY HIGH` по
+[x] `ScenePainter.shouldRepaint(...)` больше не является `HIGH`/`VERY HIGH` по
     `cyclomatic-complexity`, `maximum-nesting-level` и
     `source-lines-of-code`.
-[ ] Подшаг не вводит новый persistent render cache и не дублирует ownership
+[x] Подшаг не вводит новый persistent render cache и не дублирует ownership
     существующих caches.
-[ ] Повторная диагностика
+[x] Повторная диагностика
     `dcm calculate-metrics lib/src/render/scene_painter.dart lib/src/render/canvas_scope.dart --report-all`
     приложена к результату шага; новые или step-owned methods не содержат
     `HIGH`/`VERY HIGH` по `cyclomatic-complexity`,
@@ -153,9 +153,9 @@ context, который живёт только в пределах одного
 
 ## Тестовый контур шага
 
-[ ] Новый targeted test:
+[x] Новый targeted test:
     `test/render/scene_painter_frame_contract_test.dart`
-[ ] `test/render/scene_painter_test.dart`
+[x] `test/render/scene_painter_test.dart`
     с покрытием:
     - save/restore integrity после перевода на `canvas_scope.dart`
     - одинаковый `previewDelta` contract для culling/draw/selection
