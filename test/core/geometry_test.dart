@@ -59,6 +59,23 @@ void main() {
     expect(rotatedRect.right, closeTo(expectedHalfExtent, 1e-9));
   });
 
+  test(
+    'RectTransformGeometry exposes transform fields for runtime callers',
+    () {
+      final transform = RectTransformGeometry(
+        position: const Offset(10, 20),
+        rotationDeg: 30,
+        scaleX: 2,
+        scaleY: 3,
+      );
+
+      expect(transform.position, const Offset(10, 20));
+      expect(transform.rotationDeg, 30);
+      expect(transform.scaleX, 2);
+      expect(transform.scaleY, 3);
+    },
+  );
+
   test('distance helpers cover point/segment and segment/segment', () {
     expect(
       distanceSquaredPointToSegment(
