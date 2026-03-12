@@ -130,8 +130,9 @@ persistent cache state, либо оставит structural hotspot-ы «разм
 - defensive ownership mutable cache payload-ов;
 - роли `SceneRenderCaches` как lifecycle owner-а, а не второго owner-а revision
   policy;
-- добавлению в `tool/invariant_registry.dart` тех invariants, на которых
-  держится cache/render correctness.
+- использованию существующего `INV-ENG-EPOCH-INVALIDATION` для lifecycle
+  coverage render caches без добавления новых ids в
+  `tool/invariant_registry.dart`.
 
 ## Карта переноса деталей из исходного шага 12
 
@@ -147,8 +148,8 @@ persistent cache state, либо оставит structural hotspot-ы «разм
    `12.3`.
 4. Пересмотр ключа `SceneTextLayoutCache`, revision policy для
    `ScenePathMetricsCache` / `SceneStrokePathCache` / `SceneRenderCaches`,
-   защита от внешней мутации, явная policy для invalid transform и additions в
-   `tool/invariant_registry.dart` переносятся в `12.4`.
+   защита от внешней мутации, явная policy для invalid transform и точное
+   использование существующего invariant coverage переносятся в `12.4`.
 5. `lib/src/render/render_geometry_cache.dart` целиком закрепляется за `12.3`,
    потому что текущий seam файла не позволяет независимо менять
    geometry/parity surface и cache-validity surface без одновременного
@@ -160,8 +161,8 @@ persistent cache state, либо оставит structural hotspot-ы «разм
    - `## Диагностические метрики` остаются обязательной частью acceptance gate
      каждого подшага;
    - целевые файлы обязаны уйти ниже порога `10 / 4 / 40`;
-   - invariant additions остаются внутри шага `12`, но tooling/coverage
-     mechanics для них не переносятся из шага `13`.
+   - lifecycle invariant coverage render caches остаётся внутри шага `12`, но
+     без новых ids и без переноса tooling/coverage mechanics из шага `13`.
 
 ## Уже принятые архитектурные решения
 
@@ -192,9 +193,10 @@ persistent cache state, либо оставит structural hotspot-ы «разм
 8. Invalid transform / invalid geometry policy для render caches должна быть
    явной и одинаково трактоваться всеми cache owner-ами:
    unsafe inputs не должны silently poison-ить cache state.
-9. Добавления в `tool/invariant_registry.dart` в этом шаге ограничены
-   render/cache-local contract-ами этого этапа. Изменения `tool/check_*` и
-   coverage mechanics остаются ownership шага `13`.
+9. Шаг `12` не меняет `tool/invariant_registry.dart` ради `12.4`.
+   Render/cache contract этого этапа использует существующий
+   `INV-ENG-EPOCH-INVALIDATION`; изменения `tool/check_*` и coverage mechanics
+   остаются ownership шага `13`.
 10. Cross-layer invariant-ы, чьё enforcement требует ownership над
     interactive lifecycle, writer/result payload или controller semantics, не
     должны затягиваться в `12.4` только потому, что render/cache слой
@@ -240,7 +242,8 @@ persistent cache state, либо оставит structural hotspot-ы «разм
   key composition для `SceneTextLayoutCache` / `ScenePathMetricsCache` /
   `SceneStrokePathCache`, invalid-transform handling для этих cache-ов,
   mutable payload ownership, `SceneRenderCaches` lifecycle boundary и
-  render/cache-local invariant registry additions.
+  использованием существующего lifecycle invariant coverage без registry
+  additions.
 - Ни один подшаг не должен одновременно владеть и painter frame orchestration,
   и persistent cache key policy для одной и той же проблемы.
 - Один файл с неразделённым runtime seam не делится между двумя подшагами:

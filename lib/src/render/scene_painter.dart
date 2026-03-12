@@ -413,7 +413,7 @@ class ScenePainter extends CustomPainter {
     }
     return PathSelectionContours(
       closedContours: closedContours,
-      openContours: openContours,
+      openContours: List<Path>.unmodifiable(openContours),
     );
   }
 
@@ -670,26 +670,22 @@ class ScenePainter extends CustomPainter {
       return;
     }
     final safeSize = clampNonNegativeSizeFinite(node.size);
-    final style = buildTextStyleForTextLayout(
-      color: _applyOpacity(node.color, node.opacity),
-      fontSize: node.fontSize,
-      fontFamily: node.fontFamily,
-      isBold: node.isBold,
-      isItalic: node.isItalic,
-      isUnderline: node.isUnderline,
-      lineHeight: node.lineHeight,
-    );
-    final maxWidth = normalizeTextLayoutMaxWidth(node.maxWidth);
-
     final textLayoutCache = this.textLayoutCache;
     final textPainter = textLayoutCache != null
-        ? textLayoutCache.getOrBuild(
-            node: node,
-            textStyle: style,
-            maxWidth: maxWidth,
-            textDirection: textDirection,
-          )
-        : _buildTextPainter(node, style, maxWidth);
+        ? textLayoutCache.getOrBuild(node: node, textDirection: textDirection)
+        : _buildTextPainter(
+            node,
+            buildTextStyleForTextLayout(
+              color: _applyOpacity(node.color, node.opacity),
+              fontSize: node.fontSize,
+              fontFamily: node.fontFamily,
+              isBold: node.isBold,
+              isItalic: node.isItalic,
+              isUnderline: node.isUnderline,
+              lineHeight: node.lineHeight,
+            ),
+            normalizeTextLayoutMaxWidth(node.maxWidth),
+          );
 
     final alignOffset = _textAlignOffset(
       node.align,

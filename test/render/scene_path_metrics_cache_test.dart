@@ -24,6 +24,8 @@ void main() {
 
     final entry2 = cache.getOrBuild(node: node, localPath: localPath);
     expect(identical(entry1, entry2), isTrue);
+    expect(identical(entry1.closedContours, entry2.closedContours), isTrue);
+    expect(identical(entry1.openContours, entry2.openContours), isTrue);
     expect(cache.debugBuildCount, 1);
     expect(cache.debugHitCount, 1);
     expect(cache.debugSize, 1);
@@ -41,6 +43,7 @@ void main() {
     final entry2 = cache.getOrBuild(node: nodeB, localPath: pathB);
     expect(identical(entry1, entry2), isFalse);
     expect(cache.debugBuildCount, 2);
+    expect(cache.debugSize, 1);
   });
 
   test('ScenePathMetricsCache rebuilds on fillRule change', () {
@@ -59,6 +62,7 @@ void main() {
     final entry2 = cache.getOrBuild(node: nodeB, localPath: pathB);
     expect(identical(entry1, entry2), isFalse);
     expect(cache.debugBuildCount, 2);
+    expect(cache.debugSize, 1);
   });
 
   test(
@@ -108,13 +112,22 @@ void main() {
       ..lineTo(10, 0);
 
     final openEntry = cache.getOrBuild(node: openNode, localPath: openPath);
+    final openEntryHit = cache.getOrBuild(node: openNode, localPath: openPath);
     expect(openEntry.closedContours, isNull);
     expect(openEntry.openContours, isNotEmpty);
+    expect(identical(openEntry, openEntryHit), isTrue);
+    expect(
+      identical(openEntry.openContours, openEntryHit.openContours),
+      isTrue,
+    );
+    expect(() => openEntry.openContours.add(Path()), throwsUnsupportedError);
 
     final emptyNode = PathNodeSnapshot(id: 'empty', svgPathData: 'M0 0 H10');
     final emptyEntry = cache.getOrBuild(node: emptyNode, localPath: Path());
+    final emptyEntryHit = cache.getOrBuild(node: emptyNode, localPath: Path());
     expect(emptyEntry.closedContours, isNull);
     expect(emptyEntry.openContours, isEmpty);
+    expect(identical(emptyEntry, emptyEntryHit), isTrue);
   });
 
   test('ScenePathMetricsCache evicts least-recent entry (LRU)', () {

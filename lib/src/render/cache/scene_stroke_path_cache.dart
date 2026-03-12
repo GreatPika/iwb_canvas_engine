@@ -39,6 +39,10 @@ class SceneStrokePathCache {
   /// `epoch` is intentionally not part of this cache key.
   void clear() => _entries.clear();
 
+  /// Returns a borrowed render path for [node].
+  ///
+  /// Degenerate 0/1-point cases stay uncached and callers must treat cached
+  /// paths as read-only render payload.
   Path getOrBuild(StrokeNodeSnapshot node) {
     if (node.points.isEmpty) {
       return Path();

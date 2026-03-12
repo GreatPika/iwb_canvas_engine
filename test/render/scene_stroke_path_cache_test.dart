@@ -11,68 +11,81 @@ void main() {
     expect(() => SceneStrokePathCache(maxEntries: -1), throwsArgumentError);
   });
 
-  test('stroke path cache handles empty/dot geometries safely', () {
-    final cache = SceneStrokePathCache(maxEntries: 8);
-    final empty = StrokeNodeSnapshot(
-      id: 'empty',
-      points: const <Offset>[],
-      thickness: 2,
-      color: const Color(0xFF000000),
-    );
-    final dot = StrokeNodeSnapshot(
-      id: 'dot',
-      points: const <Offset>[Offset(0, 0)],
-      thickness: 2,
-      color: const Color(0xFF000000),
-    );
+  test(
+    'stroke path cache handles empty/dot geometries as uncached safe results',
+    () {
+      final cache = SceneStrokePathCache(maxEntries: 8);
+      final empty = StrokeNodeSnapshot(
+        id: 'empty',
+        points: const <Offset>[],
+        thickness: 2,
+        color: const Color(0xFF000000),
+      );
+      final dot = StrokeNodeSnapshot(
+        id: 'dot',
+        points: const <Offset>[Offset(0, 0)],
+        thickness: 2,
+        color: const Color(0xFF000000),
+      );
 
-    expect(() => cache.getOrBuild(empty), returnsNormally);
-    expect(() => cache.getOrBuild(dot), returnsNormally);
-    expect(cache.debugBuildCount, 0);
-  });
+      final emptyFirst = cache.getOrBuild(empty);
+      final emptySecond = cache.getOrBuild(empty);
+      final dotFirst = cache.getOrBuild(dot);
+      final dotSecond = cache.getOrBuild(dot);
 
-  test('stroke path cache rebuilds only when pointsRevision changes', () {
-    final cache = SceneStrokePathCache(maxEntries: 8);
-    final strokeA = StrokeNodeSnapshot(
-      id: 's1',
-      points: const <Offset>[Offset(0, 0), Offset(10, 10)],
-      pointsRevision: 1,
-      thickness: 2,
-      color: const Color(0xFF000000),
-    );
-    final strokeA2 = StrokeNodeSnapshot(
-      id: 's1',
-      points: const <Offset>[Offset(0, 0), Offset(10, 10)],
-      pointsRevision: 1,
-      thickness: 2,
-      color: const Color(0xFF000000),
-    );
-    final strokeChanged = StrokeNodeSnapshot(
-      id: 's1',
-      points: const <Offset>[Offset(0, 0), Offset(10, 10)],
-      pointsRevision: 2,
-      thickness: 2,
-      color: const Color(0xFF000000),
-    );
-    final staleRevision = StrokeNodeSnapshot(
-      id: 's1',
-      points: const <Offset>[Offset(0, 0), Offset(12, 10)],
-      pointsRevision: 2,
-      thickness: 2,
-      color: const Color(0xFF000000),
-    );
+      expect(identical(emptyFirst, emptySecond), isFalse);
+      expect(identical(dotFirst, dotSecond), isFalse);
+      expect(cache.debugBuildCount, 0);
+      expect(cache.debugSize, 0);
+    },
+  );
 
-    final first = cache.getOrBuild(strokeA);
-    final second = cache.getOrBuild(strokeA2);
-    final third = cache.getOrBuild(strokeChanged);
-    final fourth = cache.getOrBuild(staleRevision);
+  test(
+    'stroke path cache reuses paths only when pointsRevision and points match',
+    () {
+      final cache = SceneStrokePathCache(maxEntries: 8);
+      final strokeA = StrokeNodeSnapshot(
+        id: 's1',
+        points: const <Offset>[Offset(0, 0), Offset(10, 10)],
+        pointsRevision: 1,
+        thickness: 2,
+        color: const Color(0xFF000000),
+      );
+      final strokeA2 = StrokeNodeSnapshot(
+        id: 's1',
+        points: const <Offset>[Offset(0, 0), Offset(10, 10)],
+        pointsRevision: 1,
+        thickness: 2,
+        color: const Color(0xFF000000),
+      );
+      final strokeChanged = StrokeNodeSnapshot(
+        id: 's1',
+        points: const <Offset>[Offset(0, 0), Offset(10, 10)],
+        pointsRevision: 2,
+        thickness: 2,
+        color: const Color(0xFF000000),
+      );
+      final staleRevision = StrokeNodeSnapshot(
+        id: 's1',
+        points: const <Offset>[Offset(0, 0), Offset(12, 10)],
+        pointsRevision: 2,
+        thickness: 2,
+        color: const Color(0xFF000000),
+      );
 
-    expect(identical(first, second), isTrue);
-    expect(identical(second, third), isFalse);
-    expect(identical(third, fourth), isFalse);
-    expect(cache.debugBuildCount, 3);
-    expect(cache.debugHitCount, 1);
-  });
+      final first = cache.getOrBuild(strokeA);
+      final second = cache.getOrBuild(strokeA2);
+      final third = cache.getOrBuild(strokeChanged);
+      final fourth = cache.getOrBuild(staleRevision);
+
+      expect(identical(first, second), isTrue);
+      expect(identical(second, third), isFalse);
+      expect(identical(third, fourth), isFalse);
+      expect(cache.debugBuildCount, 3);
+      expect(cache.debugHitCount, 1);
+      expect(cache.debugSize, 1);
+    },
+  );
 
   test('stroke path cache rebuilds when points change under same revision', () {
     final cache = SceneStrokePathCache(maxEntries: 8);
@@ -99,6 +112,7 @@ void main() {
     expect(identical(first, second), isFalse);
     expect(cache.debugBuildCount, 2);
     expect(cache.debugHitCount, 0);
+    expect(cache.debugSize, 1);
   });
 
   test(
@@ -130,6 +144,7 @@ void main() {
       expect(identical(newPath, newPathHit), isTrue);
       expect(cache.debugBuildCount, 2);
       expect(cache.debugHitCount, 1);
+      expect(cache.debugSize, 2);
     },
   );
 

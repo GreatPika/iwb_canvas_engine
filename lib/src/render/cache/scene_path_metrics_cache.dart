@@ -39,6 +39,10 @@ class ScenePathMetricsCache {
   /// `epoch` is intentionally not part of this cache key.
   void clear() => _entries.clear();
 
+  /// Returns borrowed render contours for [node]'s geometry-owner [localPath].
+  ///
+  /// Callers must pass the path built for the same [PathNodeSnapshot] and must
+  /// not mutate the returned contour objects.
   PathSelectionContours getOrBuild({
     required PathNodeSnapshot node,
     required Path localPath,
@@ -56,29 +60,7 @@ class ScenePathMetricsCache {
       return cached.contours;
     }
 
-    final fillType = _fillTypeFromSnapshot(node.fillRule);
-    Path? closedContours;
-    final openContours = <Path>[];
-    for (final metric in localPath.computeMetrics()) {
-      final contour = metric.extractPath(
-        0,
-        metric.length,
-        startWithMoveTo: true,
-      );
-      contour.fillType = fillType;
-      if (metric.isClosed) {
-        contour.close();
-        closedContours ??= Path()..fillType = fillType;
-        closedContours.addPath(contour, Offset.zero);
-      } else {
-        openContours.add(contour);
-      }
-    }
-
-    final contours = PathSelectionContours(
-      closedContours: closedContours,
-      openContours: openContours,
-    );
+    final contours = _buildContours(localPath, node.fillRule);
     _entries[key] = _PathMetricsEntry(
       svgPathData: node.svgPathData,
       fillRule: node.fillRule,
@@ -94,6 +76,31 @@ class ScenePathMetricsCache {
       _entries.remove(_entries.keys.first);
       _debugEvictCount += 1;
     }
+  }
+
+  PathSelectionContours _buildContours(Path localPath, PathFillRule fillRule) {
+    final pathFillType = _fillTypeFromSnapshot(fillRule);
+    Path? closedContours;
+    final openContours = <Path>[];
+    for (final metric in localPath.computeMetrics()) {
+      final contour = metric.extractPath(
+        0,
+        metric.length,
+        startWithMoveTo: true,
+      );
+      contour.fillType = pathFillType;
+      if (metric.isClosed) {
+        contour.close();
+        closedContours ??= Path()..fillType = pathFillType;
+        closedContours.addPath(contour, Offset.zero);
+        continue;
+      }
+      openContours.add(contour);
+    }
+    return PathSelectionContours(
+      closedContours: closedContours,
+      openContours: List<Path>.unmodifiable(openContours),
+    );
   }
 }
 
@@ -135,7 +142,11 @@ class PathSelectionContours {
     required this.openContours,
   });
 
+  /// Borrowed closed contour payload. Callers must treat it as read-only.
   final Path? closedContours;
+
+  /// Borrowed open contour payload. The list shape is immutable, but contained
+  /// paths remain borrowed render objects and must not be mutated.
   final List<Path> openContours;
 }
 

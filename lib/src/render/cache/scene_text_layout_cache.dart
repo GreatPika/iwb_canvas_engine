@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 
+import '../../core/numeric_clamp.dart';
 import '../../core/text_layout.dart';
 import '../../contract/snapshot.dart';
 
@@ -36,15 +37,19 @@ class SceneTextLayoutCache {
 
   void clear() => _entries.clear();
 
+  /// Returns a render-ready [TextPainter] derived only from [node] and
+  /// [textDirection].
+  ///
+  /// The cache owns `TextStyle` and normalized width derivation so callers
+  /// cannot provide a second source of truth for the cached object.
   TextPainter getOrBuild({
     required TextNodeSnapshot node,
-    required TextStyle textStyle,
-    required double? maxWidth,
     TextDirection textDirection = TextDirection.ltr,
   }) {
+    final textStyle = _buildTextStyle(node);
     final safeFontSize = normalizeTextLayoutFontSize(node.fontSize);
     final safeLineHeight = normalizeTextLayoutLineHeight(node.lineHeight);
-    final layoutMaxWidth = normalizeTextLayoutMaxWidth(maxWidth);
+    final layoutMaxWidth = normalizeTextLayoutMaxWidth(node.maxWidth);
     final key = _TextLayoutKey(
       text: node.text,
       fontSize: safeFontSize,
@@ -89,6 +94,18 @@ class SceneTextLayoutCache {
       _debugEvictCount += 1;
     }
   }
+
+  TextStyle _buildTextStyle(TextNodeSnapshot node) {
+    return buildTextStyleForTextLayout(
+      color: _renderReadyTextColor(node),
+      fontSize: node.fontSize,
+      isBold: node.isBold,
+      isItalic: node.isItalic,
+      isUnderline: node.isUnderline,
+      fontFamily: node.fontFamily,
+      lineHeight: node.lineHeight,
+    );
+  }
 }
 
 class _TextLayoutKey {
@@ -104,7 +121,19 @@ class _TextLayoutKey {
     required this.maxWidth,
     required this.color,
     required this.textDirection,
-  });
+  }) : _signature = (
+         text: text,
+         fontSize: fontSize,
+         fontFamily: fontFamily,
+         isBold: isBold,
+         isItalic: isItalic,
+         isUnderline: isUnderline,
+         align: align,
+         lineHeight: lineHeight,
+         maxWidth: maxWidth,
+         color: color,
+         textDirection: textDirection,
+       );
 
   final String text;
   final double fontSize;
@@ -117,35 +146,34 @@ class _TextLayoutKey {
   final double? maxWidth;
   final Color color;
   final TextDirection textDirection;
+  final ({
+    TextAlign align,
+    Color color,
+    String? fontFamily,
+    double fontSize,
+    bool isBold,
+    bool isItalic,
+    bool isUnderline,
+    double? lineHeight,
+    double? maxWidth,
+    String text,
+    TextDirection textDirection,
+  })
+  _signature;
 
   @override
-  bool operator ==(Object other) {
-    return other is _TextLayoutKey &&
-        other.text == text &&
-        other.fontSize == fontSize &&
-        other.fontFamily == fontFamily &&
-        other.isBold == isBold &&
-        other.isItalic == isItalic &&
-        other.isUnderline == isUnderline &&
-        other.align == align &&
-        other.lineHeight == lineHeight &&
-        other.maxWidth == maxWidth &&
-        other.color == color &&
-        other.textDirection == textDirection;
-  }
+  bool operator ==(Object other) =>
+      other is _TextLayoutKey && other._signature == _signature;
 
   @override
-  int get hashCode => Object.hash(
-    text,
-    fontSize,
-    fontFamily,
-    isBold,
-    isItalic,
-    isUnderline,
-    align,
-    lineHeight,
-    maxWidth,
-    color,
-    textDirection,
-  );
+  int get hashCode => _signature.hashCode;
+}
+
+Color _renderReadyTextColor(TextNodeSnapshot node) {
+  final alpha = (_textOpacity01(node.opacity) * 255.0).round().clamp(0, 255);
+  return node.color.withAlpha(alpha);
+}
+
+double _textOpacity01(double opacity) {
+  return clampNonNegativeFinite(opacity).clamp(0.0, 1.0);
 }
