@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
+import 'package:iwb_canvas_engine/src/core/node_geometry.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart';
@@ -165,6 +166,30 @@ void main() {
     expect(candidates.map((candidate) => candidate.node.id), <NodeId>[
       'regular',
     ]);
+  });
+
+  test('query candidates use shared runtime geometry contract', () {
+    final line = LineNode(
+      id: 'line-shared-contract',
+      start: const Offset(-10, 0),
+      end: const Offset(10, 0),
+      thickness: 4,
+      color: const Color(0xFF000000),
+      hitPadding: 2,
+    )..position = const Offset(15, 12);
+    final scene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(id: 'layer-auto-shared', nodes: <SceneNode>[line]),
+      ],
+    );
+
+    final index = SceneSpatialIndex.build(scene);
+    final candidate = index.query(const Rect.fromLTWH(0, 0, 40, 40)).single;
+
+    expect(
+      candidate.candidateBoundsWorld,
+      nodeGeometryCandidateBoundsWorld(line),
+    );
   });
 
   test('boundary: 1024 cells stays grid, 1025 cells goes large', () {
@@ -334,5 +359,76 @@ void main() {
       nodeLocator: const <NodeId, SpatialNodeLocation>{},
     );
     expect(index.isValid, isFalse);
+  });
+
+  test('incremental update keeps parity with full rebuild path', () {
+    final originalNode = StrokeNode(
+      id: 'stroke-parity',
+      points: const <Offset>[Offset(-10, 0), Offset(10, 0)],
+      thickness: 3,
+      color: const Color(0xFF000000),
+      hitPadding: 1.5,
+    )..position = const Offset(20, 20);
+    final originalScene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(id: 'layer-auto-parity', nodes: <SceneNode>[originalNode]),
+      ],
+    );
+    final originalLocator = <NodeId, SpatialNodeLocation>{
+      originalNode.id: (layerIndex: 0, nodeIndex: 0),
+    };
+    final incremental = SceneSpatialIndex.build(
+      originalScene,
+      nodeLocator: originalLocator,
+    );
+
+    final movedNode = StrokeNode(
+      id: 'stroke-parity',
+      points: const <Offset>[Offset(-20, 0), Offset(20, 0), Offset(25, 4)],
+      thickness: 5,
+      color: const Color(0xFF000000),
+      hitPadding: 2,
+    )..position = const Offset(80, 20);
+    final movedScene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(id: 'layer-auto-parity', nodes: <SceneNode>[movedNode]),
+      ],
+    );
+    final movedLocator = <NodeId, SpatialNodeLocation>{
+      movedNode.id: (layerIndex: 0, nodeIndex: 0),
+    };
+
+    final applied = incremental.applyIncremental(
+      scene: movedScene,
+      nodeLocator: movedLocator,
+      addedNodeIds: const <NodeId>{},
+      removedNodeIds: const <NodeId>{},
+      hitGeometryChangedIds: <NodeId>{movedNode.id},
+    );
+    final rebuilt = SceneSpatialIndex.build(
+      movedScene,
+      nodeLocator: movedLocator,
+    );
+    final queryRect = const Rect.fromLTWH(40, 0, 100, 60);
+
+    final incrementalCandidates = incremental.query(queryRect);
+    final rebuiltCandidates = rebuilt.query(queryRect);
+
+    expect(applied, isTrue);
+    expect(
+      incrementalCandidates.map((candidate) => candidate.node.id),
+      <NodeId>[movedNode.id],
+    );
+    expect(rebuiltCandidates.map((candidate) => candidate.node.id), <NodeId>[
+      movedNode.id,
+    ]);
+    expect(
+      incrementalCandidates.single.candidateBoundsWorld,
+      rebuiltCandidates.single.candidateBoundsWorld,
+    );
+    expect(
+      rebuiltCandidates.single.candidateBoundsWorld,
+      nodeGeometryCandidateBoundsWorld(movedNode),
+    );
   });
 }

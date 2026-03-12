@@ -3,8 +3,6 @@ import 'dart:math' as math;
 import 'dart:developer' as developer;
 import 'dart:collection';
 
-import 'package:path_drawing/path_drawing.dart';
-
 export '../contract/ids.dart' show NodeId;
 import '../contract/ids.dart';
 import '../contract/path_fill_rule.dart';
@@ -474,11 +472,7 @@ class StrokeNode extends SceneNode {
 
   @override
   Rect get localBounds {
-    if (points.isEmpty) return Rect.zero;
-    final bounds = aabbFromPoints(points);
-    if (!_isFiniteRect(bounds)) return Rect.zero;
-    final baseThickness = clampNonNegativeFinite(thickness);
-    return bounds.inflate(baseThickness / 2);
+    return strokeLocalBounds(points: points, thickness: thickness);
   }
 
   /// Normalizes interactive stroke geometry into local coordinates.
@@ -743,14 +737,7 @@ class LineNode extends SceneNode {
 
   @override
   Rect get localBounds {
-    if (!start.dx.isFinite ||
-        !start.dy.isFinite ||
-        !end.dx.isFinite ||
-        !end.dy.isFinite) {
-      return Rect.zero;
-    }
-    final baseThickness = clampNonNegativeFinite(thickness);
-    return Rect.fromPoints(start, end).inflate(baseThickness / 2);
+    return lineLocalBounds(start: start, end: end, thickness: thickness);
   }
 
   /// Normalizes interactive line geometry into local coordinates.
@@ -985,16 +972,8 @@ class PathNode extends SceneNode {
       return null;
     }
     try {
-      final path = parseSvgPathData(_svgPathData);
-      final metrics = path.computeMetrics();
-      var hasNonZeroLength = false;
-      for (final metric in metrics) {
-        if (metric.length > 0) {
-          hasNonZeroLength = true;
-          break;
-        }
-      }
-      if (!hasNonZeroLength) {
+      final path = parseSvgPathDataOrThrow(_svgPathData);
+      if (!hasDrawablePathMetric(path)) {
         _cacheResolved = true;
         _cachedSvgPathData = _svgPathData;
         _cachedFillRule = _fillRule;
@@ -1003,19 +982,19 @@ class PathNode extends SceneNode {
         _recordBuildLocalPathFailure(reason: 'svg-path-has-no-nonzero-length');
         return null;
       }
-      final bounds = path.getBounds();
-      final centered = path.shift(-bounds.center);
-      centered.fillType = _fillRule == PathFillRule.evenOdd
-          ? PathFillType.evenOdd
-          : PathFillType.nonZero;
-      final centeredBounds = centered.getBounds();
+      final geometry = centerPathGeometry(
+        path,
+        fillType: _fillRule == PathFillRule.evenOdd
+            ? PathFillType.evenOdd
+            : PathFillType.nonZero,
+      );
       _cacheResolved = true;
       _cachedSvgPathData = _svgPathData;
       _cachedFillRule = _fillRule;
-      _cachedLocalPath = centered;
-      _cachedLocalPathBounds = centeredBounds;
+      _cachedLocalPath = geometry.localPath;
+      _cachedLocalPathBounds = geometry.localBounds;
       _clearBuildLocalPathFailure();
-      return centered;
+      return geometry.localPath;
     } catch (e, st) {
       _cacheResolved = true;
       _cachedSvgPathData = _svgPathData;

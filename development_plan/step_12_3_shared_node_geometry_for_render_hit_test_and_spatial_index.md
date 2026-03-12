@@ -122,48 +122,48 @@ contract-а и перевести `hit_test.dart` / `scene_spatial_index.dart` �
 
 ## Последовательность реализации (только действия)
 
-[ ] Создать `lib/src/core/node_geometry.dart` как runtime owner-а
+[x] Создать `lib/src/core/node_geometry.dart` как runtime owner-а
     node-family geometry contract-а.
-[ ] Перевести `hit_test.dart` на shared runtime geometry owner.
-[ ] Перевести `scene_spatial_index.dart` на shared runtime geometry owner.
-[ ] Разрезать `segmentsIntersect(...)` и связанные giant geometry helper-ы в
+[x] Перевести `hit_test.dart` на shared runtime geometry owner.
+[x] Перевести `scene_spatial_index.dart` на shared runtime geometry owner.
+[x] Разрезать `segmentsIntersect(...)` и связанные giant geometry helper-ы в
     `geometry.dart`.
-[ ] Уточнить границу `render_geometry_cache.dart` как snapshot-side adapter-а и
+[x] Уточнить границу `render_geometry_cache.dart` как snapshot-side adapter-а и
     закрепить файл целиком за этим подшагом.
-[ ] Закрыть parity тестами между render bounds, candidate bounds и precise
+[x] Закрыть parity тестами между render bounds, candidate bounds и precise
     hit-test.
-[ ] Не переносить в этот подшаг grid semantics, policy остальных render
+[x] Не переносить в этот подшаг grid semantics, policy остальных render
     caches и invariant registry additions.
 
 ## Критерии приёмки
 
-[ ] `lib/src/core/node_geometry.dart` является одним owner-ом runtime
+[x] `lib/src/core/node_geometry.dart` является одним owner-ом runtime
     node-family geometry contract-а.
-[ ] `hit_test.dart` больше не является giant source of truth для тех же
+[x] `hit_test.dart` больше не является giant source of truth для тех же
     geometry rules.
-[ ] `scene_spatial_index.dart` больше не кодирует shape-specific geometry
+[x] `scene_spatial_index.dart` больше не кодирует shape-specific geometry
     semantics отдельно от shared runtime owner-а.
-[ ] `render_geometry_cache.dart` остаётся snapshot-side adapter-ом и не
+[x] `render_geometry_cache.dart` остаётся snapshot-side adapter-ом и не
     нарушает layer DAG cross-layer ownership-ом.
-[ ] `render_geometry_cache.dart` закреплён за этим подшагом как один code seam:
+[x] `render_geometry_cache.dart` закреплён за этим подшагом как один code seam:
     geometry extraction, world/local bounds semantics, key composition и
     invalid-input behavior меняются совместно и не делятся с `12.4`.
-[ ] `hitTestNode(...)` больше не является `HIGH`/`VERY HIGH` по
+[x] `hitTestNode(...)` больше не является `HIGH`/`VERY HIGH` по
     `cyclomatic-complexity`, `maximum-nesting-level` и
     `source-lines-of-code`.
-[ ] `_hitTestPathStrokePrecise(...)` больше не является `HIGH`/`VERY HIGH` по
+[x] `_hitTestPathStrokePrecise(...)` больше не является `HIGH`/`VERY HIGH` по
     `cyclomatic-complexity`, `maximum-nesting-level` и
     `source-lines-of-code`.
-[ ] `SceneSpatialIndex.query(...)` больше не является `HIGH`/`VERY HIGH` по
+[x] `SceneSpatialIndex.query(...)` больше не является `HIGH`/`VERY HIGH` по
     `cyclomatic-complexity`, `maximum-nesting-level` и
     `source-lines-of-code`.
-[ ] `SceneSpatialIndex.applyIncremental(...)` больше не является
+[x] `SceneSpatialIndex.applyIncremental(...)` больше не является
     `HIGH`/`VERY HIGH` по `cyclomatic-complexity`,
     `maximum-nesting-level` и `source-lines-of-code`.
-[ ] `segmentsIntersect(...)` больше не является `HIGH`/`VERY HIGH` по
+[x] `segmentsIntersect(...)` больше не является `HIGH`/`VERY HIGH` по
     `cyclomatic-complexity`, `maximum-nesting-level` и
     `source-lines-of-code`.
-[ ] Повторная диагностика
+[x] Повторная диагностика
     `dcm calculate-metrics lib/src/core/node_geometry.dart lib/src/core/hit_test.dart lib/src/core/scene_spatial_index.dart lib/src/core/geometry.dart lib/src/render/render_geometry_cache.dart --report-all`
     приложена к результату шага; новые или step-owned methods не содержат
     `HIGH`/`VERY HIGH` по `cyclomatic-complexity`,
@@ -172,19 +172,19 @@ contract-а и перевести `hit_test.dart` / `scene_spatial_index.dart` �
 
 ## Тестовый контур шага
 
-[ ] Новый targeted test:
+[x] Новый targeted test:
     `test/core/node_geometry_test.dart`
-[ ] `test/core/scene_spatial_index_test.dart`
+[x] `test/core/scene_spatial_index_test.dart`
     с покрытием:
     - candidate bounds используют shared runtime geometry contract
     - incremental update не ломает parity с rebuild path
-[ ] `test/render/render_hit_bounds_parity_test.dart`
+[x] `test/render/render_hit_bounds_parity_test.dart`
     с расширением на line/stroke/path parity после выделения owner-а
-[ ] `test/render/render_geometry_cache_test.dart`
+[x] `test/render/render_geometry_cache_test.dart`
     с покрытием:
     - key composition и invalid-input behavior не расходятся с geometry/parity
       contract внутри одного owner-а
-[ ] `test/core/hit_test_test.dart`
+[x] `test/core/hit_test_test.dart`
     с покрытием:
     - precise path/stroke hit-test использует shared runtime geometry contract
     - decomposition giant helpers не меняет hit semantics

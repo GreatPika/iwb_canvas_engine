@@ -68,7 +68,7 @@ language: russian
 - [ ] [Шаг 12. Закрыть structural safety рендера и кешей через подшаги 12.1-12.4](development_plan/step_12_render_and_cache_structural_safety.md)
 - [x] [Шаг 12.1. Ввести `canvas_scope.dart` и frame-local contract для `ScenePainter`](development_plan/step_12_1_canvas_scope_and_painter_frame_contract.md)
 - [x] [Шаг 12.2. Свести grid rendering и static cache к одному owner-у](development_plan/step_12_2_grid_renderer_and_static_cache_unification.md)
-- [ ] [Шаг 12.3. Свести runtime node geometry к одному owner-у для render parity, hit-test и spatial index](development_plan/step_12_3_shared_node_geometry_for_render_hit_test_and_spatial_index.md)
+- [x] [Шаг 12.3. Свести runtime node geometry к одному owner-у для render parity, hit-test и spatial index](development_plan/step_12_3_shared_node_geometry_for_render_hit_test_and_spatial_index.md)
 - [ ] [Шаг 12.4. Зафиксировать render cache key / revision contract и supporting invariants](development_plan/step_12_4_render_cache_keys_revision_contract_and_invariants.md)
 - [ ] [Шаг 13. Ужесточить guardrails и реестр инвариантов](development_plan/step_13_guardrails_and_invariant_registry.md)
 - [ ] [Шаг 14. Закрыть тестами и невозвратом все этапы](development_plan/step_14_test_and_non_regression_closure.md)

@@ -2,10 +2,9 @@ import 'dart:collection';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
-import 'package:path_drawing/path_drawing.dart';
 
 import '../core/geometry.dart';
-import '../core/local_bounds_policy.dart';
+import '../core/local_bounds_policy.dart' hide isFiniteRect, sanitizeFiniteRect;
 import '../core/numeric_clamp.dart';
 import '../contract/transform2d.dart';
 import '../contract/snapshot.dart';
@@ -124,34 +123,36 @@ class RenderGeometryCache {
   }
 
   GeometryEntry _lineEntry(LineNodeSnapshot node) {
-    if (!_isFiniteOffset(node.start) || !_isFiniteOffset(node.end)) {
+    if (!isFiniteOffset(node.start) || !isFiniteOffset(node.end)) {
       return const GeometryEntry(
         localBounds: Rect.zero,
         worldBounds: Rect.zero,
       );
     }
-    final safeThickness = clampNonNegativeFinite(node.thickness);
-    final localBounds = Rect.fromPoints(
-      node.start,
-      node.end,
-    ).inflate(safeThickness / 2);
+    final localBounds = lineLocalBounds(
+      start: node.start,
+      end: node.end,
+      thickness: clampNonNegativeFinite(node.thickness),
+    );
     return GeometryEntry(
-      localBounds: sanitizeFiniteRect(localBounds),
+      localBounds: localBounds,
       worldBounds: _toWorldBounds(node.transform, localBounds),
     );
   }
 
   GeometryEntry _strokeEntry(StrokeNodeSnapshot node) {
-    if (node.points.isEmpty || !_areFiniteOffsets(node.points)) {
+    if (node.points.isEmpty || !areFiniteOffsets(node.points)) {
       return const GeometryEntry(
         localBounds: Rect.zero,
         worldBounds: Rect.zero,
       );
     }
-    final safeThickness = clampNonNegativeFinite(node.thickness);
-    final localBounds = aabbFromPoints(node.points).inflate(safeThickness / 2);
+    final localBounds = strokeLocalBounds(
+      points: node.points,
+      thickness: clampNonNegativeFinite(node.thickness),
+    );
     return GeometryEntry(
-      localBounds: sanitizeFiniteRect(localBounds),
+      localBounds: localBounds,
       worldBounds: _toWorldBounds(node.transform, localBounds),
     );
   }
@@ -178,31 +179,10 @@ class RenderGeometryCache {
   }
 
   Path? _buildLocalPath(PathNodeSnapshot node) {
-    if (node.svgPathData.trim().isEmpty) {
-      return null;
-    }
-    try {
-      final path = parseSvgPathData(node.svgPathData);
-      var hasNonZeroLength = false;
-      for (final metric in path.computeMetrics()) {
-        if (metric.length > 0) {
-          hasNonZeroLength = true;
-          break;
-        }
-      }
-      if (!hasNonZeroLength) {
-        return null;
-      }
-      final bounds = path.getBounds();
-      final centered = path.shift(-bounds.center);
-      centered.fillType = _fillTypeFromSnapshot(node.fillRule);
-      if (!_isFiniteRect(centered.getBounds())) {
-        return null;
-      }
-      return centered;
-    } catch (_) {
-      return null;
-    }
+    return buildCenteredSvgPathGeometry(
+      node.svgPathData,
+      fillType: _fillTypeFromSnapshot(node.fillRule),
+    )?.localPath;
   }
 }
 
@@ -234,94 +214,146 @@ class _NodeInstanceKey {
 }
 
 Object _buildValidityKey(NodeSnapshot node) {
-  final t = node.transform;
-  final ta = t.a;
-  final tb = t.b;
-  final tc = t.c;
-  final td = t.d;
-  final ttx = t.tx;
-  final tty = t.ty;
+  final transformKey = _transformKey(node.transform);
   return switch (node) {
-    RectNodeSnapshot rectNode => (
-      'rect',
-      ta,
-      tb,
-      tc,
-      td,
-      ttx,
-      tty,
-      rectNode.size.width,
-      rectNode.size.height,
-      effectiveStrokeWidth(
-        strokeColor: rectNode.strokeColor,
-        strokeWidth: rectNode.strokeWidth,
-      ),
-    ),
-    ImageNodeSnapshot imageNode => (
-      'image',
-      ta,
-      tb,
-      tc,
-      td,
-      ttx,
-      tty,
-      imageNode.size.width,
-      imageNode.size.height,
-    ),
-    TextNodeSnapshot textNode => (
-      'text',
-      ta,
-      tb,
-      tc,
-      td,
-      ttx,
-      tty,
-      textNode.size.width,
-      textNode.size.height,
-    ),
-    LineNodeSnapshot lineNode => (
-      'line',
-      ta,
-      tb,
-      tc,
-      td,
-      ttx,
-      tty,
-      lineNode.start.dx,
-      lineNode.start.dy,
-      lineNode.end.dx,
-      lineNode.end.dy,
-      clampNonNegativeFinite(lineNode.thickness),
-    ),
+    RectNodeSnapshot rectNode => _rectValidityKey(rectNode, transformKey),
+    ImageNodeSnapshot imageNode => _imageValidityKey(imageNode, transformKey),
+    TextNodeSnapshot textNode => _textValidityKey(textNode, transformKey),
+    LineNodeSnapshot lineNode => _lineValidityKey(lineNode, transformKey),
     // Keep stroke key stable across logically equal snapshots:
     // only scalar/revision geometry inputs, never collection identity.
-    StrokeNodeSnapshot strokeNode => (
-      'stroke',
-      ta,
-      tb,
-      tc,
-      td,
-      ttx,
-      tty,
-      strokeNode.pointsRevision,
-      clampNonNegativeFinite(strokeNode.thickness),
+    StrokeNodeSnapshot strokeNode => _strokeValidityKey(
+      strokeNode,
+      transformKey,
     ),
-    PathNodeSnapshot pathNode => (
-      'path',
-      ta,
-      tb,
-      tc,
-      td,
-      ttx,
-      tty,
-      pathNode.svgPathData,
-      pathNode.fillRule,
-      effectiveStrokeWidth(
-        strokeColor: pathNode.strokeColor,
-        strokeWidth: pathNode.strokeWidth,
-      ),
-    ),
+    PathNodeSnapshot pathNode => _pathValidityKey(pathNode, transformKey),
   };
+}
+
+({double a, double b, double c, double d, double tx, double ty}) _transformKey(
+  Transform2D transform,
+) {
+  return (
+    a: transform.a,
+    b: transform.b,
+    c: transform.c,
+    d: transform.d,
+    tx: transform.tx,
+    ty: transform.ty,
+  );
+}
+
+Object _rectValidityKey(
+  RectNodeSnapshot node,
+  ({double a, double b, double c, double d, double tx, double ty}) transformKey,
+) {
+  return (
+    'rect',
+    transformKey.a,
+    transformKey.b,
+    transformKey.c,
+    transformKey.d,
+    transformKey.tx,
+    transformKey.ty,
+    node.size.width,
+    node.size.height,
+    effectiveStrokeWidth(
+      strokeColor: node.strokeColor,
+      strokeWidth: node.strokeWidth,
+    ),
+  );
+}
+
+Object _imageValidityKey(
+  ImageNodeSnapshot node,
+  ({double a, double b, double c, double d, double tx, double ty}) transformKey,
+) {
+  return (
+    'image',
+    transformKey.a,
+    transformKey.b,
+    transformKey.c,
+    transformKey.d,
+    transformKey.tx,
+    transformKey.ty,
+    node.size.width,
+    node.size.height,
+  );
+}
+
+Object _textValidityKey(
+  TextNodeSnapshot node,
+  ({double a, double b, double c, double d, double tx, double ty}) transformKey,
+) {
+  return (
+    'text',
+    transformKey.a,
+    transformKey.b,
+    transformKey.c,
+    transformKey.d,
+    transformKey.tx,
+    transformKey.ty,
+    node.size.width,
+    node.size.height,
+  );
+}
+
+Object _lineValidityKey(
+  LineNodeSnapshot node,
+  ({double a, double b, double c, double d, double tx, double ty}) transformKey,
+) {
+  return (
+    'line',
+    transformKey.a,
+    transformKey.b,
+    transformKey.c,
+    transformKey.d,
+    transformKey.tx,
+    transformKey.ty,
+    node.start.dx,
+    node.start.dy,
+    node.end.dx,
+    node.end.dy,
+    clampNonNegativeFinite(node.thickness),
+  );
+}
+
+Object _strokeValidityKey(
+  StrokeNodeSnapshot node,
+  ({double a, double b, double c, double d, double tx, double ty}) transformKey,
+) {
+  return (
+    'stroke',
+    transformKey.a,
+    transformKey.b,
+    transformKey.c,
+    transformKey.d,
+    transformKey.tx,
+    transformKey.ty,
+    node.pointsRevision,
+    clampNonNegativeFinite(node.thickness),
+  );
+}
+
+Object _pathValidityKey(
+  PathNodeSnapshot node,
+  ({double a, double b, double c, double d, double tx, double ty}) transformKey,
+) {
+  return (
+    'path',
+    transformKey.a,
+    transformKey.b,
+    transformKey.c,
+    transformKey.d,
+    transformKey.tx,
+    transformKey.ty,
+    node.svgPathData,
+    node.fillRule,
+    effectiveStrokeWidth(
+      strokeColor: node.strokeColor,
+      strokeWidth: node.strokeWidth,
+    ),
+  );
 }
 
 Rect _toWorldBounds(Transform2D transform, Rect localBounds) {
@@ -342,21 +374,5 @@ PathFillType _fillTypeFromSnapshot(PathFillRule rule) {
 }
 
 bool _isFiniteRect(Rect rect) {
-  return rect.left.isFinite &&
-      rect.top.isFinite &&
-      rect.right.isFinite &&
-      rect.bottom.isFinite;
-}
-
-bool _isFiniteOffset(Offset offset) {
-  return offset.dx.isFinite && offset.dy.isFinite;
-}
-
-bool _areFiniteOffsets(List<Offset> offsets) {
-  for (final offset in offsets) {
-    if (!_isFiniteOffset(offset)) {
-      return false;
-    }
-  }
-  return true;
+  return isFiniteRect(rect);
 }

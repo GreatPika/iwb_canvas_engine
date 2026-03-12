@@ -36,19 +36,23 @@ void main() {
 
     final rect = aabbForTransformedRect(
       localRect: const Rect.fromLTWH(0, 0, 2, 4),
-      position: const Offset(10, 20),
-      rotationDeg: 0,
-      scaleX: 2,
-      scaleY: 1,
+      transform: const RectTransformGeometry(
+        position: Offset(10, 20),
+        rotationDeg: 0,
+        scaleX: 2,
+        scaleY: 1,
+      ),
     );
     expect(rect, const Rect.fromLTRB(10, 20, 14, 24));
 
     final rotatedRect = aabbForTransformedRect(
       localRect: const Rect.fromLTWH(-1, -1, 2, 2),
-      position: Offset.zero,
-      rotationDeg: 45,
-      scaleX: 1,
-      scaleY: 1,
+      transform: const RectTransformGeometry(
+        position: Offset.zero,
+        rotationDeg: 45,
+        scaleX: 1,
+        scaleY: 1,
+      ),
     );
     final expectedHalfExtent = math.sqrt2;
     expect(rotatedRect.left, closeTo(-expectedHalfExtent, 1e-9));
@@ -146,4 +150,29 @@ void main() {
       isFalse,
     );
   });
+
+  test(
+    'path geometry helpers center valid paths and reject invalid svg data',
+    () {
+      final geometry = buildCenteredSvgPathGeometry(
+        'M0 0 H10 V10 H0 Z',
+        fillType: PathFillType.evenOdd,
+      );
+
+      expect(geometry, isNotNull);
+      expect(geometry?.localBounds, const Rect.fromLTRB(-5, -5, 5, 5));
+      expect(geometry?.localPath.fillType, PathFillType.evenOdd);
+      expect(
+        buildCenteredSvgPathGeometry('', fillType: PathFillType.nonZero),
+        isNull,
+      );
+      expect(
+        buildCenteredSvgPathGeometry(
+          'this is not svg',
+          fillType: PathFillType.nonZero,
+        ),
+        isNull,
+      );
+    },
+  );
 }

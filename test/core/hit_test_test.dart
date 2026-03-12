@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
 import 'package:iwb_canvas_engine/src/core/hit_test.dart';
+import 'package:iwb_canvas_engine/src/core/node_geometry.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 
@@ -44,7 +45,7 @@ void main() {
         const Offset(0, 0),
         const <Offset>[Offset(0, 0)],
         2,
-        hitPadding: 1,
+        options: const StrokeHitOptions(hitPadding: 1),
       ),
       isTrue,
     );
@@ -229,6 +230,51 @@ void main() {
     );
     expect(hitTestNode(const Offset(4990, 0), longMetricPath), isTrue);
     expect(hitTestNode(const Offset(4990, 30), longMetricPath), isFalse);
+  });
+
+  test('hitTestNode stays aligned with shared runtime geometry owner', () {
+    final nodes = <SceneNode>[
+      RectNode(id: 'rect-owner', size: const Size(20, 20))
+        ..position = const Offset(10, 10),
+      LineNode(
+        id: 'line-owner',
+        start: const Offset(-5, 0),
+        end: const Offset(5, 0),
+        thickness: 2,
+        color: const Color(0xFF000000),
+      )..position = const Offset(30, 10),
+      StrokeNode(
+        id: 'stroke-owner',
+        points: const <Offset>[Offset(-5, 0), Offset(5, 0)],
+        thickness: 2,
+        color: const Color(0xFF000000),
+      )..position = const Offset(50, 10),
+      PathNode(
+        id: 'path-owner',
+        svgPathData: 'M0 0 H10 V10 H0 Z',
+        fillColor: const Color(0xFF00FF00),
+        strokeColor: const Color(0xFF000000),
+        strokeWidth: 2,
+        transform: Transform2D.translation(const Offset(70, 10)),
+      ),
+    ];
+    final hitPoints = <Offset>[
+      const Offset(10, 10),
+      const Offset(30, 10),
+      const Offset(50, 10),
+      const Offset(70, 10),
+    ];
+
+    for (var i = 0; i < nodes.length; i++) {
+      expect(
+        hitTestNode(hitPoints[i], nodes[i]),
+        nodeGeometryHitTest(hitPoints[i], nodes[i]),
+      );
+      expect(
+        nodeHitTestCandidateBoundsWorld(nodes[i]),
+        nodeGeometryCandidateBoundsWorld(nodes[i]),
+      );
+    }
   });
 
   test(

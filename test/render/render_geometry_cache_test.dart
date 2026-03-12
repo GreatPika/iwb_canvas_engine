@@ -341,6 +341,26 @@ void main() {
     },
   );
 
+  test(
+    'RenderGeometryCache keeps degenerate finite line geometry world bounds',
+    () {
+      final cache = RenderGeometryCache();
+      final degenerateLine = LineNodeSnapshot(
+        id: 'line-degenerate',
+        start: const Offset(0, 0),
+        end: const Offset(0, 0),
+        thickness: 4,
+        color: const Color(0xFF000000),
+        transform: Transform2D.translation(const Offset(12, 8)),
+      );
+
+      final degenerateEntry = cache.get(degenerateLine);
+
+      expect(degenerateEntry.localBounds, const Rect.fromLTRB(-2, -2, 2, 2));
+      expect(degenerateEntry.worldBounds, const Rect.fromLTRB(10, 6, 14, 10));
+    },
+  );
+
   test('RenderGeometryCache invalidateAll clears cached entries', () {
     final cache = RenderGeometryCache();
     final node = ImageNodeSnapshot(

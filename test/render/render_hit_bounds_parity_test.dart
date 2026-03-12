@@ -90,4 +90,89 @@ void main() {
       );
     },
   );
+
+  test(
+    'line hit candidate bounds are derived from the same render worldBounds',
+    () {
+      final cache = RenderGeometryCache();
+      final snapshot = LineNodeSnapshot(
+        id: 'line-parity',
+        start: const Offset(-12, 0),
+        end: const Offset(12, 0),
+        thickness: 4,
+        color: const Color(0xFF000000),
+        hitPadding: 2,
+        transform: const Transform2D(
+          a: 1,
+          b: 0.1,
+          c: 0,
+          d: 1.2,
+          tx: 16,
+          ty: -8,
+        ),
+      );
+      final renderBounds = cache.get(snapshot).worldBounds;
+
+      final coreNode = LineNode(
+        id: snapshot.id,
+        start: snapshot.start,
+        end: snapshot.end,
+        thickness: snapshot.thickness,
+        color: snapshot.color,
+        hitPadding: snapshot.hitPadding,
+        transform: snapshot.transform,
+      );
+
+      expect(
+        () => _expectRectClose(coreNode.boundsWorld, renderBounds),
+        returnsNormally,
+      );
+      expect(
+        () => _expectRectClose(
+          nodeHitTestCandidateBoundsWorld(coreNode),
+          renderBounds.inflate(snapshot.hitPadding + kHitSlop),
+        ),
+        returnsNormally,
+      );
+    },
+  );
+
+  test(
+    'stroke hit candidate bounds are derived from the same render worldBounds',
+    () {
+      final cache = RenderGeometryCache();
+      final snapshot = StrokeNodeSnapshot(
+        id: 'stroke-parity',
+        points: const <Offset>[Offset(-10, 0), Offset(10, 0), Offset(14, 6)],
+        pointsRevision: 3,
+        thickness: 5,
+        color: const Color(0xFF000000),
+        hitPadding: 1.5,
+        transform: const Transform2D(a: 1, b: 0, c: 0.3, d: 1, tx: 24, ty: 12),
+      );
+      final renderBounds = cache.get(snapshot).worldBounds;
+
+      final coreNode = StrokeNode(
+        id: snapshot.id,
+        points: snapshot.points,
+        pointsRevision: snapshot.pointsRevision,
+        thickness: snapshot.thickness,
+        color: snapshot.color,
+        hitPadding: snapshot.hitPadding,
+        transform: snapshot.transform,
+      );
+
+      expect(
+        () => _expectRectClose(coreNode.boundsWorld, renderBounds),
+        returnsNormally,
+      );
+      expect(
+        () => _expectRectClose(
+          nodeHitTestCandidateBoundsWorld(coreNode),
+          renderBounds.inflate(snapshot.hitPadding + kHitSlop),
+        ),
+        returnsNormally,
+      );
+    },
+  );
 }
