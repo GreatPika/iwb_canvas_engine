@@ -632,7 +632,9 @@ Future<List<_BoundaryTarget>> _expandBoundaryTargets({
     ];
   }
 
-  final exportedTargets = await exportResolver.exportedTargets(resolvedRepoRelPosix);
+  final exportedTargets = await exportResolver.exportedTargets(
+    resolvedRepoRelPosix,
+  );
   if (exportedTargets.isEmpty) {
     return <_BoundaryTarget>[
       _BoundaryTarget(

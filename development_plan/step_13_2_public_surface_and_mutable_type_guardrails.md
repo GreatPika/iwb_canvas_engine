@@ -77,26 +77,26 @@ AST-проверками `13.3`.
 
 ## Последовательность реализации (только действия)
 
-- [ ] Убрать broad `skip` для `interactive` и `view`, оставив только
+- [x] Убрать broad `skip` для `interactive` и `view`, оставив только
       минимально обоснованные исключения.
-- [ ] Довести scan exported/runtime signatures до полного покрытия нужного
+- [x] Довести scan exported/runtime signatures до полного покрытия нужного
       public surface.
-- [ ] Ужесточить guardrail mutable type leak-ов в сигнатурах.
-- [ ] Защитить правило «один публичный вход» от обходов через export surface.
-- [ ] Не смешивать эти проверки с semantic AST-rules шага `13.3`.
+- [x] Ужесточить guardrail mutable type leak-ов в сигнатурах.
+- [x] Защитить правило «один публичный вход» от обходов через export surface.
+- [x] Не смешивать эти проверки с semantic AST-rules шага `13.3`.
 
 ## Критерии приёмки
 
-- [ ] `tool/check_guardrails.dart` является owner-ом public/export guardrails,
+- [x] `tool/check_guardrails.dart` является owner-ом public/export guardrails,
       но не semantic mutation/epoch checks.
-- [ ] `interactive` и `view` больше не имеют необоснованного blind skip для
+- [x] `interactive` и `view` больше не имеют необоснованного blind skip для
       surface, который может быть просканирован.
-- [ ] Утечка изменяемых типов в exported/runtime signatures приводит к
+- [x] Утечка изменяемых типов в exported/runtime signatures приводит к
       tool failure.
-- [ ] Single-public-entry rule защищён от обходных export/public entrypoint-ов.
-- [ ] Подшаг не вводит semantic AST rules для write-only mutation,
+- [x] Single-public-entry rule защищён от обходных export/public entrypoint-ов.
+- [x] Подшаг не вводит semantic AST rules для write-only mutation,
       `controllerEpoch` или `SceneDataException`; это остаётся `13.3`.
-- [ ] Повторная диагностика
+- [x] Повторная диагностика
       `dcm calculate-metrics tool/check_guardrails.dart test/tool/guardrails_layout_and_entrypoints_tool_test.dart test/tool/guardrails_public_contracts_tool_test.dart test/tool/guardrails_interactive_api_tool_test.dart --report-all`
       приложена к результату шага; новые или step-owned methods не содержат
       `HIGH`/`VERY HIGH` по `cyclomatic-complexity`,
@@ -105,21 +105,21 @@ AST-проверками `13.3`.
 
 ## Тестовый контур шага
 
-- [ ] `test/tool/guardrails_public_contracts_tool_test.dart` с отрицательным
+- [x] `test/tool/guardrails_public_contracts_tool_test.dart` с отрицательным
       сценарием на утечку `Scene` или другого mutable runtime type в public
       signature
-- [ ] `test/tool/guardrails_interactive_api_tool_test.dart` как regression
+- [x] `test/tool/guardrails_interactive_api_tool_test.dart` как regression
       guard, что `interactive` surface больше не выпадает из scan-а
-- [ ] `test/tool/guardrails_layout_and_entrypoints_tool_test.dart` с
+- [x] `test/tool/guardrails_layout_and_entrypoints_tool_test.dart` с
       отрицательным сценарием на нарушение single-public-entry discipline
-- [ ] `test/tool/support/public_entrypoint_contract.dart` обновляется только
+- [x] `test/tool/support/public_entrypoint_contract.dart` обновляется только
       как test fixture public surface, а не как второй owner policy
 
 ## Диагностика шага
 
-- [ ] До завершения подшага приложен `dcm calculate-metrics`-отчёт по
+- [x] До завершения подшага приложен `dcm calculate-metrics`-отчёт по
       `tool/check_guardrails.dart` и связанным step-owned tool tests.
-- [ ] Signature-scan helper-ы и новые exported-surface predicates
+- [x] Signature-scan helper-ы и новые exported-surface predicates
       укладываются в предел `10 / 4 / 40`.
-- [ ] Ни один hotspot в `tool/check_guardrails.dart`, относящийся к public
+- [x] Ни один hotspot в `tool/check_guardrails.dart`, относящийся к public
       surface scan, не остаётся «ничьим» между `13.2` и `13.3`.

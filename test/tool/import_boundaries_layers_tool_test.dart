@@ -148,36 +148,39 @@ class SceneBuilder {
       }
     });
 
-    test('rejects core -> external package through lib barrel re-export', () async {
-      final sandbox = await createImportBoundariesSandbox();
-      try {
-        writeSandboxFile(
-          sandbox,
-          'lib/widgets_api.dart',
-          "export 'package:flutter/widgets.dart';\n",
-        );
-        writeSandboxFile(
-          sandbox,
-          'lib/src/core/value.dart',
-          "import 'package:iwb_canvas_engine/widgets_api.dart';\n",
-        );
+    test(
+      'rejects core -> external package through lib barrel re-export',
+      () async {
+        final sandbox = await createImportBoundariesSandbox();
+        try {
+          writeSandboxFile(
+            sandbox,
+            'lib/widgets_api.dart',
+            "export 'package:flutter/widgets.dart';\n",
+          );
+          writeSandboxFile(
+            sandbox,
+            'lib/src/core/value.dart',
+            "import 'package:iwb_canvas_engine/widgets_api.dart';\n",
+          );
 
-        final result = await runSandboxTool(
-          sandbox,
-          'check_import_boundaries.dart',
-        );
-        expect(result.exitCode, isNonZero);
-        expect(
-          result.stderr.toString(),
-          contains(
-            'external package violation: core/** must not import '
-            'package:flutter/widgets.dart',
-          ),
-        );
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
+          final result = await runSandboxTool(
+            sandbox,
+            'check_import_boundaries.dart',
+          );
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            contains(
+              'external package violation: core/** must not import '
+              'package:flutter/widgets.dart',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
 
     test('rejects core -> unknown target layer import', () async {
       final sandbox = await createImportBoundariesSandbox();

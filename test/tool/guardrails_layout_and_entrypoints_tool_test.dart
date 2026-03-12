@@ -11,176 +11,182 @@ import 'support/tool_process_test_support.dart';
 
 void main() {
   group('tool/check_guardrails.dart', () {
-    // INV:INV-ENG-TXN-ATOMIC-COMMIT
-    // INV:INV-G-PUBLIC-ENTRYPOINTS
-    // INV:INV-ENG-SAFE-TXN-API
-    // INV:INV-ENG-INTERACTIVE-RESOLVER-PURITY
-    test('does not require API_GUIDE.md', () async {
-      final sandbox = await createGuardrailsSandbox();
-      try {
-        writeMinimalControllerStore(sandbox);
+    _registerLayoutScaffoldTests();
+    _registerDeletedLayerViolationTests();
+    _registerUnknownLayerViolationTests();
+    _registerNonDartLayerAcceptanceTests();
+    _registerLayerLeafViolationTests();
+    _registerContractLayerAcceptanceTests();
+    _registerCanonicalRootEntrypointTests();
+    _registerMultilineRootEntrypointTests();
+    _registerExecutableRootEntrypointViolationTests();
+    _registerInlineCommentRootEntrypointViolationTests();
+    _registerStalePolicyEntryTests();
+    _registerTrailingLogicEntrypointTests();
+    _registerAdditionalRootEntrypointTests();
+  });
+}
 
-        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-        expect(result.exitCode, 0, reason: result.stderr.toString());
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
+void _registerLayoutScaffoldTests() {
+  // INV:INV-ENG-TXN-ATOMIC-COMMIT
+  // INV:INV-G-PUBLIC-ENTRYPOINTS
+  // INV:INV-ENG-SAFE-TXN-API
+  // INV:INV-ENG-INTERACTIVE-RESOLVER-PURITY
+  test('does not require API_GUIDE.md', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeMinimalControllerStore(sandbox);
 
-    test('canonical test scaffold mirrors the real public barrel exports', () {
-      final source = File('lib/iwb_canvas_engine.dart').readAsStringSync();
-      final directives = extractNormalizedExportDirectives(source);
-      final ownerFiles = extractExportOwnerFiles(source);
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
+  });
 
-      expect(canonicalPublicExportDirectives, directives);
-      expect(canonicalPublicExportFiles, ownerFiles);
-      expect(
-        canonicalPublicExportFiles,
-        contains('lib/src/contract/validated.dart'),
-      );
-      expect(
-        canonicalViewPublicExportDirective,
-        contains("'src/view/scene_view_interactive.dart'"),
-      );
-    });
+  test('canonical test scaffold mirrors the real public barrel exports', () {
+    final source = File('lib/iwb_canvas_engine.dart').readAsStringSync();
+    final directives = extractNormalizedExportDirectives(source);
+    final ownerFiles = extractExportOwnerFiles(source);
 
-    test('rejects reintroduced deleted public layer without imports', () async {
-      final sandbox = await createGuardrailsSandbox();
-      try {
-        writeMinimalControllerStore(sandbox);
-        writeSandboxFile(
-          sandbox,
-          'lib/src/public/value.dart',
-          'class PublicValue {}\n',
-        );
-
-        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-        expect(result.exitCode, isNonZero);
-        expect(
-          result.stderr.toString(),
-          allOf(
-            contains('layer layout violation:'),
-            contains('uses deleted top-level layer "public"'),
-          ),
-        );
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
-
-    test('rejects unknown top-level lib/src layer without imports', () async {
-      final sandbox = await createGuardrailsSandbox();
-      try {
-        writeMinimalControllerStore(sandbox);
-        writeSandboxFile(
-          sandbox,
-          'lib/src/unknown/value.dart',
-          'class UnknownValue {}\n',
-        );
-
-        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-        expect(result.exitCode, isNonZero);
-        expect(
-          result.stderr.toString(),
-          allOf(
-            contains('layer layout violation:'),
-            contains('uses unapproved top-level layer "unknown"'),
-          ),
-        );
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
-
-    test('ignores non-Dart top-level lib/src files', () async {
-      final sandbox = await createGuardrailsSandbox();
-      try {
-        writeMinimalControllerStore(sandbox);
-        writeSandboxFile(sandbox, 'lib/src/README.md', '# Internal notes\n');
-
-        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-        expect(result.exitCode, 0, reason: result.stderr.toString());
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
-
-    test('rejects unapproved top-level lib/src leaf file', () async {
-      final sandbox = await createGuardrailsSandbox();
-      try {
-        writeMinimalControllerStore(sandbox);
-        writeSandboxFile(
-          sandbox,
-          'lib/src/version.dart',
-          'const version = 1;\n',
-        );
-
-        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-        expect(result.exitCode, isNonZero);
-        expect(
-          result.stderr.toString(),
-          allOf(
-            contains('layer layout violation:'),
-            contains('uses unapproved top-level lib/src leaf "version.dart"'),
-          ),
-        );
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
-
-    test('allows approved contract top-level layer without imports', () async {
-      final sandbox = await createGuardrailsSandbox();
-      try {
-        writeMinimalControllerStore(sandbox);
-        writeSandboxFile(
-          sandbox,
-          'lib/src/contract/value.dart',
-          'class ContractValue {}\n',
-        );
-
-        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-        expect(result.exitCode, 0, reason: result.stderr.toString());
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
-
-    test('allows export-only root lib entrypoint files', () async {
-      final sandbox = await createGuardrailsSandbox();
-      try {
-        writeMinimalControllerStore(sandbox);
-        writeCanonicalPublicExportScaffold(sandbox);
-
-        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-        expect(result.exitCode, 0, reason: result.stderr.toString());
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
-
-    test(
-      'allows export-only root lib entrypoint files with inline block comments',
-      () async {
-        final sandbox = await createGuardrailsSandbox();
-        try {
-          writeMinimalControllerStore(sandbox);
-          writeCanonicalPublicExportScaffold(sandbox);
-          writeSandboxFile(
-            sandbox,
-            'lib/iwb_canvas_engine.dart',
-            canonicalPublicEntrypoint(withInlineComments: true),
-          );
-
-          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-          expect(result.exitCode, 0, reason: result.stderr.toString());
-        } finally {
-          sandbox.deleteSync(recursive: true);
-        }
-      },
+    expect(canonicalPublicExportDirectives, directives);
+    expect(canonicalPublicExportFiles, ownerFiles);
+    expect(
+      canonicalPublicExportFiles,
+      contains('lib/src/contract/validated.dart'),
     );
+    expect(
+      canonicalViewPublicExportDirective,
+      contains("'src/view/scene_view_interactive.dart'"),
+    );
+  });
+}
 
-    test('allows multiline export directives in root lib entrypoint', () async {
+void _registerDeletedLayerViolationTests() {
+  test('rejects reintroduced deleted public layer without imports', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeMinimalControllerStore(sandbox);
+      writeSandboxFile(
+        sandbox,
+        'lib/src/public/value.dart',
+        'class PublicValue {}\n',
+      );
+
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, isNonZero);
+      expect(
+        result.stderr.toString(),
+        allOf(
+          contains('layer layout violation:'),
+          contains('uses deleted top-level layer "public"'),
+        ),
+      );
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
+  });
+}
+
+void _registerUnknownLayerViolationTests() {
+  test('rejects unknown top-level lib/src layer without imports', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeMinimalControllerStore(sandbox);
+      writeSandboxFile(
+        sandbox,
+        'lib/src/unknown/value.dart',
+        'class UnknownValue {}\n',
+      );
+
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, isNonZero);
+      expect(
+        result.stderr.toString(),
+        allOf(
+          contains('layer layout violation:'),
+          contains('uses unapproved top-level layer "unknown"'),
+        ),
+      );
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
+  });
+}
+
+void _registerNonDartLayerAcceptanceTests() {
+  test('ignores non-Dart top-level lib/src files', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeMinimalControllerStore(sandbox);
+      writeSandboxFile(sandbox, 'lib/src/README.md', '# Internal notes\n');
+
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
+  });
+}
+
+void _registerLayerLeafViolationTests() {
+  test('rejects unapproved top-level lib/src leaf file', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeMinimalControllerStore(sandbox);
+      writeSandboxFile(sandbox, 'lib/src/version.dart', 'const version = 1;\n');
+
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, isNonZero);
+      expect(
+        result.stderr.toString(),
+        allOf(
+          contains('layer layout violation:'),
+          contains('uses unapproved top-level lib/src leaf "version.dart"'),
+        ),
+      );
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
+  });
+}
+
+void _registerContractLayerAcceptanceTests() {
+  test('allows approved contract top-level layer without imports', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeMinimalControllerStore(sandbox);
+      writeSandboxFile(
+        sandbox,
+        'lib/src/contract/value.dart',
+        'class ContractValue {}\n',
+      );
+
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
+  });
+}
+
+void _registerCanonicalRootEntrypointTests() {
+  test('accepts canonical single root public entrypoint', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeMinimalControllerStore(sandbox);
+      writeCanonicalPublicExportScaffold(sandbox);
+
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
+  });
+
+  test(
+    'accepts canonical root public entrypoint with inline block comments',
+    () async {
       final sandbox = await createGuardrailsSandbox();
       try {
         writeMinimalControllerStore(sandbox);
@@ -188,13 +194,7 @@ void main() {
         writeSandboxFile(
           sandbox,
           'lib/iwb_canvas_engine.dart',
-          canonicalPublicEntrypoint().replaceFirst(
-            canonicalFirstPublicExportDirective,
-            canonicalFirstPublicExportDirective.replaceFirst(
-              'export ',
-              'export\n  ',
-            ),
-          ),
+          canonicalPublicEntrypoint(withInlineComments: true),
         );
 
         final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
@@ -202,16 +202,75 @@ void main() {
       } finally {
         sandbox.deleteSync(recursive: true);
       }
-    });
+    },
+  );
+}
 
-    test('rejects executable logic in root lib entrypoint files', () async {
+void _registerMultilineRootEntrypointTests() {
+  test('allows multiline export directives in root lib entrypoint', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeMinimalControllerStore(sandbox);
+      writeCanonicalPublicExportScaffold(sandbox);
+      writeSandboxFile(
+        sandbox,
+        'lib/iwb_canvas_engine.dart',
+        canonicalPublicEntrypoint().replaceFirst(
+          canonicalFirstPublicExportDirective,
+          canonicalFirstPublicExportDirective.replaceFirst(
+            'export ',
+            'export\n  ',
+          ),
+        ),
+      );
+
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
+  });
+}
+
+void _registerExecutableRootEntrypointViolationTests() {
+  test('rejects executable logic in root lib entrypoint files', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeMinimalControllerStore(sandbox);
+      writeSandboxFile(sandbox, 'lib/iwb_canvas_engine.dart', '''
+library;
+
+void bootstrap() {}
+''');
+
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, isNonZero);
+      expect(
+        result.stderr.toString(),
+        diagnostic(
+          category: 'public entrypoint',
+          detail:
+              'root lib/*.dart files must contain only '
+              'library/docs/comments/export directives',
+        ),
+      );
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
+  });
+}
+
+void _registerInlineCommentRootEntrypointViolationTests() {
+  test(
+    'rejects executable logic after inline block comment in root entrypoint',
+    () async {
       final sandbox = await createGuardrailsSandbox();
       try {
         writeMinimalControllerStore(sandbox);
         writeSandboxFile(sandbox, 'lib/iwb_canvas_engine.dart', '''
 library;
 
-void bootstrap() {}
+/* safe comment */ void bootstrap() {}
 ''');
 
         final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
@@ -228,106 +287,56 @@ void bootstrap() {}
       } finally {
         sandbox.deleteSync(recursive: true);
       }
-    });
+    },
+  );
+}
 
-    test(
-      'rejects executable logic after inline block comment in root entrypoint',
-      () async {
-        final sandbox = await createGuardrailsSandbox();
-        try {
-          writeMinimalControllerStore(sandbox);
-          writeSandboxFile(sandbox, 'lib/iwb_canvas_engine.dart', '''
-library;
+void _registerStalePolicyEntryTests() {
+  test('rejects stale non-contract export scan policy entry', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeCanonicalPublicExportScaffold(sandbox);
+      writeSandboxFile(
+        sandbox,
+        'lib/iwb_canvas_engine.dart',
+        canonicalPublicEntrypoint().replaceFirst(
+          '$canonicalViewPublicExportDirective\n',
+          '',
+        ),
+      );
 
-/* safe comment */ void bootstrap() {}
-''');
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, isNonZero);
+      expect(
+        result.stderr.toString(),
+        allOf(
+          diagnostic(
+            category: 'public entrypoint',
+            detail:
+                'exported API policy entry '
+                '/lib/src/view/scene_view_interactive.dart is stale',
+          ),
+          contains('Remove or update this targeted skip'),
+        ),
+      );
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
+  });
+}
 
-          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-          expect(result.exitCode, isNonZero);
-          expect(
-            result.stderr.toString(),
-            diagnostic(
-              category: 'public entrypoint',
-              detail:
-                  'root lib/*.dart files must contain only '
-                  'library/docs/comments/export directives',
-            ),
-          );
-        } finally {
-          sandbox.deleteSync(recursive: true);
-        }
-      },
-    );
-
-    test('rejects stale non-contract export scan policy entry', () async {
+void _registerTrailingLogicEntrypointTests() {
+  test(
+    'rejects executable logic after export and inline block comment',
+    () async {
       final sandbox = await createGuardrailsSandbox();
       try {
+        writeMinimalControllerStore(sandbox);
         writeCanonicalPublicExportScaffold(sandbox);
         writeSandboxFile(
           sandbox,
           'lib/iwb_canvas_engine.dart',
-          canonicalPublicEntrypoint().replaceFirst(
-            '$canonicalViewPublicExportDirective\n',
-            '',
-          ),
-        );
-
-        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-        expect(result.exitCode, isNonZero);
-        expect(
-          result.stderr.toString(),
-          allOf(
-            diagnostic(
-              category: 'public entrypoint',
-              detail:
-                  'exported API policy entry '
-                  '/lib/src/view/scene_view_interactive.dart is stale',
-            ),
-            contains('view widgets expose framework UI types'),
-          ),
-        );
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
-
-    test(
-      'rejects executable logic after export and inline block comment',
-      () async {
-        final sandbox = await createGuardrailsSandbox();
-        try {
-          writeMinimalControllerStore(sandbox);
-          writeCanonicalPublicExportScaffold(sandbox);
-          writeSandboxFile(
-            sandbox,
-            'lib/iwb_canvas_engine.dart',
-            canonicalPublicEntrypoint(withTrailingLogicAfterFirstExport: true),
-          );
-
-          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-          expect(result.exitCode, isNonZero);
-          expect(
-            result.stderr.toString(),
-            diagnostic(
-              category: 'public entrypoint',
-              detail:
-                  'root lib/*.dart files must contain only '
-                  'library/docs/comments/export directives',
-            ),
-          );
-        } finally {
-          sandbox.deleteSync(recursive: true);
-        }
-      },
-    );
-
-    test('rejects advanced.dart entrypoint', () async {
-      final sandbox = await createGuardrailsSandbox();
-      try {
-        writeSandboxFile(
-          sandbox,
-          'lib/advanced.dart',
-          '// forbidden entrypoint\n',
+          canonicalPublicEntrypoint(withTrailingLogicAfterFirstExport: true),
         );
 
         final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
@@ -336,12 +345,43 @@ library;
           result.stderr.toString(),
           diagnostic(
             category: 'public entrypoint',
-            detail: 'advanced.dart is forbidden',
+            detail:
+                'root lib/*.dart files must contain only '
+                'library/docs/comments/export directives',
           ),
         );
       } finally {
         sandbox.deleteSync(recursive: true);
       }
-    });
+    },
+  );
+}
+
+void _registerAdditionalRootEntrypointTests() {
+  test('rejects additional export-only root entrypoint', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeMinimalControllerStore(sandbox);
+      writeCanonicalPublicExportScaffold(sandbox);
+      writeSandboxFile(
+        sandbox,
+        'lib/testing.dart',
+        "export 'src/contract/snapshot.dart';\n",
+      );
+
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, isNonZero);
+      expect(
+        result.stderr.toString(),
+        diagnostic(
+          category: 'public entrypoint',
+          detail:
+              'root lib/*.dart files must not introduce additional '
+              'entrypoints',
+        ),
+      );
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
   });
 }
