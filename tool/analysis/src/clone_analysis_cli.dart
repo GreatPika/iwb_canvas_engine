@@ -11,9 +11,10 @@ Usage:
 Options:
   -h, --help          Show this help message
   --json              Emit JSON instead of text
+  --clusters          Emit connected clone clusters instead of pairs
   --exclude-main      Skip top-level function blocks named main
-  --top N             Limit the report to the top N pairs
-  --top=N             Limit the report to the top N pairs
+  --top N             Limit the report to the top N pairs or clusters
+  --top=N             Limit the report to the top N pairs or clusters
 
 Examples:
   dart run tool/analysis/find_similar_clones.dart
@@ -21,6 +22,7 @@ Examples:
   dart run tool/analysis/find_similar_clones.dart lib 50 30 5 4 0.55 12
   dart run tool/analysis/find_similar_clones.dart --exclude-main test 60 30 5 4 0.70 10
   dart run tool/analysis/find_similar_clones.dart --json --top 20 . 60 30 5 4 0.55 12
+  dart run tool/analysis/find_similar_clones.dart --clusters --top 10 .
 ''';
 
 Future<int> runCloneAnalysisCli(
@@ -183,6 +185,13 @@ _OptionResult _handleSimpleFlag(
       return _OptionConfig(
         nextConfig: config.copyWith(
           outputFormat: CloneAnalysisOutputFormat.json,
+        ),
+        nextIndex: index,
+      );
+    case '--clusters':
+      return _OptionConfig(
+        nextConfig: config.copyWith(
+          reportMode: CloneAnalysisReportMode.clusters,
         ),
         nextIndex: index,
       );

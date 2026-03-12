@@ -116,6 +116,65 @@ class SimilarityResult {
   }
 }
 
+class CloneClusterMember {
+  CloneClusterMember({
+    required this.block,
+    required this.strongestOverlap,
+    required this.strongestSharedFingerprints,
+  });
+
+  final CodeBlock block;
+  final double strongestOverlap;
+  final int strongestSharedFingerprints;
+
+  Map<String, Object?> toJson() {
+    return <String, Object?>{
+      'strongestOverlap': strongestOverlap,
+      'strongestSharedFingerprints': strongestSharedFingerprints,
+      'block': block.toJson(),
+    };
+  }
+}
+
+class CloneCluster {
+  CloneCluster({
+    required this.members,
+    required this.pairCount,
+    required this.bestPair,
+    required this.minOverlap,
+    required this.maxOverlap,
+    required this.avgOverlap,
+    required this.minSharedFingerprints,
+    required this.maxSharedFingerprints,
+    required this.matchKinds,
+  });
+
+  final List<CloneClusterMember> members;
+  final int pairCount;
+  final SimilarityResult bestPair;
+  final double minOverlap;
+  final double maxOverlap;
+  final double avgOverlap;
+  final int minSharedFingerprints;
+  final int maxSharedFingerprints;
+  final Set<CloneMatchKind> matchKinds;
+
+  Map<String, Object?> toJson() {
+    return <String, Object?>{
+      'memberCount': members.length,
+      'pairCount': pairCount,
+      'bestPair': bestPair.toJson(),
+      'minOverlap': minOverlap,
+      'maxOverlap': maxOverlap,
+      'avgOverlap': avgOverlap,
+      'minSharedFingerprints': minSharedFingerprints,
+      'maxSharedFingerprints': maxSharedFingerprints,
+      'matchKinds': matchKinds.map((kind) => kind.name).toList()..sort(),
+      'members': members.map((member) => member.toJson()).toList(),
+    };
+  }
+}
+
 class Vocabulary {
   final Map<String, int> _ids = <String, int>{};
   int _nextId = 1;
@@ -132,6 +191,7 @@ class CloneAnalysisReport {
     required this.scannedBlocks,
     required this.parseErrors,
     required this.results,
+    required this.clusters,
   });
 
   final CloneAnalysisConfig config;
@@ -139,4 +199,5 @@ class CloneAnalysisReport {
   final int scannedBlocks;
   final List<String> parseErrors;
   final List<SimilarityResult> results;
+  final List<CloneCluster> clusters;
 }

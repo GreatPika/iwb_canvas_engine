@@ -18,11 +18,16 @@ CloneAnalysisReport runCloneAnalysis(CloneAnalysisConfig config) {
       scannedBlocks: 0,
       parseErrors: collection.parseErrors,
       results: const <SimilarityResult>[],
+      clusters: const <CloneCluster>[],
     );
   }
 
   _computeFingerprints(blocks, config);
   final results = _collectSimilarityResults(blocks, config);
+  final clusters = _limitClusters(
+    _buildCloneClusters(results),
+    config.topResults,
+  );
   final limitedResults = _limitResults(results, config.topResults);
 
   return CloneAnalysisReport(
@@ -31,6 +36,7 @@ CloneAnalysisReport runCloneAnalysis(CloneAnalysisConfig config) {
     scannedBlocks: blocks.length,
     parseErrors: collection.parseErrors,
     results: limitedResults,
+    clusters: clusters,
   );
 }
 
@@ -311,4 +317,250 @@ List<SimilarityResult> _limitResults(
     return results;
   }
   return results.take(topResults).toList(growable: false);
+}
+
+List<CloneCluster> _buildCloneClusters(List<SimilarityResult> results) {
+  if (results.isEmpty) {
+    return const <CloneCluster>[];
+  }
+
+  final adjacency = <int, Set<int>>{};
+  final byBlockId = <int, CodeBlock>{};
+  final pairsByNode = <int, List<SimilarityResult>>{};
+
+  for (final result in results) {
+    final aId = result.a.id;
+    final bId = result.b.id;
+    adjacency.putIfAbsent(aId, () => <int>{}).add(bId);
+    adjacency.putIfAbsent(bId, () => <int>{}).add(aId);
+    byBlockId[aId] = result.a;
+    byBlockId[bId] = result.b;
+    pairsByNode.putIfAbsent(aId, () => <SimilarityResult>[]).add(result);
+    pairsByNode.putIfAbsent(bId, () => <SimilarityResult>[]).add(result);
+  }
+
+  final visited = <int>{};
+  final clusters = <CloneCluster>[];
+
+  final sortedNodeIds = adjacency.keys.toList()..sort();
+  for (final startId in sortedNodeIds) {
+    if (!visited.add(startId)) {
+      continue;
+    }
+
+    final component = <int>[];
+    final queue = <int>[startId];
+    for (var i = 0; i < queue.length; i++) {
+      final current = queue[i];
+      component.add(current);
+      final neighbors = adjacency[current]!.toList()..sort();
+      for (final neighbor in neighbors) {
+        if (visited.add(neighbor)) {
+          queue.add(neighbor);
+        }
+      }
+    }
+
+    clusters.add(_buildCluster(component, pairsByNode, byBlockId));
+  }
+
+  clusters.sort(_compareCloneClusters);
+  return clusters;
+}
+
+List<CloneCluster> _limitClusters(
+  List<CloneCluster> clusters,
+  int? topResults,
+) {
+  if (topResults == null || clusters.length <= topResults) {
+    return clusters;
+  }
+  return clusters.take(topResults).toList(growable: false);
+}
+
+CloneCluster _buildCluster(
+  List<int> component,
+  Map<int, List<SimilarityResult>> pairsByNode,
+  Map<int, CodeBlock> byBlockId,
+) {
+  final componentSet = component.toSet();
+  final pairCollection = _collectClusterPairs(
+    component,
+    componentSet,
+    pairsByNode,
+  );
+  final pairs = pairCollection.pairs;
+  final overlaps = _sortedOverlaps(pairs);
+  final sharedFingerprints = _sortedSharedFingerprints(pairs);
+  final avgOverlap = _averageOverlap(overlaps);
+  final members = _buildClusterMembers(
+    component,
+    byBlockId,
+    pairCollection.strongestByBlock,
+  );
+
+  return CloneCluster(
+    members: members,
+    pairCount: pairs.length,
+    bestPair: pairs.first,
+    minOverlap: overlaps.first,
+    maxOverlap: overlaps.last,
+    avgOverlap: avgOverlap,
+    minSharedFingerprints: sharedFingerprints.first,
+    maxSharedFingerprints: sharedFingerprints.last,
+    matchKinds: pairs.map((pair) => pair.matchKind).toSet(),
+  );
+}
+
+_ClusterPairCollection _collectClusterPairs(
+  List<int> component,
+  Set<int> componentSet,
+  Map<int, List<SimilarityResult>> pairsByNode,
+) {
+  final accumulator = _ClusterPairAccumulator(componentSet);
+
+  for (final blockId in component) {
+    final incidentPairs = pairsByNode[blockId] ?? const <SimilarityResult>[];
+    accumulator.collectForBlock(blockId, incidentPairs);
+  }
+
+  final pairs = accumulator.uniquePairs.values.toList()
+    ..sort(_compareSimilarityResults);
+  return _ClusterPairCollection(
+    pairs: pairs,
+    strongestByBlock: accumulator.strongestByBlock,
+  );
+}
+
+bool _pairBelongsToComponent(SimilarityResult pair, Set<int> componentSet) {
+  return componentSet.contains(pair.a.id) && componentSet.contains(pair.b.id);
+}
+
+List<double> _sortedOverlaps(List<SimilarityResult> pairs) {
+  return pairs.map((pair) => pair.overlap).toList()..sort();
+}
+
+List<int> _sortedSharedFingerprints(List<SimilarityResult> pairs) {
+  return pairs.map((pair) => pair.sharedFingerprints).toList()..sort();
+}
+
+double _averageOverlap(List<double> overlaps) {
+  return overlaps.fold<double>(0, (sum, overlap) => sum + overlap) /
+      overlaps.length;
+}
+
+List<CloneClusterMember> _buildClusterMembers(
+  List<int> component,
+  Map<int, CodeBlock> byBlockId,
+  Map<int, SimilarityResult> strongestByBlock,
+) {
+  final members = component
+      .map(
+        (blockId) => _buildClusterMember(blockId, byBlockId, strongestByBlock),
+      )
+      .toList();
+  members.sort(_compareClusterMembers);
+  return members;
+}
+
+CloneClusterMember _buildClusterMember(
+  int blockId,
+  Map<int, CodeBlock> byBlockId,
+  Map<int, SimilarityResult> strongestByBlock,
+) {
+  final strongestPair = strongestByBlock[blockId]!;
+  return CloneClusterMember(
+    block: byBlockId[blockId]!,
+    strongestOverlap: strongestPair.overlap,
+    strongestSharedFingerprints: strongestPair.sharedFingerprints,
+  );
+}
+
+class _ClusterPairCollection {
+  _ClusterPairCollection({required this.pairs, required this.strongestByBlock});
+
+  final List<SimilarityResult> pairs;
+  final Map<int, SimilarityResult> strongestByBlock;
+}
+
+class _ClusterPairAccumulator {
+  _ClusterPairAccumulator(this.componentSet);
+
+  final Set<int> componentSet;
+  final Map<String, SimilarityResult> uniquePairs =
+      <String, SimilarityResult>{};
+  final Map<int, SimilarityResult> strongestByBlock = <int, SimilarityResult>{};
+
+  void collectForBlock(int blockId, List<SimilarityResult> incidentPairs) {
+    for (final pair in incidentPairs) {
+      if (!_pairBelongsToComponent(pair, componentSet)) {
+        continue;
+      }
+
+      uniquePairs['${pair.a.id}:${pair.b.id}'] = pair;
+      strongestByBlock.update(
+        blockId,
+        (current) => _preferStrongerPair(current, pair),
+        ifAbsent: () => pair,
+      );
+    }
+  }
+}
+
+SimilarityResult _preferStrongerPair(
+  SimilarityResult current,
+  SimilarityResult candidate,
+) {
+  final overlapCompare = candidate.overlap.compareTo(current.overlap);
+  if (overlapCompare != 0) {
+    return overlapCompare > 0 ? candidate : current;
+  }
+
+  final sharedCompare = candidate.sharedFingerprints.compareTo(
+    current.sharedFingerprints,
+  );
+  if (sharedCompare != 0) {
+    return sharedCompare > 0 ? candidate : current;
+  }
+
+  return _compareSimilarityResults(candidate, current) < 0
+      ? candidate
+      : current;
+}
+
+int _compareCloneClusters(CloneCluster left, CloneCluster right) {
+  final sizeCompare = right.members.length.compareTo(left.members.length);
+  if (sizeCompare != 0) {
+    return sizeCompare;
+  }
+
+  final overlapCompare = right.maxOverlap.compareTo(left.maxOverlap);
+  if (overlapCompare != 0) {
+    return overlapCompare;
+  }
+
+  return right.pairCount.compareTo(left.pairCount);
+}
+
+int _compareClusterMembers(CloneClusterMember left, CloneClusterMember right) {
+  final overlapCompare = right.strongestOverlap.compareTo(
+    left.strongestOverlap,
+  );
+  if (overlapCompare != 0) {
+    return overlapCompare;
+  }
+
+  final sharedCompare = right.strongestSharedFingerprints.compareTo(
+    left.strongestSharedFingerprints,
+  );
+  if (sharedCompare != 0) {
+    return sharedCompare;
+  }
+
+  final fileCompare = left.block.filePath.compareTo(right.block.filePath);
+  if (fileCompare != 0) {
+    return fileCompare;
+  }
+
+  return left.block.startLine.compareTo(right.block.startLine);
 }

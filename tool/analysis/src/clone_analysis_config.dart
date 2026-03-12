@@ -1,5 +1,7 @@
 enum CloneAnalysisOutputFormat { text, json }
 
+enum CloneAnalysisReportMode { pairs, clusters }
+
 class CloneAnalysisConfig {
   static const Object noChange = Object();
 
@@ -14,6 +16,7 @@ class CloneAnalysisConfig {
     required this.excludeMain,
     required this.topResults,
     required this.outputFormat,
+    required this.reportMode,
   });
 
   factory CloneAnalysisConfig.defaults() {
@@ -28,6 +31,7 @@ class CloneAnalysisConfig {
       excludeMain: false,
       topResults: null,
       outputFormat: CloneAnalysisOutputFormat.text,
+      reportMode: CloneAnalysisReportMode.pairs,
     );
   }
 
@@ -41,6 +45,7 @@ class CloneAnalysisConfig {
   final bool excludeMain;
   final int? topResults;
   final CloneAnalysisOutputFormat outputFormat;
+  final CloneAnalysisReportMode reportMode;
 
   CloneAnalysisConfig copyWith({
     String? rootPath,
@@ -53,19 +58,23 @@ class CloneAnalysisConfig {
     bool? excludeMain,
     Object? topResults = noChange,
     CloneAnalysisOutputFormat? outputFormat,
+    CloneAnalysisReportMode? reportMode,
   }) {
     return CloneAnalysisConfig(
-      rootPath: rootPath ?? this.rootPath,
-      minTokens: minTokens ?? this.minTokens,
-      kGramSize: kGramSize ?? this.kGramSize,
-      windowSize: windowSize ?? this.windowSize,
-      minSharedFingerprints:
-          minSharedFingerprints ?? this.minSharedFingerprints,
-      minOverlap: minOverlap ?? this.minOverlap,
-      maxBucketSize: maxBucketSize ?? this.maxBucketSize,
-      excludeMain: excludeMain ?? this.excludeMain,
+      rootPath: _resolveString(rootPath, this.rootPath),
+      minTokens: _resolveInt(minTokens, this.minTokens),
+      kGramSize: _resolveInt(kGramSize, this.kGramSize),
+      windowSize: _resolveInt(windowSize, this.windowSize),
+      minSharedFingerprints: _resolveInt(
+        minSharedFingerprints,
+        this.minSharedFingerprints,
+      ),
+      minOverlap: _resolveDouble(minOverlap, this.minOverlap),
+      maxBucketSize: _resolveInt(maxBucketSize, this.maxBucketSize),
+      excludeMain: _resolveBool(excludeMain, this.excludeMain),
       topResults: _resolveTopResults(topResults),
-      outputFormat: outputFormat ?? this.outputFormat,
+      outputFormat: _resolveOutputFormat(outputFormat),
+      reportMode: _resolveReportMode(reportMode),
     );
   }
 
@@ -94,6 +103,7 @@ class CloneAnalysisConfig {
       'excludeMain': excludeMain,
       'topResults': topResults,
       'outputFormat': outputFormat.name,
+      'reportMode': reportMode.name,
     };
   }
 
@@ -102,6 +112,32 @@ class CloneAnalysisConfig {
       return this.topResults;
     }
     return topResults as int?;
+  }
+
+  String _resolveString(String? value, String fallback) {
+    return value ?? fallback;
+  }
+
+  int _resolveInt(int? value, int fallback) {
+    return value ?? fallback;
+  }
+
+  double _resolveDouble(double? value, double fallback) {
+    return value ?? fallback;
+  }
+
+  bool _resolveBool(bool? value, bool fallback) {
+    return value ?? fallback;
+  }
+
+  CloneAnalysisOutputFormat _resolveOutputFormat(
+    CloneAnalysisOutputFormat? value,
+  ) {
+    return value ?? outputFormat;
+  }
+
+  CloneAnalysisReportMode _resolveReportMode(CloneAnalysisReportMode? value) {
+    return value ?? reportMode;
   }
 }
 

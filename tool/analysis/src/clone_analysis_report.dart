@@ -16,15 +16,24 @@ String _renderTextReport(
   CloneAnalysisConfig config,
 ) {
   final buffer = StringBuffer();
-  if (report.results.isEmpty) {
+  final hasResults = config.reportMode == CloneAnalysisReportMode.pairs
+      ? report.results.isNotEmpty
+      : report.clusters.isNotEmpty;
+  if (!hasResults) {
     buffer.writeln('No similar fragments found.');
     return buffer.toString().trimRight();
   }
 
   _writeReportHeader(buffer, report, config);
 
-  for (var i = 0; i < report.results.length; i++) {
-    _writeResultBlock(buffer, report.results[i], i + 1);
+  if (config.reportMode == CloneAnalysisReportMode.pairs) {
+    for (var i = 0; i < report.results.length; i++) {
+      _writeResultBlock(buffer, report.results[i], i + 1);
+    }
+  } else {
+    for (var i = 0; i < report.clusters.length; i++) {
+      _writeClusterBlock(buffer, report.clusters[i], i + 1);
+    }
   }
 
   if (report.parseErrors.isNotEmpty) {
@@ -43,8 +52,16 @@ String _renderJsonReport(
     'scannedFiles': report.scannedFiles,
     'scannedBlocks': report.scannedBlocks,
     'parseErrors': report.parseErrors,
-    'results': report.results.map((result) => result.toJson()).toList(),
   };
+  if (config.reportMode == CloneAnalysisReportMode.pairs) {
+    payload['results'] = report.results
+        .map((result) => result.toJson())
+        .toList();
+  } else {
+    payload['clusters'] = report.clusters
+        .map((cluster) => cluster.toJson())
+        .toList();
+  }
   return const JsonEncoder.withIndent('  ').convert(payload);
 }
 
@@ -57,7 +74,11 @@ void _writeReportHeader(
   CloneAnalysisReport report,
   CloneAnalysisConfig config,
 ) {
-  buffer.writeln('Found similar pairs: ${report.results.length}');
+  if (config.reportMode == CloneAnalysisReportMode.pairs) {
+    buffer.writeln('Found similar pairs: ${report.results.length}');
+  } else {
+    buffer.writeln('Found clone clusters: ${report.clusters.length}');
+  }
   buffer.writeln('');
   buffer.writeln('Scan summary:');
   buffer.writeln('  scannedFiles=${report.scannedFiles}');
@@ -73,7 +94,8 @@ void _writeReportHeader(
   buffer.writeln('  minOverlap=${config.minOverlap}');
   buffer.writeln('  maxBucketSize=${config.maxBucketSize}');
   buffer.writeln('  excludeMain=${config.excludeMain}');
-  buffer.writeln('  topResults=${config.topResults ?? 'all'}');
+  buffer.writeln('  topResults=${_formatTopResults(config)}');
+  buffer.writeln('  reportMode=${config.reportMode.name}');
   buffer.writeln('');
 }
 
@@ -105,6 +127,56 @@ void _writeResultBlock(
     'lines ${result.sampleBStartLine}-${result.sampleBEndLine}',
   );
   buffer.writeln('');
+}
+
+void _writeClusterBlock(StringBuffer buffer, CloneCluster cluster, int index) {
+  final matchKinds = cluster.matchKinds.map((kind) => kind.name).toList()
+    ..sort();
+  final bestPair = cluster.bestPair;
+
+  buffer.writeln(
+    'Cluster $index  [${cluster.members.length} members, ${cluster.pairCount} pairs, '
+    '${matchKinds.join(', ')}]',
+  );
+  buffer.writeln(
+    '  members=${cluster.members.length}  '
+    'pairs=${cluster.pairCount}  '
+    'overlap=${_formatPercent(cluster.minOverlap)}'
+    '..${_formatPercent(cluster.maxOverlap)}  '
+    'avgOverlap=${_formatPercent(cluster.avgOverlap)}',
+  );
+  buffer.writeln(
+    '  sharedFingerprints=${cluster.minSharedFingerprints}'
+    '..${cluster.maxSharedFingerprints}',
+  );
+  buffer.writeln(
+    '  bestPair=${bestPair.a.name} <-> ${bestPair.b.name}  '
+    'overlap=${_formatPercent(bestPair.overlap)}  '
+    'sharedFingerprints=${bestPair.sharedFingerprints}',
+  );
+
+  for (final member in cluster.members) {
+    buffer.writeln(
+      '  - ${member.block.filePath}:${member.block.startLine}-${member.block.endLine}  '
+      '${member.block.kind} ${member.block.name}  '
+      'strongestOverlap=${_formatPercent(member.strongestOverlap)}  '
+      'sharedFingerprints=${member.strongestSharedFingerprints}',
+    );
+  }
+  buffer.writeln('');
+}
+
+String _formatTopResults(CloneAnalysisConfig config) {
+  final topResults = config.topResults;
+  if (topResults == null) {
+    return config.reportMode == CloneAnalysisReportMode.pairs
+        ? 'all pairs'
+        : 'all clusters';
+  }
+
+  return config.reportMode == CloneAnalysisReportMode.pairs
+      ? 'top $topResults pairs'
+      : 'top $topResults clusters';
 }
 
 void _writeParseErrors(StringBuffer buffer, List<String> parseErrors) {
