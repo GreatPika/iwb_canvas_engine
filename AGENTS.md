@@ -37,6 +37,13 @@ app UI, product workflows, or backend logic.
 ## Validation policy
 
 - Run and report the standard checks for code changes.
+- Keep `analysis_options.yaml` as the single source of truth for DCM metrics
+  thresholds.
+- For new production files under `lib/**`, run `dcm calculate-metrics` and keep
+  them green against the current thresholds.
+- Run `dcm calculate-metrics` for legacy files only when adding a large new
+  unit, substantially rewriting a hotspot, or validating a suspected metric
+  regression.
 - Use `dart format lib test example/lib example/test tool` when you need to
   apply formatting locally. Keep the required check below as the non-mutating
   verification step. `dart format --output=none --set-exit-if-changed ...`
