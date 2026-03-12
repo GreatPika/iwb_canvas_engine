@@ -46,7 +46,8 @@ step-owned методы не должны пробивать пороги из
 недостаточно жёсткие:
 
 - `check_import_boundaries.dart` и `layer_guardrails.dart` не закрывают все
-  обходы layer DAG через `part`, `part of`, `Link`, top-level `lib/src/*.dart`
+  обходы layer DAG через `part`/`part of` как boundary surface, `Link`,
+  top-level `lib/src/*.dart`
   и `lib/*.dart`;
 - `check_guardrails.dart` пока не покрывает весь нужный semantic surface для
   mutable type leak-ов, write-only mutation, epoch invalidation, public
@@ -77,8 +78,8 @@ closure. Без разведения этих обязанностей реал�
 - `tool/check_import_boundaries.dart` как одному owner-у import topology;
 - `tool/src/layer_guardrails.dart` как single source of truth для top-level
   `lib/src` layout;
-- запрету `Link`, `part`, `part of`, новых `lib/src/*.dart` и bypass path через
-  `lib/*.dart`;
+- запрету boundary-bypassing `Link`, анализу `part`/`part of` как boundary
+  surface, запрету новых `lib/src/*.dart` и bypass path через `lib/*.dart`;
 - layer-scoped policy для внешних пакетов.
 
 ### Шаг 13.2
@@ -132,7 +133,7 @@ closure. Без разведения этих обязанностей реал�
 
 ## Карта переноса деталей из исходного шага 13
 
-1. `Link` внутри `lib/src/**`, `part`, `part of`, запрет новых
+1. boundary-bypassing `Link` внутри `lib/src/**`, анализ `part`/`part of`, запрет новых
    `lib/src/*.dart`, policy внешних пакетов по слоям, фиксация white list
    top-level слоёв, запрещённых/удалённых слоёв и перекрытие обходов через
    `lib/*.dart` переносятся в `13.1`.
@@ -151,9 +152,9 @@ closure. Без разведения этих обязанностей реал�
    coverage вместо comment-only marker-ов переносятся в `13.4`.
 5. Снятие исключения coverage для файла с реальной логикой, ужесточение
    coverage policy для критичных файлов и отрицательные tool-test сценарии на:
-   - `Link`
-   - `part`
-   - `part of`
+   - boundary-bypassing `Link`
+   - `part` как обход boundary-rule
+   - `part of` как обход boundary-rule
    - утечку `Scene`
    - fake `controllerEpoch`
    - мутирующий метод с нейтральным именем
@@ -172,10 +173,11 @@ closure. Без разведения этих обязанностей реал�
    допустимого top-level layout под `lib/src/**`.
    `tool/check_import_boundaries.dart` только потребляет этот contract и не
    дублирует его вторым списком.
-2. Запреты `Link`, `part` и `part of` внутри engine-owned runtime/controller
-   surface являются structural boundary-rules, а не style-guidelines. Их
-   enforcement принадлежит import-boundary tooling, а не тестам или review по
-   соглашению.
+2. `Link` внутри engine-owned runtime/controller surface запрещён как
+   structural boundary-rule. `part`/`part of` для `lib/src/**` после шага `13`
+   обязаны анализироваться как полноценный directive surface:
+   tooling должен видеть их в boundary-модели и уметь запрещать там, где это
+   уже запрещено policy, а не игнорировать как «не import».
 3. Policy внешних пакетов фиксируется по слоям в одном owner-е import
    guardrails и не размазывается между `check_import_boundaries.dart` и
    `check_guardrails.dart`.

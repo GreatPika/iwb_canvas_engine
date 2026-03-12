@@ -71,7 +71,7 @@ language: russian
 - [x] [Шаг 12.3. Свести runtime node geometry к одному owner-у для render parity, hit-test и spatial index](development_plan/step_12_3_shared_node_geometry_for_render_hit_test_and_spatial_index.md)
 - [x] [Шаг 12.4. Зафиксировать render cache key / revision contract и supporting invariants](development_plan/step_12_4_render_cache_keys_revision_contract_and_invariants.md)
 - [ ] [Шаг 13. Ужесточить guardrails и реестр инвариантов через подшаги 13.1-13.5](development_plan/step_13_guardrails_and_invariant_registry.md)
-- [ ] [Шаг 13.1. Замкнуть import topology, layer layout и package-boundary guardrails](development_plan/step_13_1_import_boundaries_and_layer_topology_guardrails.md)
+- [x] [Шаг 13.1. Замкнуть import topology, layer layout и package-boundary guardrails](development_plan/step_13_1_import_boundaries_and_layer_topology_guardrails.md)
 - [ ] [Шаг 13.2. Ужесточить public/export guardrails, mutable type leak scan и single-entry discipline](development_plan/step_13_2_public_surface_and_mutable_type_guardrails.md)
 - [ ] [Шаг 13.3. Перевести mutation, epoch invalidation и boundary-error rules на semantic AST guardrails](development_plan/step_13_3_semantic_ast_guardrails_for_mutation_epoch_and_boundary_errors.md)
 - [ ] [Шаг 13.4. Довести invariant registry до canonical ids и proof-based coverage](development_plan/step_13_4_invariant_registry_and_proof_coverage_contract.md)

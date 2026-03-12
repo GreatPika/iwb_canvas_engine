@@ -148,6 +148,37 @@ class SceneBuilder {
       }
     });
 
+    test('rejects core -> external package through lib barrel re-export', () async {
+      final sandbox = await createImportBoundariesSandbox();
+      try {
+        writeSandboxFile(
+          sandbox,
+          'lib/widgets_api.dart',
+          "export 'package:flutter/widgets.dart';\n",
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/core/value.dart',
+          "import 'package:iwb_canvas_engine/widgets_api.dart';\n",
+        );
+
+        final result = await runSandboxTool(
+          sandbox,
+          'check_import_boundaries.dart',
+        );
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains(
+            'external package violation: core/** must not import '
+            'package:flutter/widgets.dart',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
     test('rejects core -> unknown target layer import', () async {
       final sandbox = await createImportBoundariesSandbox();
       try {
@@ -268,6 +299,26 @@ class SceneBuilder {
       }
     });
 
+    test('ignores non-Dart top-level lib/src files', () async {
+      final sandbox = await createImportBoundariesSandbox();
+      try {
+        writeSandboxFile(sandbox, 'lib/src/README.md', '# Internal notes\n');
+        writeSandboxFile(
+          sandbox,
+          'lib/src/core/value.dart',
+          'class CoreValue {}\n',
+        );
+
+        final result = await runSandboxTool(
+          sandbox,
+          'check_import_boundaries.dart',
+        );
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
     test('rejects higher layers -> unknown target layer imports', () async {
       const layerCases = <({String filePath, String label})>[
         (filePath: 'lib/src/model/value.dart', label: 'model'),
@@ -338,32 +389,36 @@ class SceneBuilder {
       }
     });
 
-    test(
-      'allows top-level lib/src file without treating it as a layer',
-      () async {
-        final sandbox = await createImportBoundariesSandbox();
-        try {
-          writeSandboxFile(
-            sandbox,
-            'lib/src/version.dart',
-            'const version = 1;\n',
-          );
-          writeSandboxFile(
-            sandbox,
-            'lib/src/core/value.dart',
-            'class CoreValue {}\n',
-          );
+    test('rejects unapproved top-level lib/src leaf file', () async {
+      final sandbox = await createImportBoundariesSandbox();
+      try {
+        writeSandboxFile(
+          sandbox,
+          'lib/src/version.dart',
+          'const version = 1;\n',
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/core/value.dart',
+          'class CoreValue {}\n',
+        );
 
-          final result = await runSandboxTool(
-            sandbox,
-            'check_import_boundaries.dart',
-          );
-          expect(result.exitCode, 0, reason: result.stderr.toString());
-        } finally {
-          sandbox.deleteSync(recursive: true);
-        }
-      },
-    );
+        final result = await runSandboxTool(
+          sandbox,
+          'check_import_boundaries.dart',
+        );
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          allOf(
+            contains('layer layout violation:'),
+            contains('uses unapproved top-level lib/src leaf "version.dart"'),
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
 
     test('allows approved contract top-level layer without imports', () async {
       final sandbox = await createImportBoundariesSandbox();
@@ -548,6 +603,115 @@ class Widget {}
         sandbox.deleteSync(recursive: true);
       }
     });
+
+    test('allows documentation links inside lib/src', () async {
+      final sandbox = await createImportBoundariesSandbox();
+      try {
+        writeSandboxFile(sandbox, 'lib/src/core/value.dart', '''
+/// See [CoreValue].
+class CoreValue {}
+''');
+
+        final result = await runSandboxTool(
+          sandbox,
+          'check_import_boundaries.dart',
+        );
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test(
+      'rejects doc import link as contract -> core boundary bypass',
+      () async {
+        final sandbox = await createImportBoundariesSandbox();
+        try {
+          writeSandboxFile(sandbox, 'lib/src/core/value.dart', '''
+class CoreValue {}
+''');
+          writeSandboxFile(sandbox, 'lib/src/contract/value.dart', '''
+/// @docImport '../core/value.dart';
+/// See [CoreValue].
+class ContractValue {}
+''');
+
+          final result = await runSandboxTool(
+            sandbox,
+            'check_import_boundaries.dart',
+          );
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            contains('layer DAG violation: contract/** must not link core/**'),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects part directive as contract -> core boundary bypass',
+      () async {
+        final sandbox = await createImportBoundariesSandbox();
+        try {
+          writeSandboxFile(sandbox, 'lib/src/contract/value.dart', '''
+part '../core/value.part.dart';
+
+class ContractValue {}
+''');
+          writeSandboxFile(sandbox, 'lib/src/core/value.part.dart', '''
+part of '../contract/value.dart';
+
+class CoreValuePart {}
+''');
+
+          final result = await runSandboxTool(
+            sandbox,
+            'check_import_boundaries.dart',
+          );
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            contains('layer DAG violation: contract/** must not part core/**'),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects part of directive as core -> model boundary bypass',
+      () async {
+        final sandbox = await createImportBoundariesSandbox();
+        try {
+          writeSandboxFile(sandbox, 'lib/src/model/value.dart', '''
+part '../core/value.part.dart';
+
+class ModelValue {}
+''');
+          writeSandboxFile(sandbox, 'lib/src/core/value.part.dart', '''
+part of '../model/value.dart';
+
+class CoreValuePart {}
+''');
+
+          final result = await runSandboxTool(
+            sandbox,
+            'check_import_boundaries.dart',
+          );
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            contains('layer DAG violation: core/** must not part of model/**'),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
 
     test('rejects conditional import branch to forbidden layer', () async {
       final sandbox = await createImportBoundariesSandbox();

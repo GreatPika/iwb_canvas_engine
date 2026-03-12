@@ -43,59 +43,157 @@ class _DirectiveUriRef {
   final int offset;
 }
 
-List<_DirectiveUriRef> _collectDirectiveUriRefs(UriBasedDirective directive) {
-  final refs = <_DirectiveUriRef>[];
+class _BoundaryTarget {
+  const _BoundaryTarget({
+    required this.targetPosix,
+    required this.diagnosticTarget,
+    this.resolvedRepoRelPosix,
+  });
 
-  void addUri(StringLiteral literal) {
-    final uri = literal.stringValue;
-    if (uri == null || uri.isEmpty) {
-      return;
-    }
-    refs.add(_DirectiveUriRef(uri: uri, offset: literal.offset));
-  }
+  final String targetPosix;
+  final String diagnosticTarget;
+  final String? resolvedRepoRelPosix;
 
-  addUri(directive.uri);
-  if (directive is NamespaceDirective) {
-    for (final configuration in directive.configurations) {
-      addUri(configuration.uri);
-    }
-  }
+  bool get isDartSdk => targetPosix.startsWith('dart:');
 
-  return refs;
+  bool get isExternalPackage =>
+      resolvedRepoRelPosix == null && targetPosix.startsWith('package:');
 }
 
-String _normalizePosixPath(String path) {
-  final isAbs = path.startsWith('/');
-  final parts = path.split('/').where((p) => p.isNotEmpty).toList();
-  final out = <String>[];
+class _PublicLibraryExportResolver {
+  _PublicLibraryExportResolver({
+    required this.collection,
+    required this.rootAbsPosixPath,
+    required this.packageName,
+  });
 
-  for (final part in parts) {
-    if (part == '.') {
-      continue;
+  final AnalysisContextCollection collection;
+  final String rootAbsPosixPath;
+  final String packageName;
+  final Map<String, List<_BoundaryTarget>> _cache =
+      <String, List<_BoundaryTarget>>{};
+
+  Future<List<_BoundaryTarget>> exportedTargets(String repoRelPosixPath) async {
+    final cached = _cache[repoRelPosixPath];
+    if (cached != null) {
+      return cached;
     }
-    if (part == '..') {
-      if (out.isNotEmpty) {
-        out.removeLast();
+
+    final targets = await _collectExports(
+      repoRelPosixPath: repoRelPosixPath,
+      seen: <String>{},
+    );
+    final sortedTargets = targets.toList(growable: false)
+      ..sort((a, b) {
+        final byRepoRel = (a.resolvedRepoRelPosix ?? '').compareTo(
+          b.resolvedRepoRelPosix ?? '',
+        );
+        if (byRepoRel != 0) {
+          return byRepoRel;
+        }
+        return a.targetPosix.compareTo(b.targetPosix);
+      });
+    _cache[repoRelPosixPath] = sortedTargets;
+    return sortedTargets;
+  }
+
+  Future<Set<_BoundaryTarget>> _collectExports({
+    required String repoRelPosixPath,
+    required Set<String> seen,
+  }) async {
+    if (!_isTopLevelLibFile(repoRelPosixPath) || !seen.add(repoRelPosixPath)) {
+      return const <_BoundaryTarget>{};
+    }
+
+    final parsed = await _parsePublicLibrary(repoRelPosixPath);
+    if (parsed == null) {
+      return const <_BoundaryTarget>{};
+    }
+    return _collectExportTargetsFromParsed(
+      parsed: parsed,
+      repoRelPosixPath: repoRelPosixPath,
+      seen: seen,
+    );
+  }
+
+  Future<ParsedUnitResult?> _parsePublicLibrary(String repoRelPosixPath) async {
+    final absPath = _repoRelPosixToAbsPath(
+      repoRelPosixPath: repoRelPosixPath,
+      rootAbsPosixPath: rootAbsPosixPath,
+    );
+    if (!File(absPath).existsSync()) {
+      return null;
+    }
+    return _parseUnitOrFail(
+      collection: collection,
+      absPath: absPath,
+      repoRelPath: repoRelPosixPath,
+    );
+  }
+
+  Future<Set<_BoundaryTarget>> _collectExportTargetsFromParsed({
+    required ParsedUnitResult parsed,
+    required String repoRelPosixPath,
+    required Set<String> seen,
+  }) async {
+    final targets = <_BoundaryTarget>{};
+    for (final directive
+        in parsed.unit.directives.whereType<ExportDirective>()) {
+      targets.addAll(
+        await _collectExportTargetsFromDirective(
+          directive: directive,
+          repoRelPosixPath: repoRelPosixPath,
+          seen: seen,
+        ),
+      );
+    }
+    return targets;
+  }
+
+  Future<Set<_BoundaryTarget>> _collectExportTargetsFromDirective({
+    required ExportDirective directive,
+    required String repoRelPosixPath,
+    required Set<String> seen,
+  }) async {
+    final targets = <_BoundaryTarget>{};
+    for (final uriRef in _collectDirectiveUriRefs(directive)) {
+      final targetPosix = _toPosixPath(uriRef.uri);
+      final resolvedRepoRelPosix = _resolveToRepoRelTargetPosix(
+        targetPosix: targetPosix,
+        packageName: packageName,
+        fileDirRepoRelPosix: _posixDirname(repoRelPosixPath),
+      );
+      if (resolvedRepoRelPosix == null) {
+        if (targetPosix.startsWith('package:')) {
+          targets.add(
+            _BoundaryTarget(
+              targetPosix: targetPosix,
+              diagnosticTarget: uriRef.uri,
+            ),
+          );
+        }
+        continue;
       }
-      continue;
+      if (resolvedRepoRelPosix.startsWith('/lib/src/')) {
+        targets.add(
+          _BoundaryTarget(
+            targetPosix: targetPosix,
+            diagnosticTarget: uriRef.uri,
+            resolvedRepoRelPosix: resolvedRepoRelPosix,
+          ),
+        );
+        continue;
+      }
+      targets.addAll(
+        await _collectExports(
+          repoRelPosixPath: resolvedRepoRelPosix,
+          seen: seen,
+        ),
+      );
     }
-    out.add(part);
+    return targets;
   }
-
-  return '${isAbs ? '/' : ''}${out.join('/')}';
 }
-
-String _posixJoin(String a, String b) {
-  if (b.startsWith('/')) {
-    return _normalizePosixPath(b);
-  }
-  if (a.isEmpty) {
-    return _normalizePosixPath(b);
-  }
-  return _normalizePosixPath('${a.endsWith('/') ? a : '$a/'}$b');
-}
-
-String _toPosixPath(String path) => path.replaceAll('\\', '/');
 
 enum _Layer {
   contract,
@@ -136,6 +234,124 @@ const Map<_Layer, Set<_Layer>> _allowedLayerDependencies =
       },
     };
 
+const Map<_Layer, Set<String>> _allowedExternalPackagePrefixesByLayer =
+    <_Layer, Set<String>>{
+      _Layer.contract: <String>{
+        'package:flutter/foundation.dart',
+        'package:path_drawing/',
+      },
+      _Layer.core: <String>{
+        'package:flutter/painting.dart',
+        'package:path_drawing/',
+      },
+      _Layer.model: <String>{},
+      _Layer.controller: <String>{'package:flutter/foundation.dart'},
+      _Layer.interactive: <String>{'package:flutter/foundation.dart'},
+      _Layer.render: <String>{
+        'package:flutter/foundation.dart',
+        'package:flutter/rendering.dart',
+      },
+      _Layer.serialization: <String>{},
+      _Layer.view: <String>{'package:flutter/widgets.dart'},
+    };
+
+const Set<String> _globallyAllowedExternalPackagePrefixes = <String>{
+  'package:meta/',
+};
+
+List<_DirectiveUriRef> _collectDirectiveUriRefs(UriBasedDirective directive) {
+  final refs = <_DirectiveUriRef>[];
+
+  void addUri(StringLiteral literal) {
+    final uri = literal.stringValue;
+    if (uri == null || uri.isEmpty) {
+      return;
+    }
+    refs.add(_DirectiveUriRef(uri: uri, offset: literal.offset));
+  }
+
+  addUri(directive.uri);
+  if (directive is NamespaceDirective) {
+    for (final configuration in directive.configurations) {
+      addUri(configuration.uri);
+    }
+  }
+
+  return refs;
+}
+
+List<_DirectiveUriRef> _collectBoundaryDirectiveUriRefs(Directive directive) {
+  if (directive case UriBasedDirective uriDirective) {
+    return _collectDirectiveUriRefs(uriDirective);
+  }
+  if (directive case PartOfDirective(uri: final uri?)) {
+    return <_DirectiveUriRef>[
+      _DirectiveUriRef(
+        uri: uri.stringValue ?? uri.toSource(),
+        offset: uri.offset,
+      ),
+    ];
+  }
+  return const <_DirectiveUriRef>[];
+}
+
+List<_DirectiveUriRef> _collectDocImportUriRefs(AstNode node) {
+  final uriRefs = <_DirectiveUriRef>[];
+
+  void visit(AstNode current) {
+    if (current is Comment) {
+      for (final docImport in current.docImports) {
+        final uriValue = docImport.import.uri.stringValue;
+        if (uriValue == null || uriValue.isEmpty) {
+          continue;
+        }
+        uriRefs.add(_DirectiveUriRef(uri: uriValue, offset: docImport.offset));
+      }
+    }
+    for (final child in current.childEntities) {
+      if (child is AstNode) {
+        visit(child);
+      }
+    }
+  }
+
+  visit(node);
+  return uriRefs;
+}
+
+String _normalizePosixPath(String path) {
+  final isAbs = path.startsWith('/');
+  final parts = path.split('/').where((p) => p.isNotEmpty).toList();
+  final out = <String>[];
+
+  for (final part in parts) {
+    if (part == '.') {
+      continue;
+    }
+    if (part == '..') {
+      if (out.isNotEmpty) {
+        out.removeLast();
+      }
+      continue;
+    }
+    out.add(part);
+  }
+
+  return '${isAbs ? '/' : ''}${out.join('/')}';
+}
+
+String _posixJoin(String a, String b) {
+  if (b.startsWith('/')) {
+    return _normalizePosixPath(b);
+  }
+  if (a.isEmpty) {
+    return _normalizePosixPath(b);
+  }
+  return _normalizePosixPath('${a.endsWith('/') ? a : '$a/'}$b');
+}
+
+String _toPosixPath(String path) => path.replaceAll('\\', '/');
+
 _Layer? _layerForRepoRelPosixPath(String repoRelPosixPath) {
   switch (topLevelLibSrcLayerForRepoRelPosixPath(repoRelPosixPath)) {
     case 'contract':
@@ -158,26 +374,6 @@ _Layer? _layerForRepoRelPosixPath(String repoRelPosixPath) {
     case _:
       return null;
   }
-}
-
-bool _isInDisallowedTopLevelLibSrcLayer(
-  String repoRelPosixPath,
-  Set<String> disallowedTopLevelLayers,
-) {
-  final topLevelLayer = topLevelLibSrcLayerForRepoRelPosixPath(
-    repoRelPosixPath,
-  );
-  if (topLevelLayer == null) {
-    return false;
-  }
-  return disallowedTopLevelLayers.contains(topLevelLayer);
-}
-
-String? _nestedLibSrcLayoutViolation(String repoRelPosixPath) {
-  if (directChildUnderLibSrcForRepoRelPosixPath(repoRelPosixPath) != null) {
-    return null;
-  }
-  return describeLibSrcLayoutViolation(repoRelPosixPath);
 }
 
 String _layerLabel(_Layer layer) {
@@ -209,15 +405,15 @@ bool _isAllowedLayerDependency({required _Layer from, required _Layer to}) {
 }
 
 String _posixDirname(String posixPath) {
-  final n = _normalizePosixPath(posixPath);
-  if (n == '/' || n.isEmpty) {
-    return n;
+  final normalized = _normalizePosixPath(posixPath);
+  if (normalized == '/' || normalized.isEmpty) {
+    return normalized;
   }
-  final idx = n.lastIndexOf('/');
-  if (idx <= 0) {
-    return n.startsWith('/') ? '/' : '';
+  final slashIndex = normalized.lastIndexOf('/');
+  if (slashIndex <= 0) {
+    return normalized.startsWith('/') ? '/' : '';
   }
-  return n.substring(0, idx);
+  return normalized.substring(0, slashIndex);
 }
 
 String _toRepoRelPosixPath({
@@ -235,6 +431,16 @@ String _toRepoRelPosixPath({
   }
   final rel = abs.substring(root.length);
   return rel.startsWith('/') ? rel : '/$rel';
+}
+
+String _repoRelPosixToAbsPath({
+  required String repoRelPosixPath,
+  required String rootAbsPosixPath,
+}) {
+  final relPath = repoRelPosixPath.startsWith('/')
+      ? repoRelPosixPath.substring(1)
+      : repoRelPosixPath;
+  return _posixJoin(rootAbsPosixPath, relPath);
 }
 
 String _readPackageNameOrFallback(Directory root) {
@@ -278,13 +484,11 @@ String? _resolveToRepoRelTargetPosix({
   required String packageName,
   required String fileDirRepoRelPosix,
 }) {
-  final isDart = targetPosix.startsWith('dart:');
-  if (isDart) {
+  if (targetPosix.startsWith('dart:')) {
     return null;
   }
 
-  final isPackage = targetPosix.startsWith('package:');
-  if (isPackage) {
+  if (targetPosix.startsWith('package:')) {
     final prefix = 'package:$packageName/';
     if (!targetPosix.startsWith(prefix)) {
       return null;
@@ -296,6 +500,36 @@ String? _resolveToRepoRelTargetPosix({
   return _posixJoin(fileDirRepoRelPosix, targetPosix);
 }
 
+bool _isTopLevelLibFile(String repoRelPosixPath) {
+  if (!repoRelPosixPath.startsWith('/lib/') ||
+      repoRelPosixPath.startsWith('/lib/src/')) {
+    return false;
+  }
+  final remainder = repoRelPosixPath.substring('/lib/'.length);
+  return remainder.isNotEmpty && !remainder.contains('/');
+}
+
+bool _matchesAnyPrefix(String value, Set<String> prefixes) {
+  for (final prefix in prefixes) {
+    if (value == prefix || value.startsWith(prefix)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool _isAllowedExternalPackageImport({
+  required _Layer layer,
+  required String targetPosix,
+}) {
+  if (_matchesAnyPrefix(targetPosix, _globallyAllowedExternalPackagePrefixes)) {
+    return true;
+  }
+  final allowedPrefixes = _allowedExternalPackagePrefixesByLayer[layer];
+  return allowedPrefixes != null &&
+      _matchesAnyPrefix(targetPosix, allowedPrefixes);
+}
+
 bool _isAllowedForCommands({
   required String targetPosix,
   required String? resolvedRepoRelPosix,
@@ -304,35 +538,24 @@ bool _isAllowedForCommands({
   if (targetPosix.startsWith('dart:')) {
     return true;
   }
-  if (targetPosix.startsWith('package:flutter/')) {
-    return true;
-  }
-  if (targetPosix.startsWith('package:meta/')) {
-    return true;
-  }
 
   if (resolvedRepoRelPosix == null) {
     return false;
   }
-
-  if (resolvedRepoRelPosix.startsWith('/lib/src/core/')) {
-    return true;
-  }
-  if (resolvedRepoRelPosix.startsWith('/lib/src/contract/')) {
-    return true;
-  }
-  if (resolvedRepoRelPosix.startsWith('/lib/src/controller/')) return true;
-  if (resolvedRepoRelPosix.startsWith('/lib/src/model/')) return true;
   if (resolvedRepoRelPosix.startsWith('/lib/src/controller/commands/')) {
     final importedCommand = _commandGroupForFilePosix(resolvedRepoRelPosix);
     return importedCommand == null || importedCommand == currentCommand;
   }
-  if (resolvedRepoRelPosix.startsWith('/lib/src/controller/internal/')) {
-    return true;
-  }
-
-  return false;
+  return _isAllowedCommandRepoTarget(resolvedRepoRelPosix);
 }
+
+bool _isAllowedCommandRepoTarget(String resolvedRepoRelPosix) =>
+    resolvedRepoRelPosix.startsWith('/lib/src/core/') ||
+    resolvedRepoRelPosix.startsWith('/lib/src/contract/') ||
+    resolvedRepoRelPosix.startsWith('/lib/src/controller/') ||
+    resolvedRepoRelPosix.startsWith('/lib/src/model/') ||
+    resolvedRepoRelPosix == '/lib/src/controller/change_set.dart' ||
+    resolvedRepoRelPosix.startsWith('/lib/src/controller/internal/');
 
 bool _isAllowedForInternal({
   required String targetPosix,
@@ -341,17 +564,10 @@ bool _isAllowedForInternal({
   if (targetPosix.startsWith('dart:')) {
     return true;
   }
-  if (targetPosix.startsWith('package:flutter/')) {
-    return true;
-  }
-  if (targetPosix.startsWith('package:meta/')) {
-    return true;
-  }
 
   if (resolvedRepoRelPosix == null) {
     return false;
   }
-
   if (resolvedRepoRelPosix.startsWith('/lib/src/core/')) {
     return true;
   }
@@ -367,7 +583,6 @@ bool _isAllowedForInternal({
   if (resolvedRepoRelPosix.startsWith('/lib/src/controller/internal/')) {
     return true;
   }
-
   return false;
 }
 
@@ -394,86 +609,580 @@ int _lineForOffset(ParsedUnitResult result, int offset) {
   return result.lineInfo.getLocation(offset).lineNumber;
 }
 
-Future<void> main(List<String> _) async {
-  final root = Directory.current;
-  final rootAbsPosix = _toPosixPath(root.absolute.path);
-  final packageName = _readPackageNameOrFallback(root);
-  final srcRoot = Directory(
-    '${root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}src',
+Future<List<_BoundaryTarget>> _expandBoundaryTargets({
+  required _DirectiveUriRef uriRef,
+  required String packageName,
+  required String fileDirRepoRelPosix,
+  required _PublicLibraryExportResolver exportResolver,
+}) async {
+  final targetPosix = _toPosixPath(uriRef.uri);
+  final resolvedRepoRelPosix = _resolveToRepoRelTargetPosix(
+    targetPosix: targetPosix,
+    packageName: packageName,
+    fileDirRepoRelPosix: fileDirRepoRelPosix,
   );
-
-  if (!srcRoot.existsSync()) {
-    stderr.writeln('No lib/src directory found. Nothing to check.');
-    exit(0);
+  if (resolvedRepoRelPosix == null ||
+      !_isTopLevelLibFile(resolvedRepoRelPosix)) {
+    return <_BoundaryTarget>[
+      _BoundaryTarget(
+        targetPosix: targetPosix,
+        diagnosticTarget: uriRef.uri,
+        resolvedRepoRelPosix: resolvedRepoRelPosix,
+      ),
+    ];
   }
 
-  final analysisCollection = AnalysisContextCollection(
-    includedPaths: <String>[root.absolute.path],
-  );
+  final exportedTargets = await exportResolver.exportedTargets(resolvedRepoRelPosix);
+  if (exportedTargets.isEmpty) {
+    return <_BoundaryTarget>[
+      _BoundaryTarget(
+        targetPosix: targetPosix,
+        diagnosticTarget: uriRef.uri,
+        resolvedRepoRelPosix: resolvedRepoRelPosix,
+      ),
+    ];
+  }
 
-  final violations = <_Violation>[];
-  final topLevelLayoutViolations = collectTopLevelLibSrcLayoutViolations(
-    srcRoot: srcRoot,
-    rootAbsPosixPath: rootAbsPosix,
-    toPosixPath: _toPosixPath,
-    toRepoRelPosixPath: _toRepoRelPosixPath,
-  );
-  final disallowedTopLevelLayers = <String>{};
-  for (final layoutViolation in topLevelLayoutViolations) {
-    disallowedTopLevelLayers.add(layoutViolation.layer);
+  return exportedTargets
+      .map(
+        (exportedTarget) => _BoundaryTarget(
+          targetPosix: exportedTarget.targetPosix,
+          diagnosticTarget:
+              '${uriRef.uri} -> ${exportedTarget.diagnosticTarget}',
+          resolvedRepoRelPosix: exportedTarget.resolvedRepoRelPosix,
+        ),
+      )
+      .toList(growable: false);
+}
+
+class _DirectiveBoundaryChecker {
+  _DirectiveBoundaryChecker({
+    required this.parsed,
+    required this.filePosixPath,
+    required this.fileLayer,
+    required this.packageName,
+    required this.exportResolver,
+    required this.violations,
+  }) : fileDirRepoRelPosix = _posixDirname(filePosixPath),
+       isCommandScopeFile = filePosixPath.startsWith(
+         '/lib/src/controller/commands/',
+       ),
+       isInternalFile = filePosixPath.startsWith(
+         '/lib/src/controller/internal/',
+       ),
+       currentCommand =
+           filePosixPath.startsWith('/lib/src/controller/commands/')
+           ? _commandGroupForFilePosix(filePosixPath)
+           : null;
+
+  final ParsedUnitResult parsed;
+  final String filePosixPath;
+  final _Layer fileLayer;
+  final String packageName;
+  final _PublicLibraryExportResolver exportResolver;
+  final List<_Violation> violations;
+  final String fileDirRepoRelPosix;
+  final bool isCommandScopeFile;
+  final bool isInternalFile;
+  final String? currentCommand;
+
+  Future<void> checkDirective(Directive directive) async {
+    _checkCommandPartBan(directive);
+    final directiveKind = _directiveKind(directive);
+    if (directiveKind == null) {
+      return;
+    }
+    if (_hasNamedPartOfViolation(directive, directiveKind)) {
+      return;
+    }
+    for (final uriRef in _collectBoundaryDirectiveUriRefs(directive)) {
+      await _checkUriRef(directiveKind, uriRef);
+    }
+  }
+
+  Future<void> checkDocumentationLinks() async {
+    if (!filePosixPath.startsWith('/lib/src/')) {
+      return;
+    }
+    for (final uriRef in _collectDocImportUriRefs(parsed.unit)) {
+      await _checkUriRef('link', uriRef);
+    }
+  }
+
+  Future<void> _checkUriRef(
+    String directiveKind,
+    _DirectiveUriRef uriRef,
+  ) async {
+    final lineNo = _lineForOffset(parsed, uriRef.offset);
+    final boundaryTargets = await _expandBoundaryTargets(
+      uriRef: uriRef,
+      packageName: packageName,
+      fileDirRepoRelPosix: fileDirRepoRelPosix,
+      exportResolver: exportResolver,
+    );
+    for (final boundaryTarget in boundaryTargets) {
+      _enforceBoundaryTarget(directiveKind, lineNo, boundaryTarget);
+    }
+  }
+
+  void _enforceBoundaryTarget(
+    String directiveKind,
+    int lineNo,
+    _BoundaryTarget boundaryTarget,
+  ) {
+    if (isCommandScopeFile || isInternalFile) {
+      _enforceControllerStructurePolicy(directiveKind, lineNo, boundaryTarget);
+      return;
+    }
+    _enforceGeneralLayerPolicy(directiveKind, lineNo, boundaryTarget);
+  }
+
+  void _enforceGeneralLayerPolicy(
+    String directiveKind,
+    int lineNo,
+    _BoundaryTarget boundaryTarget,
+  ) {
+    if (boundaryTarget.isDartSdk) {
+      return;
+    }
+    if (boundaryTarget.isExternalPackage) {
+      if (_isAllowedExternalPackageImport(
+        layer: fileLayer,
+        targetPosix: boundaryTarget.targetPosix,
+      )) {
+        return;
+      }
+      _addViolation(
+        line: lineNo,
+        directive: directiveKind,
+        target: boundaryTarget.diagnosticTarget,
+        message:
+            'external package violation: ${_layerLabel(fileLayer)}/** must not '
+            '$directiveKind ${boundaryTarget.targetPosix}',
+      );
+      return;
+    }
+
+    final resolvedRepoRelPosix = boundaryTarget.resolvedRepoRelPosix;
+    if (resolvedRepoRelPosix == null ||
+        !resolvedRepoRelPosix.startsWith('/lib/src/')) {
+      return;
+    }
+
+    _checkGeneralInternalTarget(
+      directiveKind,
+      lineNo,
+      boundaryTarget,
+      resolvedRepoRelPosix,
+    );
+  }
+
+  void _checkGeneralInternalTarget(
+    String directiveKind,
+    int lineNo,
+    _BoundaryTarget boundaryTarget,
+    String resolvedRepoRelPosix,
+  ) {
+    final targetLayer = _layerForRepoRelPosixPath(resolvedRepoRelPosix);
+    if (targetLayer == null) {
+      _addLayoutViolation(
+        line: lineNo,
+        directiveKind: directiveKind,
+        target: boundaryTarget.diagnosticTarget,
+        repoRelPosixPath: resolvedRepoRelPosix,
+      );
+      return;
+    }
+    if (_isAllowedLayerDependency(from: fileLayer, to: targetLayer)) {
+      return;
+    }
+
+    _addViolation(
+      line: lineNo,
+      directive: directiveKind,
+      target: boundaryTarget.diagnosticTarget,
+      message:
+          'layer DAG violation: ${_layerLabel(fileLayer)}/** must not '
+          '$directiveKind ${_layerLabel(targetLayer)}/** ($resolvedRepoRelPosix)',
+    );
+  }
+
+  void _enforceControllerStructurePolicy(
+    String directiveKind,
+    int lineNo,
+    _BoundaryTarget boundaryTarget,
+  ) {
+    if (boundaryTarget.isDartSdk) {
+      return;
+    }
+    if (boundaryTarget.isExternalPackage) {
+      _checkControllerExternalPackage(directiveKind, lineNo, boundaryTarget);
+      return;
+    }
+
+    final resolvedRepoRelPosix = boundaryTarget.resolvedRepoRelPosix;
+    if (_checkSceneControllerImport(
+      directiveKind,
+      lineNo,
+      boundaryTarget,
+      resolvedRepoRelPosix,
+    )) {
+      return;
+    }
+
+    final hasSpecificViolation = _checkControllerSpecificViolations(
+      directiveKind,
+      lineNo,
+      boundaryTarget,
+      resolvedRepoRelPosix,
+    );
+    if (hasSpecificViolation || _isAllowedControllerTarget(boundaryTarget)) {
+      return;
+    }
+
+    _addViolation(
+      line: lineNo,
+      directive: directiveKind,
+      target: boundaryTarget.diagnosticTarget,
+      message:
+          'controller structure violation: ${_controllerScope()} has a '
+          'disallowed $directiveKind target '
+          '(${resolvedRepoRelPosix ?? boundaryTarget.targetPosix})',
+    );
+  }
+
+  void _checkControllerExternalPackage(
+    String directiveKind,
+    int lineNo,
+    _BoundaryTarget boundaryTarget,
+  ) {
+    if (_isAllowedExternalPackageImport(
+      layer: fileLayer,
+      targetPosix: boundaryTarget.targetPosix,
+    )) {
+      return;
+    }
+    _addViolation(
+      line: lineNo,
+      directive: directiveKind,
+      target: boundaryTarget.diagnosticTarget,
+      message:
+          'controller structure violation: ${_controllerScope()} has a '
+          'disallowed external package $directiveKind',
+    );
+  }
+
+  bool _checkSceneControllerImport(
+    String directiveKind,
+    int lineNo,
+    _BoundaryTarget boundaryTarget,
+    String? resolvedRepoRelPosix,
+  ) {
+    if (resolvedRepoRelPosix != '/lib/src/controller/scene_controller.dart') {
+      return false;
+    }
+    _addViolation(
+      line: lineNo,
+      directive: directiveKind,
+      target: boundaryTarget.diagnosticTarget,
+      message:
+          'controller structure violation: ${_controllerScope()} must not '
+          '$directiveKind controller/scene_controller.dart',
+    );
+    return true;
+  }
+
+  bool _checkControllerSpecificViolations(
+    String directiveKind,
+    int lineNo,
+    _BoundaryTarget boundaryTarget,
+    String? resolvedRepoRelPosix,
+  ) {
+    var hasViolation = false;
+    if (resolvedRepoRelPosix == null) {
+      return false;
+    }
+
+    if (_checkInternalCommandsImport(
+      directiveKind,
+      lineNo,
+      boundaryTarget,
+      resolvedRepoRelPosix,
+    )) {
+      hasViolation = true;
+    }
+    if (_checkCrossCommandImport(
+      directiveKind,
+      lineNo,
+      boundaryTarget,
+      resolvedRepoRelPosix,
+    )) {
+      hasViolation = true;
+    }
+    if (_checkUnknownLibSrcTarget(
+      directiveKind,
+      lineNo,
+      boundaryTarget,
+      resolvedRepoRelPosix,
+    )) {
+      hasViolation = true;
+    }
+    return hasViolation;
+  }
+
+  bool _checkInternalCommandsImport(
+    String directiveKind,
+    int lineNo,
+    _BoundaryTarget boundaryTarget,
+    String resolvedRepoRelPosix,
+  ) {
+    if (!isInternalFile ||
+        !resolvedRepoRelPosix.startsWith('/lib/src/controller/commands/')) {
+      return false;
+    }
+    _addViolation(
+      line: lineNo,
+      directive: directiveKind,
+      target: boundaryTarget.diagnosticTarget,
+      message:
+          'controller structure violation: internal/** must not '
+          '$directiveKind commands/**',
+    );
+    return true;
+  }
+
+  bool _checkCrossCommandImport(
+    String directiveKind,
+    int lineNo,
+    _BoundaryTarget boundaryTarget,
+    String resolvedRepoRelPosix,
+  ) {
+    if (!isCommandScopeFile ||
+        !resolvedRepoRelPosix.startsWith('/lib/src/controller/commands/')) {
+      return false;
+    }
+    final importedCommand = _commandGroupForFilePosix(resolvedRepoRelPosix);
+    if (currentCommand == null ||
+        importedCommand == null ||
+        importedCommand == currentCommand) {
+      return false;
+    }
+    _addViolation(
+      line: lineNo,
+      directive: directiveKind,
+      target: boundaryTarget.diagnosticTarget,
+      message:
+          'controller structure violation: commands/** must not '
+          '$directiveKind other commands '
+          '(current=$currentCommand, import=$importedCommand)',
+    );
+    return true;
+  }
+
+  bool _checkUnknownLibSrcTarget(
+    String directiveKind,
+    int lineNo,
+    _BoundaryTarget boundaryTarget,
+    String resolvedRepoRelPosix,
+  ) {
+    if (!_isLibSrcTarget(resolvedRepoRelPosix) ||
+        _layerForRepoRelPosixPath(resolvedRepoRelPosix) != null) {
+      return false;
+    }
+    _addLayoutViolation(
+      line: lineNo,
+      directiveKind: directiveKind,
+      target: boundaryTarget.diagnosticTarget,
+      repoRelPosixPath: resolvedRepoRelPosix,
+    );
+    return true;
+  }
+
+  bool _isAllowedControllerTarget(_BoundaryTarget boundaryTarget) {
+    return isCommandScopeFile
+        ? _isAllowedCommandTarget(boundaryTarget)
+        : _isAllowedInternalTarget(boundaryTarget);
+  }
+
+  bool _isAllowedCommandTarget(_BoundaryTarget boundaryTarget) {
+    final command = currentCommand;
+    if (command == null) {
+      return false;
+    }
+    return _isAllowedForCommands(
+      targetPosix: boundaryTarget.targetPosix,
+      resolvedRepoRelPosix: boundaryTarget.resolvedRepoRelPosix,
+      currentCommand: command,
+    );
+  }
+
+  bool _isAllowedInternalTarget(_BoundaryTarget boundaryTarget) {
+    return _isAllowedForInternal(
+      targetPosix: boundaryTarget.targetPosix,
+      resolvedRepoRelPosix: boundaryTarget.resolvedRepoRelPosix,
+    );
+  }
+
+  void _checkCommandPartBan(Directive directive) {
+    if (!isCommandScopeFile ||
+        (directive is! PartDirective && directive is! PartOfDirective)) {
+      return;
+    }
+    _addViolation(
+      line: _lineForOffset(parsed, directive.offset),
+      directive: 'part',
+      target: directive.toSource(),
+      message:
+          'controller structure violation: commands/** must not use '
+          'part/part of directives',
+    );
+  }
+
+  bool _hasNamedPartOfViolation(Directive directive, String directiveKind) {
+    if (directive is! PartOfDirective) {
+      return false;
+    }
+    final libraryName = directive.libraryName;
+    if (libraryName == null) {
+      return false;
+    }
+    _addViolation(
+      line: _lineForOffset(parsed, libraryName.offset),
+      directive: directiveKind,
+      target: libraryName.toSource(),
+      message:
+          'part boundary violation: lib/src/** must use URI-based part of '
+          'directives so boundary targets remain analyzable',
+    );
+    return true;
+  }
+
+  String? _directiveKind(Directive directive) => switch (directive) {
+    ImportDirective() => 'import',
+    ExportDirective() => 'export',
+    PartDirective() => 'part',
+    PartOfDirective() => 'part of',
+    _ => null,
+  };
+
+  String _controllerScope() =>
+      isCommandScopeFile ? 'commands/**' : 'internal/**';
+
+  void _addLayoutViolation({
+    required int line,
+    required String directiveKind,
+    required String target,
+    required String repoRelPosixPath,
+  }) {
+    final layoutViolation = describeLibSrcLayoutViolation(repoRelPosixPath);
+    _addViolation(
+      line: line,
+      directive: directiveKind,
+      target: target,
+      message:
+          layoutViolation ??
+          'layer layout violation: unresolved target layer for '
+              '$repoRelPosixPath',
+    );
+  }
+
+  void _addViolation({
+    required int line,
+    required String directive,
+    required String target,
+    required String message,
+  }) {
     violations.add(
       _Violation(
-        filePath: layoutViolation.path,
-        line: 1,
-        directive: 'layer',
-        target: layoutViolation.path,
-        message: layoutViolation.message,
+        filePath: filePosixPath,
+        line: line,
+        directive: directive,
+        target: target,
+        message: message,
       ),
     );
   }
+}
 
-  final dartFiles =
-      srcRoot
-          .listSync(recursive: true, followLinks: false)
-          .whereType<File>()
-          .where((f) => f.path.endsWith('.dart'))
-          .toList(growable: false)
-        ..sort((a, b) => a.path.compareTo(b.path));
+class _ImportBoundaryChecker {
+  _ImportBoundaryChecker()
+    : rootAbsPosix = _toPosixPath(Directory.current.absolute.path),
+      packageName = _readPackageNameOrFallback(Directory.current),
+      srcRoot = Directory(
+        '${Directory.current.path}${Platform.pathSeparator}lib'
+        '${Platform.pathSeparator}src',
+      ),
+      analysisCollection = AnalysisContextCollection(
+        includedPaths: <String>[Directory.current.absolute.path],
+      );
 
-  for (final entity in dartFiles) {
-    final fileAbsPosixPath = _toPosixPath(entity.absolute.path);
-    final filePosixPath = _toRepoRelPosixPath(
-      absPosixPath: fileAbsPosixPath,
+  final String rootAbsPosix;
+  final String packageName;
+  final Directory srcRoot;
+  final AnalysisContextCollection analysisCollection;
+  final List<_Violation> violations = <_Violation>[];
+
+  late final _PublicLibraryExportResolver exportResolver =
+      _PublicLibraryExportResolver(
+        collection: analysisCollection,
+        rootAbsPosixPath: rootAbsPosix,
+        packageName: packageName,
+      );
+
+  bool get hasSourceRoot => srcRoot.existsSync();
+
+  Future<List<_Violation>> collectViolations() async {
+    final disallowedEntries = _recordTopLevelLayoutViolations();
+    final dartFiles = _listDartFiles();
+    for (final file in dartFiles) {
+      await _checkFile(file, disallowedEntries);
+    }
+    return violations;
+  }
+
+  Set<String> _recordTopLevelLayoutViolations() {
+    final disallowedEntries = <String>{};
+    final topLevelLayoutViolations = collectTopLevelLibSrcLayoutViolations(
+      srcRoot: srcRoot,
       rootAbsPosixPath: rootAbsPosix,
+      toPosixPath: _toPosixPath,
+      toRepoRelPosixPath: _toRepoRelPosixPath,
     );
-    if (directChildUnderLibSrcForRepoRelPosixPath(filePosixPath) != null) {
-      continue;
-    }
-    if (_isInDisallowedTopLevelLibSrcLayer(
-      filePosixPath,
-      disallowedTopLevelLayers,
-    )) {
-      continue;
-    }
-    final fileLayer = _layerForRepoRelPosixPath(filePosixPath);
-    if (filePosixPath.startsWith('/lib/src/') && fileLayer == null) {
-      final layoutViolation = _nestedLibSrcLayoutViolation(filePosixPath);
+    for (final layoutViolation in topLevelLayoutViolations) {
+      disallowedEntries.add(layoutViolation.entry);
       violations.add(
         _Violation(
-          filePath: filePosixPath,
+          filePath: layoutViolation.path,
           line: 1,
           directive: 'layer',
-          target: filePosixPath,
-          message:
-              layoutViolation ??
-              'layer layout violation: file is under lib/src/** '
-                  'but has no known layer',
+          target: layoutViolation.path,
+          message: layoutViolation.message,
         ),
       );
-      continue;
     }
+    return disallowedEntries;
+  }
+
+  List<File> _listDartFiles() {
+    final files = srcRoot
+        .listSync(recursive: true, followLinks: false)
+        .whereType<File>()
+        .where((file) => file.path.endsWith('.dart'))
+        .toList(growable: false);
+    files.sort((a, b) => a.path.compareTo(b.path));
+    return files;
+  }
+
+  Future<void> _checkFile(File entity, Set<String> disallowedEntries) async {
+    final filePosixPath = _fileRepoRelPosixPath(entity);
+    if (_shouldSkipFile(filePosixPath, disallowedEntries)) {
+      return;
+    }
+
+    final fileLayer = _layerForRepoRelPosixPath(filePosixPath);
     if (fileLayer == null) {
-      continue;
+      _recordUnknownLayerFile(filePosixPath);
+      return;
     }
 
     final parsed = await _parseUnitOrFail(
@@ -481,208 +1190,73 @@ Future<void> main(List<String> _) async {
       absPath: entity.absolute.path,
       repoRelPath: filePosixPath,
     );
-
-    final isCommandFile = filePosixPath.startsWith(
-      '/lib/src/controller/commands/',
+    final checker = _DirectiveBoundaryChecker(
+      parsed: parsed,
+      filePosixPath: filePosixPath,
+      fileLayer: fileLayer,
+      packageName: packageName,
+      exportResolver: exportResolver,
+      violations: violations,
     );
-    final isCommandScopeFile = isCommandFile;
-    final isInternalFile = filePosixPath.startsWith(
-      '/lib/src/controller/internal/',
-    );
-
-    final currentCommand = isCommandFile
-        ? _commandGroupForFilePosix(filePosixPath)
-        : null;
-    final fileDirRepoRelPosix = _posixDirname(filePosixPath);
-
     for (final directive in parsed.unit.directives) {
-      final directiveLineNo = _lineForOffset(parsed, directive.offset);
-
-      if (isCommandScopeFile &&
-          (directive is PartDirective || directive is PartOfDirective)) {
-        violations.add(
-          _Violation(
-            filePath: filePosixPath,
-            line: directiveLineNo,
-            directive: 'part',
-            target: directive.toSource(),
-            message:
-                'controller structure violation: commands/** must not use '
-                'part/part of directives',
-          ),
-        );
-      }
-
-      final isImport = directive is ImportDirective;
-      final isExport = directive is ExportDirective;
-      if (!isImport && !isExport) {
-        continue;
-      }
-
-      final directiveKind = isImport ? 'import' : 'export';
-      final uriDirective = directive as UriBasedDirective;
-      for (final uriRef in _collectDirectiveUriRefs(uriDirective)) {
-        final lineNo = _lineForOffset(parsed, uriRef.offset);
-        final target = uriRef.uri;
-        final targetPosix = _toPosixPath(target);
-        final resolvedRepoRelPosix = _resolveToRepoRelTargetPosix(
-          targetPosix: targetPosix,
-          packageName: packageName,
-          fileDirRepoRelPosix: fileDirRepoRelPosix,
-        );
-
-        if (!isCommandScopeFile && !isInternalFile) {
-          if (resolvedRepoRelPosix != null &&
-              resolvedRepoRelPosix.startsWith('/lib/src/')) {
-            final targetLayer = _layerForRepoRelPosixPath(resolvedRepoRelPosix);
-            if (targetLayer == null) {
-              final layoutViolation = _nestedLibSrcLayoutViolation(
-                resolvedRepoRelPosix,
-              );
-              violations.add(
-                _Violation(
-                  filePath: filePosixPath,
-                  line: lineNo,
-                  directive: directiveKind,
-                  target: target,
-                  message:
-                      layoutViolation ??
-                      'layer layout violation: unresolved target '
-                          'layer for $resolvedRepoRelPosix',
-                ),
-              );
-            } else if (!_isAllowedLayerDependency(
-              from: fileLayer,
-              to: targetLayer,
-            )) {
-              violations.add(
-                _Violation(
-                  filePath: filePosixPath,
-                  line: lineNo,
-                  directive: directiveKind,
-                  target: target,
-                  message:
-                      'layer DAG violation: '
-                      '${_layerLabel(fileLayer)}/** must not $directiveKind '
-                      '${_layerLabel(targetLayer)}/** '
-                      '($resolvedRepoRelPosix)',
-                ),
-              );
-            }
-          }
-          continue;
-        }
-
-        var hasSpecificViolation = false;
-        final controllerScope = isCommandScopeFile
-            ? 'commands/**'
-            : 'internal/**';
-
-        if (resolvedRepoRelPosix ==
-            '/lib/src/controller/scene_controller.dart') {
-          violations.add(
-            _Violation(
-              filePath: filePosixPath,
-              line: lineNo,
-              directive: directiveKind,
-              target: target,
-              message:
-                  'controller structure violation: $controllerScope must not '
-                  '$directiveKind controller/scene_controller.dart',
-            ),
-          );
-          hasSpecificViolation = true;
-        }
-
-        if (resolvedRepoRelPosix != null) {
-          if (isInternalFile &&
-              resolvedRepoRelPosix.startsWith(
-                '/lib/src/controller/commands/',
-              )) {
-            violations.add(
-              _Violation(
-                filePath: filePosixPath,
-                line: lineNo,
-                directive: directiveKind,
-                target: target,
-                message:
-                    'controller structure violation: internal/** must not '
-                    '$directiveKind commands/**',
-              ),
-            );
-            hasSpecificViolation = true;
-          }
-
-          if (isCommandScopeFile &&
-              resolvedRepoRelPosix.startsWith(
-                '/lib/src/controller/commands/',
-              )) {
-            final importedCommand = _commandGroupForFilePosix(
-              resolvedRepoRelPosix,
-            );
-            if (currentCommand != null &&
-                importedCommand != null &&
-                importedCommand != currentCommand) {
-              violations.add(
-                _Violation(
-                  filePath: filePosixPath,
-                  line: lineNo,
-                  directive: directiveKind,
-                  target: target,
-                  message:
-                      'controller structure violation: commands/** must not '
-                      '$directiveKind other commands '
-                      '(current=$currentCommand, import=$importedCommand)',
-                ),
-              );
-              hasSpecificViolation = true;
-            }
-          }
-        }
-
-        final allowed = isCommandScopeFile
-            ? (currentCommand != null &&
-                  _isAllowedForCommands(
-                    targetPosix: targetPosix,
-                    resolvedRepoRelPosix: resolvedRepoRelPosix,
-                    currentCommand: currentCommand,
-                  ))
-            : _isAllowedForInternal(
-                targetPosix: targetPosix,
-                resolvedRepoRelPosix: resolvedRepoRelPosix,
-              );
-        if (!allowed && !hasSpecificViolation) {
-          final details = resolvedRepoRelPosix ?? targetPosix;
-          final isExternalPackage =
-              resolvedRepoRelPosix == null &&
-              targetPosix.startsWith('package:');
-          final message = isExternalPackage
-              ? 'controller structure violation: $controllerScope has a '
-                    'disallowed external package $directiveKind'
-              : 'controller structure violation: $controllerScope has a '
-                    'disallowed $directiveKind target';
-          violations.add(
-            _Violation(
-              filePath: filePosixPath,
-              line: lineNo,
-              directive: directiveKind,
-              target: target,
-              message: '$message ($details)',
-            ),
-          );
-        }
-      }
+      await checker.checkDirective(directive);
     }
+    await checker.checkDocumentationLinks();
   }
 
+  String _fileRepoRelPosixPath(File entity) {
+    final fileAbsPosixPath = _toPosixPath(entity.absolute.path);
+    return _toRepoRelPosixPath(
+      absPosixPath: fileAbsPosixPath,
+      rootAbsPosixPath: rootAbsPosix,
+    );
+  }
+
+  bool _shouldSkipFile(String filePosixPath, Set<String> disallowedEntries) {
+    final topLevelEntry = topLevelLibSrcEntryForRepoRelPosixPath(filePosixPath);
+    return topLevelEntry != null && disallowedEntries.contains(topLevelEntry);
+  }
+
+  void _recordUnknownLayerFile(String filePosixPath) {
+    if (!filePosixPath.startsWith('/lib/src/')) {
+      return;
+    }
+    final layoutViolation = describeLibSrcLayoutViolation(filePosixPath);
+    violations.add(
+      _Violation(
+        filePath: filePosixPath,
+        line: 1,
+        directive: 'layer',
+        target: filePosixPath,
+        message:
+            layoutViolation ??
+            'layer layout violation: file is under lib/src/** '
+                'but has no known layer',
+      ),
+    );
+  }
+}
+
+bool _isLibSrcTarget(String? resolvedRepoRelPosix) =>
+    resolvedRepoRelPosix != null &&
+    resolvedRepoRelPosix.startsWith('/lib/src/');
+
+Future<void> main(List<String> _) async {
+  final checker = _ImportBoundaryChecker();
+  if (!checker.hasSourceRoot) {
+    stderr.writeln('No lib/src directory found. Nothing to check.');
+    exit(0);
+  }
+
+  final violations = await checker.collectViolations();
   if (violations.isEmpty) {
     stdout.writeln('OK: import boundaries');
     exit(0);
   }
 
   stderr.writeln('FAIL: import boundary violations (${violations.length})');
-  for (final v in violations) {
-    stderr.writeln('- $v');
+  for (final violation in violations) {
+    stderr.writeln('- $violation');
   }
   exit(1);
 }

@@ -15,16 +15,37 @@ const Set<String> approvedTopLevelLibSrcLayers = <String>{
 
 const Set<String> deletedTopLevelLibSrcLayers = <String>{'public'};
 
+const Set<String> sanctionedTopLevelLibSrcLeafFiles = <String>{};
+
 class LibSrcLayoutViolation {
   const LibSrcLayoutViolation({
     required this.path,
-    required this.layer,
+    required this.entry,
     required this.message,
   });
 
   final String path;
-  final String layer;
+  final String entry;
   final String message;
+}
+
+String? topLevelLibSrcEntryForRepoRelPosixPath(String repoRelPosixPath) {
+  if (!repoRelPosixPath.startsWith('/lib/src/')) {
+    return null;
+  }
+
+  final remainder = repoRelPosixPath.substring('/lib/src/'.length);
+  if (remainder.isEmpty) {
+    return null;
+  }
+
+  final slashIndex = remainder.indexOf('/');
+  if (slashIndex == -1) {
+    return remainder;
+  }
+
+  final topLevelEntry = remainder.substring(0, slashIndex);
+  return topLevelEntry.isEmpty ? null : topLevelEntry;
 }
 
 String? directChildUnderLibSrcForRepoRelPosixPath(String repoRelPosixPath) {
@@ -40,25 +61,21 @@ String? directChildUnderLibSrcForRepoRelPosixPath(String repoRelPosixPath) {
   return remainder;
 }
 
+bool isTopLevelLibSrcLeafFilePath(String repoRelPosixPath) {
+  final entry = directChildUnderLibSrcForRepoRelPosixPath(repoRelPosixPath);
+  return entry != null && entry.endsWith('.dart');
+}
+
 String? topLevelLibSrcLayerForRepoRelPosixPath(String repoRelPosixPath) {
   if (!repoRelPosixPath.startsWith('/lib/src/')) {
     return null;
   }
 
-  final remainder = repoRelPosixPath.substring('/lib/src/'.length);
-  if (remainder.isEmpty) {
+  if (isTopLevelLibSrcLeafFilePath(repoRelPosixPath)) {
     return null;
   }
 
-  final slashIndex = remainder.indexOf('/');
-  final topLevelLayer = slashIndex == -1
-      ? remainder
-      : remainder.substring(0, slashIndex);
-  if (topLevelLayer.isEmpty) {
-    return null;
-  }
-
-  return topLevelLayer;
+  return topLevelLibSrcEntryForRepoRelPosixPath(repoRelPosixPath);
 }
 
 bool isApprovedTopLevelLibSrcLayer(String layer) =>
@@ -67,14 +84,30 @@ bool isApprovedTopLevelLibSrcLayer(String layer) =>
 bool isDeletedTopLevelLibSrcLayer(String layer) =>
     deletedTopLevelLibSrcLayers.contains(layer);
 
+bool isSanctionedTopLevelLibSrcLeafFile(String fileName) =>
+    sanctionedTopLevelLibSrcLeafFiles.contains(fileName);
+
 String? describeLibSrcLayoutViolation(String repoRelPosixPath) {
+  if (isTopLevelLibSrcLeafFilePath(repoRelPosixPath)) {
+    final topLevelLeaf = directChildUnderLibSrcForRepoRelPosixPath(
+      repoRelPosixPath,
+    );
+    if (topLevelLeaf == null) {
+      return null;
+    }
+    if (isSanctionedTopLevelLibSrcLeafFile(topLevelLeaf)) {
+      return null;
+    }
+    return 'layer layout violation: $repoRelPosixPath uses unapproved '
+        'top-level lib/src leaf "$topLevelLeaf"';
+  }
+
   final topLevelLayer = topLevelLibSrcLayerForRepoRelPosixPath(
     repoRelPosixPath,
   );
   if (topLevelLayer == null) {
     return null;
   }
-
   if (isDeletedTopLevelLibSrcLayer(topLevelLayer)) {
     return 'layer layout violation: $repoRelPosixPath uses deleted '
         'top-level layer "$topLevelLayer"';
@@ -83,7 +116,6 @@ String? describeLibSrcLayoutViolation(String repoRelPosixPath) {
     return 'layer layout violation: $repoRelPosixPath uses '
         'unapproved top-level layer "$topLevelLayer"';
   }
-
   return null;
 }
 
@@ -103,7 +135,10 @@ List<LibSrcLayoutViolation> collectTopLevelLibSrcLayoutViolations({
 
   final violations = <LibSrcLayoutViolation>[];
   for (final entity in srcRoot.listSync(recursive: false, followLinks: false)) {
-    if (entity is! Directory) {
+    if (entity is! Directory && entity is! File) {
+      continue;
+    }
+    if (entity is File && !entity.path.endsWith('.dart')) {
       continue;
     }
 
@@ -117,14 +152,15 @@ List<LibSrcLayoutViolation> collectTopLevelLibSrcLayoutViolations({
     }
 
     final layer = topLevelLibSrcLayerForRepoRelPosixPath(repoRelPosixPath);
-    if (layer == null) {
+    final leaf = directChildUnderLibSrcForRepoRelPosixPath(repoRelPosixPath);
+    final entry = layer ?? leaf;
+    if (entry == null) {
       continue;
     }
-
     violations.add(
       LibSrcLayoutViolation(
         path: repoRelPosixPath,
-        layer: layer,
+        entry: entry,
         message: violationMessage,
       ),
     );

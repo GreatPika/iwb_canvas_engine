@@ -174,6 +174,78 @@ part
       }
     });
 
+    test('rejects internal -> lib barrel bypass to commands', () async {
+      final sandbox = await createImportBoundariesSandbox();
+      try {
+        writeSandboxFile(
+          sandbox,
+          'lib/src/controller/commands/a/a.dart',
+          'class CommandA {}\n',
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/controller_api.dart',
+          "export 'src/controller/commands/a/a.dart';\n",
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/controller/internal/b.dart',
+          "import '../../../controller_api.dart';\n",
+        );
+
+        final result = await runSandboxTool(
+          sandbox,
+          'check_import_boundaries.dart',
+        );
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'controller structure',
+            detail: 'internal/** must not import commands/**',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects internal -> package re-export bypass to commands', () async {
+      final sandbox = await createImportBoundariesSandbox();
+      try {
+        writeSandboxFile(
+          sandbox,
+          'lib/src/controller/commands/a/a.dart',
+          'class CommandA {}\n',
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/controller_api.dart',
+          "export 'src/controller/commands/a/a.dart';\n",
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/controller/internal/b.dart',
+          "import 'package:iwb_canvas_engine/controller_api.dart';\n",
+        );
+
+        final result = await runSandboxTool(
+          sandbox,
+          'check_import_boundaries.dart',
+        );
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'controller structure',
+            detail: 'internal/** must not import commands/**',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
     test('rejects unknown layer under lib/src', () async {
       final sandbox = await createImportBoundariesSandbox();
       try {

@@ -92,25 +92,42 @@ void main() {
       }
     });
 
-    test(
-      'allows top-level lib/src file without treating it as a layer',
-      () async {
-        final sandbox = await createGuardrailsSandbox();
-        try {
-          writeMinimalControllerStore(sandbox);
-          writeSandboxFile(
-            sandbox,
-            'lib/src/version.dart',
-            'const version = 1;\n',
-          );
+    test('ignores non-Dart top-level lib/src files', () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeSandboxFile(sandbox, 'lib/src/README.md', '# Internal notes\n');
 
-          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-          expect(result.exitCode, 0, reason: result.stderr.toString());
-        } finally {
-          sandbox.deleteSync(recursive: true);
-        }
-      },
-    );
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects unapproved top-level lib/src leaf file', () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/version.dart',
+          'const version = 1;\n',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          allOf(
+            contains('layer layout violation:'),
+            contains('uses unapproved top-level lib/src leaf "version.dart"'),
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
 
     test('allows approved contract top-level layer without imports', () async {
       final sandbox = await createGuardrailsSandbox();
