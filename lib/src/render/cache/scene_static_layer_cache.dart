@@ -2,9 +2,11 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 
-import '../../core/grid_safety_limits.dart';
 import '../../core/numeric_clamp.dart';
 import '../../contract/snapshot.dart';
+import '../scene_grid_renderer.dart';
+
+const _gridRenderer = SceneGridRenderer();
 
 class SceneStaticLayerCache {
   _StaticLayerKey? _key;
@@ -41,14 +43,13 @@ class SceneStaticLayerCache {
     _drawBackground(canvas, size, background.color);
 
     final safeOffset = sanitizeFiniteOffset(cameraOffset);
-    final safeGridStrokeWidth = clampNonNegativeFinite(gridStrokeWidth);
-    final grid = background.grid;
-    final enabled = _isGridDrawable(
-      grid,
+    final plan = _gridRenderer.plan(
+      background.grid,
       size: size,
       cameraOffset: Offset.zero,
+      gridStrokeWidth: gridStrokeWidth,
     );
-    if (!enabled) {
+    if (plan == null) {
       _disposeGridPictureIfNeeded();
       _key = null;
       return;
@@ -57,15 +58,15 @@ class SceneStaticLayerCache {
     final key = _StaticLayerKey(
       size: size,
       gridEnabled: true,
-      gridCellSize: grid.cellSize,
-      gridColor: grid.color,
-      gridStrokeWidth: safeGridStrokeWidth,
+      gridCellSize: plan.cellSize,
+      gridColor: plan.color,
+      gridStrokeWidth: plan.strokeWidth,
     );
 
     if (_gridPicture == null || _key != key) {
       _disposeGridPictureIfNeeded();
       _key = key;
-      _gridPicture = _recordGridPicture(size, grid, safeGridStrokeWidth);
+      _gridPicture = _recordGridPicture(plan);
       _debugBuildCount += 1;
     }
 
@@ -73,7 +74,7 @@ class SceneStaticLayerCache {
     if (picture == null) {
       return;
     }
-    final shift = _gridShiftForCameraOffset(safeOffset, key.gridCellSize);
+    final shift = _gridRenderer.cameraShiftFor(safeOffset, key.gridCellSize);
     canvas.save();
     canvas.clipRect(Offset.zero & size);
     canvas.translate(shift.dx, shift.dy);
@@ -81,14 +82,10 @@ class SceneStaticLayerCache {
     canvas.restore();
   }
 
-  Picture _recordGridPicture(
-    Size size,
-    GridSnapshot grid,
-    double gridStrokeWidth,
-  ) {
+  Picture _recordGridPicture(SceneGridRenderPlan plan) {
     final recorder = PictureRecorder();
     final canvas = Canvas(recorder);
-    _drawGrid(canvas, size, grid, Offset.zero, gridStrokeWidth);
+    _gridRenderer.drawPlan(canvas, plan);
     return recorder.endRecording();
   }
 
@@ -135,107 +132,4 @@ class _StaticLayerKey {
 
 void _drawBackground(Canvas canvas, Size size, Color color) {
   canvas.drawRect(Offset.zero & size, Paint()..color = color);
-}
-
-void _drawGrid(
-  Canvas canvas,
-  Size size,
-  GridSnapshot grid,
-  Offset cameraOffset,
-  double gridStrokeWidth,
-) {
-  if (!_isGridDrawable(grid, size: size, cameraOffset: cameraOffset)) {
-    return;
-  }
-
-  final cell = grid.cellSize;
-  final paint = Paint()
-    ..color = grid.color
-    ..strokeWidth = clampNonNegativeFinite(gridStrokeWidth);
-
-  final startX = _gridStart(-cameraOffset.dx, cell);
-  final startY = _gridStart(-cameraOffset.dy, cell);
-
-  final strideX = _gridStrideForLineCount(
-    _gridLineCount(startX, size.width, cell),
-  );
-  final strideY = _gridStrideForLineCount(
-    _gridLineCount(startY, size.height, cell),
-  );
-
-  for (var x = startX, index = 0; x <= size.width; x += cell, index++) {
-    if (index % strideX != 0) {
-      continue;
-    }
-    canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
-  }
-
-  for (var y = startY, index = 0; y <= size.height; y += cell, index++) {
-    if (index % strideY != 0) {
-      continue;
-    }
-    canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
-  }
-}
-
-bool _isGridDrawable(
-  GridSnapshot grid, {
-  required Size size,
-  required Offset cameraOffset,
-}) {
-  if (!grid.isEnabled) {
-    return false;
-  }
-  if (!size.width.isFinite || !size.height.isFinite) {
-    return false;
-  }
-  if (size.width <= 0 || size.height <= 0) {
-    return false;
-  }
-  if (!_isFiniteOffset(cameraOffset)) {
-    return false;
-  }
-  if (!grid.cellSize.isFinite || grid.cellSize < kMinGridCellSize) {
-    return false;
-  }
-  return true;
-}
-
-int _gridLineCount(double start, double extent, double cell) {
-  if (!start.isFinite || !extent.isFinite || !cell.isFinite || cell <= 0) {
-    return 0;
-  }
-  return ((extent - start) / cell).ceil().clamp(0, 1 << 30) + 1;
-}
-
-int _gridStrideForLineCount(int lineCount) {
-  if (lineCount <= kMaxGridLinesPerAxis) {
-    return 1;
-  }
-  return (lineCount / kMaxGridLinesPerAxis).ceil().clamp(1, 1 << 30);
-}
-
-double _gridStart(double offset, double cell) {
-  if (!offset.isFinite || !cell.isFinite || cell <= 0) {
-    return 0;
-  }
-  final rem = offset % cell;
-  return rem > 0 ? rem - cell : rem;
-}
-
-Offset _gridShiftForCameraOffset(Offset cameraOffset, double cellSize) {
-  if (!_isFiniteOffset(cameraOffset)) {
-    return Offset.zero;
-  }
-  if (!cellSize.isFinite || cellSize <= 0) {
-    return Offset.zero;
-  }
-  return Offset(
-    _gridStart(-cameraOffset.dx, cellSize),
-    _gridStart(-cameraOffset.dy, cellSize),
-  );
-}
-
-bool _isFiniteOffset(Offset offset) {
-  return offset.dx.isFinite && offset.dy.isFinite;
 }

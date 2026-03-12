@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 
 Future<Color> _pixelAt(Image image, int x, int y) async {
@@ -17,6 +18,41 @@ Future<Color> _pixelAt(Image image, int x, int y) async {
     bytes[index + 1],
     bytes[index + 2],
   );
+}
+
+Future<Image> _paintScene(ScenePainter painter, Size size) async {
+  final recorder = PictureRecorder();
+  final canvas = Canvas(recorder);
+  painter.paint(canvas, size);
+  return recorder.endRecording().toImage(
+    size.width.toInt(),
+    size.height.toInt(),
+  );
+}
+
+Future<int> _countDarkPixelsOnRow(Image image, int y, Color background) async {
+  final data = await image.toByteData(format: ImageByteFormat.rawRgba);
+  if (data == null) {
+    throw StateError('Failed to encode image to raw RGBA.');
+  }
+
+  var count = 0;
+  final bytes = data.buffer.asUint8List();
+  final argb = background.toARGB32();
+  final bgA = (argb >> 24) & 0xFF;
+  final bgR = (argb >> 16) & 0xFF;
+  final bgG = (argb >> 8) & 0xFF;
+  final bgB = argb & 0xFF;
+  for (var x = 0; x < image.width; x++) {
+    final index = (y * image.width + x) * 4;
+    if (bytes[index] != bgR ||
+        bytes[index + 1] != bgG ||
+        bytes[index + 2] != bgB ||
+        bytes[index + 3] != bgA) {
+      count++;
+    }
+  }
+  return count;
 }
 
 void main() {
@@ -310,5 +346,48 @@ void main() {
 
     cache.dispose();
     expect(cache.debugDisposeCount, 1);
+  });
+
+  test('SceneStaticLayerCache matches painter grid output', () async {
+    final scene = SceneSnapshot(
+      camera: CameraSnapshot(offset: Offset(5, 0)),
+      background: BackgroundSnapshot(
+        color: Color(0xFFFFFFFF),
+        grid: GridSnapshot(
+          isEnabled: true,
+          cellSize: 20,
+          color: Color(0xFF000000),
+        ),
+      ),
+    );
+    const size = Size(3980, 80);
+    final controller = SceneControllerCore(initialSnapshot: scene);
+    addTearDown(controller.dispose);
+
+    final directPainter = ScenePainter(
+      controller: controller,
+      imageResolver: (_) => null,
+    );
+    final cachedPainter = ScenePainter(
+      controller: controller,
+      imageResolver: (_) => null,
+      staticLayerCache: SceneStaticLayerCache(),
+    );
+
+    final directImage = await _paintScene(directPainter, size);
+    final cachedImage = await _paintScene(cachedPainter, size);
+
+    final cachedGridPixels = await _countDarkPixelsOnRow(
+      cachedImage,
+      10,
+      const Color(0xFFFFFFFF),
+    );
+    final directGridPixels = await _countDarkPixelsOnRow(
+      directImage,
+      10,
+      const Color(0xFFFFFFFF),
+    );
+
+    expect((cachedGridPixels - directGridPixels).abs(), lessThanOrEqualTo(1));
   });
 }

@@ -116,34 +116,34 @@ plan и перевести painter/static cache на shared grid API.
 
 ## Последовательность реализации (только действия)
 
-[ ] Создать `lib/src/render/scene_grid_renderer.dart`.
-[ ] Перенести в него drawable predicate, line plan и camera shift policy.
-[ ] Добавить deterministic bounded hysteresis на пороге плотности.
-[ ] Перевести `ScenePainter` на shared grid owner.
-[ ] Перевести `SceneStaticLayerCache` на shared grid owner без дублирования
+[x] Создать `lib/src/render/scene_grid_renderer.dart`.
+[x] Перенести в него drawable predicate, line plan и camera shift policy.
+[x] Добавить deterministic bounded hysteresis на пороге плотности.
+[x] Перевести `ScenePainter` на shared grid owner.
+[x] Перевести `SceneStaticLayerCache` на shared grid owner без дублирования
     алгоритма.
-[ ] Зафиксировать picture reuse contract и `_StaticLayerKey`
+[x] Зафиксировать picture reuse contract и `_StaticLayerKey`
     `SceneStaticLayerCache` в том же owner-границе.
-[ ] Удалить локальные grid helper-ы из painter/static cache.
-[ ] Не переносить в этот подшаг painter frame orchestration и policy других
+[x] Удалить локальные grid helper-ы из painter/static cache.
+[x] Не переносить в этот подшаг painter frame orchestration и policy других
     render caches.
 
 ## Критерии приёмки
 
-[ ] `ScenePainter` и `SceneStaticLayerCache` используют одну и ту же grid
+[x] `ScenePainter` и `SceneStaticLayerCache` используют одну и ту же grid
     implementation.
-[ ] В кодовой базе не остаётся двух competing owner-ов для grid line
+[x] В кодовой базе не остаётся двух competing owner-ов для grid line
     generation, stride calculation и drawable predicate.
-[ ] Grid draw остаётся bounded policy и не рисует больше допустимого числа
+[x] Grid draw остаётся bounded policy и не рисует больше допустимого числа
     линий на ось.
-[ ] Bounded density hysteresis описана явно и не требует hidden mutable state
+[x] Bounded density hysteresis описана явно и не требует hidden mutable state
     между кадрами.
-[ ] `SceneStaticLayerCache` остаётся owner-ом только picture lifecycle и не
+[x] `SceneStaticLayerCache` остаётся owner-ом только picture lifecycle и не
     кодирует grid semantics повторно.
-[ ] Exact static-cache key inputs и `_StaticLayerKey` закреплены здесь же,
+[x] Exact static-cache key inputs и `_StaticLayerKey` закреплены здесь же,
     потому что picture reuse contract не отделён реальным seam-ом от grid
     owner-а.
-[ ] Повторная диагностика
+[x] Повторная диагностика
     `dcm calculate-metrics lib/src/render/scene_grid_renderer.dart lib/src/render/scene_painter.dart lib/src/render/cache/scene_static_layer_cache.dart --report-all`
     приложена к результату шага; новые или step-owned methods не содержат
     `HIGH`/`VERY HIGH` по `cyclomatic-complexity`,
@@ -152,13 +152,13 @@ plan и перевести painter/static cache на shared grid API.
 
 ## Тестовый контур шага
 
-[ ] Новый targeted test:
+[x] Новый targeted test:
     `test/render/scene_grid_renderer_test.dart`
-[ ] `test/render/scene_static_layer_cache_test.dart`
+[x] `test/render/scene_static_layer_cache_test.dart`
     с покрытием:
     - static cache использует тот же grid algorithm, что и painter
     - picture lifecycle и `_StaticLayerKey` соответствуют shared grid owner-у
-[ ] `test/render/scene_painter_test.dart`
+[x] `test/render/scene_painter_test.dart`
     с покрытием:
     - painter делегирует в shared grid owner
     - bounded density hysteresis не даёт near-threshold flap на соседних

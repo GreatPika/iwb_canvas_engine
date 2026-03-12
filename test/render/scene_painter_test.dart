@@ -9,6 +9,7 @@ import 'package:iwb_canvas_engine/src/contract/scene_data_exception.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_render_state.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
+import 'package:iwb_canvas_engine/src/render/scene_grid_renderer.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 
 class _FakeRenderState extends ChangeNotifier implements SceneRenderState {
@@ -123,6 +124,31 @@ Future<double> _inkCentroidX(Image image, Color background) async {
     throw StateError('Expected non-background pixels.');
   }
   return weightedX / totalInk;
+}
+
+Future<int> _countDarkPixelsOnRow(Image image, int y, Color background) async {
+  final data = await image.toByteData(format: ImageByteFormat.rawRgba);
+  if (data == null) {
+    throw StateError('Failed to encode image to raw RGBA.');
+  }
+
+  var count = 0;
+  final bytes = data.buffer.asUint8List();
+  final argb = background.toARGB32();
+  final bgA = (argb >> 24) & 0xFF;
+  final bgR = (argb >> 16) & 0xFF;
+  final bgG = (argb >> 8) & 0xFF;
+  final bgB = argb & 0xFF;
+  for (var x = 0; x < image.width; x++) {
+    final index = (y * image.width + x) * 4;
+    if (bytes[index] != bgR ||
+        bytes[index + 1] != bgG ||
+        bytes[index + 2] != bgB ||
+        bytes[index + 3] != bgA) {
+      count++;
+    }
+  }
+  return count;
 }
 
 Future<Rect> _inkBounds(Image image, Color background) async {
@@ -472,6 +498,67 @@ void main() {
     },
   );
 
+  test(
+    'ScenePainter delegates empty-scene grid draw to SceneGridRenderer',
+    () async {
+      final scene = SceneSnapshot(
+        camera: CameraSnapshot(offset: Offset(5, 0)),
+        background: BackgroundSnapshot(
+          color: Color(0xFFFFFFFF),
+          grid: GridSnapshot(
+            isEnabled: true,
+            cellSize: 20,
+            color: Color(0xFF000000),
+          ),
+        ),
+      );
+      final controller = SceneControllerCore(initialSnapshot: scene);
+      addTearDown(controller.dispose);
+      final painter = ScenePainter(
+        controller: controller,
+        imageResolver: (_) => null,
+      );
+
+      final painterImage = await _paintToImage(
+        painter,
+        width: 3980,
+        height: 80,
+      );
+
+      const renderer = SceneGridRenderer();
+      final recorder = PictureRecorder();
+      final canvas = Canvas(recorder);
+      canvas.drawRect(
+        const Rect.fromLTWH(0, 0, 3980, 80),
+        Paint()..color = const Color(0xFFFFFFFF),
+      );
+      renderer.draw(
+        canvas,
+        scene.background.grid,
+        size: const Size(3980, 80),
+        cameraOffset: scene.camera.offset,
+        gridStrokeWidth: 1,
+      );
+      final rendererImage = await recorder.endRecording().toImage(3980, 80);
+
+      final painterGridPixels = await _countDarkPixelsOnRow(
+        painterImage,
+        10,
+        const Color(0xFFFFFFFF),
+      );
+      final rendererGridPixels = await _countDarkPixelsOnRow(
+        rendererImage,
+        10,
+        const Color(0xFFFFFFFF),
+      );
+
+      expect(
+        (painterGridPixels - rendererGridPixels).abs(),
+        lessThanOrEqualTo(1),
+      );
+    },
+  );
+
   test('ScenePainter skips grid for invalid drawable state', () async {
     const background = Color(0xFFFFFFFF);
     final controller = SceneControllerCore(
@@ -496,6 +583,56 @@ void main() {
     final nonBackground = await _countNonBackgroundPixels(image, background);
     expect(nonBackground, 0);
   });
+
+  test(
+    'ScenePainter avoids near-threshold grid density flap on camera jitter',
+    () async {
+      const background = Color(0xFFFFFFFF);
+      final controller = SceneControllerCore(
+        initialSnapshot: SceneSnapshot(
+          background: BackgroundSnapshot(
+            color: background,
+            grid: GridSnapshot(
+              isEnabled: true,
+              cellSize: 20,
+              color: Color(0xFF000000),
+            ),
+          ),
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      final painter = ScenePainter(
+        controller: controller,
+        imageResolver: (_) => null,
+      );
+
+      final baseImage = await _paintToImage(painter, width: 3980, height: 80);
+      final baseInk = await _countDarkPixelsOnRow(baseImage, 10, background);
+
+      controller.writeReplaceScene(
+        SceneSnapshot(
+          camera: const CameraSnapshot(offset: Offset(5, 0)),
+          background: const BackgroundSnapshot(
+            color: background,
+            grid: GridSnapshot(
+              isEnabled: true,
+              cellSize: 20,
+              color: Color(0xFF000000),
+            ),
+          ),
+        ),
+      );
+      final jitterImage = await _paintToImage(painter, width: 3980, height: 80);
+      final jitterInk = await _countDarkPixelsOnRow(
+        jitterImage,
+        10,
+        background,
+      );
+
+      expect((jitterInk - baseInk).abs(), lessThanOrEqualTo(1));
+    },
+  );
 
   test('ScenePainter culls path nodes using stroke-inflated bounds', () async {
     const background = Color(0xFFFFFFFF);

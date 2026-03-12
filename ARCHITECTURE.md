@@ -111,7 +111,10 @@ Ownership decisions for the target state:
 3. `SceneControllerCore` performs transactional writes and finalizes a canonical
    immutable `SceneSnapshot`.
 4. `ScenePainter` renders the committed snapshot plus any ephemeral preview
-   state owned by the interactive controller.
+   state owned by the interactive controller. Background-grid draw semantics
+   have one render-local owner in `render/scene_grid_renderer.dart`; painter
+   and static cache consume the same plan instead of maintaining parallel grid
+   math.
 5. `actions` and `editTextRequests` expose asynchronous integration boundaries
    back to the host app.
 
@@ -135,6 +138,10 @@ Ownership decisions for the target state:
 - Move-session cancel semantics are local to the move owner: pointer `cancel`
   clears ephemeral preview/marquee state and restores the gesture baseline
   selection when that gesture changed selection before terminal completion.
+- Background-grid semantics are stateless and render-local: one shared owner
+  computes drawable eligibility, density bucketing, camera shift, and line
+  emission; `SceneStaticLayerCache` owns only picture lifecycle and key reuse
+  around that shared grid plan.
 - All committed mutations go through `write(...)` or higher-level controller
   methods that delegate to the same write path.
 - Public API never exposes mutable internal scene objects.

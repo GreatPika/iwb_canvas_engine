@@ -29,6 +29,15 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ### Changed
 
+- Background-grid rendering now has one internal owner in
+  `src/render/scene_grid_renderer.dart`: `ScenePainter` and
+  `SceneStaticLayerCache` share the same drawable predicate, density bucket,
+  camera-shift math, and line-emission plan, while static cache remains
+  responsible only for picture lifecycle and the existing local key contract.
+  Density bucketing now uses a deterministic bounded anti-flap policy based on
+  a camera-phase-independent visible-line upper bound, so near-threshold pans
+  no longer switch stride modes unnecessarily and still stay within
+  `kMaxGridLinesPerAxis`.
 - `SceneControllerInteractive.handlePointer(...)` now owns canonical terminal
   pointer normalization for both direct and `SceneView`-routed input:
   non-finite `down`/`move` are still dropped, while non-finite terminal

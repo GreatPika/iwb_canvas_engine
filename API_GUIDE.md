@@ -797,6 +797,10 @@ Parameters:
 - paints the committed scene
 - paints interactive previews
 - owns render caches by default and resets them on document/epoch boundaries
+- uses one internal grid renderer owner for both direct painting and
+  static-cache picture recording, so drawable checks, density bucketing,
+  camera shift, and bounded anti-flap policy stay aligned without cross-frame
+  mutable grid state
 
 ### 9.3 Image resolver
 

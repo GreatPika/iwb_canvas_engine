@@ -169,6 +169,11 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Public selection mutations are gesture-exclusive: `setSelection(...)`,
   `toggleSelection(...)`, `clearSelection()`, and `selectAll(...)` throw
   `StateError` while an active move/draw gesture is in progress.
+- Background grid rendering now has one internal owner in
+  `src/render/scene_grid_renderer.dart`: direct painter draw and static-cache
+  recording share the same drawable predicate, density bucketing, camera-shift
+  math, and bounded anti-flap policy without any cross-frame mutable grid
+  state.
 - Interactive transform/delete preflight is snapshot-based and shared:
   controller-side rotate/flip/delete entrypoints use one internal eligibility
   policy owner, while write-layer guards remain defensive commit barriers.

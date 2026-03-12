@@ -3,7 +3,6 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 
-import '../core/grid_safety_limits.dart';
 import '../core/numeric_clamp.dart';
 import '../core/text_layout.dart';
 import '../contract/transform2d.dart';
@@ -15,6 +14,7 @@ import 'cache/scene_static_layer_cache.dart';
 import 'cache/scene_stroke_path_cache.dart';
 import 'cache/scene_text_layout_cache.dart';
 import 'render_geometry_cache.dart';
+import 'scene_grid_renderer.dart';
 
 export 'cache/scene_path_metrics_cache.dart';
 export 'cache/scene_static_layer_cache.dart';
@@ -23,6 +23,8 @@ export 'cache/scene_text_layout_cache.dart';
 
 typedef ImageResolver = Image? Function(String imageId);
 typedef NodePreviewOffsetResolver = Offset Function(NodeId nodeId);
+
+const _gridRenderer = SceneGridRenderer();
 
 class ScenePainter extends CustomPainter {
   static const double _cullPadding = 1.0;
@@ -76,12 +78,12 @@ class ScenePainter extends CustomPainter {
       );
     } else {
       _drawBackground(canvas, size, snapshot.background.color);
-      _drawGrid(
+      _gridRenderer.draw(
         canvas,
-        size,
         snapshot.background.grid,
-        frame.cameraOffset,
-        gridStrokeWidth,
+        size: size,
+        cameraOffset: frame.cameraOffset,
+        gridStrokeWidth: gridStrokeWidth,
       );
     }
 
@@ -906,92 +908,6 @@ class _ResolvedNodePaintData {
 
 void _drawBackground(Canvas canvas, Size size, Color color) {
   canvas.drawRect(Offset.zero & size, Paint()..color = color);
-}
-
-void _drawGrid(
-  Canvas canvas,
-  Size size,
-  GridSnapshot grid,
-  Offset cameraOffset,
-  double gridStrokeWidth,
-) {
-  if (!_isGridDrawable(grid, size: size, cameraOffset: cameraOffset)) {
-    return;
-  }
-
-  final cell = grid.cellSize;
-  final paint = Paint()
-    ..color = grid.color
-    ..strokeWidth = clampNonNegativeFinite(gridStrokeWidth);
-
-  final startX = _gridStart(-cameraOffset.dx, cell);
-  final startY = _gridStart(-cameraOffset.dy, cell);
-
-  final strideX = _gridStrideForLineCount(
-    _gridLineCount(startX, size.width, cell),
-  );
-  final strideY = _gridStrideForLineCount(
-    _gridLineCount(startY, size.height, cell),
-  );
-
-  for (var x = startX, index = 0; x <= size.width; x += cell, index++) {
-    if (index % strideX != 0) {
-      continue;
-    }
-    canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
-  }
-
-  for (var y = startY, index = 0; y <= size.height; y += cell, index++) {
-    if (index % strideY != 0) {
-      continue;
-    }
-    canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
-  }
-}
-
-bool _isGridDrawable(
-  GridSnapshot grid, {
-  required Size size,
-  required Offset cameraOffset,
-}) {
-  if (!grid.isEnabled) {
-    return false;
-  }
-  if (!size.width.isFinite || !size.height.isFinite) {
-    return false;
-  }
-  if (size.width <= 0 || size.height <= 0) {
-    return false;
-  }
-  if (!_isFiniteOffset(cameraOffset)) {
-    return false;
-  }
-  if (!grid.cellSize.isFinite || grid.cellSize < kMinGridCellSize) {
-    return false;
-  }
-  return true;
-}
-
-int _gridLineCount(double start, double extent, double cell) {
-  if (!start.isFinite || !extent.isFinite || !cell.isFinite || cell <= 0) {
-    return 0;
-  }
-  return ((extent - start) / cell).ceil().clamp(0, 1 << 30) + 1;
-}
-
-int _gridStrideForLineCount(int lineCount) {
-  if (lineCount <= kMaxGridLinesPerAxis) {
-    return 1;
-  }
-  return (lineCount / kMaxGridLinesPerAxis).ceil().clamp(1, 1 << 30);
-}
-
-double _gridStart(double offset, double cell) {
-  if (!offset.isFinite || !cell.isFinite || cell <= 0) {
-    return 0;
-  }
-  final rem = offset % cell;
-  return rem > 0 ? rem - cell : rem;
 }
 
 Rect _centerRect(Size size) {
