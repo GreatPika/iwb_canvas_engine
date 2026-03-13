@@ -151,10 +151,13 @@ jobs:
           if [ "$JOBS" -gt 1 ]; then
             JOBS=$((JOBS - 1))
           fi
+          if [ "$JOBS" -gt 6 ]; then
+            JOBS=6
+          fi
           echo "jobs=$JOBS" >> "$GITHUB_OUTPUT"
 
       - name: Tool tests
-        run: flutter test --no-pub --tags=tool -j "${{ steps.test-jobs.outputs.jobs }}"
+        run: dart run tool/run_tool_tests.dart --jobs="${{ steps.test-jobs.outputs.jobs }}"
 
   smoke-bench:
     runs-on: ubuntu-latest

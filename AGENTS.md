@@ -65,7 +65,8 @@ app UI, product workflows, or backend logic.
   - `test/tool/support/public_entrypoint_contract.dart`
   - `pubspec.yaml`
   - `pubspec.lock`
-- Run `test/tool` file-by-file.
+- Run tool tests with `dart run tool/run_tool_tests.dart` (use `--jobs=N`
+  when you need to override parallelism).
 - Documentation-only changes do not require the full Flutter pipeline unless the
   task also changes code, tooling contracts, or executable examples.
 - If `tool/invariant_registry.dart` changes, always run and report
@@ -93,8 +94,8 @@ app UI, product workflows, or backend logic.
 9. `dart run tool/check_guardrails.dart`
 10. `dart run tool/check_import_boundaries.dart`
 11. `dart run tool/check_public_api_surface.dart`
-12. Run `test/tool` file-by-file when the tool-test trigger list above matches
-    the change.
+12. Run `dart run tool/run_tool_tests.dart` when the tool-test trigger list
+    above matches the change.
 
 ## Release hygiene
 
