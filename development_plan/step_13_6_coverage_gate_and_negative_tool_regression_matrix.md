@@ -50,7 +50,7 @@ language: russian
   - `test/tool/**` negative regression matrix;
   - allow-list cleanup для coverage по `lib/src/**`.
 - Out:
-  - новые semantic rules для import/public/invariants;
+  - новые import/public/invariant rules;
   - изменение invariant ids;
   - ownership import/public/AST checks.
 
@@ -66,7 +66,7 @@ language: russian
    - `part`
    - `part of`
    - утечку `Scene`
-   - fake `controllerEpoch`
+   - bypass canonical `nextEpoch` path
    - мутирующий метод с нейтральным именем
    - формальное `INV:` без реальной проверки
 5. Regression matrix не дублирует policy owner-ов. Тесты только доказывают,
@@ -113,7 +113,7 @@ language: russian
       - утечка `Scene`
 - [ ] `test/tool/guardrails/guardrails_controller_api_tool_test.dart` с отрицательными
       сценариями:
-      - fake `controllerEpoch`
+      - bypass canonical `nextEpoch` path
       - мутирующий метод с нейтральным именем
 - [ ] targeted invariant coverage test с отрицательным сценарием на формальный
       `INV:` без реальной проверки

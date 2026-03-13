@@ -15,8 +15,9 @@ surface всё ещё останется уязвимым, если `tool/check_
   или обходами через несогласованный export surface.
 
 Задача подшага: сделать `tool/check_guardrails.dart` owner-ом public/export
-guardrails и mutable type leak detection в signatures без смешивания с semantic
-AST-проверками `13.4`.
+guardrails и mutable type leak detection в signatures без смешивания с
+owner-level controller AST guardrails (mutation routing / epoch chokepoint
+enforcement) шага `13.4`.
 
 ## Что уже подтверждено по текущему состоянию
 
@@ -26,8 +27,9 @@ AST-проверками `13.4`.
    surface, что оставляет неполный coverage public/export signatures.
 3. Single-public-entry rule уже существует как invariant, но исходный шаг
    прямо требует его дополнительно защитить от обходов.
-4. Public/export checks и semantic AST checks живут в одном tool-файле, но это
-   не означает, что они должны иметь один ownership.
+4. Public/export checks и controller chokepoint checks могут запускаться из
+   одного runner-а (`tool/check_guardrails.dart`), но это не означает, что они
+   должны иметь один ownership или жить в одном модуле.
 
 ## Зафиксированные решения (без повторного обсуждения в реализации)
 
@@ -37,14 +39,13 @@ AST-проверками `13.4`.
    конкретный surface реально можно и нужно просканировать как exported API.
    Исключения допустимы только точечные и мотивированные.
 3. Guardrail mutable type leak-ов проверяет именно сигнатуры exported/runtime
-   API и не подменяет semantic mutation checks `13.4`.
+   API и не подменяет owner-level controller mutation/epoch checks `13.4`.
 4. Правило «один публичный вход» остаётся owner-ом этого подшага:
    public surface должен оставаться выровненным на sanctioned entrypoint-ы и
    не открывать обходные export-пути.
 5. Этот подшаг не решает:
    - write-only mutation semantics;
    - epoch invalidation semantics;
-   - `SceneDataException` factory-only throw policy;
    - invariant registry/coverage.
 
 ## Граница шага
@@ -56,7 +57,7 @@ AST-проверками `13.4`.
   - single-public-entrypoint discipline.
 - Out:
   - import topology;
-  - semantic AST guardrails;
+  - owner-level controller AST guardrails;
   - invariant ids и coverage proof contract;
   - line coverage allow-list.
 
@@ -83,19 +84,20 @@ AST-проверками `13.4`.
       public surface.
 - [x] Ужесточить guardrail mutable type leak-ов в сигнатурах.
 - [x] Защитить правило «один публичный вход» от обходов через export surface.
-- [x] Не смешивать эти проверки с semantic AST-rules шага `13.4`.
+- [x] Не смешивать эти проверки с owner-level controller AST guardrails
+      (mutation routing / epoch chokepoint enforcement) шага `13.4`.
 
 ## Критерии приёмки
 
 - [x] `tool/check_guardrails.dart` является owner-ом public/export guardrails,
-      но не semantic mutation/epoch checks.
+      но не owner-level controller mutation/epoch chokepoint checks.
 - [x] `interactive` и `view` больше не имеют необоснованного blind skip для
       surface, который может быть просканирован.
 - [x] Утечка изменяемых типов в exported/runtime signatures приводит к
       tool failure.
 - [x] Single-public-entry rule защищён от обходных export/public entrypoint-ов.
-- [x] Подшаг не вводит semantic AST rules для write-only mutation,
-      `controllerEpoch` или `SceneDataException`; это остаётся `13.4`.
+- [x] Подшаг не вводит owner-level controller AST rules для write-only
+      mutation или `controllerEpoch`; это остаётся `13.4`.
 - [x] Повторная диагностика
       `dcm calculate-metrics tool/check_guardrails.dart test/tool/guardrails/guardrails_layout_and_entrypoints_tool_test.dart test/tool/guardrails/guardrails_public_surface_tool_test.dart test/tool/guardrails/guardrails_interactive_api_tool_test.dart --report-all`
       приложена к результату шага; новые или step-owned methods не содержат

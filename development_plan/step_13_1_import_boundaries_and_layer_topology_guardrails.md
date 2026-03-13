@@ -70,7 +70,8 @@ language: russian
    не scattered regex-ами в других tool-файлах.
 7. Этот подшаг не решает:
    - mutable type leak в exported signatures;
-   - semantic AST-check для mutation/epoch;
+   - owner-level controller AST guardrails для mutation routing / epoch
+     invalidation chokepoint-ов;
    - invariant registry/coverage.
 
 ## Граница шага
@@ -84,7 +85,7 @@ language: russian
   - bypass path через `lib/*.dart`.
 - Out:
   - public signature scan;
-  - semantic AST guardrails;
+  - owner-level controller AST guardrails;
   - invariant registry;
   - line coverage policy;
   - отрицательные regression-сценарии на правила, которые принадлежат не этому

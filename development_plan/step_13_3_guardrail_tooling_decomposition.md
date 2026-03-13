@@ -28,7 +28,7 @@ language: russian
 - Out:
   - новые import-boundary rules;
   - новые public/export rules;
-  - новые semantic AST-rules;
+  - новые owner-level controller chokepoint rules (mutation routing / epoch);
   - новые invariant ids;
   - новые coverage gates;
   - перенос layout registry из `tool/src/layer_guardrails.dart` в другой файл.
