@@ -69,17 +69,20 @@ app UI, product workflows, or backend logic.
   when you need to override parallelism).
 - Documentation-only changes do not require the full Flutter pipeline unless the
   task also changes code, tooling contracts, or executable examples.
-- If `tool/invariant_registry.dart` changes, always run and report
-  `dart run tool/check_invariant_coverage.dart`.
+- Always run and report `dart run tool/check_invariant_coverage.dart`.
 
 ## Required checks for code changes
 
 1. Non-mutating formatting check:
    `dart format --output=none --set-exit-if-changed lib test example/lib example/test tool`
-2. `dcm analyze .`
-3. `flutter analyze`
-4. `(cd example && flutter analyze lib test)`
-5. Run these MCP test shards:
+2. `flutter analyze`
+3. `(cd example && flutter analyze lib test)`
+4. `dcm analyze .`
+5. `dart run tool/check_import_boundaries.dart`
+6. `dart run tool/check_public_api_surface.dart`
+7. `dart run tool/check_guardrails.dart`
+8. `dart run tool/check_invariant_coverage.dart`
+9. Run these MCP test shards:
    - `test/core`
    - `test/model test/serialization test/contract test/public_api test/entrypoints`
    - `test/controller/internal`
@@ -88,12 +91,8 @@ app UI, product workflows, or backend logic.
    - `test/render test/view`
    - `test/interactive`
    - `example/test` with MCP root `example/`
-6. `flutter test --coverage --no-pub --exclude-tags=tool`
-7. `dart run tool/check_coverage.dart`
-8. `dart run tool/check_invariant_coverage.dart`
-9. `dart run tool/check_guardrails.dart`
-10. `dart run tool/check_import_boundaries.dart`
-11. `dart run tool/check_public_api_surface.dart`
+10. `flutter test --coverage --no-pub --exclude-tags=tool`
+11. `dart run tool/check_coverage.dart`
 12. Run `dart run tool/run_tool_tests.dart` when the tool-test trigger list
     above matches the change.
 
