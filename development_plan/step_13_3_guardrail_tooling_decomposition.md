@@ -363,8 +363,7 @@ helper ухудшает domain readability:
       сохранены по тем же путям, но больше не являются giant file.
 - [x] Файлы
       `test/tool/import_boundaries_layers_tool_test.dart`,
-      `test/tool/guardrails_public_contracts_tool_test.dart`,
-      `test/tool/guardrails_interactive_api_tool_test.dart`
+      `test/tool/guardrails_public_contracts_tool_test.dart`
       удалены полностью после переноса сценариев.
 - [x] Все сценарии из исходных giant test files перенесены в финальные
       owner-level test files; thin shim files не допускаются.

@@ -103,7 +103,7 @@ comment marker без реальной enforcement-точки больше не 
 
 ## Тестовый контур шага
 
-- [ ] `test/tool/guardrails_public_contracts_tool_test.dart` или отдельный
+- [ ] `test/tool/guardrails/guardrails_controller_api_tool_test.dart` или отдельный
       targeted tool test с отрицательным сценарием на формальный `INV:` без
       реальной проверки
 - [ ] Обновлённые targeted tests/tool fixtures на:

@@ -97,7 +97,7 @@ AST-проверками `13.4`.
 - [x] Подшаг не вводит semantic AST rules для write-only mutation,
       `controllerEpoch` или `SceneDataException`; это остаётся `13.4`.
 - [x] Повторная диагностика
-      `dcm calculate-metrics tool/check_guardrails.dart test/tool/guardrails_layout_and_entrypoints_tool_test.dart test/tool/guardrails_public_contracts_tool_test.dart test/tool/guardrails_interactive_api_tool_test.dart --report-all`
+      `dcm calculate-metrics tool/check_guardrails.dart test/tool/guardrails/guardrails_layout_and_entrypoints_tool_test.dart test/tool/guardrails/guardrails_public_surface_tool_test.dart test/tool/guardrails/guardrails_interactive_api_tool_test.dart --report-all`
       приложена к результату шага; новые или step-owned methods не содержат
       `HIGH`/`VERY HIGH` по `cyclomatic-complexity`,
       `maximum-nesting-level` и `source-lines-of-code`, а целевой предел
@@ -105,12 +105,12 @@ AST-проверками `13.4`.
 
 ## Тестовый контур шага
 
-- [x] `test/tool/guardrails_public_contracts_tool_test.dart` с отрицательным
+- [x] `test/tool/guardrails/guardrails_public_surface_tool_test.dart` с отрицательным
       сценарием на утечку `Scene` или другого mutable runtime type в public
       signature
-- [x] `test/tool/guardrails_interactive_api_tool_test.dart` как regression
+- [x] `test/tool/guardrails/guardrails_interactive_api_tool_test.dart` как regression
       guard, что `interactive` surface больше не выпадает из scan-а
-- [x] `test/tool/guardrails_layout_and_entrypoints_tool_test.dart` с
+- [x] `test/tool/guardrails/guardrails_layout_and_entrypoints_tool_test.dart` с
       отрицательным сценарием на нарушение single-public-entry discipline
 - [x] `test/tool/support/public_entrypoint_contract.dart` обновляется только
       как test fixture public surface, а не как второй owner policy

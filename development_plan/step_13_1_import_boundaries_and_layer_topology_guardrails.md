@@ -152,14 +152,14 @@ language: russian
 
 ## Тестовый контур шага
 
-- [x] `test/tool/import_boundaries_layers_tool_test.dart` с отрицательными
+- [x] `test/tool/import_boundaries/import_boundaries_layout_tool_test.dart` с отрицательными
       сценариями:
       - boundary-bypassing `Link` в `lib/src/**`
       - `part` как обход существующего boundary-rule
       - `part of` как обход существующего boundary-rule
       - новый `lib/src/*.dart` вне whitelist-а
       - deleted/unapproved top-level layer
-- [x] `test/tool/import_boundaries_controller_structure_tool_test.dart`
+- [x] `test/tool/import_boundaries/import_boundaries_controller_structure_tool_test.dart`
       как regression guard на bypass path через `lib/*.dart` и package re-export
       в controller-related structure tests
 - [x] При необходимости расширение

@@ -78,7 +78,7 @@ normalization и гарантирует parity с `decodeScene(...)` по `code/
 
 [x] `test/public_api/scene_builder_test.dart`
 [x] `test/serialization/scene_codec_validation_test.dart`
-[x] `test/tool/import_boundaries_layers_tool_test.dart`
+[x] `test/tool/import_boundaries/import_boundaries_layout_tool_test.dart`
 [x] Точечные сценарии:
     - builder/decode parsed-map parity for nested path-aware validation errors
     - builder/decode parity for policy-owned duplicate/range defects

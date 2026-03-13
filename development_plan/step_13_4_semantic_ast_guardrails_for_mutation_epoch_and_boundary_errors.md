@@ -1,13 +1,13 @@
 language: russian
 
-# Шаг 13.4. Перевести mutation, epoch invalidation и boundary-error rules на semantic AST guardrails
+# Шаг 13.4. Довести controller mutation, epoch invalidation и boundary-error rules до semantic AST guardrails
 
 ## Цель шага
 
-После `13.2` и `13.3` public surface и структура tooling уже должны быть
-выровнены, но behavioral drift
-всё ещё останется возможным, если `tool/check_guardrails.dart` продолжит
-полагаться на слабые признаки:
+После `13.2` и `13.3` public surface и структура tooling уже выровнены, но
+behavioral drift всё ещё остаётся возможным, потому что controller/boundary
+часть guardrails пока опирается на слабые признаки вместо полноценной
+semantic AST-проверки:
 
 - write-only mutation можно обойти нейтральным именем метода;
 - fake `controllerEpoch` можно подложить без реального invalidation смысла;
@@ -21,17 +21,25 @@ tooling смотрит на опасные операции и реальный 
 ## Что уже подтверждено по текущему состоянию
 
 1. [check_guardrails.dart](/Users/blackpika/iwb_canvas_engine/tool/check_guardrails.dart)
-   уже содержит primitive AST visitors и controller symbol collection.
-2. Исходный шаг прямо требует:
+   уже сведён к thin runner-у, а текущая controller/boundary логика живёт в
+   [controller_api_guardrails.dart](/Users/blackpika/iwb_canvas_engine/tool/src/guardrails/controller_api_guardrails.dart).
+2. Текущая реализация уже ловит часть drift-а, но всё ещё остаётся
+   синтаксической, а не semantic:
+   - mutation определяется по имени символа и набору префиксов;
+   - наличие `controllerEpoch` засчитывается по самому символу;
+   - запрета direct `throw SceneDataException(...)` ещё нет.
+3. Исходный шаг прямо требует:
    - проверять write-only mutation по AST и опасным операциям, а не по имени;
    - проверять epoch invalidation по смыслу, а не по наличию слова;
    - запретить прямой `throw SceneDataException` вне централизованного factory.
-3. Эти проверки концептуально отличаются от public signature scan и поэтому
+4. Эти проверки концептуально отличаются от public signature scan и поэтому
    не должны смешиваться с ownership `13.2`.
 
 ## Зафиксированные решения (без повторного обсуждения в реализации)
 
-1. `13.4` владеет только semantic AST-guardrails в `check_guardrails.dart`.
+1. `13.4` владеет только semantic AST-guardrails в
+   `tool/src/guardrails/controller_api_guardrails.dart` под runner-ом
+   `tool/check_guardrails.dart`.
 2. Write-only mutation определяется по опасным операциям и mutation surface,
    а не по префиксу имени или whitelist-у удобных названий.
 3. `epoch invalidation` считается выполненным только при наличии реального
@@ -73,8 +81,10 @@ tooling смотрит на опасные операции и реальный 
 
 ## Последовательность реализации (только действия)
 
-- [ ] Перевести write-only mutation guardrail на semantic AST detection.
-- [ ] Перевести `epoch invalidation` guardrail на semantic invalidation path.
+- [ ] Перевести `tool/src/guardrails/controller_api_guardrails.dart`
+      с prefix/name matching на semantic AST detection write-only mutation.
+- [ ] Перевести guardrail `epoch invalidation` с проверки символа
+      `controllerEpoch` на semantic invalidation path.
 - [ ] Запретить direct `throw SceneDataException(...)` вне allow-list boundary
       factory и tests.
 - [ ] Явно развести эти проверки с public/export scan ownership `13.2`.
@@ -91,7 +101,7 @@ tooling смотрит на опасные операции и реальный 
       owner-у.
 - [ ] Подшаг не становится second owner-ом public signature scan.
 - [ ] Повторная диагностика
-      `dcm calculate-metrics tool/check_guardrails.dart test/tool/guardrails_public_contracts_tool_test.dart test/tool/guardrails_layout_and_entrypoints_tool_test.dart --report-all`
+      `dcm calculate-metrics tool/src/guardrails/controller_api_guardrails.dart test/tool/guardrails/guardrails_controller_api_tool_test.dart --report-all`
       приложена к результату шага; новые или step-owned methods не содержат
       `HIGH`/`VERY HIGH` по `cyclomatic-complexity`,
       `maximum-nesting-level` и `source-lines-of-code`, а целевой предел
@@ -99,7 +109,7 @@ tooling смотрит на опасные операции и реальный 
 
 ## Тестовый контур шага
 
-- [ ] `test/tool/guardrails_public_contracts_tool_test.dart` с отрицательными
+- [ ] `test/tool/guardrails/guardrails_controller_api_tool_test.dart` с отрицательными
       сценариями:
       - fake `controllerEpoch`
       - мутирующий метод с нейтральным именем
@@ -110,8 +120,10 @@ tooling смотрит на опасные операции и реальный 
 ## Диагностика шага
 
 - [ ] До завершения подшага приложен `dcm calculate-metrics`-отчёт по
-      semantic AST surface в `tool/check_guardrails.dart`.
+      semantic AST surface в
+      `tool/src/guardrails/controller_api_guardrails.dart`.
 - [ ] Любые новые visitor/helper-модули для AST detection укладываются в предел
       `10 / 4 / 40`.
-- [ ] Если hotspot остаётся в `check_guardrails.dart`, он явно закреплён за
-      semantic ownership этого подшага, а не размыт между `13.2` и `13.4`.
+- [ ] Если hotspot остаётся в `controller_api_guardrails.dart`, он явно
+      закреплён за semantic ownership этого подшага, а не размыт между `13.2`
+      и `13.4`.

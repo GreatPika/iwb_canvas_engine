@@ -96,7 +96,7 @@ language: russian
 - [ ] Regression tests валидируют именно tool failure, а не дублируют policy
       owner-ов в отдельной логике.
 - [ ] Повторная диагностика
-      `dcm calculate-metrics tool/check_coverage.dart test/tool/coverage_tool_test.dart test/tool/import_boundaries_layers_tool_test.dart test/tool/guardrails_public_contracts_tool_test.dart --report-all`
+      `dcm calculate-metrics tool/check_coverage.dart test/tool/coverage_tool_test.dart test/tool/import_boundaries/import_boundaries_layout_tool_test.dart test/tool/guardrails/guardrails_public_surface_tool_test.dart test/tool/guardrails/guardrails_controller_api_tool_test.dart --report-all`
       приложена к результату шага; новые или step-owned methods не содержат
       `HIGH`/`VERY HIGH` по `cyclomatic-complexity`,
       `maximum-nesting-level` и `source-lines-of-code`, а целевой предел
@@ -106,14 +106,17 @@ language: russian
 
 - [ ] `test/tool/coverage_tool_test.dart` с отрицательным сценарием на файл с
       реальной логикой, ошибочно оставленный вне lcov
-- [ ] `test/tool/import_boundaries_layers_tool_test.dart` с отрицательными
+- [ ] `test/tool/import_boundaries/import_boundaries_layout_tool_test.dart` с отрицательными
       сценариями `Link`, `part`, `part of`
-- [ ] `test/tool/guardrails_public_contracts_tool_test.dart` с отрицательными
+- [ ] `test/tool/guardrails/guardrails_public_surface_tool_test.dart` с отрицательными
       сценариями:
       - утечка `Scene`
+- [ ] `test/tool/guardrails/guardrails_controller_api_tool_test.dart` с отрицательными
+      сценариями:
       - fake `controllerEpoch`
       - мутирующий метод с нейтральным именем
-      - формальное `INV:` без реальной проверки
+- [ ] targeted invariant coverage test с отрицательным сценарием на формальный
+      `INV:` без реальной проверки
 - [ ] Дополнительные existing tool tests обновляются только как regression
       harness, а не как второй policy owner
 

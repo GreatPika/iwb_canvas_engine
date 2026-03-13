@@ -89,7 +89,7 @@ language: russian
 ## Тестовый контур шага
 
 [x] `test/serialization/scene_codec_validation_test.dart`
-[x] `test/tool/import_boundaries_layers_tool_test.dart`
+[x] `test/tool/import_boundaries/import_boundaries_layout_tool_test.dart`
 [x] `test/model/scene_builder_test.dart`
 [x] Точечные сценарии:
     - huge JSON fails before `jsonDecode`

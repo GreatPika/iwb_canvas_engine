@@ -22,11 +22,12 @@ step-owned методы не должны пробивать пороги из
   - `tool/check_invariant_coverage.dart`
   - `tool/check_coverage.dart`
   - `tool/invariant_registry.dart`
-  - `test/tool/import_boundaries_layers_tool_test.dart`
-  - `test/tool/import_boundaries_controller_structure_tool_test.dart`
-  - `test/tool/guardrails_layout_and_entrypoints_tool_test.dart`
-  - `test/tool/guardrails_public_contracts_tool_test.dart`
-  - `test/tool/guardrails_interactive_api_tool_test.dart`
+  - `test/tool/import_boundaries/import_boundaries_layout_tool_test.dart`
+  - `test/tool/import_boundaries/import_boundaries_controller_structure_tool_test.dart`
+  - `test/tool/guardrails/guardrails_layout_and_entrypoints_tool_test.dart`
+  - `test/tool/guardrails/guardrails_public_surface_tool_test.dart`
+  - `test/tool/guardrails/guardrails_interactive_api_tool_test.dart`
+  - `test/tool/guardrails/guardrails_controller_api_tool_test.dart`
   - `test/tool/coverage_tool_test.dart`
   - `test/tool/support/guardrails_tool_test_support.dart`
   - `test/tool/support/public_entrypoint_contract.dart`
@@ -49,9 +50,10 @@ step-owned методы не должны пробивать пороги из
   обходы layer DAG через `part`/`part of` как boundary surface, `Link`,
   top-level `lib/src/*.dart`
   и `lib/*.dart`;
-- `check_guardrails.dart` пока не покрывает весь нужный semantic surface для
-  mutable type leak-ов, write-only mutation, epoch invalidation, public
-  entrypoint discipline и factory-only `SceneDataException`;
+- `check_guardrails.dart` после `13.3` уже разрезан на runner и доменные
+  модули, но semantic surface для write-only mutation, epoch invalidation и
+  factory-only `SceneDataException` всё ещё не доведён до смыслового AST-level
+  enforcement;
 - `check_invariant_coverage.dart` засчитывает формальные `INV:` marker-ы даже
   без реальной точки доказательства;
 - `check_coverage.dart` всё ещё допускает исключения для реальной логики;
@@ -112,8 +114,8 @@ closure. Без разведения этих обязанностей реал�
 
 Владелец решения по:
 
-- semantic AST-guardrails в `tool/check_guardrails.dart` для write-only
-  mutation;
+- semantic AST-guardrails в `tool/src/guardrails/controller_api_guardrails.dart`
+  под runner-ом `tool/check_guardrails.dart` для write-only mutation;
 - semantic проверке `epoch invalidation`;
 - запрету прямого `throw SceneDataException` вне централизованного
   boundary-error factory;
@@ -154,9 +156,10 @@ closure. Без разведения этих обязанностей реал�
 3. Декомпозиция `check_import_boundaries.dart`, `check_guardrails.dart` и
    зеркальная нарезка `test/tool/**` без смены CLI contract переносятся в
    `13.3`.
-4. Семантическая проверка write-only mutation по AST и опасным операциям,
-   semantic проверка `epoch invalidation` и запрет прямого
-   `throw SceneDataException` вне boundary factory переносятся в `13.4`.
+4. Доведение `controller_api_guardrails.dart` до semantic-проверки
+   write-only mutation по AST и опасным операциям, semantic проверка
+   `epoch invalidation` и запрет прямого `throw SceneDataException` вне
+   boundary factory переносятся в `13.4`.
 5. Новый invariant-пакет:
    - `INV-SER-SCHEMA-VERSION-CONTRACT`
    - invariant монотонности `timestampMs`
