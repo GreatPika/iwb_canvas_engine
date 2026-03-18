@@ -241,7 +241,7 @@ Guardrail проверяет именно owner path, а не spelling лока�
 
 ### Срез 1. Зафиксировать harness для controller-wide scan
 
-- [ ] Результат: новый public neutral mutator в отдельном controller-файле
+- [x] Результат: новый public neutral mutator в отдельном controller-файле
       гарантированно попадает в scan, а public interactive setter,
       меняющий только interactive-local state, остаётся положительным
       сценарием.
