@@ -304,16 +304,16 @@ Guardrail проверяет именно owner path, а не spelling лока�
 ## Последовательность реализации (только действия)
 
 - [ ] Зафиксировать test fixture matrix до production-правок:
-      - neutral mutator в отдельном controller-файле
-      - alias на `_store`
-      - alias на `ctx.changeSet` с `txnTrack*`
-      - alias/cascade на `ctx.workingSelection`
-      - local helper mutation
-      - local helper с именем class method
-      - harmless epoch rename
-      - bypass canonical `nextEpoch` path
-      - `writeReplaceScene(...)` store bypass
-- [ ] Перевести scan candidate surface на полный обход controller tree и
+  - neutral mutator в отдельном controller-файле
+  - alias на `_store`
+  - alias на `ctx.changeSet` с `txnTrack*`
+  - alias/cascade на `ctx.workingSelection`
+  - local helper mutation
+  - local helper с именем class method
+  - harmless epoch rename
+  - bypass canonical `nextEpoch` path
+  - `writeReplaceScene(...)` store bypass
+- [x] Перевести scan candidate surface на полный обход controller tree и
       `scene_controller_interactive.dart`, без fixed-file shortcuts.
 - [ ] Ввести declaration-level allow-list mutation zones вместо file-level
       исключений.
@@ -322,9 +322,9 @@ Guardrail проверяет именно owner path, а не spelling лока�
       `ctx.idGeneratorState`, `ctx.revisionState`, mutating `TxnContext` методы.
 - [ ] Закрыть alias/cascade/local-helper bypass для owner state.
 - [ ] Довести resolver declaration identity:
-      - method vs local function
-      - `MethodInvocation`
-      - `FunctionExpressionInvocation`
+  - method vs local function
+  - `MethodInvocation`
+  - `FunctionExpressionInvocation`
 - [ ] Перевести guardrail `epoch invalidation` с проверки символа
       `controllerEpoch` на canonical `nextEpoch` handoff path без
       exact-source-text matching.
@@ -345,11 +345,14 @@ Guardrail проверяет именно owner path, а не spelling лока�
       до изменения production logic.
 - [ ] Подтвердить, что каждый fixture падает по ожидаемой причине, а не по
       побочному parse/layout failure.
+  Текущее состояние: добавлены только минимальные regression tests для
+  interactive-only scan и conditional `controllerEpoch` gate; полная negative
+  matrix ещё не собрана.
 
 ### Phase 2. Scan scope and allow-list
 
-- [ ] Удалить любые fixed-file shortcuts из controller scan.
-- [ ] Явно описать candidate files:
+- [x] Удалить любые fixed-file shortcuts из controller scan.
+- [x] Явно описать candidate files:
       весь `lib/src/controller/**` плюс
       `lib/src/interactive/scene_controller_interactive.dart`.
 - [ ] Вынести declaration-level allow-list mutation zones в один owner-table.
@@ -471,29 +474,24 @@ Gate:
 
 - [ ] `test/tool/guardrails/guardrails_controller_api_tool_test.dart` с отрицательными
       сценариями:
-      - public mutation entrypoint с нейтральным именем, обходящий
-        `_core.write(...)` или `_core.commands.write*`
-      - прямой `_store` mutation вне commit-owned helper
-      - alias/cascade/local-helper bypass для `_store`, `ctx.changeSet` или
-        `ctx.workingSelection`
-      - alias на `ctx.idGeneratorState` или `ctx.revisionState` с последующей
-        mutation
-      - bypass canonical `nextEpoch` path
-      - `writeReplaceScene(...)`, обходящий canonical write pipeline
+  - public mutation entrypoint с нейтральным именем, обходящий `_core.write(...)`
+    или `_core.commands.write*`
+  - прямой `_store` mutation вне commit-owned helper
+  - alias/cascade/local-helper bypass для `_store`, `ctx.changeSet` или
+    `ctx.workingSelection`
+  - alias на `ctx.idGeneratorState` или `ctx.revisionState` с последующей
+    mutation
+  - bypass canonical `nextEpoch` path
+  - `writeReplaceScene(...)`, обходящий canonical write pipeline
 - [ ] И как минимум один положительный сценарий (не должен падать):
-      - public interactive setter, меняющий только interactive-local state
-        (например `setMode`)
-      - effects-only commit branch с commit bookkeeping mutation
+  - public interactive setter, меняющий только interactive-local state (например
+    `setMode`)
+  - effects-only commit branch с commit bookkeeping mutation
 - [ ] Если потребуется отдельный fixture, он остаётся test-only и не вводит
       второй owner policy вне `check_guardrails.dart`
 
 ## Диагностика шага
 
-- [ ] До завершения подшага приложен `dcm calculate-metrics`-отчёт по
-      owner-level AST surface в
-      `tool/src/guardrails/controller_api_guardrails.dart`.
-- [ ] Любые новые visitor/helper-модули для AST detection укладываются в предел
-      `10 / 4 / 40`.
 - [ ] Если hotspot остаётся в `controller_api_guardrails.dart`, он явно
       закреплён за owner-level mutation/epoch checks этого подшага, а не
       размыт между `13.2` и `13.4`.

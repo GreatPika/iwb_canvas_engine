@@ -13,22 +13,29 @@ Future<List<GuardrailViolation>> runControllerApiGuardrails({
   required GuardrailContext context,
 }) async {
   final violations = <GuardrailViolation>[];
-  final dartFiles = _controllerDartFiles(context);
+  final controllerTreeFiles = _controllerTreeDartFiles(context);
+  final dartFiles = _controllerGuardrailFiles(
+    context,
+    controllerTreeFiles: controllerTreeFiles,
+  );
   if (dartFiles.isEmpty) {
     return violations;
   }
 
-  var hasControllerEpoch = false;
+  var hasControllerEpochInControllerTree = false;
   for (final file in dartFiles) {
     final fileResult = _checkControllerFile(context, file);
-    hasControllerEpoch = hasControllerEpoch || fileResult.hasControllerEpoch;
+    if (_isControllerTreeFile(context, file)) {
+      hasControllerEpochInControllerTree =
+          hasControllerEpochInControllerTree || fileResult.hasControllerEpoch;
+    }
     if (fileResult.violation case final violation?) {
       violations.add(violation);
       return violations;
     }
   }
 
-  if (!hasControllerEpoch) {
+  if (controllerTreeFiles.isNotEmpty && !hasControllerEpochInControllerTree) {
     violations.add(
       GuardrailViolation(
         filePath: '/lib/src/controller',
@@ -39,10 +46,31 @@ Future<List<GuardrailViolation>> runControllerApiGuardrails({
       ),
     );
   }
+
   return violations;
 }
 
-List<File> _controllerDartFiles(GuardrailContext context) {
+List<File> _controllerGuardrailFiles(
+  GuardrailContext context, {
+  List<File>? controllerTreeFiles,
+}) {
+  final candidates = <File>[
+    ...(controllerTreeFiles ?? _controllerTreeDartFiles(context)),
+    ..._interactiveControllerEntrypointFiles(context),
+  ];
+  if (candidates.isEmpty) {
+    return const <File>[];
+  }
+  final uniqueByPath = <String, File>{};
+  for (final file in candidates) {
+    uniqueByPath[toPosixPath(file.absolute.path)] = file;
+  }
+  final result = uniqueByPath.values.toList(growable: false)
+    ..sort((a, b) => a.path.compareTo(b.path));
+  return result;
+}
+
+List<File> _controllerTreeDartFiles(GuardrailContext context) {
   final controllerDir = Directory(
     '${context.root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
     'src${Platform.pathSeparator}controller',
@@ -50,14 +78,32 @@ List<File> _controllerDartFiles(GuardrailContext context) {
   if (!controllerDir.existsSync()) {
     return const <File>[];
   }
-  final dartFiles =
-      controllerDir
-          .listSync(recursive: true, followLinks: false)
-          .whereType<File>()
-          .where((file) => file.path.endsWith('.dart'))
-          .toList(growable: false)
-        ..sort((a, b) => a.path.compareTo(b.path));
-  return dartFiles;
+  return controllerDir
+      .listSync(recursive: true, followLinks: false)
+      .whereType<File>()
+      .where((file) => file.path.endsWith('.dart'))
+      .toList(growable: false);
+}
+
+List<File> _interactiveControllerEntrypointFiles(GuardrailContext context) {
+  final file = File(
+    '${context.root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+    'src${Platform.pathSeparator}interactive${Platform.pathSeparator}'
+    'scene_controller_interactive.dart',
+  );
+  if (!file.existsSync()) {
+    return const <File>[];
+  }
+  return <File>[file];
+}
+
+bool _isControllerTreeFile(GuardrailContext context, File file) {
+  final controllerRoot = toPosixPath(
+    '${context.root.absolute.path}${Platform.pathSeparator}lib'
+    '${Platform.pathSeparator}src${Platform.pathSeparator}controller'
+    '${Platform.pathSeparator}',
+  );
+  return toPosixPath(file.absolute.path).startsWith(controllerRoot);
 }
 
 ControllerFileResult _checkControllerFile(GuardrailContext context, File file) {
@@ -65,6 +111,10 @@ ControllerFileResult _checkControllerFile(GuardrailContext context, File file) {
     absPosixPath: toPosixPath(file.absolute.path),
     rootAbsPosixPath: context.rootAbsPosixPath,
   );
+  final isInteractiveEntrypointFile =
+      filePosixPath ==
+          '/lib/src/interactive/scene_controller_interactive.dart' ||
+      filePosixPath == 'lib/src/interactive/scene_controller_interactive.dart';
   final parsed = parseUnitOrFail(
     context: context,
     absPath: file.absolute.path,
@@ -76,16 +126,20 @@ ControllerFileResult _checkControllerFile(GuardrailContext context, File file) {
   return ControllerFileResult(
     hasControllerEpoch: collector.hasControllerEpoch,
     violation:
-        _replaceSceneEpochViolation(
-          collector: collector,
-          parsed: parsed,
-          filePosixPath: filePosixPath,
-        ) ??
-        _mutatingSymbolViolation(
-          collector: collector,
-          parsed: parsed,
-          filePosixPath: filePosixPath,
-        ),
+        (isInteractiveEntrypointFile
+            ? null
+            : _replaceSceneEpochViolation(
+                collector: collector,
+                parsed: parsed,
+                filePosixPath: filePosixPath,
+              )) ??
+        (isInteractiveEntrypointFile
+            ? null
+            : _mutatingSymbolViolation(
+                collector: collector,
+                parsed: parsed,
+                filePosixPath: filePosixPath,
+              )),
   );
 }
 
