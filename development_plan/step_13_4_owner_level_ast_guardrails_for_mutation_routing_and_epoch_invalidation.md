@@ -12,50 +12,13 @@ owner-level chokepoint-ов:
 - write-only mutation сейчас можно обойти нейтральным именем метода;
 - `epoch invalidation` сейчас можно формально «изобразить» словом
   `controllerEpoch`, не сохранив canonical commit path;
-- предыдущая постановка пыталась доказать произвольную runtime-семантику по
-  AST-фрагментам и из-за этого трижды уводила реализацию в хрупкий,
-  легко-обходной tooling.
+- guardrail не должен пытаться доказать произвольную runtime-семантику по
+  AST-фрагментам, потому что это ведёт к хрупкому, легко-обходному tooling.
 
 Задача подшага: отказаться от псевдо-semantic сканирования «любых опасных
 операций» и перевести `controller_api_guardrails.dart` на owner-level AST
 guardrails, которые проверяют фиксированные mutation/epoch chokepoint-ы и не
 пытаются заново доказать всю runtime-семантику контроллера.
-
-## Почему прежняя стратегия неверна
-
-1. Полноценно определить «мутацию» по произвольному AST без alias/data-flow
-   анализа нельзя: tooling либо начинает пропускать обходы, либо даёт ложные
-   срабатывания на легитимные internal mutation zones.
-2. `epoch invalidation` в проекте выражен не символом `controllerEpoch`, а
-   canonical ownership path:
-   `writeReplaceScene/writeDocumentReplace -> changeSet.documentReplaced -> resolveNextControllerEpoch(...) -> spatial/store commit`.
-   Проверять наличие одного слова бессмысленно.
-3. Глобальный запрет прямого `throw SceneDataException(...)` конфликтует с уже
-   зафиксированной архитектурой шагов `6.1-6.4`: sanitization и contract
-   shape централизованы в
-   [scene_data_exception.dart](/Users/blackpika/iwb_canvas_engine/lib/src/contract/scene_data_exception.dart),
-   но code/path ownership остаётся у локальных boundary helper-ов в
-   `model/` и `serialization/`.
-   `13.4` не должен становиться вторым owner-ом error boundary.
-
-## Что уже подтверждено по текущему состоянию
-
-1. [check_guardrails.dart](/Users/blackpika/iwb_canvas_engine/tool/check_guardrails.dart)
-   уже сведён к thin runner-у, а текущая controller/boundary логика живёт в
-   [controller_api_guardrails.dart](/Users/blackpika/iwb_canvas_engine/tool/src/guardrails/controller_api_guardrails.dart).
-2. Текущая реализация уже ловит часть drift-а, но всё ещё остаётся
-   синтаксической и name-based:
-   - mutation определяется по имени символа и набору префиксов;
-   - `epoch invalidation` засчитывается по самому символу;
-   - canonical owner/chokepoint path сейчас tooling-ом не защищён.
-3. Runtime-инвариант `INV-ENG-EPOCH-INVALIDATION` уже доказан через
-   controller/view/render tests; tooling этого шага должен защищать
-   structural owner-path, а не дублировать runtime proof.
-4. Шаги `6.1-6.4` уже зафиксировали, что `SceneDataException` contract и
-   sanitization централизованы в `contract/`, но boundary classification не
-   собрана в один throw-site owner.
-5. Эти проверки концептуально отличаются от public signature scan и поэтому
-   не должны смешиваться с ownership `13.2`.
 
 ## Зафиксированные решения (без повторного обсуждения в реализации)
 
@@ -94,20 +57,6 @@ guardrails, которые проверяют фиксированные mutatio
    - invariant registry/coverage;
    - line coverage gate;
    - global `SceneDataException` constructor policy.
-
-## Граница шага
-
-- In:
-  - owner-level AST checks для mutation routing surface;
-  - явная граница между scene mutation и interactive-local mutation;
-  - owner-level проверка canonical `epoch invalidation` path;
-  - минимальный allow-list owner-level mutation zones.
-- Out:
-  - public/export signature scan;
-  - invariant ids и proof coverage;
-  - import/link/part boundaries;
-  - coverage exclusions;
-  - глобальный запрет direct `throw SceneDataException(...)`.
 
 ## Точная реализация, которую должен описывать код
 
@@ -229,22 +178,15 @@ Resolver не должен опираться на `toSource()` и exact-text с
   (минимум: `file + offset + kind`), а не по паре `scope + name`.
   Element-resolution можно вводить только если tooling переводится на
   `ResolvedUnitResult` осознанно (perf/сложность).
-- Нужно различать:
-  - class methods;
-  - top-level/private helpers;
-  - local functions внутри методов.
+- Нужно различать class methods, top-level/private helpers и local functions
+  внутри методов.
 - Mutation propagation обязана видеть и `MethodInvocation`, и
   `FunctionExpressionInvocation`.
 - Cascade mutation обязана обрабатываться через `CascadeExpression`-sections, а
   не через `node.target` (у cascade target может быть `null`).
-- Alias tracking нужен только в локальном method/function scope:
-  - `final store = _store;`
-  - `final tx = ctx;`
-  - `final changeSet = ctx.changeSet;`
-  - `final selection = ctx.workingSelection;`
-  - `final ids = ctx.idGeneratorState;`
-  - `final rev = ctx.revisionState;`
-  - alias на canonical epoch value.
+- Alias tracking нужен только в локальном method/function scope для `_store`,
+  `ctx`, `ctx.changeSet`, `ctx.workingSelection`, `ctx.idGeneratorState`,
+  `ctx.revisionState` и canonical epoch value.
 - Реализация не должна делать общий interprocedural data-flow analysis по
   всему проекту; разрешён только bounded resolution внутри declaration-а и по
   его локально вызываемым helper-ам.
@@ -286,212 +228,121 @@ Guardrail проверяет именно owner path, а не spelling лока�
 5. Безопасный rename локальной переменной или alias на epoch value не должен
    ломать guardrail.
 
-### 8. Negative matrix до кода
+## Правило выполнения этого шага
 
-До имплементации должны быть заранее зафиксированы отрицательные сценарии:
+1. Один срез = один маленький поведенческий контракт + его test gate.
+2. Срез считается закрытым только когда в том же изменении есть fixture или
+   targeted test, который доказывает новый контракт.
+3. Нельзя отмечать следующий срез завершённым, если предыдущий не получил свой
+   зелёный test gate.
+4. Подготовительные изменения сами по себе не считаются закрытым срезом.
 
-- новый neutral mutator в отдельном controller-файле;
-- alias на `_store` с последующей mutation;
-- alias на `ctx.changeSet` с `txnTrack*`;
-- alias/cascade на `ctx.workingSelection`;
-- alias на `ctx.idGeneratorState` или `ctx.revisionState` с последующей mutation;
-- local helper, который мутирует owner state;
-- local helper с именем, совпадающим с class method;
-- harmless local rename в epoch path не ломает tool;
-- bypass canonical `nextEpoch` path действительно ломает tool;
-- `writeReplaceScene(...)` с прямым store bypass ломает tool.
+## Вертикальные срезы
 
-## Последовательность реализации (только действия)
+### Срез 1. Зафиксировать harness для controller-wide scan
 
-- [ ] Зафиксировать test fixture matrix до production-правок:
-  - neutral mutator в отдельном controller-файле
-  - alias на `_store`
-  - alias на `ctx.changeSet` с `txnTrack*`
-  - alias/cascade на `ctx.workingSelection`
-  - local helper mutation
-  - local helper с именем class method
-  - harmless epoch rename
-  - bypass canonical `nextEpoch` path
-  - `writeReplaceScene(...)` store bypass
-- [x] Перевести scan candidate surface на полный обход controller tree и
-      `scene_controller_interactive.dart`, без fixed-file shortcuts.
-- [ ] Ввести declaration-level allow-list mutation zones вместо file-level
-      исключений.
-- [ ] Добавить detection прямой mutation owner state:
-      `_store`, `ctx.changeSet`, `ctx.workingSelection`,
-      `ctx.idGeneratorState`, `ctx.revisionState`, mutating `TxnContext` методы.
-- [ ] Закрыть alias/cascade/local-helper bypass для owner state.
-- [ ] Довести resolver declaration identity:
-  - method vs local function
-  - `MethodInvocation`
-  - `FunctionExpressionInvocation`
-- [ ] Перевести guardrail `epoch invalidation` с проверки символа
-      `controllerEpoch` на canonical `nextEpoch` handoff path без
-      exact-source-text matching.
-- [ ] Защитить `writeReplaceScene(...)` как entrypoint canonical write path, а
-      не как место локальной store replacement semantics.
-- [ ] Явно вывести `SceneDataException` direct-throw policy из ownership
-      `13.4`, чтобы этот подшаг не конфликтовал с шагами `6.1-6.4`.
-- [ ] Явно развести эти проверки с public/export scan ownership `13.2`.
-- [ ] Приложить финальный metrics/report пакет только после зелёной negative
-      matrix на все перечисленные bypass-классы.
+- [ ] Результат: новый public neutral mutator в отдельном controller-файле
+      гарантированно попадает в scan, а public interactive setter,
+      меняющий только interactive-local state, остаётся положительным
+      сценарием.
+- Test gate:
+  - отрицательный fixture на fixed-file blind spot;
+  - положительный fixture на interactive-only setter;
+  - оба сценария живут в
+    `test/tool/guardrails/guardrails_controller_api_tool_test.dart`.
 
-## Исполнительный чек-лист
+### Срез 2. Заменить file-level исключения на declaration-level allow-list
 
-### Phase 1. Harness first
+- [ ] Результат: новый mutation-capable declaration больше не проходит scan
+      автоматически только потому, что он находится в special-case файле;
+      ownership задаётся только через явный owner-table деклараций.
+- Test gate:
+  - отрицательный fixture на bypass через declaration в
+    `scene_controller_interactive.dart` или другом file-level special case;
+  - существующий положительный маршрут через canonical write seam остаётся
+    зелёным.
 
-- [ ] Добавить failing regression fixtures в
-      `test/tool/guardrails/guardrails_controller_api_tool_test.dart`
-      до изменения production logic.
-- [ ] Подтвердить, что каждый fixture падает по ожидаемой причине, а не по
-      побочному parse/layout failure.
-  Текущее состояние: добавлены только минимальные regression tests для
-  interactive-only scan и conditional `controllerEpoch` gate; полная negative
-  matrix ещё не собрана.
+### Срез 3. Закрыть прямой bypass через committed store
 
-### Phase 2. Scan scope and allow-list
+- [ ] Результат: direct write в `_store` вне commit-owned зоны падает guardrail-ом.
+- Test gate:
+  - отрицательный fixture на прямой `_store` mutation;
+  - targeted tool test доказывает, что падение происходит именно по owner-state
+    bypass, а не по побочной parse/layout ошибке.
 
-- [x] Удалить любые fixed-file shortcuts из controller scan.
-- [x] Явно описать candidate files:
-      весь `lib/src/controller/**` плюс
-      `lib/src/interactive/scene_controller_interactive.dart`.
-- [ ] Вынести declaration-level allow-list mutation zones в один owner-table.
+### Срез 4. Закрыть `changeSet` и `workingSelection` bypass
 
-### Phase 3. Owner-state mutation detection
+- [ ] Результат: direct/alias/cascade mutation на `ctx.changeSet` и
+      `ctx.workingSelection`, включая `txnTrack*`, больше не обходят guardrail.
+- Test gate:
+  - отрицательный fixture на alias `ctx.changeSet` с `txnTrack*`;
+  - отрицательный fixture на alias или cascade для `ctx.workingSelection`.
 
-- [ ] Покрыть direct writes to `_store`.
-- [ ] Покрыть direct mutation calls на `ctx.changeSet`, включая `txnTrack*`.
-- [ ] Покрыть direct mutation calls на `ctx.workingSelection`.
-- [ ] Покрыть direct mutation к `ctx.idGeneratorState` и `ctx.revisionState`.
-- [ ] Покрыть mutating вызовы на `TxnContext` (txn-owned materialization surface).
-- [ ] Покрыть alias tracking внутри одного declaration scope.
-- [ ] Покрыть cascades и local helper calls.
+### Срез 5. Закрыть `idGeneratorState`, `revisionState` и mutating `TxnContext`
 
-### Phase 4. Resolver hardening
+- [ ] Результат: mutation `ctx.idGeneratorState`, `ctx.revisionState` и
+      mutating instance-вызовы на `TxnContext` допустимы только внутри узкой
+      txn-owned зоны.
+- Test gate:
+  - отрицательный fixture на alias `ctx.idGeneratorState`;
+  - отрицательный fixture на alias `ctx.revisionState`;
+  - отрицательный fixture на mutating вызов `TxnContext` вне allow-list.
 
-- [ ] Развести identity для class methods и local functions.
-- [ ] Добавить propagation через `FunctionExpressionInvocation`.
-- [ ] Проверить сценарий одинаковых имён local helper и class method.
+### Срез 6. Закрыть local-helper bypass и resolver collision cases
 
-### Phase 5. Canonical epoch path
+- [ ] Результат: mutation больше нельзя спрятать в local helper,
+      `FunctionExpressionInvocation` или в local function с тем же именем, что
+      и class method.
+- Test gate:
+  - отрицательный fixture на local helper mutation;
+  - отрицательный fixture на `FunctionExpressionInvocation`;
+  - отрицательный fixture на name collision local function vs class method.
 
-- [ ] Проверить, что `ReplaceSceneOp` приводит к `documentReplaced`.
-- [ ] Проверить, что `_buildControllerCommitPlan(...)` использует
-      `resolveNextControllerEpoch(...)`.
-- [ ] Проверить, что canonical epoch value проходит через
-      invariant assert, spatial prepare и committed store apply.
-- [ ] Убедиться, что harmless local rename/alias не ломает guardrail.
+### Срез 7. Зафиксировать canonical `nextEpoch` handoff path
 
-### Phase 6. Closure
+- [ ] Результат: guardrail валидирует именно state-commit path от
+      `documentReplaced` и `resolveNextControllerEpoch(...)` до invariant
+      assert, spatial prepare и committed store apply; harmless rename/alias не
+      ломает проверку.
+- Test gate:
+  - отрицательный fixture на stale `_store.controllerEpoch` или локальную epoch
+    math в canonical path;
+  - положительный fixture на harmless rename/alias;
+  - положительный fixture на effects-only branch без обязательного `nextEpoch`.
 
-- [ ] Подтвердить, что `13.4` не лезет в `SceneDataException` global policy.
-- [ ] Подтвердить, что `13.4` не дублирует ownership `13.2`.
-- [ ] Прогнать metrics и приложить step diagnostics.
+### Срез 8. Закрыть `writeReplaceScene(...)` как owner-level routing seam
 
-## Рекомендуемая нарезка коммитов
+- [ ] Результат: `writeReplaceScene(...)` не может обойти canonical write
+      pipeline прямой заменой committed store.
+- Test gate:
+  - отрицательный fixture на direct store bypass из `writeReplaceScene(...)`;
+  - существующий canonical replace-scene path остаётся зелёным.
 
-### Commit 1
+### Срез 9. Финальное закрытие шага
 
-- [ ] Только harness:
-      negative fixtures и failing regression matrix без production-логики.
-
-Gate:
-`test/tool/guardrails/guardrails_controller_api_tool_test.dart`
-
-### Commit 2
-
-- [ ] Полный scan controller tree.
-- [ ] Declaration-level allow-list zones.
-
-Gate:
-fixtures на fixed-file blind spot и file-level bypass
-
-### Commit 3
-
-- [ ] Direct owner-state mutation detection.
-- [ ] `txnTrack*` coverage.
-- [ ] Alias/cascade detection для `_store`, `changeSet`, `workingSelection`,
-      `idGeneratorState`, `revisionState` и mutating `TxnContext` surface.
-
-Gate:
-fixtures на alias/cascade/direct mutation
-
-### Commit 4
-
-- [ ] Resolver hardening:
-      local helper, `FunctionExpressionInvocation`, name-collision scenario.
-
-Gate:
-fixtures на local helper bypass и collision local function vs method
-
-### Commit 5
-
-- [ ] Canonical `nextEpoch` path guardrail.
-- [ ] `writeReplaceScene(...)` canonical pipeline guardrail.
-
-Gate:
-fixtures на harmless rename, stale epoch path и replace-scene bypass
-
-### Commit 6
-
-- [ ] Cleanup.
-- [ ] Metrics.
-- [ ] Final ownership assertions in docs/step result.
-
-Gate:
-`dcm calculate-metrics tool/src/guardrails/controller_api_guardrails.dart test/tool/guardrails/guardrails_controller_api_tool_test.dart --report-all`
+- [ ] Результат: все срезы `1-8` закрыты зелёным regression pack и приложенной
+      диагностикой.
+- Test gate:
+  - полный прогон
+    `test/tool/guardrails/guardrails_controller_api_tool_test.dart`;
+  - `dcm calculate-metrics tool/src/guardrails/controller_api_guardrails.dart test/tool/guardrails/guardrails_controller_api_tool_test.dart --report-all`.
 
 ## Критерии приёмки
 
-- [ ] Мутирующий метод с нейтральным именем не обходит write-only mutation
-      guardrail, если не идёт через canonical write seam.
-- [ ] Прямой `_store` mutation вне явной commit-owned зоны приводит к
-      tool failure.
-- [ ] Alias/cascade/local-helper обход owner state вне явной commit-owned зоны
-      приводит к tool failure.
-- [ ] Локальная epoch math или использование stale `_store.controllerEpoch`
-      вместо `nextEpoch` в canonical commit path не проходит guardrail.
-- [ ] Безопасный rename локальной переменной в canonical epoch path не ломает
-      guardrail сам по себе.
-- [ ] `writeReplaceScene(...)`, обходящий canonical write pipeline, приводит к
-      tool failure.
-- [ ] Effects-only commit (когда нет state commit) не ломается guardrail-ом и
-      может легитимно мутировать только commit bookkeeping (например
-      `commitRevision`) без требований по `nextEpoch`.
-- [ ] Public interactive методы, меняющие только interactive-local state (например
-      `setMode`, `setDrawTool`, `setDrawColor`), не требуют routing через
-      `_core.write(...)` и не падают tool-ом сами по себе.
-- [ ] Подшаг не становится second owner-ом public signature scan и
+- [ ] Срезы `1-8` закрыты строго сверху вниз; prep-изменения не считаются
+      завершённым результатом без собственного test gate.
+- [ ] Guardrail закрывает routing bypass, owner-state bypass и resolver
+      bypass на всем описанном surface.
+- [ ] Guardrail валидирует canonical `nextEpoch` handoff path для state-commit,
+      не ломает harmless rename/alias, не требует `nextEpoch` для effects-only
+      branch и не допускает bypass в `writeReplaceScene(...)`.
+- [ ] Public interactive-only методы не падают сами по себе.
+- [ ] Реализация не захватывает ownership `13.2` и не становится owner-ом
       `SceneDataException` boundary policy.
-- [ ] Повторная диагностика
+- [ ] Финальный прогон
+      `test/tool/guardrails/guardrails_controller_api_tool_test.dart` и
       `dcm calculate-metrics tool/src/guardrails/controller_api_guardrails.dart test/tool/guardrails/guardrails_controller_api_tool_test.dart --report-all`
-      приложена к результату шага; новые или step-owned methods не содержат
+      приложен к результату шага; новые или step-owned methods не содержат
       `HIGH`/`VERY HIGH` по `cyclomatic-complexity`,
       `maximum-nesting-level` и `source-lines-of-code`, а целевой предел
       остаётся `10 / 4 / 40`.
-
-## Тестовый контур шага
-
-- [ ] `test/tool/guardrails/guardrails_controller_api_tool_test.dart` с отрицательными
-      сценариями:
-  - public mutation entrypoint с нейтральным именем, обходящий `_core.write(...)`
-    или `_core.commands.write*`
-  - прямой `_store` mutation вне commit-owned helper
-  - alias/cascade/local-helper bypass для `_store`, `ctx.changeSet` или
-    `ctx.workingSelection`
-  - alias на `ctx.idGeneratorState` или `ctx.revisionState` с последующей
-    mutation
-  - bypass canonical `nextEpoch` path
-  - `writeReplaceScene(...)`, обходящий canonical write pipeline
-- [ ] И как минимум один положительный сценарий (не должен падать):
-  - public interactive setter, меняющий только interactive-local state (например
-    `setMode`)
-  - effects-only commit branch с commit bookkeeping mutation
-- [ ] Если потребуется отдельный fixture, он остаётся test-only и не вводит
-      второй owner policy вне `check_guardrails.dart`
-
-## Диагностика шага
-
-- [ ] Если hotspot остаётся в `controller_api_guardrails.dart`, он явно
-      закреплён за owner-level mutation/epoch checks этого подшага, а не
-      размыт между `13.2` и `13.4`.
