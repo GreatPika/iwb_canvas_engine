@@ -13,29 +13,22 @@ Future<List<GuardrailViolation>> runControllerApiGuardrails({
   required GuardrailContext context,
 }) async {
   final violations = <GuardrailViolation>[];
-  final controllerTreeFiles = _controllerTreeDartFiles(context);
-  final dartFiles = _controllerGuardrailFiles(
-    context,
-    controllerTreeFiles: controllerTreeFiles,
-  );
+  final dartFiles = _controllerDartFiles(context);
   if (dartFiles.isEmpty) {
     return violations;
   }
 
-  var hasControllerEpochInControllerTree = false;
+  var hasControllerEpoch = false;
   for (final file in dartFiles) {
     final fileResult = _checkControllerFile(context, file);
-    if (_isControllerTreeFile(context, file)) {
-      hasControllerEpochInControllerTree =
-          hasControllerEpochInControllerTree || fileResult.hasControllerEpoch;
-    }
+    hasControllerEpoch = hasControllerEpoch || fileResult.hasControllerEpoch;
     if (fileResult.violation case final violation?) {
       violations.add(violation);
       return violations;
     }
   }
 
-  if (controllerTreeFiles.isNotEmpty && !hasControllerEpochInControllerTree) {
+  if (!hasControllerEpoch) {
     violations.add(
       GuardrailViolation(
         filePath: '/lib/src/controller',
@@ -46,31 +39,10 @@ Future<List<GuardrailViolation>> runControllerApiGuardrails({
       ),
     );
   }
-
   return violations;
 }
 
-List<File> _controllerGuardrailFiles(
-  GuardrailContext context, {
-  List<File>? controllerTreeFiles,
-}) {
-  final candidates = <File>[
-    ...(controllerTreeFiles ?? _controllerTreeDartFiles(context)),
-    ..._interactiveControllerEntrypointFiles(context),
-  ];
-  if (candidates.isEmpty) {
-    return const <File>[];
-  }
-  final uniqueByPath = <String, File>{};
-  for (final file in candidates) {
-    uniqueByPath[toPosixPath(file.absolute.path)] = file;
-  }
-  final result = uniqueByPath.values.toList(growable: false)
-    ..sort((a, b) => a.path.compareTo(b.path));
-  return result;
-}
-
-List<File> _controllerTreeDartFiles(GuardrailContext context) {
+List<File> _controllerDartFiles(GuardrailContext context) {
   final controllerDir = Directory(
     '${context.root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
     'src${Platform.pathSeparator}controller',
@@ -78,32 +50,14 @@ List<File> _controllerTreeDartFiles(GuardrailContext context) {
   if (!controllerDir.existsSync()) {
     return const <File>[];
   }
-  return controllerDir
-      .listSync(recursive: true, followLinks: false)
-      .whereType<File>()
-      .where((file) => file.path.endsWith('.dart'))
-      .toList(growable: false);
-}
-
-List<File> _interactiveControllerEntrypointFiles(GuardrailContext context) {
-  final file = File(
-    '${context.root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
-    'src${Platform.pathSeparator}interactive${Platform.pathSeparator}'
-    'scene_controller_interactive.dart',
-  );
-  if (!file.existsSync()) {
-    return const <File>[];
-  }
-  return <File>[file];
-}
-
-bool _isControllerTreeFile(GuardrailContext context, File file) {
-  final controllerRoot = toPosixPath(
-    '${context.root.absolute.path}${Platform.pathSeparator}lib'
-    '${Platform.pathSeparator}src${Platform.pathSeparator}controller'
-    '${Platform.pathSeparator}',
-  );
-  return toPosixPath(file.absolute.path).startsWith(controllerRoot);
+  final dartFiles =
+      controllerDir
+          .listSync(recursive: true, followLinks: false)
+          .whereType<File>()
+          .where((file) => file.path.endsWith('.dart'))
+          .toList(growable: false)
+        ..sort((a, b) => a.path.compareTo(b.path));
+  return dartFiles;
 }
 
 ControllerFileResult _checkControllerFile(GuardrailContext context, File file) {
@@ -111,10 +65,6 @@ ControllerFileResult _checkControllerFile(GuardrailContext context, File file) {
     absPosixPath: toPosixPath(file.absolute.path),
     rootAbsPosixPath: context.rootAbsPosixPath,
   );
-  final isInteractiveEntrypointFile =
-      filePosixPath ==
-          '/lib/src/interactive/scene_controller_interactive.dart' ||
-      filePosixPath == 'lib/src/interactive/scene_controller_interactive.dart';
   final parsed = parseUnitOrFail(
     context: context,
     absPath: file.absolute.path,
@@ -126,18 +76,15 @@ ControllerFileResult _checkControllerFile(GuardrailContext context, File file) {
   return ControllerFileResult(
     hasControllerEpoch: collector.hasControllerEpoch,
     violation:
-        (isInteractiveEntrypointFile
-            ? null
-            : _replaceSceneEpochViolation(
-                collector: collector,
-                parsed: parsed,
-                filePosixPath: filePosixPath,
-              )) ??
-        _mutatingDeclarationViolation(
+        _replaceSceneEpochViolation(
           collector: collector,
           parsed: parsed,
           filePosixPath: filePosixPath,
-          isInteractiveEntrypointFile: isInteractiveEntrypointFile,
+        ) ??
+        _mutatingSymbolViolation(
+          collector: collector,
+          parsed: parsed,
+          filePosixPath: filePosixPath,
         ),
   );
 }
@@ -147,16 +94,16 @@ GuardrailViolation? _replaceSceneEpochViolation({
   required ParsedUnitResult parsed,
   required String filePosixPath,
 }) {
-  final replaceSceneDeclaration = collector.declarations.firstWhere(
-    (declaration) => declaration.name == 'replaceScene',
-    orElse: () => const ControllerDeclaration(name: '', offset: -1, node: null),
+  final replaceSceneOccurrence = collector.occurrences.firstWhere(
+    (occurrence) => occurrence.name == 'replaceScene',
+    orElse: () => const ControllerSymbolOccurrence(name: '', offset: -1),
   );
-  if (replaceSceneDeclaration.offset == -1 || collector.hasControllerEpoch) {
+  if (replaceSceneOccurrence.offset == -1 || collector.hasControllerEpoch) {
     return null;
   }
   return GuardrailViolation(
     filePath: filePosixPath,
-    line: lineForOffset(parsed, replaceSceneDeclaration.offset),
+    line: lineForOffset(parsed, replaceSceneOccurrence.offset),
     message:
         'controller API violation: replaceScene-like entrypoints '
         'must preserve epoch invalidation '
@@ -164,25 +111,21 @@ GuardrailViolation? _replaceSceneEpochViolation({
   );
 }
 
-GuardrailViolation? _mutatingDeclarationViolation({
+GuardrailViolation? _mutatingSymbolViolation({
   required ControllerSymbolCollector collector,
   required ParsedUnitResult parsed,
   required String filePosixPath,
-  required bool isInteractiveEntrypointFile,
 }) {
-  for (final declaration in collector.declarations) {
-    if (_isAllowedControllerDeclaration(
-      declaration,
-      isInteractiveEntrypointFile: isInteractiveEntrypointFile,
-    )) {
+  for (final occurrence in collector.occurrences) {
+    if (_isAllowedControllerOccurrence(occurrence.name)) {
       continue;
     }
-    if (_looksMutatingSymbol(declaration.name)) {
+    if (_looksMutatingSymbol(occurrence.name)) {
       return GuardrailViolation(
         filePath: filePosixPath,
-        line: lineForOffset(parsed, declaration.offset),
+        line: lineForOffset(parsed, occurrence.offset),
         message:
-            'controller API violation: mutating symbol "${declaration.name}" '
+            'controller API violation: mutating symbol "${occurrence.name}" '
             'must be routed through write*/txn* transaction API',
       );
     }
@@ -213,8 +156,16 @@ class ControllerFileResult {
   final GuardrailViolation? violation;
 }
 
+class ControllerSymbolOccurrence {
+  const ControllerSymbolOccurrence({required this.name, required this.offset});
+
+  final String name;
+  final int offset;
+}
+
 class ControllerSymbolCollector extends RecursiveAstVisitor<void> {
-  final List<ControllerDeclaration> declarations = <ControllerDeclaration>[];
+  final List<ControllerSymbolOccurrence> occurrences =
+      <ControllerSymbolOccurrence>[];
   bool hasControllerEpoch = false;
 
   @override
@@ -227,43 +178,52 @@ class ControllerSymbolCollector extends RecursiveAstVisitor<void> {
 
   @override
   void visitMethodDeclaration(MethodDeclaration node) {
-    if (!_isPrivateIdentifier(node.name.lexeme)) {
-      declarations.add(
-        ControllerDeclaration(
-          name: node.name.lexeme,
-          offset: node.name.offset,
-          node: node,
-        ),
-      );
-    }
+    occurrences.add(
+      ControllerSymbolOccurrence(
+        name: node.name.lexeme,
+        offset: node.name.offset,
+      ),
+    );
     super.visitMethodDeclaration(node);
   }
 
   @override
   void visitFunctionDeclaration(FunctionDeclaration node) {
-    if (!_isPrivateIdentifier(node.name.lexeme)) {
-      declarations.add(
-        ControllerDeclaration(
-          name: node.name.lexeme,
-          offset: node.name.offset,
-          node: node,
+    occurrences.add(
+      ControllerSymbolOccurrence(
+        name: node.name.lexeme,
+        offset: node.name.offset,
+      ),
+    );
+    super.visitFunctionDeclaration(node);
+  }
+
+  @override
+  void visitMethodInvocation(MethodInvocation node) {
+    if (node.target == null && !node.isCascaded) {
+      occurrences.add(
+        ControllerSymbolOccurrence(
+          name: node.methodName.name,
+          offset: node.methodName.offset,
         ),
       );
     }
-    super.visitFunctionDeclaration(node);
+    super.visitMethodInvocation(node);
   }
-}
 
-class ControllerDeclaration {
-  const ControllerDeclaration({
-    required this.name,
-    required this.offset,
-    required this.node,
-  });
-
-  final String name;
-  final int offset;
-  final AstNode? node;
+  @override
+  void visitFunctionExpressionInvocation(FunctionExpressionInvocation node) {
+    final function = node.function;
+    if (function is SimpleIdentifier) {
+      occurrences.add(
+        ControllerSymbolOccurrence(
+          name: function.name,
+          offset: function.offset,
+        ),
+      );
+    }
+    super.visitFunctionExpressionInvocation(node);
+  }
 }
 
 bool _looksMutatingSymbol(String symbol) {
@@ -284,11 +244,7 @@ bool _looksMutatingSymbol(String symbol) {
   return prefixes.any(symbol.startsWith);
 }
 
-bool _isAllowedControllerDeclaration(
-  ControllerDeclaration declaration, {
-  required bool isInteractiveEntrypointFile,
-}) {
-  final symbol = declaration.name;
+bool _isAllowedControllerOccurrence(String symbol) {
   if (const <String>{
     'if',
     'for',
@@ -301,116 +257,5 @@ bool _isAllowedControllerDeclaration(
   }.contains(symbol)) {
     return true;
   }
-  if (const <String>['write', 'txn'].any(symbol.startsWith)) {
-    return true;
-  }
-  if (!isInteractiveEntrypointFile) {
-    return false;
-  }
-  if (_interactiveDeclarationAllowList.contains(symbol)) {
-    return true;
-  }
-  return _routesThroughCanonicalWriteSeam(declaration.node);
-}
-
-const Set<String> _interactiveDeclarationAllowList = <String>{
-  'setMode',
-  'setDrawTool',
-  'setDrawColor',
-  'penThickness',
-  'highlighterThickness',
-  'lineThickness',
-  'eraserThickness',
-  'highlighterOpacity',
-  'setPointerSettings',
-  'setDragStartSlop',
-};
-
-bool _routesThroughCanonicalWriteSeam(AstNode? declaration) {
-  if (declaration == null) {
-    return false;
-  }
-  final visitor = _DirectCanonicalWriteSeamVisitor();
-  declaration.accept(visitor);
-  return visitor.foundCanonicalWriteSeam;
-}
-
-bool _isPrivateIdentifier(String name) => name.startsWith('_');
-
-class _DirectCanonicalWriteSeamVisitor extends RecursiveAstVisitor<void> {
-  bool foundCanonicalWriteSeam = false;
-
-  @override
-  void visitMethodInvocation(MethodInvocation node) {
-    if (_isDirectCanonicalWriteInvocation(node)) {
-      foundCanonicalWriteSeam = true;
-      return;
-    }
-    super.visitMethodInvocation(node);
-  }
-
-  @override
-  void visitFunctionExpressionInvocation(FunctionExpressionInvocation node) {
-    // Local helper invocations must not count as canonical routing seams.
-  }
-
-  @override
-  void visitFunctionDeclaration(FunctionDeclaration node) {
-    // Nested helpers may delegate later, but slice 13.4/2 requires direct
-    // delegation from the public declaration itself.
-  }
-
-  @override
-  void visitFunctionExpression(FunctionExpression node) {
-    // Closures are not owner-level routing seams for the enclosing declaration.
-  }
-}
-
-bool _isDirectCanonicalWriteInvocation(MethodInvocation node) {
-  final targetPath = _memberAccessPath(node.realTarget);
-  final methodName = node.methodName.name;
-  if (targetPath == null) {
-    return false;
-  }
-  if (targetPath.length == 1 && targetPath.first == '_core') {
-    return methodName == 'write' || methodName == 'writeReplaceScene';
-  }
-  if (targetPath.length == 2 &&
-      targetPath.first == '_core' &&
-      targetPath[1] == 'commands') {
-    return methodName.startsWith('write');
-  }
-  if (targetPath.length == 2 &&
-      targetPath.first == '_core' &&
-      targetPath[1] == 'draw') {
-    return methodName.startsWith('write');
-  }
-  return false;
-}
-
-List<String>? _memberAccessPath(Expression? expression) {
-  if (expression == null) {
-    return null;
-  }
-  if (expression is ParenthesizedExpression) {
-    return _memberAccessPath(expression.expression);
-  }
-  if (expression is SimpleIdentifier) {
-    return <String>[expression.name];
-  }
-  if (expression is PrefixedIdentifier) {
-    final prefixPath = _memberAccessPath(expression.prefix);
-    if (prefixPath == null) {
-      return null;
-    }
-    return <String>[...prefixPath, expression.identifier.name];
-  }
-  if (expression is PropertyAccess) {
-    final targetPath = _memberAccessPath(expression.realTarget);
-    if (targetPath == null) {
-      return null;
-    }
-    return <String>[...targetPath, expression.propertyName.name];
-  }
-  return null;
+  return const <String>['write', 'txn'].any(symbol.startsWith);
 }

@@ -60,7 +60,7 @@ comment marker без реальной enforcement-точки больше не 
   - line coverage gate;
   - import topology;
   - exported signature scans;
-  - owner-level controller mutation/epoch chokepoint guardrails.
+  - semantic mutation/epoch AST detection.
 
 ## Точная реализация, которую должен описывать код
 
