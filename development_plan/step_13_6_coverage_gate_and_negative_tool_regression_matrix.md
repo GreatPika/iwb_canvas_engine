@@ -21,12 +21,12 @@ language: russian
 
 1. [check_coverage.dart](/Users/blackpika/iwb_canvas_engine/tool/check_coverage.dart)
    уже является owner-ом line coverage gate для `lib/src/**`.
-2. Там же есть `excludedFromLcov`, и исходный шаг прямо требует убрать
-   исключение для файла с реальной логикой.
+2. Там же есть declaration-only allow-list, а после декомпозиции
+   `scene_value_validation.dart` исполняемая логика уже живёт в
+   `scene_value_validation_*.part.dart`, а не в root-unit.
 3. `test/tool/**` уже содержит отрицательные сценарии на `Link`, `part`,
    `part of` и mutable-type leak `Scene`; незакрытый остаток этого подшага
-   теперь сосредоточен в honest coverage allow-list и invariant-proof
-   regression.
+   теперь сосредоточен в honest coverage allow-list.
 4. Этот подшаг замыкает acceptance предыдущих `13.1-13.5`, но не владеет их
    policy semantics.
 
@@ -34,7 +34,9 @@ language: russian
 
 1. `tool/check_coverage.dart` остаётся единственным owner-ом line coverage
    allow-list для `lib/src/**`.
-2. Исключение для файла с реальной логикой удаляется именно здесь.
+2. Declaration-only root-unit может оставаться в allow-list только если он
+   реально не содержит исполняемой логики, а покрытие для связанной логики
+   обеспечивается через `*.part.dart` без скрытых исключений.
    После этого в allow-list могут оставаться только declaration-only или
    export-only units.
 3. Ужесточение coverage policy для критичных файлов фиксируется в одном месте:
@@ -58,7 +60,8 @@ language: russian
 
 ## Точная реализация, которую должен описывать код
 
-1. `excludedFromLcov` больше не содержит файл с реальной логикой.
+1. Declaration-only allow-list не содержит исполняемые `*.part.dart` или
+   другой реальный logic-bearing unit.
 2. Coverage allow-list после подшага ограничен только declaration-only и
    export-only units.
 3. Для критичных файлов, затронутых этим шагом, coverage policy становится
@@ -68,35 +71,36 @@ language: russian
    - `part`
    - `part of`
    - утечку `Scene`
-   и должен быть дополнен только сценарием на формальный `INV:` без явной
-   proof-связи.
+   - формальный `INV:` без явной proof-связи
+   и должен быть дополнен только coverage-сценарием на logic-bearing
+   `scene_value_validation_*.part.dart`, ошибочно оставленный вне lcov.
 5. Regression matrix не дублирует policy owner-ов. Тесты только доказывают,
    что tooling-проверка действительно падает на нарушение.
 
 ## Последовательность реализации (только действия)
 
-- [ ] Убрать из `tool/check_coverage.dart` исключение для файла с реальной
-      логикой.
-- [ ] Зафиксировать минимальный allow-list только для declaration-only и
+- [x] Уточнить declaration-only allow-list в `tool/check_coverage.dart` под
+      фактическую структуру `scene_value_validation`.
+- [x] Зафиксировать минимальный allow-list только для declaration-only и
       export-only units.
-- [ ] Ужесточить coverage gate для критичных файлов шага `13`.
-- [ ] Добавить только недостающие отрицательные tool regression-сценарии для
-      активного остатка шага `13`.
-- [ ] Убедиться, что regression tests доказывают падение tooling, а не
+- [x] Ужесточить coverage gate для критичных файлов шага `13`.
+- [x] Добавить только недостающий coverage regression-сценарий для активного
+      остатка шага `13`.
+- [x] Убедиться, что regression tests доказывают падение tooling, а не
       становятся вторым owner-ом policy.
 
 ## Критерии приёмки
 
-- [ ] В `tool/check_coverage.dart` не остаётся исключения для файла с реальной
-      логикой.
-- [ ] Coverage allow-list ограничен только declaration-only/export-only units.
-- [ ] Критичные файлы шага `13` проходят coverage gate без специальных
+- [x] В `tool/check_coverage.dart` allow-list не скрывает logic-bearing
+      `scene_value_validation_*.part.dart` или другой исполняемый unit.
+- [x] Coverage allow-list ограничен только declaration-only/export-only units.
+- [x] Критичные файлы шага `13` проходят coverage gate без специальных
       необоснованных исключений.
-- [ ] Для активного остатка шага `13` не осталось guardrail-а без нужного
-      regression scenario в `test/tool/**`.
-- [ ] Regression tests валидируют именно tool failure, а не дублируют policy
+- [x] Для активного остатка шага `13` coverage gate имеет нужный regression
+      scenario в `test/tool/**`, а остальные negative scenarios уже закрыты.
+- [x] Regression tests валидируют именно tool failure, а не дублируют policy
       owner-ов в отдельной логике.
-- [ ] Повторная диагностика
+- [x] Повторная диагностика
       `dcm calculate-metrics tool/check_coverage.dart test/tool/coverage_tool_test.dart test/tool/import_boundaries/import_boundaries_layer_dag_tool_test.dart test/tool/guardrails/guardrails_mutable_type_leaks_tool_test.dart --report-all`
       приложена к результату шага; новые или step-owned methods не содержат
       `HIGH`/`VERY HIGH` по `cyclomatic-complexity`,
@@ -105,23 +109,24 @@ language: russian
 
 ## Тестовый контур шага
 
-- [ ] `test/tool/coverage_tool_test.dart` с отрицательным сценарием на файл с
-      реальной логикой, ошибочно оставленный вне lcov
+- [x] `test/tool/coverage_tool_test.dart` с отрицательным сценарием на
+      logic-bearing `scene_value_validation_*.part.dart`, ошибочно оставленный
+      вне lcov
 - [x] `test/tool/import_boundaries/import_boundaries_layer_dag_tool_test.dart`
       уже содержит отрицательные сценарии `Link`, `part`, `part of`
 - [x] `test/tool/guardrails/guardrails_mutable_type_leaks_tool_test.dart`
       уже содержит отрицательный сценарий на утечку `Scene`
-- [ ] targeted invariant coverage test с отрицательным сценарием на формальный
-      `INV:` без явной proof-связи
-- [ ] Дополнительные existing tool tests обновляются только как regression
+- [x] `test/tool/invariant_coverage_tool_test.dart` уже содержит targeted
+      negative scenario на формальный `INV:` без явной proof-связи
+- [x] Дополнительные existing tool tests обновляются только как regression
       harness, а не как второй policy owner
 
 ## Диагностика шага
 
-- [ ] До завершения подшага приложен `dcm calculate-metrics`-отчёт по
+- [x] До завершения подшага приложен `dcm calculate-metrics`-отчёт по
       `tool/check_coverage.dart` и step-owned tool tests.
-- [ ] Новые helper-ы test harness-а и coverage policy укладываются в предел
+- [x] Новые helper-ы test harness-а и coverage policy укладываются в предел
       `10 / 4 / 40`.
-- [ ] Ни один hotspot в negative regression matrix не остаётся без owner-а:
-      test support, расширенный ради `13.6`, закреплён именно за этим
-      подшагом.
+- [x] Ни один hotspot в negative regression matrix не остаётся без owner-а:
+      coverage regression harness, расширенный ради `13.6`, закреплён именно
+      за этим подшагом.

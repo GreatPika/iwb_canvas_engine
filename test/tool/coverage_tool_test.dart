@@ -7,130 +7,177 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('tool/check_coverage.dart', () {
-    test('rejects lib/src file that is missing from lcov', () async {
-      final sandbox = await _createSandbox();
-      try {
-        _writeFile(sandbox, 'lib/src/a.dart', 'int covered() => 1;\n');
-        _writeFile(sandbox, 'lib/src/b.dart', 'int uncovered() => 2;\n');
-        _writeFile(sandbox, 'coverage/lcov.info', '''
-TN:
-SF:lib/src/a.dart
-DA:1,1
-LF:1
-LH:1
-end_of_record
-''');
-
-        final result = await _runTool(sandbox, 'check_coverage.dart');
-        expect(result.exitCode, isNonZero);
-        expect(result.stderr.toString(), contains('lib/src/b.dart'));
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
-
-    test('passes when every lib/src file is present in lcov', () async {
-      final sandbox = await _createSandbox();
-      try {
-        _writeFile(sandbox, 'lib/src/a.dart', 'int first() => 1;\n');
-        _writeFile(sandbox, 'lib/src/b.dart', 'int second() => 2;\n');
-        _writeFile(sandbox, 'coverage/lcov.info', '''
-TN:
-SF:lib/src/a.dart
-DA:1,1
-LF:1
-LH:1
-end_of_record
-TN:
-SF:lib/src/b.dart
-DA:1,1
-LF:1
-LH:1
-end_of_record
-''');
-
-        final result = await _runTool(sandbox, 'check_coverage.dart');
-        expect(result.exitCode, 0, reason: result.stderr.toString());
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
-
-    test('passes when missing file is a pure export-only shim', () async {
-      final sandbox = await _createSandbox();
-      try {
-        _writeFile(sandbox, 'lib/src/contract/a.dart', 'int covered() => 1;\n');
-        _writeFile(
-          sandbox,
-          'lib/src/shim.dart',
-          "export 'package:iwb_canvas_engine/src/contract/a.dart';\n",
-        );
-        _writeFile(sandbox, 'coverage/lcov.info', '''
-TN:
-SF:lib/src/contract/a.dart
-DA:1,1
-LF:1
-LH:1
-end_of_record
-''');
-
-        final result = await _runTool(sandbox, 'check_coverage.dart');
-        expect(result.exitCode, 0, reason: result.stderr.toString());
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
-
-    test('rejects missing shim file when logic leaks back into it', () async {
-      final sandbox = await _createSandbox();
-      try {
-        _writeFile(sandbox, 'lib/src/contract/a.dart', 'int covered() => 1;\n');
-        _writeFile(sandbox, 'lib/src/shim.dart', '''
-export 'package:iwb_canvas_engine/src/contract/a.dart';
-int leaked() => 1;
-''');
-        _writeFile(sandbox, 'coverage/lcov.info', '''
-TN:
-SF:lib/src/contract/a.dart
-DA:1,1
-LF:1
-LH:1
-end_of_record
-''');
-
-        final result = await _runTool(sandbox, 'check_coverage.dart');
-        expect(result.exitCode, isNonZero);
-        expect(result.stderr.toString(), contains('lib/src/shim.dart'));
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
-
-    test('passes when export-only shim includes comment wrapper', () async {
-      final sandbox = await _createSandbox();
-      try {
-        _writeFile(sandbox, 'lib/src/contract/a.dart', 'int covered() => 1;\n');
-        _writeFile(sandbox, 'lib/src/shim.dart', '''
-// comment
-export 'package:iwb_canvas_engine/src/contract/a.dart';
-''');
-        _writeFile(sandbox, 'coverage/lcov.info', '''
-TN:
-SF:lib/src/contract/a.dart
-DA:1,1
-LF:1
-LH:1
-end_of_record
-''');
-
-        final result = await _runTool(sandbox, 'check_coverage.dart');
-        expect(result.exitCode, 0, reason: result.stderr.toString());
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
+    _registerMissingLibSrcFileTest();
+    _registerCompleteLcovTest();
+    _registerExportOnlyShimTest();
+    _registerDeclarationOnlyAllowListTest();
+    _registerExportOnlyLeakTest();
+    _registerFormerRealLogicExclusionTest();
+    _registerCommentWrappedExportOnlyShimTest();
   });
 }
+
+void _registerMissingLibSrcFileTest() {
+  test('rejects lib/src file that is missing from lcov', () async {
+    final result = await _runCoverageScenario(
+      files: <String, String>{
+        'lib/src/a.dart': 'int covered() => 1;\n',
+        'lib/src/b.dart': 'int uncovered() => 2;\n',
+      },
+      lcov: _singleFileLcov('lib/src/a.dart'),
+    );
+
+    expect(result.exitCode, isNonZero);
+    expect(result.stderr.toString(), contains('lib/src/b.dart'));
+  });
+}
+
+void _registerCompleteLcovTest() {
+  test('passes when every lib/src file is present in lcov', () async {
+    final result = await _runCoverageScenario(
+      files: <String, String>{
+        'lib/src/a.dart': 'int first() => 1;\n',
+        'lib/src/b.dart': 'int second() => 2;\n',
+      },
+      lcov:
+          '${_singleFileLcov('lib/src/a.dart')}${_singleFileLcov('lib/src/b.dart')}',
+    );
+
+    expect(result.exitCode, 0, reason: result.stderr.toString());
+  });
+}
+
+void _registerExportOnlyShimTest() {
+  test('passes when missing file is a pure export-only shim', () async {
+    final result = await _runCoverageScenario(
+      files: <String, String>{
+        'lib/src/contract/a.dart': 'int covered() => 1;\n',
+        'lib/src/shim.dart':
+            "export 'package:iwb_canvas_engine/src/contract/a.dart';\n",
+      },
+      lcov: _singleFileLcov('lib/src/contract/a.dart'),
+    );
+
+    expect(result.exitCode, 0, reason: result.stderr.toString());
+  });
+}
+
+void _registerDeclarationOnlyAllowListTest() {
+  test(
+    'passes when missing file is a declaration-only allow-list unit',
+    () async {
+      final result = await _runCoverageScenario(
+        files: <String, String>{
+          'lib/src/core/tool_defaults.dart': '''
+class ToolDefaults {
+  static const double penThickness = 3;
+}
+''',
+          'lib/src/contract/a.dart': 'int covered() => 1;\n',
+        },
+        lcov: _singleFileLcov('lib/src/contract/a.dart'),
+      );
+
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+    },
+  );
+}
+
+void _registerExportOnlyLeakTest() {
+  test('rejects missing shim file when logic leaks back into it', () async {
+    final result = await _runCoverageScenario(
+      files: <String, String>{
+        'lib/src/contract/a.dart': 'int covered() => 1;\n',
+        'lib/src/shim.dart': '''
+export 'package:iwb_canvas_engine/src/contract/a.dart';
+int leaked() => 1;
+''',
+      },
+      lcov: _singleFileLcov('lib/src/contract/a.dart'),
+    );
+
+    expect(result.exitCode, isNonZero);
+    expect(result.stderr.toString(), contains('lib/src/shim.dart'));
+  });
+}
+
+void _registerFormerRealLogicExclusionTest() {
+  test(
+    'rejects missing scene_value_validation part file with real logic',
+    () async {
+      final result = await _runCoverageScenario(
+        files: <String, String>{
+          'lib/src/model/scene_value_validation.dart': '''
+part 'scene_value_validation_primitives.part.dart';
+
+typedef SceneValidationErrorReporter =
+    Never Function({
+      required Object? value,
+      required String field,
+      required String message,
+    });
+''',
+          'lib/src/model/scene_value_validation_primitives.part.dart': '''
+part of 'scene_value_validation.dart';
+
+bool validatesSceneValue(Object? value) => value != null;
+''',
+          'lib/src/contract/a.dart': 'int covered() => 1;\n',
+        },
+        lcov: _singleFileLcov('lib/src/contract/a.dart'),
+      );
+
+      expect(result.exitCode, isNonZero);
+      expect(
+        result.stderr.toString(),
+        contains('lib/src/model/scene_value_validation_primitives.part.dart'),
+      );
+    },
+  );
+}
+
+void _registerCommentWrappedExportOnlyShimTest() {
+  test('passes when export-only shim includes comment wrapper', () async {
+    final result = await _runCoverageScenario(
+      files: <String, String>{
+        'lib/src/contract/a.dart': 'int covered() => 1;\n',
+        'lib/src/shim.dart': '''
+// comment
+export 'package:iwb_canvas_engine/src/contract/a.dart';
+''',
+      },
+      lcov: _singleFileLcov('lib/src/contract/a.dart'),
+    );
+
+    expect(result.exitCode, 0, reason: result.stderr.toString());
+  });
+}
+
+Future<ProcessResult> _runCoverageScenario({
+  required Map<String, String> files,
+  required String lcov,
+}) async {
+  final sandbox = await _createSandbox();
+  try {
+    for (final entry in files.entries) {
+      _writeFile(sandbox, entry.key, entry.value);
+    }
+    _writeFile(sandbox, 'coverage/lcov.info', lcov);
+    return await _runTool(sandbox, 'check_coverage.dart');
+  } finally {
+    sandbox.deleteSync(recursive: true);
+  }
+}
+
+String _singleFileLcov(String path) =>
+    '''
+TN:
+SF:$path
+DA:1,1
+LF:1
+LH:1
+end_of_record
+''';
 
 Future<Directory> _createSandbox() async {
   final sandbox = await Directory.systemTemp.createTemp(

@@ -57,41 +57,66 @@ Map<String, _FileCoverage> _parseLcov(String content, {required String cwd}) {
 
   for (final rawLine in content.split('\n')) {
     final line = rawLine.trimRight();
-    if (line.startsWith('SF:')) {
-      final normalized = _normalizePath(line.substring(3), cwd);
-      current = byFile.putIfAbsent(normalized, () => _FileCoverage(normalized));
-      continue;
-    }
+    current = _updateCurrentFile(
+      line,
+      byFile: byFile,
+      current: current,
+      cwd: cwd,
+    );
     if (current == null) continue;
-
-    if (line.startsWith('DA:')) {
-      final parts = line.substring(3).split(',');
-      if (parts.length < 2) continue;
-      final lineNo = int.tryParse(parts[0]);
-      final hits = int.tryParse(parts[1]);
-      if (lineNo == null || hits == null) continue;
-      current.instrumentedLines.add(lineNo);
-      if (hits > 0) {
-        current.hitLines.add(lineNo);
-        current.missedLines.remove(lineNo);
-      } else {
-        if (current.hitLines.contains(lineNo)) continue;
-        current.missedLines.add(lineNo);
-      }
-      continue;
-    }
-
-    if (line.startsWith('LF:')) {
-      current.lf = int.tryParse(line.substring(3));
-      continue;
-    }
-    if (line.startsWith('LH:')) {
-      current.lh = int.tryParse(line.substring(3));
-      continue;
-    }
+    _recordCoverageLine(current, line);
   }
 
   return byFile;
+}
+
+_FileCoverage? _updateCurrentFile(
+  String line, {
+  required Map<String, _FileCoverage> byFile,
+  required _FileCoverage? current,
+  required String cwd,
+}) {
+  if (!line.startsWith('SF:')) {
+    return current;
+  }
+
+  final normalized = _normalizePath(line.substring(3), cwd);
+  return byFile.putIfAbsent(normalized, () => _FileCoverage(normalized));
+}
+
+void _recordCoverageLine(_FileCoverage current, String line) {
+  if (line.startsWith('DA:')) {
+    _recordDataLine(current, line.substring(3));
+    return;
+  }
+
+  if (line.startsWith('LF:')) {
+    current.lf = int.tryParse(line.substring(3));
+    return;
+  }
+
+  if (line.startsWith('LH:')) {
+    current.lh = int.tryParse(line.substring(3));
+  }
+}
+
+void _recordDataLine(_FileCoverage current, String data) {
+  final parts = data.split(',');
+  if (parts.length < 2) return;
+
+  final lineNo = int.tryParse(parts[0]);
+  final hits = int.tryParse(parts[1]);
+  if (lineNo == null || hits == null) return;
+
+  current.instrumentedLines.add(lineNo);
+  if (hits > 0) {
+    current.hitLines.add(lineNo);
+    current.missedLines.remove(lineNo);
+    return;
+  }
+
+  if (current.hitLines.contains(lineNo)) return;
+  current.missedLines.add(lineNo);
 }
 
 String _formatPercent(int lh, int lf) {
@@ -124,53 +149,125 @@ bool _isExportOnlyUnit(String repoRelativePath) {
   return meaningfulLines.every((line) => line.startsWith('export '));
 }
 
-void main(List<String> _) {
-  final cwd = Directory.current.path;
-  // Declaration-only Dart units may not be emitted by VM lcov as SF records.
-  // Keep this list minimal and limited to const/enum/interface/typedef files.
-  const excludedFromLcov = <String>{
-    'lib/src/core/tool_defaults.dart',
-    'lib/src/core/grid_safety_limits.dart',
-    'lib/src/core/interaction_types.dart',
-    'lib/src/core/scene_limits.dart',
-    'lib/src/contract/ids.dart',
-    'lib/src/contract/path_fill_rule.dart',
-    'lib/src/contract/scene_defaults.dart',
-    'lib/src/contract/scene_render_state.dart',
-    'lib/src/contract/scene_write_txn.dart',
-    'lib/src/model/scene_value_validation.dart',
-  };
-  final libSrcFiles = _collectLibSrcDartFiles(cwd: cwd);
+const _excludedDeclarationOnlyFromLcov = <String>{
+  'lib/src/core/tool_defaults.dart',
+  'lib/src/core/grid_safety_limits.dart',
+  'lib/src/core/interaction_types.dart',
+  'lib/src/core/scene_limits.dart',
+  'lib/src/contract/path_fill_rule.dart',
+  'lib/src/contract/scene_defaults.dart',
+  'lib/src/contract/scene_render_state.dart',
+  'lib/src/model/scene_value_validation.dart',
+};
+
+File _requireLcovFile() {
   final lcovFile = File('coverage/lcov.info');
   if (!lcovFile.existsSync()) {
     stderr.writeln(
       'coverage/lcov.info not found. Run: flutter test --coverage',
     );
     exitCode = 2;
+    throw StateError('missing lcov.info');
+  }
+  return lcovFile;
+}
+
+List<String> _collectMissingFromLcov(
+  Set<String> libSrcFiles,
+  Map<String, _FileCoverage> all,
+) {
+  final missing = libSrcFiles
+      .where(
+        (path) =>
+            !_excludedDeclarationOnlyFromLcov.contains(path) &&
+            !all.containsKey(path) &&
+            !_isExportOnlyUnit(path),
+      )
+      .toList();
+  missing.sort();
+  return missing;
+}
+
+List<_FileCoverage> _collectLibSrcEntries(Map<String, _FileCoverage> all) {
+  final entries = all.entries
+      .where((entry) => entry.key.startsWith('lib/src/'))
+      .map((entry) => entry.value)
+      .toList();
+  entries.sort((a, b) => a.path.compareTo(b.path));
+  return entries;
+}
+
+bool _reportMissingFromLcov(List<String> missingFromLcov) {
+  if (missingFromLcov.isEmpty) {
+    return false;
+  }
+
+  stderr.writeln(
+    'FAIL: ${missingFromLcov.length} lib/src/** file(s) are missing from coverage/lcov.info.',
+  );
+  stderr.writeln('These files are not covered at all (no lcov record):');
+  for (final path in missingFromLcov) {
+    stderr.writeln('  $path');
+  }
+  exitCode = 1;
+  return true;
+}
+
+bool _reportMissedLines(List<_FileCoverage> entries) {
+  var totalLf = 0;
+  var totalLh = 0;
+  final missed = <String>[];
+
+  stdout.writeln('Coverage report for lib/src/**');
+  for (final file in entries) {
+    totalLf += file.effectiveLf;
+    totalLh += file.effectiveLh;
+    _reportFileCoverage(file, missed);
+  }
+
+  stdout.writeln(
+    'TOTAL: ${_formatPercent(totalLh, totalLf)}  $totalLh/$totalLf',
+  );
+  if (missed.isEmpty) {
+    return false;
+  }
+
+  stdout.writeln('MISSED LINES (${missed.length}):');
+  for (final item in missed) {
+    stdout.writeln('  $item');
+  }
+  exitCode = 1;
+  return true;
+}
+
+void _reportFileCoverage(_FileCoverage file, List<String> missed) {
+  final lf = file.effectiveLf;
+  final lh = file.effectiveLh;
+  stdout.writeln('  ${_formatPercent(lh, lf)}  $lh/$lf  ${file.path}');
+
+  if (lh == lf) {
     return;
   }
 
-  final content = lcovFile.readAsStringSync();
-  final all = _parseLcov(content, cwd: cwd);
-  final missingFromLcov =
-      libSrcFiles
-          .where(
-            (path) =>
-                !excludedFromLcov.contains(path) &&
-                !all.containsKey(path) &&
-                !_isExportOnlyUnit(path),
-          )
-          .toList()
-        ..sort();
-  final entries = <_FileCoverage>[];
-  for (final entry in all.entries) {
-    final path = entry.key;
-    if (path.startsWith('lib/src/')) {
-      entries.add(entry.value);
-    }
+  final lines = file.missedLines.toList()..sort();
+  for (final lineNo in lines) {
+    missed.add('${file.path}:$lineNo');
+  }
+}
+
+void main(List<String> _) {
+  final cwd = Directory.current.path;
+  final libSrcFiles = _collectLibSrcDartFiles(cwd: cwd);
+  late final File lcovFile;
+  try {
+    lcovFile = _requireLcovFile();
+  } on StateError {
+    return;
   }
 
-  entries.sort((a, b) => a.path.compareTo(b.path));
+  final all = _parseLcov(lcovFile.readAsStringSync(), cwd: cwd);
+  final missingFromLcov = _collectMissingFromLcov(libSrcFiles, all);
+  final entries = _collectLibSrcEntries(all);
 
   if (entries.isEmpty) {
     stderr.writeln('No coverage entries found for lib/src/**.');
@@ -178,52 +275,11 @@ void main(List<String> _) {
     return;
   }
 
-  if (missingFromLcov.isNotEmpty) {
-    stderr.writeln(
-      'FAIL: ${missingFromLcov.length} lib/src/** file(s) are missing from coverage/lcov.info.',
-    );
-    stderr.writeln('These files are not covered at all (no lcov record):');
-    for (final path in missingFromLcov) {
-      stderr.writeln('  $path');
-    }
-    exitCode = 1;
+  if (_reportMissingFromLcov(missingFromLcov)) {
     return;
   }
 
-  var totalLf = 0;
-  var totalLh = 0;
-  var hasMisses = false;
-  final missed = <String>[];
-
-  stdout.writeln('Coverage report for lib/src/**');
-
-  for (final file in entries) {
-    final lf = file.effectiveLf;
-    final lh = file.effectiveLh;
-    totalLf += lf;
-    totalLh += lh;
-    final pct = _formatPercent(lh, lf);
-    stdout.writeln('  $pct  $lh/$lf  ${file.path}');
-
-    if (lh != lf) {
-      hasMisses = true;
-      final lines = file.missedLines.toList()..sort();
-      for (final lineNo in lines) {
-        missed.add('${file.path}:$lineNo');
-      }
-    }
-  }
-
-  stdout.writeln(
-    'TOTAL: ${_formatPercent(totalLh, totalLf)}  $totalLh/$totalLf',
-  );
-
-  if (hasMisses) {
-    stdout.writeln('MISSED LINES (${missed.length}):');
-    for (final item in missed) {
-      stdout.writeln('  $item');
-    }
-    exitCode = 1;
+  if (_reportMissedLines(entries)) {
     return;
   }
 

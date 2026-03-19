@@ -73,8 +73,8 @@ non-regression tooling layer.
   без явной точки доказательства;
 - `check_coverage.dart` всё ещё допускает исключения для реальной логики;
 - часть regression-матрицы уже существует, но active остаток шага всё ещё не
-  закрывает invariant-proof regression и честный coverage allow-list, поэтому
-  часть drift-а можно вернуть без явного CI-провала.
+  закрывает честный coverage allow-list, поэтому часть drift-а можно вернуть
+  без явного CI-провала.
 
 Бывший подшаг `13.4` удалён из активного плана. Попытка доказывать
 controller mutation routing, `epoch invalidation` и boundary-error semantics
@@ -164,13 +164,14 @@ runtime owner-ов, а не внутри шага `13`.
    - invariant корректного `code` для unsupported schema version
    а также rename legacy ids с `_`, запрет `_` в новых id и explicit proof
    coverage вместо comment-only marker-ов переносятся в `13.5`.
-5. Снятие исключения coverage для файла с реальной логикой, ужесточение
-   coverage policy для критичных файлов и отрицательные tool-test сценарии на:
+5. Уточнение declaration-only coverage allow-list под фактическую структуру
+   library/part units, ужесточение coverage policy для критичных файлов и
+   отрицательные tool-test сценарии на:
    - boundary-bypassing `Link`
    - `part` как обход boundary-rule
    - `part of` как обход boundary-rule
    - утечку `Scene`
-   - формальное `INV:` без явного proof contract
+   - формальный `INV:` без явного proof contract
    переносятся в `13.6`.
 6. Ничего из активного шага не теряется:
    - `## Диагностические метрики` остаются обязательной частью acceptance gate
@@ -215,8 +216,9 @@ runtime owner-ов, а не внутри шага `13`.
    Legacy ids с `_` должны быть переименованы в рамках `13.5`; после этого
    новые ids с `_` не допускаются.
 9. `tool/check_coverage.dart` может исключать только declaration-only или
-   export-only units. Файл с реальной логикой не имеет права оставаться в
-   allow-list.
+   export-only units. Root library file может оставаться в allow-list только
+   если исполняемая логика живёт в его `*.part.dart`, а не скрыта в самом
+   root-unit.
 10. Негативный regression test обязателен для каждого guardrail-а, который
     активные подшаги этого шага добавляют или делают строже.
 
