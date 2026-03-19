@@ -561,6 +561,7 @@ void main() {
     test(
       'handlePointer accepts null timestamp hint and keeps monotonic time',
       () async {
+        // INV:INV-ENG-TIMESTAMP-MS-MONOTONIC
         final controller = controllerFromScene(
           Scene(
             layers: <ContentLayer>[

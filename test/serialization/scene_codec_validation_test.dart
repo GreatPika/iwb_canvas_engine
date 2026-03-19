@@ -1386,6 +1386,7 @@ void main() {
   );
 
   test('decodeScene accepts integer-valued numeric schemaVersion', () {
+    // INV:INV-SER-SCHEMA-VERSION-CONTRACT
     final json = _minimalSceneJson();
     json['schemaVersion'] = 5.0;
 
@@ -1395,6 +1396,7 @@ void main() {
   });
 
   test('schema write version is included in read versions', () {
+    // INV:INV-SER-SCHEMA-VERSION-CONTRACT
     expect(schemaVersionsRead, contains(schemaVersionWrite));
   });
 
@@ -1416,6 +1418,8 @@ void main() {
   test(
     'decodeScene reports unsupported version for integer-valued schemaVersion',
     () {
+      // INV:INV-SER-SCHEMA-VERSION-CONTRACT
+      // INV:INV-SER-UNSUPPORTED-SCHEMA-VERSION-CODE
       final json = _minimalSceneJson();
       json['schemaVersion'] = 1.0;
       expect(
@@ -1424,6 +1428,7 @@ void main() {
           predicate(
             (e) =>
                 e is SceneDataException &&
+                e.code == SceneDataErrorCode.unsupportedSchemaVersion &&
                 e.message ==
                     'Unsupported schemaVersion: 1. Expected one of: [${_expectedSchemaVersionsMessage()}].',
           ),

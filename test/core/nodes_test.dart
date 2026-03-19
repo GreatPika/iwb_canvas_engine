@@ -286,6 +286,7 @@ void main() {
   });
 
   test('path node builds, caches and invalidates local path data', () {
+    // INV:INV-ENG-PATH-NODE-CACHE-INVALIDATION
     final pathNode = PathNode(
       id: 'p',
       svgPathData: 'M0 0 L10 0 L10 10 Z',

@@ -80,28 +80,28 @@ comment marker без явной proof-связи больше не засчит
 
 ## Последовательность реализации (только действия)
 
-- [ ] Добавить недостающие invariant ids в `tool/invariant_registry.dart`.
-- [ ] Переименовать legacy ids с `_` в `UPPER-KEBAB-CASE`.
-- [ ] Добавить tool guardrail, который запрещает новые ids с `_`.
-- [ ] Перевести `check_invariant_coverage.dart` с comment-only recognition на
+- [x] Добавить недостающие invariant ids в `tool/invariant_registry.dart`.
+- [x] Переименовать legacy ids с `_` в `UPPER-KEBAB-CASE`.
+- [x] Добавить tool guardrail, который запрещает новые ids с `_`.
+- [x] Перевести `check_invariant_coverage.dart` с comment-only recognition на
       explicit proof coverage contract.
-- [ ] Обновить registry/coverage contract в test/tool surface там, где это
+- [x] Обновить registry/coverage contract в test/tool surface там, где это
       требуется для новых invariants.
 
 ## Критерии приёмки
 
-- [ ] `tool/invariant_registry.dart` содержит все новые invariants из
+- [x] `tool/invariant_registry.dart` содержит все новые invariants из
       активного шага `13`.
-- [ ] После завершения подшага в registry не остаётся active ids с `_`.
-- [ ] Новый invariant id с `_` приводит к tool failure.
-- [ ] Comment-only `INV:` marker без явной proof-связи больше не
+- [x] После завершения подшага в registry не остаётся active ids с `_`.
+- [x] Новый invariant id с `_` приводит к tool failure.
+- [x] Comment-only `INV:` marker без явной proof-связи больше не
       засчитывается coverage.
-- [ ] Coverage tool валидирует explicit proof contract, а не произвольные
+- [x] Coverage tool валидирует explicit proof contract, а не произвольные
       комментарии.
-- [ ] Для invariants schema-version contract, `timestampMs`, `PathNode` cache,
+- [x] Для invariants schema-version contract, `timestampMs`, `PathNode` cache,
       `ClearSceneResult.removedNodeIds` и unsupported schema version `code`
       существуют явные enforcement surfaces.
-- [ ] Повторная диагностика
+- [x] Повторная диагностика
       `dcm calculate-metrics tool/invariant_registry.dart tool/check_invariant_coverage.dart --report-all`
       приложена к результату шага; новые или step-owned methods не содержат
       `HIGH`/`VERY HIGH` по `cyclomatic-complexity`,
@@ -110,21 +110,21 @@ comment marker без явной proof-связи больше не засчит
 
 ## Тестовый контур шага
 
-- [ ] Отдельный targeted invariant coverage test с отрицательным сценарием на
+- [x] Отдельный targeted invariant coverage test с отрицательным сценарием на
       формальный `INV:` без явной proof-связи
-- [ ] Обновлённые targeted tests/tool fixtures на:
+- [x] Обновлённые targeted tests/tool fixtures на:
       - unsupported schema version `code`
       - монотонность `timestampMs`
       - invalidation `PathNode` cache
       - неизменяемость `ClearSceneResult.removedNodeIds`
-- [ ] `dart run tool/check_invariant_coverage.dart` становится обязательным
+- [x] `dart run tool/check_invariant_coverage.dart` становится обязательным
       gate-ом этого подшага
 
 ## Диагностика шага
 
-- [ ] До завершения подшага приложен `dcm calculate-metrics`-отчёт по
+- [x] До завершения подшага приложен `dcm calculate-metrics`-отчёт по
       `tool/invariant_registry.dart` и `tool/check_invariant_coverage.dart`.
-- [ ] Любые новые parsing/proof-classification helper-ы укладываются в предел
+- [x] Любые новые parsing/proof-classification helper-ы укладываются в предел
       `10 / 4 / 40`.
-- [ ] Если hotspot останется в coverage tool, он закреплён за этим подшагом и
+- [x] Если hotspot останется в coverage tool, он закреплён за этим подшагом и
       не переносится в `13.6`.

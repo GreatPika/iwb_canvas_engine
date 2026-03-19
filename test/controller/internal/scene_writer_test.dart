@@ -913,6 +913,7 @@ void main() {
   });
 
   test('ClearSceneResult exposes immutable removedNodeIds snapshot', () {
+    // INV:INV-ENG-CLEAR-SCENE-RESULT-REMOVED-NODE-IDS-IMMUTABLE
     final result = ClearSceneResult(
       removedNodeIds: <NodeId>['a'],
       didStructuralClear: true,
@@ -949,6 +950,7 @@ void main() {
   );
 
   test('ClearSceneResult defensively copies removedNodeIds source', () {
+    // INV:INV-ENG-CLEAR-SCENE-RESULT-REMOVED-NODE-IDS-IMMUTABLE
     final source = <NodeId>['a'];
     final result = ClearSceneResult(
       removedNodeIds: source,
