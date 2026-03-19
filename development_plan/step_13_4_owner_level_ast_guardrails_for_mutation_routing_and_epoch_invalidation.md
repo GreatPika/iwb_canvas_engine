@@ -1,348 +1,418 @@
 language: russian
 
-# Шаг 13.4. Закрыть mutation routing и epoch invalidation через owner-level AST guardrails
+# Change Contract
 
-## Цель шага
+## 1. Change Mandate
 
-После `13.2` и `13.3` public surface и структура tooling уже выровнены, но
-behavioral drift всё ещё остаётся возможным, потому что controller guardrails
-пока опираются на слабые name-based признаки вместо проверки реальных
-owner-level chokepoint-ов:
+Изменение фиксирует шаг `13.4`: статический guardrail отвечает только за
+controller mutation routing и owner-state bypass, а proof для
+`epoch invalidation` остаётся в runtime-тестах и invariant-backed
+verification.
 
-- write-only mutation сейчас можно обойти нейтральным именем метода;
-- `epoch invalidation` сейчас можно формально «изобразить» словом
-  `controllerEpoch`, не сохранив canonical commit path;
-- guardrail не должен пытаться доказать произвольную runtime-семантику по
-  AST-фрагментам, потому что это ведёт к хрупкому, легко-обходному tooling.
+## 2. Change Boundary
 
-Задача подшага: отказаться от псевдо-semantic сканирования «любых опасных
-операций» и перевести `controller_api_guardrails.dart` на owner-level AST
-guardrails, которые проверяют фиксированные mutation/epoch chokepoint-ы и не
-пытаются заново доказать всю runtime-семантику контроллера.
+### Included in the Change
 
-## Зафиксированные решения (без повторного обсуждения в реализации)
+- Переписывание controller mutation guardrails в
+  `tool/src/guardrails/controller_api_guardrails.dart`, чтобы tool проверял
+  canonical routing seams и owner-state bypass вместо name-based mutation
+  prefixes и raw `controllerEpoch` token presence.
+- Изменение runner surface только там, где это требуется для сохранения
+  контракта `tool/check_guardrails.dart` после сужения controller guardrail.
+- Обновление targeted tool tests для controller guardrails в
+  `test/tool/guardrails/guardrails_controller_api_tool_test.dart`.
+- Сохранение proof для `epoch invalidation` в тех runtime verification units,
+  которые уже владеют replace-scene и cache-reset behavior.
 
-1. `13.4` владеет только owner-level controller AST-guardrails в
-   `tool/src/guardrails/controller_api_guardrails.dart` под runner-ом
-   `tool/check_guardrails.dart`.
-2. Write-only mutation проверяется через canonical routing seams, а не через
-   универсальный поиск «опасных операций»:
-   tooling должен смотреть на candidate entrypoints во всём
-   `lib/src/controller/**` и на их делегацию в
-   `_core.write(...)`, `_core.writeReplaceScene(...)`,
-   `_core.commands.write*` или `_writeRunner(...)`.
-3. Public interactive методы, которые мутируют только interactive-local state
-   и не трогают committed scene / controller transaction state, не считаются
-   нарушением routing contract.
-4. Controller/transaction-owned mutation допускается только в узких
-   owner-level zones с минимальным declaration-level allow-list-ом;
-   произвольные mutation к `_store`, `TxnContext`, mutable scene/selection и
-   allocator state вне этих зон считаются bypass-ом, даже если mutation
-   спрятана через локальный alias, cascade или local helper.
-5. `epoch invalidation` считается сохранённым только если удержан canonical
-   path для **state-commit** ветки:
-   `writeDocumentReplace/ReplaceSceneOp -> documentReplaced -> resolveNextControllerEpoch(...) -> (invariant assert + spatial prepare + committed store apply) с одним и тем же resolved nextEpoch`.
-   Effects-only commit branch не должна принудительно «притворяться» state
-   commit-ом и вычислять `nextEpoch`.
-6. Current private helper names/layout в epoch pipeline являются reference
-   shape, а не жёстким syntactic contract: безопасная внутренняя декомпозиция
-   допустима, если owner-level stages и единый epoch value сохраняются.
-7. Глобальный direct-throw policy для `SceneDataException` выводится из scope
-   этого подшага как неверный owner. Если когда-либо понадобится новый tool
-   contract для error boundary, он должен жить отдельным owner-ом поверх
-   шагов `6.1-6.4`, а не внутри controller guardrails.
-8. Этот подшаг не решает:
-   - mutable type leak signatures;
-   - import topology;
-   - invariant registry/coverage;
-   - line coverage gate;
-   - global `SceneDataException` constructor policy.
+### Not Included in the Change
 
-## Точная реализация, которую должен описывать код
+- Import topology, package boundaries, public/export rules и mutable type leak
+  scan вне controller routing guardrail.
+- Новые invariant ids, restructuring invariant registry или proof-coverage
+  policy.
+- Full-project interprocedural или whole-package semantic analysis.
+- Static AST proof для `epoch invalidation` внутри
+  `tool/src/guardrails/controller_api_guardrails.dart`.
 
-1. Guardrail mutation routing сканирует candidate declaration-ы во всём
-   controller scan root, но сверяет их с фиксированными chokepoint-символами и
-   declaration-level allow-list-ом, а не пытается классифицировать любой AST
-   как «опасный» или «безопасный».
-2. Public scene-mutating entrypoint с нейтральным именем не может обойти
-   guardrail, если не делегирует в canonical write seam напрямую; локальные
-   helper-ы, alias-ы и промежуточные mutation-capable операции не считаются
-   safe route.
-3. Public interactive entrypoint, который меняет только interactive-local
-   state и не трогает committed scene / controller-owned mutation surface, не
-   должен сам по себе считаться нарушением.
-4. Guardrail owner-state mutation ловит не только прямые `_store.* = ...`, но
-   и bypass к `_store`, `TxnContext`, mutable scene/selection, allocator state
-   и commit bookkeeping через alias/cascade/local helper вне явного owner-level
-   allow-list-а.
-5. Guardrail `epoch invalidation` валидирует не символ `controllerEpoch`, а
-   сохранение canonical epoch stages и единого resolved epoch value между
-   `resolveNextControllerEpoch(...)`, invariant assert, spatial prepare и
-   committed store apply, не опираясь на `toSource()` и exact-text сравнение
-   локальных имён или жёсткую привязку к одному private helper layout.
-6. `writeReplaceScene(...)` остаётся owner-level частью этого контракта:
-   он не может обойти write pipeline прямой заменой committed store.
-7. Подшаг не меняет exported API scan policy, не вводит новые invariant ids и
-   не владеет `SceneDataException` throw policy.
+## 3. File Map and Analysis Areas
 
-## Blueprint реализации
+### Implementation Files
 
-### 1. Scope scan-а
+- `tool/src/guardrails/controller_api_guardrails.dart`
+- `tool/src/guardrail_support/guardrail_context.dart`
+- `tool/check_guardrails.dart`
 
-- Scan всегда охватывает весь `lib/src/controller/**`.
-- Дополнительно scan охватывает
-  [scene_controller_interactive.dart](/Users/blackpika/iwb_canvas_engine/lib/src/interactive/scene_controller_interactive.dart),
-  потому что публичный mutation routing начинается именно там.
-- Нельзя сужать scan до «главных» файлов вроде `scene_controller.dart` или
-  `commands/**`: если в controller tree появляется новый neutral mutator, он
-  обязан попасть в ту же проверку автоматически.
+### Test Files
 
-### 2. Candidate declarations (что именно проверяем)
+- `test/tool/guardrails/guardrails_controller_api_tool_test.dart`
+- `test/controller/core/scene_controller_commit_effects_test.dart`
+- `test/view/scene_view_test.dart`
+- `test/view/scene_view_interactive_test.dart`
 
-Guardrail строится не как «поиск опасных операций по всему проекту», а как
-проверка того, что **весь публичный controller surface**:
+### Fixture and Supporting Data Files
 
-1. либо является чистым (interactive-local-only / read-only),
-2. либо маршрутизирует mutation через canonical write seams,
-3. либо находится внутри явной allow-list mutation zone.
+- `test/tool/support/guardrails_tool_test_support.dart`
 
-Минимальный контракт по candidate декларациям:
+### Analysis Area
 
-- Candidate entrypoints: любые **public** top-level функции и public методы
-  классов, объявленные в scope scan-а (см. выше), включая getters/setters и
-  operator methods.
-- Внутренние helper-ы (private methods / private top-level helpers / local
-  functions) участвуют в анализе только как зависимость candidate entrypoint-ов
-  и как потенциальный способ спрятать mutation (local helper/alias/cascade).
-- Public методы `SceneControllerInteractive`, которые меняют только
-  interactive-local state (например `_mode`, `_drawTool`, `_drawColor`,
-  координаторы жестов/сессий), не должны помечаться как нарушение сами по себе.
-  Но если они дергают `_core.commands.write*` или `_core.write(...)`, то это
-  уже canonical write seam и подчиняется routing-правилам как обычно.
+- `lib/src/controller/**`
+- `lib/src/interactive/scene_controller_interactive.dart`
+- `tool/src/guardrails/**`
+- `test/tool/guardrails/**`
+- `test/controller/core/**`
+- `test/view/**`
 
-### 3. Защищаемое состояние
+### Outside the Change Boundary
 
-Guardrail считает mutation-capable owner state следующие surface-ы:
+- Любые файлы вне перечисленных зон.
+- Исключение допустимо только для точечного изменения, без которого нельзя
+  закрыть конкретный slice и его verification.
 
-- `SceneControllerCore._store` и любые локальные alias-ы на него, включая
-  mutation к его полям (например `controllerEpoch`, `commitRevision`,
-  `structuralRevision`, `boundsRevision`, `visualRevision`, `sceneDoc`,
-  `selectedNodeIds`, `allNodeIds`, `nodeLocator`, `idGeneratorState`,
-  `revisionState`);
-- `TxnContext.changeSet` и любые локальные alias-ы на него (включая поля
-  `documentReplaced`, `structuralChanged`, ... и `txnMark*`/`txnTrack*`);
-- `TxnContext.workingSelection` и любые локальные alias-ы на него;
-- `TxnContext.idGeneratorState` и любые локальные alias-ы на него;
-- `TxnContext.revisionState` и любые локальные alias-ы на него;
-- txn-owned materialization/mutation surface самого `TxnContext`: **любой**
-  instance-вызов метода на объекте `TxnContext` считается mutation-capable,
-  потому что даже read-подобные операции могут материализовать caches и менять
-  внутреннее состояние транзакции. Такой вызов допустим только внутри явной
-  txn-owned allow-list зоны (writer/executor/core write seam).
+### File Change Rule
 
-В mutation входят:
+- Каждый изменённый implementation file должен быть привязан к конкретному
+  slice.
+- Каждый новый или изменённый test должен быть привязан к конкретному
+  verification.
+- Каждый новый или изменённый fixture должен быть привязан к конкретному
+  verification.
+- Любые untied changes считаются выходом за scope этого change.
 
-- обычное присваивание;
-- compound assignment;
-- `++` / `--`;
-- mutating method calls;
-- cascade mutation;
-- mutation, спрятанная за local function/private helper.
+## 4. Locked Decisions
 
-Для `ChangeSet` mutating API включает не только `txnMark*`, но и `txnTrack*`.
-Для `workingSelection` mutating API включает как минимум `add`, `addAll`,
-`remove`, `removeAll`, `clear`, а реализация должна покрывать и эквивалентные
-мутации `Set`.
+1. Шаг `13.4` владеет только controller mutation-routing и owner-state bypass
+   guardrails под `tool/check_guardrails.dart`.
+2. Static controller guardrails не владеют semantic proof для
+   `epoch invalidation`.
+3. `epoch invalidation` доказывается runtime-тестами и invariant-backed
+   checks вокруг replace-scene и cache invalidation behavior.
+4. Mutation safety доказывается через canonical routing seams и protected
+   owner-state analysis, а не через mutating-looking symbol prefixes.
+5. File-level allow-lists запрещены для controller mutation ownership.
+6. Analysis остаётся bounded на `lib/src/controller/**` и
+   `lib/src/interactive/scene_controller_interactive.dart`.
+7. Whole-project interprocedural data-flow находится вне scope этого шага.
 
-### 4. Allow-list только на уровне деклараций
+## 5. Result Requirements
 
-- Разрешённые mutation zones задаются не по файлам, а по конкретным
-  declaration-ам.
-- File-level allow-list запрещён: он уже приводил к blind spot, когда новый
-  neutral mutator в «разрешённом» файле проходил scan.
-- Каждый declaration в allow-list должен принадлежать одному из owner-ов:
-  - core write seam;
-  - command runner seam;
-  - writer/executor transaction zone;
-  - committed store apply zone.
-  - effects-only commit bookkeeping zone.
-- Новый mutation-capable declaration вне allow-list должен падать tooling-ом,
-  пока его ownership явно не подтверждён.
+1. Любой public controller или interactive entrypoint, который может мутировать
+   committed scene или controller-owned state, падает guardrail-ом, если он не
+   маршрутизирует mutation через canonical write seam и не принадлежит allowed
+   semantic mutation zone.
+2. Direct, alias-based, cascade-based и helper-hidden bypass к protected owner
+   state падают controller guardrail-ом вне allowed mutation zones.
+3. Public interactive methods, которые меняют только interactive-local state,
+   остаются валидными и не падают сами по себе.
+4. `tool/src/guardrails/controller_api_guardrails.dart` больше не использует
+   raw symbol prefixes или наличие `controllerEpoch` token как proof
+   correctness.
+5. Replace-scene proof для `epoch invalidation` остаётся покрыт зелёными
+   runtime-тестами и `dart run tool/check_invariant_coverage.dart`.
 
-### 5. Resolver model
+## 6. Implementation Specification
 
-Resolver не должен опираться на `toSource()` и exact-text сравнение там, где
-достаточно AST-структуры и лексического scope.
+### 6.1 Analysis Scope
 
-- Declaration identity должна храниться по **AST node identity**
-  (минимум: `file + offset + kind`), а не по паре `scope + name`.
-  Element-resolution можно вводить только если tooling переводится на
-  `ResolvedUnitResult` осознанно (perf/сложность).
-- Нужно различать class methods, top-level/private helpers и local functions
-  внутри методов.
-- Mutation propagation обязана видеть и `MethodInvocation`, и
-  `FunctionExpressionInvocation`.
-- Cascade mutation обязана обрабатываться через `CascadeExpression`-sections, а
-  не через `node.target` (у cascade target может быть `null`).
-- Alias tracking нужен только в локальном method/function scope для `_store`,
-  `ctx`, `ctx.changeSet`, `ctx.workingSelection`, `ctx.idGeneratorState`,
-  `ctx.revisionState` и canonical epoch value.
-- Реализация не должна делать общий interprocedural data-flow analysis по
-  всему проекту; разрешён только bounded resolution внутри declaration-а и по
-  его локально вызываемым helper-ам.
+- Controller guardrail scan обязан покрывать все Dart files под
+  `lib/src/controller/**`.
+- Scan обязан дополнительно покрывать
+  `lib/src/interactive/scene_controller_interactive.dart`.
+- Candidate entrypoints: public top-level functions и public class methods,
+  включая getters, setters и operators, объявленные внутри scan scope.
 
-### 6. Canonical mutation routing seams
+### 6.2 Target Verification Units
 
-Для owner-level routing допустимыми seam-ами считаются:
+- `test/tool/guardrails/guardrails_controller_api_tool_test.dart`
+- `test/controller/core/scene_controller_commit_effects_test.dart`
+- `test/view/scene_view_test.dart`
+- `test/view/scene_view_interactive_test.dart`
+- `dart run tool/check_invariant_coverage.dart`
+- `dcm calculate-metrics tool/src/guardrails/controller_api_guardrails.dart test/tool/guardrails/guardrails_controller_api_tool_test.dart --report-all`
 
-- `SceneControllerCore.write(...)`;
-- `SceneControllerCore._writeWithSceneWriter(...)`;
-- `SceneControllerCore.writeReplaceScene(...)`;
-- `SceneCommands`, `DrawCommands`, `MoveCommands` через `_writeRunner(...)`;
-- `SceneWriter.write*`;
-- `MutationExecutor.execute*` / `_execute*` как txn-owned mutation zone;
-- commit-owned helpers в `SceneControllerCore`, которые материализуют
-  committed store.
+### 6.3 Protected States, Data, or Structures
 
-Ни префикс имени, ни расположение в «похожем» файле сами по себе не делают
-declaration safe.
+- `SceneControllerCore._store` и mutable members, достижимые из `_store`.
+- `TxnContext` как transaction-owned mutable surface.
+- `TxnContext.changeSet`.
+- `TxnContext.workingSelection`.
+- `TxnContext.idGeneratorState`.
+- `TxnContext.revisionState`.
+- Mutable scene aliases, полученные из protected controller или transaction
+  state.
 
-### 7. Canonical epoch path
+### 6.4 Allowed Semantic Change Zones
 
-Guardrail проверяет именно owner path, а не spelling локальных имён:
+- Public controller и interactive entrypoints, которые делегируют напрямую в
+  canonical write seams.
+- Transaction-owned mutation zones в `SceneWriter` и `MutationExecutor`.
+- Committed-store apply и commit bookkeeping zones внутри
+  `SceneControllerCore`.
+- Interactive-local-only state updates внутри `SceneControllerInteractive`,
+  которые не мутируют committed scene или controller-owned transaction state.
 
-1. `writeDocumentReplace(...)` / `ReplaceSceneOp` должны приводить к
-   `changeSet.documentReplaced`.
-2. `_buildControllerCommitPlan(...)` должен вычислять epoch через
-   `resolveNextControllerEpoch(...)`.
-3. Для **state-commit** ветки один и тот же canonical epoch value должен
-   проходить через:
-   - invariant assert (`controllerEpoch: nextEpoch`);
-   - spatial prepare (`controllerEpoch: nextEpoch`);
-   - committed store apply (`nextEpoch: nextEpoch`).
-4. Для effects-only ветки epoch path не является обязательным; она может
-   легитимно мутировать только commit bookkeeping (например `commitRevision`)
-   без пересчёта `nextEpoch`. В частности, invariant assert в этой ветке
-   легитимно использует текущий `_store.controllerEpoch`, а не resolved
-   `nextEpoch`.
-5. Безопасный rename локальной переменной или alias на epoch value не должен
-   ломать guardrail.
+### 6.5 Recognition Forms That Must Be Supported Within This Change
 
-## Правило выполнения этого шага
+- direct bypass;
+- alias-based bypass;
+- cascade-based bypass;
+- local-function bypass;
+- private helper bypass;
+- function-expression invocation bypass.
 
-1. Один срез = один маленький поведенческий контракт + его test gate.
-2. Срез считается закрытым только когда в том же изменении есть fixture или
-   targeted test, который доказывает новый контракт.
-3. Нельзя отмечать следующий срез завершённым, если предыдущий не получил свой
-   зелёный test gate.
-4. Подготовительные изменения сами по себе не считаются закрытым срезом.
+### 6.6 Allowed Forms That Do Not Count as Violations
 
-## Вертикальные срезы
+- Public interactive methods, которые меняют только interactive-local fields,
+  gesture/session coordinators или notify scheduling state.
+- Public entrypoints, которые делегируют напрямую в `_core.write(...)`,
+  `_core.writeReplaceScene(...)`, `_core.commands.write*` или `_writeRunner(...)`.
+- Read-only public entrypoints внутри scan scope.
 
-### Срез 1. Зафиксировать harness для controller-wide scan
+### 6.7 Requirements for Resolution of Links and Structural Analysis
 
-- [x] Результат: новый public neutral mutator в отдельном controller-файле
-      гарантированно попадает в scan, а public interactive setter,
-      меняющий только interactive-local state, остаётся положительным
-      сценарием.
-- Test gate:
-  - отрицательный fixture на fixed-file blind spot;
-  - положительный fixture на interactive-only setter;
-  - оба сценария живут в
-    `test/tool/guardrails/guardrails_controller_api_tool_test.dart`.
+- Controller guardrail analysis обязан использовать analyzer-resolved
+  declarations и invocations; parse-only token presence и `toSource()` string
+  matching запрещены как proof mechanisms.
+- Declaration identity обязана различать class methods, top-level functions,
+  local functions и function expressions.
+- Resolution может следовать только по locally reachable helpers и
+  function-expression calls, которые нужны для классификации текущего
+  candidate entrypoint внутри bounded scan scope.
+- Ownership proof обязан выводиться из declaration-level semantic zones и
+  protected-state reachability, а не из file names или symbol prefixes.
 
-### Срез 2. Заменить file-level исключения на declaration-level allow-list
+### 6.8 Prohibited
 
-- [x] Результат: новый mutation-capable declaration больше не проходит scan
-      автоматически только потому, что он находится в special-case файле;
-      ownership задаётся только через явный owner-table деклараций.
-- Test gate:
-  - отрицательный fixture на bypass через declaration в
-    `scene_controller_interactive.dart` или другом file-level special case;
-  - существующий положительный маршрут через canonical write seam остаётся
-    зелёным.
+- Возвращать static `epoch invalidation` rule внутрь
+  `tool/src/guardrails/controller_api_guardrails.dart`.
+- Использовать raw `controllerEpoch` token presence как proof valid epoch path.
+- Использовать `write*` или `txn*` prefixes как единственный proof safe
+  mutation routing.
+- Возвращать file-level allow-lists для controller mutation ownership.
+- Раздувать реализацию до whole-package или whole-project interprocedural
+  analysis.
 
-### Срез 3. Закрыть прямой bypass через committed store
+## 7. Execution Rules
 
-- [ ] Результат: direct write в `_store` вне commit-owned зоны падает guardrail-ом.
-- Test gate:
-  - отрицательный fixture на прямой `_store` mutation;
-  - targeted tool test доказывает, что падение происходит именно по owner-state
-    bypass, а не по побочной parse/layout ошибке.
+1. Один slice закрывает один новый verifiable change contract.
+2. У каждого slice должен быть свой verification.
+3. Slice считается закрытым только в том изменении, где его verification уже
+   существует и его run зелёный.
+4. Подготовительные изменения сами по себе не считаются закрытым slice.
+5. Следующий slice запрещён, пока предыдущий не закрыт.
+6. Если slice закрывает failure scenario, к нему должен быть приложен
+   diagnostic output с trigger point.
+7. Если slice меняет analysis rule, должны быть покрыты negative и positive
+   scenarios там, где это применимо к subject этого change.
+8. Расширение scope запрещено, пока не закрыты обязательные slices.
 
-### Срез 4. Закрыть `changeSet` и `workingSelection` bypass
+## 8. Vertical Slices
 
-- [ ] Результат: direct/alias/cascade mutation на `ctx.changeSet` и
-      `ctx.workingSelection`, включая `txnTrack*`, больше не обходят guardrail.
-- Test gate:
-  - отрицательный fixture на alias `ctx.changeSet` с `txnTrack*`;
-  - отрицательный fixture на alias или cascade для `ctx.workingSelection`.
+### Slice 1. Replace Name-Based Controller Routing Heuristics
 
-### Срез 5. Закрыть `idGeneratorState`, `revisionState` и mutating `TxnContext`
+#### Slice Contract
 
-- [ ] Результат: mutation `ctx.idGeneratorState`, `ctx.revisionState` и
-      mutating instance-вызовы на `TxnContext` допустимы только внутри узкой
-      txn-owned зоны.
-- Test gate:
-  - отрицательный fixture на alias `ctx.idGeneratorState`;
-  - отрицательный fixture на alias `ctx.revisionState`;
-  - отрицательный fixture на mutating вызов `TxnContext` вне allow-list.
+Controller guardrail классифицирует controller-wide public entrypoints по
+resolved routing и allowed semantic zones, а не по mutation-looking symbol
+prefixes и raw `controllerEpoch` token checks.
 
-### Срез 6. Закрыть local-helper bypass и resolver collision cases
+#### Change
 
-- [ ] Результат: mutation больше нельзя спрятать в local helper,
-      `FunctionExpressionInvocation` или в local function с тем же именем, что
-      и class method.
-- Test gate:
-  - отрицательный fixture на local helper mutation;
-  - отрицательный fixture на `FunctionExpressionInvocation`;
-  - отрицательный fixture на name collision local function vs class method.
+Переписать candidate-entrypoint scan и routing classification в
+`tool/src/guardrails/controller_api_guardrails.dart`; расширить
+`tool/src/guardrail_support/guardrail_context.dart` только если это требуется
+для resolved analysis.
 
-### Срез 7. Зафиксировать canonical `nextEpoch` handoff path
+#### Verification
 
-- [ ] Результат: guardrail валидирует именно state-commit path от
-      `documentReplaced` и `resolveNextControllerEpoch(...)` до invariant
-      assert, spatial prepare и committed store apply; harmless rename/alias не
-      ломает проверку.
-- Test gate:
-  - отрицательный fixture на stale `_store.controllerEpoch` или локальную epoch
-    math в canonical path;
-  - положительный fixture на harmless rename/alias;
-  - положительный fixture на effects-only branch без обязательного `nextEpoch`.
+- `dart run tool/run_tool_tests.dart`
 
-### Срез 8. Закрыть `writeReplaceScene(...)` как owner-level routing seam
+#### Fixtures Used
 
-- [ ] Результат: `writeReplaceScene(...)` не может обойти canonical write
-      pipeline прямой заменой committed store.
-- Test gate:
-  - отрицательный fixture на direct store bypass из `writeReplaceScene(...)`;
-  - существующий canonical replace-scene path остаётся зелёным.
+- `test/tool/support/guardrails_tool_test_support.dart`
 
-### Срез 9. Финальное закрытие шага
+#### Positive Scenarios
 
-- [ ] Результат: все срезы `1-8` закрыты зелёным regression pack и приложенной
-      диагностикой.
-- Test gate:
-  - полный прогон
-    `test/tool/guardrails/guardrails_controller_api_tool_test.dart`;
-  - `dcm calculate-metrics tool/src/guardrails/controller_api_guardrails.dart test/tool/guardrails/guardrails_controller_api_tool_test.dart --report-all`.
+- controller-wide scan по-прежнему пропускает interactive-only setter.
+- direct canonical routing через `_core.write(...)` или `_core.commands.write*`
+  остаётся зелёным.
 
-## Критерии приёмки
+#### Negative Scenarios
 
-- [ ] Срезы `1-8` закрыты строго сверху вниз; prep-изменения не считаются
-      завершённым результатом без собственного test gate.
-- [ ] Guardrail закрывает routing bypass, owner-state bypass и resolver
-      bypass на всем описанном surface.
-- [ ] Guardrail валидирует canonical `nextEpoch` handoff path для state-commit,
-      не ломает harmless rename/alias, не требует `nextEpoch` для effects-only
-      branch и не допускает bypass в `writeReplaceScene(...)`.
-- [ ] Public interactive-only методы не падают сами по себе.
-- [ ] Реализация не захватывает ownership `13.2` и не становится owner-ом
-      `SceneDataException` boundary policy.
-- [ ] Финальный прогон
-      `test/tool/guardrails/guardrails_controller_api_tool_test.dart` и
-      `dcm calculate-metrics tool/src/guardrails/controller_api_guardrails.dart test/tool/guardrails/guardrails_controller_api_tool_test.dart --report-all`
-      приложен к результату шага; новые или step-owned methods не содержат
-      `HIGH`/`VERY HIGH` по `cyclomatic-complexity`,
-      `maximum-nesting-level` и `source-lines-of-code`, а целевой предел
-      остаётся `10 / 4 / 40`.
+- новый neutral public mutator под `lib/src/controller/**` падает tool-ом.
+- unrelated write-prefixed sink в interactive entrypoint не считается
+  canonical routing seam.
+
+#### Closure Evidence
+
+- зелёный run `dart run tool/run_tool_tests.dart`;
+- diagnostic output с failure point для negative scenarios.
+
+### Slice 2. Close Store, ChangeSet, and Selection Bypasses
+
+#### Slice Contract
+
+Direct и alias-hidden mutation для `_store`, `changeSet` и
+`workingSelection` падают controller guardrail-ом вне allowed semantic
+mutation zones.
+
+#### Change
+
+Добавить protected owner-state detection для `_store`,
+`TxnContext.changeSet` и `TxnContext.workingSelection`, включая direct
+mutation, alias-based mutation и cascade mutation.
+
+#### Verification
+
+- `dart run tool/run_tool_tests.dart`
+
+#### Fixtures Used
+
+- `test/tool/support/guardrails_tool_test_support.dart`
+
+#### Positive Scenarios
+
+- canonical mutation через `SceneWriter`, `MutationExecutor` и committed store
+  apply zones остаётся зелёной.
+
+#### Negative Scenarios
+
+- direct `_store` mutation вне committed-store apply zone падает.
+- alias-based `ctx.changeSet` mutation через `txnTrack*` падает.
+- alias-based или cascade-based `ctx.workingSelection` mutation падает.
+
+#### Closure Evidence
+
+- зелёный run `dart run tool/run_tool_tests.dart`;
+- diagnostic output с owner-state bypass failure point для negative scenarios.
+
+### Slice 3. Close Allocator, TxnContext, and Helper-Hidden Bypasses
+
+#### Slice Contract
+
+Mutation или mutation-capable access к `TxnContext`, `idGeneratorState`,
+`revisionState`, local helpers и function-expression calls падают вне allowed
+semantic mutation zones.
+
+#### Change
+
+Расширить protected owner-state detection на `TxnContext`,
+`TxnContext.idGeneratorState`, `TxnContext.revisionState`, local helper calls и
+function-expression invocations, которые нужны для bounded helper resolution.
+
+#### Verification
+
+- `dart run tool/run_tool_tests.dart`
+
+#### Fixtures Used
+
+- `test/tool/support/guardrails_tool_test_support.dart`
+
+#### Positive Scenarios
+
+- allowed transaction-owned helpers остаются зелёными внутри `SceneWriter`,
+  `MutationExecutor` и `SceneControllerCore` commit zones.
+
+#### Negative Scenarios
+
+- alias-based mutation `ctx.idGeneratorState` падает.
+- alias-based mutation `ctx.revisionState` падает.
+- mutation, спрятанная в local helper или `FunctionExpressionInvocation`,
+  падает.
+
+#### Closure Evidence
+
+- зелёный run `dart run tool/run_tool_tests.dart`;
+- diagnostic output с helper-hidden bypass failure point для negative
+  scenarios.
+
+### Slice 4. Move Epoch Proof to Runtime Verification
+
+#### Slice Contract
+
+Controller guardrail больше не владеет static `epoch invalidation` proof, а
+replace-scene epoch behavior остаётся доказан runtime-тестами и invariant
+coverage.
+
+#### Change
+
+Убрать static epoch-token proof из
+`tool/src/guardrails/controller_api_guardrails.dart`, обновить
+`tool/check_guardrails.dart` только там, где это требуется invariant
+ownership, и оставить proof для `epoch invalidation` в runtime verification
+units, которые уже владеют replace-scene и cache-reset behavior.
+
+#### Verification
+
+- `dart run tool/run_tool_tests.dart`
+- `dart run tool/check_invariant_coverage.dart`
+- `MCP test shard test/controller/core`
+- `MCP test shard test/view`
+
+#### Positive Scenarios
+
+- replace-scene по-прежнему увеличивает epoch и очищает selection в
+  controller-core runtime tests.
+- `SceneViewCore` cache invalidation на epoch change остаётся зелёной.
+- `SceneViewInteractive` cache invalidation на epoch change остаётся зелёной.
+- controller guardrail больше не падает только из-за отсутствия raw
+  `controllerEpoch` token в файле.
+
+#### Closure Evidence
+
+- зелёный run всех перечисленных verifications;
+- invariant coverage output, показывающий, что
+  `INV-ENG-EPOCH-INVALIDATION` остаётся покрытым после scope change.
+
+### Slice 5. Final Controller-Guardrail Closure
+
+#### Slice Contract
+
+Суженный controller guardrail и runtime epoch proof одновременно зелёные под
+targeted regression pack и step-owned metrics gate.
+
+#### Change
+
+Закрыть оставшиеся targeted controller-guardrail regressions и прогнать
+step-owned metrics check для implementation и tool-test files.
+
+#### Verification
+
+- `dart run tool/run_tool_tests.dart`
+- `dcm calculate-metrics tool/src/guardrails/controller_api_guardrails.dart test/tool/guardrails/guardrails_controller_api_tool_test.dart --report-all`
+
+#### Closure Evidence
+
+- зелёный run всех перечисленных verifications;
+- metrics output, показывающий, что step-owned files остаются в пределах
+  active thresholds.
+
+## 9. Final Verification
+
+- `dart format --output=none --set-exit-if-changed lib test example/lib example/test tool`
+- `flutter analyze`
+- `(cd example && flutter analyze lib test)`
+- `dcm analyze .`
+- `dart run tool/check_import_boundaries.dart`
+- `dart run tool/check_public_api_surface.dart`
+- `dart run tool/check_guardrails.dart`
+- `dart run tool/check_invariant_coverage.dart`
+- `MCP test shard test/core`
+- `MCP test shard test/model test/serialization test/contract test/public_api test/entrypoints`
+- `MCP test shard test/controller/internal`
+- `MCP test shard test/controller/core test/controller/commands` plus
+  controller-root `*_test.dart` files
+- `MCP test shard test/render test/view`
+- `MCP test shard test/interactive`
+- `MCP test shard example/test` with MCP root `example/`
+- `flutter test --coverage --no-pub --exclude-tags=tool`
+- `dart run tool/check_coverage.dart`
+- `dart run tool/run_tool_tests.dart`
+- `dcm calculate-metrics tool/src/guardrails/controller_api_guardrails.dart test/tool/guardrails/guardrails_controller_api_tool_test.dart --report-all`
+
+## 10. Acceptance Criteria
+
+- Result requirements are satisfied.
+- Implementation specification is satisfied.
+- Execution rules are satisfied.
+- Mandatory slices are closed.
+- Final verification has passed.
