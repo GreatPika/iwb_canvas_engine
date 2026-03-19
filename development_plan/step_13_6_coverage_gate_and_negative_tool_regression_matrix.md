@@ -13,9 +13,9 @@ language: russian
 - не у каждого guardrail-а есть отрицательный regression test, который падает
   при возврате drift-а.
 
-Задача подшага: замкнуть line-coverage gate для `lib/src/**` и собрать
-обязательную negative regression matrix в `test/tool/**` на каждый новый или
-ужесточённый guardrail шага `13`.
+Задача подшага: замкнуть line-coverage gate для `lib/src/**` и добить только
+тот остаток negative regression matrix в `test/tool/**`, который ещё не
+закрыт после завершённых `13.1-13.3`.
 
 ## Что уже подтверждено по текущему состоянию
 
@@ -23,9 +23,10 @@ language: russian
    уже является owner-ом line coverage gate для `lib/src/**`.
 2. Там же есть `excludedFromLcov`, и исходный шаг прямо требует убрать
    исключение для файла с реальной логикой.
-3. `test/tool/**` уже содержит tooling regression surface, но исходный шаг
-   требует дополнить его отрицательными сценариями на конкретные новые
-   guardrails.
+3. `test/tool/**` уже содержит отрицательные сценарии на `Link`, `part`,
+   `part of` и mutable-type leak `Scene`; незакрытый остаток этого подшага
+   теперь сосредоточен в honest coverage allow-list и invariant-proof
+   regression.
 4. Этот подшаг замыкает acceptance предыдущих `13.1-13.5`, но не владеет их
    policy semantics.
 
@@ -38,8 +39,9 @@ language: russian
    export-only units.
 3. Ужесточение coverage policy для критичных файлов фиксируется в одном месте:
    `tool/check_coverage.dart`.
-4. Каждый новый или ужесточённый guardrail шага `13` обязан иметь
-   отрицательный regression scenario в `test/tool/**`.
+4. Этот подшаг не переигрывает уже закрытые regression-сценарии `13.1-13.3`.
+   Он добавляет только те negative tests, которых реально не хватает после
+   пересмотра scope шага `13`.
 5. Этот подшаг не вводит новые import/public/invariant policies; он только
    замыкает их на CI-level невозврат.
 
@@ -52,7 +54,7 @@ language: russian
 - Out:
   - новые semantic rules для import/public/invariants;
   - изменение invariant ids;
-  - ownership import/public/AST checks.
+  - ownership import/public/behavioral checks.
 
 ## Точная реализация, которую должен описывать код
 
@@ -61,14 +63,13 @@ language: russian
    export-only units.
 3. Для критичных файлов, затронутых этим шагом, coverage policy становится
    явной и проверяемой одним owner-ом.
-4. `test/tool/**` содержит отрицательные сценарии на:
+4. `test/tool/**` уже содержит отрицательные сценарии на:
    - `Link`
    - `part`
    - `part of`
    - утечку `Scene`
-   - fake `controllerEpoch`
-   - мутирующий метод с нейтральным именем
-   - формальное `INV:` без реальной проверки
+   и должен быть дополнен только сценарием на формальный `INV:` без явной
+   proof-связи.
 5. Regression matrix не дублирует policy owner-ов. Тесты только доказывают,
    что tooling-проверка действительно падает на нарушение.
 
@@ -79,8 +80,8 @@ language: russian
 - [ ] Зафиксировать минимальный allow-list только для declaration-only и
       export-only units.
 - [ ] Ужесточить coverage gate для критичных файлов шага `13`.
-- [ ] Добавить отрицательные tool regression-сценарии на каждый guardrail
-      исходного шага.
+- [ ] Добавить только недостающие отрицательные tool regression-сценарии для
+      активного остатка шага `13`.
 - [ ] Убедиться, что regression tests доказывают падение tooling, а не
       становятся вторым owner-ом policy.
 
@@ -91,12 +92,12 @@ language: russian
 - [ ] Coverage allow-list ограничен только declaration-only/export-only units.
 - [ ] Критичные файлы шага `13` проходят coverage gate без специальных
       необоснованных исключений.
-- [ ] Для каждого guardrail-а исходного шага `13` есть отрицательный
+- [ ] Для активного остатка шага `13` не осталось guardrail-а без нужного
       regression scenario в `test/tool/**`.
 - [ ] Regression tests валидируют именно tool failure, а не дублируют policy
       owner-ов в отдельной логике.
 - [ ] Повторная диагностика
-      `dcm calculate-metrics tool/check_coverage.dart test/tool/coverage_tool_test.dart test/tool/import_boundaries/import_boundaries_layout_tool_test.dart test/tool/guardrails/guardrails_public_surface_tool_test.dart test/tool/guardrails/guardrails_controller_api_tool_test.dart --report-all`
+      `dcm calculate-metrics tool/check_coverage.dart test/tool/coverage_tool_test.dart test/tool/import_boundaries/import_boundaries_layer_dag_tool_test.dart test/tool/guardrails/guardrails_mutable_type_leaks_tool_test.dart --report-all`
       приложена к результату шага; новые или step-owned methods не содержат
       `HIGH`/`VERY HIGH` по `cyclomatic-complexity`,
       `maximum-nesting-level` и `source-lines-of-code`, а целевой предел
@@ -106,17 +107,12 @@ language: russian
 
 - [ ] `test/tool/coverage_tool_test.dart` с отрицательным сценарием на файл с
       реальной логикой, ошибочно оставленный вне lcov
-- [ ] `test/tool/import_boundaries/import_boundaries_layout_tool_test.dart` с отрицательными
-      сценариями `Link`, `part`, `part of`
-- [ ] `test/tool/guardrails/guardrails_public_surface_tool_test.dart` с отрицательными
-      сценариями:
-      - утечка `Scene`
-- [ ] `test/tool/guardrails/guardrails_controller_api_tool_test.dart` с отрицательными
-      сценариями:
-      - fake `controllerEpoch`
-      - мутирующий метод с нейтральным именем
+- [x] `test/tool/import_boundaries/import_boundaries_layer_dag_tool_test.dart`
+      уже содержит отрицательные сценарии `Link`, `part`, `part of`
+- [x] `test/tool/guardrails/guardrails_mutable_type_leaks_tool_test.dart`
+      уже содержит отрицательный сценарий на утечку `Scene`
 - [ ] targeted invariant coverage test с отрицательным сценарием на формальный
-      `INV:` без реальной проверки
+      `INV:` без явной proof-связи
 - [ ] Дополнительные existing tool tests обновляются только как regression
       harness, а не как второй policy owner
 

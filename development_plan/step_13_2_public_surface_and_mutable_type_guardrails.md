@@ -15,8 +15,8 @@ surface всё ещё останется уязвимым, если `tool/check_
   или обходами через несогласованный export surface.
 
 Задача подшага: сделать `tool/check_guardrails.dart` owner-ом public/export
-guardrails и mutable type leak detection в signatures без смешивания с semantic
-AST-проверками `13.4`.
+guardrails и mutable type leak detection в signatures без смешивания с
+behavioral/runtime checks, которые не принадлежат этому подшагу.
 
 ## Что уже подтверждено по текущему состоянию
 
@@ -26,8 +26,13 @@ AST-проверками `13.4`.
    surface, что оставляет неполный coverage public/export signatures.
 3. Single-public-entry rule уже существует как invariant, но исходный шаг
    прямо требует его дополнительно защитить от обходов.
-4. Public/export checks и semantic AST checks живут в одном tool-файле, но это
-   не означает, что они должны иметь один ownership.
+4. Public/export checks и другие runtime/tool checks могут жить в одном
+   tool-файле, но это не означает, что они должны иметь один ownership.
+5. В кодовой базе уже есть
+   [check_public_api_surface.dart](/Users/blackpika/iwb_canvas_engine/tool/check_public_api_surface.dart)
+   с golden-проверкой exported symbol set. Этот tool полезен как regression
+   gate на public API drift, но не является вторым owner-ом
+   signature/public-surface policy этого подшага.
 
 ## Зафиксированные решения (без повторного обсуждения в реализации)
 
@@ -37,11 +42,14 @@ AST-проверками `13.4`.
    конкретный surface реально можно и нужно просканировать как exported API.
    Исключения допустимы только точечные и мотивированные.
 3. Guardrail mutable type leak-ов проверяет именно сигнатуры exported/runtime
-   API и не подменяет semantic mutation checks `13.4`.
+   API и не подменяет behavioral/runtime proofs других owner-ов.
 4. Правило «один публичный вход» остаётся owner-ом этого подшага:
    public surface должен оставаться выровненным на sanctioned entrypoint-ы и
    не открывать обходные export-пути.
-5. Этот подшаг не решает:
+5. `tool/check_public_api_surface.dart` может существовать рядом как
+   golden-based regression на exported symbol set, но не заменяет и не
+   дублирует `tool/check_guardrails.dart` как owner-а public/export policy.
+6. Этот подшаг не решает:
    - write-only mutation semantics;
    - epoch invalidation semantics;
    - `SceneDataException` factory-only throw policy;
@@ -56,7 +64,7 @@ AST-проверками `13.4`.
   - single-public-entrypoint discipline.
 - Out:
   - import topology;
-  - semantic AST guardrails;
+  - behavioral/runtime checks вне public surface;
   - invariant ids и coverage proof contract;
   - line coverage allow-list.
 
@@ -72,8 +80,8 @@ AST-проверками `13.4`.
    signatures там, где публичный contract обязан оставаться immutable/value-safe.
 4. Проверка single public entrypoint ловит как прямые, так и обходные способы
    открыть дополнительный public surface.
-5. Подшаг не меняет detection rules write-only mutation или epoch invalidation;
-   это остаётся ownership `13.4`.
+5. Подшаг не меняет behavioral rules mutation routing или epoch invalidation;
+   это находится вне ownership этого подшага.
 
 ## Последовательность реализации (только действия)
 
@@ -83,7 +91,8 @@ AST-проверками `13.4`.
       public surface.
 - [x] Ужесточить guardrail mutable type leak-ов в сигнатурах.
 - [x] Защитить правило «один публичный вход» от обходов через export surface.
-- [x] Не смешивать эти проверки с semantic AST-rules шага `13.4`.
+- [x] Не смешивать эти проверки с behavioral/runtime rules вне ownership этого
+      подшага.
 
 ## Критерии приёмки
 
@@ -94,10 +103,11 @@ AST-проверками `13.4`.
 - [x] Утечка изменяемых типов в exported/runtime signatures приводит к
       tool failure.
 - [x] Single-public-entry rule защищён от обходных export/public entrypoint-ов.
-- [x] Подшаг не вводит semantic AST rules для write-only mutation,
-      `controllerEpoch` или `SceneDataException`; это остаётся `13.4`.
+- [x] Подшаг не вводит behavioral/runtime rules для write-only mutation,
+      `controllerEpoch` или `SceneDataException`; это остаётся вне ownership
+      этого подшага.
 - [x] Повторная диагностика
-      `dcm calculate-metrics tool/check_guardrails.dart test/tool/guardrails/guardrails_layout_and_entrypoints_tool_test.dart test/tool/guardrails/guardrails_public_surface_tool_test.dart test/tool/guardrails/guardrails_interactive_api_tool_test.dart --report-all`
+      `dcm calculate-metrics tool/check_guardrails.dart test/tool/guardrails/guardrails_layout_and_entrypoints_tool_test.dart test/tool/guardrails/guardrails_public_surface_tool_test.dart test/tool/guardrails/guardrails_mutable_type_leaks_tool_test.dart --report-all`
       приложена к результату шага; новые или step-owned methods не содержат
       `HIGH`/`VERY HIGH` по `cyclomatic-complexity`,
       `maximum-nesting-level` и `source-lines-of-code`, а целевой предел
@@ -108,8 +118,9 @@ AST-проверками `13.4`.
 - [x] `test/tool/guardrails/guardrails_public_surface_tool_test.dart` с отрицательным
       сценарием на утечку `Scene` или другого mutable runtime type в public
       signature
-- [x] `test/tool/guardrails/guardrails_interactive_api_tool_test.dart` как regression
-      guard, что `interactive` surface больше не выпадает из scan-а
+- [x] `test/tool/guardrails/guardrails_mutable_type_leaks_tool_test.dart` как
+      regression guard на mutable runtime/core leak-ы в exported surface,
+      включая экспортируемый `interactive` surface
 - [x] `test/tool/guardrails/guardrails_layout_and_entrypoints_tool_test.dart` с
       отрицательным сценарием на нарушение single-public-entry discipline
 - [x] `test/tool/support/public_entrypoint_contract.dart` обновляется только
@@ -122,4 +133,4 @@ AST-проверками `13.4`.
 - [x] Signature-scan helper-ы и новые exported-surface predicates
       укладываются в предел `10 / 4 / 40`.
 - [x] Ни один hotspot в `tool/check_guardrails.dart`, относящийся к public
-      surface scan, не остаётся «ничьим» между `13.2` и `13.4`.
+      surface scan, не остаётся «ничьим» внутри активного плана шага `13`.

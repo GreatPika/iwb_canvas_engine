@@ -15,8 +15,13 @@ language: russian
 - порядок запуска в обязательном списке команд из `AGENTS.md`.
 
 Подшаг не добавляет новые guardrail-правила и не меняет ownership правил из
-`13.1`, `13.2`, `13.4`, `13.5`, `13.6`. Он только делает текущую tooling
+`13.1`, `13.2`, `13.5`, `13.6`. Он только делает текущую tooling
 структуру читаемой, однозначной и поддерживаемой.
+
+После пересмотра umbrella-step этот подшаг считается закрытым. Его задача
+была именно structural decomposition. Он не должен заново активировать
+behavioral scope бывшего `13.4`, даже если соответствующие legacy-модули
+остались в текущем дереве tooling.
 
 ## Граница подшага
 
@@ -167,14 +172,17 @@ language: russian
   - не проверяет controller semantics;
   - не проверяет interactive purity.
 - `interactive_api_guardrails.dart`
-  - проверяет `_ensurePublicSideEffectAllowed(...)`;
-  - проверяет `allowAfterDispose: true` только для `dispose()`;
-  - не знает про controller epoch и write-only mutation.
+  - остаётся отдельным модулем в текущем дереве `tool/src/guardrails/`;
+  - инкапсулирует уже существующие interactive-focused checks без расширения
+    их scope в рамках этого подшага;
+  - не становится owner-ом public/export policy, invariant registry или
+    coverage gates.
 - `controller_api_guardrails.dart`
-  - проверяет `controllerEpoch`;
-  - проверяет mutation routing через `write*/txn*`;
-  - содержит controller symbol collector;
-  - не проверяет exported signature leaks.
+  - остаётся отдельным модулем в текущем дереве `tool/src/guardrails/`;
+  - инкапсулирует уже существующие controller-focused checks, которые были
+    разрезаны вместе с giant-файлом;
+  - не делает behavioral/controller semantics частью active scope шага `13`
+    после удаления бывшего `13.4`.
 - `guardrails_runner.dart`
   - создаёт общий runtime для `check_guardrails.dart`;
   - запускает четыре доменных блока строго в таком порядке:
@@ -278,8 +286,8 @@ language: russian
 helper ухудшает domain readability:
 
 - mutable-type leak traversal;
-- controller-specific semantic checks;
-- interactive purity checks;
+- legacy controller-focused checks;
+- legacy interactive-focused checks;
 - import-boundary policy tables;
 - public-surface policy tables.
 
