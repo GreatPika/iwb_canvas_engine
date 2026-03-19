@@ -253,7 +253,7 @@ Guardrail проверяет именно owner path, а не spelling лока�
 
 ### Срез 2. Заменить file-level исключения на declaration-level allow-list
 
-- [ ] Результат: новый mutation-capable declaration больше не проходит scan
+- [x] Результат: новый mutation-capable declaration больше не проходит scan
       автоматически только потому, что он находится в special-case файле;
       ownership задаётся только через явный owner-table деклараций.
 - Test gate:
