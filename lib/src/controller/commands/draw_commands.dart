@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import '../../core/input_sampling.dart';
 import '../../core/nodes.dart';
 import '../../core/scene_limits.dart';
 import '../../contract/node_spec.dart';
@@ -16,14 +17,7 @@ class DrawCommands {
     List<Offset> points, {
     required int limit,
   }) {
-    if (points.length <= limit) {
-      return points;
-    }
-    final sourceCount = points.length;
-    return List<Offset>.generate(limit, (i) {
-      final sourceIndex = (i * (sourceCount - 1)) ~/ (limit - 1);
-      return points[sourceIndex];
-    }, growable: false);
+    return resamplePointsToLimit(points, limit: limit);
   }
 
   NodeId writeDrawStroke({

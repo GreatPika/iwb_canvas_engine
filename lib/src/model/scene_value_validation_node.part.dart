@@ -1,5 +1,26 @@
 part of 'scene_value_validation.dart';
 
+typedef _ImageValidationFields = ({
+  String imageId,
+  Size size,
+  Size? naturalSize,
+});
+typedef _TextValidationFields = ({
+  String textValue,
+  Size size,
+  double fontSize,
+  String? fontFamily,
+  double? maxWidth,
+  double? lineHeight,
+});
+typedef _LineValidationFields = ({
+  Offset start,
+  String startField,
+  Offset end,
+  String endField,
+  double thickness,
+});
+
 void sceneValidateNodeSnapshot(
   NodeSnapshot node, {
   required String field,
@@ -59,17 +80,39 @@ void _sceneValidateSnapshotNodeTypeFields(
 }) {
   switch (node) {
     case ImageNodeSnapshot image:
-      _sceneValidateSnapshotImageNode(image, field: field, onError: onError);
+      _sceneValidateImageFields(
+        fields: _snapshotImageValidationFields(image),
+        field: field,
+        onError: onError,
+      );
     case TextNodeSnapshot text:
-      _sceneValidateSnapshotTextNode(text, field: field, onError: onError);
+      _sceneValidateTextFields(
+        fields: _snapshotTextValidationFields(text),
+        field: field,
+        onError: onError,
+      );
     case StrokeNodeSnapshot stroke:
       _sceneValidateSnapshotStrokeNode(stroke, field: field, onError: onError);
     case LineNodeSnapshot line:
-      _sceneValidateSnapshotLineNode(line, field: field, onError: onError);
+      _sceneValidateLineFields(
+        fields: _snapshotLineValidationFields(line, field: field),
+        field: field,
+        onError: onError,
+      );
     case RectNodeSnapshot rect:
-      _sceneValidateSnapshotRectNode(rect, field: field, onError: onError);
+      _sceneValidateRectFields(
+        size: rect.size,
+        strokeWidth: rect.strokeWidth,
+        field: field,
+        onError: onError,
+      );
     case PathNodeSnapshot path:
-      _sceneValidateSnapshotPathNode(path, field: field, onError: onError);
+      _sceneValidatePathFields(
+        svgPathData: path.svgPathData,
+        strokeWidth: path.strokeWidth,
+        field: field,
+        onError: onError,
+      );
   }
 }
 
@@ -132,14 +175,14 @@ void _sceneValidateRuntimeNodeTypeFields(
 }) {
   switch (node.type) {
     case NodeType.image:
-      _sceneValidateRuntimeImageNode(
-        node as ImageNode,
+      _sceneValidateImageFields(
+        fields: _runtimeImageValidationFields(node as ImageNode),
         field: field,
         onError: onError,
       );
     case NodeType.text:
-      _sceneValidateRuntimeTextNode(
-        node as TextNode,
+      _sceneValidateTextFields(
+        fields: _runtimeTextValidationFields(node as TextNode),
         field: field,
         onError: onError,
       );
@@ -150,19 +193,19 @@ void _sceneValidateRuntimeNodeTypeFields(
         onError: onError,
       );
     case NodeType.line:
-      _sceneValidateRuntimeLineNode(
-        node as LineNode,
+      _sceneValidateLineFields(
+        fields: _runtimeLineValidationFields(node as LineNode, field: field),
         field: field,
         onError: onError,
       );
     case NodeType.rect:
-      _sceneValidateRuntimeRectNode(
+      _sceneValidateRuntimeRectFields(
         node as RectNode,
         field: field,
         onError: onError,
       );
     case NodeType.path:
-      _sceneValidateRuntimePathNode(
+      _sceneValidateRuntimePathFields(
         node as PathNode,
         field: field,
         onError: onError,
@@ -170,23 +213,39 @@ void _sceneValidateRuntimeNodeTypeFields(
   }
 }
 
-void _sceneValidateSnapshotImageNode(
-  ImageNodeSnapshot image, {
+_ImageValidationFields _snapshotImageValidationFields(ImageNodeSnapshot image) {
+  return (
+    imageId: image.imageId,
+    size: image.size,
+    naturalSize: image.naturalSize,
+  );
+}
+
+_ImageValidationFields _runtimeImageValidationFields(ImageNode image) {
+  return (
+    imageId: image.imageId,
+    size: image.size,
+    naturalSize: image.naturalSize,
+  );
+}
+
+void _sceneValidateImageFields({
+  required _ImageValidationFields fields,
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
   _sceneValidateArgumentBoundary(
     field: '$field.imageId',
-    value: image.imageId,
+    value: fields.imageId,
     onError: onError,
-    validate: () => ImageIdValue.of(image.imageId, name: '$field.imageId'),
+    validate: () => ImageIdValue.of(fields.imageId, name: '$field.imageId'),
   );
   sceneValidateNonNegativeSize(
-    image.size,
+    fields.size,
     field: '$field.size',
     onError: onError,
   );
-  final naturalSize = image.naturalSize;
+  final naturalSize = fields.naturalSize;
   if (naturalSize != null) {
     sceneValidateNonNegativeSize(
       naturalSize,
@@ -196,41 +255,63 @@ void _sceneValidateSnapshotImageNode(
   }
 }
 
-void _sceneValidateSnapshotTextNode(
-  TextNodeSnapshot text, {
+_TextValidationFields _snapshotTextValidationFields(TextNodeSnapshot text) {
+  return (
+    textValue: text.text,
+    size: text.size,
+    fontSize: text.fontSize,
+    fontFamily: text.fontFamily,
+    maxWidth: text.maxWidth,
+    lineHeight: text.lineHeight,
+  );
+}
+
+_TextValidationFields _runtimeTextValidationFields(TextNode text) {
+  return (
+    textValue: text.text,
+    size: text.size,
+    fontSize: text.fontSize,
+    fontFamily: text.fontFamily,
+    maxWidth: text.maxWidth,
+    lineHeight: text.lineHeight,
+  );
+}
+
+void _sceneValidateTextFields({
+  required _TextValidationFields fields,
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
   _sceneValidateArgumentBoundary(
     field: '$field.text',
-    value: text.text,
+    value: fields.textValue,
     onError: onError,
-    validate: () => TextContentValue.of(text.text, name: '$field.text'),
+    validate: () => TextContentValue.of(fields.textValue, name: '$field.text'),
   );
   sceneValidateNonNegativeSize(
-    text.size,
+    fields.size,
     field: '$field.size',
     onError: onError,
   );
   _sceneValidateArgumentBoundary(
     field: '$field.fontSize',
-    value: text.fontSize,
+    value: fields.fontSize,
     onError: onError,
     validate: () =>
-        PositiveFiniteDoubleValue.of(text.fontSize, name: '$field.fontSize'),
+        PositiveFiniteDoubleValue.of(fields.fontSize, name: '$field.fontSize'),
   );
   _sceneValidateOptionalFontFamily(
-    text.fontFamily,
+    fields.fontFamily,
     field: '$field.fontFamily',
     onError: onError,
   );
   _sceneValidateOptionalPositiveDouble(
-    text.maxWidth,
+    fields.maxWidth,
     field: '$field.maxWidth',
     onError: onError,
   );
   _sceneValidateOptionalPositiveDouble(
-    text.lineHeight,
+    fields.lineHeight,
     field: '$field.lineHeight',
     onError: onError,
   );
@@ -263,132 +344,110 @@ void _sceneValidateSnapshotStrokeNode(
   );
 }
 
-void _sceneValidateSnapshotLineNode(
-  LineNodeSnapshot line, {
+void _sceneValidateLineFields({
+  required _LineValidationFields fields,
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
   _sceneValidateOffsetField(
-    line.start,
-    field: '$field.start',
+    fields.start,
+    field: fields.startField,
     onError: onError,
   );
-  _sceneValidateOffsetField(line.end, field: '$field.end', onError: onError);
-  _sceneValidateArgumentBoundary(
-    field: '$field.thickness',
-    value: line.thickness,
+  _sceneValidateOffsetField(
+    fields.end,
+    field: fields.endField,
     onError: onError,
-    validate: () =>
-        PositiveFiniteDoubleValue.of(line.thickness, name: '$field.thickness'),
+  );
+  _sceneValidateThicknessField(
+    fields.thickness,
+    field: '$field.thickness',
+    onError: onError,
   );
 }
 
-void _sceneValidateSnapshotRectNode(
-  RectNodeSnapshot rect, {
+_LineValidationFields _snapshotLineValidationFields(
+  LineNodeSnapshot line, {
+  required String field,
+}) {
+  return (
+    start: line.start,
+    startField: '$field.start',
+    end: line.end,
+    endField: '$field.end',
+    thickness: line.thickness,
+  );
+}
+
+_LineValidationFields _runtimeLineValidationFields(
+  LineNode line, {
+  required String field,
+}) {
+  return (
+    start: line.start,
+    startField: '$field.localA',
+    end: line.end,
+    endField: '$field.localB',
+    thickness: line.thickness,
+  );
+}
+
+void _sceneValidateRectFields({
+  required Size size,
+  required double strokeWidth,
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  sceneValidateNonNegativeSize(
-    rect.size,
-    field: '$field.size',
-    onError: onError,
-  );
-  _sceneValidateArgumentBoundary(
+  sceneValidateNonNegativeSize(size, field: '$field.size', onError: onError);
+  _sceneValidateNonNegativeStrokeWidthField(
+    strokeWidth,
     field: '$field.strokeWidth',
-    value: rect.strokeWidth,
     onError: onError,
-    validate: () => NonNegativeFiniteDoubleValue.of(
-      rect.strokeWidth,
-      name: '$field.strokeWidth',
-    ),
   );
 }
 
-void _sceneValidateSnapshotPathNode(
-  PathNodeSnapshot path, {
+void _sceneValidateRuntimeRectFields(
+  RectNode rect, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+}) {
+  _sceneValidateRectFields(
+    size: rect.size,
+    strokeWidth: rect.strokeWidth,
+    field: field,
+    onError: onError,
+  );
+}
+
+void _sceneValidatePathFields({
+  required String svgPathData,
+  required double strokeWidth,
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
   _sceneValidateArgumentBoundary(
     field: '$field.svgPathData',
-    value: path.svgPathData,
+    value: svgPathData,
     onError: onError,
     validate: () =>
-        SvgPathDataValue.of(path.svgPathData, name: '$field.svgPathData'),
+        SvgPathDataValue.of(svgPathData, name: '$field.svgPathData'),
   );
-  _sceneValidateArgumentBoundary(
+  _sceneValidateNonNegativeStrokeWidthField(
+    strokeWidth,
     field: '$field.strokeWidth',
-    value: path.strokeWidth,
     onError: onError,
-    validate: () => NonNegativeFiniteDoubleValue.of(
-      path.strokeWidth,
-      name: '$field.strokeWidth',
-    ),
   );
 }
 
-void _sceneValidateRuntimeImageNode(
-  ImageNode image, {
+void _sceneValidateRuntimePathFields(
+  PathNode path, {
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  _sceneValidateArgumentBoundary(
-    field: '$field.imageId',
-    value: image.imageId,
-    onError: onError,
-    validate: () => ImageIdValue.of(image.imageId, name: '$field.imageId'),
-  );
-  sceneValidateNonNegativeSize(
-    image.size,
-    field: '$field.size',
-    onError: onError,
-  );
-  final naturalSize = image.naturalSize;
-  if (naturalSize != null) {
-    sceneValidateNonNegativeSize(
-      naturalSize,
-      field: '$field.naturalSize',
-      onError: onError,
-    );
-  }
-}
-
-void _sceneValidateRuntimeTextNode(
-  TextNode text, {
-  required String field,
-  required SceneValidationErrorReporter onError,
-}) {
-  _sceneValidateArgumentBoundary(
-    field: '$field.text',
-    value: text.text,
-    onError: onError,
-    validate: () => TextContentValue.of(text.text, name: '$field.text'),
-  );
-  sceneValidateNonNegativeSize(
-    text.size,
-    field: '$field.size',
-    onError: onError,
-  );
-  _sceneValidateArgumentBoundary(
-    field: '$field.fontSize',
-    value: text.fontSize,
-    onError: onError,
-    validate: () =>
-        PositiveFiniteDoubleValue.of(text.fontSize, name: '$field.fontSize'),
-  );
-  _sceneValidateOptionalFontFamily(
-    text.fontFamily,
-    field: '$field.fontFamily',
-    onError: onError,
-  );
-  _sceneValidateOptionalPositiveDouble(
-    text.maxWidth,
-    field: '$field.maxWidth',
-    onError: onError,
-  );
-  _sceneValidateOptionalPositiveDouble(
-    text.lineHeight,
-    field: '$field.lineHeight',
+  _sceneValidatePathFields(
+    svgPathData: path.svgPathData,
+    strokeWidth: path.strokeWidth,
+    field: field,
     onError: onError,
   );
 }
@@ -403,78 +462,36 @@ void _sceneValidateRuntimeStrokeNode(
     field: '$field.localPoints',
     onError: onError,
   );
-  _sceneValidateArgumentBoundary(
+  _sceneValidateThicknessField(
+    stroke.thickness,
     field: '$field.thickness',
-    value: stroke.thickness,
     onError: onError,
-    validate: () => PositiveFiniteDoubleValue.of(
-      stroke.thickness,
-      name: '$field.thickness',
-    ),
   );
 }
 
-void _sceneValidateRuntimeLineNode(
-  LineNode line, {
-  required String field,
-  required SceneValidationErrorReporter onError,
-}) {
-  _sceneValidateOffsetField(
-    line.start,
-    field: '$field.localA',
-    onError: onError,
-  );
-  _sceneValidateOffsetField(line.end, field: '$field.localB', onError: onError);
-  _sceneValidateArgumentBoundary(
-    field: '$field.thickness',
-    value: line.thickness,
-    onError: onError,
-    validate: () =>
-        PositiveFiniteDoubleValue.of(line.thickness, name: '$field.thickness'),
-  );
-}
-
-void _sceneValidateRuntimeRectNode(
-  RectNode rect, {
-  required String field,
-  required SceneValidationErrorReporter onError,
-}) {
-  sceneValidateNonNegativeSize(
-    rect.size,
-    field: '$field.size',
-    onError: onError,
-  );
-  _sceneValidateArgumentBoundary(
-    field: '$field.strokeWidth',
-    value: rect.strokeWidth,
-    onError: onError,
-    validate: () => NonNegativeFiniteDoubleValue.of(
-      rect.strokeWidth,
-      name: '$field.strokeWidth',
-    ),
-  );
-}
-
-void _sceneValidateRuntimePathNode(
-  PathNode path, {
+void _sceneValidateThicknessField(
+  double value, {
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
   _sceneValidateArgumentBoundary(
-    field: '$field.svgPathData',
-    value: path.svgPathData,
+    field: field,
+    value: value,
     onError: onError,
-    validate: () =>
-        SvgPathDataValue.of(path.svgPathData, name: '$field.svgPathData'),
+    validate: () => PositiveFiniteDoubleValue.of(value, name: field),
   );
+}
+
+void _sceneValidateNonNegativeStrokeWidthField(
+  double value, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+}) {
   _sceneValidateArgumentBoundary(
-    field: '$field.strokeWidth',
-    value: path.strokeWidth,
+    field: field,
+    value: value,
     onError: onError,
-    validate: () => NonNegativeFiniteDoubleValue.of(
-      path.strokeWidth,
-      name: '$field.strokeWidth',
-    ),
+    validate: () => NonNegativeFiniteDoubleValue.of(value, name: field),
   );
 }
 

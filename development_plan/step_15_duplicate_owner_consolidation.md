@@ -201,7 +201,7 @@ public API, schema contract или runtime source of truth.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] One model owner for Scene to SceneSnapshot conversion
+### Slice 1. [x] One model owner for Scene to SceneSnapshot conversion
 
 #### Slice Contract
 
@@ -230,7 +230,7 @@ public API, schema contract или runtime source of truth.
   `lib/src/model/document.dart` и
   `lib/src/model/scene_builder_snapshot_from_scene.part.dart`.
 
-### Slice 2. [ ] One owner per confirmed leaf helper family
+### Slice 2. [x] One owner per confirmed leaf helper family
 
 #### Slice Contract
 
@@ -263,7 +263,7 @@ render-only stroke path construction имеют одного owner-а кажды
 - В scoped clone report по `lib/src` больше нет закрытых этим slice duplicate
   pair-ов.
 
-### Slice 3. [ ] Field-group validator reuse without snapshot-runtime merge
+### Slice 3. [x] Field-group validator reuse without snapshot-runtime merge
 
 #### Slice Contract
 
@@ -306,7 +306,7 @@ snapshot/runtime entrypoint-ы и различающиеся semantics оста�
   в `scene_value_validation_node.part.dart` и
   `scene_value_validation_top_level.part.dart`.
 
-### Slice 4. [ ] Local helper ownership in JSON require and tests
+### Slice 4. [x] Local helper ownership in JSON require and tests
 
 #### Slice Contract
 

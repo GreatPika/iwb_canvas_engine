@@ -248,12 +248,7 @@ double _localScalarToSceneMax(Transform2D transform, double valueLocal) {
 }
 
 double _maxSingularValue2x2(double a, double b, double c, double d) {
-  final t = a * a + b * b + c * c + d * d;
-  final det = a * d - b * c;
-  final discSquared = t * t - 4 * det * det;
-  final disc = math.sqrt(math.max(0, discSquared));
-  final lambdaMax = (t + disc) / 2;
-  return math.sqrt(math.max(0, lambdaMax));
+  return maxSingularValue2x2(a, b, c, d);
 }
 
 bool _hitTestPathStrokePrecise(

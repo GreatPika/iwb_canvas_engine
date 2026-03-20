@@ -126,6 +126,30 @@ void main() {
     expect((nodes[2] as StrokeNode).pointsRevision, 1);
   });
 
+  test('txnNodeToSnapshot delegates node conversion through shared owner', () {
+    final node = RectNode(
+      id: 'rect-direct',
+      size: const Size(12, 9),
+      fillColor: const Color(0xFFEEEEEE),
+      strokeColor: const Color(0xFF222222),
+      strokeWidth: 1.5,
+      opacity: 0.5,
+      hitPadding: 0.3,
+    );
+
+    final snapshot = txnNodeToSnapshot(node);
+
+    expect(snapshot, isA<RectNodeSnapshot>());
+    final rectSnapshot = snapshot as RectNodeSnapshot;
+    expect(rectSnapshot.id, 'rect-direct');
+    expect(rectSnapshot.size, const Size(12, 9));
+    expect(rectSnapshot.fillColor, const Color(0xFFEEEEEE));
+    expect(rectSnapshot.strokeColor, const Color(0xFF222222));
+    expect(rectSnapshot.strokeWidth, 1.5);
+    expect(rectSnapshot.opacity, 0.5);
+    expect(rectSnapshot.hitPadding, 0.3);
+  });
+
   test('txnSceneFromSnapshot rejects negative stroke pointsRevision', () {
     expect(
       () => txnSceneFromSnapshot(

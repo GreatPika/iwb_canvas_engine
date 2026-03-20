@@ -2,59 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-
-Map<String, Object?> _minimalRectNodeJson({required String id}) {
-  return <String, Object?>{
-    'id': id,
-    'type': 'rect',
-    'transform': <String, Object?>{
-      'a': 1,
-      'b': 0,
-      'c': 0,
-      'd': 1,
-      'tx': 0,
-      'ty': 0,
-    },
-    'hitPadding': 0,
-    'opacity': 1,
-    'isVisible': true,
-    'isSelectable': true,
-    'isLocked': false,
-    'isDeletable': true,
-    'isTransformable': true,
-    'size': <String, Object?>{'w': 1, 'h': 1},
-    'strokeWidth': 0,
-  };
-}
-
-Map<String, Object?> _minimalSceneJson() {
-  return <String, Object?>{
-    'schemaVersion': 5,
-    'camera': <String, Object?>{'offsetX': 0, 'offsetY': 0},
-    'background': <String, Object?>{
-      'color': '#FFFFFFFF',
-      'grid': <String, Object?>{
-        'enabled': false,
-        'cellSize': 10,
-        'color': '#1F000000',
-      },
-    },
-    'palette': <String, Object?>{
-      'penColors': <Object?>['#FF000000'],
-      'backgroundColors': <Object?>['#FFFFFFFF'],
-      'gridSizes': <Object?>[10],
-    },
-    'backgroundLayer': <String, Object?>{
-      'nodes': <Object?>[_minimalRectNodeJson(id: 'bg')],
-    },
-    'layers': <Object?>[
-      <String, Object?>{
-        'id': 'layer-0',
-        'nodes': <Object?>[_minimalRectNodeJson(id: 'n1')],
-      },
-    ],
-  };
-}
+import '../support/scene_builder_json_fixtures.dart';
 
 Map<String, Object?> _textNodeJson({
   required String id,
@@ -128,7 +76,11 @@ void main() {
   });
 
   test('SceneBuilder.buildFromJson builds typed snapshot', () {
-    final result = SceneBuilder.buildFromJson(_minimalSceneJson());
+    final result = SceneBuilder.buildFromJson(
+      minimalSceneJson(
+        backgroundNodes: <Object?>[minimalRectNodeJson(id: 'bg')],
+      ),
+    );
 
     expect(result.backgroundLayer.nodes.single.id, 'bg');
     expect(result.layers.single.nodes.single.id, 'n1');
@@ -137,7 +89,9 @@ void main() {
   test(
     'SceneBuilder.buildFromJson matches decodeScene for the same payload',
     () {
-      final raw = _minimalSceneJson();
+      final raw = minimalSceneJson(
+        backgroundNodes: <Object?>[minimalRectNodeJson(id: 'bg')],
+      );
 
       expect(
         encodeScene(SceneBuilder.buildFromJson(raw)),
@@ -149,7 +103,9 @@ void main() {
   test(
     'SceneBuilder.buildFromJson surfaces the same path-aware diagnostics as decodeScene',
     () {
-      final raw = _minimalSceneJson();
+      final raw = minimalSceneJson(
+        backgroundNodes: <Object?>[minimalRectNodeJson(id: 'bg')],
+      );
       raw['layers'] = <Object?>[
         <String, Object?>{
           'id': 'layer-0',
@@ -202,11 +158,13 @@ void main() {
   test(
     'SceneBuilder.buildFromJson preserves duplicate-id diagnostics of decodeScene',
     () {
-      final raw = _minimalSceneJson();
+      final raw = minimalSceneJson(
+        backgroundNodes: <Object?>[minimalRectNodeJson(id: 'bg')],
+      );
       raw['backgroundLayer'] = <String, Object?>{
         'nodes': <Object?>[
-          _minimalRectNodeJson(id: 'dup-bg'),
-          _minimalRectNodeJson(id: 'dup-bg'),
+          minimalRectNodeJson(id: 'dup-bg'),
+          minimalRectNodeJson(id: 'dup-bg'),
         ],
       };
 

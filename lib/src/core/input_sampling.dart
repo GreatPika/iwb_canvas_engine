@@ -11,6 +11,17 @@ double squaredDistanceBetween(Offset left, Offset right) {
   return delta.dx * delta.dx + delta.dy * delta.dy;
 }
 
+List<Offset> resamplePointsToLimit(List<Offset> points, {required int limit}) {
+  if (points.length <= limit) {
+    return points;
+  }
+  final sourceCount = points.length;
+  return List<Offset>.generate(limit, (i) {
+    final sourceIndex = (i * (sourceCount - 1)) ~/ (limit - 1);
+    return points[sourceIndex];
+  }, growable: false);
+}
+
 /// Returns true when distance between [left] and [right] is <= [threshold].
 bool isDistanceAtMost(Offset left, Offset right, double threshold) {
   final safeThreshold = clampNonNegativeFinite(threshold);

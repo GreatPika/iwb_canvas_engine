@@ -141,6 +141,15 @@ Rect sanitizeFiniteRect(Rect rect) {
   return isFiniteRect(rect) ? rect : Rect.zero;
 }
 
+double maxSingularValue2x2(double a, double b, double c, double d) {
+  final t = a * a + b * b + c * c + d * d;
+  final det = a * d - b * c;
+  final discSquared = t * t - 4 * det * det;
+  final disc = math.sqrt(math.max(0, discSquared));
+  final lambdaMax = (t + disc) / 2;
+  return math.sqrt(math.max(0, lambdaMax));
+}
+
 Rect lineLocalBounds({
   required Offset start,
   required Offset end,

@@ -279,7 +279,7 @@ class ScenePainter extends CustomPainter {
       final strokePathCache = this.strokePathCache;
       final path = strokePathCache != null
           ? strokePathCache.getOrBuild(node)
-          : _buildStrokePath(node.points);
+          : buildStrokePath(node.points);
       canvas.drawPath(
         path,
         _haloPaint(
@@ -647,7 +647,7 @@ class ScenePainter extends CustomPainter {
       final strokePathCache = this.strokePathCache;
       final path = strokePathCache != null
           ? strokePathCache.getOrBuild(node)
-          : _buildStrokePath(node.points);
+          : buildStrokePath(node.points);
 
       canvas.drawPath(
         path,
@@ -921,17 +921,6 @@ Rect _normalizeRect(Rect rect) {
   final top = rect.top < rect.bottom ? rect.top : rect.bottom;
   final bottom = rect.top < rect.bottom ? rect.bottom : rect.top;
   return Rect.fromLTRB(left, top, right, bottom);
-}
-
-Path _buildStrokePath(List<Offset> points) {
-  final path = Path()..fillType = PathFillType.nonZero;
-  final first = points.first;
-  path.moveTo(first.dx, first.dy);
-  for (var i = 1; i < points.length; i++) {
-    final p = points[i];
-    path.lineTo(p.dx, p.dy);
-  }
-  return path;
 }
 
 PathFillType _fillTypeFromSnapshot(PathFillRule rule) {

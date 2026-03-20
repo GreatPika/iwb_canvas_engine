@@ -96,30 +96,6 @@ Object? _requireField(
   return json[key];
 }
 
-String _requireString(
-  Map<String, Object?> json,
-  String key, {
-  String pathPrefix = '',
-}) {
-  final path = _pathAt(pathPrefix, key);
-  if (!json.containsKey(key)) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.missingField,
-      path: path,
-      message: 'Missing required field $path.',
-    );
-  }
-  final value = json[key];
-  if (value is! String) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidFieldType,
-      path: path,
-      message: 'Field $key must be a string.',
-    );
-  }
-  return value;
-}
-
 String _requireStringValue(
   Object? value, {
   required String field,
@@ -135,9 +111,10 @@ String _requireStringValue(
   return value;
 }
 
-bool _requireBool(
+T _requireTypedField<T>(
   Map<String, Object?> json,
   String key, {
+  required String typeLabel,
   String pathPrefix = '',
 }) {
   final path = _pathAt(pathPrefix, key);
@@ -149,11 +126,11 @@ bool _requireBool(
     );
   }
   final value = json[key];
-  if (value is! bool) {
+  if (value is! T) {
     throw SceneDataException(
       code: SceneDataErrorCode.invalidFieldType,
       path: path,
-      message: 'Field $key must be a bool.',
+      message: 'Field $key must be a $typeLabel.',
     );
   }
   return value;

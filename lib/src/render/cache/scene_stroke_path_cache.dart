@@ -65,7 +65,7 @@ class SceneStrokePathCache {
       return cached.path;
     }
 
-    final path = _buildStrokePath(node.points);
+    final path = buildStrokePath(node.points);
     _entries[key] = _StrokePathEntry(
       path: path,
       pointsRevision: node.pointsRevision,
@@ -116,7 +116,7 @@ class _NodeInstanceKey {
   int get hashCode => Object.hash(nodeId, instanceRevision);
 }
 
-Path _buildStrokePath(List<Offset> points) {
+Path buildStrokePath(List<Offset> points) {
   final path = Path()..fillType = PathFillType.nonZero;
   final first = points.first;
   path.moveTo(first.dx, first.dy);

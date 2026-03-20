@@ -22,6 +22,7 @@ import '../contract/scene_data_exception.dart';
 import '../contract/snapshot.dart';
 import 'scene_structural_limits.dart';
 import 'scene_policy.dart';
+import 'scene_snapshot_from_scene.dart';
 
 part 'scene_builder_json_require.part.dart';
 part 'scene_builder_decode_json.part.dart';

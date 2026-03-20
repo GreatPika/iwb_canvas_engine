@@ -82,4 +82,4 @@ language: russian
 - [x] [Шаг 14.2. Закрыть regression-матрицу controller](development_plan/step_14_2_controller_regression_matrix.md)
 - [x] [Шаг 14.3. Закрыть regression-матрицу interactive и view](development_plan/step_14_3_interactive_and_view_regression_matrix.md)
 - [x] [Шаг 14.4. Закрыть regression-матрицу render и cache](development_plan/step_14_4_render_and_cache_regression_matrix.md)
-- [ ] [Шаг 15. Свести duplicate owner-ы и локальные structural repeats без public contract drift](development_plan/step_15_duplicate_owner_consolidation.md)
+- [x] [Шаг 15. Свести duplicate owner-ы и локальные structural repeats без public contract drift](development_plan/step_15_duplicate_owner_consolidation.md)

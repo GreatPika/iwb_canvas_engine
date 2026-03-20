@@ -103,14 +103,20 @@ BackgroundSnapshot _decodeBackgroundSnapshot(Map<String, Object?> json) {
   );
   return backgroundSnapshotFromValidated(
     color: _parseColor(
-      _requireString(backgroundJson, 'color', pathPrefix: 'background'),
+      _requireTypedField<String>(
+        backgroundJson,
+        'color',
+        pathPrefix: 'background',
+        typeLabel: 'string',
+      ),
       path: 'background.color',
     ),
     grid: gridSnapshotFromValidated(
-      isEnabled: _requireBool(
+      isEnabled: _requireTypedField<bool>(
         gridJson,
         'enabled',
         pathPrefix: 'background.grid',
+        typeLabel: 'bool',
       ),
       cellSize: _requireDouble(
         gridJson,
@@ -118,7 +124,12 @@ BackgroundSnapshot _decodeBackgroundSnapshot(Map<String, Object?> json) {
         pathPrefix: 'background.grid',
       ),
       color: _parseColor(
-        _requireString(gridJson, 'color', pathPrefix: 'background.grid'),
+        _requireTypedField<String>(
+          gridJson,
+          'color',
+          pathPrefix: 'background.grid',
+          typeLabel: 'string',
+        ),
         path: 'background.grid.color',
       ),
     ),
@@ -337,7 +348,12 @@ NodeType _decodeNodeType(
   required String nodePath,
 }) {
   return _parseNodeType(
-    _requireString(json, 'type', pathPrefix: nodePath),
+    _requireTypedField<String>(
+      json,
+      'type',
+      pathPrefix: nodePath,
+      typeLabel: 'string',
+    ),
     pathPrefix: nodePath,
   );
 }
@@ -356,14 +372,35 @@ _DecodedNodeBaseFields _decodeNodeBaseFields(
       pathPrefix: nodePath,
     ),
     opacity: _decodeRequiredOpacity(json, 'opacity', pathPrefix: nodePath),
-    isVisible: _requireBool(json, 'isVisible', pathPrefix: nodePath),
-    isSelectable: _requireBool(json, 'isSelectable', pathPrefix: nodePath),
-    isLocked: _requireBool(json, 'isLocked', pathPrefix: nodePath),
-    isDeletable: _requireBool(json, 'isDeletable', pathPrefix: nodePath),
-    isTransformable: _requireBool(
+    isVisible: _requireTypedField<bool>(
+      json,
+      'isVisible',
+      pathPrefix: nodePath,
+      typeLabel: 'bool',
+    ),
+    isSelectable: _requireTypedField<bool>(
+      json,
+      'isSelectable',
+      pathPrefix: nodePath,
+      typeLabel: 'bool',
+    ),
+    isLocked: _requireTypedField<bool>(
+      json,
+      'isLocked',
+      pathPrefix: nodePath,
+      typeLabel: 'bool',
+    ),
+    isDeletable: _requireTypedField<bool>(
+      json,
+      'isDeletable',
+      pathPrefix: nodePath,
+      typeLabel: 'bool',
+    ),
+    isTransformable: _requireTypedField<bool>(
       json,
       'isTransformable',
       pathPrefix: nodePath,
+      typeLabel: 'bool',
     ),
   );
 }
@@ -469,7 +506,12 @@ _DecodedTextFields _decodeTextFields(
 }) {
   return (
     text: TextContentValue.fromJson(
-      _requireString(json, 'text', pathPrefix: nodePath),
+      _requireTypedField<String>(
+        json,
+        'text',
+        pathPrefix: nodePath,
+        typeLabel: 'string',
+      ),
       path: _pathAt(nodePath, 'text'),
       fieldName: 'text',
     ).value,
@@ -480,16 +522,41 @@ _DecodedTextFields _decodeTextFields(
       pathPrefix: nodePath,
     ),
     color: _parseColor(
-      _requireString(json, 'color', pathPrefix: nodePath),
+      _requireTypedField<String>(
+        json,
+        'color',
+        pathPrefix: nodePath,
+        typeLabel: 'string',
+      ),
       path: _pathAt(nodePath, 'color'),
     ),
     align: _parseTextAlign(
-      _requireString(json, 'align', pathPrefix: nodePath),
+      _requireTypedField<String>(
+        json,
+        'align',
+        pathPrefix: nodePath,
+        typeLabel: 'string',
+      ),
       pathPrefix: nodePath,
     ),
-    isBold: _requireBool(json, 'isBold', pathPrefix: nodePath),
-    isItalic: _requireBool(json, 'isItalic', pathPrefix: nodePath),
-    isUnderline: _requireBool(json, 'isUnderline', pathPrefix: nodePath),
+    isBold: _requireTypedField<bool>(
+      json,
+      'isBold',
+      pathPrefix: nodePath,
+      typeLabel: 'bool',
+    ),
+    isItalic: _requireTypedField<bool>(
+      json,
+      'isItalic',
+      pathPrefix: nodePath,
+      typeLabel: 'bool',
+    ),
+    isUnderline: _requireTypedField<bool>(
+      json,
+      'isUnderline',
+      pathPrefix: nodePath,
+      typeLabel: 'bool',
+    ),
     fontFamily: _decodeOptionalFontFamily(json, pathPrefix: nodePath),
     maxWidth: _decodeOptionalPositiveFiniteDouble(
       json,
@@ -519,7 +586,12 @@ StrokeNodeSnapshot _decodeStrokeNode(
       pathPrefix: nodePath,
     ),
     color: _parseColor(
-      _requireString(json, 'color', pathPrefix: nodePath),
+      _requireTypedField<String>(
+        json,
+        'color',
+        pathPrefix: nodePath,
+        typeLabel: 'string',
+      ),
       path: _pathAt(nodePath, 'color'),
     ),
     hitPadding: base.hitPadding,
@@ -577,7 +649,12 @@ LineNodeSnapshot _decodeLineNode(
       pathPrefix: nodePath,
     ),
     color: _parseColor(
-      _requireString(json, 'color', pathPrefix: nodePath),
+      _requireTypedField<String>(
+        json,
+        'color',
+        pathPrefix: nodePath,
+        typeLabel: 'string',
+      ),
       path: _pathAt(nodePath, 'color'),
     ),
     hitPadding: base.hitPadding,
@@ -627,7 +704,12 @@ PathNodeSnapshot _decodePathNode(
     id: base.id,
     instanceRevision: base.instanceRevision,
     svgPathData: SvgPathDataValue.fromJson(
-      _requireString(json, 'svgPathData', pathPrefix: nodePath),
+      _requireTypedField<String>(
+        json,
+        'svgPathData',
+        pathPrefix: nodePath,
+        typeLabel: 'string',
+      ),
       path: _pathAt(nodePath, 'svgPathData'),
       fieldName: 'svgPathData',
     ).value,
@@ -639,7 +721,12 @@ PathNodeSnapshot _decodePathNode(
       pathPrefix: nodePath,
     ),
     fillRule: _parsePathFillRule(
-      _requireString(json, 'fillRule', pathPrefix: nodePath),
+      _requireTypedField<String>(
+        json,
+        'fillRule',
+        pathPrefix: nodePath,
+        typeLabel: 'string',
+      ),
       pathPrefix: nodePath,
     ),
     hitPadding: base.hitPadding,

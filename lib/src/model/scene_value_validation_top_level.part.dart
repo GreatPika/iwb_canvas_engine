@@ -1,5 +1,38 @@
 part of 'scene_value_validation.dart';
 
+typedef _LayerValidationAccessors<TLayer, TNode> = ({
+  String Function(TLayer layer) layerIdOf,
+  List<TNode> Function(TLayer layer) layerNodesOf,
+  void Function(
+    TNode node, {
+    required String field,
+    required SceneValidationErrorReporter onError,
+  })
+  validateSingleNode,
+  void Function(
+    List<TNode> nodes, {
+    required String field,
+    required SceneValidationErrorReporter onError,
+    required void Function(
+      TNode node, {
+      required String field,
+      required SceneValidationErrorReporter onError,
+    })
+    validateNode,
+  })
+  validateLayerNodes,
+});
+
+typedef _NodeValidationAccessors<TNode> = ({
+  String Function(TNode node) nodeIdOf,
+  void Function(
+    TNode node, {
+    required String field,
+    required SceneValidationErrorReporter onError,
+  })
+  validateNode,
+});
+
 void sceneValidateSnapshotValues(
   SceneSnapshot snapshot, {
   required SceneValidationErrorReporter onError,
@@ -27,7 +60,16 @@ void sceneValidateSnapshotValues(
     onError: onError,
     validateNode: sceneValidateNodeSnapshot,
   );
-  _sceneValidateSnapshotContentLayers(snapshot.layers, onError: onError);
+  _sceneValidateContentLayers<ContentLayerSnapshot, NodeSnapshot>(
+    snapshot.layers,
+    onError: onError,
+    accessors: (
+      layerIdOf: (layer) => layer.id,
+      layerNodesOf: (layer) => layer.nodes,
+      validateSingleNode: sceneValidateNodeSnapshot,
+      validateLayerNodes: _sceneValidateSnapshotLayerNodes,
+    ),
+  );
 }
 
 void sceneValidateSceneValues(
@@ -58,41 +100,16 @@ void sceneValidateSceneValues(
     );
   }
 
-  _sceneValidateRuntimeContentLayers(scene.layers, onError: onError);
-}
-
-void _sceneValidateSnapshotContentLayers(
-  List<ContentLayerSnapshot> layers, {
-  required SceneValidationErrorReporter onError,
-}) {
-  for (var layerIndex = 0; layerIndex < layers.length; layerIndex++) {
-    final layer = layers[layerIndex];
-    final field = 'layers[$layerIndex]';
-    _sceneValidateLayerId(layer.id, field: '$field.id', onError: onError);
-    _sceneValidateSnapshotLayerNodes(
-      layer.nodes,
-      field: field,
-      onError: onError,
-      validateNode: sceneValidateNodeSnapshot,
-    );
-  }
-}
-
-void _sceneValidateRuntimeContentLayers(
-  List<ContentLayer> layers, {
-  required SceneValidationErrorReporter onError,
-}) {
-  for (var layerIndex = 0; layerIndex < layers.length; layerIndex++) {
-    final layer = layers[layerIndex];
-    final field = 'layers[$layerIndex]';
-    _sceneValidateLayerId(layer.id, field: '$field.id', onError: onError);
-    _sceneValidateRuntimeLayerNodes(
-      layer.nodes,
-      field: field,
-      onError: onError,
-      validateNode: sceneValidateNode,
-    );
-  }
+  _sceneValidateContentLayers<ContentLayer, SceneNode>(
+    scene.layers,
+    onError: onError,
+    accessors: (
+      layerIdOf: (layer) => layer.id,
+      layerNodesOf: (layer) => layer.nodes,
+      validateSingleNode: sceneValidateNode,
+      validateLayerNodes: _sceneValidateRuntimeLayerNodes,
+    ),
+  );
 }
 
 void _sceneValidateSnapshotLayerNodes(
@@ -106,12 +123,12 @@ void _sceneValidateSnapshotLayerNodes(
   })
   validateNode,
 }) {
-  for (var nodeIndex = 0; nodeIndex < nodes.length; nodeIndex++) {
-    final node = nodes[nodeIndex];
-    final nodeField = '$field.nodes[$nodeIndex]';
-    _sceneValidateNodeId(node.id, field: '$nodeField.id', onError: onError);
-    validateNode(node, field: nodeField, onError: onError);
-  }
+  _sceneValidateLayerNodes<NodeSnapshot>(
+    nodes,
+    field: field,
+    onError: onError,
+    accessors: (nodeIdOf: (node) => node.id, validateNode: validateNode),
+  );
 }
 
 void _sceneValidateRuntimeLayerNodes(
@@ -125,11 +142,52 @@ void _sceneValidateRuntimeLayerNodes(
   })
   validateNode,
 }) {
+  _sceneValidateLayerNodes<SceneNode>(
+    nodes,
+    field: field,
+    onError: onError,
+    accessors: (nodeIdOf: (node) => node.id, validateNode: validateNode),
+  );
+}
+
+void _sceneValidateContentLayers<TLayer, TNode>(
+  List<TLayer> layers, {
+  required SceneValidationErrorReporter onError,
+  required _LayerValidationAccessors<TLayer, TNode> accessors,
+}) {
+  for (var layerIndex = 0; layerIndex < layers.length; layerIndex++) {
+    final layer = layers[layerIndex];
+    final field = 'layers[$layerIndex]';
+    _sceneValidateLayerId(
+      accessors.layerIdOf(layer),
+      field: '$field.id',
+      onError: onError,
+    );
+    accessors.validateLayerNodes(
+      accessors.layerNodesOf(layer),
+      field: field,
+      onError: onError,
+      validateNode: (node, {required field, required onError}) =>
+          accessors.validateSingleNode(node, field: field, onError: onError),
+    );
+  }
+}
+
+void _sceneValidateLayerNodes<TNode>(
+  List<TNode> nodes, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+  required _NodeValidationAccessors<TNode> accessors,
+}) {
   for (var nodeIndex = 0; nodeIndex < nodes.length; nodeIndex++) {
     final node = nodes[nodeIndex];
     final nodeField = '$field.nodes[$nodeIndex]';
-    _sceneValidateNodeId(node.id, field: '$nodeField.id', onError: onError);
-    validateNode(node, field: nodeField, onError: onError);
+    _sceneValidateNodeId(
+      accessors.nodeIdOf(node),
+      field: '$nodeField.id',
+      onError: onError,
+    );
+    accessors.validateNode(node, field: nodeField, onError: onError);
   }
 }
 
