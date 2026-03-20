@@ -2,20 +2,11 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 
-import 'owned_collections.dart';
+import 'internal/node_boundary_schema.dart';
 import 'patch_field.dart';
 import 'path_fill_rule.dart';
 import 'snapshot.dart' hide PathFillRule;
 import 'transform2d.dart';
-import 'validated/finite_offset_value.dart';
-import 'validated/font_family_value.dart';
-import 'validated/image_id_value.dart';
-import 'validated/node_id_value.dart';
-import 'validated/non_negative_finite_double_value.dart';
-import 'validated/opacity_value.dart';
-import 'validated/positive_finite_double_value.dart';
-import 'validated/svg_path_data_value.dart';
-import 'validated/text_content_value.dart';
 
 part 'internal/node_patch_fast_path.part.dart';
 
@@ -31,31 +22,17 @@ class CommonNodePatch {
     PatchField<bool> isDeletable = const PatchField<bool>.absent(),
     PatchField<bool> isTransformable = const PatchField<bool>.absent(),
   }) {
-    return CommonNodePatch._internal(
-      transform: _validateNonNullablePatchField(
-        transform,
-        name: 'transform',
-        transformValue: (value) =>
-            _validateFiniteTransform2D(value, name: 'transform'),
-      ),
-      opacity: _validateNonNullablePatchField(
-        opacity,
-        name: 'opacity',
-        transformValue: (value) =>
-            OpacityValue.of(value, name: 'opacity').value,
-      ),
-      hitPadding: _validateNonNullablePatchField(
-        hitPadding,
-        name: 'hitPadding',
-        transformValue: (value) =>
-            NonNegativeFiniteDoubleValue.of(value, name: 'hitPadding').value,
-      ),
+    final fields = NodeBoundarySchema.validatePatchCommon((
+      transform: transform,
+      opacity: opacity,
+      hitPadding: hitPadding,
       isVisible: isVisible,
       isSelectable: isSelectable,
       isLocked: isLocked,
       isDeletable: isDeletable,
       isTransformable: isTransformable,
-    );
+    ));
+    return _commonNodePatchFromSchema(fields);
   }
 
   const CommonNodePatch._internal({
@@ -95,26 +72,15 @@ class ImageNodePatch extends NodePatch {
     PatchField<Size> size = const PatchField<Size>.absent(),
     PatchField<Size?> naturalSize = const PatchField<Size?>.absent(),
   }) {
-    return ImageNodePatch._internal(
-      id: NodeIdValue.of(id, name: 'id').value,
+    final fields = NodeBoundarySchema.validateImagePatch((
+      imageId: imageId,
+      size: size,
+      naturalSize: naturalSize,
+    ));
+    return _imageNodePatchFromSchema(
+      id: NodeBoundarySchema.validateRequiredNodeId(id),
       common: common ?? CommonNodePatch(),
-      imageId: _validateNonNullablePatchField(
-        imageId,
-        name: 'imageId',
-        transformValue: (value) =>
-            ImageIdValue.of(value, name: 'imageId').value,
-      ),
-      size: _validateNonNullablePatchField(
-        size,
-        name: 'size',
-        transformValue: (value) =>
-            _validateNonNegativeSize(value, name: 'size'),
-      ),
-      naturalSize: _validateNullablePatchField(
-        naturalSize,
-        transformValue: (value) =>
-            _validateNonNegativeSize(value, name: 'naturalSize'),
-      ),
+      fields: fields,
     );
   }
 
@@ -146,41 +112,22 @@ class TextNodePatch extends NodePatch {
     PatchField<double?> maxWidth = const PatchField<double?>.absent(),
     PatchField<double?> lineHeight = const PatchField<double?>.absent(),
   }) {
-    return TextNodePatch._internal(
-      id: NodeIdValue.of(id, name: 'id').value,
-      common: common ?? CommonNodePatch(),
-      text: _validateNonNullablePatchField(
-        text,
-        name: 'text',
-        transformValue: (value) =>
-            TextContentValue.of(value, name: 'text').value,
-      ),
-      fontSize: _validateNonNullablePatchField(
-        fontSize,
-        name: 'fontSize',
-        transformValue: (value) =>
-            PositiveFiniteDoubleValue.of(value, name: 'fontSize').value,
-      ),
+    final fields = NodeBoundarySchema.validateTextPatch((
+      text: text,
+      fontSize: fontSize,
       color: color,
       align: align,
       isBold: isBold,
       isItalic: isItalic,
       isUnderline: isUnderline,
-      fontFamily: _validateNullablePatchField(
-        fontFamily,
-        transformValue: (value) =>
-            FontFamilyValue.of(value, name: 'fontFamily').value,
-      ),
-      maxWidth: _validateNullablePatchField(
-        maxWidth,
-        transformValue: (value) =>
-            PositiveFiniteDoubleValue.of(value, name: 'maxWidth').value,
-      ),
-      lineHeight: _validateNullablePatchField(
-        lineHeight,
-        transformValue: (value) =>
-            PositiveFiniteDoubleValue.of(value, name: 'lineHeight').value,
-      ),
+      fontFamily: fontFamily,
+      maxWidth: maxWidth,
+      lineHeight: lineHeight,
+    ));
+    return _textNodePatchFromSchema(
+      id: NodeBoundarySchema.validateRequiredNodeId(id),
+      common: common ?? CommonNodePatch(),
+      fields: fields,
     );
   }
 
@@ -219,22 +166,15 @@ class StrokeNodePatch extends NodePatch {
     PatchField<double> thickness = const PatchField<double>.absent(),
     PatchField<Color> color = const PatchField<Color>.absent(),
   }) {
-    return StrokeNodePatch._internal(
-      id: NodeIdValue.of(id, name: 'id').value,
-      common: common ?? CommonNodePatch(),
-      points: _validateNonNullablePatchField(
-        points,
-        name: 'points',
-        transformValue: (value) =>
-            _validateFiniteOffsetList(value, name: 'points'),
-      ),
-      thickness: _validateNonNullablePatchField(
-        thickness,
-        name: 'thickness',
-        transformValue: (value) =>
-            PositiveFiniteDoubleValue.of(value, name: 'thickness').value,
-      ),
+    final fields = NodeBoundarySchema.validateStrokePatch((
+      points: points,
+      thickness: thickness,
       color: color,
+    ));
+    return _strokeNodePatchFromSchema(
+      id: NodeBoundarySchema.validateRequiredNodeId(id),
+      common: common ?? CommonNodePatch(),
+      fields: fields,
     );
   }
 
@@ -244,7 +184,7 @@ class StrokeNodePatch extends NodePatch {
     PatchField<List<Offset>> points = const PatchField<List<Offset>>.absent(),
     this.thickness = const PatchField<double>.absent(),
     this.color = const PatchField<Color>.absent(),
-  }) : points = _snapshotOffsetListPatchField(points),
+  }) : points = snapshotOffsetListPatchField(points),
        super._internal();
 
   final PatchField<List<Offset>> points;
@@ -261,28 +201,16 @@ class LineNodePatch extends NodePatch {
     PatchField<double> thickness = const PatchField<double>.absent(),
     PatchField<Color> color = const PatchField<Color>.absent(),
   }) {
-    return LineNodePatch._internal(
-      id: NodeIdValue.of(id, name: 'id').value,
-      common: common ?? CommonNodePatch(),
-      start: _validateNonNullablePatchField(
-        start,
-        name: 'start',
-        transformValue: (value) =>
-            FiniteOffsetValue.of(value, name: 'start').value,
-      ),
-      end: _validateNonNullablePatchField(
-        end,
-        name: 'end',
-        transformValue: (value) =>
-            FiniteOffsetValue.of(value, name: 'end').value,
-      ),
-      thickness: _validateNonNullablePatchField(
-        thickness,
-        name: 'thickness',
-        transformValue: (value) =>
-            PositiveFiniteDoubleValue.of(value, name: 'thickness').value,
-      ),
+    final fields = NodeBoundarySchema.validateLinePatch((
+      start: start,
+      end: end,
+      thickness: thickness,
       color: color,
+    ));
+    return _lineNodePatchFromSchema(
+      id: NodeBoundarySchema.validateRequiredNodeId(id),
+      common: common ?? CommonNodePatch(),
+      fields: fields,
     );
   }
 
@@ -310,23 +238,16 @@ class RectNodePatch extends NodePatch {
     PatchField<Color?> strokeColor = const PatchField<Color?>.absent(),
     PatchField<double> strokeWidth = const PatchField<double>.absent(),
   }) {
-    return RectNodePatch._internal(
-      id: NodeIdValue.of(id, name: 'id').value,
-      common: common ?? CommonNodePatch(),
-      size: _validateNonNullablePatchField(
-        size,
-        name: 'size',
-        transformValue: (value) =>
-            _validateNonNegativeSize(value, name: 'size'),
-      ),
+    final fields = NodeBoundarySchema.validateRectPatch((
+      size: size,
       fillColor: fillColor,
       strokeColor: strokeColor,
-      strokeWidth: _validateNonNullablePatchField(
-        strokeWidth,
-        name: 'strokeWidth',
-        transformValue: (value) =>
-            NonNegativeFiniteDoubleValue.of(value, name: 'strokeWidth').value,
-      ),
+      strokeWidth: strokeWidth,
+    ));
+    return _rectNodePatchFromSchema(
+      id: NodeBoundarySchema.validateRequiredNodeId(id),
+      common: common ?? CommonNodePatch(),
+      fields: fields,
     );
   }
 
@@ -355,24 +276,17 @@ class PathNodePatch extends NodePatch {
     PatchField<double> strokeWidth = const PatchField<double>.absent(),
     PatchField<PathFillRule> fillRule = const PatchField<PathFillRule>.absent(),
   }) {
-    return PathNodePatch._internal(
-      id: NodeIdValue.of(id, name: 'id').value,
-      common: common ?? CommonNodePatch(),
-      svgPathData: _validateNonNullablePatchField(
-        svgPathData,
-        name: 'svgPathData',
-        transformValue: (value) =>
-            SvgPathDataValue.of(value, name: 'svgPathData').value,
-      ),
+    final fields = NodeBoundarySchema.validatePathPatch((
+      svgPathData: svgPathData,
       fillColor: fillColor,
       strokeColor: strokeColor,
-      strokeWidth: _validateNonNullablePatchField(
-        strokeWidth,
-        name: 'strokeWidth',
-        transformValue: (value) =>
-            NonNegativeFiniteDoubleValue.of(value, name: 'strokeWidth').value,
-      ),
+      strokeWidth: strokeWidth,
       fillRule: fillRule,
+    ));
+    return _pathNodePatchFromSchema(
+      id: NodeBoundarySchema.validateRequiredNodeId(id),
+      common: common ?? CommonNodePatch(),
+      fields: fields,
     );
   }
 
@@ -393,86 +307,110 @@ class PathNodePatch extends NodePatch {
   final PatchField<PathFillRule> fillRule;
 }
 
-PatchField<T> _validateNonNullablePatchField<T>(
-  PatchField<T> patch, {
-  required String name,
-  required T Function(T value) transformValue,
-}) {
-  if (patch.isAbsent) return patch;
-  if (patch.isNullValue) {
-    throw ArgumentError.value(
-      null,
-      name,
-      'PatchField.nullValue() is invalid for non-nullable field.',
-    );
-  }
-  final value = transformValue(patch.value);
-  return PatchField<T>.value(value);
-}
-
-PatchField<T?> _validateNullablePatchField<T>(
-  PatchField<T?> patch, {
-  required T Function(T value) transformValue,
-}) {
-  if (patch.isAbsent || patch.isNullValue) return patch;
-  final rawValue = patch.value;
-  if (rawValue == null) {
-    return PatchField<T?>.value(null);
-  }
-  final value = transformValue(rawValue);
-  return PatchField<T?>.value(value);
-}
-
-Transform2D _validateFiniteTransform2D(
-  Transform2D value, {
-  required String name,
-}) {
-  _requireFiniteDouble(value.a, name: '$name.a');
-  _requireFiniteDouble(value.b, name: '$name.b');
-  _requireFiniteDouble(value.c, name: '$name.c');
-  _requireFiniteDouble(value.d, name: '$name.d');
-  _requireFiniteDouble(value.tx, name: '$name.tx');
-  _requireFiniteDouble(value.ty, name: '$name.ty');
-  if (value.invert() == null) {
-    throw ArgumentError.value(
-      value.toJsonMap(),
-      name,
-      'Must be invertible (non-singular).',
-    );
-  }
-  return value;
-}
-
-void _requireFiniteDouble(double value, {required String name}) {
-  if (value.isFinite) return;
-  throw ArgumentError.value(value, name, 'Must be finite.');
-}
-
-Size _validateNonNegativeSize(Size value, {required String name}) {
-  return Size(
-    NonNegativeFiniteDoubleValue.of(value.width, name: '$name.width').value,
-    NonNegativeFiniteDoubleValue.of(value.height, name: '$name.height').value,
+CommonNodePatch _commonNodePatchFromSchema(NodePatchCommonSchemaFields fields) {
+  return CommonNodePatch._internal(
+    transform: fields.transform,
+    opacity: fields.opacity,
+    hitPadding: fields.hitPadding,
+    isVisible: fields.isVisible,
+    isSelectable: fields.isSelectable,
+    isLocked: fields.isLocked,
+    isDeletable: fields.isDeletable,
+    isTransformable: fields.isTransformable,
   );
 }
 
-OwnedList<Offset> _validateFiniteOffsetList(
-  List<Offset> values, {
-  required String name,
+ImageNodePatch _imageNodePatchFromSchema({
+  required NodeId id,
+  required CommonNodePatch common,
+  required ImageNodePatchSchemaFields fields,
 }) {
-  return OwnedList<Offset>.of(
-    List<Offset>.generate(
-      values.length,
-      (index) =>
-          FiniteOffsetValue.of(values[index], name: '$name[$index]').value,
-      growable: false,
-    ),
+  return ImageNodePatch._internal(
+    id: id,
+    common: common,
+    imageId: fields.imageId,
+    size: fields.size,
+    naturalSize: fields.naturalSize,
   );
 }
 
-PatchField<List<Offset>> _snapshotOffsetListPatchField(
-  PatchField<List<Offset>> patch,
-) {
-  if (patch.isAbsent) return patch;
-  final points = patch.value;
-  return PatchField<List<Offset>>.value(OwnedList<Offset>.of(points));
+TextNodePatch _textNodePatchFromSchema({
+  required NodeId id,
+  required CommonNodePatch common,
+  required TextNodePatchSchemaFields fields,
+}) {
+  return TextNodePatch._internal(
+    id: id,
+    common: common,
+    text: fields.text,
+    fontSize: fields.fontSize,
+    color: fields.color,
+    align: fields.align,
+    isBold: fields.isBold,
+    isItalic: fields.isItalic,
+    isUnderline: fields.isUnderline,
+    fontFamily: fields.fontFamily,
+    maxWidth: fields.maxWidth,
+    lineHeight: fields.lineHeight,
+  );
+}
+
+StrokeNodePatch _strokeNodePatchFromSchema({
+  required NodeId id,
+  required CommonNodePatch common,
+  required StrokeNodePatchSchemaFields fields,
+}) {
+  return StrokeNodePatch._internal(
+    id: id,
+    common: common,
+    points: fields.points,
+    thickness: fields.thickness,
+    color: fields.color,
+  );
+}
+
+LineNodePatch _lineNodePatchFromSchema({
+  required NodeId id,
+  required CommonNodePatch common,
+  required LineNodePatchSchemaFields fields,
+}) {
+  return LineNodePatch._internal(
+    id: id,
+    common: common,
+    start: fields.start,
+    end: fields.end,
+    thickness: fields.thickness,
+    color: fields.color,
+  );
+}
+
+RectNodePatch _rectNodePatchFromSchema({
+  required NodeId id,
+  required CommonNodePatch common,
+  required RectNodePatchSchemaFields fields,
+}) {
+  return RectNodePatch._internal(
+    id: id,
+    common: common,
+    size: fields.size,
+    fillColor: fields.fillColor,
+    strokeColor: fields.strokeColor,
+    strokeWidth: fields.strokeWidth,
+  );
+}
+
+PathNodePatch _pathNodePatchFromSchema({
+  required NodeId id,
+  required CommonNodePatch common,
+  required PathNodePatchSchemaFields fields,
+}) {
+  return PathNodePatch._internal(
+    id: id,
+    common: common,
+    svgPathData: fields.svgPathData,
+    fillColor: fields.fillColor,
+    strokeColor: fields.strokeColor,
+    strokeWidth: fields.strokeWidth,
+    fillRule: fields.fillRule,
+  );
 }

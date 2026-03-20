@@ -2,20 +2,11 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 
+import 'internal/node_boundary_schema.dart';
 import 'owned_collections.dart';
 import 'path_fill_rule.dart';
 import 'snapshot.dart' hide PathFillRule;
 import 'transform2d.dart';
-import 'validated/finite_offset_value.dart';
-import 'validated/font_family_value.dart';
-import 'validated/image_id_value.dart';
-import 'validated/node_id_value.dart';
-import 'validated/non_negative_finite_double_value.dart';
-import 'validated/opacity_value.dart';
-import 'validated/positive_finite_double_value.dart';
-import 'validated/svg_path_data_value.dart';
-import 'validated/text_content_value.dart';
-import 'validated/validated_value_support.dart';
 
 part 'internal/node_spec_fast_path.part.dart';
 
@@ -59,7 +50,7 @@ class ImageNodeSpec extends NodeSpec {
     bool isDeletable = true,
     bool isTransformable = true,
   }) {
-    final common = _validateNodeSpecCommonFields(
+    final common = NodeBoundarySchema.validateSpecCommon((
       id: id,
       transform: transform,
       opacity: opacity,
@@ -69,14 +60,17 @@ class ImageNodeSpec extends NodeSpec {
       isLocked: isLocked,
       isDeletable: isDeletable,
       isTransformable: isTransformable,
-    );
+    ));
+    final fields = NodeBoundarySchema.validateImageFields((
+      imageId: imageId,
+      size: size,
+      naturalSize: naturalSize,
+    ));
     return ImageNodeSpec._internal(
       id: common.id,
-      imageId: ImageIdValue.of(imageId, name: 'imageId').value,
-      size: _validateNonNegativeSize(size, name: 'size'),
-      naturalSize: naturalSize == null
-          ? null
-          : _validateNonNegativeSize(naturalSize, name: 'naturalSize'),
+      imageId: fields.imageId,
+      size: fields.size,
+      naturalSize: fields.naturalSize,
       transform: common.transform,
       opacity: common.opacity,
       hitPadding: common.hitPadding,
@@ -130,7 +124,7 @@ class TextNodeSpec extends NodeSpec {
     bool isDeletable = true,
     bool isTransformable = true,
   }) {
-    final common = _validateNodeSpecCommonFields(
+    final common = NodeBoundarySchema.validateSpecCommon((
       id: id,
       transform: transform,
       opacity: opacity,
@@ -140,25 +134,31 @@ class TextNodeSpec extends NodeSpec {
       isLocked: isLocked,
       isDeletable: isDeletable,
       isTransformable: isTransformable,
-    );
-    return TextNodeSpec._internal(
-      id: common.id,
-      text: TextContentValue.of(text, name: 'text').value,
-      fontSize: PositiveFiniteDoubleValue.of(fontSize, name: 'fontSize').value,
+    ));
+    final fields = NodeBoundarySchema.validateTextSpecFields((
+      text: text,
+      fontSize: fontSize,
       color: color,
       align: align,
       isBold: isBold,
       isItalic: isItalic,
       isUnderline: isUnderline,
-      fontFamily: fontFamily == null
-          ? null
-          : FontFamilyValue.of(fontFamily, name: 'fontFamily').value,
-      maxWidth: maxWidth == null
-          ? null
-          : PositiveFiniteDoubleValue.of(maxWidth, name: 'maxWidth').value,
-      lineHeight: lineHeight == null
-          ? null
-          : PositiveFiniteDoubleValue.of(lineHeight, name: 'lineHeight').value,
+      fontFamily: fontFamily,
+      maxWidth: maxWidth,
+      lineHeight: lineHeight,
+    ));
+    return TextNodeSpec._internal(
+      id: common.id,
+      text: fields.text,
+      fontSize: fields.fontSize,
+      color: fields.color,
+      align: fields.align,
+      isBold: fields.isBold,
+      isItalic: fields.isItalic,
+      isUnderline: fields.isUnderline,
+      fontFamily: fields.fontFamily,
+      maxWidth: fields.maxWidth,
+      lineHeight: fields.lineHeight,
       transform: common.transform,
       opacity: common.opacity,
       hitPadding: common.hitPadding,
@@ -219,7 +219,7 @@ class StrokeNodeSpec extends NodeSpec {
     bool isDeletable = true,
     bool isTransformable = true,
   }) {
-    final common = _validateNodeSpecCommonFields(
+    final common = NodeBoundarySchema.validateSpecCommon((
       id: id,
       transform: transform,
       opacity: opacity,
@@ -229,15 +229,17 @@ class StrokeNodeSpec extends NodeSpec {
       isLocked: isLocked,
       isDeletable: isDeletable,
       isTransformable: isTransformable,
-    );
+    ));
+    final fields = NodeBoundarySchema.validateStrokeSpecFields((
+      points: points,
+      thickness: thickness,
+      color: color,
+    ));
     return StrokeNodeSpec._internal(
       id: common.id,
-      points: _validateFiniteOffsetList(points, name: 'points'),
-      thickness: PositiveFiniteDoubleValue.of(
-        thickness,
-        name: 'thickness',
-      ).value,
-      color: color,
+      points: fields.points,
+      thickness: fields.thickness,
+      color: fields.color,
       transform: common.transform,
       opacity: common.opacity,
       hitPadding: common.hitPadding,
@@ -287,7 +289,7 @@ class LineNodeSpec extends NodeSpec {
     bool isDeletable = true,
     bool isTransformable = true,
   }) {
-    final common = _validateNodeSpecCommonFields(
+    final common = NodeBoundarySchema.validateSpecCommon((
       id: id,
       transform: transform,
       opacity: opacity,
@@ -297,16 +299,19 @@ class LineNodeSpec extends NodeSpec {
       isLocked: isLocked,
       isDeletable: isDeletable,
       isTransformable: isTransformable,
-    );
+    ));
+    final fields = NodeBoundarySchema.validateLineFields((
+      start: start,
+      end: end,
+      thickness: thickness,
+      color: color,
+    ));
     return LineNodeSpec._internal(
       id: common.id,
-      start: FiniteOffsetValue.of(start, name: 'start').value,
-      end: FiniteOffsetValue.of(end, name: 'end').value,
-      thickness: PositiveFiniteDoubleValue.of(
-        thickness,
-        name: 'thickness',
-      ).value,
-      color: color,
+      start: fields.start,
+      end: fields.end,
+      thickness: fields.thickness,
+      color: fields.color,
       transform: common.transform,
       opacity: common.opacity,
       hitPadding: common.hitPadding,
@@ -356,7 +361,7 @@ class RectNodeSpec extends NodeSpec {
     bool isDeletable = true,
     bool isTransformable = true,
   }) {
-    final common = _validateNodeSpecCommonFields(
+    final common = NodeBoundarySchema.validateSpecCommon((
       id: id,
       transform: transform,
       opacity: opacity,
@@ -366,16 +371,19 @@ class RectNodeSpec extends NodeSpec {
       isLocked: isLocked,
       isDeletable: isDeletable,
       isTransformable: isTransformable,
-    );
-    return RectNodeSpec._internal(
-      id: common.id,
-      size: _validateNonNegativeSize(size, name: 'size'),
+    ));
+    final fields = NodeBoundarySchema.validateRectFields((
+      size: size,
       fillColor: fillColor,
       strokeColor: strokeColor,
-      strokeWidth: NonNegativeFiniteDoubleValue.of(
-        strokeWidth,
-        name: 'strokeWidth',
-      ).value,
+      strokeWidth: strokeWidth,
+    ));
+    return RectNodeSpec._internal(
+      id: common.id,
+      size: fields.size,
+      fillColor: fields.fillColor,
+      strokeColor: fields.strokeColor,
+      strokeWidth: fields.strokeWidth,
       transform: common.transform,
       opacity: common.opacity,
       hitPadding: common.hitPadding,
@@ -426,7 +434,7 @@ class PathNodeSpec extends NodeSpec {
     bool isDeletable = true,
     bool isTransformable = true,
   }) {
-    final common = _validateNodeSpecCommonFields(
+    final common = NodeBoundarySchema.validateSpecCommon((
       id: id,
       transform: transform,
       opacity: opacity,
@@ -436,17 +444,21 @@ class PathNodeSpec extends NodeSpec {
       isLocked: isLocked,
       isDeletable: isDeletable,
       isTransformable: isTransformable,
-    );
-    return PathNodeSpec._internal(
-      id: common.id,
-      svgPathData: SvgPathDataValue.of(svgPathData, name: 'svgPathData').value,
+    ));
+    final fields = NodeBoundarySchema.validatePathFields((
+      svgPathData: svgPathData,
       fillColor: fillColor,
       strokeColor: strokeColor,
-      strokeWidth: NonNegativeFiniteDoubleValue.of(
-        strokeWidth,
-        name: 'strokeWidth',
-      ).value,
+      strokeWidth: strokeWidth,
       fillRule: fillRule,
+    ));
+    return PathNodeSpec._internal(
+      id: common.id,
+      svgPathData: fields.svgPathData,
+      fillColor: fields.fillColor,
+      strokeColor: fields.strokeColor,
+      strokeWidth: fields.strokeWidth,
+      fillRule: fields.fillRule,
       transform: common.transform,
       opacity: common.opacity,
       hitPadding: common.hitPadding,
@@ -480,96 +492,4 @@ class PathNodeSpec extends NodeSpec {
   final Color? strokeColor;
   final double strokeWidth;
   final PathFillRule fillRule;
-}
-
-class _ValidatedNodeSpecCommonFields {
-  const _ValidatedNodeSpecCommonFields({
-    required this.id,
-    required this.transform,
-    required this.opacity,
-    required this.hitPadding,
-    required this.isVisible,
-    required this.isSelectable,
-    required this.isLocked,
-    required this.isDeletable,
-    required this.isTransformable,
-  });
-
-  final NodeId? id;
-  final Transform2D transform;
-  final double opacity;
-  final double hitPadding;
-  final bool isVisible;
-  final bool isSelectable;
-  final bool isLocked;
-  final bool isDeletable;
-  final bool isTransformable;
-}
-
-_ValidatedNodeSpecCommonFields _validateNodeSpecCommonFields({
-  required NodeId? id,
-  required Transform2D transform,
-  required double opacity,
-  required double hitPadding,
-  required bool isVisible,
-  required bool isSelectable,
-  required bool isLocked,
-  required bool isDeletable,
-  required bool isTransformable,
-}) {
-  return _ValidatedNodeSpecCommonFields(
-    id: id == null ? null : NodeIdValue.of(id, name: 'id').value,
-    transform: _validateFiniteTransform2D(transform, name: 'transform'),
-    opacity: OpacityValue.of(opacity, name: 'opacity').value,
-    hitPadding: NonNegativeFiniteDoubleValue.of(
-      hitPadding,
-      name: 'hitPadding',
-    ).value,
-    isVisible: isVisible,
-    isSelectable: isSelectable,
-    isLocked: isLocked,
-    isDeletable: isDeletable,
-    isTransformable: isTransformable,
-  );
-}
-
-Transform2D _validateFiniteTransform2D(
-  Transform2D value, {
-  required String name,
-}) {
-  validatedRequireFiniteDouble(value.a, name: '$name.a');
-  validatedRequireFiniteDouble(value.b, name: '$name.b');
-  validatedRequireFiniteDouble(value.c, name: '$name.c');
-  validatedRequireFiniteDouble(value.d, name: '$name.d');
-  validatedRequireFiniteDouble(value.tx, name: '$name.tx');
-  validatedRequireFiniteDouble(value.ty, name: '$name.ty');
-  if (value.invert() == null) {
-    throw ArgumentError.value(
-      value.toJsonMap(),
-      name,
-      'Must be invertible (non-singular).',
-    );
-  }
-  return value;
-}
-
-Size _validateNonNegativeSize(Size value, {required String name}) {
-  return Size(
-    NonNegativeFiniteDoubleValue.of(value.width, name: '$name.width').value,
-    NonNegativeFiniteDoubleValue.of(value.height, name: '$name.height').value,
-  );
-}
-
-OwnedList<Offset> _validateFiniteOffsetList(
-  List<Offset> values, {
-  required String name,
-}) {
-  return OwnedList<Offset>.of(
-    List<Offset>.generate(
-      values.length,
-      (index) =>
-          FiniteOffsetValue.of(values[index], name: '$name[$index]').value,
-      growable: false,
-    ),
-  );
 }

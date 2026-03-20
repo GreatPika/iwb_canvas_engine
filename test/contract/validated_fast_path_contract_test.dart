@@ -104,6 +104,15 @@ void main() {
     expect(path.fillRule.value, PathFillRule.evenOdd);
   });
 
+  test('validated image patch fast-path builds default common patch', () {
+    final image = imageNodePatchFromValidated(id: 'img-default-common');
+
+    expect(image.common.transform.isAbsent, isTrue);
+    expect(image.common.opacity.isAbsent, isTrue);
+    expect(image.common.hitPadding.isAbsent, isTrue);
+    expect(image.common.isVisible.isAbsent, isTrue);
+  });
+
   test(
     'validated spec and snapshot fast-paths snapshot stroke point ownership',
     () {

@@ -11,15 +11,17 @@ CommonNodePatch commonNodePatchFromValidated({
   PatchField<bool> isDeletable = const PatchField<bool>.absent(),
   PatchField<bool> isTransformable = const PatchField<bool>.absent(),
 }) {
-  return CommonNodePatch._internal(
-    transform: transform,
-    opacity: opacity,
-    hitPadding: hitPadding,
-    isVisible: isVisible,
-    isSelectable: isSelectable,
-    isLocked: isLocked,
-    isDeletable: isDeletable,
-    isTransformable: isTransformable,
+  return _commonNodePatchFromSchema(
+    NodeBoundarySchema.patchCommonFromValidated((
+      transform: transform,
+      opacity: opacity,
+      hitPadding: hitPadding,
+      isVisible: isVisible,
+      isSelectable: isSelectable,
+      isLocked: isLocked,
+      isDeletable: isDeletable,
+      isTransformable: isTransformable,
+    )),
   );
 }
 
@@ -31,12 +33,14 @@ ImageNodePatch imageNodePatchFromValidated({
   PatchField<Size> size = const PatchField<Size>.absent(),
   PatchField<Size?> naturalSize = const PatchField<Size?>.absent(),
 }) {
-  return ImageNodePatch._internal(
+  return _imageNodePatchFromSchema(
     id: id,
-    common: common ?? const CommonNodePatch._internal(),
-    imageId: imageId,
-    size: size,
-    naturalSize: naturalSize,
+    common: common ?? commonNodePatchFromValidated(),
+    fields: NodeBoundarySchema.imagePatchFromValidated((
+      imageId: imageId,
+      size: size,
+      naturalSize: naturalSize,
+    )),
   );
 }
 
@@ -55,19 +59,21 @@ TextNodePatch textNodePatchFromValidated({
   PatchField<double?> maxWidth = const PatchField<double?>.absent(),
   PatchField<double?> lineHeight = const PatchField<double?>.absent(),
 }) {
-  return TextNodePatch._internal(
+  return _textNodePatchFromSchema(
     id: id,
-    common: common ?? const CommonNodePatch._internal(),
-    text: text,
-    fontSize: fontSize,
-    color: color,
-    align: align,
-    isBold: isBold,
-    isItalic: isItalic,
-    isUnderline: isUnderline,
-    fontFamily: fontFamily,
-    maxWidth: maxWidth,
-    lineHeight: lineHeight,
+    common: common ?? commonNodePatchFromValidated(),
+    fields: NodeBoundarySchema.textPatchFromValidated((
+      text: text,
+      fontSize: fontSize,
+      color: color,
+      align: align,
+      isBold: isBold,
+      isItalic: isItalic,
+      isUnderline: isUnderline,
+      fontFamily: fontFamily,
+      maxWidth: maxWidth,
+      lineHeight: lineHeight,
+    )),
   );
 }
 
@@ -79,14 +85,14 @@ StrokeNodePatch strokeNodePatchFromValidated({
   PatchField<double> thickness = const PatchField<double>.absent(),
   PatchField<Color> color = const PatchField<Color>.absent(),
 }) {
-  // Fast paths skip primitive validation but still capture immutable ownership
-  // for collection payloads so they match public boundary semantics.
-  return StrokeNodePatch._internal(
+  return _strokeNodePatchFromSchema(
     id: id,
-    common: common ?? const CommonNodePatch._internal(),
-    points: _snapshotOffsetListPatchField(points),
-    thickness: thickness,
-    color: color,
+    common: common ?? commonNodePatchFromValidated(),
+    fields: NodeBoundarySchema.strokePatchFromValidated((
+      points: points,
+      thickness: thickness,
+      color: color,
+    )),
   );
 }
 
@@ -99,13 +105,15 @@ LineNodePatch lineNodePatchFromValidated({
   PatchField<double> thickness = const PatchField<double>.absent(),
   PatchField<Color> color = const PatchField<Color>.absent(),
 }) {
-  return LineNodePatch._internal(
+  return _lineNodePatchFromSchema(
     id: id,
-    common: common ?? const CommonNodePatch._internal(),
-    start: start,
-    end: end,
-    thickness: thickness,
-    color: color,
+    common: common ?? commonNodePatchFromValidated(),
+    fields: NodeBoundarySchema.linePatchFromValidated((
+      start: start,
+      end: end,
+      thickness: thickness,
+      color: color,
+    )),
   );
 }
 
@@ -118,13 +126,15 @@ RectNodePatch rectNodePatchFromValidated({
   PatchField<Color?> strokeColor = const PatchField<Color?>.absent(),
   PatchField<double> strokeWidth = const PatchField<double>.absent(),
 }) {
-  return RectNodePatch._internal(
+  return _rectNodePatchFromSchema(
     id: id,
-    common: common ?? const CommonNodePatch._internal(),
-    size: size,
-    fillColor: fillColor,
-    strokeColor: strokeColor,
-    strokeWidth: strokeWidth,
+    common: common ?? commonNodePatchFromValidated(),
+    fields: NodeBoundarySchema.rectPatchFromValidated((
+      size: size,
+      fillColor: fillColor,
+      strokeColor: strokeColor,
+      strokeWidth: strokeWidth,
+    )),
   );
 }
 
@@ -138,13 +148,15 @@ PathNodePatch pathNodePatchFromValidated({
   PatchField<double> strokeWidth = const PatchField<double>.absent(),
   PatchField<PathFillRule> fillRule = const PatchField<PathFillRule>.absent(),
 }) {
-  return PathNodePatch._internal(
+  return _pathNodePatchFromSchema(
     id: id,
-    common: common ?? const CommonNodePatch._internal(),
-    svgPathData: svgPathData,
-    fillColor: fillColor,
-    strokeColor: strokeColor,
-    strokeWidth: strokeWidth,
-    fillRule: fillRule,
+    common: common ?? commonNodePatchFromValidated(),
+    fields: NodeBoundarySchema.pathPatchFromValidated((
+      svgPathData: svgPathData,
+      fillColor: fillColor,
+      strokeColor: strokeColor,
+      strokeWidth: strokeWidth,
+      fillRule: fillRule,
+    )),
   );
 }

@@ -83,12 +83,9 @@ ImageNodeSnapshot imageNodeSnapshotFromValidated({
   bool isDeletable = true,
   bool isTransformable = true,
 }) {
-  return ImageNodeSnapshot._internal(
+  final common = NodeBoundarySchema.snapshotCommonFromValidated((
     id: id,
     instanceRevision: instanceRevision,
-    imageId: imageId,
-    size: size,
-    naturalSize: naturalSize,
     transform: transform,
     opacity: opacity,
     hitPadding: hitPadding,
@@ -97,6 +94,26 @@ ImageNodeSnapshot imageNodeSnapshotFromValidated({
     isLocked: isLocked,
     isDeletable: isDeletable,
     isTransformable: isTransformable,
+  ));
+  final fields = NodeBoundarySchema.imageFieldsFromValidated((
+    imageId: imageId,
+    size: size,
+    naturalSize: naturalSize,
+  ));
+  return ImageNodeSnapshot._internal(
+    id: common.id,
+    instanceRevision: common.instanceRevision,
+    imageId: fields.imageId,
+    size: fields.size,
+    naturalSize: fields.naturalSize,
+    transform: common.transform,
+    opacity: common.opacity,
+    hitPadding: common.hitPadding,
+    isVisible: common.isVisible,
+    isSelectable: common.isSelectable,
+    isLocked: common.isLocked,
+    isDeletable: common.isDeletable,
+    isTransformable: common.isTransformable,
   );
 }
 
@@ -124,9 +141,19 @@ TextNodeSnapshot textNodeSnapshotFromValidated({
   bool isDeletable = true,
   bool isTransformable = true,
 }) {
-  return TextNodeSnapshot._internal(
+  final common = NodeBoundarySchema.snapshotCommonFromValidated((
     id: id,
     instanceRevision: instanceRevision,
+    transform: transform,
+    opacity: opacity,
+    hitPadding: hitPadding,
+    isVisible: isVisible,
+    isSelectable: isSelectable,
+    isLocked: isLocked,
+    isDeletable: isDeletable,
+    isTransformable: isTransformable,
+  ));
+  final fields = NodeBoundarySchema.textSnapshotFieldsFromValidated((
     text: text,
     size: size,
     fontSize: fontSize,
@@ -138,14 +165,29 @@ TextNodeSnapshot textNodeSnapshotFromValidated({
     fontFamily: fontFamily,
     maxWidth: maxWidth,
     lineHeight: lineHeight,
-    transform: transform,
-    opacity: opacity,
-    hitPadding: hitPadding,
-    isVisible: isVisible,
-    isSelectable: isSelectable,
-    isLocked: isLocked,
-    isDeletable: isDeletable,
-    isTransformable: isTransformable,
+  ));
+  return TextNodeSnapshot._internal(
+    id: common.id,
+    instanceRevision: common.instanceRevision,
+    text: fields.text,
+    size: fields.size,
+    fontSize: fields.fontSize,
+    color: fields.color,
+    align: fields.align,
+    isBold: fields.isBold,
+    isItalic: fields.isItalic,
+    isUnderline: fields.isUnderline,
+    fontFamily: fields.fontFamily,
+    maxWidth: fields.maxWidth,
+    lineHeight: fields.lineHeight,
+    transform: common.transform,
+    opacity: common.opacity,
+    hitPadding: common.hitPadding,
+    isVisible: common.isVisible,
+    isSelectable: common.isSelectable,
+    isLocked: common.isLocked,
+    isDeletable: common.isDeletable,
+    isTransformable: common.isTransformable,
   );
 }
 
@@ -166,13 +208,9 @@ StrokeNodeSnapshot strokeNodeSnapshotFromValidated({
   bool isDeletable = true,
   bool isTransformable = true,
 }) {
-  return StrokeNodeSnapshot._internal(
+  final common = NodeBoundarySchema.snapshotCommonFromValidated((
     id: id,
     instanceRevision: instanceRevision,
-    points: points,
-    pointsRevision: pointsRevision,
-    thickness: thickness,
-    color: color,
     transform: transform,
     opacity: opacity,
     hitPadding: hitPadding,
@@ -181,6 +219,28 @@ StrokeNodeSnapshot strokeNodeSnapshotFromValidated({
     isLocked: isLocked,
     isDeletable: isDeletable,
     isTransformable: isTransformable,
+  ));
+  final fields = NodeBoundarySchema.strokeSnapshotFieldsFromValidated((
+    points: points,
+    pointsRevision: pointsRevision,
+    thickness: thickness,
+    color: color,
+  ));
+  return StrokeNodeSnapshot._internal(
+    id: common.id,
+    instanceRevision: common.instanceRevision,
+    points: fields.points,
+    pointsRevision: fields.pointsRevision,
+    thickness: fields.thickness,
+    color: fields.color,
+    transform: common.transform,
+    opacity: common.opacity,
+    hitPadding: common.hitPadding,
+    isVisible: common.isVisible,
+    isSelectable: common.isSelectable,
+    isLocked: common.isLocked,
+    isDeletable: common.isDeletable,
+    isTransformable: common.isTransformable,
   );
 }
 
@@ -201,13 +261,9 @@ LineNodeSnapshot lineNodeSnapshotFromValidated({
   bool isDeletable = true,
   bool isTransformable = true,
 }) {
-  return LineNodeSnapshot._internal(
+  final common = NodeBoundarySchema.snapshotCommonFromValidated((
     id: id,
     instanceRevision: instanceRevision,
-    start: start,
-    end: end,
-    thickness: thickness,
-    color: color,
     transform: transform,
     opacity: opacity,
     hitPadding: hitPadding,
@@ -216,6 +272,28 @@ LineNodeSnapshot lineNodeSnapshotFromValidated({
     isLocked: isLocked,
     isDeletable: isDeletable,
     isTransformable: isTransformable,
+  ));
+  final fields = NodeBoundarySchema.lineFieldsFromValidated((
+    start: start,
+    end: end,
+    thickness: thickness,
+    color: color,
+  ));
+  return LineNodeSnapshot._internal(
+    id: common.id,
+    instanceRevision: common.instanceRevision,
+    start: fields.start,
+    end: fields.end,
+    thickness: fields.thickness,
+    color: fields.color,
+    transform: common.transform,
+    opacity: common.opacity,
+    hitPadding: common.hitPadding,
+    isVisible: common.isVisible,
+    isSelectable: common.isSelectable,
+    isLocked: common.isLocked,
+    isDeletable: common.isDeletable,
+    isTransformable: common.isTransformable,
   );
 }
 
@@ -236,13 +314,9 @@ RectNodeSnapshot rectNodeSnapshotFromValidated({
   bool isDeletable = true,
   bool isTransformable = true,
 }) {
-  return RectNodeSnapshot._internal(
+  final common = NodeBoundarySchema.snapshotCommonFromValidated((
     id: id,
     instanceRevision: instanceRevision,
-    size: size,
-    fillColor: fillColor,
-    strokeColor: strokeColor,
-    strokeWidth: strokeWidth,
     transform: transform,
     opacity: opacity,
     hitPadding: hitPadding,
@@ -251,6 +325,28 @@ RectNodeSnapshot rectNodeSnapshotFromValidated({
     isLocked: isLocked,
     isDeletable: isDeletable,
     isTransformable: isTransformable,
+  ));
+  final fields = NodeBoundarySchema.rectFieldsFromValidated((
+    size: size,
+    fillColor: fillColor,
+    strokeColor: strokeColor,
+    strokeWidth: strokeWidth,
+  ));
+  return RectNodeSnapshot._internal(
+    id: common.id,
+    instanceRevision: common.instanceRevision,
+    size: fields.size,
+    fillColor: fields.fillColor,
+    strokeColor: fields.strokeColor,
+    strokeWidth: fields.strokeWidth,
+    transform: common.transform,
+    opacity: common.opacity,
+    hitPadding: common.hitPadding,
+    isVisible: common.isVisible,
+    isSelectable: common.isSelectable,
+    isLocked: common.isLocked,
+    isDeletable: common.isDeletable,
+    isTransformable: common.isTransformable,
   );
 }
 
@@ -272,14 +368,9 @@ PathNodeSnapshot pathNodeSnapshotFromValidated({
   bool isDeletable = true,
   bool isTransformable = true,
 }) {
-  return PathNodeSnapshot._internal(
+  final common = NodeBoundarySchema.snapshotCommonFromValidated((
     id: id,
     instanceRevision: instanceRevision,
-    svgPathData: svgPathData,
-    fillColor: fillColor,
-    strokeColor: strokeColor,
-    strokeWidth: strokeWidth,
-    fillRule: fillRule,
     transform: transform,
     opacity: opacity,
     hitPadding: hitPadding,
@@ -288,5 +379,29 @@ PathNodeSnapshot pathNodeSnapshotFromValidated({
     isLocked: isLocked,
     isDeletable: isDeletable,
     isTransformable: isTransformable,
+  ));
+  final fields = NodeBoundarySchema.pathFieldsFromValidated((
+    svgPathData: svgPathData,
+    fillColor: fillColor,
+    strokeColor: strokeColor,
+    strokeWidth: strokeWidth,
+    fillRule: fillRule,
+  ));
+  return PathNodeSnapshot._internal(
+    id: common.id,
+    instanceRevision: common.instanceRevision,
+    svgPathData: fields.svgPathData,
+    fillColor: fields.fillColor,
+    strokeColor: fields.strokeColor,
+    strokeWidth: fields.strokeWidth,
+    fillRule: fields.fillRule,
+    transform: common.transform,
+    opacity: common.opacity,
+    hitPadding: common.hitPadding,
+    isVisible: common.isVisible,
+    isSelectable: common.isSelectable,
+    isLocked: common.isLocked,
+    isDeletable: common.isDeletable,
+    isTransformable: common.isTransformable,
   );
 }

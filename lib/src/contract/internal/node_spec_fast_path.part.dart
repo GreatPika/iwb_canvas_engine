@@ -15,11 +15,8 @@ ImageNodeSpec imageNodeSpecFromValidated({
   bool isDeletable = true,
   bool isTransformable = true,
 }) {
-  return ImageNodeSpec._internal(
+  final common = NodeBoundarySchema.specCommonFromValidated((
     id: id,
-    imageId: imageId,
-    size: size,
-    naturalSize: naturalSize,
     transform: transform,
     opacity: opacity,
     hitPadding: hitPadding,
@@ -28,6 +25,25 @@ ImageNodeSpec imageNodeSpecFromValidated({
     isLocked: isLocked,
     isDeletable: isDeletable,
     isTransformable: isTransformable,
+  ));
+  final fields = NodeBoundarySchema.imageFieldsFromValidated((
+    imageId: imageId,
+    size: size,
+    naturalSize: naturalSize,
+  ));
+  return ImageNodeSpec._internal(
+    id: common.id,
+    imageId: fields.imageId,
+    size: fields.size,
+    naturalSize: fields.naturalSize,
+    transform: common.transform,
+    opacity: common.opacity,
+    hitPadding: common.hitPadding,
+    isVisible: common.isVisible,
+    isSelectable: common.isSelectable,
+    isLocked: common.isLocked,
+    isDeletable: common.isDeletable,
+    isTransformable: common.isTransformable,
   );
 }
 
@@ -53,8 +69,18 @@ TextNodeSpec textNodeSpecFromValidated({
   bool isDeletable = true,
   bool isTransformable = true,
 }) {
-  return TextNodeSpec._internal(
+  final common = NodeBoundarySchema.specCommonFromValidated((
     id: id,
+    transform: transform,
+    opacity: opacity,
+    hitPadding: hitPadding,
+    isVisible: isVisible,
+    isSelectable: isSelectable,
+    isLocked: isLocked,
+    isDeletable: isDeletable,
+    isTransformable: isTransformable,
+  ));
+  final fields = NodeBoundarySchema.textSpecFieldsFromValidated((
     text: text,
     fontSize: fontSize,
     color: color,
@@ -65,14 +91,27 @@ TextNodeSpec textNodeSpecFromValidated({
     fontFamily: fontFamily,
     maxWidth: maxWidth,
     lineHeight: lineHeight,
-    transform: transform,
-    opacity: opacity,
-    hitPadding: hitPadding,
-    isVisible: isVisible,
-    isSelectable: isSelectable,
-    isLocked: isLocked,
-    isDeletable: isDeletable,
-    isTransformable: isTransformable,
+  ));
+  return TextNodeSpec._internal(
+    id: common.id,
+    text: fields.text,
+    fontSize: fields.fontSize,
+    color: fields.color,
+    align: fields.align,
+    isBold: fields.isBold,
+    isItalic: fields.isItalic,
+    isUnderline: fields.isUnderline,
+    fontFamily: fields.fontFamily,
+    maxWidth: fields.maxWidth,
+    lineHeight: fields.lineHeight,
+    transform: common.transform,
+    opacity: common.opacity,
+    hitPadding: common.hitPadding,
+    isVisible: common.isVisible,
+    isSelectable: common.isSelectable,
+    isLocked: common.isLocked,
+    isDeletable: common.isDeletable,
+    isTransformable: common.isTransformable,
   );
 }
 
@@ -91,11 +130,8 @@ StrokeNodeSpec strokeNodeSpecFromValidated({
   bool isDeletable = true,
   bool isTransformable = true,
 }) {
-  return StrokeNodeSpec._internal(
+  final common = NodeBoundarySchema.specCommonFromValidated((
     id: id,
-    points: points,
-    thickness: thickness,
-    color: color,
     transform: transform,
     opacity: opacity,
     hitPadding: hitPadding,
@@ -104,6 +140,25 @@ StrokeNodeSpec strokeNodeSpecFromValidated({
     isLocked: isLocked,
     isDeletable: isDeletable,
     isTransformable: isTransformable,
+  ));
+  final fields = NodeBoundarySchema.strokeSpecFieldsFromValidated((
+    points: points,
+    thickness: thickness,
+    color: color,
+  ));
+  return StrokeNodeSpec._internal(
+    id: common.id,
+    points: fields.points,
+    thickness: fields.thickness,
+    color: fields.color,
+    transform: common.transform,
+    opacity: common.opacity,
+    hitPadding: common.hitPadding,
+    isVisible: common.isVisible,
+    isSelectable: common.isSelectable,
+    isLocked: common.isLocked,
+    isDeletable: common.isDeletable,
+    isTransformable: common.isTransformable,
   );
 }
 
@@ -123,12 +178,8 @@ LineNodeSpec lineNodeSpecFromValidated({
   bool isDeletable = true,
   bool isTransformable = true,
 }) {
-  return LineNodeSpec._internal(
+  final common = NodeBoundarySchema.specCommonFromValidated((
     id: id,
-    start: start,
-    end: end,
-    thickness: thickness,
-    color: color,
     transform: transform,
     opacity: opacity,
     hitPadding: hitPadding,
@@ -137,6 +188,27 @@ LineNodeSpec lineNodeSpecFromValidated({
     isLocked: isLocked,
     isDeletable: isDeletable,
     isTransformable: isTransformable,
+  ));
+  final fields = NodeBoundarySchema.lineFieldsFromValidated((
+    start: start,
+    end: end,
+    thickness: thickness,
+    color: color,
+  ));
+  return LineNodeSpec._internal(
+    id: common.id,
+    start: fields.start,
+    end: fields.end,
+    thickness: fields.thickness,
+    color: fields.color,
+    transform: common.transform,
+    opacity: common.opacity,
+    hitPadding: common.hitPadding,
+    isVisible: common.isVisible,
+    isSelectable: common.isSelectable,
+    isLocked: common.isLocked,
+    isDeletable: common.isDeletable,
+    isTransformable: common.isTransformable,
   );
 }
 
@@ -156,12 +228,8 @@ RectNodeSpec rectNodeSpecFromValidated({
   bool isDeletable = true,
   bool isTransformable = true,
 }) {
-  return RectNodeSpec._internal(
+  final common = NodeBoundarySchema.specCommonFromValidated((
     id: id,
-    size: size,
-    fillColor: fillColor,
-    strokeColor: strokeColor,
-    strokeWidth: strokeWidth,
     transform: transform,
     opacity: opacity,
     hitPadding: hitPadding,
@@ -170,6 +238,27 @@ RectNodeSpec rectNodeSpecFromValidated({
     isLocked: isLocked,
     isDeletable: isDeletable,
     isTransformable: isTransformable,
+  ));
+  final fields = NodeBoundarySchema.rectFieldsFromValidated((
+    size: size,
+    fillColor: fillColor,
+    strokeColor: strokeColor,
+    strokeWidth: strokeWidth,
+  ));
+  return RectNodeSpec._internal(
+    id: common.id,
+    size: fields.size,
+    fillColor: fields.fillColor,
+    strokeColor: fields.strokeColor,
+    strokeWidth: fields.strokeWidth,
+    transform: common.transform,
+    opacity: common.opacity,
+    hitPadding: common.hitPadding,
+    isVisible: common.isVisible,
+    isSelectable: common.isSelectable,
+    isLocked: common.isLocked,
+    isDeletable: common.isDeletable,
+    isTransformable: common.isTransformable,
   );
 }
 
@@ -190,13 +279,8 @@ PathNodeSpec pathNodeSpecFromValidated({
   bool isDeletable = true,
   bool isTransformable = true,
 }) {
-  return PathNodeSpec._internal(
+  final common = NodeBoundarySchema.specCommonFromValidated((
     id: id,
-    svgPathData: svgPathData,
-    fillColor: fillColor,
-    strokeColor: strokeColor,
-    strokeWidth: strokeWidth,
-    fillRule: fillRule,
     transform: transform,
     opacity: opacity,
     hitPadding: hitPadding,
@@ -205,5 +289,28 @@ PathNodeSpec pathNodeSpecFromValidated({
     isLocked: isLocked,
     isDeletable: isDeletable,
     isTransformable: isTransformable,
+  ));
+  final fields = NodeBoundarySchema.pathFieldsFromValidated((
+    svgPathData: svgPathData,
+    fillColor: fillColor,
+    strokeColor: strokeColor,
+    strokeWidth: strokeWidth,
+    fillRule: fillRule,
+  ));
+  return PathNodeSpec._internal(
+    id: common.id,
+    svgPathData: fields.svgPathData,
+    fillColor: fields.fillColor,
+    strokeColor: fields.strokeColor,
+    strokeWidth: fields.strokeWidth,
+    fillRule: fields.fillRule,
+    transform: common.transform,
+    opacity: common.opacity,
+    hitPadding: common.hitPadding,
+    isVisible: common.isVisible,
+    isSelectable: common.isSelectable,
+    isLocked: common.isLocked,
+    isDeletable: common.isDeletable,
+    isTransformable: common.isTransformable,
   );
 }

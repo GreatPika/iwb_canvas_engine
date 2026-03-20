@@ -180,7 +180,7 @@ language: russian
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Private contract boundary schema owner
+### Slice 1. [x] Private contract boundary schema owner
 
 #### Slice Contract
 
@@ -203,7 +203,7 @@ fields и family-specific boundary fields для `snapshot/spec/patch`.
 - File diff shows that the owner stays private inside `lib/src/contract/**`
   and does not change the public export surface.
 
-### Slice 2. [ ] Public contract types consume the schema owner
+### Slice 2. [x] Public contract types consume the schema owner
 
 #### Slice Contract
 
@@ -229,7 +229,7 @@ legacy implementations.
 - Clone inventory no longer shows the replaced duplicate family across
   `node_patch.dart`, `node_spec.dart`, and `snapshot.dart`.
 
-### Slice 3. [ ] Validated fast paths share the same schema-owned path
+### Slice 3. [x] Validated fast paths share the same schema-owned path
 
 #### Slice Contract
 

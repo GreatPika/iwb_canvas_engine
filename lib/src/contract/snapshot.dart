@@ -5,22 +5,14 @@ import 'package:flutter/foundation.dart';
 export 'ids.dart' show LayerId, NodeId, parseLayerId, parseNodeId;
 export 'path_fill_rule.dart' show PathFillRule;
 import 'ids.dart';
+import 'internal/node_boundary_schema.dart';
 import 'owned_collections.dart';
 import 'path_fill_rule.dart';
 import 'scene_defaults.dart';
 import 'transform2d.dart';
 import 'validated/finite_offset_value.dart';
-import 'validated/font_family_value.dart';
-import 'validated/image_id_value.dart';
-import 'validated/instance_revision_value.dart';
 import 'validated/layer_id_value.dart';
-import 'validated/node_id_value.dart';
-import 'validated/non_negative_finite_double_value.dart';
-import 'validated/opacity_value.dart';
 import 'validated/positive_finite_double_value.dart';
-import 'validated/svg_path_data_value.dart';
-import 'validated/text_content_value.dart';
-import 'validated/validated_value_support.dart';
 
 part 'internal/snapshot_fast_path.part.dart';
 
@@ -236,7 +228,7 @@ class ImageNodeSnapshot extends NodeSnapshot {
     bool isDeletable = true,
     bool isTransformable = true,
   }) {
-    final common = _validateNodeSnapshotCommonFields(
+    final common = NodeBoundarySchema.validateSnapshotCommon((
       id: id,
       instanceRevision: instanceRevision,
       transform: transform,
@@ -247,15 +239,18 @@ class ImageNodeSnapshot extends NodeSnapshot {
       isLocked: isLocked,
       isDeletable: isDeletable,
       isTransformable: isTransformable,
-    );
+    ));
+    final fields = NodeBoundarySchema.validateImageFields((
+      imageId: imageId,
+      size: size,
+      naturalSize: naturalSize,
+    ));
     return ImageNodeSnapshot._internal(
       id: common.id,
       instanceRevision: common.instanceRevision,
-      imageId: ImageIdValue.of(imageId, name: 'imageId').value,
-      size: _validateNonNegativeSize(size, name: 'size'),
-      naturalSize: naturalSize == null
-          ? null
-          : _validateNonNegativeSize(naturalSize, name: 'naturalSize'),
+      imageId: fields.imageId,
+      size: fields.size,
+      naturalSize: fields.naturalSize,
       transform: common.transform,
       opacity: common.opacity,
       hitPadding: common.hitPadding,
@@ -313,7 +308,7 @@ class TextNodeSnapshot extends NodeSnapshot {
     bool isDeletable = true,
     bool isTransformable = true,
   }) {
-    final common = _validateNodeSnapshotCommonFields(
+    final common = NodeBoundarySchema.validateSnapshotCommon((
       id: id,
       instanceRevision: instanceRevision,
       transform: transform,
@@ -324,27 +319,34 @@ class TextNodeSnapshot extends NodeSnapshot {
       isLocked: isLocked,
       isDeletable: isDeletable,
       isTransformable: isTransformable,
-    );
-    return TextNodeSnapshot._internal(
-      id: common.id,
-      instanceRevision: common.instanceRevision,
-      text: TextContentValue.of(text, name: 'text').value,
-      size: _validateNonNegativeSize(size, name: 'size'),
-      fontSize: PositiveFiniteDoubleValue.of(fontSize, name: 'fontSize').value,
+    ));
+    final fields = NodeBoundarySchema.validateTextSnapshotFields((
+      text: text,
+      size: size,
+      fontSize: fontSize,
       color: color,
       align: align,
       isBold: isBold,
       isItalic: isItalic,
       isUnderline: isUnderline,
-      fontFamily: fontFamily == null
-          ? null
-          : FontFamilyValue.of(fontFamily, name: 'fontFamily').value,
-      maxWidth: maxWidth == null
-          ? null
-          : PositiveFiniteDoubleValue.of(maxWidth, name: 'maxWidth').value,
-      lineHeight: lineHeight == null
-          ? null
-          : PositiveFiniteDoubleValue.of(lineHeight, name: 'lineHeight').value,
+      fontFamily: fontFamily,
+      maxWidth: maxWidth,
+      lineHeight: lineHeight,
+    ));
+    return TextNodeSnapshot._internal(
+      id: common.id,
+      instanceRevision: common.instanceRevision,
+      text: fields.text,
+      size: fields.size,
+      fontSize: fields.fontSize,
+      color: fields.color,
+      align: fields.align,
+      isBold: fields.isBold,
+      isItalic: fields.isItalic,
+      isUnderline: fields.isUnderline,
+      fontFamily: fields.fontFamily,
+      maxWidth: fields.maxWidth,
+      lineHeight: fields.lineHeight,
       transform: common.transform,
       opacity: common.opacity,
       hitPadding: common.hitPadding,
@@ -416,7 +418,7 @@ class StrokeNodeSnapshot extends NodeSnapshot {
     bool isDeletable = true,
     bool isTransformable = true,
   }) {
-    final common = _validateNodeSnapshotCommonFields(
+    final common = NodeBoundarySchema.validateSnapshotCommon((
       id: id,
       instanceRevision: instanceRevision,
       transform: transform,
@@ -427,31 +429,20 @@ class StrokeNodeSnapshot extends NodeSnapshot {
       isLocked: isLocked,
       isDeletable: isDeletable,
       isTransformable: isTransformable,
-    );
-    final validatedPoints = List<Offset>.from(points, growable: false)
-        .asMap()
-        .entries
-        .map(
-          (entry) => FiniteOffsetValue.of(
-            entry.value,
-            name: 'points[${entry.key}]',
-          ).value,
-        )
-        .toList(growable: false);
+    ));
+    final fields = NodeBoundarySchema.validateStrokeSnapshotFields((
+      points: points,
+      pointsRevision: pointsRevision,
+      thickness: thickness,
+      color: color,
+    ));
     return StrokeNodeSnapshot._internal(
       id: common.id,
       instanceRevision: common.instanceRevision,
-      points: validatedPoints,
-      pointsRevision: InstanceRevisionValue.of(
-        pointsRevision,
-        name: 'pointsRevision',
-        allowZero: true,
-      ).value,
-      thickness: PositiveFiniteDoubleValue.of(
-        thickness,
-        name: 'thickness',
-      ).value,
-      color: color,
+      points: fields.points,
+      pointsRevision: fields.pointsRevision,
+      thickness: fields.thickness,
+      color: fields.color,
       transform: common.transform,
       opacity: common.opacity,
       hitPadding: common.hitPadding,
@@ -506,7 +497,7 @@ class LineNodeSnapshot extends NodeSnapshot {
     bool isDeletable = true,
     bool isTransformable = true,
   }) {
-    final common = _validateNodeSnapshotCommonFields(
+    final common = NodeBoundarySchema.validateSnapshotCommon((
       id: id,
       instanceRevision: instanceRevision,
       transform: transform,
@@ -517,17 +508,20 @@ class LineNodeSnapshot extends NodeSnapshot {
       isLocked: isLocked,
       isDeletable: isDeletable,
       isTransformable: isTransformable,
-    );
+    ));
+    final fields = NodeBoundarySchema.validateLineFields((
+      start: start,
+      end: end,
+      thickness: thickness,
+      color: color,
+    ));
     return LineNodeSnapshot._internal(
       id: common.id,
       instanceRevision: common.instanceRevision,
-      start: FiniteOffsetValue.of(start, name: 'start').value,
-      end: FiniteOffsetValue.of(end, name: 'end').value,
-      thickness: PositiveFiniteDoubleValue.of(
-        thickness,
-        name: 'thickness',
-      ).value,
-      color: color,
+      start: fields.start,
+      end: fields.end,
+      thickness: fields.thickness,
+      color: fields.color,
       transform: common.transform,
       opacity: common.opacity,
       hitPadding: common.hitPadding,
@@ -580,7 +574,7 @@ class RectNodeSnapshot extends NodeSnapshot {
     bool isDeletable = true,
     bool isTransformable = true,
   }) {
-    final common = _validateNodeSnapshotCommonFields(
+    final common = NodeBoundarySchema.validateSnapshotCommon((
       id: id,
       instanceRevision: instanceRevision,
       transform: transform,
@@ -591,17 +585,20 @@ class RectNodeSnapshot extends NodeSnapshot {
       isLocked: isLocked,
       isDeletable: isDeletable,
       isTransformable: isTransformable,
-    );
+    ));
+    final fields = NodeBoundarySchema.validateRectFields((
+      size: size,
+      fillColor: fillColor,
+      strokeColor: strokeColor,
+      strokeWidth: strokeWidth,
+    ));
     return RectNodeSnapshot._internal(
       id: common.id,
       instanceRevision: common.instanceRevision,
-      size: _validateNonNegativeSize(size, name: 'size'),
-      fillColor: fillColor,
-      strokeColor: strokeColor,
-      strokeWidth: NonNegativeFiniteDoubleValue.of(
-        strokeWidth,
-        name: 'strokeWidth',
-      ).value,
+      size: fields.size,
+      fillColor: fields.fillColor,
+      strokeColor: fields.strokeColor,
+      strokeWidth: fields.strokeWidth,
       transform: common.transform,
       opacity: common.opacity,
       hitPadding: common.hitPadding,
@@ -655,7 +652,7 @@ class PathNodeSnapshot extends NodeSnapshot {
     bool isDeletable = true,
     bool isTransformable = true,
   }) {
-    final common = _validateNodeSnapshotCommonFields(
+    final common = NodeBoundarySchema.validateSnapshotCommon((
       id: id,
       instanceRevision: instanceRevision,
       transform: transform,
@@ -666,18 +663,22 @@ class PathNodeSnapshot extends NodeSnapshot {
       isLocked: isLocked,
       isDeletable: isDeletable,
       isTransformable: isTransformable,
-    );
+    ));
+    final fields = NodeBoundarySchema.validatePathFields((
+      svgPathData: svgPathData,
+      fillColor: fillColor,
+      strokeColor: strokeColor,
+      strokeWidth: strokeWidth,
+      fillRule: fillRule,
+    ));
     return PathNodeSnapshot._internal(
       id: common.id,
       instanceRevision: common.instanceRevision,
-      svgPathData: SvgPathDataValue.of(svgPathData, name: 'svgPathData').value,
-      fillColor: fillColor,
-      strokeColor: strokeColor,
-      strokeWidth: NonNegativeFiniteDoubleValue.of(
-        strokeWidth,
-        name: 'strokeWidth',
-      ).value,
-      fillRule: fillRule,
+      svgPathData: fields.svgPathData,
+      fillColor: fields.fillColor,
+      strokeColor: fields.strokeColor,
+      strokeWidth: fields.strokeWidth,
+      fillRule: fields.fillRule,
       transform: common.transform,
       opacity: common.opacity,
       hitPadding: common.hitPadding,
@@ -713,94 +714,6 @@ class PathNodeSnapshot extends NodeSnapshot {
   final Color? strokeColor;
   final double strokeWidth;
   final PathFillRule fillRule;
-}
-
-class _ValidatedNodeSnapshotCommonFields {
-  const _ValidatedNodeSnapshotCommonFields({
-    required this.id,
-    required this.instanceRevision,
-    required this.transform,
-    required this.opacity,
-    required this.hitPadding,
-    required this.isVisible,
-    required this.isSelectable,
-    required this.isLocked,
-    required this.isDeletable,
-    required this.isTransformable,
-  });
-
-  final NodeId id;
-  final int instanceRevision;
-  final Transform2D transform;
-  final double opacity;
-  final double hitPadding;
-  final bool isVisible;
-  final bool isSelectable;
-  final bool isLocked;
-  final bool isDeletable;
-  final bool isTransformable;
-}
-
-_ValidatedNodeSnapshotCommonFields _validateNodeSnapshotCommonFields({
-  required NodeId id,
-  required int instanceRevision,
-  required Transform2D transform,
-  required double opacity,
-  required double hitPadding,
-  required bool isVisible,
-  required bool isSelectable,
-  required bool isLocked,
-  required bool isDeletable,
-  required bool isTransformable,
-}) {
-  return _ValidatedNodeSnapshotCommonFields(
-    id: NodeIdValue.of(id, name: 'id').value,
-    instanceRevision: InstanceRevisionValue.of(
-      instanceRevision,
-      name: 'instanceRevision',
-      allowZero: true,
-    ).value,
-    transform: _validateFiniteInvertibleTransform2D(
-      transform,
-      name: 'transform',
-    ),
-    opacity: OpacityValue.of(opacity, name: 'opacity').value,
-    hitPadding: NonNegativeFiniteDoubleValue.of(
-      hitPadding,
-      name: 'hitPadding',
-    ).value,
-    isVisible: isVisible,
-    isSelectable: isSelectable,
-    isLocked: isLocked,
-    isDeletable: isDeletable,
-    isTransformable: isTransformable,
-  );
-}
-
-Transform2D _validateFiniteInvertibleTransform2D(
-  Transform2D value, {
-  required String name,
-}) {
-  validatedRequireFiniteDouble(value.a, name: '$name.a');
-  validatedRequireFiniteDouble(value.b, name: '$name.b');
-  validatedRequireFiniteDouble(value.c, name: '$name.c');
-  validatedRequireFiniteDouble(value.d, name: '$name.d');
-  validatedRequireFiniteDouble(value.tx, name: '$name.tx');
-  validatedRequireFiniteDouble(value.ty, name: '$name.ty');
-  if (value.invert() == null) {
-    throw ArgumentError.value(
-      value.toJsonMap(),
-      name,
-      'Must be invertible (non-singular).',
-    );
-  }
-  return value;
-}
-
-Size _validateNonNegativeSize(Size value, {required String name}) {
-  NonNegativeFiniteDoubleValue.of(value.width, name: '$name.width');
-  NonNegativeFiniteDoubleValue.of(value.height, name: '$name.height');
-  return value;
 }
 
 void _requireNonEmptyList<T>(List<T> values, {required String name}) {
