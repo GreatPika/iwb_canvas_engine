@@ -114,7 +114,7 @@ This change migrates the controller commit plan in `scene_controller.dart` from 
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Sealed Commit Plan Model
+### Slice 1. [x] Sealed Commit Plan Model
 
 #### Slice Contract
 `scene_controller.dart` uses a sealed `_ControllerCommitPlan` hierarchy where each commit branch has its own representable payload type and impossible cross-branch states are not representable in the model.
@@ -139,7 +139,7 @@ This change migrates the controller commit plan in `scene_controller.dart` from 
 - Green run of the listed verifications.
 - Код `scene_controller.dart` больше не содержит `_ControllerCommitBranchKind` и nullable branch payload fields в `_ControllerCommitPlan`.
 
-### Slice 2. [ ] Typed Commit Plan Execution
+### Slice 2. [x] Typed Commit Plan Execution
 
 #### Slice Contract
 Controller commit execution dispatches by sealed plan subtype and no longer depends on runtime `as`-casts to recover branch payload.

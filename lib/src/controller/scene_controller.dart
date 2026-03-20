@@ -312,17 +312,17 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
     final hasRepaint = _repaintFlag.needsNotify;
 
     if (commitCandidate == null && !hasSignals && !hasRepaint) {
-      return _ControllerCommitPlan.noEffects(
+      return _NoEffectsControllerCommitPlan(
         changeSet: changeSet,
         initialPhases: initialPhases,
       );
     }
 
     if (commitCandidate == null) {
-      return _ControllerCommitPlan.effectsOnly(
+      return _EffectsOnlyControllerCommitPlan(
         changeSet: changeSet,
         initialPhases: initialPhases,
-        nextCommitRevision: hasSignals ? _store.commitRevision + 1 : null,
+        nextCommitRevision: _store.commitRevision + 1,
         shouldCommitSignals: hasSignals,
         shouldNotify: hasRepaint,
       );
@@ -334,7 +334,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
     final committedRevisionState = resolvedCommittedRevisionAllocatorState(
       commitCandidate.revisionState,
     );
-    return _ControllerCommitPlan.stateCommit(
+    return _StateCommitControllerCommitPlan(
       changeSet: changeSet,
       initialPhases: initialPhases,
       commitCandidate: commitCandidate,
@@ -351,49 +351,33 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
           _store.boundsRevision + (changeSet.boundsChanged ? 1 : 0),
       nextVisualRevision: _store.visualRevision + 1,
       nextCommitRevision: _store.commitRevision + 1,
-      shouldMarkRepaint: true,
     );
   }
 
   _ControllerCommitExecution _executeControllerCommitPlan(
     _ControllerCommitPlan plan,
   ) {
-    return switch (plan.branchKind) {
-      _ControllerCommitBranchKind.noEffects => _ControllerCommitExecution(
+    return switch (plan) {
+      _NoEffectsControllerCommitPlan() => _ControllerCommitExecution(
         commitPhases: plan.initialPhases,
         commitResult: const _TxnWriteCommitResult(
           committedSignals: <CommittedSignal>[],
           needsNotify: false,
         ),
       ),
-      _ControllerCommitBranchKind.effectsOnly => _executeEffectsOnlyCommitPlan(
-        plan,
-        nextCommitRevision: plan.nextCommitRevision,
-      ),
-      _ControllerCommitBranchKind.stateCommit => _executeStateCommitPlan(
-        plan,
-        committed: plan.commitCandidate as MutationCommitCandidate,
-        committedSelection: plan.committedSelection as Set<NodeId>,
-        committedRevisionState:
-            plan.committedRevisionState as RevisionAllocatorState,
-        nextEpoch: plan.nextEpoch as int,
-        nextStructuralRevision: plan.nextStructuralRevision as int,
-        nextBoundsRevision: plan.nextBoundsRevision as int,
-        nextVisualRevision: plan.nextVisualRevision as int,
-        nextCommitRevision: plan.nextCommitRevision as int,
-      ),
+      _EffectsOnlyControllerCommitPlan() => _executeEffectsOnlyCommitPlan(plan),
+      _StateCommitControllerCommitPlan() => _executeStateCommitPlan(plan),
     };
   }
 
   _ControllerCommitExecution _executeEffectsOnlyCommitPlan(
-    _ControllerCommitPlan plan, {
-    required int? nextCommitRevision,
-  }) {
+    _EffectsOnlyControllerCommitPlan plan,
+  ) {
     var commitPhases = plan.initialPhases;
     var committedSignals = const <CommittedSignal>[];
 
     if (plan.shouldCommitSignals) {
-      final resolvedNextCommitRevision = nextCommitRevision as int;
+      final resolvedNextCommitRevision = plan.nextCommitRevision;
       _assertStoreInvariantsCandidate(
         scene: _store.sceneDoc,
         selectedNodeIds: _store.selectedNodeIds,
@@ -429,16 +413,17 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
   }
 
   _ControllerCommitExecution _executeStateCommitPlan(
-    _ControllerCommitPlan plan, {
-    required MutationCommitCandidate committed,
-    required Set<NodeId> committedSelection,
-    required RevisionAllocatorState committedRevisionState,
-    required int nextEpoch,
-    required int nextStructuralRevision,
-    required int nextBoundsRevision,
-    required int nextVisualRevision,
-    required int nextCommitRevision,
-  }) {
+    _StateCommitControllerCommitPlan plan,
+  ) {
+    final committed = plan.commitCandidate;
+    final committedSelection = plan.committedSelection;
+    final committedRevisionState = plan.committedRevisionState;
+    final nextEpoch = plan.nextEpoch;
+    final nextStructuralRevision = plan.nextStructuralRevision;
+    final nextBoundsRevision = plan.nextBoundsRevision;
+    final nextVisualRevision = plan.nextVisualRevision;
+    final nextCommitRevision = plan.nextCommitRevision;
+
     _assertStoreInvariantsCandidate(
       scene: committed.scene,
       selectedNodeIds: committedSelection,
@@ -483,9 +468,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
       'spatial_index',
       'signals',
     ];
-    if (plan.shouldMarkRepaint) {
-      _repaintFlag.writeMarkNeedsRepaint();
-    }
+    _repaintFlag.writeMarkNeedsRepaint();
     final needsNotify = _repaintFlag.writeTakeNeedsNotify();
     if (needsNotify) {
       commitPhases = <String>[...commitPhases, 'repaint'];
@@ -656,13 +639,41 @@ class _ControllerCommitExecution {
   final _TxnWriteCommitResult commitResult;
 }
 
-enum _ControllerCommitBranchKind { noEffects, effectsOnly, stateCommit }
-
-class _ControllerCommitPlan {
-  const _ControllerCommitPlan._({
-    required this.branchKind,
+sealed class _ControllerCommitPlan {
+  const _ControllerCommitPlan({
     required this.changeSet,
     required this.initialPhases,
+  });
+
+  final ChangeSet changeSet;
+  final List<String> initialPhases;
+}
+
+final class _NoEffectsControllerCommitPlan extends _ControllerCommitPlan {
+  const _NoEffectsControllerCommitPlan({
+    required super.changeSet,
+    required super.initialPhases,
+  });
+}
+
+final class _EffectsOnlyControllerCommitPlan extends _ControllerCommitPlan {
+  const _EffectsOnlyControllerCommitPlan({
+    required super.changeSet,
+    required super.initialPhases,
+    required this.nextCommitRevision,
+    required this.shouldCommitSignals,
+    required this.shouldNotify,
+  });
+
+  final int nextCommitRevision;
+  final bool shouldCommitSignals;
+  final bool shouldNotify;
+}
+
+final class _StateCommitControllerCommitPlan extends _ControllerCommitPlan {
+  const _StateCommitControllerCommitPlan({
+    required super.changeSet,
+    required super.initialPhases,
     required this.commitCandidate,
     required this.committedSelection,
     required this.committedRevisionState,
@@ -671,95 +682,14 @@ class _ControllerCommitPlan {
     required this.nextBoundsRevision,
     required this.nextVisualRevision,
     required this.nextCommitRevision,
-    required this.shouldCommitSignals,
-    required this.shouldNotify,
-    required this.shouldMarkRepaint,
   });
 
-  const _ControllerCommitPlan.noEffects({
-    required ChangeSet changeSet,
-    required List<String> initialPhases,
-  }) : this._(
-         branchKind: _ControllerCommitBranchKind.noEffects,
-         changeSet: changeSet,
-         initialPhases: initialPhases,
-         commitCandidate: null,
-         committedSelection: null,
-         committedRevisionState: null,
-         nextEpoch: null,
-         nextStructuralRevision: null,
-         nextBoundsRevision: null,
-         nextVisualRevision: null,
-         nextCommitRevision: null,
-         shouldCommitSignals: false,
-         shouldNotify: false,
-         shouldMarkRepaint: false,
-       );
-
-  const _ControllerCommitPlan.effectsOnly({
-    required ChangeSet changeSet,
-    required List<String> initialPhases,
-    required int? nextCommitRevision,
-    required bool shouldCommitSignals,
-    required bool shouldNotify,
-  }) : this._(
-         branchKind: _ControllerCommitBranchKind.effectsOnly,
-         changeSet: changeSet,
-         initialPhases: initialPhases,
-         commitCandidate: null,
-         committedSelection: null,
-         committedRevisionState: null,
-         nextEpoch: null,
-         nextStructuralRevision: null,
-         nextBoundsRevision: null,
-         nextVisualRevision: null,
-         nextCommitRevision: nextCommitRevision,
-         shouldCommitSignals: shouldCommitSignals,
-         shouldNotify: shouldNotify,
-         shouldMarkRepaint: false,
-       );
-
-  const _ControllerCommitPlan.stateCommit({
-    required ChangeSet changeSet,
-    required List<String> initialPhases,
-    required MutationCommitCandidate commitCandidate,
-    required Set<NodeId> committedSelection,
-    required RevisionAllocatorState committedRevisionState,
-    required int nextEpoch,
-    required int nextStructuralRevision,
-    required int nextBoundsRevision,
-    required int nextVisualRevision,
-    required int nextCommitRevision,
-    required bool shouldMarkRepaint,
-  }) : this._(
-         branchKind: _ControllerCommitBranchKind.stateCommit,
-         changeSet: changeSet,
-         initialPhases: initialPhases,
-         commitCandidate: commitCandidate,
-         committedSelection: committedSelection,
-         committedRevisionState: committedRevisionState,
-         nextEpoch: nextEpoch,
-         nextStructuralRevision: nextStructuralRevision,
-         nextBoundsRevision: nextBoundsRevision,
-         nextVisualRevision: nextVisualRevision,
-         nextCommitRevision: nextCommitRevision,
-         shouldCommitSignals: true,
-         shouldNotify: true,
-         shouldMarkRepaint: shouldMarkRepaint,
-       );
-
-  final _ControllerCommitBranchKind branchKind;
-  final ChangeSet changeSet;
-  final List<String> initialPhases;
-  final MutationCommitCandidate? commitCandidate;
-  final Set<NodeId>? committedSelection;
-  final RevisionAllocatorState? committedRevisionState;
-  final int? nextEpoch;
-  final int? nextStructuralRevision;
-  final int? nextBoundsRevision;
-  final int? nextVisualRevision;
-  final int? nextCommitRevision;
-  final bool shouldCommitSignals;
-  final bool shouldNotify;
-  final bool shouldMarkRepaint;
+  final MutationCommitCandidate commitCandidate;
+  final Set<NodeId> committedSelection;
+  final RevisionAllocatorState committedRevisionState;
+  final int nextEpoch;
+  final int nextStructuralRevision;
+  final int nextBoundsRevision;
+  final int nextVisualRevision;
+  final int nextCommitRevision;
 }
