@@ -168,7 +168,7 @@ schema-owned boundary path без вмешательства в JSON transport.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Transaction node conversion adopts the schema-owned mapping
+### Slice 1. [x] Transaction node conversion adopts the schema-owned mapping
 
 #### Slice Contract
 
@@ -193,7 +193,7 @@ own handwritten node-shape tables and consume the schema-owned boundary path.
 - `document.dart` no longer contains a second handwritten node-shape table for
   `txnNodeFromSnapshot(...)` or `txnNodeFromSpec(...)`.
 
-### Slice 2. [ ] Scene and SceneSnapshot conversion share one boundary path
+### Slice 2. [x] Scene and SceneSnapshot conversion share one boundary path
 
 #### Slice Contract
 
@@ -222,7 +222,7 @@ schema-owned boundary mapping across the model conversion seam.
   `document.dart`, `scene_builder_scene_from_snapshot.part.dart`, and
   `scene_snapshot_from_scene.dart`.
 
-### Slice 3. [ ] Legacy model conversion bodies are removed
+### Slice 3. [x] Legacy model conversion bodies are removed
 
 #### Slice Contract
 

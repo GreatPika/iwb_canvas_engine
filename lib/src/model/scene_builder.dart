@@ -16,11 +16,11 @@ import '../contract/validated/positive_finite_double_value.dart';
 import '../contract/validated/svg_path_data_value.dart';
 import '../contract/validated/text_content_value.dart';
 import '../contract/validated/validated_value_support.dart';
-import '../core/text_layout.dart';
 import '../contract/transform2d.dart';
 import '../contract/scene_data_exception.dart';
 import '../contract/snapshot.dart';
 import 'scene_structural_limits.dart';
+import 'scene_node_boundary_mapping.dart';
 import 'scene_policy.dart';
 import 'scene_snapshot_from_scene.dart';
 

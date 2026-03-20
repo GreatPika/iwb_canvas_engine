@@ -12,6 +12,7 @@ import '../contract/node_spec.dart';
 import '../contract/patch_field.dart';
 import '../contract/snapshot.dart';
 import 'scene_builder.dart' as model_builder;
+import 'scene_node_boundary_mapping.dart';
 import 'scene_snapshot_from_scene.dart';
 
 typedef NodeLocatorEntry = ({int layerIndex, int nodeIndex});
@@ -158,119 +159,11 @@ SceneNode txnNodeFromSnapshot(
     node,
     nextInstanceRevision: nextInstanceRevision,
   );
-  switch (node) {
-    case ImageNodeSnapshot image:
-      return ImageNode(
-        id: image.id,
-        instanceRevision: instanceRevision,
-        imageId: image.imageId,
-        size: image.size,
-        naturalSize: image.naturalSize,
-        transform: image.transform,
-        opacity: image.opacity,
-        hitPadding: image.hitPadding,
-        isVisible: image.isVisible,
-        isSelectable: image.isSelectable,
-        isLocked: image.isLocked,
-        isDeletable: image.isDeletable,
-        isTransformable: image.isTransformable,
-      );
-    case TextNodeSnapshot text:
-      final node = TextNode(
-        id: text.id,
-        instanceRevision: instanceRevision,
-        text: text.text,
-        size: text.size,
-        fontSize: text.fontSize,
-        color: text.color,
-        align: text.align,
-        isBold: text.isBold,
-        isItalic: text.isItalic,
-        isUnderline: text.isUnderline,
-        fontFamily: text.fontFamily,
-        maxWidth: text.maxWidth,
-        lineHeight: text.lineHeight,
-        transform: text.transform,
-        opacity: text.opacity,
-        hitPadding: text.hitPadding,
-        isVisible: text.isVisible,
-        isSelectable: text.isSelectable,
-        isLocked: text.isLocked,
-        isDeletable: text.isDeletable,
-        isTransformable: text.isTransformable,
-      );
-      recomputeDerivedTextSize(node);
-      return node;
-    case StrokeNodeSnapshot stroke:
-      return StrokeNode(
-        id: stroke.id,
-        instanceRevision: instanceRevision,
-        points: stroke.points,
-        pointsRevision: stroke.pointsRevision,
-        thickness: stroke.thickness,
-        color: stroke.color,
-        transform: stroke.transform,
-        opacity: stroke.opacity,
-        hitPadding: stroke.hitPadding,
-        isVisible: stroke.isVisible,
-        isSelectable: stroke.isSelectable,
-        isLocked: stroke.isLocked,
-        isDeletable: stroke.isDeletable,
-        isTransformable: stroke.isTransformable,
-      );
-    case LineNodeSnapshot line:
-      return LineNode(
-        id: line.id,
-        instanceRevision: instanceRevision,
-        start: line.start,
-        end: line.end,
-        thickness: line.thickness,
-        color: line.color,
-        transform: line.transform,
-        opacity: line.opacity,
-        hitPadding: line.hitPadding,
-        isVisible: line.isVisible,
-        isSelectable: line.isSelectable,
-        isLocked: line.isLocked,
-        isDeletable: line.isDeletable,
-        isTransformable: line.isTransformable,
-      );
-    case RectNodeSnapshot rect:
-      return RectNode(
-        id: rect.id,
-        instanceRevision: instanceRevision,
-        size: rect.size,
-        fillColor: rect.fillColor,
-        strokeColor: rect.strokeColor,
-        strokeWidth: rect.strokeWidth,
-        transform: rect.transform,
-        opacity: rect.opacity,
-        hitPadding: rect.hitPadding,
-        isVisible: rect.isVisible,
-        isSelectable: rect.isSelectable,
-        isLocked: rect.isLocked,
-        isDeletable: rect.isDeletable,
-        isTransformable: rect.isTransformable,
-      );
-    case PathNodeSnapshot path:
-      return PathNode(
-        id: path.id,
-        instanceRevision: instanceRevision,
-        svgPathData: path.svgPathData,
-        fillColor: path.fillColor,
-        strokeColor: path.strokeColor,
-        strokeWidth: path.strokeWidth,
-        fillRule: path.fillRule,
-        transform: path.transform,
-        opacity: path.opacity,
-        hitPadding: path.hitPadding,
-        isVisible: path.isVisible,
-        isSelectable: path.isSelectable,
-        isLocked: path.isLocked,
-        isDeletable: path.isDeletable,
-        isTransformable: path.isTransformable,
-      );
-  }
+  return sceneNodeFromSnapshotViaBoundarySchema(
+    node,
+    instanceRevision: instanceRevision,
+    textSizePolicy: TextNodeSnapshotSizePolicy.recomputeFromLayout,
+  );
 }
 
 NodeSnapshot txnNodeToSnapshot(SceneNode node) {
@@ -282,122 +175,14 @@ SceneNode txnNodeFromSpec(
   required NodeId fallbackId,
   int Function()? nextInstanceRevision,
 }) {
-  final id = spec.id ?? fallbackId;
   final instanceRevision = _txnResolveSpecInstanceRevision(
     nextInstanceRevision: nextInstanceRevision,
   );
-  switch (spec) {
-    case ImageNodeSpec image:
-      return ImageNode(
-        id: id,
-        instanceRevision: instanceRevision,
-        imageId: image.imageId,
-        size: image.size,
-        naturalSize: image.naturalSize,
-        transform: image.transform,
-        opacity: image.opacity,
-        hitPadding: image.hitPadding,
-        isVisible: image.isVisible,
-        isSelectable: image.isSelectable,
-        isLocked: image.isLocked,
-        isDeletable: image.isDeletable,
-        isTransformable: image.isTransformable,
-      );
-    case TextNodeSpec text:
-      final node = TextNode(
-        id: id,
-        instanceRevision: instanceRevision,
-        text: text.text,
-        size: Size.zero,
-        fontSize: text.fontSize,
-        color: text.color,
-        align: text.align,
-        isBold: text.isBold,
-        isItalic: text.isItalic,
-        isUnderline: text.isUnderline,
-        fontFamily: text.fontFamily,
-        maxWidth: text.maxWidth,
-        lineHeight: text.lineHeight,
-        transform: text.transform,
-        opacity: text.opacity,
-        hitPadding: text.hitPadding,
-        isVisible: text.isVisible,
-        isSelectable: text.isSelectable,
-        isLocked: text.isLocked,
-        isDeletable: text.isDeletable,
-        isTransformable: text.isTransformable,
-      );
-      recomputeDerivedTextSize(node);
-      return node;
-    case StrokeNodeSpec stroke:
-      return StrokeNode(
-        id: id,
-        instanceRevision: instanceRevision,
-        points: stroke.points,
-        thickness: stroke.thickness,
-        color: stroke.color,
-        transform: stroke.transform,
-        opacity: stroke.opacity,
-        hitPadding: stroke.hitPadding,
-        isVisible: stroke.isVisible,
-        isSelectable: stroke.isSelectable,
-        isLocked: stroke.isLocked,
-        isDeletable: stroke.isDeletable,
-        isTransformable: stroke.isTransformable,
-      );
-    case LineNodeSpec line:
-      return LineNode(
-        id: id,
-        instanceRevision: instanceRevision,
-        start: line.start,
-        end: line.end,
-        thickness: line.thickness,
-        color: line.color,
-        transform: line.transform,
-        opacity: line.opacity,
-        hitPadding: line.hitPadding,
-        isVisible: line.isVisible,
-        isSelectable: line.isSelectable,
-        isLocked: line.isLocked,
-        isDeletable: line.isDeletable,
-        isTransformable: line.isTransformable,
-      );
-    case RectNodeSpec rect:
-      return RectNode(
-        id: id,
-        instanceRevision: instanceRevision,
-        size: rect.size,
-        fillColor: rect.fillColor,
-        strokeColor: rect.strokeColor,
-        strokeWidth: rect.strokeWidth,
-        transform: rect.transform,
-        opacity: rect.opacity,
-        hitPadding: rect.hitPadding,
-        isVisible: rect.isVisible,
-        isSelectable: rect.isSelectable,
-        isLocked: rect.isLocked,
-        isDeletable: rect.isDeletable,
-        isTransformable: rect.isTransformable,
-      );
-    case PathNodeSpec path:
-      return PathNode(
-        id: id,
-        instanceRevision: instanceRevision,
-        svgPathData: path.svgPathData,
-        fillColor: path.fillColor,
-        strokeColor: path.strokeColor,
-        strokeWidth: path.strokeWidth,
-        fillRule: path.fillRule,
-        transform: path.transform,
-        opacity: path.opacity,
-        hitPadding: path.hitPadding,
-        isVisible: path.isVisible,
-        isSelectable: path.isSelectable,
-        isLocked: path.isLocked,
-        isDeletable: path.isDeletable,
-        isTransformable: path.isTransformable,
-      );
-  }
+  return sceneNodeFromSpecViaBoundarySchema(
+    spec,
+    fallbackId: fallbackId,
+    instanceRevision: instanceRevision,
+  );
 }
 
 int _txnResolveSnapshotInstanceRevision(
