@@ -394,6 +394,46 @@ void main() {
     },
   );
 
+  test(
+    'no-op stroke point patch keeps commit state, snapshot cache, and pointsRevision',
+    () {
+      final controller = SceneControllerCore(
+        initialSnapshot: singleStrokeSnapshot(),
+      );
+      addTearDown(controller.dispose);
+
+      final beforeSnapshot = controller.snapshot;
+      final beforeCommit = controller.debugCommitRevision;
+      final beforeStructural = controller.structuralRevision;
+      final beforeBounds = controller.boundsRevision;
+      final beforeVisual = controller.visualRevision;
+      final beforeStroke =
+          beforeSnapshot.layers.first.nodes.first as StrokeNodeSnapshot;
+
+      controller.write<void>((writer) {
+        writer.writeNodePatch(
+          StrokeNodePatch(
+            id: 's1',
+            points: PatchField<List<Offset>>.value(<Offset>[
+              const Offset(0, 0),
+              const Offset(1, 1),
+            ]),
+          ),
+        );
+      });
+
+      final afterSnapshot = controller.snapshot;
+      final afterStroke =
+          afterSnapshot.layers.first.nodes.first as StrokeNodeSnapshot;
+      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.structuralRevision, beforeStructural);
+      expect(controller.boundsRevision, beforeBounds);
+      expect(controller.visualRevision, beforeVisual);
+      expect(afterStroke.pointsRevision, beforeStroke.pointsRevision);
+      expect(identical(afterSnapshot, beforeSnapshot), isTrue);
+    },
+  );
+
   test('snapshot cache invalidates after writeReplaceScene', () {
     final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);

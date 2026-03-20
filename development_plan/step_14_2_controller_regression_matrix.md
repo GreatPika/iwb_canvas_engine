@@ -146,7 +146,7 @@ commit, command, and immutable-result semantics in the current
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Selection and Delete Matrix
+### Slice 1. [x] Selection and Delete Matrix
 
 #### Slice Contract
 Selection replacement and bulk delete semantics are closed by direct controller
@@ -174,7 +174,7 @@ delete behavior.
 - The original selection/delete items from step `14` are mapped to these
   controller owners.
 
-### Slice 2. [ ] Commit Lifecycle and Result Matrix
+### Slice 2. [x] Commit Lifecycle and Result Matrix
 
 #### Slice Contract
 Controller commit order, failure behavior, and immutable result payloads have
@@ -206,7 +206,7 @@ Extend the controller-core and internal tests around commit, dispose, and
 - The unresolved lifecycle and immutable-result items from step `14` are tied
   to one controller-owned proof set.
 
-### Slice 3. [ ] Point Patch Revision Matrix
+### Slice 3. [x] Point Patch Revision Matrix
 
 #### Slice Contract
 Point-patch no-op behavior is closed by targeted regression proofs for copy and

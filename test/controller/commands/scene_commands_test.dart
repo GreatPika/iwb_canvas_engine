@@ -375,6 +375,34 @@ void main() {
     assertControllerInvariants(controller);
   });
 
+  test(
+    'selection replace empty input keeps no-op semantics and emits no signal',
+    () async {
+      final controller = buildController();
+      addTearDown(controller.dispose);
+
+      var replacedSignals = 0;
+      final sub = controller.signals.listen((signal) {
+        if (signal.type == 'selection.replaced') {
+          replacedSignals = replacedSignals + 1;
+        }
+      });
+      addTearDown(sub.cancel);
+
+      controller.commands.writeSelectionReplace(const <NodeId>{'base'});
+      await pumpEventQueue();
+      expect(controller.selectedNodeIds, const <NodeId>{'base'});
+      expect(replacedSignals, 1);
+
+      controller.commands.writeSelectionReplace(const <NodeId>{});
+      await pumpEventQueue();
+
+      expect(controller.selectedNodeIds, const <NodeId>{'base'});
+      expect(replacedSignals, 1);
+      assertControllerInvariants(controller);
+    },
+  );
+
   test('selection signal ids equal committed selection', () async {
     final controller = buildController();
     addTearDown(controller.dispose);
@@ -548,6 +576,76 @@ void main() {
       expect(deleted, 0);
       expect(signalTypes, isNot(contains('selection.deleted')));
       expect(controller.debugCommitRevision, initialRevision);
+      assertControllerInvariants(controller);
+    },
+  );
+
+  test(
+    'selection delete removes only deletable selected nodes across command path',
+    () async {
+      final controller = SceneControllerCore(
+        initialSnapshot: SceneSnapshot(
+          backgroundLayer: BackgroundLayerSnapshot(
+            nodes: <NodeSnapshot>[
+              RectNodeSnapshot(id: 'bg', size: Size(20, 10)),
+            ],
+          ),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-auto-1',
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(
+                  id: 'locked',
+                  size: Size(20, 10),
+                  isDeletable: false,
+                ),
+                RectNodeSnapshot(id: 'free', size: Size(20, 10)),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      final deletedSignals = <List<NodeId>>[];
+      final sub = controller.signals.listen((signal) {
+        if (signal.type == 'selection.deleted') {
+          deletedSignals.add(signal.nodeIds);
+        }
+      });
+      addTearDown(sub.cancel);
+
+      controller.commands.writeSelectionReplace(const <NodeId>{
+        'bg',
+        'locked',
+        'free',
+        'missing',
+      });
+      await pumpEventQueue();
+      expect(controller.selectedNodeIds, const <NodeId>{'locked', 'free'});
+
+      final deleted = controller.commands.writeDeleteSelection();
+      await pumpEventQueue();
+
+      expect(deleted, 1);
+      expect(deletedSignals, const <List<NodeId>>[
+        <NodeId>['free'],
+      ]);
+      expect(controller.selectedNodeIds, const <NodeId>{'locked'});
+      expect(
+        controller.snapshot.layers.single.nodes
+            .map((node) => node.id)
+            .toList(growable: false),
+        const <NodeId>['locked'],
+      );
+
+      final noOpDelete = controller.commands.writeDeleteSelection();
+      await pumpEventQueue();
+
+      expect(noOpDelete, 0);
+      expect(deletedSignals, const <List<NodeId>>[
+        <NodeId>['free'],
+      ]);
       assertControllerInvariants(controller);
     },
   );

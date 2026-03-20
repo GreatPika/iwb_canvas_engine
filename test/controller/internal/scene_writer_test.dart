@@ -806,6 +806,45 @@ void main() {
     },
   );
 
+  test('stroke no-op point patch keeps point list identity and revision', () {
+    final stroke = StrokeNode(
+      id: 's1',
+      points: const <Offset>[Offset(0, 0), Offset(1, 1)],
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+    final ctx = TxnContext(
+      baseScene: Scene(
+        layers: <ContentLayer>[
+          ContentLayer(id: 'layer-auto-6c', nodes: <SceneNode>[stroke]),
+        ],
+      ),
+      workingSelection: const <NodeId>{},
+      baseAllNodeIds: const <NodeId>{'s1'},
+      nodeIdSeed: 0,
+      nextInstanceRevision: 1,
+    );
+    final writer = newWriter(ctx, txnSignalSink: (_) {});
+    final pointsBefore = stroke.points;
+    final revisionBefore = stroke.pointsRevision;
+
+    final changed = writer.writeNodePatch(
+      StrokeNodePatch(
+        id: 's1',
+        points: PatchField<List<Offset>>.value(<Offset>[
+          const Offset(0, 0),
+          const Offset(1, 1),
+        ]),
+      ),
+    );
+
+    final updated = ctx.workingScene.layers.single.nodes.single as StrokeNode;
+    expect(changed, isFalse);
+    expect(updated.pointsRevision, revisionBefore);
+    expect(identical(updated.points, pointsBefore), isTrue);
+    expect(ctx.changeSet.txnHasAnyChange, isFalse);
+  });
+
   test('writeNodeTransformSet marks visual change when bounds stay same', () {
     final ctx = TxnContext(
       baseScene: Scene(
