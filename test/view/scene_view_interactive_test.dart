@@ -267,7 +267,7 @@ void main() {
   testWidgets('SceneViewInteractive flushes pending tap timer callback', (
     tester,
   ) async {
-    final controller = SceneControllerInteractive(
+    final controller = _RecordingPointerController(
       initialSnapshot: _snapshot(text: 'timer'),
       pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 1),
     );
@@ -278,9 +278,41 @@ void main() {
 
     final gesture = await tester.startGesture(const Offset(50, 50), pointer: 8);
     await gesture.up();
+    await tester.pump();
+
+    expect(
+      debugSceneViewInteractivePendingTapFlushTimestampMsOf(
+        _sceneViewContext(tester),
+      ),
+      isNotNull,
+    );
+    expect(
+      controller.recordedInputs
+          .map((input) => (input.pointerId, input.phase))
+          .toList(),
+      <(int, CanvasPointerPhase)>[
+        (1, CanvasPointerPhase.down),
+        (1, CanvasPointerPhase.up),
+      ],
+    );
+
     await tester.pump(const Duration(milliseconds: 16));
 
-    expect(find.byType(SceneViewInteractive), findsOneWidget);
+    expect(
+      debugSceneViewInteractivePendingTapFlushTimestampMsOf(
+        _sceneViewContext(tester),
+      ),
+      isNull,
+    );
+    expect(
+      controller.recordedInputs
+          .map((input) => (input.pointerId, input.phase))
+          .toList(),
+      <(int, CanvasPointerPhase)>[
+        (1, CanvasPointerPhase.down),
+        (1, CanvasPointerPhase.up),
+      ],
+    );
   });
 
   testWidgets(

@@ -79,5 +79,5 @@ language: russian
 - [ ] [Шаг 14. Закрыть тестами и невозвратом все этапы через подшаги 14.1-14.4](development_plan/step_14_test_and_non_regression_closure.md)
 - [x] [Шаг 14.1. Закрыть regression-матрицу boundary, model и core](development_plan/step_14_1_serialization_model_and_core_regression_matrix.md)
 - [x] [Шаг 14.2. Закрыть regression-матрицу controller](development_plan/step_14_2_controller_regression_matrix.md)
-- [ ] [Шаг 14.3. Закрыть regression-матрицу interactive и view](development_plan/step_14_3_interactive_and_view_regression_matrix.md)
+- [x] [Шаг 14.3. Закрыть regression-матрицу interactive и view](development_plan/step_14_3_interactive_and_view_regression_matrix.md)
 - [ ] [Шаг 14.4. Закрыть regression-матрицу render и cache](development_plan/step_14_4_render_and_cache_regression_matrix.md)

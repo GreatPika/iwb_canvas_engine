@@ -528,5 +528,120 @@ void main() {
         expect(afterNextGesture.transform.ty, closeTo(60, 1e-6));
       },
     );
+
+    test(
+      'tapSlop = 0 matches explicit dragStartSlop = 0 threshold semantics',
+      () {
+        RectNode buildNode() =>
+            RectNode(id: 'node', size: const Size(30, 20))
+              ..position = const Offset(60, 60);
+
+        SceneControllerInteractive buildController({
+          required PointerInputSettings pointerSettings,
+          required double? dragStartSlop,
+        }) {
+          final controller = controllerFromScene(
+            Scene(
+              layers: <ContentLayer>[
+                ContentLayer(id: 'layer-auto-30'),
+                ContentLayer(
+                  id: 'layer-auto-31',
+                  nodes: <SceneNode>[buildNode()],
+                ),
+              ],
+            ),
+            pointerSettings: pointerSettings,
+            dragStartSlop: dragStartSlop,
+          );
+          addTearDown(controller.dispose);
+          controller.setSelection(const <NodeId>{'node'});
+          return controller;
+        }
+
+        void driveTap(SceneControllerInteractive controller, int pointerId) {
+          controller.handlePointer(
+            sampleInput(
+              pointerId: pointerId,
+              position: const Offset(60, 60),
+              timestampMs: 1,
+              phase: CanvasPointerPhase.down,
+            ),
+          );
+          controller.handlePointer(
+            sampleInput(
+              pointerId: pointerId,
+              position: const Offset(60, 60),
+              timestampMs: 2,
+              phase: CanvasPointerPhase.up,
+            ),
+          );
+        }
+
+        void driveMinimalMove(
+          SceneControllerInteractive controller,
+          int pointerId,
+        ) {
+          controller.handlePointer(
+            sampleInput(
+              pointerId: pointerId,
+              position: const Offset(60, 60),
+              timestampMs: 3,
+              phase: CanvasPointerPhase.down,
+            ),
+          );
+          controller.handlePointer(
+            sampleInput(
+              pointerId: pointerId,
+              position: const Offset(60.5, 60),
+              timestampMs: 4,
+              phase: CanvasPointerPhase.move,
+            ),
+          );
+          controller.handlePointer(
+            sampleInput(
+              pointerId: pointerId,
+              position: const Offset(60.5, 60),
+              timestampMs: 5,
+              phase: CanvasPointerPhase.up,
+            ),
+          );
+        }
+
+        final explicitZeroController = buildController(
+          pointerSettings: const PointerInputSettings(tapSlop: 8),
+          dragStartSlop: 0,
+        );
+        final fallbackZeroController = buildController(
+          pointerSettings: const PointerInputSettings(tapSlop: 0),
+          dragStartSlop: null,
+        );
+
+        driveTap(explicitZeroController, 1);
+        driveTap(fallbackZeroController, 1);
+
+        final explicitAfterTap =
+            nodeById(explicitZeroController.snapshot, 'node')
+                as RectNodeSnapshot;
+        final fallbackAfterTap =
+            nodeById(fallbackZeroController.snapshot, 'node')
+                as RectNodeSnapshot;
+        expect(explicitAfterTap.transform.tx, closeTo(60, 1e-6));
+        expect(fallbackAfterTap.transform.tx, closeTo(60, 1e-6));
+
+        driveMinimalMove(explicitZeroController, 2);
+        driveMinimalMove(fallbackZeroController, 2);
+
+        final explicitAfterMove =
+            nodeById(explicitZeroController.snapshot, 'node')
+                as RectNodeSnapshot;
+        final fallbackAfterMove =
+            nodeById(fallbackZeroController.snapshot, 'node')
+                as RectNodeSnapshot;
+        expect(explicitAfterMove.transform.tx, closeTo(60.5, 1e-6));
+        expect(explicitAfterMove.transform.ty, closeTo(60, 1e-6));
+        expect(fallbackAfterMove.transform.tx, closeTo(60.5, 1e-6));
+        expect(fallbackAfterMove.transform.ty, closeTo(60, 1e-6));
+      },
+    );
   });
 }

@@ -222,7 +222,7 @@ to it the original controller-side regression matrix.
 - Controller regression items are no longer mixed with interactive or render
   ownership.
 
-### Slice 3. [ ] Interactive and View Regression Contract
+### Slice 3. [x] Interactive and View Regression Contract
 
 #### Slice Contract
 The original interactive and view regression items are closed by one substep

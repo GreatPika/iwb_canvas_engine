@@ -114,4 +114,38 @@ void main() {
       isTrue,
     );
   });
+
+  test(
+    'SceneViewPointerRouter keeps raw pointer ownership stable across slot reuse',
+    () {
+      final router = SceneViewPointerRouter();
+
+      final first = router.route(rawPointer: 1001, phase: PointerPhase.down);
+      final second = router.route(rawPointer: 2002, phase: PointerPhase.down);
+      expect(first.pointerId, 1);
+      expect(second.pointerId, 2);
+
+      final firstRelease = router.release(1001);
+      expect(firstRelease.pointerId, 1);
+      expect(firstRelease.isIdleAfterRelease, isFalse);
+
+      final stillKnown = router.route(
+        rawPointer: 2002,
+        phase: PointerPhase.move,
+      );
+      expect(stillKnown.kind, SceneViewPointerRouteKind.routedKnown);
+      expect(stillKnown.pointerId, 2);
+
+      final reused = router.route(rawPointer: 3003, phase: PointerPhase.down);
+      expect(reused.pointerId, 1);
+      expect(router.liveRawPointerCount, 2);
+
+      final secondStillKnown = router.route(
+        rawPointer: 2002,
+        phase: PointerPhase.up,
+      );
+      expect(secondStillKnown.kind, SceneViewPointerRouteKind.routedKnown);
+      expect(secondStillKnown.pointerId, 2);
+    },
+  );
 }

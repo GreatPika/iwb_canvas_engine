@@ -148,7 +148,7 @@ render layers.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Interactive Gesture Boundary Matrix
+### Slice 1. [x] Interactive Gesture Boundary Matrix
 
 #### Slice Contract
 The unresolved interactive gesture and pointer-entry regressions are closed by
@@ -185,7 +185,7 @@ normalization, move parity, and pending-line cleanup.
 - Every original `interactive` item from step `14` is tied to one owner-level
   test.
 
-### Slice 2. [ ] View Host Routing Matrix
+### Slice 2. [x] View Host Routing Matrix
 
 #### Slice Contract
 The unresolved view-side raw host and pointer-router regressions are closed by
