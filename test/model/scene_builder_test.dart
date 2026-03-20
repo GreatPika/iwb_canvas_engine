@@ -265,6 +265,39 @@ void main() {
   });
 
   test(
+    'sceneValidateCore materializes missing background layer without changing content ownership',
+    () {
+      final scene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-auto-runtime-no-background',
+            nodes: <SceneNode>[
+              RectNode(
+                id: 'rect-runtime-no-background',
+                size: const Size(4, 5),
+              ),
+            ],
+          ),
+        ],
+      );
+
+      final canonical = model_builder.sceneValidateCore(scene);
+
+      expect(canonical.backgroundLayer, isNotNull);
+      final backgroundLayer = canonical.backgroundLayer;
+      if (backgroundLayer == null) {
+        fail('Expected sceneValidateCore to materialize background layer.');
+      }
+      expect(backgroundLayer.nodes, isEmpty);
+      expect(canonical.layers.single.id, 'layer-auto-runtime-no-background');
+      expect(
+        canonical.layers.single.nodes.single.id,
+        'rect-runtime-no-background',
+      );
+    },
+  );
+
+  test(
     'ScenePolicy runtime and encode entrypoints preserve runtime diagnostics',
     () {
       Scene duplicateScene() {
@@ -463,6 +496,37 @@ void main() {
       expect(textNode.size, isNot(textSnapshot.size));
       expect(textNode.size.width, closeTo(expectedSize.width, 0.001));
       expect(textNode.size.height, closeTo(expectedSize.height, 0.001));
+    },
+  );
+
+  test(
+    'sceneBuildFromJsonMap keeps legacy node-* and layer-* ids readable',
+    () {
+      final json = _minimalSceneJson();
+      json['backgroundLayer'] = <String, Object?>{
+        'nodes': <Object?>[
+          <String, Object?>{..._minimalRectNodeJson(id: 'node-1')},
+        ],
+      };
+      json['layers'] = <Object?>[
+        <String, Object?>{
+          'id': 'layer-1',
+          'nodes': <Object?>[
+            <String, Object?>{..._minimalRectNodeJson(id: 'node-2')},
+          ],
+        },
+      ];
+
+      final scene = model_builder.sceneBuildFromJsonMap(json);
+
+      expect(scene.backgroundLayer, isNotNull);
+      final backgroundLayer = scene.backgroundLayer;
+      if (backgroundLayer == null) {
+        fail('Expected legacy payload import to materialize background layer.');
+      }
+      expect(backgroundLayer.nodes.single.id, 'node-1');
+      expect(scene.layers.single.id, 'layer-1');
+      expect(scene.layers.single.nodes.single.id, 'node-2');
     },
   );
 

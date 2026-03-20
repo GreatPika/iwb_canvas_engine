@@ -46,6 +46,36 @@ void main() {
     expect(copy.nextLayerCounter, 7);
   });
 
+  test(
+    'generated ids stay in the current factory format across allocation',
+    () {
+      final state = createIdGeneratorStateForTesting(
+        sessionToken: 'abc123',
+        nextNodeCounter: 1,
+        nextLayerCounter: 1,
+      );
+
+      final nodeIds = <String>[
+        generateNextNodeId(state, containsNodeId: (_) => false),
+        generateNextNodeId(state, containsNodeId: (_) => false),
+        generateNextNodeId(state, containsNodeId: (_) => false),
+      ];
+      final layerIds = <String>[
+        generateNextLayerId(state, containsLayerId: (_) => false),
+        generateNextLayerId(state, containsLayerId: (_) => false),
+      ];
+
+      expect(nodeIds, <String>[
+        'gen-n-abc123-1',
+        'gen-n-abc123-2',
+        'gen-n-abc123-3',
+      ]);
+      expect(layerIds, <String>['gen-l-abc123-1', 'gen-l-abc123-2']);
+      expect(state.nextNodeCounter, 4);
+      expect(state.nextLayerCounter, 3);
+    },
+  );
+
   test('generator rejects non-positive counters', () {
     final negativeNodeState = createIdGeneratorStateForTesting(
       nextNodeCounter: 0,

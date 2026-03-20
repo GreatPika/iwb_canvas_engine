@@ -113,8 +113,9 @@ current boundary and scene owners.
    symmetry, and `code/path/details` contract matrices.
 2. Model regressions are covered for `backgroundLayer` policy,
    `TextNodeSnapshot.size`, non-JSON structural limits, legacy id reading,
-   revision policy, uniqueness ownership, and the chosen behavior of
-   `multipleBackgroundLayers` and `ensureBackgroundLayer`.
+   revision policy, uniqueness ownership, and the current single-owner
+   `backgroundLayer` semantics including `ensureBackgroundLayer`
+   materialization and boundary canonicalization.
 3. Core regressions are covered for validated value types, id factories,
    revision policy, and one-owner defaults.
 4. User-facing `message` snapshots remain limited to explicit user-facing
@@ -180,7 +181,7 @@ current boundary and scene owners.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Serialization Boundary Matrix
+### Slice 1. [x] Serialization Boundary Matrix
 
 #### Slice Contract
 Serialization entrypoints reject the unresolved boundary defects with explicit
@@ -213,7 +214,7 @@ to cover the unresolved matrix from the original step `14`.
 - A documented matrix exists for `code/path/details` parity across decode,
   builder, and codec-guard boundaries.
 
-### Slice 2. [ ] Scene Model Policy Matrix
+### Slice 2. [x] Scene Model Policy Matrix
 
 #### Slice Contract
 Scene/model owners have explicit regression proofs for the unresolved policy
@@ -237,15 +238,17 @@ Extend model tests around `scene_policy.dart`, `scene_builder.dart`,
 #### Negative Scenarios
 - duplicate uniqueness checks cannot diverge across owners
 - non-JSON paths still enforce `kMax*` limits
-- unsupported `multipleBackgroundLayers` or `ensureBackgroundLayer` flows fail
-  according to the currently chosen semantics
+- the current model does not reintroduce a reachable
+  `multipleBackgroundLayers` failure path or any failing
+  `ensureBackgroundLayer` branch that contradicts the chosen single-owner
+  semantics
 
 #### Closure Evidence
 - Green run of the listed model tests.
 - Each unresolved model item from the original step `14` is mapped to one owner
   file and one regression proof.
 
-### Slice 3. [ ] Core Invariant Matrix
+### Slice 3. [x] Core Invariant Matrix
 
 #### Slice Contract
 Core id, revision, and default-value invariants have explicit non-regression

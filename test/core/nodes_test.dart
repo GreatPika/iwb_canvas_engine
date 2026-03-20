@@ -274,6 +274,29 @@ void main() {
     );
   });
 
+  test('stroke no-op point mutations keep pointsRevision unchanged', () {
+    final stroke = StrokeNode(
+      id: 'stable-revision',
+      points: const <Offset>[Offset(0, 0)],
+      thickness: 1,
+      color: const Color(0xFF000000),
+    );
+    final points = stroke.points;
+    final revision = stroke.pointsRevision;
+
+    points.length = points.length;
+    points.addAll(const <Offset>[]);
+    points.removeRange(0, 0);
+    points.setRange(0, 0, const <Offset>[]);
+    points.fillRange(0, 0);
+    points.removeWhere((_) => false);
+    points.retainWhere((_) => true);
+    points.sort();
+    points[0] = const Offset(0, 0);
+
+    expect(stroke.pointsRevision, revision);
+  });
+
   test('scene node constructor rejects non-positive instanceRevision', () {
     expect(
       () => RectNode(

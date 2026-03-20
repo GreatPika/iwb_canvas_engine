@@ -849,7 +849,7 @@ void main() {
     );
   });
 
-  test('encodeScene round-trips supported extended TextAlign values', () {
+  test('encodeScene round-trips the full supported TextAlign set', () {
     SceneSnapshot sceneFor(TextAlign align, String id) {
       return SceneSnapshot(
         layers: <ContentLayerSnapshot>[
@@ -871,6 +871,9 @@ void main() {
     }
 
     for (final entry in <(TextAlign, String)>[
+      (TextAlign.left, 'left'),
+      (TextAlign.center, 'center'),
+      (TextAlign.right, 'right'),
       (TextAlign.justify, 'justify'),
       (TextAlign.start, 'start'),
       (TextAlign.end, 'end'),
@@ -988,8 +991,10 @@ void main() {
     );
   });
 
-  test('decodeScene parses full supported text align set', () {
+  test('decodeScene parses the full supported text align set', () {
     for (final entry in <(String, TextAlign)>[
+      ('left', TextAlign.left),
+      ('center', TextAlign.center),
       ('right', TextAlign.right),
       ('justify', TextAlign.justify),
       ('start', TextAlign.start),
@@ -1400,6 +1405,23 @@ void main() {
     expect(schemaVersionsRead, contains(schemaVersionWrite));
   });
 
+  test('decodeScene accepts every supported schema version', () {
+    // INV:INV-SER-SCHEMA-VERSION-CONTRACT
+    for (final version in schemaVersionsRead) {
+      final json = _minimalSceneJson();
+      json['schemaVersion'] = version;
+
+      final scene = decodeScene(json);
+
+      expect(scene.layers, isEmpty, reason: 'schemaVersion=$version');
+      expect(
+        scene.backgroundLayer.nodes,
+        isEmpty,
+        reason: 'schemaVersion=$version',
+      );
+    }
+  });
+
   test('decodeScene rejects non-integer numeric schemaVersion', () {
     final json = _minimalSceneJson();
     json['schemaVersion'] = 2.5;
@@ -1434,6 +1456,31 @@ void main() {
           ),
         ),
       );
+    },
+  );
+
+  test(
+    'decodeSceneFromJson, decodeScene, and SceneBuilder.buildFromJson keep matching unsupported schema contracts',
+    () {
+      final raw = _minimalSceneJson();
+      raw['schemaVersion'] = 1.0;
+      final rawJson = jsonEncode(raw);
+
+      final fromString = _captureSceneDataException(
+        () => decodeSceneFromJson(rawJson),
+      );
+      final fromMap = _captureSceneDataException(
+        () => decodeScene(Map<String, dynamic>.from(raw)),
+      );
+      final fromBuilder = _captureSceneDataException(
+        () => SceneBuilder.buildFromJson(raw),
+      );
+
+      _expectSameSceneDataContract(fromString, fromMap);
+      _expectSameSceneDataContract(fromBuilder, fromMap);
+      expect(fromMap.code, SceneDataErrorCode.unsupportedSchemaVersion);
+      expect(fromMap.path, 'schemaVersion');
+      expect(fromMap.details, isEmpty);
     },
   );
 

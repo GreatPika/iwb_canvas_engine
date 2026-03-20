@@ -27,6 +27,21 @@ void main() {
     expect(nextEpoch, 8);
   });
 
+  test(
+    'resolveNextControllerEpoch keeps epoch stable without bump triggers',
+    () {
+      final state = createInitialRevisionAllocatorState();
+
+      final nextEpoch = resolveNextControllerEpoch(
+        currentEpoch: 7,
+        documentReplaced: false,
+        revisionState: state,
+      );
+
+      expect(nextEpoch, 7);
+    },
+  );
+
   test('resolveNextControllerEpoch fails fast on epoch overflow', () {
     final state = createInitialRevisionAllocatorState();
     state.epochBumpRequested = true;
@@ -38,6 +53,17 @@ void main() {
         revisionState: state,
       ),
       throwsStateError,
+    );
+  });
+
+  test('resolveNextControllerEpoch rejects invalid current epoch input', () {
+    expect(
+      () => resolveNextControllerEpoch(
+        currentEpoch: kMaxControllerEpoch + 1,
+        documentReplaced: false,
+        revisionState: createInitialRevisionAllocatorState(),
+      ),
+      throwsArgumentError,
     );
   });
 
