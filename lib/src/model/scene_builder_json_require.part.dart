@@ -22,6 +22,21 @@ Map<String, Object?> _castMap(Map<Object?, Object?> value, {String? path}) {
   return out;
 }
 
+Map<String, Object?> _requireObjectValue(
+  Object? value, {
+  required String path,
+  required String objectName,
+}) {
+  if (value is! Map) {
+    throw SceneDataException(
+      code: SceneDataErrorCode.invalidFieldType,
+      path: path,
+      message: '$objectName must be an object.',
+    );
+  }
+  return _castMap(value, path: path);
+}
+
 Map<String, Object?> _requireMap(
   Map<String, Object?> json,
   String key, {
@@ -189,6 +204,78 @@ double _requireDoubleValue(
   );
 }
 
+double _requireNonNegativeFiniteDouble(
+  Map<String, Object?> json,
+  String key, {
+  required String pathPrefix,
+}) {
+  final path = _pathAt(pathPrefix, key);
+  return NonNegativeFiniteDoubleValue.fromJson(
+    _requireField(json, key, pathPrefix: pathPrefix),
+    path: path,
+    fieldName: key,
+  ).value;
+}
+
+double _requirePositiveFiniteDouble(
+  Map<String, Object?> json,
+  String key, {
+  required String pathPrefix,
+}) {
+  final path = _pathAt(pathPrefix, key);
+  return PositiveFiniteDoubleValue.fromJson(
+    _requireField(json, key, pathPrefix: pathPrefix),
+    path: path,
+    fieldName: key,
+  ).value;
+}
+
+double? _optionalPositiveFiniteDouble(
+  Map<String, Object?> json,
+  String key, {
+  required String pathPrefix,
+}) {
+  if (!json.containsKey(key)) {
+    return null;
+  }
+  final value = json[key];
+  if (value == null) {
+    return null;
+  }
+  final path = _pathAt(pathPrefix, key);
+  return PositiveFiniteDoubleValue.fromJson(
+    value,
+    path: path,
+    fieldName: key,
+  ).value;
+}
+
+double _requireOpacity(
+  Map<String, Object?> json,
+  String key, {
+  required String pathPrefix,
+}) {
+  final path = _pathAt(pathPrefix, key);
+  return OpacityValue.fromJson(
+    _requireField(json, key, pathPrefix: pathPrefix),
+    path: path,
+    fieldName: key,
+  ).value;
+}
+
+Offset _requireFiniteOffset(
+  Map<String, Object?> json,
+  String key, {
+  required String pathPrefix,
+}) {
+  final path = _pathAt(pathPrefix, key);
+  return FiniteOffsetValue.fromJson(
+    _requireField(json, key, pathPrefix: pathPrefix),
+    path: path,
+    fieldName: path,
+  ).value;
+}
+
 Transform2D _decodeTransform2D(
   Map<String, Object?> json, {
   String pathPrefix = '',
@@ -252,6 +339,25 @@ Size? _optionalSizeMap(
     );
   }
   return Size(w, h);
+}
+
+String? _optionalFontFamily(
+  Map<String, Object?> json, {
+  required String pathPrefix,
+}) {
+  if (!json.containsKey('fontFamily')) {
+    return null;
+  }
+  final value = json['fontFamily'];
+  if (value == null) {
+    return null;
+  }
+  final path = _pathAt(pathPrefix, 'fontFamily');
+  return FontFamilyValue.fromJson(
+    value,
+    path: path,
+    fieldName: 'fontFamily',
+  ).value;
 }
 
 Color _parseColor(String value, {String? path}) {

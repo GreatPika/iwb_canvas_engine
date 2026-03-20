@@ -4,6 +4,7 @@ import '../core/nodes.dart';
 import '../core/revision_policy.dart';
 import '../core/scene.dart';
 import '../core/scene_limits.dart';
+import '../contract/internal/node_boundary_schema.dart';
 import '../contract/validated/finite_offset_value.dart';
 import '../contract/validated/font_family_value.dart';
 import '../contract/validated/image_id_value.dart';

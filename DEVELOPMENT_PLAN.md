@@ -86,6 +86,6 @@ language: russian
 - [ ] [Шаг 17. Замкнуть boundary node semantics на один `schema-first` source of truth и переснять baseline через 17.1-17.5](development_plan/step_17_schema_first_boundary_transition.md)
 - [x] [Шаг 17.1. Ввести одного contract-owned owner-а boundary field schema](development_plan/step_17_1_contract_owned_boundary_schema_owner.md)
 - [x] [Шаг 17.2. Перевести Scene <-> SceneSnapshot mapping на schema-owned boundary path](development_plan/step_17_2_scene_snapshot_boundary_mapping_schema_adoption.md)
-- [ ] [Шаг 17.3. Перевести SceneBuilder JSON decode/import на schema-owned boundary path](development_plan/step_17_3_scene_builder_decode_schema_adoption.md)
+- [x] [Шаг 17.3. Перевести SceneBuilder JSON decode/import на schema-owned boundary path](development_plan/step_17_3_scene_builder_decode_schema_adoption.md)
 - [ ] [Шаг 17.4. Перевести SceneCodec JSON encode/export на schema-owned boundary path](development_plan/step_17_4_scene_codec_encode_schema_adoption.md)
 - [ ] [Шаг 17.5. Переснять baseline boundary migration и обновить roadmap](development_plan/step_17_5_boundary_migration_rebaseline_and_roadmap.md)

@@ -166,7 +166,7 @@ path и оставляет в decode seam только transport-specific parsin
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] One decode-side owner for raw JSON require helpers
+### Slice 1. [x] One decode-side owner for raw JSON require helpers
 
 #### Slice Contract
 
@@ -192,7 +192,7 @@ the decode seam.
   `scene_builder_decode_json.part.dart` and
   `scene_builder_json_require.part.dart`.
 
-### Slice 2. [ ] Node decode consumes schema-owned field descriptions
+### Slice 2. [x] Node decode consumes schema-owned field descriptions
 
 #### Slice Contract
 
@@ -217,7 +217,7 @@ second handwritten node-shape mapping in `SceneBuilder`.
 - Decode seam no longer keeps a handwritten node-shape table next to the
   schema-owned path.
 
-### Slice 3. [ ] Decode seam retains transport ownership after cleanup
+### Slice 3. [x] Decode seam retains transport ownership after cleanup
 
 #### Slice Contract
 
