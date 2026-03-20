@@ -244,7 +244,7 @@ assign to it the original `interactive` and `view` regression matrix.
 - Interactive and view ownership stays in one substep and is not split across
   controller or render contracts.
 
-### Slice 4. [ ] Render and Cache Regression Contract
+### Slice 4. [x] Render and Cache Regression Contract
 
 #### Slice Contract
 The original render and cache regression items are closed by one substep

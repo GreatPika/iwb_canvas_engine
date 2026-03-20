@@ -145,7 +145,7 @@ grid, geometry, and cache invalidation contracts in the current
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Painter and Grid Parity Matrix
+### Slice 1. [x] Painter and Grid Parity Matrix
 
 #### Slice Contract
 Painter frame and grid rendering contracts have explicit regression proofs for
@@ -174,7 +174,7 @@ generation, and painter/static-cache algorithm parity.
 - The original painter/grid regression items from step `14` are covered by
   owner-level render tests.
 
-### Slice 2. [ ] Cache Key and Invalidation Matrix
+### Slice 2. [x] Cache Key and Invalidation Matrix
 
 #### Slice Contract
 Render cache key composition and invalidation semantics have explicit owner
@@ -196,7 +196,8 @@ geometry cache, and cache lifecycle aggregation.
 - render cache aggregation respects the current lifecycle boundary
 
 #### Negative Scenarios
-- text layout cache key ignores color when layout inputs are unchanged
+- text layout cache key keeps paint-affecting color and opacity while layout
+  inputs stay unchanged
 - path cache invalidates under the current invariant
 - cache reuse does not survive incompatible revision identity changes
 
