@@ -1,6 +1,6 @@
 language: russian
 
-# Шаг 17. Замкнуть boundary node semantics на один `schema-first` source of truth и переснять baseline через подшаги 17.1-17.5
+# Шаг 17. Замкнуть boundary node semantics на один `schema-first` source of truth и переснять baseline через подшаги 17.1-17.5 с подготовительным 17.3.1
 
 ## 1. Change Mandate
 
@@ -20,6 +20,8 @@ zones и фиксирует результат теми же baseline-инстр
   `txnNodeFromSnapshot(...)` и `txnNodeFromSpec(...)`.
 - `17.3`: `SceneBuilder` JSON decode / import seam, включая одного owner-а
   raw JSON require helpers и adoption schema-owned field descriptions.
+- `17.3.1`: shared owner для snapshot `instanceRevision` normalization,
+  который нужен encode adoption без split ownership в `scene_codec.dart`.
 - `17.4`: `SceneCodec` JSON encode / export seam и removal encode-side
   handwritten node-shape mapping.
 - `17.5`: post-migration rebaseline по `lib/**` и roadmap refresh по факту
@@ -32,7 +34,8 @@ zones и фиксирует результат теми же baseline-инстр
 - Перевод `controller/**`, `interactive/**`, `render/**` и `view/**` на
   `schema-first` в рамках этого этапа.
 - Лечение residual hot spots вне `contract/model/serialization` внутри
-  migration `17.1-17.4`; они только переснимаются и фиксируются в `17.5`.
+  migration `17.1-17.4` и подготовительного `17.3.1`; они только
+  переснимаются и фиксируются в `17.5`.
 - Pair-mode clone output как acceptance gate.
 
 ## 3. File Map and Analysis Areas
@@ -82,6 +85,7 @@ zones и фиксирует результат теми же baseline-инстр
 - `development_plan/step_17_1_contract_owned_boundary_schema_owner.md`
 - `development_plan/step_17_2_scene_snapshot_boundary_mapping_schema_adoption.md`
 - `development_plan/step_17_3_scene_builder_decode_schema_adoption.md`
+- `development_plan/step_17_3_1_snapshot_instance_revision_owner_alignment.md`
 - `development_plan/step_17_4_scene_codec_encode_schema_adoption.md`
 - `development_plan/step_17_5_boundary_migration_rebaseline_and_roadmap.md`
 
@@ -150,9 +154,10 @@ zones и фиксирует результат теми же baseline-инстр
    explicit contract types, `schemaVersion = 5`, JSON field naming,
    supported schema versions, `SceneDataException` attribution, committed role
    `SceneSnapshot` и mutable role `Scene`.
-4. Подшаги `17.1-17.4` закрывают migration seam-by-seam без пересечений по
-   ownership, а `17.5` фиксирует пост-миграционный baseline и residual work
-   без возврата к старой `16.x` программе.
+4. Подшаги `17.1-17.4` и подготовительный `17.3.1` закрывают migration
+   seam-by-seam без пересечений по ownership, а `17.5` фиксирует
+   пост-миграционный baseline и residual work без возврата к старой `16.x`
+   программе.
 5. Повторный cluster-mode clone inventory и configured DCM baseline по `lib/**`
    подтверждают новую post-schema-first реальность, а не старые предположения
    о duplicate ownership.
@@ -189,8 +194,8 @@ zones и фиксирует результат теми же baseline-инстр
     `scene_builder_scene_from_snapshot.part.dart`,
     `scene_snapshot_from_scene.dart`,
     `scene_codec.dart`
-- Подтверждённые residual hot spots вне ownership `17.1-17.4`, которые только
-  переснимаются и явно фиксируются в `17.5`:
+- Подтверждённые residual hot spots вне ownership `17.1-17.4` и `17.3.1`,
+  которые только переснимаются и явно фиксируются в `17.5`:
   - `lib/src/controller/scene_controller.dart`
   - `lib/src/controller/scene_invariants.dart`
   - `lib/src/core/node_geometry.dart`
@@ -202,6 +207,7 @@ zones и фиксирует результат теми же baseline-инстр
   - `development_plan/step_17_1_contract_owned_boundary_schema_owner.md`
   - `development_plan/step_17_2_scene_snapshot_boundary_mapping_schema_adoption.md`
   - `development_plan/step_17_3_scene_builder_decode_schema_adoption.md`
+  - `development_plan/step_17_3_1_snapshot_instance_revision_owner_alignment.md`
   - `development_plan/step_17_4_scene_codec_encode_schema_adoption.md`
   - `development_plan/step_17_5_boundary_migration_rebaseline_and_roadmap.md`
 - Full project code-change validation policy:
@@ -234,6 +240,7 @@ zones и фиксирует результат теми же baseline-инстр
 - Contract schema owner and contract-side consumers in `17.1`.
 - Runtime boundary conversion in `17.2`.
 - JSON decode / import seam in `17.3`.
+- Snapshot `instanceRevision` normalization prerequisite in `17.3.1`.
 - JSON encode / export seam in `17.4`.
 - Post-migration measurement and roadmap refresh in `17.5`.
 
@@ -251,10 +258,13 @@ zones и фиксирует результат теми же baseline-инстр
   `scene_builder.dart`,
   `scene_builder_decode_json.part.dart`,
   `scene_builder_json_require.part.dart`.
+- `17.3.1` owns the shared snapshot revision prerequisite:
+  `revision_policy.dart`,
+  `document.dart`.
 - `17.4` owns the entire encode seam:
   `scene_codec.dart`.
 - `17.5` reads the post-migration state and updates planning documents; it does
-  not reopen semantic scope from `17.1-17.4`.
+  not reopen semantic scope from `17.1-17.4` or `17.3.1`.
 - If a file belongs to one owner in the matrix above, no parallel slice may
   redefine semantic ownership for that file.
 
@@ -289,10 +299,11 @@ zones и фиксирует результат теми же baseline-инстр
 9. Slice 1 (`17.1`) is mandatory and must close before slices 2, 3, or 4 may
    start.
 10. Slice 2 (`17.2`) must close before slice 3 (`17.3`) may start.
-11. Slice 3 (`17.3`) must close before slice 4 (`17.4`) may start.
-12. Slice 5 (`17.5`) is forbidden until slices 1-4 are closed and their Final
-   Verification runs are green.
-13. Umbrella step `17` is closed only when slices 1-5 are closed, the
+11. Slice 3 (`17.3`) must close before slice 3.1 (`17.3.1`) may start.
+12. Slice 3.1 (`17.3.1`) must close before slice 4 (`17.4`) may start.
+13. Slice 5 (`17.5`) is forbidden until slices 1-4 and 3.1 are closed and
+   their Final Verification runs are green.
+14. Umbrella step `17` is closed only when slices 1-5 and 3.1 are closed, the
    post-step baseline is explicitly compared with the starting baseline, and
    the project-wide final verification is green.
 
@@ -376,6 +387,30 @@ boundary mapping or duplicate JSON require helper family.
 - Green run of the listed verifications.
 - Decode seam no longer contains the migrated duplicate helper family or a
   second handwritten node-shape mapping.
+
+### Slice 3.1. [ ] Snapshot revision ownership is aligned before encode migration
+
+#### Slice Contract
+
+Snapshot `instanceRevision` normalization is owned by one reusable prerequisite
+outside the private txn-only body, so `17.4` does not need to reopen revision
+ownership when it migrates the encode seam.
+
+#### Change
+
+Закрыть `development_plan/step_17_3_1_snapshot_instance_revision_owner_alignment.md`
+без выхода за границы ownership `17.3.1`.
+
+#### Verification
+
+- `dcm calculate-metrics lib/src/core/revision_policy.dart lib/src/model/document.dart --report-all`
+- MCP test runner: `test/model/document_model_test.dart`
+- MCP test runner: `test/serialization/scene_codec_validation_test.dart test/serialization/scene_test.dart`
+
+#### Closure Evidence
+
+- Green run of the listed verifications.
+- Snapshot revision normalization no longer lives only in the private txn seam.
 
 ### Slice 4. [ ] Encode/export remains the canonical transport owner
 
