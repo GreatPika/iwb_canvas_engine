@@ -155,8 +155,8 @@ SceneNode txnNodeFromSnapshot(
   NodeSnapshot node, {
   int Function()? nextInstanceRevision,
 }) {
-  final instanceRevision = _txnResolveSnapshotInstanceRevision(
-    node,
+  final instanceRevision = resolveSnapshotInstanceRevision(
+    node.instanceRevision,
     nextInstanceRevision: nextInstanceRevision,
   );
   return sceneNodeFromSnapshotViaBoundarySchema(
@@ -182,23 +182,6 @@ SceneNode txnNodeFromSpec(
     spec,
     fallbackId: fallbackId,
     instanceRevision: instanceRevision,
-  );
-}
-
-int _txnResolveSnapshotInstanceRevision(
-  NodeSnapshot node, {
-  int Function()? nextInstanceRevision,
-}) {
-  final allocator = nextInstanceRevision;
-  if (allocator != null) {
-    return resolveImportedInstanceRevision(
-      node.instanceRevision,
-      allocateNextInstanceRevision: allocator,
-    );
-  }
-  return resolveImportedInstanceRevision(
-    node.instanceRevision,
-    allocateNextInstanceRevision: createLocalRevisionAllocator(),
   );
 }
 

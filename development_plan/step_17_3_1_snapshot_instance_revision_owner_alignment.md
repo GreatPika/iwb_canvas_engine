@@ -33,6 +33,7 @@ encode adoption без изменения текущего export contract.
 
 - `lib/src/core/revision_policy.dart`
 - `lib/src/model/document.dart`
+- `lib/src/model/scene_builder_scene_from_snapshot.part.dart`
 
 ### Test Files
 
@@ -50,6 +51,7 @@ encode adoption без изменения текущего export contract.
 
 - `lib/src/core/revision_policy.dart`
 - `lib/src/model/document.dart`
+- `lib/src/model/scene_builder_scene_from_snapshot.part.dart`
 - `test/model/document_model_test.dart`
 - `test/serialization/scene_codec_validation_test.dart`
 - `test/serialization/scene_test.dart`
@@ -103,6 +105,9 @@ encode adoption без изменения текущего export contract.
 - `txnNodeFromSnapshot(...)` currently resolves snapshot revisions through the
   private helper `_txnResolveSnapshotInstanceRevision(...)` in
   `document.dart`.
+- Runtime snapshot import in `scene_builder_scene_from_snapshot.part.dart`
+  currently keeps a second private `_resolveSnapshotInstanceRevision(...)`
+  helper with the same positive/non-positive revision semantics.
 - Existing regression tests prove the protected behavior:
   `encode -> decode -> encode is stable`,
   `decodeScene accepts JSON without instanceRevision and re-encodes with it`,
@@ -112,7 +117,7 @@ encode adoption без изменения текущего export contract.
 
 ### 6.2 Target Verification Units
 
-- `dcm calculate-metrics lib/src/core/revision_policy.dart lib/src/model/document.dart --report-all`
+- `dcm calculate-metrics lib/src/core/revision_policy.dart lib/src/model/document.dart lib/src/model/scene_builder_scene_from_snapshot.part.dart --report-all`
 - MCP test runner: `test/model/document_model_test.dart`
 - MCP test runner: `test/serialization/scene_codec_validation_test.dart test/serialization/scene_test.dart`
 
@@ -159,7 +164,7 @@ encode adoption без изменения текущего export contract.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Snapshot `instanceRevision` normalization has one reusable owner
+### Slice 1. [x] Snapshot `instanceRevision` normalization has one reusable owner
 
 #### Slice Contract
 
@@ -169,25 +174,28 @@ seam and is reusable by downstream encode work.
 
 #### Change
 
-Extract one shared owner for snapshot `instanceRevision` normalization from
-`document.dart`, wire `txnNodeFromSnapshot(...)` through it, and keep the
-current encode regression surface green without touching `scene_codec.dart`.
+Extract one shared owner for snapshot `instanceRevision` normalization above
+`document.dart` and `scene_builder_scene_from_snapshot.part.dart`, wire
+`txnNodeFromSnapshot(...)` and runtime snapshot import through it, and keep
+the current encode regression surface green without touching
+`scene_codec.dart`.
 
 #### Verification
 
-- `dcm calculate-metrics lib/src/core/revision_policy.dart lib/src/model/document.dart --report-all`
+- `dcm calculate-metrics lib/src/core/revision_policy.dart lib/src/model/document.dart lib/src/model/scene_builder_scene_from_snapshot.part.dart --report-all`
 - MCP test runner: `test/model/document_model_test.dart`
 - MCP test runner: `test/serialization/scene_codec_validation_test.dart test/serialization/scene_test.dart`
 
 #### Closure Evidence
 
 - Green run of the listed verifications.
-- `document.dart` no longer contains a private snapshot-revision normalization
-  body that duplicates the shared owner.
+- `document.dart` and `scene_builder_scene_from_snapshot.part.dart` no longer
+  contain private snapshot-revision normalization bodies that duplicate the
+  shared owner.
 
 ## 9. Final Verification
 
-- `dcm calculate-metrics lib/src/core/revision_policy.dart lib/src/model/document.dart --report-all`
+- `dcm calculate-metrics lib/src/core/revision_policy.dart lib/src/model/document.dart lib/src/model/scene_builder_scene_from_snapshot.part.dart --report-all`
 - MCP test runner: `test/model/document_model_test.dart`
 - MCP test runner: `test/serialization/scene_codec_validation_test.dart test/serialization/scene_test.dart`
 

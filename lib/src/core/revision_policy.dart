@@ -48,6 +48,17 @@ int resolveImportedInstanceRevision(
   return allocateNextInstanceRevision();
 }
 
+int resolveSnapshotInstanceRevision(
+  int instanceRevision, {
+  int Function()? nextInstanceRevision,
+}) {
+  return resolveImportedInstanceRevision(
+    instanceRevision,
+    allocateNextInstanceRevision:
+        nextInstanceRevision ?? createLocalRevisionAllocator(),
+  );
+}
+
 int resolveNextControllerEpoch({
   required int currentEpoch,
   required bool documentReplaced,

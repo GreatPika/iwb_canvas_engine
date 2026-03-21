@@ -53,23 +53,13 @@ SceneNode _sceneNodeFromSnapshot(
   NodeSnapshot node, {
   required int Function() nextInstanceRevision,
 }) {
-  final instanceRevision = _resolveSnapshotInstanceRevision(
-    node,
+  final instanceRevision = resolveSnapshotInstanceRevision(
+    node.instanceRevision,
     nextInstanceRevision: nextInstanceRevision,
   );
   return sceneNodeFromSnapshotViaBoundarySchema(
     node,
     instanceRevision: instanceRevision,
     textSizePolicy: TextNodeSnapshotSizePolicy.recomputeFromLayout,
-  );
-}
-
-int _resolveSnapshotInstanceRevision(
-  NodeSnapshot node, {
-  required int Function() nextInstanceRevision,
-}) {
-  return resolveImportedInstanceRevision(
-    node.instanceRevision,
-    allocateNextInstanceRevision: nextInstanceRevision,
   );
 }

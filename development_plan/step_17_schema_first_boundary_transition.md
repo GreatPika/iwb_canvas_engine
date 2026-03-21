@@ -260,7 +260,8 @@ zones и фиксирует результат теми же baseline-инстр
   `scene_builder_json_require.part.dart`.
 - `17.3.1` owns the shared snapshot revision prerequisite:
   `revision_policy.dart`,
-  `document.dart`.
+  `document.dart`,
+  `scene_builder_scene_from_snapshot.part.dart`.
 - `17.4` owns the entire encode seam:
   `scene_codec.dart`.
 - `17.5` reads the post-migration state and updates planning documents; it does
@@ -388,7 +389,7 @@ boundary mapping or duplicate JSON require helper family.
 - Decode seam no longer contains the migrated duplicate helper family or a
   second handwritten node-shape mapping.
 
-### Slice 3.1. [ ] Snapshot revision ownership is aligned before encode migration
+### Slice 3.1. [x] Snapshot revision ownership is aligned before encode migration
 
 #### Slice Contract
 
@@ -403,7 +404,7 @@ ownership when it migrates the encode seam.
 
 #### Verification
 
-- `dcm calculate-metrics lib/src/core/revision_policy.dart lib/src/model/document.dart --report-all`
+- `dcm calculate-metrics lib/src/core/revision_policy.dart lib/src/model/document.dart lib/src/model/scene_builder_scene_from_snapshot.part.dart --report-all`
 - MCP test runner: `test/model/document_model_test.dart`
 - MCP test runner: `test/serialization/scene_codec_validation_test.dart test/serialization/scene_test.dart`
 
