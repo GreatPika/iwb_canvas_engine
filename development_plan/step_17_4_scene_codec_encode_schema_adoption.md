@@ -152,7 +152,7 @@ path и оставляет encode seam owner-ом только canonical JSON em
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Node encoding consumes schema-owned field descriptions
+### Slice 1. [x] Node encoding consumes schema-owned field descriptions
 
 #### Slice Contract
 
@@ -176,7 +176,7 @@ field descriptions.
 - `scene_codec.dart` no longer keeps a second handwritten field table for
   common or family-specific node semantics.
 
-### Slice 2. [ ] Canonical snapshot export remains the transport owner
+### Slice 2. [x] Canonical snapshot export remains the transport owner
 
 #### Slice Contract
 

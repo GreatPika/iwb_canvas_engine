@@ -141,7 +141,7 @@ language: russian
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Post-schema-first baseline is recaptured with step 17 instruments
+### Slice 1. [x] Post-schema-first baseline is recaptured with step 17 instruments
 
 #### Slice Contract
 
@@ -165,8 +165,17 @@ baseline по `lib/**`, затем подготовить прямое срав�
 - Green run of the listed verifications.
 - Output explicitly compares the starting and post-step graph baseline and the
   starting and post-step configured DCM baseline.
+- Measured graph baseline for `lib/**`:
+  - `clusters: 63 -> 58`
+  - `scannedFiles: 115 -> 125`
+  - `scannedBlocks: 602 -> 661`
+- Measured configured DCM baseline for `lib/**`:
+  - `number-of-parameters: 40 -> 38`
+  - `source-lines-of-code: 21 -> 15`
+  - `cyclomatic-complexity: 5 -> 4`
+  - `maximum-nesting-level: 0 -> 0`
 
-### Slice 2. [ ] Roadmap reflects only the measured residual work
+### Slice 2. [x] Roadmap reflects only the measured residual work
 
 #### Slice Contract
 
@@ -191,6 +200,12 @@ about already-removed boundary duplication.
 - Green run of the listed verifications.
 - Roadmap no longer contains stale boundary-duplication assumptions that were
   already removed by `17.1-17.4`.
+- Residual runtime hot spots outside `contract/model/serialization` remain
+  explicitly tracked only for:
+  - `lib/src/controller/scene_controller.dart`
+  - `lib/src/controller/scene_invariants.dart`
+  - `lib/src/core/node_geometry.dart`
+  - `lib/src/render/scene_painter.dart`
 
 ## 9. Final Verification
 

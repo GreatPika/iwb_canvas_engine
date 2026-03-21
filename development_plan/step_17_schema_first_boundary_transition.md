@@ -310,7 +310,7 @@ zones и фиксирует результат теми же baseline-инстр
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Contract schema owner becomes the only boundary source of truth
+### Slice 1. [x] Contract schema owner becomes the only boundary source of truth
 
 #### Slice Contract
 
@@ -336,7 +336,7 @@ field tables.
 - Contract seam no longer holds a second handwritten field table for the
   migrated `snapshot/spec/patch` families.
 
-### Slice 2. [ ] Runtime conversion consumes the schema-owned boundary path
+### Slice 2. [x] Runtime conversion consumes the schema-owned boundary path
 
 #### Slice Contract
 
@@ -362,7 +362,7 @@ their own handwritten node-shape mapping.
 - Runtime conversion seam no longer keeps a second handwritten node-shape
   mapping next to the schema-owned path.
 
-### Slice 3. [ ] Decode/import keeps transport ownership and drops duplicate semantics
+### Slice 3. [x] Decode/import keeps transport ownership and drops duplicate semantics
 
 #### Slice Contract
 
@@ -413,7 +413,7 @@ ownership when it migrates the encode seam.
 - Green run of the listed verifications.
 - Snapshot revision normalization no longer lives only in the private txn seam.
 
-### Slice 4. [ ] Encode/export remains the canonical transport owner
+### Slice 4. [x] Encode/export remains the canonical transport owner
 
 #### Slice Contract
 
@@ -438,7 +438,7 @@ its own handwritten node-shape mapping outside the schema-owned path.
 - Encode seam no longer encodes a manual common or family-specific field table
   outside the schema-owned path.
 
-### Slice 5. [ ] Rebaseline proves the migration and resets the roadmap
+### Slice 5. [x] Rebaseline proves the migration and resets the roadmap
 
 #### Slice Contract
 
@@ -462,6 +462,21 @@ residual work.
 - The output explicitly compares the starting and post-step baselines and the
   roadmap no longer carries stale assumptions about already-removed boundary
   duplication.
+- Measured post-step graph baseline for `lib/**`:
+  - `clusters: 63 -> 58`
+  - `scannedFiles: 115 -> 125`
+  - `scannedBlocks: 602 -> 661`
+- Measured post-step configured DCM baseline for `lib/**`:
+  - `number-of-parameters: 40 -> 38`
+  - `source-lines-of-code: 21 -> 15`
+  - `cyclomatic-complexity: 5 -> 4`
+  - `maximum-nesting-level: 0 -> 0`
+- Residual runtime hot spots that remain outside `contract/model/serialization`
+  after the migration are explicitly fixed as:
+  - `lib/src/controller/scene_controller.dart`
+  - `lib/src/controller/scene_invariants.dart`
+  - `lib/src/core/node_geometry.dart`
+  - `lib/src/render/scene_painter.dart`
 
 ## 9. Final Verification
 
