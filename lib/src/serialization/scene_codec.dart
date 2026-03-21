@@ -1,13 +1,15 @@
 import 'dart:convert';
 import 'dart:ui';
 
-import '../core/nodes.dart';
+import '../core/text_layout.dart';
 import '../core/scene.dart';
 import '../core/scene_limits.dart'
     show
         kMaxRawSceneJsonLength,
         sceneSchemaVersionWrite,
         sceneSchemaVersionsRead;
+import '../core/revision_policy.dart';
+import '../contract/internal/node_boundary_schema.dart';
 import '../contract/transform2d.dart';
 import '../model/document.dart';
 import '../model/scene_builder.dart' as model_builder;
@@ -119,34 +121,6 @@ Scene decodeSceneDocument(Map<String, Object?> json) {
 }
 
 Map<String, dynamic> _encodeCanonicalSnapshot(SceneSnapshot snapshot) {
-  final backgroundLayer = snapshot.backgroundLayer;
-  final backgroundNodes = <Map<String, dynamic>>[];
-  for (
-    var nodeIndex = 0;
-    nodeIndex < backgroundLayer.nodes.length;
-    nodeIndex++
-  ) {
-    backgroundNodes.add(
-      _encodeNode(
-        txnNodeFromSnapshot(backgroundLayer.nodes[nodeIndex]),
-        nodePath: 'backgroundLayer.nodes[$nodeIndex]',
-      ),
-    );
-  }
-  final layers = <Map<String, dynamic>>[];
-  for (var layerIndex = 0; layerIndex < snapshot.layers.length; layerIndex++) {
-    final layer = snapshot.layers[layerIndex];
-    final nodes = <Map<String, dynamic>>[];
-    for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
-      nodes.add(
-        _encodeNode(
-          txnNodeFromSnapshot(layer.nodes[nodeIndex]),
-          nodePath: 'layers[$layerIndex].nodes[$nodeIndex]',
-        ),
-      );
-    }
-    layers.add(<String, dynamic>{'id': layer.id, 'nodes': nodes});
-  }
   return <String, dynamic>{
     'schemaVersion': schemaVersionWrite,
     'camera': {
@@ -168,113 +142,258 @@ Map<String, dynamic> _encodeCanonicalSnapshot(SceneSnapshot snapshot) {
           .toList(),
       'gridSizes': snapshot.palette.gridSizes,
     },
-    'backgroundLayer': <String, dynamic>{'nodes': backgroundNodes},
-    'layers': layers,
+    'backgroundLayer': <String, dynamic>{
+      'nodes': _encodeLayerNodes(
+        snapshot.backgroundLayer.nodes,
+        nodesPath: 'backgroundLayer.nodes',
+      ),
+    },
+    'layers': _encodeContentLayers(snapshot.layers),
   };
 }
 
-Map<String, dynamic> _encodeNode(SceneNode node, {required String nodePath}) {
+Map<String, dynamic> _encodeNode(
+  NodeSnapshot node, {
+  required String nodePath,
+}) {
   assert(nodePath.isNotEmpty, 'nodePath must not be empty.');
-  final base = <String, dynamic>{
-    'id': node.id,
-    'instanceRevision': node.instanceRevision,
-    'type': _nodeTypeToString(node.type),
-    'transform': _encodeTransform2D(node.transform),
-    'hitPadding': node.hitPadding,
-    'opacity': node.opacity,
-    'isVisible': node.isVisible,
-    'isSelectable': node.isSelectable,
-    'isLocked': node.isLocked,
-    'isDeletable': node.isDeletable,
-    'isTransformable': node.isTransformable,
+  final encodedFields = switch (node) {
+    ImageNodeSnapshot image => _encodeImageFields(image),
+    TextNodeSnapshot text => _encodeTextFields(text),
+    StrokeNodeSnapshot stroke => _encodeStrokeFields(stroke),
+    LineNodeSnapshot line => _encodeLineFields(line),
+    RectNodeSnapshot rect => _encodeRectFields(rect),
+    PathNodeSnapshot path => _encodePathFields(path),
   };
-
-  switch (node.type) {
-    case NodeType.image:
-      final image = node as ImageNode;
-      final naturalSize = image.naturalSize;
-      return {
-        ...base,
-        'imageId': image.imageId,
-        'size': _encodeSize(image.size),
-        if (naturalSize != null) ...{'naturalSize': _encodeSize(naturalSize)},
-      };
-    case NodeType.text:
-      final text = node as TextNode;
-      return {
-        ...base,
-        'text': text.text,
-        'size': _encodeSize(text.size),
-        'fontSize': text.fontSize,
-        'color': _colorToHex(text.color),
-        'align': _textAlignToString(text.align),
-        'isBold': text.isBold,
-        'isItalic': text.isItalic,
-        'isUnderline': text.isUnderline,
-        if (text.fontFamily != null) 'fontFamily': text.fontFamily,
-        if (text.maxWidth != null) 'maxWidth': text.maxWidth,
-        if (text.lineHeight != null) 'lineHeight': text.lineHeight,
-      };
-    case NodeType.stroke:
-      final stroke = node as StrokeNode;
-      return {
-        ...base,
-        'localPoints': stroke.points
-            .map((point) => {'x': point.dx, 'y': point.dy})
-            .toList(),
-        'thickness': stroke.thickness,
-        'color': _colorToHex(stroke.color),
-      };
-    case NodeType.line:
-      final line = node as LineNode;
-      return {
-        ...base,
-        'localA': {'x': line.start.dx, 'y': line.start.dy},
-        'localB': {'x': line.end.dx, 'y': line.end.dy},
-        'thickness': line.thickness,
-        'color': _colorToHex(line.color),
-      };
-    case NodeType.rect:
-      final rect = node as RectNode;
-      final fillColor = rect.fillColor;
-      final strokeColor = rect.strokeColor;
-      return {
-        ...base,
-        'size': _encodeSize(rect.size),
-        'strokeWidth': rect.strokeWidth,
-        if (fillColor != null) 'fillColor': _colorToHex(fillColor),
-        if (strokeColor != null) 'strokeColor': _colorToHex(strokeColor),
-      };
-    case NodeType.path:
-      final path = node as PathNode;
-      final fillColor = path.fillColor;
-      final strokeColor = path.strokeColor;
-      return {
-        ...base,
-        'svgPathData': path.svgPathData,
-        'fillRule': _pathFillRuleToString(path.fillRule),
-        'strokeWidth': path.strokeWidth,
-        if (fillColor != null) 'fillColor': _colorToHex(fillColor),
-        if (strokeColor != null) 'strokeColor': _colorToHex(strokeColor),
-      };
-  }
+  return {
+    ..._encodeNodeCommonFields(
+      common: _snapshotCommonFields(node),
+      type: encodedFields.type,
+    ),
+    ...encodedFields.fields,
+  };
 }
 
-String _nodeTypeToString(NodeType type) {
-  switch (type) {
-    case NodeType.image:
-      return 'image';
-    case NodeType.text:
-      return 'text';
-    case NodeType.stroke:
-      return 'stroke';
-    case NodeType.line:
-      return 'line';
-    case NodeType.rect:
-      return 'rect';
-    case NodeType.path:
-      return 'path';
+List<Map<String, dynamic>> _encodeContentLayers(
+  List<ContentLayerSnapshot> layers,
+) {
+  final encodedLayers = <Map<String, dynamic>>[];
+  for (var layerIndex = 0; layerIndex < layers.length; layerIndex++) {
+    final layer = layers[layerIndex];
+    encodedLayers.add(<String, dynamic>{
+      'id': layer.id,
+      'nodes': _encodeLayerNodes(
+        layer.nodes,
+        nodesPath: 'layers[$layerIndex].nodes',
+      ),
+    });
   }
+  return encodedLayers;
+}
+
+List<Map<String, dynamic>> _encodeLayerNodes(
+  List<NodeSnapshot> nodes, {
+  required String nodesPath,
+}) {
+  final encodedNodes = <Map<String, dynamic>>[];
+  for (var nodeIndex = 0; nodeIndex < nodes.length; nodeIndex++) {
+    encodedNodes.add(
+      _encodeNode(nodes[nodeIndex], nodePath: '$nodesPath[$nodeIndex]'),
+    );
+  }
+  return encodedNodes;
+}
+
+({Map<String, dynamic> fields, String type}) _encodeImageFields(
+  ImageNodeSnapshot node,
+) {
+  final fields = NodeBoundarySchema.imageFieldsFromValidated((
+    imageId: node.imageId,
+    size: node.size,
+    naturalSize: node.naturalSize,
+  ));
+  final naturalSize = fields.naturalSize;
+  return (
+    type: 'image',
+    fields: <String, dynamic>{
+      'imageId': fields.imageId,
+      'size': _encodeSize(fields.size),
+      ..._encodeOptionalSizeField('naturalSize', naturalSize),
+    },
+  );
+}
+
+({Map<String, dynamic> fields, String type}) _encodeTextFields(
+  TextNodeSnapshot node,
+) {
+  final fields = NodeBoundarySchema.textSnapshotFieldsFromValidated((
+    text: node.text,
+    size: node.size,
+    fontSize: node.fontSize,
+    color: node.color,
+    align: node.align,
+    isBold: node.isBold,
+    isItalic: node.isItalic,
+    isUnderline: node.isUnderline,
+    fontFamily: node.fontFamily,
+    maxWidth: node.maxWidth,
+    lineHeight: node.lineHeight,
+  ));
+  final canonicalSize = _deriveCanonicalTextSize(fields);
+  return (
+    type: 'text',
+    fields: <String, dynamic>{
+      'text': fields.text,
+      'size': _encodeSize(canonicalSize),
+      'fontSize': fields.fontSize,
+      'color': _colorToHex(fields.color),
+      'align': _textAlignToString(fields.align),
+      'isBold': fields.isBold,
+      'isItalic': fields.isItalic,
+      'isUnderline': fields.isUnderline,
+      if (fields.fontFamily != null) 'fontFamily': fields.fontFamily,
+      if (fields.maxWidth != null) 'maxWidth': fields.maxWidth,
+      if (fields.lineHeight != null) 'lineHeight': fields.lineHeight,
+    },
+  );
+}
+
+({Map<String, dynamic> fields, String type}) _encodeStrokeFields(
+  StrokeNodeSnapshot node,
+) {
+  final fields = _strokeNodeSchemaFields(node);
+  return _encodeTypedFields(
+    'stroke',
+    _encodeVectorStrokeFieldMap((
+      points: fields.points,
+      start: null,
+      end: null,
+      thickness: fields.thickness,
+      color: fields.color,
+    )),
+  );
+}
+
+({Map<String, dynamic> fields, String type}) _encodeLineFields(
+  LineNodeSnapshot node,
+) {
+  final fields = _lineNodeSchemaFields(node);
+  return _encodeTypedFields(
+    'line',
+    _encodeVectorStrokeFieldMap((
+      points: null,
+      start: fields.start,
+      end: fields.end,
+      thickness: fields.thickness,
+      color: fields.color,
+    )),
+  );
+}
+
+({Map<String, dynamic> fields, String type}) _encodeRectFields(
+  RectNodeSnapshot node,
+) {
+  final fields = _rectNodeSchemaFields(node);
+  final fillColor = fields.fillColor;
+  final strokeColor = fields.strokeColor;
+  return _encodeTypedFields(
+    'rect',
+    _encodeOutlinedShapeFieldMap((
+      size: fields.size,
+      svgPathData: null,
+      fillRule: null,
+      strokeWidth: fields.strokeWidth,
+      fillColor: fillColor,
+      strokeColor: strokeColor,
+    )),
+  );
+}
+
+({Map<String, dynamic> fields, String type}) _encodePathFields(
+  PathNodeSnapshot node,
+) {
+  final fields = _pathNodeSchemaFields(node);
+  final fillColor = fields.fillColor;
+  final strokeColor = fields.strokeColor;
+  return _encodeTypedFields(
+    'path',
+    _encodeOutlinedShapeFieldMap((
+      size: null,
+      svgPathData: fields.svgPathData,
+      fillRule: fields.fillRule,
+      strokeWidth: fields.strokeWidth,
+      fillColor: fillColor,
+      strokeColor: strokeColor,
+    )),
+  );
+}
+
+StrokeNodeSnapshotSchemaFields _strokeNodeSchemaFields(
+  StrokeNodeSnapshot node,
+) => NodeBoundarySchema.strokeSnapshotFieldsFromValidated((
+  points: node.points,
+  pointsRevision: node.pointsRevision,
+  thickness: node.thickness,
+  color: node.color,
+));
+
+LineNodeSchemaFields _lineNodeSchemaFields(LineNodeSnapshot node) =>
+    NodeBoundarySchema.lineFieldsFromValidated((
+      start: node.start,
+      end: node.end,
+      thickness: node.thickness,
+      color: node.color,
+    ));
+
+RectNodeSchemaFields _rectNodeSchemaFields(RectNodeSnapshot node) =>
+    NodeBoundarySchema.rectFieldsFromValidated((
+      size: node.size,
+      fillColor: node.fillColor,
+      strokeColor: node.strokeColor,
+      strokeWidth: node.strokeWidth,
+    ));
+
+PathNodeSchemaFields _pathNodeSchemaFields(PathNodeSnapshot node) =>
+    NodeBoundarySchema.pathFieldsFromValidated((
+      svgPathData: node.svgPathData,
+      fillColor: node.fillColor,
+      strokeColor: node.strokeColor,
+      strokeWidth: node.strokeWidth,
+      fillRule: node.fillRule,
+    ));
+
+NodeSnapshotCommonSchemaFields _snapshotCommonFields(NodeSnapshot node) {
+  return NodeBoundarySchema.snapshotCommonFromValidated((
+    id: node.id,
+    instanceRevision: resolveSnapshotInstanceRevision(node.instanceRevision),
+    transform: node.transform,
+    opacity: node.opacity,
+    hitPadding: node.hitPadding,
+    isVisible: node.isVisible,
+    isSelectable: node.isSelectable,
+    isLocked: node.isLocked,
+    isDeletable: node.isDeletable,
+    isTransformable: node.isTransformable,
+  ));
+}
+
+Map<String, dynamic> _encodeNodeCommonFields({
+  required NodeSnapshotCommonSchemaFields common,
+  required String type,
+}) {
+  return <String, dynamic>{
+    'id': common.id,
+    'instanceRevision': common.instanceRevision,
+    'type': type,
+    'transform': _encodeTransform2D(common.transform),
+    'hitPadding': common.hitPadding,
+    'opacity': common.opacity,
+    'isVisible': common.isVisible,
+    'isSelectable': common.isSelectable,
+    'isLocked': common.isLocked,
+    'isDeletable': common.isDeletable,
+    'isTransformable': common.isTransformable,
+  };
 }
 
 String _pathFillRuleToString(PathFillRule rule) {
@@ -306,6 +425,110 @@ String _textAlignToString(TextAlign align) {
 String _colorToHex(Color color) {
   final argb = color.toARGB32();
   return '#${argb.toRadixString(16).padLeft(8, '0').toUpperCase()}';
+}
+
+Map<String, dynamic> _encodeOptionalSizeField(String key, Size? size) {
+  return size == null ? const <String, dynamic>{} : {key: _encodeSize(size)};
+}
+
+Map<String, dynamic> _encodeOptionalColorField(String key, Color? color) {
+  return color == null ? const <String, dynamic>{} : {key: _colorToHex(color)};
+}
+
+Map<String, dynamic> _encodeStrokeStyleFields({
+  required double thickness,
+  required Color color,
+}) {
+  return <String, dynamic>{'thickness': thickness, 'color': _colorToHex(color)};
+}
+
+({Map<String, dynamic> fields, String type}) _encodeTypedFields(
+  String type,
+  Map<String, dynamic> fields,
+) {
+  return (type: type, fields: fields);
+}
+
+Map<String, dynamic> _encodeVectorStrokeFieldMap(
+  ({
+    Color color,
+    Offset? end,
+    List<Offset>? points,
+    Offset? start,
+    double thickness,
+  })
+  fields,
+) {
+  final points = fields.points;
+  final start = fields.start;
+  final end = fields.end;
+  return <String, dynamic>{
+    if (points != null) 'localPoints': points.map(_encodeOffset).toList(),
+    if (start != null) 'localA': _encodeOffset(start),
+    if (end != null) 'localB': _encodeOffset(end),
+    ..._encodeStrokeStyleFields(
+      thickness: fields.thickness,
+      color: fields.color,
+    ),
+  };
+}
+
+Map<String, dynamic> _encodeFillAndStrokeFields({
+  required double strokeWidth,
+  required Color? fillColor,
+  required Color? strokeColor,
+}) {
+  return <String, dynamic>{
+    'strokeWidth': strokeWidth,
+    ..._encodeOptionalColorField('fillColor', fillColor),
+    ..._encodeOptionalColorField('strokeColor', strokeColor),
+  };
+}
+
+Map<String, dynamic> _encodeOutlinedShapeFieldMap(
+  ({
+    Color? fillColor,
+    PathFillRule? fillRule,
+    Size? size,
+    String? svgPathData,
+    Color? strokeColor,
+    double strokeWidth,
+  })
+  fields,
+) {
+  final size = fields.size;
+  final fillRule = fields.fillRule;
+  return <String, dynamic>{
+    if (size != null) 'size': _encodeSize(size),
+    if (fields.svgPathData != null) 'svgPathData': fields.svgPathData,
+    if (fillRule != null) 'fillRule': _pathFillRuleToString(fillRule),
+    ..._encodeFillAndStrokeFields(
+      strokeWidth: fields.strokeWidth,
+      fillColor: fields.fillColor,
+      strokeColor: fields.strokeColor,
+    ),
+  };
+}
+
+Map<String, double> _encodeOffset(Offset offset) {
+  return <String, double>{'x': offset.dx, 'y': offset.dy};
+}
+
+Size _deriveCanonicalTextSize(TextNodeSnapshotSchemaFields fields) {
+  return measureTextLayoutSize(
+    text: fields.text,
+    textStyle: buildTextStyleForTextLayout(
+      color: fields.color,
+      fontSize: fields.fontSize,
+      isBold: fields.isBold,
+      isItalic: fields.isItalic,
+      isUnderline: fields.isUnderline,
+      fontFamily: fields.fontFamily,
+      lineHeight: fields.lineHeight,
+    ),
+    textAlign: fields.align,
+    maxWidth: fields.maxWidth,
+  );
 }
 
 Map<String, dynamic> _encodeTransform2D(Transform2D transform) {

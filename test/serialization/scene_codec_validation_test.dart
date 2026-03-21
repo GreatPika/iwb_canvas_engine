@@ -17,6 +17,8 @@ import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
         kMaxSvgPathDataLength,
         kMaxTextLength;
 import 'package:iwb_canvas_engine/src/core/scene.dart';
+import 'package:iwb_canvas_engine/src/core/text_layout.dart'
+    show buildTextStyleForTextLayout, measureTextLayoutSize;
 import 'package:iwb_canvas_engine/src/serialization/scene_codec.dart'
     show debugGuardDecodeForTest, debugGuardEncodeForTest, encodeSceneDocument;
 
@@ -1071,6 +1073,57 @@ void main() {
     final encodedSize = encodedText['size'] as Map<String, Object?>;
     expect(encodedSize['w'], closeTo(text.size.width, 0.001));
     expect(encodedSize['h'], closeTo(text.size.height, 0.001));
+  });
+
+  test('encodeScene re-derives stale text size before JSON export', () {
+    const staleSize = Size(1, 1);
+    final snapshot = SceneSnapshot(
+      layers: <ContentLayerSnapshot>[
+        ContentLayerSnapshot(
+          id: 'layer-auto-text-stale',
+          nodes: <NodeSnapshot>[
+            TextNodeSnapshot(
+              id: 't-encode-derived',
+              text: 'Derived text size',
+              size: staleSize,
+              fontSize: 24,
+              color: Color(0xFF000000),
+              align: TextAlign.left,
+              isBold: false,
+              isItalic: false,
+              isUnderline: false,
+            ),
+          ],
+        ),
+      ],
+    );
+
+    final expectedSize = measureTextLayoutSize(
+      text: 'Derived text size',
+      textStyle: buildTextStyleForTextLayout(
+        color: const Color(0xFF000000),
+        fontSize: 24,
+        isBold: false,
+        isItalic: false,
+        isUnderline: false,
+        fontFamily: null,
+        lineHeight: null,
+      ),
+      textAlign: TextAlign.left,
+      maxWidth: null,
+    );
+
+    final encoded = encodeScene(snapshot);
+    final layers = encoded['layers'] as List<Object?>;
+    final layer = layers.single as Map<String, Object?>;
+    final nodes = layer['nodes'] as List<Object?>;
+    final encodedText = nodes.single as Map<String, Object?>;
+    final encodedSize = encodedText['size'] as Map<String, Object?>;
+
+    expect(encodedSize['w'], isNot(staleSize.width));
+    expect(encodedSize['h'], isNot(staleSize.height));
+    expect(encodedSize['w'], closeTo(expectedSize.width, 0.001));
+    expect(encodedSize['h'], closeTo(expectedSize.height, 0.001));
   });
 
   test('decodeScene validates point and optional field types', () {
