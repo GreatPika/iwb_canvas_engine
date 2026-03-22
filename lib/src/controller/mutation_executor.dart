@@ -7,74 +7,38 @@ import '../contract/scene_write_txn.dart';
 import '../contract/snapshot.dart';
 import '../contract/transform2d.dart';
 import '../core/hit_test.dart';
-import '../core/id_generator.dart';
-import '../core/revision_policy.dart';
-import '../core/scene.dart';
 import '../core/selection_policy.dart';
 import '../model/document.dart';
-import 'change_set.dart';
 import 'mutation_op.dart';
 import 'txn_context.dart';
-
-class MutationCommitCandidate {
-  const MutationCommitCandidate({
-    required this.scene,
-    required this.selection,
-    required this.allNodeIds,
-    required this.nodeLocator,
-    required this.idGeneratorState,
-    required this.revisionState,
-  });
-
-  final Scene scene;
-  final Set<NodeId> selection;
-  final Set<NodeId> allNodeIds;
-  final Map<NodeId, NodeLocatorEntry> nodeLocator;
-  final IdGeneratorState idGeneratorState;
-  final RevisionAllocatorState revisionState;
-}
-
-class MutationExecutionResult {
-  const MutationExecutionResult({
-    required this.applyResult,
-    required this.changeSet,
-    required this.commitCandidate,
-  });
-
-  final MutationApplyResult applyResult;
-  final ChangeSet changeSet;
-  final MutationCommitCandidate? commitCandidate;
-}
-
-class MutationPreparedCommitResult {
-  const MutationPreparedCommitResult({
-    required this.changeSet,
-    required this.commitCandidate,
-  });
-
-  final ChangeSet changeSet;
-  final MutationCommitCandidate? commitCandidate;
-}
 
 class MutationExecutor {
   const MutationExecutor({this.textFontFamilyByDefault});
 
   final String? textFontFamilyByDefault;
 
-  MutationApplyResult execute(TxnContext ctx, MutationOp op) {
+  MutationApplyResult<TValue> execute<TValue extends Object?>(
+    TxnContext ctx,
+    TypedMutationOp<TValue> op,
+  ) {
     ctx.txnEnsureActive();
     return switch (op) {
-      StructuralDocumentMutationOp() => _executeStructuralDocumentOp(ctx, op),
-      NodeMutationOp() => _executeNodeMutationOp(ctx, op),
-      SceneSettingsMutationOp() => _executeSceneSettingsOp(ctx, op),
-      SelectionTransformMutationOp() => _executeSelectionTransformOp(ctx, op),
+      StructuralDocumentMutationOp() => _castResult<TValue>(
+        _executeStructuralDocumentOp(ctx, op),
+      ),
+      NodeMutationOp() => _castResult<TValue>(_executeNodeMutationOp(ctx, op)),
+      SceneSettingsMutationOp() => _castResult<TValue>(
+        _executeSceneSettingsOp(ctx, op),
+      ),
+      SelectionTransformMutationOp() => _castResult<TValue>(
+        _executeSelectionTransformOp(ctx, op),
+      ),
     };
   }
 
-  MutationExecutionResult executeWithPreparedCommit(
-    TxnContext ctx,
-    MutationOp op,
-  ) {
+  MutationExecutionResult<TValue> executeWithPreparedCommit<
+    TValue extends Object?
+  >(TxnContext ctx, TypedMutationOp<TValue> op) {
     final applyResult = execute(ctx, op);
     final preparedCommit = prepareCommitResult(ctx);
     return MutationExecutionResult(
@@ -92,9 +56,9 @@ class MutationExecutor {
     );
   }
 
-  MutationApplyResult _executeStructuralDocumentOp(
+  MutationApplyResult<Object?> _executeStructuralDocumentOp(
     TxnContext ctx,
-    StructuralDocumentMutationOp op,
+    StructuralDocumentMutationOp<Object?> op,
   ) {
     return switch (op) {
       EnsureLayerOp(:final layerId, :final index) => _ensureLayer(
@@ -107,9 +71,9 @@ class MutationExecutor {
     };
   }
 
-  MutationApplyResult _executeNodeMutationOp(
+  MutationApplyResult<Object?> _executeNodeMutationOp(
     TxnContext ctx,
-    NodeMutationOp op,
+    NodeMutationOp<Object?> op,
   ) {
     return switch (op) {
       InsertNodeOp(:final spec, :final layerId, :final insertIndex) => _insert(
@@ -129,9 +93,9 @@ class MutationExecutor {
     };
   }
 
-  MutationApplyResult _executeSceneSettingsOp(
+  MutationApplyResult<Object?> _executeSceneSettingsOp(
     TxnContext ctx,
-    SceneSettingsMutationOp op,
+    SceneSettingsMutationOp<Object?> op,
   ) {
     return switch (op) {
       SetBackgroundColorOp(:final color) => _setBackgroundColor(ctx, color),
@@ -141,9 +105,9 @@ class MutationExecutor {
     };
   }
 
-  MutationApplyResult _executeSelectionTransformOp(
+  MutationApplyResult<Object?> _executeSelectionTransformOp(
     TxnContext ctx,
-    SelectionTransformMutationOp op,
+    SelectionTransformMutationOp<Object?> op,
   ) {
     return switch (op) {
       TransformSelectionOp(:final delta) => _transformSelection(ctx, delta),
@@ -169,20 +133,20 @@ class MutationExecutor {
     );
   }
 
-  MutationApplyResult _ensureLayer(
+  MutationApplyResult<bool> _ensureLayer(
     TxnContext ctx,
     LayerId layerId, {
     int? index,
   }) {
     final created = ctx.txnEnsureContentLayer(layerId, index: index);
     if (!created) {
-      return const MutationApplyResult(value: false, changed: false);
+      return const MutationApplyResult<bool>(value: false, changed: false);
     }
     ctx.changeSet.txnMarkStructuralChanged();
-    return const MutationApplyResult(value: true, changed: true);
+    return const MutationApplyResult<bool>(value: true, changed: true);
   }
 
-  MutationApplyResult _insert(
+  MutationApplyResult<NodeId> _insert(
     TxnContext ctx,
     NodeSpec spec, {
     LayerId? layerId,
@@ -216,16 +180,16 @@ class MutationExecutor {
     ctx.changeSet
       ..txnMarkStructuralChanged()
       ..txnTrackAdded(node.id);
-    return MutationApplyResult(value: node.id, changed: true);
+    return MutationApplyResult<NodeId>(value: node.id, changed: true);
   }
 
-  MutationApplyResult _patch(TxnContext ctx, NodePatch patch) {
+  MutationApplyResult<bool> _patch(TxnContext ctx, NodePatch patch) {
     final existing = ctx.txnFindNodeById(patch.id);
     if (existing == null) {
-      return const MutationApplyResult(value: false, changed: false);
+      return const MutationApplyResult<bool>(value: false, changed: false);
     }
     if (!txnApplyNodePatch(existing.node, patch, dryRun: true)) {
-      return const MutationApplyResult(value: false, changed: false);
+      return const MutationApplyResult<bool>(value: false, changed: false);
     }
 
     final found = ctx.txnResolveMutableNode(patch.id);
@@ -245,10 +209,10 @@ class MutationExecutor {
         _patchTouchesSelectionPolicy(patch)) {
       ctx.changeSet.txnMarkSelectionChanged();
     }
-    return const MutationApplyResult(value: true, changed: true);
+    return const MutationApplyResult<bool>(value: true, changed: true);
   }
 
-  MutationApplyResult _setNodeTransform(
+  MutationApplyResult<bool> _setNodeTransform(
     TxnContext ctx,
     NodeId nodeId,
     Transform2D transform,
@@ -256,7 +220,7 @@ class MutationExecutor {
     _requireFiniteTransform(transform, name: 'transform');
     final existing = ctx.txnFindNodeById(nodeId);
     if (existing == null || existing.node.transform == transform) {
-      return const MutationApplyResult(value: false, changed: false);
+      return const MutationApplyResult<bool>(value: false, changed: false);
     }
 
     final found = ctx.txnResolveMutableNode(nodeId);
@@ -271,15 +235,15 @@ class MutationExecutor {
     } else {
       ctx.changeSet.txnMarkVisualChanged();
     }
-    return const MutationApplyResult(value: true, changed: true);
+    return const MutationApplyResult<bool>(value: true, changed: true);
   }
 
-  MutationApplyResult _deleteNode(TxnContext ctx, NodeId nodeId) {
+  MutationApplyResult<bool> _deleteNode(TxnContext ctx, NodeId nodeId) {
     final existing = ctx.txnFindNodeById(nodeId);
     if (existing == null ||
         existing.layerIndex == -1 ||
         !isNodeDeletableInLayer(existing.node)) {
-      return const MutationApplyResult(value: false, changed: false);
+      return const MutationApplyResult<bool>(value: false, changed: false);
     }
     ctx.txnEnsureMutableLayer(existing.layerIndex);
     final removedNodeIds = txnErasePreparedNodesFromScene(
@@ -292,7 +256,7 @@ class MutationExecutor {
       },
     );
     if (removedNodeIds.isEmpty) {
-      return const MutationApplyResult(value: false, changed: false);
+      return const MutationApplyResult<bool>(value: false, changed: false);
     }
 
     final hadSelection = ctx.workingSelection.remove(nodeId);
@@ -303,13 +267,19 @@ class MutationExecutor {
     if (hadSelection) {
       ctx.changeSet.txnMarkSelectionChanged();
     }
-    return const MutationApplyResult(value: true, changed: true);
+    return const MutationApplyResult<bool>(value: true, changed: true);
   }
 
-  MutationApplyResult _deleteNodesBulk(TxnContext ctx, Set<NodeId> nodeIds) {
+  MutationApplyResult<List<NodeId>> _deleteNodesBulk(
+    TxnContext ctx,
+    Set<NodeId> nodeIds,
+  ) {
     final plan = _prepareBulkDelete(ctx, nodeIds);
     if (plan == null) {
-      return const MutationApplyResult(value: <NodeId>[], changed: false);
+      return const MutationApplyResult<List<NodeId>>(
+        value: <NodeId>[],
+        changed: false,
+      );
     }
     for (final layerIndex in plan.targetLayerIndexes) {
       ctx.txnEnsureMutableLayer(layerIndex);
@@ -321,7 +291,10 @@ class MutationExecutor {
       removalsByLayer: plan.preparedRemovalsByLayer,
     );
     if (deleted.isEmpty) {
-      return const MutationApplyResult(value: <NodeId>[], changed: false);
+      return const MutationApplyResult<List<NodeId>>(
+        value: <NodeId>[],
+        changed: false,
+      );
     }
 
     _finalizeDeletedNodes(ctx, deleted);
@@ -329,7 +302,7 @@ class MutationExecutor {
       ctx.workingSelection.removeAll(deleted);
       ctx.changeSet.txnMarkSelectionChanged();
     }
-    return MutationApplyResult(
+    return MutationApplyResult<List<NodeId>>(
       value: List<NodeId>.unmodifiable(deleted),
       changed: true,
     );
@@ -381,7 +354,9 @@ class MutationExecutor {
     }
   }
 
-  MutationApplyResult _clearSceneKeepBackground(TxnContext ctx) {
+  MutationApplyResult<ClearSceneResult> _clearSceneKeepBackground(
+    TxnContext ctx,
+  ) {
     final result = txnClearSceneKeepBackground(
       scene: ctx.txnEnsureMutableScene(),
       nodeLocator: ctx.txnEnsureMutableNodeLocator(),
@@ -390,7 +365,7 @@ class MutationExecutor {
       ctx.txnForgetNodeId(id);
     }
     if (!result.didStructuralClear) {
-      return MutationApplyResult(
+      return MutationApplyResult<ClearSceneResult>(
         value: ClearSceneResult(
           removedNodeIds: result.removedNodeIds,
           didStructuralClear: false,
@@ -407,7 +382,7 @@ class MutationExecutor {
       ctx.workingSelection.clear();
       ctx.changeSet.txnMarkSelectionChanged();
     }
-    return MutationApplyResult(
+    return MutationApplyResult<ClearSceneResult>(
       value: ClearSceneResult(
         removedNodeIds: result.removedNodeIds,
         didStructuralClear: true,
@@ -416,7 +391,10 @@ class MutationExecutor {
     );
   }
 
-  MutationApplyResult _replaceScene(TxnContext ctx, SceneSnapshot snapshot) {
+  MutationApplyResult<Object?> _replaceScene(
+    TxnContext ctx,
+    SceneSnapshot snapshot,
+  ) {
     final hadSelection = ctx.workingSelection.isNotEmpty;
     final nextScene = txnSceneFromSnapshot(
       snapshot,
@@ -428,56 +406,65 @@ class MutationExecutor {
     if (hadSelection) {
       ctx.changeSet.txnMarkSelectionChanged();
     }
-    return const MutationApplyResult(value: null, changed: true);
+    return const MutationApplyResult<Object?>(value: null, changed: true);
   }
 
-  MutationApplyResult _setBackgroundColor(TxnContext ctx, Color color) {
+  MutationApplyResult<Object?> _setBackgroundColor(
+    TxnContext ctx,
+    Color color,
+  ) {
     if (ctx.workingScene.background.color == color) {
-      return const MutationApplyResult(value: null, changed: false);
+      return const MutationApplyResult<Object?>(value: null, changed: false);
     }
     final scene = ctx.txnEnsureMutableScene();
     scene.background.color = color;
     ctx.changeSet.txnMarkVisualChanged();
-    return const MutationApplyResult(value: null, changed: true);
+    return const MutationApplyResult<Object?>(value: null, changed: true);
   }
 
-  MutationApplyResult _setGridEnabled(TxnContext ctx, bool enabled) {
+  MutationApplyResult<Object?> _setGridEnabled(TxnContext ctx, bool enabled) {
     if (ctx.workingScene.background.grid.isEnabled == enabled) {
-      return const MutationApplyResult(value: null, changed: false);
+      return const MutationApplyResult<Object?>(value: null, changed: false);
     }
     final scene = ctx.txnEnsureMutableScene();
     scene.background.grid.isEnabled = enabled;
     ctx.changeSet.txnMarkGridChanged();
-    return const MutationApplyResult(value: null, changed: true);
+    return const MutationApplyResult<Object?>(value: null, changed: true);
   }
 
-  MutationApplyResult _setGridCellSize(TxnContext ctx, double cellSize) {
+  MutationApplyResult<Object?> _setGridCellSize(
+    TxnContext ctx,
+    double cellSize,
+  ) {
     _requireFinitePositive(cellSize, name: 'cellSize');
     if (ctx.workingScene.background.grid.cellSize == cellSize) {
-      return const MutationApplyResult(value: null, changed: false);
+      return const MutationApplyResult<Object?>(value: null, changed: false);
     }
     final scene = ctx.txnEnsureMutableScene();
     scene.background.grid.cellSize = cellSize;
     ctx.changeSet.txnMarkGridChanged();
-    return const MutationApplyResult(value: null, changed: true);
+    return const MutationApplyResult<Object?>(value: null, changed: true);
   }
 
-  MutationApplyResult _setCameraOffset(TxnContext ctx, Offset offset) {
+  MutationApplyResult<Object?> _setCameraOffset(TxnContext ctx, Offset offset) {
     _requireFiniteOffset(offset, name: 'offset');
     if (ctx.workingScene.camera.offset == offset) {
-      return const MutationApplyResult(value: null, changed: false);
+      return const MutationApplyResult<Object?>(value: null, changed: false);
     }
     final scene = ctx.txnEnsureMutableScene();
     scene.camera.offset = offset;
     ctx.changeSet.txnMarkVisualChanged();
-    return const MutationApplyResult(value: null, changed: true);
+    return const MutationApplyResult<Object?>(value: null, changed: true);
   }
 
-  MutationApplyResult _transformSelection(TxnContext ctx, Transform2D delta) {
+  MutationApplyResult<int> _transformSelection(
+    TxnContext ctx,
+    Transform2D delta,
+  ) {
     _requireFiniteTransform(delta, name: 'delta');
     final selected = ctx.workingSelection;
     if (selected.isEmpty) {
-      return const MutationApplyResult(value: 0, changed: false);
+      return const MutationApplyResult<int>(value: 0, changed: false);
     }
 
     var affected = 0;
@@ -510,13 +497,13 @@ class MutationExecutor {
       }
       affected = affected + 1;
     }
-    return MutationApplyResult(value: affected, changed: affected > 0);
+    return MutationApplyResult<int>(value: affected, changed: affected > 0);
   }
 
-  MutationApplyResult _translateSelection(TxnContext ctx, Offset delta) {
+  MutationApplyResult<int> _translateSelection(TxnContext ctx, Offset delta) {
     _requireFiniteOffset(delta, name: 'delta');
     if (delta == Offset.zero || ctx.workingSelection.isEmpty) {
-      return const MutationApplyResult(value: 0, changed: false);
+      return const MutationApplyResult<int>(value: 0, changed: false);
     }
 
     final moved = <NodeId>{};
@@ -535,7 +522,7 @@ class MutationExecutor {
       moved.add(nodeId);
     }
     if (moved.isEmpty) {
-      return const MutationApplyResult(value: 0, changed: false);
+      return const MutationApplyResult<int>(value: 0, changed: false);
     }
 
     for (final nodeId in moved) {
@@ -544,7 +531,7 @@ class MutationExecutor {
         ..txnTrackHitGeometryChanged(nodeId);
     }
     ctx.changeSet.txnMarkBoundsChanged();
-    return MutationApplyResult(value: moved.length, changed: true);
+    return MutationApplyResult<int>(value: moved.length, changed: true);
   }
 
   NodeSpec _normalizeInsertSpec(NodeSpec spec) {
@@ -613,13 +600,15 @@ class MutationExecutor {
     }
     throw ArgumentError.value(value, name, 'Must be a finite number > 0.');
   }
-}
 
-class MutationApplyResult {
-  const MutationApplyResult({required this.value, required this.changed});
-
-  final Object? value;
-  final bool changed;
+  MutationApplyResult<TValue> _castResult<TValue extends Object?>(
+    MutationApplyResult<Object?> result,
+  ) {
+    return MutationApplyResult<TValue>(
+      value: result.value as TValue,
+      changed: result.changed,
+    );
+  }
 }
 
 class _PreparedBulkDelete {

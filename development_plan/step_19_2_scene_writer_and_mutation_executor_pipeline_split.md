@@ -131,7 +131,7 @@ share one mixed responsibility surface.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] SceneWriter is reduced to exact public write-boundary ownership
+### Slice 1. [x] SceneWriter is reduced to exact public write-boundary ownership
 
 #### Slice Contract
 
@@ -155,7 +155,7 @@ mutation application and remove the replaced mixed logic.
 - `scene_writer.dart` no longer keeps the replaced mixed public / mutation
   logic body.
 
-### Slice 2. [ ] MutationExecutor owns only mutation family application
+### Slice 2. [x] MutationExecutor owns only mutation family application
 
 #### Slice Contract
 

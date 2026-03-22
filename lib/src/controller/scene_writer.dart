@@ -36,52 +36,34 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   NodeId writeNodeInsert(NodeSpec spec, {LayerId? layerId, int? insertIndex}) {
-    _ensureTxnActive();
-    return _mutationExecutor
-            .execute(
-              _ctx,
-              InsertNodeOp(spec, layerId: layerId, insertIndex: insertIndex),
-            )
-            .value
-        as NodeId;
+    return _execute(
+      InsertNodeOp(spec, layerId: layerId, insertIndex: insertIndex),
+    ).value;
   }
 
   @override
   bool writeLayerEnsure(LayerId layerId, {int? index}) {
-    _ensureTxnActive();
-    return _mutationExecutor
-            .execute(_ctx, EnsureLayerOp(layerId, index: index))
-            .value
-        as bool;
+    return _execute(EnsureLayerOp(layerId, index: index)).value;
   }
 
   @override
   bool writeNodeErase(NodeId nodeId) {
-    _ensureTxnActive();
-    return _mutationExecutor.execute(_ctx, DeleteNodeOp(nodeId)).value as bool;
+    return _execute(DeleteNodeOp(nodeId)).value;
   }
 
   List<NodeId> writeDeleteNodesResult(Iterable<NodeId> nodeIds) {
-    _ensureTxnActive();
-    final removedIds =
-        _mutationExecutor.execute(_ctx, DeleteNodesBulkOp(nodeIds)).value
-            as List<NodeId>;
+    final removedIds = _execute(DeleteNodesBulkOp(nodeIds)).value;
     return _sortedRemovedNodeIds(removedIds);
   }
 
   @override
   bool writeNodePatch(NodePatch patch) {
-    _ensureTxnActive();
-    return _mutationExecutor.execute(_ctx, PatchNodeOp(patch)).value as bool;
+    return _execute(PatchNodeOp(patch)).value;
   }
 
   @override
   bool writeNodeTransformSet(NodeId id, Transform2D transform) {
-    _ensureTxnActive();
-    return _mutationExecutor
-            .execute(_ctx, SetNodeTransformOp(id, transform))
-            .value
-        as bool;
+    return _execute(SetNodeTransformOp(id, transform)).value;
   }
 
   @override
@@ -173,16 +155,12 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   int writeSelectionTranslate(Offset delta) {
-    _ensureTxnActive();
-    return _mutationExecutor.execute(_ctx, TranslateSelectionOp(delta)).value
-        as int;
+    return _execute(TranslateSelectionOp(delta)).value;
   }
 
   @override
   int writeSelectionTransform(Transform2D delta) {
-    _ensureTxnActive();
-    return _mutationExecutor.execute(_ctx, TransformSelectionOp(delta)).value
-        as int;
+    return _execute(TransformSelectionOp(delta)).value;
   }
 
   @override
@@ -191,15 +169,9 @@ class SceneWriter implements SceneWriteTxn {
   }
 
   List<NodeId> writeDeleteSelectionResult() {
-    _ensureTxnActive();
-    final removedIds =
-        _mutationExecutor
-                .execute(
-                  _ctx,
-                  DeleteNodesBulkOp.borrowed(_ctx.workingSelection),
-                )
-                .value
-            as List<NodeId>;
+    final removedIds = _execute(
+      DeleteNodesBulkOp.borrowed(_ctx.workingSelection),
+    ).value;
     return _sortedRemovedNodeIds(removedIds);
   }
 
@@ -210,11 +182,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   ClearSceneResult writeClearSceneKeepBackgroundResult() {
-    _ensureTxnActive();
-    return _mutationExecutor
-            .execute(_ctx, const ClearSceneKeepBackgroundOp())
-            .value
-        as ClearSceneResult;
+    return _execute(const ClearSceneKeepBackgroundOp()).value;
   }
 
   @override
@@ -223,8 +191,7 @@ class SceneWriter implements SceneWriteTxn {
   }
 
   bool writeCameraOffsetChanged(Offset offset) {
-    _ensureTxnActive();
-    return _mutationExecutor.execute(_ctx, SetCameraOffsetOp(offset)).changed;
+    return _execute(SetCameraOffsetOp(offset)).changed;
   }
 
   @override
@@ -233,8 +200,7 @@ class SceneWriter implements SceneWriteTxn {
   }
 
   bool writeGridEnableChanged(bool enabled) {
-    _ensureTxnActive();
-    return _mutationExecutor.execute(_ctx, SetGridEnabledOp(enabled)).changed;
+    return _execute(SetGridEnabledOp(enabled)).changed;
   }
 
   @override
@@ -243,8 +209,7 @@ class SceneWriter implements SceneWriteTxn {
   }
 
   bool writeGridCellSizeChanged(double cellSize) {
-    _ensureTxnActive();
-    return _mutationExecutor.execute(_ctx, SetGridCellSizeOp(cellSize)).changed;
+    return _execute(SetGridCellSizeOp(cellSize)).changed;
   }
 
   @override
@@ -253,14 +218,12 @@ class SceneWriter implements SceneWriteTxn {
   }
 
   bool writeBackgroundColorChanged(Color color) {
-    _ensureTxnActive();
-    return _mutationExecutor.execute(_ctx, SetBackgroundColorOp(color)).changed;
+    return _execute(SetBackgroundColorOp(color)).changed;
   }
 
   @override
   void writeDocumentReplace(SceneSnapshot snapshot) {
-    _ensureTxnActive();
-    _mutationExecutor.execute(_ctx, ReplaceSceneOp(snapshot));
+    _execute(ReplaceSceneOp(snapshot));
   }
 
   @override
@@ -305,6 +268,11 @@ class SceneWriter implements SceneWriteTxn {
 
   bool _txnSetsEqual(Set<NodeId> left, Set<NodeId> right) {
     return left.length == right.length && left.containsAll(right);
+  }
+
+  MutationApplyResult<TValue> _execute<TValue>(TypedMutationOp<TValue> op) {
+    _ensureTxnActive();
+    return _mutationExecutor.execute(_ctx, op);
   }
 
   void _ensureTxnActive() {

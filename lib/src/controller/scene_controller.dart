@@ -24,6 +24,7 @@ import '../contract/scene_write_txn.dart';
 import '../contract/snapshot.dart';
 import 'change_set.dart';
 import 'mutation_executor.dart';
+import 'mutation_op.dart';
 import 'scene_invariants.dart';
 import 'scene_writer.dart';
 import 'store.dart';
