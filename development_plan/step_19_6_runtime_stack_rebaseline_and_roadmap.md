@@ -74,6 +74,12 @@ roadmap по новой измеренной реальности без воз�
 - Starting confirmed runtime baseline for step 19 is:
   - `25` `HIGH+` entries across the runtime stack files listed in step 19
   - `7` clone clusters in `lib` touching the runtime-stack family
+- Measured post-`19.1-19.5` runtime baseline is:
+  - `28` `HIGH+` entries across the same runtime-stack files
+  - `5` clone clusters in `lib` touching the same runtime-stack family
+- The clone inventory improved, but the `HIGH+` metric baseline regressed
+  against the starting value. This step records that residual runtime work and
+  keeps parent step `19` open.
 
 ### 6.2 Target Verification Units
 
@@ -109,7 +115,7 @@ roadmap по новой измеренной реальности без воз�
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Post-runtime baseline is recaptured
+### Slice 1. [x] Post-runtime baseline is recaptured
 
 #### Slice Contract
 
@@ -133,8 +139,15 @@ starting values of step 19.
 
 - Green run of the listed verifications.
 - Output explicitly compares starting and post-step runtime baseline.
+- Measured configured DCM baseline for the runtime-stack family:
+  - `HIGH+ entries: 25 -> 28`
+- Measured clone baseline for the runtime-stack family in `lib`:
+  - `related clone clusters: 7 -> 5`
+- `dart run tool/check_import_boundaries.dart`, `dart run tool/check_guardrails.dart`,
+  and `dart run tool/check_invariant_coverage.dart` stay green on the same
+  rebaseline run.
 
-### Slice 2. [ ] Roadmap reflects only measured residual runtime work
+### Slice 2. [x] Roadmap reflects only measured residual runtime work
 
 #### Slice Contract
 
@@ -144,7 +157,8 @@ remains after `19.1-19.5`.
 #### Change
 
 Обновить `DEVELOPMENT_PLAN.md` and `development_plan/step_19*.md` по
-измеренному результату runtime rebaseline.
+измеренному результату runtime rebaseline и явно оставить шаг `19` открытым,
+пока не будет закрыт residual runtime scope.
 
 #### Verification
 
@@ -159,6 +173,24 @@ remains after `19.1-19.5`.
 - Green run of the listed verifications.
 - Planning files no longer carry stale runtime-stack assumptions that were
   already removed.
+- Planning files explicitly record that step `19` remains open because the
+  measured `HIGH+` baseline did not improve against the starting value.
+- Residual runtime hot spots remain explicitly tracked only for:
+  - `lib/src/controller/scene_controller.dart`
+  - `lib/src/controller/scene_writer.dart`
+  - `lib/src/controller/mutation_executor.dart`
+  - `lib/src/controller/txn_context.dart`
+  - `lib/src/controller/scene_invariants.dart`
+  - `lib/src/interactive/scene_controller_interactive.dart`
+  - `lib/src/interactive/internal/interactive_move_session.dart`
+- Live runtime-related clone clusters after the rebaseline remain explicitly
+  tracked for:
+  - `lib/src/controller/mutation_executor.dart`
+  - `lib/src/controller/scene_controller.dart`
+  - `lib/src/controller/txn_context.dart`
+  - `lib/src/interactive/internal/interactive_event_dispatcher.dart`
+  - `lib/src/interactive/internal/interactive_move_session.dart`
+  - `lib/src/interactive/scene_controller_interactive.dart`
 
 ## 9. Final Verification
 

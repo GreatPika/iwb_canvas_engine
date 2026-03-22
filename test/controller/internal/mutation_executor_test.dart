@@ -5,12 +5,25 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart' hide NodeId;
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/controller/mutation_executor.dart';
+import 'package:iwb_canvas_engine/src/controller/mutation_commit_preparer.dart';
 import 'package:iwb_canvas_engine/src/controller/mutation_op.dart';
 import 'package:iwb_canvas_engine/src/controller/txn_context.dart';
 
 // INV:INV-ENG-TXN-ATOMIC-COMMIT
 
 void main() {
+  MutationExecutionResult<TValue> executeWithPreparedCommit<
+    TValue extends Object?
+  >(MutationExecutor executor, TxnContext ctx, TypedMutationOp<TValue> op) {
+    final applyResult = executor.execute(ctx, op);
+    final preparedCommit = prepareMutationPreparedCommitResult(ctx);
+    return MutationExecutionResult<TValue>(
+      applyResult: applyResult,
+      changeSet: preparedCommit.changeSet,
+      commitCandidate: preparedCommit.commitCandidate,
+    );
+  }
+
   test(
     'canonical mutation op set excludes selection-only and signal paths',
     () {
@@ -47,7 +60,8 @@ void main() {
       );
       final executor = MutationExecutor(textFontFamilyByDefault: 'Mono');
 
-      final result = executor.executeWithPreparedCommit(
+      final result = executeWithPreparedCommit(
+        executor,
         ctx,
         InsertNodeOp(
           TextNodeSpec(text: 'hello', color: const Color(0xFF111111)),
@@ -89,7 +103,8 @@ void main() {
     );
     final executor = MutationExecutor();
 
-    final result = executor.executeWithPreparedCommit(
+    final result = executeWithPreparedCommit(
+      executor,
       ctx,
       PatchNodeOp(RectNodePatch(id: 'r1')),
     );
@@ -126,7 +141,8 @@ void main() {
       );
       final executor = MutationExecutor();
 
-      final result = executor.executeWithPreparedCommit(
+      final result = executeWithPreparedCommit(
+        executor,
         ctx,
         DeleteNodesBulkOp(const <NodeId>{'keep', 'gone'}),
       );
@@ -203,7 +219,8 @@ void main() {
       );
       final executor = MutationExecutor();
 
-      final result = executor.executeWithPreparedCommit(
+      final result = executeWithPreparedCommit(
+        executor,
         ctx,
         const ClearSceneKeepBackgroundOp(),
       );
@@ -359,7 +376,8 @@ void main() {
       );
       final executor = MutationExecutor();
 
-      final result = executor.executeWithPreparedCommit(
+      final result = executeWithPreparedCommit(
+        executor,
         ctx,
         ReplaceSceneOp(
           SceneSnapshot(

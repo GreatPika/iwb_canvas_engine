@@ -23,6 +23,8 @@ import '../contract/scene_render_state.dart';
 import '../contract/scene_write_txn.dart';
 import '../contract/snapshot.dart';
 import 'change_set.dart';
+import 'committed_store_state.dart';
+import 'mutation_commit_preparer.dart';
 import 'mutation_executor.dart';
 import 'mutation_op.dart';
 import 'scene_invariants.dart';
@@ -306,7 +308,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
     TxnContext ctx, {
     required List<String> initialPhases,
   }) {
-    final preparedCommit = _mutationExecutor.prepareCommitResult(ctx);
+    final preparedCommit = prepareMutationPreparedCommitResult(ctx);
     final changeSet = preparedCommit.changeSet;
     final commitCandidate = preparedCommit.commitCandidate;
     final hasSignals = _signalsBuffer.writeHasBufferedSignals;
@@ -350,20 +352,22 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
     return _StateCommitControllerCommitPlan(
       changeSet: changeSet,
       initialPhases: initialPhases,
-      commitCandidate: commitCandidate,
-      committedSelection: committedSelection,
-      committedRevisionState: committedRevisionState,
-      nextEpoch: resolveNextControllerEpoch(
-        currentEpoch: _store.controllerEpoch,
-        documentReplaced: changeSet.documentReplaced,
-        revisionState: commitCandidate.revisionState,
+      committedStoreState: CommittedStoreState.fromMutationCommitCandidate(
+        candidate: commitCandidate,
+        selectedNodeIds: committedSelection,
+        revisionState: committedRevisionState,
+        controllerEpoch: resolveNextControllerEpoch(
+          currentEpoch: _store.controllerEpoch,
+          documentReplaced: changeSet.documentReplaced,
+          revisionState: commitCandidate.revisionState,
+        ),
+        structuralRevision:
+            _store.structuralRevision + (changeSet.structuralChanged ? 1 : 0),
+        boundsRevision:
+            _store.boundsRevision + (changeSet.boundsChanged ? 1 : 0),
+        visualRevision: _store.visualRevision + 1,
+        commitRevision: _store.commitRevision + 1,
       ),
-      nextStructuralRevision:
-          _store.structuralRevision + (changeSet.structuralChanged ? 1 : 0),
-      nextBoundsRevision:
-          _store.boundsRevision + (changeSet.boundsChanged ? 1 : 0),
-      nextVisualRevision: _store.visualRevision + 1,
-      nextCommitRevision: _store.commitRevision + 1,
     );
   }
 
@@ -390,22 +394,27 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
     var committedSignals = const <CommittedSignal>[];
 
     if (plan.shouldCommitSignals) {
-      final resolvedNextCommitRevision = plan.nextCommitRevision;
-      _assertStoreInvariantsCandidate(
+      final committedStoreState = CommittedStoreState(
         scene: _store.sceneDoc,
         selectedNodeIds: _store.selectedNodeIds,
         allNodeIds: _store.allNodeIds,
         nodeLocator: _store.nodeLocator,
         idGeneratorState: _store.idGeneratorState,
-        controllerEpoch: _store.controllerEpoch,
         revisionState: _store.revisionState,
-        commitRevision: resolvedNextCommitRevision,
+        controllerEpoch: _store.controllerEpoch,
+        structuralRevision: _store.structuralRevision,
+        boundsRevision: _store.boundsRevision,
+        visualRevision: _store.visualRevision,
+        commitRevision: plan.nextCommitRevision,
+      );
+      _assertStoreInvariantsCandidate(
+        state: committedStoreState,
         previousCommitRevision: _store.commitRevision,
       );
       committedSignals = _signalsBuffer.writeTakeCommitted(
-        commitRevision: resolvedNextCommitRevision,
+        commitRevision: committedStoreState.commitRevision,
       );
-      _store.commitRevision = resolvedNextCommitRevision;
+      _store.commitRevision = committedStoreState.commitRevision;
       commitPhases = <String>[...commitPhases, 'signals'];
     }
 
@@ -428,52 +437,26 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
   _ControllerCommitExecution _executeStateCommitPlan(
     _StateCommitControllerCommitPlan plan,
   ) {
-    final committed = plan.commitCandidate;
-    final committedSelection = plan.committedSelection;
-    final committedRevisionState = plan.committedRevisionState;
-    final nextEpoch = plan.nextEpoch;
-    final nextStructuralRevision = plan.nextStructuralRevision;
-    final nextBoundsRevision = plan.nextBoundsRevision;
-    final nextVisualRevision = plan.nextVisualRevision;
-    final nextCommitRevision = plan.nextCommitRevision;
+    final committedStoreState = plan.committedStoreState;
 
     _assertStoreInvariantsCandidate(
-      scene: committed.scene,
-      selectedNodeIds: committedSelection,
-      allNodeIds: committed.allNodeIds,
-      nodeLocator: committed.nodeLocator,
-      idGeneratorState: committed.idGeneratorState,
-      controllerEpoch: nextEpoch,
-      revisionState: committedRevisionState,
-      commitRevision: nextCommitRevision,
+      state: committedStoreState,
       previousCommitRevision: _store.commitRevision,
     );
 
     debugBeforeSpatialPrepareCommitHook?.call();
     final preparedSpatialCommit = _spatialIndexCache.writePrepareCommit(
-      scene: committed.scene,
-      nodeLocator: committed.nodeLocator,
+      scene: committedStoreState.scene,
+      nodeLocator: committedStoreState.nodeLocator,
       changeSet: plan.changeSet,
-      controllerEpoch: nextEpoch,
+      controllerEpoch: committedStoreState.controllerEpoch,
     );
 
     final committedSignals = _signalsBuffer.writeTakeCommitted(
-      commitRevision: nextCommitRevision,
+      commitRevision: committedStoreState.commitRevision,
     );
 
-    _applyCommittedStore(
-      committedScene: committed.scene,
-      committedSelection: committedSelection,
-      committedNodeIds: committed.allNodeIds,
-      committedNodeLocator: committed.nodeLocator,
-      committedIdGeneratorState: committed.idGeneratorState,
-      committedRevisionState: committedRevisionState,
-      nextEpoch: nextEpoch,
-      nextStructuralRevision: nextStructuralRevision,
-      nextBoundsRevision: nextBoundsRevision,
-      nextVisualRevision: nextVisualRevision,
-      nextCommitRevision: nextCommitRevision,
-    );
+    _applyCommittedStore(committedStoreState);
     _spatialIndexCache.writeApplyPreparedCommit(preparedSpatialCommit);
 
     var commitPhases = <String>[
@@ -496,33 +479,22 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
     );
   }
 
-  void _applyCommittedStore({
-    required Scene committedScene,
-    required Set<NodeId> committedSelection,
-    required Set<NodeId> committedNodeIds,
-    required Map<NodeId, NodeLocatorEntry> committedNodeLocator,
-    required IdGeneratorState committedIdGeneratorState,
-    required RevisionAllocatorState committedRevisionState,
-    required int nextEpoch,
-    required int nextStructuralRevision,
-    required int nextBoundsRevision,
-    required int nextVisualRevision,
-    required int nextCommitRevision,
-  }) {
-    _store.sceneDoc = committedScene;
+  void _applyCommittedStore(CommittedStoreState committedStoreState) {
+    _store.sceneDoc = committedStoreState.scene;
+    final committedSelection = committedStoreState.selectedNodeIds;
     if (!identical(_store.selectedNodeIds, committedSelection)) {
       _store.selectedNodeIds = committedSelection;
       _selectedNodeIdsView = UnmodifiableSetView<NodeId>(committedSelection);
     }
-    _store.allNodeIds = committedNodeIds;
-    _store.nodeLocator = committedNodeLocator;
-    _store.idGeneratorState = committedIdGeneratorState;
-    _store.revisionState = committedRevisionState;
-    _store.controllerEpoch = nextEpoch;
-    _store.structuralRevision = nextStructuralRevision;
-    _store.boundsRevision = nextBoundsRevision;
-    _store.visualRevision = nextVisualRevision;
-    _store.commitRevision = nextCommitRevision;
+    _store.allNodeIds = committedStoreState.allNodeIds;
+    _store.nodeLocator = committedStoreState.nodeLocator;
+    _store.idGeneratorState = committedStoreState.idGeneratorState;
+    _store.revisionState = committedStoreState.revisionState;
+    _store.controllerEpoch = committedStoreState.controllerEpoch;
+    _store.structuralRevision = committedStoreState.structuralRevision;
+    _store.boundsRevision = committedStoreState.boundsRevision;
+    _store.visualRevision = committedStoreState.visualRevision;
+    _store.commitRevision = committedStoreState.commitRevision;
   }
 
   void _debugCaptureTxnCloneStats(TxnContext ctx) {
@@ -541,19 +513,12 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
   }
 
   void _assertStoreInvariantsCandidate({
-    required Scene scene,
-    required Set<NodeId> selectedNodeIds,
-    required Set<NodeId> allNodeIds,
-    required Map<NodeId, NodeLocatorEntry> nodeLocator,
-    required IdGeneratorState idGeneratorState,
-    required int controllerEpoch,
-    required RevisionAllocatorState revisionState,
-    required int commitRevision,
+    required CommittedStoreState state,
     required int previousCommitRevision,
   }) {
     assertCriticalTxnStoreInvariants(
-      scene: scene,
-      commitRevision: commitRevision,
+      state: state,
+      commitRevision: state.commitRevision,
       previousCommitRevision: previousCommitRevision,
     );
     if (!kDebugMode && !kProfileMode) {
@@ -563,16 +528,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
       debugBeforeInvariantPrecheckHook?.call();
       return true;
     }());
-    debugAssertTxnStoreInvariants(
-      scene: scene,
-      selectedNodeIds: selectedNodeIds,
-      allNodeIds: allNodeIds,
-      nodeLocator: nodeLocator,
-      idGeneratorState: idGeneratorState,
-      controllerEpoch: controllerEpoch,
-      revisionState: revisionState,
-      commitRevision: commitRevision,
-    );
+    debugAssertTxnStoreInvariants(state);
   }
 
   @override
@@ -720,22 +676,8 @@ final class _StateCommitControllerCommitPlan extends _ControllerCommitPlan {
   const _StateCommitControllerCommitPlan({
     required super.changeSet,
     required super.initialPhases,
-    required this.commitCandidate,
-    required this.committedSelection,
-    required this.committedRevisionState,
-    required this.nextEpoch,
-    required this.nextStructuralRevision,
-    required this.nextBoundsRevision,
-    required this.nextVisualRevision,
-    required this.nextCommitRevision,
+    required this.committedStoreState,
   });
 
-  final MutationCommitCandidate commitCandidate;
-  final Set<NodeId> committedSelection;
-  final RevisionAllocatorState committedRevisionState;
-  final int nextEpoch;
-  final int nextStructuralRevision;
-  final int nextBoundsRevision;
-  final int nextVisualRevision;
-  final int nextCommitRevision;
+  final CommittedStoreState committedStoreState;
 }

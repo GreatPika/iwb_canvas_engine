@@ -8,57 +8,47 @@ import '../core/scene.dart';
 import '../contract/ids.dart' show LayerId;
 import '../model/document.dart';
 import '../model/document_clone.dart';
+import 'committed_store_state.dart';
 
-List<String> txnCollectStoreInvariantViolations({
-  required Scene scene,
-  required Set<NodeId> selectedNodeIds,
-  required Set<NodeId> allNodeIds,
-  required Map<NodeId, NodeLocatorEntry> nodeLocator,
-  required IdGeneratorState idGeneratorState,
-  int controllerEpoch = 0,
-  RevisionAllocatorState? revisionState,
-  int nextInstanceRevision = 1,
-  required int commitRevision,
-}) {
+List<String> txnCollectStoreInvariantViolations(CommittedStoreState state) {
   final violations = <String>[];
   violations.addAll(
     _txnCollectSceneIndexInvariantViolations(
-      scene: scene,
-      allNodeIds: allNodeIds,
-      nodeLocator: nodeLocator,
+      scene: state.scene,
+      allNodeIds: state.allNodeIds,
+      nodeLocator: state.nodeLocator,
     ),
   );
-  violations.addAll(_txnCollectSceneIdentityInvariantViolations(scene));
+  violations.addAll(_txnCollectSceneIdentityInvariantViolations(state.scene));
   violations.addAll(
     _txnCollectSelectionInvariantViolations(
-      scene: scene,
-      selectedNodeIds: selectedNodeIds,
+      scene: state.scene,
+      selectedNodeIds: state.selectedNodeIds,
     ),
   );
   violations.addAll(
     _txnCollectIdGeneratorInvariantViolations(
-      idGeneratorState: idGeneratorState,
+      idGeneratorState: state.idGeneratorState,
     ),
   );
   violations.addAll(
-    _txnCollectControllerEpochInvariantViolations(controllerEpoch),
+    _txnCollectControllerEpochInvariantViolations(state.controllerEpoch),
   );
   violations.addAll(
     _txnCollectRevisionStateInvariantViolations(
-      scene: scene,
-      revisionState: revisionState,
-      nextInstanceRevision: nextInstanceRevision,
+      scene: state.scene,
+      revisionState: state.revisionState,
     ),
   );
   violations.addAll(
-    _txnCollectCommitRevisionInvariantViolations(commitRevision),
+    _txnCollectCommitRevisionInvariantViolations(state.commitRevision),
   );
-  violations.addAll(_txnCollectSceneNumericInvariantViolations(scene));
+  violations.addAll(_txnCollectSceneNumericInvariantViolations(state.scene));
   return violations;
 }
 
 List<String> txnCollectCriticalStoreInvariantViolations({
-  required Scene scene,
+  required CommittedStoreState state,
   required int commitRevision,
   required int previousCommitRevision,
 }) {
@@ -72,32 +62,12 @@ List<String> txnCollectCriticalStoreInvariantViolations({
   violations.addAll(
     _txnCollectCommitRevisionInvariantViolations(commitRevision),
   );
-  violations.addAll(_txnCollectSceneNumericInvariantViolations(scene));
+  violations.addAll(_txnCollectSceneNumericInvariantViolations(state.scene));
   return violations;
 }
 
-void debugAssertTxnStoreInvariants({
-  required Scene scene,
-  required Set<NodeId> selectedNodeIds,
-  required Set<NodeId> allNodeIds,
-  required Map<NodeId, NodeLocatorEntry> nodeLocator,
-  required IdGeneratorState idGeneratorState,
-  int controllerEpoch = 0,
-  RevisionAllocatorState? revisionState,
-  int nextInstanceRevision = 1,
-  required int commitRevision,
-}) {
-  final violations = txnCollectStoreInvariantViolations(
-    scene: scene,
-    selectedNodeIds: selectedNodeIds,
-    allNodeIds: allNodeIds,
-    nodeLocator: nodeLocator,
-    idGeneratorState: idGeneratorState,
-    controllerEpoch: controllerEpoch,
-    revisionState: revisionState,
-    nextInstanceRevision: nextInstanceRevision,
-    commitRevision: commitRevision,
-  );
+void debugAssertTxnStoreInvariants(CommittedStoreState state) {
+  final violations = txnCollectStoreInvariantViolations(state);
   if (violations.isNotEmpty) {
     throw StateError(
       'Committed store invariants violated:\n- ${violations.join('\n- ')}',
@@ -106,12 +76,12 @@ void debugAssertTxnStoreInvariants({
 }
 
 void assertCriticalTxnStoreInvariants({
-  required Scene scene,
+  required CommittedStoreState state,
   required int commitRevision,
   required int previousCommitRevision,
 }) {
   final violations = txnCollectCriticalStoreInvariantViolations(
-    scene: scene,
+    state: state,
     commitRevision: commitRevision,
     previousCommitRevision: previousCommitRevision,
   );
@@ -268,17 +238,11 @@ List<String> _txnCollectControllerEpochInvariantViolations(
 
 List<String> _txnCollectRevisionStateInvariantViolations({
   required Scene scene,
-  required RevisionAllocatorState? revisionState,
-  required int nextInstanceRevision,
+  required RevisionAllocatorState revisionState,
 }) {
   final violations = <String>[];
 
-  final effectiveRevisionState =
-      revisionState ??
-      createInitialRevisionAllocatorState(
-        nextInstanceRevision: nextInstanceRevision,
-      );
-  final nextRevision = effectiveRevisionState.nextInstanceRevision;
+  final nextRevision = revisionState.nextInstanceRevision;
   if (nextRevision < 1 || nextRevision > kMaxInstanceRevision) {
     violations.add(
       'revisionState.nextInstanceRevision must stay within '
@@ -286,7 +250,7 @@ List<String> _txnCollectRevisionStateInvariantViolations({
     );
   }
 
-  if (effectiveRevisionState.epochBumpRequested) {
+  if (revisionState.epochBumpRequested) {
     violations.add('committed revisionState.epochBumpRequested must be false.');
   }
 

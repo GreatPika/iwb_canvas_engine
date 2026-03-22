@@ -1,12 +1,15 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_invariants.dart';
+import 'package:iwb_canvas_engine/src/controller/committed_store_state.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_invariants.dart'
+    as scene_invariants;
 import 'package:iwb_canvas_engine/src/core/id_generator.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/revision_policy.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/model/document.dart';
+import 'package:iwb_canvas_engine/src/model/document_clone.dart';
 
 // INV:INV-ENG-ID-INDEX-FROM-SCENE
 // INV:INV-ENG-INSTANCE-REVISION-MONOTONIC
@@ -42,6 +45,107 @@ void main() {
       sessionToken: sessionToken,
       nextNodeCounter: nextNodeCounter,
       nextLayerCounter: nextLayerCounter,
+    );
+  }
+
+  CommittedStoreState committedStoreState({
+    required Scene scene,
+    required Set<NodeId> selectedNodeIds,
+    required Set<NodeId> allNodeIds,
+    required Map<NodeId, NodeLocatorEntry> nodeLocator,
+    required IdGeneratorState idGeneratorState,
+    int controllerEpoch = 0,
+    RevisionAllocatorState? revisionState,
+    int nextInstanceRevision = 1,
+    required int commitRevision,
+  }) {
+    return CommittedStoreState(
+      scene: scene,
+      selectedNodeIds: selectedNodeIds,
+      allNodeIds: allNodeIds,
+      nodeLocator: nodeLocator,
+      idGeneratorState: idGeneratorState,
+      revisionState:
+          revisionState ??
+          createInitialRevisionAllocatorState(
+            nextInstanceRevision: nextInstanceRevision,
+          ),
+      controllerEpoch: controllerEpoch,
+      structuralRevision: 0,
+      boundsRevision: 0,
+      visualRevision: 0,
+      commitRevision: commitRevision,
+    );
+  }
+
+  List<String> txnCollectStoreInvariantViolations({
+    required Scene scene,
+    required Set<NodeId> selectedNodeIds,
+    required Set<NodeId> allNodeIds,
+    required Map<NodeId, NodeLocatorEntry> nodeLocator,
+    required IdGeneratorState idGeneratorState,
+    int controllerEpoch = 0,
+    RevisionAllocatorState? revisionState,
+    int nextInstanceRevision = 1,
+    required int commitRevision,
+  }) {
+    return scene_invariants.txnCollectStoreInvariantViolations(
+      committedStoreState(
+        scene: scene,
+        selectedNodeIds: selectedNodeIds,
+        allNodeIds: allNodeIds,
+        nodeLocator: nodeLocator,
+        idGeneratorState: idGeneratorState,
+        controllerEpoch: controllerEpoch,
+        revisionState: revisionState,
+        nextInstanceRevision: nextInstanceRevision,
+        commitRevision: commitRevision,
+      ),
+    );
+  }
+
+  void debugAssertTxnStoreInvariants({
+    required Scene scene,
+    required Set<NodeId> selectedNodeIds,
+    required Set<NodeId> allNodeIds,
+    required Map<NodeId, NodeLocatorEntry> nodeLocator,
+    required IdGeneratorState idGeneratorState,
+    int controllerEpoch = 0,
+    RevisionAllocatorState? revisionState,
+    int nextInstanceRevision = 1,
+    required int commitRevision,
+  }) {
+    scene_invariants.debugAssertTxnStoreInvariants(
+      committedStoreState(
+        scene: scene,
+        selectedNodeIds: selectedNodeIds,
+        allNodeIds: allNodeIds,
+        nodeLocator: nodeLocator,
+        idGeneratorState: idGeneratorState,
+        controllerEpoch: controllerEpoch,
+        revisionState: revisionState,
+        nextInstanceRevision: nextInstanceRevision,
+        commitRevision: commitRevision,
+      ),
+    );
+  }
+
+  void assertCriticalTxnStoreInvariants({
+    required Scene scene,
+    required int commitRevision,
+    required int previousCommitRevision,
+  }) {
+    scene_invariants.assertCriticalTxnStoreInvariants(
+      state: committedStoreState(
+        scene: scene,
+        selectedNodeIds: const <NodeId>{},
+        allNodeIds: txnCollectNodeIds(scene),
+        nodeLocator: txnBuildNodeLocator(scene),
+        idGeneratorState: state(),
+        commitRevision: commitRevision,
+      ),
+      commitRevision: commitRevision,
+      previousCommitRevision: previousCommitRevision,
     );
   }
 

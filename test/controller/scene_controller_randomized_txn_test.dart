@@ -4,8 +4,10 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/controller/committed_store_state.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_invariants.dart';
+import 'package:iwb_canvas_engine/src/core/revision_policy.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart' show Scene;
 import 'package:iwb_canvas_engine/src/model/document.dart';
 import 'package:iwb_canvas_engine/src/model/document_clone.dart';
@@ -240,13 +242,21 @@ void _assertPostConditions({
   );
 
   final violations = txnCollectStoreInvariantViolations(
-    scene: scene,
-    selectedNodeIds: controller.selectedNodeIds,
-    allNodeIds: txnCollectNodeIds(scene),
-    nodeLocator: txnBuildNodeLocator(scene),
-    idGeneratorState: controller.debugIdGeneratorState,
-    nextInstanceRevision: 1,
-    commitRevision: controller.debugCommitRevision,
+    CommittedStoreState(
+      scene: scene,
+      selectedNodeIds: controller.selectedNodeIds,
+      allNodeIds: txnCollectNodeIds(scene),
+      nodeLocator: txnBuildNodeLocator(scene),
+      idGeneratorState: controller.debugIdGeneratorState,
+      revisionState: createInitialRevisionAllocatorState(
+        nextInstanceRevision: 1,
+      ),
+      controllerEpoch: controller.controllerEpoch,
+      structuralRevision: controller.structuralRevision,
+      boundsRevision: controller.boundsRevision,
+      visualRevision: controller.visualRevision,
+      commitRevision: controller.debugCommitRevision,
+    ),
   );
   expect(
     violations,

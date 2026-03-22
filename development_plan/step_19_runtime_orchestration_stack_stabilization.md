@@ -1,6 +1,6 @@
 language: russian
 
-# Шаг 19. Стабилизировать runtime orchestration stack через подшаги 19.1-19.6
+# Шаг 19. Стабилизировать runtime orchestration stack через подшаги 19.1-19.7
 
 ## 1. Change Mandate
 
@@ -119,6 +119,19 @@ controller behavior.
   - `txnCollectStoreInvariantViolations(...): CC 25, params 9, SLOC 132`
 - Current confirmed runtime-stack family contributes `25` `HIGH+` entries in
   `lib/src` and participates in `7` clone clusters in `lib`.
+- Measured post-`19.1-19.5` baseline from `19.6` is:
+  - `28` `HIGH+` entries across
+    `scene_controller.dart`,
+    `scene_writer.dart`,
+    `mutation_executor.dart`,
+    `txn_context.dart`,
+    `scene_invariants.dart`,
+    `scene_controller_interactive.dart`,
+    and `interactive_move_session.dart`
+  - `5` clone clusters in `lib` touching the same runtime-stack family
+- The clone baseline improved, but the `HIGH+` metric count did not improve
+  against the starting baseline. Step `19` therefore remains open after
+  `19.6`.
 
 ### 6.2 Target Verification Units
 
@@ -153,6 +166,7 @@ controller behavior.
 - `19.3` closes before `19.4`.
 - `19.5` is forbidden until `19.1-19.4` are closed.
 - `19.6` is forbidden until `19.1-19.5` are closed and remeasured.
+- `19.7` starts only after `19.6` has recorded the residual runtime baseline.
 
 ### 6.8 Prohibited
 
@@ -176,7 +190,7 @@ controller behavior.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] SceneControllerCore commit lifecycle split
+### Slice 1. [x] SceneControllerCore commit lifecycle split
 
 #### Slice Contract
 
@@ -187,7 +201,7 @@ controller behavior.
 
 - Verification from `19.1`
 
-### Slice 2. [ ] Write pipeline split
+### Slice 2. [x] Write pipeline split
 
 #### Slice Contract
 
@@ -198,7 +212,7 @@ controller behavior.
 
 - Verification from `19.2`
 
-### Slice 3. [ ] TxnContext ownership split
+### Slice 3. [x] TxnContext ownership split
 
 #### Slice Contract
 
@@ -220,7 +234,7 @@ controller behavior.
 
 - Verification from `19.4`
 
-### Slice 5. [ ] Interactive facade thinning
+### Slice 5. [x] Interactive facade thinning
 
 #### Slice Contract
 
@@ -231,7 +245,7 @@ controller behavior.
 
 - Verification from `19.5`
 
-### Slice 6. [ ] Runtime-stack rebaseline
+### Slice 6. [x] Runtime-stack rebaseline
 
 #### Slice Contract
 
@@ -241,6 +255,38 @@ controller behavior.
 #### Verification
 
 - Verification from `19.6`
+
+### Slice 7. [x] Residual runtime owner correction
+
+#### Slice Contract
+
+Закрыть `development_plan/step_19_7_runtime_residual_owner_correction.md`
+без выхода за measured residual runtime scope after `19.6`.
+
+#### Verification
+
+- Verification from `19.7`
+
+#### Closure Evidence
+
+- `19.7` closed the residual runtime family without reopening solved
+  `19.1-19.6` scope.
+- Parent step-19 runtime hotspot baseline improved from `25` `HIGH+` entries
+  to `17` across
+  `scene_controller.dart`,
+  `scene_writer.dart`,
+  `mutation_executor.dart`,
+  `txn_context.dart`,
+  `scene_invariants.dart`,
+  `scene_controller_interactive.dart`,
+  and
+  `interactive_move_session.dart`.
+- Residual runtime baseline recorded by `19.6` improved from `28` `HIGH+`
+  entries to `17`.
+- Runtime-related clone clusters improved from `7` at step-19 start and `5`
+  after `19.6` to `2` after `19.7`.
+- Full verification from `19.7` is green, including repository-required
+  analyze, MCP test shards, example verification, and coverage checks.
 
 ## 9. Final Verification
 

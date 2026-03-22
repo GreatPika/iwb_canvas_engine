@@ -12,6 +12,7 @@ import 'interactive_draw_coordinator.dart';
 import 'interactive_draw_line_engine.dart' show InteractiveDrawStyle;
 import 'interactive_event_dispatcher.dart';
 import 'interactive_gesture_machine.dart';
+import 'interactive_move_callbacks.dart';
 import 'interactive_move_session.dart';
 
 class InteractiveRuntimeCallbacks {
@@ -222,20 +223,20 @@ class InteractiveRuntime {
 
   void _handlePointerDown(PointerSample sample) {
     final family = _currentGestureFamily;
-    if (!_gestureMachine.tryBegin(
+    final activeGesture = _gestureMachine.begin(
       pointerId: sample.pointerId,
       family: family,
       dragStartSlop: callbacks.readDragStartSlop(),
-    )) {
+    );
+    if (activeGesture == null) {
       return;
     }
-    final activeDragStartSlop = _requireActiveDragStartSlop();
 
     try {
       _dispatchPointerToFamily(
         sample,
-        family: family,
-        dragStartSlop: activeDragStartSlop,
+        family: activeGesture.family,
+        dragStartSlop: activeGesture.dragStartSlop,
       );
     } catch (_) {
       _gestureMachine.reset();
@@ -244,19 +245,17 @@ class InteractiveRuntime {
   }
 
   void _handleOwnedPointerSample(PointerSample sample) {
-    if (!_gestureMachine.ownsPointer(sample.pointerId)) {
+    final activeGesture = _gestureMachine.activeGestureForPointer(
+      sample.pointerId,
+    );
+    if (activeGesture == null) {
       return;
     }
-    final family = _gestureMachine.activeFamily;
-    if (family == null) {
-      return;
-    }
-    final activeDragStartSlop = _requireActiveDragStartSlop();
     try {
       _dispatchPointerToFamily(
         sample,
-        family: family,
-        dragStartSlop: activeDragStartSlop,
+        family: activeGesture.family,
+        dragStartSlop: activeGesture.dragStartSlop,
       );
     } finally {
       if (_isTerminalPointerPhase(sample.phase)) {
@@ -361,15 +360,5 @@ class InteractiveRuntime {
 
   static bool _isTerminalPointerPhase(PointerPhase phase) {
     return phase == PointerPhase.up || phase == PointerPhase.cancel;
-  }
-
-  double _requireActiveDragStartSlop() {
-    final activeDragStartSlop = _gestureMachine.activeDragStartSlop;
-    if (activeDragStartSlop != null) {
-      return activeDragStartSlop;
-    }
-    throw StateError(
-      'Interactive gesture machine lost dragStartSlop during active dispatch.',
-    );
   }
 }

@@ -17,12 +17,11 @@ import '../contract/transform2d.dart';
 import '../controller/scene_controller.dart';
 import '../core/pointer_input.dart';
 import '../model/document.dart' show txnSceneFromSnapshot;
-import 'interaction_eligibility_policy.dart' as interaction_eligibility_policy;
 import 'internal/interactive_draw_line_engine.dart' show InteractiveDrawStyle;
 import 'internal/interactive_event_dispatcher.dart';
 import 'internal/interactive_geometry.dart';
-import 'internal/interactive_move_session.dart';
 import 'internal/interactive_runtime.dart';
+import 'internal/interactive_selection_actions.dart';
 
 typedef MoveCommitDeltaResolver =
     Offset Function({
@@ -114,12 +113,14 @@ class SceneControllerInteractive extends ChangeNotifier
     _notifyScheduler = InteractiveNotifyScheduler(
       notifyListeners: notifyListeners,
     );
+    _selectionActions = _createSelectionActions();
     _runtime = _createRuntime();
     _core.addListener(_handleCoreChanged);
   }
 
   final SceneControllerCore _core;
   late final InteractiveNotifyScheduler _notifyScheduler;
+  late final InteractiveSelectionActions _selectionActions;
   late final InteractiveRuntime _runtime;
 
   PointerInputSettings _pointerSettings;
@@ -362,142 +363,30 @@ class SceneControllerInteractive extends ChangeNotifier
 
   void rotateSelection({required bool clockwise, int? timestampMs}) {
     _ensurePublicSideEffectAllowed('rotateSelection');
-    final nodes = interaction_eligibility_policy
-        .selectedTransformableNodesInSnapshotOrder(
-          snapshot: snapshot,
-          selected: selectedNodeIds,
-        );
-    if (nodes.isEmpty) return;
-
-    final center = interaction_eligibility_policy.centerWorldForNodeSnapshots(
-      nodes,
+    _selectionActions.rotateSelection(
+      clockwise: clockwise,
+      timestampMs: timestampMs,
     );
-    final pivot = Transform2D.translation(center);
-    final unpivot = Transform2D.translation(Offset(-center.dx, -center.dy));
-    final rotation = Transform2D.rotationDeg(clockwise ? 90 : -90);
-    final delta = pivot.multiply(rotation).multiply(unpivot);
-    final movedIds = nodes.map((node) => node.id).toList(growable: false);
-    final affected = _core.write<int>((writer) {
-      return writer.writeSelectionTransform(delta);
-    });
-
-    if (affected > 0) {
-      _runtime.emitAction(
-        ActionType.transform,
-        movedIds,
-        _runtime.resolveTimestampMs(timestampMs),
-        payload: <String, Object?>{'delta': delta.toJsonMap()},
-      );
-    }
   }
 
   void flipSelectionVertical({int? timestampMs}) {
     _ensurePublicSideEffectAllowed('flipSelectionVertical');
-    final nodes = interaction_eligibility_policy
-        .selectedTransformableNodesInSnapshotOrder(
-          snapshot: snapshot,
-          selected: selectedNodeIds,
-        );
-    if (nodes.isEmpty) return;
-
-    final center = interaction_eligibility_policy.centerWorldForNodeSnapshots(
-      nodes,
-    );
-    final delta = Transform2D(
-      a: 1,
-      b: 0,
-      c: 0,
-      d: -1,
-      tx: 0,
-      ty: 2 * center.dy,
-    );
-    final movedIds = nodes.map((node) => node.id).toList(growable: false);
-    final affected = _core.write<int>((writer) {
-      return writer.writeSelectionTransform(delta);
-    });
-
-    if (affected > 0) {
-      _runtime.emitAction(
-        ActionType.transform,
-        movedIds,
-        _runtime.resolveTimestampMs(timestampMs),
-        payload: <String, Object?>{'delta': delta.toJsonMap()},
-      );
-    }
+    _selectionActions.flipSelectionVertical(timestampMs: timestampMs);
   }
 
   void flipSelectionHorizontal({int? timestampMs}) {
     _ensurePublicSideEffectAllowed('flipSelectionHorizontal');
-    final nodes = interaction_eligibility_policy
-        .selectedTransformableNodesInSnapshotOrder(
-          snapshot: snapshot,
-          selected: selectedNodeIds,
-        );
-    if (nodes.isEmpty) return;
-
-    final center = interaction_eligibility_policy.centerWorldForNodeSnapshots(
-      nodes,
-    );
-    final delta = Transform2D(
-      a: -1,
-      b: 0,
-      c: 0,
-      d: 1,
-      tx: 2 * center.dx,
-      ty: 0,
-    );
-    final movedIds = nodes.map((node) => node.id).toList(growable: false);
-    final affected = _core.write<int>((writer) {
-      return writer.writeSelectionTransform(delta);
-    });
-
-    if (affected > 0) {
-      _runtime.emitAction(
-        ActionType.transform,
-        movedIds,
-        _runtime.resolveTimestampMs(timestampMs),
-        payload: <String, Object?>{'delta': delta.toJsonMap()},
-      );
-    }
+    _selectionActions.flipSelectionHorizontal(timestampMs: timestampMs);
   }
 
   void deleteSelection({int? timestampMs}) {
     _ensurePublicSideEffectAllowed('deleteSelection');
-    final deletedIds = interaction_eligibility_policy
-        .deletableSelectedNodeIdsInSnapshot(
-          snapshot: snapshot,
-          selected: selectedNodeIds,
-        );
-    if (deletedIds.isEmpty) return;
-
-    final removedCount = _core.commands.writeDeleteSelection();
-    if (removedCount <= 0) return;
-
-    _runtime.emitAction(
-      ActionType.delete,
-      deletedIds,
-      _runtime.resolveTimestampMs(timestampMs),
-    );
+    _selectionActions.deleteSelection(timestampMs: timestampMs);
   }
 
   void clearScene({int? timestampMs}) {
     _ensurePublicSideEffectAllowed('clearScene');
-    final clearResult = _core.write<({List<NodeId> clearedIds, bool changed})>((
-      writer,
-    ) {
-      final result = writer.writeClearSceneKeepBackgroundResult();
-      return (
-        clearedIds: result.removedNodeIds,
-        changed: result.didStructuralClear,
-      );
-    });
-    if (!clearResult.changed) return;
-
-    _runtime.emitAction(
-      ActionType.clear,
-      clearResult.clearedIds,
-      _runtime.resolveTimestampMs(timestampMs),
-    );
+    _selectionActions.clearScene(timestampMs: timestampMs);
   }
 
   void replaceScene(SceneSnapshot snapshot) {
@@ -536,7 +425,7 @@ class SceneControllerInteractive extends ChangeNotifier
         resolveSpatialCandidateNode: _core.resolveSpatialCandidateNode,
         writeSelectionReplace: _core.commands.writeSelectionReplace,
         writeSelectionClear: _core.commands.writeSelectionClear,
-        commitMoveSelection: _commitMoveSelection,
+        commitMoveSelection: _selectionActions.commitMoveSelection,
         writeDrawStroke: _core.draw.writeDrawStroke,
         writeDrawLineFromWorldSegment: _writeDrawLineFromWorldSegment,
         writeEraseNodes: _core.draw.writeEraseNodes,
@@ -544,44 +433,18 @@ class SceneControllerInteractive extends ChangeNotifier
     );
   }
 
-  MoveCommitSelectionResult _commitMoveSelection(Offset proposedDelta) {
-    return _core.write<MoveCommitSelectionResult>((writer) {
-      final snapshot = writer.snapshot;
-      final movedNodes = interaction_eligibility_policy
-          .selectedCommitMovableNodesInSnapshotOrder(
-            snapshot: snapshot,
-            selected: writer.selectedNodeIds,
-          );
-      if (movedNodes.isEmpty) {
-        return (appliedDelta: Offset.zero, movedIds: const <NodeId>[]);
-      }
-
-      final resolvedDelta = _runMoveCommitDeltaResolver(
-        snapshot: snapshot,
-        movedNodes: movedNodes,
-        proposedDelta: proposedDelta,
-      );
-      _requireFiniteOffset(resolvedDelta, name: 'resolvedDelta');
-      if (resolvedDelta == Offset.zero) {
-        return (appliedDelta: Offset.zero, movedIds: const <NodeId>[]);
-      }
-
-      final movedIds = <NodeId>[];
-      for (final node in movedNodes) {
-        final nextTransform = node.transform.withTranslation(
-          node.transform.translation + resolvedDelta,
-        );
-        if (!writer.writeNodeTransformSet(node.id, nextTransform)) {
-          continue;
-        }
-        movedIds.add(node.id);
-      }
-      if (movedIds.isEmpty) {
-        return (appliedDelta: Offset.zero, movedIds: const <NodeId>[]);
-      }
-
-      return (appliedDelta: resolvedDelta, movedIds: movedIds);
-    });
+  InteractiveSelectionActions _createSelectionActions() {
+    return InteractiveSelectionActions(
+      core: _core,
+      callbacks: InteractiveSelectionActionsCallbacks(
+        resolveTimestampMs: (timestampMs) =>
+            _runtime.resolveTimestampMs(timestampMs),
+        emitAction: (type, nodeIds, timestampMs, {payload}) =>
+            _runtime.emitAction(type, nodeIds, timestampMs, payload: payload),
+        resolveMoveCommitDelta: _runMoveCommitDeltaResolver,
+        requireFiniteOffset: _requireFiniteOffset,
+      ),
+    );
   }
 
   InteractiveDrawStyle get _currentDrawStyle => (
