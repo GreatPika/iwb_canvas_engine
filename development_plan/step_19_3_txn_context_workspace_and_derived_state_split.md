@@ -125,7 +125,7 @@ index/materialization concerns in one owner.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Mutable workspace ownership is isolated
+### Slice 1. [x] Mutable workspace ownership is isolated
 
 #### Slice Contract
 
@@ -149,7 +149,7 @@ derived-state materialization responsibilities.
 - `TxnContext` no longer keeps the replaced mixed workspace / materialization
   body.
 
-### Slice 2. [ ] Derived-state materialization remains exact after the split
+### Slice 2. [x] Derived-state materialization remains exact after the split
 
 #### Slice Contract
 
