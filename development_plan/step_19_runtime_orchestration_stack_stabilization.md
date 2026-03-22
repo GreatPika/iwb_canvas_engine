@@ -209,7 +209,7 @@ controller behavior.
 
 - Verification from `19.3`
 
-### Slice 4. [ ] Invariant proof surface split
+### Slice 4. [x] Invariant proof surface split
 
 #### Slice Contract
 

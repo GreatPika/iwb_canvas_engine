@@ -1,7 +1,7 @@
 import 'dart:ui';
 
-import '../core/id_generator.dart';
 import '../core/grid_safety_limits.dart';
+import '../core/id_generator.dart';
 import '../core/nodes.dart';
 import '../core/revision_policy.dart';
 import '../core/scene.dart';
@@ -20,152 +20,40 @@ List<String> txnCollectStoreInvariantViolations({
   int nextInstanceRevision = 1,
   required int commitRevision,
 }) {
-  var violations = const <String>[];
-
-  final expectedAllNodeIds = txnCollectNodeIds(scene);
-  if (!_txnSetsEqual(allNodeIds, expectedAllNodeIds)) {
-    violations = <String>[
-      ...violations,
-      'allNodeIds must equal collectNodeIds(scene). '
-          'actual=$allNodeIds expected=$expectedAllNodeIds',
-    ];
-  }
-  if (!_txnSetsEqual(allNodeIds, nodeLocator.keys.toSet())) {
-    violations = <String>[
-      ...violations,
-      'allNodeIds must equal nodeLocator keys. '
-          'allNodeIds=$allNodeIds locatorKeys=${nodeLocator.keys.toSet()}',
-    ];
-  }
-  final expectedNodeLocator = txnBuildNodeLocator(scene);
-  if (!_txnNodeLocatorEquals(nodeLocator, expectedNodeLocator)) {
-    violations = <String>[
-      ...violations,
-      'nodeLocator must match buildNodeLocator(scene). '
-          'actual=$nodeLocator expected=$expectedNodeLocator',
-    ];
-  }
-
-  final duplicateNodeIds = _txnCollectDuplicateNodeIds(scene);
-  if (duplicateNodeIds.isNotEmpty) {
-    violations = <String>[
-      ...violations,
-      'scene must not contain duplicate node ids. '
-          'duplicates=$duplicateNodeIds',
-    ];
-  }
-
-  final duplicateLayerIds = _txnCollectDuplicateLayerIds(scene);
-  if (duplicateLayerIds.isNotEmpty) {
-    violations = <String>[
-      ...violations,
-      'scene must not contain duplicate content layer ids. '
-          'duplicates=$duplicateLayerIds',
-    ];
-  }
-
-  final normalizedSelection = txnNormalizeSelection(
-    rawSelection: selectedNodeIds,
-    scene: scene,
+  final violations = <String>[];
+  violations.addAll(
+    _txnCollectSceneIndexInvariantViolations(
+      scene: scene,
+      allNodeIds: allNodeIds,
+      nodeLocator: nodeLocator,
+    ),
   );
-  if (!_txnSetsEqual(selectedNodeIds, normalizedSelection)) {
-    violations = <String>[
-      ...violations,
-      'selectedNodeIds must be normalized against scene interaction policy. '
-          'actual=$selectedNodeIds normalized=$normalizedSelection',
-    ];
-  }
-
-  if (idGeneratorState.sessionToken.isEmpty) {
-    violations = <String>[
-      ...violations,
-      'idGeneratorState.sessionToken must not be empty.',
-    ];
-  }
-
-  if (idGeneratorState.nextNodeCounter < 1) {
-    violations = <String>[
-      ...violations,
-      'idGeneratorState.nextNodeCounter must be >= 1. '
-          'actual=${idGeneratorState.nextNodeCounter}',
-    ];
-  }
-
-  if (idGeneratorState.nextLayerCounter < 1) {
-    violations = <String>[
-      ...violations,
-      'idGeneratorState.nextLayerCounter must be >= 1. '
-          'actual=${idGeneratorState.nextLayerCounter}',
-    ];
-  }
-
-  if (controllerEpoch < 0 || controllerEpoch > kMaxControllerEpoch) {
-    violations = <String>[
-      ...violations,
-      'controllerEpoch must stay within [0, $kMaxControllerEpoch]. '
-          'actual=$controllerEpoch',
-    ];
-  }
-
-  final effectiveRevisionState =
-      revisionState ??
-      createInitialRevisionAllocatorState(
-        nextInstanceRevision: nextInstanceRevision,
-      );
-  final nextRevision = effectiveRevisionState.nextInstanceRevision;
-  if (nextRevision < 1 || nextRevision > kMaxInstanceRevision) {
-    violations = <String>[
-      ...violations,
-      'revisionState.nextInstanceRevision must stay within '
-          '[1, $kMaxInstanceRevision]. actual=$nextRevision',
-    ];
-  }
-
-  if (effectiveRevisionState.epochBumpRequested) {
-    violations = <String>[
-      ...violations,
-      'committed revisionState.epochBumpRequested must be false.',
-    ];
-  }
-
-  final invalidInstanceRevisionIds = <NodeId>[];
-  for (final node in _txnAllNodes(scene)) {
-    if (node.instanceRevision >= 1) continue;
-    invalidInstanceRevisionIds.add(node.id);
-  }
-  if (invalidInstanceRevisionIds.isNotEmpty) {
-    violations = <String>[
-      ...violations,
-      'scene nodes must have instanceRevision >= 1. '
-          'nodeIds=$invalidInstanceRevisionIds',
-    ];
-  }
-
-  if (commitRevision < 0) {
-    violations = <String>[
-      ...violations,
-      'commitRevision must be non-negative.',
-    ];
-  }
-
-  final cameraOffset = scene.camera.offset;
-  if (!_txnIsFiniteOffset(cameraOffset)) {
-    violations = <String>[...violations, 'camera.offset must be finite.'];
-  }
-
-  final grid = scene.background.grid;
-  if (!grid.cellSize.isFinite || grid.cellSize <= 0) {
-    violations = <String>[
-      ...violations,
-      'grid.cellSize must be finite and > 0.',
-    ];
-  } else if (grid.isEnabled && grid.cellSize < kMinGridCellSize) {
-    violations = <String>[
-      ...violations,
-      'enabled grid.cellSize must be >= $kMinGridCellSize.',
-    ];
-  }
-
+  violations.addAll(_txnCollectSceneIdentityInvariantViolations(scene));
+  violations.addAll(
+    _txnCollectSelectionInvariantViolations(
+      scene: scene,
+      selectedNodeIds: selectedNodeIds,
+    ),
+  );
+  violations.addAll(
+    _txnCollectIdGeneratorInvariantViolations(
+      idGeneratorState: idGeneratorState,
+    ),
+  );
+  violations.addAll(
+    _txnCollectControllerEpochInvariantViolations(controllerEpoch),
+  );
+  violations.addAll(
+    _txnCollectRevisionStateInvariantViolations(
+      scene: scene,
+      revisionState: revisionState,
+      nextInstanceRevision: nextInstanceRevision,
+    ),
+  );
+  violations.addAll(
+    _txnCollectCommitRevisionInvariantViolations(commitRevision),
+  );
+  violations.addAll(_txnCollectSceneNumericInvariantViolations(scene));
   return violations;
 }
 
@@ -174,41 +62,17 @@ List<String> txnCollectCriticalStoreInvariantViolations({
   required int commitRevision,
   required int previousCommitRevision,
 }) {
-  var violations = const <String>[];
-
+  final violations = <String>[];
   if (commitRevision <= previousCommitRevision) {
-    violations = <String>[
-      ...violations,
+    violations.add(
       'commitRevision must be strictly monotonic. '
-          'actual=$commitRevision previous=$previousCommitRevision',
-    ];
+      'actual=$commitRevision previous=$previousCommitRevision',
+    );
   }
-
-  if (commitRevision < 0) {
-    violations = <String>[
-      ...violations,
-      'commitRevision must be non-negative.',
-    ];
-  }
-
-  final cameraOffset = scene.camera.offset;
-  if (!_txnIsFiniteOffset(cameraOffset)) {
-    violations = <String>[...violations, 'camera.offset must be finite.'];
-  }
-
-  final grid = scene.background.grid;
-  if (!grid.cellSize.isFinite || grid.cellSize <= 0) {
-    violations = <String>[
-      ...violations,
-      'grid.cellSize must be finite and > 0.',
-    ];
-  } else if (grid.isEnabled && grid.cellSize < kMinGridCellSize) {
-    violations = <String>[
-      ...violations,
-      'enabled grid.cellSize must be >= $kMinGridCellSize.',
-    ];
-  }
-
+  violations.addAll(
+    _txnCollectCommitRevisionInvariantViolations(commitRevision),
+  );
+  violations.addAll(_txnCollectSceneNumericInvariantViolations(scene));
   return violations;
 }
 
@@ -291,6 +155,179 @@ bool _txnNodeLocatorEquals(
 
 bool _txnIsFiniteOffset(Offset value) {
   return value.dx.isFinite && value.dy.isFinite;
+}
+
+List<String> _txnCollectSceneIndexInvariantViolations({
+  required Scene scene,
+  required Set<NodeId> allNodeIds,
+  required Map<NodeId, NodeLocatorEntry> nodeLocator,
+}) {
+  final violations = <String>[];
+
+  final expectedAllNodeIds = txnCollectNodeIds(scene);
+  if (!_txnSetsEqual(allNodeIds, expectedAllNodeIds)) {
+    violations.add(
+      'allNodeIds must equal collectNodeIds(scene). '
+      'actual=$allNodeIds expected=$expectedAllNodeIds',
+    );
+  }
+
+  if (!_txnSetsEqual(allNodeIds, nodeLocator.keys.toSet())) {
+    violations.add(
+      'allNodeIds must equal nodeLocator keys. '
+      'allNodeIds=$allNodeIds locatorKeys=${nodeLocator.keys.toSet()}',
+    );
+  }
+
+  final expectedNodeLocator = txnBuildNodeLocator(scene);
+  if (!_txnNodeLocatorEquals(nodeLocator, expectedNodeLocator)) {
+    violations.add(
+      'nodeLocator must match buildNodeLocator(scene). '
+      'actual=$nodeLocator expected=$expectedNodeLocator',
+    );
+  }
+
+  return violations;
+}
+
+List<String> _txnCollectSceneIdentityInvariantViolations(Scene scene) {
+  final violations = <String>[];
+
+  final duplicateNodeIds = _txnCollectDuplicateNodeIds(scene);
+  if (duplicateNodeIds.isNotEmpty) {
+    violations.add(
+      'scene must not contain duplicate node ids. duplicates=$duplicateNodeIds',
+    );
+  }
+
+  final duplicateLayerIds = _txnCollectDuplicateLayerIds(scene);
+  if (duplicateLayerIds.isNotEmpty) {
+    violations.add(
+      'scene must not contain duplicate content layer ids. '
+      'duplicates=$duplicateLayerIds',
+    );
+  }
+
+  return violations;
+}
+
+List<String> _txnCollectSelectionInvariantViolations({
+  required Scene scene,
+  required Set<NodeId> selectedNodeIds,
+}) {
+  final normalizedSelection = txnNormalizeSelection(
+    rawSelection: selectedNodeIds,
+    scene: scene,
+  );
+  if (_txnSetsEqual(selectedNodeIds, normalizedSelection)) {
+    return const <String>[];
+  }
+  return <String>[
+    'selectedNodeIds must be normalized against scene interaction policy. '
+        'actual=$selectedNodeIds normalized=$normalizedSelection',
+  ];
+}
+
+List<String> _txnCollectIdGeneratorInvariantViolations({
+  required IdGeneratorState idGeneratorState,
+}) {
+  final violations = <String>[];
+
+  if (idGeneratorState.sessionToken.isEmpty) {
+    violations.add('idGeneratorState.sessionToken must not be empty.');
+  }
+
+  if (idGeneratorState.nextNodeCounter < 1) {
+    violations.add(
+      'idGeneratorState.nextNodeCounter must be >= 1. '
+      'actual=${idGeneratorState.nextNodeCounter}',
+    );
+  }
+
+  if (idGeneratorState.nextLayerCounter < 1) {
+    violations.add(
+      'idGeneratorState.nextLayerCounter must be >= 1. '
+      'actual=${idGeneratorState.nextLayerCounter}',
+    );
+  }
+
+  return violations;
+}
+
+List<String> _txnCollectControllerEpochInvariantViolations(
+  int controllerEpoch,
+) {
+  if (controllerEpoch < 0 || controllerEpoch > kMaxControllerEpoch) {
+    return <String>[
+      'controllerEpoch must stay within [0, $kMaxControllerEpoch]. '
+          'actual=$controllerEpoch',
+    ];
+  }
+  return const <String>[];
+}
+
+List<String> _txnCollectRevisionStateInvariantViolations({
+  required Scene scene,
+  required RevisionAllocatorState? revisionState,
+  required int nextInstanceRevision,
+}) {
+  final violations = <String>[];
+
+  final effectiveRevisionState =
+      revisionState ??
+      createInitialRevisionAllocatorState(
+        nextInstanceRevision: nextInstanceRevision,
+      );
+  final nextRevision = effectiveRevisionState.nextInstanceRevision;
+  if (nextRevision < 1 || nextRevision > kMaxInstanceRevision) {
+    violations.add(
+      'revisionState.nextInstanceRevision must stay within '
+      '[1, $kMaxInstanceRevision]. actual=$nextRevision',
+    );
+  }
+
+  if (effectiveRevisionState.epochBumpRequested) {
+    violations.add('committed revisionState.epochBumpRequested must be false.');
+  }
+
+  final invalidInstanceRevisionIds = <NodeId>[];
+  for (final node in _txnAllNodes(scene)) {
+    if (node.instanceRevision >= 1) continue;
+    invalidInstanceRevisionIds.add(node.id);
+  }
+  if (invalidInstanceRevisionIds.isNotEmpty) {
+    violations.add(
+      'scene nodes must have instanceRevision >= 1. '
+      'nodeIds=$invalidInstanceRevisionIds',
+    );
+  }
+
+  return violations;
+}
+
+List<String> _txnCollectCommitRevisionInvariantViolations(int commitRevision) {
+  if (commitRevision < 0) {
+    return const <String>['commitRevision must be non-negative.'];
+  }
+  return const <String>[];
+}
+
+List<String> _txnCollectSceneNumericInvariantViolations(Scene scene) {
+  final violations = <String>[];
+
+  final cameraOffset = scene.camera.offset;
+  if (!_txnIsFiniteOffset(cameraOffset)) {
+    violations.add('camera.offset must be finite.');
+  }
+
+  final grid = scene.background.grid;
+  if (!grid.cellSize.isFinite || grid.cellSize <= 0) {
+    violations.add('grid.cellSize must be finite and > 0.');
+  } else if (grid.isEnabled && grid.cellSize < kMinGridCellSize) {
+    violations.add('enabled grid.cellSize must be >= $kMinGridCellSize.');
+  }
+
+  return violations;
 }
 
 Set<NodeId> _txnCollectDuplicateNodeIds(Scene scene) {

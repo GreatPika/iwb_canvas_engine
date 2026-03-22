@@ -100,7 +100,7 @@ language: russian
 - [x] [Шаг 19.1. Разрезать commit/post-commit orchestration в SceneControllerCore](development_plan/step_19_1_scene_controller_core_commit_orchestration_split.md)
 - [x] [Шаг 19.2. Развести owner-ов write pipeline между SceneWriter и MutationExecutor](development_plan/step_19_2_scene_writer_and_mutation_executor_pipeline_split.md)
 - [x] [Шаг 19.3. Разделить TxnContext на mutable workspace и derived-state ownership](development_plan/step_19_3_txn_context_workspace_and_derived_state_split.md)
-- [ ] [Шаг 19.4. Разрезать invariant sweep на атомарные owners и proof surface](development_plan/step_19_4_scene_invariants_decomposition_and_proof_surface.md)
+- [x] [Шаг 19.4. Разрезать invariant sweep на атомарные owners и proof surface](development_plan/step_19_4_scene_invariants_decomposition_and_proof_surface.md)
 - [ ] [Шаг 19.5. Сделать SceneControllerInteractive тонким facade над pointer/gesture runtime](development_plan/step_19_5_scene_controller_interactive_facade_thinning.md)
 - [ ] [Шаг 19.6. Переснять baseline runtime orchestration stack и обновить roadmap](development_plan/step_19_6_runtime_stack_rebaseline_and_roadmap.md)
 - [ ] [Шаг 20. Закрыть secondary hotspots render/view через подшаги 20.1-20.4](development_plan/step_20_render_view_secondary_hotspots.md)

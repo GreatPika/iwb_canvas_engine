@@ -121,7 +121,7 @@ owners and proof surface without changing committed-store invariant semantics.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Invariant families have separate owners
+### Slice 1. [x] Invariant families have separate owners
 
 #### Slice Contract
 
@@ -143,7 +143,7 @@ owners without changing invariant meaning.
 - Green run of the listed verifications.
 - Giant mixed invariant sweep is no longer present in the same form.
 
-### Slice 2. [ ] Proof surface remains exact after the split
+### Slice 2. [x] Proof surface remains exact after the split
 
 #### Slice Contract
 
