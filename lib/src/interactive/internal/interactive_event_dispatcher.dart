@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import '../../core/action_events.dart';
 import '../../contract/snapshot.dart';
 
@@ -43,5 +45,41 @@ class InteractiveEventDispatcher {
     _isDisposed = true;
     _actions.close();
     _editTextRequests.close();
+  }
+}
+
+class InteractiveNotifyScheduler {
+  InteractiveNotifyScheduler({required this.notifyListeners});
+
+  final VoidCallback notifyListeners;
+
+  bool _notifyScheduled = false;
+  bool _notifyPending = false;
+  bool _isDisposed = false;
+
+  void schedule() {
+    if (_isDisposed) {
+      return;
+    }
+    _notifyPending = true;
+    if (_notifyScheduled) {
+      return;
+    }
+    _notifyScheduled = true;
+
+    scheduleMicrotask(() {
+      _notifyScheduled = false;
+      if (_isDisposed || !_notifyPending) {
+        return;
+      }
+      _notifyPending = false;
+      notifyListeners();
+    });
+  }
+
+  void dispose() {
+    _isDisposed = true;
+    _notifyPending = false;
+    _notifyScheduled = false;
   }
 }

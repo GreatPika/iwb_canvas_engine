@@ -17,6 +17,7 @@ dispatch, and gesture orchestration in one class body.
 - `lib/src/interactive/internal/interactive_draw_coordinator.dart`
 - `lib/src/interactive/internal/interactive_event_dispatcher.dart`
 - `lib/src/interactive/internal/interactive_gesture_machine.dart`
+- `lib/src/interactive/internal/interactive_runtime.dart`
 
 ### Not Included in the Change
 
@@ -33,6 +34,7 @@ dispatch, and gesture orchestration in one class body.
 - `lib/src/interactive/internal/interactive_draw_coordinator.dart`
 - `lib/src/interactive/internal/interactive_event_dispatcher.dart`
 - `lib/src/interactive/internal/interactive_gesture_machine.dart`
+- `lib/src/interactive/internal/interactive_runtime.dart`
 
 ### Test Files
 
@@ -92,7 +94,7 @@ dispatch, and gesture orchestration in one class body.
 
 ### 6.2 Target Verification Units
 
-- `dcm calculate-metrics lib/src/interactive/scene_controller_interactive.dart lib/src/interactive/internal/interactive_move_session.dart lib/src/interactive/internal/interactive_draw_coordinator.dart lib/src/interactive/internal/interactive_event_dispatcher.dart lib/src/interactive/internal/interactive_gesture_machine.dart --report-all`
+- `dcm calculate-metrics lib/src/interactive/scene_controller_interactive.dart lib/src/interactive/internal/interactive_move_session.dart lib/src/interactive/internal/interactive_draw_coordinator.dart lib/src/interactive/internal/interactive_event_dispatcher.dart lib/src/interactive/internal/interactive_gesture_machine.dart lib/src/interactive/internal/interactive_runtime.dart --report-all`
 - MCP test runner: `test/interactive`
 - MCP test runner: `test/view/scene_view_interactive_test.dart`
 - `dart run tool/check_import_boundaries.dart`
@@ -133,7 +135,7 @@ dispatch, and gesture orchestration in one class body.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Pointer and gesture runtime is separated from the facade
+### Slice 1. [x] Pointer and gesture runtime is separated from the facade
 
 #### Slice Contract
 
@@ -147,7 +149,7 @@ ownership.
 
 #### Verification
 
-- `dcm calculate-metrics lib/src/interactive/scene_controller_interactive.dart lib/src/interactive/internal/interactive_move_session.dart lib/src/interactive/internal/interactive_gesture_machine.dart --report-all`
+- `dcm calculate-metrics lib/src/interactive/scene_controller_interactive.dart lib/src/interactive/internal/interactive_move_session.dart lib/src/interactive/internal/interactive_gesture_machine.dart lib/src/interactive/internal/interactive_runtime.dart --report-all`
 - MCP test runner: `test/interactive`
 - `dart run tool/check_import_boundaries.dart`
 
@@ -157,7 +159,7 @@ ownership.
 - `SceneControllerInteractive` no longer keeps the replaced mixed facade /
   runtime body.
 
-### Slice 2. [ ] Interactive semantics remain exact after facade thinning
+### Slice 2. [x] Interactive semantics remain exact after facade thinning
 
 #### Slice Contract
 
@@ -170,7 +172,7 @@ shape and close residual duplicate bodies.
 
 #### Verification
 
-- `dcm calculate-metrics lib/src/interactive/scene_controller_interactive.dart lib/src/interactive/internal/interactive_draw_coordinator.dart lib/src/interactive/internal/interactive_event_dispatcher.dart --report-all`
+- `dcm calculate-metrics lib/src/interactive/scene_controller_interactive.dart lib/src/interactive/internal/interactive_draw_coordinator.dart lib/src/interactive/internal/interactive_event_dispatcher.dart lib/src/interactive/internal/interactive_runtime.dart --report-all`
 - MCP test runner: `test/interactive`
 - MCP test runner: `test/view/scene_view_interactive_test.dart`
 - `dart run tool/check_guardrails.dart`
@@ -182,7 +184,7 @@ shape and close residual duplicate bodies.
 
 ## 9. Final Verification
 
-- `dcm calculate-metrics lib/src/interactive/scene_controller_interactive.dart lib/src/interactive/internal/interactive_move_session.dart lib/src/interactive/internal/interactive_draw_coordinator.dart lib/src/interactive/internal/interactive_event_dispatcher.dart lib/src/interactive/internal/interactive_gesture_machine.dart --report-all`
+- `dcm calculate-metrics lib/src/interactive/scene_controller_interactive.dart lib/src/interactive/internal/interactive_move_session.dart lib/src/interactive/internal/interactive_draw_coordinator.dart lib/src/interactive/internal/interactive_event_dispatcher.dart lib/src/interactive/internal/interactive_gesture_machine.dart lib/src/interactive/internal/interactive_runtime.dart --report-all`
 - MCP test runner: `test/interactive`
 - MCP test runner: `test/view/scene_view_interactive_test.dart`
 - `dart run tool/check_import_boundaries.dart`

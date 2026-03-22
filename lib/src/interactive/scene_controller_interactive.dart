@@ -1,17 +1,11 @@
-import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 
 import '../core/action_events.dart';
-import '../core/geometry.dart';
 import '../core/grid_safety_limits.dart';
 import '../core/interaction_types.dart';
-import '../core/nodes.dart' show TextNode;
-import '../core/pointer_input.dart';
 import '../core/tool_defaults.dart';
-import '../contract/transform2d.dart';
-import '../controller/scene_controller.dart';
 import '../contract/canvas_pointer_input.dart';
 import '../contract/node_patch.dart';
 import '../contract/node_spec.dart';
@@ -19,14 +13,16 @@ import '../contract/scene_defaults.dart';
 import '../contract/scene_render_state.dart';
 import '../contract/scene_write_txn.dart';
 import '../contract/snapshot.dart';
+import '../contract/transform2d.dart';
+import '../controller/scene_controller.dart';
+import '../core/pointer_input.dart';
 import '../model/document.dart' show txnSceneFromSnapshot;
 import 'interaction_eligibility_policy.dart' as interaction_eligibility_policy;
-import 'internal/interactive_draw_coordinator.dart';
+import 'internal/interactive_draw_line_engine.dart' show InteractiveDrawStyle;
 import 'internal/interactive_event_dispatcher.dart';
-import 'internal/interactive_gesture_machine.dart';
 import 'internal/interactive_geometry.dart';
 import 'internal/interactive_move_session.dart';
-import 'internal/interactive_draw_line_engine.dart' show InteractiveDrawStyle;
+import 'internal/interactive_runtime.dart';
 
 typedef MoveCommitDeltaResolver =
     Offset Function({
@@ -45,14 +41,14 @@ Offset sceneControllerInteractiveInternalPreviewDeltaForNode(
   SceneControllerInteractive controller,
   NodeId nodeId,
 ) {
-  return controller._moveSession.movePreviewDeltaForNode(nodeId);
+  return controller._runtime.movePreviewDeltaForNode(nodeId);
 }
 
 void sceneControllerInteractiveInternalSetBeforePointerDispatchHook(
   SceneControllerInteractive controller,
   VoidCallback? hook,
 ) {
-  controller._debugBeforeHandlePointerDispatchHook = hook;
+  controller._runtime.setBeforePointerDispatchHook(hook);
 }
 
 Offset sceneControllerInteractiveInternalRunMoveCommitDeltaResolverForTest(
@@ -80,7 +76,7 @@ void sceneControllerInteractiveInternalEnforceGestureBufferSoftLimitForTest(
 int sceneControllerInteractiveInternalActiveEraserPointsLength(
   SceneControllerInteractive controller,
 ) {
-  return controller._drawCoordinator.activeEraserPointsLength;
+  return controller._runtime.activeEraserPointsLength;
 }
 
 int sceneControllerInteractiveInternalEraserSpatialQueryCount(
@@ -88,7 +84,7 @@ int sceneControllerInteractiveInternalEraserSpatialQueryCount(
 ) {
   // Test-only metric: number of coarse spatial queries used by last eraser
   // commit. Helps keep complexity guards deterministic across environments.
-  return controller._drawCoordinator.debugEraserSpatialQueryCount;
+  return controller._runtime.debugEraserSpatialQueryCount;
 }
 
 int sceneControllerInteractiveInternalEraserPreciseSegmentCheckCount(
@@ -96,7 +92,7 @@ int sceneControllerInteractiveInternalEraserPreciseSegmentCheckCount(
 ) {
   // Test-only metric: number of exact segment-to-segment checks during last
   // eraser commit. Used as primary perf acceptance signal.
-  return controller._drawCoordinator.debugEraserPreciseSegmentChecks;
+  return controller._runtime.debugEraserPreciseSegmentChecks;
 }
 
 class SceneControllerInteractive extends ChangeNotifier
@@ -115,21 +111,19 @@ class SceneControllerInteractive extends ChangeNotifier
          textFontFamilyByDefault: textFontFamilyByDefault,
        ) {
     validatePointerInputSettings(_pointerSettings);
-    _moveSession = _createMoveSession();
-    _drawCoordinator = _createDrawCoordinator();
+    _notifyScheduler = InteractiveNotifyScheduler(
+      notifyListeners: notifyListeners,
+    );
+    _runtime = _createRuntime();
     _core.addListener(_handleCoreChanged);
   }
 
   final SceneControllerCore _core;
-  final InteractiveEventDispatcher _events = InteractiveEventDispatcher();
-  final InteractiveGestureMachine _gestureMachine = InteractiveGestureMachine();
-  late final InteractiveDrawCoordinator _drawCoordinator;
-  late final InteractiveMoveSession _moveSession;
+  late final InteractiveNotifyScheduler _notifyScheduler;
+  late final InteractiveRuntime _runtime;
 
   PointerInputSettings _pointerSettings;
   double? _dragStartSlop;
-  int _timestampCursorMs = -1;
-  final Map<int, Offset> _lastFinitePointerPositionById = <int, Offset>{};
 
   CanvasMode _mode = CanvasMode.move;
   DrawTool _drawTool = DrawTool.pen;
@@ -144,12 +138,8 @@ class SceneControllerInteractive extends ChangeNotifier
   final MoveCommitDeltaResolver? moveCommitDeltaResolver;
   final String? textFontFamilyByDefault;
 
-  bool _notifyScheduled = false;
-  bool _notifyPending = false;
   bool _isDisposed = false;
-  bool _handlingPointer = false;
   bool _moveCommitResolverActive = false;
-  VoidCallback? _debugBeforeHandlePointerDispatchHook;
 
   @override
   SceneSnapshot get snapshot => _core.snapshot;
@@ -167,36 +157,36 @@ class SceneControllerInteractive extends ChangeNotifier
   double get highlighterOpacity => _highlighterOpacity;
   double get dragStartSlop => _dragStartSlop ?? _pointerSettings.tapSlop;
 
-  Rect? get selectionRect => _moveSession.selectionRect;
+  Rect? get selectionRect => _runtime.selectionRect;
 
-  Offset? get pendingLineStart => _drawCoordinator.pendingLineStart;
-  int? get pendingLineTimestampMs => _drawCoordinator.pendingLineTimestampMs;
-  bool get hasPendingLineStart => _drawCoordinator.hasPendingLineStart;
+  Offset? get pendingLineStart => _runtime.pendingLineStart;
+  int? get pendingLineTimestampMs => _runtime.pendingLineTimestampMs;
+  bool get hasPendingLineStart => _runtime.hasPendingLineStart;
   bool get hasActiveStrokePreview =>
-      _gestureMachine.isActiveDrawGesture &&
+      _runtime.isActiveDrawGesture &&
       (_drawTool == DrawTool.pen || _drawTool == DrawTool.highlighter) &&
-      _drawCoordinator.hasActiveStrokePoints;
+      _runtime.hasActiveStrokePoints;
   List<Offset> get activeStrokePreviewPoints =>
-      _drawCoordinator.activeStrokePreviewPoints;
+      _runtime.activeStrokePreviewPoints;
   double get activeStrokePreviewThickness =>
       _drawTool == DrawTool.highlighter ? _highlighterThickness : _penThickness;
   Color get activeStrokePreviewColor => _drawColor;
   double get activeStrokePreviewOpacity =>
       _drawTool == DrawTool.highlighter ? _highlighterOpacity : 1;
   bool get hasActiveLinePreview =>
-      _gestureMachine.isActiveDrawGesture &&
+      _runtime.isActiveDrawGesture &&
       _drawTool == DrawTool.line &&
-      _drawCoordinator.activeLinePreviewStart != null &&
-      _drawCoordinator.activeLinePreviewEnd != null;
-  Offset? get activeLinePreviewStart => _drawCoordinator.activeLinePreviewStart;
-  Offset? get activeLinePreviewEnd => _drawCoordinator.activeLinePreviewEnd;
+      _runtime.activeLinePreviewStart != null &&
+      _runtime.activeLinePreviewEnd != null;
+  Offset? get activeLinePreviewStart => _runtime.activeLinePreviewStart;
+  Offset? get activeLinePreviewEnd => _runtime.activeLinePreviewEnd;
   double get activeLinePreviewThickness => _lineThickness;
   Color get activeLinePreviewColor => _drawColor;
 
   PointerInputSettings get pointerSettings => _pointerSettings;
 
-  Stream<ActionCommitted> get actions => _events.actions;
-  Stream<EditTextRequested> get editTextRequests => _events.editTextRequests;
+  Stream<ActionCommitted> get actions => _runtime.actions;
+  Stream<EditTextRequested> get editTextRequests => _runtime.editTextRequests;
 
   T write<T>(T Function(SceneWriteTxn writer) fn) {
     _ensurePublicSideEffectAllowed('write');
@@ -207,11 +197,8 @@ class SceneControllerInteractive extends ChangeNotifier
     _ensurePublicSideEffectAllowed('setMode');
     if (_mode == value) return;
 
-    _forceResetActiveGestureIfNeeded();
-    _resetDrawLatentState();
-
+    _runtime.resetInteractiveState();
     _mode = value;
-    _moveSession.setSelectionRect(null);
 
     if (value == CanvasMode.draw &&
         clearSelectionOnDrawModeEnter &&
@@ -225,9 +212,8 @@ class SceneControllerInteractive extends ChangeNotifier
   void setDrawTool(DrawTool value) {
     _ensurePublicSideEffectAllowed('setDrawTool');
     if (_drawTool == value) return;
-    _forceResetActiveGestureIfNeeded();
+    _runtime.resetInteractiveState();
     _drawTool = value;
-    _resetDrawLatentState();
     _scheduleNotify();
   }
 
@@ -315,8 +301,7 @@ class SceneControllerInteractive extends ChangeNotifier
     if (snapshot.camera.offset == value) {
       return;
     }
-    _forceResetActiveGestureIfNeeded();
-    _resetDrawLatentState();
+    _runtime.resetInteractiveState();
     _core.commands.writeCameraOffsetSet(value);
   }
 
@@ -345,9 +330,9 @@ class SceneControllerInteractive extends ChangeNotifier
     _ensurePublicSideEffectAllowed('removeNode');
     final deleted = _core.commands.writeDeleteNode(id);
     if (!deleted) return false;
-    _events.emitAction(ActionType.delete, <NodeId>[
+    _runtime.emitAction(ActionType.delete, <NodeId>[
       id,
-    ], _resolveTimestampMs(timestampMs));
+    ], _runtime.resolveTimestampMs(timestampMs));
     return true;
   }
 
@@ -397,10 +382,10 @@ class SceneControllerInteractive extends ChangeNotifier
     });
 
     if (affected > 0) {
-      _events.emitAction(
+      _runtime.emitAction(
         ActionType.transform,
         movedIds,
-        _resolveTimestampMs(timestampMs),
+        _runtime.resolveTimestampMs(timestampMs),
         payload: <String, Object?>{'delta': delta.toJsonMap()},
       );
     }
@@ -432,10 +417,10 @@ class SceneControllerInteractive extends ChangeNotifier
     });
 
     if (affected > 0) {
-      _events.emitAction(
+      _runtime.emitAction(
         ActionType.transform,
         movedIds,
-        _resolveTimestampMs(timestampMs),
+        _runtime.resolveTimestampMs(timestampMs),
         payload: <String, Object?>{'delta': delta.toJsonMap()},
       );
     }
@@ -467,10 +452,10 @@ class SceneControllerInteractive extends ChangeNotifier
     });
 
     if (affected > 0) {
-      _events.emitAction(
+      _runtime.emitAction(
         ActionType.transform,
         movedIds,
-        _resolveTimestampMs(timestampMs),
+        _runtime.resolveTimestampMs(timestampMs),
         payload: <String, Object?>{'delta': delta.toJsonMap()},
       );
     }
@@ -488,10 +473,10 @@ class SceneControllerInteractive extends ChangeNotifier
     final removedCount = _core.commands.writeDeleteSelection();
     if (removedCount <= 0) return;
 
-    _events.emitAction(
+    _runtime.emitAction(
       ActionType.delete,
       deletedIds,
-      _resolveTimestampMs(timestampMs),
+      _runtime.resolveTimestampMs(timestampMs),
     );
   }
 
@@ -508,21 +493,19 @@ class SceneControllerInteractive extends ChangeNotifier
     });
     if (!clearResult.changed) return;
 
-    _events.emitAction(
+    _runtime.emitAction(
       ActionType.clear,
       clearResult.clearedIds,
-      _resolveTimestampMs(timestampMs),
+      _runtime.resolveTimestampMs(timestampMs),
     );
   }
 
   void replaceScene(SceneSnapshot snapshot) {
     _ensurePublicSideEffectAllowed('replaceScene');
     txnSceneFromSnapshot(snapshot);
-    _forceResetActiveGestureIfNeeded();
-    _resetDrawLatentState();
+    _runtime.resetInteractiveState();
     _core.writeReplaceScene(snapshot);
-    _moveSession.setSelectionRect(null);
-    _lastFinitePointerPositionById.clear();
+    _runtime.clearPointerNormalizationState();
   }
 
   void notifySceneChanged() {
@@ -532,122 +515,30 @@ class SceneControllerInteractive extends ChangeNotifier
 
   void handlePointer(CanvasPointerInput input) {
     _ensurePublicSideEffectAllowed('handlePointer');
-    if (_handlingPointer) {
-      throw StateError('Reentrant handlePointer(...) is not allowed.');
-    }
-    final resolvedSample = _normalizePointerInput(input);
-    if (resolvedSample == null) {
-      return;
-    }
-
-    _handlingPointer = true;
-    try {
-      assert(() {
-        _debugBeforeHandlePointerDispatchHook?.call();
-        return true;
-      }());
-      if (_mode == CanvasMode.move) {
-        _handleMovePointer(resolvedSample);
-      } else {
-        _handleDrawPointer(resolvedSample);
-      }
-    } finally {
-      _releaseNormalizedPointerState(resolvedSample);
-      _handlingPointer = false;
-    }
+    _runtime.handlePointer(input);
   }
 
   void handleDoubleTap({required Offset position, int? timestampMs}) {
     _ensurePublicSideEffectAllowed('handleDoubleTap');
-    if (!_isFiniteOffset(position)) {
-      return;
-    }
-    if (_mode != CanvasMode.move) return;
-
-    final scenePoint = _toScenePoint(position);
-    final hit = _moveSession.hitTestTopNode(scenePoint);
-    if (hit == null || hit is! TextNode) return;
-
-    _events.emitEditTextRequested(
-      EditTextRequested(
-        nodeId: hit.id,
-        timestampMs: _resolveTimestampMs(timestampMs),
-        position: position,
-      ),
-    );
+    _runtime.handleDoubleTap(position: position, timestampMs: timestampMs);
   }
 
-  PointerPhase _toInternalPointerPhase(CanvasPointerPhase phase) {
-    switch (phase) {
-      case CanvasPointerPhase.down:
-        return PointerPhase.down;
-      case CanvasPointerPhase.move:
-        return PointerPhase.move;
-      case CanvasPointerPhase.up:
-        return PointerPhase.up;
-      case CanvasPointerPhase.cancel:
-        return PointerPhase.cancel;
-    }
-  }
-
-  PointerSample? _normalizePointerInput(CanvasPointerInput input) {
-    final phase = _toInternalPointerPhase(input.phase);
-    final hasFinitePosition = _isFiniteOffset(input.position);
-    if (!hasFinitePosition &&
-        (phase == PointerPhase.down || phase == PointerPhase.move)) {
-      return null;
-    }
-    final resolvedPosition = hasFinitePosition
-        ? input.position
-        : _lastFinitePointerPositionById[input.pointerId];
-    if (resolvedPosition == null) {
-      return null;
-    }
-    if (hasFinitePosition) {
-      _lastFinitePointerPositionById[input.pointerId] = input.position;
-    }
-
-    return PointerSample(
-      pointerId: input.pointerId,
-      position: resolvedPosition,
-      timestampMs: _resolveTimestampMs(input.timestampMs),
-      phase: phase,
-      kind: input.kind,
-    );
-  }
-
-  void _releaseNormalizedPointerState(PointerSample sample) {
-    if (!_isTerminalPointerPhase(sample.phase)) {
-      return;
-    }
-    _lastFinitePointerPositionById.remove(sample.pointerId);
-  }
-
-  InteractiveMoveSession _createMoveSession() {
-    return InteractiveMoveSession(
-      callbacks: InteractiveMoveSessionCallbacks(
-        onStateChanged: _scheduleNotify,
+  InteractiveRuntime _createRuntime() {
+    return InteractiveRuntime(
+      callbacks: InteractiveRuntimeCallbacks(
+        scheduleNotify: _scheduleNotify,
         readSnapshot: () => snapshot,
         readSelectedNodeIds: () => selectedNodeIds,
+        readMode: () => _mode,
+        readDragStartSlop: () => dragStartSlop,
+        readDrawStyle: () => _currentDrawStyle,
         querySpatialCandidates: _core.querySpatialCandidates,
         resolveSpatialCandidateNode: _core.resolveSpatialCandidateNode,
         writeSelectionReplace: _core.commands.writeSelectionReplace,
         writeSelectionClear: _core.commands.writeSelectionClear,
         commitMoveSelection: _commitMoveSelection,
-        emitAction: _events.emitAction,
-      ),
-    );
-  }
-
-  InteractiveDrawCoordinator _createDrawCoordinator() {
-    return InteractiveDrawCoordinator(
-      callbacks: InteractiveDrawCoordinatorCallbacks(
-        onStateChanged: _scheduleNotify,
-        emitAction: _events.emitAction,
         writeDrawStroke: _core.draw.writeDrawStroke,
         writeDrawLineFromWorldSegment: _writeDrawLineFromWorldSegment,
-        querySpatialCandidates: _core.querySpatialCandidates,
-        resolveSpatialCandidateNode: _core.resolveSpatialCandidateNode,
         writeEraseNodes: _core.draw.writeEraseNodes,
       ),
     );
@@ -693,115 +584,6 @@ class SceneControllerInteractive extends ChangeNotifier
     });
   }
 
-  void _handleMovePointer(PointerSample sample) {
-    _dispatchPointerSample(sample);
-  }
-
-  void _handleDrawPointer(PointerSample sample) {
-    _dispatchPointerSample(sample);
-  }
-
-  void _dispatchPointerSample(PointerSample sample) {
-    switch (sample.phase) {
-      case PointerPhase.down:
-        _handlePointerDown(sample);
-        break;
-      case PointerPhase.move:
-      case PointerPhase.up:
-      case PointerPhase.cancel:
-        _handleOwnedPointerSample(sample);
-        break;
-    }
-  }
-
-  void _handlePointerDown(PointerSample sample) {
-    final family = _currentGestureFamily;
-    if (!_gestureMachine.tryBegin(
-      pointerId: sample.pointerId,
-      family: family,
-      dragStartSlop: dragStartSlop,
-    )) {
-      return;
-    }
-
-    try {
-      _dispatchPointerToFamily(
-        sample,
-        family: family,
-        dragStartSlop: _gestureMachine.activeDragStartSlop ?? dragStartSlop,
-      );
-    } catch (_) {
-      _gestureMachine.reset();
-      rethrow;
-    }
-  }
-
-  void _handleOwnedPointerSample(PointerSample sample) {
-    if (!_gestureMachine.ownsPointer(sample.pointerId)) {
-      return;
-    }
-    final family = _gestureMachine.activeFamily;
-    if (family == null) {
-      return;
-    }
-    try {
-      _dispatchPointerToFamily(
-        sample,
-        family: family,
-        dragStartSlop: _gestureMachine.activeDragStartSlop ?? dragStartSlop,
-      );
-    } finally {
-      if (_isTerminalPointerPhase(sample.phase)) {
-        _gestureMachine.reset();
-      }
-    }
-  }
-
-  void _dispatchPointerToFamily(
-    PointerSample sample, {
-    required InteractiveGestureFamily family,
-    required double dragStartSlop,
-  }) {
-    final scenePoint = _toScenePoint(sample.position);
-    switch (family) {
-      case InteractiveGestureFamily.move:
-        _moveSession.handlePointer(
-          sample,
-          scenePoint,
-          dragStartSlop: dragStartSlop,
-        );
-        break;
-      case InteractiveGestureFamily.draw:
-        _drawCoordinator.handlePointer(
-          sample,
-          scenePoint,
-          style: _currentDrawStyle,
-          dragStartSlop: dragStartSlop,
-        );
-        break;
-    }
-  }
-
-  InteractiveGestureFamily get _currentGestureFamily {
-    return _mode == CanvasMode.move
-        ? InteractiveGestureFamily.move
-        : InteractiveGestureFamily.draw;
-  }
-
-  void _forceResetActiveGestureIfNeeded() {
-    final family = _gestureMachine.reset();
-    switch (family) {
-      case InteractiveGestureFamily.move:
-        _moveSession.resetGestureState();
-        _moveSession.setSelectionRect(null);
-        break;
-      case InteractiveGestureFamily.draw:
-        break;
-      case null:
-        break;
-    }
-  }
-
   InteractiveDrawStyle get _currentDrawStyle => (
     drawTool: _drawTool,
     drawColor: _drawColor,
@@ -812,34 +594,9 @@ class SceneControllerInteractive extends ChangeNotifier
     highlighterOpacity: _highlighterOpacity,
   );
 
-  void _resetDrawLatentState() {
-    _drawCoordinator.resetOwnedState();
-  }
-
-  Offset _toScenePoint(Offset viewPoint) {
-    return toScene(viewPoint, snapshot.camera.offset);
-  }
-
-  static bool _isFiniteOffset(Offset value) {
-    return value.dx.isFinite && value.dy.isFinite;
-  }
-
-  static bool _isTerminalPointerPhase(PointerPhase phase) {
-    return phase == PointerPhase.up || phase == PointerPhase.cancel;
-  }
-
   static double? _validateDragStartSlop(double? value) {
     if (value == null) return null;
     return _requireFiniteNonNegative(value, name: 'dragStartSlop');
-  }
-
-  int _resolveTimestampMs(int? hintTimestampMs) {
-    final next = _timestampCursorMs + 1;
-    final resolved = hintTimestampMs == null || hintTimestampMs < next
-        ? next
-        : hintTimestampMs;
-    _timestampCursorMs = resolved;
-    return resolved;
   }
 
   NodeId _writeDrawLineFromWorldSegment({
@@ -864,23 +621,7 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   void _scheduleNotify() {
-    if (_isDisposed) {
-      return;
-    }
-    _notifyPending = true;
-    if (_notifyScheduled) {
-      return;
-    }
-    _notifyScheduled = true;
-
-    scheduleMicrotask(() {
-      _notifyScheduled = false;
-      if (_isDisposed || !_notifyPending) {
-        return;
-      }
-      _notifyPending = false;
-      notifyListeners();
-    });
+    _notifyScheduler.schedule();
   }
 
   void _handleCoreChanged() {
@@ -931,7 +672,7 @@ class SceneControllerInteractive extends ChangeNotifier
   }
 
   void _ensureExternalSelectionMutationAllowed(String operation) {
-    if (_gestureMachine.hasActiveGesture) {
+    if (_runtime.hasActiveGesture) {
       throw StateError('$operation is not allowed during an active gesture.');
     }
   }
@@ -942,16 +683,11 @@ class SceneControllerInteractive extends ChangeNotifier
     if (_isDisposed) {
       return;
     }
-    _forceResetActiveGestureIfNeeded();
-    _resetDrawLatentState();
+    _runtime.resetInteractiveState();
     _core.dispose();
     _isDisposed = true;
-    _notifyPending = false;
-    _notifyScheduled = false;
-    _lastFinitePointerPositionById.clear();
-    _moveSession.dispose();
-    _drawCoordinator.dispose();
-    _events.dispose();
+    _notifyScheduler.dispose();
+    _runtime.dispose();
     super.dispose();
   }
 
