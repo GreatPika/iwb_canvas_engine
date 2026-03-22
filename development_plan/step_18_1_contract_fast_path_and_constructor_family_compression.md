@@ -162,7 +162,7 @@ files remains downstream work of `18.2` and `18.3`.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Compact contract-side family assembly exists
+### Slice 1. [x] Compact contract-side family assembly exists
 
 #### Slice Contract
 
@@ -186,7 +186,7 @@ path derived from `NodeBoundarySchema`.
 - Contract seam no longer keeps separate handwritten family assembly in the
   migrated constructor bodies.
 
-### Slice 2. [ ] Fast path and public constructors consume the same compact path
+### Slice 2. [x] Fast path and public constructors consume the same compact path
 
 #### Slice Contract
 

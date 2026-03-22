@@ -195,7 +195,7 @@ language: russian
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Contract family compression
+### Slice 1. [x] Contract family compression
 
 #### Slice Contract
 
