@@ -128,7 +128,7 @@ notify glue в одной unit.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Commit execution and post-commit scheduling are separated
+### Slice 1. [x] Commit execution and post-commit scheduling are separated
 
 #### Slice Contract
 
@@ -151,7 +151,7 @@ supporting internal helpers.
 - `scene_controller.dart` no longer keeps the replaced mixed commit /
   post-commit body in the same owner.
 
-### Slice 2. [ ] Notify and dispose glue remain exact after the split
+### Slice 2. [x] Notify and dispose glue remain exact after the split
 
 #### Slice Contract
 

@@ -40,6 +40,10 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
     _mutationExecutor = MutationExecutor(
       textFontFamilyByDefault: textFontFamilyByDefault,
     );
+    _postCommitLifecycle = _ControllerPostCommitLifecycle(
+      signalsBuffer: _signalsBuffer,
+      notifyListeners: notifyListeners,
+    );
   }
 
   final SceneStore _store;
@@ -51,10 +55,9 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
   final SpatialIndexCache _spatialIndexCache = SpatialIndexCache();
   final SignalsBuffer _signalsBuffer = SignalsBuffer();
   final RepaintFlag _repaintFlag = RepaintFlag();
+  late final _ControllerPostCommitLifecycle _postCommitLifecycle;
 
   bool _writeInProgress = false;
-  bool _notifyScheduled = false;
-  bool _notifyPending = false;
   bool _isDisposed = false;
   Scene? _cachedSnapshotScene;
   SceneSnapshot? _cachedSnapshot;
@@ -221,7 +224,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
       _writeInProgress = false;
     }
 
-    _dispatchPostCommitEffects(commitResult);
+    _postCommitLifecycle.dispatch(commitResult);
     return result;
   }
 
@@ -237,13 +240,10 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
 
   void requestRepaint() {
     _throwIfDisposed();
-    _repaintFlag.writeMarkNeedsRepaint();
-    if (_writeInProgress) {
-      return;
-    }
-    if (_repaintFlag.writeTakeNeedsNotify()) {
-      _scheduleNotify();
-    }
+    _postCommitLifecycle.requestRepaint(
+      repaintFlag: _repaintFlag,
+      writeInProgress: _writeInProgress,
+    );
   }
 
   _TxnWriteCommitResult _txnWriteCommit(TxnContext ctx) {
@@ -328,6 +328,18 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
       );
     }
 
+    return _buildStateCommitPlan(
+      changeSet: changeSet,
+      initialPhases: initialPhases,
+      commitCandidate: commitCandidate,
+    );
+  }
+
+  _StateCommitControllerCommitPlan _buildStateCommitPlan({
+    required ChangeSet changeSet,
+    required List<String> initialPhases,
+    required MutationCommitCandidate commitCandidate,
+  }) {
     final committedSelection = changeSet.selectionChanged
         ? commitCandidate.selection
         : _store.selectedNodeIds;
@@ -521,47 +533,6 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
         ctx.debugNodeLocatorMaterializations;
   }
 
-  void _dispatchPostCommitEffects(_TxnWriteCommitResult commitResult) {
-    final committedSignals = commitResult.committedSignals;
-    final needsNotify = commitResult.needsNotify;
-    if (committedSignals.isNotEmpty) {
-      _signalsBuffer.emitCommitted(committedSignals);
-    }
-    if (!needsNotify) {
-      return;
-    }
-    if (committedSignals.isEmpty) {
-      _scheduleNotify();
-      return;
-    }
-
-    // Keep deterministic post-commit order for same-commit observers:
-    // signals are enqueued first, notify is scheduled after a microtask hop.
-    scheduleMicrotask(() {
-      _scheduleNotify();
-    });
-  }
-
-  void _scheduleNotify() {
-    if (_isDisposed) {
-      return;
-    }
-    _notifyPending = true;
-    if (_notifyScheduled) {
-      return;
-    }
-    _notifyScheduled = true;
-
-    scheduleMicrotask(() {
-      _notifyScheduled = false;
-      if (_isDisposed || !_notifyPending) {
-        return;
-      }
-      _notifyPending = false;
-      notifyListeners();
-    });
-  }
-
   void _throwIfDisposed() {
     if (_isDisposed) {
       throw StateError('Controller is disposed.');
@@ -612,8 +583,7 @@ class SceneControllerCore extends ChangeNotifier implements SceneRenderState {
       return;
     }
     _isDisposed = true;
-    _notifyPending = false;
-    _notifyScheduled = false;
+    _postCommitLifecycle.dispose();
     _signalsBuffer.dispose();
     super.dispose();
   }
@@ -627,6 +597,81 @@ class _TxnWriteCommitResult {
 
   final List<CommittedSignal> committedSignals;
   final bool needsNotify;
+}
+
+final class _ControllerPostCommitLifecycle {
+  _ControllerPostCommitLifecycle({
+    required SignalsBuffer signalsBuffer,
+    required VoidCallback notifyListeners,
+  }) : _signalsBuffer = signalsBuffer,
+       _notifyListeners = notifyListeners;
+
+  final SignalsBuffer _signalsBuffer;
+  final VoidCallback _notifyListeners;
+  bool _notifyScheduled = false;
+  bool _notifyPending = false;
+  bool _isDisposed = false;
+
+  void requestRepaint({
+    required RepaintFlag repaintFlag,
+    required bool writeInProgress,
+  }) {
+    repaintFlag.writeMarkNeedsRepaint();
+    if (writeInProgress) {
+      return;
+    }
+    if (repaintFlag.writeTakeNeedsNotify()) {
+      _scheduleNotify();
+    }
+  }
+
+  void dispatch(_TxnWriteCommitResult commitResult) {
+    final committedSignals = commitResult.committedSignals;
+    final needsNotify = commitResult.needsNotify;
+    if (committedSignals.isNotEmpty) {
+      _signalsBuffer.emitCommitted(committedSignals);
+    }
+    if (!needsNotify) {
+      return;
+    }
+    if (committedSignals.isEmpty) {
+      _scheduleNotify();
+      return;
+    }
+
+    // Keep deterministic post-commit order for same-commit observers:
+    // signals are enqueued first, notify is scheduled after a microtask hop.
+    scheduleMicrotask(_scheduleNotify);
+  }
+
+  void _scheduleNotify() {
+    if (_isDisposed) {
+      return;
+    }
+    _notifyPending = true;
+    if (_notifyScheduled) {
+      return;
+    }
+    _notifyScheduled = true;
+
+    scheduleMicrotask(() {
+      _notifyScheduled = false;
+      if (_isDisposed || !_notifyPending) {
+        return;
+      }
+      _notifyPending = false;
+      _notifyListeners();
+    });
+  }
+
+  void dispose() {
+    if (_isDisposed) {
+      return;
+    }
+    _isDisposed = true;
+    _notifyPending = false;
+    _notifyScheduled = false;
+  }
 }
 
 class _ControllerCommitExecution {
