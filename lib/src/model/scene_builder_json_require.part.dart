@@ -189,43 +189,6 @@ T _requireTypedField<T>(
   return value;
 }
 
-int _requireInt(
-  Map<String, Object?> json,
-  String key, {
-  String pathPrefix = '',
-}) {
-  return _requireValidatedField(
-    json,
-    key,
-    pathPrefix: pathPrefix,
-    parse: (value, {required path, required fieldName}) =>
-        validatedRequireJsonInt(
-          value,
-          path: path,
-          fieldName: fieldName,
-          allowZero: false,
-        ),
-  );
-}
-
-double _requireDouble(
-  Map<String, Object?> json,
-  String key, {
-  String pathPrefix = '',
-}) {
-  return _requireValidatedField(
-    json,
-    key,
-    pathPrefix: pathPrefix,
-    parse: (value, {required path, required fieldName}) =>
-        validatedRequireJsonFiniteDouble(
-          value,
-          path: path,
-          fieldName: fieldName,
-        ),
-  );
-}
-
 double _requireDoubleValue(
   Object? value, {
   required String field,
@@ -238,99 +201,41 @@ double _requireDoubleValue(
   );
 }
 
-double _requireNonNegativeFiniteDouble(
-  Map<String, Object?> json,
-  String key, {
-  required String pathPrefix,
-}) {
-  return _requireValidatedField(
-    json,
-    key,
-    pathPrefix: pathPrefix,
-    parse: (value, {required path, required fieldName}) =>
-        NonNegativeFiniteDoubleValue.fromJson(
-          value,
-          path: path,
-          fieldName: fieldName,
-        ).value,
-  );
-}
-
-double _requirePositiveFiniteDouble(
-  Map<String, Object?> json,
-  String key, {
-  required String pathPrefix,
-}) {
-  return _requireValidatedField(
-    json,
-    key,
-    pathPrefix: pathPrefix,
-    parse: (value, {required path, required fieldName}) =>
-        PositiveFiniteDoubleValue.fromJson(
-          value,
-          path: path,
-          fieldName: fieldName,
-        ).value,
-  );
-}
-
-double? _optionalPositiveFiniteDouble(
-  Map<String, Object?> json,
-  String key, {
-  required String pathPrefix,
-}) {
-  return _optionalValidatedField(
-    json,
-    key,
-    pathPrefix: pathPrefix,
-    parse: (value, {required path, required fieldName}) =>
-        PositiveFiniteDoubleValue.fromJson(
-          value,
-          path: path,
-          fieldName: fieldName,
-        ).value,
-  );
-}
-
-double _requireOpacity(
-  Map<String, Object?> json,
-  String key, {
-  required String pathPrefix,
-}) {
-  return _requireValidatedField(
-    json,
-    key,
-    pathPrefix: pathPrefix,
-    parse: (value, {required path, required fieldName}) =>
-        OpacityValue.fromJson(value, path: path, fieldName: fieldName).value,
-  );
-}
-
-Offset _requireFiniteOffset(
-  Map<String, Object?> json,
-  String key, {
-  required String pathPrefix,
-}) {
-  return _requireValidatedField(
-    json,
-    key,
-    pathPrefix: pathPrefix,
-    parse: (value, {required path, required fieldName}) =>
-        FiniteOffsetValue.fromJson(value, path: path, fieldName: path).value,
-  );
-}
-
 Transform2D _decodeTransform2D(
   Map<String, Object?> json, {
   String pathPrefix = '',
 }) {
   return Transform2D(
-    a: _requireDouble(json, 'a', pathPrefix: pathPrefix),
-    b: _requireDouble(json, 'b', pathPrefix: pathPrefix),
-    c: _requireDouble(json, 'c', pathPrefix: pathPrefix),
-    d: _requireDouble(json, 'd', pathPrefix: pathPrefix),
-    tx: _requireDouble(json, 'tx', pathPrefix: pathPrefix),
-    ty: _requireDouble(json, 'ty', pathPrefix: pathPrefix),
+    a: validatedRequireJsonFiniteDouble(
+      _requireField(json, 'a', pathPrefix: pathPrefix),
+      path: _pathAt(pathPrefix, 'a'),
+      fieldName: 'a',
+    ),
+    b: validatedRequireJsonFiniteDouble(
+      _requireField(json, 'b', pathPrefix: pathPrefix),
+      path: _pathAt(pathPrefix, 'b'),
+      fieldName: 'b',
+    ),
+    c: validatedRequireJsonFiniteDouble(
+      _requireField(json, 'c', pathPrefix: pathPrefix),
+      path: _pathAt(pathPrefix, 'c'),
+      fieldName: 'c',
+    ),
+    d: validatedRequireJsonFiniteDouble(
+      _requireField(json, 'd', pathPrefix: pathPrefix),
+      path: _pathAt(pathPrefix, 'd'),
+      fieldName: 'd',
+    ),
+    tx: validatedRequireJsonFiniteDouble(
+      _requireField(json, 'tx', pathPrefix: pathPrefix),
+      path: _pathAt(pathPrefix, 'tx'),
+      fieldName: 'tx',
+    ),
+    ty: validatedRequireJsonFiniteDouble(
+      _requireField(json, 'ty', pathPrefix: pathPrefix),
+      path: _pathAt(pathPrefix, 'ty'),
+      fieldName: 'ty',
+    ),
   );
 }
 
@@ -342,8 +247,16 @@ Size _requireSize(
   final map = _requireMap(json, key, pathPrefix: pathPrefix);
   final sizePath = _pathAt(pathPrefix, key);
   return Size(
-    _requireDouble(map, 'w', pathPrefix: sizePath),
-    _requireDouble(map, 'h', pathPrefix: sizePath),
+    validatedRequireJsonFiniteDouble(
+      _requireField(map, 'w', pathPrefix: sizePath),
+      path: _pathAt(sizePath, 'w'),
+      fieldName: 'w',
+    ),
+    validatedRequireJsonFiniteDouble(
+      _requireField(map, 'h', pathPrefix: sizePath),
+      path: _pathAt(sizePath, 'h'),
+      fieldName: 'h',
+    ),
   );
 }
 
@@ -383,19 +296,6 @@ Size? _optionalSizeMap(
     );
   }
   return Size(w, h);
-}
-
-String? _optionalFontFamily(
-  Map<String, Object?> json, {
-  required String pathPrefix,
-}) {
-  return _optionalValidatedField(
-    json,
-    'fontFamily',
-    pathPrefix: pathPrefix,
-    parse: (value, {required path, required fieldName}) =>
-        FontFamilyValue.fromJson(value, path: path, fieldName: fieldName).value,
-  );
 }
 
 Color _parseColor(String value, {String? path}) {

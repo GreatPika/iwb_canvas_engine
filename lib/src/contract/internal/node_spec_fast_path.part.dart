@@ -8,9 +8,20 @@ ImageNodeSpec imageNodeSpecFromValidated({
   final resolvedCommon = NodeBoundarySchema.specCommonFromValidated(
     common ?? _defaultNodeSpecCommonSchemaFields(),
   );
-  return _imageNodeSpecFromSchema(
-    common: resolvedCommon,
-    fields: NodeBoundarySchema.imageFieldsFromValidated(fields),
+  final resolvedFields = NodeBoundarySchema.imageFieldsFromValidated(fields);
+  return ImageNodeSpec._internal(
+    id: resolvedCommon.id,
+    imageId: resolvedFields.imageId,
+    size: resolvedFields.size,
+    naturalSize: resolvedFields.naturalSize,
+    transform: resolvedCommon.transform,
+    opacity: resolvedCommon.opacity,
+    hitPadding: resolvedCommon.hitPadding,
+    isVisible: resolvedCommon.isVisible,
+    isSelectable: resolvedCommon.isSelectable,
+    isLocked: resolvedCommon.isLocked,
+    isDeletable: resolvedCommon.isDeletable,
+    isTransformable: resolvedCommon.isTransformable,
   );
 }
 
@@ -22,9 +33,27 @@ TextNodeSpec textNodeSpecFromValidated({
   final resolvedCommon = NodeBoundarySchema.specCommonFromValidated(
     common ?? _defaultNodeSpecCommonSchemaFields(),
   );
-  return _textNodeSpecFromSchema(
-    common: resolvedCommon,
-    fields: NodeBoundarySchema.textSpecFieldsFromValidated(fields),
+  final resolvedFields = NodeBoundarySchema.textSpecFieldsFromValidated(fields);
+  return TextNodeSpec._internal(
+    id: resolvedCommon.id,
+    text: resolvedFields.text,
+    fontSize: resolvedFields.fontSize,
+    color: resolvedFields.color,
+    align: resolvedFields.align,
+    isBold: resolvedFields.isBold,
+    isItalic: resolvedFields.isItalic,
+    isUnderline: resolvedFields.isUnderline,
+    fontFamily: resolvedFields.fontFamily,
+    maxWidth: resolvedFields.maxWidth,
+    lineHeight: resolvedFields.lineHeight,
+    transform: resolvedCommon.transform,
+    opacity: resolvedCommon.opacity,
+    hitPadding: resolvedCommon.hitPadding,
+    isVisible: resolvedCommon.isVisible,
+    isSelectable: resolvedCommon.isSelectable,
+    isLocked: resolvedCommon.isLocked,
+    isDeletable: resolvedCommon.isDeletable,
+    isTransformable: resolvedCommon.isTransformable,
   );
 }
 
@@ -36,9 +65,22 @@ StrokeNodeSpec strokeNodeSpecFromValidated({
   final resolvedCommon = NodeBoundarySchema.specCommonFromValidated(
     common ?? _defaultNodeSpecCommonSchemaFields(),
   );
-  return _strokeNodeSpecFromSchema(
-    common: resolvedCommon,
-    fields: NodeBoundarySchema.strokeSpecFieldsFromValidated(fields),
+  final resolvedFields = NodeBoundarySchema.strokeSpecFieldsFromValidated(
+    fields,
+  );
+  return StrokeNodeSpec._internal(
+    id: resolvedCommon.id,
+    points: resolvedFields.points,
+    thickness: resolvedFields.thickness,
+    color: resolvedFields.color,
+    transform: resolvedCommon.transform,
+    opacity: resolvedCommon.opacity,
+    hitPadding: resolvedCommon.hitPadding,
+    isVisible: resolvedCommon.isVisible,
+    isSelectable: resolvedCommon.isSelectable,
+    isLocked: resolvedCommon.isLocked,
+    isDeletable: resolvedCommon.isDeletable,
+    isTransformable: resolvedCommon.isTransformable,
   );
 }
 
@@ -50,9 +92,21 @@ LineNodeSpec lineNodeSpecFromValidated({
   final resolvedCommon = NodeBoundarySchema.specCommonFromValidated(
     common ?? _defaultNodeSpecCommonSchemaFields(),
   );
-  return _lineNodeSpecFromSchema(
-    common: resolvedCommon,
-    fields: NodeBoundarySchema.lineFieldsFromValidated(fields),
+  final resolvedFields = NodeBoundarySchema.lineFieldsFromValidated(fields);
+  return LineNodeSpec._internal(
+    id: resolvedCommon.id,
+    start: resolvedFields.start,
+    end: resolvedFields.end,
+    thickness: resolvedFields.thickness,
+    color: resolvedFields.color,
+    transform: resolvedCommon.transform,
+    opacity: resolvedCommon.opacity,
+    hitPadding: resolvedCommon.hitPadding,
+    isVisible: resolvedCommon.isVisible,
+    isSelectable: resolvedCommon.isSelectable,
+    isLocked: resolvedCommon.isLocked,
+    isDeletable: resolvedCommon.isDeletable,
+    isTransformable: resolvedCommon.isTransformable,
   );
 }
 
@@ -64,9 +118,21 @@ RectNodeSpec rectNodeSpecFromValidated({
   final resolvedCommon = NodeBoundarySchema.specCommonFromValidated(
     common ?? _defaultNodeSpecCommonSchemaFields(),
   );
-  return _rectNodeSpecFromSchema(
-    common: resolvedCommon,
-    fields: NodeBoundarySchema.rectFieldsFromValidated(fields),
+  final resolvedFields = NodeBoundarySchema.rectFieldsFromValidated(fields);
+  return RectNodeSpec._internal(
+    id: resolvedCommon.id,
+    size: resolvedFields.size,
+    fillColor: resolvedFields.fillColor,
+    strokeColor: resolvedFields.strokeColor,
+    strokeWidth: resolvedFields.strokeWidth,
+    transform: resolvedCommon.transform,
+    opacity: resolvedCommon.opacity,
+    hitPadding: resolvedCommon.hitPadding,
+    isVisible: resolvedCommon.isVisible,
+    isSelectable: resolvedCommon.isSelectable,
+    isLocked: resolvedCommon.isLocked,
+    isDeletable: resolvedCommon.isDeletable,
+    isTransformable: resolvedCommon.isTransformable,
   );
 }
 
@@ -78,9 +144,22 @@ PathNodeSpec pathNodeSpecFromValidated({
   final resolvedCommon = NodeBoundarySchema.specCommonFromValidated(
     common ?? _defaultNodeSpecCommonSchemaFields(),
   );
-  return _pathNodeSpecFromSchema(
-    common: resolvedCommon,
-    fields: NodeBoundarySchema.pathFieldsFromValidated(fields),
+  final resolvedFields = NodeBoundarySchema.pathFieldsFromValidated(fields);
+  return PathNodeSpec._internal(
+    id: resolvedCommon.id,
+    svgPathData: resolvedFields.svgPathData,
+    fillColor: resolvedFields.fillColor,
+    strokeColor: resolvedFields.strokeColor,
+    strokeWidth: resolvedFields.strokeWidth,
+    fillRule: resolvedFields.fillRule,
+    transform: resolvedCommon.transform,
+    opacity: resolvedCommon.opacity,
+    hitPadding: resolvedCommon.hitPadding,
+    isVisible: resolvedCommon.isVisible,
+    isSelectable: resolvedCommon.isSelectable,
+    isLocked: resolvedCommon.isLocked,
+    isDeletable: resolvedCommon.isDeletable,
+    isTransformable: resolvedCommon.isTransformable,
   );
 }
 

@@ -27,7 +27,17 @@ SceneSnapshot _decodeSnapshotFromJson(Map<String, Object?> json) {
 }
 
 void _requireSupportedSchemaVersion(Map<String, Object?> json) {
-  final version = _requireInt(json, 'schemaVersion');
+  final version = _requireValidatedField(
+    json,
+    'schemaVersion',
+    parse: (value, {required path, required fieldName}) =>
+        validatedRequireJsonInt(
+          value,
+          path: path,
+          fieldName: fieldName,
+          allowZero: false,
+        ),
+  );
   if (sceneSchemaVersionsRead.contains(version)) {
     return;
   }
@@ -67,8 +77,16 @@ CameraSnapshot _decodeCameraSnapshot(Map<String, Object?> json) {
   final cameraJson = _requireMap(json, 'camera');
   return cameraSnapshotFromValidated(
     offset: Offset(
-      _requireDouble(cameraJson, 'offsetX', pathPrefix: 'camera'),
-      _requireDouble(cameraJson, 'offsetY', pathPrefix: 'camera'),
+      validatedRequireJsonFiniteDouble(
+        _requireField(cameraJson, 'offsetX', pathPrefix: 'camera'),
+        path: 'camera.offsetX',
+        fieldName: 'offsetX',
+      ),
+      validatedRequireJsonFiniteDouble(
+        _requireField(cameraJson, 'offsetY', pathPrefix: 'camera'),
+        path: 'camera.offsetY',
+        fieldName: 'offsetY',
+      ),
     ),
   );
 }
@@ -97,10 +115,10 @@ BackgroundSnapshot _decodeBackgroundSnapshot(Map<String, Object?> json) {
         pathPrefix: 'background.grid',
         typeLabel: 'bool',
       ),
-      cellSize: _requireDouble(
-        gridJson,
-        'cellSize',
-        pathPrefix: 'background.grid',
+      cellSize: validatedRequireJsonFiniteDouble(
+        _requireField(gridJson, 'cellSize', pathPrefix: 'background.grid'),
+        path: 'background.grid.cellSize',
+        fieldName: 'cellSize',
       ),
       color: _parseColor(
         _requireTypedField<String>(
@@ -424,12 +442,16 @@ NodeSnapshotCommonSchemaFields _decodeNodeCommonFields(
     id: _decodeNodeId(json, nodePath: nodePath),
     instanceRevision: _decodeNodeInstanceRevision(json, nodePath: nodePath),
     transform: _decodeNodeTransform(json, nodePath: nodePath),
-    hitPadding: _requireNonNegativeFiniteDouble(
-      json,
-      'hitPadding',
-      pathPrefix: nodePath,
+    hitPadding: validatedRequireJsonNonNegativeFiniteDouble(
+      _requireField(json, 'hitPadding', pathPrefix: nodePath),
+      path: _pathAt(nodePath, 'hitPadding'),
+      fieldName: 'hitPadding',
     ),
-    opacity: _requireOpacity(json, 'opacity', pathPrefix: nodePath),
+    opacity: validatedRequireJsonOpacity(
+      _requireField(json, 'opacity', pathPrefix: nodePath),
+      path: _pathAt(nodePath, 'opacity'),
+      fieldName: 'opacity',
+    ),
     isVisible: flags.isVisible,
     isSelectable: flags.isSelectable,
     isLocked: flags.isLocked,
@@ -544,9 +566,9 @@ ImageNodeSnapshot _imageSnapshotFromSchema({
     imageId: fields.imageId,
     size: fields.size,
     naturalSize: fields.naturalSize,
-    hitPadding: common.hitPadding,
     transform: common.transform,
     opacity: common.opacity,
+    hitPadding: common.hitPadding,
     isVisible: common.isVisible,
     isSelectable: common.isSelectable,
     isLocked: common.isLocked,
@@ -593,9 +615,9 @@ TextNodeSnapshot _textSnapshotFromSchema({
     fontFamily: fields.fontFamily,
     maxWidth: fields.maxWidth,
     lineHeight: fields.lineHeight,
-    hitPadding: common.hitPadding,
     transform: common.transform,
     opacity: common.opacity,
+    hitPadding: common.hitPadding,
     isVisible: common.isVisible,
     isSelectable: common.isSelectable,
     isLocked: common.isLocked,
@@ -612,10 +634,10 @@ TextNodeSpecSchemaFields _decodeTextSpecFields(
   final optionals = _decodeTextOptionals(json, nodePath: nodePath);
   return NodeBoundarySchema.textSpecFieldsFromValidated((
     text: _decodeRequiredTextContent(json, nodePath: nodePath),
-    fontSize: _requirePositiveFiniteDouble(
-      json,
-      'fontSize',
-      pathPrefix: nodePath,
+    fontSize: validatedRequireJsonPositiveFiniteDouble(
+      _requireField(json, 'fontSize', pathPrefix: nodePath),
+      path: _pathAt(nodePath, 'fontSize'),
+      fieldName: 'fontSize',
     ),
     color: _parseColor(
       _requireTypedField<String>(
@@ -689,16 +711,38 @@ String _decodeRequiredTextContent(
 ({String? fontFamily, double? maxWidth, double? lineHeight})
 _decodeTextOptionals(Map<String, Object?> json, {required String nodePath}) {
   return (
-    fontFamily: _optionalFontFamily(json, pathPrefix: nodePath),
-    maxWidth: _optionalPositiveFiniteDouble(
+    fontFamily: _optionalValidatedField(
+      json,
+      'fontFamily',
+      pathPrefix: nodePath,
+      parse: (value, {required path, required fieldName}) =>
+          FontFamilyValue.fromJson(
+            value,
+            path: path,
+            fieldName: fieldName,
+          ).value,
+    ),
+    maxWidth: _optionalValidatedField(
       json,
       'maxWidth',
       pathPrefix: nodePath,
+      parse: (value, {required path, required fieldName}) =>
+          validatedRequireJsonPositiveFiniteDouble(
+            value,
+            path: path,
+            fieldName: fieldName,
+          ),
     ),
-    lineHeight: _optionalPositiveFiniteDouble(
+    lineHeight: _optionalValidatedField(
       json,
       'lineHeight',
       pathPrefix: nodePath,
+      parse: (value, {required path, required fieldName}) =>
+          validatedRequireJsonPositiveFiniteDouble(
+            value,
+            path: path,
+            fieldName: fieldName,
+          ),
     ),
   );
 }
@@ -710,10 +754,10 @@ StrokeNodeSnapshotSchemaFields _decodeStrokeFields(
   return NodeBoundarySchema.strokeSnapshotFieldsFromValidated((
     points: _decodeStrokePoints(json, nodePath: nodePath),
     pointsRevision: 0,
-    thickness: _requirePositiveFiniteDouble(
-      json,
-      'thickness',
-      pathPrefix: nodePath,
+    thickness: validatedRequireJsonPositiveFiniteDouble(
+      _requireField(json, 'thickness', pathPrefix: nodePath),
+      path: _pathAt(nodePath, 'thickness'),
+      fieldName: 'thickness',
     ),
     color: _decodeRequiredColor(json, 'color', pathPrefix: nodePath),
   ));
@@ -727,11 +771,12 @@ StrokeNodeSnapshot _strokeSnapshotFromSchema({
     id: common.id,
     instanceRevision: common.instanceRevision,
     points: fields.points,
+    pointsRevision: fields.pointsRevision,
     thickness: fields.thickness,
     color: fields.color,
-    hitPadding: common.hitPadding,
     transform: common.transform,
     opacity: common.opacity,
+    hitPadding: common.hitPadding,
     isVisible: common.isVisible,
     isSelectable: common.isSelectable,
     isLocked: common.isLocked,
@@ -773,12 +818,20 @@ LineNodeSchemaFields _decodeLineFields(
   required String nodePath,
 }) {
   return NodeBoundarySchema.lineFieldsFromValidated((
-    start: _requireFiniteOffset(json, 'localA', pathPrefix: nodePath),
-    end: _requireFiniteOffset(json, 'localB', pathPrefix: nodePath),
-    thickness: _requirePositiveFiniteDouble(
-      json,
-      'thickness',
-      pathPrefix: nodePath,
+    start: validatedRequireJsonFiniteOffset(
+      _requireField(json, 'localA', pathPrefix: nodePath),
+      path: _pathAt(nodePath, 'localA'),
+      fieldName: 'localA',
+    ),
+    end: validatedRequireJsonFiniteOffset(
+      _requireField(json, 'localB', pathPrefix: nodePath),
+      path: _pathAt(nodePath, 'localB'),
+      fieldName: 'localB',
+    ),
+    thickness: validatedRequireJsonPositiveFiniteDouble(
+      _requireField(json, 'thickness', pathPrefix: nodePath),
+      path: _pathAt(nodePath, 'thickness'),
+      fieldName: 'thickness',
     ),
     color: _decodeRequiredColor(json, 'color', pathPrefix: nodePath),
   ));
@@ -795,9 +848,9 @@ LineNodeSnapshot _lineSnapshotFromSchema({
     end: fields.end,
     thickness: fields.thickness,
     color: fields.color,
-    hitPadding: common.hitPadding,
     transform: common.transform,
     opacity: common.opacity,
+    hitPadding: common.hitPadding,
     isVisible: common.isVisible,
     isSelectable: common.isSelectable,
     isLocked: common.isLocked,
@@ -814,10 +867,10 @@ RectNodeSchemaFields _decodeRectFields(
     size: _requireSize(json, 'size', pathPrefix: nodePath),
     fillColor: _optionalColor(json, 'fillColor', pathPrefix: nodePath),
     strokeColor: _optionalColor(json, 'strokeColor', pathPrefix: nodePath),
-    strokeWidth: _requireNonNegativeFiniteDouble(
-      json,
-      'strokeWidth',
-      pathPrefix: nodePath,
+    strokeWidth: validatedRequireJsonNonNegativeFiniteDouble(
+      _requireField(json, 'strokeWidth', pathPrefix: nodePath),
+      path: _pathAt(nodePath, 'strokeWidth'),
+      fieldName: 'strokeWidth',
     ),
   ));
 }
@@ -833,9 +886,9 @@ RectNodeSnapshot _rectSnapshotFromSchema({
     fillColor: fields.fillColor,
     strokeColor: fields.strokeColor,
     strokeWidth: fields.strokeWidth,
-    hitPadding: common.hitPadding,
     transform: common.transform,
     opacity: common.opacity,
+    hitPadding: common.hitPadding,
     isVisible: common.isVisible,
     isSelectable: common.isSelectable,
     isLocked: common.isLocked,
@@ -861,10 +914,10 @@ PathNodeSchemaFields _decodePathFields(
     ).value,
     fillColor: _optionalColor(json, 'fillColor', pathPrefix: nodePath),
     strokeColor: _optionalColor(json, 'strokeColor', pathPrefix: nodePath),
-    strokeWidth: _requireNonNegativeFiniteDouble(
-      json,
-      'strokeWidth',
-      pathPrefix: nodePath,
+    strokeWidth: validatedRequireJsonNonNegativeFiniteDouble(
+      _requireField(json, 'strokeWidth', pathPrefix: nodePath),
+      path: _pathAt(nodePath, 'strokeWidth'),
+      fieldName: 'strokeWidth',
     ),
     fillRule: _parsePathFillRule(
       _requireTypedField<String>(
@@ -890,9 +943,9 @@ PathNodeSnapshot _pathSnapshotFromSchema({
     strokeColor: fields.strokeColor,
     strokeWidth: fields.strokeWidth,
     fillRule: fields.fillRule,
-    hitPadding: common.hitPadding,
     transform: common.transform,
     opacity: common.opacity,
+    hitPadding: common.hitPadding,
     isVisible: common.isVisible,
     isSelectable: common.isSelectable,
     isLocked: common.isLocked,

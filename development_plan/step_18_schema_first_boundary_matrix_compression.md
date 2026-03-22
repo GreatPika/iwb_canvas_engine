@@ -1,6 +1,6 @@
 language: russian
 
-# Шаг 18. Сжать `schema-first` boundary matrix через подшаги 18.1-18.5
+# Шаг 18. Сжать `schema-first` boundary matrix через подшаги 18.1-18.6
 
 ## 1. Change Mandate
 
@@ -170,7 +170,7 @@ language: russian
 - `18.1` closes before `18.2`.
 - `18.2` closes before `18.3`.
 - `18.3` closes before `18.4`.
-- `18.5` is forbidden until `18.1-18.4` are closed and remeasured.
+- `18.6` is forbidden until `18.1-18.5` are closed and remeasured.
 
 ### 6.8 Prohibited
 
@@ -206,7 +206,7 @@ language: russian
 
 - Verification from `18.1`
 
-### Slice 2. [ ] Model boundary mapping verticalization
+### Slice 2. [x] Model boundary mapping verticalization
 
 #### Slice Contract
 
@@ -217,7 +217,7 @@ language: russian
 
 - Verification from `18.2`
 
-### Slice 3. [ ] SceneBuilder matrix compression
+### Slice 3. [x] SceneBuilder matrix compression
 
 #### Slice Contract
 
@@ -228,7 +228,7 @@ language: russian
 
 - Verification from `18.3`
 
-### Slice 4. [ ] Validation matrix compression
+### Slice 4. [x] Validation matrix compression
 
 #### Slice Contract
 
@@ -239,7 +239,7 @@ language: russian
 
 - Verification from `18.4`
 
-### Slice 5. [ ] Boundary matrix rebaseline
+### Slice 5. [x] Boundary matrix rebaseline
 
 #### Slice Contract
 
@@ -249,6 +249,28 @@ language: russian
 #### Verification
 
 - Verification from `18.5`
+
+### Slice 6. [x] Review residual boundary matrix cleanup
+
+#### Slice Contract
+
+Corrective cleanup closes the live contract, decode, and mapping clusters that
+remained after the `18.5` rebaseline.
+
+#### Change
+
+Закрыть remaining live boundary-matrix clusters that the review exposed after
+`18.5`, then refresh the roadmap from the corrected baseline.
+
+#### Verification
+
+- Verification from `18.6`
+
+#### Closure Evidence
+
+- Green run of the listed verifications.
+- The corrected baseline and roadmap no longer rely on the stale residual
+  assumptions that were left after `18.5`.
 
 ## 9. Final Verification
 

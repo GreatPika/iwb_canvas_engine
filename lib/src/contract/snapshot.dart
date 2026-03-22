@@ -213,7 +213,7 @@ sealed class NodeSnapshot {
 }
 
 class ImageNodeSnapshot extends NodeSnapshot {
-  factory ImageNodeSnapshot({
+  ImageNodeSnapshot({
     required NodeId id,
     int instanceRevision = 0,
     required String imageId,
@@ -227,26 +227,44 @@ class ImageNodeSnapshot extends NodeSnapshot {
     bool isLocked = false,
     bool isDeletable = true,
     bool isTransformable = true,
-  }) {
-    final common = NodeBoundarySchema.validateSnapshotCommon((
-      id: id,
-      instanceRevision: instanceRevision,
-      transform: transform,
-      opacity: opacity,
-      hitPadding: hitPadding,
-      isVisible: isVisible,
-      isSelectable: isSelectable,
-      isLocked: isLocked,
-      isDeletable: isDeletable,
-      isTransformable: isTransformable,
-    ));
-    final fields = NodeBoundarySchema.validateImageFields((
-      imageId: imageId,
-      size: size,
-      naturalSize: naturalSize,
-    ));
-    return _imageNodeSnapshotFromSchema(common: common, fields: fields);
-  }
+  }) : this._validated(
+         common: NodeBoundarySchema.validateSnapshotCommon((
+           id: id,
+           instanceRevision: instanceRevision,
+           transform: transform,
+           opacity: opacity,
+           hitPadding: hitPadding,
+           isVisible: isVisible,
+           isSelectable: isSelectable,
+           isLocked: isLocked,
+           isDeletable: isDeletable,
+           isTransformable: isTransformable,
+         )),
+         fields: NodeBoundarySchema.validateImageFields((
+           imageId: imageId,
+           size: size,
+           naturalSize: naturalSize,
+         )),
+       );
+
+  ImageNodeSnapshot._validated({
+    required NodeSnapshotCommonSchemaFields common,
+    required ImageNodeSchemaFields fields,
+  }) : this._internal(
+         id: common.id,
+         instanceRevision: common.instanceRevision,
+         imageId: fields.imageId,
+         size: fields.size,
+         naturalSize: fields.naturalSize,
+         transform: common.transform,
+         opacity: common.opacity,
+         hitPadding: common.hitPadding,
+         isVisible: common.isVisible,
+         isSelectable: common.isSelectable,
+         isLocked: common.isLocked,
+         isDeletable: common.isDeletable,
+         isTransformable: common.isTransformable,
+       );
 
   /// Internal fast path for already validated snapshot data.
   const ImageNodeSnapshot._internal({
@@ -271,7 +289,7 @@ class ImageNodeSnapshot extends NodeSnapshot {
 }
 
 class TextNodeSnapshot extends NodeSnapshot {
-  factory TextNodeSnapshot({
+  TextNodeSnapshot({
     required NodeId id,
     int instanceRevision = 0,
     required String text,
@@ -293,34 +311,60 @@ class TextNodeSnapshot extends NodeSnapshot {
     bool isLocked = false,
     bool isDeletable = true,
     bool isTransformable = true,
-  }) {
-    final common = NodeBoundarySchema.validateSnapshotCommon((
-      id: id,
-      instanceRevision: instanceRevision,
-      transform: transform,
-      opacity: opacity,
-      hitPadding: hitPadding,
-      isVisible: isVisible,
-      isSelectable: isSelectable,
-      isLocked: isLocked,
-      isDeletable: isDeletable,
-      isTransformable: isTransformable,
-    ));
-    final fields = NodeBoundarySchema.validateTextSnapshotFields((
-      text: text,
-      size: size,
-      fontSize: fontSize,
-      color: color,
-      align: align,
-      isBold: isBold,
-      isItalic: isItalic,
-      isUnderline: isUnderline,
-      fontFamily: fontFamily,
-      maxWidth: maxWidth,
-      lineHeight: lineHeight,
-    ));
-    return _textNodeSnapshotFromSchema(common: common, fields: fields);
-  }
+  }) : this._validated(
+         common: NodeBoundarySchema.validateSnapshotCommon((
+           id: id,
+           instanceRevision: instanceRevision,
+           transform: transform,
+           opacity: opacity,
+           hitPadding: hitPadding,
+           isVisible: isVisible,
+           isSelectable: isSelectable,
+           isLocked: isLocked,
+           isDeletable: isDeletable,
+           isTransformable: isTransformable,
+         )),
+         fields: NodeBoundarySchema.validateTextSnapshotFields((
+           text: text,
+           size: size,
+           fontSize: fontSize,
+           color: color,
+           align: align,
+           isBold: isBold,
+           isItalic: isItalic,
+           isUnderline: isUnderline,
+           fontFamily: fontFamily,
+           maxWidth: maxWidth,
+           lineHeight: lineHeight,
+         )),
+       );
+
+  TextNodeSnapshot._validated({
+    required NodeSnapshotCommonSchemaFields common,
+    required TextNodeSnapshotSchemaFields fields,
+  }) : this._internal(
+         id: common.id,
+         instanceRevision: common.instanceRevision,
+         text: fields.text,
+         size: fields.size,
+         fontSize: fields.fontSize,
+         color: fields.color,
+         align: fields.align,
+         isBold: fields.isBold,
+         isItalic: fields.isItalic,
+         isUnderline: fields.isUnderline,
+         fontFamily: fields.fontFamily,
+         maxWidth: fields.maxWidth,
+         lineHeight: fields.lineHeight,
+         transform: common.transform,
+         opacity: common.opacity,
+         hitPadding: common.hitPadding,
+         isVisible: common.isVisible,
+         isSelectable: common.isSelectable,
+         isLocked: common.isLocked,
+         isDeletable: common.isDeletable,
+         isTransformable: common.isTransformable,
+       );
 
   /// Internal fast path for already validated snapshot data.
   const TextNodeSnapshot._internal({
@@ -366,7 +410,7 @@ class TextNodeSnapshot extends NodeSnapshot {
 }
 
 class StrokeNodeSnapshot extends NodeSnapshot {
-  factory StrokeNodeSnapshot({
+  StrokeNodeSnapshot({
     required NodeId id,
     int instanceRevision = 0,
     required List<Offset> points,
@@ -381,27 +425,46 @@ class StrokeNodeSnapshot extends NodeSnapshot {
     bool isLocked = false,
     bool isDeletable = true,
     bool isTransformable = true,
-  }) {
-    final common = NodeBoundarySchema.validateSnapshotCommon((
-      id: id,
-      instanceRevision: instanceRevision,
-      transform: transform,
-      opacity: opacity,
-      hitPadding: hitPadding,
-      isVisible: isVisible,
-      isSelectable: isSelectable,
-      isLocked: isLocked,
-      isDeletable: isDeletable,
-      isTransformable: isTransformable,
-    ));
-    final fields = NodeBoundarySchema.validateStrokeSnapshotFields((
-      points: points,
-      pointsRevision: pointsRevision,
-      thickness: thickness,
-      color: color,
-    ));
-    return _strokeNodeSnapshotFromSchema(common: common, fields: fields);
-  }
+  }) : this._validated(
+         common: NodeBoundarySchema.validateSnapshotCommon((
+           id: id,
+           instanceRevision: instanceRevision,
+           transform: transform,
+           opacity: opacity,
+           hitPadding: hitPadding,
+           isVisible: isVisible,
+           isSelectable: isSelectable,
+           isLocked: isLocked,
+           isDeletable: isDeletable,
+           isTransformable: isTransformable,
+         )),
+         fields: NodeBoundarySchema.validateStrokeSnapshotFields((
+           points: points,
+           pointsRevision: pointsRevision,
+           thickness: thickness,
+           color: color,
+         )),
+       );
+
+  StrokeNodeSnapshot._validated({
+    required NodeSnapshotCommonSchemaFields common,
+    required StrokeNodeSnapshotSchemaFields fields,
+  }) : this._internal(
+         id: common.id,
+         instanceRevision: common.instanceRevision,
+         points: fields.points,
+         pointsRevision: fields.pointsRevision,
+         thickness: fields.thickness,
+         color: fields.color,
+         transform: common.transform,
+         opacity: common.opacity,
+         hitPadding: common.hitPadding,
+         isVisible: common.isVisible,
+         isSelectable: common.isSelectable,
+         isLocked: common.isLocked,
+         isDeletable: common.isDeletable,
+         isTransformable: common.isTransformable,
+       );
 
   /// Internal fast path for already validated snapshot data.
   StrokeNodeSnapshot._internal({
@@ -430,7 +493,7 @@ class StrokeNodeSnapshot extends NodeSnapshot {
 }
 
 class LineNodeSnapshot extends NodeSnapshot {
-  factory LineNodeSnapshot({
+  LineNodeSnapshot({
     required NodeId id,
     int instanceRevision = 0,
     required Offset start,
@@ -445,27 +508,46 @@ class LineNodeSnapshot extends NodeSnapshot {
     bool isLocked = false,
     bool isDeletable = true,
     bool isTransformable = true,
-  }) {
-    final common = NodeBoundarySchema.validateSnapshotCommon((
-      id: id,
-      instanceRevision: instanceRevision,
-      transform: transform,
-      opacity: opacity,
-      hitPadding: hitPadding,
-      isVisible: isVisible,
-      isSelectable: isSelectable,
-      isLocked: isLocked,
-      isDeletable: isDeletable,
-      isTransformable: isTransformable,
-    ));
-    final fields = NodeBoundarySchema.validateLineFields((
-      start: start,
-      end: end,
-      thickness: thickness,
-      color: color,
-    ));
-    return _lineNodeSnapshotFromSchema(common: common, fields: fields);
-  }
+  }) : this._validated(
+         common: NodeBoundarySchema.validateSnapshotCommon((
+           id: id,
+           instanceRevision: instanceRevision,
+           transform: transform,
+           opacity: opacity,
+           hitPadding: hitPadding,
+           isVisible: isVisible,
+           isSelectable: isSelectable,
+           isLocked: isLocked,
+           isDeletable: isDeletable,
+           isTransformable: isTransformable,
+         )),
+         fields: NodeBoundarySchema.validateLineFields((
+           start: start,
+           end: end,
+           thickness: thickness,
+           color: color,
+         )),
+       );
+
+  LineNodeSnapshot._validated({
+    required NodeSnapshotCommonSchemaFields common,
+    required LineNodeSchemaFields fields,
+  }) : this._internal(
+         id: common.id,
+         instanceRevision: common.instanceRevision,
+         start: fields.start,
+         end: fields.end,
+         thickness: fields.thickness,
+         color: fields.color,
+         transform: common.transform,
+         opacity: common.opacity,
+         hitPadding: common.hitPadding,
+         isVisible: common.isVisible,
+         isSelectable: common.isSelectable,
+         isLocked: common.isLocked,
+         isDeletable: common.isDeletable,
+         isTransformable: common.isTransformable,
+       );
 
   /// Internal fast path for already validated snapshot data.
   const LineNodeSnapshot._internal({
@@ -492,7 +574,7 @@ class LineNodeSnapshot extends NodeSnapshot {
 }
 
 class RectNodeSnapshot extends NodeSnapshot {
-  factory RectNodeSnapshot({
+  RectNodeSnapshot({
     required NodeId id,
     int instanceRevision = 0,
     required Size size,
@@ -507,27 +589,46 @@ class RectNodeSnapshot extends NodeSnapshot {
     bool isLocked = false,
     bool isDeletable = true,
     bool isTransformable = true,
-  }) {
-    final common = NodeBoundarySchema.validateSnapshotCommon((
-      id: id,
-      instanceRevision: instanceRevision,
-      transform: transform,
-      opacity: opacity,
-      hitPadding: hitPadding,
-      isVisible: isVisible,
-      isSelectable: isSelectable,
-      isLocked: isLocked,
-      isDeletable: isDeletable,
-      isTransformable: isTransformable,
-    ));
-    final fields = NodeBoundarySchema.validateRectFields((
-      size: size,
-      fillColor: fillColor,
-      strokeColor: strokeColor,
-      strokeWidth: strokeWidth,
-    ));
-    return _rectNodeSnapshotFromSchema(common: common, fields: fields);
-  }
+  }) : this._validated(
+         common: NodeBoundarySchema.validateSnapshotCommon((
+           id: id,
+           instanceRevision: instanceRevision,
+           transform: transform,
+           opacity: opacity,
+           hitPadding: hitPadding,
+           isVisible: isVisible,
+           isSelectable: isSelectable,
+           isLocked: isLocked,
+           isDeletable: isDeletable,
+           isTransformable: isTransformable,
+         )),
+         fields: NodeBoundarySchema.validateRectFields((
+           size: size,
+           fillColor: fillColor,
+           strokeColor: strokeColor,
+           strokeWidth: strokeWidth,
+         )),
+       );
+
+  RectNodeSnapshot._validated({
+    required NodeSnapshotCommonSchemaFields common,
+    required RectNodeSchemaFields fields,
+  }) : this._internal(
+         id: common.id,
+         instanceRevision: common.instanceRevision,
+         size: fields.size,
+         fillColor: fields.fillColor,
+         strokeColor: fields.strokeColor,
+         strokeWidth: fields.strokeWidth,
+         transform: common.transform,
+         opacity: common.opacity,
+         hitPadding: common.hitPadding,
+         isVisible: common.isVisible,
+         isSelectable: common.isSelectable,
+         isLocked: common.isLocked,
+         isDeletable: common.isDeletable,
+         isTransformable: common.isTransformable,
+       );
 
   /// Internal fast path for already validated snapshot data.
   const RectNodeSnapshot._internal({
@@ -554,7 +655,7 @@ class RectNodeSnapshot extends NodeSnapshot {
 }
 
 class PathNodeSnapshot extends NodeSnapshot {
-  factory PathNodeSnapshot({
+  PathNodeSnapshot({
     required NodeId id,
     int instanceRevision = 0,
     required String svgPathData,
@@ -570,28 +671,48 @@ class PathNodeSnapshot extends NodeSnapshot {
     bool isLocked = false,
     bool isDeletable = true,
     bool isTransformable = true,
-  }) {
-    final common = NodeBoundarySchema.validateSnapshotCommon((
-      id: id,
-      instanceRevision: instanceRevision,
-      transform: transform,
-      opacity: opacity,
-      hitPadding: hitPadding,
-      isVisible: isVisible,
-      isSelectable: isSelectable,
-      isLocked: isLocked,
-      isDeletable: isDeletable,
-      isTransformable: isTransformable,
-    ));
-    final fields = NodeBoundarySchema.validatePathFields((
-      svgPathData: svgPathData,
-      fillColor: fillColor,
-      strokeColor: strokeColor,
-      strokeWidth: strokeWidth,
-      fillRule: fillRule,
-    ));
-    return _pathNodeSnapshotFromSchema(common: common, fields: fields);
-  }
+  }) : this._validated(
+         common: NodeBoundarySchema.validateSnapshotCommon((
+           id: id,
+           instanceRevision: instanceRevision,
+           transform: transform,
+           opacity: opacity,
+           hitPadding: hitPadding,
+           isVisible: isVisible,
+           isSelectable: isSelectable,
+           isLocked: isLocked,
+           isDeletable: isDeletable,
+           isTransformable: isTransformable,
+         )),
+         fields: NodeBoundarySchema.validatePathFields((
+           svgPathData: svgPathData,
+           fillColor: fillColor,
+           strokeColor: strokeColor,
+           strokeWidth: strokeWidth,
+           fillRule: fillRule,
+         )),
+       );
+
+  PathNodeSnapshot._validated({
+    required NodeSnapshotCommonSchemaFields common,
+    required PathNodeSchemaFields fields,
+  }) : this._internal(
+         id: common.id,
+         instanceRevision: common.instanceRevision,
+         svgPathData: fields.svgPathData,
+         fillColor: fields.fillColor,
+         strokeColor: fields.strokeColor,
+         strokeWidth: fields.strokeWidth,
+         fillRule: fields.fillRule,
+         transform: common.transform,
+         opacity: common.opacity,
+         hitPadding: common.hitPadding,
+         isVisible: common.isVisible,
+         isSelectable: common.isSelectable,
+         isLocked: common.isLocked,
+         isDeletable: common.isDeletable,
+         isTransformable: common.isTransformable,
+       );
 
   /// Internal fast path for already validated snapshot data.
   const PathNodeSnapshot._internal({
@@ -617,145 +738,6 @@ class PathNodeSnapshot extends NodeSnapshot {
   final Color? strokeColor;
   final double strokeWidth;
   final PathFillRule fillRule;
-}
-
-ImageNodeSnapshot _imageNodeSnapshotFromSchema({
-  required NodeSnapshotCommonSchemaFields common,
-  required ImageNodeSchemaFields fields,
-}) {
-  return ImageNodeSnapshot._internal(
-    id: common.id,
-    instanceRevision: common.instanceRevision,
-    imageId: fields.imageId,
-    size: fields.size,
-    naturalSize: fields.naturalSize,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-  );
-}
-
-TextNodeSnapshot _textNodeSnapshotFromSchema({
-  required NodeSnapshotCommonSchemaFields common,
-  required TextNodeSnapshotSchemaFields fields,
-}) {
-  return TextNodeSnapshot._internal(
-    id: common.id,
-    instanceRevision: common.instanceRevision,
-    text: fields.text,
-    size: fields.size,
-    fontSize: fields.fontSize,
-    color: fields.color,
-    align: fields.align,
-    isBold: fields.isBold,
-    isItalic: fields.isItalic,
-    isUnderline: fields.isUnderline,
-    fontFamily: fields.fontFamily,
-    maxWidth: fields.maxWidth,
-    lineHeight: fields.lineHeight,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-  );
-}
-
-StrokeNodeSnapshot _strokeNodeSnapshotFromSchema({
-  required NodeSnapshotCommonSchemaFields common,
-  required StrokeNodeSnapshotSchemaFields fields,
-}) {
-  return StrokeNodeSnapshot._internal(
-    id: common.id,
-    instanceRevision: common.instanceRevision,
-    points: fields.points,
-    pointsRevision: fields.pointsRevision,
-    thickness: fields.thickness,
-    color: fields.color,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-  );
-}
-
-LineNodeSnapshot _lineNodeSnapshotFromSchema({
-  required NodeSnapshotCommonSchemaFields common,
-  required LineNodeSchemaFields fields,
-}) {
-  return LineNodeSnapshot._internal(
-    id: common.id,
-    instanceRevision: common.instanceRevision,
-    start: fields.start,
-    end: fields.end,
-    thickness: fields.thickness,
-    color: fields.color,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-  );
-}
-
-RectNodeSnapshot _rectNodeSnapshotFromSchema({
-  required NodeSnapshotCommonSchemaFields common,
-  required RectNodeSchemaFields fields,
-}) {
-  return RectNodeSnapshot._internal(
-    id: common.id,
-    instanceRevision: common.instanceRevision,
-    size: fields.size,
-    fillColor: fields.fillColor,
-    strokeColor: fields.strokeColor,
-    strokeWidth: fields.strokeWidth,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-  );
-}
-
-PathNodeSnapshot _pathNodeSnapshotFromSchema({
-  required NodeSnapshotCommonSchemaFields common,
-  required PathNodeSchemaFields fields,
-}) {
-  return PathNodeSnapshot._internal(
-    id: common.id,
-    instanceRevision: common.instanceRevision,
-    svgPathData: fields.svgPathData,
-    fillColor: fields.fillColor,
-    strokeColor: fields.strokeColor,
-    strokeWidth: fields.strokeWidth,
-    fillRule: fields.fillRule,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-  );
 }
 
 void _requireNonEmptyList<T>(List<T> values, {required String name}) {

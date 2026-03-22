@@ -111,7 +111,7 @@ roadmap по новой измеренной реальности без воз�
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Post-compression baseline is recaptured
+### Slice 1. [x] Post-compression baseline is recaptured
 
 #### Slice Contract
 
@@ -132,8 +132,12 @@ to the starting baseline of step 18.
 
 - Green run of the listed verifications.
 - Output explicitly compares the starting and post-step baseline of step 18.
+- Measured configured DCM baseline for the boundary-matrix family:
+  - `HIGH+ entries: 28 -> 11`
+- Measured clone baseline for boundary-matrix families in `lib`:
+  - `related clone clusters: 19 -> 18`
 
-### Slice 2. [ ] Roadmap reflects only measured residual work
+### Slice 2. [x] Roadmap reflects only measured residual work
 
 #### Slice Contract
 
@@ -143,7 +147,8 @@ factually remains after `18.1-18.4`.
 #### Change
 
 Обновить `DEVELOPMENT_PLAN.md` and `development_plan/step_18*.md` по
-измеренному результату rebaseline.
+измеренному результату rebaseline и передать remaining live boundary-matrix
+clusters в corrective step `18.6`.
 
 #### Verification
 
@@ -155,6 +160,26 @@ factually remains after `18.1-18.4`.
 - Green run of the listed verifications.
 - Planning files no longer carry stale assumptions about already removed
   boundary-matrix families.
+- Residual boundary-matrix work is now explicitly assigned to step `18.6` and
+  includes the live contract family in:
+  - `lib/src/contract/internal/node_patch_fast_path.part.dart`
+  - `lib/src/contract/internal/node_spec_fast_path.part.dart`
+  - `lib/src/contract/internal/snapshot_fast_path.part.dart`
+  - `lib/src/contract/node_patch.dart`
+  - `lib/src/contract/node_spec.dart`
+  - `lib/src/contract/snapshot.dart`
+- Residual boundary-matrix work is also assigned to the decode/import family
+  in:
+  - `lib/src/model/scene_builder.dart`
+  - `lib/src/model/scene_builder_contract_support.dart`
+  - `lib/src/model/scene_builder_decode_json.part.dart`
+  - `lib/src/model/scene_builder_json_require.part.dart`
+- Residual boundary-matrix work is also assigned to the mapping family in:
+  - `lib/src/model/scene_node_boundary_mapping.dart`
+  - `lib/src/model/scene_node_boundary_mapping_common.part.dart`
+  - `lib/src/model/scene_node_boundary_mapping_from_snapshot.part.dart`
+  - `lib/src/model/scene_node_boundary_mapping_from_spec.part.dart`
+  - `lib/src/model/scene_node_boundary_mapping_to_snapshot.part.dart`
 
 ## 9. Final Verification
 

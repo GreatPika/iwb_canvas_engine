@@ -36,7 +36,7 @@ sealed class NodeSpec {
 }
 
 class ImageNodeSpec extends NodeSpec {
-  factory ImageNodeSpec({
+  ImageNodeSpec({
     NodeId? id,
     required String imageId,
     required Size size,
@@ -49,25 +49,42 @@ class ImageNodeSpec extends NodeSpec {
     bool isLocked = false,
     bool isDeletable = true,
     bool isTransformable = true,
-  }) {
-    final common = NodeBoundarySchema.validateSpecCommon((
-      id: id,
-      transform: transform,
-      opacity: opacity,
-      hitPadding: hitPadding,
-      isVisible: isVisible,
-      isSelectable: isSelectable,
-      isLocked: isLocked,
-      isDeletable: isDeletable,
-      isTransformable: isTransformable,
-    ));
-    final fields = NodeBoundarySchema.validateImageFields((
-      imageId: imageId,
-      size: size,
-      naturalSize: naturalSize,
-    ));
-    return _imageNodeSpecFromSchema(common: common, fields: fields);
-  }
+  }) : this._validated(
+         common: NodeBoundarySchema.validateSpecCommon((
+           id: id,
+           transform: transform,
+           opacity: opacity,
+           hitPadding: hitPadding,
+           isVisible: isVisible,
+           isSelectable: isSelectable,
+           isLocked: isLocked,
+           isDeletable: isDeletable,
+           isTransformable: isTransformable,
+         )),
+         fields: NodeBoundarySchema.validateImageFields((
+           imageId: imageId,
+           size: size,
+           naturalSize: naturalSize,
+         )),
+       );
+
+  ImageNodeSpec._validated({
+    required NodeSpecCommonSchemaFields common,
+    required ImageNodeSchemaFields fields,
+  }) : this._internal(
+         id: common.id,
+         imageId: fields.imageId,
+         size: fields.size,
+         naturalSize: fields.naturalSize,
+         transform: common.transform,
+         opacity: common.opacity,
+         hitPadding: common.hitPadding,
+         isVisible: common.isVisible,
+         isSelectable: common.isSelectable,
+         isLocked: common.isLocked,
+         isDeletable: common.isDeletable,
+         isTransformable: common.isTransformable,
+       );
 
   ImageNodeSpec._internal({
     super.id,
@@ -90,7 +107,7 @@ class ImageNodeSpec extends NodeSpec {
 }
 
 class TextNodeSpec extends NodeSpec {
-  factory TextNodeSpec({
+  TextNodeSpec({
     NodeId? id,
     required String text,
     double fontSize = 24,
@@ -110,32 +127,56 @@ class TextNodeSpec extends NodeSpec {
     bool isLocked = false,
     bool isDeletable = true,
     bool isTransformable = true,
-  }) {
-    final common = NodeBoundarySchema.validateSpecCommon((
-      id: id,
-      transform: transform,
-      opacity: opacity,
-      hitPadding: hitPadding,
-      isVisible: isVisible,
-      isSelectable: isSelectable,
-      isLocked: isLocked,
-      isDeletable: isDeletable,
-      isTransformable: isTransformable,
-    ));
-    final fields = NodeBoundarySchema.validateTextSpecFields((
-      text: text,
-      fontSize: fontSize,
-      color: color,
-      align: align,
-      isBold: isBold,
-      isItalic: isItalic,
-      isUnderline: isUnderline,
-      fontFamily: fontFamily,
-      maxWidth: maxWidth,
-      lineHeight: lineHeight,
-    ));
-    return _textNodeSpecFromSchema(common: common, fields: fields);
-  }
+  }) : this._validated(
+         common: NodeBoundarySchema.validateSpecCommon((
+           id: id,
+           transform: transform,
+           opacity: opacity,
+           hitPadding: hitPadding,
+           isVisible: isVisible,
+           isSelectable: isSelectable,
+           isLocked: isLocked,
+           isDeletable: isDeletable,
+           isTransformable: isTransformable,
+         )),
+         fields: NodeBoundarySchema.validateTextSpecFields((
+           text: text,
+           fontSize: fontSize,
+           color: color,
+           align: align,
+           isBold: isBold,
+           isItalic: isItalic,
+           isUnderline: isUnderline,
+           fontFamily: fontFamily,
+           maxWidth: maxWidth,
+           lineHeight: lineHeight,
+         )),
+       );
+
+  TextNodeSpec._validated({
+    required NodeSpecCommonSchemaFields common,
+    required TextNodeSpecSchemaFields fields,
+  }) : this._internal(
+         id: common.id,
+         text: fields.text,
+         fontSize: fields.fontSize,
+         color: fields.color,
+         align: fields.align,
+         isBold: fields.isBold,
+         isItalic: fields.isItalic,
+         isUnderline: fields.isUnderline,
+         fontFamily: fields.fontFamily,
+         maxWidth: fields.maxWidth,
+         lineHeight: fields.lineHeight,
+         transform: common.transform,
+         opacity: common.opacity,
+         hitPadding: common.hitPadding,
+         isVisible: common.isVisible,
+         isSelectable: common.isSelectable,
+         isLocked: common.isLocked,
+         isDeletable: common.isDeletable,
+         isTransformable: common.isTransformable,
+       );
 
   TextNodeSpec._internal({
     super.id,
@@ -172,7 +213,7 @@ class TextNodeSpec extends NodeSpec {
 }
 
 class StrokeNodeSpec extends NodeSpec {
-  factory StrokeNodeSpec({
+  StrokeNodeSpec({
     NodeId? id,
     required List<Offset> points,
     required double thickness,
@@ -185,25 +226,42 @@ class StrokeNodeSpec extends NodeSpec {
     bool isLocked = false,
     bool isDeletable = true,
     bool isTransformable = true,
-  }) {
-    final common = NodeBoundarySchema.validateSpecCommon((
-      id: id,
-      transform: transform,
-      opacity: opacity,
-      hitPadding: hitPadding,
-      isVisible: isVisible,
-      isSelectable: isSelectable,
-      isLocked: isLocked,
-      isDeletable: isDeletable,
-      isTransformable: isTransformable,
-    ));
-    final fields = NodeBoundarySchema.validateStrokeSpecFields((
-      points: points,
-      thickness: thickness,
-      color: color,
-    ));
-    return _strokeNodeSpecFromSchema(common: common, fields: fields);
-  }
+  }) : this._validated(
+         common: NodeBoundarySchema.validateSpecCommon((
+           id: id,
+           transform: transform,
+           opacity: opacity,
+           hitPadding: hitPadding,
+           isVisible: isVisible,
+           isSelectable: isSelectable,
+           isLocked: isLocked,
+           isDeletable: isDeletable,
+           isTransformable: isTransformable,
+         )),
+         fields: NodeBoundarySchema.validateStrokeSpecFields((
+           points: points,
+           thickness: thickness,
+           color: color,
+         )),
+       );
+
+  StrokeNodeSpec._validated({
+    required NodeSpecCommonSchemaFields common,
+    required StrokeNodeSpecSchemaInput fields,
+  }) : this._internal(
+         id: common.id,
+         points: fields.points,
+         thickness: fields.thickness,
+         color: fields.color,
+         transform: common.transform,
+         opacity: common.opacity,
+         hitPadding: common.hitPadding,
+         isVisible: common.isVisible,
+         isSelectable: common.isSelectable,
+         isLocked: common.isLocked,
+         isDeletable: common.isDeletable,
+         isTransformable: common.isTransformable,
+       );
 
   StrokeNodeSpec._internal({
     super.id,
@@ -228,7 +286,7 @@ class StrokeNodeSpec extends NodeSpec {
 }
 
 class LineNodeSpec extends NodeSpec {
-  factory LineNodeSpec({
+  LineNodeSpec({
     NodeId? id,
     required Offset start,
     required Offset end,
@@ -242,26 +300,44 @@ class LineNodeSpec extends NodeSpec {
     bool isLocked = false,
     bool isDeletable = true,
     bool isTransformable = true,
-  }) {
-    final common = NodeBoundarySchema.validateSpecCommon((
-      id: id,
-      transform: transform,
-      opacity: opacity,
-      hitPadding: hitPadding,
-      isVisible: isVisible,
-      isSelectable: isSelectable,
-      isLocked: isLocked,
-      isDeletable: isDeletable,
-      isTransformable: isTransformable,
-    ));
-    final fields = NodeBoundarySchema.validateLineFields((
-      start: start,
-      end: end,
-      thickness: thickness,
-      color: color,
-    ));
-    return _lineNodeSpecFromSchema(common: common, fields: fields);
-  }
+  }) : this._validated(
+         common: NodeBoundarySchema.validateSpecCommon((
+           id: id,
+           transform: transform,
+           opacity: opacity,
+           hitPadding: hitPadding,
+           isVisible: isVisible,
+           isSelectable: isSelectable,
+           isLocked: isLocked,
+           isDeletable: isDeletable,
+           isTransformable: isTransformable,
+         )),
+         fields: NodeBoundarySchema.validateLineFields((
+           start: start,
+           end: end,
+           thickness: thickness,
+           color: color,
+         )),
+       );
+
+  LineNodeSpec._validated({
+    required NodeSpecCommonSchemaFields common,
+    required LineNodeSchemaFields fields,
+  }) : this._internal(
+         id: common.id,
+         start: fields.start,
+         end: fields.end,
+         thickness: fields.thickness,
+         color: fields.color,
+         transform: common.transform,
+         opacity: common.opacity,
+         hitPadding: common.hitPadding,
+         isVisible: common.isVisible,
+         isSelectable: common.isSelectable,
+         isLocked: common.isLocked,
+         isDeletable: common.isDeletable,
+         isTransformable: common.isTransformable,
+       );
 
   LineNodeSpec._internal({
     super.id,
@@ -286,7 +362,7 @@ class LineNodeSpec extends NodeSpec {
 }
 
 class RectNodeSpec extends NodeSpec {
-  factory RectNodeSpec({
+  RectNodeSpec({
     NodeId? id,
     required Size size,
     Color? fillColor,
@@ -300,26 +376,44 @@ class RectNodeSpec extends NodeSpec {
     bool isLocked = false,
     bool isDeletable = true,
     bool isTransformable = true,
-  }) {
-    final common = NodeBoundarySchema.validateSpecCommon((
-      id: id,
-      transform: transform,
-      opacity: opacity,
-      hitPadding: hitPadding,
-      isVisible: isVisible,
-      isSelectable: isSelectable,
-      isLocked: isLocked,
-      isDeletable: isDeletable,
-      isTransformable: isTransformable,
-    ));
-    final fields = NodeBoundarySchema.validateRectFields((
-      size: size,
-      fillColor: fillColor,
-      strokeColor: strokeColor,
-      strokeWidth: strokeWidth,
-    ));
-    return _rectNodeSpecFromSchema(common: common, fields: fields);
-  }
+  }) : this._validated(
+         common: NodeBoundarySchema.validateSpecCommon((
+           id: id,
+           transform: transform,
+           opacity: opacity,
+           hitPadding: hitPadding,
+           isVisible: isVisible,
+           isSelectable: isSelectable,
+           isLocked: isLocked,
+           isDeletable: isDeletable,
+           isTransformable: isTransformable,
+         )),
+         fields: NodeBoundarySchema.validateRectFields((
+           size: size,
+           fillColor: fillColor,
+           strokeColor: strokeColor,
+           strokeWidth: strokeWidth,
+         )),
+       );
+
+  RectNodeSpec._validated({
+    required NodeSpecCommonSchemaFields common,
+    required RectNodeSchemaFields fields,
+  }) : this._internal(
+         id: common.id,
+         size: fields.size,
+         fillColor: fields.fillColor,
+         strokeColor: fields.strokeColor,
+         strokeWidth: fields.strokeWidth,
+         transform: common.transform,
+         opacity: common.opacity,
+         hitPadding: common.hitPadding,
+         isVisible: common.isVisible,
+         isSelectable: common.isSelectable,
+         isLocked: common.isLocked,
+         isDeletable: common.isDeletable,
+         isTransformable: common.isTransformable,
+       );
 
   RectNodeSpec._internal({
     super.id,
@@ -344,7 +438,7 @@ class RectNodeSpec extends NodeSpec {
 }
 
 class PathNodeSpec extends NodeSpec {
-  factory PathNodeSpec({
+  PathNodeSpec({
     NodeId? id,
     required String svgPathData,
     Color? fillColor,
@@ -359,27 +453,46 @@ class PathNodeSpec extends NodeSpec {
     bool isLocked = false,
     bool isDeletable = true,
     bool isTransformable = true,
-  }) {
-    final common = NodeBoundarySchema.validateSpecCommon((
-      id: id,
-      transform: transform,
-      opacity: opacity,
-      hitPadding: hitPadding,
-      isVisible: isVisible,
-      isSelectable: isSelectable,
-      isLocked: isLocked,
-      isDeletable: isDeletable,
-      isTransformable: isTransformable,
-    ));
-    final fields = NodeBoundarySchema.validatePathFields((
-      svgPathData: svgPathData,
-      fillColor: fillColor,
-      strokeColor: strokeColor,
-      strokeWidth: strokeWidth,
-      fillRule: fillRule,
-    ));
-    return _pathNodeSpecFromSchema(common: common, fields: fields);
-  }
+  }) : this._validated(
+         common: NodeBoundarySchema.validateSpecCommon((
+           id: id,
+           transform: transform,
+           opacity: opacity,
+           hitPadding: hitPadding,
+           isVisible: isVisible,
+           isSelectable: isSelectable,
+           isLocked: isLocked,
+           isDeletable: isDeletable,
+           isTransformable: isTransformable,
+         )),
+         fields: NodeBoundarySchema.validatePathFields((
+           svgPathData: svgPathData,
+           fillColor: fillColor,
+           strokeColor: strokeColor,
+           strokeWidth: strokeWidth,
+           fillRule: fillRule,
+         )),
+       );
+
+  PathNodeSpec._validated({
+    required NodeSpecCommonSchemaFields common,
+    required PathNodeSchemaFields fields,
+  }) : this._internal(
+         id: common.id,
+         svgPathData: fields.svgPathData,
+         fillColor: fields.fillColor,
+         strokeColor: fields.strokeColor,
+         strokeWidth: fields.strokeWidth,
+         fillRule: fields.fillRule,
+         transform: common.transform,
+         opacity: common.opacity,
+         hitPadding: common.hitPadding,
+         isVisible: common.isVisible,
+         isSelectable: common.isSelectable,
+         isLocked: common.isLocked,
+         isDeletable: common.isDeletable,
+         isTransformable: common.isTransformable,
+       );
 
   PathNodeSpec._internal({
     super.id,
@@ -403,135 +516,4 @@ class PathNodeSpec extends NodeSpec {
   final Color? strokeColor;
   final double strokeWidth;
   final PathFillRule fillRule;
-}
-
-ImageNodeSpec _imageNodeSpecFromSchema({
-  required NodeSpecCommonSchemaFields common,
-  required ImageNodeSchemaFields fields,
-}) {
-  return ImageNodeSpec._internal(
-    id: common.id,
-    imageId: fields.imageId,
-    size: fields.size,
-    naturalSize: fields.naturalSize,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-  );
-}
-
-TextNodeSpec _textNodeSpecFromSchema({
-  required NodeSpecCommonSchemaFields common,
-  required TextNodeSpecSchemaFields fields,
-}) {
-  return TextNodeSpec._internal(
-    id: common.id,
-    text: fields.text,
-    fontSize: fields.fontSize,
-    color: fields.color,
-    align: fields.align,
-    isBold: fields.isBold,
-    isItalic: fields.isItalic,
-    isUnderline: fields.isUnderline,
-    fontFamily: fields.fontFamily,
-    maxWidth: fields.maxWidth,
-    lineHeight: fields.lineHeight,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-  );
-}
-
-StrokeNodeSpec _strokeNodeSpecFromSchema({
-  required NodeSpecCommonSchemaFields common,
-  required StrokeNodeSpecSchemaFields fields,
-}) {
-  return StrokeNodeSpec._internal(
-    id: common.id,
-    points: fields.points,
-    thickness: fields.thickness,
-    color: fields.color,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-  );
-}
-
-LineNodeSpec _lineNodeSpecFromSchema({
-  required NodeSpecCommonSchemaFields common,
-  required LineNodeSchemaFields fields,
-}) {
-  return LineNodeSpec._internal(
-    id: common.id,
-    start: fields.start,
-    end: fields.end,
-    thickness: fields.thickness,
-    color: fields.color,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-  );
-}
-
-RectNodeSpec _rectNodeSpecFromSchema({
-  required NodeSpecCommonSchemaFields common,
-  required RectNodeSchemaFields fields,
-}) {
-  return RectNodeSpec._internal(
-    id: common.id,
-    size: fields.size,
-    fillColor: fields.fillColor,
-    strokeColor: fields.strokeColor,
-    strokeWidth: fields.strokeWidth,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-  );
-}
-
-PathNodeSpec _pathNodeSpecFromSchema({
-  required NodeSpecCommonSchemaFields common,
-  required PathNodeSchemaFields fields,
-}) {
-  return PathNodeSpec._internal(
-    id: common.id,
-    svgPathData: fields.svgPathData,
-    fillColor: fields.fillColor,
-    strokeColor: fields.strokeColor,
-    strokeWidth: fields.strokeWidth,
-    fillRule: fields.fillRule,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-  );
 }

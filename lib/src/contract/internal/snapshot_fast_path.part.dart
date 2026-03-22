@@ -83,9 +83,12 @@ ImageNodeSnapshot imageNodeSnapshotFromValidated({
   bool isDeletable = true,
   bool isTransformable = true,
 }) {
-  final common = NodeBoundarySchema.snapshotCommonFromValidated((
+  return ImageNodeSnapshot._internal(
     id: id,
     instanceRevision: instanceRevision,
+    imageId: imageId,
+    size: size,
+    naturalSize: naturalSize,
     transform: transform,
     opacity: opacity,
     hitPadding: hitPadding,
@@ -94,13 +97,7 @@ ImageNodeSnapshot imageNodeSnapshotFromValidated({
     isLocked: isLocked,
     isDeletable: isDeletable,
     isTransformable: isTransformable,
-  ));
-  final fields = NodeBoundarySchema.imageFieldsFromValidated((
-    imageId: imageId,
-    size: size,
-    naturalSize: naturalSize,
-  ));
-  return _imageNodeSnapshotFromSchema(common: common, fields: fields);
+  );
 }
 
 @internal
@@ -127,19 +124,9 @@ TextNodeSnapshot textNodeSnapshotFromValidated({
   bool isDeletable = true,
   bool isTransformable = true,
 }) {
-  final common = NodeBoundarySchema.snapshotCommonFromValidated((
+  return TextNodeSnapshot._internal(
     id: id,
     instanceRevision: instanceRevision,
-    transform: transform,
-    opacity: opacity,
-    hitPadding: hitPadding,
-    isVisible: isVisible,
-    isSelectable: isSelectable,
-    isLocked: isLocked,
-    isDeletable: isDeletable,
-    isTransformable: isTransformable,
-  ));
-  final fields = NodeBoundarySchema.textSnapshotFieldsFromValidated((
     text: text,
     size: size,
     fontSize: fontSize,
@@ -151,8 +138,15 @@ TextNodeSnapshot textNodeSnapshotFromValidated({
     fontFamily: fontFamily,
     maxWidth: maxWidth,
     lineHeight: lineHeight,
-  ));
-  return _textNodeSnapshotFromSchema(common: common, fields: fields);
+    transform: transform,
+    opacity: opacity,
+    hitPadding: hitPadding,
+    isVisible: isVisible,
+    isSelectable: isSelectable,
+    isLocked: isLocked,
+    isDeletable: isDeletable,
+    isTransformable: isTransformable,
+  );
 }
 
 @internal
@@ -172,9 +166,13 @@ StrokeNodeSnapshot strokeNodeSnapshotFromValidated({
   bool isDeletable = true,
   bool isTransformable = true,
 }) {
-  final common = NodeBoundarySchema.snapshotCommonFromValidated((
+  return StrokeNodeSnapshot._internal(
     id: id,
     instanceRevision: instanceRevision,
+    points: points,
+    pointsRevision: pointsRevision,
+    thickness: thickness,
+    color: color,
     transform: transform,
     opacity: opacity,
     hitPadding: hitPadding,
@@ -183,14 +181,7 @@ StrokeNodeSnapshot strokeNodeSnapshotFromValidated({
     isLocked: isLocked,
     isDeletable: isDeletable,
     isTransformable: isTransformable,
-  ));
-  final fields = NodeBoundarySchema.strokeSnapshotFieldsFromValidated((
-    points: points,
-    pointsRevision: pointsRevision,
-    thickness: thickness,
-    color: color,
-  ));
-  return _strokeNodeSnapshotFromSchema(common: common, fields: fields);
+  );
 }
 
 @internal
@@ -210,9 +201,13 @@ LineNodeSnapshot lineNodeSnapshotFromValidated({
   bool isDeletable = true,
   bool isTransformable = true,
 }) {
-  final common = NodeBoundarySchema.snapshotCommonFromValidated((
+  return LineNodeSnapshot._internal(
     id: id,
     instanceRevision: instanceRevision,
+    start: start,
+    end: end,
+    thickness: thickness,
+    color: color,
     transform: transform,
     opacity: opacity,
     hitPadding: hitPadding,
@@ -221,14 +216,7 @@ LineNodeSnapshot lineNodeSnapshotFromValidated({
     isLocked: isLocked,
     isDeletable: isDeletable,
     isTransformable: isTransformable,
-  ));
-  final fields = NodeBoundarySchema.lineFieldsFromValidated((
-    start: start,
-    end: end,
-    thickness: thickness,
-    color: color,
-  ));
-  return _lineNodeSnapshotFromSchema(common: common, fields: fields);
+  );
 }
 
 @internal
@@ -248,9 +236,13 @@ RectNodeSnapshot rectNodeSnapshotFromValidated({
   bool isDeletable = true,
   bool isTransformable = true,
 }) {
-  final common = NodeBoundarySchema.snapshotCommonFromValidated((
+  return RectNodeSnapshot._internal(
     id: id,
     instanceRevision: instanceRevision,
+    size: size,
+    fillColor: fillColor,
+    strokeColor: strokeColor,
+    strokeWidth: strokeWidth,
     transform: transform,
     opacity: opacity,
     hitPadding: hitPadding,
@@ -259,14 +251,7 @@ RectNodeSnapshot rectNodeSnapshotFromValidated({
     isLocked: isLocked,
     isDeletable: isDeletable,
     isTransformable: isTransformable,
-  ));
-  final fields = NodeBoundarySchema.rectFieldsFromValidated((
-    size: size,
-    fillColor: fillColor,
-    strokeColor: strokeColor,
-    strokeWidth: strokeWidth,
-  ));
-  return _rectNodeSnapshotFromSchema(common: common, fields: fields);
+  );
 }
 
 @internal
@@ -287,9 +272,14 @@ PathNodeSnapshot pathNodeSnapshotFromValidated({
   bool isDeletable = true,
   bool isTransformable = true,
 }) {
-  final common = NodeBoundarySchema.snapshotCommonFromValidated((
+  return PathNodeSnapshot._internal(
     id: id,
     instanceRevision: instanceRevision,
+    svgPathData: svgPathData,
+    fillColor: fillColor,
+    strokeColor: strokeColor,
+    strokeWidth: strokeWidth,
+    fillRule: fillRule,
     transform: transform,
     opacity: opacity,
     hitPadding: hitPadding,
@@ -298,13 +288,5 @@ PathNodeSnapshot pathNodeSnapshotFromValidated({
     isLocked: isLocked,
     isDeletable: isDeletable,
     isTransformable: isTransformable,
-  ));
-  final fields = NodeBoundarySchema.pathFieldsFromValidated((
-    svgPathData: svgPathData,
-    fillColor: fillColor,
-    strokeColor: strokeColor,
-    strokeWidth: strokeWidth,
-    fillRule: fillRule,
-  ));
-  return _pathNodeSnapshotFromSchema(common: common, fields: fields);
+  );
 }

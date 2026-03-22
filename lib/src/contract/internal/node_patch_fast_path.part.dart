@@ -4,10 +4,18 @@ part of '../node_patch.dart';
 CommonNodePatch commonNodePatchFromValidated({
   NodePatchCommonSchemaFields? fields,
 }) {
-  return _commonNodePatchFromSchema(
-    NodeBoundarySchema.patchCommonFromValidated(
-      fields ?? _defaultNodePatchCommonSchemaFields(),
-    ),
+  final resolved = NodeBoundarySchema.patchCommonFromValidated(
+    fields ?? _defaultNodePatchCommonSchemaFields(),
+  );
+  return CommonNodePatch._internal(
+    transform: resolved.transform,
+    opacity: resolved.opacity,
+    hitPadding: resolved.hitPadding,
+    isVisible: resolved.isVisible,
+    isSelectable: resolved.isSelectable,
+    isLocked: resolved.isLocked,
+    isDeletable: resolved.isDeletable,
+    isTransformable: resolved.isTransformable,
   );
 }
 
@@ -17,12 +25,16 @@ ImageNodePatch imageNodePatchFromValidated({
   CommonNodePatch? common,
   ImageNodePatchSchemaFields? fields,
 }) {
-  return _imageNodePatchFromSchema(
+  final resolvedCommon = common ?? commonNodePatchFromValidated();
+  final resolvedFields = NodeBoundarySchema.imagePatchFromValidated(
+    fields ?? _defaultImageNodePatchSchemaFields(),
+  );
+  return ImageNodePatch._internal(
     id: id,
-    common: common ?? commonNodePatchFromValidated(),
-    fields: NodeBoundarySchema.imagePatchFromValidated(
-      fields ?? _defaultImageNodePatchSchemaFields(),
-    ),
+    common: resolvedCommon,
+    imageId: resolvedFields.imageId,
+    size: resolvedFields.size,
+    naturalSize: resolvedFields.naturalSize,
   );
 }
 
@@ -32,12 +44,23 @@ TextNodePatch textNodePatchFromValidated({
   CommonNodePatch? common,
   TextNodePatchSchemaFields? fields,
 }) {
-  return _textNodePatchFromSchema(
+  final resolvedCommon = common ?? commonNodePatchFromValidated();
+  final resolvedFields = NodeBoundarySchema.textPatchFromValidated(
+    fields ?? _defaultTextNodePatchSchemaFields(),
+  );
+  return TextNodePatch._internal(
     id: id,
-    common: common ?? commonNodePatchFromValidated(),
-    fields: NodeBoundarySchema.textPatchFromValidated(
-      fields ?? _defaultTextNodePatchSchemaFields(),
-    ),
+    common: resolvedCommon,
+    text: resolvedFields.text,
+    fontSize: resolvedFields.fontSize,
+    color: resolvedFields.color,
+    align: resolvedFields.align,
+    isBold: resolvedFields.isBold,
+    isItalic: resolvedFields.isItalic,
+    isUnderline: resolvedFields.isUnderline,
+    fontFamily: resolvedFields.fontFamily,
+    maxWidth: resolvedFields.maxWidth,
+    lineHeight: resolvedFields.lineHeight,
   );
 }
 
@@ -47,12 +70,16 @@ StrokeNodePatch strokeNodePatchFromValidated({
   CommonNodePatch? common,
   StrokeNodePatchSchemaFields? fields,
 }) {
-  return _strokeNodePatchFromSchema(
+  final resolvedCommon = common ?? commonNodePatchFromValidated();
+  final resolvedFields = NodeBoundarySchema.strokePatchFromValidated(
+    fields ?? _defaultStrokeNodePatchSchemaFields(),
+  );
+  return StrokeNodePatch._internal(
     id: id,
-    common: common ?? commonNodePatchFromValidated(),
-    fields: NodeBoundarySchema.strokePatchFromValidated(
-      fields ?? _defaultStrokeNodePatchSchemaFields(),
-    ),
+    common: resolvedCommon,
+    points: resolvedFields.points,
+    thickness: resolvedFields.thickness,
+    color: resolvedFields.color,
   );
 }
 
@@ -62,12 +89,17 @@ LineNodePatch lineNodePatchFromValidated({
   CommonNodePatch? common,
   LineNodePatchSchemaFields? fields,
 }) {
-  return _lineNodePatchFromSchema(
+  final resolvedCommon = common ?? commonNodePatchFromValidated();
+  final resolvedFields = NodeBoundarySchema.linePatchFromValidated(
+    fields ?? _defaultLineNodePatchSchemaFields(),
+  );
+  return LineNodePatch._internal(
     id: id,
-    common: common ?? commonNodePatchFromValidated(),
-    fields: NodeBoundarySchema.linePatchFromValidated(
-      fields ?? _defaultLineNodePatchSchemaFields(),
-    ),
+    common: resolvedCommon,
+    start: resolvedFields.start,
+    end: resolvedFields.end,
+    thickness: resolvedFields.thickness,
+    color: resolvedFields.color,
   );
 }
 
@@ -77,12 +109,17 @@ RectNodePatch rectNodePatchFromValidated({
   CommonNodePatch? common,
   RectNodePatchSchemaFields? fields,
 }) {
-  return _rectNodePatchFromSchema(
+  final resolvedCommon = common ?? commonNodePatchFromValidated();
+  final resolvedFields = NodeBoundarySchema.rectPatchFromValidated(
+    fields ?? _defaultRectNodePatchSchemaFields(),
+  );
+  return RectNodePatch._internal(
     id: id,
-    common: common ?? commonNodePatchFromValidated(),
-    fields: NodeBoundarySchema.rectPatchFromValidated(
-      fields ?? _defaultRectNodePatchSchemaFields(),
-    ),
+    common: resolvedCommon,
+    size: resolvedFields.size,
+    fillColor: resolvedFields.fillColor,
+    strokeColor: resolvedFields.strokeColor,
+    strokeWidth: resolvedFields.strokeWidth,
   );
 }
 
@@ -92,12 +129,18 @@ PathNodePatch pathNodePatchFromValidated({
   CommonNodePatch? common,
   PathNodePatchSchemaFields? fields,
 }) {
-  return _pathNodePatchFromSchema(
+  final resolvedCommon = common ?? commonNodePatchFromValidated();
+  final resolvedFields = NodeBoundarySchema.pathPatchFromValidated(
+    fields ?? _defaultPathNodePatchSchemaFields(),
+  );
+  return PathNodePatch._internal(
     id: id,
-    common: common ?? commonNodePatchFromValidated(),
-    fields: NodeBoundarySchema.pathPatchFromValidated(
-      fields ?? _defaultPathNodePatchSchemaFields(),
-    ),
+    common: resolvedCommon,
+    svgPathData: resolvedFields.svgPathData,
+    fillColor: resolvedFields.fillColor,
+    strokeColor: resolvedFields.strokeColor,
+    strokeWidth: resolvedFields.strokeWidth,
+    fillRule: resolvedFields.fillRule,
   );
 }
 

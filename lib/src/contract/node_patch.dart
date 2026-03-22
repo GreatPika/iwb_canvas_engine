@@ -32,7 +32,7 @@ class CommonNodePatch {
       isDeletable: isDeletable,
       isTransformable: isTransformable,
     ));
-    return _commonNodePatchFromSchema(fields);
+    return commonNodePatchFromValidated(fields: fields);
   }
 
   const CommonNodePatch._internal({
@@ -65,24 +65,33 @@ sealed class NodePatch {
 }
 
 class ImageNodePatch extends NodePatch {
-  factory ImageNodePatch({
+  ImageNodePatch({
     required NodeId id,
     CommonNodePatch? common,
     PatchField<String> imageId = const PatchField<String>.absent(),
     PatchField<Size> size = const PatchField<Size>.absent(),
     PatchField<Size?> naturalSize = const PatchField<Size?>.absent(),
-  }) {
-    final fields = NodeBoundarySchema.validateImagePatch((
-      imageId: imageId,
-      size: size,
-      naturalSize: naturalSize,
-    ));
-    return _imageNodePatchFromSchema(
-      id: NodeBoundarySchema.validateRequiredNodeId(id),
-      common: common ?? CommonNodePatch(),
-      fields: fields,
-    );
-  }
+  }) : this._validated(
+         id: NodeBoundarySchema.validateRequiredNodeId(id),
+         common: common ?? commonNodePatchFromValidated(),
+         fields: NodeBoundarySchema.validateImagePatch((
+           imageId: imageId,
+           size: size,
+           naturalSize: naturalSize,
+         )),
+       );
+
+  ImageNodePatch._validated({
+    required NodeId id,
+    required CommonNodePatch common,
+    required ImageNodePatchSchemaFields fields,
+  }) : this._internal(
+         id: id,
+         common: common,
+         imageId: fields.imageId,
+         size: fields.size,
+         naturalSize: fields.naturalSize,
+       );
 
   const ImageNodePatch._internal({
     required super.id,
@@ -98,7 +107,7 @@ class ImageNodePatch extends NodePatch {
 }
 
 class TextNodePatch extends NodePatch {
-  factory TextNodePatch({
+  TextNodePatch({
     required NodeId id,
     CommonNodePatch? common,
     PatchField<String> text = const PatchField<String>.absent(),
@@ -111,25 +120,41 @@ class TextNodePatch extends NodePatch {
     PatchField<String?> fontFamily = const PatchField<String?>.absent(),
     PatchField<double?> maxWidth = const PatchField<double?>.absent(),
     PatchField<double?> lineHeight = const PatchField<double?>.absent(),
-  }) {
-    final fields = NodeBoundarySchema.validateTextPatch((
-      text: text,
-      fontSize: fontSize,
-      color: color,
-      align: align,
-      isBold: isBold,
-      isItalic: isItalic,
-      isUnderline: isUnderline,
-      fontFamily: fontFamily,
-      maxWidth: maxWidth,
-      lineHeight: lineHeight,
-    ));
-    return _textNodePatchFromSchema(
-      id: NodeBoundarySchema.validateRequiredNodeId(id),
-      common: common ?? CommonNodePatch(),
-      fields: fields,
-    );
-  }
+  }) : this._validated(
+         id: NodeBoundarySchema.validateRequiredNodeId(id),
+         common: common ?? commonNodePatchFromValidated(),
+         fields: NodeBoundarySchema.validateTextPatch((
+           text: text,
+           fontSize: fontSize,
+           color: color,
+           align: align,
+           isBold: isBold,
+           isItalic: isItalic,
+           isUnderline: isUnderline,
+           fontFamily: fontFamily,
+           maxWidth: maxWidth,
+           lineHeight: lineHeight,
+         )),
+       );
+
+  TextNodePatch._validated({
+    required NodeId id,
+    required CommonNodePatch common,
+    required TextNodePatchSchemaFields fields,
+  }) : this._internal(
+         id: id,
+         common: common,
+         text: fields.text,
+         fontSize: fields.fontSize,
+         color: fields.color,
+         align: fields.align,
+         isBold: fields.isBold,
+         isItalic: fields.isItalic,
+         isUnderline: fields.isUnderline,
+         fontFamily: fields.fontFamily,
+         maxWidth: fields.maxWidth,
+         lineHeight: fields.lineHeight,
+       );
 
   const TextNodePatch._internal({
     required super.id,
@@ -159,24 +184,33 @@ class TextNodePatch extends NodePatch {
 }
 
 class StrokeNodePatch extends NodePatch {
-  factory StrokeNodePatch({
+  StrokeNodePatch({
     required NodeId id,
     CommonNodePatch? common,
     PatchField<List<Offset>> points = const PatchField<List<Offset>>.absent(),
     PatchField<double> thickness = const PatchField<double>.absent(),
     PatchField<Color> color = const PatchField<Color>.absent(),
-  }) {
-    final fields = NodeBoundarySchema.validateStrokePatch((
-      points: points,
-      thickness: thickness,
-      color: color,
-    ));
-    return _strokeNodePatchFromSchema(
-      id: NodeBoundarySchema.validateRequiredNodeId(id),
-      common: common ?? CommonNodePatch(),
-      fields: fields,
-    );
-  }
+  }) : this._validated(
+         id: NodeBoundarySchema.validateRequiredNodeId(id),
+         common: common ?? commonNodePatchFromValidated(),
+         fields: NodeBoundarySchema.validateStrokePatch((
+           points: points,
+           thickness: thickness,
+           color: color,
+         )),
+       );
+
+  StrokeNodePatch._validated({
+    required NodeId id,
+    required CommonNodePatch common,
+    required StrokeNodePatchSchemaFields fields,
+  }) : this._internal(
+         id: id,
+         common: common,
+         points: fields.points,
+         thickness: fields.thickness,
+         color: fields.color,
+       );
 
   StrokeNodePatch._internal({
     required super.id,
@@ -193,26 +227,36 @@ class StrokeNodePatch extends NodePatch {
 }
 
 class LineNodePatch extends NodePatch {
-  factory LineNodePatch({
+  LineNodePatch({
     required NodeId id,
     CommonNodePatch? common,
     PatchField<Offset> start = const PatchField<Offset>.absent(),
     PatchField<Offset> end = const PatchField<Offset>.absent(),
     PatchField<double> thickness = const PatchField<double>.absent(),
     PatchField<Color> color = const PatchField<Color>.absent(),
-  }) {
-    final fields = NodeBoundarySchema.validateLinePatch((
-      start: start,
-      end: end,
-      thickness: thickness,
-      color: color,
-    ));
-    return _lineNodePatchFromSchema(
-      id: NodeBoundarySchema.validateRequiredNodeId(id),
-      common: common ?? CommonNodePatch(),
-      fields: fields,
-    );
-  }
+  }) : this._validated(
+         id: NodeBoundarySchema.validateRequiredNodeId(id),
+         common: common ?? commonNodePatchFromValidated(),
+         fields: NodeBoundarySchema.validateLinePatch((
+           start: start,
+           end: end,
+           thickness: thickness,
+           color: color,
+         )),
+       );
+
+  LineNodePatch._validated({
+    required NodeId id,
+    required CommonNodePatch common,
+    required LineNodePatchSchemaFields fields,
+  }) : this._internal(
+         id: id,
+         common: common,
+         start: fields.start,
+         end: fields.end,
+         thickness: fields.thickness,
+         color: fields.color,
+       );
 
   const LineNodePatch._internal({
     required super.id,
@@ -230,26 +274,36 @@ class LineNodePatch extends NodePatch {
 }
 
 class RectNodePatch extends NodePatch {
-  factory RectNodePatch({
+  RectNodePatch({
     required NodeId id,
     CommonNodePatch? common,
     PatchField<Size> size = const PatchField<Size>.absent(),
     PatchField<Color?> fillColor = const PatchField<Color?>.absent(),
     PatchField<Color?> strokeColor = const PatchField<Color?>.absent(),
     PatchField<double> strokeWidth = const PatchField<double>.absent(),
-  }) {
-    final fields = NodeBoundarySchema.validateRectPatch((
-      size: size,
-      fillColor: fillColor,
-      strokeColor: strokeColor,
-      strokeWidth: strokeWidth,
-    ));
-    return _rectNodePatchFromSchema(
-      id: NodeBoundarySchema.validateRequiredNodeId(id),
-      common: common ?? CommonNodePatch(),
-      fields: fields,
-    );
-  }
+  }) : this._validated(
+         id: NodeBoundarySchema.validateRequiredNodeId(id),
+         common: common ?? commonNodePatchFromValidated(),
+         fields: NodeBoundarySchema.validateRectPatch((
+           size: size,
+           fillColor: fillColor,
+           strokeColor: strokeColor,
+           strokeWidth: strokeWidth,
+         )),
+       );
+
+  RectNodePatch._validated({
+    required NodeId id,
+    required CommonNodePatch common,
+    required RectNodePatchSchemaFields fields,
+  }) : this._internal(
+         id: id,
+         common: common,
+         size: fields.size,
+         fillColor: fields.fillColor,
+         strokeColor: fields.strokeColor,
+         strokeWidth: fields.strokeWidth,
+       );
 
   const RectNodePatch._internal({
     required super.id,
@@ -267,7 +321,7 @@ class RectNodePatch extends NodePatch {
 }
 
 class PathNodePatch extends NodePatch {
-  factory PathNodePatch({
+  PathNodePatch({
     required NodeId id,
     CommonNodePatch? common,
     PatchField<String> svgPathData = const PatchField<String>.absent(),
@@ -275,20 +329,31 @@ class PathNodePatch extends NodePatch {
     PatchField<Color?> strokeColor = const PatchField<Color?>.absent(),
     PatchField<double> strokeWidth = const PatchField<double>.absent(),
     PatchField<PathFillRule> fillRule = const PatchField<PathFillRule>.absent(),
-  }) {
-    final fields = NodeBoundarySchema.validatePathPatch((
-      svgPathData: svgPathData,
-      fillColor: fillColor,
-      strokeColor: strokeColor,
-      strokeWidth: strokeWidth,
-      fillRule: fillRule,
-    ));
-    return _pathNodePatchFromSchema(
-      id: NodeBoundarySchema.validateRequiredNodeId(id),
-      common: common ?? CommonNodePatch(),
-      fields: fields,
-    );
-  }
+  }) : this._validated(
+         id: NodeBoundarySchema.validateRequiredNodeId(id),
+         common: common ?? commonNodePatchFromValidated(),
+         fields: NodeBoundarySchema.validatePathPatch((
+           svgPathData: svgPathData,
+           fillColor: fillColor,
+           strokeColor: strokeColor,
+           strokeWidth: strokeWidth,
+           fillRule: fillRule,
+         )),
+       );
+
+  PathNodePatch._validated({
+    required NodeId id,
+    required CommonNodePatch common,
+    required PathNodePatchSchemaFields fields,
+  }) : this._internal(
+         id: id,
+         common: common,
+         svgPathData: fields.svgPathData,
+         fillColor: fields.fillColor,
+         strokeColor: fields.strokeColor,
+         strokeWidth: fields.strokeWidth,
+         fillRule: fields.fillRule,
+       );
 
   const PathNodePatch._internal({
     required super.id,
@@ -305,112 +370,4 @@ class PathNodePatch extends NodePatch {
   final PatchField<Color?> strokeColor;
   final PatchField<double> strokeWidth;
   final PatchField<PathFillRule> fillRule;
-}
-
-CommonNodePatch _commonNodePatchFromSchema(NodePatchCommonSchemaFields fields) {
-  return CommonNodePatch._internal(
-    transform: fields.transform,
-    opacity: fields.opacity,
-    hitPadding: fields.hitPadding,
-    isVisible: fields.isVisible,
-    isSelectable: fields.isSelectable,
-    isLocked: fields.isLocked,
-    isDeletable: fields.isDeletable,
-    isTransformable: fields.isTransformable,
-  );
-}
-
-ImageNodePatch _imageNodePatchFromSchema({
-  required NodeId id,
-  required CommonNodePatch common,
-  required ImageNodePatchSchemaFields fields,
-}) {
-  return ImageNodePatch._internal(
-    id: id,
-    common: common,
-    imageId: fields.imageId,
-    size: fields.size,
-    naturalSize: fields.naturalSize,
-  );
-}
-
-TextNodePatch _textNodePatchFromSchema({
-  required NodeId id,
-  required CommonNodePatch common,
-  required TextNodePatchSchemaFields fields,
-}) {
-  return TextNodePatch._internal(
-    id: id,
-    common: common,
-    text: fields.text,
-    fontSize: fields.fontSize,
-    color: fields.color,
-    align: fields.align,
-    isBold: fields.isBold,
-    isItalic: fields.isItalic,
-    isUnderline: fields.isUnderline,
-    fontFamily: fields.fontFamily,
-    maxWidth: fields.maxWidth,
-    lineHeight: fields.lineHeight,
-  );
-}
-
-StrokeNodePatch _strokeNodePatchFromSchema({
-  required NodeId id,
-  required CommonNodePatch common,
-  required StrokeNodePatchSchemaFields fields,
-}) {
-  return StrokeNodePatch._internal(
-    id: id,
-    common: common,
-    points: fields.points,
-    thickness: fields.thickness,
-    color: fields.color,
-  );
-}
-
-LineNodePatch _lineNodePatchFromSchema({
-  required NodeId id,
-  required CommonNodePatch common,
-  required LineNodePatchSchemaFields fields,
-}) {
-  return LineNodePatch._internal(
-    id: id,
-    common: common,
-    start: fields.start,
-    end: fields.end,
-    thickness: fields.thickness,
-    color: fields.color,
-  );
-}
-
-RectNodePatch _rectNodePatchFromSchema({
-  required NodeId id,
-  required CommonNodePatch common,
-  required RectNodePatchSchemaFields fields,
-}) {
-  return RectNodePatch._internal(
-    id: id,
-    common: common,
-    size: fields.size,
-    fillColor: fields.fillColor,
-    strokeColor: fields.strokeColor,
-    strokeWidth: fields.strokeWidth,
-  );
-}
-
-PathNodePatch _pathNodePatchFromSchema({
-  required NodeId id,
-  required CommonNodePatch common,
-  required PathNodePatchSchemaFields fields,
-}) {
-  return PathNodePatch._internal(
-    id: id,
-    common: common,
-    svgPathData: fields.svgPathData,
-    fillColor: fields.fillColor,
-    strokeColor: fields.strokeColor,
-    strokeWidth: fields.strokeWidth,
-    fillRule: fields.fillRule,
-  );
 }
