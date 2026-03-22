@@ -100,21 +100,7 @@ ImageNodeSnapshot imageNodeSnapshotFromValidated({
     size: size,
     naturalSize: naturalSize,
   ));
-  return ImageNodeSnapshot._internal(
-    id: common.id,
-    instanceRevision: common.instanceRevision,
-    imageId: fields.imageId,
-    size: fields.size,
-    naturalSize: fields.naturalSize,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-  );
+  return _imageNodeSnapshotFromSchema(common: common, fields: fields);
 }
 
 @internal
@@ -166,29 +152,7 @@ TextNodeSnapshot textNodeSnapshotFromValidated({
     maxWidth: maxWidth,
     lineHeight: lineHeight,
   ));
-  return TextNodeSnapshot._internal(
-    id: common.id,
-    instanceRevision: common.instanceRevision,
-    text: fields.text,
-    size: fields.size,
-    fontSize: fields.fontSize,
-    color: fields.color,
-    align: fields.align,
-    isBold: fields.isBold,
-    isItalic: fields.isItalic,
-    isUnderline: fields.isUnderline,
-    fontFamily: fields.fontFamily,
-    maxWidth: fields.maxWidth,
-    lineHeight: fields.lineHeight,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-  );
+  return _textNodeSnapshotFromSchema(common: common, fields: fields);
 }
 
 @internal
@@ -226,22 +190,7 @@ StrokeNodeSnapshot strokeNodeSnapshotFromValidated({
     thickness: thickness,
     color: color,
   ));
-  return StrokeNodeSnapshot._internal(
-    id: common.id,
-    instanceRevision: common.instanceRevision,
-    points: fields.points,
-    pointsRevision: fields.pointsRevision,
-    thickness: fields.thickness,
-    color: fields.color,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-  );
+  return _strokeNodeSnapshotFromSchema(common: common, fields: fields);
 }
 
 @internal
@@ -279,22 +228,7 @@ LineNodeSnapshot lineNodeSnapshotFromValidated({
     thickness: thickness,
     color: color,
   ));
-  return LineNodeSnapshot._internal(
-    id: common.id,
-    instanceRevision: common.instanceRevision,
-    start: fields.start,
-    end: fields.end,
-    thickness: fields.thickness,
-    color: fields.color,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-  );
+  return _lineNodeSnapshotFromSchema(common: common, fields: fields);
 }
 
 @internal
@@ -332,22 +266,7 @@ RectNodeSnapshot rectNodeSnapshotFromValidated({
     strokeColor: strokeColor,
     strokeWidth: strokeWidth,
   ));
-  return RectNodeSnapshot._internal(
-    id: common.id,
-    instanceRevision: common.instanceRevision,
-    size: fields.size,
-    fillColor: fields.fillColor,
-    strokeColor: fields.strokeColor,
-    strokeWidth: fields.strokeWidth,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-  );
+  return _rectNodeSnapshotFromSchema(common: common, fields: fields);
 }
 
 @internal
@@ -387,21 +306,5 @@ PathNodeSnapshot pathNodeSnapshotFromValidated({
     strokeWidth: strokeWidth,
     fillRule: fillRule,
   ));
-  return PathNodeSnapshot._internal(
-    id: common.id,
-    instanceRevision: common.instanceRevision,
-    svgPathData: fields.svgPathData,
-    fillColor: fields.fillColor,
-    strokeColor: fields.strokeColor,
-    strokeWidth: fields.strokeWidth,
-    fillRule: fields.fillRule,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-  );
+  return _pathNodeSnapshotFromSchema(common: common, fields: fields);
 }

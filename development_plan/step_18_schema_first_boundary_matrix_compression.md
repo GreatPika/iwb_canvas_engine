@@ -137,6 +137,10 @@ language: russian
     `scene_node_boundary_mapping*.part.dart`;
   - decode/require and validation helper matrices in
     `scene_builder*.part.dart` and `scene_value_validation*.part.dart`.
+- Within that family, `snapshot_fast_path.part.dart` spans contract-owned
+  assembly and downstream model/decode consumers, so its hotspot closure is
+  split across `18.1`, `18.2`, and `18.3` instead of being owned entirely by
+  the contract-only boundary of `18.1`.
 
 ### 6.2 Target Verification Units
 

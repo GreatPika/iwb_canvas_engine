@@ -245,21 +245,7 @@ class ImageNodeSnapshot extends NodeSnapshot {
       size: size,
       naturalSize: naturalSize,
     ));
-    return ImageNodeSnapshot._internal(
-      id: common.id,
-      instanceRevision: common.instanceRevision,
-      imageId: fields.imageId,
-      size: fields.size,
-      naturalSize: fields.naturalSize,
-      transform: common.transform,
-      opacity: common.opacity,
-      hitPadding: common.hitPadding,
-      isVisible: common.isVisible,
-      isSelectable: common.isSelectable,
-      isLocked: common.isLocked,
-      isDeletable: common.isDeletable,
-      isTransformable: common.isTransformable,
-    );
+    return _imageNodeSnapshotFromSchema(common: common, fields: fields);
   }
 
   /// Internal fast path for already validated snapshot data.
@@ -333,29 +319,7 @@ class TextNodeSnapshot extends NodeSnapshot {
       maxWidth: maxWidth,
       lineHeight: lineHeight,
     ));
-    return TextNodeSnapshot._internal(
-      id: common.id,
-      instanceRevision: common.instanceRevision,
-      text: fields.text,
-      size: fields.size,
-      fontSize: fields.fontSize,
-      color: fields.color,
-      align: fields.align,
-      isBold: fields.isBold,
-      isItalic: fields.isItalic,
-      isUnderline: fields.isUnderline,
-      fontFamily: fields.fontFamily,
-      maxWidth: fields.maxWidth,
-      lineHeight: fields.lineHeight,
-      transform: common.transform,
-      opacity: common.opacity,
-      hitPadding: common.hitPadding,
-      isVisible: common.isVisible,
-      isSelectable: common.isSelectable,
-      isLocked: common.isLocked,
-      isDeletable: common.isDeletable,
-      isTransformable: common.isTransformable,
-    );
+    return _textNodeSnapshotFromSchema(common: common, fields: fields);
   }
 
   /// Internal fast path for already validated snapshot data.
@@ -436,22 +400,7 @@ class StrokeNodeSnapshot extends NodeSnapshot {
       thickness: thickness,
       color: color,
     ));
-    return StrokeNodeSnapshot._internal(
-      id: common.id,
-      instanceRevision: common.instanceRevision,
-      points: fields.points,
-      pointsRevision: fields.pointsRevision,
-      thickness: fields.thickness,
-      color: fields.color,
-      transform: common.transform,
-      opacity: common.opacity,
-      hitPadding: common.hitPadding,
-      isVisible: common.isVisible,
-      isSelectable: common.isSelectable,
-      isLocked: common.isLocked,
-      isDeletable: common.isDeletable,
-      isTransformable: common.isTransformable,
-    );
+    return _strokeNodeSnapshotFromSchema(common: common, fields: fields);
   }
 
   /// Internal fast path for already validated snapshot data.
@@ -515,22 +464,7 @@ class LineNodeSnapshot extends NodeSnapshot {
       thickness: thickness,
       color: color,
     ));
-    return LineNodeSnapshot._internal(
-      id: common.id,
-      instanceRevision: common.instanceRevision,
-      start: fields.start,
-      end: fields.end,
-      thickness: fields.thickness,
-      color: fields.color,
-      transform: common.transform,
-      opacity: common.opacity,
-      hitPadding: common.hitPadding,
-      isVisible: common.isVisible,
-      isSelectable: common.isSelectable,
-      isLocked: common.isLocked,
-      isDeletable: common.isDeletable,
-      isTransformable: common.isTransformable,
-    );
+    return _lineNodeSnapshotFromSchema(common: common, fields: fields);
   }
 
   /// Internal fast path for already validated snapshot data.
@@ -592,22 +526,7 @@ class RectNodeSnapshot extends NodeSnapshot {
       strokeColor: strokeColor,
       strokeWidth: strokeWidth,
     ));
-    return RectNodeSnapshot._internal(
-      id: common.id,
-      instanceRevision: common.instanceRevision,
-      size: fields.size,
-      fillColor: fields.fillColor,
-      strokeColor: fields.strokeColor,
-      strokeWidth: fields.strokeWidth,
-      transform: common.transform,
-      opacity: common.opacity,
-      hitPadding: common.hitPadding,
-      isVisible: common.isVisible,
-      isSelectable: common.isSelectable,
-      isLocked: common.isLocked,
-      isDeletable: common.isDeletable,
-      isTransformable: common.isTransformable,
-    );
+    return _rectNodeSnapshotFromSchema(common: common, fields: fields);
   }
 
   /// Internal fast path for already validated snapshot data.
@@ -671,23 +590,7 @@ class PathNodeSnapshot extends NodeSnapshot {
       strokeWidth: strokeWidth,
       fillRule: fillRule,
     ));
-    return PathNodeSnapshot._internal(
-      id: common.id,
-      instanceRevision: common.instanceRevision,
-      svgPathData: fields.svgPathData,
-      fillColor: fields.fillColor,
-      strokeColor: fields.strokeColor,
-      strokeWidth: fields.strokeWidth,
-      fillRule: fields.fillRule,
-      transform: common.transform,
-      opacity: common.opacity,
-      hitPadding: common.hitPadding,
-      isVisible: common.isVisible,
-      isSelectable: common.isSelectable,
-      isLocked: common.isLocked,
-      isDeletable: common.isDeletable,
-      isTransformable: common.isTransformable,
-    );
+    return _pathNodeSnapshotFromSchema(common: common, fields: fields);
   }
 
   /// Internal fast path for already validated snapshot data.
@@ -714,6 +617,145 @@ class PathNodeSnapshot extends NodeSnapshot {
   final Color? strokeColor;
   final double strokeWidth;
   final PathFillRule fillRule;
+}
+
+ImageNodeSnapshot _imageNodeSnapshotFromSchema({
+  required NodeSnapshotCommonSchemaFields common,
+  required ImageNodeSchemaFields fields,
+}) {
+  return ImageNodeSnapshot._internal(
+    id: common.id,
+    instanceRevision: common.instanceRevision,
+    imageId: fields.imageId,
+    size: fields.size,
+    naturalSize: fields.naturalSize,
+    transform: common.transform,
+    opacity: common.opacity,
+    hitPadding: common.hitPadding,
+    isVisible: common.isVisible,
+    isSelectable: common.isSelectable,
+    isLocked: common.isLocked,
+    isDeletable: common.isDeletable,
+    isTransformable: common.isTransformable,
+  );
+}
+
+TextNodeSnapshot _textNodeSnapshotFromSchema({
+  required NodeSnapshotCommonSchemaFields common,
+  required TextNodeSnapshotSchemaFields fields,
+}) {
+  return TextNodeSnapshot._internal(
+    id: common.id,
+    instanceRevision: common.instanceRevision,
+    text: fields.text,
+    size: fields.size,
+    fontSize: fields.fontSize,
+    color: fields.color,
+    align: fields.align,
+    isBold: fields.isBold,
+    isItalic: fields.isItalic,
+    isUnderline: fields.isUnderline,
+    fontFamily: fields.fontFamily,
+    maxWidth: fields.maxWidth,
+    lineHeight: fields.lineHeight,
+    transform: common.transform,
+    opacity: common.opacity,
+    hitPadding: common.hitPadding,
+    isVisible: common.isVisible,
+    isSelectable: common.isSelectable,
+    isLocked: common.isLocked,
+    isDeletable: common.isDeletable,
+    isTransformable: common.isTransformable,
+  );
+}
+
+StrokeNodeSnapshot _strokeNodeSnapshotFromSchema({
+  required NodeSnapshotCommonSchemaFields common,
+  required StrokeNodeSnapshotSchemaFields fields,
+}) {
+  return StrokeNodeSnapshot._internal(
+    id: common.id,
+    instanceRevision: common.instanceRevision,
+    points: fields.points,
+    pointsRevision: fields.pointsRevision,
+    thickness: fields.thickness,
+    color: fields.color,
+    transform: common.transform,
+    opacity: common.opacity,
+    hitPadding: common.hitPadding,
+    isVisible: common.isVisible,
+    isSelectable: common.isSelectable,
+    isLocked: common.isLocked,
+    isDeletable: common.isDeletable,
+    isTransformable: common.isTransformable,
+  );
+}
+
+LineNodeSnapshot _lineNodeSnapshotFromSchema({
+  required NodeSnapshotCommonSchemaFields common,
+  required LineNodeSchemaFields fields,
+}) {
+  return LineNodeSnapshot._internal(
+    id: common.id,
+    instanceRevision: common.instanceRevision,
+    start: fields.start,
+    end: fields.end,
+    thickness: fields.thickness,
+    color: fields.color,
+    transform: common.transform,
+    opacity: common.opacity,
+    hitPadding: common.hitPadding,
+    isVisible: common.isVisible,
+    isSelectable: common.isSelectable,
+    isLocked: common.isLocked,
+    isDeletable: common.isDeletable,
+    isTransformable: common.isTransformable,
+  );
+}
+
+RectNodeSnapshot _rectNodeSnapshotFromSchema({
+  required NodeSnapshotCommonSchemaFields common,
+  required RectNodeSchemaFields fields,
+}) {
+  return RectNodeSnapshot._internal(
+    id: common.id,
+    instanceRevision: common.instanceRevision,
+    size: fields.size,
+    fillColor: fields.fillColor,
+    strokeColor: fields.strokeColor,
+    strokeWidth: fields.strokeWidth,
+    transform: common.transform,
+    opacity: common.opacity,
+    hitPadding: common.hitPadding,
+    isVisible: common.isVisible,
+    isSelectable: common.isSelectable,
+    isLocked: common.isLocked,
+    isDeletable: common.isDeletable,
+    isTransformable: common.isTransformable,
+  );
+}
+
+PathNodeSnapshot _pathNodeSnapshotFromSchema({
+  required NodeSnapshotCommonSchemaFields common,
+  required PathNodeSchemaFields fields,
+}) {
+  return PathNodeSnapshot._internal(
+    id: common.id,
+    instanceRevision: common.instanceRevision,
+    svgPathData: fields.svgPathData,
+    fillColor: fields.fillColor,
+    strokeColor: fields.strokeColor,
+    strokeWidth: fields.strokeWidth,
+    fillRule: fields.fillRule,
+    transform: common.transform,
+    opacity: common.opacity,
+    hitPadding: common.hitPadding,
+    isVisible: common.isVisible,
+    isSelectable: common.isSelectable,
+    isLocked: common.isLocked,
+    isDeletable: common.isDeletable,
+    isTransformable: common.isTransformable,
+  );
 }
 
 void _requireNonEmptyList<T>(List<T> values, {required String name}) {

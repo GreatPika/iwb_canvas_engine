@@ -103,6 +103,9 @@ node-family vertical slices без изменения runtime и public boundary
    contract.
 3. The current confirmed model mapping cluster family improves against the
    starting baseline centered on `scene_node_boundary_mapping*.part.dart`.
+4. Snapshot fast-path consumer migration in
+   `scene_node_boundary_mapping_to_snapshot.part.dart` closes the portion of
+   `18.1` hotspot work that requires model-side call-site adoption.
 
 ## 6. Implementation Specification
 
@@ -115,6 +118,9 @@ node-family vertical slices без изменения runtime и public boundary
 - Current confirmed pair inventory shows exact-family repetition across
   `_image*`, `_text*`, `_stroke*`, `_line*`, `_rect*`, and `_path*`
   conversion bodies.
+- `scene_node_boundary_mapping_to_snapshot.part.dart` is one of the owned
+  downstream consumers of `*NodeSnapshotFromValidated(...)` whose call-shape
+  migration is intentionally deferred from `18.1`.
 
 ### 6.2 Target Verification Units
 
@@ -201,7 +207,10 @@ the same node-family slices without keeping the legacy direction-first matrix.
 `scene_builder_scene_from_snapshot.part.dart`,
 `scene_builder_snapshot_from_scene.part.dart`,
 `scene_snapshot_from_scene.dart`, and the remaining mapping parts on the same
-node-family slices and remove the replaced bodies.
+node-family slices, migrate the owned
+`*NodeSnapshotFromValidated(...)` consumers in
+`scene_node_boundary_mapping_to_snapshot.part.dart` to the compact
+schema-first call shape, and remove the replaced bodies.
 
 #### Verification
 

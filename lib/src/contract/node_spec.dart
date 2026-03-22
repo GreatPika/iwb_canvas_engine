@@ -66,20 +66,7 @@ class ImageNodeSpec extends NodeSpec {
       size: size,
       naturalSize: naturalSize,
     ));
-    return ImageNodeSpec._internal(
-      id: common.id,
-      imageId: fields.imageId,
-      size: fields.size,
-      naturalSize: fields.naturalSize,
-      transform: common.transform,
-      opacity: common.opacity,
-      hitPadding: common.hitPadding,
-      isVisible: common.isVisible,
-      isSelectable: common.isSelectable,
-      isLocked: common.isLocked,
-      isDeletable: common.isDeletable,
-      isTransformable: common.isTransformable,
-    );
+    return _imageNodeSpecFromSchema(common: common, fields: fields);
   }
 
   ImageNodeSpec._internal({
@@ -147,27 +134,7 @@ class TextNodeSpec extends NodeSpec {
       maxWidth: maxWidth,
       lineHeight: lineHeight,
     ));
-    return TextNodeSpec._internal(
-      id: common.id,
-      text: fields.text,
-      fontSize: fields.fontSize,
-      color: fields.color,
-      align: fields.align,
-      isBold: fields.isBold,
-      isItalic: fields.isItalic,
-      isUnderline: fields.isUnderline,
-      fontFamily: fields.fontFamily,
-      maxWidth: fields.maxWidth,
-      lineHeight: fields.lineHeight,
-      transform: common.transform,
-      opacity: common.opacity,
-      hitPadding: common.hitPadding,
-      isVisible: common.isVisible,
-      isSelectable: common.isSelectable,
-      isLocked: common.isLocked,
-      isDeletable: common.isDeletable,
-      isTransformable: common.isTransformable,
-    );
+    return _textNodeSpecFromSchema(common: common, fields: fields);
   }
 
   TextNodeSpec._internal({
@@ -235,20 +202,7 @@ class StrokeNodeSpec extends NodeSpec {
       thickness: thickness,
       color: color,
     ));
-    return StrokeNodeSpec._internal(
-      id: common.id,
-      points: fields.points,
-      thickness: fields.thickness,
-      color: fields.color,
-      transform: common.transform,
-      opacity: common.opacity,
-      hitPadding: common.hitPadding,
-      isVisible: common.isVisible,
-      isSelectable: common.isSelectable,
-      isLocked: common.isLocked,
-      isDeletable: common.isDeletable,
-      isTransformable: common.isTransformable,
-    );
+    return _strokeNodeSpecFromSchema(common: common, fields: fields);
   }
 
   StrokeNodeSpec._internal({
@@ -306,21 +260,7 @@ class LineNodeSpec extends NodeSpec {
       thickness: thickness,
       color: color,
     ));
-    return LineNodeSpec._internal(
-      id: common.id,
-      start: fields.start,
-      end: fields.end,
-      thickness: fields.thickness,
-      color: fields.color,
-      transform: common.transform,
-      opacity: common.opacity,
-      hitPadding: common.hitPadding,
-      isVisible: common.isVisible,
-      isSelectable: common.isSelectable,
-      isLocked: common.isLocked,
-      isDeletable: common.isDeletable,
-      isTransformable: common.isTransformable,
-    );
+    return _lineNodeSpecFromSchema(common: common, fields: fields);
   }
 
   LineNodeSpec._internal({
@@ -378,21 +318,7 @@ class RectNodeSpec extends NodeSpec {
       strokeColor: strokeColor,
       strokeWidth: strokeWidth,
     ));
-    return RectNodeSpec._internal(
-      id: common.id,
-      size: fields.size,
-      fillColor: fields.fillColor,
-      strokeColor: fields.strokeColor,
-      strokeWidth: fields.strokeWidth,
-      transform: common.transform,
-      opacity: common.opacity,
-      hitPadding: common.hitPadding,
-      isVisible: common.isVisible,
-      isSelectable: common.isSelectable,
-      isLocked: common.isLocked,
-      isDeletable: common.isDeletable,
-      isTransformable: common.isTransformable,
-    );
+    return _rectNodeSpecFromSchema(common: common, fields: fields);
   }
 
   RectNodeSpec._internal({
@@ -452,22 +378,7 @@ class PathNodeSpec extends NodeSpec {
       strokeWidth: strokeWidth,
       fillRule: fillRule,
     ));
-    return PathNodeSpec._internal(
-      id: common.id,
-      svgPathData: fields.svgPathData,
-      fillColor: fields.fillColor,
-      strokeColor: fields.strokeColor,
-      strokeWidth: fields.strokeWidth,
-      fillRule: fields.fillRule,
-      transform: common.transform,
-      opacity: common.opacity,
-      hitPadding: common.hitPadding,
-      isVisible: common.isVisible,
-      isSelectable: common.isSelectable,
-      isLocked: common.isLocked,
-      isDeletable: common.isDeletable,
-      isTransformable: common.isTransformable,
-    );
+    return _pathNodeSpecFromSchema(common: common, fields: fields);
   }
 
   PathNodeSpec._internal({
@@ -492,4 +403,135 @@ class PathNodeSpec extends NodeSpec {
   final Color? strokeColor;
   final double strokeWidth;
   final PathFillRule fillRule;
+}
+
+ImageNodeSpec _imageNodeSpecFromSchema({
+  required NodeSpecCommonSchemaFields common,
+  required ImageNodeSchemaFields fields,
+}) {
+  return ImageNodeSpec._internal(
+    id: common.id,
+    imageId: fields.imageId,
+    size: fields.size,
+    naturalSize: fields.naturalSize,
+    transform: common.transform,
+    opacity: common.opacity,
+    hitPadding: common.hitPadding,
+    isVisible: common.isVisible,
+    isSelectable: common.isSelectable,
+    isLocked: common.isLocked,
+    isDeletable: common.isDeletable,
+    isTransformable: common.isTransformable,
+  );
+}
+
+TextNodeSpec _textNodeSpecFromSchema({
+  required NodeSpecCommonSchemaFields common,
+  required TextNodeSpecSchemaFields fields,
+}) {
+  return TextNodeSpec._internal(
+    id: common.id,
+    text: fields.text,
+    fontSize: fields.fontSize,
+    color: fields.color,
+    align: fields.align,
+    isBold: fields.isBold,
+    isItalic: fields.isItalic,
+    isUnderline: fields.isUnderline,
+    fontFamily: fields.fontFamily,
+    maxWidth: fields.maxWidth,
+    lineHeight: fields.lineHeight,
+    transform: common.transform,
+    opacity: common.opacity,
+    hitPadding: common.hitPadding,
+    isVisible: common.isVisible,
+    isSelectable: common.isSelectable,
+    isLocked: common.isLocked,
+    isDeletable: common.isDeletable,
+    isTransformable: common.isTransformable,
+  );
+}
+
+StrokeNodeSpec _strokeNodeSpecFromSchema({
+  required NodeSpecCommonSchemaFields common,
+  required StrokeNodeSpecSchemaFields fields,
+}) {
+  return StrokeNodeSpec._internal(
+    id: common.id,
+    points: fields.points,
+    thickness: fields.thickness,
+    color: fields.color,
+    transform: common.transform,
+    opacity: common.opacity,
+    hitPadding: common.hitPadding,
+    isVisible: common.isVisible,
+    isSelectable: common.isSelectable,
+    isLocked: common.isLocked,
+    isDeletable: common.isDeletable,
+    isTransformable: common.isTransformable,
+  );
+}
+
+LineNodeSpec _lineNodeSpecFromSchema({
+  required NodeSpecCommonSchemaFields common,
+  required LineNodeSchemaFields fields,
+}) {
+  return LineNodeSpec._internal(
+    id: common.id,
+    start: fields.start,
+    end: fields.end,
+    thickness: fields.thickness,
+    color: fields.color,
+    transform: common.transform,
+    opacity: common.opacity,
+    hitPadding: common.hitPadding,
+    isVisible: common.isVisible,
+    isSelectable: common.isSelectable,
+    isLocked: common.isLocked,
+    isDeletable: common.isDeletable,
+    isTransformable: common.isTransformable,
+  );
+}
+
+RectNodeSpec _rectNodeSpecFromSchema({
+  required NodeSpecCommonSchemaFields common,
+  required RectNodeSchemaFields fields,
+}) {
+  return RectNodeSpec._internal(
+    id: common.id,
+    size: fields.size,
+    fillColor: fields.fillColor,
+    strokeColor: fields.strokeColor,
+    strokeWidth: fields.strokeWidth,
+    transform: common.transform,
+    opacity: common.opacity,
+    hitPadding: common.hitPadding,
+    isVisible: common.isVisible,
+    isSelectable: common.isSelectable,
+    isLocked: common.isLocked,
+    isDeletable: common.isDeletable,
+    isTransformable: common.isTransformable,
+  );
+}
+
+PathNodeSpec _pathNodeSpecFromSchema({
+  required NodeSpecCommonSchemaFields common,
+  required PathNodeSchemaFields fields,
+}) {
+  return PathNodeSpec._internal(
+    id: common.id,
+    svgPathData: fields.svgPathData,
+    fillColor: fields.fillColor,
+    strokeColor: fields.strokeColor,
+    strokeWidth: fields.strokeWidth,
+    fillRule: fields.fillRule,
+    transform: common.transform,
+    opacity: common.opacity,
+    hitPadding: common.hitPadding,
+    isVisible: common.isVisible,
+    isSelectable: common.isSelectable,
+    isLocked: common.isLocked,
+    isDeletable: common.isDeletable,
+    isTransformable: common.isTransformable,
+  );
 }

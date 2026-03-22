@@ -9,43 +9,123 @@ import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 void main() {
   test('validated spec fast-path helpers build typed boundary objects', () {
     final image = imageNodeSpecFromValidated(
-      id: 'img-1',
-      imageId: 'asset:1',
-      size: const Size(10, 20),
-      naturalSize: const Size(30, 40),
+      common: (
+        id: 'img-1',
+        transform: Transform2D.identity,
+        opacity: 1,
+        hitPadding: 0,
+        isVisible: true,
+        isSelectable: true,
+        isLocked: false,
+        isDeletable: true,
+        isTransformable: true,
+      ),
+      fields: (
+        imageId: 'asset:1',
+        size: const Size(10, 20),
+        naturalSize: const Size(30, 40),
+      ),
     );
     final text = textNodeSpecFromValidated(
-      id: 'text-1',
-      text: 'hello',
-      fontSize: 18,
-      color: const Color(0xFF000000),
-      fontFamily: 'Mono',
-      maxWidth: 120,
-      lineHeight: 1.4,
+      common: (
+        id: 'text-1',
+        transform: Transform2D.identity,
+        opacity: 1,
+        hitPadding: 0,
+        isVisible: true,
+        isSelectable: true,
+        isLocked: false,
+        isDeletable: true,
+        isTransformable: true,
+      ),
+      fields: (
+        text: 'hello',
+        fontSize: 18,
+        color: const Color(0xFF000000),
+        align: TextAlign.left,
+        isBold: false,
+        isItalic: false,
+        isUnderline: false,
+        fontFamily: 'Mono',
+        maxWidth: 120,
+        lineHeight: 1.4,
+      ),
     );
     final stroke = strokeNodeSpecFromValidated(
-      id: 'stroke-1',
-      points: const <Offset>[Offset(0, 0), Offset(1, 1)],
-      thickness: 2,
-      color: const Color(0xFF111111),
+      common: (
+        id: 'stroke-1',
+        transform: Transform2D.identity,
+        opacity: 1,
+        hitPadding: 0,
+        isVisible: true,
+        isSelectable: true,
+        isLocked: false,
+        isDeletable: true,
+        isTransformable: true,
+      ),
+      fields: (
+        points: const <Offset>[Offset(0, 0), Offset(1, 1)],
+        thickness: 2,
+        color: const Color(0xFF111111),
+      ),
     );
     final line = lineNodeSpecFromValidated(
-      id: 'line-1',
-      start: const Offset(0, 0),
-      end: const Offset(5, 5),
-      thickness: 3,
-      color: const Color(0xFF222222),
+      common: (
+        id: 'line-1',
+        transform: Transform2D.identity,
+        opacity: 1,
+        hitPadding: 0,
+        isVisible: true,
+        isSelectable: true,
+        isLocked: false,
+        isDeletable: true,
+        isTransformable: true,
+      ),
+      fields: (
+        start: const Offset(0, 0),
+        end: const Offset(5, 5),
+        thickness: 3,
+        color: const Color(0xFF222222),
+      ),
     );
     final rect = rectNodeSpecFromValidated(
-      id: 'rect-1',
-      size: const Size(8, 9),
-      strokeWidth: 1.5,
+      common: (
+        id: 'rect-1',
+        transform: Transform2D.identity,
+        opacity: 1,
+        hitPadding: 0,
+        isVisible: true,
+        isSelectable: true,
+        isLocked: false,
+        isDeletable: true,
+        isTransformable: true,
+      ),
+      fields: (
+        size: const Size(8, 9),
+        fillColor: null,
+        strokeColor: null,
+        strokeWidth: 1.5,
+      ),
     );
     final path = pathNodeSpecFromValidated(
-      id: 'path-1',
-      svgPathData: 'M0 0 L10 10',
-      strokeWidth: 2,
-      fillRule: PathFillRule.evenOdd,
+      common: (
+        id: 'path-1',
+        transform: Transform2D.identity,
+        opacity: 1,
+        hitPadding: 0,
+        isVisible: true,
+        isSelectable: true,
+        isLocked: false,
+        isDeletable: true,
+        isTransformable: true,
+      ),
+      fields: (
+        svgPathData: 'M0 0 L10 10',
+        fillColor: null,
+        strokeColor: null,
+        strokeWidth: 2,
+        fillRule: PathFillRule.evenOdd,
+      ),
     );
 
     expect(image.imageId, 'asset:1');
@@ -58,41 +138,79 @@ void main() {
 
   test('validated patch fast-path helpers build typed boundary objects', () {
     final common = commonNodePatchFromValidated(
-      transform: PatchField<Transform2D>.value(Transform2D.identity),
-      opacity: PatchField<double>.value(0.5),
-      hitPadding: PatchField<double>.value(2),
-      isVisible: PatchField<bool>.value(false),
+      fields: (
+        transform: PatchField<Transform2D>.value(Transform2D.identity),
+        opacity: PatchField<double>.value(0.5),
+        hitPadding: PatchField<double>.value(2),
+        isVisible: PatchField<bool>.value(false),
+        isSelectable: const PatchField<bool>.absent(),
+        isLocked: const PatchField<bool>.absent(),
+        isDeletable: const PatchField<bool>.absent(),
+        isTransformable: const PatchField<bool>.absent(),
+      ),
     );
     final image = imageNodePatchFromValidated(
       id: 'img-1',
       common: common,
-      imageId: PatchField<String>.value('asset:2'),
-      size: PatchField<Size>.value(const Size(4, 5)),
-      naturalSize: PatchField<Size?>.value(null),
+      fields: (
+        imageId: PatchField<String>.value('asset:2'),
+        size: PatchField<Size>.value(const Size(4, 5)),
+        naturalSize: PatchField<Size?>.value(null),
+      ),
     );
     final text = textNodePatchFromValidated(
       id: 'text-1',
-      text: PatchField<String>.value('updated'),
-      fontFamily: PatchField<String?>.value('Mono'),
+      fields: (
+        text: PatchField<String>.value('updated'),
+        fontSize: const PatchField<double>.absent(),
+        color: const PatchField<Color>.absent(),
+        align: const PatchField<TextAlign>.absent(),
+        isBold: const PatchField<bool>.absent(),
+        isItalic: const PatchField<bool>.absent(),
+        isUnderline: const PatchField<bool>.absent(),
+        fontFamily: PatchField<String?>.value('Mono'),
+        maxWidth: const PatchField<double?>.absent(),
+        lineHeight: const PatchField<double?>.absent(),
+      ),
     );
     final stroke = strokeNodePatchFromValidated(
       id: 'stroke-1',
-      points: PatchField<List<Offset>>.value(const <Offset>[
-        Offset(1, 2),
-        Offset(3, 4),
-      ]),
+      fields: (
+        points: PatchField<List<Offset>>.value(const <Offset>[
+          Offset(1, 2),
+          Offset(3, 4),
+        ]),
+        thickness: const PatchField<double>.absent(),
+        color: const PatchField<Color>.absent(),
+      ),
     );
     final line = lineNodePatchFromValidated(
       id: 'line-1',
-      start: PatchField<Offset>.value(const Offset(2, 0)),
+      fields: (
+        start: PatchField<Offset>.value(const Offset(2, 0)),
+        end: const PatchField<Offset>.absent(),
+        thickness: const PatchField<double>.absent(),
+        color: const PatchField<Color>.absent(),
+      ),
     );
     final rect = rectNodePatchFromValidated(
       id: 'rect-1',
-      strokeWidth: PatchField<double>.value(2),
+      fields: (
+        size: const PatchField<Size>.absent(),
+        fillColor: const PatchField<Color?>.absent(),
+        strokeColor: const PatchField<Color?>.absent(),
+        strokeWidth: PatchField<double>.value(2),
+      ),
     );
     final path = pathNodePatchFromValidated(
       id: 'path-1',
-      fillRule: PatchField<PathFillRule>.value(PathFillRule.evenOdd),
+      fields: (
+        svgPathData: const PatchField<String>.absent(),
+        fillColor: const PatchField<Color?>.absent(),
+        strokeColor: const PatchField<Color?>.absent(),
+        strokeWidth: const PatchField<double>.absent(),
+        fillRule: PatchField<PathFillRule>.value(PathFillRule.evenOdd),
+      ),
     );
 
     expect(image.common.opacity.value, 0.5);
@@ -120,10 +238,22 @@ void main() {
       final snapshotPoints = <Offset>[const Offset(5, 6), const Offset(7, 8)];
 
       final spec = strokeNodeSpecFromValidated(
-        id: 'stroke-spec-owned',
-        points: specPoints,
-        thickness: 2,
-        color: const Color(0xFF111111),
+        common: (
+          id: 'stroke-spec-owned',
+          transform: Transform2D.identity,
+          opacity: 1,
+          hitPadding: 0,
+          isVisible: true,
+          isSelectable: true,
+          isLocked: false,
+          isDeletable: true,
+          isTransformable: true,
+        ),
+        fields: (
+          points: specPoints,
+          thickness: 2,
+          color: const Color(0xFF111111),
+        ),
       );
       final snapshot = strokeNodeSnapshotFromValidated(
         id: 'stroke-snapshot-owned',
@@ -152,7 +282,11 @@ void main() {
 
       final patch = strokeNodePatchFromValidated(
         id: 'stroke-owned',
-        points: PatchField<List<Offset>>.value(points),
+        fields: (
+          points: PatchField<List<Offset>>.value(points),
+          thickness: const PatchField<double>.absent(),
+          color: const PatchField<Color>.absent(),
+        ),
       );
 
       points[1] = const Offset(30, 40);

@@ -7,6 +7,8 @@ language: russian
 Этот шаг сжимает contract-side family assembly для `snapshot/spec/patch` и их
 validated fast path-ов вокруг уже существующего schema owner-а без изменения
 public contract surface.
+Snapshot-side validated fast-path consumer migration outside contract-owned
+files remains downstream work of `18.2` and `18.3`.
 
 ## 2. Change Boundary
 
@@ -97,9 +99,12 @@ public contract surface.
 2. Public constructor behavior and fast-path output stay equivalent to the
    current public contract.
 3. The current confirmed contract-side hotspots improve against the starting
-   baseline: `snapshot_fast_path.part.dart = 8 HIGH+`,
+   baseline for the files fully owned by this step:
    `node_patch_fast_path.part.dart = 7 HIGH+`,
    `node_spec_fast_path.part.dart = 7 HIGH+`.
+4. `snapshot_fast_path.part.dart` remains behaviorally aligned with the new
+   compact contract assembly, while its downstream consumer-side hotspot
+   closure is deferred to `18.2` and `18.3`.
 
 ## 6. Implementation Specification
 
@@ -108,7 +113,10 @@ public contract surface.
 - Current confirmed parameter hotspots inside the seam are:
   - `textNodePatchFromValidated(...) = 12`
   - `textNodeSpecFromValidated(...) = 19`
-  - `textNodeSnapshotFromValidated(...) = 21`
+- Current confirmed `snapshot` fast-path hotspot
+  `textNodeSnapshotFromValidated(...) = 21` cannot be fully closed inside this
+  step without migrating model and decode consumers that are out of boundary
+  for `18.1`; that closure is owned downstream by `18.2` and `18.3`.
 - Current confirmed clone families remain inside the contract seam between
   public constructor bodies and validated fast paths.
 
@@ -187,9 +195,11 @@ assembly without keeping duplicate bodies for the same node family.
 
 #### Change
 
-Перевести `node_patch_fast_path.part.dart`, `node_spec_fast_path.part.dart`,
-and `snapshot_fast_path.part.dart` на тот же compact assembly and remove the
-replaced duplicate bodies.
+Перевести `node_patch_fast_path.part.dart` and
+`node_spec_fast_path.part.dart` на тот же compact assembly, close the
+contract-owned fast-path hotspots in those files, and align
+`snapshot_fast_path.part.dart` with the same assembly without reopening
+downstream consumer migration that belongs to `18.2` and `18.3`.
 
 #### Verification
 
@@ -203,7 +213,9 @@ replaced duplicate bodies.
 
 - Green run of the listed verifications.
 - Clone inventory for `lib/src/contract` no longer shows the replaced public /
-  fast-path family in the same form.
+  fast-path family in the same form for the migrated contract-owned families.
+- `node_patch_fast_path.part.dart` and `node_spec_fast_path.part.dart`
+  improve against the starting hotspot baseline of this step.
 
 ## 9. Final Verification
 

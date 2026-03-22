@@ -78,6 +78,8 @@ transport ownership, `SceneDataException` attribution, or import semantics.
 2. Family-specific node decode no longer keeps the current handwritten matrix
    next to the schema-owned path.
 3. Decode/import behavior remains equivalent on the public boundary.
+4. Decode-side consumers of `*NodeSnapshotFromValidated(...)` close the
+   remaining snapshot fast-path hotspot migration deferred from `18.1`.
 
 ## 6. Implementation Specification
 
@@ -91,6 +93,9 @@ transport ownership, `SceneDataException` attribution, or import semantics.
   transport-specific helpers.
 - Confirmed node-family decode bodies include
   `_decode*Node(...)`, `_decode*Fields(...)`, and related common-field decode.
+- `scene_builder_decode_json.part.dart` is the decode-side owner of the
+  remaining compact-call migration for `*NodeSnapshotFromValidated(...)`
+  consumers that cannot be closed inside `18.1`.
 
 ### 6.2 Target Verification Units
 
@@ -169,7 +174,9 @@ decode-side path above `NodeBoundarySchema`.
 #### Change
 
 Перевести `_decode*Fields(...)`, `_decode*Node(...)`, and related common-field
-decode bodies on one compact decode-side path and remove the replaced matrix.
+decode bodies on one compact decode-side path, migrate the owned
+`*NodeSnapshotFromValidated(...)` decode consumers to the compact contract
+call shape, and remove the replaced matrix.
 
 #### Verification
 
