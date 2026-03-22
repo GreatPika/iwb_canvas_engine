@@ -103,9 +103,10 @@ node-family vertical slices без изменения runtime и public boundary
    contract.
 3. The current confirmed model mapping cluster family improves against the
    starting baseline centered on `scene_node_boundary_mapping*.part.dart`.
-4. Snapshot fast-path consumer migration in
-   `scene_node_boundary_mapping_to_snapshot.part.dart` closes the portion of
-   `18.1` hotspot work that requires model-side call-site adoption.
+4. `scene_node_boundary_mapping_to_snapshot.part.dart` no longer keeps the
+   legacy direction-first family bodies, while model-side snapshot conversion
+   continues to consume the existing contract fast-path surface without opening
+   a new contract-owned API in this step.
 
 ## 6. Implementation Specification
 
@@ -118,9 +119,10 @@ node-family vertical slices без изменения runtime и public boundary
 - Current confirmed pair inventory shows exact-family repetition across
   `_image*`, `_text*`, `_stroke*`, `_line*`, `_rect*`, and `_path*`
   conversion bodies.
-- `scene_node_boundary_mapping_to_snapshot.part.dart` is one of the owned
-  downstream consumers of `*NodeSnapshotFromValidated(...)` whose call-shape
-  migration is intentionally deferred from `18.1`.
+- `scene_node_boundary_mapping_to_snapshot.part.dart` is an owned downstream
+  consumer of `*NodeSnapshotFromValidated(...)`; this step may reorganize those
+  consumers around model-side node-family slices, but it does not reopen the
+  contract-owned fast-path API surface closed by `18.1`.
 
 ### 6.2 Target Verification Units
 
@@ -169,7 +171,7 @@ node-family vertical slices без изменения runtime и public boundary
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Runtime conversion entrypoints consume node-family vertical slices
+### Slice 1. [x] Runtime conversion entrypoints consume node-family vertical slices
 
 #### Slice Contract
 
@@ -194,7 +196,7 @@ model-side conversion glue on node-family vertical slices built above
 - Conversion-entrypoint span in `document.dart` no longer keeps the replaced
   direction-first family bodies.
 
-### Slice 2. [ ] Scene and SceneSnapshot conversion share the same node-family slices
+### Slice 2. [x] Scene and SceneSnapshot conversion share the same node-family slices
 
 #### Slice Contract
 
@@ -207,10 +209,11 @@ the same node-family slices without keeping the legacy direction-first matrix.
 `scene_builder_scene_from_snapshot.part.dart`,
 `scene_builder_snapshot_from_scene.part.dart`,
 `scene_snapshot_from_scene.dart`, and the remaining mapping parts on the same
-node-family slices, migrate the owned
+node-family slices, reorganize the owned
 `*NodeSnapshotFromValidated(...)` consumers in
-`scene_node_boundary_mapping_to_snapshot.part.dart` to the compact
-schema-first call shape, and remove the replaced bodies.
+`scene_node_boundary_mapping_to_snapshot.part.dart` around the same
+model-side family slices, and remove the replaced direction-first bodies
+without expanding the contract boundary.
 
 #### Verification
 

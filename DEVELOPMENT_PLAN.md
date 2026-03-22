@@ -92,7 +92,7 @@ language: russian
 - [x] [Шаг 17.5. Переснять baseline boundary migration и обновить roadmap](development_plan/step_17_5_boundary_migration_rebaseline_and_roadmap.md)
 - [ ] [Шаг 18. Сжать `schema-first` boundary matrix через подшаги 18.1-18.5](development_plan/step_18_schema_first_boundary_matrix_compression.md)
 - [x] [Шаг 18.1. Свести contract fast path и constructor families к компактной `schema-first` assembly](development_plan/step_18_1_contract_fast_path_and_constructor_family_compression.md)
-- [ ] [Шаг 18.2. Перевести model boundary mapping на node-family vertical slices](development_plan/step_18_2_model_boundary_mapping_vertical_slices.md)
+- [x] [Шаг 18.2. Перевести model boundary mapping на node-family vertical slices](development_plan/step_18_2_model_boundary_mapping_vertical_slices.md)
 - [ ] [Шаг 18.3. Сжать SceneBuilder decode/require matrix без transport drift](development_plan/step_18_3_scene_builder_decode_require_matrix_compression.md)
 - [ ] [Шаг 18.4. Сжать scene value validation matrix без второго owner-а primitive rules](development_plan/step_18_4_scene_value_validation_matrix_compression.md)
 - [ ] [Шаг 18.5. Переснять baseline boundary matrix compression и обновить roadmap](development_plan/step_18_5_boundary_matrix_rebaseline_and_roadmap.md)
