@@ -539,29 +539,11 @@ class _TxnDerivedState {
   }
 
   void rememberNodeId(NodeId nodeId) {
-    final materialized = _materializedAllNodeIds;
-    if (materialized != null) {
-      materialized.add(nodeId);
-      return;
-    }
-    if (_baseAllNodeIds.contains(nodeId)) {
-      _removedNodeIds.remove(nodeId);
-      return;
-    }
-    _addedNodeIds.add(nodeId);
+    _updateNodeIdMembership(nodeId, present: true);
   }
 
   void forgetNodeId(NodeId nodeId) {
-    final materialized = _materializedAllNodeIds;
-    if (materialized != null) {
-      materialized.remove(nodeId);
-      return;
-    }
-    if (_baseAllNodeIds.contains(nodeId)) {
-      _removedNodeIds.add(nodeId);
-      return;
-    }
-    _addedNodeIds.remove(nodeId);
+    _updateNodeIdMembership(nodeId, present: false);
   }
 
   bool hasLayerId({required TxnContext ctx, required LayerId layerId}) {
@@ -740,6 +722,34 @@ class _TxnDerivedState {
       return null;
     }
     return scene.layers[index].id == layerId ? index : null;
+  }
+
+  void _updateNodeIdMembership(NodeId nodeId, {required bool present}) {
+    final materialized = _materializedAllNodeIds;
+    if (materialized != null) {
+      if (present) {
+        materialized.add(nodeId);
+      } else {
+        materialized.remove(nodeId);
+      }
+      return;
+    }
+
+    final isBaseNode = _baseAllNodeIds.contains(nodeId);
+    if (isBaseNode) {
+      if (present) {
+        _removedNodeIds.remove(nodeId);
+      } else {
+        _removedNodeIds.add(nodeId);
+      }
+      return;
+    }
+
+    if (present) {
+      _addedNodeIds.add(nodeId);
+    } else {
+      _addedNodeIds.remove(nodeId);
+    }
   }
 }
 
