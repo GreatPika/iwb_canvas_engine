@@ -134,7 +134,7 @@ primitive validation rules outside current validated and schema-owned sources.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] One compact owner exists for repeated validation combinators
+### Slice 1. [x] One compact owner exists for repeated validation combinators
 
 #### Slice Contract
 
@@ -156,7 +156,7 @@ validation path inside the owned seam.
 - Green run of the listed verifications.
 - Primitive-facing combinators no longer keep the replaced duplicate bodies.
 
-### Slice 2. [ ] Node and palette/grid validators consume the same compact path
+### Slice 2. [x] Node and palette/grid validators consume the same compact path
 
 #### Slice Contract
 

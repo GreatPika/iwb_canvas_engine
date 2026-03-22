@@ -33,42 +33,69 @@ typedef _NodeValidationAccessors<TNode> = ({
   validateNode,
 });
 
+typedef _SceneValueValidationAccessors<TScene, TGrid, TPalette, TLayer, TNode> =
+    ({
+      Offset Function(TScene scene) cameraOffsetOf,
+      TGrid Function(TScene scene) gridOf,
+      TPalette Function(TScene scene) paletteOf,
+      List<TNode>? Function(TScene scene) backgroundNodesOf,
+      List<TLayer> Function(TScene scene) contentLayersOf,
+      String Function(TLayer layer) layerIdOf,
+      List<TNode> Function(TLayer layer) layerNodesOf,
+      void Function(
+        TGrid grid, {
+        required String field,
+        required SceneValidationErrorReporter onError,
+        required bool requirePositiveCellSize,
+      })
+      validateGrid,
+      void Function(
+        TPalette palette, {
+        required String field,
+        required SceneValidationErrorReporter onError,
+      })
+      validatePalette,
+      void Function(
+        TNode node, {
+        required String field,
+        required SceneValidationErrorReporter onError,
+      })
+      validateSingleNode,
+      void Function(
+        List<TNode> nodes, {
+        required String field,
+        required SceneValidationErrorReporter onError,
+        required void Function(
+          TNode node, {
+          required String field,
+          required SceneValidationErrorReporter onError,
+        })
+        validateNode,
+      })
+      validateLayerNodes,
+    });
+
+final _snapshotSceneValueValidationAccessors =
+    _buildSnapshotSceneValueValidationAccessors();
+final _runtimeSceneValueValidationAccessors =
+    _buildRuntimeSceneValueValidationAccessors();
+
 void sceneValidateSnapshotValues(
   SceneSnapshot snapshot, {
   required SceneValidationErrorReporter onError,
   required bool requirePositiveGridCellSize,
 }) {
-  sceneValidateFiniteOffset(
-    snapshot.camera.offset,
-    field: 'camera.offset',
+  _sceneValidateSceneValues<
+    SceneSnapshot,
+    GridSnapshot,
+    ScenePaletteSnapshot,
+    ContentLayerSnapshot,
+    NodeSnapshot
+  >(
+    snapshot,
     onError: onError,
-  );
-  sceneValidateGridSnapshot(
-    snapshot.background.grid,
-    field: 'background.grid',
-    onError: onError,
-    requirePositiveCellSize: requirePositiveGridCellSize,
-  );
-  sceneValidatePaletteSnapshot(
-    snapshot.palette,
-    field: 'palette',
-    onError: onError,
-  );
-  _sceneValidateSnapshotLayerNodes(
-    snapshot.backgroundLayer.nodes,
-    field: 'backgroundLayer',
-    onError: onError,
-    validateNode: sceneValidateNodeSnapshot,
-  );
-  _sceneValidateContentLayers<ContentLayerSnapshot, NodeSnapshot>(
-    snapshot.layers,
-    onError: onError,
-    accessors: (
-      layerIdOf: (layer) => layer.id,
-      layerNodesOf: (layer) => layer.nodes,
-      validateSingleNode: sceneValidateNodeSnapshot,
-      validateLayerNodes: _sceneValidateSnapshotLayerNodes,
-    ),
+    requirePositiveGridCellSize: requirePositiveGridCellSize,
+    accessors: _snapshotSceneValueValidationAccessors,
   );
 }
 
@@ -77,37 +104,115 @@ void sceneValidateSceneValues(
   required SceneValidationErrorReporter onError,
   required bool requirePositiveGridCellSize,
 }) {
+  _sceneValidateSceneValues<
+    Scene,
+    GridSettings,
+    ScenePalette,
+    ContentLayer,
+    SceneNode
+  >(
+    scene,
+    onError: onError,
+    requirePositiveGridCellSize: requirePositiveGridCellSize,
+    accessors: _runtimeSceneValueValidationAccessors,
+  );
+}
+
+_SceneValueValidationAccessors<
+  SceneSnapshot,
+  GridSnapshot,
+  ScenePaletteSnapshot,
+  ContentLayerSnapshot,
+  NodeSnapshot
+>
+_buildSnapshotSceneValueValidationAccessors() {
+  return (
+    cameraOffsetOf: (scene) => scene.camera.offset,
+    gridOf: (scene) => scene.background.grid,
+    paletteOf: (scene) => scene.palette,
+    backgroundNodesOf: (scene) => scene.backgroundLayer.nodes,
+    contentLayersOf: (scene) => scene.layers,
+    layerIdOf: (layer) => layer.id,
+    layerNodesOf: (layer) => layer.nodes,
+    validateGrid: sceneValidateGridSnapshot,
+    validatePalette: sceneValidatePaletteSnapshot,
+    validateSingleNode: sceneValidateNodeSnapshot,
+    validateLayerNodes: _sceneValidateSnapshotLayerNodes,
+  );
+}
+
+_SceneValueValidationAccessors<
+  Scene,
+  GridSettings,
+  ScenePalette,
+  ContentLayer,
+  SceneNode
+>
+_buildRuntimeSceneValueValidationAccessors() {
+  return (
+    cameraOffsetOf: (scene) => scene.camera.offset,
+    gridOf: (scene) => scene.background.grid,
+    paletteOf: (scene) => scene.palette,
+    backgroundNodesOf: (scene) => scene.backgroundLayer?.nodes,
+    contentLayersOf: (scene) => scene.layers,
+    layerIdOf: (layer) => layer.id,
+    layerNodesOf: (layer) => layer.nodes,
+    validateGrid: sceneValidateGrid,
+    validatePalette: sceneValidatePalette,
+    validateSingleNode: sceneValidateNode,
+    validateLayerNodes: _sceneValidateRuntimeLayerNodes,
+  );
+}
+
+void _sceneValidateSceneValues<TScene, TGrid, TPalette, TLayer, TNode>(
+  TScene scene, {
+  required SceneValidationErrorReporter onError,
+  required bool requirePositiveGridCellSize,
+  required _SceneValueValidationAccessors<
+    TScene,
+    TGrid,
+    TPalette,
+    TLayer,
+    TNode
+  >
+  accessors,
+}) {
   sceneValidateFiniteOffset(
-    scene.camera.offset,
+    accessors.cameraOffsetOf(scene),
     field: 'camera.offset',
     onError: onError,
   );
-  sceneValidateGrid(
-    scene.background.grid,
+  accessors.validateGrid(
+    accessors.gridOf(scene),
     field: 'background.grid',
     onError: onError,
     requirePositiveCellSize: requirePositiveGridCellSize,
   );
-  sceneValidatePalette(scene.palette, field: 'palette', onError: onError);
+  accessors.validatePalette(
+    accessors.paletteOf(scene),
+    field: 'palette',
+    onError: onError,
+  );
 
-  final backgroundLayer = scene.backgroundLayer;
-  if (backgroundLayer != null) {
-    _sceneValidateRuntimeLayerNodes(
-      backgroundLayer.nodes,
+  final backgroundNodes = accessors.backgroundNodesOf(scene);
+  if (backgroundNodes != null) {
+    accessors.validateLayerNodes(
+      backgroundNodes,
       field: 'backgroundLayer',
       onError: onError,
-      validateNode: sceneValidateNode,
+      validateNode: (node, {required field, required onError}) =>
+          accessors.validateSingleNode(node, field: field, onError: onError),
     );
   }
 
-  _sceneValidateContentLayers<ContentLayer, SceneNode>(
-    scene.layers,
+  _sceneValidateContentLayers<TLayer, TNode>(
+    accessors.contentLayersOf(scene),
     onError: onError,
     accessors: (
-      layerIdOf: (layer) => layer.id,
-      layerNodesOf: (layer) => layer.nodes,
-      validateSingleNode: sceneValidateNode,
-      validateLayerNodes: _sceneValidateRuntimeLayerNodes,
+      layerIdOf: accessors.layerIdOf,
+      layerNodesOf: accessors.layerNodesOf,
+      validateSingleNode: accessors.validateSingleNode,
+      validateLayerNodes: accessors.validateLayerNodes,
     ),
   );
 }

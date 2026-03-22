@@ -5,6 +5,13 @@ typedef _ImageValidationFields = ({
   Size size,
   Size? naturalSize,
 });
+typedef _NodeBaseValidationFields = ({
+  String id,
+  int instanceRevision,
+  Transform2D transform,
+  double hitPadding,
+  double opacity,
+});
 typedef _TextValidationFields = ({
   String textValue,
   Size size,
@@ -35,41 +42,65 @@ void _sceneValidateSnapshotNodeBaseFields(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
+  _sceneValidateNodeBaseFields(
+    fields: _snapshotNodeBaseValidationFields(node),
+    field: field,
+    onError: onError,
+    allowZeroInstanceRevision: true,
+  );
+}
+
+_NodeBaseValidationFields _snapshotNodeBaseValidationFields(NodeSnapshot node) {
+  return (
+    id: node.id,
+    instanceRevision: node.instanceRevision,
+    transform: node.transform,
+    hitPadding: node.hitPadding,
+    opacity: node.opacity,
+  );
+}
+
+void _sceneValidateNodeBaseFields({
+  required _NodeBaseValidationFields fields,
+  required String field,
+  required SceneValidationErrorReporter onError,
+  required bool allowZeroInstanceRevision,
+}) {
   _sceneValidateArgumentBoundary(
     field: '$field.id',
-    value: node.id,
+    value: fields.id,
     onError: onError,
-    validate: () => NodeIdValue.of(node.id, name: '$field.id'),
+    validate: () => NodeIdValue.of(fields.id, name: '$field.id'),
   );
   _sceneValidateArgumentBoundary(
     field: '$field.instanceRevision',
-    value: node.instanceRevision,
+    value: fields.instanceRevision,
     onError: onError,
     validate: () => InstanceRevisionValue.of(
-      node.instanceRevision,
+      fields.instanceRevision,
       name: '$field.instanceRevision',
-      allowZero: true,
+      allowZero: allowZeroInstanceRevision,
     ),
   );
   sceneValidateFiniteTransform2D(
-    node.transform,
+    fields.transform,
     field: '$field.transform',
     onError: onError,
   );
   _sceneValidateArgumentBoundary(
     field: '$field.hitPadding',
-    value: node.hitPadding,
+    value: fields.hitPadding,
     onError: onError,
     validate: () => NonNegativeFiniteDoubleValue.of(
-      node.hitPadding,
+      fields.hitPadding,
       name: '$field.hitPadding',
     ),
   );
   _sceneValidateArgumentBoundary(
     field: '$field.opacity',
-    value: node.opacity,
+    value: fields.opacity,
     onError: onError,
-    validate: () => OpacityValue.of(node.opacity, name: '$field.opacity'),
+    validate: () => OpacityValue.of(fields.opacity, name: '$field.opacity'),
   );
 }
 
@@ -130,41 +161,21 @@ void _sceneValidateRuntimeNodeBaseFields(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  _sceneValidateArgumentBoundary(
-    field: '$field.id',
-    value: node.id,
+  _sceneValidateNodeBaseFields(
+    fields: _runtimeNodeBaseValidationFields(node),
+    field: field,
     onError: onError,
-    validate: () => NodeIdValue.of(node.id, name: '$field.id'),
+    allowZeroInstanceRevision: false,
   );
-  _sceneValidateArgumentBoundary(
-    field: '$field.instanceRevision',
-    value: node.instanceRevision,
-    onError: onError,
-    validate: () => InstanceRevisionValue.of(
-      node.instanceRevision,
-      name: '$field.instanceRevision',
-      allowZero: false,
-    ),
-  );
-  sceneValidateFiniteTransform2D(
-    node.transform,
-    field: '$field.transform',
-    onError: onError,
-  );
-  _sceneValidateArgumentBoundary(
-    field: '$field.hitPadding',
-    value: node.hitPadding,
-    onError: onError,
-    validate: () => NonNegativeFiniteDoubleValue.of(
-      node.hitPadding,
-      name: '$field.hitPadding',
-    ),
-  );
-  _sceneValidateArgumentBoundary(
-    field: '$field.opacity',
-    value: node.opacity,
-    onError: onError,
-    validate: () => OpacityValue.of(node.opacity, name: '$field.opacity'),
+}
+
+_NodeBaseValidationFields _runtimeNodeBaseValidationFields(SceneNode node) {
+  return (
+    id: node.id,
+    instanceRevision: node.instanceRevision,
+    transform: node.transform,
+    hitPadding: node.hitPadding,
+    opacity: node.opacity,
   );
 }
 
@@ -500,12 +511,11 @@ void _sceneValidateOptionalFontFamily(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  if (value == null) return;
-  _sceneValidateArgumentBoundary(
+  _sceneValidateOptionalValue<String>(
+    value,
     field: field,
-    value: value,
     onError: onError,
-    validate: () => FontFamilyValue.of(value, name: field),
+    validateValue: _sceneValidateFontFamilyField,
   );
 }
 
@@ -514,12 +524,11 @@ void _sceneValidateOptionalPositiveDouble(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  if (value == null) return;
-  _sceneValidateArgumentBoundary(
+  _sceneValidateOptionalValue<double>(
+    value,
     field: field,
-    value: value,
     onError: onError,
-    validate: () => PositiveFiniteDoubleValue.of(value, name: field),
+    validateValue: _sceneValidatePositiveDoubleField,
   );
 }
 
@@ -528,9 +537,14 @@ void _sceneValidatePoints(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  for (var i = 0; i < points.length; i++) {
-    _sceneValidateOffsetField(points[i], field: '$field[$i]', onError: onError);
-  }
+  _sceneValidateFields<Offset>(
+    List<_SceneValidationField<Offset>>.generate(
+      points.length,
+      (index) => (value: points[index], field: '$field[$index]'),
+    ),
+    onError: onError,
+    validateValue: _sceneValidateOffsetField,
+  );
 }
 
 void _sceneValidateOffsetField(
@@ -544,6 +558,42 @@ void _sceneValidateOffsetField(
     onError: onError,
     validate: () => FiniteOffsetValue.of(value, name: field),
   );
+}
+
+void _sceneValidateFontFamilyField(
+  String value, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+}) {
+  _sceneValidateArgumentBoundary(
+    field: field,
+    value: value,
+    onError: onError,
+    validate: () => FontFamilyValue.of(value, name: field),
+  );
+}
+
+void _sceneValidatePositiveDoubleField(
+  double value, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+}) {
+  _sceneValidateArgumentBoundary(
+    field: field,
+    value: value,
+    onError: onError,
+    validate: () => PositiveFiniteDoubleValue.of(value, name: field),
+  );
+}
+
+void _sceneValidateOptionalValue<T>(
+  T? value, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+  required _SceneValueValidator<T> validateValue,
+}) {
+  if (value == null) return;
+  validateValue(value, field: field, onError: onError);
 }
 
 void _sceneValidateArgumentBoundary({

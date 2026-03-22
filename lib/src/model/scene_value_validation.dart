@@ -22,9 +22,18 @@ part 'scene_value_validation_palette_grid.part.dart';
 part 'scene_value_validation_node.part.dart';
 part 'scene_value_validation_top_level.part.dart';
 
+typedef _SceneValidationField<T> = ({T value, String field});
+
 typedef SceneValidationErrorReporter =
     Never Function({
       required Object? value,
       required String field,
       required String message,
+    });
+
+typedef _SceneValueValidator<T> =
+    void Function(
+      T value, {
+      required String field,
+      required SceneValidationErrorReporter onError,
     });

@@ -1,33 +1,25 @@
 part of 'scene_value_validation.dart';
 
+typedef _PaletteValidationFields = ({
+  List<Color> penColors,
+  List<Color> backgroundColors,
+  List<double> gridSizes,
+});
+
 void sceneValidatePaletteSnapshot(
   ScenePaletteSnapshot palette, {
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  sceneValidateNonEmptyList(
-    palette.penColors,
-    field: '$field.penColors',
+  _sceneValidatePaletteFields(
+    fields: (
+      penColors: palette.penColors,
+      backgroundColors: palette.backgroundColors,
+      gridSizes: palette.gridSizes,
+    ),
+    field: field,
     onError: onError,
   );
-  sceneValidateNonEmptyList(
-    palette.backgroundColors,
-    field: '$field.backgroundColors',
-    onError: onError,
-  );
-  sceneValidateNonEmptyList(
-    palette.gridSizes,
-    field: '$field.gridSizes',
-    onError: onError,
-  );
-
-  for (var i = 0; i < palette.gridSizes.length; i++) {
-    sceneValidatePositiveDouble(
-      palette.gridSizes[i],
-      field: '$field.gridSizes[$i]',
-      onError: onError,
-    );
-  }
 }
 
 void sceneValidatePalette(
@@ -35,29 +27,46 @@ void sceneValidatePalette(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
+  _sceneValidatePaletteFields(
+    fields: (
+      penColors: palette.penColors,
+      backgroundColors: palette.backgroundColors,
+      gridSizes: palette.gridSizes,
+    ),
+    field: field,
+    onError: onError,
+  );
+}
+
+void _sceneValidatePaletteFields({
+  required _PaletteValidationFields fields,
+  required String field,
+  required SceneValidationErrorReporter onError,
+}) {
   sceneValidateNonEmptyList(
-    palette.penColors,
+    fields.penColors,
     field: '$field.penColors',
     onError: onError,
   );
   sceneValidateNonEmptyList(
-    palette.backgroundColors,
+    fields.backgroundColors,
     field: '$field.backgroundColors',
     onError: onError,
   );
   sceneValidateNonEmptyList(
-    palette.gridSizes,
+    fields.gridSizes,
     field: '$field.gridSizes',
     onError: onError,
   );
-
-  for (var i = 0; i < palette.gridSizes.length; i++) {
-    sceneValidatePositiveDouble(
-      palette.gridSizes[i],
-      field: '$field.gridSizes[$i]',
-      onError: onError,
-    );
-  }
+  _sceneValidateFields<double>(
+    List<_SceneValidationField<double>>.generate(
+      fields.gridSizes.length,
+      (index) =>
+          (value: fields.gridSizes[index], field: '$field.gridSizes[$index]'),
+    ),
+    onError: onError,
+    validateValue: sceneValidatePositiveDouble,
+  );
 }
 
 void sceneValidateGridSnapshot(
@@ -66,18 +75,12 @@ void sceneValidateGridSnapshot(
   required SceneValidationErrorReporter onError,
   required bool requirePositiveCellSize,
 }) {
-  sceneValidateFiniteDouble(
+  _sceneValidateGridCellSize(
     grid.cellSize,
-    field: '$field.cellSize',
+    field: field,
     onError: onError,
+    requirePositiveCellSize: requirePositiveCellSize,
   );
-  if (requirePositiveCellSize) {
-    sceneValidatePositiveDouble(
-      grid.cellSize,
-      field: '$field.cellSize',
-      onError: onError,
-    );
-  }
 }
 
 void sceneValidateGrid(
@@ -86,14 +89,28 @@ void sceneValidateGrid(
   required SceneValidationErrorReporter onError,
   required bool requirePositiveCellSize,
 }) {
-  sceneValidateFiniteDouble(
+  _sceneValidateGridCellSize(
     grid.cellSize,
+    field: field,
+    onError: onError,
+    requirePositiveCellSize: requirePositiveCellSize,
+  );
+}
+
+void _sceneValidateGridCellSize(
+  double cellSize, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+  required bool requirePositiveCellSize,
+}) {
+  sceneValidateFiniteDouble(
+    cellSize,
     field: '$field.cellSize',
     onError: onError,
   );
   if (requirePositiveCellSize) {
     sceneValidatePositiveDouble(
-      grid.cellSize,
+      cellSize,
       field: '$field.cellSize',
       onError: onError,
     );
