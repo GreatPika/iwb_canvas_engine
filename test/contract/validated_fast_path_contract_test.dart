@@ -231,6 +231,113 @@ void main() {
     expect(image.common.isVisible.isAbsent, isTrue);
   });
 
+  test('validated spec fast-path helpers build default common schema', () {
+    final image = imageNodeSpecFromValidated(
+      fields: (
+        imageId: 'asset:default',
+        size: const Size(10, 20),
+        naturalSize: null,
+      ),
+    );
+    final text = textNodeSpecFromValidated(
+      fields: (
+        text: 'default',
+        fontSize: 18,
+        color: const Color(0xFF000000),
+        align: TextAlign.left,
+        isBold: false,
+        isItalic: false,
+        isUnderline: false,
+        fontFamily: null,
+        maxWidth: null,
+        lineHeight: null,
+      ),
+    );
+    final stroke = strokeNodeSpecFromValidated(
+      fields: (
+        points: const <Offset>[Offset(0, 0), Offset(1, 1)],
+        thickness: 2,
+        color: const Color(0xFF111111),
+      ),
+    );
+    final line = lineNodeSpecFromValidated(
+      fields: (
+        start: const Offset(0, 0),
+        end: const Offset(5, 5),
+        thickness: 3,
+        color: const Color(0xFF222222),
+      ),
+    );
+    final rect = rectNodeSpecFromValidated(
+      fields: (
+        size: const Size(8, 9),
+        fillColor: null,
+        strokeColor: null,
+        strokeWidth: 1.5,
+      ),
+    );
+    final path = pathNodeSpecFromValidated(
+      fields: (
+        svgPathData: 'M0 0 L10 10',
+        fillColor: null,
+        strokeColor: null,
+        strokeWidth: 2,
+        fillRule: PathFillRule.evenOdd,
+      ),
+    );
+
+    for (final spec in <NodeSpec>[image, text, stroke, line, rect, path]) {
+      expect(spec.id, isNull);
+      expect(spec.transform, Transform2D.identity);
+      expect(spec.opacity, 1);
+      expect(spec.hitPadding, 0);
+      expect(spec.isVisible, isTrue);
+      expect(spec.isSelectable, isTrue);
+      expect(spec.isLocked, isFalse);
+      expect(spec.isDeletable, isTrue);
+      expect(spec.isTransformable, isTrue);
+    }
+  });
+
+  test('validated patch fast-path helpers build default field payloads', () {
+    final text = textNodePatchFromValidated(id: 'text-default-fields');
+    final stroke = strokeNodePatchFromValidated(id: 'stroke-default-fields');
+    final line = lineNodePatchFromValidated(id: 'line-default-fields');
+    final rect = rectNodePatchFromValidated(id: 'rect-default-fields');
+    final path = pathNodePatchFromValidated(id: 'path-default-fields');
+
+    expect(text.text.isAbsent, isTrue);
+    expect(text.fontSize.isAbsent, isTrue);
+    expect(text.color.isAbsent, isTrue);
+    expect(text.align.isAbsent, isTrue);
+    expect(text.isBold.isAbsent, isTrue);
+    expect(text.isItalic.isAbsent, isTrue);
+    expect(text.isUnderline.isAbsent, isTrue);
+    expect(text.fontFamily.isAbsent, isTrue);
+    expect(text.maxWidth.isAbsent, isTrue);
+    expect(text.lineHeight.isAbsent, isTrue);
+
+    expect(stroke.points.isAbsent, isTrue);
+    expect(stroke.thickness.isAbsent, isTrue);
+    expect(stroke.color.isAbsent, isTrue);
+
+    expect(line.start.isAbsent, isTrue);
+    expect(line.end.isAbsent, isTrue);
+    expect(line.thickness.isAbsent, isTrue);
+    expect(line.color.isAbsent, isTrue);
+
+    expect(rect.size.isAbsent, isTrue);
+    expect(rect.fillColor.isAbsent, isTrue);
+    expect(rect.strokeColor.isAbsent, isTrue);
+    expect(rect.strokeWidth.isAbsent, isTrue);
+
+    expect(path.svgPathData.isAbsent, isTrue);
+    expect(path.fillColor.isAbsent, isTrue);
+    expect(path.strokeColor.isAbsent, isTrue);
+    expect(path.strokeWidth.isAbsent, isTrue);
+    expect(path.fillRule.isAbsent, isTrue);
+  });
+
   test(
     'validated spec and snapshot fast-paths snapshot stroke point ownership',
     () {

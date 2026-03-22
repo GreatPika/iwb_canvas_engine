@@ -140,7 +140,7 @@ transport ownership, `SceneDataException` attribution, or import semantics.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] One decode-side owner remains for require helpers
+### Slice 1. [x] One decode-side owner remains for require helpers
 
 #### Slice Contract
 
@@ -164,7 +164,7 @@ replaced duplicates.
 - Green run of the listed verifications.
 - Decode seam no longer keeps the replaced helper family in two places.
 
-### Slice 2. [ ] Family-specific node decode consumes one compact path
+### Slice 2. [x] Family-specific node decode consumes one compact path
 
 #### Slice Contract
 

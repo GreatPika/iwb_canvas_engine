@@ -8,6 +8,12 @@ typedef _DecodedScenePayload = ({
   List<ContentLayerSnapshot> layers,
 });
 
+typedef _DecodeNodeSchemaFields<FieldsT> =
+    FieldsT Function(Map<String, Object?> json, {required String nodePath});
+
+typedef _NodeSnapshotFieldsBuilder<FieldsT, SnapshotT extends NodeSnapshot> =
+    SnapshotT Function(FieldsT fields);
+
 SceneSnapshot _decodeSnapshotFromJson(Map<String, Object?> json) {
   _requireSupportedSchemaVersion(json);
   final payload = _decodeScenePayload(json);
@@ -239,19 +245,13 @@ ContentLayerSnapshot _decodeContentLayer(
 }
 
 String _decodeLayerId(Map<String, Object?> json, {required String layerPath}) {
-  final idPath = _pathAt(layerPath, 'id');
-  if (!json.containsKey('id')) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.missingField,
-      path: idPath,
-      message: 'Missing required field $idPath.',
-    );
-  }
-  return LayerIdValue.fromJson(
-    json['id'],
-    path: idPath,
-    fieldName: idPath,
-  ).value;
+  return _requireValidatedField(
+    json,
+    'id',
+    pathPrefix: layerPath,
+    parse: (value, {required path, required fieldName}) =>
+        LayerIdValue.fromJson(value, path: path, fieldName: path).value,
+  );
 }
 
 List<NodeSnapshot> _decodeLayerNodes(
@@ -285,20 +285,119 @@ NodeSnapshot _decodeNode(
 }) {
   final type = _decodeNodeType(json, nodePath: nodePath);
   final common = _decodeNodeCommonFields(json, nodePath: nodePath);
-  switch (type) {
-    case NodeType.image:
-      return _decodeImageNode(json, nodePath: nodePath, common: common);
-    case NodeType.text:
-      return _decodeTextNode(json, nodePath: nodePath, common: common);
-    case NodeType.stroke:
-      return _decodeStrokeNode(json, nodePath: nodePath, common: common);
-    case NodeType.line:
-      return _decodeLineNode(json, nodePath: nodePath, common: common);
-    case NodeType.rect:
-      return _decodeRectNode(json, nodePath: nodePath, common: common);
-    case NodeType.path:
-      return _decodePathNode(json, nodePath: nodePath, common: common);
-  }
+  return switch (type) {
+    NodeType.image => _decodeImageSnapshot(
+      json,
+      nodePath: nodePath,
+      common: common,
+    ),
+    NodeType.text => _decodeTextSnapshot(
+      json,
+      nodePath: nodePath,
+      common: common,
+    ),
+    NodeType.stroke => _decodeStrokeSnapshot(
+      json,
+      nodePath: nodePath,
+      common: common,
+    ),
+    NodeType.line => _decodeLineSnapshot(
+      json,
+      nodePath: nodePath,
+      common: common,
+    ),
+    NodeType.rect => _decodeRectSnapshot(
+      json,
+      nodePath: nodePath,
+      common: common,
+    ),
+    NodeType.path => _decodePathSnapshot(
+      json,
+      nodePath: nodePath,
+      common: common,
+    ),
+  };
+}
+
+ImageNodeSnapshot _decodeImageSnapshot(
+  Map<String, Object?> json, {
+  required String nodePath,
+  required NodeSnapshotCommonSchemaFields common,
+}) => _decodeNodeSnapshotFamily(
+  json,
+  nodePath: nodePath,
+  decodeFields: _decodeImageFields,
+  buildSnapshot: (fields) =>
+      _imageSnapshotFromSchema(common: common, fields: fields),
+);
+
+TextNodeSnapshot _decodeTextSnapshot(
+  Map<String, Object?> json, {
+  required String nodePath,
+  required NodeSnapshotCommonSchemaFields common,
+}) => _decodeNodeSnapshotFamily(
+  json,
+  nodePath: nodePath,
+  decodeFields: _decodeTextFields,
+  buildSnapshot: (fields) =>
+      _textSnapshotFromSchema(common: common, fields: fields),
+);
+
+StrokeNodeSnapshot _decodeStrokeSnapshot(
+  Map<String, Object?> json, {
+  required String nodePath,
+  required NodeSnapshotCommonSchemaFields common,
+}) => _decodeNodeSnapshotFamily(
+  json,
+  nodePath: nodePath,
+  decodeFields: _decodeStrokeFields,
+  buildSnapshot: (fields) =>
+      _strokeSnapshotFromSchema(common: common, fields: fields),
+);
+
+LineNodeSnapshot _decodeLineSnapshot(
+  Map<String, Object?> json, {
+  required String nodePath,
+  required NodeSnapshotCommonSchemaFields common,
+}) => _decodeNodeSnapshotFamily(
+  json,
+  nodePath: nodePath,
+  decodeFields: _decodeLineFields,
+  buildSnapshot: (fields) =>
+      _lineSnapshotFromSchema(common: common, fields: fields),
+);
+
+RectNodeSnapshot _decodeRectSnapshot(
+  Map<String, Object?> json, {
+  required String nodePath,
+  required NodeSnapshotCommonSchemaFields common,
+}) => _decodeNodeSnapshotFamily(
+  json,
+  nodePath: nodePath,
+  decodeFields: _decodeRectFields,
+  buildSnapshot: (fields) =>
+      _rectSnapshotFromSchema(common: common, fields: fields),
+);
+
+PathNodeSnapshot _decodePathSnapshot(
+  Map<String, Object?> json, {
+  required String nodePath,
+  required NodeSnapshotCommonSchemaFields common,
+}) => _decodeNodeSnapshotFamily(
+  json,
+  nodePath: nodePath,
+  decodeFields: _decodePathFields,
+  buildSnapshot: (fields) =>
+      _pathSnapshotFromSchema(common: common, fields: fields),
+);
+
+SnapshotT _decodeNodeSnapshotFamily<FieldsT, SnapshotT extends NodeSnapshot>(
+  Map<String, Object?> json, {
+  required String nodePath,
+  required _DecodeNodeSchemaFields<FieldsT> decodeFields,
+  required _NodeSnapshotFieldsBuilder<FieldsT, SnapshotT> buildSnapshot,
+}) {
+  return buildSnapshot(decodeFields(json, nodePath: nodePath));
 }
 
 NodeType _decodeNodeType(
@@ -382,31 +481,32 @@ _decodeNodeFlags(Map<String, Object?> json, {required String nodePath}) {
 }
 
 String _decodeNodeId(Map<String, Object?> json, {required String nodePath}) {
-  final idPath = _pathAt(nodePath, 'id');
-  if (!json.containsKey('id')) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.missingField,
-      path: idPath,
-      message: 'Missing required field $idPath.',
-    );
-  }
-  return NodeIdValue.fromJson(json['id'], path: idPath, fieldName: 'id').value;
+  return _requireValidatedField(
+    json,
+    'id',
+    pathPrefix: nodePath,
+    parse: (value, {required path, required fieldName}) =>
+        NodeIdValue.fromJson(value, path: path, fieldName: fieldName).value,
+  );
 }
 
 int _decodeNodeInstanceRevision(
   Map<String, Object?> json, {
   required String nodePath,
 }) {
-  if (!json.containsKey('instanceRevision') ||
-      json['instanceRevision'] == null) {
-    return 0;
-  }
-  return InstanceRevisionValue.fromJson(
-    json['instanceRevision'],
-    path: _pathAt(nodePath, 'instanceRevision'),
-    fieldName: 'instanceRevision',
-    allowZero: true,
-  ).value;
+  return _optionalValidatedField(
+        json,
+        'instanceRevision',
+        pathPrefix: nodePath,
+        parse: (value, {required path, required fieldName}) =>
+            InstanceRevisionValue.fromJson(
+              value,
+              path: path,
+              fieldName: fieldName,
+              allowZero: true,
+            ).value,
+      ) ??
+      0;
 }
 
 Transform2D _decodeNodeTransform(
@@ -419,12 +519,11 @@ Transform2D _decodeNodeTransform(
   );
 }
 
-ImageNodeSnapshot _decodeImageNode(
+ImageNodeSchemaFields _decodeImageFields(
   Map<String, Object?> json, {
   required String nodePath,
-  required NodeSnapshotCommonSchemaFields common,
 }) {
-  final fields = NodeBoundarySchema.imageFieldsFromValidated((
+  return NodeBoundarySchema.imageFieldsFromValidated((
     imageId: ImageIdValue.fromJson(
       _requireField(json, 'imageId', pathPrefix: nodePath),
       path: _pathAt(nodePath, 'imageId'),
@@ -433,43 +532,18 @@ ImageNodeSnapshot _decodeImageNode(
     size: _requireSize(json, 'size', pathPrefix: nodePath),
     naturalSize: _optionalSizeMap(json, 'naturalSize', pathPrefix: nodePath),
   ));
+}
+
+ImageNodeSnapshot _imageSnapshotFromSchema({
+  required NodeSnapshotCommonSchemaFields common,
+  required ImageNodeSchemaFields fields,
+}) {
   return imageNodeSnapshotFromValidated(
     id: common.id,
     instanceRevision: common.instanceRevision,
     imageId: fields.imageId,
     size: fields.size,
     naturalSize: fields.naturalSize,
-    hitPadding: common.hitPadding,
-    transform: common.transform,
-    opacity: common.opacity,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-  );
-}
-
-TextNodeSnapshot _decodeTextNode(
-  Map<String, Object?> json, {
-  required String nodePath,
-  required NodeSnapshotCommonSchemaFields common,
-}) {
-  final fields = _decodeTextFields(json, nodePath: nodePath);
-  return textNodeSnapshotFromValidated(
-    id: common.id,
-    instanceRevision: common.instanceRevision,
-    text: fields.text,
-    size: fields.size,
-    fontSize: fields.fontSize,
-    color: fields.color,
-    align: fields.align,
-    isBold: fields.isBold,
-    isItalic: fields.isItalic,
-    isUnderline: fields.isUnderline,
-    fontFamily: fields.fontFamily,
-    maxWidth: fields.maxWidth,
-    lineHeight: fields.lineHeight,
     hitPadding: common.hitPadding,
     transform: common.transform,
     opacity: common.opacity,
@@ -499,6 +573,35 @@ TextNodeSnapshotSchemaFields _decodeTextFields(
     maxWidth: textFields.maxWidth,
     lineHeight: textFields.lineHeight,
   ));
+}
+
+TextNodeSnapshot _textSnapshotFromSchema({
+  required NodeSnapshotCommonSchemaFields common,
+  required TextNodeSnapshotSchemaFields fields,
+}) {
+  return textNodeSnapshotFromValidated(
+    id: common.id,
+    instanceRevision: common.instanceRevision,
+    text: fields.text,
+    size: fields.size,
+    fontSize: fields.fontSize,
+    color: fields.color,
+    align: fields.align,
+    isBold: fields.isBold,
+    isItalic: fields.isItalic,
+    isUnderline: fields.isUnderline,
+    fontFamily: fields.fontFamily,
+    maxWidth: fields.maxWidth,
+    lineHeight: fields.lineHeight,
+    hitPadding: common.hitPadding,
+    transform: common.transform,
+    opacity: common.opacity,
+    isVisible: common.isVisible,
+    isSelectable: common.isSelectable,
+    isLocked: common.isLocked,
+    isDeletable: common.isDeletable,
+    isTransformable: common.isTransformable,
+  );
 }
 
 TextNodeSpecSchemaFields _decodeTextSpecFields(
@@ -600,12 +703,26 @@ _decodeTextOptionals(Map<String, Object?> json, {required String nodePath}) {
   );
 }
 
-StrokeNodeSnapshot _decodeStrokeNode(
+StrokeNodeSnapshotSchemaFields _decodeStrokeFields(
   Map<String, Object?> json, {
   required String nodePath,
-  required NodeSnapshotCommonSchemaFields common,
 }) {
-  final fields = _decodeStrokeFields(json, nodePath: nodePath);
+  return NodeBoundarySchema.strokeSnapshotFieldsFromValidated((
+    points: _decodeStrokePoints(json, nodePath: nodePath),
+    pointsRevision: 0,
+    thickness: _requirePositiveFiniteDouble(
+      json,
+      'thickness',
+      pathPrefix: nodePath,
+    ),
+    color: _decodeRequiredColor(json, 'color', pathPrefix: nodePath),
+  ));
+}
+
+StrokeNodeSnapshot _strokeSnapshotFromSchema({
+  required NodeSnapshotCommonSchemaFields common,
+  required StrokeNodeSnapshotSchemaFields fields,
+}) {
   return strokeNodeSnapshotFromValidated(
     id: common.id,
     instanceRevision: common.instanceRevision,
@@ -621,22 +738,6 @@ StrokeNodeSnapshot _decodeStrokeNode(
     isDeletable: common.isDeletable,
     isTransformable: common.isTransformable,
   );
-}
-
-StrokeNodeSnapshotSchemaFields _decodeStrokeFields(
-  Map<String, Object?> json, {
-  required String nodePath,
-}) {
-  return NodeBoundarySchema.strokeSnapshotFieldsFromValidated((
-    points: _decodeStrokePoints(json, nodePath: nodePath),
-    pointsRevision: 0,
-    thickness: _requirePositiveFiniteDouble(
-      json,
-      'thickness',
-      pathPrefix: nodePath,
-    ),
-    color: _decodeRequiredColor(json, 'color', pathPrefix: nodePath),
-  ));
 }
 
 List<Offset> _decodeStrokePoints(
@@ -667,12 +768,26 @@ List<Offset> _decodeStrokePoints(
   return points;
 }
 
-LineNodeSnapshot _decodeLineNode(
+LineNodeSchemaFields _decodeLineFields(
   Map<String, Object?> json, {
   required String nodePath,
-  required NodeSnapshotCommonSchemaFields common,
 }) {
-  final fields = _decodeLineFields(json, nodePath: nodePath);
+  return NodeBoundarySchema.lineFieldsFromValidated((
+    start: _requireFiniteOffset(json, 'localA', pathPrefix: nodePath),
+    end: _requireFiniteOffset(json, 'localB', pathPrefix: nodePath),
+    thickness: _requirePositiveFiniteDouble(
+      json,
+      'thickness',
+      pathPrefix: nodePath,
+    ),
+    color: _decodeRequiredColor(json, 'color', pathPrefix: nodePath),
+  ));
+}
+
+LineNodeSnapshot _lineSnapshotFromSchema({
+  required NodeSnapshotCommonSchemaFields common,
+  required LineNodeSchemaFields fields,
+}) {
   return lineNodeSnapshotFromValidated(
     id: common.id,
     instanceRevision: common.instanceRevision,
@@ -691,28 +806,11 @@ LineNodeSnapshot _decodeLineNode(
   );
 }
 
-LineNodeSchemaFields _decodeLineFields(
+RectNodeSchemaFields _decodeRectFields(
   Map<String, Object?> json, {
   required String nodePath,
 }) {
-  return NodeBoundarySchema.lineFieldsFromValidated((
-    start: _requireFiniteOffset(json, 'localA', pathPrefix: nodePath),
-    end: _requireFiniteOffset(json, 'localB', pathPrefix: nodePath),
-    thickness: _requirePositiveFiniteDouble(
-      json,
-      'thickness',
-      pathPrefix: nodePath,
-    ),
-    color: _decodeRequiredColor(json, 'color', pathPrefix: nodePath),
-  ));
-}
-
-RectNodeSnapshot _decodeRectNode(
-  Map<String, Object?> json, {
-  required String nodePath,
-  required NodeSnapshotCommonSchemaFields common,
-}) {
-  final fields = NodeBoundarySchema.rectFieldsFromValidated((
+  return NodeBoundarySchema.rectFieldsFromValidated((
     size: _requireSize(json, 'size', pathPrefix: nodePath),
     fillColor: _optionalColor(json, 'fillColor', pathPrefix: nodePath),
     strokeColor: _optionalColor(json, 'strokeColor', pathPrefix: nodePath),
@@ -722,6 +820,12 @@ RectNodeSnapshot _decodeRectNode(
       pathPrefix: nodePath,
     ),
   ));
+}
+
+RectNodeSnapshot _rectSnapshotFromSchema({
+  required NodeSnapshotCommonSchemaFields common,
+  required RectNodeSchemaFields fields,
+}) {
   return rectNodeSnapshotFromValidated(
     id: common.id,
     instanceRevision: common.instanceRevision,
@@ -729,31 +833,6 @@ RectNodeSnapshot _decodeRectNode(
     fillColor: fields.fillColor,
     strokeColor: fields.strokeColor,
     strokeWidth: fields.strokeWidth,
-    hitPadding: common.hitPadding,
-    transform: common.transform,
-    opacity: common.opacity,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-  );
-}
-
-PathNodeSnapshot _decodePathNode(
-  Map<String, Object?> json, {
-  required String nodePath,
-  required NodeSnapshotCommonSchemaFields common,
-}) {
-  final fields = _decodePathFields(json, nodePath: nodePath);
-  return pathNodeSnapshotFromValidated(
-    id: common.id,
-    instanceRevision: common.instanceRevision,
-    svgPathData: fields.svgPathData,
-    fillColor: fields.fillColor,
-    strokeColor: fields.strokeColor,
-    strokeWidth: fields.strokeWidth,
-    fillRule: fields.fillRule,
     hitPadding: common.hitPadding,
     transform: common.transform,
     opacity: common.opacity,
@@ -797,6 +876,29 @@ PathNodeSchemaFields _decodePathFields(
       pathPrefix: nodePath,
     ),
   ));
+}
+
+PathNodeSnapshot _pathSnapshotFromSchema({
+  required NodeSnapshotCommonSchemaFields common,
+  required PathNodeSchemaFields fields,
+}) {
+  return pathNodeSnapshotFromValidated(
+    id: common.id,
+    instanceRevision: common.instanceRevision,
+    svgPathData: fields.svgPathData,
+    fillColor: fields.fillColor,
+    strokeColor: fields.strokeColor,
+    strokeWidth: fields.strokeWidth,
+    fillRule: fields.fillRule,
+    hitPadding: common.hitPadding,
+    transform: common.transform,
+    opacity: common.opacity,
+    isVisible: common.isVisible,
+    isSelectable: common.isSelectable,
+    isLocked: common.isLocked,
+    isDeletable: common.isDeletable,
+    isTransformable: common.isTransformable,
+  );
 }
 
 Color _decodeRequiredColor(

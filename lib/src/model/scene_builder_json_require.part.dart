@@ -1,5 +1,12 @@
 part of 'scene_builder.dart';
 
+typedef _JsonValidatedFieldParser<T> =
+    T Function(
+      Object? value, {
+      required String path,
+      required String fieldName,
+    });
+
 String _pathAt(String pathPrefix, String segment) {
   if (pathPrefix.isEmpty) return segment;
   if (segment.startsWith('[')) return '$pathPrefix$segment';
@@ -111,6 +118,37 @@ Object? _requireField(
   return json[key];
 }
 
+T _requireValidatedField<T>(
+  Map<String, Object?> json,
+  String key, {
+  required _JsonValidatedFieldParser<T> parse,
+  String pathPrefix = '',
+}) {
+  final path = _pathAt(pathPrefix, key);
+  return parse(
+    _requireField(json, key, pathPrefix: pathPrefix),
+    path: path,
+    fieldName: key,
+  );
+}
+
+T? _optionalValidatedField<T>(
+  Map<String, Object?> json,
+  String key, {
+  required _JsonValidatedFieldParser<T> parse,
+  required String pathPrefix,
+}) {
+  if (!json.containsKey(key)) {
+    return null;
+  }
+  final value = json[key];
+  if (value == null) {
+    return null;
+  }
+  final path = _pathAt(pathPrefix, key);
+  return parse(value, path: path, fieldName: key);
+}
+
 String _requireStringValue(
   Object? value, {
   required String field,
@@ -156,19 +194,17 @@ int _requireInt(
   String key, {
   String pathPrefix = '',
 }) {
-  final path = _pathAt(pathPrefix, key);
-  if (!json.containsKey(key)) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.missingField,
-      path: path,
-      message: 'Missing required field $path.',
-    );
-  }
-  return validatedRequireJsonInt(
-    json[key],
-    path: path,
-    fieldName: key,
-    allowZero: false,
+  return _requireValidatedField(
+    json,
+    key,
+    pathPrefix: pathPrefix,
+    parse: (value, {required path, required fieldName}) =>
+        validatedRequireJsonInt(
+          value,
+          path: path,
+          fieldName: fieldName,
+          allowZero: false,
+        ),
   );
 }
 
@@ -177,18 +213,16 @@ double _requireDouble(
   String key, {
   String pathPrefix = '',
 }) {
-  final path = _pathAt(pathPrefix, key);
-  if (!json.containsKey(key)) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.missingField,
-      path: path,
-      message: 'Missing required field $path.',
-    );
-  }
-  return validatedRequireJsonFiniteDouble(
-    json[key],
-    path: path,
-    fieldName: key,
+  return _requireValidatedField(
+    json,
+    key,
+    pathPrefix: pathPrefix,
+    parse: (value, {required path, required fieldName}) =>
+        validatedRequireJsonFiniteDouble(
+          value,
+          path: path,
+          fieldName: fieldName,
+        ),
   );
 }
 
@@ -209,12 +243,17 @@ double _requireNonNegativeFiniteDouble(
   String key, {
   required String pathPrefix,
 }) {
-  final path = _pathAt(pathPrefix, key);
-  return NonNegativeFiniteDoubleValue.fromJson(
-    _requireField(json, key, pathPrefix: pathPrefix),
-    path: path,
-    fieldName: key,
-  ).value;
+  return _requireValidatedField(
+    json,
+    key,
+    pathPrefix: pathPrefix,
+    parse: (value, {required path, required fieldName}) =>
+        NonNegativeFiniteDoubleValue.fromJson(
+          value,
+          path: path,
+          fieldName: fieldName,
+        ).value,
+  );
 }
 
 double _requirePositiveFiniteDouble(
@@ -222,12 +261,17 @@ double _requirePositiveFiniteDouble(
   String key, {
   required String pathPrefix,
 }) {
-  final path = _pathAt(pathPrefix, key);
-  return PositiveFiniteDoubleValue.fromJson(
-    _requireField(json, key, pathPrefix: pathPrefix),
-    path: path,
-    fieldName: key,
-  ).value;
+  return _requireValidatedField(
+    json,
+    key,
+    pathPrefix: pathPrefix,
+    parse: (value, {required path, required fieldName}) =>
+        PositiveFiniteDoubleValue.fromJson(
+          value,
+          path: path,
+          fieldName: fieldName,
+        ).value,
+  );
 }
 
 double? _optionalPositiveFiniteDouble(
@@ -235,19 +279,17 @@ double? _optionalPositiveFiniteDouble(
   String key, {
   required String pathPrefix,
 }) {
-  if (!json.containsKey(key)) {
-    return null;
-  }
-  final value = json[key];
-  if (value == null) {
-    return null;
-  }
-  final path = _pathAt(pathPrefix, key);
-  return PositiveFiniteDoubleValue.fromJson(
-    value,
-    path: path,
-    fieldName: key,
-  ).value;
+  return _optionalValidatedField(
+    json,
+    key,
+    pathPrefix: pathPrefix,
+    parse: (value, {required path, required fieldName}) =>
+        PositiveFiniteDoubleValue.fromJson(
+          value,
+          path: path,
+          fieldName: fieldName,
+        ).value,
+  );
 }
 
 double _requireOpacity(
@@ -255,12 +297,13 @@ double _requireOpacity(
   String key, {
   required String pathPrefix,
 }) {
-  final path = _pathAt(pathPrefix, key);
-  return OpacityValue.fromJson(
-    _requireField(json, key, pathPrefix: pathPrefix),
-    path: path,
-    fieldName: key,
-  ).value;
+  return _requireValidatedField(
+    json,
+    key,
+    pathPrefix: pathPrefix,
+    parse: (value, {required path, required fieldName}) =>
+        OpacityValue.fromJson(value, path: path, fieldName: fieldName).value,
+  );
 }
 
 Offset _requireFiniteOffset(
@@ -268,12 +311,13 @@ Offset _requireFiniteOffset(
   String key, {
   required String pathPrefix,
 }) {
-  final path = _pathAt(pathPrefix, key);
-  return FiniteOffsetValue.fromJson(
-    _requireField(json, key, pathPrefix: pathPrefix),
-    path: path,
-    fieldName: path,
-  ).value;
+  return _requireValidatedField(
+    json,
+    key,
+    pathPrefix: pathPrefix,
+    parse: (value, {required path, required fieldName}) =>
+        FiniteOffsetValue.fromJson(value, path: path, fieldName: path).value,
+  );
 }
 
 Transform2D _decodeTransform2D(
@@ -345,19 +389,13 @@ String? _optionalFontFamily(
   Map<String, Object?> json, {
   required String pathPrefix,
 }) {
-  if (!json.containsKey('fontFamily')) {
-    return null;
-  }
-  final value = json['fontFamily'];
-  if (value == null) {
-    return null;
-  }
-  final path = _pathAt(pathPrefix, 'fontFamily');
-  return FontFamilyValue.fromJson(
-    value,
-    path: path,
-    fieldName: 'fontFamily',
-  ).value;
+  return _optionalValidatedField(
+    json,
+    'fontFamily',
+    pathPrefix: pathPrefix,
+    parse: (value, {required path, required fieldName}) =>
+        FontFamilyValue.fromJson(value, path: path, fieldName: fieldName).value,
+  );
 }
 
 Color _parseColor(String value, {String? path}) {
