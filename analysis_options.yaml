@@ -16,6 +16,9 @@ dcm:
       - test/**
       - .dart_tool/**
       - build/**
+      - "**/*.g.dart"
+      - "**/*.freezed.dart"
+      - "**/*.mocks.dart"
 
   rules:
     - avoid-dynamic
@@ -44,4 +47,16 @@ dcm:
     number-of-parameters:
       threshold: 4
     source-lines-of-code:
+      threshold: 40
+
+    number-of-imports:
+      threshold: 10
+    number-of-external-imports:
+      threshold: 5
+
+    weighted-methods-per-class:
+      threshold: 35
+    coupling-between-object-classes:
+      threshold: 12
+    response-for-class:
       threshold: 40
