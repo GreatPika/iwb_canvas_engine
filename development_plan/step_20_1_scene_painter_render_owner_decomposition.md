@@ -132,7 +132,7 @@ new generic renderer hierarchy.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Frame and selection ownership is separated
+### Slice 1. [x] Frame and selection ownership is separated
 
 #### Slice Contract
 
@@ -155,7 +155,7 @@ into render-local owners and remove the replaced mixed logic.
 - The replaced mixed frame / selection body is no longer present in the same
   form.
 
-### Slice 2. [ ] Per-node draw ownership is separated
+### Slice 2. [x] Per-node draw ownership is separated
 
 #### Slice Contract
 

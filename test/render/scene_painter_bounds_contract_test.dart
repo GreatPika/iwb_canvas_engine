@@ -45,29 +45,26 @@ String _extractMethodBody({
 }
 
 void main() {
-  test(
-    '_resolveNodePaintData reads geometry from RenderGeometryCache once',
-    () {
-      final source = File(
-        'lib/src/render/scene_painter.dart',
-      ).readAsStringSync();
-      final body = _extractMethodBody(
-        source: source,
-        methodStart: '_ResolvedNodePaintData _resolveNodePaintData(',
-      );
+  test('frame owner reads geometry from RenderGeometryCache once', () {
+    final source = File(
+      'lib/src/render/scene_painter_frame.part.dart',
+    ).readAsStringSync();
+    final body = _extractMethodBody(
+      source: source,
+      methodStart: '_ResolvedNodePaintData resolveNodePaintData(',
+    );
 
-      expect(body, contains('geometry: _geometryCache.get(node),'));
-      expect(body, isNot(contains('parseSvgPathData')));
-      expect(body, isNot(contains('buildLocalPath')));
-      expect(body, isNot(contains('_buildPathNode')));
-    },
-  );
+    expect(body, contains('geometry: geometryCache.get(node),'));
+    expect(body, isNot(contains('parseSvgPathData')));
+    expect(body, isNot(contains('buildLocalPath')));
+    expect(body, isNot(contains('_buildPathNode')));
+  });
 
   test(
-    '_drawPathNode consumes frame-local localPath instead of querying cache',
+    'node renderer consumes frame-local localPath instead of querying cache',
     () {
       final source = File(
-        'lib/src/render/scene_painter.dart',
+        'lib/src/render/scene_painter_node_renderer.part.dart',
       ).readAsStringSync();
       expect(source, contains('required Path? localPath'));
       final body = _extractMethodBody(
@@ -79,8 +76,10 @@ void main() {
     },
   );
 
-  test('_drawSelectionForNode uses resolved frame data for box selections', () {
-    final source = File('lib/src/render/scene_painter.dart').readAsStringSync();
+  test('selection owner uses resolved frame data for box selections', () {
+    final source = File(
+      'lib/src/render/scene_painter_selection.part.dart',
+    ).readAsStringSync();
     final body = _extractMethodBody(
       source: source,
       methodStart: 'void _drawSelectionForNode(',
@@ -92,6 +91,6 @@ void main() {
     expect(body, contains('_drawWorldBoundsSelection('));
     expect(body, isNot(contains('_drawBoxSelection(')));
     expect(body, isNot(contains('_nodePreviewOffset(')));
-    expect(body, isNot(contains('_geometryCache.get(')));
+    expect(body, isNot(contains('geometryCache.get(')));
   });
 }

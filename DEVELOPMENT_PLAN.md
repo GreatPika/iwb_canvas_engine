@@ -105,7 +105,7 @@ language: russian
 - [x] [Шаг 19.6. Переснять baseline runtime orchestration stack и обновить roadmap](development_plan/step_19_6_runtime_stack_rebaseline_and_roadmap.md)
 - [x] [Шаг 19.7. Закрыть residual runtime owner hot spots после 19.6](development_plan/step_19_7_runtime_residual_owner_correction.md)
 - [ ] [Шаг 20. Закрыть secondary hotspots render/view через подшаги 20.1-20.4](development_plan/step_20_render_view_secondary_hotspots.md)
-- [ ] [Шаг 20.1. Разрезать ScenePainter на render-local owners без нового renderer hierarchy](development_plan/step_20_1_scene_painter_render_owner_decomposition.md)
+- [x] [Шаг 20.1. Разрезать ScenePainter на render-local owners без нового renderer hierarchy](development_plan/step_20_1_scene_painter_render_owner_decomposition.md)
 - [ ] [Шаг 20.2. Свести lifecycle render caches в SceneViewCore и SceneViewInteractive](development_plan/step_20_2_scene_view_render_cache_lifecycle_consolidation.md)
 - [ ] [Шаг 20.3. Упростить local hotspot-ы SceneSpatialIndex без drift hit-test parity](development_plan/step_20_3_scene_spatial_index_local_hotspot_cleanup.md)
 - [ ] [Шаг 20.4. Переснять baseline render/view hotspot closure и обновить roadmap](development_plan/step_20_4_render_view_rebaseline_and_roadmap.md)
