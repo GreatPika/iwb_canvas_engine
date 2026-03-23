@@ -178,7 +178,7 @@ view public behavior.
 
 - Verification from `20.2`
 
-### Slice 3. [ ] SceneSpatialIndex hotspot cleanup
+### Slice 3. [x] SceneSpatialIndex hotspot cleanup
 
 #### Slice Contract
 

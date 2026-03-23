@@ -125,7 +125,7 @@ spatial-query or hit-test parity behavior.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Query and rebuild local ownership is decomposed
+### Slice 1. [x] Query and rebuild local ownership is decomposed
 
 #### Slice Contract
 
@@ -149,7 +149,7 @@ remove the replaced mixed hotspot body.
 - The replaced mixed query / rebuild hotspot is no longer present in the same
   form.
 
-### Slice 2. [ ] Incremental and parity support remains exact after the split
+### Slice 2. [x] Incremental and parity support remains exact after the split
 
 #### Slice Contract
 

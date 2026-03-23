@@ -132,7 +132,7 @@ language: russian
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] One view-owned cache lifecycle path exists
+### Slice 1. [х] One view-owned cache lifecycle path exists
 
 #### Slice Contract
 
@@ -156,7 +156,7 @@ the replaced duplicates.
 - The replaced duplicated cache lifecycle bodies are no longer present in both
   view owners.
 
-### Slice 2. [ ] View semantics remain exact after consolidation
+### Slice 2. [х] View semantics remain exact after consolidation
 
 #### Slice Contract
 
