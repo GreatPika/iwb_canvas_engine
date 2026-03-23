@@ -20,13 +20,7 @@ SceneRenderCaches debugSceneViewRenderCachesOf(BuildContext context) {
       'No SceneViewCore state found for the provided BuildContext.',
     );
   }
-  return SceneRenderCaches(
-    staticLayerCache: state.debugStaticLayerCache,
-    textLayoutCache: state.debugTextLayoutCache,
-    strokePathCache: state.debugStrokePathCache,
-    pathMetricsCache: state.debugPathMetricsCache,
-    geometryCache: state.debugGeometryCache,
-  );
+  return state.debugRenderCaches;
 }
 
 class SceneViewCore extends StatefulWidget {
@@ -60,30 +54,18 @@ class SceneViewCore extends StatefulWidget {
 }
 
 class _SceneViewCoreState extends State<SceneViewCore> {
-  late SceneRenderCaches _renderCaches;
+  late final SceneViewRenderCacheLifecycle _renderCacheLifecycle =
+      SceneViewRenderCacheLifecycle(create: _createRenderCaches);
 
-  int _lastEpoch = 0;
-
   @visibleForTesting
-  SceneStaticLayerCache get debugStaticLayerCache =>
-      _renderCaches.staticLayerCache;
-  @visibleForTesting
-  SceneTextLayoutCache get debugTextLayoutCache =>
-      _renderCaches.textLayoutCache;
-  @visibleForTesting
-  SceneStrokePathCache get debugStrokePathCache =>
-      _renderCaches.strokePathCache;
-  @visibleForTesting
-  ScenePathMetricsCache get debugPathMetricsCache =>
-      _renderCaches.pathMetricsCache;
-  @visibleForTesting
-  RenderGeometryCache get debugGeometryCache => _renderCaches.geometryCache;
+  SceneRenderCaches get debugRenderCaches => _renderCacheLifecycle.debugCaches;
 
   @override
   void initState() {
     super.initState();
-    _renderCaches = _createRenderCaches();
-    _lastEpoch = widget.controller.controllerEpoch;
+    _renderCacheLifecycle.initialize(
+      controllerEpoch: widget.controller.controllerEpoch,
+    );
     widget.controller.addListener(_handleControllerChanged);
   }
 
@@ -93,20 +75,19 @@ class _SceneViewCoreState extends State<SceneViewCore> {
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller.removeListener(_handleControllerChanged);
       widget.controller.addListener(_handleControllerChanged);
-      _lastEpoch = widget.controller.controllerEpoch;
-      _clearAllCaches();
+      _renderCacheLifecycle.handleControllerSwap(
+        controllerEpoch: widget.controller.controllerEpoch,
+      );
     }
     if (_didCacheDepsChange(oldWidget)) {
-      final previous = _renderCaches;
-      _renderCaches = _createRenderCaches();
-      previous.disposeOwned();
+      _renderCacheLifecycle.recreateCaches();
     }
   }
 
   @override
   void dispose() {
     widget.controller.removeListener(_handleControllerChanged);
-    _renderCaches.disposeOwned();
+    _renderCacheLifecycle.dispose();
     super.dispose();
   }
 
@@ -117,11 +98,11 @@ class _SceneViewCoreState extends State<SceneViewCore> {
       painter: ScenePainter(
         controller: widget.controller,
         imageResolver: widget.imageResolver ?? _defaultImageResolver,
-        staticLayerCache: _renderCaches.staticLayerCache,
-        textLayoutCache: _renderCaches.textLayoutCache,
-        strokePathCache: _renderCaches.strokePathCache,
-        pathMetricsCache: _renderCaches.pathMetricsCache,
-        geometryCache: _renderCaches.geometryCache,
+        staticLayerCache: _renderCacheLifecycle.staticLayerCache,
+        textLayoutCache: _renderCacheLifecycle.textLayoutCache,
+        strokePathCache: _renderCacheLifecycle.strokePathCache,
+        pathMetricsCache: _renderCacheLifecycle.pathMetricsCache,
+        geometryCache: _renderCacheLifecycle.geometryCache,
         selectionColor: widget.selectionColor,
         selectionStrokeWidth: widget.selectionStrokeWidth,
         gridStrokeWidth: widget.gridStrokeWidth,
@@ -132,14 +113,9 @@ class _SceneViewCoreState extends State<SceneViewCore> {
   }
 
   void _handleControllerChanged() {
-    final epoch = widget.controller.controllerEpoch;
-    if (epoch == _lastEpoch) return;
-    _lastEpoch = epoch;
-    _clearAllCaches();
-  }
-
-  void _clearAllCaches() {
-    _renderCaches.clearAll();
+    _renderCacheLifecycle.clearIfEpochChanged(
+      widget.controller.controllerEpoch,
+    );
   }
 
   bool _didCacheDepsChange(SceneViewCore oldWidget) {

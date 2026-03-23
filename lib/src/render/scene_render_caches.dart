@@ -67,3 +67,62 @@ class SceneRenderCaches {
     }
   }
 }
+
+/// View-local lifecycle owner for render caches.
+///
+/// View states remain the owner and drive this helper from their widget and
+/// controller lifecycle. The helper only consolidates cache recreation, epoch
+/// invalidation, and debug exposure so view variants do not keep duplicated
+/// cache lifecycle code in parallel.
+class SceneViewRenderCacheLifecycle {
+  SceneViewRenderCacheLifecycle({required SceneRenderCaches Function() create})
+    : _create = create;
+
+  final SceneRenderCaches Function() _create;
+
+  late SceneRenderCaches _renderCaches;
+  int _lastEpoch = 0;
+
+  SceneStaticLayerCache get staticLayerCache => _renderCaches.staticLayerCache;
+  SceneTextLayoutCache get textLayoutCache => _renderCaches.textLayoutCache;
+  SceneStrokePathCache get strokePathCache => _renderCaches.strokePathCache;
+  ScenePathMetricsCache get pathMetricsCache => _renderCaches.pathMetricsCache;
+  RenderGeometryCache get geometryCache => _renderCaches.geometryCache;
+
+  SceneRenderCaches get debugCaches => SceneRenderCaches(
+    staticLayerCache: staticLayerCache,
+    textLayoutCache: textLayoutCache,
+    strokePathCache: strokePathCache,
+    pathMetricsCache: pathMetricsCache,
+    geometryCache: geometryCache,
+  );
+
+  void initialize({required int controllerEpoch}) {
+    _renderCaches = _create();
+    _lastEpoch = controllerEpoch;
+  }
+
+  void handleControllerSwap({required int controllerEpoch}) {
+    _lastEpoch = controllerEpoch;
+    _renderCaches.clearAll();
+  }
+
+  bool clearIfEpochChanged(int controllerEpoch) {
+    if (controllerEpoch == _lastEpoch) {
+      return false;
+    }
+    _lastEpoch = controllerEpoch;
+    _renderCaches.clearAll();
+    return true;
+  }
+
+  void recreateCaches() {
+    final previous = _renderCaches;
+    _renderCaches = _create();
+    previous.disposeOwned();
+  }
+
+  void dispose() {
+    _renderCaches.disposeOwned();
+  }
+}

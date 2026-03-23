@@ -150,6 +150,80 @@ void main() {
     expect(pathCache.debugHitCount, 1);
     expect(geometryCache.debugHitCount, 1);
   });
+
+  test('SceneViewRenderCacheLifecycle clears caches on epoch change', () {
+    final lifecycle = SceneViewRenderCacheLifecycle(
+      create: () => SceneRenderCaches(
+        staticLayerCache: SceneStaticLayerCache(),
+        textLayoutCache: SceneTextLayoutCache(maxEntries: 8),
+        strokePathCache: SceneStrokePathCache(maxEntries: 8),
+        pathMetricsCache: ScenePathMetricsCache(maxEntries: 8),
+        geometryCache: RenderGeometryCache(maxEntries: 8),
+      ),
+    );
+    lifecycle.initialize(controllerEpoch: 1);
+    final debugCaches = lifecycle.debugCaches;
+    final localPath = Path()..addRect(const Rect.fromLTWH(0, 0, 10, 10));
+
+    debugCaches.textLayoutCache.getOrBuild(node: _textNode());
+    debugCaches.strokePathCache.getOrBuild(_strokeNode());
+    debugCaches.pathMetricsCache.getOrBuild(
+      node: _pathNode(),
+      localPath: localPath,
+    );
+    debugCaches.geometryCache.get(_textNode());
+    _primeStaticLayerCache(debugCaches.staticLayerCache);
+
+    expect(lifecycle.clearIfEpochChanged(1), isFalse);
+    expect(lifecycle.clearIfEpochChanged(2), isTrue);
+    expect(debugCaches.textLayoutCache.debugSize, 0);
+    expect(debugCaches.strokePathCache.debugSize, 0);
+    expect(debugCaches.pathMetricsCache.debugSize, 0);
+    expect(debugCaches.geometryCache.debugSize, 0);
+    expect(debugCaches.staticLayerCache.debugKeyHashCode, isNull);
+  });
+
+  test(
+    'SceneViewRenderCacheLifecycle recreates caches and disposes only owned ones',
+    () {
+      final externalGeometryCache = RenderGeometryCache(maxEntries: 8);
+      final externalStaticCache = SceneStaticLayerCache();
+      var createCount = 0;
+      final lifecycle = SceneViewRenderCacheLifecycle(
+        create: () {
+          createCount += 1;
+          return SceneRenderCaches(
+            staticLayerCache: createCount == 1 ? null : externalStaticCache,
+            textLayoutCache: SceneTextLayoutCache(maxEntries: 8),
+            strokePathCache: SceneStrokePathCache(maxEntries: 8),
+            pathMetricsCache: ScenePathMetricsCache(maxEntries: 8),
+            geometryCache: createCount == 1 ? null : externalGeometryCache,
+          );
+        },
+      );
+
+      lifecycle.initialize(controllerEpoch: 1);
+      final firstCaches = lifecycle.debugCaches;
+      firstCaches.geometryCache.get(_textNode());
+      _primeStaticLayerCache(firstCaches.staticLayerCache);
+
+      lifecycle.recreateCaches();
+
+      final secondCaches = lifecycle.debugCaches;
+      expect(createCount, 2);
+      expect(firstCaches.geometryCache.debugSize, 0);
+      expect(firstCaches.staticLayerCache.debugDisposeCount, 1);
+      expect(secondCaches.geometryCache, same(externalGeometryCache));
+      expect(secondCaches.staticLayerCache, same(externalStaticCache));
+
+      secondCaches.geometryCache.get(_textNode());
+      _primeStaticLayerCache(secondCaches.staticLayerCache);
+      lifecycle.dispose();
+
+      expect(externalGeometryCache.debugSize, 1);
+      expect(externalStaticCache.debugDisposeCount, 0);
+    },
+  );
 }
 
 TextNodeSnapshot _textNode() {

@@ -9,7 +9,6 @@ import '../core/pointer_input.dart';
 import '../interactive/scene_controller_interactive.dart';
 import '../contract/canvas_pointer_input.dart';
 import '../render/scene_painter.dart';
-import '../render/render_geometry_cache.dart';
 import '../render/scene_render_caches.dart';
 import 'scene_view_pointer_router.dart';
 
@@ -33,13 +32,7 @@ SceneRenderCaches debugSceneViewInteractiveRenderCachesOf(
   BuildContext context,
 ) {
   final state = _sceneViewInteractiveStateOf(context);
-  return SceneRenderCaches(
-    staticLayerCache: state.debugStaticLayerCache,
-    textLayoutCache: state.debugTextLayoutCache,
-    strokePathCache: state.debugStrokePathCache,
-    pathMetricsCache: state.debugPathMetricsCache,
-    geometryCache: state.debugGeometryCache,
-  );
+  return state.debugRenderCaches;
 }
 
 @visibleForTesting
@@ -84,24 +77,11 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
   late VoidCallback _controllerListener;
   int _controllerListenerGeneration = 0;
   int _pointerTrackerGeneration = 0;
-  int _lastEpoch = 0;
+  late final SceneViewRenderCacheLifecycle _renderCacheLifecycle =
+      SceneViewRenderCacheLifecycle(create: _createRenderCaches);
 
-  late SceneRenderCaches _renderCaches;
-
   @visibleForTesting
-  SceneStaticLayerCache get debugStaticLayerCache =>
-      _renderCaches.staticLayerCache;
-  @visibleForTesting
-  SceneTextLayoutCache get debugTextLayoutCache =>
-      _renderCaches.textLayoutCache;
-  @visibleForTesting
-  SceneStrokePathCache get debugStrokePathCache =>
-      _renderCaches.strokePathCache;
-  @visibleForTesting
-  ScenePathMetricsCache get debugPathMetricsCache =>
-      _renderCaches.pathMetricsCache;
-  @visibleForTesting
-  RenderGeometryCache get debugGeometryCache => _renderCaches.geometryCache;
+  SceneRenderCaches get debugRenderCaches => _renderCacheLifecycle.debugCaches;
   @visibleForTesting
   int get debugLiveRawPointerCount => _pointerRouter.liveRawPointerCount;
   @visibleForTesting
@@ -110,8 +90,11 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
   @override
   void initState() {
     super.initState();
-    _renderCaches = _createRenderCaches();
-    _lastEpoch = sceneControllerInteractiveInternalEpoch(widget.controller);
+    _renderCacheLifecycle.initialize(
+      controllerEpoch: sceneControllerInteractiveInternalEpoch(
+        widget.controller,
+      ),
+    );
     _appliedPointerSettings = widget.controller.pointerSettings;
     _pointerTracker = PointerInputTracker(settings: _appliedPointerSettings);
     _pointerTrackerGeneration = 1;
@@ -125,8 +108,11 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
       _unsubscribeFromController(oldWidget.controller);
       _subscribeToController(widget.controller);
       _replacePointerTrackingOwner(settings: widget.controller.pointerSettings);
-      _lastEpoch = sceneControllerInteractiveInternalEpoch(widget.controller);
-      _clearAllCaches();
+      _renderCacheLifecycle.handleControllerSwap(
+        controllerEpoch: sceneControllerInteractiveInternalEpoch(
+          widget.controller,
+        ),
+      );
     }
   }
 
@@ -134,7 +120,7 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
   void dispose() {
     _unsubscribeFromController(widget.controller);
     _clearPendingTapTimer();
-    _renderCaches.disposeOwned();
+    _renderCacheLifecycle.dispose();
     super.dispose();
   }
 
@@ -157,11 +143,11 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
                 widget.controller,
                 nodeId,
               ),
-          staticLayerCache: _renderCaches.staticLayerCache,
-          textLayoutCache: _renderCaches.textLayoutCache,
-          strokePathCache: _renderCaches.strokePathCache,
-          pathMetricsCache: _renderCaches.pathMetricsCache,
-          geometryCache: _renderCaches.geometryCache,
+          staticLayerCache: _renderCacheLifecycle.staticLayerCache,
+          textLayoutCache: _renderCacheLifecycle.textLayoutCache,
+          strokePathCache: _renderCacheLifecycle.strokePathCache,
+          pathMetricsCache: _renderCacheLifecycle.pathMetricsCache,
+          geometryCache: _renderCacheLifecycle.geometryCache,
           selectionRect: widget.controller.selectionRect,
           selectionColor: widget.selectionColor,
           selectionStrokeWidth: widget.selectionStrokeWidth,
@@ -292,10 +278,6 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
     _finalizeRelease(release);
   }
 
-  void _clearAllCaches() {
-    _renderCaches.clearAll();
-  }
-
   void _handleControllerChanged({
     required SceneControllerInteractive controller,
     required int ownerGeneration,
@@ -307,12 +289,9 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
     }
     final nextPointerSettings = widget.controller.pointerSettings;
     _adoptPointerSettings(nextPointerSettings);
-    final epoch = sceneControllerInteractiveInternalEpoch(widget.controller);
-    if (epoch == _lastEpoch) {
-      return;
-    }
-    _lastEpoch = epoch;
-    _clearAllCaches();
+    _renderCacheLifecycle.clearIfEpochChanged(
+      sceneControllerInteractiveInternalEpoch(widget.controller),
+    );
   }
 
   SceneRenderCaches _createRenderCaches() {
