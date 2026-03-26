@@ -138,6 +138,10 @@ Ownership decisions for the target state:
 - Move-session cancel semantics are local to the move owner: pointer `cancel`
   clears ephemeral preview/marquee state and restores the gesture baseline
   selection when that gesture changed selection before terminal completion.
+- View-side render-cache lifecycle and `ScenePainter` assembly have one shared
+  owner in the internal render-surface boundary; `SceneViewInteractive` remains
+  the public interactive shell around that boundary and keeps pointer host and
+  overlay ownership outside it.
 - Background-grid semantics are stateless and render-local: one shared owner
   computes drawable eligibility, density bucketing, camera shift, and line
   emission; `SceneStaticLayerCache` owns only picture lifecycle and key reuse

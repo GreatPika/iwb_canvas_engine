@@ -5,7 +5,6 @@ import 'package:flutter/widgets.dart';
 import '../core/pointer_input.dart';
 import '../interactive/scene_controller_interactive.dart';
 import '../render/scene_render_caches.dart';
-import 'scene_view_defaults.dart';
 import 'scene_view_interactive_overlay_painter.dart';
 import 'scene_view_interactive_pointer_host.dart';
 import 'scene_view_render_surface.dart';
@@ -63,11 +62,11 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
 
   @visibleForTesting
   SceneRenderCaches get debugRenderCaches {
-    final renderSurfaceState = _renderSurfaceKey.currentState;
-    if (renderSurfaceState == null) {
-      throw StateError('SceneViewRenderSurface is not mounted.');
-    }
-    return renderSurfaceState.debugRenderCaches;
+    assert(
+      _renderSurfaceKey.currentState != null,
+      'SceneViewRenderSurface is not mounted.',
+    );
+    return _renderSurfaceKey.currentState!.debugRenderCaches;
   }
 
   @visibleForTesting
@@ -103,21 +102,10 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
   @override
   Widget build(BuildContext context) {
     final textDirection = Directionality.maybeOf(context) ?? TextDirection.ltr;
-    final renderSurface = SceneViewRenderSurface(
+    final renderSurface = SceneViewRenderSurface.interactive(
       key: _renderSurfaceKey,
       controller: widget.controller,
-      repaint: widget.controller,
-      readControllerEpoch: () =>
-          sceneControllerInteractiveInternalEpoch(widget.controller),
-      createRenderCaches: _createRenderCaches,
-      cacheDependencies: null,
-      imageResolver: widget.imageResolver ?? sceneViewDefaultImageResolver,
-      nodePreviewOffsetResolver: (nodeId) =>
-          sceneControllerInteractiveInternalPreviewDeltaForNode(
-            widget.controller,
-            nodeId,
-          ),
-      selectionRect: widget.controller.selectionRect,
+      imageResolver: widget.imageResolver,
       selectionColor: widget.selectionColor,
       selectionStrokeWidth: widget.selectionStrokeWidth,
       gridStrokeWidth: widget.gridStrokeWidth,
@@ -140,10 +128,6 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
         child: renderSurface,
       ),
     );
-  }
-
-  SceneRenderCaches _createRenderCaches() {
-    return SceneRenderCaches();
   }
 }
 
