@@ -199,7 +199,7 @@ owner instead of shifting the same logic behind new wrappers.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Decompose the `ScenePainter` selection hotspot
+### Slice 1. [x] Decompose the `ScenePainter` selection hotspot
 
 #### Slice Contract
 

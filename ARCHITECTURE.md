@@ -142,6 +142,10 @@ Ownership decisions for the target state:
   owner in the internal render-surface boundary; `SceneViewInteractive` remains
   the public interactive shell around that boundary and keeps pointer host and
   overlay ownership outside it.
+- `ScenePainter` keeps frame ownership and selection ownership separate:
+  frame-local geometry resolution happens once in the frame owner, while
+  selection rendering consumes only resolved `worldBounds` / `localPath`
+  through focused render-local helpers instead of reopening geometry lookup.
 - Background-grid semantics are stateless and render-local: one shared owner
   computes drawable eligibility, density bucketing, camera shift, and line
   emission; `SceneStaticLayerCache` owns only picture lifecycle and key reuse

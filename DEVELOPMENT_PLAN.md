@@ -112,4 +112,4 @@ language: russian
 - [x] [Шаг 20.5. Переснять baseline render/view hotspot closure и обновить roadmap](development_plan/step_20_5_render_view_rebaseline_and_roadmap.md)
 - [x] [Шаг 21. Ввести shared view render-surface owner для `SceneViewCore` и `SceneViewInteractive`](development_plan/step_21_shared_view_render_surface_owner.md)
 - [x] [Шаг 22. Убрать `SceneViewCore` и завершить shared view render-surface boundary](development_plan/step_22_scene_view_core_removal_and_render_surface_boundary_completion.md)
-- [ ] [Шаг 23. Разрезать `ScenePainter` selection owner на атомарные render-local owners](development_plan/step_23_scene_painter_selection_owner_decomposition.md)
+- [x] [Шаг 23. Разрезать `ScenePainter` selection owner на атомарные render-local owners](development_plan/step_23_scene_painter_selection_owner_decomposition.md)

@@ -62,11 +62,12 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
 
   @visibleForTesting
   SceneRenderCaches get debugRenderCaches {
-    assert(
-      _renderSurfaceKey.currentState != null,
-      'SceneViewRenderSurface is not mounted.',
-    );
-    return _renderSurfaceKey.currentState!.debugRenderCaches;
+    final renderSurfaceState = _renderSurfaceKey.currentState;
+    assert(renderSurfaceState != null, 'SceneViewRenderSurface is not mounted.');
+    if (renderSurfaceState == null) {
+      throw StateError('SceneViewRenderSurface is not mounted.');
+    }
+    return renderSurfaceState.debugRenderCaches;
   }
 
   @visibleForTesting

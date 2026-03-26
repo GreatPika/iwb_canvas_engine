@@ -55,7 +55,7 @@ class ScenePainter extends CustomPainter {
          selectionStrokeWidth: selectionStrokeWidth,
        ),
        super(repaint: controller) {
-    _selectionOwner = _ScenePainterSelectionOwner(
+    _selectionSupport = _SceneSelectionSupport(
       strokePathCache: strokePathCache,
       pathMetricsCache: pathMetricsCache,
       transformBuffer: _transformBuffer,
@@ -82,8 +82,8 @@ class ScenePainter extends CustomPainter {
   final double gridStrokeWidth;
   final TextDirection textDirection;
   final _ScenePainterFrameOwner _frameOwner;
+  late final _SceneSelectionSupport _selectionSupport;
   late final _ScenePainterNodeRenderer _nodeRenderer;
-  late final _ScenePainterSelectionOwner _selectionOwner;
 
   final Float64List _transformBuffer = Float64List(16);
 
@@ -118,7 +118,7 @@ class ScenePainter extends CustomPainter {
     }
 
     _drawNodeLayers(canvas, snapshot, frame);
-    _selectionOwner.draw(canvas, frame);
+    _drawSceneSelection(canvas, frame, _selectionSupport);
   }
 
   void _drawNodeLayers(

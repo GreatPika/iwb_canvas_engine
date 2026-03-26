@@ -76,10 +76,11 @@ void main() {
     },
   );
 
-  test('selection owner uses resolved frame data for box selections', () {
+  test('selection rendering uses resolved frame data for box selections', () {
     final source = File(
       'lib/src/render/scene_painter_selection.part.dart',
     ).readAsStringSync();
+    expect(source, isNot(contains('class _ScenePainterSelectionOwner')));
     final body = _extractMethodBody(
       source: source,
       methodStart: 'void _drawSelectionForNode(',
