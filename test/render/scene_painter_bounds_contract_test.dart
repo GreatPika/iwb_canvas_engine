@@ -45,13 +45,50 @@ String _extractMethodBody({
 }
 
 void main() {
+  test('scene painter modules no longer use part coupling', () {
+    final painterModules = Directory('lib/src/render')
+        .listSync()
+        .whereType<File>()
+        .where((file) => file.path.contains('scene_painter'))
+        .where((file) => file.path.endsWith('.dart'));
+
+    final partDirective = RegExp(
+      "^part 'scene_painter_|^part of 'scene_painter",
+      multiLine: true,
+    );
+
+    for (final module in painterModules) {
+      final source = module.readAsStringSync();
+      expect(partDirective.hasMatch(source), isFalse, reason: module.path);
+    }
+  });
+
+  test('scene painter shell stays orchestration-only', () {
+    final shellSource = File(
+      'lib/src/render/scene_painter_shell.dart',
+    ).readAsStringSync();
+    final backgroundSource = File(
+      'lib/src/render/scene_painter_background.dart',
+    ).readAsStringSync();
+
+    expect(shellSource, contains('class ScenePainterShell'));
+    expect(shellSource, contains('backgroundOwner.paint('));
+    expect(shellSource, isNot(contains('cache/scene_')));
+    expect(shellSource, isNot(contains('render_geometry_cache.dart')));
+    expect(shellSource, isNot(contains('scene_grid_renderer.dart')));
+    expect(shellSource, isNot(contains('ScenePainterFrameOwner(')));
+    expect(shellSource, isNot(contains('ScenePainterNodeRenderer(')));
+    expect(shellSource, isNot(contains('ScenePainterSelectionRenderer(')));
+    expect(backgroundSource, contains('class ScenePainterBackgroundOwner'));
+  });
+
   test('frame owner reads geometry from RenderGeometryCache once', () {
     final source = File(
-      'lib/src/render/scene_painter_frame.part.dart',
+      'lib/src/render/scene_painter_frame.dart',
     ).readAsStringSync();
     final body = _extractMethodBody(
       source: source,
-      methodStart: '_ResolvedNodePaintData resolveNodePaintData(',
+      methodStart: 'ScenePainterResolvedNodePaintData resolveNodePaintData(',
     );
 
     expect(body, contains('geometry: geometryCache.get(node),'));
@@ -64,9 +101,9 @@ void main() {
     'node renderer consumes frame-local localPath instead of querying cache',
     () {
       final source = File(
-        'lib/src/render/scene_painter_node_renderer.part.dart',
+        'lib/src/render/scene_painter_node_renderer.dart',
       ).readAsStringSync();
-      expect(source, isNot(contains('class _ScenePainterNodeRenderer')));
+      expect(source, contains('class ScenePainterNodeRenderer'));
       expect(source, contains('Path? localPath'));
       final body = _extractMethodBody(
         source: source,
@@ -79,9 +116,9 @@ void main() {
 
   test('selection rendering uses resolved frame data for box selections', () {
     final source = File(
-      'lib/src/render/scene_painter_selection.part.dart',
+      'lib/src/render/scene_painter_selection.dart',
     ).readAsStringSync();
-    expect(source, isNot(contains('class _ScenePainterSelectionOwner')));
+    expect(source, contains('class ScenePainterSelectionRenderer'));
     final body = _extractMethodBody(
       source: source,
       methodStart: 'void _drawSelectionForNode(',

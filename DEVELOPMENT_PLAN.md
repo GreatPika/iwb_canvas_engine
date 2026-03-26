@@ -114,4 +114,5 @@ language: russian
 - [x] [Шаг 22. Убрать `SceneViewCore` и завершить shared view render-surface boundary](development_plan/step_22_scene_view_core_removal_and_render_surface_boundary_completion.md)
 - [x] [Шаг 23. Разрезать `ScenePainter` selection owner на атомарные render-local owners](development_plan/step_23_scene_painter_selection_owner_decomposition.md)
 - [x] [Шаг 24. Разрезать `ScenePainter` node renderer на атомарные render-local owners](development_plan/step_24_scene_painter_node_renderer_decomposition.md)
-- [ ] [Шаг 25. Сделать `ScenePainter` тонким orchestration shell без painter `part`-coupling](development_plan/step_25_scene_painter_shell_finalization.md)
+- [x] [Шаг 25. Сделать `ScenePainter` тонким orchestration shell без painter `part`-coupling](development_plan/step_25_scene_painter_shell_finalization.md)
+- [x] [Шаг 26. Довести `ScenePainterShell` до чистого orchestration owner без background/cache assembly](development_plan/step_26_scene_painter_shell_owner_finalization.md)

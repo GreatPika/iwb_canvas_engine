@@ -34,9 +34,12 @@ explicit private module boundaries.
 ### Implementation Files
 
 - `lib/src/render/scene_painter.dart`
-- `lib/src/render/scene_painter_frame.part.dart`
-- `lib/src/render/scene_painter_node_renderer.part.dart`
-- `lib/src/render/scene_painter_selection.part.dart`
+- `lib/src/render/scene_painter_shell.dart`
+- `lib/src/render/scene_painter_contract.dart`
+- `lib/src/render/scene_painter_shared.dart`
+- `lib/src/render/scene_painter_frame.dart`
+- `lib/src/render/scene_painter_node_renderer.dart`
+- `lib/src/render/scene_painter_selection.dart`
 
 ### Test Files
 
@@ -202,7 +205,7 @@ explicit private module boundaries.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Finalize `ScenePainter` as a thin orchestration shell
+### Slice 1. [x] Finalize `ScenePainter` as a thin orchestration shell
 
 #### Slice Contract
 

@@ -1,33 +1,106 @@
-part of 'scene_painter.dart';
+import 'dart:typed_data';
+import 'dart:ui';
 
-typedef _FillAndStrokeStyle = ({
-  Color? fillColor,
-  double opacity,
-  Color? strokeColor,
-  double strokeWidth,
-});
+import 'package:flutter/rendering.dart';
 
-class _SceneNodeRenderSupport {
-  _SceneNodeRenderSupport({
-    required ImageResolver imageResolver,
+import '../contract/snapshot.dart';
+import '../core/numeric_clamp.dart';
+import 'cache/scene_stroke_path_cache.dart';
+import 'cache/scene_text_layout_cache.dart';
+import 'canvas_scope.dart';
+import 'scene_painter_contract.dart';
+import 'scene_painter_shared.dart';
+
+class ScenePainterNodeRenderer {
+  ScenePainterNodeRenderer({
+    required Image? Function(String imageId) imageResolver,
     required SceneTextLayoutCache? textLayoutCache,
     required SceneStrokePathCache? strokePathCache,
     required TextDirection textDirection,
-  }) : shapes = _SceneShapeNodeRenderer(),
-       strokes = _SceneStrokeNodeRenderer(strokePathCache: strokePathCache),
-       rich = _SceneRichNodeRenderer(
+    required Float64List transformBuffer,
+  }) : _transformBuffer = transformBuffer,
+       _support = SceneNodeRenderSupport(
+         imageResolver: imageResolver,
+         textLayoutCache: textLayoutCache,
+         strokePathCache: strokePathCache,
+         textDirection: textDirection,
+       );
+
+  final Float64List _transformBuffer;
+  final SceneNodeRenderSupport _support;
+
+  void paintNodeLayers({
+    required Canvas canvas,
+    required SceneSnapshot snapshot,
+    required ScenePainterPaintFrame frame,
+    required ScenePainterResolvedNodePaintData Function(NodeSnapshot node)
+    resolveNodePaintData,
+  }) {
+    _drawVisibleNodes(
+      canvas: canvas,
+      nodes: snapshot.backgroundLayer.nodes,
+      frame: frame,
+      resolveNodePaintData: resolveNodePaintData,
+    );
+    for (final layer in snapshot.layers) {
+      _drawVisibleNodes(
+        canvas: canvas,
+        nodes: layer.nodes,
+        frame: frame,
+        resolveNodePaintData: resolveNodePaintData,
+      );
+    }
+  }
+
+  void _drawVisibleNodes({
+    required Canvas canvas,
+    required Iterable<NodeSnapshot> nodes,
+    required ScenePainterPaintFrame frame,
+    required ScenePainterResolvedNodePaintData Function(NodeSnapshot node)
+    resolveNodePaintData,
+  }) {
+    final renderContext = SceneNodeRenderContext(
+      canvas: canvas,
+      cameraOffset: frame.cameraOffset,
+      transformBuffer: _transformBuffer,
+    );
+    for (final node in nodes) {
+      if (!node.isVisible) {
+        continue;
+      }
+      final resolvedNode = resolveNodePaintData(node);
+      if (!_canPaintNodeInFrame(resolvedNode, frame.viewRect)) {
+        continue;
+      }
+      _drawResolvedNode(resolvedNode, renderContext, _support);
+      if (frame.isSelected(node.id)) {
+        frame.selectedNodes.add(resolvedNode);
+      }
+    }
+  }
+}
+
+class SceneNodeRenderSupport {
+  SceneNodeRenderSupport({
+    required Image? Function(String imageId) imageResolver,
+    required SceneTextLayoutCache? textLayoutCache,
+    required SceneStrokePathCache? strokePathCache,
+    required TextDirection textDirection,
+  }) : shapes = SceneShapeNodeRenderer(),
+       strokes = SceneStrokeNodeRenderer(strokePathCache: strokePathCache),
+       rich = SceneRichNodeRenderer(
          imageResolver: imageResolver,
          textLayoutCache: textLayoutCache,
          textDirection: textDirection,
        );
 
-  final _SceneShapeNodeRenderer shapes;
-  final _SceneStrokeNodeRenderer strokes;
-  final _SceneRichNodeRenderer rich;
+  final SceneShapeNodeRenderer shapes;
+  final SceneStrokeNodeRenderer strokes;
+  final SceneRichNodeRenderer rich;
 }
 
-class _SceneNodeRenderContext {
-  const _SceneNodeRenderContext({
+class SceneNodeRenderContext {
+  const SceneNodeRenderContext({
     required this.canvas,
     required this.cameraOffset,
     required this.transformBuffer,
@@ -38,17 +111,17 @@ class _SceneNodeRenderContext {
   final Float64List transformBuffer;
 }
 
-class _SceneShapeNodeRenderer {
-  const _SceneShapeNodeRenderer();
+class SceneShapeNodeRenderer {
+  const SceneShapeNodeRenderer();
 
-  void drawRectNode(RectNodeSnapshot node, _SceneNodeRenderContext context) {
+  void drawRectNode(RectNodeSnapshot node, SceneNodeRenderContext context) {
     if (!node.transform.isFinite) {
       return;
     }
-    final rect = _centerRect(node.size);
+    final rect = scenePainterCenterRect(node.size);
     withTransform(
       context.canvas,
-      _toViewTransform(
+      scenePainterToViewTransform(
         context.transformBuffer,
         node.transform,
         context.cameraOffset,
@@ -70,7 +143,7 @@ class _SceneShapeNodeRenderer {
   void drawPathNode(
     PathNodeSnapshot node,
     Path? localPath,
-    _SceneNodeRenderContext context,
+    SceneNodeRenderContext context,
   ) {
     if (!node.transform.isFinite || localPath == null) {
       return;
@@ -78,7 +151,7 @@ class _SceneShapeNodeRenderer {
 
     withTransform(
       context.canvas,
-      _toViewTransform(
+      scenePainterToViewTransform(
         context.transformBuffer,
         node.transform,
         context.cameraOffset,
@@ -98,20 +171,20 @@ class _SceneShapeNodeRenderer {
   }
 }
 
-class _SceneStrokeNodeRenderer {
-  const _SceneStrokeNodeRenderer({required this.strokePathCache});
+class SceneStrokeNodeRenderer {
+  const SceneStrokeNodeRenderer({required this.strokePathCache});
 
   final SceneStrokePathCache? strokePathCache;
 
-  void drawLineNode(LineNodeSnapshot node, _SceneNodeRenderContext context) {
+  void drawLineNode(LineNodeSnapshot node, SceneNodeRenderContext context) {
     if (!node.transform.isFinite ||
-        !_isFiniteOffset(node.start) ||
-        !_isFiniteOffset(node.end)) {
+        !scenePainterIsFiniteOffset(node.start) ||
+        !scenePainterIsFiniteOffset(node.end)) {
       return;
     }
     withTransform(
       context.canvas,
-      _toViewTransform(
+      scenePainterToViewTransform(
         context.transformBuffer,
         node.transform,
         context.cameraOffset,
@@ -124,24 +197,21 @@ class _SceneStrokeNodeRenderer {
             ..style = PaintingStyle.stroke
             ..strokeWidth = clampNonNegativeFinite(node.thickness)
             ..strokeCap = StrokeCap.round
-            ..color = _applyOpacity(node.color, node.opacity),
+            ..color = scenePainterApplyOpacity(node.color, node.opacity),
         );
       },
     );
   }
 
-  void drawStrokeNode(
-    StrokeNodeSnapshot node,
-    _SceneNodeRenderContext context,
-  ) {
-    if (!_canPaintStrokeNode(node)) {
+  void drawStrokeNode(StrokeNodeSnapshot node, SceneNodeRenderContext context) {
+    if (!scenePainterCanPaintStrokeNode(node)) {
       return;
     }
 
     final thickness = clampNonNegativeFinite(node.thickness);
     withTransform(
       context.canvas,
-      _toViewTransform(
+      scenePainterToViewTransform(
         context.transformBuffer,
         node.transform,
         context.cameraOffset,
@@ -153,12 +223,12 @@ class _SceneStrokeNodeRenderer {
             thickness / 2,
             Paint()
               ..style = PaintingStyle.fill
-              ..color = _applyOpacity(node.color, node.opacity),
+              ..color = scenePainterApplyOpacity(node.color, node.opacity),
           );
           return;
         }
 
-        final path = _resolveStrokePath(node, strokePathCache);
+        final path = scenePainterResolveStrokePath(node, strokePathCache);
 
         context.canvas.drawPath(
           path,
@@ -167,25 +237,25 @@ class _SceneStrokeNodeRenderer {
             ..strokeWidth = thickness
             ..strokeCap = StrokeCap.round
             ..strokeJoin = StrokeJoin.round
-            ..color = _applyOpacity(node.color, node.opacity),
+            ..color = scenePainterApplyOpacity(node.color, node.opacity),
         );
       },
     );
   }
 }
 
-class _SceneRichNodeRenderer {
-  const _SceneRichNodeRenderer({
+class SceneRichNodeRenderer {
+  const SceneRichNodeRenderer({
     required this.imageResolver,
     required this.textLayoutCache,
     required this.textDirection,
   });
 
-  final ImageResolver imageResolver;
+  final Image? Function(String imageId) imageResolver;
   final SceneTextLayoutCache? textLayoutCache;
   final TextDirection textDirection;
 
-  void drawTextNode(TextNodeSnapshot node, _SceneNodeRenderContext context) {
+  void drawTextNode(TextNodeSnapshot node, SceneNodeRenderContext context) {
     if (!node.transform.isFinite) {
       return;
     }
@@ -195,7 +265,7 @@ class _SceneRichNodeRenderer {
         ? textLayoutCache.getOrBuild(node: node, textDirection: textDirection)
         : buildSceneTextPainter(node: node, textDirection: textDirection);
 
-    final alignOffset = _textAlignOffset(
+    final alignOffset = scenePainterTextAlignOffset(
       node.align,
       safeSize.width,
       textPainter.width,
@@ -204,7 +274,7 @@ class _SceneRichNodeRenderer {
 
     withTransform(
       context.canvas,
-      _toViewTransform(
+      scenePainterToViewTransform(
         context.transformBuffer,
         node.transform,
         context.cameraOffset,
@@ -218,15 +288,15 @@ class _SceneRichNodeRenderer {
     );
   }
 
-  void drawImageNode(ImageNodeSnapshot node, _SceneNodeRenderContext context) {
+  void drawImageNode(ImageNodeSnapshot node, SceneNodeRenderContext context) {
     if (!node.transform.isFinite) {
       return;
     }
-    final rect = _centerRect(node.size);
+    final rect = scenePainterCenterRect(node.size);
     final image = imageResolver(node.imageId);
     withTransform(
       context.canvas,
-      _toViewTransform(
+      scenePainterToViewTransform(
         context.transformBuffer,
         node.transform,
         context.cameraOffset,
@@ -248,17 +318,26 @@ class _SceneRichNodeRenderer {
           image: image,
           fit: BoxFit.fill,
           filterQuality: FilterQuality.medium,
-          opacity: _alpha01(node.opacity),
+          opacity: scenePainterAlpha01(node.opacity),
         );
       },
     );
   }
 }
 
+bool _canPaintNodeInFrame(
+  ScenePainterResolvedNodePaintData resolvedNode,
+  Rect viewRect,
+) {
+  final worldBounds = resolvedNode.worldBounds;
+  return scenePainterIsFiniteRect(worldBounds) &&
+      viewRect.overlaps(worldBounds);
+}
+
 void _drawResolvedNode(
-  _ResolvedNodePaintData resolvedNode,
-  _SceneNodeRenderContext context,
-  _SceneNodeRenderSupport support,
+  ScenePainterResolvedNodePaintData resolvedNode,
+  SceneNodeRenderContext context,
+  SceneNodeRenderSupport support,
 ) {
   withTranslate(context.canvas, resolvedNode.previewDelta, () {
     switch (resolvedNode.node) {
@@ -286,11 +365,18 @@ void _drawResolvedNode(
 void _drawPathNode(
   PathNodeSnapshot node,
   Path? localPath,
-  _SceneNodeRenderContext context,
-  _SceneNodeRenderSupport support,
+  SceneNodeRenderContext context,
+  SceneNodeRenderSupport support,
 ) {
   support.shapes.drawPathNode(node, localPath, context);
 }
+
+typedef _FillAndStrokeStyle = ({
+  Color? fillColor,
+  double opacity,
+  Color? strokeColor,
+  double strokeWidth,
+});
 
 void _drawFilledAndStrokedShape({
   required _FillAndStrokeStyle style,
@@ -301,7 +387,7 @@ void _drawFilledAndStrokedShape({
     draw(
       Paint()
         ..style = PaintingStyle.fill
-        ..color = _applyOpacity(fillColor, style.opacity),
+        ..color = scenePainterApplyOpacity(fillColor, style.opacity),
     );
   }
   final safeStrokeWidth = clampNonNegativeFinite(style.strokeWidth);
@@ -313,6 +399,6 @@ void _drawFilledAndStrokedShape({
     Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = safeStrokeWidth
-      ..color = _applyOpacity(strokeColor, style.opacity),
+      ..color = scenePainterApplyOpacity(strokeColor, style.opacity),
   );
 }

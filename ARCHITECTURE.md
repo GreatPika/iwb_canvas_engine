@@ -150,6 +150,11 @@ Ownership decisions for the target state:
   rect/path, line/stroke, and text/image rendering consume only
   frame-resolved node data through focused render-local helpers instead of one
   mixed node-render owner.
+- `ScenePainter` is a thin public shell over explicit private painter-local
+  modules; `ScenePainterShell` is orchestration-only and sequences frame,
+  background, node, and selection owners without owning cache/grid assembly,
+  while frame, node-render, selection, and shared draw helpers communicate
+  through imported contracts instead of library `part` coupling.
 - Background-grid semantics are stateless and render-local: one shared owner
   computes drawable eligibility, density bucketing, camera shift, and line
   emission; `SceneStaticLayerCache` owns only picture lifecycle and key reuse
