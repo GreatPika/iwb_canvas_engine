@@ -213,6 +213,14 @@ most important architectural rules are:
 
 ## Transaction and signal model
 
+- `SceneControllerCore` is the thin public controller facade. It owns public
+  lifecycle, exposes the committed store and streams, and delegates commit
+  orchestration to the controller-private `SceneControllerCommitRuntime`
+  instead of re-owning transaction assembly in `scene_controller.dart`.
+- `SceneControllerCommitRuntime` is the controller-private orchestration owner
+  for transactional writes. It assembles `TxnContext`, `SceneWriter`,
+  `MutationExecutor`, commit preparation, and post-commit publication without
+  widening the public facade boundary.
 - High-level methods such as `addNode`, `patchNode`, `clearScene`, and
   transform commands all route through the same transactional core.
 - Scene-mutating runtime intents are modeled as internal `MutationOp` values
@@ -231,6 +239,7 @@ most important architectural rules are:
   substrate without reopening the public controller facade boundary.
 - `SceneWriter` is the only internal `SceneWriteTxn` implementation, but it is
   now a thin shell over writer-local controller modules:
+  `scene_writer_nodes.dart`,
   `scene_writer_selection.dart`,
   `scene_writer_scene.dart`,
   `scene_writer_signals.dart`, and
@@ -238,6 +247,15 @@ most important architectural rules are:
   `scene_writer_runtime.dart` owns the shared transaction runtime handle used
   by those modules, while internal commands keep consuming exact writer-local
   results instead of expanding the public `SceneWriteTxn` contract.
+- Final measured controller closure baseline after steps 29-31 is:
+  `6 HIGH` metric entries limited to accepted seams in
+  `mutation_op.dart`,
+  `scene_controller.dart`,
+  `scene_controller_commit_runtime.dart`, and
+  `scene_writer.dart`,
+  plus `1` remaining clone pair between
+  `draw_commands.dart::writeEraseNodes` and
+  `scene_commands.dart::writeDeleteSelection`.
 - Successful commits finalize store state before publishing signals or repaint
   notifications.
 - Committed signals are emitted before repaint listener notification for the

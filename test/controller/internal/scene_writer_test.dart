@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -119,6 +120,39 @@ void main() {
     expect(ctx.workingScene.layers.single.nodes.single.id, 'fresh');
     expect(ctx.workingSelection, isEmpty);
     expect(ctx.changeSet.documentReplaced, isTrue);
+  });
+
+  test('SceneWriter stays a thin shell over writer-local owners', () {
+    final writerSource = File(
+      'lib/src/controller/scene_writer.dart',
+    ).readAsStringSync();
+
+    expect(writerSource, contains("import 'scene_writer_nodes.dart';"));
+    expect(writerSource, contains("import 'scene_writer_scene.dart';"));
+    expect(writerSource, contains("import 'scene_writer_selection.dart';"));
+    expect(writerSource, contains("import 'scene_writer_signals.dart';"));
+    expect(writerSource, contains("import 'scene_writer_runtime.dart';"));
+
+    expect(
+      writerSource,
+      contains('sceneWriterWriteSelectionReplaceResult(this, ids) != null;'),
+    );
+    expect(writerSource, contains('sceneWriterWriteSelectionSelectAllResult('));
+    expect(writerSource, contains('sceneWriterWriteDeleteSelectionResult('));
+    expect(
+      writerSource,
+      contains('sceneWriterWriteClearSceneKeepBackgroundResult(this);'),
+    );
+    expect(
+      writerSource,
+      contains('sceneWriterWriteDocumentReplace(this, snapshot);'),
+    );
+    expect(writerSource, contains('sceneWriterWriteSignalEnqueue('));
+
+    expect(writerSource, isNot(contains('txnNormalizeSelection(')));
+    expect(writerSource, isNot(contains('BufferedSignal(')));
+    expect(writerSource, isNot(contains('ReplaceSceneOp(')));
+    expect(writerSource, isNot(contains('DeleteNodesBulkOp.borrowed')));
   });
 
   test(

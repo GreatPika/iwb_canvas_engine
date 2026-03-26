@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -43,6 +44,57 @@ void main() {
         TransformSelectionOp,
         TranslateSelectionOp,
       ]);
+    },
+  );
+
+  test(
+    'MutationExecutor keeps mutation families split across explicit owners',
+    () {
+      final executorSource = File(
+        'lib/src/controller/mutation_executor.dart',
+      ).readAsStringSync();
+      final nodeApplierSource = File(
+        'lib/src/controller/node_mutation_applier.dart',
+      ).readAsStringSync();
+      final selectionApplierSource = File(
+        'lib/src/controller/selection_transform_mutation_applier.dart',
+      ).readAsStringSync();
+      final sceneApplierSource = File(
+        'lib/src/controller/scene_mutation_applier.dart',
+      ).readAsStringSync();
+
+      expect(executorSource, contains("import 'node_mutation_applier.dart';"));
+      expect(
+        executorSource,
+        contains("import 'selection_transform_mutation_applier.dart';"),
+      );
+      expect(executorSource, contains("import 'scene_mutation_applier.dart';"));
+      expect(
+        executorSource,
+        contains('SelectionTransformMutationOp() => _castResult<TValue>('),
+      );
+      expect(
+        executorSource,
+        contains('executeSelectionTransformMutationOp(ctx, op)'),
+      );
+
+      expect(
+        selectionApplierSource,
+        contains('executeSelectionTransformMutationOp('),
+      );
+      expect(selectionApplierSource, contains('TransformSelectionOp('));
+      expect(selectionApplierSource, contains('TranslateSelectionOp('));
+      expect(
+        sceneApplierSource,
+        contains('executeStructuralDocumentMutationOp('),
+      );
+
+      expect(
+        nodeApplierSource,
+        isNot(contains('executeSelectionTransformMutationOp(')),
+      );
+      expect(nodeApplierSource, isNot(contains('TransformSelectionOp(')));
+      expect(nodeApplierSource, isNot(contains('TranslateSelectionOp(')));
     },
   );
 

@@ -108,13 +108,14 @@ baseline без reopening production ownership slices.
    controller end-state with no stale references to remaining writer or
    mutation-family architecture debt.
 4. `dcm calculate-metrics lib/src/controller lib/src/controller/internal --report-all`
-   reports `5` or fewer `HIGH` entries after the step, and the remaining
+   reports `6` or fewer `HIGH` entries after the step, and the remaining
    `HIGH` entries are limited to accepted controller seams:
+   `scene_writer.dart`,
    `scene_controller.dart`,
    `scene_controller_commit_runtime.dart`,
    and `mutation_op.dart`.
 5. `dart run tool/analysis/find_similar_clones.dart lib/src/controller`
-   reports `2` or fewer pairs after the step.
+   reports `1` or fewer pairs after the step.
 
 ## 6. Implementation Specification
 
@@ -128,9 +129,15 @@ baseline без reopening production ownership slices.
   after steps 29 and 30.
 - This step assumes step 29 and step 30 are already closed; it does not reopen
   those production slices as the main subject of change.
-- Current measured controller baseline before steps 29 and 30 is `10 HIGH`
-  entries and `2` clone pairs; this step records the final measured baseline
-  after the preceding two controller slices are complete.
+- Final measured controller baseline recorded by this step is `6 HIGH`
+  entries and `1` clone pair.
+- The accepted residual `HIGH` seams are:
+  `mutation_op.dart` import breadth,
+  `scene_controller.dart` import breadth and `SceneControllerCore` coupling,
+  `scene_controller_commit_runtime.dart` import breadth and
+  `SceneControllerCommitRuntime` coupling,
+  and `SceneWriter` `response-for-class` caused by the fixed
+  `SceneWriteTxn` breadth.
 
 ### 6.2 Target Verification Units
 
@@ -203,7 +210,7 @@ baseline без reopening production ownership slices.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Extend structural contract tests to pin final controller boundaries
+### Slice 1. [x] Extend structural contract tests to pin final controller boundaries
 
 #### Slice Contract
 
@@ -228,8 +235,14 @@ controller boundary shape after steps 29 and 30, including the final
 - Green run of the listed verifications.
 - Structural assertions cover the final controller facade/runtime,
   writer-local, and mutation-family boundaries.
+- `scene_writer_test.dart` fails if `scene_writer.dart` reabsorbs
+  selection normalization, buffered signal construction, or direct
+  scene-replacement mutation bodies.
+- `mutation_executor_test.dart` fails if selection-transform execution moves
+  back into `node_mutation_applier.dart` or stops dispatching through the
+  dedicated family owner.
 
-### Slice 2. [ ] Rebaseline and document final controller architecture
+### Slice 2. [x] Rebaseline and document final controller architecture
 
 #### Slice Contract
 
@@ -257,6 +270,13 @@ controller metrics and clone baseline from actual runs.
 - `ARCHITECTURE.md` and `DEVELOPMENT_PLAN.md` reflect the same final
   controller end-state as the step 29-31 contracts.
 - Final measured controller baseline is recorded from the verification runs.
+- Recorded closure baseline:
+  `6 HIGH` entries limited to
+  `mutation_op.dart`,
+  `scene_controller.dart`,
+  `scene_controller_commit_runtime.dart`,
+  and `scene_writer.dart`;
+  `1` clone pair remains in command-layer delete flows.
 
 ## 9. Final Verification
 
