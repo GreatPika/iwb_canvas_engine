@@ -1,26 +1,19 @@
 import 'dart:collection';
 import 'dart:ui';
 
-import 'internal/signal_event.dart';
+import 'scene_writer_nodes.dart';
 import 'scene_writer_scene.dart';
 import 'scene_writer_selection.dart';
 import 'scene_writer_signals.dart';
 import 'scene_writer_types.dart';
 import 'scene_writer_runtime.dart';
-import 'mutation_executor.dart';
-import 'txn_context.dart';
 
 class SceneWriter implements SceneWriteTxn {
-  SceneWriter(
-    TxnContext ctx, {
-    required MutationExecutor mutationExecutor,
-    required void Function(BufferedSignal signal) txnSignalSink,
-  }) : _runtime = SceneWriterRuntime(
-         ctx: ctx,
-         mutationExecutor: mutationExecutor,
-         txnSignalSink: txnSignalSink,
-       ),
-       _selectedNodeIdsView = UnmodifiableSetView<NodeId>(ctx.workingSelection);
+  SceneWriter(SceneWriterRuntime runtime)
+    : _runtime = runtime,
+      _selectedNodeIdsView = UnmodifiableSetView<NodeId>(
+        runtime.ctx.workingSelection,
+      );
 
   final SceneWriterRuntime _runtime;
   final UnmodifiableSetView<NodeId> _selectedNodeIdsView;
@@ -33,7 +26,8 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   NodeId writeNodeInsert(NodeSpec spec, {LayerId? layerId, int? insertIndex}) {
-    return _runtime.writeNodeInsert(
+    return sceneWriterWriteNodeInsert(
+      this,
       spec,
       layerId: layerId,
       insertIndex: insertIndex,
@@ -42,22 +36,22 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   bool writeLayerEnsure(LayerId layerId, {int? index}) {
-    return _runtime.writeLayerEnsure(layerId, index: index);
+    return sceneWriterWriteLayerEnsure(this, layerId, index: index);
   }
 
   @override
   bool writeNodeErase(NodeId nodeId) {
-    return _runtime.writeNodeErase(nodeId);
+    return sceneWriterWriteNodeErase(this, nodeId);
   }
 
   @override
   bool writeNodePatch(NodePatch patch) {
-    return _runtime.writeNodePatch(patch);
+    return sceneWriterWriteNodePatch(this, patch);
   }
 
   @override
   bool writeNodeTransformSet(NodeId id, Transform2D transform) {
-    return _runtime.writeNodeTransformSet(id, transform);
+    return sceneWriterWriteNodeTransformSet(this, id, transform);
   }
 
   @override
@@ -85,12 +79,12 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   int writeSelectionTranslate(Offset delta) {
-    return _runtime.writeSelectionTranslate(delta);
+    return sceneWriterWriteSelectionTranslate(this, delta);
   }
 
   @override
   int writeSelectionTransform(Transform2D delta) {
-    return _runtime.writeSelectionTransform(delta);
+    return sceneWriterWriteSelectionTransform(this, delta);
   }
 
   @override
@@ -105,7 +99,7 @@ class SceneWriter implements SceneWriteTxn {
 
   @override
   ClearSceneResult writeClearSceneKeepBackgroundResult() {
-    return _runtime.writeClearSceneKeepBackgroundResult();
+    return sceneWriterWriteClearSceneKeepBackgroundResult(this);
   }
 
   @override

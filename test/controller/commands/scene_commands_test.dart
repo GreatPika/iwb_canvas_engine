@@ -6,6 +6,7 @@ import 'package:iwb_canvas_engine/src/controller/commands/scene_commands.dart';
 import 'package:iwb_canvas_engine/src/controller/mutation_executor.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_writer.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_writer_runtime.dart';
 import 'package:iwb_canvas_engine/src/controller/txn_context.dart';
 import 'package:iwb_canvas_engine/src/controller/internal/signal_event.dart';
 import 'package:iwb_canvas_engine/src/core/id_generator.dart';
@@ -57,9 +58,11 @@ void main() {
       );
       T writeRunner<T>(T Function(SceneWriter writer) fn) {
         final writer = SceneWriter(
-          ctx,
-          mutationExecutor: MutationExecutor(),
-          txnSignalSink: bufferedSignals.add,
+          SceneWriterRuntime(
+            ctx: ctx,
+            mutationExecutor: MutationExecutor(),
+            txnSignalSink: bufferedSignals.add,
+          ),
         );
         return fn(writer);
       }
@@ -89,9 +92,11 @@ void main() {
     );
     T writeRunner<T>(T Function(SceneWriter writer) fn) {
       final writer = SceneWriter(
-        ctx,
-        mutationExecutor: MutationExecutor(),
-        txnSignalSink: bufferedSignals.add,
+        SceneWriterRuntime(
+          ctx: ctx,
+          mutationExecutor: MutationExecutor(),
+          txnSignalSink: bufferedSignals.add,
+        ),
       );
       return fn(writer);
     }

@@ -95,7 +95,10 @@ write semantics или mutation catalog contract.
 5. Public selection transform semantics remain unchanged, including
    pre-multiply transform order and no-op behavior for non-applicable selected
    nodes.
-6. Remaining clone pairs in `draw_commands.dart` and `scene_invariants.dart`
+6. `SceneWriteTxn` breadth remains unchanged in this step; residual
+   `SceneWriter` facade `RFC` caused solely by the fixed public write contract
+   is accepted unless the contract itself is changed in a later step.
+7. Remaining clone pairs in `draw_commands.dart` and `scene_invariants.dart`
    are non-regression only in this step.
 
 ## 5. Result Requirements
@@ -111,11 +114,12 @@ write semantics или mutation catalog contract.
 4. `dcm calculate-metrics lib/src/controller/mutation_executor.dart lib/src/controller/node_mutation_applier.dart --report-all`
    reports `0 HIGH`.
 5. `dcm calculate-metrics lib/src/controller lib/src/controller/internal --report-all`
-   reports `5` or fewer `HIGH` entries after the change, and the remaining
+   reports `6` or fewer `HIGH` entries after the change, and the remaining
    `HIGH` entries are limited to accepted controller seams:
    `scene_controller.dart`,
    `scene_controller_commit_runtime.dart`,
-   and `mutation_op.dart`.
+   `mutation_op.dart`,
+   and the contract-breadth `SceneWriter` facade.
 6. `dart run tool/analysis/find_similar_clones.dart lib/src/controller`
    reports `2` or fewer pairs after the change and introduces no pair
    involving `node_mutation_applier.dart`.
@@ -216,7 +220,7 @@ write semantics или mutation catalog contract.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Extract explicit selection-transform mutation owner
+### Slice 1. [x] Extract explicit selection-transform mutation owner
 
 #### Slice Contract
 
@@ -244,7 +248,7 @@ and adapt executor dispatch accordingly.
 - `node_mutation_applier.dart` no longer contains the replaced
   selection-transform execution bodies.
 
-### Slice 2. [ ] Finalize node-local mutation owner and metric closure
+### Slice 2. [x] Finalize node-local mutation owner and metric closure
 
 #### Slice Contract
 

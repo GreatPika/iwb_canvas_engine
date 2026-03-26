@@ -219,6 +219,11 @@ most important architectural rules are:
   and executed by `MutationExecutor`; `SceneWriteTxn` stays the public write
   seam, while `SceneControllerCore` remains the owner of commit/store/signal
   lifecycle.
+- Private mutation execution ownership follows the typed mutation families in
+  `mutation_op.dart`: structural and scene-setting mutations live in
+  `scene_mutation_applier.dart`, node-local mutations live in
+  `node_mutation_applier.dart`, and selection transform mutations live in
+  `selection_transform_mutation_applier.dart`.
 - The controller-private transaction substrate is split by owner:
   `TxnContext` remains the transaction root, while private workspace and
   derived-state owners live in `txn_workspace.dart` and

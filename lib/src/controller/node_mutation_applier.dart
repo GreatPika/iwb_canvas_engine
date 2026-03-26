@@ -1,10 +1,9 @@
-import 'dart:ui';
+import 'dart:ui' show Rect;
 
-import '../contract/ids.dart';
-import '../contract/node_patch.dart';
 import '../contract/node_spec.dart';
 import '../contract/transform2d.dart';
 import '../core/hit_test.dart';
+import '../core/nodes.dart';
 import '../core/selection_policy.dart';
 import '../model/document.dart';
 import 'mutation_input_guards.dart';
@@ -22,7 +21,7 @@ MutationApplyResult<Object?> executeNodeMutationOp(
       op,
       textFontFamilyByDefault: textFontFamilyByDefault,
     ),
-    PatchNodeOp(:final patch) => _patch(ctx, patch),
+    PatchNodeOp() => _patch(ctx, op),
     SetNodeTransformOp(:final nodeId, :final transform) => _setNodeTransform(
       ctx,
       nodeId,
@@ -30,16 +29,6 @@ MutationApplyResult<Object?> executeNodeMutationOp(
     ),
     DeleteNodeOp(:final nodeId) => _deleteNode(ctx, nodeId),
     DeleteNodesBulkOp(:final nodeIds) => _deleteNodesBulk(ctx, nodeIds),
-  };
-}
-
-MutationApplyResult<Object?> executeSelectionTransformMutationOp(
-  TxnContext ctx,
-  SelectionTransformMutationOp<Object?> op,
-) {
-  return switch (op) {
-    TransformSelectionOp(:final delta) => _transformSelection(ctx, delta),
-    TranslateSelectionOp(:final delta) => _translateSelection(ctx, delta),
   };
 }
 
@@ -79,7 +68,8 @@ MutationApplyResult<NodeId> _insert(
   return MutationApplyResult<NodeId>(value: node.id, changed: true);
 }
 
-MutationApplyResult<bool> _patch(TxnContext ctx, NodePatch patch) {
+MutationApplyResult<bool> _patch(TxnContext ctx, PatchNodeOp op) {
+  final patch = op.patch;
   final existing = ctx.txnFindNodeById(patch.id);
   if (existing == null) {
     return const MutationApplyResult<bool>(value: false, changed: false);
@@ -92,14 +82,14 @@ MutationApplyResult<bool> _patch(TxnContext ctx, NodePatch patch) {
   final beforeCandidate = nodeHitTestCandidateBoundsWorld(found.node);
   txnApplyNodePatch(found.node, patch);
   final afterCandidate = nodeHitTestCandidateBoundsWorld(found.node);
-  _trackUpdatedNodeGeometry(
+  trackUpdatedNodeGeometry(
     ctx,
     nodeId: patch.id,
     beforeCandidate: beforeCandidate,
     afterCandidate: afterCandidate,
   );
   if (ctx.workingSelection.contains(patch.id) &&
-      _patchTouchesSelectionPolicy(patch)) {
+      _patchTouchesSelectionPolicy(op)) {
     ctx.changeSet.txnMarkSelectionChanged();
   }
   return const MutationApplyResult<bool>(value: true, changed: true);
@@ -116,16 +106,7 @@ MutationApplyResult<bool> _setNodeTransform(
     return const MutationApplyResult<bool>(value: false, changed: false);
   }
 
-  final found = ctx.txnResolveMutableNode(nodeId);
-  final beforeCandidate = nodeHitTestCandidateBoundsWorld(found.node);
-  found.node.transform = transform;
-  final afterCandidate = nodeHitTestCandidateBoundsWorld(found.node);
-  _trackUpdatedNodeGeometry(
-    ctx,
-    nodeId: nodeId,
-    beforeCandidate: beforeCandidate,
-    afterCandidate: afterCandidate,
-  );
+  txnApplyNodeTransform(ctx, nodeId: nodeId, transform: transform);
   return const MutationApplyResult<bool>(value: true, changed: true);
 }
 
@@ -241,81 +222,6 @@ void _finalizeDeletedNodes(TxnContext ctx, Iterable<NodeId> deletedNodeIds) {
   }
 }
 
-MutationApplyResult<int> _transformSelection(
-  TxnContext ctx,
-  Transform2D delta,
-) {
-  requireFiniteTransformMutationInput(delta, name: 'delta');
-  final selected = ctx.workingSelection;
-  if (selected.isEmpty) {
-    return const MutationApplyResult<int>(value: 0, changed: false);
-  }
-
-  var affected = 0;
-  final selectedIds = selected.toList(growable: false);
-  for (final nodeId in selectedIds) {
-    final existing = ctx.txnFindNodeById(nodeId);
-    if (existing == null ||
-        existing.layerIndex == -1 ||
-        !existing.node.isTransformable ||
-        existing.node.isLocked) {
-      continue;
-    }
-
-    final nextTransform = delta.multiply(existing.node.transform);
-    if (nextTransform == existing.node.transform) {
-      continue;
-    }
-
-    final mutable = ctx.txnResolveMutableNode(nodeId);
-    final beforeCandidate = nodeHitTestCandidateBoundsWorld(mutable.node);
-    mutable.node.transform = nextTransform;
-    final afterCandidate = nodeHitTestCandidateBoundsWorld(mutable.node);
-    _trackUpdatedNodeGeometry(
-      ctx,
-      nodeId: nodeId,
-      beforeCandidate: beforeCandidate,
-      afterCandidate: afterCandidate,
-    );
-    affected = affected + 1;
-  }
-  return MutationApplyResult<int>(value: affected, changed: affected > 0);
-}
-
-MutationApplyResult<int> _translateSelection(TxnContext ctx, Offset delta) {
-  requireFiniteOffsetMutationInput(delta, name: 'delta');
-  if (delta == Offset.zero || ctx.workingSelection.isEmpty) {
-    return const MutationApplyResult<int>(value: 0, changed: false);
-  }
-
-  final moved = <NodeId>{};
-  final selectedIds = ctx.workingSelection.toList(growable: false);
-  for (final nodeId in selectedIds) {
-    final existing = ctx.txnFindNodeById(nodeId);
-    if (existing == null ||
-        existing.layerIndex == -1 ||
-        existing.node.isLocked ||
-        !existing.node.isTransformable) {
-      continue;
-    }
-
-    final mutable = ctx.txnResolveMutableNode(nodeId);
-    mutable.node.position = mutable.node.position + delta;
-    moved.add(nodeId);
-  }
-  if (moved.isEmpty) {
-    return const MutationApplyResult<int>(value: 0, changed: false);
-  }
-
-  for (final nodeId in moved) {
-    ctx.changeSet
-      ..txnTrackUpdated(nodeId)
-      ..txnTrackHitGeometryChanged(nodeId);
-  }
-  ctx.changeSet.txnMarkBoundsChanged();
-  return MutationApplyResult<int>(value: moved.length, changed: true);
-}
-
 NodeSpec _normalizeInsertSpec(
   NodeSpec spec, {
   required String? textFontFamilyByDefault,
@@ -350,7 +256,7 @@ NodeSpec _normalizeInsertSpec(
   return spec;
 }
 
-void _trackUpdatedNodeGeometry(
+void trackUpdatedNodeGeometry(
   TxnContext ctx, {
   required NodeId nodeId,
   required Rect? beforeCandidate,
@@ -366,8 +272,25 @@ void _trackUpdatedNodeGeometry(
   }
 }
 
-bool _patchTouchesSelectionPolicy(NodePatch patch) {
-  final common = patch.common;
+void txnApplyNodeTransform(
+  TxnContext ctx, {
+  required NodeId nodeId,
+  required Transform2D transform,
+}) {
+  final found = ctx.txnResolveMutableNode(nodeId);
+  final beforeCandidate = nodeHitTestCandidateBoundsWorld(found.node);
+  found.node.transform = transform;
+  final afterCandidate = nodeHitTestCandidateBoundsWorld(found.node);
+  trackUpdatedNodeGeometry(
+    ctx,
+    nodeId: nodeId,
+    beforeCandidate: beforeCandidate,
+    afterCandidate: afterCandidate,
+  );
+}
+
+bool _patchTouchesSelectionPolicy(PatchNodeOp op) {
+  final common = op.patch.common;
   return !common.isVisible.isAbsent || !common.isSelectable.isAbsent;
 }
 

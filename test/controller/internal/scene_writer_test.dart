@@ -7,6 +7,7 @@ import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/controller/mutation_executor.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_writer_command_results.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_writer.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_writer_runtime.dart';
 import 'package:iwb_canvas_engine/src/controller/txn_context.dart';
 import 'package:iwb_canvas_engine/src/controller/internal/signal_event.dart';
 
@@ -19,11 +20,13 @@ void main() {
     String? textFontFamilyByDefault,
   }) {
     return SceneWriter(
-      ctx,
-      mutationExecutor: MutationExecutor(
-        textFontFamilyByDefault: textFontFamilyByDefault,
+      SceneWriterRuntime(
+        ctx: ctx,
+        mutationExecutor: MutationExecutor(
+          textFontFamilyByDefault: textFontFamilyByDefault,
+        ),
+        txnSignalSink: txnSignalSink,
       ),
-      txnSignalSink: txnSignalSink,
     );
   }
 

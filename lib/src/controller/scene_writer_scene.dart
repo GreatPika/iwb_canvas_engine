@@ -1,8 +1,8 @@
 import 'dart:ui';
 
-import '../contract/snapshot.dart';
 import 'scene_writer.dart';
 import 'mutation_op.dart';
+import 'scene_writer_types.dart';
 
 bool sceneWriterWriteCameraOffsetChanged(SceneWriter writer, Offset offset) {
   return writer.runtime.execute(SetCameraOffsetOp(offset)).changed;
@@ -25,4 +25,10 @@ void sceneWriterWriteDocumentReplace(
   SceneSnapshot snapshot,
 ) {
   writer.runtime.execute(ReplaceSceneOp(snapshot));
+}
+
+ClearSceneResult sceneWriterWriteClearSceneKeepBackgroundResult(
+  SceneWriter writer,
+) {
+  return writer.runtime.execute(const ClearSceneKeepBackgroundOp()).value;
 }

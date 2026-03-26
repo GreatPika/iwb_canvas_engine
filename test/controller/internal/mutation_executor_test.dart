@@ -165,6 +165,53 @@ void main() {
   );
 
   test(
+    'MutationExecutor selection transform routes through family dispatch',
+    () {
+      final existingTransform = Transform2D.rotationDeg(30);
+      final delta = Transform2D.translation(const Offset(4, -3));
+      final ctx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-auto-3sel',
+              nodes: <SceneNode>[
+                RectNode(
+                  id: 'r1',
+                  size: const Size(10, 10),
+                  transform: existingTransform,
+                ),
+                RectNode(id: 'locked', size: const Size(5, 5), isLocked: true),
+              ],
+            ),
+          ],
+        ),
+        workingSelection: const <NodeId>{'r1', 'locked', 'missing'},
+        baseAllNodeIds: const <NodeId>{'r1', 'locked'},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+      final executor = MutationExecutor();
+
+      final result = executeWithPreparedCommit(
+        executor,
+        ctx,
+        TransformSelectionOp(delta),
+      );
+
+      final updated = ctx.workingScene.layers.single.nodes.first as RectNode;
+      expect(result.applyResult.value, 1);
+      expect(result.applyResult.changed, isTrue);
+      expect(
+        updated.transform.toJsonMap(),
+        delta.multiply(existingTransform).toJsonMap(),
+      );
+      expect(result.changeSet.updatedNodeIds, const <NodeId>{'r1'});
+      expect(result.changeSet.hitGeometryChangedIds, const <NodeId>{'r1'});
+      expect(result.changeSet.boundsChanged, isTrue);
+    },
+  );
+
+  test(
     'MutationExecutor keeps locator correct after inserted layer and same-txn delete',
     () {
       final baseScene = Scene(

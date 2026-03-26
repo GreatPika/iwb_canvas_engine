@@ -119,5 +119,5 @@ language: russian
 - [x] [Шаг 27. Сделать `SceneControllerCore` тонким facade над controller commit runtime](development_plan/step_27_scene_controller_core_facade_finalization.md)
 - [x] [Шаг 28. Довести controller transaction substrate до финальной формы](development_plan/step_28_controller_transaction_substrate_finalization.md)
 - [x] [Шаг 29. Сделать `SceneWriter` тонким shell над writer-local owner-ами](development_plan/step_29_scene_writer_thin_shell_and_writer_local_owners.md)
-- [ ] [Шаг 30. Выровнять owner boundary mutation families под `MutationExecutor`](development_plan/step_30_mutation_family_owner_alignment.md)
+- [x] [Шаг 30. Выровнять owner boundary mutation families под `MutationExecutor`](development_plan/step_30_mutation_family_owner_alignment.md)
 - [ ] [Шаг 31. Замкнуть финальную controller architecture на docs, structural tests и baseline](development_plan/step_31_controller_final_architecture_closure.md)

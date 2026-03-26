@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'internal/signal_event.dart';
 import 'mutation_executor.dart';
 import 'scene_writer.dart';
+import 'scene_writer_runtime.dart';
 import 'store.dart';
 import 'txn_context.dart';
 
@@ -84,9 +85,11 @@ final class SceneControllerCommitWriteRunner {
     );
     outCtx(ctx);
     return SceneWriter(
-      ctx,
-      mutationExecutor: _mutationExecutor,
-      txnSignalSink: _txnSignalSink,
+      SceneWriterRuntime(
+        ctx: ctx,
+        mutationExecutor: _mutationExecutor,
+        txnSignalSink: _txnSignalSink,
+      ),
     );
   }
 

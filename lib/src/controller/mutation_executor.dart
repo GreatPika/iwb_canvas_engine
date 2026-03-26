@@ -1,5 +1,6 @@
 import 'mutation_op.dart';
 import 'node_mutation_applier.dart';
+import 'selection_transform_mutation_applier.dart';
 import 'scene_mutation_applier.dart';
 import 'txn_context.dart';
 

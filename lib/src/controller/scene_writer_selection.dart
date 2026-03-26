@@ -1,12 +1,13 @@
+import 'dart:ui';
+
 import 'dart:collection';
 
-import '../core/nodes.dart';
 import '../core/selection_policy.dart';
-import '../model/document.dart';
 import 'txn_context.dart';
 import 'mutation_op.dart';
 import 'scene_writer.dart';
 import 'scene_writer_support.dart';
+import 'scene_writer_types.dart';
 
 List<NodeId>? sceneWriterWriteSelectionReplaceResult(
   SceneWriter writer,
@@ -83,6 +84,14 @@ List<NodeId> sceneWriterWriteDeleteSelectionResult(SceneWriter writer) {
       .execute(DeleteNodesBulkOp.borrowed(writer.runtime.ctx.workingSelection))
       .value;
   return sortWriterNodeIds(removedIds);
+}
+
+int sceneWriterWriteSelectionTranslate(SceneWriter writer, Offset delta) {
+  return writer.runtime.execute(TranslateSelectionOp(delta)).value;
+}
+
+int sceneWriterWriteSelectionTransform(SceneWriter writer, Transform2D delta) {
+  return writer.runtime.execute(TransformSelectionOp(delta)).value;
 }
 
 void _sceneWriterReplaceSelection(
