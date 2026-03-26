@@ -1,6 +1,6 @@
 language: russian
 
-# Шаг 20. Закрыть secondary hotspots render/view через подшаги 20.1-20.4
+# Шаг 20. Закрыть secondary hotspots render/view через подшаги 20.1-20.5
 
 ## 1. Change Mandate
 
@@ -16,7 +16,8 @@ view public behavior.
 - Render-cache lifecycle consolidation across `SceneViewCore` and
   `SceneViewInteractive`.
 - `SceneSpatialIndex` local hotspot cleanup and parity proof refresh.
-- Post-step rebaseline по render/view hot spots.
+- Residual render/view hotspot closure after the first implementation pass.
+- Post-residual rebaseline по render/view hot spots.
 
 ### Not Included in the Change
 
@@ -132,7 +133,9 @@ view public behavior.
 
 - `20.1` closes before `20.2`.
 - `20.2` closes before `20.3`.
-- `20.4` is forbidden until `20.1-20.3` are closed and remeasured.
+- `20.4` is forbidden until `20.1-20.3` are closed and the residual baseline
+  is captured.
+- `20.5` is forbidden until `20.1-20.4` are closed and remeasured.
 
 ### 6.8 Prohibited
 
@@ -156,7 +159,7 @@ view public behavior.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] ScenePainter decomposition
+### Slice 1. [x] ScenePainter decomposition
 
 #### Slice Contract
 
@@ -167,7 +170,7 @@ view public behavior.
 
 - Verification from `20.1`
 
-### Slice 2. [ ] SceneView cache lifecycle consolidation
+### Slice 2. [x] SceneView cache lifecycle consolidation
 
 #### Slice Contract
 
@@ -189,16 +192,27 @@ view public behavior.
 
 - Verification from `20.3`
 
-### Slice 4. [ ] Render/view rebaseline
+### Slice 4. [ ] Residual render/view hotspot closure
 
 #### Slice Contract
 
-Закрыть `development_plan/step_20_4_render_view_rebaseline_and_roadmap.md`
-без повторного открытия semantic scope `20.1-20.3`.
+Закрыть `development_plan/step_20_4_residual_render_view_hotspot_closure.md`
+без повторного открытия semantic scope `18-19`.
 
 #### Verification
 
 - Verification from `20.4`
+
+### Slice 5. [ ] Render/view rebaseline
+
+#### Slice Contract
+
+Закрыть `development_plan/step_20_5_render_view_rebaseline_and_roadmap.md`
+без повторного открытия semantic scope `20.1-20.4`.
+
+#### Verification
+
+- Verification from `20.5`
 
 ## 9. Final Verification
 

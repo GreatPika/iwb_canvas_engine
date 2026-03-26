@@ -1,11 +1,12 @@
 language: russian
 
-# Шаг 20.4. Переснять baseline render/view hotspot closure и обновить roadmap
+# Шаг 20.5. Переснять baseline render/view hotspot closure и обновить roadmap
 
 ## 1. Change Mandate
 
-Этот шаг переснимает post-step baseline для render/view hotspots и обновляет
-roadmap по новой measured reality without reopening steps 18 or 19.
+Этот шаг переснимает post-step baseline для render/view hotspots after `20.4`
+and обновляет roadmap по новой measured reality without reopening steps 18
+or 19.
 
 ## 2. Change Boundary
 
@@ -25,7 +26,8 @@ roadmap по новой measured reality without reopening steps 18 or 19.
 ### Implementation Files
 
 - `development_plan/step_20_render_view_secondary_hotspots.md`
-- `development_plan/step_20_4_render_view_rebaseline_and_roadmap.md`
+- `development_plan/step_20_4_residual_render_view_hotspot_closure.md`
+- `development_plan/step_20_5_render_view_rebaseline_and_roadmap.md`
 - `DEVELOPMENT_PLAN.md`
 
 ### Fixture and Supporting Data Files
@@ -59,17 +61,17 @@ roadmap по новой measured reality without reopening steps 18 or 19.
 ## 5. Result Requirements
 
 1. Post-step render/view baseline is captured with the same instruments as the
-   starting baseline of step 20.
+   starting residual baseline of `20.4`.
 2. Roadmap reflects only the residual render/view work that factually remains
-   after `20.1-20.3`.
+   after `20.4`.
 
 ## 6. Implementation Specification
 
 ### 6.1 Analysis Scope
 
-- Starting confirmed render/view baseline for step 20 is:
-  - `18` `HIGH+` entries in the render/view family
-  - `10` clone clusters in `lib` touching render/view hotspots
+- Starting confirmed residual baseline for `20.4` is:
+  - `23` `HIGH+` entries in the render/view family
+  - `11` clone clusters in `lib` touching render/view hotspots
 
 ### 6.2 Target Verification Units
 
@@ -77,11 +79,12 @@ roadmap по новой measured reality without reopening steps 18 or 19.
 - `dart run tool/analysis/find_similar_clones.dart --clusters --json lib`
 - MCP test runner: `test/render test/view`
 - MCP test runner: `test/core/scene_spatial_index_test.dart test/core/node_geometry_test.dart test/core/hit_test_candidate_bounds_test.dart`
+- MCP test runner: `test/render/render_hit_bounds_parity_test.dart`
 - `dart run tool/check_import_boundaries.dart`
 
 ### 6.3 Protected States, Data, or Structures
 
-- The recorded starting baseline of step 20.
+- The recorded starting residual baseline of `20.4`.
 - The separation between render/view work and previous steps.
 
 ### 6.8 Prohibited
@@ -110,12 +113,12 @@ roadmap по новой measured reality without reopening steps 18 or 19.
 #### Slice Contract
 
 Render/view baseline is recaptured with the same instruments and compared to
-the starting baseline of step 20.
+the starting residual baseline of `20.4`.
 
 #### Change
 
 Переснять render/view baseline and prepare a direct comparison against the
-starting values of step 20.
+starting values of `20.4`.
 
 #### Verification
 
@@ -123,6 +126,7 @@ starting values of step 20.
 - `dart run tool/analysis/find_similar_clones.dart --clusters --json lib`
 - MCP test runner: `test/render test/view`
 - MCP test runner: `test/core/scene_spatial_index_test.dart test/core/node_geometry_test.dart test/core/hit_test_candidate_bounds_test.dart`
+- MCP test runner: `test/render/render_hit_bounds_parity_test.dart`
 - `dart run tool/check_import_boundaries.dart`
 
 #### Closure Evidence
@@ -135,7 +139,7 @@ starting values of step 20.
 #### Slice Contract
 
 Planning documents reflect only the residual render/view work that factually
-remains after `20.1-20.3`.
+remains after `20.4`.
 
 #### Change
 
@@ -148,6 +152,7 @@ remains after `20.1-20.3`.
 - `dart run tool/analysis/find_similar_clones.dart --clusters --json lib`
 - MCP test runner: `test/render test/view`
 - MCP test runner: `test/core/scene_spatial_index_test.dart test/core/node_geometry_test.dart test/core/hit_test_candidate_bounds_test.dart`
+- MCP test runner: `test/render/render_hit_bounds_parity_test.dart`
 - `dart run tool/check_import_boundaries.dart`
 
 #### Closure Evidence
