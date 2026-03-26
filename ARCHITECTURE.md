@@ -219,6 +219,11 @@ most important architectural rules are:
   and executed by `MutationExecutor`; `SceneWriteTxn` stays the public write
   seam, while `SceneControllerCore` remains the owner of commit/store/signal
   lifecycle.
+- The controller-private transaction substrate is split by owner:
+  `TxnContext` remains the transaction root, while private workspace and
+  derived-state owners live in `txn_workspace.dart` and
+  `txn_derived_state.dart`; `SceneControllerCommitRuntime` consumes that
+  substrate without reopening the public controller facade boundary.
 - `SceneWriter` is the internal owner for selection-only transitions, exact
   command-facing mutation results, and the buffered signal enqueue boundary;
   internal commands consume that writer-local seam directly instead of

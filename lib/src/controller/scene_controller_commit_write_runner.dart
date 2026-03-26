@@ -39,10 +39,14 @@ final class SceneControllerCommitWriteRunner {
     }
 
     _writeInProgress = true;
-    TxnContext? ctx;
+    TxnContext? closeCtx;
     try {
+      late final TxnContext ctx;
       final writer = _createSceneWriter(
-        outCtx: (createdCtx) => ctx = createdCtx,
+        outCtx: (createdCtx) {
+          ctx = createdCtx;
+          closeCtx = createdCtx;
+        },
       );
       final result = fn(writer);
       if (result is Future) {
@@ -51,14 +55,10 @@ final class SceneControllerCommitWriteRunner {
           'Return synchronously from write(...).',
         );
       }
-      final committedCtx = ctx;
-      if (committedCtx == null) {
-        throw StateError('TxnContext must exist before commit execution.');
-      }
-      txnCommit(committedCtx);
+      txnCommit(ctx);
       return result;
     } finally {
-      ctx?.txnClose();
+      closeCtx?.txnClose();
       _writeInProgress = false;
     }
   }

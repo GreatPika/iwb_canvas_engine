@@ -117,4 +117,4 @@ language: russian
 - [x] [Шаг 25. Сделать `ScenePainter` тонким orchestration shell без painter `part`-coupling](development_plan/step_25_scene_painter_shell_finalization.md)
 - [x] [Шаг 26. Довести `ScenePainterShell` до чистого orchestration owner без background/cache assembly](development_plan/step_26_scene_painter_shell_owner_finalization.md)
 - [x] [Шаг 27. Сделать `SceneControllerCore` тонким facade над controller commit runtime](development_plan/step_27_scene_controller_core_facade_finalization.md)
-- [ ] [Шаг 28. Довести controller transaction substrate до финальной формы](development_plan/step_28_controller_transaction_substrate_finalization.md)
+- [x] [Шаг 28. Довести controller transaction substrate до финальной формы](development_plan/step_28_controller_transaction_substrate_finalization.md)

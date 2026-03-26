@@ -270,6 +270,34 @@ void main() {
     },
   );
 
+  testWidgets('debugRenderCaches throws after render surface unmount', (
+    tester,
+  ) async {
+    final controller = SceneControllerInteractive(
+      initialSnapshot: _snapshot(text: 'mounted'),
+    );
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(_host(controller));
+    await tester.pump();
+
+    final state = tester.state<State<StatefulWidget>>(
+      find.byType(SceneViewInteractive),
+    );
+
+    await tester.pumpWidget(
+      const Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox.shrink(),
+      ),
+    );
+    await tester.pump();
+
+    // The private state getter is intentionally exercised here after unmount.
+    // ignore: avoid-dynamic
+    expect(() => (state as dynamic).debugRenderCaches, throwsStateError);
+  });
+
   testWidgets('SceneViewInteractive flushes pending tap timer callback', (
     tester,
   ) async {

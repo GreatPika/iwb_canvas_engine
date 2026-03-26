@@ -17,12 +17,10 @@ MutationApplyResult<Object?> executeNodeMutationOp(
   required String? textFontFamilyByDefault,
 }) {
   return switch (op) {
-    InsertNodeOp(:final spec, :final layerId, :final insertIndex) => _insert(
+    InsertNodeOp() => _insert(
       ctx,
-      spec,
+      op,
       textFontFamilyByDefault: textFontFamilyByDefault,
-      layerId: layerId,
-      insertIndex: insertIndex,
     ),
     PatchNodeOp(:final patch) => _patch(ctx, patch),
     SetNodeTransformOp(:final nodeId, :final transform) => _setNodeTransform(
@@ -47,11 +45,10 @@ MutationApplyResult<Object?> executeSelectionTransformMutationOp(
 
 MutationApplyResult<NodeId> _insert(
   TxnContext ctx,
-  NodeSpec spec, {
+  InsertNodeOp op, {
   required String? textFontFamilyByDefault,
-  LayerId? layerId,
-  int? insertIndex,
 }) {
+  final spec = op.spec;
   final explicitId = spec.id;
   if (explicitId != null && ctx.txnHasNodeId(explicitId)) {
     throw ArgumentError.value(explicitId, 'spec.id', 'Node id must be unique.');
@@ -66,14 +63,14 @@ MutationApplyResult<NodeId> _insert(
     nextInstanceRevision: ctx.txnNextInstanceRevision,
   );
   final scene = ctx.txnEnsureMutableScene();
-  final targetLayerIndex = ctx.txnResolveInsertLayerIndex(layerId: layerId);
+  final targetLayerIndex = ctx.txnResolveInsertLayerIndex(layerId: op.layerId);
   ctx.txnEnsureMutableLayer(targetLayerIndex);
   txnInsertNodeInScene(
     scene: scene,
     nodeLocator: ctx.txnEnsureMutableNodeLocator(),
     node: node,
     layerIndex: targetLayerIndex,
-    insertIndex: insertIndex,
+    insertIndex: op.insertIndex,
   );
   ctx.txnRememberNodeId(node.id);
   ctx.changeSet

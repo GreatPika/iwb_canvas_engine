@@ -58,59 +58,39 @@ class SpatialIndexCache {
     required ChangeSet changeSet,
     required int controllerEpoch,
   }) {
-    if (_index == null) {
-      return _PreparedSpatialIndexCommit.setEpochOnly(
-        controllerEpoch: controllerEpoch,
-      );
+    final coldStart = _prepareColdStartEpoch(_index, controllerEpoch);
+    if (coldStart != null) {
+      return coldStart;
     }
 
-    final epochChanged = _indexEpoch != controllerEpoch;
-    if (changeSet.documentReplaced || epochChanged) {
+    if (_requiresInvalidation(
+      changeSet: changeSet,
+      currentEpoch: _indexEpoch,
+      nextEpoch: controllerEpoch,
+    )) {
       return const _PreparedSpatialIndexCommit.invalidate();
     }
 
-    final hasSpatialChange =
-        changeSet.structuralChanged ||
-        changeSet.boundsChanged ||
-        changeSet.addedNodeIds.isNotEmpty ||
-        changeSet.removedNodeIds.isNotEmpty ||
-        changeSet.hitGeometryChangedIds.isNotEmpty;
-    if (!hasSpatialChange) {
+    if (!_hasSpatialChange(changeSet)) {
       return const _PreparedSpatialIndexCommit.noop();
     }
 
-    final hasIncrementalDelta =
-        changeSet.addedNodeIds.isNotEmpty ||
-        changeSet.removedNodeIds.isNotEmpty ||
-        changeSet.hitGeometryChangedIds.isNotEmpty;
-    if (!hasIncrementalDelta) {
+    if (!_hasIncrementalDelta(changeSet)) {
       return const _PreparedSpatialIndexCommit.invalidate();
     }
 
-    try {
-      debugBeforeIncrementalPrepareHook?.call();
-      // ignore: avoid-non-null-assertion, _index null already returned above
-      final candidate = _index!.cloneForIncrementalUpdate(
+    final incremental = _prepareIncrementalCommit(
+      _IncrementalPrepareArgs(
+        index: _index,
+        beforePrepareHook: debugBeforeIncrementalPrepareHook,
         scene: scene,
         nodeLocator: nodeLocator,
-      );
-      final applied = candidate.applyIncremental(
-        scene: scene,
-        nodeLocator: nodeLocator,
-        changeSet: SceneSpatialIndexChangeSet(
-          addedNodeIds: changeSet.addedNodeIds,
-          removedNodeIds: changeSet.removedNodeIds,
-          hitGeometryChangedIds: changeSet.hitGeometryChangedIds,
-        ),
-      );
-      if (applied) {
-        return _PreparedSpatialIndexCommit.swapIncremental(
-          candidate: candidate,
-          controllerEpoch: controllerEpoch,
-        );
-      }
-    } catch (_) {
-      // Fall through to full rebuild.
+        changeSet: changeSet,
+        controllerEpoch: controllerEpoch,
+      ),
+    );
+    if (incremental != null) {
+      return incremental;
     }
 
     return _prepareFallbackRebuild(
@@ -164,6 +144,89 @@ class SpatialIndexCache {
     _index = null;
     _indexEpoch = -1;
   }
+}
+
+_PreparedSpatialIndexCommit? _prepareColdStartEpoch(
+  SceneSpatialIndex? index,
+  int controllerEpoch,
+) {
+  if (index != null) {
+    return null;
+  }
+  return _PreparedSpatialIndexCommit.setEpochOnly(
+    controllerEpoch: controllerEpoch,
+  );
+}
+
+bool _requiresInvalidation({
+  required ChangeSet changeSet,
+  required int currentEpoch,
+  required int nextEpoch,
+}) {
+  return changeSet.documentReplaced || currentEpoch != nextEpoch;
+}
+
+bool _hasSpatialChange(ChangeSet changeSet) {
+  return changeSet.structuralChanged ||
+      changeSet.boundsChanged ||
+      changeSet.addedNodeIds.isNotEmpty ||
+      changeSet.removedNodeIds.isNotEmpty ||
+      changeSet.hitGeometryChangedIds.isNotEmpty;
+}
+
+bool _hasIncrementalDelta(ChangeSet changeSet) {
+  return changeSet.addedNodeIds.isNotEmpty ||
+      changeSet.removedNodeIds.isNotEmpty ||
+      changeSet.hitGeometryChangedIds.isNotEmpty;
+}
+
+_PreparedSpatialIndexCommit? _prepareIncrementalCommit(
+  _IncrementalPrepareArgs args,
+) {
+  try {
+    args.beforePrepareHook?.call();
+    // ignore: avoid-non-null-assertion, guarded by cold-start path
+    final candidate = args.index!.cloneForIncrementalUpdate(
+      scene: args.scene,
+      nodeLocator: args.nodeLocator,
+    );
+    final applied = candidate.applyIncremental(
+      scene: args.scene,
+      nodeLocator: args.nodeLocator,
+      changeSet: SceneSpatialIndexChangeSet(
+        addedNodeIds: args.changeSet.addedNodeIds,
+        removedNodeIds: args.changeSet.removedNodeIds,
+        hitGeometryChangedIds: args.changeSet.hitGeometryChangedIds,
+      ),
+    );
+    if (!applied) {
+      return null;
+    }
+    return _PreparedSpatialIndexCommit.swapIncremental(
+      candidate: candidate,
+      controllerEpoch: args.controllerEpoch,
+    );
+  } catch (_) {
+    return null;
+  }
+}
+
+class _IncrementalPrepareArgs {
+  const _IncrementalPrepareArgs({
+    required this.index,
+    required this.beforePrepareHook,
+    required this.scene,
+    required this.nodeLocator,
+    required this.changeSet,
+    required this.controllerEpoch,
+  });
+
+  final SceneSpatialIndex? index;
+  final void Function()? beforePrepareHook;
+  final Scene scene;
+  final Map<NodeId, SpatialNodeLocation> nodeLocator;
+  final ChangeSet changeSet;
+  final int controllerEpoch;
 }
 
 class _PreparedSpatialIndexCommit {

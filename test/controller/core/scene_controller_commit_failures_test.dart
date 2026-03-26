@@ -115,6 +115,35 @@ void main() {
     },
   );
 
+  test('debug hook accessors proxy runtime debug state', () {
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    expect(controller.debug.beforeInvariantPrecheckHook, isNull);
+    expect(controller.debug.beforeSpatialPrepareCommitHook, isNull);
+    expect(controller.debug.beforeTxnContextCreateHook, isNull);
+
+    void invariantHook() {}
+    void spatialHook() {}
+    void txnCreateHook() {}
+
+    controller.debug.beforeInvariantPrecheckHook = invariantHook;
+    controller.debug.beforeSpatialPrepareCommitHook = spatialHook;
+    controller.debug.beforeTxnContextCreateHook = txnCreateHook;
+
+    expect(controller.debug.beforeInvariantPrecheckHook, same(invariantHook));
+    expect(controller.debug.beforeSpatialPrepareCommitHook, same(spatialHook));
+    expect(controller.debug.beforeTxnContextCreateHook, same(txnCreateHook));
+
+    controller.debug.beforeInvariantPrecheckHook = null;
+    controller.debug.beforeSpatialPrepareCommitHook = null;
+    controller.debug.beforeTxnContextCreateHook = null;
+
+    expect(controller.debug.beforeInvariantPrecheckHook, isNull);
+    expect(controller.debug.beforeSpatialPrepareCommitHook, isNull);
+    expect(controller.debug.beforeTxnContextCreateHook, isNull);
+  });
+
   test(
     'invariant pre-check failure in state-change branch keeps store and effects unchanged',
     () async {

@@ -264,7 +264,7 @@ facade/runtime slice: transaction substrate под `SceneControllerCore` дол�
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Make transaction workspace and derived state explicit private owners
+### Slice 1. [x] Make transaction workspace and derived state explicit private owners
 
 #### Slice Contract
 
@@ -308,7 +308,7 @@ only the transaction-root API and debug counters in the root file.
 - `dcm calculate-metrics` shows that the old mixed-owner hotspot in
   `txn_context.dart` has been redistributed into explicit private owners.
 
-### Slice 2. [ ] Remove scene-settings clone cluster and stabilize spatial-index prepare pipeline
+### Slice 2. [x] Remove scene-settings clone cluster and stabilize spatial-index prepare pipeline
 
 #### Slice Contract
 
@@ -357,7 +357,7 @@ branches while preserving incremental-prepare and rebuild fallback semantics.
 - `dcm calculate-metrics` shows no `HIGH` on
   `SpatialIndexCache.writePrepareCommit`.
 
-### Slice 3. [ ] Rebaseline controller as a closed architecture frontier
+### Slice 3. [x] Rebaseline controller as a closed architecture frontier
 
 #### Slice Contract
 

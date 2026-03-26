@@ -1,7 +1,8 @@
-import 'dart:ui';
+import 'dart:ui' hide Scene;
 
 import '../contract/snapshot.dart';
 import '../contract/scene_write_txn.dart';
+import '../core/scene.dart' show Scene;
 import '../model/document.dart';
 import 'mutation_input_guards.dart';
 import 'mutation_op.dart';
@@ -27,10 +28,30 @@ MutationApplyResult<Object?> executeSceneSettingsMutationOp(
   SceneSettingsMutationOp<Object?> op,
 ) {
   return switch (op) {
-    SetBackgroundColorOp(:final color) => _setBackgroundColor(ctx, color),
-    SetGridEnabledOp(:final enabled) => _setGridEnabled(ctx, enabled),
-    SetGridCellSizeOp(:final cellSize) => _setGridCellSize(ctx, cellSize),
-    SetCameraOffsetOp(:final offset) => _setCameraOffset(ctx, offset),
+    SetBackgroundColorOp(:final color) => _applySceneSettingUpdate<Color>(
+      ctx,
+      kind: _SceneSettingKind.backgroundColor,
+      value: color,
+    ),
+    SetGridEnabledOp(:final enabled) => _applySceneSettingUpdate<bool>(
+      ctx,
+      kind: _SceneSettingKind.gridEnabled,
+      value: enabled,
+    ),
+    SetGridCellSizeOp(:final cellSize) => _applySceneSettingUpdate<double>(
+      ctx,
+      kind: _SceneSettingKind.gridCellSize,
+      value: cellSize,
+      validate: (value) =>
+          requireFinitePositiveMutationInput(value, name: 'cellSize'),
+    ),
+    SetCameraOffsetOp(:final offset) => _applySceneSettingUpdate<Offset>(
+      ctx,
+      kind: _SceneSettingKind.cameraOffset,
+      value: offset,
+      validate: (value) =>
+          requireFiniteOffsetMutationInput(value, name: 'offset'),
+    ),
   };
 }
 
@@ -102,44 +123,58 @@ MutationApplyResult<Object?> _replaceScene(
   return const MutationApplyResult<Object?>(value: null, changed: true);
 }
 
-MutationApplyResult<Object?> _setBackgroundColor(TxnContext ctx, Color color) {
-  if (ctx.workingScene.background.color == color) {
+MutationApplyResult<Object?> _applySceneSettingUpdate<T>(
+  TxnContext ctx, {
+  required _SceneSettingKind kind,
+  required T value,
+  void Function(T value)? validate,
+}) {
+  validate?.call(value);
+  if (_isSceneSettingNoop(ctx.workingScene, kind: kind, value: value)) {
     return const MutationApplyResult<Object?>(value: null, changed: false);
   }
-  final scene = ctx.txnEnsureMutableScene();
-  scene.background.color = color;
-  ctx.changeSet.txnMarkVisualChanged();
+  _applySceneSettingChange(ctx, kind: kind, value: value);
   return const MutationApplyResult<Object?>(value: null, changed: true);
 }
 
-MutationApplyResult<Object?> _setGridEnabled(TxnContext ctx, bool enabled) {
-  if (ctx.workingScene.background.grid.isEnabled == enabled) {
-    return const MutationApplyResult<Object?>(value: null, changed: false);
-  }
-  final scene = ctx.txnEnsureMutableScene();
-  scene.background.grid.isEnabled = enabled;
-  ctx.changeSet.txnMarkGridChanged();
-  return const MutationApplyResult<Object?>(value: null, changed: true);
+bool _isSceneSettingNoop<T>(
+  Scene scene, {
+  required _SceneSettingKind kind,
+  required T value,
+}) {
+  return switch (kind) {
+    _SceneSettingKind.backgroundColor => scene.background.color == value,
+    _SceneSettingKind.gridEnabled => scene.background.grid.isEnabled == value,
+    _SceneSettingKind.gridCellSize => scene.background.grid.cellSize == value,
+    _SceneSettingKind.cameraOffset => scene.camera.offset == value,
+  };
 }
 
-MutationApplyResult<Object?> _setGridCellSize(TxnContext ctx, double cellSize) {
-  requireFinitePositiveMutationInput(cellSize, name: 'cellSize');
-  if (ctx.workingScene.background.grid.cellSize == cellSize) {
-    return const MutationApplyResult<Object?>(value: null, changed: false);
+void _applySceneSettingChange<T>(
+  TxnContext ctx, {
+  required _SceneSettingKind kind,
+  required T value,
+}) {
+  final mutableScene = ctx.txnEnsureMutableScene();
+  switch (kind) {
+    case _SceneSettingKind.backgroundColor:
+      mutableScene.background.color = value as Color;
+      ctx.changeSet.txnMarkVisualChanged();
+    case _SceneSettingKind.gridEnabled:
+      mutableScene.background.grid.isEnabled = value as bool;
+      ctx.changeSet.txnMarkGridChanged();
+    case _SceneSettingKind.gridCellSize:
+      mutableScene.background.grid.cellSize = value as double;
+      ctx.changeSet.txnMarkGridChanged();
+    case _SceneSettingKind.cameraOffset:
+      mutableScene.camera.offset = value as Offset;
+      ctx.changeSet.txnMarkVisualChanged();
   }
-  final scene = ctx.txnEnsureMutableScene();
-  scene.background.grid.cellSize = cellSize;
-  ctx.changeSet.txnMarkGridChanged();
-  return const MutationApplyResult<Object?>(value: null, changed: true);
 }
 
-MutationApplyResult<Object?> _setCameraOffset(TxnContext ctx, Offset offset) {
-  requireFiniteOffsetMutationInput(offset, name: 'offset');
-  if (ctx.workingScene.camera.offset == offset) {
-    return const MutationApplyResult<Object?>(value: null, changed: false);
-  }
-  final scene = ctx.txnEnsureMutableScene();
-  scene.camera.offset = offset;
-  ctx.changeSet.txnMarkVisualChanged();
-  return const MutationApplyResult<Object?>(value: null, changed: true);
+enum _SceneSettingKind {
+  backgroundColor,
+  gridEnabled,
+  gridCellSize,
+  cameraOffset,
 }
