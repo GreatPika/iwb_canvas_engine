@@ -5,7 +5,7 @@ language: russian
 ## 1. Change Mandate
 
 Этот шаг переснимает post-step baseline для render/view hotspots after `20.4`
-and обновляет roadmap по новой measured reality without reopening steps 18
+and обновляет roadmap по measured residual reality without reopening steps 18
 or 19.
 
 ## 2. Change Boundary
@@ -60,18 +60,23 @@ or 19.
 
 ## 5. Result Requirements
 
-1. Post-step render/view baseline is captured with the same instruments as the
-   starting residual baseline of `20.4`.
-2. Roadmap reflects only the residual render/view work that factually remains
+1. Post-step render/view baseline is captured with the same instruments as
+   `20.4` execution verification.
+2. Measured residual reality after `20.4` is recorded as `13` `HIGH+` entries
+   and `8` related clone clusters.
+3. Roadmap reflects only the residual render/view work that factually remains
    after `20.4`.
 
 ## 6. Implementation Specification
 
 ### 6.1 Analysis Scope
 
-- Starting confirmed residual baseline for `20.4` is:
-  - `23` `HIGH+` entries in the render/view family
-  - `11` clone clusters in `lib` touching render/view hotspots
+- This rebaseline records the current measured residual reality after `20.4`:
+  - `13` `HIGH+` entries in the configured render/view family
+  - `8` clone clusters touching the target render/view zone
+- Any pre-rebaseline `23 / 11` references in older planning documents are
+  treated as stale assumptions and must not remain recorded as the current
+  post-`20.4` state.
 
 ### 6.2 Target Verification Units
 
@@ -84,7 +89,7 @@ or 19.
 
 ### 6.3 Protected States, Data, or Structures
 
-- The recorded starting residual baseline of `20.4`.
+- The measured post-`20.4` residual baseline captured by this step.
 - The separation between render/view work and previous steps.
 
 ### 6.8 Prohibited
@@ -108,17 +113,17 @@ or 19.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Post-render/view baseline is recaptured
+### Slice 1. [x] Post-render/view baseline is recaptured
 
 #### Slice Contract
 
-Render/view baseline is recaptured with the same instruments and compared to
-the starting residual baseline of `20.4`.
+Render/view baseline is recaptured with the same instruments and recorded as
+the current post-`20.4` measured state.
 
 #### Change
 
-Переснять render/view baseline and prepare a direct comparison against the
-starting values of `20.4`.
+Переснять render/view baseline and record the current measured state for the
+render/view family and target clone inventory.
 
 #### Verification
 
@@ -132,19 +137,21 @@ starting values of `20.4`.
 #### Closure Evidence
 
 - Green run of the listed verifications.
-- Output explicitly compares starting and post-step render/view baseline.
+- Output records the current measured residual baseline as `13` `HIGH+`
+  entries and `8` related clone clusters.
 
-### Slice 2. [ ] Roadmap reflects only measured residual render/view work
+### Slice 2. [x] Roadmap reflects only measured residual render/view work
 
 #### Slice Contract
 
 Planning documents reflect only the residual render/view work that factually
-remains after `20.4`.
+remains after `20.4`, based on the measured `13 / 8` rebaseline.
 
 #### Change
 
 Обновить `DEVELOPMENT_PLAN.md` and `development_plan/step_20*.md` по
-измеренному результату render/view rebaseline.
+измеренному результату render/view rebaseline and leave the remaining
+structural work open as follow-up.
 
 #### Verification
 
@@ -158,8 +165,10 @@ remains after `20.4`.
 #### Closure Evidence
 
 - Green run of the listed verifications.
-- Planning files no longer carry stale render/view assumptions that were
-  already removed.
+- Planning files no longer carry stale `23 / 11` assumptions as the current
+  post-`20.4` reality.
+- Remaining render/view work is opened only where it factually remains after
+  the measured rebaseline.
 
 ## 9. Final Verification
 

@@ -101,16 +101,19 @@ reducing remaining duplicate and mixed ownership without metric-only reshaping.
    render/view behavior drift.
 2. Remaining duplicate or mixed ownership in the render/view seams is deleted
    rather than moved behind wrappers or cosmetic abstractions.
-3. Post-`20.4` implementation state improves against the confirmed residual
-   baseline of `23` `HIGH+` entries and `11` related clone clusters.
+3. Post-`20.4` implementation state improves against the residual baseline
+   captured for this step, and the measured post-step residual reality is
+   recorded by `20.5`.
 
 ## 6. Implementation Specification
 
 ### 6.1 Analysis Scope
 
-- The confirmed residual baseline after `20.1-20.3` is:
-  - `23` `HIGH+` entries in the render/view family
-  - `11` clone clusters in `lib` touching render/view hotspots
+- `20.4` executes against the residual hotspot inventory confirmed before this
+  step.
+- The measured post-step residual reality is recaptured by `20.5` as:
+  - `13` `HIGH+` entries in the configured render/view family
+  - `8` related clone clusters in the target render/view zone
 - Residual metric hotspots are concentrated in:
   - `lib/src/view/scene_view_interactive.dart`
   - `lib/src/view/scene_view.dart`

@@ -93,21 +93,23 @@ view public behavior.
 1. Render/view hotspots are reduced without changing public render/view
    behavior.
 2. `ScenePainter`, `SceneViewCore`, `SceneViewInteractive`, and
-   `SceneSpatialIndex` no longer keep their current mixed or duplicated local
-   ownership shapes.
-3. Current render/view baseline improves against the confirmed starting state:
-   `18` `HIGH+` entries and `10` related clone clusters.
+   `SceneSpatialIndex` no longer keep the specific mixed or duplicated local
+   ownership shapes targeted by `20.1-20.4`.
+3. Post-`20.5` measured residual reality is recorded as `13` `HIGH+` entries
+   and `8` related clone clusters, and further work is moved to follow-up
+   steps instead of remaining implicit inside step 20.
 
 ## 6. Implementation Specification
 
 ### 6.1 Analysis Scope
 
-- Current confirmed hotspots include:
-  - `ScenePainter: CBO 31, RFC 75, WMC 103`
-  - `_SceneViewInteractiveState: CBO 31, RFC 62, WMC 80`
-  - `SceneSpatialIndex: RFC 60, WMC 107`
-- Current render/view family contributes `18` `HIGH+` entries in `lib/src` and
-  participates in `10` clone clusters in `lib`.
+- `20.1-20.4` are closed as execution steps.
+- Post-`20.5` measured residual reality for the configured render/view family
+  is:
+  - `13` `HIGH+` entries
+  - `8` related clone clusters in the target zone
+- Remaining render/view structural work is recorded only as explicit follow-up
+  planning after this rebaseline.
 
 ### 6.2 Target Verification Units
 
@@ -192,7 +194,7 @@ view public behavior.
 
 - Verification from `20.3`
 
-### Slice 4. [ ] Residual render/view hotspot closure
+### Slice 4. [x] Residual render/view hotspot closure
 
 #### Slice Contract
 
@@ -203,7 +205,7 @@ view public behavior.
 
 - Verification from `20.4`
 
-### Slice 5. [ ] Render/view rebaseline
+### Slice 5. [x] Render/view rebaseline
 
 #### Slice Contract
 

@@ -4,30 +4,24 @@ import 'package:flutter/widgets.dart';
 
 import '../core/pointer_input.dart';
 import '../interactive/scene_controller_interactive.dart';
-import '../render/scene_painter.dart';
 import '../render/scene_render_caches.dart';
 import 'scene_view_defaults.dart';
 import 'scene_view_interactive_overlay_painter.dart';
 import 'scene_view_interactive_pointer_host.dart';
+import 'scene_view_render_surface.dart';
 
 _SceneViewInteractiveState _sceneViewInteractiveStateOf(BuildContext context) {
-  return switch (context) {
-        StatefulElement(:final state)
-            when state is _SceneViewInteractiveState =>
-          state,
-        _ => context.findAncestorStateOfType<_SceneViewInteractiveState>(),
-      } ??
-      (throw StateError(
-        'No SceneViewInteractive state found for the provided BuildContext.',
-      ));
+  return sceneViewStateOf<_SceneViewInteractiveState>(
+    context,
+    missingStateLabel: 'SceneViewInteractive',
+  );
 }
 
 @visibleForTesting
 SceneRenderCaches debugSceneViewInteractiveRenderCachesOf(
   BuildContext context,
 ) {
-  final state = _sceneViewInteractiveStateOf(context);
-  return state.debugRenderCaches;
+  return _sceneViewInteractiveStateOf(context).debugRenderCaches;
 }
 
 @visibleForTesting
@@ -64,11 +58,18 @@ class SceneViewInteractive extends StatefulWidget {
 
 class _SceneViewInteractiveState extends State<SceneViewInteractive> {
   late final SceneViewInteractivePointerHost _pointerHost;
-  late final SceneViewRenderCacheLifecycle _renderCacheLifecycle =
-      SceneViewRenderCacheLifecycle(create: _createRenderCaches);
+  final GlobalKey<SceneViewRenderSurfaceState> _renderSurfaceKey =
+      GlobalKey<SceneViewRenderSurfaceState>();
 
   @visibleForTesting
-  SceneRenderCaches get debugRenderCaches => _renderCacheLifecycle.debugCaches;
+  SceneRenderCaches get debugRenderCaches {
+    final renderSurfaceState = _renderSurfaceKey.currentState;
+    if (renderSurfaceState == null) {
+      throw StateError('SceneViewRenderSurface is not mounted.');
+    }
+    return renderSurfaceState.debugRenderCaches;
+  }
+
   @visibleForTesting
   int get debugLiveRawPointerCount => _pointerHost.debugLiveRawPointerCount;
   @visibleForTesting
@@ -78,15 +79,10 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
   @override
   void initState() {
     super.initState();
-    _renderCacheLifecycle.initialize(
-      controllerEpoch: sceneControllerInteractiveInternalEpoch(
-        widget.controller,
-      ),
-    );
     _pointerHost = SceneViewInteractivePointerHost(
       controller: widget.controller,
       isMounted: () => mounted,
-      onControllerChanged: _handleControllerChanged,
+      onControllerChanged: () {},
     );
   }
 
@@ -95,24 +91,38 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
       _pointerHost.updateController(widget.controller);
-      _renderCacheLifecycle.handleControllerSwap(
-        controllerEpoch: sceneControllerInteractiveInternalEpoch(
-          widget.controller,
-        ),
-      );
     }
   }
 
   @override
   void dispose() {
     _pointerHost.dispose();
-    _renderCacheLifecycle.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final textDirection = Directionality.maybeOf(context) ?? TextDirection.ltr;
+    final renderSurface = SceneViewRenderSurface(
+      key: _renderSurfaceKey,
+      controller: widget.controller,
+      repaint: widget.controller,
+      readControllerEpoch: () =>
+          sceneControllerInteractiveInternalEpoch(widget.controller),
+      createRenderCaches: _createRenderCaches,
+      cacheDependencies: null,
+      imageResolver: widget.imageResolver ?? sceneViewDefaultImageResolver,
+      nodePreviewOffsetResolver: (nodeId) =>
+          sceneControllerInteractiveInternalPreviewDeltaForNode(
+            widget.controller,
+            nodeId,
+          ),
+      selectionRect: widget.controller.selectionRect,
+      selectionColor: widget.selectionColor,
+      selectionStrokeWidth: widget.selectionStrokeWidth,
+      gridStrokeWidth: widget.gridStrokeWidth,
+      textDirection: textDirection,
+    );
     return Listener(
       behavior: HitTestBehavior.opaque,
       onPointerDown: (event) =>
@@ -124,36 +134,11 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
       onPointerCancel: (event) =>
           _pointerHost.handlePointerEvent(event, PointerPhase.cancel),
       child: CustomPaint(
-        painter: ScenePainter(
-          controller: widget.controller,
-          imageResolver: widget.imageResolver ?? sceneViewDefaultImageResolver,
-          nodePreviewOffsetResolver: (nodeId) =>
-              sceneControllerInteractiveInternalPreviewDeltaForNode(
-                widget.controller,
-                nodeId,
-              ),
-          staticLayerCache: _renderCacheLifecycle.staticLayerCache,
-          textLayoutCache: _renderCacheLifecycle.textLayoutCache,
-          strokePathCache: _renderCacheLifecycle.strokePathCache,
-          pathMetricsCache: _renderCacheLifecycle.pathMetricsCache,
-          geometryCache: _renderCacheLifecycle.geometryCache,
-          selectionRect: widget.controller.selectionRect,
-          selectionColor: widget.selectionColor,
-          selectionStrokeWidth: widget.selectionStrokeWidth,
-          gridStrokeWidth: widget.gridStrokeWidth,
-          textDirection: textDirection,
-        ),
         foregroundPainter: SceneViewInteractiveOverlayPainter(
           controller: widget.controller,
         ),
-        child: const SizedBox.expand(),
+        child: renderSurface,
       ),
-    );
-  }
-
-  void _handleControllerChanged() {
-    _renderCacheLifecycle.clearIfEpochChanged(
-      sceneControllerInteractiveInternalEpoch(widget.controller),
     );
   }
 

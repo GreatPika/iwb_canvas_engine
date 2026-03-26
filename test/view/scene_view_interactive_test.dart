@@ -8,6 +8,8 @@ import 'package:iwb_canvas_engine/src/core/pointer_input.dart'
 import 'package:iwb_canvas_engine/src/interactive/scene_controller_interactive.dart';
 import 'package:iwb_canvas_engine/src/contract/canvas_pointer_input.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
+import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
+import 'package:iwb_canvas_engine/src/view/scene_view_interactive_overlay_painter.dart';
 import 'package:iwb_canvas_engine/src/view/scene_view_interactive.dart';
 
 // INV:INV-ENG-VIEW-POINTER-SETTINGS-LIVE-APPLY
@@ -228,7 +230,11 @@ void main() {
       await tester.pumpWidget(_host(controller));
       await tester.pump();
 
-      final descendantContext = tester.element(find.byType(CustomPaint));
+      final descendantContext = tester.element(
+        find.byWidgetPredicate(
+          (widget) => widget is CustomPaint && widget.painter is ScenePainter,
+        ),
+      );
       final caches = debugSceneViewInteractiveRenderCachesOf(descendantContext);
 
       expect(caches.staticLayerCache, isNotNull);
@@ -1062,7 +1068,13 @@ void main() {
     Future<void> paintOverlay() async {
       await tester.pumpWidget(_host(controller));
       await tester.pump();
-      final customPaint = tester.widget<CustomPaint>(find.byType(CustomPaint));
+      final customPaint = tester.widget<CustomPaint>(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is CustomPaint &&
+              widget.foregroundPainter is SceneViewInteractiveOverlayPainter,
+        ),
+      );
       final overlay = customPaint.foregroundPainter;
       if (overlay == null) {
         fail('Expected overlay foreground painter.');
@@ -1110,6 +1122,46 @@ void main() {
     await paintOverlay();
     controller.snapshotOverride = null;
   });
+
+  testWidgets(
+    'SceneViewInteractive keeps overlay outside shared render surface',
+    (tester) async {
+      final controller = SceneControllerInteractive(
+        initialSnapshot: _snapshot(text: 'surface-owner'),
+      );
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+
+      final customPaints = tester.widgetList<CustomPaint>(
+        find.byType(CustomPaint),
+      );
+      expect(customPaints.length, greaterThanOrEqualTo(2));
+
+      final overlayPaint = customPaints.firstWhere(
+        (paint) =>
+            paint.foregroundPainter is SceneViewInteractiveOverlayPainter,
+      );
+      expect(
+        overlayPaint.foregroundPainter,
+        isA<SceneViewInteractiveOverlayPainter>(),
+      );
+
+      final caches = debugSceneViewInteractiveRenderCachesOf(
+        _sceneViewContext(tester),
+      );
+      final innerPaint = customPaints.firstWhere(
+        (paint) =>
+            paint.painter is ScenePainter &&
+            identical(
+              (paint.painter as ScenePainter).staticLayerCache,
+              caches.staticLayerCache,
+            ),
+      );
+      expect(innerPaint.foregroundPainter, isNull);
+    },
+  );
 }
 
 class _OverlayTestController extends SceneControllerInteractive {

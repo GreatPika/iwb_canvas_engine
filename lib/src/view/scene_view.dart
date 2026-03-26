@@ -5,19 +5,18 @@ import '../render/render_geometry_cache.dart';
 import '../render/scene_painter.dart';
 import '../render/scene_render_caches.dart';
 import 'scene_view_defaults.dart';
+import 'scene_view_render_surface.dart';
+
+_SceneViewCoreState _sceneViewCoreStateOf(BuildContext context) {
+  return sceneViewStateOf<_SceneViewCoreState>(
+    context,
+    missingStateLabel: 'SceneViewCore',
+  );
+}
 
 @visibleForTesting
 SceneRenderCaches debugSceneViewRenderCachesOf(BuildContext context) {
-  final state = switch (context) {
-    StatefulElement(:final state) when state is _SceneViewCoreState => state,
-    _ => context.findAncestorStateOfType<_SceneViewCoreState>(),
-  };
-  if (state == null) {
-    throw StateError(
-      'No SceneViewCore state found for the provided BuildContext.',
-    );
-  }
-  return state.debugRenderCaches;
+  return _sceneViewCoreStateOf(context).debugRenderCaches;
 }
 
 class SceneViewCore extends StatefulWidget {
@@ -51,76 +50,40 @@ class SceneViewCore extends StatefulWidget {
 }
 
 class _SceneViewCoreState extends State<SceneViewCore> {
-  late final SceneViewRenderCacheLifecycle _renderCacheLifecycle =
-      SceneViewRenderCacheLifecycle(create: _createRenderCaches);
+  final GlobalKey<SceneViewRenderSurfaceState> _renderSurfaceKey =
+      GlobalKey<SceneViewRenderSurfaceState>();
 
   @visibleForTesting
-  SceneRenderCaches get debugRenderCaches => _renderCacheLifecycle.debugCaches;
-
-  @override
-  void initState() {
-    super.initState();
-    _renderCacheLifecycle.initialize(
-      controllerEpoch: widget.controller.controllerEpoch,
-    );
-    widget.controller.addListener(_handleControllerChanged);
-  }
-
-  @override
-  void didUpdateWidget(SceneViewCore oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.controller != widget.controller) {
-      oldWidget.controller.removeListener(_handleControllerChanged);
-      widget.controller.addListener(_handleControllerChanged);
-      _renderCacheLifecycle.handleControllerSwap(
-        controllerEpoch: widget.controller.controllerEpoch,
-      );
+  SceneRenderCaches get debugRenderCaches {
+    final renderSurfaceState = _renderSurfaceKey.currentState;
+    if (renderSurfaceState == null) {
+      throw StateError('SceneViewRenderSurface is not mounted.');
     }
-    if (_didCacheDepsChange(oldWidget)) {
-      _renderCacheLifecycle.recreateCaches();
-    }
-  }
-
-  @override
-  void dispose() {
-    widget.controller.removeListener(_handleControllerChanged);
-    _renderCacheLifecycle.dispose();
-    super.dispose();
+    return renderSurfaceState.debugRenderCaches;
   }
 
   @override
   Widget build(BuildContext context) {
     final textDirection = Directionality.maybeOf(context) ?? TextDirection.ltr;
-    return CustomPaint(
-      painter: ScenePainter(
-        controller: widget.controller,
-        imageResolver: widget.imageResolver ?? sceneViewDefaultImageResolver,
-        staticLayerCache: _renderCacheLifecycle.staticLayerCache,
-        textLayoutCache: _renderCacheLifecycle.textLayoutCache,
-        strokePathCache: _renderCacheLifecycle.strokePathCache,
-        pathMetricsCache: _renderCacheLifecycle.pathMetricsCache,
-        geometryCache: _renderCacheLifecycle.geometryCache,
-        selectionColor: widget.selectionColor,
-        selectionStrokeWidth: widget.selectionStrokeWidth,
-        gridStrokeWidth: widget.gridStrokeWidth,
-        textDirection: textDirection,
+    return SceneViewRenderSurface(
+      key: _renderSurfaceKey,
+      controller: widget.controller,
+      repaint: widget.controller,
+      readControllerEpoch: () => widget.controller.controllerEpoch,
+      createRenderCaches: _createRenderCaches,
+      cacheDependencies: (
+        widget.staticLayerCache,
+        widget.textLayoutCache,
+        widget.strokePathCache,
+        widget.pathMetricsCache,
+        widget.geometryCache,
       ),
-      child: const SizedBox.expand(),
+      imageResolver: widget.imageResolver ?? sceneViewDefaultImageResolver,
+      selectionColor: widget.selectionColor,
+      selectionStrokeWidth: widget.selectionStrokeWidth,
+      gridStrokeWidth: widget.gridStrokeWidth,
+      textDirection: textDirection,
     );
-  }
-
-  void _handleControllerChanged() {
-    _renderCacheLifecycle.clearIfEpochChanged(
-      widget.controller.controllerEpoch,
-    );
-  }
-
-  bool _didCacheDepsChange(SceneViewCore oldWidget) {
-    return oldWidget.staticLayerCache != widget.staticLayerCache ||
-        oldWidget.textLayoutCache != widget.textLayoutCache ||
-        oldWidget.strokePathCache != widget.strokePathCache ||
-        oldWidget.pathMetricsCache != widget.pathMetricsCache ||
-        oldWidget.geometryCache != widget.geometryCache;
   }
 
   SceneRenderCaches _createRenderCaches() {
