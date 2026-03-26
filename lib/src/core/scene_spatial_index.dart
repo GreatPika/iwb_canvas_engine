@@ -34,6 +34,19 @@ class SceneSpatialCandidate {
   final Rect candidateBoundsWorld;
 }
 
+/// Incremental scene delta applied to [SceneSpatialIndex].
+class SceneSpatialIndexChangeSet {
+  const SceneSpatialIndexChangeSet({
+    required this.addedNodeIds,
+    required this.removedNodeIds,
+    required this.hitGeometryChangedIds,
+  });
+
+  final Set<NodeId> addedNodeIds;
+  final Set<NodeId> removedNodeIds;
+  final Set<NodeId> hitGeometryChangedIds;
+}
+
 /// Uniform-grid spatial index for coarse scene candidate lookup.
 class SceneSpatialIndex {
   SceneSpatialIndex._(this._cellSize);
@@ -80,19 +93,13 @@ class SceneSpatialIndex {
   bool applyIncremental({
     required Scene scene,
     required Map<NodeId, SpatialNodeLocation> nodeLocator,
-    required Set<NodeId> addedNodeIds,
-    required Set<NodeId> removedNodeIds,
-    required Set<NodeId> hitGeometryChangedIds,
+    required SceneSpatialIndexChangeSet changeSet,
   }) {
     return _applySceneSpatialIndexIncremental(
       this,
       scene: scene,
       nodeLocator: nodeLocator,
-      changeSet: _IncrementalChangeSet(
-        addedNodeIds: addedNodeIds,
-        removedNodeIds: removedNodeIds,
-        hitGeometryChangedIds: hitGeometryChangedIds,
-      ),
+      changeSet: changeSet,
     );
   }
 
@@ -139,7 +146,7 @@ bool _applySceneSpatialIndexIncremental(
   SceneSpatialIndex index, {
   required Scene scene,
   required Map<NodeId, SpatialNodeLocation> nodeLocator,
-  required _IncrementalChangeSet changeSet,
+  required SceneSpatialIndexChangeSet changeSet,
 }) {
   _bindSpatialIndexState(index, scene: scene, nodeLocator: nodeLocator);
   if (!index._isValid) {
@@ -411,7 +418,7 @@ List<SceneSpatialCandidate> _resolveCandidates(
   return out.toList(growable: false);
 }
 
-bool _hasNoIncrementalChanges(_IncrementalChangeSet changeSet) {
+bool _hasNoIncrementalChanges(SceneSpatialIndexChangeSet changeSet) {
   return changeSet.addedNodeIds.isEmpty &&
       changeSet.removedNodeIds.isEmpty &&
       changeSet.hitGeometryChangedIds.isEmpty;
@@ -425,7 +432,7 @@ void _removeEntries(SceneSpatialIndex index, Set<NodeId> nodeIds) {
 
 bool _applyIncrementalUpserts(
   SceneSpatialIndex index,
-  _IncrementalChangeSet changeSet,
+  SceneSpatialIndexChangeSet changeSet,
 ) {
   if (!_upsertNodeIds(index, changeSet.addedNodeIds)) {
     return false;
@@ -444,7 +451,7 @@ bool _upsertNodeIds(SceneSpatialIndex index, Set<NodeId> nodeIds) {
 
 bool _refreshChangedNodeIds(
   SceneSpatialIndex index,
-  _IncrementalChangeSet changeSet,
+  SceneSpatialIndexChangeSet changeSet,
 ) {
   for (final nodeId in changeSet.hitGeometryChangedIds) {
     if (changeSet.removedNodeIds.contains(nodeId) ||
@@ -484,18 +491,6 @@ bool _isLargeSpan(_CellSpan span, {required int maxCells}) {
   if (dx <= 0 || dy <= 0) return true;
   if (dx > maxCells || dy > maxCells) return true;
   return dx * dy > maxCells;
-}
-
-class _IncrementalChangeSet {
-  const _IncrementalChangeSet({
-    required this.addedNodeIds,
-    required this.removedNodeIds,
-    required this.hitGeometryChangedIds,
-  });
-
-  final Set<NodeId> addedNodeIds;
-  final Set<NodeId> removedNodeIds;
-  final Set<NodeId> hitGeometryChangedIds;
 }
 
 class _SpatialEntry {

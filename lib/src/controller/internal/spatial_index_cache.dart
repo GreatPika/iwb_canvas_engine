@@ -97,9 +97,11 @@ class SpatialIndexCache {
       final applied = candidate.applyIncremental(
         scene: scene,
         nodeLocator: nodeLocator,
-        addedNodeIds: changeSet.addedNodeIds,
-        removedNodeIds: changeSet.removedNodeIds,
-        hitGeometryChangedIds: changeSet.hitGeometryChangedIds,
+        changeSet: SceneSpatialIndexChangeSet(
+          addedNodeIds: changeSet.addedNodeIds,
+          removedNodeIds: changeSet.removedNodeIds,
+          hitGeometryChangedIds: changeSet.hitGeometryChangedIds,
+        ),
       );
       if (applied) {
         return _PreparedSpatialIndexCommit.swapIncremental(

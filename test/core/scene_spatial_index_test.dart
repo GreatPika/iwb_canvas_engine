@@ -253,9 +253,11 @@ void main() {
       final applied = index.applyIncremental(
         scene: scene,
         nodeLocator: throwingLookup,
-        addedNodeIds: const <NodeId>{},
-        removedNodeIds: const <NodeId>{},
-        hitGeometryChangedIds: const <NodeId>{},
+        changeSet: const SceneSpatialIndexChangeSet(
+          addedNodeIds: <NodeId>{},
+          removedNodeIds: <NodeId>{},
+          hitGeometryChangedIds: <NodeId>{},
+        ),
       );
       expect(applied, isTrue);
 
@@ -280,9 +282,11 @@ void main() {
       final applied = index.applyIncremental(
         scene: scene,
         nodeLocator: throwingContainsKey,
-        addedNodeIds: const <NodeId>{},
-        removedNodeIds: const <NodeId>{},
-        hitGeometryChangedIds: const <NodeId>{'r1'},
+        changeSet: const SceneSpatialIndexChangeSet(
+          addedNodeIds: <NodeId>{},
+          removedNodeIds: <NodeId>{},
+          hitGeometryChangedIds: <NodeId>{'r1'},
+        ),
       );
 
       expect(applied, isFalse);
@@ -329,9 +333,11 @@ void main() {
       final applied = candidate.applyIncremental(
         scene: movedScene,
         nodeLocator: movedLocator,
-        addedNodeIds: const <NodeId>{},
-        removedNodeIds: const <NodeId>{},
-        hitGeometryChangedIds: const <NodeId>{'r1'},
+        changeSet: const SceneSpatialIndexChangeSet(
+          addedNodeIds: <NodeId>{},
+          removedNodeIds: <NodeId>{},
+          hitGeometryChangedIds: <NodeId>{'r1'},
+        ),
       );
       expect(applied, isTrue);
 
@@ -401,9 +407,11 @@ void main() {
     final applied = incremental.applyIncremental(
       scene: movedScene,
       nodeLocator: movedLocator,
-      addedNodeIds: const <NodeId>{},
-      removedNodeIds: const <NodeId>{},
-      hitGeometryChangedIds: <NodeId>{movedNode.id},
+      changeSet: SceneSpatialIndexChangeSet(
+        addedNodeIds: const <NodeId>{},
+        removedNodeIds: const <NodeId>{},
+        hitGeometryChangedIds: <NodeId>{movedNode.id},
+      ),
     );
     final rebuilt = SceneSpatialIndex.build(
       movedScene,
