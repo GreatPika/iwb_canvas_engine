@@ -84,7 +84,7 @@ void main() {
       );
       addTearDown(controller.dispose);
 
-      final beforeCommit = controller.debugCommitRevision;
+      final beforeCommit = controller.debug.currentCommitRevision;
       final beforeSnapshot = controller.snapshot;
 
       final signals = <Object>[];
@@ -107,7 +107,7 @@ void main() {
       );
       await pumpEventQueue(times: 2);
 
-      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.debug.currentCommitRevision, beforeCommit);
       expect(controller.selectedNodeIds, isEmpty);
       expect(controller.snapshot.layers.length, beforeSnapshot.layers.length);
       expect(signals, isEmpty);
@@ -128,7 +128,7 @@ void main() {
       final beforeStructural = controller.structuralRevision;
       final beforeBounds = controller.boundsRevision;
       final beforeVisual = controller.visualRevision;
-      final beforeCommit = controller.debugCommitRevision;
+      final beforeCommit = controller.debug.currentCommitRevision;
       final beforeSelection = controller.selectedNodeIds;
 
       final signals = <Object>[];
@@ -140,7 +140,7 @@ void main() {
         notifications = notifications + 1;
       });
 
-      controller.debugBeforeInvariantPrecheckHook = () {
+      controller.debug.beforeInvariantPrecheckHook = () {
         throw StateError('forced invariant pre-check failure');
       };
 
@@ -168,7 +168,7 @@ void main() {
       expect(controller.structuralRevision, beforeStructural);
       expect(controller.boundsRevision, beforeBounds);
       expect(controller.visualRevision, beforeVisual);
-      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.debug.currentCommitRevision, beforeCommit);
       expect(controller.selectedNodeIds, beforeSelection);
       expect(signals, isEmpty);
       expect(notifications, 0);
@@ -188,7 +188,7 @@ void main() {
       final beforeStructural = controller.structuralRevision;
       final beforeBounds = controller.boundsRevision;
       final beforeVisual = controller.visualRevision;
-      final beforeCommit = controller.debugCommitRevision;
+      final beforeCommit = controller.debug.currentCommitRevision;
       final beforeSelection = controller.selectedNodeIds;
 
       final signals = <Object>[];
@@ -200,7 +200,7 @@ void main() {
         notifications = notifications + 1;
       });
 
-      controller.debugBeforeSpatialPrepareCommitHook = () {
+      controller.debug.beforeSpatialPrepareCommitHook = () {
         throw StateError('forced spatial prepare failure');
       };
 
@@ -228,7 +228,7 @@ void main() {
       expect(controller.structuralRevision, beforeStructural);
       expect(controller.boundsRevision, beforeBounds);
       expect(controller.visualRevision, beforeVisual);
-      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.debug.currentCommitRevision, beforeCommit);
       expect(controller.selectedNodeIds, beforeSelection);
       expect(signals, isEmpty);
       expect(notifications, 0);
@@ -243,7 +243,7 @@ void main() {
       );
       addTearDown(controller.dispose);
 
-      final beforeCommit = controller.debugCommitRevision;
+      final beforeCommit = controller.debug.currentCommitRevision;
       final beforeEpoch = controller.controllerEpoch;
       final beforeStructural = controller.structuralRevision;
       final beforeBounds = controller.boundsRevision;
@@ -258,7 +258,7 @@ void main() {
         notifications = notifications + 1;
       });
 
-      controller.debugBeforeInvariantPrecheckHook = () {
+      controller.debug.beforeInvariantPrecheckHook = () {
         throw StateError('forced invariant pre-check failure');
       };
 
@@ -270,7 +270,7 @@ void main() {
       );
       await pumpEventQueue(times: 2);
 
-      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.debug.currentCommitRevision, beforeCommit);
       expect(controller.controllerEpoch, beforeEpoch);
       expect(controller.structuralRevision, beforeStructural);
       expect(controller.boundsRevision, beforeBounds);
@@ -363,7 +363,7 @@ void main() {
       final beforeStructural = controller.structuralRevision;
       final beforeBounds = controller.boundsRevision;
       final beforeVisual = controller.visualRevision;
-      final beforeCommit = controller.debugCommitRevision;
+      final beforeCommit = controller.debug.currentCommitRevision;
       final beforeSelection = controller.selectedNodeIds;
 
       final signals = <Object>[];
@@ -424,7 +424,7 @@ void main() {
       expect(controller.structuralRevision, beforeStructural);
       expect(controller.boundsRevision, beforeBounds);
       expect(controller.visualRevision, beforeVisual);
-      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.debug.currentCommitRevision, beforeCommit);
       expect(controller.selectedNodeIds, beforeSelection);
       expect(signals, isEmpty);
       expect(notifications, 0);

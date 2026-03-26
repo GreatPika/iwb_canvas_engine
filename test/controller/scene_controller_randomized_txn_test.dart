@@ -247,7 +247,7 @@ void _assertPostConditions({
       selectedNodeIds: controller.selectedNodeIds,
       allNodeIds: txnCollectNodeIds(scene),
       nodeLocator: txnBuildNodeLocator(scene),
-      idGeneratorState: controller.debugIdGeneratorState,
+      idGeneratorState: controller.debug.idGeneratorState,
       revisionState: createInitialRevisionAllocatorState(
         nextInstanceRevision: 1,
       ),
@@ -255,7 +255,7 @@ void _assertPostConditions({
       structuralRevision: controller.structuralRevision,
       boundsRevision: controller.boundsRevision,
       visualRevision: controller.visualRevision,
-      commitRevision: controller.debugCommitRevision,
+      commitRevision: controller.debug.currentCommitRevision,
     ),
   );
   expect(

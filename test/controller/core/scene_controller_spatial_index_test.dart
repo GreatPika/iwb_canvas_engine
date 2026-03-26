@@ -30,7 +30,7 @@ void main() {
       const Rect.fromLTWH(0, 0, 0, 0),
     );
     expect(beforeQuery, isNotEmpty);
-    expect(controller.debugSpatialIndexBuildCount, 1);
+    expect(controller.debug.spatialIndexBuildCount, 1);
 
     controller.write<void>((writer) {
       writer.writeSelectionReplace(const <NodeId>{'r1'});
@@ -41,8 +41,8 @@ void main() {
       const Rect.fromLTWH(80, 0, 0, 0),
     );
     expect(afterQuery, isNotEmpty);
-    expect(controller.debugSpatialIndexBuildCount, 1);
-    expect(controller.debugSpatialIndexIncrementalApplyCount, 1);
+    expect(controller.debug.spatialIndexBuildCount, 1);
+    expect(controller.debug.spatialIndexIncrementalApplyCount, 1);
   });
 
   test(
@@ -54,7 +54,7 @@ void main() {
       addTearDown(controller.dispose);
 
       controller.querySpatialCandidates(const Rect.fromLTWH(0, 0, 0, 0));
-      expect(controller.debugSpatialIndexBuildCount, 1);
+      expect(controller.debug.spatialIndexBuildCount, 1);
 
       controller.write<void>((writer) {
         final changed = writer.writeNodeTransformSet(
@@ -68,10 +68,10 @@ void main() {
         const Rect.fromLTWH(100, 0, 0, 0),
       );
       expect(moved.map((candidate) => candidate.node.id), contains('r1'));
-      expect(controller.debugSpatialIndexBuildCount, 1);
-      expect(controller.debugSpatialIndexIncrementalApplyCount, 1);
-      expect(controller.debugNodeIdSetMaterializations, 0);
-      expect(controller.debugNodeLocatorMaterializations, 0);
+      expect(controller.debug.spatialIndexBuildCount, 1);
+      expect(controller.debug.spatialIndexIncrementalApplyCount, 1);
+      expect(controller.debug.nodeIdSetMaterializations, 0);
+      expect(controller.debug.nodeLocatorMaterializations, 0);
     },
   );
 
@@ -83,7 +83,7 @@ void main() {
       const Rect.fromLTWH(30, 0, 0, 0),
     );
     expect(beforeQuery, isEmpty);
-    expect(controller.debugSpatialIndexBuildCount, 1);
+    expect(controller.debug.spatialIndexBuildCount, 1);
 
     controller.write<void>((writer) {
       writer.writeNodePatch(
@@ -102,8 +102,8 @@ void main() {
       afterQuery.map((candidate) => candidate.node.id),
       isNot(contains('r2')),
     );
-    expect(controller.debugSpatialIndexBuildCount, 1);
-    expect(controller.debugSpatialIndexIncrementalApplyCount, 1);
+    expect(controller.debug.spatialIndexBuildCount, 1);
+    expect(controller.debug.spatialIndexIncrementalApplyCount, 1);
   });
 
   test('spatial index handles huge node and updates incrementally', () {
@@ -125,7 +125,7 @@ void main() {
       const Rect.fromLTWH(0, 0, 10, 10),
     );
     expect(initial.map((candidate) => candidate.node.id), <NodeId>['huge']);
-    expect(controller.debugSpatialIndexBuildCount, 1);
+    expect(controller.debug.spatialIndexBuildCount, 1);
 
     controller.write<void>((writer) {
       writer.writeSelectionReplace(const <NodeId>{'huge'});
@@ -141,8 +141,8 @@ void main() {
       const Rect.fromLTWH(2e6, 0, 10, 10),
     );
     expect(movedProbe.map((candidate) => candidate.node.id), <NodeId>['huge']);
-    expect(controller.debugSpatialIndexBuildCount, 1);
-    expect(controller.debugSpatialIndexIncrementalApplyCount, 1);
+    expect(controller.debug.spatialIndexBuildCount, 1);
+    expect(controller.debug.spatialIndexIncrementalApplyCount, 1);
   });
 
   test('spatial index invalidates and rebuilds after replaceScene', () {
@@ -153,7 +153,7 @@ void main() {
       const Rect.fromLTWH(0, 0, 0, 0),
     );
     expect(beforeQuery, isNotEmpty);
-    expect(controller.debugSpatialIndexBuildCount, 1);
+    expect(controller.debug.spatialIndexBuildCount, 1);
 
     controller.writeReplaceScene(
       SceneSnapshot(
@@ -172,8 +172,8 @@ void main() {
       const Rect.fromLTWH(0, 0, 0, 0),
     );
     expect(afterQuery.map((candidate) => candidate.node.id), <NodeId>['fresh']);
-    expect(controller.debugSpatialIndexBuildCount, 2);
-    expect(controller.debugSpatialIndexIncrementalApplyCount, 0);
+    expect(controller.debug.spatialIndexBuildCount, 2);
+    expect(controller.debug.spatialIndexIncrementalApplyCount, 0);
   });
 
   test(
@@ -221,8 +221,8 @@ void main() {
         expectedPresent: const <NodeId>{},
         expectedAbsent: const <NodeId>{'r1', 'fresh'},
       );
-      expect(controller.debugSpatialIndexBuildCount, 1);
-      expect(controller.debugSpatialIndexIncrementalApplyCount, 0);
+      expect(controller.debug.spatialIndexBuildCount, 1);
+      expect(controller.debug.spatialIndexIncrementalApplyCount, 0);
 
       controller.write<void>((writer) {
         writer.writeNodeInsert(
@@ -259,7 +259,7 @@ void main() {
         expectedAbsent: const <NodeId>{'r1', 'fresh'},
       );
 
-      final buildCountBeforeReplace = controller.debugSpatialIndexBuildCount;
+      final buildCountBeforeReplace = controller.debug.spatialIndexBuildCount;
       controller.writeReplaceScene(
         SceneSnapshot(
           layers: <ContentLayerSnapshot>[
@@ -282,7 +282,7 @@ void main() {
         expectedAbsent: const <NodeId>{'r1'},
       );
       expect(
-        controller.debugSpatialIndexBuildCount,
+        controller.debug.spatialIndexBuildCount,
         buildCountBeforeReplace + 1,
       );
 
@@ -323,7 +323,7 @@ void main() {
       addTearDown(controller.dispose);
 
       controller.querySpatialCandidates(const Rect.fromLTWH(0, 0, 0, 0));
-      expect(controller.debugSpatialIndexBuildCount, 1);
+      expect(controller.debug.spatialIndexBuildCount, 1);
 
       controller.write<void>((writer) {
         writer.writeNodeErase('r2');
@@ -344,8 +344,8 @@ void main() {
       expect(byId['r3']!.nodeIndex, 1);
       expect(controller.resolveSpatialCandidateNode(byId['r1']!), isNotNull);
       expect(controller.resolveSpatialCandidateNode(byId['r3']!), isNotNull);
-      expect(controller.debugSpatialIndexBuildCount, 1);
-      expect(controller.debugSpatialIndexIncrementalApplyCount, 1);
+      expect(controller.debug.spatialIndexBuildCount, 1);
+      expect(controller.debug.spatialIndexIncrementalApplyCount, 1);
     },
   );
 
@@ -366,8 +366,8 @@ void main() {
       final allBandsProbe = Rect.fromLTWH(-32, -32, batchSize * 16 + 64, 128);
 
       controller.querySpatialCandidates(const Rect.fromLTWH(0, 0, 1, 1));
-      expect(controller.debugSpatialIndexBuildCount, 1);
-      expect(controller.debugSpatialIndexIncrementalApplyCount, 0);
+      expect(controller.debug.spatialIndexBuildCount, 1);
+      expect(controller.debug.spatialIndexIncrementalApplyCount, 0);
 
       controller.write<void>((writer) {
         for (var i = 0; i < batchSize; i++) {
@@ -386,8 +386,8 @@ void main() {
         afterFirstDraw.map((candidate) => candidate.node.id).toSet().length,
         batchSize,
       );
-      expect(controller.debugSpatialIndexBuildCount, 1);
-      expect(controller.debugSpatialIndexIncrementalApplyCount, 1);
+      expect(controller.debug.spatialIndexBuildCount, 1);
+      expect(controller.debug.spatialIndexIncrementalApplyCount, 1);
 
       controller.write<void>((writer) {
         for (var i = 0; i < batchSize; i += 2) {
@@ -402,8 +402,8 @@ void main() {
       expect(afterEraseIds.length, batchSize ~/ 2);
       expect(afterEraseIds.contains('a0'), isFalse);
       expect(afterEraseIds.contains('a1'), isTrue);
-      expect(controller.debugSpatialIndexBuildCount, 1);
-      expect(controller.debugSpatialIndexIncrementalApplyCount, 2);
+      expect(controller.debug.spatialIndexBuildCount, 1);
+      expect(controller.debug.spatialIndexIncrementalApplyCount, 2);
 
       controller.write<void>((writer) {
         for (var i = 0; i < batchSize; i++) {
@@ -425,13 +425,13 @@ void main() {
       expect(idsAfterSecondDraw.contains('b0'), isTrue);
       expect(idsAfterSecondDraw.contains('a1'), isTrue);
       expect(idsAfterSecondDraw.contains('a0'), isFalse);
-      expect(controller.debugSpatialIndexBuildCount, 1);
-      expect(controller.debugSpatialIndexIncrementalApplyCount, 3);
+      expect(controller.debug.spatialIndexBuildCount, 1);
+      expect(controller.debug.spatialIndexIncrementalApplyCount, 3);
 
       final repeatedQuery = controller.querySpatialCandidates(allBandsProbe);
       expect(repeatedQuery.length, afterSecondDraw.length);
-      expect(controller.debugSpatialIndexBuildCount, 1);
-      expect(controller.debugSpatialIndexIncrementalApplyCount, 3);
+      expect(controller.debug.spatialIndexBuildCount, 1);
+      expect(controller.debug.spatialIndexIncrementalApplyCount, 3);
     },
   );
 }

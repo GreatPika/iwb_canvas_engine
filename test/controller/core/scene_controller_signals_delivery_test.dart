@@ -119,7 +119,7 @@ void main() {
         observed.add((
           type: signal.type,
           signalRevision: signal.commitRevision,
-          storeRevision: controller.debugCommitRevision,
+          storeRevision: controller.debug.currentCommitRevision,
         ));
         if (signal.type == 'first') {
           try {
@@ -149,7 +149,7 @@ void main() {
             .toList(growable: false),
         everyElement(isTrue),
       );
-      expect(controller.debugCommitRevision, 2);
+      expect(controller.debug.currentCommitRevision, 2);
     },
   );
 

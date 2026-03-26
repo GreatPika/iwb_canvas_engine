@@ -71,7 +71,7 @@ void main() {
         controller.snapshot.layers.first.nodes.first as RectNodeSnapshot;
     expect(moved.transform.tx, 10);
     expect(notifications, 1);
-    expect(controller.debugLastCommitPhases, const <String>[
+    expect(controller.debug.lastCommitPhases, const <String>[
       'selection',
       'spatial_index',
       'signals',
@@ -111,7 +111,7 @@ void main() {
         controller.querySpatialCandidates(const Rect.fromLTWH(0, 0, 20, 20)),
         isEmpty,
       );
-      expect(controller.debugLastCommitPhases, const <String>[
+      expect(controller.debug.lastCommitPhases, const <String>[
         'selection',
         'spatial_index',
         'signals',
@@ -143,8 +143,8 @@ void main() {
       expect(controller.structuralRevision, 1);
       expect(controller.boundsRevision, 1);
       expect(controller.visualRevision, 1);
-      expect(controller.debugCommitRevision, 1);
-      expect(controller.debugLastCommitPhases, const <String>[
+      expect(controller.debug.currentCommitRevision, 1);
+      expect(controller.debug.lastCommitPhases, const <String>[
         'selection',
         'spatial_index',
         'signals',
@@ -184,7 +184,7 @@ void main() {
     final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
-    final beforeCommit = controller.debugCommitRevision;
+    final beforeCommit = controller.debug.currentCommitRevision;
     final beforeStructural = controller.structuralRevision;
     final beforeBounds = controller.boundsRevision;
     final beforeVisual = controller.visualRevision;
@@ -201,7 +201,7 @@ void main() {
     await pumpEventQueue();
 
     expect(notifications, 1);
-    expect(controller.debugCommitRevision, beforeCommit);
+    expect(controller.debug.currentCommitRevision, beforeCommit);
     expect(controller.structuralRevision, beforeStructural);
     expect(controller.boundsRevision, beforeBounds);
     expect(controller.visualRevision, beforeVisual);
@@ -211,7 +211,7 @@ void main() {
     final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
-    final beforeCommit = controller.debugCommitRevision;
+    final beforeCommit = controller.debug.currentCommitRevision;
     final beforeStructural = controller.structuralRevision;
     final beforeBounds = controller.boundsRevision;
     final beforeVisual = controller.visualRevision;
@@ -223,12 +223,12 @@ void main() {
 
     controller.write<void>((_) {});
 
-    expect(controller.debugCommitRevision, beforeCommit);
+    expect(controller.debug.currentCommitRevision, beforeCommit);
     expect(controller.structuralRevision, beforeStructural);
     expect(controller.boundsRevision, beforeBounds);
     expect(controller.visualRevision, beforeVisual);
     expect(notifications, 0);
-    expect(controller.debugLastCommitPhases, isEmpty);
+    expect(controller.debug.lastCommitPhases, isEmpty);
   });
 
   test('snapshot getter reuses immutable instance between reads', () {
@@ -403,7 +403,7 @@ void main() {
       addTearDown(controller.dispose);
 
       final beforeSnapshot = controller.snapshot;
-      final beforeCommit = controller.debugCommitRevision;
+      final beforeCommit = controller.debug.currentCommitRevision;
       final beforeStructural = controller.structuralRevision;
       final beforeBounds = controller.boundsRevision;
       final beforeVisual = controller.visualRevision;
@@ -425,7 +425,7 @@ void main() {
       final afterSnapshot = controller.snapshot;
       final afterStroke =
           afterSnapshot.layers.first.nodes.first as StrokeNodeSnapshot;
-      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.debug.currentCommitRevision, beforeCommit);
       expect(controller.structuralRevision, beforeStructural);
       expect(controller.boundsRevision, beforeBounds);
       expect(controller.visualRevision, beforeVisual);
@@ -461,7 +461,7 @@ void main() {
     final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
-    final beforeCommit = controller.debugCommitRevision;
+    final beforeCommit = controller.debug.currentCommitRevision;
     final beforeStructural = controller.structuralRevision;
     final beforeBounds = controller.boundsRevision;
     final beforeVisual = controller.visualRevision;
@@ -482,12 +482,12 @@ void main() {
 
     expect(emitted, hasLength(1));
     expect(emitted.single.type, 'signals-only');
-    expect(controller.debugCommitRevision, beforeCommit + 1);
+    expect(controller.debug.currentCommitRevision, beforeCommit + 1);
     expect(controller.structuralRevision, beforeStructural);
     expect(controller.boundsRevision, beforeBounds);
     expect(controller.visualRevision, beforeVisual);
     expect(notifications, 0);
-    expect(controller.debugLastCommitPhases, const <String>['signals']);
+    expect(controller.debug.lastCommitPhases, const <String>['signals']);
   });
 
   test(
@@ -498,7 +498,7 @@ void main() {
       );
       addTearDown(controller.dispose);
 
-      final beforeCommit = controller.debugCommitRevision;
+      final beforeCommit = controller.debug.currentCommitRevision;
       final beforeStructural = controller.structuralRevision;
       final beforeBounds = controller.boundsRevision;
       final beforeVisual = controller.visualRevision;
@@ -516,11 +516,11 @@ void main() {
       await pumpEventQueue();
 
       expect(notifications, 1);
-      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.debug.currentCommitRevision, beforeCommit);
       expect(controller.structuralRevision, beforeStructural);
       expect(controller.boundsRevision, beforeBounds);
       expect(controller.visualRevision, beforeVisual);
-      expect(controller.debugLastCommitPhases, const <String>['repaint']);
+      expect(controller.debug.lastCommitPhases, const <String>['repaint']);
     },
   );
 }

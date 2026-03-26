@@ -33,7 +33,7 @@ void main() {
       final beforeStructural = controller.structuralRevision;
       final beforeBounds = controller.boundsRevision;
       final beforeVisual = controller.visualRevision;
-      final beforeCommit = controller.debugCommitRevision;
+      final beforeCommit = controller.debug.currentCommitRevision;
       final beforeSelection = controller.selectedNodeIds;
 
       final signals = <Object>[];
@@ -65,7 +65,7 @@ void main() {
       expect(controller.structuralRevision, beforeStructural);
       expect(controller.boundsRevision, beforeBounds);
       expect(controller.visualRevision, beforeVisual);
-      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.debug.currentCommitRevision, beforeCommit);
       expect(controller.selectedNodeIds, beforeSelection);
       expect(signals, isEmpty);
       expect(notifications, 0);
@@ -84,7 +84,7 @@ void main() {
       final beforeStructural = controller.structuralRevision;
       final beforeBounds = controller.boundsRevision;
       final beforeVisual = controller.visualRevision;
-      final beforeCommit = controller.debugCommitRevision;
+      final beforeCommit = controller.debug.currentCommitRevision;
       final beforeSelection = controller.selectedNodeIds;
 
       final signals = <Object>[];
@@ -125,7 +125,7 @@ void main() {
       expect(controller.structuralRevision, beforeStructural);
       expect(controller.boundsRevision, beforeBounds);
       expect(controller.visualRevision, beforeVisual);
-      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.debug.currentCommitRevision, beforeCommit);
       expect(controller.selectedNodeIds, beforeSelection);
       expect(signals, isEmpty);
       expect(notifications, 0);
@@ -144,7 +144,7 @@ void main() {
       final beforeStructural = controller.structuralRevision;
       final beforeBounds = controller.boundsRevision;
       final beforeVisual = controller.visualRevision;
-      final beforeCommit = controller.debugCommitRevision;
+      final beforeCommit = controller.debug.currentCommitRevision;
       final beforeSelection = controller.selectedNodeIds;
 
       final signals = <Object>[];
@@ -171,12 +171,19 @@ void main() {
       expect(controller.structuralRevision, beforeStructural);
       expect(controller.boundsRevision, beforeBounds);
       expect(controller.visualRevision, beforeVisual);
-      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.debug.currentCommitRevision, beforeCommit);
       expect(controller.selectedNodeIds, beforeSelection);
       expect(signals, isEmpty);
       expect(notifications, 0);
     },
   );
+
+  test('dispose is idempotent on facade boundary', () {
+    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+
+    expect(() => controller.dispose(), returnsNormally);
+    expect(() => controller.dispose(), returnsNormally);
+  });
 
   test(
     'dispose during active write fails fast and does not poison commit lifecycle',
@@ -209,7 +216,7 @@ void main() {
           controller.snapshot.layers.first.nodes.first as RectNodeSnapshot;
       expect(moved.transform.tx, 8);
       expect(controller.selectedNodeIds, const <NodeId>{'r1'});
-      expect(controller.debugCommitRevision, 1);
+      expect(controller.debug.currentCommitRevision, 1);
       expect(signals, const <String>['commit.survived']);
       expect(notifications, 1);
 
@@ -221,7 +228,7 @@ void main() {
       );
       await pumpEventQueue(times: 2);
 
-      expect(controller.debugCommitRevision, 2);
+      expect(controller.debug.currentCommitRevision, 2);
       expect(signals, const <String>['commit.survived', 'second.commit']);
     },
   );

@@ -40,7 +40,7 @@ void main() {
       writer.writeNodeErase('r2');
     });
 
-    final changes = controller.debugLastChangeSet;
+    final changes = controller.debug.lastChangeSet;
     expect(changes.addedNodeIds, <NodeId>{'r3'});
     expect(changes.removedNodeIds, <NodeId>{'r2'});
     expect(changes.updatedNodeIds, <NodeId>{'r1'});
@@ -63,7 +63,7 @@ void main() {
       );
     });
 
-    expect(controller.debugLastChangeSet.boundsChanged, isTrue);
+    expect(controller.debug.lastChangeSet.boundsChanged, isTrue);
     expect(controller.boundsRevision, 1);
   });
 
@@ -86,7 +86,7 @@ void main() {
     });
 
     expect(controller.selectedNodeIds, const <NodeId>{'r1'});
-    expect(controller.debugLastChangeSet.selectionChanged, isTrue);
+    expect(controller.debug.lastChangeSet.selectionChanged, isTrue);
   });
 
   test(
@@ -158,7 +158,7 @@ void main() {
       expect(controller.controllerEpoch, 1);
       expect(controller.selectedNodeIds, isEmpty);
       expect(controller.snapshot.layers.first.nodes.single.id, 'fresh');
-      expect(controller.debugLastChangeSet.documentReplaced, isTrue);
+      expect(controller.debug.lastChangeSet.documentReplaced, isTrue);
       expect(notifications, 1);
       expect(signals, isEmpty);
     },

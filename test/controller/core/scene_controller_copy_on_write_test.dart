@@ -38,11 +38,11 @@ void main() {
     });
 
     expect(controller.boundsRevision, beforeBounds);
-    expect(controller.debugLastChangeSet.boundsChanged, isFalse);
-    expect(controller.debugLastChangeSet.hitGeometryChangedIds, isEmpty);
-    expect(controller.debugSceneShallowClones, 0);
-    expect(controller.debugLayerShallowClones, 0);
-    expect(controller.debugNodeClones, 0);
+    expect(controller.debug.lastChangeSet.boundsChanged, isFalse);
+    expect(controller.debug.lastChangeSet.hitGeometryChangedIds, isEmpty);
+    expect(controller.debug.sceneShallowClones, 0);
+    expect(controller.debug.layerShallowClones, 0);
+    expect(controller.debug.nodeClones, 0);
   });
 
   test(
@@ -83,9 +83,9 @@ void main() {
           controller.snapshot.layers.first.nodes.single as TextNodeSnapshot;
       expect(afterNode.size.height, greaterThan(beforeSize.height));
       expect(controller.boundsRevision, beforeBoundsRevision + 1);
-      expect(controller.debugLastChangeSet.boundsChanged, isTrue);
+      expect(controller.debug.lastChangeSet.boundsChanged, isTrue);
       expect(
-        controller.debugLastChangeSet.hitGeometryChangedIds,
+        controller.debug.lastChangeSet.hitGeometryChangedIds,
         contains('t1'),
       );
     },
@@ -124,8 +124,8 @@ void main() {
     });
 
     expect(controller.boundsRevision, beforeBoundsRevision);
-    expect(controller.debugLastChangeSet.boundsChanged, isFalse);
-    expect(controller.debugLastChangeSet.hitGeometryChangedIds, isEmpty);
+    expect(controller.debug.lastChangeSet.boundsChanged, isFalse);
+    expect(controller.debug.lastChangeSet.hitGeometryChangedIds, isEmpty);
   });
 
   test('camera offset write does not clone layers or nodes', () {
@@ -136,9 +136,9 @@ void main() {
       writer.writeCameraOffset(const Offset(20, 10));
     });
 
-    expect(controller.debugSceneShallowClones, 1);
-    expect(controller.debugLayerShallowClones, 0);
-    expect(controller.debugNodeClones, 0);
+    expect(controller.debug.sceneShallowClones, 1);
+    expect(controller.debug.layerShallowClones, 0);
+    expect(controller.debug.nodeClones, 0);
   });
 
   test('single node patch clones exactly one layer and one node', () {
@@ -151,9 +151,9 @@ void main() {
       );
     });
 
-    expect(controller.debugSceneShallowClones, 1);
-    expect(controller.debugLayerShallowClones, 1);
-    expect(controller.debugNodeClones, 1);
+    expect(controller.debug.sceneShallowClones, 1);
+    expect(controller.debug.layerShallowClones, 1);
+    expect(controller.debug.nodeClones, 1);
   });
 
   test('opacity patch commit does not materialize allNodeIds', () {
@@ -169,8 +169,8 @@ void main() {
       );
     });
 
-    expect(controller.debugNodeIdSetMaterializations, 0);
-    expect(controller.debugNodeLocatorMaterializations, 0);
+    expect(controller.debug.nodeIdSetMaterializations, 0);
+    expect(controller.debug.nodeLocatorMaterializations, 0);
   });
 
   test('structural commit materializes allNodeIds once', () {
@@ -181,8 +181,8 @@ void main() {
       writer.writeNodeInsert(RectNodeSpec(size: const Size(8, 8)));
     });
 
-    expect(controller.debugNodeIdSetMaterializations, 1);
-    expect(controller.debugNodeLocatorMaterializations, 1);
+    expect(controller.debug.nodeIdSetMaterializations, 1);
+    expect(controller.debug.nodeLocatorMaterializations, 1);
   });
 
   test(

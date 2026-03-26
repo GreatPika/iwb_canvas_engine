@@ -563,7 +563,7 @@ void main() {
       final controller = buildController();
       addTearDown(controller.dispose);
 
-      final initialRevision = controller.debugCommitRevision;
+      final initialRevision = controller.debug.currentCommitRevision;
       final signalTypes = <String>[];
       final sub = controller.signals.listen((signal) {
         signalTypes.add(signal.type);
@@ -575,7 +575,7 @@ void main() {
 
       expect(deleted, 0);
       expect(signalTypes, isNot(contains('selection.deleted')));
-      expect(controller.debugCommitRevision, initialRevision);
+      expect(controller.debug.currentCommitRevision, initialRevision);
       assertControllerInvariants(controller);
     },
   );
@@ -656,7 +656,7 @@ void main() {
       final controller = buildController();
       addTearDown(controller.dispose);
 
-      final initialRevision = controller.debugCommitRevision;
+      final initialRevision = controller.debug.currentCommitRevision;
       final snapshot = controller.snapshot;
       final signalTypes = <String>[];
       final sub = controller.signals.listen((signal) {
@@ -684,7 +684,7 @@ void main() {
           )
           .toList(growable: false);
       expect(trackedSignalTypes, isEmpty);
-      expect(controller.debugCommitRevision, initialRevision);
+      expect(controller.debug.currentCommitRevision, initialRevision);
       assertControllerInvariants(controller);
     },
   );
@@ -695,7 +695,7 @@ void main() {
       final controller = buildController();
       addTearDown(controller.dispose);
 
-      final initialRevision = controller.debugCommitRevision;
+      final initialRevision = controller.debug.currentCommitRevision;
       final signalTypes = <String>[];
       final sub = controller.signals.listen((signal) {
         signalTypes.add(signal.type);
@@ -717,7 +717,7 @@ void main() {
           'camera.updated',
         ]),
       );
-      expect(controller.debugCommitRevision, initialRevision + 4);
+      expect(controller.debug.currentCommitRevision, initialRevision + 4);
       assertControllerInvariants(controller);
     },
   );

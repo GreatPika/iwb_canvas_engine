@@ -120,7 +120,7 @@ void main() {
     final controller = buildController();
     addTearDown(controller.dispose);
 
-    final initialRevision = controller.debugCommitRevision;
+    final initialRevision = controller.debug.currentCommitRevision;
     final signalTypes = <String>[];
     final sub = controller.signals.listen((signal) {
       signalTypes.add(signal.type);
@@ -134,7 +134,7 @@ void main() {
 
     expect(removedCount, 0);
     expect(signalTypes, isNot(contains('draw.erase')));
-    expect(controller.debugCommitRevision, initialRevision);
+    expect(controller.debug.currentCommitRevision, initialRevision);
     assertControllerInvariants(controller);
   });
 

@@ -37,13 +37,13 @@ void main() {
     final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
-    controller.debugBeforeTxnContextCreateHook = () {
+    controller.debug.beforeTxnContextCreateHook = () {
       throw StateError('forced pre-context failure');
     };
 
     expect(() => controller.write<void>((_) {}), throwsStateError);
 
-    controller.debugBeforeTxnContextCreateHook = null;
+    controller.debug.beforeTxnContextCreateHook = null;
     expect(
       () => controller.write<void>((writer) {
         writer.writeSelectionReplace(const <NodeId>{'r1'});
@@ -51,7 +51,7 @@ void main() {
       returnsNormally,
     );
     expect(controller.selectedNodeIds, const <NodeId>{'r1'});
-    expect(controller.debugCommitRevision, 1);
+    expect(controller.debug.currentCommitRevision, 1);
   });
 
   test(
@@ -62,7 +62,7 @@ void main() {
       );
       addTearDown(controller.dispose);
 
-      final beforeCommit = controller.debugCommitRevision;
+      final beforeCommit = controller.debug.currentCommitRevision;
       final beforeSelection = controller.selectedNodeIds;
 
       final emitted = <String>[];
@@ -85,7 +85,7 @@ void main() {
       );
       await pumpEventQueue(times: 2);
 
-      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.debug.currentCommitRevision, beforeCommit);
       expect(controller.selectedNodeIds, beforeSelection);
       expect(emitted, isEmpty);
       expect(notifications, 0);
@@ -119,7 +119,7 @@ void main() {
       });
       await pumpEventQueue(times: 2);
 
-      final beforeCommit = controller.debugCommitRevision;
+      final beforeCommit = controller.debug.currentCommitRevision;
       final beforeEpoch = controller.controllerEpoch;
       final beforeStructural = controller.structuralRevision;
       final beforeBounds = controller.boundsRevision;
@@ -137,7 +137,7 @@ void main() {
       );
       await pumpEventQueue(times: 2);
 
-      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.debug.currentCommitRevision, beforeCommit);
       expect(controller.controllerEpoch, beforeEpoch);
       expect(controller.structuralRevision, beforeStructural);
       expect(controller.boundsRevision, beforeBounds);
@@ -161,7 +161,7 @@ void main() {
       );
       addTearDown(controller.dispose);
 
-      final beforeCommit = controller.debugCommitRevision;
+      final beforeCommit = controller.debug.currentCommitRevision;
       final beforeEpoch = controller.controllerEpoch;
       final beforeStructural = controller.structuralRevision;
       final beforeBounds = controller.boundsRevision;
@@ -198,7 +198,7 @@ void main() {
       expect(() => staleTxn.writeNodeErase('r1'), throwsStateError);
       await pumpEventQueue(times: 2);
 
-      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.debug.currentCommitRevision, beforeCommit);
       expect(controller.controllerEpoch, beforeEpoch);
       expect(controller.structuralRevision, beforeStructural);
       expect(controller.boundsRevision, beforeBounds);
@@ -238,7 +238,7 @@ void main() {
     await pumpEventQueue(times: 2);
 
     expect(emitted, const <String>['first', 'follow-up']);
-    expect(controller.debugCommitRevision, 2);
+    expect(controller.debug.currentCommitRevision, 2);
   });
 
   test(
@@ -290,9 +290,9 @@ void main() {
       };
       expect(controller.selectedNodeIds, expectedSelection);
       expect(remainingNodeIds.containsAll(controller.selectedNodeIds), isTrue);
-      expect(controller.debugLastChangeSet.selectionChanged, isTrue);
-      expect(controller.debugLastChangeSet.structuralChanged, isTrue);
-      expect(controller.debugCommitRevision, 1);
+      expect(controller.debug.lastChangeSet.selectionChanged, isTrue);
+      expect(controller.debug.lastChangeSet.structuralChanged, isTrue);
+      expect(controller.debug.currentCommitRevision, 1);
     },
   );
 
@@ -314,7 +314,7 @@ void main() {
 
     expect(controller.selectedNodeIds, isEmpty);
     expect(controller.snapshot.background.grid.cellSize, 1.0);
-    expect(controller.debugLastChangeSet.selectionChanged, isTrue);
-    expect(controller.debugLastChangeSet.gridChanged, isTrue);
+    expect(controller.debug.lastChangeSet.selectionChanged, isTrue);
+    expect(controller.debug.lastChangeSet.gridChanged, isTrue);
   });
 }
