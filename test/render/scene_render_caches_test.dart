@@ -7,6 +7,7 @@ import 'package:iwb_canvas_engine/src/render/cache/scene_static_layer_cache.dart
 import 'package:iwb_canvas_engine/src/render/cache/scene_stroke_path_cache.dart';
 import 'package:iwb_canvas_engine/src/render/cache/scene_text_layout_cache.dart';
 import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
+import 'package:iwb_canvas_engine/src/render/scene_grid_renderer.dart';
 import 'package:iwb_canvas_engine/src/render/scene_render_caches.dart';
 
 void main() {
@@ -261,17 +262,17 @@ void _primeStaticLayerCache(SceneStaticLayerCache cache) {
   final canvas = Canvas(recorder);
   cache.draw(
     canvas,
-    const Size(40, 40),
-    background: const BackgroundSnapshot(
-      color: Color(0xFFFFFFFF),
+    const SceneGridRenderRequest(
       grid: GridSnapshot(
         isEnabled: true,
         cellSize: 10,
         color: Color(0xFF000000),
       ),
+      size: Size(40, 40),
+      cameraOffset: Offset(4, 6),
+      gridStrokeWidth: 1,
     ),
-    cameraOffset: const Offset(4, 6),
-    gridStrokeWidth: 1,
+    backgroundColor: const Color(0xFFFFFFFF),
   );
   final picture = recorder.endRecording();
   picture.dispose();

@@ -1,5 +1,12 @@
 part of 'scene_painter.dart';
 
+typedef _FillAndStrokeStyle = ({
+  Color? fillColor,
+  double opacity,
+  Color? strokeColor,
+  double strokeWidth,
+});
+
 class _ScenePainterNodeRenderer {
   const _ScenePainterNodeRenderer({
     required this.imageResolver,
@@ -56,26 +63,15 @@ class _ScenePainterNodeRenderer {
       canvas,
       _toViewTransform(transformBuffer, node.transform, cameraOffset),
       () {
-        final fillColor = node.fillColor;
-        if (fillColor != null) {
-          canvas.drawRect(
-            rect,
-            Paint()
-              ..style = PaintingStyle.fill
-              ..color = _applyOpacity(fillColor, node.opacity),
-          );
-        }
-        final strokeWidth = clampNonNegativeFinite(node.strokeWidth);
-        final strokeColor = node.strokeColor;
-        if (strokeColor != null && strokeWidth > 0) {
-          canvas.drawRect(
-            rect,
-            Paint()
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = strokeWidth
-              ..color = _applyOpacity(strokeColor, node.opacity),
-          );
-        }
+        _drawFilledAndStrokedShape(
+          style: (
+            fillColor: node.fillColor,
+            strokeColor: node.strokeColor,
+            strokeWidth: node.strokeWidth,
+            opacity: node.opacity,
+          ),
+          draw: (paint) => canvas.drawRect(rect, paint),
+        );
       },
     );
   }
@@ -112,9 +108,7 @@ class _ScenePainterNodeRenderer {
     StrokeNodeSnapshot node,
     Offset cameraOffset,
   ) {
-    if (node.points.isEmpty ||
-        !node.transform.isFinite ||
-        !_areFiniteOffsets(node.points)) {
+    if (!_canPaintStrokeNode(node)) {
       return;
     }
 
@@ -134,10 +128,7 @@ class _ScenePainterNodeRenderer {
           return;
         }
 
-        final strokePathCache = this.strokePathCache;
-        final path = strokePathCache != null
-            ? strokePathCache.getOrBuild(node)
-            : buildStrokePath(node.points);
+        final path = _resolveStrokePath(node, strokePathCache);
 
         canvas.drawPath(
           path,
@@ -164,19 +155,7 @@ class _ScenePainterNodeRenderer {
     final textLayoutCache = this.textLayoutCache;
     final textPainter = textLayoutCache != null
         ? textLayoutCache.getOrBuild(node: node, textDirection: textDirection)
-        : _buildTextPainter(
-            node,
-            buildTextStyleForTextLayout(
-              color: _applyOpacity(node.color, node.opacity),
-              fontSize: node.fontSize,
-              fontFamily: node.fontFamily,
-              isBold: node.isBold,
-              isItalic: node.isItalic,
-              isUnderline: node.isUnderline,
-              lineHeight: node.lineHeight,
-            ),
-            normalizeTextLayoutMaxWidth(node.maxWidth),
-          );
+        : buildSceneTextPainter(node: node, textDirection: textDirection);
 
     final alignOffset = _textAlignOffset(
       node.align,
@@ -195,26 +174,6 @@ class _ScenePainterNodeRenderer {
         );
       },
     );
-  }
-
-  TextPainter _buildTextPainter(
-    TextNodeSnapshot node,
-    TextStyle style,
-    double? maxWidth,
-  ) {
-    final painter = TextPainter(
-      text: TextSpan(text: node.text, style: style),
-      textAlign: node.align,
-      textDirection: textDirection,
-      maxLines: null,
-    );
-    final safeMaxWidth = normalizeTextLayoutMaxWidth(maxWidth);
-    if (safeMaxWidth == null) {
-      painter.layout();
-    } else {
-      painter.layout(maxWidth: safeMaxWidth);
-    }
-    return painter;
   }
 
   void _drawImageNode(
@@ -267,28 +226,41 @@ class _ScenePainterNodeRenderer {
       canvas,
       _toViewTransform(transformBuffer, node.transform, cameraOffset),
       () {
-        final fillColor = node.fillColor;
-        if (fillColor != null) {
-          canvas.drawPath(
-            localPath,
-            Paint()
-              ..style = PaintingStyle.fill
-              ..color = _applyOpacity(fillColor, node.opacity),
-          );
-        }
-
-        final strokeWidth = clampNonNegativeFinite(node.strokeWidth);
-        final strokeColor = node.strokeColor;
-        if (strokeColor != null && strokeWidth > 0) {
-          canvas.drawPath(
-            localPath,
-            Paint()
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = strokeWidth
-              ..color = _applyOpacity(strokeColor, node.opacity),
-          );
-        }
+        _drawFilledAndStrokedShape(
+          style: (
+            fillColor: node.fillColor,
+            strokeColor: node.strokeColor,
+            strokeWidth: node.strokeWidth,
+            opacity: node.opacity,
+          ),
+          draw: (paint) => canvas.drawPath(localPath, paint),
+        );
       },
+    );
+  }
+
+  void _drawFilledAndStrokedShape({
+    required _FillAndStrokeStyle style,
+    required void Function(Paint paint) draw,
+  }) {
+    final fillColor = style.fillColor;
+    if (fillColor != null) {
+      draw(
+        Paint()
+          ..style = PaintingStyle.fill
+          ..color = _applyOpacity(fillColor, style.opacity),
+      );
+    }
+    final safeStrokeWidth = clampNonNegativeFinite(style.strokeWidth);
+    final strokeColor = style.strokeColor;
+    if (strokeColor == null || safeStrokeWidth <= 0) {
+      return;
+    }
+    draw(
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = safeStrokeWidth
+        ..color = _applyOpacity(strokeColor, style.opacity),
     );
   }
 }

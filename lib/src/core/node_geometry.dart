@@ -9,6 +9,13 @@ import 'numeric_clamp.dart';
 const double kNodeGeometryHitSlop = 4.0;
 const int kMaxStrokeHitSamplesPerMetric = 2048;
 
+typedef _MetricTraceState = ({
+  Offset localPoint,
+  Offset previous,
+  double radiusSquared,
+  double step,
+});
+
 Rect nodeGeometryCandidateBoundsWorld(
   SceneNode node, {
   double additionalScenePadding = 0,
@@ -129,37 +136,47 @@ double _pathStrokeRadiusLocal(PathNode node, Transform2D inverse) {
 }
 
 bool _hitTestLineNode(Offset point, LineNode node) {
-  final inverse = node.transform.invert();
-  if (inverse == null) {
-    return nodeGeometryCandidateBoundsWorld(node).contains(point);
-  }
-  final worldRadius = _worldStrokeRadius(
-    transform: node.transform,
-    baseThickness: node.thickness,
-    scenePadding: _nodeScenePadding(node: node),
-  );
-  return _hitTestWorldSegment(
+  return _hitTestWorldStrokeNode(
     point,
-    _worldSegment(node.transform, node.start, node.end),
-    worldRadius,
+    node,
+    node.thickness,
+    (worldRadius) => _hitTestWorldSegment(
+      point,
+      _worldSegment(node.transform, node.start, node.end),
+      worldRadius,
+    ),
   );
 }
 
 bool _hitTestStrokeNode(Offset point, StrokeNode node) {
-  final inverse = node.transform.invert();
-  if (inverse == null) {
+  return _hitTestWorldStrokeNode(
+    point,
+    node,
+    node.thickness,
+    (worldRadius) => _hitTestTransformedPolyline(
+      point: point,
+      transform: node.transform,
+      points: node.points,
+      worldRadius: worldRadius,
+    ),
+  );
+}
+
+bool _hitTestWorldStrokeNode(
+  Offset point,
+  SceneNode node,
+  double baseThickness,
+  bool Function(double worldRadius) hitTest,
+) {
+  if (node.transform.invert() == null) {
     return nodeGeometryCandidateBoundsWorld(node).contains(point);
   }
-  final worldRadius = _worldStrokeRadius(
-    transform: node.transform,
-    baseThickness: node.thickness,
-    scenePadding: _nodeScenePadding(node: node),
-  );
-  return _hitTestTransformedPolyline(
-    point: point,
-    transform: node.transform,
-    points: node.points,
-    worldRadius: worldRadius,
+  return hitTest(
+    _worldStrokeRadius(
+      transform: node.transform,
+      baseThickness: baseThickness,
+      scenePadding: _nodeScenePadding(node: node),
+    ),
   );
 }
 
@@ -304,33 +321,30 @@ bool _hitTestMetricStroke(
     return true;
   }
   final step = _pathMetricStep(metric.length, radius);
-  previous = _traceMetricInterior(
-    metric,
+  previous = _traceMetricInterior(metric, (
     localPoint: localPoint,
     step: step,
     previous: previous,
     radiusSquared: radiusSquared,
-  );
+  ));
   if (previous == null) {
     return true;
   }
   return _hitTestMetricEnd(metric, localPoint, previous, radiusSquared);
 }
 
-Offset? _traceMetricInterior(
-  PathMetric metric, {
-  required Offset localPoint,
-  required double step,
-  required Offset previous,
-  required double radiusSquared,
-}) {
-  var currentPrevious = previous;
-  for (var offset = step; offset < metric.length; offset += step) {
+Offset? _traceMetricInterior(PathMetric metric, _MetricTraceState state) {
+  var currentPrevious = state.previous;
+  for (var offset = state.step; offset < metric.length; offset += state.step) {
     final currentTangent = metric.getTangentForOffset(offset);
     if (currentTangent == null) continue;
     final current = currentTangent.position;
-    if (distanceSquaredPointToSegment(localPoint, currentPrevious, current) <=
-        radiusSquared) {
+    if (distanceSquaredPointToSegment(
+          state.localPoint,
+          currentPrevious,
+          current,
+        ) <=
+        state.radiusSquared) {
       return null;
     }
     currentPrevious = current;

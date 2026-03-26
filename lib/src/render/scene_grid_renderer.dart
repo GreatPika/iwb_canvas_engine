@@ -15,40 +15,28 @@ import '../contract/snapshot.dart';
 class SceneGridRenderer {
   const SceneGridRenderer();
 
-  SceneGridRenderPlan? plan(
-    GridSnapshot grid, {
-    required Size size,
-    required Offset cameraOffset,
-    required double gridStrokeWidth,
-  }) {
-    if (!_isDrawable(grid, size: size, cameraOffset: cameraOffset)) {
+  SceneGridRenderPlan? plan(SceneGridRenderRequest request) {
+    if (!_isDrawable(
+      request.grid,
+      size: request.size,
+      cameraOffset: request.cameraOffset,
+    )) {
       return null;
     }
 
-    final cellSize = grid.cellSize;
+    final cellSize = request.grid.cellSize;
     return SceneGridRenderPlan._(
-      size: size,
+      size: request.size,
       cellSize: cellSize,
-      color: grid.color,
-      strokeWidth: clampNonNegativeFinite(gridStrokeWidth),
-      xAxis: _axisPlan(size.width, -cameraOffset.dx, cellSize),
-      yAxis: _axisPlan(size.height, -cameraOffset.dy, cellSize),
+      color: request.grid.color,
+      strokeWidth: clampNonNegativeFinite(request.gridStrokeWidth),
+      xAxis: _axisPlan(request.size.width, -request.cameraOffset.dx, cellSize),
+      yAxis: _axisPlan(request.size.height, -request.cameraOffset.dy, cellSize),
     );
   }
 
-  void draw(
-    Canvas canvas,
-    GridSnapshot grid, {
-    required Size size,
-    required Offset cameraOffset,
-    required double gridStrokeWidth,
-  }) {
-    final plan = this.plan(
-      grid,
-      size: size,
-      cameraOffset: cameraOffset,
-      gridStrokeWidth: gridStrokeWidth,
-    );
+  void draw(Canvas canvas, SceneGridRenderRequest request) {
+    final plan = this.plan(request);
     if (plan == null) {
       return;
     }
@@ -62,19 +50,23 @@ class SceneGridRenderer {
     _drawAxisLines(
       canvas,
       plan.xAxis,
-      cellSize: plan.cellSize,
-      axisExtent: plan.size.width,
-      lineLength: plan.size.height,
-      vertical: true,
+      frame: (
+        cellSize: plan.cellSize,
+        axisExtent: plan.size.width,
+        lineLength: plan.size.height,
+        vertical: true,
+      ),
       paint: paint,
     );
     _drawAxisLines(
       canvas,
       plan.yAxis,
-      cellSize: plan.cellSize,
-      axisExtent: plan.size.height,
-      lineLength: plan.size.width,
-      vertical: false,
+      frame: (
+        cellSize: plan.cellSize,
+        axisExtent: plan.size.height,
+        lineLength: plan.size.width,
+        vertical: false,
+      ),
       paint: paint,
     );
   }
@@ -104,28 +96,47 @@ class SceneGridRenderer {
   void _drawAxisLines(
     Canvas canvas,
     SceneGridAxisPlan axis, {
-    required double cellSize,
-    required double axisExtent,
-    required double lineLength,
-    required bool vertical,
+    required _SceneGridAxisDrawFrame frame,
     required Paint paint,
   }) {
     for (
       var position = axis.start, index = 0;
-      position <= axisExtent;
-      position += cellSize, index++
+      position <= frame.axisExtent;
+      position += frame.cellSize, index++
     ) {
       if (index % axis.stride != 0) {
         continue;
       }
-      final start = vertical ? Offset(position, 0) : Offset(0, position);
-      final end = vertical
-          ? Offset(position, lineLength)
-          : Offset(lineLength, position);
+      final start = frame.vertical ? Offset(position, 0) : Offset(0, position);
+      final end = frame.vertical
+          ? Offset(position, frame.lineLength)
+          : Offset(frame.lineLength, position);
       canvas.drawLine(start, end, paint);
     }
   }
 }
+
+@immutable
+class SceneGridRenderRequest {
+  const SceneGridRenderRequest({
+    required this.grid,
+    required this.size,
+    required this.cameraOffset,
+    required this.gridStrokeWidth,
+  });
+
+  final GridSnapshot grid;
+  final Size size;
+  final Offset cameraOffset;
+  final double gridStrokeWidth;
+}
+
+typedef _SceneGridAxisDrawFrame = ({
+  double cellSize,
+  double axisExtent,
+  double lineLength,
+  bool vertical,
+});
 
 @immutable
 class SceneGridRenderPlan {

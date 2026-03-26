@@ -534,10 +534,12 @@ void main() {
       );
       renderer.draw(
         canvas,
-        scene.background.grid,
-        size: const Size(3980, 80),
-        cameraOffset: scene.camera.offset,
-        gridStrokeWidth: 1,
+        SceneGridRenderRequest(
+          grid: scene.background.grid,
+          size: const Size(3980, 80),
+          cameraOffset: scene.camera.offset,
+          gridStrokeWidth: 1,
+        ),
       );
       final rendererImage = await recorder.endRecording().toImage(3980, 80);
 

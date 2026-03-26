@@ -187,18 +187,11 @@ void _rebuildSpatialIndex(
   index._isValid = true;
   _clearSpatialIndexData(index);
   try {
-    for (var layerIndex = 0; layerIndex < scene.layers.length; layerIndex++) {
-      final layer = scene.layers[layerIndex];
-      for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
-        final node = layer.nodes[nodeIndex];
-        if (!_upsertResolvedSpatialNode(
-          index,
-          resolved: (node: node, layerIndex: layerIndex, nodeIndex: nodeIndex),
-        )) {
-          return;
-        }
+    _visitResolvedNodes(scene, (resolved) {
+      if (!_upsertResolvedSpatialNode(index, resolved: resolved)) {
+        throw const _SceneSpatialIndexTraversalAbort();
       }
-    }
+    });
   } catch (_) {
     _markSpatialIndexInvalid(index);
   }
@@ -338,23 +331,23 @@ _CellSpan? _tryCellSpanForRect(SceneSpatialIndex index, Rect rect) {
 
 List<SceneSpatialCandidate> _queryLinear(Scene scene, Rect worldRect) {
   final out = <SceneSpatialCandidate>[];
-  for (var layerIndex = 0; layerIndex < scene.layers.length; layerIndex++) {
-    final layer = scene.layers[layerIndex];
-    for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
-      final node = layer.nodes[nodeIndex];
-      final candidateBounds = nodeGeometryCandidateBoundsWorld(node);
-      if (!isFiniteRect(candidateBounds)) continue;
-      if (!_rectsIntersectInclusive(candidateBounds, worldRect)) continue;
-      out.add(
-        SceneSpatialCandidate(
-          layerIndex: layerIndex,
-          nodeIndex: nodeIndex,
-          node: node,
-          candidateBoundsWorld: candidateBounds,
-        ),
-      );
+  _visitResolvedNodes(scene, (resolved) {
+    final candidateBounds = nodeGeometryCandidateBoundsWorld(resolved.node);
+    if (!isFiniteRect(candidateBounds)) {
+      return;
     }
-  }
+    if (!_rectsIntersectInclusive(candidateBounds, worldRect)) {
+      return;
+    }
+    out.add(
+      SceneSpatialCandidate(
+        layerIndex: resolved.layerIndex,
+        nodeIndex: resolved.nodeIndex,
+        node: resolved.node,
+        candidateBoundsWorld: candidateBounds,
+      ),
+    );
+  });
   return out.toList(growable: false);
 }
 
@@ -541,14 +534,29 @@ class _CellKey {
 
 Map<NodeId, SpatialNodeLocation> _buildNodeLocator(Scene scene) {
   final out = <NodeId, SpatialNodeLocation>{};
+  _visitResolvedNodes(scene, (resolved) {
+    out[resolved.node.id] = (
+      layerIndex: resolved.layerIndex,
+      nodeIndex: resolved.nodeIndex,
+    );
+  });
+  return out;
+}
+
+void _visitResolvedNodes(
+  Scene scene,
+  void Function(_ResolvedSpatialNode resolved) visit,
+) {
   for (var layerIndex = 0; layerIndex < scene.layers.length; layerIndex++) {
     final layer = scene.layers[layerIndex];
     for (var nodeIndex = 0; nodeIndex < layer.nodes.length; nodeIndex++) {
-      final node = layer.nodes[nodeIndex];
-      out[node.id] = (layerIndex: layerIndex, nodeIndex: nodeIndex);
+      visit((
+        node: layer.nodes[nodeIndex],
+        layerIndex: layerIndex,
+        nodeIndex: nodeIndex,
+      ));
     }
   }
-  return out;
 }
 
 bool _rectsIntersectInclusive(Rect a, Rect b) {
@@ -556,4 +564,8 @@ bool _rectsIntersectInclusive(Rect a, Rect b) {
       a.right >= b.left &&
       a.top <= b.bottom &&
       a.bottom >= b.top;
+}
+
+class _SceneSpatialIndexTraversalAbort {
+  const _SceneSpatialIndexTraversalAbort();
 }

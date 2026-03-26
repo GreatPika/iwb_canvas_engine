@@ -112,9 +112,7 @@ class _ScenePainterSelectionOwner {
     Offset cameraOffset,
     _SelectionStyle style,
   ) {
-    if (node.points.isEmpty ||
-        !node.transform.isFinite ||
-        !_areFiniteOffsets(node.points)) {
+    if (!_canPaintStrokeNode(node)) {
       return;
     }
     final baseThickness = clampNonNegativeFinite(node.thickness);
@@ -133,10 +131,7 @@ class _ScenePainterSelectionOwner {
           return;
         }
 
-        final strokePathCache = this.strokePathCache;
-        final path = strokePathCache != null
-            ? strokePathCache.getOrBuild(node)
-            : buildStrokePath(node.points);
+        final path = _resolveStrokePath(node, strokePathCache);
         canvas.drawPath(
           path,
           _haloPaint(
@@ -179,7 +174,7 @@ class _ScenePainterSelectionOwner {
         final pathMetricsCache = this.pathMetricsCache;
         final contours = pathMetricsCache != null
             ? pathMetricsCache.getOrBuild(node: node, localPath: localPath)
-            : _buildPathSelectionContours(pathNode: node, localPath: localPath);
+            : buildPathSelectionContours(localPath, node.fillRule);
         _drawClosedPathSelection(
           canvas,
           contours.closedContours,
@@ -249,34 +244,6 @@ class _ScenePainterSelectionOwner {
           ),
       );
     }
-  }
-
-  PathSelectionContours _buildPathSelectionContours({
-    required PathNodeSnapshot pathNode,
-    required Path localPath,
-  }) {
-    final selectionFillType = _fillTypeFromSnapshot(pathNode.fillRule);
-    Path? closedContours;
-    final openContours = <Path>[];
-    for (final metric in localPath.computeMetrics()) {
-      final contour = metric.extractPath(
-        0,
-        metric.length,
-        startWithMoveTo: true,
-      );
-      contour.fillType = selectionFillType;
-      if (metric.isClosed) {
-        contour.close();
-        closedContours ??= Path()..fillType = selectionFillType;
-        closedContours.addPath(contour, Offset.zero);
-      } else {
-        openContours.add(contour);
-      }
-    }
-    return PathSelectionContours(
-      closedContours: closedContours,
-      openContours: List<Path>.unmodifiable(openContours),
-    );
   }
 
   void _drawWorldBoundsSelection(

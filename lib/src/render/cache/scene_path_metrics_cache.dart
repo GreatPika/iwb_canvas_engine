@@ -60,7 +60,7 @@ class ScenePathMetricsCache {
       return cached.contours;
     }
 
-    final contours = _buildContours(localPath, node.fillRule);
+    final contours = buildPathSelectionContours(localPath, node.fillRule);
     _entries[key] = _PathMetricsEntry(
       svgPathData: node.svgPathData,
       fillRule: node.fillRule,
@@ -76,31 +76,6 @@ class ScenePathMetricsCache {
       _entries.remove(_entries.keys.first);
       _debugEvictCount += 1;
     }
-  }
-
-  PathSelectionContours _buildContours(Path localPath, PathFillRule fillRule) {
-    final pathFillType = _fillTypeFromSnapshot(fillRule);
-    Path? closedContours;
-    final openContours = <Path>[];
-    for (final metric in localPath.computeMetrics()) {
-      final contour = metric.extractPath(
-        0,
-        metric.length,
-        startWithMoveTo: true,
-      );
-      contour.fillType = pathFillType;
-      if (metric.isClosed) {
-        contour.close();
-        closedContours ??= Path()..fillType = pathFillType;
-        closedContours.addPath(contour, Offset.zero);
-        continue;
-      }
-      openContours.add(contour);
-    }
-    return PathSelectionContours(
-      closedContours: closedContours,
-      openContours: List<Path>.unmodifiable(openContours),
-    );
   }
 }
 
@@ -148,6 +123,30 @@ class PathSelectionContours {
   /// Borrowed open contour payload. The list shape is immutable, but contained
   /// paths remain borrowed render objects and must not be mutated.
   final List<Path> openContours;
+}
+
+PathSelectionContours buildPathSelectionContours(
+  Path localPath,
+  PathFillRule fillRule,
+) {
+  final pathFillType = _fillTypeFromSnapshot(fillRule);
+  Path? closedContours;
+  final openContours = <Path>[];
+  for (final metric in localPath.computeMetrics()) {
+    final contour = metric.extractPath(0, metric.length, startWithMoveTo: true);
+    contour.fillType = pathFillType;
+    if (metric.isClosed) {
+      contour.close();
+      closedContours ??= Path()..fillType = pathFillType;
+      closedContours.addPath(contour, Offset.zero);
+      continue;
+    }
+    openContours.add(contour);
+  }
+  return PathSelectionContours(
+    closedContours: closedContours,
+    openContours: List<Path>.unmodifiable(openContours),
+  );
 }
 
 PathFillType _fillTypeFromSnapshot(PathFillRule rule) {

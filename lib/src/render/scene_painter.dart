@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 
 import '../core/numeric_clamp.dart';
-import '../core/text_layout.dart';
 import '../contract/transform2d.dart';
 import '../contract/scene_render_state.dart';
 import '../contract/snapshot.dart';
@@ -97,19 +96,24 @@ class ScenePainter extends CustomPainter {
     if (staticLayerCache != null) {
       staticLayerCache.draw(
         canvas,
-        size,
-        background: snapshot.background,
-        cameraOffset: frame.cameraOffset,
-        gridStrokeWidth: gridStrokeWidth,
+        SceneGridRenderRequest(
+          grid: snapshot.background.grid,
+          size: size,
+          cameraOffset: frame.cameraOffset,
+          gridStrokeWidth: gridStrokeWidth,
+        ),
+        backgroundColor: snapshot.background.color,
       );
     } else {
       _drawBackground(canvas, size, snapshot.background.color);
       _gridRenderer.draw(
         canvas,
-        snapshot.background.grid,
-        size: size,
-        cameraOffset: frame.cameraOffset,
-        gridStrokeWidth: gridStrokeWidth,
+        SceneGridRenderRequest(
+          grid: snapshot.background.grid,
+          size: size,
+          cameraOffset: frame.cameraOffset,
+          gridStrokeWidth: gridStrokeWidth,
+        ),
       );
     }
 
@@ -209,12 +213,6 @@ Rect _normalizeRect(Rect rect) {
   return Rect.fromLTRB(left, top, right, bottom);
 }
 
-PathFillType _fillTypeFromSnapshot(PathFillRule rule) {
-  return rule == PathFillRule.evenOdd
-      ? PathFillType.evenOdd
-      : PathFillType.nonZero;
-}
-
 Color _applyOpacity(Color color, double opacity) {
   final alpha = (_alpha01(opacity) * 255.0).round().clamp(0, 255);
   return color.withAlpha(alpha);
@@ -263,6 +261,21 @@ bool _areFiniteOffsets(List<Offset> offsets) {
     }
   }
   return true;
+}
+
+bool _canPaintStrokeNode(StrokeNodeSnapshot node) {
+  return node.points.isNotEmpty &&
+      node.transform.isFinite &&
+      _areFiniteOffsets(node.points);
+}
+
+Path _resolveStrokePath(
+  StrokeNodeSnapshot node,
+  SceneStrokePathCache? strokePathCache,
+) {
+  return strokePathCache != null
+      ? strokePathCache.getOrBuild(node)
+      : buildStrokePath(node.points);
 }
 
 Float64List _toViewTransform(

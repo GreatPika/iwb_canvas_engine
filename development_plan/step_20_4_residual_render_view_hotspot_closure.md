@@ -177,7 +177,7 @@ reducing remaining duplicate and mixed ownership without metric-only reshaping.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] SceneView residual ownership is reduced
+### Slice 1. [x] SceneView residual ownership is reduced
 
 #### Slice Contract
 
@@ -202,7 +202,7 @@ lifecycle and interactive behavior view-owned.
 - The replaced mixed or duplicated view-local bodies are no longer present in
   the same form.
 
-### Slice 2. [ ] ScenePainter residual owners are reduced
+### Slice 2. [x] ScenePainter residual owners are reduced
 
 #### Slice Contract
 
@@ -227,7 +227,7 @@ only where required to remove the measured residual hotspot shapes.
 - The replaced mixed or duplicated painter-local bodies are no longer present
   in the same form.
 
-### Slice 3. [ ] Render helper residual duplicates are closed
+### Slice 3. [x] Render helper residual duplicates are closed
 
 #### Slice Contract
 
@@ -250,7 +250,7 @@ delete the measured remaining duplicate or mixed ownership.
 - Green run of the listed verifications.
 - The replaced helper duplication is deleted instead of reintroduced elsewhere.
 
-### Slice 4. [ ] Core parity-sensitive residual hotspots are reduced
+### Slice 4. [x] Core parity-sensitive residual hotspots are reduced
 
 #### Slice Contract
 

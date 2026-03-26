@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/render/scene_grid_renderer.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 
 Future<Color> _pixelAt(Image image, int x, int y) async {
@@ -27,6 +28,26 @@ Future<Image> _paintScene(ScenePainter painter, Size size) async {
   return recorder.endRecording().toImage(
     size.width.toInt(),
     size.height.toInt(),
+  );
+}
+
+void _drawStaticLayer(
+  SceneStaticLayerCache cache,
+  PictureRecorder recorder, {
+  required BackgroundSnapshot background,
+  required Size size,
+  required Offset cameraOffset,
+  required double gridStrokeWidth,
+}) {
+  cache.draw(
+    Canvas(recorder),
+    SceneGridRenderRequest(
+      grid: background.grid,
+      size: size,
+      cameraOffset: cameraOffset,
+      gridStrokeWidth: gridStrokeWidth,
+    ),
+    backgroundColor: background.color,
   );
 }
 
@@ -69,10 +90,11 @@ void main() {
     const size = Size(120, 80);
 
     final recorder1 = PictureRecorder();
-    cache.draw(
-      Canvas(recorder1),
-      size,
+    _drawStaticLayer(
+      cache,
+      recorder1,
       background: background,
+      size: size,
       cameraOffset: Offset.zero,
       gridStrokeWidth: 1,
     );
@@ -82,10 +104,11 @@ void main() {
     expect(cache.debugKeyHashCode, isNotNull);
 
     final recorder2 = PictureRecorder();
-    cache.draw(
-      Canvas(recorder2),
-      size,
+    _drawStaticLayer(
+      cache,
+      recorder2,
       background: background,
+      size: size,
       cameraOffset: Offset.zero,
       gridStrokeWidth: 1,
     );
@@ -94,10 +117,11 @@ void main() {
     expect(cache.debugDisposeCount, 0);
 
     final recorder3 = PictureRecorder();
-    cache.draw(
-      Canvas(recorder3),
-      const Size(140, 80),
+    _drawStaticLayer(
+      cache,
+      recorder3,
       background: background,
+      size: const Size(140, 80),
       cameraOffset: Offset.zero,
       gridStrokeWidth: 1,
     );
@@ -119,10 +143,11 @@ void main() {
     const size = Size(120, 80);
 
     final recorder1 = PictureRecorder();
-    cache.draw(
-      Canvas(recorder1),
-      size,
+    _drawStaticLayer(
+      cache,
+      recorder1,
       background: background,
+      size: size,
       cameraOffset: Offset.zero,
       gridStrokeWidth: 1,
     );
@@ -130,10 +155,11 @@ void main() {
     expect(cache.debugBuildCount, 1);
 
     final recorder2 = PictureRecorder();
-    cache.draw(
-      Canvas(recorder2),
-      size,
+    _drawStaticLayer(
+      cache,
+      recorder2,
       background: background,
+      size: size,
       cameraOffset: const Offset(13, 7),
       gridStrokeWidth: 1,
     );
@@ -154,10 +180,11 @@ void main() {
     );
 
     final recorder = PictureRecorder();
-    cache.draw(
-      Canvas(recorder),
-      const Size(20, 20),
+    _drawStaticLayer(
+      cache,
+      recorder,
       background: background,
+      size: const Size(20, 20),
       cameraOffset: const Offset(-5, 0),
       gridStrokeWidth: 1,
     );
@@ -178,10 +205,11 @@ void main() {
     );
 
     final recorder1 = PictureRecorder();
-    cache.draw(
-      Canvas(recorder1),
-      const Size(120, 80),
+    _drawStaticLayer(
+      cache,
+      recorder1,
       background: background,
+      size: const Size(120, 80),
       cameraOffset: const Offset(double.nan, double.infinity),
       gridStrokeWidth: double.nan,
     );
@@ -190,10 +218,11 @@ void main() {
     expect(cache.debugKeyHashCode, isNull);
 
     final recorder2 = PictureRecorder();
-    cache.draw(
-      Canvas(recorder2),
-      const Size(120, 80),
+    _drawStaticLayer(
+      cache,
+      recorder2,
       background: background,
+      size: const Size(120, 80),
       cameraOffset: const Offset(double.nan, double.infinity),
       gridStrokeWidth: double.nan,
     );
@@ -217,10 +246,11 @@ void main() {
       );
 
       final recorder = PictureRecorder();
-      cache.draw(
-        Canvas(recorder),
-        const Size(120, 80),
+      _drawStaticLayer(
+        cache,
+        recorder,
         background: background,
+        size: const Size(120, 80),
         cameraOffset: Offset.zero,
         gridStrokeWidth: 1,
       );
@@ -244,10 +274,11 @@ void main() {
     );
 
     final recorder = PictureRecorder();
-    cache.draw(
-      Canvas(recorder),
-      const Size(600, 400),
+    _drawStaticLayer(
+      cache,
+      recorder,
       background: background,
+      size: const Size(600, 400),
       cameraOffset: Offset.zero,
       gridStrokeWidth: 1,
     );
@@ -277,10 +308,11 @@ void main() {
     );
 
     final enabledRecorder = PictureRecorder();
-    cache.draw(
-      Canvas(enabledRecorder),
-      const Size(120, 80),
+    _drawStaticLayer(
+      cache,
+      enabledRecorder,
       background: enabledBackground,
+      size: const Size(120, 80),
       cameraOffset: Offset.zero,
       gridStrokeWidth: 1,
     );
@@ -291,10 +323,11 @@ void main() {
     expect(cache.debugKeyHashCode, isNotNull);
 
     final disabledRecorder = PictureRecorder();
-    cache.draw(
-      Canvas(disabledRecorder),
-      const Size(120, 80),
+    _drawStaticLayer(
+      cache,
+      disabledRecorder,
       background: disabledBackground,
+      size: const Size(120, 80),
       cameraOffset: Offset.zero,
       gridStrokeWidth: 1,
     );
@@ -305,10 +338,11 @@ void main() {
     expect(cache.debugKeyHashCode, isNull);
 
     final disabledRecorderAgain = PictureRecorder();
-    cache.draw(
-      Canvas(disabledRecorderAgain),
-      const Size(120, 80),
+    _drawStaticLayer(
+      cache,
+      disabledRecorderAgain,
       background: disabledBackground,
+      size: const Size(120, 80),
       cameraOffset: Offset.zero,
       gridStrokeWidth: 1,
     );
@@ -331,10 +365,11 @@ void main() {
     );
 
     final recorder = PictureRecorder();
-    cache.draw(
-      Canvas(recorder),
-      const Size(120, 80),
+    _drawStaticLayer(
+      cache,
+      recorder,
       background: background,
+      size: const Size(120, 80),
       cameraOffset: Offset.zero,
       gridStrokeWidth: 1,
     );

@@ -108,5 +108,5 @@ language: russian
 - [x] [Шаг 20.1. Разрезать ScenePainter на render-local owners без нового renderer hierarchy](development_plan/step_20_1_scene_painter_render_owner_decomposition.md)
 - [x] [Шаг 20.2. Свести lifecycle render caches в SceneViewCore и SceneViewInteractive](development_plan/step_20_2_scene_view_render_cache_lifecycle_consolidation.md)
 - [x] [Шаг 20.3. Упростить local hotspot-ы SceneSpatialIndex без drift hit-test parity](development_plan/step_20_3_scene_spatial_index_local_hotspot_cleanup.md)
-- [ ] [Шаг 20.4. Закрыть residual render/view hotspots по measured baseline](development_plan/step_20_4_residual_render_view_hotspot_closure.md)
+- [x] [Шаг 20.4. Закрыть residual render/view hotspots по measured baseline](development_plan/step_20_4_residual_render_view_hotspot_closure.md)
 - [ ] [Шаг 20.5. Переснять baseline render/view hotspot closure и обновить roadmap](development_plan/step_20_5_render_view_rebaseline_and_roadmap.md)

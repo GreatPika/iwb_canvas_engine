@@ -3,7 +3,6 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 
 import '../../core/numeric_clamp.dart';
-import '../../contract/snapshot.dart';
 import '../scene_grid_renderer.dart';
 
 const _gridRenderer = SceneGridRenderer();
@@ -35,19 +34,19 @@ class SceneStaticLayerCache {
 
   void draw(
     Canvas canvas,
-    Size size, {
-    required BackgroundSnapshot background,
-    required Offset cameraOffset,
-    required double gridStrokeWidth,
+    SceneGridRenderRequest request, {
+    required Color backgroundColor,
   }) {
-    _drawBackground(canvas, size, background.color);
+    _drawBackground(canvas, request.size, backgroundColor);
 
-    final safeOffset = sanitizeFiniteOffset(cameraOffset);
+    final safeOffset = sanitizeFiniteOffset(request.cameraOffset);
     final plan = _gridRenderer.plan(
-      background.grid,
-      size: size,
-      cameraOffset: Offset.zero,
-      gridStrokeWidth: gridStrokeWidth,
+      SceneGridRenderRequest(
+        grid: request.grid,
+        size: request.size,
+        cameraOffset: Offset.zero,
+        gridStrokeWidth: request.gridStrokeWidth,
+      ),
     );
     if (plan == null) {
       _disposeGridPictureIfNeeded();
@@ -56,7 +55,7 @@ class SceneStaticLayerCache {
     }
 
     final key = _StaticLayerKey(
-      size: size,
+      size: request.size,
       gridEnabled: true,
       gridCellSize: plan.cellSize,
       gridColor: plan.color,
@@ -76,7 +75,7 @@ class SceneStaticLayerCache {
     }
     final shift = _gridRenderer.cameraShiftFor(safeOffset, key.gridCellSize);
     canvas.save();
-    canvas.clipRect(Offset.zero & size);
+    canvas.clipRect(Offset.zero & request.size);
     canvas.translate(shift.dx, shift.dy);
     canvas.drawPicture(picture);
     canvas.restore();

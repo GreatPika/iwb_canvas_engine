@@ -46,10 +46,12 @@ void main() {
     );
 
     final plan = renderer.plan(
-      grid,
-      size: const Size(120, 80),
-      cameraOffset: Offset.zero,
-      gridStrokeWidth: 1,
+      const SceneGridRenderRequest(
+        grid: grid,
+        size: Size(120, 80),
+        cameraOffset: Offset.zero,
+        gridStrokeWidth: 1,
+      ),
     );
 
     expect(plan, isNull);
@@ -66,16 +68,20 @@ void main() {
       const size = Size(3980, 80);
 
       final basePlan = renderer.plan(
-        grid,
-        size: size,
-        cameraOffset: Offset.zero,
-        gridStrokeWidth: 1,
+        const SceneGridRenderRequest(
+          grid: grid,
+          size: size,
+          cameraOffset: Offset.zero,
+          gridStrokeWidth: 1,
+        ),
       );
       final jitterPlan = renderer.plan(
-        grid,
-        size: size,
-        cameraOffset: const Offset(5, 0),
-        gridStrokeWidth: 1,
+        const SceneGridRenderRequest(
+          grid: grid,
+          size: size,
+          cameraOffset: Offset(5, 0),
+          gridStrokeWidth: 1,
+        ),
       );
 
       expect(basePlan, isNotNull);
@@ -99,10 +105,12 @@ void main() {
     );
 
     final plan = renderer.plan(
-      grid,
-      size: const Size(600, 400),
-      cameraOffset: const Offset(0.5, 0.5),
-      gridStrokeWidth: 1,
+      const SceneGridRenderRequest(
+        grid: grid,
+        size: Size(600, 400),
+        cameraOffset: Offset(0.5, 0.5),
+        gridStrokeWidth: 1,
+      ),
     );
 
     expect(plan, isNotNull);
@@ -138,10 +146,12 @@ void main() {
       );
       renderer.draw(
         canvas,
-        grid,
-        size: const Size(240, 80),
-        cameraOffset: Offset.zero,
-        gridStrokeWidth: 1,
+        const SceneGridRenderRequest(
+          grid: grid,
+          size: Size(240, 80),
+          cameraOffset: Offset.zero,
+          gridStrokeWidth: 1,
+        ),
       );
       final image = await recorder.endRecording().toImage(240, 80);
 

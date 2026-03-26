@@ -1,13 +1,10 @@
-import 'dart:ui' as ui;
-
 import 'package:flutter/widgets.dart';
 
 import '../controller/scene_controller.dart';
 import '../render/render_geometry_cache.dart';
 import '../render/scene_painter.dart';
 import '../render/scene_render_caches.dart';
-
-ui.Image? _defaultImageResolver(String _) => null;
+import 'scene_view_defaults.dart';
 
 @visibleForTesting
 SceneRenderCaches debugSceneViewRenderCachesOf(BuildContext context) {
@@ -97,7 +94,7 @@ class _SceneViewCoreState extends State<SceneViewCore> {
     return CustomPaint(
       painter: ScenePainter(
         controller: widget.controller,
-        imageResolver: widget.imageResolver ?? _defaultImageResolver,
+        imageResolver: widget.imageResolver ?? sceneViewDefaultImageResolver,
         staticLayerCache: _renderCacheLifecycle.staticLayerCache,
         textLayoutCache: _renderCacheLifecycle.textLayoutCache,
         strokePathCache: _renderCacheLifecycle.strokePathCache,

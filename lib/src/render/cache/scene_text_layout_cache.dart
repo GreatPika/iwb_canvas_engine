@@ -77,11 +77,7 @@ class SceneTextLayoutCache {
       textDirection: textDirection,
       maxLines: null,
     );
-    if (layoutMaxWidth == null) {
-      textPainter.layout();
-    } else {
-      textPainter.layout(maxWidth: layoutMaxWidth);
-    }
+    _layoutTextPainter(textPainter, layoutMaxWidth);
     _entries[key] = textPainter;
     _debugBuildCount += 1;
     _evictIfNeeded();
@@ -106,6 +102,29 @@ class SceneTextLayoutCache {
       lineHeight: node.lineHeight,
     );
   }
+}
+
+TextPainter buildSceneTextPainter({
+  required TextNodeSnapshot node,
+  TextDirection textDirection = TextDirection.ltr,
+}) {
+  final textStyle = buildTextStyleForTextLayout(
+    color: _renderReadyTextColor(node),
+    fontSize: node.fontSize,
+    isBold: node.isBold,
+    isItalic: node.isItalic,
+    isUnderline: node.isUnderline,
+    fontFamily: node.fontFamily,
+    lineHeight: node.lineHeight,
+  );
+  final textPainter = TextPainter(
+    text: TextSpan(text: node.text, style: textStyle),
+    textAlign: node.align,
+    textDirection: textDirection,
+    maxLines: null,
+  );
+  _layoutTextPainter(textPainter, normalizeTextLayoutMaxWidth(node.maxWidth));
+  return textPainter;
 }
 
 class _TextLayoutKey {
@@ -172,6 +191,14 @@ class _TextLayoutKey {
 Color _renderReadyTextColor(TextNodeSnapshot node) {
   final alpha = (_textOpacity01(node.opacity) * 255.0).round().clamp(0, 255);
   return node.color.withAlpha(alpha);
+}
+
+void _layoutTextPainter(TextPainter textPainter, double? layoutMaxWidth) {
+  if (layoutMaxWidth == null) {
+    textPainter.layout();
+  } else {
+    textPainter.layout(maxWidth: layoutMaxWidth);
+  }
 }
 
 double _textOpacity01(double opacity) {
