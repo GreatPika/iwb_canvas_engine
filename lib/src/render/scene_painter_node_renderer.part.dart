@@ -7,61 +7,52 @@ typedef _FillAndStrokeStyle = ({
   double strokeWidth,
 });
 
-class _ScenePainterNodeRenderer {
-  const _ScenePainterNodeRenderer({
-    required this.imageResolver,
-    required this.textLayoutCache,
-    required this.strokePathCache,
-    required this.textDirection,
+class _SceneNodeRenderSupport {
+  _SceneNodeRenderSupport({
+    required ImageResolver imageResolver,
+    required SceneTextLayoutCache? textLayoutCache,
+    required SceneStrokePathCache? strokePathCache,
+    required TextDirection textDirection,
+  }) : shapes = _SceneShapeNodeRenderer(),
+       strokes = _SceneStrokeNodeRenderer(strokePathCache: strokePathCache),
+       rich = _SceneRichNodeRenderer(
+         imageResolver: imageResolver,
+         textLayoutCache: textLayoutCache,
+         textDirection: textDirection,
+       );
+
+  final _SceneShapeNodeRenderer shapes;
+  final _SceneStrokeNodeRenderer strokes;
+  final _SceneRichNodeRenderer rich;
+}
+
+class _SceneNodeRenderContext {
+  const _SceneNodeRenderContext({
+    required this.canvas,
+    required this.cameraOffset,
     required this.transformBuffer,
   });
 
-  final ImageResolver imageResolver;
-  final SceneTextLayoutCache? textLayoutCache;
-  final SceneStrokePathCache? strokePathCache;
-  final TextDirection textDirection;
+  final Canvas canvas;
+  final Offset cameraOffset;
   final Float64List transformBuffer;
+}
 
-  void draw(
-    Canvas canvas,
-    _ResolvedNodePaintData resolvedNode,
-    Offset cameraOffset,
-  ) {
-    withTranslate(canvas, resolvedNode.previewDelta, () {
-      switch (resolvedNode.node) {
-        case RectNodeSnapshot rectNode:
-          _drawRectNode(canvas, rectNode, cameraOffset);
-        case LineNodeSnapshot lineNode:
-          _drawLineNode(canvas, lineNode, cameraOffset);
-        case StrokeNodeSnapshot strokeNode:
-          _drawStrokeNode(canvas, strokeNode, cameraOffset);
-        case TextNodeSnapshot textNode:
-          _drawTextNode(canvas, textNode, cameraOffset);
-        case ImageNodeSnapshot imageNode:
-          _drawImageNode(canvas, imageNode, cameraOffset);
-        case PathNodeSnapshot pathNode:
-          _drawPathNode(
-            canvas,
-            pathNode,
-            cameraOffset,
-            localPath: resolvedNode.geometry.localPath,
-          );
-      }
-    });
-  }
+class _SceneShapeNodeRenderer {
+  const _SceneShapeNodeRenderer();
 
-  void _drawRectNode(
-    Canvas canvas,
-    RectNodeSnapshot node,
-    Offset cameraOffset,
-  ) {
+  void drawRectNode(RectNodeSnapshot node, _SceneNodeRenderContext context) {
     if (!node.transform.isFinite) {
       return;
     }
     final rect = _centerRect(node.size);
     withTransform(
-      canvas,
-      _toViewTransform(transformBuffer, node.transform, cameraOffset),
+      context.canvas,
+      _toViewTransform(
+        context.transformBuffer,
+        node.transform,
+        context.cameraOffset,
+      ),
       () {
         _drawFilledAndStrokedShape(
           style: (
@@ -70,27 +61,63 @@ class _ScenePainterNodeRenderer {
             strokeWidth: node.strokeWidth,
             opacity: node.opacity,
           ),
-          draw: (paint) => canvas.drawRect(rect, paint),
+          draw: (paint) => context.canvas.drawRect(rect, paint),
         );
       },
     );
   }
 
-  void _drawLineNode(
-    Canvas canvas,
-    LineNodeSnapshot node,
-    Offset cameraOffset,
+  void drawPathNode(
+    PathNodeSnapshot node,
+    Path? localPath,
+    _SceneNodeRenderContext context,
   ) {
+    if (!node.transform.isFinite || localPath == null) {
+      return;
+    }
+
+    withTransform(
+      context.canvas,
+      _toViewTransform(
+        context.transformBuffer,
+        node.transform,
+        context.cameraOffset,
+      ),
+      () {
+        _drawFilledAndStrokedShape(
+          style: (
+            fillColor: node.fillColor,
+            strokeColor: node.strokeColor,
+            strokeWidth: node.strokeWidth,
+            opacity: node.opacity,
+          ),
+          draw: (paint) => context.canvas.drawPath(localPath, paint),
+        );
+      },
+    );
+  }
+}
+
+class _SceneStrokeNodeRenderer {
+  const _SceneStrokeNodeRenderer({required this.strokePathCache});
+
+  final SceneStrokePathCache? strokePathCache;
+
+  void drawLineNode(LineNodeSnapshot node, _SceneNodeRenderContext context) {
     if (!node.transform.isFinite ||
         !_isFiniteOffset(node.start) ||
         !_isFiniteOffset(node.end)) {
       return;
     }
     withTransform(
-      canvas,
-      _toViewTransform(transformBuffer, node.transform, cameraOffset),
+      context.canvas,
+      _toViewTransform(
+        context.transformBuffer,
+        node.transform,
+        context.cameraOffset,
+      ),
       () {
-        canvas.drawLine(
+        context.canvas.drawLine(
           node.start,
           node.end,
           Paint()
@@ -103,10 +130,9 @@ class _ScenePainterNodeRenderer {
     );
   }
 
-  void _drawStrokeNode(
-    Canvas canvas,
+  void drawStrokeNode(
     StrokeNodeSnapshot node,
-    Offset cameraOffset,
+    _SceneNodeRenderContext context,
   ) {
     if (!_canPaintStrokeNode(node)) {
       return;
@@ -114,11 +140,15 @@ class _ScenePainterNodeRenderer {
 
     final thickness = clampNonNegativeFinite(node.thickness);
     withTransform(
-      canvas,
-      _toViewTransform(transformBuffer, node.transform, cameraOffset),
+      context.canvas,
+      _toViewTransform(
+        context.transformBuffer,
+        node.transform,
+        context.cameraOffset,
+      ),
       () {
         if (node.points.length == 1) {
-          canvas.drawCircle(
+          context.canvas.drawCircle(
             node.points.first,
             thickness / 2,
             Paint()
@@ -130,7 +160,7 @@ class _ScenePainterNodeRenderer {
 
         final path = _resolveStrokePath(node, strokePathCache);
 
-        canvas.drawPath(
+        context.canvas.drawPath(
           path,
           Paint()
             ..style = PaintingStyle.stroke
@@ -142,12 +172,20 @@ class _ScenePainterNodeRenderer {
       },
     );
   }
+}
 
-  void _drawTextNode(
-    Canvas canvas,
-    TextNodeSnapshot node,
-    Offset cameraOffset,
-  ) {
+class _SceneRichNodeRenderer {
+  const _SceneRichNodeRenderer({
+    required this.imageResolver,
+    required this.textLayoutCache,
+    required this.textDirection,
+  });
+
+  final ImageResolver imageResolver;
+  final SceneTextLayoutCache? textLayoutCache;
+  final TextDirection textDirection;
+
+  void drawTextNode(TextNodeSnapshot node, _SceneNodeRenderContext context) {
     if (!node.transform.isFinite) {
       return;
     }
@@ -165,33 +203,37 @@ class _ScenePainterNodeRenderer {
     );
 
     withTransform(
-      canvas,
-      _toViewTransform(transformBuffer, node.transform, cameraOffset),
+      context.canvas,
+      _toViewTransform(
+        context.transformBuffer,
+        node.transform,
+        context.cameraOffset,
+      ),
       () {
         textPainter.paint(
-          canvas,
+          context.canvas,
           Offset(-safeSize.width / 2 + alignOffset, -safeSize.height / 2),
         );
       },
     );
   }
 
-  void _drawImageNode(
-    Canvas canvas,
-    ImageNodeSnapshot node,
-    Offset cameraOffset,
-  ) {
+  void drawImageNode(ImageNodeSnapshot node, _SceneNodeRenderContext context) {
     if (!node.transform.isFinite) {
       return;
     }
     final rect = _centerRect(node.size);
     final image = imageResolver(node.imageId);
     withTransform(
-      canvas,
-      _toViewTransform(transformBuffer, node.transform, cameraOffset),
+      context.canvas,
+      _toViewTransform(
+        context.transformBuffer,
+        node.transform,
+        context.cameraOffset,
+      ),
       () {
         if (image == null) {
-          canvas.drawRect(
+          context.canvas.drawRect(
             rect,
             Paint()
               ..style = PaintingStyle.stroke
@@ -201,7 +243,7 @@ class _ScenePainterNodeRenderer {
         }
 
         paintImage(
-          canvas: canvas,
+          canvas: context.canvas,
           rect: rect,
           image: image,
           fit: BoxFit.fill,
@@ -211,56 +253,66 @@ class _ScenePainterNodeRenderer {
       },
     );
   }
+}
 
-  void _drawPathNode(
-    Canvas canvas,
-    PathNodeSnapshot node,
-    Offset cameraOffset, {
-    required Path? localPath,
-  }) {
-    if (!node.transform.isFinite || localPath == null) {
-      return;
-    }
-
-    withTransform(
-      canvas,
-      _toViewTransform(transformBuffer, node.transform, cameraOffset),
-      () {
-        _drawFilledAndStrokedShape(
-          style: (
-            fillColor: node.fillColor,
-            strokeColor: node.strokeColor,
-            strokeWidth: node.strokeWidth,
-            opacity: node.opacity,
-          ),
-          draw: (paint) => canvas.drawPath(localPath, paint),
+void _drawResolvedNode(
+  _ResolvedNodePaintData resolvedNode,
+  _SceneNodeRenderContext context,
+  _SceneNodeRenderSupport support,
+) {
+  withTranslate(context.canvas, resolvedNode.previewDelta, () {
+    switch (resolvedNode.node) {
+      case RectNodeSnapshot rectNode:
+        support.shapes.drawRectNode(rectNode, context);
+      case LineNodeSnapshot lineNode:
+        support.strokes.drawLineNode(lineNode, context);
+      case StrokeNodeSnapshot strokeNode:
+        support.strokes.drawStrokeNode(strokeNode, context);
+      case TextNodeSnapshot textNode:
+        support.rich.drawTextNode(textNode, context);
+      case ImageNodeSnapshot imageNode:
+        support.rich.drawImageNode(imageNode, context);
+      case PathNodeSnapshot pathNode:
+        _drawPathNode(
+          pathNode,
+          resolvedNode.geometry.localPath,
+          context,
+          support,
         );
-      },
-    );
-  }
+    }
+  });
+}
 
-  void _drawFilledAndStrokedShape({
-    required _FillAndStrokeStyle style,
-    required void Function(Paint paint) draw,
-  }) {
-    final fillColor = style.fillColor;
-    if (fillColor != null) {
-      draw(
-        Paint()
-          ..style = PaintingStyle.fill
-          ..color = _applyOpacity(fillColor, style.opacity),
-      );
-    }
-    final safeStrokeWidth = clampNonNegativeFinite(style.strokeWidth);
-    final strokeColor = style.strokeColor;
-    if (strokeColor == null || safeStrokeWidth <= 0) {
-      return;
-    }
+void _drawPathNode(
+  PathNodeSnapshot node,
+  Path? localPath,
+  _SceneNodeRenderContext context,
+  _SceneNodeRenderSupport support,
+) {
+  support.shapes.drawPathNode(node, localPath, context);
+}
+
+void _drawFilledAndStrokedShape({
+  required _FillAndStrokeStyle style,
+  required void Function(Paint paint) draw,
+}) {
+  final fillColor = style.fillColor;
+  if (fillColor != null) {
     draw(
       Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = safeStrokeWidth
-        ..color = _applyOpacity(strokeColor, style.opacity),
+        ..style = PaintingStyle.fill
+        ..color = _applyOpacity(fillColor, style.opacity),
     );
   }
+  final safeStrokeWidth = clampNonNegativeFinite(style.strokeWidth);
+  final strokeColor = style.strokeColor;
+  if (strokeColor == null || safeStrokeWidth <= 0) {
+    return;
+  }
+  draw(
+    Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = safeStrokeWidth
+      ..color = _applyOpacity(strokeColor, style.opacity),
+  );
 }

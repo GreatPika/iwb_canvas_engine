@@ -60,12 +60,11 @@ class ScenePainter extends CustomPainter {
       pathMetricsCache: pathMetricsCache,
       transformBuffer: _transformBuffer,
     );
-    _nodeRenderer = _ScenePainterNodeRenderer(
+    _nodeRenderSupport = _SceneNodeRenderSupport(
       imageResolver: imageResolver,
       textLayoutCache: textLayoutCache,
       strokePathCache: strokePathCache,
       textDirection: textDirection,
-      transformBuffer: _transformBuffer,
     );
   }
 
@@ -82,8 +81,8 @@ class ScenePainter extends CustomPainter {
   final double gridStrokeWidth;
   final TextDirection textDirection;
   final _ScenePainterFrameOwner _frameOwner;
+  late final _SceneNodeRenderSupport _nodeRenderSupport;
   late final _SceneSelectionSupport _selectionSupport;
-  late final _ScenePainterNodeRenderer _nodeRenderer;
 
   final Float64List _transformBuffer = Float64List(16);
 
@@ -141,6 +140,11 @@ class ScenePainter extends CustomPainter {
     required Iterable<NodeSnapshot> nodes,
     required _PaintFrame frame,
   }) {
+    final renderContext = _SceneNodeRenderContext(
+      canvas: canvas,
+      cameraOffset: frame.cameraOffset,
+      transformBuffer: _transformBuffer,
+    );
     for (final node in nodes) {
       if (!node.isVisible) {
         continue;
@@ -149,7 +153,7 @@ class ScenePainter extends CustomPainter {
       if (!_frameOwner.canPaintNodeInFrame(resolvedNode, frame.viewRect)) {
         continue;
       }
-      _nodeRenderer.draw(canvas, resolvedNode, frame.cameraOffset);
+      _drawResolvedNode(resolvedNode, renderContext, _nodeRenderSupport);
       if (frame.isSelected(node.id)) {
         frame.selectedNodes.add(resolvedNode);
       }

@@ -146,6 +146,10 @@ Ownership decisions for the target state:
   frame-local geometry resolution happens once in the frame owner, while
   selection rendering consumes only resolved `worldBounds` / `localPath`
   through focused render-local helpers instead of reopening geometry lookup.
+- `ScenePainter` keeps node-family rendering separate from frame ownership:
+  rect/path, line/stroke, and text/image rendering consume only
+  frame-resolved node data through focused render-local helpers instead of one
+  mixed node-render owner.
 - Background-grid semantics are stateless and render-local: one shared owner
   computes drawable eligibility, density bucketing, camera shift, and line
   emission; `SceneStaticLayerCache` owns only picture lifecycle and key reuse

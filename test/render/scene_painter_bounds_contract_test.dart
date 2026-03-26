@@ -66,7 +66,8 @@ void main() {
       final source = File(
         'lib/src/render/scene_painter_node_renderer.part.dart',
       ).readAsStringSync();
-      expect(source, contains('required Path? localPath'));
+      expect(source, isNot(contains('class _ScenePainterNodeRenderer')));
+      expect(source, contains('Path? localPath'));
       final body = _extractMethodBody(
         source: source,
         methodStart: 'void _drawPathNode(',
