@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../../contract/scene_write_txn.dart';
+import '../scene_writer_command_results.dart';
 import '../scene_writer.dart';
 
 class MoveCommands {
@@ -16,7 +17,8 @@ class MoveCommands {
     return _writeRunner((writer) {
       final movedCount = writer.writeSelectionTranslate(delta);
       if (movedCount > 0) {
-        _sceneWriter(writer).writeOwnedSignalEnqueue(
+        sceneWriterWriteOwnedSignalExactEnqueue(
+          _sceneWriter(writer),
           type: 'selection.translated',
           payload: <String, Object?>{'dx': delta.dx, 'dy': delta.dy},
         );

@@ -224,10 +224,15 @@ most important architectural rules are:
   derived-state owners live in `txn_workspace.dart` and
   `txn_derived_state.dart`; `SceneControllerCommitRuntime` consumes that
   substrate without reopening the public controller facade boundary.
-- `SceneWriter` is the internal owner for selection-only transitions, exact
-  command-facing mutation results, and the buffered signal enqueue boundary;
-  internal commands consume that writer-local seam directly instead of
-  expanding the public `SceneWriteTxn` contract.
+- `SceneWriter` is the only internal `SceneWriteTxn` implementation, but it is
+  now a thin shell over writer-local controller modules:
+  `scene_writer_selection.dart`,
+  `scene_writer_scene.dart`,
+  `scene_writer_signals.dart`, and
+  `scene_writer_command_results.dart`.
+  `scene_writer_runtime.dart` owns the shared transaction runtime handle used
+  by those modules, while internal commands keep consuming exact writer-local
+  results instead of expanding the public `SceneWriteTxn` contract.
 - Successful commits finalize store state before publishing signals or repaint
   notifications.
 - Committed signals are emitted before repaint listener notification for the

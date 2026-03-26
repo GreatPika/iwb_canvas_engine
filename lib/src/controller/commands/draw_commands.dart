@@ -4,6 +4,7 @@ import '../../core/input_sampling.dart';
 import '../../core/nodes.dart';
 import '../../core/scene_limits.dart';
 import '../../contract/node_spec.dart';
+import '../scene_writer_command_results.dart';
 import '../scene_writer.dart';
 
 typedef DrawCommandRunner = T Function<T>(T Function(SceneWriter writer) fn);
@@ -20,31 +21,37 @@ class DrawCommands {
     return resamplePointsToLimit(points, limit: limit);
   }
 
+  NodeId _writeDrawNode(NodeSpec spec, {required String signalType}) {
+    return _writeRunner((writer) {
+      final nodeId = writer.writeNodeInsert(spec);
+      sceneWriterWriteOwnedSignalExactEnqueue(
+        writer,
+        type: signalType,
+        nodeIds: <NodeId>[nodeId],
+      );
+      return nodeId;
+    });
+  }
+
   NodeId writeDrawStroke({
     required List<Offset> points,
     required double thickness,
     required Color color,
     double opacity = 1,
   }) {
-    return _writeRunner((writer) {
-      final committedPoints = _committedStrokePoints(
-        points,
-        limit: kMaxStrokePointsPerNode,
-      );
-      final nodeId = writer.writeNodeInsert(
-        StrokeNodeSpec(
-          points: committedPoints,
-          thickness: thickness,
-          color: color,
-          opacity: opacity,
-        ),
-      );
-      writer.writeOwnedSignalEnqueue(
-        type: 'draw.stroke',
-        nodeIds: <NodeId>[nodeId],
-      );
-      return nodeId;
-    });
+    final committedPoints = _committedStrokePoints(
+      points,
+      limit: kMaxStrokePointsPerNode,
+    );
+    return _writeDrawNode(
+      StrokeNodeSpec(
+        points: committedPoints,
+        thickness: thickness,
+        color: color,
+        opacity: opacity,
+      ),
+      signalType: 'draw.stroke',
+    );
   }
 
   NodeId writeDrawLine({
@@ -53,29 +60,27 @@ class DrawCommands {
     required Color color,
     double opacity = 1,
   }) {
-    return _writeRunner((writer) {
-      final nodeId = writer.writeNodeInsert(
-        LineNodeSpec(
-          start: segment.start,
-          end: segment.end,
-          thickness: thickness,
-          color: color,
-          opacity: opacity,
-        ),
-      );
-      writer.writeOwnedSignalEnqueue(
-        type: 'draw.line',
-        nodeIds: <NodeId>[nodeId],
-      );
-      return nodeId;
-    });
+    return _writeDrawNode(
+      LineNodeSpec(
+        start: segment.start,
+        end: segment.end,
+        thickness: thickness,
+        color: color,
+        opacity: opacity,
+      ),
+      signalType: 'draw.line',
+    );
   }
 
   int writeEraseNodes(Iterable<NodeId> nodeIds) {
     return _writeRunner((writer) {
-      final removedIds = writer.writeDeleteNodesResult(nodeIds);
+      final removedIds = sceneWriterWriteDeleteNodesResult(writer, nodeIds);
       if (removedIds.isNotEmpty) {
-        writer.writeOwnedSignalEnqueue(type: 'draw.erase', nodeIds: removedIds);
+        sceneWriterWriteOwnedSignalExactEnqueue(
+          writer,
+          type: 'draw.erase',
+          nodeIds: removedIds,
+        );
       }
       return removedIds.length;
     });

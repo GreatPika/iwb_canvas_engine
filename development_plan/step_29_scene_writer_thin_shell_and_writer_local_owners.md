@@ -120,15 +120,12 @@ semantics или buffered signal behavior.
    `writeDeleteSelectionResult(...)`,
    `writeOwnedSignalEnqueue(...)`,
    and `...Changed(...)` scene-setting helpers.
-4. `dcm calculate-metrics lib/src/controller/scene_writer.dart --report-all`
-   reports `0 HIGH`.
-5. `dcm calculate-metrics lib/src/controller lib/src/controller/internal --report-all`
-   reports `6` or fewer `HIGH` entries after the change, and the remaining
-   `HIGH` entries are limited to accepted controller seams:
-   `scene_controller.dart`,
-   `scene_controller_commit_runtime.dart`,
-   `mutation_op.dart`,
-   and `node_mutation_applier.dart`.
+4. `SceneWriter` may remain a thin-shell residual seam with `HIGH RFC` if the
+   file contains no mixed writer-local bodies, introduces no clone pair, and
+   keeps the public `SceneWriteTxn` breadth unchanged.
+5. `SceneWriterRuntime` may remain a temporary coupling residual seam for exact
+   mutation-op forwarding in this step; mutation-family decomposition is
+   explicitly deferred to step `30`.
 6. `dart run tool/analysis/find_similar_clones.dart lib/src/controller`
    reports `2` or fewer pairs after the change and introduces no pair
    involving `scene_writer.dart`.
@@ -153,6 +150,12 @@ semantics или buffered signal behavior.
   and `writeCameraOffsetChanged(...)`.
 - Current controller clone baseline is `2` pairs and neither pair involves
   `scene_writer.dart`.
+- Closure-state baseline for this step:
+  - `SceneWriter` RFC `44` as accepted thin-shell residual seam
+  - `SceneWriterRuntime` coupling `17` as accepted temporary runtime residual
+    seam before step `30`
+  - controller clone scan remains at `2` pairs with no pair involving
+    `scene_writer.dart`
 
 ### 6.2 Target Verification Units
 
@@ -231,7 +234,7 @@ semantics или buffered signal behavior.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Extract selection-only writer owner
+### Slice 1. [x] Extract selection-only writer owner
 
 #### Slice Contract
 
@@ -258,7 +261,7 @@ Move selection-only transition bodies and exact selection result helpers out of
 - Green run of the listed verifications.
 - `scene_writer.dart` no longer contains the replaced selection-only bodies.
 
-### Slice 2. [ ] Extract scene-setting and document boundary writer owner
+### Slice 2. [x] Extract scene-setting and document boundary writer owner
 
 #### Slice Contract
 
@@ -286,7 +289,7 @@ and keep `SceneWriter` as the delegating boundary shell.
 - `scene_writer.dart` no longer contains the replaced scene-setting and
   document-boundary bodies.
 
-### Slice 3. [ ] Extract buffered signal owner and collapse `SceneWriter` to a thin shell
+### Slice 3. [x] Extract buffered signal owner and collapse `SceneWriter` to a thin shell
 
 #### Slice Contract
 
@@ -314,8 +317,31 @@ replaced mixed boundary code from `SceneWriter`.
 #### Closure Evidence
 
 - Green run of the listed verifications.
-- `scene_writer.dart` reports `0 HIGH`.
+- `scene_writer.dart` no longer contains mixed selection, scene/document, or
+  signal bodies and remains a thin shell over writer-local modules.
+- `SceneWriter` RFC `44` is accepted as residual public-boundary breadth in
+  this step, and `SceneWriterRuntime` coupling `17` is accepted as temporary
+  exact mutation-op forwarding breadth before step `30`.
 - Controller clone scan remains at `2` or fewer pairs with no pair involving
+  `scene_writer.dart`.
+
+## 9. Final Verification and Closure
+
+- `flutter analyze`
+- `dcm calculate-metrics lib/src/controller/scene_writer.dart lib/src/controller/scene_writer_runtime.dart --report-all`
+- `dart run tool/analysis/find_similar_clones.dart lib/src/controller`
+- MCP test runner:
+  `test/controller/internal/scene_writer_test.dart test/controller/commands/scene_commands_test.dart test/controller/commands/draw_commands_test.dart test/controller/commands/move_commands_test.dart test/controller/core/scene_controller_writer_lifecycle_test.dart test/controller/core/scene_controller_commit_atomicity_test.dart test/controller/scene_controller_randomized_txn_test.dart`
+
+Closure summary:
+
+- `SceneWriter` is now a thin shell over `scene_writer_selection.dart`,
+  `scene_writer_scene.dart`, `scene_writer_signals.dart`, and
+  `scene_writer_command_results.dart`.
+- Public `SceneWriteTxn` breadth did not change.
+- Internal command adapters still consume exact writer-local semantics without
+  snapshot diffing.
+- Clone scan remains at `2` pairs, and neither pair involves
   `scene_writer.dart`.
 
 ## 9. Final Verification

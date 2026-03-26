@@ -5,6 +5,7 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart' hide NodeId;
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/controller/mutation_executor.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_writer_command_results.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_writer.dart';
 import 'package:iwb_canvas_engine/src/controller/txn_context.dart';
 import 'package:iwb_canvas_engine/src/controller/internal/signal_event.dart';
@@ -548,16 +549,14 @@ void main() {
       );
       final writer = newWriter(ctx, txnSignalSink: (_) {});
 
-      final changedIds = writer.writeSelectionReplaceResult(const <NodeId>{
-        'z-node',
-        'a-node',
-        'base',
-      });
-      final noChange = writer.writeSelectionReplaceResult(const <NodeId>{
-        'base',
-        'a-node',
-        'z-node',
-      });
+      final changedIds = sceneWriterWriteSelectionReplaceExactResult(
+        writer,
+        const <NodeId>{'z-node', 'a-node', 'base'},
+      );
+      final noChange = sceneWriterWriteSelectionReplaceExactResult(
+        writer,
+        const <NodeId>{'base', 'a-node', 'z-node'},
+      );
 
       expect(changedIds, const <NodeId>['a-node', 'base', 'z-node']);
       expect(noChange, isNull);
@@ -625,12 +624,10 @@ void main() {
       );
       final writer = newWriter(ctx, txnSignalSink: (_) {});
 
-      final removedIds = writer.writeDeleteNodesResult(const <NodeId>{
-        'z-node',
-        'locked',
-        'a-node',
-        'missing',
-      });
+      final removedIds = sceneWriterWriteDeleteNodesResult(
+        writer,
+        const <NodeId>{'z-node', 'locked', 'a-node', 'missing'},
+      );
 
       expect(removedIds, const <NodeId>['a-node', 'z-node']);
       expect(ctx.workingSelection, isEmpty);
@@ -797,8 +794,10 @@ void main() {
       );
       final writer = newWriter(ctx, txnSignalSink: (_) {});
 
-      final changedToEmpty = writer.writeSelectionSelectAllResult();
-      final stableEmpty = writer.writeSelectionSelectAllResult();
+      final changedToEmpty = sceneWriterWriteSelectionSelectAllExactResult(
+        writer,
+      );
+      final stableEmpty = sceneWriterWriteSelectionSelectAllExactResult(writer);
 
       expect(changedToEmpty, (selectedCount: 0, changed: true));
       expect(stableEmpty, (selectedCount: 0, changed: false));
@@ -892,7 +891,11 @@ void main() {
     final writer = newWriter(ctx, txnSignalSink: bufferedSignals.add);
     final nodeIds = <NodeId>['a', 'b'];
 
-    writer.writeOwnedSignalEnqueue(type: 'owned.signal', nodeIds: nodeIds);
+    sceneWriterWriteOwnedSignalExactEnqueue(
+      writer,
+      type: 'owned.signal',
+      nodeIds: nodeIds,
+    );
     nodeIds.add('c');
 
     expect(bufferedSignals.single.type, 'owned.signal');

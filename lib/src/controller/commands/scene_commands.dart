@@ -5,6 +5,7 @@ import '../../contract/ids.dart' show LayerId;
 import '../../contract/transform2d.dart';
 import '../../contract/node_patch.dart';
 import '../../contract/node_spec.dart';
+import '../scene_writer_command_results.dart';
 import '../scene_writer.dart';
 
 typedef SceneCommandRunner = T Function<T>(T Function(SceneWriter writer) fn);
@@ -27,7 +28,8 @@ class SceneCommands {
         layerId: layerId,
         insertIndex: insertIndex,
       );
-      writer.writeOwnedSignalEnqueue(
+      sceneWriterWriteOwnedSignalExactEnqueue(
+        writer,
         type: 'node.added',
         nodeIds: <NodeId>[nodeId],
       );
@@ -39,7 +41,8 @@ class SceneCommands {
     return _writeRunner((writer) {
       final changed = writer.writeNodePatch(patch);
       if (changed) {
-        writer.writeOwnedSignalEnqueue(
+        sceneWriterWriteOwnedSignalExactEnqueue(
+          writer,
           type: 'node.updated',
           nodeIds: <NodeId>[patch.id],
         );
@@ -52,7 +55,8 @@ class SceneCommands {
     return _writeRunner((writer) {
       final deleted = writer.writeNodeErase(nodeId);
       if (deleted) {
-        writer.writeOwnedSignalEnqueue(
+        sceneWriterWriteOwnedSignalExactEnqueue(
+          writer,
           type: 'node.removed',
           nodeIds: <NodeId>[nodeId],
         );
@@ -63,9 +67,13 @@ class SceneCommands {
 
   void writeSelectionReplace(Iterable<NodeId> nodeIds) {
     _writeRunner<void>((writer) {
-      final sortedNodeIds = writer.writeSelectionReplaceResult(nodeIds);
+      final sortedNodeIds = sceneWriterWriteSelectionReplaceExactResult(
+        writer,
+        nodeIds,
+      );
       if (sortedNodeIds != null) {
-        writer.writeOwnedSignalEnqueue(
+        sceneWriterWriteOwnedSignalExactEnqueue(
+          writer,
           type: 'selection.replaced',
           nodeIds: sortedNodeIds,
         );
@@ -77,7 +85,8 @@ class SceneCommands {
     _writeRunner<void>((writer) {
       final changed = writer.writeSelectionToggle(nodeId);
       if (changed) {
-        writer.writeOwnedSignalEnqueue(
+        sceneWriterWriteOwnedSignalExactEnqueue(
+          writer,
           type: 'selection.toggled',
           nodeIds: _sortedNodeIds(<NodeId>[nodeId]),
         );
@@ -89,18 +98,22 @@ class SceneCommands {
     _writeRunner<void>((writer) {
       final changed = writer.writeSelectionClear();
       if (changed) {
-        writer.writeOwnedSignalEnqueue(type: 'selection.cleared');
+        sceneWriterWriteOwnedSignalExactEnqueue(
+          writer,
+          type: 'selection.cleared',
+        );
       }
     });
   }
 
   int writeSelectionSelectAll({bool onlySelectable = true}) {
     return _writeRunner((writer) {
-      final result = writer.writeSelectionSelectAllResult(
+      final result = sceneWriterWriteSelectionSelectAllExactResult(
+        writer,
         onlySelectable: onlySelectable,
       );
       if (result.changed) {
-        writer.writeOwnedSignalEnqueue(type: 'selection.all');
+        sceneWriterWriteOwnedSignalExactEnqueue(writer, type: 'selection.all');
       }
       return result.selectedCount;
     });
@@ -110,7 +123,8 @@ class SceneCommands {
     return _writeRunner((writer) {
       final affected = writer.writeSelectionTransform(delta);
       if (affected > 0) {
-        writer.writeOwnedSignalEnqueue(
+        sceneWriterWriteOwnedSignalExactEnqueue(
+          writer,
           type: 'selection.transformed',
           payload: <String, Object?>{'delta': delta.toJsonMap()},
         );
@@ -121,9 +135,10 @@ class SceneCommands {
 
   int writeDeleteSelection() {
     return _writeRunner((writer) {
-      final removedIds = writer.writeDeleteSelectionResult();
+      final removedIds = sceneWriterWriteDeleteSelectionExactResult(writer);
       if (removedIds.isNotEmpty) {
-        writer.writeOwnedSignalEnqueue(
+        sceneWriterWriteOwnedSignalExactEnqueue(
+          writer,
           type: 'selection.deleted',
           nodeIds: removedIds,
         );
@@ -137,7 +152,8 @@ class SceneCommands {
       final clearResult = writer.writeClearSceneKeepBackgroundResult();
       final removedNodeIds = clearResult.removedNodeIds;
       if (removedNodeIds.isNotEmpty || clearResult.didStructuralClear) {
-        writer.writeOwnedSignalEnqueue(
+        sceneWriterWriteOwnedSignalExactEnqueue(
+          writer,
           type: 'scene.cleared',
           nodeIds: removedNodeIds,
         );
@@ -148,32 +164,41 @@ class SceneCommands {
 
   void writeBackgroundColorSet(Color color) {
     _writeRunner<void>((writer) {
-      if (writer.writeBackgroundColorChanged(color)) {
-        writer.writeOwnedSignalEnqueue(type: 'background.updated');
+      if (sceneWriterWriteBackgroundColorExactChange(writer, color)) {
+        sceneWriterWriteOwnedSignalExactEnqueue(
+          writer,
+          type: 'background.updated',
+        );
       }
     });
   }
 
   void writeGridEnabledSet(bool enabled) {
     _writeRunner<void>((writer) {
-      if (writer.writeGridEnableChanged(enabled)) {
-        writer.writeOwnedSignalEnqueue(type: 'grid.enabled.updated');
+      if (sceneWriterWriteGridEnableExactChange(writer, enabled)) {
+        sceneWriterWriteOwnedSignalExactEnqueue(
+          writer,
+          type: 'grid.enabled.updated',
+        );
       }
     });
   }
 
   void writeGridCellSizeSet(double size) {
     _writeRunner<void>((writer) {
-      if (writer.writeGridCellSizeChanged(size)) {
-        writer.writeOwnedSignalEnqueue(type: 'grid.cell.updated');
+      if (sceneWriterWriteGridCellSizeExactChange(writer, size)) {
+        sceneWriterWriteOwnedSignalExactEnqueue(
+          writer,
+          type: 'grid.cell.updated',
+        );
       }
     });
   }
 
   void writeCameraOffsetSet(Offset offset) {
     _writeRunner<void>((writer) {
-      if (writer.writeCameraOffsetChanged(offset)) {
-        writer.writeOwnedSignalEnqueue(type: 'camera.updated');
+      if (sceneWriterWriteCameraOffsetExactChange(writer, offset)) {
+        sceneWriterWriteOwnedSignalExactEnqueue(writer, type: 'camera.updated');
       }
     });
   }
