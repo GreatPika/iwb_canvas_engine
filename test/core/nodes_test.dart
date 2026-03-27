@@ -51,6 +51,20 @@ void main() {
     expect(() => rect.rotationDeg = 1, throwsStateError);
   });
 
+  test('convenience getters assert on non-finite transform components', () {
+    final rect = RectNode(id: 'r', size: const Size(10, 10))
+      ..transform = const Transform2D(
+        a: double.nan,
+        b: 0,
+        c: 0,
+        d: 1,
+        tx: 0,
+        ty: 0,
+      );
+
+    expect(() => rect.rotationDeg, throwsA(isA<AssertionError>()));
+  });
+
   test('boundsWorld falls back to Rect.zero for invalid transform bounds', () {
     final line = LineNode(
       id: 'l',

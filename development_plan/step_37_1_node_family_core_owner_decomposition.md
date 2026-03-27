@@ -166,7 +166,7 @@ node semantics, box-node placement, и vector-node world/local conversion
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Box-node family placement owner is isolated
+### Slice 1. [x] Box-node family placement owner is isolated
 
 #### Slice Contract
 
@@ -191,7 +191,7 @@ core-local owner path beneath the existing node entrypoints.
 - The replaced box-node constructor family is no longer present in the same
   handwritten form.
 
-### Slice 2. [ ] Vector-node world/local conversion owner is isolated
+### Slice 2. [x] Vector-node world/local conversion owner is isolated
 
 #### Slice Contract
 

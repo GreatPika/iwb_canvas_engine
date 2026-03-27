@@ -91,37 +91,13 @@ abstract class SceneNode {
   ///
   /// This accessor is numerically robust for near-degenerate transforms and is
   /// designed to return a finite value for finite matrix components.
-  double get rotationDeg {
-    final t = transform;
-    assert(
-      t.a.isFinite && t.b.isFinite && t.c.isFinite && t.d.isFinite,
-      'SceneNode.rotationDeg requires finite transform.',
-    );
-
-    final a = t.a;
-    final b = t.b;
-    final c = t.c;
-    final d = t.d;
-
-    final sx = math.sqrt(a * a + b * b);
-    final syAbs = math.sqrt(c * c + d * d);
-    if (!sx.isFinite || !syAbs.isFinite) return 0;
-    if (nearZero(sx) && nearZero(syAbs)) return 0;
-
-    final radians = (sx >= syAbs && !nearZero(sx))
-        ? math.atan2(b, a)
-        : math.atan2(-c, d);
-    final degrees = radians * 180.0 / math.pi;
-    return degrees.isFinite ? degrees : 0;
-  }
+  double get rotationDeg =>
+      _SceneNodeTransformConvenience.rotationDeg(transform);
 
   set rotationDeg(double value) {
-    _requireTrsTransformForConvenienceSetter(transform, 'rotationDeg');
-    transform = Transform2D.trs(
-      translation: position,
+    transform = _SceneNodeTransformConvenience.withRotationDeg(
+      transform: transform,
       rotationDeg: value,
-      scaleX: scaleX,
-      scaleY: scaleY,
     );
   }
 
@@ -131,28 +107,12 @@ abstract class SceneNode {
   /// basis column of the 2×2 linear part. For flipped transforms (`det < 0`),
   /// the reflection sign is represented via [scaleY] (canonical TRS(+flip)
   /// decomposition).
-  double get scaleX {
-    final t = transform;
-    assert(
-      t.a.isFinite && t.b.isFinite && t.c.isFinite && t.d.isFinite,
-      'SceneNode.scaleX requires finite transform.',
-    );
-
-    final a = t.a;
-    final b = t.b;
-    final sx = math.sqrt(a * a + b * b);
-    if (!sx.isFinite) return 0;
-    if (nearZero(sx)) return 0;
-    return sx;
-  }
+  double get scaleX => _SceneNodeTransformConvenience.scaleX(transform);
 
   set scaleX(double value) {
-    _requireTrsTransformForConvenienceSetter(transform, 'scaleX');
-    transform = Transform2D.trs(
-      translation: position,
-      rotationDeg: rotationDeg,
+    transform = _SceneNodeTransformConvenience.withScaleX(
+      transform: transform,
       scaleX: value,
-      scaleY: scaleY,
     );
   }
 
@@ -165,35 +125,11 @@ abstract class SceneNode {
   /// For flips (`det < 0`), this accessor encodes the reflection sign while
   /// [scaleX] remains a non-negative magnitude (canonical TRS(+flip)
   /// decomposition together with [rotationDeg]).
-  double get scaleY {
-    final t = transform;
-    assert(
-      t.a.isFinite && t.b.isFinite && t.c.isFinite && t.d.isFinite,
-      'SceneNode.scaleY requires finite transform.',
-    );
-
-    final c = t.c;
-    final d = t.d;
-    final syAbs = math.sqrt(c * c + d * d);
-    if (!syAbs.isFinite) return 0;
-    if (nearZero(syAbs)) return 0;
-
-    final a = t.a;
-    final b = t.b;
-    final det = a * d - b * c;
-    if (isNearSingular2x2(a, b, c, d) || !det.isFinite) return syAbs;
-
-    final sign = det < 0 ? -1.0 : 1.0;
-    final out = sign * syAbs;
-    return out.isFinite ? out : 0;
-  }
+  double get scaleY => _SceneNodeTransformConvenience.scaleY(transform);
 
   set scaleY(double value) {
-    _requireTrsTransformForConvenienceSetter(transform, 'scaleY');
-    transform = Transform2D.trs(
-      translation: position,
-      rotationDeg: rotationDeg,
-      scaleX: scaleX,
+    transform = _SceneNodeTransformConvenience.withScaleY(
+      transform: transform,
       scaleY: value,
     );
   }
@@ -249,20 +185,23 @@ class ImageNode extends SceneNode {
     bool isDeletable = true,
     bool isTransformable = true,
   }) {
-    final centerWorld = topLeftWorld + Offset(size.width / 2, size.height / 2);
-    return ImageNode(
-      id: id,
-      imageId: imageId,
+    return _BoxNodePlacementOwner.createFromTopLeftWorld(
       size: size,
-      naturalSize: naturalSize,
-      hitPadding: hitPadding,
-      transform: Transform2D.translation(centerWorld),
-      opacity: opacity,
-      isVisible: isVisible,
-      isSelectable: isSelectable,
-      isLocked: isLocked,
-      isDeletable: isDeletable,
-      isTransformable: isTransformable,
+      topLeftWorld: topLeftWorld,
+      create: (transform) => ImageNode(
+        id: id,
+        imageId: imageId,
+        size: size,
+        naturalSize: naturalSize,
+        hitPadding: hitPadding,
+        transform: transform,
+        opacity: opacity,
+        isVisible: isVisible,
+        isSelectable: isSelectable,
+        isLocked: isLocked,
+        isDeletable: isDeletable,
+        isTransformable: isTransformable,
+      ),
     );
   }
 
@@ -273,21 +212,12 @@ class ImageNode extends SceneNode {
   /// Axis-aligned world top-left corner of this node's bounds.
   ///
   /// This is based on [boundsWorld] and is intended for UI-like positioning.
-  Offset get topLeftWorld => boundsWorld.topLeft;
-  set topLeftWorld(Offset value) {
-    final delta = value - boundsWorld.topLeft;
-    if (delta.distanceSquared < kUiEpsilonSquared) return;
-    position = position + delta;
-  }
-
-  Rect get _localRect => Rect.fromCenter(
-    center: Offset.zero,
-    width: clampNonNegativeFinite(size.width),
-    height: clampNonNegativeFinite(size.height),
-  );
+  Offset get topLeftWorld => _BoxNodePlacementOwner.topLeftWorld(this);
+  set topLeftWorld(Offset value) =>
+      _BoxNodePlacementOwner.setTopLeftWorld(node: this, value: value);
 
   @override
-  Rect get localBounds => _localRect;
+  Rect get localBounds => _BoxNodePlacementOwner.localRect(size);
 }
 
 /// Text node with derived layout box ([size]) and basic styling.
@@ -342,28 +272,31 @@ class TextNode extends SceneNode {
     bool isDeletable = true,
     bool isTransformable = true,
   }) {
-    final centerWorld = topLeftWorld + Offset(size.width / 2, size.height / 2);
-    return TextNode(
-      id: id,
-      text: text,
+    return _BoxNodePlacementOwner.createFromTopLeftWorld(
       size: size,
-      fontSize: fontSize,
-      color: color,
-      align: align,
-      isBold: isBold,
-      isItalic: isItalic,
-      isUnderline: isUnderline,
-      fontFamily: fontFamily,
-      maxWidth: maxWidth,
-      lineHeight: lineHeight,
-      hitPadding: hitPadding,
-      transform: Transform2D.translation(centerWorld),
-      opacity: opacity,
-      isVisible: isVisible,
-      isSelectable: isSelectable,
-      isLocked: isLocked,
-      isDeletable: isDeletable,
-      isTransformable: isTransformable,
+      topLeftWorld: topLeftWorld,
+      create: (transform) => TextNode(
+        id: id,
+        text: text,
+        size: size,
+        fontSize: fontSize,
+        color: color,
+        align: align,
+        isBold: isBold,
+        isItalic: isItalic,
+        isUnderline: isUnderline,
+        fontFamily: fontFamily,
+        maxWidth: maxWidth,
+        lineHeight: lineHeight,
+        hitPadding: hitPadding,
+        transform: transform,
+        opacity: opacity,
+        isVisible: isVisible,
+        isSelectable: isSelectable,
+        isLocked: isLocked,
+        isDeletable: isDeletable,
+        isTransformable: isTransformable,
+      ),
     );
   }
 
@@ -382,21 +315,12 @@ class TextNode extends SceneNode {
   /// Axis-aligned world top-left corner of this node's bounds.
   ///
   /// This is based on [boundsWorld] and is intended for UI-like positioning.
-  Offset get topLeftWorld => boundsWorld.topLeft;
-  set topLeftWorld(Offset value) {
-    final delta = value - boundsWorld.topLeft;
-    if (delta.distanceSquared < kUiEpsilonSquared) return;
-    position = position + delta;
-  }
-
-  Rect get _localRect => Rect.fromCenter(
-    center: Offset.zero,
-    width: clampNonNegativeFinite(size.width),
-    height: clampNonNegativeFinite(size.height),
-  );
+  Offset get topLeftWorld => _BoxNodePlacementOwner.topLeftWorld(this);
+  set topLeftWorld(Offset value) =>
+      _BoxNodePlacementOwner.setTopLeftWorld(node: this, value: value);
 
   @override
-  Rect get localBounds => _localRect;
+  Rect get localBounds => _BoxNodePlacementOwner.localRect(size);
 }
 
 /// Freehand polyline stroke node.
@@ -436,22 +360,22 @@ class StrokeNode extends SceneNode {
     bool isDeletable = true,
     bool isTransformable = true,
   }) {
-    final bounds = points.isEmpty ? Rect.zero : aabbFromPoints(points);
-    final centerWorld = bounds.center;
-    final local = points.map((p) => p - centerWorld).toList(growable: false);
-    return StrokeNode(
-      id: id,
-      points: local,
-      thickness: thickness,
-      color: color,
-      hitPadding: hitPadding,
-      transform: Transform2D.translation(centerWorld),
-      opacity: opacity,
-      isVisible: isVisible,
-      isSelectable: isSelectable,
-      isLocked: isLocked,
-      isDeletable: isDeletable,
-      isTransformable: isTransformable,
+    return _VectorNodeGeometryOwner.createStrokeFromWorldPoints(
+      points: points,
+      create: (normalized) => StrokeNode(
+        id: id,
+        points: normalized.localPoints,
+        thickness: thickness,
+        color: color,
+        hitPadding: hitPadding,
+        transform: Transform2D.translation(normalized.centerWorld),
+        opacity: opacity,
+        isVisible: isVisible,
+        isSelectable: isSelectable,
+        isLocked: isLocked,
+        isDeletable: isDeletable,
+        isTransformable: isTransformable,
+      ),
     );
   }
 
@@ -488,26 +412,11 @@ class StrokeNode extends SceneNode {
   /// `transform == identity`. Call this when the gesture finishes to convert
   /// geometry to local space and store the world center in [transform].
   void normalizeToLocalCenter() {
-    final t = transform;
-    if (!_isExactIdentityTransform(t)) {
-      throw StateError(
-        'StrokeNode.normalizeToLocalCenter requires transform == identity. '
-        'Use StrokeNode.fromWorldPoints for non-interactive creation.',
-      );
-    }
-    for (final p in points) {
-      if (!p.dx.isFinite || !p.dy.isFinite) {
-        throw StateError(
-          'StrokeNode.normalizeToLocalCenter requires finite point coordinates.',
-        );
-      }
-    }
-    if (points.isEmpty) return;
-    final bounds = aabbFromPoints(points);
-    final centerWorld = bounds.center;
-    for (var i = 0; i < points.length; i++) {
-      points[i] = points[i] - centerWorld;
-    }
+    final centerWorld = _VectorNodeGeometryOwner.normalizeStrokeToLocalCenter(
+      transform: transform,
+      points: points,
+    );
+    if (centerWorld == null) return;
     transform = Transform2D.trs(translation: centerWorld);
   }
 }
@@ -708,22 +617,24 @@ class LineNode extends SceneNode {
     bool isDeletable = true,
     bool isTransformable = true,
   }) {
-    final bounds = Rect.fromPoints(start, end);
-    final centerWorld = bounds.center;
-    return LineNode(
-      id: id,
-      start: start - centerWorld,
-      end: end - centerWorld,
-      thickness: thickness,
-      color: color,
-      hitPadding: hitPadding,
-      transform: Transform2D.translation(centerWorld),
-      opacity: opacity,
-      isVisible: isVisible,
-      isSelectable: isSelectable,
-      isLocked: isLocked,
-      isDeletable: isDeletable,
-      isTransformable: isTransformable,
+    return _VectorNodeGeometryOwner.createLineFromWorldSegment(
+      start: start,
+      end: end,
+      create: (normalized) => LineNode(
+        id: id,
+        start: normalized.localStart,
+        end: normalized.localEnd,
+        thickness: thickness,
+        color: color,
+        hitPadding: hitPadding,
+        transform: Transform2D.translation(normalized.centerWorld),
+        opacity: opacity,
+        isVisible: isVisible,
+        isSelectable: isSelectable,
+        isLocked: isLocked,
+        isDeletable: isDeletable,
+        isTransformable: isTransformable,
+      ),
     );
   }
 
@@ -753,26 +664,14 @@ class LineNode extends SceneNode {
   /// with `transform == identity`. Call this when the gesture finishes to
   /// convert geometry to local space and store the world center in [transform].
   void normalizeToLocalCenter() {
-    final t = transform;
-    if (!_isExactIdentityTransform(t)) {
-      throw StateError(
-        'LineNode.normalizeToLocalCenter requires transform == identity. '
-        'Use LineNode.fromWorldSegment for non-interactive creation.',
-      );
-    }
-    if (!start.dx.isFinite ||
-        !start.dy.isFinite ||
-        !end.dx.isFinite ||
-        !end.dy.isFinite) {
-      throw StateError(
-        'LineNode.normalizeToLocalCenter requires finite start/end coordinates.',
-      );
-    }
-    final bounds = Rect.fromPoints(start, end);
-    final centerWorld = bounds.center;
-    start = start - centerWorld;
-    end = end - centerWorld;
-    transform = Transform2D.trs(translation: centerWorld);
+    final normalized = _VectorNodeGeometryOwner.normalizeLineToLocalCenter(
+      transform: transform,
+      start: start,
+      end: end,
+    );
+    start = normalized.localStart;
+    end = normalized.localEnd;
+    transform = Transform2D.trs(translation: normalized.centerWorld);
   }
 }
 
@@ -814,21 +713,24 @@ class RectNode extends SceneNode {
     bool isDeletable = true,
     bool isTransformable = true,
   }) {
-    final centerWorld = topLeftWorld + Offset(size.width / 2, size.height / 2);
-    return RectNode(
-      id: id,
+    return _BoxNodePlacementOwner.createFromTopLeftWorld(
       size: size,
-      fillColor: fillColor,
-      strokeColor: strokeColor,
-      strokeWidth: strokeWidth,
-      hitPadding: hitPadding,
-      transform: Transform2D.translation(centerWorld),
-      opacity: opacity,
-      isVisible: isVisible,
-      isSelectable: isSelectable,
-      isLocked: isLocked,
-      isDeletable: isDeletable,
-      isTransformable: isTransformable,
+      topLeftWorld: topLeftWorld,
+      create: (transform) => RectNode(
+        id: id,
+        size: size,
+        fillColor: fillColor,
+        strokeColor: strokeColor,
+        strokeWidth: strokeWidth,
+        hitPadding: hitPadding,
+        transform: transform,
+        opacity: opacity,
+        isVisible: isVisible,
+        isSelectable: isSelectable,
+        isLocked: isLocked,
+        isDeletable: isDeletable,
+        isTransformable: isTransformable,
+      ),
     );
   }
 
@@ -840,21 +742,265 @@ class RectNode extends SceneNode {
   /// Axis-aligned world top-left corner of this node's bounds.
   ///
   /// This is based on [boundsWorld] and is intended for UI-like positioning.
-  Offset get topLeftWorld => boundsWorld.topLeft;
-  set topLeftWorld(Offset value) {
-    final delta = value - boundsWorld.topLeft;
-    if (delta.distanceSquared < kUiEpsilonSquared) return;
-    position = position + delta;
-  }
-
-  Rect get _localRect => centeredRectLocalBounds(size);
+  Offset get topLeftWorld => _BoxNodePlacementOwner.topLeftWorld(this);
+  set topLeftWorld(Offset value) =>
+      _BoxNodePlacementOwner.setTopLeftWorld(node: this, value: value);
 
   @override
   Rect get localBounds => strokeAwareLocalBounds(
-    baseBounds: _localRect,
+    baseBounds: _BoxNodePlacementOwner.localRect(size),
     strokeColor: strokeColor,
     strokeWidth: strokeWidth,
   );
+}
+
+abstract final class _SceneNodeTransformConvenience {
+  static double rotationDeg(Transform2D transform) {
+    _assertFiniteLinearPart(transform, 'rotationDeg');
+    final sx = _scaleMagnitude(transform.a, transform.b);
+    final syAbs = _scaleMagnitude(transform.c, transform.d);
+    if (!sx.isFinite || !syAbs.isFinite) return 0;
+    if (nearZero(sx) && nearZero(syAbs)) return 0;
+
+    final radians = (sx >= syAbs && !nearZero(sx))
+        ? math.atan2(transform.b, transform.a)
+        : math.atan2(-transform.c, transform.d);
+    final degrees = radians * 180.0 / math.pi;
+    return degrees.isFinite ? degrees : 0;
+  }
+
+  static double scaleX(Transform2D transform) {
+    _assertFiniteLinearPart(transform, 'scaleX');
+    final sx = _scaleMagnitude(transform.a, transform.b);
+    if (!sx.isFinite || nearZero(sx)) return 0;
+    return sx;
+  }
+
+  static double scaleY(Transform2D transform) {
+    _assertFiniteLinearPart(transform, 'scaleY');
+    final syAbs = _scaleMagnitude(transform.c, transform.d);
+    if (!syAbs.isFinite || nearZero(syAbs)) return 0;
+
+    final det = transform.a * transform.d - transform.b * transform.c;
+    if (isNearSingular2x2(transform.a, transform.b, transform.c, transform.d) ||
+        !det.isFinite) {
+      return syAbs;
+    }
+
+    final out = (det < 0 ? -1.0 : 1.0) * syAbs;
+    return out.isFinite ? out : 0;
+  }
+
+  static Transform2D withRotationDeg({
+    required Transform2D transform,
+    required double rotationDeg,
+  }) {
+    _requireTrsTransformForConvenienceSetter(transform, 'rotationDeg');
+    return Transform2D.trs(
+      translation: transform.translation,
+      rotationDeg: rotationDeg,
+      scaleX: scaleX(transform),
+      scaleY: scaleY(transform),
+    );
+  }
+
+  static Transform2D withScaleX({
+    required Transform2D transform,
+    required double scaleX,
+  }) {
+    _requireTrsTransformForConvenienceSetter(transform, 'scaleX');
+    return Transform2D.trs(
+      translation: transform.translation,
+      rotationDeg: rotationDeg(transform),
+      scaleX: scaleX,
+      scaleY: scaleY(transform),
+    );
+  }
+
+  static Transform2D withScaleY({
+    required Transform2D transform,
+    required double scaleY,
+  }) {
+    _requireTrsTransformForConvenienceSetter(transform, 'scaleY');
+    return Transform2D.trs(
+      translation: transform.translation,
+      rotationDeg: rotationDeg(transform),
+      scaleX: scaleX(transform),
+      scaleY: scaleY,
+    );
+  }
+
+  static void _assertFiniteLinearPart(
+    Transform2D transform,
+    String memberName,
+  ) {
+    assert(
+      transform.a.isFinite &&
+          transform.b.isFinite &&
+          transform.c.isFinite &&
+          transform.d.isFinite,
+      'SceneNode.$memberName requires finite transform.',
+    );
+  }
+
+  static double _scaleMagnitude(double x, double y) {
+    return math.sqrt(x * x + y * y);
+  }
+}
+
+abstract final class _BoxNodePlacementOwner {
+  static T createFromTopLeftWorld<T extends SceneNode>({
+    required Size size,
+    required Offset topLeftWorld,
+    required T Function(Transform2D transform) create,
+  }) {
+    return create(
+      transformFromTopLeftWorld(size: size, topLeftWorld: topLeftWorld),
+    );
+  }
+
+  static Transform2D transformFromTopLeftWorld({
+    required Size size,
+    required Offset topLeftWorld,
+  }) {
+    return Transform2D.translation(
+      topLeftWorld + Offset(size.width / 2, size.height / 2),
+    );
+  }
+
+  static Offset topLeftWorld(SceneNode node) => node.boundsWorld.topLeft;
+
+  static void setTopLeftWorld({
+    required SceneNode node,
+    required Offset value,
+  }) {
+    final delta = value - node.boundsWorld.topLeft;
+    if (delta.distanceSquared < kUiEpsilonSquared) return;
+    node.position = node.position + delta;
+  }
+
+  static Rect localRect(Size size) => centeredRectLocalBounds(size);
+}
+
+abstract final class _VectorNodeGeometryOwner {
+  static StrokeNode createStrokeFromWorldPoints({
+    required List<Offset> points,
+    required StrokeNode Function(_CenteredWorldPoints normalized) create,
+  }) {
+    return create(normalizeWorldPoints(points));
+  }
+
+  static LineNode createLineFromWorldSegment({
+    required Offset start,
+    required Offset end,
+    required LineNode Function(_CenteredWorldSegment normalized) create,
+  }) {
+    return create(normalizeWorldSegment(start: start, end: end));
+  }
+
+  static _CenteredWorldPoints normalizeWorldPoints(List<Offset> points) {
+    final centerWorld = points.isEmpty
+        ? Offset.zero
+        : aabbFromPoints(points).center;
+    return _CenteredWorldPoints(
+      centerWorld: centerWorld,
+      localPoints: points
+          .map((point) => point - centerWorld)
+          .toList(growable: false),
+    );
+  }
+
+  static Offset? normalizeStrokeToLocalCenter({
+    required Transform2D transform,
+    required List<Offset> points,
+  }) {
+    _requireExactIdentityTransform(
+      transform,
+      'StrokeNode.normalizeToLocalCenter',
+      'Use StrokeNode.fromWorldPoints for non-interactive creation.',
+    );
+    _requireFinitePoints(
+      points,
+      'StrokeNode.normalizeToLocalCenter requires finite point coordinates.',
+    );
+    if (points.isEmpty) return null;
+    final centerWorld = aabbFromPoints(points).center;
+    for (var i = 0; i < points.length; i++) {
+      points[i] = points[i] - centerWorld;
+    }
+    return centerWorld;
+  }
+
+  static _CenteredWorldSegment normalizeWorldSegment({
+    required Offset start,
+    required Offset end,
+  }) {
+    final centerWorld = Rect.fromPoints(start, end).center;
+    return _CenteredWorldSegment(
+      centerWorld: centerWorld,
+      localStart: start - centerWorld,
+      localEnd: end - centerWorld,
+    );
+  }
+
+  static _CenteredWorldSegment normalizeLineToLocalCenter({
+    required Transform2D transform,
+    required Offset start,
+    required Offset end,
+  }) {
+    _requireExactIdentityTransform(
+      transform,
+      'LineNode.normalizeToLocalCenter',
+      'Use LineNode.fromWorldSegment for non-interactive creation.',
+    );
+    if (!start.dx.isFinite ||
+        !start.dy.isFinite ||
+        !end.dx.isFinite ||
+        !end.dy.isFinite) {
+      throw StateError(
+        'LineNode.normalizeToLocalCenter requires finite start/end coordinates.',
+      );
+    }
+    return normalizeWorldSegment(start: start, end: end);
+  }
+
+  static void _requireExactIdentityTransform(
+    Transform2D transform,
+    String methodName,
+    String hint,
+  ) {
+    if (_isExactIdentityTransform(transform)) return;
+    throw StateError('$methodName requires transform == identity. $hint');
+  }
+
+  static void _requireFinitePoints(List<Offset> points, String message) {
+    for (final point in points) {
+      if (point.dx.isFinite && point.dy.isFinite) continue;
+      throw StateError(message);
+    }
+  }
+}
+
+final class _CenteredWorldPoints {
+  const _CenteredWorldPoints({
+    required this.centerWorld,
+    required this.localPoints,
+  });
+
+  final Offset centerWorld;
+  final List<Offset> localPoints;
+}
+
+final class _CenteredWorldSegment {
+  const _CenteredWorldSegment({
+    required this.centerWorld,
+    required this.localStart,
+    required this.localEnd,
+  });
+
+  final Offset centerWorld;
+  final Offset localStart;
+  final Offset localEnd;
 }
 
 /// SVG-path based vector node.
