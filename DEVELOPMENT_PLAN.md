@@ -121,3 +121,6 @@ language: russian
 - [x] [Шаг 29. Сделать `SceneWriter` тонким shell над writer-local owner-ами](development_plan/step_29_scene_writer_thin_shell_and_writer_local_owners.md)
 - [x] [Шаг 30. Выровнять owner boundary mutation families под `MutationExecutor`](development_plan/step_30_mutation_family_owner_alignment.md)
 - [x] [Шаг 31. Замкнуть финальную controller architecture на docs, structural tests и baseline](development_plan/step_31_controller_final_architecture_closure.md)
+- [ ] [Шаг 32. Сузить `InteractiveRuntime` до boundary pointer/gesture owner](development_plan/step_32_interactive_runtime_boundary_owner_split.md)
+- [ ] [Шаг 33. Разрезать draw-path interactive на focused draw-local owner-ы](development_plan/step_33_interactive_draw_path_owner_decomposition.md)
+- [ ] [Шаг 34. Замкнуть финальную interactive architecture на docs, structural tests и baseline](development_plan/step_34_interactive_final_architecture_closure.md)
