@@ -207,10 +207,8 @@ sequence has not reached its target state.
   residuals listed below:
   `document.dart` `number-of-imports`,
   `document.dart::txnInsertNodeInScene` parameter count,
-  `document_scene_edit.dart::txnInsertNodeInScene` parameter count,
+  `document_scene_insert.dart::txnInsertNodeInScene` parameter count,
   `scene_builder_decode_node_family.dart` `number-of-imports`,
-  `scene_builder_decode_scene.dart::sceneBuilderDecodeSceneSnapshotFromJson`
-  source lines,
   `scene_from_snapshot.dart::sceneFromSnapshot` source lines,
   and
   `scene_value_validation_node.dart` `number-of-imports`.

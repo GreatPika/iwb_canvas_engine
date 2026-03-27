@@ -225,7 +225,7 @@ language: russian
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Split scene decode orchestration from metadata and layer traversal owners
+### Slice 1. [x] Split scene decode orchestration from metadata and layer traversal owners
 
 #### Slice Contract
 
@@ -260,7 +260,7 @@ delegates to those owners and assembles the final `SceneSnapshot`.
   this contract.
 - Builder decode behavior remains green through the listed proof surface.
 
-### Slice 2. [ ] Split insert/layer-target ownership away from document scene edit
+### Slice 2. [x] Split insert/layer-target ownership away from document scene edit
 
 #### Slice Contract
 

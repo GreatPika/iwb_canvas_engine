@@ -145,4 +145,4 @@ language: russian
 - [x] [Шаг 48. Замкнуть residual model architecture после шагов `45-47` на docs, guardrails и baseline](development_plan/step_48_model_residual_architecture_closure.md)
 - [x] [Шаг 49. Закрыть post-closure helper seams в builder JSON helpers и document locator/index helpers](development_plan/step_49_json_helper_and_document_locator_residual_cleanup.md)
 - [x] [Шаг 50. Замкнуть post-closure helper cleanup на measured baseline и обновлённый residual review](development_plan/step_50_model_post_closure_helper_rebaseline.md)
-- [ ] [Шаг 51. Развести scene decode orchestration и scene mutation owners без reopening `model` graph](development_plan/step_51_scene_decode_and_scene_mutation_owner_split.md)
+- [x] [Шаг 51. Развести scene decode orchestration и scene mutation owners без reopening `model` graph](development_plan/step_51_scene_decode_and_scene_mutation_owner_split.md)

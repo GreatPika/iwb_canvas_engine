@@ -9,6 +9,7 @@ import '../contract/snapshot.dart';
 import 'document_locator.dart' as document_locator;
 import 'document_node_patch.dart' as document_node_patch;
 import 'document_scene_edit.dart' as document_scene_edit;
+import 'document_scene_insert.dart' as document_scene_insert;
 import 'document_selection.dart' as document_selection;
 import 'scene_node_boundary_mapping.dart';
 import 'scene_from_snapshot.dart';
@@ -130,7 +131,7 @@ bool txnInsertNodeInScene({
   required int layerIndex,
   int? insertIndex,
 }) {
-  return document_scene_edit.txnInsertNodeInScene(
+  return document_scene_insert.txnInsertNodeInScene(
     scene: scene,
     nodeLocator: nodeLocator,
     node: node,
@@ -194,7 +195,7 @@ int txnResolveInsertLayerIndex({
   LayerId? layerId,
   LayerId Function()? nextLayerId,
 }) {
-  return document_scene_edit.txnResolveInsertLayerIndex(
+  return document_scene_insert.txnResolveInsertLayerIndex(
     scene: scene,
     layerId: layerId,
     nextLayerId: nextLayerId,
@@ -205,7 +206,7 @@ int? txnFindContentLayerIndexById({
   required Scene scene,
   required LayerId layerId,
 }) {
-  return document_scene_edit.txnFindContentLayerIndexById(
+  return document_scene_insert.txnFindContentLayerIndexById(
     scene: scene,
     layerId: layerId,
   );

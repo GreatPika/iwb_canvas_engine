@@ -221,6 +221,80 @@ void decodeScene() {}
     );
 
     test(
+      'rejects non-model code importing split scene builder metadata owner',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/serialization/scene_codec.dart',
+            '''
+import '../model/scene_builder_decode_scene_metadata.dart';
+
+void decodeSceneMetadata() {}
+''',
+          );
+          writeSandboxFile(
+            sandbox,
+            'lib/src/model/scene_builder_decode_scene_metadata.dart',
+            'void sceneBuilderDecodeSceneMetadata() {}\n',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'model architecture',
+              detail:
+                  'canonical model facades instead of importing or '
+                  're-exporting internal owner module '
+                  'scene_builder_decode_scene_metadata.dart',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects non-model code importing split document scene insert owner',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeSandboxFile(sandbox, 'lib/src/controller/scene_runtime.dart', '''
+import '../model/document_scene_insert.dart';
+
+void inspectInsertOwner() {}
+''');
+          writeSandboxFile(
+            sandbox,
+            'lib/src/model/document_scene_insert.dart',
+            'bool txnInsertNodeInScene() => true;\n',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'model architecture',
+              detail:
+                  'canonical model facades instead of importing or '
+                  're-exporting internal owner module '
+                  'document_scene_insert.dart',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
       'rejects non-model code importing scene node mapping common owner',
       () async {
         final sandbox = await createGuardrailsSandbox();

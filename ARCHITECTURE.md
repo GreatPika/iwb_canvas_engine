@@ -79,6 +79,8 @@ Ownership decisions for the target state:
   explicit `model/scene_builder_json_require.dart`,
   `model/scene_builder_decode_json.dart`,
   `model/scene_builder_decode_scene.dart`,
+  `model/scene_builder_decode_scene_metadata.dart`,
+  `model/scene_builder_decode_layers.dart`,
   `model/scene_builder_decode_node_common.dart`,
   `model/scene_builder_decode_node_family.dart`, and family-local decode
   owners, and shared runtime
@@ -140,9 +142,9 @@ Ownership decisions for the target state:
   `scene_value_validation_{node,palette_grid,primitives,support,top_level}.dart`,
   and `ScenePolicy` remains the single owner of scene-level semantics.
 - `model/document.dart` is the canonical downstream transaction facade.
-  Locator, patch, scene-edit, and selection/grid ownership stay in
-  `document_{locator,node_patch,scene_edit,selection}.dart` instead of
-  returning to `document.dart`.
+  Locator, scene-insert, patch, scene-edit, and selection/grid ownership stay
+  in `document_{locator,scene_insert,node_patch,scene_edit,selection}.dart`
+  instead of returning to `document.dart`.
 - `model/document_node_patch.dart` is the canonical patch dispatcher or
   validation facade. Shared patch-field application lives in
   `document_node_patch_common.dart`, and family-local runtime patch ownership
