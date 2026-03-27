@@ -159,7 +159,6 @@ const _excludedDeclarationOnlyFromLcov = <String>{
   'lib/src/contract/scene_render_state.dart',
   'lib/src/interactive/internal/interactive_draw_eraser_projection.dart',
   'lib/src/interactive/internal/interactive_draw_style.dart',
-  'lib/src/model/scene_value_validation.dart',
 };
 
 File _requireLcovFile() {

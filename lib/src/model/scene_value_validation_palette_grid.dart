@@ -1,4 +1,9 @@
-part of 'scene_value_validation.dart';
+import 'dart:ui';
+
+import '../contract/snapshot.dart';
+import '../core/scene.dart';
+import 'scene_value_validation_primitives.dart';
+import 'scene_value_validation_support.dart';
 
 typedef _PaletteValidationFields = ({
   List<Color> penColors,
@@ -38,37 +43,6 @@ void sceneValidatePalette(
   );
 }
 
-void _sceneValidatePaletteFields({
-  required _PaletteValidationFields fields,
-  required String field,
-  required SceneValidationErrorReporter onError,
-}) {
-  sceneValidateNonEmptyList(
-    fields.penColors,
-    field: '$field.penColors',
-    onError: onError,
-  );
-  sceneValidateNonEmptyList(
-    fields.backgroundColors,
-    field: '$field.backgroundColors',
-    onError: onError,
-  );
-  sceneValidateNonEmptyList(
-    fields.gridSizes,
-    field: '$field.gridSizes',
-    onError: onError,
-  );
-  _sceneValidateFields<double>(
-    List<_SceneValidationField<double>>.generate(
-      fields.gridSizes.length,
-      (index) =>
-          (value: fields.gridSizes[index], field: '$field.gridSizes[$index]'),
-    ),
-    onError: onError,
-    validateValue: sceneValidatePositiveDouble,
-  );
-}
-
 void sceneValidateGridSnapshot(
   GridSnapshot grid, {
   required String field,
@@ -94,6 +68,37 @@ void sceneValidateGrid(
     field: field,
     onError: onError,
     requirePositiveCellSize: requirePositiveCellSize,
+  );
+}
+
+void _sceneValidatePaletteFields({
+  required _PaletteValidationFields fields,
+  required String field,
+  required SceneValidationErrorReporter onError,
+}) {
+  sceneValidateNonEmptyList(
+    fields.penColors,
+    field: '$field.penColors',
+    onError: onError,
+  );
+  sceneValidateNonEmptyList(
+    fields.backgroundColors,
+    field: '$field.backgroundColors',
+    onError: onError,
+  );
+  sceneValidateNonEmptyList(
+    fields.gridSizes,
+    field: '$field.gridSizes',
+    onError: onError,
+  );
+  sceneValidateFields<double>(
+    List<SceneValidationField<double>>.generate(
+      fields.gridSizes.length,
+      (index) =>
+          (value: fields.gridSizes[index], field: '$field.gridSizes[$index]'),
+    ),
+    onError: onError,
+    validateValue: sceneValidatePositiveDouble,
   );
 }
 

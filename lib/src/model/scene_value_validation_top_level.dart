@@ -1,4 +1,14 @@
-part of 'scene_value_validation.dart';
+import 'dart:ui';
+
+import '../contract/snapshot.dart';
+import '../contract/validated/layer_id_value.dart';
+import '../contract/validated/node_id_value.dart';
+import '../core/nodes.dart';
+import '../core/scene.dart';
+import 'scene_value_validation_node.dart';
+import 'scene_value_validation_palette_grid.dart';
+import 'scene_value_validation_primitives.dart';
+import 'scene_value_validation_support.dart';
 
 typedef _LayerValidationAccessors<TLayer, TNode> = ({
   String Function(TLayer layer) layerIdOf,
@@ -301,7 +311,7 @@ void _sceneValidateLayerId(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  _sceneValidateArgumentBoundary(
+  sceneValidateArgumentBoundary(
     field: field,
     value: value,
     onError: onError,
@@ -314,7 +324,7 @@ void _sceneValidateNodeId(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  _sceneValidateArgumentBoundary(
+  sceneValidateArgumentBoundary(
     field: field,
     value: value,
     onError: onError,

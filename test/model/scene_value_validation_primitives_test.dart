@@ -1,7 +1,10 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
+import 'package:iwb_canvas_engine/src/core/scene.dart';
+import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
 import 'package:iwb_canvas_engine/src/model/scene_value_validation.dart';
 
 void main() {
@@ -128,6 +131,91 @@ void main() {
         returnsNormally,
       );
     });
+
+    test(
+      'facade forwards validation entrypoints to explicit owner modules',
+      () {
+        expect(() {
+          sceneValidateFiniteDouble(
+            1.5,
+            field: 'finite',
+            onError: _throwFailure,
+          );
+          sceneValidateNonNegativeDouble(
+            0,
+            field: 'nonNegative',
+            onError: _throwFailure,
+          );
+          sceneValidatePositiveDouble(
+            2,
+            field: 'positive',
+            onError: _throwFailure,
+          );
+          sceneValidateFiniteOffset(
+            const Offset(1, 2),
+            field: 'offset',
+            onError: _throwFailure,
+          );
+          sceneValidateNonNegativeSize(
+            const Size(3, 4),
+            field: 'size',
+            onError: _throwFailure,
+          );
+          sceneValidateFiniteTransform2D(
+            Transform2D.identity,
+            field: 'transform',
+            onError: _throwFailure,
+          );
+          sceneValidateNonEmptyList(
+            const <Object?>[1],
+            field: 'items',
+            onError: _throwFailure,
+          );
+          sceneValidatePaletteSnapshot(
+            ScenePaletteSnapshot(),
+            field: 'paletteSnapshot',
+            onError: _throwFailure,
+          );
+          sceneValidatePalette(
+            ScenePalette(),
+            field: 'palette',
+            onError: _throwFailure,
+          );
+          sceneValidateGridSnapshot(
+            const GridSnapshot(cellSize: 16),
+            field: 'gridSnapshot',
+            onError: _throwFailure,
+            requirePositiveCellSize: true,
+          );
+          sceneValidateGrid(
+            GridSettings(cellSize: 16),
+            field: 'grid',
+            onError: _throwFailure,
+            requirePositiveCellSize: true,
+          );
+          sceneValidateNodeSnapshot(
+            RectNodeSnapshot(id: 'snapshot-node', size: const Size(4, 5)),
+            field: 'nodeSnapshot',
+            onError: _throwFailure,
+          );
+          sceneValidateSceneValues(
+            Scene(
+              backgroundLayer: BackgroundLayer(),
+              layers: <ContentLayer>[
+                ContentLayer(
+                  id: 'layer-runtime',
+                  nodes: <SceneNode>[
+                    RectNode(id: 'runtime-node', size: const Size(4, 5)),
+                  ],
+                ),
+              ],
+            ),
+            onError: _throwFailure,
+            requirePositiveGridCellSize: true,
+          );
+        }, returnsNormally);
+      },
+    );
   });
 }
 

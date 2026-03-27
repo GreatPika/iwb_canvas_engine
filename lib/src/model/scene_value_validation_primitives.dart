@@ -1,4 +1,13 @@
-part of 'scene_value_validation.dart';
+import 'dart:ui';
+
+import '../contract/transform2d.dart';
+import '../contract/validated/finite_offset_value.dart';
+import '../contract/validated/non_negative_finite_double_value.dart';
+import '../contract/validated/opacity_value.dart';
+import '../contract/validated/positive_finite_double_value.dart';
+import '../contract/validated/svg_path_data_value.dart';
+import '../contract/validated/validated_value_support.dart';
+import 'scene_value_validation_support.dart';
 
 void sceneValidateFiniteDouble(
   double value, {
@@ -61,7 +70,7 @@ void sceneValidateNonNegativeInt(
   required SceneValidationErrorReporter onError,
 }) {
   if (value >= 0) return;
-  _sceneValidationFail(
+  sceneValidationFail(
     onError: onError,
     value: value,
     field: field,
@@ -75,7 +84,7 @@ void sceneValidatePositiveInt(
   required SceneValidationErrorReporter onError,
 }) {
   if (value > 0) return;
-  _sceneValidationFail(
+  sceneValidationFail(
     onError: onError,
     value: value,
     field: field,
@@ -102,8 +111,8 @@ void sceneValidateNonNegativeSize(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  _sceneValidateFields<double>(
-    <_SceneValidationField<double>>[
+  sceneValidateFields<double>(
+    <SceneValidationField<double>>[
       (value: value.width, field: '$field.w'),
       (value: value.height, field: '$field.h'),
     ],
@@ -117,8 +126,8 @@ void sceneValidateFiniteTransform2D(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  _sceneValidateFields<double>(
-    <_SceneValidationField<double>>[
+  sceneValidateFields<double>(
+    <SceneValidationField<double>>[
       (value: value.a, field: '$field.a'),
       (value: value.b, field: '$field.b'),
       (value: value.c, field: '$field.c'),
@@ -130,7 +139,7 @@ void sceneValidateFiniteTransform2D(
     validateValue: sceneValidateFiniteDouble,
   );
   if (value.invert() == null) {
-    _sceneValidationFail(
+    sceneValidationFail(
       onError: onError,
       value: value.toJsonMap(),
       field: field,
@@ -145,7 +154,7 @@ void sceneValidateNonEmptyList(
   required SceneValidationErrorReporter onError,
 }) {
   if (values.isNotEmpty) return;
-  _sceneValidationFail(
+  sceneValidationFail(
     onError: onError,
     value: values,
     field: field,
@@ -173,29 +182,10 @@ void _sceneValidatePrimitiveBoundary<T>(
   required SceneValidationErrorReporter onError,
   required void Function(T value, {required String name}) validate,
 }) {
-  _sceneValidateArgumentBoundary(
+  sceneValidateArgumentBoundary(
     field: field,
     value: value,
     onError: onError,
     validate: () => validate(value, name: field),
   );
-}
-
-void _sceneValidateFields<T>(
-  List<_SceneValidationField<T>> values, {
-  required SceneValidationErrorReporter onError,
-  required _SceneValueValidator<T> validateValue,
-}) {
-  for (final entry in values) {
-    validateValue(entry.value, field: entry.field, onError: onError);
-  }
-}
-
-Never _sceneValidationFail({
-  required SceneValidationErrorReporter onError,
-  required Object? value,
-  required String field,
-  required String message,
-}) {
-  return onError(value: value, field: field, message: message);
 }

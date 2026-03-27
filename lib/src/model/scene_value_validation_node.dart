@@ -1,4 +1,20 @@
-part of 'scene_value_validation.dart';
+import 'dart:ui';
+
+import '../contract/snapshot.dart';
+import '../contract/validated/finite_offset_value.dart';
+import '../contract/validated/font_family_value.dart';
+import '../contract/validated/image_id_value.dart';
+import '../contract/validated/instance_revision_value.dart';
+import '../contract/validated/node_id_value.dart';
+import '../contract/validated/non_negative_finite_double_value.dart';
+import '../contract/validated/opacity_value.dart';
+import '../contract/validated/positive_finite_double_value.dart';
+import '../contract/validated/svg_path_data_value.dart';
+import '../contract/validated/text_content_value.dart';
+import '../core/nodes.dart';
+import '../contract/transform2d.dart';
+import 'scene_value_validation_primitives.dart';
+import 'scene_value_validation_support.dart';
 
 typedef _ImageValidationFields = ({
   String imageId,
@@ -37,6 +53,15 @@ void sceneValidateNodeSnapshot(
   _sceneValidateSnapshotNodeTypeFields(node, field: field, onError: onError);
 }
 
+void sceneValidateNode(
+  SceneNode node, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+}) {
+  _sceneValidateRuntimeNodeBaseFields(node, field: field, onError: onError);
+  _sceneValidateRuntimeNodeTypeFields(node, field: field, onError: onError);
+}
+
 void _sceneValidateSnapshotNodeBaseFields(
   NodeSnapshot node, {
   required String field,
@@ -50,13 +75,16 @@ void _sceneValidateSnapshotNodeBaseFields(
   );
 }
 
-_NodeBaseValidationFields _snapshotNodeBaseValidationFields(NodeSnapshot node) {
-  return (
-    id: node.id,
-    instanceRevision: node.instanceRevision,
-    transform: node.transform,
-    hitPadding: node.hitPadding,
-    opacity: node.opacity,
+void _sceneValidateRuntimeNodeBaseFields(
+  SceneNode node, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+}) {
+  _sceneValidateNodeBaseFields(
+    fields: _runtimeNodeBaseValidationFields(node),
+    field: field,
+    onError: onError,
+    allowZeroInstanceRevision: false,
   );
 }
 
@@ -66,13 +94,13 @@ void _sceneValidateNodeBaseFields({
   required SceneValidationErrorReporter onError,
   required bool allowZeroInstanceRevision,
 }) {
-  _sceneValidateArgumentBoundary(
+  sceneValidateArgumentBoundary(
     field: '$field.id',
     value: fields.id,
     onError: onError,
     validate: () => NodeIdValue.of(fields.id, name: '$field.id'),
   );
-  _sceneValidateArgumentBoundary(
+  sceneValidateArgumentBoundary(
     field: '$field.instanceRevision',
     value: fields.instanceRevision,
     onError: onError,
@@ -87,7 +115,7 @@ void _sceneValidateNodeBaseFields({
     field: '$field.transform',
     onError: onError,
   );
-  _sceneValidateArgumentBoundary(
+  sceneValidateArgumentBoundary(
     field: '$field.hitPadding',
     value: fields.hitPadding,
     onError: onError,
@@ -96,7 +124,7 @@ void _sceneValidateNodeBaseFields({
       name: '$field.hitPadding',
     ),
   );
-  _sceneValidateArgumentBoundary(
+  sceneValidateArgumentBoundary(
     field: '$field.opacity',
     value: fields.opacity,
     onError: onError,
@@ -147,38 +175,6 @@ void _sceneValidateSnapshotNodeTypeFields(
   }
 }
 
-void sceneValidateNode(
-  SceneNode node, {
-  required String field,
-  required SceneValidationErrorReporter onError,
-}) {
-  _sceneValidateRuntimeNodeBaseFields(node, field: field, onError: onError);
-  _sceneValidateRuntimeNodeTypeFields(node, field: field, onError: onError);
-}
-
-void _sceneValidateRuntimeNodeBaseFields(
-  SceneNode node, {
-  required String field,
-  required SceneValidationErrorReporter onError,
-}) {
-  _sceneValidateNodeBaseFields(
-    fields: _runtimeNodeBaseValidationFields(node),
-    field: field,
-    onError: onError,
-    allowZeroInstanceRevision: false,
-  );
-}
-
-_NodeBaseValidationFields _runtimeNodeBaseValidationFields(SceneNode node) {
-  return (
-    id: node.id,
-    instanceRevision: node.instanceRevision,
-    transform: node.transform,
-    hitPadding: node.hitPadding,
-    opacity: node.opacity,
-  );
-}
-
 void _sceneValidateRuntimeNodeTypeFields(
   SceneNode node, {
   required String field,
@@ -224,6 +220,26 @@ void _sceneValidateRuntimeNodeTypeFields(
   }
 }
 
+_NodeBaseValidationFields _snapshotNodeBaseValidationFields(NodeSnapshot node) {
+  return (
+    id: node.id,
+    instanceRevision: node.instanceRevision,
+    transform: node.transform,
+    hitPadding: node.hitPadding,
+    opacity: node.opacity,
+  );
+}
+
+_NodeBaseValidationFields _runtimeNodeBaseValidationFields(SceneNode node) {
+  return (
+    id: node.id,
+    instanceRevision: node.instanceRevision,
+    transform: node.transform,
+    hitPadding: node.hitPadding,
+    opacity: node.opacity,
+  );
+}
+
 _ImageValidationFields _snapshotImageValidationFields(ImageNodeSnapshot image) {
   return (
     imageId: image.imageId,
@@ -238,32 +254,6 @@ _ImageValidationFields _runtimeImageValidationFields(ImageNode image) {
     size: image.size,
     naturalSize: image.naturalSize,
   );
-}
-
-void _sceneValidateImageFields({
-  required _ImageValidationFields fields,
-  required String field,
-  required SceneValidationErrorReporter onError,
-}) {
-  _sceneValidateArgumentBoundary(
-    field: '$field.imageId',
-    value: fields.imageId,
-    onError: onError,
-    validate: () => ImageIdValue.of(fields.imageId, name: '$field.imageId'),
-  );
-  sceneValidateNonNegativeSize(
-    fields.size,
-    field: '$field.size',
-    onError: onError,
-  );
-  final naturalSize = fields.naturalSize;
-  if (naturalSize != null) {
-    sceneValidateNonNegativeSize(
-      naturalSize,
-      field: '$field.naturalSize',
-      onError: onError,
-    );
-  }
 }
 
 _TextValidationFields _snapshotTextValidationFields(TextNodeSnapshot text) {
@@ -288,12 +278,64 @@ _TextValidationFields _runtimeTextValidationFields(TextNode text) {
   );
 }
 
+_LineValidationFields _snapshotLineValidationFields(
+  LineNodeSnapshot line, {
+  required String field,
+}) {
+  return (
+    start: line.start,
+    startField: '$field.start',
+    end: line.end,
+    endField: '$field.end',
+    thickness: line.thickness,
+  );
+}
+
+_LineValidationFields _runtimeLineValidationFields(
+  LineNode line, {
+  required String field,
+}) {
+  return (
+    start: line.start,
+    startField: '$field.localA',
+    end: line.end,
+    endField: '$field.localB',
+    thickness: line.thickness,
+  );
+}
+
+void _sceneValidateImageFields({
+  required _ImageValidationFields fields,
+  required String field,
+  required SceneValidationErrorReporter onError,
+}) {
+  sceneValidateArgumentBoundary(
+    field: '$field.imageId',
+    value: fields.imageId,
+    onError: onError,
+    validate: () => ImageIdValue.of(fields.imageId, name: '$field.imageId'),
+  );
+  sceneValidateNonNegativeSize(
+    fields.size,
+    field: '$field.size',
+    onError: onError,
+  );
+  final naturalSize = fields.naturalSize;
+  if (naturalSize != null) {
+    sceneValidateNonNegativeSize(
+      naturalSize,
+      field: '$field.naturalSize',
+      onError: onError,
+    );
+  }
+}
+
 void _sceneValidateTextFields({
   required _TextValidationFields fields,
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  _sceneValidateArgumentBoundary(
+  sceneValidateArgumentBoundary(
     field: '$field.text',
     value: fields.textValue,
     onError: onError,
@@ -304,7 +346,7 @@ void _sceneValidateTextFields({
     field: '$field.size',
     onError: onError,
   );
-  _sceneValidateArgumentBoundary(
+  sceneValidateArgumentBoundary(
     field: '$field.fontSize',
     value: fields.fontSize,
     onError: onError,
@@ -333,7 +375,7 @@ void _sceneValidateSnapshotStrokeNode(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  _sceneValidateArgumentBoundary(
+  sceneValidateArgumentBoundary(
     field: '$field.pointsRevision',
     value: stroke.pointsRevision,
     onError: onError,
@@ -344,7 +386,7 @@ void _sceneValidateSnapshotStrokeNode(
     ),
   );
   _sceneValidatePoints(stroke.points, field: '$field.points', onError: onError);
-  _sceneValidateArgumentBoundary(
+  sceneValidateArgumentBoundary(
     field: '$field.thickness',
     value: stroke.thickness,
     onError: onError,
@@ -374,32 +416,6 @@ void _sceneValidateLineFields({
     fields.thickness,
     field: '$field.thickness',
     onError: onError,
-  );
-}
-
-_LineValidationFields _snapshotLineValidationFields(
-  LineNodeSnapshot line, {
-  required String field,
-}) {
-  return (
-    start: line.start,
-    startField: '$field.start',
-    end: line.end,
-    endField: '$field.end',
-    thickness: line.thickness,
-  );
-}
-
-_LineValidationFields _runtimeLineValidationFields(
-  LineNode line, {
-  required String field,
-}) {
-  return (
-    start: line.start,
-    startField: '$field.localA',
-    end: line.end,
-    endField: '$field.localB',
-    thickness: line.thickness,
   );
 }
 
@@ -436,7 +452,7 @@ void _sceneValidatePathFields({
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  _sceneValidateArgumentBoundary(
+  sceneValidateArgumentBoundary(
     field: '$field.svgPathData',
     value: svgPathData,
     onError: onError,
@@ -480,38 +496,12 @@ void _sceneValidateRuntimeStrokeNode(
   );
 }
 
-void _sceneValidateThicknessField(
-  double value, {
-  required String field,
-  required SceneValidationErrorReporter onError,
-}) {
-  _sceneValidateArgumentBoundary(
-    field: field,
-    value: value,
-    onError: onError,
-    validate: () => PositiveFiniteDoubleValue.of(value, name: field),
-  );
-}
-
-void _sceneValidateNonNegativeStrokeWidthField(
-  double value, {
-  required String field,
-  required SceneValidationErrorReporter onError,
-}) {
-  _sceneValidateArgumentBoundary(
-    field: field,
-    value: value,
-    onError: onError,
-    validate: () => NonNegativeFiniteDoubleValue.of(value, name: field),
-  );
-}
-
 void _sceneValidateOptionalFontFamily(
   String? value, {
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  _sceneValidateOptionalValue<String>(
+  sceneValidateOptionalValue<String>(
     value,
     field: field,
     onError: onError,
@@ -524,7 +514,7 @@ void _sceneValidateOptionalPositiveDouble(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  _sceneValidateOptionalValue<double>(
+  sceneValidateOptionalValue<double>(
     value,
     field: field,
     onError: onError,
@@ -537,8 +527,8 @@ void _sceneValidatePoints(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  _sceneValidateFields<Offset>(
-    List<_SceneValidationField<Offset>>.generate(
+  sceneValidateFields<Offset>(
+    List<SceneValidationField<Offset>>.generate(
       points.length,
       (index) => (value: points[index], field: '$field[$index]'),
     ),
@@ -552,7 +542,7 @@ void _sceneValidateOffsetField(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  _sceneValidateArgumentBoundary(
+  sceneValidateArgumentBoundary(
     field: field,
     value: value,
     onError: onError,
@@ -565,7 +555,7 @@ void _sceneValidateFontFamilyField(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  _sceneValidateArgumentBoundary(
+  sceneValidateArgumentBoundary(
     field: field,
     value: value,
     onError: onError,
@@ -578,7 +568,7 @@ void _sceneValidatePositiveDoubleField(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  _sceneValidateArgumentBoundary(
+  sceneValidateArgumentBoundary(
     field: field,
     value: value,
     onError: onError,
@@ -586,45 +576,28 @@ void _sceneValidatePositiveDoubleField(
   );
 }
 
-void _sceneValidateOptionalValue<T>(
-  T? value, {
+void _sceneValidateThicknessField(
+  double value, {
   required String field,
   required SceneValidationErrorReporter onError,
-  required _SceneValueValidator<T> validateValue,
 }) {
-  if (value == null) return;
-  validateValue(value, field: field, onError: onError);
+  sceneValidateArgumentBoundary(
+    field: field,
+    value: value,
+    onError: onError,
+    validate: () => PositiveFiniteDoubleValue.of(value, name: field),
+  );
 }
 
-void _sceneValidateArgumentBoundary({
+void _sceneValidateNonNegativeStrokeWidthField(
+  double value, {
   required String field,
-  required Object? value,
   required SceneValidationErrorReporter onError,
-  required void Function() validate,
 }) {
-  try {
-    validate();
-  } on ArgumentError catch (error) {
-    final argumentName = error.name;
-    final reportedField = argumentName is String ? argumentName : field;
-    _sceneValidationFail(
-      onError: onError,
-      value: value,
-      field: reportedField,
-      message: _sceneMessageFromArgumentError(error),
-    );
-  }
-}
-
-String _sceneMessageFromArgumentError(ArgumentError error) {
-  final message = error.message;
-  if (message is String && message.isNotEmpty) {
-    final first = message[0];
-    final lowerFirst = first.toLowerCase();
-    if (first == lowerFirst) {
-      return message;
-    }
-    return '$lowerFirst${message.substring(1)}';
-  }
-  return 'is invalid.';
+  sceneValidateArgumentBoundary(
+    field: field,
+    value: value,
+    onError: onError,
+    validate: () => NonNegativeFiniteDoubleValue.of(value, name: field),
+  );
 }

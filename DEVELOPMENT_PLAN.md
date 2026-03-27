@@ -135,6 +135,6 @@ language: russian
 - [x] [Шаг 39. Разрезать `PointerInputTracker` на focused pointer-local state owner-ы](development_plan/step_39_pointer_input_tracker_owner_decomposition.md)
 - [x] [Шаг 40. Сделать `SceneBuilder` тонким import facade и вынести shared runtime import/export spine](development_plan/step_40_scene_builder_thin_facade_and_runtime_import_export_spine.md)
 - [x] [Шаг 41. Разрезать `scene_node_boundary_mapping` на family-local owner-модули без `part`-coupling](development_plan/step_41_scene_node_boundary_mapping_family_modules_without_parts.md)
-- [ ] [Шаг 42. Разрезать `scene_value_validation` на explicit validation owner-модули без `part`-coupling](development_plan/step_42_scene_value_validation_explicit_modules_without_parts.md)
+- [x] [Шаг 42. Разрезать `scene_value_validation` на explicit validation owner-модули без `part`-coupling](development_plan/step_42_scene_value_validation_explicit_modules_without_parts.md)
 - [ ] [Шаг 43. Свести `document.dart` к thin txn facade над focused model-local owner-ами](development_plan/step_43_document_txn_facade_and_focused_owner_split.md)
 - [ ] [Шаг 44. Замкнуть финальную model architecture на docs, guardrails и baseline](development_plan/step_44_model_final_architecture_closure.md)

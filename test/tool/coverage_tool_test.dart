@@ -92,13 +92,27 @@ class ToolDefaults {
 
 void _registerFormerRealLogicExclusionTest() {
   test(
-    'rejects missing scene_value_validation part file with real logic',
+    'rejects missing explicit scene value validation module with real logic',
     () async {
       final result = await _runCoverageScenario(
         files: <String, String>{
           'lib/src/model/scene_value_validation.dart': '''
-part 'scene_value_validation_primitives.part.dart';
+typedef SceneValidationErrorReporter =
+    Never Function({
+      required Object? value,
+      required String field,
+      required String message,
+    });
 
+void sceneValidateNode(Object? value) =>
+    scene_value_validation_node.sceneValidateNode(value);
+''',
+          'lib/src/model/scene_value_validation_node.dart': '''
+void sceneValidateNode(Object? value) {
+  if (value == null) throw ArgumentError.notNull('value');
+}
+''',
+          'lib/src/model/scene_value_validation_support.dart': '''
 typedef SceneValidationErrorReporter =
     Never Function({
       required Object? value,
@@ -106,20 +120,82 @@ typedef SceneValidationErrorReporter =
       required String message,
     });
 ''',
-          'lib/src/model/scene_value_validation_primitives.part.dart': '''
-part of 'scene_value_validation.dart';
-
-bool validatesSceneValue(Object? value) => value != null;
-''',
           'lib/src/contract/a.dart': 'int covered() => 1;\n',
         },
-        lcov: _singleFileLcov('lib/src/contract/a.dart'),
+        lcov:
+            '${_singleFileLcov('lib/src/model/scene_value_validation.dart')}${_singleFileLcov('lib/src/contract/a.dart')}',
       );
 
       expect(result.exitCode, isNonZero);
       expect(
         result.stderr.toString(),
-        contains('lib/src/model/scene_value_validation_primitives.part.dart'),
+        contains('lib/src/model/scene_value_validation_node.dart'),
+      );
+    },
+  );
+
+  test(
+    'rejects missing scene value validation facade from lcov when only explicit modules are covered',
+    () async {
+      final result = await _runCoverageScenario(
+        files: <String, String>{
+          'lib/src/model/scene_value_validation.dart': '''
+typedef SceneValidationErrorReporter =
+    Never Function({
+      required Object? value,
+      required String field,
+      required String message,
+    });
+
+void sceneValidateNode(Object? value) =>
+    scene_value_validation_node.sceneValidateNode(value);
+''',
+          'lib/src/model/scene_value_validation_node.dart': '''
+void sceneValidateNode(Object? value) {}
+''',
+          'lib/src/contract/a.dart': 'int covered() => 1;\n',
+        },
+        lcov:
+            '${_singleFileLcov('lib/src/model/scene_value_validation_node.dart')}${_singleFileLcov('lib/src/contract/a.dart')}',
+      );
+
+      expect(result.exitCode, isNonZero);
+      expect(
+        result.stderr.toString(),
+        contains('lib/src/model/scene_value_validation.dart'),
+      );
+    },
+  );
+
+  test(
+    'reports missed lines when explicit scene value validation facade is in lcov',
+    () async {
+      final result = await _runCoverageScenario(
+        files: <String, String>{
+          'lib/src/model/scene_value_validation.dart': '''
+typedef SceneValidationErrorReporter =
+    Never Function({
+      required Object? value,
+      required String field,
+      required String message,
+    });
+
+void sceneValidateNode(Object? value) =>
+    scene_value_validation_node.sceneValidateNode(value);
+''',
+          'lib/src/model/scene_value_validation_node.dart': '''
+void sceneValidateNode(Object? value) {}
+''',
+          'lib/src/contract/a.dart': 'int covered() => 1;\n',
+        },
+        lcov:
+            '${_singleFileLcov('lib/src/model/scene_value_validation.dart', lineHits: <int, int>{1: 1, 8: 0})}${_singleFileLcov('lib/src/model/scene_value_validation_node.dart')}${_singleFileLcov('lib/src/contract/a.dart')}',
+      );
+
+      expect(result.exitCode, isNonZero);
+      expect(
+        result.stdout.toString(),
+        contains('lib/src/model/scene_value_validation.dart:8'),
       );
     },
   );
@@ -214,15 +290,26 @@ Future<ProcessResult> _runCoverageScenario({
   }
 }
 
-String _singleFileLcov(String path) =>
-    '''
-TN:
-SF:$path
-DA:1,1
-LF:1
-LH:1
-end_of_record
-''';
+String _singleFileLcov(String path, {Map<int, int>? lineHits}) {
+  final normalizedLineHits = lineHits ?? <int, int>{1: 1};
+  final sortedLines = normalizedLineHits.keys.toList()..sort();
+  final buffer = StringBuffer()
+    ..writeln('TN:')
+    ..writeln('SF:$path');
+  var hitLineCount = 0;
+  for (final line in sortedLines) {
+    final hits = normalizedLineHits[line]!;
+    if (hits > 0) {
+      hitLineCount++;
+    }
+    buffer.writeln('DA:$line,$hits');
+  }
+  buffer
+    ..writeln('LF:${sortedLines.length}')
+    ..writeln('LH:$hitLineCount')
+    ..writeln('end_of_record');
+  return buffer.toString();
+}
 
 Future<Directory> _createSandbox() async {
   final sandbox = await Directory.systemTemp.createTemp(

@@ -216,7 +216,7 @@ reopening `ScenePolicy` или primitive-rule ownership.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] `scene_value_validation.dart` becomes a part-free thin validation facade
+### Slice 1. [x] `scene_value_validation.dart` becomes a part-free thin validation facade
 
 #### Slice Contract
 
@@ -247,7 +247,7 @@ through them, and remove the replaced `part` bodies from the facade.
 - `scene_value_validation.dart` no longer contains the replaced `part` bodies.
 - `ScenePolicy` still consumes the facade rather than direct domain modules.
 
-### Slice 2. [ ] Tooling and downstream consumers are pinned to the explicit validation-module layout
+### Slice 2. [x] Tooling and downstream consumers are pinned to the explicit validation-module layout
 
 #### Slice Contract
 
