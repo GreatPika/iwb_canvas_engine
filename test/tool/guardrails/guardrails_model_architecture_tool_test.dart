@@ -109,6 +109,41 @@ void normalizeSelection() {}
     );
 
     test(
+      'rejects non-model code importing internal document patch owners directly',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeSandboxFile(sandbox, 'lib/src/controller/scene_runtime.dart', '''
+import '../model/document_node_patch_text.dart';
+
+void patchTextNode() {}
+''');
+          writeSandboxFile(
+            sandbox,
+            'lib/src/model/document_node_patch_text.dart',
+            'bool txnApplyTextNodePatch(Object node, Object patch, {required bool dryRun}) => false;\n',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'model architecture',
+              detail:
+                  'canonical model facades instead of importing or '
+                  're-exporting internal owner module '
+                  'document_node_patch_text.dart',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
       'rejects non-model code importing scene_builder.dart directly',
       () async {
         final sandbox = await createGuardrailsSandbox();

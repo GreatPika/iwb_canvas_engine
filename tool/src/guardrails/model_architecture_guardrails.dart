@@ -11,6 +11,13 @@ import 'public_surface_guardrails.dart';
 const Set<String> _restrictedModelOwnerModules = <String>{
   '/lib/src/model/document_locator.dart',
   '/lib/src/model/document_node_patch.dart',
+  '/lib/src/model/document_node_patch_common.dart',
+  '/lib/src/model/document_node_patch_image.dart',
+  '/lib/src/model/document_node_patch_line.dart',
+  '/lib/src/model/document_node_patch_path.dart',
+  '/lib/src/model/document_node_patch_rect.dart',
+  '/lib/src/model/document_node_patch_stroke.dart',
+  '/lib/src/model/document_node_patch_text.dart',
   '/lib/src/model/document_scene_edit.dart',
   '/lib/src/model/document_selection.dart',
   '/lib/src/model/scene_builder.dart',

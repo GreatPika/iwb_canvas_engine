@@ -130,6 +130,10 @@ Ownership decisions for the target state:
   Locator, patch, scene-edit, and selection/grid ownership stay in
   `document_{locator,node_patch,scene_edit,selection}.dart` instead of
   returning to `document.dart`.
+- `model/document_node_patch.dart` is the canonical patch dispatcher or
+  validation facade. Shared patch-field application lives in
+  `document_node_patch_common.dart`, and family-local runtime patch ownership
+  lives in `document_node_patch_{image,text,stroke,line,rect,path}.dart`.
 - `model/document_clone.dart` remains a separate focused helper for clone and
   adopt flows; it is not part of the step 40-43 facade/internal-owner split.
 

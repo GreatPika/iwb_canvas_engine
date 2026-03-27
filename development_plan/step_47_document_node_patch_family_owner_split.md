@@ -214,7 +214,7 @@ family-local patch owners.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Extract common patch helpers and shrink the dispatcher
+### Slice 1. [x] Extract common patch helpers and shrink the dispatcher
 
 #### Slice Contract
 
@@ -240,7 +240,7 @@ family dispatch.
 - The common patch owner contains only genuinely shared patch primitives.
 - `txnApplyNodePatch(...)` remains green for common-field patch cases.
 
-### Slice 2. [ ] Move family patch application into explicit owner modules
+### Slice 2. [x] Move family patch application into explicit owner modules
 
 #### Slice Contract
 
@@ -273,16 +273,16 @@ owner and stroke-point replacement in the stroke owner.
 
 ## 9. Final Verification Checklist
 
-- [ ] `dcm calculate-metrics lib/src/model/document.dart lib/src/model/document_node_patch.dart lib/src/model/document_node_patch_common.dart lib/src/model/document_node_patch_image.dart lib/src/model/document_node_patch_text.dart lib/src/model/document_node_patch_stroke.dart lib/src/model/document_node_patch_line.dart lib/src/model/document_node_patch_rect.dart lib/src/model/document_node_patch_path.dart --report-all`
-- [ ] `dart run tool/analysis/find_similar_clones.dart --clusters lib/src/model`
-- [ ] `dart run tool/check_import_boundaries.dart`
-- [ ] `dart run tool/check_guardrails.dart`
-- [ ] MCP test runner:
+- [x] `dcm calculate-metrics lib/src/model/document.dart lib/src/model/document_node_patch.dart lib/src/model/document_node_patch_common.dart lib/src/model/document_node_patch_image.dart lib/src/model/document_node_patch_text.dart lib/src/model/document_node_patch_stroke.dart lib/src/model/document_node_patch_line.dart lib/src/model/document_node_patch_rect.dart lib/src/model/document_node_patch_path.dart --report-all`
+- [x] `dart run tool/analysis/find_similar_clones.dart --clusters lib/src/model`
+- [x] `dart run tool/check_import_boundaries.dart`
+- [x] `dart run tool/check_guardrails.dart`
+- [x] MCP test runner:
       `test/model/document_model_test.dart`
-- [ ] MCP test runner:
+- [x] MCP test runner:
       `test/controller/internal/scene_writer_test.dart test/controller/internal/mutation_executor_test.dart`
-- [ ] MCP test runner:
+- [x] MCP test runner:
       `test/controller/core/scene_controller_copy_on_write_test.dart test/controller/commands/scene_commands_test.dart`
-- [ ] MCP test runner:
+- [x] MCP test runner:
       `test/controller/scene_controller_randomized_txn_test.dart`
-- [ ] `dart run tool/run_tool_tests.dart`
+- [x] `dart run tool/run_tool_tests.dart`
