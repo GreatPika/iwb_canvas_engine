@@ -161,6 +161,31 @@ sequence has not reached its target state.
   `document_scene_edit.dart::_txnReindexLayerNodes`
   must be removed.
 
+### Measured post-step-`50` baseline
+
+- The measured clone baseline after step `49` reports `13` clusters and `66`
+  similar pairs across `lib/src/model`, but no cluster or pair keeps
+  `scene_builder_json_require.dart` coupled to
+  `scene_builder_json_parse.dart`.
+- The named locator/index duplicate pairs between
+  `document_locator.dart`
+  and
+  `document_scene_edit.dart`
+  are absent from the measured post-step baseline.
+- The remaining `HIGH` metric items are exactly the accepted focused-owner
+  residuals listed below:
+  `document.dart` `number-of-imports`,
+  `document.dart::txnInsertNodeInScene` parameter count,
+  `document_scene_edit.dart::txnInsertNodeInScene` parameter count,
+  `scene_builder_decode_node_family.dart` `number-of-imports`,
+  `scene_builder_decode_scene.dart::sceneBuilderDecodeSceneSnapshotFromJson`
+  source lines,
+  `scene_from_snapshot.dart::sceneFromSnapshot` source lines,
+  and
+  `scene_value_validation_node.dart` `number-of-imports`.
+- No new `HIGH` / `VERY HIGH` hotspot appears outside that accepted residual
+  set.
+
 ### Large-file review threshold for this sequence
 
 - Review every top-level `lib/src/model/*.dart` file above `300` lines during
@@ -175,7 +200,16 @@ owners and not the center of a removed mixed-owner clone family:
 - `lib/src/model/scene_value_validation_node.dart`
 - `lib/src/model/scene_value_validation_top_level.dart`
 - `lib/src/model/scene_policy.dart`
-- `lib/src/model/document_scene_edit.dart`
+
+Measured post-step-`50` line counts keep only the four files above the
+threshold:
+`scene_value_validation_node.dart` (`603`),
+`scene_policy.dart` (`380`),
+`scene_value_validation_top_level.dart` (`333`),
+and
+`scene_builder_decode_scene.dart` (`320`).
+`document_scene_edit.dart` is now below the review threshold at `287` lines and
+therefore leaves the accepted large-file set.
 
 ### Residual red metrics that may be acceptable without opening a new plan step
 

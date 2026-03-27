@@ -71,18 +71,15 @@ Size? sceneBuilderOptionalSizeMap(
   String key, {
   String pathPrefix = '',
 }) {
-  if (!json.containsKey(key)) return null;
-  final value = json[key];
-  if (value == null) return null;
-  final path = sceneBuilderPathAt(pathPrefix, key);
-  if (value is! Map) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidFieldType,
-      path: path,
-      message: 'Field $key must be an object.',
-    );
+  final parsed = sceneBuilderOptionalObjectMap(
+    json,
+    key,
+    pathPrefix: pathPrefix,
+  );
+  if (parsed == null) {
+    return null;
   }
-  final parsed = sceneBuilderCastMap(value, path: path);
+  final path = sceneBuilderPathAt(pathPrefix, key);
   final width = parsed['w'];
   final height = parsed['h'];
   if (width is! num || height is! num) {
@@ -143,18 +140,19 @@ Color? sceneBuilderOptionalColor(
   String key, {
   String pathPrefix = '',
 }) {
-  if (!json.containsKey(key)) return null;
-  final value = json[key];
-  if (value == null) return null;
-  final path = sceneBuilderPathAt(pathPrefix, key);
-  if (value is! String) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidFieldType,
-      path: path,
-      message: 'Field $key must be a string.',
-    );
+  final value = sceneBuilderOptionalTypedField<String>(
+    json,
+    key,
+    pathPrefix: pathPrefix,
+    typeLabel: 'string',
+  );
+  if (value == null) {
+    return null;
   }
-  return sceneBuilderParseColor(value, path: path);
+  return sceneBuilderParseColor(
+    value,
+    path: sceneBuilderPathAt(pathPrefix, key),
+  );
 }
 
 Color sceneBuilderDecodeRequiredColor(

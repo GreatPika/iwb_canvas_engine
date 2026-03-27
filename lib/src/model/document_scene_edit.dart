@@ -39,10 +39,10 @@ bool txnInsertNodeInScene({
   } else {
     targetLayer.nodes.insert(insertedNodeIndex, node);
   }
-  _txnReindexLayerNodes(
-    nodeLocator: nodeLocator,
+  locator.txnWriteLayerNodeLocations(
+    locator: nodeLocator,
     layerIndex: layerIndex,
-    layerNodes: targetLayer.nodes,
+    nodes: targetLayer.nodes,
     startNodeIndex: insertedNodeIndex,
   );
   return true;
@@ -212,7 +212,7 @@ List<NodeId> _txnErasePreparedNodesFromLayer({
   if (preparedRemovals == null || preparedRemovals.isEmpty) {
     return const <NodeId>[];
   }
-  final layerNodes = _txnResolveLayerNodesForErase(
+  final layerNodes = locator.txnResolveLayerNodes(
     scene: scene,
     layerIndex: layerIndex,
   );
@@ -231,10 +231,10 @@ List<NodeId> _txnErasePreparedNodesFromLayer({
     layerNodes: layerNodes,
     validRemovals: validRemovals,
   );
-  _txnReindexLayerNodes(
-    nodeLocator: nodeLocator,
+  locator.txnWriteLayerNodeLocations(
+    locator: nodeLocator,
     layerIndex: layerIndex,
-    layerNodes: layerNodes,
+    nodes: layerNodes,
   );
   return removedNodeIds;
 }
@@ -284,35 +284,4 @@ List<NodeId> _txnEraseValidatedRemovals({
     nodeLocator.remove(removal.nodeId);
   }
   return removedNodeIds;
-}
-
-List<SceneNode>? _txnResolveLayerNodesForErase({
-  required Scene scene,
-  required int layerIndex,
-}) {
-  if (layerIndex == -1) {
-    return scene.backgroundLayer?.nodes;
-  }
-  if (layerIndex < 0 || layerIndex >= scene.layers.length) {
-    return null;
-  }
-  return scene.layers[layerIndex].nodes;
-}
-
-void _txnReindexLayerNodes({
-  required Map<NodeId, ({int layerIndex, int nodeIndex})> nodeLocator,
-  required int layerIndex,
-  required List<SceneNode> layerNodes,
-  int startNodeIndex = 0,
-}) {
-  for (
-    var nodeIndex = startNodeIndex;
-    nodeIndex < layerNodes.length;
-    nodeIndex++
-  ) {
-    nodeLocator[layerNodes[nodeIndex].id] = (
-      layerIndex: layerIndex,
-      nodeIndex: nodeIndex,
-    );
-  }
 }

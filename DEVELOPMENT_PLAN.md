@@ -143,5 +143,5 @@ language: russian
 - [x] [Шаг 46. Довести `scene_node_boundary_mapping_support` до true-common owner и вынести family assembly](development_plan/step_46_scene_node_boundary_mapping_support_owner_cleanup.md)
 - [x] [Шаг 47. Разрезать `document_node_patch` на explicit family-local patch owner-ы](development_plan/step_47_document_node_patch_family_owner_split.md)
 - [x] [Шаг 48. Замкнуть residual model architecture после шагов `45-47` на docs, guardrails и baseline](development_plan/step_48_model_residual_architecture_closure.md)
-- [ ] [Шаг 49. Закрыть post-closure helper seams в builder JSON helpers и document locator/index helpers](development_plan/step_49_json_helper_and_document_locator_residual_cleanup.md)
-- [ ] [Шаг 50. Замкнуть post-closure helper cleanup на measured baseline и обновлённый residual review](development_plan/step_50_model_post_closure_helper_rebaseline.md)
+- [x] [Шаг 49. Закрыть post-closure helper seams в builder JSON helpers и document locator/index helpers](development_plan/step_49_json_helper_and_document_locator_residual_cleanup.md)
+- [x] [Шаг 50. Замкнуть post-closure helper cleanup на measured baseline и обновлённый residual review](development_plan/step_50_model_post_closure_helper_rebaseline.md)

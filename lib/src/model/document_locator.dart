@@ -30,13 +30,13 @@ Map<NodeId, ({int layerIndex, int nodeIndex})> txnBuildNodeLocator(
   Scene scene,
 ) {
   final locator = <NodeId, ({int layerIndex, int nodeIndex})>{};
-  _txnWriteLayerNodeLocations(
+  txnWriteLayerNodeLocations(
     locator: locator,
     nodes: scene.backgroundLayer?.nodes,
     layerIndex: -1,
   );
   for (var layerIndex = 0; layerIndex < scene.layers.length; layerIndex++) {
-    _txnWriteLayerNodeLocations(
+    txnWriteLayerNodeLocations(
       locator: locator,
       nodes: scene.layers[layerIndex].nodes,
       layerIndex: layerIndex,
@@ -54,7 +54,7 @@ Map<NodeId, ({int layerIndex, int nodeIndex})> txnBuildNodeLocator(
   if (entry == null) {
     return null;
   }
-  final nodes = _txnResolveLayerNodesForLocator(
+  final nodes = txnResolveLayerNodes(
     scene: scene,
     layerIndex: entry.layerIndex,
   );
@@ -105,15 +105,16 @@ void txnShiftNodeLocatorLayersFrom({
   return null;
 }
 
-void _txnWriteLayerNodeLocations({
+void txnWriteLayerNodeLocations({
   required Map<NodeId, ({int layerIndex, int nodeIndex})> locator,
   required List<SceneNode>? nodes,
   required int layerIndex,
+  int startNodeIndex = 0,
 }) {
   if (nodes == null) {
     return;
   }
-  for (var nodeIndex = 0; nodeIndex < nodes.length; nodeIndex++) {
+  for (var nodeIndex = startNodeIndex; nodeIndex < nodes.length; nodeIndex++) {
     locator[nodes[nodeIndex].id] = (
       layerIndex: layerIndex,
       nodeIndex: nodeIndex,
@@ -121,7 +122,7 @@ void _txnWriteLayerNodeLocations({
   }
 }
 
-List<SceneNode>? _txnResolveLayerNodesForLocator({
+List<SceneNode>? txnResolveLayerNodes({
   required Scene scene,
   required int layerIndex,
 }) {

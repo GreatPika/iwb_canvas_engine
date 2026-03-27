@@ -214,7 +214,7 @@ builder-side JSON helper family между `scene_builder_json_require.dart` и
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Reduce builder JSON helper duplication without reopening decode ownership
+### Slice 1. [x] Reduce builder JSON helper duplication without reopening decode ownership
 
 #### Slice Contract
 
@@ -247,7 +247,7 @@ duplicated presence/type/path branches from those optional parse helpers.
 - The seam is closed inside the existing two files, with no new owner modules.
 - Builder decode behavior stays green through the listed proof surface.
 
-### Slice 2. [ ] Remove document locator/index helper duplication
+### Slice 2. [x] Remove document locator/index helper duplication
 
 #### Slice Contract
 
@@ -278,15 +278,15 @@ and delete the duplicated erase/reindex helpers from
 
 ## 9. Final Verification Checklist
 
-- [ ] `dcm calculate-metrics lib/src/model/scene_builder_json_require.dart lib/src/model/scene_builder_json_parse.dart lib/src/model/document_locator.dart lib/src/model/document_scene_edit.dart --report-all`
-- [ ] `dart run tool/analysis/find_similar_clones.dart --clusters lib/src/model`
-- [ ] `dart run tool/analysis/find_similar_clones.dart lib/src/model`
-- [ ] `dart run tool/check_import_boundaries.dart`
-- [ ] MCP test runner:
+- [x] `dcm calculate-metrics lib/src/model/scene_builder_json_require.dart lib/src/model/scene_builder_json_parse.dart lib/src/model/document_locator.dart lib/src/model/document_scene_edit.dart --report-all`
+- [x] `dart run tool/analysis/find_similar_clones.dart --clusters lib/src/model`
+- [x] `dart run tool/analysis/find_similar_clones.dart lib/src/model`
+- [x] `dart run tool/check_import_boundaries.dart`
+- [x] MCP test runner:
       `test/model/document_model_test.dart test/model/scene_builder_test.dart`
-- [ ] MCP test runner:
+- [x] MCP test runner:
       `test/public_api/scene_builder_test.dart test/public_api/validated_boundary_value_test.dart`
-- [ ] MCP test runner:
+- [x] MCP test runner:
       `test/serialization/scene_codec_validation_test.dart test/serialization/scene_fixture_test.dart`
-- [ ] MCP test runner:
+- [x] MCP test runner:
       `test/controller/internal/scene_writer_test.dart test/controller/commands/scene_commands_test.dart`

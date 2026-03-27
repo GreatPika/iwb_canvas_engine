@@ -155,7 +155,7 @@ language: russian
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Rebaseline the helper residual seams against the target spec
+### Slice 1. [x] Rebaseline the helper residual seams against the target spec
 
 #### Slice Contract
 
@@ -181,15 +181,39 @@ measured result justifies it.
 - The helper seams targeted by step `49` are no longer treated as open
   significant residuals.
 - Remaining residuals are classified explicitly.
+- Measured clone output reports `13` clusters / `66` similar pairs, but no
+  current cluster or pair reopens the
+  `scene_builder_json_require.dart` <-> `scene_builder_json_parse.dart`
+  seam.
+- The named duplicate pairs between `document_locator.dart` and
+  `document_scene_edit.dart` are absent from the measured post-step baseline.
+- The only remaining `HIGH` metrics in `lib/src/model` are the already
+  accepted focused-owner residuals:
+  `document.dart` import count,
+  `document.dart::txnInsertNodeInScene`,
+  `document_scene_edit.dart::txnInsertNodeInScene`,
+  `scene_builder_decode_node_family.dart` import count,
+  `scene_builder_decode_scene.dart::sceneBuilderDecodeSceneSnapshotFromJson`,
+  `scene_from_snapshot.dart::sceneFromSnapshot`,
+  and
+  `scene_value_validation_node.dart` import count.
+- Large-file review over top-level `lib/src/model/*.dart` keeps only
+  `scene_value_validation_node.dart` (`603`),
+  `scene_policy.dart` (`380`),
+  `scene_value_validation_top_level.dart` (`333`),
+  and
+  `scene_builder_decode_scene.dart` (`320`)
+  above the `300`-line threshold; `document_scene_edit.dart` is now `287`
+  lines and leaves the accepted large-file set.
 
 ## 9. Final Verification Checklist
 
-- [ ] `dcm calculate-metrics lib/src/model --report-all`
-- [ ] `dart run tool/analysis/find_similar_clones.dart --clusters lib/src/model`
-- [ ] `dart run tool/analysis/find_similar_clones.dart lib/src/model`
-- [ ] `find lib/src/model -maxdepth 1 -name '*.dart' -print0 | xargs -0 wc -l | sort -nr`
-- [ ] `dart run tool/check_import_boundaries.dart`
-- [ ] MCP test runner:
+- [x] `dcm calculate-metrics lib/src/model --report-all`
+- [x] `dart run tool/analysis/find_similar_clones.dart --clusters lib/src/model`
+- [x] `dart run tool/analysis/find_similar_clones.dart lib/src/model`
+- [x] `find lib/src/model -maxdepth 1 -name '*.dart' -print0 | xargs -0 wc -l | sort -nr`
+- [x] `dart run tool/check_import_boundaries.dart`
+- [x] MCP test runner:
       `test/model test/public_api test/serialization`
-- [ ] MCP test runner:
+- [x] MCP test runner:
       `test/controller/internal/scene_writer_test.dart test/controller/commands/scene_commands_test.dart`

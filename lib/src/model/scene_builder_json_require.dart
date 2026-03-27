@@ -153,6 +153,53 @@ T? sceneBuilderOptionalValidatedField<T>(
   return parse(value, path: path, fieldName: key);
 }
 
+T? sceneBuilderOptionalTypedField<T>(
+  Map<String, Object?> json,
+  String key, {
+  required String typeLabel,
+  String pathPrefix = '',
+}) {
+  if (!json.containsKey(key)) {
+    return null;
+  }
+  final value = json[key];
+  if (value == null) {
+    return null;
+  }
+  final path = sceneBuilderPathAt(pathPrefix, key);
+  if (value is! T) {
+    throw SceneDataException(
+      code: SceneDataErrorCode.invalidFieldType,
+      path: path,
+      message: 'Field $key must be a $typeLabel.',
+    );
+  }
+  return value as T;
+}
+
+Map<String, Object?>? sceneBuilderOptionalObjectMap(
+  Map<String, Object?> json,
+  String key, {
+  String pathPrefix = '',
+}) {
+  if (!json.containsKey(key)) {
+    return null;
+  }
+  final value = json[key];
+  if (value == null) {
+    return null;
+  }
+  final path = sceneBuilderPathAt(pathPrefix, key);
+  if (value is! Map<Object?, Object?>) {
+    throw SceneDataException(
+      code: SceneDataErrorCode.invalidFieldType,
+      path: path,
+      message: 'Field $key must be an object.',
+    );
+  }
+  return sceneBuilderCastMap(value, path: path);
+}
+
 String sceneBuilderRequireStringValue(
   Object? value, {
   required String field,
