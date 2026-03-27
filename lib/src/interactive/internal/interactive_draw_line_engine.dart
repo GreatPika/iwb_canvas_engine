@@ -5,6 +5,7 @@ import '../../core/action_events.dart';
 import '../../core/input_sampling.dart';
 import '../../core/interaction_types.dart';
 import '../../contract/snapshot.dart';
+import 'interactive_draw_action_emitter.dart';
 
 typedef InteractiveDrawStyle = ({
   DrawTool drawTool,
@@ -47,6 +48,8 @@ class InteractiveDrawLineEngine {
   InteractiveDrawLineEngine({required this.callbacks});
 
   final InteractiveDrawLineEngineCallbacks callbacks;
+  late final InteractiveDrawActionEmitter _actionEmitter =
+      InteractiveDrawActionEmitter(emitAction: callbacks.emitAction);
 
   Offset? _activeLinePreviewStart;
   Offset? _activeLinePreviewEnd;
@@ -161,15 +164,10 @@ class InteractiveDrawLineEngine {
       start: start,
       end: end,
     );
-    callbacks.emitAction(
-      ActionType.drawLine,
-      <NodeId>[lineId],
-      timestampMs,
-      payload: <String, Object?>{
-        'tool': style.drawTool.name,
-        'color': style.drawColor.toARGB32(),
-        'thickness': style.lineThickness,
-      },
+    _actionEmitter.emitLineCommit(
+      nodeId: lineId,
+      timestampMs: timestampMs,
+      style: style,
     );
   }
 

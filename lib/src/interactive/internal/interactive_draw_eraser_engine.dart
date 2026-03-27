@@ -1,16 +1,13 @@
-import 'dart:math' as math;
 import 'dart:ui';
 
 import '../../core/geometry.dart';
-import '../../core/hit_test.dart';
-import '../../core/input_sampling.dart';
 import '../../core/nodes.dart' show LineNode, SceneNode, StrokeNode;
 import '../../core/scene_limits.dart';
 import '../../core/scene_spatial_index.dart';
 import '../../contract/snapshot.dart';
 import '../../contract/transform2d.dart';
-import '../interaction_eligibility_policy.dart'
-    as interaction_eligibility_policy;
+import 'interactive_draw_eraser_targets.dart';
+import 'interactive_draw_path_buffer.dart';
 import 'interactive_geometry.dart';
 
 typedef _ProjectedEraser = ({
@@ -39,45 +36,39 @@ class InteractiveDrawEraserEngine {
   InteractiveDrawEraserEngine({required this.callbacks});
 
   final InteractiveDrawEraserEngineCallbacks callbacks;
-
-  final List<Offset> _activeEraserPoints = <Offset>[];
+  final InteractiveDrawPathBuffer _pathBuffer = InteractiveDrawPathBuffer(
+    softLimit: kInteractiveEraserPointsSoftLimit,
+    trimTo: kInteractiveEraserPointsTrimTo,
+  );
+  late final InteractiveDrawEraserTargets _targets =
+      InteractiveDrawEraserTargets(
+        callbacks: InteractiveDrawEraserTargetsCallbacks(
+          querySpatialCandidates: callbacks.querySpatialCandidates,
+          resolveSpatialCandidateNode: callbacks.resolveSpatialCandidateNode,
+          onSpatialQuery: _incrementSpatialQueryCount,
+        ),
+      );
 
   int _debugEraserSpatialQueryCount = 0;
   int _debugEraserPreciseSegmentChecks = 0;
 
-  static const int _eraserQueryBatchSegments = 64;
   static const int _eraserHitBatchSegments = 64;
   static const int _strokeHitBatchSegments = 32;
 
-  int get activeEraserPointsLength => _activeEraserPoints.length;
+  int get activeEraserPointsLength => _pathBuffer.length;
   int get debugEraserSpatialQueryCount => _debugEraserSpatialQueryCount;
   int get debugEraserPreciseSegmentChecks => _debugEraserPreciseSegmentChecks;
 
   void resetGestureState() {
-    _activeEraserPoints.clear();
+    _pathBuffer.clear();
   }
 
   void handleDown(Offset scenePoint) {
-    _activeEraserPoints
-      ..clear()
-      ..add(scenePoint);
+    _pathBuffer.start(scenePoint);
   }
 
   void handleMove(Offset scenePoint) {
-    if (_activeEraserPoints.isEmpty) return;
-    if (!isDistanceAtLeast(
-      _activeEraserPoints.last,
-      scenePoint,
-      kInputDecimationMinStepScene,
-    )) {
-      return;
-    }
-    _activeEraserPoints.add(scenePoint);
-    enforceGestureBufferSoftLimit(
-      _activeEraserPoints,
-      softLimit: kInteractiveEraserPointsSoftLimit,
-      trimTo: kInteractiveEraserPointsTrimTo,
-    );
+    if (!_pathBuffer.appendMovePoint(scenePoint)) return;
     callbacks.onStateChanged();
   }
 
@@ -85,25 +76,18 @@ class InteractiveDrawEraserEngine {
     Offset scenePoint, {
     required double eraserThickness,
   }) {
-    if (_activeEraserPoints.isEmpty) return const <NodeId>[];
+    if (_pathBuffer.isEmpty) return const <NodeId>[];
 
     _debugEraserSpatialQueryCount = 0;
     _debugEraserPreciseSegmentChecks = 0;
 
-    if (isDistanceGreaterThan(_activeEraserPoints.last, scenePoint, 0)) {
-      _activeEraserPoints.add(scenePoint);
-      enforceGestureBufferSoftLimit(
-        _activeEraserPoints,
-        softLimit: kInteractiveEraserPointsSoftLimit,
-        trimTo: kInteractiveEraserPointsTrimTo,
-      );
-    }
+    _pathBuffer.appendTerminalPoint(scenePoint, enforceSoftLimit: true);
 
     final deletedIds = _eraseAnnotations(
-      _activeEraserPoints,
+      _pathBuffer.points,
       eraserThickness: eraserThickness,
     );
-    _activeEraserPoints.clear();
+    _pathBuffer.clear();
     return deletedIds;
   }
 
@@ -111,18 +95,13 @@ class InteractiveDrawEraserEngine {
     List<Offset> eraserPoints, {
     required double eraserThickness,
   }) {
-    final candidates =
-        _queryEraserCandidates(eraserPoints, eraserThickness: eraserThickness)
-          ..sort((left, right) {
-            final byLayer = left.layerIndex.compareTo(right.layerIndex);
-            if (byLayer != 0) return byLayer;
-            return left.nodeIndex.compareTo(right.nodeIndex);
-          });
-
+    final candidates = _targets.queryDeletableTargets(
+      eraserPoints,
+      eraserThickness: eraserThickness,
+    );
     final ids = <NodeId>[];
     for (final candidate in candidates) {
-      final node = _resolveDeletableDrawableNode(candidate);
-      if (node == null) continue;
+      final node = candidate.node;
       if (!_eraserHitsNode(
         eraserPoints,
         node,
@@ -139,58 +118,6 @@ class InteractiveDrawEraserEngine {
     if (removedCount <= 0) return const <NodeId>[];
 
     return ids;
-  }
-
-  SceneNode? _resolveDeletableDrawableNode(SceneSpatialCandidate candidate) {
-    final node = callbacks.resolveSpatialCandidateNode(candidate);
-    if (node == null) return null;
-    if (node is! StrokeNode && node is! LineNode) return null;
-    if (!interaction_eligibility_policy.canDeleteSceneNode(node)) return null;
-    return node;
-  }
-
-  List<SceneSpatialCandidate> _queryEraserCandidates(
-    List<Offset> eraserPoints, {
-    required double eraserThickness,
-  }) {
-    final byId = <NodeId, SceneSpatialCandidate>{};
-    final queryPadding = eraserThickness / 2 + kHitSlop;
-
-    if (eraserPoints.length == 1) {
-      final point = eraserPoints.first;
-      final probe = Rect.fromLTWH(
-        point.dx,
-        point.dy,
-        0,
-        0,
-      ).inflate(queryPadding);
-      for (final candidate in _querySpatialCandidatesForEraser(probe)) {
-        byId[candidate.node.id] = candidate;
-      }
-      return byId.values.toList(growable: false);
-    }
-
-    final segmentCount = eraserPoints.length - 1;
-    for (
-      var segmentStart = 0;
-      segmentStart < segmentCount;
-      segmentStart += _eraserQueryBatchSegments
-    ) {
-      final segmentEndExclusive = math.min(
-        segmentStart + _eraserQueryBatchSegments,
-        segmentCount,
-      );
-      final batchBounds = segmentRangeBounds(
-        eraserPoints,
-        segmentStart: segmentStart,
-        segmentEndExclusive: segmentEndExclusive,
-      ).inflate(queryPadding);
-      for (final candidate in _querySpatialCandidatesForEraser(batchBounds)) {
-        byId[candidate.node.id] = candidate;
-      }
-    }
-
-    return byId.values.toList(growable: false);
   }
 
   bool _eraserHitsNode(
@@ -464,9 +391,8 @@ class InteractiveDrawEraserEngine {
     );
   }
 
-  List<SceneSpatialCandidate> _querySpatialCandidatesForEraser(Rect bounds) {
+  void _incrementSpatialQueryCount() {
     _debugEraserSpatialQueryCount = _debugEraserSpatialQueryCount + 1;
-    return callbacks.querySpatialCandidates(bounds);
   }
 
   Rect _eraserBoundsInWorld(List<Offset> eraserPoints) {

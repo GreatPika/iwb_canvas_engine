@@ -7,8 +7,10 @@ import '../../core/pointer_input.dart';
 import '../../core/scene_spatial_index.dart';
 import '../../contract/snapshot.dart';
 import 'interactive_draw_eraser_engine.dart';
+import 'interactive_draw_gesture_session.dart';
 import 'interactive_draw_line_engine.dart';
 import 'interactive_draw_stroke_engine.dart';
+import 'interactive_draw_terminal_router.dart';
 
 class InteractiveDrawCoordinatorCallbacks {
   const InteractiveDrawCoordinatorCallbacks({
@@ -69,6 +71,13 @@ class InteractiveDrawCoordinator {
         writeEraseNodes: callbacks.writeEraseNodes,
       ),
     );
+    _terminalRouter = InteractiveDrawTerminalRouter(
+      gestureSession: _gestureSession,
+      lineEngine: _lineEngine,
+      strokeEngine: _strokeEngine,
+      eraserEngine: _eraserEngine,
+      emitAction: callbacks.emitAction,
+    );
   }
 
   final InteractiveDrawCoordinatorCallbacks callbacks;
@@ -76,9 +85,9 @@ class InteractiveDrawCoordinator {
   late final InteractiveDrawStrokeEngine _strokeEngine;
   late final InteractiveDrawLineEngine _lineEngine;
   late final InteractiveDrawEraserEngine _eraserEngine;
-
-  Offset? _downScene;
-  bool _moved = false;
+  final InteractiveDrawGestureSession _gestureSession =
+      InteractiveDrawGestureSession();
+  late final InteractiveDrawTerminalRouter _terminalRouter;
 
   Offset? get pendingLineStart => _lineEngine.pendingLineStart;
   int? get pendingLineTimestampMs => _lineEngine.pendingLineTimestampMs;
@@ -129,8 +138,7 @@ class InteractiveDrawCoordinator {
   }
 
   void resetGestureState() {
-    _downScene = null;
-    _moved = false;
+    _gestureSession.clear();
     _strokeEngine.resetGestureState();
     _eraserEngine.resetGestureState();
     _lineEngine.resetGestureState();
@@ -151,8 +159,7 @@ class InteractiveDrawCoordinator {
   }
 
   void _handleDown(Offset scenePoint, {required DrawTool drawTool}) {
-    _downScene = scenePoint;
-    _moved = false;
+    _gestureSession.start(scenePoint);
 
     switch (drawTool) {
       case DrawTool.pen:
@@ -179,11 +186,13 @@ class InteractiveDrawCoordinator {
         _strokeEngine.handleMove(scenePoint);
         break;
       case DrawTool.line:
-        _moved = _lineEngine.handleMove(
-          scenePoint,
-          downScene: _downScene,
-          moved: _moved,
-          dragStartSlop: dragStartSlop,
+        _gestureSession.markMoved(
+          _lineEngine.handleMove(
+            scenePoint,
+            downScene: _gestureSession.downScene,
+            moved: _gestureSession.moved,
+            dragStartSlop: dragStartSlop,
+          ),
         );
         break;
       case DrawTool.eraser:
@@ -198,40 +207,11 @@ class InteractiveDrawCoordinator {
     required InteractiveDrawStyle style,
     required double dragStartSlop,
   }) {
-    switch (style.drawTool) {
-      case DrawTool.pen:
-      case DrawTool.highlighter:
-        _strokeEngine.commitOnUp(sample.timestampMs, scenePoint, style: style);
-        break;
-      case DrawTool.line:
-        _lineEngine.commitOnUp((
-          timestampMs: sample.timestampMs,
-          scenePoint: scenePoint,
-          downScene: _downScene,
-          moved: _moved,
-          dragStartSlop: dragStartSlop,
-        ), style: style);
-        break;
-      case DrawTool.eraser:
-        final deletedIds = _eraserEngine.commitOnUp(
-          scenePoint,
-          eraserThickness: style.eraserThickness,
-        );
-        if (deletedIds.isNotEmpty) {
-          callbacks.emitAction(
-            ActionType.erase,
-            deletedIds,
-            sample.timestampMs,
-            payload: <String, Object?>{
-              'eraserThickness': style.eraserThickness,
-            },
-          );
-        }
-        break;
-    }
-
-    _downScene = null;
-    _moved = false;
-    _lineEngine.resetGestureState();
+    _terminalRouter.handleUp(
+      sample,
+      scenePoint,
+      style: style,
+      dragStartSlop: dragStartSlop,
+    );
   }
 }

@@ -1,4 +1,3 @@
-import 'dart:collection';
 import 'dart:ui';
 
 import '../../core/action_events.dart';
@@ -6,8 +5,9 @@ import '../../core/input_sampling.dart';
 import '../../core/interaction_types.dart';
 import '../../core/scene_limits.dart';
 import '../../contract/snapshot.dart';
-import 'interactive_geometry.dart';
+import 'interactive_draw_action_emitter.dart';
 import 'interactive_draw_line_engine.dart' show InteractiveDrawStyle;
+import 'interactive_draw_path_buffer.dart';
 
 class InteractiveDrawStrokeEngineCallbacks {
   const InteractiveDrawStrokeEngineCallbacks({
@@ -37,39 +37,27 @@ class InteractiveDrawStrokeEngine {
   InteractiveDrawStrokeEngine({required this.callbacks});
 
   final InteractiveDrawStrokeEngineCallbacks callbacks;
+  late final InteractiveDrawActionEmitter _actionEmitter =
+      InteractiveDrawActionEmitter(emitAction: callbacks.emitAction);
 
-  final List<Offset> _activeStrokePoints = <Offset>[];
-  late final UnmodifiableListView<Offset> _activeStrokePointsView =
-      UnmodifiableListView<Offset>(_activeStrokePoints);
+  final InteractiveDrawPathBuffer _pathBuffer = InteractiveDrawPathBuffer(
+    softLimit: kInteractiveStrokePointsSoftLimit,
+    trimTo: kInteractiveStrokePointsTrimTo,
+  );
 
-  List<Offset> get activeStrokePreviewPoints => _activeStrokePointsView;
-  bool get hasActiveStrokePoints => _activeStrokePoints.isNotEmpty;
+  List<Offset> get activeStrokePreviewPoints => _pathBuffer.points;
+  bool get hasActiveStrokePoints => _pathBuffer.isNotEmpty;
 
   void resetGestureState() {
-    _activeStrokePoints.clear();
+    _pathBuffer.clear();
   }
 
   void handleDown(Offset scenePoint) {
-    _activeStrokePoints
-      ..clear()
-      ..add(scenePoint);
+    _pathBuffer.start(scenePoint);
   }
 
   void handleMove(Offset scenePoint) {
-    if (_activeStrokePoints.isEmpty) return;
-    if (!isDistanceAtLeast(
-      _activeStrokePoints.last,
-      scenePoint,
-      kInputDecimationMinStepScene,
-    )) {
-      return;
-    }
-    _activeStrokePoints.add(scenePoint);
-    enforceGestureBufferSoftLimit(
-      _activeStrokePoints,
-      softLimit: kInteractiveStrokePointsSoftLimit,
-      trimTo: kInteractiveStrokePointsTrimTo,
-    );
+    if (!_pathBuffer.appendMovePoint(scenePoint)) return;
     callbacks.onStateChanged();
   }
 
@@ -78,13 +66,11 @@ class InteractiveDrawStrokeEngine {
     Offset scenePoint, {
     required InteractiveDrawStyle style,
   }) {
-    if (_activeStrokePoints.isEmpty) return;
-    if (isDistanceGreaterThan(_activeStrokePoints.last, scenePoint, 0)) {
-      _activeStrokePoints.add(scenePoint);
-    }
+    if (_pathBuffer.isEmpty) return;
+    _pathBuffer.appendTerminalPoint(scenePoint);
 
     final committedPoints = resamplePointsToLimit(
-      _activeStrokePoints,
+      _pathBuffer.points,
       limit: kMaxStrokePointsPerNode,
     );
     final isHighlighter = style.drawTool == DrawTool.highlighter;
@@ -98,17 +84,14 @@ class InteractiveDrawStrokeEngine {
       opacity: isHighlighter ? style.highlighterOpacity : 1,
     );
 
-    callbacks.emitAction(
-      isHighlighter ? ActionType.drawHighlighter : ActionType.drawStroke,
-      <NodeId>[strokeId],
-      timestampMs,
-      payload: <String, Object?>{
-        'tool': style.drawTool.name,
-        'color': style.drawColor.toARGB32(),
-        'thickness': thickness,
-      },
+    _actionEmitter.emitStrokeCommit(
+      nodeId: strokeId,
+      timestampMs: timestampMs,
+      style: style,
+      isHighlighter: isHighlighter,
+      thickness: thickness,
     );
 
-    _activeStrokePoints.clear();
+    _pathBuffer.clear();
   }
 }

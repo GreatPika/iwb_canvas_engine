@@ -236,7 +236,7 @@ draw-local owner-ы without changing public draw behavior.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Draw coordinator becomes draw-family orchestration owner only
+### Slice 1. [x] Draw coordinator becomes draw-family orchestration owner only
 
 #### Slice Contract
 
@@ -294,7 +294,7 @@ and public draw behavior equivalent.
 - The targeted metric baseline improves for
   `interactive_draw_coordinator.dart`.
 
-### Slice 2. [ ] Eraser path is split into focused query and geometry owners
+### Slice 2. [x] Eraser path is split into focused query and geometry owners
 
 #### Slice Contract
 
