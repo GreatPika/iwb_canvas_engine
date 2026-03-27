@@ -218,7 +218,7 @@ word `support`.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Replace the mixed support bucket with a true common mapping owner
+### Slice 1. [x] Replace the mixed support bucket with a true common mapping owner
 
 #### Slice Contract
 
@@ -246,7 +246,7 @@ facade.
 - `scene_node_boundary_mapping.dart` still exports
   `TextNodeSnapshotSizePolicy`.
 
-### Slice 2. [ ] Make every mapping family own all of its assembly directions
+### Slice 2. [x] Make every mapping family own all of its assembly directions
 
 #### Slice Contract
 
@@ -279,14 +279,14 @@ the dispatcher facade limited to family dispatch and clone helpers.
 
 ## 9. Final Verification Checklist
 
-- [ ] `dcm calculate-metrics lib/src/model/scene_node_boundary_mapping.dart lib/src/model/scene_node_boundary_mapping_common.dart lib/src/model/scene_node_boundary_mapping_image.dart lib/src/model/scene_node_boundary_mapping_text.dart lib/src/model/scene_node_boundary_mapping_stroke.dart lib/src/model/scene_node_boundary_mapping_line.dart lib/src/model/scene_node_boundary_mapping_rect.dart lib/src/model/scene_node_boundary_mapping_path.dart --report-all`
-- [ ] `dart run tool/analysis/find_similar_clones.dart --clusters lib/src/model`
-- [ ] `dart run tool/check_import_boundaries.dart`
-- [ ] `dart run tool/check_guardrails.dart`
-- [ ] MCP test runner:
+- [x] `dcm calculate-metrics lib/src/model/scene_node_boundary_mapping.dart lib/src/model/scene_node_boundary_mapping_common.dart lib/src/model/scene_node_boundary_mapping_image.dart lib/src/model/scene_node_boundary_mapping_text.dart lib/src/model/scene_node_boundary_mapping_stroke.dart lib/src/model/scene_node_boundary_mapping_line.dart lib/src/model/scene_node_boundary_mapping_rect.dart lib/src/model/scene_node_boundary_mapping_path.dart --report-all`
+- [x] `dart run tool/analysis/find_similar_clones.dart --clusters lib/src/model`
+- [x] `dart run tool/check_import_boundaries.dart`
+- [x] `dart run tool/check_guardrails.dart`
+- [x] MCP test runner:
       `test/model/document_model_test.dart test/model/document_clone_test.dart test/model/scene_builder_test.dart`
-- [ ] MCP test runner:
+- [x] MCP test runner:
       `test/public_api/validated_boundary_value_test.dart`
-- [ ] MCP test runner:
+- [x] MCP test runner:
       `test/serialization/scene_fixture_test.dart`
-- [ ] `dart run tool/run_tool_tests.dart`
+- [x] `dart run tool/run_tool_tests.dart`

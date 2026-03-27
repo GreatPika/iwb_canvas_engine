@@ -186,6 +186,45 @@ void decodeScene() {}
     );
 
     test(
+      'rejects non-model code importing scene node mapping common owner',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/serialization/scene_codec.dart',
+            '''
+import '../model/scene_node_boundary_mapping_common.dart';
+
+void decodeScene() {}
+''',
+          );
+          writeSandboxFile(
+            sandbox,
+            'lib/src/model/scene_node_boundary_mapping_common.dart',
+            'enum TextNodeSnapshotSizePolicy { preserveBoundarySize }\n',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'model architecture',
+              detail:
+                  'canonical model facades instead of importing or '
+                  're-exporting internal owner module '
+                  'scene_node_boundary_mapping_common.dart',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
       'rejects non-model code importing scene_policy.dart directly',
       () async {
         final sandbox = await createGuardrailsSandbox();
