@@ -131,3 +131,5 @@ language: russian
 - [x] [Шаг 37.2. Выделить path-cache и mutable geometry support из node entrypoints](development_plan/step_37_2_path_cache_and_mutable_geometry_owner_split.md)
 - [x] [Шаг 37.3. Довести `text_layout`, `action_events` и `id_generator` до leaf support owner-ов](development_plan/step_37_3_core_leaf_support_owner_finalization.md)
 - [x] [Шаг 37.4. Замкнуть финальную core architecture на docs, non-regression pinning и baseline](development_plan/step_37_4_core_final_architecture_closure.md)
+- [ ] [Шаг 38. Разнести `nodes.dart` по file-local owner-модулям без переоткрытия core graph](development_plan/step_38_nodes_file_local_owner_split.md)
+- [ ] [Шаг 39. Разрезать `PointerInputTracker` на focused pointer-local state owner-ы](development_plan/step_39_pointer_input_tracker_owner_decomposition.md)
