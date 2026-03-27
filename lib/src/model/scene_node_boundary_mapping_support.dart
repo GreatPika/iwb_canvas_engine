@@ -1,18 +1,42 @@
-part of 'scene_node_boundary_mapping.dart';
+import 'dart:ui';
 
-typedef _SceneNodeFromSchema<FieldsT> =
+import '../contract/internal/node_boundary_schema.dart';
+import '../contract/node_spec.dart';
+import '../contract/snapshot.dart';
+import '../contract/transform2d.dart';
+import '../core/nodes.dart';
+import '../core/text_layout.dart';
+
+enum TextNodeSnapshotSizePolicy { preserveBoundarySize, recomputeFromLayout }
+
+typedef RuntimeNodeCommonFields = ({
+  NodeId id,
+  int instanceRevision,
+  Transform2D transform,
+  double opacity,
+  double hitPadding,
+  bool isVisible,
+  bool isSelectable,
+  bool isLocked,
+  bool isDeletable,
+  bool isTransformable,
+});
+
+typedef SpecRuntimeNodeContext = ({NodeId fallbackId, int instanceRevision});
+
+typedef SceneNodeFromSchema<FieldsT> =
     SceneNode Function({
-      required _RuntimeNodeCommonFields common,
+      required RuntimeNodeCommonFields common,
       required FieldsT fields,
     });
 
-typedef _NodeSnapshotFromSchema<FieldsT, SnapshotT extends NodeSnapshot> =
+typedef NodeSnapshotFromSchema<FieldsT, SnapshotT extends NodeSnapshot> =
     SnapshotT Function({
       required NodeSnapshotCommonSchemaFields common,
       required FieldsT fields,
     });
 
-NodeSnapshotCommonSchemaFields _snapshotCommonFromNodeSnapshot(
+NodeSnapshotCommonSchemaFields snapshotCommonFromNodeSnapshot(
   NodeSnapshot node,
 ) {
   return NodeBoundarySchema.snapshotCommonFromValidated((
@@ -29,7 +53,7 @@ NodeSnapshotCommonSchemaFields _snapshotCommonFromNodeSnapshot(
   ));
 }
 
-NodeSpecCommonSchemaFields _specCommonFromNodeSpec(NodeSpec spec) {
+NodeSpecCommonSchemaFields specCommonFromNodeSpec(NodeSpec spec) {
   return NodeBoundarySchema.specCommonFromValidated((
     id: spec.id,
     transform: spec.transform,
@@ -43,7 +67,7 @@ NodeSpecCommonSchemaFields _specCommonFromNodeSpec(NodeSpec spec) {
   ));
 }
 
-NodeSnapshotCommonSchemaFields _snapshotCommonFromSceneNode(SceneNode node) {
+NodeSnapshotCommonSchemaFields snapshotCommonFromSceneNode(SceneNode node) {
   return NodeBoundarySchema.snapshotCommonFromValidated((
     id: node.id,
     instanceRevision: node.instanceRevision,
@@ -58,7 +82,7 @@ NodeSnapshotCommonSchemaFields _snapshotCommonFromSceneNode(SceneNode node) {
   ));
 }
 
-_RuntimeNodeCommonFields _runtimeCommonFromSnapshot(
+RuntimeNodeCommonFields runtimeCommonFromSnapshot(
   NodeSnapshotCommonSchemaFields common, {
   required int instanceRevision,
 }) {
@@ -76,7 +100,7 @@ _RuntimeNodeCommonFields _runtimeCommonFromSnapshot(
   );
 }
 
-_RuntimeNodeCommonFields _runtimeCommonFromSpec(
+RuntimeNodeCommonFields runtimeCommonFromSpec(
   NodeSpecCommonSchemaFields common, {
   required NodeId fallbackId,
   required int instanceRevision,
@@ -95,8 +119,52 @@ _RuntimeNodeCommonFields _runtimeCommonFromSpec(
   );
 }
 
-ImageNode _imageNodeFromSchema({
-  required _RuntimeNodeCommonFields common,
+SceneNode
+sceneNodeFromSnapshotViaSchema<SnapshotT extends NodeSnapshot, FieldsT>({
+  required SnapshotT snapshot,
+  required int instanceRevision,
+  required FieldsT Function(SnapshotT snapshot) extractFields,
+  required SceneNodeFromSchema<FieldsT> buildNode,
+}) {
+  final common = runtimeCommonFromSnapshot(
+    snapshotCommonFromNodeSnapshot(snapshot),
+    instanceRevision: instanceRevision,
+  );
+  final fields = extractFields(snapshot);
+  return buildNode(common: common, fields: fields);
+}
+
+SceneNode sceneNodeFromSpecViaSchema<SpecT extends NodeSpec, FieldsT>({
+  required SpecT spec,
+  required SpecRuntimeNodeContext runtimeContext,
+  required FieldsT Function(SpecT spec) extractFields,
+  required SceneNodeFromSchema<FieldsT> buildNode,
+}) {
+  final common = runtimeCommonFromSpec(
+    specCommonFromNodeSpec(spec),
+    fallbackId: runtimeContext.fallbackId,
+    instanceRevision: runtimeContext.instanceRevision,
+  );
+  final fields = extractFields(spec);
+  return buildNode(common: common, fields: fields);
+}
+
+NodeSnapshot sceneNodeSnapshotFromViaSchema<
+  NodeT extends SceneNode,
+  FieldsT,
+  SnapshotT extends NodeSnapshot
+>({
+  required NodeT node,
+  required FieldsT Function(NodeT node) extractFields,
+  required NodeSnapshotFromSchema<FieldsT, SnapshotT> buildSnapshot,
+}) {
+  final common = snapshotCommonFromSceneNode(node);
+  final fields = extractFields(node);
+  return buildSnapshot(common: common, fields: fields);
+}
+
+ImageNode imageNodeFromSchema({
+  required RuntimeNodeCommonFields common,
   required ImageNodeSchemaFields fields,
 }) {
   return ImageNode(
@@ -116,8 +184,8 @@ ImageNode _imageNodeFromSchema({
   );
 }
 
-TextNode _textNodeFromSnapshotSchema({
-  required _RuntimeNodeCommonFields common,
+TextNode textNodeFromSnapshotSchema({
+  required RuntimeNodeCommonFields common,
   required TextNodeSnapshotSchemaFields fields,
   required TextNodeSnapshotSizePolicy textSizePolicy,
 }) {
@@ -152,8 +220,8 @@ TextNode _textNodeFromSnapshotSchema({
   return node;
 }
 
-TextNode _textNodeFromSpecSchema({
-  required _RuntimeNodeCommonFields common,
+TextNode textNodeFromSpecSchema({
+  required RuntimeNodeCommonFields common,
   required TextNodeSpecSchemaFields fields,
 }) {
   final node = TextNode(
@@ -183,8 +251,8 @@ TextNode _textNodeFromSpecSchema({
   return node;
 }
 
-StrokeNode _strokeNodeFromSnapshotSchema({
-  required _RuntimeNodeCommonFields common,
+StrokeNode strokeNodeFromSnapshotSchema({
+  required RuntimeNodeCommonFields common,
   required StrokeNodeSnapshotSchemaFields fields,
 }) {
   return StrokeNode(
@@ -205,8 +273,8 @@ StrokeNode _strokeNodeFromSnapshotSchema({
   );
 }
 
-StrokeNode _strokeNodeFromSpecSchema({
-  required _RuntimeNodeCommonFields common,
+StrokeNode strokeNodeFromSpecSchema({
+  required RuntimeNodeCommonFields common,
   required StrokeNodeSpecSchemaFields fields,
 }) {
   return StrokeNode(
@@ -226,8 +294,8 @@ StrokeNode _strokeNodeFromSpecSchema({
   );
 }
 
-LineNode _lineNodeFromSchema({
-  required _RuntimeNodeCommonFields common,
+LineNode lineNodeFromSchema({
+  required RuntimeNodeCommonFields common,
   required LineNodeSchemaFields fields,
 }) {
   return LineNode(
@@ -248,8 +316,8 @@ LineNode _lineNodeFromSchema({
   );
 }
 
-RectNode _rectNodeFromSchema({
-  required _RuntimeNodeCommonFields common,
+RectNode rectNodeFromSchema({
+  required RuntimeNodeCommonFields common,
   required RectNodeSchemaFields fields,
 }) {
   return RectNode(
@@ -270,8 +338,8 @@ RectNode _rectNodeFromSchema({
   );
 }
 
-PathNode _pathNodeFromSchema({
-  required _RuntimeNodeCommonFields common,
+PathNode pathNodeFromSchema({
+  required RuntimeNodeCommonFields common,
   required PathNodeSchemaFields fields,
 }) {
   return PathNode(
@@ -293,7 +361,7 @@ PathNode _pathNodeFromSchema({
   );
 }
 
-ImageNodeSnapshot _imageSnapshotFromSchema({
+ImageNodeSnapshot imageSnapshotFromSchema({
   required NodeSnapshotCommonSchemaFields common,
   required ImageNodeSchemaFields fields,
 }) {
@@ -314,7 +382,7 @@ ImageNodeSnapshot _imageSnapshotFromSchema({
   );
 }
 
-TextNodeSnapshot _textSnapshotFromSchema({
+TextNodeSnapshot textSnapshotFromSchema({
   required NodeSnapshotCommonSchemaFields common,
   required TextNodeSnapshotSchemaFields fields,
 }) {
@@ -343,7 +411,7 @@ TextNodeSnapshot _textSnapshotFromSchema({
   );
 }
 
-StrokeNodeSnapshot _strokeSnapshotFromSchema({
+StrokeNodeSnapshot strokeSnapshotFromSchema({
   required NodeSnapshotCommonSchemaFields common,
   required StrokeNodeSnapshotSchemaFields fields,
 }) {
@@ -365,7 +433,7 @@ StrokeNodeSnapshot _strokeSnapshotFromSchema({
   );
 }
 
-LineNodeSnapshot _lineSnapshotFromSchema({
+LineNodeSnapshot lineSnapshotFromSchema({
   required NodeSnapshotCommonSchemaFields common,
   required LineNodeSchemaFields fields,
 }) {
@@ -387,7 +455,7 @@ LineNodeSnapshot _lineSnapshotFromSchema({
   );
 }
 
-RectNodeSnapshot _rectSnapshotFromSchema({
+RectNodeSnapshot rectSnapshotFromSchema({
   required NodeSnapshotCommonSchemaFields common,
   required RectNodeSchemaFields fields,
 }) {
@@ -409,7 +477,7 @@ RectNodeSnapshot _rectSnapshotFromSchema({
   );
 }
 
-PathNodeSnapshot _pathSnapshotFromSchema({
+PathNodeSnapshot pathSnapshotFromSchema({
   required NodeSnapshotCommonSchemaFields common,
   required PathNodeSchemaFields fields,
 }) {

@@ -223,7 +223,7 @@ family-first mapping graph.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] `scene_node_boundary_mapping.dart` becomes a part-free family dispatcher
+### Slice 1. [x] `scene_node_boundary_mapping.dart` becomes a part-free family dispatcher
 
 #### Slice Contract
 
@@ -256,7 +256,7 @@ replaced mapping `part` bodies from the facade.
 - Runtime node import-from-snapshot and import-from-spec entrypoints still
   resolve through the canonical facade.
 
-### Slice 2. [ ] All runtime import/export consumers share the same family-local mapping graph
+### Slice 2. [x] All runtime import/export consumers share the same family-local mapping graph
 
 #### Slice Contract
 

@@ -1,31 +1,16 @@
-import 'dart:ui';
-
-import '../contract/internal/node_boundary_schema.dart';
 import '../contract/node_spec.dart';
 import '../contract/snapshot.dart';
-import '../contract/transform2d.dart';
 import '../core/nodes.dart';
-import '../core/text_layout.dart';
+import 'scene_node_boundary_mapping_image.dart';
+import 'scene_node_boundary_mapping_line.dart';
+import 'scene_node_boundary_mapping_path.dart';
+import 'scene_node_boundary_mapping_rect.dart';
+import 'scene_node_boundary_mapping_stroke.dart';
+import 'scene_node_boundary_mapping_support.dart';
+import 'scene_node_boundary_mapping_text.dart';
 
-part 'scene_node_boundary_mapping_common.part.dart';
-part 'scene_node_boundary_mapping_from_snapshot.part.dart';
-part 'scene_node_boundary_mapping_from_spec.part.dart';
-part 'scene_node_boundary_mapping_to_snapshot.part.dart';
-
-enum TextNodeSnapshotSizePolicy { preserveBoundarySize, recomputeFromLayout }
-
-typedef _RuntimeNodeCommonFields = ({
-  NodeId id,
-  int instanceRevision,
-  Transform2D transform,
-  double opacity,
-  double hitPadding,
-  bool isVisible,
-  bool isSelectable,
-  bool isLocked,
-  bool isDeletable,
-  bool isTransformable,
-});
+export 'scene_node_boundary_mapping_support.dart'
+    show TextNodeSnapshotSizePolicy;
 
 SceneNode sceneNodeFromSnapshotViaBoundarySchema(
   NodeSnapshot node, {
@@ -35,91 +20,17 @@ SceneNode sceneNodeFromSnapshotViaBoundarySchema(
 }) {
   switch (node) {
     case ImageNodeSnapshot image:
-      return _nodeFromSnapshotViaBoundarySchema(
-        snapshot: image,
-        instanceRevision: instanceRevision,
-        extractFields: (image) => NodeBoundarySchema.imageFieldsFromValidated((
-          imageId: image.imageId,
-          size: image.size,
-          naturalSize: image.naturalSize,
-        )),
-        buildNode: _imageNodeFromSchema,
-      );
+      return _sceneNodeImageFromSnapshot(image, instanceRevision);
     case TextNodeSnapshot text:
-      return _nodeFromSnapshotViaBoundarySchema(
-        snapshot: text,
-        instanceRevision: instanceRevision,
-        extractFields: (text) =>
-            NodeBoundarySchema.textSnapshotFieldsFromValidated((
-              text: text.text,
-              size: text.size,
-              fontSize: text.fontSize,
-              color: text.color,
-              align: text.align,
-              isBold: text.isBold,
-              isItalic: text.isItalic,
-              isUnderline: text.isUnderline,
-              fontFamily: text.fontFamily,
-              maxWidth: text.maxWidth,
-              lineHeight: text.lineHeight,
-            )),
-        buildNode: ({required common, required fields}) =>
-            _textNodeFromSnapshotSchema(
-              common: common,
-              fields: fields,
-              textSizePolicy: textSizePolicy,
-            ),
-      );
+      return _sceneNodeTextFromSnapshot(text, instanceRevision, textSizePolicy);
     case StrokeNodeSnapshot stroke:
-      return _nodeFromSnapshotViaBoundarySchema(
-        snapshot: stroke,
-        instanceRevision: instanceRevision,
-        extractFields: (stroke) =>
-            NodeBoundarySchema.strokeSnapshotFieldsFromValidated((
-              points: stroke.points,
-              pointsRevision: stroke.pointsRevision,
-              thickness: stroke.thickness,
-              color: stroke.color,
-            )),
-        buildNode: _strokeNodeFromSnapshotSchema,
-      );
+      return _sceneNodeStrokeFromSnapshot(stroke, instanceRevision);
     case LineNodeSnapshot line:
-      return _nodeFromSnapshotViaBoundarySchema(
-        snapshot: line,
-        instanceRevision: instanceRevision,
-        extractFields: (line) => NodeBoundarySchema.lineFieldsFromValidated((
-          start: line.start,
-          end: line.end,
-          thickness: line.thickness,
-          color: line.color,
-        )),
-        buildNode: _lineNodeFromSchema,
-      );
+      return _sceneNodeLineFromSnapshot(line, instanceRevision);
     case RectNodeSnapshot rect:
-      return _nodeFromSnapshotViaBoundarySchema(
-        snapshot: rect,
-        instanceRevision: instanceRevision,
-        extractFields: (rect) => NodeBoundarySchema.rectFieldsFromValidated((
-          size: rect.size,
-          fillColor: rect.fillColor,
-          strokeColor: rect.strokeColor,
-          strokeWidth: rect.strokeWidth,
-        )),
-        buildNode: _rectNodeFromSchema,
-      );
+      return _sceneNodeRectFromSnapshot(rect, instanceRevision);
     case PathNodeSnapshot path:
-      return _nodeFromSnapshotViaBoundarySchema(
-        snapshot: path,
-        instanceRevision: instanceRevision,
-        extractFields: (path) => NodeBoundarySchema.pathFieldsFromValidated((
-          svgPathData: path.svgPathData,
-          fillColor: path.fillColor,
-          strokeColor: path.strokeColor,
-          strokeWidth: path.strokeWidth,
-          fillRule: path.fillRule,
-        )),
-        buildNode: _pathNodeFromSchema,
-      );
+      return _sceneNodePathFromSnapshot(path, instanceRevision);
   }
 }
 
@@ -128,195 +39,63 @@ SceneNode sceneNodeFromSpecViaBoundarySchema(
   required NodeId fallbackId,
   required int instanceRevision,
 }) {
+  final runtimeContext = (
+    fallbackId: fallbackId,
+    instanceRevision: instanceRevision,
+  );
   switch (spec) {
     case ImageNodeSpec image:
-      return _nodeFromSpecViaBoundarySchema(
-        spec: image,
-        buildCommon: (common) => _runtimeCommonFromSpec(
-          common,
-          fallbackId: fallbackId,
-          instanceRevision: instanceRevision,
-        ),
-        extractFields: (image) => NodeBoundarySchema.imageFieldsFromValidated((
-          imageId: image.imageId,
-          size: image.size,
-          naturalSize: image.naturalSize,
-        )),
-        buildNode: _imageNodeFromSchema,
-      );
+      return _sceneNodeImageFromSpec(image, runtimeContext);
     case TextNodeSpec text:
-      return _nodeFromSpecViaBoundarySchema(
-        spec: text,
-        buildCommon: (common) => _runtimeCommonFromSpec(
-          common,
-          fallbackId: fallbackId,
-          instanceRevision: instanceRevision,
-        ),
-        extractFields: (text) =>
-            NodeBoundarySchema.textSpecFieldsFromValidated((
-              text: text.text,
-              fontSize: text.fontSize,
-              color: text.color,
-              align: text.align,
-              isBold: text.isBold,
-              isItalic: text.isItalic,
-              isUnderline: text.isUnderline,
-              fontFamily: text.fontFamily,
-              maxWidth: text.maxWidth,
-              lineHeight: text.lineHeight,
-            )),
-        buildNode: _textNodeFromSpecSchema,
-      );
+      return _sceneNodeTextFromSpec(text, runtimeContext);
     case StrokeNodeSpec stroke:
-      return _nodeFromSpecViaBoundarySchema(
-        spec: stroke,
-        buildCommon: (common) => _runtimeCommonFromSpec(
-          common,
-          fallbackId: fallbackId,
-          instanceRevision: instanceRevision,
-        ),
-        extractFields: (stroke) =>
-            NodeBoundarySchema.strokeSpecFieldsFromValidated((
-              points: stroke.points,
-              thickness: stroke.thickness,
-              color: stroke.color,
-            )),
-        buildNode: _strokeNodeFromSpecSchema,
-      );
+      return _sceneNodeStrokeFromSpec(stroke, runtimeContext);
     case LineNodeSpec line:
-      return _nodeFromSpecViaBoundarySchema(
-        spec: line,
-        buildCommon: (common) => _runtimeCommonFromSpec(
-          common,
-          fallbackId: fallbackId,
-          instanceRevision: instanceRevision,
-        ),
-        extractFields: (line) => NodeBoundarySchema.lineFieldsFromValidated((
-          start: line.start,
-          end: line.end,
-          thickness: line.thickness,
-          color: line.color,
-        )),
-        buildNode: _lineNodeFromSchema,
-      );
+      return _sceneNodeLineFromSpec(line, runtimeContext);
     case RectNodeSpec rect:
-      return _nodeFromSpecViaBoundarySchema(
-        spec: rect,
-        buildCommon: (common) => _runtimeCommonFromSpec(
-          common,
-          fallbackId: fallbackId,
-          instanceRevision: instanceRevision,
-        ),
-        extractFields: (rect) => NodeBoundarySchema.rectFieldsFromValidated((
-          size: rect.size,
-          fillColor: rect.fillColor,
-          strokeColor: rect.strokeColor,
-          strokeWidth: rect.strokeWidth,
-        )),
-        buildNode: _rectNodeFromSchema,
-      );
+      return _sceneNodeRectFromSpec(rect, runtimeContext);
     case PathNodeSpec path:
-      return _nodeFromSpecViaBoundarySchema(
-        spec: path,
-        buildCommon: (common) => _runtimeCommonFromSpec(
-          common,
-          fallbackId: fallbackId,
-          instanceRevision: instanceRevision,
-        ),
-        extractFields: (path) => NodeBoundarySchema.pathFieldsFromValidated((
-          svgPathData: path.svgPathData,
-          fillColor: path.fillColor,
-          strokeColor: path.strokeColor,
-          strokeWidth: path.strokeWidth,
-          fillRule: path.fillRule,
-        )),
-        buildNode: _pathNodeFromSchema,
-      );
+      return _sceneNodePathFromSpec(path, runtimeContext);
   }
 }
 
 NodeSnapshot sceneNodeSnapshotFromViaBoundarySchema(SceneNode node) {
   switch (node.type) {
     case NodeType.image:
-      final image = node as ImageNode;
-      return _nodeSnapshotFromNodeViaBoundarySchema(
-        node: image,
-        extractFields: (image) => NodeBoundarySchema.imageFieldsFromValidated((
-          imageId: image.imageId,
-          size: image.size,
-          naturalSize: image.naturalSize,
-        )),
-        buildSnapshot: _imageSnapshotFromSchema,
+      return sceneNodeSnapshotFromViaSchema(
+        node: node as ImageNode,
+        extractFields: imageNodeSchemaFieldsFromNode,
+        buildSnapshot: imageSnapshotFromSchema,
       );
     case NodeType.text:
-      final text = node as TextNode;
-      return _nodeSnapshotFromNodeViaBoundarySchema(
-        node: text,
-        extractFields: (text) =>
-            NodeBoundarySchema.textSnapshotFieldsFromValidated((
-              text: text.text,
-              size: text.size,
-              fontSize: text.fontSize,
-              color: text.color,
-              align: text.align,
-              isBold: text.isBold,
-              isItalic: text.isItalic,
-              isUnderline: text.isUnderline,
-              fontFamily: text.fontFamily,
-              maxWidth: text.maxWidth,
-              lineHeight: text.lineHeight,
-            )),
-        buildSnapshot: _textSnapshotFromSchema,
+      return sceneNodeSnapshotFromViaSchema(
+        node: node as TextNode,
+        extractFields: textNodeSchemaFieldsFromNode,
+        buildSnapshot: textSnapshotFromSchema,
       );
     case NodeType.stroke:
-      final stroke = node as StrokeNode;
-      return _nodeSnapshotFromNodeViaBoundarySchema(
-        node: stroke,
-        extractFields: (stroke) =>
-            NodeBoundarySchema.strokeSnapshotFieldsFromValidated((
-              points: stroke.points,
-              pointsRevision: stroke.pointsRevision,
-              thickness: stroke.thickness,
-              color: stroke.color,
-            )),
-        buildSnapshot: _strokeSnapshotFromSchema,
+      return sceneNodeSnapshotFromViaSchema(
+        node: node as StrokeNode,
+        extractFields: strokeNodeSchemaFieldsFromNode,
+        buildSnapshot: strokeSnapshotFromSchema,
       );
     case NodeType.line:
-      final line = node as LineNode;
-      return _nodeSnapshotFromNodeViaBoundarySchema(
-        node: line,
-        extractFields: (line) => NodeBoundarySchema.lineFieldsFromValidated((
-          start: line.start,
-          end: line.end,
-          thickness: line.thickness,
-          color: line.color,
-        )),
-        buildSnapshot: _lineSnapshotFromSchema,
+      return sceneNodeSnapshotFromViaSchema(
+        node: node as LineNode,
+        extractFields: lineNodeSchemaFieldsFromNode,
+        buildSnapshot: lineSnapshotFromSchema,
       );
     case NodeType.rect:
-      final rect = node as RectNode;
-      return _nodeSnapshotFromNodeViaBoundarySchema(
-        node: rect,
-        extractFields: (rect) => NodeBoundarySchema.rectFieldsFromValidated((
-          size: rect.size,
-          fillColor: rect.fillColor,
-          strokeColor: rect.strokeColor,
-          strokeWidth: rect.strokeWidth,
-        )),
-        buildSnapshot: _rectSnapshotFromSchema,
+      return sceneNodeSnapshotFromViaSchema(
+        node: node as RectNode,
+        extractFields: rectNodeSchemaFieldsFromNode,
+        buildSnapshot: rectSnapshotFromSchema,
       );
     case NodeType.path:
-      final path = node as PathNode;
-      return _nodeSnapshotFromNodeViaBoundarySchema(
-        node: path,
-        extractFields: (path) => NodeBoundarySchema.pathFieldsFromValidated((
-          svgPathData: path.svgPathData,
-          fillColor: path.fillColor,
-          strokeColor: path.strokeColor,
-          strokeWidth: path.strokeWidth,
-          fillRule: path.fillRule,
-        )),
-        buildSnapshot: _pathSnapshotFromSchema,
+      return sceneNodeSnapshotFromViaSchema(
+        node: node as PathNode,
+        extractFields: pathNodeSchemaFieldsFromNode,
+        buildSnapshot: pathSnapshotFromSchema,
       );
   }
 }
@@ -326,4 +105,166 @@ SceneNode cloneSceneNodeViaBoundarySchema(SceneNode node) {
     sceneNodeSnapshotFromViaBoundarySchema(node),
     instanceRevision: node.instanceRevision,
   );
+}
+
+ImageNode _sceneNodeImageFromSnapshot(
+  ImageNodeSnapshot image,
+  int instanceRevision,
+) {
+  return sceneNodeFromSnapshotViaSchema(
+        snapshot: image,
+        instanceRevision: instanceRevision,
+        extractFields: imageNodeSchemaFieldsFromSnapshot,
+        buildNode: imageNodeFromSchema,
+      )
+      as ImageNode;
+}
+
+TextNode _sceneNodeTextFromSnapshot(
+  TextNodeSnapshot text,
+  int instanceRevision,
+  TextNodeSnapshotSizePolicy textSizePolicy,
+) {
+  return sceneNodeFromSnapshotViaSchema(
+        snapshot: text,
+        instanceRevision: instanceRevision,
+        extractFields: textNodeSchemaFieldsFromSnapshot,
+        buildNode: ({required common, required fields}) =>
+            textNodeFromSnapshotSchema(
+              common: common,
+              fields: fields,
+              textSizePolicy: textSizePolicy,
+            ),
+      )
+      as TextNode;
+}
+
+StrokeNode _sceneNodeStrokeFromSnapshot(
+  StrokeNodeSnapshot stroke,
+  int instanceRevision,
+) {
+  return sceneNodeFromSnapshotViaSchema(
+        snapshot: stroke,
+        instanceRevision: instanceRevision,
+        extractFields: strokeNodeSchemaFieldsFromSnapshot,
+        buildNode: strokeNodeFromSnapshotSchema,
+      )
+      as StrokeNode;
+}
+
+LineNode _sceneNodeLineFromSnapshot(
+  LineNodeSnapshot line,
+  int instanceRevision,
+) {
+  return sceneNodeFromSnapshotViaSchema(
+        snapshot: line,
+        instanceRevision: instanceRevision,
+        extractFields: lineNodeSchemaFieldsFromSnapshot,
+        buildNode: lineNodeFromSchema,
+      )
+      as LineNode;
+}
+
+RectNode _sceneNodeRectFromSnapshot(
+  RectNodeSnapshot rect,
+  int instanceRevision,
+) {
+  return sceneNodeFromSnapshotViaSchema(
+        snapshot: rect,
+        instanceRevision: instanceRevision,
+        extractFields: rectNodeSchemaFieldsFromSnapshot,
+        buildNode: rectNodeFromSchema,
+      )
+      as RectNode;
+}
+
+PathNode _sceneNodePathFromSnapshot(
+  PathNodeSnapshot path,
+  int instanceRevision,
+) {
+  return sceneNodeFromSnapshotViaSchema(
+        snapshot: path,
+        instanceRevision: instanceRevision,
+        extractFields: pathNodeSchemaFieldsFromSnapshot,
+        buildNode: pathNodeFromSchema,
+      )
+      as PathNode;
+}
+
+ImageNode _sceneNodeImageFromSpec(
+  ImageNodeSpec image,
+  SpecRuntimeNodeContext runtimeContext,
+) {
+  return sceneNodeFromSpecViaSchema(
+        spec: image,
+        runtimeContext: runtimeContext,
+        extractFields: imageNodeSchemaFieldsFromSpec,
+        buildNode: imageNodeFromSchema,
+      )
+      as ImageNode;
+}
+
+TextNode _sceneNodeTextFromSpec(
+  TextNodeSpec text,
+  SpecRuntimeNodeContext runtimeContext,
+) {
+  return sceneNodeFromSpecViaSchema(
+        spec: text,
+        runtimeContext: runtimeContext,
+        extractFields: textNodeSchemaFieldsFromSpec,
+        buildNode: textNodeFromSpecSchema,
+      )
+      as TextNode;
+}
+
+StrokeNode _sceneNodeStrokeFromSpec(
+  StrokeNodeSpec stroke,
+  SpecRuntimeNodeContext runtimeContext,
+) {
+  return sceneNodeFromSpecViaSchema(
+        spec: stroke,
+        runtimeContext: runtimeContext,
+        extractFields: strokeNodeSchemaFieldsFromSpec,
+        buildNode: strokeNodeFromSpecSchema,
+      )
+      as StrokeNode;
+}
+
+LineNode _sceneNodeLineFromSpec(
+  LineNodeSpec line,
+  SpecRuntimeNodeContext runtimeContext,
+) {
+  return sceneNodeFromSpecViaSchema(
+        spec: line,
+        runtimeContext: runtimeContext,
+        extractFields: lineNodeSchemaFieldsFromSpec,
+        buildNode: lineNodeFromSchema,
+      )
+      as LineNode;
+}
+
+RectNode _sceneNodeRectFromSpec(
+  RectNodeSpec rect,
+  SpecRuntimeNodeContext runtimeContext,
+) {
+  return sceneNodeFromSpecViaSchema(
+        spec: rect,
+        runtimeContext: runtimeContext,
+        extractFields: rectNodeSchemaFieldsFromSpec,
+        buildNode: rectNodeFromSchema,
+      )
+      as RectNode;
+}
+
+PathNode _sceneNodePathFromSpec(
+  PathNodeSpec path,
+  SpecRuntimeNodeContext runtimeContext,
+) {
+  return sceneNodeFromSpecViaSchema(
+        spec: path,
+        runtimeContext: runtimeContext,
+        extractFields: pathNodeSchemaFieldsFromSpec,
+        buildNode: pathNodeFromSchema,
+      )
+      as PathNode;
 }
