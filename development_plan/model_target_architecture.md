@@ -2,10 +2,10 @@
 
 ## Purpose
 
-This document is the source of truth for the post-step-`50` target
+This document is the source of truth for the post-step-`51` target
 architecture of `lib/src/model`.
 
-Steps `45-50` may choose local code motion, helper placement, and verification
+Steps `45-51` may choose local code motion, helper placement, and verification
 sequencing only inside the graph defined here. They are not allowed to
 reinterpret the target graph while executing the plan.
 
@@ -56,7 +56,11 @@ support buckets or recover the mixed ownership that steps `40-47` removed.
   shared runtime import/export owners.
 - The parsed-map decode graph beneath `scene_builder.dart` is:
   - `scene_builder_decode_json.dart` as a thin orchestration facade.
-  - `scene_builder_decode_scene.dart` as scene-topology decode owner.
+  - `scene_builder_decode_scene.dart` as scene decode orchestration owner.
+  - `scene_builder_decode_scene_metadata.dart` as schema-version and
+    scene-metadata decode owner.
+  - `scene_builder_decode_layers.dart` as background/content layer traversal
+    decode owner.
   - `scene_builder_decode_node_common.dart` as common node decode owner.
   - `scene_builder_decode_node_family.dart` as family dispatch owner.
   - `scene_builder_decode_image.dart`
@@ -106,6 +110,7 @@ support buckets or recover the mixed ownership that steps `40-47` removed.
 - `document.dart` stays the canonical downstream transaction facade.
 - Focused document owners remain:
   - `document_locator.dart`
+  - `document_scene_insert.dart`
   - `document_scene_edit.dart`
   - `document_selection.dart`
   - `document_clone.dart`
@@ -119,7 +124,7 @@ support buckets or recover the mixed ownership that steps `40-47` removed.
   - `document_node_patch_rect.dart`
   - `document_node_patch_path.dart`
 
-## Explicit Non-Goals For Steps 45-50
+## Explicit Non-Goals For Steps 45-51
 
 - Reopening `scene_from_snapshot.dart` / `scene_snapshot_from_scene.dart`
   ownership.
@@ -130,12 +135,14 @@ support buckets or recover the mixed ownership that steps `40-47` removed.
 
 ## Residual Policy
 
-### Files that must not remain as residual mixed-owner hotspots after step `50`
+### Files that must not remain as residual mixed-owner hotspots after step `51`
 
 - `lib/src/model/scene_builder_decode_json.dart`
 - `lib/src/model/scene_builder_json_require.dart`
 - `lib/src/model/scene_node_boundary_mapping_support.dart`
 - `lib/src/model/document_node_patch.dart`
+- `lib/src/model/scene_builder_decode_scene.dart`
+- `lib/src/model/document_scene_edit.dart`
 
 If any of these files still carry the mixed-owner role they have today, the
 sequence has not reached its target state.
@@ -160,6 +167,30 @@ sequence has not reached its target state.
   and
   `document_scene_edit.dart::_txnReindexLayerNodes`
   must be removed.
+
+### Owner seams that must not remain open after step `51`
+
+- `scene_builder_decode_scene.dart` must no longer own both
+  scene-metadata decode
+  and
+  layer traversal decode in the same file.
+  After step `51`, it remains only the orchestration entry below
+  `scene_builder_decode_json.dart`, while
+  `scene_builder_decode_scene_metadata.dart`
+  owns schema-version / camera / background / palette decode and
+  `scene_builder_decode_layers.dart`
+  owns background/content layer traversal decode.
+- `document_scene_edit.dart` must no longer own both
+  insert or target-layer resolution
+  and
+  erase or clear semantics.
+  After step `51`,
+  `document_scene_insert.dart`
+  owns `txnInsertNodeInScene`, `txnResolveInsertLayerIndex`, and
+  `txnFindContentLayerIndexById`,
+  while
+  `document_scene_edit.dart`
+  owns erase / prepared-removal / clear semantics only.
 
 ### Measured post-step-`50` baseline
 
@@ -186,44 +217,45 @@ sequence has not reached its target state.
 - No new `HIGH` / `VERY HIGH` hotspot appears outside that accepted residual
   set.
 
+### Post-step-`51` large-file target
+
+- `scene_builder_decode_scene.dart` must leave the accepted large-file set by
+  becoming a thin orchestration owner.
+- `document_scene_edit.dart` must stay below the review threshold and must not
+  reacquire insert or target-layer ownership.
+
 ### Large-file review threshold for this sequence
 
 - Review every top-level `lib/src/model/*.dart` file above `300` lines during
-  step `50`.
+  step `50` and any file that step `51` touches while splitting the two
+  residual owner seams.
 
-### Large files currently expected to remain acceptable after steps `45-50`
+### Large files currently expected to remain acceptable after steps `45-51`
 
-These files may stay large only if step `50` confirms that they are focused
-owners and not the center of a removed mixed-owner clone family:
+These files may stay large only if step `51` confirms that they are focused
+owners and not the center of a removed mixed-owner seam:
 
-- `lib/src/model/scene_builder_decode_scene.dart`
 - `lib/src/model/scene_value_validation_node.dart`
 - `lib/src/model/scene_value_validation_top_level.dart`
 - `lib/src/model/scene_policy.dart`
 
-Measured post-step-`50` line counts keep only the four files above the
-threshold:
-`scene_value_validation_node.dart` (`603`),
-`scene_policy.dart` (`380`),
-`scene_value_validation_top_level.dart` (`333`),
-and
-`scene_builder_decode_scene.dart` (`320`).
-`document_scene_edit.dart` is now below the review threshold at `287` lines and
-therefore leaves the accepted large-file set.
+Measured post-step-`50` line counts still keep
+`scene_builder_decode_scene.dart` (`320`) above the threshold, which is why
+step `51` exists. `document_scene_edit.dart` is `287` lines, but it remains an
+open owner-split seam until insert/layer-target responsibilities move into
+`document_scene_insert.dart`.
 
 ### Residual red metrics that may be acceptable without opening a new plan step
 
 Only the following currently observed low-severity residuals may remain after
-steps `45-50`, and only if step `50` classifies them explicitly as focused
+steps `45-51`, and only if step `51` classifies them explicitly as focused
 tradeoffs:
 
 - `lib/src/model/document.dart`: `number-of-imports`
 - `lib/src/model/document.dart`: `txnInsertNodeInScene` parameter count
-- `lib/src/model/document_scene_edit.dart`: `txnInsertNodeInScene` parameter
+- `lib/src/model/document_scene_insert.dart`: `txnInsertNodeInScene` parameter
   count
 - `lib/src/model/scene_builder_decode_node_family.dart`: `number-of-imports`
-- `lib/src/model/scene_builder_decode_scene.dart`: `sceneBuilderDecodeSceneSnapshotFromJson`
-  source lines
 - `lib/src/model/scene_from_snapshot.dart`: `sceneFromSnapshot` source lines
 - `lib/src/model/scene_value_validation_node.dart`: `number-of-imports`
 
@@ -232,7 +264,7 @@ other seams without updating this document.
 
 ## Closure Conditions
 
-Step `50` may close only if all of the following are true:
+Step `51` may close only if all of the following are true:
 
 - The measured `model` baseline matches this target graph.
 - No removed mixed-owner seam is silently re-accepted as final state.
