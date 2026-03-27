@@ -1,0 +1,318 @@
+import '../contract/ids.dart' show LayerId;
+import '../core/nodes.dart';
+import '../core/scene.dart';
+import '../core/selection_policy.dart';
+import 'document_locator.dart' as locator;
+
+bool txnInsertNodeInScene({
+  required Scene scene,
+  required Map<NodeId, ({int layerIndex, int nodeIndex})> nodeLocator,
+  required SceneNode node,
+  required int layerIndex,
+  int? insertIndex,
+}) {
+  if (nodeLocator.containsKey(node.id)) {
+    throw StateError('Node id must be unique: ${node.id}');
+  }
+  if (layerIndex < 0 || layerIndex >= scene.layers.length) {
+    throw RangeError.range(
+      layerIndex,
+      0,
+      scene.layers.length - 1,
+      'layerIndex',
+    );
+  }
+
+  final targetLayer = scene.layers[layerIndex];
+  final insertedNodeIndex = insertIndex ?? targetLayer.nodes.length;
+  if (insertedNodeIndex < 0 || insertedNodeIndex > targetLayer.nodes.length) {
+    throw RangeError.range(
+      insertedNodeIndex,
+      0,
+      targetLayer.nodes.length,
+      'insertIndex',
+    );
+  }
+
+  if (insertedNodeIndex == targetLayer.nodes.length) {
+    targetLayer.nodes.add(node);
+  } else {
+    targetLayer.nodes.insert(insertedNodeIndex, node);
+  }
+  _txnReindexLayerNodes(
+    nodeLocator: nodeLocator,
+    layerIndex: layerIndex,
+    layerNodes: targetLayer.nodes,
+    startNodeIndex: insertedNodeIndex,
+  );
+  return true;
+}
+
+SceneNode? txnEraseNodeFromScene({
+  required Scene scene,
+  required Map<NodeId, ({int layerIndex, int nodeIndex})> nodeLocator,
+  required NodeId nodeId,
+}) {
+  final found = locator.txnFindNodeByLocator(
+    scene: scene,
+    nodeLocator: nodeLocator,
+    nodeId: nodeId,
+  );
+  if (found == null) {
+    return null;
+  }
+  final removed = found.node;
+  final removedNodeIds = txnErasePreparedNodesFromScene(
+    scene: scene,
+    nodeLocator: nodeLocator,
+    removalsByLayer: <int, List<({NodeId nodeId, int nodeIndex})>>{
+      found.layerIndex: <({NodeId nodeId, int nodeIndex})>[
+        (nodeId: nodeId, nodeIndex: found.nodeIndex),
+      ],
+    },
+  );
+  if (removedNodeIds.isEmpty) {
+    return null;
+  }
+  return removed;
+}
+
+List<NodeId> txnErasePreparedNodesFromScene({
+  required Scene scene,
+  required Map<NodeId, ({int layerIndex, int nodeIndex})> nodeLocator,
+  required Map<int, List<({NodeId nodeId, int nodeIndex})>> removalsByLayer,
+}) {
+  if (removalsByLayer.isEmpty) {
+    return const <NodeId>[];
+  }
+
+  final removedNodeIds = <NodeId>[];
+  final sortedLayerIndexes = removalsByLayer.keys.toList(growable: false)
+    ..sort();
+  for (final layerIndex in sortedLayerIndexes) {
+    removedNodeIds.addAll(
+      _txnErasePreparedNodesFromLayer(
+        scene: scene,
+        nodeLocator: nodeLocator,
+        layerIndex: layerIndex,
+        preparedRemovals: removalsByLayer[layerIndex],
+      ),
+    );
+  }
+  if (removedNodeIds.isEmpty) {
+    return const <NodeId>[];
+  }
+  return List<NodeId>.unmodifiable(removedNodeIds);
+}
+
+List<NodeId> txnEraseNodesFromScene({
+  required Scene scene,
+  required Map<NodeId, ({int layerIndex, int nodeIndex})> nodeLocator,
+  required Set<NodeId> nodeIds,
+}) {
+  if (nodeIds.isEmpty) {
+    return const <NodeId>[];
+  }
+
+  final removalsByLayer = <int, List<({NodeId nodeId, int nodeIndex})>>{};
+  for (final nodeId in nodeIds) {
+    final found = locator.txnFindNodeByLocator(
+      scene: scene,
+      nodeLocator: nodeLocator,
+      nodeId: nodeId,
+    );
+    if (found == null ||
+        found.layerIndex == -1 ||
+        !isNodeDeletableInLayer(found.node)) {
+      continue;
+    }
+    removalsByLayer
+        .putIfAbsent(
+          found.layerIndex,
+          () => <({NodeId nodeId, int nodeIndex})>[],
+        )
+        .add((nodeId: found.node.id, nodeIndex: found.nodeIndex));
+  }
+  return txnErasePreparedNodesFromScene(
+    scene: scene,
+    nodeLocator: nodeLocator,
+    removalsByLayer: removalsByLayer,
+  );
+}
+
+({List<NodeId> removedNodeIds, bool didStructuralClear})
+txnClearSceneKeepBackground({
+  required Scene scene,
+  required Map<NodeId, ({int layerIndex, int nodeIndex})> nodeLocator,
+}) {
+  final removedNodeIds = <NodeId>[
+    for (final layer in scene.layers) ...layer.nodes.map((node) => node.id),
+  ];
+  var didStructuralClear = false;
+
+  if (scene.backgroundLayer == null) {
+    scene.backgroundLayer = BackgroundLayer();
+    didStructuralClear = true;
+  }
+  if (scene.layers.isNotEmpty) {
+    scene.layers.clear();
+    didStructuralClear = true;
+  }
+  for (final nodeId in removedNodeIds) {
+    nodeLocator.remove(nodeId);
+  }
+  return (
+    removedNodeIds: List<NodeId>.unmodifiable(removedNodeIds),
+    didStructuralClear: didStructuralClear,
+  );
+}
+
+int txnResolveInsertLayerIndex({
+  required Scene scene,
+  LayerId? layerId,
+  LayerId Function()? nextLayerId,
+}) {
+  if (layerId != null) {
+    final index = txnFindContentLayerIndexById(scene: scene, layerId: layerId);
+    if (index == null) {
+      throw ArgumentError.value(
+        layerId,
+        'layerId',
+        'Unknown content layer id.',
+      );
+    }
+    return index;
+  }
+  if (scene.layers.isEmpty) {
+    final generatedId = nextLayerId == null ? 'layer-0' : nextLayerId();
+    scene.layers.add(ContentLayer(id: generatedId));
+    return 0;
+  }
+  return scene.layers.length - 1;
+}
+
+int? txnFindContentLayerIndexById({
+  required Scene scene,
+  required LayerId layerId,
+}) {
+  for (var index = 0; index < scene.layers.length; index++) {
+    if (scene.layers[index].id == layerId) {
+      return index;
+    }
+  }
+  return null;
+}
+
+List<NodeId> _txnErasePreparedNodesFromLayer({
+  required Scene scene,
+  required Map<NodeId, ({int layerIndex, int nodeIndex})> nodeLocator,
+  required int layerIndex,
+  required List<({NodeId nodeId, int nodeIndex})>? preparedRemovals,
+}) {
+  if (preparedRemovals == null || preparedRemovals.isEmpty) {
+    return const <NodeId>[];
+  }
+  final layerNodes = _txnResolveLayerNodesForErase(
+    scene: scene,
+    layerIndex: layerIndex,
+  );
+  if (layerNodes == null) {
+    return const <NodeId>[];
+  }
+  final validRemovals = _txnCollectValidPreparedRemovals(
+    layerNodes: layerNodes,
+    preparedRemovals: preparedRemovals,
+  );
+  if (validRemovals.isEmpty) {
+    return const <NodeId>[];
+  }
+  final removedNodeIds = _txnEraseValidatedRemovals(
+    nodeLocator: nodeLocator,
+    layerNodes: layerNodes,
+    validRemovals: validRemovals,
+  );
+  _txnReindexLayerNodes(
+    nodeLocator: nodeLocator,
+    layerIndex: layerIndex,
+    layerNodes: layerNodes,
+  );
+  return removedNodeIds;
+}
+
+List<({NodeId nodeId, int nodeIndex})> _txnCollectValidPreparedRemovals({
+  required List<SceneNode> layerNodes,
+  required List<({NodeId nodeId, int nodeIndex})> preparedRemovals,
+}) {
+  final validRemovals = <({NodeId nodeId, int nodeIndex})>[];
+  final seenRemovalKeys = <(NodeId, int)>{};
+  var hasDuplicateRemovals = false;
+  for (final removal in preparedRemovals) {
+    final nodeIndex = removal.nodeIndex;
+    if (nodeIndex < 0 || nodeIndex >= layerNodes.length) {
+      continue;
+    }
+    if (layerNodes[nodeIndex].id != removal.nodeId) {
+      continue;
+    }
+    final removalKey = (removal.nodeId, nodeIndex);
+    if (!seenRemovalKeys.add(removalKey)) {
+      hasDuplicateRemovals = true;
+      continue;
+    }
+    validRemovals.add(removal);
+  }
+  assert(
+    !hasDuplicateRemovals,
+    'Prepared node removals must not contain duplicate nodeId/nodeIndex pairs.',
+  );
+  validRemovals.sort(
+    (left, right) => left.nodeIndex.compareTo(right.nodeIndex),
+  );
+  return validRemovals;
+}
+
+List<NodeId> _txnEraseValidatedRemovals({
+  required Map<NodeId, ({int layerIndex, int nodeIndex})> nodeLocator,
+  required List<SceneNode> layerNodes,
+  required List<({NodeId nodeId, int nodeIndex})> validRemovals,
+}) {
+  final removedNodeIds = validRemovals
+      .map((removal) => removal.nodeId)
+      .toList(growable: false);
+  for (final removal in validRemovals.reversed) {
+    layerNodes.removeAt(removal.nodeIndex);
+    nodeLocator.remove(removal.nodeId);
+  }
+  return removedNodeIds;
+}
+
+List<SceneNode>? _txnResolveLayerNodesForErase({
+  required Scene scene,
+  required int layerIndex,
+}) {
+  if (layerIndex == -1) {
+    return scene.backgroundLayer?.nodes;
+  }
+  if (layerIndex < 0 || layerIndex >= scene.layers.length) {
+    return null;
+  }
+  return scene.layers[layerIndex].nodes;
+}
+
+void _txnReindexLayerNodes({
+  required Map<NodeId, ({int layerIndex, int nodeIndex})> nodeLocator,
+  required int layerIndex,
+  required List<SceneNode> layerNodes,
+  int startNodeIndex = 0,
+}) {
+  for (
+    var nodeIndex = startNodeIndex;
+    nodeIndex < layerNodes.length;
+    nodeIndex++
+  ) {
+    nodeLocator[layerNodes[nodeIndex].id] = (
+      layerIndex: layerIndex,
+      nodeIndex: nodeIndex,
+    );
+  }
+}

@@ -231,7 +231,7 @@ reopening the import, mapping, or validation seams closed by steps `40-42`.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Locator and scene-edit ownership move behind the canonical document facade
+### Slice 1. [x] Locator and scene-edit ownership move behind the canonical document facade
 
 #### Slice Contract
 
@@ -270,7 +270,7 @@ and layer-index helpers through them, and remove the replaced mixed bodies from
   bodies.
 - Controller and serialization consumers still import only `document.dart`.
 
-### Slice 2. [ ] Patch and selection/grid ownership move behind the same facade
+### Slice 2. [x] Patch and selection/grid ownership move behind the same facade
 
 #### Slice Contract
 

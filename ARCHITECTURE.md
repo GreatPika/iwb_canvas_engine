@@ -80,8 +80,10 @@ Ownership decisions for the target state:
   `model/scene_builder_decode_json.dart`, and shared runtime
   `SceneSnapshot -> Scene` import lives in `model/scene_from_snapshot.dart`.
 - `document.dart` remains the downstream transaction facade, but it consumes
-  `scene_from_snapshot.dart` and `scene_snapshot_from_scene.dart` directly for
-  runtime import/export instead of depending on `scene_builder.dart`.
+  focused model-local owners for locator, scene-edit, patch, and
+  selection/grid work, and it consumes `scene_from_snapshot.dart` and
+  `scene_snapshot_from_scene.dart` directly for runtime import/export instead
+  of depending on `scene_builder.dart`.
 - `Transform2D` is part of the supported contract language and lives in
   `contract/` as a contract-facing value type; its file move does not change
   the public symbol name.

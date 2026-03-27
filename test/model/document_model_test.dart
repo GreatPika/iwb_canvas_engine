@@ -834,6 +834,28 @@ void main() {
     expect(emptyScene.layers.last, isA<ContentLayer>());
   });
 
+  test('find content layer index resolves known and missing layer ids', () {
+    final scene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(id: 'layer-auto-20'),
+        ContentLayer(id: 'layer-auto-21'),
+      ],
+    );
+
+    expect(
+      txnFindContentLayerIndexById(scene: scene, layerId: 'layer-auto-20'),
+      0,
+    );
+    expect(
+      txnFindContentLayerIndexById(scene: scene, layerId: 'layer-auto-21'),
+      1,
+    );
+    expect(
+      txnFindContentLayerIndexById(scene: scene, layerId: 'layer-auto-missing'),
+      isNull,
+    );
+  });
+
   test('selection/grid helpers enforce transaction invariants', () {
     final scene = Scene(
       backgroundLayer: BackgroundLayer(
