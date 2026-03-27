@@ -138,3 +138,8 @@ language: russian
 - [x] [Шаг 42. Разрезать `scene_value_validation` на explicit validation owner-модули без `part`-coupling](development_plan/step_42_scene_value_validation_explicit_modules_without_parts.md)
 - [x] [Шаг 43. Свести `document.dart` к thin txn facade над focused model-local owner-ами](development_plan/step_43_document_txn_facade_and_focused_owner_split.md)
 - [x] [Шаг 44. Замкнуть финальную model architecture на docs, guardrails и baseline](development_plan/step_44_model_final_architecture_closure.md)
+- Residual model target state for steps `45-48` is fixed in [model_target_architecture.md](development_plan/model_target_architecture.md).
+- [ ] [Шаг 45. Разрезать `scene_builder_decode_json` и `scene_builder_json_require` на focused JSON decode owner-ы](development_plan/step_45_scene_builder_json_decode_and_require_owner_split.md)
+- [ ] [Шаг 46. Довести `scene_node_boundary_mapping_support` до true-common owner и вынести family assembly](development_plan/step_46_scene_node_boundary_mapping_support_owner_cleanup.md)
+- [ ] [Шаг 47. Разрезать `document_node_patch` на explicit family-local patch owner-ы](development_plan/step_47_document_node_patch_family_owner_split.md)
+- [ ] [Шаг 48. Замкнуть residual model architecture после шагов `45-47` на docs, guardrails и baseline](development_plan/step_48_model_residual_architecture_closure.md)
