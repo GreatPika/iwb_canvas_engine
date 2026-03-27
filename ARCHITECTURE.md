@@ -99,6 +99,40 @@ Ownership decisions for the target state:
 - `contract/` is low-level but not pure Dart: contract types intentionally use
   `dart:ui`, and `SceneRenderState` depends on Flutter `Listenable`.
 
+## Model owner graph
+
+- Public `SceneBuilder` surface lives in `model/scene_builder_api.dart`; the
+  exported static API is the supported non-controller import boundary.
+- `model/scene_builder.dart` is the thin internal import facade only. It may
+  orchestrate `scene_builder_decode_json.dart`,
+  `scene_builder_json_require.dart`,
+  `scene_from_snapshot.dart`, and
+  `scene_snapshot_from_scene.dart`, but downstream non-model code must not
+  re-own those internals.
+- `model/scene_document_codec.dart` is the canonical runtime document codec
+  facade for downstream non-model serialization. It owns internal `Scene`
+  decode and encode-canonicalization entrypoints so non-model code does not
+  import `scene_builder.dart`, `scene_from_snapshot.dart`, or
+  `scene_policy.dart` directly.
+- `model/scene_from_snapshot.dart` and
+  `model/scene_snapshot_from_scene.dart` are the shared runtime import/export
+  owners. `document.dart` consumes them directly; it must not recover a
+  `document.dart -> scene_builder.dart` dependency.
+- `model/scene_node_boundary_mapping.dart` is the canonical node-boundary
+  mapping facade. Family-local mapping owners stay in the
+  `scene_node_boundary_mapping_*.dart` files and must not be imported directly
+  by downstream non-model code.
+- `model/scene_value_validation.dart` is the canonical validation facade.
+  Focused validation owners stay in
+  `scene_value_validation_{node,palette_grid,primitives,support,top_level}.dart`,
+  and `ScenePolicy` remains the single owner of scene-level semantics.
+- `model/document.dart` is the canonical downstream transaction facade.
+  Locator, patch, scene-edit, and selection/grid ownership stay in
+  `document_{locator,node_patch,scene_edit,selection}.dart` instead of
+  returning to `document.dart`.
+- `model/document_clone.dart` remains a separate focused helper for clone and
+  adopt flows; it is not part of the step 40-43 facade/internal-owner split.
+
 ## Runtime data flow
 
 1. `SceneView` receives Flutter pointer input and normalizes it into public
@@ -234,6 +268,11 @@ most important architectural rules are:
 
 - `write(...)` is synchronous-only; returning a `Future` is a contract error.
 - `SceneWriteTxn` is valid only inside the active write callback.
+- `model/` stays structurally part-free; final model architecture is pinned by
+  guardrails so `document.dart` cannot re-import `scene_builder.dart` and
+  downstream non-model code cannot bypass canonical model facades for focused
+  owner modules such as `scene_builder.dart`, `scene_policy.dart`, and the
+  step 40-43 internal owners through direct imports or re-exports.
 - Snapshot/JSON boundaries keep `backgroundLayer` distinct from ordered content
   `layers`; mutable runtime `Scene.backgroundLayer` may remain `null` until a
   write path materializes it.

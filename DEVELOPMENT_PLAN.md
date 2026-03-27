@@ -137,4 +137,4 @@ language: russian
 - [x] [Шаг 41. Разрезать `scene_node_boundary_mapping` на family-local owner-модули без `part`-coupling](development_plan/step_41_scene_node_boundary_mapping_family_modules_without_parts.md)
 - [x] [Шаг 42. Разрезать `scene_value_validation` на explicit validation owner-модули без `part`-coupling](development_plan/step_42_scene_value_validation_explicit_modules_without_parts.md)
 - [x] [Шаг 43. Свести `document.dart` к thin txn facade над focused model-local owner-ами](development_plan/step_43_document_txn_facade_and_focused_owner_split.md)
-- [ ] [Шаг 44. Замкнуть финальную model architecture на docs, guardrails и baseline](development_plan/step_44_model_final_architecture_closure.md)
+- [x] [Шаг 44. Замкнуть финальную model architecture на docs, guardrails и baseline](development_plan/step_44_model_final_architecture_closure.md)

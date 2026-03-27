@@ -3,6 +3,7 @@ import 'dart:io';
 import '../guardrail_support/guardrail_context.dart';
 import 'controller_api_guardrails.dart';
 import 'interactive_api_guardrails.dart';
+import 'model_architecture_guardrails.dart';
 import 'mutable_type_leak_guardrails.dart';
 import 'public_surface_guardrails.dart';
 
@@ -30,6 +31,11 @@ Future<void> runGuardrailsTool() async {
       context: context,
     );
     _failIfNeeded(controllerViolations);
+
+    final modelArchitectureViolations = await runModelArchitectureGuardrails(
+      context: context,
+    );
+    _failIfNeeded(modelArchitectureViolations);
   } on _GuardrailFailure catch (failure) {
     stderr.writeln('FAIL: guardrails');
     stderr.writeln('- ${failure.violation}');

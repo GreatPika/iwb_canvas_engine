@@ -238,6 +238,13 @@ const List<Invariant> invariants = <Invariant>[
         'test/interactive/core/scene_controller_interactive_runtime_contract_test.dart',
   ),
   Invariant(
+    id: 'INV-ENG-MODEL-ARCHITECTURE-BOUNDARY',
+    scope: 'engine-structure',
+    title:
+        'model facade/internal-owner boundaries remain part-free and downstream code imports only canonical model facades',
+    proofPath: 'tool/check_guardrails.dart',
+  ),
+  Invariant(
     id: 'INV-ENG-VIEW-POINTER-SLOT-LIFECYCLE',
     scope: 'view-runtime',
     title:

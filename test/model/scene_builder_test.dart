@@ -225,6 +225,34 @@ void main() {
   });
 
   test(
+    'sceneCanonicalizeAndValidateSnapshot preserves canonical snapshot structure',
+    () {
+      final snapshot = SceneSnapshot(
+        backgroundLayer: BackgroundLayerSnapshot(
+          nodes: <NodeSnapshot>[
+            RectNodeSnapshot(id: 'bg-runtime-snapshot', size: const Size(1, 1)),
+          ],
+        ),
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
+            id: 'layer-auto-runtime-snapshot',
+            nodes: <NodeSnapshot>[
+              RectNodeSnapshot(id: 'rect-runtime-snapshot', size: Size(4, 5)),
+            ],
+          ),
+        ],
+      );
+
+      final canonical = model_builder.sceneCanonicalizeAndValidateSnapshot(
+        snapshot,
+      );
+
+      expect(canonical.backgroundLayer.nodes.single.id, 'bg-runtime-snapshot');
+      expect(canonical.layers.single.nodes.single.id, 'rect-runtime-snapshot');
+    },
+  );
+
+  test(
     'sceneValidateCore materializes missing background layer without changing content ownership',
     () {
       final scene = Scene(

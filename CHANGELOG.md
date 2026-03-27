@@ -29,6 +29,13 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ### Changed
 
+- Finalized the internal `model/` owner graph for steps `40-44`: the
+  repository now documents `scene_builder_api.dart` as the public
+  `SceneBuilder` surface, keeps `scene_builder.dart`,
+  `scene_node_boundary_mapping.dart`,
+  `scene_value_validation.dart`, and `document.dart` as thin canonical
+  facades, and enforces the no-`part` / no-bypass architecture with dedicated
+  model guardrails and invariant coverage.
 - Background-grid rendering now has one internal owner in
   `src/render/scene_grid_renderer.dart`: `ScenePainter` and
   `SceneStaticLayerCache` share the same drawable predicate, density bucket,

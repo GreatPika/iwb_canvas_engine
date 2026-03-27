@@ -12,7 +12,8 @@ import '../core/revision_policy.dart';
 import '../contract/internal/node_boundary_schema.dart';
 import '../contract/transform2d.dart';
 import '../model/document.dart';
-import '../model/scene_builder.dart' as model_builder;
+import '../model/scene_document_codec.dart';
+import '../model/scene_builder_api.dart';
 import '../contract/scene_data_exception.dart';
 import '../contract/snapshot.dart';
 
@@ -76,8 +77,7 @@ T debugGuardEncodeForTest<T>(T Function() encode) {
 /// [SceneDataException.message] is derived user-facing text.
 Map<String, dynamic> encodeScene(SceneSnapshot snapshot) {
   return _guardEncode(() {
-    final canonicalSnapshot = model_builder
-        .sceneCanonicalizeAndValidateSnapshot(snapshot);
+    final canonicalSnapshot = SceneBuilder.buildFromSnapshot(snapshot);
     return _encodeCanonicalSnapshot(canonicalSnapshot);
   });
 }
@@ -94,8 +94,7 @@ Map<String, dynamic> encodeScene(SceneSnapshot snapshot) {
 /// [SceneDataException.path], and immutable [SceneDataException.details];
 /// [SceneDataException.message] is derived user-facing text.
 SceneSnapshot decodeScene(Map<String, dynamic> json) {
-  final sceneDoc = model_builder.sceneBuildFromDynamicJsonMap(json);
-  return txnSceneToSnapshot(sceneDoc);
+  return SceneBuilder.buildFromJson(json);
 }
 
 /// Encodes internal mutable [Scene] document into a JSON-serializable map.
@@ -105,7 +104,7 @@ SceneSnapshot decodeScene(Map<String, dynamic> json) {
 /// [SceneDataException.message] is derived user-facing text.
 Map<String, dynamic> encodeSceneDocument(Scene scene) {
   return _guardEncode(() {
-    final canonicalScene = model_builder.sceneValidateCore(scene);
+    final canonicalScene = sceneValidateDocumentForEncode(scene);
     final canonicalSnapshot = txnSceneToSnapshot(canonicalScene);
     return _encodeCanonicalSnapshot(canonicalSnapshot);
   });
@@ -117,7 +116,7 @@ Map<String, dynamic> encodeSceneDocument(Scene scene) {
 ///
 /// Throws [SceneDataException] when validation fails.
 Scene decodeSceneDocument(Map<String, Object?> json) {
-  return model_builder.sceneBuildFromJsonMap(json);
+  return sceneDecodeDocumentFromJsonMap(json);
 }
 
 Map<String, dynamic> _encodeCanonicalSnapshot(SceneSnapshot snapshot) {

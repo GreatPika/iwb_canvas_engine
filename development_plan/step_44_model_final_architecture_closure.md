@@ -99,16 +99,19 @@ language: russian
 2. `SceneBuilder` remains the public import/canonicalization gateway through
    `scene_builder_api.dart`, while `scene_builder.dart` remains the thin
    internal import facade.
-3. `scene_from_snapshot.dart` and `scene_snapshot_from_scene.dart` remain the
+3. `scene_document_codec.dart` is the canonical internal runtime document
+   codec facade for non-model serialization flows; downstream non-model code
+   must not import `scene_builder.dart` or `scene_policy.dart` directly.
+4. `scene_from_snapshot.dart` and `scene_snapshot_from_scene.dart` remain the
    shared runtime import/export owners; `document.dart` must not regain
    builder-owned conversion logic.
-4. `scene_node_boundary_mapping.dart` remains the canonical mapping facade over
+5. `scene_node_boundary_mapping.dart` remains the canonical mapping facade over
    family-local owner modules.
-5. `scene_value_validation.dart` remains the canonical validation facade, and
+6. `scene_value_validation.dart` remains the canonical validation facade, and
    `ScenePolicy` remains the single owner of scene-level semantics.
-6. `document.dart` remains the canonical downstream txn facade over focused
+7. `document.dart` remains the canonical downstream txn facade over focused
    document-local owners.
-7. Final closure must pin architecture by documentation plus mechanical proofs;
+8. Final closure must pin architecture by documentation plus mechanical proofs;
    metrics alone are insufficient.
 
 ## 5. Result Requirements
@@ -116,6 +119,8 @@ language: russian
 1. `ARCHITECTURE.md` describes the final `model` architecture with:
    `scene_builder_api.dart` as the public `SceneBuilder` surface,
    `scene_builder.dart` as a thin import facade,
+   `scene_document_codec.dart` as the canonical runtime document codec facade
+   for non-model serialization,
    `scene_from_snapshot.dart` / `scene_snapshot_from_scene.dart` as shared
    runtime import/export owners,
    `scene_node_boundary_mapping.dart` as a thin mapping facade over
@@ -132,8 +137,10 @@ language: russian
    fails when:
    `lib/src/model/**` reintroduces `part` / `part of`,
    `document.dart` imports `scene_builder.dart`,
-   or downstream non-model code imports the internal owner modules introduced
-   by steps `40-43` instead of the canonical facades.
+   or downstream non-model code imports or re-exports
+   `scene_builder.dart`,
+   `scene_policy.dart`, or the internal owner modules introduced by steps
+   `40-43` instead of the canonical facades.
 4. `tool/invariant_registry.dart` contains an explicit final-architecture
    invariant for `model`, and `dart run tool/check_invariant_coverage.dart`
    stays green.
@@ -258,7 +265,7 @@ language: russian
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Add model architecture guardrails and invariant-backed proof surface
+### Slice 1. [x] Add model architecture guardrails and invariant-backed proof surface
 
 #### Slice Contract
 
@@ -286,7 +293,7 @@ non-model code imports the internal owner modules directly.
 - Invariant coverage includes the final `model` architecture invariant and its
   proof marker.
 
-### Slice 2. [ ] Rebaseline and document the final model architecture
+### Slice 2. [x] Rebaseline and document the final model architecture
 
 #### Slice Contract
 
@@ -336,6 +343,50 @@ metrics/clone baseline from actual runs of the closure verification units.
   architecture.
 - Final measured baseline is recorded from the actual runs, and any accepted
   residuals are limited to focused single-purpose modules only.
+
+## 8.1 Measured Closure Baseline (2026-03-27)
+
+### `dcm calculate-metrics lib/src/model --report-all`
+
+- Scanned files: `28`
+- No `VERY HIGH` hotspots remain in `lib/src/model/**`.
+- Residual `HIGH` hotspots are limited to focused single-purpose modules:
+  - `document.dart`: file `number-of-imports = 14`; facade delegate
+    `txnInsertNodeInScene` has `5` parameters
+  - `document_node_patch.dart`: `_txnApplyCommonPatch` has `43` SLOC
+  - `document_scene_edit.dart`: `txnInsertNodeInScene` has `5` parameters
+  - `scene_builder_decode_json.dart`: file `number-of-imports = 18`;
+    `_decodeBackgroundSnapshot` has `43` SLOC
+  - `scene_from_snapshot.dart`: `sceneFromSnapshot` has `43` SLOC
+  - `scene_value_validation_node.dart`: file `number-of-imports = 16`
+- These residuals stay within focused owner modules or thin facades and do not
+  reopen the mixed-owner shapes removed by steps `40-43`.
+
+### `dart run tool/analysis/find_similar_clones.dart --clusters lib/src/model`
+
+- Clone clusters found: `15`
+- Scan summary: `scannedFiles=28`, `scannedBlocks=158`, `parseErrors=0`
+- Residual clusters are concentrated in focused family/owner modules such as
+  `scene_node_boundary_mapping_*`,
+  `document_node_patch.dart`,
+  `scene_builder_json_require.dart`,
+  `scene_builder_decode_json.dart`,
+  `scene_value_validation_*`, and the shared import/export pair
+  `scene_from_snapshot.dart` / `scene_snapshot_from_scene.dart`.
+- No reported cluster references
+  `document.dart`,
+  `scene_builder.dart`,
+  `scene_node_boundary_mapping.dart`, or
+  `scene_value_validation.dart`,
+  so the final canonical facades do not reappear as mixed-owner clone seams.
+
+### Guardrail / Structure Closure
+
+- `dart run tool/check_guardrails.dart` is green with the new dedicated model
+  architecture guardrail.
+- `dart run tool/check_invariant_coverage.dart` is green with
+  `INV-ENG-MODEL-ARCHITECTURE-BOUNDARY`.
+- `rg -n "^(part|part of) " lib/src/model -g '*.dart'` returns no matches.
 
 ## 9. Final Verification
 
