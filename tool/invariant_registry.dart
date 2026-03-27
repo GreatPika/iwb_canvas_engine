@@ -161,6 +161,13 @@ const List<Invariant> invariants = <Invariant>[
     proofPath: 'test/core/action_events_test.dart',
   ),
   Invariant(
+    id: 'INV-ENG-CORE-ARCHITECTURE-BOUNDARY',
+    scope: 'engine-structure',
+    title:
+        'core node-family, node-support, and leaf-support owners remain structurally split after step 37 closure',
+    proofPath: 'test/core/nodes_test.dart',
+  ),
+  Invariant(
     id: 'INV-ENG-INTERACTIVE-ASYNC-DELIVERY',
     scope: 'engine-runtime',
     title:

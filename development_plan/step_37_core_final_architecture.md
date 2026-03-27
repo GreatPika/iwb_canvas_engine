@@ -135,34 +135,21 @@ support owner-ов и финальное measured closure без metric-only и�
 
 ### 6.1 Analysis Scope
 
-- Current measured `core` baseline is `7` `HIGH/VERY HIGH` metric entries from
+- Final measured `core` baseline recorded by `37.4` is `2 HIGH` entries from
   `dcm calculate-metrics lib/src/core --report-all`.
-- Current measured clone baseline for `lib/src/core` is `4` clone clusters and
-  `17` pairs.
-- Confirmed live clone clusters are:
-  - one `nodes.dart` constructor family cluster around
-    `fromTopLeftWorld`,
-    `fromWorldPoints`,
-    and
-    `fromWorldSegment`;
-  - one `nodes.dart` transform-convenience cluster around
-    `rotationDeg`,
-    `scaleX`,
-    and
-    `scaleY`;
-  - one `action_events.dart` helper cluster around
-    `tryMoveLayerIndices`,
-    `tryDrawStyle`,
-    and duplicated `tryInt`;
-  - one `id_generator.dart` allocation cluster around
-    `generateNextNodeId` and `generateNextLayerId`.
-- Confirmed live metric hotspots are concentrated in
-  `nodes.dart`,
-  with additional leaf hotspots in
-  `text_layout.dart`,
-  `action_events.dart`,
+- Final measured clone baseline for `lib/src/core` is `3` clone clusters and
+  `5` pairs from
+  `dart run tool/analysis/find_similar_clones.dart --clusters lib/src/core`
   and
-  `id_generator.dart`.
+  `dart run tool/analysis/find_similar_clones.dart lib/src/core`.
+- The accepted residual `HIGH` seams are:
+  `nodes.dart` file import breadth and
+  `pointer_input.dart` `PointerInputTracker` complexity.
+- The accepted residual clone clusters are all focused `nodes.dart`
+  convenience families:
+  the box-node `fromTopLeftWorld` constructors,
+  the vector-node world-local constructors,
+  and the `scaleX` / `scaleY` transform accessors.
 - `scene_spatial_index.dart` local hotspot cleanup is already closed by step
   `20.3` and is not reopened as the main subject of step `37`.
 
@@ -242,7 +229,7 @@ support owner-ов и финальное measured closure без metric-only и�
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Node-family owner decomposition
+### Slice 1. [x] Node-family owner decomposition
 
 #### Slice Contract
 
@@ -254,7 +241,7 @@ support owner-ов и финальное measured closure без metric-only и�
 
 - Verification from `37.1`
 
-### Slice 2. [ ] Node-local support owner split
+### Slice 2. [x] Node-local support owner split
 
 #### Slice Contract
 
@@ -266,7 +253,7 @@ support owner-ов и финальное measured closure без metric-only и�
 
 - Verification from `37.2`
 
-### Slice 3. [ ] Leaf support owner finalization
+### Slice 3. [x] Leaf support owner finalization
 
 #### Slice Contract
 
@@ -278,7 +265,7 @@ support owner-ов и финальное measured closure без metric-only и�
 
 - Verification from `37.3`
 
-### Slice 4. [ ] Core architecture closure
+### Slice 4. [x] Core architecture closure
 
 #### Slice Contract
 

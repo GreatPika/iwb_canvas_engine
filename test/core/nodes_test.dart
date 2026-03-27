@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -7,6 +8,29 @@ import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 
 void main() {
+  // INV:INV-ENG-CORE-ARCHITECTURE-BOUNDARY
+  test('core node owners remain split from leaf support owners', () {
+    final nodesSource = File('lib/src/core/nodes.dart').readAsStringSync();
+
+    expect(
+      nodesSource,
+      contains('abstract final class _SceneNodeTransformConvenience'),
+    );
+    expect(
+      nodesSource,
+      contains('abstract final class _BoxNodePlacementOwner'),
+    );
+    expect(
+      nodesSource,
+      contains('abstract final class _VectorNodeGeometryOwner'),
+    );
+    expect(nodesSource, contains('final class _PathNodeLocalPathCacheOwner'));
+    expect(nodesSource, isNot(contains('TextLayoutRequest')));
+    expect(nodesSource, isNot(contains('recomputeDerivedTextSize(')));
+    expect(nodesSource, isNot(contains('_ActionPayloadReader')));
+    expect(nodesSource, isNot(contains('_GeneratedIdAllocator')));
+  });
+
   test('node convenience accessors update TRS transform', () {
     final rect = RectNode(id: 'r', size: const Size(10, 20));
 

@@ -1,7 +1,22 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/core/id_generator.dart';
 
 void main() {
+  test('generated id allocation stays isolated in dedicated core owner', () {
+    final source = File('lib/src/core/id_generator.dart').readAsStringSync();
+
+    expect(source, contains('class IdGeneratorState'));
+    expect(source, contains('class _GeneratedIdAllocator'));
+    expect(source, contains('createInitialIdGeneratorState()'));
+    expect(source, contains('generateNextNodeId('));
+    expect(source, contains('generateNextLayerId('));
+    expect(source, isNot(contains('freezePayloadMap(')));
+    expect(source, isNot(contains('TextPainter(')));
+    expect(source, isNot(contains('recomputeDerivedTextSize(')));
+  });
+
   test('createInitialIdGeneratorState starts a fresh allocator session', () {
     final state = createInitialIdGeneratorState();
 

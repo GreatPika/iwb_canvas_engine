@@ -189,6 +189,28 @@ Ownership decisions for the target state:
   resets the next revision to `1` and the commit must bump `controllerEpoch`.
   If the epoch cannot be bumped safely, the commit fails fast.
 
+## Core owner graph
+
+- `core/` remains the low-level owner for primitives, defaults, math, and
+  event types; it depends only on `contract/`.
+- `SceneNode` in `core/nodes.dart` is the common mutable shell for
+  `transform`, opacity, and bounds semantics. `SceneNode.transform` remains the
+  single source of truth for mutable node transforms.
+- `core/nodes.dart` keeps explicit node-local support owners beneath the public
+  mutable entrypoints:
+  `_SceneNodeTransformConvenience` for TRS convenience accessors,
+  `_BoxNodePlacementOwner` for top-left/AABB placement semantics,
+  `_VectorNodeGeometryOwner` for stroke/line world-local normalization, and
+  `_PathNodeLocalPathCacheOwner` for `PathNode` local-path cache invalidation
+  and diagnostics.
+- Leaf support ownership stays isolated outside `nodes.dart`:
+  `core/text_layout.dart` owns derived text measurement,
+  `core/action_events.dart` owns immutable action payload freezing and parsing,
+  and `core/id_generator.dart` owns runtime generated-id allocation state.
+- Shared runtime geometry ownership does not move back into mutable node files:
+  `core/node_geometry.dart` remains the shared render/hit-test geometry owner,
+  and `core/scene_spatial_index.dart` remains the spatial-query owner.
+
 ## Core invariants
 
 Canonical invariant definitions live in `tool/invariant_registry.dart`. The

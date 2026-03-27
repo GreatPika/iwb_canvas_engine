@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/painting.dart';
@@ -7,6 +8,20 @@ import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('render text cache consumes shared core text layout owner', () {
+    final source = File(
+      'lib/src/render/cache/scene_text_layout_cache.dart',
+    ).readAsStringSync();
+
+    expect(source, contains("import '../../core/text_layout.dart';"));
+    expect(source, contains('TextLayoutRequest _createTextLayoutRequest('));
+    expect(source, contains('final request = _createTextLayoutRequest('));
+    expect(source, contains('request.buildTextStyle()'));
+    expect(source, isNot(contains('recomputeDerivedTextSize(')));
+    expect(source, isNot(contains('freezePayloadMap(')));
+    expect(source, isNot(contains('_GeneratedIdAllocator')));
+  });
 
   test('SceneTextLayoutCache rejects non-positive maxEntries', () {
     expect(() => SceneTextLayoutCache(maxEntries: 0), throwsArgumentError);

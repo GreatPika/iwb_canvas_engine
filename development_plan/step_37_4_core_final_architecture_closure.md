@@ -127,16 +127,24 @@ baseline без reopening production ownership slices.
 ### 6.1 Analysis Scope
 
 - This step starts only after `37.1-37.3` are closed.
-- Current confirmed pre-closure `core` baseline is `7` `HIGH/VERY HIGH`
-  entries and `4` clone clusters.
+- Final measured `core` baseline recorded by this step is `2 HIGH` entries and
+  `3` clone clusters / `5` pairs.
+- The accepted residual `HIGH` seams are:
+  `nodes.dart` file import breadth and
+  `pointer_input.dart` `PointerInputTracker` complexity.
+- The accepted residual clone clusters are limited to focused `nodes.dart`
+  convenience families:
+  `ImageNode` / `TextNode` / `RectNode` `fromTopLeftWorld`,
+  `StrokeNode.fromWorldPoints` / `LineNode.fromWorldSegment`,
+  and `scaleX` / `scaleY`.
 - Existing invariant-backed proofs already pin three closure-critical `core`
   semantics:
   `INV-ENG-TEXT-SIZE-DERIVED`,
   `INV-ENG-EVENTS-IMMUTABLE`,
   and
   `INV-ENG-PATH-NODE-CACHE-INVALIDATION`.
-- Final closure baseline must be captured from actual post-step runs and must
-  not be copied from the pre-closure snapshot above.
+- This closure adds `INV-ENG-CORE-ARCHITECTURE-BOUNDARY` so the final owner
+  split is pinned mechanically and does not live only in prose.
 
 ### 6.2 Target Verification Units
 
@@ -226,7 +234,7 @@ baseline без reopening production ownership slices.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Existing proofs pin the final core owner boundaries
+### Slice 1. [x] Existing proofs pin the final core owner boundaries
 
 #### Slice Contract
 
@@ -253,8 +261,13 @@ leaf-support boundaries.
 - Green run of the listed verifications.
 - Existing proofs cover the final `core` owner boundaries removed by
   `37.1-37.3`.
+- `nodes_test.dart` fails if `nodes.dart` reabsorbs text-layout, event-payload,
+  or generated-id leaf ownership.
+- `action_events_test.dart`, `id_generator_test.dart`, and
+  `scene_text_layout_cache_test.dart` fail if those focused leaf owners stop
+  being consumed through their dedicated files.
 
-### Slice 2. [ ] Rebaseline and document final core architecture
+### Slice 2. [x] Rebaseline and document final core architecture
 
 #### Slice Contract
 
@@ -280,6 +293,11 @@ metrics and clone baseline from actual runs.
 - Green run of the listed verifications.
 - `ARCHITECTURE.md`, `DEVELOPMENT_PLAN.md`, and the step-`37` documents reflect
   the same final `core` architecture and measured baseline.
+- Recorded closure baseline:
+  `2 HIGH` entries limited to `nodes.dart` import breadth and
+  `pointer_input.dart` `PointerInputTracker`;
+  `3` clone clusters / `5` pairs remain, all inside focused `nodes.dart`
+  convenience families.
 
 ## 9. Final Verification
 

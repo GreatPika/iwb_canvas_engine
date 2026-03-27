@@ -1,9 +1,23 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/core/action_events.dart';
 
 // INV:INV-ENG-EVENTS-IMMUTABLE
 
 void main() {
+  test('action event parsing stays isolated in core leaf support owner', () {
+    final source = File('lib/src/core/action_events.dart').readAsStringSync();
+
+    expect(source, contains('class _ActionPayloadReader'));
+    expect(source, contains('payload: freezePayloadMap(payload),'));
+    expect(source, contains('tryMoveLayerIndices()'));
+    expect(source, contains('tryDrawStyle()'));
+    expect(source, isNot(contains('TextPainter(')));
+    expect(source, isNot(contains('recomputeDerivedTextSize(')));
+    expect(source, isNot(contains('_GeneratedIdAllocator')));
+  });
+
   group('ActionCommitted parsers', () {
     test('tryTransformDelta parses valid matrix payload', () {
       final action = ActionCommitted(
