@@ -193,16 +193,22 @@ Ownership decisions for the target state:
 
 - `core/` remains the low-level owner for primitives, defaults, math, and
   event types; it depends only on `contract/`.
-- `SceneNode` in `core/nodes.dart` is the common mutable shell for
-  `transform`, opacity, and bounds semantics. `SceneNode.transform` remains the
-  single source of truth for mutable node transforms.
-- `core/nodes.dart` keeps explicit node-local support owners beneath the public
-  mutable entrypoints:
-  `_SceneNodeTransformConvenience` for TRS convenience accessors,
-  `_BoxNodePlacementOwner` for top-left/AABB placement semantics,
-  `_VectorNodeGeometryOwner` for stroke/line world-local normalization, and
-  `_PathNodeLocalPathCacheOwner` for `PathNode` local-path cache invalidation
-  and diagnostics.
+- `core/nodes.dart` is the canonical mutable-node facade for downstream
+  consumers; it re-exports focused file-local owner modules rather than
+  hand-owning mutable node implementations.
+- `SceneNode` lives in `core/scene_node.dart` and remains the common mutable
+  shell for `transform`, opacity, and bounds semantics.
+  `SceneNode.transform` stays the single source of truth for mutable node
+  transforms, and `_SceneNodeTransformConvenience` remains file-local there.
+- Box-family mutable nodes live in `core/box_nodes.dart`, which keeps
+  `_BoxNodePlacementOwner` as the file-local owner for top-left/AABB placement
+  semantics.
+- Stroke/line mutable nodes live in `core/vector_nodes.dart`, which keeps
+  `_VectorNodeGeometryOwner` as the file-local owner for stroke/line
+  world-local normalization and mutable geometry revision behavior.
+- `PathNode` lives in `core/path_node.dart`, which keeps
+  `_PathNodeLocalPathCacheOwner` as the file-local owner for local-path cache
+  invalidation and diagnostics.
 - Leaf support ownership stays isolated outside `nodes.dart`:
   `core/text_layout.dart` owns derived text measurement,
   `core/action_events.dart` owns immutable action payload freezing and parsing,

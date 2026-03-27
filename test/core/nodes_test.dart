@@ -9,26 +9,46 @@ import 'package:iwb_canvas_engine/src/core/nodes.dart';
 
 void main() {
   // INV:INV-ENG-CORE-ARCHITECTURE-BOUNDARY
-  test('core node owners remain split from leaf support owners', () {
+  test('core node owners remain split into file-local modules', () {
     final nodesSource = File('lib/src/core/nodes.dart').readAsStringSync();
+    final sceneNodeSource = File(
+      'lib/src/core/scene_node.dart',
+    ).readAsStringSync();
+    final boxNodesSource = File(
+      'lib/src/core/box_nodes.dart',
+    ).readAsStringSync();
+    final vectorNodesSource = File(
+      'lib/src/core/vector_nodes.dart',
+    ).readAsStringSync();
+    final pathNodeSource = File(
+      'lib/src/core/path_node.dart',
+    ).readAsStringSync();
 
+    expect(nodesSource, contains("export 'scene_node.dart';"));
+    expect(nodesSource, contains("export 'box_nodes.dart';"));
+    expect(nodesSource, contains("export 'vector_nodes.dart';"));
+    expect(nodesSource, contains("export 'path_node.dart';"));
+    expect(nodesSource, isNot(contains('abstract class SceneNode')));
     expect(
-      nodesSource,
+      sceneNodeSource,
       contains('abstract final class _SceneNodeTransformConvenience'),
     );
     expect(
-      nodesSource,
+      boxNodesSource,
       contains('abstract final class _BoxNodePlacementOwner'),
     );
     expect(
-      nodesSource,
+      vectorNodesSource,
       contains('abstract final class _VectorNodeGeometryOwner'),
     );
-    expect(nodesSource, contains('final class _PathNodeLocalPathCacheOwner'));
-    expect(nodesSource, isNot(contains('TextLayoutRequest')));
-    expect(nodesSource, isNot(contains('recomputeDerivedTextSize(')));
-    expect(nodesSource, isNot(contains('_ActionPayloadReader')));
-    expect(nodesSource, isNot(contains('_GeneratedIdAllocator')));
+    expect(
+      pathNodeSource,
+      contains('final class _PathNodeLocalPathCacheOwner'),
+    );
+    expect(sceneNodeSource, isNot(contains('TextLayoutRequest')));
+    expect(boxNodesSource, isNot(contains('recomputeDerivedTextSize(')));
+    expect(vectorNodesSource, isNot(contains('_ActionPayloadReader')));
+    expect(pathNodeSource, isNot(contains('_GeneratedIdAllocator')));
   });
 
   test('node convenience accessors update TRS transform', () {

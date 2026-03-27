@@ -208,7 +208,7 @@ language: russian
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] File-local node owners exist beneath the canonical facade
+### Slice 1. [x] File-local node owners exist beneath the canonical facade
 
 #### Slice Contract
 
