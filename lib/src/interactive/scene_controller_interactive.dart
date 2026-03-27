@@ -113,6 +113,7 @@ class SceneControllerInteractive extends ChangeNotifier
     _notifyScheduler = InteractiveNotifyScheduler(
       notifyListeners: notifyListeners,
     );
+    _events = InteractiveEventDispatcher();
     _selectionActions = _createSelectionActions();
     _runtime = _createRuntime();
     _core.addListener(_handleCoreChanged);
@@ -120,6 +121,7 @@ class SceneControllerInteractive extends ChangeNotifier
 
   final SceneControllerCore _core;
   late final InteractiveNotifyScheduler _notifyScheduler;
+  late final InteractiveEventDispatcher _events;
   late final InteractiveSelectionActions _selectionActions;
   late final InteractiveRuntime _runtime;
 
@@ -186,8 +188,8 @@ class SceneControllerInteractive extends ChangeNotifier
 
   PointerInputSettings get pointerSettings => _pointerSettings;
 
-  Stream<ActionCommitted> get actions => _runtime.actions;
-  Stream<EditTextRequested> get editTextRequests => _runtime.editTextRequests;
+  Stream<ActionCommitted> get actions => _events.actions;
+  Stream<EditTextRequested> get editTextRequests => _events.editTextRequests;
 
   T write<T>(T Function(SceneWriteTxn writer) fn) {
     _ensurePublicSideEffectAllowed('write');
@@ -331,9 +333,9 @@ class SceneControllerInteractive extends ChangeNotifier
     _ensurePublicSideEffectAllowed('removeNode');
     final deleted = _core.commands.writeDeleteNode(id);
     if (!deleted) return false;
-    _runtime.emitAction(ActionType.delete, <NodeId>[
+    _events.emitAction(ActionType.delete, <NodeId>[
       id,
-    ], _runtime.resolveTimestampMs(timestampMs));
+    ], _events.resolveTimestampMs(timestampMs));
     return true;
   }
 
@@ -414,6 +416,7 @@ class SceneControllerInteractive extends ChangeNotifier
 
   InteractiveRuntime _createRuntime() {
     return InteractiveRuntime(
+      events: _events,
       callbacks: InteractiveRuntimeCallbacks(
         scheduleNotify: _scheduleNotify,
         readSnapshot: () => snapshot,
@@ -437,10 +440,8 @@ class SceneControllerInteractive extends ChangeNotifier
     return InteractiveSelectionActions(
       core: _core,
       callbacks: InteractiveSelectionActionsCallbacks(
-        resolveTimestampMs: (timestampMs) =>
-            _runtime.resolveTimestampMs(timestampMs),
-        emitAction: (type, nodeIds, timestampMs, {payload}) =>
-            _runtime.emitAction(type, nodeIds, timestampMs, payload: payload),
+        resolveTimestampMs: _events.resolveTimestampMs,
+        emitAction: _events.emitAction,
         resolveMoveCommitDelta: _runMoveCommitDeltaResolver,
         requireFiniteOffset: _requireFiniteOffset,
       ),
@@ -551,6 +552,7 @@ class SceneControllerInteractive extends ChangeNotifier
     _isDisposed = true;
     _notifyScheduler.dispose();
     _runtime.dispose();
+    _events.dispose();
     super.dispose();
   }
 

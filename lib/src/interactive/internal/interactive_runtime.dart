@@ -60,7 +60,7 @@ class InteractiveRuntimeCallbacks {
 }
 
 class InteractiveRuntime {
-  InteractiveRuntime({required this.callbacks}) {
+  InteractiveRuntime({required this.callbacks, required this.events}) {
     _moveSession = InteractiveMoveSession(
       callbacks: InteractiveMoveSessionCallbacks(
         onStateChanged: callbacks.scheduleNotify,
@@ -71,13 +71,13 @@ class InteractiveRuntime {
         writeSelectionReplace: callbacks.writeSelectionReplace,
         writeSelectionClear: callbacks.writeSelectionClear,
         commitMoveSelection: callbacks.commitMoveSelection,
-        emitAction: _events.emitAction,
+        emitAction: events.emitAction,
       ),
     );
     _drawCoordinator = InteractiveDrawCoordinator(
       callbacks: InteractiveDrawCoordinatorCallbacks(
         onStateChanged: callbacks.scheduleNotify,
-        emitAction: _events.emitAction,
+        emitAction: events.emitAction,
         writeDrawStroke: callbacks.writeDrawStroke,
         writeDrawLineFromWorldSegment: callbacks.writeDrawLineFromWorldSegment,
         querySpatialCandidates: callbacks.querySpatialCandidates,
@@ -88,19 +88,15 @@ class InteractiveRuntime {
   }
 
   final InteractiveRuntimeCallbacks callbacks;
-  final InteractiveEventDispatcher _events = InteractiveEventDispatcher();
+  final InteractiveEventDispatcher events;
   final InteractiveGestureMachine _gestureMachine = InteractiveGestureMachine();
   late final InteractiveMoveSession _moveSession;
   late final InteractiveDrawCoordinator _drawCoordinator;
 
-  int _timestampCursorMs = -1;
   final Map<int, Offset> _lastFinitePointerPositionById = <int, Offset>{};
   bool _handlingPointer = false;
   bool _isDisposed = false;
   VoidCallback? _debugBeforePointerDispatchHook;
-
-  Stream<ActionCommitted> get actions => _events.actions;
-  Stream<EditTextRequested> get editTextRequests => _events.editTextRequests;
 
   Rect? get selectionRect => _moveSession.selectionRect;
   Offset? get pendingLineStart => _drawCoordinator.pendingLineStart;
@@ -127,19 +123,6 @@ class InteractiveRuntime {
       _drawCoordinator.debugEraserSpatialQueryCount;
   int get debugEraserPreciseSegmentChecks =>
       _drawCoordinator.debugEraserPreciseSegmentChecks;
-
-  void emitAction(
-    ActionType type,
-    List<NodeId> nodeIds,
-    int timestampMs, {
-    Map<String, Object?>? payload,
-  }) {
-    _events.emitAction(type, nodeIds, timestampMs, payload: payload);
-  }
-
-  int resolveTimestampMs(int? hintTimestampMs) {
-    return _resolveTimestampMs(hintTimestampMs);
-  }
 
   void handlePointer(CanvasPointerInput input) {
     if (_handlingPointer) {
@@ -174,10 +157,10 @@ class InteractiveRuntime {
       return;
     }
 
-    _events.emitEditTextRequested(
+    events.emitEditTextRequested(
       EditTextRequested(
         nodeId: hit.id,
-        timestampMs: _resolveTimestampMs(timestampMs),
+        timestampMs: events.resolveTimestampMs(timestampMs),
         position: position,
       ),
     );
@@ -205,7 +188,6 @@ class InteractiveRuntime {
     _lastFinitePointerPositionById.clear();
     _moveSession.dispose();
     _drawCoordinator.dispose();
-    _events.dispose();
   }
 
   void _dispatchPointerSample(PointerSample sample) {
@@ -319,7 +301,7 @@ class InteractiveRuntime {
     return PointerSample(
       pointerId: input.pointerId,
       position: resolvedPosition,
-      timestampMs: _resolveTimestampMs(input.timestampMs),
+      timestampMs: events.resolveTimestampMs(input.timestampMs),
       phase: phase,
       kind: input.kind,
     );
@@ -343,15 +325,6 @@ class InteractiveRuntime {
       case CanvasPointerPhase.cancel:
         return PointerPhase.cancel;
     }
-  }
-
-  int _resolveTimestampMs(int? hintTimestampMs) {
-    final next = _timestampCursorMs + 1;
-    final resolved = hintTimestampMs == null || hintTimestampMs < next
-        ? next
-        : hintTimestampMs;
-    _timestampCursorMs = resolved;
-    return resolved;
   }
 
   static bool _isFiniteOffset(Offset value) {

@@ -12,10 +12,20 @@ class InteractiveEventDispatcher {
       StreamController<EditTextRequested>.broadcast();
 
   int _actionCounter = 0;
+  int _timestampCursorMs = -1;
   bool _isDisposed = false;
 
   Stream<ActionCommitted> get actions => _actions.stream;
   Stream<EditTextRequested> get editTextRequests => _editTextRequests.stream;
+
+  int resolveTimestampMs(int? hintTimestampMs) {
+    final next = _timestampCursorMs + 1;
+    final resolved = hintTimestampMs == null || hintTimestampMs < next
+        ? next
+        : hintTimestampMs;
+    _timestampCursorMs = resolved;
+    return resolved;
+  }
 
   void emitAction(
     ActionType type,

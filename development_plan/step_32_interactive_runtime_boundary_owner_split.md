@@ -209,7 +209,7 @@ behavior.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Boundary runtime no longer owns event timeline
+### Slice 1. [x] Boundary runtime no longer owns event timeline
 
 #### Slice Contract
 
