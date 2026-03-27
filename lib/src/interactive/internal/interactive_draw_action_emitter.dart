@@ -3,7 +3,7 @@ import 'dart:ui';
 import '../../core/action_events.dart';
 import '../../core/interaction_types.dart';
 import '../../contract/snapshot.dart';
-import 'interactive_draw_line_engine.dart' show InteractiveDrawStyle;
+import 'interactive_draw_style.dart';
 
 class InteractiveDrawActionEmitter {
   const InteractiveDrawActionEmitter({required this.emitAction});

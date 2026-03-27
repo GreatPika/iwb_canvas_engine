@@ -3,19 +3,9 @@ import 'dart:ui';
 
 import '../../core/action_events.dart';
 import '../../core/input_sampling.dart';
-import '../../core/interaction_types.dart';
 import '../../contract/snapshot.dart';
 import 'interactive_draw_action_emitter.dart';
-
-typedef InteractiveDrawStyle = ({
-  DrawTool drawTool,
-  Color drawColor,
-  double penThickness,
-  double highlighterThickness,
-  double lineThickness,
-  double eraserThickness,
-  double highlighterOpacity,
-});
+import 'interactive_draw_style.dart';
 
 typedef InteractiveDrawLineUp = ({
   int timestampMs,
@@ -40,7 +30,13 @@ class InteractiveDrawLineEngineCallbacks {
     Map<String, Object?>? payload,
   })
   emitAction;
-  final NodeId Function({required Offset start, required Offset end})
+  final NodeId Function({
+    required Offset start,
+    required Offset end,
+    required double thickness,
+    required Color color,
+    required double opacity,
+  })
   writeDrawLineFromWorldSegment;
 }
 
@@ -163,6 +159,9 @@ class InteractiveDrawLineEngine {
     final lineId = callbacks.writeDrawLineFromWorldSegment(
       start: start,
       end: end,
+      thickness: style.lineThickness,
+      color: style.drawColor,
+      opacity: 1,
     );
     _actionEmitter.emitLineCommit(
       nodeId: lineId,

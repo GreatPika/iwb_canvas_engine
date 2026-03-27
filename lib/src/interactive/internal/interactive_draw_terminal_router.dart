@@ -8,6 +8,7 @@ import 'interactive_draw_action_emitter.dart';
 import 'interactive_draw_eraser_engine.dart';
 import 'interactive_draw_gesture_session.dart';
 import 'interactive_draw_line_engine.dart';
+import 'interactive_draw_style.dart';
 import 'interactive_draw_stroke_engine.dart';
 
 class InteractiveDrawTerminalRouter {

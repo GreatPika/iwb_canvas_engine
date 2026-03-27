@@ -31,7 +31,13 @@ class InteractiveDrawCoordinatorCallbacks {
     required double opacity,
   })
   writeDrawStroke;
-  final NodeId Function({required Offset start, required Offset end})
+  final NodeId Function({
+    required Offset start,
+    required Offset end,
+    required double thickness,
+    required Color color,
+    required double opacity,
+  })
   writeDrawLineFromWorldSegment;
   final List<SceneSpatialCandidate> Function(Rect bounds)
   querySpatialCandidates;

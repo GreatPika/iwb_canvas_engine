@@ -185,4 +185,30 @@ void main() {
     await pumpEventQueue();
     assertControllerInvariants(controller);
   });
+
+  test('draw line from world segment keeps centered local geometry', () async {
+    final controller = buildController();
+    addTearDown(controller.dispose);
+
+    final lineId = controller.draw.writeDrawLineFromWorldSegment(
+      start: const Offset(10, 20),
+      end: const Offset(50, 40),
+      thickness: 3,
+      color: const Color(0xFF112233),
+    );
+    await pumpEventQueue();
+
+    final line = controller.snapshot.layers
+        .expand((layer) => layer.nodes)
+        .whereType<LineNodeSnapshot>()
+        .firstWhere((node) => node.id == lineId);
+
+    expect(line.start, const Offset(-20, -10));
+    expect(line.end, const Offset(20, 10));
+    expect(line.transform.tx, 30);
+    expect(line.transform.ty, 30);
+    expect(line.transform.applyToPoint(line.start), const Offset(10, 20));
+    expect(line.transform.applyToPoint(line.end), const Offset(50, 40));
+    assertControllerInvariants(controller);
+  });
 }

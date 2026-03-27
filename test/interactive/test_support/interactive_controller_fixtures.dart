@@ -6,14 +6,7 @@ import 'package:iwb_canvas_engine/src/core/grid_safety_limits.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart' hide NodeId;
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart';
-import 'package:iwb_canvas_engine/src/interactive/scene_controller_interactive.dart'
-    show
-        sceneControllerInteractiveInternalActiveEraserPointsLength,
-        sceneControllerInteractiveInternalEraserPreciseSegmentCheckCount,
-        sceneControllerInteractiveInternalEraserSpatialQueryCount,
-        sceneControllerInteractiveInternalEnforceGestureBufferSoftLimitForTest,
-        sceneControllerInteractiveInternalRunMoveCommitDeltaResolverForTest,
-        sceneControllerInteractiveInternalSetBeforePointerDispatchHook;
+import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_interactive_internal_access.dart';
 import 'package:iwb_canvas_engine/src/model/document.dart';
 
 double get minGridCellSize => kMinGridCellSize;

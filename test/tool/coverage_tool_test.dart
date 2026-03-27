@@ -20,6 +20,7 @@ void main() {
     _registerCompleteLcovTest();
     _registerExportOnlyShimTest();
     _registerDeclarationOnlyAllowListTest();
+    _registerInteractiveDeclarationOnlyAllowListTest();
     _registerCoverageScenarioTest(
       name: 'rejects missing shim file when logic leaks back into it',
       files: <String, String>{
@@ -120,6 +121,27 @@ bool validatesSceneValue(Object? value) => value != null;
         result.stderr.toString(),
         contains('lib/src/model/scene_value_validation_primitives.part.dart'),
       );
+    },
+  );
+}
+
+void _registerInteractiveDeclarationOnlyAllowListTest() {
+  test(
+    'passes when missing interactive draw-style typedef unit is allow-listed',
+    () async {
+      final result = await _runCoverageScenario(
+        files: <String, String>{
+          'lib/src/interactive/internal/interactive_draw_style.dart': '''
+typedef InteractiveDrawStyle = ({
+  double lineThickness,
+});
+''',
+          'lib/src/contract/a.dart': 'int covered() => 1;\n',
+        },
+        lcov: _singleFileLcov('lib/src/contract/a.dart'),
+      );
+
+      expect(result.exitCode, 0, reason: result.stderr.toString());
     },
   );
 }

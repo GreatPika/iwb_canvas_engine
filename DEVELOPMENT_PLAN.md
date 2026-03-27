@@ -124,5 +124,5 @@ language: russian
 - [x] [Шаг 32. Сузить `InteractiveRuntime` до boundary pointer/gesture owner](development_plan/step_32_interactive_runtime_boundary_owner_split.md)
 - [x] [Шаг 33. Разрезать draw-path interactive на focused draw-local owner-ы](development_plan/step_33_interactive_draw_path_owner_decomposition.md)
 - [x] [Шаг 34. Замкнуть финальную interactive architecture на docs, structural tests и baseline](development_plan/step_34_interactive_final_architecture_closure.md)
-- [ ] [Шаг 35. Дожать `SceneControllerInteractive` до чистого public facade без line-write и test-access ownership](development_plan/step_35_scene_controller_interactive_public_facade_cleanup.md)
+- [x] [Шаг 35. Дожать `SceneControllerInteractive` до чистого public facade без line-write и test-access ownership](development_plan/step_35_scene_controller_interactive_public_facade_cleanup.md)
 - [ ] [Шаг 36. Разрезать `InteractiveDrawEraserEngine` на exact-hit owner-ы по node family](development_plan/step_36_interactive_draw_eraser_exact_hit_owner_split.md)

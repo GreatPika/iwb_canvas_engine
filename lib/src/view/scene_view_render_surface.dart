@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import '../controller/scene_controller.dart';
 import '../contract/scene_render_state.dart';
 import '../interactive/scene_controller_interactive.dart';
+import '../interactive/internal/scene_controller_interactive_internal_access.dart';
 import '../render/render_geometry_cache.dart';
 import '../render/scene_painter.dart';
 import '../render/scene_render_caches.dart';

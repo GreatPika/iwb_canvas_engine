@@ -253,7 +253,7 @@ test-access ownership, сохраняя его единственным public i
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Controller draw owner replaces facade-local line write bridge
+### Slice 1. [x] Controller draw owner replaces facade-local line write bridge
 
 #### Slice Contract
 
@@ -308,7 +308,7 @@ the new owner without widening the public facade.
 - Source proof that `scene_controller_interactive.dart` no longer contains the
   moved line-write helper body.
 
-### Slice 2. [ ] Public facade file no longer owns test/debug access surface
+### Slice 2. [x] Public facade file no longer owns test/debug access surface
 
 #### Slice Contract
 

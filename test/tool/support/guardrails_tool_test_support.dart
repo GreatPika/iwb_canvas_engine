@@ -165,4 +165,51 @@ class InteractiveDrawEraserEngine {
     'lib/src/interactive/internal/interactive_draw_terminal_router.dart',
     'class InteractiveDrawTerminalRouter {}\n',
   );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/interactive_draw_style.dart',
+    '''
+import 'dart:ui';
+
+enum DrawTool { pen, highlighter, line, eraser }
+
+typedef InteractiveDrawStyle = ({
+  DrawTool drawTool,
+  Color drawColor,
+  double penThickness,
+  double highlighterThickness,
+  double lineThickness,
+  double eraserThickness,
+  double highlighterOpacity,
+});
+''',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/scene_controller_interactive_internal_access.dart',
+    '''
+void registerSceneControllerInteractiveInternalAccess(
+  Object controller, {
+  required Object readEpoch,
+  required Object previewDeltaForNode,
+  required Object setBeforePointerDispatchHook,
+  required Object runMoveCommitDeltaResolverForTest,
+  required Object readActiveEraserPointsLength,
+  required Object readEraserSpatialQueryCount,
+  required Object readEraserPreciseSegmentCheckCount,
+}) {}
+
+int sceneControllerInteractiveInternalEpoch(Object controller) => 0;
+
+Object sceneControllerInteractiveInternalPreviewDeltaForNode(
+  Object controller,
+  Object nodeId,
+) => Object();
+
+void sceneControllerInteractiveInternalSetBeforePointerDispatchHook(
+  Object controller,
+  Object? hook,
+) {}
+''',
+  );
 }

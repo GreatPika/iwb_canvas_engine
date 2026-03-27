@@ -4,6 +4,7 @@ import '../../core/input_sampling.dart';
 import '../../core/nodes.dart';
 import '../../core/scene_limits.dart';
 import '../../contract/node_spec.dart';
+import '../../contract/transform2d.dart';
 import '../scene_writer_command_results.dart';
 import '../scene_writer.dart';
 
@@ -67,6 +68,28 @@ class DrawCommands {
         thickness: thickness,
         color: color,
         opacity: opacity,
+      ),
+      signalType: 'draw.line',
+    );
+  }
+
+  NodeId writeDrawLineFromWorldSegment({
+    required Offset start,
+    required Offset end,
+    required double thickness,
+    required Color color,
+    double opacity = 1,
+  }) {
+    final bounds = Rect.fromPoints(start, end);
+    final center = bounds.center;
+    return _writeDrawNode(
+      LineNodeSpec(
+        start: start - center,
+        end: end - center,
+        thickness: thickness,
+        color: color,
+        opacity: opacity,
+        transform: Transform2D.translation(center),
       ),
       signalType: 'draw.line',
     );

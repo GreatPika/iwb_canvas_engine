@@ -13,16 +13,15 @@ import '../contract/scene_defaults.dart';
 import '../contract/scene_render_state.dart';
 import '../contract/scene_write_txn.dart';
 import '../contract/snapshot.dart';
-import '../contract/transform2d.dart';
 import '../controller/scene_controller.dart';
 import '../core/pointer_input.dart';
 import '../model/document.dart' show txnSceneFromSnapshot;
-import 'internal/interactive_draw_line_engine.dart' show InteractiveDrawStyle;
+import 'internal/interactive_draw_style.dart';
 import 'internal/interactive_event_dispatcher.dart';
-import 'internal/interactive_geometry.dart';
 import 'internal/interactive_runtime.dart';
 import 'internal/interactive_runtime_callbacks.dart';
 import 'internal/interactive_selection_actions.dart';
+import 'internal/scene_controller_interactive_internal_access.dart';
 
 typedef MoveCommitDeltaResolver =
     Offset Function({
@@ -30,70 +29,6 @@ typedef MoveCommitDeltaResolver =
       required List<NodeSnapshot> movedNodes,
       required Offset proposedDelta,
     });
-
-int sceneControllerInteractiveInternalEpoch(
-  SceneControllerInteractive controller,
-) {
-  return controller._core.controllerEpoch;
-}
-
-Offset sceneControllerInteractiveInternalPreviewDeltaForNode(
-  SceneControllerInteractive controller,
-  NodeId nodeId,
-) {
-  return controller._runtime.debugMoveSession.movePreviewDeltaForNode(nodeId);
-}
-
-void sceneControllerInteractiveInternalSetBeforePointerDispatchHook(
-  SceneControllerInteractive controller,
-  VoidCallback? hook,
-) {
-  controller._runtime.setBeforePointerDispatchHook(hook);
-}
-
-Offset sceneControllerInteractiveInternalRunMoveCommitDeltaResolverForTest(
-  SceneControllerInteractive controller, {
-  required SceneSnapshot snapshot,
-  required List<NodeSnapshot> movedNodes,
-  required Offset proposedDelta,
-}) {
-  return controller._runMoveCommitDeltaResolver(
-    snapshot: snapshot,
-    movedNodes: movedNodes,
-    proposedDelta: proposedDelta,
-  );
-}
-
-void sceneControllerInteractiveInternalEnforceGestureBufferSoftLimitForTest(
-  SceneControllerInteractive _, {
-  required List<Offset> points,
-  required int softLimit,
-  required int trimTo,
-}) {
-  enforceGestureBufferSoftLimit(points, softLimit: softLimit, trimTo: trimTo);
-}
-
-int sceneControllerInteractiveInternalActiveEraserPointsLength(
-  SceneControllerInteractive controller,
-) {
-  return controller._runtime.activeEraserPointsLength;
-}
-
-int sceneControllerInteractiveInternalEraserSpatialQueryCount(
-  SceneControllerInteractive controller,
-) {
-  // Test-only metric: number of coarse spatial queries used by last eraser
-  // commit. Helps keep complexity guards deterministic across environments.
-  return controller._runtime.debugEraserSpatialQueryCount;
-}
-
-int sceneControllerInteractiveInternalEraserPreciseSegmentCheckCount(
-  SceneControllerInteractive controller,
-) {
-  // Test-only metric: number of exact segment-to-segment checks during last
-  // eraser commit. Used as primary perf acceptance signal.
-  return controller._runtime.debugEraserPreciseSegmentChecks;
-}
 
 class SceneControllerInteractive extends ChangeNotifier
     implements SceneRenderState {
@@ -117,6 +52,18 @@ class SceneControllerInteractive extends ChangeNotifier
     _events = InteractiveEventDispatcher();
     _selectionActions = _createSelectionActions();
     _runtime = _createRuntime();
+    registerSceneControllerInteractiveInternalAccess(
+      this,
+      readEpoch: () => _core.controllerEpoch,
+      previewDeltaForNode: (nodeId) =>
+          _runtime.debugMoveSession.movePreviewDeltaForNode(nodeId),
+      setBeforePointerDispatchHook: _runtime.setBeforePointerDispatchHook,
+      runMoveCommitDeltaResolverForTest: _runMoveCommitDeltaResolver,
+      readActiveEraserPointsLength: () => _runtime.activeEraserPointsLength,
+      readEraserSpatialQueryCount: () => _runtime.debugEraserSpatialQueryCount,
+      readEraserPreciseSegmentCheckCount: () =>
+          _runtime.debugEraserPreciseSegmentChecks,
+    );
     _core.addListener(_handleCoreChanged);
   }
 
@@ -431,7 +378,7 @@ class SceneControllerInteractive extends ChangeNotifier
         writeSelectionClear: _core.commands.writeSelectionClear,
         commitMoveSelection: _selectionActions.commitMoveSelection,
         writeDrawStroke: _core.draw.writeDrawStroke,
-        writeDrawLineFromWorldSegment: _writeDrawLineFromWorldSegment,
+        writeDrawLineFromWorldSegment: _core.draw.writeDrawLineFromWorldSegment,
         writeEraseNodes: _core.draw.writeEraseNodes,
       ),
     );
@@ -462,27 +409,6 @@ class SceneControllerInteractive extends ChangeNotifier
   static double? _validateDragStartSlop(double? value) {
     if (value == null) return null;
     return _requireFiniteNonNegative(value, name: 'dragStartSlop');
-  }
-
-  NodeId _writeDrawLineFromWorldSegment({
-    required Offset start,
-    required Offset end,
-  }) {
-    return _core.write<NodeId>((writer) {
-      final bounds = Rect.fromPoints(start, end);
-      final center = bounds.center;
-      final nodeId = writer.writeNodeInsert(
-        LineNodeSpec(
-          start: start - center,
-          end: end - center,
-          thickness: _lineThickness,
-          color: _drawColor,
-          transform: Transform2D.translation(center),
-        ),
-      );
-      writer.writeSignalEnqueue(type: 'draw.line', nodeIds: <NodeId>[nodeId]);
-      return nodeId;
-    });
   }
 
   void _scheduleNotify() {
@@ -553,6 +479,7 @@ class SceneControllerInteractive extends ChangeNotifier
     _isDisposed = true;
     _notifyScheduler.dispose();
     _runtime.dispose();
+    unregisterSceneControllerInteractiveInternalAccess(this);
     _events.dispose();
     super.dispose();
   }

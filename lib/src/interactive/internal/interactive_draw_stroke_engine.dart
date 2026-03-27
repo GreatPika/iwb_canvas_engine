@@ -6,8 +6,8 @@ import '../../core/interaction_types.dart';
 import '../../core/scene_limits.dart';
 import '../../contract/snapshot.dart';
 import 'interactive_draw_action_emitter.dart';
-import 'interactive_draw_line_engine.dart' show InteractiveDrawStyle;
 import 'interactive_draw_path_buffer.dart';
+import 'interactive_draw_style.dart';
 
 class InteractiveDrawStrokeEngineCallbacks {
   const InteractiveDrawStrokeEngineCallbacks({

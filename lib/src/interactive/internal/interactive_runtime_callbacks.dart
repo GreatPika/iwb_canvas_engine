@@ -4,7 +4,7 @@ import '../../core/interaction_types.dart';
 import '../../core/nodes.dart' show SceneNode;
 import '../../core/scene_spatial_index.dart';
 import '../../contract/snapshot.dart';
-import 'interactive_draw_line_engine.dart' show InteractiveDrawStyle;
+import 'interactive_draw_style.dart';
 import 'interactive_move_callbacks.dart';
 
 class InteractiveRuntimeCallbacks {
@@ -46,7 +46,13 @@ class InteractiveRuntimeCallbacks {
     required double opacity,
   })
   writeDrawStroke;
-  final NodeId Function({required Offset start, required Offset end})
+  final NodeId Function({
+    required Offset start,
+    required Offset end,
+    required double thickness,
+    required Color color,
+    required double opacity,
+  })
   writeDrawLineFromWorldSegment;
   final int Function(Iterable<NodeId> ids) writeEraseNodes;
 }

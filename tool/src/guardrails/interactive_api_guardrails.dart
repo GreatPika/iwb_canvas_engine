@@ -289,6 +289,13 @@ Never _onInteractiveParseFailure({
 }
 
 GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
+  final facadeFile = _interactiveFile(context);
+  final facadeFilePosixPath = _interactiveFilePosixPath(context, facadeFile);
+  final parsed = _parseInteractiveFile(
+    context,
+    facadeFile,
+    facadeFilePosixPath,
+  );
   final runtimeFile = _interactiveSupportFile(
     context,
     'internal/interactive_runtime.dart',
@@ -305,6 +312,14 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
     context,
     'internal/interactive_draw_eraser_engine.dart',
   );
+  final drawStyleFile = _interactiveSupportFile(
+    context,
+    'internal/interactive_draw_style.dart',
+  );
+  final internalAccessFile = _interactiveSupportFile(
+    context,
+    'internal/scene_controller_interactive_internal_access.dart',
+  );
 
   final missingOwnerViolation =
       _missingInteractiveOwnerViolation(context, <File, String>{
@@ -312,20 +327,25 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
         eventFile: 'InteractiveEventDispatcher',
         drawCoordinatorFile: 'InteractiveDrawCoordinator',
         drawEraserFile: 'InteractiveDrawEraserEngine',
+        drawStyleFile: 'InteractiveDrawStyle',
+        internalAccessFile: 'SceneControllerInteractiveInternalAccess',
       });
   if (missingOwnerViolation != null) {
     return missingOwnerViolation;
   }
 
-  final facadeSource = _interactiveFile(context).readAsStringSync();
+  final facadeSource = facadeFile.readAsStringSync();
   final runtimeSource = runtimeFile.readAsStringSync();
   final eventSource = eventFile.readAsStringSync();
   final drawCoordinatorSource = drawCoordinatorFile.readAsStringSync();
   final drawEraserSource = drawEraserFile.readAsStringSync();
+  final drawStyleSource = drawStyleFile.readAsStringSync();
+  final internalAccessSource = internalAccessFile.readAsStringSync();
 
-  return _requireSourceTokens(
+  return _topLevelFacadeHelperViolation(context, parsed: parsed) ??
+      _requireSourceTokens(
         source: facadeSource,
-        filePath: _interactiveFilePosixPath(context, _interactiveFile(context)),
+        filePath: facadeFilePosixPath,
         requiredTokens: const <String>[
           "import 'internal/interactive_runtime.dart';",
           "import 'internal/interactive_event_dispatcher.dart';",
@@ -338,8 +358,12 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
           "import 'internal/interactive_gesture_machine.dart';",
           "import 'internal/interactive_draw_coordinator.dart';",
           "import 'internal/interactive_draw_eraser_engine.dart';",
+          "import 'internal/interactive_draw_line_engine.dart' show InteractiveDrawStyle;",
           'StreamController<',
           '_timestampCursorMs',
+          'LineNodeSpec(',
+          'Rect.fromPoints(',
+          'Transform2D.translation(',
         ],
         message:
             'interactive API violation: SceneControllerInteractive must remain '
@@ -415,7 +439,53 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
         message:
             'interactive API violation: eraser geometry helpers must remain '
             'behind InteractiveDrawEraserEngine.',
+      ) ??
+      _requireSourceTokens(
+        source: drawStyleSource,
+        filePath: _interactiveFilePosixPath(context, drawStyleFile),
+        requiredTokens: const <String>[
+          'typedef InteractiveDrawStyle = ({',
+          'DrawTool drawTool,',
+          'Color drawColor,',
+          'double lineThickness,',
+        ],
+        bannedTokens: const <String>[],
+        message:
+            'interactive API violation: InteractiveDrawStyle must remain a '
+            'shared interactive-local contract owner.',
+      ) ??
+      _requireSourceTokens(
+        source: internalAccessSource,
+        filePath: _interactiveFilePosixPath(context, internalAccessFile),
+        requiredTokens: const <String>[
+          'registerSceneControllerInteractiveInternalAccess(',
+          'sceneControllerInteractiveInternalEpoch(',
+          'sceneControllerInteractiveInternalPreviewDeltaForNode(',
+          'sceneControllerInteractiveInternalSetBeforePointerDispatchHook(',
+        ],
+        bannedTokens: const <String>[],
+        message:
+            'interactive API violation: internal interactive test/debug access '
+            'must remain outside SceneControllerInteractive.',
       );
+}
+
+GuardrailViolation? _topLevelFacadeHelperViolation(
+  GuardrailContext context, {
+  required ParsedUnitResult parsed,
+}) {
+  for (final declaration in parsed.unit.declarations) {
+    if (declaration is FunctionDeclaration) {
+      return GuardrailViolation(
+        filePath: _interactiveFilePosixPath(context, _interactiveFile(context)),
+        line: lineForOffset(parsed, declaration.offset),
+        message:
+            'interactive API violation: SceneControllerInteractive facade '
+            'file must not own top-level helper functions.',
+      );
+    }
+  }
+  return null;
 }
 
 GuardrailViolation? _missingInteractiveOwnerViolation(
