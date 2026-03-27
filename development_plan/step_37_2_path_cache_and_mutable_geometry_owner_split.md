@@ -145,7 +145,7 @@ mixed support bodies directly.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Mutable stroke-geometry support owner is isolated
+### Slice 1. [x] Mutable stroke-geometry support owner is isolated
 
 #### Slice Contract
 
@@ -169,7 +169,7 @@ current mixed support-owner form.
 - Green run of the listed verifications.
 - `pointsRevision` invalidation remains green after the support-owner split.
 
-### Slice 2. [ ] Path-local cache owner is isolated
+### Slice 2. [x] Path-local cache owner is isolated
 
 #### Slice Contract
 

@@ -128,6 +128,6 @@ language: russian
 - [x] [Шаг 36. Разрезать `InteractiveDrawEraserEngine` на exact-hit owner-ы по node family](development_plan/step_36_interactive_draw_eraser_exact_hit_owner_split.md)
 - [ ] [Шаг 37. Замкнуть финальную core architecture через подшаги 37.1-37.4](development_plan/step_37_core_final_architecture.md)
 - [x] [Шаг 37.1. Разрезать `nodes.dart` на node-family core-local owner-ы](development_plan/step_37_1_node_family_core_owner_decomposition.md)
-- [ ] [Шаг 37.2. Выделить path-cache и mutable geometry support из node entrypoints](development_plan/step_37_2_path_cache_and_mutable_geometry_owner_split.md)
+- [x] [Шаг 37.2. Выделить path-cache и mutable geometry support из node entrypoints](development_plan/step_37_2_path_cache_and_mutable_geometry_owner_split.md)
 - [ ] [Шаг 37.3. Довести `text_layout`, `action_events` и `id_generator` до leaf support owner-ов](development_plan/step_37_3_core_leaf_support_owner_finalization.md)
 - [ ] [Шаг 37.4. Замкнуть финальную core architecture на docs, non-regression pinning и baseline](development_plan/step_37_4_core_final_architecture_closure.md)

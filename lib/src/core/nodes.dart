@@ -341,7 +341,7 @@ class StrokeNode extends SceneNode {
     super.isDeletable,
     super.isTransformable,
   }) : super(type: NodeType.stroke) {
-    _points = _RevisionedOffsetList.from(
+    _mutableGeometry = _StrokeMutableGeometryOwner(
       points,
       initialRevision: pointsRevision,
     );
@@ -384,13 +384,13 @@ class StrokeNode extends SceneNode {
   /// During interactive drawing, the controller may temporarily keep points in
   /// world coordinates with `transform == identity`. The stroke is normalized
   /// when the gesture finishes.
-  late final _RevisionedOffsetList _points;
-  List<Offset> get points => _points;
+  late final _StrokeMutableGeometryOwner _mutableGeometry;
+  List<Offset> get points => _mutableGeometry.points;
 
   /// Monotonic geometry revision incremented on any [points] mutation.
   ///
   /// This is used by renderer caches to validate path freshness in O(1).
-  int get pointsRevision => _points.revision;
+  int get pointsRevision => _mutableGeometry.pointsRevision;
   double thickness;
   Color color;
 
@@ -421,10 +421,12 @@ class StrokeNode extends SceneNode {
   }
 }
 
-class _RevisionedOffsetList extends ListBase<Offset> {
-  _RevisionedOffsetList.from(Iterable<Offset> source, {int initialRevision = 0})
-    : _inner = List<Offset>.from(source),
-      _revision = initialRevision {
+final class _StrokeMutableGeometryOwner {
+  _StrokeMutableGeometryOwner(
+    Iterable<Offset> source, {
+    int initialRevision = 0,
+  }) : _storage = List<Offset>.from(source),
+       _revision = initialRevision {
     if (initialRevision < 0) {
       throw ArgumentError.value(
         initialRevision,
@@ -434,106 +436,139 @@ class _RevisionedOffsetList extends ListBase<Offset> {
     }
   }
 
-  final List<Offset> _inner;
+  final List<Offset> _storage;
   int _revision;
-  int get revision => _revision;
+  late final List<Offset> _pointsView = _RevisionedOffsetListView(
+    _storage,
+    onMutated: _markMutated,
+  );
 
-  void _markMutated() {
-    _revision += 1;
-  }
+  List<Offset> get points => _pointsView;
+  int get pointsRevision => _revision;
+
+  void _markMutated() => _revision += 1;
+}
+
+final class _RevisionedOffsetListView extends ListBase<Offset>
+    with
+        _RevisionedOffsetListStructuralMutations,
+        _RevisionedOffsetListRangeMutations,
+        _RevisionedOffsetListCollectionMutations {
+  _RevisionedOffsetListView(this._storage, {required void Function() onMutated})
+    : _onMutated = onMutated;
+
+  final List<Offset> _storage;
+  final void Function() _onMutated;
 
   @override
-  int get length => _inner.length;
+  List<Offset> get revisionedOffsetsBase => _storage;
 
+  @override
+  void markRevisionedOffsetsMutated() => _onMutated();
+
+  @override
+  int get length => _storage.length;
+
+  @override
+  Offset operator [](int index) => _storage[index];
+}
+
+abstract interface class _RevisionedOffsetListMutationHost {
+  List<Offset> get revisionedOffsetsBase;
+  void markRevisionedOffsetsMutated();
+}
+
+mixin _RevisionedOffsetListStructuralMutations on ListBase<Offset>
+    implements _RevisionedOffsetListMutationHost {
   @override
   set length(int value) {
-    if (value == _inner.length) return;
-    _inner.length = value;
-    _markMutated();
+    if (value == revisionedOffsetsBase.length) return;
+    revisionedOffsetsBase.length = value;
+    markRevisionedOffsetsMutated();
   }
-
-  @override
-  Offset operator [](int index) => _inner[index];
 
   @override
   void operator []=(int index, Offset value) {
-    if (_inner[index] == value) return;
-    _inner[index] = value;
-    _markMutated();
+    if (revisionedOffsetsBase[index] == value) return;
+    revisionedOffsetsBase[index] = value;
+    markRevisionedOffsetsMutated();
   }
 
   @override
   void add(Offset value) {
-    _inner.add(value);
-    _markMutated();
+    revisionedOffsetsBase.add(value);
+    markRevisionedOffsetsMutated();
   }
 
   @override
   void addAll(Iterable<Offset> iterable) {
     if (iterable.isEmpty) return;
-    _inner.addAll(iterable);
-    _markMutated();
+    revisionedOffsetsBase.addAll(iterable);
+    markRevisionedOffsetsMutated();
   }
 
   @override
   void clear() {
-    if (_inner.isEmpty) return;
-    _inner.clear();
-    _markMutated();
+    if (revisionedOffsetsBase.isEmpty) return;
+    revisionedOffsetsBase.clear();
+    markRevisionedOffsetsMutated();
   }
 
   @override
   void insert(int index, Offset element) {
-    _inner.insert(index, element);
-    _markMutated();
+    revisionedOffsetsBase.insert(index, element);
+    markRevisionedOffsetsMutated();
   }
 
   @override
   void insertAll(int index, Iterable<Offset> iterable) {
     if (iterable.isEmpty) return;
-    _inner.insertAll(index, iterable);
-    _markMutated();
+    revisionedOffsetsBase.insertAll(index, iterable);
+    markRevisionedOffsetsMutated();
   }
 
   @override
   bool remove(Object? value) {
-    final removed = _inner.remove(value);
-    if (removed) _markMutated();
+    final removed = revisionedOffsetsBase.remove(value);
+    if (removed) markRevisionedOffsetsMutated();
     return removed;
   }
 
   @override
   Offset removeAt(int index) {
-    final removed = _inner.removeAt(index);
-    _markMutated();
+    final removed = revisionedOffsetsBase.removeAt(index);
+    markRevisionedOffsetsMutated();
     return removed;
   }
 
   @override
   Offset removeLast() {
-    final removed = _inner.removeLast();
-    _markMutated();
+    final removed = revisionedOffsetsBase.removeLast();
+    markRevisionedOffsetsMutated();
     return removed;
   }
 
   @override
   void removeRange(int start, int end) {
     if (start == end) return;
-    _inner.removeRange(start, end);
-    _markMutated();
+    revisionedOffsetsBase.removeRange(start, end);
+    markRevisionedOffsetsMutated();
   }
+}
 
+mixin _RevisionedOffsetListRangeMutations on ListBase<Offset>
+    implements _RevisionedOffsetListMutationHost {
   @override
   void replaceRange(int start, int end, Iterable<Offset> replacements) {
-    _inner.replaceRange(start, end, replacements);
-    _markMutated();
+    revisionedOffsetsBase.replaceRange(start, end, replacements);
+    markRevisionedOffsetsMutated();
   }
 
   @override
   void setAll(int index, Iterable<Offset> iterable) {
     if (iterable.isEmpty) return;
-    _inner.setAll(index, iterable);
-    _markMutated();
+    revisionedOffsetsBase.setAll(index, iterable);
+    markRevisionedOffsetsMutated();
   }
 
   @override
@@ -544,43 +579,50 @@ class _RevisionedOffsetList extends ListBase<Offset> {
     int skipCount = 0,
   ]) {
     if (start == end) return;
-    _inner.setRange(start, end, iterable, skipCount);
-    _markMutated();
+    revisionedOffsetsBase.setRange(start, end, iterable, skipCount);
+    markRevisionedOffsetsMutated();
   }
 
   @override
   void fillRange(int start, int end, [Offset? fillValue]) {
     if (start == end) return;
-    _inner.fillRange(start, end, fillValue);
-    _markMutated();
+    revisionedOffsetsBase.fillRange(start, end, fillValue);
+    markRevisionedOffsetsMutated();
   }
+}
 
+mixin _RevisionedOffsetListCollectionMutations on ListBase<Offset>
+    implements _RevisionedOffsetListMutationHost {
   @override
   void removeWhere(bool Function(Offset element) test) {
-    final before = _inner.length;
-    _inner.removeWhere(test);
-    if (_inner.length != before) _markMutated();
+    final before = revisionedOffsetsBase.length;
+    revisionedOffsetsBase.removeWhere(test);
+    if (revisionedOffsetsBase.length != before) {
+      markRevisionedOffsetsMutated();
+    }
   }
 
   @override
   void retainWhere(bool Function(Offset element) test) {
-    final before = _inner.length;
-    _inner.retainWhere(test);
-    if (_inner.length != before) _markMutated();
+    final before = revisionedOffsetsBase.length;
+    revisionedOffsetsBase.retainWhere(test);
+    if (revisionedOffsetsBase.length != before) {
+      markRevisionedOffsetsMutated();
+    }
   }
 
   @override
   void sort([int Function(Offset a, Offset b)? compare]) {
-    if (_inner.length < 2) return;
-    _inner.sort(compare);
-    _markMutated();
+    if (revisionedOffsetsBase.length < 2) return;
+    revisionedOffsetsBase.sort(compare);
+    markRevisionedOffsetsMutated();
   }
 
   @override
   void shuffle([math.Random? random]) {
-    if (_inner.length < 2) return;
-    _inner.shuffle(random);
-    _markMutated();
+    if (revisionedOffsetsBase.length < 2) return;
+    revisionedOffsetsBase.shuffle(random);
+    markRevisionedOffsetsMutated();
   }
 }
 
@@ -1039,9 +1081,83 @@ class PathNode extends SceneNode {
   String _svgPathData;
   PathFillRule _fillRule;
 
-  /// Cached local path to avoid reparsing SVG data during culling and selection.
-  /// Invariant: cache is valid only while svgPathData and fillRule are unchanged.
-  /// Validate via core_nodes_test "PathNode invalidates cached path".
+  late final _PathNodeLocalPathCacheOwner _localPathCache =
+      _PathNodeLocalPathCacheOwner();
+
+  /// Debug-only failure reason for the last `buildLocalPath()` attempt.
+  ///
+  /// This value is populated when assertions are enabled, or when
+  /// [enableBuildLocalPathDiagnostics] is true.
+  String? get debugLastBuildLocalPathFailureReason =>
+      _localPathCache.debugLastBuildLocalPathFailureReason;
+
+  /// Debug-only exception captured from the last `buildLocalPath()` attempt.
+  ///
+  /// This value is populated when assertions are enabled, or when
+  /// [enableBuildLocalPathDiagnostics] is true.
+  Object? get debugLastBuildLocalPathException =>
+      _localPathCache.debugLastBuildLocalPathException;
+
+  /// Debug-only stack trace captured from the last `buildLocalPath()` attempt.
+  ///
+  /// This value is populated when assertions are enabled, or when
+  /// [enableBuildLocalPathDiagnostics] is true.
+  StackTrace? get debugLastBuildLocalPathStackTrace =>
+      _localPathCache.debugLastBuildLocalPathStackTrace;
+
+  String get svgPathData => _svgPathData;
+  set svgPathData(String value) {
+    if (_svgPathData == value) return;
+    _svgPathData = value;
+    _localPathCache.invalidate();
+  }
+
+  PathFillRule get fillRule => _fillRule;
+  set fillRule(PathFillRule value) {
+    if (_fillRule == value) return;
+    _fillRule = value;
+    _localPathCache.invalidate();
+  }
+
+  /// Builds a local path centered around (0,0), or returns null if invalid.
+  ///
+  /// The returned path is in the node's local coordinate space. The caller is
+  /// responsible for applying [transform].
+  ///
+  /// This method returns a defensive copy of the cached geometry so external
+  /// callers cannot accidentally mutate internal cache state.
+  Path? buildLocalPath() => _localPathCache.buildLocalPath(
+    _PathNodeCacheRequest(
+      svgPathData: _svgPathData,
+      fillRule: _fillRule,
+      diagnosticsEnabled: enableBuildLocalPathDiagnostics,
+      assertionsEnabled: _assertionsEnabled,
+    ),
+  );
+
+  @override
+  Rect get localBounds => _localPathCache.resolveLocalBounds(
+    request: _PathNodeCacheRequest(
+      svgPathData: _svgPathData,
+      fillRule: _fillRule,
+      diagnosticsEnabled: enableBuildLocalPathDiagnostics,
+      assertionsEnabled: _assertionsEnabled,
+    ),
+    strokeColor: strokeColor,
+    strokeWidth: strokeWidth,
+  );
+
+  static final bool _assertionsEnabled = (() {
+    var enabled = false;
+    assert(() {
+      enabled = true;
+      return true;
+    }());
+    return enabled;
+  })();
+}
+
+final class _PathNodeLocalPathCacheOwner {
   Path? _cachedLocalPath;
   Rect? _cachedLocalPathBounds;
   String? _cachedSvgPathData;
@@ -1052,113 +1168,25 @@ class PathNode extends SceneNode {
   Object? _debugLastBuildLocalPathException;
   StackTrace? _debugLastBuildLocalPathStackTrace;
 
-  /// Debug-only failure reason for the last `buildLocalPath()` attempt.
-  ///
-  /// This value is populated when assertions are enabled, or when
-  /// [enableBuildLocalPathDiagnostics] is true.
   String? get debugLastBuildLocalPathFailureReason =>
       _debugLastBuildLocalPathFailureReason;
-
-  /// Debug-only exception captured from the last `buildLocalPath()` attempt.
-  ///
-  /// This value is populated when assertions are enabled, or when
-  /// [enableBuildLocalPathDiagnostics] is true.
   Object? get debugLastBuildLocalPathException =>
       _debugLastBuildLocalPathException;
-
-  /// Debug-only stack trace captured from the last `buildLocalPath()` attempt.
-  ///
-  /// This value is populated when assertions are enabled, or when
-  /// [enableBuildLocalPathDiagnostics] is true.
   StackTrace? get debugLastBuildLocalPathStackTrace =>
       _debugLastBuildLocalPathStackTrace;
 
-  String get svgPathData => _svgPathData;
-  set svgPathData(String value) {
-    if (_svgPathData == value) return;
-    _svgPathData = value;
-    _invalidatePathCache();
-  }
-
-  PathFillRule get fillRule => _fillRule;
-  set fillRule(PathFillRule value) {
-    if (_fillRule == value) return;
-    _fillRule = value;
-    _invalidatePathCache();
-  }
-
-  /// Builds a local path centered around (0,0), or returns null if invalid.
-  ///
-  /// The returned path is in the node's local coordinate space. The caller is
-  /// responsible for applying [transform].
-  ///
-  /// This method returns a defensive copy of the cached geometry so external
-  /// callers cannot accidentally mutate internal cache state.
-  Path? buildLocalPath() {
-    final cached = _ensureLocalPathCache();
+  Path? buildLocalPath(_PathNodeCacheRequest request) {
+    final cached = _resolve(request);
     if (cached == null) return null;
-    return _copyPath(cached);
+    return Path.from(cached);
   }
 
-  Path? _ensureLocalPathCache() {
-    if (_cacheResolved &&
-        _cachedSvgPathData == _svgPathData &&
-        _cachedFillRule == _fillRule) {
-      final cached = _cachedLocalPath;
-      if (cached == null) return null;
-      return cached;
-    }
-    if (_svgPathData.trim().isEmpty) {
-      _cacheResolved = true;
-      _cachedSvgPathData = _svgPathData;
-      _cachedFillRule = _fillRule;
-      _cachedLocalPath = null;
-      _cachedLocalPathBounds = null;
-      _recordBuildLocalPathFailure(reason: 'empty-svg-path-data');
-      return null;
-    }
-    try {
-      final path = parseSvgPathDataOrThrow(_svgPathData);
-      if (!hasDrawablePathMetric(path)) {
-        _cacheResolved = true;
-        _cachedSvgPathData = _svgPathData;
-        _cachedFillRule = _fillRule;
-        _cachedLocalPath = null;
-        _cachedLocalPathBounds = null;
-        _recordBuildLocalPathFailure(reason: 'svg-path-has-no-nonzero-length');
-        return null;
-      }
-      final geometry = centerPathGeometry(
-        path,
-        fillType: _fillRule == PathFillRule.evenOdd
-            ? PathFillType.evenOdd
-            : PathFillType.nonZero,
-      );
-      _cacheResolved = true;
-      _cachedSvgPathData = _svgPathData;
-      _cachedFillRule = _fillRule;
-      _cachedLocalPath = geometry.localPath;
-      _cachedLocalPathBounds = geometry.localBounds;
-      _clearBuildLocalPathFailure();
-      return geometry.localPath;
-    } catch (e, st) {
-      _cacheResolved = true;
-      _cachedSvgPathData = _svgPathData;
-      _cachedFillRule = _fillRule;
-      _cachedLocalPath = null;
-      _cachedLocalPathBounds = null;
-      _recordBuildLocalPathFailure(
-        reason: 'exception-while-building-local-path',
-        exception: e,
-        stackTrace: st,
-      );
-      return null;
-    }
-  }
-
-  @override
-  Rect get localBounds {
-    _ensureLocalPathCache();
+  Rect resolveLocalBounds({
+    required _PathNodeCacheRequest request,
+    required Color? strokeColor,
+    required double strokeWidth,
+  }) {
+    _resolve(request);
     final bounds = _cachedLocalPathBounds;
     if (bounds == null) return Rect.zero;
     return strokeAwareLocalBounds(
@@ -1168,7 +1196,7 @@ class PathNode extends SceneNode {
     );
   }
 
-  void _invalidatePathCache() {
+  void invalidate() {
     _cacheResolved = false;
     _cachedLocalPath = null;
     _cachedLocalPathBounds = null;
@@ -1176,21 +1204,77 @@ class PathNode extends SceneNode {
     _cachedFillRule = null;
   }
 
-  static final bool _assertionsEnabled = (() {
-    var enabled = false;
-    assert(() {
-      enabled = true;
-      return true;
-    }());
-    return enabled;
-  })();
+  Path? _resolve(_PathNodeCacheRequest request) {
+    if (_hasMatchingResolvedCache(request)) return _cachedLocalPath;
+    if (request.hasEmptySvgPathData) {
+      _rememberFailure(request, reason: 'empty-svg-path-data');
+      return null;
+    }
+    return _resolveParsedPath(request);
+  }
 
-  void _recordBuildLocalPathFailure({
+  Path? _resolveParsedPath(_PathNodeCacheRequest request) {
+    try {
+      final path = parseSvgPathDataOrThrow(request.svgPathData);
+      if (!hasDrawablePathMetric(path)) {
+        _rememberFailure(request, reason: 'svg-path-has-no-nonzero-length');
+        return null;
+      }
+      return _rememberSuccess(request, path);
+    } catch (e, st) {
+      _rememberFailure(
+        request,
+        reason: 'exception-while-building-local-path',
+        exception: e,
+        stackTrace: st,
+      );
+      return null;
+    }
+  }
+
+  bool _hasMatchingResolvedCache(_PathNodeCacheRequest request) {
+    return _cacheResolved &&
+        _cachedSvgPathData == request.svgPathData &&
+        _cachedFillRule == request.fillRule;
+  }
+
+  Path _rememberSuccess(_PathNodeCacheRequest request, Path path) {
+    final geometry = centerPathGeometry(path, fillType: request.fillType);
+    _cacheResolved = true;
+    _cachedSvgPathData = request.svgPathData;
+    _cachedFillRule = request.fillRule;
+    _cachedLocalPath = geometry.localPath;
+    _cachedLocalPathBounds = geometry.localBounds;
+    _clearRecordedFailure(request);
+    return geometry.localPath;
+  }
+
+  void _rememberFailure(
+    _PathNodeCacheRequest request, {
     required String reason,
     Object? exception,
     StackTrace? stackTrace,
   }) {
-    if (enableBuildLocalPathDiagnostics) {
+    _cacheResolved = true;
+    _cachedSvgPathData = request.svgPathData;
+    _cachedFillRule = request.fillRule;
+    _cachedLocalPath = null;
+    _cachedLocalPathBounds = null;
+    _recordBuildLocalPathFailure(
+      request,
+      reason: reason,
+      exception: exception,
+      stackTrace: stackTrace,
+    );
+  }
+
+  void _recordBuildLocalPathFailure(
+    _PathNodeCacheRequest request, {
+    required String reason,
+    Object? exception,
+    StackTrace? stackTrace,
+  }) {
+    if (request.diagnosticsEnabled) {
       _debugLastBuildLocalPathFailureReason = reason;
       _debugLastBuildLocalPathException = exception;
       _debugLastBuildLocalPathStackTrace = stackTrace;
@@ -1202,28 +1286,37 @@ class PathNode extends SceneNode {
       );
       return;
     }
-    if (!_assertionsEnabled) return;
+    if (!request.assertionsEnabled) return;
     _debugLastBuildLocalPathFailureReason = reason;
     _debugLastBuildLocalPathException = exception;
     _debugLastBuildLocalPathStackTrace = stackTrace;
   }
 
-  void _clearBuildLocalPathFailure() {
-    if (enableBuildLocalPathDiagnostics) {
-      _debugLastBuildLocalPathFailureReason = null;
-      _debugLastBuildLocalPathException = null;
-      _debugLastBuildLocalPathStackTrace = null;
-      return;
-    }
-    if (!_assertionsEnabled) return;
+  void _clearRecordedFailure(_PathNodeCacheRequest request) {
+    if (!request.diagnosticsEnabled && !request.assertionsEnabled) return;
     _debugLastBuildLocalPathFailureReason = null;
     _debugLastBuildLocalPathException = null;
     _debugLastBuildLocalPathStackTrace = null;
   }
+}
 
-  Path _copyPath(Path source) {
-    return Path.from(source);
-  }
+final class _PathNodeCacheRequest {
+  const _PathNodeCacheRequest({
+    required this.svgPathData,
+    required this.fillRule,
+    required this.diagnosticsEnabled,
+    required this.assertionsEnabled,
+  });
+
+  final String svgPathData;
+  final PathFillRule fillRule;
+  final bool diagnosticsEnabled;
+  final bool assertionsEnabled;
+
+  bool get hasEmptySvgPathData => svgPathData.trim().isEmpty;
+  PathFillType get fillType => fillRule == PathFillRule.evenOdd
+      ? PathFillType.evenOdd
+      : PathFillType.nonZero;
 }
 
 void _requireTrsTransformForConvenienceSetter(
