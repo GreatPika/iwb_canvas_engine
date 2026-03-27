@@ -493,6 +493,72 @@ class InteractiveDrawCoordinator {
     }
   });
 
+  test('rejects eraser engine that re-owns exact-hit geometry', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeMinimalControllerStore(sandbox);
+      writeInteractiveArchitectureSupportScaffold(sandbox);
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/scene_controller_interactive.dart',
+        '''
+import 'internal/interactive_event_dispatcher.dart';
+import 'internal/interactive_runtime.dart';
+import 'internal/interactive_selection_actions.dart';
+
+class SceneControllerInteractive {
+  final InteractiveEventDispatcher _events = InteractiveEventDispatcher();
+  late final InteractiveRuntime _runtime = InteractiveRuntime(events: _events);
+  final InteractiveSelectionActions _selectionActions =
+      InteractiveSelectionActions();
+
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+    _runtime.handlePointer(input);
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+    _runtime.handleDoubleTap(position: Object());
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+
+  void _ensurePublicSideEffectAllowed(
+    String operation, {
+    bool allowAfterDispose = false,
+  }) {}
+}
+''',
+      );
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/internal/interactive_draw_eraser_engine.dart',
+        '''
+class InteractiveDrawEraserEngine {
+  bool _eraserHitsLine() => false;
+}
+''',
+      );
+
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, isNonZero);
+      expect(
+        result.stderr.toString(),
+        diagnostic(
+          category: 'interactive API',
+          detail:
+              'InteractiveDrawEraserEngine must delegate exact-hit geometry '
+              'to eraser-local owners',
+        ),
+      );
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
+  });
+
   test('rejects missing required split-owner file', () async {
     final sandbox = await createGuardrailsSandbox();
     try {

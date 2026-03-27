@@ -144,6 +144,26 @@ typedef InteractiveDrawStyle = ({
       expect(result.exitCode, 0, reason: result.stderr.toString());
     },
   );
+
+  test(
+    'passes when missing interactive eraser projection typedef unit is allow-listed',
+    () async {
+      final result = await _runCoverageScenario(
+        files: <String, String>{
+          'lib/src/interactive/internal/interactive_draw_eraser_projection.dart':
+              '''
+typedef InteractiveDrawProjectedEraser = ({
+  double threshold,
+});
+''',
+          'lib/src/contract/a.dart': 'int covered() => 1;\n',
+        },
+        lcov: _singleFileLcov('lib/src/contract/a.dart'),
+      );
+
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+    },
+  );
 }
 
 void _registerCommentWrappedExportOnlyShimTest() {

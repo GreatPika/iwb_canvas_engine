@@ -64,6 +64,18 @@ void main() {
       final eraserSource = File(
         'lib/src/interactive/internal/interactive_draw_eraser_engine.dart',
       ).readAsStringSync();
+      final eraserExactHitSource = File(
+        'lib/src/interactive/internal/interactive_draw_eraser_exact_hit.dart',
+      ).readAsStringSync();
+      final eraserLineHitSource = File(
+        'lib/src/interactive/internal/interactive_draw_eraser_line_hit.dart',
+      ).readAsStringSync();
+      final eraserProjectionSource = File(
+        'lib/src/interactive/internal/interactive_draw_eraser_projection.dart',
+      ).readAsStringSync();
+      final eraserStrokeHitSource = File(
+        'lib/src/interactive/internal/interactive_draw_eraser_stroke_hit.dart',
+      ).readAsStringSync();
 
       expect(
         facadeSource,
@@ -178,10 +190,77 @@ void main() {
         isNot(contains('_eraserSegmentHitsStrokeBatch(')),
       );
 
-      expect(eraserSource, contains('_eraserHitsLine('));
-      expect(eraserSource, contains('_eraserHitsStroke('));
-      expect(eraserSource, contains('_localEraserSegmentsHitLine('));
-      expect(eraserSource, contains('_eraserSegmentHitsStrokeBatch('));
+      expect(
+        eraserSource,
+        contains("import 'interactive_draw_eraser_exact_hit.dart';"),
+      );
+      expect(eraserSource, contains('InteractiveDrawEraserExactHit('));
+      expect(eraserSource, contains('_exactHit.hitsNode('));
+      expect(eraserSource, isNot(contains('_eraserHitsNode(')));
+      expect(eraserSource, isNot(contains('_eraserHitsLine(')));
+      expect(eraserSource, isNot(contains('_eraserHitsStroke(')));
+      expect(eraserSource, isNot(contains('_projectEraserToLocal(')));
+      expect(eraserSource, isNot(contains('_fallbackWorldBoundsHit(')));
+      expect(eraserSource, isNot(contains('_localEraserSegmentsHitLine(')));
+      expect(eraserSource, isNot(contains('_eraserSegmentHitsStrokeBatch(')));
+
+      expect(
+        eraserExactHitSource,
+        contains("import 'interactive_draw_eraser_line_hit.dart';"),
+      );
+      expect(
+        eraserExactHitSource,
+        contains("import 'interactive_draw_eraser_projection.dart';"),
+      );
+      expect(
+        eraserExactHitSource,
+        contains("import 'interactive_draw_eraser_stroke_hit.dart';"),
+      );
+      expect(
+        eraserExactHitSource,
+        contains('class InteractiveDrawEraserExactHit'),
+      );
+      expect(eraserExactHitSource, contains('_lineHit.hitsProjectedLine('));
+      expect(eraserExactHitSource, contains('_strokeHit.hitsProjectedStroke('));
+      expect(eraserExactHitSource, contains('_projectEraserToLocal('));
+      expect(eraserExactHitSource, contains('_fallbackWorldBoundsHit('));
+      expect(
+        eraserExactHitSource,
+        isNot(contains('_localEraserSegmentsHitLine(')),
+      );
+      expect(
+        eraserExactHitSource,
+        isNot(contains('_eraserSegmentHitsStrokeBatch(')),
+      );
+
+      expect(
+        eraserLineHitSource,
+        contains('class InteractiveDrawEraserLineHit'),
+      );
+      expect(eraserLineHitSource, contains('hitsProjectedLine('));
+      expect(eraserLineHitSource, contains('_localEraserSegmentsHitLine('));
+      expect(eraserLineHitSource, contains('onPreciseSegmentCheck()'));
+      expect(
+        eraserLineHitSource,
+        isNot(contains('_eraserSegmentHitsStrokeBatch(')),
+      );
+
+      expect(
+        eraserStrokeHitSource,
+        contains('class InteractiveDrawEraserStrokeHit'),
+      );
+      expect(eraserStrokeHitSource, contains('hitsProjectedStroke('));
+      expect(eraserStrokeHitSource, contains('_eraserSegmentHitsStrokeBatch('));
+      expect(eraserStrokeHitSource, contains('onPreciseSegmentCheck()'));
+      expect(
+        eraserStrokeHitSource,
+        isNot(contains('_localEraserSegmentsHitLine(')),
+      );
+
+      expect(
+        eraserProjectionSource,
+        contains('typedef InteractiveDrawProjectedEraser = ({'),
+      );
     },
   );
 }

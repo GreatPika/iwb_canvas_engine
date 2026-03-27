@@ -122,11 +122,88 @@ class InteractiveDrawCoordinator {
     sandbox,
     'lib/src/interactive/internal/interactive_draw_eraser_engine.dart',
     '''
+import 'interactive_draw_eraser_exact_hit.dart';
+
 class InteractiveDrawEraserEngine {
-  bool _eraserHitsLine() => false;
-  bool _eraserHitsStroke() => false;
-  bool _localEraserSegmentsHitLine() => false;
-  bool _eraserSegmentHitsStrokeBatch() => false;
+  final InteractiveDrawEraserExactHit _exactHit = InteractiveDrawEraserExactHit();
+
+  bool erase(Object points, Object node) => _exactHit.hitsNode(points, node);
+}
+''',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/interactive_draw_eraser_exact_hit.dart',
+    '''
+import 'interactive_draw_eraser_line_hit.dart';
+import 'interactive_draw_eraser_projection.dart';
+import 'interactive_draw_eraser_stroke_hit.dart';
+
+class InteractiveDrawEraserExactHit {
+  final InteractiveDrawEraserLineHit _lineHit = InteractiveDrawEraserLineHit();
+  final InteractiveDrawEraserStrokeHit _strokeHit =
+      InteractiveDrawEraserStrokeHit();
+
+  bool hitsNode(Object points, Object node) {
+    _projectEraserToLocal(points);
+    _fallbackWorldBoundsHit(node);
+    return _lineHit.hitsProjectedLine(points, node) ||
+        _strokeHit.hitsProjectedStroke(points, node);
+  }
+
+  InteractiveDrawProjectedEraser _projectEraserToLocal(Object points) =>
+      (points: const [], threshold: 0, thresholdSquared: 0);
+
+  bool _fallbackWorldBoundsHit(Object node) => false;
+}
+''',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/interactive_draw_eraser_line_hit.dart',
+    '''
+class InteractiveDrawEraserLineHit {
+  bool hitsProjectedLine(Object points, Object node) {
+    return _localEraserSegmentsHitLine(points, node);
+  }
+
+  bool _localEraserSegmentsHitLine(Object points, Object node) {
+    onPreciseSegmentCheck();
+    return false;
+  }
+
+  void onPreciseSegmentCheck() {}
+}
+''',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/interactive_draw_eraser_projection.dart',
+    '''
+import 'dart:ui';
+
+typedef InteractiveDrawProjectedEraser = ({
+  List<Offset> points,
+  double threshold,
+  double thresholdSquared,
+});
+''',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/interactive_draw_eraser_stroke_hit.dart',
+    '''
+class InteractiveDrawEraserStrokeHit {
+  bool hitsProjectedStroke(Object points, Object node) {
+    return _eraserSegmentHitsStrokeBatch(points, node);
+  }
+
+  bool _eraserSegmentHitsStrokeBatch(Object points, Object node) {
+    onPreciseSegmentCheck();
+    return false;
+  }
+
+  void onPreciseSegmentCheck() {}
 }
 ''',
   );

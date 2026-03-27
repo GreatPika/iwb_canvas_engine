@@ -312,6 +312,22 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
     context,
     'internal/interactive_draw_eraser_engine.dart',
   );
+  final drawEraserExactHitFile = _interactiveSupportFile(
+    context,
+    'internal/interactive_draw_eraser_exact_hit.dart',
+  );
+  final drawEraserLineHitFile = _interactiveSupportFile(
+    context,
+    'internal/interactive_draw_eraser_line_hit.dart',
+  );
+  final drawEraserProjectionFile = _interactiveSupportFile(
+    context,
+    'internal/interactive_draw_eraser_projection.dart',
+  );
+  final drawEraserStrokeHitFile = _interactiveSupportFile(
+    context,
+    'internal/interactive_draw_eraser_stroke_hit.dart',
+  );
   final drawStyleFile = _interactiveSupportFile(
     context,
     'internal/interactive_draw_style.dart',
@@ -327,6 +343,10 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
         eventFile: 'InteractiveEventDispatcher',
         drawCoordinatorFile: 'InteractiveDrawCoordinator',
         drawEraserFile: 'InteractiveDrawEraserEngine',
+        drawEraserExactHitFile: 'InteractiveDrawEraserExactHit',
+        drawEraserLineHitFile: 'InteractiveDrawEraserLineHit',
+        drawEraserProjectionFile: 'InteractiveDrawProjectedEraser',
+        drawEraserStrokeHitFile: 'InteractiveDrawEraserStrokeHit',
         drawStyleFile: 'InteractiveDrawStyle',
         internalAccessFile: 'SceneControllerInteractiveInternalAccess',
       });
@@ -339,6 +359,11 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
   final eventSource = eventFile.readAsStringSync();
   final drawCoordinatorSource = drawCoordinatorFile.readAsStringSync();
   final drawEraserSource = drawEraserFile.readAsStringSync();
+  final drawEraserExactHitSource = drawEraserExactHitFile.readAsStringSync();
+  final drawEraserLineHitSource = drawEraserLineHitFile.readAsStringSync();
+  final drawEraserProjectionSource = drawEraserProjectionFile
+      .readAsStringSync();
+  final drawEraserStrokeHitSource = drawEraserStrokeHitFile.readAsStringSync();
   final drawStyleSource = drawStyleFile.readAsStringSync();
   final internalAccessSource = internalAccessFile.readAsStringSync();
 
@@ -430,15 +455,86 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
         source: drawEraserSource,
         filePath: _interactiveFilePosixPath(context, drawEraserFile),
         requiredTokens: const <String>[
+          "import 'interactive_draw_eraser_exact_hit.dart';",
+          'InteractiveDrawEraserExactHit(',
+          '_exactHit.hitsNode(',
+        ],
+        bannedTokens: const <String>[
+          '_eraserHitsNode(',
           '_eraserHitsLine(',
           '_eraserHitsStroke(',
+          '_projectEraserToLocal(',
+          '_fallbackWorldBoundsHit(',
           '_localEraserSegmentsHitLine(',
           '_eraserSegmentHitsStrokeBatch(',
         ],
+        message:
+            'interactive API violation: InteractiveDrawEraserEngine must '
+            'delegate exact-hit geometry to eraser-local owners.',
+      ) ??
+      _requireSourceTokens(
+        source: drawEraserExactHitSource,
+        filePath: _interactiveFilePosixPath(context, drawEraserExactHitFile),
+        requiredTokens: const <String>[
+          "import 'interactive_draw_eraser_line_hit.dart';",
+          "import 'interactive_draw_eraser_projection.dart';",
+          "import 'interactive_draw_eraser_stroke_hit.dart';",
+          'class InteractiveDrawEraserExactHit',
+          '_lineHit.hitsProjectedLine(',
+          '_strokeHit.hitsProjectedStroke(',
+          '_projectEraserToLocal(',
+          '_fallbackWorldBoundsHit(',
+        ],
+        bannedTokens: const <String>[
+          '_localEraserSegmentsHitLine(',
+          '_eraserSegmentHitsStrokeBatch(',
+        ],
+        message:
+            'interactive API violation: InteractiveDrawEraserExactHit must '
+            'own shared dispatch/projection/fallback and delegate focused '
+            'geometry bodies.',
+      ) ??
+      _requireSourceTokens(
+        source: drawEraserLineHitSource,
+        filePath: _interactiveFilePosixPath(context, drawEraserLineHitFile),
+        requiredTokens: const <String>[
+          'class InteractiveDrawEraserLineHit',
+          'hitsProjectedLine(',
+          '_localEraserSegmentsHitLine(',
+          'onPreciseSegmentCheck()',
+        ],
+        bannedTokens: const <String>['_eraserSegmentHitsStrokeBatch('],
+        message:
+            'interactive API violation: InteractiveDrawEraserLineHit must '
+            'remain the focused line exact-hit owner.',
+      ) ??
+      _requireSourceTokens(
+        source: drawEraserStrokeHitSource,
+        filePath: _interactiveFilePosixPath(context, drawEraserStrokeHitFile),
+        requiredTokens: const <String>[
+          'class InteractiveDrawEraserStrokeHit',
+          'hitsProjectedStroke(',
+          '_eraserSegmentHitsStrokeBatch(',
+          'onPreciseSegmentCheck()',
+        ],
+        bannedTokens: const <String>['_localEraserSegmentsHitLine('],
+        message:
+            'interactive API violation: InteractiveDrawEraserStrokeHit must '
+            'remain the focused stroke exact-hit owner.',
+      ) ??
+      _requireSourceTokens(
+        source: drawEraserProjectionSource,
+        filePath: _interactiveFilePosixPath(context, drawEraserProjectionFile),
+        requiredTokens: const <String>[
+          'typedef InteractiveDrawProjectedEraser = ({',
+          'List<Offset> points,',
+          'double threshold,',
+          'double thresholdSquared,',
+        ],
         bannedTokens: const <String>[],
         message:
-            'interactive API violation: eraser geometry helpers must remain '
-            'behind InteractiveDrawEraserEngine.',
+            'interactive API violation: InteractiveDrawProjectedEraser must '
+            'remain the shared eraser exact-hit projection contract.',
       ) ??
       _requireSourceTokens(
         source: drawStyleSource,

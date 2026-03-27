@@ -243,7 +243,7 @@ eraser-local boundary и разрезает её на focused owner-ы по node
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Eraser engine delegates exact-hit boundary
+### Slice 1. [x] Eraser engine delegates exact-hit boundary
 
 #### Slice Contract
 
@@ -291,7 +291,7 @@ preserving current counters and commit flow.
 - Source proof that `_eraserHitsNode(...)` and shared projection/fallback no
   longer live in `interactive_draw_eraser_engine.dart`.
 
-### Slice 2. [ ] Line and stroke exact-hit logic have separate focused owners
+### Slice 2. [x] Line and stroke exact-hit logic have separate focused owners
 
 #### Slice Contract
 

@@ -5,8 +5,21 @@ import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene_spatial_index.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/interactive_draw_eraser_engine.dart';
+import 'package:iwb_canvas_engine/src/interactive/internal/interactive_draw_eraser_projection.dart';
 
 void main() {
+  test('eraser projection contract stays usable across focused owners', () {
+    final InteractiveDrawProjectedEraser projected = (
+      points: const <Offset>[Offset.zero],
+      threshold: 3.0,
+      thresholdSquared: 9.0,
+    );
+
+    expect(projected.points, const <Offset>[Offset.zero]);
+    expect(projected.threshold, 3.0);
+    expect(projected.thresholdSquared, 9.0);
+  });
+
   test('eraser fallback handles singular line transform with single point', () {
     final line = LineNode(
       id: 'line',
