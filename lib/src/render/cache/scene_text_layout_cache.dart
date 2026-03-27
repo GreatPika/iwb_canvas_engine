@@ -46,22 +46,26 @@ class SceneTextLayoutCache {
     required TextNodeSnapshot node,
     TextDirection textDirection = TextDirection.ltr,
   }) {
-    final textStyle = _buildTextStyle(node);
-    final safeFontSize = normalizeTextLayoutFontSize(node.fontSize);
-    final safeLineHeight = normalizeTextLayoutLineHeight(node.lineHeight);
-    final layoutMaxWidth = normalizeTextLayoutMaxWidth(node.maxWidth);
+    final request = _createTextLayoutRequest(
+      node,
+      textDirection: textDirection,
+    );
+    final textStyle = request.buildTextStyle();
+    final safeFontSize = request.normalizedFontSize;
+    final safeLineHeight = request.normalizedLineHeight;
+    final layoutMaxWidth = request.normalizedMaxWidth;
     final key = _TextLayoutKey(
-      text: node.text,
+      text: request.text,
       fontSize: safeFontSize,
-      fontFamily: node.fontFamily,
-      isBold: node.isBold,
-      isItalic: node.isItalic,
-      isUnderline: node.isUnderline,
-      align: node.align,
+      fontFamily: request.fontFamily,
+      isBold: request.isBold,
+      isItalic: request.isItalic,
+      isUnderline: request.isUnderline,
+      align: request.textAlign,
       lineHeight: safeLineHeight,
       maxWidth: layoutMaxWidth,
       color: textStyle.color ?? const Color(0xFF000000),
-      textDirection: textDirection,
+      textDirection: request.textDirection,
     );
 
     final cached = _entries.remove(key);
@@ -72,9 +76,9 @@ class SceneTextLayoutCache {
     }
 
     final textPainter = TextPainter(
-      text: TextSpan(text: node.text, style: textStyle),
-      textAlign: node.align,
-      textDirection: textDirection,
+      text: TextSpan(text: request.text, style: textStyle),
+      textAlign: request.textAlign,
+      textDirection: request.textDirection,
       maxLines: null,
     );
     _layoutTextPainter(textPainter, layoutMaxWidth);
@@ -90,40 +94,21 @@ class SceneTextLayoutCache {
       _debugEvictCount += 1;
     }
   }
-
-  TextStyle _buildTextStyle(TextNodeSnapshot node) {
-    return buildTextStyleForTextLayout(
-      color: _renderReadyTextColor(node),
-      fontSize: node.fontSize,
-      isBold: node.isBold,
-      isItalic: node.isItalic,
-      isUnderline: node.isUnderline,
-      fontFamily: node.fontFamily,
-      lineHeight: node.lineHeight,
-    );
-  }
 }
 
 TextPainter buildSceneTextPainter({
   required TextNodeSnapshot node,
   TextDirection textDirection = TextDirection.ltr,
 }) {
-  final textStyle = buildTextStyleForTextLayout(
-    color: _renderReadyTextColor(node),
-    fontSize: node.fontSize,
-    isBold: node.isBold,
-    isItalic: node.isItalic,
-    isUnderline: node.isUnderline,
-    fontFamily: node.fontFamily,
-    lineHeight: node.lineHeight,
-  );
+  final request = _createTextLayoutRequest(node, textDirection: textDirection);
+  final textStyle = request.buildTextStyle();
   final textPainter = TextPainter(
-    text: TextSpan(text: node.text, style: textStyle),
-    textAlign: node.align,
-    textDirection: textDirection,
+    text: TextSpan(text: request.text, style: textStyle),
+    textAlign: request.textAlign,
+    textDirection: request.textDirection,
     maxLines: null,
   );
-  _layoutTextPainter(textPainter, normalizeTextLayoutMaxWidth(node.maxWidth));
+  _layoutTextPainter(textPainter, request.normalizedMaxWidth);
   return textPainter;
 }
 
@@ -191,6 +176,25 @@ class _TextLayoutKey {
 Color _renderReadyTextColor(TextNodeSnapshot node) {
   final alpha = (_textOpacity01(node.opacity) * 255.0).round().clamp(0, 255);
   return node.color.withAlpha(alpha);
+}
+
+TextLayoutRequest _createTextLayoutRequest(
+  TextNodeSnapshot node, {
+  required TextDirection textDirection,
+}) {
+  return TextLayoutRequest(
+    text: node.text,
+    color: _renderReadyTextColor(node),
+    fontSize: node.fontSize,
+    isBold: node.isBold,
+    isItalic: node.isItalic,
+    isUnderline: node.isUnderline,
+    textAlign: node.align,
+    fontFamily: node.fontFamily,
+    lineHeight: node.lineHeight,
+    maxWidth: node.maxWidth,
+    textDirection: textDirection,
+  );
 }
 
 void _layoutTextPainter(TextPainter textPainter, double? layoutMaxWidth) {

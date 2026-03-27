@@ -515,20 +515,18 @@ Map<String, double> _encodeOffset(Offset offset) {
 }
 
 Size _deriveCanonicalTextSize(TextNodeSnapshotSchemaFields fields) {
-  return measureTextLayoutSize(
+  return TextLayoutRequest(
     text: fields.text,
-    textStyle: buildTextStyleForTextLayout(
-      color: fields.color,
-      fontSize: fields.fontSize,
-      isBold: fields.isBold,
-      isItalic: fields.isItalic,
-      isUnderline: fields.isUnderline,
-      fontFamily: fields.fontFamily,
-      lineHeight: fields.lineHeight,
-    ),
+    color: fields.color,
+    fontSize: fields.fontSize,
+    isBold: fields.isBold,
+    isItalic: fields.isItalic,
+    isUnderline: fields.isUnderline,
     textAlign: fields.align,
+    fontFamily: fields.fontFamily,
+    lineHeight: fields.lineHeight,
     maxWidth: fields.maxWidth,
-  );
+  ).measure();
 }
 
 Map<String, dynamic> _encodeTransform2D(Transform2D transform) {

@@ -255,7 +255,7 @@ void main() {
     points.setRange(0, 1, const <Offset>[Offset(6, 6)]);
     points.fillRange(0, 1, const Offset(5, 5));
     points.removeWhere((p) => p == const Offset(5, 5));
-    points.addAll(const <Offset>[Offset(2, 0), Offset(1, 0)]);
+    points.addAll(const <Offset>[Offset(2, 0), Offset(1, 1), Offset(1, 0)]);
     points.retainWhere((p) => p.dy == 0);
     points.sort((a, b) => a.dx.compareTo(b.dx));
     points.shuffle(math.Random(2));

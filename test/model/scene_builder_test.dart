@@ -7,7 +7,7 @@ import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/core/text_layout.dart'
-    show buildTextStyleForTextLayout, measureTextLayoutSize;
+    show TextLayoutRequest;
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
     show
         kMaxContentLayersPerScene,
@@ -435,20 +435,18 @@ void main() {
         ],
       );
 
-      final expectedSize = measureTextLayoutSize(
+      final expectedSize = TextLayoutRequest(
         text: textSnapshot.text,
-        textStyle: buildTextStyleForTextLayout(
-          color: textSnapshot.color,
-          fontSize: textSnapshot.fontSize,
-          isBold: textSnapshot.isBold,
-          isItalic: textSnapshot.isItalic,
-          isUnderline: textSnapshot.isUnderline,
-          fontFamily: textSnapshot.fontFamily,
-          lineHeight: textSnapshot.lineHeight,
-        ),
+        color: textSnapshot.color,
+        fontSize: textSnapshot.fontSize,
+        isBold: textSnapshot.isBold,
+        isItalic: textSnapshot.isItalic,
+        isUnderline: textSnapshot.isUnderline,
         textAlign: textSnapshot.align,
+        fontFamily: textSnapshot.fontFamily,
+        lineHeight: textSnapshot.lineHeight,
         maxWidth: textSnapshot.maxWidth,
-      );
+      ).measure();
 
       final scene = model_builder.sceneBuildFromSnapshot(snapshot);
       final textNode = scene.layers.first.nodes.single as TextNode;

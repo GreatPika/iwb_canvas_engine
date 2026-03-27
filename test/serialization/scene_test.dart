@@ -87,20 +87,18 @@ void main() {
 
     final decoded = decodeScene(encoded);
     final decodedText = decoded.layers[1].nodes[1] as TextNodeSnapshot;
-    final expectedSize = measureTextLayoutSize(
+    final expectedSize = TextLayoutRequest(
       text: decodedText.text,
-      textStyle: buildTextStyleForTextLayout(
-        color: decodedText.color,
-        fontSize: decodedText.fontSize,
-        isBold: decodedText.isBold,
-        isItalic: decodedText.isItalic,
-        isUnderline: decodedText.isUnderline,
-        fontFamily: decodedText.fontFamily,
-        lineHeight: decodedText.lineHeight,
-      ),
+      color: decodedText.color,
+      fontSize: decodedText.fontSize,
+      isBold: decodedText.isBold,
+      isItalic: decodedText.isItalic,
+      isUnderline: decodedText.isUnderline,
       textAlign: decodedText.align,
+      fontFamily: decodedText.fontFamily,
+      lineHeight: decodedText.lineHeight,
       maxWidth: decodedText.maxWidth,
-    );
+    ).measure();
 
     expect(decodedText.size, expectedSize);
     expect(decodedText.size, isNot(const Size(1, 1)));
@@ -108,21 +106,19 @@ void main() {
 }
 
 SceneSnapshot _buildScene() {
-  final textStyle = buildTextStyleForTextLayout(
+  final textLayout = TextLayoutRequest(
+    text: 'Hello',
     color: const Color(0xFF112233),
     fontSize: 24,
     isBold: true,
     isItalic: false,
     isUnderline: true,
+    textAlign: TextAlign.center,
     fontFamily: 'Roboto',
     lineHeight: 1.2,
-  );
-  final derivedTextSize = measureTextLayoutSize(
-    text: 'Hello',
-    textStyle: textStyle,
-    textAlign: TextAlign.center,
     maxWidth: 200,
   );
+  final derivedTextSize = textLayout.measure();
 
   return SceneSnapshot(
     layers: <ContentLayerSnapshot>[

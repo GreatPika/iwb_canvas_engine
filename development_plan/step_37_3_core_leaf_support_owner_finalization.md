@@ -159,7 +159,7 @@ abstractions.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Text-layout leaf support owner is finalized
+### Slice 1. [x] Text-layout leaf support owner is finalized
 
 #### Slice Contract
 
@@ -184,7 +184,7 @@ core-local support owner path and перевести existing consumers на н�
 - Green run of the listed verifications.
 - Derived text-size semantics remain green after the support-owner finalization.
 
-### Slice 2. [ ] Action payload parsing owner is finalized
+### Slice 2. [x] Action payload parsing owner is finalized
 
 #### Slice Contract
 
@@ -208,7 +208,7 @@ focused support owner path without changing immutable payload exposure.
 - The replaced `action_events.dart` helper cluster is no longer present in the
   same handwritten form.
 
-### Slice 3. [ ] Generated-id allocation owner is finalized
+### Slice 3. [x] Generated-id allocation owner is finalized
 
 #### Slice Contract
 

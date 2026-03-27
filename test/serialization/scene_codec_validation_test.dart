@@ -18,7 +18,7 @@ import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
         kMaxTextLength;
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/core/text_layout.dart'
-    show buildTextStyleForTextLayout, measureTextLayoutSize;
+    show TextLayoutRequest;
 import 'package:iwb_canvas_engine/src/serialization/scene_codec.dart'
     show debugGuardDecodeForTest, debugGuardEncodeForTest, encodeSceneDocument;
 
@@ -1098,20 +1098,18 @@ void main() {
       ],
     );
 
-    final expectedSize = measureTextLayoutSize(
+    final expectedSize = TextLayoutRequest(
       text: 'Derived text size',
-      textStyle: buildTextStyleForTextLayout(
-        color: const Color(0xFF000000),
-        fontSize: 24,
-        isBold: false,
-        isItalic: false,
-        isUnderline: false,
-        fontFamily: null,
-        lineHeight: null,
-      ),
+      color: const Color(0xFF000000),
+      fontSize: 24,
+      isBold: false,
+      isItalic: false,
+      isUnderline: false,
       textAlign: TextAlign.left,
+      fontFamily: null,
+      lineHeight: null,
       maxWidth: null,
-    );
+    ).measure();
 
     final encoded = encodeScene(snapshot);
     final layers = encoded['layers'] as List<Object?>;

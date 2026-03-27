@@ -41,42 +41,69 @@ IdGeneratorState createIdGeneratorStateForTesting({
   );
 }
 
+typedef _IdFormatter<T extends String> =
+    T Function({required String sessionToken, required int counter});
+
+final _GeneratedIdAllocator<NodeId> _nodeIdAllocator =
+    _GeneratedIdAllocator<NodeId>(
+      counterOf: (state) => state.nextNodeCounter,
+      setCounter: (state, value) => state.nextNodeCounter = value,
+      formatId: _generateNodeId,
+    );
+
+final _GeneratedIdAllocator<LayerId> _layerIdAllocator =
+    _GeneratedIdAllocator<LayerId>(
+      counterOf: (state) => state.nextLayerCounter,
+      setCounter: (state, value) => state.nextLayerCounter = value,
+      formatId: _generateLayerId,
+    );
+
 NodeId generateNextNodeId(
   IdGeneratorState state, {
   required bool Function(NodeId id) containsNodeId,
 }) {
-  while (true) {
-    final candidate = _generateNodeId(
-      sessionToken: state.sessionToken,
-      counter: state.nextNodeCounter,
-    );
-    state.nextNodeCounter = state.nextNodeCounter + 1;
-    if (!containsNodeId(candidate)) {
-      return candidate;
-    }
-  }
+  return _nodeIdAllocator.allocate(state, containsId: containsNodeId);
 }
 
 LayerId generateNextLayerId(
   IdGeneratorState state, {
   required bool Function(LayerId id) containsLayerId,
 }) {
-  while (true) {
-    final candidate = _generateLayerId(
-      sessionToken: state.sessionToken,
-      counter: state.nextLayerCounter,
-    );
-    state.nextLayerCounter = state.nextLayerCounter + 1;
-    if (!containsLayerId(candidate)) {
-      return candidate;
-    }
-  }
+  return _layerIdAllocator.allocate(state, containsId: containsLayerId);
 }
 
 const String _nodeIdGeneratedPrefix = 'gen-n-';
 const String _layerIdGeneratedPrefix = 'gen-l-';
 
 int _sessionTokenCounter = 0;
+
+class _GeneratedIdAllocator<T extends String> {
+  const _GeneratedIdAllocator({
+    required this.counterOf,
+    required this.setCounter,
+    required this.formatId,
+  });
+
+  final int Function(IdGeneratorState state) counterOf;
+  final void Function(IdGeneratorState state, int value) setCounter;
+  final _IdFormatter<T> formatId;
+
+  T allocate(
+    IdGeneratorState state, {
+    required bool Function(T id) containsId,
+  }) {
+    while (true) {
+      final candidate = formatId(
+        sessionToken: state.sessionToken,
+        counter: counterOf(state),
+      );
+      setCounter(state, counterOf(state) + 1);
+      if (!containsId(candidate)) {
+        return candidate;
+      }
+    }
+  }
+}
 
 String _nextSessionToken() {
   final token = _sessionTokenCounter.toRadixString(36).padLeft(6, '0');
