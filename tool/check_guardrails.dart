@@ -8,5 +8,6 @@ import 'src/guardrails/guardrails_runner.dart';
 // INV:INV-G-PUBLIC-ENTRYPOINTS
 // INV:INV-ENG-SAFE-TXN-API
 // INV:INV-ENG-INTERACTIVE-RESOLVER-PURITY
+// INV:INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY
 
 Future<void> main(List<String> _) => runGuardrailsTool();

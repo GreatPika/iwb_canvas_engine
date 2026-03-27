@@ -1,51 +1,16 @@
 import 'dart:ui';
 
-import '../../core/action_events.dart';
 import '../../core/interaction_types.dart';
-import '../../core/nodes.dart' show SceneNode;
 import '../../core/pointer_input.dart';
-import '../../core/scene_spatial_index.dart';
-import '../../contract/snapshot.dart';
+import 'interactive_draw_coordinator_callbacks.dart';
 import 'interactive_draw_eraser_engine.dart';
 import 'interactive_draw_gesture_session.dart';
 import 'interactive_draw_line_engine.dart';
 import 'interactive_draw_stroke_engine.dart';
 import 'interactive_draw_terminal_router.dart';
 
-class InteractiveDrawCoordinatorCallbacks {
-  const InteractiveDrawCoordinatorCallbacks({
-    required this.onStateChanged,
-    required this.emitAction,
-    required this.writeDrawStroke,
-    required this.writeDrawLineFromWorldSegment,
-    required this.querySpatialCandidates,
-    required this.resolveSpatialCandidateNode,
-    required this.writeEraseNodes,
-  });
-
-  final VoidCallback onStateChanged;
-  final void Function(
-    ActionType type,
-    List<NodeId> nodeIds,
-    int timestampMs, {
-    Map<String, Object?>? payload,
-  })
-  emitAction;
-  final NodeId Function({
-    required List<Offset> points,
-    required double thickness,
-    required Color color,
-    required double opacity,
-  })
-  writeDrawStroke;
-  final NodeId Function({required Offset start, required Offset end})
-  writeDrawLineFromWorldSegment;
-  final List<SceneSpatialCandidate> Function(Rect bounds)
-  querySpatialCandidates;
-  final SceneNode? Function(SceneSpatialCandidate candidate)
-  resolveSpatialCandidateNode;
-  final int Function(Iterable<NodeId> ids) writeEraseNodes;
-}
+export 'interactive_draw_coordinator_callbacks.dart'
+    show InteractiveDrawCoordinatorCallbacks;
 
 class InteractiveDrawCoordinator {
   InteractiveDrawCoordinator({required this.callbacks}) {

@@ -271,7 +271,7 @@ language: russian
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Extend structural contract tests to pin final interactive boundaries
+### Slice 1. [x] Extend structural contract tests to pin final interactive boundaries
 
 #### Slice Contract
 
@@ -323,7 +323,7 @@ draw-family owner graph.
   the event/timeline boundary,
   or the draw-family owner graph.
 
-### Slice 2. [ ] Rebaseline and document final interactive architecture
+### Slice 2. [x] Rebaseline and document final interactive architecture
 
 #### Slice Contract
 
@@ -352,6 +352,27 @@ measured interactive metrics and clone baseline from actual runs.
 - Final measured interactive baseline is recorded from the verification runs.
 - Recorded closure baseline explicitly lists accepted residual seams, if any,
   instead of leaving runtime/draw residual debt implicit.
+
+### Recorded Closure Baseline
+
+- `dcm calculate-metrics lib/src/interactive --report-all` recorded
+  `7` `HIGH/VERY HIGH` metric entries across `lib/src/interactive`.
+- No remaining `HIGH/VERY HIGH` entry belongs to
+  `interactive_runtime.dart` or `interactive_draw_coordinator.dart`.
+- The remaining metric hotspots are limited to:
+  `scene_controller_interactive.dart` public-facade breadth,
+  `interactive_draw_eraser_engine.dart` as a focused eraser-local owner,
+  and `interactive_draw_action_emitter.dart` as a focused action owner.
+- `dart run tool/analysis/find_similar_clones.dart lib/src/interactive`
+  recorded `5` remaining clone pairs:
+  `interaction_eligibility_policy.dart`,
+  `interactive_draw_eraser_engine.dart`,
+  `interactive_move_hit_test_engine.dart`,
+  `interactive_gesture_router.dart`,
+  and constructor wiring between
+  `interactive_draw_coordinator.dart` and `interactive_runtime.dart`.
+- These residuals were kept explicit because further reduction would require
+  wrapper-style indirection or ownership drift that the repo rules reject.
 
 ## 9. Final Verification
 

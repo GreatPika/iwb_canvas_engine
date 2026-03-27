@@ -47,3 +47,122 @@ class Store {
 }
 ''');
 }
+
+void writeInteractiveArchitectureSupportScaffold(Directory sandbox) {
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/interactive_event_dispatcher.dart',
+    '''
+import 'dart:async';
+
+class InteractiveEventDispatcher {
+  final _actions = StreamController<Object>.broadcast();
+  final _editTextRequests = StreamController<Object>.broadcast();
+
+  Stream<Object> get actions => _actions.stream;
+  Stream<Object> get editTextRequests => _editTextRequests.stream;
+
+  int resolveTimestampMs(int? hintTimestampMs) => hintTimestampMs ?? 0;
+
+  void emitAction(
+    Object type,
+    List<Object> nodeIds,
+    int timestampMs, {
+    Map<String, Object?>? payload,
+  }) {}
+
+  void emitEditTextRequested(Object request) {}
+}
+''',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/interactive_selection_actions.dart',
+    'class InteractiveSelectionActions {}\n',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/interactive_runtime.dart',
+    '''
+import 'interactive_draw_coordinator.dart';
+import 'interactive_event_dispatcher.dart';
+import 'interactive_move_session.dart';
+import 'interactive_pointer_normalizer.dart';
+import 'interactive_gesture_router.dart';
+import 'interactive_double_tap_router.dart';
+
+class InteractiveRuntime {
+  InteractiveRuntime({required this.events});
+
+  final InteractiveEventDispatcher events;
+
+  void handlePointer(Object input) {}
+
+  void handleDoubleTap({required Object position, int? timestampMs}) {
+    events.resolveTimestampMs(timestampMs);
+  }
+}
+''',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/interactive_draw_coordinator.dart',
+    '''
+import 'interactive_draw_eraser_engine.dart';
+import 'interactive_draw_line_engine.dart';
+import 'interactive_draw_stroke_engine.dart';
+import 'interactive_draw_terminal_router.dart';
+
+class InteractiveDrawCoordinator {
+  void handlePointer(Object sample) {}
+}
+''',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/interactive_draw_eraser_engine.dart',
+    '''
+class InteractiveDrawEraserEngine {
+  bool _eraserHitsLine() => false;
+  bool _eraserHitsStroke() => false;
+  bool _localEraserSegmentsHitLine() => false;
+  bool _eraserSegmentHitsStrokeBatch() => false;
+}
+''',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/interactive_move_session.dart',
+    'class InteractiveMoveSession {}\n',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/interactive_pointer_normalizer.dart',
+    'class InteractivePointerNormalizer {}\n',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/interactive_gesture_router.dart',
+    'class InteractiveGestureRouter {}\n',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/interactive_double_tap_router.dart',
+    'class InteractiveDoubleTapRouter {}\n',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/interactive_draw_line_engine.dart',
+    'class InteractiveDrawLineEngine {}\n',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/interactive_draw_stroke_engine.dart',
+    'class InteractiveDrawStrokeEngine {}\n',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/interactive_draw_terminal_router.dart',
+    'class InteractiveDrawTerminalRouter {}\n',
+  );
+}

@@ -223,6 +223,14 @@ const List<Invariant> invariants = <Invariant>[
     proofPath: 'tool/check_guardrails.dart',
   ),
   Invariant(
+    id: 'INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY',
+    scope: 'engine-runtime',
+    title:
+        'interactive facade/runtime/event/draw owners remain structurally split and do not reabsorb mixed ownership',
+    proofPath:
+        'test/interactive/core/scene_controller_interactive_runtime_contract_test.dart',
+  ),
+  Invariant(
     id: 'INV-ENG-VIEW-POINTER-SLOT-LIFECYCLE',
     scope: 'view-runtime',
     title:

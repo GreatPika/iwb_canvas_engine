@@ -21,6 +21,7 @@ import 'internal/interactive_draw_line_engine.dart' show InteractiveDrawStyle;
 import 'internal/interactive_event_dispatcher.dart';
 import 'internal/interactive_geometry.dart';
 import 'internal/interactive_runtime.dart';
+import 'internal/interactive_runtime_callbacks.dart';
 import 'internal/interactive_selection_actions.dart';
 
 typedef MoveCommitDeltaResolver =
@@ -40,7 +41,7 @@ Offset sceneControllerInteractiveInternalPreviewDeltaForNode(
   SceneControllerInteractive controller,
   NodeId nodeId,
 ) {
-  return controller._runtime.movePreviewDeltaForNode(nodeId);
+  return controller._runtime.debugMoveSession.movePreviewDeltaForNode(nodeId);
 }
 
 void sceneControllerInteractiveInternalSetBeforePointerDispatchHook(

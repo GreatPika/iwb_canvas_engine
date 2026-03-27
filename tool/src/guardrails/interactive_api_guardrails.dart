@@ -40,6 +40,11 @@ Future<List<GuardrailViolation>> runInteractiveApiGuardrails({
       return violations;
     }
   }
+
+  final boundaryViolation = _checkInteractiveBoundaryShape(context);
+  if (boundaryViolation != null) {
+    violations.add(boundaryViolation);
+  }
   return violations;
 }
 
@@ -281,4 +286,186 @@ Never _onInteractiveParseFailure({
       message: 'tool failure: unable to parse Dart unit (result: $resultType)',
     ),
   );
+}
+
+GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
+  final runtimeFile = _interactiveSupportFile(
+    context,
+    'internal/interactive_runtime.dart',
+  );
+  final eventFile = _interactiveSupportFile(
+    context,
+    'internal/interactive_event_dispatcher.dart',
+  );
+  final drawCoordinatorFile = _interactiveSupportFile(
+    context,
+    'internal/interactive_draw_coordinator.dart',
+  );
+  final drawEraserFile = _interactiveSupportFile(
+    context,
+    'internal/interactive_draw_eraser_engine.dart',
+  );
+
+  final missingOwnerViolation =
+      _missingInteractiveOwnerViolation(context, <File, String>{
+        runtimeFile: 'InteractiveRuntime',
+        eventFile: 'InteractiveEventDispatcher',
+        drawCoordinatorFile: 'InteractiveDrawCoordinator',
+        drawEraserFile: 'InteractiveDrawEraserEngine',
+      });
+  if (missingOwnerViolation != null) {
+    return missingOwnerViolation;
+  }
+
+  final facadeSource = _interactiveFile(context).readAsStringSync();
+  final runtimeSource = runtimeFile.readAsStringSync();
+  final eventSource = eventFile.readAsStringSync();
+  final drawCoordinatorSource = drawCoordinatorFile.readAsStringSync();
+  final drawEraserSource = drawEraserFile.readAsStringSync();
+
+  return _requireSourceTokens(
+        source: facadeSource,
+        filePath: _interactiveFilePosixPath(context, _interactiveFile(context)),
+        requiredTokens: const <String>[
+          "import 'internal/interactive_runtime.dart';",
+          "import 'internal/interactive_event_dispatcher.dart';",
+          "import 'internal/interactive_selection_actions.dart';",
+          '_runtime.handlePointer(',
+          '_runtime.handleDoubleTap(',
+        ],
+        bannedTokens: const <String>[
+          "import 'internal/interactive_move_session.dart';",
+          "import 'internal/interactive_gesture_machine.dart';",
+          "import 'internal/interactive_draw_coordinator.dart';",
+          "import 'internal/interactive_draw_eraser_engine.dart';",
+          'StreamController<',
+          '_timestampCursorMs',
+        ],
+        message:
+            'interactive API violation: SceneControllerInteractive must remain '
+            'a thin facade over runtime/event/selection owners.',
+      ) ??
+      _requireSourceTokens(
+        source: runtimeSource,
+        filePath: _interactiveFilePosixPath(context, runtimeFile),
+        requiredTokens: const <String>[
+          "import 'interactive_draw_coordinator.dart';",
+          "import 'interactive_event_dispatcher.dart';",
+          "import 'interactive_move_session.dart';",
+          "import 'interactive_pointer_normalizer.dart';",
+          "import 'interactive_gesture_router.dart';",
+          "import 'interactive_double_tap_router.dart';",
+        ],
+        bannedTokens: const <String>[
+          'StreamController<',
+          '_timestampCursorMs',
+          '_actionCounter',
+          '_actions =',
+          '_editTextRequests =',
+          '_eraserHitsLine(',
+        ],
+        message:
+            'interactive API violation: InteractiveRuntime must keep event '
+            'timeline and draw-local geometry outside the boundary runtime.',
+      ) ??
+      _requireSourceTokens(
+        source: eventSource,
+        filePath: _interactiveFilePosixPath(context, eventFile),
+        requiredTokens: const <String>[
+          "import 'dart:async';",
+          'class InteractiveEventDispatcher',
+          'resolveTimestampMs(',
+          'emitAction(',
+          'emitEditTextRequested(',
+        ],
+        bannedTokens: const <String>['_eraserHitsLine('],
+        message:
+            'interactive API violation: InteractiveEventDispatcher must remain '
+            'the event/timeline owner.',
+      ) ??
+      _requireSourceTokens(
+        source: drawCoordinatorSource,
+        filePath: _interactiveFilePosixPath(context, drawCoordinatorFile),
+        requiredTokens: const <String>[
+          "import 'interactive_draw_eraser_engine.dart';",
+          "import 'interactive_draw_line_engine.dart';",
+          "import 'interactive_draw_stroke_engine.dart';",
+          "import 'interactive_draw_terminal_router.dart';",
+        ],
+        bannedTokens: const <String>[
+          '_eraserHitsLine(',
+          '_eraserHitsStroke(',
+          '_localEraserSegmentsHitLine(',
+          '_eraserSegmentHitsStrokeBatch(',
+        ],
+        message:
+            'interactive API violation: InteractiveDrawCoordinator must remain '
+            'a draw-family orchestrator and not re-own eraser geometry.',
+      ) ??
+      _requireSourceTokens(
+        source: drawEraserSource,
+        filePath: _interactiveFilePosixPath(context, drawEraserFile),
+        requiredTokens: const <String>[
+          '_eraserHitsLine(',
+          '_eraserHitsStroke(',
+          '_localEraserSegmentsHitLine(',
+          '_eraserSegmentHitsStrokeBatch(',
+        ],
+        bannedTokens: const <String>[],
+        message:
+            'interactive API violation: eraser geometry helpers must remain '
+            'behind InteractiveDrawEraserEngine.',
+      );
+}
+
+GuardrailViolation? _missingInteractiveOwnerViolation(
+  GuardrailContext context,
+  Map<File, String> requiredOwners,
+) {
+  for (final entry in requiredOwners.entries) {
+    final file = entry.key;
+    if (file.existsSync()) {
+      continue;
+    }
+    return GuardrailViolation(
+      filePath: _interactiveFilePosixPath(context, _interactiveFile(context)),
+      line: 1,
+      message:
+          'interactive API violation: missing required split owner '
+          '${entry.value} at '
+          '${_interactiveFilePosixPath(context, file)}.',
+    );
+  }
+  return null;
+}
+
+File _interactiveSupportFile(GuardrailContext context, String relativePath) {
+  return File(
+    '${context.root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+    'src${Platform.pathSeparator}interactive${Platform.pathSeparator}'
+    '${relativePath.replaceAll('/', Platform.pathSeparator)}',
+  );
+}
+
+GuardrailViolation? _requireSourceTokens({
+  required String source,
+  required String filePath,
+  required List<String> requiredTokens,
+  required List<String> bannedTokens,
+  required String message,
+}) {
+  for (final token in requiredTokens) {
+    if (!source.contains(token)) {
+      return GuardrailViolation(filePath: filePath, line: 1, message: message);
+    }
+  }
+  for (final token in bannedTokens) {
+    final offset = source.indexOf(token);
+    if (offset < 0) {
+      continue;
+    }
+    final line = '\n'.allMatches(source.substring(0, offset)).length + 1;
+    return GuardrailViolation(filePath: filePath, line: line, message: message);
+  }
+  return null;
 }

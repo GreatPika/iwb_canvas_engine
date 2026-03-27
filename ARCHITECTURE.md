@@ -97,25 +97,38 @@ Ownership decisions for the target state:
    adoption of `PointerInputSettings`. Invalid terminal host events are still
    forwarded through `handlePointer(...)`; `SceneView` does not own terminal
    normalization semantics.
-2. `SceneControllerInteractive` validates input, preserves terminal `up`/`cancel`
-   semantics for non-finite terminal samples only when the pointer already has
-   a cached finite position, owns one controller-level active gesture machine
-   (pointer owner + baseline `dragStartSlop` + forced boundary reset only on
-   successful observable boundary transitions), owns the snapshot-based
-   eligibility policy used by controller-side transform/delete preflight and by
-   move-mode hit-test/preview/commit shaping, restores move-local baseline
-   selection on pointer `cancel`, rejects external selection mutations during
-   an active gesture, maintains interactive state, and delegates committed
-   mutations to
-   `SceneControllerCore`.
-3. `SceneControllerCore` performs transactional writes and finalizes a canonical
+2. `SceneControllerInteractive` is the public interactive facade. It validates
+   public inputs, keeps host-facing mode/tool/selection semantics, owns the
+   snapshot-based eligibility policy used by controller-side transform/delete
+   preflight and by move-mode hit-test/preview/commit shaping, rejects
+   external selection mutations during an active gesture, restores move-local
+   baseline selection on pointer `cancel`, and delegates boundary pointer
+   handling to the controller-private `InteractiveRuntime`.
+3. `InteractiveRuntime` is the controller-private boundary runtime. It owns the
+   final interactive owner graph beneath the facade:
+   `InteractivePointerNormalizer` for terminal pointer normalization,
+   `InteractiveGestureRouter` for active pointer/family orchestration,
+   `InteractiveDoubleTapRouter` for text double-tap routing,
+   `InteractiveMoveSession` for move preview/commit ownership, and
+   `InteractiveDrawCoordinator` for draw-family orchestration.
+4. `InteractiveEventDispatcher` is the interactive event/timeline owner. It
+   keeps monotonic timestamp sequencing plus `actions` /
+   `editTextRequests` stream delivery outside `InteractiveRuntime`.
+5. `InteractiveDrawCoordinator` remains a draw-family orchestrator only. It
+   routes into `InteractiveDrawLineEngine`,
+   `InteractiveDrawStrokeEngine`,
+   `InteractiveDrawEraserEngine`, and
+   `InteractiveDrawTerminalRouter`; precise eraser hit geometry and coarse
+   candidate-query ownership stay inside `InteractiveDrawEraserEngine` and its
+   focused helpers instead of returning to the coordinator or the runtime.
+6. `SceneControllerCore` performs transactional writes and finalizes a canonical
    immutable `SceneSnapshot`.
-4. `ScenePainter` renders the committed snapshot plus any ephemeral preview
+7. `ScenePainter` renders the committed snapshot plus any ephemeral preview
    state owned by the interactive controller. Background-grid draw semantics
    have one render-local owner in `render/scene_grid_renderer.dart`; painter
    and static cache consume the same plan instead of maintaining parallel grid
    math.
-5. `actions` and `editTextRequests` expose asynchronous integration boundaries
+8. `actions` and `editTextRequests` expose asynchronous integration boundaries
    back to the host app.
 
 ## State ownership model
@@ -138,6 +151,13 @@ Ownership decisions for the target state:
 - Move-session cancel semantics are local to the move owner: pointer `cancel`
   clears ephemeral preview/marquee state and restores the gesture baseline
   selection when that gesture changed selection before terminal completion.
+- Interactive owner boundaries are structurally pinned:
+  `SceneControllerInteractive` stays a facade over runtime/event/selection
+  owners,
+  `InteractiveRuntime` stays a boundary orchestrator rather than an event or
+  draw-local geometry owner,
+  and `InteractiveDrawCoordinator` stays a draw-family router rather than an
+  eraser geometry/query owner.
 - View-side render-cache lifecycle and `ScenePainter` assembly have one shared
   owner in the internal render-surface boundary; `SceneViewInteractive` remains
   the public interactive shell around that boundary and keeps pointer host and
@@ -256,6 +276,24 @@ most important architectural rules are:
   plus `1` remaining clone pair between
   `draw_commands.dart::writeEraseNodes` and
   `scene_commands.dart::writeDeleteSelection`.
+- Final measured interactive closure baseline after steps 32-34 is:
+  `7 HIGH/VERY HIGH` metric entries and `5` remaining clone pairs across
+  `lib/src/interactive`.
+  No remaining `HIGH/VERY HIGH` entry belongs to
+  `interactive_runtime.dart` or `interactive_draw_coordinator.dart`.
+  The remaining metric hotspots are limited to:
+  public facade breadth in `scene_controller_interactive.dart`,
+  the focused eraser-local owner `interactive_draw_eraser_engine.dart`,
+  and the focused action owner `interactive_draw_action_emitter.dart`.
+  The remaining clone pairs are structural repeats in
+  `interaction_eligibility_policy.dart`,
+  `interactive_draw_eraser_engine.dart`,
+  `interactive_move_hit_test_engine.dart`,
+  `interactive_gesture_router.dart`,
+  and constructor wiring between
+  `interactive_draw_coordinator.dart` and `interactive_runtime.dart`;
+  they are documented residuals rather than hidden debt and were not reduced
+  with wrapper layers or ownership drift.
 - Successful commits finalize store state before publishing signals or repaint
   notifications.
 - Committed signals are emitted before repaint listener notification for the

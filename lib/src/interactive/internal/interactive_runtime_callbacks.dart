@@ -1,0 +1,52 @@
+import 'dart:ui';
+
+import '../../core/interaction_types.dart';
+import '../../core/nodes.dart' show SceneNode;
+import '../../core/scene_spatial_index.dart';
+import '../../contract/snapshot.dart';
+import 'interactive_draw_line_engine.dart' show InteractiveDrawStyle;
+import 'interactive_move_callbacks.dart';
+
+class InteractiveRuntimeCallbacks {
+  const InteractiveRuntimeCallbacks({
+    required this.scheduleNotify,
+    required this.readSnapshot,
+    required this.readSelectedNodeIds,
+    required this.readMode,
+    required this.readDragStartSlop,
+    required this.readDrawStyle,
+    required this.querySpatialCandidates,
+    required this.resolveSpatialCandidateNode,
+    required this.writeSelectionReplace,
+    required this.writeSelectionClear,
+    required this.commitMoveSelection,
+    required this.writeDrawStroke,
+    required this.writeDrawLineFromWorldSegment,
+    required this.writeEraseNodes,
+  });
+
+  final VoidCallback scheduleNotify;
+  final SceneSnapshot Function() readSnapshot;
+  final Set<NodeId> Function() readSelectedNodeIds;
+  final CanvasMode Function() readMode;
+  final double Function() readDragStartSlop;
+  final InteractiveDrawStyle Function() readDrawStyle;
+  final List<SceneSpatialCandidate> Function(Rect bounds)
+  querySpatialCandidates;
+  final SceneNode? Function(SceneSpatialCandidate candidate)
+  resolveSpatialCandidateNode;
+  final void Function(Iterable<NodeId> nodeIds) writeSelectionReplace;
+  final void Function() writeSelectionClear;
+  final MoveCommitSelectionResult Function(Offset proposedDelta)
+  commitMoveSelection;
+  final NodeId Function({
+    required List<Offset> points,
+    required double thickness,
+    required Color color,
+    required double opacity,
+  })
+  writeDrawStroke;
+  final NodeId Function({required Offset start, required Offset end})
+  writeDrawLineFromWorldSegment;
+  final int Function(Iterable<NodeId> ids) writeEraseNodes;
+}
