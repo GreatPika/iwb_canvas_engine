@@ -2,10 +2,10 @@
 
 ## Purpose
 
-This document is the source of truth for the post-step-`48` target
+This document is the source of truth for the post-step-`50` target
 architecture of `lib/src/model`.
 
-Steps `45-48` may choose local code motion, helper placement, and verification
+Steps `45-50` may choose local code motion, helper placement, and verification
 sequencing only inside the graph defined here. They are not allowed to
 reinterpret the target graph while executing the plan.
 
@@ -119,7 +119,7 @@ support buckets or recover the mixed ownership that steps `40-47` removed.
   - `document_node_patch_rect.dart`
   - `document_node_patch_path.dart`
 
-## Explicit Non-Goals For Steps 45-48
+## Explicit Non-Goals For Steps 45-50
 
 - Reopening `scene_from_snapshot.dart` / `scene_snapshot_from_scene.dart`
   ownership.
@@ -130,7 +130,7 @@ support buckets or recover the mixed ownership that steps `40-47` removed.
 
 ## Residual Policy
 
-### Files that must not remain as residual mixed-owner hotspots after step `48`
+### Files that must not remain as residual mixed-owner hotspots after step `50`
 
 - `lib/src/model/scene_builder_decode_json.dart`
 - `lib/src/model/scene_builder_json_require.dart`
@@ -140,14 +140,35 @@ support buckets or recover the mixed ownership that steps `40-47` removed.
 If any of these files still carry the mixed-owner role they have today, the
 sequence has not reached its target state.
 
+### Helper seams that must not remain open after step `50`
+
+- The helper family centered on
+  `lib/src/model/scene_builder_json_require.dart`
+  and
+  `lib/src/model/scene_builder_json_parse.dart`
+  must no longer appear in the current cluster-`2` form.
+  This seam is expected to close inside the existing two files through narrow
+  optional field-access primitives owned by `scene_builder_json_require.dart`;
+  new builder helper owner files or generic parser frameworks are forbidden.
+- The exact duplicate pair
+  `document_locator.dart::_txnResolveLayerNodesForLocator`
+  and
+  `document_scene_edit.dart::_txnResolveLayerNodesForErase`
+  must be removed.
+- The structural duplicate pair
+  `document_locator.dart::_txnWriteLayerNodeLocations`
+  and
+  `document_scene_edit.dart::_txnReindexLayerNodes`
+  must be removed.
+
 ### Large-file review threshold for this sequence
 
 - Review every top-level `lib/src/model/*.dart` file above `300` lines during
-  step `48`.
+  step `50`.
 
-### Large files currently expected to remain acceptable after steps `45-48`
+### Large files currently expected to remain acceptable after steps `45-50`
 
-These files may stay large only if step `48` confirms that they are focused
+These files may stay large only if step `50` confirms that they are focused
 owners and not the center of a removed mixed-owner clone family:
 
 - `lib/src/model/scene_builder_decode_scene.dart`
@@ -159,7 +180,7 @@ owners and not the center of a removed mixed-owner clone family:
 ### Residual red metrics that may be acceptable without opening a new plan step
 
 Only the following currently observed low-severity residuals may remain after
-steps `45-48`, and only if step `48` classifies them explicitly as focused
+steps `45-50`, and only if step `50` classifies them explicitly as focused
 tradeoffs:
 
 - `lib/src/model/document.dart`: `number-of-imports`
@@ -177,7 +198,7 @@ other seams without updating this document.
 
 ## Closure Conditions
 
-Step `48` may close only if all of the following are true:
+Step `50` may close only if all of the following are true:
 
 - The measured `model` baseline matches this target graph.
 - No removed mixed-owner seam is silently re-accepted as final state.
