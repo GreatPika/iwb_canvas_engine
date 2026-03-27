@@ -76,8 +76,12 @@ Ownership decisions for the target state:
   `serialization/` to reuse transport wrappers.
 - `SceneBuilder` is a thin model-local import facade: orchestration remains in
   `model/scene_builder.dart`, parsed-map require/decode ownership lives in
-  explicit `model/scene_builder_json_require.dart` and
-  `model/scene_builder_decode_json.dart`, and shared runtime
+  explicit `model/scene_builder_json_require.dart`,
+  `model/scene_builder_decode_json.dart`,
+  `model/scene_builder_decode_scene.dart`,
+  `model/scene_builder_decode_node_common.dart`,
+  `model/scene_builder_decode_node_family.dart`, and family-local decode
+  owners, and shared runtime
   `SceneSnapshot -> Scene` import lives in `model/scene_from_snapshot.dart`.
 - `document.dart` remains the downstream transaction facade, but it consumes
   focused model-local owners for locator, scene-edit, patch, and
@@ -105,6 +109,12 @@ Ownership decisions for the target state:
   exported static API is the supported non-controller import boundary.
 - `model/scene_builder.dart` is the thin internal import facade only. It may
   orchestrate `scene_builder_decode_json.dart`,
+  `scene_builder_decode_scene.dart`,
+  `scene_builder_decode_node_common.dart`,
+  `scene_builder_decode_node_family.dart`,
+  the family-local `scene_builder_decode_{image,text,stroke,line,rect,path}.dart`
+  owners,
+  `scene_builder_json_parse.dart`,
   `scene_builder_json_require.dart`,
   `scene_from_snapshot.dart`, and
   `scene_snapshot_from_scene.dart`, but downstream non-model code must not
@@ -119,9 +129,12 @@ Ownership decisions for the target state:
   owners. `document.dart` consumes them directly; it must not recover a
   `document.dart -> scene_builder.dart` dependency.
 - `model/scene_node_boundary_mapping.dart` is the canonical node-boundary
-  mapping facade. Family-local mapping owners stay in the
+  mapping facade. The removed residual support file
+  `scene_node_boundary_mapping_support.dart` must not return. Family-local
+  mapping owners stay in the
   `scene_node_boundary_mapping_*.dart` files and must not be imported directly
-  by downstream non-model code.
+  by downstream non-model code; downstream entry uses document/codec facades
+  instead of importing `scene_node_boundary_mapping.dart` directly.
 - `model/scene_value_validation.dart` is the canonical validation facade.
   Focused validation owners stay in
   `scene_value_validation_{node,palette_grid,primitives,support,top_level}.dart`,
@@ -275,8 +288,13 @@ most important architectural rules are:
 - `model/` stays structurally part-free; final model architecture is pinned by
   guardrails so `document.dart` cannot re-import `scene_builder.dart` and
   downstream non-model code cannot bypass canonical model facades for focused
-  owner modules such as `scene_builder.dart`, `scene_policy.dart`, and the
-  step 40-43 internal owners through direct imports or re-exports.
+  owner modules such as `scene_builder.dart`,
+  `scene_node_boundary_mapping.dart`,
+  `document_node_patch.dart`,
+  `scene_policy.dart`, and the step 40-48 internal owners through direct
+  imports or re-exports; the removed residual file
+  `scene_node_boundary_mapping_support.dart` is also guardrailed against
+  reintroduction.
 - Snapshot/JSON boundaries keep `backgroundLayer` distinct from ordered content
   `layers`; mutable runtime `Scene.backgroundLayer` may remain `null` until a
   write path materializes it.

@@ -58,6 +58,7 @@ support buckets or recover the mixed ownership that steps `40-47` removed.
   - `scene_builder_decode_json.dart` as a thin orchestration facade.
   - `scene_builder_decode_scene.dart` as scene-topology decode owner.
   - `scene_builder_decode_node_common.dart` as common node decode owner.
+  - `scene_builder_decode_node_family.dart` as family dispatch owner.
   - `scene_builder_decode_image.dart`
   - `scene_builder_decode_text.dart`
   - `scene_builder_decode_stroke.dart`
@@ -149,6 +150,7 @@ sequence has not reached its target state.
 These files may stay large only if step `48` confirms that they are focused
 owners and not the center of a removed mixed-owner clone family:
 
+- `lib/src/model/scene_builder_decode_scene.dart`
 - `lib/src/model/scene_value_validation_node.dart`
 - `lib/src/model/scene_value_validation_top_level.dart`
 - `lib/src/model/scene_policy.dart`
@@ -164,6 +166,9 @@ tradeoffs:
 - `lib/src/model/document.dart`: `txnInsertNodeInScene` parameter count
 - `lib/src/model/document_scene_edit.dart`: `txnInsertNodeInScene` parameter
   count
+- `lib/src/model/scene_builder_decode_node_family.dart`: `number-of-imports`
+- `lib/src/model/scene_builder_decode_scene.dart`: `sceneBuilderDecodeSceneSnapshotFromJson`
+  source lines
 - `lib/src/model/scene_from_snapshot.dart`: `sceneFromSnapshot` source lines
 - `lib/src/model/scene_value_validation_node.dart`: `number-of-imports`
 

@@ -255,7 +255,7 @@ collection of locally improved hotspots.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Re-document the final internal `model` graph after residual cleanup
+### Slice 1. [x] Re-document the final internal `model` graph after residual cleanup
 
 #### Slice Contract
 
@@ -278,7 +278,7 @@ patch owner graph after steps `45-47`.
 - Docs describe one consistent post-step-`45-47` `model` architecture.
 - No stale closure language remains that contradicts the residual-step graph.
 
-### Slice 2. [ ] Pin the final graph with measured baseline and large-file review
+### Slice 2. [x] Pin the final graph with measured baseline and large-file review
 
 #### Slice Contract
 
@@ -306,34 +306,105 @@ when the final graph needs stronger enforcement.
 - Remaining large files and red metrics are explicitly classified.
 - No removed mixed-owner seam is silently re-accepted as final state.
 
-## 9. Final Verification Checklist
+## 9. Measured Closure Baseline (2026-03-28)
 
-- [ ] `dart format --output=none --set-exit-if-changed lib test example/lib example/test tool`
-- [ ] `flutter analyze`
-- [ ] `(cd example && flutter analyze lib test)`
-- [ ] `dcm analyze .`
-- [ ] `dcm calculate-metrics lib/src/model --report-all`
-- [ ] `dart run tool/analysis/find_similar_clones.dart --clusters lib/src/model`
-- [ ] `dart run tool/analysis/find_similar_clones.dart lib/src/model`
-- [ ] `find lib/src/model -maxdepth 1 -name '*.dart' -print0 | xargs -0 wc -l | sort -nr`
-- [ ] `dart run tool/check_import_boundaries.dart`
-- [ ] `dart run tool/check_public_api_surface.dart`
-- [ ] `dart run tool/check_guardrails.dart`
-- [ ] `dart run tool/check_invariant_coverage.dart`
-- [ ] `rg -n "^(part|part of) " lib/src/model -g '*.dart'`
-- [ ] MCP test runner:
+### `dcm calculate-metrics lib/src/model --report-all`
+
+- Scanned files: `46`
+- No `VERY HIGH` hotspots remain in `lib/src/model/**`.
+- Residual `HIGH` hotspots are limited to focused owners and facades:
+  - `document.dart`: file `number-of-imports = 14`
+  - `document.dart`: `txnInsertNodeInScene` parameter count `= 5`
+  - `document_scene_edit.dart`: `txnInsertNodeInScene` parameter count `= 5`
+  - `scene_builder_decode_node_family.dart`: file `number-of-imports = 11`
+  - `scene_builder_decode_scene.dart`:
+    `sceneBuilderDecodeSceneSnapshotFromJson` source lines `= 43`
+  - `scene_from_snapshot.dart`: `sceneFromSnapshot` source lines `= 43`
+  - `scene_value_validation_node.dart`: file `number-of-imports = 16`
+- None of these entries belongs to the removed mixed-owner seams from
+  `scene_builder_decode_json.dart`,
+  `scene_builder_json_require.dart`,
+  `scene_node_boundary_mapping_support.dart`, or
+  `document_node_patch.dart`.
+
+### `dart run tool/analysis/find_similar_clones.dart --clusters lib/src/model`
+
+- Clone clusters found: `15`
+- Scan summary: `scannedFiles=46`, `scannedBlocks=153`, `parseErrors=0`
+- Reported clusters are concentrated in focused owner families:
+  `scene_node_boundary_mapping_common.dart` plus family-local mapping owners,
+  `scene_builder_json_parse.dart`,
+  `scene_builder_json_require.dart`,
+  `scene_builder_decode_*`,
+  `scene_value_validation_*`,
+  `document_clone.dart`,
+  `document_locator.dart` / `document_scene_edit.dart`,
+  `document_node_patch_common.dart`,
+  and the shared import/export pair
+  `scene_from_snapshot.dart` / `scene_snapshot_from_scene.dart`.
+- No cluster reopens the removed mixed-owner support seam
+  `scene_node_boundary_mapping_support.dart`.
+
+### `dart run tool/analysis/find_similar_clones.dart lib/src/model`
+
+- Similar pairs found: `66`
+- The highest-overlap pairs are structural repeats inside focused owners,
+  including:
+  `scene_value_validation_primitives.dart`,
+  `scene_policy.dart`,
+  `document_node_patch_common.dart`,
+  `document_locator.dart` / `document_scene_edit.dart`,
+  `scene_builder_decode_*`,
+  and `scene_node_boundary_mapping_*`.
+- Final closure accepts these as residual focused-owner repeats rather than
+  mixed-owner architecture debt.
+
+### `find lib/src/model -maxdepth 1 -name '*.dart' -print0 | xargs -0 wc -l | sort -nr`
+
+- Large-file review threshold: `> 300` lines
+- Reviewed top-level files above the threshold:
+  - `scene_value_validation_node.dart`: `603` lines, accepted focused
+    node-validation owner
+  - `scene_policy.dart`: `380` lines, accepted focused scene semantic owner
+  - `scene_value_validation_top_level.dart`: `333` lines, accepted focused
+    top-level validation owner
+  - `scene_builder_decode_scene.dart`: `320` lines, accepted focused
+    scene-topology decode owner
+  - `document_scene_edit.dart`: `318` lines, accepted focused scene-edit owner
+- No silent acceptance remains for large top-level `model` files.
+
+### `rg -n "^(part|part of) " lib/src/model -g '*.dart'`
+
+- Exit code: `1` (`no matches`)
+
+## 10. Final Verification Checklist
+
+- [x] `dart format --output=none --set-exit-if-changed lib test example/lib example/test tool`
+- [x] `flutter analyze`
+- [x] `(cd example && flutter analyze lib test)`
+- [x] `dcm analyze .`
+- [x] `dcm calculate-metrics lib/src/model --report-all`
+- [x] `dart run tool/analysis/find_similar_clones.dart --clusters lib/src/model`
+- [x] `dart run tool/analysis/find_similar_clones.dart lib/src/model`
+- [x] `find lib/src/model -maxdepth 1 -name '*.dart' -print0 | xargs -0 wc -l | sort -nr`
+- [x] `dart run tool/check_import_boundaries.dart`
+- [x] `dart run tool/check_public_api_surface.dart`
+- [x] `dart run tool/check_guardrails.dart`
+- [x] `dart run tool/check_invariant_coverage.dart`
+- [x] `rg -n "^(part|part of) " lib/src/model -g '*.dart'`
+- [x] MCP test runner:
       `test/model test/serialization test/contract test/public_api test/entrypoints`
-- [ ] MCP test runner:
+- [x] MCP test runner:
       `test/controller/core test/controller/commands` plus
       `test/controller/scene_invariants_test.dart`
       `test/controller/scene_snapshot_invariant_assertions_test.dart`
       `test/controller/scene_controller_randomized_txn_test.dart`
-- [ ] MCP test runner:
+- [x] MCP test runner:
       `test/render test/view`
-- [ ] MCP test runner:
+- [x] MCP test runner:
       `test/interactive`
-- [ ] MCP test runner:
+- [x] MCP test runner:
       `example/test` with root `example/`
-- [ ] `flutter test --coverage --no-pub --exclude-tags=tool`
-- [ ] `dart run tool/check_coverage.dart`
-- [ ] `dart run tool/run_tool_tests.dart`
+- [x] `flutter test --coverage --no-pub --exclude-tags=tool`
+- [x] `dart run tool/check_coverage.dart`
+- [x] `dart run tool/run_tool_tests.dart`

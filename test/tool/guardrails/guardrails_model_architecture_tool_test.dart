@@ -260,6 +260,45 @@ void decodeScene() {}
     );
 
     test(
+      'rejects non-model code importing scene node mapping facade directly',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/serialization/scene_codec.dart',
+            '''
+import '../model/scene_node_boundary_mapping.dart';
+
+void decodeScene() {}
+''',
+          );
+          writeSandboxFile(
+            sandbox,
+            'lib/src/model/scene_node_boundary_mapping.dart',
+            'void sceneNodeFromSnapshotViaBoundarySchema() {}\n',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'model architecture',
+              detail:
+                  'canonical model facades instead of importing or '
+                  're-exporting internal owner module '
+                  'scene_node_boundary_mapping.dart',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
       'rejects non-model code importing scene_policy.dart directly',
       () async {
         final sandbox = await createGuardrailsSandbox();
@@ -329,17 +368,49 @@ export '../model/scene_builder.dart';
       },
     );
 
+    test('rejects reintroduced removed residual model support files', () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/model/scene_node_boundary_mapping_support.dart',
+          'void legacySupport() {}\n',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'model architecture',
+            detail:
+                'removed residual seam '
+                'scene_node_boundary_mapping_support.dart must not reappear',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
     test('allows non-model imports of canonical model facades', () async {
       final sandbox = await createGuardrailsSandbox();
       try {
         writeMinimalControllerStore(sandbox);
         writeSandboxFile(sandbox, 'lib/src/controller/scene_runtime.dart', '''
+import '../model/scene_builder_api.dart';
 import '../model/document.dart';
 import '../model/scene_document_codec.dart';
 import '../model/scene_value_validation.dart';
 
 void useModelFacades() {}
 ''');
+        writeSandboxFile(
+          sandbox,
+          'lib/src/model/scene_builder_api.dart',
+          'void buildScene() {}\n',
+        );
         writeSandboxFile(
           sandbox,
           'lib/src/model/document.dart',

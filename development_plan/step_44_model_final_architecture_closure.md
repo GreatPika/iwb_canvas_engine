@@ -346,6 +346,11 @@ metrics/clone baseline from actual runs of the closure verification units.
 
 ## 8.1 Measured Closure Baseline (2026-03-27)
 
+This baseline is historical for the step-`44` closure point. The residual
+builder-decode, mapping-support, and patch-owner sequence is finalized only by
+steps `45-48`; see `development_plan/model_target_architecture.md` and
+step `48` for the post-residual target graph and final accepted baseline.
+
 ### `dcm calculate-metrics lib/src/model --report-all`
 
 - Scanned files: `28`

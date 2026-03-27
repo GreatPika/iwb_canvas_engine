@@ -37,6 +37,7 @@ const Set<String> _restrictedModelOwnerModules = <String>{
   '/lib/src/model/scene_policy.dart',
   '/lib/src/model/scene_snapshot_from_scene.dart',
   '/lib/src/model/scene_node_boundary_mapping_common.dart',
+  '/lib/src/model/scene_node_boundary_mapping.dart',
   '/lib/src/model/scene_node_boundary_mapping_image.dart',
   '/lib/src/model/scene_node_boundary_mapping_line.dart',
   '/lib/src/model/scene_node_boundary_mapping_path.dart',
@@ -67,6 +68,12 @@ Future<List<GuardrailViolation>> runModelArchitectureGuardrails({
       violations.add(violation);
       return violations;
     }
+  }
+
+  final removedResidualViolation = _checkRemovedModelResidualFiles(context);
+  if (removedResidualViolation != null) {
+    violations.add(removedResidualViolation);
+    return violations;
   }
 
   final libFiles = _collectDartFiles(
@@ -186,6 +193,34 @@ GuardrailViolation? _checkNonModelDirectiveBoundaries(
             '${target.substring('/lib/src/model/'.length)}.',
       );
     }
+  }
+
+  return null;
+}
+
+GuardrailViolation? _checkRemovedModelResidualFiles(GuardrailContext context) {
+  const removedResidualFiles = <String>{
+    '/lib/src/model/scene_node_boundary_mapping_support.dart',
+  };
+
+  for (final filePosixPath in removedResidualFiles) {
+    final file = File(
+      repoRelPosixToAbsPath(
+        repoRelPosixPath: filePosixPath,
+        rootAbsPosixPath: context.rootAbsPosixPath,
+      ),
+    );
+    if (!file.existsSync()) {
+      continue;
+    }
+    return GuardrailViolation(
+      filePath: filePosixPath,
+      line: 1,
+      message:
+          'model architecture violation: removed residual seam '
+          '${filePosixPath.substring('/lib/src/model/'.length)} must not '
+          'reappear after step 48 closure.',
+    );
   }
 
   return null;
