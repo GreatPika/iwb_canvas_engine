@@ -17,6 +17,7 @@ non-model code продолжал входить в decode через canonical 
 - `lib/src/model/scene_builder_decode_json.dart`
 - `lib/src/model/scene_builder_json_require.dart`
 - `lib/src/model/scene_builder_decode_scene.dart`
+- `lib/src/model/scene_builder_decode_node_family.dart`
 - `lib/src/model/scene_builder_decode_node_common.dart`
 - `lib/src/model/scene_builder_decode_image.dart`
 - `lib/src/model/scene_builder_decode_text.dart`
@@ -47,6 +48,7 @@ non-model code продолжал входить в decode через canonical 
 - `lib/src/model/scene_builder_decode_json.dart`
 - `lib/src/model/scene_builder_json_require.dart`
 - `lib/src/model/scene_builder_decode_scene.dart`
+- `lib/src/model/scene_builder_decode_node_family.dart`
 - `lib/src/model/scene_builder_decode_node_common.dart`
 - `lib/src/model/scene_builder_decode_image.dart`
 - `lib/src/model/scene_builder_decode_text.dart`
@@ -168,7 +170,7 @@ non-model code продолжал входить в decode через canonical 
 
 ### 6.2 Target Verification Units
 
-- `dcm calculate-metrics lib/src/model/scene_builder.dart lib/src/model/scene_builder_decode_json.dart lib/src/model/scene_builder_json_require.dart lib/src/model/scene_builder_decode_scene.dart lib/src/model/scene_builder_decode_node_common.dart lib/src/model/scene_builder_decode_image.dart lib/src/model/scene_builder_decode_text.dart lib/src/model/scene_builder_decode_stroke.dart lib/src/model/scene_builder_decode_line.dart lib/src/model/scene_builder_decode_rect.dart lib/src/model/scene_builder_decode_path.dart lib/src/model/scene_builder_json_parse.dart --report-all`
+- `dcm calculate-metrics lib/src/model/scene_builder.dart lib/src/model/scene_builder_decode_json.dart lib/src/model/scene_builder_json_require.dart lib/src/model/scene_builder_decode_scene.dart lib/src/model/scene_builder_decode_node_family.dart lib/src/model/scene_builder_decode_node_common.dart lib/src/model/scene_builder_decode_image.dart lib/src/model/scene_builder_decode_text.dart lib/src/model/scene_builder_decode_stroke.dart lib/src/model/scene_builder_decode_line.dart lib/src/model/scene_builder_decode_rect.dart lib/src/model/scene_builder_decode_path.dart lib/src/model/scene_builder_json_parse.dart --report-all`
 - `dart run tool/analysis/find_similar_clones.dart --clusters lib/src/model`
 - `dart run tool/check_import_boundaries.dart`
 - `dart run tool/check_guardrails.dart`
@@ -226,7 +228,7 @@ non-model code продолжал входить в decode через canonical 
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] `scene_builder_decode_json.dart` becomes a thin orchestration facade
+### Slice 1. [x] `scene_builder_decode_json.dart` becomes a thin orchestration facade
 
 #### Slice Contract
 
@@ -241,7 +243,7 @@ route `sceneBuilderDecodeSnapshotFromJson(...)` through them, and keep
 
 #### Verification
 
-- `dcm calculate-metrics lib/src/model/scene_builder.dart lib/src/model/scene_builder_decode_json.dart lib/src/model/scene_builder_decode_scene.dart lib/src/model/scene_builder_decode_node_common.dart lib/src/model/scene_builder_decode_image.dart lib/src/model/scene_builder_decode_text.dart lib/src/model/scene_builder_decode_stroke.dart lib/src/model/scene_builder_decode_line.dart lib/src/model/scene_builder_decode_rect.dart lib/src/model/scene_builder_decode_path.dart --report-all`
+- `dcm calculate-metrics lib/src/model/scene_builder.dart lib/src/model/scene_builder_decode_json.dart lib/src/model/scene_builder_decode_scene.dart lib/src/model/scene_builder_decode_node_family.dart lib/src/model/scene_builder_decode_node_common.dart lib/src/model/scene_builder_decode_image.dart lib/src/model/scene_builder_decode_text.dart lib/src/model/scene_builder_decode_stroke.dart lib/src/model/scene_builder_decode_line.dart lib/src/model/scene_builder_decode_rect.dart lib/src/model/scene_builder_decode_path.dart --report-all`
 - MCP test runner:
   `test/model/scene_builder_test.dart`
 - MCP test runner:
@@ -257,7 +259,7 @@ route `sceneBuilderDecodeSnapshotFromJson(...)` through them, and keep
 - `scene_builder.dart` remains thin and delegates into the explicit decode
   graph.
 
-### Slice 2. [ ] Scalar parse helpers and internal decode owners are pinned structurally
+### Slice 2. [x] Scalar parse helpers and internal decode owners are pinned structurally
 
 #### Slice Contract
 
