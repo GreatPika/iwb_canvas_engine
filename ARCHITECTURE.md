@@ -256,6 +256,10 @@ most important architectural rules are:
   applied-versus-pending transition state and may rebuild its
   `PointerInputTracker` only after the raw-pointer router becomes idle; pending
   updates are last-write-wins and do not move into the interactive controller.
+- `PointerInputTracker` is an orchestration-only core owner over two focused
+  pointer-local state owners: active down/slop state and deferred
+  tap-window/double-tap lifecycle. Hosts consume one tracker contract without
+  reopening those internal state machines in `view/` or `interactive/`.
 - After `dispose()`, mutating or effectful public entrypoints fail fast with
   `StateError`.
 

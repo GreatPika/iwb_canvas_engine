@@ -159,7 +159,7 @@ language: russian
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Pending tap-window owner is isolated
+### Slice 1. [x] Pending tap-window owner is isolated
 
 #### Slice Contract
 
@@ -182,7 +182,7 @@ double-tap semantics.
 - Green run of the listed verifications.
 - Deferred tap flush and double-tap semantics stay green after the owner split.
 
-### Slice 2. [ ] Active pointer state owner is isolated and tracker becomes a shell
+### Slice 2. [x] Active pointer state owner is isolated and tracker becomes a shell
 
 #### Slice Contract
 
