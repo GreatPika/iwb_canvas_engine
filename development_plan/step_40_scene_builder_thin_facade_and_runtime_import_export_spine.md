@@ -225,7 +225,7 @@ import/export.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Shared runtime import/export spine is explicit
+### Slice 1. [x] Shared runtime import/export spine is explicit
 
 #### Slice Contract
 
@@ -255,7 +255,7 @@ builder-local runtime import/export wrapper parts.
   `scene_builder_snapshot_from_scene.part.dart` no longer exist in their
   current wrapper form.
 
-### Slice 2. [ ] `SceneBuilder` becomes a part-free thin facade
+### Slice 2. [x] `SceneBuilder` becomes a part-free thin facade
 
 #### Slice Contract
 

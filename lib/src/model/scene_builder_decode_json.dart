@@ -1,4 +1,22 @@
-part of 'scene_builder.dart';
+import 'dart:ui';
+
+import '../contract/internal/node_boundary_schema.dart';
+import '../contract/scene_data_exception.dart';
+import '../contract/snapshot.dart';
+import '../contract/transform2d.dart';
+import '../contract/validated/finite_offset_value.dart';
+import '../contract/validated/font_family_value.dart';
+import '../contract/validated/image_id_value.dart';
+import '../contract/validated/instance_revision_value.dart';
+import '../contract/validated/layer_id_value.dart';
+import '../contract/validated/node_id_value.dart';
+import '../contract/validated/svg_path_data_value.dart';
+import '../contract/validated/text_content_value.dart';
+import '../contract/validated/validated_value_support.dart';
+import '../core/nodes.dart';
+import '../core/scene_limits.dart';
+import 'scene_builder_json_require.dart';
+import 'scene_structural_limits.dart';
 
 typedef _DecodedScenePayload = ({
   CameraSnapshot camera,
@@ -14,7 +32,7 @@ typedef _DecodeNodeSchemaFields<FieldsT> =
 typedef _NodeSnapshotFieldsBuilder<FieldsT, SnapshotT extends NodeSnapshot> =
     SnapshotT Function(FieldsT fields);
 
-SceneSnapshot _decodeSnapshotFromJson(Map<String, Object?> json) {
+SceneSnapshot sceneBuilderDecodeSnapshotFromJson(Map<String, Object?> json) {
   _requireSupportedSchemaVersion(json);
   final payload = _decodeScenePayload(json);
   return sceneSnapshotFromValidated(
@@ -27,7 +45,7 @@ SceneSnapshot _decodeSnapshotFromJson(Map<String, Object?> json) {
 }
 
 void _requireSupportedSchemaVersion(Map<String, Object?> json) {
-  final version = _requireValidatedField(
+  final version = sceneBuilderRequireValidatedField(
     json,
     'schemaVersion',
     parse: (value, {required path, required fieldName}) =>
@@ -74,16 +92,16 @@ _DecodedScenePayload _decodeScenePayload(Map<String, Object?> json) {
 }
 
 CameraSnapshot _decodeCameraSnapshot(Map<String, Object?> json) {
-  final cameraJson = _requireMap(json, 'camera');
+  final cameraJson = sceneBuilderRequireMap(json, 'camera');
   return cameraSnapshotFromValidated(
     offset: Offset(
       validatedRequireJsonFiniteDouble(
-        _requireField(cameraJson, 'offsetX', pathPrefix: 'camera'),
+        sceneBuilderRequireField(cameraJson, 'offsetX', pathPrefix: 'camera'),
         path: 'camera.offsetX',
         fieldName: 'offsetX',
       ),
       validatedRequireJsonFiniteDouble(
-        _requireField(cameraJson, 'offsetY', pathPrefix: 'camera'),
+        sceneBuilderRequireField(cameraJson, 'offsetY', pathPrefix: 'camera'),
         path: 'camera.offsetY',
         fieldName: 'offsetY',
       ),
@@ -92,15 +110,15 @@ CameraSnapshot _decodeCameraSnapshot(Map<String, Object?> json) {
 }
 
 BackgroundSnapshot _decodeBackgroundSnapshot(Map<String, Object?> json) {
-  final backgroundJson = _requireMap(json, 'background');
-  final gridJson = _requireMap(
+  final backgroundJson = sceneBuilderRequireMap(json, 'background');
+  final gridJson = sceneBuilderRequireMap(
     backgroundJson,
     'grid',
     pathPrefix: 'background',
   );
   return backgroundSnapshotFromValidated(
-    color: _parseColor(
-      _requireTypedField<String>(
+    color: sceneBuilderParseColor(
+      sceneBuilderRequireTypedField<String>(
         backgroundJson,
         'color',
         pathPrefix: 'background',
@@ -109,19 +127,23 @@ BackgroundSnapshot _decodeBackgroundSnapshot(Map<String, Object?> json) {
       path: 'background.color',
     ),
     grid: gridSnapshotFromValidated(
-      isEnabled: _requireTypedField<bool>(
+      isEnabled: sceneBuilderRequireTypedField<bool>(
         gridJson,
         'enabled',
         pathPrefix: 'background.grid',
         typeLabel: 'bool',
       ),
       cellSize: validatedRequireJsonFiniteDouble(
-        _requireField(gridJson, 'cellSize', pathPrefix: 'background.grid'),
+        sceneBuilderRequireField(
+          gridJson,
+          'cellSize',
+          pathPrefix: 'background.grid',
+        ),
         path: 'background.grid.cellSize',
         fieldName: 'cellSize',
       ),
-      color: _parseColor(
-        _requireTypedField<String>(
+      color: sceneBuilderParseColor(
+        sceneBuilderRequireTypedField<String>(
           gridJson,
           'color',
           pathPrefix: 'background.grid',
@@ -134,7 +156,7 @@ BackgroundSnapshot _decodeBackgroundSnapshot(Map<String, Object?> json) {
 }
 
 ScenePaletteSnapshot _decodePaletteSnapshot(Map<String, Object?> json) {
-  final paletteJson = _requireMap(json, 'palette');
+  final paletteJson = sceneBuilderRequireMap(json, 'palette');
   return scenePaletteSnapshotFromValidated(
     penColors: _decodePaletteColors(
       paletteJson,
@@ -155,24 +177,28 @@ List<Color> _decodePaletteColors(
   required String key,
   required String pathPrefix,
 }) {
-  final colorsJson = _requireList(
+  final colorsJson = sceneBuilderRequireList(
     paletteJson,
     key,
     pathPrefix: pathPrefix,
     maxLength: kMaxPaletteItems,
   );
-  final colorsPath = _pathAt(pathPrefix, key);
+  final colorsPath = sceneBuilderPathAt(pathPrefix, key);
   final colors = <Color>[];
   for (var i = 0; i < colorsJson.length; i++) {
-    final path = _pathAt(colorsPath, '[$i]');
-    final value = _requireStringValue(colorsJson[i], field: key, path: path);
-    colors.add(_parseColor(value, path: path));
+    final path = sceneBuilderPathAt(colorsPath, '[$i]');
+    final value = sceneBuilderRequireStringValue(
+      colorsJson[i],
+      field: key,
+      path: path,
+    );
+    colors.add(sceneBuilderParseColor(value, path: path));
   }
   return colors;
 }
 
 List<double> _decodePaletteGridSizes(Map<String, Object?> paletteJson) {
-  final gridSizesJson = _requireList(
+  final gridSizesJson = sceneBuilderRequireList(
     paletteJson,
     'gridSizes',
     pathPrefix: 'palette',
@@ -182,9 +208,13 @@ List<double> _decodePaletteGridSizes(Map<String, Object?> paletteJson) {
   const gridSizesPath = 'palette.gridSizes';
   final gridSizes = <double>[];
   for (var i = 0; i < gridSizesJson.length; i++) {
-    final path = _pathAt(gridSizesPath, '[$i]');
+    final path = sceneBuilderPathAt(gridSizesPath, '[$i]');
     gridSizes.add(
-      _requireDoubleValue(gridSizesJson[i], field: gridSizesField, path: path),
+      sceneBuilderRequireDoubleValue(
+        gridSizesJson[i],
+        field: gridSizesField,
+        path: path,
+      ),
     );
   }
   return gridSizes;
@@ -199,7 +229,7 @@ BackgroundLayerSnapshot? _decodeOptionalBackgroundLayer(
     return null;
   }
   return _decodeBackgroundLayer(
-    _requireObjectValue(
+    sceneBuilderRequireObjectValue(
       backgroundLayerJson,
       path: 'backgroundLayer',
       objectName: 'Layer',
@@ -213,14 +243,14 @@ List<ContentLayerSnapshot> _decodeContentLayers(
   Map<String, Object?> json, {
   required void Function(String nodesPath) onNodeDecoded,
 }) {
-  final layersJson = _requireList(json, 'layers');
+  final layersJson = sceneBuilderRequireList(json, 'layers');
   sceneRequireContentLayerLimit(layersJson.length);
   final layers = <ContentLayerSnapshot>[];
   for (var layerIndex = 0; layerIndex < layersJson.length; layerIndex++) {
     final layerPath = 'layers[$layerIndex]';
     layers.add(
       _decodeContentLayer(
-        _requireObjectValue(
+        sceneBuilderRequireObjectValue(
           layersJson[layerIndex],
           path: layerPath,
           objectName: 'Layer',
@@ -263,7 +293,7 @@ ContentLayerSnapshot _decodeContentLayer(
 }
 
 String _decodeLayerId(Map<String, Object?> json, {required String layerPath}) {
-  return _requireValidatedField(
+  return sceneBuilderRequireValidatedField(
     json,
     'id',
     pathPrefix: layerPath,
@@ -277,15 +307,19 @@ List<NodeSnapshot> _decodeLayerNodes(
   required String layerPath,
   required void Function(String nodesPath) onNodeDecoded,
 }) {
-  final nodesJson = _requireList(json, 'nodes', pathPrefix: layerPath);
-  final nodesPath = _pathAt(layerPath, 'nodes');
+  final nodesJson = sceneBuilderRequireList(
+    json,
+    'nodes',
+    pathPrefix: layerPath,
+  );
+  final nodesPath = sceneBuilderPathAt(layerPath, 'nodes');
   final nodes = <NodeSnapshot>[];
   for (var nodeIndex = 0; nodeIndex < nodesJson.length; nodeIndex++) {
     onNodeDecoded(nodesPath);
-    final nodePath = _pathAt(nodesPath, '[$nodeIndex]');
+    final nodePath = sceneBuilderPathAt(nodesPath, '[$nodeIndex]');
     nodes.add(
       _decodeNode(
-        _requireObjectValue(
+        sceneBuilderRequireObjectValue(
           nodesJson[nodeIndex],
           path: nodePath,
           objectName: 'Node',
@@ -422,8 +456,8 @@ NodeType _decodeNodeType(
   Map<String, Object?> json, {
   required String nodePath,
 }) {
-  return _parseNodeType(
-    _requireTypedField<String>(
+  return sceneBuilderParseNodeType(
+    sceneBuilderRequireTypedField<String>(
       json,
       'type',
       pathPrefix: nodePath,
@@ -443,13 +477,13 @@ NodeSnapshotCommonSchemaFields _decodeNodeCommonFields(
     instanceRevision: _decodeNodeInstanceRevision(json, nodePath: nodePath),
     transform: _decodeNodeTransform(json, nodePath: nodePath),
     hitPadding: validatedRequireJsonNonNegativeFiniteDouble(
-      _requireField(json, 'hitPadding', pathPrefix: nodePath),
-      path: _pathAt(nodePath, 'hitPadding'),
+      sceneBuilderRequireField(json, 'hitPadding', pathPrefix: nodePath),
+      path: sceneBuilderPathAt(nodePath, 'hitPadding'),
       fieldName: 'hitPadding',
     ),
     opacity: validatedRequireJsonOpacity(
-      _requireField(json, 'opacity', pathPrefix: nodePath),
-      path: _pathAt(nodePath, 'opacity'),
+      sceneBuilderRequireField(json, 'opacity', pathPrefix: nodePath),
+      path: sceneBuilderPathAt(nodePath, 'opacity'),
       fieldName: 'opacity',
     ),
     isVisible: flags.isVisible,
@@ -469,31 +503,31 @@ NodeSnapshotCommonSchemaFields _decodeNodeCommonFields(
 })
 _decodeNodeFlags(Map<String, Object?> json, {required String nodePath}) {
   return (
-    isVisible: _requireTypedField<bool>(
+    isVisible: sceneBuilderRequireTypedField<bool>(
       json,
       'isVisible',
       pathPrefix: nodePath,
       typeLabel: 'bool',
     ),
-    isSelectable: _requireTypedField<bool>(
+    isSelectable: sceneBuilderRequireTypedField<bool>(
       json,
       'isSelectable',
       pathPrefix: nodePath,
       typeLabel: 'bool',
     ),
-    isLocked: _requireTypedField<bool>(
+    isLocked: sceneBuilderRequireTypedField<bool>(
       json,
       'isLocked',
       pathPrefix: nodePath,
       typeLabel: 'bool',
     ),
-    isDeletable: _requireTypedField<bool>(
+    isDeletable: sceneBuilderRequireTypedField<bool>(
       json,
       'isDeletable',
       pathPrefix: nodePath,
       typeLabel: 'bool',
     ),
-    isTransformable: _requireTypedField<bool>(
+    isTransformable: sceneBuilderRequireTypedField<bool>(
       json,
       'isTransformable',
       pathPrefix: nodePath,
@@ -503,7 +537,7 @@ _decodeNodeFlags(Map<String, Object?> json, {required String nodePath}) {
 }
 
 String _decodeNodeId(Map<String, Object?> json, {required String nodePath}) {
-  return _requireValidatedField(
+  return sceneBuilderRequireValidatedField(
     json,
     'id',
     pathPrefix: nodePath,
@@ -516,7 +550,7 @@ int _decodeNodeInstanceRevision(
   Map<String, Object?> json, {
   required String nodePath,
 }) {
-  return _optionalValidatedField(
+  return sceneBuilderOptionalValidatedField(
         json,
         'instanceRevision',
         pathPrefix: nodePath,
@@ -535,9 +569,9 @@ Transform2D _decodeNodeTransform(
   Map<String, Object?> json, {
   required String nodePath,
 }) {
-  return _decodeTransform2D(
-    _requireMap(json, 'transform', pathPrefix: nodePath),
-    pathPrefix: _pathAt(nodePath, 'transform'),
+  return sceneBuilderDecodeTransform2D(
+    sceneBuilderRequireMap(json, 'transform', pathPrefix: nodePath),
+    pathPrefix: sceneBuilderPathAt(nodePath, 'transform'),
   );
 }
 
@@ -547,12 +581,16 @@ ImageNodeSchemaFields _decodeImageFields(
 }) {
   return NodeBoundarySchema.imageFieldsFromValidated((
     imageId: ImageIdValue.fromJson(
-      _requireField(json, 'imageId', pathPrefix: nodePath),
-      path: _pathAt(nodePath, 'imageId'),
+      sceneBuilderRequireField(json, 'imageId', pathPrefix: nodePath),
+      path: sceneBuilderPathAt(nodePath, 'imageId'),
       fieldName: 'imageId',
     ).value,
-    size: _requireSize(json, 'size', pathPrefix: nodePath),
-    naturalSize: _optionalSizeMap(json, 'naturalSize', pathPrefix: nodePath),
+    size: sceneBuilderRequireSize(json, 'size', pathPrefix: nodePath),
+    naturalSize: sceneBuilderOptionalSizeMap(
+      json,
+      'naturalSize',
+      pathPrefix: nodePath,
+    ),
   ));
 }
 
@@ -584,7 +622,7 @@ TextNodeSnapshotSchemaFields _decodeTextFields(
   final textFields = _decodeTextSpecFields(json, nodePath: nodePath);
   return NodeBoundarySchema.textSnapshotFieldsFromValidated((
     text: textFields.text,
-    size: _requireSize(json, 'size', pathPrefix: nodePath),
+    size: sceneBuilderRequireSize(json, 'size', pathPrefix: nodePath),
     fontSize: textFields.fontSize,
     color: textFields.color,
     align: textFields.align,
@@ -635,21 +673,21 @@ TextNodeSpecSchemaFields _decodeTextSpecFields(
   return NodeBoundarySchema.textSpecFieldsFromValidated((
     text: _decodeRequiredTextContent(json, nodePath: nodePath),
     fontSize: validatedRequireJsonPositiveFiniteDouble(
-      _requireField(json, 'fontSize', pathPrefix: nodePath),
-      path: _pathAt(nodePath, 'fontSize'),
+      sceneBuilderRequireField(json, 'fontSize', pathPrefix: nodePath),
+      path: sceneBuilderPathAt(nodePath, 'fontSize'),
       fieldName: 'fontSize',
     ),
-    color: _parseColor(
-      _requireTypedField<String>(
+    color: sceneBuilderParseColor(
+      sceneBuilderRequireTypedField<String>(
         json,
         'color',
         pathPrefix: nodePath,
         typeLabel: 'string',
       ),
-      path: _pathAt(nodePath, 'color'),
+      path: sceneBuilderPathAt(nodePath, 'color'),
     ),
-    align: _parseTextAlign(
-      _requireTypedField<String>(
+    align: sceneBuilderParseTextAlign(
+      sceneBuilderRequireTypedField<String>(
         json,
         'align',
         pathPrefix: nodePath,
@@ -671,13 +709,13 @@ String _decodeRequiredTextContent(
   required String nodePath,
 }) {
   return TextContentValue.fromJson(
-    _requireTypedField<String>(
+    sceneBuilderRequireTypedField<String>(
       json,
       'text',
       pathPrefix: nodePath,
       typeLabel: 'string',
     ),
-    path: _pathAt(nodePath, 'text'),
+    path: sceneBuilderPathAt(nodePath, 'text'),
     fieldName: 'text',
   ).value;
 }
@@ -687,19 +725,19 @@ String _decodeRequiredTextContent(
   required String nodePath,
 }) {
   return (
-    isBold: _requireTypedField<bool>(
+    isBold: sceneBuilderRequireTypedField<bool>(
       json,
       'isBold',
       pathPrefix: nodePath,
       typeLabel: 'bool',
     ),
-    isItalic: _requireTypedField<bool>(
+    isItalic: sceneBuilderRequireTypedField<bool>(
       json,
       'isItalic',
       pathPrefix: nodePath,
       typeLabel: 'bool',
     ),
-    isUnderline: _requireTypedField<bool>(
+    isUnderline: sceneBuilderRequireTypedField<bool>(
       json,
       'isUnderline',
       pathPrefix: nodePath,
@@ -711,7 +749,7 @@ String _decodeRequiredTextContent(
 ({String? fontFamily, double? maxWidth, double? lineHeight})
 _decodeTextOptionals(Map<String, Object?> json, {required String nodePath}) {
   return (
-    fontFamily: _optionalValidatedField(
+    fontFamily: sceneBuilderOptionalValidatedField(
       json,
       'fontFamily',
       pathPrefix: nodePath,
@@ -722,7 +760,7 @@ _decodeTextOptionals(Map<String, Object?> json, {required String nodePath}) {
             fieldName: fieldName,
           ).value,
     ),
-    maxWidth: _optionalValidatedField(
+    maxWidth: sceneBuilderOptionalValidatedField(
       json,
       'maxWidth',
       pathPrefix: nodePath,
@@ -733,7 +771,7 @@ _decodeTextOptionals(Map<String, Object?> json, {required String nodePath}) {
             fieldName: fieldName,
           ),
     ),
-    lineHeight: _optionalValidatedField(
+    lineHeight: sceneBuilderOptionalValidatedField(
       json,
       'lineHeight',
       pathPrefix: nodePath,
@@ -755,8 +793,8 @@ StrokeNodeSnapshotSchemaFields _decodeStrokeFields(
     points: _decodeStrokePoints(json, nodePath: nodePath),
     pointsRevision: 0,
     thickness: validatedRequireJsonPositiveFiniteDouble(
-      _requireField(json, 'thickness', pathPrefix: nodePath),
-      path: _pathAt(nodePath, 'thickness'),
+      sceneBuilderRequireField(json, 'thickness', pathPrefix: nodePath),
+      path: sceneBuilderPathAt(nodePath, 'thickness'),
       fieldName: 'thickness',
     ),
     color: _decodeRequiredColor(json, 'color', pathPrefix: nodePath),
@@ -789,8 +827,12 @@ List<Offset> _decodeStrokePoints(
   Map<String, Object?> json, {
   required String nodePath,
 }) {
-  final pointsPath = _pathAt(nodePath, 'localPoints');
-  final pointsJson = _requireList(json, 'localPoints', pathPrefix: nodePath);
+  final pointsPath = sceneBuilderPathAt(nodePath, 'localPoints');
+  final pointsJson = sceneBuilderRequireList(
+    json,
+    'localPoints',
+    pathPrefix: nodePath,
+  );
   if (pointsJson.length > kMaxStrokePointsPerNode) {
     throw SceneDataException(
       code: SceneDataErrorCode.invalidValue,
@@ -805,8 +847,8 @@ List<Offset> _decodeStrokePoints(
     points.add(
       FiniteOffsetValue.fromJson(
         pointsJson[i],
-        path: _pathAt(pointsPath, '[$i]'),
-        fieldName: _pathAt(pointsPath, '[$i]'),
+        path: sceneBuilderPathAt(pointsPath, '[$i]'),
+        fieldName: sceneBuilderPathAt(pointsPath, '[$i]'),
       ).value,
     );
   }
@@ -819,18 +861,18 @@ LineNodeSchemaFields _decodeLineFields(
 }) {
   return NodeBoundarySchema.lineFieldsFromValidated((
     start: validatedRequireJsonFiniteOffset(
-      _requireField(json, 'localA', pathPrefix: nodePath),
-      path: _pathAt(nodePath, 'localA'),
+      sceneBuilderRequireField(json, 'localA', pathPrefix: nodePath),
+      path: sceneBuilderPathAt(nodePath, 'localA'),
       fieldName: 'localA',
     ),
     end: validatedRequireJsonFiniteOffset(
-      _requireField(json, 'localB', pathPrefix: nodePath),
-      path: _pathAt(nodePath, 'localB'),
+      sceneBuilderRequireField(json, 'localB', pathPrefix: nodePath),
+      path: sceneBuilderPathAt(nodePath, 'localB'),
       fieldName: 'localB',
     ),
     thickness: validatedRequireJsonPositiveFiniteDouble(
-      _requireField(json, 'thickness', pathPrefix: nodePath),
-      path: _pathAt(nodePath, 'thickness'),
+      sceneBuilderRequireField(json, 'thickness', pathPrefix: nodePath),
+      path: sceneBuilderPathAt(nodePath, 'thickness'),
       fieldName: 'thickness',
     ),
     color: _decodeRequiredColor(json, 'color', pathPrefix: nodePath),
@@ -864,12 +906,20 @@ RectNodeSchemaFields _decodeRectFields(
   required String nodePath,
 }) {
   return NodeBoundarySchema.rectFieldsFromValidated((
-    size: _requireSize(json, 'size', pathPrefix: nodePath),
-    fillColor: _optionalColor(json, 'fillColor', pathPrefix: nodePath),
-    strokeColor: _optionalColor(json, 'strokeColor', pathPrefix: nodePath),
+    size: sceneBuilderRequireSize(json, 'size', pathPrefix: nodePath),
+    fillColor: sceneBuilderOptionalColor(
+      json,
+      'fillColor',
+      pathPrefix: nodePath,
+    ),
+    strokeColor: sceneBuilderOptionalColor(
+      json,
+      'strokeColor',
+      pathPrefix: nodePath,
+    ),
     strokeWidth: validatedRequireJsonNonNegativeFiniteDouble(
-      _requireField(json, 'strokeWidth', pathPrefix: nodePath),
-      path: _pathAt(nodePath, 'strokeWidth'),
+      sceneBuilderRequireField(json, 'strokeWidth', pathPrefix: nodePath),
+      path: sceneBuilderPathAt(nodePath, 'strokeWidth'),
       fieldName: 'strokeWidth',
     ),
   ));
@@ -903,24 +953,32 @@ PathNodeSchemaFields _decodePathFields(
 }) {
   return NodeBoundarySchema.pathFieldsFromValidated((
     svgPathData: SvgPathDataValue.fromJson(
-      _requireTypedField<String>(
+      sceneBuilderRequireTypedField<String>(
         json,
         'svgPathData',
         pathPrefix: nodePath,
         typeLabel: 'string',
       ),
-      path: _pathAt(nodePath, 'svgPathData'),
+      path: sceneBuilderPathAt(nodePath, 'svgPathData'),
       fieldName: 'svgPathData',
     ).value,
-    fillColor: _optionalColor(json, 'fillColor', pathPrefix: nodePath),
-    strokeColor: _optionalColor(json, 'strokeColor', pathPrefix: nodePath),
+    fillColor: sceneBuilderOptionalColor(
+      json,
+      'fillColor',
+      pathPrefix: nodePath,
+    ),
+    strokeColor: sceneBuilderOptionalColor(
+      json,
+      'strokeColor',
+      pathPrefix: nodePath,
+    ),
     strokeWidth: validatedRequireJsonNonNegativeFiniteDouble(
-      _requireField(json, 'strokeWidth', pathPrefix: nodePath),
-      path: _pathAt(nodePath, 'strokeWidth'),
+      sceneBuilderRequireField(json, 'strokeWidth', pathPrefix: nodePath),
+      path: sceneBuilderPathAt(nodePath, 'strokeWidth'),
       fieldName: 'strokeWidth',
     ),
-    fillRule: _parsePathFillRule(
-      _requireTypedField<String>(
+    fillRule: sceneBuilderParsePathFillRule(
+      sceneBuilderRequireTypedField<String>(
         json,
         'fillRule',
         pathPrefix: nodePath,
@@ -959,13 +1017,13 @@ Color _decodeRequiredColor(
   String key, {
   required String pathPrefix,
 }) {
-  return _parseColor(
-    _requireTypedField<String>(
+  return sceneBuilderParseColor(
+    sceneBuilderRequireTypedField<String>(
       json,
       key,
       pathPrefix: pathPrefix,
       typeLabel: 'string',
     ),
-    path: _pathAt(pathPrefix, key),
+    path: sceneBuilderPathAt(pathPrefix, key),
   );
 }

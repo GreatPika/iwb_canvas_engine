@@ -1,46 +1,24 @@
-import 'dart:ui';
-
-import '../core/nodes.dart';
-import '../core/revision_policy.dart';
 import '../core/scene.dart';
-import '../core/scene_limits.dart';
-import '../contract/internal/node_boundary_schema.dart';
 import '../contract/scene_data_exception.dart';
 import '../contract/snapshot.dart';
-import '../contract/transform2d.dart';
-import '../contract/validated/finite_offset_value.dart';
-import '../contract/validated/font_family_value.dart';
-import '../contract/validated/image_id_value.dart';
-import '../contract/validated/instance_revision_value.dart';
-import '../contract/validated/layer_id_value.dart';
-import '../contract/validated/node_id_value.dart';
-import '../contract/validated/text_content_value.dart';
-import '../contract/validated/svg_path_data_value.dart';
-import '../contract/validated/validated_value_support.dart';
-import 'scene_structural_limits.dart';
-import 'scene_node_boundary_mapping.dart';
+import 'scene_builder_decode_json.dart';
 import 'scene_policy.dart';
+import 'scene_from_snapshot.dart';
 import 'scene_snapshot_from_scene.dart';
-
-part 'scene_builder_json_require.part.dart';
-part 'scene_builder_decode_json.part.dart';
-part 'scene_builder_scene_from_snapshot.part.dart';
-part 'scene_builder_snapshot_from_scene.part.dart';
 
 Scene sceneBuildFromSnapshot(
   SceneSnapshot rawSnapshot, {
   int Function()? nextInstanceRevision,
 }) {
-  final canonicalSnapshot = sceneCanonicalizeAndValidateSnapshot(rawSnapshot);
-  return _sceneFromSnapshot(
-    canonicalSnapshot,
+  return sceneImportFromSnapshot(
+    rawSnapshot,
     nextInstanceRevision: nextInstanceRevision,
   );
 }
 
 Scene sceneBuildFromJsonMap(Map<String, Object?> rawJson) {
   try {
-    final rawSnapshot = _decodeSnapshotFromJson(rawJson);
+    final rawSnapshot = sceneBuilderDecodeSnapshotFromJson(rawJson);
     return sceneBuildFromSnapshot(rawSnapshot);
   } on SceneDataException {
     rethrow;
@@ -60,16 +38,16 @@ SceneSnapshot sceneCanonicalizeAndValidateSnapshot(SceneSnapshot rawSnapshot) {
 Scene sceneCanonicalizeAndValidateScene(Scene rawScene) {
   return ScenePolicy.validateRuntimeScene(
     rawScene,
-    snapshotFromScene: _snapshotFromScene,
-    sceneFromSnapshot: (snapshot) => _sceneFromSnapshot(snapshot),
+    snapshotFromScene: sceneSnapshotFromScene,
+    sceneFromSnapshot: sceneFromSnapshot,
   );
 }
 
 Scene sceneValidateCore(Scene scene) {
   return ScenePolicy.validateEncodeScene(
     scene,
-    snapshotFromScene: _snapshotFromScene,
-    sceneFromSnapshot: (snapshot) => _sceneFromSnapshot(snapshot),
+    snapshotFromScene: sceneSnapshotFromScene,
+    sceneFromSnapshot: sceneFromSnapshot,
   );
 }
 

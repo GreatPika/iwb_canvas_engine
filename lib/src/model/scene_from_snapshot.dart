@@ -1,6 +1,22 @@
-part of 'scene_builder.dart';
+import '../core/nodes.dart';
+import '../core/revision_policy.dart';
+import '../core/scene.dart';
+import '../contract/snapshot.dart';
+import 'scene_node_boundary_mapping.dart';
+import 'scene_policy.dart';
 
-Scene _sceneFromSnapshot(
+Scene sceneImportFromSnapshot(
+  SceneSnapshot rawSnapshot, {
+  int Function()? nextInstanceRevision,
+}) {
+  final canonicalSnapshot = ScenePolicy.validateImportSnapshot(rawSnapshot);
+  return sceneFromSnapshot(
+    canonicalSnapshot,
+    nextInstanceRevision: nextInstanceRevision,
+  );
+}
+
+Scene sceneFromSnapshot(
   SceneSnapshot snapshot, {
   int Function()? nextInstanceRevision,
 }) {

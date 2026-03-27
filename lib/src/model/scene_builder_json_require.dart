@@ -1,19 +1,28 @@
-part of 'scene_builder.dart';
+import 'dart:ui';
 
-typedef _JsonValidatedFieldParser<T> =
+import '../contract/path_fill_rule.dart';
+import '../contract/scene_data_exception.dart';
+import '../contract/transform2d.dart';
+import '../contract/validated/validated_value_support.dart';
+import '../core/nodes.dart';
+
+typedef JsonValidatedFieldParser<T> =
     T Function(
       Object? value, {
       required String path,
       required String fieldName,
     });
 
-String _pathAt(String pathPrefix, String segment) {
+String sceneBuilderPathAt(String pathPrefix, String segment) {
   if (pathPrefix.isEmpty) return segment;
   if (segment.startsWith('[')) return '$pathPrefix$segment';
   return '$pathPrefix.$segment';
 }
 
-Map<String, Object?> _castMap(Map<Object?, Object?> value, {String? path}) {
+Map<String, Object?> sceneBuilderCastMap(
+  Map<Object?, Object?> value, {
+  String? path,
+}) {
   final out = <String, Object?>{};
   for (final entry in value.entries) {
     final key = entry.key;
@@ -29,7 +38,7 @@ Map<String, Object?> _castMap(Map<Object?, Object?> value, {String? path}) {
   return out;
 }
 
-Map<String, Object?> _requireObjectValue(
+Map<String, Object?> sceneBuilderRequireObjectValue(
   Object? value, {
   required String path,
   required String objectName,
@@ -41,15 +50,15 @@ Map<String, Object?> _requireObjectValue(
       message: '$objectName must be an object.',
     );
   }
-  return _castMap(value, path: path);
+  return sceneBuilderCastMap(value, path: path);
 }
 
-Map<String, Object?> _requireMap(
+Map<String, Object?> sceneBuilderRequireMap(
   Map<String, Object?> json,
   String key, {
   String pathPrefix = '',
 }) {
-  final path = _pathAt(pathPrefix, key);
+  final path = sceneBuilderPathAt(pathPrefix, key);
   if (!json.containsKey(key)) {
     throw SceneDataException(
       code: SceneDataErrorCode.missingField,
@@ -65,16 +74,16 @@ Map<String, Object?> _requireMap(
       message: 'Field $key must be an object.',
     );
   }
-  return _castMap(value, path: path);
+  return sceneBuilderCastMap(value, path: path);
 }
 
-List<Object?> _requireList(
+List<Object?> sceneBuilderRequireList(
   Map<String, Object?> json,
   String key, {
   String pathPrefix = '',
   int? maxLength,
 }) {
-  final path = _pathAt(pathPrefix, key);
+  final path = sceneBuilderPathAt(pathPrefix, key);
   if (!json.containsKey(key)) {
     throw SceneDataException(
       code: SceneDataErrorCode.missingField,
@@ -102,12 +111,12 @@ List<Object?> _requireList(
   return list;
 }
 
-Object? _requireField(
+Object? sceneBuilderRequireField(
   Map<String, Object?> json,
   String key, {
   String pathPrefix = '',
 }) {
-  final path = _pathAt(pathPrefix, key);
+  final path = sceneBuilderPathAt(pathPrefix, key);
   if (!json.containsKey(key)) {
     throw SceneDataException(
       code: SceneDataErrorCode.missingField,
@@ -118,24 +127,24 @@ Object? _requireField(
   return json[key];
 }
 
-T _requireValidatedField<T>(
+T sceneBuilderRequireValidatedField<T>(
   Map<String, Object?> json,
   String key, {
-  required _JsonValidatedFieldParser<T> parse,
+  required JsonValidatedFieldParser<T> parse,
   String pathPrefix = '',
 }) {
-  final path = _pathAt(pathPrefix, key);
+  final path = sceneBuilderPathAt(pathPrefix, key);
   return parse(
-    _requireField(json, key, pathPrefix: pathPrefix),
+    sceneBuilderRequireField(json, key, pathPrefix: pathPrefix),
     path: path,
     fieldName: key,
   );
 }
 
-T? _optionalValidatedField<T>(
+T? sceneBuilderOptionalValidatedField<T>(
   Map<String, Object?> json,
   String key, {
-  required _JsonValidatedFieldParser<T> parse,
+  required JsonValidatedFieldParser<T> parse,
   required String pathPrefix,
 }) {
   if (!json.containsKey(key)) {
@@ -145,11 +154,11 @@ T? _optionalValidatedField<T>(
   if (value == null) {
     return null;
   }
-  final path = _pathAt(pathPrefix, key);
+  final path = sceneBuilderPathAt(pathPrefix, key);
   return parse(value, path: path, fieldName: key);
 }
 
-String _requireStringValue(
+String sceneBuilderRequireStringValue(
   Object? value, {
   required String field,
   required String path,
@@ -164,13 +173,13 @@ String _requireStringValue(
   return value;
 }
 
-T _requireTypedField<T>(
+T sceneBuilderRequireTypedField<T>(
   Map<String, Object?> json,
   String key, {
   required String typeLabel,
   String pathPrefix = '',
 }) {
-  final path = _pathAt(pathPrefix, key);
+  final path = sceneBuilderPathAt(pathPrefix, key);
   if (!json.containsKey(key)) {
     throw SceneDataException(
       code: SceneDataErrorCode.missingField,
@@ -189,7 +198,7 @@ T _requireTypedField<T>(
   return value;
 }
 
-double _requireDoubleValue(
+double sceneBuilderRequireDoubleValue(
   Object? value, {
   required String field,
   required String path,
@@ -201,66 +210,66 @@ double _requireDoubleValue(
   );
 }
 
-Transform2D _decodeTransform2D(
+Transform2D sceneBuilderDecodeTransform2D(
   Map<String, Object?> json, {
   String pathPrefix = '',
 }) {
   return Transform2D(
     a: validatedRequireJsonFiniteDouble(
-      _requireField(json, 'a', pathPrefix: pathPrefix),
-      path: _pathAt(pathPrefix, 'a'),
+      sceneBuilderRequireField(json, 'a', pathPrefix: pathPrefix),
+      path: sceneBuilderPathAt(pathPrefix, 'a'),
       fieldName: 'a',
     ),
     b: validatedRequireJsonFiniteDouble(
-      _requireField(json, 'b', pathPrefix: pathPrefix),
-      path: _pathAt(pathPrefix, 'b'),
+      sceneBuilderRequireField(json, 'b', pathPrefix: pathPrefix),
+      path: sceneBuilderPathAt(pathPrefix, 'b'),
       fieldName: 'b',
     ),
     c: validatedRequireJsonFiniteDouble(
-      _requireField(json, 'c', pathPrefix: pathPrefix),
-      path: _pathAt(pathPrefix, 'c'),
+      sceneBuilderRequireField(json, 'c', pathPrefix: pathPrefix),
+      path: sceneBuilderPathAt(pathPrefix, 'c'),
       fieldName: 'c',
     ),
     d: validatedRequireJsonFiniteDouble(
-      _requireField(json, 'd', pathPrefix: pathPrefix),
-      path: _pathAt(pathPrefix, 'd'),
+      sceneBuilderRequireField(json, 'd', pathPrefix: pathPrefix),
+      path: sceneBuilderPathAt(pathPrefix, 'd'),
       fieldName: 'd',
     ),
     tx: validatedRequireJsonFiniteDouble(
-      _requireField(json, 'tx', pathPrefix: pathPrefix),
-      path: _pathAt(pathPrefix, 'tx'),
+      sceneBuilderRequireField(json, 'tx', pathPrefix: pathPrefix),
+      path: sceneBuilderPathAt(pathPrefix, 'tx'),
       fieldName: 'tx',
     ),
     ty: validatedRequireJsonFiniteDouble(
-      _requireField(json, 'ty', pathPrefix: pathPrefix),
-      path: _pathAt(pathPrefix, 'ty'),
+      sceneBuilderRequireField(json, 'ty', pathPrefix: pathPrefix),
+      path: sceneBuilderPathAt(pathPrefix, 'ty'),
       fieldName: 'ty',
     ),
   );
 }
 
-Size _requireSize(
+Size sceneBuilderRequireSize(
   Map<String, Object?> json,
   String key, {
   String pathPrefix = '',
 }) {
-  final map = _requireMap(json, key, pathPrefix: pathPrefix);
-  final sizePath = _pathAt(pathPrefix, key);
+  final map = sceneBuilderRequireMap(json, key, pathPrefix: pathPrefix);
+  final sizePath = sceneBuilderPathAt(pathPrefix, key);
   return Size(
     validatedRequireJsonFiniteDouble(
-      _requireField(map, 'w', pathPrefix: sizePath),
-      path: _pathAt(sizePath, 'w'),
+      sceneBuilderRequireField(map, 'w', pathPrefix: sizePath),
+      path: sceneBuilderPathAt(sizePath, 'w'),
       fieldName: 'w',
     ),
     validatedRequireJsonFiniteDouble(
-      _requireField(map, 'h', pathPrefix: sizePath),
-      path: _pathAt(sizePath, 'h'),
+      sceneBuilderRequireField(map, 'h', pathPrefix: sizePath),
+      path: sceneBuilderPathAt(sizePath, 'h'),
       fieldName: 'h',
     ),
   );
 }
 
-Size? _optionalSizeMap(
+Size? sceneBuilderOptionalSizeMap(
   Map<String, Object?> json,
   String key, {
   String pathPrefix = '',
@@ -268,7 +277,7 @@ Size? _optionalSizeMap(
   if (!json.containsKey(key)) return null;
   final value = json[key];
   if (value == null) return null;
-  final path = _pathAt(pathPrefix, key);
+  final path = sceneBuilderPathAt(pathPrefix, key);
   if (value is! Map) {
     throw SceneDataException(
       code: SceneDataErrorCode.invalidFieldType,
@@ -276,7 +285,7 @@ Size? _optionalSizeMap(
       message: 'Field $key must be an object.',
     );
   }
-  final parsed = _castMap(value, path: path);
+  final parsed = sceneBuilderCastMap(value, path: path);
   final width = parsed['w'];
   final height = parsed['h'];
   if (width is! num || height is! num) {
@@ -298,7 +307,7 @@ Size? _optionalSizeMap(
   return Size(w, h);
 }
 
-Color _parseColor(String value, {String? path}) {
+Color sceneBuilderParseColor(String value, {String? path}) {
   final normalized = value.startsWith('#') ? value.substring(1) : value;
   if (normalized.length == 6) {
     final parsed = int.tryParse('FF$normalized', radix: 16);
@@ -332,7 +341,7 @@ Color _parseColor(String value, {String? path}) {
   );
 }
 
-Color? _optionalColor(
+Color? sceneBuilderOptionalColor(
   Map<String, Object?> json,
   String key, {
   String pathPrefix = '',
@@ -340,7 +349,7 @@ Color? _optionalColor(
   if (!json.containsKey(key)) return null;
   final value = json[key];
   if (value == null) return null;
-  final path = _pathAt(pathPrefix, key);
+  final path = sceneBuilderPathAt(pathPrefix, key);
   if (value is! String) {
     throw SceneDataException(
       code: SceneDataErrorCode.invalidFieldType,
@@ -348,10 +357,10 @@ Color? _optionalColor(
       message: 'Field $key must be a string.',
     );
   }
-  return _parseColor(value, path: path);
+  return sceneBuilderParseColor(value, path: path);
 }
 
-NodeType _parseNodeType(String value, {required String pathPrefix}) {
+NodeType sceneBuilderParseNodeType(String value, {required String pathPrefix}) {
   switch (value) {
     case 'image':
       return NodeType.image;
@@ -368,14 +377,17 @@ NodeType _parseNodeType(String value, {required String pathPrefix}) {
     default:
       throw SceneDataException(
         code: SceneDataErrorCode.invalidValue,
-        path: _pathAt(pathPrefix, 'type'),
+        path: sceneBuilderPathAt(pathPrefix, 'type'),
         message: 'Unknown node type: $value.',
         source: value,
       );
   }
 }
 
-PathFillRule _parsePathFillRule(String value, {required String pathPrefix}) {
+PathFillRule sceneBuilderParsePathFillRule(
+  String value, {
+  required String pathPrefix,
+}) {
   switch (value) {
     case 'nonZero':
       return PathFillRule.nonZero;
@@ -384,14 +396,17 @@ PathFillRule _parsePathFillRule(String value, {required String pathPrefix}) {
     default:
       throw SceneDataException(
         code: SceneDataErrorCode.invalidValue,
-        path: _pathAt(pathPrefix, 'fillRule'),
+        path: sceneBuilderPathAt(pathPrefix, 'fillRule'),
         message: 'Unknown fillRule: $value.',
         source: value,
       );
   }
 }
 
-TextAlign _parseTextAlign(String value, {required String pathPrefix}) {
+TextAlign sceneBuilderParseTextAlign(
+  String value, {
+  required String pathPrefix,
+}) {
   switch (value) {
     case 'left':
       return TextAlign.left;
@@ -408,7 +423,7 @@ TextAlign _parseTextAlign(String value, {required String pathPrefix}) {
     default:
       throw SceneDataException(
         code: SceneDataErrorCode.invalidValue,
-        path: _pathAt(pathPrefix, 'align'),
+        path: sceneBuilderPathAt(pathPrefix, 'align'),
         message: 'Unknown text align: $value.',
         source: value,
       );

@@ -11,8 +11,8 @@ import '../contract/owned_collections.dart';
 import '../contract/node_spec.dart';
 import '../contract/patch_field.dart';
 import '../contract/snapshot.dart';
-import 'scene_builder.dart' as model_builder;
 import 'scene_node_boundary_mapping.dart';
+import 'scene_from_snapshot.dart';
 import 'scene_snapshot_from_scene.dart';
 
 typedef NodeLocatorEntry = ({int layerIndex, int nodeIndex});
@@ -145,7 +145,7 @@ Scene txnSceneFromSnapshot(
   SceneSnapshot snapshot, {
   int Function()? nextInstanceRevision,
 }) {
-  return model_builder.sceneBuildFromSnapshot(
+  return sceneImportFromSnapshot(
     snapshot,
     nextInstanceRevision: nextInstanceRevision,
   );
