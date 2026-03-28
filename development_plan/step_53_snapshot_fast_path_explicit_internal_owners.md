@@ -296,7 +296,7 @@ public wrapper layer over immutable internal snapshot backing.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Introduce the internal snapshot graph and thin public wrapper model
+### Slice 1. [x] Introduce the internal snapshot graph and thin public wrapper model
 
 #### Slice Contract
 
@@ -331,7 +331,7 @@ constructor behavior.
 - `snapshot_immutability_test.dart` still proves defensive copying and frozen
   collections for scene, palette, and stroke payloads.
 
-### Slice 2. [ ] Rewire runtime-to-snapshot and JSON-decode producers to the internal graph
+### Slice 2. [x] Rewire runtime-to-snapshot and JSON-decode producers to the internal graph
 
 #### Slice Contract
 
@@ -368,7 +368,7 @@ path targets internal snapshot owners instead of public fast-path helpers from
 - The `rg` verification returns no producer-side `model/**` call sites that
   still use the public snapshot fast-path helper family.
 
-### Slice 3. [ ] Replace the legacy fast-path matrix with an internal compatibility surface
+### Slice 3. [x] Replace the legacy fast-path matrix with an internal compatibility surface
 
 #### Slice Contract
 
@@ -405,7 +405,7 @@ surface.
 - The `rg` verification returns no `snapshot.dart` fast-path `part`
   attachment and no remaining `part of '../snapshot.dart'` fast-path module.
 
-### Slice 4. [ ] Rebaseline downstream proof surface for the new snapshot boundary model
+### Slice 4. [x] Rebaseline downstream proof surface for the new snapshot boundary model
 
 #### Slice Contract
 

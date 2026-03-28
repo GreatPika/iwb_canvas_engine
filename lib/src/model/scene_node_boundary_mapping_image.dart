@@ -1,4 +1,5 @@
 import '../contract/internal/node_boundary_schema.dart';
+import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/node_spec.dart';
 import '../contract/snapshot.dart';
 import '../core/nodes.dart';
@@ -74,23 +75,9 @@ ImageNode imageNodeFromSchema({
   );
 }
 
-ImageNodeSnapshot imageSnapshotFromSchema({
+ImageNodeSnapshotBacking imageSnapshotBackingFromSchema({
   required NodeSnapshotCommonSchemaFields common,
   required ImageNodeSchemaFields fields,
 }) {
-  return imageNodeSnapshotFromValidated(
-    id: common.id,
-    instanceRevision: common.instanceRevision,
-    imageId: fields.imageId,
-    size: fields.size,
-    naturalSize: fields.naturalSize,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-  );
+  return imageNodeSnapshotBackingFromValidated(common: common, fields: fields);
 }

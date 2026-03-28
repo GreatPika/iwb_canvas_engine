@@ -1,4 +1,5 @@
 import '../contract/internal/node_boundary_schema.dart';
+import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/node_spec.dart';
 import '../contract/snapshot.dart';
 import '../core/nodes.dart';
@@ -76,24 +77,9 @@ RectNode rectNodeFromSchema({
   );
 }
 
-RectNodeSnapshot rectSnapshotFromSchema({
+RectNodeSnapshotBacking rectSnapshotBackingFromSchema({
   required NodeSnapshotCommonSchemaFields common,
   required RectNodeSchemaFields fields,
 }) {
-  return rectNodeSnapshotFromValidated(
-    id: common.id,
-    instanceRevision: common.instanceRevision,
-    size: fields.size,
-    fillColor: fields.fillColor,
-    strokeColor: fields.strokeColor,
-    strokeWidth: fields.strokeWidth,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-  );
+  return rectNodeSnapshotBackingFromValidated(common: common, fields: fields);
 }

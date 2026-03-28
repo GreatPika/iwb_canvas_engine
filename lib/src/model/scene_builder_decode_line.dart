@@ -1,31 +1,16 @@
 import '../contract/internal/node_boundary_schema.dart';
-import '../contract/snapshot.dart';
+import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/validated/validated_value_support.dart';
 import 'scene_builder_json_parse.dart';
 import 'scene_builder_json_require.dart';
 
-LineNodeSnapshot sceneBuilderDecodeLineSnapshot(
+LineNodeSnapshotBacking sceneBuilderDecodeLineSnapshot(
   Map<String, Object?> json, {
   required String nodePath,
   required NodeSnapshotCommonSchemaFields common,
 }) {
   final fields = _decodeLineFields(json, nodePath: nodePath);
-  return lineNodeSnapshotFromValidated(
-    id: common.id,
-    instanceRevision: common.instanceRevision,
-    start: fields.start,
-    end: fields.end,
-    thickness: fields.thickness,
-    color: fields.color,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-  );
+  return lineNodeSnapshotBackingFromValidated(common: common, fields: fields);
 }
 
 LineNodeSchemaFields _decodeLineFields(

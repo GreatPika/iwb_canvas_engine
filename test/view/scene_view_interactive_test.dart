@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart' hide Image;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
 import 'package:iwb_canvas_engine/src/core/interaction_types.dart';
 import 'package:iwb_canvas_engine/src/core/pointer_input.dart'
     show PointerInputSettings;

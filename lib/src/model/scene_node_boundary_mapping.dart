@@ -1,3 +1,4 @@
+import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/node_spec.dart';
 import '../contract/snapshot.dart';
 import '../core/nodes.dart';
@@ -60,42 +61,50 @@ SceneNode sceneNodeFromSpecViaBoundarySchema(
 }
 
 NodeSnapshot sceneNodeSnapshotFromViaBoundarySchema(SceneNode node) {
+  return materializeNodeSnapshot(
+    sceneNodeSnapshotBackingFromViaBoundarySchema(node),
+  );
+}
+
+NodeSnapshotBacking sceneNodeSnapshotBackingFromViaBoundarySchema(
+  SceneNode node,
+) {
   switch (node.type) {
     case NodeType.image:
-      return sceneNodeSnapshotFromViaSchema(
+      return sceneNodeSnapshotBackingFromViaSchema(
         node: node as ImageNode,
         extractFields: imageNodeSchemaFieldsFromNode,
-        buildSnapshot: imageSnapshotFromSchema,
+        buildSnapshotBacking: imageSnapshotBackingFromSchema,
       );
     case NodeType.text:
-      return sceneNodeSnapshotFromViaSchema(
+      return sceneNodeSnapshotBackingFromViaSchema(
         node: node as TextNode,
         extractFields: textNodeSchemaFieldsFromNode,
-        buildSnapshot: textSnapshotFromSchema,
+        buildSnapshotBacking: textSnapshotBackingFromSchema,
       );
     case NodeType.stroke:
-      return sceneNodeSnapshotFromViaSchema(
+      return sceneNodeSnapshotBackingFromViaSchema(
         node: node as StrokeNode,
         extractFields: strokeNodeSchemaFieldsFromNode,
-        buildSnapshot: strokeSnapshotFromSchema,
+        buildSnapshotBacking: strokeSnapshotBackingFromSchema,
       );
     case NodeType.line:
-      return sceneNodeSnapshotFromViaSchema(
+      return sceneNodeSnapshotBackingFromViaSchema(
         node: node as LineNode,
         extractFields: lineNodeSchemaFieldsFromNode,
-        buildSnapshot: lineSnapshotFromSchema,
+        buildSnapshotBacking: lineSnapshotBackingFromSchema,
       );
     case NodeType.rect:
-      return sceneNodeSnapshotFromViaSchema(
+      return sceneNodeSnapshotBackingFromViaSchema(
         node: node as RectNode,
         extractFields: rectNodeSchemaFieldsFromNode,
-        buildSnapshot: rectSnapshotFromSchema,
+        buildSnapshotBacking: rectSnapshotBackingFromSchema,
       );
     case NodeType.path:
-      return sceneNodeSnapshotFromViaSchema(
+      return sceneNodeSnapshotBackingFromViaSchema(
         node: node as PathNode,
         extractFields: pathNodeSchemaFieldsFromNode,
-        buildSnapshot: pathSnapshotFromSchema,
+        buildSnapshotBacking: pathSnapshotBackingFromSchema,
       );
   }
 }

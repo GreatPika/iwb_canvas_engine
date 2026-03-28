@@ -6,15 +6,14 @@ export 'ids.dart' show LayerId, NodeId, parseLayerId, parseNodeId;
 export 'path_fill_rule.dart' show PathFillRule;
 import 'ids.dart';
 import 'internal/node_boundary_schema.dart';
-import 'owned_collections.dart';
+import 'internal/snapshot_backing.dart';
+import 'internal/snapshot_materialization.dart';
 import 'path_fill_rule.dart';
 import 'scene_defaults.dart';
 import 'transform2d.dart';
 import 'validated/finite_offset_value.dart';
 import 'validated/layer_id_value.dart';
 import 'validated/positive_finite_double_value.dart';
-
-part 'internal/snapshot_fast_path.part.dart';
 
 /// Immutable scene snapshot exposed by the public API.
 class SceneSnapshot {
@@ -25,54 +24,82 @@ class SceneSnapshot {
     BackgroundSnapshot? background,
     ScenePaletteSnapshot? palette,
   }) {
-    return SceneSnapshot._internal(
-      layers: layers,
-      backgroundLayer: backgroundLayer ?? BackgroundLayerSnapshot(),
-      camera: _validateSceneCameraSnapshot(camera ?? const CameraSnapshot()),
-      background: _validateSceneBackgroundSnapshot(
-        background ?? const BackgroundSnapshot(),
+    return SceneSnapshot.materialize(
+      sceneSnapshotBackingFromValidated(
+        layers: layers
+            ?.map((layer) => layer.internalBacking)
+            .toList(growable: false),
+        backgroundLayer: backgroundLayer?.internalBacking,
+        camera: _validateSceneCameraBacking(camera ?? const CameraSnapshot()),
+        background: _validateSceneBackgroundBacking(
+          background ?? const BackgroundSnapshot(),
+        ),
+        palette: palette?.internalBacking,
       ),
-      palette: palette ?? ScenePaletteSnapshot(),
     );
   }
 
-  /// Internal fast path for already validated snapshot data.
-  SceneSnapshot._internal({
-    List<ContentLayerSnapshot>? layers,
-    BackgroundLayerSnapshot? backgroundLayer,
-    CameraSnapshot? camera,
-    BackgroundSnapshot? background,
-    ScenePaletteSnapshot? palette,
-  }) : layers = List<ContentLayerSnapshot>.unmodifiable(
-         layers == null
-             ? const <ContentLayerSnapshot>[]
-             : List<ContentLayerSnapshot>.from(layers),
-       ),
-       backgroundLayer = backgroundLayer ?? BackgroundLayerSnapshot._internal(),
-       camera = camera ?? const CameraSnapshot(),
-       background = background ?? const BackgroundSnapshot(),
-       palette = palette ?? ScenePaletteSnapshot._internal();
+  @internal
+  factory SceneSnapshot.materialize(SceneSnapshotBacking backing) =
+      SceneSnapshot._materialized;
 
-  final List<ContentLayerSnapshot> layers;
-  final BackgroundLayerSnapshot backgroundLayer;
-  final CameraSnapshot camera;
-  final BackgroundSnapshot background;
-  final ScenePaletteSnapshot palette;
+  SceneSnapshot._materialized(this._backing);
+
+  final SceneSnapshotBacking _backing;
+
+  @internal
+  SceneSnapshotBacking get internalBacking => _backing;
+
+  late final List<ContentLayerSnapshot> _layers =
+      materializeContentLayerSnapshotList(_backing.layers);
+  late final BackgroundLayerSnapshot _backgroundLayer =
+      materializeBackgroundLayerSnapshot(_backing.backgroundLayer);
+  late final CameraSnapshot _camera = materializeCameraSnapshot(
+    _backing.camera,
+  );
+  late final BackgroundSnapshot _background = materializeBackgroundSnapshot(
+    _backing.background,
+  );
+  late final ScenePaletteSnapshot _palette = materializeScenePaletteSnapshot(
+    _backing.palette,
+  );
+
+  List<ContentLayerSnapshot> get layers => _layers;
+  BackgroundLayerSnapshot get backgroundLayer => _backgroundLayer;
+  CameraSnapshot get camera => _camera;
+  BackgroundSnapshot get background => _background;
+  ScenePaletteSnapshot get palette => _palette;
 }
 
 /// Immutable dedicated background layer snapshot.
 class BackgroundLayerSnapshot {
   factory BackgroundLayerSnapshot({List<NodeSnapshot>? nodes}) {
-    return BackgroundLayerSnapshot._internal(nodes: nodes);
+    return BackgroundLayerSnapshot.materialize(
+      backgroundLayerSnapshotBackingFromValidated(
+        nodes: nodes
+            ?.map((node) => node.internalBacking)
+            .toList(growable: false),
+      ),
+    );
   }
 
-  /// Internal fast path for already validated snapshot data.
-  BackgroundLayerSnapshot._internal({List<NodeSnapshot>? nodes})
-    : nodes = List<NodeSnapshot>.unmodifiable(
-        nodes == null ? <NodeSnapshot>[] : List<NodeSnapshot>.from(nodes),
-      );
+  @internal
+  factory BackgroundLayerSnapshot.materialize(
+    BackgroundLayerSnapshotBacking backing,
+  ) = BackgroundLayerSnapshot._materialized;
 
-  final List<NodeSnapshot> nodes;
+  BackgroundLayerSnapshot._materialized(this._backing);
+
+  final BackgroundLayerSnapshotBacking _backing;
+
+  @internal
+  BackgroundLayerSnapshotBacking get internalBacking => _backing;
+
+  late final List<NodeSnapshot> _nodes = materializeNodeSnapshotList(
+    _backing.nodes,
+  );
+
+  List<NodeSnapshot> get nodes => _nodes;
 }
 
 /// Immutable content layer snapshot.
@@ -81,20 +108,34 @@ class ContentLayerSnapshot {
     required LayerId id,
     List<NodeSnapshot>? nodes,
   }) {
-    return ContentLayerSnapshot._internal(
-      id: LayerIdValue.of(id, name: 'id').value,
-      nodes: nodes,
+    return ContentLayerSnapshot.materialize(
+      contentLayerSnapshotBackingFromValidated(
+        id: LayerIdValue.of(id, name: 'id').value,
+        nodes: nodes
+            ?.map((node) => node.internalBacking)
+            .toList(growable: false),
+      ),
     );
   }
 
-  /// Internal fast path for already validated snapshot data.
-  ContentLayerSnapshot._internal({required this.id, List<NodeSnapshot>? nodes})
-    : nodes = List<NodeSnapshot>.unmodifiable(
-        nodes == null ? <NodeSnapshot>[] : List<NodeSnapshot>.from(nodes),
-      );
+  @internal
+  factory ContentLayerSnapshot.materialize(
+    ContentLayerSnapshotBacking backing,
+  ) = ContentLayerSnapshot._materialized;
 
-  final LayerId id;
-  final List<NodeSnapshot> nodes;
+  ContentLayerSnapshot._materialized(this._backing);
+
+  final ContentLayerSnapshotBacking _backing;
+
+  @internal
+  ContentLayerSnapshotBacking get internalBacking => _backing;
+
+  late final List<NodeSnapshot> _nodes = materializeNodeSnapshotList(
+    _backing.nodes,
+  );
+
+  LayerId get id => _backing.id;
+  List<NodeSnapshot> get nodes => _nodes;
 }
 
 /// Immutable camera state snapshot.
@@ -147,69 +188,56 @@ class ScenePaletteSnapshot {
     _requireNonEmptyList(resolvedPenColors, name: 'penColors');
     _requireNonEmptyList(resolvedBackgroundColors, name: 'backgroundColors');
     _requireNonEmptyList(resolvedGridSizes, name: 'gridSizes');
-    return ScenePaletteSnapshot._internal(
-      penColors: resolvedPenColors,
-      backgroundColors: resolvedBackgroundColors,
-      gridSizes: resolvedGridSizes
-          .map(
-            (value) =>
-                PositiveFiniteDoubleValue.of(value, name: 'gridSizes').value,
-          )
-          .toList(growable: false),
+    return ScenePaletteSnapshot.materialize(
+      scenePaletteSnapshotBackingFromValidated(
+        penColors: resolvedPenColors,
+        backgroundColors: resolvedBackgroundColors,
+        gridSizes: resolvedGridSizes
+            .map(
+              (value) =>
+                  PositiveFiniteDoubleValue.of(value, name: 'gridSizes').value,
+            )
+            .toList(growable: false),
+      ),
     );
   }
 
-  /// Internal fast path for already validated snapshot data.
-  ScenePaletteSnapshot._internal({
-    List<Color>? penColors,
-    List<Color>? backgroundColors,
-    List<double>? gridSizes,
-  }) : penColors = List<Color>.unmodifiable(
-         penColors == null
-             ? SceneDefaults.penColors
-             : List<Color>.from(penColors),
-       ),
-       backgroundColors = List<Color>.unmodifiable(
-         backgroundColors == null
-             ? SceneDefaults.backgroundColors
-             : List<Color>.from(backgroundColors),
-       ),
-       gridSizes = List<double>.unmodifiable(
-         gridSizes == null
-             ? SceneDefaults.gridSizes
-             : List<double>.from(gridSizes),
-       );
+  @internal
+  factory ScenePaletteSnapshot.materialize(
+    ScenePaletteSnapshotBacking backing,
+  ) = ScenePaletteSnapshot._materialized;
 
-  final List<Color> penColors;
-  final List<Color> backgroundColors;
-  final List<double> gridSizes;
+  ScenePaletteSnapshot._materialized(this._backing);
+
+  final ScenePaletteSnapshotBacking _backing;
+
+  @internal
+  ScenePaletteSnapshotBacking get internalBacking => _backing;
+
+  List<Color> get penColors => _backing.penColors;
+  List<Color> get backgroundColors => _backing.backgroundColors;
+  List<double> get gridSizes => _backing.gridSizes;
 }
 
 /// Immutable base node snapshot.
 sealed class NodeSnapshot {
-  const NodeSnapshot._internal({
-    required this.id,
-    this.instanceRevision = 0,
-    this.transform = Transform2D.identity,
-    this.opacity = 1,
-    this.hitPadding = 0,
-    this.isVisible = true,
-    this.isSelectable = true,
-    this.isLocked = false,
-    this.isDeletable = true,
-    this.isTransformable = true,
-  });
+  NodeSnapshot._materialized(this._backing);
 
-  final NodeId id;
-  final int instanceRevision;
-  final Transform2D transform;
-  final double opacity;
-  final double hitPadding;
-  final bool isVisible;
-  final bool isSelectable;
-  final bool isLocked;
-  final bool isDeletable;
-  final bool isTransformable;
+  final NodeSnapshotBacking _backing;
+
+  @internal
+  NodeSnapshotBacking get internalBacking => _backing;
+
+  NodeId get id => _backing.id;
+  int get instanceRevision => _backing.instanceRevision;
+  Transform2D get transform => _backing.transform;
+  double get opacity => _backing.opacity;
+  double get hitPadding => _backing.hitPadding;
+  bool get isVisible => _backing.isVisible;
+  bool get isSelectable => _backing.isSelectable;
+  bool get isLocked => _backing.isLocked;
+  bool get isDeletable => _backing.isDeletable;
+  bool get isTransformable => _backing.isTransformable;
 }
 
 class ImageNodeSnapshot extends NodeSnapshot {
@@ -250,42 +278,22 @@ class ImageNodeSnapshot extends NodeSnapshot {
   ImageNodeSnapshot._validated({
     required NodeSnapshotCommonSchemaFields common,
     required ImageNodeSchemaFields fields,
-  }) : this._internal(
-         id: common.id,
-         instanceRevision: common.instanceRevision,
-         imageId: fields.imageId,
-         size: fields.size,
-         naturalSize: fields.naturalSize,
-         transform: common.transform,
-         opacity: common.opacity,
-         hitPadding: common.hitPadding,
-         isVisible: common.isVisible,
-         isSelectable: common.isSelectable,
-         isLocked: common.isLocked,
-         isDeletable: common.isDeletable,
-         isTransformable: common.isTransformable,
+  }) : this._materialized(
+         imageNodeSnapshotBackingFromValidated(common: common, fields: fields),
        );
 
-  /// Internal fast path for already validated snapshot data.
-  const ImageNodeSnapshot._internal({
-    required super.id,
-    super.instanceRevision,
-    required this.imageId,
-    required this.size,
-    this.naturalSize,
-    super.transform,
-    super.opacity,
-    super.hitPadding,
-    super.isVisible,
-    super.isSelectable,
-    super.isLocked,
-    super.isDeletable,
-    super.isTransformable,
-  }) : super._internal();
+  @internal
+  factory ImageNodeSnapshot.materialize(ImageNodeSnapshotBacking backing) =
+      ImageNodeSnapshot._materialized;
 
-  final String imageId;
-  final Size size;
-  final Size? naturalSize;
+  ImageNodeSnapshot._materialized(super._backing) : super._materialized();
+
+  ImageNodeSnapshotBacking get _imageBacking =>
+      internalBacking as ImageNodeSnapshotBacking;
+
+  String get imageId => _imageBacking.imageId;
+  Size get size => _imageBacking.size;
+  Size? get naturalSize => _imageBacking.naturalSize;
 }
 
 class TextNodeSnapshot extends NodeSnapshot {
@@ -342,71 +350,34 @@ class TextNodeSnapshot extends NodeSnapshot {
   TextNodeSnapshot._validated({
     required NodeSnapshotCommonSchemaFields common,
     required TextNodeSnapshotSchemaFields fields,
-  }) : this._internal(
-         id: common.id,
-         instanceRevision: common.instanceRevision,
-         text: fields.text,
-         size: fields.size,
-         fontSize: fields.fontSize,
-         color: fields.color,
-         align: fields.align,
-         isBold: fields.isBold,
-         isItalic: fields.isItalic,
-         isUnderline: fields.isUnderline,
-         fontFamily: fields.fontFamily,
-         maxWidth: fields.maxWidth,
-         lineHeight: fields.lineHeight,
-         transform: common.transform,
-         opacity: common.opacity,
-         hitPadding: common.hitPadding,
-         isVisible: common.isVisible,
-         isSelectable: common.isSelectable,
-         isLocked: common.isLocked,
-         isDeletable: common.isDeletable,
-         isTransformable: common.isTransformable,
+  }) : this._materialized(
+         textNodeSnapshotBackingFromValidated(common: common, fields: fields),
        );
 
-  /// Internal fast path for already validated snapshot data.
-  const TextNodeSnapshot._internal({
-    required super.id,
-    super.instanceRevision,
-    required this.text,
-    required this.size,
-    this.fontSize = 24,
-    required this.color,
-    this.align = TextAlign.left,
-    this.isBold = false,
-    this.isItalic = false,
-    this.isUnderline = false,
-    this.fontFamily,
-    this.maxWidth,
-    this.lineHeight,
-    super.transform,
-    super.opacity,
-    super.hitPadding,
-    super.isVisible,
-    super.isSelectable,
-    super.isLocked,
-    super.isDeletable,
-    super.isTransformable,
-  }) : super._internal();
+  @internal
+  factory TextNodeSnapshot.materialize(TextNodeSnapshotBacking backing) =
+      TextNodeSnapshot._materialized;
 
-  final String text;
+  TextNodeSnapshot._materialized(super._backing) : super._materialized();
+
+  TextNodeSnapshotBacking get _textBacking =>
+      internalBacking as TextNodeSnapshotBacking;
 
   /// Canonical output metadata derived from text layout inputs.
   ///
   /// During snapshot import/canonicalization, the engine may ignore the input
   /// value and recompute it from `text`, font/style fields, and `maxWidth`.
-  final Size size;
-  final double fontSize;
-  final Color color;
-  final TextAlign align;
-  final bool isBold;
-  final bool isItalic;
-  final bool isUnderline;
-  final String? fontFamily;
-  final double? maxWidth;
-  final double? lineHeight;
+  String get text => _textBacking.text;
+  Size get size => _textBacking.size;
+  double get fontSize => _textBacking.fontSize;
+  Color get color => _textBacking.color;
+  TextAlign get align => _textBacking.align;
+  bool get isBold => _textBacking.isBold;
+  bool get isItalic => _textBacking.isItalic;
+  bool get isUnderline => _textBacking.isUnderline;
+  String? get fontFamily => _textBacking.fontFamily;
+  double? get maxWidth => _textBacking.maxWidth;
+  double? get lineHeight => _textBacking.lineHeight;
 }
 
 class StrokeNodeSnapshot extends NodeSnapshot {
@@ -449,47 +420,23 @@ class StrokeNodeSnapshot extends NodeSnapshot {
   StrokeNodeSnapshot._validated({
     required NodeSnapshotCommonSchemaFields common,
     required StrokeNodeSnapshotSchemaFields fields,
-  }) : this._internal(
-         id: common.id,
-         instanceRevision: common.instanceRevision,
-         points: fields.points,
-         pointsRevision: fields.pointsRevision,
-         thickness: fields.thickness,
-         color: fields.color,
-         transform: common.transform,
-         opacity: common.opacity,
-         hitPadding: common.hitPadding,
-         isVisible: common.isVisible,
-         isSelectable: common.isSelectable,
-         isLocked: common.isLocked,
-         isDeletable: common.isDeletable,
-         isTransformable: common.isTransformable,
+  }) : this._materialized(
+         strokeNodeSnapshotBackingFromValidated(common: common, fields: fields),
        );
 
-  /// Internal fast path for already validated snapshot data.
-  StrokeNodeSnapshot._internal({
-    required super.id,
-    super.instanceRevision,
-    required Iterable<Offset> points,
-    this.pointsRevision = 0,
-    required this.thickness,
-    required this.color,
-    super.transform,
-    super.opacity,
-    super.hitPadding,
-    super.isVisible,
-    super.isSelectable,
-    super.isLocked,
-    super.isDeletable,
-    super.isTransformable,
-  }) : _points = OwnedList<Offset>.of(points),
-       super._internal();
+  @internal
+  factory StrokeNodeSnapshot.materialize(StrokeNodeSnapshotBacking backing) =
+      StrokeNodeSnapshot._materialized;
 
-  final OwnedList<Offset> _points;
-  List<Offset> get points => _points;
-  final int pointsRevision;
-  final double thickness;
-  final Color color;
+  StrokeNodeSnapshot._materialized(super._backing) : super._materialized();
+
+  StrokeNodeSnapshotBacking get _strokeBacking =>
+      internalBacking as StrokeNodeSnapshotBacking;
+
+  List<Offset> get points => _strokeBacking.points;
+  int get pointsRevision => _strokeBacking.pointsRevision;
+  double get thickness => _strokeBacking.thickness;
+  Color get color => _strokeBacking.color;
 }
 
 class LineNodeSnapshot extends NodeSnapshot {
@@ -532,45 +479,23 @@ class LineNodeSnapshot extends NodeSnapshot {
   LineNodeSnapshot._validated({
     required NodeSnapshotCommonSchemaFields common,
     required LineNodeSchemaFields fields,
-  }) : this._internal(
-         id: common.id,
-         instanceRevision: common.instanceRevision,
-         start: fields.start,
-         end: fields.end,
-         thickness: fields.thickness,
-         color: fields.color,
-         transform: common.transform,
-         opacity: common.opacity,
-         hitPadding: common.hitPadding,
-         isVisible: common.isVisible,
-         isSelectable: common.isSelectable,
-         isLocked: common.isLocked,
-         isDeletable: common.isDeletable,
-         isTransformable: common.isTransformable,
+  }) : this._materialized(
+         lineNodeSnapshotBackingFromValidated(common: common, fields: fields),
        );
 
-  /// Internal fast path for already validated snapshot data.
-  const LineNodeSnapshot._internal({
-    required super.id,
-    super.instanceRevision,
-    required this.start,
-    required this.end,
-    required this.thickness,
-    required this.color,
-    super.transform,
-    super.opacity,
-    super.hitPadding,
-    super.isVisible,
-    super.isSelectable,
-    super.isLocked,
-    super.isDeletable,
-    super.isTransformable,
-  }) : super._internal();
+  @internal
+  factory LineNodeSnapshot.materialize(LineNodeSnapshotBacking backing) =
+      LineNodeSnapshot._materialized;
 
-  final Offset start;
-  final Offset end;
-  final double thickness;
-  final Color color;
+  LineNodeSnapshot._materialized(super._backing) : super._materialized();
+
+  LineNodeSnapshotBacking get _lineBacking =>
+      internalBacking as LineNodeSnapshotBacking;
+
+  Offset get start => _lineBacking.start;
+  Offset get end => _lineBacking.end;
+  double get thickness => _lineBacking.thickness;
+  Color get color => _lineBacking.color;
 }
 
 class RectNodeSnapshot extends NodeSnapshot {
@@ -613,45 +538,23 @@ class RectNodeSnapshot extends NodeSnapshot {
   RectNodeSnapshot._validated({
     required NodeSnapshotCommonSchemaFields common,
     required RectNodeSchemaFields fields,
-  }) : this._internal(
-         id: common.id,
-         instanceRevision: common.instanceRevision,
-         size: fields.size,
-         fillColor: fields.fillColor,
-         strokeColor: fields.strokeColor,
-         strokeWidth: fields.strokeWidth,
-         transform: common.transform,
-         opacity: common.opacity,
-         hitPadding: common.hitPadding,
-         isVisible: common.isVisible,
-         isSelectable: common.isSelectable,
-         isLocked: common.isLocked,
-         isDeletable: common.isDeletable,
-         isTransformable: common.isTransformable,
+  }) : this._materialized(
+         rectNodeSnapshotBackingFromValidated(common: common, fields: fields),
        );
 
-  /// Internal fast path for already validated snapshot data.
-  const RectNodeSnapshot._internal({
-    required super.id,
-    super.instanceRevision,
-    required this.size,
-    this.fillColor,
-    this.strokeColor,
-    this.strokeWidth = 0,
-    super.transform,
-    super.opacity,
-    super.hitPadding,
-    super.isVisible,
-    super.isSelectable,
-    super.isLocked,
-    super.isDeletable,
-    super.isTransformable,
-  }) : super._internal();
+  @internal
+  factory RectNodeSnapshot.materialize(RectNodeSnapshotBacking backing) =
+      RectNodeSnapshot._materialized;
 
-  final Size size;
-  final Color? fillColor;
-  final Color? strokeColor;
-  final double strokeWidth;
+  RectNodeSnapshot._materialized(super._backing) : super._materialized();
+
+  RectNodeSnapshotBacking get _rectBacking =>
+      internalBacking as RectNodeSnapshotBacking;
+
+  Size get size => _rectBacking.size;
+  Color? get fillColor => _rectBacking.fillColor;
+  Color? get strokeColor => _rectBacking.strokeColor;
+  double get strokeWidth => _rectBacking.strokeWidth;
 }
 
 class PathNodeSnapshot extends NodeSnapshot {
@@ -696,48 +599,24 @@ class PathNodeSnapshot extends NodeSnapshot {
   PathNodeSnapshot._validated({
     required NodeSnapshotCommonSchemaFields common,
     required PathNodeSchemaFields fields,
-  }) : this._internal(
-         id: common.id,
-         instanceRevision: common.instanceRevision,
-         svgPathData: fields.svgPathData,
-         fillColor: fields.fillColor,
-         strokeColor: fields.strokeColor,
-         strokeWidth: fields.strokeWidth,
-         fillRule: fields.fillRule,
-         transform: common.transform,
-         opacity: common.opacity,
-         hitPadding: common.hitPadding,
-         isVisible: common.isVisible,
-         isSelectable: common.isSelectable,
-         isLocked: common.isLocked,
-         isDeletable: common.isDeletable,
-         isTransformable: common.isTransformable,
+  }) : this._materialized(
+         pathNodeSnapshotBackingFromValidated(common: common, fields: fields),
        );
 
-  /// Internal fast path for already validated snapshot data.
-  const PathNodeSnapshot._internal({
-    required super.id,
-    super.instanceRevision,
-    required this.svgPathData,
-    this.fillColor,
-    this.strokeColor,
-    this.strokeWidth = 0,
-    this.fillRule = PathFillRule.nonZero,
-    super.transform,
-    super.opacity,
-    super.hitPadding,
-    super.isVisible,
-    super.isSelectable,
-    super.isLocked,
-    super.isDeletable,
-    super.isTransformable,
-  }) : super._internal();
+  @internal
+  factory PathNodeSnapshot.materialize(PathNodeSnapshotBacking backing) =
+      PathNodeSnapshot._materialized;
 
-  final String svgPathData;
-  final Color? fillColor;
-  final Color? strokeColor;
-  final double strokeWidth;
-  final PathFillRule fillRule;
+  PathNodeSnapshot._materialized(super._backing) : super._materialized();
+
+  PathNodeSnapshotBacking get _pathBacking =>
+      internalBacking as PathNodeSnapshotBacking;
+
+  String get svgPathData => _pathBacking.svgPathData;
+  Color? get fillColor => _pathBacking.fillColor;
+  Color? get strokeColor => _pathBacking.strokeColor;
+  double get strokeWidth => _pathBacking.strokeWidth;
+  PathFillRule get fillRule => _pathBacking.fillRule;
 }
 
 void _requireNonEmptyList<T>(List<T> values, {required String name}) {
@@ -747,16 +626,18 @@ void _requireNonEmptyList<T>(List<T> values, {required String name}) {
   throw ArgumentError.value(values, name, 'Must not be empty.');
 }
 
-CameraSnapshot _validateSceneCameraSnapshot(CameraSnapshot value) {
-  return CameraSnapshot(
+CameraSnapshotBacking _validateSceneCameraBacking(CameraSnapshot value) {
+  return cameraSnapshotBackingFromValidated(
     offset: FiniteOffsetValue.of(value.offset, name: 'camera.offset').value,
   );
 }
 
-BackgroundSnapshot _validateSceneBackgroundSnapshot(BackgroundSnapshot value) {
-  return BackgroundSnapshot(
+BackgroundSnapshotBacking _validateSceneBackgroundBacking(
+  BackgroundSnapshot value,
+) {
+  return backgroundSnapshotBackingFromValidated(
     color: value.color,
-    grid: GridSnapshot(
+    grid: gridSnapshotBackingFromValidated(
       isEnabled: value.grid.isEnabled,
       cellSize: PositiveFiniteDoubleValue.of(
         value.grid.cellSize,

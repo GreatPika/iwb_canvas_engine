@@ -1,36 +1,21 @@
 import 'dart:ui';
 
 import '../contract/internal/node_boundary_schema.dart';
+import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/scene_data_exception.dart';
-import '../contract/snapshot.dart';
 import '../contract/validated/finite_offset_value.dart';
 import '../contract/validated/validated_value_support.dart';
 import '../core/scene_limits.dart';
 import 'scene_builder_json_parse.dart';
 import 'scene_builder_json_require.dart';
 
-StrokeNodeSnapshot sceneBuilderDecodeStrokeSnapshot(
+StrokeNodeSnapshotBacking sceneBuilderDecodeStrokeSnapshot(
   Map<String, Object?> json, {
   required String nodePath,
   required NodeSnapshotCommonSchemaFields common,
 }) {
   final fields = _decodeStrokeFields(json, nodePath: nodePath);
-  return strokeNodeSnapshotFromValidated(
-    id: common.id,
-    instanceRevision: common.instanceRevision,
-    points: fields.points,
-    pointsRevision: fields.pointsRevision,
-    thickness: fields.thickness,
-    color: fields.color,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-  );
+  return strokeNodeSnapshotBackingFromValidated(common: common, fields: fields);
 }
 
 StrokeNodeSnapshotSchemaFields _decodeStrokeFields(

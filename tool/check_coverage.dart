@@ -146,7 +146,27 @@ bool _isExportOnlyUnit(String repoRelativePath) {
     return false;
   }
 
-  return meaningfulLines.every((line) => line.startsWith('export '));
+  var sawExport = false;
+  var awaitingExportTerminator = false;
+  for (final line in meaningfulLines) {
+    if (awaitingExportTerminator) {
+      if (line.endsWith(';')) {
+        awaitingExportTerminator = false;
+      }
+      continue;
+    }
+
+    if (!line.startsWith('export ')) {
+      return false;
+    }
+
+    sawExport = true;
+    if (!line.endsWith(';')) {
+      awaitingExportTerminator = true;
+    }
+  }
+
+  return sawExport && !awaitingExportTerminator;
 }
 
 const _excludedDeclarationOnlyFromLcov = <String>{

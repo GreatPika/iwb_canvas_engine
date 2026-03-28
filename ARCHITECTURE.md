@@ -110,6 +110,10 @@ Ownership decisions for the target state:
 - `contract/node_patch.dart`, `contract/node_spec.dart`, and
   `contract/snapshot.dart` remain the public immutable boundary owners and keep
   validation at the public constructor boundary.
+- `contract/snapshot.dart` is part-free and stays the only supported public
+  snapshot surface, but scene/layer/palette/node snapshots are now thin public
+  wrappers over immutable internal backing objects rather than owners of
+  trusted field assembly.
 - `contract/internal/node_boundary_schema.dart` is the canonical internal
   schema import surface, but it is barrel-only.
 - `contract/internal/node_boundary_schema_common.dart` owns shared schema field
@@ -119,6 +123,14 @@ Ownership decisions for the target state:
   `contract/internal/node_boundary_schema_snapshot.dart` own direction-local
   validation and validated-field rehydration for patch, spec, and snapshot
   flows respectively.
+- `contract/internal/snapshot_backing.dart` owns the immutable internal
+  snapshot backing graph for scene, layer, palette, and node snapshot state.
+- `contract/internal/snapshot_materialization.dart` owns public wrapper
+  materialization plus the internal compatibility helpers used by contract
+  tests and malformed-snapshot failure injection.
+- `contract/internal/snapshot_fast_path.dart` is the canonical internal
+  snapshot construction import surface; downstream code uses it instead of
+  importing privileged construction from `contract/snapshot.dart`.
 - Downstream `model/` and `serialization/` code consume those internal schema
   owners through the barrel and do not re-own schema validation locally.
 
@@ -146,14 +158,18 @@ Ownership decisions for the target state:
 - `model/scene_from_snapshot.dart` and
   `model/scene_snapshot_from_scene.dart` are the shared runtime import/export
   owners. `document.dart` consumes them directly; it must not recover a
-  `document.dart -> scene_builder.dart` dependency.
+  `document.dart -> scene_builder.dart` dependency. Their producer-side
+  construction path now targets the internal snapshot backing/materialization
+  graph and materializes public snapshot wrappers only at the return edge.
 - `model/scene_node_boundary_mapping.dart` is the canonical node-boundary
   mapping facade. The removed residual support file
   `scene_node_boundary_mapping_support.dart` must not return. Family-local
   mapping owners stay in the
   `scene_node_boundary_mapping_*.dart` files and must not be imported directly
   by downstream non-model code; downstream entry uses document/codec facades
-  instead of importing `scene_node_boundary_mapping.dart` directly.
+  instead of importing `scene_node_boundary_mapping.dart` directly. Mapping and
+  JSON decode owners build `NodeSnapshotBacking` values first and only
+  materialize public node snapshots at explicit edges.
 - `model/scene_value_validation.dart` is the canonical validation facade.
   Focused validation owners stay in
   `scene_value_validation_{node,palette_grid,primitives,support,top_level}.dart`,

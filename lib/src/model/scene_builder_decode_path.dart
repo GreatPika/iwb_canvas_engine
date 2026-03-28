@@ -1,33 +1,17 @@
 import '../contract/internal/node_boundary_schema.dart';
-import '../contract/snapshot.dart';
+import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/validated/svg_path_data_value.dart';
 import '../contract/validated/validated_value_support.dart';
 import 'scene_builder_json_parse.dart';
 import 'scene_builder_json_require.dart';
 
-PathNodeSnapshot sceneBuilderDecodePathSnapshot(
+PathNodeSnapshotBacking sceneBuilderDecodePathSnapshot(
   Map<String, Object?> json, {
   required String nodePath,
   required NodeSnapshotCommonSchemaFields common,
 }) {
   final fields = _decodePathFields(json, nodePath: nodePath);
-  return pathNodeSnapshotFromValidated(
-    id: common.id,
-    instanceRevision: common.instanceRevision,
-    svgPathData: fields.svgPathData,
-    fillColor: fields.fillColor,
-    strokeColor: fields.strokeColor,
-    strokeWidth: fields.strokeWidth,
-    fillRule: fields.fillRule,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-  );
+  return pathNodeSnapshotBackingFromValidated(common: common, fields: fields);
 }
 
 PathNodeSchemaFields _decodePathFields(

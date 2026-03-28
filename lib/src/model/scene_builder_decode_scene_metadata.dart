@@ -1,16 +1,16 @@
 import 'dart:ui';
 
+import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/scene_data_exception.dart';
-import '../contract/snapshot.dart';
 import '../contract/validated/validated_value_support.dart';
 import '../core/scene_limits.dart';
 import 'scene_builder_json_parse.dart';
 import 'scene_builder_json_require.dart';
 
 typedef DecodedSceneMetadata = ({
-  CameraSnapshot camera,
-  BackgroundSnapshot background,
-  ScenePaletteSnapshot palette,
+  CameraSnapshotBacking camera,
+  BackgroundSnapshotBacking background,
+  ScenePaletteSnapshotBacking palette,
 });
 
 void sceneBuilderRequireSupportedSchemaVersion(Map<String, Object?> json) {
@@ -49,9 +49,9 @@ DecodedSceneMetadata sceneBuilderDecodeSceneMetadata(
   );
 }
 
-CameraSnapshot _decodeCameraSnapshot(Map<String, Object?> json) {
+CameraSnapshotBacking _decodeCameraSnapshot(Map<String, Object?> json) {
   final cameraJson = sceneBuilderRequireMap(json, 'camera');
-  return cameraSnapshotFromValidated(
+  return cameraSnapshotBackingFromValidated(
     offset: Offset(
       validatedRequireJsonFiniteDouble(
         sceneBuilderRequireField(cameraJson, 'offsetX', pathPrefix: 'camera'),
@@ -67,9 +67,9 @@ CameraSnapshot _decodeCameraSnapshot(Map<String, Object?> json) {
   );
 }
 
-BackgroundSnapshot _decodeBackgroundSnapshot(Map<String, Object?> json) {
+BackgroundSnapshotBacking _decodeBackgroundSnapshot(Map<String, Object?> json) {
   final backgroundJson = sceneBuilderRequireMap(json, 'background');
-  return backgroundSnapshotFromValidated(
+  return backgroundSnapshotBackingFromValidated(
     color: _decodeBackgroundColor(backgroundJson),
     grid: _decodeBackgroundGrid(backgroundJson),
   );
@@ -87,13 +87,13 @@ Color _decodeBackgroundColor(Map<String, Object?> backgroundJson) {
   );
 }
 
-GridSnapshot _decodeBackgroundGrid(Map<String, Object?> backgroundJson) {
+GridSnapshotBacking _decodeBackgroundGrid(Map<String, Object?> backgroundJson) {
   final gridJson = sceneBuilderRequireMap(
     backgroundJson,
     'grid',
     pathPrefix: 'background',
   );
-  return gridSnapshotFromValidated(
+  return gridSnapshotBackingFromValidated(
     isEnabled: sceneBuilderRequireTypedField<bool>(
       gridJson,
       'enabled',
@@ -121,9 +121,9 @@ GridSnapshot _decodeBackgroundGrid(Map<String, Object?> backgroundJson) {
   );
 }
 
-ScenePaletteSnapshot _decodePaletteSnapshot(Map<String, Object?> json) {
+ScenePaletteSnapshotBacking _decodePaletteSnapshot(Map<String, Object?> json) {
   final paletteJson = sceneBuilderRequireMap(json, 'palette');
-  return scenePaletteSnapshotFromValidated(
+  return scenePaletteSnapshotBackingFromValidated(
     penColors: _decodePaletteColors(
       paletteJson,
       key: 'penColors',

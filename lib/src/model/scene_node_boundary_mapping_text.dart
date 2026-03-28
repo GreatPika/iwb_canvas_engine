@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../contract/internal/node_boundary_schema.dart';
+import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/node_spec.dart';
 import '../contract/snapshot.dart';
 import '../core/nodes.dart';
@@ -155,31 +156,9 @@ TextNode textNodeFromSpecSchema({
   return node;
 }
 
-TextNodeSnapshot textSnapshotFromSchema({
+TextNodeSnapshotBacking textSnapshotBackingFromSchema({
   required NodeSnapshotCommonSchemaFields common,
   required TextNodeSnapshotSchemaFields fields,
 }) {
-  return textNodeSnapshotFromValidated(
-    id: common.id,
-    instanceRevision: common.instanceRevision,
-    text: fields.text,
-    size: fields.size,
-    fontSize: fields.fontSize,
-    color: fields.color,
-    align: fields.align,
-    isBold: fields.isBold,
-    isItalic: fields.isItalic,
-    isUnderline: fields.isUnderline,
-    fontFamily: fields.fontFamily,
-    maxWidth: fields.maxWidth,
-    lineHeight: fields.lineHeight,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-  );
+  return textNodeSnapshotBackingFromValidated(common: common, fields: fields);
 }

@@ -1,31 +1,16 @@
 import '../contract/internal/node_boundary_schema.dart';
-import '../contract/snapshot.dart';
+import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/validated/validated_value_support.dart';
 import 'scene_builder_json_parse.dart';
 import 'scene_builder_json_require.dart';
 
-RectNodeSnapshot sceneBuilderDecodeRectSnapshot(
+RectNodeSnapshotBacking sceneBuilderDecodeRectSnapshot(
   Map<String, Object?> json, {
   required String nodePath,
   required NodeSnapshotCommonSchemaFields common,
 }) {
   final fields = _decodeRectFields(json, nodePath: nodePath);
-  return rectNodeSnapshotFromValidated(
-    id: common.id,
-    instanceRevision: common.instanceRevision,
-    size: fields.size,
-    fillColor: fields.fillColor,
-    strokeColor: fields.strokeColor,
-    strokeWidth: fields.strokeWidth,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-  );
+  return rectNodeSnapshotBackingFromValidated(common: common, fields: fields);
 }
 
 RectNodeSchemaFields _decodeRectFields(

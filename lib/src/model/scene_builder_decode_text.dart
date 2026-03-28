@@ -1,40 +1,18 @@
 import '../contract/internal/node_boundary_schema.dart';
-import '../contract/snapshot.dart';
+import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/validated/font_family_value.dart';
 import '../contract/validated/text_content_value.dart';
 import '../contract/validated/validated_value_support.dart';
 import 'scene_builder_json_parse.dart';
 import 'scene_builder_json_require.dart';
 
-TextNodeSnapshot sceneBuilderDecodeTextSnapshot(
+TextNodeSnapshotBacking sceneBuilderDecodeTextSnapshot(
   Map<String, Object?> json, {
   required String nodePath,
   required NodeSnapshotCommonSchemaFields common,
 }) {
   final fields = _decodeTextFields(json, nodePath: nodePath);
-  return textNodeSnapshotFromValidated(
-    id: common.id,
-    instanceRevision: common.instanceRevision,
-    text: fields.text,
-    size: fields.size,
-    fontSize: fields.fontSize,
-    color: fields.color,
-    align: fields.align,
-    isBold: fields.isBold,
-    isItalic: fields.isItalic,
-    isUnderline: fields.isUnderline,
-    fontFamily: fields.fontFamily,
-    maxWidth: fields.maxWidth,
-    lineHeight: fields.lineHeight,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-  );
+  return textNodeSnapshotBackingFromValidated(common: common, fields: fields);
 }
 
 TextNodeSnapshotSchemaFields _decodeTextFields(

@@ -1,4 +1,5 @@
 import '../contract/internal/node_boundary_schema.dart';
+import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/node_spec.dart';
 import '../contract/snapshot.dart';
 import '../contract/transform2d.dart';
@@ -29,6 +30,15 @@ typedef SceneNodeFromSchema<FieldsT> =
 
 typedef NodeSnapshotFromSchema<FieldsT, SnapshotT extends NodeSnapshot> =
     SnapshotT Function({
+      required NodeSnapshotCommonSchemaFields common,
+      required FieldsT fields,
+    });
+
+typedef NodeSnapshotBackingFromSchema<
+  FieldsT,
+  SnapshotBackingT extends NodeSnapshotBacking
+> =
+    SnapshotBackingT Function({
       required NodeSnapshotCommonSchemaFields common,
       required FieldsT fields,
     });
@@ -146,16 +156,17 @@ SceneNode sceneNodeFromSpecViaSchema<SpecT extends NodeSpec, FieldsT>({
   return buildNode(common: common, fields: fields);
 }
 
-NodeSnapshot sceneNodeSnapshotFromViaSchema<
+NodeSnapshotBacking sceneNodeSnapshotBackingFromViaSchema<
   NodeT extends SceneNode,
   FieldsT,
-  SnapshotT extends NodeSnapshot
+  SnapshotBackingT extends NodeSnapshotBacking
 >({
   required NodeT node,
   required FieldsT Function(NodeT node) extractFields,
-  required NodeSnapshotFromSchema<FieldsT, SnapshotT> buildSnapshot,
+  required NodeSnapshotBackingFromSchema<FieldsT, SnapshotBackingT>
+  buildSnapshotBacking,
 }) {
   final common = snapshotCommonFromSceneNode(node);
   final fields = extractFields(node);
-  return buildSnapshot(common: common, fields: fields);
+  return buildSnapshotBacking(common: common, fields: fields);
 }

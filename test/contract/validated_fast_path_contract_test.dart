@@ -2,9 +2,9 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart' hide NodeId;
+import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
 import 'package:iwb_canvas_engine/src/contract/node_patch.dart';
 import 'package:iwb_canvas_engine/src/contract/node_spec.dart';
-import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 
 void main() {
   test('validated spec fast-path helpers build typed boundary objects', () {
@@ -221,6 +221,53 @@ void main() {
     expect(rect.strokeWidth.value, 2);
     expect(path.fillRule.value, PathFillRule.evenOdd);
   });
+
+  test(
+    'snapshot fast-path compatibility owners preserve defaults and explicit internal owners',
+    () {
+      final backgroundLayer = backgroundLayerSnapshotFromValidated(
+        nodes: <NodeSnapshot>[RectNodeSnapshot(id: 'bg-rect', size: Size(2, 3))],
+      );
+      final palette = scenePaletteSnapshotFromValidated(
+        penColors: <Color>[const Color(0xFF123456)],
+        backgroundColors: <Color>[const Color(0xFFEEEEEE)],
+        gridSizes: <double>[24],
+      );
+      final scene = sceneSnapshotFromValidated(
+        backgroundLayer: backgroundLayer,
+        camera: cameraSnapshotFromValidated(offset: const Offset(4, 5)),
+        background: backgroundSnapshotFromValidated(
+          color: const Color(0xFFFAFAFA),
+          grid: gridSnapshotFromValidated(
+            isEnabled: true,
+            cellSize: 24,
+            color: const Color(0xFF010203),
+          ),
+        ),
+        palette: palette,
+      );
+      final image = imageNodeSnapshotFromValidated(
+        id: 'img-defaults',
+        imageId: 'asset:defaults',
+        size: const Size(10, 20),
+      );
+
+      expect(scene.internalBacking.backgroundLayer, same(backgroundLayer.internalBacking));
+      expect(scene.backgroundLayer.nodes.single.id, 'bg-rect');
+      expect(scene.camera.offset, const Offset(4, 5));
+      expect(scene.background.color, const Color(0xFFFAFAFA));
+      expect(scene.background.grid.isEnabled, isTrue);
+      expect(scene.palette.penColors, const <Color>[Color(0xFF123456)]);
+      expect(image.naturalSize, isNull);
+      expect(image.instanceRevision, 0);
+      expect(image.transform, Transform2D.identity);
+      expect(image.isVisible, isTrue);
+      expect(image.isSelectable, isTrue);
+      expect(image.isLocked, isFalse);
+      expect(image.isDeletable, isTrue);
+      expect(image.isTransformable, isTrue);
+    },
+  );
 
   test('validated image patch fast-path builds default common patch', () {
     final image = imageNodePatchFromValidated(id: 'img-default-common');

@@ -36,6 +36,7 @@ int leaked() => 1;
     );
     _registerFormerRealLogicExclusionTest();
     _registerCommentWrappedExportOnlyShimTest();
+    _registerMultilineExportOnlyShimTest();
   });
 }
 
@@ -250,6 +251,22 @@ void _registerCommentWrappedExportOnlyShimTest() {
       'lib/src/shim.dart': '''
 // comment
 export 'package:iwb_canvas_engine/src/contract/a.dart';
+''',
+    },
+    lcov: _singleFileLcov('lib/src/contract/a.dart'),
+    expectedExitCode: 0,
+  );
+}
+
+void _registerMultilineExportOnlyShimTest() {
+  _registerCoverageScenarioTest(
+    name: 'passes when export-only shim spans multiple lines',
+    files: <String, String>{
+      'lib/src/contract/a.dart': 'int covered() => 1;\n',
+      'lib/src/shim.dart': '''
+export 'package:iwb_canvas_engine/src/contract/a.dart'
+    show
+        covered;
 ''',
     },
     lcov: _singleFileLcov('lib/src/contract/a.dart'),

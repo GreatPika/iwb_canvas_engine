@@ -1,4 +1,5 @@
 import '../contract/internal/node_boundary_schema.dart';
+import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/node_spec.dart';
 import '../contract/snapshot.dart';
 import '../core/nodes.dart';
@@ -105,24 +106,9 @@ StrokeNode strokeNodeFromSpecSchema({
   );
 }
 
-StrokeNodeSnapshot strokeSnapshotFromSchema({
+StrokeNodeSnapshotBacking strokeSnapshotBackingFromSchema({
   required NodeSnapshotCommonSchemaFields common,
   required StrokeNodeSnapshotSchemaFields fields,
 }) {
-  return strokeNodeSnapshotFromValidated(
-    id: common.id,
-    instanceRevision: common.instanceRevision,
-    points: fields.points,
-    pointsRevision: fields.pointsRevision,
-    thickness: fields.thickness,
-    color: fields.color,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-  );
+  return strokeNodeSnapshotBackingFromValidated(common: common, fields: fields);
 }

@@ -1,4 +1,4 @@
-import '../contract/snapshot.dart';
+import '../contract/internal/snapshot_fast_path.dart';
 import '../core/nodes.dart';
 import 'scene_builder_decode_image.dart';
 import 'scene_builder_decode_line.dart';
@@ -10,7 +10,7 @@ import 'scene_builder_decode_text.dart';
 import 'scene_builder_json_parse.dart';
 import 'scene_builder_json_require.dart';
 
-NodeSnapshot sceneBuilderDecodeNodeSnapshot(
+NodeSnapshotBacking sceneBuilderDecodeNodeSnapshot(
   Map<String, Object?> json, {
   required String nodePath,
 }) {

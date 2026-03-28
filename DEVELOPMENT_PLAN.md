@@ -148,4 +148,4 @@ language: russian
 - [x] [Шаг 51. Развести scene decode orchestration и scene mutation owners без reopening `model` graph](development_plan/step_51_scene_decode_and_scene_mutation_owner_split.md)
 - Contract cleanup target state from step `52` onward is fixed in [contract_target_architecture.md](development_plan/contract_target_architecture.md).
 - [x] [Шаг 52. Разрезать `node_boundary_schema` на explicit direction owners и убрать schema `part`-coupling](development_plan/step_52_node_boundary_schema_explicit_owner_split.md)
-- [ ] [Шаг 53. Перестроить snapshot boundary: internal graph, public materialization, producer-side model rewiring](development_plan/step_53_snapshot_fast_path_explicit_internal_owners.md)
+- [x] [Шаг 53. Перестроить snapshot boundary: internal graph, public materialization, producer-side model rewiring](development_plan/step_53_snapshot_fast_path_explicit_internal_owners.md)

@@ -90,6 +90,11 @@ implementation buckets.
 - `internal/snapshot_materialization.dart` owns wrapper materialization between
   the internal snapshot graph and the public snapshot wrappers exposed by
   `snapshot.dart`.
+- Step `53` implementation pins that split concretely: `snapshot.dart` keeps
+  only public validating constructors plus wrapper accessors,
+  `snapshot_backing.dart` owns immutable storage, and
+  `snapshot_materialization.dart` owns wrapper creation and compatibility
+  helpers re-exported through `internal/snapshot_fast_path.dart`.
 - Producer-side owners in `scene_snapshot_from_scene.dart`,
   `scene_builder_decode_*.dart`,
   and

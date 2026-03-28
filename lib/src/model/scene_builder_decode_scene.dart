@@ -1,14 +1,15 @@
+import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/snapshot.dart';
 import 'scene_builder_decode_layers.dart';
 import 'scene_builder_decode_scene_metadata.dart';
 import 'scene_structural_limits.dart';
 
 typedef DecodedScenePayload = ({
-  CameraSnapshot camera,
-  BackgroundSnapshot background,
-  ScenePaletteSnapshot palette,
-  BackgroundLayerSnapshot? backgroundLayer,
-  List<ContentLayerSnapshot> layers,
+  CameraSnapshotBacking camera,
+  BackgroundSnapshotBacking background,
+  ScenePaletteSnapshotBacking palette,
+  BackgroundLayerSnapshotBacking? backgroundLayer,
+  List<ContentLayerSnapshotBacking> layers,
 });
 
 SceneSnapshot sceneBuilderDecodeSceneSnapshotFromJson(
@@ -16,12 +17,14 @@ SceneSnapshot sceneBuilderDecodeSceneSnapshotFromJson(
 ) {
   sceneBuilderRequireSupportedSchemaVersion(json);
   final payload = _decodeScenePayload(json);
-  return sceneSnapshotFromValidated(
-    backgroundLayer: payload.backgroundLayer,
-    layers: payload.layers,
-    camera: payload.camera,
-    background: payload.background,
-    palette: payload.palette,
+  return materializeSceneSnapshot(
+    sceneSnapshotBackingFromValidated(
+      backgroundLayer: payload.backgroundLayer,
+      layers: payload.layers,
+      camera: payload.camera,
+      background: payload.background,
+      palette: payload.palette,
+    ),
   );
 }
 
