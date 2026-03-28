@@ -1,14 +1,10 @@
 import 'dart:ui';
 
-import 'package:flutter/foundation.dart';
-
 import 'internal/node_boundary_schema.dart';
 import 'owned_collections.dart';
 import 'path_fill_rule.dart';
 import 'snapshot.dart' hide PathFillRule;
 import 'transform2d.dart';
-
-part 'internal/node_spec_fast_path.part.dart';
 
 /// Immutable node creation spec for transactional write APIs.
 sealed class NodeSpec {

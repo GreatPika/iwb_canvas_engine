@@ -1,4 +1,8 @@
-part of '../node_spec.dart';
+import 'package:flutter/foundation.dart';
+
+import '../node_spec.dart';
+import '../transform2d.dart';
+import 'node_boundary_schema.dart';
 
 @internal
 ImageNodeSpec imageNodeSpecFromValidated({
@@ -9,7 +13,7 @@ ImageNodeSpec imageNodeSpecFromValidated({
     common ?? _defaultNodeSpecCommonSchemaFields(),
   );
   final resolvedFields = imageNodeSchemaFieldsFromValidated(fields);
-  return ImageNodeSpec._internal(
+  return ImageNodeSpec(
     id: resolvedCommon.id,
     imageId: resolvedFields.imageId,
     size: resolvedFields.size,
@@ -34,7 +38,7 @@ TextNodeSpec textNodeSpecFromValidated({
     common ?? _defaultNodeSpecCommonSchemaFields(),
   );
   final resolvedFields = textNodeSpecSchemaFieldsFromValidated(fields);
-  return TextNodeSpec._internal(
+  return TextNodeSpec(
     id: resolvedCommon.id,
     text: resolvedFields.text,
     fontSize: resolvedFields.fontSize,
@@ -66,7 +70,7 @@ StrokeNodeSpec strokeNodeSpecFromValidated({
     common ?? _defaultNodeSpecCommonSchemaFields(),
   );
   final resolvedFields = strokeNodeSpecSchemaFieldsFromValidated(fields);
-  return StrokeNodeSpec._internal(
+  return StrokeNodeSpec(
     id: resolvedCommon.id,
     points: resolvedFields.points,
     thickness: resolvedFields.thickness,
@@ -91,7 +95,7 @@ LineNodeSpec lineNodeSpecFromValidated({
     common ?? _defaultNodeSpecCommonSchemaFields(),
   );
   final resolvedFields = lineNodeSchemaFieldsFromValidated(fields);
-  return LineNodeSpec._internal(
+  return LineNodeSpec(
     id: resolvedCommon.id,
     start: resolvedFields.start,
     end: resolvedFields.end,
@@ -117,7 +121,7 @@ RectNodeSpec rectNodeSpecFromValidated({
     common ?? _defaultNodeSpecCommonSchemaFields(),
   );
   final resolvedFields = rectNodeSchemaFieldsFromValidated(fields);
-  return RectNodeSpec._internal(
+  return RectNodeSpec(
     id: resolvedCommon.id,
     size: resolvedFields.size,
     fillColor: resolvedFields.fillColor,
@@ -143,7 +147,7 @@ PathNodeSpec pathNodeSpecFromValidated({
     common ?? _defaultNodeSpecCommonSchemaFields(),
   );
   final resolvedFields = pathNodeSchemaFieldsFromValidated(fields);
-  return PathNodeSpec._internal(
+  return PathNodeSpec(
     id: resolvedCommon.id,
     svgPathData: resolvedFields.svgPathData,
     fillColor: resolvedFields.fillColor,

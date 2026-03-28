@@ -268,7 +268,7 @@ language: russian
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Move `NodeSpec` validated fast path into an explicit internal module
+### Slice 1. [x] Move `NodeSpec` validated fast path into an explicit internal module
 
 #### Slice Contract
 
@@ -303,7 +303,7 @@ importing the new internal fast-path barrel.
 - Green run of the listed verifications.
 - No `NodeSpec` fast-path helper remains attached via `part`.
 
-### Slice 2. [ ] Move `NodePatch` validated fast path into an explicit internal module
+### Slice 2. [x] Move `NodePatch` validated fast path into an explicit internal module
 
 #### Slice Contract
 
@@ -340,7 +340,7 @@ fast-path barrel.
 - Green run of the listed verifications.
 - No `NodePatch` fast-path helper remains attached via `part`.
 
-### Slice 3. [ ] Prove the full contract layer is `part`-free after the local seam cleanup
+### Slice 3. [x] Prove the full contract layer is `part`-free after the local seam cleanup
 
 #### Slice Contract
 

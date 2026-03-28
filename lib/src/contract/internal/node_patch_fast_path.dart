@@ -1,13 +1,24 @@
-part of '../node_patch.dart';
+import 'dart:ui';
+
+import 'package:flutter/foundation.dart';
+
+import '../ids.dart';
+import '../node_patch.dart';
+import '../patch_field.dart';
+import '../path_fill_rule.dart';
+import 'node_boundary_schema.dart';
 
 @internal
 CommonNodePatch commonNodePatchFromValidated({
   NodePatchCommonSchemaFields? fields,
 }) {
+  if (fields == null) {
+    return CommonNodePatch();
+  }
   final resolved = patchCommonSchemaFieldsFromValidated(
-    fields ?? _defaultNodePatchCommonSchemaFields(),
+    fields,
   );
-  return CommonNodePatch._internal(
+  return CommonNodePatch(
     transform: resolved.transform,
     opacity: resolved.opacity,
     hitPadding: resolved.hitPadding,
@@ -29,7 +40,7 @@ ImageNodePatch imageNodePatchFromValidated({
   final resolvedFields = imageNodePatchSchemaFieldsFromValidated(
     fields ?? _defaultImageNodePatchSchemaFields(),
   );
-  return ImageNodePatch._internal(
+  return ImageNodePatch(
     id: id,
     common: resolvedCommon,
     imageId: resolvedFields.imageId,
@@ -48,7 +59,7 @@ TextNodePatch textNodePatchFromValidated({
   final resolvedFields = textNodePatchSchemaFieldsFromValidated(
     fields ?? _defaultTextNodePatchSchemaFields(),
   );
-  return TextNodePatch._internal(
+  return TextNodePatch(
     id: id,
     common: resolvedCommon,
     text: resolvedFields.text,
@@ -74,7 +85,7 @@ StrokeNodePatch strokeNodePatchFromValidated({
   final resolvedFields = strokeNodePatchSchemaFieldsFromValidated(
     fields ?? _defaultStrokeNodePatchSchemaFields(),
   );
-  return StrokeNodePatch._internal(
+  return StrokeNodePatch(
     id: id,
     common: resolvedCommon,
     points: resolvedFields.points,
@@ -93,7 +104,7 @@ LineNodePatch lineNodePatchFromValidated({
   final resolvedFields = lineNodePatchSchemaFieldsFromValidated(
     fields ?? _defaultLineNodePatchSchemaFields(),
   );
-  return LineNodePatch._internal(
+  return LineNodePatch(
     id: id,
     common: resolvedCommon,
     start: resolvedFields.start,
@@ -113,7 +124,7 @@ RectNodePatch rectNodePatchFromValidated({
   final resolvedFields = rectNodePatchSchemaFieldsFromValidated(
     fields ?? _defaultRectNodePatchSchemaFields(),
   );
-  return RectNodePatch._internal(
+  return RectNodePatch(
     id: id,
     common: resolvedCommon,
     size: resolvedFields.size,
@@ -133,7 +144,7 @@ PathNodePatch pathNodePatchFromValidated({
   final resolvedFields = pathNodePatchSchemaFieldsFromValidated(
     fields ?? _defaultPathNodePatchSchemaFields(),
   );
-  return PathNodePatch._internal(
+  return PathNodePatch(
     id: id,
     common: resolvedCommon,
     svgPathData: resolvedFields.svgPathData,
@@ -143,17 +154,6 @@ PathNodePatch pathNodePatchFromValidated({
     fillRule: resolvedFields.fillRule,
   );
 }
-
-NodePatchCommonSchemaFields _defaultNodePatchCommonSchemaFields() => (
-  transform: const PatchField<Transform2D>.absent(),
-  opacity: const PatchField<double>.absent(),
-  hitPadding: const PatchField<double>.absent(),
-  isVisible: const PatchField<bool>.absent(),
-  isSelectable: const PatchField<bool>.absent(),
-  isLocked: const PatchField<bool>.absent(),
-  isDeletable: const PatchField<bool>.absent(),
-  isTransformable: const PatchField<bool>.absent(),
-);
 
 ImageNodePatchSchemaFields _defaultImageNodePatchSchemaFields() => (
   imageId: const PatchField<String>.absent(),

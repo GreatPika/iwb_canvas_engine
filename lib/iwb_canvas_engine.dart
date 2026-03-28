@@ -3,23 +3,8 @@
 /// This is the primary public entrypoint and recommended default import.
 library;
 
-export 'src/contract/node_patch.dart'
-    hide
-        commonNodePatchFromValidated,
-        imageNodePatchFromValidated,
-        lineNodePatchFromValidated,
-        pathNodePatchFromValidated,
-        rectNodePatchFromValidated,
-        strokeNodePatchFromValidated,
-        textNodePatchFromValidated;
-export 'src/contract/node_spec.dart'
-    hide
-        imageNodeSpecFromValidated,
-        lineNodeSpecFromValidated,
-        pathNodeSpecFromValidated,
-        rectNodeSpecFromValidated,
-        strokeNodeSpecFromValidated,
-        textNodeSpecFromValidated;
+export 'src/contract/node_patch.dart';
+export 'src/contract/node_spec.dart';
 export 'src/contract/patch_field.dart';
 export 'src/contract/canvas_pointer_input.dart';
 export 'src/model/scene_builder_api.dart';

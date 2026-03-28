@@ -1,14 +1,10 @@
 import 'dart:ui';
 
-import 'package:flutter/foundation.dart';
-
 import 'internal/node_boundary_schema.dart';
 import 'patch_field.dart';
 import 'path_fill_rule.dart';
 import 'snapshot.dart' hide PathFillRule;
 import 'transform2d.dart';
-
-part 'internal/node_patch_fast_path.part.dart';
 
 /// Patch for common node fields shared by all node variants.
 class CommonNodePatch {
@@ -32,7 +28,23 @@ class CommonNodePatch {
       isDeletable: isDeletable,
       isTransformable: isTransformable,
     ));
-    return commonNodePatchFromValidated(fields: fields);
+    return CommonNodePatch._validated(fields: fields);
+  }
+
+  factory CommonNodePatch._validated({NodePatchCommonSchemaFields? fields}) {
+    final resolved = patchCommonSchemaFieldsFromValidated(
+      fields ?? _defaultNodePatchCommonSchemaFields(),
+    );
+    return CommonNodePatch._internal(
+      transform: resolved.transform,
+      opacity: resolved.opacity,
+      hitPadding: resolved.hitPadding,
+      isVisible: resolved.isVisible,
+      isSelectable: resolved.isSelectable,
+      isLocked: resolved.isLocked,
+      isDeletable: resolved.isDeletable,
+      isTransformable: resolved.isTransformable,
+    );
   }
 
   const CommonNodePatch._internal({
@@ -73,7 +85,7 @@ class ImageNodePatch extends NodePatch {
     PatchField<Size?> naturalSize = const PatchField<Size?>.absent(),
   }) : this._validated(
          id: validateRequiredNodeId(id),
-         common: common ?? commonNodePatchFromValidated(),
+         common: common ?? CommonNodePatch._validated(),
          fields: validateImageNodePatchSchemaFields((
            imageId: imageId,
            size: size,
@@ -122,7 +134,7 @@ class TextNodePatch extends NodePatch {
     PatchField<double?> lineHeight = const PatchField<double?>.absent(),
   }) : this._validated(
          id: validateRequiredNodeId(id),
-         common: common ?? commonNodePatchFromValidated(),
+         common: common ?? CommonNodePatch._validated(),
          fields: validateTextNodePatchSchemaFields((
            text: text,
            fontSize: fontSize,
@@ -192,7 +204,7 @@ class StrokeNodePatch extends NodePatch {
     PatchField<Color> color = const PatchField<Color>.absent(),
   }) : this._validated(
          id: validateRequiredNodeId(id),
-         common: common ?? commonNodePatchFromValidated(),
+         common: common ?? CommonNodePatch._validated(),
          fields: validateStrokeNodePatchSchemaFields((
            points: points,
            thickness: thickness,
@@ -236,7 +248,7 @@ class LineNodePatch extends NodePatch {
     PatchField<Color> color = const PatchField<Color>.absent(),
   }) : this._validated(
          id: validateRequiredNodeId(id),
-         common: common ?? commonNodePatchFromValidated(),
+         common: common ?? CommonNodePatch._validated(),
          fields: validateLineNodePatchSchemaFields((
            start: start,
            end: end,
@@ -283,7 +295,7 @@ class RectNodePatch extends NodePatch {
     PatchField<double> strokeWidth = const PatchField<double>.absent(),
   }) : this._validated(
          id: validateRequiredNodeId(id),
-         common: common ?? commonNodePatchFromValidated(),
+         common: common ?? CommonNodePatch._validated(),
          fields: validateRectNodePatchSchemaFields((
            size: size,
            fillColor: fillColor,
@@ -331,7 +343,7 @@ class PathNodePatch extends NodePatch {
     PatchField<PathFillRule> fillRule = const PatchField<PathFillRule>.absent(),
   }) : this._validated(
          id: validateRequiredNodeId(id),
-         common: common ?? commonNodePatchFromValidated(),
+         common: common ?? CommonNodePatch._validated(),
          fields: validatePathNodePatchSchemaFields((
            svgPathData: svgPathData,
            fillColor: fillColor,
@@ -371,3 +383,14 @@ class PathNodePatch extends NodePatch {
   final PatchField<double> strokeWidth;
   final PatchField<PathFillRule> fillRule;
 }
+
+NodePatchCommonSchemaFields _defaultNodePatchCommonSchemaFields() => (
+  transform: const PatchField<Transform2D>.absent(),
+  opacity: const PatchField<double>.absent(),
+  hitPadding: const PatchField<double>.absent(),
+  isVisible: const PatchField<bool>.absent(),
+  isSelectable: const PatchField<bool>.absent(),
+  isLocked: const PatchField<bool>.absent(),
+  isDeletable: const PatchField<bool>.absent(),
+  isTransformable: const PatchField<bool>.absent(),
+);
