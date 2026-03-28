@@ -50,7 +50,13 @@ void main() {
     'interactive facade/runtime/event/draw owners remain structurally split',
     () {
       final facadeSource = File(
-        'lib/src/interactive/scene_controller_interactive.dart',
+        'lib/src/interactive/scene_controller.dart',
+      ).readAsStringSync();
+      final interactionSource = File(
+        'lib/src/interactive/scene_controller_interaction.dart',
+      ).readAsStringSync();
+      final facadeAssemblySource = File(
+        'lib/src/interactive/internal/scene_controller_facade_assembly.dart',
       ).readAsStringSync();
       final runtimeSource = File(
         'lib/src/interactive/internal/interactive_runtime.dart',
@@ -79,54 +85,59 @@ void main() {
 
       expect(
         facadeSource,
-        contains("import 'internal/interactive_runtime.dart';"),
+        contains("import 'internal/scene_controller_facade_assembly.dart';"),
       );
       expect(
         facadeSource,
-        contains("import 'internal/interactive_event_dispatcher.dart';"),
+        contains(
+          "import 'internal/scene_controller_interaction_runtime.dart';",
+        ),
+      );
+      expect(facadeSource, contains('assembleSceneControllerFacade('));
+      expect(facadeSource, contains('SceneControllerFacadeRequest('));
+      expect(facadeSource, contains('registerSceneControllerInternalAccess('));
+      expect(
+        facadeSource,
+        contains('SceneControllerInternalAccessRegistration('),
       );
       expect(
         facadeSource,
-        contains("import 'internal/interactive_selection_actions.dart';"),
+        isNot(contains("import 'internal/interactive_runtime.dart';")),
       );
       expect(
         facadeSource,
-        isNot(contains("import 'internal/interactive_move_session.dart';")),
-      );
-      expect(
-        facadeSource,
-        isNot(contains("import 'internal/interactive_gesture_machine.dart';")),
-      );
-      expect(
-        facadeSource,
-        isNot(contains("import 'internal/interactive_draw_coordinator.dart';")),
+        isNot(contains("import 'internal/interactive_event_dispatcher.dart';")),
       );
       expect(
         facadeSource,
         isNot(
-          contains("import 'internal/interactive_draw_eraser_engine.dart';"),
+          contains("import 'internal/interactive_selection_actions.dart';"),
         ),
       );
+      expect(facadeSource, isNot(contains('_runtime.handlePointer(')));
+      expect(facadeSource, isNot(contains('_runtime.handleDoubleTap(')));
+
+      expect(facadeAssemblySource, contains('SceneControllerInteraction('));
+      expect(facadeAssemblySource, contains('SceneControllerSelection('));
+      expect(facadeAssemblySource, contains('SceneControllerScene('));
 
       final handlePointerBody = _extractMethodBody(
-        source: facadeSource,
+        source: interactionSource,
         methodStart: 'void handlePointer(CanvasPointerInput input)',
       );
-      expect(handlePointerBody, contains('_runtime.handlePointer(input);'));
+      expect(
+        handlePointerBody,
+        contains('_access.runtime.handlePointer(input);'),
+      );
       expect(handlePointerBody, isNot(contains('_pointerNormalizer')));
       expect(handlePointerBody, isNot(contains('_gestureRouter')));
 
       final handleDoubleTapBody = _extractMethodBody(
-        source: facadeSource,
+        source: interactionSource,
         methodStart:
             'void handleDoubleTap({required Offset position, int? timestampMs})',
       );
-      expect(
-        handleDoubleTapBody,
-        contains(
-          '_runtime.handleDoubleTap(position: position, timestampMs: timestampMs);',
-        ),
-      );
+      expect(handleDoubleTapBody, contains('_access.runtime.handleDoubleTap('));
       expect(handleDoubleTapBody, isNot(contains('resolveTimestampMs(')));
 
       expect(

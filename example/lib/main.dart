@@ -222,7 +222,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   }
 
   Widget _buildMainBottomBar() {
-    final isDrawMode = _controller.mode == CanvasMode.draw;
+    final isDrawMode = _controller.interaction.mode == CanvasMode.draw;
     final hasSelection = _controller.selectedNodeIds.isNotEmpty;
 
     return Container(
@@ -271,7 +271,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                     const VerticalDivider(indent: 25, endIndent: 25, width: 20),
                     _ColorPalette(
                       colors: _controller.snapshot.palette.penColors,
-                      selected: _controller.drawColor,
+                      selected: _controller.interaction.drawColor,
                       onSelected: _setDrawColor,
                     ),
                   ] else ...[
@@ -279,21 +279,25 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                       Icons.rotate_left,
                       "Rotate L",
                       hasSelection
-                          ? () => _controller.rotateSelection(clockwise: false)
+                          ? () => _controller.selection.rotateSelection(
+                              clockwise: false,
+                            )
                           : null,
                     ),
                     _buildActionButton(
                       Icons.rotate_right,
                       "Rotate R",
                       hasSelection
-                          ? () => _controller.rotateSelection(clockwise: true)
+                          ? () => _controller.selection.rotateSelection(
+                              clockwise: true,
+                            )
                           : null,
                     ),
                     _buildActionButton(
                       Icons.flip,
                       "Flip V",
                       hasSelection
-                          ? () => _controller.flipSelectionVertical()
+                          ? () => _controller.selection.flipSelectionVertical()
                           : null,
                       quarterTurns: 1,
                     ),
@@ -301,13 +305,16 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                       Icons.flip,
                       "Flip H",
                       hasSelection
-                          ? () => _controller.flipSelectionHorizontal()
+                          ? () =>
+                                _controller.selection.flipSelectionHorizontal()
                           : null,
                     ),
                     _buildActionButton(
                       Icons.delete_outline,
                       "Delete",
-                      hasSelection ? () => _controller.deleteSelection() : null,
+                      hasSelection
+                          ? () => _controller.selection.deleteSelection()
+                          : null,
                       color: Colors.red,
                     ),
                     _buildActionButton(
@@ -348,7 +355,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   }
 
   Widget _buildSmallModeBtn(CanvasMode mode, IconData icon) {
-    final isSelected = _controller.mode == mode;
+    final isSelected = _controller.interaction.mode == mode;
     return GestureDetector(
       onTap: () => _setMode(mode),
       child: Container(
@@ -369,10 +376,10 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   }
 
   Widget _buildDrawToolButton(DrawTool tool, IconData icon, String label) {
-    final isSelected = _controller.drawTool == tool;
+    final isSelected = _controller.interaction.drawTool == tool;
     return IconButton(
       icon: Icon(icon),
-      onPressed: () => _controller.setDrawTool(tool),
+      onPressed: () => _controller.interaction.setDrawTool(tool),
       color: isSelected ? Colors.blue : Colors.grey[700],
       iconSize: 28,
       tooltip: label,
@@ -775,7 +782,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                   color: colorScheme.error,
                   size: 20,
                 ),
-                onPressed: () => _controller.clearScene(),
+                onPressed: () => _controller.scene.clearScene(),
                 child: Text(
                   "Clear Canvas",
                   style: TextStyle(
@@ -810,7 +817,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
             ),
           ),
         ),
-        if (_controller.pendingLineStart != null)
+        if (_controller.interaction.pendingLineStart != null)
           Positioned.fill(child: IgnorePointer(child: const SizedBox())),
       ],
     );
@@ -836,7 +843,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     final nodes = _selectedTextNodes();
     if (nodes.isEmpty) return;
     for (final node in nodes) {
-      _controller.patchNode(patchBuilder(node));
+      _controller.scene.patchNode(patchBuilder(node));
     }
   }
 
@@ -858,7 +865,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
       _textEditController = TextEditingController(text: node.text);
       _textEditFocusNode = FocusNode();
     });
-    _controller.patchNode(
+    _controller.scene.patchNode(
       TextNodePatch(
         id: node.id,
         common: CommonNodePatch(isVisible: PatchField<bool>.value(false)),
@@ -879,7 +886,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
       if (save) {
         final newText = _textEditController?.text ?? "";
 
-        _controller.patchNode(
+        _controller.scene.patchNode(
           TextNodePatch(
             id: node.id,
             text: PatchField<String>.value(newText),
@@ -887,7 +894,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
           ),
         );
       } else {
-        _controller.patchNode(
+        _controller.scene.patchNode(
           TextNodePatch(
             id: node.id,
             common: CommonNodePatch(isVisible: PatchField<bool>.value(true)),
@@ -1057,7 +1064,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   }
 
   void _applyDecodedScene(SceneSnapshot decoded) {
-    _controller.replaceScene(decoded);
+    _controller.scene.replaceScene(decoded);
   }
 
   Future<void> _loadSampleCatImage() async {
@@ -1080,7 +1087,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
           _sampleCatImage = frame.image;
         });
         previousImage?.dispose();
-        _controller.notifySceneChanged();
+        _controller.scene.notifySceneChanged();
       } finally {
         codec.dispose();
       }
@@ -1164,7 +1171,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
 
     _sampleSeed++;
     for (final node in nodes) {
-      _controller.addNode(node);
+      _controller.scene.addNode(node);
     }
   }
 
@@ -1186,22 +1193,22 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
 
   // Сеттеры
   void _setMode(CanvasMode mode) {
-    if (_controller.mode == mode) return;
+    if (_controller.interaction.mode == mode) return;
     if (mode != CanvasMode.move && _editingNodeId != null) {
       _finishInlineTextEdit(save: true);
     }
-    _controller.setMode(mode);
+    _controller.interaction.setMode(mode);
   }
 
-  void _setDrawColor(Color c) => _controller.setDrawColor(c);
+  void _setDrawColor(Color c) => _controller.interaction.setDrawColor(c);
   void _panCameraBy(Offset delta) {
     final nextOffset = _controller.snapshot.camera.offset + delta;
-    _controller.setCameraOffset(nextOffset);
+    _controller.scene.setCameraOffset(nextOffset);
   }
 
-  void _setBackgroundColor(Color c) => _controller.setBackgroundColor(c);
-  void _setGridEnabled(bool v) => _controller.setGridEnabled(v);
-  void _setGridSize(double s) => _controller.setGridCellSize(s);
+  void _setBackgroundColor(Color c) => _controller.scene.setBackgroundColor(c);
+  void _setGridEnabled(bool v) => _controller.scene.setGridEnabled(v);
+  void _setGridSize(double s) => _controller.scene.setGridCellSize(s);
   void _setSelectedTextColor(Color c) => _updateSelectedTextNodes(
     (n) => TextNodePatch(id: n.id, color: PatchField<Color>.value(c)),
   );
@@ -1314,11 +1321,11 @@ class _PendingLineMarkerPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final start = controller.pendingLineStart;
+    final start = controller.interaction.pendingLineStart;
     if (start == null) return;
     final viewPos = _toViewPoint(start, controller.snapshot.camera.offset);
     final paint = Paint()
-      ..color = controller.drawColor.withAlpha(200)
+      ..color = controller.interaction.drawColor.withAlpha(200)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
     canvas.drawCircle(viewPos, 12, paint);

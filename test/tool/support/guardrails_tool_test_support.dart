@@ -51,6 +51,104 @@ class Store {
 void writeInteractiveArchitectureSupportScaffold(Directory sandbox) {
   writeSandboxFile(
     sandbox,
+    'lib/src/interactive/scene_controller_interaction.dart',
+    '''
+class SceneControllerInteraction {
+  final _access = _Access();
+
+  void handlePointer(Object input) {
+    _access.runtime.ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _access.runtime.ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  set mode(int value) {
+    _access.runtime.ensurePublicSideEffectAllowed('mode');
+  }
+}
+
+class _Access {
+  final runtime = _RuntimeAccess();
+}
+
+class _RuntimeAccess {
+  void ensurePublicSideEffectAllowed(
+    String operation, {
+    bool allowAfterDispose = false,
+  }) {}
+}
+''',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/scene_controller_selection.dart',
+    '''
+class SceneControllerSelection {
+  final _access = _Access();
+
+  void setSelection(Object nodeIds) {
+    _access.ensurePublicSideEffectAllowed('setSelection');
+    _access.ensureExternalSelectionMutationAllowed('setSelection');
+  }
+
+  void toggleSelection(Object nodeId) {
+    _access.ensurePublicSideEffectAllowed('toggleSelection');
+    _access.ensureExternalSelectionMutationAllowed('toggleSelection');
+  }
+
+  void clearSelection() {
+    _access.ensurePublicSideEffectAllowed('clearSelection');
+    _access.ensureExternalSelectionMutationAllowed('clearSelection');
+  }
+
+  void selectAll() {
+    _access.ensurePublicSideEffectAllowed('selectAll');
+    _access.ensureExternalSelectionMutationAllowed('selectAll');
+  }
+
+  void rotateSelection() {
+    _access.ensurePublicSideEffectAllowed('rotateSelection');
+  }
+}
+
+class _Access {
+  void ensurePublicSideEffectAllowed(
+    String operation, {
+    bool allowAfterDispose = false,
+  }) {}
+
+  void ensureExternalSelectionMutationAllowed(String operation) {}
+}
+''',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/scene_controller_scene.dart',
+    '''
+class SceneControllerScene {
+  final _access = _Access();
+
+  void write(Object fn) {
+    _access.ensurePublicSideEffectAllowed('write');
+  }
+
+  void clearScene() {
+    _access.ensurePublicSideEffectAllowed('clearScene');
+  }
+}
+
+class _Access {
+  void ensurePublicSideEffectAllowed(
+    String operation, {
+    bool allowAfterDispose = false,
+  }) {}
+}
+''',
+  );
+  writeSandboxFile(
+    sandbox,
     'lib/src/interactive/internal/interactive_event_dispatcher.dart',
     '''
 import 'dart:async';
@@ -263,27 +361,68 @@ typedef InteractiveDrawStyle = ({
   );
   writeSandboxFile(
     sandbox,
-    'lib/src/interactive/internal/scene_controller_interactive_internal_access.dart',
+    'lib/src/interactive/internal/scene_controller_interaction_config.dart',
+    'class SceneControllerInteractionConfig {}\n',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/scene_controller_interaction_runtime.dart',
+    'class SceneControllerInteractionRuntime {}\n',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/scene_controller_interaction_access.dart',
+    'class SceneControllerInteractionContext {}\n',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
+    'class SceneControllerSceneMutations {}\n',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/scene_controller_scene_access.dart',
+    'class SceneControllerSceneAccessAdapter {}\n',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/scene_controller_selection_access.dart',
+    'class SceneControllerSelectionAccessAdapter {}\n',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/scene_controller_selection_mutations.dart',
+    'class SceneControllerSelectionMutations {}\n',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/scene_controller_facade_assembly.dart',
+    'void assembleSceneControllerFacade() {}\n',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/scene_controller_internal_access.dart',
     '''
-void registerSceneControllerInteractiveInternalAccess(
+void registerSceneControllerInternalAccess(
   Object controller, {
   required Object readEpoch,
   required Object previewDeltaForNode,
   required Object setBeforePointerDispatchHook,
   required Object runMoveCommitDeltaResolverForTest,
+  required Object readInteractionAccessForTest,
   required Object readActiveEraserPointsLength,
   required Object readEraserSpatialQueryCount,
   required Object readEraserPreciseSegmentCheckCount,
 }) {}
 
-int sceneControllerInteractiveInternalEpoch(Object controller) => 0;
+int sceneControllerInternalEpoch(Object controller) => 0;
 
-Object sceneControllerInteractiveInternalPreviewDeltaForNode(
+Object sceneControllerInternalPreviewDeltaForNode(
   Object controller,
   Object nodeId,
 ) => Object();
 
-void sceneControllerInteractiveInternalSetBeforePointerDispatchHook(
+void sceneControllerInternalSetBeforePointerDispatchHook(
   Object controller,
   Object? hook,
 ) {}

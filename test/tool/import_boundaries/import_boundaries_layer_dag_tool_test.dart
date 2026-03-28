@@ -177,13 +177,13 @@ class SceneBuilder {
       try {
         writeSandboxFile(
           sandbox,
-          'lib/src/interactive/scene_controller_interactive.dart',
-          'class SceneControllerInteractive {}\n',
+          'lib/src/interactive/scene_controller.dart',
+          'class SceneController {}\n',
         );
         writeSandboxFile(
           sandbox,
           'lib/src/view/scene_view_interactive.dart',
-          "import 'package:iwb_canvas_engine/src/interactive/scene_controller_interactive.dart';\n",
+          "import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart';\n",
         );
 
         final result = await runSandboxTool(

@@ -15,7 +15,10 @@ const List<String> canonicalPublicExportFiles = <String>[
   'lib/src/core/interaction_types.dart',
   'lib/src/core/pointer_input.dart',
   'lib/src/contract/transform2d.dart',
-  'lib/src/interactive/scene_controller_interactive.dart',
+  'lib/src/interactive/scene_controller.dart',
+  'lib/src/interactive/scene_controller_interaction.dart',
+  'lib/src/interactive/scene_controller_selection.dart',
+  'lib/src/interactive/scene_controller_scene.dart',
   'lib/src/view/scene_view_interactive.dart',
   'lib/src/serialization/scene_codec.dart',
 ];

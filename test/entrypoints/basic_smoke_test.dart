@@ -35,7 +35,7 @@ void main() {
       expect(canonicalFromSnapshot.layers.single.id, 'layer-api-0');
       expect(canonicalFromJson.layers.single.id, 'layer-api-0');
 
-      controller.write((txn) {
+      controller.scene.write((txn) {
         expect(txn, isA<SceneWriteTxn>());
         expect(txn.snapshot.layers.single.id, 'layer-api-0');
         return null;
@@ -145,7 +145,7 @@ void main() {
       );
       await tester.pump();
 
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         const CanvasPointerInput(
           pointerId: 1,
           position: Offset(32, 32),
@@ -153,7 +153,7 @@ void main() {
           kind: PointerDeviceKind.touch,
         ),
       );
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         const CanvasPointerInput(
           pointerId: 1,
           position: Offset(40, 40),

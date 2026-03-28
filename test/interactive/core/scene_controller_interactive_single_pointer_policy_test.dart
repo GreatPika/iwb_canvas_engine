@@ -8,7 +8,7 @@ import 'package:iwb_canvas_engine/src/core/scene.dart';
 import '../test_support/interactive_controller_fixtures.dart';
 
 void main() {
-  group('SceneControllerInteractive unit', () {
+  group('SceneController unit', () {
     group('single-active-pointer policy', () {
       test(
         'move mode ignores parallel pointer ids until active pointer ends',
@@ -25,9 +25,9 @@ void main() {
             ),
           );
           addTearDown(controller.dispose);
-          controller.setSelection(const <NodeId>{'node'});
+          controller.selection.setSelection(const <NodeId>{'node'});
 
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: const Offset(60, 60),
@@ -36,7 +36,7 @@ void main() {
             ),
           );
 
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 2,
               position: const Offset(60, 60),
@@ -44,7 +44,7 @@ void main() {
               phase: CanvasPointerPhase.down,
             ),
           );
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 2,
               position: const Offset(120, 60),
@@ -52,7 +52,7 @@ void main() {
               phase: CanvasPointerPhase.move,
             ),
           );
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 2,
               position: const Offset(120, 60),
@@ -66,7 +66,7 @@ void main() {
           expect(afterParallelPointer.transform.tx, closeTo(60, 1e-6));
           expect(afterParallelPointer.transform.ty, closeTo(60, 1e-6));
 
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: const Offset(90, 60),
@@ -74,7 +74,7 @@ void main() {
               phase: CanvasPointerPhase.move,
             ),
           );
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: const Offset(90, 60),
@@ -103,9 +103,9 @@ void main() {
           ),
         );
         addTearDown(controller.dispose);
-        controller.setSelection(const <NodeId>{'node'});
+        controller.selection.setSelection(const <NodeId>{'node'});
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(60, 60),
@@ -113,7 +113,7 @@ void main() {
             phase: CanvasPointerPhase.down,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(100, 60),
@@ -122,7 +122,7 @@ void main() {
           ),
         );
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 2,
             position: const Offset(120, 60),
@@ -130,7 +130,7 @@ void main() {
             phase: CanvasPointerPhase.down,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 2,
             position: const Offset(150, 60),
@@ -138,7 +138,7 @@ void main() {
             phase: CanvasPointerPhase.move,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 2,
             position: const Offset(150, 60),
@@ -152,7 +152,7 @@ void main() {
         expect(beforeCancel.transform.tx, closeTo(60, 1e-6));
         expect(beforeCancel.transform.ty, closeTo(60, 1e-6));
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(100, 60),
@@ -161,7 +161,7 @@ void main() {
           ),
         );
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 2,
             position: const Offset(60, 60),
@@ -169,7 +169,7 @@ void main() {
             phase: CanvasPointerPhase.down,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 2,
             position: const Offset(90, 60),
@@ -177,7 +177,7 @@ void main() {
             phase: CanvasPointerPhase.move,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 2,
             position: const Offset(90, 60),
@@ -209,9 +209,9 @@ void main() {
           ),
         );
         addTearDown(controller.dispose);
-        controller.setSelection(const <NodeId>{'node'});
+        controller.selection.setSelection(const <NodeId>{'node'});
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(60, 60),
@@ -221,14 +221,17 @@ void main() {
         );
 
         expect(
-          () => controller.setSelection(const <NodeId>{'other'}),
+          () => controller.selection.setSelection(const <NodeId>{'other'}),
           throwsStateError,
         );
-        expect(() => controller.toggleSelection('other'), throwsStateError);
-        expect(() => controller.clearSelection(), throwsStateError);
-        expect(() => controller.selectAll(), throwsStateError);
+        expect(
+          () => controller.selection.toggleSelection('other'),
+          throwsStateError,
+        );
+        expect(() => controller.selection.clearSelection(), throwsStateError);
+        expect(() => controller.selection.selectAll(), throwsStateError);
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(60, 60),
@@ -237,7 +240,7 @@ void main() {
           ),
         );
 
-        controller.setSelection(const <NodeId>{'other'});
+        controller.selection.setSelection(const <NodeId>{'other'});
         expect(controller.selectedNodeIds, const <NodeId>{'other'});
       });
 
@@ -245,7 +248,7 @@ void main() {
         'draw line ignores parallel pointer ids and accepts new pointer after up',
         () async {
           // INV:INV-ENG-INTERACTIVE-SINGLE-ACTIVE-POINTER
-          final controller = SceneControllerInteractive(
+          final controller = SceneController(
             initialSnapshot: SceneSnapshot(
               layers: <ContentLayerSnapshot>[
                 ContentLayerSnapshot(id: 'layer-auto-0'),
@@ -255,14 +258,14 @@ void main() {
             dragStartSlop: 0.001,
           );
           addTearDown(controller.dispose);
-          controller.setMode(CanvasMode.draw);
-          controller.setDrawTool(DrawTool.line);
+          controller.interaction.setMode(CanvasMode.draw);
+          controller.interaction.setDrawTool(DrawTool.line);
 
           final actions = <ActionCommitted>[];
           final sub = controller.actions.listen(actions.add);
           addTearDown(sub.cancel);
 
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: const Offset(10, 10),
@@ -270,7 +273,7 @@ void main() {
               phase: CanvasPointerPhase.down,
             ),
           );
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 2,
               position: const Offset(50, 10),
@@ -278,7 +281,7 @@ void main() {
               phase: CanvasPointerPhase.down,
             ),
           );
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 2,
               position: const Offset(80, 10),
@@ -286,7 +289,7 @@ void main() {
               phase: CanvasPointerPhase.move,
             ),
           );
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 2,
               position: const Offset(80, 10),
@@ -294,9 +297,9 @@ void main() {
               phase: CanvasPointerPhase.up,
             ),
           );
-          expect(controller.hasActiveLinePreview, isFalse);
+          expect(controller.interaction.hasActiveLinePreview, isFalse);
 
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: const Offset(30, 10),
@@ -304,8 +307,8 @@ void main() {
               phase: CanvasPointerPhase.move,
             ),
           );
-          expect(controller.hasActiveLinePreview, isTrue);
-          controller.handlePointer(
+          expect(controller.interaction.hasActiveLinePreview, isTrue);
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: const Offset(30, 10),
@@ -335,7 +338,7 @@ void main() {
             const Offset(30, 10),
           );
 
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 2,
               position: const Offset(100, 100),
@@ -343,7 +346,7 @@ void main() {
               phase: CanvasPointerPhase.down,
             ),
           );
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 2,
               position: const Offset(100, 100),
@@ -351,7 +354,7 @@ void main() {
               phase: CanvasPointerPhase.up,
             ),
           );
-          expect(controller.hasPendingLineStart, isTrue);
+          expect(controller.interaction.hasPendingLineStart, isTrue);
         },
       );
 
@@ -359,7 +362,7 @@ void main() {
         'draw pen ignores parallel pointer ids and recovers after cancel',
         () async {
           // INV:INV-ENG-INTERACTIVE-SINGLE-ACTIVE-POINTER
-          final controller = SceneControllerInteractive(
+          final controller = SceneController(
             initialSnapshot: SceneSnapshot(
               layers: <ContentLayerSnapshot>[
                 ContentLayerSnapshot(id: 'layer-auto-2'),
@@ -368,14 +371,14 @@ void main() {
             ),
           );
           addTearDown(controller.dispose);
-          controller.setMode(CanvasMode.draw);
-          controller.setDrawTool(DrawTool.pen);
+          controller.interaction.setMode(CanvasMode.draw);
+          controller.interaction.setDrawTool(DrawTool.pen);
 
           final actions = <ActionCommitted>[];
           final sub = controller.actions.listen(actions.add);
           addTearDown(sub.cancel);
 
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: const Offset(10, 10),
@@ -383,7 +386,7 @@ void main() {
               phase: CanvasPointerPhase.down,
             ),
           );
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: const Offset(20, 10),
@@ -392,7 +395,7 @@ void main() {
             ),
           );
 
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 2,
               position: const Offset(100, 100),
@@ -400,7 +403,7 @@ void main() {
               phase: CanvasPointerPhase.down,
             ),
           );
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 2,
               position: const Offset(120, 100),
@@ -408,7 +411,7 @@ void main() {
               phase: CanvasPointerPhase.move,
             ),
           );
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 2,
               position: const Offset(120, 100),
@@ -417,17 +420,17 @@ void main() {
             ),
           );
 
-          expect(controller.hasActiveStrokePreview, isTrue);
+          expect(controller.interaction.hasActiveStrokePreview, isTrue);
           expect(
-            controller.activeStrokePreviewPoints.first,
+            controller.interaction.activeStrokePreviewPoints.first,
             const Offset(10, 10),
           );
           expect(
-            controller.activeStrokePreviewPoints.last,
+            controller.interaction.activeStrokePreviewPoints.last,
             const Offset(20, 10),
           );
 
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: const Offset(20, 10),
@@ -435,9 +438,9 @@ void main() {
               phase: CanvasPointerPhase.cancel,
             ),
           );
-          expect(controller.hasActiveStrokePreview, isFalse);
+          expect(controller.interaction.hasActiveStrokePreview, isFalse);
 
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 2,
               position: const Offset(30, 10),
@@ -445,7 +448,7 @@ void main() {
               phase: CanvasPointerPhase.down,
             ),
           );
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 2,
               position: const Offset(40, 10),
@@ -453,7 +456,7 @@ void main() {
               phase: CanvasPointerPhase.move,
             ),
           );
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 2,
               position: const Offset(40, 10),
@@ -486,7 +489,7 @@ void main() {
       );
 
       test('draw mode rejects external selection mutations while active', () {
-        final controller = SceneControllerInteractive(
+        final controller = SceneController(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
               ContentLayerSnapshot(id: 'layer-auto-40'),
@@ -496,10 +499,10 @@ void main() {
           dragStartSlop: 0.001,
         );
         addTearDown(controller.dispose);
-        controller.setMode(CanvasMode.draw);
-        controller.setDrawTool(DrawTool.line);
+        controller.interaction.setMode(CanvasMode.draw);
+        controller.interaction.setDrawTool(DrawTool.line);
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(10, 10),
@@ -509,14 +512,17 @@ void main() {
         );
 
         expect(
-          () => controller.setSelection(const <NodeId>{'x'}),
+          () => controller.selection.setSelection(const <NodeId>{'x'}),
           throwsStateError,
         );
-        expect(() => controller.toggleSelection('x'), throwsStateError);
-        expect(() => controller.clearSelection(), throwsStateError);
-        expect(() => controller.selectAll(), throwsStateError);
+        expect(
+          () => controller.selection.toggleSelection('x'),
+          throwsStateError,
+        );
+        expect(() => controller.selection.clearSelection(), throwsStateError);
+        expect(() => controller.selection.selectAll(), throwsStateError);
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(10, 10),
@@ -525,7 +531,7 @@ void main() {
           ),
         );
 
-        controller.clearSelection();
+        controller.selection.clearSelection();
         expect(controller.selectedNodeIds, isEmpty);
       });
     });

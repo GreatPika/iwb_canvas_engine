@@ -105,7 +105,7 @@ class _CanvasScreenState extends State<CanvasScreen> {
       ),
     );
 
-    controller.addNode(
+    controller.scene.addNode(
       RectNodeSpec(
         id: 'rect-1',
         size: const Size(160, 100),
@@ -161,7 +161,7 @@ class _CanvasScreenState extends State<CanvasScreen> {
   do not force an early reset of routed pointer tracking. Settings are treated
   as a value object, and while raw pointers remain live the view keeps only the
   last pending update until router idle.
-- `SceneControllerInteractive` keeps one controller-owned active gesture owner:
+- `SceneController` keeps one controller-owned active gesture owner:
   parallel `pointerId`s are ignored until the owner ends, and
   `replaceScene(...)`, `setCameraOffset(...)`, mode/tool changes, and `dispose()`
   force-release the active gesture only when the boundary mutation will proceed

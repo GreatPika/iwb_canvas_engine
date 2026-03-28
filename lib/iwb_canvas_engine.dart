@@ -18,8 +18,12 @@ export 'src/core/action_events.dart'
 export 'src/core/interaction_types.dart' show CanvasMode, DrawTool;
 export 'src/core/pointer_input.dart' show PointerInputSettings;
 export 'src/contract/transform2d.dart' show Transform2D;
-export 'src/interactive/scene_controller_interactive.dart'
-    show MoveCommitDeltaResolver, SceneController, SceneControllerInteractive;
+export 'src/interactive/scene_controller.dart' show SceneController;
+export 'src/interactive/scene_controller_interaction.dart'
+    show MoveCommitDeltaResolver, SceneControllerInteraction;
+export 'src/interactive/scene_controller_selection.dart'
+    show SceneControllerSelection;
+export 'src/interactive/scene_controller_scene.dart' show SceneControllerScene;
 export 'src/view/scene_view_interactive.dart'
     show SceneView, SceneViewInteractive;
 export 'src/serialization/scene_codec.dart'

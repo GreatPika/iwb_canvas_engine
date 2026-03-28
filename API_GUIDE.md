@@ -65,7 +65,7 @@ on Flutter-oriented primitives (`dart:ui`), and `SceneRenderState` uses
   - `ClearSceneResult`
 - runtime:
   - `SceneController`
-  - `SceneControllerInteractive`
+  - `SceneController`
   - `SceneView`
   - `SceneViewInteractive`
   - `SceneRenderState`
@@ -114,7 +114,10 @@ JSON string boundary note:
 
 Public aliases:
 
-- `SceneController` is a typedef alias of `SceneControllerInteractive`
+- `SceneController` is the concrete public runtime owner
+- `SceneControllerInteraction`, `SceneControllerSelection`, and
+  `SceneControllerScene` are capability owners exposed through
+  `controller.interaction`, `controller.selection`, and `controller.scene`
 - `SceneView` is a typedef alias of `SceneViewInteractive`
 
 ## 3. Scene model
@@ -238,7 +241,7 @@ Shared base fields:
 
 Key rules:
 
-- `SceneController.addNode(...)` accepts only `NodeSpec`
+- `SceneController.scene.addNode(...)` accepts only `NodeSpec`
 - public `NodeSpec` constructors validate boundary values eagerly and are
   runtime constructors rather than `const` entry points
 - `NodeSpec.id` is optional; the controller can generate ids
@@ -399,11 +402,11 @@ Streams:
 ### 5.3 Configuration methods
 
 ```dart
-controller.setMode(CanvasMode.draw);
-controller.setDrawTool(DrawTool.pen);
-controller.setDrawColor(const Color(0xFF1565C0));
-controller.setPointerSettings(const PointerInputSettings());
-controller.setDragStartSlop(12);
+controller.interaction.setMode(CanvasMode.draw);
+controller.interaction.setDrawTool(DrawTool.pen);
+controller.interaction.setDrawColor(const Color(0xFF1565C0));
+controller.interaction.setPointerSettings(const PointerInputSettings());
+controller.interaction.setDragStartSlop(12);
 ```
 
 Available methods:
@@ -502,7 +505,7 @@ Clear rules:
 ### 5.5 Low-level input hooks
 
 ```dart
-controller.handlePointer(
+controller.interaction.handlePointer(
   const CanvasPointerInput(
     pointerId: 1,
     position: Offset(100, 100),
@@ -1029,7 +1032,7 @@ class _CanvasScreenState extends State<CanvasScreen> {
       ),
     );
 
-    controller.addNode(
+    controller.scene.addNode(
       TextNodeSpec(
         id: 'title',
         text: 'Hello',

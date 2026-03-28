@@ -24,21 +24,20 @@ Future<List<GuardrailViolation>> runInteractiveApiGuardrails({
     return violations;
   }
 
-  for (final member in interactiveClass.members) {
-    final name = _interactiveEntrypointName(member);
-    if (name == null) {
-      continue;
-    }
-    final violation = _checkInteractiveEntrypointGuard(
-      member: member as MethodDeclaration,
-      name: name,
-      filePath: filePosixPath,
-      lineFor: (offset) => lineForOffset(parsed, offset),
-    );
-    if (violation != null) {
-      violations.add(violation);
-      return violations;
-    }
+  final rootViolation = _checkRootEntrypoints(
+    interactiveClass,
+    filePath: filePosixPath,
+    lineFor: (offset) => lineForOffset(parsed, offset),
+  );
+  if (rootViolation != null) {
+    violations.add(rootViolation);
+    return violations;
+  }
+
+  final capabilityViolation = _checkCapabilityEntrypoints(context);
+  if (capabilityViolation != null) {
+    violations.add(capabilityViolation);
+    return violations;
   }
 
   final boundaryViolation = _checkInteractiveBoundaryShape(context);
@@ -52,7 +51,7 @@ File _interactiveFile(GuardrailContext context) {
   return File(
     '${context.root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
     'src${Platform.pathSeparator}interactive${Platform.pathSeparator}'
-    'scene_controller_interactive.dart',
+    'scene_controller.dart',
   );
 }
 
@@ -81,7 +80,7 @@ ClassDeclaration? _findInteractiveClass(
 ) {
   for (final declaration in declarations) {
     if (declaration is ClassDeclaration &&
-        declaration.name.lexeme == 'SceneControllerInteractive') {
+        declaration.name.lexeme == 'SceneController') {
       return declaration;
     }
   }
@@ -104,7 +103,7 @@ class InteractiveGuardContext {
   final ExpressionStatement expressionStatement;
 }
 
-String? _interactiveEntrypointName(ClassMember member) {
+String? _publicEntrypointName(ClassMember member) {
   if (member is! MethodDeclaration) {
     return null;
   }
@@ -112,10 +111,36 @@ String? _interactiveEntrypointName(ClassMember member) {
     return null;
   }
   final name = member.name.lexeme;
-  if (!isPublicName(name) || name == 'SceneControllerInteractive') {
+  if (!isPublicName(name) || name == 'SceneController') {
+    return null;
+  }
+  if (name == 'addListener' || name == 'removeListener') {
     return null;
   }
   return name;
+}
+
+GuardrailViolation? _checkRootEntrypoints(
+  ClassDeclaration interactiveClass, {
+  required String filePath,
+  required int Function(int offset) lineFor,
+}) {
+  for (final member in interactiveClass.members) {
+    final name = _publicEntrypointName(member);
+    if (name == null) {
+      continue;
+    }
+    final violation = _checkInteractiveEntrypointGuard(
+      member: member as MethodDeclaration,
+      name: name,
+      filePath: filePath,
+      lineFor: lineFor,
+    );
+    if (violation != null) {
+      return violation;
+    }
+  }
+  return null;
 }
 
 GuardrailViolation? _checkInteractiveEntrypointGuard({
@@ -160,7 +185,7 @@ Object? _interactiveGuardContext({
         filePath: filePath,
         line: lineFor(member.offset),
         message:
-            'interactive API violation: public SceneControllerInteractive '
+            'interactive API violation: public SceneController '
             'entrypoint "${member.name.lexeme}" must use a block body guarded '
             'by _ensurePublicSideEffectAllowed(...).',
       ),
@@ -225,7 +250,7 @@ GuardrailViolation _interactiveGuardViolation({
     filePath: filePath,
     line: line,
     message:
-        'interactive API violation: public SceneControllerInteractive '
+        'interactive API violation: public SceneController '
         'entrypoints must guard resolver purity with '
         '_ensurePublicSideEffectAllowed(...).',
   );
@@ -273,6 +298,224 @@ GuardrailViolation? _validateEnsureCall({
               '_ensurePublicSideEffectAllowed(..., allowAfterDispose: true).',
         )
       : null;
+}
+
+final class CapabilityGuardSpec {
+  const CapabilityGuardSpec({
+    required this.relativePath,
+    required this.className,
+    required this.primaryGuardCall,
+    this.secondaryGuardCallsByMethod = const <String, String>{},
+  });
+
+  final String relativePath;
+  final String className;
+  final String primaryGuardCall;
+  final Map<String, String> secondaryGuardCallsByMethod;
+}
+
+const List<CapabilityGuardSpec> _capabilityGuardSpecs = <CapabilityGuardSpec>[
+  CapabilityGuardSpec(
+    relativePath: 'scene_controller_interaction.dart',
+    className: 'SceneControllerInteraction',
+    primaryGuardCall: '_access.runtime.ensurePublicSideEffectAllowed',
+  ),
+  CapabilityGuardSpec(
+    relativePath: 'scene_controller_scene.dart',
+    className: 'SceneControllerScene',
+    primaryGuardCall: '_access.ensurePublicSideEffectAllowed',
+  ),
+  CapabilityGuardSpec(
+    relativePath: 'scene_controller_selection.dart',
+    className: 'SceneControllerSelection',
+    primaryGuardCall: '_access.ensurePublicSideEffectAllowed',
+    secondaryGuardCallsByMethod: <String, String>{
+      'setSelection': '_access.ensureExternalSelectionMutationAllowed',
+      'toggleSelection': '_access.ensureExternalSelectionMutationAllowed',
+      'clearSelection': '_access.ensureExternalSelectionMutationAllowed',
+      'selectAll': '_access.ensureExternalSelectionMutationAllowed',
+    },
+  ),
+];
+
+GuardrailViolation? _checkCapabilityEntrypoints(GuardrailContext context) {
+  for (final spec in _capabilityGuardSpecs) {
+    final file = _interactiveSupportFile(context, spec.relativePath);
+    if (!file.existsSync()) {
+      return GuardrailViolation(
+        filePath: _interactiveFilePosixPath(context, _interactiveFile(context)),
+        line: 1,
+        message:
+            'interactive API violation: missing required capability owner '
+            '${spec.className} at ${_interactiveFilePosixPath(context, file)}.',
+      );
+    }
+
+    final filePath = _interactiveFilePosixPath(context, file);
+    final parsed = _parseInteractiveFile(context, file, filePath);
+    final capabilityClass = _findClassByName(
+      parsed.unit.declarations,
+      spec.className,
+    );
+    if (capabilityClass == null) {
+      return GuardrailViolation(
+        filePath: filePath,
+        line: 1,
+        message:
+            'interactive API violation: ${spec.className} must remain the '
+            'canonical capability owner in $filePath.',
+      );
+    }
+
+    for (final member in capabilityClass.members) {
+      final name = _publicEntrypointName(member);
+      if (name == null) {
+        continue;
+      }
+      final violation = _checkCapabilityEntrypointGuard(
+        member: member as MethodDeclaration,
+        filePath: filePath,
+        lineFor: (offset) => lineForOffset(parsed, offset),
+        className: spec.className,
+        name: name,
+        primaryGuardCall: spec.primaryGuardCall,
+        secondaryGuardCall: spec.secondaryGuardCallsByMethod[name],
+      );
+      if (violation != null) {
+        return violation;
+      }
+    }
+  }
+  return null;
+}
+
+ClassDeclaration? _findClassByName(
+  NodeList<CompilationUnitMember> declarations,
+  String className,
+) {
+  for (final declaration in declarations) {
+    if (declaration is ClassDeclaration &&
+        declaration.name.lexeme == className) {
+      return declaration;
+    }
+  }
+  return null;
+}
+
+GuardrailViolation? _checkCapabilityEntrypointGuard({
+  required MethodDeclaration member,
+  required String filePath,
+  required int Function(int offset) lineFor,
+  required String className,
+  required String name,
+  required String primaryGuardCall,
+  required String? secondaryGuardCall,
+}) {
+  final body = member.body;
+  if (body is! BlockFunctionBody) {
+    return _capabilityGuardViolation(
+      filePath: filePath,
+      line: lineFor(member.offset),
+      detail:
+          'public $className entrypoints must use a block body guarded by '
+          '$primaryGuardCall(...).',
+    );
+  }
+
+  final statements = body.block.statements;
+  if (statements.isEmpty) {
+    return _capabilityGuardViolation(
+      filePath: filePath,
+      line: lineFor(member.offset),
+      detail:
+          'public $className entrypoints must guard resolver purity with '
+          '$primaryGuardCall(...).',
+    );
+  }
+
+  final firstCall = _qualifiedInvocationNameFromStatement(statements.first);
+  if (firstCall != primaryGuardCall) {
+    return _capabilityGuardViolation(
+      filePath: filePath,
+      line: lineFor(statements.first.offset),
+      detail:
+          'public $className entrypoints must guard resolver purity with '
+          '$primaryGuardCall(...).',
+    );
+  }
+
+  if (secondaryGuardCall == null) {
+    return null;
+  }
+  if (statements.length < 2) {
+    return _capabilityGuardViolation(
+      filePath: filePath,
+      line: lineFor(statements.first.offset),
+      detail:
+          '$className.$name must guard active-gesture exclusivity with '
+          '$secondaryGuardCall(...).',
+    );
+  }
+
+  final secondCall = _qualifiedInvocationNameFromStatement(statements[1]);
+  if (secondCall != secondaryGuardCall) {
+    return _capabilityGuardViolation(
+      filePath: filePath,
+      line: lineFor(statements[1].offset),
+      detail:
+          '$className.$name must guard active-gesture exclusivity with '
+          '$secondaryGuardCall(...).',
+    );
+  }
+  return null;
+}
+
+String? _qualifiedInvocationNameFromStatement(Statement statement) {
+  if (statement is! ExpressionStatement) {
+    return null;
+  }
+  return _qualifiedInvocationName(statement.expression);
+}
+
+String? _qualifiedInvocationName(Expression expression) {
+  if (expression is! MethodInvocation) {
+    return null;
+  }
+
+  final target = expression.target;
+  final methodName = expression.methodName.name;
+  if (target == null) {
+    return methodName;
+  }
+  final qualifiedTarget = _qualifiedTargetName(target);
+  if (qualifiedTarget == null) {
+    return null;
+  }
+  return '$qualifiedTarget.$methodName';
+}
+
+String? _qualifiedTargetName(Expression expression) {
+  return switch (expression) {
+    SimpleIdentifier(:final name) => name,
+    PrefixedIdentifier(:final prefix, :final identifier) =>
+      '${prefix.name}.${identifier.name}',
+    PropertyAccess(:final target?, :final propertyName) =>
+      '${_qualifiedTargetName(target)}.${propertyName.name}',
+    ThisExpression() => 'this',
+    _ => null,
+  };
+}
+
+GuardrailViolation _capabilityGuardViolation({
+  required String filePath,
+  required int line,
+  required String detail,
+}) {
+  return GuardrailViolation(
+    filePath: filePath,
+    line: line,
+    message: 'interactive API violation: $detail',
+  );
 }
 
 Never _onInteractiveParseFailure({
@@ -332,9 +575,41 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
     context,
     'internal/interactive_draw_style.dart',
   );
+  final interactionConfigFile = _interactiveSupportFile(
+    context,
+    'internal/scene_controller_interaction_config.dart',
+  );
+  final interactionRuntimeFile = _interactiveSupportFile(
+    context,
+    'internal/scene_controller_interaction_runtime.dart',
+  );
+  final interactionAccessFile = _interactiveSupportFile(
+    context,
+    'internal/scene_controller_interaction_access.dart',
+  );
+  final sceneMutationsFile = _interactiveSupportFile(
+    context,
+    'internal/scene_controller_scene_mutations.dart',
+  );
+  final sceneAccessFile = _interactiveSupportFile(
+    context,
+    'internal/scene_controller_scene_access.dart',
+  );
+  final selectionAccessFile = _interactiveSupportFile(
+    context,
+    'internal/scene_controller_selection_access.dart',
+  );
+  final selectionMutationsFile = _interactiveSupportFile(
+    context,
+    'internal/scene_controller_selection_mutations.dart',
+  );
+  final facadeAssemblyFile = _interactiveSupportFile(
+    context,
+    'internal/scene_controller_facade_assembly.dart',
+  );
   final internalAccessFile = _interactiveSupportFile(
     context,
-    'internal/scene_controller_interactive_internal_access.dart',
+    'internal/scene_controller_internal_access.dart',
   );
 
   final missingOwnerViolation =
@@ -348,7 +623,15 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
         drawEraserProjectionFile: 'InteractiveDrawProjectedEraser',
         drawEraserStrokeHitFile: 'InteractiveDrawEraserStrokeHit',
         drawStyleFile: 'InteractiveDrawStyle',
-        internalAccessFile: 'SceneControllerInteractiveInternalAccess',
+        interactionConfigFile: 'SceneControllerInteractionConfig',
+        interactionRuntimeFile: 'SceneControllerInteractionRuntime',
+        interactionAccessFile: 'SceneControllerInteractionContext',
+        sceneMutationsFile: 'SceneControllerSceneMutations',
+        sceneAccessFile: 'SceneControllerSceneAccessAdapter',
+        selectionAccessFile: 'SceneControllerSelectionAccessAdapter',
+        selectionMutationsFile: 'SceneControllerSelectionMutations',
+        facadeAssemblyFile: 'assembleSceneControllerFacade',
+        internalAccessFile: 'SceneControllerInternalAccess',
       });
   if (missingOwnerViolation != null) {
     return missingOwnerViolation;
@@ -372,18 +655,25 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
         source: facadeSource,
         filePath: facadeFilePosixPath,
         requiredTokens: const <String>[
+          "import 'internal/scene_controller_facade_assembly.dart';",
+          "import 'internal/scene_controller_interaction_runtime.dart';",
+          'assembleSceneControllerFacade(',
+          'SceneControllerFacadeRequest(',
+          'registerSceneControllerInternalAccess(',
+          'SceneControllerInternalAccessRegistration(',
+        ],
+        bannedTokens: const <String>[
           "import 'internal/interactive_runtime.dart';",
           "import 'internal/interactive_event_dispatcher.dart';",
           "import 'internal/interactive_selection_actions.dart';",
-          '_runtime.handlePointer(',
-          '_runtime.handleDoubleTap(',
-        ],
-        bannedTokens: const <String>[
           "import 'internal/interactive_move_session.dart';",
           "import 'internal/interactive_gesture_machine.dart';",
           "import 'internal/interactive_draw_coordinator.dart';",
           "import 'internal/interactive_draw_eraser_engine.dart';",
+          "import 'internal/scene_controller_facade_support.dart';",
           "import 'internal/interactive_draw_line_engine.dart' show InteractiveDrawStyle;",
+          '_runtime.handlePointer(',
+          '_runtime.handleDoubleTap(',
           'StreamController<',
           '_timestampCursorMs',
           'LineNodeSpec(',
@@ -391,7 +681,7 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
           'Transform2D.translation(',
         ],
         message:
-            'interactive API violation: SceneControllerInteractive must remain '
+            'interactive API violation: SceneController must remain '
             'a thin facade over runtime/event/selection owners.',
       ) ??
       _requireSourceTokens(
@@ -412,6 +702,7 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
           '_actions =',
           '_editTextRequests =',
           '_eraserHitsLine(',
+          "import 'scene_controller_interaction_runtime_support.dart';",
         ],
         message:
             'interactive API violation: InteractiveRuntime must keep event '
@@ -554,15 +845,15 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
         source: internalAccessSource,
         filePath: _interactiveFilePosixPath(context, internalAccessFile),
         requiredTokens: const <String>[
-          'registerSceneControllerInteractiveInternalAccess(',
-          'sceneControllerInteractiveInternalEpoch(',
-          'sceneControllerInteractiveInternalPreviewDeltaForNode(',
-          'sceneControllerInteractiveInternalSetBeforePointerDispatchHook(',
+          'registerSceneControllerInternalAccess(',
+          'sceneControllerInternalEpoch(',
+          'sceneControllerInternalPreviewDeltaForNode(',
+          'sceneControllerInternalSetBeforePointerDispatchHook(',
         ],
         bannedTokens: const <String>[],
         message:
             'interactive API violation: internal interactive test/debug access '
-            'must remain outside SceneControllerInteractive.',
+            'must remain outside SceneController.',
       );
 }
 
@@ -576,7 +867,7 @@ GuardrailViolation? _topLevelFacadeHelperViolation(
         filePath: _interactiveFilePosixPath(context, _interactiveFile(context)),
         line: lineForOffset(parsed, declaration.offset),
         message:
-            'interactive API violation: SceneControllerInteractive facade '
+            'interactive API violation: SceneController facade '
             'file must not own top-level helper functions.',
       );
     }

@@ -122,7 +122,9 @@ const Set<String> mutableCoreTypeNames = <String>{
 
 const Set<String> mutableRuntimeTypeNames = <String>{
   'SceneController',
-  'SceneControllerInteractive',
+  'SceneControllerInteraction',
+  'SceneControllerSelection',
+  'SceneControllerScene',
 };
 
 const Set<String> mutableContractTypeNames = <String>{
@@ -130,31 +132,50 @@ const Set<String> mutableContractTypeNames = <String>{
   ...mutableRuntimeTypeNames,
 };
 
-const Map<String, ExportedApiScanPolicy> nonContractExportedApiScanPolicies =
-    <String, ExportedApiScanPolicy>{
-      '/lib/src/core/action_events.dart': ExportedApiScanPolicy.fullScan(),
-      '/lib/src/core/interaction_types.dart': ExportedApiScanPolicy.fullScan(),
-      '/lib/src/core/pointer_input.dart': ExportedApiScanPolicy.fullScan(),
-      '/lib/src/model/scene_builder_api.dart': ExportedApiScanPolicy.fullScan(),
-      '/lib/src/interactive/scene_controller_interactive.dart':
-          ExportedApiScanPolicy.targetedSkip(
-            reason:
-                'SceneController is a public alias that mirrors the scanned '
-                'SceneControllerInteractive class surface.',
-            skippedTopLevelNames: <String>{'SceneController'},
-            bannedTypeNames: mutableCoreTypeNames,
-          ),
-      '/lib/src/view/scene_view_interactive.dart':
-          ExportedApiScanPolicy.targetedSkip(
-            reason:
-                'SceneView is a public alias that mirrors the scanned '
-                'SceneViewInteractive class surface.',
-            skippedTopLevelNames: <String>{'SceneView'},
-            bannedTypeNames: mutableCoreTypeNames,
-          ),
-      '/lib/src/serialization/scene_codec.dart':
-          ExportedApiScanPolicy.fullScan(),
-    };
+const Map<String, ExportedApiScanPolicy>
+nonContractExportedApiScanPolicies = <String, ExportedApiScanPolicy>{
+  '/lib/src/core/action_events.dart': ExportedApiScanPolicy.fullScan(),
+  '/lib/src/core/interaction_types.dart': ExportedApiScanPolicy.fullScan(),
+  '/lib/src/core/pointer_input.dart': ExportedApiScanPolicy.fullScan(),
+  '/lib/src/model/scene_builder_api.dart': ExportedApiScanPolicy.fullScan(),
+  '/lib/src/interactive/scene_controller.dart':
+      ExportedApiScanPolicy.targetedSkip(
+        reason: 'SceneController may expose public runtime owner types.',
+        skippedTopLevelNames: <String>{},
+        bannedTypeNames: mutableCoreTypeNames,
+      ),
+  '/lib/src/interactive/scene_controller_interaction.dart':
+      ExportedApiScanPolicy.targetedSkip(
+        reason:
+            'SceneControllerInteraction may expose public runtime owner '
+            'types.',
+        skippedTopLevelNames: <String>{},
+        bannedTypeNames: mutableCoreTypeNames,
+      ),
+  '/lib/src/interactive/scene_controller_selection.dart':
+      ExportedApiScanPolicy.targetedSkip(
+        reason:
+            'SceneControllerSelection may expose public runtime owner '
+            'types.',
+        skippedTopLevelNames: <String>{},
+        bannedTypeNames: mutableCoreTypeNames,
+      ),
+  '/lib/src/interactive/scene_controller_scene.dart':
+      ExportedApiScanPolicy.targetedSkip(
+        reason: 'SceneControllerScene may expose public runtime owner types.',
+        skippedTopLevelNames: <String>{},
+        bannedTypeNames: mutableCoreTypeNames,
+      ),
+  '/lib/src/view/scene_view_interactive.dart':
+      ExportedApiScanPolicy.targetedSkip(
+        reason:
+            'SceneView is a public alias that mirrors the scanned '
+            'SceneViewInteractive class surface.',
+        skippedTopLevelNames: <String>{'SceneView'},
+        bannedTypeNames: mutableCoreTypeNames,
+      ),
+  '/lib/src/serialization/scene_codec.dart': ExportedApiScanPolicy.fullScan(),
+};
 
 const Set<String> _nodeIdBookkeepingNames = <String>{
   'writeNewNodeId',

@@ -3,7 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/widgets.dart';
 
 import '../core/pointer_input.dart';
-import '../interactive/scene_controller_interactive.dart';
+import '../interactive/scene_controller.dart';
 import '../render/scene_render_caches.dart';
 import 'scene_view_interactive_overlay_painter.dart';
 import 'scene_view_interactive_pointer_host.dart';
@@ -45,7 +45,7 @@ class SceneViewInteractive extends StatefulWidget {
     super.key,
   });
 
-  final SceneControllerInteractive controller;
+  final SceneController controller;
   final ui.Image? Function(String imageId)? imageResolver;
   final Color selectionColor;
   final double selectionStrokeWidth;
@@ -123,7 +123,7 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
           _pointerHost.handlePointerEvent(event, PointerPhase.cancel),
       child: CustomPaint(
         foregroundPainter: SceneViewInteractiveOverlayPainter(
-          controller: widget.controller,
+          interaction: widget.controller.interaction,
         ),
         child: renderSurface,
       ),

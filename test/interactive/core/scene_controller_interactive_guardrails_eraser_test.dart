@@ -8,7 +8,7 @@ import 'package:iwb_canvas_engine/src/core/scene.dart';
 import '../test_support/interactive_controller_fixtures.dart';
 
 void main() {
-  group('SceneControllerInteractive unit', () {
+  group('SceneController unit', () {
     group('interactive hardening: long gesture guardrails (eraser)', () {
       test('eraser long gesture remains bounded and erases near both ends', () {
         final startLine = LineNode(
@@ -39,11 +39,11 @@ void main() {
         );
         addTearDown(controller.dispose);
 
-        controller.setMode(CanvasMode.draw);
-        controller.setDrawTool(DrawTool.eraser);
-        controller.eraserThickness = 24;
+        controller.interaction.setMode(CanvasMode.draw);
+        controller.interaction.setDrawTool(DrawTool.eraser);
+        controller.interaction.eraserThickness = 24;
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(20, 50),
@@ -52,7 +52,7 @@ void main() {
           ),
         );
         for (var i = 21; i <= 9000; i++) {
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: Offset(i.toDouble(), 50),
@@ -61,7 +61,7 @@ void main() {
             ),
           );
         }
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(9000, 50),
@@ -115,11 +115,11 @@ void main() {
         );
         addTearDown(controller.dispose);
 
-        controller.setMode(CanvasMode.draw);
-        controller.setDrawTool(DrawTool.eraser);
-        controller.eraserThickness = 20;
+        controller.interaction.setMode(CanvasMode.draw);
+        controller.interaction.setDrawTool(DrawTool.eraser);
+        controller.interaction.eraserThickness = 20;
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(0, 0),
@@ -128,7 +128,7 @@ void main() {
           ),
         );
         for (var i = 1; i <= gestureLength; i++) {
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: Offset(i.toDouble(), 0),
@@ -137,7 +137,7 @@ void main() {
             ),
           );
         }
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: Offset(gestureLength.toDouble(), 0),
@@ -188,11 +188,11 @@ void main() {
         );
         addTearDown(controller.dispose);
 
-        controller.setMode(CanvasMode.draw);
-        controller.setDrawTool(DrawTool.eraser);
-        controller.eraserThickness = 20;
+        controller.interaction.setMode(CanvasMode.draw);
+        controller.interaction.setDrawTool(DrawTool.eraser);
+        controller.interaction.eraserThickness = 20;
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(0, 0),
@@ -201,7 +201,7 @@ void main() {
           ),
         );
         for (var i = 1; i <= gestureLength; i++) {
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: Offset(i.toDouble(), 0),
@@ -212,7 +212,7 @@ void main() {
         }
 
         final stopwatch = Stopwatch()..start();
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: Offset(gestureLength.toDouble(), 0),
@@ -283,11 +283,11 @@ void main() {
           );
           addTearDown(controller.dispose);
 
-          controller.setMode(CanvasMode.draw);
-          controller.setDrawTool(DrawTool.eraser);
-          controller.eraserThickness = 14;
+          controller.interaction.setMode(CanvasMode.draw);
+          controller.interaction.setDrawTool(DrawTool.eraser);
+          controller.interaction.eraserThickness = 14;
 
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 11,
               position: zigzag.first,
@@ -299,7 +299,7 @@ void main() {
             final phase = i == zigzag.length - 1
                 ? CanvasPointerPhase.up
                 : CanvasPointerPhase.move;
-            controller.handlePointer(
+            controller.interaction.handlePointer(
               sampleInput(
                 pointerId: 11,
                 position: zigzag[i],
@@ -360,11 +360,11 @@ void main() {
           );
           addTearDown(controller.dispose);
 
-          controller.setMode(CanvasMode.draw);
-          controller.setDrawTool(DrawTool.eraser);
-          controller.eraserThickness = 1;
+          controller.interaction.setMode(CanvasMode.draw);
+          controller.interaction.setDrawTool(DrawTool.eraser);
+          controller.interaction.eraserThickness = 1;
 
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: const Offset(0, 0),
@@ -372,7 +372,7 @@ void main() {
               phase: CanvasPointerPhase.down,
             ),
           );
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: const Offset(100, 0),
@@ -380,7 +380,7 @@ void main() {
               phase: CanvasPointerPhase.move,
             ),
           );
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: const Offset(100, 100),

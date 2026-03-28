@@ -201,7 +201,7 @@ Ownership decisions for the target state:
    adoption of `PointerInputSettings`. Invalid terminal host events are still
    forwarded through `handlePointer(...)`; `SceneView` does not own terminal
    normalization semantics.
-2. `SceneControllerInteractive` is the public interactive facade. It validates
+2. `SceneController` is the public interactive facade. It validates
    public inputs, keeps host-facing mode/tool/selection semantics, owns the
    snapshot-based eligibility policy used by controller-side transform/delete
    preflight and by move-mode hit-test/preview/commit shaping, rejects
@@ -256,7 +256,7 @@ Ownership decisions for the target state:
   clears ephemeral preview/marquee state and restores the gesture baseline
   selection when that gesture changed selection before terminal completion.
 - Interactive owner boundaries are structurally pinned:
-  `SceneControllerInteractive` stays a facade over runtime/event/selection
+  `SceneController` stays a facade over runtime/event/selection
   owners,
   `InteractiveRuntime` stays a boundary orchestrator rather than an event or
   draw-local geometry owner,
@@ -428,7 +428,7 @@ most important architectural rules are:
   No remaining `HIGH/VERY HIGH` entry belongs to
   `interactive_runtime.dart` or `interactive_draw_coordinator.dart`.
   The remaining metric hotspots are limited to:
-  public facade breadth in `scene_controller_interactive.dart`,
+  public facade breadth in `scene_controller.dart`,
   the focused eraser-local owner `interactive_draw_eraser_engine.dart`,
   and the focused action owner `interactive_draw_action_emitter.dart`.
   The remaining clone pairs are structural repeats in

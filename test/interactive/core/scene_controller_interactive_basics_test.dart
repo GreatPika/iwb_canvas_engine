@@ -4,11 +4,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart' hide NodeId;
 import 'package:iwb_canvas_engine/src/core/scene.dart';
+import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_internal_access.dart';
+import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_interaction_runtime.dart';
 
 import '../test_support/interactive_controller_fixtures.dart';
 
 void main() {
-  group('SceneControllerInteractive unit', () {
+  group('SceneController unit', () {
     test('read API + setters + validation', () {
       final controller = controllerFromScene(
         Scene(
@@ -26,31 +28,34 @@ void main() {
       expect(controller.snapshot.layers.length, 2);
       expect(controller.snapshot.layers.length, 2);
       expect(controller.selectedNodeIds, isEmpty);
-      expect(controller.mode, CanvasMode.move);
-      expect(controller.drawTool, DrawTool.pen);
-      expect(controller.drawColor, isA<Color>());
-      expect(controller.penThickness, greaterThan(0));
-      expect(controller.highlighterThickness, greaterThan(0));
-      expect(controller.lineThickness, greaterThan(0));
-      expect(controller.eraserThickness, greaterThan(0));
-      expect(controller.highlighterOpacity, inInclusiveRange(0, 1));
-      expect(controller.selectionRect, isNull);
-      expect(controller.pendingLineStart, isNull);
-      expect(controller.pendingLineTimestampMs, isNull);
-      expect(controller.hasPendingLineStart, isFalse);
-      expect(controller.hasActiveLinePreview, isFalse);
-      expect(controller.pointerSettings.tapSlop, greaterThan(0));
-      expect(controller.dragStartSlop, controller.pointerSettings.tapSlop);
-      expect(controller.write<int>((_) => 42), 42);
+      expect(controller.interaction.mode, CanvasMode.move);
+      expect(controller.interaction.drawTool, DrawTool.pen);
+      expect(controller.interaction.drawColor, isA<Color>());
+      expect(controller.interaction.penThickness, greaterThan(0));
+      expect(controller.interaction.highlighterThickness, greaterThan(0));
+      expect(controller.interaction.lineThickness, greaterThan(0));
+      expect(controller.interaction.eraserThickness, greaterThan(0));
+      expect(controller.interaction.highlighterOpacity, inInclusiveRange(0, 1));
+      expect(controller.interaction.selectionRect, isNull);
+      expect(controller.interaction.pendingLineStart, isNull);
+      expect(controller.interaction.pendingLineTimestampMs, isNull);
+      expect(controller.interaction.hasPendingLineStart, isFalse);
+      expect(controller.interaction.hasActiveLinePreview, isFalse);
+      expect(controller.interaction.pointerSettings.tapSlop, greaterThan(0));
+      expect(
+        controller.interaction.dragStartSlop,
+        controller.interaction.pointerSettings.tapSlop,
+      );
+      expect(controller.scene.write<int>((_) => 42), 42);
 
-      controller.penThickness = 2;
-      controller.highlighterThickness = 6;
-      controller.lineThickness = 3;
-      controller.eraserThickness = 9;
-      controller.highlighterOpacity = 0.4;
-      controller.setDrawColor(const Color(0xFF336699));
-      controller.setDrawColor(const Color(0xFF336699));
-      controller.setPointerSettings(
+      controller.interaction.penThickness = 2;
+      controller.interaction.highlighterThickness = 6;
+      controller.interaction.lineThickness = 3;
+      controller.interaction.eraserThickness = 9;
+      controller.interaction.highlighterOpacity = 0.4;
+      controller.interaction.setDrawColor(const Color(0xFF336699));
+      controller.interaction.setDrawColor(const Color(0xFF336699));
+      controller.interaction.setPointerSettings(
         const PointerInputSettings(
           tapSlop: 12,
           doubleTapSlop: 30,
@@ -58,43 +63,58 @@ void main() {
         ),
       );
 
-      expect(controller.penThickness, 2);
-      expect(controller.highlighterThickness, 6);
-      expect(controller.lineThickness, 3);
-      expect(controller.eraserThickness, 9);
-      expect(controller.highlighterOpacity, 0.4);
-      expect(controller.drawColor, const Color(0xFF336699));
-      expect(controller.pointerSettings.tapSlop, 12);
-      expect(controller.dragStartSlop, 12);
+      expect(controller.interaction.penThickness, 2);
+      expect(controller.interaction.highlighterThickness, 6);
+      expect(controller.interaction.lineThickness, 3);
+      expect(controller.interaction.eraserThickness, 9);
+      expect(controller.interaction.highlighterOpacity, 0.4);
+      expect(controller.interaction.drawColor, const Color(0xFF336699));
+      expect(controller.interaction.pointerSettings.tapSlop, 12);
+      expect(controller.interaction.dragStartSlop, 12);
 
-      controller.setDragStartSlop(9);
-      expect(controller.dragStartSlop, 9);
-      controller.setDragStartSlop(0);
-      expect(controller.dragStartSlop, 0);
-      controller.setDragStartSlop(null);
-      expect(controller.dragStartSlop, 12);
+      controller.interaction.setDragStartSlop(9);
+      expect(controller.interaction.dragStartSlop, 9);
+      controller.interaction.setDragStartSlop(0);
+      expect(controller.interaction.dragStartSlop, 0);
+      controller.interaction.setDragStartSlop(null);
+      expect(controller.interaction.dragStartSlop, 12);
 
-      expect(() => controller.penThickness = 0, throwsArgumentError);
       expect(
-        () => controller.highlighterThickness = double.nan,
+        () => controller.interaction.penThickness = 0,
         throwsArgumentError,
       );
       expect(
-        () => controller.lineThickness = double.infinity,
+        () => controller.interaction.highlighterThickness = double.nan,
         throwsArgumentError,
       );
-      expect(() => controller.eraserThickness = -1, throwsArgumentError);
-      expect(() => controller.setDragStartSlop(-1), throwsArgumentError);
-      expect(() => controller.highlighterOpacity = -0.1, throwsArgumentError);
-      expect(() => controller.highlighterOpacity = 1.1, throwsArgumentError);
       expect(
-        () => controller.setCameraOffset(const Offset(double.nan, 0)),
+        () => controller.interaction.lineThickness = double.infinity,
+        throwsArgumentError,
+      );
+      expect(
+        () => controller.interaction.eraserThickness = -1,
+        throwsArgumentError,
+      );
+      expect(
+        () => controller.interaction.setDragStartSlop(-1),
+        throwsArgumentError,
+      );
+      expect(
+        () => controller.interaction.highlighterOpacity = -0.1,
+        throwsArgumentError,
+      );
+      expect(
+        () => controller.interaction.highlighterOpacity = 1.1,
+        throwsArgumentError,
+      );
+      expect(
+        () => controller.scene.setCameraOffset(const Offset(double.nan, 0)),
         throwsArgumentError,
       );
 
-      controller.setGridEnabled(false);
+      controller.scene.setGridEnabled(false);
       expect(
-        () => controller.setGridCellSize(-12),
+        () => controller.scene.setGridCellSize(-12),
         throwsA(
           isA<ArgumentError>().having(
             (error) => error.name,
@@ -103,8 +123,8 @@ void main() {
           ),
         ),
       );
-      controller.setGridEnabled(true);
-      controller.setGridCellSize(0.5);
+      controller.scene.setGridEnabled(true);
+      controller.scene.setGridCellSize(0.5);
       expect(controller.snapshot.background.grid.cellSize, minGridCellSize);
 
       final actionSub = controller.actions.listen((_) {});
@@ -125,7 +145,7 @@ void main() {
       addTearDown(controller.dispose);
 
       expect(
-        () => controller.setPointerSettings(
+        () => controller.interaction.setPointerSettings(
           const PointerInputSettings(tapSlop: double.infinity),
         ),
         throwsA(
@@ -133,7 +153,7 @@ void main() {
         ),
       );
       expect(
-        () => controller.setPointerSettings(
+        () => controller.interaction.setPointerSettings(
           const PointerInputSettings(doubleTapSlop: -1),
         ),
         throwsA(
@@ -145,7 +165,7 @@ void main() {
         ),
       );
       expect(
-        () => controller.setPointerSettings(
+        () => controller.interaction.setPointerSettings(
           const PointerInputSettings(doubleTapMaxDelayMs: -10),
         ),
         throwsA(
@@ -157,19 +177,19 @@ void main() {
         ),
       );
 
-      controller.setPointerSettings(
+      controller.interaction.setPointerSettings(
         const PointerInputSettings(
           tapSlop: 0,
           doubleTapSlop: 0,
           doubleTapMaxDelayMs: 0,
         ),
       );
-      expect(controller.pointerSettings.doubleTapMaxDelayMs, 0);
+      expect(controller.interaction.pointerSettings.doubleTapMaxDelayMs, 0);
     });
 
     test('constructor validates pointerSettings', () {
       expect(
-        () => SceneControllerInteractive(
+        () => SceneController(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
               ContentLayerSnapshot(id: 'layer-auto-0'),
@@ -184,7 +204,7 @@ void main() {
     });
 
     test('constructor and setter share dragStartSlop validation contract', () {
-      final controller = SceneControllerInteractive(
+      final controller = SceneController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(id: 'layer-auto-0'),
@@ -194,12 +214,12 @@ void main() {
       );
       addTearDown(controller.dispose);
 
-      expect(controller.dragStartSlop, 0);
-      controller.setDragStartSlop(0);
-      expect(controller.dragStartSlop, 0);
+      expect(controller.interaction.dragStartSlop, 0);
+      controller.interaction.setDragStartSlop(0);
+      expect(controller.interaction.dragStartSlop, 0);
 
       expect(
-        () => SceneControllerInteractive(
+        () => SceneController(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
               ContentLayerSnapshot(id: 'layer-auto-1'),
@@ -216,7 +236,7 @@ void main() {
         ),
       );
       expect(
-        () => SceneControllerInteractive(
+        () => SceneController(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
               ContentLayerSnapshot(id: 'layer-auto-2'),
@@ -245,7 +265,7 @@ void main() {
         notifications = notifications + 1;
       });
 
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(100, 100),
@@ -276,10 +296,10 @@ void main() {
         notifications = notifications + 1;
       });
 
-      controller.setMode(CanvasMode.draw);
-      controller.setDrawTool(DrawTool.line);
-      controller.setDrawColor(const Color(0xFF123456));
-      controller.setDragStartSlop(9);
+      controller.interaction.setMode(CanvasMode.draw);
+      controller.interaction.setDrawTool(DrawTool.line);
+      controller.interaction.setDrawColor(const Color(0xFF123456));
+      controller.interaction.setDragStartSlop(9);
 
       expect(notifications, 0);
       await pumpEventQueue();
@@ -304,7 +324,7 @@ void main() {
         notifications = notifications + 1;
       });
 
-      controller.setSelection(const <NodeId>{'n'});
+      controller.selection.setSelection(const <NodeId>{'n'});
 
       expect(notifications, 0);
       await pumpEventQueue(times: 2);
@@ -333,13 +353,13 @@ void main() {
       setBeforePointerDispatchHook(controller, () {
         setBeforePointerDispatchHook(controller, null);
         try {
-          controller.handlePointer(sample);
+          controller.interaction.handlePointer(sample);
         } catch (error) {
           nestedError = error;
         }
       });
 
-      controller.handlePointer(sample);
+      controller.interaction.handlePointer(sample);
       expect(nestedError, isA<StateError>());
     });
 
@@ -367,8 +387,8 @@ void main() {
         final sub = controller.actions.listen(actions.add);
         addTearDown(sub.cancel);
 
-        controller.setSelection(const <NodeId>{'a'});
-        controller.handlePointer(
+        controller.selection.setSelection(const <NodeId>{'a'});
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(80, 0),
@@ -376,7 +396,7 @@ void main() {
             phase: CanvasPointerPhase.down,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(180, 80),
@@ -384,7 +404,7 @@ void main() {
             phase: CanvasPointerPhase.move,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(180, 80),
@@ -400,7 +420,7 @@ void main() {
     );
 
     test('addNode accepts NodeSpec variants', () {
-      final controller = SceneControllerInteractive(
+      final controller = SceneController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(id: 'layer-auto-1'),
@@ -411,13 +431,13 @@ void main() {
       addTearDown(controller.dispose);
 
       expect(
-        controller.addNode(
+        controller.scene.addNode(
           RectNodeSpec(id: 'spec-rect', size: const Size(10, 8)),
         ),
         'spec-rect',
       );
       expect(
-        controller.addNode(
+        controller.scene.addNode(
           TextNodeSpec(
             id: 'spec-text',
             text: 'hello',
@@ -428,7 +448,7 @@ void main() {
         'spec-text',
       );
       expect(
-        controller.addNode(
+        controller.scene.addNode(
           StrokeNodeSpec(
             id: 'spec-stroke',
             points: const <Offset>[Offset(0, 0), Offset(8, 0)],
@@ -439,7 +459,7 @@ void main() {
         'spec-stroke',
       );
       expect(
-        controller.addNode(
+        controller.scene.addNode(
           LineNodeSpec(
             id: 'spec-line',
             start: const Offset(0, 0),
@@ -451,7 +471,7 @@ void main() {
         'spec-line',
       );
       expect(
-        controller.addNode(
+        controller.scene.addNode(
           ImageNodeSpec(
             id: 'spec-image',
             imageId: 'img',
@@ -461,7 +481,7 @@ void main() {
         'spec-image',
       );
       expect(
-        controller.addNode(
+        controller.scene.addNode(
           PathNodeSpec(
             id: 'spec-path',
             svgPathData: 'M0 0 L10 0 L10 10 Z',
@@ -475,7 +495,7 @@ void main() {
     test(
       'addNode supports insertIndex and ensureLayer preserves fail-fast ids',
       () {
-        final controller = SceneControllerInteractive(
+        final controller = SceneController(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
               ContentLayerSnapshot(
@@ -489,9 +509,9 @@ void main() {
         );
         addTearDown(controller.dispose);
 
-        expect(controller.ensureLayer('layer-auto-2', index: 0), isTrue);
-        expect(controller.ensureLayer('layer-auto-2', index: 1), isFalse);
-        controller.addNode(
+        expect(controller.scene.ensureLayer('layer-auto-2', index: 0), isTrue);
+        expect(controller.scene.ensureLayer('layer-auto-2', index: 1), isFalse);
+        controller.scene.addNode(
           RectNodeSpec(id: 'under-base', size: const Size(10, 8)),
           layerId: 'layer-auto-3',
           insertIndex: 0,
@@ -510,7 +530,7 @@ void main() {
           <String>['under-base', 'base'],
         );
         expect(
-          () => controller.addNode(
+          () => controller.scene.addNode(
             RectNodeSpec(id: 'bad-layer', size: const Size(4, 4)),
             layerId: 'missing-layer',
           ),
@@ -522,7 +542,7 @@ void main() {
     test(
       'textFontFamilyByDefault applies to write inserts only when absent',
       () {
-        final controller = SceneControllerInteractive(
+        final controller = SceneController(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
               ContentLayerSnapshot(id: 'layer-auto-4'),
@@ -532,7 +552,7 @@ void main() {
         );
         addTearDown(controller.dispose);
 
-        controller.write<void>((txn) {
+        controller.scene.write<void>((txn) {
           txn.writeNodeInsert(
             TextNodeSpec(
               id: 'default-font',
@@ -572,14 +592,14 @@ void main() {
         );
         addTearDown(controller.dispose);
 
-        controller.setMode(CanvasMode.draw);
-        controller.setDrawTool(DrawTool.pen);
+        controller.interaction.setMode(CanvasMode.draw);
+        controller.interaction.setDrawTool(DrawTool.pen);
 
         final actions = <ActionCommitted>[];
         final sub = controller.actions.listen(actions.add);
         addTearDown(sub.cancel);
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           const CanvasPointerInput(
             pointerId: 1,
             position: Offset(12, 12),
@@ -587,7 +607,7 @@ void main() {
             kind: PointerDeviceKind.touch,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           const CanvasPointerInput(
             pointerId: 1,
             position: Offset(20, 20),
@@ -596,7 +616,7 @@ void main() {
           ),
         );
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           const CanvasPointerInput(
             pointerId: 2,
             position: Offset(30, 30),
@@ -604,7 +624,7 @@ void main() {
             kind: PointerDeviceKind.touch,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           const CanvasPointerInput(
             pointerId: 2,
             position: Offset(40, 40),
@@ -626,7 +646,7 @@ void main() {
     );
 
     test('removeNode emits delete actions with monotonic timestamps', () async {
-      final controller = SceneControllerInteractive(
+      final controller = SceneController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(id: 'layer-auto-3'),
@@ -640,12 +660,16 @@ void main() {
       final sub = controller.actions.listen(actions.add);
       addTearDown(sub.cancel);
 
-      expect(controller.removeNode('missing', timestampMs: 1), isFalse);
-      controller.addNode(RectNodeSpec(id: 'n1', size: const Size(10, 10)));
-      expect(controller.removeNode('n1', timestampMs: 5), isTrue);
+      expect(controller.scene.removeNode('missing', timestampMs: 1), isFalse);
+      controller.scene.addNode(
+        RectNodeSpec(id: 'n1', size: const Size(10, 10)),
+      );
+      expect(controller.scene.removeNode('n1', timestampMs: 5), isTrue);
 
-      controller.addNode(RectNodeSpec(id: 'n2', size: const Size(10, 10)));
-      expect(controller.removeNode('n2', timestampMs: 3), isTrue);
+      controller.scene.addNode(
+        RectNodeSpec(id: 'n2', size: const Size(10, 10)),
+      );
+      expect(controller.scene.removeNode('n2', timestampMs: 3), isTrue);
 
       await pumpEventQueue();
       expect(actions.length, 2);
@@ -656,7 +680,7 @@ void main() {
 
     test('actions stream delivery is asynchronous', () async {
       // INV:INV-ENG-INTERACTIVE-ASYNC-DELIVERY
-      final controller = SceneControllerInteractive(
+      final controller = SceneController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(id: 'layer-auto-5'),
@@ -666,13 +690,15 @@ void main() {
       );
       addTearDown(controller.dispose);
 
-      controller.addNode(RectNodeSpec(id: 'n1', size: const Size(10, 10)));
+      controller.scene.addNode(
+        RectNodeSpec(id: 'n1', size: const Size(10, 10)),
+      );
 
       final actions = <ActionCommitted>[];
       final sub = controller.actions.listen(actions.add);
       addTearDown(sub.cancel);
 
-      expect(controller.removeNode('n1', timestampMs: 5), isTrue);
+      expect(controller.scene.removeNode('n1', timestampMs: 5), isTrue);
       expect(actions, isEmpty);
 
       await pumpEventQueue();
@@ -685,7 +711,7 @@ void main() {
       'interactive action stream and notify are async without strict ordering contract',
       () async {
         // INV:INV-ENG-INTERACTIVE-ASYNC-DELIVERY
-        final controller = SceneControllerInteractive(
+        final controller = SceneController(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
               ContentLayerSnapshot(id: 'layer-auto-7'),
@@ -709,7 +735,7 @@ void main() {
         });
         addTearDown(sub.cancel);
 
-        expect(controller.removeNode('n1', timestampMs: 5), isTrue);
+        expect(controller.scene.removeNode('n1', timestampMs: 5), isTrue);
         expect(trace, isEmpty);
 
         await pumpEventQueue(times: 2);
@@ -732,7 +758,7 @@ void main() {
         );
         addTearDown(controller.dispose);
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(10, 10),
@@ -740,7 +766,7 @@ void main() {
             phase: CanvasPointerPhase.down,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(40, 40),
@@ -748,15 +774,15 @@ void main() {
             phase: CanvasPointerPhase.move,
           ),
         );
-        expect(controller.selectionRect, isNotNull);
+        expect(controller.interaction.selectionRect, isNotNull);
 
-        controller.setCameraOffset(const Offset(5, 6));
+        controller.scene.setCameraOffset(const Offset(5, 6));
 
         expect(controller.snapshot.camera.offset, const Offset(5, 6));
-        expect(controller.selectionRect, isNull);
+        expect(controller.interaction.selectionRect, isNull);
         expect(controller.selectedNodeIds, isEmpty);
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(40, 40),
@@ -765,7 +791,7 @@ void main() {
           ),
         );
 
-        expect(controller.selectionRect, isNull);
+        expect(controller.interaction.selectionRect, isNull);
         expect(controller.selectedNodeIds, isEmpty);
       },
     );
@@ -781,7 +807,7 @@ void main() {
       );
       addTearDown(controller.dispose);
 
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(10, 10),
@@ -789,7 +815,7 @@ void main() {
           phase: CanvasPointerPhase.down,
         ),
       );
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(40, 40),
@@ -797,13 +823,13 @@ void main() {
           phase: CanvasPointerPhase.move,
         ),
       );
-      expect(controller.selectionRect, isNotNull);
+      expect(controller.interaction.selectionRect, isNotNull);
 
-      controller.setCameraOffset(controller.snapshot.camera.offset);
+      controller.scene.setCameraOffset(controller.snapshot.camera.offset);
 
-      expect(controller.selectionRect, isNotNull);
+      expect(controller.interaction.selectionRect, isNotNull);
 
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(40, 40),
@@ -812,7 +838,7 @@ void main() {
         ),
       );
 
-      expect(controller.selectionRect, isNull);
+      expect(controller.interaction.selectionRect, isNull);
     });
 
     test('setCameraOffset no-op preserves active draw gesture state', () {
@@ -825,10 +851,10 @@ void main() {
         ),
       );
       addTearDown(controller.dispose);
-      controller.setMode(CanvasMode.draw);
-      controller.setDrawTool(DrawTool.pen);
+      controller.interaction.setMode(CanvasMode.draw);
+      controller.interaction.setDrawTool(DrawTool.pen);
 
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(10, 10),
@@ -836,7 +862,7 @@ void main() {
           phase: CanvasPointerPhase.down,
         ),
       );
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(20, 10),
@@ -844,21 +870,21 @@ void main() {
           phase: CanvasPointerPhase.move,
         ),
       );
-      expect(controller.hasActiveStrokePreview, isTrue);
-      expect(controller.activeStrokePreviewPoints, <Offset>[
+      expect(controller.interaction.hasActiveStrokePreview, isTrue);
+      expect(controller.interaction.activeStrokePreviewPoints, <Offset>[
         const Offset(10, 10),
         const Offset(20, 10),
       ]);
 
-      controller.setCameraOffset(controller.snapshot.camera.offset);
+      controller.scene.setCameraOffset(controller.snapshot.camera.offset);
 
-      expect(controller.hasActiveStrokePreview, isTrue);
-      expect(controller.activeStrokePreviewPoints, <Offset>[
+      expect(controller.interaction.hasActiveStrokePreview, isTrue);
+      expect(controller.interaction.activeStrokePreviewPoints, <Offset>[
         const Offset(10, 10),
         const Offset(20, 10),
       ]);
 
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(30, 10),
@@ -867,7 +893,7 @@ void main() {
         ),
       );
 
-      expect(controller.activeStrokePreviewPoints, <Offset>[
+      expect(controller.interaction.activeStrokePreviewPoints, <Offset>[
         const Offset(10, 10),
         const Offset(20, 10),
         const Offset(30, 10),
@@ -887,7 +913,7 @@ void main() {
         );
         addTearDown(controller.dispose);
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(10, 10),
@@ -895,7 +921,7 @@ void main() {
             phase: CanvasPointerPhase.down,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(40, 40),
@@ -903,10 +929,10 @@ void main() {
             phase: CanvasPointerPhase.move,
           ),
         );
-        expect(controller.selectionRect, isNotNull);
+        expect(controller.interaction.selectionRect, isNotNull);
 
         expect(
-          () => controller.replaceScene(
+          () => controller.scene.replaceScene(
             SceneSnapshot(
               layers: <ContentLayerSnapshot>[
                 ContentLayerSnapshot(id: 'layer-invalid-0'),
@@ -923,9 +949,9 @@ void main() {
           throwsA(isA<SceneDataException>()),
         );
 
-        expect(controller.selectionRect, isNotNull);
+        expect(controller.interaction.selectionRect, isNotNull);
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(50, 50),
@@ -933,9 +959,9 @@ void main() {
             phase: CanvasPointerPhase.move,
           ),
         );
-        expect(controller.selectionRect, isNotNull);
+        expect(controller.interaction.selectionRect, isNotNull);
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(50, 50),
@@ -944,7 +970,7 @@ void main() {
           ),
         );
 
-        expect(controller.selectionRect, isNull);
+        expect(controller.interaction.selectionRect, isNull);
       },
     );
 
@@ -960,14 +986,14 @@ void main() {
           ),
         );
         addTearDown(controller.dispose);
-        controller.setMode(CanvasMode.draw);
-        controller.setDrawTool(DrawTool.pen);
+        controller.interaction.setMode(CanvasMode.draw);
+        controller.interaction.setDrawTool(DrawTool.pen);
 
         final actions = <ActionCommitted>[];
         final sub = controller.actions.listen(actions.add);
         addTearDown(sub.cancel);
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(10, 10),
@@ -975,7 +1001,7 @@ void main() {
             phase: CanvasPointerPhase.down,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(20, 10),
@@ -983,10 +1009,14 @@ void main() {
             phase: CanvasPointerPhase.move,
           ),
         );
-        expect(controller.hasActiveStrokePreview, isTrue);
+        expect(controller.interaction.hasActiveStrokePreview, isTrue);
+        expect(
+          controller.interaction.activeStrokePreviewThickness,
+          greaterThan(0),
+        );
 
         expect(
-          () => controller.replaceScene(
+          () => controller.scene.replaceScene(
             SceneSnapshot(
               layers: <ContentLayerSnapshot>[
                 ContentLayerSnapshot(id: 'layer-invalid-2'),
@@ -1003,13 +1033,13 @@ void main() {
           throwsA(isA<SceneDataException>()),
         );
 
-        expect(controller.hasActiveStrokePreview, isTrue);
-        expect(controller.activeStrokePreviewPoints, <Offset>[
+        expect(controller.interaction.hasActiveStrokePreview, isTrue);
+        expect(controller.interaction.activeStrokePreviewPoints, <Offset>[
           const Offset(10, 10),
           const Offset(20, 10),
         ]);
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(30, 10),
@@ -1017,7 +1047,7 @@ void main() {
             phase: CanvasPointerPhase.move,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(30, 10),
@@ -1033,6 +1063,45 @@ void main() {
         );
       },
     );
+
+    test('interaction runtime access reports active gesture lifecycle', () {
+      final controller = controllerFromScene(
+        Scene(
+          layers: <ContentLayer>[
+            ContentLayer(id: 'layer-auto-gesture-0'),
+            ContentLayer(id: 'layer-auto-gesture-1'),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+      controller.interaction.setMode(CanvasMode.draw);
+      controller.interaction.setDrawTool(DrawTool.pen);
+
+      final access = sceneControllerInternalInteractionAccessForTest(
+        controller,
+      );
+      expect(access.runtime.hasActiveGesture, isFalse);
+
+      controller.interaction.handlePointer(
+        sampleInput(
+          pointerId: 1,
+          position: const Offset(10, 10),
+          timestampMs: 1,
+          phase: CanvasPointerPhase.down,
+        ),
+      );
+      expect(access.runtime.hasActiveGesture, isTrue);
+
+      controller.interaction.handlePointer(
+        sampleInput(
+          pointerId: 1,
+          position: const Offset(10, 10),
+          timestampMs: 2,
+          phase: CanvasPointerPhase.up,
+        ),
+      );
+      expect(access.runtime.hasActiveGesture, isFalse);
+    });
 
     test('down dispatch resets active gesture owner when dispatch throws', () {
       final rect = RectNode(id: 'node', size: const Size(20, 20))
@@ -1053,7 +1122,7 @@ void main() {
       });
 
       expect(
-        () => controller.handlePointer(
+        () => controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(40, 40),
@@ -1070,6 +1139,33 @@ void main() {
     // - long gesture guardrails: existing pen/eraser + new highlighter commit/preview
     // - line pending cancel semantics: existing cancel clear + new invalid second-tap no-op
     // - single-active-pointer semantics: existing move/draw policy group
+
+    test(
+      'interaction access reads snapshot through the public controller facade',
+      () {
+        final controller = _SnapshotOverrideController(
+          initialSnapshot: SceneSnapshot(
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(id: 'layer-auto-0'),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+
+        final overriddenSnapshot = SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(id: 'layer-override'),
+          ],
+        );
+        controller.snapshotOverride = overriddenSnapshot;
+
+        expect(controller.interaction.snapshot, same(overriddenSnapshot));
+        expect(
+          sceneControllerInternalInteractionAccessForTest(controller).snapshot,
+          same(overriddenSnapshot),
+        );
+      },
+    );
 
     test(
       'transform and delete public APIs stay no-op for ineligible selection',
@@ -1104,14 +1200,14 @@ void main() {
         final sub = controller.actions.listen(actions.add);
         addTearDown(sub.cancel);
 
-        controller.setSelection(const <NodeId>{
+        controller.selection.setSelection(const <NodeId>{
           'locked-protected',
           'rigid-protected',
         });
-        controller.rotateSelection(clockwise: true, timestampMs: 30);
-        controller.flipSelectionHorizontal(timestampMs: 31);
-        controller.flipSelectionVertical(timestampMs: 32);
-        controller.deleteSelection(timestampMs: 33);
+        controller.selection.rotateSelection(clockwise: true, timestampMs: 30);
+        controller.selection.flipSelectionHorizontal(timestampMs: 31);
+        controller.selection.flipSelectionVertical(timestampMs: 32);
+        controller.selection.deleteSelection(timestampMs: 33);
 
         await pumpEventQueue();
 
@@ -1127,4 +1223,13 @@ void main() {
       },
     );
   });
+}
+
+class _SnapshotOverrideController extends SceneController {
+  _SnapshotOverrideController({required super.initialSnapshot});
+
+  SceneSnapshot? snapshotOverride;
+
+  @override
+  SceneSnapshot get snapshot => snapshotOverride ?? super.snapshot;
 }

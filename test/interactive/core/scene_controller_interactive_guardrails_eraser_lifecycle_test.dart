@@ -8,10 +8,10 @@ import 'package:iwb_canvas_engine/src/core/scene.dart';
 import '../test_support/interactive_controller_fixtures.dart';
 
 void main() {
-  group('SceneControllerInteractive unit', () {
+  group('SceneController unit', () {
     group('interactive hardening: eraser lifecycle', () {
       test('long eraser gesture does not throw', () {
-        final controller = SceneControllerInteractive(
+        final controller = SceneController(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
               ContentLayerSnapshot(id: 'layer-auto-0'),
@@ -21,11 +21,11 @@ void main() {
         );
         addTearDown(controller.dispose);
 
-        controller.setMode(CanvasMode.draw);
-        controller.setDrawTool(DrawTool.eraser);
+        controller.interaction.setMode(CanvasMode.draw);
+        controller.interaction.setDrawTool(DrawTool.eraser);
 
         expect(() {
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: const Offset(0, 0),
@@ -34,7 +34,7 @@ void main() {
             ),
           );
           for (var i = 1; i <= 20000; i++) {
-            controller.handlePointer(
+            controller.interaction.handlePointer(
               sampleInput(
                 pointerId: 1,
                 position: Offset(i.toDouble(), 0),
@@ -43,7 +43,7 @@ void main() {
               ),
             );
           }
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: const Offset(20000, 0),
@@ -83,15 +83,15 @@ void main() {
         );
         addTearDown(controller.dispose);
 
-        controller.setMode(CanvasMode.draw);
-        controller.setDrawTool(DrawTool.eraser);
-        controller.eraserThickness = 24;
+        controller.interaction.setMode(CanvasMode.draw);
+        controller.interaction.setDrawTool(DrawTool.eraser);
+        controller.interaction.eraserThickness = 24;
 
         final actions = <ActionCommitted>[];
         final sub = controller.actions.listen(actions.add);
         addTearDown(sub.cancel);
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(20, 50),
@@ -100,7 +100,7 @@ void main() {
           ),
         );
         for (var i = 21; i <= 9000; i++) {
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: Offset(i.toDouble(), 50),
@@ -109,7 +109,7 @@ void main() {
             ),
           );
         }
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(9000, 50),
@@ -133,7 +133,7 @@ void main() {
 
       test('eraser active buffer is capped during long move', () {
         // INV:INV-ENG-INTERACTIVE-GESTURE-BUFFER-SOFT-CAP
-        final controller = SceneControllerInteractive(
+        final controller = SceneController(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
               ContentLayerSnapshot(id: 'layer-auto-2'),
@@ -143,10 +143,10 @@ void main() {
         );
         addTearDown(controller.dispose);
 
-        controller.setMode(CanvasMode.draw);
-        controller.setDrawTool(DrawTool.eraser);
+        controller.interaction.setMode(CanvasMode.draw);
+        controller.interaction.setDrawTool(DrawTool.eraser);
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(0, 0),
@@ -155,7 +155,7 @@ void main() {
           ),
         );
         for (var i = 1; i <= 20000; i++) {
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: Offset(i.toDouble(), 0),
@@ -202,15 +202,15 @@ void main() {
           );
           addTearDown(controller.dispose);
 
-          controller.setMode(CanvasMode.draw);
-          controller.setDrawTool(DrawTool.eraser);
-          controller.eraserThickness = 24;
+          controller.interaction.setMode(CanvasMode.draw);
+          controller.interaction.setDrawTool(DrawTool.eraser);
+          controller.interaction.eraserThickness = 24;
 
           final actions = <ActionCommitted>[];
           final sub = controller.actions.listen(actions.add);
           addTearDown(sub.cancel);
 
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: const Offset(20, 50),
@@ -218,7 +218,7 @@ void main() {
               phase: CanvasPointerPhase.down,
             ),
           );
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: const Offset(60, 50),
@@ -226,12 +226,12 @@ void main() {
               phase: CanvasPointerPhase.move,
             ),
           );
-          controller.setCameraOffset(const Offset(5, 0));
+          controller.scene.setCameraOffset(const Offset(5, 0));
 
           expect(activeEraserPointsLength(controller), 0);
 
           expect(
-            () => controller.handlePointer(
+            () => controller.interaction.handlePointer(
               const CanvasPointerInput(
                 pointerId: 1,
                 position: Offset(double.nan, 50),
@@ -243,7 +243,7 @@ void main() {
             returnsNormally,
           );
 
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 2,
               position: const Offset(20, 50),
@@ -251,7 +251,7 @@ void main() {
               phase: CanvasPointerPhase.down,
             ),
           );
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 2,
               position: const Offset(60, 50),
@@ -259,7 +259,7 @@ void main() {
               phase: CanvasPointerPhase.move,
             ),
           );
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 2,
               position: const Offset(60, 50),

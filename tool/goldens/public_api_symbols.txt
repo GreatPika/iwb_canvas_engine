@@ -46,7 +46,9 @@ RectNodeSnapshot
 RectNodeSpec
 SceneBuilder
 SceneController
-SceneControllerInteractive
+SceneControllerInteraction
+SceneControllerScene
+SceneControllerSelection
 SceneDataErrorCode
 SceneDataException
 ScenePaletteSnapshot

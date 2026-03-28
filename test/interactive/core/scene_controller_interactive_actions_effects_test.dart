@@ -8,7 +8,7 @@ import 'package:iwb_canvas_engine/src/core/scene.dart';
 import '../test_support/interactive_controller_fixtures.dart';
 
 void main() {
-  group('SceneControllerInteractive unit', () {
+  group('SceneController unit', () {
     test(
       'transform/delete/clear/notify scene APIs emit expected effects',
       () async {
@@ -41,18 +41,18 @@ void main() {
         controller.addListener(() {
           notifications = notifications + 1;
         });
-        controller.notifySceneChanged();
+        controller.scene.notifySceneChanged();
         await pumpEventQueue();
         expect(notifications, 1);
 
-        controller.setSelection(const <NodeId>{'r', 'locked'});
-        controller.rotateSelection(clockwise: true, timestampMs: 100);
-        controller.flipSelectionHorizontal(timestampMs: 101);
-        controller.flipSelectionVertical(timestampMs: 102);
-        controller.deleteSelection(timestampMs: 103);
+        controller.selection.setSelection(const <NodeId>{'r', 'locked'});
+        controller.selection.rotateSelection(clockwise: true, timestampMs: 100);
+        controller.selection.flipSelectionHorizontal(timestampMs: 101);
+        controller.selection.flipSelectionVertical(timestampMs: 102);
+        controller.selection.deleteSelection(timestampMs: 103);
         expect(nodeById(controller.snapshot, 'locked').id, 'locked');
 
-        controller.clearScene(timestampMs: 104);
+        controller.scene.clearScene(timestampMs: 104);
         final remaining = <NodeId>{
           for (final layer in controller.snapshot.layers)
             for (final node in layer.nodes) node.id,
@@ -76,7 +76,7 @@ void main() {
       final sub = controller.actions.listen(actions.add);
       addTearDown(sub.cancel);
 
-      controller.clearScene(timestampMs: 205);
+      controller.scene.clearScene(timestampMs: 205);
       await pumpEventQueue();
 
       final clearActions = actions.where((a) => a.type == ActionType.clear);
@@ -94,7 +94,7 @@ void main() {
       final sub = controller.actions.listen(actions.add);
       addTearDown(sub.cancel);
 
-      controller.clearScene(timestampMs: 206);
+      controller.scene.clearScene(timestampMs: 206);
       await pumpEventQueue();
 
       expect(actions.where((a) => a.type == ActionType.clear), isEmpty);
@@ -117,8 +117,8 @@ void main() {
       final sub = controller.actions.listen(actions.add);
       addTearDown(sub.cancel);
 
-      controller.setSelection(const <NodeId>{'node'});
-      controller.handlePointer(
+      controller.selection.setSelection(const <NodeId>{'node'});
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(60, 60),
@@ -126,7 +126,7 @@ void main() {
           phase: CanvasPointerPhase.down,
         ),
       );
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(90, 60),
@@ -134,7 +134,7 @@ void main() {
           phase: CanvasPointerPhase.move,
         ),
       );
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(100, 60),
@@ -181,8 +181,8 @@ void main() {
         final sub = controller.actions.listen(actions.add);
         addTearDown(sub.cancel);
 
-        controller.setSelection(const <NodeId>{'node'});
-        controller.handlePointer(
+        controller.selection.setSelection(const <NodeId>{'node'});
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(60, 60),
@@ -190,7 +190,7 @@ void main() {
             phase: CanvasPointerPhase.down,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(90, 60),
@@ -198,7 +198,7 @@ void main() {
             phase: CanvasPointerPhase.move,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(100, 60),
@@ -245,8 +245,8 @@ void main() {
       final sub = controller.actions.listen(actions.add);
       addTearDown(sub.cancel);
 
-      controller.setSelection(const <NodeId>{'node'});
-      controller.handlePointer(
+      controller.selection.setSelection(const <NodeId>{'node'});
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(60, 60),
@@ -254,7 +254,7 @@ void main() {
           phase: CanvasPointerPhase.down,
         ),
       );
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(90, 60),
@@ -262,7 +262,7 @@ void main() {
           phase: CanvasPointerPhase.move,
         ),
       );
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(100, 60),
@@ -286,7 +286,7 @@ void main() {
         // INV:INV-ENG-INTERACTIVE-RESOLVER-PURITY
         final rect = RectNode(id: 'node', size: const Size(30, 20))
           ..position = const Offset(60, 60);
-        late SceneControllerInteractive controller;
+        late SceneController controller;
         controller = controllerFromScene(
           Scene(
             layers: <ContentLayer>[
@@ -306,7 +306,7 @@ void main() {
                 expect(snapshot.layers, hasLength(2));
                 expect(movedNodes.map((node) => node.id), <String>['node']);
                 expect(proposedDelta, const Offset(30, 0));
-                controller.setMode(CanvasMode.draw);
+                controller.interaction.setMode(CanvasMode.draw);
                 return proposedDelta;
               },
         );
@@ -316,8 +316,8 @@ void main() {
         final sub = controller.actions.listen(actions.add);
         addTearDown(sub.cancel);
 
-        controller.setSelection(const <NodeId>{'node'});
-        controller.handlePointer(
+        controller.selection.setSelection(const <NodeId>{'node'});
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(60, 60),
@@ -325,7 +325,7 @@ void main() {
             phase: CanvasPointerPhase.down,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(90, 60),
@@ -335,7 +335,7 @@ void main() {
         );
 
         expect(
-          () => controller.handlePointer(
+          () => controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: const Offset(100, 60),
@@ -349,14 +349,14 @@ void main() {
         await pumpEventQueue();
         final moved = nodeById(controller.snapshot, 'node') as RectNodeSnapshot;
         expect(moved.transform.tx, closeTo(60, 1e-6));
-        expect(controller.mode, CanvasMode.move);
+        expect(controller.interaction.mode, CanvasMode.move);
         expect(
           actions.where((event) => event.type == ActionType.transform),
           isEmpty,
         );
-        expect(controller.selectionRect, isNull);
+        expect(controller.interaction.selectionRect, isNull);
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 2,
             position: const Offset(200, 200),
@@ -364,7 +364,7 @@ void main() {
             phase: CanvasPointerPhase.down,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 2,
             position: const Offset(230, 230),
@@ -373,7 +373,7 @@ void main() {
           ),
         );
 
-        expect(controller.selectionRect, isNotNull);
+        expect(controller.interaction.selectionRect, isNotNull);
       },
     );
 
@@ -387,7 +387,7 @@ void main() {
           size: const Size(80, 24),
           color: const Color(0xFF000000),
         )..position = const Offset(60, 60);
-        late SceneControllerInteractive controller;
+        late SceneController controller;
         controller = controllerFromScene(
           Scene(
             layers: <ContentLayer>[
@@ -407,7 +407,7 @@ void main() {
                 expect(snapshot.layers, hasLength(2));
                 expect(movedNodes.map((node) => node.id), <String>['node']);
                 expect(proposedDelta, const Offset(30, 0));
-                controller.handleDoubleTap(
+                controller.interaction.handleDoubleTap(
                   position: const Offset(60, 60),
                   timestampMs: 99,
                 );
@@ -423,8 +423,8 @@ void main() {
         final editSub = controller.editTextRequests.listen(editRequests.add);
         addTearDown(editSub.cancel);
 
-        controller.setSelection(const <NodeId>{'node'});
-        controller.handlePointer(
+        controller.selection.setSelection(const <NodeId>{'node'});
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(60, 60),
@@ -432,7 +432,7 @@ void main() {
             phase: CanvasPointerPhase.down,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(90, 60),
@@ -442,7 +442,7 @@ void main() {
         );
 
         expect(
-          () => controller.handlePointer(
+          () => controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: const Offset(100, 60),
@@ -471,9 +471,9 @@ void main() {
           isEmpty,
         );
         expect(editRequests, isEmpty);
-        expect(controller.selectionRect, isNull);
+        expect(controller.interaction.selectionRect, isNull);
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 2,
             position: const Offset(200, 200),
@@ -481,7 +481,7 @@ void main() {
             phase: CanvasPointerPhase.down,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 2,
             position: const Offset(230, 230),
@@ -490,7 +490,7 @@ void main() {
           ),
         );
 
-        expect(controller.selectionRect, isNotNull);
+        expect(controller.interaction.selectionRect, isNotNull);
       },
     );
 
@@ -500,7 +500,7 @@ void main() {
         // INV:INV-ENG-INTERACTIVE-RESOLVER-PURITY
         final rect = RectNode(id: 'node', size: const Size(30, 20))
           ..position = const Offset(60, 60);
-        late SceneControllerInteractive controller;
+        late SceneController controller;
         controller = controllerFromScene(
           Scene(
             layers: <ContentLayer>[
@@ -520,7 +520,7 @@ void main() {
                 expect(snapshot.layers, hasLength(2));
                 expect(movedNodes.map((node) => node.id), <String>['node']);
                 expect(proposedDelta, const Offset(30, 0));
-                controller.handlePointer(
+                controller.interaction.handlePointer(
                   sampleInput(
                     pointerId: 99,
                     position: const Offset(500, 500),
@@ -537,8 +537,8 @@ void main() {
         final sub = controller.actions.listen(actions.add);
         addTearDown(sub.cancel);
 
-        controller.setSelection(const <NodeId>{'node'});
-        controller.handlePointer(
+        controller.selection.setSelection(const <NodeId>{'node'});
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(60, 60),
@@ -546,7 +546,7 @@ void main() {
             phase: CanvasPointerPhase.down,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(90, 60),
@@ -556,7 +556,7 @@ void main() {
         );
 
         expect(
-          () => controller.handlePointer(
+          () => controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: const Offset(100, 60),
@@ -584,9 +584,9 @@ void main() {
           actions.where((event) => event.type == ActionType.transform),
           isEmpty,
         );
-        expect(controller.selectionRect, isNull);
+        expect(controller.interaction.selectionRect, isNull);
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 2,
             position: const Offset(200, 200),
@@ -594,7 +594,7 @@ void main() {
             phase: CanvasPointerPhase.down,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 2,
             position: const Offset(230, 230),
@@ -603,7 +603,7 @@ void main() {
           ),
         );
 
-        expect(controller.selectionRect, isNotNull);
+        expect(controller.interaction.selectionRect, isNotNull);
       },
     );
 
@@ -612,7 +612,7 @@ void main() {
       () {
         final rect = RectNode(id: 'node', size: const Size(30, 20))
           ..position = const Offset(60, 60);
-        late SceneControllerInteractive controller;
+        late SceneController controller;
         controller = controllerFromScene(
           Scene(
             layers: <ContentLayer>[
@@ -639,8 +639,8 @@ void main() {
         );
         addTearDown(controller.dispose);
 
-        controller.setSelection(const <NodeId>{'node'});
-        controller.handlePointer(
+        controller.selection.setSelection(const <NodeId>{'node'});
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(60, 60),
@@ -648,7 +648,7 @@ void main() {
             phase: CanvasPointerPhase.down,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(90, 60),
@@ -658,7 +658,7 @@ void main() {
         );
 
         expect(
-          () => controller.handlePointer(
+          () => controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: const Offset(100, 60),
@@ -669,7 +669,7 @@ void main() {
           throwsStateError,
         );
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 2,
             position: const Offset(200, 200),
@@ -677,7 +677,7 @@ void main() {
             phase: CanvasPointerPhase.down,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 2,
             position: const Offset(230, 230),
@@ -686,7 +686,7 @@ void main() {
           ),
         );
 
-        expect(controller.selectionRect, isNotNull);
+        expect(controller.interaction.selectionRect, isNotNull);
       },
     );
 
@@ -714,8 +714,8 @@ void main() {
       );
       addTearDown(controller.dispose);
 
-      controller.setSelection(const <NodeId>{'node'});
-      controller.handlePointer(
+      controller.selection.setSelection(const <NodeId>{'node'});
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(60, 60),
@@ -723,7 +723,7 @@ void main() {
           phase: CanvasPointerPhase.down,
         ),
       );
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(90, 60),
@@ -733,7 +733,7 @@ void main() {
       );
 
       expect(
-        () => controller.handlePointer(
+        () => controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(100, 60),
@@ -744,7 +744,7 @@ void main() {
         throwsArgumentError,
       );
 
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 2,
           position: const Offset(200, 200),
@@ -752,7 +752,7 @@ void main() {
           phase: CanvasPointerPhase.down,
         ),
       );
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 2,
           position: const Offset(230, 230),
@@ -761,7 +761,7 @@ void main() {
         ),
       );
 
-      expect(controller.selectionRect, isNotNull);
+      expect(controller.interaction.selectionRect, isNotNull);
     });
 
     test('rotateSelection emits transform for multi-node selection', () async {
@@ -783,8 +783,8 @@ void main() {
       final sub = controller.actions.listen(actions.add);
       addTearDown(sub.cancel);
 
-      controller.setSelection(const <NodeId>{'a', 'b'});
-      controller.rotateSelection(clockwise: true, timestampMs: 200);
+      controller.selection.setSelection(const <NodeId>{'a', 'b'});
+      controller.selection.rotateSelection(clockwise: true, timestampMs: 200);
 
       await pumpEventQueue();
       final transformActions = actions
@@ -826,13 +826,13 @@ void main() {
         final sub = controller.actions.listen(actions.add);
         addTearDown(sub.cancel);
 
-        controller.setSelection(const <NodeId>{
+        controller.selection.setSelection(const <NodeId>{
           'movable',
           'locked',
           'protected',
         });
-        controller.rotateSelection(clockwise: true, timestampMs: 300);
-        controller.deleteSelection(timestampMs: 301);
+        controller.selection.rotateSelection(clockwise: true, timestampMs: 300);
+        controller.selection.deleteSelection(timestampMs: 301);
 
         await pumpEventQueue();
 
@@ -892,8 +892,8 @@ void main() {
         final sub = controller.actions.listen(actions.add);
         addTearDown(sub.cancel);
 
-        controller.setSelection(const <NodeId>{'movable', 'locked'});
-        controller.handlePointer(
+        controller.selection.setSelection(const <NodeId>{'movable', 'locked'});
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(40, 40),
@@ -901,7 +901,7 @@ void main() {
             phase: CanvasPointerPhase.down,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(80, 40),
@@ -909,7 +909,7 @@ void main() {
             phase: CanvasPointerPhase.move,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(80, 40),
@@ -966,13 +966,16 @@ void main() {
         final sub = controller.actions.listen(actions.add);
         addTearDown(sub.cancel);
 
-        controller.setSelection(const <NodeId>{'movable', 'non-selectable'});
+        controller.selection.setSelection(const <NodeId>{
+          'movable',
+          'non-selectable',
+        });
         expect(controller.selectedNodeIds, const <NodeId>{
           'movable',
           'non-selectable',
         });
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(40, 40),
@@ -980,7 +983,7 @@ void main() {
             phase: CanvasPointerPhase.down,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(80, 40),
@@ -988,7 +991,7 @@ void main() {
             phase: CanvasPointerPhase.move,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(80, 40),

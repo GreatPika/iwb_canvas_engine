@@ -6,7 +6,7 @@ import 'package:iwb_canvas_engine/src/core/grid_safety_limits.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart' hide NodeId;
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart';
-import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_interactive_internal_access.dart';
+import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_internal_access.dart';
 import 'package:iwb_canvas_engine/src/model/document.dart';
 
 double get minGridCellSize => kMinGridCellSize;
@@ -38,7 +38,7 @@ CanvasPointerInput sampleInput({
   );
 }
 
-SceneControllerInteractive controllerFromScene(
+SceneController controllerFromScene(
   Scene scene, {
   PointerInputSettings? pointerSettings,
   double? dragStartSlop,
@@ -46,7 +46,7 @@ SceneControllerInteractive controllerFromScene(
   MoveCommitDeltaResolver? moveCommitDeltaResolver,
   String? textFontFamilyByDefault,
 }) {
-  return SceneControllerInteractive(
+  return SceneController(
     initialSnapshot: txnSceneToSnapshot(scene),
     pointerSettings: pointerSettings,
     dragStartSlop: dragStartSlop,
@@ -78,8 +78,7 @@ StrokeNode horizontalStroke({
   );
 }
 
-typedef InteractiveMutatingCall =
-    void Function(SceneControllerInteractive controller);
+typedef InteractiveMutatingCall = void Function(SceneController controller);
 
 class InteractiveControllerStableState {
   const InteractiveControllerStableState({
@@ -127,67 +126,73 @@ class DisposeMatrixCase {
 }
 
 InteractiveControllerStableState captureStableState(
-  SceneControllerInteractive controller,
+  SceneController controller,
 ) {
   return InteractiveControllerStableState(
     snapshot: controller.snapshot,
     selection: controller.selectedNodeIds,
-    mode: controller.mode,
-    drawTool: controller.drawTool,
-    drawColor: controller.drawColor,
-    penThickness: controller.penThickness,
-    highlighterThickness: controller.highlighterThickness,
-    lineThickness: controller.lineThickness,
-    eraserThickness: controller.eraserThickness,
-    highlighterOpacity: controller.highlighterOpacity,
-    dragStartSlop: controller.dragStartSlop,
-    pointerSettings: controller.pointerSettings,
-    selectionRect: controller.selectionRect,
-    pendingLineStart: controller.pendingLineStart,
-    pendingLineTimestampMs: controller.pendingLineTimestampMs,
-    hasPendingLineStart: controller.hasPendingLineStart,
+    mode: controller.interaction.mode,
+    drawTool: controller.interaction.drawTool,
+    drawColor: controller.interaction.drawColor,
+    penThickness: controller.interaction.penThickness,
+    highlighterThickness: controller.interaction.highlighterThickness,
+    lineThickness: controller.interaction.lineThickness,
+    eraserThickness: controller.interaction.eraserThickness,
+    highlighterOpacity: controller.interaction.highlighterOpacity,
+    dragStartSlop: controller.interaction.dragStartSlop,
+    pointerSettings: controller.interaction.pointerSettings,
+    selectionRect: controller.interaction.selectionRect,
+    pendingLineStart: controller.interaction.pendingLineStart,
+    pendingLineTimestampMs: controller.interaction.pendingLineTimestampMs,
+    hasPendingLineStart: controller.interaction.hasPendingLineStart,
   );
 }
 
 void expectStableStateUnchanged(
-  SceneControllerInteractive controller,
+  SceneController controller,
   InteractiveControllerStableState before,
 ) {
   expect(controller.snapshot, same(before.snapshot));
   expect(controller.selectedNodeIds, before.selection);
-  expect(controller.mode, before.mode);
-  expect(controller.drawTool, before.drawTool);
-  expect(controller.drawColor, before.drawColor);
-  expect(controller.penThickness, before.penThickness);
-  expect(controller.highlighterThickness, before.highlighterThickness);
-  expect(controller.lineThickness, before.lineThickness);
-  expect(controller.eraserThickness, before.eraserThickness);
-  expect(controller.highlighterOpacity, before.highlighterOpacity);
-  expect(controller.dragStartSlop, before.dragStartSlop);
-  expect(controller.pointerSettings, before.pointerSettings);
-  expect(controller.selectionRect, before.selectionRect);
-  expect(controller.pendingLineStart, before.pendingLineStart);
-  expect(controller.pendingLineTimestampMs, before.pendingLineTimestampMs);
-  expect(controller.hasPendingLineStart, before.hasPendingLineStart);
-}
-
-void setBeforePointerDispatchHook(
-  SceneControllerInteractive controller,
-  VoidCallback? hook,
-) {
-  sceneControllerInteractiveInternalSetBeforePointerDispatchHook(
-    controller,
-    hook,
+  expect(controller.interaction.mode, before.mode);
+  expect(controller.interaction.drawTool, before.drawTool);
+  expect(controller.interaction.drawColor, before.drawColor);
+  expect(controller.interaction.penThickness, before.penThickness);
+  expect(
+    controller.interaction.highlighterThickness,
+    before.highlighterThickness,
+  );
+  expect(controller.interaction.lineThickness, before.lineThickness);
+  expect(controller.interaction.eraserThickness, before.eraserThickness);
+  expect(controller.interaction.highlighterOpacity, before.highlighterOpacity);
+  expect(controller.interaction.dragStartSlop, before.dragStartSlop);
+  expect(controller.interaction.pointerSettings, before.pointerSettings);
+  expect(controller.interaction.selectionRect, before.selectionRect);
+  expect(controller.interaction.pendingLineStart, before.pendingLineStart);
+  expect(
+    controller.interaction.pendingLineTimestampMs,
+    before.pendingLineTimestampMs,
+  );
+  expect(
+    controller.interaction.hasPendingLineStart,
+    before.hasPendingLineStart,
   );
 }
 
+void setBeforePointerDispatchHook(
+  SceneController controller,
+  VoidCallback? hook,
+) {
+  sceneControllerInternalSetBeforePointerDispatchHook(controller, hook);
+}
+
 Offset runMoveCommitDeltaResolverForTest(
-  SceneControllerInteractive controller, {
+  SceneController controller, {
   required SceneSnapshot snapshot,
   required List<NodeSnapshot> movedNodes,
   required Offset proposedDelta,
 }) {
-  return sceneControllerInteractiveInternalRunMoveCommitDeltaResolverForTest(
+  return sceneControllerInternalRunMoveCommitDeltaResolverForTest(
     controller,
     snapshot: snapshot,
     movedNodes: movedNodes,
@@ -196,12 +201,12 @@ Offset runMoveCommitDeltaResolverForTest(
 }
 
 void enforceGestureBufferSoftLimitForTest(
-  SceneControllerInteractive controller, {
+  SceneController controller, {
   required List<Offset> points,
   required int softLimit,
   required int trimTo,
 }) {
-  sceneControllerInteractiveInternalEnforceGestureBufferSoftLimitForTest(
+  sceneControllerInternalEnforceGestureBufferSoftLimitForTest(
     controller,
     points: points,
     softLimit: softLimit,
@@ -209,16 +214,14 @@ void enforceGestureBufferSoftLimitForTest(
   );
 }
 
-int activeEraserPointsLength(SceneControllerInteractive controller) {
-  return sceneControllerInteractiveInternalActiveEraserPointsLength(controller);
+int activeEraserPointsLength(SceneController controller) {
+  return sceneControllerInternalActiveEraserPointsLength(controller);
 }
 
-int eraserSpatialQueryCount(SceneControllerInteractive controller) {
-  return sceneControllerInteractiveInternalEraserSpatialQueryCount(controller);
+int eraserSpatialQueryCount(SceneController controller) {
+  return sceneControllerInternalEraserSpatialQueryCount(controller);
 }
 
-int eraserPreciseSegmentCheckCount(SceneControllerInteractive controller) {
-  return sceneControllerInteractiveInternalEraserPreciseSegmentCheckCount(
-    controller,
-  );
+int eraserPreciseSegmentCheckCount(SceneController controller) {
+  return sceneControllerInternalEraserPreciseSegmentCheckCount(controller);
 }

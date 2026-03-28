@@ -45,14 +45,14 @@ All notable changes to `iwb_canvas_engine` are documented here.
   a camera-phase-independent visible-line upper bound, so near-threshold pans
   no longer switch stride modes unnecessarily and still stay within
   `kMaxGridLinesPerAxis`.
-- `SceneControllerInteractive.handlePointer(...)` now owns canonical terminal
+- `SceneController.interaction.handlePointer(...)` now owns canonical terminal
   pointer normalization for both direct and `SceneView`-routed input:
   non-finite `down`/`move` are still dropped, while non-finite terminal
   `up`/`cancel` preserve their original phase only when the same `pointerId`
   already has a cached finite position; otherwise they stay a no-op. Explicit
   `dragStartSlop` now uses the same finite `>= 0` validation rule in both the
   constructor and `setDragStartSlop(...)`.
-- `SceneControllerInteractive` now owns one internal active-gesture machine:
+- `SceneController` now owns one internal active-gesture machine:
   it captures baseline `dragStartSlop` on `down`, ignores parallel
   non-owning `pointerId`s until terminal release, and force-resets the active
   gesture only when `replaceScene(...)`, `setCameraOffset(...)`, mode/tool
@@ -67,7 +67,7 @@ All notable changes to `iwb_canvas_engine` are documented here.
   can still become selected on pointer `down`, but they no longer start move
   preview, and pointer `cancel` restores the gesture baseline selection after
   move-local selection changes.
-- `SceneControllerInteractive` now rejects external `setSelection(...)`,
+- `SceneController` now rejects external `setSelection(...)`,
   `toggleSelection(...)`, `clearSelection()`, and `selectAll(...)` while an
   active move/draw gesture is in progress, so selection lifecycle has one
   controller-owned gesture owner between `down` and terminal `up`/`cancel`.
@@ -225,7 +225,7 @@ All notable changes to `iwb_canvas_engine` are documented here.
 - Public interactive input moved to `CanvasPointerInput` and
   `handleDoubleTap(...)`.
 - Legacy public interactive and view types were removed in favor of
-  `SceneControllerInteractive` / `SceneViewInteractive` and their aliases.
+  `SceneController` / `SceneViewInteractive` and their aliases.
 - `SceneWriteTxn` selection mutators now expose explicit changed/no-op semantics.
 
 ### Changed

@@ -30,7 +30,7 @@ void _registerMutableLeakSurfaceTests() {
 Scene debugLeakedScene() => throw UnimplementedError();
 
 class SceneViewInteractive {
-  SceneControllerInteractive get controller => throw UnimplementedError();
+  SceneController get controller => throw UnimplementedError();
 }
 
 typedef SceneView = SceneViewInteractive;
@@ -110,7 +110,7 @@ void _registerMutableRuntimeLeakTests() {
       writeCanonicalPublicExportScaffold(sandbox);
       writeSandboxFile(sandbox, 'lib/src/contract/snapshot.dart', '''
 abstract class Foo {
-  SceneControllerInteractive get controller;
+  SceneController get controller;
 }
 ''');
 
@@ -135,11 +135,8 @@ void _registerInteractiveMutableLeakTests() {
     try {
       writeMinimalControllerStore(sandbox);
       writeCanonicalPublicExportScaffold(sandbox);
-      writeSandboxFile(
-        sandbox,
-        'lib/src/interactive/scene_controller_interactive.dart',
-        '''
-class SceneControllerInteractive {
+      writeSandboxFile(sandbox, 'lib/src/interactive/scene_controller.dart', '''
+class SceneController {
   Scene get snapshot => throw UnimplementedError();
 
   void dispose() {
@@ -152,9 +149,8 @@ class SceneControllerInteractive {
   }) {}
 }
 
-typedef SceneController = SceneControllerInteractive;
-''',
-      );
+typedef SceneController = SceneController;
+''');
 
       final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
       expect(result.exitCode, isNonZero);

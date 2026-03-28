@@ -4,7 +4,7 @@ import 'package:flutter/widgets.dart';
 
 import '../contract/canvas_pointer_input.dart';
 import '../core/pointer_input.dart';
-import '../interactive/scene_controller_interactive.dart';
+import '../interactive/scene_controller.dart';
 import 'scene_view_pointer_router.dart';
 
 void _discardPointerSignal(PointerSignal _) {}
@@ -144,7 +144,7 @@ class _PendingTapFlushScheduler {
 
 class SceneViewInteractivePointerHost {
   SceneViewInteractivePointerHost({
-    required SceneControllerInteractive controller,
+    required SceneController controller,
     required bool Function() isMounted,
     required void Function() onControllerChanged,
   }) : _controller = controller,
@@ -157,7 +157,7 @@ class SceneViewInteractivePointerHost {
     _subscribeToController(controller);
   }
 
-  SceneControllerInteractive _controller;
+  SceneController _controller;
   final bool Function() _isMounted;
   final void Function() _onControllerChanged;
 
@@ -169,7 +169,7 @@ class SceneViewInteractivePointerHost {
   int? get debugPendingTapFlushTimestampMs =>
       _runtime.debugPendingTapFlushTimestampMs;
 
-  void updateController(SceneControllerInteractive controller) {
+  void updateController(SceneController controller) {
     if (identical(_controller, controller)) {
       return;
     }
@@ -189,7 +189,7 @@ class SceneViewInteractivePointerHost {
   }
 
   void _handleControllerChanged({
-    required SceneControllerInteractive controller,
+    required SceneController controller,
     required int ownerGeneration,
   }) {
     if (!_isMounted() ||
@@ -201,7 +201,7 @@ class SceneViewInteractivePointerHost {
     _onControllerChanged();
   }
 
-  void _subscribeToController(SceneControllerInteractive controller) {
+  void _subscribeToController(SceneController controller) {
     _controllerListenerGeneration++;
     final ownerGeneration = _controllerListenerGeneration;
     _controllerListener = () => _handleControllerChanged(
@@ -211,25 +211,25 @@ class SceneViewInteractivePointerHost {
     controller.addListener(_controllerListener);
   }
 
-  void _unsubscribeFromController(SceneControllerInteractive controller) {
+  void _unsubscribeFromController(SceneController controller) {
     controller.removeListener(_controllerListener);
   }
 }
 
 class _SceneViewInteractivePointerRuntime {
   _SceneViewInteractivePointerRuntime({
-    required SceneControllerInteractive controller,
+    required SceneController controller,
     required bool Function() isMounted,
   }) : _controller = controller,
        _isMounted = isMounted,
-       _appliedPointerSettings = controller.pointerSettings,
+       _appliedPointerSettings = controller.interaction.pointerSettings,
        _pointerTracker = PointerInputTracker(
-         settings: controller.pointerSettings,
+         settings: controller.interaction.pointerSettings,
        ) {
     _pointerTrackerGeneration = 1;
   }
 
-  SceneControllerInteractive _controller;
+  SceneController _controller;
   final bool Function() _isMounted;
 
   final SceneViewPointerRouter _pointerRouter = SceneViewPointerRouter();
@@ -245,12 +245,12 @@ class _SceneViewInteractivePointerRuntime {
   int? get debugPendingTapFlushTimestampMs =>
       _pendingTapFlushScheduler.pendingTapFlushTimestampMs;
 
-  void updateController(SceneControllerInteractive controller) {
+  void updateController(SceneController controller) {
     if (identical(_controller, controller)) {
       return;
     }
     _controller = controller;
-    _resetPointerTracking(settings: controller.pointerSettings);
+    _resetPointerTracking(settings: controller.interaction.pointerSettings);
   }
 
   void dispose() {
@@ -280,7 +280,9 @@ class _SceneViewInteractivePointerRuntime {
       event: event,
       phase: phase,
     );
-    _controller.handlePointer(_canvasPointerInputFromSample(sample));
+    _controller.interaction.handlePointer(
+      _canvasPointerInputFromSample(sample),
+    );
     _emitTrackedSignals(sample);
     _syncPendingFlushTimer(referenceTimestampMs: sample.timestampMs);
     if (!_isTerminalPhase(phase)) {
@@ -292,7 +294,7 @@ class _SceneViewInteractivePointerRuntime {
   }
 
   void handleControllerChanged() {
-    _adoptPointerSettings(_controller.pointerSettings);
+    _adoptPointerSettings(_controller.interaction.pointerSettings);
   }
 
   void _emitTrackedSignals(PointerSample sample) {
@@ -306,7 +308,7 @@ class _SceneViewInteractivePointerRuntime {
       if (signal.type != PointerSignalType.doubleTap) {
         continue;
       }
-      _controller.handleDoubleTap(
+      _controller.interaction.handleDoubleTap(
         position: signal.position,
         timestampMs: signal.timestampMs,
       );
@@ -390,7 +392,7 @@ class _SceneViewInteractivePointerRuntime {
       return;
     }
 
-    _controller.handlePointer(
+    _controller.interaction.handlePointer(
       _canvasPointerInputFromSample(
         _pointerSampleFromEvent(
           pointerId: pointerId,

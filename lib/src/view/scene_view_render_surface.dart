@@ -4,8 +4,8 @@ import 'package:flutter/widgets.dart';
 
 import '../controller/scene_controller.dart';
 import '../contract/scene_render_state.dart';
-import '../interactive/scene_controller_interactive.dart';
-import '../interactive/internal/scene_controller_interactive_internal_access.dart';
+import '../interactive/internal/scene_controller_internal_access.dart';
+import '../interactive/scene_controller.dart';
 import '../render/render_geometry_cache.dart';
 import '../render/scene_painter.dart';
 import '../render/scene_render_caches.dart';
@@ -36,17 +36,15 @@ int Function() _coreControllerEpochReader(SceneControllerCore controller) {
   return () => controller.controllerEpoch;
 }
 
-int Function() _interactiveControllerEpochReader(
-  SceneControllerInteractive controller,
-) {
-  return () => sceneControllerInteractiveInternalEpoch(controller);
+int Function() _interactiveControllerEpochReader(SceneController controller) {
+  return () => sceneControllerInternalEpoch(controller);
 }
 
 NodePreviewOffsetResolver _interactivePreviewOffsetResolver(
-  SceneControllerInteractive controller,
+  SceneController controller,
 ) {
   return (nodeId) =>
-      sceneControllerInteractiveInternalPreviewDeltaForNode(controller, nodeId);
+      sceneControllerInternalPreviewDeltaForNode(controller, nodeId);
 }
 
 class SceneViewRenderSurface extends StatefulWidget {
@@ -82,7 +80,7 @@ class SceneViewRenderSurface extends StatefulWidget {
        _child = child;
 
   SceneViewRenderSurface.interactive({
-    required SceneControllerInteractive controller,
+    required SceneController controller,
     ui.Image? Function(String imageId)? imageResolver,
     Color selectionColor = const Color(0xFF1565C0),
     double selectionStrokeWidth = 1,
@@ -102,7 +100,7 @@ class SceneViewRenderSurface extends StatefulWidget {
        _nodePreviewOffsetResolver = _interactivePreviewOffsetResolver(
          controller,
        ),
-       _selectionRect = controller.selectionRect,
+       _selectionRect = controller.interaction.selectionRect,
        _selectionColor = selectionColor,
        _selectionStrokeWidth = selectionStrokeWidth,
        _gridStrokeWidth = gridStrokeWidth,

@@ -4,10 +4,10 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import '../test_support/interactive_controller_fixtures.dart';
 
 void main() {
-  group('SceneControllerInteractive unit', () {
+  group('SceneController unit', () {
     test('line preview does not mutate scene until pointer up commit', () {
       // INV:INV-ENG-INTERACTIVE-PREVIEW-COMMIT-ON-UP
-      final controller = SceneControllerInteractive(
+      final controller = SceneController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(id: 'layer-auto-0'),
@@ -18,11 +18,11 @@ void main() {
       );
       addTearDown(controller.dispose);
 
-      controller.setMode(CanvasMode.draw);
-      controller.setDrawTool(DrawTool.line);
+      controller.interaction.setMode(CanvasMode.draw);
+      controller.interaction.setDrawTool(DrawTool.line);
 
       final beforeNodeCount = controller.snapshot.layers[1].nodes.length;
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(10, 10),
@@ -30,7 +30,7 @@ void main() {
           phase: CanvasPointerPhase.down,
         ),
       );
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(30, 10),
@@ -39,10 +39,10 @@ void main() {
         ),
       );
 
-      expect(controller.hasActiveLinePreview, isTrue);
+      expect(controller.interaction.hasActiveLinePreview, isTrue);
       expect(controller.snapshot.layers[1].nodes.length, beforeNodeCount);
 
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(30, 10),
@@ -51,7 +51,7 @@ void main() {
         ),
       );
 
-      expect(controller.hasActiveLinePreview, isFalse);
+      expect(controller.interaction.hasActiveLinePreview, isFalse);
       expect(controller.snapshot.layers[1].nodes.length, beforeNodeCount + 1);
     });
   });

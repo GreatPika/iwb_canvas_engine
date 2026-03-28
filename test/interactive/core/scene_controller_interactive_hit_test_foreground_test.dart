@@ -8,7 +8,7 @@ import 'package:iwb_canvas_engine/src/core/scene.dart';
 import '../test_support/interactive_controller_fixtures.dart';
 
 void main() {
-  group('SceneControllerInteractive unit', () {
+  group('SceneController unit', () {
     test('eraser removes line and stroke nodes on pointer up', () {
       final line = LineNode(
         id: 'line',
@@ -33,11 +33,11 @@ void main() {
       );
       addTearDown(controller.dispose);
 
-      controller.setMode(CanvasMode.draw);
-      controller.setDrawTool(DrawTool.eraser);
-      controller.eraserThickness = 30;
+      controller.interaction.setMode(CanvasMode.draw);
+      controller.interaction.setDrawTool(DrawTool.eraser);
+      controller.interaction.eraserThickness = 30;
 
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(120, 120),
@@ -45,7 +45,7 @@ void main() {
           phase: CanvasPointerPhase.down,
         ),
       );
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(120, 120),
@@ -54,7 +54,7 @@ void main() {
         ),
       );
 
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 2,
           position: const Offset(170, 120),
@@ -62,7 +62,7 @@ void main() {
           phase: CanvasPointerPhase.down,
         ),
       );
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 2,
           position: const Offset(176, 120),
@@ -78,7 +78,7 @@ void main() {
       expect(ids.contains('line'), isFalse);
       expect(ids.contains('stroke'), isFalse);
 
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 3,
           position: const Offset(10, 10),
@@ -86,7 +86,7 @@ void main() {
           phase: CanvasPointerPhase.down,
         ),
       );
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 3,
           position: const Offset(10, 10),
@@ -127,7 +127,7 @@ void main() {
       );
       addTearDown(controller.dispose);
 
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(100, 100),
@@ -135,7 +135,7 @@ void main() {
           phase: CanvasPointerPhase.down,
         ),
       );
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(100, 100),
@@ -145,7 +145,7 @@ void main() {
       );
       expect(controller.selectedNodeIds, const <NodeId>{'fg'});
 
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 2,
           position: const Offset(80, 80),
@@ -153,7 +153,7 @@ void main() {
           phase: CanvasPointerPhase.down,
         ),
       );
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 2,
           position: const Offset(120, 120),
@@ -161,7 +161,7 @@ void main() {
           phase: CanvasPointerPhase.move,
         ),
       );
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 2,
           position: const Offset(120, 120),
@@ -171,10 +171,10 @@ void main() {
       );
       expect(controller.selectedNodeIds, const <NodeId>{'fg'});
 
-      controller.setMode(CanvasMode.draw);
-      controller.setDrawTool(DrawTool.eraser);
-      controller.eraserThickness = 20;
-      controller.handlePointer(
+      controller.interaction.setMode(CanvasMode.draw);
+      controller.interaction.setDrawTool(DrawTool.eraser);
+      controller.interaction.eraserThickness = 20;
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 3,
           position: const Offset(160, 100),
@@ -182,7 +182,7 @@ void main() {
           phase: CanvasPointerPhase.down,
         ),
       );
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 3,
           position: const Offset(160, 100),

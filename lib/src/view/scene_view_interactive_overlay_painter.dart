@@ -2,18 +2,18 @@ import 'package:flutter/widgets.dart';
 
 import '../core/geometry.dart';
 import '../core/numeric_clamp.dart';
-import '../interactive/scene_controller_interactive.dart';
+import '../interactive/scene_controller_interaction.dart';
 
 class SceneViewInteractiveOverlayPainter extends CustomPainter {
-  const SceneViewInteractiveOverlayPainter({required this.controller})
-    : super(repaint: controller);
+  const SceneViewInteractiveOverlayPainter({required this.interaction})
+    : super(repaint: interaction);
 
-  final SceneControllerInteractive controller;
+  final SceneControllerInteraction interaction;
 
   @override
   void paint(Canvas canvas, Size size) {
     final cameraOffset = sanitizeFiniteOffset(
-      controller.snapshot.camera.offset,
+      interaction.snapshot.camera.offset,
     );
     _paintStrokePreview(canvas, cameraOffset);
     _paintLinePreview(canvas, cameraOffset);
@@ -21,27 +21,27 @@ class SceneViewInteractiveOverlayPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant SceneViewInteractiveOverlayPainter oldDelegate) {
-    return oldDelegate.controller != controller;
+    return oldDelegate.interaction != interaction;
   }
 
   void _paintStrokePreview(Canvas canvas, Offset cameraOffset) {
-    if (!controller.hasActiveStrokePreview) {
+    if (!interaction.hasActiveStrokePreview) {
       return;
     }
 
-    final points = controller.activeStrokePreviewPoints;
+    final points = interaction.activeStrokePreviewPoints;
     if (points.isEmpty) {
       return;
     }
 
-    final thickness = controller.activeStrokePreviewThickness;
+    final thickness = interaction.activeStrokePreviewThickness;
     if (!thickness.isFinite || thickness <= 0) {
       return;
     }
 
     final color = _applyOpacity(
-      controller.activeStrokePreviewColor,
-      controller.activeStrokePreviewOpacity,
+      interaction.activeStrokePreviewColor,
+      interaction.activeStrokePreviewOpacity,
     );
 
     if (points.length == 1) {
@@ -98,17 +98,17 @@ class SceneViewInteractiveOverlayPainter extends CustomPainter {
   }
 
   void _paintLinePreview(Canvas canvas, Offset cameraOffset) {
-    if (!controller.hasActiveLinePreview) {
+    if (!interaction.hasActiveLinePreview) {
       return;
     }
 
-    final start = controller.activeLinePreviewStart;
-    final end = controller.activeLinePreviewEnd;
+    final start = interaction.activeLinePreviewStart;
+    final end = interaction.activeLinePreviewEnd;
     if (start == null || end == null) {
       return;
     }
 
-    final thickness = controller.activeLinePreviewThickness;
+    final thickness = interaction.activeLinePreviewThickness;
     if (!thickness.isFinite || thickness <= 0) {
       return;
     }
@@ -120,7 +120,7 @@ class SceneViewInteractiveOverlayPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = thickness
         ..strokeCap = StrokeCap.round
-        ..color = controller.activeLinePreviewColor,
+        ..color = interaction.activeLinePreviewColor,
     );
   }
 

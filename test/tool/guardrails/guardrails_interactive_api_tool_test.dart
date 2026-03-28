@@ -13,14 +13,53 @@ void main() {
     _registerInteractiveAcceptanceTests();
     _registerInteractiveGuardViolationTests();
     _registerInteractiveDisposeGuardTests();
+    _registerCapabilityGuardViolationTests();
     _registerInteractiveArchitectureGuardrailTests();
   });
+}
+
+String _sceneControllerFixture({
+  required String methods,
+  String extraImports = '',
+  String extraMembers = '',
+}) {
+  return '''
+import 'internal/scene_controller_facade_assembly.dart';
+import 'internal/scene_controller_interaction_runtime.dart';
+$extraImports
+
+class SceneController {
+  final Object _facade = assembleSceneControllerFacade(
+    SceneControllerFacadeRequest(),
+  );
+  final SceneControllerInteractionRuntime _runtime =
+      SceneControllerInteractionRuntime();
+$extraMembers
+
+  Object get actions => _runtime.actions;
+  Object get editTextRequests => _runtime.editTextRequests;
+
+  SceneController() {
+    registerSceneControllerInternalAccess(
+      this,
+      SceneControllerInternalAccessRegistration(),
+    );
+  }
+
+$methods
+
+  void _ensurePublicSideEffectAllowed(
+    String operation, {
+    bool allowAfterDispose = false,
+  }) {}
+}
+''';
 }
 
 void _registerInteractiveAcceptanceTests() {
   // INV:INV-ENG-INTERACTIVE-RESOLVER-PURITY
   test(
-    'accepts guarded public interactive entrypoints in SceneControllerInteractive',
+    'accepts guarded public interactive entrypoints in SceneController',
     () async {
       final sandbox = await createGuardrailsSandbox();
       try {
@@ -28,31 +67,16 @@ void _registerInteractiveAcceptanceTests() {
         writeInteractiveArchitectureSupportScaffold(sandbox);
         writeSandboxFile(
           sandbox,
-          'lib/src/interactive/scene_controller_interactive.dart',
-          '''
-import 'internal/interactive_event_dispatcher.dart';
-import 'internal/interactive_runtime.dart';
-import 'internal/interactive_selection_actions.dart';
-
-class SceneControllerInteractive {
-  final InteractiveEventDispatcher _events = InteractiveEventDispatcher();
-  late final InteractiveRuntime _runtime = InteractiveRuntime(events: _events);
-  final InteractiveSelectionActions _selectionActions =
-      InteractiveSelectionActions();
-
-  Stream<Object> get actions => _events.actions;
-  Stream<Object> get editTextRequests => _events.editTextRequests;
-
-  int get value => 1;
-
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            extraMembers: '\n  int get value => 1;\n',
+            methods: '''
   void handlePointer() {
     _ensurePublicSideEffectAllowed('handlePointer');
-    _runtime.handlePointer(Object());
   }
 
   void handleDoubleTap() {
     _ensurePublicSideEffectAllowed('handleDoubleTap');
-    _runtime.handleDoubleTap(position: Object());
   }
 
   set mode(int value) {
@@ -62,13 +86,8 @@ class SceneControllerInteractive {
   void dispose() {
     _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
   }
-
-  void _ensurePublicSideEffectAllowed(
-    String operation, {
-    bool allowAfterDispose = false,
-  }) {}
-}
 ''',
+          ),
         );
 
         final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
@@ -86,31 +105,17 @@ class SceneControllerInteractive {
       writeInteractiveArchitectureSupportScaffold(sandbox);
       writeSandboxFile(
         sandbox,
-        'lib/src/interactive/scene_controller_interactive.dart',
-        '''
-import 'internal/interactive_event_dispatcher.dart';
-import 'internal/interactive_runtime.dart';
-import 'internal/interactive_selection_actions.dart';
-
-class SceneControllerInteractive {
-  final InteractiveEventDispatcher _events = InteractiveEventDispatcher();
-  late final InteractiveRuntime _runtime = InteractiveRuntime(events: _events);
-  final InteractiveSelectionActions _selectionActions =
-      InteractiveSelectionActions();
-
-  Stream<Object> get actions => _events.actions;
-  Stream<Object> get editTextRequests => _events.editTextRequests;
-
+        'lib/src/interactive/scene_controller.dart',
+        _sceneControllerFixture(
+          methods: '''
   void handlePointer(
     int value,
   ) {
     _ensurePublicSideEffectAllowed('handlePointer');
-    _runtime.handlePointer(value);
   }
 
   void handleDoubleTap() {
     _ensurePublicSideEffectAllowed('handleDoubleTap');
-    _runtime.handleDoubleTap(position: Object());
   }
 
   set mode(
@@ -122,13 +127,8 @@ class SceneControllerInteractive {
   void dispose() {
     _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
   }
-
-  void _ensurePublicSideEffectAllowed(
-    String operation, {
-    bool allowAfterDispose = false,
-  }) {}
-}
 ''',
+        ),
       );
 
       final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
@@ -146,19 +146,72 @@ void _registerInteractiveGuardViolationTests() {
       final sandbox = await createGuardrailsSandbox();
       try {
         writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
         writeSandboxFile(
           sandbox,
-          'lib/src/interactive/scene_controller_interactive.dart',
-          '''
-class SceneControllerInteractive {
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
   void handlePointer() {
     print('missing guard');
   }
+''',
+          ),
+        );
 
-  void _ensurePublicSideEffectAllowed(
-    String operation, {
-    bool allowAfterDispose = false,
-  }) {}
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'public SceneController entrypoints must guard '
+                'resolver purity with _ensurePublicSideEffectAllowed',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+}
+
+void _registerCapabilityGuardViolationTests() {
+  test(
+    'rejects public interaction method without resolver purity guard',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller_interaction.dart',
+          '''
+class SceneControllerInteraction {
+  void handlePointer() {
+    print('missing guard');
+  }
 }
 ''',
         );
@@ -170,8 +223,9 @@ class SceneControllerInteractive {
           diagnostic(
             category: 'interactive API',
             detail:
-                'public SceneControllerInteractive entrypoints must guard '
-                'resolver purity with _ensurePublicSideEffectAllowed',
+                'public SceneControllerInteraction entrypoints must guard '
+                'resolver purity with '
+                '_access.runtime.ensurePublicSideEffectAllowed',
           ),
         );
       } finally {
@@ -179,6 +233,122 @@ class SceneControllerInteractive {
       }
     },
   );
+
+  test('rejects public scene mutation without resolver purity guard', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeMinimalControllerStore(sandbox);
+      writeInteractiveArchitectureSupportScaffold(sandbox);
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/scene_controller.dart',
+        _sceneControllerFixture(
+          methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+        ),
+      );
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/scene_controller_scene.dart',
+        '''
+class SceneControllerScene {
+  void write(Object fn) {
+    print('missing guard');
+  }
+}
+''',
+      );
+
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, isNonZero);
+      expect(
+        result.stderr.toString(),
+        diagnostic(
+          category: 'interactive API',
+          detail:
+              'public SceneControllerScene entrypoints must guard '
+              'resolver purity with _access.ensurePublicSideEffectAllowed',
+        ),
+      );
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
+  });
+
+  test('rejects selection mutation without active gesture guard', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeMinimalControllerStore(sandbox);
+      writeInteractiveArchitectureSupportScaffold(sandbox);
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/scene_controller.dart',
+        _sceneControllerFixture(
+          methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+        ),
+      );
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/scene_controller_selection.dart',
+        '''
+class SceneControllerSelection {
+  final _access = _Access();
+
+  void setSelection(Object nodeIds) {
+    _access.ensurePublicSideEffectAllowed('setSelection');
+  }
+}
+
+class _Access {
+  void ensurePublicSideEffectAllowed(
+    String operation, {
+    bool allowAfterDispose = false,
+  }) {}
+
+  void ensureExternalSelectionMutationAllowed(String operation) {}
+}
+''',
+      );
+
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, isNonZero);
+      expect(
+        result.stderr.toString(),
+        diagnostic(
+          category: 'interactive API',
+          detail:
+              'SceneControllerSelection.setSelection must guard '
+              'active-gesture exclusivity with '
+              '_access.ensureExternalSelectionMutationAllowed',
+        ),
+      );
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
+  });
 }
 
 void _registerInteractiveDisposeGuardTests() {
@@ -188,21 +358,17 @@ void _registerInteractiveDisposeGuardTests() {
       final sandbox = await createGuardrailsSandbox();
       try {
         writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
         writeSandboxFile(
           sandbox,
-          'lib/src/interactive/scene_controller_interactive.dart',
-          '''
-class SceneControllerInteractive {
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
   void dispose() {
     _ensurePublicSideEffectAllowed('dispose');
   }
-
-  void _ensurePublicSideEffectAllowed(
-    String operation, {
-    bool allowAfterDispose = false,
-  }) {}
-}
 ''',
+          ),
         );
 
         final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
@@ -231,41 +397,22 @@ void _registerInteractiveArchitectureGuardrailTests() {
       writeInteractiveArchitectureSupportScaffold(sandbox);
       writeSandboxFile(
         sandbox,
-        'lib/src/interactive/scene_controller_interactive.dart',
-        '''
-import 'internal/interactive_event_dispatcher.dart';
-import 'internal/interactive_runtime.dart';
-import 'internal/interactive_selection_actions.dart';
-
-class SceneControllerInteractive {
-  final InteractiveEventDispatcher _events = InteractiveEventDispatcher();
-  late final InteractiveRuntime _runtime = InteractiveRuntime(events: _events);
-  final InteractiveSelectionActions _selectionActions =
-      InteractiveSelectionActions();
-
-  Stream<Object> get actions => _events.actions;
-  Stream<Object> get editTextRequests => _events.editTextRequests;
-
+        'lib/src/interactive/scene_controller.dart',
+        _sceneControllerFixture(
+          methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
-    _runtime.handlePointer(input);
   }
 
   void handleDoubleTap() {
     _ensurePublicSideEffectAllowed('handleDoubleTap');
-    _runtime.handleDoubleTap(position: Object());
   }
 
   void dispose() {
     _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
   }
-
-  void _ensurePublicSideEffectAllowed(
-    String operation, {
-    bool allowAfterDispose = false,
-  }) {}
-}
 ''',
+        ),
       );
 
       final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
@@ -282,41 +429,26 @@ class SceneControllerInteractive {
       writeInteractiveArchitectureSupportScaffold(sandbox);
       writeSandboxFile(
         sandbox,
-        'lib/src/interactive/scene_controller_interactive.dart',
-        '''
-import 'internal/interactive_draw_coordinator.dart';
-import 'internal/interactive_event_dispatcher.dart';
-import 'internal/interactive_runtime.dart';
-import 'internal/interactive_selection_actions.dart';
-
-class SceneControllerInteractive {
-  final InteractiveEventDispatcher _events = InteractiveEventDispatcher();
-  late final InteractiveRuntime _runtime = InteractiveRuntime(events: _events);
-  final InteractiveSelectionActions _selectionActions =
-      InteractiveSelectionActions();
-  final InteractiveDrawCoordinator _drawCoordinator =
-      InteractiveDrawCoordinator();
-
+        'lib/src/interactive/scene_controller.dart',
+        _sceneControllerFixture(
+          extraImports: "import 'internal/interactive_draw_coordinator.dart';",
+          extraMembers:
+              '\n  final InteractiveDrawCoordinator _drawCoordinator =\n'
+              '      InteractiveDrawCoordinator();\n',
+          methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
-    _runtime.handlePointer(input);
   }
 
   void handleDoubleTap() {
     _ensurePublicSideEffectAllowed('handleDoubleTap');
-    _runtime.handleDoubleTap(position: Object());
   }
 
   void dispose() {
     _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
   }
-
-  void _ensurePublicSideEffectAllowed(
-    String operation, {
-    bool allowAfterDispose = false,
-  }) {}
-}
 ''',
+        ),
       );
 
       final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
@@ -326,7 +458,7 @@ class SceneControllerInteractive {
         diagnostic(
           category: 'interactive API',
           detail:
-              'SceneControllerInteractive must remain a thin facade over '
+              'SceneController must remain a thin facade over '
               'runtime/event/selection owners',
         ),
       );
@@ -342,38 +474,22 @@ class SceneControllerInteractive {
       writeInteractiveArchitectureSupportScaffold(sandbox);
       writeSandboxFile(
         sandbox,
-        'lib/src/interactive/scene_controller_interactive.dart',
-        '''
-import 'internal/interactive_event_dispatcher.dart';
-import 'internal/interactive_runtime.dart';
-import 'internal/interactive_selection_actions.dart';
-
-class SceneControllerInteractive {
-  final InteractiveEventDispatcher _events = InteractiveEventDispatcher();
-  late final InteractiveRuntime _runtime = InteractiveRuntime(events: _events);
-  final InteractiveSelectionActions _selectionActions =
-      InteractiveSelectionActions();
-
+        'lib/src/interactive/scene_controller.dart',
+        _sceneControllerFixture(
+          methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
-    _runtime.handlePointer(input);
   }
 
   void handleDoubleTap() {
     _ensurePublicSideEffectAllowed('handleDoubleTap');
-    _runtime.handleDoubleTap(position: Object());
   }
 
   void dispose() {
     _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
   }
-
-  void _ensurePublicSideEffectAllowed(
-    String operation, {
-    bool allowAfterDispose = false,
-  }) {}
-}
 ''',
+        ),
       );
       writeSandboxFile(
         sandbox,
@@ -427,38 +543,22 @@ class InteractiveRuntime {
       writeInteractiveArchitectureSupportScaffold(sandbox);
       writeSandboxFile(
         sandbox,
-        'lib/src/interactive/scene_controller_interactive.dart',
-        '''
-import 'internal/interactive_event_dispatcher.dart';
-import 'internal/interactive_runtime.dart';
-import 'internal/interactive_selection_actions.dart';
-
-class SceneControllerInteractive {
-  final InteractiveEventDispatcher _events = InteractiveEventDispatcher();
-  late final InteractiveRuntime _runtime = InteractiveRuntime(events: _events);
-  final InteractiveSelectionActions _selectionActions =
-      InteractiveSelectionActions();
-
+        'lib/src/interactive/scene_controller.dart',
+        _sceneControllerFixture(
+          methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
-    _runtime.handlePointer(input);
   }
 
   void handleDoubleTap() {
     _ensurePublicSideEffectAllowed('handleDoubleTap');
-    _runtime.handleDoubleTap(position: Object());
   }
 
   void dispose() {
     _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
   }
-
-  void _ensurePublicSideEffectAllowed(
-    String operation, {
-    bool allowAfterDispose = false,
-  }) {}
-}
 ''',
+        ),
       );
       writeSandboxFile(
         sandbox,
@@ -500,38 +600,22 @@ class InteractiveDrawCoordinator {
       writeInteractiveArchitectureSupportScaffold(sandbox);
       writeSandboxFile(
         sandbox,
-        'lib/src/interactive/scene_controller_interactive.dart',
-        '''
-import 'internal/interactive_event_dispatcher.dart';
-import 'internal/interactive_runtime.dart';
-import 'internal/interactive_selection_actions.dart';
-
-class SceneControllerInteractive {
-  final InteractiveEventDispatcher _events = InteractiveEventDispatcher();
-  late final InteractiveRuntime _runtime = InteractiveRuntime(events: _events);
-  final InteractiveSelectionActions _selectionActions =
-      InteractiveSelectionActions();
-
+        'lib/src/interactive/scene_controller.dart',
+        _sceneControllerFixture(
+          methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
-    _runtime.handlePointer(input);
   }
 
   void handleDoubleTap() {
     _ensurePublicSideEffectAllowed('handleDoubleTap');
-    _runtime.handleDoubleTap(position: Object());
   }
 
   void dispose() {
     _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
   }
-
-  void _ensurePublicSideEffectAllowed(
-    String operation, {
-    bool allowAfterDispose = false,
-  }) {}
-}
 ''',
+        ),
       );
       writeSandboxFile(
         sandbox,
@@ -566,38 +650,22 @@ class InteractiveDrawEraserEngine {
       writeInteractiveArchitectureSupportScaffold(sandbox);
       writeSandboxFile(
         sandbox,
-        'lib/src/interactive/scene_controller_interactive.dart',
-        '''
-import 'internal/interactive_event_dispatcher.dart';
-import 'internal/interactive_runtime.dart';
-import 'internal/interactive_selection_actions.dart';
-
-class SceneControllerInteractive {
-  final InteractiveEventDispatcher _events = InteractiveEventDispatcher();
-  late final InteractiveRuntime _runtime = InteractiveRuntime(events: _events);
-  final InteractiveSelectionActions _selectionActions =
-      InteractiveSelectionActions();
-
+        'lib/src/interactive/scene_controller.dart',
+        _sceneControllerFixture(
+          methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
-    _runtime.handlePointer(input);
   }
 
   void handleDoubleTap() {
     _ensurePublicSideEffectAllowed('handleDoubleTap');
-    _runtime.handleDoubleTap(position: Object());
   }
 
   void dispose() {
     _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
   }
-
-  void _ensurePublicSideEffectAllowed(
-    String operation, {
-    bool allowAfterDispose = false,
-  }) {}
-}
 ''',
+        ),
       );
       File(
         '${sandbox.path}/lib/src/interactive/internal/'
