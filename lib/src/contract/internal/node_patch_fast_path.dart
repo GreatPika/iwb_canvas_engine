@@ -15,9 +15,7 @@ CommonNodePatch commonNodePatchFromValidated({
   if (fields == null) {
     return CommonNodePatch();
   }
-  final resolved = patchCommonSchemaFieldsFromValidated(
-    fields,
-  );
+  final resolved = patchCommonSchemaFieldsFromValidated(fields);
   return CommonNodePatch(
     transform: resolved.transform,
     opacity: resolved.opacity,

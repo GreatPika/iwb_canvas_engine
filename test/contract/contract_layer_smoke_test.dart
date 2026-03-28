@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -55,4 +56,69 @@ void main() {
       );
     },
   );
+
+  test('contract canonical surfaces stay part-free and explicit', () {
+    final snapshotSource = File(
+      'lib/src/contract/snapshot.dart',
+    ).readAsStringSync();
+    final nodeSpecSource = File(
+      'lib/src/contract/node_spec.dart',
+    ).readAsStringSync();
+    final nodePatchSource = File(
+      'lib/src/contract/node_patch.dart',
+    ).readAsStringSync();
+    final schemaBarrelSource = File(
+      'lib/src/contract/internal/node_boundary_schema.dart',
+    ).readAsStringSync();
+    final snapshotFastPathSource = File(
+      'lib/src/contract/internal/snapshot_fast_path.dart',
+    ).readAsStringSync();
+
+    for (final source in <String>[
+      snapshotSource,
+      nodeSpecSource,
+      nodePatchSource,
+      schemaBarrelSource,
+      snapshotFastPathSource,
+    ]) {
+      expect(
+        source
+            .split('\n')
+            .any(
+              (line) => line.startsWith('part ') || line.startsWith('part of '),
+            ),
+        isFalse,
+      );
+    }
+
+    expect(
+      nodeSpecSource,
+      contains("import 'internal/node_boundary_schema.dart';"),
+    );
+    expect(
+      nodeSpecSource,
+      isNot(contains("import 'internal/node_spec_fast_path.dart';")),
+    );
+    expect(
+      nodePatchSource,
+      contains("import 'internal/node_boundary_schema.dart';"),
+    );
+    expect(
+      nodePatchSource,
+      isNot(contains("import 'internal/node_patch_fast_path.dart';")),
+    );
+    expect(
+      schemaBarrelSource,
+      contains("export 'node_boundary_schema_common.dart';"),
+    );
+    expect(
+      schemaBarrelSource,
+      contains("export 'node_boundary_schema_snapshot.dart';"),
+    );
+    expect(snapshotFastPathSource, contains("export 'snapshot_backing.dart'"));
+    expect(
+      snapshotFastPathSource,
+      contains("export 'snapshot_materialization.dart'"),
+    );
+  });
 }

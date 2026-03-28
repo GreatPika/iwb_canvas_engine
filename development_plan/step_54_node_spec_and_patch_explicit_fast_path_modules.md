@@ -10,6 +10,11 @@ language: russian
 смены public API и без переноса snapshot-style backing/materialization model на
 `NodeSpec` / `NodePatch`.
 
+Closure status after step `55`: the local fast-path split below is now part of
+the mechanically pinned final contract graph in
+`development_plan/contract_target_architecture.md` and
+`tool/check_guardrails.dart`.
+
 ## 2. Change Boundary
 
 ### Included in the Change

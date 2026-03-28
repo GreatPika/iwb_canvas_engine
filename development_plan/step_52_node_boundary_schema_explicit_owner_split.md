@@ -14,6 +14,12 @@ explicit direction owners без `part`-coupling, без возвращения 
 `node_patch.dart` / `node_spec.dart` / `snapshot.dart` и без metric-only
 compression.
 
+Closure status after step `55`: the residual seams referenced below are closed,
+and the final contract end-state is now pinned by
+`development_plan/contract_target_architecture.md`,
+`tool/check_guardrails.dart`, and
+`INV-ENG-CONTRACT-ARCHITECTURE-BOUNDARY`.
+
 ## 2. Change Boundary
 
 ### Included in the Change

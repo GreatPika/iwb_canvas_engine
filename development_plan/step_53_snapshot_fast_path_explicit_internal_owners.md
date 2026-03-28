@@ -10,6 +10,12 @@ assembly уходит из public `snapshot.dart` в explicit internal snapshot 
 fast-path surface, а публичный snapshot boundary остаётся совместимым как thin
 public wrapper layer over immutable internal snapshot backing.
 
+Closure status after step `55`: this snapshot split is part of the final
+contract architecture and is now pinned mechanically by
+`development_plan/contract_target_architecture.md`,
+`tool/check_guardrails.dart`, and
+`INV-ENG-CONTRACT-ARCHITECTURE-BOUNDARY`.
+
 ## 2. Change Boundary
 
 ### Included in the Change

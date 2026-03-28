@@ -107,6 +107,10 @@ Ownership decisions for the target state:
 
 ## Contract owner graph
 
+- The final `contract` layer is fully part-free. Structural closure is pinned
+  mechanically by `tool/check_guardrails.dart` and
+  `INV-ENG-CONTRACT-ARCHITECTURE-BOUNDARY`; `part` / `part of` must not return
+  anywhere under `lib/src/contract/**`.
 - `contract/node_patch.dart`, `contract/node_spec.dart`, and
   `contract/snapshot.dart` remain the public immutable boundary owners and keep
   validation at the public constructor boundary.
@@ -133,6 +137,10 @@ Ownership decisions for the target state:
   importing privileged construction from `contract/snapshot.dart`.
 - Downstream `model/` and `serialization/` code consume those internal schema
   owners through the barrel and do not re-own schema validation locally.
+- Downstream non-contract production code may import only the canonical
+  internal surfaces `contract/internal/node_boundary_schema.dart` and
+  `contract/internal/snapshot_fast_path.dart`; it must not bypass them and
+  import lower-level contract owner modules directly.
 
 ## Model owner graph
 

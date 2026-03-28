@@ -10,5 +10,6 @@ import 'src/guardrails/guardrails_runner.dart';
 // INV:INV-ENG-INTERACTIVE-RESOLVER-PURITY
 // INV:INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY
 // INV:INV-ENG-MODEL-ARCHITECTURE-BOUNDARY
+// INV:INV-ENG-CONTRACT-ARCHITECTURE-BOUNDARY
 
 Future<void> main(List<String> _) => runGuardrailsTool();

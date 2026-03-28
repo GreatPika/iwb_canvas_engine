@@ -5,6 +5,11 @@
 This document is the source of truth for the contract cleanup sequence that
 starts at step `52`.
 
+Step `55` closes this target state mechanically through
+`tool/check_guardrails.dart` and `INV-ENG-CONTRACT-ARCHITECTURE-BOUNDARY`.
+Remaining references below to intermediate seams describe step-local history,
+not active residual debt.
+
 The sequence may choose local code motion, helper placement, and verification
 sequencing only inside the graph defined here. It is not allowed to reinterpret
 the contract target graph while executing the plan.
@@ -23,6 +28,10 @@ updated explicitly in this document before a step is considered complete.
   they are closed in step `54` without reopening the snapshot redesign.
 - Step `55` is closure only: documentation, guardrails, invariants, and
   measured baseline for the final contract owner graph after steps `52-54`.
+- The final post-step-`55` state is mechanically pinned: `lib/src/contract/**`
+  is part-free, removed residual `*.part.dart` seams do not exist, and
+  downstream non-contract code is restricted to the canonical internal import
+  surfaces.
 - `lib/src/contract/**` keeps the public immutable boundary types and the
   internal validated-boundary owners, but contract cleanup ends in a fully
   `part`-free layer.

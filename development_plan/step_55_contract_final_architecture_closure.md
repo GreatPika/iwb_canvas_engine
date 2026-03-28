@@ -304,7 +304,7 @@ slices.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Add contract architecture guardrails and invariant-backed proof surface
+### Slice 1. [x] Add contract architecture guardrails and invariant-backed proof surface
 
 #### Slice Contract
 
@@ -356,7 +356,7 @@ policy from `contract_target_architecture.md`, not a looser approximation.
 - Tool diagnostics prove each listed negative scenario fails through
   `check_guardrails.dart`.
 
-### Slice 2. [ ] Re-document the final contract owner graph and residual policy
+### Slice 2. [x] Re-document the final contract owner graph and residual policy
 
 #### Slice Contract
 
@@ -385,7 +385,7 @@ data is kept in this step document.
 - No stale closure language remains that contradicts the final
   `contract_target_architecture.md` graph.
 
-### Slice 3. [ ] Record the measured final contract baseline and classify accepted residuals
+### Slice 3. [x] Record the measured final contract baseline and classify accepted residuals
 
 #### Slice Contract
 
@@ -413,6 +413,86 @@ the target architecture.
 - Measured baseline values are recorded in repo docs.
 - Remaining large files are explicitly classified as focused accepted owners or
   residual debt; silent acceptance does not remain.
+
+## 8.1 Measured Closure Baseline (2026-03-28)
+
+### `dcm calculate-metrics lib/src/contract --report-all`
+
+- Scanned files: `38`
+- Residual metric hotspots: `7 HIGH`, `6 VERY HIGH`
+- No `HIGH` or `VERY HIGH` hotspot remains on the removed mixed-owner seams:
+  `internal/node_boundary_schema.dart`,
+  removed `*.part.dart` residuals,
+  `node_spec.dart` / `node_patch.dart` as `part`-attached seams,
+  or direct schema bucket regressions.
+- Residual hotspots are limited to focused owners:
+  - `internal/snapshot_backing.dart`: `sceneSnapshotBackingFromValidated`
+    has `5` parameters
+  - `internal/snapshot_materialization.dart`: `sceneSnapshotFromValidated`
+    has `5` parameters, and the node-family compatibility materializers keep
+    `VERY HIGH` parameter counts (`13-21`) inside one focused
+    snapshot-materialization owner
+  - `snapshot.dart`: file `number-of-imports = 12`
+  - `transform2d.dart`: `Transform2D` has
+    `weighted-methods-per-class = 40`, and `Transform2D.invert`
+    has `cyclomatic-complexity = 14`
+  - `validated/validated_value_support.dart`:
+    `validatedRequireJsonString` has `5` parameters, and
+    `validatedRequireJsonInt` has `41` SLOC
+- The residual `VERY HIGH` items stay inside
+  `internal/snapshot_materialization.dart`, which is an accepted focused owner
+  for snapshot compatibility/materialization rather than a re-opened mixed seam.
+
+### `dart run tool/analysis/find_similar_clones.dart --clusters lib/src/contract`
+
+- Clone clusters found: `10`
+- Scan summary: `scannedFiles=38`, `scannedBlocks=127`, `parseErrors=0`
+- Residual clusters are concentrated in focused owners:
+  `scene_data_exception.dart`,
+  `internal/node_patch_fast_path.dart`,
+  `internal/node_boundary_schema_patch.dart`,
+  `internal/snapshot_materialization.dart`,
+  and `validated/**`.
+- No cluster reopens the removed residual shapes from steps `52-54`:
+  the canonical barrels
+  `internal/node_boundary_schema.dart`
+  and
+  `internal/snapshot_fast_path.dart`
+  stay thin, and the deleted `*.part.dart` seams do not reappear.
+
+### `dart run tool/analysis/find_similar_clones.dart lib/src/contract`
+
+- Similar pairs found: `99`
+- The top exact/structural pairs remain family-symmetric constructor or
+  validation matrices in focused owners:
+  `scene_data_exception.dart`,
+  `internal/node_patch_fast_path.dart`,
+  `internal/node_boundary_schema_patch.dart`,
+  `internal/snapshot_materialization.dart`,
+  and validated value parsers.
+- The pair list does not indicate reopening of the removed mixed-owner seams.
+
+### Large-file review
+
+- `scene_data_exception.dart` (`883` lines): accepted focused boundary
+  error-taxonomy owner
+- `snapshot.dart` (`649` lines): accepted focused public immutable snapshot
+  family surface
+- `node_spec.dart` (`515` lines): accepted focused public immutable `NodeSpec`
+  family surface
+- `node_patch.dart` (`396` lines): accepted focused public immutable
+  `NodePatch` family surface
+- `transform2d.dart` (`253` lines): accepted focused value-object owner
+- No reviewed large file belongs to the mixed-owner shapes removed by steps
+  `52-54`.
+
+### Guardrail / Structure Closure
+
+- `dart run tool/check_guardrails.dart` is green with the new dedicated
+  contract architecture guardrail.
+- `dart run tool/check_invariant_coverage.dart` is green with
+  `INV-ENG-CONTRACT-ARCHITECTURE-BOUNDARY`.
+- `rg -n "^(part|part of) " lib/src/contract -g '*.dart'` returns no matches.
 
 ## 9. Final Verification
 

@@ -245,6 +245,13 @@ const List<Invariant> invariants = <Invariant>[
     proofPath: 'tool/check_guardrails.dart',
   ),
   Invariant(
+    id: 'INV-ENG-CONTRACT-ARCHITECTURE-BOUNDARY',
+    scope: 'engine-structure',
+    title:
+        'contract layer remains part-free and downstream non-contract code imports only canonical contract surfaces',
+    proofPath: 'tool/check_guardrails.dart',
+  ),
+  Invariant(
     id: 'INV-ENG-VIEW-POINTER-SLOT-LIFECYCLE',
     scope: 'view-runtime',
     title:

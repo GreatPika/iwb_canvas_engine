@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import '../guardrail_support/guardrail_context.dart';
+import 'contract_architecture_guardrails.dart';
 import 'controller_api_guardrails.dart';
 import 'interactive_api_guardrails.dart';
 import 'model_architecture_guardrails.dart';
@@ -36,6 +37,10 @@ Future<void> runGuardrailsTool() async {
       context: context,
     );
     _failIfNeeded(modelArchitectureViolations);
+
+    final contractArchitectureViolations =
+        await runContractArchitectureGuardrails(context: context);
+    _failIfNeeded(contractArchitectureViolations);
   } on _GuardrailFailure catch (failure) {
     stderr.writeln('FAIL: guardrails');
     stderr.writeln('- ${failure.violation}');
