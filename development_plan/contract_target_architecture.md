@@ -16,18 +16,21 @@ updated explicitly in this document before a step is considered complete.
 
 - After step `52`, the node-boundary schema seam is already closed through
   explicit common / patch / spec / snapshot owners; the remaining contract
-  cleanup starts with the snapshot fast-path seam in step `53`.
+  cleanup starts with the full snapshot-boundary redesign in step `53`.
 - `lib/src/contract/**` keeps the public immutable boundary types and the
-  internal validated-boundary owners, but the remaining internal hotspot seams
-  stop relying on `part`-coupled shared namespaces.
-- `snapshot.dart` stays the public immutable snapshot surface and becomes
-  `part`-free.
+  internal validated-boundary owners, but the remaining snapshot seam stops
+  relying on both `part`-coupled shared namespaces and public fast-path
+  helpers as the runtime construction model.
+- `snapshot.dart` stays the public immutable snapshot surface and becomes a
+  `part`-free thin public wrapper surface over an internal snapshot graph.
 - `node_patch.dart`, `node_spec.dart`, and `snapshot.dart` remain public
   boundary owners and must not absorb internal schema-helper bodies.
 - `internal/node_boundary_schema.dart` becomes a thin canonical internal schema
   barrel rather than a giant static owner bucket.
-- The snapshot fast path moves out of `snapshot.dart` `part` coupling into
-  explicit internal owner modules.
+- Snapshot construction moves into an explicit internal snapshot graph plus a
+  thin public wrapper edge.
+- Producer-side `model/**` owners build snapshots through internal snapshot
+  owners instead of hidden public snapshot fast-path helpers.
 - Large contract files are acceptable only when they are focused public
   immutable boundary surfaces or focused value-object owners. Large internal
   mixed-owner buckets are not acceptable residuals.
@@ -74,21 +77,29 @@ implementation buckets.
 - `NodeBoundarySchema` as a giant static class does not exist in the target
   state.
 
-### Snapshot fast-path graph
+### Snapshot boundary graph
 
 - `snapshot.dart` keeps the public immutable snapshot classes and public
-  validating factories only.
-- `snapshot.dart` no longer contains
-  `part 'internal/snapshot_fast_path.part.dart';`.
-- `internal/snapshot_fast_path.dart` becomes a thin internal import surface for
-  validated snapshot allocation helpers.
-- `internal/snapshot_fast_path_scene.dart` owns scene, layer, camera,
-  background, grid, and palette fast-path allocation.
-- `internal/snapshot_fast_path_node.dart` owns node-family fast-path
-  allocation.
-- `snapshot.dart` exposes explicit `@internal` prevalidated constructors or
-  equivalent internal-only allocation entrypoints so the fast-path modules no
-  longer require `part` access to private constructors.
+  validating constructors only.
+- `snapshot.dart` is `part`-free and does not own privileged fast-path
+  construction.
+- `internal/snapshot_fast_path.dart` stays the canonical internal snapshot
+  construction import surface and becomes a thin barrel only.
+- `internal/snapshot_backing.dart` owns trusted immutable scene-level and
+  node-family snapshot representation.
+- `internal/snapshot_materialization.dart` owns wrapper materialization between
+  the internal snapshot graph and the public snapshot wrappers exposed by
+  `snapshot.dart`.
+- Producer-side owners in `scene_snapshot_from_scene.dart`,
+  `scene_builder_decode_*.dart`,
+  and
+  `scene_node_boundary_mapping*.dart`
+  build snapshots through the internal snapshot graph and materialize public
+  snapshot objects only at edges that must still return public snapshot types.
+- Internal compatibility helpers for validated or intentionally malformed
+  public snapshots may remain only behind `internal/snapshot_fast_path.dart`
+  and must delegate through backing/materialization owners instead of public
+  `_internal` constructors.
 
 ## Explicit Non-Goals For The Sequence
 
@@ -106,7 +117,10 @@ implementation buckets.
 
 - `lib/src/contract/internal/node_boundary_schema.dart`
 - `lib/src/contract/internal/snapshot_fast_path.part.dart`
-- `lib/src/contract/snapshot.dart` with a fast-path `part` attachment
+- `lib/src/contract/snapshot.dart` as the owner of trusted fast-path snapshot
+  field assembly
+- producer-side `lib/src/model/**` call sites that assemble snapshots through
+  public `*SnapshotFromValidated` helpers
 
 If any of these shapes remain, the contract cleanup sequence has not reached
 its target state.
@@ -126,7 +140,7 @@ its target state.
   public boundary surfaces listed above and not to internal mixed-owner
   buckets.
 - No `VERY HIGH` metric item may remain on the internal node-boundary schema or
-  snapshot fast-path seams.
+  snapshot boundary seams.
 - Clone residuals are acceptable only as family symmetry inside focused
   snapshot or validated-boundary owners; constructor/fast-path matrices and
   direction-mixed schema buckets are not accepted residuals.
