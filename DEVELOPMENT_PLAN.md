@@ -149,3 +149,5 @@ language: russian
 - Contract cleanup target state from step `52` onward is fixed in [contract_target_architecture.md](development_plan/contract_target_architecture.md).
 - [x] [Шаг 52. Разрезать `node_boundary_schema` на explicit direction owners и убрать schema `part`-coupling](development_plan/step_52_node_boundary_schema_explicit_owner_split.md)
 - [x] [Шаг 53. Перестроить snapshot boundary: internal graph, public materialization, producer-side model rewiring](development_plan/step_53_snapshot_fast_path_explicit_internal_owners.md)
+- [ ] [Шаг 54. Убрать residual `part`-coupling из `node_spec.dart` и `node_patch.dart` через explicit internal fast-path modules](development_plan/step_54_node_spec_and_patch_explicit_fast_path_modules.md)
+- [ ] [Шаг 55. Замкнуть финальную contract architecture на docs, guardrails и baseline](development_plan/step_55_contract_final_architecture_closure.md)
