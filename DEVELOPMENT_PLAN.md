@@ -146,3 +146,6 @@ language: russian
 - [x] [Шаг 49. Закрыть post-closure helper seams в builder JSON helpers и document locator/index helpers](development_plan/step_49_json_helper_and_document_locator_residual_cleanup.md)
 - [x] [Шаг 50. Замкнуть post-closure helper cleanup на measured baseline и обновлённый residual review](development_plan/step_50_model_post_closure_helper_rebaseline.md)
 - [x] [Шаг 51. Развести scene decode orchestration и scene mutation owners без reopening `model` graph](development_plan/step_51_scene_decode_and_scene_mutation_owner_split.md)
+- Contract cleanup target state from step `52` onward is fixed in [contract_target_architecture.md](development_plan/contract_target_architecture.md).
+- [ ] [Шаг 52. Разрезать `node_boundary_schema` на explicit direction owners и убрать schema `part`-coupling](development_plan/step_52_node_boundary_schema_explicit_owner_split.md)
+- [ ] [Шаг 53. Вынести snapshot fast path из `snapshot.dart` `part`-coupling в explicit internal owner-модули](development_plan/step_53_snapshot_fast_path_explicit_internal_owners.md)
