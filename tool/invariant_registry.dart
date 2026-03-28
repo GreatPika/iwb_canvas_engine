@@ -233,9 +233,9 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY',
     scope: 'engine-runtime',
     title:
-        'interactive facade/runtime/event/draw owners remain structurally split and do not reabsorb mixed ownership',
+        'interactive capability/runtime/event/draw owners remain structurally split, keep SceneController as the committed render-state boundary, and do not reabsorb deleted residual seams',
     proofPath:
-        'test/interactive/core/scene_controller_interactive_runtime_contract_test.dart',
+        'test/interactive/core/scene_controller_architecture_boundary_test.dart',
   ),
   Invariant(
     id: 'INV-ENG-MODEL-ARCHITECTURE-BOUNDARY',

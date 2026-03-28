@@ -278,7 +278,7 @@ class SceneControllerScene {
           category: 'interactive API',
           detail:
               'public SceneControllerScene entrypoints must guard '
-              'resolver purity with _access.ensurePublicSideEffectAllowed',
+              'resolver purity with ensurePublicSideEffectAllowed',
         ),
       );
     } finally {
@@ -315,14 +315,14 @@ class SceneControllerScene {
         'lib/src/interactive/scene_controller_selection.dart',
         '''
 class SceneControllerSelection {
-  final _access = _Access();
+  final _runtime = _Runtime();
 
   void setSelection(Object nodeIds) {
-    _access.ensurePublicSideEffectAllowed('setSelection');
+    _runtime.ensurePublicSideEffectAllowed('setSelection');
   }
 }
 
-class _Access {
+class _Runtime {
   void ensurePublicSideEffectAllowed(
     String operation, {
     bool allowAfterDispose = false,
@@ -342,7 +342,7 @@ class _Access {
           detail:
               'SceneControllerSelection.setSelection must guard '
               'active-gesture exclusivity with '
-              '_access.ensureExternalSelectionMutationAllowed',
+              '_runtime.ensureExternalSelectionMutationAllowed',
         ),
       );
     } finally {
@@ -417,6 +417,110 @@ void _registerInteractiveArchitectureGuardrailTests() {
 
       final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
       expect(result.exitCode, 0, reason: result.stderr.toString());
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
+  });
+
+  test('rejects retained scene access seam', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeMinimalControllerStore(sandbox);
+      writeInteractiveArchitectureSupportScaffold(sandbox);
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/scene_controller.dart',
+        _sceneControllerFixture(
+          methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+        ),
+      );
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/internal/scene_controller_scene_access.dart',
+        'class SceneControllerSceneAccessAdapter {}\n',
+      );
+
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, isNonZero);
+      expect(
+        result.stderr.toString(),
+        diagnostic(
+          category: 'interactive API',
+          detail:
+              'SceneControllerSceneAccessAdapter is a deleted residual seam '
+              'and must not exist',
+        ),
+      );
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
+  });
+
+  test('rejects interaction snapshot leak', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeMinimalControllerStore(sandbox);
+      writeInteractiveArchitectureSupportScaffold(sandbox);
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/scene_controller.dart',
+        _sceneControllerFixture(
+          methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+        ),
+      );
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/scene_controller_interaction.dart',
+        '''
+import '../contract/snapshot.dart';
+
+class SceneControllerInteraction {
+  final _access = _Access();
+
+  SceneSnapshot get snapshot => _access.snapshot;
+}
+
+class _Access {
+  SceneSnapshot get snapshot => throw UnimplementedError();
+}
+''',
+      );
+
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, isNonZero);
+      expect(
+        result.stderr.toString(),
+        diagnostic(
+          category: 'interactive API',
+          detail:
+              'SceneControllerInteraction must not expose committed '
+              'render-state through snapshot',
+        ),
+      );
     } finally {
       sandbox.deleteSync(recursive: true);
     }

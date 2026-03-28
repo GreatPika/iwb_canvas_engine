@@ -2,18 +2,22 @@ import 'package:flutter/widgets.dart';
 
 import '../core/geometry.dart';
 import '../core/numeric_clamp.dart';
+import '../interactive/scene_controller.dart';
 import '../interactive/scene_controller_interaction.dart';
 
 class SceneViewInteractiveOverlayPainter extends CustomPainter {
-  const SceneViewInteractiveOverlayPainter({required this.interaction})
-    : super(repaint: interaction);
+  const SceneViewInteractiveOverlayPainter({
+    required this.controller,
+    required this.interaction,
+  }) : super(repaint: interaction);
 
+  final SceneController controller;
   final SceneControllerInteraction interaction;
 
   @override
   void paint(Canvas canvas, Size size) {
     final cameraOffset = sanitizeFiniteOffset(
-      interaction.snapshot.camera.offset,
+      controller.snapshot.camera.offset,
     );
     _paintStrokePreview(canvas, cameraOffset);
     _paintLinePreview(canvas, cameraOffset);
@@ -21,7 +25,8 @@ class SceneViewInteractiveOverlayPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant SceneViewInteractiveOverlayPainter oldDelegate) {
-    return oldDelegate.interaction != interaction;
+    return oldDelegate.controller != controller ||
+        oldDelegate.interaction != interaction;
   }
 
   void _paintStrokePreview(Canvas canvas, Offset cameraOffset) {

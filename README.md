@@ -19,8 +19,9 @@ storage.
 
 - Deterministic scene rendering with a dedicated boundary `backgroundLayer`
   plus ordered content `layers`.
-- Public runtime aliases `SceneController` and `SceneView` for move, select,
-  draw, and edit flows.
+- `SceneController` as the public interactive runtime root, with capability
+  owners exposed through `controller.interaction`, `controller.selection`, and
+  `controller.scene`, plus `SceneView` as the public interactive widget.
 - Transactional write API via `SceneWriteTxn`.
 - Explicit path fill-rule contract via `PathFillRule`.
 - JSON import/export with strict validation and canonicalization.

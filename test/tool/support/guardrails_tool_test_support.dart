@@ -86,34 +86,34 @@ class _RuntimeAccess {
     'lib/src/interactive/scene_controller_selection.dart',
     '''
 class SceneControllerSelection {
-  final _access = _Access();
+  final _runtime = _Runtime();
 
   void setSelection(Object nodeIds) {
-    _access.ensurePublicSideEffectAllowed('setSelection');
-    _access.ensureExternalSelectionMutationAllowed('setSelection');
+    _runtime.ensurePublicSideEffectAllowed('setSelection');
+    _runtime.ensureExternalSelectionMutationAllowed('setSelection');
   }
 
   void toggleSelection(Object nodeId) {
-    _access.ensurePublicSideEffectAllowed('toggleSelection');
-    _access.ensureExternalSelectionMutationAllowed('toggleSelection');
+    _runtime.ensurePublicSideEffectAllowed('toggleSelection');
+    _runtime.ensureExternalSelectionMutationAllowed('toggleSelection');
   }
 
   void clearSelection() {
-    _access.ensurePublicSideEffectAllowed('clearSelection');
-    _access.ensureExternalSelectionMutationAllowed('clearSelection');
+    _runtime.ensurePublicSideEffectAllowed('clearSelection');
+    _runtime.ensureExternalSelectionMutationAllowed('clearSelection');
   }
 
   void selectAll() {
-    _access.ensurePublicSideEffectAllowed('selectAll');
-    _access.ensureExternalSelectionMutationAllowed('selectAll');
+    _runtime.ensurePublicSideEffectAllowed('selectAll');
+    _runtime.ensureExternalSelectionMutationAllowed('selectAll');
   }
 
   void rotateSelection() {
-    _access.ensurePublicSideEffectAllowed('rotateSelection');
+    _runtime.ensurePublicSideEffectAllowed('rotateSelection');
   }
 }
 
-class _Access {
+class _Runtime {
   void ensurePublicSideEffectAllowed(
     String operation, {
     bool allowAfterDispose = false,
@@ -128,23 +128,22 @@ class _Access {
     'lib/src/interactive/scene_controller_scene.dart',
     '''
 class SceneControllerScene {
-  final _access = _Access();
+  final void Function(String operation, {bool allowAfterDispose})
+  ensurePublicSideEffectAllowed = _ensure;
 
   void write(Object fn) {
-    _access.ensurePublicSideEffectAllowed('write');
+    ensurePublicSideEffectAllowed('write');
   }
 
   void clearScene() {
-    _access.ensurePublicSideEffectAllowed('clearScene');
+    ensurePublicSideEffectAllowed('clearScene');
   }
 }
 
-class _Access {
-  void ensurePublicSideEffectAllowed(
-    String operation, {
-    bool allowAfterDispose = false,
-  }) {}
-}
+void _ensure(
+  String operation, {
+  bool allowAfterDispose = false,
+}) {}
 ''',
   );
   writeSandboxFile(
@@ -378,16 +377,6 @@ typedef InteractiveDrawStyle = ({
     sandbox,
     'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
     'class SceneControllerSceneMutations {}\n',
-  );
-  writeSandboxFile(
-    sandbox,
-    'lib/src/interactive/internal/scene_controller_scene_access.dart',
-    'class SceneControllerSceneAccessAdapter {}\n',
-  );
-  writeSandboxFile(
-    sandbox,
-    'lib/src/interactive/internal/scene_controller_selection_access.dart',
-    'class SceneControllerSelectionAccessAdapter {}\n',
   );
   writeSandboxFile(
     sandbox,

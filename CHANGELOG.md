@@ -26,9 +26,17 @@ All notable changes to `iwb_canvas_engine` are documented here.
   Integrations must stop depending on `generate*`, `isGenerated*`, and
   `tryParseGenerated*` helpers or on the legacy `node-<n>` / `layer-<n>`
   runtime format as a public contract.
+- `SceneControllerInteraction.snapshot` was removed from the public runtime
+  surface. Integrations must read committed render-state from
+  `controller.snapshot` instead of `controller.interaction.snapshot`.
 
 ### Changed
 
+- `SceneController` post-split cleanup removed residual selection/scene access
+  adapters, restored root-owned committed render-state reads for interactive
+  overlay painting, and aligned docs/guardrails with the final
+  `controller.interaction` / `controller.selection` / `controller.scene`
+  capability graph.
 - Finalized the internal `model/` owner graph for steps `40-44`: the
   repository now documents `scene_builder_api.dart` as the public
   `SceneBuilder` surface, keeps `scene_builder.dart`,
@@ -278,7 +286,8 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ### Added
 
-- Stable public runtime aliases: `SceneController` and `SceneView`.
+- Stable public interactive runtime root `SceneController` and widget
+  `SceneView`.
 - `SceneRenderState` as the supported view/painter read contract.
 - Guardrails around the single-entrypoint and safe transaction model.
 

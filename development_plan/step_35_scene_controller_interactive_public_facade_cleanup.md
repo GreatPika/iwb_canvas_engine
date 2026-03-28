@@ -47,7 +47,7 @@ test-access ownership, сохраняя его единственным public i
 ### Test Files
 
 - `test/controller/commands/draw_commands_test.dart`
-- `test/interactive/core/scene_controller_interactive_runtime_contract_test.dart`
+- `test/interactive/core/scene_controller_architecture_boundary_test.dart`
 - `test/interactive/core/scene_controller_interactive_line_tool_flow_test.dart`
 - `test/interactive/core/scene_controller_interactive_line_pending_cancel_test.dart`
 - `test/interactive/core/scene_controller_interactive_actions_effects_test.dart`

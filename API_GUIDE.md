@@ -2,7 +2,7 @@
 
 This document is the canonical integration reference for the current mainline.
 It describes the supported public API, the runtime contracts that matter in
-production, and the migration expectations for the `5.x` line.
+production, and the migration expectations for the current mainline release.
 
 ## 1. Package boundary
 
@@ -112,13 +112,20 @@ JSON string boundary note:
 - oversized raw JSON is reported as `SceneDataErrorCode.invalidJson` with
   `details.template == 'jsonPayloadTooLarge'`
 
-Public aliases:
+Public runtime surface:
 
 - `SceneController` is the concrete public runtime owner
 - `SceneControllerInteraction`, `SceneControllerSelection`, and
   `SceneControllerScene` are capability owners exposed through
   `controller.interaction`, `controller.selection`, and `controller.scene`
-- `SceneView` is a typedef alias of `SceneViewInteractive`
+- `SceneView` is the public interactive widget export
+
+Migration note:
+
+- `SceneControllerInteraction.snapshot` was removed from the public runtime
+  surface
+- read committed render-state from `controller.snapshot`
+- keep `controller.interaction` for interactive mode/tool/preview concerns only
 
 ## 3. Scene model
 

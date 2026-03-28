@@ -47,7 +47,7 @@ String _extractMethodBody({
 void main() {
   // INV:INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY
   test(
-    'interactive facade/runtime/event/draw owners remain structurally split',
+    'SceneController architecture boundary remains structurally split',
     () {
       final facadeSource = File(
         'lib/src/interactive/scene_controller.dart',

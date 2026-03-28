@@ -323,17 +323,17 @@ const List<CapabilityGuardSpec> _capabilityGuardSpecs = <CapabilityGuardSpec>[
   CapabilityGuardSpec(
     relativePath: 'scene_controller_scene.dart',
     className: 'SceneControllerScene',
-    primaryGuardCall: '_access.ensurePublicSideEffectAllowed',
+    primaryGuardCall: 'ensurePublicSideEffectAllowed',
   ),
   CapabilityGuardSpec(
     relativePath: 'scene_controller_selection.dart',
     className: 'SceneControllerSelection',
-    primaryGuardCall: '_access.ensurePublicSideEffectAllowed',
+    primaryGuardCall: '_runtime.ensurePublicSideEffectAllowed',
     secondaryGuardCallsByMethod: <String, String>{
-      'setSelection': '_access.ensureExternalSelectionMutationAllowed',
-      'toggleSelection': '_access.ensureExternalSelectionMutationAllowed',
-      'clearSelection': '_access.ensureExternalSelectionMutationAllowed',
-      'selectAll': '_access.ensureExternalSelectionMutationAllowed',
+      'setSelection': '_runtime.ensureExternalSelectionMutationAllowed',
+      'toggleSelection': '_runtime.ensureExternalSelectionMutationAllowed',
+      'clearSelection': '_runtime.ensureExternalSelectionMutationAllowed',
+      'selectAll': '_runtime.ensureExternalSelectionMutationAllowed',
     },
   ),
 ];
@@ -579,6 +579,10 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
     context,
     'internal/scene_controller_interaction_config.dart',
   );
+  final interactionFile = _interactiveSupportFile(
+    context,
+    'scene_controller_interaction.dart',
+  );
   final interactionRuntimeFile = _interactiveSupportFile(
     context,
     'internal/scene_controller_interaction_runtime.dart',
@@ -590,14 +594,6 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
   final sceneMutationsFile = _interactiveSupportFile(
     context,
     'internal/scene_controller_scene_mutations.dart',
-  );
-  final sceneAccessFile = _interactiveSupportFile(
-    context,
-    'internal/scene_controller_scene_access.dart',
-  );
-  final selectionAccessFile = _interactiveSupportFile(
-    context,
-    'internal/scene_controller_selection_access.dart',
   );
   final selectionMutationsFile = _interactiveSupportFile(
     context,
@@ -624,11 +620,10 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
         drawEraserStrokeHitFile: 'InteractiveDrawEraserStrokeHit',
         drawStyleFile: 'InteractiveDrawStyle',
         interactionConfigFile: 'SceneControllerInteractionConfig',
+        interactionFile: 'SceneControllerInteraction',
         interactionRuntimeFile: 'SceneControllerInteractionRuntime',
         interactionAccessFile: 'SceneControllerInteractionContext',
         sceneMutationsFile: 'SceneControllerSceneMutations',
-        sceneAccessFile: 'SceneControllerSceneAccessAdapter',
-        selectionAccessFile: 'SceneControllerSelectionAccessAdapter',
         selectionMutationsFile: 'SceneControllerSelectionMutations',
         facadeAssemblyFile: 'assembleSceneControllerFacade',
         internalAccessFile: 'SceneControllerInternalAccess',
@@ -636,8 +631,35 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
   if (missingOwnerViolation != null) {
     return missingOwnerViolation;
   }
+  if (_interactiveSupportFile(
+    context,
+    'internal/scene_controller_scene_access.dart',
+  ).existsSync()) {
+    return GuardrailViolation(
+      filePath:
+          'lib/src/interactive/internal/scene_controller_scene_access.dart',
+      line: 1,
+      message:
+          'interactive API violation: SceneControllerSceneAccessAdapter is a '
+          'deleted residual seam and must not exist.',
+    );
+  }
+  if (_interactiveSupportFile(
+    context,
+    'internal/scene_controller_selection_access.dart',
+  ).existsSync()) {
+    return GuardrailViolation(
+      filePath:
+          'lib/src/interactive/internal/scene_controller_selection_access.dart',
+      line: 1,
+      message:
+          'interactive API violation: SceneControllerSelectionAccessAdapter is '
+          'a deleted residual seam and must not exist.',
+    );
+  }
 
   final facadeSource = facadeFile.readAsStringSync();
+  final interactionSource = interactionFile.readAsStringSync();
   final runtimeSource = runtimeFile.readAsStringSync();
   final eventSource = eventFile.readAsStringSync();
   final drawCoordinatorSource = drawCoordinatorFile.readAsStringSync();
@@ -651,6 +673,18 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
   final internalAccessSource = internalAccessFile.readAsStringSync();
 
   return _topLevelFacadeHelperViolation(context, parsed: parsed) ??
+      _requireSourceTokens(
+        source: interactionSource,
+        filePath: _interactiveFilePosixPath(context, interactionFile),
+        requiredTokens: const <String>[],
+        bannedTokens: const <String>[
+          'SceneSnapshot get snapshot',
+          'get snapshot => _access.snapshot',
+        ],
+        message:
+            'interactive API violation: SceneControllerInteraction must not '
+            'expose committed render-state through snapshot.',
+      ) ??
       _requireSourceTokens(
         source: facadeSource,
         filePath: facadeFilePosixPath,
@@ -672,6 +706,10 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
           "import 'internal/interactive_draw_eraser_engine.dart';",
           "import 'internal/scene_controller_facade_support.dart';",
           "import 'internal/interactive_draw_line_engine.dart' show InteractiveDrawStyle;",
+          "import 'scene_controller_scene_access.dart';",
+          "import 'scene_controller_selection_access.dart';",
+          'SceneControllerSceneAccessAdapter(',
+          'SceneControllerSelectionAccessAdapter(',
           '_runtime.handlePointer(',
           '_runtime.handleDoubleTap(',
           'StreamController<',

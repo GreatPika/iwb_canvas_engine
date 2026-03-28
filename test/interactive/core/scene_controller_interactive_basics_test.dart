@@ -1141,7 +1141,7 @@ void main() {
     // - single-active-pointer semantics: existing move/draw policy group
 
     test(
-      'interaction access reads snapshot through the public controller facade',
+      'internal interaction access reads snapshot through the public controller facade',
       () {
         final controller = _SnapshotOverrideController(
           initialSnapshot: SceneSnapshot(
@@ -1159,7 +1159,6 @@ void main() {
         );
         controller.snapshotOverride = overriddenSnapshot;
 
-        expect(controller.interaction.snapshot, same(overriddenSnapshot));
         expect(
           sceneControllerInternalInteractionAccessForTest(controller).snapshot,
           same(overriddenSnapshot),

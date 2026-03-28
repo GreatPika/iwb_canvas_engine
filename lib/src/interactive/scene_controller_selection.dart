@@ -1,52 +1,58 @@
 import '../contract/snapshot.dart';
-import 'internal/scene_controller_selection_access.dart';
+import 'internal/scene_controller_interaction_runtime.dart';
+import 'internal/scene_controller_selection_mutations.dart';
 
 class SceneControllerSelection {
-  SceneControllerSelection(this._access);
+  const SceneControllerSelection({
+    required SceneControllerInteractionRuntime runtime,
+    required SceneControllerSelectionMutations mutations,
+  }) : _runtime = runtime,
+       _mutations = mutations;
 
-  final SceneControllerSelectionAccess _access;
+  final SceneControllerInteractionRuntime _runtime;
+  final SceneControllerSelectionMutations _mutations;
 
   void setSelection(Iterable<NodeId> nodeIds) {
-    _access.ensurePublicSideEffectAllowed('setSelection');
-    _access.ensureExternalSelectionMutationAllowed('setSelection');
-    _access.setSelection(nodeIds);
+    _runtime.ensurePublicSideEffectAllowed('setSelection');
+    _runtime.ensureExternalSelectionMutationAllowed('setSelection');
+    _mutations.setSelection(nodeIds);
   }
 
   void toggleSelection(NodeId nodeId) {
-    _access.ensurePublicSideEffectAllowed('toggleSelection');
-    _access.ensureExternalSelectionMutationAllowed('toggleSelection');
-    _access.toggleSelection(nodeId);
+    _runtime.ensurePublicSideEffectAllowed('toggleSelection');
+    _runtime.ensureExternalSelectionMutationAllowed('toggleSelection');
+    _mutations.toggleSelection(nodeId);
   }
 
   void clearSelection() {
-    _access.ensurePublicSideEffectAllowed('clearSelection');
-    _access.ensureExternalSelectionMutationAllowed('clearSelection');
-    _access.clearSelection();
+    _runtime.ensurePublicSideEffectAllowed('clearSelection');
+    _runtime.ensureExternalSelectionMutationAllowed('clearSelection');
+    _mutations.clearSelection();
   }
 
   void selectAll({bool onlySelectable = true}) {
-    _access.ensurePublicSideEffectAllowed('selectAll');
-    _access.ensureExternalSelectionMutationAllowed('selectAll');
-    _access.selectAll(onlySelectable: onlySelectable);
+    _runtime.ensurePublicSideEffectAllowed('selectAll');
+    _runtime.ensureExternalSelectionMutationAllowed('selectAll');
+    _mutations.selectAll(onlySelectable: onlySelectable);
   }
 
   void rotateSelection({required bool clockwise, int? timestampMs}) {
-    _access.ensurePublicSideEffectAllowed('rotateSelection');
-    _access.rotateSelection(clockwise: clockwise, timestampMs: timestampMs);
+    _runtime.ensurePublicSideEffectAllowed('rotateSelection');
+    _mutations.rotateSelection(clockwise: clockwise, timestampMs: timestampMs);
   }
 
   void flipSelectionVertical({int? timestampMs}) {
-    _access.ensurePublicSideEffectAllowed('flipSelectionVertical');
-    _access.flipSelectionVertical(timestampMs: timestampMs);
+    _runtime.ensurePublicSideEffectAllowed('flipSelectionVertical');
+    _mutations.flipSelectionVertical(timestampMs: timestampMs);
   }
 
   void flipSelectionHorizontal({int? timestampMs}) {
-    _access.ensurePublicSideEffectAllowed('flipSelectionHorizontal');
-    _access.flipSelectionHorizontal(timestampMs: timestampMs);
+    _runtime.ensurePublicSideEffectAllowed('flipSelectionHorizontal');
+    _mutations.flipSelectionHorizontal(timestampMs: timestampMs);
   }
 
   void deleteSelection({int? timestampMs}) {
-    _access.ensurePublicSideEffectAllowed('deleteSelection');
-    _access.deleteSelection(timestampMs: timestampMs);
+    _runtime.ensurePublicSideEffectAllowed('deleteSelection');
+    _mutations.deleteSelection(timestampMs: timestampMs);
   }
 }

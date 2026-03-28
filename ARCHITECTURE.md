@@ -16,7 +16,8 @@ constraints that keep the public API stable.
 - Supported public surface: exactly the exports declared by
   `lib/iwb_canvas_engine.dart`
 - Current serialization contract: write `schemaVersion = 5`, read `{5}`
-- Public runtime aliases: `SceneController`, `SceneView`
+- Public interactive runtime root: `SceneController`
+- Public interactive widget: `SceneView`
 - Public write boundary: `SceneWriteTxn`
 
 The package is an engine. It does not own app UI, persistence, collaboration, or

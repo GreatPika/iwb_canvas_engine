@@ -6,9 +6,7 @@ import '../../core/pointer_input.dart';
 import 'scene_controller_interaction_access.dart';
 import 'scene_controller_interaction_config.dart';
 import 'scene_controller_interaction_runtime.dart';
-import 'scene_controller_scene_access.dart';
 import 'scene_controller_scene_mutations.dart';
-import 'scene_controller_selection_access.dart';
 import 'scene_controller_selection_mutations.dart';
 import '../scene_controller_interaction.dart';
 import '../scene_controller_scene.dart';
@@ -78,17 +76,13 @@ SceneControllerFacadeAssembly assembleSceneControllerFacade(
     interactionAccess: interactionAccess,
     interaction: SceneControllerInteraction(interactionAccess),
     selection: SceneControllerSelection(
-      SceneControllerSelectionAccessAdapter(
-        runtime: interactionRuntime,
-        mutations: selectionMutations,
-      ),
+      runtime: interactionRuntime,
+      mutations: selectionMutations,
     ),
     scene: SceneControllerScene(
-      SceneControllerSceneAccessAdapter(
-        ensurePublicSideEffectAllowedCallback:
-            interactionRuntime.ensurePublicSideEffectAllowed,
-        mutations: sceneMutations,
-      ),
+      ensurePublicSideEffectAllowed:
+          interactionRuntime.ensurePublicSideEffectAllowed,
+      mutations: sceneMutations,
     ),
   );
 }

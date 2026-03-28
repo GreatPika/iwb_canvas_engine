@@ -44,7 +44,7 @@ eraser-local boundary и разрезает её на focused owner-ы по node
 - `test/interactive/core/interactive_draw_eraser_engine_test.dart`
 - `test/interactive/core/scene_controller_interactive_guardrails_eraser_test.dart`
 - `test/interactive/core/scene_controller_interactive_guardrails_eraser_lifecycle_test.dart`
-- `test/interactive/core/scene_controller_interactive_runtime_contract_test.dart`
+- `test/interactive/core/scene_controller_architecture_boundary_test.dart`
 - `test/tool/guardrails/guardrails_interactive_api_tool_test.dart`
 
 ### Fixture and Supporting Data Files

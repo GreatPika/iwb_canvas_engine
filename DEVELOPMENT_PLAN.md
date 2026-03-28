@@ -152,4 +152,4 @@ language: russian
 - [x] [Шаг 54. Убрать residual `part`-coupling из `node_spec.dart` и `node_patch.dart` через explicit internal fast-path modules](development_plan/step_54_node_spec_and_patch_explicit_fast_path_modules.md)
 - [x] [Шаг 55. Замкнуть финальную contract architecture на docs, guardrails и baseline](development_plan/step_55_contract_final_architecture_closure.md)
 - [ ] [Шаг 56. Сделать `SceneController` единственным public root и разрезать API по capability owner-ам](development_plan/step_56_scene_controller_public_capability_split.md)
-- [ ] [Шаг 57. Убрать residual access seams, render-state leak и naming drift после public split `SceneController`](development_plan/step_57_scene_controller_post_split_residual_cleanup.md)
+- [x] [Шаг 57. Убрать residual access seams, render-state leak и naming drift после public split `SceneController`](development_plan/step_57_scene_controller_post_split_residual_cleanup.md)

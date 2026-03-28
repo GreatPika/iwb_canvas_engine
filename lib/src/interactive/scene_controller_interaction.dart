@@ -32,7 +32,6 @@ class SceneControllerInteraction implements Listenable {
     _access.removeListener(listener);
   }
 
-  SceneSnapshot get snapshot => _access.snapshot;
   Rect? get selectionRect => _access.runtime.selectionRect;
   Offset? get pendingLineStart => _access.runtime.pendingLineStart;
   int? get pendingLineTimestampMs => _access.runtime.pendingLineTimestampMs;

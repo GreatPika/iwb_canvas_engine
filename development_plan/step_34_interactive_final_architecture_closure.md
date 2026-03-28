@@ -48,7 +48,7 @@ language: russian
 ### Test Files
 
 - `test/interactive/core/interactive_move_session_test.dart`
-- `test/interactive/core/scene_controller_interactive_runtime_contract_test.dart`
+- `test/interactive/core/scene_controller_architecture_boundary_test.dart`
 - `test/tool/guardrails/guardrails_interactive_api_tool_test.dart`
 
 ### Fixture and Supporting Data Files
@@ -291,7 +291,7 @@ draw-family owner graph.
 - `dart run tool/check_guardrails.dart`
 - `dart run tool/check_invariant_coverage.dart`
 - MCP test runner:
-  `test/interactive/core/interactive_move_session_test.dart test/interactive/core/scene_controller_interactive_runtime_contract_test.dart`
+  `test/interactive/core/interactive_move_session_test.dart test/interactive/core/scene_controller_architecture_boundary_test.dart`
 - `dart run tool/run_tool_tests.dart`
 
 #### Positive Scenarios

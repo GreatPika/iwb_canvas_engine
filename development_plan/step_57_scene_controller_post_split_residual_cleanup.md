@@ -178,9 +178,10 @@ with the final controller architecture.
   `lib/src/interactive/internal/scene_controller_scene_access.dart` currently
   duplicate public selection/scene signatures and forward into retained
   mutation/runtime owners.
-- `SceneControllerInteraction` currently exposes `snapshot`, and
-  `SceneViewInteractiveOverlayPainter` currently reads camera state through
-  `interaction.snapshot`.
+- `SceneControllerInteraction.snapshot` is being removed as a public
+  breaking-change boundary, and
+  `SceneViewInteractiveOverlayPainter` is moving camera reads to
+  `controller.snapshot`.
 - Repo-local truth still drifts from the new shape:
   `README.md`, `ARCHITECTURE.md`, and `CHANGELOG.md` still describe
   `SceneController` as an alias family, and `API_GUIDE.md` still contains the
@@ -257,8 +258,8 @@ with the final controller architecture.
   `SceneControllerInteraction` declares a public `snapshot` getter or another
   public getter that mirrors committed root render state.
 - `tool/invariant_registry.dart` proof coverage for
-  `INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY` must stop pointing at a
-  legacy-named facade proof file.
+  `INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY` must point at a
+  SceneController-named facade proof file.
 - Positive-source searches listed in section 6.2 must stay empty after the
   change.
 
@@ -293,7 +294,7 @@ with the final controller architecture.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Delete selection/scene access adapters and move ownership directly into public owners
+### Slice 1. [x] Delete selection/scene access adapters and move ownership directly into public owners
 
 #### Slice Contract
 
@@ -342,7 +343,7 @@ without recreating those adapter seams.
 - Green run of the listed verifications.
 - Both `test ! -e ...` checks pass.
 
-### Slice 2. [ ] Remove the committed render-state leak from `interaction`
+### Slice 2. [x] Remove the committed render-state leak from `interaction`
 
 #### Slice Contract
 
@@ -386,7 +387,7 @@ interactive/view tests and test support.
 - Green run of the listed verifications.
 - The `rg -n "interaction\\.snapshot" ...` search returns no matches.
 
-### Slice 3. [ ] Close repo-local docs, proofs, and guardrails on the final controller architecture
+### Slice 3. [x] Close repo-local docs, proofs, and guardrails on the final controller architecture
 
 #### Slice Contract
 
@@ -416,7 +417,7 @@ the deleted access seams plus the `interaction` render-state leak.
 #### Fixtures Used
 
 - `test/tool/guardrails/guardrails_interactive_api_tool_test.dart`
-- `test/interactive/core/scene_controller_interactive_runtime_contract_test.dart`
+- `test/interactive/core/scene_controller_architecture_boundary_test.dart`
 
 #### Positive Scenarios
 
