@@ -36,7 +36,7 @@ typedef NodeSnapshotFromSchema<FieldsT, SnapshotT extends NodeSnapshot> =
 NodeSnapshotCommonSchemaFields snapshotCommonFromNodeSnapshot(
   NodeSnapshot node,
 ) {
-  return NodeBoundarySchema.snapshotCommonFromValidated((
+  return snapshotCommonSchemaFieldsFromValidated((
     id: node.id,
     instanceRevision: node.instanceRevision,
     transform: node.transform,
@@ -51,7 +51,7 @@ NodeSnapshotCommonSchemaFields snapshotCommonFromNodeSnapshot(
 }
 
 NodeSpecCommonSchemaFields specCommonFromNodeSpec(NodeSpec spec) {
-  return NodeBoundarySchema.specCommonFromValidated((
+  return specCommonSchemaFieldsFromValidated((
     id: spec.id,
     transform: spec.transform,
     opacity: spec.opacity,
@@ -65,7 +65,7 @@ NodeSpecCommonSchemaFields specCommonFromNodeSpec(NodeSpec spec) {
 }
 
 NodeSnapshotCommonSchemaFields snapshotCommonFromSceneNode(SceneNode node) {
-  return NodeBoundarySchema.snapshotCommonFromValidated((
+  return snapshotCommonSchemaFieldsFromValidated((
     id: node.id,
     instanceRevision: node.instanceRevision,
     transform: node.transform,

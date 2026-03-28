@@ -32,7 +32,7 @@ LineNodeSchemaFields _decodeLineFields(
   Map<String, Object?> json, {
   required String nodePath,
 }) {
-  return NodeBoundarySchema.lineFieldsFromValidated((
+  return lineNodeSchemaFieldsFromValidated((
     start: validatedRequireJsonFiniteOffset(
       sceneBuilderRequireField(json, 'localA', pathPrefix: nodePath),
       path: sceneBuilderPathAt(nodePath, 'localA'),

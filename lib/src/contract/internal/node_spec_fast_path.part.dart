@@ -5,10 +5,10 @@ ImageNodeSpec imageNodeSpecFromValidated({
   NodeSpecCommonSchemaFields? common,
   required ImageNodeSchemaFields fields,
 }) {
-  final resolvedCommon = NodeBoundarySchema.specCommonFromValidated(
+  final resolvedCommon = specCommonSchemaFieldsFromValidated(
     common ?? _defaultNodeSpecCommonSchemaFields(),
   );
-  final resolvedFields = NodeBoundarySchema.imageFieldsFromValidated(fields);
+  final resolvedFields = imageNodeSchemaFieldsFromValidated(fields);
   return ImageNodeSpec._internal(
     id: resolvedCommon.id,
     imageId: resolvedFields.imageId,
@@ -30,10 +30,10 @@ TextNodeSpec textNodeSpecFromValidated({
   NodeSpecCommonSchemaFields? common,
   required TextNodeSpecSchemaFields fields,
 }) {
-  final resolvedCommon = NodeBoundarySchema.specCommonFromValidated(
+  final resolvedCommon = specCommonSchemaFieldsFromValidated(
     common ?? _defaultNodeSpecCommonSchemaFields(),
   );
-  final resolvedFields = NodeBoundarySchema.textSpecFieldsFromValidated(fields);
+  final resolvedFields = textNodeSpecSchemaFieldsFromValidated(fields);
   return TextNodeSpec._internal(
     id: resolvedCommon.id,
     text: resolvedFields.text,
@@ -62,12 +62,10 @@ StrokeNodeSpec strokeNodeSpecFromValidated({
   NodeSpecCommonSchemaFields? common,
   required StrokeNodeSpecSchemaInput fields,
 }) {
-  final resolvedCommon = NodeBoundarySchema.specCommonFromValidated(
+  final resolvedCommon = specCommonSchemaFieldsFromValidated(
     common ?? _defaultNodeSpecCommonSchemaFields(),
   );
-  final resolvedFields = NodeBoundarySchema.strokeSpecFieldsFromValidated(
-    fields,
-  );
+  final resolvedFields = strokeNodeSpecSchemaFieldsFromValidated(fields);
   return StrokeNodeSpec._internal(
     id: resolvedCommon.id,
     points: resolvedFields.points,
@@ -89,10 +87,10 @@ LineNodeSpec lineNodeSpecFromValidated({
   NodeSpecCommonSchemaFields? common,
   required LineNodeSchemaFields fields,
 }) {
-  final resolvedCommon = NodeBoundarySchema.specCommonFromValidated(
+  final resolvedCommon = specCommonSchemaFieldsFromValidated(
     common ?? _defaultNodeSpecCommonSchemaFields(),
   );
-  final resolvedFields = NodeBoundarySchema.lineFieldsFromValidated(fields);
+  final resolvedFields = lineNodeSchemaFieldsFromValidated(fields);
   return LineNodeSpec._internal(
     id: resolvedCommon.id,
     start: resolvedFields.start,
@@ -115,10 +113,10 @@ RectNodeSpec rectNodeSpecFromValidated({
   NodeSpecCommonSchemaFields? common,
   required RectNodeSchemaFields fields,
 }) {
-  final resolvedCommon = NodeBoundarySchema.specCommonFromValidated(
+  final resolvedCommon = specCommonSchemaFieldsFromValidated(
     common ?? _defaultNodeSpecCommonSchemaFields(),
   );
-  final resolvedFields = NodeBoundarySchema.rectFieldsFromValidated(fields);
+  final resolvedFields = rectNodeSchemaFieldsFromValidated(fields);
   return RectNodeSpec._internal(
     id: resolvedCommon.id,
     size: resolvedFields.size,
@@ -141,10 +139,10 @@ PathNodeSpec pathNodeSpecFromValidated({
   NodeSpecCommonSchemaFields? common,
   required PathNodeSchemaFields fields,
 }) {
-  final resolvedCommon = NodeBoundarySchema.specCommonFromValidated(
+  final resolvedCommon = specCommonSchemaFieldsFromValidated(
     common ?? _defaultNodeSpecCommonSchemaFields(),
   );
-  final resolvedFields = NodeBoundarySchema.pathFieldsFromValidated(fields);
+  final resolvedFields = pathNodeSchemaFieldsFromValidated(fields);
   return PathNodeSpec._internal(
     id: resolvedCommon.id,
     svgPathData: resolvedFields.svgPathData,

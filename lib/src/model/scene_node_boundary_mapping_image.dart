@@ -7,7 +7,7 @@ import 'scene_node_boundary_mapping_common.dart';
 ImageNodeSchemaFields imageNodeSchemaFieldsFromSnapshot(
   ImageNodeSnapshot image,
 ) {
-  return NodeBoundarySchema.imageFieldsFromValidated((
+  return imageNodeSchemaFieldsFromValidated((
     imageId: image.imageId,
     size: image.size,
     naturalSize: image.naturalSize,
@@ -15,7 +15,7 @@ ImageNodeSchemaFields imageNodeSchemaFieldsFromSnapshot(
 }
 
 ImageNodeSchemaFields imageNodeSchemaFieldsFromSpec(ImageNodeSpec image) {
-  return NodeBoundarySchema.imageFieldsFromValidated((
+  return imageNodeSchemaFieldsFromValidated((
     imageId: image.imageId,
     size: image.size,
     naturalSize: image.naturalSize,
@@ -23,7 +23,7 @@ ImageNodeSchemaFields imageNodeSchemaFieldsFromSpec(ImageNodeSpec image) {
 }
 
 ImageNodeSchemaFields imageNodeSchemaFieldsFromNode(ImageNode image) {
-  return NodeBoundarySchema.imageFieldsFromValidated((
+  return imageNodeSchemaFieldsFromValidated((
     imageId: image.imageId,
     size: image.size,
     naturalSize: image.naturalSize,

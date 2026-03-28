@@ -34,7 +34,7 @@ PathNodeSchemaFields _decodePathFields(
   Map<String, Object?> json, {
   required String nodePath,
 }) {
-  return NodeBoundarySchema.pathFieldsFromValidated((
+  return pathNodeSchemaFieldsFromValidated((
     svgPathData: SvgPathDataValue.fromJson(
       sceneBuilderRequireTypedField<String>(
         json,

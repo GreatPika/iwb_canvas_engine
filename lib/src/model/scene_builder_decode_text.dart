@@ -42,7 +42,7 @@ TextNodeSnapshotSchemaFields _decodeTextFields(
   required String nodePath,
 }) {
   final textFields = _decodeTextSpecFields(json, nodePath: nodePath);
-  return NodeBoundarySchema.textSnapshotFieldsFromValidated((
+  return textNodeSnapshotSchemaFieldsFromValidated((
     text: textFields.text,
     size: sceneBuilderRequireSize(json, 'size', pathPrefix: nodePath),
     fontSize: textFields.fontSize,
@@ -63,7 +63,7 @@ TextNodeSpecSchemaFields _decodeTextSpecFields(
 }) {
   final flags = _decodeTextFlags(json, nodePath: nodePath);
   final optionals = _decodeTextOptionals(json, nodePath: nodePath);
-  return NodeBoundarySchema.textSpecFieldsFromValidated((
+  return textNodeSpecSchemaFieldsFromValidated((
     text: _decodeRequiredTextContent(json, nodePath: nodePath),
     fontSize: validatedRequireJsonPositiveFiniteDouble(
       sceneBuilderRequireField(json, 'fontSize', pathPrefix: nodePath),

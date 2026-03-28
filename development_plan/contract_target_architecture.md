@@ -14,6 +14,9 @@ updated explicitly in this document before a step is considered complete.
 
 ## Target End State
 
+- After step `52`, the node-boundary schema seam is already closed through
+  explicit common / patch / spec / snapshot owners; the remaining contract
+  cleanup starts with the snapshot fast-path seam in step `53`.
 - `lib/src/contract/**` keeps the public immutable boundary types and the
   internal validated-boundary owners, but the remaining internal hotspot seams
   stop relying on `part`-coupled shared namespaces.

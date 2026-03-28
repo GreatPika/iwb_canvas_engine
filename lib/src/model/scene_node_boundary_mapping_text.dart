@@ -10,7 +10,7 @@ import 'scene_node_boundary_mapping_common.dart';
 TextNodeSnapshotSchemaFields textNodeSchemaFieldsFromSnapshot(
   TextNodeSnapshot text,
 ) {
-  return NodeBoundarySchema.textSnapshotFieldsFromValidated((
+  return textNodeSnapshotSchemaFieldsFromValidated((
     text: text.text,
     size: text.size,
     fontSize: text.fontSize,
@@ -26,7 +26,7 @@ TextNodeSnapshotSchemaFields textNodeSchemaFieldsFromSnapshot(
 }
 
 TextNodeSpecSchemaFields textNodeSchemaFieldsFromSpec(TextNodeSpec text) {
-  return NodeBoundarySchema.textSpecFieldsFromValidated((
+  return textNodeSpecSchemaFieldsFromValidated((
     text: text.text,
     fontSize: text.fontSize,
     color: text.color,
@@ -41,7 +41,7 @@ TextNodeSpecSchemaFields textNodeSchemaFieldsFromSpec(TextNodeSpec text) {
 }
 
 TextNodeSnapshotSchemaFields textNodeSchemaFieldsFromNode(TextNode text) {
-  return NodeBoundarySchema.textSnapshotFieldsFromValidated((
+  return textNodeSnapshotSchemaFieldsFromValidated((
     text: text.text,
     size: text.size,
     fontSize: text.fontSize,

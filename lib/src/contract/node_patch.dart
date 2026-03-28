@@ -22,7 +22,7 @@ class CommonNodePatch {
     PatchField<bool> isDeletable = const PatchField<bool>.absent(),
     PatchField<bool> isTransformable = const PatchField<bool>.absent(),
   }) {
-    final fields = NodeBoundarySchema.validatePatchCommon((
+    final fields = validatePatchCommonSchemaFields((
       transform: transform,
       opacity: opacity,
       hitPadding: hitPadding,
@@ -72,9 +72,9 @@ class ImageNodePatch extends NodePatch {
     PatchField<Size> size = const PatchField<Size>.absent(),
     PatchField<Size?> naturalSize = const PatchField<Size?>.absent(),
   }) : this._validated(
-         id: NodeBoundarySchema.validateRequiredNodeId(id),
+         id: validateRequiredNodeId(id),
          common: common ?? commonNodePatchFromValidated(),
-         fields: NodeBoundarySchema.validateImagePatch((
+         fields: validateImageNodePatchSchemaFields((
            imageId: imageId,
            size: size,
            naturalSize: naturalSize,
@@ -121,9 +121,9 @@ class TextNodePatch extends NodePatch {
     PatchField<double?> maxWidth = const PatchField<double?>.absent(),
     PatchField<double?> lineHeight = const PatchField<double?>.absent(),
   }) : this._validated(
-         id: NodeBoundarySchema.validateRequiredNodeId(id),
+         id: validateRequiredNodeId(id),
          common: common ?? commonNodePatchFromValidated(),
-         fields: NodeBoundarySchema.validateTextPatch((
+         fields: validateTextNodePatchSchemaFields((
            text: text,
            fontSize: fontSize,
            color: color,
@@ -191,9 +191,9 @@ class StrokeNodePatch extends NodePatch {
     PatchField<double> thickness = const PatchField<double>.absent(),
     PatchField<Color> color = const PatchField<Color>.absent(),
   }) : this._validated(
-         id: NodeBoundarySchema.validateRequiredNodeId(id),
+         id: validateRequiredNodeId(id),
          common: common ?? commonNodePatchFromValidated(),
-         fields: NodeBoundarySchema.validateStrokePatch((
+         fields: validateStrokeNodePatchSchemaFields((
            points: points,
            thickness: thickness,
            color: color,
@@ -235,9 +235,9 @@ class LineNodePatch extends NodePatch {
     PatchField<double> thickness = const PatchField<double>.absent(),
     PatchField<Color> color = const PatchField<Color>.absent(),
   }) : this._validated(
-         id: NodeBoundarySchema.validateRequiredNodeId(id),
+         id: validateRequiredNodeId(id),
          common: common ?? commonNodePatchFromValidated(),
-         fields: NodeBoundarySchema.validateLinePatch((
+         fields: validateLineNodePatchSchemaFields((
            start: start,
            end: end,
            thickness: thickness,
@@ -282,9 +282,9 @@ class RectNodePatch extends NodePatch {
     PatchField<Color?> strokeColor = const PatchField<Color?>.absent(),
     PatchField<double> strokeWidth = const PatchField<double>.absent(),
   }) : this._validated(
-         id: NodeBoundarySchema.validateRequiredNodeId(id),
+         id: validateRequiredNodeId(id),
          common: common ?? commonNodePatchFromValidated(),
-         fields: NodeBoundarySchema.validateRectPatch((
+         fields: validateRectNodePatchSchemaFields((
            size: size,
            fillColor: fillColor,
            strokeColor: strokeColor,
@@ -330,9 +330,9 @@ class PathNodePatch extends NodePatch {
     PatchField<double> strokeWidth = const PatchField<double>.absent(),
     PatchField<PathFillRule> fillRule = const PatchField<PathFillRule>.absent(),
   }) : this._validated(
-         id: NodeBoundarySchema.validateRequiredNodeId(id),
+         id: validateRequiredNodeId(id),
          common: common ?? commonNodePatchFromValidated(),
-         fields: NodeBoundarySchema.validatePathPatch((
+         fields: validatePathNodePatchSchemaFields((
            svgPathData: svgPathData,
            fillColor: fillColor,
            strokeColor: strokeColor,

@@ -5,7 +5,7 @@ import '../core/nodes.dart';
 import 'scene_node_boundary_mapping_common.dart';
 
 RectNodeSchemaFields rectNodeSchemaFieldsFromSnapshot(RectNodeSnapshot rect) {
-  return NodeBoundarySchema.rectFieldsFromValidated((
+  return rectNodeSchemaFieldsFromValidated((
     size: rect.size,
     fillColor: rect.fillColor,
     strokeColor: rect.strokeColor,
@@ -14,7 +14,7 @@ RectNodeSchemaFields rectNodeSchemaFieldsFromSnapshot(RectNodeSnapshot rect) {
 }
 
 RectNodeSchemaFields rectNodeSchemaFieldsFromSpec(RectNodeSpec rect) {
-  return NodeBoundarySchema.rectFieldsFromValidated((
+  return rectNodeSchemaFieldsFromValidated((
     size: rect.size,
     fillColor: rect.fillColor,
     strokeColor: rect.strokeColor,
@@ -23,7 +23,7 @@ RectNodeSchemaFields rectNodeSchemaFieldsFromSpec(RectNodeSpec rect) {
 }
 
 RectNodeSchemaFields rectNodeSchemaFieldsFromNode(RectNode rect) {
-  return NodeBoundarySchema.rectFieldsFromValidated((
+  return rectNodeSchemaFieldsFromValidated((
     size: rect.size,
     fillColor: rect.fillColor,
     strokeColor: rect.strokeColor,

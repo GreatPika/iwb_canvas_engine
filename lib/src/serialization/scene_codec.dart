@@ -206,7 +206,7 @@ List<Map<String, dynamic>> _encodeLayerNodes(
 ({Map<String, dynamic> fields, String type}) _encodeImageFields(
   ImageNodeSnapshot node,
 ) {
-  final fields = NodeBoundarySchema.imageFieldsFromValidated((
+  final fields = imageNodeSchemaFieldsFromValidated((
     imageId: node.imageId,
     size: node.size,
     naturalSize: node.naturalSize,
@@ -225,7 +225,7 @@ List<Map<String, dynamic>> _encodeLayerNodes(
 ({Map<String, dynamic> fields, String type}) _encodeTextFields(
   TextNodeSnapshot node,
 ) {
-  final fields = NodeBoundarySchema.textSnapshotFieldsFromValidated((
+  final fields = textNodeSnapshotSchemaFieldsFromValidated((
     text: node.text,
     size: node.size,
     fontSize: node.fontSize,
@@ -329,7 +329,7 @@ List<Map<String, dynamic>> _encodeLayerNodes(
 
 StrokeNodeSnapshotSchemaFields _strokeNodeSchemaFields(
   StrokeNodeSnapshot node,
-) => NodeBoundarySchema.strokeSnapshotFieldsFromValidated((
+) => strokeNodeSnapshotSchemaFieldsFromValidated((
   points: node.points,
   pointsRevision: node.pointsRevision,
   thickness: node.thickness,
@@ -337,7 +337,7 @@ StrokeNodeSnapshotSchemaFields _strokeNodeSchemaFields(
 ));
 
 LineNodeSchemaFields _lineNodeSchemaFields(LineNodeSnapshot node) =>
-    NodeBoundarySchema.lineFieldsFromValidated((
+    lineNodeSchemaFieldsFromValidated((
       start: node.start,
       end: node.end,
       thickness: node.thickness,
@@ -345,7 +345,7 @@ LineNodeSchemaFields _lineNodeSchemaFields(LineNodeSnapshot node) =>
     ));
 
 RectNodeSchemaFields _rectNodeSchemaFields(RectNodeSnapshot node) =>
-    NodeBoundarySchema.rectFieldsFromValidated((
+    rectNodeSchemaFieldsFromValidated((
       size: node.size,
       fillColor: node.fillColor,
       strokeColor: node.strokeColor,
@@ -353,7 +353,7 @@ RectNodeSchemaFields _rectNodeSchemaFields(RectNodeSnapshot node) =>
     ));
 
 PathNodeSchemaFields _pathNodeSchemaFields(PathNodeSnapshot node) =>
-    NodeBoundarySchema.pathFieldsFromValidated((
+    pathNodeSchemaFieldsFromValidated((
       svgPathData: node.svgPathData,
       fillColor: node.fillColor,
       strokeColor: node.strokeColor,
@@ -362,7 +362,7 @@ PathNodeSchemaFields _pathNodeSchemaFields(PathNodeSnapshot node) =>
     ));
 
 NodeSnapshotCommonSchemaFields _snapshotCommonFields(NodeSnapshot node) {
-  return NodeBoundarySchema.snapshotCommonFromValidated((
+  return snapshotCommonSchemaFieldsFromValidated((
     id: node.id,
     instanceRevision: resolveSnapshotInstanceRevision(node.instanceRevision),
     transform: node.transform,

@@ -228,7 +228,7 @@ class ImageNodeSnapshot extends NodeSnapshot {
     bool isDeletable = true,
     bool isTransformable = true,
   }) : this._validated(
-         common: NodeBoundarySchema.validateSnapshotCommon((
+         common: validateSnapshotCommonSchemaFields((
            id: id,
            instanceRevision: instanceRevision,
            transform: transform,
@@ -240,7 +240,7 @@ class ImageNodeSnapshot extends NodeSnapshot {
            isDeletable: isDeletable,
            isTransformable: isTransformable,
          )),
-         fields: NodeBoundarySchema.validateImageFields((
+         fields: validateImageNodeSchemaFields((
            imageId: imageId,
            size: size,
            naturalSize: naturalSize,
@@ -312,7 +312,7 @@ class TextNodeSnapshot extends NodeSnapshot {
     bool isDeletable = true,
     bool isTransformable = true,
   }) : this._validated(
-         common: NodeBoundarySchema.validateSnapshotCommon((
+         common: validateSnapshotCommonSchemaFields((
            id: id,
            instanceRevision: instanceRevision,
            transform: transform,
@@ -324,7 +324,7 @@ class TextNodeSnapshot extends NodeSnapshot {
            isDeletable: isDeletable,
            isTransformable: isTransformable,
          )),
-         fields: NodeBoundarySchema.validateTextSnapshotFields((
+         fields: validateTextNodeSnapshotSchemaFields((
            text: text,
            size: size,
            fontSize: fontSize,
@@ -426,7 +426,7 @@ class StrokeNodeSnapshot extends NodeSnapshot {
     bool isDeletable = true,
     bool isTransformable = true,
   }) : this._validated(
-         common: NodeBoundarySchema.validateSnapshotCommon((
+         common: validateSnapshotCommonSchemaFields((
            id: id,
            instanceRevision: instanceRevision,
            transform: transform,
@@ -438,7 +438,7 @@ class StrokeNodeSnapshot extends NodeSnapshot {
            isDeletable: isDeletable,
            isTransformable: isTransformable,
          )),
-         fields: NodeBoundarySchema.validateStrokeSnapshotFields((
+         fields: validateStrokeNodeSnapshotSchemaFields((
            points: points,
            pointsRevision: pointsRevision,
            thickness: thickness,
@@ -509,7 +509,7 @@ class LineNodeSnapshot extends NodeSnapshot {
     bool isDeletable = true,
     bool isTransformable = true,
   }) : this._validated(
-         common: NodeBoundarySchema.validateSnapshotCommon((
+         common: validateSnapshotCommonSchemaFields((
            id: id,
            instanceRevision: instanceRevision,
            transform: transform,
@@ -521,7 +521,7 @@ class LineNodeSnapshot extends NodeSnapshot {
            isDeletable: isDeletable,
            isTransformable: isTransformable,
          )),
-         fields: NodeBoundarySchema.validateLineFields((
+         fields: validateLineNodeSchemaFields((
            start: start,
            end: end,
            thickness: thickness,
@@ -590,7 +590,7 @@ class RectNodeSnapshot extends NodeSnapshot {
     bool isDeletable = true,
     bool isTransformable = true,
   }) : this._validated(
-         common: NodeBoundarySchema.validateSnapshotCommon((
+         common: validateSnapshotCommonSchemaFields((
            id: id,
            instanceRevision: instanceRevision,
            transform: transform,
@@ -602,7 +602,7 @@ class RectNodeSnapshot extends NodeSnapshot {
            isDeletable: isDeletable,
            isTransformable: isTransformable,
          )),
-         fields: NodeBoundarySchema.validateRectFields((
+         fields: validateRectNodeSchemaFields((
            size: size,
            fillColor: fillColor,
            strokeColor: strokeColor,
@@ -672,7 +672,7 @@ class PathNodeSnapshot extends NodeSnapshot {
     bool isDeletable = true,
     bool isTransformable = true,
   }) : this._validated(
-         common: NodeBoundarySchema.validateSnapshotCommon((
+         common: validateSnapshotCommonSchemaFields((
            id: id,
            instanceRevision: instanceRevision,
            transform: transform,
@@ -684,7 +684,7 @@ class PathNodeSnapshot extends NodeSnapshot {
            isDeletable: isDeletable,
            isTransformable: isTransformable,
          )),
-         fields: NodeBoundarySchema.validatePathFields((
+         fields: validatePathNodeSchemaFields((
            svgPathData: svgPathData,
            fillColor: fillColor,
            strokeColor: strokeColor,

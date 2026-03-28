@@ -50,7 +50,7 @@ class ImageNodeSpec extends NodeSpec {
     bool isDeletable = true,
     bool isTransformable = true,
   }) : this._validated(
-         common: NodeBoundarySchema.validateSpecCommon((
+         common: validateSpecCommonSchemaFields((
            id: id,
            transform: transform,
            opacity: opacity,
@@ -61,7 +61,7 @@ class ImageNodeSpec extends NodeSpec {
            isDeletable: isDeletable,
            isTransformable: isTransformable,
          )),
-         fields: NodeBoundarySchema.validateImageFields((
+         fields: validateImageNodeSchemaFields((
            imageId: imageId,
            size: size,
            naturalSize: naturalSize,
@@ -128,7 +128,7 @@ class TextNodeSpec extends NodeSpec {
     bool isDeletable = true,
     bool isTransformable = true,
   }) : this._validated(
-         common: NodeBoundarySchema.validateSpecCommon((
+         common: validateSpecCommonSchemaFields((
            id: id,
            transform: transform,
            opacity: opacity,
@@ -139,7 +139,7 @@ class TextNodeSpec extends NodeSpec {
            isDeletable: isDeletable,
            isTransformable: isTransformable,
          )),
-         fields: NodeBoundarySchema.validateTextSpecFields((
+         fields: validateTextNodeSpecSchemaFields((
            text: text,
            fontSize: fontSize,
            color: color,
@@ -227,7 +227,7 @@ class StrokeNodeSpec extends NodeSpec {
     bool isDeletable = true,
     bool isTransformable = true,
   }) : this._validated(
-         common: NodeBoundarySchema.validateSpecCommon((
+         common: validateSpecCommonSchemaFields((
            id: id,
            transform: transform,
            opacity: opacity,
@@ -238,7 +238,7 @@ class StrokeNodeSpec extends NodeSpec {
            isDeletable: isDeletable,
            isTransformable: isTransformable,
          )),
-         fields: NodeBoundarySchema.validateStrokeSpecFields((
+         fields: validateStrokeNodeSpecSchemaFields((
            points: points,
            thickness: thickness,
            color: color,
@@ -301,7 +301,7 @@ class LineNodeSpec extends NodeSpec {
     bool isDeletable = true,
     bool isTransformable = true,
   }) : this._validated(
-         common: NodeBoundarySchema.validateSpecCommon((
+         common: validateSpecCommonSchemaFields((
            id: id,
            transform: transform,
            opacity: opacity,
@@ -312,7 +312,7 @@ class LineNodeSpec extends NodeSpec {
            isDeletable: isDeletable,
            isTransformable: isTransformable,
          )),
-         fields: NodeBoundarySchema.validateLineFields((
+         fields: validateLineNodeSchemaFields((
            start: start,
            end: end,
            thickness: thickness,
@@ -377,7 +377,7 @@ class RectNodeSpec extends NodeSpec {
     bool isDeletable = true,
     bool isTransformable = true,
   }) : this._validated(
-         common: NodeBoundarySchema.validateSpecCommon((
+         common: validateSpecCommonSchemaFields((
            id: id,
            transform: transform,
            opacity: opacity,
@@ -388,7 +388,7 @@ class RectNodeSpec extends NodeSpec {
            isDeletable: isDeletable,
            isTransformable: isTransformable,
          )),
-         fields: NodeBoundarySchema.validateRectFields((
+         fields: validateRectNodeSchemaFields((
            size: size,
            fillColor: fillColor,
            strokeColor: strokeColor,
@@ -454,7 +454,7 @@ class PathNodeSpec extends NodeSpec {
     bool isDeletable = true,
     bool isTransformable = true,
   }) : this._validated(
-         common: NodeBoundarySchema.validateSpecCommon((
+         common: validateSpecCommonSchemaFields((
            id: id,
            transform: transform,
            opacity: opacity,
@@ -465,7 +465,7 @@ class PathNodeSpec extends NodeSpec {
            isDeletable: isDeletable,
            isTransformable: isTransformable,
          )),
-         fields: NodeBoundarySchema.validatePathFields((
+         fields: validatePathNodeSchemaFields((
            svgPathData: svgPathData,
            fillColor: fillColor,
            strokeColor: strokeColor,

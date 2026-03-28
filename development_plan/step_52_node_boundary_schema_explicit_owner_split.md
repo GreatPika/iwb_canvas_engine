@@ -221,7 +221,7 @@ compression.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Replace the static schema bucket with explicit owner modules
+### Slice 1. [x] Replace the static schema bucket with explicit owner modules
 
 #### Slice Contract
 
@@ -240,7 +240,7 @@ barrel surface, and delete the legacy `part` files.
 - `dart run tool/analysis/find_similar_clones.dart --clusters lib/src/contract`
 - `rg -n "NodeBoundarySchema\\.|part 'node_boundary_schema_.*part.dart'" lib/src/contract lib/src/model lib/src/serialization -g '*.dart'`
 
-### Slice 2. [ ] Rewire downstream contract, model, and serialization call sites
+### Slice 2. [x] Rewire downstream contract, model, and serialization call sites
 
 #### Slice Contract
 
@@ -264,12 +264,12 @@ then remove the last `NodeBoundarySchema.` references.
 
 ## 9. Final Verification Checklist
 
-- [ ] `node_boundary_schema.dart` is a thin internal barrel only.
-- [ ] `node_boundary_schema*.part.dart` files are deleted.
-- [ ] `NodeBoundarySchema.` no longer appears in production code.
-- [ ] Public patch/spec/snapshot behavior is unchanged.
-- [ ] Metrics and clone output improve on the schema seam without reopening the
+- [x] `node_boundary_schema.dart` is a thin internal barrel only.
+- [x] `node_boundary_schema*.part.dart` files are deleted.
+- [x] `NodeBoundarySchema.` no longer appears in production code.
+- [x] Public patch/spec/snapshot behavior is unchanged.
+- [x] Metrics and clone output improve on the schema seam without reopening the
       snapshot fast-path seam.
-- [ ] `development_plan/contract_target_architecture.md`,
+- [x] `development_plan/contract_target_architecture.md`,
       `DEVELOPMENT_PLAN.md`,
       and this step describe one consistent post-step state.

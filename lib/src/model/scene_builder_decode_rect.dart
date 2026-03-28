@@ -32,7 +32,7 @@ RectNodeSchemaFields _decodeRectFields(
   Map<String, Object?> json, {
   required String nodePath,
 }) {
-  return NodeBoundarySchema.rectFieldsFromValidated((
+  return rectNodeSchemaFieldsFromValidated((
     size: sceneBuilderRequireSize(json, 'size', pathPrefix: nodePath),
     fillColor: sceneBuilderOptionalColor(
       json,

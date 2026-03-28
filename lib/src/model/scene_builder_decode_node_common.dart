@@ -11,7 +11,7 @@ NodeSnapshotCommonSchemaFields sceneBuilderDecodeNodeCommonFields(
   required String nodePath,
 }) {
   final flags = _decodeNodeFlags(json, nodePath: nodePath);
-  return NodeBoundarySchema.snapshotCommonFromValidated((
+  return snapshotCommonSchemaFieldsFromValidated((
     id: _decodeNodeId(json, nodePath: nodePath),
     instanceRevision: _decodeNodeInstanceRevision(json, nodePath: nodePath),
     transform: _decodeNodeTransform(json, nodePath: nodePath),

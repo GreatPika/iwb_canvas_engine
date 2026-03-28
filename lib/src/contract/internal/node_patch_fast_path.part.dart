@@ -4,7 +4,7 @@ part of '../node_patch.dart';
 CommonNodePatch commonNodePatchFromValidated({
   NodePatchCommonSchemaFields? fields,
 }) {
-  final resolved = NodeBoundarySchema.patchCommonFromValidated(
+  final resolved = patchCommonSchemaFieldsFromValidated(
     fields ?? _defaultNodePatchCommonSchemaFields(),
   );
   return CommonNodePatch._internal(
@@ -26,7 +26,7 @@ ImageNodePatch imageNodePatchFromValidated({
   ImageNodePatchSchemaFields? fields,
 }) {
   final resolvedCommon = common ?? commonNodePatchFromValidated();
-  final resolvedFields = NodeBoundarySchema.imagePatchFromValidated(
+  final resolvedFields = imageNodePatchSchemaFieldsFromValidated(
     fields ?? _defaultImageNodePatchSchemaFields(),
   );
   return ImageNodePatch._internal(
@@ -45,7 +45,7 @@ TextNodePatch textNodePatchFromValidated({
   TextNodePatchSchemaFields? fields,
 }) {
   final resolvedCommon = common ?? commonNodePatchFromValidated();
-  final resolvedFields = NodeBoundarySchema.textPatchFromValidated(
+  final resolvedFields = textNodePatchSchemaFieldsFromValidated(
     fields ?? _defaultTextNodePatchSchemaFields(),
   );
   return TextNodePatch._internal(
@@ -71,7 +71,7 @@ StrokeNodePatch strokeNodePatchFromValidated({
   StrokeNodePatchSchemaFields? fields,
 }) {
   final resolvedCommon = common ?? commonNodePatchFromValidated();
-  final resolvedFields = NodeBoundarySchema.strokePatchFromValidated(
+  final resolvedFields = strokeNodePatchSchemaFieldsFromValidated(
     fields ?? _defaultStrokeNodePatchSchemaFields(),
   );
   return StrokeNodePatch._internal(
@@ -90,7 +90,7 @@ LineNodePatch lineNodePatchFromValidated({
   LineNodePatchSchemaFields? fields,
 }) {
   final resolvedCommon = common ?? commonNodePatchFromValidated();
-  final resolvedFields = NodeBoundarySchema.linePatchFromValidated(
+  final resolvedFields = lineNodePatchSchemaFieldsFromValidated(
     fields ?? _defaultLineNodePatchSchemaFields(),
   );
   return LineNodePatch._internal(
@@ -110,7 +110,7 @@ RectNodePatch rectNodePatchFromValidated({
   RectNodePatchSchemaFields? fields,
 }) {
   final resolvedCommon = common ?? commonNodePatchFromValidated();
-  final resolvedFields = NodeBoundarySchema.rectPatchFromValidated(
+  final resolvedFields = rectNodePatchSchemaFieldsFromValidated(
     fields ?? _defaultRectNodePatchSchemaFields(),
   );
   return RectNodePatch._internal(
@@ -130,7 +130,7 @@ PathNodePatch pathNodePatchFromValidated({
   PathNodePatchSchemaFields? fields,
 }) {
   final resolvedCommon = common ?? commonNodePatchFromValidated();
-  final resolvedFields = NodeBoundarySchema.pathPatchFromValidated(
+  final resolvedFields = pathNodePatchSchemaFieldsFromValidated(
     fields ?? _defaultPathNodePatchSchemaFields(),
   );
   return PathNodePatch._internal(

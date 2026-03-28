@@ -105,6 +105,23 @@ Ownership decisions for the target state:
 - `contract/` is low-level but not pure Dart: contract types intentionally use
   `dart:ui`, and `SceneRenderState` depends on Flutter `Listenable`.
 
+## Contract owner graph
+
+- `contract/node_patch.dart`, `contract/node_spec.dart`, and
+  `contract/snapshot.dart` remain the public immutable boundary owners and keep
+  validation at the public constructor boundary.
+- `contract/internal/node_boundary_schema.dart` is the canonical internal
+  schema import surface, but it is barrel-only.
+- `contract/internal/node_boundary_schema_common.dart` owns shared schema field
+  definitions plus truly cross-direction primitive validators.
+- `contract/internal/node_boundary_schema_patch.dart`,
+  `contract/internal/node_boundary_schema_spec.dart`, and
+  `contract/internal/node_boundary_schema_snapshot.dart` own direction-local
+  validation and validated-field rehydration for patch, spec, and snapshot
+  flows respectively.
+- Downstream `model/` and `serialization/` code consume those internal schema
+  owners through the barrel and do not re-own schema validation locally.
+
 ## Model owner graph
 
 - Public `SceneBuilder` surface lives in `model/scene_builder_api.dart`; the

@@ -5,7 +5,7 @@ import '../core/nodes.dart';
 import 'scene_node_boundary_mapping_common.dart';
 
 PathNodeSchemaFields pathNodeSchemaFieldsFromSnapshot(PathNodeSnapshot path) {
-  return NodeBoundarySchema.pathFieldsFromValidated((
+  return pathNodeSchemaFieldsFromValidated((
     svgPathData: path.svgPathData,
     fillColor: path.fillColor,
     strokeColor: path.strokeColor,
@@ -15,7 +15,7 @@ PathNodeSchemaFields pathNodeSchemaFieldsFromSnapshot(PathNodeSnapshot path) {
 }
 
 PathNodeSchemaFields pathNodeSchemaFieldsFromSpec(PathNodeSpec path) {
-  return NodeBoundarySchema.pathFieldsFromValidated((
+  return pathNodeSchemaFieldsFromValidated((
     svgPathData: path.svgPathData,
     fillColor: path.fillColor,
     strokeColor: path.strokeColor,
@@ -25,7 +25,7 @@ PathNodeSchemaFields pathNodeSchemaFieldsFromSpec(PathNodeSpec path) {
 }
 
 PathNodeSchemaFields pathNodeSchemaFieldsFromNode(PathNode path) {
-  return NodeBoundarySchema.pathFieldsFromValidated((
+  return pathNodeSchemaFieldsFromValidated((
     svgPathData: path.svgPathData,
     fillColor: path.fillColor,
     strokeColor: path.strokeColor,

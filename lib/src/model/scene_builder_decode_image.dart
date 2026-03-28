@@ -31,7 +31,7 @@ ImageNodeSchemaFields _decodeImageFields(
   Map<String, Object?> json, {
   required String nodePath,
 }) {
-  return NodeBoundarySchema.imageFieldsFromValidated((
+  return imageNodeSchemaFieldsFromValidated((
     imageId: ImageIdValue.fromJson(
       sceneBuilderRequireField(json, 'imageId', pathPrefix: nodePath),
       path: sceneBuilderPathAt(nodePath, 'imageId'),

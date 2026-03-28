@@ -5,7 +5,7 @@ import '../core/nodes.dart';
 import 'scene_node_boundary_mapping_common.dart';
 
 LineNodeSchemaFields lineNodeSchemaFieldsFromSnapshot(LineNodeSnapshot line) {
-  return NodeBoundarySchema.lineFieldsFromValidated((
+  return lineNodeSchemaFieldsFromValidated((
     start: line.start,
     end: line.end,
     thickness: line.thickness,
@@ -14,7 +14,7 @@ LineNodeSchemaFields lineNodeSchemaFieldsFromSnapshot(LineNodeSnapshot line) {
 }
 
 LineNodeSchemaFields lineNodeSchemaFieldsFromSpec(LineNodeSpec line) {
-  return NodeBoundarySchema.lineFieldsFromValidated((
+  return lineNodeSchemaFieldsFromValidated((
     start: line.start,
     end: line.end,
     thickness: line.thickness,
@@ -23,7 +23,7 @@ LineNodeSchemaFields lineNodeSchemaFieldsFromSpec(LineNodeSpec line) {
 }
 
 LineNodeSchemaFields lineNodeSchemaFieldsFromNode(LineNode line) {
-  return NodeBoundarySchema.lineFieldsFromValidated((
+  return lineNodeSchemaFieldsFromValidated((
     start: line.start,
     end: line.end,
     thickness: line.thickness,

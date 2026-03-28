@@ -7,7 +7,7 @@ import 'scene_node_boundary_mapping_common.dart';
 StrokeNodeSnapshotSchemaFields strokeNodeSchemaFieldsFromSnapshot(
   StrokeNodeSnapshot stroke,
 ) {
-  return NodeBoundarySchema.strokeSnapshotFieldsFromValidated((
+  return strokeNodeSnapshotSchemaFieldsFromValidated((
     points: stroke.points,
     pointsRevision: stroke.pointsRevision,
     thickness: stroke.thickness,
@@ -18,7 +18,7 @@ StrokeNodeSnapshotSchemaFields strokeNodeSchemaFieldsFromSnapshot(
 StrokeNodeSpecSchemaFields strokeNodeSchemaFieldsFromSpec(
   StrokeNodeSpec stroke,
 ) {
-  return NodeBoundarySchema.strokeSpecFieldsFromValidated((
+  return strokeNodeSpecSchemaFieldsFromValidated((
     points: stroke.points,
     thickness: stroke.thickness,
     color: stroke.color,
@@ -28,7 +28,7 @@ StrokeNodeSpecSchemaFields strokeNodeSchemaFieldsFromSpec(
 StrokeNodeSnapshotSchemaFields strokeNodeSchemaFieldsFromNode(
   StrokeNode stroke,
 ) {
-  return NodeBoundarySchema.strokeSnapshotFieldsFromValidated((
+  return strokeNodeSnapshotSchemaFieldsFromValidated((
     points: stroke.points,
     pointsRevision: stroke.pointsRevision,
     thickness: stroke.thickness,

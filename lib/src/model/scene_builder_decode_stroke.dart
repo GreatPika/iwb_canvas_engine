@@ -37,7 +37,7 @@ StrokeNodeSnapshotSchemaFields _decodeStrokeFields(
   Map<String, Object?> json, {
   required String nodePath,
 }) {
-  return NodeBoundarySchema.strokeSnapshotFieldsFromValidated((
+  return strokeNodeSnapshotSchemaFieldsFromValidated((
     points: _decodeStrokePoints(json, nodePath: nodePath),
     pointsRevision: 0,
     thickness: validatedRequireJsonPositiveFiniteDouble(
