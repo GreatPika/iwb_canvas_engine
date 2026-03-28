@@ -151,3 +151,4 @@ language: russian
 - [x] [Шаг 53. Перестроить snapshot boundary: internal graph, public materialization, producer-side model rewiring](development_plan/step_53_snapshot_fast_path_explicit_internal_owners.md)
 - [x] [Шаг 54. Убрать residual `part`-coupling из `node_spec.dart` и `node_patch.dart` через explicit internal fast-path modules](development_plan/step_54_node_spec_and_patch_explicit_fast_path_modules.md)
 - [x] [Шаг 55. Замкнуть финальную contract architecture на docs, guardrails и baseline](development_plan/step_55_contract_final_architecture_closure.md)
+- [ ] [Шаг 56. Разрезать публичную поверхность `SceneController` на capability owner-ы](development_plan/step_56_scene_controller_public_capability_split.md)
