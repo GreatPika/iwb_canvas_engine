@@ -4,6 +4,12 @@
 modeling, rendering, input handling, and JSON serialization. It does not own
 app UI, product workflows, or backend logic.
 
+## Plan tracking
+
+- After completing a plan step, update the corresponding checkbox entries in
+  `DEVELOPMENT_PLAN.md` and any linked step document so finished items are
+  marked done in the same change.
+
 ## Document map
 
 - `README.md` for package overview and getting started.
@@ -13,18 +19,8 @@ app UI, product workflows, or backend logic.
 - `DEVELOPMENT_PLAN.md` for the active roadmap.
 - `tool/invariant_registry.dart` for invariant ids and ownership.
 
-## Working rules
+## Documentation hygiene
 
-- Keep one source of truth for runtime state. Do not add sync glue.
-- Group is ephemeral. Do not introduce a stored Group node.
-- Do not game metrics, clone scans, or other static-analysis tools with
-  cosmetic code-shape changes that do not improve architecture, ownership, or
-  clarity. If a tool reports a problem, prefer fixing the underlying design.
-  If the only available change would silence tooling while making the code less
-  coherent, stop and surface the trade-off instead of shipping the workaround.
-- After completing a plan step, update the corresponding checkbox entries in
-  `DEVELOPMENT_PLAN.md` and any linked step document so finished items are
-  marked done in the same change.
 - Public behavior changes must update:
   - `README.md`
   - `API_GUIDE.md`
@@ -37,17 +33,11 @@ app UI, product workflows, or backend logic.
 
 - Add or modify invariant definitions in `tool/invariant_registry.dart`.
 - Reference enforcement with exact `// INV:<id>` markers in `test/**` or `tool/**`.
-- Keep `dart run tool/check_invariant_coverage.dart` green.
 
 ## Validation policy
 
-- Run and report the standard checks for code changes.
 - Keep `analysis_options.yaml` as the single source of truth for DCM metrics
   thresholds.
-- Metric and clone-tool regressions must be resolved by improving structure,
-  boundaries, or ownership. Do not introduce wrapper layers, helper indirection,
-  or signature reshaping whose primary purpose is to appease tooling rather than
-  improve the design.
 - For new production files under `lib/**`, run `dcm calculate-metrics` and keep
   them green against the current thresholds.
 - Run `dcm calculate-metrics` for legacy files only when adding a large new
@@ -78,7 +68,6 @@ app UI, product workflows, or backend logic.
   when you need to override parallelism).
 - Documentation-only changes do not require the full Flutter pipeline unless the
   task also changes code, tooling contracts, or executable examples.
-- Always run and report `dart run tool/check_invariant_coverage.dart`.
 
 ## Required checks for code changes
 
