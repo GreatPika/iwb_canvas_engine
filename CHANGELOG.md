@@ -212,7 +212,7 @@ All notable changes to `iwb_canvas_engine` are documented here.
   - `README.md` is now a concise package landing page
   - `API_GUIDE.md` is the single integration reference
   - `ARCHITECTURE.md` is focused on module boundaries and invariants
-  - `DEVELOPMENT_PLAN.md` is reduced to active-plan status only
+  - `PLAN.md` is reduced to active-plan status only
   - `AGENTS.md` now includes a clear document map and validation policy
   - example docs were aligned with current demo capabilities and platform
     template guidance

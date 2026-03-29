@@ -10,14 +10,14 @@ app UI, product workflows, or backend logic.
 - `API_GUIDE.md` for public API, runtime behavior, and migration notes.
 - `ARCHITECTURE.md` for architecture, invariants, and module boundaries.
 - `CHANGELOG.md` for released and unreleased user-visible changes.
-- `DEVELOPMENT_PLAN.md` for the active roadmap.
+- `PLAN.md` for the active roadmap.
 - `VERIFICATION.md` for the required verification workflow and test/check entrypoints.
 - `tool/invariant_registry.dart` for invariant ids and ownership.
 
 ## Execution tracking
 
 - After completing a plan step, update the corresponding checkbox entries in
-  `DEVELOPMENT_PLAN.md` and any linked step document so finished items are
+  `PLAN.md` and any linked step document so finished items are
   marked done in the same change.
 
 ## Documentation hygiene
