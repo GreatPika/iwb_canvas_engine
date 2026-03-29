@@ -11,6 +11,7 @@ app UI, product workflows, or backend logic.
 - `ARCHITECTURE.md` for architecture, invariants, and module boundaries.
 - `CHANGELOG.md` for released and unreleased user-visible changes.
 - `DEVELOPMENT_PLAN.md` for the active roadmap.
+- `VERIFICATION.md` for the required verification workflow and test/check entrypoints.
 - `tool/invariant_registry.dart` for invariant ids and ownership.
 
 ## Execution tracking
@@ -36,59 +37,10 @@ app UI, product workflows, or backend logic.
 
 ## Verification
 
-- For new production files under `lib/**`, run `dcm calculate-metrics` and keep
-  them green against the current thresholds.
-- Run `dcm calculate-metrics` for legacy files only when adding a large new
-  unit, substantially rewriting a hotspot, or validating a suspected metric
-  regression.
-- Use `dart format lib test example/lib example/test tool` when you need to
-  apply formatting locally. Keep the required check below as the non-mutating
-  verification step. `dart format --output=none --set-exit-if-changed ...`
-  must not write files, even though Dart may still print `Changed ...` for
-  files that would need formatting.
-- Run package and example tests via the MCP test runner.
-- MCP test runs do not generate `coverage/lcov.info`; use
-  `flutter test --coverage --no-pub --exclude-tags=tool` before
-  `dart run tool/check_coverage.dart`.
-- Run example-package tests from the `example/` project root so
-  `package:iwb_canvas_engine_example/...` imports resolve correctly.
-- Keep test runs sharded.
-- Run tool tests only when the change touches tool-test surface. The trigger
-  list in this file must stay identical to `.github/workflows/ci.yaml`:
-  - `tool/**`
-  - `test/tool/**`
-  - `test/tool/support/guardrails_tool_test_support.dart`
-  - `test/tool/support/tool_process_test_support.dart`
-  - `test/tool/support/public_entrypoint_contract.dart`
-  - `pubspec.yaml`
-  - `pubspec.lock`
-- Run tool tests with `dart run tool/run_tool_tests.dart` (use `--jobs=N`
-  when you need to override parallelism).
-- Documentation-only changes do not require the full Flutter pipeline unless the
-  task also changes code, tooling contracts, or executable examples.
-- Required checks for code changes:
-  1. Non-mutating formatting check:
-     `dart format --output=none --set-exit-if-changed lib test example/lib example/test tool`
-  2. `flutter analyze`
-  3. `(cd example && flutter analyze lib test)`
-  4. `dcm analyze .`
-  5. `dart run tool/check_import_boundaries.dart`
-  6. `dart run tool/check_public_api_surface.dart`
-  7. `dart run tool/check_guardrails.dart`
-  8. `dart run tool/check_invariant_coverage.dart`
-  9. Run these MCP test shards:
-     - `test/core`
-     - `test/model test/serialization test/contract test/public_api test/entrypoints`
-     - `test/controller/internal`
-     - `test/controller/core test/controller/commands` plus controller-root
-       `*_test.dart` files (the MCP runner does not expand shell globs)
-     - `test/render test/view`
-     - `test/interactive`
-     - `example/test` with MCP root `example/`
-  10. `flutter test --coverage --no-pub --exclude-tags=tool`
-  11. `dart run tool/check_coverage.dart`
-  12. Run `dart run tool/run_tool_tests.dart` when the tool-test trigger list
-      above matches the change.
+After any code change, run all checks listed in `VERIFICATION.md`.
+Update `VERIFICATION.md` in the same change whenever the
+verification surface changes, including new required tests, renamed test
+entrypoints, changed shard composition, or new mandatory checks.
 
 ## Release hygiene
 
