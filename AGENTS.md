@@ -4,12 +4,6 @@
 modeling, rendering, input handling, and JSON serialization. It does not own
 app UI, product workflows, or backend logic.
 
-## Plan tracking
-
-- After completing a plan step, update the corresponding checkbox entries in
-  `DEVELOPMENT_PLAN.md` and any linked step document so finished items are
-  marked done in the same change.
-
 ## Document map
 
 - `README.md` for package overview and getting started.
@@ -18,6 +12,12 @@ app UI, product workflows, or backend logic.
 - `CHANGELOG.md` for released and unreleased user-visible changes.
 - `DEVELOPMENT_PLAN.md` for the active roadmap.
 - `tool/invariant_registry.dart` for invariant ids and ownership.
+
+## Execution tracking
+
+- After completing a plan step, update the corresponding checkbox entries in
+  `DEVELOPMENT_PLAN.md` and any linked step document so finished items are
+  marked done in the same change.
 
 ## Documentation hygiene
 
@@ -34,10 +34,8 @@ app UI, product workflows, or backend logic.
 - Add or modify invariant definitions in `tool/invariant_registry.dart`.
 - Reference enforcement with exact `// INV:<id>` markers in `test/**` or `tool/**`.
 
-## Validation policy
+## Verification
 
-- Keep `analysis_options.yaml` as the single source of truth for DCM metrics
-  thresholds.
 - For new production files under `lib/**`, run `dcm calculate-metrics` and keep
   them green against the current thresholds.
 - Run `dcm calculate-metrics` for legacy files only when adding a large new
@@ -68,31 +66,29 @@ app UI, product workflows, or backend logic.
   when you need to override parallelism).
 - Documentation-only changes do not require the full Flutter pipeline unless the
   task also changes code, tooling contracts, or executable examples.
-
-## Required checks for code changes
-
-1. Non-mutating formatting check:
-   `dart format --output=none --set-exit-if-changed lib test example/lib example/test tool`
-2. `flutter analyze`
-3. `(cd example && flutter analyze lib test)`
-4. `dcm analyze .`
-5. `dart run tool/check_import_boundaries.dart`
-6. `dart run tool/check_public_api_surface.dart`
-7. `dart run tool/check_guardrails.dart`
-8. `dart run tool/check_invariant_coverage.dart`
-9. Run these MCP test shards:
-   - `test/core`
-   - `test/model test/serialization test/contract test/public_api test/entrypoints`
-   - `test/controller/internal`
-   - `test/controller/core test/controller/commands` plus controller-root
-     `*_test.dart` files (the MCP runner does not expand shell globs)
-   - `test/render test/view`
-   - `test/interactive`
-   - `example/test` with MCP root `example/`
-10. `flutter test --coverage --no-pub --exclude-tags=tool`
-11. `dart run tool/check_coverage.dart`
-12. Run `dart run tool/run_tool_tests.dart` when the tool-test trigger list
-    above matches the change.
+- Required checks for code changes:
+  1. Non-mutating formatting check:
+     `dart format --output=none --set-exit-if-changed lib test example/lib example/test tool`
+  2. `flutter analyze`
+  3. `(cd example && flutter analyze lib test)`
+  4. `dcm analyze .`
+  5. `dart run tool/check_import_boundaries.dart`
+  6. `dart run tool/check_public_api_surface.dart`
+  7. `dart run tool/check_guardrails.dart`
+  8. `dart run tool/check_invariant_coverage.dart`
+  9. Run these MCP test shards:
+     - `test/core`
+     - `test/model test/serialization test/contract test/public_api test/entrypoints`
+     - `test/controller/internal`
+     - `test/controller/core test/controller/commands` plus controller-root
+       `*_test.dart` files (the MCP runner does not expand shell globs)
+     - `test/render test/view`
+     - `test/interactive`
+     - `example/test` with MCP root `example/`
+  10. `flutter test --coverage --no-pub --exclude-tags=tool`
+  11. `dart run tool/check_coverage.dart`
+  12. Run `dart run tool/run_tool_tests.dart` when the tool-test trigger list
+      above matches the change.
 
 ## Release hygiene
 
