@@ -2199,10 +2199,16 @@ void main() {
           id: 'layer-auto-10',
           nodes: <NodeSnapshot>[
             rectNodeSnapshotFromValidated(
-              id: 'r1',
-              size: const Size(10, 10),
-              fillColor: const Color(0xFF000000),
-              hitPadding: -1,
+              common: nodeSnapshotCommonFieldsFromValidated(
+                id: 'r1',
+                hitPadding: -1,
+              ),
+              fields: (
+                size: const Size(10, 10),
+                fillColor: const Color(0xFF000000),
+                strokeColor: null,
+                strokeWidth: 0,
+              ),
             ),
           ],
         ),
@@ -2225,11 +2231,20 @@ void main() {
           id: 'layer-auto-11',
           nodes: <NodeSnapshot>[
             textNodeSnapshotFromValidated(
-              id: 't1',
-              text: 'Hello',
-              size: const Size(10, 10),
-              fontSize: 0,
-              color: const Color(0xFF000000),
+              common: nodeSnapshotCommonFieldsFromValidated(id: 't1'),
+              fields: (
+                text: 'Hello',
+                size: const Size(10, 10),
+                fontSize: 0,
+                color: const Color(0xFF000000),
+                align: TextAlign.left,
+                isBold: false,
+                isItalic: false,
+                isUnderline: false,
+                fontFamily: null,
+                maxWidth: null,
+                lineHeight: null,
+              ),
             ),
           ],
         ),
@@ -2252,10 +2267,16 @@ void main() {
           id: 'layer-auto-12',
           nodes: <NodeSnapshot>[
             rectNodeSnapshotFromValidated(
-              id: 'r1',
-              size: const Size(10, 10),
-              fillColor: const Color(0xFF000000),
-              opacity: 2,
+              common: nodeSnapshotCommonFieldsFromValidated(
+                id: 'r1',
+                opacity: 2,
+              ),
+              fields: (
+                size: const Size(10, 10),
+                fillColor: const Color(0xFF000000),
+                strokeColor: null,
+                strokeWidth: 0,
+              ),
             ),
           ],
         ),

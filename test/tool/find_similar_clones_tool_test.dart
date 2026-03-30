@@ -79,10 +79,7 @@ int gamma(int z) {
         expect(stdout, contains('Found clone clusters: 1'));
         expect(stdout, contains('members=3'));
         expect(stdout, contains('pairs=3'));
-        expect(
-          stdout,
-          contains('Cluster 1  [3 members, 3 pairs, structural]'),
-        );
+        expect(stdout, contains('Cluster 1  [3 members, 3 pairs, structural]'));
         expect(
           stdout,
           contains(
@@ -259,23 +256,24 @@ int alpha(int x) {
       }
     });
 
-    test('does not report repeated blocks with different multiplicity as exact',
-        () async {
-      final sandbox = await createToolSandbox(
-        tempPrefix: 'iwb_canvas_engine_find_similar_clones_tool_test_',
-        toolFiles: const <String>[
-          'tool/analysis/find_similar_clones.dart',
-          'tool/analysis/src/clone_analysis_cli.dart',
-          'tool/analysis/src/clone_analysis_collector.dart',
-          'tool/analysis/src/clone_analysis_config.dart',
-          'tool/analysis/src/clone_analysis_engine.dart',
-          'tool/analysis/src/clone_analysis_models.dart',
-          'tool/analysis/src/clone_analysis_report.dart',
-        ],
-      );
+    test(
+      'does not report repeated blocks with different multiplicity as exact',
+      () async {
+        final sandbox = await createToolSandbox(
+          tempPrefix: 'iwb_canvas_engine_find_similar_clones_tool_test_',
+          toolFiles: const <String>[
+            'tool/analysis/find_similar_clones.dart',
+            'tool/analysis/src/clone_analysis_cli.dart',
+            'tool/analysis/src/clone_analysis_collector.dart',
+            'tool/analysis/src/clone_analysis_config.dart',
+            'tool/analysis/src/clone_analysis_engine.dart',
+            'tool/analysis/src/clone_analysis_models.dart',
+            'tool/analysis/src/clone_analysis_report.dart',
+          ],
+        );
 
-      try {
-        writeSandboxFile(sandbox, 'lib/repeated.dart', '''
+        try {
+          writeSandboxFile(sandbox, 'lib/repeated.dart', '''
 int alpha(int x) {
   x += 1;
   x += 1;
@@ -291,23 +289,33 @@ int beta(int x) {
 }
 ''');
 
-        final result = await runSandboxTool(
-          sandbox,
-          'analysis/find_similar_clones.dart',
-          args: const <String>['--json', 'lib', '1', '1', '1', '1', '0.0', '100'],
-        );
+          final result = await runSandboxTool(
+            sandbox,
+            'analysis/find_similar_clones.dart',
+            args: const <String>[
+              '--json',
+              'lib',
+              '1',
+              '1',
+              '1',
+              '1',
+              '0.0',
+              '100',
+            ],
+          );
 
-        expect(result.exitCode, 0, reason: result.stderr.toString());
-        final payload =
-            jsonDecode(result.stdout.toString()) as Map<String, Object?>;
-        final results = payload['results'] as List<Object?>;
-        expect(results, hasLength(1));
-        final pair = results.single as Map<String, Object?>;
-        expect(pair['matchKind'], 'structural');
-        expect(pair['jaccard'], lessThan(1.0));
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
+          expect(result.exitCode, 0, reason: result.stderr.toString());
+          final payload =
+              jsonDecode(result.stdout.toString()) as Map<String, Object?>;
+          final results = payload['results'] as List<Object?>;
+          expect(results, hasLength(1));
+          final pair = results.single as Map<String, Object?>;
+          expect(pair['matchKind'], 'structural');
+          expect(pair['jaccard'], lessThan(1.0));
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
   });
 }

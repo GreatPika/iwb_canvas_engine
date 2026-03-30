@@ -160,11 +160,13 @@ void main() {
               id: 'layer-auto-0',
               nodes: <NodeSnapshot>[
                 strokeNodeSnapshotFromValidated(
-                  id: 's',
-                  points: const <Offset>[Offset(0, 0), Offset(1, 1)],
-                  pointsRevision: -1,
-                  thickness: 1,
-                  color: const Color(0xFF000000),
+                  common: nodeSnapshotCommonFieldsFromValidated(id: 's'),
+                  fields: (
+                    points: const <Offset>[Offset(0, 0), Offset(1, 1)],
+                    pointsRevision: -1,
+                    thickness: 1,
+                    color: const Color(0xFF000000),
+                  ),
                 ),
               ],
             ),
@@ -327,15 +329,22 @@ void main() {
               id: 'layer-auto-7',
               nodes: <NodeSnapshot>[
                 rectNodeSnapshotFromValidated(
-                  id: 'r1',
-                  size: const Size(1, 1),
-                  transform: const Transform2D(
-                    a: double.nan,
-                    b: 0,
-                    c: 0,
-                    d: 1,
-                    tx: 0,
-                    ty: 0,
+                  common: nodeSnapshotCommonFieldsFromValidated(
+                    id: 'r1',
+                    transform: const Transform2D(
+                      a: double.nan,
+                      b: 0,
+                      c: 0,
+                      d: 1,
+                      tx: 0,
+                      ty: 0,
+                    ),
+                  ),
+                  fields: (
+                    size: const Size(1, 1),
+                    fillColor: null,
+                    strokeColor: null,
+                    strokeWidth: 0,
                   ),
                 ),
               ],

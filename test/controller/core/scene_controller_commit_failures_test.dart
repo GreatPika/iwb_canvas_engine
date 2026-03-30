@@ -338,8 +338,14 @@ void main() {
                   id: 'layer-auto-2',
                   nodes: <NodeSnapshot>[
                     pathNodeSnapshotFromValidated(
-                      id: 'p1',
-                      svgPathData: 'not-a-path',
+                      common: nodeSnapshotCommonFieldsFromValidated(id: 'p1'),
+                      fields: (
+                        svgPathData: 'not-a-path',
+                        fillColor: null,
+                        strokeColor: null,
+                        strokeWidth: 0,
+                        fillRule: PathFillRule.nonZero,
+                      ),
                     ),
                   ],
                 ),
@@ -410,15 +416,22 @@ void main() {
             id: 'layer-auto-3',
             nodes: <NodeSnapshot>[
               rectNodeSnapshotFromValidated(
-                id: 'bad',
-                size: const Size(10, 10),
-                transform: const Transform2D(
-                  a: double.infinity,
-                  b: 0,
-                  c: 0,
-                  d: 1,
-                  tx: 0,
-                  ty: 0,
+                common: nodeSnapshotCommonFieldsFromValidated(
+                  id: 'bad',
+                  transform: const Transform2D(
+                    a: double.infinity,
+                    b: 0,
+                    c: 0,
+                    d: 1,
+                    tx: 0,
+                    ty: 0,
+                  ),
+                ),
+                fields: (
+                  size: const Size(10, 10),
+                  fillColor: null,
+                  strokeColor: null,
+                  strokeWidth: 0,
                 ),
               ),
             ],

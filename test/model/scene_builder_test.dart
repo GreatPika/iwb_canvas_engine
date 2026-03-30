@@ -379,15 +379,22 @@ void main() {
           id: 'layer-auto-1',
           nodes: <NodeSnapshot>[
             rectNodeSnapshotFromValidated(
-              id: 'r1',
-              size: const Size(1, 1),
-              transform: const Transform2D(
-                a: 1,
-                b: 2,
-                c: 2,
-                d: 4,
-                tx: 0,
-                ty: 0,
+              common: nodeSnapshotCommonFieldsFromValidated(
+                id: 'r1',
+                transform: const Transform2D(
+                  a: 1,
+                  b: 2,
+                  c: 2,
+                  d: 4,
+                  tx: 0,
+                  ty: 0,
+                ),
+              ),
+              fields: (
+                size: const Size(1, 1),
+                fillColor: null,
+                strokeColor: null,
+                strokeWidth: 0,
               ),
             ),
           ],

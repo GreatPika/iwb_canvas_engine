@@ -98,11 +98,13 @@ void main() {
           id: 'layer-auto-3',
           nodes: <NodeSnapshot>[
             lineNodeSnapshotFromValidated(
-              id: 'bad-line',
-              start: const Offset(double.nan, 0),
-              end: const Offset(10, 0),
-              thickness: 2,
-              color: const Color(0xFF000000),
+              common: nodeSnapshotCommonFieldsFromValidated(id: 'bad-line'),
+              fields: (
+                start: const Offset(double.nan, 0),
+                end: const Offset(10, 0),
+                thickness: 2,
+                color: const Color(0xFF000000),
+              ),
             ),
           ],
         ),

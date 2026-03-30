@@ -49,6 +49,7 @@ export 'snapshot_materialization.dart'
         materializeSceneSnapshot,
         materializeStrokeNodeSnapshot,
         materializeTextNodeSnapshot,
+        nodeSnapshotCommonFieldsFromValidated,
         pathNodeSnapshotFromValidated,
         rectNodeSnapshotFromValidated,
         scenePaletteSnapshotFromValidated,

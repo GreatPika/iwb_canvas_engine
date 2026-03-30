@@ -155,24 +155,38 @@ void main() {
       final cache = SceneTextLayoutCache(maxEntries: 8);
       final first = cache.getOrBuild(
         node: textNodeSnapshotFromValidated(
-          id: 'node-invalid',
-          text: 'Shared',
-          size: const ui.Size(100, 20),
-          fontSize: -5,
-          lineHeight: -1,
-          maxWidth: double.nan,
-          color: const ui.Color(0xFF000000),
+          common: nodeSnapshotCommonFieldsFromValidated(id: 'node-invalid'),
+          fields: (
+            text: 'Shared',
+            size: const ui.Size(100, 20),
+            fontSize: -5,
+            color: const ui.Color(0xFF000000),
+            align: TextAlign.left,
+            isBold: false,
+            isItalic: false,
+            isUnderline: false,
+            fontFamily: null,
+            maxWidth: double.nan,
+            lineHeight: -1,
+          ),
         ),
       );
       final second = cache.getOrBuild(
         node: textNodeSnapshotFromValidated(
-          id: 'node-invalid',
-          text: 'Shared',
-          size: const ui.Size(100, 20),
-          fontSize: double.nan,
-          lineHeight: 0,
-          maxWidth: -100,
-          color: const ui.Color(0xFF000000),
+          common: nodeSnapshotCommonFieldsFromValidated(id: 'node-invalid'),
+          fields: (
+            text: 'Shared',
+            size: const ui.Size(100, 20),
+            fontSize: double.nan,
+            color: const ui.Color(0xFF000000),
+            align: TextAlign.left,
+            isBold: false,
+            isItalic: false,
+            isUnderline: false,
+            fontFamily: null,
+            maxWidth: -100,
+            lineHeight: 0,
+          ),
         ),
       );
 

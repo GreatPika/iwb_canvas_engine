@@ -249,9 +249,12 @@ void main() {
         palette: palette,
       );
       final image = imageNodeSnapshotFromValidated(
-        id: 'img-defaults',
-        imageId: 'asset:defaults',
-        size: const Size(10, 20),
+        common: nodeSnapshotCommonFieldsFromValidated(id: 'img-defaults'),
+        fields: (
+          imageId: 'asset:defaults',
+          size: const Size(10, 20),
+          naturalSize: null,
+        ),
       );
 
       expect(
@@ -271,6 +274,99 @@ void main() {
       expect(image.isLocked, isFalse);
       expect(image.isDeletable, isTrue);
       expect(image.isTransformable, isTrue);
+    },
+  );
+
+  test(
+    'validated snapshot fast-path node helpers preserve shared common defaults across families',
+    () {
+      final nodes = <NodeSnapshot>[
+        imageNodeSnapshotFromValidated(
+          common: nodeSnapshotCommonFieldsFromValidated(
+            id: 'img-shared-defaults',
+          ),
+          fields: (
+            imageId: 'asset:shared-defaults',
+            size: const Size(10, 20),
+            naturalSize: null,
+          ),
+        ),
+        textNodeSnapshotFromValidated(
+          common: nodeSnapshotCommonFieldsFromValidated(
+            id: 'text-shared-defaults',
+          ),
+          fields: (
+            text: 'hello',
+            size: const Size(30, 40),
+            fontSize: 24,
+            color: const Color(0xFF000000),
+            align: TextAlign.left,
+            isBold: false,
+            isItalic: false,
+            isUnderline: false,
+            fontFamily: null,
+            maxWidth: null,
+            lineHeight: null,
+          ),
+        ),
+        strokeNodeSnapshotFromValidated(
+          common: nodeSnapshotCommonFieldsFromValidated(
+            id: 'stroke-shared-defaults',
+          ),
+          fields: (
+            points: const <Offset>[Offset(0, 0), Offset(1, 1)],
+            pointsRevision: 0,
+            thickness: 2,
+            color: const Color(0xFF111111),
+          ),
+        ),
+        lineNodeSnapshotFromValidated(
+          common: nodeSnapshotCommonFieldsFromValidated(
+            id: 'line-shared-defaults',
+          ),
+          fields: (
+            start: const Offset(0, 0),
+            end: const Offset(2, 2),
+            thickness: 3,
+            color: const Color(0xFF222222),
+          ),
+        ),
+        rectNodeSnapshotFromValidated(
+          common: nodeSnapshotCommonFieldsFromValidated(
+            id: 'rect-shared-defaults',
+          ),
+          fields: (
+            size: const Size(8, 9),
+            fillColor: null,
+            strokeColor: null,
+            strokeWidth: 0,
+          ),
+        ),
+        pathNodeSnapshotFromValidated(
+          common: nodeSnapshotCommonFieldsFromValidated(
+            id: 'path-shared-defaults',
+          ),
+          fields: (
+            svgPathData: 'M0 0 L10 10',
+            fillColor: null,
+            strokeColor: null,
+            strokeWidth: 0,
+            fillRule: PathFillRule.nonZero,
+          ),
+        ),
+      ];
+
+      for (final node in nodes) {
+        expect(node.instanceRevision, 0);
+        expect(node.transform, Transform2D.identity);
+        expect(node.opacity, 1);
+        expect(node.hitPadding, 0);
+        expect(node.isVisible, isTrue);
+        expect(node.isSelectable, isTrue);
+        expect(node.isLocked, isFalse);
+        expect(node.isDeletable, isTrue);
+        expect(node.isTransformable, isTrue);
+      }
     },
   );
 
@@ -415,10 +511,15 @@ void main() {
         ),
       );
       final snapshot = strokeNodeSnapshotFromValidated(
-        id: 'stroke-snapshot-owned',
-        points: snapshotPoints,
-        thickness: 3,
-        color: const Color(0xFF222222),
+        common: nodeSnapshotCommonFieldsFromValidated(
+          id: 'stroke-snapshot-owned',
+        ),
+        fields: (
+          points: snapshotPoints,
+          pointsRevision: 0,
+          thickness: 3,
+          color: const Color(0xFF222222),
+        ),
       );
 
       specPoints[1] = const Offset(30, 40);

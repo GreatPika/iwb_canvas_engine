@@ -235,7 +235,7 @@ snapshot boundary.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Centralize node-family validated helper assembly
+### Slice 1. [x] Centralize node-family validated helper assembly
 
 #### Slice Contract
 
@@ -279,7 +279,7 @@ wrapper materialization edge.
   is compressed.
 - Green targeted contract/model/serialization verification.
 
-### Slice 2. [ ] Align fast-path surface and downstream proof callers
+### Slice 2. [x] Align fast-path surface and downstream proof callers
 
 #### Slice Contract
 

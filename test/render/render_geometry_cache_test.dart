@@ -313,8 +313,14 @@ void main() {
     () {
       final cache = RenderGeometryCache();
       final node = pathNodeSnapshotFromValidated(
-        id: 'path-invalid',
-        svgPathData: 'invalid',
+        common: nodeSnapshotCommonFieldsFromValidated(id: 'path-invalid'),
+        fields: (
+          svgPathData: 'invalid',
+          fillColor: null,
+          strokeColor: null,
+          strokeWidth: 0,
+          fillRule: PathFillRule.nonZero,
+        ),
       );
 
       final entry = cache.get(node);
@@ -330,9 +336,16 @@ void main() {
     () {
       final cache = RenderGeometryCache();
       final node = rectNodeSnapshotFromValidated(
-        id: 'rect-non-finite-transform',
-        size: const Size(10, 10),
-        transform: Transform2D(a: 1, b: 0, c: 0, d: 1, tx: double.nan, ty: 0),
+        common: nodeSnapshotCommonFieldsFromValidated(
+          id: 'rect-non-finite-transform',
+          transform: Transform2D(a: 1, b: 0, c: 0, d: 1, tx: double.nan, ty: 0),
+        ),
+        fields: (
+          size: const Size(10, 10),
+          fillColor: null,
+          strokeColor: null,
+          strokeWidth: 0,
+        ),
       );
 
       final entry = cache.get(node);

@@ -6,6 +6,20 @@ import '../transform2d.dart';
 import 'node_boundary_schema.dart';
 import 'snapshot_backing.dart';
 
+typedef _SnapshotNodeBackingBuilder<
+  TBacking extends NodeSnapshotBacking,
+  TFields
+> =
+    TBacking Function({
+      required NodeSnapshotCommonSchemaFields common,
+      required TFields fields,
+    });
+
+typedef _SnapshotNodeMaterializer<
+  TSnapshot extends NodeSnapshot,
+  TBacking extends NodeSnapshotBacking
+> = TSnapshot Function(TBacking backing);
+
 SceneSnapshot materializeSceneSnapshot(SceneSnapshotBacking backing) {
   return SceneSnapshot.materialize(backing);
 }
@@ -205,12 +219,9 @@ ScenePaletteSnapshot scenePaletteSnapshotFromValidated({
   );
 }
 
-ImageNodeSnapshot imageNodeSnapshotFromValidated({
+NodeSnapshotCommonSchemaFields nodeSnapshotCommonFieldsFromValidated({
   required NodeId id,
   int instanceRevision = 0,
-  required String imageId,
-  required Size size,
-  Size? naturalSize,
   Transform2D transform = Transform2D.identity,
   double opacity = 1,
   double hitPadding = 0,
@@ -220,241 +231,101 @@ ImageNodeSnapshot imageNodeSnapshotFromValidated({
   bool isDeletable = true,
   bool isTransformable = true,
 }) {
-  return materializeImageNodeSnapshot(
-    imageNodeSnapshotBackingFromValidated(
-      common: snapshotCommonSchemaFieldsFromValidated((
-        id: id,
-        instanceRevision: instanceRevision,
-        transform: transform,
-        opacity: opacity,
-        hitPadding: hitPadding,
-        isVisible: isVisible,
-        isSelectable: isSelectable,
-        isLocked: isLocked,
-        isDeletable: isDeletable,
-        isTransformable: isTransformable,
-      )),
-      fields: imageNodeSchemaFieldsFromValidated((
-        imageId: imageId,
-        size: size,
-        naturalSize: naturalSize,
-      )),
-    ),
+  return snapshotCommonSchemaFieldsFromValidated((
+    id: id,
+    instanceRevision: instanceRevision,
+    transform: transform,
+    opacity: opacity,
+    hitPadding: hitPadding,
+    isVisible: isVisible,
+    isSelectable: isSelectable,
+    isLocked: isLocked,
+    isDeletable: isDeletable,
+    isTransformable: isTransformable,
+  ));
+}
+
+TSnapshot _nodeSnapshotFromValidated<
+  TSnapshot extends NodeSnapshot,
+  TBacking extends NodeSnapshotBacking,
+  TFields
+>({
+  required NodeSnapshotCommonSchemaFields common,
+  required TFields fields,
+  required _SnapshotNodeBackingBuilder<TBacking, TFields> buildBacking,
+  required _SnapshotNodeMaterializer<TSnapshot, TBacking> materialize,
+}) {
+  return materialize(buildBacking(common: common, fields: fields));
+}
+
+ImageNodeSnapshot imageNodeSnapshotFromValidated({
+  required NodeSnapshotCommonSchemaFields common,
+  required ImageNodeSchemaFields fields,
+}) {
+  return _nodeSnapshotFromValidated(
+    common: common,
+    fields: imageNodeSchemaFieldsFromValidated(fields),
+    buildBacking: imageNodeSnapshotBackingFromValidated,
+    materialize: materializeImageNodeSnapshot,
   );
 }
 
 TextNodeSnapshot textNodeSnapshotFromValidated({
-  required NodeId id,
-  int instanceRevision = 0,
-  required String text,
-  required Size size,
-  double fontSize = 24,
-  required Color color,
-  TextAlign align = TextAlign.left,
-  bool isBold = false,
-  bool isItalic = false,
-  bool isUnderline = false,
-  String? fontFamily,
-  double? maxWidth,
-  double? lineHeight,
-  Transform2D transform = Transform2D.identity,
-  double opacity = 1,
-  double hitPadding = 0,
-  bool isVisible = true,
-  bool isSelectable = true,
-  bool isLocked = false,
-  bool isDeletable = true,
-  bool isTransformable = true,
+  required NodeSnapshotCommonSchemaFields common,
+  required TextNodeSnapshotSchemaFields fields,
 }) {
-  return materializeTextNodeSnapshot(
-    textNodeSnapshotBackingFromValidated(
-      common: snapshotCommonSchemaFieldsFromValidated((
-        id: id,
-        instanceRevision: instanceRevision,
-        transform: transform,
-        opacity: opacity,
-        hitPadding: hitPadding,
-        isVisible: isVisible,
-        isSelectable: isSelectable,
-        isLocked: isLocked,
-        isDeletable: isDeletable,
-        isTransformable: isTransformable,
-      )),
-      fields: textNodeSnapshotSchemaFieldsFromValidated((
-        text: text,
-        size: size,
-        fontSize: fontSize,
-        color: color,
-        align: align,
-        isBold: isBold,
-        isItalic: isItalic,
-        isUnderline: isUnderline,
-        fontFamily: fontFamily,
-        maxWidth: maxWidth,
-        lineHeight: lineHeight,
-      )),
-    ),
+  return _nodeSnapshotFromValidated(
+    common: common,
+    fields: textNodeSnapshotSchemaFieldsFromValidated(fields),
+    buildBacking: textNodeSnapshotBackingFromValidated,
+    materialize: materializeTextNodeSnapshot,
   );
 }
 
 StrokeNodeSnapshot strokeNodeSnapshotFromValidated({
-  required NodeId id,
-  int instanceRevision = 0,
-  required List<Offset> points,
-  int pointsRevision = 0,
-  required double thickness,
-  required Color color,
-  Transform2D transform = Transform2D.identity,
-  double opacity = 1,
-  double hitPadding = 0,
-  bool isVisible = true,
-  bool isSelectable = true,
-  bool isLocked = false,
-  bool isDeletable = true,
-  bool isTransformable = true,
+  required NodeSnapshotCommonSchemaFields common,
+  required StrokeNodeSnapshotSchemaInput fields,
 }) {
-  return materializeStrokeNodeSnapshot(
-    strokeNodeSnapshotBackingFromValidated(
-      common: snapshotCommonSchemaFieldsFromValidated((
-        id: id,
-        instanceRevision: instanceRevision,
-        transform: transform,
-        opacity: opacity,
-        hitPadding: hitPadding,
-        isVisible: isVisible,
-        isSelectable: isSelectable,
-        isLocked: isLocked,
-        isDeletable: isDeletable,
-        isTransformable: isTransformable,
-      )),
-      fields: strokeNodeSnapshotSchemaFieldsFromValidated((
-        points: points,
-        pointsRevision: pointsRevision,
-        thickness: thickness,
-        color: color,
-      )),
-    ),
+  return _nodeSnapshotFromValidated(
+    common: common,
+    fields: strokeNodeSnapshotSchemaFieldsFromValidated(fields),
+    buildBacking: strokeNodeSnapshotBackingFromValidated,
+    materialize: materializeStrokeNodeSnapshot,
   );
 }
 
 LineNodeSnapshot lineNodeSnapshotFromValidated({
-  required NodeId id,
-  int instanceRevision = 0,
-  required Offset start,
-  required Offset end,
-  required double thickness,
-  required Color color,
-  Transform2D transform = Transform2D.identity,
-  double opacity = 1,
-  double hitPadding = 0,
-  bool isVisible = true,
-  bool isSelectable = true,
-  bool isLocked = false,
-  bool isDeletable = true,
-  bool isTransformable = true,
+  required NodeSnapshotCommonSchemaFields common,
+  required LineNodeSchemaFields fields,
 }) {
-  return materializeLineNodeSnapshot(
-    lineNodeSnapshotBackingFromValidated(
-      common: snapshotCommonSchemaFieldsFromValidated((
-        id: id,
-        instanceRevision: instanceRevision,
-        transform: transform,
-        opacity: opacity,
-        hitPadding: hitPadding,
-        isVisible: isVisible,
-        isSelectable: isSelectable,
-        isLocked: isLocked,
-        isDeletable: isDeletable,
-        isTransformable: isTransformable,
-      )),
-      fields: lineNodeSchemaFieldsFromValidated((
-        start: start,
-        end: end,
-        thickness: thickness,
-        color: color,
-      )),
-    ),
+  return _nodeSnapshotFromValidated(
+    common: common,
+    fields: lineNodeSchemaFieldsFromValidated(fields),
+    buildBacking: lineNodeSnapshotBackingFromValidated,
+    materialize: materializeLineNodeSnapshot,
   );
 }
 
 RectNodeSnapshot rectNodeSnapshotFromValidated({
-  required NodeId id,
-  int instanceRevision = 0,
-  required Size size,
-  Color? fillColor,
-  Color? strokeColor,
-  double strokeWidth = 0,
-  Transform2D transform = Transform2D.identity,
-  double opacity = 1,
-  double hitPadding = 0,
-  bool isVisible = true,
-  bool isSelectable = true,
-  bool isLocked = false,
-  bool isDeletable = true,
-  bool isTransformable = true,
+  required NodeSnapshotCommonSchemaFields common,
+  required RectNodeSchemaFields fields,
 }) {
-  return materializeRectNodeSnapshot(
-    rectNodeSnapshotBackingFromValidated(
-      common: snapshotCommonSchemaFieldsFromValidated((
-        id: id,
-        instanceRevision: instanceRevision,
-        transform: transform,
-        opacity: opacity,
-        hitPadding: hitPadding,
-        isVisible: isVisible,
-        isSelectable: isSelectable,
-        isLocked: isLocked,
-        isDeletable: isDeletable,
-        isTransformable: isTransformable,
-      )),
-      fields: rectNodeSchemaFieldsFromValidated((
-        size: size,
-        fillColor: fillColor,
-        strokeColor: strokeColor,
-        strokeWidth: strokeWidth,
-      )),
-    ),
+  return _nodeSnapshotFromValidated(
+    common: common,
+    fields: rectNodeSchemaFieldsFromValidated(fields),
+    buildBacking: rectNodeSnapshotBackingFromValidated,
+    materialize: materializeRectNodeSnapshot,
   );
 }
 
 PathNodeSnapshot pathNodeSnapshotFromValidated({
-  required NodeId id,
-  int instanceRevision = 0,
-  required String svgPathData,
-  Color? fillColor,
-  Color? strokeColor,
-  double strokeWidth = 0,
-  PathFillRule fillRule = PathFillRule.nonZero,
-  Transform2D transform = Transform2D.identity,
-  double opacity = 1,
-  double hitPadding = 0,
-  bool isVisible = true,
-  bool isSelectable = true,
-  bool isLocked = false,
-  bool isDeletable = true,
-  bool isTransformable = true,
+  required NodeSnapshotCommonSchemaFields common,
+  required PathNodeSchemaFields fields,
 }) {
-  return materializePathNodeSnapshot(
-    pathNodeSnapshotBackingFromValidated(
-      common: snapshotCommonSchemaFieldsFromValidated((
-        id: id,
-        instanceRevision: instanceRevision,
-        transform: transform,
-        opacity: opacity,
-        hitPadding: hitPadding,
-        isVisible: isVisible,
-        isSelectable: isSelectable,
-        isLocked: isLocked,
-        isDeletable: isDeletable,
-        isTransformable: isTransformable,
-      )),
-      fields: pathNodeSchemaFieldsFromValidated((
-        svgPathData: svgPathData,
-        fillColor: fillColor,
-        strokeColor: strokeColor,
-        strokeWidth: strokeWidth,
-        fillRule: fillRule,
-      )),
-    ),
+  return _nodeSnapshotFromValidated(
+    common: common,
+    fields: pathNodeSchemaFieldsFromValidated(fields),
+    buildBacking: pathNodeSnapshotBackingFromValidated,
+    materialize: materializePathNodeSnapshot,
   );
 }
