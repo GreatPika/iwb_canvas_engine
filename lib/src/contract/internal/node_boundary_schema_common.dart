@@ -35,6 +35,30 @@ typedef PathNodeSchemaFields = ({
   PathFillRule fillRule,
 });
 
+typedef NodeDirectionalCommonSchemaFields = ({
+  Transform2D transform,
+  double opacity,
+  double hitPadding,
+  bool isVisible,
+  bool isSelectable,
+  bool isLocked,
+  bool isDeletable,
+  bool isTransformable,
+});
+
+typedef TextNodeDirectionalSchemaFields = ({
+  String text,
+  double fontSize,
+  Color color,
+  TextAlign align,
+  bool isBold,
+  bool isItalic,
+  bool isUnderline,
+  String? fontFamily,
+  double? maxWidth,
+  double? lineHeight,
+});
+
 NodeId validateRequiredNodeId(NodeId id) {
   return NodeIdValue.of(id, name: 'id').value;
 }
@@ -198,4 +222,66 @@ PathNodeSchemaFields validatePathNodeSchemaFields(PathNodeSchemaFields fields) {
 
 PathNodeSchemaFields pathNodeSchemaFieldsFromValidated(
   PathNodeSchemaFields fields,
+) => fields;
+
+NodeDirectionalCommonSchemaFields validateNodeDirectionalCommonSchemaFields(
+  NodeDirectionalCommonSchemaFields fields,
+) {
+  return (
+    transform: validateFiniteInvertibleTransform2D(
+      fields.transform,
+      name: 'transform',
+    ),
+    opacity: validateOpacityValue(fields.opacity, name: 'opacity'),
+    hitPadding: validateNonNegativeFiniteDoubleValue(
+      fields.hitPadding,
+      name: 'hitPadding',
+    ),
+    isVisible: fields.isVisible,
+    isSelectable: fields.isSelectable,
+    isLocked: fields.isLocked,
+    isDeletable: fields.isDeletable,
+    isTransformable: fields.isTransformable,
+  );
+}
+
+NodeDirectionalCommonSchemaFields
+nodeDirectionalCommonSchemaFieldsFromValidated(
+  NodeDirectionalCommonSchemaFields fields,
+) => fields;
+
+TextNodeDirectionalSchemaFields validateTextNodeDirectionalSchemaFields(
+  TextNodeDirectionalSchemaFields fields,
+) {
+  final resolvedFontFamily = fields.fontFamily;
+  final resolvedMaxWidth = fields.maxWidth;
+  final resolvedLineHeight = fields.lineHeight;
+  return (
+    text: validateTextContentValue(fields.text, name: 'text'),
+    fontSize: validatePositiveFiniteDoubleValue(
+      fields.fontSize,
+      name: 'fontSize',
+    ),
+    color: fields.color,
+    align: fields.align,
+    isBold: fields.isBold,
+    isItalic: fields.isItalic,
+    isUnderline: fields.isUnderline,
+    fontFamily: resolvedFontFamily == null
+        ? null
+        : validateFontFamilyValue(resolvedFontFamily, name: 'fontFamily'),
+    maxWidth: resolvedMaxWidth == null
+        ? null
+        : validatePositiveFiniteDoubleValue(resolvedMaxWidth, name: 'maxWidth'),
+    lineHeight: resolvedLineHeight == null
+        ? null
+        : validatePositiveFiniteDoubleValue(
+            resolvedLineHeight,
+            name: 'lineHeight',
+          ),
+  );
+}
+
+TextNodeDirectionalSchemaFields textNodeDirectionalSchemaFieldsFromValidated(
+  TextNodeDirectionalSchemaFields fields,
 ) => fields;

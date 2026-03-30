@@ -50,6 +50,16 @@ typedef StrokeNodeSnapshotSchemaFields = ({
 NodeSnapshotCommonSchemaFields validateSnapshotCommonSchemaFields(
   NodeSnapshotCommonSchemaFields fields,
 ) {
+  final commonFields = validateNodeDirectionalCommonSchemaFields((
+    transform: fields.transform,
+    opacity: fields.opacity,
+    hitPadding: fields.hitPadding,
+    isVisible: fields.isVisible,
+    isSelectable: fields.isSelectable,
+    isLocked: fields.isLocked,
+    isDeletable: fields.isDeletable,
+    isTransformable: fields.isTransformable,
+  ));
   return (
     id: validateNodeIdValue(fields.id, name: 'id'),
     instanceRevision: validateInstanceRevisionValue(
@@ -57,31 +67,48 @@ NodeSnapshotCommonSchemaFields validateSnapshotCommonSchemaFields(
       name: 'instanceRevision',
       allowZero: true,
     ),
-    transform: validateFiniteInvertibleTransform2D(
-      fields.transform,
-      name: 'transform',
-    ),
-    opacity: validateOpacityValue(fields.opacity, name: 'opacity'),
-    hitPadding: validateNonNegativeFiniteDoubleValue(
-      fields.hitPadding,
-      name: 'hitPadding',
-    ),
-    isVisible: fields.isVisible,
-    isSelectable: fields.isSelectable,
-    isLocked: fields.isLocked,
-    isDeletable: fields.isDeletable,
-    isTransformable: fields.isTransformable,
+    transform: commonFields.transform,
+    opacity: commonFields.opacity,
+    hitPadding: commonFields.hitPadding,
+    isVisible: commonFields.isVisible,
+    isSelectable: commonFields.isSelectable,
+    isLocked: commonFields.isLocked,
+    isDeletable: commonFields.isDeletable,
+    isTransformable: commonFields.isTransformable,
   );
 }
 
 NodeSnapshotCommonSchemaFields snapshotCommonSchemaFieldsFromValidated(
   NodeSnapshotCommonSchemaFields fields,
-) => fields;
+) {
+  final commonFields = nodeDirectionalCommonSchemaFieldsFromValidated((
+    transform: fields.transform,
+    opacity: fields.opacity,
+    hitPadding: fields.hitPadding,
+    isVisible: fields.isVisible,
+    isSelectable: fields.isSelectable,
+    isLocked: fields.isLocked,
+    isDeletable: fields.isDeletable,
+    isTransformable: fields.isTransformable,
+  ));
+  return (
+    id: fields.id,
+    instanceRevision: fields.instanceRevision,
+    transform: commonFields.transform,
+    opacity: commonFields.opacity,
+    hitPadding: commonFields.hitPadding,
+    isVisible: commonFields.isVisible,
+    isSelectable: commonFields.isSelectable,
+    isLocked: commonFields.isLocked,
+    isDeletable: commonFields.isDeletable,
+    isTransformable: commonFields.isTransformable,
+  );
+}
 
 TextNodeSnapshotSchemaFields validateTextNodeSnapshotSchemaFields(
   TextNodeSnapshotSchemaFields fields,
 ) {
-  final textFields = validateTextNodeSpecSchemaFields((
+  final textFields = validateTextNodeDirectionalSchemaFields((
     text: fields.text,
     fontSize: fields.fontSize,
     color: fields.color,
@@ -110,7 +137,33 @@ TextNodeSnapshotSchemaFields validateTextNodeSnapshotSchemaFields(
 
 TextNodeSnapshotSchemaFields textNodeSnapshotSchemaFieldsFromValidated(
   TextNodeSnapshotSchemaFields fields,
-) => fields;
+) {
+  final textFields = textNodeDirectionalSchemaFieldsFromValidated((
+    text: fields.text,
+    fontSize: fields.fontSize,
+    color: fields.color,
+    align: fields.align,
+    isBold: fields.isBold,
+    isItalic: fields.isItalic,
+    isUnderline: fields.isUnderline,
+    fontFamily: fields.fontFamily,
+    maxWidth: fields.maxWidth,
+    lineHeight: fields.lineHeight,
+  ));
+  return (
+    text: textFields.text,
+    size: fields.size,
+    fontSize: textFields.fontSize,
+    color: textFields.color,
+    align: textFields.align,
+    isBold: textFields.isBold,
+    isItalic: textFields.isItalic,
+    isUnderline: textFields.isUnderline,
+    fontFamily: textFields.fontFamily,
+    maxWidth: textFields.maxWidth,
+    lineHeight: textFields.lineHeight,
+  );
+}
 
 StrokeNodeSnapshotSchemaFields validateStrokeNodeSnapshotSchemaFields(
   StrokeNodeSnapshotSchemaInput fields,

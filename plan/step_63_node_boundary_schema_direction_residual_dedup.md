@@ -257,7 +257,7 @@ language: russian
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Centralize truly shared field semantics in `node_boundary_schema_common.dart`
+### Slice 1. [x] Centralize truly shared field semantics in `node_boundary_schema_common.dart`
 
 #### Slice Contract
 
@@ -297,7 +297,7 @@ while keeping only direction-specific wrappers in the direction owners.
 - Confirmed shared field semantics have one canonical owner in
   `node_boundary_schema_common.dart`.
 
-### Slice 2. [ ] Reduce residual scaffolding in patch/spec/snapshot direction owners
+### Slice 2. [x] Reduce residual scaffolding in patch/spec/snapshot direction owners
 
 #### Slice Contract
 

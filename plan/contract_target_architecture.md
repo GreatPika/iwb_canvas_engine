@@ -97,6 +97,9 @@ fast-path barrels.
 - `internal/node_boundary_schema_common.dart` owns:
   - schema field typedefs shared across directions;
   - common validated-boundary conversion helpers;
+  - shared direction-neutral node-common and text-field semantics reused by
+    `spec` and `snapshot` owners while leaving their requiredness and
+    assembly-specific fields local;
   - primitive/shared validators that are truly cross-direction rather than
     patch-local, spec-local, or snapshot-local.
 - `internal/node_boundary_schema_patch.dart` owns patch-only validation and
