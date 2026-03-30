@@ -154,3 +154,5 @@ This file is the plan index. Each step has a dedicated document so steps can be 
 - [x] [Шаг 56. Сделать `SceneController` единственным public root и разрезать API по capability owner-ам](plan/step_56_scene_controller_public_capability_split.md)
 - [x] [Шаг 57. Убрать residual access seams, render-state leak и naming drift после public split `SceneController`](plan/step_57_scene_controller_post_split_residual_cleanup.md)
 - [x] [Шаг 58. Исправить метрику сходства, diagnostics и CLI-контракт утилиты clone analysis](plan/step_58_clone_analysis_correctness_and_diagnostics.md)
+- [ ] [Шаг 59. Заменить грубую нормализацию на portable AST-aware canonicalizer](plan/step_59_clone_analysis_portable_canonicalizer.md)
+- [ ] [Шаг 60. Добавить fragment-level clone search по последовательностям top-level statements](plan/step_60_clone_analysis_fragment_level_search.md)
