@@ -99,10 +99,18 @@ support buckets or recover the mixed ownership that steps `40-47` removed.
 - `scene_value_validation.dart` stays the canonical validation facade.
 - Focused validation owners remain:
   - `scene_value_validation_node.dart`
+  - `scene_value_validation_node_image.dart`
+  - `scene_value_validation_node_text.dart`
+  - `scene_value_validation_node_stroke.dart`
+  - `scene_value_validation_node_line.dart`
+  - `scene_value_validation_node_rect.dart`
+  - `scene_value_validation_node_path.dart`
   - `scene_value_validation_palette_grid.dart`
   - `scene_value_validation_primitives.dart`
   - `scene_value_validation_support.dart`
   - `scene_value_validation_top_level.dart`
+- `scene_value_validation_node.dart` stays a thin shared node-validation
+  facade for base fields and node-family dispatch.
 - `scene_policy.dart` remains the only scene-level semantic owner.
 
 ### Document and patch graph

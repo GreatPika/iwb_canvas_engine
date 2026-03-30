@@ -249,7 +249,7 @@ base-field validation, snapshot/runtime branching, и family-local rule bodies
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Make `scene_value_validation_node.dart` a thin node-validation facade
+### Slice 1. [x] Make `scene_value_validation_node.dart` a thin node-validation facade
 
 #### Slice Contract
 
@@ -286,7 +286,7 @@ shared frame needed to route node-family validation to explicit family owners.
 - `scene_value_validation_node.dart` is visibly reduced to shared frame and
   dispatch responsibilities.
 
-### Slice 2. [ ] Move family-local node validation rules into focused owner modules
+### Slice 2. [x] Move family-local node validation rules into focused owner modules
 
 #### Slice Contract
 

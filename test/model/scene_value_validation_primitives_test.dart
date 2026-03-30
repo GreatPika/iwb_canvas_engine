@@ -133,6 +133,54 @@ void main() {
     });
 
     test(
+      'sceneValidateNodeSnapshot accepts valid stroke snapshots after family split',
+      () {
+        expect(
+          () => sceneValidateNodeSnapshot(
+            StrokeNodeSnapshot(
+              id: 'stroke-0',
+              points: const <Offset>[Offset(0, 0)],
+              pointsRevision: 0,
+              thickness: 1,
+              color: const Color(0xFF000000),
+            ),
+            field: 'node',
+            onError: _throwFailure,
+          ),
+          returnsNormally,
+        );
+      },
+    );
+
+    test(
+      'sceneValidateNode keeps line runtime field paths after family split',
+      () {
+        expect(
+          () => sceneValidateNode(
+            LineNode(
+              id: 'line-0',
+              start: const Offset(double.infinity, 0),
+              end: const Offset(1, 1),
+              thickness: 1,
+              color: const Color(0xFF000000),
+            ),
+            field: 'node',
+            onError: _throwFailure,
+          ),
+          throwsA(
+            predicate(
+              (error) =>
+                  error is _ValidationFailure &&
+                  error.field == 'node.localA.dx' &&
+                  error.message == 'must be finite.' &&
+                  error.value == const Offset(double.infinity, 0),
+            ),
+          ),
+        );
+      },
+    );
+
+    test(
       'facade forwards validation entrypoints to explicit owner modules',
       () {
         expect(() {
