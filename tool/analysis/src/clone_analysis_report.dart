@@ -19,14 +19,13 @@ String _renderTextReport(
   final hasResults = config.reportMode == CloneAnalysisReportMode.pairs
       ? report.results.isNotEmpty
       : report.clusters.isNotEmpty;
-  if (!hasResults) {
-    buffer.writeln('No similar fragments found.');
-    return buffer.toString().trimRight();
-  }
 
   _writeReportHeader(buffer, report, config);
 
-  if (config.reportMode == CloneAnalysisReportMode.pairs) {
+  if (!hasResults) {
+    buffer.writeln('No similar fragments found.');
+    buffer.writeln('');
+  } else if (config.reportMode == CloneAnalysisReportMode.pairs) {
     for (var i = 0; i < report.results.length; i++) {
       _writeResultBlock(buffer, report.results[i], i + 1);
     }

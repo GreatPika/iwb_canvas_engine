@@ -46,232 +46,219 @@ String _extractMethodBody({
 
 void main() {
   // INV:INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY
-  test(
-    'SceneController architecture boundary remains structurally split',
-    () {
-      final facadeSource = File(
-        'lib/src/interactive/scene_controller.dart',
-      ).readAsStringSync();
-      final interactionSource = File(
-        'lib/src/interactive/scene_controller_interaction.dart',
-      ).readAsStringSync();
-      final facadeAssemblySource = File(
-        'lib/src/interactive/internal/scene_controller_facade_assembly.dart',
-      ).readAsStringSync();
-      final runtimeSource = File(
-        'lib/src/interactive/internal/interactive_runtime.dart',
-      ).readAsStringSync();
-      final eventSource = File(
-        'lib/src/interactive/internal/interactive_event_dispatcher.dart',
-      ).readAsStringSync();
-      final drawCoordinatorSource = File(
-        'lib/src/interactive/internal/interactive_draw_coordinator.dart',
-      ).readAsStringSync();
-      final eraserSource = File(
-        'lib/src/interactive/internal/interactive_draw_eraser_engine.dart',
-      ).readAsStringSync();
-      final eraserExactHitSource = File(
-        'lib/src/interactive/internal/interactive_draw_eraser_exact_hit.dart',
-      ).readAsStringSync();
-      final eraserLineHitSource = File(
-        'lib/src/interactive/internal/interactive_draw_eraser_line_hit.dart',
-      ).readAsStringSync();
-      final eraserProjectionSource = File(
-        'lib/src/interactive/internal/interactive_draw_eraser_projection.dart',
-      ).readAsStringSync();
-      final eraserStrokeHitSource = File(
-        'lib/src/interactive/internal/interactive_draw_eraser_stroke_hit.dart',
-      ).readAsStringSync();
+  test('SceneController architecture boundary remains structurally split', () {
+    final facadeSource = File(
+      'lib/src/interactive/scene_controller.dart',
+    ).readAsStringSync();
+    final interactionSource = File(
+      'lib/src/interactive/scene_controller_interaction.dart',
+    ).readAsStringSync();
+    final facadeAssemblySource = File(
+      'lib/src/interactive/internal/scene_controller_facade_assembly.dart',
+    ).readAsStringSync();
+    final runtimeSource = File(
+      'lib/src/interactive/internal/interactive_runtime.dart',
+    ).readAsStringSync();
+    final eventSource = File(
+      'lib/src/interactive/internal/interactive_event_dispatcher.dart',
+    ).readAsStringSync();
+    final drawCoordinatorSource = File(
+      'lib/src/interactive/internal/interactive_draw_coordinator.dart',
+    ).readAsStringSync();
+    final eraserSource = File(
+      'lib/src/interactive/internal/interactive_draw_eraser_engine.dart',
+    ).readAsStringSync();
+    final eraserExactHitSource = File(
+      'lib/src/interactive/internal/interactive_draw_eraser_exact_hit.dart',
+    ).readAsStringSync();
+    final eraserLineHitSource = File(
+      'lib/src/interactive/internal/interactive_draw_eraser_line_hit.dart',
+    ).readAsStringSync();
+    final eraserProjectionSource = File(
+      'lib/src/interactive/internal/interactive_draw_eraser_projection.dart',
+    ).readAsStringSync();
+    final eraserStrokeHitSource = File(
+      'lib/src/interactive/internal/interactive_draw_eraser_stroke_hit.dart',
+    ).readAsStringSync();
 
-      expect(
-        facadeSource,
-        contains("import 'internal/scene_controller_facade_assembly.dart';"),
-      );
-      expect(
-        facadeSource,
-        contains(
-          "import 'internal/scene_controller_interaction_runtime.dart';",
-        ),
-      );
-      expect(facadeSource, contains('assembleSceneControllerFacade('));
-      expect(facadeSource, contains('SceneControllerFacadeRequest('));
-      expect(facadeSource, contains('registerSceneControllerInternalAccess('));
-      expect(
-        facadeSource,
-        contains('SceneControllerInternalAccessRegistration('),
-      );
-      expect(
-        facadeSource,
-        isNot(contains("import 'internal/interactive_runtime.dart';")),
-      );
-      expect(
-        facadeSource,
-        isNot(contains("import 'internal/interactive_event_dispatcher.dart';")),
-      );
-      expect(
-        facadeSource,
-        isNot(
-          contains("import 'internal/interactive_selection_actions.dart';"),
-        ),
-      );
-      expect(facadeSource, isNot(contains('_runtime.handlePointer(')));
-      expect(facadeSource, isNot(contains('_runtime.handleDoubleTap(')));
+    expect(
+      facadeSource,
+      contains("import 'internal/scene_controller_facade_assembly.dart';"),
+    );
+    expect(
+      facadeSource,
+      contains("import 'internal/scene_controller_interaction_runtime.dart';"),
+    );
+    expect(facadeSource, contains('assembleSceneControllerFacade('));
+    expect(facadeSource, contains('SceneControllerFacadeRequest('));
+    expect(facadeSource, contains('registerSceneControllerInternalAccess('));
+    expect(
+      facadeSource,
+      contains('SceneControllerInternalAccessRegistration('),
+    );
+    expect(
+      facadeSource,
+      isNot(contains("import 'internal/interactive_runtime.dart';")),
+    );
+    expect(
+      facadeSource,
+      isNot(contains("import 'internal/interactive_event_dispatcher.dart';")),
+    );
+    expect(
+      facadeSource,
+      isNot(contains("import 'internal/interactive_selection_actions.dart';")),
+    );
+    expect(facadeSource, isNot(contains('_runtime.handlePointer(')));
+    expect(facadeSource, isNot(contains('_runtime.handleDoubleTap(')));
 
-      expect(facadeAssemblySource, contains('SceneControllerInteraction('));
-      expect(facadeAssemblySource, contains('SceneControllerSelection('));
-      expect(facadeAssemblySource, contains('SceneControllerScene('));
+    expect(facadeAssemblySource, contains('SceneControllerInteraction('));
+    expect(facadeAssemblySource, contains('SceneControllerSelection('));
+    expect(facadeAssemblySource, contains('SceneControllerScene('));
 
-      final handlePointerBody = _extractMethodBody(
-        source: interactionSource,
-        methodStart: 'void handlePointer(CanvasPointerInput input)',
-      );
-      expect(
-        handlePointerBody,
-        contains('_access.runtime.handlePointer(input);'),
-      );
-      expect(handlePointerBody, isNot(contains('_pointerNormalizer')));
-      expect(handlePointerBody, isNot(contains('_gestureRouter')));
+    final handlePointerBody = _extractMethodBody(
+      source: interactionSource,
+      methodStart: 'void handlePointer(CanvasPointerInput input)',
+    );
+    expect(
+      handlePointerBody,
+      contains('_access.runtime.handlePointer(input);'),
+    );
+    expect(handlePointerBody, isNot(contains('_pointerNormalizer')));
+    expect(handlePointerBody, isNot(contains('_gestureRouter')));
 
-      final handleDoubleTapBody = _extractMethodBody(
-        source: interactionSource,
-        methodStart:
-            'void handleDoubleTap({required Offset position, int? timestampMs})',
-      );
-      expect(handleDoubleTapBody, contains('_access.runtime.handleDoubleTap('));
-      expect(handleDoubleTapBody, isNot(contains('resolveTimestampMs(')));
+    final handleDoubleTapBody = _extractMethodBody(
+      source: interactionSource,
+      methodStart:
+          'void handleDoubleTap({required Offset position, int? timestampMs})',
+    );
+    expect(handleDoubleTapBody, contains('_access.runtime.handleDoubleTap('));
+    expect(handleDoubleTapBody, isNot(contains('resolveTimestampMs(')));
 
-      expect(
-        runtimeSource,
-        contains("import 'interactive_draw_coordinator.dart';"),
-      );
-      expect(
-        runtimeSource,
-        contains("import 'interactive_event_dispatcher.dart';"),
-      );
-      expect(
-        runtimeSource,
-        contains("import 'interactive_move_session.dart';"),
-      );
-      expect(
-        runtimeSource,
-        contains("import 'interactive_pointer_normalizer.dart';"),
-      );
-      expect(
-        runtimeSource,
-        contains("import 'interactive_gesture_router.dart';"),
-      );
-      expect(
-        runtimeSource,
-        contains("import 'interactive_double_tap_router.dart';"),
-      );
-      expect(runtimeSource, isNot(contains('StreamController<')));
-      expect(runtimeSource, isNot(contains('_timestampCursorMs')));
-      expect(runtimeSource, isNot(contains('_actionCounter')));
-      expect(runtimeSource, isNot(contains('_eraserHitsLine(')));
+    expect(
+      runtimeSource,
+      contains("import 'interactive_draw_coordinator.dart';"),
+    );
+    expect(
+      runtimeSource,
+      contains("import 'interactive_event_dispatcher.dart';"),
+    );
+    expect(runtimeSource, contains("import 'interactive_move_session.dart';"));
+    expect(
+      runtimeSource,
+      contains("import 'interactive_pointer_normalizer.dart';"),
+    );
+    expect(
+      runtimeSource,
+      contains("import 'interactive_gesture_router.dart';"),
+    );
+    expect(
+      runtimeSource,
+      contains("import 'interactive_double_tap_router.dart';"),
+    );
+    expect(runtimeSource, isNot(contains('StreamController<')));
+    expect(runtimeSource, isNot(contains('_timestampCursorMs')));
+    expect(runtimeSource, isNot(contains('_actionCounter')));
+    expect(runtimeSource, isNot(contains('_eraserHitsLine(')));
 
-      expect(eventSource, contains('class InteractiveEventDispatcher'));
-      expect(eventSource, contains('resolveTimestampMs('));
-      expect(eventSource, contains('emitAction('));
-      expect(eventSource, contains('emitEditTextRequested('));
+    expect(eventSource, contains('class InteractiveEventDispatcher'));
+    expect(eventSource, contains('resolveTimestampMs('));
+    expect(eventSource, contains('emitAction('));
+    expect(eventSource, contains('emitEditTextRequested('));
 
-      expect(
-        drawCoordinatorSource,
-        contains("import 'interactive_draw_eraser_engine.dart';"),
-      );
-      expect(
-        drawCoordinatorSource,
-        contains("import 'interactive_draw_line_engine.dart';"),
-      );
-      expect(
-        drawCoordinatorSource,
-        contains("import 'interactive_draw_stroke_engine.dart';"),
-      );
-      expect(
-        drawCoordinatorSource,
-        contains("import 'interactive_draw_terminal_router.dart';"),
-      );
-      expect(drawCoordinatorSource, isNot(contains('_eraserHitsLine(')));
-      expect(drawCoordinatorSource, isNot(contains('_eraserHitsStroke(')));
-      expect(
-        drawCoordinatorSource,
-        isNot(contains('_localEraserSegmentsHitLine(')),
-      );
-      expect(
-        drawCoordinatorSource,
-        isNot(contains('_eraserSegmentHitsStrokeBatch(')),
-      );
+    expect(
+      drawCoordinatorSource,
+      contains("import 'interactive_draw_eraser_engine.dart';"),
+    );
+    expect(
+      drawCoordinatorSource,
+      contains("import 'interactive_draw_line_engine.dart';"),
+    );
+    expect(
+      drawCoordinatorSource,
+      contains("import 'interactive_draw_stroke_engine.dart';"),
+    );
+    expect(
+      drawCoordinatorSource,
+      contains("import 'interactive_draw_terminal_router.dart';"),
+    );
+    expect(drawCoordinatorSource, isNot(contains('_eraserHitsLine(')));
+    expect(drawCoordinatorSource, isNot(contains('_eraserHitsStroke(')));
+    expect(
+      drawCoordinatorSource,
+      isNot(contains('_localEraserSegmentsHitLine(')),
+    );
+    expect(
+      drawCoordinatorSource,
+      isNot(contains('_eraserSegmentHitsStrokeBatch(')),
+    );
 
-      expect(
-        eraserSource,
-        contains("import 'interactive_draw_eraser_exact_hit.dart';"),
-      );
-      expect(eraserSource, contains('InteractiveDrawEraserExactHit('));
-      expect(eraserSource, contains('_exactHit.hitsNode('));
-      expect(eraserSource, isNot(contains('_eraserHitsNode(')));
-      expect(eraserSource, isNot(contains('_eraserHitsLine(')));
-      expect(eraserSource, isNot(contains('_eraserHitsStroke(')));
-      expect(eraserSource, isNot(contains('_projectEraserToLocal(')));
-      expect(eraserSource, isNot(contains('_fallbackWorldBoundsHit(')));
-      expect(eraserSource, isNot(contains('_localEraserSegmentsHitLine(')));
-      expect(eraserSource, isNot(contains('_eraserSegmentHitsStrokeBatch(')));
+    expect(
+      eraserSource,
+      contains("import 'interactive_draw_eraser_exact_hit.dart';"),
+    );
+    expect(eraserSource, contains('InteractiveDrawEraserExactHit('));
+    expect(eraserSource, contains('_exactHit.hitsNode('));
+    expect(eraserSource, isNot(contains('_eraserHitsNode(')));
+    expect(eraserSource, isNot(contains('_eraserHitsLine(')));
+    expect(eraserSource, isNot(contains('_eraserHitsStroke(')));
+    expect(eraserSource, isNot(contains('_projectEraserToLocal(')));
+    expect(eraserSource, isNot(contains('_fallbackWorldBoundsHit(')));
+    expect(eraserSource, isNot(contains('_localEraserSegmentsHitLine(')));
+    expect(eraserSource, isNot(contains('_eraserSegmentHitsStrokeBatch(')));
 
-      expect(
-        eraserExactHitSource,
-        contains("import 'interactive_draw_eraser_line_hit.dart';"),
-      );
-      expect(
-        eraserExactHitSource,
-        contains("import 'interactive_draw_eraser_projection.dart';"),
-      );
-      expect(
-        eraserExactHitSource,
-        contains("import 'interactive_draw_eraser_stroke_hit.dart';"),
-      );
-      expect(
-        eraserExactHitSource,
-        contains('class InteractiveDrawEraserExactHit'),
-      );
-      expect(eraserExactHitSource, contains('_lineHit.hitsProjectedLine('));
-      expect(eraserExactHitSource, contains('_strokeHit.hitsProjectedStroke('));
-      expect(eraserExactHitSource, contains('_projectEraserToLocal('));
-      expect(eraserExactHitSource, contains('_fallbackWorldBoundsHit('));
-      expect(
-        eraserExactHitSource,
-        isNot(contains('_localEraserSegmentsHitLine(')),
-      );
-      expect(
-        eraserExactHitSource,
-        isNot(contains('_eraserSegmentHitsStrokeBatch(')),
-      );
+    expect(
+      eraserExactHitSource,
+      contains("import 'interactive_draw_eraser_line_hit.dart';"),
+    );
+    expect(
+      eraserExactHitSource,
+      contains("import 'interactive_draw_eraser_projection.dart';"),
+    );
+    expect(
+      eraserExactHitSource,
+      contains("import 'interactive_draw_eraser_stroke_hit.dart';"),
+    );
+    expect(
+      eraserExactHitSource,
+      contains('class InteractiveDrawEraserExactHit'),
+    );
+    expect(eraserExactHitSource, contains('_lineHit.hitsProjectedLine('));
+    expect(eraserExactHitSource, contains('_strokeHit.hitsProjectedStroke('));
+    expect(eraserExactHitSource, contains('_projectEraserToLocal('));
+    expect(eraserExactHitSource, contains('_fallbackWorldBoundsHit('));
+    expect(
+      eraserExactHitSource,
+      isNot(contains('_localEraserSegmentsHitLine(')),
+    );
+    expect(
+      eraserExactHitSource,
+      isNot(contains('_eraserSegmentHitsStrokeBatch(')),
+    );
 
-      expect(
-        eraserLineHitSource,
-        contains('class InteractiveDrawEraserLineHit'),
-      );
-      expect(eraserLineHitSource, contains('hitsProjectedLine('));
-      expect(eraserLineHitSource, contains('_localEraserSegmentsHitLine('));
-      expect(eraserLineHitSource, contains('onPreciseSegmentCheck()'));
-      expect(
-        eraserLineHitSource,
-        isNot(contains('_eraserSegmentHitsStrokeBatch(')),
-      );
+    expect(eraserLineHitSource, contains('class InteractiveDrawEraserLineHit'));
+    expect(eraserLineHitSource, contains('hitsProjectedLine('));
+    expect(eraserLineHitSource, contains('_localEraserSegmentsHitLine('));
+    expect(eraserLineHitSource, contains('onPreciseSegmentCheck()'));
+    expect(
+      eraserLineHitSource,
+      isNot(contains('_eraserSegmentHitsStrokeBatch(')),
+    );
 
-      expect(
-        eraserStrokeHitSource,
-        contains('class InteractiveDrawEraserStrokeHit'),
-      );
-      expect(eraserStrokeHitSource, contains('hitsProjectedStroke('));
-      expect(eraserStrokeHitSource, contains('_eraserSegmentHitsStrokeBatch('));
-      expect(eraserStrokeHitSource, contains('onPreciseSegmentCheck()'));
-      expect(
-        eraserStrokeHitSource,
-        isNot(contains('_localEraserSegmentsHitLine(')),
-      );
+    expect(
+      eraserStrokeHitSource,
+      contains('class InteractiveDrawEraserStrokeHit'),
+    );
+    expect(eraserStrokeHitSource, contains('hitsProjectedStroke('));
+    expect(eraserStrokeHitSource, contains('_eraserSegmentHitsStrokeBatch('));
+    expect(eraserStrokeHitSource, contains('onPreciseSegmentCheck()'));
+    expect(
+      eraserStrokeHitSource,
+      isNot(contains('_localEraserSegmentsHitLine(')),
+    );
 
-      expect(
-        eraserProjectionSource,
-        contains('typedef InteractiveDrawProjectedEraser = ({'),
-      );
-    },
-  );
+    expect(
+      eraserProjectionSource,
+      contains('typedef InteractiveDrawProjectedEraser = ({'),
+    );
+  });
 }

@@ -178,7 +178,7 @@ architecture-oriented feature work starts.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Fix similarity accounting and match-kind honesty
+### Slice 1. [x] Fix similarity accounting and match-kind honesty
 
 #### Slice Contract
 
@@ -217,7 +217,7 @@ corrected behavior.
 - Updated regression assertions in `test/tool/find_similar_clones_tool_test.dart`
   no longer encode `overlap=81.0%` for the repeated-k-gram case.
 
-### Slice 2. [ ] Surface parser diagnostics and reject invalid positional args
+### Slice 2. [x] Surface parser diagnostics and reject invalid positional args
 
 #### Slice Contract
 

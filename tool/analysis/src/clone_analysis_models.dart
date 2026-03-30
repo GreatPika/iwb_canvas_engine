@@ -66,7 +66,7 @@ class PairStat {
   bool hasSample = false;
 }
 
-enum CloneMatchKind { exact, structural }
+enum CloneMatchKind { normalizedExact, structural }
 
 class SimilarityResult {
   SimilarityResult({
@@ -95,7 +95,7 @@ class SimilarityResult {
     final exactOverlap = overlap == 1;
     final exactJaccard = jaccard == 1;
     if (exactOverlap && exactJaccard) {
-      return CloneMatchKind.exact;
+      return CloneMatchKind.normalizedExact;
     }
     return CloneMatchKind.structural;
   }

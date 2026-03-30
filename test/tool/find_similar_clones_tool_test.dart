@@ -79,7 +79,10 @@ int gamma(int z) {
         expect(stdout, contains('Found clone clusters: 1'));
         expect(stdout, contains('members=3'));
         expect(stdout, contains('pairs=3'));
-        expect(stdout, contains('Cluster 1  [3 members, 3 pairs, structural]'));
+        expect(
+          stdout,
+          contains('Cluster 1  [3 members, 3 pairs, structural]'),
+        );
         expect(
           stdout,
           contains(
@@ -146,7 +149,9 @@ int gamma(int z) {
         final cluster = clusters.single as Map<String, Object?>;
         expect(cluster['memberCount'], 3);
         expect(cluster['pairCount'], 3);
+        expect(cluster['matchKinds'], <Object?>['structural']);
         final bestPair = cluster['bestPair'] as Map<String, Object?>;
+        expect(bestPair['matchKind'], 'structural');
         expect((
           (bestPair['a'] as Map<String, Object?>)['name'],
           (bestPair['b'] as Map<String, Object?>)['name'],
@@ -161,6 +166,145 @@ int gamma(int z) {
             )
             .toList();
         expect(names, containsAll(<String>['alpha', 'beta', 'gamma']));
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('reports parser diagnostics in text and json output', () async {
+      final sandbox = await createToolSandbox(
+        tempPrefix: 'iwb_canvas_engine_find_similar_clones_tool_test_',
+        toolFiles: const <String>[
+          'tool/analysis/find_similar_clones.dart',
+          'tool/analysis/src/clone_analysis_cli.dart',
+          'tool/analysis/src/clone_analysis_collector.dart',
+          'tool/analysis/src/clone_analysis_config.dart',
+          'tool/analysis/src/clone_analysis_engine.dart',
+          'tool/analysis/src/clone_analysis_models.dart',
+          'tool/analysis/src/clone_analysis_report.dart',
+        ],
+      );
+
+      try {
+        writeSandboxFile(sandbox, 'lib/broken.dart', '''
+int broken( {
+''');
+
+        final textResult = await runSandboxTool(
+          sandbox,
+          'analysis/find_similar_clones.dart',
+          args: const <String>['lib'],
+        );
+        expect(textResult.exitCode, 0, reason: textResult.stderr.toString());
+        final textStdout = textResult.stdout.toString();
+        expect(textStdout, contains('No similar fragments found.'));
+        expect(textStdout, contains('parseErrors='));
+        expect(textStdout, isNot(contains('  parseErrors=0')));
+        expect(textStdout, contains('Parse errors:'));
+        expect(textStdout, contains('Parse error in lib/broken.dart:'));
+
+        final jsonResult = await runSandboxTool(
+          sandbox,
+          'analysis/find_similar_clones.dart',
+          args: const <String>['--json', 'lib'],
+        );
+        expect(jsonResult.exitCode, 0, reason: jsonResult.stderr.toString());
+        final payload =
+            jsonDecode(jsonResult.stdout.toString()) as Map<String, Object?>;
+        expect(payload['scannedFiles'], 1);
+        expect(payload['parseErrors'], isNotEmpty);
+        expect(
+          (payload['parseErrors'] as List<Object?>).first,
+          contains('Parse error in lib/broken.dart:'),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects invalid numeric positional arguments', () async {
+      final sandbox = await createToolSandbox(
+        tempPrefix: 'iwb_canvas_engine_find_similar_clones_tool_test_',
+        toolFiles: const <String>[
+          'tool/analysis/find_similar_clones.dart',
+          'tool/analysis/src/clone_analysis_cli.dart',
+          'tool/analysis/src/clone_analysis_collector.dart',
+          'tool/analysis/src/clone_analysis_config.dart',
+          'tool/analysis/src/clone_analysis_engine.dart',
+          'tool/analysis/src/clone_analysis_models.dart',
+          'tool/analysis/src/clone_analysis_report.dart',
+        ],
+      );
+
+      try {
+        writeSandboxFile(sandbox, 'lib/ok.dart', '''
+int alpha(int x) {
+  return x + 1;
+}
+''');
+
+        final result = await runSandboxTool(
+          sandbox,
+          'analysis/find_similar_clones.dart',
+          args: const <String>['lib', 'oops'],
+        );
+
+        expect(result.exitCode, 64);
+        expect(
+          result.stderr.toString(),
+          contains('Invalid integer value for minTokens: oops'),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('does not report repeated blocks with different multiplicity as exact',
+        () async {
+      final sandbox = await createToolSandbox(
+        tempPrefix: 'iwb_canvas_engine_find_similar_clones_tool_test_',
+        toolFiles: const <String>[
+          'tool/analysis/find_similar_clones.dart',
+          'tool/analysis/src/clone_analysis_cli.dart',
+          'tool/analysis/src/clone_analysis_collector.dart',
+          'tool/analysis/src/clone_analysis_config.dart',
+          'tool/analysis/src/clone_analysis_engine.dart',
+          'tool/analysis/src/clone_analysis_models.dart',
+          'tool/analysis/src/clone_analysis_report.dart',
+        ],
+      );
+
+      try {
+        writeSandboxFile(sandbox, 'lib/repeated.dart', '''
+int alpha(int x) {
+  x += 1;
+  x += 1;
+  x += 1;
+  x += 1;
+  return x;
+}
+
+int beta(int x) {
+  x += 1;
+  x += 1;
+  return x;
+}
+''');
+
+        final result = await runSandboxTool(
+          sandbox,
+          'analysis/find_similar_clones.dart',
+          args: const <String>['--json', 'lib', '1', '1', '1', '1', '0.0', '100'],
+        );
+
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+        final payload =
+            jsonDecode(result.stdout.toString()) as Map<String, Object?>;
+        final results = payload['results'] as List<Object?>;
+        expect(results, hasLength(1));
+        final pair = results.single as Map<String, Object?>;
+        expect(pair['matchKind'], 'structural');
+        expect(pair['jaccard'], lessThan(1.0));
       } finally {
         sandbox.deleteSync(recursive: true);
       }

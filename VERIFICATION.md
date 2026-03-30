@@ -22,6 +22,10 @@
   - `render_view`: root `.` paths `test/render`, `test/view`
   - `interactive`: root `.` paths `test/interactive`
   - `example`: root `example/` paths `test`
+- Do not run package tests with plain `dart test` in this repository. The test
+  surface is driven by Flutter and project runners (`flutter_test`, MCP shard
+  presets, and `tool/run_tool_tests.dart` for tool tests), so direct `dart test`
+  invocations can fail for environment reasons unrelated to the change.
 - In MCP runs, pass one directory or file per `paths` entry. Do not use shell
   globs or raw `flutter test` CLI flags; use only MCP-supported
   `testRunnerArgs`.
@@ -39,6 +43,8 @@
   - `pubspec.lock`
 - Run tool tests with `dart run tool/run_tool_tests.dart` (use `--jobs=N`
   when you need to override parallelism).
+- To run a single tool test file, pass the file path directly, for example:
+  `dart run tool/run_tool_tests.dart test/tool/find_similar_clones_tool_test.dart`
 - Documentation-only changes do not require the full Flutter pipeline unless the
   task also changes code, tooling contracts, or executable examples.
 - Required checks for code changes:

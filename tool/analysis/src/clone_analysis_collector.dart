@@ -4,6 +4,8 @@ import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:analyzer/diagnostic/diagnostic.dart';
+import 'package:analyzer/source/line_info.dart';
 
 import 'clone_analysis_models.dart';
 
@@ -165,6 +167,9 @@ CloneBlockCollection collectCloneBlocks({
         path: file,
         throwIfDiagnostics: false,
       );
+      parseErrors.addAll(
+        _formatParseErrors(file, result.errors, result.lineInfo),
+      );
 
       final collector = ExecutableCollector(
         filePath: file,
@@ -185,6 +190,24 @@ CloneBlockCollection collectCloneBlocks({
     parseErrors: parseErrors,
     scannedFiles: files.length,
   );
+}
+
+List<String> _formatParseErrors(
+  String filePath,
+  List<Diagnostic> errors,
+  LineInfo lineInfo,
+) {
+  if (errors.isEmpty) {
+    return const <String>[];
+  }
+
+  return errors
+      .map((error) {
+        final location = lineInfo.getLocation(error.offset);
+        return 'Parse error in $filePath:${location.lineNumber}:${location.columnNumber} '
+            '[${error.diagnosticCode.name}]: ${error.message}';
+      })
+      .toList(growable: false);
 }
 
 List<String> collectDartFiles(String rootPath) {

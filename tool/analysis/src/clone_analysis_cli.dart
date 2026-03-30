@@ -57,7 +57,6 @@ Future<int> runCloneAnalysisCli(
     return 1;
   }
 
-  _writeParseErrorsIfNeeded(config, report.parseErrors, stderr);
   stdout.writeln(renderCloneAnalysisReport(report));
   return 0;
 }
@@ -85,28 +84,67 @@ CloneAnalysisParseResult parseCloneAnalysisArgs(List<String> args) {
     }
   }
 
-  return CloneAnalysisParseResult.success(
-    _applyPositionalArgs(config, positionals),
-  );
+  return _applyPositionalArgs(config, positionals);
 }
 
-CloneAnalysisConfig _applyPositionalArgs(
+CloneAnalysisParseResult _applyPositionalArgs(
   CloneAnalysisConfig config,
   List<String> positionals,
 ) {
   if (positionals.isEmpty) {
-    return config;
+    return CloneAnalysisParseResult.success(config);
   }
 
-  return config.copyWith(
-    rootPath: positionals[0],
-    minTokens: _parseInt(positionals, 1) ?? config.minTokens,
-    kGramSize: _parseInt(positionals, 2) ?? config.kGramSize,
-    windowSize: _parseInt(positionals, 3) ?? config.windowSize,
-    minSharedFingerprints:
-        _parseInt(positionals, 4) ?? config.minSharedFingerprints,
-    minOverlap: _parseDouble(positionals, 5) ?? config.minOverlap,
-    maxBucketSize: _parseInt(positionals, 6) ?? config.maxBucketSize,
+  if (positionals.length > 7) {
+    return CloneAnalysisParseResult.error(
+      'Too many positional arguments. Expected at most 7 values.',
+    );
+  }
+
+  final minTokens = _parsePositionalInt(positionals, 1, 'minTokens');
+  if (minTokens case _ParsedPositionalError(:final message)) {
+    return CloneAnalysisParseResult.error(message);
+  }
+
+  final kGramSize = _parsePositionalInt(positionals, 2, 'kGramSize');
+  if (kGramSize case _ParsedPositionalError(:final message)) {
+    return CloneAnalysisParseResult.error(message);
+  }
+
+  final windowSize = _parsePositionalInt(positionals, 3, 'windowSize');
+  if (windowSize case _ParsedPositionalError(:final message)) {
+    return CloneAnalysisParseResult.error(message);
+  }
+
+  final minSharedFingerprints = _parsePositionalInt(
+    positionals,
+    4,
+    'minSharedFingerprints',
+  );
+  if (minSharedFingerprints case _ParsedPositionalError(:final message)) {
+    return CloneAnalysisParseResult.error(message);
+  }
+
+  final minOverlap = _parsePositionalDouble(positionals, 5, 'minOverlap');
+  if (minOverlap case _ParsedPositionalError(:final message)) {
+    return CloneAnalysisParseResult.error(message);
+  }
+
+  final maxBucketSize = _parsePositionalInt(positionals, 6, 'maxBucketSize');
+  if (maxBucketSize case _ParsedPositionalError(:final message)) {
+    return CloneAnalysisParseResult.error(message);
+  }
+
+  return CloneAnalysisParseResult.success(
+    config.copyWith(
+      rootPath: positionals[0],
+      minTokens: minTokens.value,
+      kGramSize: kGramSize.value,
+      windowSize: windowSize.value,
+      minSharedFingerprints: minSharedFingerprints.value,
+      minOverlap: minOverlap.value,
+      maxBucketSize: maxBucketSize.value,
+    ),
   );
 }
 
@@ -115,21 +153,6 @@ int _writeUsageError(IOSink stderr, String message) {
   stderr.writeln('');
   stderr.writeln(_usage.trim());
   return 64;
-}
-
-void _writeParseErrorsIfNeeded(
-  CloneAnalysisConfig config,
-  List<String> parseErrors,
-  IOSink stderr,
-) {
-  if (config.outputFormat != CloneAnalysisOutputFormat.text ||
-      parseErrors.isEmpty) {
-    return;
-  }
-
-  for (final parseError in parseErrors) {
-    stderr.writeln(parseError);
-  }
 }
 
 sealed class _OptionResult {}
@@ -234,16 +257,62 @@ _OptionResult _handleTopValue(
   );
 }
 
-int? _parseInt(List<String> values, int index) {
-  if (index >= values.length) {
-    return null;
-  }
-  return int.tryParse(values[index]);
+sealed class _ParsedPositionalValue<T extends num> {
+  const _ParsedPositionalValue();
+
+  T? get value;
 }
 
-double? _parseDouble(List<String> values, int index) {
+final class _ParsedPositionalSuccess<T extends num>
+    extends _ParsedPositionalValue<T> {
+  const _ParsedPositionalSuccess(this.value);
+
+  @override
+  final T? value;
+}
+
+final class _ParsedPositionalError<T extends num>
+    extends _ParsedPositionalValue<T> {
+  const _ParsedPositionalError(this.message);
+
+  final String message;
+
+  @override
+  T? get value => null;
+}
+
+_ParsedPositionalValue<int> _parsePositionalInt(
+  List<String> values,
+  int index,
+  String name,
+) {
   if (index >= values.length) {
-    return null;
+    return const _ParsedPositionalSuccess<int>(null);
   }
-  return double.tryParse(values[index]);
+
+  final value = int.tryParse(values[index]);
+  if (value == null) {
+    return _ParsedPositionalError<int>(
+      'Invalid integer value for $name: ${values[index]}',
+    );
+  }
+  return _ParsedPositionalSuccess<int>(value);
+}
+
+_ParsedPositionalValue<double> _parsePositionalDouble(
+  List<String> values,
+  int index,
+  String name,
+) {
+  if (index >= values.length) {
+    return const _ParsedPositionalSuccess<double>(null);
+  }
+
+  final value = double.tryParse(values[index]);
+  if (value == null) {
+    return _ParsedPositionalError<double>(
+      'Invalid double value for $name: ${values[index]}',
+    );
+  }
+  return _ParsedPositionalSuccess<double>(value);
 }
