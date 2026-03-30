@@ -60,6 +60,7 @@ contract architecture and is now pinned mechanically by
 - `tool/**`
 - Splitting `snapshot.dart` into one public file per snapshot family
 - A symmetry follow-up for `node_patch.dart` / `node_spec.dart`
+  completed later in step `64`
 
 ## 3. File Map and Analysis Areas
 

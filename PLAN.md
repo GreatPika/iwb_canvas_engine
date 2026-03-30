@@ -158,4 +158,4 @@ This file is the plan index. Each step has a dedicated document so steps can be 
 - [x] [Шаг 61. Сжать residual JSON decode helper matrix в `SceneBuilder`](plan/step_61_scene_builder_decode_helper_residual_compression.md)
 - [x] [Шаг 62. Разрезать residual node-validation matrix на focused family owner-ы](plan/step_62_scene_value_validation_node_family_split.md)
 - [x] [Шаг 63. Убрать residual duplication между direction owner-ами в `node_boundary_schema`](plan/step_63_node_boundary_schema_direction_residual_dedup.md)
-- [ ] [Шаг 64. Сжать residual fast-path family matrix в `NodePatch` и `NodeSpec`](plan/step_64_node_patch_and_spec_fast_path_family_compression.md)
+- [x] [Шаг 64. Перестроить `NodePatch` и `NodeSpec`: internal backing/materialization graph](plan/step_64_node_patch_and_spec_internal_backing_materialization.md)

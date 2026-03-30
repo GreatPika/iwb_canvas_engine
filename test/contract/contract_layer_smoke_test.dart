@@ -73,6 +73,12 @@ void main() {
     final snapshotFastPathSource = File(
       'lib/src/contract/internal/snapshot_fast_path.dart',
     ).readAsStringSync();
+    final nodeSpecFastPathSource = File(
+      'lib/src/contract/internal/node_spec_fast_path.dart',
+    ).readAsStringSync();
+    final nodePatchFastPathSource = File(
+      'lib/src/contract/internal/node_patch_fast_path.dart',
+    ).readAsStringSync();
 
     for (final source in <String>[
       snapshotSource,
@@ -80,6 +86,8 @@ void main() {
       nodePatchSource,
       schemaBarrelSource,
       snapshotFastPathSource,
+      nodeSpecFastPathSource,
+      nodePatchFastPathSource,
     ]) {
       expect(
         source
@@ -97,7 +105,7 @@ void main() {
     );
     expect(
       nodeSpecSource,
-      isNot(contains("import 'internal/node_spec_fast_path.dart';")),
+      contains("import 'internal/node_spec_backing.dart';"),
     );
     expect(
       nodePatchSource,
@@ -105,7 +113,7 @@ void main() {
     );
     expect(
       nodePatchSource,
-      isNot(contains("import 'internal/node_patch_fast_path.dart';")),
+      contains("import 'internal/node_patch_backing.dart';"),
     );
     expect(
       schemaBarrelSource,
@@ -119,6 +127,19 @@ void main() {
     expect(
       snapshotFastPathSource,
       contains("export 'snapshot_materialization.dart'"),
+    );
+    expect(nodeSpecFastPathSource, contains("export 'node_spec_backing.dart'"));
+    expect(
+      nodeSpecFastPathSource,
+      contains("export 'node_spec_materialization.dart'"),
+    );
+    expect(
+      nodePatchFastPathSource,
+      contains("export 'node_patch_backing.dart'"),
+    );
+    expect(
+      nodePatchFastPathSource,
+      contains("export 'node_patch_materialization.dart'"),
     );
   });
 }

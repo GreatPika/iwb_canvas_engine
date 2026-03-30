@@ -7,6 +7,37 @@ import 'package:iwb_canvas_engine/src/contract/internal/node_spec_fast_path.dart
 import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
 
 void main() {
+  test(
+    'validated spec fast-path barrel exposes backing and materialization',
+    () {
+      final backing = imageNodeSpecBackingFromValidated(
+        common: (
+          id: 'img-backing',
+          transform: Transform2D.identity,
+          opacity: 1,
+          hitPadding: 0,
+          isVisible: true,
+          isSelectable: true,
+          isLocked: false,
+          isDeletable: true,
+          isTransformable: true,
+        ),
+        fields: (
+          imageId: 'asset:backing',
+          size: const Size(11, 12),
+          naturalSize: const Size(21, 22),
+        ),
+      );
+
+      final spec = materializeNodeSpec(backing) as ImageNodeSpec;
+
+      expect(spec.internalBacking, same(backing));
+      expect(spec.imageId, 'asset:backing');
+      expect(spec.size, const Size(11, 12));
+      expect(spec.naturalSize, const Size(21, 22));
+    },
+  );
+
   test('validated spec fast-path helpers build typed boundary objects', () {
     final image = imageNodeSpecFromValidated(
       common: (
@@ -134,6 +165,339 @@ void main() {
     expect(line.end, const Offset(5, 5));
     expect(rect.strokeWidth, 1.5);
     expect(path.fillRule, PathFillRule.evenOdd);
+  });
+
+  test(
+    'validated patch fast-path barrel exposes backing and materialization',
+    () {
+      final backing = imageNodePatchBackingFromValidated(
+        id: 'img-patch-backing',
+        common: commonNodePatchBackingFromValidated(
+          fields: (
+            transform: const PatchField<Transform2D>.absent(),
+            opacity: PatchField<double>.value(0.25),
+            hitPadding: const PatchField<double>.absent(),
+            isVisible: const PatchField<bool>.absent(),
+            isSelectable: const PatchField<bool>.absent(),
+            isLocked: const PatchField<bool>.absent(),
+            isDeletable: const PatchField<bool>.absent(),
+            isTransformable: const PatchField<bool>.absent(),
+          ),
+        ),
+        fields: (
+          imageId: PatchField<String>.value('asset:patch-backing'),
+          size: PatchField<Size>.value(const Size(9, 10)),
+          naturalSize: const PatchField<Size?>.absent(),
+        ),
+      );
+
+      final patch = materializeNodePatch(backing) as ImageNodePatch;
+
+      expect(patch.internalBacking, same(backing));
+      expect(patch.common.opacity.value, 0.25);
+      expect(patch.imageId.value, 'asset:patch-backing');
+      expect(patch.size.value, const Size(9, 10));
+    },
+  );
+
+  test('validated patch materializer covers every patch family branch', () {
+    final textPatch =
+        materializeNodePatch(
+              textNodePatchBackingFromValidated(
+                id: 'text-patch-materialized',
+                common: commonNodePatchBackingFromValidated(
+                  fields: (
+                    transform: const PatchField<Transform2D>.absent(),
+                    opacity: PatchField<double>.value(0.1),
+                    hitPadding: const PatchField<double>.absent(),
+                    isVisible: const PatchField<bool>.absent(),
+                    isSelectable: const PatchField<bool>.absent(),
+                    isLocked: const PatchField<bool>.absent(),
+                    isDeletable: const PatchField<bool>.absent(),
+                    isTransformable: const PatchField<bool>.absent(),
+                  ),
+                ),
+                fields: (
+                  text: PatchField<String>.value('materialized'),
+                  fontSize: const PatchField<double>.absent(),
+                  color: const PatchField<Color>.absent(),
+                  align: const PatchField<TextAlign>.absent(),
+                  isBold: const PatchField<bool>.absent(),
+                  isItalic: const PatchField<bool>.absent(),
+                  isUnderline: const PatchField<bool>.absent(),
+                  fontFamily: const PatchField<String?>.absent(),
+                  maxWidth: const PatchField<double?>.absent(),
+                  lineHeight: const PatchField<double?>.absent(),
+                ),
+              ),
+            )
+            as TextNodePatch;
+    final strokePatch =
+        materializeNodePatch(
+              strokeNodePatchBackingFromValidated(
+                id: 'stroke-patch-materialized',
+                fields: (
+                  points: PatchField<List<Offset>>.value(const <Offset>[
+                    Offset(1, 1),
+                    Offset(2, 2),
+                  ]),
+                  thickness: const PatchField<double>.absent(),
+                  color: const PatchField<Color>.absent(),
+                ),
+              ),
+            )
+            as StrokeNodePatch;
+    final linePatch =
+        materializeNodePatch(
+              lineNodePatchBackingFromValidated(
+                id: 'line-patch-materialized',
+                fields: (
+                  start: PatchField<Offset>.value(const Offset(3, 3)),
+                  end: const PatchField<Offset>.absent(),
+                  thickness: const PatchField<double>.absent(),
+                  color: const PatchField<Color>.absent(),
+                ),
+              ),
+            )
+            as LineNodePatch;
+    final rectPatch =
+        materializeNodePatch(
+              rectNodePatchBackingFromValidated(
+                id: 'rect-patch-materialized',
+                fields: (
+                  size: PatchField<Size>.value(const Size(4, 5)),
+                  fillColor: const PatchField<Color?>.absent(),
+                  strokeColor: const PatchField<Color?>.absent(),
+                  strokeWidth: const PatchField<double>.absent(),
+                ),
+              ),
+            )
+            as RectNodePatch;
+    final pathPatch =
+        materializeNodePatch(
+              pathNodePatchBackingFromValidated(
+                id: 'path-patch-materialized',
+                fields: (
+                  svgPathData: PatchField<String>.value('M0 0 L3 3'),
+                  fillColor: const PatchField<Color?>.absent(),
+                  strokeColor: const PatchField<Color?>.absent(),
+                  strokeWidth: const PatchField<double>.absent(),
+                  fillRule: const PatchField<PathFillRule>.absent(),
+                ),
+              ),
+            )
+            as PathNodePatch;
+
+    expect(textPatch.text.value, 'materialized');
+    expect(strokePatch.points.value, const <Offset>[
+      Offset(1, 1),
+      Offset(2, 2),
+    ]);
+    expect(linePatch.start.value, const Offset(3, 3));
+    expect(rectPatch.size.value, const Size(4, 5));
+    expect(pathPatch.svgPathData.value, 'M0 0 L3 3');
+  });
+
+  test('validated fast-path materializers cover every node family branch', () {
+    final textSpec =
+        materializeNodeSpec(
+              textNodeSpecBackingFromValidated(
+                common: (
+                  id: 'text-backing',
+                  transform: Transform2D.identity,
+                  opacity: 1,
+                  hitPadding: 0,
+                  isVisible: true,
+                  isSelectable: true,
+                  isLocked: false,
+                  isDeletable: true,
+                  isTransformable: true,
+                ),
+                fields: (
+                  text: 'text',
+                  fontSize: 16,
+                  color: const Color(0xFF000000),
+                  align: TextAlign.center,
+                  isBold: false,
+                  isItalic: false,
+                  isUnderline: false,
+                  fontFamily: null,
+                  maxWidth: null,
+                  lineHeight: null,
+                ),
+              ),
+            )
+            as TextNodeSpec;
+    final strokeSpec =
+        materializeNodeSpec(
+              strokeNodeSpecBackingFromValidated(
+                common: (
+                  id: 'stroke-backing',
+                  transform: Transform2D.identity,
+                  opacity: 1,
+                  hitPadding: 0,
+                  isVisible: true,
+                  isSelectable: true,
+                  isLocked: false,
+                  isDeletable: true,
+                  isTransformable: true,
+                ),
+                fields: (
+                  points: const <Offset>[Offset(0, 0), Offset(2, 2)],
+                  thickness: 2,
+                  color: const Color(0xFF111111),
+                ),
+              ),
+            )
+            as StrokeNodeSpec;
+    final lineSpec =
+        materializeNodeSpec(
+              lineNodeSpecBackingFromValidated(
+                common: (
+                  id: 'line-backing',
+                  transform: Transform2D.identity,
+                  opacity: 1,
+                  hitPadding: 0,
+                  isVisible: true,
+                  isSelectable: true,
+                  isLocked: false,
+                  isDeletable: true,
+                  isTransformable: true,
+                ),
+                fields: (
+                  start: const Offset(1, 1),
+                  end: const Offset(3, 3),
+                  thickness: 3,
+                  color: const Color(0xFF222222),
+                ),
+              ),
+            )
+            as LineNodeSpec;
+    final rectSpec =
+        materializeNodeSpec(
+              rectNodeSpecBackingFromValidated(
+                common: (
+                  id: 'rect-backing',
+                  transform: Transform2D.identity,
+                  opacity: 1,
+                  hitPadding: 0,
+                  isVisible: true,
+                  isSelectable: true,
+                  isLocked: false,
+                  isDeletable: true,
+                  isTransformable: true,
+                ),
+                fields: (
+                  size: const Size(12, 13),
+                  fillColor: null,
+                  strokeColor: const Color(0xFF333333),
+                  strokeWidth: 4,
+                ),
+              ),
+            )
+            as RectNodeSpec;
+    final pathSpec =
+        materializeNodeSpec(
+              pathNodeSpecBackingFromValidated(
+                common: (
+                  id: 'path-backing',
+                  transform: Transform2D.identity,
+                  opacity: 1,
+                  hitPadding: 0,
+                  isVisible: true,
+                  isSelectable: true,
+                  isLocked: false,
+                  isDeletable: true,
+                  isTransformable: true,
+                ),
+                fields: (
+                  svgPathData: 'M0 0 L1 1',
+                  fillColor: null,
+                  strokeColor: const Color(0xFF444444),
+                  strokeWidth: 5,
+                  fillRule: PathFillRule.nonZero,
+                ),
+              ),
+            )
+            as PathNodeSpec;
+
+    final common = CommonNodePatch(opacity: PatchField<double>.value(0.6));
+    final textPatch = textNodePatchFromValidated(
+      id: 'text-patch-backing',
+      common: common,
+      fields: (
+        text: PatchField<String>.value('patched'),
+        fontSize: const PatchField<double>.absent(),
+        color: const PatchField<Color>.absent(),
+        align: const PatchField<TextAlign>.absent(),
+        isBold: const PatchField<bool>.absent(),
+        isItalic: const PatchField<bool>.absent(),
+        isUnderline: const PatchField<bool>.absent(),
+        fontFamily: const PatchField<String?>.absent(),
+        maxWidth: const PatchField<double?>.absent(),
+        lineHeight: const PatchField<double?>.absent(),
+      ),
+    );
+    final strokePatch = strokeNodePatchFromValidated(
+      id: 'stroke-patch-backing',
+      common: common,
+      fields: (
+        points: PatchField<List<Offset>>.value(const <Offset>[
+          Offset(3, 4),
+          Offset(5, 6),
+        ]),
+        thickness: const PatchField<double>.absent(),
+        color: const PatchField<Color>.absent(),
+      ),
+    );
+    final linePatch = lineNodePatchFromValidated(
+      id: 'line-patch-backing',
+      common: common,
+      fields: (
+        start: PatchField<Offset>.value(const Offset(7, 8)),
+        end: const PatchField<Offset>.absent(),
+        thickness: const PatchField<double>.absent(),
+        color: const PatchField<Color>.absent(),
+      ),
+    );
+    final rectPatch = rectNodePatchFromValidated(
+      id: 'rect-patch-backing',
+      common: common,
+      fields: (
+        size: PatchField<Size>.value(const Size(14, 15)),
+        fillColor: const PatchField<Color?>.absent(),
+        strokeColor: const PatchField<Color?>.absent(),
+        strokeWidth: const PatchField<double>.absent(),
+      ),
+    );
+    final pathPatch = pathNodePatchFromValidated(
+      id: 'path-patch-backing',
+      common: common,
+      fields: (
+        svgPathData: PatchField<String>.value('M1 1 L2 2'),
+        fillColor: const PatchField<Color?>.absent(),
+        strokeColor: const PatchField<Color?>.absent(),
+        strokeWidth: const PatchField<double>.absent(),
+        fillRule: const PatchField<PathFillRule>.absent(),
+      ),
+    );
+
+    expect(textSpec.align, TextAlign.center);
+    expect(strokeSpec.points, const <Offset>[Offset(0, 0), Offset(2, 2)]);
+    expect(lineSpec.end, const Offset(3, 3));
+    expect(rectSpec.strokeColor, const Color(0xFF333333));
+    expect(pathSpec.strokeWidth, 5);
+
+    expect(textPatch.common.opacity.value, 0.6);
+    expect(textPatch.text.value, 'patched');
+    expect(strokePatch.common.opacity.value, 0.6);
+    expect(strokePatch.points.value, const <Offset>[
+      Offset(3, 4),
+      Offset(5, 6),
+    ]);
+    expect(linePatch.start.value, const Offset(7, 8));
+    expect(rectPatch.size.value, const Size(14, 15));
+    expect(pathPatch.svgPathData.value, 'M1 1 L2 2');
   });
 
   test('validated patch fast-path helpers build typed boundary objects', () {

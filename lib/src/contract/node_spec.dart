@@ -1,34 +1,31 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
+
 import 'internal/node_boundary_schema.dart';
-import 'owned_collections.dart';
+import 'internal/node_spec_backing.dart';
 import 'path_fill_rule.dart';
 import 'snapshot.dart' hide PathFillRule;
 import 'transform2d.dart';
 
 /// Immutable node creation spec for transactional write APIs.
 sealed class NodeSpec {
-  const NodeSpec._internal({
-    this.id,
-    this.transform = Transform2D.identity,
-    this.opacity = 1,
-    this.hitPadding = 0,
-    this.isVisible = true,
-    this.isSelectable = true,
-    this.isLocked = false,
-    this.isDeletable = true,
-    this.isTransformable = true,
-  });
+  NodeSpec._materialized(this._backing);
 
-  final NodeId? id;
-  final Transform2D transform;
-  final double opacity;
-  final double hitPadding;
-  final bool isVisible;
-  final bool isSelectable;
-  final bool isLocked;
-  final bool isDeletable;
-  final bool isTransformable;
+  final NodeSpecBacking _backing;
+
+  @internal
+  NodeSpecBacking get internalBacking => _backing;
+
+  NodeId? get id => _backing.id;
+  Transform2D get transform => _backing.transform;
+  double get opacity => _backing.opacity;
+  double get hitPadding => _backing.hitPadding;
+  bool get isVisible => _backing.isVisible;
+  bool get isSelectable => _backing.isSelectable;
+  bool get isLocked => _backing.isLocked;
+  bool get isDeletable => _backing.isDeletable;
+  bool get isTransformable => _backing.isTransformable;
 }
 
 class ImageNodeSpec extends NodeSpec {
@@ -67,39 +64,22 @@ class ImageNodeSpec extends NodeSpec {
   ImageNodeSpec._validated({
     required NodeSpecCommonSchemaFields common,
     required ImageNodeSchemaFields fields,
-  }) : this._internal(
-         id: common.id,
-         imageId: fields.imageId,
-         size: fields.size,
-         naturalSize: fields.naturalSize,
-         transform: common.transform,
-         opacity: common.opacity,
-         hitPadding: common.hitPadding,
-         isVisible: common.isVisible,
-         isSelectable: common.isSelectable,
-         isLocked: common.isLocked,
-         isDeletable: common.isDeletable,
-         isTransformable: common.isTransformable,
+  }) : this._materialized(
+         imageNodeSpecBackingFromValidated(common: common, fields: fields),
        );
 
-  ImageNodeSpec._internal({
-    super.id,
-    required this.imageId,
-    required this.size,
-    this.naturalSize,
-    super.transform,
-    super.opacity,
-    super.hitPadding,
-    super.isVisible,
-    super.isSelectable,
-    super.isLocked,
-    super.isDeletable,
-    super.isTransformable,
-  }) : super._internal();
+  @internal
+  factory ImageNodeSpec.materialize(ImageNodeSpecBacking backing) =
+      ImageNodeSpec._materialized;
 
-  final String imageId;
-  final Size size;
-  final Size? naturalSize;
+  ImageNodeSpec._materialized(super._backing) : super._materialized();
+
+  ImageNodeSpecBacking get _imageBacking =>
+      internalBacking as ImageNodeSpecBacking;
+
+  String get imageId => _imageBacking.imageId;
+  Size get size => _imageBacking.size;
+  Size? get naturalSize => _imageBacking.naturalSize;
 }
 
 class TextNodeSpec extends NodeSpec {
@@ -152,60 +132,29 @@ class TextNodeSpec extends NodeSpec {
   TextNodeSpec._validated({
     required NodeSpecCommonSchemaFields common,
     required TextNodeSpecSchemaFields fields,
-  }) : this._internal(
-         id: common.id,
-         text: fields.text,
-         fontSize: fields.fontSize,
-         color: fields.color,
-         align: fields.align,
-         isBold: fields.isBold,
-         isItalic: fields.isItalic,
-         isUnderline: fields.isUnderline,
-         fontFamily: fields.fontFamily,
-         maxWidth: fields.maxWidth,
-         lineHeight: fields.lineHeight,
-         transform: common.transform,
-         opacity: common.opacity,
-         hitPadding: common.hitPadding,
-         isVisible: common.isVisible,
-         isSelectable: common.isSelectable,
-         isLocked: common.isLocked,
-         isDeletable: common.isDeletable,
-         isTransformable: common.isTransformable,
+  }) : this._materialized(
+         textNodeSpecBackingFromValidated(common: common, fields: fields),
        );
 
-  TextNodeSpec._internal({
-    super.id,
-    required this.text,
-    this.fontSize = 24,
-    required this.color,
-    this.align = TextAlign.left,
-    this.isBold = false,
-    this.isItalic = false,
-    this.isUnderline = false,
-    this.fontFamily,
-    this.maxWidth,
-    this.lineHeight,
-    super.transform,
-    super.opacity,
-    super.hitPadding,
-    super.isVisible,
-    super.isSelectable,
-    super.isLocked,
-    super.isDeletable,
-    super.isTransformable,
-  }) : super._internal();
+  @internal
+  factory TextNodeSpec.materialize(TextNodeSpecBacking backing) =
+      TextNodeSpec._materialized;
 
-  final String text;
-  final double fontSize;
-  final Color color;
-  final TextAlign align;
-  final bool isBold;
-  final bool isItalic;
-  final bool isUnderline;
-  final String? fontFamily;
-  final double? maxWidth;
-  final double? lineHeight;
+  TextNodeSpec._materialized(super._backing) : super._materialized();
+
+  TextNodeSpecBacking get _textBacking =>
+      internalBacking as TextNodeSpecBacking;
+
+  String get text => _textBacking.text;
+  double get fontSize => _textBacking.fontSize;
+  Color get color => _textBacking.color;
+  TextAlign get align => _textBacking.align;
+  bool get isBold => _textBacking.isBold;
+  bool get isItalic => _textBacking.isItalic;
+  bool get isUnderline => _textBacking.isUnderline;
+  String? get fontFamily => _textBacking.fontFamily;
+  double? get maxWidth => _textBacking.maxWidth;
+  double? get lineHeight => _textBacking.lineHeight;
 }
 
 class StrokeNodeSpec extends NodeSpec {
@@ -244,41 +193,22 @@ class StrokeNodeSpec extends NodeSpec {
   StrokeNodeSpec._validated({
     required NodeSpecCommonSchemaFields common,
     required StrokeNodeSpecSchemaInput fields,
-  }) : this._internal(
-         id: common.id,
-         points: fields.points,
-         thickness: fields.thickness,
-         color: fields.color,
-         transform: common.transform,
-         opacity: common.opacity,
-         hitPadding: common.hitPadding,
-         isVisible: common.isVisible,
-         isSelectable: common.isSelectable,
-         isLocked: common.isLocked,
-         isDeletable: common.isDeletable,
-         isTransformable: common.isTransformable,
+  }) : this._materialized(
+         strokeNodeSpecBackingFromValidated(common: common, fields: fields),
        );
 
-  StrokeNodeSpec._internal({
-    super.id,
-    required Iterable<Offset> points,
-    required this.thickness,
-    required this.color,
-    super.transform,
-    super.opacity,
-    super.hitPadding,
-    super.isVisible,
-    super.isSelectable,
-    super.isLocked,
-    super.isDeletable,
-    super.isTransformable,
-  }) : _points = OwnedList<Offset>.of(points),
-       super._internal();
+  @internal
+  factory StrokeNodeSpec.materialize(StrokeNodeSpecBacking backing) =
+      StrokeNodeSpec._materialized;
 
-  final OwnedList<Offset> _points;
-  List<Offset> get points => _points;
-  final double thickness;
-  final Color color;
+  StrokeNodeSpec._materialized(super._backing) : super._materialized();
+
+  StrokeNodeSpecBacking get _strokeBacking =>
+      internalBacking as StrokeNodeSpecBacking;
+
+  List<Offset> get points => _strokeBacking.points;
+  double get thickness => _strokeBacking.thickness;
+  Color get color => _strokeBacking.color;
 }
 
 class LineNodeSpec extends NodeSpec {
@@ -319,42 +249,23 @@ class LineNodeSpec extends NodeSpec {
   LineNodeSpec._validated({
     required NodeSpecCommonSchemaFields common,
     required LineNodeSchemaFields fields,
-  }) : this._internal(
-         id: common.id,
-         start: fields.start,
-         end: fields.end,
-         thickness: fields.thickness,
-         color: fields.color,
-         transform: common.transform,
-         opacity: common.opacity,
-         hitPadding: common.hitPadding,
-         isVisible: common.isVisible,
-         isSelectable: common.isSelectable,
-         isLocked: common.isLocked,
-         isDeletable: common.isDeletable,
-         isTransformable: common.isTransformable,
+  }) : this._materialized(
+         lineNodeSpecBackingFromValidated(common: common, fields: fields),
        );
 
-  LineNodeSpec._internal({
-    super.id,
-    required this.start,
-    required this.end,
-    required this.thickness,
-    required this.color,
-    super.transform,
-    super.opacity,
-    super.hitPadding,
-    super.isVisible,
-    super.isSelectable,
-    super.isLocked,
-    super.isDeletable,
-    super.isTransformable,
-  }) : super._internal();
+  @internal
+  factory LineNodeSpec.materialize(LineNodeSpecBacking backing) =
+      LineNodeSpec._materialized;
 
-  final Offset start;
-  final Offset end;
-  final double thickness;
-  final Color color;
+  LineNodeSpec._materialized(super._backing) : super._materialized();
+
+  LineNodeSpecBacking get _lineBacking =>
+      internalBacking as LineNodeSpecBacking;
+
+  Offset get start => _lineBacking.start;
+  Offset get end => _lineBacking.end;
+  double get thickness => _lineBacking.thickness;
+  Color get color => _lineBacking.color;
 }
 
 class RectNodeSpec extends NodeSpec {
@@ -395,42 +306,23 @@ class RectNodeSpec extends NodeSpec {
   RectNodeSpec._validated({
     required NodeSpecCommonSchemaFields common,
     required RectNodeSchemaFields fields,
-  }) : this._internal(
-         id: common.id,
-         size: fields.size,
-         fillColor: fields.fillColor,
-         strokeColor: fields.strokeColor,
-         strokeWidth: fields.strokeWidth,
-         transform: common.transform,
-         opacity: common.opacity,
-         hitPadding: common.hitPadding,
-         isVisible: common.isVisible,
-         isSelectable: common.isSelectable,
-         isLocked: common.isLocked,
-         isDeletable: common.isDeletable,
-         isTransformable: common.isTransformable,
+  }) : this._materialized(
+         rectNodeSpecBackingFromValidated(common: common, fields: fields),
        );
 
-  RectNodeSpec._internal({
-    super.id,
-    required this.size,
-    this.fillColor,
-    this.strokeColor,
-    this.strokeWidth = 1,
-    super.transform,
-    super.opacity,
-    super.hitPadding,
-    super.isVisible,
-    super.isSelectable,
-    super.isLocked,
-    super.isDeletable,
-    super.isTransformable,
-  }) : super._internal();
+  @internal
+  factory RectNodeSpec.materialize(RectNodeSpecBacking backing) =
+      RectNodeSpec._materialized;
 
-  final Size size;
-  final Color? fillColor;
-  final Color? strokeColor;
-  final double strokeWidth;
+  RectNodeSpec._materialized(super._backing) : super._materialized();
+
+  RectNodeSpecBacking get _rectBacking =>
+      internalBacking as RectNodeSpecBacking;
+
+  Size get size => _rectBacking.size;
+  Color? get fillColor => _rectBacking.fillColor;
+  Color? get strokeColor => _rectBacking.strokeColor;
+  double get strokeWidth => _rectBacking.strokeWidth;
 }
 
 class PathNodeSpec extends NodeSpec {
@@ -473,43 +365,22 @@ class PathNodeSpec extends NodeSpec {
   PathNodeSpec._validated({
     required NodeSpecCommonSchemaFields common,
     required PathNodeSchemaFields fields,
-  }) : this._internal(
-         id: common.id,
-         svgPathData: fields.svgPathData,
-         fillColor: fields.fillColor,
-         strokeColor: fields.strokeColor,
-         strokeWidth: fields.strokeWidth,
-         fillRule: fields.fillRule,
-         transform: common.transform,
-         opacity: common.opacity,
-         hitPadding: common.hitPadding,
-         isVisible: common.isVisible,
-         isSelectable: common.isSelectable,
-         isLocked: common.isLocked,
-         isDeletable: common.isDeletable,
-         isTransformable: common.isTransformable,
+  }) : this._materialized(
+         pathNodeSpecBackingFromValidated(common: common, fields: fields),
        );
 
-  PathNodeSpec._internal({
-    super.id,
-    required this.svgPathData,
-    this.fillColor,
-    this.strokeColor,
-    this.strokeWidth = 1,
-    this.fillRule = PathFillRule.nonZero,
-    super.transform,
-    super.opacity,
-    super.hitPadding,
-    super.isVisible,
-    super.isSelectable,
-    super.isLocked,
-    super.isDeletable,
-    super.isTransformable,
-  }) : super._internal();
+  @internal
+  factory PathNodeSpec.materialize(PathNodeSpecBacking backing) =
+      PathNodeSpec._materialized;
 
-  final String svgPathData;
-  final Color? fillColor;
-  final Color? strokeColor;
-  final double strokeWidth;
-  final PathFillRule fillRule;
+  PathNodeSpec._materialized(super._backing) : super._materialized();
+
+  PathNodeSpecBacking get _pathBacking =>
+      internalBacking as PathNodeSpecBacking;
+
+  String get svgPathData => _pathBacking.svgPathData;
+  Color? get fillColor => _pathBacking.fillColor;
+  Color? get strokeColor => _pathBacking.strokeColor;
+  double get strokeWidth => _pathBacking.strokeWidth;
+  PathFillRule get fillRule => _pathBacking.fillRule;
 }

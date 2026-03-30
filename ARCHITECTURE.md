@@ -115,6 +115,9 @@ Ownership decisions for the target state:
 - `contract/node_patch.dart`, `contract/node_spec.dart`, and
   `contract/snapshot.dart` remain the public immutable boundary owners and keep
   validation at the public constructor boundary.
+- `contract/node_spec.dart` and `contract/node_patch.dart` are thin public
+  wrappers over immutable internal backing graphs. Trusted spec/patch storage
+  and public wrapper materialization no longer live inside the public files.
 - `contract/snapshot.dart` is part-free and stays the only supported public
   snapshot surface, but scene/layer/palette/node snapshots are now thin public
   wrappers over immutable internal backing objects rather than owners of
@@ -136,6 +139,17 @@ Ownership decisions for the target state:
 - `contract/internal/snapshot_fast_path.dart` is the canonical internal
   snapshot construction import surface; downstream code uses it instead of
   importing privileged construction from `contract/snapshot.dart`.
+- `contract/internal/node_spec_backing.dart` and
+  `contract/internal/node_patch_backing.dart` own the immutable internal
+  `NodeSpec` / `NodePatch` family backing graphs.
+- `contract/internal/node_spec_materialization.dart` and
+  `contract/internal/node_patch_materialization.dart` own public wrapper
+  materialization plus the validated compatibility helpers used by
+  contract-local fast-path tests.
+- `contract/internal/node_spec_fast_path.dart` and
+  `contract/internal/node_patch_fast_path.dart` are thin canonical barrels for
+  contract-local validated construction; they export backing/materialization
+  owners and must not grow back into mixed implementation buckets.
 - Downstream `model/` and `serialization/` code consume those internal schema
   owners through the barrel and do not re-own schema validation locally.
 - Downstream non-contract production code may import only the canonical
