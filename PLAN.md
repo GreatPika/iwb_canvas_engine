@@ -159,3 +159,4 @@ This file is the plan index. Each step has a dedicated document so steps can be 
 - [x] [Шаг 62. Разрезать residual node-validation matrix на focused family owner-ы](plan/step_62_scene_value_validation_node_family_split.md)
 - [x] [Шаг 63. Убрать residual duplication между direction owner-ами в `node_boundary_schema`](plan/step_63_node_boundary_schema_direction_residual_dedup.md)
 - [x] [Шаг 64. Перестроить `NodePatch` и `NodeSpec`: internal backing/materialization graph](plan/step_64_node_patch_and_spec_internal_backing_materialization.md)
+- [x] [Шаг 65. Свести clone/import/export обход сцены к одному canonical traversal helper](plan/step_65_scene_graph_traversal_helper.md)

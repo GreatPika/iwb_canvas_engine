@@ -286,6 +286,101 @@ void main() {
   );
 
   test(
+    'txnSceneFromSnapshot allocates missing instance revisions across background and content traversal',
+    () {
+      var nextRevision = 40;
+      final snapshot = SceneSnapshot(
+        backgroundLayer: BackgroundLayerSnapshot(
+          nodes: <NodeSnapshot>[
+            RectNodeSnapshot(
+              id: 'bg-import',
+              size: const Size(1, 1),
+              instanceRevision: 0,
+            ),
+          ],
+        ),
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
+            id: 'layer-auto-import',
+            nodes: <NodeSnapshot>[
+              RectNodeSnapshot(
+                id: 'content-import-1',
+                size: const Size(2, 2),
+                instanceRevision: 0,
+              ),
+              RectNodeSnapshot(
+                id: 'content-import-2',
+                size: const Size(3, 3),
+                instanceRevision: 7,
+              ),
+            ],
+          ),
+        ],
+      );
+
+      final scene = txnSceneFromSnapshot(
+        snapshot,
+        nextInstanceRevision: () => nextRevision++,
+      );
+
+      final backgroundLayer = scene.backgroundLayer;
+      if (backgroundLayer == null) {
+        fail('Expected imported scene to materialize background layer.');
+      }
+      expect(backgroundLayer.nodes.single.instanceRevision, 40);
+      expect(scene.layers.single.nodes.first.instanceRevision, 41);
+      expect(scene.layers.single.nodes.last.instanceRevision, 7);
+      expect(nextRevision, 42);
+    },
+  );
+
+  test(
+    'txnSceneToSnapshot canonicalizes absent runtime background layer and preserves scene shell',
+    () {
+      final scene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-auto-export',
+            nodes: <SceneNode>[
+              RectNode(id: 'rect-export', size: const Size(4, 5)),
+            ],
+          ),
+        ],
+        camera: Camera(offset: const Offset(9, 11)),
+        background: Background(
+          color: const Color(0xFFABCDEF),
+          grid: GridSettings(
+            isEnabled: true,
+            cellSize: 24,
+            color: const Color(0xFF010203),
+          ),
+        ),
+        palette: ScenePalette(
+          penColors: <Color>[const Color(0xFF111111)],
+          backgroundColors: <Color>[const Color(0xFF222222)],
+          gridSizes: <double>[24, 48],
+        ),
+      );
+
+      final snapshot = txnSceneToSnapshot(scene);
+
+      expect(snapshot.backgroundLayer.nodes, isEmpty);
+      expect(snapshot.layers.single.id, 'layer-auto-export');
+      expect(snapshot.layers.single.nodes.single.id, 'rect-export');
+      expect(snapshot.camera.offset, const Offset(9, 11));
+      expect(snapshot.background.color, const Color(0xFFABCDEF));
+      expect(snapshot.background.grid.isEnabled, isTrue);
+      expect(snapshot.background.grid.cellSize, 24);
+      expect(snapshot.background.grid.color, const Color(0xFF010203));
+      expect(snapshot.palette.penColors, <Color>[const Color(0xFF111111)]);
+      expect(snapshot.palette.backgroundColors, <Color>[
+        const Color(0xFF222222),
+      ]);
+      expect(snapshot.palette.gridSizes, <double>[24, 48]);
+    },
+  );
+
+  test(
     'ScenePolicy runtime and encode entrypoints preserve runtime diagnostics',
     () {
       Scene duplicateScene() {

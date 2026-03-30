@@ -97,6 +97,9 @@ void main() {
 
   test('txnCloneSceneShallow copies scene shell and shares layers/nodes', () {
     final source = sourceScene();
+    source.backgroundLayer = BackgroundLayer(
+      nodes: <SceneNode>[RectNode(id: 'bg-shell', size: const Size(20, 20))],
+    );
 
     final clone = txnCloneSceneShallow(source);
 
@@ -109,6 +112,7 @@ void main() {
       identical(clone.layers[1].nodes[0], source.layers[1].nodes[0]),
       isTrue,
     );
+    expect(clone.backgroundLayer, same(source.backgroundLayer));
 
     expect(clone.camera, isNot(same(source.camera)));
     expect(clone.background, isNot(same(source.background)));
@@ -196,9 +200,23 @@ void main() {
       fail('Expected source background layer.');
     }
 
+    final shallowSceneClone = txnCloneSceneShallow(source);
     final shallow = txnCloneBackgroundLayerShallow(sourceBackgroundLayer);
     final deep = txnCloneBackgroundLayer(sourceBackgroundLayer);
     final sceneClone = txnCloneScene(source);
+
+    expect(shallowSceneClone.backgroundLayer, same(sourceBackgroundLayer));
+    final shallowSceneBackgroundLayer = shallowSceneClone.backgroundLayer;
+    if (shallowSceneBackgroundLayer == null) {
+      fail('Expected shallow scene clone background layer.');
+    }
+    expect(
+      identical(
+        shallowSceneBackgroundLayer.nodes.first,
+        sourceBackgroundLayer.nodes.first,
+      ),
+      isTrue,
+    );
 
     expect(shallow, isNot(same(sourceBackgroundLayer)));
     expect(shallow.nodes, isNot(same(sourceBackgroundLayer.nodes)));

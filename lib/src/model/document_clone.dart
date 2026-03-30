@@ -3,52 +3,20 @@ import 'dart:ui';
 import '../core/nodes.dart';
 import '../core/scene.dart';
 import '../contract/ids.dart' show LayerId;
+import 'scene_graph_traversal.dart';
 import 'scene_node_boundary_mapping.dart';
 
 Scene txnCloneSceneShallow(Scene scene) {
   return Scene(
-    layers: scene.layers,
+    layers: List<ContentLayer>.from(scene.layers),
     backgroundLayer: scene.backgroundLayer,
     camera: Camera(offset: scene.camera.offset),
-    background: Background(
-      color: scene.background.color,
-      grid: GridSettings(
-        isEnabled: scene.background.grid.isEnabled,
-        cellSize: scene.background.grid.cellSize,
-        color: scene.background.grid.color,
-      ),
-    ),
-    palette: ScenePalette(
-      penColors: List<Color>.from(scene.palette.penColors),
-      backgroundColors: List<Color>.from(scene.palette.backgroundColors),
-      gridSizes: List<double>.from(scene.palette.gridSizes),
-    ),
+    background: _cloneBackground(scene.background),
+    palette: _clonePalette(scene.palette),
   );
 }
 
-Scene txnCloneScene(Scene scene) {
-  final backgroundLayer = scene.backgroundLayer;
-  return Scene(
-    layers: scene.layers.map(txnCloneContentLayer).toList(growable: false),
-    backgroundLayer: backgroundLayer == null
-        ? null
-        : txnCloneBackgroundLayer(backgroundLayer),
-    camera: Camera(offset: scene.camera.offset),
-    background: Background(
-      color: scene.background.color,
-      grid: GridSettings(
-        isEnabled: scene.background.grid.isEnabled,
-        cellSize: scene.background.grid.cellSize,
-        color: scene.background.grid.color,
-      ),
-    ),
-    palette: ScenePalette(
-      penColors: List<Color>.from(scene.palette.penColors),
-      backgroundColors: List<Color>.from(scene.palette.backgroundColors),
-      gridSizes: List<double>.from(scene.palette.gridSizes),
-    ),
-  );
-}
+Scene txnCloneScene(Scene scene) => _cloneScene(scene, mapNode: txnCloneNode);
 
 BackgroundLayer txnCloneBackgroundLayerShallow(BackgroundLayer layer) {
   return BackgroundLayer(nodes: layer.nodes);
@@ -73,6 +41,97 @@ ContentLayer txnCloneContentLayer(ContentLayer layer) {
 
 SceneNode txnCloneNode(SceneNode node) {
   return cloneSceneNodeViaBoundarySchema(node);
+}
+
+Scene _cloneScene(
+  Scene scene, {
+  required SceneNode Function(SceneNode node) mapNode,
+}) {
+  return traverseSceneGraph<
+    Scene,
+    BackgroundLayer,
+    ContentLayer,
+    SceneNode,
+    SceneNode,
+    BackgroundLayer,
+    ContentLayer,
+    Camera,
+    Background,
+    ScenePalette
+  >(
+    source: _runtimeSceneTraversalSource(scene),
+    strategy: _cloneSceneStrategy(scene, mapNode: mapNode),
+  );
+}
+
+SceneGraphTraversalSource<BackgroundLayer, ContentLayer, SceneNode>
+_runtimeSceneTraversalSource(Scene scene) {
+  return SceneGraphTraversalSource(
+    backgroundLayer: scene.backgroundLayer,
+    layers: scene.layers,
+    backgroundNodesOf: (layer) => layer.nodes,
+    contentNodesOf: (layer) => layer.nodes,
+  );
+}
+
+SceneGraphTraversalStrategy<
+  Scene,
+  BackgroundLayer,
+  ContentLayer,
+  SceneNode,
+  SceneNode,
+  BackgroundLayer,
+  ContentLayer,
+  Camera,
+  Background,
+  ScenePalette
+>
+_cloneSceneStrategy(
+  Scene scene, {
+  required SceneNode Function(SceneNode node) mapNode,
+}) {
+  return SceneGraphTraversalStrategy(
+    mapNode: mapNode,
+    buildBackgroundLayer: (_, nodes) => BackgroundLayer(nodes: nodes),
+    buildContentLayer: (layer, nodes) =>
+        ContentLayer(id: layer.id, nodes: nodes),
+    buildCamera: () => Camera(offset: scene.camera.offset),
+    buildBackground: () => _cloneBackground(scene.background),
+    buildPalette: () => _clonePalette(scene.palette),
+    buildResult:
+        ({
+          required backgroundLayer,
+          required layers,
+          required camera,
+          required background,
+          required palette,
+        }) => Scene(
+          layers: layers,
+          backgroundLayer: backgroundLayer,
+          camera: camera,
+          background: background,
+          palette: palette,
+        ),
+  );
+}
+
+Background _cloneBackground(Background background) {
+  return Background(
+    color: background.color,
+    grid: GridSettings(
+      isEnabled: background.grid.isEnabled,
+      cellSize: background.grid.cellSize,
+      color: background.grid.color,
+    ),
+  );
+}
+
+ScenePalette _clonePalette(ScenePalette palette) {
+  return ScenePalette(
+    penColors: List<Color>.from(palette.penColors),
+    backgroundColors: List<Color>.from(palette.backgroundColors),
+    gridSizes: List<double>.from(palette.gridSizes),
+  );
 }
 
 Set<NodeId> txnCollectNodeIds(Scene scene) {
