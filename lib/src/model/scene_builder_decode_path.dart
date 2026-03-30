@@ -19,16 +19,17 @@ PathNodeSchemaFields _decodePathFields(
   required String nodePath,
 }) {
   return pathNodeSchemaFieldsFromValidated((
-    svgPathData: SvgPathDataValue.fromJson(
-      sceneBuilderRequireTypedField<String>(
-        json,
-        'svgPathData',
-        pathPrefix: nodePath,
-        typeLabel: 'string',
-      ),
-      path: sceneBuilderPathAt(nodePath, 'svgPathData'),
-      fieldName: 'svgPathData',
-    ).value,
+    svgPathData: sceneBuilderRequireValidatedField(
+      json,
+      'svgPathData',
+      pathPrefix: nodePath,
+      parse: (value, {required path, required fieldName}) =>
+          SvgPathDataValue.fromJson(
+            value,
+            path: path,
+            fieldName: fieldName,
+          ).value,
+    ),
     fillColor: sceneBuilderOptionalColor(
       json,
       'fillColor',
@@ -39,18 +40,19 @@ PathNodeSchemaFields _decodePathFields(
       'strokeColor',
       pathPrefix: nodePath,
     ),
-    strokeWidth: validatedRequireJsonNonNegativeFiniteDouble(
-      sceneBuilderRequireField(json, 'strokeWidth', pathPrefix: nodePath),
-      path: sceneBuilderPathAt(nodePath, 'strokeWidth'),
-      fieldName: 'strokeWidth',
+    strokeWidth: sceneBuilderRequireValidatedField(
+      json,
+      'strokeWidth',
+      pathPrefix: nodePath,
+      parse: (value, {required path, required fieldName}) =>
+          validatedRequireJsonNonNegativeFiniteDouble(
+            value,
+            path: path,
+            fieldName: fieldName,
+          ),
     ),
     fillRule: sceneBuilderParsePathFillRule(
-      sceneBuilderRequireTypedField<String>(
-        json,
-        'fillRule',
-        pathPrefix: nodePath,
-        typeLabel: 'string',
-      ),
+      sceneBuilderRequireStringField(json, 'fillRule', pathPrefix: nodePath),
       pathPrefix: nodePath,
     ),
   ));

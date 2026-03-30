@@ -8,6 +8,13 @@ typedef JsonValidatedFieldParser<T> =
       required String fieldName,
     });
 
+typedef _SceneBuilderJsonFieldAccess = ({
+  bool isPresent,
+  String path,
+  Object? value,
+});
+typedef _SceneBuilderTypedFieldSpec = ({bool isRequired, String typeLabel});
+
 String sceneBuilderPathAt(String pathPrefix, String segment) {
   if (pathPrefix.isEmpty) return segment;
   if (segment.startsWith('[')) return '$pathPrefix$segment';
@@ -48,28 +55,129 @@ Map<String, Object?> sceneBuilderRequireObjectValue(
   return sceneBuilderCastMap(value, path: path);
 }
 
-Map<String, Object?> sceneBuilderRequireMap(
+_SceneBuilderJsonFieldAccess _sceneBuilderFieldAccess(
   Map<String, Object?> json,
   String key, {
   String pathPrefix = '',
 }) {
   final path = sceneBuilderPathAt(pathPrefix, key);
-  if (!json.containsKey(key)) {
+  final isPresent = json.containsKey(key);
+  return (
+    isPresent: isPresent,
+    path: path,
+    value: isPresent ? json[key] : null,
+  );
+}
+
+Object? _sceneBuilderRequireAccessedValue(_SceneBuilderJsonFieldAccess access) {
+  if (!access.isPresent) {
     throw SceneDataException(
       code: SceneDataErrorCode.missingField,
-      path: path,
-      message: 'Missing required field $path.',
+      path: access.path,
+      message: 'Missing required field ${access.path}.',
     );
   }
-  final value = json[key];
-  if (value is! Map<Object?, Object?>) {
+  return access.value;
+}
+
+T sceneBuilderRequireParsedField<T>(
+  Map<String, Object?> json,
+  String key, {
+  required JsonValidatedFieldParser<T> parse,
+  String pathPrefix = '',
+}) {
+  final access = _sceneBuilderFieldAccess(json, key, pathPrefix: pathPrefix);
+  return parse(
+    _sceneBuilderRequireAccessedValue(access),
+    path: access.path,
+    fieldName: key,
+  );
+}
+
+T? sceneBuilderOptionalParsedField<T>(
+  Map<String, Object?> json,
+  String key, {
+  required JsonValidatedFieldParser<T> parse,
+  required String pathPrefix,
+}) {
+  final access = _sceneBuilderFieldAccess(json, key, pathPrefix: pathPrefix);
+  final value = access.value;
+  if (!access.isPresent || value == null) {
+    return null;
+  }
+  return parse(value, path: access.path, fieldName: key);
+}
+
+T _sceneBuilderRequireTypedValue<T>(
+  Object? value, {
+  required String path,
+  required String fieldName,
+  required String typeLabel,
+}) {
+  if (value is! T) {
     throw SceneDataException(
       code: SceneDataErrorCode.invalidFieldType,
       path: path,
-      message: 'Field $key must be an object.',
+      message: 'Field $fieldName must be a $typeLabel.',
     );
   }
-  return sceneBuilderCastMap(value, path: path);
+  return value;
+}
+
+Map<String, Object?> _sceneBuilderParseFieldObjectMap(
+  Object? value, {
+  required String path,
+  required String fieldName,
+}) {
+  return sceneBuilderRequireObjectValue(
+    value,
+    path: path,
+    objectName: 'Field $fieldName',
+  );
+}
+
+T? _sceneBuilderTypedField<T>(
+  Map<String, Object?> json,
+  String key, {
+  required _SceneBuilderTypedFieldSpec spec,
+  String pathPrefix = '',
+}) {
+  T parse(Object? value, {required String path, required String fieldName}) {
+    return _sceneBuilderRequireTypedValue<T>(
+      value,
+      path: path,
+      fieldName: fieldName,
+      typeLabel: spec.typeLabel,
+    );
+  }
+
+  if (spec.isRequired) {
+    return sceneBuilderRequireParsedField(
+      json,
+      key,
+      pathPrefix: pathPrefix,
+      parse: parse,
+    );
+  }
+  return sceneBuilderOptionalParsedField(
+    json,
+    key,
+    pathPrefix: pathPrefix,
+    parse: parse,
+  );
+}
+
+Map<String, Object?> sceneBuilderRequireMap(
+  Map<String, Object?> json,
+  String key, {
+  String pathPrefix = '',
+}) {
+  return sceneBuilderRequireParsedField(
+    json,
+    key,
+    pathPrefix: pathPrefix,
+    parse: _sceneBuilderParseFieldObjectMap,
+  );
 }
 
 List<Object?> sceneBuilderRequireList(
@@ -78,32 +186,30 @@ List<Object?> sceneBuilderRequireList(
   String pathPrefix = '',
   int? maxLength,
 }) {
-  final path = sceneBuilderPathAt(pathPrefix, key);
-  if (!json.containsKey(key)) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.missingField,
-      path: path,
-      message: 'Missing required field $path.',
-    );
-  }
-  final value = json[key];
-  if (value is! List) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidFieldType,
-      path: path,
-      message: 'Field $key must be a list.',
-    );
-  }
-  final list = List<Object?>.from(value);
-  if (maxLength != null && list.length > maxLength) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidValue,
-      path: path,
-      message: 'Field $path must contain at most $maxLength items.',
-      source: list.length,
-    );
-  }
-  return list;
+  return sceneBuilderRequireParsedField(
+    json,
+    key,
+    pathPrefix: pathPrefix,
+    parse: (value, {required path, required fieldName}) {
+      if (value is! List) {
+        throw SceneDataException(
+          code: SceneDataErrorCode.invalidFieldType,
+          path: path,
+          message: 'Field $fieldName must be a list.',
+        );
+      }
+      final list = List<Object?>.from(value);
+      if (maxLength != null && list.length > maxLength) {
+        throw SceneDataException(
+          code: SceneDataErrorCode.invalidValue,
+          path: path,
+          message: 'Field $path must contain at most $maxLength items.',
+          source: list.length,
+        );
+      }
+      return list;
+    },
+  );
 }
 
 Object? sceneBuilderRequireField(
@@ -111,15 +217,9 @@ Object? sceneBuilderRequireField(
   String key, {
   String pathPrefix = '',
 }) {
-  final path = sceneBuilderPathAt(pathPrefix, key);
-  if (!json.containsKey(key)) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.missingField,
-      path: path,
-      message: 'Missing required field $path.',
-    );
-  }
-  return json[key];
+  return _sceneBuilderRequireAccessedValue(
+    _sceneBuilderFieldAccess(json, key, pathPrefix: pathPrefix),
+  );
 }
 
 T sceneBuilderRequireValidatedField<T>(
@@ -128,11 +228,11 @@ T sceneBuilderRequireValidatedField<T>(
   required JsonValidatedFieldParser<T> parse,
   String pathPrefix = '',
 }) {
-  final path = sceneBuilderPathAt(pathPrefix, key);
-  return parse(
-    sceneBuilderRequireField(json, key, pathPrefix: pathPrefix),
-    path: path,
-    fieldName: key,
+  return sceneBuilderRequireParsedField(
+    json,
+    key,
+    parse: parse,
+    pathPrefix: pathPrefix,
   );
 }
 
@@ -142,15 +242,12 @@ T? sceneBuilderOptionalValidatedField<T>(
   required JsonValidatedFieldParser<T> parse,
   required String pathPrefix,
 }) {
-  if (!json.containsKey(key)) {
-    return null;
-  }
-  final value = json[key];
-  if (value == null) {
-    return null;
-  }
-  final path = sceneBuilderPathAt(pathPrefix, key);
-  return parse(value, path: path, fieldName: key);
+  return sceneBuilderOptionalParsedField(
+    json,
+    key,
+    parse: parse,
+    pathPrefix: pathPrefix,
+  );
 }
 
 T? sceneBuilderOptionalTypedField<T>(
@@ -159,22 +256,12 @@ T? sceneBuilderOptionalTypedField<T>(
   required String typeLabel,
   String pathPrefix = '',
 }) {
-  if (!json.containsKey(key)) {
-    return null;
-  }
-  final value = json[key];
-  if (value == null) {
-    return null;
-  }
-  final path = sceneBuilderPathAt(pathPrefix, key);
-  if (value is! T) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidFieldType,
-      path: path,
-      message: 'Field $key must be a $typeLabel.',
-    );
-  }
-  return value as T;
+  return _sceneBuilderTypedField<T>(
+    json,
+    key,
+    pathPrefix: pathPrefix,
+    spec: (isRequired: false, typeLabel: typeLabel),
+  );
 }
 
 Map<String, Object?>? sceneBuilderOptionalObjectMap(
@@ -182,22 +269,12 @@ Map<String, Object?>? sceneBuilderOptionalObjectMap(
   String key, {
   String pathPrefix = '',
 }) {
-  if (!json.containsKey(key)) {
-    return null;
-  }
-  final value = json[key];
-  if (value == null) {
-    return null;
-  }
-  final path = sceneBuilderPathAt(pathPrefix, key);
-  if (value is! Map<Object?, Object?>) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidFieldType,
-      path: path,
-      message: 'Field $key must be an object.',
-    );
-  }
-  return sceneBuilderCastMap(value, path: path);
+  return sceneBuilderOptionalParsedField(
+    json,
+    key,
+    pathPrefix: pathPrefix,
+    parse: _sceneBuilderParseFieldObjectMap,
+  );
 }
 
 String sceneBuilderRequireStringValue(
@@ -221,23 +298,39 @@ T sceneBuilderRequireTypedField<T>(
   required String typeLabel,
   String pathPrefix = '',
 }) {
-  final path = sceneBuilderPathAt(pathPrefix, key);
-  if (!json.containsKey(key)) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.missingField,
-      path: path,
-      message: 'Missing required field $path.',
-    );
-  }
-  final value = json[key];
-  if (value is! T) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidFieldType,
-      path: path,
-      message: 'Field $key must be a $typeLabel.',
-    );
-  }
-  return value;
+  return _sceneBuilderTypedField<T>(
+        json,
+        key,
+        pathPrefix: pathPrefix,
+        spec: (isRequired: true, typeLabel: typeLabel),
+      )
+      as T;
+}
+
+String sceneBuilderRequireStringField(
+  Map<String, Object?> json,
+  String key, {
+  String pathPrefix = '',
+}) {
+  return sceneBuilderRequireTypedField<String>(
+    json,
+    key,
+    pathPrefix: pathPrefix,
+    typeLabel: 'string',
+  );
+}
+
+bool sceneBuilderRequireBoolField(
+  Map<String, Object?> json,
+  String key, {
+  String pathPrefix = '',
+}) {
+  return sceneBuilderRequireTypedField<bool>(
+    json,
+    key,
+    pathPrefix: pathPrefix,
+    typeLabel: 'bool',
+  );
 }
 
 double sceneBuilderRequireDoubleValue(

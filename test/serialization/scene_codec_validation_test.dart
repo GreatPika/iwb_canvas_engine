@@ -348,6 +348,60 @@ void main() {
   );
 
   test(
+    'SceneBuilder.buildFromJson and decodeScene keep matching common node-type diagnostics',
+    () {
+      final raw = _sceneWithSingleNode(
+        _baseNodeJson(id: 'p1', type: 'path')
+          ..addAll(<String, Object?>{
+            'svgPathData': 'M0 0 H10 V10 H0 Z',
+            'strokeWidth': 1,
+            'fillRule': 'nonZero',
+          })
+          ..['type'] = 123,
+      );
+
+      final fromBuilder = _captureSceneDataException(
+        () => SceneBuilder.buildFromJson(raw),
+      );
+      final fromCodec = _captureSceneDataException(
+        () => decodeScene(Map<String, Object?>.from(raw)),
+      );
+
+      _expectSameSceneDataContract(fromBuilder, fromCodec);
+      expect(fromBuilder.path, 'layers[0].nodes[0].type');
+    },
+  );
+
+  test(
+    'SceneBuilder.buildFromJson and decodeScene keep matching optional field diagnostics',
+    () {
+      final raw = _sceneWithSingleNode(
+        _baseNodeJson(id: 't1', type: 'text')..addAll(<String, Object?>{
+          'text': 'Hello',
+          'size': <String, Object?>{'w': 10, 'h': 10},
+          'fontSize': 12,
+          'color': '#FF000000',
+          'align': 'left',
+          'isBold': false,
+          'isItalic': false,
+          'isUnderline': false,
+          'fontFamily': 123,
+        }),
+      );
+
+      final fromBuilder = _captureSceneDataException(
+        () => SceneBuilder.buildFromJson(raw),
+      );
+      final fromCodec = _captureSceneDataException(
+        () => decodeScene(Map<String, Object?>.from(raw)),
+      );
+
+      _expectSameSceneDataContract(fromBuilder, fromCodec);
+      expect(fromBuilder.path, 'layers[0].nodes[0].fontFamily');
+    },
+  );
+
+  test(
     'SceneBuilder.buildFromJson and decodeScene keep matching policy-owned scene overflow diagnostics',
     () {
       final json = _minimalSceneJson();

@@ -55,12 +55,7 @@ NodeType _decodeNodeType(
   required String nodePath,
 }) {
   return sceneBuilderParseNodeType(
-    sceneBuilderRequireTypedField<String>(
-      json,
-      'type',
-      pathPrefix: nodePath,
-      typeLabel: 'string',
-    ),
+    sceneBuilderRequireStringField(json, 'type', pathPrefix: nodePath),
     pathPrefix: nodePath,
   );
 }

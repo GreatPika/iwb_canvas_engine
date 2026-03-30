@@ -25,10 +25,16 @@ StrokeNodeSnapshotSchemaFields _decodeStrokeFields(
   return strokeNodeSnapshotSchemaFieldsFromValidated((
     points: _decodeStrokePoints(json, nodePath: nodePath),
     pointsRevision: 0,
-    thickness: validatedRequireJsonPositiveFiniteDouble(
-      sceneBuilderRequireField(json, 'thickness', pathPrefix: nodePath),
-      path: sceneBuilderPathAt(nodePath, 'thickness'),
-      fieldName: 'thickness',
+    thickness: sceneBuilderRequireValidatedField(
+      json,
+      'thickness',
+      pathPrefix: nodePath,
+      parse: (value, {required path, required fieldName}) =>
+          validatedRequireJsonPositiveFiniteDouble(
+            value,
+            path: path,
+            fieldName: fieldName,
+          ),
     ),
     color: sceneBuilderDecodeRequiredColor(json, 'color', pathPrefix: nodePath),
   ));

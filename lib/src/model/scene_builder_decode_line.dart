@@ -18,20 +18,38 @@ LineNodeSchemaFields _decodeLineFields(
   required String nodePath,
 }) {
   return lineNodeSchemaFieldsFromValidated((
-    start: validatedRequireJsonFiniteOffset(
-      sceneBuilderRequireField(json, 'localA', pathPrefix: nodePath),
-      path: sceneBuilderPathAt(nodePath, 'localA'),
-      fieldName: 'localA',
+    start: sceneBuilderRequireValidatedField(
+      json,
+      'localA',
+      pathPrefix: nodePath,
+      parse: (value, {required path, required fieldName}) =>
+          validatedRequireJsonFiniteOffset(
+            value,
+            path: path,
+            fieldName: fieldName,
+          ),
     ),
-    end: validatedRequireJsonFiniteOffset(
-      sceneBuilderRequireField(json, 'localB', pathPrefix: nodePath),
-      path: sceneBuilderPathAt(nodePath, 'localB'),
-      fieldName: 'localB',
+    end: sceneBuilderRequireValidatedField(
+      json,
+      'localB',
+      pathPrefix: nodePath,
+      parse: (value, {required path, required fieldName}) =>
+          validatedRequireJsonFiniteOffset(
+            value,
+            path: path,
+            fieldName: fieldName,
+          ),
     ),
-    thickness: validatedRequireJsonPositiveFiniteDouble(
-      sceneBuilderRequireField(json, 'thickness', pathPrefix: nodePath),
-      path: sceneBuilderPathAt(nodePath, 'thickness'),
-      fieldName: 'thickness',
+    thickness: sceneBuilderRequireValidatedField(
+      json,
+      'thickness',
+      pathPrefix: nodePath,
+      parse: (value, {required path, required fieldName}) =>
+          validatedRequireJsonPositiveFiniteDouble(
+            value,
+            path: path,
+            fieldName: fieldName,
+          ),
     ),
     color: sceneBuilderDecodeRequiredColor(json, 'color', pathPrefix: nodePath),
   ));

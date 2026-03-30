@@ -126,6 +126,32 @@ void main() {
   );
 
   test(
+    'SceneBuilder.buildFromJson keeps common validated-field diagnostics aligned with decodeScene',
+    () {
+      final raw = minimalSceneJson(
+        backgroundNodes: <Object?>[minimalRectNodeJson(id: 'bg')],
+      );
+      final node =
+          ((((raw['layers'] as List<Object?>).single
+                          as Map<String, Object?>)['nodes']
+                      as List<Object?>)
+                  .single
+              as Map<String, Object?>);
+      node['opacity'] = 2;
+
+      final fromBuilder = _captureSceneDataException(
+        () => SceneBuilder.buildFromJson(raw),
+      );
+      final fromCodec = _captureSceneDataException(
+        () => decodeScene(Map<String, dynamic>.from(raw)),
+      );
+
+      _expectSameSceneDataContract(fromBuilder, fromCodec);
+      expect(fromBuilder.path, 'layers[0].nodes[0].opacity');
+    },
+  );
+
+  test(
     'SceneBuilder.buildFromSnapshot reports path-aware duplicate-id failures',
     () {
       final snapshot = SceneSnapshot(

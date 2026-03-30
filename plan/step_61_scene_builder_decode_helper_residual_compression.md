@@ -266,7 +266,7 @@ language: russian
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Centralize structural require and optional access scaffolding
+### Slice 1. [x] Centralize structural require and optional access scaffolding
 
 #### Slice Contract
 
@@ -304,7 +304,7 @@ scaffolding.
 - `scene_builder_json_require.dart` no longer expresses the current residual
   access scaffolding as parallel helper copies.
 
-### Slice 2. [ ] Align node-common and family decode owners to canonical helper paths
+### Slice 2. [x] Align node-common and family decode owners to canonical helper paths
 
 #### Slice Contract
 
@@ -357,25 +357,25 @@ consuming the compressed helper surface from
 - Family and common owner files are visibly narrower in generic extraction
   scaffolding and remain focused on their declared owner role.
 
-## 9. Final Verification
+## 9. Final Verification Checklist
 
-- `dart format --output=none --set-exit-if-changed lib test example/lib example/test tool`
-- `flutter analyze`
-- `(cd example && flutter analyze lib test)`
-- `dcm analyze .`
-- `dart run tool/check_import_boundaries.dart`
-- `dart run tool/check_public_api_surface.dart`
-- `dart run tool/check_guardrails.dart`
-- `dart run tool/check_invariant_coverage.dart`
-- MCP test runner preset: `core`
-- MCP test runner preset: `model_contract`
-- MCP test runner preset: `controller_internal`
-- MCP test runner preset: `controller`
-- MCP test runner preset: `render_view`
-- MCP test runner preset: `interactive`
-- MCP test runner preset: `example`
-- `flutter test --coverage --no-pub --exclude-tags=tool`
-- `dart run tool/check_coverage.dart`
+- [x] `dart format --output=none --set-exit-if-changed lib test example/lib example/test tool`
+- [x] `flutter analyze`
+- [x] `(cd example && flutter analyze lib test)`
+- [x] `dcm analyze .`
+- [x] `dart run tool/check_import_boundaries.dart`
+- [x] `dart run tool/check_public_api_surface.dart`
+- [x] `dart run tool/check_guardrails.dart`
+- [x] `dart run tool/check_invariant_coverage.dart`
+- [x] MCP test runner preset: `core`
+- [x] MCP test runner preset: `model_contract`
+- [x] MCP test runner preset: `controller_internal`
+- [x] MCP test runner preset: `controller`
+- [x] MCP test runner preset: `render_view`
+- [x] MCP test runner preset: `interactive`
+- [x] MCP test runner preset: `example`
+- [x] `flutter test --coverage --no-pub --exclude-tags=tool`
+- [x] `dart run tool/check_coverage.dart`
 
 ## 10. Acceptance Criteria
 

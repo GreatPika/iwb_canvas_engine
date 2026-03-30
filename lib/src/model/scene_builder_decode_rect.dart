@@ -29,10 +29,16 @@ RectNodeSchemaFields _decodeRectFields(
       'strokeColor',
       pathPrefix: nodePath,
     ),
-    strokeWidth: validatedRequireJsonNonNegativeFiniteDouble(
-      sceneBuilderRequireField(json, 'strokeWidth', pathPrefix: nodePath),
-      path: sceneBuilderPathAt(nodePath, 'strokeWidth'),
-      fieldName: 'strokeWidth',
+    strokeWidth: sceneBuilderRequireValidatedField(
+      json,
+      'strokeWidth',
+      pathPrefix: nodePath,
+      parse: (value, {required path, required fieldName}) =>
+          validatedRequireJsonNonNegativeFiniteDouble(
+            value,
+            path: path,
+            fieldName: fieldName,
+          ),
     ),
   ));
 }

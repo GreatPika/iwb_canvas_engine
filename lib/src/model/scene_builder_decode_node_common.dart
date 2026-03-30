@@ -15,15 +15,23 @@ NodeSnapshotCommonSchemaFields sceneBuilderDecodeNodeCommonFields(
     id: _decodeNodeId(json, nodePath: nodePath),
     instanceRevision: _decodeNodeInstanceRevision(json, nodePath: nodePath),
     transform: _decodeNodeTransform(json, nodePath: nodePath),
-    hitPadding: validatedRequireJsonNonNegativeFiniteDouble(
-      sceneBuilderRequireField(json, 'hitPadding', pathPrefix: nodePath),
-      path: sceneBuilderPathAt(nodePath, 'hitPadding'),
-      fieldName: 'hitPadding',
+    hitPadding: sceneBuilderRequireValidatedField(
+      json,
+      'hitPadding',
+      pathPrefix: nodePath,
+      parse: (value, {required path, required fieldName}) =>
+          validatedRequireJsonNonNegativeFiniteDouble(
+            value,
+            path: path,
+            fieldName: fieldName,
+          ),
     ),
-    opacity: validatedRequireJsonOpacity(
-      sceneBuilderRequireField(json, 'opacity', pathPrefix: nodePath),
-      path: sceneBuilderPathAt(nodePath, 'opacity'),
-      fieldName: 'opacity',
+    opacity: sceneBuilderRequireValidatedField(
+      json,
+      'opacity',
+      pathPrefix: nodePath,
+      parse: (value, {required path, required fieldName}) =>
+          validatedRequireJsonOpacity(value, path: path, fieldName: fieldName),
     ),
     isVisible: flags.isVisible,
     isSelectable: flags.isSelectable,
@@ -42,35 +50,30 @@ NodeSnapshotCommonSchemaFields sceneBuilderDecodeNodeCommonFields(
 })
 _decodeNodeFlags(Map<String, Object?> json, {required String nodePath}) {
   return (
-    isVisible: sceneBuilderRequireTypedField<bool>(
+    isVisible: sceneBuilderRequireBoolField(
       json,
       'isVisible',
       pathPrefix: nodePath,
-      typeLabel: 'bool',
     ),
-    isSelectable: sceneBuilderRequireTypedField<bool>(
+    isSelectable: sceneBuilderRequireBoolField(
       json,
       'isSelectable',
       pathPrefix: nodePath,
-      typeLabel: 'bool',
     ),
-    isLocked: sceneBuilderRequireTypedField<bool>(
+    isLocked: sceneBuilderRequireBoolField(
       json,
       'isLocked',
       pathPrefix: nodePath,
-      typeLabel: 'bool',
     ),
-    isDeletable: sceneBuilderRequireTypedField<bool>(
+    isDeletable: sceneBuilderRequireBoolField(
       json,
       'isDeletable',
       pathPrefix: nodePath,
-      typeLabel: 'bool',
     ),
-    isTransformable: sceneBuilderRequireTypedField<bool>(
+    isTransformable: sceneBuilderRequireBoolField(
       json,
       'isTransformable',
       pathPrefix: nodePath,
-      typeLabel: 'bool',
     ),
   );
 }

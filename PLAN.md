@@ -155,4 +155,4 @@ This file is the plan index. Each step has a dedicated document so steps can be 
 - [x] [Шаг 57. Убрать residual access seams, render-state leak и naming drift после public split `SceneController`](plan/step_57_scene_controller_post_split_residual_cleanup.md)
 - [x] [Шаг 58. Исправить метрику сходства, diagnostics и CLI-контракт утилиты clone analysis](plan/step_58_clone_analysis_correctness_and_diagnostics.md)
 - [x] [Шаг 60. Сжать residual validated-helper matrix в snapshot boundary](plan/step_60_snapshot_boundary_validated_helper_compression.md)
-- [ ] [Шаг 61. Сжать residual JSON decode helper matrix в `SceneBuilder`](plan/step_61_scene_builder_decode_helper_residual_compression.md)
+- [x] [Шаг 61. Сжать residual JSON decode helper matrix в `SceneBuilder`](plan/step_61_scene_builder_decode_helper_residual_compression.md)

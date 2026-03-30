@@ -18,11 +18,13 @@ ImageNodeSchemaFields _decodeImageFields(
   required String nodePath,
 }) {
   return imageNodeSchemaFieldsFromValidated((
-    imageId: ImageIdValue.fromJson(
-      sceneBuilderRequireField(json, 'imageId', pathPrefix: nodePath),
-      path: sceneBuilderPathAt(nodePath, 'imageId'),
-      fieldName: 'imageId',
-    ).value,
+    imageId: sceneBuilderRequireValidatedField(
+      json,
+      'imageId',
+      pathPrefix: nodePath,
+      parse: (value, {required path, required fieldName}) =>
+          ImageIdValue.fromJson(value, path: path, fieldName: fieldName).value,
+    ),
     size: sceneBuilderRequireSize(json, 'size', pathPrefix: nodePath),
     naturalSize: sceneBuilderOptionalSizeMap(
       json,

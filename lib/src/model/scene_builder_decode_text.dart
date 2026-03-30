@@ -43,27 +43,20 @@ TextNodeSpecSchemaFields _decodeTextSpecFields(
   final optionals = _decodeTextOptionals(json, nodePath: nodePath);
   return textNodeSpecSchemaFieldsFromValidated((
     text: _decodeRequiredTextContent(json, nodePath: nodePath),
-    fontSize: validatedRequireJsonPositiveFiniteDouble(
-      sceneBuilderRequireField(json, 'fontSize', pathPrefix: nodePath),
-      path: sceneBuilderPathAt(nodePath, 'fontSize'),
-      fieldName: 'fontSize',
+    fontSize: sceneBuilderRequireValidatedField(
+      json,
+      'fontSize',
+      pathPrefix: nodePath,
+      parse: (value, {required path, required fieldName}) =>
+          validatedRequireJsonPositiveFiniteDouble(
+            value,
+            path: path,
+            fieldName: fieldName,
+          ),
     ),
-    color: sceneBuilderParseColor(
-      sceneBuilderRequireTypedField<String>(
-        json,
-        'color',
-        pathPrefix: nodePath,
-        typeLabel: 'string',
-      ),
-      path: sceneBuilderPathAt(nodePath, 'color'),
-    ),
+    color: sceneBuilderDecodeRequiredColor(json, 'color', pathPrefix: nodePath),
     align: sceneBuilderParseTextAlign(
-      sceneBuilderRequireTypedField<String>(
-        json,
-        'align',
-        pathPrefix: nodePath,
-        typeLabel: 'string',
-      ),
+      sceneBuilderRequireStringField(json, 'align', pathPrefix: nodePath),
       pathPrefix: nodePath,
     ),
     isBold: flags.isBold,
@@ -79,16 +72,17 @@ String _decodeRequiredTextContent(
   Map<String, Object?> json, {
   required String nodePath,
 }) {
-  return TextContentValue.fromJson(
-    sceneBuilderRequireTypedField<String>(
-      json,
-      'text',
-      pathPrefix: nodePath,
-      typeLabel: 'string',
-    ),
-    path: sceneBuilderPathAt(nodePath, 'text'),
-    fieldName: 'text',
-  ).value;
+  return sceneBuilderRequireValidatedField(
+    json,
+    'text',
+    pathPrefix: nodePath,
+    parse: (value, {required path, required fieldName}) =>
+        TextContentValue.fromJson(
+          value,
+          path: path,
+          fieldName: fieldName,
+        ).value,
+  );
 }
 
 ({bool isBold, bool isItalic, bool isUnderline}) _decodeTextFlags(
@@ -96,23 +90,16 @@ String _decodeRequiredTextContent(
   required String nodePath,
 }) {
   return (
-    isBold: sceneBuilderRequireTypedField<bool>(
-      json,
-      'isBold',
-      pathPrefix: nodePath,
-      typeLabel: 'bool',
-    ),
-    isItalic: sceneBuilderRequireTypedField<bool>(
+    isBold: sceneBuilderRequireBoolField(json, 'isBold', pathPrefix: nodePath),
+    isItalic: sceneBuilderRequireBoolField(
       json,
       'isItalic',
       pathPrefix: nodePath,
-      typeLabel: 'bool',
     ),
-    isUnderline: sceneBuilderRequireTypedField<bool>(
+    isUnderline: sceneBuilderRequireBoolField(
       json,
       'isUnderline',
       pathPrefix: nodePath,
-      typeLabel: 'bool',
     ),
   );
 }
