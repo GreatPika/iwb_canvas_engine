@@ -162,3 +162,4 @@ This file is the plan index. Each step has a dedicated document so steps can be 
 - [x] [Шаг 65. Свести clone/import/export обход сцены к одному canonical traversal helper](plan/step_65_scene_graph_traversal_helper.md)
 - [x] [Шаг 66. Замкнуть active-gesture exclusivity для всех public scene/selection mutations](plan/step_66_active_gesture_public_mutation_exclusivity.md)
 - [x] [Шаг 67. Замкнуть канонический write-side контур интеракции](plan/step_67_canonical_interaction_write_side_contour.md)
+- [ ] [Шаг 68. Замкнуть view-boundary pointer semantics через assembled internal bridge](plan/step_68_pointer_semantics_view_boundary_closure.md)
