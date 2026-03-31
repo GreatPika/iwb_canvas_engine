@@ -1,52 +1,45 @@
 import 'package:flutter/widgets.dart';
 
+import '../contract/scene_view_render_state.dart';
 import '../core/geometry.dart';
 import '../core/numeric_clamp.dart';
-import '../interactive/scene_controller.dart';
-import '../interactive/scene_controller_interaction.dart';
 
 class SceneViewInteractiveOverlayPainter extends CustomPainter {
-  const SceneViewInteractiveOverlayPainter({
-    required this.controller,
-    required this.interaction,
-  }) : super(repaint: interaction);
+  const SceneViewInteractiveOverlayPainter({required this.renderState})
+    : super(repaint: renderState);
 
-  final SceneController controller;
-  final SceneControllerInteraction interaction;
+  final SceneViewRenderState renderState;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final cameraOffset = sanitizeFiniteOffset(
-      controller.snapshot.camera.offset,
-    );
+    final cameraOffset = sanitizeFiniteOffset(renderState.cameraOffset);
     _paintStrokePreview(canvas, cameraOffset);
     _paintLinePreview(canvas, cameraOffset);
   }
 
   @override
   bool shouldRepaint(covariant SceneViewInteractiveOverlayPainter oldDelegate) {
-    return oldDelegate.controller != controller ||
-        oldDelegate.interaction != interaction;
+    return oldDelegate.renderState != renderState;
   }
 
   void _paintStrokePreview(Canvas canvas, Offset cameraOffset) {
-    if (!interaction.hasActiveStrokePreview) {
+    if (!renderState.hasActiveStrokePreview) {
       return;
     }
 
-    final points = interaction.activeStrokePreviewPoints;
+    final points = renderState.activeStrokePreviewPoints;
     if (points.isEmpty) {
       return;
     }
 
-    final thickness = interaction.activeStrokePreviewThickness;
+    final thickness = renderState.activeStrokePreviewThickness;
     if (!thickness.isFinite || thickness <= 0) {
       return;
     }
 
     final color = _applyOpacity(
-      interaction.activeStrokePreviewColor,
-      interaction.activeStrokePreviewOpacity,
+      renderState.activeStrokePreviewColor,
+      renderState.activeStrokePreviewOpacity,
     );
 
     if (points.length == 1) {
@@ -103,17 +96,17 @@ class SceneViewInteractiveOverlayPainter extends CustomPainter {
   }
 
   void _paintLinePreview(Canvas canvas, Offset cameraOffset) {
-    if (!interaction.hasActiveLinePreview) {
+    if (!renderState.hasActiveLinePreview) {
       return;
     }
 
-    final start = interaction.activeLinePreviewStart;
-    final end = interaction.activeLinePreviewEnd;
+    final start = renderState.activeLinePreviewStart;
+    final end = renderState.activeLinePreviewEnd;
     if (start == null || end == null) {
       return;
     }
 
-    final thickness = interaction.activeLinePreviewThickness;
+    final thickness = renderState.activeLinePreviewThickness;
     if (!thickness.isFinite || thickness <= 0) {
       return;
     }
@@ -125,7 +118,7 @@ class SceneViewInteractiveOverlayPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = thickness
         ..strokeCap = StrokeCap.round
-        ..color = interaction.activeLinePreviewColor,
+        ..color = renderState.activeLinePreviewColor,
     );
   }
 

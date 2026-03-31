@@ -16,6 +16,14 @@ All notable changes to `iwb_canvas_engine` are documented here.
   routes its structural write through the same command-layer owner that emits
   `scene.cleared`, leaving `SceneControllerMutationBoundary` as the interactive
   action adapter instead of a second write-side owner.
+- Interactive render read-side ownership is now unified under one
+  controller-owned internal render-state: `SceneViewRenderSurface`,
+  `ScenePainter`, `ScenePainterFrameOwner`, and
+  `SceneViewInteractiveOverlayPainter` share the same live marquee/preview
+  reads and the same repaint source, `view/**` no longer uses
+  `interactive/internal/**` helper reads for the closed render seam, and
+  reset mutations such as `setCameraOffset(...)` and `replaceScene(...)` clear
+  stale overlay state immediately on screen.
 
 ### Breaking
 

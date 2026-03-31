@@ -40,15 +40,19 @@ void main() {
       controller.write<void>((writer) {
         writer.writeSelectionReplace(const <NodeId>{'path-frame-contract'});
       });
-
-      final painter = ScenePainter(
-        controller: controller,
-        imageResolver: (_) => null,
-        geometryCache: geometryCache,
-        nodePreviewOffsetResolver: (_) {
+      final renderState = _ScenePainterFrameTestRenderState(
+        snapshot: controller.snapshot,
+        selectedNodeIds: controller.selectedNodeIds,
+        previewDeltaReader: (_) {
           previewCalls += 1;
           return const Offset(5, -3);
         },
+      );
+
+      final painter = ScenePainter(
+        controller: renderState,
+        imageResolver: (_) => null,
+        geometryCache: geometryCache,
         selectionStrokeWidth: 2,
       );
 
@@ -60,4 +64,22 @@ void main() {
       expect(geometryCache.debugSize, 1);
     },
   );
+}
+
+final class _ScenePainterFrameTestRenderState extends SceneControllerCore {
+  _ScenePainterFrameTestRenderState({
+    required SceneSnapshot snapshot,
+    required Set<NodeId> selectedNodeIds,
+    required this.previewDeltaReader,
+  }) : _selectedNodeIds = selectedNodeIds,
+       super(initialSnapshot: snapshot);
+
+  final Set<NodeId> _selectedNodeIds;
+  final Offset Function(NodeId nodeId) previewDeltaReader;
+
+  @override
+  Set<NodeId> get selectedNodeIds => _selectedNodeIds;
+
+  @override
+  Offset Function(NodeId nodeId) get previewDeltaResolver => previewDeltaReader;
 }

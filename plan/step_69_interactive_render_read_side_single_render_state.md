@@ -18,24 +18,28 @@ fields, and `interactive/internal` helper readers at the view boundary.
 
 ### Included in the Change
 
+- `lib/src/contract/scene_view_render_state.dart`
 - `lib/src/view/scene_view_render_surface.dart`
 - `lib/src/view/scene_view_interactive.dart`
 - `lib/src/view/scene_view_interactive_overlay_painter.dart`
 - `lib/src/view/scene_view_interactive_pointer_host.dart`
 - `lib/src/render/scene_painter.dart`
 - `lib/src/render/scene_painter_frame.dart`
+- `lib/src/render/scene_painter_shell.dart`
+- `lib/src/controller/scene_controller.dart`
 - `lib/src/interactive/scene_controller.dart`
-- `lib/src/interactive/internal/scene_controller_internal_access.dart`
-- `tool/check_import_boundaries.dart`
+- `tool/check_coverage.dart`
 - `tool/src/import_boundaries/import_boundary_policy.dart`
+- `tool/src/import_boundaries/directive_boundary_checker.dart`
 - `tool/invariant_registry.dart`
+- `test/contract/runtime_contract_interfaces_test.dart`
 - `test/view/scene_view_interactive_test.dart`
-- `test/view/scene_view_test.dart`
 - `test/render/scene_painter_test.dart`
 - `test/render/scene_painter_frame_contract_test.dart`
 - `test/interactive/core/scene_controller_architecture_boundary_test.dart`
+- `test/interactive/core/scene_controller_interaction_contract_test.dart`
+- `test/tool/coverage_tool_test.dart`
 - `test/tool/import_boundaries/import_boundaries_layer_dag_tool_test.dart`
-- `test/tool/support/guardrails_tool_test_support.dart`
 - `README.md`
 - `API_GUIDE.md`
 - `ARCHITECTURE.md`
@@ -62,30 +66,34 @@ fields, and `interactive/internal` helper readers at the view boundary.
 
 ### Implementation Files
 
+- `lib/src/contract/scene_view_render_state.dart`
 - `lib/src/view/scene_view_render_surface.dart`
 - `lib/src/view/scene_view_interactive.dart`
 - `lib/src/view/scene_view_interactive_overlay_painter.dart`
 - `lib/src/view/scene_view_interactive_pointer_host.dart`
 - `lib/src/render/scene_painter.dart`
 - `lib/src/render/scene_painter_frame.dart`
+- `lib/src/render/scene_painter_shell.dart`
+- `lib/src/controller/scene_controller.dart`
 - `lib/src/interactive/scene_controller.dart`
-- `lib/src/interactive/internal/scene_controller_internal_access.dart`
 - `tool/src/import_boundaries/import_boundary_policy.dart`
+- `tool/src/import_boundaries/directive_boundary_checker.dart`
+- `tool/check_coverage.dart`
 
 ### Test Files
 
+- `test/contract/runtime_contract_interfaces_test.dart`
 - `test/view/scene_view_interactive_test.dart`
-- `test/view/scene_view_test.dart`
 - `test/render/scene_painter_test.dart`
 - `test/render/scene_painter_frame_contract_test.dart`
 - `test/interactive/core/scene_controller_architecture_boundary_test.dart`
+- `test/interactive/core/scene_controller_interaction_contract_test.dart`
+- `test/tool/coverage_tool_test.dart`
 - `test/tool/import_boundaries/import_boundaries_layer_dag_tool_test.dart`
 
 ### Fixture and Supporting Data Files
 
-- `tool/check_import_boundaries.dart`
 - `tool/invariant_registry.dart`
-- `test/tool/support/guardrails_tool_test_support.dart`
 - `README.md`
 - `API_GUIDE.md`
 - `ARCHITECTURE.md`
@@ -97,12 +105,17 @@ fields, and `interactive/internal` helper readers at the view boundary.
 
 - `lib/src/view/**`
 - `lib/src/render/**`
+- `lib/src/controller/scene_controller.dart`
+- `lib/src/contract/scene_view_render_state.dart`
 - `lib/src/interactive/scene_controller.dart`
-- `lib/src/interactive/internal/**`
 - `tool/src/import_boundaries/**`
+- `tool/check_coverage.dart`
+- `test/contract/runtime_contract_interfaces_test.dart`
 - `test/view/**`
 - `test/render/**`
 - `test/interactive/core/scene_controller_architecture_boundary_test.dart`
+- `test/interactive/core/scene_controller_interaction_contract_test.dart`
+- `test/tool/coverage_tool_test.dart`
 - `test/tool/import_boundaries/**`
 - `README.md`
 - `API_GUIDE.md`
@@ -332,7 +345,7 @@ fields, and `interactive/internal` helper readers at the view boundary.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Adopt one render-state at the render-surface boundary
+### Slice 1. [x] Adopt one render-state at the render-surface boundary
 
 #### Slice Contract
 
@@ -366,7 +379,7 @@ removing the local epoch reader, preview resolver helper, and widget-owned
 - `rg` output shows the interactive helper readers and widget-owned marquee
   snapshot are removed from `scene_view_render_surface.dart`
 
-### Slice 2. [ ] Move painter frame reads to the live render-state
+### Slice 2. [x] Move painter frame reads to the live render-state
 
 #### Slice Contract
 
@@ -398,7 +411,7 @@ frame creation, and align painter repaint ownership with the unified state.
 - render tests prove frame-time preview resolution and marquee rendering
   without snapshot-style widget inputs
 
-### Slice 3. [ ] Switch overlay to the same render-state and repaint source
+### Slice 3. [x] Switch overlay to the same render-state and repaint source
 
 #### Slice Contract
 
@@ -439,7 +452,7 @@ remaining interactive read-side helper seam from `view/**`.
   reset mutations
 - `rg` output shows no closed render read-side import remains under `view/**`
 
-### Slice 4. [ ] Pin the closed read-side boundary in docs and structural checks
+### Slice 4. [x] Pin the closed read-side boundary in docs and structural checks
 
 #### Slice Contract
 

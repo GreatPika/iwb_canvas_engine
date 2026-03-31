@@ -2,33 +2,84 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
 import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
 import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
 import 'package:iwb_canvas_engine/src/contract/node_spec.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_data_exception.dart';
-import 'package:iwb_canvas_engine/src/contract/scene_render_state.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 import 'package:iwb_canvas_engine/src/render/scene_grid_renderer.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 
-class _FakeRenderState extends ChangeNotifier implements SceneRenderState {
-  _FakeRenderState({required this.snapshot, Set<NodeId>? selectedNodeIds})
-    : _selectedNodeIds = selectedNodeIds ?? const <NodeId>{};
+class _FakeRenderState extends ChangeNotifier implements SceneViewRenderState {
+  _FakeRenderState({
+    required this.snapshot,
+    Set<NodeId>? selectedNodeIds,
+    this.selectionRect,
+    Offset Function(NodeId nodeId)? previewDeltaResolver,
+  }) : _selectedNodeIds = selectedNodeIds ?? const <NodeId>{},
+       _previewDeltaResolver = previewDeltaResolver;
 
   @override
   SceneSnapshot snapshot;
   Set<NodeId> _selectedNodeIds;
+  final Offset Function(NodeId nodeId)? _previewDeltaResolver;
+
+  @override
+  final int controllerEpoch = 0;
+
+  @override
+  Rect? selectionRect;
+
+  @override
+  Offset get cameraOffset => snapshot.camera.offset;
 
   @override
   Set<NodeId> get selectedNodeIds => _selectedNodeIds;
+
+  @override
+  Offset Function(NodeId nodeId) get previewDeltaResolver =>
+      _previewDeltaResolver ?? _zeroPreviewDelta;
+
+  @override
+  bool get hasActiveStrokePreview => false;
+
+  @override
+  List<Offset> get activeStrokePreviewPoints => const <Offset>[];
+
+  @override
+  double get activeStrokePreviewThickness => 0;
+
+  @override
+  Color get activeStrokePreviewColor => const Color(0x00000000);
+
+  @override
+  double get activeStrokePreviewOpacity => 0;
+
+  @override
+  bool get hasActiveLinePreview => false;
+
+  @override
+  Offset? get activeLinePreviewStart => null;
+
+  @override
+  Offset? get activeLinePreviewEnd => null;
+
+  @override
+  double get activeLinePreviewThickness => 0;
+
+  @override
+  Color get activeLinePreviewColor => const Color(0x00000000);
 
   set selectedNodeIds(Set<NodeId> value) {
     _selectedNodeIds = value;
     notifyListeners();
   }
 }
+
+Offset _zeroPreviewDelta(NodeId _) => Offset.zero;
 
 Future<Image> _solidImage(Color color, {int width = 8, int height = 8}) async {
   final recorder = PictureRecorder();
@@ -312,10 +363,13 @@ void main() {
       selectionColor: const Color(0xFFFF0000),
       selectionStrokeWidth: 2,
     );
-    final withMarquee = ScenePainter(
-      controller: controller,
-      imageResolver: (_) => null,
+    final withMarqueeState = _FakeRenderState(
+      snapshot: controller.snapshot,
       selectionRect: const Rect.fromLTRB(20, 20, 70, 60),
+    );
+    final withMarquee = ScenePainter(
+      controller: withMarqueeState,
+      imageResolver: (_) => null,
       selectionColor: const Color(0xFFFF0000),
       selectionStrokeWidth: 2,
     );
@@ -450,7 +504,6 @@ void main() {
       final painter = ScenePainter(
         controller: controller,
         imageResolver: (_) => null,
-        nodePreviewOffsetResolver: (_) => const Offset(6, -4),
         selectionColor: const Color(0xFFFF0000),
         selectionStrokeWidth: 2,
       );
@@ -858,13 +911,17 @@ void main() {
       );
 
       const previewDelta = Offset(7, -5);
+      final previewState = _FakeRenderState(
+        snapshot: renderState.snapshot,
+        selectedNodeIds: renderState.selectedNodeIds,
+        previewDeltaResolver: (_) => previewDelta,
+      );
       final previewImage = await _paintToImage(
         ScenePainter(
-          controller: renderState,
+          controller: previewState,
           imageResolver: (_) => null,
           selectionStrokeWidth: selectionStrokeWidth,
           selectionColor: const Color(0xFFFF0000),
-          nodePreviewOffsetResolver: (_) => previewDelta,
         ),
         width: 80,
         height: 80,
@@ -932,13 +989,17 @@ void main() {
       );
 
       const previewDelta = Offset(7, -5);
+      final previewState = _FakeRenderState(
+        snapshot: controller.snapshot,
+        selectedNodeIds: controller.selectedNodeIds,
+        previewDeltaResolver: (_) => previewDelta,
+      );
       final previewImage = await _paintToImage(
         ScenePainter(
-          controller: controller,
+          controller: previewState,
           imageResolver: (_) => null,
           selectionStrokeWidth: selectionStrokeWidth,
           selectionColor: const Color(0xFFFF0000),
-          nodePreviewOffsetResolver: (_) => previewDelta,
         ),
         width: 80,
         height: 80,
@@ -1681,16 +1742,17 @@ void main() {
       controller.write((writer) {
         writer.writeSelectionReplace(const <NodeId>{'previewed'});
       });
+      final renderState = _FakeRenderState(
+        snapshot: controller.snapshot,
+        selectedNodeIds: controller.selectedNodeIds,
+        previewDeltaResolver: (nodeId) {
+          if (nodeId == 'previewed') return const Offset(30, 10);
+          return Offset.zero;
+        },
+      );
 
       final image = await _paintToImage(
-        ScenePainter(
-          controller: controller,
-          imageResolver: (_) => null,
-          nodePreviewOffsetResolver: (nodeId) {
-            if (nodeId == 'previewed') return const Offset(30, 10);
-            return Offset.zero;
-          },
-        ),
+        ScenePainter(controller: renderState, imageResolver: (_) => null),
         width: 80,
         height: 80,
       );

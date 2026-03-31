@@ -224,6 +224,37 @@ class SceneBuilder {
     );
 
     test(
+      'rejects scene_view_render_surface.dart -> scene_controller_internal_access.dart',
+      () async {
+        final sandbox = await createImportBoundariesSandbox();
+        try {
+          writeSandboxFile(
+            sandbox,
+            'lib/src/interactive/internal/scene_controller_internal_access.dart',
+            'class SceneControllerInternalAccess {}\n',
+          );
+          writeSandboxFile(
+            sandbox,
+            'lib/src/view/scene_view_render_surface.dart',
+            "import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_internal_access.dart';\n",
+          );
+
+          final result = await runSandboxTool(
+            sandbox,
+            'check_import_boundaries.dart',
+          );
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            contains('view render-state boundary violation:'),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
       'rejects scene_view_interactive_pointer_host.dart -> scene_controller_pointer_semantics.dart',
       () async {
         final sandbox = await createImportBoundariesSandbox();

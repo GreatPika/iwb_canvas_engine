@@ -3,8 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter/rendering.dart';
 
-import '../contract/scene_render_state.dart';
-import '../contract/snapshot.dart';
+import '../contract/scene_view_render_state.dart';
 import 'cache/scene_path_metrics_cache.dart';
 import 'cache/scene_static_layer_cache.dart';
 import 'cache/scene_stroke_path_cache.dart';
@@ -22,19 +21,16 @@ export 'cache/scene_stroke_path_cache.dart';
 export 'cache/scene_text_layout_cache.dart';
 
 typedef ImageResolver = Image? Function(String imageId);
-typedef NodePreviewOffsetResolver = Offset Function(NodeId nodeId);
 
 class ScenePainter extends CustomPainter {
   ScenePainter({
     required this.controller,
     required this.imageResolver,
-    this.nodePreviewOffsetResolver,
     this.staticLayerCache,
     this.textLayoutCache,
     this.strokePathCache,
     this.pathMetricsCache,
     RenderGeometryCache? geometryCache,
-    this.selectionRect,
     this.selectionColor = const Color(0xFF1565C0),
     this.selectionStrokeWidth = 1,
     this.gridStrokeWidth = 1,
@@ -43,13 +39,11 @@ class ScenePainter extends CustomPainter {
          _ScenePainterConfig(
            controller: controller,
            imageResolver: imageResolver,
-           nodePreviewOffsetResolver: nodePreviewOffsetResolver,
            staticLayerCache: staticLayerCache,
            textLayoutCache: textLayoutCache,
            strokePathCache: strokePathCache,
            pathMetricsCache: pathMetricsCache,
            geometryCache: geometryCache ?? RenderGeometryCache(),
-           selectionRect: selectionRect,
            selectionColor: selectionColor,
            selectionStrokeWidth: selectionStrokeWidth,
            gridStrokeWidth: gridStrokeWidth,
@@ -58,14 +52,12 @@ class ScenePainter extends CustomPainter {
        ),
        super(repaint: controller);
 
-  final SceneRenderState controller;
+  final SceneViewRenderState controller;
   final ImageResolver imageResolver;
-  final NodePreviewOffsetResolver? nodePreviewOffsetResolver;
   final SceneStaticLayerCache? staticLayerCache;
   final SceneTextLayoutCache? textLayoutCache;
   final SceneStrokePathCache? strokePathCache;
   final ScenePathMetricsCache? pathMetricsCache;
-  final Rect? selectionRect;
   final Color selectionColor;
   final double selectionStrokeWidth;
   final double gridStrokeWidth;
@@ -85,12 +77,10 @@ class ScenePainter extends CustomPainter {
 
   (
     ImageResolver,
-    NodePreviewOffsetResolver?,
     SceneStaticLayerCache?,
     SceneTextLayoutCache?,
     SceneStrokePathCache?,
     ScenePathMetricsCache?,
-    Rect?,
     Color,
     double,
     double,
@@ -99,12 +89,10 @@ class ScenePainter extends CustomPainter {
   _repaintConfiguration() {
     return (
       imageResolver,
-      nodePreviewOffsetResolver,
       staticLayerCache,
       textLayoutCache,
       strokePathCache,
       pathMetricsCache,
-      selectionRect,
       selectionColor,
       selectionStrokeWidth,
       gridStrokeWidth,
@@ -117,28 +105,24 @@ class _ScenePainterConfig {
   const _ScenePainterConfig({
     required this.controller,
     required this.imageResolver,
-    required this.nodePreviewOffsetResolver,
     required this.staticLayerCache,
     required this.textLayoutCache,
     required this.strokePathCache,
     required this.pathMetricsCache,
     required this.geometryCache,
-    required this.selectionRect,
     required this.selectionColor,
     required this.selectionStrokeWidth,
     required this.gridStrokeWidth,
     required this.textDirection,
   });
 
-  final SceneRenderState controller;
+  final SceneViewRenderState controller;
   final ImageResolver imageResolver;
-  final NodePreviewOffsetResolver? nodePreviewOffsetResolver;
   final SceneStaticLayerCache? staticLayerCache;
   final SceneTextLayoutCache? textLayoutCache;
   final SceneStrokePathCache? strokePathCache;
   final ScenePathMetricsCache? pathMetricsCache;
   final RenderGeometryCache geometryCache;
-  final Rect? selectionRect;
   final Color selectionColor;
   final double selectionStrokeWidth;
   final double gridStrokeWidth;
@@ -154,10 +138,8 @@ ScenePainterShell _createScenePainterShell(_ScenePainterConfig config) {
       gridStrokeWidth: config.gridStrokeWidth,
     ),
     frameOwner: ScenePainterFrameOwner(
-      controller: config.controller,
+      renderState: config.controller,
       geometryCache: config.geometryCache,
-      nodePreviewOffsetResolver: config.nodePreviewOffsetResolver,
-      selectionRect: config.selectionRect,
       selectionColor: config.selectionColor,
       selectionStrokeWidth: config.selectionStrokeWidth,
     ),

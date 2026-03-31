@@ -301,8 +301,10 @@ Ownership decisions for the target state:
   eraser geometry/query owner.
 - View-side render-cache lifecycle and `ScenePainter` assembly have one shared
   owner in the internal render-surface boundary; `SceneViewInteractive` remains
-  the public interactive shell around that boundary and keeps pointer host and
-  overlay ownership outside it.
+  the public interactive shell around that boundary, keeps pointer host and
+  overlay ownership outside it, and routes both the main painter and overlay
+  through the same controller-owned internal render-state plus one repaint
+  source.
 - `ScenePainter` keeps frame ownership and selection ownership separate:
   frame-local geometry resolution happens once in the frame owner, while
   selection rendering consumes only resolved `worldBounds` / `localPath`

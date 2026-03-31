@@ -79,11 +79,9 @@ class SceneViewInteractivePointerHost {
   SceneViewInteractivePointerHost({
     required SceneController controller,
     required bool Function() isMounted,
-    required void Function() onControllerChanged,
     required SceneControllerPointerSemanticsBridge pointerSemantics,
   }) : _controller = controller,
        _isMounted = isMounted,
-       _onControllerChanged = onControllerChanged,
        _runtime = _SceneViewInteractivePointerRuntime(
          pointerSemantics: pointerSemantics,
        ) {
@@ -92,7 +90,6 @@ class SceneViewInteractivePointerHost {
 
   SceneController _controller;
   final bool Function() _isMounted;
-  final void Function() _onControllerChanged;
 
   final _SceneViewInteractivePointerRuntime _runtime;
   late VoidCallback _controllerListener;
@@ -136,7 +133,6 @@ class SceneViewInteractivePointerHost {
       return;
     }
     _runtime.handleControllerChanged();
-    _onControllerChanged();
   }
 
   void _subscribeToController(SceneController controller) {

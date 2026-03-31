@@ -89,6 +89,28 @@ class ToolDefaults {
       expect(result.exitCode, 0, reason: result.stderr.toString());
     },
   );
+
+  test(
+    'passes when missing file is the scene view render-state declaration unit',
+    () async {
+      final result = await _runCoverageScenario(
+        files: <String, String>{
+          'lib/src/contract/scene_render_state.dart': '''
+abstract interface class SceneRenderState {}
+''',
+          'lib/src/contract/scene_view_render_state.dart': '''
+import 'scene_render_state.dart';
+
+abstract interface class SceneViewRenderState implements SceneRenderState {}
+''',
+          'lib/src/contract/a.dart': 'int covered() => 1;\n',
+        },
+        lcov: _singleFileLcov('lib/src/contract/a.dart'),
+      );
+
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+    },
+  );
 }
 
 void _registerFormerRealLogicExclusionTest() {

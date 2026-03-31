@@ -66,6 +66,30 @@ Widget _host(
   );
 }
 
+CustomPaint _sceneViewInteractiveCustomPaint(
+  WidgetTester tester, {
+  required bool Function(CustomPaint paint) matches,
+}) {
+  return tester.widget<CustomPaint>(
+    find.byWidgetPredicate(
+      (widget) => widget is CustomPaint && matches(widget),
+    ),
+  );
+}
+
+int _paintInvocationCount(
+  CustomPainter painter,
+  Symbol memberName, {
+  int width = 120,
+  int height = 120,
+}) {
+  final canvas = TestRecordingCanvas();
+  painter.paint(canvas, Size(width.toDouble(), height.toDouble()));
+  return canvas.invocations
+      .where((invocation) => invocation.invocation.memberName == memberName)
+      .length;
+}
+
 BuildContext _sceneViewContext(WidgetTester tester) {
   return tester.element(find.byType(SceneViewInteractive));
 }
@@ -1194,6 +1218,112 @@ void main() {
     await paintOverlay();
     controller.snapshotOverride = null;
   });
+
+  testWidgets(
+    'SceneViewInteractive marquee painter reads live selectionRect without rebuild inputs',
+    (tester) async {
+      final controller = SceneController(
+        initialSnapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(id: 'layer-empty'),
+          ],
+        ),
+        dragStartSlop: 0.001,
+      );
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+
+      final scenePaint = _sceneViewInteractiveCustomPaint(
+        tester,
+        matches: (paint) => paint.painter is ScenePainter,
+      );
+      final painter = scenePaint.painter;
+      if (painter == null) {
+        fail('Expected scene painter.');
+      }
+
+      final baselineRectCount = _paintInvocationCount(painter, #drawRect);
+      expect(controller.interaction.selectionRect, isNull);
+
+      final gesture = await tester.startGesture(const Offset(12, 12));
+      await gesture.moveTo(const Offset(76, 54));
+      await tester.pump();
+
+      expect(controller.interaction.selectionRect, isNotNull);
+
+      final marqueeRectCount = _paintInvocationCount(painter, #drawRect);
+      expect(marqueeRectCount, greaterThan(baselineRectCount));
+
+      await gesture.up();
+      await tester.pump();
+    },
+  );
+
+  testWidgets(
+    'SceneViewInteractive overlay clears live preview after reset mutations',
+    (tester) async {
+      final controller = SceneController(
+        initialSnapshot: _snapshot(text: 'overlay-reset'),
+        dragStartSlop: 0.001,
+      );
+      addTearDown(controller.dispose);
+      controller.interaction.setMode(CanvasMode.draw);
+      controller.interaction.setDrawTool(DrawTool.line);
+
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+
+      final overlayPaint = _sceneViewInteractiveCustomPaint(
+        tester,
+        matches: (paint) =>
+            paint.foregroundPainter is SceneViewInteractiveOverlayPainter,
+      );
+      final overlay = overlayPaint.foregroundPainter;
+      if (overlay == null) {
+        fail('Expected overlay foreground painter.');
+      }
+
+      int overlayLineCount() {
+        return _paintInvocationCount(overlay, #drawLine);
+      }
+
+      final gestureA = await tester.startGesture(const Offset(20, 20));
+      await gestureA.moveTo(const Offset(72, 64));
+      await tester.pump();
+
+      expect(controller.interaction.hasActiveLinePreview, isTrue);
+      final beforeCameraReset = overlayLineCount();
+      expect(beforeCameraReset, greaterThan(0));
+
+      controller.scene.setCameraOffset(const Offset(8, 6));
+      await tester.pump();
+
+      expect(controller.interaction.hasActiveLinePreview, isFalse);
+      final afterCameraReset = overlayLineCount();
+      expect(afterCameraReset, 0);
+      await gestureA.up();
+      await tester.pump();
+
+      final gestureB = await tester.startGesture(const Offset(24, 24));
+      await gestureB.moveTo(const Offset(80, 60));
+      await tester.pump();
+
+      expect(controller.interaction.hasActiveLinePreview, isTrue);
+      final beforeReplaceScene = overlayLineCount();
+      expect(beforeReplaceScene, greaterThan(0));
+
+      controller.scene.replaceScene(_snapshot(text: 'overlay-reset-next'));
+      await tester.pump();
+
+      expect(controller.interaction.hasActiveLinePreview, isFalse);
+      final afterReplaceScene = overlayLineCount();
+      expect(afterReplaceScene, 0);
+      await gestureB.up();
+      await tester.pump();
+    },
+  );
 
   testWidgets(
     'SceneViewInteractive keeps overlay outside shared render surface',

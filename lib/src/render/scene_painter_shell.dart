@@ -20,7 +20,7 @@ class ScenePainterShell {
   final ScenePainterSelectionRenderer selectionRenderer;
 
   void paint(Canvas canvas, Size size, SceneSnapshot snapshot) {
-    final frame = frameOwner.create(snapshot, size);
+    final frame = frameOwner.create(size);
     backgroundOwner.paint(canvas, size, snapshot, frame.cameraOffset);
     nodeRenderer.paintNodeLayers(
       canvas: canvas,

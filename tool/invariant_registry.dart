@@ -288,6 +288,14 @@ const List<Invariant> invariants = <Invariant>[
     proofPath: 'tool/check_import_boundaries.dart',
   ),
   Invariant(
+    id: 'INV-ENG-VIEW-RENDER-READ-STATE-BOUNDARY',
+    scope: 'engine-structure',
+    title:
+        'interactive view/render shell files consume one controller-owned render read-state, keep overlay ownership outside the render surface, and do not reopen helper-based read-side seams through view/**',
+    proofPath:
+        'test/interactive/core/scene_controller_architecture_boundary_test.dart',
+  ),
+  Invariant(
     id: 'INV-ENG-EPOCH-INVALIDATION',
     scope: 'engine-runtime',
     title: 'replace-scene lifecycle preserves epoch invalidation',

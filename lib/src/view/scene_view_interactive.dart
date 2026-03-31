@@ -82,7 +82,6 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
     _pointerHost = SceneViewInteractivePointerHost(
       controller: widget.controller,
       isMounted: () => mounted,
-      onControllerChanged: () {},
       pointerSemantics: sceneControllerInternalCreatePointerSemanticsBridge(
         widget.controller,
         isMounted: () => mounted,
@@ -128,8 +127,7 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
           _pointerHost.handlePointerEvent(event, PointerPhase.cancel),
       child: CustomPaint(
         foregroundPainter: SceneViewInteractiveOverlayPainter(
-          controller: widget.controller,
-          interaction: widget.controller.interaction,
+          renderState: widget.controller,
         ),
         child: renderSurface,
       ),

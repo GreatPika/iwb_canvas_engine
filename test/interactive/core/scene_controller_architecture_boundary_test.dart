@@ -46,6 +46,7 @@ String _extractMethodBody({
 
 void main() {
   // INV:INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY
+  // INV:INV-ENG-VIEW-RENDER-READ-STATE-BOUNDARY
   test('SceneController architecture boundary remains structurally split', () {
     final facadeSource = File(
       'lib/src/interactive/scene_controller.dart',
@@ -85,6 +86,12 @@ void main() {
     ).readAsStringSync();
     final sceneViewInteractiveSource = File(
       'lib/src/view/scene_view_interactive.dart',
+    ).readAsStringSync();
+    final renderSurfaceSource = File(
+      'lib/src/view/scene_view_render_surface.dart',
+    ).readAsStringSync();
+    final overlayPainterSource = File(
+      'lib/src/view/scene_view_interactive_overlay_painter.dart',
     ).readAsStringSync();
     final eventSource = File(
       'lib/src/interactive/internal/interactive_event_dispatcher.dart',
@@ -286,6 +293,14 @@ void main() {
     );
     expect(
       sceneViewInteractiveSource,
+      contains('foregroundPainter: SceneViewInteractiveOverlayPainter('),
+    );
+    expect(
+      sceneViewInteractiveSource,
+      contains('renderState: widget.controller,'),
+    );
+    expect(
+      sceneViewInteractiveSource,
       contains(
         "import '../interactive/internal/scene_controller_internal_access.dart';",
       ),
@@ -310,6 +325,7 @@ void main() {
       pointerHostSource,
       contains('sceneControllerInternalCreatePointerSemanticsBridge('),
     );
+    expect(pointerHostSource, isNot(contains('onControllerChanged')));
     expect(
       pointerHostSource,
       isNot(contains('SceneControllerPointerSemantics(')),
@@ -317,6 +333,38 @@ void main() {
     expect(pointerHostSource, isNot(contains('PointerInputTracker(')));
     expect(pointerHostSource, isNot(contains('_PendingTapFlushScheduler')));
     expect(pointerHostSource, isNot(contains('_pendingPointerSettings')));
+    expect(
+      renderSurfaceSource,
+      isNot(
+        contains(
+          "import '../interactive/internal/scene_controller_internal_access.dart';",
+        ),
+      ),
+    );
+    expect(
+      renderSurfaceSource,
+      isNot(contains('_interactiveControllerEpochReader')),
+    );
+    expect(
+      renderSurfaceSource,
+      isNot(contains('_interactivePreviewOffsetResolver')),
+    );
+    expect(renderSurfaceSource, isNot(contains('_selectionRect')));
+    expect(renderSurfaceSource, contains('clearIfEpochChanged('));
+    expect(renderSurfaceSource, contains('widget._controller.controllerEpoch'));
+    expect(overlayPainterSource, contains('super(repaint: renderState)'));
+    expect(
+      overlayPainterSource,
+      contains('sanitizeFiniteOffset(renderState.cameraOffset)'),
+    );
+    expect(
+      overlayPainterSource,
+      isNot(contains('super(repaint: interaction)')),
+    );
+    expect(
+      overlayPainterSource,
+      isNot(contains('controller.snapshot.camera.offset')),
+    );
     expect(runtimeSource, isNot(contains('StreamController<')));
     expect(runtimeSource, isNot(contains('_timestampCursorMs')));
     expect(runtimeSource, isNot(contains('_actionCounter')));

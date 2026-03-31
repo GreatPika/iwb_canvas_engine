@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-import '../contract/scene_render_state.dart';
+import '../contract/scene_view_render_state.dart';
 import '../contract/snapshot.dart';
 import '../core/numeric_clamp.dart';
 import 'render_geometry_cache.dart';
@@ -10,23 +10,19 @@ const double scenePainterCullPadding = 1.0;
 
 class ScenePainterFrameOwner {
   const ScenePainterFrameOwner({
-    required this.controller,
+    required this.renderState,
     required this.geometryCache,
-    required this.nodePreviewOffsetResolver,
-    required this.selectionRect,
     required this.selectionColor,
     required this.selectionStrokeWidth,
   });
 
-  final SceneRenderState controller;
+  final SceneViewRenderState renderState;
   final RenderGeometryCache geometryCache;
-  final Offset Function(NodeId nodeId)? nodePreviewOffsetResolver;
-  final Rect? selectionRect;
   final Color selectionColor;
   final double selectionStrokeWidth;
 
-  ScenePainterPaintFrame create(SceneSnapshot snapshot, Size size) {
-    final cameraOffset = sanitizeFiniteOffset(snapshot.camera.offset);
+  ScenePainterPaintFrame create(Size size) {
+    final cameraOffset = sanitizeFiniteOffset(renderState.cameraOffset);
     return ScenePainterPaintFrame(
       cameraOffset: cameraOffset,
       viewRect: Rect.fromLTWH(
@@ -35,8 +31,8 @@ class ScenePainterFrameOwner {
         size.width,
         size.height,
       ).inflate(scenePainterCullPadding),
-      selectedIds: controller.selectedNodeIds,
-      selectionRect: selectionRect,
+      selectedIds: renderState.selectedNodeIds,
+      selectionRect: renderState.selectionRect,
       selectionStyle: ScenePainterSelectionStyle(
         color: selectionColor,
         haloWidth: clampNonNegativeFinite(selectionStrokeWidth),
@@ -53,8 +49,6 @@ class ScenePainterFrameOwner {
   }
 
   Offset _nodePreviewOffset(NodeId nodeId) {
-    return sanitizeFiniteOffset(
-      nodePreviewOffsetResolver?.call(nodeId) ?? Offset.zero,
-    );
+    return sanitizeFiniteOffset(renderState.previewDeltaResolver(nodeId));
   }
 }

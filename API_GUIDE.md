@@ -125,7 +125,10 @@ Migration note:
 - `SceneControllerInteraction.snapshot` was removed from the public runtime
   surface
 - read committed render-state from `controller.snapshot`
-- keep `controller.interaction` for interactive mode/tool/preview concerns only
+- keep `controller.interaction` for public mode/tool configuration only; the
+  interactive view/render path now reads one controller-owned internal
+  render-state instead of mixing snapshot reads with overlay/widget-side
+  preview state
 
 ## 3. Scene model
 
@@ -826,6 +829,9 @@ Parameters:
 - paints the committed scene
 - paints interactive previews
 - owns render caches by default and resets them on document/epoch boundaries
+- keeps `ScenePainter` and the interactive overlay on the same controller-owned
+  internal render-state and repaint source, so marquee and draw previews stay
+  live without widget rebuild glue
 - uses one internal grid renderer owner for both direct painting and
   static-cache picture recording, so drawable checks, density bucketing,
   camera shift, and bounded anti-flap policy stay aligned without cross-frame

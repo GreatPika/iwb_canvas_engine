@@ -148,6 +148,10 @@ bool isViewPointerSemanticsBoundaryFile(String repoRelPosixPath) {
           '/lib/src/view/scene_view_interactive_pointer_host.dart';
 }
 
+bool isViewLayerFile(String repoRelPosixPath) {
+  return repoRelPosixPath.startsWith('/lib/src/view/');
+}
+
 bool isAllowedViewPointerSemanticsInternalTarget(String resolvedRepoRelPosix) {
   return resolvedRepoRelPosix ==
       '/lib/src/interactive/internal/scene_controller_internal_access.dart';

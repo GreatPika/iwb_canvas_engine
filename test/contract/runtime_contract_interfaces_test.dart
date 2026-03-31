@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
 import 'package:iwb_canvas_engine/src/contract/node_spec.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_render_state.dart';
+import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
 
 void main() {
   group('runtime contract interfaces', () {
@@ -23,6 +24,31 @@ void main() {
       expect(state.snapshot.layers, isEmpty);
       expect(state.selectedNodeIds, isEmpty);
     });
+
+    test(
+      'SceneControllerCore exposes committed-only defaults as SceneViewRenderState',
+      () {
+        final controller = SceneControllerCore();
+        addTearDown(controller.dispose);
+
+        final state = controller as SceneViewRenderState;
+
+        expect(state.controllerEpoch, 0);
+        expect(state.selectionRect, isNull);
+        expect(state.cameraOffset, Offset.zero);
+        expect(state.previewDeltaResolver.call('node-1'), Offset.zero);
+        expect(state.hasActiveStrokePreview, isFalse);
+        expect(state.activeStrokePreviewPoints, isEmpty);
+        expect(state.activeStrokePreviewThickness, 0);
+        expect(state.activeStrokePreviewColor, const Color(0x00000000));
+        expect(state.activeStrokePreviewOpacity, 0);
+        expect(state.hasActiveLinePreview, isFalse);
+        expect(state.activeLinePreviewStart, isNull);
+        expect(state.activeLinePreviewEnd, isNull);
+        expect(state.activeLinePreviewThickness, 0);
+        expect(state.activeLinePreviewColor, const Color(0x00000000));
+      },
+    );
 
     test('write callback exposes SceneWriteTxn contract', () {
       final controller = SceneControllerCore();

@@ -163,6 +163,21 @@ class DirectiveBoundaryChecker {
     required BoundaryTarget boundaryTarget,
     required String resolvedRepoRelPosix,
   }) {
+    if (isViewLayerFile(filePosixPath) &&
+        !isViewPointerSemanticsBoundaryFile(filePosixPath) &&
+        resolvedRepoRelPosix.startsWith('/lib/src/interactive/internal/')) {
+      _addViolation(
+        line: lineNo,
+        directive: directiveKind,
+        target: boundaryTarget.diagnosticTarget,
+        message:
+            'view render-state boundary violation: '
+            '${filePosixPath.substring('/lib/src/'.length)} must not '
+            '$directiveKind interactive/internal/** '
+            '($resolvedRepoRelPosix)',
+      );
+      return;
+    }
     if (isViewPointerSemanticsBoundaryFile(filePosixPath) &&
         resolvedRepoRelPosix.startsWith('/lib/src/interactive/internal/') &&
         !isAllowedViewPointerSemanticsInternalTarget(resolvedRepoRelPosix)) {

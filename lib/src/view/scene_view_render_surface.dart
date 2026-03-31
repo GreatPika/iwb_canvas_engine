@@ -3,8 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/widgets.dart';
 
 import '../controller/scene_controller.dart';
-import '../contract/scene_render_state.dart';
-import '../interactive/internal/scene_controller_internal_access.dart';
+import '../contract/scene_view_render_state.dart';
 import '../interactive/scene_controller.dart';
 import '../render/render_geometry_cache.dart';
 import '../render/scene_painter.dart';
@@ -32,22 +31,8 @@ SceneRenderCaches debugSceneViewRenderCachesOf(BuildContext context) {
   ).debugRenderCaches;
 }
 
-int Function() _coreControllerEpochReader(SceneControllerCore controller) {
-  return () => controller.controllerEpoch;
-}
-
-int Function() _interactiveControllerEpochReader(SceneController controller) {
-  return () => sceneControllerInternalEpoch(controller);
-}
-
-NodePreviewOffsetResolver _interactivePreviewOffsetResolver(
-  SceneController controller,
-) {
-  return (nodeId) =>
-      sceneControllerInternalPreviewDeltaForNode(controller, nodeId);
-}
-
 class SceneViewRenderSurface extends StatefulWidget {
+  // ignore: prefer_const_constructors_in_immutables, runtime fallback wiring keeps this constructor non-const
   SceneViewRenderSurface.core({
     required SceneControllerCore controller,
     ImageResolver? imageResolver,
@@ -63,22 +48,19 @@ class SceneViewRenderSurface extends StatefulWidget {
     Widget child = const SizedBox.expand(),
     super.key,
   }) : _controller = controller,
-       _repaint = controller,
-       _readControllerEpoch = _coreControllerEpochReader(controller),
        _staticLayerCache = staticLayerCache,
        _textLayoutCache = textLayoutCache,
        _strokePathCache = strokePathCache,
        _pathMetricsCache = pathMetricsCache,
        _geometryCache = geometryCache,
        _imageResolver = imageResolver ?? sceneViewDefaultImageResolver,
-       _nodePreviewOffsetResolver = null,
-       _selectionRect = null,
        _selectionColor = selectionColor,
        _selectionStrokeWidth = selectionStrokeWidth,
        _gridStrokeWidth = gridStrokeWidth,
        _textDirection = textDirection,
        _child = child;
 
+  // ignore: prefer_const_constructors_in_immutables, runtime fallback wiring keeps this constructor non-const
   SceneViewRenderSurface.interactive({
     required SceneController controller,
     ui.Image? Function(String imageId)? imageResolver,
@@ -89,35 +71,25 @@ class SceneViewRenderSurface extends StatefulWidget {
     Widget child = const SizedBox.expand(),
     super.key,
   }) : _controller = controller,
-       _repaint = controller,
-       _readControllerEpoch = _interactiveControllerEpochReader(controller),
        _staticLayerCache = null,
        _textLayoutCache = null,
        _strokePathCache = null,
        _pathMetricsCache = null,
        _geometryCache = null,
        _imageResolver = imageResolver ?? sceneViewDefaultImageResolver,
-       _nodePreviewOffsetResolver = _interactivePreviewOffsetResolver(
-         controller,
-       ),
-       _selectionRect = controller.interaction.selectionRect,
        _selectionColor = selectionColor,
        _selectionStrokeWidth = selectionStrokeWidth,
        _gridStrokeWidth = gridStrokeWidth,
        _textDirection = textDirection,
        _child = child;
 
-  final SceneRenderState _controller;
-  final Listenable _repaint;
-  final int Function() _readControllerEpoch;
+  final SceneViewRenderState _controller;
   final SceneStaticLayerCache? _staticLayerCache;
   final SceneTextLayoutCache? _textLayoutCache;
   final SceneStrokePathCache? _strokePathCache;
   final ScenePathMetricsCache? _pathMetricsCache;
   final RenderGeometryCache? _geometryCache;
   final ImageResolver _imageResolver;
-  final NodePreviewOffsetResolver? _nodePreviewOffsetResolver;
-  final Rect? _selectionRect;
   final Color _selectionColor;
   final double _selectionStrokeWidth;
   final double _gridStrokeWidth;
@@ -158,19 +130,19 @@ class SceneViewRenderSurfaceState extends State<SceneViewRenderSurface> {
   void initState() {
     super.initState();
     _renderCacheLifecycle.initialize(
-      controllerEpoch: widget._readControllerEpoch(),
+      controllerEpoch: widget._controller.controllerEpoch,
     );
-    widget._repaint.addListener(_handleControllerChanged);
+    widget._controller.addListener(_handleControllerChanged);
   }
 
   @override
   void didUpdateWidget(SceneViewRenderSurface oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget._repaint != widget._repaint) {
-      oldWidget._repaint.removeListener(_handleControllerChanged);
-      widget._repaint.addListener(_handleControllerChanged);
+    if (oldWidget._controller != widget._controller) {
+      oldWidget._controller.removeListener(_handleControllerChanged);
+      widget._controller.addListener(_handleControllerChanged);
       _renderCacheLifecycle.handleControllerSwap(
-        controllerEpoch: widget._readControllerEpoch(),
+        controllerEpoch: widget._controller.controllerEpoch,
       );
     }
     if (_cacheDependenciesOf(oldWidget) != _cacheDependenciesOf(widget)) {
@@ -180,7 +152,7 @@ class SceneViewRenderSurfaceState extends State<SceneViewRenderSurface> {
 
   @override
   void dispose() {
-    widget._repaint.removeListener(_handleControllerChanged);
+    widget._controller.removeListener(_handleControllerChanged);
     _renderCacheLifecycle.dispose();
     super.dispose();
   }
@@ -191,13 +163,11 @@ class SceneViewRenderSurfaceState extends State<SceneViewRenderSurface> {
       painter: ScenePainter(
         controller: widget._controller,
         imageResolver: widget._imageResolver,
-        nodePreviewOffsetResolver: widget._nodePreviewOffsetResolver,
         staticLayerCache: _renderCacheLifecycle.staticLayerCache,
         textLayoutCache: _renderCacheLifecycle.textLayoutCache,
         strokePathCache: _renderCacheLifecycle.strokePathCache,
         pathMetricsCache: _renderCacheLifecycle.pathMetricsCache,
         geometryCache: _renderCacheLifecycle.geometryCache,
-        selectionRect: widget._selectionRect,
         selectionColor: widget._selectionColor,
         selectionStrokeWidth: widget._selectionStrokeWidth,
         gridStrokeWidth: widget._gridStrokeWidth,
@@ -208,6 +178,8 @@ class SceneViewRenderSurfaceState extends State<SceneViewRenderSurface> {
   }
 
   void _handleControllerChanged() {
-    _renderCacheLifecycle.clearIfEpochChanged(widget._readControllerEpoch());
+    _renderCacheLifecycle.clearIfEpochChanged(
+      widget._controller.controllerEpoch,
+    );
   }
 }
