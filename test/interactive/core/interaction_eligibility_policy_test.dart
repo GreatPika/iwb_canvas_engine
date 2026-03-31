@@ -2,7 +2,9 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/core/local_bounds_policy.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
+import 'package:iwb_canvas_engine/src/core/text_layout.dart';
 import 'package:iwb_canvas_engine/src/interactive/interaction_eligibility_policy.dart'
     as interaction_eligibility_policy;
 import 'package:iwb_canvas_engine/src/interactive/internal/interactive_selection_utils.dart'
@@ -237,5 +239,114 @@ void main() {
         isFalse,
       );
     });
+
+    test(
+      'centerWorldForNodeSnapshots materializes stroke line and path bounds',
+      () {
+        expect(
+          interaction_eligibility_policy.centerWorldForNodeSnapshots(
+            <NodeSnapshot>[
+              StrokeNodeSnapshot(
+                id: 'stroke-center',
+                points: const <Offset>[Offset(-10, 0), Offset(10, 0)],
+                thickness: 6,
+                color: const Color(0xFF000000),
+                transform: Transform2D.translation(const Offset(15, -7)),
+              ),
+            ],
+          ),
+          const Offset(15, -7),
+        );
+
+        expect(
+          interaction_eligibility_policy
+              .centerWorldForNodeSnapshots(<NodeSnapshot>[
+                LineNodeSnapshot(
+                  id: 'line-center',
+                  start: const Offset(-8, 0),
+                  end: const Offset(8, 0),
+                  thickness: 4,
+                  color: const Color(0xFF000000),
+                  transform: Transform2D.translation(const Offset(-12, 9)),
+                ),
+              ]),
+          const Offset(-12, 9),
+        );
+
+        expect(
+          interaction_eligibility_policy
+              .centerWorldForNodeSnapshots(<NodeSnapshot>[
+                PathNodeSnapshot(
+                  id: 'path-even-odd-center',
+                  svgPathData: 'M0 0 H20 V12 H0 Z',
+                  fillRule: PathFillRule.evenOdd,
+                  strokeColor: const Color(0xFF000000),
+                  strokeWidth: 2,
+                  transform: Transform2D.translation(const Offset(30, 11)),
+                ),
+              ]),
+          const Offset(30, 11),
+        );
+
+        expect(
+          interaction_eligibility_policy
+              .centerWorldForNodeSnapshots(<NodeSnapshot>[
+                PathNodeSnapshot(
+                  id: 'path-non-zero-center',
+                  svgPathData: 'M0 0 H10 V10 H0 Z',
+                  fillRule: PathFillRule.nonZero,
+                  strokeColor: const Color(0xFF000000),
+                  strokeWidth: 2,
+                  transform: Transform2D.translation(const Offset(-18, 6)),
+                ),
+              ]),
+          const Offset(-18, 6),
+        );
+      },
+    );
+
+    test(
+      'centerWorldForNodeSnapshots ignores stale serialized text size',
+      () {
+        const rectCenter = Offset(80, 0);
+        final text = TextNodeSnapshot(
+          id: 'text',
+          text: 'Pivot',
+          size: const Size(400, 20),
+          fontSize: 20,
+          color: const Color(0xFF000000),
+        );
+        final rect = RectNodeSnapshot(
+          id: 'rect',
+          size: const Size(20, 20),
+          transform: Transform2D.translation(rectCenter),
+        );
+
+        final measuredTextSize = TextLayoutRequest(
+          text: text.text,
+          color: text.color,
+          fontSize: text.fontSize,
+          isBold: text.isBold,
+          isItalic: text.isItalic,
+          isUnderline: text.isUnderline,
+          textAlign: text.align,
+          fontFamily: text.fontFamily,
+          lineHeight: text.lineHeight,
+          maxWidth: text.maxWidth,
+        ).measure();
+        final expectedBounds = centeredRectLocalBounds(
+          measuredTextSize,
+        ).expandToInclude(
+          rect.transform.applyToRect(centeredRectLocalBounds(rect.size)),
+        );
+
+        expect(
+          interaction_eligibility_policy.centerWorldForNodeSnapshots(
+            <NodeSnapshot>[text, rect],
+          ),
+          expectedBounds.center,
+        );
+      },
+    );
   });
 }

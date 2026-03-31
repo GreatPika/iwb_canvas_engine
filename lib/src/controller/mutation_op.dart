@@ -3,9 +3,10 @@ import 'dart:ui';
 
 import '../contract/node_patch.dart';
 import '../contract/node_spec.dart';
-import '../contract/transform2d.dart';
-import '../contract/scene_write_txn.dart';
 import '../contract/snapshot.dart';
+import '../contract/scene_write_txn.dart';
+import '../contract/transform2d.dart';
+import 'scene_snapshot_materializer.dart';
 
 sealed class MutationOp {
   const MutationOp();
@@ -89,9 +90,9 @@ final class ClearSceneKeepBackgroundOp
 }
 
 final class ReplaceSceneOp extends StructuralDocumentMutationOp<Object?> {
-  const ReplaceSceneOp(this.snapshot);
+  const ReplaceSceneOp(this.replacement);
 
-  final SceneSnapshot snapshot;
+  final PreparedSceneReplacement replacement;
 }
 
 final class SetBackgroundColorOp extends SceneSettingsMutationOp<Object?> {

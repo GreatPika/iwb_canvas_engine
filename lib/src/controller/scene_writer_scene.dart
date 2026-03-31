@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'scene_snapshot_materializer.dart';
 import 'scene_writer.dart';
 import 'mutation_op.dart';
 import 'scene_writer_types.dart';
@@ -24,7 +25,15 @@ void sceneWriterWriteDocumentReplace(
   SceneWriter writer,
   SceneSnapshot snapshot,
 ) {
-  writer.runtime.execute(ReplaceSceneOp(snapshot));
+  final replacement = writer.runtime.prepareSceneReplacement(snapshot);
+  sceneWriterWritePreparedDocumentReplace(writer, replacement);
+}
+
+void sceneWriterWritePreparedDocumentReplace(
+  SceneWriter writer,
+  PreparedSceneReplacement replacement,
+) {
+  writer.runtime.execute(ReplaceSceneOp(replacement));
 }
 
 ClearSceneResult sceneWriterWriteClearSceneKeepBackgroundResult(

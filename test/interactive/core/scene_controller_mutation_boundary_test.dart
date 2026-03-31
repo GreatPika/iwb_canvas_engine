@@ -124,11 +124,8 @@ void main() {
           ),
         ],
       );
-      expect(
-        () => boundary.validateSceneReplacement(replacement),
-        returnsNormally,
-      );
-      boundary.replaceScene(replacement);
+      final prepared = boundary.prepareSceneReplacement(replacement);
+      boundary.replaceScene(prepared);
       expect(clearPointerNormalizationCalls, 1);
       expect(controller.snapshot.layers.single.nodes.single.id, 'fresh');
 

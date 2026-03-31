@@ -906,18 +906,16 @@ class _Core {
     },
   );
 
-  test(
-    'rejects scene mutation owner generic core write bypass',
-    () async {
-      final sandbox = await createGuardrailsSandbox();
-      try {
-        writeMinimalControllerStore(sandbox);
-        writeInteractiveArchitectureSupportScaffold(sandbox);
-        writeSandboxFile(
-          sandbox,
-          'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
-            methods: '''
+  test('rejects scene mutation owner generic core write bypass', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeMinimalControllerStore(sandbox);
+      writeInteractiveArchitectureSupportScaffold(sandbox);
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/scene_controller.dart',
+        _sceneControllerFixture(
+          methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
   }
@@ -930,12 +928,12 @@ class _Core {
     _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
   }
 ''',
-          ),
-        );
-        writeSandboxFile(
-          sandbox,
-          'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
-          '''
+        ),
+      );
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
+        '''
 class SceneControllerSceneMutations {
   final mutations = Object();
 
@@ -1018,24 +1016,23 @@ class _Core {
   void write<T>(Object fn) {}
 }
 ''',
-        );
+      );
 
-        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-        expect(result.exitCode, isNonZero);
-        expect(
-          result.stderr.toString(),
-          diagnostic(
-            category: 'interactive API',
-            detail:
-                'SceneControllerSceneMutations must delegate committed scene '
-                'writes through SceneControllerMutationBoundary',
-          ),
-        );
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    },
-  );
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, isNonZero);
+      expect(
+        result.stderr.toString(),
+        diagnostic(
+          category: 'interactive API',
+          detail:
+              'SceneControllerSceneMutations must delegate committed scene '
+              'writes through SceneControllerMutationBoundary',
+        ),
+      );
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
+  });
 
   test(
     'rejects runtime selection callbacks that bypass mutation boundary',

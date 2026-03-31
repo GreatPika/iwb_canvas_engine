@@ -15,6 +15,7 @@ import 'commands/scene_commands.dart';
 import 'internal/signal_event.dart';
 import 'scene_controller_commit_debug.dart';
 import 'scene_controller_commit_runtime.dart';
+import 'scene_snapshot_materializer.dart';
 import 'scene_writer.dart';
 import 'store.dart';
 
@@ -133,5 +134,22 @@ extension SceneControllerCoreSpatialAccess on SceneControllerCore {
     write<void>((writer) {
       writer.writeDocumentReplace(snapshot);
     });
+  }
+
+  PreparedSceneReplacement prepareSceneReplacement(SceneSnapshot snapshot) {
+    return materializeSceneReplacement(
+      snapshot: snapshot,
+      nextInstanceRevisionSeed: _store.nextInstanceRevision,
+    );
+  }
+
+  void writePreparedSceneReplacement(PreparedSceneReplacement replacement) {
+    write<void>((writer) {
+      (writer as SceneWriter).writePreparedDocumentReplace(replacement);
+    });
+  }
+
+  Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots) {
+    return centerWorldForNodeSnapshotsMaterialized(snapshots);
   }
 }

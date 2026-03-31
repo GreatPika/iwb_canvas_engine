@@ -241,7 +241,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY',
     scope: 'engine-runtime',
     title:
-        'interactive capability/runtime/event/draw owners remain structurally split, keep SceneController as the committed render-state boundary, and do not reabsorb deleted residual seams',
+        'interactive capability/runtime/event/write-side owners remain structurally split, keep SceneController as the committed render-state boundary, stay model-free under lib/src/interactive/**, and do not reabsorb deleted residual seams',
     proofPath:
         'test/interactive/core/scene_controller_architecture_boundary_test.dart',
   ),
@@ -277,7 +277,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-VIEW-POINTER-SETTINGS-LIVE-APPLY',
     scope: 'view-runtime',
     title:
-        'SceneView applies updated pointer settings on the same controller without remount',
+        'SceneView keeps pointer-settings live-apply behavior on the same controller without re-owning tracker/pending-setting state in the host shell',
     proofPath: 'test/view/scene_view_interactive_test.dart',
   ),
   Invariant(

@@ -212,10 +212,11 @@ Ownership decisions for the target state:
 
 1. `SceneView` receives Flutter pointer input and normalizes it into public
    `CanvasPointerInput`, while its view-local pointer router owns raw Flutter
-   pointer lifetimes, routed runtime `pointerId` allocation, and apply-on-idle
-   adoption of `PointerInputSettings`. Invalid terminal host events are still
-   forwarded through `handlePointer(...)`; `SceneView` does not own terminal
-   normalization semantics.
+   pointer lifetimes and routed runtime `pointerId` allocation. A dedicated
+   controller-owned pointer-semantics owner consumes those routed samples,
+   owns tap/double-tap recognition, deferred tap flushing, and live
+   `PointerInputSettings` adoption, and keeps invalid terminal host forwarding
+   on the same controller-side path as direct pointer input.
 2. `SceneController` is the public interactive facade. It validates
    public inputs, keeps host-facing mode/tool/selection semantics, owns the
    snapshot-based eligibility policy used by controller-side transform/delete
@@ -242,7 +243,10 @@ Ownership decisions for the target state:
    candidate-query ownership stay inside `InteractiveDrawEraserEngine` and its
    focused helpers instead of returning to the coordinator or the runtime.
 6. `SceneControllerCore` performs transactional writes and finalizes a canonical
-   immutable `SceneSnapshot`.
+   immutable `SceneSnapshot`. It also owns prepared replace-scene materialization,
+   so `replaceScene(...)` validates/imports runtime scene data exactly once
+   before any active-gesture reset and the apply path adopts the prepared
+   payload without a second snapshot import.
 7. `ScenePainter` renders the committed snapshot plus any ephemeral preview
    state owned by the interactive controller. Background-grid draw semantics
    have one render-local owner in `render/scene_grid_renderer.dart`; painter
@@ -391,10 +395,11 @@ most important architectural rules are:
 - Listener notifications are microtask-deferred and coalesced.
 - `actions` and `editTextRequests` are asynchronous; their relative ordering
   against repaint notifications is intentionally not a public contract.
-- `PointerInputSettings` is a value object. `SceneView` owns the
-  applied-versus-pending transition state and may rebuild its
-  `PointerInputTracker` only after the raw-pointer router becomes idle; pending
-  updates are last-write-wins and do not move into the interactive controller.
+- `PointerInputSettings` is a value object. `SceneView` does not own
+  applied-versus-pending settings state; the controller-owned pointer-semantics
+  owner applies updates only after the raw-pointer router becomes idle, keeps
+  pending updates last-write-wins, and preserves the current settings for live
+  routed pointers until terminal release.
 - `PointerInputTracker` is an orchestration-only core owner over two focused
   pointer-local state owners: active down/slop state and deferred
   tap-window/double-tap lifecycle. Hosts consume one tracker contract without

@@ -2,7 +2,9 @@ import 'dart:ui';
 
 import '../core/nodes.dart' show SceneNode;
 import '../contract/snapshot.dart';
-import '../model/document.dart';
+import '../core/geometry.dart';
+import '../core/local_bounds_policy.dart';
+import '../core/text_layout.dart';
 
 /// Pure interactive preflight policy for runtime snapshot-based admissibility.
 bool canSelect(NodeSnapshot node) {
@@ -125,10 +127,68 @@ List<NodeId> deletableSelectedNodeIdsInSnapshot({
 Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> nodes) {
   Rect? bounds;
   for (final nodeSnapshot in nodes) {
-    final boundsWorld = txnNodeFromSnapshot(nodeSnapshot).boundsWorld;
+    final boundsWorld = _snapshotBoundsWorld(nodeSnapshot);
     bounds = bounds == null ? boundsWorld : bounds.expandToInclude(boundsWorld);
   }
   return bounds?.center ?? Offset.zero;
+}
+
+Rect _snapshotBoundsWorld(NodeSnapshot node) {
+  final localBounds = switch (node) {
+    ImageNodeSnapshot(:final size) => centeredRectLocalBounds(size),
+    TextNodeSnapshot() => _textSnapshotLocalBounds(node),
+    RectNodeSnapshot(:final size, :final strokeColor, :final strokeWidth) =>
+      strokeAwareLocalBounds(
+        baseBounds: centeredRectLocalBounds(size),
+        strokeColor: strokeColor,
+        strokeWidth: strokeWidth,
+      ),
+    StrokeNodeSnapshot(:final points, :final thickness) => strokeLocalBounds(
+      points: points,
+      thickness: thickness,
+    ),
+    LineNodeSnapshot(:final start, :final end, :final thickness) =>
+      lineLocalBounds(start: start, end: end, thickness: thickness),
+    PathNodeSnapshot(
+      :final svgPathData,
+      :final fillRule,
+      :final strokeColor,
+      :final strokeWidth,
+    ) =>
+      strokeAwareLocalBounds(
+        baseBounds:
+            buildCenteredSvgPathGeometry(
+              svgPathData,
+              fillType: _toPathFillType(fillRule),
+            )?.localBounds ??
+            Rect.zero,
+        strokeColor: strokeColor,
+        strokeWidth: strokeWidth,
+      ),
+  };
+  return node.transform.applyToRect(localBounds);
+}
+
+Rect _textSnapshotLocalBounds(TextNodeSnapshot node) {
+  final measuredSize = TextLayoutRequest(
+    text: node.text,
+    color: node.color,
+    fontSize: node.fontSize,
+    isBold: node.isBold,
+    isItalic: node.isItalic,
+    isUnderline: node.isUnderline,
+    textAlign: node.align,
+    fontFamily: node.fontFamily,
+    lineHeight: node.lineHeight,
+    maxWidth: node.maxWidth,
+  ).measure();
+  return centeredRectLocalBounds(measuredSize);
+}
+
+PathFillType _toPathFillType(PathFillRule rule) {
+  return rule == PathFillRule.evenOdd
+      ? PathFillType.evenOdd
+      : PathFillType.nonZero;
 }
 
 bool _canSelectFlags({required bool isVisible, required bool isSelectable}) {

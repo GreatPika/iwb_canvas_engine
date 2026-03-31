@@ -720,6 +720,10 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
     context,
     'internal/scene_controller_mutation_boundary.dart',
   );
+  final pointerSemanticsFile = _interactiveSupportFile(
+    context,
+    'internal/scene_controller_pointer_semantics.dart',
+  );
   final selectionActionsFile = _interactiveSupportFile(
     context,
     'internal/interactive_selection_actions.dart',
@@ -751,6 +755,7 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
         sceneMutationsFile: 'SceneControllerSceneMutations',
         selectionMutationsFile: 'SceneControllerSelectionMutations',
         mutationBoundaryFile: 'SceneControllerMutationBoundary',
+        pointerSemanticsFile: 'SceneControllerPointerSemantics',
         selectionActionsFile: 'InteractiveSelectionActions',
         facadeAssemblyFile: 'assembleSceneControllerFacade',
         internalAccessFile: 'SceneControllerInternalAccess',
@@ -802,7 +807,19 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
   final sceneMutationsSource = sceneMutationsFile.readAsStringSync();
   final selectionMutationsSource = selectionMutationsFile.readAsStringSync();
   final mutationBoundarySource = mutationBoundaryFile.readAsStringSync();
+  final pointerSemanticsSource = pointerSemanticsFile.readAsStringSync();
   final selectionActionsSource = selectionActionsFile.readAsStringSync();
+  final eligibilityPolicyFile = _interactiveSupportFile(
+    context,
+    'interaction_eligibility_policy.dart',
+  );
+  final eligibilityPolicySource = eligibilityPolicyFile.readAsStringSync();
+  final pointerHostFile = File(
+    '${context.root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+    'src${Platform.pathSeparator}view${Platform.pathSeparator}'
+    'scene_view_interactive_pointer_host.dart',
+  );
+  final pointerHostSource = pointerHostFile.readAsStringSync();
 
   return _topLevelFacadeHelperViolation(context, parsed: parsed) ??
       _requireSourceTokens(
@@ -897,6 +914,18 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
             'SceneControllerMutationBoundary.',
       ) ??
       _requireSourceTokens(
+        source: eligibilityPolicySource,
+        filePath: _interactiveFilePosixPath(context, eligibilityPolicyFile),
+        requiredTokens: const <String>['_snapshotBoundsWorld('],
+        bannedTokens: const <String>[
+          "../model/document.dart",
+          'txnNodeFromSnapshot(',
+        ],
+        message:
+            'interactive API violation: interaction_eligibility_policy must '
+            'stay model-free and avoid document.dart materialization helpers.',
+      ) ??
+      _requireSourceTokens(
         source: sceneMutationsSource,
         filePath: _interactiveFilePosixPath(context, sceneMutationsFile),
         requiredTokens: const <String>['mutations.'],
@@ -904,9 +933,7 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
           'core.commands.',
           'core.writeReplaceScene(',
         ],
-        bannedPatterns: <RegExp>[
-          RegExp(r'core\.write\s*(<[^>]+>)?\s*\('),
-        ],
+        bannedPatterns: <RegExp>[RegExp(r'core\.write\s*(<[^>]+>)?\s*\(')],
         message:
             'interactive API violation: SceneControllerSceneMutations must '
             'delegate committed scene writes through '
@@ -917,9 +944,7 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
         filePath: _interactiveFilePosixPath(context, selectionMutationsFile),
         requiredTokens: const <String>['mutations.'],
         bannedTokens: const <String>['core.commands.'],
-        bannedPatterns: <RegExp>[
-          RegExp(r'core\.write\s*(<[^>]+>)?\s*\('),
-        ],
+        bannedPatterns: <RegExp>[RegExp(r'core\.write\s*(<[^>]+>)?\s*\(')],
         message:
             'interactive API violation: SceneControllerSelectionMutations '
             'must delegate committed selection writes through '
@@ -930,9 +955,7 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
         filePath: _interactiveFilePosixPath(context, selectionActionsFile),
         requiredTokens: const <String>['mutations.'],
         bannedTokens: const <String>['core.commands.'],
-        bannedPatterns: <RegExp>[
-          RegExp(r'core\.write\s*(<[^>]+>)?\s*\('),
-        ],
+        bannedPatterns: <RegExp>[RegExp(r'core\.write\s*(<[^>]+>)?\s*\(')],
         message:
             'interactive API violation: InteractiveSelectionActions must '
             'remain a thin routing shell over SceneControllerMutationBoundary.',
@@ -946,12 +969,45 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
           'core.commands.writeSelectionClear',
           'core.commands.writeDeleteSelection',
           'core.commands.writeSelectionTransform',
-          'core.writeReplaceScene(snapshot);',
+          'core.prepareSceneReplacement(snapshot);',
+          'core.writePreparedSceneReplacement(replacement);',
         ],
-        bannedTokens: const <String>[],
+        bannedTokens: const <String>[
+          'core.writeReplaceScene(snapshot);',
+          'txnSceneFromSnapshot(',
+        ],
         message:
             'interactive API violation: SceneControllerMutationBoundary must '
             'remain the canonical scene/selection write owner.',
+      ) ??
+      _requireSourceTokens(
+        source: pointerSemanticsSource,
+        filePath: _interactiveFilePosixPath(context, pointerSemanticsFile),
+        requiredTokens: const <String>[
+          'class SceneControllerPointerSemantics',
+          'PointerInputTracker(',
+          '_PendingTapFlushScheduler',
+        ],
+        bannedTokens: const <String>[],
+        message:
+            'interactive API violation: pointer semantics must stay owned by '
+            'SceneControllerPointerSemantics.',
+      ) ??
+      _requireSourceTokens(
+        source: pointerHostSource,
+        filePath: toRepoRelPosixPath(
+          absPosixPath: toPosixPath(pointerHostFile.absolute.path),
+          rootAbsPosixPath: context.rootAbsPosixPath,
+        ),
+        requiredTokens: const <String>['SceneControllerPointerSemantics('],
+        bannedTokens: const <String>[
+          'PointerInputTracker(',
+          '_PendingTapFlushScheduler',
+          '_pendingPointerSettings',
+        ],
+        message:
+            'interactive API violation: SceneViewInteractivePointerHost must '
+            'remain a raw routing/lifecycle shell over pointer semantics.',
       ) ??
       _requireSourceTokens(
         source: eventSource,

@@ -8,7 +8,7 @@ import '../../contract/transform2d.dart';
 import '../../controller/scene_controller.dart';
 import '../../core/action_events.dart';
 import '../../core/grid_safety_limits.dart';
-import '../../model/document.dart' show txnSceneFromSnapshot;
+import '../../controller/scene_snapshot_materializer.dart';
 import '../interaction_eligibility_policy.dart'
     as interaction_eligibility_policy;
 import 'interactive_move_callbacks.dart';
@@ -134,12 +134,12 @@ final class SceneControllerMutationBoundary {
     );
   }
 
-  void validateSceneReplacement(SceneSnapshot snapshot) {
-    txnSceneFromSnapshot(snapshot);
+  PreparedSceneReplacement prepareSceneReplacement(SceneSnapshot snapshot) {
+    return core.prepareSceneReplacement(snapshot);
   }
 
-  void replaceScene(SceneSnapshot snapshot) {
-    core.writeReplaceScene(snapshot);
+  void replaceScene(PreparedSceneReplacement replacement) {
+    core.writePreparedSceneReplacement(replacement);
     callbacks.clearPointerNormalizationState();
   }
 
@@ -173,9 +173,7 @@ final class SceneControllerMutationBoundary {
       return;
     }
 
-    final center = interaction_eligibility_policy.centerWorldForNodeSnapshots(
-      nodes,
-    );
+    final center = core.centerWorldForNodeSnapshots(nodes);
     final pivot = Transform2D.translation(center);
     final unpivot = Transform2D.translation(Offset(-center.dx, -center.dy));
     final rotation = Transform2D.rotationDeg(clockwise ? 90 : -90);
@@ -193,9 +191,7 @@ final class SceneControllerMutationBoundary {
       return;
     }
 
-    final center = interaction_eligibility_policy.centerWorldForNodeSnapshots(
-      nodes,
-    );
+    final center = core.centerWorldForNodeSnapshots(nodes);
     final delta = Transform2D(
       a: 1,
       b: 0,
@@ -217,9 +213,7 @@ final class SceneControllerMutationBoundary {
       return;
     }
 
-    final center = interaction_eligibility_policy.centerWorldForNodeSnapshots(
-      nodes,
-    );
+    final center = core.centerWorldForNodeSnapshots(nodes);
     final delta = Transform2D(
       a: -1,
       b: 0,

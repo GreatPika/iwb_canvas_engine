@@ -5,6 +5,7 @@ import 'scene_writer_nodes.dart';
 import 'scene_writer_scene.dart';
 import 'scene_writer_selection.dart';
 import 'scene_writer_signals.dart';
+import 'scene_snapshot_materializer.dart';
 import 'scene_writer_types.dart';
 import 'scene_writer_runtime.dart';
 
@@ -125,6 +126,10 @@ class SceneWriter implements SceneWriteTxn {
   @override
   void writeDocumentReplace(SceneSnapshot snapshot) {
     sceneWriterWriteDocumentReplace(this, snapshot);
+  }
+
+  void writePreparedDocumentReplace(PreparedSceneReplacement replacement) {
+    sceneWriterWritePreparedDocumentReplace(this, replacement);
   }
 
   @override

@@ -72,9 +72,9 @@ final class SceneControllerSceneMutations {
   }
 
   void replaceScene(SceneSnapshot snapshot) {
-    mutations.validateSceneReplacement(snapshot);
+    final replacement = mutations.prepareSceneReplacement(snapshot);
     resetActiveGestureBeforeExternalMutation();
-    mutations.replaceScene(snapshot);
+    mutations.replaceScene(replacement);
   }
 
   void notifySceneChanged() {

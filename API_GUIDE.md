@@ -437,6 +437,9 @@ Important behavior:
 - `setPointerSettings(...)` is applied live by `SceneView`
 - if a gesture is already active, new pointer settings take effect after
   `up` or `cancel`
+- `SceneView` owns only raw pointer routing; tap/double-tap recognition,
+  deferred tap flush, and applied-versus-pending pointer settings are owned by
+  a controller-side pointer-semantics runtime
 - active gesture ownership is controller-local: parallel `pointerId`s are
   ignored until terminal release, and `replaceScene(...)`, `setCameraOffset(...)`,
   `setMode(...)`, `setDrawTool(...)`, and `dispose()` force-reset the active
@@ -882,8 +885,9 @@ Validation rules:
 - value semantics include all four fields (`==` / `hashCode`)
 - `SceneView` applies updated settings immediately only when the raw-pointer
   router is idle
-- when raw host pointers are still live, `SceneView` keeps one pending settings
-  value and applies only the last update after router idle
+- when raw host pointers are still live, the controller-owned pointer-semantics
+  owner keeps one pending settings value and applies only the last update
+  after router idle
 - controller swaps discard pending settings from the previous controller owner
 
 ## 11. Serialization

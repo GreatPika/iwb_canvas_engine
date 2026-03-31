@@ -1,11 +1,12 @@
 import 'dart:ui' hide Scene;
 
-import '../contract/snapshot.dart';
+import '../contract/ids.dart';
 import '../contract/scene_write_txn.dart';
 import '../core/scene.dart' show Scene;
 import '../model/document.dart';
 import 'mutation_input_guards.dart';
 import 'mutation_op.dart';
+import 'scene_snapshot_materializer.dart';
 import 'txn_context.dart';
 
 MutationApplyResult<Object?> executeStructuralDocumentMutationOp(
@@ -19,7 +20,7 @@ MutationApplyResult<Object?> executeStructuralDocumentMutationOp(
       index: index,
     ),
     ClearSceneKeepBackgroundOp() => _clearSceneKeepBackground(ctx),
-    ReplaceSceneOp(:final snapshot) => _replaceScene(ctx, snapshot),
+    ReplaceSceneOp(:final replacement) => _replaceScene(ctx, replacement),
   };
 }
 
@@ -107,14 +108,11 @@ MutationApplyResult<ClearSceneResult> _clearSceneKeepBackground(
 
 MutationApplyResult<Object?> _replaceScene(
   TxnContext ctx,
-  SceneSnapshot snapshot,
+  PreparedSceneReplacement replacement,
 ) {
   final hadSelection = ctx.workingSelection.isNotEmpty;
-  final nextScene = txnSceneFromSnapshot(
-    snapshot,
-    nextInstanceRevision: ctx.txnNextInstanceRevision,
-  );
-  ctx.txnAdoptScene(nextScene);
+  ctx.txnAdoptScene(replacement.scene);
+  ctx.nextInstanceRevision = replacement.nextInstanceRevision;
   ctx.workingSelection.clear();
   ctx.changeSet.txnMarkDocumentReplaced();
   if (hadSelection) {

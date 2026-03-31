@@ -4,6 +4,15 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ## Unreleased
 
+- Interactive write-side ownership is now canonicalized across
+  `replaceScene(...)`, controller-side transform/delete preflight, and
+  `SceneView` pointer semantics: `replaceScene(...)` now materializes its
+  runtime payload exactly once before gesture reset, files under
+  `lib/src/interactive/**` no longer import `model/document.dart`, and
+  tap/double-tap recognition plus live pointer-settings adoption moved out of
+  `SceneViewInteractivePointerHost` into a dedicated controller-owned
+  pointer-semantics runtime.
+
 ### Breaking
 
 - `SceneDataErrorCode.multipleBackgroundLayers` was removed as an unreachable

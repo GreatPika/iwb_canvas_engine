@@ -59,6 +59,9 @@ void main() {
     final mutationBoundarySource = File(
       'lib/src/interactive/internal/scene_controller_mutation_boundary.dart',
     ).readAsStringSync();
+    final eligibilityPolicySource = File(
+      'lib/src/interactive/interaction_eligibility_policy.dart',
+    ).readAsStringSync();
     final sceneMutationsSource = File(
       'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
     ).readAsStringSync();
@@ -73,6 +76,12 @@ void main() {
     ).readAsStringSync();
     final interactionRuntimeSource = File(
       'lib/src/interactive/internal/scene_controller_interaction_runtime.dart',
+    ).readAsStringSync();
+    final pointerSemanticsSource = File(
+      'lib/src/interactive/internal/scene_controller_pointer_semantics.dart',
+    ).readAsStringSync();
+    final pointerHostSource = File(
+      'lib/src/view/scene_view_interactive_pointer_host.dart',
     ).readAsStringSync();
     final eventSource = File(
       'lib/src/interactive/internal/interactive_event_dispatcher.dart',
@@ -156,14 +165,38 @@ void main() {
     );
     expect(
       mutationBoundarySource,
-      contains('core.writeReplaceScene(snapshot);'),
+      contains('core.prepareSceneReplacement(snapshot);'),
     );
+    expect(
+      mutationBoundarySource,
+      contains('core.writePreparedSceneReplacement(replacement);'),
+    );
+    expect(
+      mutationBoundarySource,
+      isNot(contains('core.writeReplaceScene(snapshot);')),
+    );
+    expect(mutationBoundarySource, isNot(contains('txnSceneFromSnapshot(')));
 
     expect(sceneMutationsSource, contains('mutations.setGridCellSize(value);'));
-    expect(sceneMutationsSource, contains('mutations.replaceScene(snapshot);'));
+    expect(
+      sceneMutationsSource,
+      contains(
+        'final replacement = mutations.prepareSceneReplacement(snapshot);',
+      ),
+    );
+    expect(
+      sceneMutationsSource,
+      contains('mutations.replaceScene(replacement);'),
+    );
     expect(sceneMutationsSource, isNot(contains('core.commands.')));
     expect(sceneMutationsSource, isNot(contains('core.write(')));
     expect(sceneMutationsSource, isNot(contains('core.writeReplaceScene(')));
+
+    expect(
+      eligibilityPolicySource,
+      isNot(contains("import '../model/document.dart';")),
+    );
+    expect(eligibilityPolicySource, isNot(contains('txnNodeFromSnapshot(')));
 
     expect(
       selectionMutationsSource,
@@ -238,6 +271,16 @@ void main() {
       interactionRuntimeSource,
       contains('writeSelectionClear: mutationBoundary.clearSelection,'),
     );
+    expect(
+      pointerSemanticsSource,
+      contains('class SceneControllerPointerSemantics'),
+    );
+    expect(pointerSemanticsSource, contains('PointerInputTracker('));
+    expect(pointerSemanticsSource, contains('_PendingTapFlushScheduler'));
+    expect(pointerHostSource, contains('SceneControllerPointerSemantics('));
+    expect(pointerHostSource, isNot(contains('PointerInputTracker(')));
+    expect(pointerHostSource, isNot(contains('_PendingTapFlushScheduler')));
+    expect(pointerHostSource, isNot(contains('_pendingPointerSettings')));
     expect(runtimeSource, isNot(contains('StreamController<')));
     expect(runtimeSource, isNot(contains('_timestampCursorMs')));
     expect(runtimeSource, isNot(contains('_actionCounter')));

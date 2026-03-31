@@ -9,6 +9,7 @@ import 'package:iwb_canvas_engine/src/controller/mutation_executor.dart';
 import 'package:iwb_canvas_engine/src/controller/mutation_commit_preparer.dart';
 import 'package:iwb_canvas_engine/src/controller/mutation_execution_types.dart';
 import 'package:iwb_canvas_engine/src/controller/mutation_op.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_snapshot_materializer.dart';
 import 'package:iwb_canvas_engine/src/controller/txn_context.dart';
 
 // INV:INV-ENG-TXN-ATOMIC-COMMIT
@@ -579,15 +580,18 @@ void main() {
         executor,
         ctx,
         ReplaceSceneOp(
-          SceneSnapshot(
-            layers: <ContentLayerSnapshot>[
-              ContentLayerSnapshot(
-                id: 'layer-auto-5',
-                nodes: <NodeSnapshot>[
-                  RectNodeSnapshot(id: 'fresh', size: const Size(2, 2)),
-                ],
-              ),
-            ],
+          materializeSceneReplacement(
+            snapshot: SceneSnapshot(
+              layers: <ContentLayerSnapshot>[
+                ContentLayerSnapshot(
+                  id: 'layer-auto-5',
+                  nodes: <NodeSnapshot>[
+                    RectNodeSnapshot(id: 'fresh', size: const Size(2, 2)),
+                  ],
+                ),
+              ],
+            ),
+            nextInstanceRevisionSeed: ctx.nextInstanceRevision,
           ),
         ),
       );

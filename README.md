@@ -160,8 +160,8 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - `setPointerSettings(...)` is applied live by `SceneView`; active gestures keep
   their current settings until `up` or `cancel`, and parallel raw host pointers
   do not force an early reset of routed pointer tracking. Settings are treated
-  as a value object, and while raw pointers remain live the view keeps only the
-  last pending update until router idle.
+  as a value object, and while raw pointers remain live a controller-owned
+  pointer-semantics owner keeps only the last pending update until router idle.
 - `SceneController` keeps one controller-owned active gesture owner:
   parallel `pointerId`s are ignored until the owner ends, and
   `replaceScene(...)`, `setCameraOffset(...)`, mode/tool changes, and `dispose()`

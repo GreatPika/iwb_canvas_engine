@@ -211,8 +211,13 @@ class SceneControllerMutationBoundary {
     core.commands.writeSelectionTransform(delta);
   }
 
+  Object prepareSceneReplacement(Object snapshot) {
+    return core.prepareSceneReplacement(snapshot);
+  }
+
   void replaceScene(Object snapshot) {
-    core.writeReplaceScene(snapshot);
+    final replacement = core.prepareSceneReplacement(snapshot);
+    core.writePreparedSceneReplacement(replacement);
   }
 
   Object commitMoveSelection(Object proposedDelta) => proposedDelta;
@@ -221,7 +226,9 @@ class SceneControllerMutationBoundary {
 class _Core {
   final commands = _Commands();
 
-  void writeReplaceScene(Object snapshot) {}
+  Object prepareSceneReplacement(Object snapshot) => snapshot;
+
+  void writePreparedSceneReplacement(Object replacement) {}
 }
 
 class _Commands {
@@ -233,6 +240,15 @@ class _Commands {
 
   void writeSelectionTransform(Object delta) {}
 }
+''',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/interaction_eligibility_policy.dart',
+    '''
+Object _snapshotBoundsWorld(Object node) => node;
+
+bool canSelect(Object node) => true;
 ''',
   );
   writeSandboxFile(
@@ -431,6 +447,23 @@ typedef InteractiveDrawStyle = ({
   );
   writeSandboxFile(
     sandbox,
+    'lib/src/interactive/internal/scene_controller_pointer_semantics.dart',
+    '''
+class PointerInputTracker {}
+
+class SceneControllerPointerSemantics {
+  final _PendingTapFlushScheduler scheduler = _PendingTapFlushScheduler();
+
+  void createTracker() {
+    PointerInputTracker();
+  }
+}
+
+class _PendingTapFlushScheduler {}
+''',
+  );
+  writeSandboxFile(
+    sandbox,
     'lib/src/interactive/internal/scene_controller_interaction_runtime.dart',
     '''
 import 'scene_controller_mutation_boundary.dart';
@@ -454,6 +487,17 @@ class SceneControllerInteractionRuntime {
     sandbox,
     'lib/src/interactive/internal/scene_controller_interaction_access.dart',
     'class SceneControllerInteractionContext {}\n',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/view/scene_view_interactive_pointer_host.dart',
+    '''
+import '../interactive/internal/scene_controller_pointer_semantics.dart';
+
+class SceneViewInteractivePointerHost {
+  final semantics = SceneControllerPointerSemantics();
+}
+''',
   );
   writeSandboxFile(
     sandbox,
@@ -561,8 +605,9 @@ if (_isSameOffset(value)) {
 resetActiveGestureBeforeExternalMutation();
 ''',
   String replaceSceneBody = '''
-validateSnapshot(snapshot);
+final replacement = mutations.prepareSceneReplacement(snapshot);
 resetActiveGestureBeforeExternalMutation();
+mutations.replaceScene(replacement);
 ''',
 }) {
   return _mutationOwnerFixture(
@@ -583,8 +628,6 @@ resetActiveGestureBeforeExternalMutation();
   void _requireFiniteOffset(Object value) {}
 
   bool _isSameOffset(Object value) => false;
-
-  void validateSnapshot(Object snapshot) {}
 
   void _touchMutationBoundary() {
     mutations.toString();

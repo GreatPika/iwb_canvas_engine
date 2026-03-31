@@ -1,13 +1,10 @@
-import 'dart:async';
-
 import 'package:flutter/widgets.dart';
 
 import '../contract/canvas_pointer_input.dart';
 import '../core/pointer_input.dart';
 import '../interactive/scene_controller.dart';
+import '../interactive/internal/scene_controller_pointer_semantics.dart';
 import 'scene_view_pointer_router.dart';
-
-void _discardPointerSignal(PointerSignal _) {}
 
 bool _hasFiniteLocalPosition(PointerEvent event) {
   return event.localPosition.dx.isFinite && event.localPosition.dy.isFinite;
@@ -75,70 +72,6 @@ CanvasPointerPhase _toCanvasPointerPhase(PointerPhase phase) {
       return CanvasPointerPhase.up;
     case PointerPhase.cancel:
       return CanvasPointerPhase.cancel;
-  }
-}
-
-class _PendingTapFlushScheduler {
-  Timer? _pendingTapTimer;
-  int? _pendingTapFlushTimestampMs;
-
-  int? get pendingTapFlushTimestampMs => _pendingTapFlushTimestampMs;
-
-  void dispose() {
-    clear();
-  }
-
-  void clear() {
-    _pendingTapTimer?.cancel();
-    _pendingTapTimer = null;
-    _pendingTapFlushTimestampMs = null;
-  }
-
-  void sync({
-    required int? nextFlushTimestampMs,
-    required int referenceTimestampMs,
-    required int ownerGeneration,
-    required void Function(int expectedFlushTimestampMs, int ownerGeneration)
-    onFlush,
-  }) {
-    if (nextFlushTimestampMs == null) {
-      clear();
-      return;
-    }
-
-    if (_pendingTapTimer != null &&
-        _pendingTapFlushTimestampMs == nextFlushTimestampMs) {
-      return;
-    }
-
-    clear();
-    _pendingTapFlushTimestampMs = nextFlushTimestampMs;
-    final delayMs = (nextFlushTimestampMs - referenceTimestampMs)
-        .clamp(0, 1 << 30)
-        .toInt();
-    _pendingTapTimer = Timer(
-      Duration(milliseconds: delayMs),
-      () => onFlush(nextFlushTimestampMs, ownerGeneration),
-    );
-  }
-
-  bool matches({
-    required int expectedFlushTimestampMs,
-    required int ownerGeneration,
-    required int currentGeneration,
-    required bool isMounted,
-  }) {
-    return isMounted &&
-        ownerGeneration == currentGeneration &&
-        _pendingTapFlushTimestampMs == expectedFlushTimestampMs;
-  }
-
-  void clearCompleted(int expectedFlushTimestampMs) {
-    if (_pendingTapFlushTimestampMs != expectedFlushTimestampMs) {
-      return;
-    }
-    _pendingTapTimer = null;
-    _pendingTapFlushTimestampMs = null;
   }
 }
 
@@ -221,40 +154,31 @@ class _SceneViewInteractivePointerRuntime {
     required SceneController controller,
     required bool Function() isMounted,
   }) : _controller = controller,
-       _isMounted = isMounted,
-       _appliedPointerSettings = controller.interaction.pointerSettings,
-       _pointerTracker = PointerInputTracker(
-         settings: controller.interaction.pointerSettings,
-       ) {
-    _pointerTrackerGeneration = 1;
-  }
+       _pointerSemantics = SceneControllerPointerSemantics(
+         controller: controller,
+         isMounted: isMounted,
+       );
 
   SceneController _controller;
-  final bool Function() _isMounted;
 
   final SceneViewPointerRouter _pointerRouter = SceneViewPointerRouter();
-  final _PendingTapFlushScheduler _pendingTapFlushScheduler =
-      _PendingTapFlushScheduler();
-
-  late PointerInputTracker _pointerTracker;
-  late PointerInputSettings _appliedPointerSettings;
-  PointerInputSettings? _pendingPointerSettings;
-  int _pointerTrackerGeneration = 0;
+  final SceneControllerPointerSemantics _pointerSemantics;
 
   int get debugLiveRawPointerCount => _pointerRouter.liveRawPointerCount;
   int? get debugPendingTapFlushTimestampMs =>
-      _pendingTapFlushScheduler.pendingTapFlushTimestampMs;
+      _pointerSemantics.pendingTapFlushTimestampMs;
 
   void updateController(SceneController controller) {
     if (identical(_controller, controller)) {
       return;
     }
     _controller = controller;
-    _resetPointerTracking(settings: controller.interaction.pointerSettings);
+    _pointerRouter.reset();
+    _pointerSemantics.updateController(controller);
   }
 
   void dispose() {
-    _pendingTapFlushScheduler.dispose();
+    _pointerSemantics.dispose();
   }
 
   void handlePointerEvent(PointerEvent event, PointerPhase phase) {
@@ -280,103 +204,25 @@ class _SceneViewInteractivePointerRuntime {
       event: event,
       phase: phase,
     );
-    _controller.interaction.handlePointer(
-      _canvasPointerInputFromSample(sample),
+    _pointerSemantics.handleRoutedSample(
+      sample,
+      shouldTrackSignals: _pointerRouter.shouldTrackSignals(
+        pointerId: sample.pointerId,
+        phase: sample.phase,
+      ),
     );
-    _emitTrackedSignals(sample);
-    _syncPendingFlushTimer(referenceTimestampMs: sample.timestampMs);
-    if (!_isTerminalPhase(phase)) {
-      return;
-    }
-    if (_pointerRouter.release(event.pointer).isIdleAfterRelease) {
-      _applyPendingPointerSettingsIfPossible();
-    }
-  }
-
-  void handleControllerChanged() {
-    _adoptPointerSettings(_controller.interaction.pointerSettings);
-  }
-
-  void _emitTrackedSignals(PointerSample sample) {
-    if (!_pointerRouter.shouldTrackSignals(
-      pointerId: sample.pointerId,
-      phase: sample.phase,
-    )) {
-      return;
-    }
-    for (final signal in _pointerTracker.handle(sample)) {
-      if (signal.type != PointerSignalType.doubleTap) {
-        continue;
-      }
-      _controller.interaction.handleDoubleTap(
-        position: signal.position,
-        timestampMs: signal.timestampMs,
+    if (_isTerminalPhase(phase)) {
+      final release = _pointerRouter.release(event.pointer);
+      _pointerSemantics.handleRawPointerRelease(
+        isIdleAfterRelease: release.isIdleAfterRelease,
       );
     }
   }
 
-  void _syncPendingFlushTimer({required int referenceTimestampMs}) {
-    _pendingTapFlushScheduler.sync(
-      nextFlushTimestampMs: _pointerTracker.nextPendingFlushTimestampMs,
-      referenceTimestampMs: referenceTimestampMs,
-      ownerGeneration: _pointerTrackerGeneration,
-      onFlush: _handlePendingTapTimer,
+  void handleControllerChanged() {
+    _pointerSemantics.handleControllerChanged(
+      routerHasLiveRawPointers: _pointerRouter.hasLiveRawPointers,
     );
-  }
-
-  void _handlePendingTapTimer(
-    int expectedFlushTimestampMs,
-    int ownerGeneration,
-  ) {
-    if (!_pendingTapFlushScheduler.matches(
-      expectedFlushTimestampMs: expectedFlushTimestampMs,
-      ownerGeneration: ownerGeneration,
-      currentGeneration: _pointerTrackerGeneration,
-      isMounted: _isMounted(),
-    )) {
-      return;
-    }
-
-    _pendingTapFlushScheduler.clearCompleted(expectedFlushTimestampMs);
-    _pointerTracker.flushPendingTo(
-      expectedFlushTimestampMs,
-      _discardPointerSignal,
-    );
-    if (!_isMounted() || ownerGeneration != _pointerTrackerGeneration) {
-      return;
-    }
-    _syncPendingFlushTimer(referenceTimestampMs: expectedFlushTimestampMs);
-  }
-
-  void _resetPointerTracking({required PointerInputSettings settings}) {
-    _pendingPointerSettings = null;
-    _appliedPointerSettings = settings;
-    _pointerTracker = PointerInputTracker(settings: settings);
-    _pointerTrackerGeneration++;
-    _pendingTapFlushScheduler.clear();
-    _pointerRouter.reset();
-  }
-
-  void _adoptPointerSettings(PointerInputSettings nextSettings) {
-    if (_pointerRouter.hasLiveRawPointers) {
-      _pendingPointerSettings = nextSettings == _appliedPointerSettings
-          ? null
-          : nextSettings;
-      return;
-    }
-    if (nextSettings == _appliedPointerSettings) {
-      _pendingPointerSettings = null;
-      return;
-    }
-    _resetPointerTracking(settings: nextSettings);
-  }
-
-  void _applyPendingPointerSettingsIfPossible() {
-    final pending = _pendingPointerSettings;
-    if (pending == null || !_pointerRouter.isIdle) {
-      return;
-    }
-    _resetPointerTracking(settings: pending);
   }
 
   void _forwardInvalidTerminalHostEvent(
@@ -392,24 +238,17 @@ class _SceneViewInteractivePointerRuntime {
       return;
     }
 
-    _controller.interaction.handlePointer(
-      _canvasPointerInputFromSample(
-        _pointerSampleFromEvent(
-          pointerId: pointerId,
-          event: event,
-          phase: phase,
-        ),
-      ),
+    final input = _canvasPointerInputFromSample(
+      _pointerSampleFromEvent(pointerId: pointerId, event: event, phase: phase),
     );
-
-    _pointerTracker.discardPointer(pointerId);
     final release = _pointerRouter.release(event.pointer);
-    if (release.isIdleAfterRelease) {
-      _applyPendingPointerSettingsIfPossible();
-      return;
-    }
-    _syncPendingFlushTimer(
+    _pointerSemantics.handleInvalidTerminalSample(
+      input: input,
+      pointerId: pointerId,
       referenceTimestampMs: event.timeStamp.inMilliseconds,
+    );
+    _pointerSemantics.handleRawPointerRelease(
+      isIdleAfterRelease: release.isIdleAfterRelease,
     );
   }
 }

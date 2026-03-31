@@ -1,5 +1,7 @@
+import '../contract/snapshot.dart';
 import 'mutation_executor.dart';
 import 'mutation_op.dart';
+import 'scene_snapshot_materializer.dart';
 import 'txn_context.dart';
 import 'internal/signal_event.dart';
 
@@ -19,6 +21,14 @@ final class SceneWriterRuntime {
   ) {
     ensureTxnActive();
     return mutationExecutor.execute(ctx, op);
+  }
+
+  PreparedSceneReplacement prepareSceneReplacement(SceneSnapshot snapshot) {
+    ensureTxnActive();
+    return materializeSceneReplacement(
+      snapshot: snapshot,
+      nextInstanceRevisionSeed: ctx.nextInstanceRevision,
+    );
   }
 
   void ensureTxnActive() {

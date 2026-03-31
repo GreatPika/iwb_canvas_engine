@@ -258,7 +258,7 @@ Introduce one controller-private mutation boundary consumed by public capability
 - green run of the listed verifications;
 - listed interactive mutation callers no longer invoke `core.commands.writeSelection*`, `core.write(...)`, or `core.writeReplaceScene(...)` directly for scene/selection mutation behavior.
 
-### Slice 3. [ ] Single-Import ReplaceScene And Model-Free Interactive Preflight
+### Slice 3. [x] Single-Import ReplaceScene And Model-Free Interactive Preflight
 
 #### Slice Contract
 
@@ -292,7 +292,7 @@ Introduce a prepared scene-replacement owner that materializes runtime scene plu
 - structural proof that `lib/src/interactive/**` has no direct `document.dart` import;
 - source proof that the replace-scene apply path consumes a prepared payload instead of reimporting the snapshot.
 
-### Slice 4. [ ] Dedicated Pointer-Semantics Owner
+### Slice 4. [x] Dedicated Pointer-Semantics Owner
 
 #### Slice Contract
 
@@ -353,3 +353,14 @@ Extract pointer semantics into one dedicated owner beneath the existing public c
 - Mandatory slices are closed.
 - Final verification has passed.
 - Repo docs, invariants, and structural guardrails describe and enforce the same owner graph without split-source fallback wording.
+
+## 11. Verification Evidence
+
+- Final file-level metrics were captured for the full step-closure file set with:
+  `dcm calculate-metrics lib/src/view/scene_view_interactive_pointer_host.dart lib/src/interactive/scene_controller_interaction.dart lib/src/interactive/interaction_eligibility_policy.dart lib/src/interactive/internal/scene_controller_interaction_runtime.dart lib/src/interactive/internal/scene_controller_facade_assembly.dart lib/src/interactive/internal/scene_controller_scene_mutations.dart lib/src/interactive/internal/scene_controller_selection_mutations.dart lib/src/interactive/internal/interactive_selection_actions.dart lib/src/controller/scene_writer_selection.dart lib/src/controller/mutation_op.dart lib/src/controller/mutation_executor.dart lib/src/controller/scene_mutation_applier.dart --report-all`
+- The metrics run completed green with exit code `0`; no threshold violations were reported for the targeted file set. The highest near-threshold findings in this run were:
+  - `lib/src/view/scene_view_interactive_pointer_host.dart`: `_SceneViewInteractivePointerRuntime.handlePointerEvent` at `33` source lines (`NEAR`).
+  - `lib/src/controller/mutation_op.dart`: `EnsureLayerOp` at inheritance depth `4` (`NEAR`).
+- Targeted duplication analysis was also captured for the same file set with:
+  `dcm check-code-duplication lib/src/view/scene_view_interactive_pointer_host.dart lib/src/interactive/scene_controller_interaction.dart lib/src/interactive/interaction_eligibility_policy.dart lib/src/interactive/internal/scene_controller_interaction_runtime.dart lib/src/interactive/internal/scene_controller_facade_assembly.dart lib/src/interactive/internal/scene_controller_scene_mutations.dart lib/src/interactive/internal/scene_controller_selection_mutations.dart lib/src/interactive/internal/interactive_selection_actions.dart lib/src/controller/scene_writer_selection.dart lib/src/controller/mutation_op.dart lib/src/controller/mutation_executor.dart lib/src/controller/scene_mutation_applier.dart --output-format console`
+- The duplication run completed green with exit code `0` and reported `0` code duplicates for the targeted file set.
