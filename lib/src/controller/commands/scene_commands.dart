@@ -5,6 +5,7 @@ import '../../contract/ids.dart' show LayerId;
 import '../../contract/transform2d.dart';
 import '../../contract/node_patch.dart';
 import '../../contract/node_spec.dart';
+import '../../contract/scene_write_txn.dart';
 import '../scene_writer_command_results.dart';
 import '../scene_writer.dart';
 
@@ -147,9 +148,9 @@ class SceneCommands {
     });
   }
 
-  int writeClearScene() {
+  ClearSceneResult writeClearSceneExactResult() {
     return _writeRunner((writer) {
-      final clearResult = writer.writeClearSceneKeepBackgroundResult();
+      final clearResult = sceneWriterWriteClearSceneExactResult(writer);
       final removedNodeIds = clearResult.removedNodeIds;
       if (removedNodeIds.isNotEmpty || clearResult.didStructuralClear) {
         sceneWriterWriteOwnedSignalExactEnqueue(
@@ -158,8 +159,12 @@ class SceneCommands {
           nodeIds: removedNodeIds,
         );
       }
-      return removedNodeIds.length;
+      return clearResult;
     });
+  }
+
+  int writeClearScene() {
+    return writeClearSceneExactResult().removedNodeIds.length;
   }
 
   void writeBackgroundColorSet(Color color) {

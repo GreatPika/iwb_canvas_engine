@@ -109,6 +109,42 @@ void main() {
     expect(bufferedSignals, isEmpty);
   });
 
+  test('writeClearSceneExactResult preserves structural clear metadata', () {
+    final bufferedSignals = <BufferedSignal>[];
+    final ctx = TxnContext(
+      baseScene: Scene(
+        layers: <ContentLayer>[ContentLayer(id: 'layer-auto-1')],
+      ),
+      workingSelection: <NodeId>{},
+      baseAllNodeIds: <NodeId>{},
+      idGeneratorState: createIdGeneratorStateForTesting(
+        nextNodeCounter: 1,
+        nextLayerCounter: 1,
+      ),
+      nextInstanceRevision: 1,
+    );
+    T writeRunner<T>(T Function(SceneWriter writer) fn) {
+      final writer = SceneWriter(
+        SceneWriterRuntime(
+          ctx: ctx,
+          mutationExecutor: MutationExecutor(),
+          txnSignalSink: bufferedSignals.add,
+        ),
+      );
+      return fn(writer);
+    }
+
+    final commands = SceneCommands(writeRunner);
+
+    final clearResult = commands.writeClearSceneExactResult();
+
+    expect(clearResult.didStructuralClear, isTrue);
+    expect(clearResult.removedNodeIds, isEmpty);
+    expect(bufferedSignals, hasLength(1));
+    expect(bufferedSignals.single.type, 'scene.cleared');
+    expect(bufferedSignals.single.nodeIds, isEmpty);
+  });
+
   test('scene commands route structural updates through write', () async {
     final controller = buildController();
     addTearDown(controller.dispose);

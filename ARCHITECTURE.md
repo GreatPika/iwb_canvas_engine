@@ -269,7 +269,10 @@ Ownership decisions for the target state:
   competing pointer lock.
 - `SceneControllerMutationBoundary` is the only interactive owner allowed to
   perform committed scene/selection writes from public scene/selection
-  capability surfaces and gesture-local selection flows.
+  capability surfaces and gesture-local selection flows. For `clearScene(...)`,
+  the boundary is only the interactive adapter: structural clear ownership
+  stays in `controller/commands/scene_commands.dart`, and the boundary adds the
+  interactive `ActionType.clear` projection without re-owning the write path.
 - `SceneControllerSelectionMutations`, `SceneControllerSceneMutations`, and
   `InteractiveSelectionActions` are thin routing shells only. They may enforce
   public gesture policy or route gesture-local requests, but they must not

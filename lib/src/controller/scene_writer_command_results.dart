@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import '../contract/scene_write_txn.dart';
 import '../core/nodes.dart';
 import 'mutation_op.dart';
 import 'scene_writer.dart';
@@ -36,6 +37,10 @@ sceneWriterWriteSelectionSelectAllExactResult(
 
 List<NodeId> sceneWriterWriteDeleteSelectionExactResult(SceneWriter writer) {
   return sceneWriterWriteDeleteSelectionResult(writer);
+}
+
+ClearSceneResult sceneWriterWriteClearSceneExactResult(SceneWriter writer) {
+  return sceneWriterWriteClearSceneKeepBackgroundResult(writer);
 }
 
 bool sceneWriterWriteCameraOffsetExactChange(

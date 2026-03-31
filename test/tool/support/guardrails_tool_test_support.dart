@@ -195,6 +195,10 @@ class _Mutations {
 class SceneControllerMutationBoundary {
   final core = _Core();
 
+  void clearScene() {
+    core.commands.writeClearSceneExactResult();
+  }
+
   void setSelection(Object nodeIds) {
     core.commands.writeSelectionReplace(nodeIds);
   }
@@ -232,6 +236,8 @@ class _Core {
 }
 
 class _Commands {
+  void writeClearSceneExactResult() {}
+
   void writeSelectionReplace(Object nodeIds) {}
 
   void writeSelectionClear() {}

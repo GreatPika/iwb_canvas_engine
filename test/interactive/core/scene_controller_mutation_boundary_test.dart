@@ -134,6 +134,62 @@ void main() {
       expect(notifications, greaterThan(0));
     });
 
+    test('emits clear action for structural clear without removed nodes', () {
+      final controller = SceneControllerCore(
+        initialSnapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-auto-0',
+              nodes: const <NodeSnapshot>[],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      final emitted =
+          <
+            ({
+              ActionType type,
+              List<NodeId> nodeIds,
+              int timestampMs,
+              Map<String, Object?>? payload,
+            })
+          >[];
+
+      final boundary = SceneControllerMutationBoundary(
+        core: controller,
+        readSnapshot: () => controller.snapshot,
+        callbacks: SceneControllerMutationBoundaryCallbacks(
+          resolveTimestampMs: (timestampMs) => timestampMs ?? -1,
+          emitAction:
+              (type, nodeIds, timestampMs, {Map<String, Object?>? payload}) {
+                emitted.add((
+                  type: type,
+                  nodeIds: List<NodeId>.from(nodeIds),
+                  timestampMs: timestampMs,
+                  payload: payload,
+                ));
+              },
+          resolveMoveCommitDelta:
+              ({
+                required SceneSnapshot snapshot,
+                required List<NodeSnapshot> movedNodes,
+                required Offset proposedDelta,
+              }) => proposedDelta,
+          requireFiniteOffset: (value, {required name}) {},
+          clearPointerNormalizationState: () {},
+        ),
+      );
+
+      boundary.clearScene(timestampMs: 9);
+
+      expect(emitted, hasLength(1));
+      expect(emitted.single.type, ActionType.clear);
+      expect(emitted.single.nodeIds, isEmpty);
+      expect(emitted.single.timestampMs, 9);
+    });
+
     test('applies selection transforms deletion and move commits', () {
       final controller = SceneControllerCore(
         initialSnapshot: SceneSnapshot(

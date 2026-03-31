@@ -965,6 +965,7 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
         filePath: _interactiveFilePosixPath(context, mutationBoundaryFile),
         requiredTokens: const <String>[
           'class SceneControllerMutationBoundary',
+          'core.commands.writeClearSceneExactResult',
           'core.commands.writeSelectionReplace',
           'core.commands.writeSelectionClear',
           'core.commands.writeDeleteSelection',
@@ -975,6 +976,11 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
         bannedTokens: const <String>[
           'core.writeReplaceScene(snapshot);',
           'txnSceneFromSnapshot(',
+        ],
+        bannedPatterns: <RegExp>[
+          RegExp(
+            r'\bclearScene\s*\([^)]*\)\s*\{[^}]*core\.write\s*(<[^>]+>)?\s*\(',
+          ),
         ],
         message:
             'interactive API violation: SceneControllerMutationBoundary must '

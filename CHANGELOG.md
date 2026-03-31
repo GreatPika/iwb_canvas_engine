@@ -12,7 +12,10 @@ All notable changes to `iwb_canvas_engine` are documented here.
   tap/double-tap recognition plus live pointer-settings adoption moved out of
   `SceneViewInteractivePointerHost` into a dedicated controller-owned
   pointer-semantics runtime assembled behind controller-private internal
-  access instead of a view-local concrete dependency.
+  access instead of a view-local concrete dependency. `clearScene(...)` now
+  routes its structural write through the same command-layer owner that emits
+  `scene.cleared`, leaving `SceneControllerMutationBoundary` as the interactive
+  action adapter instead of a second write-side owner.
 
 ### Breaking
 

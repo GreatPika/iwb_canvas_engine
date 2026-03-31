@@ -114,22 +114,14 @@ final class SceneControllerMutationBoundary {
   }
 
   void clearScene({int? timestampMs}) {
-    final clearResult = core.write<({List<NodeId> clearedIds, bool changed})>((
-      writer,
-    ) {
-      final result = writer.writeClearSceneKeepBackgroundResult();
-      return (
-        clearedIds: result.removedNodeIds,
-        changed: result.didStructuralClear,
-      );
-    });
-    if (!clearResult.changed) {
+    final clearResult = core.commands.writeClearSceneExactResult();
+    if (!clearResult.didStructuralClear) {
       return;
     }
 
     callbacks.emitAction(
       ActionType.clear,
-      clearResult.clearedIds,
+      clearResult.removedNodeIds,
       callbacks.resolveTimestampMs(timestampMs),
     );
   }
