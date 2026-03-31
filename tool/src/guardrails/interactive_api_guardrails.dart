@@ -999,8 +999,12 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
           absPosixPath: toPosixPath(pointerHostFile.absolute.path),
           rootAbsPosixPath: context.rootAbsPosixPath,
         ),
-        requiredTokens: const <String>['SceneControllerPointerSemantics('],
+        requiredTokens: const <String>[
+          'SceneControllerPointerSemanticsBridge',
+          'sceneControllerInternalCreatePointerSemanticsBridge(',
+        ],
         bannedTokens: const <String>[
+          'SceneControllerPointerSemantics(',
           'PointerInputTracker(',
           '_PendingTapFlushScheduler',
           '_pendingPointerSettings',

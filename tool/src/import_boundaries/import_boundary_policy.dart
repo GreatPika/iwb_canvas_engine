@@ -142,6 +142,17 @@ bool isAllowedExternalPackageImport({
       _matchesAnyPrefix(targetPosix, allowedPrefixes);
 }
 
+bool isViewPointerSemanticsBoundaryFile(String repoRelPosixPath) {
+  return repoRelPosixPath == '/lib/src/view/scene_view_interactive.dart' ||
+      repoRelPosixPath ==
+          '/lib/src/view/scene_view_interactive_pointer_host.dart';
+}
+
+bool isAllowedViewPointerSemanticsInternalTarget(String resolvedRepoRelPosix) {
+  return resolvedRepoRelPosix ==
+      '/lib/src/interactive/internal/scene_controller_internal_access.dart';
+}
+
 String? commandGroupForFilePosix(String filePosixPath) {
   const marker = '/lib/src/controller/commands/';
   final idx = filePosixPath.indexOf(marker);

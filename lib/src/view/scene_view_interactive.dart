@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 
 import '../core/pointer_input.dart';
 import '../interactive/scene_controller.dart';
+import '../interactive/internal/scene_controller_internal_access.dart';
 import '../render/scene_render_caches.dart';
 import 'scene_view_interactive_overlay_painter.dart';
 import 'scene_view_interactive_pointer_host.dart';
@@ -82,6 +83,10 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
       controller: widget.controller,
       isMounted: () => mounted,
       onControllerChanged: () {},
+      pointerSemantics: sceneControllerInternalCreatePointerSemanticsBridge(
+        widget.controller,
+        isMounted: () => mounted,
+      ),
     );
   }
 

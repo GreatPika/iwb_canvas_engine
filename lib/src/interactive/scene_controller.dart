@@ -45,6 +45,7 @@ class SceneController extends ChangeNotifier implements SceneRenderState {
         previewDeltaForNode: _facade.interactionRuntime.previewDeltaForNode,
         setBeforePointerDispatchHook:
             _facade.interactionRuntime.setBeforePointerDispatchHook,
+        createPointerSemanticsBridge: _facade.createPointerSemanticsBridge,
         runMoveCommitDeltaResolverForTest:
             _facade.interactionRuntime.runMoveCommitDeltaResolver,
         readInteractionAccessForTest: () => _facade.interactionAccess,

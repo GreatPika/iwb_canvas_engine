@@ -492,10 +492,21 @@ class SceneControllerInteractionRuntime {
     sandbox,
     'lib/src/view/scene_view_interactive_pointer_host.dart',
     '''
-import '../interactive/internal/scene_controller_pointer_semantics.dart';
+import '../interactive/internal/scene_controller_internal_access.dart';
 
 class SceneViewInteractivePointerHost {
-  final semantics = SceneControllerPointerSemantics();
+  SceneViewInteractivePointerHost({
+    required SceneControllerPointerSemanticsBridge pointerSemantics,
+  }) : semantics = pointerSemantics;
+
+  final SceneControllerPointerSemanticsBridge semantics;
+
+  void updateController(Object controller) {
+    sceneControllerInternalCreatePointerSemanticsBridge(
+      controller,
+      isMounted: Object(),
+    );
+  }
 }
 ''',
   );
@@ -550,16 +561,11 @@ Object assembleSceneControllerFacade() {
     'lib/src/interactive/internal/scene_controller_internal_access.dart',
     '''
 void registerSceneControllerInternalAccess(
-  Object controller, {
-  required Object readEpoch,
-  required Object previewDeltaForNode,
-  required Object setBeforePointerDispatchHook,
-  required Object runMoveCommitDeltaResolverForTest,
-  required Object readInteractionAccessForTest,
-  required Object readActiveEraserPointsLength,
-  required Object readEraserSpatialQueryCount,
-  required Object readEraserPreciseSegmentCheckCount,
-}) {}
+  Object controller,
+  Object registration,
+) {}
+
+abstract interface class SceneControllerPointerSemanticsBridge {}
 
 int sceneControllerInternalEpoch(Object controller) => 0;
 
@@ -567,6 +573,11 @@ Object sceneControllerInternalPreviewDeltaForNode(
   Object controller,
   Object nodeId,
 ) => Object();
+
+Object sceneControllerInternalCreatePointerSemanticsBridge(
+  Object controller, {
+  required Object isMounted,
+}) => Object();
 
 void sceneControllerInternalSetBeforePointerDispatchHook(
   Object controller,

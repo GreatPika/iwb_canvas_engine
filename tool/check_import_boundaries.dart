@@ -10,5 +10,6 @@ import 'src/import_boundaries/import_boundaries_runner.dart';
 // INV:INV-ENG-INTERNAL-NO-SCENE-CONTROLLER
 // INV:INV-ENG-INTERNAL-NO-COMMANDS-IMPORTS
 // INV:INV-ENG-SHARED-CONTROLLER-HELPERS
+// INV:INV-ENG-VIEW-POINTER-SEMANTICS-BOUNDARY
 
 Future<void> main(List<String> _) => runImportBoundariesTool();

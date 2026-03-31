@@ -3,10 +3,12 @@ import 'dart:async';
 import '../../contract/canvas_pointer_input.dart';
 import '../../core/pointer_input.dart';
 import '../scene_controller.dart';
+import 'scene_controller_internal_access.dart';
 
 void _discardPointerSignal(PointerSignal _) {}
 
-final class SceneControllerPointerSemantics {
+final class SceneControllerPointerSemantics
+    implements SceneControllerPointerSemanticsBridge {
   SceneControllerPointerSemantics({
     required SceneController controller,
     required bool Function() isMounted,
@@ -19,7 +21,7 @@ final class SceneControllerPointerSemantics {
     _pointerTrackerGeneration = 1;
   }
 
-  SceneController _controller;
+  final SceneController _controller;
   final bool Function() _isMounted;
   final _PendingTapFlushScheduler _pendingTapFlushScheduler =
       _PendingTapFlushScheduler();
@@ -29,21 +31,16 @@ final class SceneControllerPointerSemantics {
   PointerInputSettings? _pendingPointerSettings;
   int _pointerTrackerGeneration = 0;
 
+  @override
   int? get pendingTapFlushTimestampMs =>
       _pendingTapFlushScheduler.pendingTapFlushTimestampMs;
 
-  void updateController(SceneController controller) {
-    if (identical(_controller, controller)) {
-      return;
-    }
-    _controller = controller;
-    _resetPointerTracking(settings: controller.interaction.pointerSettings);
-  }
-
+  @override
   void dispose() {
     _pendingTapFlushScheduler.dispose();
   }
 
+  @override
   void handleControllerChanged({required bool routerHasLiveRawPointers}) {
     _adoptPointerSettings(
       _controller.interaction.pointerSettings,
@@ -51,6 +48,7 @@ final class SceneControllerPointerSemantics {
     );
   }
 
+  @override
   void handleRoutedSample(
     PointerSample sample, {
     required bool shouldTrackSignals,
@@ -70,6 +68,7 @@ final class SceneControllerPointerSemantics {
     _syncPendingFlushTimer(referenceTimestampMs: sample.timestampMs);
   }
 
+  @override
   void handleInvalidTerminalSample({
     required CanvasPointerInput input,
     required int pointerId,
@@ -80,6 +79,7 @@ final class SceneControllerPointerSemantics {
     _syncPendingFlushTimer(referenceTimestampMs: referenceTimestampMs);
   }
 
+  @override
   void handleRawPointerRelease({required bool isIdleAfterRelease}) {
     if (!isIdleAfterRelease) {
       return;

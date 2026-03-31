@@ -212,9 +212,14 @@ Ownership decisions for the target state:
 
 1. `SceneView` receives Flutter pointer input and normalizes it into public
    `CanvasPointerInput`, while its view-local pointer router owns raw Flutter
-   pointer lifetimes and routed runtime `pointerId` allocation. A dedicated
-   controller-owned pointer-semantics owner consumes those routed samples,
-   owns tap/double-tap recognition, deferred tap flushing, and live
+   pointer lifetimes and routed runtime `pointerId` allocation. The closed
+   local seam around `scene_view_interactive.dart` and
+   `scene_view_interactive_pointer_host.dart` may consume only the assembled
+   controller-private bridge from
+   `interactive/internal/scene_controller_internal_access.dart`; concrete
+   pointer-semantics ownership stays outside `view/**`. The dedicated
+   controller-owned pointer-semantics owner consumes routed samples, owns
+   tap/double-tap recognition, deferred tap flushing, and live
    `PointerInputSettings` adoption, and keeps invalid terminal host forwarding
    on the same controller-side path as direct pointer input.
 2. `SceneController` is the public interactive facade. It validates

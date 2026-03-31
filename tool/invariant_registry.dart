@@ -281,6 +281,13 @@ const List<Invariant> invariants = <Invariant>[
     proofPath: 'test/view/scene_view_interactive_test.dart',
   ),
   Invariant(
+    id: 'INV-ENG-VIEW-POINTER-SEMANTICS-BOUNDARY',
+    scope: 'engine-structure',
+    title:
+        'the local SceneView pointer-semantics seam stays closed: view shell files may consume only controller-private internal access, while concrete pointer-semantics ownership remains outside view/**',
+    proofPath: 'tool/check_import_boundaries.dart',
+  ),
+  Invariant(
     id: 'INV-ENG-EPOCH-INVALIDATION',
     scope: 'engine-runtime',
     title: 'replace-scene lifecycle preserves epoch invalidation',

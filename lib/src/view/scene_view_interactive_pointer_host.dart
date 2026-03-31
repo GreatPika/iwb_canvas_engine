@@ -3,7 +3,7 @@ import 'package:flutter/widgets.dart';
 import '../contract/canvas_pointer_input.dart';
 import '../core/pointer_input.dart';
 import '../interactive/scene_controller.dart';
-import '../interactive/internal/scene_controller_pointer_semantics.dart';
+import '../interactive/internal/scene_controller_internal_access.dart';
 import 'scene_view_pointer_router.dart';
 
 bool _hasFiniteLocalPosition(PointerEvent event) {
@@ -80,12 +80,12 @@ class SceneViewInteractivePointerHost {
     required SceneController controller,
     required bool Function() isMounted,
     required void Function() onControllerChanged,
+    required SceneControllerPointerSemanticsBridge pointerSemantics,
   }) : _controller = controller,
        _isMounted = isMounted,
        _onControllerChanged = onControllerChanged,
        _runtime = _SceneViewInteractivePointerRuntime(
-         controller: controller,
-         isMounted: isMounted,
+         pointerSemantics: pointerSemantics,
        ) {
     _subscribeToController(controller);
   }
@@ -108,7 +108,12 @@ class SceneViewInteractivePointerHost {
     }
     _unsubscribeFromController(_controller);
     _controller = controller;
-    _runtime.updateController(controller);
+    _runtime.replacePointerSemantics(
+      sceneControllerInternalCreatePointerSemanticsBridge(
+        controller,
+        isMounted: _isMounted,
+      ),
+    );
     _subscribeToController(controller);
   }
 
@@ -151,30 +156,20 @@ class SceneViewInteractivePointerHost {
 
 class _SceneViewInteractivePointerRuntime {
   _SceneViewInteractivePointerRuntime({
-    required SceneController controller,
-    required bool Function() isMounted,
-  }) : _controller = controller,
-       _pointerSemantics = SceneControllerPointerSemantics(
-         controller: controller,
-         isMounted: isMounted,
-       );
-
-  SceneController _controller;
+    required SceneControllerPointerSemanticsBridge pointerSemantics,
+  }) : _pointerSemantics = pointerSemantics;
 
   final SceneViewPointerRouter _pointerRouter = SceneViewPointerRouter();
-  final SceneControllerPointerSemantics _pointerSemantics;
+  SceneControllerPointerSemanticsBridge _pointerSemantics;
 
   int get debugLiveRawPointerCount => _pointerRouter.liveRawPointerCount;
   int? get debugPendingTapFlushTimestampMs =>
       _pointerSemantics.pendingTapFlushTimestampMs;
 
-  void updateController(SceneController controller) {
-    if (identical(_controller, controller)) {
-      return;
-    }
-    _controller = controller;
+  void replacePointerSemantics(SceneControllerPointerSemanticsBridge next) {
+    _pointerSemantics.dispose();
+    _pointerSemantics = next;
     _pointerRouter.reset();
-    _pointerSemantics.updateController(controller);
   }
 
   void dispose() {

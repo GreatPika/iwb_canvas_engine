@@ -305,48 +305,44 @@ void main() {
       },
     );
 
-    test(
-      'centerWorldForNodeSnapshots ignores stale serialized text size',
-      () {
-        const rectCenter = Offset(80, 0);
-        final text = TextNodeSnapshot(
-          id: 'text',
-          text: 'Pivot',
-          size: const Size(400, 20),
-          fontSize: 20,
-          color: const Color(0xFF000000),
-        );
-        final rect = RectNodeSnapshot(
-          id: 'rect',
-          size: const Size(20, 20),
-          transform: Transform2D.translation(rectCenter),
-        );
+    test('centerWorldForNodeSnapshots ignores stale serialized text size', () {
+      const rectCenter = Offset(80, 0);
+      final text = TextNodeSnapshot(
+        id: 'text',
+        text: 'Pivot',
+        size: const Size(400, 20),
+        fontSize: 20,
+        color: const Color(0xFF000000),
+      );
+      final rect = RectNodeSnapshot(
+        id: 'rect',
+        size: const Size(20, 20),
+        transform: Transform2D.translation(rectCenter),
+      );
 
-        final measuredTextSize = TextLayoutRequest(
-          text: text.text,
-          color: text.color,
-          fontSize: text.fontSize,
-          isBold: text.isBold,
-          isItalic: text.isItalic,
-          isUnderline: text.isUnderline,
-          textAlign: text.align,
-          fontFamily: text.fontFamily,
-          lineHeight: text.lineHeight,
-          maxWidth: text.maxWidth,
-        ).measure();
-        final expectedBounds = centeredRectLocalBounds(
-          measuredTextSize,
-        ).expandToInclude(
-          rect.transform.applyToRect(centeredRectLocalBounds(rect.size)),
-        );
+      final measuredTextSize = TextLayoutRequest(
+        text: text.text,
+        color: text.color,
+        fontSize: text.fontSize,
+        isBold: text.isBold,
+        isItalic: text.isItalic,
+        isUnderline: text.isUnderline,
+        textAlign: text.align,
+        fontFamily: text.fontFamily,
+        lineHeight: text.lineHeight,
+        maxWidth: text.maxWidth,
+      ).measure();
+      final expectedBounds = centeredRectLocalBounds(measuredTextSize)
+          .expandToInclude(
+            rect.transform.applyToRect(centeredRectLocalBounds(rect.size)),
+          );
 
-        expect(
-          interaction_eligibility_policy.centerWorldForNodeSnapshots(
-            <NodeSnapshot>[text, rect],
-          ),
-          expectedBounds.center,
-        );
-      },
-    );
+      expect(
+        interaction_eligibility_policy.centerWorldForNodeSnapshots(
+          <NodeSnapshot>[text, rect],
+        ),
+        expectedBounds.center,
+      );
+    });
   });
 }

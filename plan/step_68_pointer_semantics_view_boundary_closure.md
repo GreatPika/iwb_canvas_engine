@@ -326,7 +326,7 @@ lifecycle shell.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Assembled Pointer-Semantics Bridge
+### Slice 1. [x] Assembled Pointer-Semantics Bridge
 
 #### Slice Contract
 
@@ -387,7 +387,7 @@ assembled dependency instead of constructing
 - source proof that no `view/**` file in the closed seam decides bridge
   construction or imports a concrete pointer-semantics implementation.
 
-### Slice 2. [ ] Pointer-Seam Guardrails And Boundary Proof
+### Slice 2. [x] Pointer-Seam Guardrails And Boundary Proof
 
 #### Slice Contract
 

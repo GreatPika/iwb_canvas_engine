@@ -11,7 +11,8 @@ All notable changes to `iwb_canvas_engine` are documented here.
   `lib/src/interactive/**` no longer import `model/document.dart`, and
   tap/double-tap recognition plus live pointer-settings adoption moved out of
   `SceneViewInteractivePointerHost` into a dedicated controller-owned
-  pointer-semantics runtime.
+  pointer-semantics runtime assembled behind controller-private internal
+  access instead of a view-local concrete dependency.
 
 ### Breaking
 
