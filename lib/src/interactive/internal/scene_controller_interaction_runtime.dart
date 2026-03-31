@@ -10,6 +10,7 @@ import 'interactive_draw_style.dart';
 import 'interactive_event_dispatcher.dart';
 import 'interactive_runtime.dart';
 import 'interactive_runtime_callbacks.dart';
+import 'scene_controller_mutation_boundary.dart';
 import 'interactive_selection_actions.dart';
 
 final class SceneControllerInteractionRuntime {
@@ -18,6 +19,7 @@ final class SceneControllerInteractionRuntime {
     required this.core,
     required this.notifyScheduler,
     required this.events,
+    required this.mutationBoundary,
     required this.selectionActions,
     required this.runtime,
   }) : _moveCommitDeltaResolver = moveCommitDeltaResolver;
@@ -26,6 +28,7 @@ final class SceneControllerInteractionRuntime {
   final MoveCommitDeltaResolver? _moveCommitDeltaResolver;
   final InteractiveNotifyScheduler notifyScheduler;
   final InteractiveEventDispatcher events;
+  final SceneControllerMutationBoundary mutationBoundary;
   final InteractiveSelectionActions selectionActions;
   final InteractiveRuntime runtime;
 
@@ -131,18 +134,20 @@ SceneControllerInteractionRuntime createSceneControllerInteractionRuntime({
   );
   final events = InteractiveEventDispatcher();
   late final SceneControllerInteractionRuntime wiredRuntime;
-  final selectionActions = _createSelectionActions(request, () => wiredRuntime);
+  final mutationBoundary = _createMutationBoundary(request, () => wiredRuntime);
+  final selectionActions = _createSelectionActions(mutationBoundary);
   final interactiveRuntime = _createInteractiveRuntime(
     request,
     notifyScheduler: notifyScheduler,
     events: events,
-    selectionActions: selectionActions,
+    mutationBoundary: mutationBoundary,
   );
   wiredRuntime = SceneControllerInteractionRuntime._(
     moveCommitDeltaResolver: request.moveCommitDeltaResolver,
     core: request.core,
     notifyScheduler: notifyScheduler,
     events: events,
+    mutationBoundary: mutationBoundary,
     selectionActions: selectionActions,
     runtime: interactiveRuntime,
   );
@@ -235,13 +240,14 @@ extension SceneControllerInteractionRuntimeMutationApi
   }
 }
 
-InteractiveSelectionActions _createSelectionActions(
+SceneControllerMutationBoundary _createMutationBoundary(
   SceneControllerInteractionRuntimeRequest request,
   SceneControllerInteractionRuntime Function() readRuntime,
 ) {
-  return InteractiveSelectionActions(
+  return SceneControllerMutationBoundary(
     core: request.core,
-    callbacks: InteractiveSelectionActionsCallbacks(
+    readSnapshot: request.readSnapshot,
+    callbacks: SceneControllerMutationBoundaryCallbacks(
       resolveTimestampMs: (timestampMs) =>
           readRuntime().events.resolveTimestampMs(timestampMs),
       emitAction: (type, nodeIds, timestampMs, {payload}) {
@@ -260,15 +266,24 @@ InteractiveSelectionActions _createSelectionActions(
                 proposedDelta: proposedDelta,
               ),
       requireFiniteOffset: request.requireFiniteOffset,
+      clearPointerNormalizationState: () {
+        readRuntime().runtime.clearPointerNormalizationState();
+      },
     ),
   );
+}
+
+InteractiveSelectionActions _createSelectionActions(
+  SceneControllerMutationBoundary mutationBoundary,
+) {
+  return InteractiveSelectionActions(mutations: mutationBoundary);
 }
 
 InteractiveRuntime _createInteractiveRuntime(
   SceneControllerInteractionRuntimeRequest request, {
   required InteractiveNotifyScheduler notifyScheduler,
   required InteractiveEventDispatcher events,
-  required InteractiveSelectionActions selectionActions,
+  required SceneControllerMutationBoundary mutationBoundary,
 }) {
   return InteractiveRuntime(
     events: events,
@@ -281,9 +296,9 @@ InteractiveRuntime _createInteractiveRuntime(
       readDrawStyle: request.readDrawStyle,
       querySpatialCandidates: request.core.querySpatialCandidates,
       resolveSpatialCandidateNode: request.core.resolveSpatialCandidateNode,
-      writeSelectionReplace: request.core.commands.writeSelectionReplace,
-      writeSelectionClear: request.core.commands.writeSelectionClear,
-      commitMoveSelection: selectionActions.commitMoveSelection,
+      writeSelectionReplace: mutationBoundary.setSelection,
+      writeSelectionClear: mutationBoundary.clearSelection,
+      commitMoveSelection: mutationBoundary.commitMoveSelection,
       writeDrawStroke: request.core.draw.writeDrawStroke,
       writeDrawLineFromWorldSegment:
           request.core.draw.writeDrawLineFromWorldSegment,

@@ -56,8 +56,23 @@ void main() {
     final facadeAssemblySource = File(
       'lib/src/interactive/internal/scene_controller_facade_assembly.dart',
     ).readAsStringSync();
+    final mutationBoundarySource = File(
+      'lib/src/interactive/internal/scene_controller_mutation_boundary.dart',
+    ).readAsStringSync();
+    final sceneMutationsSource = File(
+      'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
+    ).readAsStringSync();
+    final selectionMutationsSource = File(
+      'lib/src/interactive/internal/scene_controller_selection_mutations.dart',
+    ).readAsStringSync();
+    final selectionActionsSource = File(
+      'lib/src/interactive/internal/interactive_selection_actions.dart',
+    ).readAsStringSync();
     final runtimeSource = File(
       'lib/src/interactive/internal/interactive_runtime.dart',
+    ).readAsStringSync();
+    final interactionRuntimeSource = File(
+      'lib/src/interactive/internal/scene_controller_interaction_runtime.dart',
     ).readAsStringSync();
     final eventSource = File(
       'lib/src/interactive/internal/interactive_event_dispatcher.dart',
@@ -114,6 +129,58 @@ void main() {
     expect(facadeAssemblySource, contains('SceneControllerInteraction('));
     expect(facadeAssemblySource, contains('SceneControllerSelection('));
     expect(facadeAssemblySource, contains('SceneControllerScene('));
+    expect(
+      facadeAssemblySource,
+      contains('mutations: interactionRuntime.mutationBoundary,'),
+    );
+
+    expect(
+      mutationBoundarySource,
+      contains('class SceneControllerMutationBoundary'),
+    );
+    expect(
+      mutationBoundarySource,
+      contains('core.commands.writeSelectionReplace(nodeIds);'),
+    );
+    expect(
+      mutationBoundarySource,
+      contains('core.commands.writeSelectionClear();'),
+    );
+    expect(
+      mutationBoundarySource,
+      contains('core.commands.writeDeleteSelection();'),
+    );
+    expect(
+      mutationBoundarySource,
+      contains('core.commands.writeSelectionTransform(delta);'),
+    );
+    expect(
+      mutationBoundarySource,
+      contains('core.writeReplaceScene(snapshot);'),
+    );
+
+    expect(sceneMutationsSource, contains('mutations.setGridCellSize(value);'));
+    expect(sceneMutationsSource, contains('mutations.replaceScene(snapshot);'));
+    expect(sceneMutationsSource, isNot(contains('core.commands.')));
+    expect(sceneMutationsSource, isNot(contains('core.write(')));
+    expect(sceneMutationsSource, isNot(contains('core.writeReplaceScene(')));
+
+    expect(
+      selectionMutationsSource,
+      contains('mutations.setSelection(nodeIds);'),
+    );
+    expect(
+      selectionMutationsSource,
+      contains('mutations.deleteSelection(timestampMs: timestampMs);'),
+    );
+    expect(selectionMutationsSource, isNot(contains('core.commands.')));
+
+    expect(
+      selectionActionsSource,
+      contains('return mutations.commitMoveSelection(proposedDelta);'),
+    );
+    expect(selectionActionsSource, isNot(contains('core.commands.')));
+    expect(selectionActionsSource, isNot(contains('core.write(')));
 
     final handlePointerBody = _extractMethodBody(
       source: interactionSource,
@@ -155,10 +222,34 @@ void main() {
       runtimeSource,
       contains("import 'interactive_double_tap_router.dart';"),
     );
+    expect(
+      interactionRuntimeSource,
+      contains("import 'scene_controller_mutation_boundary.dart';"),
+    );
+    expect(
+      interactionRuntimeSource,
+      contains('writeSelectionReplace: mutationBoundary.setSelection,'),
+    );
+    expect(
+      interactionRuntimeSource,
+      contains('commitMoveSelection: mutationBoundary.commitMoveSelection,'),
+    );
+    expect(
+      interactionRuntimeSource,
+      contains('writeSelectionClear: mutationBoundary.clearSelection,'),
+    );
     expect(runtimeSource, isNot(contains('StreamController<')));
     expect(runtimeSource, isNot(contains('_timestampCursorMs')));
     expect(runtimeSource, isNot(contains('_actionCounter')));
     expect(runtimeSource, isNot(contains('_eraserHitsLine(')));
+    expect(
+      interactionRuntimeSource,
+      isNot(contains('request.core.commands.writeSelectionReplace')),
+    );
+    expect(
+      interactionRuntimeSource,
+      isNot(contains('request.core.commands.writeSelectionClear')),
+    );
 
     expect(eventSource, contains('class InteractiveEventDispatcher'));
     expect(eventSource, contains('resolveTimestampMs('));

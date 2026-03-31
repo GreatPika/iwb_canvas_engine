@@ -174,7 +174,66 @@ class InteractiveEventDispatcher {
   writeSandboxFile(
     sandbox,
     'lib/src/interactive/internal/interactive_selection_actions.dart',
-    'class InteractiveSelectionActions {}\n',
+    '''
+class InteractiveSelectionActions {
+  final mutations = Object();
+
+  Object commitMoveSelection(Object proposedDelta) {
+    return mutations.commitMoveSelection(proposedDelta);
+  }
+}
+
+class _Mutations {
+  Object commitMoveSelection(Object proposedDelta) => proposedDelta;
+}
+''',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/scene_controller_mutation_boundary.dart',
+    '''
+class SceneControllerMutationBoundary {
+  final core = _Core();
+
+  void setSelection(Object nodeIds) {
+    core.commands.writeSelectionReplace(nodeIds);
+  }
+
+  void clearSelection() {
+    core.commands.writeSelectionClear();
+  }
+
+  void deleteSelection() {
+    core.commands.writeDeleteSelection();
+  }
+
+  void transformSelection(Object delta) {
+    core.commands.writeSelectionTransform(delta);
+  }
+
+  void replaceScene(Object snapshot) {
+    core.writeReplaceScene(snapshot);
+  }
+
+  Object commitMoveSelection(Object proposedDelta) => proposedDelta;
+}
+
+class _Core {
+  final commands = _Commands();
+
+  void writeReplaceScene(Object snapshot) {}
+}
+
+class _Commands {
+  void writeSelectionReplace(Object nodeIds) {}
+
+  void writeSelectionClear() {}
+
+  void writeDeleteSelection() {}
+
+  void writeSelectionTransform(Object delta) {}
+}
+''',
   );
   writeSandboxFile(
     sandbox,
@@ -186,11 +245,19 @@ import 'interactive_move_session.dart';
 import 'interactive_pointer_normalizer.dart';
 import 'interactive_gesture_router.dart';
 import 'interactive_double_tap_router.dart';
+import 'scene_controller_mutation_boundary.dart';
 
 class InteractiveRuntime {
   InteractiveRuntime({required this.events});
 
   final InteractiveEventDispatcher events;
+  final mutationBoundary = SceneControllerMutationBoundary();
+
+  void wireSelectionCallbacks() {
+    // writeSelectionReplace: mutationBoundary.setSelection,
+    // writeSelectionClear: mutationBoundary.clearSelection,
+    // commitMoveSelection: mutationBoundary.commitMoveSelection,
+  }
 
   void handlePointer(Object input) {}
 
@@ -366,10 +433,20 @@ typedef InteractiveDrawStyle = ({
     sandbox,
     'lib/src/interactive/internal/scene_controller_interaction_runtime.dart',
     '''
+import 'scene_controller_mutation_boundary.dart';
+
 class SceneControllerInteractionRuntime {
+  final mutationBoundary = SceneControllerMutationBoundary();
+
   void ensureExternalMutationAllowed(String operation) {}
 
   void resetActiveGestureBeforeExternalMutation() {}
+
+  void wireSelectionCallbacks() {
+    // writeSelectionReplace: mutationBoundary.setSelection,
+    // writeSelectionClear: mutationBoundary.clearSelection,
+    // commitMoveSelection: mutationBoundary.commitMoveSelection,
+  }
 }
 ''',
   );
@@ -391,7 +468,38 @@ class SceneControllerInteractionRuntime {
   writeSandboxFile(
     sandbox,
     'lib/src/interactive/internal/scene_controller_facade_assembly.dart',
-    'void assembleSceneControllerFacade() {}\n',
+    '''
+class SceneControllerInteraction {}
+
+class SceneControllerSelection {
+  SceneControllerSelection({required Object mutations});
+}
+
+class SceneControllerScene {
+  SceneControllerScene({
+    required Object ensurePublicSideEffectAllowed,
+    required Object mutations,
+  });
+}
+
+class _InteractionRuntime {
+  final mutationBoundary = Object();
+
+  void ensurePublicSideEffectAllowed(String operation) {}
+}
+
+Object assembleSceneControllerFacade() {
+  final interactionRuntime = _InteractionRuntime();
+  SceneControllerInteraction();
+  SceneControllerSelection(mutations: interactionRuntime.mutationBoundary);
+  SceneControllerScene(
+    ensurePublicSideEffectAllowed:
+        interactionRuntime.ensurePublicSideEffectAllowed,
+    mutations: interactionRuntime.mutationBoundary,
+  );
+  return Object();
+}
+''',
   );
   writeSandboxFile(
     sandbox,
@@ -432,7 +540,13 @@ String interactiveSelectionMutationsFixture({
     policies: selectionMutationOwnerPolicies,
     bodyOverrides: <String, String>{'setSelection': setSelectionBody},
     helperMethods: '''
+  final mutations = Object();
+
   void ensureExternalMutationAllowed(String operation) {}
+
+  void _touchMutationBoundary() {
+    mutations.toString();
+  }
 ''',
   );
 }
@@ -460,6 +574,8 @@ resetActiveGestureBeforeExternalMutation();
       'replaceScene': replaceSceneBody,
     },
     helperMethods: '''
+  final mutations = _Mutations();
+
   void ensureExternalMutationAllowed(String operation) {}
 
   void resetActiveGestureBeforeExternalMutation() {}
@@ -469,6 +585,10 @@ resetActiveGestureBeforeExternalMutation();
   bool _isSameOffset(Object value) => false;
 
   void validateSnapshot(Object snapshot) {}
+
+  void _touchMutationBoundary() {
+    mutations.toString();
+  }
 ''',
   );
 }

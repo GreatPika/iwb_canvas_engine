@@ -716,6 +716,14 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
     context,
     'internal/scene_controller_selection_mutations.dart',
   );
+  final mutationBoundaryFile = _interactiveSupportFile(
+    context,
+    'internal/scene_controller_mutation_boundary.dart',
+  );
+  final selectionActionsFile = _interactiveSupportFile(
+    context,
+    'internal/interactive_selection_actions.dart',
+  );
   final facadeAssemblyFile = _interactiveSupportFile(
     context,
     'internal/scene_controller_facade_assembly.dart',
@@ -742,6 +750,8 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
         interactionAccessFile: 'SceneControllerInteractionContext',
         sceneMutationsFile: 'SceneControllerSceneMutations',
         selectionMutationsFile: 'SceneControllerSelectionMutations',
+        mutationBoundaryFile: 'SceneControllerMutationBoundary',
+        selectionActionsFile: 'InteractiveSelectionActions',
         facadeAssemblyFile: 'assembleSceneControllerFacade',
         internalAccessFile: 'SceneControllerInternalAccess',
       });
@@ -788,6 +798,11 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
   final drawEraserStrokeHitSource = drawEraserStrokeHitFile.readAsStringSync();
   final drawStyleSource = drawStyleFile.readAsStringSync();
   final internalAccessSource = internalAccessFile.readAsStringSync();
+  final interactionRuntimeSource = interactionRuntimeFile.readAsStringSync();
+  final sceneMutationsSource = sceneMutationsFile.readAsStringSync();
+  final selectionMutationsSource = selectionMutationsFile.readAsStringSync();
+  final mutationBoundarySource = mutationBoundaryFile.readAsStringSync();
+  final selectionActionsSource = selectionActionsFile.readAsStringSync();
 
   return _topLevelFacadeHelperViolation(context, parsed: parsed) ??
       _requireSourceTokens(
@@ -862,6 +877,81 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
         message:
             'interactive API violation: InteractiveRuntime must keep event '
             'timeline and draw-local geometry outside the boundary runtime.',
+      ) ??
+      _requireSourceTokens(
+        source: interactionRuntimeSource,
+        filePath: _interactiveFilePosixPath(context, interactionRuntimeFile),
+        requiredTokens: const <String>[
+          "import 'scene_controller_mutation_boundary.dart';",
+          'writeSelectionReplace: mutationBoundary.setSelection,',
+          'writeSelectionClear: mutationBoundary.clearSelection,',
+          'commitMoveSelection: mutationBoundary.commitMoveSelection,',
+        ],
+        bannedTokens: const <String>[
+          'request.core.commands.writeSelectionReplace',
+          'request.core.commands.writeSelectionClear',
+        ],
+        message:
+            'interactive API violation: SceneControllerInteractionRuntime '
+            'must route selection callbacks through '
+            'SceneControllerMutationBoundary.',
+      ) ??
+      _requireSourceTokens(
+        source: sceneMutationsSource,
+        filePath: _interactiveFilePosixPath(context, sceneMutationsFile),
+        requiredTokens: const <String>['mutations.'],
+        bannedTokens: const <String>[
+          'core.commands.',
+          'core.writeReplaceScene(',
+        ],
+        bannedPatterns: <RegExp>[
+          RegExp(r'core\.write\s*(<[^>]+>)?\s*\('),
+        ],
+        message:
+            'interactive API violation: SceneControllerSceneMutations must '
+            'delegate committed scene writes through '
+            'SceneControllerMutationBoundary.',
+      ) ??
+      _requireSourceTokens(
+        source: selectionMutationsSource,
+        filePath: _interactiveFilePosixPath(context, selectionMutationsFile),
+        requiredTokens: const <String>['mutations.'],
+        bannedTokens: const <String>['core.commands.'],
+        bannedPatterns: <RegExp>[
+          RegExp(r'core\.write\s*(<[^>]+>)?\s*\('),
+        ],
+        message:
+            'interactive API violation: SceneControllerSelectionMutations '
+            'must delegate committed selection writes through '
+            'SceneControllerMutationBoundary.',
+      ) ??
+      _requireSourceTokens(
+        source: selectionActionsSource,
+        filePath: _interactiveFilePosixPath(context, selectionActionsFile),
+        requiredTokens: const <String>['mutations.'],
+        bannedTokens: const <String>['core.commands.'],
+        bannedPatterns: <RegExp>[
+          RegExp(r'core\.write\s*(<[^>]+>)?\s*\('),
+        ],
+        message:
+            'interactive API violation: InteractiveSelectionActions must '
+            'remain a thin routing shell over SceneControllerMutationBoundary.',
+      ) ??
+      _requireSourceTokens(
+        source: mutationBoundarySource,
+        filePath: _interactiveFilePosixPath(context, mutationBoundaryFile),
+        requiredTokens: const <String>[
+          'class SceneControllerMutationBoundary',
+          'core.commands.writeSelectionReplace',
+          'core.commands.writeSelectionClear',
+          'core.commands.writeDeleteSelection',
+          'core.commands.writeSelectionTransform',
+          'core.writeReplaceScene(snapshot);',
+        ],
+        bannedTokens: const <String>[],
+        message:
+            'interactive API violation: SceneControllerMutationBoundary must '
+            'remain the canonical scene/selection write owner.',
       ) ??
       _requireSourceTokens(
         source: eventSource,
@@ -1064,6 +1154,7 @@ GuardrailViolation? _requireSourceTokens({
   required String filePath,
   required List<String> requiredTokens,
   required List<String> bannedTokens,
+  List<RegExp> bannedPatterns = const <RegExp>[],
   required String message,
 }) {
   for (final token in requiredTokens) {
@@ -1076,6 +1167,15 @@ GuardrailViolation? _requireSourceTokens({
     if (offset < 0) {
       continue;
     }
+    final line = '\n'.allMatches(source.substring(0, offset)).length + 1;
+    return GuardrailViolation(filePath: filePath, line: line, message: message);
+  }
+  for (final pattern in bannedPatterns) {
+    final match = pattern.firstMatch(source);
+    if (match == null) {
+      continue;
+    }
+    final offset = match.start;
     final line = '\n'.allMatches(source.substring(0, offset)).length + 1;
     return GuardrailViolation(filePath: filePath, line: line, message: message);
   }

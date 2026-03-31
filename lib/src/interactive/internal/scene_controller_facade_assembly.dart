@@ -53,12 +53,9 @@ SceneControllerFacadeAssembly assembleSceneControllerFacade(
     interactionConfig: interactionConfig,
   );
   final selectionMutations = _createSelectionMutations(
-    core: request.core,
     interactionRuntime: interactionRuntime,
   );
   final sceneMutations = _createSceneMutations(
-    request: request,
-    core: request.core,
     interactionRuntime: interactionRuntime,
   );
   final interactionAccess = SceneControllerInteractionContext(
@@ -118,36 +115,23 @@ SceneControllerInteractionRuntime _createInteractionRuntime({
 }
 
 SceneControllerSelectionMutations _createSelectionMutations({
-  required SceneControllerCore core,
   required SceneControllerInteractionRuntime interactionRuntime,
 }) {
   return SceneControllerSelectionMutations(
-    core: core,
+    mutations: interactionRuntime.mutationBoundary,
     ensureExternalMutationAllowed:
         interactionRuntime.ensureExternalMutationAllowed,
-    rotateSelectionState: interactionRuntime.rotateSelection,
-    flipSelectionVerticalState: interactionRuntime.flipSelectionVertical,
-    flipSelectionHorizontalState: interactionRuntime.flipSelectionHorizontal,
-    deleteSelectionState: interactionRuntime.deleteSelection,
   );
 }
 
 SceneControllerSceneMutations _createSceneMutations({
-  required SceneControllerFacadeRequest request,
-  required SceneControllerCore core,
   required SceneControllerInteractionRuntime interactionRuntime,
 }) {
   return SceneControllerSceneMutations(
-    core: core,
+    mutations: interactionRuntime.mutationBoundary,
     ensureExternalMutationAllowed:
         interactionRuntime.ensureExternalMutationAllowed,
     resetActiveGestureBeforeExternalMutation:
         interactionRuntime.resetActiveGestureBeforeExternalMutation,
-    emitAction: interactionRuntime.emitAction,
-    resolveTimestampMs: interactionRuntime.resolveTimestampMs,
-    clearPointerNormalizationState:
-        interactionRuntime.clearPointerNormalizationState,
-    clearSceneSelectionState: interactionRuntime.clearSceneSelectionState,
-    readSnapshot: request.readSnapshot,
   );
 }

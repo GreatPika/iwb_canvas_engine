@@ -775,6 +775,325 @@ class _Access {
     }
   });
 
+  test(
+    'rejects scene mutation owner that bypasses mutation boundary',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
+          '''
+class SceneControllerSceneMutations {
+  final mutations = Object();
+
+  void write(Object fn) {
+    ensureExternalMutationAllowed('write');
+    core.write(fn);
+  }
+
+  void setBackgroundColor(Object value) {
+    ensureExternalMutationAllowed('setBackgroundColor');
+    mutations.toString();
+  }
+
+  void setGridEnabled(bool value) {
+    ensureExternalMutationAllowed('setGridEnabled');
+    mutations.toString();
+  }
+
+  void setGridCellSize(double value) {
+    ensureExternalMutationAllowed('setGridCellSize');
+    mutations.toString();
+  }
+
+  void addNode(Object node) {
+    ensureExternalMutationAllowed('addNode');
+    mutations.toString();
+  }
+
+  void ensureLayer(Object layerId) {
+    ensureExternalMutationAllowed('ensureLayer');
+    mutations.toString();
+  }
+
+  void patchNode(Object patch) {
+    ensureExternalMutationAllowed('patchNode');
+    mutations.toString();
+  }
+
+  void removeNode(Object nodeId) {
+    ensureExternalMutationAllowed('removeNode');
+    mutations.toString();
+  }
+
+  void clearScene() {
+    ensureExternalMutationAllowed('clearScene');
+    mutations.toString();
+  }
+
+  void setCameraOffset(Object value) {
+    _requireFiniteOffset(value);
+    if (_isSameOffset(value)) {
+      return;
+    }
+    resetActiveGestureBeforeExternalMutation();
+    mutations.toString();
+  }
+
+  void replaceScene(Object snapshot) {
+    ensureExternalMutationAllowed('replaceScene');
+    resetActiveGestureBeforeExternalMutation();
+    mutations.toString();
+  }
+
+  void notifySceneChanged() {
+    mutations.toString();
+  }
+
+  void ensureExternalMutationAllowed(String operation) {}
+
+  void resetActiveGestureBeforeExternalMutation() {}
+
+  void _requireFiniteOffset(Object value) {}
+
+  bool _isSameOffset(Object value) => false;
+
+  final core = _Core();
+}
+
+class _Core {
+  void write(Object fn) {}
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneControllerSceneMutations must delegate committed scene '
+                'writes through SceneControllerMutationBoundary',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects scene mutation owner generic core write bypass',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
+          '''
+class SceneControllerSceneMutations {
+  final mutations = Object();
+
+  void write(Object fn) {
+    ensureExternalMutationAllowed('write');
+    core.write<int>(fn);
+  }
+
+  void setBackgroundColor(Object value) {
+    ensureExternalMutationAllowed('setBackgroundColor');
+    mutations.toString();
+  }
+
+  void setGridEnabled(bool value) {
+    ensureExternalMutationAllowed('setGridEnabled');
+    mutations.toString();
+  }
+
+  void setGridCellSize(double value) {
+    ensureExternalMutationAllowed('setGridCellSize');
+    mutations.toString();
+  }
+
+  void addNode(Object node) {
+    ensureExternalMutationAllowed('addNode');
+    mutations.toString();
+  }
+
+  void ensureLayer(Object layerId) {
+    ensureExternalMutationAllowed('ensureLayer');
+    mutations.toString();
+  }
+
+  void patchNode(Object patch) {
+    ensureExternalMutationAllowed('patchNode');
+    mutations.toString();
+  }
+
+  void removeNode(Object nodeId) {
+    ensureExternalMutationAllowed('removeNode');
+    mutations.toString();
+  }
+
+  void clearScene() {
+    ensureExternalMutationAllowed('clearScene');
+    mutations.toString();
+  }
+
+  void setCameraOffset(Object value) {
+    _requireFiniteOffset(value);
+    if (_isSameOffset(value)) {
+      return;
+    }
+    resetActiveGestureBeforeExternalMutation();
+    mutations.toString();
+  }
+
+  void replaceScene(Object snapshot) {
+    ensureExternalMutationAllowed('replaceScene');
+    resetActiveGestureBeforeExternalMutation();
+    mutations.toString();
+  }
+
+  void notifySceneChanged() {
+    mutations.toString();
+  }
+
+  void ensureExternalMutationAllowed(String operation) {}
+
+  void resetActiveGestureBeforeExternalMutation() {}
+
+  void _requireFiniteOffset(Object value) {}
+
+  bool _isSameOffset(Object value) => false;
+
+  final core = _Core();
+}
+
+class _Core {
+  void write<T>(Object fn) {}
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneControllerSceneMutations must delegate committed scene '
+                'writes through SceneControllerMutationBoundary',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects runtime selection callbacks that bypass mutation boundary',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/internal/scene_controller_interaction_runtime.dart',
+          '''
+import 'scene_controller_mutation_boundary.dart';
+
+class SceneControllerInteractionRuntime {
+  void wireRuntime(Object request, Object mutationBoundary) {
+    request.core.commands.writeSelectionReplace;
+  }
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneControllerInteractionRuntime must route selection '
+                'callbacks through SceneControllerMutationBoundary',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
   test('rejects runtime that re-owns event timeline state', () async {
     final sandbox = await createGuardrailsSandbox();
     try {

@@ -258,8 +258,14 @@ Ownership decisions for the target state:
   mutate committed scene data until commit on `up`.
 - Active gesture identity is controller-owned; move/draw helpers do not own a
   competing pointer lock.
-- `SceneControllerSelectionMutations` and `SceneControllerSceneMutations` own
-  the runtime-mediated public mutation policy for active gestures.
+- `SceneControllerMutationBoundary` is the only interactive owner allowed to
+  perform committed scene/selection writes from public scene/selection
+  capability surfaces and gesture-local selection flows.
+- `SceneControllerSelectionMutations`, `SceneControllerSceneMutations`, and
+  `InteractiveSelectionActions` are thin routing shells only. They may enforce
+  public gesture policy or route gesture-local requests, but they must not
+  retain parallel committed-mutation semantics beside
+  `SceneControllerMutationBoundary`.
 - During an active move/draw gesture, public `controller.selection.*`
   mutations plus deny-listed `controller.scene.*` mutations are rejected before
   committed state changes; only `setCameraOffset(...)` and `replaceScene(...)`

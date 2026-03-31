@@ -228,7 +228,7 @@ Introduce a dedicated canonical mutation-family owner for selection-state transi
 - green run of the listed verifications;
 - `scene_writer_selection.dart` no longer contains direct writes to `ctx.workingSelection` or `ctx.changeSet`.
 
-### Slice 2. [ ] Canonical Interaction Mutation Boundary
+### Slice 2. [x] Canonical Interaction Mutation Boundary
 
 #### Slice Contract
 
