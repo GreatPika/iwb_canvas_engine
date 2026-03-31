@@ -7,6 +7,7 @@ import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/controller/mutation_executor.dart';
 import 'package:iwb_canvas_engine/src/controller/mutation_commit_preparer.dart';
+import 'package:iwb_canvas_engine/src/controller/mutation_execution_types.dart';
 import 'package:iwb_canvas_engine/src/controller/mutation_op.dart';
 import 'package:iwb_canvas_engine/src/controller/txn_context.dart';
 
@@ -41,6 +42,10 @@ void main() {
         SetGridEnabledOp,
         SetGridCellSizeOp,
         SetCameraOffsetOp,
+        ReplaceSelectionOp,
+        ToggleSelectionOp,
+        ClearSelectionOp,
+        SelectAllSelectionOp,
         TransformSelectionOp,
         TranslateSelectionOp,
       ]);
@@ -57,6 +62,9 @@ void main() {
         'lib/src/controller/node_mutation_applier.dart',
       ).readAsStringSync();
       final selectionApplierSource = File(
+        'lib/src/controller/selection_state_mutation_applier.dart',
+      ).readAsStringSync();
+      final selectionTransformApplierSource = File(
         'lib/src/controller/selection_transform_mutation_applier.dart',
       ).readAsStringSync();
       final sceneApplierSource = File(
@@ -66,9 +74,21 @@ void main() {
       expect(executorSource, contains("import 'node_mutation_applier.dart';"));
       expect(
         executorSource,
+        contains("import 'selection_state_mutation_applier.dart';"),
+      );
+      expect(
+        executorSource,
         contains("import 'selection_transform_mutation_applier.dart';"),
       );
       expect(executorSource, contains("import 'scene_mutation_applier.dart';"));
+      expect(
+        executorSource,
+        contains('SelectionStateMutationOp() => _castResult<TValue>('),
+      );
+      expect(
+        executorSource,
+        contains('executeSelectionStateMutationOp(ctx, op)'),
+      );
       expect(
         executorSource,
         contains('SelectionTransformMutationOp() => _castResult<TValue>('),
@@ -80,10 +100,25 @@ void main() {
 
       expect(
         selectionApplierSource,
+        contains('executeSelectionStateMutationOp('),
+      );
+      expect(selectionApplierSource, contains('ReplaceSelectionOp('));
+      expect(selectionApplierSource, contains('ToggleSelectionOp('));
+      expect(selectionApplierSource, contains('ClearSelectionOp()'));
+      expect(selectionApplierSource, contains('SelectAllSelectionOp('));
+
+      expect(
+        selectionTransformApplierSource,
         contains('executeSelectionTransformMutationOp('),
       );
-      expect(selectionApplierSource, contains('TransformSelectionOp('));
-      expect(selectionApplierSource, contains('TranslateSelectionOp('));
+      expect(
+        selectionTransformApplierSource,
+        contains('TransformSelectionOp('),
+      );
+      expect(
+        selectionTransformApplierSource,
+        contains('TranslateSelectionOp('),
+      );
       expect(
         sceneApplierSource,
         contains('executeStructuralDocumentMutationOp('),
@@ -91,10 +126,75 @@ void main() {
 
       expect(
         nodeApplierSource,
+        isNot(contains('executeSelectionStateMutationOp(')),
+      );
+      expect(nodeApplierSource, isNot(contains('ReplaceSelectionOp(')));
+      expect(nodeApplierSource, isNot(contains('ToggleSelectionOp(')));
+      expect(nodeApplierSource, isNot(contains('ClearSelectionOp(')));
+      expect(nodeApplierSource, isNot(contains('SelectAllSelectionOp(')));
+      expect(
+        nodeApplierSource,
         isNot(contains('executeSelectionTransformMutationOp(')),
       );
       expect(nodeApplierSource, isNot(contains('TransformSelectionOp(')));
       expect(nodeApplierSource, isNot(contains('TranslateSelectionOp(')));
+    },
+  );
+
+  test(
+    'MutationExecutor selection-state ops preserve normalized selection semantics',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(
+          backgroundLayer: BackgroundLayer(
+            nodes: <SceneNode>[RectNode(id: 'bg-node', size: const Size(2, 2))],
+          ),
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-auto-selection',
+              nodes: <SceneNode>[
+                RectNode(id: 'visible', size: const Size(10, 10)),
+                RectNode(
+                  id: 'hidden',
+                  size: const Size(10, 10),
+                  isVisible: false,
+                ),
+              ],
+            ),
+          ],
+        ),
+        workingSelection: const <NodeId>{'visible'},
+        baseAllNodeIds: const <NodeId>{'bg-node', 'visible', 'hidden'},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+      final executor = MutationExecutor();
+
+      final replaceNoop = executor.execute(
+        ctx,
+        ReplaceSelectionOp(const <NodeId>{'missing', 'bg-node', 'hidden'}),
+      );
+      expect(replaceNoop.value, isNull);
+      expect(replaceNoop.changed, isFalse);
+      expect(ctx.workingSelection, const <NodeId>{'visible'});
+
+      final toggle = executor.execute(ctx, const ToggleSelectionOp('visible'));
+      expect(toggle.value, isTrue);
+      expect(toggle.changed, isTrue);
+      expect(ctx.workingSelection, isEmpty);
+
+      final clear = executor.execute(ctx, const ClearSelectionOp());
+      expect(clear.value, isFalse);
+      expect(clear.changed, isFalse);
+
+      final selectAll = executor.execute(
+        ctx,
+        const SelectAllSelectionOp(onlySelectable: false),
+      );
+      expect(selectAll.value, (selectedCount: 1, changed: true));
+      expect(selectAll.changed, isTrue);
+      expect(ctx.workingSelection, const <NodeId>{'visible'});
+      expect(ctx.changeSet.selectionChanged, isTrue);
     },
   );
 

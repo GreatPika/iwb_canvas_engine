@@ -3,7 +3,7 @@ import '../core/nodes.dart';
 import '../core/revision_policy.dart';
 import '../core/scene.dart';
 import '../model/document.dart';
-import 'mutation_op.dart';
+import 'mutation_execution_types.dart';
 
 final class CommittedStoreState {
   const CommittedStoreState({

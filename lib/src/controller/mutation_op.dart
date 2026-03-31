@@ -3,14 +3,9 @@ import 'dart:ui';
 
 import '../contract/node_patch.dart';
 import '../contract/node_spec.dart';
-import '../contract/snapshot.dart';
 import '../contract/transform2d.dart';
 import '../contract/scene_write_txn.dart';
-import '../core/id_generator.dart';
-import '../core/revision_policy.dart';
-import '../core/scene.dart';
-import '../model/document.dart';
-import 'change_set.dart';
+import '../contract/snapshot.dart';
 
 sealed class MutationOp {
   const MutationOp();
@@ -33,6 +28,11 @@ sealed class NodeMutationOp<TValue extends Object?>
 sealed class SceneSettingsMutationOp<TValue extends Object?>
     extends TypedMutationOp<TValue> {
   const SceneSettingsMutationOp();
+}
+
+sealed class SelectionStateMutationOp<TValue extends Object?>
+    extends TypedMutationOp<TValue> {
+  const SelectionStateMutationOp();
 }
 
 sealed class SelectionTransformMutationOp<TValue extends Object?>
@@ -118,6 +118,30 @@ final class SetCameraOffsetOp extends SceneSettingsMutationOp<Object?> {
   final Offset offset;
 }
 
+final class ReplaceSelectionOp extends SelectionStateMutationOp<List<NodeId>?> {
+  ReplaceSelectionOp(Iterable<NodeId> nodeIds)
+    : nodeIds = Set<NodeId>.unmodifiable(nodeIds.toSet());
+
+  final Set<NodeId> nodeIds;
+}
+
+final class ToggleSelectionOp extends SelectionStateMutationOp<bool> {
+  const ToggleSelectionOp(this.nodeId);
+
+  final NodeId nodeId;
+}
+
+final class ClearSelectionOp extends SelectionStateMutationOp<bool> {
+  const ClearSelectionOp();
+}
+
+final class SelectAllSelectionOp
+    extends SelectionStateMutationOp<({int selectedCount, bool changed})> {
+  const SelectAllSelectionOp({this.onlySelectable = true});
+
+  final bool onlySelectable;
+}
+
 final class TransformSelectionOp extends SelectionTransformMutationOp<int> {
   const TransformSelectionOp(this.delta);
 
@@ -143,6 +167,10 @@ const List<Type> kCanonicalMutationOpTypes = <Type>[
   SetGridEnabledOp,
   SetGridCellSizeOp,
   SetCameraOffsetOp,
+  ReplaceSelectionOp,
+  ToggleSelectionOp,
+  ClearSelectionOp,
+  SelectAllSelectionOp,
   TransformSelectionOp,
   TranslateSelectionOp,
 ];
@@ -156,44 +184,4 @@ class MutationApplyResult<TValue extends Object?> {
 
   final TValue value;
   final bool changed;
-}
-
-class MutationCommitCandidate {
-  const MutationCommitCandidate({
-    required this.scene,
-    required this.selection,
-    required this.allNodeIds,
-    required this.nodeLocator,
-    required this.idGeneratorState,
-    required this.revisionState,
-  });
-
-  final Scene scene;
-  final Set<NodeId> selection;
-  final Set<NodeId> allNodeIds;
-  final Map<NodeId, NodeLocatorEntry> nodeLocator;
-  final IdGeneratorState idGeneratorState;
-  final RevisionAllocatorState revisionState;
-}
-
-class MutationExecutionResult<TValue extends Object?> {
-  const MutationExecutionResult({
-    required this.applyResult,
-    required this.changeSet,
-    required this.commitCandidate,
-  });
-
-  final MutationApplyResult<TValue> applyResult;
-  final ChangeSet changeSet;
-  final MutationCommitCandidate? commitCandidate;
-}
-
-class MutationPreparedCommitResult {
-  const MutationPreparedCommitResult({
-    required this.changeSet,
-    required this.commitCandidate,
-  });
-
-  final ChangeSet changeSet;
-  final MutationCommitCandidate? commitCandidate;
 }

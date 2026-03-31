@@ -200,7 +200,7 @@ This change introduces a canonical controller-owned interaction write-side conto
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Canonical Selection-State Mutation Family
+### Slice 1. [x] Canonical Selection-State Mutation Family
 
 #### Slice Contract
 

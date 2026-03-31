@@ -1,9 +1,5 @@
 import 'dart:ui';
 
-import 'dart:collection';
-
-import '../core/selection_policy.dart';
-import 'txn_context.dart';
 import 'mutation_op.dart';
 import 'scene_writer.dart';
 import 'scene_writer_support.dart';
@@ -13,70 +9,24 @@ List<NodeId>? sceneWriterWriteSelectionReplaceResult(
   SceneWriter writer,
   Iterable<NodeId> ids,
 ) {
-  writer.runtime.ensureTxnActive();
-  final ctx = writer.runtime.ctx;
-  final nextSelection = txnNormalizeSelection(
-    rawSelection: ids.toSet(),
-    scene: ctx.workingScene,
-    nodeLocator: ctx.txnNodeLocatorView(),
-  );
-  if (nextSelection.isEmpty ||
-      _sceneWriterSetsEqual(ctx.workingSelection, nextSelection)) {
-    return null;
-  }
-  _sceneWriterReplaceSelection(writer, nextSelection);
-  return sortWriterNodeIds(ctx.workingSelection);
+  return writer.runtime.execute(ReplaceSelectionOp(ids)).value;
 }
 
 bool sceneWriterWriteSelectionToggle(SceneWriter writer, NodeId id) {
-  writer.runtime.ensureTxnActive();
-  final ctx = writer.runtime.ctx;
-  if (!txnIsSelectionCandidateId(
-    scene: ctx.workingScene,
-    nodeId: id,
-    nodeLocator: ctx.txnNodeLocatorView(),
-  )) {
-    return false;
-  }
-  if (ctx.workingSelection.contains(id)) {
-    ctx.workingSelection.remove(id);
-  } else {
-    ctx.workingSelection.add(id);
-  }
-  ctx.changeSet.txnMarkSelectionChanged();
-  return true;
+  return writer.runtime.execute(ToggleSelectionOp(id)).value;
 }
 
 bool sceneWriterWriteSelectionClear(SceneWriter writer) {
-  writer.runtime.ensureTxnActive();
-  final selection = writer.runtime.ctx.workingSelection;
-  if (selection.isEmpty) {
-    return false;
-  }
-  selection.clear();
-  writer.runtime.ctx.changeSet.txnMarkSelectionChanged();
-  return true;
+  return writer.runtime.execute(const ClearSelectionOp()).value;
 }
 
 ({int selectedCount, bool changed}) sceneWriterWriteSelectionSelectAllResult(
   SceneWriter writer, {
   bool onlySelectable = true,
 }) {
-  writer.runtime.ensureTxnActive();
-  final ctx = writer.runtime.ctx;
-  final targetSelection = HashSet<NodeId>();
-  for (final layer in ctx.workingScene.layers) {
-    for (final node in layer.nodes) {
-      if (isNodeInteractiveForSelection(node, onlySelectable: onlySelectable)) {
-        targetSelection.add(node.id);
-      }
-    }
-  }
-  if (_sceneWriterSetsEqual(ctx.workingSelection, targetSelection)) {
-    return (selectedCount: 0, changed: false);
-  }
-  _sceneWriterReplaceSelection(writer, targetSelection);
-  return (selectedCount: targetSelection.length, changed: true);
+  return writer.runtime
+      .execute(SelectAllSelectionOp(onlySelectable: onlySelectable))
+      .value;
 }
 
 List<NodeId> sceneWriterWriteDeleteSelectionResult(SceneWriter writer) {
@@ -92,19 +42,4 @@ int sceneWriterWriteSelectionTranslate(SceneWriter writer, Offset delta) {
 
 int sceneWriterWriteSelectionTransform(SceneWriter writer, Transform2D delta) {
   return writer.runtime.execute(TransformSelectionOp(delta)).value;
-}
-
-void _sceneWriterReplaceSelection(
-  SceneWriter writer,
-  Set<NodeId> nextSelection,
-) {
-  final ctx = writer.runtime.ctx;
-  ctx.workingSelection
-    ..clear()
-    ..addAll(nextSelection);
-  ctx.changeSet.txnMarkSelectionChanged();
-}
-
-bool _sceneWriterSetsEqual(Set<NodeId> left, Set<NodeId> right) {
-  return left.length == right.length && left.containsAll(right);
 }

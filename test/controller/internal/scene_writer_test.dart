@@ -126,6 +126,9 @@ void main() {
     final writerSource = File(
       'lib/src/controller/scene_writer.dart',
     ).readAsStringSync();
+    final selectionOwnerSource = File(
+      'lib/src/controller/scene_writer_selection.dart',
+    ).readAsStringSync();
 
     expect(writerSource, contains("import 'scene_writer_nodes.dart';"));
     expect(writerSource, contains("import 'scene_writer_scene.dart';"));
@@ -153,6 +156,16 @@ void main() {
     expect(writerSource, isNot(contains('BufferedSignal(')));
     expect(writerSource, isNot(contains('ReplaceSceneOp(')));
     expect(writerSource, isNot(contains('DeleteNodesBulkOp.borrowed')));
+
+    expect(selectionOwnerSource, contains('ReplaceSelectionOp(ids)'));
+    expect(selectionOwnerSource, contains('ToggleSelectionOp(id)'));
+    expect(selectionOwnerSource, contains('const ClearSelectionOp()'));
+    expect(
+      selectionOwnerSource,
+      contains('SelectAllSelectionOp(onlySelectable: onlySelectable)'),
+    );
+    expect(selectionOwnerSource, isNot(contains('txnNormalizeSelection(')));
+    expect(selectionOwnerSource, isNot(contains('txnMarkSelectionChanged(')));
   });
 
   test(

@@ -1,5 +1,6 @@
 import 'mutation_op.dart';
 import 'node_mutation_applier.dart';
+import 'selection_state_mutation_applier.dart';
 import 'selection_transform_mutation_applier.dart';
 import 'scene_mutation_applier.dart';
 import 'txn_context.dart';
@@ -27,6 +28,9 @@ class MutationExecutor {
       ),
       SceneSettingsMutationOp() => _castResult<TValue>(
         executeSceneSettingsMutationOp(ctx, op),
+      ),
+      SelectionStateMutationOp() => _castResult<TValue>(
+        executeSelectionStateMutationOp(ctx, op),
       ),
       SelectionTransformMutationOp() => _castResult<TValue>(
         executeSelectionTransformMutationOp(ctx, op),

@@ -34,5 +34,42 @@ class Store {
         sandbox.deleteSync(recursive: true);
       }
     });
+
+    test(
+      'rejects direct selection writer mutation bypass outside canonical ops',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeSandboxFile(
+            sandbox,
+            'lib/src/controller/scene_writer_selection.dart',
+            '''
+List<String>? sceneWriterWriteSelectionReplaceResult(Object writer, Set<String> ids) {
+  final ctx = writer.runtime.ctx;
+  ctx.workingSelection
+    ..clear()
+    ..addAll(ids);
+  return ids.toList();
+}
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'controller API',
+              detail:
+                  'selection writer entrypoints must route through canonical '
+                  'selection-state mutation ops instead of touching '
+                  'workingSelection/changeSet directly',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
   });
 }

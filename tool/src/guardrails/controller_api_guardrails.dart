@@ -76,6 +76,10 @@ ControllerFileResult _checkControllerFile(GuardrailContext context, File file) {
   return ControllerFileResult(
     hasControllerEpoch: collector.hasControllerEpoch,
     violation:
+        _sceneWriterSelectionBypassViolation(
+          parsed: parsed,
+          filePosixPath: filePosixPath,
+        ) ??
         _replaceSceneEpochViolation(
           collector: collector,
           parsed: parsed,
@@ -87,6 +91,45 @@ ControllerFileResult _checkControllerFile(GuardrailContext context, File file) {
           filePosixPath: filePosixPath,
         ),
   );
+}
+
+GuardrailViolation? _sceneWriterSelectionBypassViolation({
+  required ParsedUnitResult parsed,
+  required String filePosixPath,
+}) {
+  if (filePosixPath != '/lib/src/controller/scene_writer_selection.dart') {
+    return null;
+  }
+
+  const guardedFunctions = <String>{
+    'sceneWriterWriteSelectionReplaceResult',
+    'sceneWriterWriteSelectionToggle',
+    'sceneWriterWriteSelectionClear',
+    'sceneWriterWriteSelectionSelectAllResult',
+  };
+  for (final declaration in parsed.unit.declarations) {
+    if (declaration case FunctionDeclaration(
+      name: final name,
+      functionExpression: final expression,
+    )) {
+      if (!guardedFunctions.contains(name.lexeme)) {
+        continue;
+      }
+      final bodySource = expression.body.toSource();
+      if (bodySource.contains('workingSelection') ||
+          bodySource.contains('changeSet')) {
+        return GuardrailViolation(
+          filePath: filePosixPath,
+          line: lineForOffset(parsed, name.offset),
+          message:
+              'controller API violation: selection writer entrypoints must '
+              'route through canonical selection-state mutation ops instead '
+              'of touching workingSelection/changeSet directly',
+        );
+      }
+    }
+  }
+  return null;
 }
 
 GuardrailViolation? _replaceSceneEpochViolation({

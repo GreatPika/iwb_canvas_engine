@@ -1,7 +1,7 @@
 import 'dart:collection';
 
 import '../contract/ids.dart';
-import 'mutation_op.dart';
+import 'mutation_execution_types.dart';
 import 'txn_context.dart';
 
 MutationPreparedCommitResult prepareMutationPreparedCommitResult(
