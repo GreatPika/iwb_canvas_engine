@@ -125,7 +125,7 @@ selection-only guard set.
 3. The runtime-owned policy exposes exactly two mutation behaviors for this
    step:
    `ensureExternalMutationAllowed(...)` for deny semantics and
-   `resetActiveGestureForExternalMutation(...)` for reset-before-mutate
+   `resetActiveGestureBeforeExternalMutation()` for reset-before-mutate
    semantics.
 4. `setCameraOffset(...)` and `replaceScene(...)` remain the only public
    scene mutations that may force-release an active gesture in this step.
@@ -282,7 +282,7 @@ selection-only guard set.
 ### 6.6 Allowed Forms That Do Not Count as Violations
 
 - `setCameraOffset(...)` and `replaceScene(...)` performing validation/no-op
-  preflight before calling `resetActiveGestureForExternalMutation(...)`.
+  preflight before calling `resetActiveGestureBeforeExternalMutation()`.
 - `notifySceneChanged()` remaining guarded only by public-side-effect rules.
 - Internal gesture-owned writes that do not enter through
   `controller.selection.*` or `controller.scene.*`.
@@ -321,7 +321,7 @@ selection-only guard set.
   must call `ensureExternalMutationAllowed(...)` before the first stateful
   write or emitted side effect.
 - `setCameraOffset(...)` and `replaceScene(...)` must call
-  `resetActiveGestureForExternalMutation(...)` only after their existing
+  `resetActiveGestureBeforeExternalMutation()` only after their existing
   mutation preflight determines that the boundary transition will proceed.
 - `notifySceneChanged()` must not be added to the active-gesture exclusivity
   guard set in this step.
@@ -373,7 +373,7 @@ existing preflight-before-reset behavior.
 #### Change
 
 Add `ensureExternalMutationAllowed(...)` and
-`resetActiveGestureForExternalMutation(...)` to
+`resetActiveGestureBeforeExternalMutation()` to
 `SceneControllerInteractionRuntime`, wire
 `SceneControllerSelectionMutations` and `SceneControllerSceneMutations` to use
 that policy, adjust facade assembly and thin capability owners accordingly, and

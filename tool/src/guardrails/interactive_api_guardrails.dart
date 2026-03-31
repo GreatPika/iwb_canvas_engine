@@ -6,6 +6,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import '../guardrail_support/guardrail_ast_utils.dart';
 import '../guardrail_support/guardrail_context.dart';
 import '../guardrail_support/guardrail_path_utils.dart';
+import 'interactive_mutation_guard_contract.dart';
 import 'public_surface_guardrails.dart';
 
 Future<List<GuardrailViolation>> runInteractiveApiGuardrails({
@@ -338,82 +339,6 @@ const List<CapabilityGuardSpec> _capabilityGuardSpecs = <CapabilityGuardSpec>[
   ),
 ];
 
-final class MutationOwnerGuardSpec {
-  const MutationOwnerGuardSpec({
-    required this.relativePath,
-    required this.className,
-    required this.policyIndexByMethod,
-    required this.policyCallByMethod,
-  });
-
-  final String relativePath;
-  final String className;
-  final Map<String, int> policyIndexByMethod;
-  final Map<String, String> policyCallByMethod;
-}
-
-const Map<String, String> _selectionMutationPolicyCalls = <String, String>{
-  'setSelection': 'ensureExternalMutationAllowed',
-  'toggleSelection': 'ensureExternalMutationAllowed',
-  'clearSelection': 'ensureExternalMutationAllowed',
-  'selectAll': 'ensureExternalMutationAllowed',
-  'rotateSelection': 'ensureExternalMutationAllowed',
-  'flipSelectionVertical': 'ensureExternalMutationAllowed',
-  'flipSelectionHorizontal': 'ensureExternalMutationAllowed',
-  'deleteSelection': 'ensureExternalMutationAllowed',
-};
-
-const Map<String, String> _sceneMutationPolicyCalls = <String, String>{
-  'write': 'ensureExternalMutationAllowed',
-  'setBackgroundColor': 'ensureExternalMutationAllowed',
-  'setGridEnabled': 'ensureExternalMutationAllowed',
-  'setGridCellSize': 'ensureExternalMutationAllowed',
-  'addNode': 'ensureExternalMutationAllowed',
-  'ensureLayer': 'ensureExternalMutationAllowed',
-  'patchNode': 'ensureExternalMutationAllowed',
-  'removeNode': 'ensureExternalMutationAllowed',
-  'clearScene': 'ensureExternalMutationAllowed',
-  'setCameraOffset': 'resetActiveGestureForExternalMutation',
-  'replaceScene': 'resetActiveGestureForExternalMutation',
-};
-
-const List<MutationOwnerGuardSpec> _mutationOwnerGuardSpecs =
-    <MutationOwnerGuardSpec>[
-      MutationOwnerGuardSpec(
-        relativePath: 'internal/scene_controller_selection_mutations.dart',
-        className: 'SceneControllerSelectionMutations',
-        policyIndexByMethod: <String, int>{
-          'setSelection': 0,
-          'toggleSelection': 0,
-          'clearSelection': 0,
-          'selectAll': 0,
-          'rotateSelection': 0,
-          'flipSelectionVertical': 0,
-          'flipSelectionHorizontal': 0,
-          'deleteSelection': 0,
-        },
-        policyCallByMethod: _selectionMutationPolicyCalls,
-      ),
-      MutationOwnerGuardSpec(
-        relativePath: 'internal/scene_controller_scene_mutations.dart',
-        className: 'SceneControllerSceneMutations',
-        policyIndexByMethod: <String, int>{
-          'write': 0,
-          'setBackgroundColor': 0,
-          'setGridEnabled': 0,
-          'setGridCellSize': 0,
-          'addNode': 0,
-          'ensureLayer': 0,
-          'patchNode': 0,
-          'removeNode': 0,
-          'clearScene': 0,
-          'setCameraOffset': 2,
-          'replaceScene': 1,
-        },
-        policyCallByMethod: _sceneMutationPolicyCalls,
-      ),
-    ];
-
 GuardrailViolation? _checkCapabilityEntrypoints(GuardrailContext context) {
   for (final spec in _capabilityGuardSpecs) {
     final file = _interactiveSupportFile(context, spec.relativePath);
@@ -466,7 +391,7 @@ GuardrailViolation? _checkCapabilityEntrypoints(GuardrailContext context) {
 }
 
 GuardrailViolation? _checkMutationOwnerPolicies(GuardrailContext context) {
-  for (final spec in _mutationOwnerGuardSpecs) {
+  for (final spec in mutationOwnerGuardSpecs) {
     final file = _interactiveSupportFile(context, spec.relativePath);
     if (!file.existsSync()) {
       return GuardrailViolation(
@@ -494,14 +419,15 @@ GuardrailViolation? _checkMutationOwnerPolicies(GuardrailContext context) {
       );
     }
 
-    for (final entry in spec.policyCallByMethod.entries) {
-      final member = _findMethodByName(ownerClass.members, entry.key);
+    for (final policy in spec.policies) {
+      final member = _findMethodByName(ownerClass.members, policy.methodName);
       if (member == null) {
         return GuardrailViolation(
           filePath: filePath,
           line: 1,
           message:
-              'interactive API violation: ${spec.className}.${entry.key} '
+              'interactive API violation: '
+              '${spec.className}.${policy.methodName} '
               'must remain part of the canonical mutation-owner surface.',
         );
       }
@@ -510,9 +436,9 @@ GuardrailViolation? _checkMutationOwnerPolicies(GuardrailContext context) {
         filePath: filePath,
         lineFor: (offset) => lineForOffset(parsed, offset),
         className: spec.className,
-        methodName: entry.key,
-        policyCall: entry.value,
-        policyIndex: spec.policyIndexByMethod[entry.key]!,
+        methodName: policy.methodName,
+        policyCall: policy.policyCall,
+        policyIndex: policy.policyIndex,
       );
       if (violation != null) {
         return violation;

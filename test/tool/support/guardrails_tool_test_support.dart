@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../../tool/src/guardrails/interactive_mutation_guard_contract.dart';
 import 'public_entrypoint_contract.dart';
 import 'tool_process_test_support.dart';
 
@@ -117,7 +118,7 @@ class _Runtime {
 
   void ensureExternalMutationAllowed(String operation) {}
 
-  void resetActiveGestureForExternalMutation(String operation) {}
+  void resetActiveGestureBeforeExternalMutation() {}
 }
 ''',
   );
@@ -368,7 +369,7 @@ typedef InteractiveDrawStyle = ({
 class SceneControllerInteractionRuntime {
   void ensureExternalMutationAllowed(String operation) {}
 
-  void resetActiveGestureForExternalMutation(String operation) {}
+  void resetActiveGestureBeforeExternalMutation() {}
 }
 ''',
   );
@@ -380,109 +381,12 @@ class SceneControllerInteractionRuntime {
   writeSandboxFile(
     sandbox,
     'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
-    '''
-class SceneControllerSceneMutations {
-  void write(Object fn) {
-    ensureExternalMutationAllowed('write');
-  }
-
-  void setBackgroundColor(Object value) {
-    ensureExternalMutationAllowed('setBackgroundColor');
-  }
-
-  void setGridEnabled(bool value) {
-    ensureExternalMutationAllowed('setGridEnabled');
-  }
-
-  void setGridCellSize(double value) {
-    ensureExternalMutationAllowed('setGridCellSize');
-  }
-
-  void addNode(Object node) {
-    ensureExternalMutationAllowed('addNode');
-  }
-
-  void ensureLayer(Object layerId) {
-    ensureExternalMutationAllowed('ensureLayer');
-  }
-
-  void patchNode(Object patch) {
-    ensureExternalMutationAllowed('patchNode');
-  }
-
-  void removeNode(Object nodeId) {
-    ensureExternalMutationAllowed('removeNode');
-  }
-
-  void clearScene() {
-    ensureExternalMutationAllowed('clearScene');
-  }
-
-  void setCameraOffset(Object value) {
-    _requireFiniteOffset(value);
-    if (_isSameOffset(value)) {
-      return;
-    }
-    resetActiveGestureForExternalMutation('setCameraOffset');
-  }
-
-  void replaceScene(Object snapshot) {
-    validateSnapshot(snapshot);
-    resetActiveGestureForExternalMutation('replaceScene');
-  }
-
-  void ensureExternalMutationAllowed(String operation) {}
-
-  void resetActiveGestureForExternalMutation(String operation) {}
-
-  void _requireFiniteOffset(Object value) {}
-
-  bool _isSameOffset(Object value) => false;
-
-  void validateSnapshot(Object snapshot) {}
-}
-''',
+    interactiveSceneMutationsFixture(),
   );
   writeSandboxFile(
     sandbox,
     'lib/src/interactive/internal/scene_controller_selection_mutations.dart',
-    '''
-class SceneControllerSelectionMutations {
-  void setSelection(Object nodeIds) {
-    ensureExternalMutationAllowed('setSelection');
-  }
-
-  void toggleSelection(Object nodeId) {
-    ensureExternalMutationAllowed('toggleSelection');
-  }
-
-  void clearSelection() {
-    ensureExternalMutationAllowed('clearSelection');
-  }
-
-  void selectAll() {
-    ensureExternalMutationAllowed('selectAll');
-  }
-
-  void rotateSelection() {
-    ensureExternalMutationAllowed('rotateSelection');
-  }
-
-  void flipSelectionVertical() {
-    ensureExternalMutationAllowed('flipSelectionVertical');
-  }
-
-  void flipSelectionHorizontal() {
-    ensureExternalMutationAllowed('flipSelectionHorizontal');
-  }
-
-  void deleteSelection() {
-    ensureExternalMutationAllowed('deleteSelection');
-  }
-
-  void ensureExternalMutationAllowed(String operation) {}
-}
-''',
+    interactiveSelectionMutationsFixture(),
   );
   writeSandboxFile(
     sandbox,
@@ -518,4 +422,138 @@ void sceneControllerInternalSetBeforePointerDispatchHook(
 ) {}
 ''',
   );
+}
+
+String interactiveSelectionMutationsFixture({
+  String setSelectionBody = "ensureExternalMutationAllowed('setSelection');",
+}) {
+  return _mutationOwnerFixture(
+    className: 'SceneControllerSelectionMutations',
+    policies: selectionMutationOwnerPolicies,
+    bodyOverrides: <String, String>{'setSelection': setSelectionBody},
+    helperMethods: '''
+  void ensureExternalMutationAllowed(String operation) {}
+''',
+  );
+}
+
+String interactiveSceneMutationsFixture({
+  String writeBody = "ensureExternalMutationAllowed('write');",
+  String setCameraOffsetBody = '''
+_requireFiniteOffset(value);
+if (_isSameOffset(value)) {
+  return;
+}
+resetActiveGestureBeforeExternalMutation();
+''',
+  String replaceSceneBody = '''
+validateSnapshot(snapshot);
+resetActiveGestureBeforeExternalMutation();
+''',
+}) {
+  return _mutationOwnerFixture(
+    className: 'SceneControllerSceneMutations',
+    policies: sceneMutationOwnerPolicies,
+    bodyOverrides: <String, String>{
+      'write': writeBody,
+      'setCameraOffset': setCameraOffsetBody,
+      'replaceScene': replaceSceneBody,
+    },
+    helperMethods: '''
+  void ensureExternalMutationAllowed(String operation) {}
+
+  void resetActiveGestureBeforeExternalMutation() {}
+
+  void _requireFiniteOffset(Object value) {}
+
+  bool _isSameOffset(Object value) => false;
+
+  void validateSnapshot(Object snapshot) {}
+''',
+  );
+}
+
+String _mutationOwnerFixture({
+  required String className,
+  required List<MutationOwnerPolicySpec> policies,
+  required Map<String, String> bodyOverrides,
+  required String helperMethods,
+}) {
+  final buffer = StringBuffer()..writeln('class $className {');
+  for (final policy in policies) {
+    buffer
+      ..writeln(
+        _mutationMethodFixture(
+          methodName: policy.methodName,
+          body:
+              bodyOverrides[policy.methodName] ?? _defaultMutationBody(policy),
+        ),
+      )
+      ..writeln();
+  }
+  buffer
+    ..writeln(helperMethods.trimRight())
+    ..writeln('}');
+  return buffer.toString();
+}
+
+String _mutationMethodFixture({
+  required String methodName,
+  required String body,
+}) {
+  final normalizedBody = body
+      .trimRight()
+      .split('\n')
+      .map((line) => '    $line')
+      .join('\n');
+  return '''
+  ${_mutationMethodReturnType()} $methodName(${_mutationMethodParameter(methodName)}) {
+$normalizedBody
+  }''';
+}
+
+String _defaultMutationBody(MutationOwnerPolicySpec policy) {
+  return "${policy.policyCall}('${policy.methodName}');";
+}
+
+String _mutationMethodReturnType() {
+  return 'void';
+}
+
+String _mutationMethodParameter(String methodName) {
+  switch (methodName) {
+    case 'write':
+      return 'Object fn';
+    case 'setBackgroundColor':
+      return 'Object value';
+    case 'setGridEnabled':
+      return 'bool value';
+    case 'setGridCellSize':
+      return 'double value';
+    case 'addNode':
+      return 'Object node';
+    case 'ensureLayer':
+      return 'Object layerId';
+    case 'patchNode':
+      return 'Object patch';
+    case 'removeNode':
+      return 'Object nodeId';
+    case 'setCameraOffset':
+      return 'Object value';
+    case 'replaceScene':
+      return 'Object snapshot';
+    case 'setSelection':
+      return 'Object nodeIds';
+    case 'toggleSelection':
+      return 'Object nodeId';
+    case 'clearScene':
+    case 'clearSelection':
+    case 'selectAll':
+    case 'rotateSelection':
+    case 'flipSelectionVertical':
+    case 'flipSelectionHorizontal':
+    case 'deleteSelection':
+      return '';
+  }
+  throw ArgumentError.value(methodName, 'methodName', 'Unsupported method.');
 }

@@ -52,7 +52,7 @@ final class SceneControllerInteractionRuntime {
     }
   }
 
-  void resetActiveGestureForExternalMutation(String _) {
+  void resetActiveGestureBeforeExternalMutation() {
     runtime.resetInteractiveState();
   }
 

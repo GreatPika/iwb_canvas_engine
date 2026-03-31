@@ -56,118 +56,6 @@ $methods
 ''';
 }
 
-String _selectionMutationsFixture({
-  String setSelectionBody = "ensureExternalMutationAllowed('setSelection');",
-}) {
-  return '''
-class SceneControllerSelectionMutations {
-  void setSelection(Object nodeIds) {
-    $setSelectionBody
-  }
-
-  void toggleSelection(Object nodeId) {
-    ensureExternalMutationAllowed('toggleSelection');
-  }
-
-  void clearSelection() {
-    ensureExternalMutationAllowed('clearSelection');
-  }
-
-  void selectAll() {
-    ensureExternalMutationAllowed('selectAll');
-  }
-
-  void rotateSelection() {
-    ensureExternalMutationAllowed('rotateSelection');
-  }
-
-  void flipSelectionVertical() {
-    ensureExternalMutationAllowed('flipSelectionVertical');
-  }
-
-  void flipSelectionHorizontal() {
-    ensureExternalMutationAllowed('flipSelectionHorizontal');
-  }
-
-  void deleteSelection() {
-    ensureExternalMutationAllowed('deleteSelection');
-  }
-
-  void ensureExternalMutationAllowed(String operation) {}
-}
-''';
-}
-
-String _sceneMutationsFixture({
-  String writeBody = "ensureExternalMutationAllowed('write');",
-  String setCameraOffsetBody = '''
-_requireFiniteOffset(value);
-if (_isSameOffset(value)) {
-  return;
-}
-resetActiveGestureForExternalMutation('setCameraOffset');
-''',
-}) {
-  return '''
-class SceneControllerSceneMutations {
-  void write(Object fn) {
-    $writeBody
-  }
-
-  void setBackgroundColor(Object value) {
-    ensureExternalMutationAllowed('setBackgroundColor');
-  }
-
-  void setGridEnabled(bool value) {
-    ensureExternalMutationAllowed('setGridEnabled');
-  }
-
-  void setGridCellSize(double value) {
-    ensureExternalMutationAllowed('setGridCellSize');
-  }
-
-  void addNode(Object node) {
-    ensureExternalMutationAllowed('addNode');
-  }
-
-  void ensureLayer(Object layerId) {
-    ensureExternalMutationAllowed('ensureLayer');
-  }
-
-  void patchNode(Object patch) {
-    ensureExternalMutationAllowed('patchNode');
-  }
-
-  void removeNode(Object nodeId) {
-    ensureExternalMutationAllowed('removeNode');
-  }
-
-  void clearScene() {
-    ensureExternalMutationAllowed('clearScene');
-  }
-
-  void setCameraOffset(Object value) {
-    $setCameraOffsetBody
-  }
-
-  void replaceScene(Object snapshot) {
-    validateSnapshot(snapshot);
-    resetActiveGestureForExternalMutation('replaceScene');
-  }
-
-  void ensureExternalMutationAllowed(String operation) {}
-
-  void resetActiveGestureForExternalMutation(String operation) {}
-
-  void _requireFiniteOffset(Object value) {}
-
-  bool _isSameOffset(Object value) => false;
-
-  void validateSnapshot(Object snapshot) {}
-}
-''';
-}
-
 void _registerInteractiveAcceptanceTests() {
   // INV:INV-ENG-INTERACTIVE-RESOLVER-PURITY
   test(
@@ -425,7 +313,9 @@ class SceneControllerScene {
       writeSandboxFile(
         sandbox,
         'lib/src/interactive/internal/scene_controller_selection_mutations.dart',
-        _selectionMutationsFixture(setSelectionBody: "print('missing guard');"),
+        interactiveSelectionMutationsFixture(
+          setSelectionBody: "print('missing guard');",
+        ),
       );
 
       final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
@@ -474,7 +364,9 @@ class SceneControllerScene {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
-          _sceneMutationsFixture(writeBody: "print('missing guard');"),
+          interactiveSceneMutationsFixture(
+            writeBody: "print('missing guard');",
+          ),
         );
 
         final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
@@ -522,7 +414,7 @@ class SceneControllerScene {
       writeSandboxFile(
         sandbox,
         'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
-        _sceneMutationsFixture(
+        interactiveSceneMutationsFixture(
           setCameraOffsetBody: '''
 _requireFiniteOffset(value);
 if (_isSameOffset(value)) {
@@ -542,7 +434,7 @@ ensureExternalMutationAllowed('setCameraOffset');
           detail:
               'SceneControllerSceneMutations.setCameraOffset must guard '
               'active-gesture exclusivity with '
-              'resetActiveGestureForExternalMutation',
+              'resetActiveGestureBeforeExternalMutation',
         ),
       );
     } finally {
@@ -620,12 +512,12 @@ class SceneControllerSceneMutations {
     if (_isSameOffset(value)) {
       return;
     }
-    resetActiveGestureForExternalMutation('setCameraOffset');
+    resetActiveGestureBeforeExternalMutation();
   }
 
   void replaceScene(Object snapshot) {
     validateSnapshot(snapshot);
-    resetActiveGestureForExternalMutation('replaceScene');
+    resetActiveGestureBeforeExternalMutation();
   }
 
   void _guardExternal(String operation) {
@@ -634,7 +526,7 @@ class SceneControllerSceneMutations {
 
   void ensureExternalMutationAllowed(String operation) {}
 
-  void resetActiveGestureForExternalMutation(String operation) {}
+  void resetActiveGestureBeforeExternalMutation() {}
 
   void _requireFiniteOffset(Object value) {}
 

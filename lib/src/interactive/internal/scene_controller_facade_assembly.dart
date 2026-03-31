@@ -141,8 +141,8 @@ SceneControllerSceneMutations _createSceneMutations({
     core: core,
     ensureExternalMutationAllowed:
         interactionRuntime.ensureExternalMutationAllowed,
-    resetActiveGestureForExternalMutation:
-        interactionRuntime.resetActiveGestureForExternalMutation,
+    resetActiveGestureBeforeExternalMutation:
+        interactionRuntime.resetActiveGestureBeforeExternalMutation,
     emitAction: interactionRuntime.emitAction,
     resolveTimestampMs: interactionRuntime.resolveTimestampMs,
     clearPointerNormalizationState:

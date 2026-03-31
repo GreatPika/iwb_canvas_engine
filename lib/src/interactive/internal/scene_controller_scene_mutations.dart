@@ -13,7 +13,7 @@ final class SceneControllerSceneMutations {
   const SceneControllerSceneMutations({
     required this.core,
     required this.ensureExternalMutationAllowed,
-    required this.resetActiveGestureForExternalMutation,
+    required this.resetActiveGestureBeforeExternalMutation,
     required this.emitAction,
     required this.resolveTimestampMs,
     required this.clearPointerNormalizationState,
@@ -23,7 +23,7 @@ final class SceneControllerSceneMutations {
 
   final SceneControllerCore core;
   final void Function(String operation) ensureExternalMutationAllowed;
-  final void Function(String operation) resetActiveGestureForExternalMutation;
+  final VoidCallback resetActiveGestureBeforeExternalMutation;
   final void Function(ActionType action, List<NodeId> nodeIds, int timestampMs)
   emitAction;
   final int Function(int? timestampMs) resolveTimestampMs;
@@ -92,7 +92,7 @@ final class SceneControllerSceneMutations {
     if (readSnapshot().camera.offset == value) {
       return;
     }
-    resetActiveGestureForExternalMutation('setCameraOffset');
+    resetActiveGestureBeforeExternalMutation();
     core.commands.writeCameraOffsetSet(value);
   }
 
@@ -103,7 +103,7 @@ final class SceneControllerSceneMutations {
 
   void replaceScene(SceneSnapshot snapshot) {
     txnSceneFromSnapshot(snapshot);
-    resetActiveGestureForExternalMutation('replaceScene');
+    resetActiveGestureBeforeExternalMutation();
     core.writeReplaceScene(snapshot);
     clearPointerNormalizationState();
   }
