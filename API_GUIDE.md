@@ -442,8 +442,16 @@ Important behavior:
   `setMode(...)`, `setDrawTool(...)`, and `dispose()` force-reset the active
   gesture only when the boundary transition will actually continue with an
   observable state change
-- `setSelection(...)`, `toggleSelection(...)`, `clearSelection()`, and
-  `selectAll(...)` throw `StateError` while an active move/draw gesture owns
+- all public `controller.selection.*` mutations plus
+  `scene.write(...)`,
+  `setBackgroundColor(...)`,
+  `setGridEnabled(...)`,
+  `setGridCellSize(...)`,
+  `addNode(...)`,
+  `ensureLayer(...)`,
+  `patchNode(...)`,
+  `removeNode(...)`, and
+  `clearScene(...)` throw `StateError` while an active move/draw gesture owns
   the controller
 - interactive rotate/flip/delete preflight uses one internal snapshot-based
   eligibility policy owner; write-layer guards remain separate defensive
@@ -468,13 +476,21 @@ Selection helpers:
 - `clearSelection()`
 - `selectAll({bool onlySelectable = true})`
 
-Selection exclusivity:
+Active-gesture mutation exclusivity:
 
-- `setSelection(...)`, `toggleSelection(...)`, `clearSelection()`, and
-  `selectAll(...)` are external selection mutations
-- external selection mutations throw `StateError` while an active move/draw
-  gesture is in progress
+- `setSelection(...)`, `toggleSelection(...)`, `clearSelection()`,
+  `selectAll(...)`, `rotateSelection(...)`, `flipSelectionVertical(...)`,
+  `flipSelectionHorizontal(...)`, `deleteSelection(...)`, `scene.write(...)`,
+  `setBackgroundColor(...)`, `setGridEnabled(...)`, `setGridCellSize(...)`,
+  `addNode(...)`, `ensureLayer(...)`, `patchNode(...)`, `removeNode(...)`, and
+  `clearScene(...)` are external public mutations
+- these APIs throw `StateError` while an active move/draw gesture is in
+  progress
 - after terminal `up` or `cancel`, these APIs become available again
+- `setCameraOffset(...)` and `replaceScene(...)` are the only public scene
+  mutations that may reset the active gesture instead of being denied
+- `setCameraOffset(...)` keeps its existing finite/no-op preflight before any
+  reset, and `replaceScene(...)` keeps snapshot validation before any reset
 
 Transform and document helpers:
 

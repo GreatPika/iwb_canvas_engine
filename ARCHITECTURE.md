@@ -219,10 +219,11 @@ Ownership decisions for the target state:
 2. `SceneController` is the public interactive facade. It validates
    public inputs, keeps host-facing mode/tool/selection semantics, owns the
    snapshot-based eligibility policy used by controller-side transform/delete
-   preflight and by move-mode hit-test/preview/commit shaping, rejects
-   external selection mutations during an active gesture, restores move-local
-   baseline selection on pointer `cancel`, and delegates boundary pointer
-   handling to the controller-private `InteractiveRuntime`.
+   preflight and by move-mode hit-test/preview/commit shaping, keeps public
+   scene/selection capability facades thin, restores move-local baseline
+   selection on pointer `cancel`, and delegates boundary pointer handling plus
+   external-mutation gesture policy to the controller-private
+   `InteractiveRuntime`.
 3. `InteractiveRuntime` is the controller-private boundary runtime. It owns the
    final interactive owner graph beneath the facade:
    `InteractivePointerNormalizer` for terminal pointer normalization,
@@ -257,10 +258,13 @@ Ownership decisions for the target state:
   mutate committed scene data until commit on `up`.
 - Active gesture identity is controller-owned; move/draw helpers do not own a
   competing pointer lock.
-- Public selection mutations are controller-gated while a gesture is active, so
-  move/draw-local selection transitions do not compete with external
-  `setSelection(...)`, `toggleSelection(...)`, `clearSelection()`, or
-  `selectAll(...)`.
+- `SceneControllerSelectionMutations` and `SceneControllerSceneMutations` own
+  the runtime-mediated public mutation policy for active gestures.
+- During an active move/draw gesture, public `controller.selection.*`
+  mutations plus deny-listed `controller.scene.*` mutations are rejected before
+  committed state changes; only `setCameraOffset(...)` and `replaceScene(...)`
+  may reset the active gesture, and only after their existing preflight proves
+  the boundary mutation will proceed.
 - Interactive admissibility has one owner per boundary: snapshot-based
   transform/delete preflight and move-mode preview/commit shaping live under
   `interactive/`, while marquee inclusion and move hit-testing reuse the same

@@ -46,10 +46,14 @@ final class SceneControllerInteractionRuntime {
     }
   }
 
-  void ensureExternalSelectionMutationAllowed(String operation) {
+  void ensureExternalMutationAllowed(String operation) {
     if (runtime.hasActiveGesture) {
       throw StateError('$operation is not allowed during an active gesture.');
     }
+  }
+
+  void resetActiveGestureForExternalMutation(String _) {
+    runtime.resetInteractiveState();
   }
 
   void scheduleNotify() {

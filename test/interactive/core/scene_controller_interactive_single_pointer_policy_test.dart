@@ -7,6 +7,146 @@ import 'package:iwb_canvas_engine/src/core/scene.dart';
 
 import '../test_support/interactive_controller_fixtures.dart';
 
+typedef _MutationCase = ({
+  String name,
+  void Function(SceneController controller) run,
+});
+
+SceneController _controllerForPublicMutationExclusivity({
+  required bool drawMode,
+}) {
+  final rect = RectNode(id: 'node', size: const Size(30, 20))
+    ..position = const Offset(60, 60);
+  final other = RectNode(id: 'other', size: const Size(30, 20))
+    ..position = const Offset(120, 60);
+  final controller = controllerFromScene(
+    Scene(
+      layers: <ContentLayer>[
+        ContentLayer(id: 'layer-auto-30'),
+        ContentLayer(id: 'layer-auto-31', nodes: <SceneNode>[rect, other]),
+      ],
+    ),
+  );
+  controller.selection.setSelection(const <NodeId>{'node'});
+  if (drawMode) {
+    controller.interaction.setMode(CanvasMode.draw);
+    controller.interaction.setDrawTool(DrawTool.line);
+  }
+  return controller;
+}
+
+void _beginActiveGesture(SceneController controller, {required bool drawMode}) {
+  controller.interaction.handlePointer(
+    sampleInput(
+      pointerId: 1,
+      position: drawMode ? const Offset(10, 10) : const Offset(60, 60),
+      timestampMs: 1,
+      phase: CanvasPointerPhase.down,
+    ),
+  );
+}
+
+void _cancelActiveGesture(
+  SceneController controller, {
+  required bool drawMode,
+}) {
+  controller.interaction.handlePointer(
+    sampleInput(
+      pointerId: 1,
+      position: drawMode ? const Offset(10, 10) : const Offset(60, 60),
+      timestampMs: 2,
+      phase: CanvasPointerPhase.cancel,
+    ),
+  );
+}
+
+List<_MutationCase> _denyListedPublicMutationCases() {
+  return <_MutationCase>[
+    (
+      name: 'setSelection',
+      run: (controller) =>
+          controller.selection.setSelection(const <NodeId>{'other'}),
+    ),
+    (
+      name: 'toggleSelection',
+      run: (controller) => controller.selection.toggleSelection('other'),
+    ),
+    (
+      name: 'clearSelection',
+      run: (controller) => controller.selection.clearSelection(),
+    ),
+    (name: 'selectAll', run: (controller) => controller.selection.selectAll()),
+    (
+      name: 'rotateSelection',
+      run: (controller) => controller.selection.rotateSelection(
+        clockwise: true,
+        timestampMs: 10,
+      ),
+    ),
+    (
+      name: 'flipSelectionVertical',
+      run: (controller) =>
+          controller.selection.flipSelectionVertical(timestampMs: 10),
+    ),
+    (
+      name: 'flipSelectionHorizontal',
+      run: (controller) =>
+          controller.selection.flipSelectionHorizontal(timestampMs: 10),
+    ),
+    (
+      name: 'deleteSelection',
+      run: (controller) =>
+          controller.selection.deleteSelection(timestampMs: 10),
+    ),
+    (
+      name: 'write',
+      run: (controller) => controller.scene.write<void>((txn) {
+        txn.writeCameraOffset(const Offset(5, 6));
+      }),
+    ),
+    (
+      name: 'setBackgroundColor',
+      run: (controller) =>
+          controller.scene.setBackgroundColor(const Color(0xFF336699)),
+    ),
+    (
+      name: 'setGridEnabled',
+      run: (controller) => controller.scene.setGridEnabled(false),
+    ),
+    (
+      name: 'setGridCellSize',
+      run: (controller) => controller.scene.setGridCellSize(12),
+    ),
+    (
+      name: 'addNode',
+      run: (controller) => controller.scene.addNode(
+        RectNodeSpec(id: 'fresh-node', size: const Size(8, 8)),
+      ),
+    ),
+    (
+      name: 'ensureLayer',
+      run: (controller) => controller.scene.ensureLayer('layer-extra'),
+    ),
+    (
+      name: 'patchNode',
+      run: (controller) => controller.scene.patchNode(
+        RectNodePatch(
+          id: 'node',
+          size: PatchField<Size>.value(const Size(40, 25)),
+        ),
+      ),
+    ),
+    (
+      name: 'removeNode',
+      run: (controller) => controller.scene.removeNode('other'),
+    ),
+    (
+      name: 'clearScene',
+      run: (controller) => controller.scene.clearScene(timestampMs: 10),
+    ),
+  ];
+}
+
 void main() {
   group('SceneController unit', () {
     group('single-active-pointer policy', () {
@@ -192,57 +332,33 @@ void main() {
         expect(afterCancelRecovery.transform.ty, closeTo(60, 1e-6));
       });
 
-      test('move mode rejects external selection mutations while active', () {
-        final rect = RectNode(id: 'node', size: const Size(30, 20))
-          ..position = const Offset(60, 60);
-        final other = RectNode(id: 'other', size: const Size(30, 20))
-          ..position = const Offset(120, 60);
-        final controller = controllerFromScene(
-          Scene(
-            layers: <ContentLayer>[
-              ContentLayer(id: 'layer-auto-30'),
-              ContentLayer(
-                id: 'layer-auto-31',
-                nodes: <SceneNode>[rect, other],
-              ),
-            ],
-          ),
-        );
-        addTearDown(controller.dispose);
-        controller.selection.setSelection(const <NodeId>{'node'});
+      test(
+        'move mode rejects all public scene/selection mutations while active',
+        () {
+          // INV:INV-ENG-INTERACTIVE-PUBLIC-MUTATION-EXCLUSIVITY
+          for (final mutation in _denyListedPublicMutationCases()) {
+            final controller = _controllerForPublicMutationExclusivity(
+              drawMode: false,
+            );
+            addTearDown(controller.dispose);
+            _beginActiveGesture(controller, drawMode: false);
 
-        controller.interaction.handlePointer(
-          sampleInput(
-            pointerId: 1,
-            position: const Offset(60, 60),
-            timestampMs: 1,
-            phase: CanvasPointerPhase.down,
-          ),
-        );
+            expect(
+              () => mutation.run(controller),
+              throwsStateError,
+              reason: mutation.name,
+            );
 
-        expect(
-          () => controller.selection.setSelection(const <NodeId>{'other'}),
-          throwsStateError,
-        );
-        expect(
-          () => controller.selection.toggleSelection('other'),
-          throwsStateError,
-        );
-        expect(() => controller.selection.clearSelection(), throwsStateError);
-        expect(() => controller.selection.selectAll(), throwsStateError);
+            _cancelActiveGesture(controller, drawMode: false);
 
-        controller.interaction.handlePointer(
-          sampleInput(
-            pointerId: 1,
-            position: const Offset(60, 60),
-            timestampMs: 2,
-            phase: CanvasPointerPhase.cancel,
-          ),
-        );
-
-        controller.selection.setSelection(const <NodeId>{'other'});
-        expect(controller.selectedNodeIds, const <NodeId>{'other'});
-      });
+            expect(
+              () => mutation.run(controller),
+              returnsNormally,
+              reason: mutation.name,
+            );
+          }
+        },
+      );
 
       test(
         'draw line ignores parallel pointer ids and accepts new pointer after up',
@@ -488,52 +604,33 @@ void main() {
         },
       );
 
-      test('draw mode rejects external selection mutations while active', () {
-        final controller = SceneController(
-          initialSnapshot: SceneSnapshot(
-            layers: <ContentLayerSnapshot>[
-              ContentLayerSnapshot(id: 'layer-auto-40'),
-              ContentLayerSnapshot(id: 'layer-auto-41'),
-            ],
-          ),
-          dragStartSlop: 0.001,
-        );
-        addTearDown(controller.dispose);
-        controller.interaction.setMode(CanvasMode.draw);
-        controller.interaction.setDrawTool(DrawTool.line);
+      test(
+        'draw mode rejects all public scene/selection mutations while active',
+        () {
+          // INV:INV-ENG-INTERACTIVE-PUBLIC-MUTATION-EXCLUSIVITY
+          for (final mutation in _denyListedPublicMutationCases()) {
+            final controller = _controllerForPublicMutationExclusivity(
+              drawMode: true,
+            );
+            addTearDown(controller.dispose);
+            _beginActiveGesture(controller, drawMode: true);
 
-        controller.interaction.handlePointer(
-          sampleInput(
-            pointerId: 1,
-            position: const Offset(10, 10),
-            timestampMs: 1,
-            phase: CanvasPointerPhase.down,
-          ),
-        );
+            expect(
+              () => mutation.run(controller),
+              throwsStateError,
+              reason: mutation.name,
+            );
 
-        expect(
-          () => controller.selection.setSelection(const <NodeId>{'x'}),
-          throwsStateError,
-        );
-        expect(
-          () => controller.selection.toggleSelection('x'),
-          throwsStateError,
-        );
-        expect(() => controller.selection.clearSelection(), throwsStateError);
-        expect(() => controller.selection.selectAll(), throwsStateError);
+            _cancelActiveGesture(controller, drawMode: true);
 
-        controller.interaction.handlePointer(
-          sampleInput(
-            pointerId: 1,
-            position: const Offset(10, 10),
-            timestampMs: 2,
-            phase: CanvasPointerPhase.cancel,
-          ),
-        );
-
-        controller.selection.clearSelection();
-        expect(controller.selectedNodeIds, isEmpty);
-      });
+            expect(
+              () => mutation.run(controller),
+              returnsNormally,
+              reason: mutation.name,
+            );
+          }
+        },
+      );
     });
   });
 }

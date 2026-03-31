@@ -230,6 +230,14 @@ const List<Invariant> invariants = <Invariant>[
     proofPath: 'tool/check_guardrails.dart',
   ),
   Invariant(
+    id: 'INV-ENG-INTERACTIVE-PUBLIC-MUTATION-EXCLUSIVITY',
+    scope: 'engine-runtime',
+    title:
+        'public controller.selection.* and controller.scene.* mutations stay gesture-exclusive during active move/draw ownership except setCameraOffset(...) and replaceScene(...), which reset only after preflight confirms the boundary mutation will proceed',
+    proofPath:
+        'test/interactive/core/scene_controller_interactive_single_pointer_policy_test.dart',
+  ),
+  Invariant(
     id: 'INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY',
     scope: 'engine-runtime',
     title:

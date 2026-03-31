@@ -56,6 +56,118 @@ $methods
 ''';
 }
 
+String _selectionMutationsFixture({
+  String setSelectionBody = "ensureExternalMutationAllowed('setSelection');",
+}) {
+  return '''
+class SceneControllerSelectionMutations {
+  void setSelection(Object nodeIds) {
+    $setSelectionBody
+  }
+
+  void toggleSelection(Object nodeId) {
+    ensureExternalMutationAllowed('toggleSelection');
+  }
+
+  void clearSelection() {
+    ensureExternalMutationAllowed('clearSelection');
+  }
+
+  void selectAll() {
+    ensureExternalMutationAllowed('selectAll');
+  }
+
+  void rotateSelection() {
+    ensureExternalMutationAllowed('rotateSelection');
+  }
+
+  void flipSelectionVertical() {
+    ensureExternalMutationAllowed('flipSelectionVertical');
+  }
+
+  void flipSelectionHorizontal() {
+    ensureExternalMutationAllowed('flipSelectionHorizontal');
+  }
+
+  void deleteSelection() {
+    ensureExternalMutationAllowed('deleteSelection');
+  }
+
+  void ensureExternalMutationAllowed(String operation) {}
+}
+''';
+}
+
+String _sceneMutationsFixture({
+  String writeBody = "ensureExternalMutationAllowed('write');",
+  String setCameraOffsetBody = '''
+_requireFiniteOffset(value);
+if (_isSameOffset(value)) {
+  return;
+}
+resetActiveGestureForExternalMutation('setCameraOffset');
+''',
+}) {
+  return '''
+class SceneControllerSceneMutations {
+  void write(Object fn) {
+    $writeBody
+  }
+
+  void setBackgroundColor(Object value) {
+    ensureExternalMutationAllowed('setBackgroundColor');
+  }
+
+  void setGridEnabled(bool value) {
+    ensureExternalMutationAllowed('setGridEnabled');
+  }
+
+  void setGridCellSize(double value) {
+    ensureExternalMutationAllowed('setGridCellSize');
+  }
+
+  void addNode(Object node) {
+    ensureExternalMutationAllowed('addNode');
+  }
+
+  void ensureLayer(Object layerId) {
+    ensureExternalMutationAllowed('ensureLayer');
+  }
+
+  void patchNode(Object patch) {
+    ensureExternalMutationAllowed('patchNode');
+  }
+
+  void removeNode(Object nodeId) {
+    ensureExternalMutationAllowed('removeNode');
+  }
+
+  void clearScene() {
+    ensureExternalMutationAllowed('clearScene');
+  }
+
+  void setCameraOffset(Object value) {
+    $setCameraOffsetBody
+  }
+
+  void replaceScene(Object snapshot) {
+    validateSnapshot(snapshot);
+    resetActiveGestureForExternalMutation('replaceScene');
+  }
+
+  void ensureExternalMutationAllowed(String operation) {}
+
+  void resetActiveGestureForExternalMutation(String operation) {}
+
+  void _requireFiniteOffset(Object value) {}
+
+  bool _isSameOffset(Object value) => false;
+
+  void validateSnapshot(Object snapshot) {}
+}
+''';
+}
+
 void _registerInteractiveAcceptanceTests() {
   // INV:INV-ENG-INTERACTIVE-RESOLVER-PURITY
   test(
@@ -286,7 +398,7 @@ class SceneControllerScene {
     }
   });
 
-  test('rejects selection mutation without active gesture guard', () async {
+  test('rejects selection mutation owner without active gesture guard', () async {
     final sandbox = await createGuardrailsSandbox();
     try {
       writeMinimalControllerStore(sandbox);
@@ -312,23 +424,223 @@ class SceneControllerScene {
       );
       writeSandboxFile(
         sandbox,
-        'lib/src/interactive/scene_controller_selection.dart',
-        '''
-class SceneControllerSelection {
-  final _runtime = _Runtime();
+        'lib/src/interactive/internal/scene_controller_selection_mutations.dart',
+        _selectionMutationsFixture(setSelectionBody: "print('missing guard');"),
+      );
 
-  void setSelection(Object nodeIds) {
-    _runtime.ensurePublicSideEffectAllowed('setSelection');
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, isNonZero);
+      expect(
+        result.stderr.toString(),
+        diagnostic(
+          category: 'interactive API',
+          detail:
+              'SceneControllerSelectionMutations.setSelection must guard '
+              'active-gesture exclusivity with '
+              'ensureExternalMutationAllowed',
+        ),
+      );
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
+  });
+
+  test(
+    'rejects scene mutation owner write without active gesture guard',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
   }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
+          _sceneMutationsFixture(writeBody: "print('missing guard');"),
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneControllerSceneMutations.write must guard '
+                'active-gesture exclusivity with '
+                'ensureExternalMutationAllowed',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test('rejects reset-listed scene mutation using deny policy', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeMinimalControllerStore(sandbox);
+      writeInteractiveArchitectureSupportScaffold(sandbox);
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/scene_controller.dart',
+        _sceneControllerFixture(
+          methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+        ),
+      );
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
+        _sceneMutationsFixture(
+          setCameraOffsetBody: '''
+_requireFiniteOffset(value);
+if (_isSameOffset(value)) {
+  return;
 }
+ensureExternalMutationAllowed('setCameraOffset');
+''',
+        ),
+      );
 
-class _Runtime {
-  void ensurePublicSideEffectAllowed(
-    String operation, {
-    bool allowAfterDispose = false,
-  }) {}
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, isNonZero);
+      expect(
+        result.stderr.toString(),
+        diagnostic(
+          category: 'interactive API',
+          detail:
+              'SceneControllerSceneMutations.setCameraOffset must guard '
+              'active-gesture exclusivity with '
+              'resetActiveGestureForExternalMutation',
+        ),
+      );
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
+  });
 
-  void ensureExternalSelectionMutationAllowed(String operation) {}
+  test('rejects mutation-owner helper bypass for scene.write', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeMinimalControllerStore(sandbox);
+      writeInteractiveArchitectureSupportScaffold(sandbox);
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/scene_controller.dart',
+        _sceneControllerFixture(
+          methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+        ),
+      );
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
+        '''
+class SceneControllerSceneMutations {
+  void write(Object fn) {
+    _guardExternal('write');
+  }
+
+  void setBackgroundColor(Object value) {
+    ensureExternalMutationAllowed('setBackgroundColor');
+  }
+
+  void setGridEnabled(bool value) {
+    ensureExternalMutationAllowed('setGridEnabled');
+  }
+
+  void setGridCellSize(double value) {
+    ensureExternalMutationAllowed('setGridCellSize');
+  }
+
+  void addNode(Object node) {
+    ensureExternalMutationAllowed('addNode');
+  }
+
+  void ensureLayer(Object layerId) {
+    ensureExternalMutationAllowed('ensureLayer');
+  }
+
+  void patchNode(Object patch) {
+    ensureExternalMutationAllowed('patchNode');
+  }
+
+  void removeNode(Object nodeId) {
+    ensureExternalMutationAllowed('removeNode');
+  }
+
+  void clearScene() {
+    ensureExternalMutationAllowed('clearScene');
+  }
+
+  void setCameraOffset(Object value) {
+    _requireFiniteOffset(value);
+    if (_isSameOffset(value)) {
+      return;
+    }
+    resetActiveGestureForExternalMutation('setCameraOffset');
+  }
+
+  void replaceScene(Object snapshot) {
+    validateSnapshot(snapshot);
+    resetActiveGestureForExternalMutation('replaceScene');
+  }
+
+  void _guardExternal(String operation) {
+    ensureExternalMutationAllowed(operation);
+  }
+
+  void ensureExternalMutationAllowed(String operation) {}
+
+  void resetActiveGestureForExternalMutation(String operation) {}
+
+  void _requireFiniteOffset(Object value) {}
+
+  bool _isSameOffset(Object value) => false;
+
+  void validateSnapshot(Object snapshot) {}
 }
 ''',
       );
@@ -340,9 +652,9 @@ class _Runtime {
         diagnostic(
           category: 'interactive API',
           detail:
-              'SceneControllerSelection.setSelection must guard '
+              'SceneControllerSceneMutations.write must guard '
               'active-gesture exclusivity with '
-              '_runtime.ensureExternalSelectionMutationAllowed',
+              'ensureExternalMutationAllowed',
         ),
       );
     } finally {

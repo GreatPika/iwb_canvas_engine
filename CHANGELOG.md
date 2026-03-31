@@ -79,6 +79,16 @@ All notable changes to `iwb_canvas_engine` are documented here.
   `toggleSelection(...)`, `clearSelection()`, and `selectAll(...)` while an
   active move/draw gesture is in progress, so selection lifecycle has one
   controller-owned gesture owner between `down` and terminal `up`/`cancel`.
+- Active-gesture exclusivity now covers all mutating
+  `controller.selection.*` entrypoints and public deny-listed
+  `controller.scene.*` mutations. `scene.write(...)`,
+  `setBackgroundColor(...)`, `setGridEnabled(...)`, `setGridCellSize(...)`,
+  `addNode(...)`, `ensureLayer(...)`, `patchNode(...)`, `removeNode(...)`,
+  `clearScene(...)`, `rotateSelection(...)`, `flipSelectionVertical(...)`,
+  `flipSelectionHorizontal(...)`, and `deleteSelection(...)` now throw
+  `StateError` during an active gesture, while `setCameraOffset(...)` and
+  `replaceScene(...)` remain the only public scene mutations that can
+  force-release the gesture after their existing preflight succeeds.
 - `SceneViewInteractive` now owns raw Flutter pointer routing through the
   dedicated `SceneViewPointerRouter`, so routed `pointerId` values are created
   only on `down`, stray non-down host events are dropped, minimum free slot

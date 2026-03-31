@@ -309,11 +309,17 @@ void main() {
           controller.interaction.drawColor,
         );
 
-        controller.scene.setBackgroundColor(const Color(0xFF010203));
-        expect(controller.snapshot.background.color, const Color(0xFF010203));
+        expect(
+          () => controller.scene.setBackgroundColor(const Color(0xFF010203)),
+          throwsStateError,
+        );
 
         controller.scene.setCameraOffset(const Offset(3, 4));
         expect(controller.snapshot.camera.offset, const Offset(3, 4));
+        expect(controller.interaction.hasActiveStrokePreview, isFalse);
+
+        controller.scene.setBackgroundColor(const Color(0xFF010203));
+        expect(controller.snapshot.background.color, const Color(0xFF010203));
 
         expect(
           controller.scene.patchNode(

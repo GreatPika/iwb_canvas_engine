@@ -12,28 +12,32 @@ import '../../model/document.dart' show txnSceneFromSnapshot;
 final class SceneControllerSceneMutations {
   const SceneControllerSceneMutations({
     required this.core,
+    required this.ensureExternalMutationAllowed,
+    required this.resetActiveGestureForExternalMutation,
     required this.emitAction,
     required this.resolveTimestampMs,
-    required this.resetInteractiveState,
     required this.clearPointerNormalizationState,
     required this.clearSceneSelectionState,
     required this.readSnapshot,
   });
 
   final SceneControllerCore core;
+  final void Function(String operation) ensureExternalMutationAllowed;
+  final void Function(String operation) resetActiveGestureForExternalMutation;
   final void Function(ActionType action, List<NodeId> nodeIds, int timestampMs)
   emitAction;
   final int Function(int? timestampMs) resolveTimestampMs;
-  final VoidCallback resetInteractiveState;
   final VoidCallback clearPointerNormalizationState;
   final void Function({int? timestampMs}) clearSceneSelectionState;
   final SceneSnapshot Function() readSnapshot;
 
   T write<T>(T Function(SceneWriteTxn writer) fn) {
+    ensureExternalMutationAllowed('write');
     return core.write(fn);
   }
 
   NodeId addNode(NodeSpec node, {LayerId? layerId, int? insertIndex}) {
+    ensureExternalMutationAllowed('addNode');
     return core.commands.writeAddNode(
       node,
       layerId: layerId,
@@ -42,16 +46,19 @@ final class SceneControllerSceneMutations {
   }
 
   bool ensureLayer(LayerId layerId, {int? index}) {
+    ensureExternalMutationAllowed('ensureLayer');
     return core.write((writer) {
       return writer.writeLayerEnsure(layerId, index: index);
     });
   }
 
   bool patchNode(NodePatch patch) {
+    ensureExternalMutationAllowed('patchNode');
     return core.commands.writePatchNode(patch);
   }
 
   bool removeNode(NodeId id, {int? timestampMs}) {
+    ensureExternalMutationAllowed('removeNode');
     final deleted = core.commands.writeDeleteNode(id);
     if (!deleted) return false;
     emitAction(ActionType.delete, <NodeId>[
@@ -61,14 +68,17 @@ final class SceneControllerSceneMutations {
   }
 
   void setBackgroundColor(Color value) {
+    ensureExternalMutationAllowed('setBackgroundColor');
     core.commands.writeBackgroundColorSet(value);
   }
 
   void setGridEnabled(bool value) {
+    ensureExternalMutationAllowed('setGridEnabled');
     core.commands.writeGridEnabledSet(value);
   }
 
   void setGridCellSize(double value) {
+    ensureExternalMutationAllowed('setGridCellSize');
     _requireFinitePositive(value, name: 'cellSize');
     final gridEnabled = readSnapshot().background.grid.isEnabled;
     final resolved = gridEnabled
@@ -82,17 +92,18 @@ final class SceneControllerSceneMutations {
     if (readSnapshot().camera.offset == value) {
       return;
     }
-    resetInteractiveState();
+    resetActiveGestureForExternalMutation('setCameraOffset');
     core.commands.writeCameraOffsetSet(value);
   }
 
   void clearScene({int? timestampMs}) {
+    ensureExternalMutationAllowed('clearScene');
     clearSceneSelectionState(timestampMs: timestampMs);
   }
 
   void replaceScene(SceneSnapshot snapshot) {
     txnSceneFromSnapshot(snapshot);
-    resetInteractiveState();
+    resetActiveGestureForExternalMutation('replaceScene');
     core.writeReplaceScene(snapshot);
     clearPointerNormalizationState();
   }

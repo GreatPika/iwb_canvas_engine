@@ -90,22 +90,18 @@ class SceneControllerSelection {
 
   void setSelection(Object nodeIds) {
     _runtime.ensurePublicSideEffectAllowed('setSelection');
-    _runtime.ensureExternalSelectionMutationAllowed('setSelection');
   }
 
   void toggleSelection(Object nodeId) {
     _runtime.ensurePublicSideEffectAllowed('toggleSelection');
-    _runtime.ensureExternalSelectionMutationAllowed('toggleSelection');
   }
 
   void clearSelection() {
     _runtime.ensurePublicSideEffectAllowed('clearSelection');
-    _runtime.ensureExternalSelectionMutationAllowed('clearSelection');
   }
 
   void selectAll() {
     _runtime.ensurePublicSideEffectAllowed('selectAll');
-    _runtime.ensureExternalSelectionMutationAllowed('selectAll');
   }
 
   void rotateSelection() {
@@ -119,7 +115,9 @@ class _Runtime {
     bool allowAfterDispose = false,
   }) {}
 
-  void ensureExternalSelectionMutationAllowed(String operation) {}
+  void ensureExternalMutationAllowed(String operation) {}
+
+  void resetActiveGestureForExternalMutation(String operation) {}
 }
 ''',
   );
@@ -366,7 +364,13 @@ typedef InteractiveDrawStyle = ({
   writeSandboxFile(
     sandbox,
     'lib/src/interactive/internal/scene_controller_interaction_runtime.dart',
-    'class SceneControllerInteractionRuntime {}\n',
+    '''
+class SceneControllerInteractionRuntime {
+  void ensureExternalMutationAllowed(String operation) {}
+
+  void resetActiveGestureForExternalMutation(String operation) {}
+}
+''',
   );
   writeSandboxFile(
     sandbox,
@@ -376,12 +380,109 @@ typedef InteractiveDrawStyle = ({
   writeSandboxFile(
     sandbox,
     'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
-    'class SceneControllerSceneMutations {}\n',
+    '''
+class SceneControllerSceneMutations {
+  void write(Object fn) {
+    ensureExternalMutationAllowed('write');
+  }
+
+  void setBackgroundColor(Object value) {
+    ensureExternalMutationAllowed('setBackgroundColor');
+  }
+
+  void setGridEnabled(bool value) {
+    ensureExternalMutationAllowed('setGridEnabled');
+  }
+
+  void setGridCellSize(double value) {
+    ensureExternalMutationAllowed('setGridCellSize');
+  }
+
+  void addNode(Object node) {
+    ensureExternalMutationAllowed('addNode');
+  }
+
+  void ensureLayer(Object layerId) {
+    ensureExternalMutationAllowed('ensureLayer');
+  }
+
+  void patchNode(Object patch) {
+    ensureExternalMutationAllowed('patchNode');
+  }
+
+  void removeNode(Object nodeId) {
+    ensureExternalMutationAllowed('removeNode');
+  }
+
+  void clearScene() {
+    ensureExternalMutationAllowed('clearScene');
+  }
+
+  void setCameraOffset(Object value) {
+    _requireFiniteOffset(value);
+    if (_isSameOffset(value)) {
+      return;
+    }
+    resetActiveGestureForExternalMutation('setCameraOffset');
+  }
+
+  void replaceScene(Object snapshot) {
+    validateSnapshot(snapshot);
+    resetActiveGestureForExternalMutation('replaceScene');
+  }
+
+  void ensureExternalMutationAllowed(String operation) {}
+
+  void resetActiveGestureForExternalMutation(String operation) {}
+
+  void _requireFiniteOffset(Object value) {}
+
+  bool _isSameOffset(Object value) => false;
+
+  void validateSnapshot(Object snapshot) {}
+}
+''',
   );
   writeSandboxFile(
     sandbox,
     'lib/src/interactive/internal/scene_controller_selection_mutations.dart',
-    'class SceneControllerSelectionMutations {}\n',
+    '''
+class SceneControllerSelectionMutations {
+  void setSelection(Object nodeIds) {
+    ensureExternalMutationAllowed('setSelection');
+  }
+
+  void toggleSelection(Object nodeId) {
+    ensureExternalMutationAllowed('toggleSelection');
+  }
+
+  void clearSelection() {
+    ensureExternalMutationAllowed('clearSelection');
+  }
+
+  void selectAll() {
+    ensureExternalMutationAllowed('selectAll');
+  }
+
+  void rotateSelection() {
+    ensureExternalMutationAllowed('rotateSelection');
+  }
+
+  void flipSelectionVertical() {
+    ensureExternalMutationAllowed('flipSelectionVertical');
+  }
+
+  void flipSelectionHorizontal() {
+    ensureExternalMutationAllowed('flipSelectionHorizontal');
+  }
+
+  void deleteSelection() {
+    ensureExternalMutationAllowed('deleteSelection');
+  }
+
+  void ensureExternalMutationAllowed(String operation) {}
+}
+''',
   );
   writeSandboxFile(
     sandbox,

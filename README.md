@@ -167,9 +167,14 @@ class _CanvasScreenState extends State<CanvasScreen> {
   `replaceScene(...)`, `setCameraOffset(...)`, mode/tool changes, and `dispose()`
   force-release the active gesture only when the boundary mutation will proceed
   with an observable state change.
-- Public selection mutations are gesture-exclusive: `setSelection(...)`,
-  `toggleSelection(...)`, `clearSelection()`, and `selectAll(...)` throw
-  `StateError` while an active move/draw gesture is in progress.
+- Public scene/selection mutations are gesture-exclusive while an active
+  move/draw gesture is in progress. `scene.write(...)`,
+  `setBackgroundColor(...)`, `setGridEnabled(...)`, `setGridCellSize(...)`,
+  `addNode(...)`, `ensureLayer(...)`, `patchNode(...)`, `removeNode(...)`,
+  `clearScene(...)`, `setSelection(...)`, `toggleSelection(...)`,
+  `clearSelection()`, `selectAll(...)`, `rotateSelection(...)`,
+  `flipSelectionVertical(...)`, `flipSelectionHorizontal(...)`, and
+  `deleteSelection(...)` throw `StateError` until terminal `up` or `cancel`.
 - Background grid rendering now has one internal owner in
   `src/render/scene_grid_renderer.dart`: direct painter draw and static-cache
   recording share the same drawable predicate, density bucketing, camera-shift

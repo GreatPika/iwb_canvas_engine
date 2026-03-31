@@ -901,6 +901,71 @@ void main() {
     });
 
     test(
+      'replaceScene forces active gesture reset before committed replacement',
+      () {
+        // INV:INV-ENG-INTERACTIVE-PUBLIC-MUTATION-EXCLUSIVITY
+        final controller = controllerFromScene(
+          Scene(
+            layers: <ContentLayer>[
+              ContentLayer(id: 'layer-auto-23'),
+              ContentLayer(id: 'layer-auto-24'),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+        controller.interaction.setMode(CanvasMode.draw);
+        controller.interaction.setDrawTool(DrawTool.pen);
+
+        controller.interaction.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(10, 10),
+            timestampMs: 1,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+        controller.interaction.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(20, 10),
+            timestampMs: 2,
+            phase: CanvasPointerPhase.move,
+          ),
+        );
+        expect(controller.interaction.hasActiveStrokePreview, isTrue);
+
+        controller.scene.replaceScene(
+          SceneSnapshot(
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(id: 'layer-auto-25'),
+              ContentLayerSnapshot(
+                id: 'layer-auto-26',
+                nodes: <NodeSnapshot>[
+                  RectNodeSnapshot(id: 'replacement', size: Size(12, 12)),
+                ],
+              ),
+            ],
+          ),
+        );
+
+        expect(controller.interaction.hasActiveStrokePreview, isFalse);
+        expect(controller.selectedNodeIds, isEmpty);
+        expect(controller.snapshot.layers[1].nodes.single.id, 'replacement');
+
+        controller.interaction.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(20, 10),
+            timestampMs: 3,
+            phase: CanvasPointerPhase.up,
+          ),
+        );
+
+        expect(controller.interaction.hasActiveStrokePreview, isFalse);
+      },
+    );
+
+    test(
       'replaceScene validation failure preserves active move gesture state',
       () {
         final controller = controllerFromScene(

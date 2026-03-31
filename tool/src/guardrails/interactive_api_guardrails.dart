@@ -40,6 +40,12 @@ Future<List<GuardrailViolation>> runInteractiveApiGuardrails({
     return violations;
   }
 
+  final mutationOwnerViolation = _checkMutationOwnerPolicies(context);
+  if (mutationOwnerViolation != null) {
+    violations.add(mutationOwnerViolation);
+    return violations;
+  }
+
   final boundaryViolation = _checkInteractiveBoundaryShape(context);
   if (boundaryViolation != null) {
     violations.add(boundaryViolation);
@@ -329,14 +335,84 @@ const List<CapabilityGuardSpec> _capabilityGuardSpecs = <CapabilityGuardSpec>[
     relativePath: 'scene_controller_selection.dart',
     className: 'SceneControllerSelection',
     primaryGuardCall: '_runtime.ensurePublicSideEffectAllowed',
-    secondaryGuardCallsByMethod: <String, String>{
-      'setSelection': '_runtime.ensureExternalSelectionMutationAllowed',
-      'toggleSelection': '_runtime.ensureExternalSelectionMutationAllowed',
-      'clearSelection': '_runtime.ensureExternalSelectionMutationAllowed',
-      'selectAll': '_runtime.ensureExternalSelectionMutationAllowed',
-    },
   ),
 ];
+
+final class MutationOwnerGuardSpec {
+  const MutationOwnerGuardSpec({
+    required this.relativePath,
+    required this.className,
+    required this.policyIndexByMethod,
+    required this.policyCallByMethod,
+  });
+
+  final String relativePath;
+  final String className;
+  final Map<String, int> policyIndexByMethod;
+  final Map<String, String> policyCallByMethod;
+}
+
+const Map<String, String> _selectionMutationPolicyCalls = <String, String>{
+  'setSelection': 'ensureExternalMutationAllowed',
+  'toggleSelection': 'ensureExternalMutationAllowed',
+  'clearSelection': 'ensureExternalMutationAllowed',
+  'selectAll': 'ensureExternalMutationAllowed',
+  'rotateSelection': 'ensureExternalMutationAllowed',
+  'flipSelectionVertical': 'ensureExternalMutationAllowed',
+  'flipSelectionHorizontal': 'ensureExternalMutationAllowed',
+  'deleteSelection': 'ensureExternalMutationAllowed',
+};
+
+const Map<String, String> _sceneMutationPolicyCalls = <String, String>{
+  'write': 'ensureExternalMutationAllowed',
+  'setBackgroundColor': 'ensureExternalMutationAllowed',
+  'setGridEnabled': 'ensureExternalMutationAllowed',
+  'setGridCellSize': 'ensureExternalMutationAllowed',
+  'addNode': 'ensureExternalMutationAllowed',
+  'ensureLayer': 'ensureExternalMutationAllowed',
+  'patchNode': 'ensureExternalMutationAllowed',
+  'removeNode': 'ensureExternalMutationAllowed',
+  'clearScene': 'ensureExternalMutationAllowed',
+  'setCameraOffset': 'resetActiveGestureForExternalMutation',
+  'replaceScene': 'resetActiveGestureForExternalMutation',
+};
+
+const List<MutationOwnerGuardSpec> _mutationOwnerGuardSpecs =
+    <MutationOwnerGuardSpec>[
+      MutationOwnerGuardSpec(
+        relativePath: 'internal/scene_controller_selection_mutations.dart',
+        className: 'SceneControllerSelectionMutations',
+        policyIndexByMethod: <String, int>{
+          'setSelection': 0,
+          'toggleSelection': 0,
+          'clearSelection': 0,
+          'selectAll': 0,
+          'rotateSelection': 0,
+          'flipSelectionVertical': 0,
+          'flipSelectionHorizontal': 0,
+          'deleteSelection': 0,
+        },
+        policyCallByMethod: _selectionMutationPolicyCalls,
+      ),
+      MutationOwnerGuardSpec(
+        relativePath: 'internal/scene_controller_scene_mutations.dart',
+        className: 'SceneControllerSceneMutations',
+        policyIndexByMethod: <String, int>{
+          'write': 0,
+          'setBackgroundColor': 0,
+          'setGridEnabled': 0,
+          'setGridCellSize': 0,
+          'addNode': 0,
+          'ensureLayer': 0,
+          'patchNode': 0,
+          'removeNode': 0,
+          'clearScene': 0,
+          'setCameraOffset': 2,
+          'replaceScene': 1,
+        },
+        policyCallByMethod: _sceneMutationPolicyCalls,
+      ),
+    ];
 
 GuardrailViolation? _checkCapabilityEntrypoints(GuardrailContext context) {
   for (final spec in _capabilityGuardSpecs) {
@@ -389,6 +465,63 @@ GuardrailViolation? _checkCapabilityEntrypoints(GuardrailContext context) {
   return null;
 }
 
+GuardrailViolation? _checkMutationOwnerPolicies(GuardrailContext context) {
+  for (final spec in _mutationOwnerGuardSpecs) {
+    final file = _interactiveSupportFile(context, spec.relativePath);
+    if (!file.existsSync()) {
+      return GuardrailViolation(
+        filePath: _interactiveFilePosixPath(context, _interactiveFile(context)),
+        line: 1,
+        message:
+            'interactive API violation: missing required mutation owner '
+            '${spec.className} at ${_interactiveFilePosixPath(context, file)}.',
+      );
+    }
+
+    final filePath = _interactiveFilePosixPath(context, file);
+    final parsed = _parseInteractiveFile(context, file, filePath);
+    final ownerClass = _findClassByName(
+      parsed.unit.declarations,
+      spec.className,
+    );
+    if (ownerClass == null) {
+      return GuardrailViolation(
+        filePath: filePath,
+        line: 1,
+        message:
+            'interactive API violation: ${spec.className} must remain the '
+            'canonical mutation owner in $filePath.',
+      );
+    }
+
+    for (final entry in spec.policyCallByMethod.entries) {
+      final member = _findMethodByName(ownerClass.members, entry.key);
+      if (member == null) {
+        return GuardrailViolation(
+          filePath: filePath,
+          line: 1,
+          message:
+              'interactive API violation: ${spec.className}.${entry.key} '
+              'must remain part of the canonical mutation-owner surface.',
+        );
+      }
+      final violation = _checkMutationOwnerPolicy(
+        member: member,
+        filePath: filePath,
+        lineFor: (offset) => lineForOffset(parsed, offset),
+        className: spec.className,
+        methodName: entry.key,
+        policyCall: entry.value,
+        policyIndex: spec.policyIndexByMethod[entry.key]!,
+      );
+      if (violation != null) {
+        return violation;
+      }
+    }
+  }
+  return null;
+}
+
 ClassDeclaration? _findClassByName(
   NodeList<CompilationUnitMember> declarations,
   String className,
@@ -397,6 +530,18 @@ ClassDeclaration? _findClassByName(
     if (declaration is ClassDeclaration &&
         declaration.name.lexeme == className) {
       return declaration;
+    }
+  }
+  return null;
+}
+
+MethodDeclaration? _findMethodByName(
+  NodeList<ClassMember> members,
+  String name,
+) {
+  for (final member in members) {
+    if (member is MethodDeclaration && member.name.lexeme == name) {
+      return member;
     }
   }
   return null;
@@ -465,6 +610,52 @@ GuardrailViolation? _checkCapabilityEntrypointGuard({
       detail:
           '$className.$name must guard active-gesture exclusivity with '
           '$secondaryGuardCall(...).',
+    );
+  }
+  return null;
+}
+
+GuardrailViolation? _checkMutationOwnerPolicy({
+  required MethodDeclaration member,
+  required String filePath,
+  required int Function(int offset) lineFor,
+  required String className,
+  required String methodName,
+  required String policyCall,
+  required int policyIndex,
+}) {
+  final body = member.body;
+  if (body is! BlockFunctionBody) {
+    return _capabilityGuardViolation(
+      filePath: filePath,
+      line: lineFor(member.offset),
+      detail:
+          '$className.$methodName must guard active-gesture exclusivity with '
+          '$policyCall(...).',
+    );
+  }
+
+  final statements = body.block.statements;
+  if (statements.length <= policyIndex) {
+    return _capabilityGuardViolation(
+      filePath: filePath,
+      line: lineFor(member.offset),
+      detail:
+          '$className.$methodName must guard active-gesture exclusivity with '
+          '$policyCall(...).',
+    );
+  }
+
+  final actualCall = _qualifiedInvocationNameFromStatement(
+    statements[policyIndex],
+  );
+  if (actualCall != policyCall) {
+    return _capabilityGuardViolation(
+      filePath: filePath,
+      line: lineFor(statements[policyIndex].offset),
+      detail:
+          '$className.$methodName must guard active-gesture exclusivity with '
+          '$policyCall(...).',
     );
   }
   return null;

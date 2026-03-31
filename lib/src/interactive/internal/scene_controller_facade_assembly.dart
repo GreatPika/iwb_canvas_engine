@@ -123,6 +123,8 @@ SceneControllerSelectionMutations _createSelectionMutations({
 }) {
   return SceneControllerSelectionMutations(
     core: core,
+    ensureExternalMutationAllowed:
+        interactionRuntime.ensureExternalMutationAllowed,
     rotateSelectionState: interactionRuntime.rotateSelection,
     flipSelectionVerticalState: interactionRuntime.flipSelectionVertical,
     flipSelectionHorizontalState: interactionRuntime.flipSelectionHorizontal,
@@ -137,9 +139,12 @@ SceneControllerSceneMutations _createSceneMutations({
 }) {
   return SceneControllerSceneMutations(
     core: core,
+    ensureExternalMutationAllowed:
+        interactionRuntime.ensureExternalMutationAllowed,
+    resetActiveGestureForExternalMutation:
+        interactionRuntime.resetActiveGestureForExternalMutation,
     emitAction: interactionRuntime.emitAction,
     resolveTimestampMs: interactionRuntime.resolveTimestampMs,
-    resetInteractiveState: interactionRuntime.resetInteractiveState,
     clearPointerNormalizationState:
         interactionRuntime.clearPointerNormalizationState,
     clearSceneSelectionState: interactionRuntime.clearSceneSelectionState,

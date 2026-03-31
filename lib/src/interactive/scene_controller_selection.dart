@@ -14,25 +14,21 @@ class SceneControllerSelection {
 
   void setSelection(Iterable<NodeId> nodeIds) {
     _runtime.ensurePublicSideEffectAllowed('setSelection');
-    _runtime.ensureExternalSelectionMutationAllowed('setSelection');
     _mutations.setSelection(nodeIds);
   }
 
   void toggleSelection(NodeId nodeId) {
     _runtime.ensurePublicSideEffectAllowed('toggleSelection');
-    _runtime.ensureExternalSelectionMutationAllowed('toggleSelection');
     _mutations.toggleSelection(nodeId);
   }
 
   void clearSelection() {
     _runtime.ensurePublicSideEffectAllowed('clearSelection');
-    _runtime.ensureExternalSelectionMutationAllowed('clearSelection');
     _mutations.clearSelection();
   }
 
   void selectAll({bool onlySelectable = true}) {
     _runtime.ensurePublicSideEffectAllowed('selectAll');
-    _runtime.ensureExternalSelectionMutationAllowed('selectAll');
     _mutations.selectAll(onlySelectable: onlySelectable);
   }
 

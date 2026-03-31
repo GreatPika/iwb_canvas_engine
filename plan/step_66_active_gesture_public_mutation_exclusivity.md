@@ -197,7 +197,7 @@ selection-only guard set.
   `clearSelection()`,
   and
   `selectAll(...)`
-  through `ensureExternalSelectionMutationAllowed(...)`.
+  through a selection-only runtime guard path.
 - `rotateSelection(...)`,
   `flipSelectionVertical(...)`,
   `flipSelectionHorizontal(...)`,
@@ -361,7 +361,7 @@ selection-only guard set.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Introduce one runtime-owned public mutation policy
+### Slice 1. [x] Introduce one runtime-owned public mutation policy
 
 #### Slice Contract
 
@@ -409,7 +409,7 @@ reset/no-op paths.
 - Updated interactive proofs marked with
   `// INV:INV-ENG-INTERACTIVE-PUBLIC-MUTATION-EXCLUSIVITY`.
 
-### Slice 2. [ ] Pin structural enforcement, widget proof, and published contract
+### Slice 2. [x] Pin structural enforcement, widget proof, and published contract
 
 #### Slice Contract
 

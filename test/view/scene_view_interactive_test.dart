@@ -171,6 +171,47 @@ void main() {
     expect(find.byType(SceneViewInteractive), findsOneWidget);
   });
 
+  testWidgets(
+    'SceneViewInteractive active gesture blocks scene.write until terminal release',
+    (tester) async {
+      // INV:INV-ENG-INTERACTIVE-PUBLIC-MUTATION-EXCLUSIVITY
+      final controller = SceneController(
+        initialSnapshot: _snapshot(text: 'write-lock'),
+        dragStartSlop: 0.001,
+      );
+      addTearDown(controller.dispose);
+      controller.interaction.setMode(CanvasMode.draw);
+      controller.interaction.setDrawTool(DrawTool.line);
+
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+
+      final gesture = await tester.startGesture(
+        const Offset(20, 20),
+        pointer: 7,
+      );
+      await tester.pump();
+
+      expect(
+        () => controller.scene.write<void>((txn) {
+          txn.writeCameraOffset(const Offset(5, 6));
+        }),
+        throwsStateError,
+      );
+
+      await gesture.cancel();
+      await tester.pump();
+
+      expect(
+        () => controller.scene.write<void>((txn) {
+          txn.writeCameraOffset(const Offset(5, 6));
+        }),
+        returnsNormally,
+      );
+      expect(controller.snapshot.camera.offset, const Offset(5, 6));
+    },
+  );
+
   testWidgets('SceneViewInteractive clears render caches on epoch change', (
     tester,
   ) async {
