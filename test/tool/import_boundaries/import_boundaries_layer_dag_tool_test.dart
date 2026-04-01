@@ -196,32 +196,29 @@ class SceneBuilder {
       }
     });
 
-    test(
-      'allows scene_view_interactive.dart -> scene_controller_internal_access.dart',
-      () async {
-        final sandbox = await createImportBoundariesSandbox();
-        try {
-          writeSandboxFile(
-            sandbox,
-            'lib/src/interactive/internal/scene_controller_internal_access.dart',
-            'class SceneControllerInternalAccess {}\n',
-          );
-          writeSandboxFile(
-            sandbox,
-            'lib/src/view/scene_view_interactive.dart',
-            "import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_internal_access.dart';\n",
-          );
+    test('allows view -> interactive seam import', () async {
+      final sandbox = await createImportBoundariesSandbox();
+      try {
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_view_pointer_semantics.dart',
+          'abstract interface class SceneViewPointerSemanticsBridge {}\n',
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/view/scene_view_interactive.dart',
+          "import 'package:iwb_canvas_engine/src/interactive/scene_view_pointer_semantics.dart';\n",
+        );
 
-          final result = await runSandboxTool(
-            sandbox,
-            'check_import_boundaries.dart',
-          );
-          expect(result.exitCode, 0, reason: result.stderr.toString());
-        } finally {
-          sandbox.deleteSync(recursive: true);
-        }
-      },
-    );
+        final result = await runSandboxTool(
+          sandbox,
+          'check_import_boundaries.dart',
+        );
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
 
     test(
       'rejects scene_view_render_surface.dart -> scene_controller_internal_access.dart',
@@ -246,7 +243,7 @@ class SceneBuilder {
           expect(result.exitCode, isNonZero);
           expect(
             result.stderr.toString(),
-            contains('view render-state boundary violation:'),
+            contains('view/internal boundary violation:'),
           );
         } finally {
           sandbox.deleteSync(recursive: true);
@@ -254,42 +251,40 @@ class SceneBuilder {
       },
     );
 
-    test(
-      'rejects scene_view_interactive_pointer_host.dart -> scene_controller_pointer_semantics.dart',
-      () async {
-        final sandbox = await createImportBoundariesSandbox();
-        try {
-          writeSandboxFile(
-            sandbox,
-            'lib/src/interactive/internal/scene_controller_pointer_semantics.dart',
-            'class SceneControllerPointerSemantics {}\n',
-          );
-          writeSandboxFile(
-            sandbox,
-            'lib/src/view/scene_view_interactive_pointer_host.dart',
-            "import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_pointer_semantics.dart';\n",
-          );
+    test('rejects scene_view_interactive.dart -> any interactive/internal target',
+        () async {
+      final sandbox = await createImportBoundariesSandbox();
+      try {
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/internal/interactive_pointer_normalizer.dart',
+          'class InteractivePointerNormalizer {}\n',
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/view/scene_view_interactive.dart',
+          "import 'package:iwb_canvas_engine/src/interactive/internal/interactive_pointer_normalizer.dart';\n",
+        );
 
-          final result = await runSandboxTool(
-            sandbox,
-            'check_import_boundaries.dart',
-          );
-          expect(result.exitCode, isNonZero);
-          expect(
-            result.stderr.toString(),
-            contains('pointer-semantics boundary violation:'),
-          );
-          expect(
-            result.stderr.toString(),
-            contains(
-              'scene_view_interactive_pointer_host.dart must not import interactive/internal/** outside scene_controller_internal_access.dart',
-            ),
-          );
-        } finally {
-          sandbox.deleteSync(recursive: true);
-        }
-      },
-    );
+        final result = await runSandboxTool(
+          sandbox,
+          'check_import_boundaries.dart',
+        );
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains('view/internal boundary violation:'),
+        );
+        expect(
+          result.stderr.toString(),
+          contains(
+            'scene_view_interactive.dart must not import interactive/internal/**',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
 
     test('allows serialization -> model import', () async {
       final sandbox = await createImportBoundariesSandbox();

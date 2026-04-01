@@ -214,10 +214,11 @@ Ownership decisions for the target state:
    `CanvasPointerInput`, while its view-local pointer router owns raw Flutter
    pointer lifetimes and routed runtime `pointerId` allocation. The closed
    local seam around `scene_view_interactive.dart` and
-   `scene_view_interactive_pointer_host.dart` may consume only the assembled
-   controller-private bridge from
-   `interactive/internal/scene_controller_internal_access.dart`; concrete
-   pointer-semantics ownership stays outside `view/**`. The dedicated
+   `scene_view_interactive_pointer_host.dart` may consume only two
+   interactive-side contacts: render read-side through
+   `SceneViewRenderState` and pointer/input semantics through the narrow
+   controller-owned seam in `interactive/scene_view_pointer_semantics.dart`;
+   `view/**` must not import `interactive/internal/**`. The dedicated
    controller-owned pointer-semantics owner consumes routed samples, owns
    tap/double-tap recognition, deferred tap flushing, and live
    `PointerInputSettings` adoption, and keeps invalid terminal host forwarding

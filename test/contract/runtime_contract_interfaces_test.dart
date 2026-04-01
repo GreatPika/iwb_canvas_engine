@@ -5,6 +5,9 @@ import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
 import 'package:iwb_canvas_engine/src/contract/node_spec.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_render_state.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
+import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart'
+    as interactive;
+import 'package:iwb_canvas_engine/src/interactive/scene_view_pointer_semantics.dart';
 
 void main() {
   group('runtime contract interfaces', () {
@@ -49,6 +52,18 @@ void main() {
         expect(state.activeLinePreviewColor, const Color(0x00000000));
       },
     );
+
+    test('interactive SceneController exposes view pointer semantics source', () {
+      final controller = interactive.SceneController();
+      addTearDown(controller.dispose);
+
+      final source = controller as SceneViewPointerSemanticsSource;
+      final bridge = source.createPointerSemanticsBridge(isMounted: () => true);
+      addTearDown(bridge.dispose);
+
+      expect(bridge.pendingTapFlushTimestampMs, isNull);
+      expect(controller, isA<SceneViewRenderState>());
+    });
 
     test('write callback exposes SceneWriteTxn contract', () {
       final controller = SceneControllerCore();

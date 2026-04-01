@@ -111,6 +111,36 @@ abstract interface class SceneViewRenderState implements SceneRenderState {}
       expect(result.exitCode, 0, reason: result.stderr.toString());
     },
   );
+
+  test(
+    'passes when missing file is the scene view pointer semantics declaration unit',
+    () async {
+      final result = await _runCoverageScenario(
+        files: <String, String>{
+          'lib/src/contract/canvas_pointer_input.dart': '''
+class CanvasPointerInput {}
+''',
+          'lib/src/core/pointer_input.dart': '''
+class PointerSample {}
+''',
+          'lib/src/interactive/scene_view_pointer_semantics.dart': '''
+import '../contract/canvas_pointer_input.dart';
+import '../core/pointer_input.dart';
+
+abstract interface class SceneViewPointerSemanticsBridge {
+  void handleRoutedSample(PointerSample sample);
+  void handleInvalidTerminalSample(CanvasPointerInput input);
+}
+''',
+          'lib/src/contract/a.dart': 'int covered() => 1;\n',
+        },
+        lcov:
+            '${_singleFileLcov('lib/src/contract/canvas_pointer_input.dart')}${_singleFileLcov('lib/src/core/pointer_input.dart')}${_singleFileLcov('lib/src/contract/a.dart')}',
+      );
+
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+    },
+  );
 }
 
 void _registerFormerRealLogicExclusionTest() {

@@ -3,12 +3,12 @@ import 'dart:async';
 import '../../contract/canvas_pointer_input.dart';
 import '../../core/pointer_input.dart';
 import '../scene_controller.dart';
-import 'scene_controller_internal_access.dart';
+import '../scene_view_pointer_semantics.dart';
 
 void _discardPointerSignal(PointerSignal _) {}
 
 final class SceneControllerPointerSemantics
-    implements SceneControllerPointerSemanticsBridge {
+    implements SceneViewPointerSemanticsBridge {
   SceneControllerPointerSemantics({
     required SceneController controller,
     required bool Function() isMounted,

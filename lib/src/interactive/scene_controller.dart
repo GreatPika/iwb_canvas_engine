@@ -7,6 +7,7 @@ import '../contract/snapshot.dart';
 import '../core/action_events.dart';
 import '../core/pointer_input.dart';
 import '../controller/scene_controller.dart';
+import 'scene_view_pointer_semantics.dart';
 import 'internal/scene_controller_facade_assembly.dart';
 import 'internal/scene_controller_internal_access.dart';
 import 'internal/scene_controller_interaction_runtime.dart';
@@ -14,7 +15,8 @@ import 'scene_controller_interaction.dart';
 import 'scene_controller_scene.dart';
 import 'scene_controller_selection.dart';
 
-class SceneController extends ChangeNotifier implements SceneViewRenderState {
+class SceneController extends ChangeNotifier
+    implements SceneViewRenderState, SceneViewPointerSemanticsSource {
   SceneController({
     SceneSnapshot? initialSnapshot,
     PointerInputSettings? pointerSettings,
@@ -47,7 +49,6 @@ class SceneController extends ChangeNotifier implements SceneViewRenderState {
         previewDeltaForNode: _facade.interactionRuntime.previewDeltaForNode,
         setBeforePointerDispatchHook:
             _facade.interactionRuntime.setBeforePointerDispatchHook,
-        createPointerSemanticsBridge: _facade.createPointerSemanticsBridge,
         runMoveCommitDeltaResolverForTest:
             _facade.interactionRuntime.runMoveCommitDeltaResolver,
         readInteractionAccessForTest: () => _facade.interactionAccess,
@@ -116,6 +117,14 @@ class SceneController extends ChangeNotifier implements SceneViewRenderState {
 
   @override
   Color get activeLinePreviewColor => interaction.activeLinePreviewColor;
+
+  @override
+  SceneViewPointerSemanticsBridge createPointerSemanticsBridge({
+    required bool Function() isMounted,
+  }) {
+    _ensurePublicSideEffectAllowed('createPointerSemanticsBridge');
+    return _facade.createPointerSemanticsBridge(isMounted: isMounted);
+  }
 
   SceneControllerInteraction get interaction => _facade.interaction;
   SceneControllerSelection get selection => _facade.selection;

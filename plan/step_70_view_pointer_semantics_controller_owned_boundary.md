@@ -309,7 +309,7 @@ controller-owned pointer-semantics boundary outside
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Introduce the standalone pointer seam outside `internal/**`
+### Slice 1. [x] Introduce the standalone pointer seam outside `internal/**`
 
 #### Slice Contract
 
@@ -351,7 +351,7 @@ source while the concrete pointer owner stays in
   `scene_view_pointer_semantics.dart`
 - source proof that `SceneController` implements the new source contract
 
-### Slice 2. [ ] Adopt the new seam at the view boundary
+### Slice 2. [x] Adopt the new seam at the view boundary
 
 #### Slice Contract
 
@@ -398,7 +398,7 @@ contract instead of the internal-access helper.
   `lib/src/view/**`
 - widget and router tests stay green while the host remains a raw shell
 
-### Slice 3. [ ] Remove the production pointer bridge path from internal access
+### Slice 3. [x] Remove the production pointer bridge path from internal access
 
 #### Slice Contract
 
@@ -440,7 +440,7 @@ pointer path no longer depends on internal access.
 - structural tests prove that the production pointer path no longer routes
   through internal access
 
-### Slice 4. [ ] Remove the view/internal exception and pin the final boundary
+### Slice 4. [x] Remove the view/internal exception and pin the final boundary
 
 #### Slice Contract
 

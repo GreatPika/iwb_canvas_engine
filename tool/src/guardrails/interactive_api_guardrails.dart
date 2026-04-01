@@ -1006,14 +1006,15 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
           rootAbsPosixPath: context.rootAbsPosixPath,
         ),
         requiredTokens: const <String>[
-          'SceneControllerPointerSemanticsBridge',
-          'sceneControllerInternalCreatePointerSemanticsBridge(',
+          'SceneViewPointerSemanticsBridge',
+          'createPointerSemanticsBridge(',
         ],
         bannedTokens: const <String>[
           'SceneControllerPointerSemantics(',
           'PointerInputTracker(',
           '_PendingTapFlushScheduler',
           '_pendingPointerSettings',
+          'sceneControllerInternalCreatePointerSemanticsBridge(',
         ],
         message:
             'interactive API violation: SceneViewInteractivePointerHost must '

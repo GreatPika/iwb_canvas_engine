@@ -284,7 +284,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-VIEW-POINTER-SEMANTICS-BOUNDARY',
     scope: 'engine-structure',
     title:
-        'the local SceneView pointer-semantics seam stays closed: view shell files may consume only controller-private internal access, while concrete pointer-semantics ownership remains outside view/**',
+        'SceneView reaches interactive only through SceneViewRenderState and the controller-owned SceneViewPointerSemantics seam; view/** must not import interactive/internal/**',
     proofPath: 'tool/check_import_boundaries.dart',
   ),
   Invariant(

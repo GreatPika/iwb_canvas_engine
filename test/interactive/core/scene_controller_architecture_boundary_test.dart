@@ -81,6 +81,12 @@ void main() {
     final pointerSemanticsSource = File(
       'lib/src/interactive/internal/scene_controller_pointer_semantics.dart',
     ).readAsStringSync();
+    final pointerSemanticsContractSource = File(
+      'lib/src/interactive/scene_view_pointer_semantics.dart',
+    ).readAsStringSync();
+    final internalAccessSource = File(
+      'lib/src/interactive/internal/scene_controller_internal_access.dart',
+    ).readAsStringSync();
     final pointerHostSource = File(
       'lib/src/view/scene_view_interactive_pointer_host.dart',
     ).readAsStringSync();
@@ -129,6 +135,20 @@ void main() {
     expect(
       facadeSource,
       contains('SceneControllerInternalAccessRegistration('),
+    );
+    expect(
+      facadeSource,
+      contains("import 'scene_view_pointer_semantics.dart';"),
+    );
+    expect(
+      facadeSource,
+      contains(
+        'implements SceneViewRenderState, SceneViewPointerSemanticsSource',
+      ),
+    );
+    expect(
+      facadeSource,
+      contains('SceneViewPointerSemanticsBridge createPointerSemanticsBridge('),
     );
     expect(
       facadeSource,
@@ -288,8 +308,24 @@ void main() {
     expect(pointerSemanticsSource, contains('PointerInputTracker('));
     expect(pointerSemanticsSource, contains('_PendingTapFlushScheduler'));
     expect(
+      pointerSemanticsContractSource,
+      contains('abstract interface class SceneViewPointerSemanticsBridge'),
+    );
+    expect(
+      pointerSemanticsContractSource,
+      contains('abstract interface class SceneViewPointerSemanticsSource'),
+    );
+    expect(
+      internalAccessSource,
+      isNot(contains('SceneControllerPointerSemanticsBridge')),
+    );
+    expect(
+      internalAccessSource,
+      isNot(contains('sceneControllerInternalCreatePointerSemanticsBridge(')),
+    );
+    expect(
       sceneViewInteractiveSource,
-      contains('sceneControllerInternalCreatePointerSemanticsBridge('),
+      contains('widget.controller.createPointerSemanticsBridge('),
     );
     expect(
       sceneViewInteractiveSource,
@@ -301,8 +337,14 @@ void main() {
     );
     expect(
       sceneViewInteractiveSource,
-      contains(
-        "import '../interactive/internal/scene_controller_internal_access.dart';",
+      contains("import '../interactive/scene_controller.dart';"),
+    );
+    expect(
+      sceneViewInteractiveSource,
+      isNot(
+        contains(
+          "import '../interactive/internal/scene_controller_internal_access.dart';",
+        ),
       ),
     );
     expect(
@@ -319,11 +361,11 @@ void main() {
     );
     expect(
       pointerHostSource,
-      contains('SceneControllerPointerSemanticsBridge'),
+      contains('SceneViewPointerSemanticsBridge'),
     );
     expect(
       pointerHostSource,
-      contains('sceneControllerInternalCreatePointerSemanticsBridge('),
+      contains('controller.createPointerSemanticsBridge('),
     );
     expect(pointerHostSource, isNot(contains('onControllerChanged')));
     expect(
@@ -333,6 +375,14 @@ void main() {
     expect(pointerHostSource, isNot(contains('PointerInputTracker(')));
     expect(pointerHostSource, isNot(contains('_PendingTapFlushScheduler')));
     expect(pointerHostSource, isNot(contains('_pendingPointerSettings')));
+    expect(
+      pointerHostSource,
+      isNot(
+        contains(
+          "import '../interactive/internal/scene_controller_internal_access.dart';",
+        ),
+      ),
+    );
     expect(
       renderSurfaceSource,
       isNot(

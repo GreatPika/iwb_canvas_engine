@@ -1,9 +1,9 @@
 import '../../contract/snapshot.dart';
 import '../../controller/scene_controller.dart';
 import '../../core/pointer_input.dart';
+import '../scene_view_pointer_semantics.dart';
 import 'scene_controller_interaction_access.dart';
 import 'scene_controller_interaction_config.dart';
-import 'scene_controller_internal_access.dart';
 import 'scene_controller_interaction_runtime.dart';
 import 'scene_controller_pointer_semantics.dart';
 import 'scene_controller_scene_mutations.dart';
@@ -16,7 +16,7 @@ import '../scene_controller_selection.dart';
 typedef SceneControllerFacadeAssembly = ({
   SceneControllerInteractionRuntime interactionRuntime,
   SceneControllerInteractionAccess interactionAccess,
-  SceneControllerPointerSemanticsBridge Function({
+  SceneViewPointerSemanticsBridge Function({
     required bool Function() isMounted,
   })
   createPointerSemanticsBridge,

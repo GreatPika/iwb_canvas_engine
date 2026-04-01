@@ -1,39 +1,15 @@
 import 'dart:ui';
 
-import '../../contract/canvas_pointer_input.dart';
 import '../../contract/snapshot.dart';
-import '../../core/pointer_input.dart';
 import '../scene_controller.dart';
 import 'scene_controller_interaction_access.dart';
 import 'interactive_geometry.dart';
-
-abstract interface class SceneControllerPointerSemanticsBridge {
-  int? get pendingTapFlushTimestampMs;
-
-  void handleControllerChanged({required bool routerHasLiveRawPointers});
-
-  void handleRoutedSample(
-    PointerSample sample, {
-    required bool shouldTrackSignals,
-  });
-
-  void handleInvalidTerminalSample({
-    required CanvasPointerInput input,
-    required int pointerId,
-    required int referenceTimestampMs,
-  });
-
-  void handleRawPointerRelease({required bool isIdleAfterRelease});
-
-  void dispose();
-}
 
 class _SceneControllerInternalAccess {
   const _SceneControllerInternalAccess({
     required this.readEpoch,
     required this.previewDeltaForNode,
     required this.setBeforePointerDispatchHook,
-    required this.createPointerSemanticsBridge,
     required this.runMoveCommitDeltaResolverForTest,
     required this.readInteractionAccessForTest,
     required this.readActiveEraserPointsLength,
@@ -44,10 +20,6 @@ class _SceneControllerInternalAccess {
   final int Function() readEpoch;
   final Offset Function(NodeId nodeId) previewDeltaForNode;
   final void Function(VoidCallback? hook) setBeforePointerDispatchHook;
-  final SceneControllerPointerSemanticsBridge Function({
-    required bool Function() isMounted,
-  })
-  createPointerSemanticsBridge;
   final Offset Function({
     required SceneSnapshot snapshot,
     required List<NodeSnapshot> movedNodes,
@@ -69,7 +41,6 @@ final class SceneControllerInternalAccessRegistration {
     required this.readEpoch,
     required this.previewDeltaForNode,
     required this.setBeforePointerDispatchHook,
-    required this.createPointerSemanticsBridge,
     required this.runMoveCommitDeltaResolverForTest,
     required this.readInteractionAccessForTest,
     required this.readActiveEraserPointsLength,
@@ -80,10 +51,6 @@ final class SceneControllerInternalAccessRegistration {
   final int Function() readEpoch;
   final Offset Function(NodeId nodeId) previewDeltaForNode;
   final void Function(VoidCallback? hook) setBeforePointerDispatchHook;
-  final SceneControllerPointerSemanticsBridge Function({
-    required bool Function() isMounted,
-  })
-  createPointerSemanticsBridge;
   final Offset Function({
     required SceneSnapshot snapshot,
     required List<NodeSnapshot> movedNodes,
@@ -105,7 +72,6 @@ void registerSceneControllerInternalAccess(
     readEpoch: registration.readEpoch,
     previewDeltaForNode: registration.previewDeltaForNode,
     setBeforePointerDispatchHook: registration.setBeforePointerDispatchHook,
-    createPointerSemanticsBridge: registration.createPointerSemanticsBridge,
     runMoveCommitDeltaResolverForTest:
         registration.runMoveCommitDeltaResolverForTest,
     readInteractionAccessForTest: registration.readInteractionAccessForTest,
@@ -150,16 +116,6 @@ void sceneControllerInternalSetBeforePointerDispatchHook(
   _requireSceneControllerInternalAccess(
     controller,
   ).setBeforePointerDispatchHook(hook);
-}
-
-SceneControllerPointerSemanticsBridge
-sceneControllerInternalCreatePointerSemanticsBridge(
-  SceneController controller, {
-  required bool Function() isMounted,
-}) {
-  return _requireSceneControllerInternalAccess(
-    controller,
-  ).createPointerSemanticsBridge(isMounted: isMounted);
 }
 
 Offset sceneControllerInternalRunMoveCommitDeltaResolverForTest(

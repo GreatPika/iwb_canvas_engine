@@ -164,32 +164,15 @@ class DirectiveBoundaryChecker {
     required String resolvedRepoRelPosix,
   }) {
     if (isViewLayerFile(filePosixPath) &&
-        !isViewPointerSemanticsBoundaryFile(filePosixPath) &&
         resolvedRepoRelPosix.startsWith('/lib/src/interactive/internal/')) {
       _addViolation(
         line: lineNo,
         directive: directiveKind,
         target: boundaryTarget.diagnosticTarget,
         message:
-            'view render-state boundary violation: '
+            'view/internal boundary violation: '
             '${filePosixPath.substring('/lib/src/'.length)} must not '
             '$directiveKind interactive/internal/** '
-            '($resolvedRepoRelPosix)',
-      );
-      return;
-    }
-    if (isViewPointerSemanticsBoundaryFile(filePosixPath) &&
-        resolvedRepoRelPosix.startsWith('/lib/src/interactive/internal/') &&
-        !isAllowedViewPointerSemanticsInternalTarget(resolvedRepoRelPosix)) {
-      _addViolation(
-        line: lineNo,
-        directive: directiveKind,
-        target: boundaryTarget.diagnosticTarget,
-        message:
-            'pointer-semantics boundary violation: '
-            '${filePosixPath.substring('/lib/src/'.length)} must not '
-            '$directiveKind interactive/internal/** outside '
-            'scene_controller_internal_access.dart '
             '($resolvedRepoRelPosix)',
       );
       return;

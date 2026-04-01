@@ -3,7 +3,7 @@ import 'package:flutter/widgets.dart';
 import '../contract/canvas_pointer_input.dart';
 import '../core/pointer_input.dart';
 import '../interactive/scene_controller.dart';
-import '../interactive/internal/scene_controller_internal_access.dart';
+import '../interactive/scene_view_pointer_semantics.dart';
 import 'scene_view_pointer_router.dart';
 
 bool _hasFiniteLocalPosition(PointerEvent event) {
@@ -79,7 +79,7 @@ class SceneViewInteractivePointerHost {
   SceneViewInteractivePointerHost({
     required SceneController controller,
     required bool Function() isMounted,
-    required SceneControllerPointerSemanticsBridge pointerSemantics,
+    required SceneViewPointerSemanticsBridge pointerSemantics,
   }) : _controller = controller,
        _isMounted = isMounted,
        _runtime = _SceneViewInteractivePointerRuntime(
@@ -106,8 +106,7 @@ class SceneViewInteractivePointerHost {
     _unsubscribeFromController(_controller);
     _controller = controller;
     _runtime.replacePointerSemantics(
-      sceneControllerInternalCreatePointerSemanticsBridge(
-        controller,
+      controller.createPointerSemanticsBridge(
         isMounted: _isMounted,
       ),
     );
@@ -152,17 +151,17 @@ class SceneViewInteractivePointerHost {
 
 class _SceneViewInteractivePointerRuntime {
   _SceneViewInteractivePointerRuntime({
-    required SceneControllerPointerSemanticsBridge pointerSemantics,
+    required SceneViewPointerSemanticsBridge pointerSemantics,
   }) : _pointerSemantics = pointerSemantics;
 
   final SceneViewPointerRouter _pointerRouter = SceneViewPointerRouter();
-  SceneControllerPointerSemanticsBridge _pointerSemantics;
+  SceneViewPointerSemanticsBridge _pointerSemantics;
 
   int get debugLiveRawPointerCount => _pointerRouter.liveRawPointerCount;
   int? get debugPendingTapFlushTimestampMs =>
       _pointerSemantics.pendingTapFlushTimestampMs;
 
-  void replacePointerSemantics(SceneControllerPointerSemanticsBridge next) {
+  void replacePointerSemantics(SceneViewPointerSemanticsBridge next) {
     _pointerSemantics.dispose();
     _pointerSemantics = next;
     _pointerRouter.reset();
