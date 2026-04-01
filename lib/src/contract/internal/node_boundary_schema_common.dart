@@ -6,6 +6,7 @@ import '../path_fill_rule.dart';
 import '../transform2d.dart';
 import '../validated.dart';
 import '../validated/validated_value_support.dart';
+import '../scene_model_invariants.dart';
 
 typedef ImageNodeSchemaFields = ({
   String imageId,
@@ -51,6 +52,7 @@ typedef TextNodeDirectionalSchemaFields = ({
   double fontSize,
   Color color,
   TextAlign align,
+  TextDirection textDirection,
   bool isBold,
   bool isItalic,
   bool isUnderline,
@@ -145,6 +147,7 @@ OwnedList<Offset> validateFiniteOffsetList(
   List<Offset> values, {
   required String name,
 }) {
+  validateStrokePointCount(values.length, name: name, source: values);
   return OwnedList<Offset>.of(
     List<Offset>.generate(
       values.length,
@@ -264,6 +267,7 @@ TextNodeDirectionalSchemaFields validateTextNodeDirectionalSchemaFields(
     ),
     color: fields.color,
     align: fields.align,
+    textDirection: fields.textDirection,
     isBold: fields.isBold,
     isItalic: fields.isItalic,
     isUnderline: fields.isUnderline,

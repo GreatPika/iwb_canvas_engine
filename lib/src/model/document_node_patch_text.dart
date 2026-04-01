@@ -58,6 +58,7 @@ bool _txnRecomputeTextSizeAfterPatch(
 bool _txnTextPatchTouchesLayout(TextNodePatch patch) {
   return !patch.text.isAbsent ||
       !patch.fontSize.isAbsent ||
+      !patch.textDirection.isAbsent ||
       !patch.isBold.isAbsent ||
       !patch.isItalic.isAbsent ||
       !patch.isUnderline.isAbsent ||
@@ -87,6 +88,11 @@ _textContentPatchAssignments = <TxnPatchAssignment<TextNode, TextNodePatch>>[
     patchField: (patch) => patch.align,
     currentValue: (node) => node.align,
     assign: (node, value) => node.align = value,
+  ),
+  txnPatchValueAssignment(
+    patchField: (patch) => patch.textDirection,
+    currentValue: (node) => node.textDirection,
+    assign: (node, value) => node.textDirection = value,
   ),
 ];
 

@@ -20,10 +20,7 @@ class TextLayoutRequest {
     this.textDirection = kDerivedTextLayoutDirection,
   });
 
-  factory TextLayoutRequest.forNode(
-    TextNode node, {
-    TextDirection textDirection = kDerivedTextLayoutDirection,
-  }) {
+  factory TextLayoutRequest.forNode(TextNode node) {
     return TextLayoutRequest(
       text: node.text,
       color: node.color,
@@ -35,7 +32,7 @@ class TextLayoutRequest {
       fontFamily: node.fontFamily,
       lineHeight: node.lineHeight,
       maxWidth: node.maxWidth,
-      textDirection: textDirection,
+      textDirection: node.textDirection,
     );
   }
 
@@ -103,12 +100,6 @@ double? normalizeTextLayoutMaxWidth(double? maxWidth) {
   return maxWidth;
 }
 
-void recomputeDerivedTextSize(
-  TextNode node, {
-  TextDirection textDirection = kDerivedTextLayoutDirection,
-}) {
-  node.size = TextLayoutRequest.forNode(
-    node,
-    textDirection: textDirection,
-  ).measure();
+void recomputeDerivedTextSize(TextNode node) {
+  node.size = TextLayoutRequest.forNode(node).measure();
 }

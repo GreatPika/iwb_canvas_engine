@@ -465,6 +465,7 @@ void main() {
         id: 'default-font',
         text: 'hello',
         color: const Color(0xFF111111),
+        textDirection: TextDirection.ltr,
       ),
     );
     writer.writeNodeInsert(
@@ -472,6 +473,7 @@ void main() {
         id: 'explicit-font',
         text: 'world',
         color: const Color(0xFF111111),
+        textDirection: TextDirection.ltr,
         fontFamily: 'Serif',
       ),
     );

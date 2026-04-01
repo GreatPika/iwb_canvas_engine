@@ -34,8 +34,8 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 - `validated.dart` is part of that supported public surface through the package
   barrel export
 
-- current JSON write version: `schemaVersion = 5`
-- current JSON read set: `{5}`
+- current JSON write version: `schemaVersion = 6`
+- current JSON read set: `{6}`
 
 Do not import from `package:iwb_canvas_engine/src/**`.
 Imports under `src/**` are internal implementation details and are not a
@@ -205,6 +205,10 @@ Important runtime details:
 - `StrokeNodeSnapshot.pointsRevision` is runtime metadata used by render caches
 - `pointsRevision` is not serialized into JSON
 - `instanceRevision` is part of runtime node identity and is serialized
+- text nodes carry explicit `textDirection` in runtime and serialized scene
+  data; public `TextNodeSpec` / `TextNodeSnapshot` creation requires it,
+  `TextNodePatch` can update it for existing text nodes, and JSON payloads
+  that omit the field are rejected by the current schema
 - runtime invalidation identity is composite: `controllerEpoch + instanceRevision`
 - snapshot/import preserves existing positive safe-int `instanceRevision`
   values; missing or non-positive values are normalized from a local allocator
@@ -219,10 +223,14 @@ Important runtime details:
 
 - `TextNodeSpec` does not expose writable `size`
 - `TextNodePatch` does not expose writable `size`
+- `TextNodeSpec` and `TextNodeSnapshot` require explicit `textDirection`
+- `TextNodePatch` can change `textDirection` without resending unrelated fields
 - import/decode and layout-affecting text patches re-derive the box size inside
   the engine
 - incoming `TextNodeSnapshot.size` is treated as non-authoritative and may be
   ignored during canonicalization/import
+- text layout semantics are model-owned: `TextAlign.start` / `TextAlign.end`
+  resolve against the node's explicit `textDirection`, not a view fallback
 
 If you compare serialized text sizes across platforms, use semantic assertions
 or numeric tolerance. Font metrics can differ slightly by platform and font
@@ -254,6 +262,8 @@ Key rules:
 - `SceneController.scene.addNode(...)` accepts only `NodeSpec`
 - public `NodeSpec` constructors validate boundary values eagerly and are
   runtime constructors rather than `const` entry points
+- `TextNodeSpec` is strict-explicit for direction: callers must pass
+  `textDirection` rather than relying on an implicit LTR default
 - `NodeSpec.id` is optional; the controller can generate ids
 - explicit ids remain `String`-compatible at the public API boundary, and the
   supported validation surface is `NodeIdValue`, `LayerIdValue`,
@@ -284,6 +294,9 @@ Patch semantics use `PatchField<T>`:
 
 Public `NodePatch` and `CommonNodePatch` constructors validate only present
 fields eagerly and are runtime constructors rather than `const` entry points.
+`TextNodePatch` remains partial by design, but when present its
+`textDirection` field updates the canonical text-direction state used by layout
+and render paths.
 Collection payloads such as stroke points are captured as immutable snapshots
 at the boundary.
 
@@ -958,6 +971,8 @@ controller.
   nullable `Scene.backgroundLayer` remains an internal runtime shape
 - text node bounds are canonicalized from layout inputs; incoming serialized
   text `size` is not treated as the source of truth
+- canonical serialized text payloads include explicit `textDirection`; decode
+  rejects text objects that omit it under the current schema contract
 - supported text-align values stay aligned across boundary constructors,
   serialization, and import/runtime semantics:
   `left`, `center`, `right`, `justify`, `start`, `end`
@@ -1070,6 +1085,7 @@ class _CanvasScreenState extends State<CanvasScreen> {
         id: 'title',
         text: 'Hello',
         color: const Color(0xFF111111),
+        textDirection: TextDirection.ltr,
       ),
     );
 

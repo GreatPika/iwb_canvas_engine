@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/scene_data_exception.dart';
+import '../contract/scene_model_invariants.dart';
 import '../contract/validated/validated_value_support.dart';
 import '../core/scene_limits.dart';
 import 'scene_builder_json_parse.dart';
@@ -147,9 +148,17 @@ List<Color> _decodePaletteColors(
     paletteJson,
     key,
     pathPrefix: pathPrefix,
-    maxLength: kMaxPaletteItems,
   );
   final colorsPath = sceneBuilderPathAt(pathPrefix, key);
+  final limitMessage = scenePaletteItemCountViolationMessage(colorsJson.length);
+  if (limitMessage != null) {
+    throw SceneDataException(
+      code: SceneDataErrorCode.invalidValue,
+      path: colorsPath,
+      message: 'Field $colorsPath $limitMessage',
+      source: colorsJson.length,
+    );
+  }
   final colors = <Color>[];
   for (var i = 0; i < colorsJson.length; i++) {
     final path = sceneBuilderPathAt(colorsPath, '[$i]');
@@ -168,10 +177,20 @@ List<double> _decodePaletteGridSizes(Map<String, Object?> paletteJson) {
     paletteJson,
     'gridSizes',
     pathPrefix: 'palette',
-    maxLength: kMaxPaletteItems,
   );
   const gridSizesField = 'gridSizes';
   const gridSizesPath = 'palette.gridSizes';
+  final limitMessage = scenePaletteItemCountViolationMessage(
+    gridSizesJson.length,
+  );
+  if (limitMessage != null) {
+    throw SceneDataException(
+      code: SceneDataErrorCode.invalidValue,
+      path: gridSizesPath,
+      message: 'Field $gridSizesPath $limitMessage',
+      source: gridSizesJson.length,
+    );
+  }
   final gridSizes = <double>[];
   for (var i = 0; i < gridSizesJson.length; i++) {
     final path = sceneBuilderPathAt(gridSizesPath, '[$i]');

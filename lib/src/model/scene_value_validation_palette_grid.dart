@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../contract/snapshot.dart';
+import '../contract/scene_model_invariants.dart';
 import '../core/scene.dart';
 import 'scene_value_validation_primitives.dart';
 import 'scene_value_validation_support.dart';
@@ -76,6 +77,21 @@ void _sceneValidatePaletteFields({
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
+  _sceneValidatePaletteItemCount(
+    fields.penColors,
+    field: '$field.penColors',
+    onError: onError,
+  );
+  _sceneValidatePaletteItemCount(
+    fields.backgroundColors,
+    field: '$field.backgroundColors',
+    onError: onError,
+  );
+  _sceneValidatePaletteItemCount(
+    fields.gridSizes,
+    field: '$field.gridSizes',
+    onError: onError,
+  );
   sceneValidateNonEmptyList(
     fields.penColors,
     field: '$field.penColors',
@@ -100,6 +116,18 @@ void _sceneValidatePaletteFields({
     onError: onError,
     validateValue: sceneValidatePositiveDouble,
   );
+}
+
+void _sceneValidatePaletteItemCount<T>(
+  List<T> values, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+}) {
+  final limitMessage = scenePaletteItemCountViolationMessage(values.length);
+  if (limitMessage == null) {
+    return;
+  }
+  onError(field: field, value: values, message: 'Field $field $limitMessage');
 }
 
 void _sceneValidateGridCellSize(

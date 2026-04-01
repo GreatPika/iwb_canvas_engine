@@ -1150,6 +1150,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
         text: sampleText,
         fontSize: sampleFontSize,
         color: Colors.black87,
+        textDirection: TextDirection.ltr,
         transform: Transform2D.translation(
           Offset(baseX + 160, baseY.toDouble()),
         ),

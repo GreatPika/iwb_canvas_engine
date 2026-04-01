@@ -231,6 +231,7 @@ List<Map<String, dynamic>> _encodeLayerNodes(
     fontSize: node.fontSize,
     color: node.color,
     align: node.align,
+    textDirection: node.textDirection,
     isBold: node.isBold,
     isItalic: node.isItalic,
     isUnderline: node.isUnderline,
@@ -247,6 +248,7 @@ List<Map<String, dynamic>> _encodeLayerNodes(
       'fontSize': fields.fontSize,
       'color': _colorToHex(fields.color),
       'align': _textAlignToString(fields.align),
+      'textDirection': _textDirectionToString(fields.textDirection),
       'isBold': fields.isBold,
       'isItalic': fields.isItalic,
       'isUnderline': fields.isUnderline,
@@ -421,6 +423,15 @@ String _textAlignToString(TextAlign align) {
   }
 }
 
+String _textDirectionToString(TextDirection direction) {
+  switch (direction) {
+    case TextDirection.ltr:
+      return 'ltr';
+    case TextDirection.rtl:
+      return 'rtl';
+  }
+}
+
 String _colorToHex(Color color) {
   final argb = color.toARGB32();
   return '#${argb.toRadixString(16).padLeft(8, '0').toUpperCase()}';
@@ -525,6 +536,7 @@ Size _deriveCanonicalTextSize(TextNodeSnapshotSchemaFields fields) {
     fontFamily: fields.fontFamily,
     lineHeight: fields.lineHeight,
     maxWidth: fields.maxWidth,
+    textDirection: fields.textDirection,
   ).measure();
 }
 

@@ -154,10 +154,7 @@ void main() {
       facadeSource,
       contains("import 'internal/scene_controller_pointer_semantics.dart';"),
     );
-    expect(
-      facadeSource,
-      contains('return SceneControllerPointerSemantics('),
-    );
+    expect(facadeSource, contains('return SceneControllerPointerSemantics('));
     expect(
       facadeSource,
       isNot(contains("import 'internal/interactive_runtime.dart';")),
@@ -375,10 +372,7 @@ void main() {
       sceneViewInteractiveSource,
       isNot(contains('SceneControllerPointerSemantics(')),
     );
-    expect(
-      pointerHostSource,
-      contains('SceneViewPointerSemanticsBridge'),
-    );
+    expect(pointerHostSource, contains('SceneViewPointerSemanticsBridge'));
     expect(
       pointerHostSource,
       contains('controller.createPointerSemanticsBridge('),

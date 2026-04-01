@@ -32,7 +32,7 @@ SceneRenderCaches debugSceneViewRenderCachesOf(BuildContext context) {
 }
 
 class SceneViewRenderSurface extends StatefulWidget {
-  // ignore: prefer_const_constructors_in_immutables, runtime fallback wiring keeps this constructor non-const
+  // ignore: prefer_const_constructors_in_immutables, cache wiring keeps this constructor non-const
   SceneViewRenderSurface.core({
     required SceneControllerCore controller,
     ImageResolver? imageResolver,
@@ -44,7 +44,6 @@ class SceneViewRenderSurface extends StatefulWidget {
     Color selectionColor = const Color(0xFF1565C0),
     double selectionStrokeWidth = 1,
     double gridStrokeWidth = 1,
-    TextDirection textDirection = TextDirection.ltr,
     Widget child = const SizedBox.expand(),
     super.key,
   }) : _controller = controller,
@@ -57,17 +56,15 @@ class SceneViewRenderSurface extends StatefulWidget {
        _selectionColor = selectionColor,
        _selectionStrokeWidth = selectionStrokeWidth,
        _gridStrokeWidth = gridStrokeWidth,
-       _textDirection = textDirection,
        _child = child;
 
-  // ignore: prefer_const_constructors_in_immutables, runtime fallback wiring keeps this constructor non-const
+  // ignore: prefer_const_constructors_in_immutables, cache wiring keeps this constructor non-const
   SceneViewRenderSurface.interactive({
     required SceneController controller,
     ui.Image? Function(String imageId)? imageResolver,
     Color selectionColor = const Color(0xFF1565C0),
     double selectionStrokeWidth = 1,
     double gridStrokeWidth = 1,
-    TextDirection textDirection = TextDirection.ltr,
     Widget child = const SizedBox.expand(),
     super.key,
   }) : _controller = controller,
@@ -80,7 +77,6 @@ class SceneViewRenderSurface extends StatefulWidget {
        _selectionColor = selectionColor,
        _selectionStrokeWidth = selectionStrokeWidth,
        _gridStrokeWidth = gridStrokeWidth,
-       _textDirection = textDirection,
        _child = child;
 
   final SceneViewRenderState _controller;
@@ -93,7 +89,6 @@ class SceneViewRenderSurface extends StatefulWidget {
   final Color _selectionColor;
   final double _selectionStrokeWidth;
   final double _gridStrokeWidth;
-  final TextDirection _textDirection;
   final Widget _child;
 
   @override
@@ -171,7 +166,6 @@ class SceneViewRenderSurfaceState extends State<SceneViewRenderSurface> {
         selectionColor: widget._selectionColor,
         selectionStrokeWidth: widget._selectionStrokeWidth,
         gridStrokeWidth: widget._gridStrokeWidth,
-        textDirection: widget._textDirection,
       ),
       child: widget._child,
     );

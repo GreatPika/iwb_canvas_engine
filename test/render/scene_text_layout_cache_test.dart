@@ -69,10 +69,20 @@ void main() {
 
   test('SceneTextLayoutCache key includes textDirection', () {
     final cache = SceneTextLayoutCache(maxEntries: 8);
-    final node = _textNode(id: 't-dir', maxWidth: 100);
-
-    final ltr = cache.getOrBuild(node: node, textDirection: TextDirection.ltr);
-    final rtl = cache.getOrBuild(node: node, textDirection: TextDirection.rtl);
+    final ltr = cache.getOrBuild(
+      node: _textNode(
+        id: 't-dir-ltr',
+        maxWidth: 100,
+        textDirection: TextDirection.ltr,
+      ),
+    );
+    final rtl = cache.getOrBuild(
+      node: _textNode(
+        id: 't-dir-rtl',
+        maxWidth: 100,
+        textDirection: TextDirection.rtl,
+      ),
+    );
 
     expect(identical(ltr, rtl), isFalse);
     expect(cache.debugBuildCount, 2);
@@ -162,6 +172,7 @@ void main() {
             fontSize: -5,
             color: const ui.Color(0xFF000000),
             align: TextAlign.left,
+            textDirection: TextDirection.ltr,
             isBold: false,
             isItalic: false,
             isUnderline: false,
@@ -180,6 +191,7 @@ void main() {
             fontSize: double.nan,
             color: const ui.Color(0xFF000000),
             align: TextAlign.left,
+            textDirection: TextDirection.ltr,
             isBold: false,
             isItalic: false,
             isUnderline: false,
@@ -235,6 +247,7 @@ TextNodeSnapshot _textNode({
   double fontSize = 14,
   ui.Color color = const ui.Color(0xFF000000),
   TextAlign align = TextAlign.left,
+  TextDirection textDirection = TextDirection.ltr,
   bool isBold = false,
   bool isItalic = false,
   bool isUnderline = false,
@@ -250,6 +263,7 @@ TextNodeSnapshot _textNode({
     fontSize: fontSize,
     color: color,
     align: align,
+    textDirection: textDirection,
     isBold: isBold,
     isItalic: isItalic,
     isUnderline: isUnderline,

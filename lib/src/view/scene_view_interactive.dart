@@ -103,7 +103,6 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
 
   @override
   Widget build(BuildContext context) {
-    final textDirection = Directionality.maybeOf(context) ?? TextDirection.ltr;
     final renderSurface = SceneViewRenderSurface.interactive(
       key: _renderSurfaceKey,
       controller: widget.controller,
@@ -111,7 +110,6 @@ class _SceneViewInteractiveState extends State<SceneViewInteractive> {
       selectionColor: widget.selectionColor,
       selectionStrokeWidth: widget.selectionStrokeWidth,
       gridStrokeWidth: widget.gridStrokeWidth,
-      textDirection: textDirection,
     );
     return Listener(
       behavior: HitTestBehavior.opaque,

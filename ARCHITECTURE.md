@@ -15,7 +15,7 @@ constraints that keep the public API stable.
 - Public entrypoint: `package:iwb_canvas_engine/iwb_canvas_engine.dart`
 - Supported public surface: exactly the exports declared by
   `lib/iwb_canvas_engine.dart`
-- Current serialization contract: write `schemaVersion = 5`, read `{5}`
+- Current serialization contract: write `schemaVersion = 6`, read `{6}`
 - Public interactive runtime root: `SceneController`
 - Public interactive widget: `SceneView`
 - Public write boundary: `SceneWriteTxn`
@@ -386,9 +386,17 @@ most important architectural rules are:
 - `TextNode.size` is derived from text layout inputs and is not a writable
   public field; `TextNodeSnapshot.size` is canonical output metadata and is
   non-authoritative on import.
+- Text layout semantics are model-owned: text nodes carry explicit
+  `textDirection`, the current schema requires it during decode, and
+  render/layout paths consume the node contract instead of a separate
+  view-owned fallback. Public text creation is strict-explicit for direction,
+  and the public patch boundary exposes direction mutation for existing text
+  nodes instead of relying on a compatibility fallback.
 - Boundary validation has one source of truth per rule: limits come from
-  `core/scene_limits.dart`, boundary value parsing/generation lives in
-  `contract/validated/**`, and model/serialization layers reuse those rules.
+  `core/scene_limits.dart`, shared stroke/palette cardinality invariants live
+  in `contract/scene_model_invariants.dart`, boundary value
+  parsing/generation lives in `contract/validated/**`, and model/serialization
+  layers reuse those rules.
 - Public snapshot/spec/patch constructors enforce those primitive boundary
   rules eagerly; `contract/owned_collections.dart` is the single structural
   owner for immutable collection payload ownership; internal decode/runtime

@@ -131,6 +131,8 @@ class TextNodePatch extends NodePatch {
     PatchField<double> fontSize = const PatchField<double>.absent(),
     PatchField<Color> color = const PatchField<Color>.absent(),
     PatchField<TextAlign> align = const PatchField<TextAlign>.absent(),
+    PatchField<TextDirection> textDirection =
+        const PatchField<TextDirection>.absent(),
     PatchField<bool> isBold = const PatchField<bool>.absent(),
     PatchField<bool> isItalic = const PatchField<bool>.absent(),
     PatchField<bool> isUnderline = const PatchField<bool>.absent(),
@@ -145,6 +147,7 @@ class TextNodePatch extends NodePatch {
            fontSize: fontSize,
            color: color,
            align: align,
+           textDirection: textDirection,
            isBold: isBold,
            isItalic: isItalic,
            isUnderline: isUnderline,
@@ -179,6 +182,7 @@ class TextNodePatch extends NodePatch {
   PatchField<double> get fontSize => _textBacking.fontSize;
   PatchField<Color> get color => _textBacking.color;
   PatchField<TextAlign> get align => _textBacking.align;
+  PatchField<TextDirection> get textDirection => _textBacking.textDirection;
   PatchField<bool> get isBold => _textBacking.isBold;
   PatchField<bool> get isItalic => _textBacking.isItalic;
   PatchField<bool> get isUnderline => _textBacking.isUnderline;

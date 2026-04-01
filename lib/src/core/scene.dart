@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../contract/ids.dart' show LayerId;
+import '../contract/scene_model_invariants.dart';
 import '../contract/scene_defaults.dart';
 import 'nodes.dart';
 
@@ -129,7 +130,23 @@ class ScenePalette {
        backgroundColors = List<Color>.from(
          backgroundColors ?? SceneDefaults.backgroundColors,
        ),
-       gridSizes = List<double>.from(gridSizes ?? SceneDefaults.gridSizes);
+       gridSizes = List<double>.from(gridSizes ?? SceneDefaults.gridSizes) {
+    validatePaletteItemCount(
+      this.penColors.length,
+      name: 'penColors',
+      source: this.penColors,
+    );
+    validatePaletteItemCount(
+      this.backgroundColors.length,
+      name: 'backgroundColors',
+      source: this.backgroundColors,
+    );
+    validatePaletteItemCount(
+      this.gridSizes.length,
+      name: 'gridSizes',
+      source: this.gridSizes,
+    );
+  }
 
   final List<Color> penColors;
   final List<Color> backgroundColors;

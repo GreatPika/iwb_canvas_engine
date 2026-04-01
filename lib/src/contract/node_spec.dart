@@ -89,6 +89,7 @@ class TextNodeSpec extends NodeSpec {
     double fontSize = 24,
     required Color color,
     TextAlign align = TextAlign.left,
+    required TextDirection textDirection,
     bool isBold = false,
     bool isItalic = false,
     bool isUnderline = false,
@@ -120,6 +121,7 @@ class TextNodeSpec extends NodeSpec {
            fontSize: fontSize,
            color: color,
            align: align,
+           textDirection: textDirection,
            isBold: isBold,
            isItalic: isItalic,
            isUnderline: isUnderline,
@@ -149,6 +151,7 @@ class TextNodeSpec extends NodeSpec {
   double get fontSize => _textBacking.fontSize;
   Color get color => _textBacking.color;
   TextAlign get align => _textBacking.align;
+  TextDirection get textDirection => _textBacking.textDirection;
   bool get isBold => _textBacking.isBold;
   bool get isItalic => _textBacking.isItalic;
   bool get isUnderline => _textBacking.isUnderline;

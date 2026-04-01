@@ -251,40 +251,42 @@ class SceneBuilder {
       },
     );
 
-    test('rejects scene_view_interactive.dart -> any interactive/internal target',
-        () async {
-      final sandbox = await createImportBoundariesSandbox();
-      try {
-        writeSandboxFile(
-          sandbox,
-          'lib/src/interactive/internal/interactive_pointer_normalizer.dart',
-          'class InteractivePointerNormalizer {}\n',
-        );
-        writeSandboxFile(
-          sandbox,
-          'lib/src/view/scene_view_interactive.dart',
-          "import 'package:iwb_canvas_engine/src/interactive/internal/interactive_pointer_normalizer.dart';\n",
-        );
+    test(
+      'rejects scene_view_interactive.dart -> any interactive/internal target',
+      () async {
+        final sandbox = await createImportBoundariesSandbox();
+        try {
+          writeSandboxFile(
+            sandbox,
+            'lib/src/interactive/internal/interactive_pointer_normalizer.dart',
+            'class InteractivePointerNormalizer {}\n',
+          );
+          writeSandboxFile(
+            sandbox,
+            'lib/src/view/scene_view_interactive.dart',
+            "import 'package:iwb_canvas_engine/src/interactive/internal/interactive_pointer_normalizer.dart';\n",
+          );
 
-        final result = await runSandboxTool(
-          sandbox,
-          'check_import_boundaries.dart',
-        );
-        expect(result.exitCode, isNonZero);
-        expect(
-          result.stderr.toString(),
-          contains('view/internal boundary violation:'),
-        );
-        expect(
-          result.stderr.toString(),
-          contains(
-            'scene_view_interactive.dart must not import interactive/internal/**',
-          ),
-        );
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
+          final result = await runSandboxTool(
+            sandbox,
+            'check_import_boundaries.dart',
+          );
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            contains('view/internal boundary violation:'),
+          );
+          expect(
+            result.stderr.toString(),
+            contains(
+              'scene_view_interactive.dart must not import interactive/internal/**',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
 
     test('allows serialization -> model import', () async {
       final sandbox = await createImportBoundariesSandbox();

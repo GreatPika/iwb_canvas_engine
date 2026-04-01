@@ -58,6 +58,7 @@ final class TextNodeSpecBacking extends NodeSpecBacking {
     this.fontSize = 24,
     required this.color,
     this.align = TextAlign.left,
+    this.textDirection = TextDirection.ltr,
     this.isBold = false,
     this.isItalic = false,
     this.isUnderline = false,
@@ -78,6 +79,7 @@ final class TextNodeSpecBacking extends NodeSpecBacking {
   final double fontSize;
   final Color color;
   final TextAlign align;
+  final TextDirection textDirection;
   final bool isBold;
   final bool isItalic;
   final bool isUnderline;
@@ -216,6 +218,7 @@ TextNodeSpecBacking textNodeSpecBackingFromValidated({
     fontSize: resolvedFields.fontSize,
     color: resolvedFields.color,
     align: resolvedFields.align,
+    textDirection: resolvedFields.textDirection,
     isBold: resolvedFields.isBold,
     isItalic: resolvedFields.isItalic,
     isUnderline: resolvedFields.isUnderline,

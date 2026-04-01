@@ -237,6 +237,7 @@ NodeSpec _normalizeInsertSpec(
       fontSize: text.fontSize,
       color: text.color,
       align: text.align,
+      textDirection: text.textDirection,
       isBold: text.isBold,
       isItalic: text.isItalic,
       isUnderline: text.isUnderline,

@@ -941,6 +941,7 @@ void main() {
         maxWidth: 20,
         lineHeight: 1.5,
         color: const Color(0xFF000000),
+        textDirection: TextDirection.ltr,
       ),
       fallbackId: 'auto-2',
     );
@@ -1075,6 +1076,7 @@ void main() {
                 text: 'Derived size',
                 fontSize: 20,
                 color: const Color(0xFF000000),
+                textDirection: TextDirection.ltr,
               ),
               fallbackId: 'auto-text',
             )
@@ -1093,6 +1095,7 @@ void main() {
                 size: Size(1, 1),
                 fontSize: 24,
                 color: Color(0xFF000000),
+                textDirection: TextDirection.ltr,
               ),
             )
             as TextNode;
@@ -1125,6 +1128,32 @@ void main() {
     expect(text.size.height, greaterThan(1));
   });
 
+  test('textDirection patch updates text node and re-derives size', () {
+    final text = TextNode(
+      id: 'text-direction-patch',
+      text: 'abc אבג',
+      size: const Size(1, 1),
+      fontSize: 24,
+      color: const Color(0xFF000000),
+      textDirection: TextDirection.ltr,
+      align: TextAlign.start,
+    );
+
+    final changed = txnApplyNodePatch(
+      text,
+      TextNodePatch(
+        id: 'text-direction-patch',
+        textDirection: PatchField<TextDirection>.value(TextDirection.rtl),
+      ),
+    );
+
+    expect(changed, isTrue);
+    expect(text.textDirection, TextDirection.rtl);
+    expect(text.size, isNot(const Size(1, 1)));
+    expect(text.size.width, greaterThan(1));
+    expect(text.size.height, greaterThan(1));
+  });
+
   test('text node patch without layout fields keeps derived size', () {
     final text =
         txnNodeFromSpec(
@@ -1132,6 +1161,7 @@ void main() {
                 text: 'Stable derived size',
                 fontSize: 20,
                 color: const Color(0xFF000000),
+                textDirection: TextDirection.ltr,
               ),
               fallbackId: 'text-non-layout-patch',
             )
@@ -1178,6 +1208,7 @@ void main() {
               text: 't',
               fontSize: 0,
               color: const Color(0xFF000000),
+              textDirection: TextDirection.ltr,
             ),
             field: 'fontSize',
             message: 'Must be > 0.',

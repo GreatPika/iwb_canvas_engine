@@ -240,3 +240,23 @@ TextAlign sceneBuilderParseTextAlign(
       );
   }
 }
+
+TextDirection sceneBuilderParseTextDirection(
+  String value, {
+  required String pathPrefix,
+  required String fieldName,
+}) {
+  switch (value) {
+    case 'ltr':
+      return TextDirection.ltr;
+    case 'rtl':
+      return TextDirection.rtl;
+    default:
+      throw SceneDataException(
+        code: SceneDataErrorCode.invalidValue,
+        path: sceneBuilderPathAt(pathPrefix, fieldName),
+        message: 'Unknown text direction: $value.',
+        source: value,
+      );
+  }
+}

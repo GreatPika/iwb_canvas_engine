@@ -58,6 +58,7 @@ final class TextNodePatchBacking extends NodePatchBacking {
     this.fontSize = const PatchField<double>.absent(),
     this.color = const PatchField<Color>.absent(),
     this.align = const PatchField<TextAlign>.absent(),
+    this.textDirection = const PatchField<TextDirection>.absent(),
     this.isBold = const PatchField<bool>.absent(),
     this.isItalic = const PatchField<bool>.absent(),
     this.isUnderline = const PatchField<bool>.absent(),
@@ -70,6 +71,7 @@ final class TextNodePatchBacking extends NodePatchBacking {
   final PatchField<double> fontSize;
   final PatchField<Color> color;
   final PatchField<TextAlign> align;
+  final PatchField<TextDirection> textDirection;
   final PatchField<bool> isBold;
   final PatchField<bool> isItalic;
   final PatchField<bool> isUnderline;
@@ -192,6 +194,7 @@ TextNodePatchBacking textNodePatchBackingFromValidated({
     fontSize: resolvedFields.fontSize,
     color: resolvedFields.color,
     align: resolvedFields.align,
+    textDirection: resolvedFields.textDirection,
     isBold: resolvedFields.isBold,
     isItalic: resolvedFields.isItalic,
     isUnderline: resolvedFields.isUnderline,
@@ -295,6 +298,7 @@ TextNodePatchSchemaFields _defaultTextNodePatchSchemaFields() => (
   fontSize: const PatchField<double>.absent(),
   color: const PatchField<Color>.absent(),
   align: const PatchField<TextAlign>.absent(),
+  textDirection: const PatchField<TextDirection>.absent(),
   isBold: const PatchField<bool>.absent(),
   isItalic: const PatchField<bool>.absent(),
   isUnderline: const PatchField<bool>.absent(),

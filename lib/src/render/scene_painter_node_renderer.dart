@@ -16,14 +16,12 @@ class ScenePainterNodeRenderer {
     required Image? Function(String imageId) imageResolver,
     required SceneTextLayoutCache? textLayoutCache,
     required SceneStrokePathCache? strokePathCache,
-    required TextDirection textDirection,
     required Float64List transformBuffer,
   }) : _transformBuffer = transformBuffer,
        _support = SceneNodeRenderSupport(
          imageResolver: imageResolver,
          textLayoutCache: textLayoutCache,
          strokePathCache: strokePathCache,
-         textDirection: textDirection,
        );
 
   final Float64List _transformBuffer;
@@ -85,13 +83,11 @@ class SceneNodeRenderSupport {
     required Image? Function(String imageId) imageResolver,
     required SceneTextLayoutCache? textLayoutCache,
     required SceneStrokePathCache? strokePathCache,
-    required TextDirection textDirection,
   }) : shapes = SceneShapeNodeRenderer(),
        strokes = SceneStrokeNodeRenderer(strokePathCache: strokePathCache),
        rich = SceneRichNodeRenderer(
          imageResolver: imageResolver,
          textLayoutCache: textLayoutCache,
-         textDirection: textDirection,
        );
 
   final SceneShapeNodeRenderer shapes;
@@ -248,12 +244,10 @@ class SceneRichNodeRenderer {
   const SceneRichNodeRenderer({
     required this.imageResolver,
     required this.textLayoutCache,
-    required this.textDirection,
   });
 
   final Image? Function(String imageId) imageResolver;
   final SceneTextLayoutCache? textLayoutCache;
-  final TextDirection textDirection;
 
   void drawTextNode(TextNodeSnapshot node, SceneNodeRenderContext context) {
     if (!node.transform.isFinite) {
@@ -262,14 +256,14 @@ class SceneRichNodeRenderer {
     final safeSize = clampNonNegativeSizeFinite(node.size);
     final textLayoutCache = this.textLayoutCache;
     final textPainter = textLayoutCache != null
-        ? textLayoutCache.getOrBuild(node: node, textDirection: textDirection)
-        : buildSceneTextPainter(node: node, textDirection: textDirection);
+        ? textLayoutCache.getOrBuild(node: node)
+        : buildSceneTextPainter(node: node);
 
     final alignOffset = scenePainterTextAlignOffset(
       node.align,
       safeSize.width,
       textPainter.width,
-      textDirection,
+      node.textDirection,
     );
 
     withTransform(

@@ -126,6 +126,7 @@ void main() {
       fontSize: 18,
       color: Color(0xFF0000FF),
       align: TextAlign.center,
+      textDirection: TextDirection.ltr,
       isBold: true,
       isItalic: true,
       isUnderline: true,
@@ -206,6 +207,7 @@ void main() {
       text: 'runtime',
       size: const Size(10, 10),
       color: const Color(0xFF010203),
+      textDirection: TextDirection.ltr,
     );
     final line = LineNodeSnapshot(
       id: 'l-runtime',

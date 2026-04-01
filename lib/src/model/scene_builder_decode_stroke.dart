@@ -3,9 +3,9 @@ import 'dart:ui';
 import '../contract/internal/node_boundary_schema.dart';
 import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/scene_data_exception.dart';
+import '../contract/scene_model_invariants.dart';
 import '../contract/validated/finite_offset_value.dart';
 import '../contract/validated/validated_value_support.dart';
-import '../core/scene_limits.dart';
 import 'scene_builder_json_parse.dart';
 import 'scene_builder_json_require.dart';
 
@@ -50,12 +50,12 @@ List<Offset> _decodeStrokePoints(
     'localPoints',
     pathPrefix: nodePath,
   );
-  if (pointsJson.length > kMaxStrokePointsPerNode) {
+  final limitMessage = sceneStrokePointCountViolationMessage(pointsJson.length);
+  if (limitMessage != null) {
     throw SceneDataException(
       code: SceneDataErrorCode.invalidValue,
       path: pointsPath,
-      message:
-          'Field localPoints must contain at most $kMaxStrokePointsPerNode points.',
+      message: 'Field localPoints $limitMessage',
       source: pointsJson.length,
     );
   }

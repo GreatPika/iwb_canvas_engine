@@ -306,6 +306,7 @@ void main() {
                 fontSize: 14,
                 color: const Color(0xFF000000),
                 align: TextAlign.center,
+                textDirection: TextDirection.ltr,
                 transform: Transform2D.translation(const Offset(25, 60)),
               ),
               ImageNodeSnapshot(
@@ -1012,82 +1013,78 @@ void main() {
     },
   );
 
-  test('ScenePainter uses textDirection for TextAlign.start and end', () async {
-    const background = Color(0xFFFFFFFF);
+  test(
+    'ScenePainter uses node textDirection for TextAlign.start and end',
+    () async {
+      const background = Color(0xFFFFFFFF);
 
-    SceneSnapshot snapshotFor(TextAlign align) {
-      return SceneSnapshot(
-        background: const BackgroundSnapshot(color: background),
-        layers: <ContentLayerSnapshot>[
-          ContentLayerSnapshot(
-            id: 'layer-auto-6',
-            nodes: <NodeSnapshot>[
-              TextNodeSnapshot(
-                id: 'text-$align',
-                text: 'StartEnd',
-                size: const Size(140, 28),
-                fontSize: 20,
-                color: const Color(0xFF000000),
-                align: align,
-                maxWidth: 60,
-                transform: Transform2D.translation(const Offset(80, 40)),
-              ),
-            ],
-          ),
-        ],
+      SceneSnapshot snapshotFor(TextAlign align, TextDirection textDirection) {
+        return SceneSnapshot(
+          background: const BackgroundSnapshot(color: background),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-auto-6',
+              nodes: <NodeSnapshot>[
+                TextNodeSnapshot(
+                  id: 'text-$align',
+                  text: 'StartEnd',
+                  size: const Size(140, 28),
+                  fontSize: 20,
+                  color: const Color(0xFF000000),
+                  align: align,
+                  textDirection: textDirection,
+                  maxWidth: 60,
+                  transform: Transform2D.translation(const Offset(80, 40)),
+                ),
+              ],
+            ),
+          ],
+        );
+      }
+
+      final ltrState = _FakeRenderState(
+        snapshot: snapshotFor(TextAlign.start, TextDirection.ltr),
       );
-    }
+      final rtlState = _FakeRenderState(
+        snapshot: snapshotFor(TextAlign.start, TextDirection.rtl),
+      );
 
-    final ltrState = _FakeRenderState(snapshot: snapshotFor(TextAlign.start));
-    final rtlState = _FakeRenderState(snapshot: snapshotFor(TextAlign.start));
+      final ltrImage = await _paintToImage(
+        ScenePainter(controller: ltrState, imageResolver: (_) => null),
+        width: 160,
+        height: 80,
+      );
+      final rtlImage = await _paintToImage(
+        ScenePainter(controller: rtlState, imageResolver: (_) => null),
+        width: 160,
+        height: 80,
+      );
+      final ltrCenterX = await _inkCentroidX(ltrImage, background);
+      final rtlCenterX = await _inkCentroidX(rtlImage, background);
+      expect(rtlCenterX, greaterThan(ltrCenterX));
 
-    final ltrImage = await _paintToImage(
-      ScenePainter(
-        controller: ltrState,
-        imageResolver: (_) => null,
-        textDirection: TextDirection.ltr,
-      ),
-      width: 160,
-      height: 80,
-    );
-    final rtlImage = await _paintToImage(
-      ScenePainter(
-        controller: rtlState,
-        imageResolver: (_) => null,
-        textDirection: TextDirection.rtl,
-      ),
-      width: 160,
-      height: 80,
-    );
-    final ltrCenterX = await _inkCentroidX(ltrImage, background);
-    final rtlCenterX = await _inkCentroidX(rtlImage, background);
-    expect(rtlCenterX, greaterThan(ltrCenterX));
+      final ltrEndState = _FakeRenderState(
+        snapshot: snapshotFor(TextAlign.end, TextDirection.ltr),
+      );
+      final rtlEndState = _FakeRenderState(
+        snapshot: snapshotFor(TextAlign.end, TextDirection.rtl),
+      );
 
-    final ltrEndState = _FakeRenderState(snapshot: snapshotFor(TextAlign.end));
-    final rtlEndState = _FakeRenderState(snapshot: snapshotFor(TextAlign.end));
-
-    final ltrEndImage = await _paintToImage(
-      ScenePainter(
-        controller: ltrEndState,
-        imageResolver: (_) => null,
-        textDirection: TextDirection.ltr,
-      ),
-      width: 160,
-      height: 80,
-    );
-    final rtlEndImage = await _paintToImage(
-      ScenePainter(
-        controller: rtlEndState,
-        imageResolver: (_) => null,
-        textDirection: TextDirection.rtl,
-      ),
-      width: 160,
-      height: 80,
-    );
-    final ltrEndCenterX = await _inkCentroidX(ltrEndImage, background);
-    final rtlEndCenterX = await _inkCentroidX(rtlEndImage, background);
-    expect(rtlEndCenterX, lessThan(ltrEndCenterX));
-  });
+      final ltrEndImage = await _paintToImage(
+        ScenePainter(controller: ltrEndState, imageResolver: (_) => null),
+        width: 160,
+        height: 80,
+      );
+      final rtlEndImage = await _paintToImage(
+        ScenePainter(controller: rtlEndState, imageResolver: (_) => null),
+        width: 160,
+        height: 80,
+      );
+      final ltrEndCenterX = await _inkCentroidX(ltrEndImage, background);
+      final rtlEndCenterX = await _inkCentroidX(rtlEndImage, background);
+      expect(rtlEndCenterX, lessThan(ltrEndCenterX));
+    },
+  );
 
   test(
     'ScenePainter treats lineHeight as absolute logical units (legacy parity)',
@@ -1107,6 +1104,7 @@ void main() {
                   size: const Size(180, 180),
                   fontSize: 12,
                   color: const Color(0xFF000000),
+                  textDirection: TextDirection.ltr,
                   lineHeight: lineHeight,
                   transform: Transform2D.translation(const Offset(90, 90)),
                 ),
@@ -1167,6 +1165,7 @@ void main() {
                 size: const Size(80, 24),
                 fontSize: 14,
                 color: const Color(0xFF000000),
+                textDirection: TextDirection.ltr,
                 transform: Transform2D.translation(const Offset(50, 40)),
               ),
               PathNodeSnapshot(
@@ -1486,6 +1485,7 @@ void main() {
                   lineHeight: 1.4,
                   align: TextAlign.right,
                   color: const Color(0xFF000000),
+                  textDirection: TextDirection.ltr,
                   transform: Transform2D.translation(const Offset(20, 55)),
                 ),
                 TextNodeSnapshot(
@@ -1495,6 +1495,7 @@ void main() {
                   fontSize: 14,
                   align: TextAlign.justify,
                   color: const Color(0xFF000000),
+                  textDirection: TextDirection.ltr,
                   transform: Transform2D.translation(const Offset(55, 55)),
                 ),
               ],
@@ -1543,6 +1544,7 @@ void main() {
                   text: 'T',
                   size: const Size(30, 16),
                   color: const Color(0xFF000000),
+                  textDirection: TextDirection.ltr,
                   transform: Transform2D.translation(const Offset(60, 20)),
                 ),
                 StrokeNodeSnapshot(
@@ -1703,14 +1705,6 @@ void main() {
         controller: c1,
         imageResolver: resolverA,
         gridStrokeWidth: 2,
-      ).shouldRepaint(base),
-      isTrue,
-    );
-    expect(
-      ScenePainter(
-        controller: c1,
-        imageResolver: resolverA,
-        textDirection: TextDirection.rtl,
       ).shouldRepaint(base),
       isTrue,
     );

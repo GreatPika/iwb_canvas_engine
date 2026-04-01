@@ -4,6 +4,14 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ## Unreleased
 
+- Shared scene-model invariants now reject oversized stroke point lists and
+  palette lists through one shared contract path across typed construction,
+  import/decode, and encode. Text nodes now carry explicit `textDirection` in
+  runtime and serialized scene data, inbound serialized text `size` remains
+  non-authoritative, the JSON contract now requires explicit `textDirection`
+  on text nodes, public `TextNodeSpec` / `TextNodeSnapshot` creation requires
+  explicit direction, and `TextNodePatch` can update direction for existing
+  text nodes.
 - Interactive write-side ownership is now canonicalized across
   `replaceScene(...)`, controller-side transform/delete preflight, and
   `SceneView` pointer semantics: `replaceScene(...)` now materializes its
@@ -50,6 +58,13 @@ All notable changes to `iwb_canvas_engine` are documented here.
 - `SceneControllerInteraction.snapshot` was removed from the public runtime
   surface. Integrations must read committed render-state from
   `controller.snapshot` instead of `controller.interaction.snapshot`.
+- JSON schema `5` is no longer supported. The engine now writes and reads only
+  `schemaVersion = 6`, and text nodes must include explicit `textDirection`
+  during decode instead of relying on legacy view-context fallback semantics.
+- `ScenePainter` and `SceneViewRenderSurface` no longer accept a
+  painter-level `textDirection` override. Text layout and `TextAlign.start` /
+  `TextAlign.end` semantics are now fully owned by per-node
+  `TextNode.textDirection`.
 
 ### Changed
 

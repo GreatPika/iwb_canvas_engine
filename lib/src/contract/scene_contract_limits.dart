@@ -7,6 +7,8 @@ const int kMaxNodeIdLength = 256;
 const int kMaxImageIdLength = 1024;
 const int kMaxFontFamilyLength = 256;
 const int kMaxTextLength = 100000;
+const int kMaxStrokePointsPerNode = 20000;
+const int kMaxPaletteItems = 1024;
 const int kMaxRawSceneJsonLength = 32 * 1024 * 1024;
 
 List<int> sceneContractLimitValues() {
@@ -17,6 +19,8 @@ List<int> sceneContractLimitValues() {
     kMaxImageIdLength,
     kMaxFontFamilyLength,
     kMaxTextLength,
+    kMaxStrokePointsPerNode,
+    kMaxPaletteItems,
     kMaxRawSceneJsonLength,
   ];
 }

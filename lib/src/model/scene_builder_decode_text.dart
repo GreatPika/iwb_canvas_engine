@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import '../contract/internal/node_boundary_schema.dart';
 import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/validated/font_family_value.dart';
@@ -26,6 +28,7 @@ TextNodeSnapshotSchemaFields _decodeTextFields(
     fontSize: textFields.fontSize,
     color: textFields.color,
     align: textFields.align,
+    textDirection: textFields.textDirection,
     isBold: textFields.isBold,
     isItalic: textFields.isItalic,
     isUnderline: textFields.isUnderline,
@@ -59,6 +62,7 @@ TextNodeSpecSchemaFields _decodeTextSpecFields(
       sceneBuilderRequireStringField(json, 'align', pathPrefix: nodePath),
       pathPrefix: nodePath,
     ),
+    textDirection: _decodeTextDirection(json, nodePath: nodePath),
     isBold: flags.isBold,
     isItalic: flags.isItalic,
     isUnderline: flags.isUnderline,
@@ -82,6 +86,23 @@ String _decodeRequiredTextContent(
           path: path,
           fieldName: fieldName,
         ).value,
+  );
+}
+
+TextDirection _decodeTextDirection(
+  Map<String, Object?> json, {
+  required String nodePath,
+}) {
+  final rawDirection = sceneBuilderRequireTypedField<String>(
+    json,
+    'textDirection',
+    pathPrefix: nodePath,
+    typeLabel: 'string',
+  );
+  return sceneBuilderParseTextDirection(
+    rawDirection,
+    pathPrefix: nodePath,
+    fieldName: 'textDirection',
   );
 }
 

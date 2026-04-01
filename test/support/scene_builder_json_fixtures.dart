@@ -1,3 +1,6 @@
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart'
+    show schemaVersionWrite;
+
 Map<String, Object?> minimalRectNodeJson({required String id}) {
   return <String, Object?>{
     'id': id,
@@ -27,7 +30,7 @@ Map<String, Object?> minimalSceneJson({
   List<Object?>? contentNodes,
 }) {
   return <String, Object?>{
-    'schemaVersion': 5,
+    'schemaVersion': schemaVersionWrite,
     'camera': <String, Object?>{'offsetX': 0, 'offsetY': 0},
     'background': <String, Object?>{
       'color': '#FFFFFFFF',

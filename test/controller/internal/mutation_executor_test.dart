@@ -217,7 +217,11 @@ void main() {
         executor,
         ctx,
         InsertNodeOp(
-          TextNodeSpec(text: 'hello', color: const Color(0xFF111111)),
+          TextNodeSpec(
+            text: 'hello',
+            color: const Color(0xFF111111),
+            textDirection: TextDirection.ltr,
+          ),
         ),
       );
 

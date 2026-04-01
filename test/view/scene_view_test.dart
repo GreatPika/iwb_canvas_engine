@@ -19,6 +19,7 @@ SceneSnapshot _snapshot({required double strokeY, required String text}) {
             text: text,
             size: const Size(80, 24),
             color: const Color(0xFF000000),
+            textDirection: TextDirection.ltr,
           ),
           StrokeNodeSnapshot(
             id: 'stroke',
@@ -48,6 +49,7 @@ SceneSnapshot _churnSnapshot({required int pairCount, required String prefix}) {
               text: '$prefix-$i',
               size: const Size(80, 24),
               color: const Color(0xFF000000),
+              textDirection: TextDirection.ltr,
             ),
             StrokeNodeSnapshot(
               id: '$prefix-stroke-$i',

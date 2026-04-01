@@ -97,7 +97,7 @@ void main() {
     'sceneBuildFromDynamicJsonMap maps parsed-map normalization failures to invalidJsonPayload',
     () {
       final malformed = <Object?, Object?>{
-        'schemaVersion': 5,
+        'schemaVersion': schemaVersionWrite,
         1: 'non-string-key',
       };
 
@@ -552,6 +552,7 @@ void main() {
         fontSize: 24,
         color: Color(0xFF000000),
         align: TextAlign.left,
+        textDirection: TextDirection.ltr,
         isBold: false,
         isItalic: false,
         isUnderline: false,
@@ -1031,6 +1032,7 @@ void main() {
   );
 
   test('sceneBuildFromJsonMap rejects too many stroke points', () {
+    // INV:INV-SER-SHARED-STROKE-POINT-LIMIT
     final json = _minimalSceneJson();
     json['layers'] = <Object?>[
       <String, Object?>{
@@ -1108,6 +1110,7 @@ void main() {
             'fontSize': 14,
             'color': '#FF000000',
             'align': 'left',
+            'textDirection': 'ltr',
             'isBold': false,
             'isItalic': false,
             'isUnderline': false,
@@ -1130,6 +1133,7 @@ void main() {
   });
 
   test('sceneBuildFromJsonMap rejects oversized palette penColors', () {
+    // INV:INV-SER-SHARED-PALETTE-ITEM-LIMIT
     final json = _minimalSceneJson();
     (json['palette'] as Map<String, Object?>)['penColors'] = <Object?>[
       for (var i = 0; i < kMaxPaletteItems + 1; i++) '#FF000000',
@@ -1147,6 +1151,278 @@ void main() {
       ),
     );
   });
+
+  test('sceneBuildFromJsonMap rejects oversized palette gridSizes', () {
+    final json = _minimalSceneJson();
+    (json['palette'] as Map<String, Object?>)['gridSizes'] = <Object?>[
+      for (var i = 0; i < kMaxPaletteItems + 1; i++) i + 1,
+    ];
+
+    expect(
+      () => model_builder.sceneBuildFromJsonMap(json),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'palette.gridSizes' &&
+              e.message ==
+                  'Field palette.gridSizes must contain at most '
+                      '$kMaxPaletteItems items.',
+        ),
+      ),
+    );
+  });
+
+  test(
+    'typed text/stroke/palette boundaries enforce shared model invariants',
+    () {
+      // INV:INV-SER-TEXT-DIRECTION-EXPLICIT
+      expect(
+        () => StrokeNodeSnapshot(
+          id: 'stroke-too-many',
+          points: <Offset>[
+            for (var i = 0; i < kMaxStrokePointsPerNode + 1; i++)
+              Offset(i.toDouble(), 0),
+          ],
+          thickness: 1,
+          color: const Color(0xFF000000),
+        ),
+        throwsArgumentError,
+      );
+
+      expect(
+        () => ScenePaletteSnapshot(
+          penColors: <Color>[
+            for (var i = 0; i < kMaxPaletteItems + 1; i++)
+              const Color(0xFF000000),
+          ],
+        ),
+        throwsArgumentError,
+      );
+
+      final text = TextNodeSnapshot(
+        id: 'text-rtl',
+        text: 'rtl',
+        size: const Size(10, 10),
+        fontSize: 16,
+        color: const Color(0xFF000000),
+        textDirection: TextDirection.rtl,
+      );
+      expect(text.textDirection, TextDirection.rtl);
+    },
+  );
+
+  test('sceneBuildFromJsonMap rejects missing textDirection', () {
+    final json = _minimalSceneJson();
+    json['layers'] = <Object?>[
+      <String, Object?>{
+        'id': 'layer-0',
+        'nodes': <Object?>[
+          <String, Object?>{
+            ..._minimalRectNodeJson(id: 't-legacy'),
+            'type': 'text',
+            'text': 'Legacy text',
+            'size': <String, Object?>{'w': 1, 'h': 1},
+            'fontSize': 14,
+            'color': '#FF000000',
+            'align': 'start',
+            'isBold': false,
+            'isItalic': false,
+            'isUnderline': false,
+          },
+        ],
+      },
+    ];
+
+    expect(
+      () => model_builder.sceneBuildFromJsonMap(json),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.missingField &&
+              e.path == 'layers[0].nodes[0].textDirection' &&
+              e.message ==
+                  'Missing required field layers[0].nodes[0].textDirection.',
+        ),
+      ),
+    );
+  });
+
+  test('sceneBuildFromJsonMap rejects unknown textDirection', () {
+    final json = _minimalSceneJson();
+    json['layers'] = <Object?>[
+      <String, Object?>{
+        'id': 'layer-0',
+        'nodes': <Object?>[
+          <String, Object?>{
+            ..._minimalRectNodeJson(id: 't-invalid-direction'),
+            'type': 'text',
+            'text': 'Invalid direction',
+            'size': <String, Object?>{'w': 1, 'h': 1},
+            'fontSize': 14,
+            'color': '#FF000000',
+            'align': 'start',
+            'textDirection': 'sideways',
+            'isBold': false,
+            'isItalic': false,
+            'isUnderline': false,
+          },
+        ],
+      },
+    ];
+
+    expect(
+      () => model_builder.sceneBuildFromJsonMap(json),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers[0].nodes[0].textDirection' &&
+              e.message == 'Unknown text direction: sideways.',
+        ),
+      ),
+    );
+  });
+
+  test(
+    'sceneCanonicalizeAndValidateSnapshot rejects oversized stroke points and palette gridSizes',
+    () {
+      final oversizedStroke = sceneSnapshotFromValidated(
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
+            id: 'layer-auto-overflow-stroke',
+            nodes: <NodeSnapshot>[
+              strokeNodeSnapshotFromValidated(
+                common: nodeSnapshotCommonFieldsFromValidated(
+                  id: 'stroke-overflow-policy',
+                  instanceRevision: 1,
+                  transform: Transform2D.identity,
+                  opacity: 1,
+                  hitPadding: 0,
+                  isVisible: true,
+                  isSelectable: true,
+                  isLocked: false,
+                  isDeletable: true,
+                  isTransformable: true,
+                ),
+                fields: (
+                  points: <Offset>[
+                    for (var i = 0; i < kMaxStrokePointsPerNode + 1; i++)
+                      Offset(i.toDouble(), 0),
+                  ],
+                  pointsRevision: 0,
+                  thickness: 1,
+                  color: const Color(0xFF000000),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+
+      expect(
+        () =>
+            model_builder.sceneCanonicalizeAndValidateSnapshot(oversizedStroke),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.code == SceneDataErrorCode.invalidValue &&
+                e.path == 'layers[0].nodes[0].points' &&
+                e.message ==
+                    'Field layers[0].nodes[0].points Field '
+                        'layers[0].nodes[0].points must contain at most '
+                        '$kMaxStrokePointsPerNode points.',
+          ),
+        ),
+      );
+
+      final oversizedPalette = sceneSnapshotFromValidated(
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(id: 'layer-auto-overflow-palette'),
+        ],
+        palette: scenePaletteSnapshotFromValidated(
+          gridSizes: <double>[
+            for (var i = 0; i < kMaxPaletteItems + 1; i++) i + 1,
+          ],
+        ),
+      );
+
+      expect(
+        () => model_builder.sceneCanonicalizeAndValidateSnapshot(
+          oversizedPalette,
+        ),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.code == SceneDataErrorCode.invalidValue &&
+                e.path == 'palette.gridSizes' &&
+                e.message ==
+                    'Field palette.gridSizes Field palette.gridSizes must '
+                        'contain at most '
+                        '$kMaxPaletteItems items.',
+          ),
+        ),
+      );
+    },
+  );
+
+  test(
+    'sceneCanonicalizeAndValidateSnapshot validates optional text sizes and non-uniform path transforms',
+    () {
+      final snapshot = sceneSnapshotFromValidated(
+        layers: <ContentLayerSnapshot>[
+          contentLayerSnapshotFromValidated(
+            id: 'layer-auto-policy-ranges',
+            nodes: <NodeSnapshot>[
+              TextNodeSnapshot(
+                id: 'text-policy-ranges',
+                text: 'Sized text',
+                size: const Size(40, 20),
+                transform: const Transform2D(
+                  a: 1,
+                  b: 0,
+                  c: 0,
+                  d: 1.5,
+                  tx: 0,
+                  ty: 0,
+                ),
+                fontSize: 16,
+                color: const Color(0xFF000000),
+                textDirection: TextDirection.ltr,
+                maxWidth: 120,
+                lineHeight: 1.25,
+              ),
+              PathNodeSnapshot(
+                id: 'path-policy-ranges',
+                transform: const Transform2D(
+                  a: 1.2,
+                  b: 0,
+                  c: 0,
+                  d: 0.8,
+                  tx: 0,
+                  ty: 0,
+                ),
+                svgPathData: 'M0 0 L5 0 L5 5 Z',
+                strokeWidth: 2,
+                fillRule: PathFillRule.evenOdd,
+              ),
+            ],
+          ),
+        ],
+      );
+
+      final validated = model_builder.sceneCanonicalizeAndValidateSnapshot(
+        snapshot,
+      );
+
+      expect(validated.layers.single.nodes, hasLength(2));
+    },
+  );
 
   test('public snapshot boundary rejects oversized image ids', () {
     expect(

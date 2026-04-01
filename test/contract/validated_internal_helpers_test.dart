@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_contract_limits.dart';
+import 'package:iwb_canvas_engine/src/contract/scene_model_invariants.dart';
 import 'package:iwb_canvas_engine/src/contract/validated/finite_offset_value.dart';
 import 'package:iwb_canvas_engine/src/contract/validated/font_family_value.dart';
 import 'package:iwb_canvas_engine/src/contract/validated/image_id_value.dart';
@@ -14,14 +15,54 @@ import 'package:iwb_canvas_engine/src/contract/validated/text_content_value.dart
 
 void main() {
   test('contract boundary limits stay positive and ordered', () {
-    expect(sceneContractLimitValues(), hasLength(7));
+    expect(sceneContractLimitValues(), hasLength(9));
     expect(kMaxSvgPathDataLength, greaterThan(0));
     expect(kMaxLayerIdLength, greaterThan(0));
     expect(kMaxNodeIdLength, greaterThan(0));
     expect(kMaxImageIdLength, greaterThanOrEqualTo(kMaxNodeIdLength));
     expect(kMaxFontFamilyLength, greaterThan(0));
     expect(kMaxTextLength, greaterThan(kMaxFontFamilyLength));
+    expect(kMaxStrokePointsPerNode, greaterThan(0));
+    expect(kMaxPaletteItems, greaterThan(0));
     expect(kMaxRawSceneJsonLength, greaterThan(kMaxTextLength));
+  });
+
+  test('shared scene model invariant helpers enforce shared count limits', () {
+    expect(
+      sceneStrokePointCountViolationMessage(kMaxStrokePointsPerNode),
+      isNull,
+    );
+    expect(
+      sceneStrokePointCountViolationMessage(kMaxStrokePointsPerNode + 1),
+      'must contain at most $kMaxStrokePointsPerNode points.',
+    );
+    expect(
+      () =>
+          validateStrokePointCount(kMaxStrokePointsPerNode + 1, name: 'points'),
+      throwsA(
+        isA<ArgumentError>().having(
+          (error) => error.message,
+          'message',
+          'Must contain at most $kMaxStrokePointsPerNode points.',
+        ),
+      ),
+    );
+
+    expect(scenePaletteItemCountViolationMessage(kMaxPaletteItems), isNull);
+    expect(
+      scenePaletteItemCountViolationMessage(kMaxPaletteItems + 1),
+      'must contain at most $kMaxPaletteItems items.',
+    );
+    expect(
+      () => validatePaletteItemCount(kMaxPaletteItems + 1, name: 'palette'),
+      throwsA(
+        isA<ArgumentError>().having(
+          (error) => error.message,
+          'message',
+          'Must contain at most $kMaxPaletteItems items.',
+        ),
+      ),
+    );
   });
 
   test('validated value types implement equality and hashCode explicitly', () {

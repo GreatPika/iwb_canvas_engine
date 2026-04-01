@@ -53,17 +53,22 @@ void main() {
       },
     );
 
-    test('interactive SceneController exposes view pointer semantics source', () {
-      final controller = interactive.SceneController();
-      addTearDown(controller.dispose);
+    test(
+      'interactive SceneController exposes view pointer semantics source',
+      () {
+        final controller = interactive.SceneController();
+        addTearDown(controller.dispose);
 
-      final source = controller as SceneViewPointerSemanticsSource;
-      final bridge = source.createPointerSemanticsBridge(isMounted: () => true);
-      addTearDown(bridge.dispose);
+        final source = controller as SceneViewPointerSemanticsSource;
+        final bridge = source.createPointerSemanticsBridge(
+          isMounted: () => true,
+        );
+        addTearDown(bridge.dispose);
 
-      expect(bridge.pendingTapFlushTimestampMs, isNull);
-      expect(controller, isA<SceneViewRenderState>());
-    });
+        expect(bridge.pendingTapFlushTimestampMs, isNull);
+        expect(controller, isA<SceneViewRenderState>());
+      },
+    );
 
     test('write callback exposes SceneWriteTxn contract', () {
       final controller = SceneControllerCore();

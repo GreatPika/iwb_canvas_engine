@@ -29,6 +29,7 @@ SceneSnapshot _snapshot({required String text, bool includeImage = false}) {
             text: text,
             size: const Size(60, 20),
             color: const Color(0xFF000000),
+            textDirection: TextDirection.ltr,
           ),
           if (includeImage)
             ImageNodeSnapshot(
@@ -125,6 +126,7 @@ SceneSnapshot _cacheSnapshot({
             text: text,
             size: const Size(60, 20),
             color: const Color(0xFF000000),
+            textDirection: TextDirection.ltr,
           ),
           StrokeNodeSnapshot(
             id: 'stroke',

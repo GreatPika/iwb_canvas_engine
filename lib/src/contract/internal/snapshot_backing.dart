@@ -168,6 +168,7 @@ final class TextNodeSnapshotBacking extends NodeSnapshotBacking {
     this.fontSize = 24,
     required this.color,
     this.align = TextAlign.left,
+    this.textDirection = TextDirection.ltr,
     this.isBold = false,
     this.isItalic = false,
     this.isUnderline = false,
@@ -189,6 +190,7 @@ final class TextNodeSnapshotBacking extends NodeSnapshotBacking {
   final double fontSize;
   final Color color;
   final TextAlign align;
+  final TextDirection textDirection;
   final bool isBold;
   final bool isItalic;
   final bool isUnderline;
@@ -394,6 +396,7 @@ TextNodeSnapshotBacking textNodeSnapshotBackingFromValidated({
     fontSize: fields.fontSize,
     color: fields.color,
     align: fields.align,
+    textDirection: fields.textDirection,
     isBold: fields.isBold,
     isItalic: fields.isItalic,
     isUnderline: fields.isUnderline,

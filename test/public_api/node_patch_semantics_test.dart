@@ -72,6 +72,7 @@ void main() {
       fontSize: PatchField<double>.value(16),
       color: PatchField<Color>.value(Color(0xFF00FF00)),
       align: PatchField<TextAlign>.value(TextAlign.right),
+      textDirection: PatchField<TextDirection>.value(TextDirection.rtl),
       isBold: PatchField<bool>.value(true),
       isItalic: PatchField<bool>.value(true),
       isUnderline: PatchField<bool>.value(false),
@@ -120,6 +121,7 @@ void main() {
     expect(image.naturalSize.isNullValue, isTrue);
 
     expect(text.align.value, TextAlign.right);
+    expect(text.textDirection.value, TextDirection.rtl);
     expect(text.fontFamily.value, 'Mono');
     expect(text.lineHeight.isNullValue, isTrue);
 
@@ -147,6 +149,7 @@ void main() {
     );
     final textPatch = TextNodePatch(
       id: 'text-runtime',
+      textDirection: PatchField<TextDirection>.value(TextDirection.rtl),
       fontFamily: dynamicNull,
       lineHeight: explicitNullValue,
     );
@@ -168,6 +171,7 @@ void main() {
     );
 
     expect(imagePatch.imageId.value, 'runtime');
+    expect(textPatch.textDirection.value, TextDirection.rtl);
     expect(textPatch.fontFamily.isNullValue, isTrue);
     expect(textPatch.lineHeight.valueOrNull, isNull);
     expect(strokePatch.thickness.value, 2);

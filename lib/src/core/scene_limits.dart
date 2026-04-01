@@ -6,8 +6,10 @@ export '../contract/scene_contract_limits.dart'
         kMaxFontFamilyLength,
         kMaxImageIdLength,
         kMaxLayerIdLength,
+        kMaxPaletteItems,
         kMaxNodeIdLength,
         kMaxRawSceneJsonLength,
+        kMaxStrokePointsPerNode,
         kMaxSvgPathDataLength,
         kMaxTextLength;
 
@@ -23,8 +25,6 @@ const double sceneHitPaddingMax = 1e5;
 
 const int kMaxContentLayersPerScene = 4096;
 const int kMaxNodesPerScene = 200000;
-const int kMaxStrokePointsPerNode = 20000;
-const int kMaxPaletteItems = 1024;
 // Guardrail invariants:
 // - trimTo must be >= 2 (endpoint-preserving resample requires two points)
 // - trimTo must be < softLimit (hysteresis avoids resampling on every point)
@@ -33,5 +33,5 @@ const int kInteractiveStrokePointsTrimTo = 18000;
 const int kInteractiveEraserPointsSoftLimit = 8000;
 const int kInteractiveEraserPointsTrimTo = 4000;
 
-const Set<int> sceneSchemaVersionsRead = {5};
-const int sceneSchemaVersionWrite = 5;
+const Set<int> sceneSchemaVersionsRead = {6};
+const int sceneSchemaVersionWrite = 6;

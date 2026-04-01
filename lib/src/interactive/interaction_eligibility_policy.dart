@@ -181,6 +181,7 @@ Rect _textSnapshotLocalBounds(TextNodeSnapshot node) {
     fontFamily: node.fontFamily,
     lineHeight: node.lineHeight,
     maxWidth: node.maxWidth,
+    textDirection: node.textDirection,
   ).measure();
   return centeredRectLocalBounds(measuredSize);
 }

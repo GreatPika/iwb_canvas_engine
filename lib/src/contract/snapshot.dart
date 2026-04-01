@@ -14,6 +14,7 @@ import 'transform2d.dart';
 import 'validated/finite_offset_value.dart';
 import 'validated/layer_id_value.dart';
 import 'validated/positive_finite_double_value.dart';
+import 'scene_model_invariants.dart';
 
 /// Immutable scene snapshot exposed by the public API.
 class SceneSnapshot {
@@ -185,6 +186,21 @@ class ScenePaletteSnapshot {
     final resolvedGridSizes = List<double>.from(
       gridSizes ?? SceneDefaults.gridSizes,
     );
+    validatePaletteItemCount(
+      resolvedPenColors.length,
+      name: 'penColors',
+      source: resolvedPenColors,
+    );
+    validatePaletteItemCount(
+      resolvedBackgroundColors.length,
+      name: 'backgroundColors',
+      source: resolvedBackgroundColors,
+    );
+    validatePaletteItemCount(
+      resolvedGridSizes.length,
+      name: 'gridSizes',
+      source: resolvedGridSizes,
+    );
     _requireNonEmptyList(resolvedPenColors, name: 'penColors');
     _requireNonEmptyList(resolvedBackgroundColors, name: 'backgroundColors');
     _requireNonEmptyList(resolvedGridSizes, name: 'gridSizes');
@@ -305,6 +321,7 @@ class TextNodeSnapshot extends NodeSnapshot {
     double fontSize = 24,
     required Color color,
     TextAlign align = TextAlign.left,
+    required TextDirection textDirection,
     bool isBold = false,
     bool isItalic = false,
     bool isUnderline = false,
@@ -338,6 +355,7 @@ class TextNodeSnapshot extends NodeSnapshot {
            fontSize: fontSize,
            color: color,
            align: align,
+           textDirection: textDirection,
            isBold: isBold,
            isItalic: isItalic,
            isUnderline: isUnderline,
@@ -372,6 +390,7 @@ class TextNodeSnapshot extends NodeSnapshot {
   double get fontSize => _textBacking.fontSize;
   Color get color => _textBacking.color;
   TextAlign get align => _textBacking.align;
+  TextDirection get textDirection => _textBacking.textDirection;
   bool get isBold => _textBacking.isBold;
   bool get isItalic => _textBacking.isItalic;
   bool get isUnderline => _textBacking.isUnderline;

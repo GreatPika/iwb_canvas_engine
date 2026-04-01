@@ -83,6 +83,7 @@ void main() {
     textNodeMap['text'] = 'Auto-derived size from decode';
     textNodeMap['fontSize'] = 28.0;
     textNodeMap['size'] = <String, Object?>{'w': 1.0, 'h': 1.0};
+    textNodeMap['textDirection'] = 'rtl';
     textNodeMap['maxWidth'] = null;
 
     final decoded = decodeScene(encoded);
@@ -98,10 +99,36 @@ void main() {
       fontFamily: decodedText.fontFamily,
       lineHeight: decodedText.lineHeight,
       maxWidth: decodedText.maxWidth,
+      textDirection: decodedText.textDirection,
     ).measure();
 
+    expect(decodedText.textDirection, TextDirection.rtl);
     expect(decodedText.size, expectedSize);
     expect(decodedText.size, isNot(const Size(1, 1)));
+  });
+
+  test('decodeScene rejects text payloads without textDirection', () {
+    final encoded = encodeScene(_buildScene());
+    final textNode =
+        ((encoded['layers'] as List<Object?>)[1]
+                as Map<String, Object?>)['nodes']
+            as List<Object?>;
+    final textNodeMap = textNode[1] as Map<String, Object?>;
+    textNodeMap.remove('textDirection');
+
+    expect(
+      () => decodeScene(encoded),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.missingField &&
+              e.path == 'layers[1].nodes[1].textDirection' &&
+              e.message ==
+                  'Missing required field layers[1].nodes[1].textDirection.',
+        ),
+      ),
+    );
   });
 }
 
@@ -117,6 +144,7 @@ SceneSnapshot _buildScene() {
     fontFamily: 'Roboto',
     lineHeight: 1.2,
     maxWidth: 200,
+    textDirection: TextDirection.rtl,
   );
   final derivedTextSize = textLayout.measure();
 
@@ -151,6 +179,7 @@ SceneSnapshot _buildScene() {
             fontSize: 24,
             color: const Color(0xFF112233),
             align: TextAlign.center,
+            textDirection: TextDirection.rtl,
             isBold: true,
             isItalic: false,
             isUnderline: true,

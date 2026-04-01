@@ -313,6 +313,7 @@ void main() {
         size: const Size(400, 20),
         fontSize: 20,
         color: const Color(0xFF000000),
+        textDirection: TextDirection.ltr,
       );
       final rect = RectNodeSnapshot(
         id: 'rect',

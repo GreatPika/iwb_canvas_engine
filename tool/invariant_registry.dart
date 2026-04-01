@@ -385,6 +385,27 @@ const List<Invariant> invariants = <Invariant>[
     proofPath: 'test/serialization/scene_codec_validation_test.dart',
   ),
   Invariant(
+    id: 'INV-SER-SHARED-STROKE-POINT-LIMIT',
+    scope: 'model',
+    title:
+        'stroke point-count invariant is shared across typed, decode, and encode paths',
+    proofPath: 'test/serialization/scene_codec_validation_test.dart',
+  ),
+  Invariant(
+    id: 'INV-SER-SHARED-PALETTE-ITEM-LIMIT',
+    scope: 'model',
+    title:
+        'palette item-count invariant is shared across typed, decode, and encode paths',
+    proofPath: 'test/serialization/scene_codec_validation_test.dart',
+  ),
+  Invariant(
+    id: 'INV-SER-TEXT-DIRECTION-EXPLICIT',
+    scope: 'model',
+    title:
+        'text node textDirection is explicit in model/serialization and decode requires it in the current schema',
+    proofPath: 'test/serialization/scene_codec_validation_test.dart',
+  ),
+  Invariant(
     id: 'INV-SER-TYPED-LAYER-SPLIT',
     scope: 'serialization',
     title:

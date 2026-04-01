@@ -73,6 +73,7 @@ Map<String, Object?> _baseNodeJson({required String id, required String type}) {
     'isLocked': false,
     'isDeletable': true,
     'isTransformable': true,
+    if (type == 'text') 'textDirection': 'ltr',
   };
 }
 
@@ -838,6 +839,7 @@ void main() {
   });
 
   test('decodeScene rejects oversized palette penColors', () {
+    // INV:INV-SER-SHARED-PALETTE-ITEM-LIMIT
     final json = _minimalSceneJson();
     (json['palette'] as Map<String, Object?>)['penColors'] = <Object?>[
       for (var i = 0; i < kMaxPaletteItems + 1; i++) '#FF000000',
@@ -919,6 +921,7 @@ void main() {
                 fontSize: 12,
                 color: const Color(0xFF000000),
                 align: align,
+                textDirection: TextDirection.ltr,
               ),
             ],
           ),
@@ -1101,6 +1104,7 @@ void main() {
   });
 
   test('decodeScene re-derives stale serialized text size on import', () {
+    // INV:INV-SER-TEXT-DIRECTION-EXPLICIT
     final nodeJson = _baseNodeJson(id: 't-derived', type: 'text')
       ..addAll(<String, Object?>{
         'text': 'Derived text size',
@@ -1108,6 +1112,7 @@ void main() {
         'fontSize': 24,
         'color': '#FF000000',
         'align': 'left',
+        'textDirection': 'rtl',
         'isBold': false,
         'isItalic': false,
         'isUnderline': false,
@@ -1115,6 +1120,7 @@ void main() {
 
     final decoded = decodeScene(_sceneWithSingleNode(nodeJson));
     final text = decoded.layers.first.nodes.single as TextNodeSnapshot;
+    expect(text.textDirection, TextDirection.rtl);
     expect(text.size, isNot(const Size(1, 1)));
     expect(text.size.width, greaterThan(1));
     expect(text.size.height, greaterThan(1));
@@ -1124,9 +1130,67 @@ void main() {
     final layer = layers.single as Map<String, Object?>;
     final nodes = layer['nodes'] as List<Object?>;
     final encodedText = nodes.single as Map<String, Object?>;
+    expect(encodedText['textDirection'], 'rtl');
     final encodedSize = encodedText['size'] as Map<String, Object?>;
     expect(encodedSize['w'], closeTo(text.size.width, 0.001));
     expect(encodedSize['h'], closeTo(text.size.height, 0.001));
+  });
+
+  test('decodeScene rejects unknown textDirection', () {
+    final invalidDirectionJson = _baseNodeJson(id: 't-direction', type: 'text')
+      ..addAll(<String, Object?>{
+        'text': 'Hello',
+        'size': <String, Object?>{'w': 10, 'h': 10},
+        'fontSize': 12,
+        'color': '#FF000000',
+        'align': 'left',
+        'textDirection': 'sideways',
+        'isBold': false,
+        'isItalic': false,
+        'isUnderline': false,
+      });
+
+    expect(
+      () => decodeScene(_sceneWithSingleNode(invalidDirectionJson)),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.path == 'layers[0].nodes[0].textDirection' &&
+              e.message == 'Unknown text direction: sideways.',
+        ),
+      ),
+    );
+  });
+
+  test('decodeScene rejects missing textDirection', () {
+    final missingDirectionJson =
+        _baseNodeJson(id: 't-missing-direction', type: 'text')
+          ..addAll(<String, Object?>{
+            'text': 'Hello',
+            'size': <String, Object?>{'w': 10, 'h': 10},
+            'fontSize': 12,
+            'color': '#FF000000',
+            'align': 'left',
+            'isBold': false,
+            'isItalic': false,
+            'isUnderline': false,
+          });
+    missingDirectionJson.remove('textDirection');
+
+    expect(
+      () => decodeScene(_sceneWithSingleNode(missingDirectionJson)),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.missingField &&
+              e.path == 'layers[0].nodes[0].textDirection' &&
+              e.message ==
+                  'Missing required field layers[0].nodes[0].textDirection.',
+        ),
+      ),
+    );
   });
 
   test('encodeScene re-derives stale text size before JSON export', () {
@@ -1143,6 +1207,7 @@ void main() {
               fontSize: 24,
               color: Color(0xFF000000),
               align: TextAlign.left,
+              textDirection: TextDirection.ltr,
               isBold: false,
               isItalic: false,
               isUnderline: false,
@@ -1498,7 +1563,7 @@ void main() {
   test('decodeScene accepts integer-valued numeric schemaVersion', () {
     // INV:INV-SER-SCHEMA-VERSION-CONTRACT
     final json = _minimalSceneJson();
-    json['schemaVersion'] = 5.0;
+    json['schemaVersion'] = schemaVersionWrite.toDouble();
 
     final scene = decodeScene(json);
     expect(scene.layers, isEmpty);
@@ -2134,6 +2199,27 @@ void main() {
     );
   });
 
+  test('decodeScene rejects oversized palette gridSizes', () {
+    final json = _minimalSceneJson();
+    (json['palette'] as Map<String, Object?>)['gridSizes'] = <Object?>[
+      for (var i = 0; i < kMaxPaletteItems + 1; i++) i + 1,
+    ];
+
+    expect(
+      () => decodeScene(json),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.path == 'palette.gridSizes' &&
+              e.message ==
+                  'Field palette.gridSizes must contain at most '
+                      '$kMaxPaletteItems items.',
+        ),
+      ),
+    );
+  });
+
   test('encodeScene enforces grid and palette contracts', () {
     // INV:INV-SER-JSON-GRID-PALETTE-CONTRACTS
     final invalidGridScene = sceneSnapshotFromValidated(
@@ -2229,6 +2315,82 @@ void main() {
     );
   });
 
+  test(
+    'encodeScene rejects snapshots with oversized stroke and palette lists',
+    () {
+      // INV:INV-SER-SHARED-STROKE-POINT-LIMIT
+      // INV:INV-SER-SHARED-PALETTE-ITEM-LIMIT
+      final oversizedStrokeScene = sceneSnapshotFromValidated(
+        layers: <ContentLayerSnapshot>[
+          contentLayerSnapshotFromValidated(
+            id: 'layer-auto-stroke-overflow',
+            nodes: <NodeSnapshot>[
+              strokeNodeSnapshotFromValidated(
+                common: nodeSnapshotCommonFieldsFromValidated(
+                  id: 'stroke-overflow',
+                  instanceRevision: 1,
+                  transform: Transform2D.identity,
+                  opacity: 1,
+                  hitPadding: 0,
+                  isVisible: true,
+                  isSelectable: true,
+                  isLocked: false,
+                  isDeletable: true,
+                  isTransformable: true,
+                ),
+                fields: (
+                  points: <Offset>[
+                    for (var i = 0; i < kMaxStrokePointsPerNode + 1; i++)
+                      Offset(i.toDouble(), 0),
+                  ],
+                  pointsRevision: 0,
+                  thickness: 1,
+                  color: const Color(0xFF000000),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+
+      expect(
+        () => encodeScene(oversizedStrokeScene),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.code == SceneDataErrorCode.invalidValue &&
+                e.path == 'layers[0].nodes[0].points',
+          ),
+        ),
+      );
+
+      final oversizedPaletteScene = sceneSnapshotFromValidated(
+        layers: <ContentLayerSnapshot>[
+          contentLayerSnapshotFromValidated(id: 'layer-auto-palette-overflow'),
+        ],
+        palette: scenePaletteSnapshotFromValidated(
+          penColors: <Color>[
+            for (var i = 0; i < kMaxPaletteItems + 1; i++)
+              const Color(0xFF111111),
+          ],
+        ),
+      );
+
+      expect(
+        () => encodeScene(oversizedPaletteScene),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.code == SceneDataErrorCode.invalidValue &&
+                e.path == 'palette.penColors',
+          ),
+        ),
+      );
+    },
+  );
+
   test('encodeScene rejects invalid numeric fields', () {
     final cameraNaN = sceneSnapshotFromValidated(
       layers: <ContentLayerSnapshot>[
@@ -2292,6 +2454,7 @@ void main() {
                 fontSize: 0,
                 color: const Color(0xFF000000),
                 align: TextAlign.left,
+                textDirection: TextDirection.ltr,
                 isBold: false,
                 isItalic: false,
                 isUnderline: false,

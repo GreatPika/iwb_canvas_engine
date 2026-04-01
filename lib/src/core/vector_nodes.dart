@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import '../contract/ids.dart';
+import '../contract/scene_model_invariants.dart';
 import '../contract/transform2d.dart';
 import 'geometry.dart';
 import 'scene_node.dart';
@@ -25,6 +26,7 @@ class StrokeNode extends SceneNode {
     super.isDeletable,
     super.isTransformable,
   }) : super(type: NodeType.stroke) {
+    validateStrokePointCount(points.length, name: 'points', source: points);
     _mutableGeometry = _StrokeMutableGeometryOwner(
       points,
       initialRevision: pointsRevision,

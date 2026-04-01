@@ -184,7 +184,6 @@ List<Object?> sceneBuilderRequireList(
   Map<String, Object?> json,
   String key, {
   String pathPrefix = '',
-  int? maxLength,
 }) {
   return sceneBuilderRequireParsedField(
     json,
@@ -198,16 +197,7 @@ List<Object?> sceneBuilderRequireList(
           message: 'Field $fieldName must be a list.',
         );
       }
-      final list = List<Object?>.from(value);
-      if (maxLength != null && list.length > maxLength) {
-        throw SceneDataException(
-          code: SceneDataErrorCode.invalidValue,
-          path: path,
-          message: 'Field $path must contain at most $maxLength items.',
-          source: list.length,
-        );
-      }
-      return list;
+      return List<Object?>.from(value);
     },
   );
 }

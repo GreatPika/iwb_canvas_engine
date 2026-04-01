@@ -60,6 +60,7 @@ void main() {
                   size: Size(1, 1),
                   fontSize: 12,
                   color: Color(0xFF000000),
+                  textDirection: TextDirection.ltr,
                 ),
               ],
             ),
@@ -91,6 +92,51 @@ void main() {
     },
   );
 
+  test(
+    'textDirection patch updates snapshot through controller write path',
+    () {
+      final controller = SceneControllerCore(
+        initialSnapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-auto-1b',
+              nodes: <NodeSnapshot>[
+                TextNodeSnapshot(
+                  id: 't-dir',
+                  text: 'abc אבג',
+                  size: const Size(1, 1),
+                  fontSize: 24,
+                  color: const Color(0xFF000000),
+                  textDirection: TextDirection.ltr,
+                  align: TextAlign.start,
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      final beforeNode =
+          controller.snapshot.layers.first.nodes.single as TextNodeSnapshot;
+
+      controller.write<void>((writer) {
+        writer.writeNodePatch(
+          TextNodePatch(
+            id: 't-dir',
+            textDirection: PatchField<TextDirection>.value(TextDirection.rtl),
+          ),
+        );
+      });
+
+      final afterNode =
+          controller.snapshot.layers.first.nodes.single as TextNodeSnapshot;
+      expect(beforeNode.textDirection, TextDirection.ltr);
+      expect(afterNode.textDirection, TextDirection.rtl);
+      expect(afterNode.size, isNot(const Size(1, 1)));
+    },
+  );
+
   test('text visual-only patch keeps bounds revision unchanged', () {
     final controller = SceneControllerCore(
       initialSnapshot: SceneSnapshot(
@@ -104,6 +150,7 @@ void main() {
                 size: Size(80, 24),
                 fontSize: 24,
                 color: Color(0xFF000000),
+                textDirection: TextDirection.ltr,
               ),
             ],
           ),

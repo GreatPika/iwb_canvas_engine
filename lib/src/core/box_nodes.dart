@@ -86,6 +86,7 @@ class TextNode extends SceneNode {
     this.fontSize = 24,
     required this.color,
     this.align = TextAlign.left,
+    this.textDirection = TextDirection.ltr,
     this.isBold = false,
     this.isItalic = false,
     this.isUnderline = false,
@@ -115,6 +116,7 @@ class TextNode extends SceneNode {
     double fontSize = 24,
     required Color color,
     TextAlign align = TextAlign.left,
+    TextDirection textDirection = TextDirection.ltr,
     bool isBold = false,
     bool isItalic = false,
     bool isUnderline = false,
@@ -139,6 +141,7 @@ class TextNode extends SceneNode {
         fontSize: fontSize,
         color: color,
         align: align,
+        textDirection: textDirection,
         isBold: isBold,
         isItalic: isItalic,
         isUnderline: isUnderline,
@@ -162,6 +165,7 @@ class TextNode extends SceneNode {
   double fontSize;
   Color color;
   TextAlign align;
+  TextDirection textDirection;
   bool isBold;
   bool isItalic;
   bool isUnderline;

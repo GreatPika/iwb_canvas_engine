@@ -106,9 +106,7 @@ class SceneViewInteractivePointerHost {
     _unsubscribeFromController(_controller);
     _controller = controller;
     _runtime.replacePointerSemantics(
-      controller.createPointerSemanticsBridge(
-        isMounted: _isMounted,
-      ),
+      controller.createPointerSemanticsBridge(isMounted: _isMounted),
     );
     _subscribeToController(controller);
   }

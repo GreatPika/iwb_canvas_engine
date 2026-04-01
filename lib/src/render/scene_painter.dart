@@ -34,7 +34,6 @@ class ScenePainter extends CustomPainter {
     this.selectionColor = const Color(0xFF1565C0),
     this.selectionStrokeWidth = 1,
     this.gridStrokeWidth = 1,
-    this.textDirection = TextDirection.ltr,
   }) : _shell = _createScenePainterShell(
          _ScenePainterConfig(
            controller: controller,
@@ -47,7 +46,6 @@ class ScenePainter extends CustomPainter {
            selectionColor: selectionColor,
            selectionStrokeWidth: selectionStrokeWidth,
            gridStrokeWidth: gridStrokeWidth,
-           textDirection: textDirection,
          ),
        ),
        super(repaint: controller);
@@ -61,7 +59,6 @@ class ScenePainter extends CustomPainter {
   final Color selectionColor;
   final double selectionStrokeWidth;
   final double gridStrokeWidth;
-  final TextDirection textDirection;
   final ScenePainterShell _shell;
 
   @override
@@ -84,7 +81,6 @@ class ScenePainter extends CustomPainter {
     Color,
     double,
     double,
-    TextDirection,
   )
   _repaintConfiguration() {
     return (
@@ -96,7 +92,6 @@ class ScenePainter extends CustomPainter {
       selectionColor,
       selectionStrokeWidth,
       gridStrokeWidth,
-      textDirection,
     );
   }
 }
@@ -113,7 +108,6 @@ class _ScenePainterConfig {
     required this.selectionColor,
     required this.selectionStrokeWidth,
     required this.gridStrokeWidth,
-    required this.textDirection,
   });
 
   final SceneViewRenderState controller;
@@ -126,7 +120,6 @@ class _ScenePainterConfig {
   final Color selectionColor;
   final double selectionStrokeWidth;
   final double gridStrokeWidth;
-  final TextDirection textDirection;
 }
 
 ScenePainterShell _createScenePainterShell(_ScenePainterConfig config) {
@@ -147,7 +140,6 @@ ScenePainterShell _createScenePainterShell(_ScenePainterConfig config) {
       imageResolver: config.imageResolver,
       textLayoutCache: config.textLayoutCache,
       strokePathCache: config.strokePathCache,
-      textDirection: config.textDirection,
       transformBuffer: nodeTransformBuffer,
     ),
     selectionRenderer: ScenePainterSelectionRenderer(

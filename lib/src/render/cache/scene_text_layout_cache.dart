@@ -38,18 +38,12 @@ class SceneTextLayoutCache {
   void clear() => _entries.clear();
 
   /// Returns a render-ready [TextPainter] derived only from [node] and
-  /// [textDirection].
+  /// node-owned layout semantics.
   ///
   /// The cache owns `TextStyle` and normalized width derivation so callers
   /// cannot provide a second source of truth for the cached object.
-  TextPainter getOrBuild({
-    required TextNodeSnapshot node,
-    TextDirection textDirection = TextDirection.ltr,
-  }) {
-    final request = _createTextLayoutRequest(
-      node,
-      textDirection: textDirection,
-    );
+  TextPainter getOrBuild({required TextNodeSnapshot node}) {
+    final request = _createTextLayoutRequest(node);
     final textStyle = request.buildTextStyle();
     final safeFontSize = request.normalizedFontSize;
     final safeLineHeight = request.normalizedLineHeight;
@@ -96,11 +90,8 @@ class SceneTextLayoutCache {
   }
 }
 
-TextPainter buildSceneTextPainter({
-  required TextNodeSnapshot node,
-  TextDirection textDirection = TextDirection.ltr,
-}) {
-  final request = _createTextLayoutRequest(node, textDirection: textDirection);
+TextPainter buildSceneTextPainter({required TextNodeSnapshot node}) {
+  final request = _createTextLayoutRequest(node);
   final textStyle = request.buildTextStyle();
   final textPainter = TextPainter(
     text: TextSpan(text: request.text, style: textStyle),
@@ -178,10 +169,7 @@ Color _renderReadyTextColor(TextNodeSnapshot node) {
   return node.color.withAlpha(alpha);
 }
 
-TextLayoutRequest _createTextLayoutRequest(
-  TextNodeSnapshot node, {
-  required TextDirection textDirection,
-}) {
+TextLayoutRequest _createTextLayoutRequest(TextNodeSnapshot node) {
   return TextLayoutRequest(
     text: node.text,
     color: _renderReadyTextColor(node),
@@ -193,7 +181,7 @@ TextLayoutRequest _createTextLayoutRequest(
     fontFamily: node.fontFamily,
     lineHeight: node.lineHeight,
     maxWidth: node.maxWidth,
-    textDirection: textDirection,
+    textDirection: node.textDirection,
   );
 }
 

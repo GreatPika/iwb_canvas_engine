@@ -191,6 +191,7 @@ void main() {
             text: 'hello',
             fontSize: 0,
             color: const Color(0xFF000000),
+            textDirection: TextDirection.ltr,
           ),
           throwsA(
             isA<ArgumentError>().having(
@@ -930,6 +931,7 @@ void main() {
           text: 'hello',
           size: const Size(1, 1),
           color: const Color(0xFF000000),
+          textDirection: TextDirection.ltr,
           fontFamily: '',
         ),
         throwsA(isA<ArgumentError>()),
@@ -954,6 +956,7 @@ void main() {
                     text: 'hello',
                     size: Size(1, 1),
                     color: Color(0xFF000000),
+                    textDirection: TextDirection.ltr,
                     fontFamily: 'Inter',
                   ),
                 ],
