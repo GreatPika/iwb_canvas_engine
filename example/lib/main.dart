@@ -48,6 +48,9 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   static const String _sampleCatPackageAssetKey =
       'packages/iwb_canvas_engine/image/cat.png';
   static const String _sampleCatLocalAssetKey = 'image/cat.png';
+  static const Key _textEditDismissOverlayKey = Key(
+    'canvas-example-text-edit-dismiss-overlay',
+  );
 
   late final SceneController _controller;
   late final bool _ownsController;
@@ -145,7 +148,18 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                   child: _buildMainBottomBar(),
                 ),
 
-                // 5. Оверлей редактирования текста
+                // 5. Оверлей завершения текстового редактирования
+                if (_editingNodeId != null)
+                  Positioned.fill(
+                    child: GestureDetector(
+                      key: _textEditDismissOverlayKey,
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => _finishInlineTextEdit(save: true),
+                      child: const SizedBox.expand(),
+                    ),
+                  ),
+
+                // 6. Оверлей редактирования текста
                 if (_editingNodeId != null)
                   _buildTextEditOverlay() ?? const SizedBox.shrink(),
               ],
@@ -952,7 +966,6 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
                 maxLines: null,
                 textAlign: node.align,
                 scrollPadding: EdgeInsets.zero,
-                onTapOutside: (_) => _finishInlineTextEdit(save: true),
                 strutStyle: StrutStyle(
                   fontSize: node.fontSize,
                   height: lineHeight == null
