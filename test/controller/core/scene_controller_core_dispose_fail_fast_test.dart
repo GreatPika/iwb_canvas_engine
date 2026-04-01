@@ -204,7 +204,7 @@ void main() {
         notifications = notifications + 1;
       });
 
-      controller.write<void>((writer) {
+      controller.writeWithSceneWriter<void>((writer) {
         writer.writeSelectionReplace(const <NodeId>{'r1'});
         expect(() => controller.dispose(), throwsStateError);
         writer.writeSelectionTranslate(const Offset(8, 0));
@@ -221,7 +221,7 @@ void main() {
       expect(notifications, 1);
 
       expect(
-        () => controller.write<void>((writer) {
+        () => controller.writeWithSceneWriter<void>((writer) {
           writer.writeSignalEnqueue(type: 'second.commit');
         }),
         returnsNormally,

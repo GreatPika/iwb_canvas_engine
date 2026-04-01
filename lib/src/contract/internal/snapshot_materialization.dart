@@ -4,6 +4,7 @@ import '../scene_defaults.dart';
 import '../snapshot.dart';
 import '../transform2d.dart';
 import 'node_boundary_schema.dart';
+import 'snapshot_boundary_impl.dart';
 import 'snapshot_backing.dart';
 
 typedef _SnapshotNodeBackingBuilder<
@@ -21,13 +22,13 @@ typedef _SnapshotNodeMaterializer<
 > = TSnapshot Function(TBacking backing);
 
 SceneSnapshot materializeSceneSnapshot(SceneSnapshotBacking backing) {
-  return SceneSnapshot.materialize(backing);
+  return materializeSceneSnapshotForInternalUse(backing);
 }
 
 BackgroundLayerSnapshot materializeBackgroundLayerSnapshot(
   BackgroundLayerSnapshotBacking backing,
 ) {
-  return BackgroundLayerSnapshot.materialize(backing);
+  return materializeBackgroundLayerSnapshotForInternalUse(backing);
 }
 
 List<ContentLayerSnapshot> materializeContentLayerSnapshotList(
@@ -41,7 +42,7 @@ List<ContentLayerSnapshot> materializeContentLayerSnapshotList(
 ContentLayerSnapshot materializeContentLayerSnapshot(
   ContentLayerSnapshotBacking backing,
 ) {
-  return ContentLayerSnapshot.materialize(backing);
+  return materializeContentLayerSnapshotForInternalUse(backing);
 }
 
 CameraSnapshot materializeCameraSnapshot(CameraSnapshotBacking backing) {
@@ -68,7 +69,7 @@ GridSnapshot materializeGridSnapshot(GridSnapshotBacking backing) {
 ScenePaletteSnapshot materializeScenePaletteSnapshot(
   ScenePaletteSnapshotBacking backing,
 ) {
-  return ScenePaletteSnapshot.materialize(backing);
+  return materializeScenePaletteSnapshotForInternalUse(backing);
 }
 
 List<NodeSnapshot> materializeNodeSnapshotList(
@@ -91,29 +92,29 @@ NodeSnapshot materializeNodeSnapshot(NodeSnapshotBacking backing) {
 ImageNodeSnapshot materializeImageNodeSnapshot(
   ImageNodeSnapshotBacking backing,
 ) {
-  return ImageNodeSnapshot.materialize(backing);
+  return materializeNodeSnapshotForInternalUse(backing) as ImageNodeSnapshot;
 }
 
 TextNodeSnapshot materializeTextNodeSnapshot(TextNodeSnapshotBacking backing) {
-  return TextNodeSnapshot.materialize(backing);
+  return materializeNodeSnapshotForInternalUse(backing) as TextNodeSnapshot;
 }
 
 StrokeNodeSnapshot materializeStrokeNodeSnapshot(
   StrokeNodeSnapshotBacking backing,
 ) {
-  return StrokeNodeSnapshot.materialize(backing);
+  return materializeNodeSnapshotForInternalUse(backing) as StrokeNodeSnapshot;
 }
 
 LineNodeSnapshot materializeLineNodeSnapshot(LineNodeSnapshotBacking backing) {
-  return LineNodeSnapshot.materialize(backing);
+  return materializeNodeSnapshotForInternalUse(backing) as LineNodeSnapshot;
 }
 
 RectNodeSnapshot materializeRectNodeSnapshot(RectNodeSnapshotBacking backing) {
-  return RectNodeSnapshot.materialize(backing);
+  return materializeNodeSnapshotForInternalUse(backing) as RectNodeSnapshot;
 }
 
 PathNodeSnapshot materializePathNodeSnapshot(PathNodeSnapshotBacking backing) {
-  return PathNodeSnapshot.materialize(backing);
+  return materializeNodeSnapshotForInternalUse(backing) as PathNodeSnapshot;
 }
 
 SceneSnapshot sceneSnapshotFromValidated({
@@ -126,9 +127,11 @@ SceneSnapshot sceneSnapshotFromValidated({
   return materializeSceneSnapshot(
     sceneSnapshotBackingFromValidated(
       layers: layers
-          ?.map((layer) => layer.internalBacking)
+          ?.map(contentLayerSnapshotBackingOf)
           .toList(growable: false),
-      backgroundLayer: backgroundLayer?.internalBacking,
+      backgroundLayer: backgroundLayer == null
+          ? null
+          : backgroundLayerSnapshotBackingOf(backgroundLayer),
       camera: camera == null
           ? null
           : cameraSnapshotBackingFromValidated(offset: camera.offset),
@@ -142,7 +145,7 @@ SceneSnapshot sceneSnapshotFromValidated({
                 color: background.grid.color,
               ),
             ),
-      palette: palette?.internalBacking,
+      palette: palette == null ? null : scenePaletteSnapshotBackingOf(palette),
     ),
   );
 }
@@ -152,7 +155,7 @@ BackgroundLayerSnapshot backgroundLayerSnapshotFromValidated({
 }) {
   return materializeBackgroundLayerSnapshot(
     backgroundLayerSnapshotBackingFromValidated(
-      nodes: nodes?.map((node) => node.internalBacking).toList(growable: false),
+      nodes: nodes?.map(nodeSnapshotBackingOf).toList(growable: false),
     ),
   );
 }
@@ -164,7 +167,7 @@ ContentLayerSnapshot contentLayerSnapshotFromValidated({
   return materializeContentLayerSnapshot(
     contentLayerSnapshotBackingFromValidated(
       id: id,
-      nodes: nodes?.map((node) => node.internalBacking).toList(growable: false),
+      nodes: nodes?.map(nodeSnapshotBackingOf).toList(growable: false),
     ),
   );
 }

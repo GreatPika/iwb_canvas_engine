@@ -56,3 +56,10 @@ export 'snapshot_materialization.dart'
         sceneSnapshotFromValidated,
         strokeNodeSnapshotFromValidated,
         textNodeSnapshotFromValidated;
+export 'snapshot_boundary_impl.dart'
+    show
+        backgroundLayerSnapshotBackingOf,
+        contentLayerSnapshotBackingOf,
+        nodeSnapshotBackingOf,
+        scenePaletteSnapshotBackingOf,
+        sceneSnapshotBackingOf;

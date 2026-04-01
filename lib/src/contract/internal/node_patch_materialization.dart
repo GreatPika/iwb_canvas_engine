@@ -1,6 +1,7 @@
 import '../node_patch.dart';
 import '../ids.dart';
 import 'node_boundary_schema.dart';
+import 'node_patch_boundary_impl.dart';
 import 'node_patch_backing.dart';
 
 typedef _NodePatchBackingBuilder<TBacking extends NodePatchBacking, TFields> =
@@ -16,42 +17,35 @@ typedef _NodePatchMaterializer<
 > = TPatch Function(TBacking backing);
 
 CommonNodePatch materializeCommonNodePatch(CommonNodePatchBacking backing) {
-  return CommonNodePatch.materialize(backing);
+  return materializeCommonNodePatchForInternalUse(backing);
 }
 
 NodePatch materializeNodePatch(NodePatchBacking backing) {
-  return switch (backing) {
-    ImageNodePatchBacking image => materializeImageNodePatch(image),
-    TextNodePatchBacking text => materializeTextNodePatch(text),
-    StrokeNodePatchBacking stroke => materializeStrokeNodePatch(stroke),
-    LineNodePatchBacking line => materializeLineNodePatch(line),
-    RectNodePatchBacking rect => materializeRectNodePatch(rect),
-    PathNodePatchBacking path => materializePathNodePatch(path),
-  };
+  return materializeNodePatchForInternalUse(backing);
 }
 
 ImageNodePatch materializeImageNodePatch(ImageNodePatchBacking backing) {
-  return ImageNodePatch.materialize(backing);
+  return materializeNodePatchForInternalUse(backing) as ImageNodePatch;
 }
 
 TextNodePatch materializeTextNodePatch(TextNodePatchBacking backing) {
-  return TextNodePatch.materialize(backing);
+  return materializeNodePatchForInternalUse(backing) as TextNodePatch;
 }
 
 StrokeNodePatch materializeStrokeNodePatch(StrokeNodePatchBacking backing) {
-  return StrokeNodePatch.materialize(backing);
+  return materializeNodePatchForInternalUse(backing) as StrokeNodePatch;
 }
 
 LineNodePatch materializeLineNodePatch(LineNodePatchBacking backing) {
-  return LineNodePatch.materialize(backing);
+  return materializeNodePatchForInternalUse(backing) as LineNodePatch;
 }
 
 RectNodePatch materializeRectNodePatch(RectNodePatchBacking backing) {
-  return RectNodePatch.materialize(backing);
+  return materializeNodePatchForInternalUse(backing) as RectNodePatch;
 }
 
 PathNodePatch materializePathNodePatch(PathNodePatchBacking backing) {
-  return PathNodePatch.materialize(backing);
+  return materializeNodePatchForInternalUse(backing) as PathNodePatch;
 }
 
 CommonNodePatch commonNodePatchFromValidated({
@@ -83,7 +77,7 @@ ImageNodePatch imageNodePatchFromValidated({
 }) {
   return _nodePatchFromValidated(
     id: id,
-    common: common?.internalBacking,
+    common: common == null ? null : commonNodePatchBackingOf(common),
     fields: fields,
     buildBacking: imageNodePatchBackingFromValidated,
     materialize: materializeImageNodePatch,
@@ -97,7 +91,7 @@ TextNodePatch textNodePatchFromValidated({
 }) {
   return _nodePatchFromValidated(
     id: id,
-    common: common?.internalBacking,
+    common: common == null ? null : commonNodePatchBackingOf(common),
     fields: fields,
     buildBacking: textNodePatchBackingFromValidated,
     materialize: materializeTextNodePatch,
@@ -111,7 +105,7 @@ StrokeNodePatch strokeNodePatchFromValidated({
 }) {
   return _nodePatchFromValidated(
     id: id,
-    common: common?.internalBacking,
+    common: common == null ? null : commonNodePatchBackingOf(common),
     fields: fields,
     buildBacking: strokeNodePatchBackingFromValidated,
     materialize: materializeStrokeNodePatch,
@@ -125,7 +119,7 @@ LineNodePatch lineNodePatchFromValidated({
 }) {
   return _nodePatchFromValidated(
     id: id,
-    common: common?.internalBacking,
+    common: common == null ? null : commonNodePatchBackingOf(common),
     fields: fields,
     buildBacking: lineNodePatchBackingFromValidated,
     materialize: materializeLineNodePatch,
@@ -139,7 +133,7 @@ RectNodePatch rectNodePatchFromValidated({
 }) {
   return _nodePatchFromValidated(
     id: id,
-    common: common?.internalBacking,
+    common: common == null ? null : commonNodePatchBackingOf(common),
     fields: fields,
     buildBacking: rectNodePatchBackingFromValidated,
     materialize: materializeRectNodePatch,
@@ -153,7 +147,7 @@ PathNodePatch pathNodePatchFromValidated({
 }) {
   return _nodePatchFromValidated(
     id: id,
-    common: common?.internalBacking,
+    common: common == null ? null : commonNodePatchBackingOf(common),
     fields: fields,
     buildBacking: pathNodePatchBackingFromValidated,
     materialize: materializePathNodePatch,

@@ -1,10 +1,6 @@
 import 'dart:ui';
 
-import 'package:flutter/foundation.dart';
-
 import 'internal/node_boundary_schema.dart';
-import 'internal/node_patch_backing.dart';
-import 'internal/node_patch_materialization.dart';
 import 'patch_field.dart';
 import 'path_fill_rule.dart';
 import 'snapshot.dart' hide PathFillRule;
@@ -12,7 +8,7 @@ import 'transform2d.dart';
 
 /// Patch for common node fields shared by all node variants.
 class CommonNodePatch {
-  factory CommonNodePatch({
+  CommonNodePatch({
     PatchField<Transform2D> transform = const PatchField<Transform2D>.absent(),
     PatchField<double> opacity = const PatchField<double>.absent(),
     PatchField<double> hitPadding = const PatchField<double>.absent(),
@@ -21,63 +17,46 @@ class CommonNodePatch {
     PatchField<bool> isLocked = const PatchField<bool>.absent(),
     PatchField<bool> isDeletable = const PatchField<bool>.absent(),
     PatchField<bool> isTransformable = const PatchField<bool>.absent(),
-  }) {
-    return CommonNodePatch._validated(
-      fields: validatePatchCommonSchemaFields((
-        transform: transform,
-        opacity: opacity,
-        hitPadding: hitPadding,
-        isVisible: isVisible,
-        isSelectable: isSelectable,
-        isLocked: isLocked,
-        isDeletable: isDeletable,
-        isTransformable: isTransformable,
-      )),
-    );
-  }
+  }) : this._validated(
+         fields: validatePatchCommonSchemaFields((
+           transform: transform,
+           opacity: opacity,
+           hitPadding: hitPadding,
+           isVisible: isVisible,
+           isSelectable: isSelectable,
+           isLocked: isLocked,
+           isDeletable: isDeletable,
+           isTransformable: isTransformable,
+         )),
+       );
 
-  factory CommonNodePatch._validated({NodePatchCommonSchemaFields? fields}) {
-    return CommonNodePatch._materialized(
-      commonNodePatchBackingFromValidated(fields: fields),
-    );
-  }
+  CommonNodePatch._validated({NodePatchCommonSchemaFields? fields})
+    : transform = fields?.transform ?? const PatchField<Transform2D>.absent(),
+      opacity = fields?.opacity ?? const PatchField<double>.absent(),
+      hitPadding = fields?.hitPadding ?? const PatchField<double>.absent(),
+      isVisible = fields?.isVisible ?? const PatchField<bool>.absent(),
+      isSelectable = fields?.isSelectable ?? const PatchField<bool>.absent(),
+      isLocked = fields?.isLocked ?? const PatchField<bool>.absent(),
+      isDeletable = fields?.isDeletable ?? const PatchField<bool>.absent(),
+      isTransformable =
+          fields?.isTransformable ?? const PatchField<bool>.absent();
 
-  @internal
-  factory CommonNodePatch.materialize(CommonNodePatchBacking backing) =
-      CommonNodePatch._materialized;
-
-  const CommonNodePatch._materialized(this._backing);
-
-  final CommonNodePatchBacking _backing;
-
-  @internal
-  CommonNodePatchBacking get internalBacking => _backing;
-
-  PatchField<Transform2D> get transform => _backing.transform;
-  PatchField<double> get opacity => _backing.opacity;
-  PatchField<double> get hitPadding => _backing.hitPadding;
-  PatchField<bool> get isVisible => _backing.isVisible;
-  PatchField<bool> get isSelectable => _backing.isSelectable;
-  PatchField<bool> get isLocked => _backing.isLocked;
-  PatchField<bool> get isDeletable => _backing.isDeletable;
-  PatchField<bool> get isTransformable => _backing.isTransformable;
+  final PatchField<Transform2D> transform;
+  final PatchField<double> opacity;
+  final PatchField<double> hitPadding;
+  final PatchField<bool> isVisible;
+  final PatchField<bool> isSelectable;
+  final PatchField<bool> isLocked;
+  final PatchField<bool> isDeletable;
+  final PatchField<bool> isTransformable;
 }
 
 /// Partial node update request for transactional write APIs.
-sealed class NodePatch {
-  NodePatch._materialized(this._backing);
+abstract class NodePatch {
+  const NodePatch({required this.id, required this.common});
 
-  final NodePatchBacking _backing;
-
-  @internal
-  NodePatchBacking get internalBacking => _backing;
-
-  late final CommonNodePatch _common = materializeCommonNodePatch(
-    _backing.common,
-  );
-
-  NodeId get id => _backing.id;
-  CommonNodePatch get common => _common;
+  final NodeId id;
+  final CommonNodePatch common;
 }
 
 class ImageNodePatch extends NodePatch {
@@ -98,29 +77,17 @@ class ImageNodePatch extends NodePatch {
        );
 
   ImageNodePatch._validated({
-    required NodeId id,
-    required CommonNodePatch common,
+    required super.id,
+    required super.common,
     required ImageNodePatchSchemaFields fields,
-  }) : this._materialized(
-         imageNodePatchBackingFromValidated(
-           id: id,
-           common: common.internalBacking,
-           fields: fields,
-         ),
-       );
+  }) : imageId = fields.imageId,
+       size = fields.size,
+       naturalSize = fields.naturalSize,
+       super();
 
-  @internal
-  factory ImageNodePatch.materialize(ImageNodePatchBacking backing) =
-      ImageNodePatch._materialized;
-
-  ImageNodePatch._materialized(super._backing) : super._materialized();
-
-  ImageNodePatchBacking get _imageBacking =>
-      internalBacking as ImageNodePatchBacking;
-
-  PatchField<String> get imageId => _imageBacking.imageId;
-  PatchField<Size> get size => _imageBacking.size;
-  PatchField<Size?> get naturalSize => _imageBacking.naturalSize;
+  final PatchField<String> imageId;
+  final PatchField<Size> size;
+  final PatchField<Size?> naturalSize;
 }
 
 class TextNodePatch extends NodePatch {
@@ -158,37 +125,33 @@ class TextNodePatch extends NodePatch {
        );
 
   TextNodePatch._validated({
-    required NodeId id,
-    required CommonNodePatch common,
+    required super.id,
+    required super.common,
     required TextNodePatchSchemaFields fields,
-  }) : this._materialized(
-         textNodePatchBackingFromValidated(
-           id: id,
-           common: common.internalBacking,
-           fields: fields,
-         ),
-       );
+  }) : text = fields.text,
+       fontSize = fields.fontSize,
+       color = fields.color,
+       align = fields.align,
+       textDirection = fields.textDirection,
+       isBold = fields.isBold,
+       isItalic = fields.isItalic,
+       isUnderline = fields.isUnderline,
+       fontFamily = fields.fontFamily,
+       maxWidth = fields.maxWidth,
+       lineHeight = fields.lineHeight,
+       super();
 
-  @internal
-  factory TextNodePatch.materialize(TextNodePatchBacking backing) =
-      TextNodePatch._materialized;
-
-  TextNodePatch._materialized(super._backing) : super._materialized();
-
-  TextNodePatchBacking get _textBacking =>
-      internalBacking as TextNodePatchBacking;
-
-  PatchField<String> get text => _textBacking.text;
-  PatchField<double> get fontSize => _textBacking.fontSize;
-  PatchField<Color> get color => _textBacking.color;
-  PatchField<TextAlign> get align => _textBacking.align;
-  PatchField<TextDirection> get textDirection => _textBacking.textDirection;
-  PatchField<bool> get isBold => _textBacking.isBold;
-  PatchField<bool> get isItalic => _textBacking.isItalic;
-  PatchField<bool> get isUnderline => _textBacking.isUnderline;
-  PatchField<String?> get fontFamily => _textBacking.fontFamily;
-  PatchField<double?> get maxWidth => _textBacking.maxWidth;
-  PatchField<double?> get lineHeight => _textBacking.lineHeight;
+  final PatchField<String> text;
+  final PatchField<double> fontSize;
+  final PatchField<Color> color;
+  final PatchField<TextAlign> align;
+  final PatchField<TextDirection> textDirection;
+  final PatchField<bool> isBold;
+  final PatchField<bool> isItalic;
+  final PatchField<bool> isUnderline;
+  final PatchField<String?> fontFamily;
+  final PatchField<double?> maxWidth;
+  final PatchField<double?> lineHeight;
 }
 
 class StrokeNodePatch extends NodePatch {
@@ -209,29 +172,17 @@ class StrokeNodePatch extends NodePatch {
        );
 
   StrokeNodePatch._validated({
-    required NodeId id,
-    required CommonNodePatch common,
+    required super.id,
+    required super.common,
     required StrokeNodePatchSchemaFields fields,
-  }) : this._materialized(
-         strokeNodePatchBackingFromValidated(
-           id: id,
-           common: common.internalBacking,
-           fields: fields,
-         ),
-       );
+  }) : points = fields.points,
+       thickness = fields.thickness,
+       color = fields.color,
+       super();
 
-  @internal
-  factory StrokeNodePatch.materialize(StrokeNodePatchBacking backing) =
-      StrokeNodePatch._materialized;
-
-  StrokeNodePatch._materialized(super._backing) : super._materialized();
-
-  StrokeNodePatchBacking get _strokeBacking =>
-      internalBacking as StrokeNodePatchBacking;
-
-  PatchField<List<Offset>> get points => _strokeBacking.points;
-  PatchField<double> get thickness => _strokeBacking.thickness;
-  PatchField<Color> get color => _strokeBacking.color;
+  final PatchField<List<Offset>> points;
+  final PatchField<double> thickness;
+  final PatchField<Color> color;
 }
 
 class LineNodePatch extends NodePatch {
@@ -254,30 +205,19 @@ class LineNodePatch extends NodePatch {
        );
 
   LineNodePatch._validated({
-    required NodeId id,
-    required CommonNodePatch common,
+    required super.id,
+    required super.common,
     required LineNodePatchSchemaFields fields,
-  }) : this._materialized(
-         lineNodePatchBackingFromValidated(
-           id: id,
-           common: common.internalBacking,
-           fields: fields,
-         ),
-       );
+  }) : start = fields.start,
+       end = fields.end,
+       thickness = fields.thickness,
+       color = fields.color,
+       super();
 
-  @internal
-  factory LineNodePatch.materialize(LineNodePatchBacking backing) =
-      LineNodePatch._materialized;
-
-  LineNodePatch._materialized(super._backing) : super._materialized();
-
-  LineNodePatchBacking get _lineBacking =>
-      internalBacking as LineNodePatchBacking;
-
-  PatchField<Offset> get start => _lineBacking.start;
-  PatchField<Offset> get end => _lineBacking.end;
-  PatchField<double> get thickness => _lineBacking.thickness;
-  PatchField<Color> get color => _lineBacking.color;
+  final PatchField<Offset> start;
+  final PatchField<Offset> end;
+  final PatchField<double> thickness;
+  final PatchField<Color> color;
 }
 
 class RectNodePatch extends NodePatch {
@@ -300,30 +240,19 @@ class RectNodePatch extends NodePatch {
        );
 
   RectNodePatch._validated({
-    required NodeId id,
-    required CommonNodePatch common,
+    required super.id,
+    required super.common,
     required RectNodePatchSchemaFields fields,
-  }) : this._materialized(
-         rectNodePatchBackingFromValidated(
-           id: id,
-           common: common.internalBacking,
-           fields: fields,
-         ),
-       );
+  }) : size = fields.size,
+       fillColor = fields.fillColor,
+       strokeColor = fields.strokeColor,
+       strokeWidth = fields.strokeWidth,
+       super();
 
-  @internal
-  factory RectNodePatch.materialize(RectNodePatchBacking backing) =
-      RectNodePatch._materialized;
-
-  RectNodePatch._materialized(super._backing) : super._materialized();
-
-  RectNodePatchBacking get _rectBacking =>
-      internalBacking as RectNodePatchBacking;
-
-  PatchField<Size> get size => _rectBacking.size;
-  PatchField<Color?> get fillColor => _rectBacking.fillColor;
-  PatchField<Color?> get strokeColor => _rectBacking.strokeColor;
-  PatchField<double> get strokeWidth => _rectBacking.strokeWidth;
+  final PatchField<Size> size;
+  final PatchField<Color?> fillColor;
+  final PatchField<Color?> strokeColor;
+  final PatchField<double> strokeWidth;
 }
 
 class PathNodePatch extends NodePatch {
@@ -348,29 +277,19 @@ class PathNodePatch extends NodePatch {
        );
 
   PathNodePatch._validated({
-    required NodeId id,
-    required CommonNodePatch common,
+    required super.id,
+    required super.common,
     required PathNodePatchSchemaFields fields,
-  }) : this._materialized(
-         pathNodePatchBackingFromValidated(
-           id: id,
-           common: common.internalBacking,
-           fields: fields,
-         ),
-       );
+  }) : svgPathData = fields.svgPathData,
+       fillColor = fields.fillColor,
+       strokeColor = fields.strokeColor,
+       strokeWidth = fields.strokeWidth,
+       fillRule = fields.fillRule,
+       super();
 
-  @internal
-  factory PathNodePatch.materialize(PathNodePatchBacking backing) =
-      PathNodePatch._materialized;
-
-  PathNodePatch._materialized(super._backing) : super._materialized();
-
-  PathNodePatchBacking get _pathBacking =>
-      internalBacking as PathNodePatchBacking;
-
-  PatchField<String> get svgPathData => _pathBacking.svgPathData;
-  PatchField<Color?> get fillColor => _pathBacking.fillColor;
-  PatchField<Color?> get strokeColor => _pathBacking.strokeColor;
-  PatchField<double> get strokeWidth => _pathBacking.strokeWidth;
-  PatchField<PathFillRule> get fillRule => _pathBacking.fillRule;
+  final PatchField<String> svgPathData;
+  final PatchField<Color?> fillColor;
+  final PatchField<Color?> strokeColor;
+  final PatchField<double> strokeWidth;
+  final PatchField<PathFillRule> fillRule;
 }

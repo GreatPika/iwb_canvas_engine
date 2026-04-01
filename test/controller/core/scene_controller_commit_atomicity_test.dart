@@ -57,7 +57,7 @@ void main() {
       notifications = notifications + 1;
     });
 
-    controller.write<void>((writer) {
+    controller.writeWithSceneWriter<void>((writer) {
       writer.writeSelectionReplace(const <NodeId>{'r1'});
       writer.writeSelectionTranslate(const Offset(10, 0));
       writer.writeSignalEnqueue(
@@ -266,7 +266,7 @@ void main() {
     final afterBounds = controller.selectedNodeIds;
     expect(identical(before, afterBounds), isTrue);
 
-    controller.write<void>((writer) {
+    controller.writeWithSceneWriter<void>((writer) {
       writer.writeSignalEnqueue(type: 'signals-only.selection-view');
     });
     final afterSignals = controller.selectedNodeIds;
@@ -298,7 +298,7 @@ void main() {
     final afterSelection = controller.snapshot;
     expect(identical(before, afterSelection), isTrue);
 
-    controller.write<void>((writer) {
+    controller.writeWithSceneWriter<void>((writer) {
       writer.writeSignalEnqueue(type: 'signals-only.cache');
     });
     final afterSignals = controller.snapshot;
@@ -475,7 +475,7 @@ void main() {
     final sub = controller.signals.listen(emitted.add);
     addTearDown(sub.cancel);
 
-    controller.write<void>((writer) {
+    controller.writeWithSceneWriter<void>((writer) {
       writer.writeSignalEnqueue(type: 'signals-only');
     });
     await pumpEventQueue();

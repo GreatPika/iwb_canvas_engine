@@ -137,11 +137,4 @@ abstract interface class SceneWriteTxn {
 
   /// Replaces the entire document snapshot.
   void writeDocumentReplace(SceneSnapshot snapshot);
-
-  /// Enqueues a committed signal for post-transaction delivery.
-  void writeSignalEnqueue({
-    required String type,
-    Iterable<NodeId> nodeIds,
-    Map<String, Object?>? payload,
-  });
 }

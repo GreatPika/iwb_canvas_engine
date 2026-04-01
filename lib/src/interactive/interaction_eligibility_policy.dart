@@ -165,6 +165,9 @@ Rect _snapshotBoundsWorld(NodeSnapshot node) {
         strokeColor: strokeColor,
         strokeWidth: strokeWidth,
       ),
+    _ => throw StateError(
+      'Unsupported NodeSnapshot subtype: ${node.runtimeType}',
+    ),
   };
   return node.transform.applyToRect(localBounds);
 }

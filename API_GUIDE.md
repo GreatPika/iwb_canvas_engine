@@ -676,14 +676,12 @@ Scene settings writes:
 - `writeGridCellSize(...)`
 - `writeBackgroundColor(...)`
 
-Signal write:
-
-- `writeSignalEnqueue(...)`
-
 Transaction handle lifetime:
 
 - a transaction handle is valid only inside the active callback
 - calling a `write*` method after callback completion throws `StateError`
+- committed-signal enqueue and delivery stay on internal controller/runtime
+  paths and are not part of the supported public `SceneWriteTxn` contract
 
 ### 6.3 `ClearSceneResult`
 

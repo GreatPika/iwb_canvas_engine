@@ -103,18 +103,17 @@ void main() {
       nodeSpecSource,
       contains("import 'internal/node_boundary_schema.dart';"),
     );
-    expect(
-      nodeSpecSource,
-      contains("import 'internal/node_spec_backing.dart';"),
-    );
+    expect(nodeSpecSource, isNot(contains('internalBacking')));
     expect(
       nodePatchSource,
       contains("import 'internal/node_boundary_schema.dart';"),
     );
-    expect(
-      nodePatchSource,
-      contains("import 'internal/node_patch_backing.dart';"),
-    );
+    expect(nodePatchSource, isNot(contains('internalBacking')));
+    expect(snapshotSource, isNot(contains('@internal')));
+    expect(snapshotSource, isNot(contains('.internal(')));
+    expect(snapshotSource, isNot(contains('materialize')));
+    expect(nodeSpecSource, isNot(contains('materialize')));
+    expect(nodePatchSource, isNot(contains('materialize')));
     expect(
       schemaBarrelSource,
       contains("export 'node_boundary_schema_common.dart';"),

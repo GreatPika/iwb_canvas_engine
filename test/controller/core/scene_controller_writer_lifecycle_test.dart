@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_writer.dart';
 
 // INV:INV-ENG-TXN-WRITER-LIFETIME
 
@@ -79,7 +80,6 @@ void main() {
       expect(
         () => controller.write<Future<void>>((writer) async {
           writer.writeSelectionReplace(const <NodeId>{'r1'});
-          writer.writeSignalEnqueue(type: 'must.rollback');
         }),
         throwsStateError,
       );
@@ -115,6 +115,10 @@ void main() {
       controller.write<void>((writer) {
         staleTxn = writer;
         writer.writeSelectionReplace(const <NodeId>{'r1'});
+      });
+      late final SceneWriter staleWriter;
+      controller.writeWithSceneWriter<void>((writer) {
+        staleWriter = writer;
         writer.writeSignalEnqueue(type: 'initial.commit');
       });
       await pumpEventQueue(times: 2);
@@ -132,7 +136,7 @@ void main() {
         throwsStateError,
       );
       expect(
-        () => staleTxn.writeSignalEnqueue(type: 'stale.signal'),
+        () => staleWriter.writeSignalEnqueue(type: 'stale.signal'),
         throwsStateError,
       );
       await pumpEventQueue(times: 2);
@@ -185,7 +189,6 @@ void main() {
         () => controller.write<void>((writer) {
           staleTxn = writer;
           writer.writeSelectionReplace(const <NodeId>{'r1'});
-          writer.writeSignalEnqueue(type: 'will.rollback');
           throw StateError('rollback');
         }),
         throwsStateError,
@@ -227,12 +230,23 @@ void main() {
     late final SceneWriteTxn staleTxn;
     controller.write<void>((writer) {
       staleTxn = writer;
+    });
+    late final SceneWriter staleWriter;
+    controller.writeWithSceneWriter<void>((writer) {
+      staleWriter = writer;
       writer.writeSignalEnqueue(type: 'first');
     });
 
-    expect(() => staleTxn.writeSignalEnqueue(type: 'stale'), throwsStateError);
+    expect(
+      () => staleTxn.writeSelectionReplace(const <NodeId>{'r1'}),
+      throwsStateError,
+    );
+    expect(
+      () => staleWriter.writeSignalEnqueue(type: 'stale'),
+      throwsStateError,
+    );
 
-    controller.write<void>((writer) {
+    controller.writeWithSceneWriter<void>((writer) {
       writer.writeSignalEnqueue(type: 'follow-up');
     });
     await pumpEventQueue(times: 2);

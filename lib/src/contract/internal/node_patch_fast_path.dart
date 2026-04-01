@@ -32,3 +32,5 @@ export 'node_patch_materialization.dart'
         rectNodePatchFromValidated,
         strokeNodePatchFromValidated,
         textNodePatchFromValidated;
+export 'node_patch_boundary_impl.dart'
+    show commonNodePatchBackingOf, nodePatchBackingOf;

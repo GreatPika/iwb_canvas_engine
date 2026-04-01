@@ -35,6 +35,9 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ### Breaking
 
+- `SceneWriteTxn` no longer exposes `writeSignalEnqueue(...)` on the public
+  package surface. Committed-signal buffering and delivery remain internal
+  controller/runtime behavior instead of a supported public write capability.
 - `SceneDataErrorCode.multipleBackgroundLayers` was removed as an unreachable
   public contract branch. Integrations must stop matching this enum value and
   treat background-layer canonicalization as a single-layer boundary rule.

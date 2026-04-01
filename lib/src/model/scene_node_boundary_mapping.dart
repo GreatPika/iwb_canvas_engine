@@ -32,6 +32,8 @@ SceneNode sceneNodeFromSnapshotViaBoundarySchema(
       return rectNodeFromSnapshot(rect, instanceRevision);
     case PathNodeSnapshot path:
       return pathNodeFromSnapshot(path, instanceRevision);
+    default:
+      throw StateError('Unsupported NodeSnapshot subtype: ${node.runtimeType}');
   }
 }
 
@@ -57,6 +59,8 @@ SceneNode sceneNodeFromSpecViaBoundarySchema(
       return rectNodeFromSpec(rect, runtimeContext);
     case PathNodeSpec path:
       return pathNodeFromSpec(path, runtimeContext);
+    default:
+      throw StateError('Unsupported NodeSpec subtype: ${spec.runtimeType}');
   }
 }
 

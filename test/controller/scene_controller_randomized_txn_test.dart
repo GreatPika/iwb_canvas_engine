@@ -467,6 +467,8 @@ NodePatch _typeSpecificPatchForNode(NodeSnapshot node, math.Random random) {
           random.nextBool() ? null : _randomSize(random),
         ),
       );
+    default:
+      throw StateError('Unsupported NodeSnapshot subtype: ${node.runtimeType}');
   }
 }
 
@@ -498,6 +500,8 @@ NodePatch _commonPatchForNode({
       return TextNodePatch(id: node.id, common: common);
     case ImageNodeSnapshot():
       return ImageNodePatch(id: node.id, common: common);
+    default:
+      throw StateError('Unsupported NodeSnapshot subtype: ${node.runtimeType}');
   }
 }
 

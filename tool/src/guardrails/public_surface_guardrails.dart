@@ -213,6 +213,11 @@ Future<PublicSurfaceGuardrailResult> runPublicSurfaceGuardrails({
     exportedFiles: exportedSurfaces.keys,
     violations: violations,
   );
+  _checkExportedContractHermeticMembers(
+    context: context,
+    exportedFiles: exportedSurfaces.keys,
+    violations: violations,
+  );
   _checkRootLibFilesAreExportOnly(context: context, violations: violations);
   _checkSceneWriteTxnContract(context: context, violations: violations);
   return PublicSurfaceGuardrailResult(
@@ -469,6 +474,32 @@ void _checkSceneWriteTxnContract({
   );
   if (violation != null) {
     violations.add(violation);
+  }
+}
+
+void _checkExportedContractHermeticMembers({
+  required GuardrailContext context,
+  required Iterable<String> exportedFiles,
+  required List<GuardrailViolation> violations,
+}) {
+  const targetFiles = <String>{
+    '/lib/src/contract/snapshot.dart',
+    '/lib/src/contract/node_spec.dart',
+    '/lib/src/contract/node_patch.dart',
+  };
+  for (final filePosixPath in exportedFiles.where(targetFiles.contains)) {
+    final scan = _buildExportedApiFileScan(context, filePosixPath, violations);
+    if (scan == null) {
+      continue;
+    }
+    final violation = _exportedContractHermeticMemberViolation(
+      parsed: scan.parsed,
+      filePosixPath: filePosixPath,
+    );
+    if (violation != null) {
+      violations.add(violation);
+      return;
+    }
   }
 }
 
@@ -839,6 +870,42 @@ GuardrailViolation? _sceneWriteTxnMemberViolation({
   return null;
 }
 
+GuardrailViolation? _exportedContractHermeticMemberViolation({
+  required ParsedUnitResult parsed,
+  required String filePosixPath,
+}) {
+  for (final declaration in parsed.unit.declarations) {
+    if (declaration is! ClassDeclaration) {
+      continue;
+    }
+    final members = declaration.members;
+    for (final member in members) {
+      final memberName = _exportedContractMemberName(member);
+      if (memberName == null || !isPublicName(memberName)) {
+        continue;
+      }
+      final message = switch (memberName) {
+        'internalBacking' =>
+          'public contract violation: exported contract types must not '
+              'expose internalBacking.',
+        'materialize' =>
+          'public contract violation: exported contract types must not '
+              'expose materialize(...).',
+        _ => null,
+      };
+      if (message == null) {
+        continue;
+      }
+      return GuardrailViolation(
+        filePath: filePosixPath,
+        line: lineForOffset(parsed, member.offset),
+        message: message,
+      );
+    }
+  }
+  return null;
+}
+
 class ExportedApiFileScan {
   const ExportedApiFileScan({
     required this.fileDirRepoRelPosix,
@@ -864,8 +931,15 @@ class ExportedApiDirectiveScan {
 }
 
 String? _sceneWriteTxnMemberName(ClassMember member) {
+  return _exportedContractMemberName(member);
+}
+
+String? _exportedContractMemberName(ClassMember member) {
   if (member is MethodDeclaration) {
     return member.name.lexeme;
+  }
+  if (member is ConstructorDeclaration) {
+    return member.name?.lexeme;
   }
   if (member is! FieldDeclaration) {
     return null;
@@ -891,6 +965,10 @@ String? _sceneWriteTxnViolationMessage(String memberName) {
   if (RegExp(r'^writeMark[A-Za-z0-9_]*$').hasMatch(memberName)) {
     return 'public contract violation: exported SceneWriteTxn must not '
         'expose writeMark* escape hatches.';
+  }
+  if (memberName == 'writeSignalEnqueue') {
+    return 'public contract violation: exported SceneWriteTxn must not '
+        'expose writeSignalEnqueue.';
   }
   if (_nodeIdBookkeepingNames.contains(memberName)) {
     return 'public contract violation: exported SceneWriteTxn must not '

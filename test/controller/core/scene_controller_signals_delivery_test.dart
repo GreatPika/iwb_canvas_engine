@@ -33,7 +33,7 @@ void main() {
     addTearDown(sub.cancel);
 
     expect(
-      () => controller.write<void>((writer) {
+      () => controller.writeWithSceneWriter<void>((writer) {
         writer.writeSignalEnqueue(type: 'will.rollback');
         throw StateError('fail');
       }),
@@ -42,7 +42,7 @@ void main() {
 
     expect(emitted, isEmpty);
 
-    controller.write<void>((writer) {
+    controller.writeWithSceneWriter<void>((writer) {
       writer.writeSignalEnqueue(type: 'committed');
     });
     await pumpEventQueue();
@@ -67,7 +67,7 @@ void main() {
         observed.add('notify');
       });
 
-      controller.write<void>((writer) {
+      controller.writeWithSceneWriter<void>((writer) {
         writer.writeSelectionReplace(const <NodeId>{'r1'});
         writer.writeSignalEnqueue(type: 'ordered');
       });
@@ -94,7 +94,7 @@ void main() {
         observed.add('notify');
       });
 
-      controller.write<void>((writer) {
+      controller.writeWithSceneWriter<void>((writer) {
         writer.writeSignalEnqueue(type: 'signal.with.repaint');
         controller.requestRepaint();
       });
@@ -123,7 +123,7 @@ void main() {
         ));
         if (signal.type == 'first') {
           try {
-            controller.write<void>((writer) {
+            controller.writeWithSceneWriter<void>((writer) {
               writer.writeSignalEnqueue(type: 'second');
             });
           } catch (error) {
@@ -133,7 +133,7 @@ void main() {
       });
       addTearDown(sub.cancel);
 
-      controller.write<void>((writer) {
+      controller.writeWithSceneWriter<void>((writer) {
         writer.writeSignalEnqueue(type: 'first');
       });
       await pumpEventQueue(times: 2);
@@ -200,7 +200,7 @@ void main() {
       'nested': <String, Object?>{'value': 1},
       'items': <Object?>[1, 2],
     };
-    controller.write<void>((writer) {
+    controller.writeWithSceneWriter<void>((writer) {
       writer.writeSignalEnqueue(
         type: 'immutable',
         nodeIds: nodeIds,

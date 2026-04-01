@@ -20,6 +20,9 @@ GeometryEntry buildRenderGeometryEntry(NodeSnapshot node) {
     LineNodeSnapshot lineNode => _lineEntry(lineNode),
     StrokeNodeSnapshot strokeNode => _strokeEntry(strokeNode),
     PathNodeSnapshot pathNode => _pathEntry(pathNode),
+    _ => throw StateError(
+      'Unsupported NodeSnapshot subtype: ${node.runtimeType}',
+    ),
   };
 }
 
@@ -37,6 +40,9 @@ Object buildRenderGeometryValidityKey(NodeSnapshot node) {
       transformKey,
     ),
     PathNodeSnapshot pathNode => _pathValidityKey(pathNode, transformKey),
+    _ => throw StateError(
+      'Unsupported NodeSnapshot subtype: ${node.runtimeType}',
+    ),
   };
 }
 

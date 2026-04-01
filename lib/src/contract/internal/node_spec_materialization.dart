@@ -1,5 +1,6 @@
 import '../node_spec.dart';
 import 'node_boundary_schema.dart';
+import 'node_spec_boundary_impl.dart';
 import 'node_spec_backing.dart';
 
 typedef _NodeSpecBackingBuilder<TBacking extends NodeSpecBacking, TFields> =
@@ -14,38 +15,31 @@ typedef _NodeSpecMaterializer<
 > = TSpec Function(TBacking backing);
 
 NodeSpec materializeNodeSpec(NodeSpecBacking backing) {
-  return switch (backing) {
-    ImageNodeSpecBacking image => materializeImageNodeSpec(image),
-    TextNodeSpecBacking text => materializeTextNodeSpec(text),
-    StrokeNodeSpecBacking stroke => materializeStrokeNodeSpec(stroke),
-    LineNodeSpecBacking line => materializeLineNodeSpec(line),
-    RectNodeSpecBacking rect => materializeRectNodeSpec(rect),
-    PathNodeSpecBacking path => materializePathNodeSpec(path),
-  };
+  return materializeNodeSpecForInternalUse(backing);
 }
 
 ImageNodeSpec materializeImageNodeSpec(ImageNodeSpecBacking backing) {
-  return ImageNodeSpec.materialize(backing);
+  return materializeNodeSpecForInternalUse(backing) as ImageNodeSpec;
 }
 
 TextNodeSpec materializeTextNodeSpec(TextNodeSpecBacking backing) {
-  return TextNodeSpec.materialize(backing);
+  return materializeNodeSpecForInternalUse(backing) as TextNodeSpec;
 }
 
 StrokeNodeSpec materializeStrokeNodeSpec(StrokeNodeSpecBacking backing) {
-  return StrokeNodeSpec.materialize(backing);
+  return materializeNodeSpecForInternalUse(backing) as StrokeNodeSpec;
 }
 
 LineNodeSpec materializeLineNodeSpec(LineNodeSpecBacking backing) {
-  return LineNodeSpec.materialize(backing);
+  return materializeNodeSpecForInternalUse(backing) as LineNodeSpec;
 }
 
 RectNodeSpec materializeRectNodeSpec(RectNodeSpecBacking backing) {
-  return RectNodeSpec.materialize(backing);
+  return materializeNodeSpecForInternalUse(backing) as RectNodeSpec;
 }
 
 PathNodeSpec materializePathNodeSpec(PathNodeSpecBacking backing) {
-  return PathNodeSpec.materialize(backing);
+  return materializeNodeSpecForInternalUse(backing) as PathNodeSpec;
 }
 
 TSpec _nodeSpecFromValidated<

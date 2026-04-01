@@ -41,9 +41,9 @@ class SceneControllerCore extends ChangeNotifier
 
   Scene? _cachedSnapshotScene;
   SceneSnapshot? _cachedSnapshot;
-  late final SceneCommands commands = SceneCommands(_writeWithSceneWriter);
-  late final MoveCommands move = MoveCommands(write);
-  late final DrawCommands draw = DrawCommands(_writeWithSceneWriter);
+  late final SceneCommands commands = SceneCommands(writeWithSceneWriter);
+  late final MoveCommands move = MoveCommands(writeWithSceneWriter);
+  late final DrawCommands draw = DrawCommands(writeWithSceneWriter);
 
   @override
   SceneSnapshot get snapshot {
@@ -120,8 +120,8 @@ class SceneControllerCore extends ChangeNotifier
     return _commitRuntime.write(fn);
   }
 
-  T _writeWithSceneWriter<T>(T Function(SceneWriter writer) fn) {
-    return write<T>((writer) => fn(writer as SceneWriter));
+  T writeWithSceneWriter<T>(T Function(SceneWriter writer) fn) {
+    return _commitRuntime.writeWithSceneWriter(fn);
   }
 
   void requestRepaint() {
@@ -188,8 +188,8 @@ extension SceneControllerCoreSpatialAccess on SceneControllerCore {
   }
 
   void writePreparedSceneReplacement(PreparedSceneReplacement replacement) {
-    write<void>((writer) {
-      (writer as SceneWriter).writePreparedDocumentReplace(replacement);
+    writeWithSceneWriter<void>((writer) {
+      writer.writePreparedDocumentReplace(replacement);
     });
   }
 

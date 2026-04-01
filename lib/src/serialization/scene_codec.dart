@@ -67,6 +67,12 @@ T debugGuardEncodeForTest<T>(T Function() encode) {
   return _guardEncode(encode);
 }
 
+Map<String, dynamic> debugEncodeCanonicalSnapshotForTest(
+  SceneSnapshot snapshot,
+) {
+  return _encodeCanonicalSnapshot(snapshot);
+}
+
 /// Encodes [snapshot] into a canonical JSON-serializable map.
 ///
 /// This is the parsed-map serialization gateway on the public boundary.
@@ -163,6 +169,9 @@ Map<String, dynamic> _encodeNode(
     LineNodeSnapshot line => _encodeLineFields(line),
     RectNodeSnapshot rect => _encodeRectFields(rect),
     PathNodeSnapshot path => _encodePathFields(path),
+    _ => throw StateError(
+      'Unsupported NodeSnapshot subtype: ${node.runtimeType}',
+    ),
   };
   return {
     ..._encodeNodeCommonFields(

@@ -223,7 +223,7 @@ language: russian
 
 ## 8. Вертикальные slices
 
-### Slice 1. [ ] Public `SceneWriteTxn` cleanup
+### Slice 1. [x] Public `SceneWriteTxn` cleanup
 
 #### Slice Contract
 
@@ -257,7 +257,7 @@ language: russian
 * Зелёный прогон перечисленных controller/core и controller/internal verifications.
 * Локальный diff показывает, что `writeSignalEnqueue(...)` удалён только из публичного `SceneWriteTxn`, а не из internal `SceneWriter`.
 
-### Slice 2. [ ] Snapshot family hermetic boundary
+### Slice 2. [x] Snapshot family hermetic boundary
 
 #### Slice Contract
 
@@ -288,7 +288,7 @@ language: russian
 * Зелёный прогон перечисленных public и fast-path verifications.
 * Fast-path regression assertions больше не зависят от public members на snapshot boundary-типах.
 
-### Slice 3. [ ] `NodeSpec` and `NodePatch` family hermetic boundary
+### Slice 3. [x] `NodeSpec` and `NodePatch` family hermetic boundary
 
 #### Slice Contract
 
@@ -319,7 +319,7 @@ language: russian
 * Зелёный прогон перечисленных public и fast-path verifications.
 * Fast-path regression assertions больше не опираются на public `internalBacking` / `materialize(...)` у spec/patch family.
 
-### Slice 4. [ ] Guardrails and published contract alignment
+### Slice 4. [x] Guardrails and published contract alignment
 
 #### Slice Contract
 

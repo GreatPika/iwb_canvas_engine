@@ -136,6 +136,9 @@ Ownership decisions for the target state:
 - `contract/internal/snapshot_materialization.dart` owns public wrapper
   materialization plus the internal compatibility helpers used by contract
   tests and malformed-snapshot failure injection.
+- Public snapshot/spec/patch files do not expose backing getters or
+  `materialize(...)` members. Backing identity and wrapper materialization stay
+  on internal helper paths under `contract/internal/**`.
 - `contract/internal/snapshot_fast_path.dart` is the canonical internal
   snapshot construction import surface; downstream code uses it instead of
   importing privileged construction from `contract/snapshot.dart`.
@@ -452,16 +455,19 @@ most important architectural rules are:
   derived-state owners live in `txn_workspace.dart` and
   `txn_derived_state.dart`; `SceneControllerCommitRuntime` consumes that
   substrate without reopening the public controller facade boundary.
-- `SceneWriter` is the only internal `SceneWriteTxn` implementation, but it is
-  now a thin shell over writer-local controller modules:
+- Public callers receive a dedicated `SceneWriteTxn` adapter that exposes only
+  the supported write surface. `SceneWriter` remains the internal writer owner
+  for command/runtime code and is a thin shell over writer-local controller
+  modules:
   `scene_writer_nodes.dart`,
   `scene_writer_selection.dart`,
   `scene_writer_scene.dart`,
   `scene_writer_signals.dart`, and
   `scene_writer_command_results.dart`.
   `scene_writer_runtime.dart` owns the shared transaction runtime handle used
-  by those modules, while internal commands keep consuming exact writer-local
-  results instead of expanding the public `SceneWriteTxn` contract.
+  by those modules, while committed-signal enqueue stays internal to
+  `SceneWriter` / `scene_writer_signals.dart` instead of expanding the public
+  `SceneWriteTxn` contract.
 - Final measured controller closure baseline after steps 29-31 is:
   `6 HIGH` metric entries limited to accepted seams in
   `mutation_op.dart`,

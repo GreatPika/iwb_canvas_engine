@@ -942,6 +942,33 @@ void main() {
       );
     });
 
+    test('public SceneSnapshot validates camera and grid eagerly', () {
+      expect(
+        () => SceneSnapshot(
+          camera: const CameraSnapshot(offset: Offset(double.nan, 0)),
+        ),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.name,
+            'name',
+            'camera.offset.dx',
+          ),
+        ),
+      );
+      expect(
+        () => SceneSnapshot(
+          background: const BackgroundSnapshot(grid: GridSnapshot(cellSize: 0)),
+        ),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.name,
+            'name',
+            'background.grid.cellSize',
+          ),
+        ),
+      );
+    });
+
     test(
       'SceneBuilder.buildFromSnapshot accepts valid explicit font family',
       () {

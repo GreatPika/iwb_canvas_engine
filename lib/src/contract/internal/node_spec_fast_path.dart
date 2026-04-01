@@ -28,3 +28,4 @@ export 'node_spec_materialization.dart'
         rectNodeSpecFromValidated,
         strokeNodeSpecFromValidated,
         textNodeSpecFromValidated;
+export 'node_spec_boundary_impl.dart' show nodeSpecBackingOf;

@@ -22,7 +22,8 @@ storage.
 - `SceneController` as the public interactive runtime root, with capability
   owners exposed through `controller.interaction`, `controller.selection`, and
   `controller.scene`, plus `SceneView` as the public interactive widget.
-- Transactional write API via `SceneWriteTxn`.
+- Transactional write API via `SceneWriteTxn` for supported scene, selection,
+  and document mutations.
 - Explicit path fill-rule contract via `PathFillRule`.
 - JSON import/export with strict validation and canonicalization.
 - Parsed-map import via `SceneBuilder.buildFromJson(...)` with the same stable
@@ -140,6 +141,9 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Public snapshot/node/spec/patch constructors validate boundary ids and
   numeric values eagerly and are runtime constructors rather than `const`
   entry points.
+- Internal snapshot/spec/patch backing identity and materialization helpers
+  live only under `lib/src/contract/internal/**`; they are package internals,
+  not supported public API.
 - runtime `Scene.backgroundLayer` may be absent internally, while snapshot/JSON
   boundaries canonicalize it to a dedicated layer distinct from content
   `layers`; content writes use `LayerId`.

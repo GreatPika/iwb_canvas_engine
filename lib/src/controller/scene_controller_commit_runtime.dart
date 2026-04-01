@@ -11,6 +11,8 @@ import 'scene_controller_commit_execution.dart';
 import 'scene_controller_commit_plan.dart';
 import 'scene_controller_commit_write_runner.dart';
 import 'scene_controller_post_commit_lifecycle.dart';
+import 'scene_write_txn_public_adapter.dart';
+import 'scene_writer.dart';
 import 'store.dart';
 import 'txn_context.dart';
 
@@ -68,7 +70,9 @@ final class SceneControllerCommitRuntime {
 
   T write<T>(T Function(SceneWriteTxn txn) fn) {
     _throwIfDisposed();
-    final committedWrite = _write(fn);
+    final committedWrite = _write<T>((writer) {
+      return fn(SceneWriteTxnPublicAdapter(writer));
+    });
     _postCommitLifecycle.dispatch(committedWrite.commitResult);
     return committedWrite.result;
   }
@@ -91,11 +95,20 @@ final class SceneControllerCommitRuntime {
     _isDisposed = true;
   }
 
-  SceneControllerCommittedWrite<T> _write<T>(T Function(SceneWriteTxn txn) fn) {
+  T writeWithSceneWriter<T>(T Function(SceneWriter writer) fn) {
+    _throwIfDisposed();
+    final committedWrite = _write(fn);
+    _postCommitLifecycle.dispatch(committedWrite.commitResult);
+    return committedWrite.result;
+  }
+
+  SceneControllerCommittedWrite<T> _write<T>(
+    T Function(SceneWriter writer) fn,
+  ) {
     late SceneControllerWriteCommitResult commitResult;
     try {
       final result = _writeRunner.run<T>(
-        fn: (writer) => fn(writer),
+        fn: fn,
         txnCommit: (ctx) => commitResult = _commitTxn(ctx),
       );
       _refreshSelectedNodeIdsView();

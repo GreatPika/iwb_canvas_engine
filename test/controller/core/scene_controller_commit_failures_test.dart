@@ -53,7 +53,7 @@ void main() {
       });
 
       expect(
-        () => controller.write<void>((writer) {
+        () => controller.writeWithSceneWriter<void>((writer) {
           writer.writeSelectionReplace(const <NodeId>{'r1'});
           writer.writeSignalEnqueue(type: 'selection.changed');
           throw StateError('rollback');
@@ -97,7 +97,7 @@ void main() {
       });
 
       expect(
-        () => controller.write<void>((writer) {
+        () => controller.writeWithSceneWriter<void>((writer) {
           writer.writeSelectionReplace(const <NodeId>{'r1'});
           writer.writeSignalEnqueue(type: 'will.rollback');
           controller.requestRepaint();
@@ -174,7 +174,7 @@ void main() {
       };
 
       expect(
-        () => controller.write<void>((writer) {
+        () => controller.writeWithSceneWriter<void>((writer) {
           writer.writeSelectionReplace(const <NodeId>{'r1'});
           writer.writeSelectionTranslate(const Offset(10, 0));
           writer.writeSignalEnqueue(type: 'will.not.emit');
@@ -234,7 +234,7 @@ void main() {
       };
 
       expect(
-        () => controller.write<void>((writer) {
+        () => controller.writeWithSceneWriter<void>((writer) {
           writer.writeSelectionReplace(const <NodeId>{'r1'});
           writer.writeSelectionTranslate(const Offset(10, 0));
           writer.writeSignalEnqueue(type: 'will.not.emit');
@@ -292,7 +292,7 @@ void main() {
       };
 
       expect(
-        () => controller.write<void>((writer) {
+        () => controller.writeWithSceneWriter<void>((writer) {
           writer.writeSignalEnqueue(type: 'signals-only.fail');
         }),
         throwsStateError,

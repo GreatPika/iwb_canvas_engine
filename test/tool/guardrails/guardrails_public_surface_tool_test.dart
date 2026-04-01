@@ -16,6 +16,7 @@ void main() {
     _registerDuplicateExportCombinatorViolationTests();
     _registerMissingScanPolicyViolationTests();
     _registerTxnContractViolationTests();
+    _registerContractHermeticityViolationTests();
     _registerExportImportBoundaryTests();
   });
 }
@@ -240,7 +241,7 @@ class SceneView {}
 
 void _registerTxnContractViolationTests() {
   test(
-    'rejects scene/writeFindNode/writeMark*/id-bookkeeping in exported txn API',
+    'rejects scene/writeFindNode/writeMark*/id-bookkeeping/writeSignalEnqueue in exported txn API',
     () async {
       final sandbox = await createGuardrailsSandbox();
       try {
@@ -251,6 +252,7 @@ abstract interface class SceneWriteTxn {
   Object? writeFindNode(String id);
   void writeMarkVisualChanged();
   String writeNewNodeId();
+  void writeSignalEnqueue({required String type});
 }
 ''');
 
@@ -279,8 +281,76 @@ abstract interface class SceneWriteTxn {
                   'exported SceneWriteTxn must not expose node-id '
                   'bookkeeping methods',
             ),
+            diagnostic(
+              category: 'public contract',
+              detail:
+                  'exported SceneWriteTxn must not expose writeSignalEnqueue',
+            ),
           ),
         );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+}
+
+void _registerContractHermeticityViolationTests() {
+  test(
+    'rejects internalBacking and materialize members on exported contract types',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeCanonicalPublicExportScaffold(sandbox);
+        writeSandboxFile(sandbox, 'lib/src/contract/snapshot.dart', '''
+class SceneSnapshot {
+  Object get internalBacking => Object();
+  factory SceneSnapshot.materialize(Object backing) => SceneSnapshot();
+}
+''');
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          anyOf(
+            diagnostic(
+              category: 'public contract',
+              detail: 'exported contract types must not expose internalBacking',
+            ),
+            diagnostic(
+              category: 'public contract',
+              detail:
+                  'exported contract types must not expose materialize(...)',
+            ),
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'allows internal-only backing and signal helpers outside exported surface',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeCanonicalPublicExportScaffold(sandbox);
+        writeMinimalControllerStore(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/contract/internal/snapshot_boundary_impl.dart',
+          'Object internalBackingOf(Object value) => value;\n',
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/controller/scene_writer.dart',
+          'class SceneWriter { void writeSignalEnqueue({required String type}) {} }\n',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, 0, reason: result.stderr.toString());
       } finally {
         sandbox.deleteSync(recursive: true);
       }
