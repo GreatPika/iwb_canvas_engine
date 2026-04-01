@@ -48,7 +48,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-G-PUBLIC-ENTRYPOINTS',
     scope: 'public-api',
     title:
-        'public entrypoint is single iwb_canvas_engine.dart (advanced.dart forbidden)',
+        'public entrypoint is single iwb_canvas_engine.dart and exported top-level symbol set stays stable (advanced.dart forbidden)',
     proofPath: 'tool/check_public_api_surface.dart',
   ),
   Invariant(
@@ -85,7 +85,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-SAFE-TXN-API',
     scope: 'engine-controller',
     title:
-        'public transaction API does not expose mutable scene escape hatches',
+        'public transaction API and exported contract members do not expose scene escape hatches or signal/internal materialization helpers',
     proofPath: 'tool/check_guardrails.dart',
   ),
   Invariant(
