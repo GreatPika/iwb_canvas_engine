@@ -11,6 +11,7 @@ import 'scene_view_pointer_semantics.dart';
 import 'internal/scene_controller_facade_assembly.dart';
 import 'internal/scene_controller_internal_access.dart';
 import 'internal/scene_controller_interaction_runtime.dart';
+import 'internal/scene_controller_pointer_semantics.dart';
 import 'scene_controller_interaction.dart';
 import 'scene_controller_scene.dart';
 import 'scene_controller_selection.dart';
@@ -123,7 +124,10 @@ class SceneController extends ChangeNotifier
     required bool Function() isMounted,
   }) {
     _ensurePublicSideEffectAllowed('createPointerSemanticsBridge');
-    return _facade.createPointerSemanticsBridge(isMounted: isMounted);
+    return SceneControllerPointerSemantics(
+      controller: this,
+      isMounted: isMounted,
+    );
   }
 
   SceneControllerInteraction get interaction => _facade.interaction;

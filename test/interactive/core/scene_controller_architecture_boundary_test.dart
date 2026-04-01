@@ -152,6 +152,14 @@ void main() {
     );
     expect(
       facadeSource,
+      contains("import 'internal/scene_controller_pointer_semantics.dart';"),
+    );
+    expect(
+      facadeSource,
+      contains('return SceneControllerPointerSemantics('),
+    );
+    expect(
+      facadeSource,
       isNot(contains("import 'internal/interactive_runtime.dart';")),
     );
     expect(
@@ -171,6 +179,14 @@ void main() {
     expect(
       facadeAssemblySource,
       contains('mutations: interactionRuntime.mutationBoundary,'),
+    );
+    expect(
+      facadeAssemblySource,
+      isNot(contains('createPointerSemanticsBridge')),
+    );
+    expect(
+      facadeAssemblySource,
+      isNot(contains('SceneControllerPointerSemantics(')),
     );
 
     expect(
