@@ -166,3 +166,4 @@ This file is the plan index. Each step has a dedicated document so steps can be 
 - [x] [Шаг 69. Замкнуть интерактивный read-side рендера на одном internal render-state](plan/step_69_interactive_render_read_side_single_render_state.md)
 - [x] [Шаг 70. Вынести view-side pointer semantics в controller-owned boundary вне `interactive/internal`](plan/step_70_view_pointer_semantics_controller_owned_boundary.md)
 - [x] [Шаг 71. Замкнуть shared scene model invariants для stroke, palette и `textDirection`](plan/step_71_shared_scene_model_invariants_stroke_palette_text_direction.md)
+- [ ] [Шаг 72. Герметизировать public contract boundary и убрать signal enqueue из публичной write-транзакции](plan/step_72_public_contract_boundary_hermeticity_and_signal_txn_cleanup.md)
