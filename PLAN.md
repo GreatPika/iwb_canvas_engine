@@ -165,3 +165,4 @@ This file is the plan index. Each step has a dedicated document so steps can be 
 - [x] [Шаг 68. Замкнуть view-boundary pointer semantics через assembled internal bridge](plan/step_68_pointer_semantics_view_boundary_closure.md)
 - [x] [Шаг 69. Замкнуть интерактивный read-side рендера на одном internal render-state](plan/step_69_interactive_render_read_side_single_render_state.md)
 - [x] [Шаг 70. Вынести view-side pointer semantics в controller-owned boundary вне `interactive/internal`](plan/step_70_view_pointer_semantics_controller_owned_boundary.md)
+- [ ] [Шаг 71. Замкнуть shared scene model invariants для stroke, palette и `textDirection`](plan/step_71_shared_scene_model_invariants_stroke_palette_text_direction.md)
