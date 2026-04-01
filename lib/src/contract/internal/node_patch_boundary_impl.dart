@@ -1,4 +1,6 @@
 import '../node_patch.dart';
+import 'boundary_impl_support.dart';
+import 'node_patch_boundary_fallback.dart';
 import 'node_patch_backing.dart';
 
 abstract interface class CommonNodePatchBackingCarrier {
@@ -14,22 +16,57 @@ final Expando<CommonNodePatchBacking> _commonNodePatchBackingCache =
 final Expando<NodePatchBacking> _nodePatchBackingCache =
     Expando<NodePatchBacking>('nodePatchBacking');
 
-CommonNodePatchBacking commonNodePatchBackingOf(CommonNodePatch patch) {
-  try {
-    return (patch as CommonNodePatchBackingCarrier).commonNodePatchBacking;
-  } on TypeError {
-    // Fall through to the public-field reconstruction path.
-  }
-  final cached = _commonNodePatchBackingCache[patch];
-  if (cached != null) {
-    return cached;
-  }
-  if (patch.runtimeType != CommonNodePatch) {
-    throw StateError(
-      'Unsupported CommonNodePatch subtype: ${patch.runtimeType}',
+final _commonNodePatchBackingResolver =
+    BoundaryBackingResolver<CommonNodePatch, CommonNodePatchBacking>(
+      cache: _commonNodePatchBackingCache,
+      readCarrier: _commonNodePatchBackingFromCarrier,
+      rebuild: _rebuildCommonNodePatchBacking,
     );
-  }
-  final backing = CommonNodePatchBacking(
+
+final _nodePatchBackingResolver =
+    BoundaryBackingResolver<NodePatch, NodePatchBacking>(
+      cache: _nodePatchBackingCache,
+      readCarrier: _nodePatchBackingFromCarrier,
+      rebuild: _rebuildNodePatchBacking,
+    );
+
+CommonNodePatchBacking commonNodePatchBackingOf(CommonNodePatch patch) =>
+    _commonNodePatchBackingResolver.resolve(patch);
+
+NodePatchBacking nodePatchBackingOf(NodePatch patch) =>
+    _nodePatchBackingResolver.resolve(patch);
+
+CommonNodePatchBacking? _commonNodePatchBackingFromCarrier(
+  CommonNodePatch patch,
+) {
+  return readBoundaryBackingCarrier(
+    patch,
+    (carrier) =>
+        (carrier as CommonNodePatchBackingCarrier).commonNodePatchBacking,
+  );
+}
+
+NodePatchBacking? _nodePatchBackingFromCarrier(NodePatch patch) {
+  return readBoundaryBackingCarrier(
+    patch,
+    (carrier) => (carrier as NodePatchBackingCarrier).nodePatchBacking,
+  );
+}
+
+NodePatchBacking _rebuildNodePatchBacking(NodePatch patch) {
+  return publicNodePatchBackingOf(
+    patch,
+    commonNodePatchBackingOf(patch.common),
+  );
+}
+
+CommonNodePatchBacking _rebuildCommonNodePatchBacking(CommonNodePatch patch) {
+  requireExactBoundaryRuntimeType(
+    value: patch,
+    exactType: CommonNodePatch,
+    typeName: 'CommonNodePatch',
+  );
+  return CommonNodePatchBacking(
     transform: patch.transform,
     opacity: patch.opacity,
     hitPadding: patch.hitPadding,
@@ -39,103 +76,6 @@ CommonNodePatchBacking commonNodePatchBackingOf(CommonNodePatch patch) {
     isDeletable: patch.isDeletable,
     isTransformable: patch.isTransformable,
   );
-  _commonNodePatchBackingCache[patch] = backing;
-  return backing;
-}
-
-NodePatchBacking nodePatchBackingOf(NodePatch patch) {
-  try {
-    return (patch as NodePatchBackingCarrier).nodePatchBacking;
-  } on TypeError {
-    // Fall through to the public-field reconstruction path.
-  }
-  final cached = _nodePatchBackingCache[patch];
-  if (cached != null) {
-    return cached;
-  }
-  final common = commonNodePatchBackingOf(patch.common);
-  final backing = _publicNodePatchBackingOf(patch, common);
-  _nodePatchBackingCache[patch] = backing;
-  return backing;
-}
-
-NodePatchBacking _publicNodePatchBackingOf(
-  NodePatch patch,
-  CommonNodePatchBacking common,
-) {
-  if (patch.runtimeType == ImageNodePatch) {
-    final image = patch as ImageNodePatch;
-    return ImageNodePatchBacking(
-      id: image.id,
-      common: common,
-      imageId: image.imageId,
-      size: image.size,
-      naturalSize: image.naturalSize,
-    );
-  }
-  if (patch.runtimeType == TextNodePatch) {
-    final text = patch as TextNodePatch;
-    return TextNodePatchBacking(
-      id: text.id,
-      common: common,
-      text: text.text,
-      fontSize: text.fontSize,
-      color: text.color,
-      align: text.align,
-      textDirection: text.textDirection,
-      isBold: text.isBold,
-      isItalic: text.isItalic,
-      isUnderline: text.isUnderline,
-      fontFamily: text.fontFamily,
-      maxWidth: text.maxWidth,
-      lineHeight: text.lineHeight,
-    );
-  }
-  if (patch.runtimeType == StrokeNodePatch) {
-    final stroke = patch as StrokeNodePatch;
-    return StrokeNodePatchBacking(
-      id: stroke.id,
-      common: common,
-      points: stroke.points,
-      thickness: stroke.thickness,
-      color: stroke.color,
-    );
-  }
-  if (patch.runtimeType == LineNodePatch) {
-    final line = patch as LineNodePatch;
-    return LineNodePatchBacking(
-      id: line.id,
-      common: common,
-      start: line.start,
-      end: line.end,
-      thickness: line.thickness,
-      color: line.color,
-    );
-  }
-  if (patch.runtimeType == RectNodePatch) {
-    final rect = patch as RectNodePatch;
-    return RectNodePatchBacking(
-      id: rect.id,
-      common: common,
-      size: rect.size,
-      fillColor: rect.fillColor,
-      strokeColor: rect.strokeColor,
-      strokeWidth: rect.strokeWidth,
-    );
-  }
-  if (patch.runtimeType == PathNodePatch) {
-    final path = patch as PathNodePatch;
-    return PathNodePatchBacking(
-      id: path.id,
-      common: common,
-      svgPathData: path.svgPathData,
-      fillColor: path.fillColor,
-      strokeColor: path.strokeColor,
-      strokeWidth: path.strokeWidth,
-      fillRule: path.fillRule,
-    );
-  }
-  throw StateError('Unsupported NodePatch subtype: ${patch.runtimeType}');
 }
 
 CommonNodePatch materializeCommonNodePatchForInternalUse(

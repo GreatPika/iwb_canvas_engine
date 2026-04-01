@@ -185,6 +185,86 @@ const Set<String> _nodeIdBookkeepingNames = <String>{
   'writeRebuildNodeIdIndex',
 };
 
+enum _PublicSurfaceMemberBanKind { exact, writeMarkFamily, nodeIdBookkeeping }
+
+class _PublicSurfaceMemberBanRule {
+  const _PublicSurfaceMemberBanRule.exact({
+    required this.memberName,
+    required this.message,
+  }) : kind = _PublicSurfaceMemberBanKind.exact;
+
+  const _PublicSurfaceMemberBanRule.writeMarkFamily({required this.message})
+    : kind = _PublicSurfaceMemberBanKind.writeMarkFamily,
+      memberName = null;
+
+  const _PublicSurfaceMemberBanRule.nodeIdBookkeeping({required this.message})
+    : kind = _PublicSurfaceMemberBanKind.nodeIdBookkeeping,
+      memberName = null;
+
+  final _PublicSurfaceMemberBanKind kind;
+  final String? memberName;
+  final String message;
+
+  bool matches(String candidate) {
+    return switch (kind) {
+      _PublicSurfaceMemberBanKind.exact => memberName == candidate,
+      _PublicSurfaceMemberBanKind.writeMarkFamily => RegExp(
+        r'^writeMark[A-Za-z0-9_]*$',
+      ).hasMatch(candidate),
+      _PublicSurfaceMemberBanKind.nodeIdBookkeeping =>
+        _nodeIdBookkeepingNames.contains(candidate),
+    };
+  }
+}
+
+const List<_PublicSurfaceMemberBanRule> _sceneWriteTxnMemberBanRules =
+    <_PublicSurfaceMemberBanRule>[
+      _PublicSurfaceMemberBanRule.exact(
+        memberName: 'scene',
+        message:
+            'public contract violation: exported SceneWriteTxn must not '
+            'expose raw scene access.',
+      ),
+      _PublicSurfaceMemberBanRule.exact(
+        memberName: 'writeFindNode',
+        message:
+            'public contract violation: exported SceneWriteTxn must not '
+            'expose writeFindNode.',
+      ),
+      _PublicSurfaceMemberBanRule.writeMarkFamily(
+        message:
+            'public contract violation: exported SceneWriteTxn must not '
+            'expose writeMark* escape hatches.',
+      ),
+      _PublicSurfaceMemberBanRule.exact(
+        memberName: 'writeSignalEnqueue',
+        message:
+            'public contract violation: exported SceneWriteTxn must not '
+            'expose writeSignalEnqueue.',
+      ),
+      _PublicSurfaceMemberBanRule.nodeIdBookkeeping(
+        message:
+            'public contract violation: exported SceneWriteTxn must not '
+            'expose node-id bookkeeping methods.',
+      ),
+    ];
+
+const List<_PublicSurfaceMemberBanRule> _exportedContractMemberBanRules =
+    <_PublicSurfaceMemberBanRule>[
+      _PublicSurfaceMemberBanRule.exact(
+        memberName: 'internalBacking',
+        message:
+            'public contract violation: exported contract types must not '
+            'expose internalBacking.',
+      ),
+      _PublicSurfaceMemberBanRule.exact(
+        memberName: 'materialize',
+        message:
+            'public contract violation: exported contract types must not '
+            'expose materialize(...).',
+      ),
+    ];
+
 Future<PublicSurfaceGuardrailResult> runPublicSurfaceGuardrails({
   required GuardrailContext context,
 }) async {
@@ -852,22 +932,13 @@ GuardrailViolation? _sceneWriteTxnMemberViolation({
   required ParsedUnitResult parsed,
   required String filePosixPath,
 }) {
-  for (final member in members) {
-    final memberName = _sceneWriteTxnMemberName(member);
-    if (memberName == null || !isPublicName(memberName)) {
-      continue;
-    }
-    final message = _sceneWriteTxnViolationMessage(memberName);
-    if (message == null) {
-      continue;
-    }
-    return GuardrailViolation(
-      filePath: filePosixPath,
-      line: lineForOffset(parsed, member.offset),
-      message: message,
-    );
-  }
-  return null;
+  return _firstMemberBanViolation(
+    members: members,
+    parsed: parsed,
+    filePosixPath: filePosixPath,
+    memberNameOf: _sceneWriteTxnMemberName,
+    rules: _sceneWriteTxnMemberBanRules,
+  );
 }
 
 GuardrailViolation? _exportedContractHermeticMemberViolation({
@@ -878,29 +949,15 @@ GuardrailViolation? _exportedContractHermeticMemberViolation({
     if (declaration is! ClassDeclaration) {
       continue;
     }
-    final members = declaration.members;
-    for (final member in members) {
-      final memberName = _exportedContractMemberName(member);
-      if (memberName == null || !isPublicName(memberName)) {
-        continue;
-      }
-      final message = switch (memberName) {
-        'internalBacking' =>
-          'public contract violation: exported contract types must not '
-              'expose internalBacking.',
-        'materialize' =>
-          'public contract violation: exported contract types must not '
-              'expose materialize(...).',
-        _ => null,
-      };
-      if (message == null) {
-        continue;
-      }
-      return GuardrailViolation(
-        filePath: filePosixPath,
-        line: lineForOffset(parsed, member.offset),
-        message: message,
-      );
+    final violation = _firstMemberBanViolation(
+      members: declaration.members,
+      parsed: parsed,
+      filePosixPath: filePosixPath,
+      memberNameOf: _exportedContractMemberName,
+      rules: _exportedContractMemberBanRules,
+    );
+    if (violation != null) {
+      return violation;
     }
   }
   return null;
@@ -934,6 +991,43 @@ String? _sceneWriteTxnMemberName(ClassMember member) {
   return _exportedContractMemberName(member);
 }
 
+GuardrailViolation? _firstMemberBanViolation({
+  required NodeList<ClassMember> members,
+  required ParsedUnitResult parsed,
+  required String filePosixPath,
+  required String? Function(ClassMember member) memberNameOf,
+  required List<_PublicSurfaceMemberBanRule> rules,
+}) {
+  for (final member in members) {
+    final memberName = memberNameOf(member);
+    if (memberName == null || !isPublicName(memberName)) {
+      continue;
+    }
+    final rule = _matchingMemberBanRule(memberName, rules);
+    if (rule == null) {
+      continue;
+    }
+    return GuardrailViolation(
+      filePath: filePosixPath,
+      line: lineForOffset(parsed, member.offset),
+      message: rule.message,
+    );
+  }
+  return null;
+}
+
+_PublicSurfaceMemberBanRule? _matchingMemberBanRule(
+  String memberName,
+  List<_PublicSurfaceMemberBanRule> rules,
+) {
+  for (final rule in rules) {
+    if (rule.matches(memberName)) {
+      return rule;
+    }
+  }
+  return null;
+}
+
 String? _exportedContractMemberName(ClassMember member) {
   if (member is MethodDeclaration) {
     return member.name.lexeme;
@@ -949,30 +1043,6 @@ String? _exportedContractMemberName(ClassMember member) {
     if (isPublicName(name)) {
       return name;
     }
-  }
-  return null;
-}
-
-String? _sceneWriteTxnViolationMessage(String memberName) {
-  if (memberName == 'scene') {
-    return 'public contract violation: exported SceneWriteTxn must not '
-        'expose raw scene access.';
-  }
-  if (memberName == 'writeFindNode') {
-    return 'public contract violation: exported SceneWriteTxn must not '
-        'expose writeFindNode.';
-  }
-  if (RegExp(r'^writeMark[A-Za-z0-9_]*$').hasMatch(memberName)) {
-    return 'public contract violation: exported SceneWriteTxn must not '
-        'expose writeMark* escape hatches.';
-  }
-  if (memberName == 'writeSignalEnqueue') {
-    return 'public contract violation: exported SceneWriteTxn must not '
-        'expose writeSignalEnqueue.';
-  }
-  if (_nodeIdBookkeepingNames.contains(memberName)) {
-    return 'public contract violation: exported SceneWriteTxn must not '
-        'expose node-id bookkeeping methods.';
   }
   return null;
 }

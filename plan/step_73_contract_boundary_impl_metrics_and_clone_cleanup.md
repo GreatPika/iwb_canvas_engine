@@ -182,7 +182,7 @@ language: russian
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Snapshot Boundary Impl Decomposition
+### Slice 1. [x] Snapshot Boundary Impl Decomposition
 
 #### Slice Contract
 
@@ -221,7 +221,7 @@ materialized snapshot wrappers.
 - Measured metrics no longer report the current `VERY HIGH` hotspot on `_publicNodeSnapshotBackingOf(...)`.
 - Clone output for `lib/src/contract/internal` no longer reports the old strongest duplication path rooted in snapshot fallback/carrier helpers.
 
-### Slice 2. [ ] Shared Spec/Patch Boundary Substrate
+### Slice 2. [x] Shared Spec/Patch Boundary Substrate
 
 #### Slice Contract
 
@@ -262,7 +262,7 @@ typed materialization dispatch.
 - Measured metrics no longer report the current large SLOC hotspots on `_publicNodeSpecBackingOf(...)` and `_publicNodePatchBackingOf(...)`.
 - Targeted clone output no longer reports the current normalized-exact strongest pair between `nodeSpecBackingOf(...)` and `nodeSnapshotBackingOf(...)`.
 
-### Slice 3. [ ] Canonical Guardrail Member-Ban Path
+### Slice 3. [x] Canonical Guardrail Member-Ban Path
 
 #### Slice Contract
 

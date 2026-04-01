@@ -2,7 +2,9 @@ import 'dart:ui';
 
 import '../snapshot.dart';
 import '../transform2d.dart';
+import 'boundary_impl_support.dart';
 import 'snapshot_backing.dart';
+import 'snapshot_node_boundary_fallback.dart';
 
 abstract interface class SceneSnapshotBackingCarrier {
   SceneSnapshotBacking get sceneSnapshotBacking;
@@ -35,22 +37,119 @@ final Expando<ScenePaletteSnapshotBacking> _paletteBackingCache =
 final Expando<NodeSnapshotBacking> _nodeSnapshotBackingCache =
     Expando<NodeSnapshotBacking>('nodeSnapshotBacking');
 
-SceneSnapshotBacking sceneSnapshotBackingOf(SceneSnapshot snapshot) {
-  try {
-    return (snapshot as SceneSnapshotBackingCarrier).sceneSnapshotBacking;
-  } on TypeError {
-    // Fall through to the public-field reconstruction path.
-  }
-  final cached = _sceneSnapshotBackingCache[snapshot];
-  if (cached != null) {
-    return cached;
-  }
-  if (snapshot.runtimeType != SceneSnapshot) {
-    throw StateError(
-      'Unsupported SceneSnapshot subtype: ${snapshot.runtimeType}',
+final _sceneSnapshotBackingResolver =
+    BoundaryBackingResolver<SceneSnapshot, SceneSnapshotBacking>(
+      cache: _sceneSnapshotBackingCache,
+      readCarrier: _sceneSnapshotBackingFromCarrier,
+      rebuild: _rebuildSceneSnapshotBacking,
     );
-  }
-  final backing = SceneSnapshotBacking(
+
+final _backgroundLayerSnapshotBackingResolver =
+    BoundaryBackingResolver<
+      BackgroundLayerSnapshot,
+      BackgroundLayerSnapshotBacking
+    >(
+      cache: _backgroundLayerBackingCache,
+      readCarrier: _backgroundLayerSnapshotBackingFromCarrier,
+      rebuild: _rebuildBackgroundLayerSnapshotBacking,
+    );
+
+final _contentLayerSnapshotBackingResolver =
+    BoundaryBackingResolver<ContentLayerSnapshot, ContentLayerSnapshotBacking>(
+      cache: _contentLayerBackingCache,
+      readCarrier: _contentLayerSnapshotBackingFromCarrier,
+      rebuild: _rebuildContentLayerSnapshotBacking,
+    );
+
+final _scenePaletteSnapshotBackingResolver =
+    BoundaryBackingResolver<ScenePaletteSnapshot, ScenePaletteSnapshotBacking>(
+      cache: _paletteBackingCache,
+      readCarrier: _scenePaletteSnapshotBackingFromCarrier,
+      rebuild: _rebuildScenePaletteSnapshotBacking,
+    );
+
+final _nodeSnapshotBackingResolver =
+    BoundaryBackingResolver<NodeSnapshot, NodeSnapshotBacking>(
+      cache: _nodeSnapshotBackingCache,
+      readCarrier: _nodeSnapshotBackingFromCarrier,
+      rebuild: publicNodeSnapshotBackingOf,
+    );
+
+SceneSnapshotBacking sceneSnapshotBackingOf(SceneSnapshot snapshot) =>
+    _sceneSnapshotBackingResolver.resolve(snapshot);
+
+BackgroundLayerSnapshotBacking backgroundLayerSnapshotBackingOf(
+  BackgroundLayerSnapshot layer,
+) {
+  return _backgroundLayerSnapshotBackingResolver.resolve(layer);
+}
+
+ContentLayerSnapshotBacking contentLayerSnapshotBackingOf(
+  ContentLayerSnapshot layer,
+) {
+  return _contentLayerSnapshotBackingResolver.resolve(layer);
+}
+
+ScenePaletteSnapshotBacking scenePaletteSnapshotBackingOf(
+  ScenePaletteSnapshot palette,
+) {
+  return _scenePaletteSnapshotBackingResolver.resolve(palette);
+}
+
+NodeSnapshotBacking nodeSnapshotBackingOf(NodeSnapshot snapshot) =>
+    _nodeSnapshotBackingResolver.resolve(snapshot);
+
+SceneSnapshotBacking? _sceneSnapshotBackingFromCarrier(SceneSnapshot snapshot) {
+  return readBoundaryBackingCarrier(
+    snapshot,
+    (carrier) => (carrier as SceneSnapshotBackingCarrier).sceneSnapshotBacking,
+  );
+}
+
+BackgroundLayerSnapshotBacking? _backgroundLayerSnapshotBackingFromCarrier(
+  BackgroundLayerSnapshot layer,
+) {
+  return readBoundaryBackingCarrier(
+    layer,
+    (carrier) => (carrier as BackgroundLayerSnapshotBackingCarrier)
+        .backgroundLayerSnapshotBacking,
+  );
+}
+
+ContentLayerSnapshotBacking? _contentLayerSnapshotBackingFromCarrier(
+  ContentLayerSnapshot layer,
+) {
+  return readBoundaryBackingCarrier(
+    layer,
+    (carrier) => (carrier as ContentLayerSnapshotBackingCarrier)
+        .contentLayerSnapshotBacking,
+  );
+}
+
+ScenePaletteSnapshotBacking? _scenePaletteSnapshotBackingFromCarrier(
+  ScenePaletteSnapshot palette,
+) {
+  return readBoundaryBackingCarrier(
+    palette,
+    (carrier) => (carrier as ScenePaletteSnapshotBackingCarrier)
+        .scenePaletteSnapshotBacking,
+  );
+}
+
+NodeSnapshotBacking? _nodeSnapshotBackingFromCarrier(NodeSnapshot snapshot) {
+  return readBoundaryBackingCarrier(
+    snapshot,
+    (carrier) => (carrier as NodeSnapshotBackingCarrier).nodeSnapshotBacking,
+  );
+}
+
+SceneSnapshotBacking _rebuildSceneSnapshotBacking(SceneSnapshot snapshot) {
+  requireExactBoundaryRuntimeType(
+    value: snapshot,
+    exactType: SceneSnapshot,
+    typeName: 'SceneSnapshot',
+  );
+  return SceneSnapshotBacking(
     layers: snapshot.layers
         .map(contentLayerSnapshotBackingOf)
         .toList(growable: false),
@@ -59,227 +158,48 @@ SceneSnapshotBacking sceneSnapshotBackingOf(SceneSnapshot snapshot) {
     background: _backgroundSnapshotBackingOf(snapshot.background),
     palette: scenePaletteSnapshotBackingOf(snapshot.palette),
   );
-  _sceneSnapshotBackingCache[snapshot] = backing;
-  return backing;
 }
 
-BackgroundLayerSnapshotBacking backgroundLayerSnapshotBackingOf(
+BackgroundLayerSnapshotBacking _rebuildBackgroundLayerSnapshotBacking(
   BackgroundLayerSnapshot layer,
 ) {
-  try {
-    return (layer as BackgroundLayerSnapshotBackingCarrier)
-        .backgroundLayerSnapshotBacking;
-  } on TypeError {
-    // Fall through to the public-field reconstruction path.
-  }
-  final cached = _backgroundLayerBackingCache[layer];
-  if (cached != null) {
-    return cached;
-  }
-  if (layer.runtimeType != BackgroundLayerSnapshot) {
-    throw StateError(
-      'Unsupported BackgroundLayerSnapshot subtype: ${layer.runtimeType}',
-    );
-  }
-  final backing = BackgroundLayerSnapshotBacking(
+  requireExactBoundaryRuntimeType(
+    value: layer,
+    exactType: BackgroundLayerSnapshot,
+    typeName: 'BackgroundLayerSnapshot',
+  );
+  return BackgroundLayerSnapshotBacking(
     nodes: layer.nodes.map(nodeSnapshotBackingOf).toList(growable: false),
   );
-  _backgroundLayerBackingCache[layer] = backing;
-  return backing;
 }
 
-ContentLayerSnapshotBacking contentLayerSnapshotBackingOf(
+ContentLayerSnapshotBacking _rebuildContentLayerSnapshotBacking(
   ContentLayerSnapshot layer,
 ) {
-  try {
-    return (layer as ContentLayerSnapshotBackingCarrier)
-        .contentLayerSnapshotBacking;
-  } on TypeError {
-    // Fall through to the public-field reconstruction path.
-  }
-  final cached = _contentLayerBackingCache[layer];
-  if (cached != null) {
-    return cached;
-  }
-  if (layer.runtimeType != ContentLayerSnapshot) {
-    throw StateError(
-      'Unsupported ContentLayerSnapshot subtype: ${layer.runtimeType}',
-    );
-  }
-  final backing = ContentLayerSnapshotBacking(
+  requireExactBoundaryRuntimeType(
+    value: layer,
+    exactType: ContentLayerSnapshot,
+    typeName: 'ContentLayerSnapshot',
+  );
+  return ContentLayerSnapshotBacking(
     id: layer.id,
     nodes: layer.nodes.map(nodeSnapshotBackingOf).toList(growable: false),
   );
-  _contentLayerBackingCache[layer] = backing;
-  return backing;
 }
 
-ScenePaletteSnapshotBacking scenePaletteSnapshotBackingOf(
+ScenePaletteSnapshotBacking _rebuildScenePaletteSnapshotBacking(
   ScenePaletteSnapshot palette,
 ) {
-  try {
-    return (palette as ScenePaletteSnapshotBackingCarrier)
-        .scenePaletteSnapshotBacking;
-  } on TypeError {
-    // Fall through to the public-field reconstruction path.
-  }
-  final cached = _paletteBackingCache[palette];
-  if (cached != null) {
-    return cached;
-  }
-  if (palette.runtimeType != ScenePaletteSnapshot) {
-    throw StateError(
-      'Unsupported ScenePaletteSnapshot subtype: ${palette.runtimeType}',
-    );
-  }
-  final backing = ScenePaletteSnapshotBacking(
+  requireExactBoundaryRuntimeType(
+    value: palette,
+    exactType: ScenePaletteSnapshot,
+    typeName: 'ScenePaletteSnapshot',
+  );
+  return ScenePaletteSnapshotBacking(
     penColors: palette.penColors,
     backgroundColors: palette.backgroundColors,
     gridSizes: palette.gridSizes,
   );
-  _paletteBackingCache[palette] = backing;
-  return backing;
-}
-
-NodeSnapshotBacking nodeSnapshotBackingOf(NodeSnapshot snapshot) {
-  try {
-    return (snapshot as NodeSnapshotBackingCarrier).nodeSnapshotBacking;
-  } on TypeError {
-    // Fall through to the public-field reconstruction path.
-  }
-  final cached = _nodeSnapshotBackingCache[snapshot];
-  if (cached != null) {
-    return cached;
-  }
-  final backing = _publicNodeSnapshotBackingOf(snapshot);
-  _nodeSnapshotBackingCache[snapshot] = backing;
-  return backing;
-}
-
-NodeSnapshotBacking _publicNodeSnapshotBackingOf(NodeSnapshot snapshot) {
-  if (snapshot.runtimeType == ImageNodeSnapshot) {
-    final image = snapshot as ImageNodeSnapshot;
-    return ImageNodeSnapshotBacking(
-      id: image.id,
-      instanceRevision: image.instanceRevision,
-      imageId: image.imageId,
-      size: image.size,
-      naturalSize: image.naturalSize,
-      transform: image.transform,
-      opacity: image.opacity,
-      hitPadding: image.hitPadding,
-      isVisible: image.isVisible,
-      isSelectable: image.isSelectable,
-      isLocked: image.isLocked,
-      isDeletable: image.isDeletable,
-      isTransformable: image.isTransformable,
-    );
-  }
-  if (snapshot.runtimeType == TextNodeSnapshot) {
-    final text = snapshot as TextNodeSnapshot;
-    return TextNodeSnapshotBacking(
-      id: text.id,
-      instanceRevision: text.instanceRevision,
-      text: text.text,
-      size: text.size,
-      fontSize: text.fontSize,
-      color: text.color,
-      align: text.align,
-      textDirection: text.textDirection,
-      isBold: text.isBold,
-      isItalic: text.isItalic,
-      isUnderline: text.isUnderline,
-      fontFamily: text.fontFamily,
-      maxWidth: text.maxWidth,
-      lineHeight: text.lineHeight,
-      transform: text.transform,
-      opacity: text.opacity,
-      hitPadding: text.hitPadding,
-      isVisible: text.isVisible,
-      isSelectable: text.isSelectable,
-      isLocked: text.isLocked,
-      isDeletable: text.isDeletable,
-      isTransformable: text.isTransformable,
-    );
-  }
-  if (snapshot.runtimeType == StrokeNodeSnapshot) {
-    final stroke = snapshot as StrokeNodeSnapshot;
-    return StrokeNodeSnapshotBacking(
-      id: stroke.id,
-      instanceRevision: stroke.instanceRevision,
-      points: stroke.points,
-      pointsRevision: stroke.pointsRevision,
-      thickness: stroke.thickness,
-      color: stroke.color,
-      transform: stroke.transform,
-      opacity: stroke.opacity,
-      hitPadding: stroke.hitPadding,
-      isVisible: stroke.isVisible,
-      isSelectable: stroke.isSelectable,
-      isLocked: stroke.isLocked,
-      isDeletable: stroke.isDeletable,
-      isTransformable: stroke.isTransformable,
-    );
-  }
-  if (snapshot.runtimeType == LineNodeSnapshot) {
-    final line = snapshot as LineNodeSnapshot;
-    return LineNodeSnapshotBacking(
-      id: line.id,
-      instanceRevision: line.instanceRevision,
-      start: line.start,
-      end: line.end,
-      thickness: line.thickness,
-      color: line.color,
-      transform: line.transform,
-      opacity: line.opacity,
-      hitPadding: line.hitPadding,
-      isVisible: line.isVisible,
-      isSelectable: line.isSelectable,
-      isLocked: line.isLocked,
-      isDeletable: line.isDeletable,
-      isTransformable: line.isTransformable,
-    );
-  }
-  if (snapshot.runtimeType == RectNodeSnapshot) {
-    final rect = snapshot as RectNodeSnapshot;
-    return RectNodeSnapshotBacking(
-      id: rect.id,
-      instanceRevision: rect.instanceRevision,
-      size: rect.size,
-      fillColor: rect.fillColor,
-      strokeColor: rect.strokeColor,
-      strokeWidth: rect.strokeWidth,
-      transform: rect.transform,
-      opacity: rect.opacity,
-      hitPadding: rect.hitPadding,
-      isVisible: rect.isVisible,
-      isSelectable: rect.isSelectable,
-      isLocked: rect.isLocked,
-      isDeletable: rect.isDeletable,
-      isTransformable: rect.isTransformable,
-    );
-  }
-  if (snapshot.runtimeType == PathNodeSnapshot) {
-    final path = snapshot as PathNodeSnapshot;
-    return PathNodeSnapshotBacking(
-      id: path.id,
-      instanceRevision: path.instanceRevision,
-      svgPathData: path.svgPathData,
-      fillColor: path.fillColor,
-      strokeColor: path.strokeColor,
-      strokeWidth: path.strokeWidth,
-      fillRule: path.fillRule,
-      transform: path.transform,
-      opacity: path.opacity,
-      hitPadding: path.hitPadding,
-      isVisible: path.isVisible,
-      isSelectable: path.isSelectable,
-      isLocked: path.isLocked,
-      isDeletable: path.isDeletable,
-      isTransformable: path.isTransformable,
-    );
-  }
-  throw StateError('Unsupported NodeSnapshot subtype: ${snapshot.runtimeType}');
 }
 
 SceneSnapshot materializeSceneSnapshotForInternalUse(
