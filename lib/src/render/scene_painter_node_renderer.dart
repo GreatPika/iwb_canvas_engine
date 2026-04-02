@@ -253,11 +253,13 @@ class SceneRichNodeRenderer {
     if (!node.transform.isFinite) {
       return;
     }
-    final safeSize = clampNonNegativeSizeFinite(node.size);
     final textLayoutCache = this.textLayoutCache;
     final textPainter = textLayoutCache != null
         ? textLayoutCache.getOrBuild(node: node)
         : buildSceneTextPainter(node: node);
+    final safeSize = clampNonNegativeSizeFinite(
+      Size(textPainter.width, textPainter.height),
+    );
 
     final alignOffset = scenePainterTextAlignOffset(
       node.align,

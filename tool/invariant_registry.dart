@@ -259,7 +259,8 @@ const List<Invariant> invariants = <Invariant>[
   Invariant(
     id: 'INV-ENG-TEXT-SIZE-DERIVED',
     scope: 'engine-controller',
-    title: 'TextNode.size is always derived from text layout inputs',
+    title:
+        'text bounds are derived from layout inputs and never cross typed or JSON boundaries as stored size data',
     primaryProof: PrimaryProof(
       path: 'test/controller/core/scene_controller_commit_atomicity_test.dart',
     ),

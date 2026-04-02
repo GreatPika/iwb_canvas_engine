@@ -3,6 +3,7 @@ import 'dart:ui';
 import '../core/geometry.dart';
 import '../core/local_bounds_policy.dart' hide isFiniteRect;
 import '../core/numeric_clamp.dart';
+import '../core/text_layout.dart';
 import '../contract/snapshot.dart';
 import '../contract/transform2d.dart';
 import 'render_geometry_entry.dart';
@@ -63,7 +64,11 @@ GeometryEntry _imageEntry(ImageNodeSnapshot node) {
 }
 
 GeometryEntry _textEntry(TextNodeSnapshot node) {
-  return _centeredRectEntry(node.size, node.transform);
+  final localBounds = centeredRectLocalBounds(_measureTextNodeSnapshot(node));
+  return GeometryEntry(
+    localBounds: localBounds,
+    worldBounds: _toWorldBounds(node.transform, localBounds),
+  );
 }
 
 GeometryEntry _lineEntry(LineNodeSnapshot node) {
@@ -156,9 +161,18 @@ Object _textValidityKey(
   TextNodeSnapshot node,
   ({double a, double b, double c, double d, double tx, double ty}) transformKey,
 ) {
+  final request = _textLayoutRequest(node);
   return _transformScopedValidityKey('text', transformKey, (
-    width: node.size.width,
-    height: node.size.height,
+    text: request.text,
+    fontSize: request.normalizedFontSize,
+    align: request.textAlign,
+    textDirection: request.textDirection,
+    isBold: request.isBold,
+    isItalic: request.isItalic,
+    isUnderline: request.isUnderline,
+    fontFamily: request.fontFamily,
+    lineHeight: request.normalizedLineHeight,
+    maxWidth: request.normalizedMaxWidth,
   ));
 }
 
@@ -235,4 +249,24 @@ PathFillType _fillTypeFromSnapshot(PathFillRule rule) {
   return rule == PathFillRule.evenOdd
       ? PathFillType.evenOdd
       : PathFillType.nonZero;
+}
+
+TextLayoutRequest _textLayoutRequest(TextNodeSnapshot node) {
+  return TextLayoutRequest(
+    text: node.text,
+    color: node.color,
+    fontSize: node.fontSize,
+    isBold: node.isBold,
+    isItalic: node.isItalic,
+    isUnderline: node.isUnderline,
+    textAlign: node.align,
+    fontFamily: node.fontFamily,
+    lineHeight: node.lineHeight,
+    maxWidth: node.maxWidth,
+    textDirection: node.textDirection,
+  );
+}
+
+Size _measureTextNodeSnapshot(TextNodeSnapshot node) {
+  return _textLayoutRequest(node).measure();
 }

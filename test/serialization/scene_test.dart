@@ -2,7 +2,6 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/core/text_layout.dart';
 
 void main() {
   test('encode -> decode -> encode is stable', () {
@@ -73,7 +72,7 @@ void main() {
     },
   );
 
-  test('decodeScene recomputes derived text size from content', () {
+  test('decodeScene rejects legacy text size in schemaVersion 7', () {
     final encoded = encodeScene(_buildScene());
     final textNode =
         ((encoded['layers'] as List<Object?>)[1]
@@ -86,25 +85,17 @@ void main() {
     textNodeMap['textDirection'] = 'rtl';
     textNodeMap['maxWidth'] = null;
 
-    final decoded = decodeScene(encoded);
-    final decodedText = decoded.layers[1].nodes[1] as TextNodeSnapshot;
-    final expectedSize = TextLayoutRequest(
-      text: decodedText.text,
-      color: decodedText.color,
-      fontSize: decodedText.fontSize,
-      isBold: decodedText.isBold,
-      isItalic: decodedText.isItalic,
-      isUnderline: decodedText.isUnderline,
-      textAlign: decodedText.align,
-      fontFamily: decodedText.fontFamily,
-      lineHeight: decodedText.lineHeight,
-      maxWidth: decodedText.maxWidth,
-      textDirection: decodedText.textDirection,
-    ).measure();
-
-    expect(decodedText.textDirection, TextDirection.rtl);
-    expect(decodedText.size, expectedSize);
-    expect(decodedText.size, isNot(const Size(1, 1)));
+    expect(
+      () => decodeScene(encoded),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers[1].nodes[1].size',
+        ),
+      ),
+    );
   });
 
   test('decodeScene rejects text payloads without textDirection', () {
@@ -133,21 +124,6 @@ void main() {
 }
 
 SceneSnapshot _buildScene() {
-  final textLayout = TextLayoutRequest(
-    text: 'Hello',
-    color: const Color(0xFF112233),
-    fontSize: 24,
-    isBold: true,
-    isItalic: false,
-    isUnderline: true,
-    textAlign: TextAlign.center,
-    fontFamily: 'Roboto',
-    lineHeight: 1.2,
-    maxWidth: 200,
-    textDirection: TextDirection.rtl,
-  );
-  final derivedTextSize = textLayout.measure();
-
   return SceneSnapshot(
     layers: <ContentLayerSnapshot>[
       ContentLayerSnapshot(id: 'layer-auto-1'),
@@ -175,7 +151,6 @@ SceneSnapshot _buildScene() {
           TextNodeSnapshot(
             id: 'text-1',
             text: 'Hello',
-            size: derivedTextSize,
             fontSize: 24,
             color: const Color(0xFF112233),
             align: TextAlign.center,

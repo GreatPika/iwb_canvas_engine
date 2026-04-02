@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../contract/internal/node_boundary_schema.dart';
 import '../contract/internal/snapshot_fast_path.dart';
+import '../contract/scene_data_exception.dart';
 import '../contract/validated/font_family_value.dart';
 import '../contract/validated/text_content_value.dart';
 import '../contract/validated/validated_value_support.dart';
@@ -21,10 +22,10 @@ TextNodeSnapshotSchemaFields _decodeTextFields(
   Map<String, Object?> json, {
   required String nodePath,
 }) {
+  _rejectLegacyTextSizeField(json, nodePath: nodePath);
   final textFields = _decodeTextSpecFields(json, nodePath: nodePath);
   return textNodeSnapshotSchemaFieldsFromValidated((
     text: textFields.text,
-    size: sceneBuilderRequireSize(json, 'size', pathPrefix: nodePath),
     fontSize: textFields.fontSize,
     color: textFields.color,
     align: textFields.align,
@@ -36,6 +37,21 @@ TextNodeSnapshotSchemaFields _decodeTextFields(
     maxWidth: textFields.maxWidth,
     lineHeight: textFields.lineHeight,
   ));
+}
+
+void _rejectLegacyTextSizeField(
+  Map<String, Object?> json, {
+  required String nodePath,
+}) {
+  if (!json.containsKey('size')) {
+    return;
+  }
+  throw SceneDataException(
+    code: SceneDataErrorCode.invalidValue,
+    path: sceneBuilderPathAt(nodePath, 'size'),
+    message: 'Text nodes must not contain the size field in schemaVersion 7.',
+    source: json['size'],
+  );
 }
 
 TextNodeSpecSchemaFields _decodeTextSpecFields(

@@ -326,7 +326,6 @@ void main() {
       final invalidAlignJson = _baseNodeJson(id: 't2', type: 'text')
         ..addAll(<String, Object?>{
           'text': 'Hello',
-          'size': <String, Object?>{'w': 10, 'h': 10},
           'fontSize': 12,
           'color': '#FF000000',
           'align': 'diagonal',
@@ -379,7 +378,6 @@ void main() {
       final raw = _sceneWithSingleNode(
         _baseNodeJson(id: 't1', type: 'text')..addAll(<String, Object?>{
           'text': 'Hello',
-          'size': <String, Object?>{'w': 10, 'h': 10},
           'fontSize': 12,
           'color': '#FF000000',
           'align': 'left',
@@ -502,7 +500,6 @@ void main() {
       final raw = _sceneWithSingleNode(
         _baseNodeJson(id: 't3', type: 'text')..addAll(<String, Object?>{
           'text': 'Hello',
-          'size': <String, Object?>{'w': 10, 'h': 10},
           'fontSize': 12,
           'color': '#FF000000',
           'align': 'diagonal',
@@ -816,7 +813,6 @@ void main() {
     final textJson = _baseNodeJson(id: 'text-overflow', type: 'text')
       ..addAll(<String, Object?>{
         'text': List<String>.filled(kMaxTextLength + 1, 'a').join(),
-        'size': <String, Object?>{'w': 1, 'h': 1},
         'fontSize': 14,
         'color': '#FF000000',
         'align': 'left',
@@ -833,6 +829,32 @@ void main() {
               e is SceneDataException &&
               e.code == SceneDataErrorCode.invalidValue &&
               e.path == 'layers[0].nodes[0].text',
+        ),
+      ),
+    );
+  });
+
+  test('decodeScene rejects oversized derived text bounds', () {
+    final textJson = _baseNodeJson(id: 'text-derived-overflow', type: 'text')
+      ..addAll(<String, Object?>{
+        'text': List<String>.filled(30000, 'W').join(),
+        'fontSize': 1000,
+        'color': '#FF000000',
+        'align': 'left',
+        'isBold': false,
+        'isItalic': false,
+        'isUnderline': false,
+        'maxWidth': null,
+      });
+
+    expect(
+      () => decodeScene(_sceneWithSingleNode(textJson)),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.outOfRange &&
+              e.path == 'layers[0].nodes[0].derivedBounds.w',
         ),
       ),
     );
@@ -917,7 +939,6 @@ void main() {
               TextNodeSnapshot(
                 id: id,
                 text: 'Hello',
-                size: const Size(10, 10),
                 fontSize: 12,
                 color: const Color(0xFF000000),
                 align: align,
@@ -1062,7 +1083,6 @@ void main() {
       final nodeJson = _baseNodeJson(id: 't-${entry.$1}', type: 'text')
         ..addAll(<String, Object?>{
           'text': 'Hello',
-          'size': <String, Object?>{'w': 10, 'h': 10},
           'fontSize': 12,
           'color': '#FF000000',
           'align': entry.$1,
@@ -1081,7 +1101,6 @@ void main() {
     final invalidAlignJson = _baseNodeJson(id: 't2', type: 'text')
       ..addAll(<String, Object?>{
         'text': 'Hello',
-        'size': <String, Object?>{'w': 10, 'h': 10},
         'fontSize': 12,
         'color': '#FF000000',
         'align': 'diagonal',
@@ -1103,7 +1122,7 @@ void main() {
     );
   });
 
-  test('decodeScene re-derives stale serialized text size on import', () {
+  test('decodeScene rejects legacy text size on import', () {
     // INV:INV-SER-TEXT-DIRECTION-EXPLICIT
     final nodeJson = _baseNodeJson(id: 't-derived', type: 'text')
       ..addAll(<String, Object?>{
@@ -1118,29 +1137,23 @@ void main() {
         'isUnderline': false,
       });
 
-    final decoded = decodeScene(_sceneWithSingleNode(nodeJson));
-    final text = decoded.layers.first.nodes.single as TextNodeSnapshot;
-    expect(text.textDirection, TextDirection.rtl);
-    expect(text.size, isNot(const Size(1, 1)));
-    expect(text.size.width, greaterThan(1));
-    expect(text.size.height, greaterThan(1));
-
-    final encoded = encodeScene(decoded);
-    final layers = encoded['layers'] as List<Object?>;
-    final layer = layers.single as Map<String, Object?>;
-    final nodes = layer['nodes'] as List<Object?>;
-    final encodedText = nodes.single as Map<String, Object?>;
-    expect(encodedText['textDirection'], 'rtl');
-    final encodedSize = encodedText['size'] as Map<String, Object?>;
-    expect(encodedSize['w'], closeTo(text.size.width, 0.001));
-    expect(encodedSize['h'], closeTo(text.size.height, 0.001));
+    expect(
+      () => decodeScene(_sceneWithSingleNode(nodeJson)),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers[0].nodes[0].size',
+        ),
+      ),
+    );
   });
 
   test('decodeScene rejects unknown textDirection', () {
     final invalidDirectionJson = _baseNodeJson(id: 't-direction', type: 'text')
       ..addAll(<String, Object?>{
         'text': 'Hello',
-        'size': <String, Object?>{'w': 10, 'h': 10},
         'fontSize': 12,
         'color': '#FF000000',
         'align': 'left',
@@ -1168,7 +1181,6 @@ void main() {
         _baseNodeJson(id: 't-missing-direction', type: 'text')
           ..addAll(<String, Object?>{
             'text': 'Hello',
-            'size': <String, Object?>{'w': 10, 'h': 10},
             'fontSize': 12,
             'color': '#FF000000',
             'align': 'left',
@@ -1193,8 +1205,7 @@ void main() {
     );
   });
 
-  test('encodeScene re-derives stale text size before JSON export', () {
-    const staleSize = Size(1, 1);
+  test('encodeScene omits derived text size from JSON export', () {
     final snapshot = SceneSnapshot(
       layers: <ContentLayerSnapshot>[
         ContentLayerSnapshot(
@@ -1203,7 +1214,6 @@ void main() {
             TextNodeSnapshot(
               id: 't-encode-derived',
               text: 'Derived text size',
-              size: staleSize,
               fontSize: 24,
               color: Color(0xFF000000),
               align: TextAlign.left,
@@ -1235,12 +1245,10 @@ void main() {
     final layer = layers.single as Map<String, Object?>;
     final nodes = layer['nodes'] as List<Object?>;
     final encodedText = nodes.single as Map<String, Object?>;
-    final encodedSize = encodedText['size'] as Map<String, Object?>;
 
-    expect(encodedSize['w'], isNot(staleSize.width));
-    expect(encodedSize['h'], isNot(staleSize.height));
-    expect(encodedSize['w'], closeTo(expectedSize.width, 0.001));
-    expect(encodedSize['h'], closeTo(expectedSize.height, 0.001));
+    expect(encodedText.containsKey('size'), isFalse);
+    expect(expectedSize.width, greaterThan(0));
+    expect(expectedSize.height, greaterThan(0));
   });
 
   test('decodeScene validates point and optional field types', () {
@@ -1284,7 +1292,6 @@ void main() {
     final textJson = _baseNodeJson(id: 't1', type: 'text')
       ..addAll(<String, Object?>{
         'text': 'Hello',
-        'size': <String, Object?>{'w': 10, 'h': 10},
         'fontSize': 12,
         'color': '#FF000000',
         'align': 'left',
@@ -1308,7 +1315,6 @@ void main() {
     final textJsonWidth = _baseNodeJson(id: 't2', type: 'text')
       ..addAll(<String, Object?>{
         'text': 'Hello',
-        'size': <String, Object?>{'w': 10, 'h': 10},
         'fontSize': 12,
         'color': '#FF000000',
         'align': 'left',
@@ -1536,7 +1542,6 @@ void main() {
       final textJson = _baseNodeJson(id: 't-overlong-font-family', type: 'text')
         ..addAll(<String, Object?>{
           'text': 'Hello',
-          'size': <String, Object?>{'w': 10, 'h': 10},
           'fontSize': 12,
           'color': '#FF000000',
           'align': 'left',
@@ -2119,7 +2124,6 @@ void main() {
     final nonFiniteMaxWidth = _baseNodeJson(id: 't1', type: 'text')
       ..addAll(<String, Object?>{
         'text': 'Hello',
-        'size': <String, Object?>{'w': 10, 'h': 10},
         'fontSize': 12,
         'color': '#FF000000',
         'align': 'left',
@@ -2143,7 +2147,6 @@ void main() {
     final nonPositiveMaxWidth = _baseNodeJson(id: 't1', type: 'text')
       ..addAll(<String, Object?>{
         'text': 'Hello',
-        'size': <String, Object?>{'w': 10, 'h': 10},
         'fontSize': 12,
         'color': '#FF000000',
         'align': 'left',
@@ -2450,7 +2453,6 @@ void main() {
               common: nodeSnapshotCommonFieldsFromValidated(id: 't1'),
               fields: (
                 text: 'Hello',
-                size: const Size(10, 10),
                 fontSize: 0,
                 color: const Color(0xFF000000),
                 align: TextAlign.left,

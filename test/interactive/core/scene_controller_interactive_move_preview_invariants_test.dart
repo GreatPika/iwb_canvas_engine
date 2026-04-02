@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart' hide NodeId;
 import 'package:iwb_canvas_engine/src/core/scene.dart';
+import 'package:iwb_canvas_engine/src/core/text_layout.dart';
 
 import '../test_support/interactive_controller_fixtures.dart';
 
@@ -13,7 +14,6 @@ void main() {
       final text = TextNode(
         id: 'text',
         text: 'note',
-        size: const Size(40, 20),
         color: const Color(0xFF000000),
       )..position = const Offset(100, 100);
       final controller = controllerFromScene(
@@ -32,8 +32,11 @@ void main() {
         textSnapshotBeforeMove.transform.tx,
         textSnapshotBeforeMove.transform.ty,
       );
+      final textSize = TextLayoutRequest.forSnapshot(
+        textSnapshotBeforeMove,
+      ).measure();
       final originalOnlyPoint = Offset(
-        originalCenter.dx - textSnapshotBeforeMove.size.width / 2 + 2,
+        originalCenter.dx - textSize.width / 2 + 2,
         originalCenter.dy,
       );
       final movedPoint = originalCenter.translate(40, 0);
@@ -191,13 +194,11 @@ void main() {
         final baseline = TextNode(
           id: 'baseline',
           text: 'baseline',
-          size: const Size(50, 20),
           color: const Color(0xFF000000),
         )..position = const Offset(40, 40);
         final locked = TextNode(
           id: 'locked',
           text: 'locked',
-          size: const Size(50, 20),
           color: const Color(0xFF000000),
           isLocked: true,
         )..position = const Offset(140, 40);

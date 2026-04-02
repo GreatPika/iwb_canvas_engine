@@ -17,6 +17,9 @@ void main() {
     final boxNodesSource = File(
       'lib/src/core/box_nodes.dart',
     ).readAsStringSync();
+    final textNodeLayoutStateSource = File(
+      'lib/src/core/text_node_layout_state.dart',
+    ).readAsStringSync();
     final vectorNodesSource = File(
       'lib/src/core/vector_nodes.dart',
     ).readAsStringSync();
@@ -37,6 +40,12 @@ void main() {
       boxNodesSource,
       contains('abstract final class _BoxNodePlacementOwner'),
     );
+    expect(boxNodesSource, isNot(contains('TextLayoutRequest(')));
+    expect(
+      textNodeLayoutStateSource,
+      contains('final class TextNodeLayoutState'),
+    );
+    expect(textNodeLayoutStateSource, contains('TextLayoutRequest('));
     expect(
       vectorNodesSource,
       contains('abstract final class _VectorNodeGeometryOwner'),
@@ -46,7 +55,6 @@ void main() {
       contains('final class _PathNodeLocalPathCacheOwner'),
     );
     expect(sceneNodeSource, isNot(contains('TextLayoutRequest')));
-    expect(boxNodesSource, isNot(contains('recomputeDerivedTextSize(')));
     expect(vectorNodesSource, isNot(contains('_ActionPayloadReader')));
     expect(pathNodeSource, isNot(contains('_GeneratedIdAllocator')));
   });
@@ -150,7 +158,6 @@ void main() {
     final text = TextNode.fromTopLeftWorld(
       id: 'txt',
       text: 'hello',
-      size: const Size(40, 12),
       topLeftWorld: const Offset(3, 4),
       color: const Color(0xFF000000),
     );

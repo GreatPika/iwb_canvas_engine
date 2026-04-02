@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:ui';
 
-import '../core/text_layout.dart';
 import '../core/scene.dart';
 import '../core/scene_limits.dart'
     show
@@ -236,7 +235,6 @@ List<Map<String, dynamic>> _encodeLayerNodes(
 ) {
   final fields = textNodeSnapshotSchemaFieldsFromValidated((
     text: node.text,
-    size: node.size,
     fontSize: node.fontSize,
     color: node.color,
     align: node.align,
@@ -248,12 +246,10 @@ List<Map<String, dynamic>> _encodeLayerNodes(
     maxWidth: node.maxWidth,
     lineHeight: node.lineHeight,
   ));
-  final canonicalSize = _deriveCanonicalTextSize(fields);
   return (
     type: 'text',
     fields: <String, dynamic>{
       'text': fields.text,
-      'size': _encodeSize(canonicalSize),
       'fontSize': fields.fontSize,
       'color': _colorToHex(fields.color),
       'align': _textAlignToString(fields.align),
@@ -531,22 +527,6 @@ Map<String, dynamic> _encodeOutlinedShapeFieldMap(
 
 Map<String, double> _encodeOffset(Offset offset) {
   return <String, double>{'x': offset.dx, 'y': offset.dy};
-}
-
-Size _deriveCanonicalTextSize(TextNodeSnapshotSchemaFields fields) {
-  return TextLayoutRequest(
-    text: fields.text,
-    color: fields.color,
-    fontSize: fields.fontSize,
-    isBold: fields.isBold,
-    isItalic: fields.isItalic,
-    isUnderline: fields.isUnderline,
-    textAlign: fields.align,
-    fontFamily: fields.fontFamily,
-    lineHeight: fields.lineHeight,
-    maxWidth: fields.maxWidth,
-    textDirection: fields.textDirection,
-  ).measure();
 }
 
 Map<String, dynamic> _encodeTransform2D(Transform2D transform) {

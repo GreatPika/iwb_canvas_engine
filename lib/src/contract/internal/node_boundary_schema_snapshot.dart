@@ -21,7 +21,6 @@ typedef NodeSnapshotCommonSchemaFields = ({
 
 typedef TextNodeSnapshotSchemaFields = ({
   String text,
-  Size size,
   double fontSize,
   Color color,
   TextAlign align,
@@ -124,7 +123,6 @@ TextNodeSnapshotSchemaFields validateTextNodeSnapshotSchemaFields(
   ));
   return (
     text: textFields.text,
-    size: validateNonNegativeSize(fields.size, name: 'size'),
     fontSize: textFields.fontSize,
     color: textFields.color,
     align: textFields.align,
@@ -156,7 +154,6 @@ TextNodeSnapshotSchemaFields textNodeSnapshotSchemaFieldsFromValidated(
   ));
   return (
     text: textFields.text,
-    size: fields.size,
     fontSize: textFields.fontSize,
     color: textFields.color,
     align: textFields.align,

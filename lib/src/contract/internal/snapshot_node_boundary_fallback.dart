@@ -46,7 +46,6 @@ TextNodeSnapshotBacking _textNodeSnapshotBacking(TextNodeSnapshot text) {
     id: text.id,
     instanceRevision: text.instanceRevision,
     text: text.text,
-    size: text.size,
     fontSize: text.fontSize,
     color: text.color,
     align: text.align,

@@ -5,6 +5,7 @@ import '../contract/transform2d.dart';
 import 'local_bounds_policy.dart';
 import 'numeric_tolerance.dart' show kUiEpsilonSquared;
 import 'scene_node.dart';
+import 'text_node_layout_state.dart';
 
 /// Raster image node referenced by [imageId] and drawn at [size].
 class ImageNode extends SceneNode {
@@ -77,22 +78,21 @@ class ImageNode extends SceneNode {
   Rect get localBounds => _BoxNodePlacementOwner.localRect(size);
 }
 
-/// Text node with derived layout box ([size]) and basic styling.
+/// Text node with layout-derived bounds and basic styling.
 class TextNode extends SceneNode {
   TextNode({
     required super.id,
-    required this.text,
-    required this.size,
-    this.fontSize = 24,
+    required String text,
+    double fontSize = 24,
     required this.color,
-    this.align = TextAlign.left,
-    this.textDirection = TextDirection.ltr,
-    this.isBold = false,
-    this.isItalic = false,
-    this.isUnderline = false,
-    this.fontFamily,
-    this.maxWidth,
-    this.lineHeight,
+    TextAlign align = TextAlign.left,
+    TextDirection textDirection = TextDirection.ltr,
+    bool isBold = false,
+    bool isItalic = false,
+    bool isUnderline = false,
+    String? fontFamily,
+    double? maxWidth,
+    double? lineHeight,
     super.instanceRevision,
     super.hitPadding,
     super.transform,
@@ -102,7 +102,19 @@ class TextNode extends SceneNode {
     super.isLocked,
     super.isDeletable,
     super.isTransformable,
-  }) : super(type: NodeType.text);
+  }) : _layoutState = TextNodeLayoutState(
+         text: text,
+         fontSize: fontSize,
+         align: align,
+         textDirection: textDirection,
+         isBold: isBold,
+         isItalic: isItalic,
+         isUnderline: isUnderline,
+         fontFamily: fontFamily,
+         maxWidth: maxWidth,
+         lineHeight: lineHeight,
+       ),
+       super(type: NodeType.text);
 
   /// Creates a text node positioned by its axis-aligned world top-left corner.
   ///
@@ -111,7 +123,6 @@ class TextNode extends SceneNode {
   factory TextNode.fromTopLeftWorld({
     required NodeId id,
     required String text,
-    required Size size,
     required Offset topLeftWorld,
     double fontSize = 24,
     required Color color,
@@ -131,47 +142,67 @@ class TextNode extends SceneNode {
     bool isDeletable = true,
     bool isTransformable = true,
   }) {
-    return _BoxNodePlacementOwner.createFromTopLeftWorld(
-      size: size,
-      topLeftWorld: topLeftWorld,
-      create: (transform) => TextNode(
-        id: id,
-        text: text,
-        size: size,
-        fontSize: fontSize,
-        color: color,
-        align: align,
-        textDirection: textDirection,
-        isBold: isBold,
-        isItalic: isItalic,
-        isUnderline: isUnderline,
-        fontFamily: fontFamily,
-        maxWidth: maxWidth,
-        lineHeight: lineHeight,
-        hitPadding: hitPadding,
-        transform: transform,
-        opacity: opacity,
-        isVisible: isVisible,
-        isSelectable: isSelectable,
-        isLocked: isLocked,
-        isDeletable: isDeletable,
-        isTransformable: isTransformable,
-      ),
+    final node = TextNode(
+      id: id,
+      text: text,
+      fontSize: fontSize,
+      color: color,
+      align: align,
+      textDirection: textDirection,
+      isBold: isBold,
+      isItalic: isItalic,
+      isUnderline: isUnderline,
+      fontFamily: fontFamily,
+      maxWidth: maxWidth,
+      lineHeight: lineHeight,
+      hitPadding: hitPadding,
+      opacity: opacity,
+      isVisible: isVisible,
+      isSelectable: isSelectable,
+      isLocked: isLocked,
+      isDeletable: isDeletable,
+      isTransformable: isTransformable,
     );
+    node.transform = _BoxNodePlacementOwner.transformFromTopLeftWorld(
+      size: node._layoutState.derivedSize(color: node.color),
+      topLeftWorld: topLeftWorld,
+    );
+    return node;
   }
 
-  String text;
-  Size size;
-  double fontSize;
+  final TextNodeLayoutState _layoutState;
+
+  String get text => _layoutState.text;
+  set text(String value) => _layoutState.text = value;
+
+  double get fontSize => _layoutState.fontSize;
+  set fontSize(double value) => _layoutState.fontSize = value;
+
   Color color;
-  TextAlign align;
-  TextDirection textDirection;
-  bool isBold;
-  bool isItalic;
-  bool isUnderline;
-  String? fontFamily;
-  double? maxWidth;
-  double? lineHeight;
+
+  TextAlign get align => _layoutState.align;
+  set align(TextAlign value) => _layoutState.align = value;
+
+  TextDirection get textDirection => _layoutState.textDirection;
+  set textDirection(TextDirection value) => _layoutState.textDirection = value;
+
+  bool get isBold => _layoutState.isBold;
+  set isBold(bool value) => _layoutState.isBold = value;
+
+  bool get isItalic => _layoutState.isItalic;
+  set isItalic(bool value) => _layoutState.isItalic = value;
+
+  bool get isUnderline => _layoutState.isUnderline;
+  set isUnderline(bool value) => _layoutState.isUnderline = value;
+
+  String? get fontFamily => _layoutState.fontFamily;
+  set fontFamily(String? value) => _layoutState.fontFamily = value;
+
+  double? get maxWidth => _layoutState.maxWidth;
+  set maxWidth(double? value) => _layoutState.maxWidth = value;
+
+  double? get lineHeight => _layoutState.lineHeight;
+  set lineHeight(double? value) => _layoutState.lineHeight = value;
 
   /// Axis-aligned world top-left corner of this node's bounds.
   ///
@@ -181,7 +212,8 @@ class TextNode extends SceneNode {
       _BoxNodePlacementOwner.setTopLeftWorld(node: this, value: value);
 
   @override
-  Rect get localBounds => _BoxNodePlacementOwner.localRect(size);
+  Rect get localBounds =>
+      _BoxNodePlacementOwner.localRect(_layoutState.derivedSize(color: color));
 }
 
 /// Box node with optional fill and stroke.

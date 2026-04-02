@@ -32,7 +32,6 @@ void main() {
                 TextNodeSnapshot(
                   id: 'text-node',
                   text: 'hello',
-                  size: const Size(120, 40),
                   color: const Color(0xFF000000),
                   textDirection: TextDirection.ltr,
                   transform: Transform2D.translation(const Offset(120, 120)),

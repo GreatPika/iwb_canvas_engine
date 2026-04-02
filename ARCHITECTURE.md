@@ -15,7 +15,7 @@ constraints that keep the public API stable.
 - Public entrypoint: `package:iwb_canvas_engine/iwb_canvas_engine.dart`
 - Supported public surface: exactly the exports declared by
   `lib/iwb_canvas_engine.dart`
-- Current serialization contract: write `schemaVersion = 6`, read `{6}`
+- Current serialization contract: write `schemaVersion = 7`, read `{7}`
 - Public interactive runtime root: `SceneController`
 - Public interactive widget: `SceneView`
 - Public write boundary: `SceneWriteTxn`
@@ -393,9 +393,11 @@ most important architectural rules are:
   write path materializes it.
 - Content layers are addressed by stable `LayerId`; z-order is defined only by
   list order.
-- `TextNode.size` is derived from text layout inputs and is not a writable
-  public field; `TextNodeSnapshot.size` is canonical output metadata and is
-  non-authoritative on import.
+- Text bounds are derived from text layout inputs and do not cross runtime,
+  snapshot, or JSON boundaries as stored `size` data.
+- Import/decode range policy still validates derived text bounds against scene
+  size limits even though text size is no longer stored on typed or JSON
+  boundaries.
 - Text layout semantics are model-owned: text nodes carry explicit
   `textDirection`, the current schema requires it during decode, and
   render/layout paths consume the node contract instead of a separate

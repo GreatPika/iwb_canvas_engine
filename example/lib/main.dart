@@ -4,8 +4,8 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:vector_math/vector_math_64.dart' show Vector3;
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:vector_math/vector_math_64.dart' show Vector3;
 
 void main() {
   runApp(const CanvasExampleApp());
@@ -943,6 +943,7 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     final scaleY = _scaleYFromTransform(node.transform);
     final alignment = _mapTextAlignToAlignment(node.align);
     final lineHeight = node.lineHeight;
+    final textSize = _measureTextNode(node);
 
     return Positioned(
       left: viewPosition.dx,
@@ -954,8 +955,8 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
         child: FractionalTranslation(
           translation: const Offset(-0.5, -0.5),
           child: SizedBox(
-            width: node.size.width,
-            height: node.size.height,
+            width: textSize.width,
+            height: textSize.height,
             child: OverflowBox(
               maxWidth: 3000,
               maxHeight: 2000,
@@ -999,6 +1000,41 @@ class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
         ),
       ),
     );
+  }
+
+  Size _measureTextNode(TextNodeSnapshot node) {
+    final safeFontSize = node.fontSize > 0 && node.fontSize.isFinite
+        ? node.fontSize
+        : 24.0;
+    final lineHeight = node.lineHeight;
+    final maxWidth = node.maxWidth;
+    final painter = TextPainter(
+      text: TextSpan(
+        text: node.text,
+        style: TextStyle(
+          color: node.color,
+          fontSize: safeFontSize,
+          fontFamily: node.fontFamily,
+          fontWeight: node.isBold ? FontWeight.bold : FontWeight.normal,
+          fontStyle: node.isItalic ? FontStyle.italic : FontStyle.normal,
+          decoration: node.isUnderline
+              ? TextDecoration.underline
+              : TextDecoration.none,
+          height: lineHeight == null || !lineHeight.isFinite || lineHeight <= 0
+              ? null
+              : lineHeight / safeFontSize,
+        ),
+      ),
+      textAlign: node.align,
+      textDirection: node.textDirection,
+      maxLines: null,
+    );
+    if (maxWidth == null || !maxWidth.isFinite || maxWidth <= 0) {
+      painter.layout();
+    } else {
+      painter.layout(maxWidth: maxWidth);
+    }
+    return Size(painter.width, painter.height);
   }
 
   Alignment _mapTextAlignToAlignment(TextAlign align) {

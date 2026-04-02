@@ -384,7 +384,6 @@ void main() {
         final text = TextNode(
           id: 'node',
           text: 'hello',
-          size: const Size(80, 24),
           color: const Color(0xFF000000),
         )..position = const Offset(60, 60);
         late SceneController controller;

@@ -122,7 +122,6 @@ void main() {
     final text = TextNodeSnapshot(
       id: 'txt-1',
       text: 'hello',
-      size: Size(50, 20),
       fontSize: 18,
       color: Color(0xFF0000FF),
       align: TextAlign.center,
@@ -205,7 +204,6 @@ void main() {
     final text = TextNodeSnapshot(
       id: 't-runtime',
       text: 'runtime',
-      size: const Size(10, 10),
       color: const Color(0xFF010203),
       textDirection: TextDirection.ltr,
     );

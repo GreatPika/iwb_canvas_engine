@@ -89,7 +89,6 @@ SceneNode txnNodeFromSnapshot(
   return sceneNodeFromSnapshotViaBoundarySchema(
     node,
     instanceRevision: instanceRevision,
-    textSizePolicy: TextNodeSnapshotSizePolicy.recomputeFromLayout,
   );
 }
 

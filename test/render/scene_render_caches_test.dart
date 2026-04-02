@@ -231,7 +231,6 @@ TextNodeSnapshot _textNode() {
   return TextNodeSnapshot(
     id: 'text',
     text: 'cache',
-    size: const Size(80, 24),
     fontSize: 14,
     color: const Color(0xFF000000),
     textDirection: TextDirection.ltr,

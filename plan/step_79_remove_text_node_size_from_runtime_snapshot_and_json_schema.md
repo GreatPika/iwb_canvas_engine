@@ -261,7 +261,7 @@ language: russian
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Runtime Text Node Without Stored Size
+### Slice 1. [x] Runtime Text Node Without Stored Size
 
 #### Slice Contract
 
@@ -294,7 +294,7 @@ language: russian
 
 - Green run of the listed verifications.
 
-### Slice 2. [ ] Snapshot Boundary And Render Path Without Text Size
+### Slice 2. [x] Snapshot Boundary And Render Path Without Text Size
 
 #### Slice Contract
 
@@ -335,7 +335,7 @@ Text snapshot/export/import/render paths no longer transport or consume a stored
 
 - Green run of the listed verifications.
 
-### Slice 3. [ ] Schema Version 7 Text JSON Without `size`
+### Slice 3. [x] Schema Version 7 Text JSON Without `size`
 
 #### Slice Contract
 

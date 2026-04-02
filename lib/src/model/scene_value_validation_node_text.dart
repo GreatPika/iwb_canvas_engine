@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import '../contract/snapshot.dart';
 import '../contract/validated/font_family_value.dart';
 import '../contract/validated/text_content_value.dart';
@@ -14,7 +12,6 @@ void sceneValidateTextNodeSnapshot(
 }) {
   _sceneValidateTextNodeFields(
     textValue: text.text,
-    size: text.size,
     fontSize: text.fontSize,
     fontFamily: text.fontFamily,
     maxWidth: text.maxWidth,
@@ -31,7 +28,6 @@ void sceneValidateTextNode(
 }) {
   _sceneValidateTextNodeFields(
     textValue: text.text,
-    size: text.size,
     fontSize: text.fontSize,
     fontFamily: text.fontFamily,
     maxWidth: text.maxWidth,
@@ -43,7 +39,6 @@ void sceneValidateTextNode(
 
 void _sceneValidateTextNodeFields({
   required String textValue,
-  required Size size,
   required double fontSize,
   required String? fontFamily,
   required double? maxWidth,
@@ -57,7 +52,6 @@ void _sceneValidateTextNodeFields({
     onError: onError,
     validate: () => TextContentValue.of(textValue, name: '$field.text'),
   );
-  sceneValidateNonNegativeSize(size, field: '$field.size', onError: onError);
   sceneValidatePositiveDouble(
     fontSize,
     field: '$field.fontSize',

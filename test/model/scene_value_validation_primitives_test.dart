@@ -120,7 +120,6 @@ void main() {
             id: 'node-0',
             instanceRevision: 1,
             text: 'hello',
-            size: const Size(1, 1),
             fontSize: 16,
             color: const Color(0xFF000000),
             fontFamily: 'Inter',

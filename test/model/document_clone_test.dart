@@ -35,7 +35,6 @@ void main() {
             TextNode(
               id: 'node-2',
               text: 'hello',
-              size: const Size(10, 5),
               fontSize: 12,
               color: const Color(0xFF111111),
               align: TextAlign.right,

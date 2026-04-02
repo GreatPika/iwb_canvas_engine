@@ -5,8 +5,6 @@ import '../contract/snapshot.dart';
 import '../contract/transform2d.dart';
 import '../core/nodes.dart';
 
-enum TextNodeSnapshotSizePolicy { preserveBoundarySize, recomputeFromLayout }
-
 typedef RuntimeNodeCommonFields = ({
   NodeId id,
   int instanceRevision,

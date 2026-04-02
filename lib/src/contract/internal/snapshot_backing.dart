@@ -164,7 +164,6 @@ final class TextNodeSnapshotBacking extends NodeSnapshotBacking {
     required super.id,
     super.instanceRevision,
     required this.text,
-    required this.size,
     this.fontSize = 24,
     required this.color,
     this.align = TextAlign.left,
@@ -186,7 +185,6 @@ final class TextNodeSnapshotBacking extends NodeSnapshotBacking {
   });
 
   final String text;
-  final Size size;
   final double fontSize;
   final Color color;
   final TextAlign align;
@@ -392,7 +390,6 @@ TextNodeSnapshotBacking textNodeSnapshotBackingFromValidated({
     id: common.id,
     instanceRevision: common.instanceRevision,
     text: fields.text,
-    size: fields.size,
     fontSize: fields.fontSize,
     color: fields.color,
     align: fields.align,

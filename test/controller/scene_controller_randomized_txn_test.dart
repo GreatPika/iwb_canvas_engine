@@ -9,6 +9,7 @@ import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_invariants.dart';
 import 'package:iwb_canvas_engine/src/core/revision_policy.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart' show Scene;
+import 'package:iwb_canvas_engine/src/core/text_layout.dart';
 import 'package:iwb_canvas_engine/src/model/document.dart';
 import 'package:iwb_canvas_engine/src/model/document_clone.dart';
 
@@ -666,8 +667,9 @@ void _assertFiniteSnapshotNumbers({
             reason: '$nodeCtx line',
           );
         case TextNodeSnapshot():
+          final derivedSize = TextLayoutRequest.forSnapshot(node).measure();
           expect(
-            _isFiniteSize(node.size) &&
+            _isFiniteSize(derivedSize) &&
                 node.fontSize.isFinite &&
                 node.fontSize > 0,
             isTrue,

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 6,
+  "schemaVersion": 7,
   "camera": { "offsetX": 7.0, "offsetY": -3.0 },
   "background": {
     "color": "#FFFFFFFF",
@@ -118,7 +118,6 @@
           "isDeletable": true,
           "isTransformable": true,
           "text": "Hello",
-          "size": { "w": 120.0, "h": 1.0 },
           "fontSize": 24.0,
           "color": "#FF112233",
           "align": "center",

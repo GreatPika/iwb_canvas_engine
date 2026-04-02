@@ -4,6 +4,7 @@ import '../contract/snapshot.dart';
 import '../contract/transform2d.dart';
 import '../core/scene.dart';
 import '../core/scene_limits.dart';
+import '../core/text_layout.dart';
 import 'scene_structural_limits.dart';
 import 'scene_value_validation.dart';
 
@@ -239,8 +240,6 @@ void _validateImageNodeRanges(ImageNodeSnapshot image, String field) {
 }
 
 void _validateTextNodeRanges(TextNodeSnapshot text, String field) {
-  _validateSize(text.size.width, '$field.size.w');
-  _validateSize(text.size.height, '$field.size.h');
   _validateInRange(
     text.fontSize,
     min: 0,
@@ -249,6 +248,9 @@ void _validateTextNodeRanges(TextNodeSnapshot text, String field) {
   );
   _validateOptionalNodeSize(text.maxWidth, '$field.maxWidth');
   _validateOptionalNodeSize(text.lineHeight, '$field.lineHeight');
+  final derivedBounds = TextLayoutRequest.forSnapshot(text).measure();
+  _validateSize(derivedBounds.width, '$field.derivedBounds.w');
+  _validateSize(derivedBounds.height, '$field.derivedBounds.h');
 }
 
 void _validateStrokeNodeRanges(StrokeNodeSnapshot stroke, String field) {

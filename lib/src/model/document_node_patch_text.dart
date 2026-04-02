@@ -1,6 +1,5 @@
 import '../contract/node_patch.dart';
 import '../core/nodes.dart';
-import '../core/text_layout.dart';
 import 'document_node_patch_common.dart';
 
 bool txnApplyTextNodePatch(
@@ -11,8 +10,6 @@ bool txnApplyTextNodePatch(
   var changed = _txnApplyTextContentPatch(text, patch, dryRun: dryRun);
   changed =
       _txnApplyTextLayoutStylePatch(text, patch, dryRun: dryRun) || changed;
-  changed =
-      _txnRecomputeTextSizeAfterPatch(text, patch, dryRun: dryRun) || changed;
   return changed;
 }
 
@@ -40,31 +37,6 @@ bool _txnApplyTextLayoutStylePatch(
     _textLayoutPatchAssignments,
     dryRun: dryRun,
   );
-}
-
-bool _txnRecomputeTextSizeAfterPatch(
-  TextNode text,
-  TextNodePatch patch, {
-  required bool dryRun,
-}) {
-  if (dryRun || !_txnTextPatchTouchesLayout(patch)) {
-    return false;
-  }
-  final beforeSize = text.size;
-  recomputeDerivedTextSize(text);
-  return text.size != beforeSize;
-}
-
-bool _txnTextPatchTouchesLayout(TextNodePatch patch) {
-  return !patch.text.isAbsent ||
-      !patch.fontSize.isAbsent ||
-      !patch.textDirection.isAbsent ||
-      !patch.isBold.isAbsent ||
-      !patch.isItalic.isAbsent ||
-      !patch.isUnderline.isAbsent ||
-      !patch.fontFamily.isAbsent ||
-      !patch.lineHeight.isAbsent ||
-      !patch.maxWidth.isAbsent;
 }
 
 final List<TxnPatchAssignment<TextNode, TextNodePatch>>

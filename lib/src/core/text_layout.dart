@@ -1,6 +1,6 @@
 import 'package:flutter/painting.dart';
 
-import 'nodes.dart';
+import '../contract/snapshot.dart';
 import 'numeric_clamp.dart';
 
 const TextDirection kDerivedTextLayoutDirection = TextDirection.ltr;
@@ -20,7 +20,7 @@ class TextLayoutRequest {
     this.textDirection = kDerivedTextLayoutDirection,
   });
 
-  factory TextLayoutRequest.forNode(TextNode node) {
+  factory TextLayoutRequest.forSnapshot(TextNodeSnapshot node) {
     return TextLayoutRequest(
       text: node.text,
       color: node.color,
@@ -98,8 +98,4 @@ double? normalizeTextLayoutMaxWidth(double? maxWidth) {
   if (maxWidth == null) return null;
   if (!maxWidth.isFinite || maxWidth <= 0) return null;
   return maxWidth;
-}
-
-void recomputeDerivedTextSize(TextNode node) {
-  node.size = TextLayoutRequest.forNode(node).measure();
 }

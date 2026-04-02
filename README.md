@@ -10,7 +10,7 @@ storage.
 
 - Current package version: `5.1.0`
 - Single public import: `package:iwb_canvas_engine/iwb_canvas_engine.dart`
-- JSON contract: write `schemaVersion = 6`, read `{6}`
+- JSON contract: write `schemaVersion = 7`, read `{7}`
 - Demo: https://greatpika.github.io/iwb_canvas_engine/demo/
 - Hosted API docs: https://greatpika.github.io/iwb_canvas_engine/api/
 - Full integration reference: `API_GUIDE.md`
@@ -131,9 +131,11 @@ class _CanvasScreenState extends State<CanvasScreen> {
 
 ## Runtime contracts worth knowing
 
-- `TextNode.size` and `TextNodeSnapshot.size` are derived metadata.
-  `TextNodeSpec` and `TextNodePatch` do not expose writable `size`, and import
-  paths may ignore incoming text `size` and recompute canonical bounds.
+- Text runtime and snapshot bounds are derived from text layout inputs.
+  `TextNode`, `TextNodeSnapshot`, `TextNodeSpec`, and `TextNodePatch` do not
+  expose writable text `size`, and schema-version-7 JSON rejects text payloads
+  that still contain `size`. Import/decode also rejects text whose derived
+  bounds exceed scene size limits.
 - `TextNode`, `TextNodeSnapshot`, and serialized text payloads carry explicit
   `textDirection`. Public `TextNodeSpec` / `TextNodeSnapshot` creation requires
   explicit direction, `TextNodePatch` can update it for existing text nodes,

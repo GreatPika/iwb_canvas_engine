@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
+import 'package:iwb_canvas_engine/src/core/text_layout.dart';
 
 // INV:INV-ENG-TXN-COPY-ON-WRITE
 // INV:INV-ENG-TEXT-SIZE-DERIVED
@@ -46,7 +47,7 @@ void main() {
   });
 
   test(
-    'text layout patch recomputes derived size and bumps bounds revision',
+    'text layout patch recomputes derived bounds and bumps bounds revision',
     () {
       final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
@@ -57,7 +58,6 @@ void main() {
                 TextNodeSnapshot(
                   id: 't1',
                   text: 'hello',
-                  size: Size(1, 1),
                   fontSize: 12,
                   color: Color(0xFF000000),
                   textDirection: TextDirection.ltr,
@@ -71,7 +71,7 @@ void main() {
 
       final beforeNode =
           controller.snapshot.layers.first.nodes.single as TextNodeSnapshot;
-      final beforeSize = beforeNode.size;
+      final beforeSize = TextLayoutRequest.forSnapshot(beforeNode).measure();
       final beforeBoundsRevision = controller.boundsRevision;
 
       controller.write<void>((writer) {
@@ -82,7 +82,8 @@ void main() {
 
       final afterNode =
           controller.snapshot.layers.first.nodes.single as TextNodeSnapshot;
-      expect(afterNode.size.height, greaterThan(beforeSize.height));
+      final afterSize = TextLayoutRequest.forSnapshot(afterNode).measure();
+      expect(afterSize.height, greaterThan(beforeSize.height));
       expect(controller.boundsRevision, beforeBoundsRevision + 1);
       expect(controller.debug.lastChangeSet.boundsChanged, isTrue);
       expect(
@@ -104,7 +105,6 @@ void main() {
                 TextNodeSnapshot(
                   id: 't-dir',
                   text: 'abc אבג',
-                  size: const Size(1, 1),
                   fontSize: 24,
                   color: const Color(0xFF000000),
                   textDirection: TextDirection.ltr,
@@ -133,7 +133,10 @@ void main() {
           controller.snapshot.layers.first.nodes.single as TextNodeSnapshot;
       expect(beforeNode.textDirection, TextDirection.ltr);
       expect(afterNode.textDirection, TextDirection.rtl);
-      expect(afterNode.size, isNot(const Size(1, 1)));
+      expect(
+        TextLayoutRequest.forSnapshot(afterNode).measure().width,
+        greaterThan(0),
+      );
     },
   );
 
@@ -147,7 +150,6 @@ void main() {
               TextNodeSnapshot(
                 id: 't1',
                 text: 'hello',
-                size: Size(80, 24),
                 fontSize: 24,
                 color: Color(0xFF000000),
                 textDirection: TextDirection.ltr,

@@ -31,7 +31,6 @@ void main() {
             TextNode(
               id: 'txt',
               text: 'hello',
-              size: const Size(30, 12),
               fontSize: 14,
               color: const Color(0xFF123456),
               align: TextAlign.center,
@@ -1082,17 +1081,16 @@ void main() {
             )
             as TextNode;
 
-    expect(node.size.width, greaterThan(0));
-    expect(node.size.height, greaterThan(0));
+    expect(node.localBounds.width, greaterThan(0));
+    expect(node.localBounds.height, greaterThan(0));
   });
 
-  test('text node from snapshot recomputes stale serialized size', () {
+  test('text node from snapshot derives bounds from layout inputs', () {
     final node =
         txnNodeFromSnapshot(
               TextNodeSnapshot(
                 id: 'text-stale',
                 text: 'Derived size',
-                size: Size(1, 1),
                 fontSize: 24,
                 color: Color(0xFF000000),
                 textDirection: TextDirection.ltr,
@@ -1100,19 +1098,18 @@ void main() {
             )
             as TextNode;
 
-    expect(node.size, isNot(const Size(1, 1)));
-    expect(node.size.width, greaterThan(1));
-    expect(node.size.height, greaterThan(1));
+    expect(node.localBounds.width, greaterThan(1));
+    expect(node.localBounds.height, greaterThan(1));
   });
 
-  test('text node patch touching layout re-derives size', () {
+  test('text node patch touching layout re-derives bounds', () {
     final text = TextNode(
       id: 'text-layout-patch',
       text: 'Derived size',
-      size: const Size(1, 1),
       fontSize: 24,
       color: const Color(0xFF000000),
     );
+    final beforeHeight = text.localBounds.height;
 
     final changed = txnApplyNodePatch(
       text,
@@ -1123,36 +1120,36 @@ void main() {
     );
 
     expect(changed, isTrue);
-    expect(text.size, isNot(const Size(1, 1)));
-    expect(text.size.width, greaterThan(1));
-    expect(text.size.height, greaterThan(1));
+    expect(text.localBounds.width, greaterThan(1));
+    expect(text.localBounds.height, greaterThan(beforeHeight));
   });
 
-  test('textDirection patch updates text node and re-derives size', () {
-    final text = TextNode(
-      id: 'text-direction-patch',
-      text: 'abc אבג',
-      size: const Size(1, 1),
-      fontSize: 24,
-      color: const Color(0xFF000000),
-      textDirection: TextDirection.ltr,
-      align: TextAlign.start,
-    );
-
-    final changed = txnApplyNodePatch(
-      text,
-      TextNodePatch(
+  test(
+    'textDirection patch updates text node and keeps derived bounds valid',
+    () {
+      final text = TextNode(
         id: 'text-direction-patch',
-        textDirection: PatchField<TextDirection>.value(TextDirection.rtl),
-      ),
-    );
+        text: 'abc אבג',
+        fontSize: 24,
+        color: const Color(0xFF000000),
+        textDirection: TextDirection.ltr,
+        align: TextAlign.start,
+      );
 
-    expect(changed, isTrue);
-    expect(text.textDirection, TextDirection.rtl);
-    expect(text.size, isNot(const Size(1, 1)));
-    expect(text.size.width, greaterThan(1));
-    expect(text.size.height, greaterThan(1));
-  });
+      final changed = txnApplyNodePatch(
+        text,
+        TextNodePatch(
+          id: 'text-direction-patch',
+          textDirection: PatchField<TextDirection>.value(TextDirection.rtl),
+        ),
+      );
+
+      expect(changed, isTrue);
+      expect(text.textDirection, TextDirection.rtl);
+      expect(text.localBounds.width, greaterThan(1));
+      expect(text.localBounds.height, greaterThan(1));
+    },
+  );
 
   test('text node patch without layout fields keeps derived size', () {
     final text =
@@ -1166,7 +1163,7 @@ void main() {
               fallbackId: 'text-non-layout-patch',
             )
             as TextNode;
-    final sizeBefore = text.size;
+    final sizeBefore = text.localBounds.size;
 
     final changed = txnApplyNodePatch(
       text,
@@ -1177,7 +1174,7 @@ void main() {
     );
 
     expect(changed, isTrue);
-    expect(text.size, sizeBefore);
+    expect(text.localBounds.size, sizeBefore);
   });
 
   test('node-from-spec rejects invalid numeric fields with field path', () {
@@ -1289,12 +1286,7 @@ void main() {
     expect(image.isDeletable, isFalse);
     expect(image.isTransformable, isFalse);
 
-    final text = TextNode(
-      id: 'txt',
-      text: 'x',
-      size: const Size(1, 1),
-      color: const Color(0xFF000000),
-    );
+    final text = TextNode(id: 'txt', text: 'x', color: const Color(0xFF000000));
     expect(
       txnApplyNodePatch(
         text,

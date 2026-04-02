@@ -4,14 +4,19 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ## Unreleased
 
+- Breaking: JSON schema `6` is no longer supported. The engine now writes and
+  reads only `schemaVersion = 7`, text JSON payloads must not contain `size`,
+  and text bounds are derived from layout inputs instead of crossing runtime,
+  snapshot, or JSON boundaries as stored size metadata.
+- Import/decode once again rejects text nodes whose derived layout bounds
+  exceed scene size limits, restoring the pre-removal range guard after stored
+  text `size` was removed from typed and JSON boundaries.
 - Shared scene-model invariants now reject oversized stroke point lists and
   palette lists through one shared contract path across typed construction,
   import/decode, and encode. Text nodes now carry explicit `textDirection` in
-  runtime and serialized scene data, inbound serialized text `size` remains
-  non-authoritative, the JSON contract now requires explicit `textDirection`
-  on text nodes, public `TextNodeSpec` / `TextNodeSnapshot` creation requires
-  explicit direction, and `TextNodePatch` can update direction for existing
-  text nodes.
+  runtime and serialized scene data, public `TextNodeSpec` /
+  `TextNodeSnapshot` creation requires explicit direction, and `TextNodePatch`
+  can update direction for existing text nodes.
 - Interactive write-side ownership is now canonicalized across
   `replaceScene(...)`, controller-side transform/delete preflight, and
   `SceneView` pointer semantics: `replaceScene(...)` now materializes its

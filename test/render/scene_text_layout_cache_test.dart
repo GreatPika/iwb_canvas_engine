@@ -91,18 +91,10 @@ void main() {
   test('SceneTextLayoutCache key excludes node identity and box height', () {
     final cache = SceneTextLayoutCache(maxEntries: 8);
     final first = cache.getOrBuild(
-      node: _textNode(
-        id: 'node-a',
-        size: const ui.Size(100, 20),
-        maxWidth: 100,
-      ),
+      node: _textNode(id: 'node-a', maxWidth: 100),
     );
     final second = cache.getOrBuild(
-      node: _textNode(
-        id: 'node-b',
-        size: const ui.Size(100, 200),
-        maxWidth: 100,
-      ),
+      node: _textNode(id: 'node-b', maxWidth: 100),
     );
 
     expect(identical(first, second), isTrue);
@@ -168,7 +160,6 @@ void main() {
           common: nodeSnapshotCommonFieldsFromValidated(id: 'node-invalid'),
           fields: (
             text: 'Shared',
-            size: const ui.Size(100, 20),
             fontSize: -5,
             color: const ui.Color(0xFF000000),
             align: TextAlign.left,
@@ -187,7 +178,6 @@ void main() {
           common: nodeSnapshotCommonFieldsFromValidated(id: 'node-invalid'),
           fields: (
             text: 'Shared',
-            size: const ui.Size(100, 20),
             fontSize: double.nan,
             color: const ui.Color(0xFF000000),
             align: TextAlign.left,
@@ -243,7 +233,6 @@ void main() {
 TextNodeSnapshot _textNode({
   required String id,
   String text = 'Hello',
-  ui.Size size = const ui.Size(100, 20),
   double fontSize = 14,
   ui.Color color = const ui.Color(0xFF000000),
   TextAlign align = TextAlign.left,
@@ -259,7 +248,6 @@ TextNodeSnapshot _textNode({
   return TextNodeSnapshot(
     id: id,
     text: text,
-    size: size,
     fontSize: fontSize,
     color: color,
     align: align,

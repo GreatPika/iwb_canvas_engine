@@ -302,7 +302,6 @@ void main() {
               TextNodeSnapshot(
                 id: 'text-1',
                 text: 'TXT',
-                size: const Size(40, 20),
                 fontSize: 14,
                 color: const Color(0xFF000000),
                 align: TextAlign.center,
@@ -1028,7 +1027,6 @@ void main() {
                 TextNodeSnapshot(
                   id: 'text-$align',
                   text: 'StartEnd',
-                  size: const Size(140, 28),
                   fontSize: 20,
                   color: const Color(0xFF000000),
                   align: align,
@@ -1101,7 +1099,6 @@ void main() {
                 TextNodeSnapshot(
                   id: 'text-line-height',
                   text: 'One\nTwo',
-                  size: const Size(180, 180),
                   fontSize: 12,
                   color: const Color(0xFF000000),
                   textDirection: TextDirection.ltr,
@@ -1162,7 +1159,6 @@ void main() {
               TextNodeSnapshot(
                 id: 'text',
                 text: 'cache',
-                size: const Size(80, 24),
                 fontSize: 14,
                 color: const Color(0xFF000000),
                 textDirection: TextDirection.ltr,
@@ -1480,7 +1476,6 @@ void main() {
                 TextNodeSnapshot(
                   id: 'text-right',
                   text: 'R',
-                  size: const Size(40, 20),
                   fontSize: 14,
                   lineHeight: 1.4,
                   align: TextAlign.right,
@@ -1491,7 +1486,6 @@ void main() {
                 TextNodeSnapshot(
                   id: 'text-justify',
                   text: 'J',
-                  size: const Size(40, 20),
                   fontSize: 14,
                   align: TextAlign.justify,
                   color: const Color(0xFF000000),
@@ -1542,7 +1536,6 @@ void main() {
                 TextNodeSnapshot(
                   id: 'txt-sel',
                   text: 'T',
-                  size: const Size(30, 16),
                   color: const Color(0xFF000000),
                   textDirection: TextDirection.ltr,
                   transform: Transform2D.translation(const Offset(60, 20)),

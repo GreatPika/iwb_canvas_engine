@@ -1,11 +1,8 @@
-import 'dart:ui';
-
 import '../contract/internal/node_boundary_schema.dart';
 import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/node_spec.dart';
 import '../contract/snapshot.dart';
 import '../core/nodes.dart';
-import '../core/text_layout.dart';
 import 'scene_node_boundary_mapping_common.dart';
 
 TextNodeSnapshotSchemaFields textNodeSchemaFieldsFromSnapshot(
@@ -13,7 +10,6 @@ TextNodeSnapshotSchemaFields textNodeSchemaFieldsFromSnapshot(
 ) {
   return textNodeSnapshotSchemaFieldsFromValidated((
     text: text.text,
-    size: text.size,
     fontSize: text.fontSize,
     color: text.color,
     align: text.align,
@@ -46,7 +42,6 @@ TextNodeSpecSchemaFields textNodeSchemaFieldsFromSpec(TextNodeSpec text) {
 TextNodeSnapshotSchemaFields textNodeSchemaFieldsFromNode(TextNode text) {
   return textNodeSnapshotSchemaFieldsFromValidated((
     text: text.text,
-    size: text.size,
     fontSize: text.fontSize,
     color: text.color,
     align: text.align,
@@ -60,21 +55,13 @@ TextNodeSnapshotSchemaFields textNodeSchemaFieldsFromNode(TextNode text) {
   ));
 }
 
-TextNode textNodeFromSnapshot(
-  TextNodeSnapshot text,
-  int instanceRevision,
-  TextNodeSnapshotSizePolicy textSizePolicy,
-) {
+TextNode textNodeFromSnapshot(TextNodeSnapshot text, int instanceRevision) {
   return sceneNodeFromSnapshotViaSchema(
         snapshot: text,
         instanceRevision: instanceRevision,
         extractFields: textNodeSchemaFieldsFromSnapshot,
         buildNode: ({required common, required fields}) =>
-            textNodeFromSnapshotSchema(
-              common: common,
-              fields: fields,
-              textSizePolicy: textSizePolicy,
-            ),
+            textNodeFromSnapshotSchema(common: common, fields: fields),
       )
       as TextNode;
 }
@@ -95,15 +82,11 @@ TextNode textNodeFromSpec(
 TextNode textNodeFromSnapshotSchema({
   required RuntimeNodeCommonFields common,
   required TextNodeSnapshotSchemaFields fields,
-  required TextNodeSnapshotSizePolicy textSizePolicy,
 }) {
-  final node = TextNode(
+  return TextNode(
     id: common.id,
     instanceRevision: common.instanceRevision,
     text: fields.text,
-    size: textSizePolicy == TextNodeSnapshotSizePolicy.preserveBoundarySize
-        ? fields.size
-        : Size.zero,
     fontSize: fields.fontSize,
     color: fields.color,
     align: fields.align,
@@ -123,21 +106,16 @@ TextNode textNodeFromSnapshotSchema({
     isDeletable: common.isDeletable,
     isTransformable: common.isTransformable,
   );
-  if (textSizePolicy == TextNodeSnapshotSizePolicy.recomputeFromLayout) {
-    recomputeDerivedTextSize(node);
-  }
-  return node;
 }
 
 TextNode textNodeFromSpecSchema({
   required RuntimeNodeCommonFields common,
   required TextNodeSpecSchemaFields fields,
 }) {
-  final node = TextNode(
+  return TextNode(
     id: common.id,
     instanceRevision: common.instanceRevision,
     text: fields.text,
-    size: Size.zero,
     fontSize: fields.fontSize,
     color: fields.color,
     align: fields.align,
@@ -157,8 +135,6 @@ TextNode textNodeFromSpecSchema({
     isDeletable: common.isDeletable,
     isTransformable: common.isTransformable,
   );
-  recomputeDerivedTextSize(node);
-  return node;
 }
 
 TextNodeSnapshotBacking textSnapshotBackingFromSchema({

@@ -222,7 +222,6 @@ class TextNodeSnapshot extends NodeSnapshot {
     required NodeId id,
     int instanceRevision = 0,
     required String text,
-    required Size size,
     double fontSize = 24,
     required Color color,
     TextAlign align = TextAlign.left,
@@ -256,7 +255,6 @@ class TextNodeSnapshot extends NodeSnapshot {
          )),
          fields: validateTextNodeSnapshotSchemaFields((
            text: text,
-           size: size,
            fontSize: fontSize,
            color: color,
            align: align,
@@ -274,7 +272,6 @@ class TextNodeSnapshot extends NodeSnapshot {
     required NodeSnapshotCommonSchemaFields common,
     required TextNodeSnapshotSchemaFields fields,
   }) : text = fields.text,
-       size = fields.size,
        fontSize = fields.fontSize,
        color = fields.color,
        align = fields.align,
@@ -298,12 +295,7 @@ class TextNodeSnapshot extends NodeSnapshot {
          isTransformable: common.isTransformable,
        );
 
-  /// Canonical output metadata derived from text layout inputs.
-  ///
-  /// During snapshot import/canonicalization, the engine may ignore the input
-  /// value and recompute it from `text`, font/style fields, and `maxWidth`.
   final String text;
-  final Size size;
   final double fontSize;
   final Color color;
   final TextAlign align;

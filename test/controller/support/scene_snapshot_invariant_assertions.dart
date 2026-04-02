@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/core/text_layout.dart';
 
 void assertSceneInvariants(
   SceneSnapshot snapshot, {
@@ -75,7 +76,7 @@ void _expectNodeFinite(NodeSnapshot node) {
         _expectFiniteSize(naturalSize);
       }
     case TextNodeSnapshot text:
-      _expectFiniteSize(text.size);
+      _expectFiniteSize(TextLayoutRequest.forSnapshot(text).measure());
       expect(text.fontSize.isFinite, isTrue);
       final maxWidth = text.maxWidth;
       if (maxWidth != null) {

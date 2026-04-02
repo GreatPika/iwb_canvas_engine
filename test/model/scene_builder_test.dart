@@ -153,7 +153,6 @@ void main() {
               TextNode(
                 id: 'txt',
                 text: 'hello',
-                size: const Size(40, 12),
                 fontSize: 18,
                 color: const Color(0xFF112233),
                 maxWidth: 120,
@@ -542,51 +541,46 @@ void main() {
     );
   });
 
-  test(
-    'sceneBuildFromSnapshot ignores input text size and re-derives canonical size',
-    () {
-      final textSnapshot = TextNodeSnapshot(
-        id: 't-derived',
-        text: 'Derived text size',
-        size: Size(999, 777),
-        fontSize: 24,
-        color: Color(0xFF000000),
-        align: TextAlign.left,
-        textDirection: TextDirection.ltr,
-        isBold: false,
-        isItalic: false,
-        isUnderline: false,
-      );
-      final snapshot = SceneSnapshot(
-        layers: <ContentLayerSnapshot>[
-          ContentLayerSnapshot(
-            id: 'layer-auto-text',
-            nodes: <NodeSnapshot>[textSnapshot],
-          ),
-        ],
-      );
+  test('sceneBuildFromSnapshot derives text bounds from layout inputs', () {
+    final textSnapshot = TextNodeSnapshot(
+      id: 't-derived',
+      text: 'Derived text size',
+      fontSize: 24,
+      color: Color(0xFF000000),
+      align: TextAlign.left,
+      textDirection: TextDirection.ltr,
+      isBold: false,
+      isItalic: false,
+      isUnderline: false,
+    );
+    final snapshot = SceneSnapshot(
+      layers: <ContentLayerSnapshot>[
+        ContentLayerSnapshot(
+          id: 'layer-auto-text',
+          nodes: <NodeSnapshot>[textSnapshot],
+        ),
+      ],
+    );
 
-      final expectedSize = TextLayoutRequest(
-        text: textSnapshot.text,
-        color: textSnapshot.color,
-        fontSize: textSnapshot.fontSize,
-        isBold: textSnapshot.isBold,
-        isItalic: textSnapshot.isItalic,
-        isUnderline: textSnapshot.isUnderline,
-        textAlign: textSnapshot.align,
-        fontFamily: textSnapshot.fontFamily,
-        lineHeight: textSnapshot.lineHeight,
-        maxWidth: textSnapshot.maxWidth,
-      ).measure();
+    final expectedSize = TextLayoutRequest(
+      text: textSnapshot.text,
+      color: textSnapshot.color,
+      fontSize: textSnapshot.fontSize,
+      isBold: textSnapshot.isBold,
+      isItalic: textSnapshot.isItalic,
+      isUnderline: textSnapshot.isUnderline,
+      textAlign: textSnapshot.align,
+      fontFamily: textSnapshot.fontFamily,
+      lineHeight: textSnapshot.lineHeight,
+      maxWidth: textSnapshot.maxWidth,
+    ).measure();
 
-      final scene = model_builder.sceneBuildFromSnapshot(snapshot);
-      final textNode = scene.layers.first.nodes.single as TextNode;
+    final scene = model_builder.sceneBuildFromSnapshot(snapshot);
+    final textNode = scene.layers.first.nodes.single as TextNode;
 
-      expect(textNode.size, isNot(textSnapshot.size));
-      expect(textNode.size.width, closeTo(expectedSize.width, 0.001));
-      expect(textNode.size.height, closeTo(expectedSize.height, 0.001));
-    },
-  );
+    expect(textNode.localBounds.width, closeTo(expectedSize.width, 0.001));
+    expect(textNode.localBounds.height, closeTo(expectedSize.height, 0.001));
+  });
 
   test(
     'sceneBuildFromJsonMap keeps legacy node-* and layer-* ids readable',
@@ -1103,10 +1097,11 @@ void main() {
         'id': 'layer-0',
         'nodes': <Object?>[
           <String, Object?>{
-            ..._minimalRectNodeJson(id: 't1'),
+            ...(_minimalRectNodeJson(id: 't1')
+              ..remove('size')
+              ..remove('strokeWidth')),
             'type': 'text',
             'text': List<String>.filled(kMaxTextLength + 1, 'a').join(),
-            'size': <String, Object?>{'w': 1, 'h': 1},
             'fontSize': 14,
             'color': '#FF000000',
             'align': 'left',
@@ -1127,6 +1122,44 @@ void main() {
               e is SceneDataException &&
               e.code == SceneDataErrorCode.invalidValue &&
               e.path == 'layers[0].nodes[0].text',
+        ),
+      ),
+    );
+  });
+
+  test('sceneBuildFromJsonMap rejects oversized derived text bounds', () {
+    final json = _minimalSceneJson();
+    json['layers'] = <Object?>[
+      <String, Object?>{
+        'id': 'layer-0',
+        'nodes': <Object?>[
+          <String, Object?>{
+            ...(_minimalRectNodeJson(id: 't-derived-overflow')
+              ..remove('size')
+              ..remove('strokeWidth')),
+            'type': 'text',
+            'text': List<String>.filled(30000, 'W').join(),
+            'fontSize': 1000,
+            'color': '#FF000000',
+            'align': 'left',
+            'textDirection': 'ltr',
+            'isBold': false,
+            'isItalic': false,
+            'isUnderline': false,
+            'maxWidth': null,
+          },
+        ],
+      },
+    ];
+
+    expect(
+      () => model_builder.sceneBuildFromJsonMap(json),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.outOfRange &&
+              e.path == 'layers[0].nodes[0].derivedBounds.w',
         ),
       ),
     );
@@ -1204,7 +1237,6 @@ void main() {
       final text = TextNodeSnapshot(
         id: 'text-rtl',
         text: 'rtl',
-        size: const Size(10, 10),
         fontSize: 16,
         color: const Color(0xFF000000),
         textDirection: TextDirection.rtl,
@@ -1220,10 +1252,11 @@ void main() {
         'id': 'layer-0',
         'nodes': <Object?>[
           <String, Object?>{
-            ..._minimalRectNodeJson(id: 't-legacy'),
+            ...(_minimalRectNodeJson(id: 't-legacy')
+              ..remove('size')
+              ..remove('strokeWidth')),
             'type': 'text',
             'text': 'Legacy text',
-            'size': <String, Object?>{'w': 1, 'h': 1},
             'fontSize': 14,
             'color': '#FF000000',
             'align': 'start',
@@ -1257,10 +1290,11 @@ void main() {
         'id': 'layer-0',
         'nodes': <Object?>[
           <String, Object?>{
-            ..._minimalRectNodeJson(id: 't-invalid-direction'),
+            ...(_minimalRectNodeJson(id: 't-invalid-direction')
+              ..remove('size')
+              ..remove('strokeWidth')),
             'type': 'text',
             'text': 'Invalid direction',
-            'size': <String, Object?>{'w': 1, 'h': 1},
             'fontSize': 14,
             'color': '#FF000000',
             'align': 'start',
@@ -1372,7 +1406,7 @@ void main() {
   );
 
   test(
-    'sceneCanonicalizeAndValidateSnapshot validates optional text sizes and non-uniform path transforms',
+    'sceneCanonicalizeAndValidateSnapshot validates optional text layout fields and non-uniform path transforms',
     () {
       final snapshot = sceneSnapshotFromValidated(
         layers: <ContentLayerSnapshot>[
@@ -1382,7 +1416,6 @@ void main() {
               TextNodeSnapshot(
                 id: 'text-policy-ranges',
                 text: 'Sized text',
-                size: const Size(40, 20),
                 transform: const Transform2D(
                   a: 1,
                   b: 0,

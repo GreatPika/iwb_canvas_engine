@@ -929,7 +929,6 @@ void main() {
         () => TextNodeSnapshot(
           id: 'node-0',
           text: 'hello',
-          size: const Size(1, 1),
           color: const Color(0xFF000000),
           textDirection: TextDirection.ltr,
           fontFamily: '',
@@ -981,7 +980,6 @@ void main() {
                   TextNodeSnapshot(
                     id: 'node-0',
                     text: 'hello',
-                    size: Size(1, 1),
                     color: Color(0xFF000000),
                     textDirection: TextDirection.ltr,
                     fontFamily: 'Inter',
@@ -1056,10 +1054,10 @@ void main() {
                 'isDeletable': true,
                 'isTransformable': true,
                 'text': 'hello',
-                'size': <String, Object?>{'w': 1, 'h': 1},
                 'fontSize': 16,
                 'color': '#FF000000',
                 'align': 'left',
+                'textDirection': 'ltr',
                 'isBold': false,
                 'isItalic': false,
                 'isUnderline': false,

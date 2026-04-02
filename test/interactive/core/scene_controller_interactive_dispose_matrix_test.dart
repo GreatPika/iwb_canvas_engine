@@ -194,7 +194,6 @@ void main() {
             final textNode = TextNode(
               id: 'text',
               text: 'hello',
-              size: const Size(30, 20),
               color: const Color(0xFF000000),
             )..position = const Offset(60, 60);
             final controller = controllerFromScene(

@@ -673,7 +673,6 @@ void main() {
           ),
           fields: (
             text: 'hello',
-            size: const Size(30, 40),
             fontSize: 24,
             color: const Color(0xFF000000),
             align: TextAlign.left,
@@ -1240,7 +1239,6 @@ void main() {
                   ),
                   fields: (
                     text: 'scene text',
-                    size: const Size(34, 35),
                     fontSize: 18,
                     color: const Color(0xFF030303),
                     align: TextAlign.start,

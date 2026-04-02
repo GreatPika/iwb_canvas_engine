@@ -10,20 +10,15 @@ import 'scene_node_boundary_mapping_rect.dart';
 import 'scene_node_boundary_mapping_stroke.dart';
 import 'scene_node_boundary_mapping_text.dart';
 
-export 'scene_node_boundary_mapping_common.dart'
-    show TextNodeSnapshotSizePolicy;
-
 SceneNode sceneNodeFromSnapshotViaBoundarySchema(
   NodeSnapshot node, {
   required int instanceRevision,
-  TextNodeSnapshotSizePolicy textSizePolicy =
-      TextNodeSnapshotSizePolicy.preserveBoundarySize,
 }) {
   switch (node) {
     case ImageNodeSnapshot image:
       return imageNodeFromSnapshot(image, instanceRevision);
     case TextNodeSnapshot text:
-      return textNodeFromSnapshot(text, instanceRevision, textSizePolicy);
+      return textNodeFromSnapshot(text, instanceRevision);
     case StrokeNodeSnapshot stroke:
       return strokeNodeFromSnapshot(stroke, instanceRevision);
     case LineNodeSnapshot line:

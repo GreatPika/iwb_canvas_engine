@@ -27,7 +27,6 @@ SceneSnapshot _snapshot({required String text, bool includeImage = false}) {
           TextNodeSnapshot(
             id: 'txt',
             text: text,
-            size: const Size(60, 20),
             color: const Color(0xFF000000),
             textDirection: TextDirection.ltr,
           ),
@@ -124,7 +123,6 @@ SceneSnapshot _cacheSnapshot({
           TextNodeSnapshot(
             id: 'txt',
             text: text,
-            size: const Size(60, 20),
             color: const Color(0xFF000000),
             textDirection: TextDirection.ltr,
           ),

@@ -34,8 +34,8 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 - `validated.dart` is part of that supported public surface through the package
   barrel export
 
-- current JSON write version: `schemaVersion = 6`
-- current JSON read set: `{6}`
+- current JSON write version: `schemaVersion = 7`
+- current JSON read set: `{7}`
 
 Do not import from `package:iwb_canvas_engine/src/**`.
 Imports under `src/**` are internal implementation details and are not a
@@ -219,22 +219,23 @@ Important runtime details:
 
 ### 3.4 Text sizing contract
 
-`TextNode.size` and `TextNodeSnapshot.size` are derived metadata.
+Text bounds are derived from text layout inputs at runtime and on the read
+side.
 
-- `TextNodeSpec` does not expose writable `size`
-- `TextNodePatch` does not expose writable `size`
+- `TextNode`, `TextNodeSnapshot`, `TextNodeSpec`, and `TextNodePatch` do not
+  expose writable text `size`
 - `TextNodeSpec` and `TextNodeSnapshot` require explicit `textDirection`
 - `TextNodePatch` can change `textDirection` without resending unrelated fields
-- import/decode and layout-affecting text patches re-derive the box size inside
-  the engine
-- incoming `TextNodeSnapshot.size` is treated as non-authoritative and may be
-  ignored during canonicalization/import
+- layout-affecting text mutations re-derive bounds inside the engine
+- schema-version-7 JSON rejects text payloads that still contain `size`
+- import/decode rejects text whose derived layout bounds exceed scene size
+  limits even though those bounds are no longer stored on the typed or JSON
+  boundary
 - text layout semantics are model-owned: `TextAlign.start` / `TextAlign.end`
   resolve against the node's explicit `textDirection`, not a view fallback
 
-If you compare serialized text sizes across platforms, use semantic assertions
-or numeric tolerance. Font metrics can differ slightly by platform and font
-engine.
+If you compare text bounds across platforms, use semantic assertions or numeric
+tolerance. Font metrics can differ slightly by platform and font engine.
 
 ## 4. Creating and updating nodes
 
@@ -967,8 +968,11 @@ controller.
   empty dedicated layer
 - decode/build boundaries expose a canonical single-background-layer contract;
   nullable `Scene.backgroundLayer` remains an internal runtime shape
-- text node bounds are canonicalized from layout inputs; incoming serialized
-  text `size` is not treated as the source of truth
+- text node bounds are canonicalized from layout inputs; legacy serialized
+  text `size` is rejected under the current schema contract
+- text nodes whose derived layout bounds exceed scene size limits are rejected
+  during import/decode even though the bounds are not stored in snapshot or
+  JSON payloads
 - canonical serialized text payloads include explicit `textDirection`; decode
   rejects text objects that omit it under the current schema contract
 - supported text-align values stay aligned across boundary constructors,
@@ -1045,9 +1049,9 @@ If you are aligning older integration code to the current `5.x` contract:
    types.
 3. Use typed layers: `backgroundLayer` plus content-only `layers`.
 4. Address content layers by `LayerId`, not legacy layer indexes in write APIs.
-5. Treat JSON as schema `5` only.
-6. Treat `TextNode.size` / `TextNodeSnapshot.size` as derived metadata, not a
-   source of truth.
+5. Treat JSON as schema `7` only.
+6. Treat text bounds as derived from layout inputs, not as typed or serialized
+   source data.
 7. Treat `actions` and `editTextRequests` as asynchronous.
 
 ## 14. Integration example

@@ -17,7 +17,6 @@ SceneSnapshot _snapshot({required double strokeY, required String text}) {
           TextNodeSnapshot(
             id: 'txt',
             text: text,
-            size: const Size(80, 24),
             color: const Color(0xFF000000),
             textDirection: TextDirection.ltr,
           ),
@@ -47,7 +46,6 @@ SceneSnapshot _churnSnapshot({required int pairCount, required String prefix}) {
             TextNodeSnapshot(
               id: '$prefix-text-$i',
               text: '$prefix-$i',
-              size: const Size(80, 24),
               color: const Color(0xFF000000),
               textDirection: TextDirection.ltr,
             ),

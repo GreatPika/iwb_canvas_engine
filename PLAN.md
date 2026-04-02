@@ -173,4 +173,4 @@ This file is the plan index. Each step has a dedicated document so steps can be 
 - [x] [Шаг 76. Привести guardrails claims к реально доказуемому invariant contour](plan/step_76_guardrails_claim_honesty_and_registry_alignment.md)
 - [x] [Шаг 77. Синхронизировать CI trigger surface tool-tests с repo-local public entrypoint dependencies](plan/step_77_tool_test_trigger_surface_and_public_entrypoint_dependency.md)
 - [x] [Шаг 78. Поднять недостающие render contracts в invariant registry для существующих proof surfaces](plan/step_78_render_contract_invariant_registry_backfill.md)
-- [ ] [Шаг 79. Удалить `TextNode.size` из runtime-модели, snapshot boundary и JSON schema](plan/step_79_remove_text_node_size_from_runtime_snapshot_and_json_schema.md)
+- [x] [Шаг 79. Удалить `TextNode.size` из runtime-модели, snapshot boundary и JSON schema](plan/step_79_remove_text_node_size_from_runtime_snapshot_and_json_schema.md)

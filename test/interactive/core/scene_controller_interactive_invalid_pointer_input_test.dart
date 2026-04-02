@@ -238,7 +238,6 @@ void main() {
         final text = TextNode(
           id: 'text',
           text: 'note',
-          size: const Size(80, 30),
           color: const Color(0xFF000000),
         )..position = const Offset(100, 100);
         final controller = controllerFromScene(
@@ -288,7 +287,6 @@ void main() {
         final text = TextNode(
           id: 'text',
           text: 'note',
-          size: const Size(80, 30),
           color: const Color(0xFF000000),
         )..position = const Offset(100, 100);
         final rect = RectNode(id: 'rect', size: const Size(80, 30))
@@ -335,7 +333,6 @@ void main() {
       final text = TextNode(
         id: 'text',
         text: 'note',
-        size: const Size(80, 30),
         color: const Color(0xFF000000),
       )..position = const Offset(100, 100);
       final controller = controllerFromScene(

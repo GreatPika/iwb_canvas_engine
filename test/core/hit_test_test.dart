@@ -139,12 +139,8 @@ void main() {
     );
     expect(hitTestNode(Offset.zero, emptyStroke), isFalse);
 
-    final text = TextNode(
-      id: 'text',
-      text: 'x',
-      size: const Size(20, 10),
-      color: const Color(0xFF000000),
-    )..position = const Offset(70, 70);
+    final text = TextNode(id: 'text', text: 'x', color: const Color(0xFF000000))
+      ..position = const Offset(70, 70);
     expect(hitTestNode(const Offset(70, 70), text), isTrue);
 
     text.isVisible = false;

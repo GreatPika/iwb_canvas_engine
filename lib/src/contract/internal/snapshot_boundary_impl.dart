@@ -407,7 +407,6 @@ final class _MaterializedTextNodeSnapshot extends TextNodeSnapshot
     : super(
         id: _placeholderNodeId,
         text: _placeholderText,
-        size: _placeholderSize,
         color: _placeholderColor,
         textDirection: TextDirection.ltr,
       );
@@ -447,9 +446,6 @@ final class _MaterializedTextNodeSnapshot extends TextNodeSnapshot
 
   @override
   String get text => nodeSnapshotBacking.text;
-
-  @override
-  Size get size => nodeSnapshotBacking.size;
 
   @override
   double get fontSize => nodeSnapshotBacking.fontSize;

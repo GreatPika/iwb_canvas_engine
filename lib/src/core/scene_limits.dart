@@ -33,5 +33,5 @@ const int kInteractiveStrokePointsTrimTo = 18000;
 const int kInteractiveEraserPointsSoftLimit = 8000;
 const int kInteractiveEraserPointsTrimTo = 4000;
 
-const Set<int> sceneSchemaVersionsRead = {6};
-const int sceneSchemaVersionWrite = 6;
+const Set<int> sceneSchemaVersionsRead = {7};
+const int sceneSchemaVersionWrite = 7;
