@@ -1,5 +1,9 @@
 import 'dart:ui';
 
+// INV:INV-ENG-SCENE-WRITE-TXN-ADAPTER-BOUNDARY
+// INV:INV-ENG-VIEW-RENDER-READ-STATE-BOUNDARY
+// INV:INV-ENG-VIEW-POINTER-SEMANTICS-BOUNDARY
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
 import 'package:iwb_canvas_engine/src/contract/node_spec.dart';

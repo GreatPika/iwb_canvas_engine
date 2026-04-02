@@ -1,6 +1,8 @@
 @Tags(['tool'])
 library;
 
+// INV:INV-G-PUBLIC-ENTRYPOINTS
+
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';

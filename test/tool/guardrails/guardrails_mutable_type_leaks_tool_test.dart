@@ -1,6 +1,8 @@
 @Tags(['tool'])
 library;
 
+// INV:INV-ENG-PUBLIC-SURFACE-NO-MUTABLE-TYPES
+
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/guardrails_tool_test_support.dart';

@@ -7,6 +7,8 @@ import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 
+// INV:INV-ENG-RENDER-HIT-BOUNDS-PARITY
+
 void _expectRectClose(Rect actual, Rect expected, {double epsilon = 1e-9}) {
   expect((actual.left - expected.left).abs(), lessThanOrEqualTo(epsilon));
   expect((actual.top - expected.top).abs(), lessThanOrEqualTo(epsilon));

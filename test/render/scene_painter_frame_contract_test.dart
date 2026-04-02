@@ -7,6 +7,8 @@ import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 
+// INV:INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 

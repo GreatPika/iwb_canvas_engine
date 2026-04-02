@@ -8,6 +8,8 @@ import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_inte
 import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_interaction_runtime.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_mutation_boundary.dart';
 
+// INV:INV-ENG-INTERACTIVE-MUTATION-BOUNDARY
+
 void main() {
   group('SceneControllerMutationBoundary', () {
     test('applies scene mutations and replacement side effects', () async {

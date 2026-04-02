@@ -7,6 +7,8 @@ final RegExp _importDirectivePattern = RegExp(
   multiLine: true,
 );
 
+// INV:INV-G-PUBLIC-ENTRYPOINTS
+
 void main() {
   test('example app imports only the public package entrypoint', () {
     final repoRoot = Directory.current;

@@ -11,6 +11,8 @@ import 'package:iwb_canvas_engine/src/model/scene_node_boundary_mapping.dart';
 import 'package:iwb_canvas_engine/src/render/render_geometry_builder.dart';
 import 'package:iwb_canvas_engine/src/serialization/scene_codec.dart';
 
+// INV:INV-ENG-CONTRACT-ARCHITECTURE-BOUNDARY
+
 void main() {
   test(
     'validated spec fast-path barrel exposes backing and materialization',

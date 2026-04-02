@@ -3,6 +3,9 @@ import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_inte
 import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart';
 import 'package:iwb_canvas_engine/src/interactive/scene_view_pointer_semantics.dart';
 
+// INV:INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY
+// INV:INV-ENG-VIEW-POINTER-SEMANTICS-BOUNDARY
+
 void main() {
   group('SceneController interaction contract', () {
     test('internal access exposes registered epoch and preview resolver', () {

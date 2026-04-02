@@ -153,6 +153,20 @@ const List<Invariant> invariants = <Invariant>[
     ),
   ),
   Invariant(
+    id: 'INV-ENG-PUBLIC-SURFACE-NO-MUTABLE-TYPES',
+    scope: 'engine-api',
+    title:
+        'exported public contract and runtime signatures do not expose mutable core or runtime owner types',
+    primaryProof: PrimaryProof(
+      path: 'test/tool/guardrails/guardrails_mutable_type_leaks_tool_test.dart',
+    ),
+    toolProof: ToolProof(
+      enforcementPath: 'tool/check_guardrails.dart',
+      regressionPath:
+          'test/tool/guardrails/guardrails_mutable_type_leaks_tool_test.dart',
+    ),
+  ),
+  Invariant(
     id: 'INV-ENG-TXN-WRITER-LIFETIME',
     scope: 'engine-controller',
     title:
@@ -221,6 +235,25 @@ const List<Invariant> invariants = <Invariant>[
     primaryProof: PrimaryProof(
       path:
           'test/controller/core/scene_controller_core_dispose_fail_fast_test.dart',
+    ),
+  ),
+  Invariant(
+    id: 'INV-ENG-CONTROLLER-COMMIT-RUNTIME-BOUNDARY',
+    scope: 'engine-structure',
+    title:
+        'SceneControllerCore stays a thin public facade over SceneControllerCommitRuntime and does not re-own commit planning or post-commit helpers',
+    primaryProof: PrimaryProof(
+      path:
+          'test/controller/core/scene_controller_commit_runtime_contract_test.dart',
+    ),
+  ),
+  Invariant(
+    id: 'INV-ENG-SCENE-WRITE-TXN-ADAPTER-BOUNDARY',
+    scope: 'engine-structure',
+    title:
+        'public write callbacks consume only the dedicated SceneWriteTxn adapter while SceneWriter remains the internal transactional owner',
+    primaryProof: PrimaryProof(
+      path: 'test/controller/internal/scene_write_txn_public_adapter_test.dart',
     ),
   ),
   Invariant(
@@ -346,6 +379,16 @@ const List<Invariant> invariants = <Invariant>[
     ),
   ),
   Invariant(
+    id: 'INV-ENG-INTERACTIVE-MUTATION-BOUNDARY',
+    scope: 'engine-runtime',
+    title:
+        'SceneControllerMutationBoundary remains the only interactive owner that performs committed scene/selection writes and clear/delete action projection while scene/selection shells stay routing-only',
+    primaryProof: PrimaryProof(
+      path:
+          'test/interactive/core/scene_controller_mutation_boundary_test.dart',
+    ),
+  ),
+  Invariant(
     id: 'INV-ENG-MODEL-ARCHITECTURE-BOUNDARY',
     scope: 'engine-structure',
     title:
@@ -435,12 +478,39 @@ const List<Invariant> invariants = <Invariant>[
     ),
   ),
   Invariant(
+    id: 'INV-ENG-RENDER-HIT-BOUNDS-PARITY',
+    scope: 'engine-runtime',
+    title:
+        'render hit candidate bounds stay derived from the same render worldBounds contract as core hit-test bounds',
+    primaryProof: PrimaryProof(
+      path: 'test/render/render_hit_bounds_parity_test.dart',
+    ),
+  ),
+  Invariant(
     id: 'INV-ENG-RENDER-GEOMETRY-KEY-STABLE',
     scope: 'engine-runtime',
     title:
         'render geometry cache keys use stable scalar/revision inputs (no collection identity)',
     primaryProof: PrimaryProof(
       path: 'test/render/render_geometry_cache_test.dart',
+    ),
+  ),
+  Invariant(
+    id: 'INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION',
+    scope: 'engine-structure',
+    title:
+        'ScenePainter resolves preview delta and geometry once per node per frame before render-local consumers read frame data',
+    primaryProof: PrimaryProof(
+      path: 'test/render/scene_painter_frame_contract_test.dart',
+    ),
+  ),
+  Invariant(
+    id: 'INV-ENG-SCENE-PAINTER-MODULE-BOUNDARY',
+    scope: 'engine-structure',
+    title:
+        'ScenePainterShell stays orchestration-only and painter-local modules communicate through resolved contracts without part coupling or cache re-entry',
+    primaryProof: PrimaryProof(
+      path: 'test/render/scene_painter_bounds_contract_test.dart',
     ),
   ),
   Invariant(

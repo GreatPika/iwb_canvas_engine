@@ -7,6 +7,8 @@ import 'package:iwb_canvas_engine/src/contract/path_fill_rule.dart'
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
 
+// INV:INV-ENG-CONTRACT-ARCHITECTURE-BOUNDARY
+
 void main() {
   test('contract snapshot remains the canonical immutable contract owner', () {
     final snapshot = SceneSnapshot(

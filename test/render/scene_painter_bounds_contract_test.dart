@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+// INV:INV-ENG-SCENE-PAINTER-MODULE-BOUNDARY
+
 String _extractMethodBody({
   required String source,
   required String methodStart,

@@ -115,6 +115,10 @@ Ownership decisions for the target state:
 - `contract/node_patch.dart`, `contract/node_spec.dart`, and
   `contract/snapshot.dart` remain the public immutable boundary owners and keep
   validation at the public constructor boundary.
+- Exported public contract and runtime signatures must not expose mutable core
+  model owners or mutable controller/runtime owners directly; the supported
+  public API stays on immutable boundary types and explicit facade contracts.
+  This contract is pinned by `INV-ENG-PUBLIC-SURFACE-NO-MUTABLE-TYPES`.
 - `contract/node_spec.dart` and `contract/node_patch.dart` are thin public
   wrappers over immutable internal backing graphs. Trusted spec/patch storage
   and public wrapper materialization no longer live inside the public files.
@@ -277,6 +281,7 @@ Ownership decisions for the target state:
   the boundary is only the interactive adapter: structural clear ownership
   stays in `controller/commands/scene_commands.dart`, and the boundary adds the
   interactive `ActionType.clear` projection without re-owning the write path.
+  This contract is pinned by `INV-ENG-INTERACTIVE-MUTATION-BOUNDARY`.
 - `SceneControllerSelectionMutations`, `SceneControllerSceneMutations`, and
   `InteractiveSelectionActions` are thin routing shells only. They may enforce
   public gesture policy or route gesture-local requests, but they must not
@@ -313,6 +318,7 @@ Ownership decisions for the target state:
   frame-local geometry resolution happens once in the frame owner, while
   selection rendering consumes only resolved `worldBounds` / `localPath`
   through focused render-local helpers instead of reopening geometry lookup.
+  This contract is pinned by `INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION`.
 - `ScenePainter` keeps node-family rendering separate from frame ownership:
   rect/path, line/stroke, and text/image rendering consume only
   frame-resolved node data through focused render-local helpers instead of one
@@ -321,7 +327,8 @@ Ownership decisions for the target state:
   modules; `ScenePainterShell` is orchestration-only and sequences frame,
   background, node, and selection owners without owning cache/grid assembly,
   while frame, node-render, selection, and shared draw helpers communicate
-  through imported contracts instead of library `part` coupling.
+  through imported contracts instead of library `part` coupling. This contract
+  is pinned by `INV-ENG-SCENE-PAINTER-MODULE-BOUNDARY`.
 - Background-grid semantics are stateless and render-local: one shared owner
   computes drawable eligibility, density bucketing, camera shift, and line
   emission; `SceneStaticLayerCache` owns only picture lifecycle and key reuse
@@ -434,7 +441,8 @@ most important architectural rules are:
 - `SceneControllerCore` is the thin public controller facade. It owns public
   lifecycle, exposes the committed store and streams, and delegates commit
   orchestration to the controller-private `SceneControllerCommitRuntime`
-  instead of re-owning transaction assembly in `scene_controller.dart`.
+  instead of re-owning transaction assembly in `scene_controller.dart`. This
+  split is pinned by `INV-ENG-CONTROLLER-COMMIT-RUNTIME-BOUNDARY`.
 - `SceneControllerCommitRuntime` is the controller-private orchestration owner
   for transactional writes. It assembles `TxnContext`, `SceneWriter`,
   `MutationExecutor`, commit preparation, and post-commit publication without
@@ -459,6 +467,7 @@ most important architectural rules are:
   the supported write surface. `SceneWriter` remains the internal writer owner
   for command/runtime code and is a thin shell over writer-local controller
   modules:
+  This contract is pinned by `INV-ENG-SCENE-WRITE-TXN-ADAPTER-BOUNDARY`.
   `scene_writer_nodes.dart`,
   `scene_writer_selection.dart`,
   `scene_writer_scene.dart`,

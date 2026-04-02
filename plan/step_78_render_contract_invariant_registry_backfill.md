@@ -139,7 +139,7 @@ language: russian
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Render Registry Backfill
+### Slice 1. [x] Render Registry Backfill
 
 #### Slice Contract
 
