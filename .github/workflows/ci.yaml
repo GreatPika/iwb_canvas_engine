@@ -27,6 +27,7 @@ jobs:
         with:
           filters: |
             tool_tests:
+              - 'lib/iwb_canvas_engine.dart'
               - 'tool/**'
               - 'test/tool/**'
               - 'test/tool/support/guardrails_tool_test_support.dart'
@@ -78,6 +79,9 @@ jobs:
       - name: Example test
         working-directory: example
         run: flutter test --no-pub
+
+      - name: Tool-test trigger surface
+        run: dart run tool/check_tool_test_trigger_surface.dart
 
       - name: Import boundaries
         run: dart run tool/check_import_boundaries.dart

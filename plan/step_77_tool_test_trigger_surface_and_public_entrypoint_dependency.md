@@ -143,7 +143,7 @@ language: russian
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Trigger Surface Alignment And Drift Check
+### Slice 1. [x] Trigger Surface Alignment And Drift Check
 
 #### Slice Contract
 

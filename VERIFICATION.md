@@ -34,6 +34,7 @@
   `flutter test --coverage ...` in parallel with `dart run tool/run_tool_tests.dart`.
 - Run tool tests only when the change touches tool-test surface. The trigger
   list in this file must stay identical to `.github/workflows/ci.yaml`:
+  - `lib/iwb_canvas_engine.dart`
   - `tool/**`
   - `test/tool/**`
   - `test/tool/support/guardrails_tool_test_support.dart`
@@ -53,11 +54,12 @@
   2. `flutter analyze`
   3. `(cd example && flutter analyze lib test)`
   4. `dcm analyze .`
-  5. `dart run tool/check_import_boundaries.dart`
-  6. `dart run tool/check_public_api_surface.dart`
-  7. `dart run tool/check_guardrails.dart`
-  8. `dart run tool/check_invariant_coverage.dart`
-  9. Run these MCP test shard presets:
+  5. `dart run tool/check_tool_test_trigger_surface.dart`
+  6. `dart run tool/check_import_boundaries.dart`
+  7. `dart run tool/check_public_api_surface.dart`
+  8. `dart run tool/check_guardrails.dart`
+  9. `dart run tool/check_invariant_coverage.dart`
+  10. Run these MCP test shard presets:
      - `core`
      - `model_contract`
      - `controller_internal`
@@ -65,7 +67,7 @@
      - `render_view`
      - `interactive`
      - `example`
-  10. `flutter test --coverage --no-pub --exclude-tags=tool`
-  11. `dart run tool/check_coverage.dart`
-  12. Run `dart run tool/run_tool_tests.dart` when the tool-test trigger list
+  11. `flutter test --coverage --no-pub --exclude-tags=tool`
+  12. `dart run tool/check_coverage.dart`
+  13. Run `dart run tool/run_tool_tests.dart` when the tool-test trigger list
       above matches the change.
