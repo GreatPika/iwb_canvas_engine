@@ -176,7 +176,7 @@ language: russian
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Surface Taxonomy Policy
+### Slice 1. [x] Surface Taxonomy Policy
 
 #### Slice Contract
 
@@ -216,7 +216,7 @@ language: russian
 - Green run of the listed verification.
 - Regression matrix in the slice verification distinguishes `bridge` from generic `internal`.
 
-### Slice 2. [ ] Semantic Enforcement Order
+### Slice 2. [x] Semantic Enforcement Order
 
 #### Slice Contract
 
@@ -257,7 +257,7 @@ language: russian
 - Green run of the listed verifications.
 - Negative scenarios prove distinct semantic diagnostics instead of generic layer DAG failure.
 
-### Slice 3. [ ] Full Regression Matrix For Resolved Forms
+### Slice 3. [x] Full Regression Matrix For Resolved Forms
 
 #### Slice Contract
 

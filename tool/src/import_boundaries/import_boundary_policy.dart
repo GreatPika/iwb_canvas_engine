@@ -11,6 +11,55 @@ enum ImportBoundaryLayer {
   view,
 }
 
+enum ImportBoundarySurfaceKind { public, internal, bridge }
+
+class BridgeSurfaceDescriptor {
+  const BridgeSurfaceDescriptor({
+    required this.repoRelPosixPath,
+    required this.ownerLayer,
+    required this.friendLayers,
+  });
+
+  final String repoRelPosixPath;
+  final ImportBoundaryLayer ownerLayer;
+  final List<ImportBoundaryLayer> friendLayers;
+
+  bool allowsImporter(ImportBoundaryLayer layer) =>
+      layer == ownerLayer || friendLayers.contains(layer);
+}
+
+class ResolvedImportBoundarySurface {
+  const ResolvedImportBoundarySurface._({
+    required this.kind,
+    required this.targetLayer,
+    this.bridge,
+  });
+
+  const ResolvedImportBoundarySurface.public({
+    required ImportBoundaryLayer targetLayer,
+  }) : this._(kind: ImportBoundarySurfaceKind.public, targetLayer: targetLayer);
+
+  const ResolvedImportBoundarySurface.internal({
+    required ImportBoundaryLayer targetLayer,
+  }) : this._(
+         kind: ImportBoundarySurfaceKind.internal,
+         targetLayer: targetLayer,
+       );
+
+  const ResolvedImportBoundarySurface.bridge({
+    required ImportBoundaryLayer targetLayer,
+    required BridgeSurfaceDescriptor bridge,
+  }) : this._(
+         kind: ImportBoundarySurfaceKind.bridge,
+         targetLayer: targetLayer,
+         bridge: bridge,
+       );
+
+  final ImportBoundarySurfaceKind kind;
+  final ImportBoundaryLayer targetLayer;
+  final BridgeSurfaceDescriptor? bridge;
+}
+
 const Map<ImportBoundaryLayer, Set<ImportBoundaryLayer>>
 _allowedLayerDependencies = <ImportBoundaryLayer, Set<ImportBoundaryLayer>>{
   ImportBoundaryLayer.contract: <ImportBoundaryLayer>{},
@@ -75,6 +124,28 @@ const Set<String> _globallyAllowedExternalPackagePrefixes = <String>{
   'package:meta/',
 };
 
+const Map<String, BridgeSurfaceDescriptor>
+_bridgeSurfaceDescriptors = <String, BridgeSurfaceDescriptor>{
+  '/lib/src/contract/internal/node_boundary_schema.dart':
+      BridgeSurfaceDescriptor(
+        repoRelPosixPath:
+            '/lib/src/contract/internal/node_boundary_schema.dart',
+        ownerLayer: ImportBoundaryLayer.contract,
+        friendLayers: <ImportBoundaryLayer>[
+          ImportBoundaryLayer.model,
+          ImportBoundaryLayer.serialization,
+        ],
+      ),
+  '/lib/src/contract/internal/snapshot_fast_path.dart': BridgeSurfaceDescriptor(
+    repoRelPosixPath: '/lib/src/contract/internal/snapshot_fast_path.dart',
+    ownerLayer: ImportBoundaryLayer.contract,
+    friendLayers: <ImportBoundaryLayer>[
+      ImportBoundaryLayer.model,
+      ImportBoundaryLayer.serialization,
+    ],
+  ),
+};
+
 ImportBoundaryLayer? layerForRepoRelPosixPath(String repoRelPosixPath) {
   switch (topLevelLibSrcLayerForRepoRelPosixPath(repoRelPosixPath)) {
     case 'contract':
@@ -118,6 +189,30 @@ String layerLabel(ImportBoundaryLayer layer) {
     case ImportBoundaryLayer.view:
       return 'view';
   }
+}
+
+ResolvedImportBoundarySurface? classifyResolvedImportBoundarySurface(
+  String resolvedRepoRelPosix,
+) {
+  final targetLayer = layerForRepoRelPosixPath(resolvedRepoRelPosix);
+  if (targetLayer == null) {
+    return null;
+  }
+
+  final bridge = _bridgeSurfaceDescriptors[resolvedRepoRelPosix];
+  if (bridge != null) {
+    return ResolvedImportBoundarySurface.bridge(
+      targetLayer: targetLayer,
+      bridge: bridge,
+    );
+  }
+
+  final internalPrefix = '/lib/src/${layerLabel(targetLayer)}/internal/';
+  if (resolvedRepoRelPosix.startsWith(internalPrefix)) {
+    return ResolvedImportBoundarySurface.internal(targetLayer: targetLayer);
+  }
+
+  return ResolvedImportBoundarySurface.public(targetLayer: targetLayer);
 }
 
 bool isAllowedLayerDependency({
