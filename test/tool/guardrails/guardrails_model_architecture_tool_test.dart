@@ -8,6 +8,7 @@ import '../support/tool_process_test_support.dart';
 
 void main() {
   group('tool/check_guardrails.dart', () {
+    // INV:INV-ENG-MODEL-ARCHITECTURE-BOUNDARY
     test('rejects part directives under lib/src/model', () async {
       final sandbox = await createGuardrailsSandbox();
       try {

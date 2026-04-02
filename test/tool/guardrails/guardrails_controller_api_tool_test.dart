@@ -8,6 +8,7 @@ import '../support/tool_process_test_support.dart';
 
 void main() {
   group('tool/check_guardrails.dart', () {
+    // INV:INV-ENG-WRITE-ONLY-MUTATION
     test('rejects mutating symbol outside write/txn prefixes', () async {
       final sandbox = await createGuardrailsSandbox();
       try {

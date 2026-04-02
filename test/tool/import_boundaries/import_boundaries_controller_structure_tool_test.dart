@@ -8,6 +8,12 @@ import '../support/tool_process_test_support.dart';
 
 void main() {
   group('tool/check_import_boundaries.dart', () {
+    // INV:INV-ENG-COMMANDS-NO-PART
+    // INV:INV-ENG-COMMANDS-NO-SCENE-CONTROLLER
+    // INV:INV-ENG-COMMANDS-NO-CROSS-IMPORTS
+    // INV:INV-ENG-INTERNAL-NO-SCENE-CONTROLLER
+    // INV:INV-ENG-INTERNAL-NO-COMMANDS-IMPORTS
+    // INV:INV-ENG-SHARED-CONTROLLER-HELPERS
     test('rejects internal -> commands import', () async {
       final sandbox = await createImportBoundariesSandbox();
       try {

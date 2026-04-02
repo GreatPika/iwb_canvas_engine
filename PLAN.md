@@ -169,4 +169,4 @@ This file is the plan index. Each step has a dedicated document so steps can be 
 - [x] [Шаг 72. Герметизировать public contract boundary и убрать signal enqueue из публичной write-транзакции](plan/step_72_public_contract_boundary_hermeticity_and_signal_txn_cleanup.md)
 - [x] [Шаг 73. Сжать residual metric/clone debt в boundary impl и public surface guardrails](plan/step_73_contract_boundary_impl_metrics_and_clone_cleanup.md)
 - [x] [Шаг 74. Ввести семантическую модель `public/internal/bridge` для import boundaries](plan/step_74_cross_layer_internal_import_guardrails.md)
-- [ ] [Шаг 75. Ввести симметричный primary/tool proof contract для invariant coverage](plan/step_75_typed_invariant_proof_surface_and_tool_companions.md)
+- [x] [Шаг 75. Ввести симметричный primary/tool proof contract для invariant coverage](plan/step_75_typed_invariant_proof_surface_and_tool_companions.md)

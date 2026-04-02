@@ -8,6 +8,7 @@ import '../support/tool_process_test_support.dart';
 
 void main() {
   group('tool/check_guardrails.dart', () {
+    // INV:INV-ENG-CONTRACT-ARCHITECTURE-BOUNDARY
     test(
       'allows canonical contract internal surfaces for non-contract code',
       () async {

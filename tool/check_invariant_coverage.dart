@@ -6,6 +6,9 @@ final RegExp _invRef = RegExp(r'\bINV:([A-Z0-9_-]+)\b');
 final RegExp _canonicalInvariantId = RegExp(
   r'^INV-(G|ENG|SER)-[A-Z0-9]+(?:-[A-Z0-9]+)*$',
 );
+final RegExp _primaryProofPathPattern = RegExp(r'^test/.+_test\.dart$');
+final RegExp _toolEnforcementPathPattern = RegExp(r'^tool/[^/]+\.dart$');
+final RegExp _toolRegressionPathPattern = RegExp(r'^test/tool/.+_test\.dart$');
 
 class _Finding {
   _Finding(this.file, this.line, this.message);
@@ -23,6 +26,23 @@ class _RegistryContract {
 
   final Set<String> knownIds;
   final List<String> issues;
+}
+
+class _DeclaredProofSurface {
+  const _DeclaredProofSurface({required this.label, required this.path});
+
+  final String label;
+  final String path;
+}
+
+class _CoverageReport {
+  const _CoverageReport({
+    required this.missingDetails,
+    required this.missingInvariantIds,
+  });
+
+  final List<String> missingDetails;
+  final Set<String> missingInvariantIds;
 }
 
 class _ScanResult {
@@ -45,9 +65,14 @@ bool _isCanonicalInvariantId(String id) {
   return _canonicalInvariantId.hasMatch(id);
 }
 
-bool _isProofPathAllowed(String path) {
-  if (!path.endsWith('.dart')) return false;
-  return path.startsWith('tool/') || path.startsWith('test/');
+bool _isRepoRelativePosixPath(String path) {
+  return path.isNotEmpty &&
+      !path.startsWith('/') &&
+      !path.startsWith('./') &&
+      !path.contains(r'\') &&
+      !path.contains('/./') &&
+      !path.contains('../') &&
+      !path.contains('/..');
 }
 
 String _toPosixPath(String path) => path.replaceAll('\\', '/');
@@ -89,6 +114,27 @@ void _fail(String header, List<String> details) {
   exit(1);
 }
 
+void _validateProofPath({
+  required List<String> issues,
+  required String invariantId,
+  required String label,
+  required String? path,
+  required RegExp pattern,
+  required String expectedShape,
+}) {
+  if (path == null || path.isEmpty) {
+    issues.add('$invariantId $label is required');
+    return;
+  }
+  if (!_isRepoRelativePosixPath(path)) {
+    issues.add('$invariantId $label must be a repo-relative POSIX path: $path');
+    return;
+  }
+  if (!pattern.hasMatch(path)) {
+    issues.add('$invariantId $label must match $expectedShape: $path');
+  }
+}
+
 _RegistryContract _readRegistryContract() {
   final knownIds = <String>{};
   final issues = <String>[];
@@ -100,11 +146,34 @@ _RegistryContract _readRegistryContract() {
     if (!_isCanonicalInvariantId(invariant.id)) {
       issues.add('non-canonical invariant id ${invariant.id}');
     }
-    if (!_isProofPathAllowed(invariant.proofPath)) {
-      issues.add(
-        '${invariant.id} uses unsupported proofPath ${invariant.proofPath}',
-      );
+    _validateProofPath(
+      issues: issues,
+      invariantId: invariant.id,
+      label: 'primaryProof.path',
+      path: invariant.primaryProof.path,
+      pattern: _primaryProofPathPattern,
+      expectedShape: 'test/**/*_test.dart',
+    );
+    final toolProof = invariant.toolProof;
+    if (toolProof == null) {
+      continue;
     }
+    _validateProofPath(
+      issues: issues,
+      invariantId: invariant.id,
+      label: 'toolProof.enforcementPath',
+      path: toolProof.enforcementPath,
+      pattern: _toolEnforcementPathPattern,
+      expectedShape: 'top-level tool/*.dart',
+    );
+    _validateProofPath(
+      issues: issues,
+      invariantId: invariant.id,
+      label: 'toolProof.regressionPath',
+      path: toolProof.regressionPath,
+      pattern: _toolRegressionPathPattern,
+      expectedShape: 'test/tool/**/*_test.dart',
+    );
   }
 
   return _RegistryContract(knownIds: knownIds, issues: issues);
@@ -251,42 +320,81 @@ void _failOnReferenceFindings(_ScanResult scanResult) {
   }
 }
 
-List<String> _collectMissingProofs(Map<String, Set<String>> refsById) {
-  final missing = <String>[];
+Iterable<_DeclaredProofSurface> _declaredProofSurfaces(
+  Invariant invariant,
+) sync* {
+  final primaryPath = invariant.primaryProof.path;
+  if (primaryPath != null && primaryPath.isNotEmpty) {
+    yield _DeclaredProofSurface(label: 'primaryProof', path: primaryPath);
+  }
+  final toolProof = invariant.toolProof;
+  if (toolProof == null) {
+    return;
+  }
+  final enforcementPath = toolProof.enforcementPath;
+  if (enforcementPath != null && enforcementPath.isNotEmpty) {
+    yield _DeclaredProofSurface(
+      label: 'toolProof.enforcementPath',
+      path: enforcementPath,
+    );
+  }
+  final regressionPath = toolProof.regressionPath;
+  if (regressionPath != null && regressionPath.isNotEmpty) {
+    yield _DeclaredProofSurface(
+      label: 'toolProof.regressionPath',
+      path: regressionPath,
+    );
+  }
+}
+
+_CoverageReport _collectCoverageReport(Map<String, Set<String>> refsById) {
+  final missingDetails = <String>[];
+  final missingInvariantIds = <String>{};
 
   for (final invariant in invariants) {
-    final proofFile = File(invariant.proofPath);
-    if (!proofFile.existsSync()) {
-      missing.add('${invariant.id} proofPath missing: ${invariant.proofPath}');
-      continue;
-    }
-    if (!refsById[invariant.id]!.contains(invariant.proofPath)) {
-      missing.add(
-        '${invariant.id} is missing explicit proof marker in '
-        '${invariant.proofPath}',
-      );
+    for (final proof in _declaredProofSurfaces(invariant)) {
+      final proofFile = File(proof.path);
+      if (!proofFile.existsSync()) {
+        missingDetails.add(
+          '${invariant.id} ${proof.label} missing: ${proof.path}',
+        );
+        missingInvariantIds.add(invariant.id);
+        continue;
+      }
+      if (!refsById[invariant.id]!.contains(proof.path)) {
+        missingDetails.add(
+          '${invariant.id} is missing explicit proof marker in '
+          '${proof.label} ${proof.path}',
+        );
+        missingInvariantIds.add(invariant.id);
+      }
     }
   }
 
-  return missing;
+  return _CoverageReport(
+    missingDetails: missingDetails,
+    missingInvariantIds: missingInvariantIds,
+  );
 }
 
-void _reportCoverage(List<String> missing) {
-  final covered = invariants.length - missing.length;
+void _reportCoverage(_CoverageReport coverageReport) {
+  final missingDetails = coverageReport.missingDetails;
+  final covered = invariants.length - coverageReport.missingInvariantIds.length;
   final total = invariants.length;
   final pct = total == 0 ? 100.0 : (covered / total) * 100.0;
 
-  if (missing.isNotEmpty) {
+  if (missingDetails.isNotEmpty) {
     stderr.writeln(
       'FAIL: invariant proof coverage '
       '${pct.toStringAsFixed(1)}% ($covered/$total). Missing:',
     );
-    for (final entry in missing) {
+    for (final entry in missingDetails) {
       stderr.writeln('- $entry');
     }
     stderr.writeln(
-      'Declare the canonical proof surface in tool/invariant_registry.dart '
-      'and keep a matching // INV:<id> marker in that file.',
+      'Declare canonical primaryProof/toolProof surfaces in '
+      'tool/invariant_registry.dart and keep matching // INV:<id> markers '
+      'in every declared proof file.',
     );
     exit(1);
   }
@@ -312,5 +420,5 @@ void main(List<String> _) {
     rootAbsPosix: _toPosixPath(Directory.current.absolute.path),
   );
   _failOnReferenceFindings(scanResult);
-  _reportCoverage(_collectMissingProofs(scanResult.refsById));
+  _reportCoverage(_collectCoverageReport(scanResult.refsById));
 }

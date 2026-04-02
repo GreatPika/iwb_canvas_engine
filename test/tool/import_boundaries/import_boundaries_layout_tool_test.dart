@@ -8,6 +8,7 @@ import '../support/tool_process_test_support.dart';
 
 void main() {
   group('tool/check_import_boundaries.dart', () {
+    // INV:INV-G-LAYER-BOUNDARIES
     test('rejects core -> unknown target layer import', () async {
       final sandbox = await createImportBoundariesSandbox();
       try {

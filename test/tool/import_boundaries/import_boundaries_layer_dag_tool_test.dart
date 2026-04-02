@@ -23,6 +23,8 @@ void writeContractBridgeSurfaces(Directory sandbox) {
 
 void main() {
   group('tool/check_import_boundaries.dart', () {
+    // INV:INV-G-LAYER-DAG
+    // INV:INV-ENG-VIEW-POINTER-SEMANTICS-BOUNDARY
     test('allows contract -> contract export', () async {
       final sandbox = await createImportBoundariesSandbox();
       try {

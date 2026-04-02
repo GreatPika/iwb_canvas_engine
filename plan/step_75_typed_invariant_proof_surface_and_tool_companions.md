@@ -167,7 +167,7 @@ language: russian
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Typed Proof Contract
+### Slice 1. [x] Typed Proof Contract
 
 #### Slice Contract
 
@@ -203,7 +203,7 @@ Registry и coverage tool работают на explicit `primaryProof` / `toolP
 - Green run of the listed verifications.
 - Failure diagnostics from the sandbox matrix show the expected categories for comment-only, wrong-kind, and missing-tool-test cases.
 
-### Slice 2. [ ] Repository Tool-Proof Migration
+### Slice 2. [x] Repository Tool-Proof Migration
 
 #### Slice Contract
 
