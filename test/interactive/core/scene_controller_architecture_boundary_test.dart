@@ -192,31 +192,31 @@ void main() {
     );
     expect(
       mutationBoundarySource,
-      contains('core.commands.writeSelectionReplace(nodeIds);'),
+      contains('storeController.commands.writeSelectionReplace(nodeIds);'),
     );
     expect(
       mutationBoundarySource,
-      contains('core.commands.writeSelectionClear();'),
+      contains('storeController.commands.writeSelectionClear();'),
     );
     expect(
       mutationBoundarySource,
-      contains('core.commands.writeDeleteSelection();'),
+      contains('storeController.commands.writeDeleteSelection();'),
     );
     expect(
       mutationBoundarySource,
-      contains('core.commands.writeSelectionTransform(delta);'),
+      contains('storeController.commands.writeSelectionTransform(delta);'),
     );
     expect(
       mutationBoundarySource,
-      contains('core.prepareSceneReplacement(snapshot);'),
+      contains('storeController.prepareSceneReplacement(snapshot);'),
     );
     expect(
       mutationBoundarySource,
-      contains('core.writePreparedSceneReplacement(replacement);'),
+      contains('storeController.writePreparedSceneReplacement(replacement);'),
     );
     expect(
       mutationBoundarySource,
-      isNot(contains('core.writeReplaceScene(snapshot);')),
+      isNot(contains('storeController.writeReplaceScene(snapshot);')),
     );
     expect(mutationBoundarySource, isNot(contains('txnSceneFromSnapshot(')));
 
@@ -231,9 +231,12 @@ void main() {
       sceneMutationsSource,
       contains('mutations.replaceScene(replacement);'),
     );
-    expect(sceneMutationsSource, isNot(contains('core.commands.')));
-    expect(sceneMutationsSource, isNot(contains('core.write(')));
-    expect(sceneMutationsSource, isNot(contains('core.writeReplaceScene(')));
+    expect(sceneMutationsSource, isNot(contains('storeController.commands.')));
+    expect(sceneMutationsSource, isNot(contains('storeController.write(')));
+    expect(
+      sceneMutationsSource,
+      isNot(contains('storeController.writeReplaceScene(')),
+    );
 
     expect(
       eligibilityPolicySource,
@@ -249,14 +252,20 @@ void main() {
       selectionMutationsSource,
       contains('mutations.deleteSelection(timestampMs: timestampMs);'),
     );
-    expect(selectionMutationsSource, isNot(contains('core.commands.')));
+    expect(
+      selectionMutationsSource,
+      isNot(contains('storeController.commands.')),
+    );
 
     expect(
       selectionActionsSource,
       contains('return mutations.commitMoveSelection(proposedDelta);'),
     );
-    expect(selectionActionsSource, isNot(contains('core.commands.')));
-    expect(selectionActionsSource, isNot(contains('core.write(')));
+    expect(
+      selectionActionsSource,
+      isNot(contains('storeController.commands.')),
+    );
+    expect(selectionActionsSource, isNot(contains('storeController.write(')));
 
     final handlePointerBody = _extractMethodBody(
       source: interactionSource,
@@ -431,11 +440,11 @@ void main() {
     expect(runtimeSource, isNot(contains('_eraserHitsLine(')));
     expect(
       interactionRuntimeSource,
-      isNot(contains('request.core.commands.writeSelectionReplace')),
+      isNot(contains('request.storeController.commands.writeSelectionReplace')),
     );
     expect(
       interactionRuntimeSource,
-      isNot(contains('request.core.commands.writeSelectionClear')),
+      isNot(contains('request.storeController.commands.writeSelectionClear')),
     );
 
     expect(eventSource, contains('class InteractiveEventDispatcher'));

@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 
 // INV:INV-ENG-TXN-COPY-ON-WRITE
 // INV:INV-ENG-TEXT-SIZE-DERIVED
@@ -23,7 +23,7 @@ void main() {
   }
 
   test('no-op hitPadding patch does not bump bounds revision', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final beforeBounds = controller.boundsRevision;
@@ -48,7 +48,7 @@ void main() {
   test(
     'text layout patch recomputes derived size and bumps bounds revision',
     () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
@@ -95,7 +95,7 @@ void main() {
   test(
     'textDirection patch updates snapshot through controller write path',
     () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
@@ -138,7 +138,7 @@ void main() {
   );
 
   test('text visual-only patch keeps bounds revision unchanged', () {
-    final controller = SceneControllerCore(
+    final controller = SceneStoreController(
       initialSnapshot: SceneSnapshot(
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
@@ -176,7 +176,7 @@ void main() {
   });
 
   test('camera offset write does not clone layers or nodes', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     controller.write<void>((writer) {
@@ -189,7 +189,7 @@ void main() {
   });
 
   test('single node patch clones exactly one layer and one node', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     controller.write<void>((writer) {
@@ -204,7 +204,7 @@ void main() {
   });
 
   test('opacity patch commit does not materialize allNodeIds', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     controller.write<void>((writer) {
@@ -221,7 +221,7 @@ void main() {
   });
 
   test('structural commit materializes allNodeIds once', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     controller.write<void>((writer) {
@@ -235,7 +235,7 @@ void main() {
   test(
     'node allocation stays runtime-owned after deleting explicit max id',
     () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
@@ -269,7 +269,7 @@ void main() {
   test(
     'replaceScene keeps runtime revision allocator independent from snapshot max',
     () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(

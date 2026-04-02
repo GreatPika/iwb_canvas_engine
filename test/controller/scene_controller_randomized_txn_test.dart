@@ -5,7 +5,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/controller/committed_store_state.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_invariants.dart';
 import 'package:iwb_canvas_engine/src/core/revision_policy.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart' show Scene;
@@ -22,7 +22,7 @@ void main() {
   for (final seed in scenarioSeeds) {
     test('randomized transactional scenario keeps invariants (seed=$seed)', () {
       final random = math.Random(seed);
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: _initialSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -67,7 +67,7 @@ enum _RandomOperation {
 }
 
 String _runRandomOperation({
-  required SceneControllerCore controller,
+  required SceneStoreController controller,
   required math.Random random,
   required int seed,
   required int step,
@@ -210,7 +210,7 @@ String _runRandomOperation({
 }
 
 void _assertPostConditions({
-  required SceneControllerCore controller,
+  required SceneStoreController controller,
   required int seed,
   required int step,
   required String operation,

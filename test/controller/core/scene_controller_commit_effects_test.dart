@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 
 // INV:INV-ENG-TXN-ATOMIC-COMMIT
 // INV:INV-ENG-EPOCH-INVALIDATION
@@ -29,7 +29,7 @@ void main() {
   }
 
   test('changeset tracks added removed and updated node ids', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     controller.write<void>((writer) {
@@ -47,7 +47,7 @@ void main() {
   });
 
   test('boundsChanged is auto-detected for transform patch', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     controller.write<void>((writer) {
@@ -68,7 +68,7 @@ void main() {
   });
 
   test('node patch changing isSelectable keeps explicitly selected ids', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     controller.write<void>((writer) {
@@ -92,7 +92,7 @@ void main() {
   test(
     'selectAll with onlySelectable false preserves non-selectable ids after commit',
     () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
@@ -123,7 +123,7 @@ void main() {
   test(
     'writeReplaceScene increments epoch clears selection and has no action signal',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);

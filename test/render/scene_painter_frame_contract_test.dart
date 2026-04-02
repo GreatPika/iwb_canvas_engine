@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
@@ -18,7 +18,7 @@ void main() {
       final geometryCache = RenderGeometryCache();
       var previewCalls = 0;
 
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
           background: const BackgroundSnapshot(color: Color(0xFFFFFFFF)),
           layers: <ContentLayerSnapshot>[
@@ -68,7 +68,7 @@ void main() {
   );
 }
 
-final class _ScenePainterFrameTestRenderState extends SceneControllerCore {
+final class _ScenePainterFrameTestRenderState extends SceneStoreController {
   _ScenePainterFrameTestRenderState({
     required SceneSnapshot snapshot,
     required Set<NodeId> selectedNodeIds,

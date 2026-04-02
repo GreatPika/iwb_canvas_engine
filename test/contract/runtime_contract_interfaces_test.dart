@@ -5,7 +5,7 @@ import 'dart:ui';
 // INV:INV-ENG-VIEW-POINTER-SEMANTICS-BOUNDARY
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/contract/node_spec.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_render_state.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
@@ -15,8 +15,8 @@ import 'package:iwb_canvas_engine/src/interactive/scene_view_pointer_semantics.d
 
 void main() {
   group('runtime contract interfaces', () {
-    test('SceneControllerCore is consumable as SceneRenderState', () async {
-      final controller = SceneControllerCore();
+    test('SceneStoreController is consumable as SceneRenderState', () async {
+      final controller = SceneStoreController();
       addTearDown(controller.dispose);
 
       final state = controller as SceneRenderState;
@@ -33,9 +33,9 @@ void main() {
     });
 
     test(
-      'SceneControllerCore exposes committed-only defaults as SceneViewRenderState',
+      'SceneStoreController exposes committed-only defaults as SceneViewRenderState',
       () {
-        final controller = SceneControllerCore();
+        final controller = SceneStoreController();
         addTearDown(controller.dispose);
 
         final state = controller as SceneViewRenderState;
@@ -75,7 +75,7 @@ void main() {
     );
 
     test('write callback exposes SceneWriteTxn contract', () {
-      final controller = SceneControllerCore();
+      final controller = SceneStoreController();
       addTearDown(controller.dispose);
 
       final insertedId = controller.write((txn) {

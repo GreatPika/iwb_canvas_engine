@@ -5,7 +5,7 @@ import '../../contract/node_spec.dart';
 import '../../contract/scene_write_txn.dart';
 import '../../contract/snapshot.dart';
 import '../../contract/transform2d.dart';
-import '../../controller/scene_controller.dart';
+import '../../controller/scene_store_controller.dart';
 import '../../core/action_events.dart';
 import '../../core/grid_safety_limits.dart';
 import '../../controller/scene_snapshot_materializer.dart';
@@ -42,21 +42,21 @@ final class SceneControllerMutationBoundaryCallbacks {
 
 final class SceneControllerMutationBoundary {
   const SceneControllerMutationBoundary({
-    required this.core,
+    required this.storeController,
     required this.readSnapshot,
     required this.callbacks,
   });
 
-  final SceneControllerCore core;
+  final SceneStoreController storeController;
   final SceneSnapshot Function() readSnapshot;
   final SceneControllerMutationBoundaryCallbacks callbacks;
 
   T write<T>(T Function(SceneWriteTxn writer) fn) {
-    return core.write(fn);
+    return storeController.write(fn);
   }
 
   NodeId addNode(NodeSpec node, {LayerId? layerId, int? insertIndex}) {
-    return core.commands.writeAddNode(
+    return storeController.commands.writeAddNode(
       node,
       layerId: layerId,
       insertIndex: insertIndex,
@@ -64,17 +64,17 @@ final class SceneControllerMutationBoundary {
   }
 
   bool ensureLayer(LayerId layerId, {int? index}) {
-    return core.write((writer) {
+    return storeController.write((writer) {
       return writer.writeLayerEnsure(layerId, index: index);
     });
   }
 
   bool patchNode(NodePatch patch) {
-    return core.commands.writePatchNode(patch);
+    return storeController.commands.writePatchNode(patch);
   }
 
   bool removeNode(NodeId id, {int? timestampMs}) {
-    final deleted = core.commands.writeDeleteNode(id);
+    final deleted = storeController.commands.writeDeleteNode(id);
     if (!deleted) {
       return false;
     }
@@ -85,11 +85,11 @@ final class SceneControllerMutationBoundary {
   }
 
   void setBackgroundColor(Color value) {
-    core.commands.writeBackgroundColorSet(value);
+    storeController.commands.writeBackgroundColorSet(value);
   }
 
   void setGridEnabled(bool value) {
-    core.commands.writeGridEnabledSet(value);
+    storeController.commands.writeGridEnabledSet(value);
   }
 
   void setGridCellSize(double value) {
@@ -98,7 +98,7 @@ final class SceneControllerMutationBoundary {
     final resolved = gridEnabled
         ? value.clamp(kMinGridCellSize, double.infinity).toDouble()
         : value;
-    core.commands.writeGridCellSizeSet(resolved);
+    storeController.commands.writeGridCellSizeSet(resolved);
   }
 
   void validateCameraOffset(Offset value) {
@@ -110,11 +110,11 @@ final class SceneControllerMutationBoundary {
   }
 
   void setCameraOffset(Offset value) {
-    core.commands.writeCameraOffsetSet(value);
+    storeController.commands.writeCameraOffsetSet(value);
   }
 
   void clearScene({int? timestampMs}) {
-    final clearResult = core.commands.writeClearSceneExactResult();
+    final clearResult = storeController.commands.writeClearSceneExactResult();
     if (!clearResult.didStructuralClear) {
       return;
     }
@@ -127,45 +127,47 @@ final class SceneControllerMutationBoundary {
   }
 
   PreparedSceneReplacement prepareSceneReplacement(SceneSnapshot snapshot) {
-    return core.prepareSceneReplacement(snapshot);
+    return storeController.prepareSceneReplacement(snapshot);
   }
 
   void replaceScene(PreparedSceneReplacement replacement) {
-    core.writePreparedSceneReplacement(replacement);
+    storeController.writePreparedSceneReplacement(replacement);
     callbacks.clearPointerNormalizationState();
   }
 
   void notifySceneChanged() {
-    core.requestRepaint();
+    storeController.requestRepaint();
   }
 
   void setSelection(Iterable<NodeId> nodeIds) {
-    core.commands.writeSelectionReplace(nodeIds);
+    storeController.commands.writeSelectionReplace(nodeIds);
   }
 
   void toggleSelection(NodeId nodeId) {
-    core.commands.writeSelectionToggle(nodeId);
+    storeController.commands.writeSelectionToggle(nodeId);
   }
 
   void clearSelection() {
-    core.commands.writeSelectionClear();
+    storeController.commands.writeSelectionClear();
   }
 
   void selectAll({bool onlySelectable = true}) {
-    core.commands.writeSelectionSelectAll(onlySelectable: onlySelectable);
+    storeController.commands.writeSelectionSelectAll(
+      onlySelectable: onlySelectable,
+    );
   }
 
   void rotateSelection({required bool clockwise, int? timestampMs}) {
     final nodes = interaction_eligibility_policy
         .selectedTransformableNodesInSnapshotOrder(
-          snapshot: core.snapshot,
-          selected: core.selectedNodeIds,
+          snapshot: storeController.snapshot,
+          selected: storeController.selectedNodeIds,
         );
     if (nodes.isEmpty) {
       return;
     }
 
-    final center = core.centerWorldForNodeSnapshots(nodes);
+    final center = storeController.centerWorldForNodeSnapshots(nodes);
     final pivot = Transform2D.translation(center);
     final unpivot = Transform2D.translation(Offset(-center.dx, -center.dy));
     final rotation = Transform2D.rotationDeg(clockwise ? 90 : -90);
@@ -176,14 +178,14 @@ final class SceneControllerMutationBoundary {
   void flipSelectionVertical({int? timestampMs}) {
     final nodes = interaction_eligibility_policy
         .selectedTransformableNodesInSnapshotOrder(
-          snapshot: core.snapshot,
-          selected: core.selectedNodeIds,
+          snapshot: storeController.snapshot,
+          selected: storeController.selectedNodeIds,
         );
     if (nodes.isEmpty) {
       return;
     }
 
-    final center = core.centerWorldForNodeSnapshots(nodes);
+    final center = storeController.centerWorldForNodeSnapshots(nodes);
     final delta = Transform2D(
       a: 1,
       b: 0,
@@ -198,14 +200,14 @@ final class SceneControllerMutationBoundary {
   void flipSelectionHorizontal({int? timestampMs}) {
     final nodes = interaction_eligibility_policy
         .selectedTransformableNodesInSnapshotOrder(
-          snapshot: core.snapshot,
-          selected: core.selectedNodeIds,
+          snapshot: storeController.snapshot,
+          selected: storeController.selectedNodeIds,
         );
     if (nodes.isEmpty) {
       return;
     }
 
-    final center = core.centerWorldForNodeSnapshots(nodes);
+    final center = storeController.centerWorldForNodeSnapshots(nodes);
     final delta = Transform2D(
       a: -1,
       b: 0,
@@ -220,14 +222,14 @@ final class SceneControllerMutationBoundary {
   void deleteSelection({int? timestampMs}) {
     final deletedIds = interaction_eligibility_policy
         .deletableSelectedNodeIdsInSnapshot(
-          snapshot: core.snapshot,
-          selected: core.selectedNodeIds,
+          snapshot: storeController.snapshot,
+          selected: storeController.selectedNodeIds,
         );
     if (deletedIds.isEmpty) {
       return;
     }
 
-    final removedCount = core.commands.writeDeleteSelection();
+    final removedCount = storeController.commands.writeDeleteSelection();
     if (removedCount <= 0) {
       return;
     }
@@ -240,7 +242,7 @@ final class SceneControllerMutationBoundary {
   }
 
   MoveCommitSelectionResult commitMoveSelection(Offset proposedDelta) {
-    return core.write<MoveCommitSelectionResult>((writer) {
+    return storeController.write<MoveCommitSelectionResult>((writer) {
       final snapshot = writer.snapshot;
       final movedNodes = interaction_eligibility_policy
           .selectedCommitMovableNodesInSnapshotOrder(
@@ -285,7 +287,7 @@ final class SceneControllerMutationBoundary {
     int? timestampMs,
   }) {
     final movedIds = nodes.map((node) => node.id).toList(growable: false);
-    final affected = core.commands.writeSelectionTransform(delta);
+    final affected = storeController.commands.writeSelectionTransform(delta);
     if (affected <= 0) {
       return;
     }

@@ -48,10 +48,10 @@ String _extractMethodBody({
 
 void main() {
   test(
-    'scene controller public facade no longer keeps commit runtime helpers',
+    'scene store controller public facade no longer keeps commit runtime helpers',
     () {
       final controllerSource = File(
-        'lib/src/controller/scene_controller.dart',
+        'lib/src/controller/scene_store_controller.dart',
       ).readAsStringSync();
       final runtimeSource = File(
         'lib/src/controller/scene_controller_commit_runtime.dart',
@@ -69,7 +69,7 @@ void main() {
         'lib/src/controller/scene_controller_post_commit_lifecycle.dart',
       ).readAsStringSync();
 
-      expect(controllerSource, contains('class SceneControllerCore'));
+      expect(controllerSource, contains('class SceneStoreController'));
       expect(
         controllerSource,
         isNot(contains('class SceneControllerPostCommitLifecycle')),
@@ -135,9 +135,9 @@ void main() {
     },
   );
 
-  test('scene controller write facade delegates into commit runtime', () {
+  test('scene store controller write facade delegates into commit runtime', () {
     final controllerSource = File(
-      'lib/src/controller/scene_controller.dart',
+      'lib/src/controller/scene_store_controller.dart',
     ).readAsStringSync();
     final body = _extractMethodBody(
       source: controllerSource,
@@ -150,17 +150,20 @@ void main() {
     expect(body, isNot(contains('_txnWriteCommit(')));
   });
 
-  test('scene controller repaint facade delegates into commit runtime', () {
-    final controllerSource = File(
-      'lib/src/controller/scene_controller.dart',
-    ).readAsStringSync();
-    final body = _extractMethodBody(
-      source: controllerSource,
-      methodStart: 'void requestRepaint()',
-    );
+  test(
+    'scene store controller repaint facade delegates into commit runtime',
+    () {
+      final controllerSource = File(
+        'lib/src/controller/scene_store_controller.dart',
+      ).readAsStringSync();
+      final body = _extractMethodBody(
+        source: controllerSource,
+        methodStart: 'void requestRepaint()',
+      );
 
-    expect(body, contains('_commitRuntime.requestRepaint();'));
-    expect(body, isNot(contains('_postCommitLifecycle')));
-    expect(body, isNot(contains('_repaintFlag')));
-  });
+      expect(body, contains('_commitRuntime.requestRepaint();'));
+      expect(body, isNot(contains('_postCommitLifecycle')));
+      expect(body, isNot(contains('_repaintFlag')));
+    },
+  );
 }

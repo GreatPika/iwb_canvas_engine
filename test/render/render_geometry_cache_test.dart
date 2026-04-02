@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
 import 'package:iwb_canvas_engine/src/contract/node_patch.dart';
 import 'package:iwb_canvas_engine/src/contract/patch_field.dart';
@@ -146,7 +146,7 @@ void main() {
     'RenderGeometryCache keeps hit for unchanged stroke across unrelated controller commit',
     () {
       // pointsRevision monotonicity itself is asserted in scene_controller_test.
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(

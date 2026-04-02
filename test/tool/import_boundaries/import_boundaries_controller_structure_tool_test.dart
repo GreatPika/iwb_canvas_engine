@@ -127,13 +127,13 @@ part
       }
     });
 
-    test('rejects internal -> scene_controller import', () async {
+    test('rejects internal -> scene_store_controller import', () async {
       final sandbox = await createImportBoundariesSandbox();
       try {
         writeSandboxFile(
           sandbox,
           'lib/src/controller/internal/b.dart',
-          "import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';\n",
+          "import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';\n",
         );
 
         final result = await runSandboxTool(
@@ -146,7 +146,7 @@ part
           diagnostic(
             category: 'controller structure',
             detail:
-                'internal/** must not import controller/scene_controller.dart',
+                'internal/** must not import controller/scene_store_controller.dart',
           ),
         );
       } finally {

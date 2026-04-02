@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import '../../contract/canvas_pointer_input.dart';
 import '../../contract/snapshot.dart';
-import '../../controller/scene_controller.dart';
+import '../../controller/scene_store_controller.dart';
 import '../../core/action_events.dart';
 import '../../core/interaction_types.dart';
 import '../scene_controller_interaction.dart';
@@ -16,7 +16,7 @@ import 'interactive_selection_actions.dart';
 final class SceneControllerInteractionRuntime {
   SceneControllerInteractionRuntime._({
     required MoveCommitDeltaResolver? moveCommitDeltaResolver,
-    required this.core,
+    required this.storeController,
     required this.notifyScheduler,
     required this.events,
     required this.mutationBoundary,
@@ -24,7 +24,7 @@ final class SceneControllerInteractionRuntime {
     required this.runtime,
   }) : _moveCommitDeltaResolver = moveCommitDeltaResolver;
 
-  final SceneControllerCore core;
+  final SceneStoreController storeController;
   final MoveCommitDeltaResolver? _moveCommitDeltaResolver;
   final InteractiveNotifyScheduler notifyScheduler;
   final InteractiveEventDispatcher events;
@@ -97,7 +97,7 @@ final class SceneControllerInteractionRuntime {
     events.dispose();
   }
 
-  void _handleCoreChanged() {
+  void _handleStoreControllerChanged() {
     scheduleNotify();
   }
 }
@@ -105,7 +105,7 @@ final class SceneControllerInteractionRuntime {
 final class SceneControllerInteractionRuntimeRequest {
   const SceneControllerInteractionRuntimeRequest({
     required this.notifyListeners,
-    required this.core,
+    required this.storeController,
     required this.readSnapshot,
     required this.readSelectedNodeIds,
     required this.readMode,
@@ -116,7 +116,7 @@ final class SceneControllerInteractionRuntimeRequest {
   });
 
   final void Function() notifyListeners;
-  final SceneControllerCore core;
+  final SceneStoreController storeController;
   final SceneSnapshot Function() readSnapshot;
   final Set<NodeId> Function() readSelectedNodeIds;
   final CanvasMode Function() readMode;
@@ -144,14 +144,16 @@ SceneControllerInteractionRuntime createSceneControllerInteractionRuntime({
   );
   wiredRuntime = SceneControllerInteractionRuntime._(
     moveCommitDeltaResolver: request.moveCommitDeltaResolver,
-    core: request.core,
+    storeController: request.storeController,
     notifyScheduler: notifyScheduler,
     events: events,
     mutationBoundary: mutationBoundary,
     selectionActions: selectionActions,
     runtime: interactiveRuntime,
   );
-  request.core.addListener(wiredRuntime._handleCoreChanged);
+  request.storeController.addListener(
+    wiredRuntime._handleStoreControllerChanged,
+  );
   return wiredRuntime;
 }
 
@@ -245,7 +247,7 @@ SceneControllerMutationBoundary _createMutationBoundary(
   SceneControllerInteractionRuntime Function() readRuntime,
 ) {
   return SceneControllerMutationBoundary(
-    core: request.core,
+    storeController: request.storeController,
     readSnapshot: request.readSnapshot,
     callbacks: SceneControllerMutationBoundaryCallbacks(
       resolveTimestampMs: (timestampMs) =>
@@ -294,15 +296,16 @@ InteractiveRuntime _createInteractiveRuntime(
       readMode: request.readMode,
       readDragStartSlop: request.readDragStartSlop,
       readDrawStyle: request.readDrawStyle,
-      querySpatialCandidates: request.core.querySpatialCandidates,
-      resolveSpatialCandidateNode: request.core.resolveSpatialCandidateNode,
+      querySpatialCandidates: request.storeController.querySpatialCandidates,
+      resolveSpatialCandidateNode:
+          request.storeController.resolveSpatialCandidateNode,
       writeSelectionReplace: mutationBoundary.setSelection,
       writeSelectionClear: mutationBoundary.clearSelection,
       commitMoveSelection: mutationBoundary.commitMoveSelection,
-      writeDrawStroke: request.core.draw.writeDrawStroke,
+      writeDrawStroke: request.storeController.draw.writeDrawStroke,
       writeDrawLineFromWorldSegment:
-          request.core.draw.writeDrawLineFromWorldSegment,
-      writeEraseNodes: request.core.draw.writeEraseNodes,
+          request.storeController.draw.writeDrawLineFromWorldSegment,
+      writeEraseNodes: request.storeController.draw.writeEraseNodes,
     ),
   );
 }

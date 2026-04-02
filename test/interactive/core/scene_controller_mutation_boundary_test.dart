@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/core/grid_safety_limits.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_internal_access.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_interaction_runtime.dart';
@@ -13,7 +13,7 @@ import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_muta
 void main() {
   group('SceneControllerMutationBoundary', () {
     test('applies scene mutations and replacement side effects', () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
@@ -43,7 +43,7 @@ void main() {
       });
 
       final boundary = SceneControllerMutationBoundary(
-        core: controller,
+        storeController: controller,
         readSnapshot: () => controller.snapshot,
         callbacks: SceneControllerMutationBoundaryCallbacks(
           resolveTimestampMs: (timestampMs) => timestampMs ?? -1,
@@ -137,7 +137,7 @@ void main() {
     });
 
     test('emits clear action for structural clear without removed nodes', () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
@@ -160,7 +160,7 @@ void main() {
           >[];
 
       final boundary = SceneControllerMutationBoundary(
-        core: controller,
+        storeController: controller,
         readSnapshot: () => controller.snapshot,
         callbacks: SceneControllerMutationBoundaryCallbacks(
           resolveTimestampMs: (timestampMs) => timestampMs ?? -1,
@@ -193,7 +193,7 @@ void main() {
     });
 
     test('applies selection transforms deletion and move commits', () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
@@ -233,7 +233,7 @@ void main() {
           >[];
 
       final boundary = SceneControllerMutationBoundary(
-        core: controller,
+        storeController: controller,
         readSnapshot: () => controller.snapshot,
         callbacks: SceneControllerMutationBoundaryCallbacks(
           resolveTimestampMs: (timestampMs) => timestampMs ?? -1,

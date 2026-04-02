@@ -312,7 +312,8 @@ class DirectiveBoundaryChecker {
     BoundaryTarget boundaryTarget,
     String? resolvedRepoRelPosix,
   ) {
-    if (resolvedRepoRelPosix != '/lib/src/controller/scene_controller.dart') {
+    if (resolvedRepoRelPosix !=
+        '/lib/src/controller/scene_store_controller.dart') {
       return false;
     }
     _addViolation(
@@ -321,7 +322,7 @@ class DirectiveBoundaryChecker {
       target: boundaryTarget.diagnosticTarget,
       message:
           'controller structure violation: ${_controllerScope()} must not '
-          '$directiveKind controller/scene_controller.dart',
+          '$directiveKind controller/scene_store_controller.dart',
     );
     return true;
   }

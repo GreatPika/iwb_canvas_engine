@@ -905,8 +905,8 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
           'commitMoveSelection: mutationBoundary.commitMoveSelection,',
         ],
         bannedTokens: const <String>[
-          'request.core.commands.writeSelectionReplace',
-          'request.core.commands.writeSelectionClear',
+          'request.storeController.commands.writeSelectionReplace',
+          'request.storeController.commands.writeSelectionClear',
         ],
         message:
             'interactive API violation: SceneControllerInteractionRuntime '
@@ -930,10 +930,12 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
         filePath: _interactiveFilePosixPath(context, sceneMutationsFile),
         requiredTokens: const <String>['mutations.'],
         bannedTokens: const <String>[
-          'core.commands.',
-          'core.writeReplaceScene(',
+          'storeController.commands.',
+          'storeController.writeReplaceScene(',
         ],
-        bannedPatterns: <RegExp>[RegExp(r'core\.write\s*(<[^>]+>)?\s*\(')],
+        bannedPatterns: <RegExp>[
+          RegExp(r'storeController\.write\s*(<[^>]+>)?\s*\('),
+        ],
         message:
             'interactive API violation: SceneControllerSceneMutations must '
             'delegate committed scene writes through '
@@ -943,8 +945,10 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
         source: selectionMutationsSource,
         filePath: _interactiveFilePosixPath(context, selectionMutationsFile),
         requiredTokens: const <String>['mutations.'],
-        bannedTokens: const <String>['core.commands.'],
-        bannedPatterns: <RegExp>[RegExp(r'core\.write\s*(<[^>]+>)?\s*\(')],
+        bannedTokens: const <String>['storeController.commands.'],
+        bannedPatterns: <RegExp>[
+          RegExp(r'storeController\.write\s*(<[^>]+>)?\s*\('),
+        ],
         message:
             'interactive API violation: SceneControllerSelectionMutations '
             'must delegate committed selection writes through '
@@ -965,21 +969,21 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
         filePath: _interactiveFilePosixPath(context, mutationBoundaryFile),
         requiredTokens: const <String>[
           'class SceneControllerMutationBoundary',
-          'core.commands.writeClearSceneExactResult',
-          'core.commands.writeSelectionReplace',
-          'core.commands.writeSelectionClear',
-          'core.commands.writeDeleteSelection',
-          'core.commands.writeSelectionTransform',
-          'core.prepareSceneReplacement(snapshot);',
-          'core.writePreparedSceneReplacement(replacement);',
+          'storeController.commands.writeClearSceneExactResult',
+          'storeController.commands.writeSelectionReplace',
+          'storeController.commands.writeSelectionClear',
+          'storeController.commands.writeDeleteSelection',
+          'storeController.commands.writeSelectionTransform',
+          'storeController.prepareSceneReplacement(snapshot);',
+          'storeController.writePreparedSceneReplacement(replacement);',
         ],
         bannedTokens: const <String>[
-          'core.writeReplaceScene(snapshot);',
+          'storeController.writeReplaceScene(snapshot);',
           'txnSceneFromSnapshot(',
         ],
         bannedPatterns: <RegExp>[
           RegExp(
-            r'\bclearScene\s*\([^)]*\)\s*\{[^}]*core\.write\s*(<[^>]+>)?\s*\(',
+            r'\bclearScene\s*\([^)]*\)\s*\{[^}]*storeController\.write\s*(<[^>]+>)?\s*\(',
           ),
         ],
         message:

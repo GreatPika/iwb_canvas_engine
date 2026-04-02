@@ -255,7 +255,7 @@ Ownership decisions for the target state:
    `InteractiveDrawTerminalRouter`; precise eraser hit geometry and coarse
    candidate-query ownership stay inside `InteractiveDrawEraserEngine` and its
    focused helpers instead of returning to the coordinator or the runtime.
-6. `SceneControllerCore` performs transactional writes and finalizes a canonical
+6. `SceneStoreController` performs transactional writes and finalizes a canonical
    immutable `SceneSnapshot`. It also owns prepared replace-scene materialization,
    so `replaceScene(...)` validates/imports runtime scene data exactly once
    before any active-gesture reset and the apply path adopts the prepared
@@ -438,10 +438,10 @@ most important architectural rules are:
 
 ## Transaction and signal model
 
-- `SceneControllerCore` is the thin public controller facade. It owns public
+- `SceneStoreController` is the thin public controller facade. It owns public
   lifecycle, exposes the committed store and streams, and delegates commit
   orchestration to the controller-private `SceneControllerCommitRuntime`
-  instead of re-owning transaction assembly in `scene_controller.dart`. This
+  instead of re-owning transaction assembly in `scene_store_controller.dart`. This
   split is pinned by `INV-ENG-CONTROLLER-COMMIT-RUNTIME-BOUNDARY`.
 - `SceneControllerCommitRuntime` is the controller-private orchestration owner
   for transactional writes. It assembles `TxnContext`, `SceneWriter`,
@@ -451,7 +451,7 @@ most important architectural rules are:
   transform commands all route through the same transactional core.
 - Scene-mutating runtime intents are modeled as internal `MutationOp` values
   and executed by `MutationExecutor`; `SceneWriteTxn` stays the public write
-  seam, while `SceneControllerCore` remains the owner of commit/store/signal
+  seam, while `SceneStoreController` remains the owner of commit/store/signal
   lifecycle.
 - Private mutation execution ownership follows the typed mutation families in
   `mutation_op.dart`: structural and scene-setting mutations live in
@@ -480,7 +480,7 @@ most important architectural rules are:
 - Final measured controller closure baseline after steps 29-31 is:
   `6 HIGH` metric entries limited to accepted seams in
   `mutation_op.dart`,
-  `scene_controller.dart`,
+  `scene_store_controller.dart`,
   `scene_controller_commit_runtime.dart`, and
   `scene_writer.dart`,
   plus `1` remaining clone pair between

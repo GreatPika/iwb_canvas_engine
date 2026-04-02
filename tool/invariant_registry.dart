@@ -241,7 +241,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-CONTROLLER-COMMIT-RUNTIME-BOUNDARY',
     scope: 'engine-structure',
     title:
-        'SceneControllerCore stays a thin public facade over SceneControllerCommitRuntime and does not re-own commit planning or post-commit helpers',
+        'SceneStoreController stays a thin public facade over SceneControllerCommitRuntime and does not re-own commit planning or post-commit helpers',
     primaryProof: PrimaryProof(
       path:
           'test/controller/core/scene_controller_commit_runtime_contract_test.dart',

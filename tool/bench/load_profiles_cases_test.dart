@@ -4,7 +4,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart' show sceneSizeMax;
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 
@@ -105,7 +105,7 @@ Map<String, Object?> _runNodeScaleCase({
       ),
     ],
   );
-  final controller = SceneControllerCore(initialSnapshot: snapshot);
+  final controller = SceneStoreController(initialSnapshot: snapshot);
   final targetId = 'n${nodeCount ~/ 2}';
 
   try {
@@ -197,7 +197,7 @@ Map<String, Object?> _runStrokeScaleCase({
       ContentLayerSnapshot(id: 'layer-auto-1', nodes: nodes),
     ],
   );
-  final controller = SceneControllerCore(initialSnapshot: snapshot);
+  final controller = SceneStoreController(initialSnapshot: snapshot);
   final targetId = 's${strokeCount ~/ 2}';
   final pointsA = _linearPoints(count: pointsPerStroke, y: 0);
   final pointsB = _linearPoints(count: pointsPerStroke, y: 5);
@@ -308,7 +308,7 @@ Map<String, Object?> _runSelectionPathMetricsCase({
       ContentLayerSnapshot(id: 'layer-auto-selection-path', nodes: nodes),
     ],
   );
-  final controller = SceneControllerCore(initialSnapshot: snapshot);
+  final controller = SceneStoreController(initialSnapshot: snapshot);
   final pathCache = ScenePathMetricsCache(maxEntries: pathNodeCount * 2);
   final painter = ScenePainter(
     controller: controller,
@@ -367,7 +367,7 @@ Map<String, Object?> _runHugeBoundsMetric({required int iterations}) {
       ),
     ],
   );
-  final controller = SceneControllerCore(initialSnapshot: snapshot);
+  final controller = SceneStoreController(initialSnapshot: snapshot);
   try {
     final queryMetric = _measureOperation(
       iterations: iterations,
@@ -421,7 +421,7 @@ Map<String, Object?> _runHugeRectSelectMetric({
       ),
     ],
   );
-  final controller = SceneControllerCore(initialSnapshot: snapshot);
+  final controller = SceneStoreController(initialSnapshot: snapshot);
   try {
     return _measureOperation(
       iterations: iterations,
@@ -457,7 +457,7 @@ Map<String, Object?> _runVeryLongPathMetric({
       ),
     ],
   );
-  final controller = SceneControllerCore(initialSnapshot: snapshot);
+  final controller = SceneStoreController(initialSnapshot: snapshot);
   try {
     final patchMetric = _measureOperation(
       iterations: iterations,

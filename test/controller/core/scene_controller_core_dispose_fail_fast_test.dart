@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 
 // INV:INV-ENG-DISPOSE-FAIL-FAST
 
@@ -24,7 +24,7 @@ void main() {
   test(
     'write after dispose throws and keeps state/effects unchanged',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
 
@@ -75,7 +75,7 @@ void main() {
   test(
     'writeReplaceScene after dispose throws and keeps state unchanged',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
 
@@ -135,7 +135,7 @@ void main() {
   test(
     'requestRepaint after dispose throws and does not schedule notification',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
 
@@ -179,7 +179,7 @@ void main() {
   );
 
   test('dispose is idempotent on facade boundary', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
 
     expect(() => controller.dispose(), returnsNormally);
     expect(() => controller.dispose(), returnsNormally);
@@ -188,7 +188,7 @@ void main() {
   test(
     'dispose during active write fails fast and does not poison commit lifecycle',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);

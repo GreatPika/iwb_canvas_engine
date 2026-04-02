@@ -2,7 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
@@ -66,7 +66,7 @@ SceneSnapshot _churnSnapshot({required int pairCount, required String prefix}) {
 }
 
 Widget _coreHost(
-  SceneControllerCore controller, {
+  SceneStoreController controller, {
   ui.Image? Function(String imageId)? imageResolver,
   SceneStaticLayerCache? staticLayerCache,
   SceneTextLayoutCache? textLayoutCache,
@@ -81,7 +81,7 @@ Widget _coreHost(
     child: SizedBox(
       width: width,
       height: height,
-      child: SceneViewRenderSurface.core(
+      child: SceneViewRenderSurface.store(
         controller: controller,
         imageResolver: imageResolver,
         staticLayerCache: staticLayerCache,
@@ -98,7 +98,7 @@ void main() {
   testWidgets('debugSceneViewRenderCachesOf supports descendant contexts', (
     tester,
   ) async {
-    final controller = SceneControllerCore(
+    final controller = SceneStoreController(
       initialSnapshot: _snapshot(strokeY: 10, text: 'ctx'),
     );
     final staticLayerCache = SceneStaticLayerCache();
@@ -160,7 +160,7 @@ void main() {
     tester,
   ) async {
     // INV:INV-ENG-EPOCH-INVALIDATION
-    final controller = SceneControllerCore(
+    final controller = SceneStoreController(
       initialSnapshot: _snapshot(strokeY: 20, text: 'A'),
     );
     addTearDown(controller.dispose);
@@ -206,10 +206,10 @@ void main() {
   testWidgets('core render surface clears caches when controller is replaced', (
     tester,
   ) async {
-    final controllerA = SceneControllerCore(
+    final controllerA = SceneStoreController(
       initialSnapshot: _snapshot(strokeY: 16, text: 'A'),
     );
-    final controllerB = SceneControllerCore(
+    final controllerB = SceneStoreController(
       initialSnapshot: _snapshot(strokeY: 16, text: 'A'),
     );
     addTearDown(controllerA.dispose);
@@ -265,7 +265,7 @@ void main() {
   testWidgets(
     'core render surface syncs owned/external caches and exposes debug getters',
     (tester) async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: _snapshot(strokeY: 12, text: 'sync'),
       );
       addTearDown(controller.dispose);
@@ -359,7 +359,7 @@ void main() {
   testWidgets(
     'core render surface replaceScene clears stale cache tails after heavy churn',
     (tester) async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: _churnSnapshot(pairCount: 24, prefix: 'old'),
       );
       addTearDown(controller.dispose);

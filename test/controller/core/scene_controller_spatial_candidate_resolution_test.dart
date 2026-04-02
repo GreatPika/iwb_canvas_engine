@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart' show RectNode;
 import 'package:iwb_canvas_engine/src/core/scene_spatial_index.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 
 // INV:INV-ENG-ID-INDEX-FROM-SCENE
 
@@ -24,7 +24,7 @@ void main() {
   }
 
   test('resolveSpatialCandidateNode accepts valid foreground candidate', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final candidates = controller.querySpatialCandidates(
@@ -40,7 +40,7 @@ void main() {
   test(
     'resolveSpatialCandidateNode rejects candidate from background locator',
     () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
           backgroundLayer: BackgroundLayerSnapshot(
             nodes: <NodeSnapshot>[
@@ -69,7 +69,7 @@ void main() {
   );
 
   test('resolveSpatialCandidateNode rejects out-of-range indices', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final node = RectNode(id: 'fake', size: const Size(4, 4));
@@ -93,7 +93,7 @@ void main() {
   test(
     'resolveSpatialCandidateNode rejects stale identity after replaceScene',
     () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -123,7 +123,7 @@ void main() {
   test(
     'resolveSpatialCandidateNode accepts non-geometry clone after selection write',
     () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);

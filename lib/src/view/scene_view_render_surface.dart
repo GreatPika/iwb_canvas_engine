@@ -2,7 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 
-import '../controller/scene_controller.dart';
+import '../controller/scene_store_controller.dart';
 import '../contract/scene_view_render_state.dart';
 import '../interactive/scene_controller.dart';
 import '../render/render_geometry_cache.dart';
@@ -33,8 +33,8 @@ SceneRenderCaches debugSceneViewRenderCachesOf(BuildContext context) {
 
 class SceneViewRenderSurface extends StatefulWidget {
   // ignore: prefer_const_constructors_in_immutables, cache wiring keeps this constructor non-const
-  SceneViewRenderSurface.core({
-    required SceneControllerCore controller,
+  SceneViewRenderSurface.store({
+    required SceneStoreController controller,
     ImageResolver? imageResolver,
     SceneStaticLayerCache? staticLayerCache,
     SceneTextLayoutCache? textLayoutCache,

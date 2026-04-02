@@ -42,8 +42,8 @@ final class SceneControllerCommitDebugState {
   }
 }
 
-final class SceneControllerCoreDebugAccess {
-  const SceneControllerCoreDebugAccess({
+final class SceneStoreControllerDebugAccess {
+  const SceneStoreControllerDebugAccess({
     required SceneStore store,
     required SceneControllerCommitRuntime runtime,
   }) : _store = store,

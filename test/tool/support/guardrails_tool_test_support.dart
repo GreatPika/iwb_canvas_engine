@@ -193,35 +193,35 @@ class _Mutations {
     'lib/src/interactive/internal/scene_controller_mutation_boundary.dart',
     '''
 class SceneControllerMutationBoundary {
-  final core = _Core();
+  final storeController = _Core();
 
   void clearScene() {
-    core.commands.writeClearSceneExactResult();
+    storeController.commands.writeClearSceneExactResult();
   }
 
   void setSelection(Object nodeIds) {
-    core.commands.writeSelectionReplace(nodeIds);
+    storeController.commands.writeSelectionReplace(nodeIds);
   }
 
   void clearSelection() {
-    core.commands.writeSelectionClear();
+    storeController.commands.writeSelectionClear();
   }
 
   void deleteSelection() {
-    core.commands.writeDeleteSelection();
+    storeController.commands.writeDeleteSelection();
   }
 
   void transformSelection(Object delta) {
-    core.commands.writeSelectionTransform(delta);
+    storeController.commands.writeSelectionTransform(delta);
   }
 
   Object prepareSceneReplacement(Object snapshot) {
-    return core.prepareSceneReplacement(snapshot);
+    return storeController.prepareSceneReplacement(snapshot);
   }
 
   void replaceScene(Object snapshot) {
-    final replacement = core.prepareSceneReplacement(snapshot);
-    core.writePreparedSceneReplacement(replacement);
+    final replacement = storeController.prepareSceneReplacement(snapshot);
+    storeController.writePreparedSceneReplacement(replacement);
   }
 
   Object commitMoveSelection(Object proposedDelta) => proposedDelta;

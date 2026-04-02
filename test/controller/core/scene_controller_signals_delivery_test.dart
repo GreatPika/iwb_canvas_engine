@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/controller/internal/signal_event.dart';
 
 // INV:INV-ENG-SIGNALS-AFTER-COMMIT
@@ -23,7 +23,7 @@ void main() {
   }
 
   test('signals are emitted only after successful commit', () async {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final emitted = <String>[];
@@ -53,7 +53,7 @@ void main() {
   test(
     'signals are delivered before repaint listeners for same commit',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -80,7 +80,7 @@ void main() {
   test(
     'signals stay ordered before notify in signals-plus-repaint commit',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -107,7 +107,7 @@ void main() {
   test(
     'signal listener observes committed state and can trigger follow-up write',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -156,7 +156,7 @@ void main() {
   test(
     'change listener can trigger follow-up write without nested write error',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -188,7 +188,7 @@ void main() {
 
   test('committed signals expose immutable payload and nodeIds', () async {
     // INV:INV-ENG-EVENTS-IMMUTABLE
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final emitted = <CommittedSignal>[];

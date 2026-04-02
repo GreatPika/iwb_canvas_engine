@@ -1,5 +1,5 @@
 import '../../contract/snapshot.dart';
-import '../../controller/scene_controller.dart';
+import '../../controller/scene_store_controller.dart';
 import '../../core/pointer_input.dart';
 import 'scene_controller_interaction_access.dart';
 import 'scene_controller_interaction_config.dart';
@@ -23,7 +23,7 @@ final class SceneControllerFacadeRequest {
   const SceneControllerFacadeRequest({
     required this.owner,
     required this.notifyListeners,
-    required this.core,
+    required this.storeController,
     required this.readSnapshot,
     required this.readSelectedNodeIds,
     required this.pointerSettings,
@@ -34,7 +34,7 @@ final class SceneControllerFacadeRequest {
 
   final SceneController owner;
   final void Function() notifyListeners;
-  final SceneControllerCore core;
+  final SceneStoreController storeController;
   final SceneSnapshot Function() readSnapshot;
   final Set<NodeId> Function() readSelectedNodeIds;
   final PointerInputSettings? pointerSettings;
@@ -101,7 +101,7 @@ SceneControllerInteractionRuntime _createInteractionRuntime({
   return createSceneControllerInteractionRuntime(
     request: SceneControllerInteractionRuntimeRequest(
       notifyListeners: request.notifyListeners,
-      core: request.core,
+      storeController: request.storeController,
       readSnapshot: request.readSnapshot,
       readSelectedNodeIds: request.readSelectedNodeIds,
       readMode: () => interactionConfig.mode,

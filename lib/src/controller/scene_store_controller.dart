@@ -19,9 +19,9 @@ import 'scene_snapshot_materializer.dart';
 import 'scene_writer.dart';
 import 'store.dart';
 
-class SceneControllerCore extends ChangeNotifier
+class SceneStoreController extends ChangeNotifier
     implements SceneViewRenderState {
-  SceneControllerCore({
+  SceneStoreController({
     SceneSnapshot? initialSnapshot,
     this.textFontFamilyByDefault,
   }) : _store = SceneStore(
@@ -113,8 +113,8 @@ class SceneControllerCore extends ChangeNotifier
   Stream<CommittedSignal> get signals => _commitRuntime.signals;
 
   @visibleForTesting
-  SceneControllerCoreDebugAccess get debug =>
-      SceneControllerCoreDebugAccess(store: _store, runtime: _commitRuntime);
+  SceneStoreControllerDebugAccess get debug =>
+      SceneStoreControllerDebugAccess(store: _store, runtime: _commitRuntime);
 
   T write<T>(T Function(SceneWriteTxn txn) fn) {
     return _commitRuntime.write(fn);
@@ -141,7 +141,7 @@ class SceneControllerCore extends ChangeNotifier
 
 Offset _zeroPreviewDeltaForNode(NodeId _) => Offset.zero;
 
-extension SceneControllerCoreSpatialAccess on SceneControllerCore {
+extension SceneStoreControllerSpatialAccess on SceneStoreController {
   List<SceneSpatialCandidate> querySpatialCandidates(Rect worldBounds) {
     return _commitRuntime.spatialIndexCache.writeQueryCandidates(
       scene: _store.sceneDoc,

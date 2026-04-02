@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 
 // INV:INV-ENG-TXN-ATOMIC-COMMIT
 // INV:INV-ENG-EPOCH-INVALIDATION
@@ -32,7 +32,7 @@ void main() {
   test(
     'write rollback keeps scene/revisions unchanged and emits no signals',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -79,7 +79,7 @@ void main() {
   test(
     'write rollback discards repaint request and emits no external effects',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -116,7 +116,7 @@ void main() {
   );
 
   test('debug hook accessors proxy runtime debug state', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     expect(controller.debug.beforeInvariantPrecheckHook, isNull);
@@ -147,7 +147,7 @@ void main() {
   test(
     'invariant pre-check failure in state-change branch keeps store and effects unchanged',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -207,7 +207,7 @@ void main() {
   test(
     'spatial prepare failure in state-change branch keeps store and effects unchanged',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -267,7 +267,7 @@ void main() {
   test(
     'invariant pre-check failure in signals-only branch keeps commit and effects unchanged',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -368,7 +368,7 @@ void main() {
 
     for (final malformed in malformedCases) {
       expect(
-        () => SceneControllerCore(initialSnapshot: malformed.snapshot),
+        () => SceneStoreController(initialSnapshot: malformed.snapshot),
         throwsA(
           predicate(
             (e) =>
@@ -384,7 +384,7 @@ void main() {
   test(
     'writeReplaceScene rejects malformed snapshot without state changes or effects',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);

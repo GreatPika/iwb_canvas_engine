@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/controller/internal/signal_event.dart';
 
 // INV:INV-ENG-TXN-ATOMIC-COMMIT
@@ -49,7 +49,7 @@ void main() {
   }
 
   test('write is atomic and notifies once per commit', () async {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     var notifications = 0;
@@ -82,7 +82,7 @@ void main() {
   test(
     'commit handles locator shift before delete without leaving stale node',
     () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(id: 'layer-auto-0'),
@@ -123,7 +123,7 @@ void main() {
   test(
     'structural clear without removed nodes still commits through state path',
     () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(id: 'layer-empty'),
@@ -156,7 +156,7 @@ void main() {
   test(
     'repaint notifications are coalesced within the same event-loop tick',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -181,7 +181,7 @@ void main() {
   );
 
   test('requestRepaint outside write is deferred and coalesced', () async {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final beforeCommit = controller.debug.currentCommitRevision;
@@ -208,7 +208,7 @@ void main() {
   });
 
   test('no-op write keeps commit/revisions unchanged and does not notify', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final beforeCommit = controller.debug.currentCommitRevision;
@@ -232,7 +232,7 @@ void main() {
   });
 
   test('snapshot getter reuses immutable instance between reads', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final first = controller.snapshot;
@@ -242,7 +242,7 @@ void main() {
   });
 
   test('selectedNodeIds getter reuses view between reads', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final first = controller.selectedNodeIds;
@@ -252,7 +252,7 @@ void main() {
   });
 
   test('selectedNodeIds view survives commits without selection changes', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     controller.write<void>((writer) {
@@ -274,7 +274,7 @@ void main() {
   });
 
   test('selectedNodeIds view identity changes after selection mutation', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final before = controller.selectedNodeIds;
@@ -288,7 +288,7 @@ void main() {
   });
 
   test('snapshot cache survives selection-only and signals-only commits', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final before = controller.snapshot;
@@ -306,7 +306,7 @@ void main() {
   });
 
   test('snapshot cache invalidates on scene identity change', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final before = controller.snapshot;
@@ -324,7 +324,7 @@ void main() {
   test(
     'stroke pointsRevision stays monotonic across sequential geometry commits',
     () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: singleStrokeSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -372,7 +372,7 @@ void main() {
   test(
     'stroke patch points are copied on commit and do not alias input list',
     () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: singleStrokeSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -397,7 +397,7 @@ void main() {
   test(
     'no-op stroke point patch keeps commit state, snapshot cache, and pointsRevision',
     () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: singleStrokeSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -435,7 +435,7 @@ void main() {
   );
 
   test('snapshot cache invalidates after writeReplaceScene', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final before = controller.snapshot;
@@ -458,7 +458,7 @@ void main() {
   });
 
   test('signals-only write bumps commit only and skips repaint', () async {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final beforeCommit = controller.debug.currentCommitRevision;
@@ -493,7 +493,7 @@ void main() {
   test(
     'requestRepaint inside successful no-op write schedules one notification',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);

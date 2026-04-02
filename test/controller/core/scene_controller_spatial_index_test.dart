@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/core/scene_spatial_index.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 
 // INV:INV-ENG-ID-INDEX-FROM-SCENE
 
@@ -23,7 +23,7 @@ void main() {
   }
 
   test('spatial index updates incrementally on bounds revision change', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final beforeQuery = controller.querySpatialCandidates(
@@ -48,7 +48,7 @@ void main() {
   test(
     'single-node transform stays incremental without full materialization',
     () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -76,7 +76,7 @@ void main() {
   );
 
   test('spatial index updates incrementally on hitPadding change', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final beforeQuery = controller.querySpatialCandidates(
@@ -107,7 +107,7 @@ void main() {
   });
 
   test('spatial index handles huge node and updates incrementally', () {
-    final controller = SceneControllerCore(
+    final controller = SceneStoreController(
       initialSnapshot: SceneSnapshot(
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
@@ -146,7 +146,7 @@ void main() {
   });
 
   test('spatial index invalidates and rebuilds after replaceScene', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final beforeQuery = controller.querySpatialCandidates(
@@ -179,7 +179,7 @@ void main() {
   test(
     'spatial index stays consistent across insert-move-erase-replace-move',
     () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(id: 'layer-auto-3'),
@@ -306,7 +306,7 @@ void main() {
   test(
     'spatial index keeps candidate indices after erase in middle of layer',
     () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
@@ -352,7 +352,7 @@ void main() {
   test(
     'spatial index stays incremental across bulk draw-erase-redraw cycle',
     () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(id: 'layer-auto-6'),

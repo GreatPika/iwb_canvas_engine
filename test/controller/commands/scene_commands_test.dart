@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/controller/commands/scene_commands.dart';
 import 'package:iwb_canvas_engine/src/controller/mutation_executor.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_writer.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_writer_runtime.dart';
 import 'package:iwb_canvas_engine/src/controller/txn_context.dart';
@@ -17,8 +17,8 @@ import '../support/scene_snapshot_invariant_assertions.dart';
 // INV:INV-ENG-TXN-ATOMIC-COMMIT
 // INV:INV-ENG-SIGNALS-AFTER-COMMIT
 
-SceneControllerCore buildController() {
-  return SceneControllerCore(
+SceneStoreController buildController() {
+  return SceneStoreController(
     initialSnapshot: SceneSnapshot(
       layers: <ContentLayerSnapshot>[
         ContentLayerSnapshot(
@@ -32,7 +32,7 @@ SceneControllerCore buildController() {
   );
 }
 
-void assertControllerInvariants(SceneControllerCore controller) {
+void assertControllerInvariants(SceneStoreController controller) {
   assertSceneInvariants(
     controller.snapshot,
     selectedNodeIds: controller.selectedNodeIds,
@@ -510,7 +510,7 @@ void main() {
   });
 
   test('selection replace filters invisible or background nodes', () async {
-    final controller = SceneControllerCore(
+    final controller = SceneStoreController(
       initialSnapshot: SceneSnapshot(
         backgroundLayer: BackgroundLayerSnapshot(
           nodes: <NodeSnapshot>[RectNodeSnapshot(id: 'bg', size: Size(20, 10))],
@@ -624,7 +624,7 @@ void main() {
   test(
     'selection delete removes only deletable selected nodes across command path',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
           backgroundLayer: BackgroundLayerSnapshot(
             nodes: <NodeSnapshot>[

@@ -6,7 +6,7 @@ import '../contract/scene_view_render_state.dart';
 import '../contract/snapshot.dart';
 import '../core/action_events.dart';
 import '../core/pointer_input.dart';
-import '../controller/scene_controller.dart';
+import '../controller/scene_store_controller.dart';
 import 'scene_view_pointer_semantics.dart';
 import 'internal/scene_controller_facade_assembly.dart';
 import 'internal/scene_controller_internal_access.dart';
@@ -25,7 +25,7 @@ class SceneController extends ChangeNotifier
     bool clearSelectionOnDrawModeEnter = false,
     MoveCommitDeltaResolver? moveCommitDeltaResolver,
     String? textFontFamilyByDefault,
-  }) : _core = SceneControllerCore(
+  }) : _storeController = SceneStoreController(
          initialSnapshot: initialSnapshot,
          textFontFamilyByDefault: textFontFamilyByDefault,
        ) {
@@ -33,7 +33,7 @@ class SceneController extends ChangeNotifier
       SceneControllerFacadeRequest(
         owner: this,
         notifyListeners: notifyListeners,
-        core: _core,
+        storeController: _storeController,
         readSnapshot: () => snapshot,
         readSelectedNodeIds: () => selectedNodeIds,
         pointerSettings: pointerSettings,
@@ -46,7 +46,7 @@ class SceneController extends ChangeNotifier
     registerSceneControllerInternalAccess(
       this,
       SceneControllerInternalAccessRegistration(
-        readEpoch: () => _core.controllerEpoch,
+        readEpoch: () => _storeController.controllerEpoch,
         previewDeltaForNode: _facade.interactionRuntime.previewDeltaForNode,
         setBeforePointerDispatchHook:
             _facade.interactionRuntime.setBeforePointerDispatchHook,
@@ -63,17 +63,17 @@ class SceneController extends ChangeNotifier
     );
   }
 
-  final SceneControllerCore _core;
+  final SceneStoreController _storeController;
   late final SceneControllerFacadeAssembly _facade;
 
   @override
-  SceneSnapshot get snapshot => _core.snapshot;
+  SceneSnapshot get snapshot => _storeController.snapshot;
 
   @override
-  Set<NodeId> get selectedNodeIds => _core.selectedNodeIds;
+  Set<NodeId> get selectedNodeIds => _storeController.selectedNodeIds;
 
   @override
-  int get controllerEpoch => _core.controllerEpoch;
+  int get controllerEpoch => _storeController.controllerEpoch;
 
   @override
   Rect? get selectionRect => _facade.interactionRuntime.selectionRect;
@@ -155,7 +155,7 @@ class SceneController extends ChangeNotifier
       return;
     }
     _facade.interactionRuntime.resetInteractiveState();
-    _core.dispose();
+    _storeController.dispose();
     _facade.interactionRuntime.dispose();
     unregisterSceneControllerInternalAccess(this);
     super.dispose();

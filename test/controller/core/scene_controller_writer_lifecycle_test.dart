@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_writer.dart';
 
 // INV:INV-ENG-TXN-WRITER-LIFETIME
@@ -23,7 +23,7 @@ void main() {
   }
 
   test('nested write throws and does not commit', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     expect(
@@ -35,7 +35,7 @@ void main() {
   });
 
   test('pre-context failure does not lock future writes', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     controller.debug.beforeTxnContextCreateHook = () {
@@ -58,7 +58,7 @@ void main() {
   test(
     'async write callback fails fast and rolls back state/effects',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -95,7 +95,7 @@ void main() {
   test(
     'stale txn handle after commit throws and does not emit effects',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -160,7 +160,7 @@ void main() {
   test(
     'stale txn handle after rollback throws and keeps state unchanged',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -218,7 +218,7 @@ void main() {
   );
 
   test('normal write still works after stale txn handle rejection', () async {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final emitted = <String>[];
@@ -258,7 +258,7 @@ void main() {
   test(
     'controller commit handles 1000 mixed selection operations and stays correct',
     () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
@@ -311,7 +311,7 @@ void main() {
   );
 
   test('commit normalization marks selection/grid changes when normalized', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     controller.write<void>((writer) {

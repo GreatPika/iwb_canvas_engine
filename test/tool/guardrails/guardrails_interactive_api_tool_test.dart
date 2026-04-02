@@ -776,7 +776,7 @@ class _Access {
   });
 
   test(
-    'rejects scene mutation owner that bypasses mutation boundary',
+    'rejects scene mutation owner store controller write bypass outside mutation boundary',
     () async {
       final sandbox = await createGuardrailsSandbox();
       try {
@@ -810,7 +810,7 @@ class SceneControllerSceneMutations {
 
   void write(Object fn) {
     ensureExternalMutationAllowed('write');
-    core.write(fn);
+    storeController.write(fn);
   }
 
   void setBackgroundColor(Object value) {
@@ -880,10 +880,10 @@ class SceneControllerSceneMutations {
 
   bool _isSameOffset(Object value) => false;
 
-  final core = _Core();
+  final storeController = _StoreController();
 }
 
-class _Core {
+class _StoreController {
   void write(Object fn) {}
 }
 ''',
@@ -939,7 +939,7 @@ class SceneControllerSceneMutations {
 
   void write(Object fn) {
     ensureExternalMutationAllowed('write');
-    core.write<int>(fn);
+    storeController.write<int>(fn);
   }
 
   void setBackgroundColor(Object value) {
@@ -1009,7 +1009,7 @@ class SceneControllerSceneMutations {
 
   bool _isSameOffset(Object value) => false;
 
-  final core = _Core();
+  final storeController = _Core();
 }
 
 class _Core {
@@ -1068,7 +1068,7 @@ import 'scene_controller_mutation_boundary.dart';
 
 class SceneControllerInteractionRuntime {
   void wireRuntime(Object request, Object mutationBoundary) {
-    request.core.commands.writeSelectionReplace;
+    request.storeController.commands.writeSelectionReplace;
   }
 }
 ''',
@@ -1091,109 +1091,8 @@ class SceneControllerInteractionRuntime {
     },
   );
 
-  test('rejects mutation boundary generic core write bypass', () async {
-    final sandbox = await createGuardrailsSandbox();
-    try {
-      writeMinimalControllerStore(sandbox);
-      writeInteractiveArchitectureSupportScaffold(sandbox);
-      writeSandboxFile(
-        sandbox,
-        'lib/src/interactive/scene_controller.dart',
-        _sceneControllerFixture(
-          methods: '''
-  void handlePointer(Object input) {
-    _ensurePublicSideEffectAllowed('handlePointer');
-  }
-
-  void handleDoubleTap() {
-    _ensurePublicSideEffectAllowed('handleDoubleTap');
-  }
-
-  void dispose() {
-    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
-  }
-''',
-        ),
-      );
-      writeSandboxFile(
-        sandbox,
-        'lib/src/interactive/internal/scene_controller_mutation_boundary.dart',
-        '''
-class SceneControllerMutationBoundary {
-  final core = _Core();
-
-  void clearScene() {
-    core.write<void>((writer) {});
-  }
-
-  void setSelection(Object nodeIds) {
-    core.commands.writeSelectionReplace(nodeIds);
-  }
-
-  void clearSelection() {
-    core.commands.writeSelectionClear();
-  }
-
-  void deleteSelection() {
-    core.commands.writeDeleteSelection();
-  }
-
-  void transformSelection(Object delta) {
-    core.commands.writeSelectionTransform(delta);
-  }
-
-  Object prepareSceneReplacement(Object snapshot) {
-    return core.prepareSceneReplacement(snapshot);
-  }
-
-  void replaceScene(Object snapshot) {
-    final replacement = core.prepareSceneReplacement(snapshot);
-    core.writePreparedSceneReplacement(replacement);
-  }
-
-  Object commitMoveSelection(Object proposedDelta) => proposedDelta;
-}
-
-class _Core {
-  final commands = _Commands();
-
-  void write<T>(Object fn) {}
-
-  Object prepareSceneReplacement(Object snapshot) => snapshot;
-
-  void writePreparedSceneReplacement(Object replacement) {}
-}
-
-class _Commands {
-  void writeSelectionReplace(Object nodeIds) {}
-
-  void writeSelectionClear() {}
-
-  void writeDeleteSelection() {}
-
-  void writeSelectionTransform(Object delta) {}
-}
-''',
-      );
-
-      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-      expect(result.exitCode, isNonZero);
-      expect(
-        result.stderr.toString(),
-        diagnostic(
-          category: 'interactive API',
-          detail:
-              'SceneControllerMutationBoundary must remain the canonical '
-              'scene/selection write owner',
-        ),
-      );
-    } finally {
-      sandbox.deleteSync(recursive: true);
-    }
-  });
-
   test(
-    'rejects mutation boundary clearScene core write bypass with return value',
+    'rejects mutation boundary generic store controller write bypass',
     () async {
       final sandbox = await createGuardrailsSandbox();
       try {
@@ -1223,35 +1122,139 @@ class _Commands {
           'lib/src/interactive/internal/scene_controller_mutation_boundary.dart',
           '''
 class SceneControllerMutationBoundary {
-  final core = _Core();
+  final storeController = _Core();
 
-  bool clearScene() {
-    return core.write<bool>((writer) => true);
+  void clearScene() {
+    storeController.write<void>((writer) {});
   }
 
   void setSelection(Object nodeIds) {
-    core.commands.writeSelectionReplace(nodeIds);
+    storeController.commands.writeSelectionReplace(nodeIds);
   }
 
   void clearSelection() {
-    core.commands.writeSelectionClear();
+    storeController.commands.writeSelectionClear();
   }
 
   void deleteSelection() {
-    core.commands.writeDeleteSelection();
+    storeController.commands.writeDeleteSelection();
   }
 
   void transformSelection(Object delta) {
-    core.commands.writeSelectionTransform(delta);
+    storeController.commands.writeSelectionTransform(delta);
   }
 
   Object prepareSceneReplacement(Object snapshot) {
-    return core.prepareSceneReplacement(snapshot);
+    return storeController.prepareSceneReplacement(snapshot);
   }
 
   void replaceScene(Object snapshot) {
-    final replacement = core.prepareSceneReplacement(snapshot);
-    core.writePreparedSceneReplacement(replacement);
+    final replacement = storeController.prepareSceneReplacement(snapshot);
+    storeController.writePreparedSceneReplacement(replacement);
+  }
+
+  Object commitMoveSelection(Object proposedDelta) => proposedDelta;
+}
+
+class _Core {
+  final commands = _Commands();
+
+  void write<T>(Object fn) {}
+
+  Object prepareSceneReplacement(Object snapshot) => snapshot;
+
+  void writePreparedSceneReplacement(Object replacement) {}
+}
+
+class _Commands {
+  void writeSelectionReplace(Object nodeIds) {}
+
+  void writeSelectionClear() {}
+
+  void writeDeleteSelection() {}
+
+  void writeSelectionTransform(Object delta) {}
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneControllerMutationBoundary must remain the canonical '
+                'scene/selection write owner',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects mutation boundary clearScene store controller write bypass with return value',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/internal/scene_controller_mutation_boundary.dart',
+          '''
+class SceneControllerMutationBoundary {
+  final storeController = _Core();
+
+  bool clearScene() {
+    return storeController.write<bool>((writer) => true);
+  }
+
+  void setSelection(Object nodeIds) {
+    storeController.commands.writeSelectionReplace(nodeIds);
+  }
+
+  void clearSelection() {
+    storeController.commands.writeSelectionClear();
+  }
+
+  void deleteSelection() {
+    storeController.commands.writeDeleteSelection();
+  }
+
+  void transformSelection(Object delta) {
+    storeController.commands.writeSelectionTransform(delta);
+  }
+
+  Object prepareSceneReplacement(Object snapshot) {
+    return storeController.prepareSceneReplacement(snapshot);
+  }
+
+  void replaceScene(Object snapshot) {
+    final replacement = storeController.prepareSceneReplacement(snapshot);
+    storeController.writePreparedSceneReplacement(replacement);
   }
 
   Object commitMoveSelection(Object proposedDelta) => proposedDelta;
