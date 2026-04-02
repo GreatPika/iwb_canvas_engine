@@ -17,6 +17,10 @@ All notable changes to `iwb_canvas_engine` are documented here.
   runtime and serialized scene data, public `TextNodeSpec` /
   `TextNodeSnapshot` creation requires explicit direction, and `TextNodePatch`
   can update direction for existing text nodes.
+- Breaking: Runtime stroke geometry is now hermetic: `StrokeNode.points` exposes a
+  read-only view, direct list mutation is rejected, `StrokeNode.replacePoints`
+  is the canonical runtime geometry write surface, and stroke point patches now
+  route through that owner while preserving `pointsRevision` no-op semantics.
 - Interactive write-side ownership is now canonicalized across
   `replaceScene(...)`, controller-side transform/delete preflight, and
   `SceneView` pointer semantics: `replaceScene(...)` now materializes its
