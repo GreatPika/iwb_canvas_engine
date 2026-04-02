@@ -168,3 +168,4 @@ This file is the plan index. Each step has a dedicated document so steps can be 
 - [x] [Шаг 71. Замкнуть shared scene model invariants для stroke, palette и `textDirection`](plan/step_71_shared_scene_model_invariants_stroke_palette_text_direction.md)
 - [x] [Шаг 72. Герметизировать public contract boundary и убрать signal enqueue из публичной write-транзакции](plan/step_72_public_contract_boundary_hermeticity_and_signal_txn_cleanup.md)
 - [x] [Шаг 73. Сжать residual metric/clone debt в boundary impl и public surface guardrails](plan/step_73_contract_boundary_impl_metrics_and_clone_cleanup.md)
+- [ ] [Шаг 74. Ввести семантическую модель `public/internal/bridge` для import boundaries](plan/step_74_cross_layer_internal_import_guardrails.md)
