@@ -4,7 +4,7 @@ language: russian
 
 ## 1. Change Mandate
 
-Этот шаг приводит `check_guardrails.dart` и `test/tool/guardrails/**` к registry-backed truth: guardrails claim surfaces должны заявлять только те invariants, которые реально объявлены для них как enforcement или executable proof surfaces.
+Этот шаг приводит `check_guardrails.dart` и `test/tool/guardrails/**` к registry-backed truth: guardrails claim surfaces должны заявлять только те invariants, которые реально объявлены для них как enforcement или executable proof surfaces, а navigation references не должны смешиваться с explicit claim markers.
 
 ## 2. Change Boundary
 
@@ -82,7 +82,7 @@ language: russian
 
 1. `tool/check_guardrails.dart` больше не содержит invariant claims, которые не backed current registry tool enforcement mapping.
 2. `test/tool/guardrails/**` больше не содержит invariant claims для invariants, которые не declared to that exact file as `primaryProof` or `toolProof.regressionPath`.
-3. `dart run tool/check_invariant_coverage.dart` fails on overclaimed guardrails entrypoint markers and overclaimed guardrails tool-test markers.
+3. `dart run tool/check_invariant_coverage.dart` fails on overclaimed explicit guardrails claim markers after declared proof-path and missing-proof diagnostics have already passed.
 4. Any remaining guardrails-linked registry bindings are truthful to the actual claim surfaces after the cleanup.
 5. The repository no longer presents guardrails as proving commit atomicity, epoch invalidation, or runtime immutability through `check_guardrails.dart`.
 
@@ -92,7 +92,7 @@ language: russian
 
 - `tool/check_guardrails.dart` currently declares a wider invariant set than the registry-backed `toolProof` mapping for that tool.
 - `test/tool/guardrails/guardrails_layout_and_entrypoints_tool_test.dart`, `test/tool/guardrails/guardrails_public_surface_tool_test.dart`, and `test/tool/guardrails/guardrails_mutable_type_leaks_tool_test.dart` currently carry markers for invariants that are not declared to those files in the registry.
-- `tool/check_invariant_coverage.dart` currently validates declared proof surfaces but does not validate that guardrails claim files match the registry-derived expected invariant set exactly.
+- `tool/check_invariant_coverage.dart` currently validates declared proof surfaces but does not validate that guardrails claim files match the registry-derived expected invariant set exactly or distinguish explicit claim markers from navigation references.
 - `tool/invariant_registry.dart` already distinguishes `primaryProof` and `toolProof`, so the expected guardrails claim set can be derived mechanically from the registry instead of being hardcoded twice.
 
 ### 6.2 Target Verification Units
@@ -111,31 +111,33 @@ language: russian
 ### 6.4 Allowed Semantic Change Zones
 
 - Guardrails claim-set declaration in `tool/check_guardrails.dart`.
-- Guardrails proof-marker placement in `test/tool/guardrails/**`.
+- Explicit guardrails claim-marker placement in `test/tool/guardrails/**`.
 - Registry-backed claim-set derivation logic in `tool/check_invariant_coverage.dart`.
 - Targeted removal of overestimated guardrails-linked registry mappings if exact alignment reveals one.
 
 ### 6.5 Recognition Forms That Must Be Supported Within This Change
 
-- overclaimed marker in `tool/check_guardrails.dart`;
-- overclaimed marker in `test/tool/guardrails/**/*_test.dart`;
-- missing marker in a declared guardrails enforcement surface;
-- missing marker in a declared guardrails proof surface.
+- overclaimed explicit line-comment marker in `tool/check_guardrails.dart`;
+- overclaimed explicit line-comment marker in `test/tool/guardrails/**/*_test.dart`;
+- navigation-only `INV:` reference in a guardrails file;
+- missing declared proof file for a guardrails claim surface.
 
 ### 6.6 Allowed Forms That Do Not Count as Violations
 
 - Runtime or product tests outside `test/tool/guardrails/**` remaining the authoritative proofs for behavioral invariants.
-- Guardrails tool tests carrying more than one invariant marker when every claimed invariant is declared to that exact file in the registry.
-- Repeated marker occurrences for the same invariant inside one declared guardrails proof file.
+- Guardrails tool tests carrying more than one explicit claim marker when every claimed invariant is declared to that exact file in the registry.
+- Repeated explicit claim-marker occurrences for the same invariant inside one declared guardrails proof file.
+- Navigation-only `INV:` references in comments or string literals inside guardrails files when they are not standalone `// INV:<id>` claim markers.
 
 ### 6.7 Requirements for Resolution of Links and Structural Analysis
 
 - The expected guardrails claim set must be derived only from `tool/invariant_registry.dart`.
 - For `tool/check_guardrails.dart`, the expected invariant set is the set of invariants whose `toolProof.enforcementPath` equals `tool/check_guardrails.dart`.
 - For each file under `test/tool/guardrails/**`, the expected invariant set is the union of invariants whose `primaryProof.path` equals that file and invariants whose `toolProof.regressionPath` equals that file.
-- Guardrails claim-set comparison must use unique invariant ids per file; repeated markers for the same id in the same file do not create a mismatch.
+- Guardrails claim-set comparison must use only standalone line-comment markers of the form `// INV:<id>`.
+- Guardrails claim-set comparison must use unique invariant ids per file; repeated explicit claim markers for the same id in the same file do not create a mismatch.
 - A marker found in `tool/check_guardrails.dart` or `test/tool/guardrails/**` that is not in that file’s expected set is a claim-honesty failure.
-- A declared guardrails claim file missing one of its expected markers is a claim-honesty failure even if generic proof coverage would already fail later.
+- Missing declared proof files and missing explicit proof markers in declared guardrails surfaces must fail before claim-honesty checks run.
 
 ### 6.8 Prohibited
 
@@ -157,7 +159,7 @@ language: russian
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Registry-Driven Guardrails Claim Check
+### Slice 1. [x] Registry-Driven Guardrails Claim Check
 
 #### Slice Contract
 
@@ -165,7 +167,7 @@ language: russian
 
 #### Change
 
-Добавить в invariant coverage tool derivation expected guardrails claim sets from the registry and explicit failures for extra or missing guardrails claims, then закрыть это sandbox regression cases в `test/tool/invariant_coverage_tool_test.dart`.
+Добавить в invariant coverage tool derivation expected guardrails claim sets from the registry, считать claim только из standalone `// INV:<id>` markers, и запускать guardrails claim-honesty только после successful declared-proof validation.
 
 #### Verification
 
@@ -180,20 +182,21 @@ language: russian
 #### Positive Scenarios
 
 - A guardrails enforcement file passes when its claimed invariants exactly match the registry-backed `toolProof.enforcementPath` set.
-- A guardrails proof file passes when its claimed invariants exactly match the union of declared `primaryProof` and `toolProof.regressionPath` entries for that file.
+- A guardrails proof file passes when its standalone `// INV:<id>` claim markers exactly match the union of declared `primaryProof` and `toolProof.regressionPath` entries for that file.
+- A guardrails file may contain navigation-only `INV:` references outside standalone claim-marker lines without triggering overclaim failures.
 
 #### Negative Scenarios
 
 - `tool/check_guardrails.dart` claims an invariant whose `toolProof.enforcementPath` points elsewhere or is absent.
 - A `test/tool/guardrails/**` file claims an invariant whose declared proof surfaces point to a different file.
-- A declared guardrails claim file omits a required marker for one of its registry-backed invariants.
+- A missing declared guardrails proof file still reports the missing-file proof diagnostic before any claim-honesty failure.
 
 #### Closure Evidence
 
 - Green run of the listed verifications.
 - Failure diagnostics from sandbox tests identify overclaimed and missing guardrails claim markers.
 
-### Slice 2. [ ] Repository Guardrails Claim Cleanup
+### Slice 2. [x] Repository Guardrails Claim Cleanup
 
 #### Slice Contract
 

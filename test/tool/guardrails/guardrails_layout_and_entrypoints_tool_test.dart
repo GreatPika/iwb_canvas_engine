@@ -28,10 +28,7 @@ void main() {
 }
 
 void _registerLayoutScaffoldTests() {
-  // INV:INV-ENG-TXN-ATOMIC-COMMIT
   // INV:INV-G-PUBLIC-ENTRYPOINTS
-  // INV:INV-ENG-SAFE-TXN-API
-  // INV:INV-ENG-INTERACTIVE-RESOLVER-PURITY
   test('does not require API_GUIDE.md', () async {
     final sandbox = await createGuardrailsSandbox();
     try {

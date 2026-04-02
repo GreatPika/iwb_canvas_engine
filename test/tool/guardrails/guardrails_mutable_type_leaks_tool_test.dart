@@ -48,7 +48,6 @@ typedef SceneView = SceneViewInteractive;
 
 void _registerMutableCoreLeakTests() {
   test('rejects mutable core type in exported public API signature', () async {
-    // INV:INV-ENG-NO-EXTERNAL-MUTATION
     final sandbox = await createGuardrailsSandbox();
     try {
       writeCanonicalPublicExportScaffold(sandbox);

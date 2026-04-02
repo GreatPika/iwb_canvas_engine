@@ -3,6 +3,9 @@ import 'dart:io';
 import 'invariant_registry.dart';
 
 final RegExp _invRef = RegExp(r'\bINV:([A-Z0-9_-]+)\b');
+final RegExp _explicitInvariantMarkerLine = RegExp(
+  r'^\s*//\s*INV:([A-Z0-9_-]+)\s*$',
+);
 final RegExp _canonicalInvariantId = RegExp(
   r'^INV-(G|ENG|SER)-[A-Z0-9]+(?:-[A-Z0-9]+)*$',
 );
@@ -47,12 +50,14 @@ class _CoverageReport {
 
 class _ScanResult {
   const _ScanResult({
-    required this.refsById,
+    required this.explicitMarkerFilesById,
+    required this.explicitMarkerIdsByFile,
     required this.legacyRefs,
     required this.unknownRefs,
   });
 
-  final Map<String, Set<String>> refsById;
+  final Map<String, Set<String>> explicitMarkerFilesById;
+  final Map<String, Set<String>> explicitMarkerIdsByFile;
   final List<_Finding> legacyRefs;
   final List<_Finding> unknownRefs;
 }
@@ -191,16 +196,18 @@ _ScanResult _scanReferenceFiles({
   required Set<String> excludedRepoRel,
   required String rootAbsPosix,
 }) {
-  final refsById = <String, Set<String>>{
+  final explicitMarkerFilesById = <String, Set<String>>{
     for (final id in knownIds) id: <String>{},
   };
+  final explicitMarkerIdsByFile = <String, Set<String>>{};
   final legacyRefs = <_Finding>[];
   final unknownRefs = <_Finding>[];
 
   for (final dir in _scanRoots()) {
     _scanDirectory(
       dir,
-      refsById: refsById,
+      explicitMarkerFilesById: explicitMarkerFilesById,
+      explicitMarkerIdsByFile: explicitMarkerIdsByFile,
       legacyRefs: legacyRefs,
       unknownRefs: unknownRefs,
       knownIds: knownIds,
@@ -210,7 +217,8 @@ _ScanResult _scanReferenceFiles({
   }
 
   return _ScanResult(
-    refsById: refsById,
+    explicitMarkerFilesById: explicitMarkerFilesById,
+    explicitMarkerIdsByFile: explicitMarkerIdsByFile,
     legacyRefs: legacyRefs,
     unknownRefs: unknownRefs,
   );
@@ -218,7 +226,8 @@ _ScanResult _scanReferenceFiles({
 
 void _scanDirectory(
   Directory dir, {
-  required Map<String, Set<String>> refsById,
+  required Map<String, Set<String>> explicitMarkerFilesById,
+  required Map<String, Set<String>> explicitMarkerIdsByFile,
   required List<_Finding> legacyRefs,
   required List<_Finding> unknownRefs,
   required Set<String> knownIds,
@@ -229,7 +238,8 @@ void _scanDirectory(
     if (!_isDartFile(entity)) continue;
     _scanFile(
       entity as File,
-      refsById: refsById,
+      explicitMarkerFilesById: explicitMarkerFilesById,
+      explicitMarkerIdsByFile: explicitMarkerIdsByFile,
       legacyRefs: legacyRefs,
       unknownRefs: unknownRefs,
       knownIds: knownIds,
@@ -241,7 +251,8 @@ void _scanDirectory(
 
 void _scanFile(
   File file, {
-  required Map<String, Set<String>> refsById,
+  required Map<String, Set<String>> explicitMarkerFilesById,
+  required Map<String, Set<String>> explicitMarkerIdsByFile,
   required List<_Finding> legacyRefs,
   required List<_Finding> unknownRefs,
   required Set<String> knownIds,
@@ -260,7 +271,8 @@ void _scanFile(
       lines[index],
       fileRepoRel: fileRepoRel,
       lineNo: index + 1,
-      refsById: refsById,
+      explicitMarkerFilesById: explicitMarkerFilesById,
+      explicitMarkerIdsByFile: explicitMarkerIdsByFile,
       legacyRefs: legacyRefs,
       unknownRefs: unknownRefs,
       knownIds: knownIds,
@@ -272,11 +284,15 @@ void _scanLine(
   String line, {
   required String fileRepoRel,
   required int lineNo,
-  required Map<String, Set<String>> refsById,
+  required Map<String, Set<String>> explicitMarkerFilesById,
+  required Map<String, Set<String>> explicitMarkerIdsByFile,
   required List<_Finding> legacyRefs,
   required List<_Finding> unknownRefs,
   required Set<String> knownIds,
 }) {
+  final explicitMarkerMatch = _explicitInvariantMarkerLine.firstMatch(line);
+  final explicitMarkerId = explicitMarkerMatch?.group(1);
+
   for (final match in _invRef.allMatches(line)) {
     final id = match.group(1);
     if (id == null) continue;
@@ -296,7 +312,13 @@ void _scanLine(
       );
       continue;
     }
-    refsById[id]!.add(fileRepoRel);
+
+    if (id == explicitMarkerId) {
+      explicitMarkerFilesById[id]!.add(fileRepoRel);
+      explicitMarkerIdsByFile
+          .putIfAbsent(fileRepoRel, () => <String>{})
+          .add(id);
+    }
   }
 }
 
@@ -347,7 +369,9 @@ Iterable<_DeclaredProofSurface> _declaredProofSurfaces(
   }
 }
 
-_CoverageReport _collectCoverageReport(Map<String, Set<String>> refsById) {
+_CoverageReport _collectCoverageReport(
+  Map<String, Set<String>> explicitMarkerFilesById,
+) {
   final missingDetails = <String>[];
   final missingInvariantIds = <String>{};
 
@@ -361,7 +385,7 @@ _CoverageReport _collectCoverageReport(Map<String, Set<String>> refsById) {
         missingInvariantIds.add(invariant.id);
         continue;
       }
-      if (!refsById[invariant.id]!.contains(proof.path)) {
+      if (!explicitMarkerFilesById[invariant.id]!.contains(proof.path)) {
         missingDetails.add(
           '${invariant.id} is missing explicit proof marker in '
           '${proof.label} ${proof.path}',
@@ -377,27 +401,109 @@ _CoverageReport _collectCoverageReport(Map<String, Set<String>> refsById) {
   );
 }
 
-void _reportCoverage(_CoverageReport coverageReport) {
+const String _guardrailsEnforcementPath = 'tool/check_guardrails.dart';
+const String _guardrailsTestPrefix = 'test/tool/guardrails/';
+
+bool _isGuardrailsClaimSurface(String path) {
+  return path == _guardrailsEnforcementPath ||
+      (path.startsWith(_guardrailsTestPrefix) && path.endsWith('_test.dart'));
+}
+
+Map<String, Set<String>> _collectExpectedGuardrailsClaims() {
+  final expectedByFile = <String, Set<String>>{};
+
+  for (final invariant in invariants) {
+    final toolProof = invariant.toolProof;
+    final enforcementPath = toolProof?.enforcementPath;
+    if (enforcementPath == _guardrailsEnforcementPath) {
+      expectedByFile
+          .putIfAbsent(_guardrailsEnforcementPath, () => <String>{})
+          .add(invariant.id);
+    }
+
+    final primaryPath = invariant.primaryProof.path;
+    if (primaryPath != null && _isGuardrailsClaimSurface(primaryPath)) {
+      expectedByFile
+          .putIfAbsent(primaryPath, () => <String>{})
+          .add(invariant.id);
+    }
+
+    final regressionPath = toolProof?.regressionPath;
+    if (regressionPath != null && _isGuardrailsClaimSurface(regressionPath)) {
+      expectedByFile
+          .putIfAbsent(regressionPath, () => <String>{})
+          .add(invariant.id);
+    }
+  }
+
+  return expectedByFile;
+}
+
+String _formatInvariantIdList(Set<String> ids) {
+  final sortedIds = ids.toList()..sort();
+  if (sortedIds.isEmpty) {
+    return '<none>';
+  }
+  return sortedIds.join(', ');
+}
+
+List<String> _collectGuardrailsClaimHonestyIssues(
+  Map<String, Set<String>> explicitMarkerIdsByFile,
+) {
+  final issues = <String>[];
+  final expectedByFile = _collectExpectedGuardrailsClaims();
+  final actualGuardrailsFiles = explicitMarkerIdsByFile.keys.where(
+    _isGuardrailsClaimSurface,
+  );
+  final allFiles = <String>{...expectedByFile.keys, ...actualGuardrailsFiles}
+    ..removeWhere((path) => !_isGuardrailsClaimSurface(path));
+
+  final sortedFiles = allFiles.toList()..sort();
+  for (final file in sortedFiles) {
+    final expectedIds = expectedByFile[file] ?? const <String>{};
+    final actualIds = explicitMarkerIdsByFile[file] ?? const <String>{};
+
+    final extraIds = actualIds.difference(expectedIds).toList()..sort();
+    for (final id in extraIds) {
+      issues.add(
+        '$file overclaims guardrails invariant INV:$id; '
+        'registry-backed set for this file: ${_formatInvariantIdList(expectedIds)}',
+      );
+    }
+  }
+
+  return issues;
+}
+
+void _failOnCoverageGaps(_CoverageReport coverageReport) {
   final missingDetails = coverageReport.missingDetails;
+  if (missingDetails.isEmpty) {
+    return;
+  }
+
   final covered = invariants.length - coverageReport.missingInvariantIds.length;
   final total = invariants.length;
   final pct = total == 0 ? 100.0 : (covered / total) * 100.0;
 
-  if (missingDetails.isNotEmpty) {
-    stderr.writeln(
-      'FAIL: invariant proof coverage '
-      '${pct.toStringAsFixed(1)}% ($covered/$total). Missing:',
-    );
-    for (final entry in missingDetails) {
-      stderr.writeln('- $entry');
-    }
-    stderr.writeln(
-      'Declare canonical primaryProof/toolProof surfaces in '
-      'tool/invariant_registry.dart and keep matching // INV:<id> markers '
-      'in every declared proof file.',
-    );
-    exit(1);
+  stderr.writeln(
+    'FAIL: invariant proof coverage '
+    '${pct.toStringAsFixed(1)}% ($covered/$total). Missing:',
+  );
+  for (final entry in missingDetails) {
+    stderr.writeln('- $entry');
   }
+  stderr.writeln(
+    'Declare canonical primaryProof/toolProof surfaces in '
+    'tool/invariant_registry.dart and keep matching // INV:<id> markers '
+    'in every declared proof file.',
+  );
+  exit(1);
+}
+
+void _reportCoverageSuccess(_CoverageReport coverageReport) {
+  final covered = invariants.length - coverageReport.missingInvariantIds.length;
+  final total = invariants.length;
+  final pct = total == 0 ? 100.0 : (covered / total) * 100.0;
 
   stdout.writeln(
     'OK: invariant proof coverage '
@@ -420,5 +526,18 @@ void main(List<String> _) {
     rootAbsPosix: _toPosixPath(Directory.current.absolute.path),
   );
   _failOnReferenceFindings(scanResult);
-  _reportCoverage(_collectCoverageReport(scanResult.refsById));
+  final coverageReport = _collectCoverageReport(
+    scanResult.explicitMarkerFilesById,
+  );
+  _failOnCoverageGaps(coverageReport);
+  final guardrailsClaimIssues = _collectGuardrailsClaimHonestyIssues(
+    scanResult.explicitMarkerIdsByFile,
+  );
+  if (guardrailsClaimIssues.isNotEmpty) {
+    _fail(
+      'guardrails claim surfaces must match the registry-backed contour',
+      guardrailsClaimIssues,
+    );
+  }
+  _reportCoverageSuccess(coverageReport);
 }

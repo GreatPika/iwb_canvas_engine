@@ -22,10 +22,7 @@ void main() {
 }
 
 void _registerGuardrailHappyPathTests() {
-  // INV:INV-ENG-TXN-ATOMIC-COMMIT
-  // INV:INV-G-PUBLIC-ENTRYPOINTS
   // INV:INV-ENG-SAFE-TXN-API
-  // INV:INV-ENG-INTERACTIVE-RESOLVER-PURITY
   test('passes for write/txn APIs and controllerEpoch usage', () async {
     final sandbox = await createGuardrailsSandbox();
     try {
@@ -208,7 +205,6 @@ void _registerMissingScanPolicyViolationTests() {
   test(
     'rejects non-contract export without mutable-type leak scan policy',
     () async {
-      // INV:INV-G-PUBLIC-ENTRYPOINTS
       final sandbox = await createGuardrailsSandbox();
       try {
         writeCanonicalPublicExportScaffold(sandbox);
