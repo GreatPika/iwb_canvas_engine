@@ -228,6 +228,13 @@ const List<Invariant> invariants = <Invariant>[
     ),
   ),
   Invariant(
+    id: 'INV-ENG-STROKE-RUNTIME-GEOMETRY-OWNER',
+    scope: 'engine-core',
+    title:
+        'runtime stroke geometry stays hermetic: StrokeNode.points is read-only and StrokeNode.replacePoints owns validation plus pointsRevision updates',
+    primaryProof: PrimaryProof(path: 'test/core/nodes_test.dart'),
+  ),
+  Invariant(
     id: 'INV-ENG-DISPOSE-FAIL-FAST',
     scope: 'engine-controller',
     title:

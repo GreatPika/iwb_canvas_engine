@@ -136,6 +136,10 @@ class _CanvasScreenState extends State<CanvasScreen> {
   expose writable text `size`, and schema-version-7 JSON rejects text payloads
   that still contain `size`. Import/decode also rejects text whose derived
   bounds exceed scene size limits.
+- Runtime stroke geometry is hermetic: `StrokeNode.points` is a read-only view,
+  direct list mutation is unsupported, and whole-geometry updates go through
+  `StrokeNode.replacePoints(...)`, which preserves `pointsRevision` no-op
+  semantics and rejects non-finite or oversized point lists.
 - `TextNode`, `TextNodeSnapshot`, and serialized text payloads carry explicit
   `textDirection`. Public `TextNodeSpec` / `TextNodeSnapshot` creation requires
   explicit direction, `TextNodePatch` can update it for existing text nodes,

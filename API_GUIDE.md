@@ -204,6 +204,10 @@ Important runtime details:
 
 - `StrokeNodeSnapshot.pointsRevision` is runtime metadata used by render caches
 - `pointsRevision` is not serialized into JSON
+- runtime `StrokeNode.points` is read-only; direct list mutation is unsupported
+- runtime whole-stroke geometry writes go through
+  `StrokeNode.replacePoints(...)`, which rejects non-finite coordinates and
+  point lists longer than `20000`
 - `instanceRevision` is part of runtime node identity and is serialized
 - text nodes carry explicit `textDirection` in runtime and serialized scene
   data; public `TextNodeSpec` / `TextNodeSnapshot` creation requires it,
@@ -299,7 +303,10 @@ fields eagerly and are runtime constructors rather than `const` entry points.
 `textDirection` field updates the canonical text-direction state used by layout
 and render paths.
 Collection payloads such as stroke points are captured as immutable snapshots
-at the boundary.
+at the boundary. For strokes, `StrokeNodePatch.points` remains a whole-list
+patch field; runtime application replaces the full geometry through
+`StrokeNode.replacePoints(...)` instead of mutating `StrokeNode.points`
+in-place.
 
 ### 4.3 Write-boundary validation
 

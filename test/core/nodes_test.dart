@@ -1,9 +1,9 @@
 import 'dart:io';
-import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contract/path_fill_rule.dart';
+import 'package:iwb_canvas_engine/src/contract/scene_contract_limits.dart';
 import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 
@@ -217,13 +217,15 @@ void main() {
       );
       expect(strokeWrongTransform.normalizeToLocalCenter, throwsStateError);
 
-      final strokeBadPoint = StrokeNode(
-        id: 's3',
-        points: const <Offset>[Offset(double.nan, 0)],
-        thickness: 1,
-        color: const Color(0xFF000000),
+      expect(
+        () => StrokeNode(
+          id: 's3',
+          points: const <Offset>[Offset(double.nan, 0)],
+          thickness: 1,
+          color: const Color(0xFF000000),
+        ),
+        throwsArgumentError,
       );
-      expect(strokeBadPoint.normalizeToLocalCenter, throwsStateError);
 
       final line = LineNode(
         id: 'l',
@@ -256,74 +258,17 @@ void main() {
     },
   );
 
-  test('stroke points revision tracks mutating list operations', () {
+  // INV:INV-ENG-STROKE-RUNTIME-GEOMETRY-OWNER
+  test('stroke points expose read-only runtime geometry view', () {
     final stroke = StrokeNode(
       id: 's',
       points: const <Offset>[Offset(0, 0)],
       thickness: 1,
       color: const Color(0xFF000000),
     );
-    final points = stroke.points;
-    var revision = stroke.pointsRevision;
-
-    points.length = points.length;
-    points.addAll(const <Offset>[]);
-    points.removeRange(0, 0);
-    points.setRange(0, 0, const <Offset>[]);
-    points.fillRange(0, 0);
-    points.removeWhere((_) => false);
-    points.retainWhere((_) => true);
-    points.sort();
-    points.shuffle(math.Random(1));
-    expect(stroke.pointsRevision, revision);
-
-    points.add(const Offset(1, 1));
-    expect(stroke.pointsRevision, greaterThan(revision));
-    revision = stroke.pointsRevision;
-
-    points[0] = const Offset(0, 0);
-    expect(stroke.pointsRevision, revision);
-
-    points[0] = const Offset(2, 2);
-    expect(stroke.pointsRevision, greaterThan(revision));
-    revision = stroke.pointsRevision;
-
-    points.addAll(const <Offset>[Offset(3, 3)]);
-    points.length = points.length - 1;
-    points.insert(1, const Offset(9, 9));
-    points.insertAll(0, const <Offset>[Offset(-1, -1)]);
-    points.remove(const Offset(9, 9));
-    points.removeAt(0);
-    points.removeLast();
-    if (points.isNotEmpty) {
-      points.removeRange(0, 1);
-    }
-    if (points.isEmpty) {
-      points.add(const Offset(0, 0));
-    }
-    points.replaceRange(0, 1, const <Offset>[Offset(7, 7)]);
-    points.setAll(0, const <Offset>[Offset(8, 8)]);
-    points.setRange(0, 1, const <Offset>[Offset(6, 6)]);
-    points.fillRange(0, 1, const Offset(5, 5));
-    points.removeWhere((p) => p == const Offset(5, 5));
-    points.addAll(const <Offset>[Offset(2, 0), Offset(1, 1), Offset(1, 0)]);
-    points.retainWhere((p) => p.dy == 0);
-    points.sort((a, b) => a.dx.compareTo(b.dx));
-    points.shuffle(math.Random(2));
-    points.clear();
-    expect(stroke.pointsRevision, greaterThan(revision));
-
-    final one = StrokeNode(
-      id: 'single',
-      points: const <Offset>[Offset(0, 0)],
-      thickness: 1,
-      color: const Color(0xFF000000),
-    );
-    final oneRev = one.pointsRevision;
-    one.points.length = 1;
-    expect(one.pointsRevision, oneRev);
-    one.points.remove(const Offset(100, 100));
-    expect(one.pointsRevision, oneRev);
+    expect(() => stroke.points.add(const Offset(1, 1)), throwsUnsupportedError);
+    expect(() => stroke.points[0] = const Offset(2, 2), throwsUnsupportedError);
+    expect(() => stroke.points.clear(), throwsUnsupportedError);
   });
 
   test('stroke constructor rejects negative initial pointsRevision', () {
@@ -339,27 +284,50 @@ void main() {
     );
   });
 
-  test('stroke no-op point mutations keep pointsRevision unchanged', () {
+  test(
+    'stroke replacePoints keeps no-op revision stable and updates on change',
+    () {
+      final stroke = StrokeNode(
+        id: 'stable-revision',
+        points: const <Offset>[Offset(0, 0)],
+        thickness: 1,
+        color: const Color(0xFF000000),
+      );
+      final revision = stroke.pointsRevision;
+      final pointsView = stroke.points;
+
+      expect(stroke.replacePoints(const <Offset>[Offset(0, 0)]), isFalse);
+      expect(stroke.pointsRevision, revision);
+      expect(identical(stroke.points, pointsView), isTrue);
+
+      expect(
+        stroke.replacePoints(const <Offset>[Offset(2, 2), Offset(3, 3)]),
+        isTrue,
+      );
+      expect(stroke.points, const <Offset>[Offset(2, 2), Offset(3, 3)]);
+      expect(stroke.pointsRevision, revision + 1);
+      expect(identical(stroke.points, pointsView), isTrue);
+    },
+  );
+
+  test('stroke replacePoints rejects invalid runtime geometry', () {
     final stroke = StrokeNode(
-      id: 'stable-revision',
+      id: 'runtime-validate',
       points: const <Offset>[Offset(0, 0)],
       thickness: 1,
       color: const Color(0xFF000000),
     );
-    final points = stroke.points;
-    final revision = stroke.pointsRevision;
 
-    points.length = points.length;
-    points.addAll(const <Offset>[]);
-    points.removeRange(0, 0);
-    points.setRange(0, 0, const <Offset>[]);
-    points.fillRange(0, 0);
-    points.removeWhere((_) => false);
-    points.retainWhere((_) => true);
-    points.sort();
-    points[0] = const Offset(0, 0);
-
-    expect(stroke.pointsRevision, revision);
+    expect(
+      () => stroke.replacePoints(const <Offset>[Offset(double.nan, 0)]),
+      throwsArgumentError,
+    );
+    expect(
+      () => stroke.replacePoints(
+        List<Offset>.filled(kMaxStrokePointsPerNode + 1, Offset.zero),
+      ),
+      throwsArgumentError,
+    );
   });
 
   test('scene node constructor rejects non-positive instanceRevision', () {

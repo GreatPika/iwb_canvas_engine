@@ -174,6 +174,6 @@ This file is the plan index. Each step has a dedicated document so steps can be 
 - [x] [Шаг 77. Синхронизировать CI trigger surface tool-tests с repo-local public entrypoint dependencies](plan/step_77_tool_test_trigger_surface_and_public_entrypoint_dependency.md)
 - [x] [Шаг 78. Поднять недостающие render contracts в invariant registry для существующих proof surfaces](plan/step_78_render_contract_invariant_registry_backfill.md)
 - [x] [Шаг 79. Удалить `TextNode.size` из runtime-модели, snapshot boundary и JSON schema](plan/step_79_remove_text_node_size_from_runtime_snapshot_and_json_schema.md)
-- [ ] [Шаг 80. Герметизировать runtime owner stroke geometry и убрать прямую мутацию `StrokeNode.points`](plan/step_80_stroke_points_runtime_owner_hermeticity.md)
+- [x] [Шаг 80. Герметизировать runtime owner stroke geometry и убрать прямую мутацию `StrokeNode.points`](plan/step_80_stroke_points_runtime_owner_hermeticity.md)
 - [ ] [Шаг 81. Сделать `ScenePalette` runtime value-owner и убрать post-construction mutation обходы](plan/step_81_scene_palette_runtime_value_owner.md)
 - [ ] [Шаг 82. Выровнять runtime numeric write semantics на reject-only policy для `opacity` и grid cell size](plan/step_82_runtime_numeric_write_reject_policy.md)

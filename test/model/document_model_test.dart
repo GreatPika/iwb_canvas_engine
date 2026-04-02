@@ -102,7 +102,7 @@ void main() {
   test('scene <-> snapshot conversion preserves node variants', () {
     final scene = sceneWithAllNodeTypes();
     final stroke = scene.layers[1].nodes[2] as StrokeNode;
-    stroke.points[0] = const Offset(-1, -1);
+    stroke.replacePoints(const <Offset>[Offset(-1, -1), Offset(3, 4)]);
     final snapshot = txnSceneToSnapshot(scene);
     final restored = txnSceneFromSnapshot(snapshot);
 

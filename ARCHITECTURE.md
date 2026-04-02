@@ -360,6 +360,9 @@ Ownership decisions for the target state:
 - Stroke/line mutable nodes live in `core/vector_nodes.dart`, which keeps
   `_VectorNodeGeometryOwner` as the file-local owner for stroke/line
   world-local normalization and mutable geometry revision behavior.
+  `StrokeNode.points` is a read-only runtime view; `StrokeNode.replacePoints`
+  is the canonical write owner for stroke geometry validation and
+  `pointsRevision` monotonicity.
 - `PathNode` lives in `core/path_node.dart`, which keeps
   `_PathNodeLocalPathCacheOwner` as the file-local owner for local-path cache
   invalidation and diagnostics.

@@ -177,7 +177,7 @@ language: russian
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Hermetic Runtime Stroke Geometry Owner
+### Slice 1. [x] Hermetic Runtime Stroke Geometry Owner
 
 #### Slice Contract
 
@@ -206,9 +206,10 @@ language: russian
 
 #### Closure Evidence
 
-- Green run of the listed verifications.
+- `flutter analyze`
+- MCP test run: root `.` paths `test/core/nodes_test.dart`, `test/core/hit_test_test.dart`
 
-### Slice 2. [ ] Patch, Clone, And Cache Integration Through The Canonical Owner
+### Slice 2. [x] Patch, Clone, And Cache Integration Through The Canonical Owner
 
 #### Slice Contract
 
@@ -238,7 +239,9 @@ Patch application, clone independence, and render/cache freshness all work throu
 
 #### Closure Evidence
 
-- Green run of the listed verifications.
+- MCP test run: root `.` paths `test/model/document_model_test.dart`, `test/model/document_clone_test.dart`
+- MCP test run: root `.` paths `test/controller/internal/scene_writer_test.dart`, `test/controller/core/scene_controller_commit_atomicity_test.dart`
+- MCP test shard preset `render_view`
 
 ## 9. Final Verification
 

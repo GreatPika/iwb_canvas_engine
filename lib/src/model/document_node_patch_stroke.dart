@@ -40,7 +40,7 @@ bool _txnApplyStrokePointsPatch(
     return false;
   }
   if (!dryRun) {
-    stroke.points.replaceRange(0, stroke.points.length, next);
+    stroke.replacePoints(next);
   }
   return true;
 }
