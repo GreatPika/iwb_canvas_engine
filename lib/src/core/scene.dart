@@ -3,6 +3,7 @@ import 'dart:ui';
 import '../contract/ids.dart' show LayerId;
 import '../contract/scene_model_invariants.dart';
 import '../contract/scene_defaults.dart';
+import 'grid_safety_limits.dart';
 import 'nodes.dart';
 
 /// A mutable scene graph used by the canvas engine.
@@ -104,19 +105,55 @@ class Background {
 
 /// Grid rendering configuration.
 class GridSettings {
-  GridSettings({this.isEnabled = false, double? cellSize, Color? color})
-    : cellSize = cellSize ?? SceneDefaults.gridSizes.first,
-      color = color ?? SceneDefaults.gridColor;
+  GridSettings({bool isEnabled = false, double? cellSize, Color? color})
+    : _isEnabled = false,
+      _cellSize = _requireFinitePositiveGridCellSize(
+        cellSize ?? SceneDefaults.gridSizes.first,
+        name: 'cellSize',
+      ),
+      color = color ?? SceneDefaults.gridColor {
+    if (isEnabled) {
+      this.isEnabled = true;
+    }
+  }
 
-  bool isEnabled;
+  bool get isEnabled => _isEnabled;
+  bool _isEnabled;
+  set isEnabled(bool value) {
+    if (value && _cellSize < kMinGridCellSize) {
+      throw ArgumentError.value(
+        value,
+        'isEnabled',
+        'Cannot enable grid when cellSize is < $kMinGridCellSize.',
+      );
+    }
+    _isEnabled = value;
+  }
 
   /// Grid cell size in scene/world units.
   ///
-  /// Expected to be finite and `> 0` when [isEnabled] is true.
+  /// Expected to be finite and `> 0`.
   ///
-  /// Runtime behavior: rendering treats non-finite or non-positive values as
-  /// "grid disabled"; JSON serialization rejects invalid values.
-  double cellSize;
+  /// Runtime behavior: invalid values throw at assignment; enabling the grid
+  /// also requires `cellSize >= kMinGridCellSize`. JSON serialization rejects
+  /// invalid values.
+  double get cellSize => _cellSize;
+  double _cellSize;
+  set cellSize(double value) {
+    final nextValue = _requireFinitePositiveGridCellSize(
+      value,
+      name: 'cellSize',
+    );
+    if (_isEnabled && nextValue < kMinGridCellSize) {
+      throw ArgumentError.value(
+        value,
+        'cellSize',
+        'Must be >= $kMinGridCellSize while the grid is enabled.',
+      );
+    }
+    _cellSize = nextValue;
+  }
+
   Color color;
 }
 
@@ -126,29 +163,47 @@ class ScenePalette {
     List<Color>? penColors,
     List<Color>? backgroundColors,
     List<double>? gridSizes,
-  }) : penColors = List<Color>.from(penColors ?? SceneDefaults.penColors),
-       backgroundColors = List<Color>.from(
-         backgroundColors ?? SceneDefaults.backgroundColors,
+  }) : penColors = _ownedPaletteColors(
+         penColors ?? SceneDefaults.penColors,
+         name: 'penColors',
        ),
-       gridSizes = List<double>.from(gridSizes ?? SceneDefaults.gridSizes) {
-    validatePaletteItemCount(
-      this.penColors.length,
-      name: 'penColors',
-      source: this.penColors,
-    );
-    validatePaletteItemCount(
-      this.backgroundColors.length,
-      name: 'backgroundColors',
-      source: this.backgroundColors,
-    );
-    validatePaletteItemCount(
-      this.gridSizes.length,
-      name: 'gridSizes',
-      source: this.gridSizes,
-    );
-  }
+       backgroundColors = _ownedPaletteColors(
+         backgroundColors ?? SceneDefaults.backgroundColors,
+         name: 'backgroundColors',
+       ),
+       gridSizes = _ownedPaletteGridSizes(
+         gridSizes ?? SceneDefaults.gridSizes,
+         name: 'gridSizes',
+       );
 
+  /// Immutable runtime palette presets.
+  ///
+  /// Constructor inputs are defensively copied and frozen, so runtime palette
+  /// updates use replacement-only semantics at the [Scene.palette] field.
   final List<Color> penColors;
   final List<Color> backgroundColors;
   final List<double> gridSizes;
+}
+
+List<Color> _ownedPaletteColors(List<Color> values, {required String name}) {
+  validatePaletteItemCount(values.length, name: name, source: values);
+  return List<Color>.unmodifiable(List<Color>.from(values));
+}
+
+List<double> _ownedPaletteGridSizes(
+  List<double> values, {
+  required String name,
+}) {
+  validatePaletteItemCount(values.length, name: name, source: values);
+  return List<double>.unmodifiable(List<double>.from(values));
+}
+
+double _requireFinitePositiveGridCellSize(
+  double value, {
+  required String name,
+}) {
+  if (value.isFinite && value > 0) {
+    return value;
+  }
+  throw ArgumentError.value(value, name, 'Must be a finite number > 0.');
 }

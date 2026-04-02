@@ -4,6 +4,12 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ## Unreleased
 
+- Runtime numeric write semantics are now reject-only for `SceneNode.opacity`
+  and background-grid cell size. Invalid runtime writes throw
+  `ArgumentError`, enabled-grid writes no longer clamp undersized cell sizes,
+  controller commit no longer repairs grid numeric state after mutation, and
+  import/snapshot validation now rejects enabled grid payloads whose
+  `cellSize` is below `1.0` before runtime materialization.
 - Breaking: JSON schema `6` is no longer supported. The engine now writes and
   reads only `schemaVersion = 7`, text JSON payloads must not contain `size`,
   and text bounds are derived from layout inputs instead of crossing runtime,
@@ -21,6 +27,11 @@ All notable changes to `iwb_canvas_engine` are documented here.
   read-only view, direct list mutation is rejected, `StrokeNode.replacePoints`
   is the canonical runtime geometry write surface, and stroke point patches now
   route through that owner while preserving `pointsRevision` no-op semantics.
+- Runtime palette ownership is now replacement-only: `Scene.palette` keeps a
+  mutable reference to an immutable `ScenePalette` value object, palette
+  constructor inputs are defensively copied, and direct mutation of
+  `penColors`, `backgroundColors`, or `gridSizes` is rejected after
+  construction.
 - Interactive write-side ownership is now canonicalized across
   `replaceScene(...)`, controller-side transform/delete preflight, and
   `SceneView` pointer semantics: `replaceScene(...)` now materializes its

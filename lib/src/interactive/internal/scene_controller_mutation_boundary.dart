@@ -94,11 +94,14 @@ final class SceneControllerMutationBoundary {
 
   void setGridCellSize(double value) {
     _requireFinitePositive(value, name: 'cellSize');
-    final gridEnabled = readSnapshot().background.grid.isEnabled;
-    final resolved = gridEnabled
-        ? value.clamp(kMinGridCellSize, double.infinity).toDouble()
-        : value;
-    storeController.commands.writeGridCellSizeSet(resolved);
+    if (readSnapshot().background.grid.isEnabled && value < kMinGridCellSize) {
+      throw ArgumentError.value(
+        value,
+        'cellSize',
+        'Must be >= $kMinGridCellSize while the grid is enabled.',
+      );
+    }
+    storeController.commands.writeGridCellSizeSet(value);
   }
 
   void validateCameraOffset(Offset value) {

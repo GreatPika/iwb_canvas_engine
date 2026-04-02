@@ -617,8 +617,8 @@ void main() {
 
   test('ScenePainter skips grid for invalid drawable state', () async {
     const background = Color(0xFFFFFFFF);
-    final controller = SceneStoreController(
-      initialSnapshot: SceneSnapshot(
+    final controller = _FakeRenderState(
+      snapshot: SceneSnapshot(
         background: BackgroundSnapshot(
           color: background,
           grid: GridSnapshot(
@@ -629,7 +629,6 @@ void main() {
         ),
       ),
     );
-    addTearDown(controller.dispose);
 
     final painter = ScenePainter(
       controller: controller,

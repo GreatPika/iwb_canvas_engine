@@ -353,7 +353,11 @@ Ownership decisions for the target state:
 - `SceneNode` lives in `core/scene_node.dart` and remains the common mutable
   shell for `transform`, opacity, and bounds semantics.
   `SceneNode.transform` stays the single source of truth for mutable node
-  transforms, and `_SceneNodeTransformConvenience` remains file-local there.
+  transforms, `_SceneNodeTransformConvenience` remains file-local there, and
+  runtime `opacity` writes are reject-only instead of clamp-normalized.
+- `GridSettings` lives in `core/scene.dart` and owns the runtime validity
+  envelope for background-grid writes: `cellSize` must stay finite and `> 0`,
+  and enabling the grid is reject-only when `cellSize < 1.0`.
 - Box-family mutable nodes live in `core/box_nodes.dart`, which keeps
   `_BoxNodePlacementOwner` as the file-local owner for top-left/AABB placement
   semantics.
@@ -528,6 +532,10 @@ most important architectural rules are:
 - Mutable runtime `Scene` keeps `backgroundLayer` nullable as an internal
   shape; local write paths materialize it on demand instead of maintaining a
   second canonical runtime model.
+- Mutable runtime `Scene.palette` is a replaceable scene-level reference to an
+  immutable `ScenePalette` value object. Palette constructor inputs are
+  defensively copied into unmodifiable lists, so runtime palette state does
+  not expose mutable nested list ownership after validation.
 - Decode/import and runtime replacement paths validate structure and numeric
   constraints and throw `SceneDataException` on malformed input.
 - `ScenePolicy` is the single owner for scene-level traversal semantics across

@@ -62,12 +62,11 @@ void main() {
   test('node convenience accessors update TRS transform', () {
     final rect = RectNode(id: 'r', size: const Size(10, 20));
 
-    rect.opacity = 2;
-    expect(rect.opacity, 1);
-    rect.opacity = -1;
-    expect(rect.opacity, 0);
-    rect.opacity = double.nan;
-    expect(rect.opacity, 1);
+    rect.opacity = 0.5;
+    expect(rect.opacity, 0.5);
+    expect(() => rect.opacity = 2, throwsArgumentError);
+    expect(() => rect.opacity = -1, throwsArgumentError);
+    expect(() => rect.opacity = double.nan, throwsArgumentError);
 
     rect.position = const Offset(5, 6);
     expect(rect.position, const Offset(5, 6));

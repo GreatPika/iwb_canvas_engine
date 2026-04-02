@@ -183,7 +183,7 @@ language: russian
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Reject-Only Runtime Setter Semantics
+### Slice 1. [x] Reject-Only Runtime Setter Semantics
 
 #### Slice Contract
 
@@ -213,7 +213,7 @@ language: russian
 
 - Green run of the listed verifications.
 
-### Slice 2. [ ] Controller And Interactive Numeric Policy Alignment
+### Slice 2. [x] Controller And Interactive Numeric Policy Alignment
 
 #### Slice Contract
 

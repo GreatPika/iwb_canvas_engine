@@ -13,6 +13,7 @@ import 'package:iwb_canvas_engine/src/model/document.dart';
 // INV:INV-ENG-TEXT-SIZE-DERIVED
 
 void main() {
+  // INV:INV-ENG-PALETTE-RUNTIME-VALUE-OWNER
   Scene sceneWithAllNodeTypes() {
     return Scene(
       layers: <ContentLayer>[
@@ -185,6 +186,31 @@ void main() {
     );
   });
 
+  test(
+    'txnSceneFromSnapshot rejects enabled grid cellSize below the import minimum',
+    () {
+      expect(
+        () => txnSceneFromSnapshot(
+          sceneSnapshotFromValidated(
+            background: backgroundSnapshotFromValidated(
+              grid: gridSnapshotFromValidated(isEnabled: true, cellSize: 0.5),
+            ),
+          ),
+        ),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.code == SceneDataErrorCode.invalidValue &&
+                e.path == 'background.grid.cellSize' &&
+                e.message ==
+                    'Field background.grid.cellSize must be >= 1.0 when background.grid.enabled is true.',
+          ),
+        ),
+      );
+    },
+  );
+
   test('txnSceneFromSnapshot preserves dedicated background layer', () {
     final scene = txnSceneFromSnapshot(
       SceneSnapshot(
@@ -236,6 +262,48 @@ void main() {
     }
     expect(backgroundLayer.nodes, isEmpty);
   });
+
+  test(
+    'runtime ScenePalette freezes constructor lists and supports replacement',
+    () {
+      final sourcePenColors = <Color>[const Color(0xFF111111)];
+      final sourceBackgroundColors = <Color>[const Color(0xFFEEEEEE)];
+      final sourceGridSizes = <double>[8, 16];
+      final palette = ScenePalette(
+        penColors: sourcePenColors,
+        backgroundColors: sourceBackgroundColors,
+        gridSizes: sourceGridSizes,
+      );
+      final scene = Scene(palette: palette);
+
+      sourcePenColors.add(const Color(0xFF222222));
+      sourceBackgroundColors.add(const Color(0xFFDDDDDD));
+      sourceGridSizes.add(24);
+
+      expect(scene.palette.penColors, <Color>[const Color(0xFF111111)]);
+      expect(scene.palette.backgroundColors, <Color>[const Color(0xFFEEEEEE)]);
+      expect(scene.palette.gridSizes, <double>[8, 16]);
+      expect(
+        () => scene.palette.penColors.add(const Color(0xFF333333)),
+        throwsUnsupportedError,
+      );
+      expect(
+        () => scene.palette.backgroundColors.add(const Color(0xFFCCCCCC)),
+        throwsUnsupportedError,
+      );
+      expect(() => scene.palette.gridSizes.add(32), throwsUnsupportedError);
+
+      scene.palette = ScenePalette(
+        penColors: <Color>[const Color(0xFFABCDEF)],
+        backgroundColors: <Color>[const Color(0xFFFEDCBA)],
+        gridSizes: <double>[32],
+      );
+
+      expect(scene.palette.penColors, <Color>[const Color(0xFFABCDEF)]);
+      expect(scene.palette.backgroundColors, <Color>[const Color(0xFFFEDCBA)]);
+      expect(scene.palette.gridSizes, <double>[32]);
+    },
+  );
 
   test('txnSceneToSnapshot canonicalizes null runtime background layer', () {
     // INV:INV-SER-TYPED-LAYER-SPLIT
@@ -886,9 +954,7 @@ void main() {
           ],
         ),
       ],
-      background: Background(
-        grid: GridSettings(isEnabled: true, cellSize: 0.2),
-      ),
+      background: Background(grid: GridSettings(isEnabled: true, cellSize: 1)),
     );
 
     final normalized = txnNormalizeSelection(
@@ -920,9 +986,16 @@ void main() {
     final ok = okEntry.node as RectNode;
     expect(ok.transform.tx, 10);
 
-    expect(txnNormalizeGrid(scene), isTrue);
-    expect(scene.background.grid.cellSize, 1.0);
-    expect(txnNormalizeGrid(scene), isFalse);
+    final grid = scene.background.grid;
+    expect(() => grid.cellSize = 0, throwsArgumentError);
+    expect(() => grid.cellSize = double.nan, throwsArgumentError);
+    grid.isEnabled = false;
+    grid.cellSize = 0.5;
+    expect(grid.cellSize, 0.5);
+    expect(() => grid.isEnabled = true, throwsArgumentError);
+    grid.cellSize = 2;
+    grid.isEnabled = true;
+    expect(grid.isEnabled, isTrue);
   });
 
   test('node-from-spec maps all variants and fallback id behavior', () {

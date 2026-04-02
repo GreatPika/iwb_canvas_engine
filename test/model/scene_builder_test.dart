@@ -1508,6 +1508,7 @@ void main() {
               );
             },
         requirePositiveGridCellSize: true,
+        requireEnabledMinGridCellSize: true,
       ),
       returnsNormally,
     );
@@ -1548,6 +1549,7 @@ void main() {
               );
             },
         requirePositiveGridCellSize: true,
+        requireEnabledMinGridCellSize: true,
       ),
       returnsNormally,
     );
@@ -1620,6 +1622,7 @@ void main() {
                 );
               },
           requirePositiveGridCellSize: true,
+          requireEnabledMinGridCellSize: true,
         ),
         returnsNormally,
       );

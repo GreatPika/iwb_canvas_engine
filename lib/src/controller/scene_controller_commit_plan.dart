@@ -1,4 +1,3 @@
-import 'internal/grid_normalizer.dart';
 import 'internal/selection_normalizer.dart';
 import 'mutation_commit_preparer.dart';
 import 'committed_store_state.dart';
@@ -9,7 +8,6 @@ import 'txn_context.dart';
 
 List<String> normalizeControllerCommitInputs({required TxnContext ctx}) {
   final selectionNormalizer = SelectionNormalizer();
-  final gridNormalizer = GridNormalizer();
   var commitPhases = const <String>[];
 
   final shouldNormalizeSelection =
@@ -30,18 +28,6 @@ List<String> normalizeControllerCommitInputs({required TxnContext ctx}) {
       ctx.workingSelection
         ..clear()
         ..addAll(selectionResult.normalized);
-    }
-  }
-
-  final shouldNormalizeGrid =
-      ctx.changeSet.gridChanged || ctx.changeSet.documentReplaced;
-  if (shouldNormalizeGrid) {
-    final gridChanged = gridNormalizer.writeNormalizeGrid(
-      scene: ctx.workingScene,
-    );
-    commitPhases = <String>[...commitPhases, 'grid'];
-    if (gridChanged) {
-      ctx.changeSet.txnMarkGridChanged();
     }
   }
 

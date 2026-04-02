@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../contract/snapshot.dart';
 import '../contract/scene_model_invariants.dart';
+import '../core/grid_safety_limits.dart';
 import '../core/scene.dart';
 import 'scene_value_validation_primitives.dart';
 import 'scene_value_validation_support.dart';
@@ -49,12 +50,15 @@ void sceneValidateGridSnapshot(
   required String field,
   required SceneValidationErrorReporter onError,
   required bool requirePositiveCellSize,
+  required bool requireEnabledMinCellSize,
 }) {
   _sceneValidateGridCellSize(
-    grid.cellSize,
+    cellSize: grid.cellSize,
+    isEnabled: grid.isEnabled,
     field: field,
     onError: onError,
     requirePositiveCellSize: requirePositiveCellSize,
+    requireEnabledMinCellSize: requireEnabledMinCellSize,
   );
 }
 
@@ -63,12 +67,15 @@ void sceneValidateGrid(
   required String field,
   required SceneValidationErrorReporter onError,
   required bool requirePositiveCellSize,
+  required bool requireEnabledMinCellSize,
 }) {
   _sceneValidateGridCellSize(
-    grid.cellSize,
+    cellSize: grid.cellSize,
+    isEnabled: grid.isEnabled,
     field: field,
     onError: onError,
     requirePositiveCellSize: requirePositiveCellSize,
+    requireEnabledMinCellSize: requireEnabledMinCellSize,
   );
 }
 
@@ -130,11 +137,13 @@ void _sceneValidatePaletteItemCount<T>(
   onError(field: field, value: values, message: 'Field $field $limitMessage');
 }
 
-void _sceneValidateGridCellSize(
-  double cellSize, {
+void _sceneValidateGridCellSize({
+  required double cellSize,
+  required bool isEnabled,
   required String field,
   required SceneValidationErrorReporter onError,
   required bool requirePositiveCellSize,
+  required bool requireEnabledMinCellSize,
 }) {
   sceneValidateFiniteDouble(
     cellSize,
@@ -146,6 +155,13 @@ void _sceneValidateGridCellSize(
       cellSize,
       field: '$field.cellSize',
       onError: onError,
+    );
+  }
+  if (requireEnabledMinCellSize && isEnabled && cellSize < kMinGridCellSize) {
+    onError(
+      field: '$field.cellSize',
+      value: cellSize,
+      message: 'must be >= $kMinGridCellSize when $field.enabled is true.',
     );
   }
 }

@@ -310,7 +310,7 @@ void main() {
     },
   );
 
-  test('commit normalization marks selection/grid changes when normalized', () {
+  test('commit normalizes selection without repairing invalid grid state', () {
     final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
@@ -322,13 +322,11 @@ void main() {
           common: CommonNodePatch(isVisible: PatchField<bool>.value(false)),
         ),
       );
-      writer.writeGridEnable(true);
-      writer.writeGridCellSize(0.1);
     });
 
     expect(controller.selectedNodeIds, isEmpty);
-    expect(controller.snapshot.background.grid.cellSize, 1.0);
+    expect(controller.snapshot.background.grid.cellSize, 10);
     expect(controller.debug.lastChangeSet.selectionChanged, isTrue);
-    expect(controller.debug.lastChangeSet.gridChanged, isTrue);
+    expect(controller.debug.lastChangeSet.gridChanged, isFalse);
   });
 }

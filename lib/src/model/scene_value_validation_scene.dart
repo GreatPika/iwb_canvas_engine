@@ -57,6 +57,7 @@ typedef _SceneValueValidationAccessors<TScene, TGrid, TPalette, TLayer, TNode> =
         required String field,
         required SceneValidationErrorReporter onError,
         required bool requirePositiveCellSize,
+        required bool requireEnabledMinCellSize,
       })
       validateGrid,
       void Function(
@@ -94,6 +95,7 @@ void sceneValidateSnapshotValues(
   SceneSnapshot snapshot, {
   required SceneValidationErrorReporter onError,
   required bool requirePositiveGridCellSize,
+  required bool requireEnabledMinGridCellSize,
 }) {
   _sceneValidateSceneValues<
     SceneSnapshot,
@@ -105,6 +107,7 @@ void sceneValidateSnapshotValues(
     snapshot,
     onError: onError,
     requirePositiveGridCellSize: requirePositiveGridCellSize,
+    requireEnabledMinGridCellSize: requireEnabledMinGridCellSize,
     accessors: _snapshotSceneValueValidationAccessors,
   );
 }
@@ -113,6 +116,7 @@ void sceneValidateSceneValues(
   Scene scene, {
   required SceneValidationErrorReporter onError,
   required bool requirePositiveGridCellSize,
+  required bool requireEnabledMinGridCellSize,
 }) {
   _sceneValidateSceneValues<
     Scene,
@@ -124,6 +128,7 @@ void sceneValidateSceneValues(
     scene,
     onError: onError,
     requirePositiveGridCellSize: requirePositiveGridCellSize,
+    requireEnabledMinGridCellSize: requireEnabledMinGridCellSize,
     accessors: _runtimeSceneValueValidationAccessors,
   );
 }
@@ -178,6 +183,7 @@ void _sceneValidateSceneValues<TScene, TGrid, TPalette, TLayer, TNode>(
   TScene scene, {
   required SceneValidationErrorReporter onError,
   required bool requirePositiveGridCellSize,
+  required bool requireEnabledMinGridCellSize,
   required _SceneValueValidationAccessors<
     TScene,
     TGrid,
@@ -197,6 +203,7 @@ void _sceneValidateSceneValues<TScene, TGrid, TPalette, TLayer, TNode>(
     field: 'background.grid',
     onError: onError,
     requirePositiveCellSize: requirePositiveGridCellSize,
+    requireEnabledMinCellSize: requireEnabledMinGridCellSize,
   );
   accessors.validatePalette(
     accessors.paletteOf(scene),

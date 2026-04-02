@@ -5,7 +5,6 @@ import '../contract/ids.dart';
 import '../contract/transform_tolerance.dart'
     show isNearSingular2x2, kEpsilon, norm1_2x2;
 import '../contract/transform2d.dart';
-import 'numeric_clamp.dart';
 import 'numeric_tolerance.dart' show nearZero;
 
 /// Supported node variants in a [Scene].
@@ -59,11 +58,21 @@ abstract class SceneNode {
   ///
   /// Expected to be finite.
   ///
-  /// Runtime behavior: values are normalized at assignment (`!finite -> 1`,
-  /// clamped to `[0,1]`); JSON serialization rejects invalid values.
+  /// Runtime behavior: invalid values throw at assignment; JSON serialization
+  /// rejects invalid values.
   double get opacity => _opacity;
   late double _opacity;
-  set opacity(double value) => _opacity = clamp01Finite(value);
+  set opacity(double value) {
+    if (!value.isFinite || value < 0 || value > 1) {
+      throw ArgumentError.value(
+        value,
+        'opacity',
+        'Must be finite and within [0,1].',
+      );
+    }
+    _opacity = value;
+  }
+
   bool isVisible;
   bool isSelectable;
   bool isLocked;

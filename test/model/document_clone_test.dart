@@ -139,43 +139,61 @@ void main() {
     },
   );
 
-  test('txnCloneScene deep clones scene, layers, nodes and mutable lists', () {
-    final source = sourceScene();
-    final sourceStrokeBeforeClone = source.layers[1].nodes[2] as StrokeNode;
-    sourceStrokeBeforeClone.replacePoints(const <Offset>[
-      Offset(-1, -1),
-      Offset(3, 4),
-    ]);
-    final clone = txnCloneScene(source);
+  test(
+    'txnCloneScene deep clones scene, layers, nodes and palette ownership',
+    () {
+      final source = sourceScene();
+      final sourceStrokeBeforeClone = source.layers[1].nodes[2] as StrokeNode;
+      sourceStrokeBeforeClone.replacePoints(const <Offset>[
+        Offset(-1, -1),
+        Offset(3, 4),
+      ]);
+      final clone = txnCloneScene(source);
 
-    expect(clone, isNot(same(source)));
-    expect(clone.layers, isNot(same(source.layers)));
-    expect(clone.layers.length, source.layers.length);
-    expect(clone.camera.offset, source.camera.offset);
-    expect(clone.background.grid.cellSize, 12);
-    expect(clone.palette.penColors, source.palette.penColors);
+      expect(clone, isNot(same(source)));
+      expect(clone.layers, isNot(same(source.layers)));
+      expect(clone.layers.length, source.layers.length);
+      expect(clone.camera.offset, source.camera.offset);
+      expect(clone.background.grid.cellSize, 12);
+      expect(clone.palette, isNot(same(source.palette)));
+      expect(clone.palette.penColors, isNot(same(source.palette.penColors)));
+      expect(clone.palette.penColors, source.palette.penColors);
+      expect(
+        () => clone.palette.penColors.add(const Color(0xFF999999)),
+        throwsUnsupportedError,
+      );
 
-    final sourceNode = source.layers[1].nodes[2] as StrokeNode;
-    final cloneNode = clone.layers[1].nodes[2] as StrokeNode;
-    expect(cloneNode, isNot(same(sourceNode)));
-    expect(cloneNode.points, isNot(same(sourceNode.points)));
-    expect(cloneNode.points, sourceNode.points);
-    expect(cloneNode.instanceRevision, sourceNode.instanceRevision);
-    expect(cloneNode.pointsRevision, sourceNode.pointsRevision);
-    expect(cloneNode.pointsRevision, greaterThan(0));
+      final sourceNode = source.layers[1].nodes[2] as StrokeNode;
+      final cloneNode = clone.layers[1].nodes[2] as StrokeNode;
+      expect(cloneNode, isNot(same(sourceNode)));
+      expect(cloneNode.points, isNot(same(sourceNode.points)));
+      expect(cloneNode.points, sourceNode.points);
+      expect(cloneNode.instanceRevision, sourceNode.instanceRevision);
+      expect(cloneNode.pointsRevision, sourceNode.pointsRevision);
+      expect(cloneNode.pointsRevision, greaterThan(0));
 
-    cloneNode.replacePoints(const <Offset>[
-      Offset(-1, -1),
-      Offset(3, 4),
-      Offset(99, 99),
-    ]);
-    expect(sourceNode.points.length, 2);
+      cloneNode.replacePoints(const <Offset>[
+        Offset(-1, -1),
+        Offset(3, 4),
+        Offset(99, 99),
+      ]);
+      expect(sourceNode.points.length, 2);
 
-    final cloneRect = clone.layers[1].nodes[4] as RectNode;
-    cloneRect.size = const Size(100, 200);
-    final sourceRect = source.layers[1].nodes[4] as RectNode;
-    expect(sourceRect.size, const Size(4, 6));
-  });
+      final cloneRect = clone.layers[1].nodes[4] as RectNode;
+      cloneRect.size = const Size(100, 200);
+      final sourceRect = source.layers[1].nodes[4] as RectNode;
+      expect(sourceRect.size, const Size(4, 6));
+
+      source.palette = ScenePalette(
+        penColors: <Color>[const Color(0xFF123456)],
+        backgroundColors: <Color>[const Color(0xFF654321)],
+        gridSizes: <double>[48],
+      );
+      expect(clone.palette.penColors, <Color>[const Color(0xFF000001)]);
+      expect(clone.palette.backgroundColors, <Color>[const Color(0xFF000002)]);
+      expect(clone.palette.gridSizes, <double>[12, 24]);
+    },
+  );
 
   test('txnCloneContentLayer and txnCloneNode keep node type fidelity', () {
     final source = sourceScene();

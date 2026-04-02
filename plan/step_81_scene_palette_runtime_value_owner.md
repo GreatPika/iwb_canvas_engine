@@ -157,7 +157,7 @@ language: russian
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Immutable Runtime Palette Value Owner
+### Slice 1. [x] Immutable Runtime Palette Value Owner
 
 #### Slice Contract
 
@@ -187,7 +187,7 @@ language: russian
 
 - Green run of the listed verifications.
 
-### Slice 2. [ ] Clone And Boundary Proofs Over Immutable Palette Ownership
+### Slice 2. [x] Clone And Boundary Proofs Over Immutable Palette Ownership
 
 #### Slice Contract
 

@@ -1,6 +1,5 @@
 import 'dart:ui';
 
-import '../core/grid_safety_limits.dart';
 import '../core/id_generator.dart';
 import '../core/nodes.dart';
 import '../core/revision_policy.dart';
@@ -282,13 +281,6 @@ List<String> _txnCollectSceneNumericInvariantViolations(Scene scene) {
   final cameraOffset = scene.camera.offset;
   if (!_txnIsFiniteOffset(cameraOffset)) {
     violations.add('camera.offset must be finite.');
-  }
-
-  final grid = scene.background.grid;
-  if (!grid.cellSize.isFinite || grid.cellSize <= 0) {
-    violations.add('grid.cellSize must be finite and > 0.');
-  } else if (grid.isEnabled && grid.cellSize < kMinGridCellSize) {
-    violations.add('enabled grid.cellSize must be >= $kMinGridCellSize.');
   }
 
   return violations;

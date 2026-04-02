@@ -246,7 +246,3 @@ Set<NodeId> txnTranslateSelection({
     delta: delta,
   );
 }
-
-bool txnNormalizeGrid(Scene scene) {
-  return document_selection.txnNormalizeGrid(scene);
-}

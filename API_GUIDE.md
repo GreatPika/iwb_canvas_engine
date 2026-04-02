@@ -208,6 +208,9 @@ Important runtime details:
 - runtime whole-stroke geometry writes go through
   `StrokeNode.replacePoints(...)`, which rejects non-finite coordinates and
   point lists longer than `20000`
+- runtime `Scene.palette` is replacement-only: `ScenePalette` defensively
+  copies and freezes `penColors`, `backgroundColors`, and `gridSizes`, so
+  callers replace the palette object instead of mutating nested lists
 - `instanceRevision` is part of runtime node identity and is serialized
 - text nodes carry explicit `textDirection` in runtime and serialized scene
   data; public `TextNodeSpec` / `TextNodeSnapshot` creation requires it,
@@ -320,7 +323,7 @@ Public write-boundary values validate eagerly at construction time:
   throws `ArgumentError`
 - runtime write/model paths consume already validated boundary objects and own
   only runtime/stateful semantics such as target existence, patch target
-  id/type compatibility, range/index checks, canonicalization, and derived
+  id/type compatibility, range/index checks, reject-on-write validation, and derived
   recomputation
 - validated boundary value types expose the supported parse rules without
   changing the wire/runtime representation used by `SceneSnapshot`, `NodeSpec`,
@@ -339,9 +342,14 @@ Public write-boundary values validate eagerly at construction time:
 - `SvgPathDataValue` enforces non-empty bounded path payloads and SVG parsing
 - non-finite `Transform2D` and `Offset` values are rejected by transform and
   translate write paths
-- non-finite camera offsets and non-positive/non-finite grid cell sizes are
-  rejected by their runtime write paths
-- `opacity` is strict at the public boundary and must stay in `[0, 1]`
+- non-finite camera offsets are rejected by their runtime write paths
+- grid cell size writes are reject-only at runtime: values must be finite and
+  `> 0`, and enabling the grid requires `cellSize >= 1.0`
+- import/snapshot validation also rejects enabled grids whose `cellSize` is
+  below `1.0`, so invalid payloads fail with `SceneDataException` before
+  runtime materialization
+- `opacity` is reject-only at the public boundary and in runtime nodes; it
+  must stay in `[0, 1]`
 - in-memory write/import validation now mirrors the same id/text/font-family,
   revision, opacity, and finite-offset rules used by the JSON boundary
 
@@ -483,8 +491,10 @@ Important behavior:
 - interactive rotate/flip/delete preflight uses one internal snapshot-based
   eligibility policy owner; write-layer guards remain separate defensive
   barriers in the transactional core
-- `setGridCellSize(...)` requires a finite positive value and applies an
-  internal safety minimum when the grid is enabled
+- `setGridCellSize(...)` is reject-only: it requires a finite positive value,
+  and while the grid is enabled the value must also be `>= 1.0`
+- `setGridEnabled(true)` throws `ArgumentError` when the current runtime
+  `cellSize` is below the enabled-grid minimum
 - invalid numeric settings throw `ArgumentError`
 
 ### 5.4 Scene and node mutation methods

@@ -1818,6 +1818,32 @@ void main() {
   });
 
   test(
+    'encodeSceneDocument reads frozen runtime palette values instead of constructor aliases',
+    () {
+      final sourcePenColors = <Color>[const Color(0xFF111111)];
+      final sourceBackgroundColors = <Color>[const Color(0xFF222222)];
+      final sourceGridSizes = <double>[8, 16];
+      final scene = Scene(
+        palette: ScenePalette(
+          penColors: sourcePenColors,
+          backgroundColors: sourceBackgroundColors,
+          gridSizes: sourceGridSizes,
+        ),
+      );
+
+      sourcePenColors.add(const Color(0xFF333333));
+      sourceBackgroundColors.add(const Color(0xFF444444));
+      sourceGridSizes.add(32);
+
+      final palette =
+          encodeSceneDocument(scene)['palette'] as Map<String, Object?>;
+      expect(palette['penColors'], <String>['#FF111111']);
+      expect(palette['backgroundColors'], <String>['#FF222222']);
+      expect(palette['gridSizes'], <double>[8, 16]);
+    },
+  );
+
+  test(
     'encodeSceneDocument rejects duplicate node ids across background/content',
     () {
       final duplicateIds = Scene(
@@ -2035,6 +2061,29 @@ void main() {
       final scene = decodeScene(json);
       expect(scene.background.grid.isEnabled, isFalse);
       expect(scene.background.grid.cellSize, value);
+    }
+  });
+
+  test('decodeScene rejects enabled grid cellSize below the safety minimum', () {
+    for (final value in <double>[0.125, 0.5]) {
+      final json = _minimalSceneJson();
+      final grid =
+          (json['background'] as Map<String, Object?>)['grid']
+              as Map<String, Object?>;
+      grid['enabled'] = true;
+      grid['cellSize'] = value;
+
+      expect(
+        () => decodeScene(json),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.message ==
+                    'Field background.grid.cellSize must be >= 1.0 when background.grid.enabled is true.',
+          ),
+        ),
+      );
     }
   });
 

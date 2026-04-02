@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import '../core/nodes.dart';
 import '../core/scene.dart';
 import '../contract/ids.dart' show LayerId;
@@ -128,9 +126,9 @@ Background _cloneBackground(Background background) {
 
 ScenePalette _clonePalette(ScenePalette palette) {
   return ScenePalette(
-    penColors: List<Color>.from(palette.penColors),
-    backgroundColors: List<Color>.from(palette.backgroundColors),
-    gridSizes: List<double>.from(palette.gridSizes),
+    penColors: palette.penColors,
+    backgroundColors: palette.backgroundColors,
+    gridSizes: palette.gridSizes,
   );
 }
 

@@ -8,7 +8,7 @@ import 'scene_value_validation_node.dart' as node_validation;
 import 'scene_value_validation_palette_grid.dart' as palette_grid_validation;
 import 'scene_value_validation_primitives.dart' as primitives_validation;
 import 'scene_value_validation_support.dart' as validation_support;
-import 'scene_value_validation_top_level.dart' as top_level_validation;
+import 'scene_value_validation_scene.dart' as scene_validation;
 
 typedef SceneValidationErrorReporter =
     validation_support.SceneValidationErrorReporter;
@@ -148,11 +148,13 @@ void sceneValidateGridSnapshot(
   required String field,
   required SceneValidationErrorReporter onError,
   required bool requirePositiveCellSize,
+  required bool requireEnabledMinCellSize,
 }) => palette_grid_validation.sceneValidateGridSnapshot(
   grid,
   field: field,
   onError: onError,
   requirePositiveCellSize: requirePositiveCellSize,
+  requireEnabledMinCellSize: requireEnabledMinCellSize,
 );
 
 void sceneValidateGrid(
@@ -160,11 +162,13 @@ void sceneValidateGrid(
   required String field,
   required SceneValidationErrorReporter onError,
   required bool requirePositiveCellSize,
+  required bool requireEnabledMinCellSize,
 }) => palette_grid_validation.sceneValidateGrid(
   grid,
   field: field,
   onError: onError,
   requirePositiveCellSize: requirePositiveCellSize,
+  requireEnabledMinCellSize: requireEnabledMinCellSize,
 );
 
 void sceneValidateNodeSnapshot(
@@ -187,18 +191,22 @@ void sceneValidateSnapshotValues(
   SceneSnapshot snapshot, {
   required SceneValidationErrorReporter onError,
   required bool requirePositiveGridCellSize,
-}) => top_level_validation.sceneValidateSnapshotValues(
+  required bool requireEnabledMinGridCellSize,
+}) => scene_validation.sceneValidateSnapshotValues(
   snapshot,
   onError: onError,
   requirePositiveGridCellSize: requirePositiveGridCellSize,
+  requireEnabledMinGridCellSize: requireEnabledMinGridCellSize,
 );
 
 void sceneValidateSceneValues(
   Scene scene, {
   required SceneValidationErrorReporter onError,
   required bool requirePositiveGridCellSize,
-}) => top_level_validation.sceneValidateSceneValues(
+  required bool requireEnabledMinGridCellSize,
+}) => scene_validation.sceneValidateSceneValues(
   scene,
   onError: onError,
   requirePositiveGridCellSize: requirePositiveGridCellSize,
+  requireEnabledMinGridCellSize: requireEnabledMinGridCellSize,
 );

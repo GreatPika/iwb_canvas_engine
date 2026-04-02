@@ -153,6 +153,17 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - runtime `Scene.backgroundLayer` may be absent internally, while snapshot/JSON
   boundaries canonicalize it to a dedicated layer distinct from content
   `layers`; content writes use `LayerId`.
+- runtime `SceneNode.opacity` is reject-only: assignments must be finite and
+  stay within `[0, 1]`, otherwise the write throws `ArgumentError`.
+- runtime `Background.grid` is reject-only: `GridSettings.cellSize` must stay
+  finite and `> 0`, and enabling the grid requires
+  `cellSize >= 1.0` instead of silently clamping or repairing the value later.
+- snapshot/JSON import uses the same enabled-grid minimum, so invalid payloads
+  fail at the import boundary with `SceneDataException` instead of later during
+  runtime materialization.
+- runtime `Scene.palette` is replacement-only at the object level; a
+  `ScenePalette` defensively copies and freezes its nested lists, so palette
+  presets cannot be mutated in place after construction.
 - Boundary helpers such as `parseNodeId(...)`, `parseLayerId(...)`, and
   validated value types including `ImageIdValue` keep external payload checks
   aligned with import/build rules. Runtime-generated ids are internal engine

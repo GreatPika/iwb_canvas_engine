@@ -124,7 +124,22 @@ void main() {
         ),
       );
       controller.scene.setGridEnabled(true);
+      expect(
+        () => controller.scene.setGridCellSize(0.5),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.name,
+            'name',
+            'cellSize',
+          ),
+        ),
+      );
+      controller.scene.setGridEnabled(false);
       controller.scene.setGridCellSize(0.5);
+      expect(controller.snapshot.background.grid.cellSize, 0.5);
+      expect(() => controller.scene.setGridEnabled(true), throwsArgumentError);
+      controller.scene.setGridCellSize(minGridCellSize);
+      controller.scene.setGridEnabled(true);
       expect(controller.snapshot.background.grid.cellSize, minGridCellSize);
 
       final actionSub = controller.actions.listen((_) {});

@@ -167,11 +167,7 @@ void main() {
   });
 
   test('collects violations for mismatched index and non-finite values', () {
-    final scene = sceneFixture(
-      gridEnabled: false,
-      gridCellSize: double.nan,
-      cameraOffset: const Offset(double.infinity, 0),
-    );
+    final scene = sceneFixture(cameraOffset: const Offset(double.infinity, 0));
     final violations = txnCollectStoreInvariantViolations(
       scene: scene,
       selectedNodeIds: const <NodeId>{'missing'},
@@ -201,25 +197,16 @@ void main() {
     expect(violations.join('\n'), contains('camera.offset must be finite'));
     expect(
       violations.join('\n'),
-      contains('grid.cellSize must be finite and > 0'),
+      isNot(contains('grid.cellSize must be finite and > 0')),
     );
   });
 
-  test('checks minimum enabled grid size invariant', () {
-    final scene = sceneFixture(gridEnabled: true, gridCellSize: 0.5);
-    final violations = txnCollectStoreInvariantViolations(
-      scene: scene,
-      selectedNodeIds: const <NodeId>{'node-1'},
-      allNodeIds: const <NodeId>{'node-1'},
-      nodeLocator: const <NodeId, NodeLocatorEntry>{
-        'node-1': (layerIndex: 0, nodeIndex: 0),
-      },
-      idGeneratorState: state(nextNodeCounter: 2),
-      nextInstanceRevision: 2,
-      commitRevision: 0,
-    );
+  test('runtime grid owner rejects invalid committed grid states eagerly', () {
+    final scene = sceneFixture(gridEnabled: false, gridCellSize: 16);
 
-    expect(violations.join('\n'), contains('enabled grid.cellSize must be >='));
+    scene.background.grid.cellSize = 0.5;
+    expect(() => scene.background.grid.isEnabled = true, throwsArgumentError);
+    expect(() => scene.background.grid.cellSize = 0, throwsArgumentError);
   });
 
   test('detects duplicate node ids in committed scene', () {
@@ -488,11 +475,7 @@ void main() {
   });
 
   test('critical runtime invariant check throws for invalid numeric state', () {
-    final scene = sceneFixture(
-      gridEnabled: false,
-      gridCellSize: double.nan,
-      cameraOffset: const Offset(double.infinity, 0),
-    );
+    final scene = sceneFixture(cameraOffset: const Offset(double.infinity, 0));
     expect(
       () => assertCriticalTxnStoreInvariants(
         scene: scene,
@@ -504,9 +487,9 @@ void main() {
   });
 
   test(
-    'critical runtime invariant check reports negative commit and enabled min grid',
+    'critical runtime invariant check reports negative commit regression',
     () {
-      final scene = sceneFixture(gridEnabled: true, gridCellSize: 0.5);
+      final scene = sceneFixture();
       expect(
         () => assertCriticalTxnStoreInvariants(
           scene: scene,

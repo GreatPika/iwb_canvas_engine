@@ -233,12 +233,14 @@ void main() {
             field: 'gridSnapshot',
             onError: _throwFailure,
             requirePositiveCellSize: true,
+            requireEnabledMinCellSize: true,
           );
           sceneValidateGrid(
             GridSettings(cellSize: 16),
             field: 'grid',
             onError: _throwFailure,
             requirePositiveCellSize: true,
+            requireEnabledMinCellSize: true,
           );
           sceneValidateNodeSnapshot(
             RectNodeSnapshot(id: 'snapshot-node', size: const Size(4, 5)),
@@ -259,6 +261,7 @@ void main() {
             ),
             onError: _throwFailure,
             requirePositiveGridCellSize: true,
+            requireEnabledMinGridCellSize: true,
           );
         }, returnsNormally);
       },

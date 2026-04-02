@@ -1,6 +1,5 @@
 import 'dart:ui';
 
-import '../core/grid_safety_limits.dart';
 import '../core/nodes.dart';
 import '../core/scene.dart';
 import 'document_locator.dart' as locator;
@@ -62,13 +61,4 @@ Set<NodeId> txnTranslateSelection({
     }
   }
   return moved;
-}
-
-bool txnNormalizeGrid(Scene scene) {
-  final grid = scene.background.grid;
-  if (grid.isEnabled && grid.cellSize < kMinGridCellSize) {
-    grid.cellSize = kMinGridCellSize;
-    return true;
-  }
-  return false;
 }

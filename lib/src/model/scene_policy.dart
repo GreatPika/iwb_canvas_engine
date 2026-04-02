@@ -18,6 +18,7 @@ abstract final class ScenePolicy {
       rawSnapshot,
       onError: _snapshotValidationError,
       requirePositiveGridCellSize: true,
+      requireEnabledMinGridCellSize: true,
     );
     _validateSnapshotRanges(rawSnapshot);
     return rawSnapshot;
@@ -56,6 +57,7 @@ abstract final class ScenePolicy {
       rawScene,
       onError: _sceneValidationError,
       requirePositiveGridCellSize: true,
+      requireEnabledMinGridCellSize: true,
     );
     final rawSnapshot = snapshotFromScene(rawScene);
     final canonicalSnapshot = validateImportSnapshot(rawSnapshot);

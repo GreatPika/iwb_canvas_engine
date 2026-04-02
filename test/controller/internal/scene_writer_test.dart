@@ -713,7 +713,7 @@ void main() {
     expect(ctx.debugNodeIdSetMaterializations, 0);
   });
 
-  test('SceneWriter rejects non-finite grid/camera values', () {
+  test('SceneWriter rejects invalid grid/camera values', () {
     // INV:INV-ENG-WRITE-NUMERIC-GUARDS
     final ctx = TxnContext(
       baseScene: Scene(),
@@ -726,6 +726,13 @@ void main() {
 
     expect(() => writer.writeGridCellSize(double.nan), throwsArgumentError);
     expect(() => writer.writeGridCellSize(0), throwsArgumentError);
+    expect(() => writer.writeGridEnable(true), isNot(throwsException));
+    expect(() => writer.writeGridCellSize(0.5), throwsArgumentError);
+    writer.writeGridEnable(false);
+    expect(() => writer.writeGridCellSize(0.5), isNot(throwsException));
+    expect(() => writer.writeGridEnable(true), throwsArgumentError);
+    writer.writeGridCellSize(2);
+    expect(() => writer.writeGridEnable(true), isNot(throwsException));
     expect(
       () => writer.writeCameraOffset(const Offset(double.infinity, 0)),
       throwsArgumentError,

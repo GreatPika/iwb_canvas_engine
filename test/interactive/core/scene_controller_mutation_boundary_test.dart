@@ -94,10 +94,15 @@ void main() {
 
       boundary.setBackgroundColor(const Color(0xFF00FF00));
       boundary.setGridEnabled(true);
-      boundary.setGridCellSize(1);
+      boundary.setGridCellSize(kMinGridCellSize);
       expect(controller.snapshot.background.grid.cellSize, kMinGridCellSize);
 
       expect(() => boundary.setGridCellSize(0), throwsArgumentError);
+      expect(() => boundary.setGridCellSize(0.5), throwsArgumentError);
+      boundary.setGridEnabled(false);
+      boundary.setGridCellSize(0.5);
+      expect(controller.snapshot.background.grid.cellSize, 0.5);
+      expect(() => boundary.setGridEnabled(true), throwsArgumentError);
       expect(
         () => boundary.validateCameraOffset(const Offset(double.nan, 0)),
         throwsArgumentError,

@@ -222,7 +222,8 @@ const List<Invariant> invariants = <Invariant>[
   Invariant(
     id: 'INV-ENG-WRITE-NUMERIC-GUARDS',
     scope: 'engine-controller',
-    title: 'writer rejects non-finite or invalid numeric write inputs',
+    title:
+        'writer rejects invalid numeric writes instead of clamping or repair-normalizing them later',
     primaryProof: PrimaryProof(
       path: 'test/controller/internal/scene_writer_test.dart',
     ),
@@ -233,6 +234,13 @@ const List<Invariant> invariants = <Invariant>[
     title:
         'runtime stroke geometry stays hermetic: StrokeNode.points is read-only and StrokeNode.replacePoints owns validation plus pointsRevision updates',
     primaryProof: PrimaryProof(path: 'test/core/nodes_test.dart'),
+  ),
+  Invariant(
+    id: 'INV-ENG-PALETTE-RUNTIME-VALUE-OWNER',
+    scope: 'engine-core',
+    title:
+        'runtime palette state is replacement-only: Scene.palette stays replaceable, while ScenePalette defensively copies and freezes nested lists after construction',
+    primaryProof: PrimaryProof(path: 'test/model/document_model_test.dart'),
   ),
   Invariant(
     id: 'INV-ENG-DISPOSE-FAIL-FAST',
