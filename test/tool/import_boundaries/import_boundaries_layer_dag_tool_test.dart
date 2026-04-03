@@ -267,6 +267,92 @@ class SceneController {
       }
     });
 
+    test('rejects interactive -> model import', () async {
+      final sandbox = await createImportBoundariesSandbox();
+      try {
+        writeSandboxFile(
+          sandbox,
+          'lib/src/model/document.dart',
+          'class DocumentModel {}\n',
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          "import 'package:iwb_canvas_engine/src/model/document.dart';\n",
+        );
+
+        final result = await runSandboxTool(
+          sandbox,
+          'check_import_boundaries.dart',
+        );
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains(
+            'layer DAG violation: interactive/** must not import model/**',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects render -> model import', () async {
+      final sandbox = await createImportBoundariesSandbox();
+      try {
+        writeSandboxFile(
+          sandbox,
+          'lib/src/model/document.dart',
+          'class DocumentModel {}\n',
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/render/painter.dart',
+          "import 'package:iwb_canvas_engine/src/model/document.dart';\n",
+        );
+
+        final result = await runSandboxTool(
+          sandbox,
+          'check_import_boundaries.dart',
+        );
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains('layer DAG violation: render/** must not import model/**'),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects view -> model import', () async {
+      final sandbox = await createImportBoundariesSandbox();
+      try {
+        writeSandboxFile(
+          sandbox,
+          'lib/src/model/document.dart',
+          'class DocumentModel {}\n',
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/view/widget.dart',
+          "import 'package:iwb_canvas_engine/src/model/document.dart';\n",
+        );
+
+        final result = await runSandboxTool(
+          sandbox,
+          'check_import_boundaries.dart',
+        );
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains('layer DAG violation: view/** must not import model/**'),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
     test(
       'rejects scene_view_render_surface.dart -> scene_controller_internal_access.dart',
       () async {

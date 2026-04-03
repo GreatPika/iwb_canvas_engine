@@ -77,12 +77,10 @@ _allowedLayerDependencies = <ImportBoundaryLayer, Set<ImportBoundaryLayer>>{
     ImportBoundaryLayer.contract,
     ImportBoundaryLayer.core,
     ImportBoundaryLayer.controller,
-    ImportBoundaryLayer.model,
   },
   ImportBoundaryLayer.render: <ImportBoundaryLayer>{
     ImportBoundaryLayer.contract,
     ImportBoundaryLayer.core,
-    ImportBoundaryLayer.model,
   },
   ImportBoundaryLayer.serialization: <ImportBoundaryLayer>{
     ImportBoundaryLayer.contract,
@@ -95,7 +93,6 @@ _allowedLayerDependencies = <ImportBoundaryLayer, Set<ImportBoundaryLayer>>{
     ImportBoundaryLayer.controller,
     ImportBoundaryLayer.interactive,
     ImportBoundaryLayer.render,
-    ImportBoundaryLayer.model,
   },
 };
 
