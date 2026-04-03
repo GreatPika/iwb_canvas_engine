@@ -9,6 +9,8 @@ import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_inte
 
 import '../test_support/interactive_controller_fixtures.dart';
 
+// INV:INV-ENG-INTERACTIVE-HANDLE-POINTER-NON-REENTRANT
+
 void main() {
   group('SceneController unit', () {
     test('read API + setters + validation', () {
@@ -376,6 +378,18 @@ void main() {
 
       controller.interaction.handlePointer(sample);
       expect(nestedError, isA<StateError>());
+
+      expect(
+        () => controller.interaction.handlePointer(
+          sampleInput(
+            pointerId: 2,
+            position: const Offset(120, 100),
+            timestampMs: 2,
+            phase: CanvasPointerPhase.down,
+          ),
+        ),
+        returnsNormally,
+      );
     });
 
     test(

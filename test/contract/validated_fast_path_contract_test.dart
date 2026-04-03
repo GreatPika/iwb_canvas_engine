@@ -12,6 +12,7 @@ import 'package:iwb_canvas_engine/src/render/render_geometry_builder.dart';
 import 'package:iwb_canvas_engine/src/serialization/scene_codec.dart';
 
 // INV:INV-ENG-CONTRACT-ARCHITECTURE-BOUNDARY
+// INV:INV-ENG-BOUNDARY-HERMETIC-CONCRETE-TYPES
 
 void main() {
   test(
@@ -1536,6 +1537,7 @@ void main() {
   );
 
   test('unsupported boundary subtypes fail fast across seam helpers', () {
+    // INV:INV-ENG-BOUNDARY-HERMETIC-CONCRETE-TYPES
     final fakeSnapshot = _UnsupportedNodeSnapshot();
     final fakeSpec = _UnsupportedNodeSpec();
     final fakePatch = _UnsupportedNodePatch();
@@ -1589,6 +1591,7 @@ void main() {
   });
 
   test('fallback backing helpers reject public subclasses of known types', () {
+    // INV:INV-ENG-BOUNDARY-HERMETIC-CONCRETE-TYPES
     expect(
       () => nodeSpecBackingOf(_SubclassedImageNodeSpec()),
       throwsA(isA<StateError>()),

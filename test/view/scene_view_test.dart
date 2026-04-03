@@ -8,6 +8,8 @@ import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 import 'package:iwb_canvas_engine/src/view/scene_view_render_surface.dart';
 
+// INV:INV-ENG-VIEW-RENDER-SURFACE-DEBUG-PROBES
+
 SceneSnapshot _snapshot({required double strokeY, required String text}) {
   return SceneSnapshot(
     layers: <ContentLayerSnapshot>[
@@ -96,6 +98,7 @@ void main() {
   testWidgets('debugSceneViewRenderCachesOf supports descendant contexts', (
     tester,
   ) async {
+    // INV:INV-ENG-VIEW-RENDER-SURFACE-DEBUG-PROBES
     final controller = SceneStoreController(
       initialSnapshot: _snapshot(strokeY: 10, text: 'ctx'),
     );
@@ -133,6 +136,7 @@ void main() {
   testWidgets(
     'debugSceneViewRenderCachesOf throws without SceneViewRenderSurface',
     (tester) async {
+      // INV:INV-ENG-VIEW-RENDER-SURFACE-DEBUG-PROBES
       await tester.pumpWidget(
         const Directionality(
           textDirection: TextDirection.ltr,

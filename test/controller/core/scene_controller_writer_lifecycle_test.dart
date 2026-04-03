@@ -6,6 +6,7 @@ import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_writer.dart';
 
 // INV:INV-ENG-TXN-WRITER-LIFETIME
+// INV:INV-ENG-WRITE-PROTOCOL
 
 void main() {
   SceneSnapshot twoRectSnapshot() {
@@ -89,6 +90,41 @@ void main() {
       expect(controller.selectedNodeIds, beforeSelection);
       expect(emitted, isEmpty);
       expect(notifications, 0);
+    },
+  );
+
+  test(
+    'dispose during active write fails fast and does not poison later writes',
+    () async {
+      final controller = SceneStoreController(
+        initialSnapshot: twoRectSnapshot(),
+      );
+      addTearDown(controller.dispose);
+
+      final signals = <String>[];
+      final sub = controller.signals.listen((signal) {
+        signals.add(signal.type);
+      });
+      addTearDown(sub.cancel);
+
+      controller.writeWithSceneWriter<void>((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'r1'});
+        expect(() => controller.dispose(), throwsStateError);
+        writer.writeSignalEnqueue(type: 'commit.survived');
+      });
+      await pumpEventQueue(times: 2);
+
+      expect(controller.selectedNodeIds, const <NodeId>{'r1'});
+      expect(controller.debug.currentCommitRevision, 1);
+      expect(signals, const <String>['commit.survived']);
+
+      controller.writeWithSceneWriter<void>((writer) {
+        writer.writeSignalEnqueue(type: 'second.commit');
+      });
+      await pumpEventQueue(times: 2);
+
+      expect(controller.debug.currentCommitRevision, 2);
+      expect(signals, const <String>['commit.survived', 'second.commit']);
     },
   );
 

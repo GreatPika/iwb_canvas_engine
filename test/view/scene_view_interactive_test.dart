@@ -17,6 +17,7 @@ import 'package:iwb_canvas_engine/src/view/scene_view_interactive.dart';
 import 'package:iwb_canvas_engine/src/view/scene_view_runtime_host.dart';
 
 // INV:INV-ENG-VIEW-POINTER-SETTINGS-LIVE-APPLY
+// INV:INV-ENG-VIEW-RUNTIME-HOST-DEBUG-PROBES
 
 SceneSnapshot _snapshot({required String text, bool includeImage = false}) {
   return SceneSnapshot(
@@ -289,6 +290,7 @@ void main() {
   testWidgets(
     'debugSceneViewInteractiveRenderCachesOf supports runtime owner contexts',
     (tester) async {
+      // INV:INV-ENG-VIEW-RUNTIME-HOST-DEBUG-PROBES
       final controller = SceneController(
         initialSnapshot: _cacheSnapshot(
           text: 'runtime-ctx',
@@ -345,6 +347,7 @@ void main() {
   testWidgets(
     'debugSceneViewInteractiveRenderCachesOf throws without SceneViewInteractive',
     (tester) async {
+      // INV:INV-ENG-VIEW-RUNTIME-HOST-DEBUG-PROBES
       await tester.pumpWidget(
         const Directionality(
           textDirection: TextDirection.ltr,
@@ -428,6 +431,7 @@ void main() {
   testWidgets('SceneViewInteractive flushes pending tap timer callback', (
     tester,
   ) async {
+    // INV:INV-ENG-VIEW-RUNTIME-HOST-DEBUG-PROBES
     final controller = _RecordingPointerController(
       initialSnapshot: _snapshot(text: 'timer'),
       pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 1),

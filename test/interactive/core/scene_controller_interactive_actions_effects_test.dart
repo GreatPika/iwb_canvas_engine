@@ -7,6 +7,8 @@ import 'package:iwb_canvas_engine/src/core/scene.dart';
 
 import '../test_support/interactive_controller_fixtures.dart';
 
+// INV:INV-ENG-INTERACTIVE-MOVE-COMMIT-RESOLVER-NON-REENTRANT
+
 void main() {
   group('SceneController unit', () {
     test(
@@ -609,6 +611,7 @@ void main() {
     test(
       'reentrant moveCommitDeltaResolver throws and clears gesture state',
       () {
+        // INV:INV-ENG-INTERACTIVE-MOVE-COMMIT-RESOLVER-NON-REENTRANT
         final rect = RectNode(id: 'node', size: const Size(30, 20))
           ..position = const Offset(60, 60);
         late SceneController controller;
@@ -690,6 +693,7 @@ void main() {
     );
 
     test('invalid resolved delta clears gesture state before rethrow', () {
+      // INV:INV-ENG-INTERACTIVE-MOVE-COMMIT-RESOLVER-NON-REENTRANT
       final rect = RectNode(id: 'node', size: const Size(30, 20))
         ..position = const Offset(60, 60);
       final controller = controllerFromScene(

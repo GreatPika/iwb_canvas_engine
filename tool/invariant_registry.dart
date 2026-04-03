@@ -193,6 +193,15 @@ const List<Invariant> invariants = <Invariant>[
     ),
   ),
   Invariant(
+    id: 'INV-ENG-WRITE-PROTOCOL',
+    scope: 'engine-controller',
+    title:
+        'write(...) rejects nested writes, async callbacks, and dispose during the active callback without poisoning later writes',
+    primaryProof: PrimaryProof(
+      path: 'test/controller/core/scene_controller_writer_lifecycle_test.dart',
+    ),
+  ),
+  Invariant(
     id: 'INV-ENG-SIGNALS-AFTER-COMMIT',
     scope: 'engine-controller',
     title:
@@ -304,6 +313,16 @@ const List<Invariant> invariants = <Invariant>[
     ),
   ),
   Invariant(
+    id: 'INV-ENG-INTERACTIVE-HANDLE-POINTER-NON-REENTRANT',
+    scope: 'engine-runtime',
+    title:
+        'public handlePointer(...) rejects same-stack reentrancy and unwinds cleanly after the active dispatch returns',
+    primaryProof: PrimaryProof(
+      path:
+          'test/interactive/core/scene_controller_interactive_basics_test.dart',
+    ),
+  ),
+  Invariant(
     id: 'INV-ENG-INTERACTIVE-POINTER-FINITE',
     scope: 'engine-runtime',
     title:
@@ -375,6 +394,16 @@ const List<Invariant> invariants = <Invariant>[
     ),
   ),
   Invariant(
+    id: 'INV-ENG-INTERACTIVE-MOVE-COMMIT-RESOLVER-NON-REENTRANT',
+    scope: 'engine-runtime',
+    title:
+        'moveCommitDeltaResolver rejects reentrancy and always clears resolver-owned gesture state after failure before the next gesture starts',
+    primaryProof: PrimaryProof(
+      path:
+          'test/interactive/core/scene_controller_interactive_actions_effects_test.dart',
+    ),
+  ),
+  Invariant(
     id: 'INV-ENG-INTERACTIVE-PUBLIC-MUTATION-EXCLUSIVITY',
     scope: 'engine-runtime',
     title:
@@ -434,6 +463,15 @@ const List<Invariant> invariants = <Invariant>[
     ),
   ),
   Invariant(
+    id: 'INV-ENG-BOUNDARY-HERMETIC-CONCRETE-TYPES',
+    scope: 'engine-api',
+    title:
+        'public boundary fallback/backing seam helpers accept only the built-in concrete boundary types and reject unsupported subtypes, including public subclasses of known boundary types',
+    primaryProof: PrimaryProof(
+      path: 'test/contract/validated_fast_path_contract_test.dart',
+    ),
+  ),
+  Invariant(
     id: 'INV-ENG-VIEW-POINTER-SLOT-LIFECYCLE',
     scope: 'view-runtime',
     title:
@@ -456,6 +494,15 @@ const List<Invariant> invariants = <Invariant>[
     scope: 'view-runtime',
     title:
         'SceneView keeps pointer-settings live-apply behavior on the same controller without re-owning tracker/pending-setting state in the host shell',
+    primaryProof: PrimaryProof(
+      path: 'test/view/scene_view_interactive_test.dart',
+    ),
+  ),
+  Invariant(
+    id: 'INV-ENG-VIEW-RUNTIME-HOST-DEBUG-PROBES',
+    scope: 'view-runtime',
+    title:
+        'debugSceneViewInteractive* and debugSceneViewRuntimeHost* helpers are stable test probes for runtime-host cache and raw-pointer diagnostics and fail fast outside the mounted host boundary',
     primaryProof: PrimaryProof(
       path: 'test/view/scene_view_interactive_test.dart',
     ),
@@ -561,6 +608,31 @@ const List<Invariant> invariants = <Invariant>[
     primaryProof: PrimaryProof(
       path: 'test/controller/internal/scene_writer_test.dart',
     ),
+  ),
+  Invariant(
+    id: 'INV-G-SELECTION-NORMALIZED',
+    scope: 'behavior',
+    title:
+        'committed selectedNodeIds stay normalized against the current scene interaction policy',
+    primaryProof: PrimaryProof(
+      path: 'test/controller/scene_invariants_test.dart',
+    ),
+  ),
+  Invariant(
+    id: 'INV-G-GRID-ENABLE-CELL-SIZE-RELATION',
+    scope: 'behavior',
+    title:
+        'runtime grid ownership keeps grid.isEnabled compatible with grid.cellSize and rejects invalid enable/size transitions eagerly',
+    primaryProof: PrimaryProof(
+      path: 'test/controller/scene_invariants_test.dart',
+    ),
+  ),
+  Invariant(
+    id: 'INV-ENG-VIEW-RENDER-SURFACE-DEBUG-PROBES',
+    scope: 'view-runtime',
+    title:
+        'debugSceneViewRenderCachesOf is a stable render-surface test probe for cache ownership and mounted-surface fail-fast diagnostics',
+    primaryProof: PrimaryProof(path: 'test/view/scene_view_test.dart'),
   ),
   Invariant(
     id: 'INV-ENG-COMMANDS-NO-PART',

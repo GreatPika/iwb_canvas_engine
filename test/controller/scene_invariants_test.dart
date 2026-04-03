@@ -15,6 +15,8 @@ import 'package:iwb_canvas_engine/src/model/document_clone.dart';
 // INV:INV-ENG-INSTANCE-REVISION-MONOTONIC
 // INV:INV-G-NODEID-UNIQUE
 // INV:INV-G-LAYERID-UNIQUE
+// INV:INV-G-SELECTION-NORMALIZED
+// INV:INV-G-GRID-ENABLE-CELL-SIZE-RELATION
 
 void main() {
   Scene sceneFixture({
@@ -167,6 +169,7 @@ void main() {
   });
 
   test('collects violations for mismatched index and non-finite values', () {
+    // INV:INV-G-SELECTION-NORMALIZED
     final scene = sceneFixture(cameraOffset: const Offset(double.infinity, 0));
     final violations = txnCollectStoreInvariantViolations(
       scene: scene,
@@ -202,6 +205,7 @@ void main() {
   });
 
   test('runtime grid owner rejects invalid committed grid states eagerly', () {
+    // INV:INV-G-GRID-ENABLE-CELL-SIZE-RELATION
     final scene = sceneFixture(gridEnabled: false, gridCellSize: 16);
 
     scene.background.grid.cellSize = 0.5;

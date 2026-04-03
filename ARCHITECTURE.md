@@ -423,6 +423,11 @@ most important architectural rules are:
   owner for immutable collection payload ownership; internal decode/runtime
   producers use contract-local fast paths so already validated data does not
   pay the same constructor boundary twice or fork collection semantics.
+- Boundary fallback/backing seam helpers are intentionally hermetic: they
+  accept only the built-in concrete public boundary types and fail fast with
+  `StateError` for unsupported subtypes, including user-defined subclasses of
+  known `NodeSpec`, `NodePatch`, `NodeSnapshot`, and scene snapshot wrapper
+  families.
 - Transactional write/model paths consume those already validated contract
   objects and own only runtime/stateful semantics such as target existence,
   type compatibility, live-scene duplicate checks, index/range checks,
@@ -444,6 +449,10 @@ most important architectural rules are:
   pointer-local state owners: active down/slop state and deferred
   tap-window/double-tap lifecycle. Hosts consume one tracker contract without
   reopening those internal state machines in `view/` or `interactive/`.
+- `debugSceneViewInteractive*`, `debugSceneViewRuntimeHost*`, and
+  `debugSceneViewRenderCachesOf(...)` are deliberate stable test probes for
+  `test/view/**`; they expose mounted host/render-surface diagnostics and keep
+  fail-fast `StateError` behavior outside those boundaries.
 - After `dispose()`, mutating or effectful public entrypoints fail fast with
   `StateError`.
 

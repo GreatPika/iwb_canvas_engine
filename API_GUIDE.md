@@ -279,6 +279,9 @@ Key rules:
 - runtime-generated ids are internal allocator output; callers must treat them
   as opaque strings rather than depend on a parseable public format
 - malformed values fail fast with `ArgumentError`
+- internal fallback/backing seam helpers are concrete-only implementation
+  seams: unsupported `NodeSpec` subtypes, including public subclasses of known
+  built-in variants, fail fast with `StateError`
 
 ### 4.2 `NodePatch`
 
@@ -310,6 +313,9 @@ at the boundary. For strokes, `StrokeNodePatch.points` remains a whole-list
 patch field; runtime application replaces the full geometry through
 `StrokeNode.replacePoints(...)` instead of mutating `StrokeNode.points`
 in-place.
+Internal patch/snapshot/spec fallback helpers are likewise concrete-only and
+reject unsupported public subtypes with `StateError` instead of attempting
+best-effort subclass materialization.
 
 ### 4.3 Write-boundary validation
 

@@ -178,3 +178,4 @@ This file is the plan index. Each step has a dedicated document so steps can be 
 - [x] [Шаг 81. Сделать `ScenePalette` runtime value-owner и убрать post-construction mutation обходы](plan/step_81_scene_palette_runtime_value_owner.md)
 - [x] [Шаг 82. Выровнять runtime numeric write semantics на reject-only policy для `opacity` и grid cell size](plan/step_82_runtime_numeric_write_reject_policy.md)
 - [x] [Шаг 83. Ввести assembled `SceneView` runtime boundary и отвязать view core от concrete controller](plan/step_83_scene_view_runtime_boundary_and_controller_detachment.md)
+- [x] [Шаг 84. Закрыть остаточные invariant gaps для write, interactive, boundary, model и view contracts](plan/step_84_residual_invariant_contour_backfill.md)
