@@ -25,17 +25,17 @@ String _sceneControllerFixture({
 }) {
   return '''
 import '../contract/scene_view_runtime.dart';
-import 'internal/scene_controller_owners.dart';
+import 'internal/scene_controller_graph.dart';
 $extraImports
 
 class SceneController {
-  final Object _owners = createSceneControllerOwners(
-    SceneControllerOwnersRequest(),
+  final Object _graph = createSceneControllerGraph(
+    SceneControllerGraphRequest(),
   );
 $extraMembers
 
-  Object get actions => sceneControllerOwnersActions(_owners);
-  Object get editTextRequests => sceneControllerOwnersEditTextRequests(_owners);
+  Object get actions => sceneControllerGraphActions(_graph);
+  Object get editTextRequests => sceneControllerGraphEditTextRequests(_graph);
 
 $methods
 
@@ -46,7 +46,7 @@ $methods
 }
 
 SceneViewRuntime sceneControllerViewRuntimeOf(SceneController controller) {
-  return controller._owners.sceneViewRuntime;
+  return controller._graph.sceneViewRuntime;
 }
 ''';
 }
@@ -762,7 +762,7 @@ class _Access {
           category: 'interactive API',
           detail:
               'SceneController must remain a thin facade over '
-              'runtime/event/selection owners',
+              'the assembled controller graph',
         ),
       );
     } finally {

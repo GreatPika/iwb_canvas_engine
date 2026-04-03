@@ -14,7 +14,7 @@ import 'package:iwb_canvas_engine/src/interactive/scene_controller_interaction.d
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 import 'package:iwb_canvas_engine/src/view/scene_view_interactive_overlay_painter.dart';
 import 'package:iwb_canvas_engine/src/view/scene_view_interactive.dart';
-import 'package:iwb_canvas_engine/src/view/scene_view_runtime_owner.dart';
+import 'package:iwb_canvas_engine/src/view/scene_view_runtime_host.dart';
 
 // INV:INV-ENG-VIEW-POINTER-SETTINGS-LIVE-APPLY
 
@@ -91,8 +91,8 @@ int _paintInvocationCount(
       .length;
 }
 
-BuildContext _sceneViewRuntimeOwnerContext(WidgetTester tester) {
-  return tester.element(find.byType(SceneViewRuntimeOwner));
+BuildContext _sceneViewRuntimeHostContext(WidgetTester tester) {
+  return tester.element(find.byType(SceneViewRuntimeHost));
 }
 
 void _dispatchHostPointerEvent(WidgetTester tester, PointerEvent event) {
@@ -257,7 +257,7 @@ void main() {
     await tester.pump();
 
     final caches = debugSceneViewInteractiveRenderCachesOf(
-      _sceneViewRuntimeOwnerContext(tester),
+      _sceneViewRuntimeHostContext(tester),
     );
     expect(caches.staticLayerCache.debugBuildCount, 1);
     expect(caches.textLayoutCache.debugBuildCount, 1);
@@ -301,7 +301,7 @@ void main() {
       await tester.pumpWidget(_host(controller));
       await tester.pump();
 
-      final runtimeContext = tester.element(find.byType(SceneViewRuntimeOwner));
+      final runtimeContext = tester.element(find.byType(SceneViewRuntimeHost));
       final caches = debugSceneViewInteractiveRenderCachesOf(runtimeContext);
 
       expect(caches.staticLayerCache, isNotNull);
@@ -360,7 +360,7 @@ void main() {
           isA<StateError>().having(
             (error) => error.message,
             'message',
-            'No SceneViewRuntimeOwner state found for the provided BuildContext.',
+            'No SceneViewRuntimeHost state found for the provided BuildContext.',
           ),
         ),
       );
@@ -390,7 +390,7 @@ void main() {
           isA<StateError>().having(
             (error) => error.message,
             'message',
-            'No SceneViewRuntimeOwner state found for the provided BuildContext.',
+            'No SceneViewRuntimeHost state found for the provided BuildContext.',
           ),
         ),
       );
@@ -409,7 +409,7 @@ void main() {
     await tester.pump();
 
     final state = tester.state<State<StatefulWidget>>(
-      find.byType(SceneViewRuntimeOwner),
+      find.byType(SceneViewRuntimeHost),
     );
 
     await tester.pumpWidget(
@@ -443,7 +443,7 @@ void main() {
 
     expect(
       debugSceneViewInteractivePendingTapFlushTimestampMsOf(
-        _sceneViewRuntimeOwnerContext(tester),
+        _sceneViewRuntimeHostContext(tester),
       ),
       isNotNull,
     );
@@ -461,7 +461,7 @@ void main() {
 
     expect(
       debugSceneViewInteractivePendingTapFlushTimestampMsOf(
-        _sceneViewRuntimeOwnerContext(tester),
+        _sceneViewRuntimeHostContext(tester),
       ),
       isNull,
     );
@@ -500,13 +500,13 @@ void main() {
       expect(controller.recordedInputs, isEmpty);
       expect(
         debugSceneViewInteractiveLiveRawPointerCountOf(
-          _sceneViewRuntimeOwnerContext(tester),
+          _sceneViewRuntimeHostContext(tester),
         ),
         0,
       );
       expect(
         debugSceneViewInteractivePendingTapFlushTimestampMsOf(
-          _sceneViewRuntimeOwnerContext(tester),
+          _sceneViewRuntimeHostContext(tester),
         ),
         isNull,
       );
@@ -537,13 +537,13 @@ void main() {
       );
       expect(
         debugSceneViewInteractiveLiveRawPointerCountOf(
-          _sceneViewRuntimeOwnerContext(tester),
+          _sceneViewRuntimeHostContext(tester),
         ),
         1,
       );
       expect(
         debugSceneViewInteractivePendingTapFlushTimestampMsOf(
-          _sceneViewRuntimeOwnerContext(tester),
+          _sceneViewRuntimeHostContext(tester),
         ),
         isNull,
       );
@@ -590,7 +590,7 @@ void main() {
       );
       expect(
         debugSceneViewInteractiveLiveRawPointerCountOf(
-          _sceneViewRuntimeOwnerContext(tester),
+          _sceneViewRuntimeHostContext(tester),
         ),
         0,
       );
@@ -657,7 +657,7 @@ void main() {
 
       expect(
         debugSceneViewInteractiveLiveRawPointerCountOf(
-          _sceneViewRuntimeOwnerContext(tester),
+          _sceneViewRuntimeHostContext(tester),
         ),
         1,
       );
@@ -700,7 +700,7 @@ void main() {
 
       expect(
         debugSceneViewInteractivePendingTapFlushTimestampMsOf(
-          _sceneViewRuntimeOwnerContext(tester),
+          _sceneViewRuntimeHostContext(tester),
         ),
         isNotNull,
       );
@@ -709,7 +709,7 @@ void main() {
       await tester.pump();
       expect(
         debugSceneViewInteractivePendingTapFlushTimestampMsOf(
-          _sceneViewRuntimeOwnerContext(tester),
+          _sceneViewRuntimeHostContext(tester),
         ),
         isNull,
       );
@@ -717,7 +717,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 150));
       expect(
         debugSceneViewInteractivePendingTapFlushTimestampMsOf(
-          _sceneViewRuntimeOwnerContext(tester),
+          _sceneViewRuntimeHostContext(tester),
         ),
         isNull,
       );
@@ -746,7 +746,7 @@ void main() {
 
     expect(
       debugSceneViewInteractivePendingTapFlushTimestampMsOf(
-        _sceneViewRuntimeOwnerContext(tester),
+        _sceneViewRuntimeHostContext(tester),
       ),
       isNotNull,
     );
@@ -1410,7 +1410,7 @@ void main() {
       );
 
       final caches = debugSceneViewInteractiveRenderCachesOf(
-        _sceneViewRuntimeOwnerContext(tester),
+        _sceneViewRuntimeHostContext(tester),
       );
       final innerPaint = customPaints.firstWhere(
         (paint) =>

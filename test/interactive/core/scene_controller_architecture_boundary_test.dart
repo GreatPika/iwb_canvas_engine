@@ -55,8 +55,8 @@ void main() {
     final interactionSource = _read(
       'lib/src/interactive/scene_controller_interaction.dart',
     );
-    final ownerGraphSource = _read(
-      'lib/src/interactive/internal/scene_controller_owners.dart',
+    final graphSource = _read(
+      'lib/src/interactive/internal/scene_controller_graph.dart',
     );
     final viewRuntimeSource = _read(
       'lib/src/interactive/internal/scene_controller_scene_view_runtime.dart',
@@ -95,7 +95,7 @@ void main() {
       'lib/src/view/scene_view_interactive.dart',
     );
     final sceneViewRuntimeSource = _read(
-      'lib/src/view/scene_view_runtime_owner.dart',
+      'lib/src/view/scene_view_runtime_host.dart',
     );
     final renderSurfaceSource = _read(
       'lib/src/view/scene_view_render_surface.dart',
@@ -146,14 +146,14 @@ void main() {
 
     expect(
       facadeSource,
-      contains("import 'internal/scene_controller_owners.dart';"),
+      contains("import 'internal/scene_controller_graph.dart';"),
     );
     expect(
       facadeSource,
       contains("import '../contract/scene_view_runtime.dart';"),
     );
-    expect(facadeSource, contains('createSceneControllerOwners('));
-    expect(facadeSource, contains('SceneControllerOwnersRequest('));
+    expect(facadeSource, contains('createSceneControllerGraph('));
+    expect(facadeSource, contains('SceneControllerGraphRequest('));
     expect(
       facadeSource,
       isNot(contains('registerSceneControllerInternalAccess(')),
@@ -177,24 +177,21 @@ void main() {
       ),
     );
 
-    expect(ownerGraphSource, contains('SceneControllerInteraction('));
-    expect(ownerGraphSource, contains('SceneControllerSelection('));
-    expect(ownerGraphSource, contains('SceneControllerScene('));
-    expect(ownerGraphSource, contains('SceneControllerSceneViewRuntime('));
+    expect(graphSource, contains('SceneControllerInteraction('));
+    expect(graphSource, contains('SceneControllerSelection('));
+    expect(graphSource, contains('SceneControllerScene('));
+    expect(graphSource, contains('SceneControllerSceneViewRuntime('));
+    expect(graphSource, contains('SceneControllerInternalAccessRegistration('));
     expect(
-      ownerGraphSource,
-      contains('SceneControllerInternalAccessRegistration('),
-    );
-    expect(
-      ownerGraphSource,
+      graphSource,
       contains('readInteraction: () => request.owner.interaction,'),
     );
     expect(
-      ownerGraphSource,
+      graphSource,
       contains('interactionRuntime.ensurePublicSideEffectAllowed'),
     );
-    expect(ownerGraphSource, contains('createSceneControllerOwners('));
-    expect(ownerGraphSource, isNot(contains('createPointerSemanticsBridge')));
+    expect(graphSource, contains('createSceneControllerGraph('));
+    expect(graphSource, isNot(contains('createPointerSemanticsBridge')));
 
     expect(
       runtimeContractSource,
@@ -324,7 +321,7 @@ void main() {
     );
     expect(
       sceneViewInteractiveSource,
-      contains("import 'scene_view_runtime_owner.dart';"),
+      contains("import 'scene_view_runtime_host.dart';"),
     );
     expect(
       sceneViewInteractiveSource,
@@ -338,7 +335,7 @@ void main() {
 
     expect(
       sceneViewRuntimeSource,
-      contains('class SceneViewRuntimeOwner extends StatefulWidget'),
+      contains('class SceneViewRuntimeHost extends StatefulWidget'),
     );
     expect(
       sceneViewRuntimeSource,

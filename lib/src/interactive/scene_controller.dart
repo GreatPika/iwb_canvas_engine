@@ -8,7 +8,7 @@ import '../contract/snapshot.dart';
 import '../controller/scene_store_controller.dart';
 import '../core/action_events.dart';
 import '../core/pointer_input.dart';
-import 'internal/scene_controller_owners.dart';
+import 'internal/scene_controller_graph.dart';
 import 'scene_controller_interaction.dart';
 import 'scene_controller_scene.dart';
 import 'scene_controller_selection.dart';
@@ -25,8 +25,8 @@ class SceneController extends ChangeNotifier {
          initialSnapshot: initialSnapshot,
          textFontFamilyByDefault: textFontFamilyByDefault,
        ) {
-    _owners = createSceneControllerOwners(
-      SceneControllerOwnersRequest(
+    _graph = createSceneControllerGraph(
+      SceneControllerGraphRequest(
         owner: this,
         notifyListeners: notifyListeners,
         storeController: _storeController,
@@ -43,10 +43,10 @@ class SceneController extends ChangeNotifier {
   }
 
   final SceneStoreController _storeController;
-  late final SceneControllerOwners _owners;
+  late final SceneControllerGraph _graph;
 
   SceneViewRenderState get _viewRenderState =>
-      _owners.sceneViewRuntime.renderState;
+      _graph.sceneViewRuntime.renderState;
 
   SceneSnapshot get snapshot => _storeController.snapshot;
   Set<NodeId> get selectedNodeIds => _storeController.selectedNodeIds;
@@ -55,7 +55,7 @@ class SceneController extends ChangeNotifier {
   Rect? get selectionRect => _viewRenderState.selectionRect;
   Offset get cameraOffset => _viewRenderState.cameraOffset;
   Offset Function(NodeId nodeId) get previewDeltaResolver =>
-      sceneControllerOwnersPreviewDeltaResolver(_owners);
+      sceneControllerGraphPreviewDeltaResolver(_graph);
 
   bool get hasActiveStrokePreview => _viewRenderState.hasActiveStrokePreview;
   List<Offset> get activeStrokePreviewPoints =>
@@ -74,20 +74,20 @@ class SceneController extends ChangeNotifier {
       _viewRenderState.activeLinePreviewThickness;
   Color get activeLinePreviewColor => _viewRenderState.activeLinePreviewColor;
 
-  SceneControllerInteraction get interaction => _owners.interaction;
-  SceneControllerSelection get selection => _owners.selection;
-  SceneControllerScene get scene => _owners.scene;
+  SceneControllerInteraction get interaction => _graph.interaction;
+  SceneControllerSelection get selection => _graph.selection;
+  SceneControllerScene get scene => _graph.scene;
 
-  Stream<ActionCommitted> get actions => sceneControllerOwnersActions(_owners);
+  Stream<ActionCommitted> get actions => sceneControllerGraphActions(_graph);
   Stream<EditTextRequested> get editTextRequests =>
-      sceneControllerOwnersEditTextRequests(_owners);
+      sceneControllerGraphEditTextRequests(_graph);
 
   void _ensurePublicSideEffectAllowed(
     String operation, {
     bool allowAfterDispose = false,
   }) {
-    sceneControllerOwnersEnsurePublicSideEffectAllowed(
-      _owners,
+    sceneControllerGraphEnsurePublicSideEffectAllowed(
+      _graph,
       operation,
       allowAfterDispose: allowAfterDispose,
     );
@@ -96,17 +96,17 @@ class SceneController extends ChangeNotifier {
   @override
   void dispose() {
     _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
-    if (sceneControllerOwnersAreDisposed(_owners)) {
+    if (sceneControllerGraphIsDisposed(_graph)) {
       return;
     }
-    resetSceneControllerOwnersInteractiveState(_owners);
+    resetSceneControllerGraphInteractiveState(_graph);
     _storeController.dispose();
-    disposeSceneControllerOwners(_owners);
-    detachSceneControllerOwnersInternalAccess(this);
+    disposeSceneControllerGraph(_graph);
+    detachSceneControllerGraphInternalAccess(this);
     super.dispose();
   }
 }
 
 SceneViewRuntime sceneControllerViewRuntimeOf(SceneController controller) {
-  return controller._owners.sceneViewRuntime;
+  return controller._graph.sceneViewRuntime;
 }

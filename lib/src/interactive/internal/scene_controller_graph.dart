@@ -17,7 +17,7 @@ import 'scene_controller_scene_view_runtime.dart';
 import 'scene_controller_scene_mutations.dart';
 import 'scene_controller_selection_mutations.dart';
 
-typedef SceneControllerOwners = ({
+typedef SceneControllerGraph = ({
   SceneControllerInteractionRuntime interactionRuntime,
   SceneControllerInteractionAccess interactionAccess,
   SceneControllerInteraction interaction,
@@ -27,8 +27,8 @@ typedef SceneControllerOwners = ({
   SceneControllerInternalAccessRegistration internalAccessRegistration,
 });
 
-final class SceneControllerOwnersRequest {
-  const SceneControllerOwnersRequest({
+final class SceneControllerGraphRequest {
+  const SceneControllerGraphRequest({
     required this.owner,
     required this.notifyListeners,
     required this.storeController,
@@ -55,19 +55,19 @@ final class SceneControllerOwnersRequest {
   final MoveCommitDeltaResolver? moveCommitDeltaResolver;
 }
 
-SceneControllerOwners createSceneControllerOwners(
-  SceneControllerOwnersRequest request,
+SceneControllerGraph createSceneControllerGraph(
+  SceneControllerGraphRequest request,
 ) {
-  final owners = _assembleSceneControllerOwners(request);
+  final graph = _assembleSceneControllerGraph(request);
   registerSceneControllerInternalAccess(
     request.owner,
-    owners.internalAccessRegistration,
+    graph.internalAccessRegistration,
   );
-  return owners;
+  return graph;
 }
 
-SceneControllerOwners _assembleSceneControllerOwners(
-  SceneControllerOwnersRequest request,
+SceneControllerGraph _assembleSceneControllerGraph(
+  SceneControllerGraphRequest request,
 ) {
   final interactionConfig = _createInteractionConfig(request);
   final interactionRuntime = _createInteractionRuntime(
@@ -133,53 +133,53 @@ SceneControllerOwners _assembleSceneControllerOwners(
   );
 }
 
-void detachSceneControllerOwnersInternalAccess(SceneController controller) {
+void detachSceneControllerGraphInternalAccess(SceneController controller) {
   unregisterSceneControllerInternalAccess(controller);
 }
 
-Offset Function(NodeId nodeId) sceneControllerOwnersPreviewDeltaResolver(
-  SceneControllerOwners owners,
+Offset Function(NodeId nodeId) sceneControllerGraphPreviewDeltaResolver(
+  SceneControllerGraph graph,
 ) {
-  return owners.interactionRuntime.previewDeltaForNode;
+  return graph.interactionRuntime.previewDeltaForNode;
 }
 
-Stream<ActionCommitted> sceneControllerOwnersActions(
-  SceneControllerOwners owners,
+Stream<ActionCommitted> sceneControllerGraphActions(
+  SceneControllerGraph graph,
 ) {
-  return owners.interactionRuntime.actions;
+  return graph.interactionRuntime.actions;
 }
 
-Stream<EditTextRequested> sceneControllerOwnersEditTextRequests(
-  SceneControllerOwners owners,
+Stream<EditTextRequested> sceneControllerGraphEditTextRequests(
+  SceneControllerGraph graph,
 ) {
-  return owners.interactionRuntime.editTextRequests;
+  return graph.interactionRuntime.editTextRequests;
 }
 
-void sceneControllerOwnersEnsurePublicSideEffectAllowed(
-  SceneControllerOwners owners,
+void sceneControllerGraphEnsurePublicSideEffectAllowed(
+  SceneControllerGraph graph,
   String operation, {
   bool allowAfterDispose = false,
 }) {
-  owners.interactionRuntime.ensurePublicSideEffectAllowed(
+  graph.interactionRuntime.ensurePublicSideEffectAllowed(
     operation,
     allowAfterDispose: allowAfterDispose,
   );
 }
 
-bool sceneControllerOwnersAreDisposed(SceneControllerOwners owners) {
-  return owners.interactionRuntime.isDisposed;
+bool sceneControllerGraphIsDisposed(SceneControllerGraph graph) {
+  return graph.interactionRuntime.isDisposed;
 }
 
-void resetSceneControllerOwnersInteractiveState(SceneControllerOwners owners) {
-  owners.interactionRuntime.resetInteractiveState();
+void resetSceneControllerGraphInteractiveState(SceneControllerGraph graph) {
+  graph.interactionRuntime.resetInteractiveState();
 }
 
-void disposeSceneControllerOwners(SceneControllerOwners owners) {
-  owners.interactionRuntime.dispose();
+void disposeSceneControllerGraph(SceneControllerGraph graph) {
+  graph.interactionRuntime.dispose();
 }
 
 SceneControllerInteractionConfig _createInteractionConfig(
-  SceneControllerOwnersRequest request,
+  SceneControllerGraphRequest request,
 ) {
   final interactionConfig = SceneControllerInteractionConfig(
     pointerSettings: request.pointerSettings,
@@ -190,7 +190,7 @@ SceneControllerInteractionConfig _createInteractionConfig(
 }
 
 SceneControllerInteractionRuntime _createInteractionRuntime({
-  required SceneControllerOwnersRequest request,
+  required SceneControllerGraphRequest request,
   required SceneControllerInteractionConfig interactionConfig,
 }) {
   return createSceneControllerInteractionRuntime(

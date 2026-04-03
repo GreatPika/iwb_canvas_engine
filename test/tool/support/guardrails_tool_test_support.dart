@@ -518,22 +518,22 @@ class SceneViewInteractivePointerHost {
   );
   writeSandboxFile(sandbox, 'lib/src/view/scene_view_interactive.dart', '''
 import '../interactive/scene_controller.dart';
-import 'scene_view_runtime_owner.dart';
+import 'scene_view_runtime_host.dart';
 
 class SceneViewInteractive {
   Object build(SceneController controller) {
-    return SceneViewRuntimeOwner(
+    return SceneViewRuntimeHost(
       runtime: sceneControllerViewRuntimeOf(controller),
     );
   }
 }
 ''');
-  writeSandboxFile(sandbox, 'lib/src/view/scene_view_runtime_owner.dart', '''
-class SceneViewRuntimeOwner extends StatefulWidget {
+  writeSandboxFile(sandbox, 'lib/src/view/scene_view_runtime_host.dart', '''
+class SceneViewRuntimeHost extends StatefulWidget {
   final Object runtime;
   final Object _pointerHost = Object();
 
-  SceneViewRuntimeOwner({required this.runtime});
+  SceneViewRuntimeHost({required this.runtime});
 
   Object build() {
     widget.runtime.createPointerSession(
@@ -635,7 +635,7 @@ final class SceneControllerSceneViewRenderState {
   );
   writeSandboxFile(
     sandbox,
-    'lib/src/interactive/internal/scene_controller_owners.dart',
+    'lib/src/interactive/internal/scene_controller_graph.dart',
     '''
 class SceneControllerInteraction {}
 
@@ -656,18 +656,18 @@ class _InteractionRuntime {
   void ensurePublicSideEffectAllowed(String operation) {}
 }
 
-class SceneControllerOwnersRequest {}
+class SceneControllerGraphRequest {}
 
 class SceneControllerInternalAccessRegistration {}
 
-class _Owners {
+class _Graph {
   final sceneViewRuntime = SceneControllerSceneViewRuntime(
     ensurePublicSideEffectAllowed:
         _InteractionRuntime().ensurePublicSideEffectAllowed,
   );
 }
 
-Object createSceneControllerOwners(Object request) {
+Object createSceneControllerGraph(Object request) {
   final interactionRuntime = _InteractionRuntime();
   SceneControllerInternalAccessRegistration();
   registerSceneControllerInternalAccess(Object(), Object());
@@ -681,12 +681,12 @@ Object createSceneControllerOwners(Object request) {
         interactionRuntime.ensurePublicSideEffectAllowed,
     mutations: interactionRuntime.mutationBoundary,
   );
-  return _Owners();
+  return _Graph();
 }
 
-Object sceneControllerOwnersActions(Object ownerGraph) => Object();
+Object sceneControllerGraphActions(Object graph) => Object();
 
-Object sceneControllerOwnersEditTextRequests(Object ownerGraph) => Object();
+Object sceneControllerGraphEditTextRequests(Object graph) => Object();
 ''',
   );
   writeSandboxFile(

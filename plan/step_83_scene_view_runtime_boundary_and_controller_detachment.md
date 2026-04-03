@@ -15,12 +15,12 @@ pointer host becomes a raw routing shell over an opaque session owner.
 
 - `lib/src/contract/scene_view_runtime.dart`
 - `lib/src/view/scene_view_interactive.dart`
-- `lib/src/view/scene_view_runtime_owner.dart`
+- `lib/src/view/scene_view_runtime_host.dart`
 - `lib/src/view/scene_view_render_surface.dart`
 - `lib/src/view/scene_view_interactive_pointer_host.dart`
 - `lib/src/view/scene_view_interactive_overlay_painter.dart`
 - `lib/src/interactive/scene_controller.dart`
-- `lib/src/interactive/internal/scene_controller_owners.dart`
+- `lib/src/interactive/internal/scene_controller_graph.dart`
 - `lib/src/interactive/internal/scene_controller_scene_view_runtime.dart`
 - `lib/src/interactive/internal/scene_controller_pointer_session.dart`
 - `lib/src/interactive/internal/scene_controller_internal_access.dart`
@@ -64,12 +64,12 @@ pointer host becomes a raw routing shell over an opaque session owner.
 
 - `lib/src/contract/scene_view_runtime.dart`
 - `lib/src/view/scene_view_interactive.dart`
-- `lib/src/view/scene_view_runtime_owner.dart`
+- `lib/src/view/scene_view_runtime_host.dart`
 - `lib/src/view/scene_view_render_surface.dart`
 - `lib/src/view/scene_view_interactive_pointer_host.dart`
 - `lib/src/view/scene_view_interactive_overlay_painter.dart`
 - `lib/src/interactive/scene_controller.dart`
-- `lib/src/interactive/internal/scene_controller_owners.dart`
+- `lib/src/interactive/internal/scene_controller_graph.dart`
 - `lib/src/interactive/internal/scene_controller_scene_view_runtime.dart`
 - `lib/src/interactive/internal/scene_controller_pointer_session.dart`
 - `lib/src/interactive/internal/scene_controller_internal_access.dart`
@@ -170,7 +170,7 @@ pointer host becomes a raw routing shell over an opaque session owner.
     after this step closes.
 13. `SceneViewRenderSurface` is reduced to one constructor that accepts
     `SceneViewRenderState`; interactive/store mode bifurcation is removed.
-14. `SceneViewRuntimeOwner` is the only stateful runtime owner beneath
+14. `SceneViewRuntimeHost` is the only stateful runtime owner beneath
     the public shell; it owns the render-surface key and pointer-host lifetime.
 15. `sceneControllerViewRuntimeOf(SceneController controller)` is the only
     package-level adapter exposed from `interactive/scene_controller.dart` for
@@ -181,7 +181,7 @@ pointer host becomes a raw routing shell over an opaque session owner.
 1. `lib/src/view/scene_view_interactive.dart` is a thin public shell that
    converts `SceneController` into an internal-safe runtime dependency and does
    not own pointer host, render-surface key, or other runtime state.
-2. `lib/src/view/scene_view_runtime_owner.dart`,
+2. `lib/src/view/scene_view_runtime_host.dart`,
    `lib/src/view/scene_view_render_surface.dart`,
    `lib/src/view/scene_view_interactive_pointer_host.dart`, and
    `lib/src/view/scene_view_interactive_overlay_painter.dart`
@@ -255,21 +255,21 @@ pointer host becomes a raw routing shell over an opaque session owner.
 ### 6.1.2 Canonical Widget Composition
 
 - `scene_view_interactive.dart` must define only the public shell widget and
-  delegate to `SceneViewRuntimeOwner`.
-- `scene_view_runtime_owner.dart` must define the stateful runtime owner
+  delegate to `SceneViewRuntimeHost`.
+- `scene_view_runtime_host.dart` must define the stateful runtime owner
   beneath the public shell.
-- `_SceneViewRuntimeOwnerState.initState()` must create one pointer host
+- `_SceneViewRuntimeHostState.initState()` must create one pointer host
   from `widget.runtime.createPointerSession(...)`.
-- `_SceneViewRuntimeOwnerState.didUpdateWidget(...)` must replace the
+- `_SceneViewRuntimeHostState.didUpdateWidget(...)` must replace the
   pointer session only when `oldWidget.runtime != widget.runtime`.
-- `_SceneViewRuntimeOwnerState.build(...)` must compose:
+- `_SceneViewRuntimeHostState.build(...)` must compose:
   `Listener -> CustomPaint(foregroundPainter: SceneViewInteractiveOverlayPainter(renderState: widget.runtime.renderState)) -> SceneViewRenderSurface(renderState: widget.runtime.renderState, ...)`.
 - `scene_view_render_surface.dart` must expose one constructor:
   `SceneViewRenderSurface({required SceneViewRenderState renderState, ...})`.
 
 ### 6.1.3 Canonical Interactive Assembly Shape
 
-- `scene_controller_owners.dart` must assemble and return all controller
+- `scene_controller_graph.dart` must assemble and return all controller
   owners in one value object that includes:
   `interactionRuntime`,
   `interactionAccess`,
@@ -376,7 +376,7 @@ pointer host becomes a raw routing shell over an opaque session owner.
   `SceneViewPointerSemanticsSource`, or
   `SceneControllerPointerSemantics`.
 - If `scene_controller_facade_assembly.dart` is replaced by
-  `scene_controller_owners.dart`, all references in tests, guardrails,
+  `scene_controller_graph.dart`, all references in tests, guardrails,
   docs, and tooling must move in the same change; dangling path references keep
   the slice open.
 
@@ -420,7 +420,7 @@ runtime widget, and the view core beneath that shell depends only on
 
 #### Change
 
-Add `scene_view_runtime.dart`, add `scene_view_runtime_owner.dart`,
+Add `scene_view_runtime.dart`, add `scene_view_runtime_host.dart`,
 reduce `scene_view_interactive.dart` to a shell that delegates through
 `sceneControllerViewRuntimeOf(...)`, and replace controller-specific
 render-surface constructors with a single render-state entrypoint.
@@ -459,7 +459,7 @@ private runtime/internal-access assembly to one internal owner graph.
 
 #### Change
 
-Introduce `scene_controller_owners.dart` and
+Introduce `scene_controller_graph.dart` and
 `scene_controller_scene_view_runtime.dart`, give `scene_controller.dart` one private
 runtime field plus package-internal `sceneControllerViewRuntimeOf(...)`, remove
 direct `SceneViewRenderState` / pointer-source implementation, and move

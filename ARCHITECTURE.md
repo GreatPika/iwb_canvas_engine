@@ -221,7 +221,7 @@ Ownership decisions for the target state:
    `CanvasPointerInput`, while its view-local pointer router owns raw Flutter
    pointer lifetimes and routed runtime `pointerId` allocation. The closed
    local seam around `scene_view_interactive.dart`,
-   `scene_view_runtime_owner.dart`, and
+   `scene_view_runtime_host.dart`, and
    `scene_view_interactive_pointer_host.dart` may consume only the assembled
    `SceneViewRuntime` boundary. The public shell in
    `scene_view_interactive.dart` is the only production `view/**` file allowed

@@ -9,44 +9,42 @@ import 'scene_view_interactive_overlay_painter.dart';
 import 'scene_view_interactive_pointer_host.dart';
 import 'scene_view_render_surface.dart';
 
-_SceneViewRuntimeOwnerState _sceneViewRuntimeOwnerStateOf(
-  BuildContext context,
-) {
+_SceneViewRuntimeHostState _sceneViewRuntimeHostStateOf(BuildContext context) {
   if (context case StatefulElement(
     :final state,
-  ) when state is _SceneViewRuntimeOwnerState) {
+  ) when state is _SceneViewRuntimeHostState) {
     return state;
   }
 
   final ancestorState = context
-      .findAncestorStateOfType<_SceneViewRuntimeOwnerState>();
+      .findAncestorStateOfType<_SceneViewRuntimeHostState>();
   if (ancestorState != null) {
     return ancestorState;
   }
 
   throw StateError(
-    'No SceneViewRuntimeOwner state found for the provided BuildContext.',
+    'No SceneViewRuntimeHost state found for the provided BuildContext.',
   );
 }
 
-SceneRenderCaches debugSceneViewRuntimeOwnerRenderCachesOf(
+SceneRenderCaches debugSceneViewRuntimeHostRenderCachesOf(
   BuildContext context,
 ) {
-  return _sceneViewRuntimeOwnerStateOf(context).debugRenderCaches;
+  return _sceneViewRuntimeHostStateOf(context).debugRenderCaches;
 }
 
-int debugSceneViewRuntimeOwnerLiveRawPointerCountOf(BuildContext context) {
-  return _sceneViewRuntimeOwnerStateOf(context).debugLiveRawPointerCount;
+int debugSceneViewRuntimeHostLiveRawPointerCountOf(BuildContext context) {
+  return _sceneViewRuntimeHostStateOf(context).debugLiveRawPointerCount;
 }
 
-int? debugSceneViewRuntimeOwnerPendingTapFlushTimestampMsOf(
+int? debugSceneViewRuntimeHostPendingTapFlushTimestampMsOf(
   BuildContext context,
 ) {
-  return _sceneViewRuntimeOwnerStateOf(context).debugPendingTapFlushTimestampMs;
+  return _sceneViewRuntimeHostStateOf(context).debugPendingTapFlushTimestampMs;
 }
 
-class SceneViewRuntimeOwner extends StatefulWidget {
-  const SceneViewRuntimeOwner({
+class SceneViewRuntimeHost extends StatefulWidget {
+  const SceneViewRuntimeHost({
     required this.runtime,
     this.imageResolver,
     this.selectionColor = const Color(0xFF1565C0),
@@ -62,10 +60,10 @@ class SceneViewRuntimeOwner extends StatefulWidget {
   final double gridStrokeWidth;
 
   @override
-  State<SceneViewRuntimeOwner> createState() => _SceneViewRuntimeOwnerState();
+  State<SceneViewRuntimeHost> createState() => _SceneViewRuntimeHostState();
 }
 
-class _SceneViewRuntimeOwnerState extends State<SceneViewRuntimeOwner> {
+class _SceneViewRuntimeHostState extends State<SceneViewRuntimeHost> {
   late final SceneViewInteractivePointerHost _pointerHost;
   final GlobalKey<SceneViewRenderSurfaceState> _renderSurfaceKey =
       GlobalKey<SceneViewRenderSurfaceState>();
@@ -98,7 +96,7 @@ class _SceneViewRuntimeOwnerState extends State<SceneViewRuntimeOwner> {
   }
 
   @override
-  void didUpdateWidget(SceneViewRuntimeOwner oldWidget) {
+  void didUpdateWidget(SceneViewRuntimeHost oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.runtime != widget.runtime) {
       _pointerHost.replacePointerSession(
