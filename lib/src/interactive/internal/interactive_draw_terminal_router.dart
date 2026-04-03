@@ -1,8 +1,8 @@
 import 'dart:ui';
 
+import '../../contract/pointer_input.dart';
 import '../../core/action_events.dart';
 import '../../core/interaction_types.dart';
-import '../../core/pointer_input.dart';
 import '../../contract/snapshot.dart';
 import 'interactive_draw_action_emitter.dart';
 import 'interactive_draw_eraser_engine.dart';

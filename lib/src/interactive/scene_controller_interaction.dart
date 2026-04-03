@@ -3,9 +3,9 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 
 import '../contract/canvas_pointer_input.dart';
+import '../contract/pointer_input.dart';
 import '../contract/snapshot.dart';
 import '../core/interaction_types.dart';
-import '../core/pointer_input.dart';
 import 'internal/scene_controller_interaction_access.dart';
 import 'internal/scene_controller_interaction_config.dart';
 import 'internal/scene_controller_interaction_runtime.dart';

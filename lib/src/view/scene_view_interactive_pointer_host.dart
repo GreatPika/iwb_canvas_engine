@@ -1,9 +1,9 @@
 import 'package:flutter/widgets.dart';
 
 import '../contract/canvas_pointer_input.dart';
+import '../contract/pointer_input.dart';
 import '../contract/pointer_phase_codec.dart';
 import '../contract/scene_view_runtime.dart';
-import '../core/pointer_input.dart';
 import 'scene_view_pointer_router.dart';
 
 bool _hasFiniteLocalPosition(PointerEvent event) {

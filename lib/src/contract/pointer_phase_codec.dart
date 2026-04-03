@@ -1,5 +1,5 @@
-import '../core/pointer_input.dart';
 import 'canvas_pointer_input.dart';
+import 'pointer_input.dart';
 
 CanvasPointerPhase canvasPointerPhaseFromPointerPhase(PointerPhase phase) {
   switch (phase) {

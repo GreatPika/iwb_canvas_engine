@@ -193,7 +193,7 @@ This change migrates routed pointer boundary ownership from `core` into `contrac
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Contract-Owned Routed Pointer Boundary
+### Slice 1. [x] Contract-Owned Routed Pointer Boundary
 
 #### Slice Contract
 
@@ -228,7 +228,7 @@ Create [lib/src/contract/pointer_input.dart](/Users/blackpika/iwb_canvas_engine/
 - Green run of the listed verifications.
 - Source proof that [lib/src/contract/scene_view_runtime.dart](/Users/blackpika/iwb_canvas_engine/lib/src/contract/scene_view_runtime.dart) and [lib/src/contract/pointer_phase_codec.dart](/Users/blackpika/iwb_canvas_engine/lib/src/contract/pointer_phase_codec.dart) import [lib/src/contract/pointer_input.dart](/Users/blackpika/iwb_canvas_engine/lib/src/contract/pointer_input.dart) instead of the core tracker owner.
 
-### Slice 2. [ ] Import-Boundary, Public Surface, and Roadmap Closure
+### Slice 2. [x] Import-Boundary, Public Surface, and Roadmap Closure
 
 #### Slice Contract
 

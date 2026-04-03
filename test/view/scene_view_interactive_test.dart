@@ -4,10 +4,10 @@ import 'package:flutter/material.dart' hide Image;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
 import 'package:iwb_canvas_engine/src/contract/canvas_pointer_input.dart';
+import 'package:iwb_canvas_engine/src/contract/pointer_input.dart'
+    show PointerInputSettings;
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/core/interaction_types.dart';
-import 'package:iwb_canvas_engine/src/core/pointer_input.dart'
-    show PointerInputSettings;
 import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_internal_access.dart';
 import 'package:iwb_canvas_engine/src/interactive/scene_controller_interaction.dart';

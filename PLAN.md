@@ -180,4 +180,4 @@ This file is the plan index. Each step has a dedicated document so steps can be 
 - [x] [Шаг 83. Ввести assembled `SceneView` runtime boundary и отвязать view core от concrete controller](plan/step_83_scene_view_runtime_boundary_and_controller_detachment.md)
 - [x] [Шаг 84. Закрыть остаточные invariant gaps для write, interactive, boundary, model и view contracts](plan/step_84_residual_invariant_contour_backfill.md)
 - [x] [Шаг 85. Финализировать transaction-state до commit-plan и замкнуть интерактивный commit boundary](plan/step_85_transaction_finalized_selection_and_interactive_commit_boundary.md)
-- [ ] [Шаг 86. Перенести routed pointer boundary-типы в `contract` и убрать `contract -> core` bridge](plan/step_86_pointer_boundary_contract_core_detachment.md)
+- [x] [Шаг 86. Перенести routed pointer boundary-типы в `contract` и убрать `contract -> core` bridge](plan/step_86_pointer_boundary_contract_core_detachment.md)

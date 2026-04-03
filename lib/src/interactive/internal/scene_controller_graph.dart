@@ -1,10 +1,10 @@
 import 'dart:ui';
 
 import '../../core/action_events.dart';
+import '../../contract/pointer_input.dart';
 import '../../contract/scene_view_runtime.dart';
 import '../../contract/snapshot.dart';
 import '../../controller/scene_store_controller.dart';
-import '../../core/pointer_input.dart';
 import '../scene_controller.dart';
 import '../scene_controller_interaction.dart';
 import '../scene_controller_scene.dart';

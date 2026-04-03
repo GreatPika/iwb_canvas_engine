@@ -3,9 +3,10 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../../contract/canvas_pointer_input.dart';
+import '../../contract/pointer_input.dart';
 import '../../contract/pointer_phase_codec.dart';
 import '../../contract/scene_view_runtime.dart';
-import '../../core/pointer_input.dart';
+import '../../core/pointer_input_tracker.dart';
 import '../scene_controller_interaction.dart';
 
 void _discardPointerSignal(PointerSignal _) {}

@@ -53,6 +53,10 @@ lib/
   exists for it.
 - `contract/` is the low-level layer for stable API contracts and
   shared contract-facing value types.
+- `contract/pointer_input.dart` owns routed pointer boundary value types
+  (`PointerPhase`, `PointerSample`, `PointerInputSettings`) and pointer
+  settings validation; `core/` consumes that boundary instead of owning a
+  second copy.
 - `contract/validated/**` is the single contract-facing home for boundary value
   parsing/generation rules; `model/` and `serialization/` consume it rather
   than re-owning those rules independently.
@@ -447,8 +451,9 @@ most important architectural rules are:
   owner applies updates only after the raw-pointer router becomes idle, keeps
   pending updates last-write-wins, and preserves the current settings for live
   routed pointers until terminal release.
-- `PointerInputTracker` is an orchestration-only core owner over two focused
-  pointer-local state owners: active down/slop state and deferred
+- Routed pointer samples/phases and pointer-settings validation are contract
+  owners. `PointerInputTracker` is an orchestration-only core owner over two
+  focused pointer-local state owners: active down/slop state and deferred
   tap-window/double-tap lifecycle. Hosts consume one tracker contract without
   reopening those internal state machines in `view/` or `interactive/`.
 - `debugSceneViewInteractive*`, `debugSceneViewRuntimeHost*`, and

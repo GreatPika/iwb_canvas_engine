@@ -1,7 +1,7 @@
 import 'dart:ui';
 
+import '../../contract/pointer_input.dart';
 import '../../core/interaction_types.dart';
-import '../../core/pointer_input.dart';
 import 'interactive_draw_coordinator_callbacks.dart';
 import 'interactive_draw_eraser_engine.dart';
 import 'interactive_draw_gesture_session.dart';

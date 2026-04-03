@@ -39,6 +39,9 @@ updated explicitly in this document before a step is considered complete.
 - `lib/src/contract/**` keeps the public immutable boundary types and the
   internal validated-boundary owners, but contract cleanup ends in a fully
   `part`-free layer.
+- `lib/src/contract/pointer_input.dart` owns routed pointer boundary value
+  types and pointer-settings validation, so downstream contract consumers do
+  not depend on `core/` for pointer boundary semantics.
 - `snapshot.dart` stays the public immutable snapshot surface and becomes a
   `part`-free thin public wrapper surface over an internal snapshot graph.
 - `node_spec.dart` and `node_patch.dart` stay public boundary owners, become

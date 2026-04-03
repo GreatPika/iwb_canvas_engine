@@ -1,5 +1,5 @@
-import '../core/pointer_input.dart';
 import 'canvas_pointer_input.dart';
+import 'pointer_input.dart';
 import 'scene_view_render_state.dart';
 
 abstract interface class SceneViewRuntime {

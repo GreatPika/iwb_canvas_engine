@@ -120,12 +120,12 @@ abstract interface class SceneViewRenderState implements SceneRenderState {}
           'lib/src/contract/canvas_pointer_input.dart': '''
 class CanvasPointerInput {}
 ''',
-          'lib/src/core/pointer_input.dart': '''
+          'lib/src/contract/pointer_input.dart': '''
 class PointerSample {}
 ''',
           'lib/src/contract/scene_view_runtime.dart': '''
 import '../contract/canvas_pointer_input.dart';
-import '../core/pointer_input.dart';
+import '../contract/pointer_input.dart';
 
 abstract interface class SceneViewRuntime {
   Object createPointerSession({
@@ -142,7 +142,7 @@ abstract interface class SceneViewPointerSession {
           'lib/src/contract/a.dart': 'int covered() => 1;\n',
         },
         lcov:
-            '${_singleFileLcov('lib/src/contract/canvas_pointer_input.dart')}${_singleFileLcov('lib/src/core/pointer_input.dart')}${_singleFileLcov('lib/src/contract/a.dart')}',
+            '${_singleFileLcov('lib/src/contract/canvas_pointer_input.dart')}${_singleFileLcov('lib/src/contract/pointer_input.dart')}${_singleFileLcov('lib/src/contract/a.dart')}',
       );
 
       expect(result.exitCode, 0, reason: result.stderr.toString());

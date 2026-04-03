@@ -1,8 +1,8 @@
 import 'dart:ui';
 
+import '../../contract/pointer_input.dart';
 import '../../contract/scene_defaults.dart';
 import '../../core/interaction_types.dart';
-import '../../core/pointer_input.dart';
 import '../../core/tool_defaults.dart';
 import 'interactive_draw_style.dart';
 

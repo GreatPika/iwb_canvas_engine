@@ -213,42 +213,46 @@ class SceneBuilder {
       }
     });
 
-    test('allows contract -> core pointer_input bridge import', () async {
+    test('rejects contract -> core pointer_input_tracker import', () async {
       final sandbox = await createImportBoundariesSandbox();
       try {
         writeSandboxFile(
           sandbox,
-          'lib/src/core/pointer_input.dart',
+          'lib/src/core/pointer_input_tracker.dart',
           'class PointerSample {}\n',
         );
         writeSandboxFile(
           sandbox,
           'lib/src/contract/scene_view_runtime.dart',
-          "import 'package:iwb_canvas_engine/src/core/pointer_input.dart';\n",
+          "import 'package:iwb_canvas_engine/src/core/pointer_input_tracker.dart';\n",
         );
 
         final result = await runSandboxTool(
           sandbox,
           'check_import_boundaries.dart',
         );
-        expect(result.exitCode, 0, reason: result.stderr.toString());
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains('layer DAG violation: contract/** must not import core/**'),
+        );
       } finally {
         sandbox.deleteSync(recursive: true);
       }
     });
 
-    test('allows interactive -> core pointer_input bridge import', () async {
+    test('allows interactive -> core pointer_input_tracker import', () async {
       final sandbox = await createImportBoundariesSandbox();
       try {
         writeSandboxFile(
           sandbox,
-          'lib/src/core/pointer_input.dart',
+          'lib/src/core/pointer_input_tracker.dart',
           'class PointerSample {}\n',
         );
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          "import 'package:iwb_canvas_engine/src/core/pointer_input.dart';\n",
+          "import 'package:iwb_canvas_engine/src/core/pointer_input_tracker.dart';\n",
         );
 
         final result = await runSandboxTool(
@@ -261,18 +265,18 @@ class SceneBuilder {
       }
     });
 
-    test('allows view -> core pointer_input bridge import', () async {
+    test('allows view -> core pointer_input_tracker import', () async {
       final sandbox = await createImportBoundariesSandbox();
       try {
         writeSandboxFile(
           sandbox,
-          'lib/src/core/pointer_input.dart',
+          'lib/src/core/pointer_input_tracker.dart',
           'class PointerSample {}\n',
         );
         writeSandboxFile(
           sandbox,
           'lib/src/view/scene_view_pointer_router.dart',
-          "import 'package:iwb_canvas_engine/src/core/pointer_input.dart';\n",
+          "import 'package:iwb_canvas_engine/src/core/pointer_input_tracker.dart';\n",
         );
 
         final result = await runSandboxTool(

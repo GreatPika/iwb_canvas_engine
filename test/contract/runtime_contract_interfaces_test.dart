@@ -8,13 +8,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/contract/node_spec.dart';
 import 'package:iwb_canvas_engine/src/contract/canvas_pointer_input.dart';
+import 'package:iwb_canvas_engine/src/contract/pointer_input.dart';
 import 'package:iwb_canvas_engine/src/contract/pointer_phase_codec.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_render_state.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_view_runtime.dart';
 import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart'
     as interactive;
-import 'package:iwb_canvas_engine/src/core/pointer_input.dart';
 
 void main() {
   group('runtime contract interfaces', () {

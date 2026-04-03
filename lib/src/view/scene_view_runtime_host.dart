@@ -2,8 +2,8 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 
+import '../contract/pointer_input.dart';
 import '../contract/scene_view_runtime.dart';
-import '../core/pointer_input.dart';
 import '../render/scene_render_caches.dart';
 import 'scene_view_interactive_overlay_painter.dart';
 import 'scene_view_interactive_pointer_host.dart';

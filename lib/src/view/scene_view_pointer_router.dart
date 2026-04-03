@@ -1,6 +1,6 @@
 import 'dart:collection';
 
-import '../core/pointer_input.dart';
+import '../contract/pointer_input.dart';
 
 enum SceneViewPointerRouteKind { routedDown, routedKnown, stray }
 

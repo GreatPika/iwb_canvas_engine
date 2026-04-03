@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/src/core/pointer_input.dart';
+import 'package:iwb_canvas_engine/src/contract/pointer_input.dart';
 import 'package:iwb_canvas_engine/src/view/scene_view_pointer_router.dart';
 
 void main() {

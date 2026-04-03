@@ -1,7 +1,7 @@
 import 'dart:ui';
 
+import '../../contract/pointer_input.dart';
 import '../../core/nodes.dart' show SceneNode;
-import '../../core/pointer_input.dart';
 import '../../contract/ids.dart';
 import 'interactive_move_commit_coordinator.dart';
 import 'interactive_move_callbacks.dart';

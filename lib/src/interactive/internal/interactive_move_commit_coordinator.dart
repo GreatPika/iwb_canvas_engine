@@ -1,7 +1,7 @@
 import 'dart:ui';
 
+import '../../contract/pointer_input.dart';
 import '../../core/action_events.dart';
-import '../../core/pointer_input.dart';
 import '../../contract/transform2d.dart';
 import 'interactive_move_callbacks.dart';
 import 'interactive_move_gesture_state.dart';

@@ -13,7 +13,7 @@ const List<String> canonicalPublicExportFiles = <String>[
   'lib/src/contract/validated.dart',
   'lib/src/core/action_events.dart',
   'lib/src/core/interaction_types.dart',
-  'lib/src/core/pointer_input.dart',
+  'lib/src/contract/pointer_input.dart',
   'lib/src/contract/transform2d.dart',
   'lib/src/interactive/scene_controller.dart',
   'lib/src/interactive/scene_controller_interaction.dart',

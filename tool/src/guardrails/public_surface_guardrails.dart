@@ -136,7 +136,6 @@ const Map<String, ExportedApiScanPolicy>
 nonContractExportedApiScanPolicies = <String, ExportedApiScanPolicy>{
   '/lib/src/core/action_events.dart': ExportedApiScanPolicy.fullScan(),
   '/lib/src/core/interaction_types.dart': ExportedApiScanPolicy.fullScan(),
-  '/lib/src/core/pointer_input.dart': ExportedApiScanPolicy.fullScan(),
   '/lib/src/model/scene_builder_api.dart': ExportedApiScanPolicy.fullScan(),
   '/lib/src/interactive/scene_controller.dart':
       ExportedApiScanPolicy.targetedSkip(

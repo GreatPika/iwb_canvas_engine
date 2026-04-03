@@ -1,7 +1,8 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/src/core/pointer_input.dart';
+import 'package:iwb_canvas_engine/src/contract/pointer_input.dart';
+import 'package:iwb_canvas_engine/src/core/pointer_input_tracker.dart';
 
 // INV:INV-ENG-POINTER-SETTINGS-VALIDATION
 

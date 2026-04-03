@@ -1,8 +1,8 @@
 import 'dart:ui';
 
 import '../../contract/canvas_pointer_input.dart';
+import '../../contract/pointer_input.dart';
 import '../../contract/pointer_phase_codec.dart';
-import '../../core/pointer_input.dart';
 
 class InteractivePointerNormalizer {
   final Map<int, Offset> _lastFinitePointerPositionById = <int, Offset>{};

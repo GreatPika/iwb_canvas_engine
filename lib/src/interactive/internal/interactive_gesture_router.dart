@@ -1,8 +1,8 @@
 import 'dart:ui';
 
+import '../../contract/pointer_input.dart';
 import '../../core/geometry.dart';
 import '../../core/interaction_types.dart';
-import '../../core/pointer_input.dart';
 import 'interactive_draw_coordinator.dart';
 import 'interactive_gesture_machine.dart';
 import 'interactive_move_session.dart';
