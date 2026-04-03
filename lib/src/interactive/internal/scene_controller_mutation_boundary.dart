@@ -284,6 +284,40 @@ final class SceneControllerMutationBoundary {
     });
   }
 
+  NodeId commitDrawStroke({
+    required List<Offset> points,
+    required double thickness,
+    required Color color,
+    required double opacity,
+  }) {
+    return storeController.draw.writeDrawStroke(
+      points: points,
+      thickness: thickness,
+      color: color,
+      opacity: opacity,
+    );
+  }
+
+  NodeId commitDrawLineFromWorldSegment({
+    required Offset start,
+    required Offset end,
+    required double thickness,
+    required Color color,
+    required double opacity,
+  }) {
+    return storeController.draw.writeDrawLineFromWorldSegment(
+      start: start,
+      end: end,
+      thickness: thickness,
+      color: color,
+      opacity: opacity,
+    );
+  }
+
+  int commitEraseNodes(Iterable<NodeId> ids) {
+    return storeController.draw.writeEraseNodes(ids);
+  }
+
   void _commitTransformSelection(
     Transform2D delta, {
     required List<NodeSnapshot> nodes,

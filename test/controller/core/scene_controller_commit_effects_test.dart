@@ -86,7 +86,7 @@ void main() {
     });
 
     expect(controller.selectedNodeIds, const <NodeId>{'r1'});
-    expect(controller.debug.lastChangeSet.selectionChanged, isTrue);
+    expect(controller.debug.lastChangeSet.selectionChanged, isFalse);
   });
 
   test(

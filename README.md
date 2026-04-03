@@ -200,6 +200,12 @@ class _CanvasScreenState extends State<CanvasScreen> {
   `clearSelection()`, `selectAll(...)`, `rotateSelection(...)`,
   `flipSelectionVertical(...)`, `flipSelectionHorizontal(...)`, and
   `deleteSelection(...)` throw `StateError` until terminal `up` or `cancel`.
+- Transaction-scoped reads are finalized before commit planning: after any
+  successful node or structural mutation inside `write(...)`,
+  `SceneWriteTxn.selectedNodeIds` and `SceneWriteTxn.snapshot` already expose
+  the state that would commit if the callback returned immediately. Patching a
+  selected visible node to `isSelectable: false` keeps it explicitly selected
+  and does not create a false selection delta.
 - Background grid rendering now has one internal owner in
   `src/render/scene_grid_renderer.dart`: direct painter draw and static-cache
   recording share the same drawable predicate, density bucketing, camera-shift
@@ -208,6 +214,10 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Interactive transform/delete preflight is snapshot-based and shared:
   controller-side rotate/flip/delete entrypoints use one internal eligibility
   policy owner, while write-layer guards remain defensive commit barriers.
+- Interactive committed writes have one owner: stroke, line, erase, move,
+  and selection commits all route through `SceneControllerMutationBoundary`
+  instead of mixing direct `storeController.draw.*` bypasses into the runtime
+  callback graph.
 - Move-mode hit-testing, marquee selection, move preview, and move commit now
   share one internal eligibility policy: selectable-but-non-movable nodes can
   still become the selection target, but they do not start move preview, and

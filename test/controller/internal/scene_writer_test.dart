@@ -311,6 +311,76 @@ void main() {
     },
   );
 
+  test(
+    'SceneWriter finalizes selection during node visibility and selectability patches',
+    () {
+      final hiddenCtx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-auto-post-apply',
+              nodes: <SceneNode>[
+                RectNode(id: 'visible', size: const Size(10, 10)),
+              ],
+            ),
+          ],
+        ),
+        workingSelection: <NodeId>{'visible'},
+        baseAllNodeIds: const <NodeId>{'visible'},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+      final hiddenWriter = newWriter(hiddenCtx, txnSignalSink: (_) {});
+
+      expect(
+        hiddenWriter.writeNodePatch(
+          RectNodePatch(
+            id: 'visible',
+            common: CommonNodePatch(isVisible: PatchField<bool>.value(false)),
+          ),
+        ),
+        isTrue,
+      );
+      expect(hiddenWriter.selectedNodeIds, isEmpty);
+      expect(hiddenCtx.changeSet.selectionChanged, isTrue);
+
+      final nonSelectableCtx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-auto-post-apply-2',
+              nodes: <SceneNode>[
+                RectNode(id: 'visible', size: const Size(10, 10)),
+              ],
+            ),
+          ],
+        ),
+        workingSelection: <NodeId>{'visible'},
+        baseAllNodeIds: const <NodeId>{'visible'},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+      final nonSelectableWriter = newWriter(
+        nonSelectableCtx,
+        txnSignalSink: (_) {},
+      );
+
+      expect(
+        nonSelectableWriter.writeNodePatch(
+          RectNodePatch(
+            id: 'visible',
+            common: CommonNodePatch(
+              isSelectable: PatchField<bool>.value(false),
+            ),
+          ),
+        ),
+        isTrue,
+      );
+      expect(nonSelectableWriter.selectedNodeIds, const <NodeId>{'visible'});
+      expect(nonSelectableCtx.changeSet.selectionChanged, isFalse);
+    },
+  );
+
   test('SceneWriter writeNodeInsert resolves target layer by layerId', () {
     final baseScene = Scene(
       layers: <ContentLayer>[

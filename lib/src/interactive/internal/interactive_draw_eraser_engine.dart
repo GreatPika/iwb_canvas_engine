@@ -13,7 +13,7 @@ class InteractiveDrawEraserEngineCallbacks {
     required this.onStateChanged,
     required this.querySpatialCandidates,
     required this.resolveSpatialCandidateNode,
-    required this.writeEraseNodes,
+    required this.commitEraseNodes,
   });
 
   final VoidCallback onStateChanged;
@@ -21,7 +21,7 @@ class InteractiveDrawEraserEngineCallbacks {
   querySpatialCandidates;
   final SceneNode? Function(SceneSpatialCandidate candidate)
   resolveSpatialCandidateNode;
-  final int Function(Iterable<NodeId> ids) writeEraseNodes;
+  final int Function(Iterable<NodeId> ids) commitEraseNodes;
 }
 
 class InteractiveDrawEraserEngine {
@@ -109,7 +109,7 @@ class InteractiveDrawEraserEngine {
 
     if (ids.isEmpty) return const <NodeId>[];
 
-    final removedCount = callbacks.writeEraseNodes(ids);
+    final removedCount = callbacks.commitEraseNodes(ids);
     if (removedCount <= 0) return const <NodeId>[];
 
     return ids;

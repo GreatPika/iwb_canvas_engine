@@ -29,11 +29,12 @@ class InteractiveRuntime {
       callbacks: InteractiveDrawCoordinatorCallbacks(
         onStateChanged: callbacks.scheduleNotify,
         emitAction: events.emitAction,
-        writeDrawStroke: callbacks.writeDrawStroke,
-        writeDrawLineFromWorldSegment: callbacks.writeDrawLineFromWorldSegment,
+        commitDrawStroke: callbacks.commitDrawStroke,
+        commitDrawLineFromWorldSegment:
+            callbacks.commitDrawLineFromWorldSegment,
         querySpatialCandidates: callbacks.querySpatialCandidates,
         resolveSpatialCandidateNode: callbacks.resolveSpatialCandidateNode,
-        writeEraseNodes: callbacks.writeEraseNodes,
+        commitEraseNodes: callbacks.commitEraseNodes,
       ),
     );
   }

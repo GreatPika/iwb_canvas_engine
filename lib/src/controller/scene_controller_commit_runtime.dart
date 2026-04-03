@@ -124,7 +124,9 @@ final class SceneControllerCommitRuntime {
   }
 
   SceneControllerWriteCommitResult _commitTxn(TxnContext ctx) {
-    final commitPhases = normalizeControllerCommitInputs(ctx: ctx);
+    final commitPhases = deriveControllerCommitInitialPhases(
+      changeSet: ctx.changeSet,
+    );
     final plan = buildControllerCommitPlan(
       ctx: ctx,
       store: _store,

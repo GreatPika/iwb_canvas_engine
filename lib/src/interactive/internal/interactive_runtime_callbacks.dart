@@ -20,9 +20,9 @@ class InteractiveRuntimeCallbacks {
     required this.writeSelectionReplace,
     required this.writeSelectionClear,
     required this.commitMoveSelection,
-    required this.writeDrawStroke,
-    required this.writeDrawLineFromWorldSegment,
-    required this.writeEraseNodes,
+    required this.commitDrawStroke,
+    required this.commitDrawLineFromWorldSegment,
+    required this.commitEraseNodes,
   });
 
   final VoidCallback scheduleNotify;
@@ -45,7 +45,7 @@ class InteractiveRuntimeCallbacks {
     required Color color,
     required double opacity,
   })
-  writeDrawStroke;
+  commitDrawStroke;
   final NodeId Function({
     required Offset start,
     required Offset end,
@@ -53,6 +53,6 @@ class InteractiveRuntimeCallbacks {
     required Color color,
     required double opacity,
   })
-  writeDrawLineFromWorldSegment;
-  final int Function(Iterable<NodeId> ids) writeEraseNodes;
+  commitDrawLineFromWorldSegment;
+  final int Function(Iterable<NodeId> ids) commitEraseNodes;
 }

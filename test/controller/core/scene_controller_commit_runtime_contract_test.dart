@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 // INV:INV-ENG-CONTROLLER-COMMIT-RUNTIME-BOUNDARY
+// INV:INV-ENG-TXN-FINALIZED-BEFORE-COMMIT-PLAN
 
 String _extractMethodBody({
   required String source,
@@ -59,6 +60,9 @@ void main() {
       final planSource = File(
         'lib/src/controller/scene_controller_commit_plan.dart',
       ).readAsStringSync();
+      final finalizerSource = File(
+        'lib/src/controller/selection_post_apply_finalizer.dart',
+      ).readAsStringSync();
       final executionSource = File(
         'lib/src/controller/scene_controller_commit_execution.dart',
       ).readAsStringSync();
@@ -93,10 +97,7 @@ void main() {
         runtimeSource,
         isNot(contains('sealed class ControllerCommitPlan')),
       );
-      expect(
-        runtimeSource,
-        isNot(contains('final SelectionNormalizer _selectionNormalizer =')),
-      );
+      expect(runtimeSource, contains('deriveControllerCommitInitialPhases('));
       expect(
         runtimeSource,
         isNot(contains('class SceneControllerCommitPlanner')),
@@ -105,10 +106,16 @@ void main() {
         postCommitSource,
         contains('class SceneControllerPostCommitLifecycle'),
       );
+      expect(
+        File(
+          'lib/src/controller/internal/selection_normalizer.dart',
+        ).existsSync(),
+        isFalse,
+      );
       expect(planSource, contains('sealed class ControllerCommitPlan'));
       expect(
         planSource,
-        contains('List<String> normalizeControllerCommitInputs'),
+        contains('List<String> deriveControllerCommitInitialPhases'),
       );
       expect(
         planSource,
@@ -124,14 +131,15 @@ void main() {
         contains('class SceneControllerWriteCommitResult'),
       );
       expect(
+        finalizerSource,
+        contains('void finalizePostApplySelection(TxnContext ctx)'),
+      );
+      expect(
         executionSource,
         contains('class SceneControllerCommitExecutionContext'),
       );
       expect(debugSource, contains('class SceneControllerCommitDebugState'));
-      expect(
-        planSource,
-        isNot(contains('final SelectionNormalizer _selectionNormalizer =')),
-      );
+      expect(planSource, isNot(contains('txnNormalizeSelection(')));
     },
   );
 

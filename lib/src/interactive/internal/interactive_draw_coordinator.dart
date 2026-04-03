@@ -19,14 +19,15 @@ class InteractiveDrawCoordinator {
       callbacks: InteractiveDrawStrokeEngineCallbacks(
         onStateChanged: callbacks.onStateChanged,
         emitAction: callbacks.emitAction,
-        writeDrawStroke: callbacks.writeDrawStroke,
+        commitDrawStroke: callbacks.commitDrawStroke,
       ),
     );
     _lineEngine = InteractiveDrawLineEngine(
       callbacks: InteractiveDrawLineEngineCallbacks(
         onStateChanged: callbacks.onStateChanged,
         emitAction: callbacks.emitAction,
-        writeDrawLineFromWorldSegment: callbacks.writeDrawLineFromWorldSegment,
+        commitDrawLineFromWorldSegment:
+            callbacks.commitDrawLineFromWorldSegment,
       ),
     );
     _eraserEngine = InteractiveDrawEraserEngine(
@@ -34,7 +35,7 @@ class InteractiveDrawCoordinator {
         onStateChanged: callbacks.onStateChanged,
         querySpatialCandidates: callbacks.querySpatialCandidates,
         resolveSpatialCandidateNode: callbacks.resolveSpatialCandidateNode,
-        writeEraseNodes: callbacks.writeEraseNodes,
+        commitEraseNodes: callbacks.commitEraseNodes,
       ),
     );
     _terminalRouter = InteractiveDrawTerminalRouter(

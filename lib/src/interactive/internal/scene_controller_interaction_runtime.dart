@@ -302,10 +302,10 @@ InteractiveRuntime _createInteractiveRuntime(
       writeSelectionReplace: mutationBoundary.setSelection,
       writeSelectionClear: mutationBoundary.clearSelection,
       commitMoveSelection: mutationBoundary.commitMoveSelection,
-      writeDrawStroke: request.storeController.draw.writeDrawStroke,
-      writeDrawLineFromWorldSegment:
-          request.storeController.draw.writeDrawLineFromWorldSegment,
-      writeEraseNodes: request.storeController.draw.writeEraseNodes,
+      commitDrawStroke: mutationBoundary.commitDrawStroke,
+      commitDrawLineFromWorldSegment:
+          mutationBoundary.commitDrawLineFromWorldSegment,
+      commitEraseNodes: mutationBoundary.commitEraseNodes,
     ),
   );
 }

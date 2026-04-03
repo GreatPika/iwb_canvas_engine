@@ -1064,6 +1064,7 @@ import 'scene_controller_mutation_boundary.dart';
 class SceneControllerInteractionRuntime {
   void wireRuntime(Object request, Object mutationBoundary) {
     request.storeController.commands.writeSelectionReplace;
+    request.storeController.draw.writeDrawStroke;
   }
 }
 ''',
@@ -1076,8 +1077,9 @@ class SceneControllerInteractionRuntime {
           diagnostic(
             category: 'interactive API',
             detail:
-                'SceneControllerInteractionRuntime must route selection '
-                'callbacks through SceneControllerMutationBoundary',
+                'SceneControllerInteractionRuntime must route committed '
+                'selection/draw callbacks through '
+                'SceneControllerMutationBoundary',
           ),
         );
       } finally {
@@ -1149,10 +1151,23 @@ class SceneControllerMutationBoundary {
   }
 
   Object commitMoveSelection(Object proposedDelta) => proposedDelta;
+
+  Object commitDrawStroke(Object payload) {
+    return storeController.draw.writeDrawStroke(payload);
+  }
+
+  Object commitDrawLineFromWorldSegment(Object payload) {
+    return storeController.draw.writeDrawLineFromWorldSegment(payload);
+  }
+
+  int commitEraseNodes(Object ids) {
+    return storeController.draw.writeEraseNodes(ids);
+  }
 }
 
 class _Core {
   final commands = _Commands();
+  final draw = _Draw();
 
   void write<T>(Object fn) {}
 
@@ -1169,6 +1184,14 @@ class _Commands {
   void writeDeleteSelection() {}
 
   void writeSelectionTransform(Object delta) {}
+}
+
+class _Draw {
+  Object writeDrawStroke(Object payload) => payload;
+
+  Object writeDrawLineFromWorldSegment(Object payload) => payload;
+
+  int writeEraseNodes(Object ids) => 0;
 }
 ''',
         );
@@ -1253,10 +1276,23 @@ class SceneControllerMutationBoundary {
   }
 
   Object commitMoveSelection(Object proposedDelta) => proposedDelta;
+
+  Object commitDrawStroke(Object payload) {
+    return storeController.draw.writeDrawStroke(payload);
+  }
+
+  Object commitDrawLineFromWorldSegment(Object payload) {
+    return storeController.draw.writeDrawLineFromWorldSegment(payload);
+  }
+
+  int commitEraseNodes(Object ids) {
+    return storeController.draw.writeEraseNodes(ids);
+  }
 }
 
 class _Core {
   final commands = _Commands();
+  final draw = _Draw();
 
   T write<T>(Object fn) => true as T;
 
@@ -1273,6 +1309,14 @@ class _Commands {
   void writeDeleteSelection() {}
 
   void writeSelectionTransform(Object delta) {}
+}
+
+class _Draw {
+  Object writeDrawStroke(Object payload) => payload;
+
+  Object writeDrawLineFromWorldSegment(Object payload) => payload;
+
+  int writeEraseNodes(Object ids) => 0;
 }
 ''',
         );

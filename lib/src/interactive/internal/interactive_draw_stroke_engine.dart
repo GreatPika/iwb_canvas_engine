@@ -13,7 +13,7 @@ class InteractiveDrawStrokeEngineCallbacks {
   const InteractiveDrawStrokeEngineCallbacks({
     required this.onStateChanged,
     required this.emitAction,
-    required this.writeDrawStroke,
+    required this.commitDrawStroke,
   });
 
   final VoidCallback onStateChanged;
@@ -30,7 +30,7 @@ class InteractiveDrawStrokeEngineCallbacks {
     required Color color,
     required double opacity,
   })
-  writeDrawStroke;
+  commitDrawStroke;
 }
 
 class InteractiveDrawStrokeEngine {
@@ -77,7 +77,7 @@ class InteractiveDrawStrokeEngine {
     final thickness = isHighlighter
         ? style.highlighterThickness
         : style.penThickness;
-    final strokeId = callbacks.writeDrawStroke(
+    final strokeId = callbacks.commitDrawStroke(
       points: committedPoints,
       thickness: thickness,
       color: style.drawColor,

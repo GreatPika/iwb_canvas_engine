@@ -273,6 +273,18 @@ void main() {
     );
     expect(
       mutationBoundarySource,
+      contains('storeController.draw.writeDrawStroke('),
+    );
+    expect(
+      mutationBoundarySource,
+      contains('storeController.draw.writeDrawLineFromWorldSegment('),
+    );
+    expect(
+      mutationBoundarySource,
+      contains('storeController.draw.writeEraseNodes(ids);'),
+    );
+    expect(
+      mutationBoundarySource,
       contains('storeController.writePreparedSceneReplacement(replacement);'),
     );
     expect(
@@ -306,6 +318,35 @@ void main() {
     expect(
       interactionRuntimeSource,
       contains('writeSelectionReplace: mutationBoundary.setSelection,'),
+    );
+    expect(
+      interactionRuntimeSource,
+      contains('commitDrawStroke: mutationBoundary.commitDrawStroke,'),
+    );
+    expect(
+      interactionRuntimeSource,
+      contains(
+        'commitDrawLineFromWorldSegment:\n'
+        '          mutationBoundary.commitDrawLineFromWorldSegment,',
+      ),
+    );
+    expect(
+      interactionRuntimeSource,
+      contains('commitEraseNodes: mutationBoundary.commitEraseNodes,'),
+    );
+    expect(
+      interactionRuntimeSource,
+      isNot(contains('request.storeController.draw.writeDrawStroke')),
+    );
+    expect(
+      interactionRuntimeSource,
+      isNot(
+        contains('request.storeController.draw.writeDrawLineFromWorldSegment'),
+      ),
+    );
+    expect(
+      interactionRuntimeSource,
+      isNot(contains('request.storeController.draw.writeEraseNodes')),
     );
 
     expect(

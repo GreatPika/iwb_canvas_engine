@@ -42,7 +42,7 @@ void main() {
         onStateChanged: () {},
         querySpatialCandidates: (_) => <SceneSpatialCandidate>[candidate],
         resolveSpatialCandidateNode: (c) => c.node,
-        writeEraseNodes: (ids) {
+        commitEraseNodes: (ids) {
           removedIds.addAll(ids);
           return ids.length;
         },
@@ -80,7 +80,7 @@ void main() {
         onStateChanged: () {},
         querySpatialCandidates: (_) => <SceneSpatialCandidate>[candidate],
         resolveSpatialCandidateNode: (c) => c.node,
-        writeEraseNodes: (ids) {
+        commitEraseNodes: (ids) {
           removedIds.addAll(ids);
           return ids.length;
         },
@@ -120,7 +120,7 @@ void main() {
         onStateChanged: () {},
         querySpatialCandidates: (_) => <SceneSpatialCandidate>[candidate],
         resolveSpatialCandidateNode: (c) => c.node,
-        writeEraseNodes: (ids) {
+        commitEraseNodes: (ids) {
           removedIds.addAll(ids);
           return ids.length;
         },

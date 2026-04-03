@@ -13,6 +13,7 @@ import 'package:iwb_canvas_engine/src/controller/scene_snapshot_materializer.dar
 import 'package:iwb_canvas_engine/src/controller/txn_context.dart';
 
 // INV:INV-ENG-TXN-ATOMIC-COMMIT
+// INV:INV-ENG-TXN-FINALIZED-BEFORE-COMMIT-PLAN
 
 void main() {
   MutationExecutionResult<TValue> executeWithPreparedCommit<
@@ -62,6 +63,9 @@ void main() {
       final nodeApplierSource = File(
         'lib/src/controller/node_mutation_applier.dart',
       ).readAsStringSync();
+      final selectionFinalizerSource = File(
+        'lib/src/controller/selection_post_apply_finalizer.dart',
+      ).readAsStringSync();
       final selectionApplierSource = File(
         'lib/src/controller/selection_state_mutation_applier.dart',
       ).readAsStringSync();
@@ -73,6 +77,10 @@ void main() {
       ).readAsStringSync();
 
       expect(executorSource, contains("import 'node_mutation_applier.dart';"));
+      expect(
+        executorSource,
+        contains("import 'selection_post_apply_finalizer.dart';"),
+      );
       expect(
         executorSource,
         contains("import 'selection_state_mutation_applier.dart';"),
@@ -98,6 +106,38 @@ void main() {
         executorSource,
         contains('executeSelectionTransformMutationOp(ctx, op)'),
       );
+      expect(
+        executorSource,
+        contains('_executeStructuralDocumentMutation<TValue>(ctx, op)'),
+      );
+      expect(executorSource, contains('_executeNodeMutation<TValue>(ctx, op)'));
+      expect(
+        executorSource,
+        contains(
+          'PatchNodeOp(:final patch) => !patch.common.isVisible.isAbsent',
+        ),
+      );
+      expect(executorSource, contains('DeleteNodeOp() => true,'));
+      expect(executorSource, contains('DeleteNodesBulkOp() => true,'));
+      expect(executorSource, contains('ClearSceneKeepBackgroundOp() => true,'));
+      expect(executorSource, contains('ReplaceSceneOp() => true,'));
+      expect(
+        executorSource,
+        isNot(
+          contains(
+            'NodeMutationOp() => _executeWithPostApplySelection<TValue>(',
+          ),
+        ),
+      );
+      expect(
+        executorSource,
+        isNot(
+          contains(
+            'StructuralDocumentMutationOp() => _executeWithPostApplySelection<TValue>(',
+          ),
+        ),
+      );
+      expect(executorSource, contains('finalizePostApplySelection(ctx);'));
 
       expect(
         selectionApplierSource,
@@ -124,6 +164,16 @@ void main() {
         sceneApplierSource,
         contains('executeStructuralDocumentMutationOp('),
       );
+      expect(
+        selectionFinalizerSource,
+        contains('void finalizePostApplySelection(TxnContext ctx)'),
+      );
+      expect(
+        File(
+          'lib/src/controller/internal/selection_normalizer.dart',
+        ).existsSync(),
+        isFalse,
+      );
 
       expect(
         nodeApplierSource,
@@ -139,6 +189,116 @@ void main() {
       );
       expect(nodeApplierSource, isNot(contains('TransformSelectionOp(')));
       expect(nodeApplierSource, isNot(contains('TranslateSelectionOp(')));
+      expect(
+        nodeApplierSource,
+        isNot(contains('_patchTouchesSelectionPolicy')),
+      );
+    },
+  );
+
+  test(
+    'MutationExecutor finalizes selection on node patches before commit planning',
+    () {
+      final hiddenCtx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-auto-finalize',
+              nodes: <SceneNode>[
+                RectNode(id: 'visible', size: const Size(10, 10)),
+                RectNode(id: 'stable', size: const Size(10, 10)),
+              ],
+            ),
+          ],
+        ),
+        workingSelection: <NodeId>{'visible'},
+        baseAllNodeIds: const <NodeId>{'visible', 'stable'},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+      final executor = MutationExecutor();
+
+      final hideResult = executor.execute(
+        hiddenCtx,
+        PatchNodeOp(
+          RectNodePatch(
+            id: 'visible',
+            common: CommonNodePatch(isVisible: PatchField<bool>.value(false)),
+          ),
+        ),
+      );
+      expect(hideResult.changed, isTrue);
+      expect(hiddenCtx.workingSelection, isEmpty);
+      expect(hiddenCtx.changeSet.selectionChanged, isTrue);
+
+      final nonSelectableCtx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-auto-finalize',
+              nodes: <SceneNode>[
+                RectNode(id: 'visible', size: const Size(10, 10)),
+                RectNode(id: 'stable', size: const Size(10, 10)),
+              ],
+            ),
+          ],
+        ),
+        workingSelection: <NodeId>{'stable'},
+        baseAllNodeIds: const <NodeId>{'visible', 'stable'},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+
+      final nonSelectableResult = executor.execute(
+        nonSelectableCtx,
+        PatchNodeOp(
+          RectNodePatch(
+            id: 'stable',
+            common: CommonNodePatch(
+              isSelectable: PatchField<bool>.value(false),
+            ),
+          ),
+        ),
+      );
+      expect(nonSelectableResult.changed, isTrue);
+      expect(nonSelectableCtx.workingSelection, const <NodeId>{'stable'});
+      expect(nonSelectableCtx.changeSet.selectionChanged, isFalse);
+    },
+  );
+
+  test(
+    'MutationExecutor skips post-apply selection finalization for transform-only node writes',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-auto-finalize',
+              nodes: <SceneNode>[
+                RectNode(id: 'selected', size: const Size(10, 10)),
+                RectNode(id: 'moved', size: const Size(10, 10)),
+              ],
+            ),
+          ],
+        ),
+        workingSelection: <NodeId>{'selected'},
+        baseAllNodeIds: const <NodeId>{'selected', 'moved'},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+      final executor = MutationExecutor();
+
+      final result = executor.execute(
+        ctx,
+        SetNodeTransformOp(
+          'moved',
+          Transform2D.translation(const Offset(12, 8)),
+        ),
+      );
+
+      expect(result.changed, isTrue);
+      expect(ctx.workingSelection, const <NodeId>{'selected'});
+      expect(ctx.changeSet.selectionChanged, isFalse);
     },
   );
 

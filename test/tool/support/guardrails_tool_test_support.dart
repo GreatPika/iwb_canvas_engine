@@ -225,10 +225,23 @@ class SceneControllerMutationBoundary {
   }
 
   Object commitMoveSelection(Object proposedDelta) => proposedDelta;
+
+  Object commitDrawStroke(Object payload) {
+    return storeController.draw.writeDrawStroke(payload);
+  }
+
+  Object commitDrawLineFromWorldSegment(Object payload) {
+    return storeController.draw.writeDrawLineFromWorldSegment(payload);
+  }
+
+  int commitEraseNodes(Object ids) {
+    return storeController.draw.writeEraseNodes(ids);
+  }
 }
 
 class _Core {
   final commands = _Commands();
+  final draw = _Draw();
 
   Object prepareSceneReplacement(Object snapshot) => snapshot;
 
@@ -245,6 +258,14 @@ class _Commands {
   void writeDeleteSelection() {}
 
   void writeSelectionTransform(Object delta) {}
+}
+
+class _Draw {
+  Object writeDrawStroke(Object payload) => payload;
+
+  Object writeDrawLineFromWorldSegment(Object payload) => payload;
+
+  int writeEraseNodes(Object ids) => 0;
 }
 ''',
   );
@@ -279,6 +300,10 @@ class InteractiveRuntime {
     // writeSelectionReplace: mutationBoundary.setSelection,
     // writeSelectionClear: mutationBoundary.clearSelection,
     // commitMoveSelection: mutationBoundary.commitMoveSelection,
+    // commitDrawStroke: mutationBoundary.commitDrawStroke,
+    // commitDrawLineFromWorldSegment:
+    //     mutationBoundary.commitDrawLineFromWorldSegment,
+    // commitEraseNodes: mutationBoundary.commitEraseNodes,
   }
 
   void handlePointer(Object input) {}
@@ -488,6 +513,10 @@ class SceneControllerInteractionRuntime {
     // writeSelectionReplace: mutationBoundary.setSelection,
     // writeSelectionClear: mutationBoundary.clearSelection,
     // commitMoveSelection: mutationBoundary.commitMoveSelection,
+    // commitDrawStroke: mutationBoundary.commitDrawStroke,
+    // commitDrawLineFromWorldSegment:
+    //     mutationBoundary.commitDrawLineFromWorldSegment,
+    // commitEraseNodes: mutationBoundary.commitEraseNodes,
   }
 }
 ''',

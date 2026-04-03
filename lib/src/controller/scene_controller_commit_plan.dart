@@ -1,37 +1,17 @@
-import 'internal/selection_normalizer.dart';
-import 'mutation_commit_preparer.dart';
 import 'committed_store_state.dart';
 import '../core/revision_policy.dart';
 import 'change_set.dart';
+import 'mutation_commit_preparer.dart';
 import 'store.dart';
 import 'txn_context.dart';
 
-List<String> normalizeControllerCommitInputs({required TxnContext ctx}) {
-  final selectionNormalizer = SelectionNormalizer();
-  var commitPhases = const <String>[];
-
-  final shouldNormalizeSelection =
-      ctx.changeSet.selectionChanged ||
-      ctx.changeSet.structuralChanged ||
-      ctx.changeSet.documentReplaced;
-  if (shouldNormalizeSelection) {
-    final selectionResult = selectionNormalizer.writeNormalizeSelection(
-      rawSelection: ctx.workingSelection,
-      scene: ctx.workingScene,
-      nodeLocator: ctx.txnNodeLocatorView(),
-    );
-    commitPhases = <String>[...commitPhases, 'selection'];
-    if (selectionResult.normalizedChanged) {
-      ctx.changeSet.txnMarkSelectionChanged();
-    }
-    if (!identical(selectionResult.normalized, ctx.workingSelection)) {
-      ctx.workingSelection
-        ..clear()
-        ..addAll(selectionResult.normalized);
-    }
+List<String> deriveControllerCommitInitialPhases({
+  required ChangeSet changeSet,
+}) {
+  if (_requiresSelectionCommitPhase(changeSet)) {
+    return const <String>['selection'];
   }
-
-  return commitPhases;
+  return const <String>[];
 }
 
 ControllerCommitPlan buildControllerCommitPlan({
@@ -77,6 +57,12 @@ ControllerCommitPlan buildControllerCommitPlan({
       commitRevision: store.commitRevision + 1,
     ),
   );
+}
+
+bool _requiresSelectionCommitPhase(ChangeSet changeSet) {
+  return changeSet.selectionChanged ||
+      changeSet.structuralChanged ||
+      changeSet.documentReplaced;
 }
 
 List<String> resolveControllerCommitPhases({

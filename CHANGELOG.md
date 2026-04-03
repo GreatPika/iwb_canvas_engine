@@ -4,6 +4,15 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ## Unreleased
 
+- Transaction state now finalizes before commit planning: successful node and
+  structural writes expose finalized `SceneWriteTxn.snapshot` /
+  `selectedNodeIds` before callback return, commit planning is read-only over
+  finalized transaction state, and `isSelectable: false` patches no longer
+  create false `selectionChanged` deltas for explicitly selected visible ids.
+- Interactive committed draw-family writes now route through
+  `SceneControllerMutationBoundary` together with move and selection commits,
+  and guardrails reject direct draw callback wiring from
+  `scene_controller_interaction_runtime.dart` to `storeController.draw.*`.
 - Runtime numeric write semantics are now reject-only for `SceneNode.opacity`
   and background-grid cell size. Invalid runtime writes throw
   `ArgumentError`, enabled-grid writes no longer clamp undersized cell sizes,

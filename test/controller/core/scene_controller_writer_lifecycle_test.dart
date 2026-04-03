@@ -7,6 +7,7 @@ import 'package:iwb_canvas_engine/src/controller/scene_writer.dart';
 
 // INV:INV-ENG-TXN-WRITER-LIFETIME
 // INV:INV-ENG-WRITE-PROTOCOL
+// INV:INV-ENG-TXN-FINALIZED-BEFORE-COMMIT-PLAN
 
 void main() {
   SceneSnapshot twoRectSnapshot() {
@@ -358,6 +359,7 @@ void main() {
           common: CommonNodePatch(isVisible: PatchField<bool>.value(false)),
         ),
       );
+      expect(writer.selectedNodeIds, isEmpty);
     });
 
     expect(controller.selectedNodeIds, isEmpty);
@@ -365,4 +367,34 @@ void main() {
     expect(controller.debug.lastChangeSet.selectionChanged, isTrue);
     expect(controller.debug.lastChangeSet.gridChanged, isFalse);
   });
+
+  test(
+    'document replace exposes finalized selection before write callback returns',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: twoRectSnapshot(),
+      );
+      addTearDown(controller.dispose);
+
+      controller.write<void>((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'r1'});
+        writer.writeDocumentReplace(
+          SceneSnapshot(
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(
+                id: 'layer-auto-next',
+                nodes: <NodeSnapshot>[
+                  RectNodeSnapshot(id: 'fresh', size: Size(6, 6)),
+                ],
+              ),
+            ],
+          ),
+        );
+        expect(writer.selectedNodeIds, isEmpty);
+      });
+
+      expect(controller.selectedNodeIds, isEmpty);
+      expect(controller.snapshot.layers.single.nodes.single.id, 'fresh');
+    },
+  );
 }

@@ -990,14 +990,20 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
           'writeSelectionReplace: mutationBoundary.setSelection,',
           'writeSelectionClear: mutationBoundary.clearSelection,',
           'commitMoveSelection: mutationBoundary.commitMoveSelection,',
+          'commitDrawStroke: mutationBoundary.commitDrawStroke,',
+          'mutationBoundary.commitDrawLineFromWorldSegment',
+          'commitEraseNodes: mutationBoundary.commitEraseNodes,',
         ],
         bannedTokens: const <String>[
           'request.storeController.commands.writeSelectionReplace',
           'request.storeController.commands.writeSelectionClear',
+          'request.storeController.draw.writeDrawStroke',
+          'request.storeController.draw.writeDrawLineFromWorldSegment',
+          'request.storeController.draw.writeEraseNodes',
         ],
         message:
             'interactive API violation: SceneControllerInteractionRuntime '
-            'must route selection callbacks through '
+            'must route committed selection/draw callbacks through '
             'SceneControllerMutationBoundary.',
       ) ??
       _requireSourceTokens(
@@ -1062,6 +1068,9 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
           'storeController.commands.writeDeleteSelection',
           'storeController.commands.writeSelectionTransform',
           'storeController.prepareSceneReplacement(snapshot);',
+          'storeController.draw.writeDrawStroke(',
+          'storeController.draw.writeDrawLineFromWorldSegment(',
+          'storeController.draw.writeEraseNodes(ids);',
           'storeController.writePreparedSceneReplacement(replacement);',
         ],
         bannedTokens: const <String>[

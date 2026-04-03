@@ -92,6 +92,31 @@ void main() {
       expect(emitted.last.nodeIds, <NodeId>['added']);
       expect(emitted.last.timestampMs, 7);
 
+      final strokeId = boundary.commitDrawStroke(
+        points: const <Offset>[Offset.zero, Offset(4, 4)],
+        thickness: 2,
+        color: const Color(0xFF112233),
+        opacity: 1,
+      );
+      final lineId = boundary.commitDrawLineFromWorldSegment(
+        start: const Offset(2, 2),
+        end: const Offset(8, 8),
+        thickness: 3,
+        color: const Color(0xFF445566),
+        opacity: 1,
+      );
+      final removedDrawCount = boundary.commitEraseNodes(<NodeId>{strokeId});
+      expect(strokeId, isNotEmpty);
+      expect(lineId, isNotEmpty);
+      expect(removedDrawCount, 1);
+      expect(
+        controller.snapshot.layers
+            .expand((layer) => layer.nodes)
+            .map((node) => node.id)
+            .contains(lineId),
+        isTrue,
+      );
+
       boundary.setBackgroundColor(const Color(0xFF00FF00));
       boundary.setGridEnabled(true);
       boundary.setGridCellSize(kMinGridCellSize);
@@ -114,7 +139,7 @@ void main() {
 
       boundary.clearScene(timestampMs: 8);
       expect(emitted.last.type, ActionType.clear);
-      expect(emitted.last.nodeIds, <NodeId>['base']);
+      expect(emitted.last.nodeIds, unorderedEquals(<NodeId>['base', lineId]));
       expect(emitted.last.timestampMs, 8);
 
       final replacement = SceneSnapshot(

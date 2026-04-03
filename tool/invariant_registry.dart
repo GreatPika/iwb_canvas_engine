@@ -184,6 +184,15 @@ const List<Invariant> invariants = <Invariant>[
     ),
   ),
   Invariant(
+    id: 'INV-ENG-TXN-FINALIZED-BEFORE-COMMIT-PLAN',
+    scope: 'engine-controller',
+    title:
+        'transaction state is finalized before commit planning and before the write callback regains control',
+    primaryProof: PrimaryProof(
+      path: 'test/controller/core/scene_controller_writer_lifecycle_test.dart',
+    ),
+  ),
+  Invariant(
     id: 'INV-ENG-TXN-COPY-ON-WRITE',
     scope: 'engine-controller',
     title:
@@ -427,7 +436,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-INTERACTIVE-MUTATION-BOUNDARY',
     scope: 'engine-runtime',
     title:
-        'SceneControllerMutationBoundary remains the only interactive owner that performs committed scene/selection writes and clear/delete action projection while scene/selection shells stay routing-only',
+        'SceneControllerMutationBoundary remains the only interactive owner that performs committed scene/selection/draw writes and clear/delete action projection while scene/selection shells stay routing-only',
     primaryProof: PrimaryProof(
       path:
           'test/interactive/core/scene_controller_mutation_boundary_test.dart',

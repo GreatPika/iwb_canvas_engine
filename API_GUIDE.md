@@ -676,6 +676,12 @@ Runtime contract highlights:
   by those operations
 - `writeSelectionTransform(...)` composes transforms with pre-multiply
   semantics: `nextTransform = delta.multiply(existingTransform)`
+- after any successful node or structural write, `snapshot` and
+  `selectedNodeIds` already reflect the finalized transaction state that would
+  commit if the callback returned immediately
+- post-apply selection finalization removes missing/background/invisible ids,
+  but a visible node explicitly selected before an `isSelectable: false` patch
+  remains selected and does not mark `selectionChanged` by itself
 
 Selection writes:
 
@@ -741,6 +747,9 @@ Contract:
 - line supports drag creation and two-tap creation
 - `dragStartSlop` applies to both move and line drag start
 - preview state is ephemeral and does not mutate the committed snapshot
+- committed draw-family writes use the same interactive mutation boundary as
+  move and selection commits; runtime draw callbacks no longer bypass that
+  boundary with direct `storeController.draw.*` wiring
 - move-mode hit-testing and marquee inclusion use the same selection
   admissibility owner (`canSelect(...)`)
 - move preview and move commit use the same move admissibility owner, so

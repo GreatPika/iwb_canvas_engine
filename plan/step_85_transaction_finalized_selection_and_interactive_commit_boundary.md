@@ -100,7 +100,7 @@ This change fixes the write-side owner graph so that transaction state is fully 
 ## 5. Result Requirements
 
 1. After any successful node, structural, or document mutation inside `write(...)`, `SceneWriteTxn.selectedNodeIds` and `SceneWriteTxn.snapshot` reflect the finalized transaction state that would commit if the callback returned at that point.
-2. `buildControllerCommitPlan(...)` and `normalizeControllerCommitInputs(...)` no longer mutate `TxnContext`, `workingSelection`, or `changeSet`.
+2. `buildControllerCommitPlan(...)` and `deriveControllerCommitInitialPhases(...)` no longer mutate `TxnContext`, `workingSelection`, or `changeSet`.
 3. `selectionChanged` is true only when the effective selection set changes; a selected node patched to `isSelectable: false` stays selected and does not create a false selection delta.
 4. `SceneControllerInteractionRuntime` and draw-family callback surfaces no longer call `request.storeController.draw.write*` directly; all committed gesture writes route through `SceneControllerMutationBoundary`.
 5. Structural enforcement fails when interactive callback wiring bypasses the boundary or when commit planning reintroduces post-callback transaction-state repair.
@@ -110,12 +110,12 @@ This change fixes the write-side owner graph so that transaction state is fully 
 
 ### 6.1 Analysis Scope
 
-- `normalizeControllerCommitInputs(...)` currently mutates `ctx.workingSelection` and `ctx.changeSet` during commit planning.
+- `normalizeControllerCommitInputs(...)` previously mutated `ctx.workingSelection` and `ctx.changeSet` during commit planning.
 - Explicit selection writes already have a canonical owner in `selection_state_mutation_applier.dart`.
 - Post-apply selection repair is a separate transactional responsibility from explicit selection commands and must not be folded into a mixed-responsibility selection-state file.
-- `node_mutation_applier.dart` currently marks `selectionChanged` for `isVisible` and `isSelectable` patches without finalizing `ctx.workingSelection`.
-- `scene_controller_interaction_runtime.dart` currently routes selection and move through `mutationBoundary`, but routes stroke, line, and erase directly through `request.storeController.draw.*`.
-- `tool/src/guardrails/interactive_api_guardrails.dart` currently protects selection callback wiring, but not draw-family callback wiring.
+- `node_mutation_applier.dart` previously marked `selectionChanged` for `isVisible` and `isSelectable` patches without finalizing `ctx.workingSelection`.
+- `scene_controller_interaction_runtime.dart` previously routed selection and move through `mutationBoundary`, but routed stroke, line, and erase directly through `request.storeController.draw.*`.
+- `tool/src/guardrails/interactive_api_guardrails.dart` previously protected selection callback wiring, but not draw-family callback wiring.
 - `ARCHITECTURE.md` already fixes two critical contracts: non-selectable explicit ids remain stable, and `SceneControllerMutationBoundary` is the canonical interactive committed-write owner.
 
 ### 6.2 Target Verification Units
@@ -193,7 +193,7 @@ This change fixes the write-side owner graph so that transaction state is fully 
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Finalized Transaction Selection Before Commit Plan
+### Slice 1. [x] Finalized Transaction Selection Before Commit Plan
 
 #### Slice Contract
 
@@ -228,7 +228,7 @@ Introduce a dedicated controller-private finalization owner in [lib/src/controll
 - Green run of the listed verifications.
 - Source proof in [test/controller/core/scene_controller_commit_runtime_contract_test.dart](/Users/blackpika/iwb_canvas_engine/test/controller/core/scene_controller_commit_runtime_contract_test.dart) that commit planning no longer mutates transaction state.
 
-### Slice 2. [ ] Full Interactive Commit Boundary For Draw Family
+### Slice 2. [x] Full Interactive Commit Boundary For Draw Family
 
 #### Slice Contract
 
@@ -259,7 +259,7 @@ Add `commitDrawStroke(...)`, `commitDrawLineFromWorldSegment(...)`, and `commitE
 - Green run of the listed verifications.
 - Source proof in [test/interactive/core/scene_controller_architecture_boundary_test.dart](/Users/blackpika/iwb_canvas_engine/test/interactive/core/scene_controller_architecture_boundary_test.dart) that all committed gesture callback wiring uses `mutationBoundary`.
 
-### Slice 3. [ ] Enforcement And Documentation Closure
+### Slice 3. [x] Enforcement And Documentation Closure
 
 #### Slice Contract
 

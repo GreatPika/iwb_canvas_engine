@@ -19,7 +19,7 @@ class InteractiveDrawLineEngineCallbacks {
   const InteractiveDrawLineEngineCallbacks({
     required this.onStateChanged,
     required this.emitAction,
-    required this.writeDrawLineFromWorldSegment,
+    required this.commitDrawLineFromWorldSegment,
   });
 
   final VoidCallback onStateChanged;
@@ -37,7 +37,7 @@ class InteractiveDrawLineEngineCallbacks {
     required Color color,
     required double opacity,
   })
-  writeDrawLineFromWorldSegment;
+  commitDrawLineFromWorldSegment;
 }
 
 class InteractiveDrawLineEngine {
@@ -156,7 +156,7 @@ class InteractiveDrawLineEngine {
     required Offset end,
     required InteractiveDrawStyle style,
   }) {
-    final lineId = callbacks.writeDrawLineFromWorldSegment(
+    final lineId = callbacks.commitDrawLineFromWorldSegment(
       start: start,
       end: end,
       thickness: style.lineThickness,

@@ -9,11 +9,11 @@ class InteractiveDrawCoordinatorCallbacks {
   const InteractiveDrawCoordinatorCallbacks({
     required this.onStateChanged,
     required this.emitAction,
-    required this.writeDrawStroke,
-    required this.writeDrawLineFromWorldSegment,
+    required this.commitDrawStroke,
+    required this.commitDrawLineFromWorldSegment,
     required this.querySpatialCandidates,
     required this.resolveSpatialCandidateNode,
-    required this.writeEraseNodes,
+    required this.commitEraseNodes,
   });
 
   final VoidCallback onStateChanged;
@@ -30,7 +30,7 @@ class InteractiveDrawCoordinatorCallbacks {
     required Color color,
     required double opacity,
   })
-  writeDrawStroke;
+  commitDrawStroke;
   final NodeId Function({
     required Offset start,
     required Offset end,
@@ -38,10 +38,10 @@ class InteractiveDrawCoordinatorCallbacks {
     required Color color,
     required double opacity,
   })
-  writeDrawLineFromWorldSegment;
+  commitDrawLineFromWorldSegment;
   final List<SceneSpatialCandidate> Function(Rect bounds)
   querySpatialCandidates;
   final SceneNode? Function(SceneSpatialCandidate candidate)
   resolveSpatialCandidateNode;
-  final int Function(Iterable<NodeId> ids) writeEraseNodes;
+  final int Function(Iterable<NodeId> ids) commitEraseNodes;
 }

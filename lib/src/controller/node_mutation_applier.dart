@@ -88,10 +88,6 @@ MutationApplyResult<bool> _patch(TxnContext ctx, PatchNodeOp op) {
     beforeCandidate: beforeCandidate,
     afterCandidate: afterCandidate,
   );
-  if (ctx.workingSelection.contains(patch.id) &&
-      _patchTouchesSelectionPolicy(op)) {
-    ctx.changeSet.txnMarkSelectionChanged();
-  }
   return const MutationApplyResult<bool>(value: true, changed: true);
 }
 
@@ -131,14 +127,10 @@ MutationApplyResult<bool> _deleteNode(TxnContext ctx, NodeId nodeId) {
     return const MutationApplyResult<bool>(value: false, changed: false);
   }
 
-  final hadSelection = ctx.workingSelection.remove(nodeId);
   ctx.txnForgetNodeId(nodeId);
   ctx.changeSet
     ..txnMarkStructuralChanged()
     ..txnTrackRemoved(nodeId);
-  if (hadSelection) {
-    ctx.changeSet.txnMarkSelectionChanged();
-  }
   return const MutationApplyResult<bool>(value: true, changed: true);
 }
 
@@ -170,10 +162,6 @@ MutationApplyResult<List<NodeId>> _deleteNodesBulk(
   }
 
   _finalizeDeletedNodes(ctx, deleted);
-  if (plan.selectionMayChange) {
-    ctx.workingSelection.removeAll(deleted);
-    ctx.changeSet.txnMarkSelectionChanged();
-  }
   return MutationApplyResult<List<NodeId>>(
     value: List<NodeId>.unmodifiable(deleted),
     changed: true,
@@ -187,7 +175,6 @@ _PreparedBulkDelete? _prepareBulkDelete(TxnContext ctx, Set<NodeId> nodeIds) {
 
   final preparedRemovalsByLayer = <int, List<PreparedNodeRemoval>>{};
   final targetLayerIndexes = <int>{};
-  var selectionMayChange = false;
   for (final nodeId in nodeIds) {
     final existing = ctx.txnFindNodeById(nodeId);
     if (existing == null ||
@@ -199,9 +186,6 @@ _PreparedBulkDelete? _prepareBulkDelete(TxnContext ctx, Set<NodeId> nodeIds) {
     preparedRemovalsByLayer
         .putIfAbsent(existing.layerIndex, () => <PreparedNodeRemoval>[])
         .add((nodeId: nodeId, nodeIndex: existing.nodeIndex));
-    if (!selectionMayChange && ctx.workingSelection.contains(nodeId)) {
-      selectionMayChange = true;
-    }
   }
   if (preparedRemovalsByLayer.isEmpty) {
     return null;
@@ -210,7 +194,6 @@ _PreparedBulkDelete? _prepareBulkDelete(TxnContext ctx, Set<NodeId> nodeIds) {
   return _PreparedBulkDelete(
     preparedRemovalsByLayer: preparedRemovalsByLayer,
     targetLayerIndexes: sortedLayerIndexes,
-    selectionMayChange: selectionMayChange,
   );
 }
 
@@ -290,19 +273,12 @@ void txnApplyNodeTransform(
   );
 }
 
-bool _patchTouchesSelectionPolicy(PatchNodeOp op) {
-  final common = op.patch.common;
-  return !common.isVisible.isAbsent || !common.isSelectable.isAbsent;
-}
-
 final class _PreparedBulkDelete {
   const _PreparedBulkDelete({
     required this.preparedRemovalsByLayer,
     required this.targetLayerIndexes,
-    required this.selectionMayChange,
   });
 
   final Map<int, List<PreparedNodeRemoval>> preparedRemovalsByLayer;
   final List<int> targetLayerIndexes;
-  final bool selectionMayChange;
 }

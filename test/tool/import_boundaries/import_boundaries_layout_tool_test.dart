@@ -149,51 +149,54 @@ void main() {
       }
     });
 
-    test('rejects higher layers -> unknown target layer imports', () async {
-      const layerCases = <({String filePath, String label})>[
-        (filePath: 'lib/src/model/value.dart', label: 'model'),
-        (filePath: 'lib/src/controller/value.dart', label: 'controller'),
-        (filePath: 'lib/src/interactive/value.dart', label: 'interactive'),
-        (filePath: 'lib/src/render/value.dart', label: 'render'),
-        (filePath: 'lib/src/serialization/value.dart', label: 'serialization'),
-        (filePath: 'lib/src/view/value.dart', label: 'view'),
-      ];
+    const higherLayerCases = <({String filePath, String label})>[
+      (filePath: 'lib/src/model/value.dart', label: 'model'),
+      (filePath: 'lib/src/controller/value.dart', label: 'controller'),
+      (filePath: 'lib/src/interactive/value.dart', label: 'interactive'),
+      (filePath: 'lib/src/render/value.dart', label: 'render'),
+      (filePath: 'lib/src/serialization/value.dart', label: 'serialization'),
+      (filePath: 'lib/src/view/value.dart', label: 'view'),
+    ];
 
-      for (final layerCase in layerCases) {
-        final sandbox = await createImportBoundariesSandbox();
-        try {
-          writeSandboxFile(
-            sandbox,
-            'lib/src/unknown/value.dart',
-            'class UnknownValue {}\n',
-          );
-          writeSandboxFile(
-            sandbox,
-            layerCase.filePath,
-            "import 'package:iwb_canvas_engine/src/unknown/value.dart';\n",
-          );
+    for (final layerCase in higherLayerCases) {
+      test(
+        'rejects ${layerCase.label} -> unknown target layer import',
+        () async {
+          final sandbox = await createImportBoundariesSandbox();
+          try {
+            writeSandboxFile(
+              sandbox,
+              'lib/src/unknown/value.dart',
+              'class UnknownValue {}\n',
+            );
+            writeSandboxFile(
+              sandbox,
+              layerCase.filePath,
+              "import 'package:iwb_canvas_engine/src/unknown/value.dart';\n",
+            );
 
-          final result = await runSandboxTool(
-            sandbox,
-            'check_import_boundaries.dart',
-          );
-          expect(
-            result.exitCode,
-            isNonZero,
-            reason: '${layerCase.label} unexpectedly imported unknown layer',
-          );
-          expect(
-            result.stderr.toString(),
-            allOf(
-              contains('layer layout violation:'),
-              contains('uses unapproved top-level layer "unknown"'),
-            ),
-          );
-        } finally {
-          sandbox.deleteSync(recursive: true);
-        }
-      }
-    });
+            final result = await runSandboxTool(
+              sandbox,
+              'check_import_boundaries.dart',
+            );
+            expect(
+              result.exitCode,
+              isNonZero,
+              reason: '${layerCase.label} unexpectedly imported unknown layer',
+            );
+            expect(
+              result.stderr.toString(),
+              allOf(
+                contains('layer layout violation:'),
+                contains('uses unapproved top-level layer "unknown"'),
+              ),
+            );
+          } finally {
+            sandbox.deleteSync(recursive: true);
+          }
+        },
+      );
+    }
 
     test('rejects unapproved top-level lib/src leaf file', () async {
       final sandbox = await createImportBoundariesSandbox();

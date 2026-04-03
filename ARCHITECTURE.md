@@ -283,6 +283,8 @@ Ownership decisions for the target state:
   the boundary is only the interactive adapter: structural clear ownership
   stays in `controller/commands/scene_commands.dart`, and the boundary adds the
   interactive `ActionType.clear` projection without re-owning the write path.
+  Draw-family commits (`stroke`, `line`, `erase`) follow the same rule and may
+  not bypass the boundary through direct runtime wiring.
   This contract is pinned by `INV-ENG-INTERACTIVE-MUTATION-BOUNDARY`.
 - `SceneControllerSelectionMutations`, `SceneControllerSceneMutations`, and
   `InteractiveSelectionActions` are thin routing shells only. They may enforce
@@ -473,6 +475,12 @@ most important architectural rules are:
   and executed by `MutationExecutor`; `SceneWriteTxn` stays the public write
   seam, while `SceneStoreController` remains the owner of commit/store/signal
   lifecycle.
+- Transaction finalization is controller-private and pre-commit-plan:
+  `MutationExecutor` applies post-mutation selection finalization before
+  control returns to the write callback, while
+  `scene_controller_commit_plan.dart` remains read-only and derives phases and
+  commit data only from already-finalized transaction state. This contract is
+  pinned by `INV-ENG-TXN-FINALIZED-BEFORE-COMMIT-PLAN`.
 - Private mutation execution ownership follows the typed mutation families in
   `mutation_op.dart`: structural and scene-setting mutations live in
   `scene_mutation_applier.dart`, node-local mutations live in
