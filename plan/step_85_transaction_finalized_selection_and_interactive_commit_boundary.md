@@ -28,6 +28,7 @@ This change fixes the write-side owner graph so that transaction state is fully 
 
 - [lib/src/controller/mutation_executor.dart](/Users/blackpika/iwb_canvas_engine/lib/src/controller/mutation_executor.dart)
 - [lib/src/controller/selection_state_mutation_applier.dart](/Users/blackpika/iwb_canvas_engine/lib/src/controller/selection_state_mutation_applier.dart)
+- [lib/src/controller/selection_post_apply_finalizer.dart](/Users/blackpika/iwb_canvas_engine/lib/src/controller/selection_post_apply_finalizer.dart)
 - [lib/src/controller/node_mutation_applier.dart](/Users/blackpika/iwb_canvas_engine/lib/src/controller/node_mutation_applier.dart)
 - [lib/src/controller/scene_controller_commit_plan.dart](/Users/blackpika/iwb_canvas_engine/lib/src/controller/scene_controller_commit_plan.dart)
 - [lib/src/controller/internal/selection_normalizer.dart](/Users/blackpika/iwb_canvas_engine/lib/src/controller/internal/selection_normalizer.dart)
@@ -111,6 +112,7 @@ This change fixes the write-side owner graph so that transaction state is fully 
 
 - `normalizeControllerCommitInputs(...)` currently mutates `ctx.workingSelection` and `ctx.changeSet` during commit planning.
 - Explicit selection writes already have a canonical owner in `selection_state_mutation_applier.dart`.
+- Post-apply selection repair is a separate transactional responsibility from explicit selection commands and must not be folded into a mixed-responsibility selection-state file.
 - `node_mutation_applier.dart` currently marks `selectionChanged` for `isVisible` and `isSelectable` patches without finalizing `ctx.workingSelection`.
 - `scene_controller_interaction_runtime.dart` currently routes selection and move through `mutationBoundary`, but routes stroke, line, and erase directly through `request.storeController.draw.*`.
 - `tool/src/guardrails/interactive_api_guardrails.dart` currently protects selection callback wiring, but not draw-family callback wiring.
@@ -162,7 +164,7 @@ This change fixes the write-side owner graph so that transaction state is fully 
 ### 6.7 Requirements for Resolution of Links and Structural Analysis
 
 - `MutationExecutor.execute(...)` must become the single place that invokes post-apply selection finalization after successful `NodeMutationOp` and `StructuralDocumentMutationOp`; this step must run before the write callback regains control.
-- The finalization helper must live under the existing selection-state owner surface in [lib/src/controller/selection_state_mutation_applier.dart](/Users/blackpika/iwb_canvas_engine/lib/src/controller/selection_state_mutation_applier.dart), not in commit planning.
+- Post-apply selection finalization must live in a dedicated controller-private owner file at [lib/src/controller/selection_post_apply_finalizer.dart](/Users/blackpika/iwb_canvas_engine/lib/src/controller/selection_post_apply_finalizer.dart), not inside [lib/src/controller/selection_state_mutation_applier.dart](/Users/blackpika/iwb_canvas_engine/lib/src/controller/selection_state_mutation_applier.dart) and not in commit planning.
 - `scene_controller_commit_plan.dart` must remain present as the commit-plan owner, but it may only read finalized transaction state and derive plan data; if [lib/src/controller/internal/selection_normalizer.dart](/Users/blackpika/iwb_canvas_engine/lib/src/controller/internal/selection_normalizer.dart) becomes unused, it must be deleted in this change.
 - Draw-family callback surfaces under `interactive/internal/**` must be renamed from `write*` to `commit*` when they start routing through the mutation boundary, so the callback API itself no longer suggests a direct store write owner.
 - Structural guardrails must reject both direct and renamed draw-family bypasses in `scene_controller_interaction_runtime.dart`; string checks limited to selection-only wiring do not satisfy closure.
@@ -199,7 +201,7 @@ Selection finalization happens inside the canonical mutation execution path befo
 
 #### Change
 
-Extend [lib/src/controller/selection_state_mutation_applier.dart](/Users/blackpika/iwb_canvas_engine/lib/src/controller/selection_state_mutation_applier.dart) with one controller-private finalization helper that normalizes `ctx.workingSelection` against the current scene and marks `selectionChanged` only on an actual set delta. Invoke that helper from [lib/src/controller/mutation_executor.dart](/Users/blackpika/iwb_canvas_engine/lib/src/controller/mutation_executor.dart) after successful `NodeMutationOp` and `StructuralDocumentMutationOp` execution. Remove the flag-only `isVisible/isSelectable` selection marker from [lib/src/controller/node_mutation_applier.dart](/Users/blackpika/iwb_canvas_engine/lib/src/controller/node_mutation_applier.dart). Convert [lib/src/controller/scene_controller_commit_plan.dart](/Users/blackpika/iwb_canvas_engine/lib/src/controller/scene_controller_commit_plan.dart) into a read-only plan owner and delete [lib/src/controller/internal/selection_normalizer.dart](/Users/blackpika/iwb_canvas_engine/lib/src/controller/internal/selection_normalizer.dart) if no code path uses it afterward.
+Introduce a dedicated controller-private finalization owner in [lib/src/controller/selection_post_apply_finalizer.dart](/Users/blackpika/iwb_canvas_engine/lib/src/controller/selection_post_apply_finalizer.dart) that normalizes `ctx.workingSelection` against the current scene and marks `selectionChanged` only on an actual set delta. Invoke that owner from [lib/src/controller/mutation_executor.dart](/Users/blackpika/iwb_canvas_engine/lib/src/controller/mutation_executor.dart) after successful `NodeMutationOp` and `StructuralDocumentMutationOp` execution. Keep [lib/src/controller/selection_state_mutation_applier.dart](/Users/blackpika/iwb_canvas_engine/lib/src/controller/selection_state_mutation_applier.dart) limited to explicit selection commands. Remove the flag-only `isVisible/isSelectable` selection marker from [lib/src/controller/node_mutation_applier.dart](/Users/blackpika/iwb_canvas_engine/lib/src/controller/node_mutation_applier.dart). Convert [lib/src/controller/scene_controller_commit_plan.dart](/Users/blackpika/iwb_canvas_engine/lib/src/controller/scene_controller_commit_plan.dart) into a read-only plan owner and delete [lib/src/controller/internal/selection_normalizer.dart](/Users/blackpika/iwb_canvas_engine/lib/src/controller/internal/selection_normalizer.dart) if no code path uses it afterward.
 
 #### Verification
 
@@ -295,7 +297,7 @@ Extend [tool/src/guardrails/interactive_api_guardrails.dart](/Users/blackpika/iw
 - `flutter analyze`
 - `(cd example && flutter analyze lib test)`
 - `dcm analyze .`
-- `dcm calculate-metrics lib/src/controller/mutation_executor.dart lib/src/controller/selection_state_mutation_applier.dart lib/src/controller/node_mutation_applier.dart lib/src/controller/scene_controller_commit_plan.dart lib/src/interactive/internal/scene_controller_mutation_boundary.dart lib/src/interactive/internal/scene_controller_interaction_runtime.dart lib/src/interactive/internal/interactive_runtime_callbacks.dart lib/src/interactive/internal/interactive_draw_coordinator.dart lib/src/interactive/internal/interactive_draw_coordinator_callbacks.dart lib/src/interactive/internal/interactive_draw_stroke_engine.dart lib/src/interactive/internal/interactive_draw_line_engine.dart lib/src/interactive/internal/interactive_draw_eraser_engine.dart`
+- `dcm calculate-metrics lib/src/controller/mutation_executor.dart lib/src/controller/selection_state_mutation_applier.dart lib/src/controller/selection_post_apply_finalizer.dart lib/src/controller/node_mutation_applier.dart lib/src/controller/scene_controller_commit_plan.dart lib/src/interactive/internal/scene_controller_mutation_boundary.dart lib/src/interactive/internal/scene_controller_interaction_runtime.dart lib/src/interactive/internal/interactive_runtime_callbacks.dart lib/src/interactive/internal/interactive_draw_coordinator.dart lib/src/interactive/internal/interactive_draw_coordinator_callbacks.dart lib/src/interactive/internal/interactive_draw_stroke_engine.dart lib/src/interactive/internal/interactive_draw_line_engine.dart lib/src/interactive/internal/interactive_draw_eraser_engine.dart`
 - `dart run tool/check_tool_test_trigger_surface.dart`
 - `dart run tool/check_import_boundaries.dart`
 - `dart run tool/check_public_api_surface.dart`
