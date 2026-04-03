@@ -113,7 +113,7 @@ abstract interface class SceneViewRenderState implements SceneRenderState {}
   );
 
   test(
-    'passes when missing file is the scene view pointer semantics declaration unit',
+    'passes when missing file is the scene view runtime declaration unit',
     () async {
       final result = await _runCoverageScenario(
         files: <String, String>{
@@ -123,11 +123,18 @@ class CanvasPointerInput {}
           'lib/src/core/pointer_input.dart': '''
 class PointerSample {}
 ''',
-          'lib/src/interactive/scene_view_pointer_semantics.dart': '''
+          'lib/src/contract/scene_view_runtime.dart': '''
 import '../contract/canvas_pointer_input.dart';
 import '../core/pointer_input.dart';
 
-abstract interface class SceneViewPointerSemanticsBridge {
+abstract interface class SceneViewRuntime {
+  Object createPointerSession({
+    required Object isMounted,
+    required Object hasLiveRawPointers,
+  });
+}
+
+abstract interface class SceneViewPointerSession {
   void handleRoutedSample(PointerSample sample);
   void handleInvalidTerminalSample(CanvasPointerInput input);
 }

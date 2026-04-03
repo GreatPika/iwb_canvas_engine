@@ -464,7 +464,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-VIEW-POINTER-SEMANTICS-BOUNDARY',
     scope: 'engine-structure',
     title:
-        'SceneView reaches interactive only through SceneViewRenderState and the controller-owned SceneViewPointerSemantics seam; view/** must not import interactive/internal/**',
+        'SceneView reaches interactive only through SceneViewRuntime, and only scene_view_interactive.dart may adapt SceneController into that runtime boundary',
     primaryProof: PrimaryProof(
       path:
           'test/tool/import_boundaries/import_boundaries_layer_dag_tool_test.dart',
@@ -479,7 +479,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-VIEW-RENDER-READ-STATE-BOUNDARY',
     scope: 'engine-structure',
     title:
-        'interactive view/render shell files consume one controller-owned render read-state, keep overlay ownership outside the render surface, and do not reopen helper-based read-side seams through view/**',
+        'interactive view/render shell files consume one assembled SceneViewRuntime boundary, keep overlay ownership outside the render surface, and do not reopen concrete-controller seams through view/**',
     primaryProof: PrimaryProof(
       path:
           'test/interactive/core/scene_controller_architecture_boundary_test.dart',

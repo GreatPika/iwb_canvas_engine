@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/src/contract/scene_view_runtime.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_internal_access.dart';
 import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart';
-import 'package:iwb_canvas_engine/src/interactive/scene_view_pointer_semantics.dart';
 
 // INV:INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY
 // INV:INV-ENG-VIEW-POINTER-SEMANTICS-BOUNDARY
@@ -33,15 +33,19 @@ void main() {
       expect(completed, isTrue);
     });
 
-    test('controller owns view pointer semantics seam directly', () {
+    test('controller exposes view runtime pointer session through adapter', () {
       final controller = SceneController();
       addTearDown(controller.dispose);
 
-      final source = controller as SceneViewPointerSemanticsSource;
-      final bridge = source.createPointerSemanticsBridge(isMounted: () => true);
-      addTearDown(bridge.dispose);
+      final runtime = sceneControllerViewRuntimeOf(controller);
+      final session = runtime.createPointerSession(
+        isMounted: () => true,
+        hasLiveRawPointers: () => false,
+      );
+      addTearDown(session.dispose);
 
-      expect(bridge.pendingTapFlushTimestampMs, isNull);
+      expect(runtime, isA<SceneViewRuntime>());
+      expect(session.pendingTapFlushTimestampMs, isNull);
     });
   });
 }

@@ -451,23 +451,26 @@ typedef InteractiveDrawStyle = ({
     'lib/src/interactive/internal/scene_controller_interaction_config.dart',
     'class SceneControllerInteractionConfig {}\n',
   );
-  writeSandboxFile(
-    sandbox,
-    'lib/src/interactive/internal/scene_controller_pointer_semantics.dart',
-    '''
-class PointerInputTracker {}
+  writeSandboxFile(sandbox, 'lib/src/contract/scene_view_runtime.dart', '''
+abstract interface class SceneViewRuntime {
+  Object get renderState;
 
-class SceneControllerPointerSemantics {
-  final _PendingTapFlushScheduler scheduler = _PendingTapFlushScheduler();
-
-  void createTracker() {
-    PointerInputTracker();
-  }
+  SceneViewPointerSession createPointerSession({
+    required Object isMounted,
+    required Object hasLiveRawPointers,
+  });
 }
 
-class _PendingTapFlushScheduler {}
-''',
-  );
+abstract interface class SceneViewPointerSession {
+  Object? get pendingTapFlushTimestampMs;
+
+  void handleRoutedSample(Object sample);
+
+  void handleInvalidTerminalSample(Object input);
+
+  void dispose();
+}
+''');
   writeSandboxFile(
     sandbox,
     'lib/src/interactive/internal/scene_controller_interaction_runtime.dart',
@@ -498,29 +501,99 @@ class SceneControllerInteractionRuntime {
     sandbox,
     'lib/src/view/scene_view_interactive_pointer_host.dart',
     '''
-import '../interactive/scene_view_pointer_semantics.dart';
+import '../contract/scene_view_runtime.dart';
 
 class SceneViewInteractivePointerHost {
   SceneViewInteractivePointerHost({
-    required SceneViewPointerSemanticsBridge pointerSemantics,
-  }) : semantics = pointerSemantics;
+    required SceneViewPointerSession pointerSession,
+  }) : session = pointerSession;
 
-  final SceneViewPointerSemanticsBridge semantics;
+  final SceneViewPointerSession session;
 
-  void updateController(Object controller) {
-    controller.createPointerSemanticsBridge(isMounted: Object());
+  void replacePointerSession(SceneViewPointerSession pointerSession) {
+    pointerSession.dispose();
   }
 }
 ''',
   );
+  writeSandboxFile(sandbox, 'lib/src/view/scene_view_interactive.dart', '''
+import '../interactive/scene_controller.dart';
+import 'scene_view_runtime_owner.dart';
+
+class SceneViewInteractive {
+  Object build(SceneController controller) {
+    return SceneViewRuntimeOwner(
+      runtime: sceneControllerViewRuntimeOf(controller),
+    );
+  }
+}
+''');
+  writeSandboxFile(sandbox, 'lib/src/view/scene_view_runtime_owner.dart', '''
+class SceneViewRuntimeOwner extends StatefulWidget {
+  final Object runtime;
+  final Object _pointerHost = Object();
+
+  SceneViewRuntimeOwner({required this.runtime});
+
+  Object build() {
+    widget.runtime.createPointerSession(
+      isMounted: Object(),
+      hasLiveRawPointers: Object(),
+    );
+    _pointerHost.replacePointerSession(Object());
+    return SceneViewRenderSurface(renderState: Object());
+  }
+}
+
+class StatefulWidget {}
+
+class SceneViewRenderSurface {
+  SceneViewRenderSurface({
+    required Object renderState,
+  });
+}
+
+final widget = _WidgetRuntime();
+
+class _WidgetRuntime {
+  Object createPointerSession({
+    required Object isMounted,
+    required Object hasLiveRawPointers,
+  }) => Object();
+}
+''');
+  writeSandboxFile(sandbox, 'lib/src/view/scene_view_render_surface.dart', '''
+class SceneViewRenderState {}
+
+class SceneViewRenderSurface {
+  SceneViewRenderSurface({
+    required SceneViewRenderState renderState,
+  });
+}
+''');
   writeSandboxFile(
     sandbox,
-    'lib/src/interactive/scene_view_pointer_semantics.dart',
+    'lib/src/interactive/internal/scene_controller_pointer_session.dart',
     '''
-abstract interface class SceneViewPointerSemanticsBridge {}
+class PointerInputTracker {}
 
-abstract interface class SceneViewPointerSemanticsSource {
-  Object createPointerSemanticsBridge({required Object isMounted});
+class SceneControllerPointerSession {
+  final _ownerListenable = _OwnerListenable();
+  final _PendingTapFlushScheduler scheduler = _PendingTapFlushScheduler();
+
+  void createTracker() {
+    PointerInputTracker();
+  }
+
+  void attach() {
+    _ownerListenable.addListener(Object());
+  }
+}
+
+class _PendingTapFlushScheduler {}
+
+class _OwnerListenable {
+  void addListener(Object listener) {}
 }
 ''',
   );
@@ -536,12 +609,38 @@ abstract interface class SceneViewPointerSemanticsSource {
   );
   writeSandboxFile(
     sandbox,
-    'lib/src/interactive/internal/scene_controller_facade_assembly.dart',
+    'lib/src/interactive/internal/scene_controller_scene_view_runtime.dart',
+    '''
+final class SceneControllerSceneViewRuntime {
+  SceneControllerSceneViewRuntime({
+    Object? ensurePublicSideEffectAllowed,
+  });
+
+  final renderState = SceneControllerSceneViewRenderState();
+
+  Object createPointerSession({
+    required Object isMounted,
+    required Object hasLiveRawPointers,
+  }) {
+    return SceneControllerPointerSession();
+  }
+}
+
+class SceneControllerInteraction {}
+
+final class SceneControllerSceneViewRenderState {
+  SceneControllerInteraction get _interaction => SceneControllerInteraction();
+}
+''',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/scene_controller_owners.dart',
     '''
 class SceneControllerInteraction {}
 
 class SceneControllerSelection {
-  SceneControllerSelection({required Object mutations});
+  SceneControllerSelection({required Object runtime, required Object mutations});
 }
 
 class SceneControllerScene {
@@ -557,17 +656,37 @@ class _InteractionRuntime {
   void ensurePublicSideEffectAllowed(String operation) {}
 }
 
-Object assembleSceneControllerFacade() {
+class SceneControllerOwnersRequest {}
+
+class SceneControllerInternalAccessRegistration {}
+
+class _Owners {
+  final sceneViewRuntime = SceneControllerSceneViewRuntime(
+    ensurePublicSideEffectAllowed:
+        _InteractionRuntime().ensurePublicSideEffectAllowed,
+  );
+}
+
+Object createSceneControllerOwners(Object request) {
   final interactionRuntime = _InteractionRuntime();
+  SceneControllerInternalAccessRegistration();
+  registerSceneControllerInternalAccess(Object(), Object());
   SceneControllerInteraction();
-  SceneControllerSelection(mutations: interactionRuntime.mutationBoundary);
+  SceneControllerSelection(
+    runtime: interactionRuntime,
+    mutations: interactionRuntime.mutationBoundary,
+  );
   SceneControllerScene(
     ensurePublicSideEffectAllowed:
         interactionRuntime.ensurePublicSideEffectAllowed,
     mutations: interactionRuntime.mutationBoundary,
   );
-  return Object();
+  return _Owners();
 }
+
+Object sceneControllerOwnersActions(Object ownerGraph) => Object();
+
+Object sceneControllerOwnersEditTextRequests(Object ownerGraph) => Object();
 ''',
   );
   writeSandboxFile(

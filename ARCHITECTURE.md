@@ -220,16 +220,18 @@ Ownership decisions for the target state:
 1. `SceneView` receives Flutter pointer input and normalizes it into public
    `CanvasPointerInput`, while its view-local pointer router owns raw Flutter
    pointer lifetimes and routed runtime `pointerId` allocation. The closed
-   local seam around `scene_view_interactive.dart` and
-   `scene_view_interactive_pointer_host.dart` may consume only two
-   interactive-side contacts: render read-side through
-   `SceneViewRenderState` and pointer/input semantics through the narrow
-   controller-owned seam in `interactive/scene_view_pointer_semantics.dart`;
-   `view/**` must not import `interactive/internal/**`. The dedicated
-   controller-owned pointer-semantics owner consumes routed samples, owns
-   tap/double-tap recognition, deferred tap flushing, and live
-   `PointerInputSettings` adoption, and keeps invalid terminal host forwarding
-   on the same controller-side path as direct pointer input.
+   local seam around `scene_view_interactive.dart`,
+   `scene_view_runtime_owner.dart`, and
+   `scene_view_interactive_pointer_host.dart` may consume only the assembled
+   `SceneViewRuntime` boundary. The public shell in
+   `scene_view_interactive.dart` is the only production `view/**` file allowed
+   to adapt `SceneController`; the rest of `view/**` consumes only
+   `SceneViewRenderState` and `SceneViewPointerSession`, and must not import
+   `interactive/internal/**`. The dedicated controller-owned pointer-session
+   owner consumes routed samples, owns tap/double-tap recognition, deferred
+   tap flushing, live `PointerInputSettings` adoption, and controller-change
+   reaction, and keeps invalid terminal host forwarding on the same
+   controller-side path as direct pointer input.
 2. `SceneController` is the public interactive facade. It validates
    public inputs, keeps host-facing mode/tool/selection semantics, owns the
    snapshot-based eligibility policy used by controller-side transform/delete

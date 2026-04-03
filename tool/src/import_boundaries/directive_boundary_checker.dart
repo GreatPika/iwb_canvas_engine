@@ -124,12 +124,51 @@ class DirectiveBoundaryChecker {
       return;
     }
 
+    if (_enforceViewInteractiveBoundary(
+      directiveKind: directiveKind,
+      lineNo: lineNo,
+      boundaryTarget: boundaryTarget,
+      resolvedRepoRelPosix: resolvedRepoRelPosix,
+    )) {
+      return;
+    }
+
     _enforceResolvedLayerTarget(
       directiveKind: directiveKind,
       lineNo: lineNo,
       boundaryTarget: boundaryTarget,
       resolvedRepoRelPosix: resolvedRepoRelPosix,
     );
+  }
+
+  bool _enforceViewInteractiveBoundary({
+    required String directiveKind,
+    required int lineNo,
+    required BoundaryTarget boundaryTarget,
+    required String resolvedRepoRelPosix,
+  }) {
+    if (!isViewLayerFile(filePosixPath) ||
+        !resolvedRepoRelPosix.startsWith('/lib/src/interactive/')) {
+      return false;
+    }
+    final isPublicShell =
+        filePosixPath == '/lib/src/view/scene_view_interactive.dart';
+    final isAllowedPublicShellTarget =
+        resolvedRepoRelPosix == '/lib/src/interactive/scene_controller.dart';
+    if (isPublicShell && isAllowedPublicShellTarget) {
+      return false;
+    }
+    _addViolation(
+      line: lineNo,
+      directive: directiveKind,
+      target: boundaryTarget.diagnosticTarget,
+      message:
+          'view runtime boundary violation: view/** may reach interactive/** '
+          'only through scene_view_interactive.dart -> '
+          'interactive/scene_controller.dart '
+          '($resolvedRepoRelPosix)',
+    );
+    return true;
   }
 
   bool _externalPackageViolation({

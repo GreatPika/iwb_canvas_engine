@@ -1,31 +1,41 @@
+import 'dart:ui';
+
+import '../../core/action_events.dart';
+import '../../contract/scene_view_runtime.dart';
 import '../../contract/snapshot.dart';
 import '../../controller/scene_store_controller.dart';
 import '../../core/pointer_input.dart';
-import 'scene_controller_interaction_access.dart';
-import 'scene_controller_interaction_config.dart';
-import 'scene_controller_interaction_runtime.dart';
-import 'scene_controller_scene_mutations.dart';
-import 'scene_controller_selection_mutations.dart';
 import '../scene_controller.dart';
 import '../scene_controller_interaction.dart';
 import '../scene_controller_scene.dart';
 import '../scene_controller_selection.dart';
+import 'scene_controller_internal_access.dart';
+import 'scene_controller_interaction_access.dart';
+import 'scene_controller_interaction_config.dart';
+import 'scene_controller_interaction_runtime.dart';
+import 'scene_controller_scene_view_runtime.dart';
+import 'scene_controller_scene_mutations.dart';
+import 'scene_controller_selection_mutations.dart';
 
-typedef SceneControllerFacadeAssembly = ({
+typedef SceneControllerOwners = ({
   SceneControllerInteractionRuntime interactionRuntime,
   SceneControllerInteractionAccess interactionAccess,
   SceneControllerInteraction interaction,
   SceneControllerSelection selection,
   SceneControllerScene scene,
+  SceneViewRuntime sceneViewRuntime,
+  SceneControllerInternalAccessRegistration internalAccessRegistration,
 });
 
-final class SceneControllerFacadeRequest {
-  const SceneControllerFacadeRequest({
+final class SceneControllerOwnersRequest {
+  const SceneControllerOwnersRequest({
     required this.owner,
     required this.notifyListeners,
     required this.storeController,
     required this.readSnapshot,
     required this.readSelectedNodeIds,
+    required this.readControllerEpoch,
+    required this.readPreviewDeltaResolver,
     required this.pointerSettings,
     required this.dragStartSlop,
     required this.clearSelectionOnDrawModeEnter,
@@ -37,14 +47,27 @@ final class SceneControllerFacadeRequest {
   final SceneStoreController storeController;
   final SceneSnapshot Function() readSnapshot;
   final Set<NodeId> Function() readSelectedNodeIds;
+  final int Function() readControllerEpoch;
+  final Offset Function(NodeId nodeId) Function() readPreviewDeltaResolver;
   final PointerInputSettings? pointerSettings;
   final double? dragStartSlop;
   final bool clearSelectionOnDrawModeEnter;
   final MoveCommitDeltaResolver? moveCommitDeltaResolver;
 }
 
-SceneControllerFacadeAssembly assembleSceneControllerFacade(
-  SceneControllerFacadeRequest request,
+SceneControllerOwners createSceneControllerOwners(
+  SceneControllerOwnersRequest request,
+) {
+  final owners = _assembleSceneControllerOwners(request);
+  registerSceneControllerInternalAccess(
+    request.owner,
+    owners.internalAccessRegistration,
+  );
+  return owners;
+}
+
+SceneControllerOwners _assembleSceneControllerOwners(
+  SceneControllerOwnersRequest request,
 ) {
   final interactionConfig = _createInteractionConfig(request);
   final interactionRuntime = _createInteractionRuntime(
@@ -66,11 +89,22 @@ SceneControllerFacadeAssembly assembleSceneControllerFacade(
     clearSelectionState: selectionMutations.clearSelection,
     clearSelectionOnDrawModeEnter: request.clearSelectionOnDrawModeEnter,
   );
+  final interaction = SceneControllerInteraction(interactionAccess);
+  final sceneViewRuntime = SceneControllerSceneViewRuntime(
+    ownerListenable: request.owner,
+    ensurePublicSideEffectAllowed:
+        interactionRuntime.ensurePublicSideEffectAllowed,
+    readSnapshot: request.readSnapshot,
+    readSelectedNodeIds: request.readSelectedNodeIds,
+    readControllerEpoch: request.readControllerEpoch,
+    readPreviewDeltaResolver: request.readPreviewDeltaResolver,
+    readInteraction: () => request.owner.interaction,
+  );
 
   return (
     interactionRuntime: interactionRuntime,
     interactionAccess: interactionAccess,
-    interaction: SceneControllerInteraction(interactionAccess),
+    interaction: interaction,
     selection: SceneControllerSelection(
       runtime: interactionRuntime,
       mutations: selectionMutations,
@@ -80,11 +114,72 @@ SceneControllerFacadeAssembly assembleSceneControllerFacade(
           interactionRuntime.ensurePublicSideEffectAllowed,
       mutations: sceneMutations,
     ),
+    sceneViewRuntime: sceneViewRuntime,
+    internalAccessRegistration: SceneControllerInternalAccessRegistration(
+      readEpoch: request.readControllerEpoch,
+      previewDeltaForNode: interactionRuntime.previewDeltaForNode,
+      setBeforePointerDispatchHook:
+          interactionRuntime.setBeforePointerDispatchHook,
+      runMoveCommitDeltaResolverForTest:
+          interactionRuntime.runMoveCommitDeltaResolver,
+      readInteractionAccessForTest: () => interactionAccess,
+      readActiveEraserPointsLength: () =>
+          interactionRuntime.activeEraserPointsLength,
+      readEraserSpatialQueryCount: () =>
+          interactionRuntime.eraserSpatialQueryCount,
+      readEraserPreciseSegmentCheckCount: () =>
+          interactionRuntime.eraserPreciseSegmentCheckCount,
+    ),
   );
 }
 
+void detachSceneControllerOwnersInternalAccess(SceneController controller) {
+  unregisterSceneControllerInternalAccess(controller);
+}
+
+Offset Function(NodeId nodeId) sceneControllerOwnersPreviewDeltaResolver(
+  SceneControllerOwners owners,
+) {
+  return owners.interactionRuntime.previewDeltaForNode;
+}
+
+Stream<ActionCommitted> sceneControllerOwnersActions(
+  SceneControllerOwners owners,
+) {
+  return owners.interactionRuntime.actions;
+}
+
+Stream<EditTextRequested> sceneControllerOwnersEditTextRequests(
+  SceneControllerOwners owners,
+) {
+  return owners.interactionRuntime.editTextRequests;
+}
+
+void sceneControllerOwnersEnsurePublicSideEffectAllowed(
+  SceneControllerOwners owners,
+  String operation, {
+  bool allowAfterDispose = false,
+}) {
+  owners.interactionRuntime.ensurePublicSideEffectAllowed(
+    operation,
+    allowAfterDispose: allowAfterDispose,
+  );
+}
+
+bool sceneControllerOwnersAreDisposed(SceneControllerOwners owners) {
+  return owners.interactionRuntime.isDisposed;
+}
+
+void resetSceneControllerOwnersInteractiveState(SceneControllerOwners owners) {
+  owners.interactionRuntime.resetInteractiveState();
+}
+
+void disposeSceneControllerOwners(SceneControllerOwners owners) {
+  owners.interactionRuntime.dispose();
+}
+
 SceneControllerInteractionConfig _createInteractionConfig(
-  SceneControllerFacadeRequest request,
+  SceneControllerOwnersRequest request,
 ) {
   final interactionConfig = SceneControllerInteractionConfig(
     pointerSettings: request.pointerSettings,
@@ -95,7 +190,7 @@ SceneControllerInteractionConfig _createInteractionConfig(
 }
 
 SceneControllerInteractionRuntime _createInteractionRuntime({
-  required SceneControllerFacadeRequest request,
+  required SceneControllerOwnersRequest request,
   required SceneControllerInteractionConfig interactionConfig,
 }) {
   return createSceneControllerInteractionRuntime(

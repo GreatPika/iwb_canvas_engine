@@ -1,10 +1,6 @@
-import 'dart:ui' as ui;
-
 import 'package:flutter/widgets.dart';
 
-import '../controller/scene_store_controller.dart';
 import '../contract/scene_view_render_state.dart';
-import '../interactive/scene_controller.dart';
 import '../render/render_geometry_cache.dart';
 import '../render/scene_painter.dart';
 import '../render/scene_render_caches.dart';
@@ -33,8 +29,8 @@ SceneRenderCaches debugSceneViewRenderCachesOf(BuildContext context) {
 
 class SceneViewRenderSurface extends StatefulWidget {
   // ignore: prefer_const_constructors_in_immutables, cache wiring keeps this constructor non-const
-  SceneViewRenderSurface.store({
-    required SceneStoreController controller,
+  SceneViewRenderSurface({
+    required SceneViewRenderState renderState,
     ImageResolver? imageResolver,
     SceneStaticLayerCache? staticLayerCache,
     SceneTextLayoutCache? textLayoutCache,
@@ -46,7 +42,7 @@ class SceneViewRenderSurface extends StatefulWidget {
     double gridStrokeWidth = 1,
     Widget child = const SizedBox.expand(),
     super.key,
-  }) : _controller = controller,
+  }) : _renderState = renderState,
        _staticLayerCache = staticLayerCache,
        _textLayoutCache = textLayoutCache,
        _strokePathCache = strokePathCache,
@@ -58,28 +54,7 @@ class SceneViewRenderSurface extends StatefulWidget {
        _gridStrokeWidth = gridStrokeWidth,
        _child = child;
 
-  // ignore: prefer_const_constructors_in_immutables, cache wiring keeps this constructor non-const
-  SceneViewRenderSurface.interactive({
-    required SceneController controller,
-    ui.Image? Function(String imageId)? imageResolver,
-    Color selectionColor = const Color(0xFF1565C0),
-    double selectionStrokeWidth = 1,
-    double gridStrokeWidth = 1,
-    Widget child = const SizedBox.expand(),
-    super.key,
-  }) : _controller = controller,
-       _staticLayerCache = null,
-       _textLayoutCache = null,
-       _strokePathCache = null,
-       _pathMetricsCache = null,
-       _geometryCache = null,
-       _imageResolver = imageResolver ?? sceneViewDefaultImageResolver,
-       _selectionColor = selectionColor,
-       _selectionStrokeWidth = selectionStrokeWidth,
-       _gridStrokeWidth = gridStrokeWidth,
-       _child = child;
-
-  final SceneViewRenderState _controller;
+  final SceneViewRenderState _renderState;
   final SceneStaticLayerCache? _staticLayerCache;
   final SceneTextLayoutCache? _textLayoutCache;
   final SceneStrokePathCache? _strokePathCache;
@@ -125,19 +100,19 @@ class SceneViewRenderSurfaceState extends State<SceneViewRenderSurface> {
   void initState() {
     super.initState();
     _renderCacheLifecycle.initialize(
-      controllerEpoch: widget._controller.controllerEpoch,
+      controllerEpoch: widget._renderState.controllerEpoch,
     );
-    widget._controller.addListener(_handleControllerChanged);
+    widget._renderState.addListener(_handleControllerChanged);
   }
 
   @override
   void didUpdateWidget(SceneViewRenderSurface oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget._controller != widget._controller) {
-      oldWidget._controller.removeListener(_handleControllerChanged);
-      widget._controller.addListener(_handleControllerChanged);
+    if (oldWidget._renderState != widget._renderState) {
+      oldWidget._renderState.removeListener(_handleControllerChanged);
+      widget._renderState.addListener(_handleControllerChanged);
       _renderCacheLifecycle.handleControllerSwap(
-        controllerEpoch: widget._controller.controllerEpoch,
+        controllerEpoch: widget._renderState.controllerEpoch,
       );
     }
     if (_cacheDependenciesOf(oldWidget) != _cacheDependenciesOf(widget)) {
@@ -147,7 +122,7 @@ class SceneViewRenderSurfaceState extends State<SceneViewRenderSurface> {
 
   @override
   void dispose() {
-    widget._controller.removeListener(_handleControllerChanged);
+    widget._renderState.removeListener(_handleControllerChanged);
     _renderCacheLifecycle.dispose();
     super.dispose();
   }
@@ -156,7 +131,7 @@ class SceneViewRenderSurfaceState extends State<SceneViewRenderSurface> {
   Widget build(BuildContext context) {
     return CustomPaint(
       painter: ScenePainter(
-        controller: widget._controller,
+        controller: widget._renderState,
         imageResolver: widget._imageResolver,
         staticLayerCache: _renderCacheLifecycle.staticLayerCache,
         textLayoutCache: _renderCacheLifecycle.textLayoutCache,
@@ -173,7 +148,7 @@ class SceneViewRenderSurfaceState extends State<SceneViewRenderSurface> {
 
   void _handleControllerChanged() {
     _renderCacheLifecycle.clearIfEpochChanged(
-      widget._controller.controllerEpoch,
+      widget._renderState.controllerEpoch,
     );
   }
 }

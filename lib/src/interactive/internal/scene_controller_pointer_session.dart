@@ -1,30 +1,41 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import '../../contract/canvas_pointer_input.dart';
+import '../../contract/pointer_phase_codec.dart';
+import '../../contract/scene_view_runtime.dart';
 import '../../core/pointer_input.dart';
-import '../scene_controller.dart';
-import '../scene_view_pointer_semantics.dart';
+import '../scene_controller_interaction.dart';
 
 void _discardPointerSignal(PointerSignal _) {}
 
-final class SceneControllerPointerSemantics
-    implements SceneViewPointerSemanticsBridge {
-  SceneControllerPointerSemantics({
-    required SceneController controller,
+final class SceneControllerPointerSession implements SceneViewPointerSession {
+  SceneControllerPointerSession({
+    required Listenable ownerListenable,
+    required SceneControllerInteraction Function() readInteraction,
     required bool Function() isMounted,
-  }) : _controller = controller,
+    required bool Function() hasLiveRawPointers,
+  }) : _ownerListenable = ownerListenable,
+       _readInteraction = readInteraction,
        _isMounted = isMounted,
-       _appliedPointerSettings = controller.interaction.pointerSettings,
+       _hasLiveRawPointers = hasLiveRawPointers,
+       _appliedPointerSettings = readInteraction().pointerSettings,
        _pointerTracker = PointerInputTracker(
-         settings: controller.interaction.pointerSettings,
+         settings: readInteraction().pointerSettings,
        ) {
     _pointerTrackerGeneration = 1;
+    _ownerListener = _handleOwnerChanged;
+    _ownerListenable.addListener(_ownerListener);
   }
 
-  final SceneController _controller;
+  final Listenable _ownerListenable;
+  final SceneControllerInteraction Function() _readInteraction;
   final bool Function() _isMounted;
+  final bool Function() _hasLiveRawPointers;
   final _PendingTapFlushScheduler _pendingTapFlushScheduler =
       _PendingTapFlushScheduler();
+  late final VoidCallback _ownerListener;
 
   late PointerInputTracker _pointerTracker;
   late PointerInputSettings _appliedPointerSettings;
@@ -37,15 +48,8 @@ final class SceneControllerPointerSemantics
 
   @override
   void dispose() {
+    _ownerListenable.removeListener(_ownerListener);
     _pendingTapFlushScheduler.dispose();
-  }
-
-  @override
-  void handleControllerChanged({required bool routerHasLiveRawPointers}) {
-    _adoptPointerSettings(
-      _controller.interaction.pointerSettings,
-      routerHasLiveRawPointers: routerHasLiveRawPointers,
-    );
   }
 
   @override
@@ -53,17 +57,18 @@ final class SceneControllerPointerSemantics
     PointerSample sample, {
     required bool shouldTrackSignals,
   }) {
-    _controller.interaction.handlePointer(
+    final interaction = _readInteraction();
+    interaction.handlePointer(
       CanvasPointerInput(
         pointerId: sample.pointerId,
         position: sample.position,
         timestampMs: sample.timestampMs,
-        phase: _toCanvasPointerPhase(sample.phase),
+        phase: canvasPointerPhaseFromPointerPhase(sample.phase),
         kind: sample.kind,
       ),
     );
     if (shouldTrackSignals) {
-      _emitTrackedSignals(sample);
+      _emitTrackedSignals(interaction, sample);
     }
     _syncPendingFlushTimer(referenceTimestampMs: sample.timestampMs);
   }
@@ -74,7 +79,7 @@ final class SceneControllerPointerSemantics
     required int pointerId,
     required int referenceTimestampMs,
   }) {
-    _controller.interaction.handlePointer(input);
+    _readInteraction().handlePointer(input);
     _pointerTracker.discardPointer(pointerId);
     _syncPendingFlushTimer(referenceTimestampMs: referenceTimestampMs);
   }
@@ -87,12 +92,25 @@ final class SceneControllerPointerSemantics
     _applyPendingPointerSettingsIfPossible();
   }
 
-  void _emitTrackedSignals(PointerSample sample) {
+  void _handleOwnerChanged() {
+    if (!_isMounted()) {
+      return;
+    }
+    _adoptPointerSettings(
+      _readInteraction().pointerSettings,
+      routerHasLiveRawPointers: _hasLiveRawPointers(),
+    );
+  }
+
+  void _emitTrackedSignals(
+    SceneControllerInteraction interaction,
+    PointerSample sample,
+  ) {
     for (final signal in _pointerTracker.handle(sample)) {
       if (signal.type != PointerSignalType.doubleTap) {
         continue;
       }
-      _controller.interaction.handleDoubleTap(
+      interaction.handleDoubleTap(
         position: signal.position,
         timestampMs: signal.timestampMs,
       );
@@ -163,19 +181,6 @@ final class SceneControllerPointerSemantics
       return;
     }
     _resetPointerTracking(settings: pending);
-  }
-}
-
-CanvasPointerPhase _toCanvasPointerPhase(PointerPhase phase) {
-  switch (phase) {
-    case PointerPhase.down:
-      return CanvasPointerPhase.down;
-    case PointerPhase.move:
-      return CanvasPointerPhase.move;
-    case PointerPhase.up:
-      return CanvasPointerPhase.up;
-    case PointerPhase.cancel:
-      return CanvasPointerPhase.cancel;
   }
 }
 

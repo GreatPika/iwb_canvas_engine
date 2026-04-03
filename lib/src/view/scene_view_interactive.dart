@@ -2,40 +2,30 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 
-import '../core/pointer_input.dart';
 import '../interactive/scene_controller.dart';
 import '../render/scene_render_caches.dart';
-import 'scene_view_interactive_overlay_painter.dart';
-import 'scene_view_interactive_pointer_host.dart';
-import 'scene_view_render_surface.dart';
-
-_SceneViewInteractiveState _sceneViewInteractiveStateOf(BuildContext context) {
-  return sceneViewStateOf<_SceneViewInteractiveState>(
-    context,
-    missingStateLabel: 'SceneViewInteractive',
-  );
-}
+import 'scene_view_runtime_owner.dart';
 
 @visibleForTesting
 SceneRenderCaches debugSceneViewInteractiveRenderCachesOf(
   BuildContext context,
 ) {
-  return _sceneViewInteractiveStateOf(context).debugRenderCaches;
+  return debugSceneViewRuntimeOwnerRenderCachesOf(context);
 }
 
 @visibleForTesting
 int debugSceneViewInteractiveLiveRawPointerCountOf(BuildContext context) {
-  return _sceneViewInteractiveStateOf(context).debugLiveRawPointerCount;
+  return debugSceneViewRuntimeOwnerLiveRawPointerCountOf(context);
 }
 
 @visibleForTesting
 int? debugSceneViewInteractivePendingTapFlushTimestampMsOf(
   BuildContext context,
 ) {
-  return _sceneViewInteractiveStateOf(context).debugPendingTapFlushTimestampMs;
+  return debugSceneViewRuntimeOwnerPendingTapFlushTimestampMsOf(context);
 }
 
-class SceneViewInteractive extends StatefulWidget {
+class SceneViewInteractive extends StatelessWidget {
   const SceneViewInteractive({
     required this.controller,
     this.imageResolver,
@@ -52,81 +42,13 @@ class SceneViewInteractive extends StatefulWidget {
   final double gridStrokeWidth;
 
   @override
-  State<SceneViewInteractive> createState() => _SceneViewInteractiveState();
-}
-
-class _SceneViewInteractiveState extends State<SceneViewInteractive> {
-  late final SceneViewInteractivePointerHost _pointerHost;
-  final GlobalKey<SceneViewRenderSurfaceState> _renderSurfaceKey =
-      GlobalKey<SceneViewRenderSurfaceState>();
-
-  @visibleForTesting
-  SceneRenderCaches get debugRenderCaches {
-    final renderSurfaceState = _renderSurfaceKey.currentState;
-    if (renderSurfaceState == null) {
-      throw StateError('SceneViewRenderSurface is not mounted.');
-    }
-    return renderSurfaceState.debugRenderCaches;
-  }
-
-  @visibleForTesting
-  int get debugLiveRawPointerCount => _pointerHost.debugLiveRawPointerCount;
-  @visibleForTesting
-  int? get debugPendingTapFlushTimestampMs =>
-      _pointerHost.debugPendingTapFlushTimestampMs;
-
-  @override
-  void initState() {
-    super.initState();
-    _pointerHost = SceneViewInteractivePointerHost(
-      controller: widget.controller,
-      isMounted: () => mounted,
-      pointerSemantics: widget.controller.createPointerSemanticsBridge(
-        isMounted: () => mounted,
-      ),
-    );
-  }
-
-  @override
-  void didUpdateWidget(SceneViewInteractive oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.controller != widget.controller) {
-      _pointerHost.updateController(widget.controller);
-    }
-  }
-
-  @override
-  void dispose() {
-    _pointerHost.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final renderSurface = SceneViewRenderSurface.interactive(
-      key: _renderSurfaceKey,
-      controller: widget.controller,
-      imageResolver: widget.imageResolver,
-      selectionColor: widget.selectionColor,
-      selectionStrokeWidth: widget.selectionStrokeWidth,
-      gridStrokeWidth: widget.gridStrokeWidth,
-    );
-    return Listener(
-      behavior: HitTestBehavior.opaque,
-      onPointerDown: (event) =>
-          _pointerHost.handlePointerEvent(event, PointerPhase.down),
-      onPointerMove: (event) =>
-          _pointerHost.handlePointerEvent(event, PointerPhase.move),
-      onPointerUp: (event) =>
-          _pointerHost.handlePointerEvent(event, PointerPhase.up),
-      onPointerCancel: (event) =>
-          _pointerHost.handlePointerEvent(event, PointerPhase.cancel),
-      child: CustomPaint(
-        foregroundPainter: SceneViewInteractiveOverlayPainter(
-          renderState: widget.controller,
-        ),
-        child: renderSurface,
-      ),
+    return SceneViewRuntimeOwner(
+      runtime: sceneControllerViewRuntimeOf(controller),
+      imageResolver: imageResolver,
+      selectionColor: selectionColor,
+      selectionStrokeWidth: selectionStrokeWidth,
+      gridStrokeWidth: gridStrokeWidth,
     );
   }
 }

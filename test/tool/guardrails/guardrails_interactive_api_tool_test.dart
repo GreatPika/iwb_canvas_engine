@@ -24,27 +24,18 @@ String _sceneControllerFixture({
   String extraMembers = '',
 }) {
   return '''
-import 'internal/scene_controller_facade_assembly.dart';
-import 'internal/scene_controller_interaction_runtime.dart';
+import '../contract/scene_view_runtime.dart';
+import 'internal/scene_controller_owners.dart';
 $extraImports
 
 class SceneController {
-  final Object _facade = assembleSceneControllerFacade(
-    SceneControllerFacadeRequest(),
+  final Object _owners = createSceneControllerOwners(
+    SceneControllerOwnersRequest(),
   );
-  final SceneControllerInteractionRuntime _runtime =
-      SceneControllerInteractionRuntime();
 $extraMembers
 
-  Object get actions => _runtime.actions;
-  Object get editTextRequests => _runtime.editTextRequests;
-
-  SceneController() {
-    registerSceneControllerInternalAccess(
-      this,
-      SceneControllerInternalAccessRegistration(),
-    );
-  }
+  Object get actions => sceneControllerOwnersActions(_owners);
+  Object get editTextRequests => sceneControllerOwnersEditTextRequests(_owners);
 
 $methods
 
@@ -52,6 +43,10 @@ $methods
     String operation, {
     bool allowAfterDispose = false,
   }) {}
+}
+
+SceneViewRuntime sceneControllerViewRuntimeOf(SceneController controller) {
+  return controller._owners.sceneViewRuntime;
 }
 ''';
 }

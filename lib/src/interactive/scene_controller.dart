@@ -3,21 +3,17 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 
 import '../contract/scene_view_render_state.dart';
+import '../contract/scene_view_runtime.dart';
 import '../contract/snapshot.dart';
+import '../controller/scene_store_controller.dart';
 import '../core/action_events.dart';
 import '../core/pointer_input.dart';
-import '../controller/scene_store_controller.dart';
-import 'scene_view_pointer_semantics.dart';
-import 'internal/scene_controller_facade_assembly.dart';
-import 'internal/scene_controller_internal_access.dart';
-import 'internal/scene_controller_interaction_runtime.dart';
-import 'internal/scene_controller_pointer_semantics.dart';
+import 'internal/scene_controller_owners.dart';
 import 'scene_controller_interaction.dart';
 import 'scene_controller_scene.dart';
 import 'scene_controller_selection.dart';
 
-class SceneController extends ChangeNotifier
-    implements SceneViewRenderState, SceneViewPointerSemanticsSource {
+class SceneController extends ChangeNotifier {
   SceneController({
     SceneSnapshot? initialSnapshot,
     PointerInputSettings? pointerSettings,
@@ -29,120 +25,69 @@ class SceneController extends ChangeNotifier
          initialSnapshot: initialSnapshot,
          textFontFamilyByDefault: textFontFamilyByDefault,
        ) {
-    _facade = assembleSceneControllerFacade(
-      SceneControllerFacadeRequest(
+    _owners = createSceneControllerOwners(
+      SceneControllerOwnersRequest(
         owner: this,
         notifyListeners: notifyListeners,
         storeController: _storeController,
         readSnapshot: () => snapshot,
         readSelectedNodeIds: () => selectedNodeIds,
+        readControllerEpoch: () => controllerEpoch,
+        readPreviewDeltaResolver: () => previewDeltaResolver,
         pointerSettings: pointerSettings,
         dragStartSlop: dragStartSlop,
         clearSelectionOnDrawModeEnter: clearSelectionOnDrawModeEnter,
         moveCommitDeltaResolver: moveCommitDeltaResolver,
       ),
     );
-
-    registerSceneControllerInternalAccess(
-      this,
-      SceneControllerInternalAccessRegistration(
-        readEpoch: () => _storeController.controllerEpoch,
-        previewDeltaForNode: _facade.interactionRuntime.previewDeltaForNode,
-        setBeforePointerDispatchHook:
-            _facade.interactionRuntime.setBeforePointerDispatchHook,
-        runMoveCommitDeltaResolverForTest:
-            _facade.interactionRuntime.runMoveCommitDeltaResolver,
-        readInteractionAccessForTest: () => _facade.interactionAccess,
-        readActiveEraserPointsLength: () =>
-            _facade.interactionRuntime.activeEraserPointsLength,
-        readEraserSpatialQueryCount: () =>
-            _facade.interactionRuntime.eraserSpatialQueryCount,
-        readEraserPreciseSegmentCheckCount: () =>
-            _facade.interactionRuntime.eraserPreciseSegmentCheckCount,
-      ),
-    );
   }
 
   final SceneStoreController _storeController;
-  late final SceneControllerFacadeAssembly _facade;
+  late final SceneControllerOwners _owners;
 
-  @override
+  SceneViewRenderState get _viewRenderState =>
+      _owners.sceneViewRuntime.renderState;
+
   SceneSnapshot get snapshot => _storeController.snapshot;
-
-  @override
   Set<NodeId> get selectedNodeIds => _storeController.selectedNodeIds;
-
-  @override
   int get controllerEpoch => _storeController.controllerEpoch;
 
-  @override
-  Rect? get selectionRect => _facade.interactionRuntime.selectionRect;
-
-  @override
-  Offset get cameraOffset => snapshot.camera.offset;
-
-  @override
+  Rect? get selectionRect => _viewRenderState.selectionRect;
+  Offset get cameraOffset => _viewRenderState.cameraOffset;
   Offset Function(NodeId nodeId) get previewDeltaResolver =>
-      _facade.interactionRuntime.previewDeltaForNode;
+      sceneControllerOwnersPreviewDeltaResolver(_owners);
 
-  @override
-  bool get hasActiveStrokePreview => interaction.hasActiveStrokePreview;
-
-  @override
+  bool get hasActiveStrokePreview => _viewRenderState.hasActiveStrokePreview;
   List<Offset> get activeStrokePreviewPoints =>
-      interaction.activeStrokePreviewPoints;
-
-  @override
+      _viewRenderState.activeStrokePreviewPoints;
   double get activeStrokePreviewThickness =>
-      interaction.activeStrokePreviewThickness;
-
-  @override
-  Color get activeStrokePreviewColor => interaction.activeStrokePreviewColor;
-
-  @override
+      _viewRenderState.activeStrokePreviewThickness;
+  Color get activeStrokePreviewColor =>
+      _viewRenderState.activeStrokePreviewColor;
   double get activeStrokePreviewOpacity =>
-      interaction.activeStrokePreviewOpacity;
+      _viewRenderState.activeStrokePreviewOpacity;
 
-  @override
-  bool get hasActiveLinePreview => interaction.hasActiveLinePreview;
-
-  @override
-  Offset? get activeLinePreviewStart => interaction.activeLinePreviewStart;
-
-  @override
-  Offset? get activeLinePreviewEnd => interaction.activeLinePreviewEnd;
-
-  @override
+  bool get hasActiveLinePreview => _viewRenderState.hasActiveLinePreview;
+  Offset? get activeLinePreviewStart => _viewRenderState.activeLinePreviewStart;
+  Offset? get activeLinePreviewEnd => _viewRenderState.activeLinePreviewEnd;
   double get activeLinePreviewThickness =>
-      interaction.activeLinePreviewThickness;
+      _viewRenderState.activeLinePreviewThickness;
+  Color get activeLinePreviewColor => _viewRenderState.activeLinePreviewColor;
 
-  @override
-  Color get activeLinePreviewColor => interaction.activeLinePreviewColor;
+  SceneControllerInteraction get interaction => _owners.interaction;
+  SceneControllerSelection get selection => _owners.selection;
+  SceneControllerScene get scene => _owners.scene;
 
-  @override
-  SceneViewPointerSemanticsBridge createPointerSemanticsBridge({
-    required bool Function() isMounted,
-  }) {
-    _ensurePublicSideEffectAllowed('createPointerSemanticsBridge');
-    return SceneControllerPointerSemantics(
-      controller: this,
-      isMounted: isMounted,
-    );
-  }
-
-  SceneControllerInteraction get interaction => _facade.interaction;
-  SceneControllerSelection get selection => _facade.selection;
-  SceneControllerScene get scene => _facade.scene;
-
-  Stream<ActionCommitted> get actions => _facade.interactionRuntime.actions;
+  Stream<ActionCommitted> get actions => sceneControllerOwnersActions(_owners);
   Stream<EditTextRequested> get editTextRequests =>
-      _facade.interactionRuntime.editTextRequests;
+      sceneControllerOwnersEditTextRequests(_owners);
 
   void _ensurePublicSideEffectAllowed(
     String operation, {
     bool allowAfterDispose = false,
   }) {
-    _facade.interactionRuntime.ensurePublicSideEffectAllowed(
+    sceneControllerOwnersEnsurePublicSideEffectAllowed(
+      _owners,
       operation,
       allowAfterDispose: allowAfterDispose,
     );
@@ -151,13 +96,17 @@ class SceneController extends ChangeNotifier
   @override
   void dispose() {
     _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
-    if (_facade.interactionRuntime.isDisposed) {
+    if (sceneControllerOwnersAreDisposed(_owners)) {
       return;
     }
-    _facade.interactionRuntime.resetInteractiveState();
+    resetSceneControllerOwnersInteractiveState(_owners);
     _storeController.dispose();
-    _facade.interactionRuntime.dispose();
-    unregisterSceneControllerInternalAccess(this);
+    disposeSceneControllerOwners(_owners);
+    detachSceneControllerOwnersInternalAccess(this);
     super.dispose();
   }
+}
+
+SceneViewRuntime sceneControllerViewRuntimeOf(SceneController controller) {
+  return controller._owners.sceneViewRuntime;
 }

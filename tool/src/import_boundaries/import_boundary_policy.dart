@@ -141,6 +141,15 @@ _bridgeSurfaceDescriptors = <String, BridgeSurfaceDescriptor>{
       ImportBoundaryLayer.serialization,
     ],
   ),
+  '/lib/src/core/pointer_input.dart': BridgeSurfaceDescriptor(
+    repoRelPosixPath: '/lib/src/core/pointer_input.dart',
+    ownerLayer: ImportBoundaryLayer.core,
+    friendLayers: <ImportBoundaryLayer>[
+      ImportBoundaryLayer.contract,
+      ImportBoundaryLayer.interactive,
+      ImportBoundaryLayer.view,
+    ],
+  ),
 };
 
 ImportBoundaryLayer? layerForRepoRelPosixPath(String repoRelPosixPath) {

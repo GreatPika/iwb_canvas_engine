@@ -14,6 +14,7 @@ import 'package:iwb_canvas_engine/src/interactive/scene_controller_interaction.d
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 import 'package:iwb_canvas_engine/src/view/scene_view_interactive_overlay_painter.dart';
 import 'package:iwb_canvas_engine/src/view/scene_view_interactive.dart';
+import 'package:iwb_canvas_engine/src/view/scene_view_runtime_owner.dart';
 
 // INV:INV-ENG-VIEW-POINTER-SETTINGS-LIVE-APPLY
 
@@ -90,8 +91,8 @@ int _paintInvocationCount(
       .length;
 }
 
-BuildContext _sceneViewContext(WidgetTester tester) {
-  return tester.element(find.byType(SceneViewInteractive));
+BuildContext _sceneViewRuntimeOwnerContext(WidgetTester tester) {
+  return tester.element(find.byType(SceneViewRuntimeOwner));
 }
 
 void _dispatchHostPointerEvent(WidgetTester tester, PointerEvent event) {
@@ -174,6 +175,8 @@ void main() {
 
     await tester.pumpWidget(_host(controllerB));
     await tester.pump();
+    controllerB.interaction.setMode(CanvasMode.draw);
+    await tester.pump();
 
     // No crashes after controller swap.
     expect(find.byType(SceneViewInteractive), findsOneWidget);
@@ -254,7 +257,7 @@ void main() {
     await tester.pump();
 
     final caches = debugSceneViewInteractiveRenderCachesOf(
-      tester.element(find.byType(SceneViewInteractive)),
+      _sceneViewRuntimeOwnerContext(tester),
     );
     expect(caches.staticLayerCache.debugBuildCount, 1);
     expect(caches.textLayoutCache.debugBuildCount, 1);
@@ -282,6 +285,32 @@ void main() {
     expect(caches.strokePathCache.debugHitCount, 0);
     expect(caches.pathMetricsCache.debugHitCount, 0);
   });
+
+  testWidgets(
+    'debugSceneViewInteractiveRenderCachesOf supports runtime owner contexts',
+    (tester) async {
+      final controller = SceneController(
+        initialSnapshot: _cacheSnapshot(
+          text: 'runtime-ctx',
+          pathSvg: 'M0 0 H10',
+          strokeY: 16,
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+
+      final runtimeContext = tester.element(find.byType(SceneViewRuntimeOwner));
+      final caches = debugSceneViewInteractiveRenderCachesOf(runtimeContext);
+
+      expect(caches.staticLayerCache, isNotNull);
+      expect(caches.textLayoutCache, isNotNull);
+      expect(caches.strokePathCache, isNotNull);
+      expect(caches.pathMetricsCache, isNotNull);
+      expect(caches.geometryCache, isNotNull);
+    },
+  );
 
   testWidgets(
     'debugSceneViewInteractiveRenderCachesOf supports descendant contexts',
@@ -331,7 +360,37 @@ void main() {
           isA<StateError>().having(
             (error) => error.message,
             'message',
-            'No SceneViewInteractive state found for the provided BuildContext.',
+            'No SceneViewRuntimeOwner state found for the provided BuildContext.',
+          ),
+        ),
+      );
+    },
+  );
+
+  testWidgets(
+    'debugSceneViewInteractiveRenderCachesOf rejects public shell contexts',
+    (tester) async {
+      final controller = SceneController(
+        initialSnapshot: _cacheSnapshot(
+          text: 'shell-ctx',
+          pathSvg: 'M0 0 H10',
+          strokeY: 14,
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+
+      expect(
+        () => debugSceneViewInteractiveRenderCachesOf(
+          tester.element(find.byType(SceneViewInteractive)),
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            'No SceneViewRuntimeOwner state found for the provided BuildContext.',
           ),
         ),
       );
@@ -350,7 +409,7 @@ void main() {
     await tester.pump();
 
     final state = tester.state<State<StatefulWidget>>(
-      find.byType(SceneViewInteractive),
+      find.byType(SceneViewRuntimeOwner),
     );
 
     await tester.pumpWidget(
@@ -384,7 +443,7 @@ void main() {
 
     expect(
       debugSceneViewInteractivePendingTapFlushTimestampMsOf(
-        _sceneViewContext(tester),
+        _sceneViewRuntimeOwnerContext(tester),
       ),
       isNotNull,
     );
@@ -402,7 +461,7 @@ void main() {
 
     expect(
       debugSceneViewInteractivePendingTapFlushTimestampMsOf(
-        _sceneViewContext(tester),
+        _sceneViewRuntimeOwnerContext(tester),
       ),
       isNull,
     );
@@ -441,13 +500,13 @@ void main() {
       expect(controller.recordedInputs, isEmpty);
       expect(
         debugSceneViewInteractiveLiveRawPointerCountOf(
-          _sceneViewContext(tester),
+          _sceneViewRuntimeOwnerContext(tester),
         ),
         0,
       );
       expect(
         debugSceneViewInteractivePendingTapFlushTimestampMsOf(
-          _sceneViewContext(tester),
+          _sceneViewRuntimeOwnerContext(tester),
         ),
         isNull,
       );
@@ -478,13 +537,13 @@ void main() {
       );
       expect(
         debugSceneViewInteractiveLiveRawPointerCountOf(
-          _sceneViewContext(tester),
+          _sceneViewRuntimeOwnerContext(tester),
         ),
         1,
       );
       expect(
         debugSceneViewInteractivePendingTapFlushTimestampMsOf(
-          _sceneViewContext(tester),
+          _sceneViewRuntimeOwnerContext(tester),
         ),
         isNull,
       );
@@ -531,7 +590,7 @@ void main() {
       );
       expect(
         debugSceneViewInteractiveLiveRawPointerCountOf(
-          _sceneViewContext(tester),
+          _sceneViewRuntimeOwnerContext(tester),
         ),
         0,
       );
@@ -598,7 +657,7 @@ void main() {
 
       expect(
         debugSceneViewInteractiveLiveRawPointerCountOf(
-          _sceneViewContext(tester),
+          _sceneViewRuntimeOwnerContext(tester),
         ),
         1,
       );
@@ -641,7 +700,7 @@ void main() {
 
       expect(
         debugSceneViewInteractivePendingTapFlushTimestampMsOf(
-          _sceneViewContext(tester),
+          _sceneViewRuntimeOwnerContext(tester),
         ),
         isNotNull,
       );
@@ -650,7 +709,7 @@ void main() {
       await tester.pump();
       expect(
         debugSceneViewInteractivePendingTapFlushTimestampMsOf(
-          _sceneViewContext(tester),
+          _sceneViewRuntimeOwnerContext(tester),
         ),
         isNull,
       );
@@ -658,7 +717,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 150));
       expect(
         debugSceneViewInteractivePendingTapFlushTimestampMsOf(
-          _sceneViewContext(tester),
+          _sceneViewRuntimeOwnerContext(tester),
         ),
         isNull,
       );
@@ -687,7 +746,7 @@ void main() {
 
     expect(
       debugSceneViewInteractivePendingTapFlushTimestampMsOf(
-        _sceneViewContext(tester),
+        _sceneViewRuntimeOwnerContext(tester),
       ),
       isNotNull,
     );
@@ -1351,7 +1410,7 @@ void main() {
       );
 
       final caches = debugSceneViewInteractiveRenderCachesOf(
-        _sceneViewContext(tester),
+        _sceneViewRuntimeOwnerContext(tester),
       );
       final innerPaint = customPaints.firstWhere(
         (paint) =>
@@ -1364,6 +1423,41 @@ void main() {
       expect(innerPaint.foregroundPainter, isNull);
     },
   );
+
+  test('SceneController facade forwards runtime-backed render getters', () {
+    final controller = _OverlayTestController(
+      initialSnapshot: _snapshot(text: 'facade-getters'),
+    );
+    addTearDown(controller.dispose);
+
+    controller.strokeActive = true;
+    controller.strokePoints = const <Offset>[Offset(1, 2), Offset(3, 4)];
+    controller.strokeThickness = 6;
+    controller.strokeColor = const Color(0xFFAA5500);
+    controller.strokeOpacity = 0.4;
+    controller.lineActive = true;
+    controller.lineStart = const Offset(10, 20);
+    controller.lineEnd = const Offset(30, 40);
+    controller.linePreviewThickness = 5;
+    controller.lineColor = const Color(0xFF0055AA);
+
+    expect(controller.selectionRect, isNull);
+    expect(controller.cameraOffset, Offset.zero);
+    expect(controller.previewDeltaResolver('node-1'), Offset.zero);
+    expect(controller.hasActiveStrokePreview, isTrue);
+    expect(controller.activeStrokePreviewPoints, const <Offset>[
+      Offset(1, 2),
+      Offset(3, 4),
+    ]);
+    expect(controller.activeStrokePreviewThickness, 6);
+    expect(controller.activeStrokePreviewColor, const Color(0xFFAA5500));
+    expect(controller.activeStrokePreviewOpacity, 0.4);
+    expect(controller.hasActiveLinePreview, isTrue);
+    expect(controller.activeLinePreviewStart, const Offset(10, 20));
+    expect(controller.activeLinePreviewEnd, const Offset(30, 40));
+    expect(controller.activeLinePreviewThickness, 5);
+    expect(controller.activeLinePreviewColor, const Color(0xFF0055AA));
+  });
 }
 
 class _OverlayTestController extends SceneController {

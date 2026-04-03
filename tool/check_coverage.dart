@@ -177,8 +177,8 @@ const _excludedDeclarationOnlyFromLcov = <String>{
   'lib/src/contract/path_fill_rule.dart',
   'lib/src/contract/scene_defaults.dart',
   'lib/src/contract/scene_render_state.dart',
+  'lib/src/contract/scene_view_runtime.dart',
   'lib/src/contract/scene_view_render_state.dart',
-  'lib/src/interactive/scene_view_pointer_semantics.dart',
   'lib/src/interactive/internal/interactive_draw_eraser_projection.dart',
   'lib/src/interactive/internal/interactive_draw_style.dart',
 };

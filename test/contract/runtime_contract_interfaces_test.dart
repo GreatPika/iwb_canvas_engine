@@ -7,11 +7,14 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/contract/node_spec.dart';
+import 'package:iwb_canvas_engine/src/contract/canvas_pointer_input.dart';
+import 'package:iwb_canvas_engine/src/contract/pointer_phase_codec.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_render_state.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
+import 'package:iwb_canvas_engine/src/contract/scene_view_runtime.dart';
 import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart'
     as interactive;
-import 'package:iwb_canvas_engine/src/interactive/scene_view_pointer_semantics.dart';
+import 'package:iwb_canvas_engine/src/core/pointer_input.dart';
 
 void main() {
   group('runtime contract interfaces', () {
@@ -58,21 +61,78 @@ void main() {
     );
 
     test(
-      'interactive SceneController exposes view pointer semantics source',
+      'interactive SceneController exposes assembled view runtime boundary',
       () {
         final controller = interactive.SceneController();
         addTearDown(controller.dispose);
 
-        final source = controller as SceneViewPointerSemanticsSource;
-        final bridge = source.createPointerSemanticsBridge(
+        final runtime = interactive.sceneControllerViewRuntimeOf(controller);
+        final session = runtime.createPointerSession(
           isMounted: () => true,
+          hasLiveRawPointers: () => false,
         );
-        addTearDown(bridge.dispose);
+        addTearDown(session.dispose);
 
-        expect(bridge.pendingTapFlushTimestampMs, isNull);
-        expect(controller, isA<SceneViewRenderState>());
+        expect(session.pendingTapFlushTimestampMs, isNull);
+        expect(runtime, isA<SceneViewRuntime>());
+        expect(runtime.renderState, isA<SceneViewRenderState>());
+        expect(controller, isNot(isA<SceneViewRenderState>()));
       },
     );
+
+    test(
+      'interactive SceneController rejects pointer sessions after dispose',
+      () {
+        final controller = interactive.SceneController();
+        final runtime = interactive.sceneControllerViewRuntimeOf(controller);
+
+        controller.dispose();
+
+        expect(
+          () => runtime.createPointerSession(
+            isMounted: () => true,
+            hasLiveRawPointers: () => false,
+          ),
+          throwsStateError,
+        );
+      },
+    );
+
+    test('pointer phase codec converts between canvas and internal phases', () {
+      expect(
+        canvasPointerPhaseFromPointerPhase(PointerPhase.down),
+        CanvasPointerPhase.down,
+      );
+      expect(
+        canvasPointerPhaseFromPointerPhase(PointerPhase.move),
+        CanvasPointerPhase.move,
+      );
+      expect(
+        canvasPointerPhaseFromPointerPhase(PointerPhase.up),
+        CanvasPointerPhase.up,
+      );
+      expect(
+        canvasPointerPhaseFromPointerPhase(PointerPhase.cancel),
+        CanvasPointerPhase.cancel,
+      );
+
+      expect(
+        pointerPhaseFromCanvasPointerPhase(CanvasPointerPhase.down),
+        PointerPhase.down,
+      );
+      expect(
+        pointerPhaseFromCanvasPointerPhase(CanvasPointerPhase.move),
+        PointerPhase.move,
+      );
+      expect(
+        pointerPhaseFromCanvasPointerPhase(CanvasPointerPhase.up),
+        PointerPhase.up,
+      );
+      expect(
+        pointerPhaseFromCanvasPointerPhase(CanvasPointerPhase.cancel),
+        PointerPhase.cancel,
+      );
+    });
 
     test('write callback exposes SceneWriteTxn contract', () {
       final controller = SceneStoreController();

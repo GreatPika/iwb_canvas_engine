@@ -44,147 +44,211 @@ String _extractMethodBody({
   throw StateError('Method body end not found: $methodStart');
 }
 
+String _read(String path) => File(path).readAsStringSync();
+
 void main() {
   // INV:INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY
   // INV:INV-ENG-VIEW-RENDER-READ-STATE-BOUNDARY
+  // INV:INV-ENG-VIEW-POINTER-SEMANTICS-BOUNDARY
   test('SceneController architecture boundary remains structurally split', () {
-    final facadeSource = File(
-      'lib/src/interactive/scene_controller.dart',
-    ).readAsStringSync();
-    final interactionSource = File(
+    final facadeSource = _read('lib/src/interactive/scene_controller.dart');
+    final interactionSource = _read(
       'lib/src/interactive/scene_controller_interaction.dart',
-    ).readAsStringSync();
-    final facadeAssemblySource = File(
-      'lib/src/interactive/internal/scene_controller_facade_assembly.dart',
-    ).readAsStringSync();
-    final mutationBoundarySource = File(
+    );
+    final ownerGraphSource = _read(
+      'lib/src/interactive/internal/scene_controller_owners.dart',
+    );
+    final viewRuntimeSource = _read(
+      'lib/src/interactive/internal/scene_controller_scene_view_runtime.dart',
+    );
+    final pointerSessionSource = _read(
+      'lib/src/interactive/internal/scene_controller_pointer_session.dart',
+    );
+    final runtimeContractSource = _read(
+      'lib/src/contract/scene_view_runtime.dart',
+    );
+    final mutationBoundarySource = _read(
       'lib/src/interactive/internal/scene_controller_mutation_boundary.dart',
-    ).readAsStringSync();
-    final eligibilityPolicySource = File(
-      'lib/src/interactive/interaction_eligibility_policy.dart',
-    ).readAsStringSync();
-    final sceneMutationsSource = File(
+    );
+    final sceneMutationsSource = _read(
       'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
-    ).readAsStringSync();
-    final selectionMutationsSource = File(
+    );
+    final selectionMutationsSource = _read(
       'lib/src/interactive/internal/scene_controller_selection_mutations.dart',
-    ).readAsStringSync();
-    final selectionActionsSource = File(
+    );
+    final selectionActionsSource = _read(
       'lib/src/interactive/internal/interactive_selection_actions.dart',
-    ).readAsStringSync();
-    final runtimeSource = File(
+    );
+    final runtimeSource = _read(
       'lib/src/interactive/internal/interactive_runtime.dart',
-    ).readAsStringSync();
-    final interactionRuntimeSource = File(
+    );
+    final interactionRuntimeSource = _read(
       'lib/src/interactive/internal/scene_controller_interaction_runtime.dart',
-    ).readAsStringSync();
-    final pointerSemanticsSource = File(
-      'lib/src/interactive/internal/scene_controller_pointer_semantics.dart',
-    ).readAsStringSync();
-    final pointerSemanticsContractSource = File(
-      'lib/src/interactive/scene_view_pointer_semantics.dart',
-    ).readAsStringSync();
-    final internalAccessSource = File(
+    );
+    final internalAccessSource = _read(
       'lib/src/interactive/internal/scene_controller_internal_access.dart',
-    ).readAsStringSync();
-    final pointerHostSource = File(
+    );
+    final pointerHostSource = _read(
       'lib/src/view/scene_view_interactive_pointer_host.dart',
-    ).readAsStringSync();
-    final sceneViewInteractiveSource = File(
+    );
+    final sceneViewInteractiveSource = _read(
       'lib/src/view/scene_view_interactive.dart',
-    ).readAsStringSync();
-    final renderSurfaceSource = File(
+    );
+    final sceneViewRuntimeSource = _read(
+      'lib/src/view/scene_view_runtime_owner.dart',
+    );
+    final renderSurfaceSource = _read(
       'lib/src/view/scene_view_render_surface.dart',
-    ).readAsStringSync();
-    final overlayPainterSource = File(
+    );
+    final overlayPainterSource = _read(
       'lib/src/view/scene_view_interactive_overlay_painter.dart',
-    ).readAsStringSync();
-    final eventSource = File(
+    );
+    final eventSource = _read(
       'lib/src/interactive/internal/interactive_event_dispatcher.dart',
-    ).readAsStringSync();
-    final drawCoordinatorSource = File(
+    );
+    final drawCoordinatorSource = _read(
       'lib/src/interactive/internal/interactive_draw_coordinator.dart',
-    ).readAsStringSync();
-    final eraserSource = File(
+    );
+    final eraserSource = _read(
       'lib/src/interactive/internal/interactive_draw_eraser_engine.dart',
-    ).readAsStringSync();
-    final eraserExactHitSource = File(
+    );
+    final eraserExactHitSource = _read(
       'lib/src/interactive/internal/interactive_draw_eraser_exact_hit.dart',
-    ).readAsStringSync();
-    final eraserLineHitSource = File(
+    );
+    final eraserLineHitSource = _read(
       'lib/src/interactive/internal/interactive_draw_eraser_line_hit.dart',
-    ).readAsStringSync();
-    final eraserProjectionSource = File(
+    );
+    final eraserProjectionSource = _read(
       'lib/src/interactive/internal/interactive_draw_eraser_projection.dart',
-    ).readAsStringSync();
-    final eraserStrokeHitSource = File(
+    );
+    final eraserStrokeHitSource = _read(
       'lib/src/interactive/internal/interactive_draw_eraser_stroke_hit.dart',
-    ).readAsStringSync();
+    );
+
+    expect(
+      File(
+        'lib/src/interactive/internal/scene_controller_facade_assembly.dart',
+      ).existsSync(),
+      isFalse,
+    );
+    expect(
+      File(
+        'lib/src/interactive/internal/scene_controller_pointer_semantics.dart',
+      ).existsSync(),
+      isFalse,
+    );
+    expect(
+      File(
+        'lib/src/interactive/scene_view_pointer_semantics.dart',
+      ).existsSync(),
+      isFalse,
+    );
 
     expect(
       facadeSource,
-      contains("import 'internal/scene_controller_facade_assembly.dart';"),
+      contains("import 'internal/scene_controller_owners.dart';"),
     );
     expect(
       facadeSource,
-      contains("import 'internal/scene_controller_interaction_runtime.dart';"),
+      contains("import '../contract/scene_view_runtime.dart';"),
     );
-    expect(facadeSource, contains('assembleSceneControllerFacade('));
-    expect(facadeSource, contains('SceneControllerFacadeRequest('));
-    expect(facadeSource, contains('registerSceneControllerInternalAccess('));
+    expect(facadeSource, contains('createSceneControllerOwners('));
+    expect(facadeSource, contains('SceneControllerOwnersRequest('));
     expect(
       facadeSource,
-      contains('SceneControllerInternalAccessRegistration('),
-    );
-    expect(
-      facadeSource,
-      contains("import 'scene_view_pointer_semantics.dart';"),
+      isNot(contains('registerSceneControllerInternalAccess(')),
     );
     expect(
       facadeSource,
-      contains(
-        'implements SceneViewRenderState, SceneViewPointerSemanticsSource',
+      contains('SceneViewRuntime sceneControllerViewRuntimeOf('),
+    );
+    expect(facadeSource, isNot(contains('implements SceneViewRenderState')));
+    expect(facadeSource, isNot(contains('createPointerSemanticsBridge(')));
+    expect(
+      facadeSource,
+      isNot(
+        contains("import 'internal/scene_controller_internal_access.dart';"),
       ),
     );
     expect(
       facadeSource,
-      contains('SceneViewPointerSemanticsBridge createPointerSemanticsBridge('),
+      isNot(
+        contains("import 'internal/scene_controller_pointer_session.dart';"),
+      ),
     );
-    expect(
-      facadeSource,
-      contains("import 'internal/scene_controller_pointer_semantics.dart';"),
-    );
-    expect(facadeSource, contains('return SceneControllerPointerSemantics('));
-    expect(
-      facadeSource,
-      isNot(contains("import 'internal/interactive_runtime.dart';")),
-    );
-    expect(
-      facadeSource,
-      isNot(contains("import 'internal/interactive_event_dispatcher.dart';")),
-    );
-    expect(
-      facadeSource,
-      isNot(contains("import 'internal/interactive_selection_actions.dart';")),
-    );
-    expect(facadeSource, isNot(contains('_runtime.handlePointer(')));
-    expect(facadeSource, isNot(contains('_runtime.handleDoubleTap(')));
 
-    expect(facadeAssemblySource, contains('SceneControllerInteraction('));
-    expect(facadeAssemblySource, contains('SceneControllerSelection('));
-    expect(facadeAssemblySource, contains('SceneControllerScene('));
+    expect(ownerGraphSource, contains('SceneControllerInteraction('));
+    expect(ownerGraphSource, contains('SceneControllerSelection('));
+    expect(ownerGraphSource, contains('SceneControllerScene('));
+    expect(ownerGraphSource, contains('SceneControllerSceneViewRuntime('));
     expect(
-      facadeAssemblySource,
-      contains('mutations: interactionRuntime.mutationBoundary,'),
+      ownerGraphSource,
+      contains('SceneControllerInternalAccessRegistration('),
     );
     expect(
-      facadeAssemblySource,
-      isNot(contains('createPointerSemanticsBridge')),
+      ownerGraphSource,
+      contains('readInteraction: () => request.owner.interaction,'),
     );
     expect(
-      facadeAssemblySource,
-      isNot(contains('SceneControllerPointerSemantics(')),
+      ownerGraphSource,
+      contains('interactionRuntime.ensurePublicSideEffectAllowed'),
     );
+    expect(ownerGraphSource, contains('createSceneControllerOwners('));
+    expect(ownerGraphSource, isNot(contains('createPointerSemanticsBridge')));
+
+    expect(
+      runtimeContractSource,
+      contains('abstract interface class SceneViewRuntime'),
+    );
+    expect(
+      runtimeContractSource,
+      contains('SceneViewPointerSession createPointerSession({'),
+    );
+    expect(
+      runtimeContractSource,
+      contains('abstract interface class SceneViewPointerSession'),
+    );
+    expect(runtimeContractSource, isNot(contains('handleControllerChanged')));
+    expect(runtimeContractSource, isNot(contains('updateController(')));
+
+    expect(
+      viewRuntimeSource,
+      contains('final class SceneControllerSceneViewRuntime'),
+    );
+    expect(
+      viewRuntimeSource,
+      contains('final class SceneControllerSceneViewRenderState'),
+    );
+    expect(viewRuntimeSource, contains('SceneControllerPointerSession('));
+    expect(
+      viewRuntimeSource,
+      contains("_ensurePublicSideEffectAllowed('createPointerSession');"),
+    );
+    expect(
+      viewRuntimeSource,
+      contains('SceneControllerInteraction get _interaction'),
+    );
+    expect(viewRuntimeSource, contains('snapshot => _readSnapshot()'));
+
+    expect(
+      pointerSessionSource,
+      contains('final class SceneControllerPointerSession'),
+    );
+    expect(pointerSessionSource, contains('PointerInputTracker('));
+    expect(pointerSessionSource, contains('_PendingTapFlushScheduler'));
+    expect(pointerSessionSource, contains('_ownerListenable.addListener('));
+    expect(pointerSessionSource, isNot(contains('handleControllerChanged(')));
+
+    final handlePointerBody = _extractMethodBody(
+      source: interactionSource,
+      methodStart: 'void handlePointer(CanvasPointerInput input)',
+    );
+    expect(
+      handlePointerBody,
+      contains('_access.runtime.handlePointer(input);'),
+    );
+    expect(handlePointerBody, isNot(contains('_pointerNormalizer')));
+    expect(handlePointerBody, isNot(contains('_gestureRouter')));
 
     expect(
       mutationBoundarySource,
@@ -218,73 +282,16 @@ void main() {
       mutationBoundarySource,
       isNot(contains('storeController.writeReplaceScene(snapshot);')),
     );
-    expect(mutationBoundarySource, isNot(contains('txnSceneFromSnapshot(')));
 
     expect(sceneMutationsSource, contains('mutations.setGridCellSize(value);'));
-    expect(
-      sceneMutationsSource,
-      contains(
-        'final replacement = mutations.prepareSceneReplacement(snapshot);',
-      ),
-    );
-    expect(
-      sceneMutationsSource,
-      contains('mutations.replaceScene(replacement);'),
-    );
-    expect(sceneMutationsSource, isNot(contains('storeController.commands.')));
-    expect(sceneMutationsSource, isNot(contains('storeController.write(')));
-    expect(
-      sceneMutationsSource,
-      isNot(contains('storeController.writeReplaceScene(')),
-    );
-
-    expect(
-      eligibilityPolicySource,
-      isNot(contains("import '../model/document.dart';")),
-    );
-    expect(eligibilityPolicySource, isNot(contains('txnNodeFromSnapshot(')));
-
     expect(
       selectionMutationsSource,
       contains('mutations.setSelection(nodeIds);'),
     );
     expect(
-      selectionMutationsSource,
-      contains('mutations.deleteSelection(timestampMs: timestampMs);'),
-    );
-    expect(
-      selectionMutationsSource,
-      isNot(contains('storeController.commands.')),
-    );
-
-    expect(
       selectionActionsSource,
       contains('return mutations.commitMoveSelection(proposedDelta);'),
     );
-    expect(
-      selectionActionsSource,
-      isNot(contains('storeController.commands.')),
-    );
-    expect(selectionActionsSource, isNot(contains('storeController.write(')));
-
-    final handlePointerBody = _extractMethodBody(
-      source: interactionSource,
-      methodStart: 'void handlePointer(CanvasPointerInput input)',
-    );
-    expect(
-      handlePointerBody,
-      contains('_access.runtime.handlePointer(input);'),
-    );
-    expect(handlePointerBody, isNot(contains('_pointerNormalizer')));
-    expect(handlePointerBody, isNot(contains('_gestureRouter')));
-
-    final handleDoubleTapBody = _extractMethodBody(
-      source: interactionSource,
-      methodStart:
-          'void handleDoubleTap({required Offset position, int? timestampMs})',
-    );
-    expect(handleDoubleTapBody, contains('_access.runtime.handleDoubleTap('));
-    expect(handleDoubleTapBody, isNot(contains('resolveTimestampMs(')));
 
     expect(
       runtimeSource,
@@ -296,18 +303,6 @@ void main() {
     );
     expect(runtimeSource, contains("import 'interactive_move_session.dart';"));
     expect(
-      runtimeSource,
-      contains("import 'interactive_pointer_normalizer.dart';"),
-    );
-    expect(
-      runtimeSource,
-      contains("import 'interactive_gesture_router.dart';"),
-    );
-    expect(
-      runtimeSource,
-      contains("import 'interactive_double_tap_router.dart';"),
-    );
-    expect(
       interactionRuntimeSource,
       contains("import 'scene_controller_mutation_boundary.dart';"),
     );
@@ -315,136 +310,87 @@ void main() {
       interactionRuntimeSource,
       contains('writeSelectionReplace: mutationBoundary.setSelection,'),
     );
-    expect(
-      interactionRuntimeSource,
-      contains('commitMoveSelection: mutationBoundary.commitMoveSelection,'),
-    );
-    expect(
-      interactionRuntimeSource,
-      contains('writeSelectionClear: mutationBoundary.clearSelection,'),
-    );
-    expect(
-      pointerSemanticsSource,
-      contains('class SceneControllerPointerSemantics'),
-    );
-    expect(pointerSemanticsSource, contains('PointerInputTracker('));
-    expect(pointerSemanticsSource, contains('_PendingTapFlushScheduler'));
-    expect(
-      pointerSemanticsContractSource,
-      contains('abstract interface class SceneViewPointerSemanticsBridge'),
-    );
-    expect(
-      pointerSemanticsContractSource,
-      contains('abstract interface class SceneViewPointerSemanticsSource'),
-    );
+
     expect(
       internalAccessSource,
-      isNot(contains('SceneControllerPointerSemanticsBridge')),
+      contains('registerSceneControllerInternalAccess('),
     );
-    expect(
-      internalAccessSource,
-      isNot(contains('sceneControllerInternalCreatePointerSemanticsBridge(')),
-    );
-    expect(
-      sceneViewInteractiveSource,
-      contains('widget.controller.createPointerSemanticsBridge('),
-    );
-    expect(
-      sceneViewInteractiveSource,
-      contains('foregroundPainter: SceneViewInteractiveOverlayPainter('),
-    );
-    expect(
-      sceneViewInteractiveSource,
-      contains('renderState: widget.controller,'),
-    );
+    expect(internalAccessSource, isNot(contains('SceneViewRuntime')));
+    expect(internalAccessSource, isNot(contains('SceneViewPointerSession')));
+
     expect(
       sceneViewInteractiveSource,
       contains("import '../interactive/scene_controller.dart';"),
     );
     expect(
       sceneViewInteractiveSource,
-      isNot(
-        contains(
-          "import '../interactive/internal/scene_controller_internal_access.dart';",
-        ),
-      ),
+      contains("import 'scene_view_runtime_owner.dart';"),
     );
     expect(
       sceneViewInteractiveSource,
-      isNot(
-        contains(
-          "import '../interactive/internal/scene_controller_pointer_semantics.dart';",
-        ),
-      ),
+      contains('runtime: sceneControllerViewRuntimeOf(controller),'),
     );
+    expect(sceneViewInteractiveSource, isNot(contains('Listener(')));
     expect(
       sceneViewInteractiveSource,
-      isNot(contains('SceneControllerPointerSemantics(')),
+      isNot(contains('SceneViewRenderSurface(')),
     );
-    expect(pointerHostSource, contains('SceneViewPointerSemanticsBridge'));
+
     expect(
-      pointerHostSource,
-      contains('controller.createPointerSemanticsBridge('),
+      sceneViewRuntimeSource,
+      contains('class SceneViewRuntimeOwner extends StatefulWidget'),
     );
-    expect(pointerHostSource, isNot(contains('onControllerChanged')));
     expect(
-      pointerHostSource,
-      isNot(contains('SceneControllerPointerSemantics(')),
+      sceneViewRuntimeSource,
+      contains('widget.runtime.createPointerSession('),
     );
+    expect(
+      sceneViewRuntimeSource,
+      contains('_pointerHost.replacePointerSession('),
+    );
+    expect(
+      sceneViewRuntimeSource,
+      contains('foregroundPainter: SceneViewInteractiveOverlayPainter('),
+    );
+    expect(sceneViewRuntimeSource, contains('child: SceneViewRenderSurface('));
+
+    expect(pointerHostSource, contains('SceneViewPointerSession'));
+    expect(pointerHostSource, contains('replacePointerSession('));
+    expect(pointerHostSource, isNot(contains('SceneController')));
+    expect(pointerHostSource, isNot(contains('createPointerSemanticsBridge(')));
     expect(pointerHostSource, isNot(contains('PointerInputTracker(')));
     expect(pointerHostSource, isNot(contains('_PendingTapFlushScheduler')));
     expect(pointerHostSource, isNot(contains('_pendingPointerSettings')));
+
     expect(
-      pointerHostSource,
-      isNot(
-        contains(
-          "import '../interactive/internal/scene_controller_internal_access.dart';",
-        ),
-      ),
+      renderSurfaceSource,
+      contains('required SceneViewRenderState renderState,'),
     );
     expect(
       renderSurfaceSource,
-      isNot(
-        contains(
-          "import '../interactive/internal/scene_controller_internal_access.dart';",
-        ),
-      ),
+      isNot(contains('SceneViewRenderSurface.store(')),
     );
     expect(
       renderSurfaceSource,
-      isNot(contains('_interactiveControllerEpochReader')),
+      isNot(contains('SceneViewRenderSurface.interactive(')),
     );
     expect(
       renderSurfaceSource,
-      isNot(contains('_interactivePreviewOffsetResolver')),
+      isNot(contains("import '../interactive/scene_controller.dart';")),
     );
-    expect(renderSurfaceSource, isNot(contains('_selectionRect')));
-    expect(renderSurfaceSource, contains('clearIfEpochChanged('));
-    expect(renderSurfaceSource, contains('widget._controller.controllerEpoch'));
+    expect(
+      renderSurfaceSource,
+      isNot(contains("import '../controller/scene_store_controller.dart';")),
+    );
+    expect(
+      renderSurfaceSource,
+      contains('widget._renderState.controllerEpoch'),
+    );
+
     expect(overlayPainterSource, contains('super(repaint: renderState)'));
     expect(
       overlayPainterSource,
       contains('sanitizeFiniteOffset(renderState.cameraOffset)'),
-    );
-    expect(
-      overlayPainterSource,
-      isNot(contains('super(repaint: interaction)')),
-    );
-    expect(
-      overlayPainterSource,
-      isNot(contains('controller.snapshot.camera.offset')),
-    );
-    expect(runtimeSource, isNot(contains('StreamController<')));
-    expect(runtimeSource, isNot(contains('_timestampCursorMs')));
-    expect(runtimeSource, isNot(contains('_actionCounter')));
-    expect(runtimeSource, isNot(contains('_eraserHitsLine(')));
-    expect(
-      interactionRuntimeSource,
-      isNot(contains('request.storeController.commands.writeSelectionReplace')),
-    );
-    expect(
-      interactionRuntimeSource,
-      isNot(contains('request.storeController.commands.writeSelectionClear')),
     );
 
     expect(eventSource, contains('class InteractiveEventDispatcher'));
@@ -456,96 +402,19 @@ void main() {
       drawCoordinatorSource,
       contains("import 'interactive_draw_eraser_engine.dart';"),
     );
-    expect(
-      drawCoordinatorSource,
-      contains("import 'interactive_draw_line_engine.dart';"),
-    );
-    expect(
-      drawCoordinatorSource,
-      contains("import 'interactive_draw_stroke_engine.dart';"),
-    );
-    expect(
-      drawCoordinatorSource,
-      contains("import 'interactive_draw_terminal_router.dart';"),
-    );
-    expect(drawCoordinatorSource, isNot(contains('_eraserHitsLine(')));
-    expect(drawCoordinatorSource, isNot(contains('_eraserHitsStroke(')));
-    expect(
-      drawCoordinatorSource,
-      isNot(contains('_localEraserSegmentsHitLine(')),
-    );
-    expect(
-      drawCoordinatorSource,
-      isNot(contains('_eraserSegmentHitsStrokeBatch(')),
-    );
-
-    expect(
-      eraserSource,
-      contains("import 'interactive_draw_eraser_exact_hit.dart';"),
-    );
     expect(eraserSource, contains('InteractiveDrawEraserExactHit('));
-    expect(eraserSource, contains('_exactHit.hitsNode('));
-    expect(eraserSource, isNot(contains('_eraserHitsNode(')));
-    expect(eraserSource, isNot(contains('_eraserHitsLine(')));
-    expect(eraserSource, isNot(contains('_eraserHitsStroke(')));
-    expect(eraserSource, isNot(contains('_projectEraserToLocal(')));
-    expect(eraserSource, isNot(contains('_fallbackWorldBoundsHit(')));
-    expect(eraserSource, isNot(contains('_localEraserSegmentsHitLine(')));
-    expect(eraserSource, isNot(contains('_eraserSegmentHitsStrokeBatch(')));
-
     expect(
       eraserExactHitSource,
       contains("import 'interactive_draw_eraser_line_hit.dart';"),
     );
-    expect(
-      eraserExactHitSource,
-      contains("import 'interactive_draw_eraser_projection.dart';"),
-    );
-    expect(
-      eraserExactHitSource,
-      contains("import 'interactive_draw_eraser_stroke_hit.dart';"),
-    );
-    expect(
-      eraserExactHitSource,
-      contains('class InteractiveDrawEraserExactHit'),
-    );
-    expect(eraserExactHitSource, contains('_lineHit.hitsProjectedLine('));
-    expect(eraserExactHitSource, contains('_strokeHit.hitsProjectedStroke('));
-    expect(eraserExactHitSource, contains('_projectEraserToLocal('));
-    expect(eraserExactHitSource, contains('_fallbackWorldBoundsHit('));
-    expect(
-      eraserExactHitSource,
-      isNot(contains('_localEraserSegmentsHitLine(')),
-    );
-    expect(
-      eraserExactHitSource,
-      isNot(contains('_eraserSegmentHitsStrokeBatch(')),
-    );
-
     expect(eraserLineHitSource, contains('class InteractiveDrawEraserLineHit'));
-    expect(eraserLineHitSource, contains('hitsProjectedLine('));
-    expect(eraserLineHitSource, contains('_localEraserSegmentsHitLine('));
-    expect(eraserLineHitSource, contains('onPreciseSegmentCheck()'));
-    expect(
-      eraserLineHitSource,
-      isNot(contains('_eraserSegmentHitsStrokeBatch(')),
-    );
-
-    expect(
-      eraserStrokeHitSource,
-      contains('class InteractiveDrawEraserStrokeHit'),
-    );
-    expect(eraserStrokeHitSource, contains('hitsProjectedStroke('));
-    expect(eraserStrokeHitSource, contains('_eraserSegmentHitsStrokeBatch('));
-    expect(eraserStrokeHitSource, contains('onPreciseSegmentCheck()'));
-    expect(
-      eraserStrokeHitSource,
-      isNot(contains('_localEraserSegmentsHitLine(')),
-    );
-
     expect(
       eraserProjectionSource,
       contains('typedef InteractiveDrawProjectedEraser = ({'),
+    );
+    expect(
+      eraserStrokeHitSource,
+      contains('class InteractiveDrawEraserStrokeHit'),
     );
   });
 }

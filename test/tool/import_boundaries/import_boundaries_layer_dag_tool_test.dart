@@ -189,7 +189,7 @@ class SceneBuilder {
       }
     });
 
-    test('allows view -> interactive import', () async {
+    test('allows scene_view_interactive.dart -> interactive import', () async {
       final sandbox = await createImportBoundariesSandbox();
       try {
         writeSandboxFile(
@@ -213,18 +213,18 @@ class SceneBuilder {
       }
     });
 
-    test('allows view -> interactive seam import', () async {
+    test('allows contract -> core pointer_input bridge import', () async {
       final sandbox = await createImportBoundariesSandbox();
       try {
         writeSandboxFile(
           sandbox,
-          'lib/src/interactive/scene_view_pointer_semantics.dart',
-          'abstract interface class SceneViewPointerSemanticsBridge {}\n',
+          'lib/src/core/pointer_input.dart',
+          'class PointerSample {}\n',
         );
         writeSandboxFile(
           sandbox,
-          'lib/src/view/scene_view_interactive.dart',
-          "import 'package:iwb_canvas_engine/src/interactive/scene_view_pointer_semantics.dart';\n",
+          'lib/src/contract/scene_view_runtime.dart',
+          "import 'package:iwb_canvas_engine/src/core/pointer_input.dart';\n",
         );
 
         final result = await runSandboxTool(
@@ -232,6 +232,82 @@ class SceneBuilder {
           'check_import_boundaries.dart',
         );
         expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('allows interactive -> core pointer_input bridge import', () async {
+      final sandbox = await createImportBoundariesSandbox();
+      try {
+        writeSandboxFile(
+          sandbox,
+          'lib/src/core/pointer_input.dart',
+          'class PointerSample {}\n',
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          "import 'package:iwb_canvas_engine/src/core/pointer_input.dart';\n",
+        );
+
+        final result = await runSandboxTool(
+          sandbox,
+          'check_import_boundaries.dart',
+        );
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('allows view -> core pointer_input bridge import', () async {
+      final sandbox = await createImportBoundariesSandbox();
+      try {
+        writeSandboxFile(
+          sandbox,
+          'lib/src/core/pointer_input.dart',
+          'class PointerSample {}\n',
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/view/scene_view_pointer_router.dart',
+          "import 'package:iwb_canvas_engine/src/core/pointer_input.dart';\n",
+        );
+
+        final result = await runSandboxTool(
+          sandbox,
+          'check_import_boundaries.dart',
+        );
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects non-shell view -> interactive import', () async {
+      final sandbox = await createImportBoundariesSandbox();
+      try {
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          'class SceneController {}\n',
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/view/scene_view_render_surface.dart',
+          "import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart';\n",
+        );
+
+        final result = await runSandboxTool(
+          sandbox,
+          'check_import_boundaries.dart',
+        );
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains('view runtime boundary violation:'),
+        );
       } finally {
         sandbox.deleteSync(recursive: true);
       }
@@ -376,7 +452,7 @@ class SceneController {
           expect(result.exitCode, isNonZero);
           expect(
             result.stderr.toString(),
-            contains('cross-layer internal boundary violation:'),
+            contains('view runtime boundary violation:'),
           );
         } finally {
           sandbox.deleteSync(recursive: true);
@@ -407,11 +483,11 @@ class SceneController {
           expect(result.exitCode, isNonZero);
           expect(
             result.stderr.toString(),
-            contains('cross-layer internal boundary violation:'),
+            contains('view runtime boundary violation:'),
           );
           expect(
             result.stderr.toString(),
-            contains('view/** must not import interactive/internal/**'),
+            contains('view/** may reach interactive/** only through'),
           );
         } finally {
           sandbox.deleteSync(recursive: true);
@@ -420,7 +496,7 @@ class SceneController {
     );
 
     test(
-      'rejects view -> interactive/internal relative import as cross-layer internal boundary violation',
+      'rejects view -> interactive/internal relative import as view runtime boundary violation',
       () async {
         final sandbox = await createImportBoundariesSandbox();
         try {
@@ -446,11 +522,11 @@ class SceneViewInteractive {}
           expect(result.exitCode, isNonZero);
           expect(
             result.stderr.toString(),
-            contains('cross-layer internal boundary violation:'),
+            contains('view runtime boundary violation:'),
           );
           expect(
             result.stderr.toString(),
-            contains('view/** must not import interactive/internal/**'),
+            contains('view/** may reach interactive/** only through'),
           );
         } finally {
           sandbox.deleteSync(recursive: true);
@@ -459,7 +535,7 @@ class SceneViewInteractive {}
     );
 
     test(
-      'rejects view export -> interactive/internal target as cross-layer internal boundary violation',
+      'rejects view export -> interactive/internal target as view runtime boundary violation',
       () async {
         final sandbox = await createImportBoundariesSandbox();
         try {
@@ -483,11 +559,11 @@ export 'package:iwb_canvas_engine/src/interactive/internal/interactive_pointer_n
           expect(result.exitCode, isNonZero);
           expect(
             result.stderr.toString(),
-            contains('cross-layer internal boundary violation:'),
+            contains('view runtime boundary violation:'),
           );
           expect(
             result.stderr.toString(),
-            contains('view/** must not export interactive/internal/**'),
+            contains('view/** may reach interactive/** only through'),
           );
         } finally {
           sandbox.deleteSync(recursive: true);
@@ -665,7 +741,7 @@ export 'package:iwb_canvas_engine/src/interactive/internal/interactive_pointer_n
     });
 
     test(
-      'rejects view -> interactive/internal barrel re-export as cross-layer internal boundary violation',
+      'rejects view -> interactive/internal barrel re-export as view runtime boundary violation',
       () async {
         final sandbox = await createImportBoundariesSandbox();
         try {
@@ -692,11 +768,11 @@ export 'package:iwb_canvas_engine/src/interactive/internal/interactive_pointer_n
           expect(result.exitCode, isNonZero);
           expect(
             result.stderr.toString(),
-            contains('cross-layer internal boundary violation:'),
+            contains('view runtime boundary violation:'),
           );
           expect(
             result.stderr.toString(),
-            contains('view/** must not import interactive/internal/**'),
+            contains('view/** may reach interactive/** only through'),
           );
         } finally {
           sandbox.deleteSync(recursive: true);

@@ -720,21 +720,50 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
     context,
     'internal/scene_controller_mutation_boundary.dart',
   );
-  final pointerSemanticsFile = _interactiveSupportFile(
+  final pointerSessionFile = _interactiveSupportFile(
     context,
-    'internal/scene_controller_pointer_semantics.dart',
+    'internal/scene_controller_pointer_session.dart',
   );
   final selectionActionsFile = _interactiveSupportFile(
     context,
     'internal/interactive_selection_actions.dart',
   );
-  final facadeAssemblyFile = _interactiveSupportFile(
+  final ownerGraphFile = _interactiveSupportFile(
     context,
-    'internal/scene_controller_facade_assembly.dart',
+    'internal/scene_controller_owners.dart',
+  );
+  final viewRuntimeFile = _interactiveSupportFile(
+    context,
+    'internal/scene_controller_scene_view_runtime.dart',
   );
   final internalAccessFile = _interactiveSupportFile(
     context,
     'internal/scene_controller_internal_access.dart',
+  );
+  final runtimeContractFile = File(
+    '${context.root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+    'src${Platform.pathSeparator}contract${Platform.pathSeparator}'
+    'scene_view_runtime.dart',
+  );
+  final sceneViewInteractiveFile = File(
+    '${context.root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+    'src${Platform.pathSeparator}view${Platform.pathSeparator}'
+    'scene_view_interactive.dart',
+  );
+  final sceneViewRuntimeFile = File(
+    '${context.root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+    'src${Platform.pathSeparator}view${Platform.pathSeparator}'
+    'scene_view_runtime_owner.dart',
+  );
+  final renderSurfaceFile = File(
+    '${context.root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+    'src${Platform.pathSeparator}view${Platform.pathSeparator}'
+    'scene_view_render_surface.dart',
+  );
+  final pointerHostFile = File(
+    '${context.root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+    'src${Platform.pathSeparator}view${Platform.pathSeparator}'
+    'scene_view_interactive_pointer_host.dart',
   );
 
   final missingOwnerViolation =
@@ -755,39 +784,51 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
         sceneMutationsFile: 'SceneControllerSceneMutations',
         selectionMutationsFile: 'SceneControllerSelectionMutations',
         mutationBoundaryFile: 'SceneControllerMutationBoundary',
-        pointerSemanticsFile: 'SceneControllerPointerSemantics',
+        pointerSessionFile: 'SceneControllerPointerSession',
         selectionActionsFile: 'InteractiveSelectionActions',
-        facadeAssemblyFile: 'assembleSceneControllerFacade',
+        ownerGraphFile: 'createSceneControllerOwners',
+        viewRuntimeFile: 'SceneControllerSceneViewRuntime',
         internalAccessFile: 'SceneControllerInternalAccess',
+        runtimeContractFile: 'SceneViewRuntime',
+        sceneViewInteractiveFile: 'SceneViewInteractive',
+        sceneViewRuntimeFile: 'SceneViewRuntimeOwner',
+        renderSurfaceFile: 'SceneViewRenderSurface',
+        pointerHostFile: 'SceneViewInteractivePointerHost',
       });
   if (missingOwnerViolation != null) {
     return missingOwnerViolation;
   }
-  if (_interactiveSupportFile(
-    context,
+  for (final deletedPath in <String>[
     'internal/scene_controller_scene_access.dart',
-  ).existsSync()) {
-    return GuardrailViolation(
-      filePath:
-          'lib/src/interactive/internal/scene_controller_scene_access.dart',
-      line: 1,
-      message:
-          'interactive API violation: SceneControllerSceneAccessAdapter is a '
-          'deleted residual seam and must not exist.',
-    );
-  }
-  if (_interactiveSupportFile(
-    context,
     'internal/scene_controller_selection_access.dart',
-  ).existsSync()) {
-    return GuardrailViolation(
-      filePath:
-          'lib/src/interactive/internal/scene_controller_selection_access.dart',
-      line: 1,
-      message:
-          'interactive API violation: SceneControllerSelectionAccessAdapter is '
-          'a deleted residual seam and must not exist.',
-    );
+    'internal/scene_controller_facade_assembly.dart',
+    'internal/scene_controller_pointer_semantics.dart',
+    'scene_view_pointer_semantics.dart',
+  ]) {
+    if (_interactiveSupportFile(context, deletedPath).existsSync()) {
+      final detail = switch (deletedPath) {
+        'internal/scene_controller_scene_access.dart' =>
+          'SceneControllerSceneAccessAdapter is a deleted residual seam and '
+              'must not exist.',
+        'internal/scene_controller_selection_access.dart' =>
+          'SceneControllerSelectionAccessAdapter is a deleted residual seam '
+              'and must not exist.',
+        'internal/scene_controller_facade_assembly.dart' =>
+          'assembleSceneControllerFacade is a deleted residual seam and must '
+              'not exist.',
+        'internal/scene_controller_pointer_semantics.dart' =>
+          'SceneControllerPointerSemantics is a deleted residual seam and '
+              'must not exist.',
+        'scene_view_pointer_semantics.dart' =>
+          'SceneView pointer-semantics seam is deleted and must not exist.',
+        _ => 'deleted residual seam must not exist ($deletedPath).',
+      };
+      return GuardrailViolation(
+        filePath: 'lib/src/interactive/$deletedPath',
+        line: 1,
+        message: 'interactive API violation: $detail',
+      );
+    }
   }
 
   final facadeSource = facadeFile.readAsStringSync();
@@ -807,19 +848,21 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
   final sceneMutationsSource = sceneMutationsFile.readAsStringSync();
   final selectionMutationsSource = selectionMutationsFile.readAsStringSync();
   final mutationBoundarySource = mutationBoundaryFile.readAsStringSync();
-  final pointerSemanticsSource = pointerSemanticsFile.readAsStringSync();
+  final pointerSessionSource = pointerSessionFile.readAsStringSync();
   final selectionActionsSource = selectionActionsFile.readAsStringSync();
+  final ownerGraphSource = ownerGraphFile.readAsStringSync();
+  final viewRuntimeSource = viewRuntimeFile.readAsStringSync();
+  final runtimeContractSource = runtimeContractFile.readAsStringSync();
+  final pointerHostSource = pointerHostFile.readAsStringSync();
+  final sceneViewInteractiveSource = sceneViewInteractiveFile
+      .readAsStringSync();
+  final sceneViewRuntimeSource = sceneViewRuntimeFile.readAsStringSync();
+  final renderSurfaceSource = renderSurfaceFile.readAsStringSync();
   final eligibilityPolicyFile = _interactiveSupportFile(
     context,
     'interaction_eligibility_policy.dart',
   );
   final eligibilityPolicySource = eligibilityPolicyFile.readAsStringSync();
-  final pointerHostFile = File(
-    '${context.root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
-    'src${Platform.pathSeparator}view${Platform.pathSeparator}'
-    'scene_view_interactive_pointer_host.dart',
-  );
-  final pointerHostSource = pointerHostFile.readAsStringSync();
 
   return _topLevelFacadeHelperViolation(context, parsed: parsed) ??
       _requireSourceTokens(
@@ -838,38 +881,83 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
         source: facadeSource,
         filePath: facadeFilePosixPath,
         requiredTokens: const <String>[
-          "import 'internal/scene_controller_facade_assembly.dart';",
-          "import 'internal/scene_controller_interaction_runtime.dart';",
-          'assembleSceneControllerFacade(',
-          'SceneControllerFacadeRequest(',
-          'registerSceneControllerInternalAccess(',
-          'SceneControllerInternalAccessRegistration(',
+          "import 'internal/scene_controller_owners.dart';",
+          "import '../contract/scene_view_runtime.dart';",
+          'createSceneControllerOwners(',
+          'SceneControllerOwnersRequest(',
+          'SceneViewRuntime sceneControllerViewRuntimeOf(',
         ],
         bannedTokens: const <String>[
+          'implements SceneViewRenderState',
+          'createPointerSemanticsBridge(',
+          "import 'internal/scene_controller_internal_access.dart';",
+          "import 'internal/scene_controller_pointer_session.dart';",
+          "import 'internal/interactive_draw_coordinator.dart';",
           "import 'internal/interactive_runtime.dart';",
           "import 'internal/interactive_event_dispatcher.dart';",
-          "import 'internal/interactive_selection_actions.dart';",
-          "import 'internal/interactive_move_session.dart';",
-          "import 'internal/interactive_gesture_machine.dart';",
-          "import 'internal/interactive_draw_coordinator.dart';",
-          "import 'internal/interactive_draw_eraser_engine.dart';",
-          "import 'internal/scene_controller_facade_support.dart';",
-          "import 'internal/interactive_draw_line_engine.dart' show InteractiveDrawStyle;",
-          "import 'scene_controller_scene_access.dart';",
-          "import 'scene_controller_selection_access.dart';",
-          'SceneControllerSceneAccessAdapter(',
-          'SceneControllerSelectionAccessAdapter(',
           '_runtime.handlePointer(',
           '_runtime.handleDoubleTap(',
           'StreamController<',
           '_timestampCursorMs',
-          'LineNodeSpec(',
-          'Rect.fromPoints(',
-          'Transform2D.translation(',
         ],
         message:
             'interactive API violation: SceneController must remain '
             'a thin facade over runtime/event/selection owners.',
+      ) ??
+      _requireSourceTokens(
+        source: runtimeContractSource,
+        filePath: toRepoRelPosixPath(
+          absPosixPath: toPosixPath(runtimeContractFile.absolute.path),
+          rootAbsPosixPath: context.rootAbsPosixPath,
+        ),
+        requiredTokens: const <String>[
+          'abstract interface class SceneViewRuntime',
+          'SceneViewPointerSession createPointerSession({',
+          'abstract interface class SceneViewPointerSession',
+        ],
+        bannedTokens: const <String>[
+          'handleControllerChanged(',
+          'updateController(',
+        ],
+        message:
+            'interactive API violation: SceneViewRuntime must remain the '
+            'single internal runtime/session contract for view core.',
+      ) ??
+      _requireSourceTokens(
+        source: ownerGraphSource,
+        filePath: _interactiveFilePosixPath(context, ownerGraphFile),
+        requiredTokens: const <String>[
+          'SceneControllerInteraction(',
+          'SceneControllerSelection(',
+          'SceneControllerScene(',
+          'SceneControllerSceneViewRuntime(',
+          'SceneControllerInternalAccessRegistration(',
+          'registerSceneControllerInternalAccess(',
+        ],
+        bannedTokens: const <String>[
+          'createPointerSemanticsBridge(',
+          'SceneControllerPointerSemantics',
+        ],
+        message:
+            'interactive API violation: SceneController owners must '
+            'assemble view runtime and internal access outside the facade.',
+      ) ??
+      _requireSourceTokens(
+        source: viewRuntimeSource,
+        filePath: _interactiveFilePosixPath(context, viewRuntimeFile),
+        requiredTokens: const <String>[
+          'final class SceneControllerSceneViewRuntime',
+          'final class SceneControllerSceneViewRenderState',
+          'SceneControllerPointerSession(',
+          'SceneControllerInteraction get _interaction',
+        ],
+        bannedTokens: const <String>[
+          'SceneControllerPointerSemantics',
+          'createPointerSemanticsBridge(',
+        ],
+        message:
+            'interactive API violation: SceneControllerSceneViewRuntime must '
+            'own the render-state adapter and pointer-session factory.',
       ) ??
       _requireSourceTokens(
         source: runtimeSource,
@@ -889,7 +977,6 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
           '_actions =',
           '_editTextRequests =',
           '_eraserHitsLine(',
-          "import 'scene_controller_interaction_runtime_support.dart';",
         ],
         message:
             'interactive API violation: InteractiveRuntime must keep event '
@@ -981,27 +1068,23 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
           'storeController.writeReplaceScene(snapshot);',
           'txnSceneFromSnapshot(',
         ],
-        bannedPatterns: <RegExp>[
-          RegExp(
-            r'\bclearScene\s*\([^)]*\)\s*\{[^}]*storeController\.write\s*(<[^>]+>)?\s*\(',
-          ),
-        ],
         message:
             'interactive API violation: SceneControllerMutationBoundary must '
             'remain the canonical scene/selection write owner.',
       ) ??
       _requireSourceTokens(
-        source: pointerSemanticsSource,
-        filePath: _interactiveFilePosixPath(context, pointerSemanticsFile),
+        source: pointerSessionSource,
+        filePath: _interactiveFilePosixPath(context, pointerSessionFile),
         requiredTokens: const <String>[
-          'class SceneControllerPointerSemantics',
+          'class SceneControllerPointerSession',
           'PointerInputTracker(',
           '_PendingTapFlushScheduler',
+          '_ownerListenable.addListener(',
         ],
-        bannedTokens: const <String>[],
+        bannedTokens: const <String>['handleControllerChanged('],
         message:
-            'interactive API violation: pointer semantics must stay owned by '
-            'SceneControllerPointerSemantics.',
+            'interactive API violation: pointer session must stay owned by '
+            'SceneControllerPointerSession.',
       ) ??
       _requireSourceTokens(
         source: pointerHostSource,
@@ -1010,19 +1093,74 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
           rootAbsPosixPath: context.rootAbsPosixPath,
         ),
         requiredTokens: const <String>[
-          'SceneViewPointerSemanticsBridge',
-          'createPointerSemanticsBridge(',
+          'SceneViewPointerSession',
+          'replacePointerSession(',
         ],
         bannedTokens: const <String>[
-          'SceneControllerPointerSemantics(',
+          'SceneController',
+          'createPointerSemanticsBridge(',
           'PointerInputTracker(',
           '_PendingTapFlushScheduler',
           '_pendingPointerSettings',
-          'sceneControllerInternalCreatePointerSemanticsBridge(',
         ],
         message:
             'interactive API violation: SceneViewInteractivePointerHost must '
-            'remain a raw routing/lifecycle shell over pointer semantics.',
+            'remain a raw routing/lifecycle shell over pointer sessions.',
+      ) ??
+      _requireSourceTokens(
+        source: sceneViewInteractiveSource,
+        filePath: toRepoRelPosixPath(
+          absPosixPath: toPosixPath(sceneViewInteractiveFile.absolute.path),
+          rootAbsPosixPath: context.rootAbsPosixPath,
+        ),
+        requiredTokens: const <String>[
+          "import '../interactive/scene_controller.dart';",
+          "import 'scene_view_runtime_owner.dart';",
+          'sceneControllerViewRuntimeOf(controller)',
+        ],
+        bannedTokens: const <String>['Listener(', 'SceneViewRenderSurface('],
+        message:
+            'interactive API violation: SceneViewInteractive must remain a '
+            'thin public shell over SceneViewRuntimeOwner.',
+      ) ??
+      _requireSourceTokens(
+        source: sceneViewRuntimeSource,
+        filePath: toRepoRelPosixPath(
+          absPosixPath: toPosixPath(sceneViewRuntimeFile.absolute.path),
+          rootAbsPosixPath: context.rootAbsPosixPath,
+        ),
+        requiredTokens: const <String>[
+          'class SceneViewRuntimeOwner extends StatefulWidget',
+          'widget.runtime.createPointerSession(',
+          '_pointerHost.replacePointerSession(',
+          'SceneViewRenderSurface(',
+        ],
+        bannedTokens: const <String>[
+          "import '../interactive/scene_controller.dart';",
+          'createPointerSemanticsBridge(',
+        ],
+        message:
+            'interactive API violation: SceneViewRuntimeOwner must own '
+            'runtime state beneath the public shell.',
+      ) ??
+      _requireSourceTokens(
+        source: renderSurfaceSource,
+        filePath: toRepoRelPosixPath(
+          absPosixPath: toPosixPath(renderSurfaceFile.absolute.path),
+          rootAbsPosixPath: context.rootAbsPosixPath,
+        ),
+        requiredTokens: const <String>[
+          'required SceneViewRenderState renderState,',
+        ],
+        bannedTokens: const <String>[
+          'SceneViewRenderSurface.store(',
+          'SceneViewRenderSurface.interactive(',
+          "import '../interactive/scene_controller.dart';",
+          "import '../controller/scene_store_controller.dart';",
+        ],
+        message:
+            'interactive API violation: SceneViewRenderSurface must remain a '
+            'single render-state entrypoint.',
       ) ??
       _requireSourceTokens(
         source: eventSource,
@@ -1166,7 +1304,10 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
           'sceneControllerInternalPreviewDeltaForNode(',
           'sceneControllerInternalSetBeforePointerDispatchHook(',
         ],
-        bannedTokens: const <String>[],
+        bannedTokens: const <String>[
+          'SceneViewRuntime',
+          'SceneViewPointerSession',
+        ],
         message:
             'interactive API violation: internal interactive test/debug access '
             'must remain outside SceneController.',
@@ -1179,6 +1320,10 @@ GuardrailViolation? _topLevelFacadeHelperViolation(
 }) {
   for (final declaration in parsed.unit.declarations) {
     if (declaration is FunctionDeclaration) {
+      final name = declaration.name.lexeme;
+      if (name == 'sceneControllerViewRuntimeOf') {
+        continue;
+      }
       return GuardrailViolation(
         filePath: _interactiveFilePosixPath(context, _interactiveFile(context)),
         line: lineForOffset(parsed, declaration.offset),

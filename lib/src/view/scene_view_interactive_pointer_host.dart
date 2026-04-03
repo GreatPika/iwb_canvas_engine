@@ -1,9 +1,9 @@
 import 'package:flutter/widgets.dart';
 
 import '../contract/canvas_pointer_input.dart';
+import '../contract/pointer_phase_codec.dart';
+import '../contract/scene_view_runtime.dart';
 import '../core/pointer_input.dart';
-import '../interactive/scene_controller.dart';
-import '../interactive/scene_view_pointer_semantics.dart';
 import 'scene_view_pointer_router.dart';
 
 bool _hasFiniteLocalPosition(PointerEvent event) {
@@ -57,116 +57,57 @@ CanvasPointerInput _canvasPointerInputFromSample(PointerSample sample) {
     pointerId: sample.pointerId,
     position: sample.position,
     timestampMs: sample.timestampMs,
-    phase: _toCanvasPointerPhase(sample.phase),
+    phase: canvasPointerPhaseFromPointerPhase(sample.phase),
     kind: sample.kind,
   );
 }
 
-CanvasPointerPhase _toCanvasPointerPhase(PointerPhase phase) {
-  switch (phase) {
-    case PointerPhase.down:
-      return CanvasPointerPhase.down;
-    case PointerPhase.move:
-      return CanvasPointerPhase.move;
-    case PointerPhase.up:
-      return CanvasPointerPhase.up;
-    case PointerPhase.cancel:
-      return CanvasPointerPhase.cancel;
-  }
-}
-
 class SceneViewInteractivePointerHost {
   SceneViewInteractivePointerHost({
-    required SceneController controller,
-    required bool Function() isMounted,
-    required SceneViewPointerSemanticsBridge pointerSemantics,
-  }) : _controller = controller,
-       _isMounted = isMounted,
-       _runtime = _SceneViewInteractivePointerRuntime(
-         pointerSemantics: pointerSemantics,
-       ) {
-    _subscribeToController(controller);
-  }
-
-  SceneController _controller;
-  final bool Function() _isMounted;
+    required SceneViewPointerSession pointerSession,
+  }) : _runtime = _SceneViewInteractivePointerRuntime(
+         pointerSession: pointerSession,
+       );
 
   final _SceneViewInteractivePointerRuntime _runtime;
-  late VoidCallback _controllerListener;
-  int _controllerListenerGeneration = 0;
 
   int get debugLiveRawPointerCount => _runtime.debugLiveRawPointerCount;
   int? get debugPendingTapFlushTimestampMs =>
       _runtime.debugPendingTapFlushTimestampMs;
 
-  void updateController(SceneController controller) {
-    if (identical(_controller, controller)) {
-      return;
-    }
-    _unsubscribeFromController(_controller);
-    _controller = controller;
-    _runtime.replacePointerSemantics(
-      controller.createPointerSemanticsBridge(isMounted: _isMounted),
-    );
-    _subscribeToController(controller);
+  void replacePointerSession(SceneViewPointerSession pointerSession) {
+    _runtime.replacePointerSession(pointerSession);
   }
 
   void dispose() {
-    _unsubscribeFromController(_controller);
     _runtime.dispose();
   }
 
   void handlePointerEvent(PointerEvent event, PointerPhase phase) {
     _runtime.handlePointerEvent(event, phase);
   }
-
-  void _handleControllerChanged({
-    required SceneController controller,
-    required int ownerGeneration,
-  }) {
-    if (!_isMounted() ||
-        ownerGeneration != _controllerListenerGeneration ||
-        !identical(controller, _controller)) {
-      return;
-    }
-    _runtime.handleControllerChanged();
-  }
-
-  void _subscribeToController(SceneController controller) {
-    _controllerListenerGeneration++;
-    final ownerGeneration = _controllerListenerGeneration;
-    _controllerListener = () => _handleControllerChanged(
-      controller: controller,
-      ownerGeneration: ownerGeneration,
-    );
-    controller.addListener(_controllerListener);
-  }
-
-  void _unsubscribeFromController(SceneController controller) {
-    controller.removeListener(_controllerListener);
-  }
 }
 
 class _SceneViewInteractivePointerRuntime {
   _SceneViewInteractivePointerRuntime({
-    required SceneViewPointerSemanticsBridge pointerSemantics,
-  }) : _pointerSemantics = pointerSemantics;
+    required SceneViewPointerSession pointerSession,
+  }) : _pointerSession = pointerSession;
 
   final SceneViewPointerRouter _pointerRouter = SceneViewPointerRouter();
-  SceneViewPointerSemanticsBridge _pointerSemantics;
+  SceneViewPointerSession _pointerSession;
 
   int get debugLiveRawPointerCount => _pointerRouter.liveRawPointerCount;
   int? get debugPendingTapFlushTimestampMs =>
-      _pointerSemantics.pendingTapFlushTimestampMs;
+      _pointerSession.pendingTapFlushTimestampMs;
 
-  void replacePointerSemantics(SceneViewPointerSemanticsBridge next) {
-    _pointerSemantics.dispose();
-    _pointerSemantics = next;
+  void replacePointerSession(SceneViewPointerSession next) {
+    _pointerSession.dispose();
+    _pointerSession = next;
     _pointerRouter.reset();
   }
 
   void dispose() {
-    _pointerSemantics.dispose();
+    _pointerSession.dispose();
   }
 
   void handlePointerEvent(PointerEvent event, PointerPhase phase) {
@@ -192,7 +133,7 @@ class _SceneViewInteractivePointerRuntime {
       event: event,
       phase: phase,
     );
-    _pointerSemantics.handleRoutedSample(
+    _pointerSession.handleRoutedSample(
       sample,
       shouldTrackSignals: _pointerRouter.shouldTrackSignals(
         pointerId: sample.pointerId,
@@ -201,16 +142,10 @@ class _SceneViewInteractivePointerRuntime {
     );
     if (_isTerminalPhase(phase)) {
       final release = _pointerRouter.release(event.pointer);
-      _pointerSemantics.handleRawPointerRelease(
+      _pointerSession.handleRawPointerRelease(
         isIdleAfterRelease: release.isIdleAfterRelease,
       );
     }
-  }
-
-  void handleControllerChanged() {
-    _pointerSemantics.handleControllerChanged(
-      routerHasLiveRawPointers: _pointerRouter.hasLiveRawPointers,
-    );
   }
 
   void _forwardInvalidTerminalHostEvent(
@@ -230,12 +165,12 @@ class _SceneViewInteractivePointerRuntime {
       _pointerSampleFromEvent(pointerId: pointerId, event: event, phase: phase),
     );
     final release = _pointerRouter.release(event.pointer);
-    _pointerSemantics.handleInvalidTerminalSample(
+    _pointerSession.handleInvalidTerminalSample(
       input: input,
       pointerId: pointerId,
       referenceTimestampMs: event.timeStamp.inMilliseconds,
     );
-    _pointerSemantics.handleRawPointerRelease(
+    _pointerSession.handleRawPointerRelease(
       isIdleAfterRelease: release.isIdleAfterRelease,
     );
   }

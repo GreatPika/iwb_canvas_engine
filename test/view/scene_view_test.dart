@@ -79,8 +79,8 @@ Widget _coreHost(
     child: SizedBox(
       width: width,
       height: height,
-      child: SceneViewRenderSurface.store(
-        controller: controller,
+      child: SceneViewRenderSurface(
+        renderState: controller,
         imageResolver: imageResolver,
         staticLayerCache: staticLayerCache,
         textLayoutCache: textLayoutCache,

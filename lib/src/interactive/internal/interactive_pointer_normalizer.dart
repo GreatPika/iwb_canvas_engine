@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../../contract/canvas_pointer_input.dart';
+import '../../contract/pointer_phase_codec.dart';
 import '../../core/pointer_input.dart';
 
 class InteractivePointerNormalizer {
@@ -10,7 +11,7 @@ class InteractivePointerNormalizer {
     CanvasPointerInput input, {
     required int Function(int? hintTimestampMs) resolveTimestampMs,
   }) {
-    final phase = _toInternalPointerPhase(input.phase);
+    final phase = pointerPhaseFromCanvasPointerPhase(input.phase);
     final hasFinitePosition = _isFiniteOffset(input.position);
     if (!hasFinitePosition &&
         (phase == PointerPhase.down || phase == PointerPhase.move)) {
@@ -44,19 +45,6 @@ class InteractivePointerNormalizer {
 
   void clear() {
     _lastFinitePointerPositionById.clear();
-  }
-
-  static PointerPhase _toInternalPointerPhase(CanvasPointerPhase phase) {
-    switch (phase) {
-      case CanvasPointerPhase.down:
-        return PointerPhase.down;
-      case CanvasPointerPhase.move:
-        return PointerPhase.move;
-      case CanvasPointerPhase.up:
-        return PointerPhase.up;
-      case CanvasPointerPhase.cancel:
-        return PointerPhase.cancel;
-    }
   }
 
   static bool _isFiniteOffset(Offset value) {
