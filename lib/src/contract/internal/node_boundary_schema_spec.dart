@@ -175,7 +175,7 @@ StrokeNodeSpecSchemaFields strokeNodeSpecSchemaFieldsFromValidated(
   StrokeNodeSpecSchemaInput fields,
 ) {
   return (
-    points: OwnedList<Offset>.of(fields.points),
+    points: canonicalOwnedOffsetList(fields.points),
     thickness: fields.thickness,
     color: fields.color,
   );

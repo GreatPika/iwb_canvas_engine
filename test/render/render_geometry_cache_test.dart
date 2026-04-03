@@ -7,6 +7,7 @@ import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
 import 'package:iwb_canvas_engine/src/contract/node_patch.dart';
 import 'package:iwb_canvas_engine/src/contract/patch_field.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
+import 'package:iwb_canvas_engine/src/render/render_geometry_builder.dart';
 import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 
 // INV:INV-ENG-RENDER-GEOMETRY-KEY-STABLE
@@ -82,53 +83,74 @@ void main() {
     },
   );
 
+  test('RenderGeometryCache hits for equivalent public stroke geometry', () {
+    final cache = RenderGeometryCache();
+    final strokeA = StrokeNodeSnapshot(
+      id: 'stroke-eq',
+      instanceRevision: 7,
+      points: const <Offset>[Offset(0, 0), Offset(10, 5), Offset(20, 5)],
+      thickness: 3,
+      color: const Color(0xFF000000),
+    );
+    final strokeA2 = StrokeNodeSnapshot(
+      id: 'stroke-eq',
+      instanceRevision: 7,
+      points: const <Offset>[Offset(0, 0), Offset(10, 5), Offset(20, 5)],
+      thickness: 3,
+      color: const Color(0xFF000000),
+    );
+
+    final entryA = cache.get(strokeA);
+    final entryA2 = cache.get(strokeA2);
+
+    expect(identical(strokeA.points, strokeA2.points), isTrue);
+    expect(identical(entryA, entryA2), isTrue);
+    expect(cache.debugBuildCount, 1);
+    expect(cache.debugHitCount, 1);
+  });
+
   test(
-    'RenderGeometryCache hits for equivalent stroke snapshots with stable revision/scalars',
+    'stroke validity keys stay value-based across equivalent public snapshots',
     () {
-      final cache = RenderGeometryCache();
       final strokeA = StrokeNodeSnapshot(
-        id: 'stroke-eq',
+        id: 'stroke-key',
         instanceRevision: 7,
         points: const <Offset>[Offset(0, 0), Offset(10, 5), Offset(20, 5)],
-        pointsRevision: 11,
         thickness: 3,
         color: const Color(0xFF000000),
       );
-      final strokeA2 = StrokeNodeSnapshot(
-        id: 'stroke-eq',
+      final strokeB = StrokeNodeSnapshot(
+        id: 'stroke-key',
         instanceRevision: 7,
         points: const <Offset>[Offset(0, 0), Offset(10, 5), Offset(20, 5)],
-        pointsRevision: 11,
         thickness: 3,
-        color: const Color(0xFF000000),
+        color: const Color(0xFF112233),
       );
 
-      final entryA = cache.get(strokeA);
-      final entryA2 = cache.get(strokeA2);
+      final keyA = buildRenderGeometryValidityKey(strokeA);
+      final keyB = buildRenderGeometryValidityKey(strokeB);
 
-      expect(identical(entryA, entryA2), isTrue);
-      expect(cache.debugBuildCount, 1);
-      expect(cache.debugHitCount, 1);
+      expect(identical(strokeA.points, strokeB.points), isTrue);
+      expect(keyA, keyB);
+      expect(keyA.hashCode, keyB.hashCode);
     },
   );
 
   test(
-    'RenderGeometryCache rebuilds stroke entry when pointsRevision changes',
+    'RenderGeometryCache rebuilds stroke entry when stroke points change',
     () {
       final cache = RenderGeometryCache();
       final strokeA = StrokeNodeSnapshot(
         id: 'stroke-rev',
         instanceRevision: 9,
         points: const <Offset>[Offset(0, 0), Offset(10, 5), Offset(20, 5)],
-        pointsRevision: 11,
         thickness: 3,
         color: const Color(0xFF000000),
       );
       final strokeChanged = StrokeNodeSnapshot(
         id: 'stroke-rev',
         instanceRevision: 9,
-        points: const <Offset>[Offset(0, 0), Offset(10, 5), Offset(20, 5)],
-        pointsRevision: 12,
+        points: const <Offset>[Offset(0, 0), Offset(10, 8), Offset(20, 5)],
         thickness: 3,
         color: const Color(0xFF000000),
       );
@@ -142,10 +164,34 @@ void main() {
     },
   );
 
+  test('RenderGeometryCache rebuilds stroke entry when thickness changes', () {
+    final cache = RenderGeometryCache();
+    final strokeA = StrokeNodeSnapshot(
+      id: 'stroke-thickness',
+      instanceRevision: 10,
+      points: const <Offset>[Offset(0, 0), Offset(10, 5), Offset(20, 5)],
+      thickness: 3,
+      color: const Color(0xFF000000),
+    );
+    final strokeChanged = StrokeNodeSnapshot(
+      id: 'stroke-thickness',
+      instanceRevision: 10,
+      points: const <Offset>[Offset(0, 0), Offset(10, 5), Offset(20, 5)],
+      thickness: 6,
+      color: const Color(0xFF000000),
+    );
+
+    final entryA = cache.get(strokeA);
+    final entryChanged = cache.get(strokeChanged);
+
+    expect(identical(entryA, entryChanged), isFalse);
+    expect(cache.debugBuildCount, 2);
+    expect(cache.debugHitCount, 0);
+  });
+
   test(
     'RenderGeometryCache keeps hit for unchanged stroke across unrelated controller commit',
     () {
-      // pointsRevision monotonicity itself is asserted in scene_controller_test.
       final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
@@ -155,7 +201,6 @@ void main() {
                 StrokeNodeSnapshot(
                   id: 's',
                   points: const <Offset>[Offset(0, 0), Offset(10, 0)],
-                  pointsRevision: 3,
                   thickness: 2,
                   color: const Color(0xFF000000),
                 ),

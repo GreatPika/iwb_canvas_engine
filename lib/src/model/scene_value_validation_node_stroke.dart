@@ -2,7 +2,6 @@ import 'dart:ui';
 
 import '../contract/snapshot.dart';
 import '../contract/scene_model_invariants.dart';
-import '../contract/validated/instance_revision_value.dart';
 import '../core/nodes.dart';
 import 'scene_value_validation_primitives.dart';
 import 'scene_value_validation_support.dart';
@@ -12,16 +11,6 @@ void sceneValidateStrokeNodeSnapshot(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  sceneValidateArgumentBoundary(
-    field: '$field.pointsRevision',
-    value: stroke.pointsRevision,
-    onError: onError,
-    validate: () => InstanceRevisionValue.of(
-      stroke.pointsRevision,
-      name: '$field.pointsRevision',
-      allowZero: true,
-    ),
-  );
   _sceneValidatePoints(stroke.points, field: '$field.points', onError: onError);
   sceneValidatePositiveDouble(
     stroke.thickness,

@@ -692,7 +692,6 @@ void main() {
           ),
           fields: (
             points: const <Offset>[Offset(0, 0), Offset(1, 1)],
-            pointsRevision: 0,
             thickness: 2,
             color: const Color(0xFF111111),
           ),
@@ -894,7 +893,6 @@ void main() {
         ),
         fields: (
           points: snapshotPoints,
-          pointsRevision: 0,
           thickness: 3,
           color: const Color(0xFF222222),
         ),
@@ -1262,7 +1260,6 @@ void main() {
                       Offset(2, 2),
                       Offset(4, 4),
                     ]),
-                    pointsRevision: 5,
                     thickness: 3,
                     color: const Color(0xFF040404),
                   ),
@@ -1364,7 +1361,10 @@ void main() {
       final nodes = materializedScene.layers.single.nodes;
       expect((nodes[0] as ImageNodeSnapshot).naturalSize, const Size(32, 33));
       expect((nodes[1] as TextNodeSnapshot).textDirection, TextDirection.rtl);
-      expect((nodes[2] as StrokeNodeSnapshot).pointsRevision, 5);
+      expect((nodes[2] as StrokeNodeSnapshot).points, const <Offset>[
+        Offset(2, 2),
+        Offset(4, 4),
+      ]);
       expect((nodes[3] as LineNodeSnapshot).end, const Offset(6, 6));
       expect((nodes[4] as RectNodeSnapshot).strokeWidth, 4);
       expect((nodes[5] as PathNodeSnapshot).fillRule, PathFillRule.evenOdd);
@@ -1392,8 +1392,8 @@ void main() {
       );
       expect(publicStrokeBacking.id, 'stroke-fallback-public');
       expect(
-        (publicStrokeBacking as StrokeNodeSnapshotBacking).pointsRevision,
-        0,
+        (publicStrokeBacking as StrokeNodeSnapshotBacking).points,
+        const <Offset>[Offset(8, 8), Offset(9, 9)],
       );
 
       final publicLineSnapshot = LineNodeSnapshot(

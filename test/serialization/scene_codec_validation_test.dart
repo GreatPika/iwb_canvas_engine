@@ -2395,7 +2395,6 @@ void main() {
                     for (var i = 0; i < kMaxStrokePointsPerNode + 1; i++)
                       Offset(i.toDouble(), 0),
                   ],
-                  pointsRevision: 0,
                   thickness: 1,
                   color: const Color(0xFF000000),
                 ),

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/controller/internal/signal_event.dart';
+import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 
 // INV:INV-ENG-TXN-ATOMIC-COMMIT
 // INV:INV-ENG-EPOCH-INVALIDATION
@@ -322,17 +323,17 @@ void main() {
   });
 
   test(
-    'stroke pointsRevision stays monotonic across sequential geometry commits',
+    'stroke geometry commit invalidates the public render geometry cache entry',
     () {
       final controller = SceneStoreController(
         initialSnapshot: singleStrokeSnapshot(),
       );
       addTearDown(controller.dispose);
+      final cache = RenderGeometryCache();
 
-      final rev0 =
-          (controller.snapshot.layers.first.nodes.first as StrokeNodeSnapshot)
-              .pointsRevision;
-      expect(rev0, 0);
+      final beforeStroke =
+          controller.snapshot.layers.first.nodes.first as StrokeNodeSnapshot;
+      final beforeEntry = cache.get(beforeStroke);
 
       controller.write<void>((writer) {
         writer.writeNodePatch(
@@ -345,27 +346,14 @@ void main() {
           ),
         );
       });
-      final rev1 =
-          (controller.snapshot.layers.first.nodes.first as StrokeNodeSnapshot)
-              .pointsRevision;
+      final afterStroke =
+          controller.snapshot.layers.first.nodes.first as StrokeNodeSnapshot;
+      final afterEntry = cache.get(afterStroke);
 
-      controller.write<void>((writer) {
-        writer.writeNodePatch(
-          StrokeNodePatch(
-            id: 's1',
-            points: PatchField<List<Offset>>.value(<Offset>[
-              Offset(0, 0),
-              Offset(3, 3),
-            ]),
-          ),
-        );
-      });
-      final rev2 =
-          (controller.snapshot.layers.first.nodes.first as StrokeNodeSnapshot)
-              .pointsRevision;
-
-      expect(rev1, greaterThan(rev0));
-      expect(rev2, greaterThan(rev1));
+      expect(afterStroke.points, const <Offset>[Offset(0, 0), Offset(2, 2)]);
+      expect(identical(beforeEntry, afterEntry), isFalse);
+      expect(cache.debugBuildCount, 2);
+      expect(cache.debugHitCount, 0);
     },
   );
 
@@ -394,45 +382,42 @@ void main() {
     },
   );
 
-  test(
-    'no-op stroke point patch keeps commit state, snapshot cache, and pointsRevision',
-    () {
-      final controller = SceneStoreController(
-        initialSnapshot: singleStrokeSnapshot(),
+  test('no-op stroke point patch keeps commit state and snapshot cache', () {
+    final controller = SceneStoreController(
+      initialSnapshot: singleStrokeSnapshot(),
+    );
+    addTearDown(controller.dispose);
+
+    final beforeSnapshot = controller.snapshot;
+    final beforeCommit = controller.debug.currentCommitRevision;
+    final beforeStructural = controller.structuralRevision;
+    final beforeBounds = controller.boundsRevision;
+    final beforeVisual = controller.visualRevision;
+    final beforeStroke =
+        beforeSnapshot.layers.first.nodes.first as StrokeNodeSnapshot;
+
+    controller.write<void>((writer) {
+      writer.writeNodePatch(
+        StrokeNodePatch(
+          id: 's1',
+          points: PatchField<List<Offset>>.value(<Offset>[
+            const Offset(0, 0),
+            const Offset(1, 1),
+          ]),
+        ),
       );
-      addTearDown(controller.dispose);
+    });
 
-      final beforeSnapshot = controller.snapshot;
-      final beforeCommit = controller.debug.currentCommitRevision;
-      final beforeStructural = controller.structuralRevision;
-      final beforeBounds = controller.boundsRevision;
-      final beforeVisual = controller.visualRevision;
-      final beforeStroke =
-          beforeSnapshot.layers.first.nodes.first as StrokeNodeSnapshot;
-
-      controller.write<void>((writer) {
-        writer.writeNodePatch(
-          StrokeNodePatch(
-            id: 's1',
-            points: PatchField<List<Offset>>.value(<Offset>[
-              const Offset(0, 0),
-              const Offset(1, 1),
-            ]),
-          ),
-        );
-      });
-
-      final afterSnapshot = controller.snapshot;
-      final afterStroke =
-          afterSnapshot.layers.first.nodes.first as StrokeNodeSnapshot;
-      expect(controller.debug.currentCommitRevision, beforeCommit);
-      expect(controller.structuralRevision, beforeStructural);
-      expect(controller.boundsRevision, beforeBounds);
-      expect(controller.visualRevision, beforeVisual);
-      expect(afterStroke.pointsRevision, beforeStroke.pointsRevision);
-      expect(identical(afterSnapshot, beforeSnapshot), isTrue);
-    },
-  );
+    final afterSnapshot = controller.snapshot;
+    final afterStroke =
+        afterSnapshot.layers.first.nodes.first as StrokeNodeSnapshot;
+    expect(controller.debug.currentCommitRevision, beforeCommit);
+    expect(controller.structuralRevision, beforeStructural);
+    expect(controller.boundsRevision, beforeBounds);
+    expect(controller.visualRevision, beforeVisual);
+    expect(afterStroke.points, beforeStroke.points);
+    expect(identical(afterSnapshot, beforeSnapshot), isTrue);
+  });
 
   test('snapshot cache invalidates after writeReplaceScene', () {
     final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());

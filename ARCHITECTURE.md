@@ -374,7 +374,9 @@ Ownership decisions for the target state:
   world-local normalization and mutable geometry revision behavior.
   `StrokeNode.points` is a read-only runtime view; `StrokeNode.replacePoints`
   is the canonical write owner for stroke geometry validation and
-  `pointsRevision` monotonicity.
+  `pointsRevision` monotonicity. Public snapshot/JSON boundaries transport
+  stroke geometry and scalar document data only; runtime `pointsRevision`
+  stays inside the runtime owner.
 - `PathNode` lives in `core/path_node.dart`, which keeps
   `_PathNodeLocalPathCacheOwner` as the file-local owner for local-path cache
   invalidation and diagnostics.

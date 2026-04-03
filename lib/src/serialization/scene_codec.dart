@@ -338,7 +338,6 @@ StrokeNodeSnapshotSchemaFields _strokeNodeSchemaFields(
   StrokeNodeSnapshot node,
 ) => strokeNodeSnapshotSchemaFieldsFromValidated((
   points: node.points,
-  pointsRevision: node.pointsRevision,
   thickness: node.thickness,
   color: node.color,
 ));

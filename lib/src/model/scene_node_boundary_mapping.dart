@@ -108,9 +108,19 @@ NodeSnapshotBacking sceneNodeSnapshotBackingFromViaBoundarySchema(
   }
 }
 
-SceneNode cloneSceneNodeViaBoundarySchema(SceneNode node) {
-  return sceneNodeFromSnapshotViaBoundarySchema(
-    sceneNodeSnapshotFromViaBoundarySchema(node),
-    instanceRevision: node.instanceRevision,
-  );
+SceneNode cloneRuntimeSceneNode(SceneNode node) {
+  switch (node.type) {
+    case NodeType.image:
+      return cloneRuntimeImageNode(node as ImageNode);
+    case NodeType.text:
+      return cloneRuntimeTextNode(node as TextNode);
+    case NodeType.stroke:
+      return cloneRuntimeStrokeNode(node as StrokeNode);
+    case NodeType.line:
+      return cloneRuntimeLineNode(node as LineNode);
+    case NodeType.rect:
+      return cloneRuntimeRectNode(node as RectNode);
+    case NodeType.path:
+      return cloneRuntimePathNode(node as PathNode);
+  }
 }

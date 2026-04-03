@@ -250,7 +250,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-STROKE-RUNTIME-GEOMETRY-OWNER',
     scope: 'engine-core',
     title:
-        'runtime stroke geometry stays hermetic: StrokeNode.points is read-only and StrokeNode.replacePoints owns validation plus pointsRevision updates',
+        'runtime stroke geometry stays hermetic: StrokeNode.points is read-only, StrokeNode.replacePoints owns pointsRevision updates, and public snapshot/JSON boundaries do not carry runtime stroke revision metadata',
     primaryProof: PrimaryProof(path: 'test/core/nodes_test.dart'),
   ),
   Invariant(
@@ -562,7 +562,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-RENDER-GEOMETRY-KEY-STABLE',
     scope: 'engine-runtime',
     title:
-        'render geometry cache keys use stable scalar/revision inputs (no collection identity)',
+        'render geometry cache keys use canonical public geometry owners instead of linear point scans',
     primaryProof: PrimaryProof(
       path: 'test/render/render_geometry_cache_test.dart',
     ),

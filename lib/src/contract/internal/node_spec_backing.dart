@@ -102,7 +102,7 @@ final class StrokeNodeSpecBacking extends NodeSpecBacking {
     super.isLocked,
     super.isDeletable,
     super.isTransformable,
-  }) : points = OwnedList<Offset>.of(points);
+  }) : points = canonicalOwnedOffsetList(points);
 
   final OwnedList<Offset> points;
   final double thickness;

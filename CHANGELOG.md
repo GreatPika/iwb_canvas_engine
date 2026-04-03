@@ -4,6 +4,11 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ## Unreleased
 
+- Public stroke snapshots no longer expose `pointsRevision`. Typed
+  snapshot import/export and JSON persistence now treat stroke geometry
+  revision as runtime-only metadata, and render/cache read-side freshness for
+  public stroke snapshots now keys off public geometry/scalar payload instead
+  of a public runtime revision field.
 - Transaction state now finalizes before commit planning: successful node and
   structural writes expose finalized `SceneWriteTxn.snapshot` /
   `selectedNodeIds` before callback return, commit planning is read-only over

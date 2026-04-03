@@ -75,6 +75,24 @@ ImageNode imageNodeFromSchema({
   );
 }
 
+ImageNode cloneRuntimeImageNode(ImageNode image) {
+  return ImageNode(
+    id: image.id,
+    instanceRevision: image.instanceRevision,
+    imageId: image.imageId,
+    size: image.size,
+    naturalSize: image.naturalSize,
+    transform: image.transform,
+    opacity: image.opacity,
+    hitPadding: image.hitPadding,
+    isVisible: image.isVisible,
+    isSelectable: image.isSelectable,
+    isLocked: image.isLocked,
+    isDeletable: image.isDeletable,
+    isTransformable: image.isTransformable,
+  );
+}
+
 ImageNodeSnapshotBacking imageSnapshotBackingFromSchema({
   required NodeSnapshotCommonSchemaFields common,
   required ImageNodeSchemaFields fields,

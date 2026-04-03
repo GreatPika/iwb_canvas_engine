@@ -10,7 +10,6 @@ StrokeNodeSnapshotSchemaFields strokeNodeSchemaFieldsFromSnapshot(
 ) {
   return strokeNodeSnapshotSchemaFieldsFromValidated((
     points: stroke.points,
-    pointsRevision: stroke.pointsRevision,
     thickness: stroke.thickness,
     color: stroke.color,
   ));
@@ -31,7 +30,6 @@ StrokeNodeSnapshotSchemaFields strokeNodeSchemaFieldsFromNode(
 ) {
   return strokeNodeSnapshotSchemaFieldsFromValidated((
     points: stroke.points,
-    pointsRevision: stroke.pointsRevision,
     thickness: stroke.thickness,
     color: stroke.color,
   ));
@@ -71,7 +69,6 @@ StrokeNode strokeNodeFromSnapshotSchema({
     id: common.id,
     instanceRevision: common.instanceRevision,
     points: fields.points,
-    pointsRevision: fields.pointsRevision,
     thickness: fields.thickness,
     color: fields.color,
     transform: common.transform,
@@ -103,6 +100,25 @@ StrokeNode strokeNodeFromSpecSchema({
     isLocked: common.isLocked,
     isDeletable: common.isDeletable,
     isTransformable: common.isTransformable,
+  );
+}
+
+StrokeNode cloneRuntimeStrokeNode(StrokeNode stroke) {
+  return StrokeNode(
+    id: stroke.id,
+    instanceRevision: stroke.instanceRevision,
+    points: stroke.points,
+    pointsRevision: stroke.pointsRevision,
+    thickness: stroke.thickness,
+    color: stroke.color,
+    transform: stroke.transform,
+    opacity: stroke.opacity,
+    hitPadding: stroke.hitPadding,
+    isVisible: stroke.isVisible,
+    isSelectable: stroke.isSelectable,
+    isLocked: stroke.isLocked,
+    isDeletable: stroke.isDeletable,
+    isTransformable: stroke.isTransformable,
   );
 }
 

@@ -25,7 +25,6 @@ SceneSnapshot _snapshot({required double strokeY, required String text}) {
           StrokeNodeSnapshot(
             id: 'stroke',
             points: <Offset>[Offset(8, strokeY), Offset(72, strokeY)],
-            pointsRevision: strokeY.abs().round(),
             thickness: 3,
             color: const Color(0xFF000000),
           ),
@@ -54,7 +53,6 @@ SceneSnapshot _churnSnapshot({required int pairCount, required String prefix}) {
             StrokeNodeSnapshot(
               id: '$prefix-stroke-$i',
               points: <Offset>[Offset(8, i * 4), Offset(72, i * 4)],
-              pointsRevision: i,
               thickness: 3,
               color: const Color(0xFF000000),
             ),

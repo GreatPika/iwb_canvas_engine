@@ -137,6 +137,32 @@ TextNode textNodeFromSpecSchema({
   );
 }
 
+TextNode cloneRuntimeTextNode(TextNode text) {
+  return TextNode(
+    id: text.id,
+    instanceRevision: text.instanceRevision,
+    text: text.text,
+    fontSize: text.fontSize,
+    color: text.color,
+    align: text.align,
+    textDirection: text.textDirection,
+    isBold: text.isBold,
+    isItalic: text.isItalic,
+    isUnderline: text.isUnderline,
+    fontFamily: text.fontFamily,
+    maxWidth: text.maxWidth,
+    lineHeight: text.lineHeight,
+    transform: text.transform,
+    opacity: text.opacity,
+    hitPadding: text.hitPadding,
+    isVisible: text.isVisible,
+    isSelectable: text.isSelectable,
+    isLocked: text.isLocked,
+    isDeletable: text.isDeletable,
+    isTransformable: text.isTransformable,
+  );
+}
+
 TextNodeSnapshotBacking textSnapshotBackingFromSchema({
   required NodeSnapshotCommonSchemaFields common,
   required TextNodeSnapshotSchemaFields fields,

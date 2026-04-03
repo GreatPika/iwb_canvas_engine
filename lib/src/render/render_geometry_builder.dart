@@ -34,8 +34,8 @@ Object buildRenderGeometryValidityKey(NodeSnapshot node) {
     ImageNodeSnapshot imageNode => _imageValidityKey(imageNode, transformKey),
     TextNodeSnapshot textNode => _textValidityKey(textNode, transformKey),
     LineNodeSnapshot lineNode => _lineValidityKey(lineNode, transformKey),
-    // Keep stroke key stable across logically equal snapshots:
-    // only scalar/revision geometry inputs, never collection identity.
+    // Keep stroke keys stable across logically equal snapshots by using the
+    // canonical public stroke-points owner derived from document geometry.
     StrokeNodeSnapshot strokeNode => _strokeValidityKey(
       strokeNode,
       transformKey,
@@ -194,7 +194,7 @@ Object _strokeValidityKey(
   ({double a, double b, double c, double d, double tx, double ty}) transformKey,
 ) {
   return _transformScopedValidityKey('stroke', transformKey, (
-    pointsRevision: node.pointsRevision,
+    pointsOwner: _IdentityOwner(node.points),
     thickness: clampNonNegativeFinite(node.thickness),
   ));
 }
@@ -232,6 +232,20 @@ Object _transformScopedValidityKey(
     tx: transform.tx,
     ty: transform.ty,
   );
+}
+
+final class _IdentityOwner {
+  const _IdentityOwner(this.value);
+
+  final Object value;
+
+  @override
+  bool operator ==(Object other) {
+    return other is _IdentityOwner && identical(other.value, value);
+  }
+
+  @override
+  int get hashCode => identityHashCode(value);
 }
 
 Rect _toWorldBounds(Transform2D transform, Rect localBounds) {

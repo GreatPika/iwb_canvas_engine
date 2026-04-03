@@ -243,7 +243,6 @@ StrokeNodeSnapshot _strokeNode() {
     id: 'stroke',
     instanceRevision: 1,
     points: const <Offset>[Offset(0, 0), Offset(10, 10)],
-    pointsRevision: 1,
     thickness: 2,
     color: const Color(0xFF000000),
   );

@@ -313,7 +313,6 @@ class StrokeNodeSnapshot extends NodeSnapshot {
     required NodeId id,
     int instanceRevision = 0,
     required List<Offset> points,
-    int pointsRevision = 0,
     required double thickness,
     required Color color,
     Transform2D transform = Transform2D.identity,
@@ -339,7 +338,6 @@ class StrokeNodeSnapshot extends NodeSnapshot {
          )),
          fields: validateStrokeNodeSnapshotSchemaFields((
            points: points,
-           pointsRevision: pointsRevision,
            thickness: thickness,
            color: color,
          )),
@@ -348,8 +346,7 @@ class StrokeNodeSnapshot extends NodeSnapshot {
   StrokeNodeSnapshot._validated({
     required NodeSnapshotCommonSchemaFields common,
     required StrokeNodeSnapshotSchemaFields fields,
-  }) : points = List<Offset>.unmodifiable(List<Offset>.from(fields.points)),
-       pointsRevision = fields.pointsRevision,
+  }) : points = fields.points,
        thickness = fields.thickness,
        color = fields.color,
        super(
@@ -366,7 +363,6 @@ class StrokeNodeSnapshot extends NodeSnapshot {
        );
 
   final List<Offset> points;
-  final int pointsRevision;
   final double thickness;
   final Color color;
 }

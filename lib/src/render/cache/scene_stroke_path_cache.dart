@@ -57,9 +57,7 @@ class SceneStrokePathCache {
       instanceRevision: node.instanceRevision,
     );
     final cached = _entries.remove(key);
-    if (cached != null &&
-        cached.pointsRevision == node.pointsRevision &&
-        _sameOffsets(cached.points, node.points)) {
+    if (cached != null && identical(cached.points, node.points)) {
       _entries[key] = cached;
       _debugHitCount += 1;
       return cached.path;
@@ -68,8 +66,9 @@ class SceneStrokePathCache {
     final path = buildStrokePath(node.points);
     _entries[key] = _StrokePathEntry(
       path: path,
-      pointsRevision: node.pointsRevision,
-      points: List<Offset>.of(node.points, growable: false),
+      // Equivalent public stroke snapshots share one canonical immutable points
+      // owner, so identity is an exact O(1) freshness check here.
+      points: node.points,
     );
     _debugBuildCount += 1;
     _evictIfNeeded();
@@ -85,14 +84,9 @@ class SceneStrokePathCache {
 }
 
 class _StrokePathEntry {
-  const _StrokePathEntry({
-    required this.path,
-    required this.pointsRevision,
-    required this.points,
-  });
+  const _StrokePathEntry({required this.path, required this.points});
 
   final Path path;
-  final int pointsRevision;
   final List<Offset> points;
 }
 
@@ -125,16 +119,4 @@ Path buildStrokePath(List<Offset> points) {
     path.lineTo(p.dx, p.dy);
   }
   return path;
-}
-
-bool _sameOffsets(List<Offset> left, List<Offset> right) {
-  if (left.length != right.length) {
-    return false;
-  }
-  for (var i = 0; i < left.length; i++) {
-    if (left[i] != right[i]) {
-      return false;
-    }
-  }
-  return true;
 }

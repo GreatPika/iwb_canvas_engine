@@ -195,7 +195,7 @@ language: russian
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Stroke Render Freshness Without Public Revision
+### Slice 1. [x] Stroke Render Freshness Without Public Revision
 
 #### Slice Contract
 
@@ -227,7 +227,7 @@ Public stroke render/cache reuse no longer depends on `StrokeNodeSnapshot.points
 
 - Green run of the listed verifications.
 
-### Slice 2. [ ] Public Stroke Snapshot Contract Drops Runtime Revision Metadata
+### Slice 2. [x] Public Stroke Snapshot Contract Drops Runtime Revision Metadata
 
 #### Slice Contract
 
@@ -265,7 +265,7 @@ Public stroke render/cache reuse no longer depends on `StrokeNodeSnapshot.points
 
 - Green run of the listed verifications.
 
-### Slice 3. [ ] Source Of Truth Pins Stroke Runtime/Public Split
+### Slice 3. [x] Source Of Truth Pins Stroke Runtime/Public Split
 
 #### Slice Contract
 

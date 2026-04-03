@@ -24,7 +24,6 @@ StrokeNodeSnapshotSchemaFields _decodeStrokeFields(
 }) {
   return strokeNodeSnapshotSchemaFieldsFromValidated((
     points: _decodeStrokePoints(json, nodePath: nodePath),
-    pointsRevision: 0,
     thickness: sceneBuilderRequireValidatedField(
       json,
       'thickness',

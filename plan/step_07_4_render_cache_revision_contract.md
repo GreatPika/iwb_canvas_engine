@@ -79,7 +79,9 @@ invalidation contract и зафиксировать, где достаточно
 5. `SceneStrokePathCache`:
    - не содержит `epoch` в key;
    - entry owner key это `(nodeId, instanceRevision)`;
-   - `pointsRevision` остаётся secondary discriminator внутри entry semantics.
+  - historical note: at this step `pointsRevision` was still part of stroke
+    freshness semantics; the current contract was later updated by step 87 to
+    use public stroke geometry instead of public revision metadata.
 6. `ScenePathMetricsCache`:
    - не содержит `epoch` в key;
    - entry owner key это `(nodeId, instanceRevision)`;

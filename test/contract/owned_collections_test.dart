@@ -43,6 +43,23 @@ void main() {
     expect(identical(reused, source), isTrue);
   });
 
+  test('canonicalOwnedOffsetList interns equivalent offset sequences', () {
+    final canonicalA = canonicalOwnedOffsetList(const <Offset>[
+      Offset(1, 2),
+      Offset(3, 4),
+    ]);
+    final canonicalB = canonicalOwnedOffsetList(const <Offset>[
+      Offset(1, 2),
+      Offset(3, 4),
+    ]);
+    final canonicalC = canonicalOwnedOffsetList(
+      const <Offset>[Offset(1, 2), Offset(3, 4)].where((_) => true),
+    );
+
+    expect(identical(canonicalA, canonicalB), isTrue);
+    expect(identical(canonicalA, canonicalC), isTrue);
+  });
+
   test('OwnedList compares non-list iterables by element values', () {
     final owned = OwnedList<Offset>.of(const <Offset>[
       Offset(1, 2),

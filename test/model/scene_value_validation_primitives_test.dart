@@ -139,7 +139,6 @@ void main() {
             StrokeNodeSnapshot(
               id: 'stroke-0',
               points: const <Offset>[Offset(0, 0)],
-              pointsRevision: 0,
               thickness: 1,
               color: const Color(0xFF000000),
             ),

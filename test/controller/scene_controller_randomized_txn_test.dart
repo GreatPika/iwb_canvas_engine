@@ -638,9 +638,7 @@ void _assertFiniteSnapshotNumbers({
           );
         case StrokeNodeSnapshot():
           expect(
-            node.thickness.isFinite &&
-                node.thickness > 0 &&
-                node.pointsRevision >= 0,
+            node.thickness.isFinite && node.thickness > 0,
             isTrue,
             reason: '$nodeCtx stroke',
           );

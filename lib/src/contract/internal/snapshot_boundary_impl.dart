@@ -525,9 +525,6 @@ final class _MaterializedStrokeNodeSnapshot extends StrokeNodeSnapshot
   List<Offset> get points => nodeSnapshotBacking.points;
 
   @override
-  int get pointsRevision => nodeSnapshotBacking.pointsRevision;
-
-  @override
   double get thickness => nodeSnapshotBacking.thickness;
 
   @override

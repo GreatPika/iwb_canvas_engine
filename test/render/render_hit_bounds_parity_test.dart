@@ -146,7 +146,6 @@ void main() {
       final snapshot = StrokeNodeSnapshot(
         id: 'stroke-parity',
         points: const <Offset>[Offset(-10, 0), Offset(10, 0), Offset(14, 6)],
-        pointsRevision: 3,
         thickness: 5,
         color: const Color(0xFF000000),
         hitPadding: 1.5,
@@ -157,7 +156,6 @@ void main() {
       final coreNode = StrokeNode(
         id: snapshot.id,
         points: snapshot.points,
-        pointsRevision: snapshot.pointsRevision,
         thickness: snapshot.thickness,
         color: snapshot.color,
         hitPadding: snapshot.hitPadding,

@@ -77,6 +77,25 @@ LineNode lineNodeFromSchema({
   );
 }
 
+LineNode cloneRuntimeLineNode(LineNode line) {
+  return LineNode(
+    id: line.id,
+    instanceRevision: line.instanceRevision,
+    start: line.start,
+    end: line.end,
+    thickness: line.thickness,
+    color: line.color,
+    transform: line.transform,
+    opacity: line.opacity,
+    hitPadding: line.hitPadding,
+    isVisible: line.isVisible,
+    isSelectable: line.isSelectable,
+    isLocked: line.isLocked,
+    isDeletable: line.isDeletable,
+    isTransformable: line.isTransformable,
+  );
+}
+
 LineNodeSnapshotBacking lineSnapshotBackingFromSchema({
   required NodeSnapshotCommonSchemaFields common,
   required LineNodeSchemaFields fields,

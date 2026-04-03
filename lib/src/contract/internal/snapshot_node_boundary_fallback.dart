@@ -74,7 +74,6 @@ StrokeNodeSnapshotBacking _strokeNodeSnapshotBacking(
     id: stroke.id,
     instanceRevision: stroke.instanceRevision,
     points: stroke.points,
-    pointsRevision: stroke.pointsRevision,
     thickness: stroke.thickness,
     color: stroke.color,
     transform: stroke.transform,

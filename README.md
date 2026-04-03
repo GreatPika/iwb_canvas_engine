@@ -139,7 +139,9 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Runtime stroke geometry is hermetic: `StrokeNode.points` is a read-only view,
   direct list mutation is unsupported, and whole-geometry updates go through
   `StrokeNode.replacePoints(...)`, which preserves `pointsRevision` no-op
-  semantics and rejects non-finite or oversized point lists.
+  semantics and rejects non-finite or oversized point lists. Public stroke
+  snapshots and JSON carry only document geometry/scalar data; runtime
+  `pointsRevision` does not cross the public boundary.
 - `TextNode`, `TextNodeSnapshot`, and serialized text payloads carry explicit
   `textDirection`. Public `TextNodeSpec` / `TextNodeSnapshot` creation requires
   explicit direction, `TextNodePatch` can update it for existing text nodes,

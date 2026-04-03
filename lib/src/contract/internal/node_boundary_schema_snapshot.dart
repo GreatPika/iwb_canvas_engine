@@ -35,14 +35,12 @@ typedef TextNodeSnapshotSchemaFields = ({
 
 typedef StrokeNodeSnapshotSchemaInput = ({
   List<Offset> points,
-  int pointsRevision,
   double thickness,
   Color color,
 });
 
 typedef StrokeNodeSnapshotSchemaFields = ({
   OwnedList<Offset> points,
-  int pointsRevision,
   double thickness,
   Color color,
 });
@@ -177,11 +175,6 @@ StrokeNodeSnapshotSchemaFields validateStrokeNodeSnapshotSchemaFields(
   ));
   return (
     points: strokeFields.points,
-    pointsRevision: validateInstanceRevisionValue(
-      fields.pointsRevision,
-      name: 'pointsRevision',
-      allowZero: true,
-    ),
     thickness: strokeFields.thickness,
     color: strokeFields.color,
   );
@@ -197,7 +190,6 @@ StrokeNodeSnapshotSchemaFields strokeNodeSnapshotSchemaFieldsFromValidated(
   ));
   return (
     points: strokeFields.points,
-    pointsRevision: fields.pointsRevision,
     thickness: strokeFields.thickness,
     color: strokeFields.color,
   );

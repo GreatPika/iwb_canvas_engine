@@ -40,52 +40,50 @@ void main() {
     },
   );
 
-  test(
-    'stroke path cache reuses paths only when pointsRevision and points match',
-    () {
-      final cache = SceneStrokePathCache(maxEntries: 8);
-      final strokeA = StrokeNodeSnapshot(
-        id: 's1',
-        points: const <Offset>[Offset(0, 0), Offset(10, 10)],
-        pointsRevision: 1,
-        thickness: 2,
-        color: const Color(0xFF000000),
-      );
-      final strokeA2 = StrokeNodeSnapshot(
-        id: 's1',
-        points: const <Offset>[Offset(0, 0), Offset(10, 10)],
-        pointsRevision: 1,
-        thickness: 2,
-        color: const Color(0xFF000000),
-      );
-      final strokeChanged = StrokeNodeSnapshot(
-        id: 's1',
-        points: const <Offset>[Offset(0, 0), Offset(10, 10)],
-        pointsRevision: 2,
-        thickness: 2,
-        color: const Color(0xFF000000),
-      );
-      final staleRevision = StrokeNodeSnapshot(
-        id: 's1',
-        points: const <Offset>[Offset(0, 0), Offset(12, 10)],
-        pointsRevision: 2,
-        thickness: 2,
-        color: const Color(0xFF000000),
-      );
+  test('stroke path cache reuses paths when public stroke points match', () {
+    final cache = SceneStrokePathCache(maxEntries: 8);
+    final strokeA = StrokeNodeSnapshot(
+      id: 's1',
+      points: const <Offset>[Offset(0, 0), Offset(10, 10)],
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+    final strokeA2 = StrokeNodeSnapshot(
+      id: 's1',
+      points: const <Offset>[Offset(0, 0), Offset(10, 10)],
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+    final sameGeometryDifferentThickness = StrokeNodeSnapshot(
+      id: 's1',
+      points: const <Offset>[Offset(0, 0), Offset(10, 10)],
+      thickness: 4,
+      color: const Color(0xFF000000),
+    );
+    final strokeChanged = StrokeNodeSnapshot(
+      id: 's1',
+      points: const <Offset>[Offset(0, 0), Offset(12, 10)],
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
 
-      final first = cache.getOrBuild(strokeA);
-      final second = cache.getOrBuild(strokeA2);
-      final third = cache.getOrBuild(strokeChanged);
-      final fourth = cache.getOrBuild(staleRevision);
+    final first = cache.getOrBuild(strokeA);
+    final second = cache.getOrBuild(strokeA2);
+    final third = cache.getOrBuild(sameGeometryDifferentThickness);
+    final fourth = cache.getOrBuild(strokeChanged);
 
-      expect(identical(first, second), isTrue);
-      expect(identical(second, third), isFalse);
-      expect(identical(third, fourth), isFalse);
-      expect(cache.debugBuildCount, 3);
-      expect(cache.debugHitCount, 1);
-      expect(cache.debugSize, 1);
-    },
-  );
+    expect(identical(strokeA.points, strokeA2.points), isTrue);
+    expect(
+      identical(strokeA.points, sameGeometryDifferentThickness.points),
+      isTrue,
+    );
+    expect(identical(first, second), isTrue);
+    expect(identical(second, third), isTrue);
+    expect(identical(third, fourth), isFalse);
+    expect(cache.debugBuildCount, 2);
+    expect(cache.debugHitCount, 2);
+    expect(cache.debugSize, 1);
+  });
 
   test('stroke path cache rebuilds when points change under same revision', () {
     final cache = SceneStrokePathCache(maxEntries: 8);
@@ -93,7 +91,6 @@ void main() {
       id: 'same-revision',
       instanceRevision: 1,
       points: const <Offset>[Offset(0, 0), Offset(10, 0)],
-      pointsRevision: 0,
       thickness: 2,
       color: const Color(0xFF000000),
     );
@@ -101,7 +98,6 @@ void main() {
       id: 'same-revision',
       instanceRevision: 1,
       points: const <Offset>[Offset(0, 0), Offset(0, 10)],
-      pointsRevision: 0,
       thickness: 2,
       color: const Color(0xFF000000),
     );
@@ -123,7 +119,6 @@ void main() {
         id: 'reuse-id',
         instanceRevision: 1,
         points: const <Offset>[Offset(0, 0), Offset(10, 0)],
-        pointsRevision: 1,
         thickness: 2,
         color: const Color(0xFF000000),
       );
@@ -131,7 +126,6 @@ void main() {
         id: 'reuse-id',
         instanceRevision: 2,
         points: const <Offset>[Offset(0, 0), Offset(0, 10)],
-        pointsRevision: 1,
         thickness: 2,
         color: const Color(0xFF000000),
       );
@@ -204,7 +198,6 @@ void main() {
         id: 'reuse-id',
         instanceRevision: 1,
         points: const <Offset>[Offset(0, 0), Offset(10, 10)],
-        pointsRevision: 1,
         thickness: 2,
         color: const Color(0xFF000000),
       );

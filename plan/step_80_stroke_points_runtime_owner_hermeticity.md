@@ -128,8 +128,10 @@ language: russian
 
 ### 6.3 Protected States, Data, or Structures
 
-- `StrokeNodeSnapshot.points` and `StrokeNodeSnapshot.pointsRevision` remain immutable typed boundary data.
-- Existing render cache semantics that use `pointsRevision` for freshness remain unchanged.
+- `StrokeNodeSnapshot.points` remains immutable typed boundary data.
+- Historical note: this step still assumed public `StrokeNodeSnapshot.pointsRevision`;
+  that boundary field was removed later by step 87 and is no longer part of the
+  current contract.
 - Existing point-count invariants in typed, decode, and encode paths remain unchanged.
 - Existing stroke geometry semantics for hit-testing and rendering remain unchanged.
 

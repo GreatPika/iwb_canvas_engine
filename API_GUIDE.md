@@ -202,8 +202,10 @@ Public variants:
 
 Important runtime details:
 
-- `StrokeNodeSnapshot.pointsRevision` is runtime metadata used by render caches
-- `pointsRevision` is not serialized into JSON
+- public `StrokeNodeSnapshot` and JSON carry stroke document data only:
+  points, thickness, color, identity, and common node fields
+- runtime `pointsRevision` stays internal stroke metadata and does not cross
+  typed snapshot import/export or JSON serialization
 - runtime `StrokeNode.points` is read-only; direct list mutation is unsupported
 - runtime whole-stroke geometry writes go through
   `StrokeNode.replacePoints(...)`, which rejects non-finite coordinates and

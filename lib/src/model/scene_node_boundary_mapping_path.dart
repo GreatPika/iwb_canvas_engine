@@ -81,6 +81,26 @@ PathNode pathNodeFromSchema({
   );
 }
 
+PathNode cloneRuntimePathNode(PathNode path) {
+  return PathNode(
+    id: path.id,
+    instanceRevision: path.instanceRevision,
+    svgPathData: path.svgPathData,
+    fillColor: path.fillColor,
+    strokeColor: path.strokeColor,
+    strokeWidth: path.strokeWidth,
+    fillRule: path.fillRule,
+    transform: path.transform,
+    opacity: path.opacity,
+    hitPadding: path.hitPadding,
+    isVisible: path.isVisible,
+    isSelectable: path.isSelectable,
+    isLocked: path.isLocked,
+    isDeletable: path.isDeletable,
+    isTransformable: path.isTransformable,
+  );
+}
+
 PathNodeSnapshotBacking pathSnapshotBackingFromSchema({
   required NodeSnapshotCommonSchemaFields common,
   required PathNodeSchemaFields fields,

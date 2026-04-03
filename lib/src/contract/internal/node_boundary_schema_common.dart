@@ -148,7 +148,7 @@ OwnedList<Offset> validateFiniteOffsetList(
   required String name,
 }) {
   validateStrokePointCount(values.length, name: name, source: values);
-  return OwnedList<Offset>.of(
+  return canonicalOwnedOffsetList(
     List<Offset>.generate(
       values.length,
       (index) =>

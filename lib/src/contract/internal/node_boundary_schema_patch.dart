@@ -280,7 +280,7 @@ PatchField<List<Offset>> snapshotOffsetListPatchField(
   PatchField<List<Offset>> patch,
 ) {
   if (patch.isAbsent) return patch;
-  return PatchField<List<Offset>>.value(OwnedList<Offset>.of(patch.value));
+  return PatchField<List<Offset>>.value(canonicalOwnedOffsetList(patch.value));
 }
 
 PatchField<T> _validateNonNullablePatchField<T>(

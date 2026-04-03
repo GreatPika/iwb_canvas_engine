@@ -181,4 +181,4 @@ This file is the plan index. Each step has a dedicated document so steps can be 
 - [x] [Шаг 84. Закрыть остаточные invariant gaps для write, interactive, boundary, model и view contracts](plan/step_84_residual_invariant_contour_backfill.md)
 - [x] [Шаг 85. Финализировать transaction-state до commit-plan и замкнуть интерактивный commit boundary](plan/step_85_transaction_finalized_selection_and_interactive_commit_boundary.md)
 - [x] [Шаг 86. Перенести routed pointer boundary-типы в `contract` и убрать `contract -> core` bridge](plan/step_86_pointer_boundary_contract_core_detachment.md)
-- [ ] [Шаг 87. Убрать `StrokeNodeSnapshot.pointsRevision` из публичного snapshot boundary](plan/step_87_remove_stroke_points_revision_from_public_snapshot_boundary.md)
+- [x] [Шаг 87. Убрать `StrokeNodeSnapshot.pointsRevision` из публичного snapshot boundary](plan/step_87_remove_stroke_points_revision_from_public_snapshot_boundary.md)

@@ -202,7 +202,6 @@ final class StrokeNodeSnapshotBacking extends NodeSnapshotBacking {
     required super.id,
     super.instanceRevision,
     required Iterable<Offset> points,
-    this.pointsRevision = 0,
     required this.thickness,
     required this.color,
     super.transform,
@@ -213,10 +212,9 @@ final class StrokeNodeSnapshotBacking extends NodeSnapshotBacking {
     super.isLocked,
     super.isDeletable,
     super.isTransformable,
-  }) : points = OwnedList<Offset>.of(points);
+  }) : points = canonicalOwnedOffsetList(points);
 
   final OwnedList<Offset> points;
-  final int pointsRevision;
   final double thickness;
   final Color color;
 }
@@ -419,7 +417,6 @@ StrokeNodeSnapshotBacking strokeNodeSnapshotBackingFromValidated({
     id: common.id,
     instanceRevision: common.instanceRevision,
     points: fields.points,
-    pointsRevision: fields.pointsRevision,
     thickness: fields.thickness,
     color: fields.color,
     transform: common.transform,

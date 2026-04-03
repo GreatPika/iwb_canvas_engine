@@ -121,10 +121,10 @@ void main() {
     expect(nodes[5], isA<PathNode>());
     expect((nodes[5] as PathNode).fillRule, PathFillRule.evenOdd);
     expect(
-      (snapshot.layers[1].nodes[2] as StrokeNodeSnapshot).pointsRevision,
-      1,
+      (snapshot.layers[1].nodes[2] as StrokeNodeSnapshot).points,
+      const <Offset>[Offset(-1, -1), Offset(3, 4)],
     );
-    expect((nodes[2] as StrokeNode).pointsRevision, 1);
+    expect((nodes[2] as StrokeNode).pointsRevision, 0);
   });
 
   test('txnNodeToSnapshot delegates node conversion through shared owner', () {
@@ -151,9 +151,10 @@ void main() {
     expect(rectSnapshot.hitPadding, 0.3);
   });
 
-  test('txnSceneFromSnapshot rejects negative stroke pointsRevision', () {
-    expect(
-      () => txnSceneFromSnapshot(
+  test(
+    'txnSceneFromSnapshot materializes runtime stroke revision from defaults',
+    () {
+      final scene = txnSceneFromSnapshot(
         sceneSnapshotFromValidated(
           layers: <ContentLayerSnapshot>[
             contentLayerSnapshotFromValidated(
@@ -163,7 +164,6 @@ void main() {
                   common: nodeSnapshotCommonFieldsFromValidated(id: 's'),
                   fields: (
                     points: const <Offset>[Offset(0, 0), Offset(1, 1)],
-                    pointsRevision: -1,
                     thickness: 1,
                     color: const Color(0xFF000000),
                   ),
@@ -172,19 +172,13 @@ void main() {
             ),
           ],
         ),
-      ),
-      throwsA(
-        predicate(
-          (e) =>
-              e is SceneDataException &&
-              e.code == SceneDataErrorCode.invalidValue &&
-              e.path == 'layers[0].nodes[0].pointsRevision' &&
-              e.message ==
-                  'Field layers[0].nodes[0].pointsRevision must be >= 0.',
-        ),
-      ),
-    );
-  });
+      );
+
+      final stroke = scene.layers.single.nodes.single as StrokeNode;
+      expect(stroke.points, const <Offset>[Offset(0, 0), Offset(1, 1)]);
+      expect(stroke.pointsRevision, 0);
+    },
+  );
 
   test(
     'txnSceneFromSnapshot rejects enabled grid cellSize below the import minimum',

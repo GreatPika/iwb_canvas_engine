@@ -38,7 +38,7 @@ ContentLayer txnCloneContentLayer(ContentLayer layer) {
 }
 
 SceneNode txnCloneNode(SceneNode node) {
-  return cloneSceneNodeViaBoundarySchema(node);
+  return cloneRuntimeSceneNode(node);
 }
 
 Scene _cloneScene(

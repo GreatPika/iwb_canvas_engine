@@ -77,6 +77,25 @@ RectNode rectNodeFromSchema({
   );
 }
 
+RectNode cloneRuntimeRectNode(RectNode rect) {
+  return RectNode(
+    id: rect.id,
+    instanceRevision: rect.instanceRevision,
+    size: rect.size,
+    fillColor: rect.fillColor,
+    strokeColor: rect.strokeColor,
+    strokeWidth: rect.strokeWidth,
+    transform: rect.transform,
+    opacity: rect.opacity,
+    hitPadding: rect.hitPadding,
+    isVisible: rect.isVisible,
+    isSelectable: rect.isSelectable,
+    isLocked: rect.isLocked,
+    isDeletable: rect.isDeletable,
+    isTransformable: rect.isTransformable,
+  );
+}
+
 RectNodeSnapshotBacking rectSnapshotBackingFromSchema({
   required NodeSnapshotCommonSchemaFields common,
   required RectNodeSchemaFields fields,
