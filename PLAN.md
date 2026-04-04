@@ -186,3 +186,4 @@ This file is the plan index. Each step has a dedicated document so steps can be 
 - [x] [Шаг 89. Сделать публичный `SceneSnapshot` глобально валидным по определению](plan/step_89_scene_snapshot_global_validity_by_construction.md)
 - [x] [Шаг 90. Выровнять shared scene-metadata value contracts между runtime / public / import](plan/step_90_shared_scene_metadata_value_contract_alignment.md)
 - [x] [Шаг 91. Замкнуть финальную scene-document architecture на docs, invariants, guardrails и roadmap](plan/step_91_scene_document_architecture_closure.md)
+- [ ] [Шаг 92. Замкнуть семантический lifecycle gesture, snapshot draw-style и detachment pointer-session](plan/step_92_interactive_semantic_gesture_lifecycle_closure.md)
