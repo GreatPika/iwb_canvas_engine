@@ -129,7 +129,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-PUBLIC-SNAPSHOT-GLOBAL-VALIDITY',
     scope: 'engine-api',
     title:
-        'ordinary public SceneSnapshot construction is structurally valid by construction and raw malformed snapshot materialization stays internal-only',
+        'public SceneSnapshot remains the canonical document boundary, ordinary public construction is globally valid by construction, and raw malformed snapshot assembly stays internal-only',
     primaryProof: PrimaryProof(
       path: 'test/public_api/validated_boundary_value_test.dart',
     ),
@@ -138,7 +138,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-SHARED-SCENE-METADATA-CONTRACT',
     scope: 'engine-api',
     title:
-        'scene metadata values use one eager contract across public constructors, runtime owners, and import/decode paths, while raw malformed metadata stays internal-only',
+        'scene metadata values use one eager contract across public constructors, runtime owners, and import/decode paths, while raw malformed metadata assembly stays internal-only',
     primaryProof: PrimaryProof(
       path: 'test/public_api/validated_boundary_value_test.dart',
     ),
@@ -277,7 +277,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-STROKE-RUNTIME-GEOMETRY-OWNER',
     scope: 'engine-core',
     title:
-        'runtime stroke geometry stays hermetic: StrokeNode.points is read-only, StrokeNode.replacePoints owns pointsRevision updates, and public snapshot/JSON boundaries do not carry runtime stroke revision metadata',
+        'runtime stroke geometry stays hermetic: StrokeNode.points is read-only, StrokeNode.replacePoints owns pointsRevision updates, and public SceneSnapshot/JSON document boundaries do not carry runtime stroke revision metadata',
     primaryProof: PrimaryProof(path: 'test/core/nodes_test.dart'),
   ),
   Invariant(
@@ -473,7 +473,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-MODEL-ARCHITECTURE-BOUNDARY',
     scope: 'engine-structure',
     title:
-        'model facade/internal-owner boundaries remain part-free and downstream code imports only canonical model facades',
+        'model facade/internal-owner boundaries remain part-free, internal draft/import owners stay model-only, and downstream code imports only canonical model facades',
     primaryProof: PrimaryProof(
       path: 'test/tool/guardrails/guardrails_model_architecture_tool_test.dart',
     ),

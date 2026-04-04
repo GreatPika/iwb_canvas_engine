@@ -152,6 +152,10 @@ class _CanvasScreenState extends State<CanvasScreen> {
   duplicate node ids, duplicate content-layer ids, and scene-wide
   layer/node-count overflow before a malformed public snapshot can escape the
   boundary.
+- `SceneSnapshot` is the canonical public document boundary. Typed snapshot
+  import and parsed JSON decode may normalize through internal draft/import
+  owners, but callers still only construct, pass, and receive public
+  snapshots; raw malformed snapshot or metadata assembly stays internal-only.
 - Scene metadata uses one shared eager contract across public constructors,
   runtime setters/owners, typed import, and JSON decode. `CameraSnapshot` /
   `Camera.offset` reject non-finite or out-of-range offsets, `GridSnapshot` /

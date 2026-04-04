@@ -260,7 +260,7 @@ repository knowledge.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Draft/Import Structural Guardrail Closure
+### Slice 1. [x] Draft/Import Structural Guardrail Closure
 
 #### Slice Contract
 
@@ -305,7 +305,7 @@ draft/import owner restriction.
 
 - Green run of the listed verifications.
 
-### Slice 2. [ ] Invariant And Proof Contour Closure
+### Slice 2. [x] Invariant And Proof Contour Closure
 
 #### Slice Contract
 
@@ -351,7 +351,7 @@ so the declared proof surfaces stay exact.
 
 - Green run of the listed verifications.
 
-### Slice 3. [ ] Source-Of-Truth Docs And Roadmap Closure
+### Slice 3. [x] Source-Of-Truth Docs And Roadmap Closure
 
 #### Slice Contract
 

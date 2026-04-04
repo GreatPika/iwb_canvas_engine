@@ -222,6 +222,122 @@ void decodeScene() {}
     );
 
     test(
+      'rejects non-model code importing scene_import_draft.dart directly',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/serialization/scene_codec.dart',
+            '''
+import '../model/scene_import_draft.dart';
+
+void decodeScene() {}
+''',
+          );
+          writeSandboxFile(
+            sandbox,
+            'lib/src/model/scene_import_draft.dart',
+            'class SceneImportDraft {}\n',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'model architecture',
+              detail:
+                  'canonical model facades instead of importing or '
+                  're-exporting internal owner module scene_import_draft.dart',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects non-model code importing scene_import_draft_from_snapshot.dart directly',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/serialization/scene_codec.dart',
+            '''
+import '../model/scene_import_draft_from_snapshot.dart';
+
+void decodeScene() {}
+''',
+          );
+          writeSandboxFile(
+            sandbox,
+            'lib/src/model/scene_import_draft_from_snapshot.dart',
+            'Object sceneImportDraftFromSnapshot(Object snapshot) => snapshot;\n',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'model architecture',
+              detail:
+                  'canonical model facades instead of importing or '
+                  're-exporting internal owner module '
+                  'scene_import_draft_from_snapshot.dart',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects non-model code importing scene_from_import_draft.dart directly',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/serialization/scene_codec.dart',
+            '''
+import '../model/scene_from_import_draft.dart';
+
+void decodeScene() {}
+''',
+          );
+          writeSandboxFile(
+            sandbox,
+            'lib/src/model/scene_from_import_draft.dart',
+            'Object sceneFromImportDraft(Object draft) => draft;\n',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'model architecture',
+              detail:
+                  'canonical model facades instead of importing or '
+                  're-exporting internal owner module '
+                  'scene_from_import_draft.dart',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
       'rejects non-model code importing split scene builder metadata owner',
       () async {
         final sandbox = await createGuardrailsSandbox();

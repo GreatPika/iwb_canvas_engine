@@ -205,8 +205,8 @@ Ownership decisions for the target state:
 - `model/scene_import_draft.dart` is the single model-owned pre-canonical
   import carrier. Typed `SceneSnapshot` import and parsed-map decode both
   normalize into this draft before scene-level policy validation closes.
-- Ordinary `SceneImportDraft(...)` construction stays on validated backing
-  builders; raw decode and malformed-draft assembly must remain explicit
+- `SceneImportDraft` remains internal-only. Ordinary public callers construct
+  `SceneSnapshot`, while raw decode and malformed-draft assembly stay explicit
   through `SceneImportDraft.fromBacking(...)`.
 - `model/scene_from_import_draft.dart` is the runtime materializer from a
   validated draft to mutable `Scene`; public `SceneSnapshot` is not used as

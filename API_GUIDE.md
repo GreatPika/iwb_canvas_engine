@@ -144,6 +144,9 @@ Import note:
   policy validation closes
 - public callers still only construct, pass, and receive `SceneSnapshot`
   values; the draft layer is not part of the public API
+- raw malformed snapshot or scene-metadata assembly stays on explicit internal
+  backing/materialization paths and is not available through ordinary public
+  constructors
 
 Fields:
 

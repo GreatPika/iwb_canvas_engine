@@ -175,6 +175,7 @@ void main() {
   test(
     'SceneBuilder.buildFromSnapshot reports path-aware duplicate-id failures',
     () {
+      // INV:INV-ENG-PUBLIC-SNAPSHOT-GLOBAL-VALIDITY
       final snapshot = _duplicateNodeSnapshotFromInternalBypass();
 
       expect(
@@ -195,6 +196,7 @@ void main() {
   test(
     'SceneBuilder.buildFromJson preserves duplicate-id diagnostics of decodeScene',
     () {
+      // INV:INV-ENG-SHARED-SCENE-METADATA-CONTRACT
       final raw = minimalSceneJson(
         backgroundNodes: <Object?>[minimalRectNodeJson(id: 'bg')],
       );
