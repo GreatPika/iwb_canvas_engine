@@ -5,6 +5,7 @@ import '../core/nodes.dart';
 import '../core/revision_policy.dart';
 import '../core/scene.dart';
 import '../contract/ids.dart' show LayerId;
+import '../contract/scene_model_invariants.dart';
 import '../model/document.dart';
 import '../model/document_clone.dart';
 import 'committed_store_state.dart';
@@ -120,10 +121,6 @@ bool _txnNodeLocatorEquals(
     }
   }
   return true;
-}
-
-bool _txnIsFiniteOffset(Offset value) {
-  return value.dx.isFinite && value.dy.isFinite;
 }
 
 List<String> _txnCollectSceneIndexInvariantViolations({
@@ -278,12 +275,128 @@ List<String> _txnCollectCommitRevisionInvariantViolations(int commitRevision) {
 List<String> _txnCollectSceneNumericInvariantViolations(Scene scene) {
   final violations = <String>[];
 
-  final cameraOffset = scene.camera.offset;
-  if (!_txnIsFiniteOffset(cameraOffset)) {
-    violations.add('camera.offset must be finite.');
-  }
+  _txnCollectSceneCoordinateViolations(
+    scene.camera.offset,
+    field: 'camera.offset',
+    violations: violations,
+  );
+  _txnCollectGridViolations(
+    scene.background.grid,
+    field: 'background.grid',
+    violations: violations,
+  );
+  _txnCollectPaletteViolations(
+    scene.palette,
+    field: 'palette',
+    violations: violations,
+  );
 
   return violations;
+}
+
+void _txnCollectSceneCoordinateViolations(
+  Offset value, {
+  required String field,
+  required List<String> violations,
+}) {
+  _txnCollectCoordinateComponentViolation(
+    value.dx,
+    field: '$field.dx',
+    violations: violations,
+  );
+  _txnCollectCoordinateComponentViolation(
+    value.dy,
+    field: '$field.dy',
+    violations: violations,
+  );
+}
+
+void _txnCollectCoordinateComponentViolation(
+  double value, {
+  required String field,
+  required List<String> violations,
+}) {
+  final message = sceneCoordinateViolationMessage(value);
+  if (message == null) {
+    return;
+  }
+  violations.add('$field $message');
+}
+
+void _txnCollectGridViolations(
+  GridSettings grid, {
+  required String field,
+  required List<String> violations,
+}) {
+  final cellSizeField = '$field.cellSize';
+  _txnCollectPositiveBoundedSizeViolation(
+    grid.cellSize,
+    field: cellSizeField,
+    violations: violations,
+  );
+  if (!grid.isEnabled) {
+    return;
+  }
+  final message = sceneEnabledGridCellSizeViolationMessage(grid.cellSize);
+  if (message == null) {
+    return;
+  }
+  violations.add('$cellSizeField $message');
+}
+
+void _txnCollectPaletteViolations(
+  ScenePalette palette, {
+  required String field,
+  required List<String> violations,
+}) {
+  _txnCollectPaletteListViolations(
+    palette.penColors,
+    field: '$field.penColors',
+    violations: violations,
+  );
+  _txnCollectPaletteListViolations(
+    palette.backgroundColors,
+    field: '$field.backgroundColors',
+    violations: violations,
+  );
+  _txnCollectPaletteListViolations(
+    palette.gridSizes,
+    field: '$field.gridSizes',
+    violations: violations,
+  );
+  for (var index = 0; index < palette.gridSizes.length; index++) {
+    _txnCollectPositiveBoundedSizeViolation(
+      palette.gridSizes[index],
+      field: '$field.gridSizes[$index]',
+      violations: violations,
+    );
+  }
+}
+
+void _txnCollectPaletteListViolations<T>(
+  List<T> values, {
+  required String field,
+  required List<String> violations,
+}) {
+  final countMessage = scenePaletteItemCountViolationMessage(values.length);
+  if (countMessage != null) {
+    violations.add('$field $countMessage');
+  }
+  if (values.isEmpty) {
+    violations.add('$field must not be empty.');
+  }
+}
+
+void _txnCollectPositiveBoundedSizeViolation(
+  double value, {
+  required String field,
+  required List<String> violations,
+}) {
+  final message = scenePositiveBoundedSizeViolationMessage(value);
+  if (message == null) {
+    return;
+  }
+  violations.add('$field $message');
 }
 
 Set<NodeId> _txnCollectDuplicateNodeIds(Scene scene) {

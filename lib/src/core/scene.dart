@@ -3,7 +3,6 @@ import 'dart:ui';
 import '../contract/ids.dart' show LayerId;
 import '../contract/scene_model_invariants.dart';
 import '../contract/scene_defaults.dart';
-import 'grid_safety_limits.dart';
 import 'nodes.dart';
 
 /// A mutable scene graph used by the canvas engine.
@@ -82,15 +81,21 @@ class ContentLayer {
 
 /// Viewport state for converting between view and scene coordinates.
 class Camera {
-  Camera({Offset? offset}) : offset = offset ?? Offset.zero;
+  Camera({Offset? offset})
+    : _offset = validateSceneCameraOffset(
+        offset ?? Offset.zero,
+        name: 'offset',
+      );
 
   /// Camera pan in scene/world coordinates.
   ///
-  /// Expected to have finite components.
-  ///
-  /// Runtime behavior: rendering and hit-testing sanitize non-finite components
-  /// to `0` to avoid crashes; JSON serialization rejects invalid values.
-  Offset offset;
+  /// Runtime behavior: rendering and hit-testing still keep defensive
+  /// sanitation, but canonical runtime state rejects invalid offsets eagerly.
+  Offset get offset => _offset;
+  Offset _offset;
+  set offset(Offset value) {
+    _offset = validateSceneCameraOffset(value, name: 'offset');
+  }
 }
 
 /// Background visual settings: solid [color] and optional [grid].
@@ -106,52 +111,33 @@ class Background {
 /// Grid rendering configuration.
 class GridSettings {
   GridSettings({bool isEnabled = false, double? cellSize, Color? color})
-    : _isEnabled = false,
-      _cellSize = _requireFinitePositiveGridCellSize(
+    : _isEnabled = isEnabled,
+      _cellSize = validateSceneGridCellSize(
         cellSize ?? SceneDefaults.gridSizes.first,
         name: 'cellSize',
+        isEnabled: isEnabled,
       ),
-      color = color ?? SceneDefaults.gridColor {
-    if (isEnabled) {
-      this.isEnabled = true;
-    }
-  }
+      color = color ?? SceneDefaults.gridColor;
 
   bool get isEnabled => _isEnabled;
   bool _isEnabled;
   set isEnabled(bool value) {
-    if (value && _cellSize < kMinGridCellSize) {
-      throw ArgumentError.value(
-        value,
-        'isEnabled',
-        'Cannot enable grid when cellSize is < $kMinGridCellSize.',
-      );
-    }
+    validateSceneGridCellSize(_cellSize, name: 'cellSize', isEnabled: value);
     _isEnabled = value;
   }
 
   /// Grid cell size in scene/world units.
   ///
-  /// Expected to be finite and `> 0`.
-  ///
-  /// Runtime behavior: invalid values throw at assignment; enabling the grid
-  /// also requires `cellSize >= kMinGridCellSize`. JSON serialization rejects
-  /// invalid values.
+  /// Runtime behavior: invalid values throw at assignment and enabling the
+  /// grid also requires `cellSize >= kMinGridCellSize`.
   double get cellSize => _cellSize;
   double _cellSize;
   set cellSize(double value) {
-    final nextValue = _requireFinitePositiveGridCellSize(
+    _cellSize = validateSceneGridCellSize(
       value,
       name: 'cellSize',
+      isEnabled: _isEnabled,
     );
-    if (_isEnabled && nextValue < kMinGridCellSize) {
-      throw ArgumentError.value(
-        value,
-        'cellSize',
-        'Must be >= $kMinGridCellSize while the grid is enabled.',
-      );
-    }
-    _cellSize = nextValue;
   }
 
   Color color;
@@ -163,15 +149,15 @@ class ScenePalette {
     List<Color>? penColors,
     List<Color>? backgroundColors,
     List<double>? gridSizes,
-  }) : penColors = _ownedPaletteColors(
+  }) : penColors = validateScenePaletteColorList(
          penColors ?? SceneDefaults.penColors,
          name: 'penColors',
        ),
-       backgroundColors = _ownedPaletteColors(
+       backgroundColors = validateScenePaletteColorList(
          backgroundColors ?? SceneDefaults.backgroundColors,
          name: 'backgroundColors',
        ),
-       gridSizes = _ownedPaletteGridSizes(
+       gridSizes = validateScenePaletteGridSizeList(
          gridSizes ?? SceneDefaults.gridSizes,
          name: 'gridSizes',
        );
@@ -183,27 +169,4 @@ class ScenePalette {
   final List<Color> penColors;
   final List<Color> backgroundColors;
   final List<double> gridSizes;
-}
-
-List<Color> _ownedPaletteColors(List<Color> values, {required String name}) {
-  validatePaletteItemCount(values.length, name: name, source: values);
-  return List<Color>.unmodifiable(List<Color>.from(values));
-}
-
-List<double> _ownedPaletteGridSizes(
-  List<double> values, {
-  required String name,
-}) {
-  validatePaletteItemCount(values.length, name: name, source: values);
-  return List<double>.unmodifiable(List<double>.from(values));
-}
-
-double _requireFinitePositiveGridCellSize(
-  double value, {
-  required String name,
-}) {
-  if (value.isFinite && value > 0) {
-    return value;
-  }
-  throw ArgumentError.value(value, name, 'Must be a finite number > 0.');
 }

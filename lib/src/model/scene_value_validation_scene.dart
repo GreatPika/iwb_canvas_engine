@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/snapshot.dart';
 import '../contract/validated/layer_id_value.dart';
@@ -9,7 +7,6 @@ import '../core/scene.dart';
 import 'scene_import_draft.dart';
 import 'scene_value_validation_node.dart';
 import 'scene_value_validation_palette_grid.dart';
-import 'scene_value_validation_primitives.dart';
 import 'scene_value_validation_support.dart';
 
 typedef _LayerValidationAccessors<TLayer, TNode> = ({
@@ -47,7 +44,12 @@ typedef _NodeValidationAccessors<TNode> = ({
 
 typedef _SceneValueValidationAccessors<TScene, TGrid, TPalette, TLayer, TNode> =
     ({
-      Offset Function(TScene scene) cameraOffsetOf,
+      void Function(
+        TScene scene, {
+        required String field,
+        required SceneValidationErrorReporter onError,
+      })
+      validateCameraOffset,
       TGrid Function(TScene scene) gridOf,
       TPalette Function(TScene scene) paletteOf,
       List<TNode>? Function(TScene scene) backgroundNodesOf,
@@ -167,7 +169,12 @@ _SceneValueValidationAccessors<
 >
 _buildSnapshotSceneValueValidationAccessors() {
   return (
-    cameraOffsetOf: (scene) => scene.camera.offset,
+    validateCameraOffset: (scene, {required field, required onError}) =>
+        sceneValidateCameraOffsetValue(
+          scene.camera.offset,
+          field: field,
+          onError: onError,
+        ),
     gridOf: (scene) => scene.background.grid,
     paletteOf: (scene) => scene.palette,
     backgroundNodesOf: (scene) => scene.backgroundLayer.nodes,
@@ -190,7 +197,12 @@ _SceneValueValidationAccessors<
 >
 _buildDraftSceneValueValidationAccessors() {
   return (
-    cameraOffsetOf: (scene) => scene.camera.offset,
+    validateCameraOffset: (scene, {required field, required onError}) =>
+        sceneValidateCameraOffsetValue(
+          scene.camera.offset,
+          field: field,
+          onError: onError,
+        ),
     gridOf: (scene) => scene.background.grid,
     paletteOf: (scene) => scene.palette,
     backgroundNodesOf: (scene) => scene.backgroundLayer.nodes,
@@ -204,20 +216,19 @@ _buildDraftSceneValueValidationAccessors() {
           required onError,
           required requirePositiveCellSize,
           required requireEnabledMinCellSize,
-        }) => sceneValidateGridSnapshot(
-          GridSnapshot(
-            isEnabled: grid.isEnabled,
-            cellSize: grid.cellSize,
-            color: grid.color,
-          ),
+        }) => sceneValidateGridCellSizeValue(
+          cellSize: grid.cellSize,
+          isEnabled: grid.isEnabled,
           field: field,
           onError: onError,
           requirePositiveCellSize: requirePositiveCellSize,
           requireEnabledMinCellSize: requireEnabledMinCellSize,
         ),
     validatePalette: (palette, {required field, required onError}) =>
-        sceneValidatePaletteSnapshot(
-          materializeScenePaletteSnapshot(palette),
+        sceneValidatePaletteFields(
+          penColors: palette.penColors,
+          backgroundColors: palette.backgroundColors,
+          gridSizes: palette.gridSizes,
           field: field,
           onError: onError,
         ),
@@ -240,7 +251,12 @@ _SceneValueValidationAccessors<
 >
 _buildRuntimeSceneValueValidationAccessors() {
   return (
-    cameraOffsetOf: (scene) => scene.camera.offset,
+    validateCameraOffset: (scene, {required field, required onError}) =>
+        sceneValidateCameraOffsetValue(
+          scene.camera.offset,
+          field: field,
+          onError: onError,
+        ),
     gridOf: (scene) => scene.background.grid,
     paletteOf: (scene) => scene.palette,
     backgroundNodesOf: (scene) => scene.backgroundLayer?.nodes,
@@ -268,8 +284,8 @@ void _sceneValidateSceneValues<TScene, TGrid, TPalette, TLayer, TNode>(
   >
   accessors,
 }) {
-  sceneValidateFiniteOffset(
-    accessors.cameraOffsetOf(scene),
+  accessors.validateCameraOffset(
+    scene,
     field: 'camera.offset',
     onError: onError,
   );

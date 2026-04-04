@@ -208,8 +208,8 @@ SceneSnapshot _buildScene() {
         ],
       ),
     ],
-    camera: const CameraSnapshot(offset: Offset(7, -3)),
-    background: const BackgroundSnapshot(
+    camera: CameraSnapshot(offset: Offset(7, -3)),
+    background: BackgroundSnapshot(
       color: Color(0xFFFFFFFF),
       grid: GridSnapshot(
         isEnabled: true,

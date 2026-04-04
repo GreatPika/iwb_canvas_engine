@@ -1,10 +1,11 @@
 import 'dart:ui';
 
 import '../contract/internal/snapshot_fast_path.dart';
+import '../contract/scene_contract_limits.dart';
 import '../contract/scene_data_exception.dart';
 import '../contract/scene_model_invariants.dart';
 import '../contract/validated/validated_value_support.dart';
-import '../core/scene_limits.dart';
+import '../core/scene_limits.dart' show sceneSchemaVersionsRead;
 import 'scene_builder_json_parse.dart';
 import 'scene_builder_json_require.dart';
 
@@ -30,7 +31,7 @@ void sceneBuilderRequireSupportedSchemaVersion(Map<String, Object?> json) {
     return;
   }
   final expectedVersions = sceneSchemaVersionsRead.toList()
-    ..sort((a, b) => a.compareTo(b));
+    ..sort((int a, int b) => a.compareTo(b));
   final expectedVersionsMessage = expectedVersions.join(', ');
   throw SceneDataException(
     code: SceneDataErrorCode.unsupportedSchemaVersion,
@@ -52,25 +53,24 @@ DecodedSceneMetadata sceneBuilderDecodeSceneMetadata(
 
 CameraSnapshotBacking _decodeCameraSnapshot(Map<String, Object?> json) {
   final cameraJson = sceneBuilderRequireMap(json, 'camera');
-  return cameraSnapshotBackingFromValidated(
-    offset: Offset(
-      validatedRequireJsonFiniteDouble(
-        sceneBuilderRequireField(cameraJson, 'offsetX', pathPrefix: 'camera'),
-        path: 'camera.offsetX',
-        fieldName: 'offsetX',
-      ),
-      validatedRequireJsonFiniteDouble(
-        sceneBuilderRequireField(cameraJson, 'offsetY', pathPrefix: 'camera'),
-        path: 'camera.offsetY',
-        fieldName: 'offsetY',
-      ),
-    ),
+  final offsetX = _decodeRequiredDoubleField(
+    sceneBuilderRequireField(cameraJson, 'offsetX', pathPrefix: 'camera'),
+    path: 'camera.offsetX',
+    fieldName: 'offsetX',
   );
+  final offsetY = _decodeRequiredDoubleField(
+    sceneBuilderRequireField(cameraJson, 'offsetY', pathPrefix: 'camera'),
+    path: 'camera.offsetY',
+    fieldName: 'offsetY',
+  );
+  _validateDecodedCoordinate(offsetX, path: 'camera.offsetX');
+  _validateDecodedCoordinate(offsetY, path: 'camera.offsetY');
+  return CameraSnapshotBacking(offset: Offset(offsetX, offsetY));
 }
 
 BackgroundSnapshotBacking _decodeBackgroundSnapshot(Map<String, Object?> json) {
   final backgroundJson = sceneBuilderRequireMap(json, 'background');
-  return backgroundSnapshotBackingFromValidated(
+  return BackgroundSnapshotBacking(
     color: _decodeBackgroundColor(backgroundJson),
     grid: _decodeBackgroundGrid(backgroundJson),
   );
@@ -94,22 +94,40 @@ GridSnapshotBacking _decodeBackgroundGrid(Map<String, Object?> backgroundJson) {
     'grid',
     pathPrefix: 'background',
   );
-  return gridSnapshotBackingFromValidated(
-    isEnabled: sceneBuilderRequireTypedField<bool>(
+  final isEnabled = sceneBuilderRequireTypedField<bool>(
+    gridJson,
+    'enabled',
+    pathPrefix: 'background.grid',
+    typeLabel: 'bool',
+  );
+  final cellSize = _decodeRequiredDoubleField(
+    sceneBuilderRequireField(
       gridJson,
-      'enabled',
+      'cellSize',
       pathPrefix: 'background.grid',
-      typeLabel: 'bool',
     ),
-    cellSize: validatedRequireJsonFiniteDouble(
-      sceneBuilderRequireField(
-        gridJson,
-        'cellSize',
-        pathPrefix: 'background.grid',
-      ),
-      path: 'background.grid.cellSize',
-      fieldName: 'cellSize',
-    ),
+    path: 'background.grid.cellSize',
+    fieldName: 'cellSize',
+  );
+  _validateDecodedPositiveBoundedSize(
+    cellSize,
+    path: 'background.grid.cellSize',
+  );
+  if (isEnabled) {
+    final message = sceneEnabledGridCellSizeViolationMessage(cellSize);
+    if (message != null) {
+      throw SceneDataException.boundary(
+        code: SceneDataErrorCode.invalidValue,
+        path: 'background.grid.cellSize',
+        message:
+            'Field background.grid.cellSize must be >= $kMinGridCellSize when background.grid.enabled is true.',
+        source: cellSize,
+      );
+    }
+  }
+  return GridSnapshotBacking(
+    isEnabled: isEnabled,
+    cellSize: cellSize,
     color: sceneBuilderParseColor(
       sceneBuilderRequireTypedField<String>(
         gridJson,
@@ -124,7 +142,7 @@ GridSnapshotBacking _decodeBackgroundGrid(Map<String, Object?> backgroundJson) {
 
 ScenePaletteSnapshotBacking _decodePaletteSnapshot(Map<String, Object?> json) {
   final paletteJson = sceneBuilderRequireMap(json, 'palette');
-  return scenePaletteSnapshotBackingFromValidated(
+  return ScenePaletteSnapshotBacking(
     penColors: _decodePaletteColors(
       paletteJson,
       key: 'penColors',
@@ -159,6 +177,12 @@ List<Color> _decodePaletteColors(
       source: colorsJson.length,
     );
   }
+  if (sceneNonEmptyListViolationMessage(colorsJson) != null) {
+    throw SceneDataException.fieldMustNotBeEmpty(
+      path: colorsPath,
+      source: colorsJson,
+    );
+  }
   final colors = <Color>[];
   for (var i = 0; i < colorsJson.length; i++) {
     final path = sceneBuilderPathAt(colorsPath, '[$i]');
@@ -191,16 +215,85 @@ List<double> _decodePaletteGridSizes(Map<String, Object?> paletteJson) {
       source: gridSizesJson.length,
     );
   }
+  if (sceneNonEmptyListViolationMessage(gridSizesJson) != null) {
+    throw SceneDataException.fieldMustNotBeEmpty(
+      path: gridSizesPath,
+      source: gridSizesJson,
+    );
+  }
   final gridSizes = <double>[];
   for (var i = 0; i < gridSizesJson.length; i++) {
     final path = sceneBuilderPathAt(gridSizesPath, '[$i]');
-    gridSizes.add(
-      sceneBuilderRequireDoubleValue(
-        gridSizesJson[i],
-        field: gridSizesField,
-        path: path,
-      ),
+    final value = sceneBuilderRequireDoubleValue(
+      gridSizesJson[i],
+      field: gridSizesField,
+      path: path,
     );
+    _validateDecodedPositiveBoundedSize(value, path: path);
+    gridSizes.add(value);
   }
   return gridSizes;
+}
+
+double _decodeRequiredDoubleField(
+  Object? raw, {
+  required String path,
+  required String fieldName,
+}) {
+  if (raw is! num) {
+    throw SceneDataException.invalidFieldType(
+      path: path,
+      fieldName: fieldName,
+      expected: 'number',
+      source: raw,
+    );
+  }
+  return raw.toDouble();
+}
+
+void _validateDecodedCoordinate(double value, {required String path}) {
+  final message = sceneCoordinateViolationMessage(value);
+  if (message == null) {
+    return;
+  }
+  if (!value.isFinite) {
+    throw SceneDataException.fieldMustBeFinite(
+      path: path,
+      fieldName: path.split('.').last,
+      source: value,
+    );
+  }
+  throw SceneDataException.outOfRange(
+    path: path,
+    min: sceneCoordMin,
+    max: sceneCoordMax,
+    source: value,
+  );
+}
+
+void _validateDecodedPositiveBoundedSize(double value, {required String path}) {
+  final message = scenePositiveBoundedSizeViolationMessage(value);
+  if (message == null) {
+    return;
+  }
+  if (!value.isFinite) {
+    throw SceneDataException.fieldMustBeFinite(
+      path: path,
+      fieldName: path.split('.').last,
+      source: value,
+    );
+  }
+  if (value <= 0) {
+    throw SceneDataException.fieldMustBeGreaterThan(
+      path: path,
+      limit: 0,
+      source: value,
+    );
+  }
+  throw SceneDataException.outOfRange(
+    path: path,
+    min: 0,
+    max: sceneSizeMax,
+    source: value,
+  );
 }

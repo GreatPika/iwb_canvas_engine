@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
 import 'package:iwb_canvas_engine/src/core/grid_safety_limits.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/render/scene_grid_renderer.dart';
@@ -39,14 +40,20 @@ void main() {
   const renderer = SceneGridRenderer();
 
   test('SceneGridRenderer returns null for invalid drawable inputs', () {
-    const grid = GridSnapshot(
-      isEnabled: true,
-      cellSize: 0.5,
-      color: Color(0xFF000000),
-    );
+    final grid = materializeSceneSnapshot(
+      SceneSnapshotBacking(
+        background: BackgroundSnapshotBacking(
+          grid: GridSnapshotBacking(
+            isEnabled: true,
+            cellSize: 0.5,
+            color: Color(0xFF000000),
+          ),
+        ),
+      ),
+    ).background.grid;
 
     final plan = renderer.plan(
-      const SceneGridRenderRequest(
+      SceneGridRenderRequest(
         grid: grid,
         size: Size(120, 80),
         cameraOffset: Offset.zero,
@@ -60,7 +67,7 @@ void main() {
   test(
     'SceneGridRenderer keeps stride stable across near-threshold pan jitter',
     () {
-      const grid = GridSnapshot(
+      final grid = GridSnapshot(
         isEnabled: true,
         cellSize: 20,
         color: Color(0xFF000000),
@@ -68,7 +75,7 @@ void main() {
       const size = Size(3980, 80);
 
       final basePlan = renderer.plan(
-        const SceneGridRenderRequest(
+        SceneGridRenderRequest(
           grid: grid,
           size: size,
           cameraOffset: Offset.zero,
@@ -76,7 +83,7 @@ void main() {
         ),
       );
       final jitterPlan = renderer.plan(
-        const SceneGridRenderRequest(
+        SceneGridRenderRequest(
           grid: grid,
           size: size,
           cameraOffset: Offset(5, 0),
@@ -98,14 +105,14 @@ void main() {
   );
 
   test('SceneGridRenderer keeps visible line cap bounded per axis', () {
-    const grid = GridSnapshot(
+    final grid = GridSnapshot(
       isEnabled: true,
       cellSize: 1,
       color: Color(0xFF000000),
     );
 
     final plan = renderer.plan(
-      const SceneGridRenderRequest(
+      SceneGridRenderRequest(
         grid: grid,
         size: Size(600, 400),
         cameraOffset: Offset(0.5, 0.5),
@@ -132,7 +139,7 @@ void main() {
     'SceneGridRenderer draws full-height vertical lines on wide viewports',
     () async {
       const background = Color(0xFFFFFFFF);
-      const grid = GridSnapshot(
+      final grid = GridSnapshot(
         isEnabled: true,
         cellSize: 20,
         color: Color(0xFF000000),
@@ -146,7 +153,7 @@ void main() {
       );
       renderer.draw(
         canvas,
-        const SceneGridRenderRequest(
+        SceneGridRenderRequest(
           grid: grid,
           size: Size(240, 80),
           cameraOffset: Offset.zero,

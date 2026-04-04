@@ -1,11 +1,18 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/src/contract/scene_contract_limits.dart';
+import 'package:iwb_canvas_engine/src/contract/scene_data_exception.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
 import 'package:iwb_canvas_engine/src/model/scene_value_validation.dart';
+import 'package:iwb_canvas_engine/src/model/scene_value_validation_palette_grid.dart'
+    show
+        sceneValidateCameraOffsetValue,
+        sceneValidateGridCellSizeValue,
+        sceneValidatePaletteFields;
 
 void main() {
   group('scene value validation primitives', () {
@@ -228,7 +235,7 @@ void main() {
             onError: _throwFailure,
           );
           sceneValidateGridSnapshot(
-            const GridSnapshot(cellSize: 16),
+            GridSnapshot(cellSize: 16),
             field: 'gridSnapshot',
             onError: _throwFailure,
             requirePositiveCellSize: true,
@@ -263,6 +270,100 @@ void main() {
             requireEnabledMinGridCellSize: true,
           );
         }, returnsNormally);
+      },
+    );
+
+    test(
+      'scene metadata helper functions distinguish finite errors from range overflow',
+      () {
+        expect(
+          () => sceneValidateCameraOffsetValue(
+            const Offset(double.infinity, 0),
+            field: 'camera',
+            onError: _throwFailure,
+          ),
+          throwsA(
+            predicate(
+              (error) =>
+                  error is _ValidationFailure &&
+                  error.field == 'camera.dx' &&
+                  error.message == 'must be finite.' &&
+                  error.value == double.infinity,
+            ),
+          ),
+        );
+
+        expect(
+          () => sceneValidateCameraOffsetValue(
+            Offset(sceneCoordMax + 1, 0),
+            field: 'camera',
+            onError: _throwFailure,
+          ),
+          throwsA(
+            predicate(
+              (error) =>
+                  error is SceneDataException &&
+                  error.code == SceneDataErrorCode.outOfRange &&
+                  error.path == 'camera.dx',
+            ),
+          ),
+        );
+
+        expect(
+          () => sceneValidateGridCellSizeValue(
+            cellSize: double.nan,
+            isEnabled: false,
+            field: 'background.grid',
+            onError: _throwFailure,
+            requirePositiveCellSize: false,
+            requireEnabledMinCellSize: false,
+          ),
+          throwsA(
+            predicate(
+              (error) =>
+                  error is _ValidationFailure &&
+                  error.field == 'background.grid.cellSize' &&
+                  error.message == 'must be finite.',
+            ),
+          ),
+        );
+
+        expect(
+          () => sceneValidateGridCellSizeValue(
+            cellSize: sceneSizeMax + 1,
+            isEnabled: false,
+            field: 'background.grid',
+            onError: _throwFailure,
+            requirePositiveCellSize: false,
+            requireEnabledMinCellSize: false,
+          ),
+          throwsA(
+            predicate(
+              (error) =>
+                  error is SceneDataException &&
+                  error.code == SceneDataErrorCode.outOfRange &&
+                  error.path == 'background.grid.cellSize',
+            ),
+          ),
+        );
+
+        expect(
+          () => sceneValidatePaletteFields(
+            penColors: const <Color>[Color(0xFF000000)],
+            backgroundColors: const <Color>[Color(0xFFFFFFFF)],
+            gridSizes: <double>[sceneSizeMax + 1],
+            field: 'palette',
+            onError: _throwFailure,
+          ),
+          throwsA(
+            predicate(
+              (error) =>
+                  error is SceneDataException &&
+                  error.code == SceneDataErrorCode.outOfRange &&
+                  error.path == 'palette.gridSizes[0]',
+            ),
+          ),
+        );
       },
     );
   });

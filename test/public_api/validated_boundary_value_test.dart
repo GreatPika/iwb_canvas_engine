@@ -948,28 +948,25 @@ void main() {
       );
     });
 
-    test('public SceneSnapshot validates camera and grid eagerly', () {
+    test('public metadata constructors validate camera and grid eagerly', () {
+      // INV:INV-ENG-SHARED-SCENE-METADATA-CONTRACT
       expect(
-        () => SceneSnapshot(
-          camera: const CameraSnapshot(offset: Offset(double.nan, 0)),
-        ),
+        () => CameraSnapshot(offset: Offset(double.nan, 0)),
         throwsA(
           isA<ArgumentError>().having(
             (error) => error.name,
             'name',
-            'camera.offset.dx',
+            'offset.dx',
           ),
         ),
       );
       expect(
-        () => SceneSnapshot(
-          background: const BackgroundSnapshot(grid: GridSnapshot(cellSize: 0)),
-        ),
+        () => GridSnapshot(cellSize: 0),
         throwsA(
           isA<ArgumentError>().having(
             (error) => error.name,
             'name',
-            'background.grid.cellSize',
+            'cellSize',
           ),
         ),
       );

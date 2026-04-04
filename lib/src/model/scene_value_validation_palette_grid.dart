@@ -1,29 +1,22 @@
 import 'dart:ui';
 
+import '../contract/scene_contract_limits.dart';
+import '../contract/scene_data_exception.dart';
 import '../contract/snapshot.dart';
 import '../contract/scene_model_invariants.dart';
-import '../core/grid_safety_limits.dart';
 import '../core/scene.dart';
 import 'scene_value_validation_primitives.dart';
 import 'scene_value_validation_support.dart';
-
-typedef _PaletteValidationFields = ({
-  List<Color> penColors,
-  List<Color> backgroundColors,
-  List<double> gridSizes,
-});
 
 void sceneValidatePaletteSnapshot(
   ScenePaletteSnapshot palette, {
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  _sceneValidatePaletteFields(
-    fields: (
-      penColors: palette.penColors,
-      backgroundColors: palette.backgroundColors,
-      gridSizes: palette.gridSizes,
-    ),
+  sceneValidatePaletteFields(
+    penColors: palette.penColors,
+    backgroundColors: palette.backgroundColors,
+    gridSizes: palette.gridSizes,
     field: field,
     onError: onError,
   );
@@ -34,12 +27,10 @@ void sceneValidatePalette(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  _sceneValidatePaletteFields(
-    fields: (
-      penColors: palette.penColors,
-      backgroundColors: palette.backgroundColors,
-      gridSizes: palette.gridSizes,
-    ),
+  sceneValidatePaletteFields(
+    penColors: palette.penColors,
+    backgroundColors: palette.backgroundColors,
+    gridSizes: palette.gridSizes,
     field: field,
     onError: onError,
   );
@@ -52,7 +43,7 @@ void sceneValidateGridSnapshot(
   required bool requirePositiveCellSize,
   required bool requireEnabledMinCellSize,
 }) {
-  _sceneValidateGridCellSize(
+  sceneValidateGridCellSizeValue(
     cellSize: grid.cellSize,
     isEnabled: grid.isEnabled,
     field: field,
@@ -69,7 +60,7 @@ void sceneValidateGrid(
   required bool requirePositiveCellSize,
   required bool requireEnabledMinCellSize,
 }) {
-  _sceneValidateGridCellSize(
+  sceneValidateGridCellSizeValue(
     cellSize: grid.cellSize,
     isEnabled: grid.isEnabled,
     field: field,
@@ -79,50 +70,67 @@ void sceneValidateGrid(
   );
 }
 
-void _sceneValidatePaletteFields({
-  required _PaletteValidationFields fields,
+void sceneValidateCameraOffsetValue(
+  Offset value, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+}) {
+  _sceneValidateCoordinateComponent(
+    value.dx,
+    field: '$field.dx',
+    onError: onError,
+  );
+  _sceneValidateCoordinateComponent(
+    value.dy,
+    field: '$field.dy',
+    onError: onError,
+  );
+}
+
+void sceneValidatePaletteFields({
+  required List<Color> penColors,
+  required List<Color> backgroundColors,
+  required List<double> gridSizes,
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
   _sceneValidatePaletteItemCount(
-    fields.penColors,
+    penColors,
     field: '$field.penColors',
     onError: onError,
   );
   _sceneValidatePaletteItemCount(
-    fields.backgroundColors,
+    backgroundColors,
     field: '$field.backgroundColors',
     onError: onError,
   );
   _sceneValidatePaletteItemCount(
-    fields.gridSizes,
+    gridSizes,
     field: '$field.gridSizes',
     onError: onError,
   );
   sceneValidateNonEmptyList(
-    fields.penColors,
+    penColors,
     field: '$field.penColors',
     onError: onError,
   );
   sceneValidateNonEmptyList(
-    fields.backgroundColors,
+    backgroundColors,
     field: '$field.backgroundColors',
     onError: onError,
   );
   sceneValidateNonEmptyList(
-    fields.gridSizes,
+    gridSizes,
     field: '$field.gridSizes',
     onError: onError,
   );
-  sceneValidateFields<double>(
-    List<SceneValidationField<double>>.generate(
-      fields.gridSizes.length,
-      (index) =>
-          (value: fields.gridSizes[index], field: '$field.gridSizes[$index]'),
-    ),
-    onError: onError,
-    validateValue: sceneValidatePositiveDouble,
-  );
+  for (var index = 0; index < gridSizes.length; index++) {
+    _sceneValidatePositiveBoundedSize(
+      gridSizes[index],
+      field: '$field.gridSizes[$index]',
+      onError: onError,
+    );
+  }
 }
 
 void _sceneValidatePaletteItemCount<T>(
@@ -137,7 +145,7 @@ void _sceneValidatePaletteItemCount<T>(
   onError(field: field, value: values, message: 'Field $field $limitMessage');
 }
 
-void _sceneValidateGridCellSize({
+void sceneValidateGridCellSizeValue({
   required double cellSize,
   required bool isEnabled,
   required String field,
@@ -145,23 +153,86 @@ void _sceneValidateGridCellSize({
   required bool requirePositiveCellSize,
   required bool requireEnabledMinCellSize,
 }) {
-  sceneValidateFiniteDouble(
-    cellSize,
-    field: '$field.cellSize',
-    onError: onError,
-  );
+  final cellSizeField = '$field.cellSize';
   if (requirePositiveCellSize) {
-    sceneValidatePositiveDouble(
+    _sceneValidatePositiveBoundedSize(
       cellSize,
-      field: '$field.cellSize',
+      field: cellSizeField,
+      onError: onError,
+    );
+  } else {
+    _sceneValidateFiniteBoundedUpperSize(
+      cellSize,
+      field: cellSizeField,
       onError: onError,
     );
   }
-  if (requireEnabledMinCellSize && isEnabled && cellSize < kMinGridCellSize) {
-    onError(
-      field: '$field.cellSize',
-      value: cellSize,
-      message: 'must be >= $kMinGridCellSize when $field.enabled is true.',
+  if (requireEnabledMinCellSize && isEnabled) {
+    final message = sceneEnabledGridCellSizeViolationMessage(cellSize);
+    if (message != null) {
+      onError(
+        field: cellSizeField,
+        value: cellSize,
+        message: 'must be >= $kMinGridCellSize when $field.enabled is true.',
+      );
+    }
+  }
+}
+
+void _sceneValidateCoordinateComponent(
+  double value, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+}) {
+  final message = sceneCoordinateViolationMessage(value);
+  if (message == null) {
+    return;
+  }
+  if (!value.isFinite) {
+    onError(field: field, value: value, message: message);
+  }
+  throw SceneDataException.outOfRange(
+    path: field,
+    min: sceneCoordMin,
+    max: sceneCoordMax,
+    source: value,
+  );
+}
+
+void _sceneValidatePositiveBoundedSize(
+  double value, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+}) {
+  final message = scenePositiveBoundedSizeViolationMessage(value);
+  if (message == null) {
+    return;
+  }
+  if (!value.isFinite || value <= 0) {
+    onError(field: field, value: value, message: message);
+  }
+  throw SceneDataException.outOfRange(
+    path: field,
+    min: 0,
+    max: sceneSizeMax,
+    source: value,
+  );
+}
+
+void _sceneValidateFiniteBoundedUpperSize(
+  double value, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+}) {
+  if (!value.isFinite) {
+    onError(field: field, value: value, message: 'must be finite.');
+  }
+  if (value > sceneSizeMax) {
+    throw SceneDataException.outOfRange(
+      path: field,
+      min: 0,
+      max: sceneSizeMax,
+      source: value,
     );
   }
 }

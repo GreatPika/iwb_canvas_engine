@@ -655,6 +655,30 @@ void main() {
   );
 
   test(
+    'sceneSnapshotFromValidatedBacking preserves the validated top-level backing carrier',
+    () {
+      final backing = sceneSnapshotBackingFromValidated(
+        backgroundLayer: backgroundLayerSnapshotBackingFromValidated(
+          nodes: <NodeSnapshotBacking>[
+            nodeSnapshotBackingOf(
+              RectNodeSnapshot(id: 'bg-carrier', size: const Size(1, 2)),
+            ),
+          ],
+        ),
+        layers: <ContentLayerSnapshotBacking>[
+          contentLayerSnapshotBackingFromValidated(id: 'layer-carrier'),
+        ],
+      );
+
+      final snapshot = sceneSnapshotFromValidatedBacking(backing);
+
+      expect(sceneSnapshotBackingOf(snapshot), same(backing));
+      expect(snapshot.backgroundLayer.nodes.single.id, 'bg-carrier');
+      expect(snapshot.layers.single.id, 'layer-carrier');
+    },
+  );
+
+  test(
     'validated snapshot producers enforce structure while raw materialization keeps the internal bypass',
     () {
       final malformedBacking = sceneSnapshotBackingFromValidated(

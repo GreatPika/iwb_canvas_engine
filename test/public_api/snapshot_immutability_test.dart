@@ -170,13 +170,13 @@ void main() {
   });
 
   test('Scene-level snapshot value objects are configurable and immutable', () {
-    const camera = CameraSnapshot(offset: Offset(3, 4));
-    const grid = GridSnapshot(
+    final camera = CameraSnapshot(offset: Offset(3, 4));
+    final grid = GridSnapshot(
       isEnabled: true,
       cellSize: 24,
       color: Color(0xFF101010),
     );
-    const background = BackgroundSnapshot(color: Color(0xFFFAFAFA), grid: grid);
+    final background = BackgroundSnapshot(color: Color(0xFFFAFAFA), grid: grid);
 
     final scene = SceneSnapshot(
       camera: camera,

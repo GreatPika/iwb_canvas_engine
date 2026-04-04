@@ -1,4 +1,8 @@
+import 'dart:ui';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/src/contract/internal/snapshot_backing.dart';
+import 'package:iwb_canvas_engine/src/contract/internal/snapshot_materialization.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_contract_limits.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_model_invariants.dart';
 import 'package:iwb_canvas_engine/src/contract/validated/finite_offset_value.dart';
@@ -16,6 +20,12 @@ import 'package:iwb_canvas_engine/src/contract/validated/text_content_value.dart
 void main() {
   test('contract boundary limits stay positive and ordered', () {
     expect(sceneContractLimitValues(), hasLength(11));
+    expect(sceneContractDoubleLimitValues(), const <double>[
+      sceneCoordMin,
+      sceneCoordMax,
+      sceneSizeMax,
+      kMinGridCellSize,
+    ]);
     expect(kMaxContentLayersPerScene, greaterThan(0));
     expect(kMaxNodesPerScene, greaterThan(0));
     expect(kMaxSvgPathDataLength, greaterThan(0));
@@ -27,6 +37,61 @@ void main() {
     expect(kMaxStrokePointsPerNode, greaterThan(0));
     expect(kMaxPaletteItems, greaterThan(0));
     expect(kMaxRawSceneJsonLength, greaterThan(kMaxTextLength));
+  });
+
+  test('internal raw metadata materializers preserve malformed values', () {
+    final camera = materializeCameraSnapshot(
+      const CameraSnapshotBacking(
+        offset: Offset(double.nan, sceneCoordMax + 1),
+      ),
+    );
+    expect(camera.offset.dx.isNaN, isTrue);
+    expect(camera.offset.dy, sceneCoordMax + 1);
+
+    final background = materializeBackgroundSnapshot(
+      const BackgroundSnapshotBacking(
+        color: Color(0xFF123456),
+        grid: GridSnapshotBacking(
+          isEnabled: true,
+          cellSize: 0.5,
+          color: Color(0xFF654321),
+        ),
+      ),
+    );
+    expect(background.color, const Color(0xFF123456));
+    expect(background.grid.isEnabled, isTrue);
+    expect(background.grid.cellSize, 0.5);
+    expect(background.grid.color, const Color(0xFF654321));
+
+    final grid = materializeGridSnapshot(
+      const GridSnapshotBacking(
+        isEnabled: false,
+        cellSize: -12.5,
+        color: Color(0xFFABCDEF),
+      ),
+    );
+    expect(grid.isEnabled, isFalse);
+    expect(grid.cellSize, -12.5);
+    expect(grid.color, const Color(0xFFABCDEF));
+
+    final palette = materializeScenePaletteSnapshot(
+      ScenePaletteSnapshotBacking(
+        penColors: <Color>[Color(0xFF000001)],
+        backgroundColors: <Color>[Color(0xFF000002)],
+        gridSizes: <double>[-1],
+      ),
+    );
+    expect(palette.penColors, const <Color>[Color(0xFF000001)]);
+    expect(palette.backgroundColors, const <Color>[Color(0xFF000002)]);
+    expect(palette.gridSizes, const <double>[-1]);
+  });
+
+  test('validated background materializer uses default validated grid', () {
+    final background = backgroundSnapshotFromValidated();
+
+    expect(background.grid.isEnabled, isFalse);
+    expect(background.grid.cellSize, 10);
+    expect(background.grid.color, const Color(0x1F000000));
   });
 
   test('shared scene model invariant helpers enforce shared count limits', () {

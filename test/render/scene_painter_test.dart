@@ -263,8 +263,8 @@ void main() {
 
     final controller = SceneStoreController(
       initialSnapshot: SceneSnapshot(
-        camera: const CameraSnapshot(offset: Offset(4, -3)),
-        background: const BackgroundSnapshot(
+        camera: CameraSnapshot(offset: Offset(4, -3)),
+        background: BackgroundSnapshot(
           color: background,
           grid: GridSnapshot(
             isEnabled: true,
@@ -349,7 +349,7 @@ void main() {
     const background = Color(0xFFFFFFFF);
     final controller = SceneStoreController(
       initialSnapshot: SceneSnapshot(
-        background: const BackgroundSnapshot(color: background),
+        background: BackgroundSnapshot(color: background),
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(id: 'layer-auto-1'),
         ],
@@ -390,8 +390,10 @@ void main() {
   test('SceneStoreController rejects invalid numeric snapshot fields', () {
     expect(
       () => SceneStoreController(
-        initialSnapshot: sceneSnapshotFromValidated(
-          camera: const CameraSnapshot(offset: Offset(double.nan, 0)),
+        initialSnapshot: materializeSceneSnapshot(
+          SceneSnapshotBacking(
+            camera: const CameraSnapshotBacking(offset: Offset(double.nan, 0)),
+          ),
         ),
       ),
       throwsA(
@@ -409,7 +411,7 @@ void main() {
     const background = Color(0xFFFFFFFF);
     final controller = SceneStoreController(
       initialSnapshot: SceneSnapshot(
-        background: const BackgroundSnapshot(color: background),
+        background: BackgroundSnapshot(color: background),
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
             id: 'layer-auto-2',
@@ -477,7 +479,7 @@ void main() {
     () {
       final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
-          background: const BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+          background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
               id: 'layer-save-restore',
@@ -618,13 +620,15 @@ void main() {
   test('ScenePainter skips grid for invalid drawable state', () async {
     const background = Color(0xFFFFFFFF);
     final controller = _FakeRenderState(
-      snapshot: SceneSnapshot(
-        background: BackgroundSnapshot(
-          color: background,
-          grid: GridSnapshot(
-            isEnabled: true,
-            cellSize: 0.5,
-            color: Color(0xFF000000),
+      snapshot: materializeSceneSnapshot(
+        SceneSnapshotBacking(
+          background: BackgroundSnapshotBacking(
+            color: background,
+            grid: GridSnapshotBacking(
+              isEnabled: true,
+              cellSize: 0.5,
+              color: Color(0xFF000000),
+            ),
           ),
         ),
       ),
@@ -667,8 +671,8 @@ void main() {
 
       controller.writeReplaceScene(
         SceneSnapshot(
-          camera: const CameraSnapshot(offset: Offset(5, 0)),
-          background: const BackgroundSnapshot(
+          camera: CameraSnapshot(offset: Offset(5, 0)),
+          background: BackgroundSnapshot(
             color: background,
             grid: GridSnapshot(
               isEnabled: true,
@@ -693,7 +697,7 @@ void main() {
     const background = Color(0xFFFFFFFF);
     final controller = SceneStoreController(
       initialSnapshot: SceneSnapshot(
-        background: const BackgroundSnapshot(
+        background: BackgroundSnapshot(
           color: background,
           grid: GridSnapshot(
             isEnabled: false,
@@ -734,7 +738,7 @@ void main() {
     const background = Color(0xFFFFFFFF);
     final controller = SceneStoreController(
       initialSnapshot: SceneSnapshot(
-        background: const BackgroundSnapshot(
+        background: BackgroundSnapshot(
           color: background,
           grid: GridSnapshot(
             isEnabled: false,
@@ -777,7 +781,7 @@ void main() {
     const contentNodeColor = Color(0xFFE53935);
     final controller = SceneStoreController(
       initialSnapshot: SceneSnapshot(
-        background: const BackgroundSnapshot(color: background),
+        background: BackgroundSnapshot(color: background),
         backgroundLayer: BackgroundLayerSnapshot(
           nodes: <NodeSnapshot>[
             RectNodeSnapshot(
@@ -823,7 +827,7 @@ void main() {
       const background = Color(0xFFFFFFFF);
       final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
-          background: const BackgroundSnapshot(
+          background: BackgroundSnapshot(
             color: background,
             grid: GridSnapshot(
               isEnabled: false,
@@ -884,7 +888,7 @@ void main() {
           .inflate(selectionStrokeWidth);
       final renderState = _FakeRenderState(
         snapshot: SceneSnapshot(
-          background: const BackgroundSnapshot(color: background),
+          background: BackgroundSnapshot(color: background),
           backgroundLayer: BackgroundLayerSnapshot(nodes: <NodeSnapshot>[node]),
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(id: 'layer-auto-bg-selection'),
@@ -957,7 +961,7 @@ void main() {
 
       final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
-          background: const BackgroundSnapshot(color: background),
+          background: BackgroundSnapshot(color: background),
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
               id: 'layer-auto-5',
@@ -1018,7 +1022,7 @@ void main() {
 
       SceneSnapshot snapshotFor(TextAlign align, TextDirection textDirection) {
         return SceneSnapshot(
-          background: const BackgroundSnapshot(color: background),
+          background: BackgroundSnapshot(color: background),
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
               id: 'layer-auto-6',
@@ -1090,7 +1094,7 @@ void main() {
 
       SceneSnapshot snapshotFor(double? lineHeight) {
         return SceneSnapshot(
-          background: const BackgroundSnapshot(color: background),
+          background: BackgroundSnapshot(color: background),
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
               id: 'layer-auto-7',
@@ -1144,7 +1148,7 @@ void main() {
     final pathCache = ScenePathMetricsCache(maxEntries: 8);
     final controller = SceneStoreController(
       initialSnapshot: SceneSnapshot(
-        background: const BackgroundSnapshot(color: background),
+        background: BackgroundSnapshot(color: background),
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
             id: 'layer-auto-8',
@@ -1211,7 +1215,7 @@ void main() {
       final strokeCache = SceneStrokePathCache(maxEntries: 8);
       final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
-          background: const BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+          background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
               id: 'layer-auto-9',
@@ -1263,7 +1267,7 @@ void main() {
       final strokeCache = SceneStrokePathCache(maxEntries: 8);
       final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
-          background: const BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+          background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
               id: 'layer-auto-10',
@@ -1313,7 +1317,7 @@ void main() {
       final geometryCache = RenderGeometryCache();
       final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
-          background: const BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+          background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
               id: 'layer-auto-11',
@@ -1363,7 +1367,7 @@ void main() {
       final pathCache = ScenePathMetricsCache(maxEntries: 8);
       final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
-          background: const BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+          background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
               id: 'layer-auto-12',
@@ -1448,7 +1452,7 @@ void main() {
       const background = Color(0xFFFFFFFF);
       final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
-          background: const BackgroundSnapshot(color: background),
+          background: BackgroundSnapshot(color: background),
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
               id: 'layer-auto-13',
@@ -1514,7 +1518,7 @@ void main() {
       const background = Color(0xFFFFFFFF);
       final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
-          background: const BackgroundSnapshot(color: background),
+          background: BackgroundSnapshot(color: background),
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
               id: 'layer-auto-14',
@@ -1708,7 +1712,7 @@ void main() {
       const background = Color(0xFFFFFFFF);
       final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
-          background: const BackgroundSnapshot(color: background),
+          background: BackgroundSnapshot(color: background),
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
               id: 'layer-auto-15',

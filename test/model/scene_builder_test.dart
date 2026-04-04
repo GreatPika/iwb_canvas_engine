@@ -4,6 +4,8 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart' hide NodeId;
 import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
+import 'package:iwb_canvas_engine/src/contract/scene_contract_limits.dart'
+    show sceneCoordMax, sceneSizeMax;
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/core/text_layout.dart'
@@ -23,6 +25,7 @@ import 'package:iwb_canvas_engine/src/model/document.dart'
     show txnSceneFromSnapshot, txnSceneToSnapshot;
 import 'package:iwb_canvas_engine/src/model/scene_from_import_draft.dart'
     show sceneFromImportDraft;
+import 'package:iwb_canvas_engine/src/model/scene_import_draft.dart';
 import 'package:iwb_canvas_engine/src/model/scene_from_snapshot.dart'
     show sceneFromSnapshot;
 import 'package:iwb_canvas_engine/src/model/scene_node_boundary_mapping.dart'
@@ -1315,6 +1318,77 @@ void main() {
     );
   });
 
+  test('sceneBuildFromJsonMap rejects non-finite scene metadata values', () {
+    final cameraJson = _minimalSceneJson();
+    (cameraJson['camera'] as Map<String, Object?>)['offsetX'] = double.infinity;
+
+    expect(
+      () => model_builder.sceneBuildFromJsonMap(cameraJson),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'camera.offsetX' &&
+              e.message == 'Field offsetX must be finite.',
+        ),
+      ),
+    );
+
+    final gridJson = _minimalSceneJson();
+    ((gridJson['background'] as Map<String, Object?>)['grid']
+            as Map<String, Object?>)['cellSize'] =
+        double.infinity;
+
+    expect(
+      () => model_builder.sceneBuildFromJsonMap(gridJson),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'background.grid.cellSize' &&
+              e.message == 'Field cellSize must be finite.',
+        ),
+      ),
+    );
+  });
+
+  test('sceneBuildFromJsonMap rejects out-of-range scene metadata values', () {
+    final cameraJson = _minimalSceneJson();
+    (cameraJson['camera'] as Map<String, Object?>)['offsetX'] =
+        sceneCoordMax + 1;
+
+    expect(
+      () => model_builder.sceneBuildFromJsonMap(cameraJson),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.outOfRange &&
+              e.path == 'camera.offsetX',
+        ),
+      ),
+    );
+
+    final gridJson = _minimalSceneJson();
+    ((gridJson['background'] as Map<String, Object?>)['grid']
+            as Map<String, Object?>)['cellSize'] =
+        sceneSizeMax + 1;
+
+    expect(
+      () => model_builder.sceneBuildFromJsonMap(gridJson),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.outOfRange &&
+              e.path == 'background.grid.cellSize',
+        ),
+      ),
+    );
+  });
+
   test(
     'typed text/stroke/palette boundaries enforce shared model invariants',
     () {
@@ -1481,14 +1555,18 @@ void main() {
         ),
       );
 
-      final oversizedPalette = sceneSnapshotFromValidated(
-        layers: <ContentLayerSnapshot>[
-          ContentLayerSnapshot(id: 'layer-auto-overflow-palette'),
-        ],
-        palette: scenePaletteSnapshotFromValidated(
-          gridSizes: <double>[
-            for (var i = 0; i < kMaxPaletteItems + 1; i++) i + 1,
+      final oversizedPalette = materializeSceneSnapshot(
+        SceneSnapshotBacking(
+          layers: <ContentLayerSnapshotBacking>[
+            contentLayerSnapshotBackingFromValidated(
+              id: 'layer-auto-overflow-palette',
+            ),
           ],
+          palette: ScenePaletteSnapshotBacking(
+            gridSizes: <double>[
+              for (var i = 0; i < kMaxPaletteItems + 1; i++) i + 1,
+            ],
+          ),
         ),
       );
 
@@ -1686,6 +1764,41 @@ void main() {
       ),
     );
   });
+
+  test(
+    'SceneImportDraft keeps ordinary construction validated and raw bypass explicit',
+    () {
+      final validatedDraft = SceneImportDraft(
+        camera: const CameraSnapshotBacking(offset: Offset(12, -34)),
+      );
+
+      expect(validatedDraft.camera.offset, const Offset(12, -34));
+
+      expect(
+        () => SceneImportDraft(
+          camera: const CameraSnapshotBacking(offset: Offset(double.nan, 0)),
+        ),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.name,
+            'name',
+            'camera.offset.dx',
+          ),
+        ),
+      );
+
+      final rawDraft = SceneImportDraft.fromBacking(
+        SceneSnapshotBacking(
+          camera: const CameraSnapshotBacking(
+            offset: Offset(double.nan, sceneCoordMax + 1),
+          ),
+        ),
+      );
+
+      expect(rawDraft.camera.offset.dx.isNaN, isTrue);
+      expect(rawDraft.camera.offset.dy, sceneCoordMax + 1);
+    },
+  );
 
   test(
     'sceneValidateSnapshotValues skips background duplicate-node policy',

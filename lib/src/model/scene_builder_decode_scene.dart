@@ -17,12 +17,14 @@ SceneImportDraft sceneBuilderDecodeSceneImportDraftFromJson(
 ) {
   sceneBuilderRequireSupportedSchemaVersion(json);
   final payload = _decodeScenePayload(json);
-  return SceneImportDraft(
-    backgroundLayer: payload.backgroundLayer,
-    layers: payload.layers,
-    camera: payload.camera,
-    background: payload.background,
-    palette: payload.palette,
+  return SceneImportDraft.fromBacking(
+    SceneSnapshotBacking(
+      backgroundLayer: payload.backgroundLayer,
+      layers: payload.layers,
+      camera: payload.camera,
+      background: payload.background,
+      palette: payload.palette,
+    ),
   );
 }
 

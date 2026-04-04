@@ -4,6 +4,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contract/scene_model_invariants.dart';
 import 'package:iwb_canvas_engine/src/controller/committed_store_state.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_invariants.dart';
@@ -593,7 +594,7 @@ void _assertFiniteSnapshotNumbers({
   required String context,
 }) {
   expect(
-    _isFiniteOffset(snapshot.camera.offset),
+    _isValidSceneCameraOffset(snapshot.camera.offset),
     isTrue,
     reason: '$context camera.offset',
   );
@@ -709,6 +710,15 @@ void _assertFiniteSnapshotNumbers({
 }
 
 bool _isFiniteOffset(Offset value) => value.dx.isFinite && value.dy.isFinite;
+
+bool _isValidSceneCameraOffset(Offset value) {
+  try {
+    validateSceneCameraOffset(value, name: 'camera.offset');
+    return true;
+  } on ArgumentError {
+    return false;
+  }
+}
 
 bool _isFiniteSize(Size value) =>
     value.width.isFinite &&

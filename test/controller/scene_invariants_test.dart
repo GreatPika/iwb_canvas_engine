@@ -1,6 +1,8 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/src/contract/scene_contract_limits.dart'
+    show kMaxPaletteItems, sceneCoordMax, sceneSizeMax;
 import 'package:iwb_canvas_engine/src/controller/committed_store_state.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_invariants.dart'
     as scene_invariants;
@@ -17,12 +19,16 @@ import 'package:iwb_canvas_engine/src/model/document_clone.dart';
 // INV:INV-G-LAYERID-UNIQUE
 // INV:INV-G-SELECTION-NORMALIZED
 // INV:INV-G-GRID-ENABLE-CELL-SIZE-RELATION
+// INV:INV-ENG-COMMITTED-STORE-METADATA-CONTRACT
 
 void main() {
   Scene sceneFixture({
     bool gridEnabled = false,
     double gridCellSize = 16,
     Offset cameraOffset = Offset.zero,
+    Camera? camera,
+    Background? background,
+    ScenePalette? palette,
   }) {
     return Scene(
       layers: <ContentLayer>[
@@ -31,10 +37,48 @@ void main() {
           nodes: <SceneNode>[RectNode(id: 'node-1', size: const Size(10, 10))],
         ),
       ],
-      camera: Camera(offset: cameraOffset),
-      background: Background(
-        grid: GridSettings(isEnabled: gridEnabled, cellSize: gridCellSize),
-      ),
+      camera: camera ?? Camera(offset: cameraOffset),
+      background:
+          background ??
+          Background(
+            grid: GridSettings(isEnabled: gridEnabled, cellSize: gridCellSize),
+          ),
+      palette: palette ?? ScenePalette(),
+    );
+  }
+
+  Camera rawCameraFixture(Offset offset) {
+    return _RawCamera(offset);
+  }
+
+  Background rawBackgroundFixture({
+    required GridSettings grid,
+    Color color = const Color(0xFFFFFFFF),
+  }) {
+    return _RawBackground(color: color, grid: grid);
+  }
+
+  GridSettings rawGridFixture({
+    required bool isEnabled,
+    required double cellSize,
+    Color color = const Color(0xFF000000),
+  }) {
+    return _RawGridSettings(
+      isEnabled: isEnabled,
+      cellSize: cellSize,
+      color: color,
+    );
+  }
+
+  ScenePalette rawPaletteFixture({
+    required List<Color> penColors,
+    required List<Color> backgroundColors,
+    required List<double> gridSizes,
+  }) {
+    return _RawScenePalette(
+      penColors: penColors,
+      backgroundColors: backgroundColors,
+      gridSizes: gridSizes,
     );
   }
 
@@ -170,7 +214,9 @@ void main() {
 
   test('collects violations for mismatched index and non-finite values', () {
     // INV:INV-G-SELECTION-NORMALIZED
-    final scene = sceneFixture(cameraOffset: const Offset(double.infinity, 0));
+    final scene = sceneFixture(
+      camera: rawCameraFixture(const Offset(double.infinity, 0)),
+    );
     final violations = txnCollectStoreInvariantViolations(
       scene: scene,
       selectedNodeIds: const <NodeId>{'missing'},
@@ -197,12 +243,70 @@ void main() {
       violations.join('\n'),
       contains('commitRevision must be non-negative'),
     );
-    expect(violations.join('\n'), contains('camera.offset must be finite'));
-    expect(
-      violations.join('\n'),
-      isNot(contains('grid.cellSize must be finite and > 0')),
-    );
+    expect(violations.join('\n'), contains('camera.offset.dx must be finite'));
+    expect(violations.join('\n'), isNot(contains('background.grid.cellSize')));
   });
+
+  test(
+    'collects shared scene metadata contract violations from raw committed state',
+    () {
+      final scene = sceneFixture(
+        camera: rawCameraFixture(Offset(sceneCoordMax + 1, 0)),
+        background: rawBackgroundFixture(
+          grid: rawGridFixture(isEnabled: true, cellSize: 0.5),
+        ),
+        palette: rawPaletteFixture(
+          penColors: const <Color>[],
+          backgroundColors: <Color>[
+            for (var i = 0; i < kMaxPaletteItems + 1; i++)
+              const Color(0xFF010101),
+          ],
+          gridSizes: <double>[0, sceneSizeMax + 1],
+        ),
+      );
+
+      final violations = txnCollectStoreInvariantViolations(
+        scene: scene,
+        selectedNodeIds: const <NodeId>{},
+        allNodeIds: const <NodeId>{'node-1'},
+        nodeLocator: const <NodeId, NodeLocatorEntry>{
+          'node-1': (layerIndex: 0, nodeIndex: 0),
+        },
+        idGeneratorState: state(nextNodeCounter: 2),
+        nextInstanceRevision: 2,
+        commitRevision: 0,
+      );
+
+      expect(
+        violations.join('\n'),
+        contains('camera.offset.dx must be within [-10000000.0, 10000000.0].'),
+      );
+      expect(
+        violations.join('\n'),
+        contains(
+          'background.grid.cellSize must be >= 1.0 when grid is enabled.',
+        ),
+      );
+      expect(
+        violations.join('\n'),
+        contains('palette.penColors must not be empty.'),
+      );
+      expect(
+        violations.join('\n'),
+        contains(
+          'palette.backgroundColors must contain at most $kMaxPaletteItems items.',
+        ),
+      );
+      expect(
+        violations.join('\n'),
+        contains('palette.gridSizes[0] must be > 0.'),
+      );
+      expect(
+        violations.join('\n'),
+        contains('palette.gridSizes[1] must be within [0, 10000000.0].'),
+      );
+    },
+  );
 
   test('runtime grid owner rejects invalid committed grid states eagerly', () {
     // INV:INV-G-GRID-ENABLE-CELL-SIZE-RELATION
@@ -463,7 +567,9 @@ void main() {
   });
 
   test('runtime invariant check throws for invalid committed store', () {
-    final scene = sceneFixture(cameraOffset: const Offset(double.nan, 0));
+    final scene = sceneFixture(
+      camera: rawCameraFixture(const Offset(double.nan, 0)),
+    );
     expect(
       () => debugAssertTxnStoreInvariants(
         scene: scene,
@@ -478,8 +584,36 @@ void main() {
     );
   });
 
+  test(
+    'runtime invariant check throws for out-of-range committed scene metadata',
+    () {
+      final scene = sceneFixture(
+        camera: rawCameraFixture(Offset(sceneCoordMax + 1, 0)),
+        background: rawBackgroundFixture(
+          grid: rawGridFixture(isEnabled: true, cellSize: 0.5),
+        ),
+      );
+      expect(
+        () => debugAssertTxnStoreInvariants(
+          scene: scene,
+          selectedNodeIds: const <NodeId>{},
+          allNodeIds: const <NodeId>{'node-1'},
+          nodeLocator: const <NodeId, NodeLocatorEntry>{
+            'node-1': (layerIndex: 0, nodeIndex: 0),
+          },
+          idGeneratorState: state(nextNodeCounter: 2),
+          nextInstanceRevision: 2,
+          commitRevision: 0,
+        ),
+        throwsStateError,
+      );
+    },
+  );
+
   test('critical runtime invariant check throws for invalid numeric state', () {
-    final scene = sceneFixture(cameraOffset: const Offset(double.infinity, 0));
+    final scene = sceneFixture(
+      camera: rawCameraFixture(const Offset(double.infinity, 0)),
+    );
     expect(
       () => assertCriticalTxnStoreInvariants(
         scene: scene,
@@ -489,6 +623,28 @@ void main() {
       throwsStateError,
     );
   });
+
+  test(
+    'critical runtime invariant check throws for out-of-range metadata state',
+    () {
+      final scene = sceneFixture(
+        camera: rawCameraFixture(Offset(sceneCoordMax + 1, 0)),
+        palette: rawPaletteFixture(
+          penColors: const <Color>[Color(0xFF000000)],
+          backgroundColors: const <Color>[Color(0xFFFFFFFF)],
+          gridSizes: <double>[sceneSizeMax + 1],
+        ),
+      );
+      expect(
+        () => assertCriticalTxnStoreInvariants(
+          scene: scene,
+          commitRevision: 0,
+          previousCommitRevision: -1,
+        ),
+        throwsStateError,
+      );
+    },
+  );
 
   test(
     'critical runtime invariant check reports negative commit regression',
@@ -579,6 +735,79 @@ void main() {
       contains('allNodeIds must equal nodeLocator keys'),
     );
   });
+}
+
+final class _RawCamera extends Camera {
+  _RawCamera(this._offset) : super();
+
+  final Offset _offset;
+
+  @override
+  Offset get offset => _offset;
+}
+
+final class _RawBackground extends Background {
+  _RawBackground({required Color color, required GridSettings grid})
+    : _color = color,
+      _grid = grid,
+      super();
+
+  final Color _color;
+  final GridSettings _grid;
+
+  @override
+  Color get color => _color;
+
+  @override
+  GridSettings get grid => _grid;
+}
+
+final class _RawGridSettings extends GridSettings {
+  _RawGridSettings({
+    required bool isEnabled,
+    required double cellSize,
+    required Color color,
+  }) : _isEnabled = isEnabled,
+       _cellSize = cellSize,
+       _color = color,
+       super();
+
+  final bool _isEnabled;
+  final double _cellSize;
+  final Color _color;
+
+  @override
+  bool get isEnabled => _isEnabled;
+
+  @override
+  double get cellSize => _cellSize;
+
+  @override
+  Color get color => _color;
+}
+
+final class _RawScenePalette extends ScenePalette {
+  _RawScenePalette({
+    required List<Color> penColors,
+    required List<Color> backgroundColors,
+    required List<double> gridSizes,
+  }) : _penColors = penColors,
+       _backgroundColors = backgroundColors,
+       _gridSizes = gridSizes,
+       super();
+
+  final List<Color> _penColors;
+  final List<Color> _backgroundColors;
+  final List<double> _gridSizes;
+
+  @override
+  List<Color> get penColors => _penColors;
+
+  @override
+  List<Color> get backgroundColors => _backgroundColors;
+
+  @override
+  List<double> get gridSizes => _gridSizes;
 }
 
 class _BadInstanceRevisionNode extends SceneNode {

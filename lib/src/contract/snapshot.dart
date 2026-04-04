@@ -9,9 +9,7 @@ import 'scene_defaults.dart';
 import 'scene_model_invariants.dart';
 import 'scene_structure_validation.dart';
 import 'transform2d.dart';
-import 'validated/finite_offset_value.dart';
 import 'validated/layer_id_value.dart';
-import 'validated/positive_finite_double_value.dart';
 
 /// Immutable scene snapshot exposed by the public API.
 class SceneSnapshot {
@@ -117,17 +115,18 @@ class ContentLayerSnapshot {
 
 /// Immutable camera state snapshot.
 class CameraSnapshot {
-  const CameraSnapshot({this.offset = Offset.zero});
+  CameraSnapshot({Offset offset = Offset.zero})
+    : offset = validateSceneCameraOffset(offset, name: 'offset');
 
   final Offset offset;
 }
 
 /// Immutable background snapshot.
 class BackgroundSnapshot {
-  const BackgroundSnapshot({
+  BackgroundSnapshot({
     this.color = SceneDefaults.backgroundColor,
-    this.grid = const GridSnapshot(),
-  });
+    GridSnapshot? grid,
+  }) : grid = grid ?? GridSnapshot();
 
   final Color color;
   final GridSnapshot grid;
@@ -135,11 +134,15 @@ class BackgroundSnapshot {
 
 /// Immutable grid settings snapshot.
 class GridSnapshot {
-  const GridSnapshot({
+  GridSnapshot({
     this.isEnabled = false,
-    this.cellSize = SceneDefaults.gridCellSize,
+    double cellSize = SceneDefaults.gridCellSize,
     this.color = SceneDefaults.gridColor,
-  });
+  }) : cellSize = validateSceneGridCellSize(
+         cellSize,
+         name: 'cellSize',
+         isEnabled: isEnabled,
+       );
 
   final bool isEnabled;
   final double cellSize;
@@ -598,70 +601,45 @@ class PathNodeSnapshot extends NodeSnapshot {
   final PathFillRule fillRule;
 }
 
-void _requireNonEmptyList<T>(List<T> values, {required String name}) {
-  if (values.isNotEmpty) {
-    return;
-  }
-  throw ArgumentError.value(values, name, 'Must not be empty.');
-}
-
 List<Color> _validatedPenColors(List<Color>? values) {
-  final resolved = List<Color>.from(values ?? SceneDefaults.penColors);
-  validatePaletteItemCount(
-    resolved.length,
+  return validateScenePaletteColorList(
+    values ?? SceneDefaults.penColors,
     name: 'penColors',
-    source: resolved,
   );
-  _requireNonEmptyList(resolved, name: 'penColors');
-  return List<Color>.unmodifiable(resolved);
 }
 
 List<Color> _validatedBackgroundColors(List<Color>? values) {
-  final resolved = List<Color>.from(values ?? SceneDefaults.backgroundColors);
-  validatePaletteItemCount(
-    resolved.length,
+  return validateScenePaletteColorList(
+    values ?? SceneDefaults.backgroundColors,
     name: 'backgroundColors',
-    source: resolved,
   );
-  _requireNonEmptyList(resolved, name: 'backgroundColors');
-  return List<Color>.unmodifiable(resolved);
 }
 
 List<double> _validatedGridSizes(List<double>? values) {
-  final resolved = List<double>.from(values ?? SceneDefaults.gridSizes);
-  validatePaletteItemCount(
-    resolved.length,
+  return validateScenePaletteGridSizeList(
+    values ?? SceneDefaults.gridSizes,
     name: 'gridSizes',
-    source: resolved,
-  );
-  _requireNonEmptyList(resolved, name: 'gridSizes');
-  return List<double>.unmodifiable(
-    resolved
-        .map(
-          (value) =>
-              PositiveFiniteDoubleValue.of(value, name: 'gridSizes').value,
-        )
-        .toList(growable: false),
   );
 }
 
 CameraSnapshot _validatedSceneCamera(CameraSnapshot? value) {
-  final resolved = value ?? const CameraSnapshot();
+  final resolved = value ?? CameraSnapshot();
   return CameraSnapshot(
-    offset: FiniteOffsetValue.of(resolved.offset, name: 'camera.offset').value,
+    offset: validateSceneCameraOffset(resolved.offset, name: 'camera.offset'),
   );
 }
 
 BackgroundSnapshot _validatedSceneBackground(BackgroundSnapshot? value) {
-  final resolved = value ?? const BackgroundSnapshot();
+  final resolved = value ?? BackgroundSnapshot();
   return BackgroundSnapshot(
     color: resolved.color,
     grid: GridSnapshot(
       isEnabled: resolved.grid.isEnabled,
-      cellSize: PositiveFiniteDoubleValue.of(
+      cellSize: validateSceneGridCellSize(
         resolved.grid.cellSize,
         name: 'background.grid.cellSize',
-      ).value,
+        isEnabled: resolved.grid.isEnabled,
+      ),
       color: resolved.grid.color,
     ),
   );

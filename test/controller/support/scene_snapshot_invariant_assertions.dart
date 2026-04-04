@@ -2,13 +2,14 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contract/scene_model_invariants.dart';
 import 'package:iwb_canvas_engine/src/core/text_layout.dart';
 
 void assertSceneInvariants(
   SceneSnapshot snapshot, {
   Set<NodeId> selectedNodeIds = const <NodeId>{},
 }) {
-  expect(_isFiniteOffset(snapshot.camera.offset), isTrue);
+  expect(_isValidSceneCameraOffset(snapshot.camera.offset), isTrue);
 
   final contentNodeIds = <NodeId>{};
   final allNodeIds = <NodeId>{};
@@ -110,4 +111,13 @@ void _expectFiniteSize(Size size) {
 
 bool _isFiniteOffset(Offset offset) {
   return offset.dx.isFinite && offset.dy.isFinite;
+}
+
+bool _isValidSceneCameraOffset(Offset offset) {
+  try {
+    validateSceneCameraOffset(offset, name: 'camera.offset');
+    return true;
+  } on ArgumentError {
+    return false;
+  }
 }

@@ -15,7 +15,9 @@ import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
         kMaxRawSceneJsonLength,
         kMaxStrokePointsPerNode,
         kMaxSvgPathDataLength,
-        kMaxTextLength;
+        kMaxTextLength,
+        sceneCoordMax,
+        sceneSizeMax;
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/core/text_layout.dart'
     show TextLayoutRequest;
@@ -1497,6 +1499,56 @@ void main() {
     );
   });
 
+  test('decodeScene differentiates finite and out-of-range scene metadata', () {
+    // INV:INV-SER-JSON-GRID-PALETTE-CONTRACTS
+    final nonFiniteCamera = _minimalSceneJson();
+    (nonFiniteCamera['camera'] as Map<String, Object?>)['offsetX'] =
+        double.infinity;
+    expect(
+      () => decodeScene(nonFiniteCamera),
+      throwsA(
+        predicate(
+          (error) =>
+              error is SceneDataException &&
+              error.code == SceneDataErrorCode.invalidValue &&
+              error.path == 'camera.offsetX' &&
+              error.message == 'Field offsetX must be finite.',
+        ),
+      ),
+    );
+
+    final oversizedCamera = _minimalSceneJson();
+    (oversizedCamera['camera'] as Map<String, Object?>)['offsetX'] =
+        sceneCoordMax + 1;
+    expect(
+      () => decodeScene(oversizedCamera),
+      throwsA(
+        predicate(
+          (error) =>
+              error is SceneDataException &&
+              error.code == SceneDataErrorCode.outOfRange &&
+              error.path == 'camera.offsetX',
+        ),
+      ),
+    );
+
+    final oversizedGrid = _minimalSceneJson();
+    ((oversizedGrid['background'] as Map<String, Object?>)['grid']
+            as Map<String, Object?>)['cellSize'] =
+        sceneSizeMax + 1;
+    expect(
+      () => decodeScene(oversizedGrid),
+      throwsA(
+        predicate(
+          (error) =>
+              error is SceneDataException &&
+              error.code == SceneDataErrorCode.outOfRange &&
+              error.path == 'background.grid.cellSize',
+        ),
+      ),
+    );
+  });
+
   test('decodeScene validates required field types', () {
     final schemaWrong = _minimalSceneJson();
     schemaWrong['schemaVersion'] = '1';
@@ -2270,12 +2322,14 @@ void main() {
 
   test('encodeScene enforces grid and palette contracts', () {
     // INV:INV-SER-JSON-GRID-PALETTE-CONTRACTS
-    final invalidGridScene = sceneSnapshotFromValidated(
-      layers: <ContentLayerSnapshot>[
-        contentLayerSnapshotFromValidated(id: 'layer-auto-4'),
-      ],
-      background: const BackgroundSnapshot(
-        grid: GridSnapshot(isEnabled: false, cellSize: -12.5),
+    final invalidGridScene = materializeSceneSnapshot(
+      SceneSnapshotBacking(
+        layers: <ContentLayerSnapshotBacking>[
+          contentLayerSnapshotBackingFromValidated(id: 'layer-auto-4'),
+        ],
+        background: const BackgroundSnapshotBacking(
+          grid: GridSnapshotBacking(isEnabled: false, cellSize: -12.5),
+        ),
       ),
     );
     expect(
@@ -2289,12 +2343,14 @@ void main() {
       ),
     );
 
-    final enabledGridScene = sceneSnapshotFromValidated(
-      layers: <ContentLayerSnapshot>[
-        contentLayerSnapshotFromValidated(id: 'layer-auto-5'),
-      ],
-      background: const BackgroundSnapshot(
-        grid: GridSnapshot(isEnabled: true, cellSize: 0),
+    final enabledGridScene = materializeSceneSnapshot(
+      SceneSnapshotBacking(
+        layers: <ContentLayerSnapshotBacking>[
+          contentLayerSnapshotBackingFromValidated(id: 'layer-auto-5'),
+        ],
+        background: const BackgroundSnapshotBacking(
+          grid: GridSnapshotBacking(isEnabled: true, cellSize: 0),
+        ),
       ),
     );
     expect(
@@ -2310,11 +2366,13 @@ void main() {
 
     expect(
       () => encodeScene(
-        sceneSnapshotFromValidated(
-          layers: <ContentLayerSnapshot>[
-            contentLayerSnapshotFromValidated(id: 'layer-auto-6'),
-          ],
-          palette: scenePaletteSnapshotFromValidated(penColors: const []),
+        materializeSceneSnapshot(
+          SceneSnapshotBacking(
+            layers: <ContentLayerSnapshotBacking>[
+              contentLayerSnapshotBackingFromValidated(id: 'layer-auto-6'),
+            ],
+            palette: ScenePaletteSnapshotBacking(penColors: const []),
+          ),
         ),
       ),
       throwsA(
@@ -2327,12 +2385,12 @@ void main() {
     );
     expect(
       () => encodeScene(
-        sceneSnapshotFromValidated(
-          layers: <ContentLayerSnapshot>[
-            contentLayerSnapshotFromValidated(id: 'layer-auto-7'),
-          ],
-          palette: scenePaletteSnapshotFromValidated(
-            backgroundColors: const [],
+        materializeSceneSnapshot(
+          SceneSnapshotBacking(
+            layers: <ContentLayerSnapshotBacking>[
+              contentLayerSnapshotBackingFromValidated(id: 'layer-auto-7'),
+            ],
+            palette: ScenePaletteSnapshotBacking(backgroundColors: const []),
           ),
         ),
       ),
@@ -2346,11 +2404,13 @@ void main() {
     );
     expect(
       () => encodeScene(
-        sceneSnapshotFromValidated(
-          layers: <ContentLayerSnapshot>[
-            contentLayerSnapshotFromValidated(id: 'layer-auto-8'),
-          ],
-          palette: scenePaletteSnapshotFromValidated(gridSizes: const []),
+        materializeSceneSnapshot(
+          SceneSnapshotBacking(
+            layers: <ContentLayerSnapshotBacking>[
+              contentLayerSnapshotBackingFromValidated(id: 'layer-auto-8'),
+            ],
+            palette: ScenePaletteSnapshotBacking(gridSizes: const []),
+          ),
         ),
       ),
       throwsA(
@@ -2412,15 +2472,19 @@ void main() {
         ),
       );
 
-      final oversizedPaletteScene = sceneSnapshotFromValidated(
-        layers: <ContentLayerSnapshot>[
-          contentLayerSnapshotFromValidated(id: 'layer-auto-palette-overflow'),
-        ],
-        palette: scenePaletteSnapshotFromValidated(
-          penColors: <Color>[
-            for (var i = 0; i < kMaxPaletteItems + 1; i++)
-              const Color(0xFF111111),
+      final oversizedPaletteScene = materializeSceneSnapshot(
+        SceneSnapshotBacking(
+          layers: <ContentLayerSnapshotBacking>[
+            contentLayerSnapshotBackingFromValidated(
+              id: 'layer-auto-palette-overflow',
+            ),
           ],
+          palette: ScenePaletteSnapshotBacking(
+            penColors: <Color>[
+              for (var i = 0; i < kMaxPaletteItems + 1; i++)
+                const Color(0xFF111111),
+            ],
+          ),
         ),
       );
 
@@ -2439,11 +2503,13 @@ void main() {
   );
 
   test('encodeScene rejects invalid numeric fields', () {
-    final cameraNaN = sceneSnapshotFromValidated(
-      layers: <ContentLayerSnapshot>[
-        contentLayerSnapshotFromValidated(id: 'layer-auto-9'),
-      ],
-      camera: const CameraSnapshot(offset: Offset(double.nan, 0)),
+    final cameraNaN = materializeSceneSnapshot(
+      SceneSnapshotBacking(
+        layers: <ContentLayerSnapshotBacking>[
+          contentLayerSnapshotBackingFromValidated(id: 'layer-auto-9'),
+        ],
+        camera: const CameraSnapshotBacking(offset: Offset(double.nan, 0)),
+      ),
     );
     expect(
       () => encodeScene(cameraNaN),

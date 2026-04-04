@@ -12,6 +12,10 @@ const int kMaxPaletteItems = 1024;
 const int kMaxRawSceneJsonLength = 32 * 1024 * 1024;
 const int kMaxContentLayersPerScene = 4096;
 const int kMaxNodesPerScene = 200000;
+const double sceneCoordMin = -1e7;
+const double sceneCoordMax = 1e7;
+const double sceneSizeMax = 1e7;
+const double kMinGridCellSize = 1.0;
 
 List<int> sceneContractLimitValues() {
   return const <int>[
@@ -26,5 +30,14 @@ List<int> sceneContractLimitValues() {
     kMaxRawSceneJsonLength,
     kMaxContentLayersPerScene,
     kMaxNodesPerScene,
+  ];
+}
+
+List<double> sceneContractDoubleLimitValues() {
+  return const <double>[
+    sceneCoordMin,
+    sceneCoordMax,
+    sceneSizeMax,
+    kMinGridCellSize,
   ];
 }

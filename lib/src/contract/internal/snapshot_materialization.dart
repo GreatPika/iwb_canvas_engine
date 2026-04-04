@@ -28,6 +28,7 @@ SceneSnapshot materializeSceneSnapshot(SceneSnapshotBacking backing) {
 
 SceneSnapshot sceneSnapshotFromValidatedBacking(SceneSnapshotBacking backing) {
   sceneValidateSceneSnapshotBackingStructure(backing);
+  validateSceneSnapshotBackingMetadataValues(backing);
   return materializeSceneSnapshot(backing);
 }
 
@@ -52,24 +53,17 @@ ContentLayerSnapshot materializeContentLayerSnapshot(
 }
 
 CameraSnapshot materializeCameraSnapshot(CameraSnapshotBacking backing) {
-  return CameraSnapshot(offset: backing.offset);
+  return materializeCameraSnapshotForInternalUse(backing);
 }
 
 BackgroundSnapshot materializeBackgroundSnapshot(
   BackgroundSnapshotBacking backing,
 ) {
-  return BackgroundSnapshot(
-    color: backing.color,
-    grid: materializeGridSnapshot(backing.grid),
-  );
+  return materializeBackgroundSnapshotForInternalUse(backing);
 }
 
 GridSnapshot materializeGridSnapshot(GridSnapshotBacking backing) {
-  return GridSnapshot(
-    isEnabled: backing.isEnabled,
-    cellSize: backing.cellSize,
-    color: backing.color,
-  );
+  return materializeGridSnapshotForInternalUse(backing);
 }
 
 ScenePaletteSnapshot materializeScenePaletteSnapshot(
@@ -176,23 +170,29 @@ ContentLayerSnapshot contentLayerSnapshotFromValidated({
 }
 
 CameraSnapshot cameraSnapshotFromValidated({Offset offset = Offset.zero}) {
-  return materializeCameraSnapshot(
-    cameraSnapshotBackingFromValidated(offset: offset),
-  );
+  final backing = cameraSnapshotBackingFromValidated(offset: offset);
+  return CameraSnapshot(offset: backing.offset);
 }
 
 BackgroundSnapshot backgroundSnapshotFromValidated({
   Color color = SceneDefaults.backgroundColor,
-  GridSnapshot grid = const GridSnapshot(),
+  GridSnapshot? grid,
 }) {
-  return materializeBackgroundSnapshot(
-    backgroundSnapshotBackingFromValidated(
-      color: color,
-      grid: gridSnapshotBackingFromValidated(
-        isEnabled: grid.isEnabled,
-        cellSize: grid.cellSize,
-        color: grid.color,
-      ),
+  final resolvedGrid = grid ?? GridSnapshot();
+  final backing = backgroundSnapshotBackingFromValidated(
+    color: color,
+    grid: gridSnapshotBackingFromValidated(
+      isEnabled: resolvedGrid.isEnabled,
+      cellSize: resolvedGrid.cellSize,
+      color: resolvedGrid.color,
+    ),
+  );
+  return BackgroundSnapshot(
+    color: backing.color,
+    grid: GridSnapshot(
+      isEnabled: backing.grid.isEnabled,
+      cellSize: backing.grid.cellSize,
+      color: backing.grid.color,
     ),
   );
 }
@@ -202,12 +202,15 @@ GridSnapshot gridSnapshotFromValidated({
   double cellSize = SceneDefaults.gridCellSize,
   Color color = SceneDefaults.gridColor,
 }) {
-  return materializeGridSnapshot(
-    gridSnapshotBackingFromValidated(
-      isEnabled: isEnabled,
-      cellSize: cellSize,
-      color: color,
-    ),
+  final backing = gridSnapshotBackingFromValidated(
+    isEnabled: isEnabled,
+    cellSize: cellSize,
+    color: color,
+  );
+  return GridSnapshot(
+    isEnabled: backing.isEnabled,
+    cellSize: backing.cellSize,
+    color: backing.color,
   );
 }
 
@@ -216,12 +219,15 @@ ScenePaletteSnapshot scenePaletteSnapshotFromValidated({
   List<Color>? backgroundColors,
   List<double>? gridSizes,
 }) {
-  return materializeScenePaletteSnapshot(
-    scenePaletteSnapshotBackingFromValidated(
-      penColors: penColors,
-      backgroundColors: backgroundColors,
-      gridSizes: gridSizes,
-    ),
+  final backing = scenePaletteSnapshotBackingFromValidated(
+    penColors: penColors,
+    backgroundColors: backgroundColors,
+    gridSizes: gridSizes,
+  );
+  return ScenePaletteSnapshot(
+    penColors: backing.penColors,
+    backgroundColors: backing.backgroundColors,
+    gridSizes: backing.gridSizes,
   );
 }
 

@@ -152,6 +152,12 @@ class _CanvasScreenState extends State<CanvasScreen> {
   duplicate node ids, duplicate content-layer ids, and scene-wide
   layer/node-count overflow before a malformed public snapshot can escape the
   boundary.
+- Scene metadata uses one shared eager contract across public constructors,
+  runtime setters/owners, typed import, and JSON decode. `CameraSnapshot` /
+  `Camera.offset` reject non-finite or out-of-range offsets, `GridSnapshot` /
+  `GridSettings` require finite positive bounded `cellSize` values, enabling a
+  grid still requires `cellSize >= 1.0`, and palette lists must stay non-empty,
+  bounded, and use finite positive bounded `gridSizes`.
 - Internal snapshot/spec/patch backing identity and materialization helpers
   live only under `lib/src/contract/internal/**`; they are package internals,
   not supported public API.

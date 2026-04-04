@@ -20,7 +20,7 @@ void main() {
 
       final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
-          background: const BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+          background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
               id: 'layer-frame-contract',

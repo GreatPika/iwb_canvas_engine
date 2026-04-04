@@ -210,9 +210,11 @@ void main() {
     () {
       expect(
         () => txnSceneFromSnapshot(
-          sceneSnapshotFromValidated(
-            background: backgroundSnapshotFromValidated(
-              grid: gridSnapshotFromValidated(isEnabled: true, cellSize: 0.5),
+          materializeSceneSnapshot(
+            SceneSnapshotBacking(
+              background: const BackgroundSnapshotBacking(
+                grid: GridSnapshotBacking(isEnabled: true, cellSize: 0.5),
+              ),
             ),
           ),
         ),
@@ -384,9 +386,7 @@ void main() {
           layers: <ContentLayer>[
             ContentLayer(
               id: 'layer-auto-runtime-dup',
-              nodes: <SceneNode>[
-                RectNode(id: 'dup', size: const Size(2, 2)),
-              ],
+              nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(2, 2))],
             ),
           ],
         ),

@@ -146,6 +146,10 @@ Ownership decisions for the target state:
 - `contract/internal/snapshot_materialization.dart` owns public wrapper
   materialization plus the internal compatibility helpers used by contract
   tests and malformed-snapshot failure injection.
+- Validated snapshot materialization must preserve the original top-level
+  `SceneSnapshotBacking` carrier; metadata revalidation belongs on the backing
+  path before wrapper materialization rather than by rebuilding plain public
+  snapshot wrappers.
 - Public snapshot/spec/patch files do not expose backing getters or
   `materialize(...)` members. Backing identity and wrapper materialization stay
   on internal helper paths under `contract/internal/**`.
@@ -201,6 +205,9 @@ Ownership decisions for the target state:
 - `model/scene_import_draft.dart` is the single model-owned pre-canonical
   import carrier. Typed `SceneSnapshot` import and parsed-map decode both
   normalize into this draft before scene-level policy validation closes.
+- Ordinary `SceneImportDraft(...)` construction stays on validated backing
+  builders; raw decode and malformed-draft assembly must remain explicit
+  through `SceneImportDraft.fromBacking(...)`.
 - `model/scene_from_import_draft.dart` is the runtime materializer from a
   validated draft to mutable `Scene`; public `SceneSnapshot` is not used as
   the scene-level working container during import.
@@ -292,6 +299,9 @@ Ownership decisions for the target state:
 ## State ownership model
 
 - The committed `SceneSnapshot` is the single source of truth.
+- Committed-store invariant sweeps must reuse the shared runtime scene metadata
+  contract for camera, grid, and palette values so raw/internal bypassed state
+  is surfaced before controller code treats it as canonical.
 - Preview state for move/draw gestures is intentionally ephemeral and does not
   mutate committed scene data until commit on `up`.
 - Active gesture identity is controller-owned; move/draw helpers do not own a
@@ -437,10 +447,11 @@ most important architectural rules are:
   and the public patch boundary exposes direction mutation for existing text
   nodes instead of relying on a compatibility fallback.
 - Boundary validation has one source of truth per rule: limits come from
-  `core/scene_limits.dart`, shared stroke/palette cardinality invariants live
-  in `contract/scene_model_invariants.dart`, boundary value
-  parsing/generation lives in `contract/validated/**`, and model/serialization
-  layers reuse those rules.
+  `contract/scene_contract_limits.dart`, shared scene-metadata and
+  stroke/palette invariants live in `contract/scene_model_invariants.dart`,
+  boundary value parsing/generation lives in `contract/validated/**`, and
+  model/serialization layers reuse those rules instead of re-owning late-only
+  copies.
 - Public snapshot/spec/patch constructors enforce those primitive boundary
   rules eagerly; `contract/owned_collections.dart` is the single structural
   owner for immutable collection payload ownership; internal decode/runtime
@@ -577,6 +588,13 @@ most important architectural rules are:
   immutable `ScenePalette` value object. Palette constructor inputs are
   defensively copied into unmodifiable lists, so runtime palette state does
   not expose mutable nested list ownership after validation.
+- Scene metadata now has one lower-layer contract across public constructors,
+  runtime owners, and decode/import validation: camera offsets are finite and
+  in range, grid sizes are finite positive bounded values, enabled grids
+  require `cellSize >= 1.0`, and palette lists stay non-empty and bounded.
+- Raw malformed scene metadata remains available only through explicit
+  internal backing/materialization paths under `contract/internal/**`; ordinary
+  public and runtime APIs do not expose raw invalid metadata containers.
 - Decode/import and runtime replacement paths validate structure and numeric
   constraints and throw `SceneDataException` on malformed input.
 - `contract/scene_structure_validation.dart` is the single owner for shared

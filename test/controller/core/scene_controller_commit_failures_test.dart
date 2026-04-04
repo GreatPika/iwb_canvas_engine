@@ -366,9 +366,11 @@ void main() {
                 'Field layers[0].nodes[0].svgPathData must be valid SVG path data.',
           ),
           (
-            snapshot: sceneSnapshotFromValidated(
-              palette: scenePaletteSnapshotFromValidated(
-                penColors: const <Color>[],
+            snapshot: materializeSceneSnapshot(
+              SceneSnapshotBacking(
+                palette: ScenePaletteSnapshotBacking(
+                  penColors: const <Color>[],
+                ),
               ),
             ),
             field: 'palette.penColors',

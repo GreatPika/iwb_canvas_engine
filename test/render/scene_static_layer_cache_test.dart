@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/render/scene_grid_renderer.dart';
@@ -79,7 +80,7 @@ Future<int> _countDarkPixelsOnRow(Image image, int y, Color background) async {
 void main() {
   test('SceneStaticLayerCache disposes picture on key change', () {
     final cache = SceneStaticLayerCache();
-    const background = BackgroundSnapshot(
+    final background = BackgroundSnapshot(
       color: Color(0xFFFFFFFF),
       grid: GridSnapshot(
         isEnabled: true,
@@ -132,7 +133,7 @@ void main() {
 
   test('SceneStaticLayerCache does not rebuild grid picture on camera pan', () {
     final cache = SceneStaticLayerCache();
-    const background = BackgroundSnapshot(
+    final background = BackgroundSnapshot(
       color: Color(0xFFFFFFFF),
       grid: GridSnapshot(
         isEnabled: true,
@@ -170,7 +171,7 @@ void main() {
 
   test('SceneStaticLayerCache clips translated grid to scene bounds', () async {
     final cache = SceneStaticLayerCache();
-    const background = BackgroundSnapshot(
+    final background = BackgroundSnapshot(
       color: Color(0x00000000),
       grid: GridSnapshot(
         isEnabled: true,
@@ -195,14 +196,18 @@ void main() {
 
   test('SceneStaticLayerCache handles invalid numeric inputs', () {
     final cache = SceneStaticLayerCache();
-    const background = BackgroundSnapshot(
-      color: Color(0xFFFFFFFF),
-      grid: GridSnapshot(
-        isEnabled: true,
-        cellSize: double.nan,
-        color: Color(0xFFCCCCCC),
+    final background = materializeSceneSnapshot(
+      SceneSnapshotBacking(
+        background: BackgroundSnapshotBacking(
+          color: Color(0xFFFFFFFF),
+          grid: GridSnapshotBacking(
+            isEnabled: true,
+            cellSize: double.nan,
+            color: Color(0xFFCCCCCC),
+          ),
+        ),
       ),
-    );
+    ).background;
 
     final recorder1 = PictureRecorder();
     _drawStaticLayer(
@@ -236,7 +241,7 @@ void main() {
     'SceneStaticLayerCache skips picture recording when grid is disabled',
     () {
       final cache = SceneStaticLayerCache();
-      const background = BackgroundSnapshot(
+      final background = BackgroundSnapshot(
         color: Color(0xFFFFFFFF),
         grid: GridSnapshot(
           isEnabled: false,
@@ -264,7 +269,7 @@ void main() {
 
   test('SceneStaticLayerCache applies stride for dense grid line counts', () {
     final cache = SceneStaticLayerCache();
-    const background = BackgroundSnapshot(
+    final background = BackgroundSnapshot(
       color: Color(0xFFFFFFFF),
       grid: GridSnapshot(
         isEnabled: true,
@@ -290,7 +295,7 @@ void main() {
 
   test('SceneStaticLayerCache releases picture when grid becomes disabled', () {
     final cache = SceneStaticLayerCache();
-    const enabledBackground = BackgroundSnapshot(
+    final enabledBackground = BackgroundSnapshot(
       color: Color(0xFFFFFFFF),
       grid: GridSnapshot(
         isEnabled: true,
@@ -298,7 +303,7 @@ void main() {
         color: Color(0xFFCCCCCC),
       ),
     );
-    const disabledBackground = BackgroundSnapshot(
+    final disabledBackground = BackgroundSnapshot(
       color: Color(0xFFFFFFFF),
       grid: GridSnapshot(
         isEnabled: false,
@@ -355,7 +360,7 @@ void main() {
 
   test('SceneStaticLayerCache clear and dispose release cached picture', () {
     final cache = SceneStaticLayerCache();
-    const background = BackgroundSnapshot(
+    final background = BackgroundSnapshot(
       color: Color(0xFFFFFFFF),
       grid: GridSnapshot(
         isEnabled: true,

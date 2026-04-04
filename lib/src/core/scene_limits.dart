@@ -12,16 +12,16 @@ export '../contract/scene_contract_limits.dart'
         kMaxNodeIdLength,
         kMaxRawSceneJsonLength,
         kMaxStrokePointsPerNode,
+        kMinGridCellSize,
         kMaxSvgPathDataLength,
-        kMaxTextLength;
-
-const double sceneCoordMin = -1e7;
-const double sceneCoordMax = 1e7;
+        kMaxTextLength,
+        sceneCoordMax,
+        sceneCoordMin,
+        sceneSizeMax;
 
 const double sceneScaleMin = 1e-4;
 const double sceneScaleMax = 1e4;
 
-const double sceneSizeMax = 1e7;
 const double sceneThicknessMax = 1e5;
 const double sceneHitPaddingMax = 1e5;
 

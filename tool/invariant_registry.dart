@@ -135,6 +135,15 @@ const List<Invariant> invariants = <Invariant>[
     ),
   ),
   Invariant(
+    id: 'INV-ENG-SHARED-SCENE-METADATA-CONTRACT',
+    scope: 'engine-api',
+    title:
+        'scene metadata values use one eager contract across public constructors, runtime owners, and import/decode paths, while raw malformed metadata stays internal-only',
+    primaryProof: PrimaryProof(
+      path: 'test/public_api/validated_boundary_value_test.dart',
+    ),
+  ),
+  Invariant(
     id: 'INV-ENG-WRITE-ONLY-MUTATION',
     scope: 'engine-controller',
     title: 'mutations are routed via write*/txn* APIs',
@@ -253,6 +262,15 @@ const List<Invariant> invariants = <Invariant>[
         'writer rejects invalid numeric writes instead of clamping or repair-normalizing them later',
     primaryProof: PrimaryProof(
       path: 'test/controller/internal/scene_writer_test.dart',
+    ),
+  ),
+  Invariant(
+    id: 'INV-ENG-COMMITTED-STORE-METADATA-CONTRACT',
+    scope: 'engine-controller',
+    title:
+        'committed-store invariant sweeps enforce the shared runtime scene metadata contract for camera, grid, and palette values',
+    primaryProof: PrimaryProof(
+      path: 'test/controller/scene_invariants_test.dart',
     ),
   ),
   Invariant(
@@ -748,7 +766,8 @@ const List<Invariant> invariants = <Invariant>[
   Invariant(
     id: 'INV-SER-JSON-GRID-PALETTE-CONTRACTS',
     scope: 'serialization',
-    title: 'JSON grid/palette contracts are enforced',
+    title:
+        'JSON scene-metadata contracts are enforced for camera, grid, background, and palette values',
     primaryProof: PrimaryProof(
       path: 'test/serialization/scene_codec_validation_test.dart',
     ),

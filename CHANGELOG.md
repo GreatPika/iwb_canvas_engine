@@ -4,6 +4,14 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ## Unreleased
 
+- Breaking: Scene metadata contracts are now aligned across ordinary public
+  constructors, runtime owners, validated helper paths, and import/decode.
+  `CameraSnapshot`, `GridSnapshot`, and `BackgroundSnapshot` now reject invalid
+  metadata eagerly, runtime `Camera`, `GridSettings`, and `ScenePalette` use
+  the same shared value contract, validated `...FromValidated` metadata
+  helpers no longer materialize invalid values, and raw malformed scene
+  metadata remains available only through explicit internal backing or draft
+  materialization paths.
 - Public `SceneSnapshot` is now structurally valid by construction for public
   callers: ordinary `SceneSnapshot(...)` and validated producer paths reject
   duplicate node ids, duplicate content-layer ids, and scene-wide

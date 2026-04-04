@@ -4,6 +4,7 @@ import '../ids.dart';
 import '../owned_collections.dart';
 import '../path_fill_rule.dart';
 import '../scene_defaults.dart';
+import '../scene_model_invariants.dart';
 import '../transform2d.dart';
 import 'node_boundary_schema.dart';
 
@@ -300,13 +301,22 @@ SceneSnapshotBacking sceneSnapshotBackingFromValidated({
   BackgroundSnapshotBacking? background,
   ScenePaletteSnapshotBacking? palette,
 }) {
+  final resolvedCamera = _validatedCameraSnapshotBacking(camera);
+  final resolvedBackground = _validatedBackgroundSnapshotBacking(background);
+  final resolvedPalette = _validatedScenePaletteSnapshotBacking(palette);
   return SceneSnapshotBacking(
     layers: layers,
     backgroundLayer: backgroundLayer,
-    camera: camera,
-    background: background,
-    palette: palette,
+    camera: resolvedCamera,
+    background: resolvedBackground,
+    palette: resolvedPalette,
   );
+}
+
+void validateSceneSnapshotBackingMetadataValues(SceneSnapshotBacking backing) {
+  _validatedCameraSnapshotBacking(backing.camera);
+  _validatedBackgroundSnapshotBacking(backing.background);
+  _validatedScenePaletteSnapshotBacking(backing.palette);
 }
 
 BackgroundLayerSnapshotBacking backgroundLayerSnapshotBackingFromValidated({
@@ -325,14 +335,17 @@ ContentLayerSnapshotBacking contentLayerSnapshotBackingFromValidated({
 CameraSnapshotBacking cameraSnapshotBackingFromValidated({
   Offset offset = Offset.zero,
 }) {
-  return CameraSnapshotBacking(offset: offset);
+  return CameraSnapshotBacking(
+    offset: validateSceneCameraOffset(offset, name: 'offset'),
+  );
 }
 
 BackgroundSnapshotBacking backgroundSnapshotBackingFromValidated({
   Color color = SceneDefaults.backgroundColor,
-  GridSnapshotBacking grid = const GridSnapshotBacking(),
+  GridSnapshotBacking? grid,
 }) {
-  return BackgroundSnapshotBacking(color: color, grid: grid);
+  final resolvedGrid = _validatedGridSnapshotBacking(grid);
+  return BackgroundSnapshotBacking(color: color, grid: resolvedGrid);
 }
 
 GridSnapshotBacking gridSnapshotBackingFromValidated({
@@ -342,7 +355,11 @@ GridSnapshotBacking gridSnapshotBackingFromValidated({
 }) {
   return GridSnapshotBacking(
     isEnabled: isEnabled,
-    cellSize: cellSize,
+    cellSize: validateSceneGridCellSize(
+      cellSize,
+      name: 'cellSize',
+      isEnabled: isEnabled,
+    ),
     color: color,
   );
 }
@@ -353,9 +370,78 @@ ScenePaletteSnapshotBacking scenePaletteSnapshotBackingFromValidated({
   List<double>? gridSizes,
 }) {
   return ScenePaletteSnapshotBacking(
-    penColors: penColors,
-    backgroundColors: backgroundColors,
-    gridSizes: gridSizes,
+    penColors: validateScenePaletteColorList(
+      penColors ?? SceneDefaults.penColors,
+      name: 'penColors',
+    ),
+    backgroundColors: validateScenePaletteColorList(
+      backgroundColors ?? SceneDefaults.backgroundColors,
+      name: 'backgroundColors',
+    ),
+    gridSizes: validateScenePaletteGridSizeList(
+      gridSizes ?? SceneDefaults.gridSizes,
+      name: 'gridSizes',
+    ),
+  );
+}
+
+CameraSnapshotBacking _validatedCameraSnapshotBacking(
+  CameraSnapshotBacking? value,
+) {
+  final resolved = value ?? const CameraSnapshotBacking();
+  return CameraSnapshotBacking(
+    offset: validateSceneCameraOffset(resolved.offset, name: 'camera.offset'),
+  );
+}
+
+BackgroundSnapshotBacking _validatedBackgroundSnapshotBacking(
+  BackgroundSnapshotBacking? value,
+) {
+  final resolved = value ?? const BackgroundSnapshotBacking();
+  return BackgroundSnapshotBacking(
+    color: resolved.color,
+    grid: GridSnapshotBacking(
+      isEnabled: resolved.grid.isEnabled,
+      cellSize: validateSceneGridCellSize(
+        resolved.grid.cellSize,
+        name: 'background.grid.cellSize',
+        isEnabled: resolved.grid.isEnabled,
+      ),
+      color: resolved.grid.color,
+    ),
+  );
+}
+
+GridSnapshotBacking _validatedGridSnapshotBacking(GridSnapshotBacking? value) {
+  final resolved = value ?? const GridSnapshotBacking();
+  return GridSnapshotBacking(
+    isEnabled: resolved.isEnabled,
+    cellSize: validateSceneGridCellSize(
+      resolved.cellSize,
+      name: 'grid.cellSize',
+      isEnabled: resolved.isEnabled,
+    ),
+    color: resolved.color,
+  );
+}
+
+ScenePaletteSnapshotBacking _validatedScenePaletteSnapshotBacking(
+  ScenePaletteSnapshotBacking? value,
+) {
+  final resolved = value ?? ScenePaletteSnapshotBacking();
+  return ScenePaletteSnapshotBacking(
+    penColors: validateScenePaletteColorList(
+      resolved.penColors,
+      name: 'palette.penColors',
+    ),
+    backgroundColors: validateScenePaletteColorList(
+      resolved.backgroundColors,
+      name: 'palette.backgroundColors',
+    ),
+    gridSizes: validateScenePaletteGridSizeList(
+      resolved.gridSizes,
+      name: 'palette.gridSizes',
+    ),
   );
 }
 

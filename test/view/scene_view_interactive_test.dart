@@ -144,7 +144,7 @@ SceneSnapshot _cacheSnapshot({
         ],
       ),
     ],
-    background: const BackgroundSnapshot(
+    background: BackgroundSnapshot(
       grid: GridSnapshot(isEnabled: true, cellSize: 12),
     ),
   );
@@ -1273,9 +1273,13 @@ void main() {
     controller.linePreviewThickness = 2;
     await paintOverlay();
 
-    controller.snapshotOverride = sceneSnapshotFromValidated(
-      camera: const CameraSnapshot(offset: Offset(double.nan, double.infinity)),
-      layers: const <ContentLayerSnapshot>[],
+    controller.snapshotOverride = materializeSceneSnapshot(
+      SceneSnapshotBacking(
+        camera: const CameraSnapshotBacking(
+          offset: Offset(double.nan, double.infinity),
+        ),
+        layers: const <ContentLayerSnapshotBacking>[],
+      ),
     );
     await paintOverlay();
     controller.snapshotOverride = null;

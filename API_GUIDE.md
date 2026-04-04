@@ -164,6 +164,10 @@ Constructor defaults:
   layer/node-count overflow with deterministic `SceneDataException`
   diagnostics, so these constructors are runtime constructors rather than
   `const` entry points
+- public `CameraSnapshot`, `GridSnapshot`, `BackgroundSnapshot`, and
+  `ScenePaletteSnapshot` also validate scene metadata eagerly, so ordinary
+  public metadata construction now matches the accepted runtime/import
+  envelope instead of deferring those failures to later policy checks
 
 ### 3.2 Layer model
 
@@ -221,6 +225,13 @@ Important runtime details:
 - runtime whole-stroke geometry writes go through
   `StrokeNode.replacePoints(...)`, which rejects non-finite coordinates and
   point lists longer than `20000`
+- scene metadata uses one shared eager contract across public constructors,
+  runtime owners, typed import, and JSON decode:
+  - camera offsets must be finite and stay within the scene coordinate range
+  - grid cell sizes and palette `gridSizes` must be finite, `> 0`, and stay
+    within the shared scene-size envelope
+  - enabled grids still require `cellSize >= 1.0`
+  - palette lists must stay non-empty and `<= 1024` items each
 - runtime `Scene.palette` is replacement-only: `ScenePalette` defensively
   copies and freezes `penColors`, `backgroundColors`, and `gridSizes`, so
   callers replace the palette object instead of mutating nested lists
@@ -361,12 +372,17 @@ Public write-boundary values validate eagerly at construction time:
 - `SvgPathDataValue` enforces non-empty bounded path payloads and SVG parsing
 - non-finite `Transform2D` and `Offset` values are rejected by transform and
   translate write paths
-- non-finite camera offsets are rejected by their runtime write paths
+- camera offsets are reject-only at the public/runtime boundary: they must be
+  finite and stay within the shared scene coordinate range
 - grid cell size writes are reject-only at runtime: values must be finite and
-  `> 0`, and enabling the grid requires `cellSize >= 1.0`
-- import/snapshot validation also rejects enabled grids whose `cellSize` is
-  below `1.0`, so invalid payloads fail with `SceneDataException` before
-  runtime materialization
+  `> 0`, bounded by the shared scene-size envelope, and enabling the grid
+  requires `cellSize >= 1.0`
+- palette `gridSizes` follow the same finite positive bounded numeric contract
+  as background-grid `cellSize`, and palette lists must stay non-empty and
+  bounded by the shared item-count limit
+- import/snapshot validation uses the same scene-metadata envelope, so invalid
+  camera/grid/palette payloads fail with `SceneDataException` before runtime
+  materialization
 - `opacity` is reject-only at the public boundary and in runtime nodes; it
   must stay in `[0, 1]`
 - in-memory write/import validation now mirrors the same id/text/font-family,

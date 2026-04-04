@@ -226,6 +226,24 @@ ScenePaletteSnapshot materializeScenePaletteSnapshotForInternalUse(
   return _MaterializedScenePaletteSnapshot(backing);
 }
 
+CameraSnapshot materializeCameraSnapshotForInternalUse(
+  CameraSnapshotBacking backing,
+) {
+  return _MaterializedCameraSnapshot(backing);
+}
+
+BackgroundSnapshot materializeBackgroundSnapshotForInternalUse(
+  BackgroundSnapshotBacking backing,
+) {
+  return _MaterializedBackgroundSnapshot(backing);
+}
+
+GridSnapshot materializeGridSnapshotForInternalUse(
+  GridSnapshotBacking backing,
+) {
+  return _MaterializedGridSnapshot(backing);
+}
+
 NodeSnapshot materializeNodeSnapshotForInternalUse(
   NodeSnapshotBacking backing,
 ) {
@@ -258,18 +276,14 @@ final class _MaterializedSceneSnapshot extends SceneSnapshot
         sceneSnapshotBacking.backgroundLayer,
       );
 
-  late final CameraSnapshot _camera = CameraSnapshot(
-    offset: sceneSnapshotBacking.camera.offset,
+  late final CameraSnapshot _camera = materializeCameraSnapshotForInternalUse(
+    sceneSnapshotBacking.camera,
   );
 
-  late final BackgroundSnapshot _background = BackgroundSnapshot(
-    color: sceneSnapshotBacking.background.color,
-    grid: GridSnapshot(
-      isEnabled: sceneSnapshotBacking.background.grid.isEnabled,
-      cellSize: sceneSnapshotBacking.background.grid.cellSize,
-      color: sceneSnapshotBacking.background.grid.color,
-    ),
-  );
+  late final BackgroundSnapshot _background =
+      materializeBackgroundSnapshotForInternalUse(
+        sceneSnapshotBacking.background,
+      );
 
   late final ScenePaletteSnapshot _palette =
       materializeScenePaletteSnapshotForInternalUse(
@@ -347,6 +361,46 @@ final class _MaterializedScenePaletteSnapshot extends ScenePaletteSnapshot
 
   @override
   List<double> get gridSizes => scenePaletteSnapshotBacking.gridSizes;
+}
+
+final class _MaterializedCameraSnapshot extends CameraSnapshot {
+  _MaterializedCameraSnapshot(this.cameraSnapshotBacking) : super();
+
+  final CameraSnapshotBacking cameraSnapshotBacking;
+
+  @override
+  Offset get offset => cameraSnapshotBacking.offset;
+}
+
+final class _MaterializedBackgroundSnapshot extends BackgroundSnapshot {
+  _MaterializedBackgroundSnapshot(this.backgroundSnapshotBacking) : super();
+
+  final BackgroundSnapshotBacking backgroundSnapshotBacking;
+
+  late final GridSnapshot _grid = materializeGridSnapshotForInternalUse(
+    backgroundSnapshotBacking.grid,
+  );
+
+  @override
+  Color get color => backgroundSnapshotBacking.color;
+
+  @override
+  GridSnapshot get grid => _grid;
+}
+
+final class _MaterializedGridSnapshot extends GridSnapshot {
+  _MaterializedGridSnapshot(this.gridSnapshotBacking) : super();
+
+  final GridSnapshotBacking gridSnapshotBacking;
+
+  @override
+  bool get isEnabled => gridSnapshotBacking.isEnabled;
+
+  @override
+  double get cellSize => gridSnapshotBacking.cellSize;
+
+  @override
+  Color get color => gridSnapshotBacking.color;
 }
 
 final class _MaterializedImageNodeSnapshot extends ImageNodeSnapshot

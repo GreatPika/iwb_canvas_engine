@@ -80,7 +80,6 @@ SceneImportDraft _validateStructurallyValidImportDraft(SceneImportDraft draft) {
 }
 
 void _validateDraftRanges(SceneImportDraft draft) {
-  _validateSceneRanges(draft);
   _validateBackgroundLayerRanges(draft.backgroundLayer);
   _validateContentLayerRanges(draft.layers);
 }
@@ -101,18 +100,6 @@ void _validateNodeRanges(NodeSnapshot node, String field) {
       _validateRectNodeRanges(rect, field);
     case PathNodeSnapshot path:
       _validatePathNodeRanges(path, field);
-  }
-}
-
-void _validateSceneRanges(SceneImportDraft draft) {
-  _validateCoordinate(draft.camera.offset.dx, 'camera.offset.dx');
-  _validateCoordinate(draft.camera.offset.dy, 'camera.offset.dy');
-  _validateSizeUpper(
-    draft.background.grid.cellSize,
-    'background.grid.cellSize',
-  );
-  for (var i = 0; i < draft.palette.gridSizes.length; i++) {
-    _validateSizeUpper(draft.palette.gridSizes[i], 'palette.gridSizes[$i]');
   }
 }
 
@@ -259,10 +246,6 @@ void _validateCoordinate(double value, String path) {
 }
 
 void _validateSize(double value, String path) {
-  _validateInRange(value, min: 0, max: sceneSizeMax, path: path);
-}
-
-void _validateSizeUpper(double value, String path) {
   _validateInRange(value, min: 0, max: sceneSizeMax, path: path);
 }
 

@@ -36,8 +36,8 @@ void main() {
 
     test('public snapshot defaults stay aligned with shared defaults', () {
       final snapshotPalette = ScenePaletteSnapshot();
-      const snapshotGrid = GridSnapshot();
-      const snapshotBackground = BackgroundSnapshot();
+      final snapshotGrid = GridSnapshot();
+      final snapshotBackground = BackgroundSnapshot();
 
       expect(SceneDefaults.penColors, orderedEquals(snapshotPalette.penColors));
       expect(

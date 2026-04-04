@@ -2,12 +2,12 @@ import 'dart:ui';
 
 import '../../contract/node_patch.dart';
 import '../../contract/node_spec.dart';
+import '../../contract/scene_model_invariants.dart';
 import '../../contract/scene_write_txn.dart';
 import '../../contract/snapshot.dart';
 import '../../contract/transform2d.dart';
 import '../../controller/scene_store_controller.dart';
 import '../../core/action_events.dart';
-import '../../core/grid_safety_limits.dart';
 import '../../controller/scene_snapshot_materializer.dart';
 import '../interaction_eligibility_policy.dart'
     as interaction_eligibility_policy;
@@ -93,19 +93,16 @@ final class SceneControllerMutationBoundary {
   }
 
   void setGridCellSize(double value) {
-    _requireFinitePositive(value, name: 'cellSize');
-    if (readSnapshot().background.grid.isEnabled && value < kMinGridCellSize) {
-      throw ArgumentError.value(
-        value,
-        'cellSize',
-        'Must be >= $kMinGridCellSize while the grid is enabled.',
-      );
-    }
+    validateSceneGridCellSize(
+      value,
+      name: 'cellSize',
+      isEnabled: readSnapshot().background.grid.isEnabled,
+    );
     storeController.commands.writeGridCellSizeSet(value);
   }
 
   void validateCameraOffset(Offset value) {
-    callbacks.requireFiniteOffset(value, name: 'value');
+    validateSceneCameraOffset(value, name: 'value');
   }
 
   bool shouldApplyCameraOffset(Offset value) {
@@ -336,11 +333,4 @@ final class SceneControllerMutationBoundary {
       payload: <String, Object?>{'delta': delta.toJsonMap()},
     );
   }
-}
-
-double _requireFinitePositive(double value, {required String name}) {
-  if (value.isFinite && value > 0) {
-    return value;
-  }
-  throw ArgumentError.value(value, name, 'Must be a finite number > 0.');
 }

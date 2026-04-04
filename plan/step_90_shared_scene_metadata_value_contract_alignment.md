@@ -402,7 +402,7 @@ failures to later `ScenePolicy` or encode-only checks.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Shared Public And Runtime Scene-Metadata Value Owners
+### Slice 1. [x] Shared Public And Runtime Scene-Metadata Value Owners
 
 #### Slice Contract
 
@@ -466,7 +466,7 @@ caused by validated metadata constructors.
 
 - Green run of the listed verifications.
 
-### Slice 2. [ ] Honest Validated Fast Paths And Explicit Raw Metadata Bypass
+### Slice 2. [x] Honest Validated Fast Paths And Explicit Raw Metadata Bypass
 
 #### Slice Contract
 
@@ -520,7 +520,7 @@ Replace every invalid metadata test that currently uses ordinary constructors or
 
 - Green run of the listed verifications.
 
-### Slice 3. [ ] Import, Decode, And Model Validation Parity For Scene Metadata
+### Slice 3. [x] Import, Decode, And Model Validation Parity For Scene Metadata
 
 #### Slice Contract
 

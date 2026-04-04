@@ -261,7 +261,7 @@ void _primeStaticLayerCache(SceneStaticLayerCache cache) {
   final canvas = Canvas(recorder);
   cache.draw(
     canvas,
-    const SceneGridRenderRequest(
+    SceneGridRenderRequest(
       grid: GridSnapshot(
         isEnabled: true,
         cellSize: 10,

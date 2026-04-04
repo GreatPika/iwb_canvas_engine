@@ -31,7 +31,7 @@ SceneSnapshot _snapshot({required double strokeY, required String text}) {
         ],
       ),
     ],
-    background: const BackgroundSnapshot(
+    background: BackgroundSnapshot(
       grid: GridSnapshot(isEnabled: true, cellSize: 12),
     ),
   );
