@@ -183,4 +183,4 @@ This file is the plan index. Each step has a dedicated document so steps can be 
 - [x] [Шаг 86. Перенести routed pointer boundary-типы в `contract` и убрать `contract -> core` bridge](plan/step_86_pointer_boundary_contract_core_detachment.md)
 - [x] [Шаг 87. Убрать `StrokeNodeSnapshot.pointsRevision` из публичного snapshot boundary](plan/step_87_remove_stroke_points_revision_from_public_snapshot_boundary.md)
 - [x] [Шаг 88. Ввести internal draft/import слой для невалидных и промежуточных состояний](plan/step_88_internal_scene_import_draft_layer.md)
-- [ ] [Шаг 89. Сделать публичный `SceneSnapshot` глобально валидным по определению](plan/step_89_scene_snapshot_global_validity_by_construction.md)
+- [x] [Шаг 89. Сделать публичный `SceneSnapshot` глобально валидным по определению](plan/step_89_scene_snapshot_global_validity_by_construction.md)

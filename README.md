@@ -148,7 +148,10 @@ class _CanvasScreenState extends State<CanvasScreen> {
   and JSON payloads without it are rejected by the current schema.
 - Public snapshot/node/spec/patch constructors validate boundary ids and
   numeric values eagerly and are runtime constructors rather than `const`
-  entry points.
+  entry points. Ordinary public `SceneSnapshot(...)` construction also rejects
+  duplicate node ids, duplicate content-layer ids, and scene-wide
+  layer/node-count overflow before a malformed public snapshot can escape the
+  boundary.
 - Internal snapshot/spec/patch backing identity and materialization helpers
   live only under `lib/src/contract/internal/**`; they are package internals,
   not supported public API.

@@ -219,7 +219,10 @@ Ownership decisions for the target state:
 - `model/scene_value_validation.dart` is the canonical validation facade.
   Focused validation owners stay in
   `scene_value_validation_{node,palette_grid,primitives,support,top_level}.dart`,
-  and `ScenePolicy` remains the single owner of scene-level semantics.
+  `ScenePolicy` remains the import/runtime orchestration owner for scene-level
+  validation closure, and `contract/scene_structure_validation.dart` owns the
+  shared duplicate/count document-structure policy reused by public snapshot
+  construction and model import validation.
 - `model/document.dart` is the canonical downstream transaction facade.
   Locator, scene-insert, patch, scene-edit, and selection/grid ownership stay
   in `document_{locator,scene_insert,node_patch,scene_edit,selection}.dart`
@@ -576,11 +579,13 @@ most important architectural rules are:
   not expose mutable nested list ownership after validation.
 - Decode/import and runtime replacement paths validate structure and numeric
   constraints and throw `SceneDataException` on malformed input.
-- `ScenePolicy` is the single owner for scene-level traversal semantics across
-  import, decode, and runtime scene canonicalization:
-  duplicate node ids, duplicate content-layer ids, scene-wide node/layer
-  limits, and scene-level numeric range enforcement must not be re-owned by
-  parallel validation paths.
+- `contract/scene_structure_validation.dart` is the single owner for shared
+  public scene-document structure rules: duplicate node ids, duplicate
+  content-layer ids, and scene-wide node/layer limits are enforced there for
+  both ordinary public `SceneSnapshot(...)` construction and model import.
+- `ScenePolicy` remains the owner of import/runtime orchestration and
+  scene-level numeric range enforcement; it consumes the shared structural
+  validator instead of re-owning duplicate/count logic privately.
 - `imageId` follows the same validated boundary-owner policy on decode/import,
   snapshot/spec/patch validation, and runtime scene validation.
 - Encode/decode/build boundaries sanitize oversized `SceneDataException.source`

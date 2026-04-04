@@ -29,6 +29,6 @@ final class SceneImportDraft {
   ScenePaletteSnapshotBacking get palette => backing.palette;
 }
 
-SceneSnapshot sceneSnapshotFromImportDraft(SceneImportDraft draft) {
-  return materializeSceneSnapshot(draft.backing);
+SceneSnapshot sceneSnapshotFromValidatedImportDraft(SceneImportDraft draft) {
+  return sceneSnapshotFromValidatedBacking(draft.backing);
 }

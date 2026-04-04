@@ -1,8 +1,8 @@
 import '../contract/internal/snapshot_fast_path.dart';
+import '../contract/scene_structure_validation.dart';
 import 'scene_builder_decode_layers.dart';
 import 'scene_builder_decode_scene_metadata.dart';
 import 'scene_import_draft.dart';
-import 'scene_structural_limits.dart';
 
 typedef DecodedScenePayload = ({
   CameraSnapshotBacking camera,

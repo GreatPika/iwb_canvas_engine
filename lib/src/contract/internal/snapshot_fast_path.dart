@@ -53,6 +53,7 @@ export 'snapshot_materialization.dart'
         pathNodeSnapshotFromValidated,
         rectNodeSnapshotFromValidated,
         scenePaletteSnapshotFromValidated,
+        sceneSnapshotFromValidatedBacking,
         sceneSnapshotFromValidated,
         strokeNodeSnapshotFromValidated,
         textNodeSnapshotFromValidated;

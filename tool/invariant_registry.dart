@@ -126,6 +126,15 @@ const List<Invariant> invariants = <Invariant>[
     ),
   ),
   Invariant(
+    id: 'INV-ENG-PUBLIC-SNAPSHOT-GLOBAL-VALIDITY',
+    scope: 'engine-api',
+    title:
+        'ordinary public SceneSnapshot construction is structurally valid by construction and raw malformed snapshot materialization stays internal-only',
+    primaryProof: PrimaryProof(
+      path: 'test/public_api/validated_boundary_value_test.dart',
+    ),
+  ),
+  Invariant(
     id: 'INV-ENG-WRITE-ONLY-MUTATION',
     scope: 'engine-controller',
     title: 'mutations are routed via write*/txn* APIs',

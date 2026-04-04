@@ -7,6 +7,7 @@ import 'internal/node_boundary_schema.dart';
 import 'path_fill_rule.dart';
 import 'scene_defaults.dart';
 import 'scene_model_invariants.dart';
+import 'scene_structure_validation.dart';
 import 'transform2d.dart';
 import 'validated/finite_offset_value.dart';
 import 'validated/layer_id_value.dart';
@@ -20,31 +21,68 @@ class SceneSnapshot {
     CameraSnapshot? camera,
     BackgroundSnapshot? background,
     ScenePaletteSnapshot? palette,
-  }) : this._(
-         layers: List<ContentLayerSnapshot>.unmodifiable(
-           List<ContentLayerSnapshot>.from(
-             layers ?? const <ContentLayerSnapshot>[],
-           ),
+  }) : this._validated(
+         _validatedSceneSnapshotFields(
+           layers: layers,
+           backgroundLayer: backgroundLayer,
+           camera: camera,
+           background: background,
+           palette: palette,
          ),
-         backgroundLayer: backgroundLayer ?? BackgroundLayerSnapshot(),
-         camera: _validatedSceneCamera(camera),
-         background: _validatedSceneBackground(background),
-         palette: palette ?? ScenePaletteSnapshot(),
        );
 
-  SceneSnapshot._({
-    required this.layers,
-    required this.backgroundLayer,
-    required this.camera,
-    required this.background,
-    required this.palette,
-  });
+  SceneSnapshot._validated(_SceneSnapshotFields fields)
+    : layers = fields.layers,
+      backgroundLayer = fields.backgroundLayer,
+      camera = fields.camera,
+      background = fields.background,
+      palette = fields.palette;
 
   final List<ContentLayerSnapshot> layers;
   final BackgroundLayerSnapshot backgroundLayer;
   final CameraSnapshot camera;
   final BackgroundSnapshot background;
   final ScenePaletteSnapshot palette;
+}
+
+typedef _SceneSnapshotFields = ({
+  List<ContentLayerSnapshot> layers,
+  BackgroundLayerSnapshot backgroundLayer,
+  CameraSnapshot camera,
+  BackgroundSnapshot background,
+  ScenePaletteSnapshot palette,
+});
+
+_SceneSnapshotFields _validatedSceneSnapshotFields({
+  List<ContentLayerSnapshot>? layers,
+  BackgroundLayerSnapshot? backgroundLayer,
+  CameraSnapshot? camera,
+  BackgroundSnapshot? background,
+  ScenePaletteSnapshot? palette,
+}) {
+  final validatedLayers = List<ContentLayerSnapshot>.unmodifiable(
+    List<ContentLayerSnapshot>.from(layers ?? const <ContentLayerSnapshot>[]),
+  );
+  final validatedBackgroundLayer = backgroundLayer ?? BackgroundLayerSnapshot();
+  final validatedCamera = _validatedSceneCamera(camera);
+  final validatedBackground = _validatedSceneBackground(background);
+  final validatedPalette = palette ?? ScenePaletteSnapshot();
+
+  sceneValidateSceneStructure<ContentLayerSnapshot, NodeSnapshot>(
+    layers: validatedLayers,
+    backgroundNodes: validatedBackgroundLayer.nodes,
+    layerIdOf: (layer) => layer.id,
+    nodesOf: (layer) => layer.nodes,
+    nodeIdOf: (node) => node.id,
+  );
+
+  return (
+    layers: validatedLayers,
+    backgroundLayer: validatedBackgroundLayer,
+    camera: validatedCamera,
+    background: validatedBackground,
+    palette: validatedPalette,
+  );
 }
 
 /// Immutable dedicated background layer snapshot.

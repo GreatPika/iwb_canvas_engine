@@ -1,8 +1,8 @@
 import '../contract/internal/snapshot_fast_path.dart';
+import '../contract/scene_structure_validation.dart';
 import '../contract/validated/layer_id_value.dart';
 import 'scene_builder_decode_node_family.dart';
 import 'scene_builder_json_require.dart';
-import 'scene_structural_limits.dart';
 
 typedef DecodedSceneLayers = ({
   BackgroundLayerSnapshotBacking? backgroundLayer,

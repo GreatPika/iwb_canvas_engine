@@ -100,6 +100,30 @@ void _expectSameSceneDataContract(
   expect(actual.details, expected.details);
 }
 
+SceneSnapshot _duplicateNodeSnapshotFromInternalBypass() {
+  return materializeSceneSnapshot(
+    sceneSnapshotBackingFromValidated(
+      backgroundLayer: backgroundLayerSnapshotBackingFromValidated(
+        nodes: <NodeSnapshotBacking>[
+          nodeSnapshotBackingOf(
+            RectNodeSnapshot(id: 'dup', size: const Size(1, 1)),
+          ),
+        ],
+      ),
+      layers: <ContentLayerSnapshotBacking>[
+        contentLayerSnapshotBackingFromValidated(
+          id: 'layer-auto-dup-snapshot',
+          nodes: <NodeSnapshotBacking>[
+            nodeSnapshotBackingOf(
+              RectNodeSnapshot(id: 'dup', size: const Size(2, 2)),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
 void main() {
   // INV:INV-SER-JSON-NUMERIC-VALIDATION
   test('encodeSceneToJson -> decodeSceneFromJson is stable', () {
@@ -1873,21 +1897,7 @@ void main() {
   );
 
   test('encodeScene preserves import-boundary duplicate-id diagnostics', () {
-    final snapshot = SceneSnapshot(
-      backgroundLayer: BackgroundLayerSnapshot(
-        nodes: <NodeSnapshot>[
-          RectNodeSnapshot(id: 'dup', size: const Size(1, 1)),
-        ],
-      ),
-      layers: <ContentLayerSnapshot>[
-        ContentLayerSnapshot(
-          id: 'layer-auto-dup-encode',
-          nodes: <NodeSnapshot>[
-            RectNodeSnapshot(id: 'dup', size: const Size(2, 2)),
-          ],
-        ),
-      ],
-    );
+    final snapshot = _duplicateNodeSnapshotFromInternalBypass();
 
     expect(
       () => encodeScene(snapshot),
@@ -1917,21 +1927,7 @@ void main() {
           ),
         ],
       );
-      final snapshot = SceneSnapshot(
-        backgroundLayer: BackgroundLayerSnapshot(
-          nodes: <NodeSnapshot>[
-            RectNodeSnapshot(id: 'dup', size: const Size(1, 1)),
-          ],
-        ),
-        layers: <ContentLayerSnapshot>[
-          ContentLayerSnapshot(
-            id: 'layer-auto-dup-snapshot',
-            nodes: <NodeSnapshot>[
-              RectNodeSnapshot(id: 'dup', size: const Size(2, 2)),
-            ],
-          ),
-        ],
-      );
+      final snapshot = _duplicateNodeSnapshotFromInternalBypass();
 
       final fromDocument = _captureSceneDataException(
         () => encodeSceneDocument(runtimeScene),

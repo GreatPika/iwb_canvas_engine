@@ -2,13 +2,13 @@ import 'dart:math' as math;
 import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/scene_data_exception.dart';
 import '../contract/snapshot.dart';
+import '../contract/scene_structure_validation.dart';
 import '../contract/transform2d.dart';
 import '../core/scene.dart';
 import '../core/scene_limits.dart';
 import '../core/text_layout.dart';
 import 'scene_import_draft.dart';
 import 'scene_import_draft_from_snapshot.dart';
-import 'scene_structural_limits.dart';
 import 'scene_value_validation.dart';
 
 typedef ScenePolicySnapshotFromScene = SceneSnapshot Function(Scene scene);
@@ -17,20 +17,13 @@ typedef ScenePolicySceneFromImportDraft =
 
 abstract final class ScenePolicy {
   static SceneImportDraft validateImportDraft(SceneImportDraft rawDraft) {
-    _validateStructuralInvariants(rawDraft);
-    sceneValidateImportDraftValues(
-      rawDraft,
-      onError: _snapshotValidationError,
-      requirePositiveGridCellSize: true,
-      requireEnabledMinGridCellSize: true,
-    );
-    _validateDraftRanges(rawDraft);
-    return rawDraft;
+    sceneValidateSceneSnapshotBackingStructure(rawDraft.backing);
+    return _validateStructurallyValidImportDraft(rawDraft);
   }
 
   static SceneSnapshot validateImportSnapshot(SceneSnapshot rawSnapshot) {
     final rawDraft = sceneImportDraftFromSnapshot(rawSnapshot);
-    return sceneSnapshotFromImportDraft(validateImportDraft(rawDraft));
+    return sceneSnapshotFromValidatedImportDraft(validateImportDraft(rawDraft));
   }
 
   static Scene validateRuntimeScene(
@@ -70,28 +63,20 @@ abstract final class ScenePolicy {
     );
     final rawSnapshot = snapshotFromScene(rawScene);
     final rawDraft = sceneImportDraftFromSnapshot(rawSnapshot);
-    final canonicalDraft = validateImportDraft(rawDraft);
+    final canonicalDraft = _validateStructurallyValidImportDraft(rawDraft);
     return sceneFromImportDraft(canonicalDraft);
   }
 }
 
-void _validateStructuralInvariants(SceneImportDraft draft) {
-  final seen = <String>{};
-  final seenLayerIds = <LayerId>{};
-  var totalNodeCount = 0;
-
-  sceneRequireContentLayerLimit(draft.layers.length);
-  totalNodeCount = _validateBackgroundLayerStructure(
-    draft.backgroundLayer,
-    seenNodeIds: seen,
-    totalNodeCount: totalNodeCount,
+SceneImportDraft _validateStructurallyValidImportDraft(SceneImportDraft draft) {
+  sceneValidateImportDraftValues(
+    draft,
+    onError: _snapshotValidationError,
+    requirePositiveGridCellSize: true,
+    requireEnabledMinGridCellSize: true,
   );
-  _validateContentLayerStructure(
-    draft.layers,
-    seenNodeIds: seen,
-    seenLayerIds: seenLayerIds,
-    totalNodeCount: totalNodeCount,
-  );
+  _validateDraftRanges(draft);
+  return draft;
 }
 
 void _validateDraftRanges(SceneImportDraft draft) {
@@ -117,82 +102,6 @@ void _validateNodeRanges(NodeSnapshot node, String field) {
     case PathNodeSnapshot path:
       _validatePathNodeRanges(path, field);
   }
-}
-
-int _validateBackgroundLayerStructure(
-  BackgroundLayerSnapshotBacking backgroundLayer, {
-  required Set<String> seenNodeIds,
-  required int totalNodeCount,
-}) {
-  return _validateLayerNodeUniqueness(
-    backgroundLayer.nodes,
-    nodesPath: 'backgroundLayer.nodes',
-    seenNodeIds: seenNodeIds,
-    totalNodeCount: totalNodeCount,
-  );
-}
-
-void _validateContentLayerStructure(
-  List<ContentLayerSnapshotBacking> layers, {
-  required Set<String> seenNodeIds,
-  required Set<LayerId> seenLayerIds,
-  required int totalNodeCount,
-}) {
-  for (var layerIndex = 0; layerIndex < layers.length; layerIndex++) {
-    final layer = layers[layerIndex];
-    _validateContentLayerId(
-      layer.id,
-      layerIndex: layerIndex,
-      seenLayerIds: seenLayerIds,
-    );
-    totalNodeCount = _validateLayerNodeUniqueness(
-      layer.nodes,
-      nodesPath: 'layers[$layerIndex].nodes',
-      seenNodeIds: seenNodeIds,
-      totalNodeCount: totalNodeCount,
-    );
-  }
-}
-
-int _validateLayerNodeUniqueness(
-  List<NodeSnapshotBacking> nodes, {
-  required String nodesPath,
-  required Set<String> seenNodeIds,
-  required int totalNodeCount,
-}) {
-  for (var nodeIndex = 0; nodeIndex < nodes.length; nodeIndex++) {
-    totalNodeCount = sceneConsumeNodeBudget(
-      totalNodeCount: totalNodeCount,
-      path: nodesPath,
-    );
-    _validateNodeIdUniqueness(
-      nodes[nodeIndex].id,
-      path: '$nodesPath[$nodeIndex].id',
-      seenNodeIds: seenNodeIds,
-    );
-  }
-  return totalNodeCount;
-}
-
-void _validateContentLayerId(
-  LayerId layerId, {
-  required int layerIndex,
-  required Set<LayerId> seenLayerIds,
-}) {
-  if (seenLayerIds.add(layerId)) return;
-  throw SceneDataException.duplicateLayerId(
-    path: 'layers[$layerIndex].id',
-    layerId: layerId,
-  );
-}
-
-void _validateNodeIdUniqueness(
-  String nodeId, {
-  required String path,
-  required Set<String> seenNodeIds,
-}) {
-  if (seenNodeIds.add(nodeId)) return;
-  throw SceneDataException.duplicateNodeId(path: path, nodeId: nodeId);
 }
 
 void _validateSceneRanges(SceneImportDraft draft) {

@@ -43,18 +43,26 @@ void main() {
   });
 
   test('fails on duplicate NodeId across background and content', () {
-    final snapshot = SceneSnapshot(
-      backgroundLayer: BackgroundLayerSnapshot(
-        nodes: <NodeSnapshot>[RectNodeSnapshot(id: 'dup', size: Size(10, 10))],
-      ),
-      layers: <ContentLayerSnapshot>[
-        ContentLayerSnapshot(
-          id: 'layer-auto-1',
-          nodes: <NodeSnapshot>[
-            RectNodeSnapshot(id: 'dup', size: Size(10, 10)),
+    final snapshot = materializeSceneSnapshot(
+      sceneSnapshotBackingFromValidated(
+        backgroundLayer: backgroundLayerSnapshotBackingFromValidated(
+          nodes: <NodeSnapshotBacking>[
+            nodeSnapshotBackingOf(
+              RectNodeSnapshot(id: 'dup', size: const Size(10, 10)),
+            ),
           ],
         ),
-      ],
+        layers: <ContentLayerSnapshotBacking>[
+          contentLayerSnapshotBackingFromValidated(
+            id: 'layer-auto-1',
+            nodes: <NodeSnapshotBacking>[
+              nodeSnapshotBackingOf(
+                RectNodeSnapshot(id: 'dup', size: const Size(10, 10)),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
 
     expect(() => assertSceneInvariants(snapshot), throwsA(isA<TestFailure>()));

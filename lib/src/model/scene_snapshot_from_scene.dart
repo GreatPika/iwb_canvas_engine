@@ -82,14 +82,15 @@ _sceneExportStrategy(Scene scene) {
           required camera,
           required background,
           required palette,
-        }) => materializeSceneSnapshot(
-          sceneSnapshotBackingFromValidated(
+        }) {
+          final backing = sceneSnapshotBackingFromValidated(
             backgroundLayer: backgroundLayer,
             layers: layers,
             camera: camera,
             background: background,
             palette: palette,
-          ),
-        ),
+          );
+          return sceneSnapshotFromValidatedBacking(backing);
+        },
   );
 }

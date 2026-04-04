@@ -41,6 +41,51 @@ Map<String, Object?> _minimalSceneJson() {
   return minimalSceneJson();
 }
 
+SceneSnapshot _duplicateLayerIdSnapshotFromInternalBypass() {
+  return materializeSceneSnapshot(
+    sceneSnapshotBackingFromValidated(
+      layers: <ContentLayerSnapshotBacking>[
+        contentLayerSnapshotBackingFromValidated(
+          id: 'layer-auto-dup',
+          nodes: <NodeSnapshotBacking>[
+            nodeSnapshotBackingOf(
+              RectNodeSnapshot(id: 'r1', size: const Size(1, 1)),
+            ),
+          ],
+        ),
+        contentLayerSnapshotBackingFromValidated(
+          id: 'layer-auto-dup',
+          nodes: <NodeSnapshotBacking>[
+            nodeSnapshotBackingOf(
+              RectNodeSnapshot(id: 'r2', size: const Size(1, 1)),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
+SceneSnapshot _duplicateBackgroundNodeSnapshotFromInternalBypass() {
+  return materializeSceneSnapshot(
+    sceneSnapshotBackingFromValidated(
+      backgroundLayer: backgroundLayerSnapshotBackingFromValidated(
+        nodes: <NodeSnapshotBacking>[
+          nodeSnapshotBackingOf(
+            RectNodeSnapshot(id: 'dup-bg', size: const Size(1, 1)),
+          ),
+          nodeSnapshotBackingOf(
+            RectNodeSnapshot(id: 'dup-bg', size: const Size(2, 2)),
+          ),
+        ],
+      ),
+      layers: <ContentLayerSnapshotBacking>[
+        contentLayerSnapshotBackingFromValidated(id: 'layer-auto-3'),
+      ],
+    ),
+  );
+}
+
 class _ThrowingMap extends MapBase<String, Object?> {
   @override
   Object? operator [](Object? key) => throw StateError('boom');
@@ -586,18 +631,7 @@ void main() {
   });
 
   test('sceneBuildFromSnapshot rejects duplicate content layer ids', () {
-    final snapshot = SceneSnapshot(
-      layers: <ContentLayerSnapshot>[
-        ContentLayerSnapshot(
-          id: 'layer-auto-dup',
-          nodes: <NodeSnapshot>[RectNodeSnapshot(id: 'r1', size: Size(1, 1))],
-        ),
-        ContentLayerSnapshot(
-          id: 'layer-auto-dup',
-          nodes: <NodeSnapshot>[RectNodeSnapshot(id: 'r2', size: Size(1, 1))],
-        ),
-      ],
-    );
+    final snapshot = _duplicateLayerIdSnapshotFromInternalBypass();
 
     expect(
       () => model_builder.sceneBuildFromSnapshot(snapshot),
@@ -1557,16 +1591,22 @@ void main() {
 
     expect(
       () => value_validation.sceneValidateSnapshotValues(
-        SceneSnapshot(
-          layers: <ContentLayerSnapshot>[
-            ContentLayerSnapshot(
-              id: 'layer-auto-2',
-              nodes: <NodeSnapshot>[
-                RectNodeSnapshot(id: 'dup', size: Size(1, 1)),
-                RectNodeSnapshot(id: 'dup', size: Size(1, 1)),
-              ],
-            ),
-          ],
+        materializeSceneSnapshot(
+          sceneSnapshotBackingFromValidated(
+            layers: <ContentLayerSnapshotBacking>[
+              contentLayerSnapshotBackingFromValidated(
+                id: 'layer-auto-2',
+                nodes: <NodeSnapshotBacking>[
+                  nodeSnapshotBackingOf(
+                    RectNodeSnapshot(id: 'dup', size: const Size(1, 1)),
+                  ),
+                  nodeSnapshotBackingOf(
+                    RectNodeSnapshot(id: 'dup', size: const Size(1, 1)),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
         onError:
             ({
@@ -1603,11 +1643,13 @@ void main() {
 
     expect(
       () => value_validation.sceneValidateSnapshotValues(
-        SceneSnapshot(
-          layers: <ContentLayerSnapshot>[
-            ContentLayerSnapshot(id: 'layer-auto-dup-a'),
-            ContentLayerSnapshot(id: 'layer-auto-dup-a'),
-          ],
+        materializeSceneSnapshot(
+          sceneSnapshotBackingFromValidated(
+            layers: <ContentLayerSnapshotBacking>[
+              contentLayerSnapshotBackingFromValidated(id: 'layer-auto-dup-a'),
+              contentLayerSnapshotBackingFromValidated(id: 'layer-auto-dup-a'),
+            ],
+          ),
         ),
         onError:
             ({
@@ -1629,15 +1671,7 @@ void main() {
   });
 
   test('sceneBuildFromSnapshot rejects duplicate ids in background layer', () {
-    final snapshot = SceneSnapshot(
-      backgroundLayer: BackgroundLayerSnapshot(
-        nodes: <NodeSnapshot>[
-          RectNodeSnapshot(id: 'dup-bg', size: Size(1, 1)),
-          RectNodeSnapshot(id: 'dup-bg', size: Size(2, 2)),
-        ],
-      ),
-      layers: <ContentLayerSnapshot>[ContentLayerSnapshot(id: 'layer-auto-3')],
-    );
+    final snapshot = _duplicateBackgroundNodeSnapshotFromInternalBypass();
 
     expect(
       () => model_builder.sceneBuildFromSnapshot(snapshot),
@@ -1671,16 +1705,22 @@ void main() {
 
       expect(
         () => value_validation.sceneValidateSnapshotValues(
-          SceneSnapshot(
-            backgroundLayer: BackgroundLayerSnapshot(
-              nodes: <NodeSnapshot>[
-                RectNodeSnapshot(id: 'dup-bg', size: Size(1, 1)),
-                RectNodeSnapshot(id: 'dup-bg', size: Size(1, 1)),
+          materializeSceneSnapshot(
+            sceneSnapshotBackingFromValidated(
+              backgroundLayer: backgroundLayerSnapshotBackingFromValidated(
+                nodes: <NodeSnapshotBacking>[
+                  nodeSnapshotBackingOf(
+                    RectNodeSnapshot(id: 'dup-bg', size: const Size(1, 1)),
+                  ),
+                  nodeSnapshotBackingOf(
+                    RectNodeSnapshot(id: 'dup-bg', size: const Size(1, 1)),
+                  ),
+                ],
+              ),
+              layers: <ContentLayerSnapshotBacking>[
+                contentLayerSnapshotBackingFromValidated(id: 'layer-auto-4'),
               ],
             ),
-            layers: <ContentLayerSnapshot>[
-              ContentLayerSnapshot(id: 'layer-auto-4'),
-            ],
           ),
           onError:
               ({

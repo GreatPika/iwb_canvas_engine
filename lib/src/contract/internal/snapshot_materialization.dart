@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../scene_defaults.dart';
+import '../scene_structure_validation.dart';
 import '../snapshot.dart';
 import '../transform2d.dart';
 import 'node_boundary_schema.dart';
@@ -23,6 +24,11 @@ typedef _SnapshotNodeMaterializer<
 
 SceneSnapshot materializeSceneSnapshot(SceneSnapshotBacking backing) {
   return materializeSceneSnapshotForInternalUse(backing);
+}
+
+SceneSnapshot sceneSnapshotFromValidatedBacking(SceneSnapshotBacking backing) {
+  sceneValidateSceneSnapshotBackingStructure(backing);
+  return materializeSceneSnapshot(backing);
 }
 
 BackgroundLayerSnapshot materializeBackgroundLayerSnapshot(
@@ -124,30 +130,27 @@ SceneSnapshot sceneSnapshotFromValidated({
   BackgroundSnapshot? background,
   ScenePaletteSnapshot? palette,
 }) {
-  return materializeSceneSnapshot(
-    sceneSnapshotBackingFromValidated(
-      layers: layers
-          ?.map(contentLayerSnapshotBackingOf)
-          .toList(growable: false),
-      backgroundLayer: backgroundLayer == null
-          ? null
-          : backgroundLayerSnapshotBackingOf(backgroundLayer),
-      camera: camera == null
-          ? null
-          : cameraSnapshotBackingFromValidated(offset: camera.offset),
-      background: background == null
-          ? null
-          : backgroundSnapshotBackingFromValidated(
-              color: background.color,
-              grid: gridSnapshotBackingFromValidated(
-                isEnabled: background.grid.isEnabled,
-                cellSize: background.grid.cellSize,
-                color: background.grid.color,
-              ),
+  final backing = sceneSnapshotBackingFromValidated(
+    layers: layers?.map(contentLayerSnapshotBackingOf).toList(growable: false),
+    backgroundLayer: backgroundLayer == null
+        ? null
+        : backgroundLayerSnapshotBackingOf(backgroundLayer),
+    camera: camera == null
+        ? null
+        : cameraSnapshotBackingFromValidated(offset: camera.offset),
+    background: background == null
+        ? null
+        : backgroundSnapshotBackingFromValidated(
+            color: background.color,
+            grid: gridSnapshotBackingFromValidated(
+              isEnabled: background.grid.isEnabled,
+              cellSize: background.grid.cellSize,
+              color: background.grid.color,
             ),
-      palette: palette == null ? null : scenePaletteSnapshotBackingOf(palette),
-    ),
+          ),
+    palette: palette == null ? null : scenePaletteSnapshotBackingOf(palette),
   );
+  return sceneSnapshotFromValidatedBacking(backing);
 }
 
 BackgroundLayerSnapshot backgroundLayerSnapshotFromValidated({

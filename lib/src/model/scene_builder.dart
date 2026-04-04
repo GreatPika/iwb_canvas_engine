@@ -35,7 +35,7 @@ Scene sceneBuildFromDynamicJsonMap(Map<String, dynamic> rawJson) {
 
 SceneSnapshot sceneCanonicalizeAndValidateSnapshot(SceneSnapshot rawSnapshot) {
   final rawDraft = sceneImportDraftFromSnapshot(rawSnapshot);
-  return sceneSnapshotFromImportDraft(
+  return sceneSnapshotFromValidatedImportDraft(
     ScenePolicy.validateImportDraft(rawDraft),
   );
 }

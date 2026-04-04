@@ -4,6 +4,11 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ## Unreleased
 
+- Public `SceneSnapshot` is now structurally valid by construction for public
+  callers: ordinary `SceneSnapshot(...)` and validated producer paths reject
+  duplicate node ids, duplicate content-layer ids, and scene-wide
+  layer/node-count overflow at the snapshot boundary, while explicit malformed
+  snapshot materialization remains internal-only under `contract/internal/**`.
 - Public stroke snapshots no longer expose `pointsRevision`. Typed
   snapshot import/export and JSON persistence now treat stroke geometry
   revision as runtime-only metadata, and render/cache read-side freshness for

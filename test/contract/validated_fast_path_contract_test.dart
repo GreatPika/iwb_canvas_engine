@@ -655,6 +655,67 @@ void main() {
   );
 
   test(
+    'validated snapshot producers enforce structure while raw materialization keeps the internal bypass',
+    () {
+      final malformedBacking = sceneSnapshotBackingFromValidated(
+        backgroundLayer: backgroundLayerSnapshotBackingFromValidated(
+          nodes: <NodeSnapshotBacking>[
+            nodeSnapshotBackingOf(
+              RectNodeSnapshot(id: 'dup-struct', size: const Size(1, 1)),
+            ),
+          ],
+        ),
+        layers: <ContentLayerSnapshotBacking>[
+          contentLayerSnapshotBackingFromValidated(
+            id: 'layer-struct',
+            nodes: <NodeSnapshotBacking>[
+              nodeSnapshotBackingOf(
+                RectNodeSnapshot(id: 'dup-struct', size: const Size(2, 2)),
+              ),
+            ],
+          ),
+        ],
+      );
+
+      expect(
+        () => sceneSnapshotFromValidated(
+          backgroundLayer: materializeBackgroundLayerSnapshot(
+            malformedBacking.backgroundLayer,
+          ),
+          layers: materializeContentLayerSnapshotList(malformedBacking.layers),
+        ),
+        throwsA(
+          predicate(
+            (error) =>
+                error is SceneDataException &&
+                error.code == SceneDataErrorCode.duplicateNodeId &&
+                error.path == 'layers[0].nodes[0].id' &&
+                error.details['template'] == 'duplicateNodeId',
+          ),
+        ),
+      );
+
+      expect(
+        () => sceneSnapshotFromValidatedBacking(malformedBacking),
+        throwsA(
+          predicate(
+            (error) =>
+                error is SceneDataException &&
+                error.code == SceneDataErrorCode.duplicateNodeId &&
+                error.path == 'layers[0].nodes[0].id' &&
+                error.details['template'] == 'duplicateNodeId',
+          ),
+        ),
+      );
+
+      final malformed = materializeSceneSnapshot(malformedBacking);
+      expect(sceneSnapshotBackingOf(malformed), same(malformedBacking));
+      expect(malformed.backgroundLayer.nodes.single.id, 'dup-struct');
+      expect(malformed.layers.single.nodes.single.id, 'dup-struct');
+    },
+  );
+
+  test(
     'validated snapshot fast-path node helpers preserve shared common defaults across families',
     () {
       final nodes = <NodeSnapshot>[

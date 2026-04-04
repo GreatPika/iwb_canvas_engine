@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
 import '../support/scene_builder_json_fixtures.dart';
 
 Map<String, Object?> _textNodeJson({
@@ -53,6 +54,26 @@ void _expectSameSceneDataContract(
   expect(actual.code, expected.code);
   expect(actual.path, expected.path);
   expect(actual.details, expected.details);
+}
+
+SceneSnapshot _duplicateNodeSnapshotFromInternalBypass() {
+  return materializeSceneSnapshot(
+    sceneSnapshotBackingFromValidated(
+      backgroundLayer: backgroundLayerSnapshotBackingFromValidated(
+        nodes: <NodeSnapshotBacking>[
+          nodeSnapshotBackingOf(
+            RectNodeSnapshot(id: 'dup-bg', size: const Size(1, 1)),
+          ),
+          nodeSnapshotBackingOf(
+            RectNodeSnapshot(id: 'dup-bg', size: const Size(2, 2)),
+          ),
+        ],
+      ),
+      layers: <ContentLayerSnapshotBacking>[
+        contentLayerSnapshotBackingFromValidated(id: 'layer-auto-0'),
+      ],
+    ),
+  );
 }
 
 void main() {
@@ -154,17 +175,7 @@ void main() {
   test(
     'SceneBuilder.buildFromSnapshot reports path-aware duplicate-id failures',
     () {
-      final snapshot = SceneSnapshot(
-        backgroundLayer: BackgroundLayerSnapshot(
-          nodes: <NodeSnapshot>[
-            RectNodeSnapshot(id: 'dup-bg', size: const Size(1, 1)),
-            RectNodeSnapshot(id: 'dup-bg', size: const Size(2, 2)),
-          ],
-        ),
-        layers: <ContentLayerSnapshot>[
-          ContentLayerSnapshot(id: 'layer-auto-0'),
-        ],
-      );
+      final snapshot = _duplicateNodeSnapshotFromInternalBypass();
 
       expect(
         () => SceneBuilder.buildFromSnapshot(snapshot),

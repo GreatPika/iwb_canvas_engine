@@ -15,6 +15,30 @@ import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 // INV:INV-ENG-DISPOSE-FAIL-FAST
 
 void main() {
+  SceneSnapshot duplicateNodeSnapshotFromInternalBypass() {
+    return materializeSceneSnapshot(
+      sceneSnapshotBackingFromValidated(
+        backgroundLayer: backgroundLayerSnapshotBackingFromValidated(
+          nodes: <NodeSnapshotBacking>[
+            nodeSnapshotBackingOf(
+              RectNodeSnapshot(id: 'dup', size: const Size(1, 1)),
+            ),
+          ],
+        ),
+        layers: <ContentLayerSnapshotBacking>[
+          contentLayerSnapshotBackingFromValidated(
+            id: 'layer-auto-1',
+            nodes: <NodeSnapshotBacking>[
+              nodeSnapshotBackingOf(
+                RectNodeSnapshot(id: 'dup', size: const Size(2, 2)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   SceneSnapshot twoRectSnapshot() {
     return SceneSnapshot(
       layers: <ContentLayerSnapshot>[
@@ -313,21 +337,7 @@ void main() {
     final malformedCases =
         <({SceneSnapshot snapshot, String field, String expectedMessage})>[
           (
-            snapshot: SceneSnapshot(
-              backgroundLayer: BackgroundLayerSnapshot(
-                nodes: <NodeSnapshot>[
-                  RectNodeSnapshot(id: 'dup', size: Size(1, 1)),
-                ],
-              ),
-              layers: <ContentLayerSnapshot>[
-                ContentLayerSnapshot(
-                  id: 'layer-auto-1',
-                  nodes: <NodeSnapshot>[
-                    RectNodeSnapshot(id: 'dup', size: Size(2, 2)),
-                  ],
-                ),
-              ],
-            ),
+            snapshot: duplicateNodeSnapshotFromInternalBypass(),
             field: 'layers[0].nodes[0].id',
             expectedMessage: 'Must be unique across scene layers.',
           ),

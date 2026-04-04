@@ -158,9 +158,12 @@ Constructor defaults:
 - omitting `backgroundLayer` creates an empty dedicated background layer
 - omitting `layers` creates no content layers
 - camera, background, and palette default to safe built-in values
-- public snapshot/layer/node constructors validate boundary ids and numeric
-  fields eagerly and therefore are runtime constructors rather than `const`
-  entry points
+- public layer/node constructors validate boundary ids and numeric fields
+  eagerly, and ordinary `SceneSnapshot(...)` construction also rejects
+  duplicate node ids, duplicate content-layer ids, and scene-wide
+  layer/node-count overflow with deterministic `SceneDataException`
+  diagnostics, so these constructors are runtime constructors rather than
+  `const` entry points
 
 ### 3.2 Layer model
 
@@ -1028,8 +1031,10 @@ controller.
 - decode/build paths reuse the exported validated boundary value types for ids,
   image ids, revisions, text/font payloads, SVG path data, opacity, finite
   offsets, and bounded numeric node fields
-- scene-level duplicate/count/range policy has a single owner:
-  `ScenePolicy`
+- scene-wide duplicate/count structural policy has a single shared owner:
+  `contract/scene_structure_validation.dart`
+- `ScenePolicy` remains the import/runtime orchestration owner and scene-level
+  numeric-range owner
 - for the same scene defect, `SceneBuilder.buildFromSnapshot(...)`,
   `SceneBuilder.buildFromJson(...)`, `decodeScene(...)`,
   `decodeSceneFromJson(...)`, `encodeScene(...)`, `encodeSceneDocument(...)`,

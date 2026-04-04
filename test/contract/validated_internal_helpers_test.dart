@@ -15,7 +15,9 @@ import 'package:iwb_canvas_engine/src/contract/validated/text_content_value.dart
 
 void main() {
   test('contract boundary limits stay positive and ordered', () {
-    expect(sceneContractLimitValues(), hasLength(9));
+    expect(sceneContractLimitValues(), hasLength(11));
+    expect(kMaxContentLayersPerScene, greaterThan(0));
+    expect(kMaxNodesPerScene, greaterThan(0));
     expect(kMaxSvgPathDataLength, greaterThan(0));
     expect(kMaxLayerIdLength, greaterThan(0));
     expect(kMaxNodeIdLength, greaterThan(0));

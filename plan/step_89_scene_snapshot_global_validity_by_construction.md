@@ -315,7 +315,7 @@ import-time failure.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Shared Structural Validation Moves Under Contract
+### Slice 1. [x] Shared Structural Validation Moves Under Contract
 
 #### Slice Contract
 
@@ -375,7 +375,7 @@ proof surface from
 - Green run of the listed verifications.
 - `lib/src/model/scene_structural_limits.dart` no longer exists.
 
-### Slice 2. [ ] Public SceneSnapshot Rejects Structural Invalidity Eagerly
+### Slice 2. [x] Public SceneSnapshot Rejects Structural Invalidity Eagerly
 
 #### Slice Contract
 
@@ -420,7 +420,7 @@ structural failures must continue using the existing duplicate/max
 
 - Green run of the listed verifications.
 
-### Slice 3. [ ] Validated Public Snapshot Producers Stop Using Raw Materialization
+### Slice 3. [x] Validated Public Snapshot Producers Stop Using Raw Materialization
 
 #### Slice Contract
 
@@ -482,7 +482,7 @@ use the existing validated helper surface.
 
 - Green run of the listed verifications.
 
-### Slice 4. [ ] Source Of Truth Pins Public SceneSnapshot Global Validity
+### Slice 4. [x] Source Of Truth Pins Public SceneSnapshot Global Validity
 
 #### Slice Contract
 

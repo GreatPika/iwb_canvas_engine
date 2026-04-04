@@ -4,9 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
     show
+        kMaxContentLayersPerScene,
         kMaxFontFamilyLength,
         kMaxImageIdLength,
         kMaxLayerIdLength,
+        kMaxNodesPerScene,
         kMaxNodeIdLength,
         kMaxSvgPathDataLength,
         kMaxTextLength;
@@ -23,6 +25,10 @@ Map<String, Object?> _singleNodeJson(Map<String, Object?> sceneJson) {
   final layer = layers.single as Map<String, Object?>;
   final nodes = layer['nodes'] as List<Object?>;
   return nodes.single as Map<String, Object?>;
+}
+
+RectNodeSnapshot _rectNodeSnapshot(String id) {
+  return RectNodeSnapshot(id: id, size: const Size(1, 1));
 }
 
 void main() {
@@ -892,6 +898,7 @@ void main() {
   });
 
   group('boundary adoption', () {
+    // INV:INV-ENG-PUBLIC-SNAPSHOT-GLOBAL-VALIDITY
     test(
       'encodeScene encodes background layer nodes through snapshot path',
       () {
@@ -963,6 +970,93 @@ void main() {
             (error) => error.name,
             'name',
             'background.grid.cellSize',
+          ),
+        ),
+      );
+    });
+
+    test('public SceneSnapshot rejects duplicate node ids eagerly', () {
+      expect(
+        () => SceneSnapshot(
+          backgroundLayer: BackgroundLayerSnapshot(
+            nodes: <NodeSnapshot>[_rectNodeSnapshot('dup')],
+          ),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-dup-node',
+              nodes: <NodeSnapshot>[_rectNodeSnapshot('dup')],
+            ),
+          ],
+        ),
+        throwsA(
+          predicate(
+            (error) =>
+                error is SceneDataException &&
+                error.code == SceneDataErrorCode.duplicateNodeId &&
+                error.path == 'layers[0].nodes[0].id' &&
+                error.details['template'] == 'duplicateNodeId',
+          ),
+        ),
+      );
+    });
+
+    test('public SceneSnapshot rejects duplicate layer ids eagerly', () {
+      expect(
+        () => SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(id: 'layer-dup'),
+            ContentLayerSnapshot(id: 'layer-dup'),
+          ],
+        ),
+        throwsA(
+          predicate(
+            (error) =>
+                error is SceneDataException &&
+                error.code == SceneDataErrorCode.duplicateLayerId &&
+                error.path == 'layers[1].id' &&
+                error.details['template'] == 'duplicateLayerId',
+          ),
+        ),
+      );
+    });
+
+    test('public SceneSnapshot rejects content-layer overflow eagerly', () {
+      expect(
+        () => SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            for (var i = 0; i < kMaxContentLayersPerScene + 1; i++)
+              ContentLayerSnapshot(id: 'layer-$i'),
+          ],
+        ),
+        throwsA(
+          predicate(
+            (error) =>
+                error is SceneDataException &&
+                error.code == SceneDataErrorCode.invalidValue &&
+                error.path == 'layers' &&
+                error.details['template'] == 'maxItems',
+          ),
+        ),
+      );
+    });
+
+    test('public SceneSnapshot rejects scene-wide node overflow eagerly', () {
+      expect(
+        () => SceneSnapshot(
+          backgroundLayer: BackgroundLayerSnapshot(
+            nodes: <NodeSnapshot>[
+              for (var i = 0; i < kMaxNodesPerScene + 1; i++)
+                _rectNodeSnapshot('node-$i'),
+            ],
+          ),
+        ),
+        throwsA(
+          predicate(
+            (error) =>
+                error is SceneDataException &&
+                error.code == SceneDataErrorCode.invalidValue &&
+                error.path == 'backgroundLayer.nodes' &&
+                error.details['template'] == 'maxNodes',
           ),
         ),
       );

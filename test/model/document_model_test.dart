@@ -7,12 +7,37 @@ import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
-    show kMaxImageIdLength;
+    show kMaxContentLayersPerScene, kMaxImageIdLength, kMaxNodesPerScene;
 import 'package:iwb_canvas_engine/src/model/document.dart';
 
 // INV:INV-ENG-TEXT-SIZE-DERIVED
 
 void main() {
+  SceneSnapshot duplicateNodeSnapshotFromInternalBypass() {
+    return materializeSceneSnapshot(
+      sceneSnapshotBackingFromValidated(
+        layers: <ContentLayerSnapshotBacking>[
+          contentLayerSnapshotBackingFromValidated(
+            id: 'layer-auto-5',
+            nodes: <NodeSnapshotBacking>[
+              nodeSnapshotBackingOf(
+                RectNodeSnapshot(id: 'dup', size: const Size(1, 1)),
+              ),
+            ],
+          ),
+          contentLayerSnapshotBackingFromValidated(
+            id: 'layer-auto-6',
+            nodes: <NodeSnapshotBacking>[
+              nodeSnapshotBackingOf(
+                RectNodeSnapshot(id: 'dup', size: const Size(2, 2)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   // INV:INV-ENG-PALETTE-RUNTIME-VALUE-OWNER
   Scene sceneWithAllNodeTypes() {
     return Scene(
@@ -349,26 +374,106 @@ void main() {
     },
   );
 
-  test('txnSceneFromSnapshot rejects duplicate node ids with field path', () {
+  test('txnSceneToSnapshot rejects duplicate node ids with field path', () {
     expect(
-      () => txnSceneFromSnapshot(
-        SceneSnapshot(
-          layers: <ContentLayerSnapshot>[
-            ContentLayerSnapshot(
-              id: 'layer-auto-5',
-              nodes: <NodeSnapshot>[
-                RectNodeSnapshot(id: 'dup', size: Size(1, 1)),
-              ],
-            ),
-            ContentLayerSnapshot(
-              id: 'layer-auto-6',
-              nodes: <NodeSnapshot>[
-                RectNodeSnapshot(id: 'dup', size: Size(2, 2)),
+      () => txnSceneToSnapshot(
+        Scene(
+          backgroundLayer: BackgroundLayer(
+            nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(1, 1))],
+          ),
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-auto-runtime-dup',
+              nodes: <SceneNode>[
+                RectNode(id: 'dup', size: const Size(2, 2)),
               ],
             ),
           ],
         ),
       ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.duplicateNodeId &&
+              e.path == 'layers[0].nodes[0].id' &&
+              e.message == 'Must be unique across scene layers.',
+        ),
+      ),
+    );
+  });
+
+  test('txnSceneToSnapshot rejects duplicate layer ids with field path', () {
+    expect(
+      () => txnSceneToSnapshot(
+        Scene(
+          layers: <ContentLayer>[
+            ContentLayer(id: 'layer-auto-dup'),
+            ContentLayer(id: 'layer-auto-dup'),
+          ],
+        ),
+      ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.duplicateLayerId &&
+              e.path == 'layers[1].id' &&
+              e.details['template'] == 'duplicateLayerId',
+        ),
+      ),
+    );
+  });
+
+  test('txnSceneToSnapshot rejects content-layer overflow with field path', () {
+    expect(
+      () => txnSceneToSnapshot(
+        Scene(
+          layers: <ContentLayer>[
+            for (var i = 0; i < kMaxContentLayersPerScene + 1; i++)
+              ContentLayer(id: 'layer-runtime-$i'),
+          ],
+        ),
+      ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers' &&
+              e.details['template'] == 'maxItems',
+        ),
+      ),
+    );
+  });
+
+  test('txnSceneToSnapshot rejects node overflow with field path', () {
+    expect(
+      () => txnSceneToSnapshot(
+        Scene(
+          backgroundLayer: BackgroundLayer(
+            nodes: <SceneNode>[
+              for (var i = 0; i < kMaxNodesPerScene + 1; i++)
+                RectNode(id: 'node-runtime-$i', size: const Size(1, 1)),
+            ],
+          ),
+        ),
+      ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'backgroundLayer.nodes' &&
+              e.details['template'] == 'maxNodes',
+        ),
+      ),
+    );
+  });
+
+  test('txnSceneFromSnapshot rejects duplicate node ids with field path', () {
+    expect(
+      () => txnSceneFromSnapshot(duplicateNodeSnapshotFromInternalBypass()),
       throwsA(
         predicate(
           (e) =>
