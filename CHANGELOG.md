@@ -4,6 +4,9 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ## Unreleased
 
+- Added a manual GitHub Actions workflow that builds the `example/` Windows
+  desktop app and publishes an Inno Setup `setup.exe` installer artifact for
+  install-and-launch smoke testing on Windows machines.
 - Breaking: Scene metadata contracts are now aligned across ordinary public
   constructors, runtime owners, validated helper paths, and import/decode.
   `CameraSnapshot`, `GridSnapshot`, and `BackgroundSnapshot` now reject invalid

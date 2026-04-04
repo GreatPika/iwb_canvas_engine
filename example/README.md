@@ -24,3 +24,15 @@ flutter run
 
 Use `flutter devices` and `flutter run -d <deviceId>` if you want a specific
 target.
+
+## Windows installer artifact
+
+This repository includes a manual GitHub Actions workflow named
+`Windows Installer`.
+
+It builds the Flutter Windows desktop release for `example/`, packages the
+release directory into an Inno Setup installer, and uploads a `setup.exe`
+artifact.
+
+Use it when you want a Windows-installable package for smoke-testing install
+and launch behavior on a real machine.
