@@ -1,57 +1,66 @@
 import 'dart:math' as math;
+import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/scene_data_exception.dart';
 import '../contract/snapshot.dart';
 import '../contract/transform2d.dart';
 import '../core/scene.dart';
 import '../core/scene_limits.dart';
 import '../core/text_layout.dart';
+import 'scene_import_draft.dart';
+import 'scene_import_draft_from_snapshot.dart';
 import 'scene_structural_limits.dart';
 import 'scene_value_validation.dart';
 
 typedef ScenePolicySnapshotFromScene = SceneSnapshot Function(Scene scene);
-typedef ScenePolicySceneFromSnapshot = Scene Function(SceneSnapshot snapshot);
+typedef ScenePolicySceneFromImportDraft =
+    Scene Function(SceneImportDraft draft);
 
 abstract final class ScenePolicy {
-  static SceneSnapshot validateImportSnapshot(SceneSnapshot rawSnapshot) {
-    _validateStructuralInvariants(rawSnapshot);
-    sceneValidateSnapshotValues(
-      rawSnapshot,
+  static SceneImportDraft validateImportDraft(SceneImportDraft rawDraft) {
+    _validateStructuralInvariants(rawDraft);
+    sceneValidateImportDraftValues(
+      rawDraft,
       onError: _snapshotValidationError,
       requirePositiveGridCellSize: true,
       requireEnabledMinGridCellSize: true,
     );
-    _validateSnapshotRanges(rawSnapshot);
-    return rawSnapshot;
+    _validateDraftRanges(rawDraft);
+    return rawDraft;
+  }
+
+  static SceneSnapshot validateImportSnapshot(SceneSnapshot rawSnapshot) {
+    final rawDraft = sceneImportDraftFromSnapshot(rawSnapshot);
+    return sceneSnapshotFromImportDraft(validateImportDraft(rawDraft));
   }
 
   static Scene validateRuntimeScene(
     Scene rawScene, {
     required ScenePolicySnapshotFromScene snapshotFromScene,
-    required ScenePolicySceneFromSnapshot sceneFromSnapshot,
+    required ScenePolicySceneFromImportDraft sceneFromImportDraft,
   }) {
     return _validateSceneBoundary(
       rawScene,
       snapshotFromScene: snapshotFromScene,
-      sceneFromSnapshot: sceneFromSnapshot,
+      sceneFromImportDraft: sceneFromImportDraft,
     );
   }
 
   static Scene validateEncodeScene(
     Scene scene, {
     required ScenePolicySnapshotFromScene snapshotFromScene,
-    required ScenePolicySceneFromSnapshot sceneFromSnapshot,
+    required ScenePolicySceneFromImportDraft sceneFromImportDraft,
   }) {
     return _validateSceneBoundary(
       scene,
       snapshotFromScene: snapshotFromScene,
-      sceneFromSnapshot: sceneFromSnapshot,
+      sceneFromImportDraft: sceneFromImportDraft,
     );
   }
 
   static Scene _validateSceneBoundary(
     Scene rawScene, {
     required ScenePolicySnapshotFromScene snapshotFromScene,
-    required ScenePolicySceneFromSnapshot sceneFromSnapshot,
+    required ScenePolicySceneFromImportDraft sceneFromImportDraft,
   }) {
     sceneValidateSceneValues(
       rawScene,
@@ -60,34 +69,35 @@ abstract final class ScenePolicy {
       requireEnabledMinGridCellSize: true,
     );
     final rawSnapshot = snapshotFromScene(rawScene);
-    final canonicalSnapshot = validateImportSnapshot(rawSnapshot);
-    return sceneFromSnapshot(canonicalSnapshot);
+    final rawDraft = sceneImportDraftFromSnapshot(rawSnapshot);
+    final canonicalDraft = validateImportDraft(rawDraft);
+    return sceneFromImportDraft(canonicalDraft);
   }
 }
 
-void _validateStructuralInvariants(SceneSnapshot snapshot) {
+void _validateStructuralInvariants(SceneImportDraft draft) {
   final seen = <String>{};
   final seenLayerIds = <LayerId>{};
   var totalNodeCount = 0;
 
-  sceneRequireContentLayerLimit(snapshot.layers.length);
+  sceneRequireContentLayerLimit(draft.layers.length);
   totalNodeCount = _validateBackgroundLayerStructure(
-    snapshot.backgroundLayer,
+    draft.backgroundLayer,
     seenNodeIds: seen,
     totalNodeCount: totalNodeCount,
   );
   _validateContentLayerStructure(
-    snapshot.layers,
+    draft.layers,
     seenNodeIds: seen,
     seenLayerIds: seenLayerIds,
     totalNodeCount: totalNodeCount,
   );
 }
 
-void _validateSnapshotRanges(SceneSnapshot snapshot) {
-  _validateSceneRanges(snapshot);
-  _validateBackgroundLayerRanges(snapshot.backgroundLayer);
-  _validateContentLayerRanges(snapshot.layers);
+void _validateDraftRanges(SceneImportDraft draft) {
+  _validateSceneRanges(draft);
+  _validateBackgroundLayerRanges(draft.backgroundLayer);
+  _validateContentLayerRanges(draft.layers);
 }
 
 void _validateNodeRanges(NodeSnapshot node, String field) {
@@ -110,7 +120,7 @@ void _validateNodeRanges(NodeSnapshot node, String field) {
 }
 
 int _validateBackgroundLayerStructure(
-  BackgroundLayerSnapshot backgroundLayer, {
+  BackgroundLayerSnapshotBacking backgroundLayer, {
   required Set<String> seenNodeIds,
   required int totalNodeCount,
 }) {
@@ -123,7 +133,7 @@ int _validateBackgroundLayerStructure(
 }
 
 void _validateContentLayerStructure(
-  List<ContentLayerSnapshot> layers, {
+  List<ContentLayerSnapshotBacking> layers, {
   required Set<String> seenNodeIds,
   required Set<LayerId> seenLayerIds,
   required int totalNodeCount,
@@ -145,7 +155,7 @@ void _validateContentLayerStructure(
 }
 
 int _validateLayerNodeUniqueness(
-  List<NodeSnapshot> nodes, {
+  List<NodeSnapshotBacking> nodes, {
   required String nodesPath,
   required Set<String> seenNodeIds,
   required int totalNodeCount,
@@ -185,26 +195,28 @@ void _validateNodeIdUniqueness(
   throw SceneDataException.duplicateNodeId(path: path, nodeId: nodeId);
 }
 
-void _validateSceneRanges(SceneSnapshot snapshot) {
-  _validateCoordinate(snapshot.camera.offset.dx, 'camera.offset.dx');
-  _validateCoordinate(snapshot.camera.offset.dy, 'camera.offset.dy');
+void _validateSceneRanges(SceneImportDraft draft) {
+  _validateCoordinate(draft.camera.offset.dx, 'camera.offset.dx');
+  _validateCoordinate(draft.camera.offset.dy, 'camera.offset.dy');
   _validateSizeUpper(
-    snapshot.background.grid.cellSize,
+    draft.background.grid.cellSize,
     'background.grid.cellSize',
   );
-  for (var i = 0; i < snapshot.palette.gridSizes.length; i++) {
-    _validateSizeUpper(snapshot.palette.gridSizes[i], 'palette.gridSizes[$i]');
+  for (var i = 0; i < draft.palette.gridSizes.length; i++) {
+    _validateSizeUpper(draft.palette.gridSizes[i], 'palette.gridSizes[$i]');
   }
 }
 
-void _validateBackgroundLayerRanges(BackgroundLayerSnapshot backgroundLayer) {
+void _validateBackgroundLayerRanges(
+  BackgroundLayerSnapshotBacking backgroundLayer,
+) {
   _validateLayerNodeRanges(
     backgroundLayer.nodes,
     layerField: 'backgroundLayer',
   );
 }
 
-void _validateContentLayerRanges(List<ContentLayerSnapshot> layers) {
+void _validateContentLayerRanges(List<ContentLayerSnapshotBacking> layers) {
   for (var layerIndex = 0; layerIndex < layers.length; layerIndex++) {
     _validateLayerNodeRanges(
       layers[layerIndex].nodes,
@@ -214,11 +226,14 @@ void _validateContentLayerRanges(List<ContentLayerSnapshot> layers) {
 }
 
 void _validateLayerNodeRanges(
-  List<NodeSnapshot> nodes, {
+  List<NodeSnapshotBacking> nodes, {
   required String layerField,
 }) {
   for (var nodeIndex = 0; nodeIndex < nodes.length; nodeIndex++) {
-    _validateNodeRanges(nodes[nodeIndex], '$layerField.nodes[$nodeIndex]');
+    _validateNodeRanges(
+      materializeNodeSnapshot(nodes[nodeIndex]),
+      '$layerField.nodes[$nodeIndex]',
+    );
   }
 }
 

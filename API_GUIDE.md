@@ -137,6 +137,14 @@ Migration note:
 `SceneSnapshot` is the immutable document boundary returned by the runtime and
 serialization APIs.
 
+Import note:
+
+- typed snapshot import, parsed-map decode, and controller snapshot replacement
+  first normalize into a model-internal draft/import owner before scene-level
+  policy validation closes
+- public callers still only construct, pass, and receive `SceneSnapshot`
+  values; the draft layer is not part of the public API
+
 Fields:
 
 - `backgroundLayer: BackgroundLayerSnapshot`
@@ -967,6 +975,8 @@ controller.
   boundary as `decodeScene(...)`, but skips JSON string parsing. Parsed-map
   normalization stays inside the `SceneBuilder` model boundary rather than in
   the public API entrypoint.
+- both import paths normalize into the same model-internal pre-canonical draft
+  owner before scene-level duplicate/count/range policy validation runs
 - both methods throw `SceneDataException` when the input violates schema or
   boundary validation rules
 - nested validation failures include `SceneDataException.path` when the
@@ -986,6 +996,9 @@ controller.
   - it reuses the same parsed-map guard contract as
     `SceneBuilder.buildFromJson(...)` so malformed map normalization stays
     aligned on `code` / `path` / `details`
+- typed snapshot import, parsed-map decode, and controller
+  `initialSnapshot`/replace-scene admission all reuse the same model-internal
+  draft/import spine before canonical public snapshot output is materialized
 - `encodeScene(...)` and `encodeSceneDocument(...)` are the snapshot/runtime
   encode boundaries:
   - they preserve policy-owned validation diagnostics and route unexpected

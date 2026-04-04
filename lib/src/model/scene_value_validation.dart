@@ -4,6 +4,7 @@ import '../contract/snapshot.dart';
 import '../contract/transform2d.dart';
 import '../core/nodes.dart';
 import '../core/scene.dart';
+import 'scene_import_draft.dart';
 import 'scene_value_validation_node.dart' as node_validation;
 import 'scene_value_validation_palette_grid.dart' as palette_grid_validation;
 import 'scene_value_validation_primitives.dart' as primitives_validation;
@@ -194,6 +195,18 @@ void sceneValidateSnapshotValues(
   required bool requireEnabledMinGridCellSize,
 }) => scene_validation.sceneValidateSnapshotValues(
   snapshot,
+  onError: onError,
+  requirePositiveGridCellSize: requirePositiveGridCellSize,
+  requireEnabledMinGridCellSize: requireEnabledMinGridCellSize,
+);
+
+void sceneValidateImportDraftValues(
+  SceneImportDraft draft, {
+  required SceneValidationErrorReporter onError,
+  required bool requirePositiveGridCellSize,
+  required bool requireEnabledMinGridCellSize,
+}) => scene_validation.sceneValidateImportDraftValues(
+  draft,
   onError: onError,
   requirePositiveGridCellSize: requirePositiveGridCellSize,
   requireEnabledMinGridCellSize: requireEnabledMinGridCellSize,

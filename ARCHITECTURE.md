@@ -88,8 +88,10 @@ Ownership decisions for the target state:
   `model/scene_builder_decode_layers.dart`,
   `model/scene_builder_decode_node_common.dart`,
   `model/scene_builder_decode_node_family.dart`, and family-local decode
-  owners, and shared runtime
-  `SceneSnapshot -> Scene` import lives in `model/scene_from_snapshot.dart`.
+  owners, and shared typed-snapshot adapters/runtime import live in
+  `model/scene_import_draft_from_snapshot.dart`,
+  `model/scene_from_import_draft.dart`, and
+  `model/scene_from_snapshot.dart`.
 - `document.dart` remains the downstream transaction facade, but it consumes
   focused model-local owners for locator, scene-edit, patch, and
   selection/grid work, and it consumes `scene_from_snapshot.dart` and
@@ -181,6 +183,9 @@ Ownership decisions for the target state:
   owners,
   `scene_builder_json_parse.dart`,
   `scene_builder_json_require.dart`,
+  `scene_import_draft.dart`,
+  `scene_import_draft_from_snapshot.dart`,
+  `scene_from_import_draft.dart`,
   `scene_from_snapshot.dart`, and
   `scene_snapshot_from_scene.dart`, but downstream non-model code must not
   re-own those internals.
@@ -190,11 +195,18 @@ Ownership decisions for the target state:
   import `scene_builder.dart`, `scene_from_snapshot.dart`, or
   `scene_policy.dart` directly.
 - `model/scene_from_snapshot.dart` and
-  `model/scene_snapshot_from_scene.dart` are the shared runtime import/export
+  `model/scene_snapshot_from_scene.dart` are the shared typed-adapter/export
   owners. `document.dart` consumes them directly; it must not recover a
-  `document.dart -> scene_builder.dart` dependency. Their producer-side
-  construction path now targets the internal snapshot backing/materialization
-  graph and materializes public snapshot wrappers only at the return edge.
+  `document.dart -> scene_builder.dart` dependency.
+- `model/scene_import_draft.dart` is the single model-owned pre-canonical
+  import carrier. Typed `SceneSnapshot` import and parsed-map decode both
+  normalize into this draft before scene-level policy validation closes.
+- `model/scene_from_import_draft.dart` is the runtime materializer from a
+  validated draft to mutable `Scene`; public `SceneSnapshot` is not used as
+  the scene-level working container during import.
+- Producer-side import/decode work targets the internal snapshot
+  backing/materialization graph and materializes public snapshot wrappers only
+  at explicit public return edges.
 - `model/scene_node_boundary_mapping.dart` is the canonical node-boundary
   mapping facade. The removed residual support file
   `scene_node_boundary_mapping_support.dart` must not return. Family-local

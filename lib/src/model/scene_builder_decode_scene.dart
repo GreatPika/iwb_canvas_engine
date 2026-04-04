@@ -1,7 +1,7 @@
 import '../contract/internal/snapshot_fast_path.dart';
-import '../contract/snapshot.dart';
 import 'scene_builder_decode_layers.dart';
 import 'scene_builder_decode_scene_metadata.dart';
+import 'scene_import_draft.dart';
 import 'scene_structural_limits.dart';
 
 typedef DecodedScenePayload = ({
@@ -12,19 +12,17 @@ typedef DecodedScenePayload = ({
   List<ContentLayerSnapshotBacking> layers,
 });
 
-SceneSnapshot sceneBuilderDecodeSceneSnapshotFromJson(
+SceneImportDraft sceneBuilderDecodeSceneImportDraftFromJson(
   Map<String, Object?> json,
 ) {
   sceneBuilderRequireSupportedSchemaVersion(json);
   final payload = _decodeScenePayload(json);
-  return materializeSceneSnapshot(
-    sceneSnapshotBackingFromValidated(
-      backgroundLayer: payload.backgroundLayer,
-      layers: payload.layers,
-      camera: payload.camera,
-      background: payload.background,
-      palette: payload.palette,
-    ),
+  return SceneImportDraft(
+    backgroundLayer: payload.backgroundLayer,
+    layers: payload.layers,
+    camera: payload.camera,
+    background: payload.background,
+    palette: payload.palette,
   );
 }
 

@@ -21,6 +21,12 @@ import 'package:iwb_canvas_engine/src/model/scene_builder.dart'
     as model_builder;
 import 'package:iwb_canvas_engine/src/model/document.dart'
     show txnSceneFromSnapshot, txnSceneToSnapshot;
+import 'package:iwb_canvas_engine/src/model/scene_from_import_draft.dart'
+    show sceneFromImportDraft;
+import 'package:iwb_canvas_engine/src/model/scene_from_snapshot.dart'
+    show sceneFromSnapshot;
+import 'package:iwb_canvas_engine/src/model/scene_node_boundary_mapping.dart'
+    show sceneNodeSnapshotFromViaBoundarySchema;
 import 'package:iwb_canvas_engine/src/model/scene_policy.dart';
 import 'package:iwb_canvas_engine/src/model/scene_value_validation.dart'
     as value_validation;
@@ -404,12 +410,12 @@ void main() {
         (scene) => ScenePolicy.validateRuntimeScene(
           scene,
           snapshotFromScene: txnSceneToSnapshot,
-          sceneFromSnapshot: txnSceneFromSnapshot,
+          sceneFromImportDraft: sceneFromImportDraft,
         ),
         (scene) => ScenePolicy.validateEncodeScene(
           scene,
           snapshotFromScene: txnSceneToSnapshot,
-          sceneFromSnapshot: txnSceneFromSnapshot,
+          sceneFromImportDraft: sceneFromImportDraft,
         ),
       ];
 
@@ -427,6 +433,74 @@ void main() {
           ),
         );
       }
+    },
+  );
+
+  test(
+    'ScenePolicy import snapshot and runtime validation reuse the draft import spine',
+    () {
+      final rawSnapshot = SceneSnapshot(
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
+            id: 'layer-auto-policy',
+            nodes: <NodeSnapshot>[
+              RectNodeSnapshot(id: 'rect-policy', size: const Size(5, 6)),
+            ],
+          ),
+        ],
+      );
+
+      final canonicalSnapshot = ScenePolicy.validateImportSnapshot(rawSnapshot);
+      expect(canonicalSnapshot.backgroundLayer.nodes, isEmpty);
+      expect(canonicalSnapshot.layers.single.nodes.single.id, 'rect-policy');
+
+      final runtimeScene = ScenePolicy.validateRuntimeScene(
+        Scene(
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-auto-policy',
+              nodes: <SceneNode>[
+                RectNode(id: 'rect-policy', size: const Size(5, 6)),
+              ],
+            ),
+          ],
+        ),
+        snapshotFromScene: txnSceneToSnapshot,
+        sceneFromImportDraft: sceneFromImportDraft,
+      );
+      expect(runtimeScene.layers.single.nodes.single.id, 'rect-policy');
+    },
+  );
+
+  test('sceneFromSnapshot imports through the draft adapter wrapper', () {
+    final imported = sceneFromSnapshot(
+      SceneSnapshot(
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
+            id: 'layer-auto-wrapper',
+            nodes: <NodeSnapshot>[
+              RectNodeSnapshot(id: 'rect-wrapper', size: const Size(7, 8)),
+            ],
+          ),
+        ],
+      ),
+      nextInstanceRevision: () => 41,
+    );
+
+    final rect = imported.layers.single.nodes.single as RectNode;
+    expect(rect.id, 'rect-wrapper');
+    expect(rect.instanceRevision, 41);
+  });
+
+  test(
+    'scene node boundary mapping materializes runtime nodes to snapshots',
+    () {
+      final snapshot = sceneNodeSnapshotFromViaBoundarySchema(
+        RectNode(id: 'rect-boundary', size: const Size(3, 4)),
+      );
+
+      expect(snapshot, isA<RectNodeSnapshot>());
+      expect(snapshot.id, 'rect-boundary');
     },
   );
 

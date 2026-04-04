@@ -1,10 +1,12 @@
 import 'dart:ui';
 
+import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/snapshot.dart';
 import '../contract/validated/layer_id_value.dart';
 import '../contract/validated/node_id_value.dart';
 import '../core/nodes.dart';
 import '../core/scene.dart';
+import 'scene_import_draft.dart';
 import 'scene_value_validation_node.dart';
 import 'scene_value_validation_palette_grid.dart';
 import 'scene_value_validation_primitives.dart';
@@ -88,6 +90,8 @@ typedef _SceneValueValidationAccessors<TScene, TGrid, TPalette, TLayer, TNode> =
 
 final _snapshotSceneValueValidationAccessors =
     _buildSnapshotSceneValueValidationAccessors();
+final _draftSceneValueValidationAccessors =
+    _buildDraftSceneValueValidationAccessors();
 final _runtimeSceneValueValidationAccessors =
     _buildRuntimeSceneValueValidationAccessors();
 
@@ -133,6 +137,27 @@ void sceneValidateSceneValues(
   );
 }
 
+void sceneValidateImportDraftValues(
+  SceneImportDraft draft, {
+  required SceneValidationErrorReporter onError,
+  required bool requirePositiveGridCellSize,
+  required bool requireEnabledMinGridCellSize,
+}) {
+  _sceneValidateSceneValues<
+    SceneImportDraft,
+    GridSnapshotBacking,
+    ScenePaletteSnapshotBacking,
+    ContentLayerSnapshotBacking,
+    NodeSnapshotBacking
+  >(
+    draft,
+    onError: onError,
+    requirePositiveGridCellSize: requirePositiveGridCellSize,
+    requireEnabledMinGridCellSize: requireEnabledMinGridCellSize,
+    accessors: _draftSceneValueValidationAccessors,
+  );
+}
+
 _SceneValueValidationAccessors<
   SceneSnapshot,
   GridSnapshot,
@@ -153,6 +178,56 @@ _buildSnapshotSceneValueValidationAccessors() {
     validatePalette: sceneValidatePaletteSnapshot,
     validateSingleNode: sceneValidateNodeSnapshot,
     validateLayerNodes: _sceneValidateSnapshotLayerNodes,
+  );
+}
+
+_SceneValueValidationAccessors<
+  SceneImportDraft,
+  GridSnapshotBacking,
+  ScenePaletteSnapshotBacking,
+  ContentLayerSnapshotBacking,
+  NodeSnapshotBacking
+>
+_buildDraftSceneValueValidationAccessors() {
+  return (
+    cameraOffsetOf: (scene) => scene.camera.offset,
+    gridOf: (scene) => scene.background.grid,
+    paletteOf: (scene) => scene.palette,
+    backgroundNodesOf: (scene) => scene.backgroundLayer.nodes,
+    contentLayersOf: (scene) => scene.layers,
+    layerIdOf: (layer) => layer.id,
+    layerNodesOf: (layer) => layer.nodes,
+    validateGrid:
+        (
+          grid, {
+          required field,
+          required onError,
+          required requirePositiveCellSize,
+          required requireEnabledMinCellSize,
+        }) => sceneValidateGridSnapshot(
+          GridSnapshot(
+            isEnabled: grid.isEnabled,
+            cellSize: grid.cellSize,
+            color: grid.color,
+          ),
+          field: field,
+          onError: onError,
+          requirePositiveCellSize: requirePositiveCellSize,
+          requireEnabledMinCellSize: requireEnabledMinCellSize,
+        ),
+    validatePalette: (palette, {required field, required onError}) =>
+        sceneValidatePaletteSnapshot(
+          materializeScenePaletteSnapshot(palette),
+          field: field,
+          onError: onError,
+        ),
+    validateSingleNode: (node, {required field, required onError}) =>
+        sceneValidateNodeSnapshot(
+          materializeNodeSnapshot(node),
+          field: field,
+          onError: onError,
+        ),
+    validateLayerNodes: _sceneValidateDraftLayerNodes,
   );
 }
 
@@ -265,6 +340,25 @@ void _sceneValidateRuntimeLayerNodes(
   validateNode,
 }) {
   _sceneValidateLayerNodes<SceneNode>(
+    nodes,
+    field: field,
+    onError: onError,
+    accessors: (nodeIdOf: (node) => node.id, validateNode: validateNode),
+  );
+}
+
+void _sceneValidateDraftLayerNodes(
+  List<NodeSnapshotBacking> nodes, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+  required void Function(
+    NodeSnapshotBacking node, {
+    required String field,
+    required SceneValidationErrorReporter onError,
+  })
+  validateNode,
+}) {
+  _sceneValidateLayerNodes<NodeSnapshotBacking>(
     nodes,
     field: field,
     onError: onError,

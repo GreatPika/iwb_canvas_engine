@@ -276,7 +276,7 @@ state, чтобы import/decode/runtime replacement перестали испо�
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] One Internal Draft Owner For Typed And JSON Import
+### Slice 1. [x] One Internal Draft Owner For Typed And JSON Import
 
 #### Slice Contract
 
@@ -330,7 +330,7 @@ introduce a new `contract/internal` bridge.
 - The `rg` verification returns no `materializeSceneSnapshot(...)` call inside
   the parsed-map draft decode owner files.
 
-### Slice 2. [ ] Runtime Import Spine Validates Draft Instead Of Raw Snapshot
+### Slice 2. [x] Runtime Import Spine Validates Draft Instead Of Raw Snapshot
 
 #### Slice Contract
 
@@ -385,7 +385,7 @@ validation on a raw public snapshot.
 
 - Green run of the listed verifications.
 
-### Slice 3. [ ] Source Of Truth Pins Public Document Boundary And Draft Owner
+### Slice 3. [x] Source Of Truth Pins Public Document Boundary And Draft Owner
 
 #### Slice Contract
 
