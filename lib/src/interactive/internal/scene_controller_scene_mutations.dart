@@ -10,12 +10,12 @@ final class SceneControllerSceneMutations {
   const SceneControllerSceneMutations({
     required this.mutations,
     required this.ensureExternalMutationAllowed,
-    required this.resetActiveGestureBeforeExternalMutation,
+    required this.interruptForExternalMutation,
   });
 
   final SceneControllerMutationBoundary mutations;
   final void Function(String operation) ensureExternalMutationAllowed;
-  final VoidCallback resetActiveGestureBeforeExternalMutation;
+  final VoidCallback interruptForExternalMutation;
 
   T write<T>(T Function(SceneWriteTxn writer) fn) {
     ensureExternalMutationAllowed('write');
@@ -62,7 +62,7 @@ final class SceneControllerSceneMutations {
     if (!mutations.shouldApplyCameraOffset(value)) {
       return;
     }
-    resetActiveGestureBeforeExternalMutation();
+    interruptForExternalMutation();
     mutations.setCameraOffset(value);
   }
 
@@ -73,7 +73,7 @@ final class SceneControllerSceneMutations {
 
   void replaceScene(SceneSnapshot snapshot) {
     final replacement = mutations.prepareSceneReplacement(snapshot);
-    resetActiveGestureBeforeExternalMutation();
+    interruptForExternalMutation();
     mutations.replaceScene(replacement);
   }
 

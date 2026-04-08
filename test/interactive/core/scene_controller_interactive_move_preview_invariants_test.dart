@@ -2,9 +2,11 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contract/pointer_input.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart' hide NodeId;
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/core/text_layout.dart';
+import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart';
 
 import '../test_support/interactive_controller_fixtures.dart';
 
@@ -182,6 +184,64 @@ void main() {
             phase: CanvasPointerPhase.cancel,
           ),
         );
+
+        expect(controller.selectedNodeIds, const <NodeId>{'baseline'});
+        expect(controller.interaction.selectionRect, isNull);
+      },
+    );
+
+    test(
+      'disposing owning pointer session restores marquee baseline like cancel',
+      () {
+        final baseline = RectNode(id: 'baseline', size: const Size(40, 20))
+          ..position = const Offset(40, 40);
+        final other = RectNode(id: 'other', size: const Size(40, 20))
+          ..position = const Offset(180, 40);
+        final controller = controllerFromScene(
+          Scene(
+            layers: <ContentLayer>[
+              ContentLayer(id: 'layer-auto-24'),
+              ContentLayer(
+                id: 'layer-auto-25',
+                nodes: <SceneNode>[baseline, other],
+              ),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+        controller.selection.setSelection(const <NodeId>{'baseline'});
+
+        final session = sceneControllerViewRuntimeOf(controller)
+            .createPointerSession(
+              isMounted: () => true,
+              hasLiveRawPointers: () => false,
+            );
+
+        session.handleRoutedSample(
+          const PointerSample(
+            pointerId: 1,
+            position: Offset(300, 300),
+            timestampMs: 1,
+            phase: PointerPhase.down,
+            kind: PointerDeviceKind.touch,
+          ),
+          shouldTrackSignals: false,
+        );
+        session.handleRoutedSample(
+          const PointerSample(
+            pointerId: 1,
+            position: Offset(320, 320),
+            timestampMs: 2,
+            phase: PointerPhase.move,
+            kind: PointerDeviceKind.touch,
+          ),
+          shouldTrackSignals: false,
+        );
+
+        expect(controller.selectedNodeIds, isEmpty);
+        expect(controller.interaction.selectionRect, isNotNull);
+
+        session.dispose();
 
         expect(controller.selectedNodeIds, const <NodeId>{'baseline'});
         expect(controller.interaction.selectionRect, isNull);

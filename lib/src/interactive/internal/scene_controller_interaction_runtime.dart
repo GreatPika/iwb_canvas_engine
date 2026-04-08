@@ -58,8 +58,8 @@ final class SceneControllerInteractionRuntime {
     }
   }
 
-  void resetActiveGestureBeforeExternalMutation() {
-    runtime.resetInteractiveState();
+  void interruptForExternalMutation() {
+    runtime.interruptForExternalMutation();
   }
 
   void scheduleNotify() {
@@ -182,8 +182,8 @@ extension SceneControllerInteractionRuntimeStateApi
   int get eraserPreciseSegmentCheckCount =>
       runtime.debugEraserPreciseSegmentChecks;
 
-  void resetInteractiveState() {
-    runtime.resetInteractiveState();
+  void interruptForInteractionConfigChange() {
+    runtime.interruptForInteractionConfigChange();
   }
 
   void clearPointerNormalizationState() {
@@ -200,7 +200,10 @@ extension SceneControllerInteractionRuntimeMutationApi
   }
 
   void releasePointerSessionToken(PointerSessionToken token) {
-    _pointerSessionTokens.remove(token);
+    if (!_pointerSessionTokens.remove(token)) {
+      return;
+    }
+    runtime.detachPointerSession(token);
   }
 
   int resolveTimestampMs(int? timestampMs) {

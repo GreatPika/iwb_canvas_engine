@@ -2,8 +2,10 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contract/pointer_input.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart' hide NodeId;
 import 'package:iwb_canvas_engine/src/core/scene.dart';
+import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart';
 
 import '../test_support/interactive_controller_fixtures.dart';
 
@@ -53,6 +55,68 @@ void main() {
           );
         }, returnsNormally);
       });
+
+      test(
+        'disposing owning eraser session clears draw gesture without commit',
+        () async {
+          final line = LineNode(
+            id: 'eraser-line',
+            start: const Offset(-30, 0),
+            end: const Offset(30, 0),
+            thickness: 4,
+            color: const Color(0xFF000000),
+          )..position = const Offset(80, 80);
+          final controller = controllerFromScene(
+            Scene(
+              layers: <ContentLayer>[
+                ContentLayer(id: 'layer-auto-2'),
+                ContentLayer(id: 'layer-auto-3', nodes: <SceneNode>[line]),
+              ],
+            ),
+          );
+          addTearDown(controller.dispose);
+          controller.interaction.setMode(CanvasMode.draw);
+          controller.interaction.setDrawTool(DrawTool.eraser);
+          controller.interaction.eraserThickness = 24;
+
+          final actions = <ActionCommitted>[];
+          final sub = controller.actions.listen(actions.add);
+          addTearDown(sub.cancel);
+
+          final session = sceneControllerViewRuntimeOf(controller)
+              .createPointerSession(
+                isMounted: () => true,
+                hasLiveRawPointers: () => false,
+              );
+
+          session.handleRoutedSample(
+            const PointerSample(
+              pointerId: 1,
+              position: Offset(80, 80),
+              timestampMs: 1,
+              phase: PointerPhase.down,
+              kind: PointerDeviceKind.touch,
+            ),
+            shouldTrackSignals: false,
+          );
+          session.handleRoutedSample(
+            const PointerSample(
+              pointerId: 1,
+              position: Offset(100, 80),
+              timestampMs: 2,
+              phase: PointerPhase.move,
+              kind: PointerDeviceKind.touch,
+            ),
+            shouldTrackSignals: false,
+          );
+
+          session.dispose();
+          await pumpEventQueue();
+
+          expect(actions, isEmpty);
+          expect(controller.snapshot.layers[1].nodes.single.id, 'eraser-line');
+        },
+      );
 
       test('long eraser gesture cancel does not mutate scene', () async {
         // INV:INV-ENG-INTERACTIVE-CANCEL-STATE-RESET

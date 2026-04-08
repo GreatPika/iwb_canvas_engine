@@ -118,7 +118,7 @@ class _Runtime {
 
   void ensureExternalMutationAllowed(String operation) {}
 
-  void resetActiveGestureBeforeExternalMutation() {}
+  void interruptForExternalMutation() {}
 }
 ''',
   );
@@ -328,6 +328,12 @@ class InteractiveRuntime {
   }) {
     events.resolveTimestampMs(timestampMs);
   }
+
+  void interruptForInteractionConfigChange() {}
+
+  void interruptForExternalMutation() {}
+
+  void detachPointerSession(PointerSessionToken token) {}
 }
 ''',
   );
@@ -540,7 +546,9 @@ class SceneControllerInteractionRuntime {
 
   void ensureExternalMutationAllowed(String operation) {}
 
-  void resetActiveGestureBeforeExternalMutation() {}
+  void interruptForInteractionConfigChange() {}
+
+  void interruptForExternalMutation() {}
 
   void wireSelectionCallbacks() {
     // writeSelectionReplace: mutationBoundary.setSelection,
@@ -863,11 +871,11 @@ _requireFiniteOffset(value);
 if (_isSameOffset(value)) {
   return;
 }
-resetActiveGestureBeforeExternalMutation();
+interruptForExternalMutation();
 ''',
   String replaceSceneBody = '''
 final replacement = mutations.prepareSceneReplacement(snapshot);
-resetActiveGestureBeforeExternalMutation();
+interruptForExternalMutation();
 mutations.replaceScene(replacement);
 ''',
 }) {
@@ -884,7 +892,7 @@ mutations.replaceScene(replacement);
 
   void ensureExternalMutationAllowed(String operation) {}
 
-  void resetActiveGestureBeforeExternalMutation() {}
+  void interruptForExternalMutation() {}
 
   void _requireFiniteOffset(Object value) {}
 

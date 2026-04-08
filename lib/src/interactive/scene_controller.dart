@@ -99,7 +99,6 @@ class SceneController extends ChangeNotifier {
     if (sceneControllerGraphIsDisposed(_graph)) {
       return;
     }
-    resetSceneControllerGraphInteractiveState(_graph);
     _storeController.dispose();
     disposeSceneControllerGraph(_graph);
     detachSceneControllerGraphInternalAccess(this);

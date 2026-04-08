@@ -61,6 +61,14 @@ class InteractiveMoveSession {
     _previewState.clear();
   }
 
+  bool interruptGesture() {
+    return _restoreAndClearGestureState();
+  }
+
+  bool detachOwningSession() {
+    return _restoreAndClearGestureState();
+  }
+
   void dispose() {}
 
   void handlePointer(
@@ -145,8 +153,7 @@ class InteractiveMoveSession {
   }
 
   bool _moveHandleCancel() {
-    _commitCoordinator.commitCancelRestore();
-    return _resetGestureStateForTerminal();
+    return _restoreAndClearGestureState();
   }
 
   void _beginGesture(Offset scenePoint) {
@@ -185,5 +192,10 @@ class InteractiveMoveSession {
         _gestureState.selectionRect != null || _previewState.isActive;
     resetGestureState();
     return didChange;
+  }
+
+  bool _restoreAndClearGestureState() {
+    _commitCoordinator.commitCancelRestore();
+    return _resetGestureStateForTerminal();
   }
 }

@@ -429,7 +429,7 @@ ensureExternalMutationAllowed('setCameraOffset');
           detail:
               'SceneControllerSceneMutations.setCameraOffset must guard '
               'active-gesture exclusivity with '
-              'resetActiveGestureBeforeExternalMutation',
+              'interruptForExternalMutation',
         ),
       );
     } finally {
@@ -507,12 +507,12 @@ class SceneControllerSceneMutations {
     if (_isSameOffset(value)) {
       return;
     }
-    resetActiveGestureBeforeExternalMutation();
+    interruptForExternalMutation();
   }
 
   void replaceScene(Object snapshot) {
     validateSnapshot(snapshot);
-    resetActiveGestureBeforeExternalMutation();
+    interruptForExternalMutation();
   }
 
   void _guardExternal(String operation) {
@@ -521,7 +521,7 @@ class SceneControllerSceneMutations {
 
   void ensureExternalMutationAllowed(String operation) {}
 
-  void resetActiveGestureBeforeExternalMutation() {}
+  void interruptForExternalMutation() {}
 
   void _requireFiniteOffset(Object value) {}
 
@@ -989,13 +989,13 @@ class SceneControllerSceneMutations {
     if (_isSameOffset(value)) {
       return;
     }
-    resetActiveGestureBeforeExternalMutation();
+    interruptForExternalMutation();
     mutations.toString();
   }
 
   void replaceScene(Object snapshot) {
     ensureExternalMutationAllowed('replaceScene');
-    resetActiveGestureBeforeExternalMutation();
+    interruptForExternalMutation();
     mutations.toString();
   }
 
@@ -1005,7 +1005,7 @@ class SceneControllerSceneMutations {
 
   void ensureExternalMutationAllowed(String operation) {}
 
-  void resetActiveGestureBeforeExternalMutation() {}
+  void interruptForExternalMutation() {}
 
   void _requireFiniteOffset(Object value) {}
 
@@ -1118,13 +1118,13 @@ class SceneControllerSceneMutations {
     if (_isSameOffset(value)) {
       return;
     }
-    resetActiveGestureBeforeExternalMutation();
+    interruptForExternalMutation();
     mutations.toString();
   }
 
   void replaceScene(Object snapshot) {
     ensureExternalMutationAllowed('replaceScene');
-    resetActiveGestureBeforeExternalMutation();
+    interruptForExternalMutation();
     mutations.toString();
   }
 
@@ -1134,7 +1134,7 @@ class SceneControllerSceneMutations {
 
   void ensureExternalMutationAllowed(String operation) {}
 
-  void resetActiveGestureBeforeExternalMutation() {}
+  void interruptForExternalMutation() {}
 
   void _requireFiniteOffset(Object value) {}
 

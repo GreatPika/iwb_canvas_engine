@@ -342,6 +342,7 @@ void main() {
     );
 
     expect(sceneMutationsSource, contains('mutations.setGridCellSize(value);'));
+    expect(sceneMutationsSource, contains('interruptForExternalMutation();'));
     expect(
       selectionMutationsSource,
       contains('mutations.setSelection(nodeIds);'),
@@ -365,6 +366,12 @@ void main() {
       contains('void handlePublicPointer(CanvasPointerInput input)'),
     );
     expect(runtimeSource, contains('void handlePointerFromSession('));
+    expect(
+      runtimeSource,
+      contains('void interruptForInteractionConfigChange()'),
+    );
+    expect(runtimeSource, contains('void interruptForExternalMutation()'));
+    expect(runtimeSource, contains('void detachPointerSession('));
     expect(
       runtimeSource,
       contains(
@@ -395,6 +402,14 @@ void main() {
     expect(
       interactionRuntimeSource,
       contains('void releasePointerSessionToken(PointerSessionToken token)'),
+    );
+    expect(
+      interactionRuntimeSource,
+      contains('void interruptForInteractionConfigChange()'),
+    );
+    expect(
+      interactionRuntimeSource,
+      contains('void interruptForExternalMutation()'),
     );
     expect(
       interactionRuntimeSource,

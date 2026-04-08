@@ -2,8 +2,10 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contract/pointer_input.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart' hide NodeId;
 import 'package:iwb_canvas_engine/src/core/scene.dart';
+import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart';
 
 import '../test_support/interactive_controller_fixtures.dart';
 
@@ -331,6 +333,74 @@ void main() {
         expect(afterCancelRecovery.transform.tx, closeTo(90, 1e-6));
         expect(afterCancelRecovery.transform.ty, closeTo(60, 1e-6));
       });
+
+      test(
+        'detaching a non-owning pointer session keeps active move gesture',
+        () {
+          final rect = RectNode(id: 'node', size: const Size(30, 20))
+            ..position = const Offset(60, 60);
+          final controller = controllerFromScene(
+            Scene(
+              layers: <ContentLayer>[
+                ContentLayer(id: 'layer-auto-70'),
+                ContentLayer(id: 'layer-auto-71', nodes: <SceneNode>[rect]),
+              ],
+            ),
+          );
+          addTearDown(controller.dispose);
+          controller.selection.setSelection(const <NodeId>{'node'});
+
+          final activeSession = sceneControllerViewRuntimeOf(controller)
+              .createPointerSession(
+                isMounted: () => true,
+                hasLiveRawPointers: () => false,
+              );
+          final otherSession = sceneControllerViewRuntimeOf(controller)
+              .createPointerSession(
+                isMounted: () => true,
+                hasLiveRawPointers: () => false,
+              );
+
+          activeSession.handleRoutedSample(
+            const PointerSample(
+              pointerId: 1,
+              position: Offset(60, 60),
+              timestampMs: 1,
+              phase: PointerPhase.down,
+              kind: PointerDeviceKind.touch,
+            ),
+            shouldTrackSignals: false,
+          );
+          activeSession.handleRoutedSample(
+            const PointerSample(
+              pointerId: 1,
+              position: Offset(90, 60),
+              timestampMs: 2,
+              phase: PointerPhase.move,
+              kind: PointerDeviceKind.touch,
+            ),
+            shouldTrackSignals: false,
+          );
+
+          otherSession.dispose();
+
+          activeSession.handleRoutedSample(
+            const PointerSample(
+              pointerId: 1,
+              position: Offset(90, 60),
+              timestampMs: 3,
+              phase: PointerPhase.up,
+              kind: PointerDeviceKind.touch,
+            ),
+            shouldTrackSignals: false,
+          );
+
+          final movedNode =
+              nodeById(controller.snapshot, 'node') as RectNodeSnapshot;
+          expect(movedNode.transform.tx, closeTo(90, 1e-6));
+          expect(movedNode.transform.ty, closeTo(60, 1e-6));
+        },
+      );
 
       test(
         'move mode rejects all public scene/selection mutations while active',

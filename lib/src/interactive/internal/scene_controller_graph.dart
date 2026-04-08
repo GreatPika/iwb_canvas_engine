@@ -171,10 +171,6 @@ bool sceneControllerGraphIsDisposed(SceneControllerGraph graph) {
   return graph.interactionRuntime.isDisposed;
 }
 
-void resetSceneControllerGraphInteractiveState(SceneControllerGraph graph) {
-  graph.interactionRuntime.resetInteractiveState();
-}
-
 void disposeSceneControllerGraph(SceneControllerGraph graph) {
   graph.interactionRuntime.dispose();
 }
@@ -226,7 +222,7 @@ SceneControllerSceneMutations _createSceneMutations({
     mutations: interactionRuntime.mutationBoundary,
     ensureExternalMutationAllowed:
         interactionRuntime.ensureExternalMutationAllowed,
-    resetActiveGestureBeforeExternalMutation:
-        interactionRuntime.resetActiveGestureBeforeExternalMutation,
+    interruptForExternalMutation:
+        interactionRuntime.interruptForExternalMutation,
   );
 }

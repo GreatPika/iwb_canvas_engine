@@ -5,6 +5,7 @@ import 'pointer_session_token.dart';
 import 'interactive_draw_coordinator.dart';
 import 'interactive_double_tap_router.dart';
 import 'interactive_event_dispatcher.dart';
+import 'interactive_gesture_machine.dart';
 import 'interactive_gesture_router.dart';
 import 'interactive_move_callbacks.dart';
 import 'interactive_move_session.dart';
@@ -114,9 +115,9 @@ class InteractiveRuntime {
 
   void _dispatchPointerFromSession(
     CanvasPointerInput input,
-    PointerSessionToken _,
+    PointerSessionToken token,
   ) {
-    _dispatchPointer(input);
+    _dispatchPointer(input, sessionToken: token);
   }
 
   void _dispatchDoubleTapFromSession(
@@ -127,13 +128,17 @@ class InteractiveRuntime {
     _dispatchDoubleTap(position: position, timestampMs: timestampMs);
   }
 
-  void _dispatchPointer(CanvasPointerInput input) {
+  void _dispatchPointer(
+    CanvasPointerInput input, {
+    PointerSessionToken? sessionToken,
+  }) {
     if (_handlingPointer) {
       throw StateError('Reentrant handlePointer(...) is not allowed.');
     }
     final resolvedSample = _pointerNormalizer.normalize(
       input,
       resolveTimestampMs: events.resolveTimestampMs,
+      sessionToken: sessionToken,
     );
     if (resolvedSample == null) {
       return;
@@ -145,9 +150,12 @@ class InteractiveRuntime {
         _debugBeforePointerDispatchHook?.call();
         return true;
       }());
-      _gestureRouter.dispatchPointerSample(resolvedSample);
+      _gestureRouter.dispatchPointerSample(
+        resolvedSample,
+        sessionToken: sessionToken,
+      );
     } finally {
-      _pointerNormalizer.release(resolvedSample);
+      _pointerNormalizer.release(resolvedSample, sessionToken: sessionToken);
       _handlingPointer = false;
     }
   }
@@ -159,12 +167,17 @@ class InteractiveRuntime {
     );
   }
 
-  void resetInteractiveState() {
-    if (_gestureRouter.resetGestureWasMove()) {
-      _moveSession.resetGestureState();
-    }
-    _moveSession.setSelectionRect(null);
-    _drawCoordinator.resetOwnedState();
+  void interruptForInteractionConfigChange() {
+    _interruptInteractiveState();
+  }
+
+  void interruptForExternalMutation() {
+    _interruptInteractiveState();
+  }
+
+  void detachPointerSession(PointerSessionToken token) {
+    _pointerNormalizer.detachSession(token);
+    _detachInteractiveStateForSession(token);
   }
 
   void clearPointerNormalizationState() {
@@ -176,9 +189,46 @@ class InteractiveRuntime {
       return;
     }
     _isDisposed = true;
-    _gestureRouter.resetGestureWasMove();
+    _gestureRouter.interruptActiveGesture();
     _pointerNormalizer.clear();
     _moveSession.dispose();
     _drawCoordinator.dispose();
+  }
+
+  void _interruptInteractiveState() {
+    final family = _gestureRouter.interruptActiveGesture();
+    if (family == InteractiveGestureFamily.move) {
+      _moveSession.interruptGesture();
+    } else {
+      _moveSession.setSelectionRect(null);
+    }
+    _drawCoordinator.resetOwnedState();
+  }
+
+  void _detachInteractiveStateForSession(PointerSessionToken token) {
+    final didChange = _detachOwnedStateForFamily(
+      _gestureRouter.detachPointerSession(token),
+    );
+    if (didChange) {
+      callbacks.scheduleNotify();
+    }
+  }
+
+  bool _detachOwnedStateForFamily(InteractiveGestureFamily? family) {
+    switch (family) {
+      case InteractiveGestureFamily.move:
+        return _moveSession.detachOwningSession();
+      case InteractiveGestureFamily.draw:
+        final didChange =
+            _drawCoordinator.hasPendingLineStart ||
+            _drawCoordinator.hasActiveStrokePoints ||
+            _drawCoordinator.activeLinePreviewStart != null ||
+            _drawCoordinator.activeLinePreviewEnd != null ||
+            _drawCoordinator.activeEraserPointsLength > 0;
+        _drawCoordinator.resetOwnedState();
+        return didChange;
+      case null:
+        return false;
+    }
   }
 }

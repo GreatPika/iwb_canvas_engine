@@ -89,7 +89,7 @@ class SceneControllerInteraction implements Listenable {
     _access.runtime.ensurePublicSideEffectAllowed('setMode');
     if (mode == value) return;
 
-    _access.runtime.resetInteractiveState();
+    _access.runtime.interruptForInteractionConfigChange();
     _access.config.mode = value;
 
     if (value == CanvasMode.draw &&
@@ -104,7 +104,7 @@ class SceneControllerInteraction implements Listenable {
   void setDrawTool(DrawTool value) {
     _access.runtime.ensurePublicSideEffectAllowed('setDrawTool');
     if (drawTool == value) return;
-    _access.runtime.resetInteractiveState();
+    _access.runtime.interruptForInteractionConfigChange();
     _access.config.drawTool = value;
     _access.runtime.scheduleNotify();
   }

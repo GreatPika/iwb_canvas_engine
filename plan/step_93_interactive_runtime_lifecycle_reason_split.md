@@ -194,7 +194,7 @@ distinct interactive-runtime lifecycle owners instead of a shared reset path.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Lifecycle Reasons Are Split And Owned
+### Slice 1. [x] Lifecycle Reasons Are Split And Owned
 
 #### Slice Contract
 

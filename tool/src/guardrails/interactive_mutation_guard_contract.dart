@@ -24,8 +24,7 @@ final class MutationOwnerGuardSpec {
 
 const String ensureExternalMutationAllowedCall =
     'ensureExternalMutationAllowed';
-const String resetActiveGestureBeforeExternalMutationCall =
-    'resetActiveGestureBeforeExternalMutation';
+const String interruptForExternalMutationCall = 'interruptForExternalMutation';
 
 const List<MutationOwnerPolicySpec> selectionMutationOwnerPolicies =
     <MutationOwnerPolicySpec>[
@@ -121,12 +120,12 @@ const List<MutationOwnerPolicySpec> sceneMutationOwnerPolicies =
       MutationOwnerPolicySpec(
         methodName: 'setCameraOffset',
         policyIndex: 2,
-        policyCall: resetActiveGestureBeforeExternalMutationCall,
+        policyCall: interruptForExternalMutationCall,
       ),
       MutationOwnerPolicySpec(
         methodName: 'replaceScene',
         policyIndex: 1,
-        policyCall: resetActiveGestureBeforeExternalMutationCall,
+        policyCall: interruptForExternalMutationCall,
       ),
     ];
 

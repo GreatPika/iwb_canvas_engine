@@ -1,13 +1,17 @@
+import 'pointer_session_token.dart';
+
 enum InteractiveGestureFamily { move, draw }
 
 final class InteractiveActiveGesture {
   const InteractiveActiveGesture({
     required this.pointerId,
+    required this.sessionToken,
     required this.family,
     required this.dragStartSlop,
   });
 
   final int pointerId;
+  final PointerSessionToken? sessionToken;
   final InteractiveGestureFamily family;
   final double dragStartSlop;
 }
@@ -22,11 +26,20 @@ class InteractiveGestureMachine {
   bool get isActiveDrawGesture =>
       _activeGesture?.family == InteractiveGestureFamily.draw;
 
-  bool ownsPointer(int pointerId) => _activeGesture?.pointerId == pointerId;
-
-  InteractiveActiveGesture? activeGestureForPointer(int pointerId) {
+  bool ownsPointer(int pointerId, {PointerSessionToken? sessionToken}) {
     final activeGesture = _activeGesture;
-    if (activeGesture == null || activeGesture.pointerId != pointerId) {
+    return activeGesture?.pointerId == pointerId &&
+        activeGesture?.sessionToken == sessionToken;
+  }
+
+  InteractiveActiveGesture? activeGestureForPointer(
+    int pointerId, {
+    PointerSessionToken? sessionToken,
+  }) {
+    final activeGesture = _activeGesture;
+    if (activeGesture == null ||
+        activeGesture.pointerId != pointerId ||
+        activeGesture.sessionToken != sessionToken) {
       return null;
     }
     return activeGesture;
@@ -34,6 +47,7 @@ class InteractiveGestureMachine {
 
   InteractiveActiveGesture? begin({
     required int pointerId,
+    PointerSessionToken? sessionToken,
     required InteractiveGestureFamily family,
     required double dragStartSlop,
   }) {
@@ -42,6 +56,7 @@ class InteractiveGestureMachine {
     }
     final activeGesture = InteractiveActiveGesture(
       pointerId: pointerId,
+      sessionToken: sessionToken,
       family: family,
       dragStartSlop: dragStartSlop,
     );
@@ -49,9 +64,17 @@ class InteractiveGestureMachine {
     return activeGesture;
   }
 
-  InteractiveGestureFamily? reset() {
+  InteractiveGestureFamily? interruptActiveGesture() {
     final family = _activeGesture?.family;
     _activeGesture = null;
     return family;
+  }
+
+  InteractiveGestureFamily? detachSession(PointerSessionToken token) {
+    final activeGesture = _activeGesture;
+    if (activeGesture == null || activeGesture.sessionToken != token) {
+      return null;
+    }
+    return interruptActiveGesture();
   }
 }

@@ -52,7 +52,7 @@ void main() {
       expect(machine.activeFamily, InteractiveGestureFamily.move);
       expect(machine.activeDragStartSlop, 12);
 
-      expect(machine.reset(), InteractiveGestureFamily.move);
+      expect(machine.interruptActiveGesture(), InteractiveGestureFamily.move);
       expect(machine.hasActiveGesture, isFalse);
       expect(machine.activeGesture, isNull);
       expect(machine.activeFamily, isNull);

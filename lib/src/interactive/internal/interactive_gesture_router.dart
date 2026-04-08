@@ -6,6 +6,7 @@ import '../../core/interaction_types.dart';
 import 'interactive_draw_coordinator.dart';
 import 'interactive_gesture_machine.dart';
 import 'interactive_move_session.dart';
+import 'pointer_session_token.dart';
 import 'interactive_runtime_callbacks.dart';
 
 class InteractiveGestureRouter {
@@ -24,19 +25,26 @@ class InteractiveGestureRouter {
   bool get hasActiveGesture => _gestureMachine.hasActiveGesture;
   bool get isActiveDrawGesture => _gestureMachine.isActiveDrawGesture;
 
-  bool resetGestureWasMove() {
-    return _gestureMachine.reset() == InteractiveGestureFamily.move;
+  InteractiveGestureFamily? interruptActiveGesture() {
+    return _gestureMachine.interruptActiveGesture();
   }
 
-  void dispatchPointerSample(PointerSample sample) {
+  InteractiveGestureFamily? detachPointerSession(PointerSessionToken token) {
+    return _gestureMachine.detachSession(token);
+  }
+
+  void dispatchPointerSample(
+    PointerSample sample, {
+    PointerSessionToken? sessionToken,
+  }) {
     switch (sample.phase) {
       case PointerPhase.down:
-        _handlePointerDown(sample);
+        _handlePointerDown(sample, sessionToken: sessionToken);
         break;
       case PointerPhase.move:
       case PointerPhase.up:
       case PointerPhase.cancel:
-        _handleOwnedPointerSample(sample);
+        _handleOwnedPointerSample(sample, sessionToken: sessionToken);
         break;
     }
   }
@@ -49,10 +57,14 @@ class InteractiveGestureRouter {
     return phase == PointerPhase.up || phase == PointerPhase.cancel;
   }
 
-  void _handlePointerDown(PointerSample sample) {
+  void _handlePointerDown(
+    PointerSample sample, {
+    PointerSessionToken? sessionToken,
+  }) {
     final family = _currentGestureFamily;
     final activeGesture = _gestureMachine.begin(
       pointerId: sample.pointerId,
+      sessionToken: sessionToken,
       family: family,
       dragStartSlop: callbacks.readDragStartSlop(),
     );
@@ -67,14 +79,18 @@ class InteractiveGestureRouter {
         dragStartSlop: activeGesture.dragStartSlop,
       );
     } catch (_) {
-      _gestureMachine.reset();
+      _gestureMachine.interruptActiveGesture();
       rethrow;
     }
   }
 
-  void _handleOwnedPointerSample(PointerSample sample) {
+  void _handleOwnedPointerSample(
+    PointerSample sample, {
+    PointerSessionToken? sessionToken,
+  }) {
     final activeGesture = _gestureMachine.activeGestureForPointer(
       sample.pointerId,
+      sessionToken: sessionToken,
     );
     if (activeGesture == null) {
       return;
@@ -87,7 +103,7 @@ class InteractiveGestureRouter {
       );
     } finally {
       if (isTerminalPointerPhase(sample.phase)) {
-        _gestureMachine.reset();
+        _gestureMachine.interruptActiveGesture();
       }
     }
   }
