@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../../contract/canvas_pointer_input.dart';
+import 'pointer_session_token.dart';
 import 'interactive_draw_coordinator.dart';
 import 'interactive_double_tap_router.dart';
 import 'interactive_event_dispatcher.dart';
@@ -88,7 +89,45 @@ class InteractiveRuntime {
   int get debugEraserPreciseSegmentChecks =>
       _drawCoordinator.debugEraserPreciseSegmentChecks;
 
-  void handlePointer(CanvasPointerInput input) {
+  void handlePublicPointer(CanvasPointerInput input) {
+    _dispatchPointer(input);
+  }
+
+  void handlePointerFromSession(
+    CanvasPointerInput input, {
+    required PointerSessionToken token,
+  }) {
+    _dispatchPointerFromSession(input, token);
+  }
+
+  void handlePublicDoubleTap({required Offset position, int? timestampMs}) {
+    _dispatchDoubleTap(position: position, timestampMs: timestampMs);
+  }
+
+  void handleDoubleTapFromSession({
+    required Offset position,
+    int? timestampMs,
+    required PointerSessionToken token,
+  }) {
+    _dispatchDoubleTapFromSession(position, timestampMs, token);
+  }
+
+  void _dispatchPointerFromSession(
+    CanvasPointerInput input,
+    PointerSessionToken _,
+  ) {
+    _dispatchPointer(input);
+  }
+
+  void _dispatchDoubleTapFromSession(
+    Offset position,
+    int? timestampMs,
+    PointerSessionToken _,
+  ) {
+    _dispatchDoubleTap(position: position, timestampMs: timestampMs);
+  }
+
+  void _dispatchPointer(CanvasPointerInput input) {
     if (_handlingPointer) {
       throw StateError('Reentrant handlePointer(...) is not allowed.');
     }
@@ -113,7 +152,7 @@ class InteractiveRuntime {
     }
   }
 
-  void handleDoubleTap({required Offset position, int? timestampMs}) {
+  void _dispatchDoubleTap({required Offset position, int? timestampMs}) {
     _doubleTapRouter.handleDoubleTap(
       position: position,
       timestampMs: timestampMs,

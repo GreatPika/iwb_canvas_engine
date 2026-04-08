@@ -621,6 +621,142 @@ void _registerInteractiveArchitectureGuardrailTests() {
     }
   });
 
+  test(
+    'rejects pointer session that routes through public interaction facade',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/internal/scene_controller_pointer_session.dart',
+          '''
+class SceneControllerInteraction {}
+class PointerInputTracker {}
+class PointerSessionToken {}
+
+class SceneControllerPointerSession {
+  final _ownerListenable = _OwnerListenable();
+  final _PendingTapFlushScheduler scheduler = _PendingTapFlushScheduler();
+  final SceneControllerInteraction _readInteraction = SceneControllerInteraction();
+
+  void createTracker() {
+    PointerInputTracker();
+  }
+
+  void attach() {
+    _ownerListenable.addListener(Object());
+    _readInteraction.runtimeType;
+  }
+}
+
+class _PendingTapFlushScheduler {}
+
+class _OwnerListenable {
+  void addListener(Object listener) {}
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'pointer session must stay owned by SceneControllerPointerSession',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects interactive runtime that keeps pre-split pointer boundary names',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/internal/interactive_runtime.dart',
+          '''
+import '../contract/canvas_pointer_input.dart';
+import 'pointer_session_token.dart';
+import 'interactive_draw_coordinator.dart';
+import 'interactive_event_dispatcher.dart';
+import 'interactive_move_session.dart';
+import 'interactive_pointer_normalizer.dart';
+import 'interactive_gesture_router.dart';
+import 'interactive_double_tap_router.dart';
+
+class InteractiveRuntime {
+  void handlePointer(CanvasPointerInput input) {}
+
+  void handleDoubleTap({required Object position, int? timestampMs}) {}
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'InteractiveRuntime must keep event timeline and draw-local geometry outside the boundary runtime',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
   test('rejects retained scene access seam', () async {
     final sandbox = await createGuardrailsSandbox();
     try {

@@ -282,12 +282,16 @@ bool canSelect(Object node) => true;
     sandbox,
     'lib/src/interactive/internal/interactive_runtime.dart',
     '''
+import 'dart:ui';
+
+import '../contract/canvas_pointer_input.dart';
 import 'interactive_draw_coordinator.dart';
 import 'interactive_event_dispatcher.dart';
 import 'interactive_move_session.dart';
 import 'interactive_pointer_normalizer.dart';
 import 'interactive_gesture_router.dart';
 import 'interactive_double_tap_router.dart';
+import 'pointer_session_token.dart';
 import 'scene_controller_mutation_boundary.dart';
 
 class InteractiveRuntime {
@@ -306,11 +310,36 @@ class InteractiveRuntime {
     // commitEraseNodes: mutationBoundary.commitEraseNodes,
   }
 
-  void handlePointer(Object input) {}
+  void handlePublicPointer(CanvasPointerInput input) {}
 
-  void handleDoubleTap({required Object position, int? timestampMs}) {
+  void handlePointerFromSession(
+    CanvasPointerInput input, {
+    required PointerSessionToken token,
+  }) {}
+
+  void handlePublicDoubleTap({required Offset position, int? timestampMs}) {
     events.resolveTimestampMs(timestampMs);
   }
+
+  void handleDoubleTapFromSession({
+    required Offset position,
+    int? timestampMs,
+    required PointerSessionToken token,
+  }) {
+    events.resolveTimestampMs(timestampMs);
+  }
+}
+''',
+  );
+  writeSandboxFile(sandbox, 'lib/src/contract/canvas_pointer_input.dart', '''
+class CanvasPointerInput {}
+''');
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/pointer_session_token.dart',
+    '''
+final class PointerSessionToken {
+  PointerSessionToken();
 }
 ''',
   );
@@ -500,6 +529,10 @@ abstract interface class SceneViewPointerSession {
     sandbox,
     'lib/src/interactive/internal/scene_controller_interaction_runtime.dart',
     '''
+import 'dart:ui';
+
+import '../contract/canvas_pointer_input.dart';
+import 'pointer_session_token.dart';
 import 'scene_controller_mutation_boundary.dart';
 
 class SceneControllerInteractionRuntime {
@@ -518,6 +551,33 @@ class SceneControllerInteractionRuntime {
     //     mutationBoundary.commitDrawLineFromWorldSegment,
     // commitEraseNodes: mutationBoundary.commitEraseNodes,
   }
+
+  PointerSessionToken createPointerSessionToken() => PointerSessionToken();
+
+  void releasePointerSessionToken(PointerSessionToken token) {
+    _ensureKnownPointerSessionToken(token);
+  }
+
+  void handlePublicPointer(CanvasPointerInput input) {}
+
+  void handlePublicDoubleTap({required Offset position, int? timestampMs}) {}
+
+  void handlePointerFromSession(
+    CanvasPointerInput input, {
+    required PointerSessionToken token,
+  }) {
+    _ensureKnownPointerSessionToken(token);
+  }
+
+  void handleDoubleTapFromSession({
+    required Offset position,
+    int? timestampMs,
+    required PointerSessionToken token,
+  }) {
+    _ensureKnownPointerSessionToken(token);
+  }
+
+  void _ensureKnownPointerSessionToken(PointerSessionToken token) {}
 }
 ''',
   );
@@ -606,7 +666,14 @@ class SceneViewRenderSurface {
     '''
 class PointerInputTracker {}
 
+class PointerSessionToken {}
+
 class SceneControllerPointerSession {
+  SceneControllerPointerSession({
+    required PointerSessionToken token,
+    required void Function(PointerSessionToken token) releasePointerSessionToken,
+  });
+
   final _ownerListenable = _OwnerListenable();
   final _PendingTapFlushScheduler scheduler = _PendingTapFlushScheduler();
 
@@ -617,6 +684,21 @@ class SceneControllerPointerSession {
   void attach() {
     _ownerListenable.addListener(Object());
   }
+
+  void route(PointerSessionToken token) {
+    _handlePointerFromSession(token);
+    _handleDoubleTapFromSession(token);
+  }
+
+  void dispose(PointerSessionToken token) {
+    _releasePointerSessionToken(token);
+  }
+
+  void _handlePointerFromSession(PointerSessionToken token) {}
+
+  void _handleDoubleTapFromSession(PointerSessionToken token) {}
+
+  void _releasePointerSessionToken(PointerSessionToken token) {}
 }
 
 class _PendingTapFlushScheduler {}
@@ -646,16 +728,29 @@ final class SceneControllerSceneViewRuntime {
   });
 
   final renderState = SceneControllerSceneViewRenderState();
+  final _interactionRuntime = _InteractionRuntime();
 
   Object createPointerSession({
     required Object isMounted,
     required Object hasLiveRawPointers,
   }) {
-    return SceneControllerPointerSession();
+    createPointerSessionToken();
+    return SceneControllerPointerSession(
+      token: createPointerSessionToken(),
+      releasePointerSessionToken:
+          _interactionRuntime.releasePointerSessionToken,
+      // handlePointerFromSession: _interactionRuntime.handlePointerFromSession,
+    );
   }
+
+  Object createPointerSessionToken() => Object();
 }
 
 class SceneControllerInteraction {}
+class _InteractionRuntime {
+  void releasePointerSessionToken() {}
+  void handlePointerFromSession() {}
+}
 
 final class SceneControllerSceneViewRenderState {
   SceneControllerInteraction get _interaction => SceneControllerInteraction();

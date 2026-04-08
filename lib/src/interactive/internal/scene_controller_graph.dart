@@ -99,6 +99,7 @@ SceneControllerGraph _assembleSceneControllerGraph(
     readControllerEpoch: request.readControllerEpoch,
     readPreviewDeltaResolver: request.readPreviewDeltaResolver,
     readInteraction: () => request.owner.interaction,
+    interactionRuntime: interactionRuntime,
   );
 
   return (

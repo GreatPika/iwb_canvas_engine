@@ -64,6 +64,9 @@ void main() {
     final pointerSessionSource = _read(
       'lib/src/interactive/internal/scene_controller_pointer_session.dart',
     );
+    final pointerSessionTokenSource = _read(
+      'lib/src/interactive/internal/pointer_session_token.dart',
+    );
     final runtimeContractSource = _read(
       'lib/src/contract/scene_view_runtime.dart',
     );
@@ -225,7 +228,26 @@ void main() {
       viewRuntimeSource,
       contains('SceneControllerInteraction get _interaction'),
     );
+    expect(viewRuntimeSource, contains('createPointerSessionToken()'));
+    expect(viewRuntimeSource, contains('releasePointerSessionToken:'));
+    expect(
+      viewRuntimeSource,
+      contains('_interactionRuntime.releasePointerSessionToken'),
+    );
+    expect(
+      viewRuntimeSource,
+      contains(
+        'handlePointerFromSession: _interactionRuntime.handlePointerFromSession,',
+      ),
+    );
     expect(viewRuntimeSource, contains('snapshot => _readSnapshot()'));
+
+    expect(
+      pointerSessionTokenSource,
+      contains('final class PointerSessionToken'),
+    );
+    expect(pointerSessionTokenSource, isNot(contains('operator ==')));
+    expect(pointerSessionTokenSource, isNot(contains('hashCode')));
 
     expect(
       pointerSessionSource,
@@ -234,7 +256,22 @@ void main() {
     expect(pointerSessionSource, contains('PointerInputTracker('));
     expect(pointerSessionSource, contains('_PendingTapFlushScheduler'));
     expect(pointerSessionSource, contains('_ownerListenable.addListener('));
+    expect(pointerSessionSource, contains('PointerSessionToken token,'));
+    expect(pointerSessionSource, contains('releasePointerSessionToken'));
+    expect(pointerSessionSource, contains('PointerSessionToken token'));
+    expect(pointerSessionSource, contains('_handlePointerFromSession('));
+    expect(pointerSessionSource, contains('_handleDoubleTapFromSession('));
+    expect(
+      pointerSessionSource,
+      contains('_releasePointerSessionToken(_token);'),
+    );
     expect(pointerSessionSource, isNot(contains('handleControllerChanged(')));
+    expect(pointerSessionSource, isNot(contains('SceneControllerInteraction')));
+    expect(pointerSessionSource, isNot(contains('_readInteraction')));
+    expect(pointerSessionSource, isNot(contains('Object? owner')));
+    expect(pointerSessionSource, isNot(contains('Object? session')));
+    expect(pointerSessionSource, isNot(contains('Object? context')));
+    expect(pointerSessionSource, isNot(contains('runtimeType')));
 
     final handlePointerBody = _extractMethodBody(
       source: interactionSource,
@@ -242,10 +279,22 @@ void main() {
     );
     expect(
       handlePointerBody,
-      contains('_access.runtime.handlePointer(input);'),
+      contains('_access.runtime.handlePublicPointer(input);'),
     );
     expect(handlePointerBody, isNot(contains('_pointerNormalizer')));
     expect(handlePointerBody, isNot(contains('_gestureRouter')));
+    expect(handlePointerBody, isNot(contains('PointerSessionToken')));
+
+    final handleDoubleTapBody = _extractMethodBody(
+      source: interactionSource,
+      methodStart:
+          'void handleDoubleTap({required Offset position, int? timestampMs})',
+    );
+    expect(
+      handleDoubleTapBody,
+      contains('_access.runtime.handlePublicDoubleTap('),
+    );
+    expect(handleDoubleTapBody, isNot(contains('PointerSessionToken')));
 
     expect(
       mutationBoundarySource,
@@ -311,6 +360,76 @@ void main() {
       contains("import 'interactive_event_dispatcher.dart';"),
     );
     expect(runtimeSource, contains("import 'interactive_move_session.dart';"));
+    expect(
+      runtimeSource,
+      contains('void handlePublicPointer(CanvasPointerInput input)'),
+    );
+    expect(runtimeSource, contains('void handlePointerFromSession('));
+    expect(
+      runtimeSource,
+      contains(
+        'void handlePublicDoubleTap({required Offset position, int? timestampMs})',
+      ),
+    );
+    expect(runtimeSource, contains('void handleDoubleTapFromSession({'));
+    expect(
+      runtimeSource,
+      isNot(contains('void handlePointer(CanvasPointerInput input)')),
+    );
+    expect(
+      runtimeSource,
+      isNot(
+        contains(
+          'void handleDoubleTap({required Offset position, int? timestampMs})',
+        ),
+      ),
+    );
+    expect(
+      interactionRuntimeSource,
+      contains("import 'pointer_session_token.dart';"),
+    );
+    expect(
+      interactionRuntimeSource,
+      contains('PointerSessionToken createPointerSessionToken()'),
+    );
+    expect(
+      interactionRuntimeSource,
+      contains('void releasePointerSessionToken(PointerSessionToken token)'),
+    );
+    expect(
+      interactionRuntimeSource,
+      contains('void handlePublicPointer(CanvasPointerInput input)'),
+    );
+    expect(
+      interactionRuntimeSource,
+      contains(
+        'void handlePublicDoubleTap({required Offset position, int? timestampMs})',
+      ),
+    );
+    expect(
+      interactionRuntimeSource,
+      contains('void handlePointerFromSession('),
+    );
+    expect(
+      interactionRuntimeSource,
+      contains('void handleDoubleTapFromSession({'),
+    );
+    expect(
+      interactionRuntimeSource,
+      contains('_ensureKnownPointerSessionToken(token);'),
+    );
+    expect(
+      interactionRuntimeSource,
+      isNot(contains('void handlePointer(CanvasPointerInput input)')),
+    );
+    expect(
+      interactionRuntimeSource,
+      isNot(
+        contains(
+          'void handleDoubleTap({required Offset position, int? timestampMs})',
+        ),
+      ),
+    );
     expect(
       interactionRuntimeSource,
       contains("import 'scene_controller_mutation_boundary.dart';"),

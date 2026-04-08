@@ -765,6 +765,10 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
     'src${Platform.pathSeparator}view${Platform.pathSeparator}'
     'scene_view_interactive_pointer_host.dart',
   );
+  final pointerSessionTokenFile = _interactiveSupportFile(
+    context,
+    'internal/pointer_session_token.dart',
+  );
 
   final missingOwnerViolation =
       _missingInteractiveOwnerViolation(context, <File, String>{
@@ -785,6 +789,7 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
         selectionMutationsFile: 'SceneControllerSelectionMutations',
         mutationBoundaryFile: 'SceneControllerMutationBoundary',
         pointerSessionFile: 'SceneControllerPointerSession',
+        pointerSessionTokenFile: 'PointerSessionToken',
         selectionActionsFile: 'InteractiveSelectionActions',
         ownerGraphFile: 'createSceneControllerGraph',
         viewRuntimeFile: 'SceneControllerSceneViewRuntime',
@@ -834,6 +839,7 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
   final facadeSource = facadeFile.readAsStringSync();
   final interactionSource = interactionFile.readAsStringSync();
   final runtimeSource = runtimeFile.readAsStringSync();
+  final pointerSessionTokenSource = pointerSessionTokenFile.readAsStringSync();
   final eventSource = eventFile.readAsStringSync();
   final drawCoordinatorSource = drawCoordinatorFile.readAsStringSync();
   final drawEraserSource = drawEraserFile.readAsStringSync();
@@ -950,6 +956,10 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
           'final class SceneControllerSceneViewRenderState',
           'SceneControllerPointerSession(',
           'SceneControllerInteraction get _interaction',
+          'createPointerSessionToken()',
+          'releasePointerSessionToken:',
+          '_interactionRuntime.releasePointerSessionToken',
+          'handlePointerFromSession: _interactionRuntime.handlePointerFromSession',
         ],
         bannedTokens: const <String>[
           'SceneControllerPointerSemantics',
@@ -958,6 +968,20 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
         message:
             'interactive API violation: SceneControllerSceneViewRuntime must '
             'own the render-state adapter and pointer-session factory.',
+      ) ??
+      _requireSourceTokens(
+        source: pointerSessionTokenSource,
+        filePath: _interactiveFilePosixPath(context, pointerSessionTokenFile),
+        requiredTokens: const <String>['final class PointerSessionToken'],
+        bannedTokens: const <String>[
+          'operator ==',
+          'hashCode',
+          ' id;',
+          'toJson(',
+        ],
+        message:
+            'interactive API violation: PointerSessionToken must remain an '
+            'opaque internal nominal token.',
       ) ??
       _requireSourceTokens(
         source: runtimeSource,
@@ -969,6 +993,10 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
           "import 'interactive_pointer_normalizer.dart';",
           "import 'interactive_gesture_router.dart';",
           "import 'interactive_double_tap_router.dart';",
+          'void handlePublicPointer(CanvasPointerInput input)',
+          'void handlePublicDoubleTap({required Offset position, int? timestampMs})',
+          'handlePointerFromSession(',
+          'handleDoubleTapFromSession({',
         ],
         bannedTokens: const <String>[
           'StreamController<',
@@ -977,6 +1005,8 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
           '_actions =',
           '_editTextRequests =',
           '_eraserHitsLine(',
+          'void handlePointer(CanvasPointerInput input)',
+          'void handleDoubleTap({required Offset position, int? timestampMs})',
         ],
         message:
             'interactive API violation: InteractiveRuntime must keep event '
@@ -986,7 +1016,15 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
         source: interactionRuntimeSource,
         filePath: _interactiveFilePosixPath(context, interactionRuntimeFile),
         requiredTokens: const <String>[
+          "import 'pointer_session_token.dart';",
           "import 'scene_controller_mutation_boundary.dart';",
+          'PointerSessionToken createPointerSessionToken()',
+          'void releasePointerSessionToken(PointerSessionToken token)',
+          'void handlePublicPointer(CanvasPointerInput input)',
+          'void handlePublicDoubleTap({required Offset position, int? timestampMs})',
+          'handlePointerFromSession(',
+          'handleDoubleTapFromSession({',
+          '_ensureKnownPointerSessionToken(token);',
           'writeSelectionReplace: mutationBoundary.setSelection,',
           'writeSelectionClear: mutationBoundary.clearSelection,',
           'commitMoveSelection: mutationBoundary.commitMoveSelection,',
@@ -1000,6 +1038,8 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
           'request.storeController.draw.writeDrawStroke',
           'request.storeController.draw.writeDrawLineFromWorldSegment',
           'request.storeController.draw.writeEraseNodes',
+          'void handlePointer(CanvasPointerInput input)',
+          'void handleDoubleTap({required Offset position, int? timestampMs})',
         ],
         message:
             'interactive API violation: SceneControllerInteractionRuntime '
@@ -1089,8 +1129,22 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
           'PointerInputTracker(',
           '_PendingTapFlushScheduler',
           '_ownerListenable.addListener(',
+          'PointerSessionToken token,',
+          'releasePointerSessionToken',
+          'PointerSessionToken token',
+          '_handlePointerFromSession(',
+          '_handleDoubleTapFromSession(',
+          '_releasePointerSessionToken(',
         ],
-        bannedTokens: const <String>['handleControllerChanged('],
+        bannedTokens: const <String>[
+          'handleControllerChanged(',
+          'SceneControllerInteraction',
+          '_readInteraction',
+          'Object? owner',
+          'Object? session',
+          'Object? context',
+          'runtimeType',
+        ],
         message:
             'interactive API violation: pointer session must stay owned by '
             'SceneControllerPointerSession.',

@@ -10,8 +10,9 @@ import 'interactive_draw_style.dart';
 import 'interactive_event_dispatcher.dart';
 import 'interactive_runtime.dart';
 import 'interactive_runtime_callbacks.dart';
-import 'scene_controller_mutation_boundary.dart';
 import 'interactive_selection_actions.dart';
+import 'pointer_session_token.dart';
+import 'scene_controller_mutation_boundary.dart';
 
 final class SceneControllerInteractionRuntime {
   SceneControllerInteractionRuntime._({
@@ -31,6 +32,8 @@ final class SceneControllerInteractionRuntime {
   final SceneControllerMutationBoundary mutationBoundary;
   final InteractiveSelectionActions selectionActions;
   final InteractiveRuntime runtime;
+  final Set<PointerSessionToken> _pointerSessionTokens =
+      <PointerSessionToken>{};
 
   bool _isDisposed = false;
   bool _moveCommitResolverActive = false;
@@ -92,6 +95,7 @@ final class SceneControllerInteractionRuntime {
 
   void dispose() {
     _isDisposed = true;
+    _pointerSessionTokens.clear();
     notifyScheduler.dispose();
     runtime.dispose();
     events.dispose();
@@ -189,6 +193,16 @@ extension SceneControllerInteractionRuntimeStateApi
 
 extension SceneControllerInteractionRuntimeMutationApi
     on SceneControllerInteractionRuntime {
+  PointerSessionToken createPointerSessionToken() {
+    final token = PointerSessionToken();
+    _pointerSessionTokens.add(token);
+    return token;
+  }
+
+  void releasePointerSessionToken(PointerSessionToken token) {
+    _pointerSessionTokens.remove(token);
+  }
+
   int resolveTimestampMs(int? timestampMs) {
     return events.resolveTimestampMs(timestampMs);
   }
@@ -233,12 +247,39 @@ extension SceneControllerInteractionRuntimeMutationApi
     runtime.setBeforePointerDispatchHook(hook);
   }
 
-  void handlePointer(CanvasPointerInput input) {
-    runtime.handlePointer(input);
+  void handlePublicPointer(CanvasPointerInput input) {
+    runtime.handlePublicPointer(input);
   }
 
-  void handleDoubleTap({required Offset position, int? timestampMs}) {
-    runtime.handleDoubleTap(position: position, timestampMs: timestampMs);
+  void handlePublicDoubleTap({required Offset position, int? timestampMs}) {
+    runtime.handlePublicDoubleTap(position: position, timestampMs: timestampMs);
+  }
+
+  void handlePointerFromSession(
+    CanvasPointerInput input, {
+    required PointerSessionToken token,
+  }) {
+    _ensureKnownPointerSessionToken(token);
+    runtime.handlePointerFromSession(input, token: token);
+  }
+
+  void handleDoubleTapFromSession({
+    required Offset position,
+    int? timestampMs,
+    required PointerSessionToken token,
+  }) {
+    _ensureKnownPointerSessionToken(token);
+    runtime.handleDoubleTapFromSession(
+      position: position,
+      timestampMs: timestampMs,
+      token: token,
+    );
+  }
+
+  void _ensureKnownPointerSessionToken(PointerSessionToken token) {
+    if (!_pointerSessionTokens.contains(token)) {
+      throw StateError('Unknown pointer session token.');
+    }
   }
 }
 

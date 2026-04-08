@@ -74,12 +74,12 @@ class SceneControllerInteraction implements Listenable {
 
   void handlePointer(CanvasPointerInput input) {
     _access.runtime.ensurePublicSideEffectAllowed('handlePointer');
-    _access.runtime.handlePointer(input);
+    _access.runtime.handlePublicPointer(input);
   }
 
   void handleDoubleTap({required Offset position, int? timestampMs}) {
     _access.runtime.ensurePublicSideEffectAllowed('handleDoubleTap');
-    _access.runtime.handleDoubleTap(
+    _access.runtime.handlePublicDoubleTap(
       position: position,
       timestampMs: timestampMs,
     );

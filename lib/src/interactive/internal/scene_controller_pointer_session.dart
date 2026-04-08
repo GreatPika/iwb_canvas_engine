@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 
@@ -7,33 +8,62 @@ import '../../contract/pointer_input.dart';
 import '../../contract/pointer_phase_codec.dart';
 import '../../contract/scene_view_runtime.dart';
 import '../../core/pointer_input_tracker.dart';
-import '../scene_controller_interaction.dart';
+import 'pointer_session_token.dart';
 
 void _discardPointerSignal(PointerSignal _) {}
 
 final class SceneControllerPointerSession implements SceneViewPointerSession {
   SceneControllerPointerSession({
     required Listenable ownerListenable,
-    required SceneControllerInteraction Function() readInteraction,
+    required PointerSessionToken token,
+    required PointerInputSettings Function() readPointerSettings,
     required bool Function() isMounted,
     required bool Function() hasLiveRawPointers,
+    required void Function(PointerSessionToken token)
+    releasePointerSessionToken,
+    required void Function(
+      CanvasPointerInput input, {
+      required PointerSessionToken token,
+    })
+    handlePointerFromSession,
+    required void Function({
+      required Offset position,
+      int? timestampMs,
+      required PointerSessionToken token,
+    })
+    handleDoubleTapFromSession,
   }) : _ownerListenable = ownerListenable,
-       _readInteraction = readInteraction,
+       _token = token,
+       _readPointerSettings = readPointerSettings,
        _isMounted = isMounted,
        _hasLiveRawPointers = hasLiveRawPointers,
-       _appliedPointerSettings = readInteraction().pointerSettings,
-       _pointerTracker = PointerInputTracker(
-         settings: readInteraction().pointerSettings,
-       ) {
+       _releasePointerSessionToken = releasePointerSessionToken,
+       _handlePointerFromSession = handlePointerFromSession,
+       _handleDoubleTapFromSession = handleDoubleTapFromSession,
+       _appliedPointerSettings = readPointerSettings(),
+       _pointerTracker = PointerInputTracker(settings: readPointerSettings()) {
     _pointerTrackerGeneration = 1;
     _ownerListener = _handleOwnerChanged;
     _ownerListenable.addListener(_ownerListener);
   }
 
   final Listenable _ownerListenable;
-  final SceneControllerInteraction Function() _readInteraction;
+  final PointerSessionToken _token;
+  final PointerInputSettings Function() _readPointerSettings;
   final bool Function() _isMounted;
   final bool Function() _hasLiveRawPointers;
+  final void Function(PointerSessionToken token) _releasePointerSessionToken;
+  final void Function(
+    CanvasPointerInput input, {
+    required PointerSessionToken token,
+  })
+  _handlePointerFromSession;
+  final void Function({
+    required Offset position,
+    int? timestampMs,
+    required PointerSessionToken token,
+  })
+  _handleDoubleTapFromSession;
   final _PendingTapFlushScheduler _pendingTapFlushScheduler =
       _PendingTapFlushScheduler();
   late final VoidCallback _ownerListener;
@@ -42,6 +72,7 @@ final class SceneControllerPointerSession implements SceneViewPointerSession {
   late PointerInputSettings _appliedPointerSettings;
   PointerInputSettings? _pendingPointerSettings;
   int _pointerTrackerGeneration = 0;
+  bool _disposed = false;
 
   @override
   int? get pendingTapFlushTimestampMs =>
@@ -49,8 +80,13 @@ final class SceneControllerPointerSession implements SceneViewPointerSession {
 
   @override
   void dispose() {
+    if (_disposed) {
+      return;
+    }
+    _disposed = true;
     _ownerListenable.removeListener(_ownerListener);
     _pendingTapFlushScheduler.dispose();
+    _releasePointerSessionToken(_token);
   }
 
   @override
@@ -58,8 +94,7 @@ final class SceneControllerPointerSession implements SceneViewPointerSession {
     PointerSample sample, {
     required bool shouldTrackSignals,
   }) {
-    final interaction = _readInteraction();
-    interaction.handlePointer(
+    _handlePointerFromSession(
       CanvasPointerInput(
         pointerId: sample.pointerId,
         position: sample.position,
@@ -67,9 +102,10 @@ final class SceneControllerPointerSession implements SceneViewPointerSession {
         phase: canvasPointerPhaseFromPointerPhase(sample.phase),
         kind: sample.kind,
       ),
+      token: _token,
     );
     if (shouldTrackSignals) {
-      _emitTrackedSignals(interaction, sample);
+      _emitTrackedSignals(sample);
     }
     _syncPendingFlushTimer(referenceTimestampMs: sample.timestampMs);
   }
@@ -80,7 +116,7 @@ final class SceneControllerPointerSession implements SceneViewPointerSession {
     required int pointerId,
     required int referenceTimestampMs,
   }) {
-    _readInteraction().handlePointer(input);
+    _handlePointerFromSession(input, token: _token);
     _pointerTracker.discardPointer(pointerId);
     _syncPendingFlushTimer(referenceTimestampMs: referenceTimestampMs);
   }
@@ -98,22 +134,20 @@ final class SceneControllerPointerSession implements SceneViewPointerSession {
       return;
     }
     _adoptPointerSettings(
-      _readInteraction().pointerSettings,
+      _readPointerSettings(),
       routerHasLiveRawPointers: _hasLiveRawPointers(),
     );
   }
 
-  void _emitTrackedSignals(
-    SceneControllerInteraction interaction,
-    PointerSample sample,
-  ) {
+  void _emitTrackedSignals(PointerSample sample) {
     for (final signal in _pointerTracker.handle(sample)) {
       if (signal.type != PointerSignalType.doubleTap) {
         continue;
       }
-      interaction.handleDoubleTap(
+      _handleDoubleTapFromSession(
         position: signal.position,
         timestampMs: signal.timestampMs,
+        token: _token,
       );
     }
   }

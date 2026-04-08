@@ -186,7 +186,7 @@ This file is the plan index. Each step has a dedicated document so steps can be 
 - [x] [Шаг 89. Сделать публичный `SceneSnapshot` глобально валидным по определению](plan/step_89_scene_snapshot_global_validity_by_construction.md)
 - [x] [Шаг 90. Выровнять shared scene-metadata value contracts между runtime / public / import](plan/step_90_shared_scene_metadata_value_contract_alignment.md)
 - [x] [Шаг 91. Замкнуть финальную scene-document architecture на docs, invariants, guardrails и roadmap](plan/step_91_scene_document_architecture_closure.md)
-- [ ] [Шаг 92. Убрать session-routed input из public interactive facade](plan/step_92_session_routed_input_boundary.md)
+- [x] [Шаг 92. Убрать session-routed input из public interactive facade](plan/step_92_session_routed_input_boundary.md)
 - [ ] [Шаг 93. Развести interruption, detachment и dispose reasons в interactive runtime](plan/step_93_interactive_runtime_lifecycle_reason_split.md)
 - [ ] [Шаг 94. Зафиксировать draw-style snapshot и owner-scoped pending line](plan/step_94_draw_style_snapshot_and_pending_line_ownership.md)
 - [ ] [Шаг 95. Ввести `SceneViewPointerSession.detach()` и host ordering для session replacement](plan/step_95_pointer_session_detach_contract_and_host_ordering.md)

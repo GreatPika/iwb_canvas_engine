@@ -6,6 +6,7 @@ import '../../contract/scene_view_render_state.dart';
 import '../../contract/scene_view_runtime.dart';
 import '../../contract/snapshot.dart';
 import '../scene_controller_interaction.dart';
+import 'scene_controller_interaction_runtime.dart';
 import 'scene_controller_pointer_session.dart';
 
 final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
@@ -18,9 +19,11 @@ final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
     required int Function() readControllerEpoch,
     required Offset Function(NodeId nodeId) Function() readPreviewDeltaResolver,
     required SceneControllerInteraction Function() readInteraction,
+    required SceneControllerInteractionRuntime interactionRuntime,
   }) : _ownerListenable = ownerListenable,
        _ensurePublicSideEffectAllowed = ensurePublicSideEffectAllowed,
        _readInteraction = readInteraction,
+       _interactionRuntime = interactionRuntime,
        _renderState = SceneControllerSceneViewRenderState(
          ownerListenable: ownerListenable,
          readSnapshot: readSnapshot,
@@ -34,6 +37,7 @@ final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
   final void Function(String operation, {bool allowAfterDispose})
   _ensurePublicSideEffectAllowed;
   final SceneControllerInteraction Function() _readInteraction;
+  final SceneControllerInteractionRuntime _interactionRuntime;
   final SceneControllerSceneViewRenderState _renderState;
 
   @override
@@ -45,11 +49,18 @@ final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
     required bool Function() hasLiveRawPointers,
   }) {
     _ensurePublicSideEffectAllowed('createPointerSession');
+    final token = _interactionRuntime.createPointerSessionToken();
     return SceneControllerPointerSession(
       ownerListenable: _ownerListenable,
-      readInteraction: _readInteraction,
+      token: token,
+      readPointerSettings: () => _readInteraction().pointerSettings,
       isMounted: isMounted,
       hasLiveRawPointers: hasLiveRawPointers,
+      releasePointerSessionToken:
+          _interactionRuntime.releasePointerSessionToken,
+      handlePointerFromSession: _interactionRuntime.handlePointerFromSession,
+      handleDoubleTapFromSession:
+          _interactionRuntime.handleDoubleTapFromSession,
     );
   }
 }

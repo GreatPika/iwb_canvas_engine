@@ -235,7 +235,7 @@ session boundary.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Session-Routed Input Leaves The Public Facade
+### Slice 1. [x] Session-Routed Input Leaves The Public Facade
 
 #### Slice Contract
 

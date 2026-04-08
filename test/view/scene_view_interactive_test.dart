@@ -4,12 +4,15 @@ import 'package:flutter/material.dart' hide Image;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
 import 'package:iwb_canvas_engine/src/contract/canvas_pointer_input.dart';
-import 'package:iwb_canvas_engine/src/contract/pointer_input.dart'
-    show PointerInputSettings;
+import 'package:iwb_canvas_engine/src/contract/pointer_input.dart';
+import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
+import 'package:iwb_canvas_engine/src/contract/scene_view_runtime.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/core/interaction_types.dart';
 import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_internal_access.dart';
+import 'package:iwb_canvas_engine/src/interactive/internal/pointer_session_token.dart';
+import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_pointer_session.dart';
 import 'package:iwb_canvas_engine/src/interactive/scene_controller_interaction.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 import 'package:iwb_canvas_engine/src/view/scene_view_interactive_overlay_painter.dart';
@@ -62,6 +65,23 @@ Widget _host(
       height: 120,
       child: SceneViewInteractive(
         controller: controller,
+        imageResolver: imageResolver,
+      ),
+    ),
+  );
+}
+
+Widget _runtimeHost(
+  SceneViewRuntime runtime, {
+  Image? Function(String imageId)? imageResolver,
+}) {
+  return Directionality(
+    textDirection: TextDirection.ltr,
+    child: SizedBox(
+      width: 120,
+      height: 120,
+      child: SceneViewRuntimeHost(
+        runtime: runtime,
         imageResolver: imageResolver,
       ),
     ),
@@ -431,13 +451,13 @@ void main() {
     tester,
   ) async {
     // INV:INV-ENG-VIEW-RUNTIME-HOST-DEBUG-PROBES
-    final controller = _RecordingPointerController(
-      initialSnapshot: _snapshot(text: 'timer'),
+    final runtime = _RecordingSceneViewRuntime(
+      snapshot: _snapshot(text: 'timer'),
       pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 1),
     );
-    addTearDown(controller.dispose);
+    addTearDown(runtime.dispose);
 
-    await tester.pumpWidget(_host(controller));
+    await tester.pumpWidget(_runtimeHost(runtime));
     await tester.pump();
 
     final gesture = await tester.startGesture(const Offset(50, 50), pointer: 8);
@@ -451,7 +471,7 @@ void main() {
       isNotNull,
     );
     expect(
-      controller.recordedInputs
+      runtime.recordedInputs
           .map((input) => (input.pointerId, input.phase))
           .toList(),
       <(int, CanvasPointerPhase)>[
@@ -469,7 +489,7 @@ void main() {
       isNull,
     );
     expect(
-      controller.recordedInputs
+      runtime.recordedInputs
           .map((input) => (input.pointerId, input.phase))
           .toList(),
       <(int, CanvasPointerPhase)>[
@@ -482,12 +502,12 @@ void main() {
   testWidgets(
     'SceneViewInteractive drops invalid down and move before host side effects',
     (tester) async {
-      final controller = _RecordingPointerController(
-        initialSnapshot: _snapshot(text: 'invalid-host-admission'),
+      final runtime = _RecordingSceneViewRuntime(
+        snapshot: _snapshot(text: 'invalid-host-admission'),
       );
-      addTearDown(controller.dispose);
+      addTearDown(runtime.dispose);
 
-      await tester.pumpWidget(_host(controller));
+      await tester.pumpWidget(_runtimeHost(runtime));
       await tester.pump();
 
       _dispatchHostPointerEvent(
@@ -500,7 +520,7 @@ void main() {
       );
       await tester.pump();
 
-      expect(controller.recordedInputs, isEmpty);
+      expect(runtime.recordedInputs, isEmpty);
       expect(
         debugSceneViewInteractiveLiveRawPointerCountOf(
           _sceneViewRuntimeHostContext(tester),
@@ -533,7 +553,7 @@ void main() {
       await tester.pump();
 
       expect(
-        controller.recordedInputs
+        runtime.recordedInputs
             .map((input) => (input.pointerId, input.phase))
             .toList(),
         <(int, CanvasPointerPhase)>[(1, CanvasPointerPhase.down)],
@@ -556,12 +576,12 @@ void main() {
   testWidgets(
     'SceneViewInteractive forwards invalid terminal events without rewriting terminal phase',
     (tester) async {
-      final controller = _RecordingPointerController(
-        initialSnapshot: _snapshot(text: 'invalid-terminal-cleanup'),
+      final runtime = _RecordingSceneViewRuntime(
+        snapshot: _snapshot(text: 'invalid-terminal-cleanup'),
       );
-      addTearDown(controller.dispose);
+      addTearDown(runtime.dispose);
 
-      await tester.pumpWidget(_host(controller));
+      await tester.pumpWidget(_runtimeHost(runtime));
       await tester.pump();
 
       _dispatchHostPointerEvent(
@@ -583,7 +603,7 @@ void main() {
       await tester.pump();
 
       expect(
-        controller.recordedInputs
+        runtime.recordedInputs
             .map((input) => (input.pointerId, input.phase))
             .toList(),
         <(int, CanvasPointerPhase)>[
@@ -609,7 +629,7 @@ void main() {
       await tester.pump();
 
       expect(
-        controller.recordedInputs
+        runtime.recordedInputs
             .map((input) => (input.pointerId, input.phase))
             .toList(),
         <(int, CanvasPointerPhase)>[
@@ -624,12 +644,12 @@ void main() {
   testWidgets(
     'SceneViewInteractive keeps remaining raw pointers alive after invalid terminal cleanup',
     (tester) async {
-      final controller = _RecordingPointerController(
-        initialSnapshot: _snapshot(text: 'invalid-terminal-non-idle'),
+      final runtime = _RecordingSceneViewRuntime(
+        snapshot: _snapshot(text: 'invalid-terminal-non-idle'),
       );
-      addTearDown(controller.dispose);
+      addTearDown(runtime.dispose);
 
-      await tester.pumpWidget(_host(controller));
+      await tester.pumpWidget(_runtimeHost(runtime));
       await tester.pump();
 
       _dispatchHostPointerEvent(
@@ -665,7 +685,7 @@ void main() {
         1,
       );
       expect(
-        controller.recordedInputs
+        runtime.recordedInputs
             .map((input) => (input.pointerId, input.phase))
             .toList(),
         <(int, CanvasPointerPhase)>[
@@ -680,18 +700,18 @@ void main() {
   testWidgets(
     'SceneViewInteractive cancels stale pending tap timer on controller swap',
     (tester) async {
-      final controllerA = _RecordingPointerController(
-        initialSnapshot: _snapshot(text: 'swap-a'),
+      final runtimeA = _RecordingSceneViewRuntime(
+        snapshot: _snapshot(text: 'swap-a'),
         pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 100),
       );
-      final controllerB = _RecordingPointerController(
-        initialSnapshot: _snapshot(text: 'swap-b'),
+      final runtimeB = _RecordingSceneViewRuntime(
+        snapshot: _snapshot(text: 'swap-b'),
         pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 100),
       );
-      addTearDown(controllerA.dispose);
-      addTearDown(controllerB.dispose);
+      addTearDown(runtimeA.dispose);
+      addTearDown(runtimeB.dispose);
 
-      await tester.pumpWidget(_host(controllerA));
+      await tester.pumpWidget(_runtimeHost(runtimeA));
       await tester.pump();
 
       final gesture = await tester.startGesture(
@@ -708,7 +728,7 @@ void main() {
         isNotNull,
       );
 
-      await tester.pumpWidget(_host(controllerB));
+      await tester.pumpWidget(_runtimeHost(runtimeB));
       await tester.pump();
       expect(
         debugSceneViewInteractivePendingTapFlushTimestampMsOf(
@@ -724,7 +744,7 @@ void main() {
         ),
         isNull,
       );
-      expect(controllerB.recordedInputs, isEmpty);
+      expect(runtimeB.recordedInputs, isEmpty);
     },
   );
 
@@ -1038,12 +1058,12 @@ void main() {
   testWidgets(
     'SceneViewInteractive drops stray non-down host events before controller routing',
     (tester) async {
-      final controller = _RecordingPointerController(
-        initialSnapshot: _snapshot(text: 'stray'),
+      final runtime = _RecordingSceneViewRuntime(
+        snapshot: _snapshot(text: 'stray'),
       );
-      addTearDown(controller.dispose);
+      addTearDown(runtime.dispose);
 
-      await tester.pumpWidget(_host(controller));
+      await tester.pumpWidget(_runtimeHost(runtime));
       await tester.pump();
 
       await tester.sendEventToBinding(
@@ -1062,7 +1082,7 @@ void main() {
       );
       await tester.pump();
 
-      expect(controller.recordedInputs, isEmpty);
+      expect(runtime.recordedInputs, isEmpty);
     },
   );
 
@@ -1071,13 +1091,13 @@ void main() {
     (tester) async {
       // INV:INV-ENG-VIEW-POINTER-SLOT-LIFECYCLE
       // INV:INV-ENG-VIEW-ACTIVE-POINTER-GATE
-      final controller = _RecordingPointerController(
-        initialSnapshot: _snapshot(text: 'idle-gate'),
+      final runtime = _RecordingSceneViewRuntime(
+        snapshot: _snapshot(text: 'idle-gate'),
         pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 300),
       );
-      addTearDown(controller.dispose);
+      addTearDown(runtime.dispose);
 
-      await tester.pumpWidget(_host(controller));
+      await tester.pumpWidget(_runtimeHost(runtime));
       await tester.pump();
 
       final first = await tester.startGesture(
@@ -1088,7 +1108,7 @@ void main() {
         const Offset(12, 10),
         pointer: 702,
       );
-      controller.interaction.setPointerSettings(
+      runtime.updatePointerSettings(
         const PointerInputSettings(doubleTapMaxDelayMs: 1),
       );
       await tester.pump();
@@ -1107,7 +1127,7 @@ void main() {
       await tester.pump();
 
       expect(
-        controller.recordedInputs
+        runtime.recordedInputs
             .map((input) => (input.pointerId, input.phase))
             .toList(),
         <(int, CanvasPointerPhase)>[
@@ -1496,23 +1516,6 @@ class _OverlayTestController extends SceneController {
   SceneControllerInteraction get interaction => _interaction;
 }
 
-class _RecordingPointerController extends SceneController {
-  _RecordingPointerController({
-    required super.initialSnapshot,
-    super.pointerSettings,
-  });
-
-  final List<CanvasPointerInput> recordedInputs = <CanvasPointerInput>[];
-  late final SceneControllerInteraction _interaction =
-      _RecordingPointerInteraction(
-        sceneControllerInternalInteractionAccessForTest(this),
-        recordedInputs,
-      );
-
-  @override
-  SceneControllerInteraction get interaction => _interaction;
-}
-
 class _OverlayTestInteraction extends SceneControllerInteraction {
   _OverlayTestInteraction(super.access, this.controller);
 
@@ -1549,14 +1552,157 @@ class _OverlayTestInteraction extends SceneControllerInteraction {
   Color get activeLinePreviewColor => controller.lineColor;
 }
 
-class _RecordingPointerInteraction extends SceneControllerInteraction {
-  _RecordingPointerInteraction(super.access, this.recordedInputs);
+class _RecordingSceneViewRuntime implements SceneViewRuntime {
+  _RecordingSceneViewRuntime({
+    required SceneSnapshot snapshot,
+    PointerInputSettings pointerSettings = const PointerInputSettings(),
+  }) : _renderState = _StaticSceneViewRenderState(snapshot),
+       _pointerSettings = pointerSettings;
 
-  final List<CanvasPointerInput> recordedInputs;
+  final ChangeNotifier _ownerListenable = ChangeNotifier();
+  final _StaticSceneViewRenderState _renderState;
+  final List<CanvasPointerInput> recordedInputs = <CanvasPointerInput>[];
+  final List<(Offset position, int? timestampMs)> recordedDoubleTaps =
+      <(Offset position, int? timestampMs)>[];
+  PointerInputSettings _pointerSettings;
+
+  void updatePointerSettings(PointerInputSettings value) {
+    _pointerSettings = value;
+    _ownerListenable.notifyListeners();
+  }
+
+  void dispose() {
+    _ownerListenable.dispose();
+  }
 
   @override
-  void handlePointer(CanvasPointerInput input) {
-    recordedInputs.add(input);
-    super.handlePointer(input);
+  SceneViewRenderState get renderState => _renderState;
+
+  @override
+  SceneViewPointerSession createPointerSession({
+    required bool Function() isMounted,
+    required bool Function() hasLiveRawPointers,
+  }) {
+    return _RecordingSceneViewPointerSession(
+      SceneControllerPointerSession(
+        ownerListenable: _ownerListenable,
+        token: PointerSessionToken(),
+        readPointerSettings: () => _pointerSettings,
+        isMounted: isMounted,
+        hasLiveRawPointers: hasLiveRawPointers,
+        releasePointerSessionToken: (_) {},
+        handlePointerFromSession:
+            (CanvasPointerInput input, {required PointerSessionToken token}) {
+              recordedInputs.add(input);
+            },
+        handleDoubleTapFromSession:
+            ({
+              required Offset position,
+              int? timestampMs,
+              required PointerSessionToken token,
+            }) {
+              recordedDoubleTaps.add((position, timestampMs));
+            },
+      ),
+    );
   }
+}
+
+class _RecordingSceneViewPointerSession implements SceneViewPointerSession {
+  _RecordingSceneViewPointerSession(this._delegate);
+
+  final SceneViewPointerSession _delegate;
+
+  @override
+  int? get pendingTapFlushTimestampMs => _delegate.pendingTapFlushTimestampMs;
+
+  @override
+  void dispose() {
+    _delegate.dispose();
+  }
+
+  @override
+  void handleInvalidTerminalSample({
+    required CanvasPointerInput input,
+    required int pointerId,
+    required int referenceTimestampMs,
+  }) {
+    _delegate.handleInvalidTerminalSample(
+      input: input,
+      pointerId: pointerId,
+      referenceTimestampMs: referenceTimestampMs,
+    );
+  }
+
+  @override
+  void handleRawPointerRelease({required bool isIdleAfterRelease}) {
+    _delegate.handleRawPointerRelease(isIdleAfterRelease: isIdleAfterRelease);
+  }
+
+  @override
+  void handleRoutedSample(
+    PointerSample sample, {
+    required bool shouldTrackSignals,
+  }) {
+    _delegate.handleRoutedSample(
+      sample,
+      shouldTrackSignals: shouldTrackSignals,
+    );
+  }
+}
+
+class _StaticSceneViewRenderState extends ChangeNotifier
+    implements SceneViewRenderState {
+  _StaticSceneViewRenderState(this._snapshot);
+
+  final SceneSnapshot _snapshot;
+
+  @override
+  SceneSnapshot get snapshot => _snapshot;
+
+  @override
+  Set<NodeId> get selectedNodeIds => const <NodeId>{};
+
+  @override
+  int get controllerEpoch => 0;
+
+  @override
+  Rect? get selectionRect => null;
+
+  @override
+  Offset get cameraOffset => _snapshot.camera.offset;
+
+  @override
+  Offset Function(NodeId nodeId) get previewDeltaResolver =>
+      (_) => Offset.zero;
+
+  @override
+  bool get hasActiveStrokePreview => false;
+
+  @override
+  List<Offset> get activeStrokePreviewPoints => const <Offset>[];
+
+  @override
+  double get activeStrokePreviewThickness => 1;
+
+  @override
+  Color get activeStrokePreviewColor => const Color(0xFF000000);
+
+  @override
+  double get activeStrokePreviewOpacity => 1;
+
+  @override
+  bool get hasActiveLinePreview => false;
+
+  @override
+  Offset? get activeLinePreviewStart => null;
+
+  @override
+  Offset? get activeLinePreviewEnd => null;
+
+  @override
+  double get activeLinePreviewThickness => 1;
+
+  @override
+  Color get activeLinePreviewColor => const Color(0xFF000000);
 }
