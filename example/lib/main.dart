@@ -1372,12 +1372,14 @@ class _PendingLineMarkerPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final start = controller.interaction.pendingLineStart;
-    if (start == null) return;
+    final color = controller.interaction.pendingLineColor;
+    final thickness = controller.interaction.pendingLineThickness;
+    if (start == null || color == null || thickness == null) return;
     final viewPos = _toViewPoint(start, controller.snapshot.camera.offset);
     final paint = Paint()
-      ..color = controller.interaction.drawColor.withAlpha(200)
+      ..color = color.withAlpha(200)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
+      ..strokeWidth = thickness;
     canvas.drawCircle(viewPos, 12, paint);
     canvas.drawLine(
       viewPos + const Offset(-15, 0),

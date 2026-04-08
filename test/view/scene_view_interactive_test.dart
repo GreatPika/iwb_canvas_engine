@@ -1485,6 +1485,50 @@ void main() {
     expect(controller.activeLinePreviewThickness, 5);
     expect(controller.activeLinePreviewColor, const Color(0xFF0055AA));
   });
+
+  test(
+    'SceneController render getters expose captured draw style during active preview',
+    () {
+      final controller = SceneController(
+        initialSnapshot: _snapshot(text: 'captured-preview'),
+        dragStartSlop: 0.001,
+      );
+      addTearDown(controller.dispose);
+
+      controller.interaction.setMode(CanvasMode.draw);
+      controller.interaction.setDrawTool(DrawTool.line);
+      controller.interaction.lineThickness = 4;
+      controller.interaction.setDrawColor(const Color(0xFF3366AA));
+
+      controller.interaction.handlePointer(
+        const CanvasPointerInput(
+          pointerId: 1,
+          position: Offset(10, 10),
+          timestampMs: 1,
+          phase: CanvasPointerPhase.down,
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      controller.interaction.handlePointer(
+        const CanvasPointerInput(
+          pointerId: 1,
+          position: Offset(30, 10),
+          timestampMs: 2,
+          phase: CanvasPointerPhase.move,
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+
+      controller.interaction.lineThickness = 9;
+      controller.interaction.setDrawColor(const Color(0xFFAA5500));
+
+      expect(controller.hasActiveLinePreview, isTrue);
+      expect(controller.activeLinePreviewStart, const Offset(10, 10));
+      expect(controller.activeLinePreviewEnd, const Offset(30, 10));
+      expect(controller.activeLinePreviewThickness, 4);
+      expect(controller.activeLinePreviewColor, const Color(0xFF3366AA));
+    },
+  );
 }
 
 class _OverlayTestController extends SceneController {

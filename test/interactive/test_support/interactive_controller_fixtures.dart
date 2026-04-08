@@ -97,6 +97,8 @@ class InteractiveControllerStableState {
     required this.pendingLineStart,
     required this.pendingLineTimestampMs,
     required this.hasPendingLineStart,
+    required this.pendingLineColor,
+    required this.pendingLineThickness,
   });
 
   final SceneSnapshot snapshot;
@@ -115,6 +117,8 @@ class InteractiveControllerStableState {
   final Offset? pendingLineStart;
   final int? pendingLineTimestampMs;
   final bool hasPendingLineStart;
+  final Color? pendingLineColor;
+  final double? pendingLineThickness;
 }
 
 class DisposeMatrixCase {
@@ -144,6 +148,8 @@ InteractiveControllerStableState captureStableState(
     pendingLineStart: controller.interaction.pendingLineStart,
     pendingLineTimestampMs: controller.interaction.pendingLineTimestampMs,
     hasPendingLineStart: controller.interaction.hasPendingLineStart,
+    pendingLineColor: controller.interaction.pendingLineColor,
+    pendingLineThickness: controller.interaction.pendingLineThickness,
   );
 }
 
@@ -175,6 +181,11 @@ void expectStableStateUnchanged(
   expect(
     controller.interaction.hasPendingLineStart,
     before.hasPendingLineStart,
+  );
+  expect(controller.interaction.pendingLineColor, before.pendingLineColor);
+  expect(
+    controller.interaction.pendingLineThickness,
+    before.pendingLineThickness,
   );
 }
 

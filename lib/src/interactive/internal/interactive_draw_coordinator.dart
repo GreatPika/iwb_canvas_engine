@@ -9,6 +9,7 @@ import 'interactive_draw_line_engine.dart';
 import 'interactive_draw_stroke_engine.dart';
 import 'interactive_draw_style.dart';
 import 'interactive_draw_terminal_router.dart';
+import 'pointer_session_token.dart';
 
 export 'interactive_draw_coordinator_callbacks.dart'
     show InteractiveDrawCoordinatorCallbacks;
@@ -59,6 +60,8 @@ class InteractiveDrawCoordinator {
   Offset? get pendingLineStart => _lineEngine.pendingLineStart;
   int? get pendingLineTimestampMs => _lineEngine.pendingLineTimestampMs;
   bool get hasPendingLineStart => _lineEngine.hasPendingLineStart;
+  InteractiveDrawStyle? get pendingLineStyle => _lineEngine.pendingLineStyle;
+  InteractiveDrawStyle? get activeDrawStyle => _gestureSession.capturedStyle;
 
   List<Offset> get activeStrokePreviewPoints =>
       _strokeEngine.activeStrokePreviewPoints;
@@ -76,27 +79,23 @@ class InteractiveDrawCoordinator {
   void handlePointer(
     PointerSample sample,
     Offset scenePoint, {
-    required InteractiveDrawStyle style,
+    required PointerSessionToken? sessionToken,
+    InteractiveDrawStyle? capturedStyle,
     required double dragStartSlop,
   }) {
     switch (sample.phase) {
       case PointerPhase.down:
-        _handleDown(scenePoint, drawTool: style.drawTool);
+        _handleDown(
+          scenePoint,
+          capturedStyle: capturedStyle,
+          sessionToken: sessionToken,
+        );
         break;
       case PointerPhase.move:
-        _handleMove(
-          scenePoint,
-          drawTool: style.drawTool,
-          dragStartSlop: dragStartSlop,
-        );
+        _handleMove(scenePoint, dragStartSlop: dragStartSlop);
         break;
       case PointerPhase.up:
-        _handleUp(
-          sample,
-          scenePoint,
-          style: style,
-          dragStartSlop: dragStartSlop,
-        );
+        _handleUp(sample, scenePoint, dragStartSlop: dragStartSlop);
         break;
       case PointerPhase.cancel:
         cancelGesture();
@@ -117,7 +116,9 @@ class InteractiveDrawCoordinator {
   }
 
   void cancelGesture() {
-    resetOwnedState();
+    final sessionToken = _gestureSession.sessionToken;
+    resetGestureState();
+    _lineEngine.clearPendingLineOwnedBy(sessionToken);
     callbacks.onStateChanged();
   }
 
@@ -125,10 +126,25 @@ class InteractiveDrawCoordinator {
     _lineEngine.dispose();
   }
 
-  void _handleDown(Offset scenePoint, {required DrawTool drawTool}) {
-    _gestureSession.start(scenePoint);
+  bool detachPointerSession(PointerSessionToken token) {
+    return _lineEngine.detachPendingLine(token);
+  }
 
-    switch (drawTool) {
+  void _handleDown(
+    Offset scenePoint, {
+    required InteractiveDrawStyle? capturedStyle,
+    required PointerSessionToken? sessionToken,
+  }) {
+    if (capturedStyle == null) {
+      return;
+    }
+    _gestureSession.start(
+      scenePoint,
+      capturedStyle: capturedStyle,
+      sessionToken: sessionToken,
+    );
+
+    switch (capturedStyle.drawTool) {
       case DrawTool.pen:
       case DrawTool.highlighter:
         _strokeEngine.handleDown(scenePoint);
@@ -142,12 +158,12 @@ class InteractiveDrawCoordinator {
     }
   }
 
-  void _handleMove(
-    Offset scenePoint, {
-    required DrawTool drawTool,
-    required double dragStartSlop,
-  }) {
-    switch (drawTool) {
+  void _handleMove(Offset scenePoint, {required double dragStartSlop}) {
+    final capturedStyle = _gestureSession.capturedStyle;
+    if (capturedStyle == null) {
+      return;
+    }
+    switch (capturedStyle.drawTool) {
       case DrawTool.pen:
       case DrawTool.highlighter:
         _strokeEngine.handleMove(scenePoint);
@@ -158,6 +174,7 @@ class InteractiveDrawCoordinator {
             scenePoint,
             downScene: _gestureSession.downScene,
             moved: _gestureSession.moved,
+            sessionToken: _gestureSession.sessionToken,
             dragStartSlop: dragStartSlop,
           ),
         );
@@ -171,14 +188,8 @@ class InteractiveDrawCoordinator {
   void _handleUp(
     PointerSample sample,
     Offset scenePoint, {
-    required InteractiveDrawStyle style,
     required double dragStartSlop,
   }) {
-    _terminalRouter.handleUp(
-      sample,
-      scenePoint,
-      style: style,
-      dragStartSlop: dragStartSlop,
-    );
+    _terminalRouter.handleUp(sample, scenePoint, dragStartSlop: dragStartSlop);
   }
 }

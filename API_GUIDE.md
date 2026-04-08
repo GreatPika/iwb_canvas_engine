@@ -460,6 +460,8 @@ Interactive preview state:
 - `pendingLineStart`
 - `pendingLineTimestampMs`
 - `hasPendingLineStart`
+- `pendingLineColor`
+- `pendingLineThickness`
 - `hasActiveStrokePreview`
 - `activeStrokePreviewPoints`
 - `activeStrokePreviewThickness`
@@ -470,6 +472,11 @@ Interactive preview state:
 - `activeLinePreviewEnd`
 - `activeLinePreviewThickness`
 - `activeLinePreviewColor`
+
+When `hasPendingLineStart` is `true`, `pendingLineColor` and
+`pendingLineThickness` expose the captured line style that will be used if the
+pending line commits. Live `drawColor` and `lineThickness` remain configuration
+for future gestures only.
 
 Streams:
 

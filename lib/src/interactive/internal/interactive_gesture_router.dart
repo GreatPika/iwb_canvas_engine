@@ -76,6 +76,7 @@ class InteractiveGestureRouter {
       _dispatchPointerToFamily(
         sample,
         family: activeGesture.family,
+        sessionToken: activeGesture.sessionToken,
         dragStartSlop: activeGesture.dragStartSlop,
       );
     } catch (_) {
@@ -99,6 +100,7 @@ class InteractiveGestureRouter {
       _dispatchPointerToFamily(
         sample,
         family: activeGesture.family,
+        sessionToken: activeGesture.sessionToken,
         dragStartSlop: activeGesture.dragStartSlop,
       );
     } finally {
@@ -111,6 +113,7 @@ class InteractiveGestureRouter {
   void _dispatchPointerToFamily(
     PointerSample sample, {
     required InteractiveGestureFamily family,
+    required PointerSessionToken? sessionToken,
     required double dragStartSlop,
   }) {
     final scenePoint = toScenePoint(sample.position);
@@ -126,7 +129,10 @@ class InteractiveGestureRouter {
         _drawCoordinator.handlePointer(
           sample,
           scenePoint,
-          style: callbacks.readDrawStyle(),
+          sessionToken: sessionToken,
+          capturedStyle: sample.phase == PointerPhase.down
+              ? callbacks.readDrawStyle()
+              : null,
           dragStartSlop: dragStartSlop,
         );
         break;

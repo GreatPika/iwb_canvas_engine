@@ -88,11 +88,13 @@ latent state.
    for their full lifetime.
 2. Pending line stores captured style and ownership provenance in one
    owner-local carrier inside `InteractiveDrawLineEngine`.
-3. A different owner can replace an existing pending line but cannot complete
-   it across owners.
+3. A different owner can replace an existing pending line by tap but cannot
+   complete or clear it across owners through terminal or drag lifecycle.
 4. Active preview getters on the controller/runtime read captured draw values
    while the preview is active; mutable config getters remain future-gesture
    state only.
+5. Public pending-line read-side getters expose the pending line's captured
+   color/thickness instead of live mutable draw config.
 
 ## 6. Implementation Specification
 
@@ -164,7 +166,7 @@ latent state.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Draw Snapshot And Owner-Scoped Pending Line
+### Slice 1. [x] Draw Snapshot And Owner-Scoped Pending Line
 
 #### Slice Contract
 
@@ -193,7 +195,7 @@ owner-local carrier inside that file. The carrier must store exactly:
 
 Implement exact owner-scoped pending-line semantics:
 
-- drag gesture clears any existing pending line before active preview
+- drag gesture clears only a matching-owner pending line before active preview
 - first tap with no pending line stores a pending line for the current owner
 - second tap from the same owner commits using the pending line’s captured
   style
@@ -234,7 +236,7 @@ through public manual `interaction.handlePointer(...)`.
 #### Negative Scenarios
 
 - different-owner tap cannot complete an existing pending line
-- different-owner drag cannot reuse an existing pending line
+- different-owner drag cannot reuse or clear an existing pending line
 - post-terminal config changes affect the next gesture immediately
 
 #### Closure Evidence

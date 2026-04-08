@@ -6,6 +6,7 @@ import '../contract/canvas_pointer_input.dart';
 import '../contract/pointer_input.dart';
 import '../contract/snapshot.dart';
 import '../core/interaction_types.dart';
+import 'internal/interactive_draw_style.dart';
 import 'internal/scene_controller_interaction_access.dart';
 import 'internal/scene_controller_interaction_config.dart';
 import 'internal/scene_controller_interaction_runtime.dart';
@@ -36,31 +37,42 @@ class SceneControllerInteraction implements Listenable {
   Offset? get pendingLineStart => _access.runtime.pendingLineStart;
   int? get pendingLineTimestampMs => _access.runtime.pendingLineTimestampMs;
   bool get hasPendingLineStart => _access.runtime.hasPendingLineStart;
+  Color? get pendingLineColor => _access.runtime.pendingLineStyle?.drawColor;
+  double? get pendingLineThickness =>
+      _access.runtime.pendingLineStyle?.lineThickness;
+  InteractiveDrawStyle? get _activeDrawStyle => _access.runtime.activeDrawStyle;
   bool get hasActiveStrokePreview =>
       _access.runtime.isActiveDrawGesture &&
-      (_access.config.drawTool == DrawTool.pen ||
-          _access.config.drawTool == DrawTool.highlighter) &&
+      ((_activeDrawStyle?.drawTool == DrawTool.pen) ||
+          (_activeDrawStyle?.drawTool == DrawTool.highlighter)) &&
       _access.runtime.hasActiveStrokePoints;
   List<Offset> get activeStrokePreviewPoints =>
       _access.runtime.activeStrokePreviewPoints;
   double get activeStrokePreviewThickness =>
-      _access.config.drawTool == DrawTool.highlighter
-      ? _access.config.highlighterThickness
-      : _access.config.penThickness;
-  Color get activeStrokePreviewColor => _access.config.drawColor;
+      (_activeDrawStyle?.drawTool ?? _access.config.drawTool) ==
+          DrawTool.highlighter
+      ? _activeDrawStyle?.highlighterThickness ??
+            _access.config.highlighterThickness
+      : _activeDrawStyle?.penThickness ?? _access.config.penThickness;
+  Color get activeStrokePreviewColor =>
+      _activeDrawStyle?.drawColor ?? _access.config.drawColor;
   double get activeStrokePreviewOpacity =>
-      _access.config.drawTool == DrawTool.highlighter
-      ? _access.config.highlighterOpacity
+      (_activeDrawStyle?.drawTool ?? _access.config.drawTool) ==
+          DrawTool.highlighter
+      ? _activeDrawStyle?.highlighterOpacity ??
+            _access.config.highlighterOpacity
       : 1;
   bool get hasActiveLinePreview =>
       _access.runtime.isActiveDrawGesture &&
-      _access.config.drawTool == DrawTool.line &&
+      _activeDrawStyle?.drawTool == DrawTool.line &&
       _access.runtime.activeLinePreviewStart != null &&
       _access.runtime.activeLinePreviewEnd != null;
   Offset? get activeLinePreviewStart => _access.runtime.activeLinePreviewStart;
   Offset? get activeLinePreviewEnd => _access.runtime.activeLinePreviewEnd;
-  double get activeLinePreviewThickness => _access.config.lineThickness;
-  Color get activeLinePreviewColor => _access.config.drawColor;
+  double get activeLinePreviewThickness =>
+      _activeDrawStyle?.lineThickness ?? _access.config.lineThickness;
+  Color get activeLinePreviewColor =>
+      _activeDrawStyle?.drawColor ?? _access.config.drawColor;
   CanvasMode get mode => _access.config.mode;
   DrawTool get drawTool => _access.config.drawTool;
   Color get drawColor => _access.config.drawColor;

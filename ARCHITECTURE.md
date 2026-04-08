@@ -304,6 +304,10 @@ Ownership decisions for the target state:
   is surfaced before controller code treats it as canonical.
 - Preview state for move/draw gestures is intentionally ephemeral and does not
   mutate committed scene data until commit on `up`.
+- Draw-style capture is single-owner state: active preview reads come from the
+  gesture-start style, and pending two-tap line reads expose the same captured
+  color/thickness that the eventual line commit will use rather than live
+  mutable draw config.
 - Active gesture identity is controller-owned; move/draw helpers do not own a
   competing pointer lock.
 - `SceneControllerMutationBoundary` is the only interactive owner allowed to

@@ -170,11 +170,13 @@ extension SceneControllerInteractionRuntimeStateApi
   Offset? get pendingLineStart => runtime.pendingLineStart;
   int? get pendingLineTimestampMs => runtime.pendingLineTimestampMs;
   bool get hasPendingLineStart => runtime.hasPendingLineStart;
+  InteractiveDrawStyle? get pendingLineStyle => runtime.pendingLineStyle;
   bool get hasActiveGesture => runtime.hasActiveGesture;
   bool get isActiveDrawGesture => runtime.isActiveDrawGesture;
   bool get hasActiveStrokePoints => runtime.hasActiveStrokePoints;
   List<Offset> get activeStrokePreviewPoints =>
       runtime.activeStrokePreviewPoints;
+  InteractiveDrawStyle? get activeDrawStyle => runtime.activeDrawStyle;
   Offset? get activeLinePreviewStart => runtime.activeLinePreviewStart;
   Offset? get activeLinePreviewEnd => runtime.activeLinePreviewEnd;
   int get activeEraserPointsLength => runtime.activeEraserPointsLength;

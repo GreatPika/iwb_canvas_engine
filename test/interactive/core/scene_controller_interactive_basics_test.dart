@@ -42,6 +42,8 @@ void main() {
       expect(controller.interaction.pendingLineStart, isNull);
       expect(controller.interaction.pendingLineTimestampMs, isNull);
       expect(controller.interaction.hasPendingLineStart, isFalse);
+      expect(controller.interaction.pendingLineColor, isNull);
+      expect(controller.interaction.pendingLineThickness, isNull);
       expect(controller.interaction.hasActiveLinePreview, isFalse);
       expect(controller.interaction.pointerSettings.tapSlop, greaterThan(0));
       expect(

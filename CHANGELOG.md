@@ -4,6 +4,10 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ## Unreleased
 
+- Pending two-tap line read-state now exposes captured line color and
+  thickness through `SceneControllerInteraction.pendingLineColor` and
+  `pendingLineThickness`, so host UI can render pending-line markers with the
+  same style that the eventual line commit will use.
 - Added a manual GitHub Actions workflow that builds the `example/` Windows
   desktop app and publishes an Inno Setup `setup.exe` installer artifact for
   install-and-launch smoke testing on Windows machines.

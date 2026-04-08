@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
@@ -230,6 +232,76 @@ void main() {
         },
       );
 
+      test(
+        'active stroke preview and commit keep captured style after config edits',
+        () {
+          final controller = SceneController(
+            initialSnapshot: SceneSnapshot(
+              layers: <ContentLayerSnapshot>[
+                ContentLayerSnapshot(id: 'layer-auto-12'),
+                ContentLayerSnapshot(id: 'layer-auto-13'),
+              ],
+            ),
+          );
+          addTearDown(controller.dispose);
+
+          controller.interaction.setMode(CanvasMode.draw);
+          controller.interaction.setDrawTool(DrawTool.highlighter);
+          controller.interaction.highlighterThickness = 8;
+          controller.interaction.highlighterOpacity = 0.3;
+          controller.interaction.setDrawColor(const Color(0xFF336699));
+
+          controller.interaction.handlePointer(
+            sampleInput(
+              pointerId: 1,
+              position: const Offset(10, 10),
+              timestampMs: 1,
+              phase: CanvasPointerPhase.down,
+            ),
+          );
+          controller.interaction.handlePointer(
+            sampleInput(
+              pointerId: 1,
+              position: const Offset(16, 10),
+              timestampMs: 2,
+              phase: CanvasPointerPhase.move,
+            ),
+          );
+
+          controller.interaction.highlighterThickness = 17;
+          controller.interaction.highlighterOpacity = 0.65;
+          controller.interaction.setDrawColor(const Color(0xFFCC5500));
+
+          expect(controller.interaction.hasActiveStrokePreview, isTrue);
+          expect(controller.interaction.activeStrokePreviewThickness, 8);
+          expect(
+            controller.interaction.activeStrokePreviewOpacity,
+            closeTo(0.3, 1e-6),
+          );
+          expect(
+            controller.interaction.activeStrokePreviewColor,
+            const Color(0xFF336699),
+          );
+
+          controller.interaction.handlePointer(
+            sampleInput(
+              pointerId: 1,
+              position: const Offset(20, 10),
+              timestampMs: 3,
+              phase: CanvasPointerPhase.up,
+            ),
+          );
+
+          final strokeSnap = controller.snapshot.layers
+              .expand((layer) => layer.nodes)
+              .whereType<StrokeNodeSnapshot>()
+              .single;
+          expect(strokeSnap.thickness, 8);
+          expect(strokeSnap.opacity, closeTo(0.3, 1e-6));
+          expect(strokeSnap.color, const Color(0xFF336699));
+        },
+      );
+
       test('invalid soft-limit config throws ArgumentError', () {
         // INV:INV-ENG-INTERACTIVE-GESTURE-BUFFER-SOFT-CAP
         final controller = SceneController(
@@ -270,6 +342,30 @@ void main() {
             trimTo: 1,
           ),
           throwsArgumentError,
+        );
+      });
+
+      test('inactive highlighter preview getters fall back to live config', () {
+        final controller = SceneController(
+          initialSnapshot: SceneSnapshot(
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(id: 'layer-auto-14'),
+              ContentLayerSnapshot(id: 'layer-auto-15'),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+
+        controller.interaction.setMode(CanvasMode.draw);
+        controller.interaction.setDrawTool(DrawTool.highlighter);
+        controller.interaction.highlighterThickness = 12;
+        controller.interaction.highlighterOpacity = 0.45;
+
+        expect(controller.interaction.hasActiveStrokePreview, isFalse);
+        expect(controller.interaction.activeStrokePreviewThickness, 12);
+        expect(
+          controller.interaction.activeStrokePreviewOpacity,
+          closeTo(0.45, 1e-6),
         );
       });
     });

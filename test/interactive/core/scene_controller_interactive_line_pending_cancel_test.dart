@@ -2,8 +2,22 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contract/pointer_input.dart';
+import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/interactive/internal/interactive_draw_eraser_engine.dart';
+import 'package:iwb_canvas_engine/src/interactive/internal/interactive_draw_gesture_session.dart';
+import 'package:iwb_canvas_engine/src/interactive/internal/interactive_draw_line_engine.dart';
+import 'package:iwb_canvas_engine/src/interactive/internal/interactive_draw_stroke_engine.dart';
+import 'package:iwb_canvas_engine/src/interactive/internal/interactive_draw_terminal_router.dart';
 
 import '../test_support/interactive_controller_fixtures.dart';
+
+void _ignoreEmitAction(
+  ActionType type,
+  List<NodeId> nodeIds,
+  int timestampMs, {
+  Map<String, Object?>? payload,
+}) {}
 
 void main() {
   group('SceneController unit', () {
@@ -356,6 +370,335 @@ void main() {
             .whereType<LineNodeSnapshot>()
             .length;
         expect(lineCount, 1);
+      });
+
+      test('detaching a session clears only its matching pending line', () {
+        final controller = SceneController(
+          initialSnapshot: SceneSnapshot(
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(id: 'layer-auto-6'),
+              ContentLayerSnapshot(id: 'layer-auto-7'),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+        controller.interaction.setMode(CanvasMode.draw);
+        controller.interaction.setDrawTool(DrawTool.line);
+
+        final session = sceneControllerViewRuntimeOf(controller)
+            .createPointerSession(
+              isMounted: () => true,
+              hasLiveRawPointers: () => false,
+            );
+
+        session.handleRoutedSample(
+          const PointerSample(
+            pointerId: 10,
+            position: Offset(40, 40),
+            timestampMs: 1,
+            phase: PointerPhase.down,
+            kind: PointerDeviceKind.touch,
+          ),
+          shouldTrackSignals: false,
+        );
+        session.handleRoutedSample(
+          const PointerSample(
+            pointerId: 10,
+            position: Offset(40, 40),
+            timestampMs: 2,
+            phase: PointerPhase.up,
+            kind: PointerDeviceKind.touch,
+          ),
+          shouldTrackSignals: false,
+        );
+
+        expect(controller.interaction.pendingLineStart, const Offset(40, 40));
+        session.dispose();
+
+        expect(controller.interaction.hasPendingLineStart, isFalse);
+
+        controller.interaction.handlePointer(
+          sampleInput(
+            pointerId: 11,
+            position: const Offset(70, 70),
+            timestampMs: 3,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+        controller.interaction.handlePointer(
+          sampleInput(
+            pointerId: 11,
+            position: const Offset(70, 70),
+            timestampMs: 4,
+            phase: CanvasPointerPhase.up,
+          ),
+        );
+        expect(controller.interaction.pendingLineStart, const Offset(70, 70));
+
+        final otherSession = sceneControllerViewRuntimeOf(controller)
+            .createPointerSession(
+              isMounted: () => true,
+              hasLiveRawPointers: () => false,
+            );
+        otherSession.dispose();
+
+        expect(controller.interaction.hasPendingLineStart, isTrue);
+        expect(controller.interaction.pendingLineStart, const Offset(70, 70));
+        expect(controller.interaction.pendingLineTimestampMs, 4);
+      });
+
+      test('public cancel does not clear session-owned pending line', () {
+        final controller = SceneController(
+          initialSnapshot: SceneSnapshot(
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(id: 'layer-auto-22'),
+              ContentLayerSnapshot(id: 'layer-auto-23'),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+        controller.interaction.setMode(CanvasMode.draw);
+        controller.interaction.setDrawTool(DrawTool.line);
+
+        final session = sceneControllerViewRuntimeOf(controller)
+            .createPointerSession(
+              isMounted: () => true,
+              hasLiveRawPointers: () => false,
+            );
+        addTearDown(session.dispose);
+
+        session.handleRoutedSample(
+          const PointerSample(
+            pointerId: 10,
+            position: Offset(40, 40),
+            timestampMs: 1,
+            phase: PointerPhase.down,
+            kind: PointerDeviceKind.touch,
+          ),
+          shouldTrackSignals: false,
+        );
+        session.handleRoutedSample(
+          const PointerSample(
+            pointerId: 10,
+            position: Offset(40, 40),
+            timestampMs: 2,
+            phase: PointerPhase.up,
+            kind: PointerDeviceKind.touch,
+          ),
+          shouldTrackSignals: false,
+        );
+
+        expect(controller.interaction.pendingLineStart, const Offset(40, 40));
+        expect(controller.interaction.pendingLineTimestampMs, 2);
+
+        controller.interaction.handlePointer(
+          sampleInput(
+            pointerId: 11,
+            position: const Offset(70, 70),
+            timestampMs: 3,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+        controller.interaction.handlePointer(
+          sampleInput(
+            pointerId: 11,
+            position: const Offset(70, 70),
+            timestampMs: 4,
+            phase: CanvasPointerPhase.cancel,
+          ),
+        );
+
+        expect(controller.interaction.hasPendingLineStart, isTrue);
+        expect(controller.interaction.pendingLineStart, const Offset(40, 40));
+        expect(controller.interaction.pendingLineTimestampMs, 2);
+      });
+
+      test('session cancel does not clear public pending line', () {
+        final controller = SceneController(
+          initialSnapshot: SceneSnapshot(
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(id: 'layer-auto-24'),
+              ContentLayerSnapshot(id: 'layer-auto-25'),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+        controller.interaction.setMode(CanvasMode.draw);
+        controller.interaction.setDrawTool(DrawTool.line);
+
+        controller.interaction.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(25, 25),
+            timestampMs: 1,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+        controller.interaction.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(25, 25),
+            timestampMs: 2,
+            phase: CanvasPointerPhase.up,
+          ),
+        );
+
+        expect(controller.interaction.pendingLineStart, const Offset(25, 25));
+        expect(controller.interaction.pendingLineTimestampMs, 2);
+
+        final session = sceneControllerViewRuntimeOf(controller)
+            .createPointerSession(
+              isMounted: () => true,
+              hasLiveRawPointers: () => false,
+            );
+        addTearDown(session.dispose);
+        session.handleRoutedSample(
+          const PointerSample(
+            pointerId: 2,
+            position: Offset(80, 80),
+            timestampMs: 3,
+            phase: PointerPhase.down,
+            kind: PointerDeviceKind.touch,
+          ),
+          shouldTrackSignals: false,
+        );
+        session.handleRoutedSample(
+          const PointerSample(
+            pointerId: 2,
+            position: Offset(80, 80),
+            timestampMs: 4,
+            phase: PointerPhase.cancel,
+            kind: PointerDeviceKind.touch,
+          ),
+          shouldTrackSignals: false,
+        );
+
+        expect(controller.interaction.hasPendingLineStart, isTrue);
+        expect(controller.interaction.pendingLineStart, const Offset(25, 25));
+        expect(controller.interaction.pendingLineTimestampMs, 2);
+      });
+
+      test(
+        'detaching active draw session keeps pending line owned by another source',
+        () {
+          final controller = SceneController(
+            initialSnapshot: SceneSnapshot(
+              layers: <ContentLayerSnapshot>[
+                ContentLayerSnapshot(id: 'layer-auto-16'),
+                ContentLayerSnapshot(id: 'layer-auto-17'),
+              ],
+            ),
+            dragStartSlop: 0.001,
+          );
+          addTearDown(controller.dispose);
+          controller.interaction.setMode(CanvasMode.draw);
+          controller.interaction.setDrawTool(DrawTool.line);
+
+          controller.interaction.handlePointer(
+            sampleInput(
+              pointerId: 1,
+              position: const Offset(25, 25),
+              timestampMs: 1,
+              phase: CanvasPointerPhase.down,
+            ),
+          );
+          controller.interaction.handlePointer(
+            sampleInput(
+              pointerId: 1,
+              position: const Offset(25, 25),
+              timestampMs: 2,
+              phase: CanvasPointerPhase.up,
+            ),
+          );
+          expect(controller.interaction.pendingLineStart, const Offset(25, 25));
+
+          final session = sceneControllerViewRuntimeOf(controller)
+              .createPointerSession(
+                isMounted: () => true,
+                hasLiveRawPointers: () => false,
+              );
+          session.handleRoutedSample(
+            const PointerSample(
+              pointerId: 2,
+              position: Offset(80, 80),
+              timestampMs: 3,
+              phase: PointerPhase.down,
+              kind: PointerDeviceKind.touch,
+            ),
+            shouldTrackSignals: false,
+          );
+          expect(controller.interaction.hasActiveLinePreview, isFalse);
+          session.dispose();
+
+          expect(controller.interaction.hasActiveLinePreview, isFalse);
+          expect(controller.interaction.hasPendingLineStart, isTrue);
+          expect(controller.interaction.pendingLineStart, const Offset(25, 25));
+          expect(controller.interaction.pendingLineTimestampMs, 2);
+        },
+      );
+
+      test('terminal router handles missing captured style as no-op reset', () {
+        final gestureSession = InteractiveDrawGestureSession();
+        final lineEngine = InteractiveDrawLineEngine(
+          callbacks: InteractiveDrawLineEngineCallbacks(
+            onStateChanged: () {},
+            emitAction: _ignoreEmitAction,
+            commitDrawLineFromWorldSegment:
+                ({
+                  required Offset start,
+                  required Offset end,
+                  required double thickness,
+                  required Color color,
+                  required double opacity,
+                }) => 'line',
+          ),
+        );
+        final strokeEngine = InteractiveDrawStrokeEngine(
+          callbacks: InteractiveDrawStrokeEngineCallbacks(
+            onStateChanged: () {},
+            emitAction: _ignoreEmitAction,
+            commitDrawStroke:
+                ({
+                  required List<Offset> points,
+                  required double thickness,
+                  required Color color,
+                  required double opacity,
+                }) => 'stroke',
+          ),
+        );
+        final eraserEngine = InteractiveDrawEraserEngine(
+          callbacks: InteractiveDrawEraserEngineCallbacks(
+            onStateChanged: () {},
+            querySpatialCandidates: (_) => const <Never>[],
+            resolveSpatialCandidateNode: (_) => null,
+            commitEraseNodes: (_) => 0,
+          ),
+        );
+        final router = InteractiveDrawTerminalRouter(
+          gestureSession: gestureSession,
+          lineEngine: lineEngine,
+          strokeEngine: strokeEngine,
+          eraserEngine: eraserEngine,
+          emitAction: _ignoreEmitAction,
+        );
+
+        expect(
+          () => router.handleUp(
+            const PointerSample(
+              pointerId: 1,
+              position: Offset(10, 10),
+              timestampMs: 1,
+              phase: PointerPhase.up,
+              kind: PointerDeviceKind.touch,
+            ),
+            const Offset(10, 10),
+            dragStartSlop: 1,
+          ),
+          returnsNormally,
+        );
+        expect(gestureSession.downScene, isNull);
+        expect(lineEngine.activeLinePreviewStart, isNull);
+        expect(lineEngine.activeLinePreviewEnd, isNull);
       });
 
       test(

@@ -8,7 +8,6 @@ import 'interactive_draw_action_emitter.dart';
 import 'interactive_draw_eraser_engine.dart';
 import 'interactive_draw_gesture_session.dart';
 import 'interactive_draw_line_engine.dart';
-import 'interactive_draw_style.dart';
 import 'interactive_draw_stroke_engine.dart';
 
 class InteractiveDrawTerminalRouter {
@@ -38,13 +37,23 @@ class InteractiveDrawTerminalRouter {
   void handleUp(
     PointerSample sample,
     Offset scenePoint, {
-    required InteractiveDrawStyle style,
     required double dragStartSlop,
   }) {
-    switch (style.drawTool) {
+    final capturedStyle = gestureSession.capturedStyle;
+    if (capturedStyle == null) {
+      gestureSession.clear();
+      lineEngine.resetGestureState();
+      return;
+    }
+
+    switch (capturedStyle.drawTool) {
       case DrawTool.pen:
       case DrawTool.highlighter:
-        strokeEngine.commitOnUp(sample.timestampMs, scenePoint, style: style);
+        strokeEngine.commitOnUp(
+          sample.timestampMs,
+          scenePoint,
+          style: capturedStyle,
+        );
         break;
       case DrawTool.line:
         lineEngine.commitOnUp((
@@ -53,18 +62,20 @@ class InteractiveDrawTerminalRouter {
           downScene: gestureSession.downScene,
           moved: gestureSession.moved,
           dragStartSlop: dragStartSlop,
-        ), style: style);
+          capturedStyle: capturedStyle,
+          sessionToken: gestureSession.sessionToken,
+        ));
         break;
       case DrawTool.eraser:
         final deletedIds = eraserEngine.commitOnUp(
           scenePoint,
-          eraserThickness: style.eraserThickness,
+          eraserThickness: capturedStyle.eraserThickness,
         );
         if (deletedIds.isNotEmpty) {
           _actionEmitter.emitEraseCommit(
             nodeIds: deletedIds,
             timestampMs: sample.timestampMs,
-            eraserThickness: style.eraserThickness,
+            eraserThickness: capturedStyle.eraserThickness,
           );
         }
         break;

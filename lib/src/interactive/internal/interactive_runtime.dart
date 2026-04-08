@@ -1,8 +1,8 @@
 import 'dart:ui';
 
 import '../../contract/canvas_pointer_input.dart';
-import 'pointer_session_token.dart';
 import 'interactive_draw_coordinator.dart';
+import 'interactive_draw_style.dart';
 import 'interactive_double_tap_router.dart';
 import 'interactive_event_dispatcher.dart';
 import 'interactive_gesture_machine.dart';
@@ -11,6 +11,7 @@ import 'interactive_move_callbacks.dart';
 import 'interactive_move_session.dart';
 import 'interactive_pointer_normalizer.dart';
 import 'interactive_runtime_callbacks.dart';
+import 'pointer_session_token.dart';
 
 class InteractiveRuntime {
   InteractiveRuntime({required this.callbacks, required this.events}) {
@@ -70,6 +71,8 @@ class InteractiveRuntime {
   Offset? get pendingLineStart => _drawCoordinator.pendingLineStart;
   int? get pendingLineTimestampMs => _drawCoordinator.pendingLineTimestampMs;
   bool get hasPendingLineStart => _drawCoordinator.hasPendingLineStart;
+  InteractiveDrawStyle? get pendingLineStyle =>
+      _drawCoordinator.pendingLineStyle;
   bool get hasActiveGesture => _gestureRouter.hasActiveGesture;
   bool get isActiveDrawGesture => _gestureRouter.isActiveDrawGesture;
   bool get hasActiveStrokePoints => _drawCoordinator.hasActiveStrokePoints;
@@ -77,6 +80,7 @@ class InteractiveRuntime {
       _drawCoordinator.activeStrokePreviewPoints;
   Offset? get activeLinePreviewStart => _drawCoordinator.activeLinePreviewStart;
   Offset? get activeLinePreviewEnd => _drawCoordinator.activeLinePreviewEnd;
+  InteractiveDrawStyle? get activeDrawStyle => _drawCoordinator.activeDrawStyle;
 
   InteractiveMoveSession get debugMoveSession => _moveSession;
 
@@ -206,9 +210,12 @@ class InteractiveRuntime {
   }
 
   void _detachInteractiveStateForSession(PointerSessionToken token) {
-    final didChange = _detachOwnedStateForFamily(
-      _gestureRouter.detachPointerSession(token),
-    );
+    final didClearPendingLine = _drawCoordinator.detachPointerSession(token);
+    final didChange =
+        _detachOwnedStateForFamily(
+          _gestureRouter.detachPointerSession(token),
+        ) ||
+        didClearPendingLine;
     if (didChange) {
       callbacks.scheduleNotify();
     }
@@ -220,12 +227,11 @@ class InteractiveRuntime {
         return _moveSession.detachOwningSession();
       case InteractiveGestureFamily.draw:
         final didChange =
-            _drawCoordinator.hasPendingLineStart ||
             _drawCoordinator.hasActiveStrokePoints ||
             _drawCoordinator.activeLinePreviewStart != null ||
             _drawCoordinator.activeLinePreviewEnd != null ||
             _drawCoordinator.activeEraserPointsLength > 0;
-        _drawCoordinator.resetOwnedState();
+        _drawCoordinator.resetGestureState();
         return didChange;
       case null:
         return false;

@@ -207,6 +207,10 @@ class _CanvasScreenState extends State<CanvasScreen> {
   `replaceScene(...)`, `setCameraOffset(...)`, mode/tool changes, and `dispose()`
   force-release the active gesture only when the boundary mutation will proceed
   with an observable state change.
+- Pending two-tap line state keeps its captured line style on the read side as
+  well as the write side: `pendingLineColor` / `pendingLineThickness` reflect
+  the pending commit style, while mutable `drawColor` / `lineThickness` remain
+  configuration for the next gesture.
 - Public scene/selection mutations are gesture-exclusive while an active
   move/draw gesture is in progress. `scene.write(...)`,
   `setBackgroundColor(...)`, `setGridEnabled(...)`, `setGridCellSize(...)`,
