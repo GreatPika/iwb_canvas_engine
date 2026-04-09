@@ -21,6 +21,7 @@ import 'package:iwb_canvas_engine/src/view/scene_view_runtime_host.dart';
 
 // INV:INV-ENG-VIEW-POINTER-SETTINGS-LIVE-APPLY
 // INV:INV-ENG-VIEW-RUNTIME-HOST-DEBUG-PROBES
+// INV:INV-ENG-VIEW-POINTER-SESSION-DETACH
 
 SceneSnapshot _snapshot({required String text, bool includeImage = false}) {
   return SceneSnapshot(

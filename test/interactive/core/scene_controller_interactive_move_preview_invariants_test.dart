@@ -193,6 +193,7 @@ void main() {
     test(
       'disposing owning pointer session restores marquee baseline like cancel',
       () {
+        // INV:INV-ENG-INTERACTIVE-INTERRUPTION-SEMANTICS
         final baseline = RectNode(id: 'baseline', size: const Size(40, 20))
           ..position = const Offset(40, 40);
         final other = RectNode(id: 'other', size: const Size(40, 20))

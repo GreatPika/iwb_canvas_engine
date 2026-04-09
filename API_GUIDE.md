@@ -476,7 +476,8 @@ Interactive preview state:
 When `hasPendingLineStart` is `true`, `pendingLineColor` and
 `pendingLineThickness` expose the captured line style that will be used if the
 pending line commits. Live `drawColor` and `lineThickness` remain configuration
-for future gestures only.
+for future gestures only, and the pending line keeps owner provenance so a
+different owner may replace it but cannot complete the previous owner's commit.
 
 Streams:
 
@@ -518,10 +519,16 @@ Important behavior:
   deferred tap flush, and applied-versus-pending pointer settings are owned by
   a controller-side pointer-semantics runtime
 - active gesture ownership is controller-local: parallel `pointerId`s are
-  ignored until terminal release, and `replaceScene(...)`, `setCameraOffset(...)`,
-  `setMode(...)`, `setDrawTool(...)`, and `dispose()` force-reset the active
-  gesture only when the boundary transition will actually continue with an
-  observable state change
+  ignored until terminal release
+- `setMode(...)` and `setDrawTool(...)` interrupt active gesture state as
+  interaction-config changes
+- `setCameraOffset(...)` and `replaceScene(...)` interrupt active gesture state
+  as external mutations only after their existing preflight confirms the
+  boundary transition will proceed
+- routed `SceneViewPointerSession.detach()` clears only matching session-owned
+  interactive state and does not alias config interruption, external mutation,
+  or `dispose()`
+- `dispose()` remains destructive teardown rather than a generic reset alias
 - all public `controller.selection.*` mutations plus
   `scene.write(...)`,
   `setBackgroundColor(...)`,
@@ -626,6 +633,8 @@ Public hooks:
 - `handleDoubleTap({required Offset position, int? timestampMs})`
 
 Use these only when you are not relying on `SceneView` to route input.
+`SceneView`-routed pointer and double-tap delivery use an internal tokenized
+session path and do not round-trip through these public manual hooks.
 
 Guardrails:
 
@@ -643,6 +652,9 @@ Guardrails:
 
 - `dispose()` releases controller resources and closes future mutating or
   effectful entrypoints with fail-fast `StateError`
+- interaction-config interruption, external-mutation interruption,
+  pointer-session detachment, and `dispose()` are distinct interactive
+  lifecycle reasons with owner-appropriate state release
 - view-runtime pointer sessions treat `detach()` as the terminal controller
   unbind step: it immediately releases controller-owned listener/token
   resources, turns later session callbacks into local no-ops, and leaves

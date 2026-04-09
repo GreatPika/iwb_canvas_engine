@@ -194,6 +194,7 @@ void main() {
     test(
       'line preview and pending commit keep captured style and do not cross owners',
       () {
+        // INV:INV-ENG-INTERACTIVE-DRAW-STYLE-SNAPSHOT
         final controller = SceneController(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[

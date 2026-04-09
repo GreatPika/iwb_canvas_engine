@@ -406,6 +406,16 @@ const List<Invariant> invariants = <Invariant>[
     ),
   ),
   Invariant(
+    id: 'INV-ENG-INTERACTIVE-INTERRUPTION-SEMANTICS',
+    scope: 'engine-runtime',
+    title:
+        'interactive interruption and owning-session teardown remain distinct non-committing lifecycle reasons that release preview/baseline state without widening the pointer-cancel-specific contract',
+    primaryProof: PrimaryProof(
+      path:
+          'test/interactive/core/scene_controller_interactive_move_preview_invariants_test.dart',
+    ),
+  ),
+  Invariant(
     id: 'INV-ENG-INTERACTIVE-PREVIEW-COMMIT-ON-UP',
     scope: 'engine-runtime',
     title:
@@ -535,10 +545,29 @@ const List<Invariant> invariants = <Invariant>[
     ),
   ),
   Invariant(
+    id: 'INV-ENG-INTERACTIVE-DRAW-STYLE-SNAPSHOT',
+    scope: 'engine-runtime',
+    title:
+        'active draw preview and pending two-tap line state use gesture-start style snapshots with owner-scoped pending-line provenance',
+    primaryProof: PrimaryProof(
+      path:
+          'test/interactive/core/scene_controller_interactive_line_tool_flow_test.dart',
+    ),
+  ),
+  Invariant(
     id: 'INV-ENG-VIEW-RUNTIME-HOST-DEBUG-PROBES',
     scope: 'view-runtime',
     title:
         'debugSceneViewInteractive* and debugSceneViewRuntimeHost* helpers are stable test probes for runtime-host cache and raw-pointer diagnostics and fail fast outside the mounted host boundary',
+    primaryProof: PrimaryProof(
+      path: 'test/view/scene_view_interactive_test.dart',
+    ),
+  ),
+  Invariant(
+    id: 'INV-ENG-VIEW-POINTER-SESSION-DETACH',
+    scope: 'view-runtime',
+    title:
+        'SceneView runtime hosts detach opaque pointer sessions before dispose or router reset, and detach remains the terminal controller-unbind step before idempotent dispose',
     primaryProof: PrimaryProof(
       path: 'test/view/scene_view_interactive_test.dart',
     ),

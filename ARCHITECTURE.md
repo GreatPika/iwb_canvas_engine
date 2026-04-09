@@ -267,17 +267,22 @@ Ownership decisions for the target state:
    public inputs, keeps host-facing mode/tool/selection semantics, owns the
    snapshot-based eligibility policy used by controller-side transform/delete
    preflight and by move-mode hit-test/preview/commit shaping, keeps public
-   scene/selection capability facades thin, restores move-local baseline
-   selection on pointer `cancel`, and delegates boundary pointer handling plus
-   external-mutation gesture policy to the controller-private
-   `InteractiveRuntime`.
+   scene/selection capability facades thin, keeps
+   `SceneControllerInteraction.handlePointer(...)` /
+   `handleDoubleTap(...)` as manual/public hooks only, restores move-local
+   baseline selection on pointer `cancel`, and delegates manual boundary input,
+   session-routed tokenized input, and external-mutation gesture policy to the
+   controller-private `InteractiveRuntime`.
 3. `InteractiveRuntime` is the controller-private boundary runtime. It owns the
    final interactive owner graph beneath the facade:
    `InteractivePointerNormalizer` for terminal pointer normalization,
    `InteractiveGestureRouter` for active pointer/family orchestration,
    `InteractiveDoubleTapRouter` for text double-tap routing,
    `InteractiveMoveSession` for move preview/commit ownership, and
-   `InteractiveDrawCoordinator` for draw-family orchestration.
+   `InteractiveDrawCoordinator` for draw-family orchestration. It also keeps
+   interaction-config interruption, external-mutation interruption,
+   pointer-session detachment, and destructive dispose as distinct lifecycle
+   reasons instead of one shared reset path.
 4. `InteractiveEventDispatcher` is the interactive event/timeline owner. It
    keeps monotonic timestamp sequencing plus `actions` /
    `editTextRequests` stream delivery outside `InteractiveRuntime`.
@@ -313,6 +318,9 @@ Ownership decisions for the target state:
   gesture-start style, and pending two-tap line reads expose the same captured
   color/thickness that the eventual line commit will use rather than live
   mutable draw config.
+- Pending two-tap line state remains draw-local latent state inside the line
+  engine and retains owner provenance, so a different source may replace a
+  pending line but cannot complete or clear another source's pending commit.
 - Active gesture identity is controller-owned; move/draw helpers do not own a
   competing pointer lock.
 - `SceneControllerMutationBoundary` is the only interactive owner allowed to
@@ -332,8 +340,11 @@ Ownership decisions for the target state:
 - During an active move/draw gesture, public `controller.selection.*`
   mutations plus deny-listed `controller.scene.*` mutations are rejected before
   committed state changes; only `setCameraOffset(...)` and `replaceScene(...)`
-  may reset the active gesture, and only after their existing preflight proves
-  the boundary mutation will proceed.
+  may interrupt the active gesture for external mutation, and only after their
+  existing preflight proves the boundary mutation will proceed. Mode/tool
+  changes use a separate interaction-config interruption path, pointer-session
+  detachment releases only matching session-owned state, and `dispose()` stays
+  destructive teardown.
 - Interactive admissibility has one owner per boundary: snapshot-based
   transform/delete preflight and move-mode preview/commit shaping live under
   `interactive/`, while marquee inclusion and move hit-testing reuse the same

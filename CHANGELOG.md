@@ -4,6 +4,11 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ## Unreleased
 
+- Interactive lifecycle closure is now documented and pinned by repository
+  invariants: public `handlePointer(...)` / `handleDoubleTap(...)` remain
+  manual-only hooks, active draw and pending two-tap line state use captured
+  gesture-start style, and `SceneView` session teardown is explicitly
+  detach-before-dispose.
 - `SceneView` runtime session teardown is now fully terminal on `detach()`.
   Failed runtime swaps now surface to the host instead of being swallowed,
   while rendering and pointer input stay on the last installed runtime until a

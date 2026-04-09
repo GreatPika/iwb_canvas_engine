@@ -202,6 +202,10 @@ class _CanvasScreenState extends State<CanvasScreen> {
   do not force an early reset of routed pointer tracking. Settings are treated
   as a value object, and while raw pointers remain live a controller-owned
   pointer-semantics owner keeps only the last pending update until router idle.
+- Public `handlePointer(...)` / `handleDoubleTap(...)` hooks remain manual-only
+  entrypoints on `SceneControllerInteraction`. `SceneView`-routed input uses an
+  internal tokenized session path instead of sending session-owned provenance
+  back through the public facade.
 - `SceneView` runtime swaps are atomic: replacement pointer sessions are
   created before install, failed replacement creation surfaces to the owner,
   and render/input ownership stays on the last installed runtime until a later
@@ -211,13 +215,18 @@ class _CanvasScreenState extends State<CanvasScreen> {
   `dispose()`.
 - `SceneController` keeps one controller-owned active gesture owner:
   parallel `pointerId`s are ignored until the owner ends, and
-  `replaceScene(...)`, `setCameraOffset(...)`, mode/tool changes, and `dispose()`
-  force-release the active gesture only when the boundary mutation will proceed
-  with an observable state change.
+  mode/tool changes interrupt for interaction-config changes,
+  `replaceScene(...)` / `setCameraOffset(...)` interrupt for external
+  mutations only after preflight confirms the boundary transition will proceed,
+  routed-session `detach()` clears only matching session-owned state, and
+  `dispose()` remains destructive teardown rather than an alias of those
+  interruption paths.
 - Pending two-tap line state keeps its captured line style on the read side as
   well as the write side: `pendingLineColor` / `pendingLineThickness` reflect
   the pending commit style, while mutable `drawColor` / `lineThickness` remain
-  configuration for the next gesture.
+  configuration for the next gesture. Pending line ownership remains draw-local,
+  so one owner source may replace but not complete another owner source's
+  pending commit.
 - Public scene/selection mutations are gesture-exclusive while an active
   move/draw gesture is in progress. `scene.write(...)`,
   `setBackgroundColor(...)`, `setGridEnabled(...)`, `setGridCellSize(...)`,
