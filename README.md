@@ -202,6 +202,13 @@ class _CanvasScreenState extends State<CanvasScreen> {
   do not force an early reset of routed pointer tracking. Settings are treated
   as a value object, and while raw pointers remain live a controller-owned
   pointer-semantics owner keeps only the last pending update until router idle.
+- `SceneView` runtime swaps are atomic: replacement pointer sessions are
+  created before install, failed replacement creation surfaces to the owner,
+  and render/input ownership stays on the last installed runtime until a later
+  rebuild succeeds. Session `detach()` is the terminal controller-unbind step:
+  it releases controller-owned listener/token resources immediately and turns
+  later session callbacks into local no-ops before the final idempotent
+  `dispose()`.
 - `SceneController` keeps one controller-owned active gesture owner:
   parallel `pointerId`s are ignored until the owner ends, and
   `replaceScene(...)`, `setCameraOffset(...)`, mode/tool changes, and `dispose()`

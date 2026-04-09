@@ -524,6 +524,8 @@ abstract interface class SceneViewRuntime {
 abstract interface class SceneViewPointerSession {
   Object? get pendingTapFlushTimestampMs;
 
+  void detach();
+
   void handleRoutedSample(Object sample);
 
   void handleInvalidTerminalSample(Object input);
@@ -561,6 +563,10 @@ class SceneControllerInteractionRuntime {
   }
 
   PointerSessionToken createPointerSessionToken() => PointerSessionToken();
+
+  void detachPointerSession(PointerSessionToken token) {
+    _ensureKnownPointerSessionToken(token);
+  }
 
   void releasePointerSessionToken(PointerSessionToken token) {
     _ensureKnownPointerSessionToken(token);
@@ -603,13 +609,53 @@ import '../contract/scene_view_runtime.dart';
 class SceneViewInteractivePointerHost {
   SceneViewInteractivePointerHost({
     required SceneViewPointerSession pointerSession,
-  }) : session = pointerSession;
+  }) : _runtime = _SceneViewInteractivePointerRuntime(
+         pointerSession: pointerSession,
+       );
 
-  final SceneViewPointerSession session;
+  final _SceneViewInteractivePointerRuntime _runtime;
+
+  int get debugLiveRawPointerCount => _runtime.debugLiveRawPointerCount;
+  int? get debugPendingTapFlushTimestampMs =>
+      _runtime.debugPendingTapFlushTimestampMs;
 
   void replacePointerSession(SceneViewPointerSession pointerSession) {
-    pointerSession.dispose();
+    _runtime.replacePointerSession(pointerSession);
   }
+
+  void dispose() {
+    _runtime.dispose();
+  }
+}
+
+class _SceneViewInteractivePointerRuntime {
+  _SceneViewInteractivePointerRuntime({
+    required SceneViewPointerSession pointerSession,
+  }) : _pointerSession = pointerSession;
+
+  final _pointerRouter = _PointerRouter();
+  SceneViewPointerSession _pointerSession;
+
+  int get debugLiveRawPointerCount => 0;
+  int? get debugPendingTapFlushTimestampMs =>
+      _pointerSession.pendingTapFlushTimestampMs;
+
+  void replacePointerSession(SceneViewPointerSession next) {
+    final current = _pointerSession;
+    current.detach();
+    current.dispose();
+    _pointerRouter.reset();
+    _pointerSession = next;
+  }
+
+  void dispose() {
+    _pointerSession.detach();
+    _pointerSession.dispose();
+  }
+}
+
+class _PointerRouter {
+  void reset() {}
 }
 ''',
   );
@@ -627,36 +673,57 @@ class SceneViewInteractive {
 ''');
   writeSandboxFile(sandbox, 'lib/src/view/scene_view_runtime_host.dart', '''
 class SceneViewRuntimeHost extends StatefulWidget {
-  final Object runtime;
-  final Object _pointerHost = Object();
+  final SceneViewRuntime runtime;
 
   SceneViewRuntimeHost({required this.runtime});
+}
 
-  Object build() {
-    widget.runtime.createPointerSession(
+class _SceneViewRuntimeHostState {
+  final SceneViewInteractivePointerHost _pointerHost =
+      SceneViewInteractivePointerHost();
+  late SceneViewRuntime _activeRuntime;
+
+  void initState() {
+    _activeRuntime = widget.runtime;
+    _activeRuntime.createPointerSession(
       isMounted: Object(),
       hasLiveRawPointers: Object(),
     );
-    _pointerHost.replacePointerSession(Object());
-    return SceneViewRenderSurface(renderState: Object());
+  }
+
+  void didUpdateWidget(SceneViewRuntimeHost oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_activeRuntime == widget.runtime) {
+      return;
+    }
+    final nextPointerSession = _createReplacementPointerSession(widget.runtime);
+    _pointerHost.replacePointerSession(nextPointerSession);
+    _activeRuntime = widget.runtime;
+  }
+
+  Object build() {
+    final renderState = _activeRuntime.renderState;
+    return SceneViewRenderSurface(renderState: renderState);
+  }
+
+  Object _createReplacementPointerSession(SceneViewRuntime runtime) {
+    return runtime.createPointerSession(
+      isMounted: Object(),
+      hasLiveRawPointers: Object(),
+    );
   }
 }
 
 class StatefulWidget {}
 
+class SceneViewInteractivePointerHost {
+  void replacePointerSession(Object session) {}
+}
+
 class SceneViewRenderSurface {
   SceneViewRenderSurface({
     required Object renderState,
   });
-}
-
-final widget = _WidgetRuntime();
-
-class _WidgetRuntime {
-  Object createPointerSession({
-    required Object isMounted,
-    required Object hasLiveRawPointers,
-  }) => Object();
 }
 ''');
   writeSandboxFile(sandbox, 'lib/src/view/scene_view_render_surface.dart', '''
@@ -679,8 +746,12 @@ class PointerSessionToken {}
 class SceneControllerPointerSession {
   SceneControllerPointerSession({
     required PointerSessionToken token,
+    required void Function(PointerSessionToken token) detachPointerSession,
     required void Function(PointerSessionToken token) releasePointerSessionToken,
-  });
+  }) : _token = token;
+
+  final PointerSessionToken _token;
+  final Object _ownerListener = Object();
 
   final _ownerListenable = _OwnerListenable();
   final _PendingTapFlushScheduler scheduler = _PendingTapFlushScheduler();
@@ -690,7 +761,7 @@ class SceneControllerPointerSession {
   }
 
   void attach() {
-    _ownerListenable.addListener(Object());
+    _ownerListenable.addListener(_ownerListener);
   }
 
   void route(PointerSessionToken token) {
@@ -698,9 +769,21 @@ class SceneControllerPointerSession {
     _handleDoubleTapFromSession(token);
   }
 
-  void dispose(PointerSessionToken token) {
-    _releasePointerSessionToken(token);
+  void detach() {
+    _detachPointerSession(_token);
+    _releaseOwnedResources();
   }
+
+  void dispose(PointerSessionToken token) {
+    scheduler.dispose();
+  }
+
+  void _releaseOwnedResources() {
+    _ownerListenable.removeListener(_ownerListener);
+    _releasePointerSessionToken(_token);
+  }
+
+  void _detachPointerSession(PointerSessionToken token) {}
 
   void _handlePointerFromSession(PointerSessionToken token) {}
 
@@ -709,10 +792,14 @@ class SceneControllerPointerSession {
   void _releasePointerSessionToken(PointerSessionToken token) {}
 }
 
-class _PendingTapFlushScheduler {}
+class _PendingTapFlushScheduler {
+  void dispose() {}
+}
 
 class _OwnerListenable {
   void addListener(Object listener) {}
+
+  void removeListener(Object listener) {}
 }
 ''',
   );
@@ -745,6 +832,8 @@ final class SceneControllerSceneViewRuntime {
     createPointerSessionToken();
     return SceneControllerPointerSession(
       token: createPointerSessionToken(),
+      detachPointerSession:
+          _interactionRuntime.detachPointerSession,
       releasePointerSessionToken:
           _interactionRuntime.releasePointerSessionToken,
       // handlePointerFromSession: _interactionRuntime.handlePointerFromSession,
@@ -756,6 +845,7 @@ final class SceneControllerSceneViewRuntime {
 
 class SceneControllerInteraction {}
 class _InteractionRuntime {
+  void detachPointerSession() {}
   void releasePointerSessionToken() {}
   void handlePointerFromSession() {}
 }

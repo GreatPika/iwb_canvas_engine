@@ -71,9 +71,13 @@ void main() {
           isMounted: () => true,
           hasLiveRawPointers: () => false,
         );
-        addTearDown(session.dispose);
+        addTearDown(() {
+          session.detach();
+          session.dispose();
+        });
 
         expect(session.pendingTapFlushTimestampMs, isNull);
+        expect(() => session.detach(), returnsNormally);
         expect(runtime, isA<SceneViewRuntime>());
         expect(runtime.renderState, isA<SceneViewRenderState>());
         expect(controller, isNot(isA<SceneViewRenderState>()));

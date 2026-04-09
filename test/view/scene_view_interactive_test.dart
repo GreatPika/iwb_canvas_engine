@@ -748,6 +748,132 @@ void main() {
     },
   );
 
+  testWidgets(
+    'SceneViewRuntimeHost detaches old session before dispose and router reset',
+    (tester) async {
+      final runtimeA = _HostLifecycleRecordingRuntime(
+        snapshot: _snapshot(text: 'host-a'),
+      );
+      final runtimeB = _HostLifecycleRecordingRuntime(
+        snapshot: _snapshot(text: 'host-b'),
+      );
+      addTearDown(runtimeA.dispose);
+      addTearDown(runtimeB.dispose);
+
+      await tester.pumpWidget(_runtimeHost(runtimeA));
+      await tester.pump();
+
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerDownEvent(
+          pointer: 9101,
+          position: Offset(20, 20),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+
+      expect(
+        debugSceneViewRuntimeHostLiveRawPointerCountOf(
+          _sceneViewRuntimeHostContext(tester),
+        ),
+        1,
+      );
+
+      await tester.pumpWidget(_runtimeHost(runtimeB));
+      await tester.pump();
+
+      expect(runtimeA.lifecycleLog, <String>[
+        'session-1.detach',
+        'session-1.dispose',
+      ]);
+      expect(
+        debugSceneViewRuntimeHostLiveRawPointerCountOf(
+          _sceneViewRuntimeHostContext(tester),
+        ),
+        0,
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+
+      expect(runtimeB.lifecycleLog, <String>[
+        'session-1.detach',
+        'session-1.dispose',
+      ]);
+    },
+  );
+
+  testWidgets(
+    'SceneViewRuntimeHost retries failed swaps and compares rebuilds against the installed runtime',
+    (tester) async {
+      final runtimeA = _HostLifecycleRecordingRuntime(
+        snapshot: _snapshot(text: 'host-a'),
+      );
+      final runtimeB = _FlakyCreatePointerSessionRuntime(
+        snapshot: _snapshot(text: 'host-b'),
+        failAttemptCount: 1,
+      );
+      addTearDown(runtimeA.dispose);
+      addTearDown(runtimeB.dispose);
+
+      await tester.pumpWidget(_runtimeHost(runtimeA));
+      await tester.pump();
+      final hostContext = _sceneViewRuntimeHostContext(tester);
+
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerDownEvent(
+          pointer: 9201,
+          position: Offset(28, 28),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+
+      await tester.pumpWidget(_runtimeHost(runtimeB));
+      expect(tester.takeException(), isA<StateError>());
+      while (tester.takeException() != null) {}
+      expect(runtimeA.lifecycleLog, isEmpty);
+      expect(
+        runtimeA.recordedSamples.map((sample) => sample.phase).toList(),
+        <PointerPhase>[PointerPhase.down],
+      );
+      expect(
+        debugSceneViewRuntimeHostActiveRuntimeOf(hostContext),
+        same(runtimeA),
+      );
+      expect(debugSceneViewRuntimeHostLiveRawPointerCountOf(hostContext), 1);
+      expect(runtimeB.createPointerSessionAttemptCount, 1);
+
+      await tester.pumpWidget(_runtimeHost(runtimeB));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      expect(runtimeB.createPointerSessionAttemptCount, 2);
+      final installedHostContext = _sceneViewRuntimeHostContext(tester);
+      expect(
+        debugSceneViewRuntimeHostActiveRuntimeOf(installedHostContext),
+        same(runtimeB),
+      );
+      expect(
+        debugSceneViewRuntimeHostLiveRawPointerCountOf(installedHostContext),
+        0,
+      );
+
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerDownEvent(
+          pointer: 9202,
+          position: Offset(18, 22),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+
+      expect(
+        runtimeB.recordedSamples.map((sample) => sample.phase).toList(),
+        <PointerPhase>[PointerPhase.down],
+      );
+    },
+  );
+
   testWidgets('SceneViewInteractive ignores pending tap timer after dispose', (
     tester,
   ) async {
@@ -1634,6 +1760,7 @@ class _RecordingSceneViewRuntime implements SceneViewRuntime {
         readPointerSettings: () => _pointerSettings,
         isMounted: isMounted,
         hasLiveRawPointers: hasLiveRawPointers,
+        detachPointerSession: (_) {},
         releasePointerSessionToken: (_) {},
         handlePointerFromSession:
             (CanvasPointerInput input, {required PointerSessionToken token}) {
@@ -1659,6 +1786,11 @@ class _RecordingSceneViewPointerSession implements SceneViewPointerSession {
 
   @override
   int? get pendingTapFlushTimestampMs => _delegate.pendingTapFlushTimestampMs;
+
+  @override
+  void detach() {
+    _delegate.detach();
+  }
 
   @override
   void dispose() {
@@ -1691,6 +1823,113 @@ class _RecordingSceneViewPointerSession implements SceneViewPointerSession {
     _delegate.handleRoutedSample(
       sample,
       shouldTrackSignals: shouldTrackSignals,
+    );
+  }
+}
+
+class _HostLifecycleRecordingRuntime implements SceneViewRuntime {
+  _HostLifecycleRecordingRuntime({required SceneSnapshot snapshot})
+    : _renderState = _StaticSceneViewRenderState(snapshot);
+
+  final _StaticSceneViewRenderState _renderState;
+  final List<String> lifecycleLog = <String>[];
+  final List<PointerSample> recordedSamples = <PointerSample>[];
+  int _sessionCounter = 0;
+
+  void dispose() {}
+
+  @override
+  SceneViewRenderState get renderState => _renderState;
+
+  @override
+  SceneViewPointerSession createPointerSession({
+    required bool Function() isMounted,
+    required bool Function() hasLiveRawPointers,
+  }) {
+    _sessionCounter++;
+    return _HostLifecycleRecordingSession(
+      label: 'session-$_sessionCounter',
+      lifecycleLog: lifecycleLog,
+      recordedSamples: recordedSamples,
+    );
+  }
+}
+
+class _HostLifecycleRecordingSession implements SceneViewPointerSession {
+  _HostLifecycleRecordingSession({
+    required this.label,
+    required this.lifecycleLog,
+    required this.recordedSamples,
+  });
+
+  final String label;
+  final List<String> lifecycleLog;
+  final List<PointerSample> recordedSamples;
+
+  @override
+  int? get pendingTapFlushTimestampMs => null;
+
+  @override
+  void detach() {
+    lifecycleLog.add('$label.detach');
+  }
+
+  @override
+  void dispose() {
+    lifecycleLog.add('$label.dispose');
+  }
+
+  @override
+  void handleInvalidTerminalSample({
+    required CanvasPointerInput input,
+    required int pointerId,
+    required int referenceTimestampMs,
+  }) {}
+
+  @override
+  void handleRawPointerRelease({required bool isIdleAfterRelease}) {}
+
+  @override
+  void handleRoutedSample(
+    PointerSample sample, {
+    required bool shouldTrackSignals,
+  }) {
+    recordedSamples.add(sample);
+  }
+}
+
+class _FlakyCreatePointerSessionRuntime implements SceneViewRuntime {
+  _FlakyCreatePointerSessionRuntime({
+    required SceneSnapshot snapshot,
+    required this.failAttemptCount,
+  }) : _renderState = _StaticSceneViewRenderState(snapshot);
+
+  final _StaticSceneViewRenderState _renderState;
+  final List<String> lifecycleLog = <String>[];
+  final List<PointerSample> recordedSamples = <PointerSample>[];
+  final int failAttemptCount;
+  int createPointerSessionAttemptCount = 0;
+  int _sessionCounter = 0;
+
+  void dispose() {}
+
+  @override
+  SceneViewRenderState get renderState => _renderState;
+
+  @override
+  SceneViewPointerSession createPointerSession({
+    required bool Function() isMounted,
+    required bool Function() hasLiveRawPointers,
+  }) {
+    createPointerSessionAttemptCount += 1;
+    if (createPointerSessionAttemptCount <= failAttemptCount) {
+      throw StateError('replacement session creation failed');
+    }
+    _sessionCounter++;
+    return _HostLifecycleRecordingSession(
+      label: 'session-$_sessionCounter',
+      lifecycleLog: lifecycleLog,
+      recordedSamples: recordedSamples,
     );
   }
 }

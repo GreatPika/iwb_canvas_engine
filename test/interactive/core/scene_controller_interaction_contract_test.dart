@@ -52,7 +52,10 @@ void main() {
         isMounted: () => true,
         hasLiveRawPointers: () => false,
       );
-      addTearDown(session.dispose);
+      addTearDown(() {
+        session.detach();
+        session.dispose();
+      });
 
       expect(runtime, isA<SceneViewRuntime>());
       expect(session.pendingTapFlushTimestampMs, isNull);
@@ -69,7 +72,10 @@ void main() {
             isMounted: () => true,
             hasLiveRawPointers: () => false,
           );
-      addTearDown(session.dispose);
+      addTearDown(() {
+        session.detach();
+        session.dispose();
+      });
 
       expect(
         () => session.handleRoutedSample(
@@ -116,7 +122,7 @@ void main() {
       );
     });
 
-    test('disposed session invalidates its pointer session token', () {
+    test('disposed session turns later routed samples into local no-op', () {
       final controller = SceneController();
       addTearDown(controller.dispose);
       controller.interaction.setMode(CanvasMode.draw);
@@ -140,14 +146,9 @@ void main() {
           ),
           shouldTrackSignals: false,
         ),
-        throwsA(
-          isA<StateError>().having(
-            (error) => error.message,
-            'message',
-            'Unknown pointer session token.',
-          ),
-        ),
+        returnsNormally,
       );
+      expect(controller.interaction.hasActiveStrokePreview, isFalse);
     });
 
     test('session dispose stays safe after controller dispose', () {
@@ -163,6 +164,146 @@ void main() {
       expect(() => session.dispose(), returnsNormally);
     });
 
+    test('disposed controller runtime rejects pointer session creation', () {
+      final controller = SceneController();
+      final runtime = sceneControllerViewRuntimeOf(controller);
+
+      controller.dispose();
+
+      expect(
+        () => runtime.createPointerSession(
+          isMounted: () => true,
+          hasLiveRawPointers: () => false,
+        ),
+        throwsStateError,
+      );
+    });
+
+    test(
+      'detached session becomes local no-op and keeps dispose sequence safe',
+      () async {
+        final ownerListenable = _TrackingListenable();
+        final pointerInputs = <CanvasPointerInput>[];
+        final detachedTokens = <PointerSessionToken>[];
+        final releasedTokens = <PointerSessionToken>[];
+        final session = SceneControllerPointerSession(
+          ownerListenable: ownerListenable,
+          token: PointerSessionToken(),
+          readPointerSettings: () =>
+              const PointerInputSettings(doubleTapMaxDelayMs: 20),
+          isMounted: () => true,
+          hasLiveRawPointers: () => false,
+          detachPointerSession: detachedTokens.add,
+          releasePointerSessionToken: releasedTokens.add,
+          handlePointerFromSession:
+              (CanvasPointerInput input, {required PointerSessionToken token}) {
+                pointerInputs.add(input);
+              },
+          handleDoubleTapFromSession:
+              ({
+                required Offset position,
+                int? timestampMs,
+                required PointerSessionToken token,
+              }) {},
+        );
+        addTearDown(session.dispose);
+
+        session.handleRoutedSample(
+          const PointerSample(
+            pointerId: 1,
+            position: Offset(8, 8),
+            timestampMs: 1,
+            phase: PointerPhase.down,
+            kind: PointerDeviceKind.touch,
+          ),
+          shouldTrackSignals: true,
+        );
+        session.handleRoutedSample(
+          const PointerSample(
+            pointerId: 1,
+            position: Offset(8, 8),
+            timestampMs: 2,
+            phase: PointerPhase.up,
+            kind: PointerDeviceKind.touch,
+          ),
+          shouldTrackSignals: true,
+        );
+
+        expect(session.pendingTapFlushTimestampMs, isNotNull);
+
+        session.detach();
+        session.detach();
+
+        expect(session.pendingTapFlushTimestampMs, isNull);
+        expect(detachedTokens, hasLength(1));
+        expect(releasedTokens, hasLength(1));
+        expect(ownerListenable.activeListenerCount, 0);
+
+        ownerListenable.notifyListeners();
+        session.handleRoutedSample(
+          const PointerSample(
+            pointerId: 2,
+            position: Offset(12, 12),
+            timestampMs: 3,
+            phase: PointerPhase.down,
+            kind: PointerDeviceKind.touch,
+          ),
+          shouldTrackSignals: true,
+        );
+        session.handleInvalidTerminalSample(
+          input: const CanvasPointerInput(
+            pointerId: 1,
+            position: Offset(8, 8),
+            timestampMs: 4,
+            phase: CanvasPointerPhase.cancel,
+            kind: PointerDeviceKind.touch,
+          ),
+          pointerId: 1,
+          referenceTimestampMs: 4,
+        );
+        session.handleRawPointerRelease(isIdleAfterRelease: true);
+
+        await Future<void>.delayed(const Duration(milliseconds: 40));
+
+        expect(pointerInputs, hasLength(2));
+        expect(releasedTokens, hasLength(1));
+
+        session.dispose();
+        session.detach();
+
+        expect(releasedTokens, hasLength(1));
+      },
+    );
+
+    test('dispose preserves detach semantics for live session', () {
+      final ownerListenable = ChangeNotifier();
+      addTearDown(ownerListenable.dispose);
+      final detachedTokens = <PointerSessionToken>[];
+      final releasedTokens = <PointerSessionToken>[];
+      final session = SceneControllerPointerSession(
+        ownerListenable: ownerListenable,
+        token: PointerSessionToken(),
+        readPointerSettings: () => const PointerInputSettings(),
+        isMounted: () => true,
+        hasLiveRawPointers: () => false,
+        detachPointerSession: detachedTokens.add,
+        releasePointerSessionToken: releasedTokens.add,
+        handlePointerFromSession:
+            (CanvasPointerInput input, {required PointerSessionToken token}) {},
+        handleDoubleTapFromSession:
+            ({
+              required Offset position,
+              int? timestampMs,
+              required PointerSessionToken token,
+            }) {},
+      );
+
+      session.dispose();
+
+      expect(detachedTokens, hasLength(1));
+      expect(releasedTokens, hasLength(1));
+    });
+
     test(
       'session pointer boundary routes double tap through session callback',
       () {
@@ -176,6 +317,7 @@ void main() {
               const PointerInputSettings(doubleTapMaxDelayMs: 300),
           isMounted: () => true,
           hasLiveRawPointers: () => false,
+          detachPointerSession: (_) {},
           releasePointerSessionToken: (_) {},
           handlePointerFromSession:
               (
@@ -230,6 +372,28 @@ void main() {
       },
     );
   });
+}
+
+final class _TrackingListenable implements Listenable {
+  final List<VoidCallback> _listeners = <VoidCallback>[];
+
+  int get activeListenerCount => _listeners.length;
+
+  @override
+  void addListener(VoidCallback listener) {
+    _listeners.add(listener);
+  }
+
+  @override
+  void removeListener(VoidCallback listener) {
+    _listeners.remove(listener);
+  }
+
+  void notifyListeners() {
+    for (final listener in List<VoidCallback>.of(_listeners)) {
+      listener();
+    }
+  }
 }
 
 class _ThrowingInteractionController extends SceneController {

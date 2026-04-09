@@ -256,8 +256,13 @@ Ownership decisions for the target state:
    `interactive/internal/**`. The dedicated controller-owned pointer-session
    owner consumes routed samples, owns tap/double-tap recognition, deferred
    tap flushing, live `PointerInputSettings` adoption, and controller-change
-   reaction, and keeps invalid terminal host forwarding on the same
-   controller-side path as direct pointer input.
+   reaction, keeps invalid terminal host forwarding on the same
+   controller-side path as direct pointer input, treats `detach()` as the
+   terminal controller-unbind step that releases controller-owned
+   listener/token resources before any later idempotent `dispose()`, and keeps
+   runtime replacement atomic by creating replacement pointer sessions before
+   install so failed swaps propagate to the owner while the last installed
+   runtime remains the active render/input owner.
 2. `SceneController` is the public interactive facade. It validates
    public inputs, keeps host-facing mode/tool/selection semantics, owns the
    snapshot-based eligibility policy used by controller-side transform/delete

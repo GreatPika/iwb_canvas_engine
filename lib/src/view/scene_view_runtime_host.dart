@@ -43,6 +43,12 @@ int? debugSceneViewRuntimeHostPendingTapFlushTimestampMsOf(
   return _sceneViewRuntimeHostStateOf(context).debugPendingTapFlushTimestampMs;
 }
 
+SceneViewRuntime debugSceneViewRuntimeHostActiveRuntimeOf(
+  BuildContext context,
+) {
+  return _sceneViewRuntimeHostStateOf(context).debugActiveRuntime;
+}
+
 class SceneViewRuntimeHost extends StatefulWidget {
   const SceneViewRuntimeHost({
     required this.runtime,
@@ -65,6 +71,8 @@ class SceneViewRuntimeHost extends StatefulWidget {
 
 class _SceneViewRuntimeHostState extends State<SceneViewRuntimeHost> {
   late final SceneViewInteractivePointerHost _pointerHost;
+  late SceneViewRuntime _activeRuntime;
+  bool _pointerHostInitialized = false;
   final GlobalKey<SceneViewRenderSurfaceState> _renderSurfaceKey =
       GlobalKey<SceneViewRenderSurfaceState>();
 
@@ -81,42 +89,48 @@ class _SceneViewRuntimeHostState extends State<SceneViewRuntimeHost> {
   int get debugLiveRawPointerCount => _pointerHost.debugLiveRawPointerCount;
 
   @visibleForTesting
-  int? get debugPendingTapFlushTimestampMs =>
-      _pointerHost.debugPendingTapFlushTimestampMs;
+  int? get debugPendingTapFlushTimestampMs => _pointerHostInitialized
+      ? _pointerHost.debugPendingTapFlushTimestampMs
+      : null;
+
+  @visibleForTesting
+  SceneViewRuntime get debugActiveRuntime => _activeRuntime;
 
   @override
   void initState() {
     super.initState();
+    _activeRuntime = widget.runtime;
     _pointerHost = SceneViewInteractivePointerHost(
-      pointerSession: widget.runtime.createPointerSession(
+      pointerSession: _activeRuntime.createPointerSession(
         isMounted: () => mounted,
         hasLiveRawPointers: _hasLiveRawPointers,
       ),
     );
+    _pointerHostInitialized = true;
   }
 
   @override
   void didUpdateWidget(SceneViewRuntimeHost oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.runtime != widget.runtime) {
-      _pointerHost.replacePointerSession(
-        widget.runtime.createPointerSession(
-          isMounted: () => mounted,
-          hasLiveRawPointers: _hasLiveRawPointers,
-        ),
-      );
+    if (_activeRuntime == widget.runtime) {
+      return;
     }
+    final nextPointerSession = _createReplacementPointerSession(widget.runtime);
+    _pointerHost.replacePointerSession(nextPointerSession);
+    _activeRuntime = widget.runtime;
   }
 
   @override
   void dispose() {
-    _pointerHost.dispose();
+    if (_pointerHostInitialized) {
+      _pointerHost.dispose();
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final renderState = widget.runtime.renderState;
+    final renderState = _activeRuntime.renderState;
     return Listener(
       behavior: HitTestBehavior.opaque,
       onPointerDown: (event) =>
@@ -143,5 +157,15 @@ class _SceneViewRuntimeHostState extends State<SceneViewRuntimeHost> {
     );
   }
 
-  bool _hasLiveRawPointers() => _pointerHost.debugLiveRawPointerCount > 0;
+  bool _hasLiveRawPointers() =>
+      _pointerHostInitialized && _pointerHost.debugLiveRawPointerCount > 0;
+
+  SceneViewPointerSession _createReplacementPointerSession(
+    SceneViewRuntime runtime,
+  ) {
+    return runtime.createPointerSession(
+      isMounted: () => mounted,
+      hasLiveRawPointers: _hasLiveRawPointers,
+    );
+  }
 }

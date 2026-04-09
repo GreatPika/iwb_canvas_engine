@@ -56,6 +56,7 @@ final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
       readPointerSettings: () => _readInteraction().pointerSettings,
       isMounted: isMounted,
       hasLiveRawPointers: hasLiveRawPointers,
+      detachPointerSession: _interactionRuntime.detachPointerSession,
       releasePointerSessionToken:
           _interactionRuntime.releasePointerSessionToken,
       handlePointerFromSession: _interactionRuntime.handlePointerFromSession,

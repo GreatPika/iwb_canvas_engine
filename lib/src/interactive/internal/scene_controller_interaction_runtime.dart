@@ -201,11 +201,15 @@ extension SceneControllerInteractionRuntimeMutationApi
     return token;
   }
 
-  void releasePointerSessionToken(PointerSessionToken token) {
-    if (!_pointerSessionTokens.remove(token)) {
+  void detachPointerSession(PointerSessionToken token) {
+    if (!_pointerSessionTokens.contains(token)) {
       return;
     }
     runtime.detachPointerSession(token);
+  }
+
+  void releasePointerSessionToken(PointerSessionToken token) {
+    _pointerSessionTokens.remove(token);
   }
 
   int resolveTimestampMs(int? timestampMs) {

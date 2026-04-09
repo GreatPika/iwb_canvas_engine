@@ -101,12 +101,15 @@ class _SceneViewInteractivePointerRuntime {
       _pointerSession.pendingTapFlushTimestampMs;
 
   void replacePointerSession(SceneViewPointerSession next) {
-    _pointerSession.dispose();
-    _pointerSession = next;
+    final current = _pointerSession;
+    current.detach();
+    current.dispose();
     _pointerRouter.reset();
+    _pointerSession = next;
   }
 
   void dispose() {
+    _pointerSession.detach();
     _pointerSession.dispose();
   }
 

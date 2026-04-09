@@ -643,6 +643,14 @@ Guardrails:
 
 - `dispose()` releases controller resources and closes future mutating or
   effectful entrypoints with fail-fast `StateError`
+- view-runtime pointer sessions treat `detach()` as the terminal controller
+  unbind step: it immediately releases controller-owned listener/token
+  resources, turns later session callbacks into local no-ops, and leaves
+  `dispose()` as an idempotent finalizer over already-detached sessions
+- `SceneViewRuntimeHost` treats runtime swaps as atomic: replacement pointer
+  sessions are created before install, failed replacement creation propagates
+  to the caller, and rendering/pointer routing stay on the last installed
+  runtime until a later rebuild installs a replacement successfully
 - `write(...)`, `handlePointer(...)`, and `handleDoubleTap(...)` never call
   `notifyListeners()` synchronously
 - listener notifications are scheduled in a microtask

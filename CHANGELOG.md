@@ -4,6 +4,12 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ## Unreleased
 
+- `SceneView` runtime session teardown is now fully terminal on `detach()`.
+  Failed runtime swaps now surface to the host instead of being swallowed,
+  while rendering and pointer input stay on the last installed runtime until a
+  later successful rebuild replaces it. Detached pointer sessions also release
+  controller-owned listener/token resources immediately instead of waiting for
+  a later `dispose()`.
 - Pending two-tap line read-state now exposes captured line color and
   thickness through `SceneControllerInteraction.pendingLineColor` and
   `pendingLineThickness`, so host UI can render pending-line markers with the

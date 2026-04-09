@@ -208,6 +208,7 @@ void main() {
       runtimeContractSource,
       contains('abstract interface class SceneViewPointerSession'),
     );
+    expect(runtimeContractSource, contains('void detach();'));
     expect(runtimeContractSource, isNot(contains('handleControllerChanged')));
     expect(runtimeContractSource, isNot(contains('updateController(')));
 
@@ -229,6 +230,19 @@ void main() {
       contains('SceneControllerInteraction get _interaction'),
     );
     expect(viewRuntimeSource, contains('createPointerSessionToken()'));
+    expect(viewRuntimeSource, contains('detachPointerSession:'));
+    expect(
+      viewRuntimeSource,
+      contains('_interactionRuntime.detachPointerSession'),
+    );
+    expect(
+      viewRuntimeSource,
+      isNot(contains('_DisposedSceneViewPointerSession')),
+    );
+    expect(
+      viewRuntimeSource,
+      isNot(contains('if (_interactionRuntime.isDisposed)')),
+    );
     expect(viewRuntimeSource, contains('releasePointerSessionToken:'));
     expect(
       viewRuntimeSource,
@@ -257,10 +271,19 @@ void main() {
     expect(pointerSessionSource, contains('_PendingTapFlushScheduler'));
     expect(pointerSessionSource, contains('_ownerListenable.addListener('));
     expect(pointerSessionSource, contains('PointerSessionToken token,'));
+    expect(pointerSessionSource, contains('detachPointerSession'));
     expect(pointerSessionSource, contains('releasePointerSessionToken'));
     expect(pointerSessionSource, contains('PointerSessionToken token'));
+    expect(pointerSessionSource, contains('void detach()'));
+    expect(pointerSessionSource, contains('_detachPointerSession(_token);'));
+    expect(pointerSessionSource, contains('_releaseOwnedResources();'));
     expect(pointerSessionSource, contains('_handlePointerFromSession('));
     expect(pointerSessionSource, contains('_handleDoubleTapFromSession('));
+    expect(pointerSessionSource, contains('void _releaseOwnedResources()'));
+    expect(
+      pointerSessionSource,
+      contains('_ownerListenable.removeListener(_ownerListener);'),
+    );
     expect(
       pointerSessionSource,
       contains('_releasePointerSessionToken(_token);'),
@@ -401,6 +424,10 @@ void main() {
     );
     expect(
       interactionRuntimeSource,
+      contains('void detachPointerSession(PointerSessionToken token)'),
+    );
+    expect(
+      interactionRuntimeSource,
       contains('void releasePointerSessionToken(PointerSessionToken token)'),
     );
     expect(
@@ -514,7 +541,27 @@ void main() {
     );
     expect(
       sceneViewRuntimeSource,
-      contains('widget.runtime.createPointerSession('),
+      contains('late SceneViewRuntime _activeRuntime;'),
+    );
+    expect(
+      sceneViewRuntimeSource,
+      isNot(contains('late SceneViewRuntime _requestedRuntime;')),
+    );
+    expect(
+      sceneViewRuntimeSource,
+      contains('_activeRuntime.createPointerSession('),
+    );
+    expect(
+      sceneViewRuntimeSource,
+      contains('return runtime.createPointerSession('),
+    );
+    expect(
+      sceneViewRuntimeSource,
+      contains('_createReplacementPointerSession('),
+    );
+    expect(
+      sceneViewRuntimeSource,
+      isNot(contains('FlutterError.reportError(')),
     );
     expect(
       sceneViewRuntimeSource,
@@ -522,12 +569,95 @@ void main() {
     );
     expect(
       sceneViewRuntimeSource,
+      contains('final nextPointerSession = _createReplacementPointerSession('),
+    );
+    expect(
+      sceneViewRuntimeSource,
+      contains('if (_activeRuntime == widget.runtime) {'),
+    );
+    expect(
+      sceneViewRuntimeSource,
+      isNot(contains('_requestedRuntime = widget.runtime;')),
+    );
+    expect(
+      sceneViewRuntimeSource,
+      isNot(contains('if (nextPointerSession == null) {')),
+    );
+    expect(
+      sceneViewRuntimeSource,
+      contains('final renderState = _activeRuntime.renderState;'),
+    );
+    expect(
+      sceneViewRuntimeSource,
+      isNot(contains('final renderState = widget.runtime.renderState;')),
+    );
+    expect(
+      sceneViewRuntimeSource,
       contains('foregroundPainter: SceneViewInteractiveOverlayPainter('),
     );
     expect(sceneViewRuntimeSource, contains('child: SceneViewRenderSurface('));
+    final runtimeHostBody = sceneViewRuntimeSource.substring(
+      sceneViewRuntimeSource.indexOf('class _SceneViewRuntimeHostState'),
+    );
+    final didUpdateWidgetBody = _extractMethodBody(
+      source: runtimeHostBody,
+      methodStart: 'void didUpdateWidget(SceneViewRuntimeHost oldWidget)',
+    );
+    expect(
+      didUpdateWidgetBody.indexOf('if (_activeRuntime == widget.runtime) {') <
+          didUpdateWidgetBody.indexOf('return;'),
+      isTrue,
+    );
+    expect(
+      didUpdateWidgetBody.indexOf(
+            'final nextPointerSession = _createReplacementPointerSession(',
+          ) <
+          didUpdateWidgetBody.indexOf(
+            '_pointerHost.replacePointerSession(nextPointerSession);',
+          ),
+      isTrue,
+    );
+    expect(
+      didUpdateWidgetBody.indexOf(
+            '_pointerHost.replacePointerSession(nextPointerSession);',
+          ) <
+          didUpdateWidgetBody.indexOf('_activeRuntime = widget.runtime;'),
+      isTrue,
+    );
 
     expect(pointerHostSource, contains('SceneViewPointerSession'));
     expect(pointerHostSource, contains('replacePointerSession('));
+    final pointerRuntimeSource = pointerHostSource.substring(
+      pointerHostSource.indexOf('class _SceneViewInteractivePointerRuntime'),
+    );
+    final replacePointerSessionBody = _extractMethodBody(
+      source: pointerRuntimeSource,
+      methodStart: 'void replacePointerSession(SceneViewPointerSession next)',
+    );
+    expect(
+      replacePointerSessionBody.indexOf('current.detach();') <
+          replacePointerSessionBody.indexOf('current.dispose();'),
+      isTrue,
+    );
+    expect(
+      replacePointerSessionBody.indexOf('current.dispose();') <
+          replacePointerSessionBody.indexOf('_pointerRouter.reset();'),
+      isTrue,
+    );
+    expect(
+      replacePointerSessionBody.indexOf('_pointerRouter.reset();') <
+          replacePointerSessionBody.indexOf('_pointerSession = next;'),
+      isTrue,
+    );
+    final disposePointerHostBody = _extractMethodBody(
+      source: pointerRuntimeSource,
+      methodStart: 'void dispose()',
+    );
+    expect(
+      disposePointerHostBody.indexOf('_pointerSession.detach();') <
+          disposePointerHostBody.indexOf('_pointerSession.dispose();'),
+      isTrue,
+    );
     expect(pointerHostSource, isNot(contains('SceneController')));
     expect(pointerHostSource, isNot(contains('createPointerSemanticsBridge(')));
     expect(pointerHostSource, isNot(contains('PointerInputTracker(')));

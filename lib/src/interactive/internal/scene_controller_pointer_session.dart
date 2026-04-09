@@ -19,6 +19,7 @@ final class SceneControllerPointerSession implements SceneViewPointerSession {
     required PointerInputSettings Function() readPointerSettings,
     required bool Function() isMounted,
     required bool Function() hasLiveRawPointers,
+    required void Function(PointerSessionToken token) detachPointerSession,
     required void Function(PointerSessionToken token)
     releasePointerSessionToken,
     required void Function(
@@ -37,6 +38,7 @@ final class SceneControllerPointerSession implements SceneViewPointerSession {
        _readPointerSettings = readPointerSettings,
        _isMounted = isMounted,
        _hasLiveRawPointers = hasLiveRawPointers,
+       _detachPointerSession = detachPointerSession,
        _releasePointerSessionToken = releasePointerSessionToken,
        _handlePointerFromSession = handlePointerFromSession,
        _handleDoubleTapFromSession = handleDoubleTapFromSession,
@@ -52,6 +54,7 @@ final class SceneControllerPointerSession implements SceneViewPointerSession {
   final PointerInputSettings Function() _readPointerSettings;
   final bool Function() _isMounted;
   final bool Function() _hasLiveRawPointers;
+  final void Function(PointerSessionToken token) _detachPointerSession;
   final void Function(PointerSessionToken token) _releasePointerSessionToken;
   final void Function(
     CanvasPointerInput input, {
@@ -72,21 +75,35 @@ final class SceneControllerPointerSession implements SceneViewPointerSession {
   late PointerInputSettings _appliedPointerSettings;
   PointerInputSettings? _pendingPointerSettings;
   int _pointerTrackerGeneration = 0;
+  bool _detached = false;
   bool _disposed = false;
+  bool _ownedResourcesReleased = false;
 
   @override
   int? get pendingTapFlushTimestampMs =>
-      _pendingTapFlushScheduler.pendingTapFlushTimestampMs;
+      _detached ? null : _pendingTapFlushScheduler.pendingTapFlushTimestampMs;
+
+  @override
+  void detach() {
+    if (_detached || _disposed) {
+      return;
+    }
+    _detached = true;
+    _pendingPointerSettings = null;
+    _pointerTrackerGeneration++;
+    _pendingTapFlushScheduler.clear();
+    _detachPointerSession(_token);
+    _releaseOwnedResources();
+  }
 
   @override
   void dispose() {
     if (_disposed) {
       return;
     }
+    detach();
     _disposed = true;
-    _ownerListenable.removeListener(_ownerListener);
     _pendingTapFlushScheduler.dispose();
-    _releasePointerSessionToken(_token);
   }
 
   @override
@@ -94,6 +111,9 @@ final class SceneControllerPointerSession implements SceneViewPointerSession {
     PointerSample sample, {
     required bool shouldTrackSignals,
   }) {
+    if (_detached) {
+      return;
+    }
     _handlePointerFromSession(
       CanvasPointerInput(
         pointerId: sample.pointerId,
@@ -116,6 +136,9 @@ final class SceneControllerPointerSession implements SceneViewPointerSession {
     required int pointerId,
     required int referenceTimestampMs,
   }) {
+    if (_detached) {
+      return;
+    }
     _handlePointerFromSession(input, token: _token);
     _pointerTracker.discardPointer(pointerId);
     _syncPendingFlushTimer(referenceTimestampMs: referenceTimestampMs);
@@ -123,6 +146,9 @@ final class SceneControllerPointerSession implements SceneViewPointerSession {
 
   @override
   void handleRawPointerRelease({required bool isIdleAfterRelease}) {
+    if (_detached) {
+      return;
+    }
     if (!isIdleAfterRelease) {
       return;
     }
@@ -130,6 +156,9 @@ final class SceneControllerPointerSession implements SceneViewPointerSession {
   }
 
   void _handleOwnerChanged() {
+    if (_detached) {
+      return;
+    }
     if (!_isMounted()) {
       return;
     }
@@ -165,6 +194,9 @@ final class SceneControllerPointerSession implements SceneViewPointerSession {
     int expectedFlushTimestampMs,
     int ownerGeneration,
   ) {
+    if (_detached) {
+      return;
+    }
     if (!_pendingTapFlushScheduler.matches(
       expectedFlushTimestampMs: expectedFlushTimestampMs,
       ownerGeneration: ownerGeneration,
@@ -216,6 +248,15 @@ final class SceneControllerPointerSession implements SceneViewPointerSession {
       return;
     }
     _resetPointerTracking(settings: pending);
+  }
+
+  void _releaseOwnedResources() {
+    if (_ownedResourcesReleased) {
+      return;
+    }
+    _ownedResourcesReleased = true;
+    _ownerListenable.removeListener(_ownerListener);
+    _releasePointerSessionToken(_token);
   }
 }
 

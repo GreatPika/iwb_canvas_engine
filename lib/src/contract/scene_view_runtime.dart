@@ -14,6 +14,8 @@ abstract interface class SceneViewRuntime {
 abstract interface class SceneViewPointerSession {
   int? get pendingTapFlushTimestampMs;
 
+  void detach();
+
   void handleRoutedSample(
     PointerSample sample, {
     required bool shouldTrackSignals,

@@ -91,18 +91,25 @@ reset.
    committed scene mutation.
 5. `SceneViewInteractivePointerHost` remains a raw routing/lifecycle shell and
    must not become a pointer-tracker owner or gesture owner.
+6. Existing fail-fast dispose behavior for public/effectful runtime entrypoints
+   remains unchanged; this step does not legalize post-dispose pointer-session
+   creation or disposed-runtime fallback objects.
 
 ## 5. Result Requirements
 
 1. Replacing or disposing an opaque `SceneViewPointerSession` detaches the old
    session before disposal and before any host-side router reset.
 2. `SceneControllerPointerSession.detach()` is idempotent,
-   allow-after-dispose-safe, and makes later session-owned callbacks local
-   no-ops.
+   allow-after-dispose-safe, releases controller-owned listener/token
+   resources, and makes later session-owned callbacks local no-ops.
 3. Swapping or disposing the host leaves the old controller with no active
    gesture or session-owned pending-line ownership.
 4. Contract tests and guardrails fail if the detach method or detach-before-
    dispose ordering is removed.
+5. Runtime replacement is atomic: the host must not switch render-state
+   ownership until replacement pointer-session creation succeeds, and failed
+   replacement creation must surface to the owner instead of being swallowed
+   behind the previous runtime.
 
 ## 6. Implementation Specification
 
@@ -159,6 +166,9 @@ reset.
 - After `detach()` returns, later routed samples, invalid terminal forwarding,
   raw pointer release callbacks, and session-owned timer flushes must be local
   no-ops and must not call the controller again.
+- `SceneControllerSceneViewRuntime.createPointerSession(...)` must keep
+  `createPointerSession` behind the existing public side-effect gate and must
+  not special-case disposed controllers with an inert session fallback.
 
 ### 6.6 Prohibited
 
@@ -168,6 +178,9 @@ reset.
 - letting host replacement or dispose call `dispose()` before `detach()`
 - storing pointer tracker, pending settings, or gesture-owner state in
   `SceneViewInteractivePointerHost`
+- returning an inert/no-op `SceneViewPointerSession` from a disposed runtime
+- swallowing `SceneViewRenderState.addListener/removeListener` after dispose to
+  make mounting a disposed runtime succeed
 
 ## 7. Execution Rules
 
@@ -183,13 +196,15 @@ reset.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Pointer Session Detaches Before Replace And Dispose
+### Slice 1. [x] Pointer Session Detaches Before Replace And Dispose
 
 #### Slice Contract
 
 Replacing or disposing an opaque `SceneViewPointerSession` detaches the old
 session before disposal and before host-side router reset, so the old
-controller is not left with active gesture or pending-line ownership.
+controller is not left with active gesture or pending-line ownership, and a
+failed replacement session creation keeps both pointer routing and render-state
+ownership on the current runtime.
 
 #### Change
 
@@ -245,6 +260,9 @@ same change so contract shape, host ordering, and sandbox mirrors all agree.
   and old pending-line ownership before the old session is disposed
 - disposing the host while the controller survives leaves no active gesture or
   session-owned pending line in the controller
+- replacement session creation failure surfaces to the owner while both
+  rendering and pointer input stay bound to the current runtime until a later
+  successful rebuild installs the replacement
 
 #### Negative Scenarios
 
