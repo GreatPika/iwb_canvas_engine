@@ -297,7 +297,9 @@ Ownership decisions for the target state:
    immutable `SceneSnapshot`. It also owns prepared replace-scene materialization,
    so `replaceScene(...)` validates/imports runtime scene data exactly once
    before any active-gesture reset and the apply path adopts the prepared
-   payload without a second snapshot import.
+   payload without a second snapshot import. On the read side it remains a
+   committed-store `SceneRenderState`; the full `SceneViewRenderState` contract
+   is assembled only on the controller-owned interactive runtime path.
 7. `ScenePainter` renders the committed snapshot plus any ephemeral preview
    state owned by the interactive controller. Background-grid draw semantics
    have one render-local owner in `render/scene_grid_renderer.dart`; painter
@@ -518,6 +520,12 @@ most important architectural rules are:
   orchestration to the controller-private `SceneControllerCommitRuntime`
   instead of re-owning transaction assembly in `scene_store_controller.dart`. This
   split is pinned by `INV-ENG-CONTROLLER-COMMIT-RUNTIME-BOUNDARY`.
+- `SceneStoreController` is not a production owner of the full
+  `SceneViewRenderState` contract. It remains consumable as committed
+  `SceneRenderState`, while the assembled controller-owned runtime path is the
+  only production source of full view render-state fields such as selection
+  marquee, preview deltas, and active line/stroke previews. This split is
+  pinned by `INV-ENG-CONTROLLER-NO-FULL-VIEW-RENDER-STATE`.
 - `SceneControllerCommitRuntime` is the controller-private orchestration owner
   for transactional writes. It assembles `TxnContext`, `SceneWriter`,
   `MutationExecutor`, commit preparation, and post-commit publication without

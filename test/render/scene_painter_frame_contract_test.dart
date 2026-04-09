@@ -7,6 +7,8 @@ import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 
+import '../support/committed_scene_view_render_state.dart';
+
 // INV:INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION
 
 void main() {
@@ -42,10 +44,10 @@ void main() {
       controller.write<void>((writer) {
         writer.writeSelectionReplace(const <NodeId>{'path-frame-contract'});
       });
-      final renderState = _ScenePainterFrameTestRenderState(
+      final renderState = CommittedSceneViewRenderState(
         snapshot: controller.snapshot,
         selectedNodeIds: controller.selectedNodeIds,
-        previewDeltaReader: (_) {
+        previewDeltaResolver: (_) {
           previewCalls += 1;
           return const Offset(5, -3);
         },
@@ -66,22 +68,4 @@ void main() {
       expect(geometryCache.debugSize, 1);
     },
   );
-}
-
-final class _ScenePainterFrameTestRenderState extends SceneStoreController {
-  _ScenePainterFrameTestRenderState({
-    required SceneSnapshot snapshot,
-    required Set<NodeId> selectedNodeIds,
-    required this.previewDeltaReader,
-  }) : _selectedNodeIds = selectedNodeIds,
-       super(initialSnapshot: snapshot);
-
-  final Set<NodeId> _selectedNodeIds;
-  final Offset Function(NodeId nodeId) previewDeltaReader;
-
-  @override
-  Set<NodeId> get selectedNodeIds => _selectedNodeIds;
-
-  @override
-  Offset Function(NodeId nodeId) get previewDeltaResolver => previewDeltaReader;
 }

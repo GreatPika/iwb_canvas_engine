@@ -2,10 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart' show sceneSizeMax;
+import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 
 import 'load_profile_policy.dart';
@@ -309,9 +311,10 @@ Map<String, Object?> _runSelectionPathMetricsCase({
     ],
   );
   final controller = SceneStoreController(initialSnapshot: snapshot);
+  final renderState = _BenchmarkControllerRenderState(controller);
   final pathCache = ScenePathMetricsCache(maxEntries: pathNodeCount * 2);
   final painter = ScenePainter(
-    controller: controller,
+    controller: renderState,
     imageResolver: (_) => null,
     pathMetricsCache: pathCache,
   );
@@ -352,9 +355,76 @@ Map<String, Object?> _runSelectionPathMetricsCase({
       },
     };
   } finally {
+    renderState.dispose();
     controller.dispose();
   }
 }
+
+class _BenchmarkControllerRenderState extends ChangeNotifier
+    implements SceneViewRenderState {
+  _BenchmarkControllerRenderState(this._controller) {
+    _controller.addListener(notifyListeners);
+  }
+
+  final SceneStoreController _controller;
+
+  @override
+  SceneSnapshot get snapshot => _controller.snapshot;
+
+  @override
+  Set<NodeId> get selectedNodeIds => _controller.selectedNodeIds;
+
+  @override
+  int get controllerEpoch => _controller.controllerEpoch;
+
+  @override
+  Rect? get selectionRect => null;
+
+  @override
+  Offset get cameraOffset => snapshot.camera.offset;
+
+  @override
+  Offset Function(NodeId nodeId) get previewDeltaResolver =>
+      _benchmarkZeroPreviewDelta;
+
+  @override
+  bool get hasActiveStrokePreview => false;
+
+  @override
+  List<Offset> get activeStrokePreviewPoints => const <Offset>[];
+
+  @override
+  double get activeStrokePreviewThickness => 0;
+
+  @override
+  Color get activeStrokePreviewColor => const Color(0x00000000);
+
+  @override
+  double get activeStrokePreviewOpacity => 0;
+
+  @override
+  bool get hasActiveLinePreview => false;
+
+  @override
+  Offset? get activeLinePreviewStart => null;
+
+  @override
+  Offset? get activeLinePreviewEnd => null;
+
+  @override
+  double get activeLinePreviewThickness => 0;
+
+  @override
+  Color get activeLinePreviewColor => const Color(0x00000000);
+
+  @override
+  void dispose() {
+    _controller.removeListener(notifyListeners);
+    super.dispose();
+  }
+}
+
+Offset _benchmarkZeroPreviewDelta(NodeId _) => Offset.zero;
 
 Map<String, Object?> _runHugeBoundsMetric({required int iterations}) {
   final snapshot = SceneSnapshot(

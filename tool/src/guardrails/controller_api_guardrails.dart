@@ -76,6 +76,16 @@ ControllerFileResult _checkControllerFile(GuardrailContext context, File file) {
   return ControllerFileResult(
     hasControllerEpoch: collector.hasControllerEpoch,
     violation:
+        _sceneViewRenderStateImportViolation(
+          collector: collector,
+          parsed: parsed,
+          filePosixPath: filePosixPath,
+        ) ??
+        _sceneStoreControllerViewRenderStateViolation(
+          collector: collector,
+          parsed: parsed,
+          filePosixPath: filePosixPath,
+        ) ??
         _sceneWriterSelectionBypassViolation(
           parsed: parsed,
           filePosixPath: filePosixPath,
@@ -90,6 +100,42 @@ ControllerFileResult _checkControllerFile(GuardrailContext context, File file) {
           parsed: parsed,
           filePosixPath: filePosixPath,
         ),
+  );
+}
+
+GuardrailViolation? _sceneViewRenderStateImportViolation({
+  required ControllerSymbolCollector collector,
+  required ParsedUnitResult parsed,
+  required String filePosixPath,
+}) {
+  final importOccurrence = collector.sceneViewRenderStateImport;
+  if (importOccurrence == null) {
+    return null;
+  }
+  return GuardrailViolation(
+    filePath: filePosixPath,
+    line: lineForOffset(parsed, importOccurrence.offset),
+    message:
+        'controller API violation: controller layer must not import '
+        'scene_view_render_state.dart',
+  );
+}
+
+GuardrailViolation? _sceneStoreControllerViewRenderStateViolation({
+  required ControllerSymbolCollector collector,
+  required ParsedUnitResult parsed,
+  required String filePosixPath,
+}) {
+  final occurrence = collector.sceneStoreControllerViewRenderStateOccurrence;
+  if (occurrence == null) {
+    return null;
+  }
+  return GuardrailViolation(
+    filePath: filePosixPath,
+    line: lineForOffset(parsed, occurrence.offset),
+    message:
+        'controller API violation: SceneStoreController must not implement '
+        'SceneViewRenderState',
   );
 }
 
@@ -210,6 +256,36 @@ class ControllerSymbolCollector extends RecursiveAstVisitor<void> {
   final List<ControllerSymbolOccurrence> occurrences =
       <ControllerSymbolOccurrence>[];
   bool hasControllerEpoch = false;
+  ControllerSymbolOccurrence? sceneViewRenderStateImport;
+  ControllerSymbolOccurrence? sceneStoreControllerViewRenderStateOccurrence;
+
+  @override
+  void visitImportDirective(ImportDirective node) {
+    final uri = node.uri.stringValue;
+    if (uri != null && uri.endsWith('scene_view_render_state.dart')) {
+      sceneViewRenderStateImport = ControllerSymbolOccurrence(
+        name: uri,
+        offset: node.uri.offset,
+      );
+    }
+    super.visitImportDirective(node);
+  }
+
+  @override
+  void visitClassDeclaration(ClassDeclaration node) {
+    if (node.name.lexeme == 'SceneStoreController' &&
+        node.implementsClause?.interfaces.any(
+              (type) => type.toSource() == 'SceneViewRenderState',
+            ) ==
+            true) {
+      sceneStoreControllerViewRenderStateOccurrence =
+          ControllerSymbolOccurrence(
+            name: node.name.lexeme,
+            offset: node.name.offset,
+          );
+    }
+    super.visitClassDeclaration(node);
+  }
 
   @override
   void visitVariableDeclaration(VariableDeclaration node) {

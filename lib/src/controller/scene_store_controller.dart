@@ -2,7 +2,7 @@ import 'dart:ui' hide Scene;
 
 import 'package:flutter/foundation.dart';
 
-import '../contract/scene_view_render_state.dart';
+import '../contract/scene_render_state.dart';
 import '../core/nodes.dart' show SceneNode;
 import '../core/scene.dart' show Scene;
 import '../core/scene_spatial_index.dart';
@@ -19,8 +19,7 @@ import 'scene_snapshot_materializer.dart';
 import 'scene_writer.dart';
 import 'store.dart';
 
-class SceneStoreController extends ChangeNotifier
-    implements SceneViewRenderState {
+class SceneStoreController extends ChangeNotifier implements SceneRenderState {
   SceneStoreController({
     SceneSnapshot? initialSnapshot,
     this.textFontFamilyByDefault,
@@ -64,51 +63,10 @@ class SceneStoreController extends ChangeNotifier
   @override
   Set<NodeId> get selectedNodeIds => _commitRuntime.selectedNodeIdsView;
 
-  @override
   int get controllerEpoch => _store.controllerEpoch;
   int get structuralRevision => _store.structuralRevision;
   int get boundsRevision => _store.boundsRevision;
   int get visualRevision => _store.visualRevision;
-
-  @override
-  Rect? get selectionRect => null;
-
-  @override
-  Offset get cameraOffset => snapshot.camera.offset;
-
-  @override
-  Offset Function(NodeId nodeId) get previewDeltaResolver =>
-      _zeroPreviewDeltaForNode;
-
-  @override
-  bool get hasActiveStrokePreview => false;
-
-  @override
-  List<Offset> get activeStrokePreviewPoints => const <Offset>[];
-
-  @override
-  double get activeStrokePreviewThickness => 0;
-
-  @override
-  Color get activeStrokePreviewColor => const Color(0x00000000);
-
-  @override
-  double get activeStrokePreviewOpacity => 0;
-
-  @override
-  bool get hasActiveLinePreview => false;
-
-  @override
-  Offset? get activeLinePreviewStart => null;
-
-  @override
-  Offset? get activeLinePreviewEnd => null;
-
-  @override
-  double get activeLinePreviewThickness => 0;
-
-  @override
-  Color get activeLinePreviewColor => const Color(0x00000000);
 
   Stream<CommittedSignal> get signals => _commitRuntime.signals;
 
@@ -138,8 +96,6 @@ class SceneStoreController extends ChangeNotifier
     super.dispose();
   }
 }
-
-Offset _zeroPreviewDeltaForNode(NodeId _) => Offset.zero;
 
 extension SceneStoreControllerSpatialAccess on SceneStoreController {
   List<SceneSpatialCandidate> querySpatialCandidates(Rect worldBounds) {

@@ -8,6 +8,99 @@ import '../support/tool_process_test_support.dart';
 
 void main() {
   group('tool/check_guardrails.dart', () {
+    // INV:INV-ENG-CONTROLLER-NO-FULL-VIEW-RENDER-STATE
+    test(
+      'allows SceneStoreController to stay on SceneRenderState without full view render-state import',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeSandboxFile(
+            sandbox,
+            'lib/src/controller/scene_store_controller.dart',
+            '''
+import '../contract/scene_render_state.dart';
+
+class SceneStoreController implements SceneRenderState {
+  final int controllerEpoch = 0;
+
+  SceneRenderState? currentState;
+}
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, 0);
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects controller-layer import of scene_view_render_state.dart',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeSandboxFile(
+            sandbox,
+            'lib/src/controller/scene_store_controller.dart',
+            '''
+import '../contract/scene_view_render_state.dart';
+
+class SceneStoreController {
+  final int controllerEpoch = 0;
+}
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'controller API',
+              detail:
+                  'controller layer must not import '
+                  'scene_view_render_state.dart',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects SceneStoreController implementing SceneViewRenderState',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeSandboxFile(
+            sandbox,
+            'lib/src/controller/scene_store_controller.dart',
+            '''
+class SceneStoreController implements SceneViewRenderState {
+  final int controllerEpoch = 0;
+}
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'controller API',
+              detail:
+                  'SceneStoreController must not implement SceneViewRenderState',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
     // INV:INV-ENG-WRITE-ONLY-MUTATION
     test('rejects mutating symbol outside write/txn prefixes', () async {
       final sandbox = await createGuardrailsSandbox();

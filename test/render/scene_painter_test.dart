@@ -13,6 +13,8 @@ import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 import 'package:iwb_canvas_engine/src/render/scene_grid_renderer.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 
+import '../support/committed_scene_view_render_state.dart';
+
 class _FakeRenderState extends ChangeNotifier implements SceneViewRenderState {
   _FakeRenderState({
     required this.snapshot,
@@ -80,6 +82,20 @@ class _FakeRenderState extends ChangeNotifier implements SceneViewRenderState {
 }
 
 Offset _zeroPreviewDelta(NodeId _) => Offset.zero;
+
+CommittedSceneViewRenderState _mirrorRenderState(
+  SceneStoreController controller, {
+  Offset Function(NodeId nodeId)? previewDeltaResolver,
+  Rect? selectionRect,
+}) {
+  final renderState = CommittedSceneViewRenderState.mirror(
+    controller,
+    previewDeltaResolver: previewDeltaResolver,
+    selectionRect: selectionRect,
+  );
+  addTearDown(renderState.dispose);
+  return renderState;
+}
 
 Future<Image> _solidImage(Color color, {int width = 8, int height = 8}) async {
   final recorder = PictureRecorder();
@@ -329,12 +345,13 @@ void main() {
       ),
     );
     addTearDown(controller.dispose);
+    final renderState = _mirrorRenderState(controller);
     controller.write<void>((writer) {
       writer.writeSelectionReplace(const <String>{'rect-1', 'path-1'});
     });
 
     final painter = ScenePainter(
-      controller: controller,
+      controller: renderState,
       imageResolver: (id) => id == 'img' ? image : null,
       selectionColor: const Color(0xFFFF0000),
       selectionStrokeWidth: 2,
@@ -356,9 +373,10 @@ void main() {
       ),
     );
     addTearDown(controller.dispose);
+    final renderState = _mirrorRenderState(controller);
 
     final withoutMarquee = ScenePainter(
-      controller: controller,
+      controller: renderState,
       imageResolver: (_) => null,
       selectionColor: const Color(0xFFFF0000),
       selectionStrokeWidth: 2,
@@ -437,6 +455,7 @@ void main() {
       ),
     );
     addTearDown(controller.dispose);
+    final renderState = _mirrorRenderState(controller);
     controller.write<void>((writer) {
       writer.writeSelectionReplace(const <String>{
         'line-valid',
@@ -445,7 +464,7 @@ void main() {
     });
 
     final painter = ScenePainter(
-      controller: controller,
+      controller: renderState,
       imageResolver: (_) => null,
       selectionColor: const Color(0xFFFF0000),
       selectionStrokeWidth: 2,
@@ -456,7 +475,7 @@ void main() {
     expect(nonBackground, greaterThan(0));
 
     final cachedPainter = ScenePainter(
-      controller: controller,
+      controller: renderState,
       imageResolver: (_) => null,
       selectionColor: const Color(0xFFFF0000),
       selectionStrokeWidth: 2,
@@ -498,13 +517,14 @@ void main() {
         ),
       );
       addTearDown(controller.dispose);
+      final renderState = _mirrorRenderState(controller);
       controller.write<void>((writer) {
         writer.writeSelectionReplace(const <NodeId>{'path-selected'});
       });
 
       final canvas = TestRecordingCanvas();
       final painter = ScenePainter(
-        controller: controller,
+        controller: renderState,
         imageResolver: (_) => null,
         selectionColor: const Color(0xFFFF0000),
         selectionStrokeWidth: 2,
@@ -543,9 +563,10 @@ void main() {
         ),
       );
       addTearDown(controller.dispose);
+      final renderState = _mirrorRenderState(controller);
 
       final painter = ScenePainter(
-        controller: controller,
+        controller: renderState,
         imageResolver: (_) => null,
       );
       final image = await _paintToImage(painter, width: 500, height: 500);
@@ -570,8 +591,9 @@ void main() {
       );
       final controller = SceneStoreController(initialSnapshot: scene);
       addTearDown(controller.dispose);
+      final renderState = _mirrorRenderState(controller);
       final painter = ScenePainter(
-        controller: controller,
+        controller: renderState,
         imageResolver: (_) => null,
       );
 
@@ -660,9 +682,10 @@ void main() {
         ),
       );
       addTearDown(controller.dispose);
+      final renderState = _mirrorRenderState(controller);
 
       final painter = ScenePainter(
-        controller: controller,
+        controller: renderState,
         imageResolver: (_) => null,
       );
 
@@ -722,9 +745,10 @@ void main() {
       ),
     );
     addTearDown(controller.dispose);
+    final renderState = _mirrorRenderState(controller);
 
     final painter = ScenePainter(
-      controller: controller,
+      controller: renderState,
       imageResolver: (_) => null,
     );
     final image = await _paintToImage(painter, width: 30, height: 30);
@@ -763,9 +787,10 @@ void main() {
       ),
     );
     addTearDown(controller.dispose);
+    final renderState = _mirrorRenderState(controller);
 
     final painter = ScenePainter(
-      controller: controller,
+      controller: renderState,
       imageResolver: (_) => null,
     );
     final image = await _paintToImage(painter, width: 30, height: 30);
@@ -810,9 +835,10 @@ void main() {
       ),
     );
     addTearDown(controller.dispose);
+    final renderState = _mirrorRenderState(controller);
 
     final image = await _paintToImage(
-      ScenePainter(controller: controller, imageResolver: (_) => null),
+      ScenePainter(controller: renderState, imageResolver: (_) => null),
       width: 40,
       height: 40,
     );
@@ -849,9 +875,10 @@ void main() {
         ),
       );
       addTearDown(controller.dispose);
+      final renderState = _mirrorRenderState(controller);
 
       final image = await _paintToImage(
-        ScenePainter(controller: controller, imageResolver: (_) => null),
+        ScenePainter(controller: renderState, imageResolver: (_) => null),
         width: 30,
         height: 30,
       );
@@ -971,13 +998,14 @@ void main() {
         ),
       );
       addTearDown(controller.dispose);
+      final renderState = _mirrorRenderState(controller);
       controller.write((writer) {
         writer.writeSelectionReplace(const <NodeId>{'rect-world-selection'});
       });
 
       final baselineImage = await _paintToImage(
         ScenePainter(
-          controller: controller,
+          controller: renderState,
           imageResolver: (_) => null,
           selectionStrokeWidth: selectionStrokeWidth,
           selectionColor: const Color(0xFFFF0000),
@@ -1122,14 +1150,19 @@ void main() {
       );
       addTearDown(defaultController.dispose);
       addTearDown(customController.dispose);
+      final defaultRenderState = _mirrorRenderState(defaultController);
+      final customRenderState = _mirrorRenderState(customController);
 
       final defaultImage = await _paintToImage(
-        ScenePainter(controller: defaultController, imageResolver: (_) => null),
+        ScenePainter(
+          controller: defaultRenderState,
+          imageResolver: (_) => null,
+        ),
         width: 180,
         height: 180,
       );
       final customImage = await _paintToImage(
-        ScenePainter(controller: customController, imageResolver: (_) => null),
+        ScenePainter(controller: customRenderState, imageResolver: (_) => null),
         width: 180,
         height: 180,
       );
@@ -1180,9 +1213,10 @@ void main() {
       ),
     );
     addTearDown(controller.dispose);
+    final renderState = _mirrorRenderState(controller);
 
     final painter = ScenePainter(
-      controller: controller,
+      controller: renderState,
       imageResolver: (_) => null,
       strokePathCache: strokeCache,
       textLayoutCache: textCache,
@@ -1232,9 +1266,10 @@ void main() {
         ),
       );
       addTearDown(controller.dispose);
+      final renderState = _mirrorRenderState(controller);
 
       final painter = ScenePainter(
-        controller: controller,
+        controller: renderState,
         imageResolver: (_) => null,
         strokePathCache: strokeCache,
       );
@@ -1284,9 +1319,10 @@ void main() {
         ),
       );
       addTearDown(controller.dispose);
+      final renderState = _mirrorRenderState(controller);
 
       final painter = ScenePainter(
-        controller: controller,
+        controller: renderState,
         imageResolver: (_) => null,
         strokePathCache: strokeCache,
       );
@@ -1343,12 +1379,13 @@ void main() {
         ),
       );
       addTearDown(controller.dispose);
+      final renderState = _mirrorRenderState(controller);
       controller.write<void>((writer) {
         writer.writeSelectionReplace(const <NodeId>{'path-geometry-reuse'});
       });
 
       final painter = ScenePainter(
-        controller: controller,
+        controller: renderState,
         imageResolver: (_) => null,
         geometryCache: geometryCache,
       );
@@ -1385,9 +1422,10 @@ void main() {
         ),
       );
       addTearDown(controller.dispose);
+      final renderState = _mirrorRenderState(controller);
 
       final painter = ScenePainter(
-        controller: controller,
+        controller: renderState,
         imageResolver: (_) => null,
         pathMetricsCache: pathCache,
       );
@@ -1418,9 +1456,10 @@ void main() {
         ),
       );
       addTearDown(controller.dispose);
+      final renderState = _mirrorRenderState(controller);
 
       final painter = ScenePainter(
-        controller: controller,
+        controller: renderState,
         imageResolver: (_) => null,
         staticLayerCache: staticCache,
       );
@@ -1501,9 +1540,10 @@ void main() {
         ),
       );
       addTearDown(controller.dispose);
+      final renderState = _mirrorRenderState(controller);
 
       final image = await _paintToImage(
-        ScenePainter(controller: controller, imageResolver: (_) => null),
+        ScenePainter(controller: renderState, imageResolver: (_) => null),
         width: 100,
         height: 80,
       );
@@ -1575,6 +1615,7 @@ void main() {
         ),
       );
       addTearDown(controller.dispose);
+      final renderState = _mirrorRenderState(controller);
 
       controller.write((writer) {
         writer.writeSelectionReplace(const <NodeId>{
@@ -1587,7 +1628,7 @@ void main() {
       });
 
       final withoutCache = await _paintToImage(
-        ScenePainter(controller: controller, imageResolver: (_) => null),
+        ScenePainter(controller: renderState, imageResolver: (_) => null),
         width: 120,
         height: 120,
       );
@@ -1598,7 +1639,7 @@ void main() {
 
       final withPathCache = await _paintToImage(
         ScenePainter(
-          controller: controller,
+          controller: renderState,
           imageResolver: (_) => null,
           pathMetricsCache: ScenePathMetricsCache(),
         ),
@@ -1617,24 +1658,26 @@ void main() {
     final c2 = SceneStoreController();
     addTearDown(c1.dispose);
     addTearDown(c2.dispose);
+    final r1 = _mirrorRenderState(c1);
+    final r2 = _mirrorRenderState(c2);
 
     Image? resolverA(String _) => null;
     Image? resolverB(String _) => null;
 
-    final base = ScenePainter(controller: c1, imageResolver: resolverA);
-    final same = ScenePainter(controller: c1, imageResolver: resolverA);
+    final base = ScenePainter(controller: r1, imageResolver: resolverA);
+    final same = ScenePainter(controller: r1, imageResolver: resolverA);
     expect(base.shouldRepaint(same), isFalse);
 
     expect(
       ScenePainter(
-        controller: c2,
+        controller: r2,
         imageResolver: resolverA,
       ).shouldRepaint(base),
       isTrue,
     );
     expect(
       ScenePainter(
-        controller: c1,
+        controller: r1,
         imageResolver: resolverB,
       ).shouldRepaint(base),
       isTrue,
@@ -1643,7 +1686,7 @@ void main() {
     final staticCache = SceneStaticLayerCache();
     expect(
       ScenePainter(
-        controller: c1,
+        controller: r1,
         imageResolver: resolverA,
         staticLayerCache: staticCache,
       ).shouldRepaint(base),
@@ -1653,7 +1696,7 @@ void main() {
     final textCache = SceneTextLayoutCache();
     expect(
       ScenePainter(
-        controller: c1,
+        controller: r1,
         imageResolver: resolverA,
         textLayoutCache: textCache,
       ).shouldRepaint(base),
@@ -1663,7 +1706,7 @@ void main() {
     final strokeCache = SceneStrokePathCache();
     expect(
       ScenePainter(
-        controller: c1,
+        controller: r1,
         imageResolver: resolverA,
         strokePathCache: strokeCache,
       ).shouldRepaint(base),
@@ -1673,7 +1716,7 @@ void main() {
     final pathCache = ScenePathMetricsCache();
     expect(
       ScenePainter(
-        controller: c1,
+        controller: r1,
         imageResolver: resolverA,
         pathMetricsCache: pathCache,
       ).shouldRepaint(base),
@@ -1682,7 +1725,7 @@ void main() {
 
     expect(
       ScenePainter(
-        controller: c1,
+        controller: r1,
         imageResolver: resolverA,
         selectionColor: const Color(0xFFFF0000),
       ).shouldRepaint(base),
@@ -1690,7 +1733,7 @@ void main() {
     );
     expect(
       ScenePainter(
-        controller: c1,
+        controller: r1,
         imageResolver: resolverA,
         selectionStrokeWidth: 3,
       ).shouldRepaint(base),
@@ -1698,7 +1741,7 @@ void main() {
     );
     expect(
       ScenePainter(
-        controller: c1,
+        controller: r1,
         imageResolver: resolverA,
         gridStrokeWidth: 2,
       ).shouldRepaint(base),

@@ -3,6 +3,7 @@ import 'dart:ui';
 // INV:INV-ENG-SCENE-WRITE-TXN-ADAPTER-BOUNDARY
 // INV:INV-ENG-VIEW-RENDER-READ-STATE-BOUNDARY
 // INV:INV-ENG-VIEW-POINTER-SEMANTICS-BOUNDARY
+// INV:INV-ENG-CONTROLLER-NO-FULL-VIEW-RENDER-STATE
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
@@ -35,30 +36,12 @@ void main() {
       expect(state.selectedNodeIds, isEmpty);
     });
 
-    test(
-      'SceneStoreController exposes committed-only defaults as SceneViewRenderState',
-      () {
-        final controller = SceneStoreController();
-        addTearDown(controller.dispose);
+    test('SceneStoreController is not a SceneViewRenderState', () {
+      final controller = SceneStoreController();
+      addTearDown(controller.dispose);
 
-        final state = controller as SceneViewRenderState;
-
-        expect(state.controllerEpoch, 0);
-        expect(state.selectionRect, isNull);
-        expect(state.cameraOffset, Offset.zero);
-        expect(state.previewDeltaResolver.call('node-1'), Offset.zero);
-        expect(state.hasActiveStrokePreview, isFalse);
-        expect(state.activeStrokePreviewPoints, isEmpty);
-        expect(state.activeStrokePreviewThickness, 0);
-        expect(state.activeStrokePreviewColor, const Color(0x00000000));
-        expect(state.activeStrokePreviewOpacity, 0);
-        expect(state.hasActiveLinePreview, isFalse);
-        expect(state.activeLinePreviewStart, isNull);
-        expect(state.activeLinePreviewEnd, isNull);
-        expect(state.activeLinePreviewThickness, 0);
-        expect(state.activeLinePreviewColor, const Color(0x00000000));
-      },
-    );
+      expect(controller, isNot(isA<SceneViewRenderState>()));
+    });
 
     test(
       'interactive SceneController exposes assembled view runtime boundary',

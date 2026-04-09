@@ -157,6 +157,20 @@ const List<Invariant> invariants = <Invariant>[
     ),
   ),
   Invariant(
+    id: 'INV-ENG-CONTROLLER-NO-FULL-VIEW-RENDER-STATE',
+    scope: 'engine-structure',
+    title:
+        'SceneStoreController remains committed-store-only on the read side, while full SceneViewRenderState stays on the assembled interactive runtime path',
+    primaryProof: PrimaryProof(
+      path: 'test/contract/runtime_contract_interfaces_test.dart',
+    ),
+    toolProof: ToolProof(
+      enforcementPath: 'tool/check_guardrails.dart',
+      regressionPath:
+          'test/tool/guardrails/guardrails_controller_api_tool_test.dart',
+    ),
+  ),
+  Invariant(
     id: 'INV-ENG-SAFE-TXN-API',
     scope: 'engine-controller',
     title:

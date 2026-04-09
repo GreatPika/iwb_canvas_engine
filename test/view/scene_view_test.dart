@@ -3,10 +3,13 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
+import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 import 'package:iwb_canvas_engine/src/view/scene_view_render_surface.dart';
+
+import '../support/committed_scene_view_render_state.dart';
 
 // INV:INV-ENG-VIEW-RENDER-SURFACE-DEBUG-PROBES
 
@@ -63,8 +66,8 @@ SceneSnapshot _churnSnapshot({required int pairCount, required String prefix}) {
   );
 }
 
-Widget _coreHost(
-  SceneStoreController controller, {
+Widget _coreHost({
+  required SceneViewRenderState renderState,
   ui.Image? Function(String imageId)? imageResolver,
   SceneStaticLayerCache? staticLayerCache,
   SceneTextLayoutCache? textLayoutCache,
@@ -80,7 +83,7 @@ Widget _coreHost(
       width: width,
       height: height,
       child: SceneViewRenderSurface(
-        renderState: controller,
+        renderState: renderState,
         imageResolver: imageResolver,
         staticLayerCache: staticLayerCache,
         textLayoutCache: textLayoutCache,
@@ -90,6 +93,14 @@ Widget _coreHost(
       ),
     ),
   );
+}
+
+CommittedSceneViewRenderState _mirrorRenderState(
+  SceneStoreController controller,
+) {
+  final renderState = CommittedSceneViewRenderState.mirror(controller);
+  addTearDown(renderState.dispose);
+  return renderState;
 }
 
 void main() {
@@ -105,12 +116,13 @@ void main() {
     final strokePathCache = SceneStrokePathCache();
     final pathMetricsCache = ScenePathMetricsCache();
     final geometryCache = RenderGeometryCache();
+    final renderState = _mirrorRenderState(controller);
     addTearDown(controller.dispose);
     addTearDown(staticLayerCache.dispose);
 
     await tester.pumpWidget(
       _coreHost(
-        controller,
+        renderState: renderState,
         imageResolver: (_) => null,
         staticLayerCache: staticLayerCache,
         textLayoutCache: textLayoutCache,
@@ -163,6 +175,7 @@ void main() {
     final controller = SceneStoreController(
       initialSnapshot: _snapshot(strokeY: 20, text: 'A'),
     );
+    final renderState = _mirrorRenderState(controller);
     addTearDown(controller.dispose);
 
     final textCache = SceneTextLayoutCache(maxEntries: 8);
@@ -172,7 +185,7 @@ void main() {
 
     await tester.pumpWidget(
       _coreHost(
-        controller,
+        renderState: renderState,
         width: 96,
         height: 96,
         imageResolver: (_) => null,
@@ -212,6 +225,8 @@ void main() {
     final controllerB = SceneStoreController(
       initialSnapshot: _snapshot(strokeY: 16, text: 'A'),
     );
+    final renderStateA = _mirrorRenderState(controllerA);
+    final renderStateB = _mirrorRenderState(controllerB);
     addTearDown(controllerA.dispose);
     addTearDown(controllerB.dispose);
 
@@ -222,7 +237,7 @@ void main() {
 
     await tester.pumpWidget(
       _coreHost(
-        controllerA,
+        renderState: renderStateA,
         width: 96,
         height: 96,
         imageResolver: (_) => null,
@@ -241,7 +256,7 @@ void main() {
 
     await tester.pumpWidget(
       _coreHost(
-        controllerB,
+        renderState: renderStateB,
         width: 96,
         height: 96,
         imageResolver: (_) => null,
@@ -268,9 +283,10 @@ void main() {
       final controller = SceneStoreController(
         initialSnapshot: _snapshot(strokeY: 12, text: 'sync'),
       );
+      final renderState = _mirrorRenderState(controller);
       addTearDown(controller.dispose);
 
-      await tester.pumpWidget(_coreHost(controller));
+      await tester.pumpWidget(_coreHost(renderState: renderState));
       await tester.pump();
 
       final customPaint = tester.widget<CustomPaint>(find.byType(CustomPaint));
@@ -307,7 +323,7 @@ void main() {
 
       await tester.pumpWidget(
         _coreHost(
-          controller,
+          renderState: renderState,
           staticLayerCache: extStaticA,
           textLayoutCache: extTextA,
           strokePathCache: extStrokeA,
@@ -325,7 +341,7 @@ void main() {
 
       await tester.pumpWidget(
         _coreHost(
-          controller,
+          renderState: renderState,
           staticLayerCache: extStaticB,
           textLayoutCache: extTextB,
           strokePathCache: extStrokeB,
@@ -344,7 +360,7 @@ void main() {
       expect(extRenderCaches.geometryCache, same(extGeometryB));
       expect(extRenderCaches.geometryCache, isNot(same(extGeometryA)));
 
-      await tester.pumpWidget(_coreHost(controller));
+      await tester.pumpWidget(_coreHost(renderState: renderState));
       await tester.pump();
       final ownedRenderCaches = debugSceneViewRenderCachesOf(
         tester.element(find.byType(SceneViewRenderSurface)),
@@ -362,6 +378,7 @@ void main() {
       final controller = SceneStoreController(
         initialSnapshot: _churnSnapshot(pairCount: 24, prefix: 'old'),
       );
+      final renderState = _mirrorRenderState(controller);
       addTearDown(controller.dispose);
 
       final textCache = SceneTextLayoutCache(maxEntries: 256);
@@ -372,7 +389,7 @@ void main() {
 
       await tester.pumpWidget(
         _coreHost(
-          controller,
+          renderState: renderState,
           width: 96,
           height: 96,
           imageResolver: (_) => null,
