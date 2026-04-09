@@ -332,7 +332,10 @@ Ownership decisions for the target state:
   stays in `controller/commands/scene_commands.dart`, and the boundary adds the
   interactive `ActionType.clear` projection without re-owning the write path.
   Draw-family commits (`stroke`, `line`, `erase`) follow the same rule and may
-  not bypass the boundary through direct runtime wiring.
+  not bypass the boundary through direct runtime wiring. The boundary depends
+  only on the controller-private
+  `SceneControllerCommittedMutationAccess` seam, while
+  `SceneStoreController` remains the concrete owner beneath that bridge.
   This contract is pinned by `INV-ENG-INTERACTIVE-MUTATION-BOUNDARY`.
 - `SceneControllerSelectionMutations`, `SceneControllerSceneMutations`, and
   `InteractiveSelectionActions` are thin routing shells only. They may enforce

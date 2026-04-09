@@ -487,10 +487,15 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-INTERACTIVE-MUTATION-BOUNDARY',
     scope: 'engine-runtime',
     title:
-        'SceneControllerMutationBoundary remains the only interactive owner that performs committed scene/selection/draw writes and clear/delete action projection while scene/selection shells stay routing-only',
+        'SceneControllerMutationBoundary remains the only interactive owner that performs committed scene/selection/draw writes and clear/delete action projection, while its committed mutation seam is narrowed to one controller-private access contract and scene/selection shells stay routing-only',
     primaryProof: PrimaryProof(
       path:
           'test/interactive/core/scene_controller_mutation_boundary_test.dart',
+    ),
+    toolProof: ToolProof(
+      enforcementPath: 'tool/check_guardrails.dart',
+      regressionPath:
+          'test/tool/guardrails/guardrails_interactive_api_tool_test.dart',
     ),
   ),
   Invariant(

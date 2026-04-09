@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_controller_committed_mutation_access.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/core/grid_safety_limits.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_internal_access.dart';
@@ -42,8 +43,11 @@ void main() {
         notifications = notifications + 1;
       });
 
+      final mutationAccess = SceneStoreControllerCommittedMutationAccess(
+        controller,
+      );
       final boundary = SceneControllerMutationBoundary(
-        storeController: controller,
+        mutationAccess: mutationAccess,
         readSnapshot: () => controller.snapshot,
         callbacks: SceneControllerMutationBoundaryCallbacks(
           resolveTimestampMs: (timestampMs) => timestampMs ?? -1,
@@ -189,8 +193,11 @@ void main() {
             })
           >[];
 
+      final mutationAccess = SceneStoreControllerCommittedMutationAccess(
+        controller,
+      );
       final boundary = SceneControllerMutationBoundary(
-        storeController: controller,
+        mutationAccess: mutationAccess,
         readSnapshot: () => controller.snapshot,
         callbacks: SceneControllerMutationBoundaryCallbacks(
           resolveTimestampMs: (timestampMs) => timestampMs ?? -1,
@@ -262,8 +269,11 @@ void main() {
             })
           >[];
 
+      final mutationAccess = SceneStoreControllerCommittedMutationAccess(
+        controller,
+      );
       final boundary = SceneControllerMutationBoundary(
-        storeController: controller,
+        mutationAccess: mutationAccess,
         readSnapshot: () => controller.snapshot,
         callbacks: SceneControllerMutationBoundaryCallbacks(
           resolveTimestampMs: (timestampMs) => timestampMs ?? -1,

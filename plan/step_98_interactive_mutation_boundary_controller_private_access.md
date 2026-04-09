@@ -298,7 +298,7 @@ internals directly.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Introduce Controller-Private Committed Mutation Access
+### Slice 1. [x] Introduce Controller-Private Committed Mutation Access
 
 #### Slice Contract
 
@@ -343,7 +343,7 @@ write behavior out of the controller layer.
 - dedicated controller-level proof that the adapter is thin over
   `SceneStoreController` and does not re-own mutation behavior
 
-### Slice 2. [ ] Rewire Mutation Boundary And Interactive Assembly To The Narrowed Seam
+### Slice 2. [x] Rewire Mutation Boundary And Interactive Assembly To The Narrowed Seam
 
 #### Slice Contract
 
@@ -404,7 +404,7 @@ committed-store listener wiring in this step.
 - source proof that the narrowed access contract is the only committed mutation
   seam beneath `SceneControllerMutationBoundary`
 
-### Slice 3. [ ] Update Mechanical Proofs And Architecture Source Of Truth
+### Slice 3. [x] Update Mechanical Proofs And Architecture Source Of Truth
 
 #### Slice Contract
 

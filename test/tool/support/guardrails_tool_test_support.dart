@@ -52,6 +52,66 @@ class Store {
 void writeInteractiveArchitectureSupportScaffold(Directory sandbox) {
   writeSandboxFile(
     sandbox,
+    'lib/src/controller/scene_controller_committed_mutation_access.dart',
+    '''
+abstract interface class SceneControllerCommittedMutationAccess {
+  void replaceSelection(Object nodeIds);
+
+  void clearSelection();
+
+  int deleteSelection();
+
+  int transformSelection(Object delta);
+
+  Object prepareSceneReplacement(Object snapshot);
+
+  void writePreparedSceneReplacement(Object replacement);
+
+  Object commitDrawStroke(Object payload);
+
+  Object commitDrawLineFromWorldSegment(Object payload);
+
+  int commitEraseNodes(Object ids);
+
+  Object clearSceneExactResult();
+}
+
+final class SceneStoreControllerCommittedMutationAccess
+    implements SceneControllerCommittedMutationAccess {
+  @override
+  void replaceSelection(Object nodeIds) {}
+
+  @override
+  void clearSelection() {}
+
+  @override
+  int deleteSelection() => 0;
+
+  @override
+  int transformSelection(Object delta) => 0;
+
+  @override
+  Object prepareSceneReplacement(Object snapshot) => snapshot;
+
+  @override
+  void writePreparedSceneReplacement(Object replacement) {}
+
+  @override
+  Object commitDrawStroke(Object payload) => payload;
+
+  @override
+  Object commitDrawLineFromWorldSegment(Object payload) => payload;
+
+  @override
+  int commitEraseNodes(Object ids) => 0;
+
+  @override
+  Object clearSceneExactResult() => Object();
+}
+''',
+  );
+  writeSandboxFile(
+    sandbox,
     'lib/src/interactive/scene_controller_interaction.dart',
     '''
 class SceneControllerInteraction {
@@ -192,80 +252,57 @@ class _Mutations {
     sandbox,
     'lib/src/interactive/internal/scene_controller_mutation_boundary.dart',
     '''
+import '../../controller/scene_controller_committed_mutation_access.dart';
+
 class SceneControllerMutationBoundary {
-  final storeController = _Core();
+  SceneControllerMutationBoundary({
+    required this.mutationAccess,
+  });
+
+  final SceneControllerCommittedMutationAccess mutationAccess;
 
   void clearScene() {
-    storeController.commands.writeClearSceneExactResult();
+    mutationAccess.clearSceneExactResult();
   }
 
   void setSelection(Object nodeIds) {
-    storeController.commands.writeSelectionReplace(nodeIds);
+    mutationAccess.replaceSelection(nodeIds);
   }
 
   void clearSelection() {
-    storeController.commands.writeSelectionClear();
+    mutationAccess.clearSelection();
   }
 
   void deleteSelection() {
-    storeController.commands.writeDeleteSelection();
+    mutationAccess.deleteSelection();
   }
 
   void transformSelection(Object delta) {
-    storeController.commands.writeSelectionTransform(delta);
+    mutationAccess.transformSelection(delta);
   }
 
   Object prepareSceneReplacement(Object snapshot) {
-    return storeController.prepareSceneReplacement(snapshot);
+    return mutationAccess.prepareSceneReplacement(snapshot);
   }
 
   void replaceScene(Object snapshot) {
-    final replacement = storeController.prepareSceneReplacement(snapshot);
-    storeController.writePreparedSceneReplacement(replacement);
+    final replacement = mutationAccess.prepareSceneReplacement(snapshot);
+    mutationAccess.writePreparedSceneReplacement(replacement);
   }
 
   Object commitMoveSelection(Object proposedDelta) => proposedDelta;
 
   Object commitDrawStroke(Object payload) {
-    return storeController.draw.writeDrawStroke(payload);
+    return mutationAccess.commitDrawStroke(payload);
   }
 
   Object commitDrawLineFromWorldSegment(Object payload) {
-    return storeController.draw.writeDrawLineFromWorldSegment(payload);
+    return mutationAccess.commitDrawLineFromWorldSegment(payload);
   }
 
   int commitEraseNodes(Object ids) {
-    return storeController.draw.writeEraseNodes(ids);
+    return mutationAccess.commitEraseNodes(ids);
   }
-}
-
-class _Core {
-  final commands = _Commands();
-  final draw = _Draw();
-
-  Object prepareSceneReplacement(Object snapshot) => snapshot;
-
-  void writePreparedSceneReplacement(Object replacement) {}
-}
-
-class _Commands {
-  void writeClearSceneExactResult() {}
-
-  void writeSelectionReplace(Object nodeIds) {}
-
-  void writeSelectionClear() {}
-
-  void writeDeleteSelection() {}
-
-  void writeSelectionTransform(Object delta) {}
-}
-
-class _Draw {
-  Object writeDrawStroke(Object payload) => payload;
-
-  Object writeDrawLineFromWorldSegment(Object payload) => payload;
-
-  int writeEraseNodes(Object ids) => 0;
 }
 ''',
   );
@@ -540,8 +577,17 @@ abstract interface class SceneViewPointerSession {
 import 'dart:ui';
 
 import '../contract/canvas_pointer_input.dart';
+import '../../controller/scene_controller_committed_mutation_access.dart';
 import 'pointer_session_token.dart';
 import 'scene_controller_mutation_boundary.dart';
+
+class SceneControllerInteractionRuntimeRequest {
+  SceneControllerInteractionRuntimeRequest({
+    required this.mutationAccess,
+  });
+
+  final SceneControllerCommittedMutationAccess mutationAccess;
+}
 
 class SceneControllerInteractionRuntime {
   final mutationBoundary = SceneControllerMutationBoundary();
@@ -592,6 +638,14 @@ class SceneControllerInteractionRuntime {
   }
 
   void _ensureKnownPointerSessionToken(PointerSessionToken token) {}
+}
+
+SceneControllerMutationBoundary wireRuntime(
+  SceneControllerInteractionRuntimeRequest request,
+) {
+  return SceneControllerMutationBoundary()
+    // mutationAccess: request.mutationAccess,
+    ;
 }
 ''',
   );

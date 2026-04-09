@@ -102,6 +102,106 @@ class SceneStoreController implements SceneViewRenderState {
     );
 
     // INV:INV-ENG-WRITE-ONLY-MUTATION
+    test(
+      'allows controller-private committed mutation access contract by declaration shape',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeSandboxFile(
+            sandbox,
+            'lib/src/controller/scene_store_controller.dart',
+            '''
+class SceneStoreController {
+  final int controllerEpoch = 0;
+}
+''',
+          );
+          writeSandboxFile(
+            sandbox,
+            'lib/src/controller/controller_private_mutation_bridge.dart',
+            '''
+abstract interface class SceneControllerCommittedMutationAccess {
+  void replaceSelection(Object nodeIds);
+
+  int commitEraseNodes(Object ids);
+}
+
+final class SceneStoreControllerCommittedMutationAccess
+    implements SceneControllerCommittedMutationAccess {
+  SceneStoreControllerCommittedMutationAccess(this._storeController);
+
+  final SceneStoreController _storeController;
+
+  @override
+  void replaceSelection(Object nodeIds) {}
+
+  @override
+  int commitEraseNodes(Object ids) => 0;
+}
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, 0);
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects extra mutating symbol outside whitelisted mutation bridge declarations',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeSandboxFile(
+            sandbox,
+            'lib/src/controller/scene_store_controller.dart',
+            '''
+class SceneStoreController {
+  final int controllerEpoch = 0;
+}
+''',
+          );
+          writeSandboxFile(
+            sandbox,
+            'lib/src/controller/controller_private_mutation_bridge.dart',
+            '''
+abstract interface class SceneControllerCommittedMutationAccess {
+  void replaceSelection(Object nodeIds);
+}
+
+final class SceneStoreControllerCommittedMutationAccess
+    implements SceneControllerCommittedMutationAccess {
+  SceneStoreControllerCommittedMutationAccess(this._storeController);
+
+  final SceneStoreController _storeController;
+
+  @override
+  void replaceSelection(Object nodeIds) {}
+}
+
+void clearSelectionCache() {}
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'controller API',
+              detail:
+                  'mutating symbol "clearSelectionCache" must be routed through '
+                  'write*/txn* transaction API',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
     test('rejects mutating symbol outside write/txn prefixes', () async {
       final sandbox = await createGuardrailsSandbox();
       try {

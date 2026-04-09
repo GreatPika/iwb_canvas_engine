@@ -4,6 +4,7 @@ import '../../core/action_events.dart';
 import '../../contract/pointer_input.dart';
 import '../../contract/scene_view_runtime.dart';
 import '../../contract/snapshot.dart';
+import '../../controller/scene_controller_committed_mutation_access.dart';
 import '../../controller/scene_store_controller.dart';
 import '../scene_controller.dart';
 import '../scene_controller_interaction.dart';
@@ -194,6 +195,9 @@ SceneControllerInteractionRuntime _createInteractionRuntime({
     request: SceneControllerInteractionRuntimeRequest(
       notifyListeners: request.notifyListeners,
       storeController: request.storeController,
+      mutationAccess: SceneStoreControllerCommittedMutationAccess(
+        request.storeController,
+      ),
       readSnapshot: request.readSnapshot,
       readSelectedNodeIds: request.readSelectedNodeIds,
       readMode: () => interactionConfig.mode,

@@ -6,8 +6,8 @@ import '../../contract/scene_model_invariants.dart';
 import '../../contract/scene_write_txn.dart';
 import '../../contract/snapshot.dart';
 import '../../contract/transform2d.dart';
-import '../../controller/scene_store_controller.dart';
 import '../../core/action_events.dart';
+import '../../controller/scene_controller_committed_mutation_access.dart';
 import '../../controller/scene_snapshot_materializer.dart';
 import '../interaction_eligibility_policy.dart'
     as interaction_eligibility_policy;
@@ -42,21 +42,21 @@ final class SceneControllerMutationBoundaryCallbacks {
 
 final class SceneControllerMutationBoundary {
   const SceneControllerMutationBoundary({
-    required this.storeController,
+    required this.mutationAccess,
     required this.readSnapshot,
     required this.callbacks,
   });
 
-  final SceneStoreController storeController;
+  final SceneControllerCommittedMutationAccess mutationAccess;
   final SceneSnapshot Function() readSnapshot;
   final SceneControllerMutationBoundaryCallbacks callbacks;
 
   T write<T>(T Function(SceneWriteTxn writer) fn) {
-    return storeController.write(fn);
+    return mutationAccess.write(fn);
   }
 
   NodeId addNode(NodeSpec node, {LayerId? layerId, int? insertIndex}) {
-    return storeController.commands.writeAddNode(
+    return mutationAccess.addNode(
       node,
       layerId: layerId,
       insertIndex: insertIndex,
@@ -64,17 +64,15 @@ final class SceneControllerMutationBoundary {
   }
 
   bool ensureLayer(LayerId layerId, {int? index}) {
-    return storeController.write((writer) {
-      return writer.writeLayerEnsure(layerId, index: index);
-    });
+    return mutationAccess.ensureLayer(layerId, index: index);
   }
 
   bool patchNode(NodePatch patch) {
-    return storeController.commands.writePatchNode(patch);
+    return mutationAccess.patchNode(patch);
   }
 
   bool removeNode(NodeId id, {int? timestampMs}) {
-    final deleted = storeController.commands.writeDeleteNode(id);
+    final deleted = mutationAccess.removeNode(id);
     if (!deleted) {
       return false;
     }
@@ -85,11 +83,11 @@ final class SceneControllerMutationBoundary {
   }
 
   void setBackgroundColor(Color value) {
-    storeController.commands.writeBackgroundColorSet(value);
+    mutationAccess.setBackgroundColor(value);
   }
 
   void setGridEnabled(bool value) {
-    storeController.commands.writeGridEnabledSet(value);
+    mutationAccess.setGridEnabled(value);
   }
 
   void setGridCellSize(double value) {
@@ -98,7 +96,7 @@ final class SceneControllerMutationBoundary {
       name: 'cellSize',
       isEnabled: readSnapshot().background.grid.isEnabled,
     );
-    storeController.commands.writeGridCellSizeSet(value);
+    mutationAccess.setGridCellSize(value);
   }
 
   void validateCameraOffset(Offset value) {
@@ -110,11 +108,11 @@ final class SceneControllerMutationBoundary {
   }
 
   void setCameraOffset(Offset value) {
-    storeController.commands.writeCameraOffsetSet(value);
+    mutationAccess.setCameraOffset(value);
   }
 
   void clearScene({int? timestampMs}) {
-    final clearResult = storeController.commands.writeClearSceneExactResult();
+    final clearResult = mutationAccess.clearSceneExactResult();
     if (!clearResult.didStructuralClear) {
       return;
     }
@@ -127,47 +125,45 @@ final class SceneControllerMutationBoundary {
   }
 
   PreparedSceneReplacement prepareSceneReplacement(SceneSnapshot snapshot) {
-    return storeController.prepareSceneReplacement(snapshot);
+    return mutationAccess.prepareSceneReplacement(snapshot);
   }
 
   void replaceScene(PreparedSceneReplacement replacement) {
-    storeController.writePreparedSceneReplacement(replacement);
+    mutationAccess.writePreparedSceneReplacement(replacement);
     callbacks.clearPointerNormalizationState();
   }
 
   void notifySceneChanged() {
-    storeController.requestRepaint();
+    mutationAccess.requestRepaint();
   }
 
   void setSelection(Iterable<NodeId> nodeIds) {
-    storeController.commands.writeSelectionReplace(nodeIds);
+    mutationAccess.replaceSelection(nodeIds);
   }
 
   void toggleSelection(NodeId nodeId) {
-    storeController.commands.writeSelectionToggle(nodeId);
+    mutationAccess.toggleSelection(nodeId);
   }
 
   void clearSelection() {
-    storeController.commands.writeSelectionClear();
+    mutationAccess.clearSelection();
   }
 
   void selectAll({bool onlySelectable = true}) {
-    storeController.commands.writeSelectionSelectAll(
-      onlySelectable: onlySelectable,
-    );
+    mutationAccess.selectAll(onlySelectable: onlySelectable);
   }
 
   void rotateSelection({required bool clockwise, int? timestampMs}) {
     final nodes = interaction_eligibility_policy
         .selectedTransformableNodesInSnapshotOrder(
-          snapshot: storeController.snapshot,
-          selected: storeController.selectedNodeIds,
+          snapshot: mutationAccess.snapshot,
+          selected: mutationAccess.selectedNodeIds,
         );
     if (nodes.isEmpty) {
       return;
     }
 
-    final center = storeController.centerWorldForNodeSnapshots(nodes);
+    final center = mutationAccess.centerWorldForNodeSnapshots(nodes);
     final pivot = Transform2D.translation(center);
     final unpivot = Transform2D.translation(Offset(-center.dx, -center.dy));
     final rotation = Transform2D.rotationDeg(clockwise ? 90 : -90);
@@ -178,14 +174,14 @@ final class SceneControllerMutationBoundary {
   void flipSelectionVertical({int? timestampMs}) {
     final nodes = interaction_eligibility_policy
         .selectedTransformableNodesInSnapshotOrder(
-          snapshot: storeController.snapshot,
-          selected: storeController.selectedNodeIds,
+          snapshot: mutationAccess.snapshot,
+          selected: mutationAccess.selectedNodeIds,
         );
     if (nodes.isEmpty) {
       return;
     }
 
-    final center = storeController.centerWorldForNodeSnapshots(nodes);
+    final center = mutationAccess.centerWorldForNodeSnapshots(nodes);
     final delta = Transform2D(
       a: 1,
       b: 0,
@@ -200,14 +196,14 @@ final class SceneControllerMutationBoundary {
   void flipSelectionHorizontal({int? timestampMs}) {
     final nodes = interaction_eligibility_policy
         .selectedTransformableNodesInSnapshotOrder(
-          snapshot: storeController.snapshot,
-          selected: storeController.selectedNodeIds,
+          snapshot: mutationAccess.snapshot,
+          selected: mutationAccess.selectedNodeIds,
         );
     if (nodes.isEmpty) {
       return;
     }
 
-    final center = storeController.centerWorldForNodeSnapshots(nodes);
+    final center = mutationAccess.centerWorldForNodeSnapshots(nodes);
     final delta = Transform2D(
       a: -1,
       b: 0,
@@ -222,14 +218,14 @@ final class SceneControllerMutationBoundary {
   void deleteSelection({int? timestampMs}) {
     final deletedIds = interaction_eligibility_policy
         .deletableSelectedNodeIdsInSnapshot(
-          snapshot: storeController.snapshot,
-          selected: storeController.selectedNodeIds,
+          snapshot: mutationAccess.snapshot,
+          selected: mutationAccess.selectedNodeIds,
         );
     if (deletedIds.isEmpty) {
       return;
     }
 
-    final removedCount = storeController.commands.writeDeleteSelection();
+    final removedCount = mutationAccess.deleteSelection();
     if (removedCount <= 0) {
       return;
     }
@@ -242,7 +238,7 @@ final class SceneControllerMutationBoundary {
   }
 
   MoveCommitSelectionResult commitMoveSelection(Offset proposedDelta) {
-    return storeController.write<MoveCommitSelectionResult>((writer) {
+    return mutationAccess.write<MoveCommitSelectionResult>((writer) {
       final snapshot = writer.snapshot;
       final movedNodes = interaction_eligibility_policy
           .selectedCommitMovableNodesInSnapshotOrder(
@@ -287,7 +283,7 @@ final class SceneControllerMutationBoundary {
     required Color color,
     required double opacity,
   }) {
-    return storeController.draw.writeDrawStroke(
+    return mutationAccess.commitDrawStroke(
       points: points,
       thickness: thickness,
       color: color,
@@ -302,7 +298,7 @@ final class SceneControllerMutationBoundary {
     required Color color,
     required double opacity,
   }) {
-    return storeController.draw.writeDrawLineFromWorldSegment(
+    return mutationAccess.commitDrawLineFromWorldSegment(
       start: start,
       end: end,
       thickness: thickness,
@@ -312,7 +308,7 @@ final class SceneControllerMutationBoundary {
   }
 
   int commitEraseNodes(Iterable<NodeId> ids) {
-    return storeController.draw.writeEraseNodes(ids);
+    return mutationAccess.commitEraseNodes(ids);
   }
 
   void _commitTransformSelection(
@@ -321,7 +317,7 @@ final class SceneControllerMutationBoundary {
     int? timestampMs,
   }) {
     final movedIds = nodes.map((node) => node.id).toList(growable: false);
-    final affected = storeController.commands.writeSelectionTransform(delta);
+    final affected = mutationAccess.transformSelection(delta);
     if (affected <= 0) {
       return;
     }

@@ -209,6 +209,9 @@ GuardrailViolation? _mutatingSymbolViolation({
     if (_isAllowedControllerOccurrence(occurrence.name)) {
       continue;
     }
+    if (collector.allowsWhitelistedMutatingOccurrence(occurrence)) {
+      continue;
+    }
     if (_looksMutatingSymbol(occurrence.name)) {
       return GuardrailViolation(
         filePath: filePosixPath,
@@ -255,9 +258,20 @@ class ControllerSymbolOccurrence {
 class ControllerSymbolCollector extends RecursiveAstVisitor<void> {
   final List<ControllerSymbolOccurrence> occurrences =
       <ControllerSymbolOccurrence>[];
+  final List<ControllerAllowedMutatingRange> _allowedMutatingRanges =
+      <ControllerAllowedMutatingRange>[];
   bool hasControllerEpoch = false;
   ControllerSymbolOccurrence? sceneViewRenderStateImport;
   ControllerSymbolOccurrence? sceneStoreControllerViewRenderStateOccurrence;
+
+  bool allowsWhitelistedMutatingOccurrence(
+    ControllerSymbolOccurrence occurrence,
+  ) {
+    return _allowedMutatingRanges.any(
+      (range) =>
+          occurrence.offset >= range.start && occurrence.offset < range.end,
+    );
+  }
 
   @override
   void visitImportDirective(ImportDirective node) {
@@ -283,6 +297,11 @@ class ControllerSymbolCollector extends RecursiveAstVisitor<void> {
             name: node.name.lexeme,
             offset: node.name.offset,
           );
+    }
+    if (_isCommittedMutationBridgeDeclaration(node)) {
+      _allowedMutatingRanges.add(
+        ControllerAllowedMutatingRange(start: node.offset, end: node.end),
+      );
     }
     super.visitClassDeclaration(node);
   }
@@ -343,6 +362,40 @@ class ControllerSymbolCollector extends RecursiveAstVisitor<void> {
     }
     super.visitFunctionExpressionInvocation(node);
   }
+}
+
+class ControllerAllowedMutatingRange {
+  const ControllerAllowedMutatingRange({
+    required this.start,
+    required this.end,
+  });
+
+  final int start;
+  final int end;
+}
+
+bool _isCommittedMutationBridgeDeclaration(ClassDeclaration node) {
+  return _isCommittedMutationAccessInterface(node) ||
+      _isCommittedMutationAccessAdapter(node);
+}
+
+bool _isCommittedMutationAccessInterface(ClassDeclaration node) {
+  return node.name.lexeme == 'SceneControllerCommittedMutationAccess' &&
+      node.abstractKeyword != null &&
+      node.interfaceKeyword != null;
+}
+
+bool _isCommittedMutationAccessAdapter(ClassDeclaration node) {
+  if (node.name.lexeme != 'SceneStoreControllerCommittedMutationAccess' ||
+      node.finalKeyword == null) {
+    return false;
+  }
+  final interfaces = node.implementsClause?.interfaces;
+  if (interfaces == null || interfaces.length != 1) {
+    return false;
+  }
+  return interfaces.single.toSource() ==
+      'SceneControllerCommittedMutationAccess';
 }
 
 bool _looksMutatingSymbol(String symbol) {

@@ -14,6 +14,7 @@ void main() {
     _registerInteractiveGuardViolationTests();
     _registerInteractiveDisposeGuardTests();
     _registerCapabilityGuardViolationTests();
+    // INV:INV-ENG-INTERACTIVE-MUTATION-BOUNDARY
     _registerInteractiveArchitectureGuardrailTests();
   });
 }
@@ -2374,6 +2375,64 @@ class SceneControllerInteractionRuntime {
       }
     },
   );
+
+  test('rejects mutation boundary concrete SceneStoreController seam', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeMinimalControllerStore(sandbox);
+      writeInteractiveArchitectureSupportScaffold(sandbox);
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/scene_controller.dart',
+        _sceneControllerFixture(
+          methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+        ),
+      );
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/internal/scene_controller_mutation_boundary.dart',
+        '''
+import '../../controller/scene_store_controller.dart';
+
+class SceneControllerMutationBoundary {
+  SceneControllerMutationBoundary(this.storeController);
+
+  final SceneStoreController storeController;
+
+  void clearScene() {
+    storeController.commands.writeClearSceneExactResult();
+  }
+}
+''',
+      );
+
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, isNonZero);
+      expect(
+        result.stderr.toString(),
+        diagnostic(
+          category: 'interactive API',
+          detail:
+              'SceneControllerMutationBoundary must remain the canonical '
+              'scene/selection write owner',
+        ),
+      );
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
+  });
 
   test(
     'rejects mutation boundary generic store controller write bypass',

@@ -73,6 +73,9 @@ void main() {
     final mutationBoundarySource = _read(
       'lib/src/interactive/internal/scene_controller_mutation_boundary.dart',
     );
+    final mutationAccessSource = _read(
+      'lib/src/controller/scene_controller_committed_mutation_access.dart',
+    );
     final sceneMutationsSource = _read(
       'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
     );
@@ -325,43 +328,80 @@ void main() {
     );
     expect(
       mutationBoundarySource,
-      contains('storeController.commands.writeSelectionReplace(nodeIds);'),
+      contains(
+        "import '../../controller/scene_controller_committed_mutation_access.dart';",
+      ),
     );
     expect(
       mutationBoundarySource,
-      contains('storeController.commands.writeSelectionClear();'),
+      contains('final SceneControllerCommittedMutationAccess mutationAccess;'),
     );
     expect(
       mutationBoundarySource,
-      contains('storeController.commands.writeDeleteSelection();'),
+      contains('mutationAccess.replaceSelection(nodeIds);'),
     );
     expect(
       mutationBoundarySource,
-      contains('storeController.commands.writeSelectionTransform(delta);'),
+      contains('mutationAccess.clearSelection();'),
     );
     expect(
       mutationBoundarySource,
-      contains('storeController.prepareSceneReplacement(snapshot);'),
+      contains('mutationAccess.deleteSelection();'),
     );
     expect(
       mutationBoundarySource,
-      contains('storeController.draw.writeDrawStroke('),
+      contains('mutationAccess.transformSelection(delta);'),
     );
     expect(
       mutationBoundarySource,
-      contains('storeController.draw.writeDrawLineFromWorldSegment('),
+      contains('mutationAccess.prepareSceneReplacement(snapshot);'),
     );
     expect(
       mutationBoundarySource,
-      contains('storeController.draw.writeEraseNodes(ids);'),
+      contains('mutationAccess.commitDrawStroke('),
     );
     expect(
       mutationBoundarySource,
-      contains('storeController.writePreparedSceneReplacement(replacement);'),
+      contains('mutationAccess.commitDrawLineFromWorldSegment('),
     );
+    expect(
+      mutationBoundarySource,
+      contains('mutationAccess.commitEraseNodes(ids);'),
+    );
+    expect(
+      mutationBoundarySource,
+      contains('mutationAccess.writePreparedSceneReplacement(replacement);'),
+    );
+    expect(mutationBoundarySource, isNot(contains('SceneStoreController')));
+    expect(
+      mutationBoundarySource,
+      isNot(contains('storeController.commands.')),
+    );
+    expect(mutationBoundarySource, isNot(contains('storeController.draw.')));
     expect(
       mutationBoundarySource,
       isNot(contains('storeController.writeReplaceScene(snapshot);')),
+    );
+
+    expect(
+      mutationAccessSource,
+      contains(
+        'abstract interface class SceneControllerCommittedMutationAccess',
+      ),
+    );
+    expect(
+      mutationAccessSource,
+      contains('final class SceneStoreControllerCommittedMutationAccess'),
+    );
+    expect(mutationAccessSource, isNot(contains('commands;')));
+    expect(mutationAccessSource, isNot(contains('draw;')));
+    expect(
+      mutationAccessSource,
+      contains('void replaceSelection(Iterable<NodeId> nodeIds);'),
+    );
+    expect(
+      mutationAccessSource,
+      contains('return _storeController.commands.writeSelectionSelectAll('),
     );
 
     expect(sceneMutationsSource, contains('mutations.setGridCellSize(value);'));
@@ -417,6 +457,12 @@ void main() {
     expect(
       interactionRuntimeSource,
       contains("import 'pointer_session_token.dart';"),
+    );
+    expect(
+      interactionRuntimeSource,
+      contains(
+        "import '../../controller/scene_controller_committed_mutation_access.dart';",
+      ),
     );
     expect(
       interactionRuntimeSource,
@@ -476,6 +522,15 @@ void main() {
       interactionRuntimeSource,
       contains("import 'scene_controller_mutation_boundary.dart';"),
     );
+    expect(interactionRuntimeSource, contains('required this.mutationAccess,'));
+    expect(
+      interactionRuntimeSource,
+      contains('final SceneControllerCommittedMutationAccess mutationAccess;'),
+    );
+    expect(
+      interactionRuntimeSource,
+      contains('mutationAccess: request.mutationAccess,'),
+    );
     expect(
       interactionRuntimeSource,
       contains('writeSelectionReplace: mutationBoundary.setSelection,'),
@@ -508,6 +563,17 @@ void main() {
     expect(
       interactionRuntimeSource,
       isNot(contains('request.storeController.draw.writeEraseNodes')),
+    );
+
+    expect(
+      graphSource,
+      contains(
+        "import '../../controller/scene_controller_committed_mutation_access.dart';",
+      ),
+    );
+    expect(
+      graphSource,
+      contains('mutationAccess: SceneStoreControllerCommittedMutationAccess('),
     );
 
     expect(

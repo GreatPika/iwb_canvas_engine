@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../../contract/canvas_pointer_input.dart';
 import '../../contract/snapshot.dart';
+import '../../controller/scene_controller_committed_mutation_access.dart';
 import '../../controller/scene_store_controller.dart';
 import '../../core/action_events.dart';
 import '../../core/interaction_types.dart';
@@ -110,6 +111,7 @@ final class SceneControllerInteractionRuntimeRequest {
   const SceneControllerInteractionRuntimeRequest({
     required this.notifyListeners,
     required this.storeController,
+    required this.mutationAccess,
     required this.readSnapshot,
     required this.readSelectedNodeIds,
     required this.readMode,
@@ -121,6 +123,7 @@ final class SceneControllerInteractionRuntimeRequest {
 
   final void Function() notifyListeners;
   final SceneStoreController storeController;
+  final SceneControllerCommittedMutationAccess mutationAccess;
   final SceneSnapshot Function() readSnapshot;
   final Set<NodeId> Function() readSelectedNodeIds;
   final CanvasMode Function() readMode;
@@ -297,7 +300,7 @@ SceneControllerMutationBoundary _createMutationBoundary(
   SceneControllerInteractionRuntime Function() readRuntime,
 ) {
   return SceneControllerMutationBoundary(
-    storeController: request.storeController,
+    mutationAccess: request.mutationAccess,
     readSnapshot: request.readSnapshot,
     callbacks: SceneControllerMutationBoundaryCallbacks(
       resolveTimestampMs: (timestampMs) =>
