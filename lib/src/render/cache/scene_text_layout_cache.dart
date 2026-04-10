@@ -3,7 +3,6 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 
-import '../../core/numeric_clamp.dart';
 import '../../core/text_layout.dart';
 import '../../contract/snapshot.dart';
 
@@ -19,8 +18,8 @@ class SceneTextLayoutCache {
     : maxEntries = _requirePositiveCacheEntries(maxEntries);
 
   final int maxEntries;
-  final LinkedHashMap<_TextLayoutKey, TextPainter> _entries =
-      LinkedHashMap<_TextLayoutKey, TextPainter>();
+  final LinkedHashMap<_TextLayoutKey, ResolvedTextLayout> _entries =
+      LinkedHashMap<_TextLayoutKey, ResolvedTextLayout>();
 
   int _debugBuildCount = 0;
   int _debugHitCount = 0;
@@ -37,27 +36,24 @@ class SceneTextLayoutCache {
 
   void clear() => _entries.clear();
 
-  /// Returns a render-ready [TextPainter] derived only from [node] and
+  /// Returns a render-ready [ResolvedTextLayout] derived only from [node] and
   /// node-owned layout semantics.
   ///
   /// The cache owns `TextStyle` and normalized width derivation so callers
   /// cannot provide a second source of truth for the cached object.
-  TextPainter getOrBuild({required TextNodeSnapshot node}) {
+  ResolvedTextLayout getOrBuild({required TextNodeSnapshot node}) {
     final request = _createTextLayoutRequest(node);
     final textStyle = request.buildTextStyle();
-    final safeFontSize = request.normalizedFontSize;
-    final safeLineHeight = request.normalizedLineHeight;
-    final layoutMaxWidth = request.normalizedMaxWidth;
     final key = _TextLayoutKey(
       text: request.text,
-      fontSize: safeFontSize,
+      fontSize: request.normalizedFontSize,
       fontFamily: request.fontFamily,
       isBold: request.isBold,
       isItalic: request.isItalic,
       isUnderline: request.isUnderline,
       align: request.textAlign,
-      lineHeight: safeLineHeight,
-      maxWidth: layoutMaxWidth,
+      lineHeight: request.normalizedLineHeight,
+      maxWidth: request.normalizedMaxWidth,
       color: textStyle.color ?? const Color(0xFF000000),
       textDirection: request.textDirection,
     );
@@ -69,17 +65,11 @@ class SceneTextLayoutCache {
       return cached;
     }
 
-    final textPainter = TextPainter(
-      text: TextSpan(text: request.text, style: textStyle),
-      textAlign: request.textAlign,
-      textDirection: request.textDirection,
-      maxLines: null,
-    );
-    _layoutTextPainter(textPainter, layoutMaxWidth);
-    _entries[key] = textPainter;
+    final resolvedTextLayout = request.resolve();
+    _entries[key] = resolvedTextLayout;
     _debugBuildCount += 1;
     _evictIfNeeded();
-    return textPainter;
+    return resolvedTextLayout;
   }
 
   void _evictIfNeeded() {
@@ -88,19 +78,6 @@ class SceneTextLayoutCache {
       _debugEvictCount += 1;
     }
   }
-}
-
-TextPainter buildSceneTextPainter({required TextNodeSnapshot node}) {
-  final request = _createTextLayoutRequest(node);
-  final textStyle = request.buildTextStyle();
-  final textPainter = TextPainter(
-    text: TextSpan(text: request.text, style: textStyle),
-    textAlign: request.textAlign,
-    textDirection: request.textDirection,
-    maxLines: null,
-  );
-  _layoutTextPainter(textPainter, request.normalizedMaxWidth);
-  return textPainter;
 }
 
 class _TextLayoutKey {
@@ -164,35 +141,6 @@ class _TextLayoutKey {
   int get hashCode => _signature.hashCode;
 }
 
-Color _renderReadyTextColor(TextNodeSnapshot node) {
-  final alpha = (_textOpacity01(node.opacity) * 255.0).round().clamp(0, 255);
-  return node.color.withAlpha(alpha);
-}
-
 TextLayoutRequest _createTextLayoutRequest(TextNodeSnapshot node) {
-  return TextLayoutRequest(
-    text: node.text,
-    color: _renderReadyTextColor(node),
-    fontSize: node.fontSize,
-    isBold: node.isBold,
-    isItalic: node.isItalic,
-    isUnderline: node.isUnderline,
-    textAlign: node.align,
-    fontFamily: node.fontFamily,
-    lineHeight: node.lineHeight,
-    maxWidth: node.maxWidth,
-    textDirection: node.textDirection,
-  );
-}
-
-void _layoutTextPainter(TextPainter textPainter, double? layoutMaxWidth) {
-  if (layoutMaxWidth == null) {
-    textPainter.layout();
-  } else {
-    textPainter.layout(maxWidth: layoutMaxWidth);
-  }
-}
-
-double _textOpacity01(double opacity) {
-  return clampNonNegativeFinite(opacity).clamp(0.0, 1.0);
+  return TextLayoutRequest.forRenderSnapshot(node);
 }

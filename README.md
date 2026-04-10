@@ -135,7 +135,9 @@ class _CanvasScreenState extends State<CanvasScreen> {
   `TextNode`, `TextNodeSnapshot`, `TextNodeSpec`, and `TextNodePatch` do not
   expose writable text `size`, and schema-version-7 JSON rejects text payloads
   that still contain `size`. Import/decode also rejects text whose derived
-  bounds exceed scene size limits.
+  bounds exceed scene size limits. On the render read-side, one canonical
+  resolved text-layout payload now feeds both text geometry sizing and text
+  paint, so the engine does not keep parallel layout owners for those paths.
 - Runtime stroke geometry is hermetic: `StrokeNode.points` is a read-only view,
   direct list mutation is unsupported, and whole-geometry updates go through
   `StrokeNode.replacePoints(...)`, which preserves `pointsRevision` no-op

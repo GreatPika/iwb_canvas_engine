@@ -291,7 +291,7 @@ language: russian
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Canonical resolved text-layout payload owner exists
+### Slice 1. [x] Canonical resolved text-layout payload owner exists
 
 #### Slice Contract
 
@@ -340,7 +340,7 @@ language: russian
 - Source-level assertions prove the superseded `buildSceneTextPainter(...)`
   render path is removed.
 
-### Slice 2. [ ] Text geometry consumes provided resolved layout payload
+### Slice 2. [x] Text geometry consumes provided resolved layout payload
 
 #### Slice Contract
 
@@ -388,7 +388,7 @@ triggers its own independent layout computation.
   `ResolvedTextLayout` instead of a second layout path.
 - Runtime cache tests show non-text geometry cache semantics remain unchanged.
 
-### Slice 3. [ ] Frame resolution hands one text layout payload to geometry and paint
+### Slice 3. [x] Frame resolution hands one text layout payload to geometry and paint
 
 #### Slice Contract
 
@@ -437,7 +437,7 @@ text paint through `ScenePainterResolvedNodePaintData`.
 - Integration paint tests prove the renderer path no longer re-enters text
   layout ownership.
 
-### Slice 4. [ ] Invariant and docs publish shared text-layout payload ownership
+### Slice 4. [x] Invariant and docs publish shared text-layout payload ownership
 
 #### Slice Contract
 

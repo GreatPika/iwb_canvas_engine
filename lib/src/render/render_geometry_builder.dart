@@ -13,11 +13,20 @@ const _zeroGeometryEntry = GeometryEntry(
   worldBounds: Rect.zero,
 );
 
-GeometryEntry buildRenderGeometryEntry(NodeSnapshot node) {
+GeometryEntry buildRenderGeometryEntry(
+  NodeSnapshot node, {
+  ResolvedTextLayout? resolvedTextLayout,
+}) {
   return switch (node) {
     RectNodeSnapshot rectNode => _rectEntry(rectNode),
     ImageNodeSnapshot imageNode => _imageEntry(imageNode),
-    TextNodeSnapshot textNode => _textEntry(textNode),
+    TextNodeSnapshot textNode => _textEntry(
+      textNode,
+      resolvedTextLayout: _requireResolvedTextLayout(
+        textNode,
+        resolvedTextLayout,
+      ),
+    ),
     LineNodeSnapshot lineNode => _lineEntry(lineNode),
     StrokeNodeSnapshot strokeNode => _strokeEntry(strokeNode),
     PathNodeSnapshot pathNode => _pathEntry(pathNode),
@@ -63,8 +72,11 @@ GeometryEntry _imageEntry(ImageNodeSnapshot node) {
   return _centeredRectEntry(node.size, node.transform);
 }
 
-GeometryEntry _textEntry(TextNodeSnapshot node) {
-  final localBounds = centeredRectLocalBounds(_measureTextNodeSnapshot(node));
+GeometryEntry _textEntry(
+  TextNodeSnapshot node, {
+  required ResolvedTextLayout resolvedTextLayout,
+}) {
+  final localBounds = centeredRectLocalBounds(resolvedTextLayout.measuredSize);
   return GeometryEntry(
     localBounds: localBounds,
     worldBounds: _toWorldBounds(node.transform, localBounds),
@@ -265,6 +277,20 @@ PathFillType _fillTypeFromSnapshot(PathFillRule rule) {
       : PathFillType.nonZero;
 }
 
+ResolvedTextLayout _requireResolvedTextLayout(
+  TextNodeSnapshot node,
+  ResolvedTextLayout? resolvedTextLayout,
+) {
+  if (resolvedTextLayout != null) {
+    return resolvedTextLayout;
+  }
+  throw ArgumentError.value(
+    resolvedTextLayout,
+    'resolvedTextLayout',
+    'Text node ${node.id} requires a resolved text layout.',
+  );
+}
+
 TextLayoutRequest _textLayoutRequest(TextNodeSnapshot node) {
   return TextLayoutRequest(
     text: node.text,
@@ -279,8 +305,4 @@ TextLayoutRequest _textLayoutRequest(TextNodeSnapshot node) {
     maxWidth: node.maxWidth,
     textDirection: node.textDirection,
   );
-}
-
-Size _measureTextNodeSnapshot(TextNodeSnapshot node) {
-  return _textLayoutRequest(node).measure();
 }

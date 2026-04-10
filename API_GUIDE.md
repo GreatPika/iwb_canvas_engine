@@ -267,6 +267,10 @@ side.
   boundary
 - text layout semantics are model-owned: `TextAlign.start` / `TextAlign.end`
   resolve against the node's explicit `textDirection`, not a view fallback
+- on the render read-side, `ScenePainterFrameOwner` resolves one canonical
+  text-layout payload per text paint candidate and hands that same payload to
+  both geometry sizing and text paint; renderer-local code does not reopen
+  text layout from a second cache or uncached builder path
 
 If you compare text bounds across platforms, use semantic assertions or numeric
 tolerance. Font metrics can differ slightly by platform and font engine.
@@ -938,6 +942,10 @@ Parameters:
 - lets `ScenePainter` consume controller-owned ordered viewport candidates
   before expensive frame resolution, preserving background/content paint order
   and selected move-preview visibility without reopening a full content scan
+- keeps text layout resolution on one frame-local path: `SceneTextLayoutCache`
+  stores canonical resolved text-layout payloads, `ScenePainterFrameOwner`
+  resolves them once per text candidate, and geometry plus paint both consume
+  the same payload instead of relaying out text independently
 - uses one internal grid renderer owner for both direct painting and
   static-cache picture recording, so drawable checks, density bucketing,
   camera shift, and bounded anti-flap policy stay aligned without cross-frame

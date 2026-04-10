@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../contract/snapshot.dart';
+import '../core/text_layout.dart';
 import 'render_geometry_cache.dart';
 
 class ScenePainterSelectionStyle {
@@ -43,11 +44,13 @@ class ScenePainterResolvedNodePaintData {
     required this.node,
     required this.previewDelta,
     required this.geometry,
+    this.textLayout,
   });
 
   final NodeSnapshot node;
   final Offset previewDelta;
   final GeometryEntry geometry;
+  final ResolvedTextLayout? textLayout;
 
   Rect get worldBounds {
     if (previewDelta == Offset.zero) {

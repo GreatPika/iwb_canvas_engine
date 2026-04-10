@@ -132,13 +132,13 @@ ScenePainterShell _createScenePainterShell(_ScenePainterConfig config) {
     ),
     frameOwner: ScenePainterFrameOwner(
       renderState: config.controller,
+      textLayoutCache: config.textLayoutCache,
       geometryCache: config.geometryCache,
       selectionColor: config.selectionColor,
       selectionStrokeWidth: config.selectionStrokeWidth,
     ),
     nodeRenderer: ScenePainterNodeRenderer(
       imageResolver: config.imageResolver,
-      textLayoutCache: config.textLayoutCache,
       strokePathCache: config.strokePathCache,
       transformBuffer: nodeTransformBuffer,
     ),

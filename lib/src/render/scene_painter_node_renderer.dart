@@ -4,9 +4,9 @@ import 'dart:ui';
 import 'package:flutter/rendering.dart';
 
 import '../contract/snapshot.dart';
+import '../core/text_layout.dart';
 import '../core/numeric_clamp.dart';
 import 'cache/scene_stroke_path_cache.dart';
-import 'cache/scene_text_layout_cache.dart';
 import 'canvas_scope.dart';
 import 'scene_painter_contract.dart';
 import 'scene_painter_shared.dart';
@@ -14,13 +14,11 @@ import 'scene_painter_shared.dart';
 class ScenePainterNodeRenderer {
   ScenePainterNodeRenderer({
     required Image? Function(String imageId) imageResolver,
-    required SceneTextLayoutCache? textLayoutCache,
     required SceneStrokePathCache? strokePathCache,
     required Float64List transformBuffer,
   }) : _transformBuffer = transformBuffer,
        _support = SceneNodeRenderSupport(
          imageResolver: imageResolver,
-         textLayoutCache: textLayoutCache,
          strokePathCache: strokePathCache,
        );
 
@@ -72,14 +70,10 @@ class ScenePainterNodeRenderer {
 class SceneNodeRenderSupport {
   SceneNodeRenderSupport({
     required Image? Function(String imageId) imageResolver,
-    required SceneTextLayoutCache? textLayoutCache,
     required SceneStrokePathCache? strokePathCache,
   }) : shapes = SceneShapeNodeRenderer(),
        strokes = SceneStrokeNodeRenderer(strokePathCache: strokePathCache),
-       rich = SceneRichNodeRenderer(
-         imageResolver: imageResolver,
-         textLayoutCache: textLayoutCache,
-       );
+       rich = SceneRichNodeRenderer(imageResolver: imageResolver);
 
   final SceneShapeNodeRenderer shapes;
   final SceneStrokeNodeRenderer strokes;
@@ -232,30 +226,25 @@ class SceneStrokeNodeRenderer {
 }
 
 class SceneRichNodeRenderer {
-  const SceneRichNodeRenderer({
-    required this.imageResolver,
-    required this.textLayoutCache,
-  });
+  const SceneRichNodeRenderer({required this.imageResolver});
 
   final Image? Function(String imageId) imageResolver;
-  final SceneTextLayoutCache? textLayoutCache;
 
-  void drawTextNode(TextNodeSnapshot node, SceneNodeRenderContext context) {
+  void drawTextNode(
+    TextNodeSnapshot node,
+    ResolvedTextLayout textLayout,
+    SceneNodeRenderContext context,
+  ) {
     if (!node.transform.isFinite) {
       return;
     }
-    final textLayoutCache = this.textLayoutCache;
-    final textPainter = textLayoutCache != null
-        ? textLayoutCache.getOrBuild(node: node)
-        : buildSceneTextPainter(node: node);
-    final safeSize = clampNonNegativeSizeFinite(
-      Size(textPainter.width, textPainter.height),
-    );
+    final textPainter = textLayout.textPainter;
+    final safeSize = clampNonNegativeSizeFinite(textLayout.measuredSize);
 
     final alignOffset = scenePainterTextAlignOffset(
       node.align,
       safeSize.width,
-      textPainter.width,
+      safeSize.width,
       node.textDirection,
     );
 
@@ -335,7 +324,11 @@ void _drawResolvedNode(
       case StrokeNodeSnapshot strokeNode:
         support.strokes.drawStrokeNode(strokeNode, context);
       case TextNodeSnapshot textNode:
-        support.rich.drawTextNode(textNode, context);
+        support.rich.drawTextNode(
+          textNode,
+          _requireResolvedTextLayout(resolvedNode),
+          context,
+        );
       case ImageNodeSnapshot imageNode:
         support.rich.drawImageNode(imageNode, context);
       case PathNodeSnapshot pathNode:
@@ -356,6 +349,18 @@ void _drawPathNode(
   SceneNodeRenderSupport support,
 ) {
   support.shapes.drawPathNode(node, localPath, context);
+}
+
+ResolvedTextLayout _requireResolvedTextLayout(
+  ScenePainterResolvedNodePaintData resolvedNode,
+) {
+  final textLayout = resolvedNode.textLayout;
+  if (textLayout != null) {
+    return textLayout;
+  }
+  throw StateError(
+    'Missing resolved text layout for text node ${resolvedNode.node.id}.',
+  );
 }
 
 typedef _FillAndStrokeStyle = ({

@@ -2,6 +2,7 @@ import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
 
+import '../core/text_layout.dart';
 import '../contract/snapshot.dart';
 import 'render_geometry_entry.dart';
 import 'render_geometry_builder.dart';
@@ -40,7 +41,10 @@ class RenderGeometryCache {
   @visibleForTesting
   int get debugSize => _entries.length;
 
-  GeometryEntry get(NodeSnapshot node) {
+  GeometryEntry get(
+    NodeSnapshot node, {
+    ResolvedTextLayout? resolvedTextLayout,
+  }) {
     final key = buildRenderGeometryValidityKey(node);
     final entryKey = _NodeInstanceKey(
       nodeId: node.id,
@@ -53,7 +57,10 @@ class RenderGeometryCache {
       return cached.entry;
     }
 
-    final entry = buildRenderGeometryEntry(node);
+    final entry = buildRenderGeometryEntry(
+      node,
+      resolvedTextLayout: resolvedTextLayout,
+    );
     _entries[entryKey] = _GeometryCacheRecord(key: key, entry: entry);
     _debugBuildCount += 1;
     _evictIfNeeded();

@@ -11,6 +11,7 @@ import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart'
     as interactive;
 import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
+import 'package:iwb_canvas_engine/src/render/scene_painter_frame.dart';
 
 // INV:INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION
 
@@ -213,6 +214,61 @@ void main() {
           .toList(growable: false);
 
       expect(candidateIds, const <NodeId>['runtime-background-node']);
+    },
+  );
+
+  test(
+    'ScenePainterFrameOwner resolves one text layout payload and hands it to geometry plus paint data',
+    () {
+      final textLayoutCache = SceneTextLayoutCache(maxEntries: 8);
+      final geometryCache = RenderGeometryCache();
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-text-frame-contract',
+              nodes: <NodeSnapshot>[
+                TextNodeSnapshot(
+                  id: 'text-frame-contract',
+                  text: 'shared payload',
+                  fontSize: 14,
+                  color: const Color(0xFF000000),
+                  textDirection: TextDirection.ltr,
+                  maxWidth: 100,
+                  transform: Transform2D.translation(const Offset(40, 30)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+      final renderState = _controllerOwnedRenderState(controller);
+      final frameOwner = ScenePainterFrameOwner(
+        renderState: renderState,
+        textLayoutCache: textLayoutCache,
+        geometryCache: geometryCache,
+        selectionColor: const Color(0xFF1565C0),
+        selectionStrokeWidth: 1,
+      );
+      final textNode =
+          controller.snapshot.layers.single.nodes.single as TextNodeSnapshot;
+
+      final resolved = frameOwner.resolveNodePaintData(textNode);
+
+      expect(resolved.node, same(textNode));
+      expect(resolved.textLayout, isNotNull);
+      expect(
+        identical(
+          resolved.textLayout,
+          textLayoutCache.getOrBuild(node: textNode),
+        ),
+        isTrue,
+      );
+      expect(textLayoutCache.debugBuildCount, 1);
+      expect(textLayoutCache.debugHitCount, 1);
+      expect(geometryCache.debugBuildCount, 1);
     },
   );
 

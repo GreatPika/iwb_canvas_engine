@@ -5,6 +5,7 @@ import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
+import 'package:iwb_canvas_engine/src/core/text_layout.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 
 void main() {
@@ -19,6 +20,8 @@ void main() {
     expect(source, contains('TextLayoutRequest _createTextLayoutRequest('));
     expect(source, contains('final request = _createTextLayoutRequest('));
     expect(source, contains('request.buildTextStyle()'));
+    expect(source, contains('final resolvedTextLayout = request.resolve();'));
+    expect(source, isNot(contains('TextPainter buildSceneTextPainter(')));
     expect(source, isNot(contains('recomputeDerivedTextSize(')));
     expect(source, isNot(contains('freezePayloadMap(')));
     expect(source, isNot(contains('_GeneratedIdAllocator')));
@@ -29,7 +32,7 @@ void main() {
     expect(() => SceneTextLayoutCache(maxEntries: -1), throwsArgumentError);
   });
 
-  test('SceneTextLayoutCache caches render-ready TextPainters', () {
+  test('SceneTextLayoutCache caches resolved text layouts', () {
     final cache = SceneTextLayoutCache(maxEntries: 8);
     final node = _textNode(
       id: 't-1',
@@ -46,13 +49,39 @@ void main() {
     expect(cache.debugHitCount, 1);
     expect(cache.debugSize, 1);
 
-    final span = first.text;
+    expect(
+      first.measuredSize,
+      Size(first.textPainter.width, first.textPainter.height),
+    );
+
+    final span = first.textPainter.text;
     expect(span, isA<TextSpan>());
     final style = (span as TextSpan).style;
     expect(style, isNotNull);
     expect(style?.color, _effectiveTextColor(node.color, node.opacity));
     expect(style?.fontWeight, FontWeight.bold);
   });
+
+  test(
+    'canonical uncached text layout resolves size from the same painter',
+    () {
+      final resolved = TextLayoutRequest.forRenderSnapshot(
+        _textNode(id: 't-resolve', maxWidth: 80, opacity: 0.5),
+      ).resolve();
+
+      expect(
+        resolved.measuredSize,
+        Size(resolved.textPainter.width, resolved.textPainter.height),
+      );
+      final span = resolved.textPainter.text;
+      expect(span, isA<TextSpan>());
+      final style = (span as TextSpan).style;
+      expect(
+        style?.color,
+        _effectiveTextColor(const ui.Color(0xFF000000), 0.5),
+      );
+    },
+  );
 
   test('SceneTextLayoutCache rebuilds on maxWidth change', () {
     final cache = SceneTextLayoutCache(maxEntries: 8);

@@ -5,6 +5,16 @@ import 'numeric_clamp.dart';
 
 const TextDirection kDerivedTextLayoutDirection = TextDirection.ltr;
 
+class ResolvedTextLayout {
+  const ResolvedTextLayout({
+    required this.textPainter,
+    required this.measuredSize,
+  });
+
+  final TextPainter textPainter;
+  final Size measuredSize;
+}
+
 class TextLayoutRequest {
   const TextLayoutRequest({
     required this.text,
@@ -24,6 +34,22 @@ class TextLayoutRequest {
     return TextLayoutRequest(
       text: node.text,
       color: node.color,
+      fontSize: node.fontSize,
+      isBold: node.isBold,
+      isItalic: node.isItalic,
+      isUnderline: node.isUnderline,
+      textAlign: node.align,
+      fontFamily: node.fontFamily,
+      lineHeight: node.lineHeight,
+      maxWidth: node.maxWidth,
+      textDirection: node.textDirection,
+    );
+  }
+
+  factory TextLayoutRequest.forRenderSnapshot(TextNodeSnapshot node) {
+    return TextLayoutRequest(
+      text: node.text,
+      color: _renderReadyTextColor(node.color, node.opacity),
       fontSize: node.fontSize,
       isBold: node.isBold,
       isItalic: node.isItalic,
@@ -67,8 +93,8 @@ class TextLayoutRequest {
     );
   }
 
-  Size measure() {
-    final painter = TextPainter(
+  ResolvedTextLayout resolve() {
+    final textPainter = TextPainter(
       text: TextSpan(text: text, style: buildTextStyle()),
       textAlign: textAlign,
       textDirection: textDirection,
@@ -76,11 +102,18 @@ class TextLayoutRequest {
     );
     final safeMaxWidth = normalizedMaxWidth;
     if (safeMaxWidth == null) {
-      painter.layout();
+      textPainter.layout();
     } else {
-      painter.layout(maxWidth: safeMaxWidth);
+      textPainter.layout(maxWidth: safeMaxWidth);
     }
-    return Size(painter.width, painter.height);
+    return ResolvedTextLayout(
+      textPainter: textPainter,
+      measuredSize: Size(textPainter.width, textPainter.height),
+    );
+  }
+
+  Size measure() {
+    return resolve().measuredSize;
   }
 }
 
@@ -98,4 +131,13 @@ double? normalizeTextLayoutMaxWidth(double? maxWidth) {
   if (maxWidth == null) return null;
   if (!maxWidth.isFinite || maxWidth <= 0) return null;
   return maxWidth;
+}
+
+Color _renderReadyTextColor(Color color, double opacity) {
+  final alpha = (_textOpacity01(opacity) * 255.0).round().clamp(0, 255);
+  return color.withAlpha(alpha);
+}
+
+double _textOpacity01(double opacity) {
+  return clampNonNegativeFinite(opacity).clamp(0.0, 1.0);
 }

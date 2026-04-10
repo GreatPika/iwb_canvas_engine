@@ -375,14 +375,18 @@ Ownership decisions for the target state:
 - `ScenePainter` keeps frame ownership and selection ownership separate:
   the frame owner first consumes controller-owned ordered viewport paint
   candidates, then resolves preview delta plus geometry only for those
-  candidates, while selection rendering consumes only resolved `worldBounds` /
+  candidates. For text nodes, that same frame owner also resolves one
+  canonical `ResolvedTextLayout` payload through `SceneTextLayoutCache` or the
+  shared uncached core resolver and hands it to both geometry sizing and text
+  paint, while selection rendering consumes only resolved `worldBounds` /
   `localPath` through focused render-local helpers instead of reopening
   geometry lookup or scanning all content nodes.
   This contract is pinned by `INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION`.
 - `ScenePainter` keeps node-family rendering separate from frame ownership:
   rect/path, line/stroke, and text/image rendering consume only
   frame-resolved node data through focused render-local helpers instead of one
-  mixed node-render owner.
+  mixed node-render owner. Text renderers do not own `SceneTextLayoutCache`
+  and do not allocate a second `TextPainter` path after frame resolution.
 - `ScenePainter` is a thin public shell over explicit private painter-local
   modules; `ScenePainterShell` is orchestration-only and sequences frame,
   background, node, and selection owners without owning cache/grid assembly,

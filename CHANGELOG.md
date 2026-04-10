@@ -4,6 +4,12 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ## Unreleased
 
+- Render read-side text layout now uses one canonical resolved payload per
+  text candidate. `SceneTextLayoutCache` stores resolved text layout instead of
+  bare `TextPainter` instances, `ScenePainterFrameOwner` resolves that payload
+  once and hands it to both geometry sizing and text paint, and
+  `ScenePainterNodeRenderer` no longer re-enters text layout ownership during
+  paint.
 - `ScenePainter` now consumes controller-owned ordered viewport paint
   candidates from the internal render-state path before frame-local geometry
   resolution. Cold paints no longer resolve off-viewport content nodes, while
@@ -208,8 +214,8 @@ All notable changes to `iwb_canvas_engine` are documented here.
 - Render-cache invalidation is now explicitly owned by
   `SceneRenderCaches.clearAll()` on controller epoch/document boundaries;
   render cache keys stay scoped to local revision/layout inputs only, while
-  text layout cache keys still include paint color because cached
-  `TextPainter` instances retain render style.
+  text layout cache keys still include paint color because cached resolved
+  text-layout payloads retain render style.
 - Unified scene-level validation ownership under `ScenePolicy` so import,
   decode, and runtime scene canonicalization now report the same deterministic
   `SceneDataException.code` / `path` / `details` contract for duplicate node

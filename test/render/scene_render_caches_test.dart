@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
+import 'package:iwb_canvas_engine/src/core/text_layout.dart';
 import 'package:iwb_canvas_engine/src/render/cache/scene_path_metrics_cache.dart';
 import 'package:iwb_canvas_engine/src/render/cache/scene_static_layer_cache.dart';
 import 'package:iwb_canvas_engine/src/render/cache/scene_stroke_path_cache.dart';
@@ -38,7 +39,10 @@ void main() {
         node: pathNode,
         localPath: localPath,
       );
-      final geometryBefore = geometryCache.get(textNode);
+      final geometryBefore = geometryCache.get(
+        textNode,
+        resolvedTextLayout: _resolvedTextLayout(textNode),
+      );
       _primeStaticLayerCache(staticCache);
 
       renderCaches.clearAll();
@@ -56,7 +60,10 @@ void main() {
         node: pathNode,
         localPath: localPath,
       );
-      final geometryAfter = geometryCache.get(textNode);
+      final geometryAfter = geometryCache.get(
+        textNode,
+        resolvedTextLayout: _resolvedTextLayout(textNode),
+      );
       _primeStaticLayerCache(staticCache);
 
       expect(identical(textBefore, textAfter), isFalse);
@@ -87,7 +94,10 @@ void main() {
       node: pathNode,
       localPath: Path()..addRect(const Rect.fromLTWH(0, 0, 10, 10)),
     );
-    renderCaches.geometryCache.get(textNode);
+    renderCaches.geometryCache.get(
+      textNode,
+      resolvedTextLayout: _resolvedTextLayout(textNode),
+    );
     _primeStaticLayerCache(renderCaches.staticLayerCache);
 
     renderCaches.disposeOwned();
@@ -124,7 +134,10 @@ void main() {
       node: pathNode,
       localPath: localPath,
     );
-    final geometryBefore = geometryCache.get(textNode);
+    final geometryBefore = geometryCache.get(
+      textNode,
+      resolvedTextLayout: _resolvedTextLayout(textNode),
+    );
     _primeStaticLayerCache(staticCache);
 
     renderCaches.disposeOwned();
@@ -145,7 +158,16 @@ void main() {
       ),
       isTrue,
     );
-    expect(identical(geometryBefore, geometryCache.get(textNode)), isTrue);
+    expect(
+      identical(
+        geometryBefore,
+        geometryCache.get(
+          textNode,
+          resolvedTextLayout: _resolvedTextLayout(textNode),
+        ),
+      ),
+      isTrue,
+    );
     expect(textCache.debugHitCount, 1);
     expect(strokeCache.debugHitCount, 1);
     expect(pathCache.debugHitCount, 1);
@@ -172,7 +194,11 @@ void main() {
       node: _pathNode(),
       localPath: localPath,
     );
-    debugCaches.geometryCache.get(_textNode());
+    final textNode = _textNode();
+    debugCaches.geometryCache.get(
+      textNode,
+      resolvedTextLayout: _resolvedTextLayout(textNode),
+    );
     _primeStaticLayerCache(debugCaches.staticLayerCache);
 
     expect(lifecycle.clearIfEpochChanged(1), isFalse);
@@ -205,7 +231,11 @@ void main() {
 
       lifecycle.initialize(controllerEpoch: 1);
       final firstCaches = lifecycle.debugCaches;
-      firstCaches.geometryCache.get(_textNode());
+      final textNode = _textNode();
+      firstCaches.geometryCache.get(
+        textNode,
+        resolvedTextLayout: _resolvedTextLayout(textNode),
+      );
       _primeStaticLayerCache(firstCaches.staticLayerCache);
 
       lifecycle.recreateCaches();
@@ -217,7 +247,11 @@ void main() {
       expect(secondCaches.geometryCache, same(externalGeometryCache));
       expect(secondCaches.staticLayerCache, same(externalStaticCache));
 
-      secondCaches.geometryCache.get(_textNode());
+      final recreatedTextNode = _textNode();
+      secondCaches.geometryCache.get(
+        recreatedTextNode,
+        resolvedTextLayout: _resolvedTextLayout(recreatedTextNode),
+      );
       _primeStaticLayerCache(secondCaches.staticLayerCache);
       lifecycle.dispose();
 
@@ -236,6 +270,10 @@ TextNodeSnapshot _textNode() {
     textDirection: TextDirection.ltr,
     maxWidth: 80,
   );
+}
+
+ResolvedTextLayout _resolvedTextLayout(TextNodeSnapshot node) {
+  return TextLayoutRequest.forRenderSnapshot(node).resolve();
 }
 
 StrokeNodeSnapshot _strokeNode() {

@@ -1,12 +1,14 @@
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
-import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
 import 'package:iwb_canvas_engine/src/contract/node_patch.dart';
 import 'package:iwb_canvas_engine/src/contract/patch_field.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
+import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
+import 'package:iwb_canvas_engine/src/core/text_layout.dart';
 import 'package:iwb_canvas_engine/src/render/render_geometry_builder.dart';
 import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 
@@ -16,6 +18,23 @@ void main() {
     expect(() => RenderGeometryCache(maxEntries: 0), throwsArgumentError);
     expect(() => RenderGeometryCache(maxEntries: -1), throwsArgumentError);
   });
+
+  test(
+    'render geometry builder consumes resolved text layout payloads only',
+    () {
+      final source = File(
+        'lib/src/render/render_geometry_builder.dart',
+      ).readAsStringSync();
+
+      expect(source, contains('ResolvedTextLayout? resolvedTextLayout'));
+      expect(
+        source,
+        contains('centeredRectLocalBounds(resolvedTextLayout.measuredSize)'),
+      );
+      expect(source, isNot(contains('_measureTextNodeSnapshot')));
+      expect(source, isNot(contains('.measure()')));
+    },
+  );
 
   test('RenderGeometryCache reuses entry for unchanged node geometry', () {
     final cache = RenderGeometryCache();
@@ -33,6 +52,48 @@ void main() {
     expect(cache.debugBuildCount, 1);
     expect(cache.debugHitCount, 1);
     expect(cache.debugSize, 1);
+  });
+
+  test('RenderGeometryCache requires resolved text layout for text nodes', () {
+    final cache = RenderGeometryCache();
+    final node = _textNode();
+
+    expect(
+      () => cache.get(node),
+      throwsA(
+        isA<ArgumentError>().having(
+          (error) => error.name,
+          'name',
+          'resolvedTextLayout',
+        ),
+      ),
+    );
+  });
+
+  test('RenderGeometryCache text geometry uses provided resolved layout', () {
+    final cache = RenderGeometryCache();
+    final node = _textNode(
+      transform: Transform2D.translation(const Offset(40, 30)),
+      maxWidth: 90,
+    );
+    final resolvedTextLayout = TextLayoutRequest.forRenderSnapshot(
+      node,
+    ).resolve();
+
+    final entry = cache.get(node, resolvedTextLayout: resolvedTextLayout);
+    final expectedLocalBounds = Rect.fromCenter(
+      center: Offset.zero,
+      width: resolvedTextLayout.measuredSize.width,
+      height: resolvedTextLayout.measuredSize.height,
+    );
+
+    expect(entry.localBounds, expectedLocalBounds);
+    expect(
+      entry.worldBounds,
+      Transform2D.translation(
+        const Offset(40, 30),
+      ).applyToRect(expectedLocalBounds),
+    );
   });
 
   test(
@@ -490,4 +551,19 @@ void main() {
     expect(cache.debugBuildCount, 5000);
     expect(cache.debugEvictCount, 4936);
   });
+}
+
+TextNodeSnapshot _textNode({
+  Transform2D transform = Transform2D.identity,
+  double? maxWidth,
+}) {
+  return TextNodeSnapshot(
+    id: 'text-geometry',
+    text: 'cache',
+    fontSize: 14,
+    color: const Color(0xFF000000),
+    textDirection: TextDirection.ltr,
+    transform: transform,
+    maxWidth: maxWidth,
+  );
 }

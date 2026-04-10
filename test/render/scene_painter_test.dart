@@ -12,6 +12,8 @@ import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 import 'package:iwb_canvas_engine/src/render/scene_grid_renderer.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
+import 'package:iwb_canvas_engine/src/render/scene_painter_contract.dart';
+import 'package:iwb_canvas_engine/src/render/scene_painter_node_renderer.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_scene_view_runtime.dart';
 import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart'
     as interactive;
@@ -393,6 +395,60 @@ void main() {
     final nonBackground = await _countNonBackgroundPixels(rendered, background);
     expect(nonBackground, greaterThan(0));
   });
+
+  test(
+    'ScenePainterNodeRenderer rejects text paint without frame-resolved text layout',
+    () {
+      final textNode = TextNodeSnapshot(
+        id: 'text-missing-layout',
+        text: 'layout',
+        fontSize: 14,
+        color: const Color(0xFF000000),
+        textDirection: TextDirection.ltr,
+      );
+      final renderer = ScenePainterNodeRenderer(
+        imageResolver: (_) => null,
+        strokePathCache: null,
+        transformBuffer: Float64List(16),
+      );
+      final recorder = PictureRecorder();
+      final canvas = Canvas(recorder);
+
+      expect(
+        () => renderer.paintNodeLayers(
+          canvas: canvas,
+          frame: ScenePainterPaintFrame(
+            cameraOffset: Offset.zero,
+            viewRect: const Rect.fromLTWH(-20, -20, 40, 40),
+            paintCandidates: <NodeSnapshot>[textNode],
+            selectedIds: const <NodeId>{},
+            selectionRect: null,
+            selectionStyle: const ScenePainterSelectionStyle(
+              color: Color(0xFF1565C0),
+              haloWidth: 1,
+            ),
+          ),
+          resolveNodePaintData: (_) => ScenePainterResolvedNodePaintData(
+            node: textNode,
+            previewDelta: Offset.zero,
+            geometry: const GeometryEntry(
+              localBounds: Rect.fromLTRB(-10, -10, 10, 10),
+              worldBounds: Rect.fromLTRB(-10, -10, 10, 10),
+            ),
+          ),
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            contains('Missing resolved text layout'),
+          ),
+        ),
+      );
+
+      recorder.endRecording();
+    },
+  );
 
   test('ScenePainter paints marquee selection rectangle', () async {
     const background = Color(0xFFFFFFFF);

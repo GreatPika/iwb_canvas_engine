@@ -85,7 +85,7 @@ void main() {
   });
 
   test(
-    'frame owner resolves ordered paint candidates before geometry lookup',
+    'frame owner resolves ordered paint candidates and shared text layout before geometry lookup',
     () {
       final source = File(
         'lib/src/render/scene_painter_frame.dart',
@@ -107,7 +107,12 @@ void main() {
         createBody,
         contains('paintCandidates: List<NodeSnapshot>.unmodifiable('),
       );
-      expect(body, contains('geometry: geometryCache.get(node),'));
+      expect(body, contains('final textLayout = switch (node) {'));
+      expect(
+        body,
+        contains('geometryCache.get(node, resolvedTextLayout: textLayout)'),
+      );
+      expect(body, contains('textLayout: textLayout,'));
       expect(body, isNot(contains('parseSvgPathData')));
       expect(body, isNot(contains('buildLocalPath')));
       expect(body, isNot(contains('_buildPathNode')));
@@ -125,6 +130,8 @@ void main() {
       expect(source, isNot(contains('snapshot.backgroundLayer.nodes')));
       expect(source, isNot(contains('for (final layer in snapshot.layers)')));
       expect(source, contains('Path? localPath'));
+      expect(source, isNot(contains('SceneTextLayoutCache')));
+      expect(source, isNot(contains('buildSceneTextPainter(')));
       final body = _extractMethodBody(
         source: source,
         methodStart: 'void _drawPathNode(',
