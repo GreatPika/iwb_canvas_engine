@@ -646,7 +646,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION',
     scope: 'engine-structure',
     title:
-        'ScenePainter consumes controller-owned ordered viewport paint candidates and resolves preview delta plus one canonical ResolvedTextLayout plus geometry only for those candidates before render-local consumers read frame data',
+        'ScenePainterFrameOwner owns one render-local visibility budget, keeps ordinary controller candidate enumeration viewport-first, supplements only selected edge nodes through the budgeted visibility rect, and resolves preview delta plus one canonical ResolvedTextLayout plus geometry only for those candidates before render-local consumers apply final culling',
     primaryProof: PrimaryProof(
       path: 'test/render/scene_painter_frame_contract_test.dart',
     ),

@@ -56,7 +56,8 @@ class ScenePainterNodeRenderer {
         continue;
       }
       final resolvedNode = resolveNodePaintData(node);
-      if (!_canPaintNodeInFrame(resolvedNode, frame.viewRect)) {
+      final nodeViewRect = frame.visibilityRectForNode(node.id);
+      if (!_canPaintNodeInFrame(resolvedNode, nodeViewRect)) {
         continue;
       }
       _drawResolvedNode(resolvedNode, renderContext, _support);

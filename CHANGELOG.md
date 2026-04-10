@@ -19,6 +19,14 @@ All notable changes to `iwb_canvas_engine` are documented here.
   candidates from the internal render-state path before frame-local geometry
   resolution. Cold paints no longer resolve off-viewport content nodes, while
   `backgroundLayer` order and selected move-preview visibility stay intact.
+- `ScenePainterFrameOwner` now owns one render-local
+  `ScenePainterVisibilityBudget` per frame without widening ordinary candidate
+  enumeration. Controller paint-candidate queries stay viewport-first, while
+  the budgeted visibility rect is used only for selected-node supplement and
+  final cull. The base budget remains `1.0`, and active selection expands
+  visibility only by the outward halo extent so selected edge nodes stay
+  paint-visible without reintroducing unselected off-viewport geometry or
+  text-layout work.
 - Interactive lifecycle closure is now documented and pinned by repository
   invariants: public `handlePointer(...)` / `handleDoubleTap(...)` remain
   manual-only hooks, active draw and pending two-tap line state use captured

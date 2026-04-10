@@ -35,6 +35,25 @@ class ScenePainterPaintFrame {
       selectedNodes.isNotEmpty && selectionStyle.haloWidth > 0;
 
   bool isSelected(NodeId nodeId) => selectedIds.contains(nodeId);
+
+  Rect visibilityRectForNode(NodeId nodeId) {
+    final deflateBy = _frameVisibilityOutset - _nodeVisibilityOutset(nodeId);
+    if (deflateBy <= 0) {
+      return viewRect;
+    }
+    return viewRect.deflate(deflateBy);
+  }
+
+  double get _frameVisibilityOutset =>
+      _visibilityOutset(hasSelectionHalo: selectedIds.isNotEmpty);
+
+  double _nodeVisibilityOutset(NodeId nodeId) =>
+      _visibilityOutset(hasSelectionHalo: isSelected(nodeId));
+
+  double _visibilityOutset({required bool hasSelectionHalo}) {
+    final haloOutset = hasSelectionHalo ? selectionStyle.haloWidth : 0.0;
+    return haloOutset > 1.0 ? haloOutset : 1.0;
+  }
 }
 
 class ScenePainterResolvedNodePaintData {

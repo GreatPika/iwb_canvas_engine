@@ -8,14 +8,10 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
-import 'package:iwb_canvas_engine/src/contract/node_spec.dart';
-import 'package:iwb_canvas_engine/src/contract/canvas_pointer_input.dart';
 import 'package:iwb_canvas_engine/src/contract/pointer_input.dart';
 import 'package:iwb_canvas_engine/src/contract/pointer_phase_codec.dart';
-import 'package:iwb_canvas_engine/src/contract/scene_render_state.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_view_runtime.dart';
-import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart'
     as interactive;
 
@@ -44,6 +40,28 @@ void main() {
 
       expect(controller, isNot(isA<SceneViewRenderState>()));
     });
+
+    test(
+      'ScenePaintCandidateQuery uses value equality and stable hashCode',
+      () {
+        const query = ScenePaintCandidateQuery(
+          viewportRect: Rect.fromLTWH(1, 2, 3, 4),
+          visibilityRect: Rect.fromLTWH(0, 1, 5, 6),
+        );
+        const sameQuery = ScenePaintCandidateQuery(
+          viewportRect: Rect.fromLTWH(1, 2, 3, 4),
+          visibilityRect: Rect.fromLTWH(0, 1, 5, 6),
+        );
+        const differentQuery = ScenePaintCandidateQuery(
+          viewportRect: Rect.fromLTWH(1, 2, 3, 4),
+          visibilityRect: Rect.fromLTWH(1, 2, 3, 4),
+        );
+
+        expect(query, sameQuery);
+        expect(query.hashCode, same(sameQuery.hashCode));
+        expect(query, isNot(differentQuery));
+      },
+    );
 
     test(
       'interactive SceneController exposes assembled view runtime boundary',

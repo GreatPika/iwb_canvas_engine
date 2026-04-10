@@ -85,7 +85,7 @@ void main() {
   });
 
   test(
-    'frame owner resolves ordered paint candidates and shared text layout before geometry lookup',
+    'frame owner resolves viewport-first paint candidates, per-node visibility rects, and shared text layout before geometry lookup',
     () {
       final source = File(
         'lib/src/render/scene_painter_frame.dart',
@@ -99,14 +99,28 @@ void main() {
         methodStart: 'ScenePainterResolvedNodePaintData resolveNodePaintData(',
       );
 
+      expect(source, contains('class ScenePainterVisibilityBudget'));
       expect(
         createBody,
-        contains('renderState.enumeratePaintCandidates(viewRect)'),
+        contains('final visibilityBudget = ScenePainterVisibilityBudget('),
       );
+      expect(
+        createBody,
+        contains('hasSelectedNodes: renderState.selectedNodeIds.isNotEmpty,'),
+      );
+      expect(createBody, contains('final rawViewRect = Rect.fromLTWH('));
+      expect(
+        createBody,
+        contains('final viewRect = visibilityBudget.applyTo(rawViewRect);'),
+      );
+      expect(createBody, contains('renderState.enumeratePaintCandidates('));
+      expect(createBody, contains('viewportRect: rawViewRect,'));
+      expect(createBody, contains('visibilityRect: viewRect,'));
       expect(
         createBody,
         contains('paintCandidates: List<NodeSnapshot>.unmodifiable('),
       );
+      expect(source, isNot(contains('scenePainterCullPadding')));
       expect(body, contains('final textLayout = switch (node) {'));
       expect(
         body,
@@ -125,19 +139,36 @@ void main() {
       final source = File(
         'lib/src/render/scene_painter_node_renderer.dart',
       ).readAsStringSync();
+      final body = _extractMethodBody(
+        source: source,
+        methodStart: 'void _drawVisibleNodes(',
+      );
+
       expect(source, contains('class ScenePainterNodeRenderer'));
       expect(source, contains('nodes: frame.paintCandidates,'));
+      expect(
+        body,
+        contains('final nodeViewRect = frame.visibilityRectForNode('),
+      );
+      expect(
+        body,
+        contains('_canPaintNodeInFrame(resolvedNode, nodeViewRect)'),
+      );
+      expect(
+        source,
+        isNot(contains('_canPaintNodeInFrame(resolvedNode, frame.viewRect)')),
+      );
       expect(source, isNot(contains('snapshot.backgroundLayer.nodes')));
       expect(source, isNot(contains('for (final layer in snapshot.layers)')));
       expect(source, contains('Path? localPath'));
       expect(source, isNot(contains('SceneTextLayoutCache')));
       expect(source, isNot(contains('buildSceneTextPainter(')));
-      final body = _extractMethodBody(
+      final pathBody = _extractMethodBody(
         source: source,
         methodStart: 'void _drawPathNode(',
       );
 
-      expect(body, isNot(contains('_geometryCache.get(')));
+      expect(pathBody, isNot(contains('_geometryCache.get(')));
     },
   );
 

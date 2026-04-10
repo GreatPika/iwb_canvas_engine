@@ -150,11 +150,14 @@ final class SceneControllerSceneViewRenderState
       _readPreviewDeltaResolver();
 
   @override
-  Iterable<NodeSnapshot> enumeratePaintCandidates(Rect worldRect) sync* {
+  Iterable<NodeSnapshot> enumeratePaintCandidates(
+    ScenePaintCandidateQuery query,
+  ) sync* {
     final snapshot = _readSnapshot();
     final selectedNodeIds = _readSelectedNodeIds();
     final previewResolver = _readPreviewDeltaResolver();
     final acceptedNodeIds = <NodeId>{};
+    final backgroundCandidates = <({NodeSnapshot node, int nodeIndex})>[];
     final contentCandidates =
         <({NodeSnapshot node, int layerIndex, int nodeIndex})>[];
 
@@ -181,17 +184,19 @@ final class SceneControllerSceneViewRenderState
         runtimeNode,
       ).shift(previewDelta);
       if (!isFiniteRect(candidateBounds) ||
-          !worldRect.overlaps(candidateBounds)) {
+          !query.viewportRect.overlaps(candidateBounds)) {
         continue;
       }
-      acceptedNodeIds.add(snapshotNode.id);
-      yield snapshotNode;
+      if (!acceptedNodeIds.add(snapshotNode.id)) {
+        continue;
+      }
+      backgroundCandidates.add((node: snapshotNode, nodeIndex: nodeIndex));
     }
 
     for (final candidate in _storeController.querySpatialCandidates(
-      worldRect,
+      query.viewportRect,
     )) {
-      final snapshotNode = _resolveSnapshotContentNode(
+      final snapshotNode = _resolveSnapshotNode(
         snapshot: snapshot,
         layerIndex: candidate.layerIndex,
         nodeIndex: candidate.nodeIndex,
@@ -213,23 +218,18 @@ final class SceneControllerSceneViewRenderState
 
     for (final nodeId in selectedNodeIds) {
       final previewDelta = _previewDeltaForNode(previewResolver, nodeId);
-      if (previewDelta == Offset.zero) {
-        continue;
-      }
       final resolvedNode = _storeController.resolveNodeById(nodeId);
-      if (resolvedNode == null ||
-          resolvedNode.layerIndex < 0 ||
-          acceptedNodeIds.contains(nodeId)) {
+      if (resolvedNode == null || acceptedNodeIds.contains(nodeId)) {
         continue;
       }
       final candidateBounds = nodeGeometryCandidateBoundsWorld(
         resolvedNode.node,
       ).shift(previewDelta);
       if (!isFiniteRect(candidateBounds) ||
-          !worldRect.overlaps(candidateBounds)) {
+          !query.visibilityRect.overlaps(candidateBounds)) {
         continue;
       }
-      final snapshotNode = _resolveSnapshotContentNode(
+      final snapshotNode = _resolveSnapshotNode(
         snapshot: snapshot,
         layerIndex: resolvedNode.layerIndex,
         nodeIndex: resolvedNode.nodeIndex,
@@ -242,6 +242,13 @@ final class SceneControllerSceneViewRenderState
           !acceptedNodeIds.add(nodeId)) {
         continue;
       }
+      if (resolvedNode.layerIndex < 0) {
+        backgroundCandidates.add((
+          node: snapshotNode,
+          nodeIndex: resolvedNode.nodeIndex,
+        ));
+        continue;
+      }
       contentCandidates.add((
         node: snapshotNode,
         layerIndex: resolvedNode.layerIndex,
@@ -249,6 +256,7 @@ final class SceneControllerSceneViewRenderState
       ));
     }
 
+    backgroundCandidates.sort((a, b) => a.nodeIndex.compareTo(b.nodeIndex));
     contentCandidates.sort((a, b) {
       final layerOrder = a.layerIndex.compareTo(b.layerIndex);
       if (layerOrder != 0) {
@@ -257,6 +265,9 @@ final class SceneControllerSceneViewRenderState
       return a.nodeIndex.compareTo(b.nodeIndex);
     });
 
+    for (final candidate in backgroundCandidates) {
+      yield candidate.node;
+    }
     for (final candidate in contentCandidates) {
       yield candidate.node;
     }
@@ -326,11 +337,17 @@ final class SceneControllerOverlayRepaintChannel extends ChangeNotifier {
   }
 }
 
-NodeSnapshot? _resolveSnapshotContentNode({
+NodeSnapshot? _resolveSnapshotNode({
   required SceneSnapshot snapshot,
   required int layerIndex,
   required int nodeIndex,
 }) {
+  if (layerIndex == -1) {
+    if (nodeIndex < 0 || nodeIndex >= snapshot.backgroundLayer.nodes.length) {
+      return null;
+    }
+    return snapshot.backgroundLayer.nodes[nodeIndex];
+  }
   if (layerIndex < 0 || layerIndex >= snapshot.layers.length) {
     return null;
   }

@@ -268,7 +268,12 @@ class _CanvasScreenState extends State<CanvasScreen> {
   snapshots or helper-based read-side seams at the view boundary, while the
   main painter still consumes controller-enumerated ordered viewport
   candidates so cold paints do not resolve off-viewport content geometry and
-  selected move previews can still pull nodes into frame.
+  selected move previews can still pull nodes into frame. One render-local
+  `ScenePainterVisibilityBudget` now widens only the frame visibility rect and
+  the selected-node supplement path: ordinary candidate enumeration stays
+  viewport-first, the base budget stays at `1.0`, and active selection adds
+  only the outward halo extent so selected edge nodes remain visible without
+  reintroducing unselected off-viewport work.
 - `handlePointer(...)` treats non-finite `down`/`move` as no-op admission
   failures. For non-finite terminal `up`/`cancel`, the controller preserves the
   original terminal phase only when the same `pointerId` already has a cached

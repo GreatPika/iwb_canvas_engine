@@ -54,10 +54,13 @@ class _FakeRenderState extends ChangeNotifier implements SceneViewRenderState {
       _previewDeltaResolver ?? _zeroPreviewDelta;
 
   @override
-  Iterable<NodeSnapshot> enumeratePaintCandidates(Rect worldRect) {
+  Iterable<NodeSnapshot> enumeratePaintCandidates(
+    ScenePaintCandidateQuery query,
+  ) {
     return enumerateSnapshotPaintCandidates(
       snapshot: snapshot,
-      worldRect: worldRect,
+      query: query,
+      selectedNodeIds: selectedNodeIds,
       previewDeltaResolver: previewDeltaResolver,
     );
   }
@@ -1738,6 +1741,150 @@ void main() {
       expect(
         await _countNonBackgroundPixels(withPathCache, background),
         greaterThan(0),
+      );
+    },
+  );
+
+  test(
+    'ScenePainter keeps only selection-halo edge nodes visible without widening ordinary candidate enumeration',
+    () async {
+      const background = Color(0xFFFFFFFF);
+      const selectionColor = Color(0xFFFF0000);
+      const selectionStrokeWidth = 3.0;
+
+      Future<({int ink, int geometryBuilds})> paintVisibleInk({
+        required String id,
+        required Offset center,
+        required bool selected,
+      }) async {
+        final geometryCache = RenderGeometryCache();
+        final controller = SceneStoreController(
+          initialSnapshot: SceneSnapshot(
+            background: BackgroundSnapshot(color: background),
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(
+                id: 'layer-visibility-budget',
+                nodes: <NodeSnapshot>[
+                  RectNodeSnapshot(
+                    id: id,
+                    size: const Size(10, 10),
+                    fillColor: const Color(0xFF000000),
+                    strokeWidth: 0,
+                    transform: Transform2D.translation(center),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+        final renderState = _mirrorRenderState(controller);
+        if (selected) {
+          controller.write((writer) {
+            writer.writeSelectionReplace(<NodeId>{id});
+          });
+        }
+
+        final image = await _paintToImage(
+          ScenePainter(
+            controller: renderState,
+            imageResolver: (_) => null,
+            geometryCache: geometryCache,
+            selectionColor: selectionColor,
+            selectionStrokeWidth: selectionStrokeWidth,
+          ),
+          width: 30,
+          height: 30,
+        );
+        return (
+          ink: await _countNonBackgroundPixels(image, background),
+          geometryBuilds: geometryCache.debugBuildCount,
+        );
+      }
+
+      final selectedHaloVisible = await paintVisibleInk(
+        id: 'edge-selected-visible',
+        center: const Offset(-6, 15),
+        selected: true,
+      );
+      final unselectedStillCulled = await paintVisibleInk(
+        id: 'edge-unselected-culled',
+        center: const Offset(-6, 15),
+        selected: false,
+      );
+      final selectedButTooFar = await paintVisibleInk(
+        id: 'edge-selected-too-far',
+        center: const Offset(-9, 15),
+        selected: true,
+      );
+
+      expect(selectedHaloVisible.ink, greaterThan(0));
+      expect(selectedHaloVisible.geometryBuilds, 1);
+      expect(unselectedStillCulled.ink, 0);
+      expect(unselectedStillCulled.geometryBuilds, 0);
+      expect(selectedButTooFar.ink, 0);
+      expect(selectedButTooFar.geometryBuilds, 0);
+    },
+  );
+
+  test(
+    'ScenePainter keeps unselected edge nodes culled when another node is selected',
+    () {
+      const background = Color(0xFFFFFFFF);
+      const selectionColor = Color(0xFFFF0000);
+      const unselectedFill = Color(0xFF2962FF);
+      const selectionStrokeWidth = 3.0;
+
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          background: BackgroundSnapshot(color: background),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-mixed-visibility-budget',
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(
+                  id: 'selected-budget-anchor',
+                  size: const Size(10, 10),
+                  fillColor: const Color(0xFF2E7D32),
+                  strokeWidth: 0,
+                  transform: Transform2D.translation(const Offset(15, 15)),
+                ),
+                RectNodeSnapshot(
+                  id: 'unselected-edge-node',
+                  size: const Size(10, 10),
+                  fillColor: unselectedFill,
+                  strokeWidth: 0,
+                  transform: Transform2D.translation(const Offset(-6, 15)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+      final renderState = _mirrorRenderState(controller);
+      controller.write((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'selected-budget-anchor'});
+      });
+
+      final canvas = TestRecordingCanvas();
+      final painter = ScenePainter(
+        controller: renderState,
+        imageResolver: (_) => null,
+        selectionColor: selectionColor,
+        selectionStrokeWidth: selectionStrokeWidth,
+      );
+
+      painter.paint(canvas, const Size(30, 30));
+
+      final drawRectPaints = canvas.invocations
+          .where((entry) => entry.invocation.memberName == #drawRect)
+          .map((entry) => entry.invocation.positionalArguments[1] as Paint)
+          .toList(growable: false);
+
+      expect(
+        drawRectPaints.where((paint) => paint.color == unselectedFill),
+        isEmpty,
       );
     },
   );

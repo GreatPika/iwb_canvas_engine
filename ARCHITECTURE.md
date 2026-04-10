@@ -376,13 +376,19 @@ Ownership decisions for the target state:
   rendering stays outside the base scene painter.
 - `ScenePainter` keeps frame ownership and selection ownership separate:
   the frame owner first consumes controller-owned ordered viewport paint
-  candidates, then resolves preview delta plus geometry only for those
-  candidates. For text nodes, that same frame owner also resolves one
-  canonical `ResolvedTextLayout` payload through `SceneTextLayoutCache` or the
-  shared uncached core resolver and hands it to both geometry sizing and text
-  paint, while selection rendering consumes only resolved `worldBounds` /
-  `localPath` through focused render-local helpers instead of reopening
-  geometry lookup or scanning all content nodes.
+  candidates through a raw viewport query, then resolves preview delta plus
+  geometry only for those candidates. `ScenePainterVisibilityBudget` stays
+  render-local on the frame path, but it does not widen ordinary candidate
+  enumeration: the base outset is `1.0`, active selection contributes only
+  its outward halo extent, and that budgeted visibility rect is consumed by
+  selected-node supplement plus final culling. Overlay-only marquee / preview
+  state does not affect the base scene visibility contract. For text nodes,
+  that same frame owner also resolves one canonical `ResolvedTextLayout`
+  payload through `SceneTextLayoutCache` or the shared uncached core resolver
+  and hands it to both geometry sizing and text paint, while selection
+  rendering consumes only resolved `worldBounds` / `localPath` through
+  focused render-local helpers instead of reopening geometry lookup or
+  scanning all content nodes.
   This contract is pinned by `INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION`.
 - `ScenePainter` keeps node-family rendering separate from frame ownership:
   rect/path, line/stroke, and text/image rendering consume only

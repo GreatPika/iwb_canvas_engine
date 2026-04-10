@@ -271,6 +271,13 @@ side.
   text-layout payload per text paint candidate and hands that same payload to
   both geometry sizing and text paint; renderer-local code does not reopen
   text layout from a second cache or uncached builder path
+- on the render read-side, `ScenePainterFrameOwner` also owns one
+  `ScenePainterVisibilityBudget` per frame; ordinary
+  `enumeratePaintCandidates(...)` stays viewport-first, while the budgeted
+  visibility rect is used for selected-node supplement and final node culling.
+  The budget never drops below `1.0` and expands to the outward selection
+  halo extent only while selection is active (`selectionStrokeWidth`, not
+  doubled stroke width)
 
 If you compare text bounds across platforms, use semantic assertions or numeric
 tolerance. Font metrics can differ slightly by platform and font engine.

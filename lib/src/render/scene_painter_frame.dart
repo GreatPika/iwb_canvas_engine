@@ -8,7 +8,25 @@ import 'cache/scene_text_layout_cache.dart';
 import 'render_geometry_cache.dart';
 import 'scene_painter_contract.dart';
 
-const double scenePainterCullPadding = 1.0;
+class ScenePainterVisibilityBudget {
+  const ScenePainterVisibilityBudget._({required this.outset});
+
+  factory ScenePainterVisibilityBudget({
+    required bool hasSelectedNodes,
+    required ScenePainterSelectionStyle selectionStyle,
+  }) {
+    final haloOutset = hasSelectedNodes
+        ? clampNonNegativeFinite(selectionStyle.haloWidth)
+        : 0.0;
+    return ScenePainterVisibilityBudget._(
+      outset: haloOutset > 1.0 ? haloOutset : 1.0,
+    );
+  }
+
+  final double outset;
+
+  Rect applyTo(Rect rawViewRect) => rawViewRect.inflate(outset);
+}
 
 class ScenePainterFrameOwner {
   const ScenePainterFrameOwner({
@@ -26,24 +44,35 @@ class ScenePainterFrameOwner {
   final double selectionStrokeWidth;
 
   ScenePainterPaintFrame create(Size size) {
+    final selectionStyle = ScenePainterSelectionStyle(
+      color: selectionColor,
+      haloWidth: clampNonNegativeFinite(selectionStrokeWidth),
+    );
+    final visibilityBudget = ScenePainterVisibilityBudget(
+      hasSelectedNodes: renderState.selectedNodeIds.isNotEmpty,
+      selectionStyle: selectionStyle,
+    );
     final cameraOffset = sanitizeFiniteOffset(renderState.cameraOffset);
-    final viewRect = Rect.fromLTWH(
+    final rawViewRect = Rect.fromLTWH(
       cameraOffset.dx,
       cameraOffset.dy,
       size.width,
       size.height,
-    ).inflate(scenePainterCullPadding);
+    );
+    final viewRect = visibilityBudget.applyTo(rawViewRect);
     return ScenePainterPaintFrame(
       cameraOffset: cameraOffset,
       viewRect: viewRect,
       paintCandidates: List<NodeSnapshot>.unmodifiable(
-        renderState.enumeratePaintCandidates(viewRect),
+        renderState.enumeratePaintCandidates(
+          ScenePaintCandidateQuery(
+            viewportRect: rawViewRect,
+            visibilityRect: viewRect,
+          ),
+        ),
       ),
       selectedIds: renderState.selectedNodeIds,
-      selectionStyle: ScenePainterSelectionStyle(
-        color: selectionColor,
-        haloWidth: clampNonNegativeFinite(selectionStrokeWidth),
-      ),
+      selectionStyle: selectionStyle,
     );
   }
 

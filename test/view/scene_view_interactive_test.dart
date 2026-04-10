@@ -2122,10 +2122,13 @@ class _StaticSceneViewRenderState extends ChangeNotifier
       (_) => Offset.zero;
 
   @override
-  Iterable<NodeSnapshot> enumeratePaintCandidates(Rect worldRect) {
+  Iterable<NodeSnapshot> enumeratePaintCandidates(
+    ScenePaintCandidateQuery query,
+  ) {
     return enumerateSnapshotPaintCandidates(
       snapshot: _snapshot,
-      worldRect: worldRect,
+      query: query,
+      selectedNodeIds: selectedNodeIds,
       previewDeltaResolver: previewDeltaResolver,
     );
   }

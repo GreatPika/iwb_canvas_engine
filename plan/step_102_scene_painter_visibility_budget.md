@@ -1,23 +1,26 @@
 language: russian
 
-# Шаг 102. Ввести единый visibility budget для query и final cull в `ScenePainter`
+# Шаг 102. Ввести render-local visibility budget без расширения viewport query в `ScenePainter`
 
 ## 1. Change Mandate
 
 Этот шаг вводит один render-local owner visibility budget для `ScenePainter`,
-чтобы candidate query и final cull опирались на один и тот же budgeted rect, а
-selection halo больше не выпадал из visibility contract у границы viewport.
+но не расширяет им обычную candidate enumeration. Viewport-first query остаётся
+controller-owned, а visibility budget используется только для selected-node
+supplement и final cull, чтобы selection halo больше не выпадал из visibility
+contract у границы viewport и при этом не возвращал лишнюю off-viewport
+geometry/text work для unselected nodes.
 
 ## 2. Change Boundary
 
 ### Included in the Change
 
 - Render-local visibility-budget owner for base scene painter node visibility.
-- Frame assembly changes required so one budgeted rect drives both
-  `enumeratePaintCandidates(...)` and final node culling.
+- Frame and render-state changes required so raw viewport query, selected-node
+  supplement, and final node culling use one explicit ownership contract.
 - Selection-halo contribution to the base scene visibility budget.
-- Render proof, invariant, and documentation updates required to publish one
-  unified visibility-budget contract.
+- Render proof, invariant, and documentation updates required to publish the
+  viewport-first query plus selection-aware visibility contract.
 
 ### Not Included in the Change
 
@@ -33,6 +36,8 @@ selection halo больше не выпадал из visibility contract у гр
 
 ### Implementation Files
 
+- `lib/src/contract/scene_view_render_state.dart`
+- `lib/src/interactive/internal/scene_controller_scene_view_runtime.dart`
 - `lib/src/render/scene_painter_frame.dart`
 - `lib/src/render/scene_painter_node_renderer.dart`
 
@@ -41,6 +46,8 @@ selection halo больше не выпадал из visibility contract у гр
 - `test/render/scene_painter_bounds_contract_test.dart`
 - `test/render/scene_painter_frame_contract_test.dart`
 - `test/render/scene_painter_test.dart`
+- `test/support/committed_scene_view_render_state.dart`
+- `test/view/scene_view_interactive_test.dart`
 
 ### Fixture and Supporting Data Files
 
@@ -54,8 +61,12 @@ selection halo больше не выпадал из visibility contract у гр
 
 ### Analysis Area
 
+- `lib/src/contract/scene_view_render_state.dart`
+- `lib/src/interactive/internal/scene_controller_scene_view_runtime.dart`
 - `lib/src/render/scene_painter_*`
 - `test/render/scene_painter_*`
+- `test/view/scene_view_interactive_test.dart`
+- `test/support/committed_scene_view_render_state.dart`
 - `tool/invariant_registry.dart`
 - `README.md`
 - `API_GUIDE.md`
@@ -70,12 +81,14 @@ selection halo больше не выпадал из visibility contract у гр
 
 ### File Change Rule
 
-- Every modified implementation file must either introduce the unified
-  visibility-budget owner on the frame path or keep final culling wired to the
-  same frame rect without widening frame contracts.
+- Every modified implementation file must either introduce the render-local
+  visibility-budget owner on the frame path or keep viewport-first candidate
+  ownership intact while wiring selected supplement and final culling to the
+  same visibility contract.
 - Every modified test file must pin one closed seam of this step:
-  unified budgeted rect assembly,
-  query/final-cull rect parity,
+  raw viewport query ownership,
+  selected-node supplement visibility,
+  per-node final-cull rect parity,
   or selection-halo edge visibility.
 - Every modified supporting or documentation file must publish or enforce the
   exact visibility-budget contract closed by this step.
@@ -93,9 +106,10 @@ selection halo больше не выпадал из visibility contract у гр
 3. `ScenePainterVisibilityBudget` stays render-local on the frame path. This
    step must not move visibility budgeting into controller state, spatial index
    ownership, or widget-side view code.
-4. `ScenePainterPaintFrame.viewRect` remains the single frame-level visibility
-   rect consumed by both candidate enumeration and final culling. This step
-   must not introduce parallel query and cull rect surfaces.
+4. Ordinary candidate enumeration remains viewport-first and controller-owned.
+   This step may add an internal query wrapper so the runtime receives both
+   raw viewport ownership and the budgeted visibility rect, but it must not
+   widen ordinary enumeration for unselected nodes.
 5. The minimum base visibility outset remains `1.0`; this value continues to
    cover the current anti-alias / fuzz budget even when no selection halo is
    active.
@@ -106,24 +120,24 @@ selection halo больше не выпадал из visibility contract у гр
 7. Overlay-only state, including marquee `selectionRect`, stroke preview, and
    line preview, does not contribute to the base `ScenePainter` visibility
    budget after the repaint split and marquee migration.
-8. The same computed visibility budget must be applied to both
-   `renderState.enumeratePaintCandidates(...)` input and
-   `_canPaintNodeInFrame(...)` via the shared frame rect. Computing separate
-   paddings for query and final cull is forbidden.
+8. The budgeted visibility rect must be applied to selected-node supplement
+   and final culling. Computing a second independent halo padding path for one
+   of those consumers is forbidden.
 
 ## 5. Result Requirements
 
-1. `ScenePainter` computes one per-frame visibility budget and uses the same
-   budgeted world rect for candidate enumeration and final node culling.
+1. `ScenePainter` computes one per-frame visibility budget while ordinary
+   candidate enumeration stays viewport-first.
 2. The base-scene visibility budget is never smaller than `1.0` and expands to
    match `selectionStyle.haloWidth` when the active selection halo is larger.
 3. A selected node whose geometry is just outside the raw viewport but whose
    selection halo still intersects the viewport remains paint-visible in the
    main `ScenePainter`.
-4. Unselected nodes and selected nodes with no halo intersection remain culled
-   by the same unified frame rect.
+4. Unselected nodes in the halo band remain absent from expensive candidate
+   resolution, and selected nodes with no halo intersection remain culled.
 5. The invariant registry, proof surface, and release-ready docs describe one
-   render-local visibility-budget owner instead of a fixed magic cull padding.
+   render-local visibility-budget owner plus viewport-first candidate query
+   ownership instead of a fixed magic cull padding.
 
 ## 6. Implementation Specification
 
@@ -131,7 +145,14 @@ selection halo больше не выпадал из visibility contract у гр
 
 - `lib/src/render/scene_painter_frame.dart` currently hardcodes
   `scenePainterCullPadding = 1.0` and inflates the viewport rect before
-  `renderState.enumeratePaintCandidates(viewRect)`.
+  candidate enumeration.
+- `lib/src/contract/scene_view_render_state.dart` currently exposes only a
+  single rect input for candidate enumeration, which conflates raw viewport
+  ownership with selection-aware visibility.
+- `lib/src/interactive/internal/scene_controller_scene_view_runtime.dart`
+  currently owns viewport candidate ordering and selected-preview supplement
+  behavior, so it is the correct owning layer for any selection-aware
+  supplementation that must preserve viewport-first enumeration.
 - `lib/src/render/scene_painter_node_renderer.dart` currently performs final
   culling through `_canPaintNodeInFrame(resolvedNode, frame.viewRect)`, so the
   frame rect already acts as the final visibility gate.
@@ -139,8 +160,9 @@ selection halo больше не выпадал из visibility contract у гр
   visuals whose outward extent equals `selectionStyle.haloWidth`, even though
   some stroke widths are expressed as `haloWidth * 2`.
 - `tool/invariant_registry.dart` currently publishes frame resolution and
-  viewport paint-candidate ownership but does not yet publish one unified
-  visibility-budget contract for query and final cull.
+  viewport paint-candidate ownership but does not yet publish the
+  selection-aware visibility contract that preserves viewport-first
+  enumeration.
 
 ### 6.2 Target Verification Units
 
@@ -174,10 +196,12 @@ selection halo больше не выпадал из visibility contract у гр
 ### 6.4 Allowed Semantic Change Zones
 
 - Frame-local visibility-budget computation.
-- Frame rect semantics for candidate enumeration and final culling.
+- Internal render-state query semantics for viewport-first enumeration and
+  selected-node supplement.
+- Frame rect semantics for final culling.
 - Render-only selection-halo cull contribution.
 - Render proof, invariant wording, and release-ready documentation for the
-  unified visibility-budget contract.
+  viewport-first query plus selection-aware visibility contract.
 
 ### 6.7 Requirements for Resolution of Links and Structural Analysis
 
@@ -187,20 +211,23 @@ selection halo больше не выпадал из visibility contract у гр
 - `ScenePainterVisibilityBudget` must be computed from the base minimum
   `1.0` and the current `ScenePainterSelectionStyle.haloWidth`, with the
   effective outward extent equal to `max(1.0, selectionStyle.haloWidth)`.
-- `renderState.enumeratePaintCandidates(...)` must keep receiving the same
-  `frame.viewRect` that final culling consumes later in
-  `_canPaintNodeInFrame(...)`.
-- `ScenePainterPaintFrame` must not grow a second raw viewport rect or a
-  second cull rect in parallel with `viewRect` for this step.
-- Verification must include one proof that captures the world rect passed to
-  `enumeratePaintCandidates(...)` and shows it matches the budgeted frame rect
-  for a non-default `selectionStrokeWidth`.
+- `renderState.enumeratePaintCandidates(...)` must receive raw viewport
+  ownership together with the budgeted visibility rect so ordinary candidates
+  stay viewport-first while selected supplements can use halo-aware
+  visibility.
+- `ScenePainterPaintFrame` must keep `viewRect` as the frame-level final-cull
+  rect and provide per-node access so unselected nodes keep raw viewport
+  culling semantics even when another node is selected.
+- Verification must include one proof that captures both the raw viewport rect
+  and the budgeted visibility rect passed into candidate enumeration for a
+  non-default `selectionStrokeWidth`.
 
 ### 6.8 Prohibited
 
 - Raising the existing constant from `1.0` to another magic number without
   introducing the explicit `ScenePainterVisibilityBudget` owner.
-- Computing query padding and final-cull padding in two independent paths.
+- Widening ordinary candidate enumeration for unselected nodes just because
+  any selection exists.
 - Treating selection halo contribution as `haloWidth * 2`, total stroke width,
   or any other value larger than the actual outward halo extent.
 - Letting overlay-only marquee or draw-preview state influence the base-scene
@@ -233,13 +260,13 @@ selection halo больше не выпадал из visibility contract у гр
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Frame path owns one unified visibility budget rect
+### Slice 1. [x] Frame path owns raw viewport query and budgeted final visibility
 
 #### Slice Contract
 
-`ScenePainterFrameOwner` computes one explicit `ScenePainterVisibilityBudget`
-and uses the resulting single `viewRect` both for candidate enumeration and
-for later final culling.
+`ScenePainterFrameOwner` computes one explicit `ScenePainterVisibilityBudget`,
+keeps the ordinary candidate query on the raw viewport rect, and carries the
+resulting budgeted `viewRect` forward for later final culling.
 
 #### Change
 
@@ -248,16 +275,17 @@ for later final culling.
 - Build the raw viewport rect from camera offset and canvas size, then derive
   one budgeted `viewRect` from that raw rect plus the computed visibility
   budget.
-- Keep `ScenePainterPaintFrame.viewRect` as the only visibility rect carried by
-  frame data.
+- Pass both raw viewport ownership and the budgeted visibility rect into the
+  internal candidate query contract.
+- Keep `ScenePainterPaintFrame.viewRect` as the frame-level visibility rect
+  carried by frame data for final culling.
 - Update `test/render/scene_painter_bounds_contract_test.dart` so the
   structural proof pins `ScenePainterVisibilityBudget` construction and the
-  `renderState.enumeratePaintCandidates(viewRect)` call on the budgeted frame
-  rect.
+  raw viewport plus budgeted visibility query assembly.
 - Add or update a frame-contract proof in
   `test/render/scene_painter_frame_contract_test.dart` that captures the world
-  rect passed to `enumeratePaintCandidates(...)` and proves it equals the
-  budgeted frame `viewRect`.
+  rects passed to `enumeratePaintCandidates(...)` and proves the viewport
+  query stays raw while `frame.viewRect` stays budgeted.
 
 #### Verification
 
@@ -267,24 +295,24 @@ for later final culling.
 #### Positive Scenarios
 
 - A frame built with a non-default `selectionStrokeWidth` passes one inflated
-  world rect to candidate enumeration and stores that same rect in
-  `ScenePainterPaintFrame.viewRect`.
-- Final node culling continues to read `frame.viewRect` rather than deriving a
-  second independent cull rect.
+  visibility rect plus the raw viewport rect to candidate enumeration and
+  stores the budgeted rect in `ScenePainterPaintFrame.viewRect`.
+- Final node culling continues to read frame-owned visibility data rather than
+  deriving an independent halo padding path.
 
 #### Negative Scenarios
 
 - `ScenePainterFrameOwner` must not keep a fixed magic cull-padding constant.
-- `ScenePainterPaintFrame` must not gain a second query-only or cull-only rect
-  surface.
+- Ordinary candidate enumeration must not switch from raw viewport ownership
+  to the halo-expanded rect.
 
 #### Closure Evidence
 
 - Green run of the listed verifications.
-- Structural and frame-contract tests prove one budgeted frame rect is shared
-  by candidate enumeration and final culling.
+- Structural and frame-contract tests prove raw viewport query ownership and a
+  frame-owned budgeted final visibility rect.
 
-### Slice 2. [ ] Selection halo contributes exact outward visibility extent
+### Slice 2. [x] Selection halo contributes exact outward visibility extent
 
 #### Slice Contract
 
@@ -297,6 +325,9 @@ the viewport while non-intersecting nodes remain culled.
 - Compute the `ScenePainterVisibilityBudget` outward extent as
   `max(1.0, selectionStyle.haloWidth)`.
 - Keep overlay-only marquee and draw-preview state out of that computation.
+- Add selected-node supplement ownership in the internal render-state path so
+  selected edge nodes can enter frame resolution through the budgeted
+  visibility rect without widening ordinary viewport candidates.
 - Add render regression coverage in `test/render/scene_painter_test.dart` for
   an edge-selected `RectNodeSnapshot` whose geometry sits just outside the raw
   viewport but whose halo intersects the viewport when
@@ -315,6 +346,8 @@ the viewport while non-intersecting nodes remain culled.
   halo intersects the viewport only through the visibility budget.
 - The same selected node still uses the existing selection renderer and does
   not require overlay participation for edge visibility.
+- Selected edge-node supplementation works even without a non-zero preview
+  delta.
 
 #### Negative Scenarios
 
@@ -328,20 +361,21 @@ the viewport while non-intersecting nodes remain culled.
 - Render regression tests prove edge-selected halo visibility and preserve
   culling for non-intersecting nodes.
 
-### Slice 3. [ ] Invariant and docs publish unified visibility-budget ownership
+### Slice 3. [x] Invariant and docs publish viewport-first visibility ownership
 
 #### Slice Contract
 
 The invariant registry, proof surface, and release-ready docs describe one
-render-local visibility-budget owner for candidate query and final cull, with
-selection halo contributing exact outward extent and no fixed magic padding.
+render-local visibility-budget owner together with viewport-first candidate
+enumeration ownership, with selection halo contributing exact outward extent
+and no fixed magic padding.
 
 #### Change
 
 - Update `tool/invariant_registry.dart` so
-  `INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION` publishes one budgeted frame rect
-  shared by candidate enumeration, text/geometry frame resolution, and final
-  culling.
+  `INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION` publishes viewport-first candidate
+  enumeration, selected-node supplement through the budgeted visibility rect,
+  text/geometry frame resolution, and final culling.
 - Update the proof wording in
   `test/render/scene_painter_bounds_contract_test.dart` and
   `test/render/scene_painter_frame_contract_test.dart` so the proof surface
@@ -350,7 +384,9 @@ selection halo contributing exact outward extent and no fixed magic padding.
   `PLAN.md`, and this step document so they publish the same internal
   architecture:
   `ScenePainterVisibilityBudget` as the render-local owner,
-  one budgeted `viewRect` shared by query and final cull,
+  raw viewport query ownership,
+  selected-node supplement plus final cull through the budgeted visibility
+  rect,
   base minimum `1.0`,
   and selection-halo contribution through exact outward extent.
 
@@ -364,15 +400,15 @@ selection halo contributing exact outward extent and no fixed magic padding.
 
 #### Positive Scenarios
 
-- The invariant text and proof files describe the same unified visibility
-  budget contract.
+- The invariant text and proof files describe the same viewport-first query
+  plus selection-aware visibility contract.
 - Release-ready docs no longer describe a fixed cull padding for the base
   scene painter.
 
 #### Negative Scenarios
 
-- No invariant or documentation text may continue to describe independent
-  query/cull padding paths or a fixed `scenePainterCullPadding`.
+- No invariant or documentation text may continue to describe halo-expanded
+  ordinary candidate enumeration or a fixed `scenePainterCullPadding`.
 
 #### Closure Evidence
 
