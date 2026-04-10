@@ -37,6 +37,7 @@ exploratory repository searches.
 - `tool/src/check_coverage/coverage_machine_report.dart`
 - `README.md`
 - `AGENTS.md`
+- `API_GUIDE.md`
 - `CHANGELOG.md`
 
 ### Test Files
@@ -89,7 +90,7 @@ exploratory repository searches.
    exists for that gap kind: gap kind code, source path, enclosing declaration
    symbol or file-scope fallback code, declaration range, missed line list,
    missed branch list, compact source snippet, candidate test paths, and
-   preferred verification shard.
+   preferred verification scope.
 3. `dart run tool/check_coverage.dart --json --changed-only` restricts the
    machine report to changed source files only, without requiring a separate
    git discovery command outside `tool/check_coverage.dart`.
@@ -103,7 +104,7 @@ exploratory repository searches.
 6. Machine gap records use compact machine-oriented codes and fields rather
    than narrative descriptions.
 7. The machine report does not require a second grouped lookup to connect a
-   gap with its tests, shard, declaration, or snippet.
+   gap with its tests, verification scope, declaration, or snippet.
 
 ## 6. Implementation Specification
 
@@ -137,7 +138,7 @@ exploratory repository searches.
 - LCOV parsing and internal coverage data models.
 - Mapping missed coverage lines and branches to enclosing Dart declarations.
 - Compact machine-report schema and machine-only flags.
-- Deterministic candidate test-target and shard resolution.
+- Deterministic candidate test-target and verification-scope resolution.
 - Changed-file filtering.
 - Internal module boundaries under `tool/src/check_coverage/**`.
 
@@ -162,7 +163,8 @@ exploratory repository searches.
   - `mb`: missed branch payloads
   - `sn`: compact source snippet
   - `tt`: candidate test paths
-  - `sh`: preferred verification shard, or `null`
+  - `sh`: preferred verification scope id from the canonical verification
+    contract registry, or `null`
 - Gap kind codes are limited to:
   - `mf` for a source file missing from LCOV
   - `ml` for missed-line-only executable gaps
@@ -203,8 +205,9 @@ exploratory repository searches.
 - Do not rescan the same source file separately for each reported gap.
 - Do not widen coverage policy ownership beyond the current `lib/src/**` gate.
 - Do not make file-grouped machine output the primary machine contract.
-- Do not invent candidate test paths or shard names that are not supported by
-  the existing repository tree and the canonical verification scope registry.
+- Do not invent candidate test paths or verification scope ids that are not
+  supported by the existing repository tree and the canonical verification
+  contract registry under `tool/src/verification_contract/**`.
 
 ## 7. Execution Rules
 
@@ -315,15 +318,17 @@ including declaration symbol, declaration range, and minimal source context.
 
 #### Slice Contract
 Each actionable machine gap includes deterministic candidate test targets and a
-preferred verification shard derived from the existing repository test tree.
+preferred verification scope derived from the existing repository test tree and
+the canonical verification contract registry.
 
 #### Change
 - Add `tool/src/check_coverage/coverage_test_target_locator.dart`.
 - Resolve candidate test files from existing `test/**` paths using
   deterministic path and basename matching against the affected `lib/src/**`
   file and its enclosing module area.
-- Attach the preferred shard name used by the canonical verification scope
-  registry when the resolved target clearly belongs to one shard.
+- Attach the preferred verification scope id from
+  `tool/src/verification_contract/verification_contract_registry.dart` when
+  the resolved target clearly belongs to one scope.
 - Keep the result deterministic: if no candidate test exists on disk, emit an
   empty target set instead of inventing one.
 - Keep candidate test paths attached directly to each actionable gap instead
@@ -334,9 +339,9 @@ preferred verification shard derived from the existing repository test tree.
 
 #### Positive Scenarios
 - A render source gap resolves to existing render test files and the
-  `render_view` shard.
+  `render_view` verification scope.
 - An interactive source gap resolves to existing interactive test files and
-  the `interactive` shard.
+  the `interactive` verification scope.
 
 #### Negative Scenarios
 - A source file with no matching tests returns no candidate test paths instead
@@ -345,8 +350,8 @@ preferred verification shard derived from the existing repository test tree.
 
 #### Closure Evidence
 - Green run of the listed verification.
-- Sandbox diagnostics proving candidate-test and shard fields for at least two
-  repository areas.
+- Sandbox diagnostics proving candidate-test and verification-scope fields for
+  at least two repository areas.
 
 ### Slice 4. [ ] Add changed-only triage and close the workflow contract
 
@@ -359,8 +364,8 @@ to the machine-first `check_coverage` workflow.
 - Extend `tool/check_coverage.dart` machine mode with the explicit
   `--changed-only` flag that strictly filters to changed source files only.
 - Use non-interactive git commands only.
-- Update `README.md`, `AGENTS.md`, and `CHANGELOG.md` to document the
-  final machine-first workflow and the exact invocation forms:
+- Update `README.md`, `AGENTS.md`, `API_GUIDE.md`, and `CHANGELOG.md` to
+  document the final machine-first workflow and the exact invocation forms:
   - `dart run tool/check_coverage.dart --json`
   - `dart run tool/check_coverage.dart --json --uncovered-branches`
   - `dart run tool/check_coverage.dart --json --uncovered-branches --changed-only`
@@ -385,12 +390,8 @@ to the machine-first `check_coverage` workflow.
 
 ## 9. Final Verification
 
-- `dart format --output=none --set-exit-if-changed lib test example/lib example/test tool`
-- `flutter analyze`
-- `dcm analyze .`
-- `flutter test --coverage --no-pub --exclude-tags=tool`
-- `dart run tool/check_coverage.dart`
 - `dart run tool/run_tool_tests.dart test/tool/coverage_tool_test.dart`
+- `dart run tool/run_verification_preset.dart run --preset required_code_change --changed-paths-file=<path-or->`
 
 ## 10. Acceptance Criteria
 
