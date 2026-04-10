@@ -36,12 +36,14 @@ Future<ProcessResult> runSandboxTool(
   Directory sandbox,
   String toolFileName, {
   List<String> args = const <String>[],
+  Map<String, String>? environment,
 }) {
-  return Process.run('dart', <String>[
-    'run',
-    'tool/$toolFileName',
-    ...args,
-  ], workingDirectory: sandbox.path);
+  return Process.run(
+    'dart',
+    <String>['run', 'tool/$toolFileName', ...args],
+    workingDirectory: sandbox.path,
+    environment: environment,
+  );
 }
 
 void _copyPath(String from, String to) {

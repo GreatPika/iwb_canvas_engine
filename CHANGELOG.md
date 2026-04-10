@@ -4,6 +4,11 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ## Unreleased
 
+- Repository verification now uses the shell-first
+  `tool/run_verification_preset.dart` contract with registry-backed drift
+  checks in `tool/check_verification_contract.dart`, `VERIFICATION.md` is no
+  longer a second verification source of truth, and the canonical changed-file
+  input now supports compact `--changed-paths-file=<path>` invocation.
 - `tool/check_coverage.dart` now supports a machine-readable diagnostics mode
   via `--json`, plus optional uncovered-branch reporting via
   `--uncovered-branches`, so coverage gaps can be extracted directly from the

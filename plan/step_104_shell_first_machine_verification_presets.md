@@ -293,7 +293,7 @@ verification without MCP-specific orchestration or manual command assembly.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Establish the canonical machine preset registry
+### Slice 1. [x] Establish the canonical machine preset registry
 
 #### Slice Contract
 `dart run tool/run_verification_preset.dart resolve --format=json` exposes one
@@ -377,7 +377,7 @@ repository test areas.
   multi-scope deduplication, example-root resolution, trigger-based tool-test
   resolution, and explicit tool-test-file selection.
 
-### Slice 2. [ ] Execute shell presets quietly and suppress passing tool-test noise
+### Slice 2. [x] Execute shell presets quietly and suppress passing tool-test noise
 
 #### Slice Contract
 `dart run tool/run_verification_preset.dart run ...` executes the resolved
@@ -424,7 +424,7 @@ tool test file.
 - Sandbox output assertions proving quiet-success behavior for both the preset
   runner and the tool-test runner.
 
-### Slice 3. [ ] Enforce shell-first preset drift across code, docs, and CI
+### Slice 3. [x] Enforce shell-first preset drift across code, docs, and CI
 
 #### Slice Contract
 The verification contract registry becomes the repository-owned source of

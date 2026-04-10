@@ -31,8 +31,10 @@ Future<void> main(List<String> args) async {
         stdout.writeln(
           '$status $testFile (${result.duration.inSeconds}.$millis s)',
         );
-        stdout.write(result.stdout);
-        stderr.write(result.stderr);
+        if (!result.succeeded) {
+          stdout.write(result.stdout);
+          stderr.write(result.stderr);
+        }
         return result;
       },
     );

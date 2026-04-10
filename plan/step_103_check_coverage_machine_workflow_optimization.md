@@ -36,7 +36,7 @@ exploratory repository searches.
 - `tool/src/check_coverage/coverage_test_target_locator.dart`
 - `tool/src/check_coverage/coverage_machine_report.dart`
 - `README.md`
-- `VERIFICATION.md`
+- `AGENTS.md`
 - `CHANGELOG.md`
 
 ### Test Files
@@ -121,7 +121,8 @@ exploratory repository searches.
 - Machine-mode scenarios for missing LCOV files, declaration-clustered missed
   lines, declaration-clustered missed branches, missing `BRDA` capability,
   candidate test-target resolution, and changed-file filtering.
-- Final repository checks listed in `VERIFICATION.md` for code changes.
+- Final repository checks invoked through the canonical verification command in
+  `AGENTS.md` for code changes.
 
 ### 6.3 Protected States, Data, or Structures
 - The existing exit-code contract for:
@@ -203,7 +204,7 @@ exploratory repository searches.
 - Do not widen coverage policy ownership beyond the current `lib/src/**` gate.
 - Do not make file-grouped machine output the primary machine contract.
 - Do not invent candidate test paths or shard names that are not supported by
-  the existing repository tree and `VERIFICATION.md`.
+  the existing repository tree and the canonical verification scope registry.
 
 ## 7. Execution Rules
 
@@ -321,8 +322,8 @@ preferred verification shard derived from the existing repository test tree.
 - Resolve candidate test files from existing `test/**` paths using
   deterministic path and basename matching against the affected `lib/src/**`
   file and its enclosing module area.
-- Attach the preferred shard name used by `VERIFICATION.md` when the resolved
-  target clearly belongs to one shard.
+- Attach the preferred shard name used by the canonical verification scope
+  registry when the resolved target clearly belongs to one shard.
 - Keep the result deterministic: if no candidate test exists on disk, emit an
   empty target set instead of inventing one.
 - Keep candidate test paths attached directly to each actionable gap instead
@@ -358,7 +359,7 @@ to the machine-first `check_coverage` workflow.
 - Extend `tool/check_coverage.dart` machine mode with the explicit
   `--changed-only` flag that strictly filters to changed source files only.
 - Use non-interactive git commands only.
-- Update `README.md`, `VERIFICATION.md`, and `CHANGELOG.md` to document the
+- Update `README.md`, `AGENTS.md`, and `CHANGELOG.md` to document the
   final machine-first workflow and the exact invocation forms:
   - `dart run tool/check_coverage.dart --json`
   - `dart run tool/check_coverage.dart --json --uncovered-branches`

@@ -78,10 +78,10 @@ jobs:
 
       - name: Example test
         working-directory: example
-        run: flutter test --no-pub
+        run: flutter test --no-pub test
 
-      - name: Tool-test trigger surface
-        run: dart run tool/check_tool_test_trigger_surface.dart
+      - name: Verification contract
+        run: dart run tool/check_verification_contract.dart
 
       - name: Import boundaries
         run: dart run tool/check_import_boundaries.dart

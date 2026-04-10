@@ -11,8 +11,6 @@ app UI, product workflows, or backend logic.
 - `ARCHITECTURE.md` for architecture, invariants, and module boundaries.
 - `CHANGELOG.md` for released and unreleased user-visible changes.
 - `PLAN.md` for the active roadmap.
-- `VERIFICATION.md` for the required verification workflow and test/check entrypoints.
-- `tool/invariant_registry.dart` for invariant ids and ownership.
 
 ## Execution tracking
 
@@ -37,10 +35,23 @@ app UI, product workflows, or backend logic.
 
 ## Verification
 
-After any code change, run all checks listed in `VERIFICATION.md`.
-Update `VERIFICATION.md` in the same change whenever the
-verification surface changes, including new required tests, renamed test
-entrypoints, changed shard composition, or new mandatory checks.
+After any code change, run `dart run tool/run_verification_preset.dart run --preset required_code_change --changed-paths-file=<path>` and write every modified, added, renamed, or deleted repository-relative path to that file, one path per line.
+- For new production files under `lib/**`, run `dcm calculate-metrics` and keep
+  them green against the current thresholds.
+- Run `dcm calculate-metrics` for legacy files only when adding a large new
+  unit, substantially rewriting a hotspot, or validating a suspected metric
+  regression.
+- Do not run package tests with plain `dart test` in this repository. Use the
+  verification preset or `flutter test` for the owned surface.
+- Coverage is shell-only. After a failed coverage gate, prefer
+  `dart run tool/check_coverage.dart --json --uncovered-branches` to inspect
+  missing LCOV files, missed lines, and uncovered branches from the existing
+  `coverage/lcov.info` artifact.
+- Run heavyweight Flutter invocations sequentially. Do not run
+  `flutter test --coverage ...` in parallel with
+  `dart run tool/run_tool_tests.dart`.
+- Documentation-only changes do not require the full Flutter pipeline unless
+  the task also changes code, tooling contracts, or executable examples.
 
 ## Release hygiene
 

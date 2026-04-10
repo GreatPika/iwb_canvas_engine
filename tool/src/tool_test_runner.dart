@@ -162,6 +162,8 @@ class ToolTestResult {
   final Duration duration;
   final String stdout;
   final String stderr;
+
+  bool get succeeded => exitCode == 0;
 }
 
 class RunnerExit implements Exception {
