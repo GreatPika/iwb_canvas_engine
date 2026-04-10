@@ -46,6 +46,34 @@ The package is not designed as a pure Dart engine. Public contract types rely
 on Flutter-oriented primitives (`dart:ui`), and `SceneRenderState` uses
 `Listenable` from `package:flutter/foundation.dart`.
 
+## Repository coverage triage workflow
+
+Repository coverage enforcement stays on `dart run tool/check_coverage.dart`
+against `coverage/lcov.info` for `lib/src/**`. For post-coverage triage, the
+tool also exposes a machine-first JSON workflow:
+
+```sh
+dart run tool/check_coverage.dart --json
+dart run tool/check_coverage.dart --json --uncovered-branches
+dart run tool/check_coverage.dart --json --uncovered-branches --changed-only
+```
+
+The machine payload is a flat `gaps` collection rather than a file-grouped
+report. Each gap includes:
+
+- compact gap kind code
+- source path
+- enclosing declaration symbol or file-scope fallback
+- declaration range
+- missed lines and optional missed branches
+- compact source snippet
+- candidate repository test files
+- preferred verification step id when the owning repository scope is known
+
+`--changed-only` uses git worktree state to keep triage focused on changed
+`lib/src/**` files; if git metadata is unavailable, the tool keeps reporting
+coverage gaps and emits a warning instead of inventing a filtered result.
+
 ## 2. Public surface at a glance
 
 `iwb_canvas_engine.dart` exports:

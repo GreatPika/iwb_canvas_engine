@@ -69,15 +69,21 @@ In CI, DCM is installed with the official GitHub Action before the static
 checks job runs.
 
 For coverage-gap diagnostics after `flutter test --coverage`, use the
-machine-readable coverage report instead of manual file-by-file inspection:
+machine-first coverage report instead of manual repository searches:
 
 ```sh
+dart run tool/check_coverage.dart --json
 dart run tool/check_coverage.dart --json --uncovered-branches
+dart run tool/check_coverage.dart --json --uncovered-branches --changed-only
 ```
 
-The JSON report keeps the existing `lib/src/**` coverage gate semantics and
-lists files missing from LCOV, missed lines, and uncovered branches when the
-LCOV artifact contains branch data.
+The JSON payload keeps the existing `lib/src/**` coverage gate semantics while
+returning one flat `gaps` collection. Each gap carries the source path,
+enclosing declaration or file-scope fallback, compact declaration range,
+missed lines and optional branch records, a compact source snippet, candidate
+test paths, and the preferred verification step id when a repository scope can
+be resolved deterministically. Use `--changed-only` to restrict triage to
+changed `lib/src/**` files from the current git worktree.
 
 For clone-hunting during refactors, use the development-only analyzer script:
 

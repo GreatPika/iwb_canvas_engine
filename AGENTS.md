@@ -44,9 +44,12 @@ After any code change, run `dart run tool/run_verification_preset.dart run --pre
 - Do not run package tests with plain `dart test` in this repository. Use the
   verification preset or `flutter test` for the owned surface.
 - Coverage is shell-only. After a failed coverage gate, prefer
-  `dart run tool/check_coverage.dart --json --uncovered-branches` to inspect
-  missing LCOV files, missed lines, and uncovered branches from the existing
-  `coverage/lcov.info` artifact.
+  `dart run tool/check_coverage.dart --json` for machine-first triage, add
+  `--uncovered-branches` when branch diagnostics matter, and add
+  `--changed-only` when the next action should be limited to changed
+  `lib/src/**` files from the current git worktree. The JSON `gaps` payload is
+  the canonical actionable output and already includes candidate test files
+  plus preferred verification step ids when they can be resolved.
 - Run heavyweight Flutter invocations sequentially. Do not run
   `flutter test --coverage ...` in parallel with
   `dart run tool/run_tool_tests.dart`.

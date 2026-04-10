@@ -232,7 +232,7 @@ exploratory repository searches.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Establish a compact machine-report foundation
+### Slice 1. [x] Establish a compact machine-report foundation
 
 #### Slice Contract
 `tool/check_coverage.dart` exposes one compact machine-only mode that reports
@@ -276,7 +276,7 @@ becomes a thin orchestrator over focused internal modules under
 - Sandbox output proving compact machine-mode records for missing files,
   missed lines, and missed branches.
 
-### Slice 2. [ ] Cluster gaps by enclosing declaration
+### Slice 2. [x] Cluster gaps by enclosing declaration
 
 #### Slice Contract
 The machine report no longer emits raw per-line gaps only; it emits actionable
@@ -314,7 +314,7 @@ including declaration symbol, declaration range, and minimal source context.
 - Sandbox diagnostics proving declaration-clustered gap output for both a
   declaration-backed case and a file-scope fallback case.
 
-### Slice 3. [ ] Resolve candidate tests for each actionable gap
+### Slice 3. [x] Resolve candidate tests for each actionable gap
 
 #### Slice Contract
 Each actionable machine gap includes deterministic candidate test targets and a
@@ -353,7 +353,7 @@ the canonical verification contract registry.
 - Sandbox diagnostics proving candidate-test and verification-scope fields for
   at least two repository areas.
 
-### Slice 4. [ ] Add changed-only triage and close the workflow contract
+### Slice 4. [x] Add changed-only triage and close the workflow contract
 
 #### Slice Contract
 The machine workflow can restrict output to changed source files from the

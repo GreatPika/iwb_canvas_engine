@@ -42,6 +42,21 @@ lib/
     view/           // Flutter widget that wires input + painting
 ```
 
+Repository tooling layout relevant to verification:
+
+```text
+tool/
+  check_coverage.dart              // CLI orchestration and exit-code ownership
+  src/check_coverage/              // LCOV parsing, declaration clustering,
+                                   // test-target resolution, machine report
+```
+
+`tool/check_coverage.dart` remains the single top-level coverage gate
+entrypoint. Machine-first coverage triage logic now lives under
+`tool/src/check_coverage/**` so LCOV parsing, analyzer-based declaration
+location, test-target resolution, and machine report assembly do not collapse
+back into one mixed-responsibility CLI file.
+
 ## Layer ownership note (ADR)
 
 - Public API is defined only by exports from

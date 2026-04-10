@@ -9,10 +9,11 @@ All notable changes to `iwb_canvas_engine` are documented here.
   checks in `tool/check_verification_contract.dart`, `VERIFICATION.md` is no
   longer a second verification source of truth, and the canonical changed-file
   input now supports compact `--changed-paths-file=<path>` invocation.
-- `tool/check_coverage.dart` now supports a machine-readable diagnostics mode
-  via `--json`, plus optional uncovered-branch reporting via
-  `--uncovered-branches`, so coverage gaps can be extracted directly from the
-  existing LCOV artifact without manual file-by-file inspection.
+- `tool/check_coverage.dart` machine mode now returns one flat actionable
+  `gaps` collection with declaration-clustered missed lines and branches,
+  compact source snippets, candidate test files, preferred verification step
+  ids, and explicit `--changed-only` git filtering on top of the existing
+  `--json` and `--uncovered-branches` workflow.
 - `SceneView` render-state now uses split repaint channels: the main painter
   listens to scene repaint through `SceneViewRenderState`, the interactive
   overlay listens to `overlayRepaintListenable`, and marquee selection
