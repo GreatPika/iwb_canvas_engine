@@ -196,3 +196,4 @@ This file is the plan index. Each step has a dedicated document so steps can be 
 - [x] [Шаг 99. Ввести controller-owned viewport candidate contract для `ScenePainter`](plan/step_99_scene_painter_viewport_candidate_contract.md)
 - [x] [Шаг 100. Ввести canonical text-layout payload для geometry и paint](plan/step_100_text_layout_payload_unification.md)
 - [x] [Шаг 101. Разделить scene/overlay repaint channels и перенести marquee в overlay](plan/step_101_overlay_repaint_channels_and_marquee_ownership.md)
+- [ ] [Шаг 102. Ввести единый visibility budget для query и final cull в `ScenePainter`](plan/step_102_scene_painter_visibility_budget.md)
