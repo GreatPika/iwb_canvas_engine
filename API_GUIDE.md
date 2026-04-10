@@ -74,6 +74,18 @@ report. Each gap includes:
 `lib/src/**` files; if git metadata is unavailable, the tool keeps reporting
 coverage gaps and emits a warning instead of inventing a filtered result.
 
+For isolated runtime/listener repros that must execute outside the repository's
+own package context, use `dart run tool/run_temp_pkg_test.dart`. The tool
+creates a temporary Flutter package with a path dependency on the current
+repository, writes either a wrapped snippet or a full test file into `test/`,
+then runs `flutter pub get` followed by `flutter test --no-pub`.
+
+```sh
+dart run tool/run_temp_pkg_test.dart --snippet-file=path/to/repro_snippet.dart
+dart run tool/run_temp_pkg_test.dart --test-file=path/to/full_repro_test.dart
+cat path/to/repro_snippet.dart | dart run tool/run_temp_pkg_test.dart --stdin
+```
+
 ## 2. Public surface at a glance
 
 `iwb_canvas_engine.dart` exports:

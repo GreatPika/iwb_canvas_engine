@@ -85,6 +85,20 @@ test paths, and the preferred verification step id when a repository scope can
 be resolved deterministically. Use `--changed-only` to restrict triage to
 changed `lib/src/**` files from the current git worktree.
 
+For minimal runtime/listener repros that need a clean package boundary, use the
+temporary package runner instead of hand-assembling `/tmp` test directories:
+
+```sh
+dart run tool/run_temp_pkg_test.dart --snippet-file=path/to/repro_snippet.dart
+dart run tool/run_temp_pkg_test.dart --test-file=path/to/full_repro_test.dart
+cat path/to/repro_snippet.dart | dart run tool/run_temp_pkg_test.dart --stdin
+```
+
+`--snippet-file` and `--stdin` wrap the snippet with standard
+`flutter_test`, `flutter/widgets.dart`, and package imports before running it
+inside a temporary Flutter package that depends on the current repository via
+`path:`.
+
 For clone-hunting during refactors, use the development-only analyzer script:
 
 ```sh

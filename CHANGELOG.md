@@ -9,6 +9,11 @@ All notable changes to `iwb_canvas_engine` are documented here.
   checks in `tool/check_verification_contract.dart`, `VERIFICATION.md` is no
   longer a second verification source of truth, and the canonical changed-file
   input now supports compact `--changed-paths-file=<path>` invocation.
+- Added `tool/run_temp_pkg_test.dart` as the canonical runtime/listener repro
+  workflow. The tool assembles a temporary Flutter package with a path
+  dependency on the current repository, supports wrapped snippet input from a
+  file or stdin, and runs the repro in the correct package context without
+  manual `/tmp` setup.
 - `tool/check_coverage.dart` machine mode now returns one flat actionable
   `gaps` collection with declaration-clustered missed lines and branches,
   compact source snippets, candidate test files, preferred verification step

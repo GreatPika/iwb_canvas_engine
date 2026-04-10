@@ -47,8 +47,10 @@ Repository tooling layout relevant to verification:
 ```text
 tool/
   check_coverage.dart              // CLI orchestration and exit-code ownership
+  run_temp_pkg_test.dart           // temporary package repro runner
   src/check_coverage/              // LCOV parsing, declaration clustering,
                                    // test-target resolution, machine report
+  src/temp_pkg_test/               // temp package assembly and CLI parsing
 ```
 
 `tool/check_coverage.dart` remains the single top-level coverage gate
@@ -56,6 +58,11 @@ entrypoint. Machine-first coverage triage logic now lives under
 `tool/src/check_coverage/**` so LCOV parsing, analyzer-based declaration
 location, test-target resolution, and machine report assembly do not collapse
 back into one mixed-responsibility CLI file.
+
+`tool/run_temp_pkg_test.dart` is the canonical repro entrypoint when a runtime
+or listener contract needs a clean package boundary. It owns deterministic
+temporary Flutter package assembly so ad hoc `/tmp` directory creation and
+manual import/path wiring do not become a second undocumented workflow.
 
 ## Layer ownership note (ADR)
 

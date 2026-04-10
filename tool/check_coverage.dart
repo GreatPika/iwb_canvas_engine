@@ -376,9 +376,17 @@ void main(List<String> args) {
   }
 
   final entries = changedOnlyApplied
-      ? allEntries
-            .where((entry) => selectedChangedPaths!.contains(entry.path))
-            .toList()
+      ? () {
+          final changedPaths = selectedChangedPaths;
+          if (changedPaths == null) {
+            throw StateError(
+              'changedOnlyApplied requires selectedChangedPaths to be present.',
+            );
+          }
+          return allEntries
+              .where((entry) => changedPaths.contains(entry.path))
+              .toList();
+        }()
       : allEntries;
   final coverageIndex = <String, FileCoverage>{
     for (final entry in entries) entry.path: entry,

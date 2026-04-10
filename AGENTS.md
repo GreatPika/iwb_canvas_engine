@@ -50,6 +50,10 @@ After any code change, run `dart run tool/run_verification_preset.dart run --pre
   `lib/src/**` files from the current git worktree. The JSON `gaps` payload is
   the canonical actionable output and already includes candidate test files
   plus preferred verification step ids when they can be resolved.
+- For minimal runtime/listener contract repros that need a clean package
+  boundary, use `dart run tool/run_temp_pkg_test.dart`. Do not hand-assemble
+  ad hoc `/tmp` test packages or run manual import/path wiring when this tool
+  fits the task.
 - Run heavyweight Flutter invocations sequentially. Do not run
   `flutter test --coverage ...` in parallel with
   `dart run tool/run_tool_tests.dart`.
