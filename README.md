@@ -68,6 +68,17 @@ flutter analyze
 In CI, DCM is installed with the official GitHub Action before the static
 checks job runs.
 
+For coverage-gap diagnostics after `flutter test --coverage`, use the
+machine-readable coverage report instead of manual file-by-file inspection:
+
+```sh
+dart run tool/check_coverage.dart --json --uncovered-branches
+```
+
+The JSON report keeps the existing `lib/src/**` coverage gate semantics and
+lists files missing from LCOV, missed lines, and uncovered branches when the
+LCOV artifact contains branch data.
+
 For clone-hunting during refactors, use the development-only analyzer script:
 
 ```sh

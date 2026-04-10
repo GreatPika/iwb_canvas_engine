@@ -4,6 +4,10 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ## Unreleased
 
+- `tool/check_coverage.dart` now supports a machine-readable diagnostics mode
+  via `--json`, plus optional uncovered-branch reporting via
+  `--uncovered-branches`, so coverage gaps can be extracted directly from the
+  existing LCOV artifact without manual file-by-file inspection.
 - `SceneView` render-state now uses split repaint channels: the main painter
   listens to scene repaint through `SceneViewRenderState`, the interactive
   overlay listens to `overlayRepaintListenable`, and marquee selection

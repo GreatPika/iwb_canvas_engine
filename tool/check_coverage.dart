@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 class _FileCoverage {
@@ -9,9 +10,69 @@ class _FileCoverage {
   final Set<int> instrumentedLines = <int>{};
   final Set<int> hitLines = <int>{};
   final Set<int> missedLines = <int>{};
+  final List<_BranchCoverage> branches = <_BranchCoverage>[];
 
   int get effectiveLf => lf ?? instrumentedLines.length;
   int get effectiveLh => lh ?? hitLines.length;
+}
+
+class _BranchCoverage {
+  const _BranchCoverage({
+    required this.line,
+    required this.block,
+    required this.branch,
+    required this.takenRaw,
+  });
+
+  final int line;
+  final String block;
+  final String branch;
+  final String takenRaw;
+
+  bool get isCovered {
+    final taken = int.tryParse(takenRaw);
+    return taken != null && taken > 0;
+  }
+
+  Map<String, Object> toJson() => <String, Object>{
+    'line': line,
+    'block': block,
+    'branch': branch,
+    'taken': takenRaw,
+    'description': 'Instrumented branch was not taken.',
+  };
+}
+
+class _CoverageOptions {
+  const _CoverageOptions({
+    required this.json,
+    required this.includeUncoveredBranches,
+  });
+
+  final bool json;
+  final bool includeUncoveredBranches;
+}
+
+class _SourceLookup {
+  final Map<String, List<String>?> _cache = <String, List<String>?>{};
+
+  String? lineText(String path, int line) {
+    if (line < 1) {
+      return null;
+    }
+
+    final lines = _cache.putIfAbsent(path, () {
+      final file = File(path);
+      if (!file.existsSync()) {
+        return null;
+      }
+      return file.readAsLinesSync();
+    });
+    if (lines == null || line > lines.length) {
+      return null;
+    }
+    return lines[line - 1].trimRight();
+  }
 }
 
 String _toPosixPath(String path) => path.replaceAll('\\', '/');
@@ -90,6 +151,11 @@ void _recordCoverageLine(_FileCoverage current, String line) {
     return;
   }
 
+  if (line.startsWith('BRDA:')) {
+    _recordBranchDataLine(current, line.substring(5));
+    return;
+  }
+
   if (line.startsWith('LF:')) {
     current.lf = int.tryParse(line.substring(3));
     return;
@@ -117,6 +183,23 @@ void _recordDataLine(_FileCoverage current, String data) {
 
   if (current.hitLines.contains(lineNo)) return;
   current.missedLines.add(lineNo);
+}
+
+void _recordBranchDataLine(_FileCoverage current, String data) {
+  final parts = data.split(',');
+  if (parts.length != 4) return;
+
+  final lineNo = int.tryParse(parts[0]);
+  if (lineNo == null) return;
+
+  current.branches.add(
+    _BranchCoverage(
+      line: lineNo,
+      block: parts[1],
+      branch: parts[2],
+      takenRaw: parts[3],
+    ),
+  );
 }
 
 String _formatPercent(int lh, int lf) {
@@ -263,6 +346,167 @@ bool _reportMissedLines(List<_FileCoverage> entries) {
   return true;
 }
 
+bool _reportMissedBranches(List<_FileCoverage> entries) {
+  final missed = <String>[];
+  for (final file in entries) {
+    final branches = _collectUncoveredBranchesForFile(file);
+    for (final branch in branches) {
+      missed.add(
+        '${file.path}:${branch.line} block=${branch.block} branch=${branch.branch} taken=${branch.takenRaw}',
+      );
+    }
+  }
+
+  if (missed.isEmpty) {
+    return false;
+  }
+
+  stdout.writeln('MISSED BRANCHES (${missed.length}):');
+  for (final item in missed) {
+    stdout.writeln('  $item');
+  }
+  exitCode = 1;
+  return true;
+}
+
+List<_BranchCoverage> _collectUncoveredBranchesForFile(_FileCoverage file) {
+  final branches = file.branches.where((branch) => !branch.isCovered).toList();
+  branches.sort((a, b) {
+    final lineCompare = a.line.compareTo(b.line);
+    if (lineCompare != 0) return lineCompare;
+    final blockCompare = a.block.compareTo(b.block);
+    if (blockCompare != 0) return blockCompare;
+    return a.branch.compareTo(b.branch);
+  });
+  return branches;
+}
+
+bool _hasBranchData(List<_FileCoverage> entries) =>
+    entries.any((file) => file.branches.isNotEmpty);
+
+_CoverageOptions _parseOptions(List<String> args) {
+  var json = false;
+  var includeUncoveredBranches = false;
+
+  for (final arg in args) {
+    if (arg == '--json') {
+      json = true;
+      continue;
+    }
+
+    if (arg == '--uncovered-branches') {
+      includeUncoveredBranches = true;
+      continue;
+    }
+
+    stderr.writeln('Unknown argument: $arg');
+    exitCode = 64;
+    throw ArgumentError.value(arg, 'arg', 'Unsupported flag');
+  }
+
+  return _CoverageOptions(
+    json: json,
+    includeUncoveredBranches: includeUncoveredBranches,
+  );
+}
+
+Map<String, Object> _buildJsonReport({
+  required String lcovPath,
+  required Set<String> libSrcFiles,
+  required List<String> missingFromLcov,
+  required List<_FileCoverage> entries,
+  required bool includeUncoveredBranches,
+}) {
+  final files = <Map<String, Object>>[];
+  final warnings = <String>[];
+  final branchDataAvailable = _hasBranchData(entries);
+  final sourceLookup = _SourceLookup();
+
+  for (final path in missingFromLcov) {
+    files.add(<String, Object>{
+      'path': path,
+      'description': 'File is under lib/src/** but has no LCOV record.',
+      'missingFromLcov': true,
+      'missedLines': const <Object>[],
+      'uncoveredBranches': const <Object>[],
+    });
+  }
+
+  for (final entry in entries) {
+    final missedLineNumbers = entry.missedLines.toList()..sort();
+    final uncoveredBranches = includeUncoveredBranches
+        ? _collectUncoveredBranchesForFile(entry)
+        : const <_BranchCoverage>[];
+    if (missedLineNumbers.isEmpty && uncoveredBranches.isEmpty) {
+      continue;
+    }
+
+    files.add(<String, Object>{
+      'path': entry.path,
+      'description': 'Instrumented coverage gaps detected.',
+      'missingFromLcov': false,
+      'missedLines': missedLineNumbers
+          .map(
+            (line) => <String, Object?>{
+              'line': line,
+              'source': sourceLookup.lineText(entry.path, line),
+              'description': 'Instrumented line was not executed.',
+            },
+          )
+          .toList(),
+      'uncoveredBranches': uncoveredBranches
+          .map(
+            (branch) => <String, Object?>{
+              ...branch.toJson(),
+              'source': sourceLookup.lineText(entry.path, branch.line),
+            },
+          )
+          .toList(),
+    });
+  }
+
+  files.sort((a, b) {
+    final left = a['path']! as String;
+    final right = b['path']! as String;
+    return left.compareTo(right);
+  });
+
+  if (includeUncoveredBranches && !branchDataAvailable) {
+    warnings.add(
+      'coverage/lcov.info does not contain BRDA entries; uncovered branch diagnostics are unavailable.',
+    );
+  }
+
+  final missedLineCount = entries.fold<int>(
+    0,
+    (total, entry) => total + entry.missedLines.length,
+  );
+  final uncoveredBranchCount = includeUncoveredBranches
+      ? entries.fold<int>(
+          0,
+          (total, entry) =>
+              total + _collectUncoveredBranchesForFile(entry).length,
+        )
+      : 0;
+
+  return <String, Object>{
+    'lcovPath': lcovPath,
+    'scope': 'lib/src/**',
+    'branchDataAvailable': branchDataAvailable,
+    'requestedUncoveredBranches': includeUncoveredBranches,
+    'summary': <String, Object>{
+      'libSrcFileCount': libSrcFiles.length,
+      'lcovEntryCount': entries.length,
+      'missingFileCount': missingFromLcov.length,
+      'fileGapCount': files.length,
+      'missedLineCount': missedLineCount,
+      'uncoveredBranchCount': uncoveredBranchCount,
+    },
+    'warnings': warnings,
+    'files': files,
+  };
+}
+
 void _reportFileCoverage(_FileCoverage file, List<String> missed) {
   final lf = file.effectiveLf;
   final lh = file.effectiveLh;
@@ -278,7 +522,14 @@ void _reportFileCoverage(_FileCoverage file, List<String> missed) {
   }
 }
 
-void main(List<String> _) {
+void main(List<String> args) {
+  late final _CoverageOptions options;
+  try {
+    options = _parseOptions(args);
+  } on ArgumentError {
+    return;
+  }
+
   final cwd = Directory.current.path;
   final libSrcFiles = _collectLibSrcDartFiles(cwd: cwd);
   late final File lcovFile;
@@ -293,8 +544,39 @@ void main(List<String> _) {
   final entries = _collectLibSrcEntries(all);
 
   if (entries.isEmpty) {
-    stderr.writeln('No coverage entries found for lib/src/**.');
+    if (options.json) {
+      stdout.writeln(
+        const JsonEncoder.withIndent('  ').convert(<String, Object>{
+          'lcovPath': 'coverage/lcov.info',
+          'scope': 'lib/src/**',
+          'error': 'No coverage entries found for lib/src/**.',
+        }),
+      );
+    } else {
+      stderr.writeln('No coverage entries found for lib/src/**.');
+    }
     exitCode = 2;
+    return;
+  }
+
+  if (options.json) {
+    final report = _buildJsonReport(
+      lcovPath: lcovFile.path,
+      libSrcFiles: libSrcFiles,
+      missingFromLcov: missingFromLcov,
+      entries: entries,
+      includeUncoveredBranches: options.includeUncoveredBranches,
+    );
+    stdout.writeln(const JsonEncoder.withIndent('  ').convert(report));
+
+    final hasGaps =
+        missingFromLcov.isNotEmpty ||
+        entries.any((entry) => entry.missedLines.isNotEmpty) ||
+        (options.includeUncoveredBranches &&
+            entries.any(
+              (entry) => _collectUncoveredBranchesForFile(entry).isNotEmpty,
+            ));
+    exitCode = hasGaps ? 1 : 0;
     return;
   }
 
@@ -303,6 +585,10 @@ void main(List<String> _) {
   }
 
   if (_reportMissedLines(entries)) {
+    return;
+  }
+
+  if (options.includeUncoveredBranches && _reportMissedBranches(entries)) {
     return;
   }
 

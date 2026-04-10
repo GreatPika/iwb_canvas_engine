@@ -1,6 +1,7 @@
 @Tags(['tool'])
 library;
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -37,6 +38,9 @@ int leaked() => 1;
     _registerFormerRealLogicExclusionTest();
     _registerCommentWrappedExportOnlyShimTest();
     _registerMultilineExportOnlyShimTest();
+    _registerJsonCoverageDiagnosticsTest();
+    _registerJsonBranchDiagnosticsTest();
+    _registerJsonNoBranchDataWarningTest();
   });
 }
 
@@ -333,6 +337,124 @@ export 'package:iwb_canvas_engine/src/contract/a.dart'
   );
 }
 
+void _registerJsonCoverageDiagnosticsTest() {
+  test('reports missing files and missed lines in json mode', () async {
+    final result = await _runCoverageScenario(
+      files: <String, String>{
+        'lib/src/a.dart': '''
+int covered() => 1;
+
+int uncovered() => 2;
+''',
+        'lib/src/b.dart': 'int missing() => 3;\n',
+      },
+      lcov: _singleFileLcov('lib/src/a.dart', lineHits: <int, int>{1: 1, 3: 0}),
+      args: const <String>['--json'],
+    );
+
+    expect(result.exitCode, isNonZero);
+    final report = jsonDecode(result.stdout.toString()) as Map<String, Object?>;
+    expect(report['branchDataAvailable'], false);
+
+    final summary = report['summary'] as Map<String, Object?>;
+    expect(summary['missingFileCount'], 1);
+    expect(summary['missedLineCount'], 1);
+
+    final files = (report['files'] as List<Object?>)
+        .cast<Map<String, Object?>>();
+    expect(files, hasLength(2));
+
+    final missingEntry = files.firstWhere(
+      (entry) => entry['path'] == 'lib/src/b.dart',
+    );
+    expect(missingEntry['missingFromLcov'], true);
+    expect(
+      missingEntry['description'],
+      'File is under lib/src/** but has no LCOV record.',
+    );
+
+    final uncoveredEntry = files.firstWhere(
+      (entry) => entry['path'] == 'lib/src/a.dart',
+    );
+    expect(uncoveredEntry['missingFromLcov'], false);
+    final missedLines = (uncoveredEntry['missedLines'] as List<Object?>)
+        .cast<Map<String, Object?>>();
+    expect(missedLines, hasLength(1));
+    expect(missedLines.single['line'], 3);
+    expect(missedLines.single['source'], 'int uncovered() => 2;');
+    expect(
+      missedLines.single['description'],
+      'Instrumented line was not executed.',
+    );
+  });
+}
+
+void _registerJsonBranchDiagnosticsTest() {
+  test('reports uncovered branches in json mode when requested', () async {
+    final result = await _runCoverageScenario(
+      files: <String, String>{
+        'lib/src/a.dart': '''
+int pick(bool value) {
+  if (value) {
+    return 1;
+  }
+  return 2;
+}
+''',
+      },
+      lcov: _singleFileLcov(
+        'lib/src/a.dart',
+        branchHits: const <String>['2,0,0,1', '2,0,1,0'],
+      ),
+      args: const <String>['--json', '--uncovered-branches'],
+    );
+
+    expect(result.exitCode, isNonZero);
+    final report = jsonDecode(result.stdout.toString()) as Map<String, Object?>;
+    expect(report['branchDataAvailable'], true);
+
+    final summary = report['summary'] as Map<String, Object?>;
+    expect(summary['uncoveredBranchCount'], 1);
+
+    final files = (report['files'] as List<Object?>)
+        .cast<Map<String, Object?>>();
+    expect(files, hasLength(1));
+    final entry = files.single;
+    final branches = (entry['uncoveredBranches'] as List<Object?>)
+        .cast<Map<String, Object?>>();
+    expect(branches, hasLength(1));
+
+    final branch = branches.single;
+    expect(branch['line'], 2);
+    expect(branch['block'], '0');
+    expect(branch['branch'], '1');
+    expect(branch['taken'], '0');
+    expect(branch['source'], '  if (value) {');
+    expect(branch['description'], 'Instrumented branch was not taken.');
+  });
+}
+
+void _registerJsonNoBranchDataWarningTest() {
+  test(
+    'emits a warning when branch diagnostics are requested without BRDA data',
+    () async {
+      final result = await _runCoverageScenario(
+        files: <String, String>{'lib/src/a.dart': 'int covered() => 1;\n'},
+        lcov: _singleFileLcov('lib/src/a.dart'),
+        args: const <String>['--json', '--uncovered-branches'],
+      );
+
+      expect(result.exitCode, 0);
+      final report =
+          jsonDecode(result.stdout.toString()) as Map<String, Object?>;
+      expect(report['branchDataAvailable'], false);
+      expect(report['warnings'], <String>[
+        'coverage/lcov.info does not contain BRDA entries; uncovered branch diagnostics are unavailable.',
+      ]);
+    },
+  );
+}
+
 void _registerCoverageScenarioTest({
   required String name,
   required Map<String, String> files,
@@ -353,6 +475,7 @@ void _registerCoverageScenarioTest({
 Future<ProcessResult> _runCoverageScenario({
   required Map<String, String> files,
   required String lcov,
+  List<String> args = const <String>[],
 }) async {
   final sandbox = await _createSandbox();
   try {
@@ -360,13 +483,17 @@ Future<ProcessResult> _runCoverageScenario({
       _writeFile(sandbox, entry.key, entry.value);
     }
     _writeFile(sandbox, 'coverage/lcov.info', lcov);
-    return await _runTool(sandbox, 'check_coverage.dart');
+    return await _runTool(sandbox, 'check_coverage.dart', args: args);
   } finally {
     sandbox.deleteSync(recursive: true);
   }
 }
 
-String _singleFileLcov(String path, {Map<int, int>? lineHits}) {
+String _singleFileLcov(
+  String path, {
+  Map<int, int>? lineHits,
+  List<String> branchHits = const <String>[],
+}) {
   final normalizedLineHits = lineHits ?? <int, int>{1: 1};
   final sortedLines = normalizedLineHits.keys.toList()..sort();
   final buffer = StringBuffer()
@@ -379,6 +506,9 @@ String _singleFileLcov(String path, {Map<int, int>? lineHits}) {
       hitLineCount++;
     }
     buffer.writeln('DA:$line,$hits');
+  }
+  for (final branch in branchHits) {
+    buffer.writeln('BRDA:$branch');
   }
   buffer
     ..writeln('LF:${sortedLines.length}')
@@ -420,9 +550,14 @@ void _writeFile(Directory root, String relativePath, String content) {
   file.writeAsStringSync(content);
 }
 
-Future<ProcessResult> _runTool(Directory sandbox, String toolFileName) {
+Future<ProcessResult> _runTool(
+  Directory sandbox,
+  String toolFileName, {
+  List<String> args = const <String>[],
+}) {
   return Process.run('dart', <String>[
     'run',
     'tool/$toolFileName',
+    ...args,
   ], workingDirectory: sandbox.path);
 }

@@ -32,6 +32,10 @@
 - Coverage is shell-only: MCP test runs do not generate `coverage/lcov.info`.
 - Run heavyweight Flutter invocations sequentially. Do not run
   `flutter test --coverage ...` in parallel with `dart run tool/run_tool_tests.dart`.
+- After a failed coverage gate, prefer
+  `dart run tool/check_coverage.dart --json --uncovered-branches` to inspect
+  missing LCOV files, missed lines, and uncovered branches from the existing
+  `coverage/lcov.info` artifact.
 - Run tool tests only when the change touches tool-test surface. The trigger
   list in this file must stay identical to `.github/workflows/ci.yaml`:
   - `lib/iwb_canvas_engine.dart`
