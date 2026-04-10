@@ -14,7 +14,6 @@ void main() {
       final sandbox = await _createSandbox();
       try {
         _writeCanonicalToolTestFile(sandbox);
-        _writeChangedPathsFile(sandbox, 'tool/run_verification_preset.dart\n');
 
         final result = await runSandboxTool(
           sandbox,
@@ -23,8 +22,9 @@ void main() {
             'resolve',
             '--format=json',
             '--preset=required_code_change',
-            '--changed-paths-file=.codex/changed_paths.txt',
+            '--changed-paths-file=-',
           ],
+          stdinText: 'tool/run_verification_preset.dart\n',
         );
 
         expect(result.exitCode, 0, reason: result.stderr.toString());
@@ -117,7 +117,6 @@ void main() {
       () async {
         final sandbox = await _createSandbox();
         try {
-          _writeChangedPathsFile(sandbox, 'tool/src/tool_test_runner.dart\n');
           final matched = await runSandboxTool(
             sandbox,
             'run_verification_preset.dart',
@@ -125,10 +124,10 @@ void main() {
               'resolve',
               '--format=json',
               '--tool-tests',
-              '--changed-paths-file=.codex/changed_paths.txt',
+              '--changed-paths-file=-',
             ],
+            stdinText: 'tool/src/tool_test_runner.dart\n',
           );
-          _writeChangedPathsFile(sandbox, 'README.md\n');
           final unmatched = await runSandboxTool(
             sandbox,
             'run_verification_preset.dart',
@@ -136,8 +135,9 @@ void main() {
               'resolve',
               '--format=json',
               '--tool-tests',
-              '--changed-paths-file=.codex/changed_paths.txt',
+              '--changed-paths-file=-',
             ],
+            stdinText: 'README.md\n',
           );
 
           expect(matched.exitCode, 0, reason: matched.stderr.toString());
@@ -260,6 +260,36 @@ void main() {
       },
     );
 
+    test('resolve reads changed paths from stdin', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeCanonicalToolTestFile(sandbox);
+
+        final result = await runSandboxTool(
+          sandbox,
+          'run_verification_preset.dart',
+          args: const <String>[
+            'resolve',
+            '--format=json',
+            '--tool-tests',
+            '--changed-paths-file=-',
+          ],
+          stdinText: 'tool/src/tool_test_runner.dart\n',
+        );
+
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+        final payload =
+            jsonDecode(result.stdout.toString()) as Map<String, Object?>;
+        expect(payload['mode'], 'tool_tests');
+        expect(payload['selectors'], <Object?>[
+          'tool/src/tool_test_runner.dart',
+        ]);
+        expect((payload['steps'] as List<Object?>).length, 1);
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
     test('resolve fails when required changed paths are missing', () async {
       final sandbox = await _createSandbox();
       try {
@@ -309,6 +339,27 @@ void main() {
       }
     });
 
+    test('resolve accepts stdin marker without a filesystem path', () async {
+      final sandbox = await _createSandbox();
+      try {
+        final result = await runSandboxTool(
+          sandbox,
+          'run_verification_preset.dart',
+          args: const <String>[
+            'resolve',
+            '--format=json',
+            '--preset=required_code_change',
+            '--changed-paths-file=-',
+          ],
+          stdinText: 'README.md\n',
+        );
+
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
     test(
       'run emits compact success output and hides child output for passing steps',
       () async {
@@ -316,10 +367,6 @@ void main() {
         try {
           _writeFakeExecutables(sandbox);
           _writeCanonicalToolTestFile(sandbox);
-          _writeChangedPathsFile(
-            sandbox,
-            'test/tool/run_verification_preset_tool_test.dart\n',
-          );
 
           final result = await runSandboxTool(
             sandbox,
@@ -327,9 +374,10 @@ void main() {
             args: const <String>[
               'run',
               '--tool-tests',
-              '--changed-paths-file=.codex/changed_paths.txt',
+              '--changed-paths-file=-',
             ],
             environment: _sandboxEnvironment(sandbox),
+            stdinText: 'test/tool/run_verification_preset_tool_test.dart\n',
           );
 
           expect(result.exitCode, 0, reason: result.stderr.toString());

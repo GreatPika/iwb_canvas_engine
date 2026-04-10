@@ -37,13 +37,34 @@ Future<ProcessResult> runSandboxTool(
   String toolFileName, {
   List<String> args = const <String>[],
   Map<String, String>? environment,
-}) {
-  return Process.run(
+  String? stdinText,
+}) async {
+  if (stdinText == null) {
+    return Process.run(
+      'dart',
+      <String>['run', 'tool/$toolFileName', ...args],
+      workingDirectory: sandbox.path,
+      environment: environment,
+    );
+  }
+
+  final process = await Process.start(
     'dart',
     <String>['run', 'tool/$toolFileName', ...args],
     workingDirectory: sandbox.path,
     environment: environment,
   );
+  process.stdin.write(stdinText);
+  await process.stdin.close();
+
+  final stdout = await process.stdout
+      .transform(SystemEncoding().decoder)
+      .join();
+  final stderr = await process.stderr
+      .transform(SystemEncoding().decoder)
+      .join();
+  final exitCode = await process.exitCode;
+  return ProcessResult(process.pid, exitCode, stdout, stderr);
 }
 
 void _copyPath(String from, String to) {

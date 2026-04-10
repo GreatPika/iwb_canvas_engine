@@ -25,9 +25,9 @@ const List<String> toolTestTriggerEntries = <String>[
 
 const String agentsVerificationInstruction =
     'After any code change, run `dart run tool/run_verification_preset.dart '
-    'run --preset required_code_change --changed-paths-file=<path>` and write '
-    'every modified, added, renamed, or deleted repository-relative path to '
-    'that file, one path per line.';
+    'run --preset required_code_change --changed-paths-file=<path-or->` and '
+    'provide every modified, added, renamed, or deleted repository-relative '
+    'path as one line from that file or from stdin.';
 
 const String ciToolTestJobsExpression = r'${{ steps.test-jobs.outputs.jobs }}';
 const String ciCoverageJobsExpression = r'${{ steps.test-jobs.outputs.jobs }}';

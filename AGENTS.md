@@ -35,7 +35,7 @@ app UI, product workflows, or backend logic.
 
 ## Verification
 
-After any code change, run `dart run tool/run_verification_preset.dart run --preset required_code_change --changed-paths-file=<path>` and write every modified, added, renamed, or deleted repository-relative path to that file, one path per line.
+After any code change, run `dart run tool/run_verification_preset.dart run --preset required_code_change --changed-paths-file=<path-or->` and provide every modified, added, renamed, or deleted repository-relative path as one line from that file or from stdin.
 - For new production files under `lib/**`, run `dcm calculate-metrics` and keep
   them green against the current thresholds.
 - Run `dcm calculate-metrics` for legacy files only when adding a large new

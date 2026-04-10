@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'verification_contract_models.dart';
@@ -5,17 +6,19 @@ import 'verification_contract_registry.dart';
 
 const String verificationPresetUsage = '''
 Usage:
-  dart run tool/run_verification_preset.dart resolve --format=json --preset=required_code_change --changed-paths-file=<path>
-  dart run tool/run_verification_preset.dart run --preset=required_code_change --changed-paths-file=<path>
+  dart run tool/run_verification_preset.dart resolve --format=json --preset=required_code_change --changed-paths-file=<path-or->
+  dart run tool/run_verification_preset.dart run --preset=required_code_change --changed-paths-file=<path-or->
   dart run tool/run_verification_preset.dart resolve --scope=<scope> [--scope=<scope>...]
   dart run tool/run_verification_preset.dart run --scope=<scope> [--scope=<scope>...]
-  dart run tool/run_verification_preset.dart resolve --tool-tests --changed-paths-file=<path>
-  dart run tool/run_verification_preset.dart run --tool-tests --changed-paths-file=<path>
+  dart run tool/run_verification_preset.dart resolve --tool-tests --changed-paths-file=<path-or->
+  dart run tool/run_verification_preset.dart run --tool-tests --changed-paths-file=<path-or->
   dart run tool/run_verification_preset.dart resolve --tool-test-file=<path> [--tool-test-file=<path>...]
   dart run tool/run_verification_preset.dart run --tool-test-file=<path> [--tool-test-file=<path>...]
 ''';
 
-VerificationInvocation parseVerificationInvocation(List<String> args) {
+Future<VerificationInvocation> parseVerificationInvocation(
+  List<String> args,
+) async {
   if (args.isEmpty) {
     _failUsage('Missing command.');
   }
@@ -90,7 +93,7 @@ VerificationInvocation parseVerificationInvocation(List<String> args) {
     toolTestFiles: List<String>.unmodifiable(toolTestFiles),
     changedPathsFile: changedPathsFile,
     changedPaths: List<String>.unmodifiable(
-      _mergeChangedPathInputs(
+      await _mergeChangedPathInputs(
         changedPathsFile: changedPathsFile,
         paths: changedPaths,
       ),
@@ -283,26 +286,38 @@ List<String> normalizeChangedPaths(Iterable<String> paths) {
   return _normalizeUnique(paths);
 }
 
-List<String> _mergeChangedPathInputs({
+Future<List<String>> _mergeChangedPathInputs({
   required String? changedPathsFile,
   required List<String> paths,
-}) {
+}) async {
   if (changedPathsFile == null) {
     return paths;
   }
 
+  final fileLines = changedPathsFile == '-'
+      ? await _readChangedPathsStdin()
+      : _readChangedPathsFile(changedPathsFile);
+
+  return <String>[...paths, ...fileLines];
+}
+
+Iterable<String> _readChangedPathsFile(String changedPathsFile) {
   final file = File(changedPathsFile);
   if (!file.existsSync()) {
     _failUsage('Changed paths file not found: $changedPathsFile');
   }
 
-  return <String>[
-    ...paths,
-    ...file
-        .readAsLinesSync()
-        .map(_normalizePathValue)
-        .where((line) => line.isNotEmpty),
-  ];
+  return file
+      .readAsLinesSync()
+      .map(_normalizePathValue)
+      .where((line) => line.isNotEmpty);
+}
+
+Future<Iterable<String>> _readChangedPathsStdin() async {
+  return (await stdin.transform(utf8.decoder).join())
+      .split(RegExp(r'\r?\n'))
+      .map(_normalizePathValue)
+      .where((line) => line.isNotEmpty);
 }
 
 List<String> _normalizeUnique(Iterable<String> values) {

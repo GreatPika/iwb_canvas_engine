@@ -7,7 +7,7 @@ import 'src/verification_contract/verification_contract_runner.dart';
 
 Future<void> main(List<String> args) async {
   try {
-    final invocation = parseVerificationInvocation(args);
+    final invocation = await parseVerificationInvocation(args);
     final plan = resolveVerificationPlan(invocation);
 
     switch (invocation.command) {
