@@ -24,7 +24,6 @@ class ScenePainterShell {
     backgroundOwner.paint(canvas, size, snapshot, frame.cameraOffset);
     nodeRenderer.paintNodeLayers(
       canvas: canvas,
-      snapshot: snapshot,
       frame: frame,
       resolveNodePaintData: frameOwner.resolveNodePaintData,
     );

@@ -29,25 +29,16 @@ class ScenePainterNodeRenderer {
 
   void paintNodeLayers({
     required Canvas canvas,
-    required SceneSnapshot snapshot,
     required ScenePainterPaintFrame frame,
     required ScenePainterResolvedNodePaintData Function(NodeSnapshot node)
     resolveNodePaintData,
   }) {
     _drawVisibleNodes(
       canvas: canvas,
-      nodes: snapshot.backgroundLayer.nodes,
+      nodes: frame.paintCandidates,
       frame: frame,
       resolveNodePaintData: resolveNodePaintData,
     );
-    for (final layer in snapshot.layers) {
-      _drawVisibleNodes(
-        canvas: canvas,
-        nodes: layer.nodes,
-        frame: frame,
-        resolveNodePaintData: resolveNodePaintData,
-      );
-    }
   }
 
   void _drawVisibleNodes({

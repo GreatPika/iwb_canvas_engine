@@ -19,6 +19,8 @@ import 'package:iwb_canvas_engine/src/view/scene_view_interactive_overlay_painte
 import 'package:iwb_canvas_engine/src/view/scene_view_interactive.dart';
 import 'package:iwb_canvas_engine/src/view/scene_view_runtime_host.dart';
 
+import '../support/committed_scene_view_render_state.dart';
+
 // INV:INV-ENG-VIEW-POINTER-SETTINGS-LIVE-APPLY
 // INV:INV-ENG-VIEW-RUNTIME-HOST-DEBUG-PROBES
 // INV:INV-ENG-VIEW-POINTER-SESSION-DETACH
@@ -1959,6 +1961,15 @@ class _StaticSceneViewRenderState extends ChangeNotifier
   @override
   Offset Function(NodeId nodeId) get previewDeltaResolver =>
       (_) => Offset.zero;
+
+  @override
+  Iterable<NodeSnapshot> enumeratePaintCandidates(Rect worldRect) {
+    return enumerateSnapshotPaintCandidates(
+      snapshot: _snapshot,
+      worldRect: worldRect,
+      previewDeltaResolver: previewDeltaResolver,
+    );
+  }
 
   @override
   bool get hasActiveStrokePreview => false;

@@ -9,6 +9,7 @@ abstract interface class SceneViewRenderState implements SceneRenderState {
   Rect? get selectionRect;
   Offset get cameraOffset;
   Offset Function(NodeId nodeId) get previewDeltaResolver;
+  Iterable<NodeSnapshot> enumeratePaintCandidates(Rect worldRect);
 
   bool get hasActiveStrokePreview;
   List<Offset> get activeStrokePreviewPoints;

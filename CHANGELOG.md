@@ -4,6 +4,10 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ## Unreleased
 
+- `ScenePainter` now consumes controller-owned ordered viewport paint
+  candidates from the internal render-state path before frame-local geometry
+  resolution. Cold paints no longer resolve off-viewport content nodes, while
+  `backgroundLayer` order and selected move-preview visibility stay intact.
 - Interactive lifecycle closure is now documented and pinned by repository
   invariants: public `handlePointer(...)` / `handleDoubleTap(...)` remain
   manual-only hooks, active draw and pending two-tap line state use captured

@@ -280,7 +280,7 @@ move-preview видимости.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Candidate-first paint pipeline is live
+### Slice 1. [x] Candidate-first paint pipeline is live
 
 #### Slice Contract
 
@@ -360,7 +360,7 @@ preview-driven visibility.
 - Candidate-order assertions prove background/content and in-layer order remain
   intact.
 
-### Slice 2. [ ] Invariant and docs publish candidate-first frame resolution
+### Slice 2. [x] Invariant and docs publish candidate-first frame resolution
 
 #### Slice Contract
 

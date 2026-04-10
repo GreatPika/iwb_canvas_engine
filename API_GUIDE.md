@@ -935,6 +935,9 @@ Parameters:
 - keeps `ScenePainter` and the interactive overlay on the same controller-owned
   internal render-state and repaint source, so marquee and draw previews stay
   live without widget rebuild glue
+- lets `ScenePainter` consume controller-owned ordered viewport candidates
+  before expensive frame resolution, preserving background/content paint order
+  and selected move-preview visibility without reopening a full content scan
 - uses one internal grid renderer owner for both direct painting and
   static-cache picture recording, so drawable checks, density bucketing,
   camera shift, and bounded anti-flap policy stay aligned without cross-frame

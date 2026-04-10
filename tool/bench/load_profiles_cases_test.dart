@@ -5,6 +5,7 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_snapshot_materializer.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart' show sceneSizeMax;
 import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
@@ -388,6 +389,22 @@ class _BenchmarkControllerRenderState extends ChangeNotifier
       _benchmarkZeroPreviewDelta;
 
   @override
+  Iterable<NodeSnapshot> enumeratePaintCandidates(Rect worldRect) sync* {
+    for (final node in snapshot.backgroundLayer.nodes) {
+      if (_benchmarkCandidateOverlaps(node, worldRect)) {
+        yield node;
+      }
+    }
+    for (final layer in snapshot.layers) {
+      for (final node in layer.nodes) {
+        if (_benchmarkCandidateOverlaps(node, worldRect)) {
+          yield node;
+        }
+      }
+    }
+  }
+
+  @override
   bool get hasActiveStrokePreview => false;
 
   @override
@@ -425,6 +442,10 @@ class _BenchmarkControllerRenderState extends ChangeNotifier
 }
 
 Offset _benchmarkZeroPreviewDelta(NodeId _) => Offset.zero;
+
+bool _benchmarkCandidateOverlaps(NodeSnapshot node, Rect worldRect) {
+  return worldRect.overlaps(boundsWorldForNodeSnapshot(node));
+}
 
 Map<String, Object?> _runHugeBoundsMetric({required int iterations}) {
   final snapshot = SceneSnapshot(

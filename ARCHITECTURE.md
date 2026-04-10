@@ -373,9 +373,11 @@ Ownership decisions for the target state:
   through the same controller-owned internal render-state plus one repaint
   source.
 - `ScenePainter` keeps frame ownership and selection ownership separate:
-  frame-local geometry resolution happens once in the frame owner, while
-  selection rendering consumes only resolved `worldBounds` / `localPath`
-  through focused render-local helpers instead of reopening geometry lookup.
+  the frame owner first consumes controller-owned ordered viewport paint
+  candidates, then resolves preview delta plus geometry only for those
+  candidates, while selection rendering consumes only resolved `worldBounds` /
+  `localPath` through focused render-local helpers instead of reopening
+  geometry lookup or scanning all content nodes.
   This contract is pinned by `INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION`.
 - `ScenePainter` keeps node-family rendering separate from frame ownership:
   rect/path, line/stroke, and text/image rendering consume only

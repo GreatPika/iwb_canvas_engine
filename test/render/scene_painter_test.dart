@@ -12,6 +12,9 @@ import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 import 'package:iwb_canvas_engine/src/render/scene_grid_renderer.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
+import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_scene_view_runtime.dart';
+import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart'
+    as interactive;
 
 import '../support/committed_scene_view_render_state.dart';
 
@@ -44,6 +47,15 @@ class _FakeRenderState extends ChangeNotifier implements SceneViewRenderState {
   @override
   Offset Function(NodeId nodeId) get previewDeltaResolver =>
       _previewDeltaResolver ?? _zeroPreviewDelta;
+
+  @override
+  Iterable<NodeSnapshot> enumeratePaintCandidates(Rect worldRect) {
+    return enumerateSnapshotPaintCandidates(
+      snapshot: snapshot,
+      worldRect: worldRect,
+      previewDeltaResolver: previewDeltaResolver,
+    );
+  }
 
   @override
   bool get hasActiveStrokePreview => false;
@@ -95,6 +107,26 @@ CommittedSceneViewRenderState _mirrorRenderState(
   );
   addTearDown(renderState.dispose);
   return renderState;
+}
+
+SceneViewRenderState _controllerOwnedRenderState(
+  SceneStoreController controller, {
+  Set<NodeId>? selectedNodeIds,
+  Offset Function(NodeId nodeId)? previewDeltaResolver,
+}) {
+  final owner = ChangeNotifier();
+  addTearDown(owner.dispose);
+  final interactionController = interactive.SceneController();
+  addTearDown(interactionController.dispose);
+  return SceneControllerSceneViewRenderState(
+    storeController: controller,
+    ownerListenable: owner,
+    readSnapshot: () => controller.snapshot,
+    readSelectedNodeIds: () => selectedNodeIds ?? controller.selectedNodeIds,
+    readControllerEpoch: () => controller.controllerEpoch,
+    readPreviewDeltaResolver: () => previewDeltaResolver ?? _zeroPreviewDelta,
+    readInteraction: () => interactionController.interaction,
+  );
 }
 
 Future<Image> _solidImage(Color color, {int width = 8, int height = 8}) async {
@@ -1764,7 +1796,7 @@ void main() {
                   id: 'previewed',
                   size: const Size(20, 20),
                   fillColor: const Color(0xFF000000),
-                  transform: Transform2D.translation(const Offset(20, 20)),
+                  transform: Transform2D.translation(const Offset(140, 20)),
                 ),
               ],
             ),
@@ -1772,14 +1804,11 @@ void main() {
         ),
       );
       addTearDown(controller.dispose);
-      controller.write((writer) {
-        writer.writeSelectionReplace(const <NodeId>{'previewed'});
-      });
-      final renderState = _FakeRenderState(
-        snapshot: controller.snapshot,
-        selectedNodeIds: controller.selectedNodeIds,
+      final renderState = _controllerOwnedRenderState(
+        controller,
+        selectedNodeIds: const <NodeId>{'previewed'},
         previewDeltaResolver: (nodeId) {
-          if (nodeId == 'previewed') return const Offset(30, 10);
+          if (nodeId == 'previewed') return const Offset(-120, 10);
           return Offset.zero;
         },
       );
@@ -1794,6 +1823,7 @@ void main() {
         await _countNonBackgroundPixels(image, background),
         greaterThan(0),
       );
+      expect(await _pixelColor(image, 20, 30), const Color(0xFF000000));
     },
   );
 }

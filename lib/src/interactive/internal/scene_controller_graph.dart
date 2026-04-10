@@ -92,6 +92,7 @@ SceneControllerGraph _assembleSceneControllerGraph(
   );
   final interaction = SceneControllerInteraction(interactionAccess);
   final sceneViewRuntime = SceneControllerSceneViewRuntime(
+    storeController: request.storeController,
     ownerListenable: request.owner,
     ensurePublicSideEffectAllowed:
         interactionRuntime.ensurePublicSideEffectAllowed,

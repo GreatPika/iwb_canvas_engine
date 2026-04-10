@@ -84,28 +84,46 @@ void main() {
     expect(backgroundSource, contains('class ScenePainterBackgroundOwner'));
   });
 
-  test('frame owner reads geometry from RenderGeometryCache once', () {
-    final source = File(
-      'lib/src/render/scene_painter_frame.dart',
-    ).readAsStringSync();
-    final body = _extractMethodBody(
-      source: source,
-      methodStart: 'ScenePainterResolvedNodePaintData resolveNodePaintData(',
-    );
+  test(
+    'frame owner resolves ordered paint candidates before geometry lookup',
+    () {
+      final source = File(
+        'lib/src/render/scene_painter_frame.dart',
+      ).readAsStringSync();
+      final createBody = _extractMethodBody(
+        source: source,
+        methodStart: 'ScenePainterPaintFrame create(Size size)',
+      );
+      final body = _extractMethodBody(
+        source: source,
+        methodStart: 'ScenePainterResolvedNodePaintData resolveNodePaintData(',
+      );
 
-    expect(body, contains('geometry: geometryCache.get(node),'));
-    expect(body, isNot(contains('parseSvgPathData')));
-    expect(body, isNot(contains('buildLocalPath')));
-    expect(body, isNot(contains('_buildPathNode')));
-  });
+      expect(
+        createBody,
+        contains('renderState.enumeratePaintCandidates(viewRect)'),
+      );
+      expect(
+        createBody,
+        contains('paintCandidates: List<NodeSnapshot>.unmodifiable('),
+      );
+      expect(body, contains('geometry: geometryCache.get(node),'));
+      expect(body, isNot(contains('parseSvgPathData')));
+      expect(body, isNot(contains('buildLocalPath')));
+      expect(body, isNot(contains('_buildPathNode')));
+    },
+  );
 
   test(
-    'node renderer consumes frame-local localPath instead of querying cache',
+    'node renderer consumes ordered frame paint candidates instead of snapshot scans',
     () {
       final source = File(
         'lib/src/render/scene_painter_node_renderer.dart',
       ).readAsStringSync();
       expect(source, contains('class ScenePainterNodeRenderer'));
+      expect(source, contains('nodes: frame.paintCandidates,'));
+      expect(source, isNot(contains('snapshot.backgroundLayer.nodes')));
+      expect(source, isNot(contains('for (final layer in snapshot.layers)')));
       expect(source, contains('Path? localPath'));
       final body = _extractMethodBody(
         source: source,

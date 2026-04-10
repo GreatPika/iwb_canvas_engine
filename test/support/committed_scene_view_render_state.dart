@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_snapshot_materializer.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
@@ -61,6 +62,15 @@ class CommittedSceneViewRenderState extends ChangeNotifier
       _previewDeltaResolver;
 
   @override
+  Iterable<NodeSnapshot> enumeratePaintCandidates(Rect worldRect) {
+    return enumerateSnapshotPaintCandidates(
+      snapshot: snapshot,
+      worldRect: worldRect,
+      previewDeltaResolver: previewDeltaResolver,
+    );
+  }
+
+  @override
   bool get hasActiveStrokePreview => false;
 
   @override
@@ -113,3 +123,50 @@ class CommittedSceneViewRenderState extends ChangeNotifier
 }
 
 Offset _zeroPreviewDelta(NodeId _) => Offset.zero;
+
+Iterable<NodeSnapshot> enumerateSnapshotPaintCandidates({
+  required SceneSnapshot snapshot,
+  required Rect worldRect,
+  required Offset Function(NodeId nodeId) previewDeltaResolver,
+}) sync* {
+  for (final node in snapshot.backgroundLayer.nodes) {
+    if (_snapshotNodeOverlapsWorldRect(node, worldRect, previewDeltaResolver)) {
+      yield node;
+    }
+  }
+  for (final layer in snapshot.layers) {
+    for (final node in layer.nodes) {
+      if (_snapshotNodeOverlapsWorldRect(
+        node,
+        worldRect,
+        previewDeltaResolver,
+      )) {
+        yield node;
+      }
+    }
+  }
+}
+
+bool _snapshotNodeOverlapsWorldRect(
+  NodeSnapshot node,
+  Rect worldRect,
+  Offset Function(NodeId nodeId) previewDeltaResolver,
+) {
+  final previewDelta = _safePreviewDelta(previewDeltaResolver(node.id));
+  final candidateBounds = boundsWorldForNodeSnapshot(node).shift(previewDelta);
+  return _isFiniteRect(candidateBounds) && worldRect.overlaps(candidateBounds);
+}
+
+Offset _safePreviewDelta(Offset value) {
+  if (!value.dx.isFinite || !value.dy.isFinite) {
+    return Offset.zero;
+  }
+  return value;
+}
+
+bool _isFiniteRect(Rect rect) {
+  return rect.left.isFinite &&
+      rect.top.isFinite &&
+      rect.right.isFinite &&
+      rect.bottom.isFinite;
+}

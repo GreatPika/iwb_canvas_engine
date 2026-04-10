@@ -23,14 +23,18 @@ class ScenePainterFrameOwner {
 
   ScenePainterPaintFrame create(Size size) {
     final cameraOffset = sanitizeFiniteOffset(renderState.cameraOffset);
+    final viewRect = Rect.fromLTWH(
+      cameraOffset.dx,
+      cameraOffset.dy,
+      size.width,
+      size.height,
+    ).inflate(scenePainterCullPadding);
     return ScenePainterPaintFrame(
       cameraOffset: cameraOffset,
-      viewRect: Rect.fromLTWH(
-        cameraOffset.dx,
-        cameraOffset.dy,
-        size.width,
-        size.height,
-      ).inflate(scenePainterCullPadding),
+      viewRect: viewRect,
+      paintCandidates: List<NodeSnapshot>.unmodifiable(
+        renderState.enumeratePaintCandidates(viewRect),
+      ),
       selectedIds: renderState.selectedNodeIds,
       selectionRect: renderState.selectionRect,
       selectionStyle: ScenePainterSelectionStyle(

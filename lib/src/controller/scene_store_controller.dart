@@ -98,6 +98,10 @@ class SceneStoreController extends ChangeNotifier implements SceneRenderState {
 }
 
 extension SceneStoreControllerSpatialAccess on SceneStoreController {
+  List<SceneNode> backgroundLayerNodes() {
+    return _store.sceneDoc.backgroundLayer?.nodes ?? const <SceneNode>[];
+  }
+
   List<SceneSpatialCandidate> querySpatialCandidates(Rect worldBounds) {
     return _commitRuntime.spatialIndexCache.writeQueryCandidates(
       scene: _store.sceneDoc,
@@ -128,6 +132,16 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
       return null;
     }
     return node;
+  }
+
+  ({SceneNode node, int layerIndex, int nodeIndex})? resolveNodeById(
+    NodeId nodeId,
+  ) {
+    return txnFindNodeByLocator(
+      scene: _store.sceneDoc,
+      nodeLocator: _store.nodeLocator,
+      nodeId: nodeId,
+    );
   }
 
   void writeReplaceScene(SceneSnapshot snapshot) {

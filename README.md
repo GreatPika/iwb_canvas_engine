@@ -261,7 +261,9 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - `SceneView` main-painter and overlay reads now share one controller-owned
   internal render-state and one repaint source, so live marquee/preview state
   updates without widget-field snapshots or helper-based read-side seams at the
-  view boundary.
+  view boundary. The main painter also consumes controller-enumerated ordered
+  viewport candidates, so cold paints do not resolve off-viewport content
+  geometry while selected move previews can still pull nodes into frame.
 - `handlePointer(...)` treats non-finite `down`/`move` as no-op admission
   failures. For non-finite terminal `up`/`cancel`, the controller preserves the
   original terminal phase only when the same `pointerId` already has a cached

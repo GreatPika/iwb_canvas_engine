@@ -193,4 +193,4 @@ This file is the plan index. Each step has a dedicated document so steps can be 
 - [x] [Шаг 96. Замкнуть interactive lifecycle на docs, invariants и roadmap](plan/step_96_interactive_lifecycle_closure_docs_and_invariants.md)
 - [x] [Шаг 97. Ликвидировать committed-only `SceneViewRenderState` путь из `SceneStoreController`](plan/step_97_remove_committed_only_scene_view_render_state_path.md)
 - [x] [Шаг 98. Сузить committed mutation seam интерактива до controller-private access contract](plan/step_98_interactive_mutation_boundary_controller_private_access.md)
-- [ ] [Шаг 99. Ввести controller-owned viewport candidate contract для `ScenePainter`](plan/step_99_scene_painter_viewport_candidate_contract.md)
+- [x] [Шаг 99. Ввести controller-owned viewport candidate contract для `ScenePainter`](plan/step_99_scene_painter_viewport_candidate_contract.md)
