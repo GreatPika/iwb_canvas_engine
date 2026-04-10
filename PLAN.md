@@ -16,3 +16,4 @@ roadmap can be updated without mixing execution contracts.
 ## Step Files
 
 - [ ] [Step 103. Optimize `check_coverage` for machine-first workflow triage](plan/step_103_check_coverage_machine_workflow_optimization.md)
+- [ ] [Step 104. Introduce shell-first machine verification presets](plan/step_104_shell_first_machine_verification_presets.md)
