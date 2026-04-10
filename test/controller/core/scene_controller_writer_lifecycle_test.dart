@@ -36,6 +36,27 @@ void main() {
     );
   });
 
+  test(
+    'writeWithSceneWriterCommitted preserves no-op and commit semantics',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: twoRectSnapshot(),
+      );
+      addTearDown(controller.dispose);
+
+      final noOp = controller.writeWithSceneWriterCommitted<void>((_) {});
+      expect(noOp.commitResult.needsNotify, isFalse);
+
+      final committed = controller.writeWithSceneWriterCommitted<void>((
+        writer,
+      ) {
+        writer.writeSelectionReplace(const <NodeId>{'r1'});
+      });
+      expect(committed.commitResult.needsNotify, isTrue);
+      expect(controller.selectedNodeIds, const <NodeId>{'r1'});
+    },
+  );
+
   test('pre-context failure does not lock future writes', () {
     final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);

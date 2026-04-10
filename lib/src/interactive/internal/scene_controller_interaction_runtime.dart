@@ -18,17 +18,19 @@ import 'scene_controller_mutation_boundary.dart';
 final class SceneControllerInteractionRuntime {
   SceneControllerInteractionRuntime._({
     required MoveCommitDeltaResolver? moveCommitDeltaResolver,
-    required this.storeController,
-    required this.notifyScheduler,
+    required this.publicNotifyScheduler,
+    required this.sceneNotifyScheduler,
+    required this.overlayNotifyScheduler,
     required this.events,
     required this.mutationBoundary,
     required this.selectionActions,
     required this.runtime,
   }) : _moveCommitDeltaResolver = moveCommitDeltaResolver;
 
-  final SceneStoreController storeController;
   final MoveCommitDeltaResolver? _moveCommitDeltaResolver;
-  final InteractiveNotifyScheduler notifyScheduler;
+  final InteractiveNotifyScheduler publicNotifyScheduler;
+  final InteractiveNotifyScheduler sceneNotifyScheduler;
+  final InteractiveNotifyScheduler overlayNotifyScheduler;
   final InteractiveEventDispatcher events;
   final SceneControllerMutationBoundary mutationBoundary;
   final InteractiveSelectionActions selectionActions;
@@ -64,7 +66,15 @@ final class SceneControllerInteractionRuntime {
   }
 
   void scheduleNotify() {
-    notifyScheduler.schedule();
+    publicNotifyScheduler.schedule();
+  }
+
+  void scheduleSceneNotify() {
+    sceneNotifyScheduler.schedule();
+  }
+
+  void scheduleOverlayNotify() {
+    overlayNotifyScheduler.schedule();
   }
 
   Offset runMoveCommitDeltaResolver({
@@ -97,19 +107,19 @@ final class SceneControllerInteractionRuntime {
   void dispose() {
     _isDisposed = true;
     _pointerSessionTokens.clear();
-    notifyScheduler.dispose();
+    publicNotifyScheduler.dispose();
+    sceneNotifyScheduler.dispose();
+    overlayNotifyScheduler.dispose();
     runtime.dispose();
     events.dispose();
-  }
-
-  void _handleStoreControllerChanged() {
-    scheduleNotify();
   }
 }
 
 final class SceneControllerInteractionRuntimeRequest {
   const SceneControllerInteractionRuntimeRequest({
-    required this.notifyListeners,
+    required this.notifyPublicListeners,
+    required this.notifySceneListeners,
+    required this.notifyOverlayListeners,
     required this.storeController,
     required this.mutationAccess,
     required this.readSnapshot,
@@ -121,7 +131,9 @@ final class SceneControllerInteractionRuntimeRequest {
     required this.moveCommitDeltaResolver,
   });
 
-  final void Function() notifyListeners;
+  final void Function() notifyPublicListeners;
+  final void Function() notifySceneListeners;
+  final void Function() notifyOverlayListeners;
   final SceneStoreController storeController;
   final SceneControllerCommittedMutationAccess mutationAccess;
   final SceneSnapshot Function() readSnapshot;
@@ -136,8 +148,14 @@ final class SceneControllerInteractionRuntimeRequest {
 SceneControllerInteractionRuntime createSceneControllerInteractionRuntime({
   required SceneControllerInteractionRuntimeRequest request,
 }) {
+  final publicNotifyScheduler = InteractiveNotifyScheduler(
+    notifyListeners: request.notifyPublicListeners,
+  );
   final notifyScheduler = InteractiveNotifyScheduler(
-    notifyListeners: request.notifyListeners,
+    notifyListeners: request.notifySceneListeners,
+  );
+  final overlayNotifyScheduler = InteractiveNotifyScheduler(
+    notifyListeners: request.notifyOverlayListeners,
   );
   final events = InteractiveEventDispatcher();
   late final SceneControllerInteractionRuntime wiredRuntime;
@@ -145,21 +163,21 @@ SceneControllerInteractionRuntime createSceneControllerInteractionRuntime({
   final selectionActions = _createSelectionActions(mutationBoundary);
   final interactiveRuntime = _createInteractiveRuntime(
     request,
-    notifyScheduler: notifyScheduler,
+    publicNotifyScheduler: publicNotifyScheduler,
+    sceneNotifyScheduler: notifyScheduler,
+    overlayNotifyScheduler: overlayNotifyScheduler,
     events: events,
     mutationBoundary: mutationBoundary,
   );
   wiredRuntime = SceneControllerInteractionRuntime._(
     moveCommitDeltaResolver: request.moveCommitDeltaResolver,
-    storeController: request.storeController,
-    notifyScheduler: notifyScheduler,
+    publicNotifyScheduler: publicNotifyScheduler,
+    sceneNotifyScheduler: notifyScheduler,
+    overlayNotifyScheduler: overlayNotifyScheduler,
     events: events,
     mutationBoundary: mutationBoundary,
     selectionActions: selectionActions,
     runtime: interactiveRuntime,
-  );
-  request.storeController.addListener(
-    wiredRuntime._handleStoreControllerChanged,
   );
   return wiredRuntime;
 }
@@ -324,6 +342,15 @@ SceneControllerMutationBoundary _createMutationBoundary(
       clearPointerNormalizationState: () {
         readRuntime().runtime.clearPointerNormalizationState();
       },
+      schedulePublicNotify: () {
+        readRuntime().scheduleNotify();
+      },
+      scheduleSceneRepaint: () {
+        readRuntime().scheduleSceneNotify();
+      },
+      scheduleOverlayRepaint: () {
+        readRuntime().scheduleOverlayNotify();
+      },
     ),
   );
 }
@@ -336,14 +363,18 @@ InteractiveSelectionActions _createSelectionActions(
 
 InteractiveRuntime _createInteractiveRuntime(
   SceneControllerInteractionRuntimeRequest request, {
-  required InteractiveNotifyScheduler notifyScheduler,
+  required InteractiveNotifyScheduler publicNotifyScheduler,
+  required InteractiveNotifyScheduler sceneNotifyScheduler,
+  required InteractiveNotifyScheduler overlayNotifyScheduler,
   required InteractiveEventDispatcher events,
   required SceneControllerMutationBoundary mutationBoundary,
 }) {
   return InteractiveRuntime(
     events: events,
     callbacks: InteractiveRuntimeCallbacks(
-      scheduleNotify: notifyScheduler.schedule,
+      schedulePublicNotify: publicNotifyScheduler.schedule,
+      scheduleSceneNotify: sceneNotifyScheduler.schedule,
+      scheduleOverlayNotify: overlayNotifyScheduler.schedule,
       readSnapshot: request.readSnapshot,
       readSelectedNodeIds: request.readSelectedNodeIds,
       readMode: request.readMode,

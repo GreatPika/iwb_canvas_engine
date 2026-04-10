@@ -17,7 +17,9 @@ class InteractiveRuntime {
   InteractiveRuntime({required this.callbacks, required this.events}) {
     _moveSession = InteractiveMoveSession(
       callbacks: InteractiveMoveSessionCallbacks(
-        onStateChanged: callbacks.scheduleNotify,
+        onPublicStateChanged: callbacks.schedulePublicNotify,
+        onSceneStateChanged: _notifyPublicAndScene,
+        onOverlayStateChanged: _notifyPublicAndOverlay,
         readSnapshot: callbacks.readSnapshot,
         readSelectedNodeIds: callbacks.readSelectedNodeIds,
         querySpatialCandidates: callbacks.querySpatialCandidates,
@@ -30,7 +32,7 @@ class InteractiveRuntime {
     );
     _drawCoordinator = InteractiveDrawCoordinator(
       callbacks: InteractiveDrawCoordinatorCallbacks(
-        onStateChanged: callbacks.scheduleNotify,
+        onOverlayStateChanged: _notifyPublicAndOverlay,
         emitAction: events.emitAction,
         commitDrawStroke: callbacks.commitDrawStroke,
         commitDrawLineFromWorldSegment:
@@ -202,26 +204,37 @@ class InteractiveRuntime {
   void _interruptInteractiveState() {
     final family = _gestureRouter.interruptActiveGesture();
     if (family == InteractiveGestureFamily.move) {
-      _moveSession.interruptGesture();
+      final change = _moveSession.interruptGesture();
+      _scheduleStateChange(change);
     } else {
       _moveSession.setSelectionRect(null);
     }
+    final hadOverlayState =
+        _drawCoordinator.hasActiveStrokePoints ||
+        _drawCoordinator.activeLinePreviewStart != null ||
+        _drawCoordinator.activeLinePreviewEnd != null ||
+        _drawCoordinator.hasPendingLineStart ||
+        _drawCoordinator.activeEraserPointsLength > 0;
     _drawCoordinator.resetOwnedState();
+    if (hadOverlayState) {
+      _notifyPublicAndOverlay();
+    }
   }
 
   void _detachInteractiveStateForSession(PointerSessionToken token) {
     final didClearPendingLine = _drawCoordinator.detachPointerSession(token);
-    final didChange =
-        _detachOwnedStateForFamily(
-          _gestureRouter.detachPointerSession(token),
-        ) ||
-        didClearPendingLine;
-    if (didChange) {
-      callbacks.scheduleNotify();
+    final change = _detachOwnedStateForFamily(
+      _gestureRouter.detachPointerSession(token),
+    );
+    _scheduleStateChange(change);
+    if (didClearPendingLine) {
+      _notifyPublicAndOverlay();
     }
   }
 
-  bool _detachOwnedStateForFamily(InteractiveGestureFamily? family) {
+  ({bool scene, bool overlay}) _detachOwnedStateForFamily(
+    InteractiveGestureFamily? family,
+  ) {
     switch (family) {
       case InteractiveGestureFamily.move:
         return _moveSession.detachOwningSession();
@@ -232,9 +245,31 @@ class InteractiveRuntime {
             _drawCoordinator.activeLinePreviewEnd != null ||
             _drawCoordinator.activeEraserPointsLength > 0;
         _drawCoordinator.resetGestureState();
-        return didChange;
+        return (scene: false, overlay: didChange);
       case null:
-        return false;
+        return (scene: false, overlay: false);
     }
+  }
+
+  void _scheduleStateChange(({bool scene, bool overlay}) change) {
+    if (change.scene || change.overlay) {
+      callbacks.schedulePublicNotify();
+    }
+    if (change.scene) {
+      callbacks.scheduleSceneNotify();
+    }
+    if (change.overlay) {
+      callbacks.scheduleOverlayNotify();
+    }
+  }
+
+  void _notifyPublicAndScene() {
+    callbacks.schedulePublicNotify();
+    callbacks.scheduleSceneNotify();
+  }
+
+  void _notifyPublicAndOverlay() {
+    callbacks.schedulePublicNotify();
+    callbacks.scheduleOverlayNotify();
   }
 }

@@ -38,6 +38,9 @@ class _FakeRenderState extends ChangeNotifier implements SceneViewRenderState {
   final int controllerEpoch = 0;
 
   @override
+  Listenable get overlayRepaintListenable => this;
+
+  @override
   Rect? selectionRect;
 
   @override
@@ -116,19 +119,18 @@ SceneViewRenderState _controllerOwnedRenderState(
   Set<NodeId>? selectedNodeIds,
   Offset Function(NodeId nodeId)? previewDeltaResolver,
 }) {
-  final owner = ChangeNotifier();
-  addTearDown(owner.dispose);
   final interactionController = interactive.SceneController();
   addTearDown(interactionController.dispose);
-  return SceneControllerSceneViewRenderState(
+  final renderState = SceneControllerSceneViewRenderState(
     storeController: controller,
-    ownerListenable: owner,
     readSnapshot: () => controller.snapshot,
     readSelectedNodeIds: () => selectedNodeIds ?? controller.selectedNodeIds,
     readControllerEpoch: () => controller.controllerEpoch,
     readPreviewDeltaResolver: () => previewDeltaResolver ?? _zeroPreviewDelta,
     readInteraction: () => interactionController.interaction,
   );
+  addTearDown(renderState.dispose);
+  return renderState;
 }
 
 Future<Image> _solidImage(Color color, {int width = 8, int height = 8}) async {
@@ -422,7 +424,6 @@ void main() {
             viewRect: const Rect.fromLTWH(-20, -20, 40, 40),
             paintCandidates: <NodeSnapshot>[textNode],
             selectedIds: const <NodeId>{},
-            selectionRect: null,
             selectionStyle: const ScenePainterSelectionStyle(
               color: Color(0xFF1565C0),
               haloWidth: 1,
@@ -450,7 +451,7 @@ void main() {
     },
   );
 
-  test('ScenePainter paints marquee selection rectangle', () async {
+  test('ScenePainter ignores marquee selection rectangle', () async {
     const background = Color(0xFFFFFFFF);
     final controller = SceneStoreController(
       initialSnapshot: SceneSnapshot(
@@ -490,7 +491,7 @@ void main() {
       imageWith,
       background,
     );
-    expect(nonBackgroundWith, greaterThan(nonBackgroundWithout));
+    expect(nonBackgroundWith, nonBackgroundWithout);
   });
 
   test('SceneStoreController rejects invalid numeric snapshot fields', () {

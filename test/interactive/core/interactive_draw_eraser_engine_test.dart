@@ -39,7 +39,7 @@ void main() {
 
     final engine = InteractiveDrawEraserEngine(
       callbacks: InteractiveDrawEraserEngineCallbacks(
-        onStateChanged: () {},
+        onOverlayStateChanged: () {},
         querySpatialCandidates: (_) => <SceneSpatialCandidate>[candidate],
         resolveSpatialCandidateNode: (c) => c.node,
         commitEraseNodes: (ids) {
@@ -77,7 +77,7 @@ void main() {
 
     final engine = InteractiveDrawEraserEngine(
       callbacks: InteractiveDrawEraserEngineCallbacks(
-        onStateChanged: () {},
+        onOverlayStateChanged: () {},
         querySpatialCandidates: (_) => <SceneSpatialCandidate>[candidate],
         resolveSpatialCandidateNode: (c) => c.node,
         commitEraseNodes: (ids) {
@@ -117,7 +117,7 @@ void main() {
 
     final engine = InteractiveDrawEraserEngine(
       callbacks: InteractiveDrawEraserEngineCallbacks(
-        onStateChanged: () {},
+        onOverlayStateChanged: () {},
         querySpatialCandidates: (_) => <SceneSpatialCandidate>[candidate],
         resolveSpatialCandidateNode: (c) => c.node,
         commitEraseNodes: (ids) {

@@ -10,13 +10,13 @@ import 'interactive_draw_path_buffer.dart';
 
 class InteractiveDrawEraserEngineCallbacks {
   const InteractiveDrawEraserEngineCallbacks({
-    required this.onStateChanged,
+    required this.onOverlayStateChanged,
     required this.querySpatialCandidates,
     required this.resolveSpatialCandidateNode,
     required this.commitEraseNodes,
   });
 
-  final VoidCallback onStateChanged;
+  final VoidCallback onOverlayStateChanged;
   final List<SceneSpatialCandidate> Function(Rect bounds)
   querySpatialCandidates;
   final SceneNode? Function(SceneSpatialCandidate candidate)
@@ -64,7 +64,7 @@ class InteractiveDrawEraserEngine {
 
   void handleMove(Offset scenePoint) {
     if (!_pathBuffer.appendMovePoint(scenePoint)) return;
-    callbacks.onStateChanged();
+    callbacks.onOverlayStateChanged();
   }
 
   List<NodeId> commitOnUp(

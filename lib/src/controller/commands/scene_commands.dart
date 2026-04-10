@@ -66,8 +66,8 @@ class SceneCommands {
     });
   }
 
-  void writeSelectionReplace(Iterable<NodeId> nodeIds) {
-    _writeRunner<void>((writer) {
+  List<NodeId>? writeSelectionReplaceExactResult(Iterable<NodeId> nodeIds) {
+    return _writeRunner<List<NodeId>?>((writer) {
       final sortedNodeIds = sceneWriterWriteSelectionReplaceExactResult(
         writer,
         nodeIds,
@@ -79,11 +79,16 @@ class SceneCommands {
           nodeIds: sortedNodeIds,
         );
       }
+      return sortedNodeIds;
     });
   }
 
-  void writeSelectionToggle(NodeId nodeId) {
-    _writeRunner<void>((writer) {
+  void writeSelectionReplace(Iterable<NodeId> nodeIds) {
+    writeSelectionReplaceExactResult(nodeIds);
+  }
+
+  bool writeSelectionToggleExactChange(NodeId nodeId) {
+    return _writeRunner<bool>((writer) {
       final changed = writer.writeSelectionToggle(nodeId);
       if (changed) {
         sceneWriterWriteOwnedSignalExactEnqueue(
@@ -92,11 +97,16 @@ class SceneCommands {
           nodeIds: _sortedNodeIds(<NodeId>[nodeId]),
         );
       }
+      return changed;
     });
   }
 
-  void writeSelectionClear() {
-    _writeRunner<void>((writer) {
+  void writeSelectionToggle(NodeId nodeId) {
+    writeSelectionToggleExactChange(nodeId);
+  }
+
+  bool writeSelectionClearExactChange() {
+    return _writeRunner<bool>((writer) {
       final changed = writer.writeSelectionClear();
       if (changed) {
         sceneWriterWriteOwnedSignalExactEnqueue(
@@ -104,11 +114,18 @@ class SceneCommands {
           type: 'selection.cleared',
         );
       }
+      return changed;
     });
   }
 
-  int writeSelectionSelectAll({bool onlySelectable = true}) {
-    return _writeRunner((writer) {
+  void writeSelectionClear() {
+    writeSelectionClearExactChange();
+  }
+
+  ({int selectedCount, bool changed}) writeSelectionSelectAllExactResult({
+    bool onlySelectable = true,
+  }) {
+    return _writeRunner<({int selectedCount, bool changed})>((writer) {
       final result = sceneWriterWriteSelectionSelectAllExactResult(
         writer,
         onlySelectable: onlySelectable,
@@ -116,8 +133,14 @@ class SceneCommands {
       if (result.changed) {
         sceneWriterWriteOwnedSignalExactEnqueue(writer, type: 'selection.all');
       }
-      return result.selectedCount;
+      return result;
     });
+  }
+
+  int writeSelectionSelectAll({bool onlySelectable = true}) {
+    return writeSelectionSelectAllExactResult(
+      onlySelectable: onlySelectable,
+    ).selectedCount;
   }
 
   int writeSelectionTransform(Transform2D delta) {
@@ -167,44 +190,68 @@ class SceneCommands {
     return writeClearSceneExactResult().removedNodeIds.length;
   }
 
-  void writeBackgroundColorSet(Color color) {
-    _writeRunner<void>((writer) {
-      if (sceneWriterWriteBackgroundColorExactChange(writer, color)) {
+  bool writeBackgroundColorSetExactChange(Color color) {
+    return _writeRunner<bool>((writer) {
+      final changed = sceneWriterWriteBackgroundColorExactChange(writer, color);
+      if (changed) {
         sceneWriterWriteOwnedSignalExactEnqueue(
           writer,
           type: 'background.updated',
         );
       }
+      return changed;
     });
   }
 
-  void writeGridEnabledSet(bool enabled) {
-    _writeRunner<void>((writer) {
-      if (sceneWriterWriteGridEnableExactChange(writer, enabled)) {
+  void writeBackgroundColorSet(Color color) {
+    writeBackgroundColorSetExactChange(color);
+  }
+
+  bool writeGridEnabledSetExactChange(bool enabled) {
+    return _writeRunner<bool>((writer) {
+      final changed = sceneWriterWriteGridEnableExactChange(writer, enabled);
+      if (changed) {
         sceneWriterWriteOwnedSignalExactEnqueue(
           writer,
           type: 'grid.enabled.updated',
         );
       }
+      return changed;
     });
   }
 
-  void writeGridCellSizeSet(double size) {
-    _writeRunner<void>((writer) {
-      if (sceneWriterWriteGridCellSizeExactChange(writer, size)) {
+  void writeGridEnabledSet(bool enabled) {
+    writeGridEnabledSetExactChange(enabled);
+  }
+
+  bool writeGridCellSizeSetExactChange(double size) {
+    return _writeRunner<bool>((writer) {
+      final changed = sceneWriterWriteGridCellSizeExactChange(writer, size);
+      if (changed) {
         sceneWriterWriteOwnedSignalExactEnqueue(
           writer,
           type: 'grid.cell.updated',
         );
       }
+      return changed;
+    });
+  }
+
+  void writeGridCellSizeSet(double size) {
+    writeGridCellSizeSetExactChange(size);
+  }
+
+  bool writeCameraOffsetSetExactChange(Offset offset) {
+    return _writeRunner<bool>((writer) {
+      final changed = sceneWriterWriteCameraOffsetExactChange(writer, offset);
+      if (changed) {
+        sceneWriterWriteOwnedSignalExactEnqueue(writer, type: 'camera.updated');
+      }
+      return changed;
     });
   }
 
   void writeCameraOffsetSet(Offset offset) {
-    _writeRunner<void>((writer) {
-      if (sceneWriterWriteCameraOffsetExactChange(writer, offset)) {
-        sceneWriterWriteOwnedSignalExactEnqueue(writer, type: 'camera.updated');
-      }
-    });
+    writeCameraOffsetSetExactChange(offset);
   }
 }

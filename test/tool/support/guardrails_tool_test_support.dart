@@ -55,9 +55,9 @@ void writeInteractiveArchitectureSupportScaffold(Directory sandbox) {
     'lib/src/controller/scene_controller_committed_mutation_access.dart',
     '''
 abstract interface class SceneControllerCommittedMutationAccess {
-  void replaceSelection(Object nodeIds);
+  bool replaceSelection(Object nodeIds);
 
-  void clearSelection();
+  bool clearSelection();
 
   int deleteSelection();
 
@@ -79,10 +79,10 @@ abstract interface class SceneControllerCommittedMutationAccess {
 final class SceneStoreControllerCommittedMutationAccess
     implements SceneControllerCommittedMutationAccess {
   @override
-  void replaceSelection(Object nodeIds) {}
+  bool replaceSelection(Object nodeIds) => true;
 
   @override
-  void clearSelection() {}
+  bool clearSelection() => true;
 
   @override
   int deleteSelection() => 0;
@@ -266,11 +266,15 @@ class SceneControllerMutationBoundary {
   }
 
   void setSelection(Object nodeIds) {
-    mutationAccess.replaceSelection(nodeIds);
+    if (!mutationAccess.replaceSelection(nodeIds)) {
+      return;
+    }
   }
 
   void clearSelection() {
-    mutationAccess.clearSelection();
+    if (!mutationAccess.clearSelection()) {
+      return;
+    }
   }
 
   void deleteSelection() {

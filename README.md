@@ -261,11 +261,14 @@ class _CanvasScreenState extends State<CanvasScreen> {
   pointer `cancel` restores the gesture baseline selection after any temporary
   move-local selection change.
 - `SceneView` main-painter and overlay reads now share one controller-owned
-  internal render-state and one repaint source, so live marquee/preview state
-  updates without widget-field snapshots or helper-based read-side seams at the
-  view boundary. The main painter also consumes controller-enumerated ordered
-  viewport candidates, so cold paints do not resolve off-viewport content
-  geometry while selected move previews can still pull nodes into frame.
+  internal render-state family with split repaint ownership: the main painter
+  listens to the scene channel, the interactive overlay listens to
+  `overlayRepaintListenable`, and marquee rendering lives fully in the overlay
+  painter. Live marquee/preview state therefore updates without widget-field
+  snapshots or helper-based read-side seams at the view boundary, while the
+  main painter still consumes controller-enumerated ordered viewport
+  candidates so cold paints do not resolve off-viewport content geometry and
+  selected move previews can still pull nodes into frame.
 - `handlePointer(...)` treats non-finite `down`/`move` as no-op admission
   failures. For non-finite terminal `up`/`cancel`, the controller preserves the
   original terminal phase only when the same `pointerId` already has a cached

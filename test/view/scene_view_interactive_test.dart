@@ -115,6 +115,45 @@ int _paintInvocationCount(
       .length;
 }
 
+List<Rect> _paintedRects(
+  CustomPainter painter, {
+  int width = 120,
+  int height = 120,
+}) {
+  final canvas = TestRecordingCanvas();
+  painter.paint(canvas, Size(width.toDouble(), height.toDouble()));
+  return canvas.invocations
+      .where((entry) => entry.invocation.memberName == #drawRect)
+      .map((entry) => entry.invocation.positionalArguments.first as Rect)
+      .toList(growable: false);
+}
+
+List<Paint> _drawRectPaints(
+  CustomPainter painter, {
+  int width = 120,
+  int height = 120,
+}) {
+  final canvas = TestRecordingCanvas();
+  painter.paint(canvas, Size(width.toDouble(), height.toDouble()));
+  return canvas.invocations
+      .where((entry) => entry.invocation.memberName == #drawRect)
+      .map((entry) => entry.invocation.positionalArguments[1] as Paint)
+      .toList(growable: false);
+}
+
+List<Paint> _drawLinePaints(
+  CustomPainter painter, {
+  int width = 120,
+  int height = 120,
+}) {
+  final canvas = TestRecordingCanvas();
+  painter.paint(canvas, Size(width.toDouble(), height.toDouble()));
+  return canvas.invocations
+      .where((entry) => entry.invocation.memberName == #drawLine)
+      .map((entry) => entry.invocation.positionalArguments[2] as Paint)
+      .toList(growable: false);
+}
+
 BuildContext _sceneViewRuntimeHostContext(WidgetTester tester) {
   return tester.element(find.byType(SceneViewRuntimeHost));
 }
@@ -1450,13 +1489,14 @@ void main() {
       await tester.pumpWidget(_host(controller));
       await tester.pump();
 
-      final scenePaint = _sceneViewInteractiveCustomPaint(
+      final overlayPaint = _sceneViewInteractiveCustomPaint(
         tester,
-        matches: (paint) => paint.painter is ScenePainter,
+        matches: (paint) =>
+            paint.foregroundPainter is SceneViewInteractiveOverlayPainter,
       );
-      final painter = scenePaint.painter;
+      final painter = overlayPaint.foregroundPainter;
       if (painter == null) {
-        fail('Expected scene painter.');
+        fail('Expected overlay painter.');
       }
 
       final baselineRectCount = _paintInvocationCount(painter, #drawRect);
@@ -1473,6 +1513,43 @@ void main() {
 
       await gesture.up();
       await tester.pump();
+    },
+  );
+
+  testWidgets(
+    'SceneViewInteractive overlay painter normalizes reversed marquee bounds',
+    (tester) async {
+      final painter = SceneViewInteractiveOverlayPainter(
+        renderState: _MutableSceneViewRenderState(
+          snapshot: _snapshot(text: 'normalized-marquee'),
+          selectionRectOverride: const Rect.fromLTRB(76, 54, 12, 18),
+        ),
+        selectionColor: const Color(0xFF00AAFF),
+        selectionStrokeWidth: 2,
+      );
+
+      final rects = _paintedRects(painter);
+      expect(rects, hasLength(2));
+      expect(rects.first, const Rect.fromLTRB(12, 18, 76, 54));
+      expect(rects.last, const Rect.fromLTRB(12, 18, 76, 54));
+    },
+  );
+
+  testWidgets(
+    'SceneViewInteractive overlay painter clamps invalid marquee stroke width',
+    (tester) async {
+      final painter = SceneViewInteractiveOverlayPainter(
+        renderState: _MutableSceneViewRenderState(
+          snapshot: _snapshot(text: 'clamped-marquee'),
+          selectionRectOverride: const Rect.fromLTRB(12, 18, 76, 54),
+        ),
+        selectionColor: const Color(0xFF00AAFF),
+        selectionStrokeWidth: double.nan,
+      );
+
+      final paints = _drawRectPaints(painter);
+      expect(paints, hasLength(2));
+      expect(paints.last.strokeWidth, 0);
     },
   );
 
@@ -1656,6 +1733,85 @@ void main() {
       expect(controller.activeLinePreviewEnd, const Offset(30, 10));
       expect(controller.activeLinePreviewThickness, 4);
       expect(controller.activeLinePreviewColor, const Color(0xFF3366AA));
+    },
+  );
+
+  testWidgets(
+    'SceneViewInteractive overlay painter keeps captured line preview style after config changes',
+    (tester) async {
+      final controller = SceneController(
+        initialSnapshot: _snapshot(text: 'captured-overlay-preview'),
+        dragStartSlop: 0.001,
+      );
+      addTearDown(controller.dispose);
+
+      controller.interaction.setMode(CanvasMode.draw);
+      controller.interaction.setDrawTool(DrawTool.line);
+      controller.interaction.lineThickness = 4;
+      controller.interaction.setDrawColor(const Color(0xFF3366AA));
+
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+
+      controller.interaction.handlePointer(
+        const CanvasPointerInput(
+          pointerId: 1,
+          position: Offset(10, 10),
+          timestampMs: 1,
+          phase: CanvasPointerPhase.down,
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      controller.interaction.handlePointer(
+        const CanvasPointerInput(
+          pointerId: 1,
+          position: Offset(30, 10),
+          timestampMs: 2,
+          phase: CanvasPointerPhase.move,
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      await tester.pump();
+
+      final initialOverlayPaint = _sceneViewInteractiveCustomPaint(
+        tester,
+        matches: (paint) =>
+            paint.foregroundPainter is SceneViewInteractiveOverlayPainter,
+      );
+      final initialPainter = initialOverlayPaint.foregroundPainter;
+      if (initialPainter == null) {
+        fail('Expected overlay painter.');
+      }
+
+      final initialLinePaints = _drawLinePaints(initialPainter);
+      expect(initialLinePaints, hasLength(1));
+      expect(initialLinePaints.single.strokeWidth, 4);
+      expect(
+        initialLinePaints.single.color.toARGB32(),
+        const Color(0xFF3366AA).toARGB32(),
+      );
+
+      controller.interaction.lineThickness = 9;
+      controller.interaction.setDrawColor(const Color(0xFFAA5500));
+      await tester.pump();
+
+      final updatedOverlayPaint = _sceneViewInteractiveCustomPaint(
+        tester,
+        matches: (paint) =>
+            paint.foregroundPainter is SceneViewInteractiveOverlayPainter,
+      );
+      final updatedPainter = updatedOverlayPaint.foregroundPainter;
+      if (updatedPainter == null) {
+        fail('Expected overlay painter.');
+      }
+
+      final updatedLinePaints = _drawLinePaints(updatedPainter);
+      expect(updatedLinePaints, hasLength(1));
+      expect(updatedLinePaints.single.strokeWidth, 4);
+      expect(
+        updatedLinePaints.single.color.toARGB32(),
+        const Color(0xFF3366AA).toARGB32(),
+      );
     },
   );
 }
@@ -1953,6 +2109,9 @@ class _StaticSceneViewRenderState extends ChangeNotifier
   int get controllerEpoch => 0;
 
   @override
+  Listenable get overlayRepaintListenable => this;
+
+  @override
   Rect? get selectionRect => null;
 
   @override
@@ -2000,4 +2159,16 @@ class _StaticSceneViewRenderState extends ChangeNotifier
 
   @override
   Color get activeLinePreviewColor => const Color(0xFF000000);
+}
+
+class _MutableSceneViewRenderState extends _StaticSceneViewRenderState {
+  _MutableSceneViewRenderState({
+    required SceneSnapshot snapshot,
+    this.selectionRectOverride,
+  }) : super(snapshot);
+
+  final Rect? selectionRectOverride;
+
+  @override
+  Rect? get selectionRect => selectionRectOverride;
 }

@@ -5,11 +5,21 @@ import '../contract/node_spec.dart';
 import '../contract/scene_write_txn.dart';
 import '../contract/snapshot.dart';
 import '../contract/transform2d.dart';
+import 'scene_controller_commit_runtime.dart';
 import 'scene_snapshot_materializer.dart';
 import 'scene_store_controller.dart';
 
+typedef SceneControllerCommittedMutationWriteResult<T> = ({
+  T value,
+  bool didChangeRenderState,
+});
+
 abstract interface class SceneControllerCommittedMutationAccess {
   T write<T>(T Function(SceneWriteTxn writer) fn);
+
+  SceneControllerCommittedMutationWriteResult<T> writeExact<T>(
+    T Function(SceneWriteTxn writer) fn,
+  );
 
   NodeId addNode(NodeSpec node, {LayerId? layerId, int? insertIndex});
 
@@ -19,13 +29,13 @@ abstract interface class SceneControllerCommittedMutationAccess {
 
   bool removeNode(NodeId id);
 
-  void setBackgroundColor(Color value);
+  bool setBackgroundColor(Color value);
 
-  void setGridEnabled(bool value);
+  bool setGridEnabled(bool value);
 
-  void setGridCellSize(double value);
+  bool setGridCellSize(double value);
 
-  void setCameraOffset(Offset value);
+  bool setCameraOffset(Offset value);
 
   ClearSceneResult clearSceneExactResult();
 
@@ -35,13 +45,13 @@ abstract interface class SceneControllerCommittedMutationAccess {
 
   void requestRepaint();
 
-  void replaceSelection(Iterable<NodeId> nodeIds);
+  bool replaceSelection(Iterable<NodeId> nodeIds);
 
-  void toggleSelection(NodeId nodeId);
+  bool toggleSelection(NodeId nodeId);
 
-  void clearSelection();
+  bool clearSelection();
 
-  int selectAll({bool onlySelectable = true});
+  ({int selectedCount, bool changed}) selectAll({bool onlySelectable = true});
 
   int transformSelection(Transform2D delta);
 
@@ -83,6 +93,17 @@ final class SceneStoreControllerCommittedMutationAccess
   }
 
   @override
+  SceneControllerCommittedMutationWriteResult<T> writeExact<T>(
+    T Function(SceneWriteTxn writer) fn,
+  ) {
+    final committedWrite = _storeController.writeCommitted(fn);
+    return (
+      value: committedWrite.result,
+      didChangeRenderState: _didChangeRenderState(committedWrite),
+    );
+  }
+
+  @override
   NodeId addNode(NodeSpec node, {LayerId? layerId, int? insertIndex}) {
     return _storeController.commands.writeAddNode(
       node,
@@ -109,23 +130,23 @@ final class SceneStoreControllerCommittedMutationAccess
   }
 
   @override
-  void setBackgroundColor(Color value) {
-    _storeController.commands.writeBackgroundColorSet(value);
+  bool setBackgroundColor(Color value) {
+    return _storeController.commands.writeBackgroundColorSetExactChange(value);
   }
 
   @override
-  void setGridEnabled(bool value) {
-    _storeController.commands.writeGridEnabledSet(value);
+  bool setGridEnabled(bool value) {
+    return _storeController.commands.writeGridEnabledSetExactChange(value);
   }
 
   @override
-  void setGridCellSize(double value) {
-    _storeController.commands.writeGridCellSizeSet(value);
+  bool setGridCellSize(double value) {
+    return _storeController.commands.writeGridCellSizeSetExactChange(value);
   }
 
   @override
-  void setCameraOffset(Offset value) {
-    _storeController.commands.writeCameraOffsetSet(value);
+  bool setCameraOffset(Offset value) {
+    return _storeController.commands.writeCameraOffsetSetExactChange(value);
   }
 
   @override
@@ -149,23 +170,26 @@ final class SceneStoreControllerCommittedMutationAccess
   }
 
   @override
-  void replaceSelection(Iterable<NodeId> nodeIds) {
-    _storeController.commands.writeSelectionReplace(nodeIds);
+  bool replaceSelection(Iterable<NodeId> nodeIds) {
+    return _storeController.commands.writeSelectionReplaceExactResult(
+          nodeIds,
+        ) !=
+        null;
   }
 
   @override
-  void toggleSelection(NodeId nodeId) {
-    _storeController.commands.writeSelectionToggle(nodeId);
+  bool toggleSelection(NodeId nodeId) {
+    return _storeController.commands.writeSelectionToggleExactChange(nodeId);
   }
 
   @override
-  void clearSelection() {
-    _storeController.commands.writeSelectionClear();
+  bool clearSelection() {
+    return _storeController.commands.writeSelectionClearExactChange();
   }
 
   @override
-  int selectAll({bool onlySelectable = true}) {
-    return _storeController.commands.writeSelectionSelectAll(
+  ({int selectedCount, bool changed}) selectAll({bool onlySelectable = true}) {
+    return _storeController.commands.writeSelectionSelectAllExactResult(
       onlySelectable: onlySelectable,
     );
   }
@@ -226,5 +250,9 @@ final class SceneStoreControllerCommittedMutationAccess
   @override
   Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots) {
     return _storeController.centerWorldForNodeSnapshots(snapshots);
+  }
+
+  bool _didChangeRenderState(SceneControllerCommittedWrite<Object?> result) {
+    return result.commitResult.needsNotify;
   }
 }

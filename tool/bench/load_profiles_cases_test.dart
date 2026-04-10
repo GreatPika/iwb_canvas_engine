@@ -379,6 +379,9 @@ class _BenchmarkControllerRenderState extends ChangeNotifier
   int get controllerEpoch => _controller.controllerEpoch;
 
   @override
+  Listenable get overlayRepaintListenable => this;
+
+  @override
   Rect? get selectionRect => null;
 
   @override

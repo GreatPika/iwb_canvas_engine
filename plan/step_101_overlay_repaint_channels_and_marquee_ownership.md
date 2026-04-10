@@ -18,6 +18,9 @@ language: russian
 - View/runtime wiring changes required so the main painter listens only to the
   scene repaint channel and the overlay painter listens to the overlay repaint
   channel.
+- Controller-private commit and mutation routing changes required to invalidate
+  the correct repaint channel for committed scene, selection, camera, and
+  opaque write paths while keeping one controller-owned render-state family.
 - Render/view/interactive/invariant/documentation surfaces required to prove
   and publish the split repaint-channel architecture.
 
@@ -28,7 +31,8 @@ language: russian
 - Dynamic selection-halo cull-budget computation.
 - Node selection halo rendering ownership; node halos remain in the main
   `ScenePainter` selection pass.
-- Public scene/model/write contracts and hit-test eligibility semantics.
+- Public scene/model/write contracts, public listener-delivery semantics, and
+  hit-test eligibility semantics.
 
 ## 3. File Map and Analysis Areas
 
@@ -44,6 +48,10 @@ language: russian
 - `lib/src/interactive/internal/interactive_runtime.dart`
 - `lib/src/interactive/internal/scene_controller_interaction_runtime.dart`
 - `lib/src/interactive/internal/scene_controller_scene_view_runtime.dart`
+- `lib/src/controller/commands/scene_commands.dart`
+- `lib/src/controller/scene_controller_commit_runtime.dart`
+- `lib/src/controller/scene_controller_committed_mutation_access.dart`
+- `lib/src/controller/scene_store_controller.dart`
 - `lib/src/view/scene_view_interactive_overlay_painter.dart`
 - `lib/src/view/scene_view_runtime_host.dart`
 - `lib/src/view/scene_view_render_surface.dart`
@@ -53,8 +61,13 @@ language: russian
 
 ### Test Files
 
+- `test/controller/core/scene_controller_committed_mutation_access_test.dart`
+- `test/controller/core/scene_controller_writer_lifecycle_test.dart`
+- `test/interactive/core/interactive_move_session_test.dart`
 - `test/interactive/core/scene_controller_architecture_boundary_test.dart`
+- `test/interactive/core/scene_controller_mutation_boundary_test.dart`
 - `test/contract/runtime_contract_interfaces_test.dart`
+- `test/render/scene_painter_frame_contract_test.dart`
 - `test/render/scene_painter_test.dart`
 - `test/view/scene_view_interactive_test.dart`
 - `test/view/scene_view_test.dart`
@@ -62,7 +75,10 @@ language: russian
 ### Fixture and Supporting Data Files
 
 - `test/support/committed_scene_view_render_state.dart`
+- `test/tool/guardrails/guardrails_interactive_api_tool_test.dart`
+- `test/tool/support/guardrails_tool_test_support.dart`
 - `tool/invariant_registry.dart`
+- `tool/src/guardrails/interactive_api_guardrails.dart`
 - `README.md`
 - `API_GUIDE.md`
 - `ARCHITECTURE.md`
@@ -73,15 +89,21 @@ language: russian
 ### Analysis Area
 
 - `lib/src/contract/scene_view_render_state.dart`
+- `lib/src/controller/**`
 - `lib/src/interactive/internal/**`
 - `lib/src/view/**`
 - `lib/src/render/scene_painter_*`
+- `test/controller/core/**`
 - `test/contract/runtime_contract_interfaces_test.dart`
 - `test/interactive/core/scene_controller_architecture_boundary_test.dart`
+- `test/interactive/core/**`
 - `test/view/**`
 - `test/render/scene_painter_test.dart`
+- `test/render/scene_painter_frame_contract_test.dart`
 - `test/support/committed_scene_view_render_state.dart`
+- `test/tool/**`
 - `tool/invariant_registry.dart`
+- `tool/src/guardrails/interactive_api_guardrails.dart`
 - `README.md`
 - `API_GUIDE.md`
 - `ARCHITECTURE.md`
@@ -135,6 +157,10 @@ language: russian
    notify the overlay repaint channel. A gesture that changes both must notify
    both channels through those distinct causes rather than a shared fallback
    notify path.
+8. Public `SceneController` listener-delivery semantics are not a target of
+   this step. The repaint split may refactor controller-private scheduling, but
+   it must not redefine the public async/coalescing contract for raw input and
+   configuration entrypoints.
 
 ## 5. Result Requirements
 
@@ -235,6 +261,9 @@ language: russian
 - Store-controller changes that affect committed scene reads used by both
   painters, including scene replacement and committed camera changes, must
   notify both repaint channels.
+- Opaque `scene.write(...)` commits must invalidate both repaint channels,
+  because the public write adapter does not preserve enough domain detail after
+  commit to route scene-only versus overlay-only repaint causes exactly.
 - Committed selection changes that affect `selectedNodeIds` must notify the
   scene repaint channel and must not rely on the overlay repaint channel for
   halo correctness.
@@ -258,6 +287,9 @@ language: russian
   consumer remains.
 - `SceneViewRenderSurface` must keep listening only to the scene repaint
   channel for cache lifecycle and base painter updates.
+- Public `SceneController` listener delivery must remain on the pre-step
+  async/coalesced contract; split repaint channels are an internal routing
+  change, not a public notification-behavior rewrite.
 
 ### 6.8 Prohibited
 
@@ -295,7 +327,7 @@ language: russian
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Controller-owned render-state family exposes split repaint channels
+### Slice 1. [x] Controller-owned render-state family exposes split repaint channels
 
 #### Slice Contract
 
@@ -357,7 +389,7 @@ surface for both painters.
 - Runtime and architecture-boundary tests prove the split channel wiring and
   the absence of one generic notify path.
 
-### Slice 2. [ ] Overlay owns marquee painting and base frame drops selectionRect
+### Slice 2. [x] Overlay owns marquee painting and base frame drops selectionRect
 
 #### Slice Contract
 
@@ -402,7 +434,7 @@ the base scene painter no longer carries or paints marquee state.
   overlay painter.
 - Structural tests prove base frame contracts no longer carry `selectionRect`.
 
-### Slice 3. [ ] View shell consumes split repaint channels without widening public runtime
+### Slice 3. [x] View shell consumes split repaint channels without widening public runtime
 
 #### Slice Contract
 
@@ -449,7 +481,7 @@ keeps its existing single `renderState` boundary.
 - Widget/runtime tests prove channel-specific listener attachment without a
   public runtime surface split.
 
-### Slice 4. [ ] Invariant and docs publish split repaint-channel architecture
+### Slice 4. [x] Invariant and docs publish split repaint-channel architecture
 
 #### Slice Contract
 

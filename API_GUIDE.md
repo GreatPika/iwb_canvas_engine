@@ -127,8 +127,8 @@ Migration note:
 - read committed render-state from `controller.snapshot`
 - keep `controller.interaction` for public mode/tool configuration only; the
   interactive view/render path now reads one controller-owned internal
-  render-state instead of mixing snapshot reads with overlay/widget-side
-  preview state
+  render-state family with split scene/overlay repaint channels instead of
+  mixing snapshot reads with overlay/widget-side preview state
 
 ## 3. Scene model
 
@@ -936,9 +936,11 @@ Parameters:
 - paints the committed scene
 - paints interactive previews
 - owns render caches by default and resets them on document/epoch boundaries
-- keeps `ScenePainter` and the interactive overlay on the same controller-owned
-  internal render-state and repaint source, so marquee and draw previews stay
-  live without widget rebuild glue
+- keeps `ScenePainter` and the interactive overlay on one controller-owned
+  internal render-state family while routing repaint through separate channels:
+  scene repaint stays on `SceneViewRenderState`, overlay repaint stays on
+  `overlayRepaintListenable`, and marquee plus draw previews stay live without
+  widget rebuild glue
 - lets `ScenePainter` consume controller-owned ordered viewport candidates
   before expensive frame resolution, preserving background/content paint order
   and selected move-preview visibility without reopening a full content scan

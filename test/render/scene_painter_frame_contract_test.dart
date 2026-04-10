@@ -1,6 +1,5 @@
 import 'dart:ui';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
@@ -21,19 +20,18 @@ SceneViewRenderState _controllerOwnedRenderState(
   Offset Function(NodeId nodeId)? previewDeltaResolver,
   SceneSnapshot? snapshotOverride,
 }) {
-  final owner = ChangeNotifier();
-  addTearDown(owner.dispose);
   final interactionController = interactive.SceneController();
   addTearDown(interactionController.dispose);
-  return SceneControllerSceneViewRenderState(
+  final renderState = SceneControllerSceneViewRenderState(
     storeController: controller,
-    ownerListenable: owner,
     readSnapshot: () => snapshotOverride ?? controller.snapshot,
     readSelectedNodeIds: () => selectedNodeIds,
     readControllerEpoch: () => controller.controllerEpoch,
     readPreviewDeltaResolver: () => previewDeltaResolver ?? (_) => Offset.zero,
     readInteraction: () => interactionController.interaction,
   );
+  addTearDown(renderState.dispose);
+  return renderState;
 }
 
 void main() {

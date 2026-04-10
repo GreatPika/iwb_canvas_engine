@@ -74,6 +74,9 @@ void main() {
           clearPointerNormalizationState: () {
             clearPointerNormalizationCalls = clearPointerNormalizationCalls + 1;
           },
+          schedulePublicNotify: () {},
+          scheduleSceneRepaint: () {},
+          scheduleOverlayRepaint: () {},
         ),
       );
 
@@ -170,6 +173,81 @@ void main() {
       expect(notifications, greaterThan(0));
     });
 
+    test('schedules repaint callbacks only for real committed changes', () {
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-auto-0',
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(id: 'base', size: const Size(20, 10)),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      var publicNotifyCalls = 0;
+      var sceneRepaintCalls = 0;
+      var overlayRepaintCalls = 0;
+
+      final boundary = SceneControllerMutationBoundary(
+        mutationAccess: SceneStoreControllerCommittedMutationAccess(controller),
+        readSnapshot: () => controller.snapshot,
+        callbacks: SceneControllerMutationBoundaryCallbacks(
+          resolveTimestampMs: (timestampMs) => timestampMs ?? -1,
+          emitAction:
+              (type, nodeIds, timestampMs, {Map<String, Object?>? payload}) {},
+          resolveMoveCommitDelta:
+              ({
+                required SceneSnapshot snapshot,
+                required List<NodeSnapshot> movedNodes,
+                required Offset proposedDelta,
+              }) => proposedDelta,
+          requireFiniteOffset: (value, {required name}) {},
+          clearPointerNormalizationState: () {},
+          schedulePublicNotify: () {
+            publicNotifyCalls += 1;
+          },
+          scheduleSceneRepaint: () {
+            sceneRepaintCalls += 1;
+          },
+          scheduleOverlayRepaint: () {
+            overlayRepaintCalls += 1;
+          },
+        ),
+      );
+
+      boundary.write<void>((_) {});
+      boundary.setBackgroundColor(controller.snapshot.background.color);
+      boundary.setGridEnabled(controller.snapshot.background.grid.isEnabled);
+      boundary.setGridCellSize(controller.snapshot.background.grid.cellSize);
+      boundary.setSelection(const <NodeId>{});
+      boundary.clearSelection();
+      boundary.toggleSelection('missing');
+
+      expect(publicNotifyCalls, 0);
+      expect(sceneRepaintCalls, 0);
+      expect(overlayRepaintCalls, 0);
+
+      boundary.write<void>((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'base'});
+      });
+      expect(publicNotifyCalls, 1);
+      expect(sceneRepaintCalls, 1);
+      expect(overlayRepaintCalls, 1);
+
+      publicNotifyCalls = 0;
+      sceneRepaintCalls = 0;
+      overlayRepaintCalls = 0;
+
+      boundary.clearSelection();
+      expect(publicNotifyCalls, 1);
+      expect(sceneRepaintCalls, 1);
+      expect(overlayRepaintCalls, 0);
+    });
+
     test('emits clear action for structural clear without removed nodes', () {
       final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
@@ -218,6 +296,9 @@ void main() {
               }) => proposedDelta,
           requireFiniteOffset: (value, {required name}) {},
           clearPointerNormalizationState: () {},
+          schedulePublicNotify: () {},
+          scheduleSceneRepaint: () {},
+          scheduleOverlayRepaint: () {},
         ),
       );
 
@@ -303,6 +384,9 @@ void main() {
             }
           },
           clearPointerNormalizationState: () {},
+          schedulePublicNotify: () {},
+          scheduleSceneRepaint: () {},
+          scheduleOverlayRepaint: () {},
         ),
       );
 

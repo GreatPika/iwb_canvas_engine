@@ -52,7 +52,7 @@ class InteractiveMoveSession {
     if (!_gestureState.setSelectionRect(value)) {
       return;
     }
-    callbacks.onStateChanged();
+    callbacks.onOverlayStateChanged();
   }
 
   void resetGestureState() {
@@ -61,11 +61,11 @@ class InteractiveMoveSession {
     _previewState.clear();
   }
 
-  bool interruptGesture() {
+  ({bool scene, bool overlay}) interruptGesture() {
     return _restoreAndClearGestureState();
   }
 
-  bool detachOwningSession() {
+  ({bool scene, bool overlay}) detachOwningSession() {
     return _restoreAndClearGestureState();
   }
 
@@ -76,17 +76,38 @@ class InteractiveMoveSession {
     Offset scenePoint, {
     required double dragStartSlop,
   }) {
-    final shouldNotify = switch (sample.phase) {
-      PointerPhase.down => _moveHandleDown(scenePoint),
-      PointerPhase.move => _moveHandleMove(
-        scenePoint,
-        dragStartSlop: dragStartSlop,
-      ),
-      PointerPhase.up => _moveHandleUp(sample),
-      PointerPhase.cancel => _moveHandleCancel(),
-    };
-    if (shouldNotify) {
-      callbacks.onStateChanged();
+    switch (sample.phase) {
+      case PointerPhase.down:
+        if (_moveHandleDown(scenePoint)) {
+          callbacks.onSceneStateChanged();
+        }
+      case PointerPhase.move:
+        final change = _moveHandleMove(
+          scenePoint,
+          dragStartSlop: dragStartSlop,
+        );
+        if (change.scene) {
+          callbacks.onSceneStateChanged();
+        }
+        if (change.overlay) {
+          callbacks.onOverlayStateChanged();
+        }
+      case PointerPhase.up:
+        final change = _moveHandleUp(sample);
+        if (change.scene) {
+          callbacks.onSceneStateChanged();
+        }
+        if (change.overlay) {
+          callbacks.onOverlayStateChanged();
+        }
+      case PointerPhase.cancel:
+        final change = _moveHandleCancel();
+        if (change.scene) {
+          callbacks.onSceneStateChanged();
+        }
+        if (change.overlay) {
+          callbacks.onOverlayStateChanged();
+        }
     }
   }
 
@@ -98,7 +119,8 @@ class InteractiveMoveSession {
       _gestureState
         ..setTarget(InteractiveMoveDragTarget.marquee)
         ..setPendingClearSelection(true);
-      return true;
+      callbacks.onPublicStateChanged();
+      return false;
     }
 
     _selectionCoordinator.selectHitNodeIfNeeded(hit.id);
@@ -112,10 +134,13 @@ class InteractiveMoveSession {
     return false;
   }
 
-  bool _moveHandleMove(Offset scenePoint, {required double dragStartSlop}) {
+  ({bool scene, bool overlay}) _moveHandleMove(
+    Offset scenePoint, {
+    required double dragStartSlop,
+  }) {
     final moveLastScene = _gestureState.lastScene;
     if (moveLastScene == null) {
-      return false;
+      return (scene: false, overlay: false);
     }
 
     final didStartDrag = _gestureState.tryStartDrag(
@@ -123,7 +148,7 @@ class InteractiveMoveSession {
       dragStartSlop: dragStartSlop,
     );
     if (!didStartDrag) {
-      return false;
+      return (scene: false, overlay: false);
     }
 
     if (_gestureState.target == InteractiveMoveDragTarget.marquee &&
@@ -133,26 +158,29 @@ class InteractiveMoveSession {
     }
 
     return switch (_gestureState.target) {
-      InteractiveMoveDragTarget.move => _advanceMovePreview(
-        scenePoint,
-        moveLastScene,
+      InteractiveMoveDragTarget.move => (
+        scene: _advanceMovePreview(scenePoint, moveLastScene),
+        overlay: false,
       ),
-      InteractiveMoveDragTarget.marquee => _updateSelectionRect(scenePoint),
-      InteractiveMoveDragTarget.none => false,
+      InteractiveMoveDragTarget.marquee => (
+        scene: false,
+        overlay: _updateSelectionRect(scenePoint),
+      ),
+      InteractiveMoveDragTarget.none => (scene: false, overlay: false),
     };
   }
 
-  bool _moveHandleUp(PointerSample sample) {
-    var shouldNotify = false;
+  ({bool scene, bool overlay}) _moveHandleUp(PointerSample sample) {
+    var change = (scene: false, overlay: false);
     try {
       _commitMoveGesture(sample);
     } finally {
-      shouldNotify = _resetGestureStateForTerminal();
+      change = _resetGestureStateForTerminal();
     }
-    return shouldNotify;
+    return change;
   }
 
-  bool _moveHandleCancel() {
+  ({bool scene, bool overlay}) _moveHandleCancel() {
     return _restoreAndClearGestureState();
   }
 
@@ -187,14 +215,16 @@ class InteractiveMoveSession {
     return _gestureState.setSelectionRect(value);
   }
 
-  bool _resetGestureStateForTerminal() {
-    final didChange =
-        _gestureState.selectionRect != null || _previewState.isActive;
+  ({bool scene, bool overlay}) _resetGestureStateForTerminal() {
+    final didChange = (
+      scene: _previewState.isActive,
+      overlay: _gestureState.selectionRect != null,
+    );
     resetGestureState();
     return didChange;
   }
 
-  bool _restoreAndClearGestureState() {
+  ({bool scene, bool overlay}) _restoreAndClearGestureState() {
     _commitCoordinator.commitCancelRestore();
     return _resetGestureStateForTerminal();
   }

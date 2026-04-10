@@ -20,6 +20,9 @@ final class SceneControllerMutationBoundaryCallbacks {
     required this.resolveMoveCommitDelta,
     required this.requireFiniteOffset,
     required this.clearPointerNormalizationState,
+    required this.schedulePublicNotify,
+    required this.scheduleSceneRepaint,
+    required this.scheduleOverlayRepaint,
   });
 
   final int Function(int? timestampMs) resolveTimestampMs;
@@ -38,6 +41,9 @@ final class SceneControllerMutationBoundaryCallbacks {
   resolveMoveCommitDelta;
   final void Function(Offset value, {required String name}) requireFiniteOffset;
   final VoidCallback clearPointerNormalizationState;
+  final VoidCallback schedulePublicNotify;
+  final VoidCallback scheduleSceneRepaint;
+  final VoidCallback scheduleOverlayRepaint;
 }
 
 final class SceneControllerMutationBoundary {
@@ -52,23 +58,43 @@ final class SceneControllerMutationBoundary {
   final SceneControllerMutationBoundaryCallbacks callbacks;
 
   T write<T>(T Function(SceneWriteTxn writer) fn) {
-    return mutationAccess.write(fn);
+    final result = mutationAccess.writeExact(fn);
+    if (!result.didChangeRenderState) {
+      return result.value;
+    }
+    // Opaque writes may affect scene, overlay, or both. Invalidate all
+    // controller-facing channels because the public adapter cannot derive the
+    // touched domain after the transaction closes.
+    callbacks.schedulePublicNotify();
+    callbacks.scheduleSceneRepaint();
+    callbacks.scheduleOverlayRepaint();
+    return result.value;
   }
 
   NodeId addNode(NodeSpec node, {LayerId? layerId, int? insertIndex}) {
-    return mutationAccess.addNode(
+    final nodeId = mutationAccess.addNode(
       node,
       layerId: layerId,
       insertIndex: insertIndex,
     );
+    _scheduleSceneCommit();
+    return nodeId;
   }
 
   bool ensureLayer(LayerId layerId, {int? index}) {
-    return mutationAccess.ensureLayer(layerId, index: index);
+    final changed = mutationAccess.ensureLayer(layerId, index: index);
+    if (changed) {
+      _scheduleSceneCommit();
+    }
+    return changed;
   }
 
   bool patchNode(NodePatch patch) {
-    return mutationAccess.patchNode(patch);
+    final changed = mutationAccess.patchNode(patch);
+    if (changed) {
+      _scheduleSceneCommit();
+    }
+    return changed;
   }
 
   bool removeNode(NodeId id, {int? timestampMs}) {
@@ -76,6 +102,7 @@ final class SceneControllerMutationBoundary {
     if (!deleted) {
       return false;
     }
+    _scheduleSceneCommit();
     callbacks.emitAction(ActionType.delete, <NodeId>[
       id,
     ], callbacks.resolveTimestampMs(timestampMs));
@@ -83,11 +110,17 @@ final class SceneControllerMutationBoundary {
   }
 
   void setBackgroundColor(Color value) {
-    mutationAccess.setBackgroundColor(value);
+    if (!mutationAccess.setBackgroundColor(value)) {
+      return;
+    }
+    _scheduleSceneCommit();
   }
 
   void setGridEnabled(bool value) {
-    mutationAccess.setGridEnabled(value);
+    if (!mutationAccess.setGridEnabled(value)) {
+      return;
+    }
+    _scheduleSceneCommit();
   }
 
   void setGridCellSize(double value) {
@@ -96,7 +129,10 @@ final class SceneControllerMutationBoundary {
       name: 'cellSize',
       isEnabled: readSnapshot().background.grid.isEnabled,
     );
-    mutationAccess.setGridCellSize(value);
+    if (!mutationAccess.setGridCellSize(value)) {
+      return;
+    }
+    _scheduleSceneCommit();
   }
 
   void validateCameraOffset(Offset value) {
@@ -108,7 +144,10 @@ final class SceneControllerMutationBoundary {
   }
 
   void setCameraOffset(Offset value) {
-    mutationAccess.setCameraOffset(value);
+    if (!mutationAccess.setCameraOffset(value)) {
+      return;
+    }
+    _scheduleSceneAndOverlayCommit();
   }
 
   void clearScene({int? timestampMs}) {
@@ -116,6 +155,7 @@ final class SceneControllerMutationBoundary {
     if (!clearResult.didStructuralClear) {
       return;
     }
+    _scheduleSceneCommit();
 
     callbacks.emitAction(
       ActionType.clear,
@@ -131,26 +171,41 @@ final class SceneControllerMutationBoundary {
   void replaceScene(PreparedSceneReplacement replacement) {
     mutationAccess.writePreparedSceneReplacement(replacement);
     callbacks.clearPointerNormalizationState();
+    _scheduleSceneAndOverlayCommit();
   }
 
   void notifySceneChanged() {
     mutationAccess.requestRepaint();
+    _scheduleSceneCommit();
   }
 
   void setSelection(Iterable<NodeId> nodeIds) {
-    mutationAccess.replaceSelection(nodeIds);
+    if (!mutationAccess.replaceSelection(nodeIds)) {
+      return;
+    }
+    _scheduleSceneCommit();
   }
 
   void toggleSelection(NodeId nodeId) {
-    mutationAccess.toggleSelection(nodeId);
+    if (!mutationAccess.toggleSelection(nodeId)) {
+      return;
+    }
+    _scheduleSceneCommit();
   }
 
   void clearSelection() {
-    mutationAccess.clearSelection();
+    if (!mutationAccess.clearSelection()) {
+      return;
+    }
+    _scheduleSceneCommit();
   }
 
   void selectAll({bool onlySelectable = true}) {
-    mutationAccess.selectAll(onlySelectable: onlySelectable);
+    final result = mutationAccess.selectAll(onlySelectable: onlySelectable);
+    if (!result.changed) {
+      return;
+    }
+    _scheduleSceneCommit();
   }
 
   void rotateSelection({required bool clockwise, int? timestampMs}) {
@@ -229,6 +284,7 @@ final class SceneControllerMutationBoundary {
     if (removedCount <= 0) {
       return;
     }
+    _scheduleSceneCommit();
 
     callbacks.emitAction(
       ActionType.delete,
@@ -238,7 +294,7 @@ final class SceneControllerMutationBoundary {
   }
 
   MoveCommitSelectionResult commitMoveSelection(Offset proposedDelta) {
-    return mutationAccess.write<MoveCommitSelectionResult>((writer) {
+    final result = mutationAccess.write<MoveCommitSelectionResult>((writer) {
       final snapshot = writer.snapshot;
       final movedNodes = interaction_eligibility_policy
           .selectedCommitMovableNodesInSnapshotOrder(
@@ -275,6 +331,10 @@ final class SceneControllerMutationBoundary {
 
       return (appliedDelta: resolvedDelta, movedIds: movedIds);
     });
+    if (result.appliedDelta != Offset.zero && result.movedIds.isNotEmpty) {
+      _scheduleSceneCommit();
+    }
+    return result;
   }
 
   NodeId commitDrawStroke({
@@ -283,12 +343,14 @@ final class SceneControllerMutationBoundary {
     required Color color,
     required double opacity,
   }) {
-    return mutationAccess.commitDrawStroke(
+    final nodeId = mutationAccess.commitDrawStroke(
       points: points,
       thickness: thickness,
       color: color,
       opacity: opacity,
     );
+    _scheduleSceneCommit();
+    return nodeId;
   }
 
   NodeId commitDrawLineFromWorldSegment({
@@ -298,17 +360,23 @@ final class SceneControllerMutationBoundary {
     required Color color,
     required double opacity,
   }) {
-    return mutationAccess.commitDrawLineFromWorldSegment(
+    final nodeId = mutationAccess.commitDrawLineFromWorldSegment(
       start: start,
       end: end,
       thickness: thickness,
       color: color,
       opacity: opacity,
     );
+    _scheduleSceneCommit();
+    return nodeId;
   }
 
   int commitEraseNodes(Iterable<NodeId> ids) {
-    return mutationAccess.commitEraseNodes(ids);
+    final removedCount = mutationAccess.commitEraseNodes(ids);
+    if (removedCount > 0) {
+      _scheduleSceneCommit();
+    }
+    return removedCount;
   }
 
   void _commitTransformSelection(
@@ -321,6 +389,7 @@ final class SceneControllerMutationBoundary {
     if (affected <= 0) {
       return;
     }
+    _scheduleSceneCommit();
 
     callbacks.emitAction(
       ActionType.transform,
@@ -328,5 +397,16 @@ final class SceneControllerMutationBoundary {
       callbacks.resolveTimestampMs(timestampMs),
       payload: <String, Object?>{'delta': delta.toJsonMap()},
     );
+  }
+
+  void _scheduleSceneCommit() {
+    callbacks.schedulePublicNotify();
+    callbacks.scheduleSceneRepaint();
+  }
+
+  void _scheduleSceneAndOverlayCommit() {
+    callbacks.schedulePublicNotify();
+    callbacks.scheduleSceneRepaint();
+    callbacks.scheduleOverlayRepaint();
   }
 }

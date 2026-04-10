@@ -9,7 +9,9 @@ import 'interactive_move_callbacks.dart';
 
 class InteractiveRuntimeCallbacks {
   const InteractiveRuntimeCallbacks({
-    required this.scheduleNotify,
+    required this.schedulePublicNotify,
+    required this.scheduleSceneNotify,
+    required this.scheduleOverlayNotify,
     required this.readSnapshot,
     required this.readSelectedNodeIds,
     required this.readMode,
@@ -25,7 +27,9 @@ class InteractiveRuntimeCallbacks {
     required this.commitEraseNodes,
   });
 
-  final VoidCallback scheduleNotify;
+  final VoidCallback schedulePublicNotify;
+  final VoidCallback scheduleSceneNotify;
+  final VoidCallback scheduleOverlayNotify;
   final SceneSnapshot Function() readSnapshot;
   final Set<NodeId> Function() readSelectedNodeIds;
   final CanvasMode Function() readMode;

@@ -610,7 +610,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-VIEW-RENDER-READ-STATE-BOUNDARY',
     scope: 'engine-structure',
     title:
-        'interactive view/render shell files consume one assembled SceneViewRuntime boundary, keep overlay ownership outside the render surface, and do not reopen concrete-controller seams through view/**',
+        'interactive view/render shell files consume one assembled SceneViewRuntime boundary, keep overlay ownership outside the render surface, split scene and overlay repaint channels inside one controller-owned render-state family, and do not reopen concrete-controller seams through view/**',
     primaryProof: PrimaryProof(
       path:
           'test/interactive/core/scene_controller_architecture_boundary_test.dart',

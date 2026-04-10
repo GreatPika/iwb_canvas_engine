@@ -33,6 +33,9 @@ void main() {
       addTearDown(controller.dispose);
 
       final access = SceneStoreControllerCommittedMutationAccess(controller);
+      final noOpWrite = access.writeExact<void>((_) {});
+      expect(noOpWrite.didChangeRenderState, isFalse);
+
       expect(access.ensureLayer('layer-auto-1', index: 0), isTrue);
       expect(
         access.addNode(
@@ -49,27 +52,58 @@ void main() {
       );
       expect(access.removeNode('c'), isTrue);
 
-      access.setBackgroundColor(const Color(0xFF00FF00));
-      access.setGridEnabled(true);
-      access.setGridCellSize(16);
-      access.setCameraOffset(const Offset(5, 6));
+      expect(access.setBackgroundColor(const Color(0xFF00FF00)), isTrue);
+      expect(access.setGridEnabled(true), isTrue);
+      expect(access.setGridCellSize(16), isTrue);
+      expect(access.setCameraOffset(const Offset(5, 6)), isTrue);
       expect(controller.snapshot.background.color, const Color(0xFF00FF00));
       expect(controller.snapshot.background.grid.isEnabled, isTrue);
       expect(controller.snapshot.background.grid.cellSize, 16);
       expect(controller.snapshot.camera.offset, const Offset(5, 6));
+      expect(
+        access.setBackgroundColor(controller.snapshot.background.color),
+        isFalse,
+      );
+      expect(
+        access.setGridEnabled(controller.snapshot.background.grid.isEnabled),
+        isFalse,
+      );
+      expect(
+        access.setGridCellSize(controller.snapshot.background.grid.cellSize),
+        isFalse,
+      );
+      expect(
+        access.setCameraOffset(controller.snapshot.camera.offset),
+        isFalse,
+      );
 
       access.write<void>((writer) {
         writer.writeSelectionReplace(const <NodeId>{'a'});
       });
       expect(access.selectedNodeIds, const <NodeId>{'a'});
+      final committedSelectionWrite = access.writeExact<void>((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'b'});
+      });
+      expect(committedSelectionWrite.didChangeRenderState, isTrue);
+      expect(access.selectedNodeIds, const <NodeId>{'b'});
 
-      access.replaceSelection(const <NodeId>{'b'});
-      access.toggleSelection('a');
+      expect(access.replaceSelection(const <NodeId>{'b'}), isFalse);
+      expect(access.toggleSelection('a'), isTrue);
       expect(access.selectedNodeIds, const <NodeId>{'a', 'b'});
-      access.clearSelection();
+      expect(access.clearSelection(), isTrue);
       expect(access.selectedNodeIds, isEmpty);
-      expect(access.selectAll(onlySelectable: false), 2);
+      final selectAllResult = access.selectAll(onlySelectable: false);
+      expect(selectAllResult.selectedCount, 2);
+      expect(selectAllResult.changed, isTrue);
       expect(access.selectedNodeIds, const <NodeId>{'a', 'b'});
+      expect(access.clearSelection(), isTrue);
+      expect(access.clearSelection(), isFalse);
+      final selectAllNoOp = access.selectAll(onlySelectable: false);
+      expect(selectAllNoOp.selectedCount, 2);
+      expect(selectAllNoOp.changed, isTrue);
+      final selectAllStable = access.selectAll(onlySelectable: false);
+      expect(selectAllStable.selectedCount, 0);
+      expect(selectAllStable.changed, isFalse);
 
       final contentNodes = controller.snapshot.layers.last.nodes;
       final center = access.centerWorldForNodeSnapshots(contentNodes);

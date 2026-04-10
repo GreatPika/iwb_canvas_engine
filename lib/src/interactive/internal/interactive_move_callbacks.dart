@@ -12,7 +12,9 @@ typedef MoveCommitSelectionResult = ({
 
 class InteractiveMoveSessionCallbacks {
   const InteractiveMoveSessionCallbacks({
-    required this.onStateChanged,
+    required this.onPublicStateChanged,
+    required this.onSceneStateChanged,
+    required this.onOverlayStateChanged,
     required this.readSnapshot,
     required this.readSelectedNodeIds,
     required this.querySpatialCandidates,
@@ -23,7 +25,9 @@ class InteractiveMoveSessionCallbacks {
     required this.emitAction,
   });
 
-  final VoidCallback onStateChanged;
+  final VoidCallback onPublicStateChanged;
+  final VoidCallback onSceneStateChanged;
+  final VoidCallback onOverlayStateChanged;
   final SceneSnapshot Function() readSnapshot;
   final Set<NodeId> Function() readSelectedNodeIds;
   final List<SceneSpatialCandidate> Function(Rect bounds)

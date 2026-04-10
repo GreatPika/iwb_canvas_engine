@@ -25,14 +25,14 @@ final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
     required int Function() readControllerEpoch,
     required Offset Function(NodeId nodeId) Function() readPreviewDeltaResolver,
     required SceneControllerInteraction Function() readInteraction,
-    required SceneControllerInteractionRuntime interactionRuntime,
+    required SceneControllerInteractionRuntime Function()
+    readInteractionRuntime,
   }) : _ownerListenable = ownerListenable,
        _ensurePublicSideEffectAllowed = ensurePublicSideEffectAllowed,
        _readInteraction = readInteraction,
-       _interactionRuntime = interactionRuntime,
+       _readInteractionRuntime = readInteractionRuntime,
        _renderState = SceneControllerSceneViewRenderState(
          storeController: storeController,
-         ownerListenable: ownerListenable,
          readSnapshot: readSnapshot,
          readSelectedNodeIds: readSelectedNodeIds,
          readControllerEpoch: readControllerEpoch,
@@ -44,11 +44,26 @@ final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
   final void Function(String operation, {bool allowAfterDispose})
   _ensurePublicSideEffectAllowed;
   final SceneControllerInteraction Function() _readInteraction;
-  final SceneControllerInteractionRuntime _interactionRuntime;
+  final SceneControllerInteractionRuntime Function() _readInteractionRuntime;
   final SceneControllerSceneViewRenderState _renderState;
+
+  SceneControllerInteractionRuntime get _interactionRuntime =>
+      _readInteractionRuntime();
 
   @override
   SceneViewRenderState get renderState => _renderState;
+
+  void scheduleSceneRepaint() {
+    _renderState.scheduleSceneRepaint();
+  }
+
+  void scheduleOverlayRepaint() {
+    _renderState.scheduleOverlayRepaint();
+  }
+
+  void dispose() {
+    _renderState.dispose();
+  }
 
   @override
   SceneViewPointerSession createPointerSession({
@@ -77,14 +92,12 @@ final class SceneControllerSceneViewRenderState
     implements SceneViewRenderState {
   SceneControllerSceneViewRenderState({
     required SceneStoreController storeController,
-    required Listenable ownerListenable,
     required SceneSnapshot Function() readSnapshot,
     required Set<NodeId> Function() readSelectedNodeIds,
     required int Function() readControllerEpoch,
     required Offset Function(NodeId nodeId) Function() readPreviewDeltaResolver,
     required SceneControllerInteraction Function() readInteraction,
   }) : _storeController = storeController,
-       _ownerListenable = ownerListenable,
        _readSnapshot = readSnapshot,
        _readSelectedNodeIds = readSelectedNodeIds,
        _readControllerEpoch = readControllerEpoch,
@@ -92,7 +105,10 @@ final class SceneControllerSceneViewRenderState
        _readInteraction = readInteraction;
 
   final SceneStoreController _storeController;
-  final Listenable _ownerListenable;
+  final SceneControllerSceneRepaintChannel _sceneRepaintChannel =
+      SceneControllerSceneRepaintChannel();
+  final SceneControllerOverlayRepaintChannel _overlayRepaintChannel =
+      SceneControllerOverlayRepaintChannel();
   final SceneSnapshot Function() _readSnapshot;
   final Set<NodeId> Function() _readSelectedNodeIds;
   final int Function() _readControllerEpoch;
@@ -103,13 +119,16 @@ final class SceneControllerSceneViewRenderState
 
   @override
   void addListener(VoidCallback listener) {
-    _ownerListenable.addListener(listener);
+    _sceneRepaintChannel.addListener(listener);
   }
 
   @override
   void removeListener(VoidCallback listener) {
-    _ownerListenable.removeListener(listener);
+    _sceneRepaintChannel.removeListener(listener);
   }
+
+  @override
+  Listenable get overlayRepaintListenable => _overlayRepaintChannel;
 
   @override
   SceneSnapshot get snapshot => _readSnapshot();
@@ -276,6 +295,35 @@ final class SceneControllerSceneViewRenderState
 
   @override
   Color get activeLinePreviewColor => _interaction.activeLinePreviewColor;
+
+  void scheduleSceneRepaint() {
+    _sceneRepaintChannel.scheduleNotify();
+  }
+
+  void scheduleOverlayRepaint() {
+    _overlayRepaintChannel.scheduleNotify();
+  }
+
+  void dispose() {
+    _sceneRepaintChannel.dispose();
+    _overlayRepaintChannel.dispose();
+  }
+}
+
+final class SceneControllerSceneRepaintChannel extends ChangeNotifier {
+  SceneControllerSceneRepaintChannel();
+
+  void scheduleNotify() {
+    notifyListeners();
+  }
+}
+
+final class SceneControllerOverlayRepaintChannel extends ChangeNotifier {
+  SceneControllerOverlayRepaintChannel();
+
+  void scheduleNotify() {
+    notifyListeners();
+  }
 }
 
 NodeSnapshot? _resolveSnapshotContentNode({

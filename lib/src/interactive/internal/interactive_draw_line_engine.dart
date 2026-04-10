@@ -40,12 +40,12 @@ final class _PendingLineState {
 
 class InteractiveDrawLineEngineCallbacks {
   const InteractiveDrawLineEngineCallbacks({
-    required this.onStateChanged,
+    required this.onOverlayStateChanged,
     required this.emitAction,
     required this.commitDrawLineFromWorldSegment,
   });
 
-  final VoidCallback onStateChanged;
+  final VoidCallback onOverlayStateChanged;
   final void Function(
     ActionType type,
     List<NodeId> nodeIds,
@@ -133,7 +133,6 @@ class InteractiveDrawLineEngine {
     final didMove = true;
     clearPendingLineOwnedBy(sessionToken);
     _setActiveLinePreview(downScene, scenePoint);
-    callbacks.onStateChanged();
     return didMove;
   }
 
@@ -226,7 +225,7 @@ class InteractiveDrawLineEngine {
     }
     _activeLinePreviewStart = start;
     _activeLinePreviewEnd = end;
-    callbacks.onStateChanged();
+    callbacks.onOverlayStateChanged();
   }
 
   _PendingLineState _createPendingLine({
@@ -257,6 +256,6 @@ class InteractiveDrawLineEngine {
     }
     _pendingLine?.dispose();
     _pendingLine = pendingLine;
-    callbacks.onStateChanged();
+    callbacks.onOverlayStateChanged();
   }
 }

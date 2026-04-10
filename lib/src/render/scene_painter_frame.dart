@@ -40,7 +40,6 @@ class ScenePainterFrameOwner {
         renderState.enumeratePaintCandidates(viewRect),
       ),
       selectedIds: renderState.selectedNodeIds,
-      selectionRect: renderState.selectionRect,
       selectionStyle: ScenePainterSelectionStyle(
         color: selectionColor,
         haloWidth: clampNonNegativeFinite(selectionStrokeWidth),

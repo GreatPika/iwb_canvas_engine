@@ -370,8 +370,10 @@ Ownership decisions for the target state:
   owner in the internal render-surface boundary; `SceneViewInteractive` remains
   the public interactive shell around that boundary, keeps pointer host and
   overlay ownership outside it, and routes both the main painter and overlay
-  through the same controller-owned internal render-state plus one repaint
-  source.
+  through one controller-owned internal render-state family with split repaint
+  channels. `SceneViewRenderState` remains the scene repaint owner for the main
+  painter, `overlayRepaintListenable` owns overlay repaints, and marquee
+  rendering stays outside the base scene painter.
 - `ScenePainter` keeps frame ownership and selection ownership separate:
   the frame owner first consumes controller-owned ordered viewport paint
   candidates, then resolves preview delta plus geometry only for those

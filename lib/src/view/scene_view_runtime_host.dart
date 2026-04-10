@@ -144,6 +144,8 @@ class _SceneViewRuntimeHostState extends State<SceneViewRuntimeHost> {
       child: CustomPaint(
         foregroundPainter: SceneViewInteractiveOverlayPainter(
           renderState: renderState,
+          selectionColor: widget.selectionColor,
+          selectionStrokeWidth: widget.selectionStrokeWidth,
         ),
         child: SceneViewRenderSurface(
           key: _renderSurfaceKey,

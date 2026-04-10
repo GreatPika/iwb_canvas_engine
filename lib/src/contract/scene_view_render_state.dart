@@ -1,11 +1,14 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
+
 import 'scene_render_state.dart';
 import 'snapshot.dart';
 
 /// Internal read-side contract shared by the main painter and overlay painter.
 abstract interface class SceneViewRenderState implements SceneRenderState {
   int get controllerEpoch;
+  Listenable get overlayRepaintListenable;
   Rect? get selectionRect;
   Offset get cameraOffset;
   Offset Function(NodeId nodeId) get previewDeltaResolver;

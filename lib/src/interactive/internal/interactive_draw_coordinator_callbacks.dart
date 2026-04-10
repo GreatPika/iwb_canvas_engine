@@ -7,7 +7,7 @@ import '../../contract/snapshot.dart';
 
 class InteractiveDrawCoordinatorCallbacks {
   const InteractiveDrawCoordinatorCallbacks({
-    required this.onStateChanged,
+    required this.onOverlayStateChanged,
     required this.emitAction,
     required this.commitDrawStroke,
     required this.commitDrawLineFromWorldSegment,
@@ -16,7 +16,7 @@ class InteractiveDrawCoordinatorCallbacks {
     required this.commitEraseNodes,
   });
 
-  final VoidCallback onStateChanged;
+  final VoidCallback onOverlayStateChanged;
   final void Function(
     ActionType type,
     List<NodeId> nodeIds,

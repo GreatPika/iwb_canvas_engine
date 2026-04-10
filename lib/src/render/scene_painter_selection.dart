@@ -34,8 +34,6 @@ class ScenePainterSelectionRenderer {
         _drawSelectionForNode(node, context, _support);
       }
     }
-
-    _drawMarqueeSelection(canvas, frame);
   }
 }
 
@@ -75,24 +73,6 @@ class SelectionHaloStyle {
   final Color color;
   final double haloWidth;
   final double baseStrokeWidth;
-}
-
-void _drawMarqueeSelection(Canvas canvas, ScenePainterPaintFrame frame) {
-  final selectionRect = frame.selectionRect;
-  if (selectionRect == null || !scenePainterIsFiniteRect(selectionRect)) {
-    return;
-  }
-  final normalized = scenePainterNormalizeRect(selectionRect);
-  final viewRect = normalized.shift(-frame.cameraOffset);
-  final fillPaint = Paint()
-    ..style = PaintingStyle.fill
-    ..color = scenePainterApplyOpacity(frame.selectionStyle.color, 0.15);
-  final strokePaint = Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = frame.selectionStyle.haloWidth
-    ..color = frame.selectionStyle.color;
-  canvas.drawRect(viewRect, fillPaint);
-  canvas.drawRect(viewRect, strokePaint);
 }
 
 void _drawSelectionForNode(

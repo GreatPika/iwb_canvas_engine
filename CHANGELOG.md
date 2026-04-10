@@ -4,6 +4,11 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ## Unreleased
 
+- `SceneView` render-state now uses split repaint channels: the main painter
+  listens to scene repaint through `SceneViewRenderState`, the interactive
+  overlay listens to `overlayRepaintListenable`, and marquee selection
+  rectangles moved out of `ScenePainter` into the overlay painter so
+  overlay-only interactive state no longer repaints the base scene.
 - Render read-side text layout now uses one canonical resolved payload per
   text candidate. `SceneTextLayoutCache` stores resolved text layout instead of
   bare `TextPainter` instances, `ScenePainterFrameOwner` resolves that payload

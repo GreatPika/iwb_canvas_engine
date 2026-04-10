@@ -93,3 +93,5 @@ class InteractiveNotifyScheduler {
     _notifyScheduled = false;
   }
 }
+
+typedef InteractiveRepaintChange = ({bool scene, bool overlay});

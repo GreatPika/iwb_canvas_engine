@@ -18,14 +18,14 @@ class InteractiveDrawCoordinator {
   InteractiveDrawCoordinator({required this.callbacks}) {
     _strokeEngine = InteractiveDrawStrokeEngine(
       callbacks: InteractiveDrawStrokeEngineCallbacks(
-        onStateChanged: callbacks.onStateChanged,
+        onOverlayStateChanged: callbacks.onOverlayStateChanged,
         emitAction: callbacks.emitAction,
         commitDrawStroke: callbacks.commitDrawStroke,
       ),
     );
     _lineEngine = InteractiveDrawLineEngine(
       callbacks: InteractiveDrawLineEngineCallbacks(
-        onStateChanged: callbacks.onStateChanged,
+        onOverlayStateChanged: callbacks.onOverlayStateChanged,
         emitAction: callbacks.emitAction,
         commitDrawLineFromWorldSegment:
             callbacks.commitDrawLineFromWorldSegment,
@@ -33,7 +33,7 @@ class InteractiveDrawCoordinator {
     );
     _eraserEngine = InteractiveDrawEraserEngine(
       callbacks: InteractiveDrawEraserEngineCallbacks(
-        onStateChanged: callbacks.onStateChanged,
+        onOverlayStateChanged: callbacks.onOverlayStateChanged,
         querySpatialCandidates: callbacks.querySpatialCandidates,
         resolveSpatialCandidateNode: callbacks.resolveSpatialCandidateNode,
         commitEraseNodes: callbacks.commitEraseNodes,
@@ -119,7 +119,7 @@ class InteractiveDrawCoordinator {
     final sessionToken = _gestureSession.sessionToken;
     resetGestureState();
     _lineEngine.clearPendingLineOwnedBy(sessionToken);
-    callbacks.onStateChanged();
+    callbacks.onOverlayStateChanged();
   }
 
   void dispose() {

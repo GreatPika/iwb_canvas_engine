@@ -11,12 +11,12 @@ import 'interactive_draw_style.dart';
 
 class InteractiveDrawStrokeEngineCallbacks {
   const InteractiveDrawStrokeEngineCallbacks({
-    required this.onStateChanged,
+    required this.onOverlayStateChanged,
     required this.emitAction,
     required this.commitDrawStroke,
   });
 
-  final VoidCallback onStateChanged;
+  final VoidCallback onOverlayStateChanged;
   final void Function(
     ActionType type,
     List<NodeId> nodeIds,
@@ -58,7 +58,7 @@ class InteractiveDrawStrokeEngine {
 
   void handleMove(Offset scenePoint) {
     if (!_pathBuffer.appendMovePoint(scenePoint)) return;
-    callbacks.onStateChanged();
+    callbacks.onOverlayStateChanged();
   }
 
   void commitOnUp(

@@ -68,13 +68,19 @@ final class SceneControllerCommitRuntime {
   SceneControllerCommitDebugState get debugState => _debugState;
   SpatialIndexCache get spatialIndexCache => _spatialIndexCache;
 
-  T write<T>(T Function(SceneWriteTxn txn) fn) {
+  SceneControllerCommittedWrite<T> writeCommitted<T>(
+    T Function(SceneWriteTxn txn) fn,
+  ) {
     _throwIfDisposed();
     final committedWrite = _write<T>((writer) {
       return fn(SceneWriteTxnPublicAdapter(writer));
     });
     _postCommitLifecycle.dispatch(committedWrite.commitResult);
-    return committedWrite.result;
+    return committedWrite;
+  }
+
+  T write<T>(T Function(SceneWriteTxn txn) fn) {
+    return writeCommitted(fn).result;
   }
 
   void requestRepaint() {
@@ -95,11 +101,17 @@ final class SceneControllerCommitRuntime {
     _isDisposed = true;
   }
 
-  T writeWithSceneWriter<T>(T Function(SceneWriter writer) fn) {
+  SceneControllerCommittedWrite<T> writeWithSceneWriterCommitted<T>(
+    T Function(SceneWriter writer) fn,
+  ) {
     _throwIfDisposed();
     final committedWrite = _write(fn);
     _postCommitLifecycle.dispatch(committedWrite.commitResult);
-    return committedWrite.result;
+    return committedWrite;
+  }
+
+  T writeWithSceneWriter<T>(T Function(SceneWriter writer) fn) {
+    return writeWithSceneWriterCommitted(fn).result;
   }
 
   SceneControllerCommittedWrite<T> _write<T>(

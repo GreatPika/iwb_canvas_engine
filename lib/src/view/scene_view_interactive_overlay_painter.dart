@@ -5,21 +5,69 @@ import '../core/geometry.dart';
 import '../core/numeric_clamp.dart';
 
 class SceneViewInteractiveOverlayPainter extends CustomPainter {
-  const SceneViewInteractiveOverlayPainter({required this.renderState})
-    : super(repaint: renderState);
+  SceneViewInteractiveOverlayPainter({
+    required this.renderState,
+    required this.selectionColor,
+    required this.selectionStrokeWidth,
+  }) : super(repaint: renderState.overlayRepaintListenable);
 
   final SceneViewRenderState renderState;
+  final Color selectionColor;
+  final double selectionStrokeWidth;
 
   @override
   void paint(Canvas canvas, Size size) {
     final cameraOffset = sanitizeFiniteOffset(renderState.cameraOffset);
+    _paintMarqueeSelection(canvas, cameraOffset);
     _paintStrokePreview(canvas, cameraOffset);
     _paintLinePreview(canvas, cameraOffset);
   }
 
   @override
   bool shouldRepaint(covariant SceneViewInteractiveOverlayPainter oldDelegate) {
-    return oldDelegate.renderState != renderState;
+    return oldDelegate.renderState != renderState ||
+        oldDelegate.selectionColor != selectionColor ||
+        oldDelegate.selectionStrokeWidth != selectionStrokeWidth;
+  }
+
+  void _paintMarqueeSelection(Canvas canvas, Offset cameraOffset) {
+    final selectionRect = renderState.selectionRect;
+    if (selectionRect == null ||
+        !selectionRect.left.isFinite ||
+        !selectionRect.top.isFinite ||
+        !selectionRect.right.isFinite ||
+        !selectionRect.bottom.isFinite) {
+      return;
+    }
+
+    final normalized = Rect.fromLTRB(
+      selectionRect.left < selectionRect.right
+          ? selectionRect.left
+          : selectionRect.right,
+      selectionRect.top < selectionRect.bottom
+          ? selectionRect.top
+          : selectionRect.bottom,
+      selectionRect.left < selectionRect.right
+          ? selectionRect.right
+          : selectionRect.left,
+      selectionRect.top < selectionRect.bottom
+          ? selectionRect.bottom
+          : selectionRect.top,
+    );
+    final viewRect = normalized.shift(-cameraOffset);
+    canvas.drawRect(
+      viewRect,
+      Paint()
+        ..style = PaintingStyle.fill
+        ..color = _applyOpacity(selectionColor, 0.15),
+    );
+    canvas.drawRect(
+      viewRect,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = clampNonNegativeFinite(selectionStrokeWidth)
+        ..color = selectionColor,
+    );
   }
 
   void _paintStrokePreview(Canvas canvas, Offset cameraOffset) {

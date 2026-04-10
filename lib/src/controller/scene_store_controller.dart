@@ -78,8 +78,20 @@ class SceneStoreController extends ChangeNotifier implements SceneRenderState {
     return _commitRuntime.write(fn);
   }
 
+  SceneControllerCommittedWrite<T> writeCommitted<T>(
+    T Function(SceneWriteTxn txn) fn,
+  ) {
+    return _commitRuntime.writeCommitted(fn);
+  }
+
   T writeWithSceneWriter<T>(T Function(SceneWriter writer) fn) {
     return _commitRuntime.writeWithSceneWriter(fn);
+  }
+
+  SceneControllerCommittedWrite<T> writeWithSceneWriterCommitted<T>(
+    T Function(SceneWriter writer) fn,
+  ) {
+    return _commitRuntime.writeWithSceneWriterCommitted(fn);
   }
 
   void requestRepaint() {

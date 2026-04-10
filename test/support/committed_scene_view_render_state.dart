@@ -52,6 +52,9 @@ class CommittedSceneViewRenderState extends ChangeNotifier
       _mirroredController?.controllerEpoch ?? _controllerEpoch;
 
   @override
+  Listenable get overlayRepaintListenable => this;
+
+  @override
   Rect? get selectionRect => _selectionRect;
 
   @override

@@ -223,6 +223,14 @@ void main() {
       viewRuntimeSource,
       contains('final class SceneControllerSceneViewRenderState'),
     );
+    expect(viewRuntimeSource, contains('overlayRepaintListenable'));
+    expect(viewRuntimeSource, contains('scheduleSceneRepaint()'));
+    expect(viewRuntimeSource, contains('scheduleOverlayRepaint()'));
+    expect(viewRuntimeSource, contains('SceneControllerSceneRepaintChannel()'));
+    expect(
+      viewRuntimeSource,
+      contains('SceneControllerOverlayRepaintChannel()'),
+    );
     expect(viewRuntimeSource, contains('SceneControllerPointerSession('));
     expect(
       viewRuntimeSource,
@@ -338,11 +346,11 @@ void main() {
     );
     expect(
       mutationBoundarySource,
-      contains('mutationAccess.replaceSelection(nodeIds);'),
+      contains('if (!mutationAccess.replaceSelection(nodeIds)) {'),
     );
     expect(
       mutationBoundarySource,
-      contains('mutationAccess.clearSelection();'),
+      contains('if (!mutationAccess.clearSelection()) {'),
     );
     expect(
       mutationBoundarySource,
@@ -397,11 +405,17 @@ void main() {
     expect(mutationAccessSource, isNot(contains('draw;')));
     expect(
       mutationAccessSource,
-      contains('void replaceSelection(Iterable<NodeId> nodeIds);'),
+      contains('SceneControllerCommittedMutationWriteResult<T> writeExact<T>('),
     );
     expect(
       mutationAccessSource,
-      contains('return _storeController.commands.writeSelectionSelectAll('),
+      contains('bool replaceSelection(Iterable<NodeId> nodeIds);'),
+    );
+    expect(
+      mutationAccessSource,
+      contains(
+        'return _storeController.commands.writeSelectionSelectAllExactResult(',
+      ),
     );
 
     expect(sceneMutationsSource, contains('mutations.setGridCellSize(value);'));
@@ -755,11 +769,15 @@ void main() {
       contains('widget._renderState.controllerEpoch'),
     );
 
-    expect(overlayPainterSource, contains('super(repaint: renderState)'));
+    expect(
+      overlayPainterSource,
+      contains('super(repaint: renderState.overlayRepaintListenable)'),
+    );
     expect(
       overlayPainterSource,
       contains('sanitizeFiniteOffset(renderState.cameraOffset)'),
     );
+    expect(overlayPainterSource, contains('_paintMarqueeSelection('));
 
     expect(eventSource, contains('class InteractiveEventDispatcher'));
     expect(eventSource, contains('resolveTimestampMs('));

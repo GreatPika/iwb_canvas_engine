@@ -10,10 +10,14 @@ import 'package:iwb_canvas_engine/src/interactive/internal/interactive_move_sess
 
 void main() {
   InteractiveMoveSessionCallbacks buildCallbacks({
-    required VoidCallback onStateChanged,
+    required VoidCallback onPublicStateChanged,
+    required VoidCallback onSceneStateChanged,
+    required VoidCallback onOverlayStateChanged,
   }) {
     return InteractiveMoveSessionCallbacks(
-      onStateChanged: onStateChanged,
+      onPublicStateChanged: onPublicStateChanged,
+      onSceneStateChanged: onSceneStateChanged,
+      onOverlayStateChanged: onOverlayStateChanged,
       readSnapshot: SceneSnapshot.new,
       readSelectedNodeIds: () => const <NodeId>{},
       querySpatialCandidates: (_) => const <SceneSpatialCandidate>[],
@@ -63,7 +67,11 @@ void main() {
       var stateChanges = 0;
       final session = InteractiveMoveSession(
         callbacks: buildCallbacks(
-          onStateChanged: () {
+          onPublicStateChanged: () {},
+          onSceneStateChanged: () {
+            stateChanges += 1;
+          },
+          onOverlayStateChanged: () {
             stateChanges += 1;
           },
         ),

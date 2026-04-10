@@ -641,7 +641,7 @@ void main() {
         final gestureSession = InteractiveDrawGestureSession();
         final lineEngine = InteractiveDrawLineEngine(
           callbacks: InteractiveDrawLineEngineCallbacks(
-            onStateChanged: () {},
+            onOverlayStateChanged: () {},
             emitAction: _ignoreEmitAction,
             commitDrawLineFromWorldSegment:
                 ({
@@ -655,7 +655,7 @@ void main() {
         );
         final strokeEngine = InteractiveDrawStrokeEngine(
           callbacks: InteractiveDrawStrokeEngineCallbacks(
-            onStateChanged: () {},
+            onOverlayStateChanged: () {},
             emitAction: _ignoreEmitAction,
             commitDrawStroke:
                 ({
@@ -668,7 +668,7 @@ void main() {
         );
         final eraserEngine = InteractiveDrawEraserEngine(
           callbacks: InteractiveDrawEraserEngineCallbacks(
-            onStateChanged: () {},
+            onOverlayStateChanged: () {},
             querySpatialCandidates: (_) => const <Never>[],
             resolveSpatialCandidateNode: (_) => null,
             commitEraseNodes: (_) => 0,

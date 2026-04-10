@@ -20,7 +20,6 @@ class ScenePainterPaintFrame {
     required this.viewRect,
     required this.paintCandidates,
     required this.selectedIds,
-    required this.selectionRect,
     required this.selectionStyle,
   });
 
@@ -28,7 +27,6 @@ class ScenePainterPaintFrame {
   final Rect viewRect;
   final List<NodeSnapshot> paintCandidates;
   final Set<NodeId> selectedIds;
-  final Rect? selectionRect;
   final ScenePainterSelectionStyle selectionStyle;
   final List<ScenePainterResolvedNodePaintData> selectedNodes =
       <ScenePainterResolvedNodePaintData>[];
