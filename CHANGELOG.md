@@ -4,6 +4,12 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ## Unreleased
 
+- Scene boundary diagnostics are now aligned across parsed JSON import,
+  typed snapshot import, and public builder entrypoints for palette item
+  limits, stroke point limits, optional image `naturalSize`, and parsed
+  color/enum literals. These failures now keep their stable meaning in
+  `SceneDataException.code` / `path` / `details`, while `message` remains a
+  derived user-facing summary.
 - `SceneControllerInteraction`, `SceneControllerSelection`, and
   `SceneControllerScene` now stay controller-owned public capability contracts
   only. Public callers obtain them from `SceneController`, while direct public

@@ -267,12 +267,16 @@ void _validateInRange(
 Never _snapshotValidationError({
   required Object? value,
   required String field,
-  required String message,
+  String? message,
+  SceneDataDiagnosticDescriptor? diagnostic,
 }) {
+  if (diagnostic != null) {
+    throw diagnostic.toException(path: field, source: value);
+  }
   throw SceneDataException(
     code: SceneDataErrorCode.invalidValue,
     path: field,
-    message: 'Field $field $message',
+    message: message == null ? null : 'Field $field $message',
     source: value,
   );
 }
@@ -280,12 +284,16 @@ Never _snapshotValidationError({
 Never _sceneValidationError({
   required Object? value,
   required String field,
-  required String message,
+  String? message,
+  SceneDataDiagnosticDescriptor? diagnostic,
 }) {
+  if (diagnostic != null) {
+    throw diagnostic.toException(path: field, source: value);
+  }
   throw SceneDataException(
     code: SceneDataErrorCode.invalidValue,
     path: field,
-    message: 'Field $field $message',
+    message: message == null ? null : 'Field $field $message',
     source: value,
   );
 }

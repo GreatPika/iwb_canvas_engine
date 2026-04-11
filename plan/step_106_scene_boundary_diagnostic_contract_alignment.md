@@ -236,7 +236,7 @@ semantics.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Normalize collection-limit diagnostics
+### Slice 1. [x] Normalize collection-limit diagnostics
 
 #### Slice Contract
 Palette item-count failures and stroke point-limit failures keep one diagnostic
@@ -301,7 +301,7 @@ owner per boundary path, and typed snapshot import no longer emits duplicated
 - Diagnostic output showing one-prefix failures for typed palette and stroke
   limit regressions.
 
-### Slice 2. [ ] Componentize optional `naturalSize` diagnostics
+### Slice 2. [x] Componentize optional `naturalSize` diagnostics
 
 #### Slice Contract
 Optional image `naturalSize` failures report the failing child component path
@@ -355,7 +355,7 @@ and stable `details` for wrong-type, non-finite, and range cases.
 - Diagnostic output proving wrong-type and non-finite failures now identify
   the concrete child component path.
 
-### Slice 3. [ ] Publish details-first custom parse diagnostics
+### Slice 3. [x] Publish details-first custom parse diagnostics
 
 #### Slice Contract
 Invalid color and unknown enum-like parsed-map failures expose stable

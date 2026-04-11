@@ -3,7 +3,7 @@ import 'dart:ui';
 import '../contract/scene_contract_limits.dart';
 import '../contract/scene_data_exception.dart';
 import '../contract/snapshot.dart';
-import '../contract/scene_model_invariants.dart';
+import '../core/scene_limits.dart';
 import '../core/scene.dart';
 import 'scene_value_validation_primitives.dart';
 import 'scene_value_validation_support.dart';
@@ -138,11 +138,16 @@ void _sceneValidatePaletteItemCount<T>(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  final limitMessage = scenePaletteItemCountViolationMessage(values.length);
-  if (limitMessage == null) {
+  if (values.length <= kMaxPaletteItems) {
     return;
   }
-  onError(field: field, value: values, message: 'Field $field $limitMessage');
+  onError(
+    field: field,
+    value: values,
+    diagnostic: SceneDataDiagnosticDescriptor.maxItems(
+      maxItems: kMaxPaletteItems,
+    ),
+  );
 }
 
 void sceneValidateGridCellSizeValue({
@@ -168,12 +173,15 @@ void sceneValidateGridCellSizeValue({
     );
   }
   if (requireEnabledMinCellSize && isEnabled) {
-    final message = sceneEnabledGridCellSizeViolationMessage(cellSize);
-    if (message != null) {
+    if (cellSize < kMinGridCellSize) {
       onError(
         field: cellSizeField,
         value: cellSize,
-        message: 'must be >= $kMinGridCellSize when $field.enabled is true.',
+        diagnostic:
+            SceneDataDiagnosticDescriptor.fieldMustBeAtLeastWhenFlagEnabled(
+              limit: kMinGridCellSize,
+              enabledField: '$field.enabled',
+            ),
       );
     }
   }
@@ -184,12 +192,17 @@ void _sceneValidateCoordinateComponent(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  final message = sceneCoordinateViolationMessage(value);
-  if (message == null) {
-    return;
-  }
   if (!value.isFinite) {
-    onError(field: field, value: value, message: message);
+    onError(
+      field: field,
+      value: value,
+      diagnostic: SceneDataDiagnosticDescriptor.fieldMustBeFinite(
+        fieldName: field,
+      ),
+    );
+  }
+  if (value >= sceneCoordMin && value <= sceneCoordMax) {
+    return;
   }
   throw SceneDataException.outOfRange(
     path: field,
@@ -204,12 +217,26 @@ void _sceneValidatePositiveBoundedSize(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  final message = scenePositiveBoundedSizeViolationMessage(value);
-  if (message == null) {
-    return;
+  if (!value.isFinite) {
+    onError(
+      field: field,
+      value: value,
+      diagnostic: SceneDataDiagnosticDescriptor.fieldMustBeFinite(
+        fieldName: field,
+      ),
+    );
   }
-  if (!value.isFinite || value <= 0) {
-    onError(field: field, value: value, message: message);
+  if (value <= 0) {
+    onError(
+      field: field,
+      value: value,
+      diagnostic: SceneDataDiagnosticDescriptor.fieldMustBeGreaterThan(
+        limit: 0,
+      ),
+    );
+  }
+  if (value > 0 && value <= sceneSizeMax) {
+    return;
   }
   throw SceneDataException.outOfRange(
     path: field,
@@ -225,7 +252,13 @@ void _sceneValidateFiniteBoundedUpperSize(
   required SceneValidationErrorReporter onError,
 }) {
   if (!value.isFinite) {
-    onError(field: field, value: value, message: 'must be finite.');
+    onError(
+      field: field,
+      value: value,
+      diagnostic: SceneDataDiagnosticDescriptor.fieldMustBeFinite(
+        fieldName: field,
+      ),
+    );
   }
   if (value > sceneSizeMax) {
     throw SceneDataException.outOfRange(

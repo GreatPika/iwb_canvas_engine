@@ -949,6 +949,10 @@ void main() {
         predicate(
           (e) =>
               e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers[0].nodes[0].type' &&
+              e.details['template'] == 'unknownEnumValue' &&
+              e.details['value'] == 'mystery' &&
               e.message == 'Unknown node type: mystery.',
         ),
       ),
@@ -1011,6 +1015,10 @@ void main() {
         predicate(
           (e) =>
               e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers[0].nodes[0].fillRule' &&
+              e.details['template'] == 'unknownEnumValue' &&
+              e.details['value'] == 'weird' &&
               e.message == 'Unknown fillRule: weird.',
         ),
       ),
@@ -1062,11 +1070,37 @@ void main() {
   test('decodeScene rejects invalid colors in 6- and 8-digit forms', () {
     final six = _minimalSceneJson();
     (six['background'] as Map<String, Object?>)['color'] = '#GGGGGG';
-    expect(() => decodeScene(six), throwsA(isA<SceneDataException>()));
+    expect(
+      () => decodeScene(six),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'background.color' &&
+              e.details['template'] == 'invalidColorLiteral' &&
+              e.details['value'] == '#GGGGGG' &&
+              e.message == 'Invalid color: #GGGGGG.',
+        ),
+      ),
+    );
 
     final eight = _minimalSceneJson();
     (eight['background'] as Map<String, Object?>)['color'] = '#GGGGGGGG';
-    expect(() => decodeScene(eight), throwsA(isA<SceneDataException>()));
+    expect(
+      () => decodeScene(eight),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'background.color' &&
+              e.details['template'] == 'invalidColorLiteral' &&
+              e.details['value'] == '#GGGGGGGG' &&
+              e.message == 'Invalid color: #GGGGGGGG.',
+        ),
+      ),
+    );
   });
 
   test('decodeScene accepts 6-digit colors', () {
@@ -1092,6 +1126,31 @@ void main() {
           (e) =>
               e is SceneDataException &&
               e.message == 'Field naturalSize must be an object.',
+        ),
+      ),
+    );
+  });
+
+  test('decodeScene rejects missing naturalSize components on child paths', () {
+    final nodeJson =
+        _baseNodeJson(id: 'img-missing-natural-size', type: 'image')
+          ..addAll(<String, Object?>{
+            'imageId': 'image-1',
+            'size': <String, Object?>{'w': 10, 'h': 20},
+            'naturalSize': <String, Object?>{'h': 20},
+          });
+
+    expect(
+      () => decodeScene(_sceneWithSingleNode(nodeJson)),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.missingField &&
+              e.path == 'layers[0].nodes[0].naturalSize.w' &&
+              e.details['template'] == 'missingField' &&
+              e.message ==
+                  'Missing required field layers[0].nodes[0].naturalSize.w.',
         ),
       ),
     );
@@ -1142,6 +1201,8 @@ void main() {
           (e) =>
               e is SceneDataException &&
               e.path == 'layers[0].nodes[0].align' &&
+              e.details['template'] == 'unknownEnumValue' &&
+              e.details['value'] == 'diagonal' &&
               e.message == 'Unknown text align: diagonal.',
         ),
       ),
@@ -1196,6 +1257,8 @@ void main() {
           (e) =>
               e is SceneDataException &&
               e.path == 'layers[0].nodes[0].textDirection' &&
+              e.details['template'] == 'unknownEnumValue' &&
+              e.details['value'] == 'sideways' &&
               e.message == 'Unknown text direction: sideways.',
         ),
       ),
@@ -1310,7 +1373,12 @@ void main() {
         predicate(
           (e) =>
               e is SceneDataException &&
-              e.message == 'Optional size must be numeric.',
+              e.code == SceneDataErrorCode.invalidFieldType &&
+              e.path == 'layers[0].nodes[0].naturalSize.w' &&
+              e.details['template'] == 'fieldType' &&
+              e.details['fieldName'] == 'w' &&
+              e.details['expected'] == 'number' &&
+              e.message == 'Field w must be a number.',
         ),
       ),
     );
@@ -1731,7 +1799,11 @@ void main() {
       _expectSameSceneDataContract(fromBuilder, fromMap);
       expect(fromMap.code, SceneDataErrorCode.unsupportedSchemaVersion);
       expect(fromMap.path, 'schemaVersion');
-      expect(fromMap.details, isEmpty);
+      expect(fromMap.details, <String, Object?>{
+        'template': 'unsupportedSchemaVersion',
+        'version': 1,
+        'expectedVersions': <int>[7],
+      });
     },
   );
 
@@ -1796,8 +1868,10 @@ void main() {
         predicate(
           (e) =>
               e is SceneDataException &&
+              e.code == SceneDataErrorCode.outOfRange &&
+              e.details['template'] == 'outOfRange' &&
               e.message ==
-                  'Field layers[0].nodes[0].opacity must be within [0,1].',
+                  'Field layers[0].nodes[0].opacity must be within [0, 1].',
         ),
       ),
     );
@@ -1819,8 +1893,10 @@ void main() {
         predicate(
           (e) =>
               e is SceneDataException &&
+              e.code == SceneDataErrorCode.outOfRange &&
+              e.details['template'] == 'outOfRange' &&
               e.message ==
-                  'Field layers[0].nodes[0].opacity must be within [0,1].',
+                  'Field layers[0].nodes[0].opacity must be within [0, 1].',
         ),
       ),
     );
@@ -2192,7 +2268,11 @@ void main() {
         predicate(
           (e) =>
               e is SceneDataException &&
-              e.message == 'Optional size must be finite.',
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers[0].nodes[0].naturalSize.w' &&
+              e.details['template'] == 'fieldMustBeFinite' &&
+              e.details['fieldName'] == 'w' &&
+              e.message == 'Field w must be finite.',
         ),
       ),
     );
@@ -2210,6 +2290,10 @@ void main() {
         predicate(
           (e) =>
               e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers[0].nodes[0].naturalSize.w' &&
+              e.details['template'] == 'fieldMustBeAtLeast' &&
+              e.details['limit'] == 0 &&
               e.message ==
                   'Field layers[0].nodes[0].naturalSize.w must be >= 0.',
         ),
@@ -2617,8 +2701,10 @@ void main() {
         predicate(
           (e) =>
               e is SceneDataException &&
+              e.code == SceneDataErrorCode.outOfRange &&
+              e.details['template'] == 'outOfRange' &&
               e.message ==
-                  'Field layers[0].nodes[0].opacity must be within [0,1].',
+                  'Field layers[0].nodes[0].opacity must be within [0, 1].',
         ),
       ),
     );
@@ -2680,7 +2766,10 @@ void main() {
           (e) =>
               e is SceneDataException &&
               e.code == SceneDataErrorCode.invalidValue &&
-              e.message == 'Field instanceRevision must be an int.',
+              e.details['template'] == 'fieldMustBeSafeInteger' &&
+              e.details['limit'] == 9007199254740991 &&
+              e.message ==
+                  'Field layers[0].nodes[0].instanceRevision must be a safe integer within +/-9007199254740991.',
         ),
       ),
     );

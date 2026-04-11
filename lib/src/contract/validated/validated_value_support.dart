@@ -14,13 +14,21 @@ String validatedRequireString(
   bool allowEmpty = true,
 }) {
   if (!allowEmpty && value.trim().isEmpty) {
-    throw ArgumentError.value(value, name, 'Must not be empty.');
+    throw SceneValidationArgumentError.value(
+      value,
+      name,
+      'Must not be empty.',
+      diagnostic: SceneDataDiagnosticDescriptor.fieldMustNotBeEmpty(),
+    );
   }
   if (maxLength != null && value.length > maxLength) {
-    throw ArgumentError.value(
+    throw SceneValidationArgumentError.value(
       value.length,
       name,
       'Length must be <= $maxLength characters.',
+      diagnostic: SceneDataDiagnosticDescriptor.fieldMaxLength(
+        maxLength: maxLength,
+      ),
     );
   }
   return value;
@@ -56,7 +64,14 @@ String validatedRequireJsonString(
 
 double validatedRequireFiniteDouble(double value, {required String name}) {
   if (!value.isFinite) {
-    throw ArgumentError.value(value, name, 'Must be finite.');
+    throw SceneValidationArgumentError.value(
+      value,
+      name,
+      'Must be finite.',
+      diagnostic: SceneDataDiagnosticDescriptor.fieldMustBeFinite(
+        fieldName: name,
+      ),
+    );
   }
   return value;
 }
@@ -67,7 +82,12 @@ double validatedRequireNonNegativeFiniteDouble(
 }) {
   validatedRequireFiniteDouble(value, name: name);
   if (value < 0) {
-    throw ArgumentError.value(value, name, 'Must be >= 0.');
+    throw SceneValidationArgumentError.value(
+      value,
+      name,
+      'Must be >= 0.',
+      diagnostic: SceneDataDiagnosticDescriptor.fieldMustBeAtLeast(limit: 0),
+    );
   }
   return value;
 }
@@ -78,7 +98,14 @@ double validatedRequirePositiveFiniteDouble(
 }) {
   validatedRequireFiniteDouble(value, name: name);
   if (value <= 0) {
-    throw ArgumentError.value(value, name, 'Must be > 0.');
+    throw SceneValidationArgumentError.value(
+      value,
+      name,
+      'Must be > 0.',
+      diagnostic: SceneDataDiagnosticDescriptor.fieldMustBeGreaterThan(
+        limit: 0,
+      ),
+    );
   }
   return value;
 }
@@ -86,7 +113,12 @@ double validatedRequirePositiveFiniteDouble(
 double validatedRequireOpacity(double value, {required String name}) {
   validatedRequireFiniteDouble(value, name: name);
   if (value < 0 || value > 1) {
-    throw ArgumentError.value(value, name, 'Must be within [0,1].');
+    throw SceneValidationArgumentError.value(
+      value,
+      name,
+      'Must be within [0,1].',
+      diagnostic: SceneDataDiagnosticDescriptor.outOfRange(min: 0, max: 1),
+    );
   }
   return value;
 }
@@ -104,17 +136,23 @@ int validatedRequireInstanceRevision(
 }) {
   final minimum = allowZero ? 0 : 1;
   if (value < minimum) {
-    throw ArgumentError.value(
+    throw SceneValidationArgumentError.value(
       value,
       name,
       allowZero ? 'Must be >= 0.' : 'Must be > 0.',
+      diagnostic: allowZero
+          ? SceneDataDiagnosticDescriptor.fieldMustBeAtLeast(limit: 0)
+          : SceneDataDiagnosticDescriptor.fieldMustBeGreaterThan(limit: 0),
     );
   }
   if (value.abs() > validatedSafeIntegerMax) {
-    throw ArgumentError.value(
+    throw SceneValidationArgumentError.value(
       value,
       name,
       'Must be a safe integer within +/-$validatedSafeIntegerMax.',
+      diagnostic: SceneDataDiagnosticDescriptor.fieldMustBeSafeInteger(
+        limit: validatedSafeIntegerMax,
+      ),
     );
   }
   return value;
@@ -128,10 +166,9 @@ int validatedRequireJsonInt(
 }) {
   if (raw is int) {
     if (raw.abs() > validatedSafeIntegerMax) {
-      throw SceneDataException.fieldMustBeInt(
-        code: SceneDataErrorCode.invalidValue,
+      throw SceneDataException.fieldMustBeSafeInteger(
         path: path,
-        fieldName: fieldName,
+        limit: validatedSafeIntegerMax,
         source: raw,
       );
     }
@@ -155,10 +192,9 @@ int validatedRequireJsonInt(
     );
   }
   if (asDouble.abs() > validatedSafeIntegerMax) {
-    throw SceneDataException.fieldMustBeInt(
-      code: SceneDataErrorCode.invalidValue,
+    throw SceneDataException.fieldMustBeSafeInteger(
       path: path,
-      fieldName: fieldName,
+      limit: validatedSafeIntegerMax,
       source: raw,
     );
   }
@@ -266,10 +302,10 @@ double validatedRequireJsonOpacity(
     fieldName: fieldName,
   );
   if (value < 0 || value > 1) {
-    throw SceneDataException.boundary(
-      code: SceneDataErrorCode.invalidValue,
+    throw SceneDataException.outOfRange(
       path: path,
-      message: 'Field $path must be within [0,1].',
+      min: 0,
+      max: 1,
       source: value,
     );
   }
@@ -282,29 +318,26 @@ Offset validatedRequireJsonFiniteOffset(
   required String fieldName,
 }) {
   if (raw is! Map<Object?, Object?>) {
-    throw SceneDataException.boundary(
-      code: SceneDataErrorCode.invalidFieldType,
+    throw SceneDataException.fieldMustBeOffsetObject(
       path: path,
-      message: 'Field $fieldName must be an object with x/y.',
+      fieldName: fieldName,
       source: raw,
     );
   }
   final dx = raw['x'];
   final dy = raw['y'];
   if (dx is! num || dy is! num) {
-    throw SceneDataException.boundary(
-      code: SceneDataErrorCode.invalidFieldType,
+    throw SceneDataException.fieldMustBeOffsetObject(
       path: path,
-      message: 'Field $fieldName must be an object with x/y.',
+      fieldName: fieldName,
       source: raw,
     );
   }
   final offset = Offset(dx.toDouble(), dy.toDouble());
   if (!offset.dx.isFinite || !offset.dy.isFinite) {
-    throw SceneDataException.boundary(
-      code: SceneDataErrorCode.invalidValue,
+    throw SceneDataException.fieldCoordinatesMustBeFinite(
       path: path,
-      message: 'Field $path coordinates must be finite.',
+      fieldName: fieldName,
       source: raw,
     );
   }
@@ -317,19 +350,18 @@ double validatedRequireJsonFiniteDoubleItem(
   required String fieldName,
 }) {
   if (raw is! num) {
-    throw SceneDataException.boundary(
-      code: SceneDataErrorCode.invalidFieldType,
+    throw SceneDataException.itemsMustBeType(
       path: path,
-      message: 'Items of $fieldName must be numbers.',
+      fieldName: fieldName,
+      expected: 'numbers',
       source: raw,
     );
   }
   final value = raw.toDouble();
   if (!value.isFinite) {
-    throw SceneDataException.boundary(
-      code: SceneDataErrorCode.invalidValue,
+    throw SceneDataException.itemsMustBeFinite(
       path: path,
-      message: 'Items of $fieldName must be finite.',
+      fieldName: fieldName,
       source: raw,
     );
   }
@@ -346,7 +378,12 @@ String validatedRequireSvgPathData(String value, {required String name}) {
   try {
     parseSvgPathData(value);
   } catch (_) {
-    throw ArgumentError.value(value, name, 'Must be valid SVG path data.');
+    throw SceneValidationArgumentError.value(
+      value,
+      name,
+      'Must be valid SVG path data.',
+      diagnostic: SceneDataDiagnosticDescriptor.fieldMustBeValidSvgPathData(),
+    );
   }
   return value;
 }
@@ -366,10 +403,8 @@ String validatedRequireJsonSvgPathData(
   try {
     parseSvgPathData(value);
   } catch (_) {
-    throw SceneDataException.boundary(
-      code: SceneDataErrorCode.invalidValue,
+    throw SceneDataException.fieldMustBeValidSvgPathData(
       path: path,
-      message: 'Field $path must be valid SVG path data.',
       source: value,
     );
   }

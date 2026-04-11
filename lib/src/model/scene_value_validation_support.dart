@@ -1,10 +1,13 @@
+import '../contract/scene_data_exception.dart';
+
 typedef SceneValidationField<T> = ({T value, String field});
 
 typedef SceneValidationErrorReporter =
     Never Function({
       required Object? value,
       required String field,
-      required String message,
+      String? message,
+      SceneDataDiagnosticDescriptor? diagnostic,
     });
 
 typedef SceneValueValidator<T> =
@@ -45,11 +48,15 @@ void sceneValidateArgumentBoundary({
   } on ArgumentError catch (error) {
     final argumentName = error.name;
     final reportedField = argumentName is String ? argumentName : field;
+    final diagnostic = error is SceneValidationArgumentError
+        ? error.diagnostic
+        : null;
     sceneValidationFail(
       onError: onError,
       value: value,
       field: reportedField,
-      message: sceneMessageFromArgumentError(error),
+      message: diagnostic == null ? sceneMessageFromArgumentError(error) : null,
+      diagnostic: diagnostic,
     );
   }
 }
@@ -58,9 +65,15 @@ Never sceneValidationFail({
   required SceneValidationErrorReporter onError,
   required Object? value,
   required String field,
-  required String message,
+  String? message,
+  SceneDataDiagnosticDescriptor? diagnostic,
 }) {
-  return onError(value: value, field: field, message: message);
+  return onError(
+    value: value,
+    field: field,
+    message: message,
+    diagnostic: diagnostic,
+  );
 }
 
 String sceneMessageFromArgumentError(ArgumentError error) {

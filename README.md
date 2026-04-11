@@ -34,6 +34,10 @@ storage.
   limit of `33554432` characters before parsing.
 - Boundary failures expose stable `SceneDataException.code`, `path`, and
   immutable `details`; `message` remains a derived human-readable summary.
+- Collection-limit failures for palette lists and stroke points, optional
+  image `naturalSize` child-field failures, and parsed color/enum literals
+  all follow the same details-first boundary contract across builder/decode
+  entrypoints.
 - Public validated boundary value types such as `NodeIdValue`,
   `LayerIdValue`, `ImageIdValue`, `FiniteOffsetValue`, and `OpacityValue` for
   pre-validating external inputs before snapshot/spec construction and for

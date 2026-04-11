@@ -1253,7 +1253,10 @@ void main() {
               (error) =>
                   error is SceneDataException &&
                   error.path == 'layers[0].nodes[0].instanceRevision' &&
-                  error.message == 'Field instanceRevision must be an int.',
+                  error.details['template'] == 'fieldMustBeSafeInteger' &&
+                  error.details['limit'] == 9007199254740991 &&
+                  error.message ==
+                      'Field layers[0].nodes[0].instanceRevision must be a safe integer within +/-9007199254740991.',
             ),
           ),
         );

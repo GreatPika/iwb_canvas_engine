@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import '../contract/scene_data_exception.dart';
 import '../contract/transform2d.dart';
 import '../contract/validated/finite_offset_value.dart';
 import '../contract/validated/non_negative_finite_double_value.dart';
@@ -74,7 +75,7 @@ void sceneValidateNonNegativeInt(
     onError: onError,
     value: value,
     field: field,
-    message: 'must be >= 0.',
+    diagnostic: SceneDataDiagnosticDescriptor.fieldMustBeAtLeast(limit: 0),
   );
 }
 
@@ -88,7 +89,7 @@ void sceneValidatePositiveInt(
     onError: onError,
     value: value,
     field: field,
-    message: 'must be > 0.',
+    diagnostic: SceneDataDiagnosticDescriptor.fieldMustBeGreaterThan(limit: 0),
   );
 }
 
@@ -143,7 +144,7 @@ void sceneValidateFiniteTransform2D(
       onError: onError,
       value: value.toJsonMap(),
       field: field,
-      message: 'must be invertible (non-singular).',
+      diagnostic: SceneDataDiagnosticDescriptor.fieldMustBeInvertible(),
     );
   }
 }
@@ -158,7 +159,7 @@ void sceneValidateNonEmptyList(
     onError: onError,
     value: values,
     field: field,
-    message: 'must not be empty.',
+    diagnostic: SceneDataDiagnosticDescriptor.fieldMustNotBeEmpty(),
   );
 }
 

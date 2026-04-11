@@ -687,6 +687,11 @@ most important architectural rules are:
   immutable containers while preserving stable `code`, `path`, and immutable
   `details`; `message` is a derived user-facing rendering owned by
   `scene_data_exception.dart`.
+- `scene_data_exception.dart` is also the single template owner for the
+  touched scene-boundary diagnostics: palette/stroke collection limits,
+  optional image `naturalSize` child failures, and parsed color/enum literal
+  failures carry their machine-readable meaning in `details` instead of in
+  branch-owned message text.
 - `scene_codec.dart` is a thin boundary adapter: string decode uses
   serialization-local guards, parsed-map decode delegates to the model-owned
   parsed-map guard, and snapshot/runtime encode entrypoints reuse the shared

@@ -65,6 +65,25 @@ class SceneDataException implements FormatException {
     );
   }
 
+  /// Reports that the schema version is unsupported by this package build.
+  factory SceneDataException.unsupportedSchemaVersion({
+    required String path,
+    required int version,
+    required List<int> expectedVersions,
+    Object? source,
+  }) {
+    return SceneDataException.boundary(
+      code: SceneDataErrorCode.unsupportedSchemaVersion,
+      path: path,
+      details: <String, Object?>{
+        'template': 'unsupportedSchemaVersion',
+        'version': version,
+        'expectedVersions': expectedVersions,
+      },
+      source: source,
+    );
+  }
+
   /// Reports that the raw JSON string exceeds the supported boundary length.
   factory SceneDataException.jsonPayloadTooLarge({
     required int maxLength,
@@ -112,6 +131,23 @@ class SceneDataException implements FormatException {
     );
   }
 
+  /// Reports that a labeled value must be an object.
+  factory SceneDataException.objectMustBeObject({
+    required String path,
+    required String objectName,
+    Object? source,
+  }) {
+    return SceneDataException.boundary(
+      code: SceneDataErrorCode.invalidFieldType,
+      path: path,
+      details: <String, Object?>{
+        'template': 'objectMustBeObject',
+        'objectName': objectName,
+      },
+      source: source,
+    );
+  }
+
   /// Reports that a string field must not be empty.
   factory SceneDataException.fieldMustNotBeEmpty({
     required String path,
@@ -154,6 +190,23 @@ class SceneDataException implements FormatException {
       details: <String, Object?>{
         'template': 'fieldMustBeFinite',
         'fieldName': fieldName,
+      },
+      source: source,
+    );
+  }
+
+  /// Reports that a numeric field must stay within the safe integer range.
+  factory SceneDataException.fieldMustBeSafeInteger({
+    required String path,
+    required int limit,
+    Object? source,
+  }) {
+    return SceneDataException.boundary(
+      code: SceneDataErrorCode.invalidValue,
+      path: path,
+      details: <String, Object?>{
+        'template': 'fieldMustBeSafeInteger',
+        'limit': limit,
       },
       source: source,
     );
@@ -211,6 +264,25 @@ class SceneDataException implements FormatException {
     );
   }
 
+  /// Reports that a field must be at least a lower bound when another flag is enabled.
+  factory SceneDataException.fieldMustBeAtLeastWhenFlagEnabled({
+    required String path,
+    required num limit,
+    required String enabledField,
+    Object? source,
+  }) {
+    return SceneDataException.boundary(
+      code: SceneDataErrorCode.invalidValue,
+      path: path,
+      details: <String, Object?>{
+        'template': 'fieldMustBeAtLeastWhenFlagEnabled',
+        'limit': limit,
+        'enabledField': enabledField,
+      },
+      source: source,
+    );
+  }
+
   /// Reports that a field must stay within the accepted range.
   factory SceneDataException.outOfRange({
     required String path,
@@ -225,6 +297,140 @@ class SceneDataException implements FormatException {
         'template': 'outOfRange',
         'min': min,
         'max': max,
+      },
+      source: source,
+    );
+  }
+
+  /// Reports that a field must be an object with x/y coordinates.
+  factory SceneDataException.fieldMustBeOffsetObject({
+    required String path,
+    required String fieldName,
+    Object? source,
+  }) {
+    return SceneDataException.boundary(
+      code: SceneDataErrorCode.invalidFieldType,
+      path: path,
+      details: <String, Object?>{
+        'template': 'fieldMustBeOffsetObject',
+        'fieldName': fieldName,
+      },
+      source: source,
+    );
+  }
+
+  /// Reports that x/y coordinates inside an object must be finite.
+  factory SceneDataException.fieldCoordinatesMustBeFinite({
+    required String path,
+    required String fieldName,
+    Object? source,
+  }) {
+    return SceneDataException.boundary(
+      code: SceneDataErrorCode.invalidValue,
+      path: path,
+      details: <String, Object?>{
+        'template': 'fieldCoordinatesMustBeFinite',
+        'fieldName': fieldName,
+      },
+      source: source,
+    );
+  }
+
+  /// Reports that list items must match the expected item type.
+  factory SceneDataException.itemsMustBeType({
+    required String path,
+    required String fieldName,
+    required String expected,
+    Object? source,
+  }) {
+    return SceneDataException.boundary(
+      code: SceneDataErrorCode.invalidFieldType,
+      path: path,
+      details: <String, Object?>{
+        'template': 'itemsMustBeType',
+        'fieldName': fieldName,
+        'expected': expected,
+      },
+      source: source,
+    );
+  }
+
+  /// Reports that list items must be finite.
+  factory SceneDataException.itemsMustBeFinite({
+    required String path,
+    required String fieldName,
+    Object? source,
+  }) {
+    return SceneDataException.boundary(
+      code: SceneDataErrorCode.invalidValue,
+      path: path,
+      details: <String, Object?>{
+        'template': 'itemsMustBeFinite',
+        'fieldName': fieldName,
+      },
+      source: source,
+    );
+  }
+
+  /// Reports that a field must contain valid SVG path data.
+  factory SceneDataException.fieldMustBeValidSvgPathData({
+    required String path,
+    Object? source,
+  }) {
+    return SceneDataException.boundary(
+      code: SceneDataErrorCode.invalidValue,
+      path: path,
+      details: const <String, Object?>{
+        'template': 'fieldMustBeValidSvgPathData',
+      },
+      source: source,
+    );
+  }
+
+  /// Reports that JSON object keys must be strings.
+  factory SceneDataException.jsonObjectKeysMustBeStrings({
+    String? path,
+    Object? source,
+  }) {
+    return SceneDataException.boundary(
+      code: SceneDataErrorCode.invalidFieldType,
+      path: path,
+      details: const <String, Object?>{
+        'template': 'jsonObjectKeysMustBeStrings',
+      },
+      source: source,
+    );
+  }
+
+  /// Reports that a value must be invertible.
+  factory SceneDataException.fieldMustBeInvertible({
+    required String path,
+    Object? source,
+  }) {
+    return SceneDataException.boundary(
+      code: SceneDataErrorCode.invalidValue,
+      path: path,
+      details: const <String, Object?>{'template': 'fieldMustBeInvertible'},
+      source: source,
+    );
+  }
+
+  /// Reports that a field is forbidden in a specific schema version.
+  factory SceneDataException.fieldForbiddenInSchemaVersion({
+    required String path,
+    required String fieldName,
+    required int schemaVersion,
+    required String subject,
+    Object? source,
+  }) {
+    return SceneDataException.boundary(
+      code: SceneDataErrorCode.invalidValue,
+      path: path,
+      details: <String, Object?>{
+        'template': 'fieldForbiddenInSchemaVersion',
+        'fieldName': fieldName,
+        'schemaVersion': schemaVersion,
+        'subject': subject,
       },
       source: source,
     );
@@ -267,6 +473,55 @@ class SceneDataException implements FormatException {
       path: path,
       details: <String, Object?>{'template': 'maxItems', 'maxItems': maxItems},
       source: source,
+    );
+  }
+
+  /// Reports that a point collection exceeded the allowed number of items.
+  factory SceneDataException.maxPoints({
+    required String path,
+    required int maxPoints,
+    Object? source,
+  }) {
+    return SceneDataException.boundary(
+      code: SceneDataErrorCode.invalidValue,
+      path: path,
+      details: <String, Object?>{
+        'template': 'maxPoints',
+        'maxPoints': maxPoints,
+      },
+      source: source,
+    );
+  }
+
+  /// Reports that a parsed color literal is malformed.
+  factory SceneDataException.invalidColorLiteral({
+    required String path,
+    required String value,
+  }) {
+    return SceneDataException.boundary(
+      code: SceneDataErrorCode.invalidValue,
+      path: path,
+      details: <String, Object?>{
+        'template': 'invalidColorLiteral',
+        'value': value,
+      },
+      source: value,
+    );
+  }
+
+  /// Reports that a parsed enum-like literal is unknown.
+  factory SceneDataException.unknownEnumValue({
+    required String path,
+    required String value,
+  }) {
+    return SceneDataException.boundary(
+      code: SceneDataErrorCode.invalidValue,
+      path: path,
+      details: <String, Object?>{
+        'template': 'unknownEnumValue',
+        'value': value,
+      },
+      source: value,
     );
   }
 
@@ -338,6 +593,157 @@ enum SceneDataErrorCode {
 
   /// A numeric or indexed value is outside the accepted range.
   outOfRange,
+}
+
+/// Structured typed-validation input owned by the scene data error contract.
+class SceneDataDiagnosticDescriptor {
+  SceneDataDiagnosticDescriptor._({
+    required this.code,
+    required this.template,
+    this.args = const <String, Object?>{},
+  });
+
+  factory SceneDataDiagnosticDescriptor.maxItems({required int maxItems}) {
+    return SceneDataDiagnosticDescriptor._(
+      code: SceneDataErrorCode.invalidValue,
+      template: 'maxItems',
+      args: <String, Object?>{'maxItems': maxItems},
+    );
+  }
+
+  factory SceneDataDiagnosticDescriptor.maxPoints({required int maxPoints}) {
+    return SceneDataDiagnosticDescriptor._(
+      code: SceneDataErrorCode.invalidValue,
+      template: 'maxPoints',
+      args: <String, Object?>{'maxPoints': maxPoints},
+    );
+  }
+
+  factory SceneDataDiagnosticDescriptor.fieldMustBeFinite({String? fieldName}) {
+    return SceneDataDiagnosticDescriptor._(
+      code: SceneDataErrorCode.invalidValue,
+      template: 'fieldMustBeFinite',
+      args: fieldName == null
+          ? const <String, Object?>{}
+          : <String, Object?>{'fieldName': fieldName},
+    );
+  }
+
+  factory SceneDataDiagnosticDescriptor.fieldMustNotBeEmpty() {
+    return SceneDataDiagnosticDescriptor._(
+      code: SceneDataErrorCode.invalidValue,
+      template: 'fieldMustNotBeEmpty',
+    );
+  }
+
+  factory SceneDataDiagnosticDescriptor.fieldMaxLength({
+    required int maxLength,
+  }) {
+    return SceneDataDiagnosticDescriptor._(
+      code: SceneDataErrorCode.invalidValue,
+      template: 'fieldMaxLength',
+      args: <String, Object?>{'maxLength': maxLength},
+    );
+  }
+
+  factory SceneDataDiagnosticDescriptor.fieldMustBeSafeInteger({
+    required int limit,
+  }) {
+    return SceneDataDiagnosticDescriptor._(
+      code: SceneDataErrorCode.invalidValue,
+      template: 'fieldMustBeSafeInteger',
+      args: <String, Object?>{'limit': limit},
+    );
+  }
+
+  factory SceneDataDiagnosticDescriptor.fieldMustBeGreaterThan({
+    required num limit,
+  }) {
+    return SceneDataDiagnosticDescriptor._(
+      code: SceneDataErrorCode.invalidValue,
+      template: 'fieldMustBeGreaterThan',
+      args: <String, Object?>{'limit': limit},
+    );
+  }
+
+  factory SceneDataDiagnosticDescriptor.fieldMustBeAtLeast({
+    required num limit,
+  }) {
+    return SceneDataDiagnosticDescriptor._(
+      code: SceneDataErrorCode.invalidValue,
+      template: 'fieldMustBeAtLeast',
+      args: <String, Object?>{'limit': limit},
+    );
+  }
+
+  factory SceneDataDiagnosticDescriptor.fieldMustBeAtLeastWhenFlagEnabled({
+    required num limit,
+    required String enabledField,
+  }) {
+    return SceneDataDiagnosticDescriptor._(
+      code: SceneDataErrorCode.invalidValue,
+      template: 'fieldMustBeAtLeastWhenFlagEnabled',
+      args: <String, Object?>{'limit': limit, 'enabledField': enabledField},
+    );
+  }
+
+  factory SceneDataDiagnosticDescriptor.outOfRange({
+    required num min,
+    required num max,
+  }) {
+    return SceneDataDiagnosticDescriptor._(
+      code: SceneDataErrorCode.outOfRange,
+      template: 'outOfRange',
+      args: <String, Object?>{'min': min, 'max': max},
+    );
+  }
+
+  factory SceneDataDiagnosticDescriptor.fieldMustBeValidSvgPathData() {
+    return SceneDataDiagnosticDescriptor._(
+      code: SceneDataErrorCode.invalidValue,
+      template: 'fieldMustBeValidSvgPathData',
+    );
+  }
+
+  factory SceneDataDiagnosticDescriptor.fieldMustBeInvertible() {
+    return SceneDataDiagnosticDescriptor._(
+      code: SceneDataErrorCode.invalidValue,
+      template: 'fieldMustBeInvertible',
+    );
+  }
+
+  final SceneDataErrorCode code;
+  final String template;
+  final Map<String, Object?> args;
+
+  SceneDataException toException({required String path, Object? source}) {
+    return SceneDataException.boundary(
+      code: code,
+      path: path,
+      details: _detailsForPath(path),
+      source: source,
+    );
+  }
+
+  Map<String, Object?> _detailsForPath(String path) {
+    final details = <String, Object?>{'template': template, ...args};
+    if (template == 'fieldMustBeFinite' && !details.containsKey('fieldName')) {
+      details['fieldName'] = _sceneDataPathTail(path) ?? path;
+    }
+    return details;
+  }
+}
+
+/// Argument error carrying a structured scene validation descriptor.
+class SceneValidationArgumentError extends ArgumentError {
+  SceneValidationArgumentError.value(
+    Object? super.invalidValue,
+    super.name,
+    Object? super.message, {
+    this.diagnostic,
+  }) : super.value();
+
+  final SceneDataDiagnosticDescriptor? diagnostic;
 }
 
 const int _sceneDataDetailsPreviewMaxLength = 128;
@@ -532,8 +938,13 @@ String? _deriveSceneDataJsonTemplateMessage({
   return switch (template) {
     'rootObject' => 'Root JSON must be an object.',
     'invalidJsonPayload' => 'Invalid scene JSON payload.',
+    'unsupportedSchemaVersion' =>
+      'Unsupported schemaVersion: ${details['version'] ?? '?'}. Expected one of: '
+          '[${_sceneDataExpectedVersions(details['expectedVersions'])}].',
     'jsonPayloadTooLarge' =>
       'Scene JSON payload must be <= ${details['maxLength'] ?? '?'} characters.',
+    'jsonObjectKeysMustBeStrings' => 'JSON object keys must be strings.',
+    'invalidColorLiteral' => 'Invalid color: ${details['value'] ?? '?'}.',
     _ => null,
   };
 }
@@ -551,11 +962,35 @@ String? _deriveSceneDataFieldTemplateMessage({
         fieldName: fieldName,
         details: details,
       ) ??
+      _deriveSceneDataUnknownEnumTemplateMessage(
+        template: template,
+        path: path,
+        details: details,
+      ) ??
       _deriveSceneDataFieldRangeTemplateMessage(
         template: template,
         pathLabel: pathLabel,
         details: details,
       );
+}
+
+String? _deriveSceneDataUnknownEnumTemplateMessage({
+  required String template,
+  required String? path,
+  required Map<String, Object?> details,
+}) {
+  if (template != 'unknownEnumValue') {
+    return null;
+  }
+  final fieldLabel = switch (_sceneDataPathTail(path)) {
+    'type' => 'node type',
+    'fillRule' => 'fillRule',
+    'align' => 'text align',
+    'textDirection' => 'text direction',
+    final tail? => tail,
+    null => 'value',
+  };
+  return 'Unknown $fieldLabel: ${details['value'] ?? '?'}.';
 }
 
 String? _deriveSceneDataFieldShapeTemplateMessage({
@@ -567,12 +1002,30 @@ String? _deriveSceneDataFieldShapeTemplateMessage({
   return switch (template) {
     'missingField' => 'Missing required field $pathLabel.',
     'fieldType' =>
-      'Field $fieldName must be a ${details['expected'] ?? 'valid value'}.',
+      'Field $fieldName must be '
+          '${_sceneDataIndefiniteArticle(details['expected'])} '
+          '${details['expected'] ?? 'valid value'}.',
+    'objectMustBeObject' =>
+      "${details['objectName'] ?? pathLabel} must be an object.",
     'fieldMustNotBeEmpty' => 'Field $pathLabel must not be empty.',
     'fieldMaxLength' =>
       'Field $pathLabel length must be <= ${details['maxLength'] ?? '?'} characters.',
     'fieldMustBeFinite' => 'Field $fieldName must be finite.',
+    'fieldMustBeSafeInteger' =>
+      'Field $pathLabel must be a safe integer within '
+          '+/-${details['limit'] ?? '?'}.',
     'fieldMustBeInt' => 'Field $fieldName must be an int.',
+    'fieldMustBeOffsetObject' => 'Field $fieldName must be an object with x/y.',
+    'fieldCoordinatesMustBeFinite' =>
+      'Field $pathLabel coordinates must be finite.',
+    'fieldMustBeValidSvgPathData' =>
+      'Field $pathLabel must be valid SVG path data.',
+    'fieldMustBeInvertible' =>
+      'Field $pathLabel must be invertible (non-singular).',
+    'fieldForbiddenInSchemaVersion' =>
+      "${details['subject'] ?? 'Field'} must not contain the "
+          "${details['fieldName'] ?? pathLabel} field in schemaVersion "
+          "${details['schemaVersion'] ?? '?'}.",
     _ => null,
   };
 }
@@ -587,6 +1040,9 @@ String? _deriveSceneDataFieldRangeTemplateMessage({
       'Field $pathLabel must be > ${details['limit'] ?? '?'}.',
     'fieldMustBeAtLeast' =>
       'Field $pathLabel must be >= ${details['limit'] ?? '?'}.',
+    'fieldMustBeAtLeastWhenFlagEnabled' =>
+      'Field $pathLabel must be >= ${details['limit'] ?? '?'} when '
+          "${details['enabledField'] ?? '?'} is true.",
     'outOfRange' =>
       'Field $pathLabel must be within '
           '[${details['min'] ?? '?'}, ${details['max'] ?? '?'}].',
@@ -612,13 +1068,40 @@ String? _deriveSceneDataLimitTemplateMessage({
   required Map<String, Object?> details,
 }) {
   return switch (template) {
+    'itemsMustBeType' =>
+      "Items of ${details['fieldName'] ?? '?'} must be "
+          "${details['expected'] ?? 'valid values'}.",
+    'itemsMustBeFinite' =>
+      "Items of ${details['fieldName'] ?? '?'} must be finite.",
     'maxItems' =>
       'Field ${_sceneDataPathLabel(path)} must contain at most '
           "${details['maxItems'] ?? '?'} items.",
     'maxNodes' =>
       'Scene must contain at most ${details['maxNodes'] ?? '?'} nodes.',
+    'maxPoints' =>
+      'Field ${_sceneDataPathLabel(path)} must contain at most '
+          "${details['maxPoints'] ?? '?'} points.",
     _ => null,
   };
+}
+
+String _sceneDataIndefiniteArticle(Object? noun) {
+  final value = noun;
+  if (value is! String || value.isEmpty) {
+    return 'a';
+  }
+  final first = value[0].toLowerCase();
+  return switch (first) {
+    'a' || 'e' || 'i' || 'o' || 'u' => 'an',
+    _ => 'a',
+  };
+}
+
+String _sceneDataExpectedVersions(Object? value) {
+  if (value is List) {
+    return value.join(', ');
+  }
+  return '?';
 }
 
 String _deriveSceneDataFallbackMessage({
@@ -643,6 +1126,14 @@ String _deriveSceneDataFallbackMessage({
 }
 
 String _sceneDataPathLabel(String? path) => path ?? '<unknown>';
+
+String? _sceneDataPathTail(String? path) {
+  if (path == null || path.isEmpty) {
+    return null;
+  }
+  final dotIndex = path.lastIndexOf('.');
+  return dotIndex == -1 ? path : path.substring(dotIndex + 1);
+}
 
 Object? _sanitizeSceneDataSource(Object? source, {int depth = 0}) {
   if (source == null || source is num || source is bool) {

@@ -46,10 +46,11 @@ void _rejectLegacyTextSizeField(
   if (!json.containsKey('size')) {
     return;
   }
-  throw SceneDataException(
-    code: SceneDataErrorCode.invalidValue,
+  throw SceneDataException.fieldForbiddenInSchemaVersion(
     path: sceneBuilderPathAt(nodePath, 'size'),
-    message: 'Text nodes must not contain the size field in schemaVersion 7.',
+    fieldName: 'size',
+    schemaVersion: 7,
+    subject: 'Text nodes',
     source: json['size'],
   );
 }

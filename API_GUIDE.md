@@ -1124,6 +1124,20 @@ controller.
   not yet know a more specific field location
 - compare boundary-equivalent failures by `SceneDataException.code`,
   `path`, and immutable `details`; `message` is derived user-facing text
+- palette item-count overflow uses
+  `details = {'template': 'maxItems', 'maxItems': <limit>}` across parsed-map
+  and typed-snapshot import
+- stroke point-count overflow uses
+  `details = {'template': 'maxPoints', 'maxPoints': <limit>}` while keeping
+  each boundary's existing field path (`localPoints` for parsed JSON,
+  `points` for typed snapshots)
+- optional image `naturalSize` failures report child-component paths
+  (`...naturalSize.w` / `...naturalSize.h`) for missing-field, type, finite,
+  and range diagnostics
+- parsed invalid color literals use
+  `details = {'template': 'invalidColorLiteral', 'value': <literal>}`
+- parsed unknown node type, fill rule, text align, and text direction values
+  use `details = {'template': 'unknownEnumValue', 'value': <literal>}`
 - `SceneDataException.source` remains a diagnostic/`FormatException`
   compatibility field and is not part of cross-boundary parity
 - decode accepts a missing `backgroundLayer` field and canonicalizes it to an

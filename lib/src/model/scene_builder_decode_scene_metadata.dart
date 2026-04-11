@@ -3,7 +3,6 @@ import 'dart:ui';
 import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/scene_contract_limits.dart';
 import '../contract/scene_data_exception.dart';
-import '../contract/scene_model_invariants.dart';
 import '../contract/validated/validated_value_support.dart';
 import '../core/scene_limits.dart' show sceneSchemaVersionsRead;
 import 'scene_builder_json_parse.dart';
@@ -32,12 +31,11 @@ void sceneBuilderRequireSupportedSchemaVersion(Map<String, Object?> json) {
   }
   final expectedVersions = sceneSchemaVersionsRead.toList()
     ..sort((int a, int b) => a.compareTo(b));
-  final expectedVersionsMessage = expectedVersions.join(', ');
-  throw SceneDataException(
-    code: SceneDataErrorCode.unsupportedSchemaVersion,
+  throw SceneDataException.unsupportedSchemaVersion(
     path: 'schemaVersion',
-    message:
-        'Unsupported schemaVersion: $version. Expected one of: [$expectedVersionsMessage].',
+    version: version,
+    expectedVersions: expectedVersions,
+    source: version,
   );
 }
 
@@ -114,13 +112,11 @@ GridSnapshotBacking _decodeBackgroundGrid(Map<String, Object?> backgroundJson) {
     path: 'background.grid.cellSize',
   );
   if (isEnabled) {
-    final message = sceneEnabledGridCellSizeViolationMessage(cellSize);
-    if (message != null) {
-      throw SceneDataException.boundary(
-        code: SceneDataErrorCode.invalidValue,
+    if (cellSize < kMinGridCellSize) {
+      throw SceneDataException.fieldMustBeAtLeastWhenFlagEnabled(
         path: 'background.grid.cellSize',
-        message:
-            'Field background.grid.cellSize must be >= $kMinGridCellSize when background.grid.enabled is true.',
+        limit: kMinGridCellSize,
+        enabledField: 'background.grid.enabled',
         source: cellSize,
       );
     }
@@ -168,16 +164,14 @@ List<Color> _decodePaletteColors(
     pathPrefix: pathPrefix,
   );
   final colorsPath = sceneBuilderPathAt(pathPrefix, key);
-  final limitMessage = scenePaletteItemCountViolationMessage(colorsJson.length);
-  if (limitMessage != null) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidValue,
+  if (colorsJson.length > kMaxPaletteItems) {
+    throw SceneDataException.maxItems(
       path: colorsPath,
-      message: 'Field $colorsPath $limitMessage',
+      maxItems: kMaxPaletteItems,
       source: colorsJson.length,
     );
   }
-  if (sceneNonEmptyListViolationMessage(colorsJson) != null) {
+  if (colorsJson.isEmpty) {
     throw SceneDataException.fieldMustNotBeEmpty(
       path: colorsPath,
       source: colorsJson,
@@ -204,18 +198,14 @@ List<double> _decodePaletteGridSizes(Map<String, Object?> paletteJson) {
   );
   const gridSizesField = 'gridSizes';
   const gridSizesPath = 'palette.gridSizes';
-  final limitMessage = scenePaletteItemCountViolationMessage(
-    gridSizesJson.length,
-  );
-  if (limitMessage != null) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidValue,
+  if (gridSizesJson.length > kMaxPaletteItems) {
+    throw SceneDataException.maxItems(
       path: gridSizesPath,
-      message: 'Field $gridSizesPath $limitMessage',
+      maxItems: kMaxPaletteItems,
       source: gridSizesJson.length,
     );
   }
-  if (sceneNonEmptyListViolationMessage(gridSizesJson) != null) {
+  if (gridSizesJson.isEmpty) {
     throw SceneDataException.fieldMustNotBeEmpty(
       path: gridSizesPath,
       source: gridSizesJson,
@@ -252,16 +242,15 @@ double _decodeRequiredDoubleField(
 }
 
 void _validateDecodedCoordinate(double value, {required String path}) {
-  final message = sceneCoordinateViolationMessage(value);
-  if (message == null) {
-    return;
-  }
   if (!value.isFinite) {
     throw SceneDataException.fieldMustBeFinite(
       path: path,
       fieldName: path.split('.').last,
       source: value,
     );
+  }
+  if (value >= sceneCoordMin && value <= sceneCoordMax) {
+    return;
   }
   throw SceneDataException.outOfRange(
     path: path,
@@ -272,10 +261,6 @@ void _validateDecodedCoordinate(double value, {required String path}) {
 }
 
 void _validateDecodedPositiveBoundedSize(double value, {required String path}) {
-  final message = scenePositiveBoundedSizeViolationMessage(value);
-  if (message == null) {
-    return;
-  }
   if (!value.isFinite) {
     throw SceneDataException.fieldMustBeFinite(
       path: path,
@@ -289,6 +274,9 @@ void _validateDecodedPositiveBoundedSize(double value, {required String path}) {
       limit: 0,
       source: value,
     );
+  }
+  if (value <= sceneSizeMax) {
+    return;
   }
   throw SceneDataException.outOfRange(
     path: path,

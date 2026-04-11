@@ -1,7 +1,8 @@
 import 'dart:ui';
 
+import '../contract/scene_contract_limits.dart';
+import '../contract/scene_data_exception.dart';
 import '../contract/snapshot.dart';
-import '../contract/scene_model_invariants.dart';
 import '../core/nodes.dart';
 import 'scene_value_validation_primitives.dart';
 import 'scene_value_validation_support.dart';
@@ -41,9 +42,14 @@ void _sceneValidatePoints(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  final limitMessage = sceneStrokePointCountViolationMessage(points.length);
-  if (limitMessage != null) {
-    onError(field: field, value: points, message: 'Field $field $limitMessage');
+  if (points.length > kMaxStrokePointsPerNode) {
+    onError(
+      field: field,
+      value: points,
+      diagnostic: SceneDataDiagnosticDescriptor.maxPoints(
+        maxPoints: kMaxStrokePointsPerNode,
+      ),
+    );
   }
   sceneValidateFields<Offset>(
     List<SceneValidationField<Offset>>.generate(

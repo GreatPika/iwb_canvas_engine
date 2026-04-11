@@ -30,7 +30,8 @@ void main() {
             (error) =>
                 error is _ValidationFailure &&
                 error.field == 'count' &&
-                error.message == 'must be >= 0.' &&
+                error.diagnostic?.template == 'fieldMustBeAtLeast' &&
+                error.message == 'Field count must be >= 0.' &&
                 error.value == -1,
           ),
         ),
@@ -48,7 +49,8 @@ void main() {
             (error) =>
                 error is _ValidationFailure &&
                 error.field == 'count' &&
-                error.message == 'must be > 0.' &&
+                error.diagnostic?.template == 'fieldMustBeGreaterThan' &&
+                error.message == 'Field count must be > 0.' &&
                 error.value == 0,
           ),
         ),
@@ -73,7 +75,8 @@ void main() {
             (error) =>
                 error is _ValidationFailure &&
                 error.field == 'svgPathData' &&
-                error.message == 'must not be empty.',
+                error.diagnostic?.template == 'fieldMustNotBeEmpty' &&
+                error.message == 'Field svgPathData must not be empty.',
           ),
         ),
       );
@@ -89,7 +92,9 @@ void main() {
             (error) =>
                 error is _ValidationFailure &&
                 error.field == 'svgPathData' &&
-                error.message == 'must be valid SVG path data.',
+                error.diagnostic?.template == 'fieldMustBeValidSvgPathData' &&
+                error.message ==
+                    'Field svgPathData must be valid SVG path data.',
           ),
         ),
       );
@@ -113,7 +118,8 @@ void main() {
             (error) =>
                 error is _ValidationFailure &&
                 error.field == 'opacity' &&
-                error.message == 'must be within [0,1].' &&
+                error.diagnostic?.template == 'outOfRange' &&
+                error.message == 'Field opacity must be within [0, 1].' &&
                 error.value == 1.1,
           ),
         ),
@@ -177,7 +183,8 @@ void main() {
               (error) =>
                   error is _ValidationFailure &&
                   error.field == 'node.localA.dx' &&
-                  error.message == 'must be finite.' &&
+                  error.diagnostic?.template == 'fieldMustBeFinite' &&
+                  error.message == 'Field node.localA.dx must be finite.' &&
                   error.value == const Offset(double.infinity, 0),
             ),
           ),
@@ -287,7 +294,8 @@ void main() {
               (error) =>
                   error is _ValidationFailure &&
                   error.field == 'camera.dx' &&
-                  error.message == 'must be finite.' &&
+                  error.diagnostic?.template == 'fieldMustBeFinite' &&
+                  error.message == 'Field camera.dx must be finite.' &&
                   error.value == double.infinity,
             ),
           ),
@@ -323,7 +331,9 @@ void main() {
               (error) =>
                   error is _ValidationFailure &&
                   error.field == 'background.grid.cellSize' &&
-                  error.message == 'must be finite.',
+                  error.diagnostic?.template == 'fieldMustBeFinite' &&
+                  error.message ==
+                      'Field background.grid.cellSize must be finite.',
             ),
           ),
         );
@@ -372,9 +382,19 @@ void main() {
 Never _throwFailure({
   required Object? value,
   required String field,
-  required String message,
+  String? message,
+  SceneDataDiagnosticDescriptor? diagnostic,
 }) {
-  throw _ValidationFailure(value: value, field: field, message: message);
+  final resolvedMessage =
+      diagnostic?.toException(path: field, source: value).message ??
+      message ??
+      'is invalid.';
+  throw _ValidationFailure(
+    value: value,
+    field: field,
+    message: resolvedMessage,
+    diagnostic: diagnostic,
+  );
 }
 
 class _ValidationFailure {
@@ -382,9 +402,11 @@ class _ValidationFailure {
     required this.value,
     required this.field,
     required this.message,
+    required this.diagnostic,
   });
 
   final Object? value;
   final String field;
   final String message;
+  final SceneDataDiagnosticDescriptor? diagnostic;
 }

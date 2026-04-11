@@ -29,10 +29,9 @@ Map<String, Object?> sceneBuilderCastMap(
   for (final entry in value.entries) {
     final key = entry.key;
     if (key is! String) {
-      throw SceneDataException(
-        code: SceneDataErrorCode.invalidFieldType,
+      throw SceneDataException.jsonObjectKeysMustBeStrings(
         path: path,
-        message: 'JSON object keys must be strings.',
+        source: key,
       );
     }
     out[key] = entry.value;
@@ -46,10 +45,10 @@ Map<String, Object?> sceneBuilderRequireObjectValue(
   required String objectName,
 }) {
   if (value is! Map) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidFieldType,
+    throw SceneDataException.objectMustBeObject(
       path: path,
-      message: '$objectName must be an object.',
+      objectName: objectName,
+      source: value,
     );
   }
   return sceneBuilderCastMap(value, path: path);
@@ -71,11 +70,7 @@ _SceneBuilderJsonFieldAccess _sceneBuilderFieldAccess(
 
 Object? _sceneBuilderRequireAccessedValue(_SceneBuilderJsonFieldAccess access) {
   if (!access.isPresent) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.missingField,
-      path: access.path,
-      message: 'Missing required field ${access.path}.',
-    );
+    throw SceneDataException.missingField(path: access.path);
   }
   return access.value;
 }
@@ -115,10 +110,11 @@ T _sceneBuilderRequireTypedValue<T>(
   required String typeLabel,
 }) {
   if (value is! T) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidFieldType,
+    throw SceneDataException.invalidFieldType(
       path: path,
-      message: 'Field $fieldName must be a $typeLabel.',
+      fieldName: fieldName,
+      expected: typeLabel,
+      source: value,
     );
   }
   return value;
@@ -191,10 +187,11 @@ List<Object?> sceneBuilderRequireList(
     pathPrefix: pathPrefix,
     parse: (value, {required path, required fieldName}) {
       if (value is! List) {
-        throw SceneDataException(
-          code: SceneDataErrorCode.invalidFieldType,
+        throw SceneDataException.invalidFieldType(
           path: path,
-          message: 'Field $fieldName must be a list.',
+          fieldName: fieldName,
+          expected: 'list',
+          source: value,
         );
       }
       return List<Object?>.from(value);
@@ -273,10 +270,11 @@ String sceneBuilderRequireStringValue(
   required String path,
 }) {
   if (value is! String) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidFieldType,
+    throw SceneDataException.itemsMustBeType(
       path: path,
-      message: 'Items of $field must be strings.',
+      fieldName: field,
+      expected: 'strings',
+      source: value,
     );
   }
   return value;

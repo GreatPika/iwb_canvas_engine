@@ -938,7 +938,11 @@ void main() {
           (e) =>
               e is SceneDataException &&
               e.code == SceneDataErrorCode.invalidValue &&
-              e.path == 'schemaVersion',
+              e.path == 'schemaVersion' &&
+              e.details['template'] == 'fieldMustBeSafeInteger' &&
+              e.details['limit'] == 9007199254740991 &&
+              e.message ==
+                  'Field schemaVersion must be a safe integer within +/-9007199254740991.',
         ),
       ),
     );
@@ -954,7 +958,10 @@ void main() {
               e is SceneDataException &&
               e.code == SceneDataErrorCode.invalidValue &&
               e.path == 'schemaVersion' &&
-              e.message == 'Field schemaVersion must be an int.',
+              e.details['template'] == 'fieldMustBeSafeInteger' &&
+              e.details['limit'] == 9007199254740991 &&
+              e.message ==
+                  'Field schemaVersion must be a safe integer within +/-9007199254740991.',
         ),
       ),
     );
@@ -974,6 +981,26 @@ void main() {
               e.code == SceneDataErrorCode.invalidFieldType &&
               e.path == 'palette.penColors[0]' &&
               e.message == 'Items of penColors must be strings.',
+        ),
+      ),
+    );
+  });
+
+  test('sceneBuildFromJsonMap rejects invalid color literals with details', () {
+    final json = _minimalSceneJson();
+    (json['background'] as Map<String, Object?>)['color'] = '#GGGGGG';
+
+    expect(
+      () => model_builder.sceneBuildFromJsonMap(json),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'background.color' &&
+              e.details['template'] == 'invalidColorLiteral' &&
+              e.details['value'] == '#GGGGGG' &&
+              e.message == 'Invalid color: #GGGGGG.',
         ),
       ),
     );
@@ -1164,7 +1191,12 @@ void main() {
           (e) =>
               e is SceneDataException &&
               e.code == SceneDataErrorCode.invalidValue &&
-              e.path == 'layers[0].nodes[0].localPoints',
+              e.path == 'layers[0].nodes[0].localPoints' &&
+              e.details['template'] == 'maxPoints' &&
+              e.details['maxPoints'] == kMaxStrokePointsPerNode &&
+              e.message ==
+                  'Field layers[0].nodes[0].localPoints must contain at most '
+                      '$kMaxStrokePointsPerNode points.',
         ),
       ),
     );
@@ -1290,7 +1322,12 @@ void main() {
           (e) =>
               e is SceneDataException &&
               e.code == SceneDataErrorCode.invalidValue &&
-              e.path == 'palette.penColors',
+              e.path == 'palette.penColors' &&
+              e.details['template'] == 'maxItems' &&
+              e.details['maxItems'] == kMaxPaletteItems &&
+              e.message ==
+                  'Field palette.penColors must contain at most '
+                      '$kMaxPaletteItems items.',
         ),
       ),
     );
@@ -1310,6 +1347,8 @@ void main() {
               e is SceneDataException &&
               e.code == SceneDataErrorCode.invalidValue &&
               e.path == 'palette.gridSizes' &&
+              e.details['template'] == 'maxItems' &&
+              e.details['maxItems'] == kMaxPaletteItems &&
               e.message ==
                   'Field palette.gridSizes must contain at most '
                       '$kMaxPaletteItems items.',
@@ -1497,6 +1536,8 @@ void main() {
               e is SceneDataException &&
               e.code == SceneDataErrorCode.invalidValue &&
               e.path == 'layers[0].nodes[0].textDirection' &&
+              e.details['template'] == 'unknownEnumValue' &&
+              e.details['value'] == 'sideways' &&
               e.message == 'Unknown text direction: sideways.',
         ),
       ),
@@ -1547,9 +1588,10 @@ void main() {
                 e is SceneDataException &&
                 e.code == SceneDataErrorCode.invalidValue &&
                 e.path == 'layers[0].nodes[0].points' &&
+                e.details['template'] == 'maxPoints' &&
+                e.details['maxPoints'] == kMaxStrokePointsPerNode &&
                 e.message ==
-                    'Field layers[0].nodes[0].points Field '
-                        'layers[0].nodes[0].points must contain at most '
+                    'Field layers[0].nodes[0].points must contain at most '
                         '$kMaxStrokePointsPerNode points.',
           ),
         ),
@@ -1580,9 +1622,10 @@ void main() {
                 e is SceneDataException &&
                 e.code == SceneDataErrorCode.invalidValue &&
                 e.path == 'palette.gridSizes' &&
+                e.details['template'] == 'maxItems' &&
+                e.details['maxItems'] == kMaxPaletteItems &&
                 e.message ==
-                    'Field palette.gridSizes Field palette.gridSizes must '
-                        'contain at most '
+                    'Field palette.gridSizes must contain at most '
                         '$kMaxPaletteItems items.',
           ),
         ),
@@ -1690,12 +1733,16 @@ void main() {
             ({
               required Object? value,
               required String field,
-              required String message,
+              String? message,
+              SceneDataDiagnosticDescriptor? diagnostic,
             }) {
+              if (diagnostic != null) {
+                throw diagnostic.toException(path: field, source: value);
+              }
               throw asSceneDataException(
                 value: value,
                 field: field,
-                message: message,
+                message: message ?? 'is invalid.',
               );
             },
         requirePositiveGridCellSize: true,
@@ -1733,12 +1780,16 @@ void main() {
             ({
               required Object? value,
               required String field,
-              required String message,
+              String? message,
+              SceneDataDiagnosticDescriptor? diagnostic,
             }) {
+              if (diagnostic != null) {
+                throw diagnostic.toException(path: field, source: value);
+              }
               throw asSceneDataException(
                 value: value,
                 field: field,
-                message: message,
+                message: message ?? 'is invalid.',
               );
             },
         requirePositiveGridCellSize: true,
@@ -1839,12 +1890,16 @@ void main() {
               ({
                 required Object? value,
                 required String field,
-                required String message,
+                String? message,
+                SceneDataDiagnosticDescriptor? diagnostic,
               }) {
+                if (diagnostic != null) {
+                  throw diagnostic.toException(path: field, source: value);
+                }
                 throw asSceneDataException(
                   value: value,
                   field: field,
-                  message: message,
+                  message: message ?? 'is invalid.',
                 );
               },
           requirePositiveGridCellSize: true,
@@ -1926,12 +1981,16 @@ void main() {
             ({
               required Object? value,
               required String field,
-              required String message,
+              String? message,
+              SceneDataDiagnosticDescriptor? diagnostic,
             }) {
+              if (diagnostic != null) {
+                throw diagnostic.toException(path: field, source: value);
+              }
               throw asSceneDataException(
                 value: value,
                 field: field,
-                message: message,
+                message: message ?? 'is invalid.',
               );
             },
       ),

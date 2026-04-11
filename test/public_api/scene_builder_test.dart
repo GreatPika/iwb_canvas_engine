@@ -3,6 +3,8 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
+import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
+    show kMaxPaletteItems, kMaxStrokePointsPerNode;
 import '../support/scene_builder_json_fixtures.dart';
 
 Map<String, Object?> _textNodeJson({
@@ -169,6 +171,169 @@ void main() {
 
       _expectSameSceneDataContract(fromBuilder, fromCodec);
       expect(fromBuilder.path, 'layers[0].nodes[0].opacity');
+    },
+  );
+
+  test(
+    'SceneBuilder palette limit diagnostics stay aligned across json and snapshot entrypoints',
+    () {
+      for (final scenario
+          in <
+            ({
+              String field,
+              List<Object?> jsonValues,
+              SceneSnapshot snapshot,
+            })
+          >[
+            (
+              field: 'penColors',
+              jsonValues: <Object?>[
+                for (var i = 0; i < kMaxPaletteItems + 1; i++) '#FF000000',
+              ],
+          snapshot: materializeSceneSnapshot(
+            SceneSnapshotBacking(
+              palette: ScenePaletteSnapshotBacking(
+                    penColors: <Color>[
+                      for (var i = 0; i < kMaxPaletteItems + 1; i++)
+                        const Color(0xFF000000),
+                    ],
+                  ),
+                  layers: <ContentLayerSnapshotBacking>[
+                    contentLayerSnapshotBackingFromValidated(
+                      id: 'layer-auto-0',
+                    ),
+                  ],
+                ),
+          ),
+        ),
+            (
+              field: 'backgroundColors',
+              jsonValues: <Object?>[
+                for (var i = 0; i < kMaxPaletteItems + 1; i++) '#FFFFFFFF',
+              ],
+          snapshot: materializeSceneSnapshot(
+            SceneSnapshotBacking(
+              palette: ScenePaletteSnapshotBacking(
+                    backgroundColors: <Color>[
+                      for (var i = 0; i < kMaxPaletteItems + 1; i++)
+                        const Color(0xFFFFFFFF),
+                    ],
+                  ),
+                  layers: <ContentLayerSnapshotBacking>[
+                    contentLayerSnapshotBackingFromValidated(
+                      id: 'layer-auto-0',
+                    ),
+                  ],
+                ),
+          ),
+        ),
+            (
+              field: 'gridSizes',
+              jsonValues: <Object?>[
+                for (var i = 0; i < kMaxPaletteItems + 1; i++) i + 1,
+              ],
+          snapshot: materializeSceneSnapshot(
+            SceneSnapshotBacking(
+              palette: ScenePaletteSnapshotBacking(
+                    gridSizes: <double>[
+                      for (var i = 0; i < kMaxPaletteItems + 1; i++) i + 1,
+                    ],
+                  ),
+                  layers: <ContentLayerSnapshotBacking>[
+                    contentLayerSnapshotBackingFromValidated(
+                      id: 'layer-auto-0',
+                    ),
+                  ],
+                ),
+          ),
+        ),
+          ]) {
+        final raw = minimalSceneJson();
+        (raw['palette'] as Map<String, Object?>)[scenario.field] =
+            scenario.jsonValues;
+
+        final fromJson = _captureSceneDataException(
+          () => SceneBuilder.buildFromJson(raw),
+        );
+        final fromSnapshot = _captureSceneDataException(
+          () => SceneBuilder.buildFromSnapshot(scenario.snapshot),
+        );
+
+        final expectedPath = 'palette.${scenario.field}';
+        expect(fromJson.code, SceneDataErrorCode.invalidValue);
+        expect(fromJson.path, expectedPath);
+        expect(fromJson.details, const <String, Object?>{
+          'template': 'maxItems',
+          'maxItems': kMaxPaletteItems,
+        });
+        expect(
+          fromJson.message,
+          'Field $expectedPath must contain at most $kMaxPaletteItems items.',
+        );
+        expect(fromSnapshot.code, fromJson.code);
+        expect(fromSnapshot.path, fromJson.path);
+        expect(fromSnapshot.details, fromJson.details);
+        expect(fromSnapshot.message, fromJson.message);
+      }
+    },
+  );
+
+  test(
+    'SceneBuilder stroke and optional naturalSize diagnostics keep child-aware boundary contracts',
+    () {
+      final strokeJson = minimalSceneJson(
+        contentNodes: <Object?>[
+          <String, Object?>{
+            ...minimalRectNodeJson(id: 'stroke-1'),
+            'type': 'stroke',
+            'localPoints': <Object?>[
+              for (var i = 0; i < kMaxStrokePointsPerNode + 1; i++)
+                <String, Object?>{'x': i.toDouble(), 'y': 0.0},
+            ],
+            'thickness': 1,
+            'color': '#FF000000',
+          },
+        ],
+      );
+      final strokeError = _captureSceneDataException(
+        () => SceneBuilder.buildFromJson(strokeJson),
+      );
+      expect(strokeError.path, 'layers[0].nodes[0].localPoints');
+      expect(strokeError.details, const <String, Object?>{
+        'template': 'maxPoints',
+        'maxPoints': kMaxStrokePointsPerNode,
+      });
+      expect(
+        strokeError.message,
+        'Field layers[0].nodes[0].localPoints must contain at most '
+        '$kMaxStrokePointsPerNode points.',
+      );
+
+      final imageJson = minimalSceneJson(
+        contentNodes: <Object?>[
+          <String, Object?>{
+            ...minimalRectNodeJson(id: 'img-1')
+              ..remove('strokeWidth')
+              ..remove('size'),
+            'type': 'image',
+            'imageId': 'asset:image-1',
+            'size': <String, Object?>{'w': 10, 'h': 20},
+            'naturalSize': <String, Object?>{'h': 20},
+          },
+        ],
+      );
+      final naturalSizeError = _captureSceneDataException(
+        () => SceneBuilder.buildFromJson(imageJson),
+      );
+      expect(naturalSizeError.code, SceneDataErrorCode.missingField);
+      expect(naturalSizeError.path, 'layers[0].nodes[0].naturalSize.w');
+      expect(naturalSizeError.details, const <String, Object?>{
+        'template': 'missingField',
+      });
+      expect(
+        naturalSizeError.message,
+        'Missing required field layers[0].nodes[0].naturalSize.w.',
+      );
     },
   );
 

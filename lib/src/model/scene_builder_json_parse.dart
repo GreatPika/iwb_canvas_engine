@@ -79,60 +79,37 @@ Size? sceneBuilderOptionalSizeMap(
   if (parsed == null) {
     return null;
   }
-  final path = sceneBuilderPathAt(pathPrefix, key);
-  final width = parsed['w'];
-  final height = parsed['h'];
-  if (width is! num || height is! num) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidFieldType,
-      path: path,
-      message: 'Optional size must be numeric.',
-    );
-  }
-  final w = width.toDouble();
-  final h = height.toDouble();
-  if (!w.isFinite || !h.isFinite) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidValue,
-      path: path,
-      message: 'Optional size must be finite.',
-    );
-  }
+  final sizePath = sceneBuilderPathAt(pathPrefix, key);
+  final w = validatedRequireJsonFiniteDouble(
+    sceneBuilderRequireField(parsed, 'w', pathPrefix: sizePath),
+    path: sceneBuilderPathAt(sizePath, 'w'),
+    fieldName: 'w',
+  );
+  final h = validatedRequireJsonFiniteDouble(
+    sceneBuilderRequireField(parsed, 'h', pathPrefix: sizePath),
+    path: sceneBuilderPathAt(sizePath, 'h'),
+    fieldName: 'h',
+  );
   return Size(w, h);
 }
 
-Color sceneBuilderParseColor(String value, {String? path}) {
+Color sceneBuilderParseColor(String value, {required String path}) {
   final normalized = value.startsWith('#') ? value.substring(1) : value;
   if (normalized.length == 6) {
     final parsed = int.tryParse('FF$normalized', radix: 16);
     if (parsed == null) {
-      throw SceneDataException(
-        code: SceneDataErrorCode.invalidValue,
-        path: path,
-        message: 'Invalid color: $value.',
-        source: value,
-      );
+      throw SceneDataException.invalidColorLiteral(path: path, value: value);
     }
     return Color(parsed);
   }
   if (normalized.length == 8) {
     final parsed = int.tryParse(normalized, radix: 16);
     if (parsed == null) {
-      throw SceneDataException(
-        code: SceneDataErrorCode.invalidValue,
-        path: path,
-        message: 'Invalid color: $value.',
-        source: value,
-      );
+      throw SceneDataException.invalidColorLiteral(path: path, value: value);
     }
     return Color(parsed);
   }
-  throw SceneDataException(
-    code: SceneDataErrorCode.invalidValue,
-    path: path,
-    message: 'Invalid color: $value.',
-    source: value,
-  );
+  throw SceneDataException.invalidColorLiteral(path: path, value: value);
 }
 
 Color? sceneBuilderOptionalColor(
@@ -186,11 +163,9 @@ NodeType sceneBuilderParseNodeType(String value, {required String pathPrefix}) {
     case 'path':
       return NodeType.path;
     default:
-      throw SceneDataException(
-        code: SceneDataErrorCode.invalidValue,
+      throw SceneDataException.unknownEnumValue(
         path: sceneBuilderPathAt(pathPrefix, 'type'),
-        message: 'Unknown node type: $value.',
-        source: value,
+        value: value,
       );
   }
 }
@@ -205,11 +180,9 @@ PathFillRule sceneBuilderParsePathFillRule(
     case 'evenOdd':
       return PathFillRule.evenOdd;
     default:
-      throw SceneDataException(
-        code: SceneDataErrorCode.invalidValue,
+      throw SceneDataException.unknownEnumValue(
         path: sceneBuilderPathAt(pathPrefix, 'fillRule'),
-        message: 'Unknown fillRule: $value.',
-        source: value,
+        value: value,
       );
   }
 }
@@ -232,11 +205,9 @@ TextAlign sceneBuilderParseTextAlign(
     case 'end':
       return TextAlign.end;
     default:
-      throw SceneDataException(
-        code: SceneDataErrorCode.invalidValue,
+      throw SceneDataException.unknownEnumValue(
         path: sceneBuilderPathAt(pathPrefix, 'align'),
-        message: 'Unknown text align: $value.',
-        source: value,
+        value: value,
       );
   }
 }
@@ -252,11 +223,9 @@ TextDirection sceneBuilderParseTextDirection(
     case 'rtl':
       return TextDirection.rtl;
     default:
-      throw SceneDataException(
-        code: SceneDataErrorCode.invalidValue,
+      throw SceneDataException.unknownEnumValue(
         path: sceneBuilderPathAt(pathPrefix, fieldName),
-        message: 'Unknown text direction: $value.',
-        source: value,
+        value: value,
       );
   }
 }
