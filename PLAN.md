@@ -19,3 +19,4 @@ roadmap can be updated without mixing execution contracts.
 - [x] [Step 104. Introduce shell-first machine verification presets](plan/step_104_shell_first_machine_verification_presets.md)
 - [x] [Step 105. Seal capability-owner construction and enforce hermetic public signatures](plan/step_105_capability_owner_public_signature_hermeticity.md)
 - [ ] [Step 106. Align scene boundary diagnostic contracts across import paths](plan/step_106_scene_boundary_diagnostic_contract_alignment.md)
+- [ ] [Step 107. Seal runtime scene validity ownership before commit](plan/step_107_runtime_scene_validity_ownership.md)
